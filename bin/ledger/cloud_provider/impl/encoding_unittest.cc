@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 #include "lib/ftl/time/time_delta.h"
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 namespace {
 
 // Allows to create correct std::strings with \0 bytes inside from C-style
@@ -129,4 +129,4 @@ TEST(EncodingTest, EncodeDecodeBatch) {
 }
 
 }  // namespace
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase

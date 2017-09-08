@@ -11,7 +11,7 @@
 #include "apps/ledger/src/cloud_provider/public/record.h"
 #include "lib/ftl/macros.h"
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 
 class CommitWatcher {
  public:
@@ -39,6 +39,6 @@ class CommitWatcher {
   FTL_DISALLOW_COPY_AND_ASSIGN(CommitWatcher);
 };
 
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase
 
 #endif  // APPS_LEDGER_SRC_CLOUD_PROVIDER_PUBLIC_COMMIT_WATCHER_H_

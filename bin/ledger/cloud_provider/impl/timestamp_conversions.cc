@@ -6,7 +6,7 @@
 
 #include "lib/ftl/logging.h"
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 
 namespace {
 
@@ -36,4 +36,4 @@ int64_t BytesToServerTimestamp(const std::string& bytes) {
   return 0;
 }
 
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase

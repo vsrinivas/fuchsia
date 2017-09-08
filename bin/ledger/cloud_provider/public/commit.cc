@@ -6,7 +6,7 @@
 
 #include <utility>
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 
 Commit::Commit() = default;
 
@@ -30,4 +30,4 @@ Commit Commit::Clone() const {
   return clone;
 }
 
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase

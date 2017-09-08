@@ -14,7 +14,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 
 namespace {
 
@@ -172,4 +172,4 @@ bool DecodeCommitFromValue(const rapidjson::Value& value,
   return true;
 }
 
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase

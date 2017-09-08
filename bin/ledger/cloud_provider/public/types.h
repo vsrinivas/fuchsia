@@ -11,7 +11,7 @@
 #include "apps/ledger/src/gcs/status.h"
 #include "lib/ftl/strings/string_view.h"
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 
 using AppId = std::string;
 using PageId = std::string;
@@ -37,6 +37,6 @@ Status ConvertGcsStatus(gcs::Status gcs_status);
 
 Status ConvertFirebaseStatus(firebase::Status firebase_status);
 
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase
 
 #endif  // APPS_LEDGER_SRC_CLOUD_PROVIDER_PUBLIC_TYPES_H_

@@ -85,7 +85,7 @@ void EraseRemoteRepositoryOperation::ClearDeviceMap() {
 
   firebase_ = std::make_unique<firebase::FirebaseImpl>(
       network_service_, server_id_,
-      cloud_provider::GetFirebasePathForUser(user_id_));
+      cloud_provider_firebase::GetFirebasePathForUser(user_id_));
   std::vector<std::string> query_params;
   if (!auth_token_.empty()) {
     query_params = {"auth=" + auth_token_};

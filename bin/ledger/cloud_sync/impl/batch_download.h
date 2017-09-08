@@ -22,7 +22,7 @@ namespace cloud_sync {
 class BatchDownload {
  public:
   BatchDownload(storage::PageStorage* storage,
-                std::vector<cloud_provider::Record> records,
+                std::vector<cloud_provider_firebase::Record> records,
                 ftl::Closure on_done,
                 ftl::Closure on_error);
   ~BatchDownload();
@@ -34,7 +34,7 @@ class BatchDownload {
   void UpdateTimestampAndQuit();
 
   storage::PageStorage* const storage_;
-  std::vector<cloud_provider::Record> records_;
+  std::vector<cloud_provider_firebase::Record> records_;
   ftl::Closure on_done_;
   ftl::Closure on_error_;
   bool started_ = false;

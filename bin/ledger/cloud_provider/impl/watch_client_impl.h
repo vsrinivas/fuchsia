@@ -14,7 +14,7 @@
 
 #include <rapidjson/document.h>
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 
 // Relay between Firebase and a CommitWatcher corresponding to particular
 // WatchCommits() request.
@@ -57,6 +57,6 @@ class WatchClientImpl : public firebase::WatchClient {
   size_t batch_size_;
 };
 
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase
 
 #endif  // APPS_LEDGER_SRC_CLOUD_PROVIDER_IMPL_WATCH_CLIENT_IMPL_H_

@@ -6,7 +6,7 @@
 
 #include "lib/ftl/logging.h"
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 namespace test {
 
 void CloudProviderEmptyImpl::AddCommits(
@@ -50,4 +50,4 @@ void CloudProviderEmptyImpl::GetObject(
 }
 
 }  // namespace test
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase

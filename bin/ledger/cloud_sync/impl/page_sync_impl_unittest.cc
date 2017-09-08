@@ -229,22 +229,23 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   mtl::MessageLoop* message_loop_;
 };
 
-// Fake implementation of cloud_provider::CloudProvider. Injects the returned
-// status for commit notification upload, allowing the test to make them fail.
-// Registers for inspection the notifications passed by PageSync.
-class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
+// Fake implementation of cloud_provider_firebase::CloudProvider. Injects the
+// returned status for commit notification upload, allowing the test to make
+// them fail. Registers for inspection the notifications passed by PageSync.
+class TestCloudProvider
+    : public cloud_provider_firebase::test::CloudProviderEmptyImpl {
  public:
   explicit TestCloudProvider(mtl::MessageLoop* message_loop)
       : message_loop_(message_loop) {}
 
   ~TestCloudProvider() override = default;
 
-  void AddCommits(
-      const std::string& /*auth_token*/,
-      std::vector<cloud_provider::Commit> commits,
-      const std::function<void(cloud_provider::Status)>& callback) override {
+  void AddCommits(const std::string& /*auth_token*/,
+                  std::vector<cloud_provider_firebase::Commit> commits,
+                  const std::function<void(cloud_provider_firebase::Status)>&
+                      callback) override {
     ++add_commits_calls;
-    if (commit_status_to_return == cloud_provider::Status::OK) {
+    if (commit_status_to_return == cloud_provider_firebase::Status::OK) {
       std::move(commits.begin(), commits.end(),
                 std::back_inserter(received_commits));
     }
@@ -254,7 +255,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
 
   void WatchCommits(const std::string& auth_token,
                     const std::string& min_timestamp,
-                    cloud_provider::CommitWatcher* watcher) override {
+                    cloud_provider_firebase::CommitWatcher* watcher) override {
     watch_commits_auth_tokens.push_back(auth_token);
     watch_call_min_timestamps.push_back(min_timestamp);
     watcher_ = watcher;
@@ -265,54 +266,58 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
     for (auto& record : notifications_to_deliver) {
       message_loop_->task_runner()->PostTask(
           ftl::MakeCopyable([ this, record = std::move(record) ]() mutable {
-            std::vector<cloud_provider::Record> records;
+            std::vector<cloud_provider_firebase::Record> records;
             records.push_back(std::move(record));
             watcher_->OnRemoteCommits(std::move(records));
           }));
     }
   }
 
-  void UnwatchCommits(cloud_provider::CommitWatcher* /*watcher*/) override {
+  void UnwatchCommits(
+      cloud_provider_firebase::CommitWatcher* /*watcher*/) override {
     watcher_ = nullptr;
     watcher_removed = true;
   }
 
-  void GetCommits(const std::string& auth_token,
-                  const std::string& /*min_timestamp*/,
-                  std::function<void(cloud_provider::Status,
-                                     std::vector<cloud_provider::Record>)>
-                      callback) override {
+  void GetCommits(
+      const std::string& auth_token,
+      const std::string& /*min_timestamp*/,
+      std::function<void(cloud_provider_firebase::Status,
+                         std::vector<cloud_provider_firebase::Record>)>
+          callback) override {
     get_commits_calls++;
     get_commits_auth_tokens.push_back(auth_token);
     if (should_fail_get_commits) {
       message_loop_->task_runner()->PostTask([callback]() {
-        callback(cloud_provider::Status::NETWORK_ERROR, {});
+        callback(cloud_provider_firebase::Status::NETWORK_ERROR, {});
       });
       return;
     }
 
     message_loop_->task_runner()->PostTask([this, callback]() {
-      callback(cloud_provider::Status::OK, std::move(records_to_return));
+      callback(cloud_provider_firebase::Status::OK,
+               std::move(records_to_return));
     });
   }
 
   void GetObject(const std::string& auth_token,
-                 cloud_provider::ObjectIdView object_id,
-                 std::function<void(cloud_provider::Status status,
+                 cloud_provider_firebase::ObjectIdView object_id,
+                 std::function<void(cloud_provider_firebase::Status status,
                                     uint64_t size,
                                     mx::socket data)> callback) override {
     get_object_calls++;
     get_object_auth_tokens.push_back(auth_token);
     if (should_fail_get_object) {
       message_loop_->task_runner()->PostTask([callback]() {
-        callback(cloud_provider::Status::NETWORK_ERROR, 0, mx::socket());
+        callback(cloud_provider_firebase::Status::NETWORK_ERROR, 0,
+                 mx::socket());
       });
       return;
     }
 
     message_loop_->task_runner()->PostTask(
         [ this, object_id = object_id.ToString(), callback ]() {
-          callback(cloud_provider::Status::OK,
+          callback(cloud_provider_firebase::Status::OK,
                    objects_to_return[object_id].size(),
                    mtl::WriteStringToSocket(objects_to_return[object_id]));
         });
@@ -320,9 +325,10 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
 
   bool should_fail_get_commits = false;
   bool should_fail_get_object = false;
-  std::vector<cloud_provider::Record> records_to_return;
-  std::vector<cloud_provider::Record> notifications_to_deliver;
-  cloud_provider::Status commit_status_to_return = cloud_provider::Status::OK;
+  std::vector<cloud_provider_firebase::Record> records_to_return;
+  std::vector<cloud_provider_firebase::Record> notifications_to_deliver;
+  cloud_provider_firebase::Status commit_status_to_return =
+      cloud_provider_firebase::Status::OK;
   std::unordered_map<std::string, std::string> objects_to_return;
 
   std::vector<std::string> watch_commits_auth_tokens;
@@ -332,9 +338,9 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
   std::vector<std::string> get_commits_auth_tokens;
   unsigned int get_object_calls = 0u;
   std::vector<std::string> get_object_auth_tokens;
-  std::vector<cloud_provider::Commit> received_commits;
+  std::vector<cloud_provider_firebase::Commit> received_commits;
   bool watcher_removed = false;
-  cloud_provider::CommitWatcher* watcher_ = nullptr;
+  cloud_provider_firebase::CommitWatcher* watcher_ = nullptr;
 
  private:
   mtl::MessageLoop* message_loop_;
@@ -521,8 +527,9 @@ TEST_F(PageSyncImplTest, NoUploadWhenDownloading) {
   page_sync_->SetOnIdle(MakeQuitTask());
   StartPageSync();
   EXPECT_FALSE(RunLoopWithTimeout());
-  std::vector<cloud_provider::Record> records;
-  records.emplace_back(cloud_provider::Commit("id1", "content1"), "44");
+  std::vector<cloud_provider_firebase::Record> records;
+  records.emplace_back(cloud_provider_firebase::Commit("id1", "content1"),
+                       "44");
   page_sync_->OnRemoteCommits(std::move(records));
   page_sync_->OnNewCommits(storage_.NewCommit("id2", "content2")->AsList(),
                            storage::ChangeSource::LOCAL);
@@ -543,9 +550,9 @@ TEST_F(PageSyncImplTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
   storage_.NewCommit("local2", "content2");
 
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider::Commit("remote3", "content3"), "42");
+      cloud_provider_firebase::Commit("remote3", "content3"), "42");
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider::Commit("remote4", "content4"), "43");
+      cloud_provider_firebase::Commit("remote4", "content4"), "43");
   bool backlog_downloaded_called = false;
   page_sync_->SetOnBacklogDownloaded([this, &backlog_downloaded_called] {
     EXPECT_EQ(0u, cloud_provider_.received_commits.size());
@@ -679,7 +686,7 @@ TEST_F(PageSyncImplTest, UploadExistingAndNewCommits) {
 TEST_F(PageSyncImplTest, RetryUpload) {
   storage_.NewCommit("id1", "content1");
   cloud_provider_.commit_status_to_return =
-      cloud_provider::Status::NETWORK_ERROR;
+      cloud_provider_firebase::Status::NETWORK_ERROR;
   StartPageSync();
 
   // Test cloud provider logs every commit, even if it reports that upload
@@ -751,9 +758,9 @@ TEST_F(PageSyncImplTest, DownloadBacklog) {
   EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
 
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider::Commit("id1", "content1"), "42");
+      cloud_provider_firebase::Commit("id1", "content1"), "42");
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider::Commit("id2", "content2"), "43");
+      cloud_provider_firebase::Commit("id2", "content2"), "43");
 
   int on_backlog_downloaded_calls = 0;
   page_sync_->SetOnBacklogDownloaded([this, &on_backlog_downloaded_calls] {
@@ -809,9 +816,9 @@ TEST_F(PageSyncImplTest, DownloadEmptyBacklog) {
 // recent commit downloaded from the backlog.
 TEST_F(PageSyncImplTest, RegisterWatcher) {
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider::Commit("id1", "content1"), "42");
+      cloud_provider_firebase::Commit("id1", "content1"), "42");
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider::Commit("id2", "content2"), "43");
+      cloud_provider_firebase::Commit("id2", "content2"), "43");
   auth_provider_.token_to_return = "some-token";
 
   page_sync_->SetOnIdle(MakeQuitTask());
@@ -842,9 +849,9 @@ TEST_F(PageSyncImplTest, ReceiveNotifications) {
   EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
 
   cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider::Commit("id1", "content1"), "42");
+      cloud_provider_firebase::Commit("id1", "content1"), "42");
   cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider::Commit("id2", "content2"), "43");
+      cloud_provider_firebase::Commit("id2", "content2"), "43");
   StartPageSync();
 
   message_loop_.SetAfterTaskCallback([this] {
@@ -888,11 +895,11 @@ TEST_F(PageSyncImplTest, CoalesceMultipleNotifications) {
   EXPECT_EQ(0u, storage_.received_commits.size());
 
   cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider::Commit("id1", "content1"), "42");
+      cloud_provider_firebase::Commit("id1", "content1"), "42");
   cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider::Commit("id2", "content2"), "43");
+      cloud_provider_firebase::Commit("id2", "content2"), "43");
   cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider::Commit("id3", "content3"), "44");
+      cloud_provider_firebase::Commit("id3", "content3"), "44");
 
   // Make the storage delay requests to add remote commits.
   storage_.should_delay_add_commit_confirmation = true;
@@ -935,7 +942,7 @@ TEST_F(PageSyncImplTest, CoalesceMultipleNotifications) {
 // are retried.
 TEST_F(PageSyncImplTest, RetryDownloadBacklog) {
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider::Commit("id1", "content1"), "42");
+      cloud_provider_firebase::Commit("id1", "content1"), "42");
   cloud_provider_.should_fail_get_commits = true;
   StartPageSync();
 
@@ -968,7 +975,7 @@ TEST_F(PageSyncImplTest, FailToStoreRemoteCommit) {
   EXPECT_EQ(0, error_callback_calls_);
 
   cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider::Commit("id1", "content1"), "42");
+      cloud_provider_firebase::Commit("id1", "content1"), "42");
   storage_.should_fail_add_commit_from_sync = true;
   StartPageSync();
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -981,9 +988,9 @@ TEST_F(PageSyncImplTest, FailToStoreRemoteCommit) {
 // progress.
 TEST_F(PageSyncImplTest, DownloadIdleCallback) {
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider::Commit("id1", "content1"), "42");
+      cloud_provider_firebase::Commit("id1", "content1"), "42");
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider::Commit("id2", "content2"), "43");
+      cloud_provider_firebase::Commit("id2", "content2"), "43");
 
   int on_idle_calls = 0;
   page_sync_->SetOnIdle([this, &on_idle_calls] {
@@ -1002,8 +1009,9 @@ TEST_F(PageSyncImplTest, DownloadIdleCallback) {
 
   // Notify about a new commit to download and verify that the idle callback was
   // called again on completion.
-  std::vector<cloud_provider::Record> records;
-  records.emplace_back(cloud_provider::Commit("id3", "content3"), "44");
+  std::vector<cloud_provider_firebase::Record> records;
+  records.emplace_back(cloud_provider_firebase::Commit("id3", "content3"),
+                       "44");
   page_sync_->OnRemoteCommits(std::move(records));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(3u, storage_.received_commits.size());
@@ -1129,7 +1137,7 @@ TEST_F(PageSyncImplTest, DoNotUploadSyncedCommitsOnRetry) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   cloud_provider_.commit_status_to_return =
-      cloud_provider::Status::NETWORK_ERROR;
+      cloud_provider_firebase::Status::NETWORK_ERROR;
 
   auto commit = storage_.NewCommit("id", "content");
   storage_.new_commits_to_return["id"] = commit->Clone();
@@ -1147,7 +1155,7 @@ TEST_F(PageSyncImplTest, DoNotUploadSyncedCommitsOnRetry) {
   // Commit was rejected.
   ASSERT_EQ(0u, cloud_provider_.received_commits.size());
 
-  cloud_provider_.commit_status_to_return = cloud_provider::Status::OK;
+  cloud_provider_.commit_status_to_return = cloud_provider_firebase::Status::OK;
   cloud_provider_.add_commits_calls = 0u;
 
   // Simulate the commit being received from the cloud.
@@ -1170,7 +1178,7 @@ TEST_F(PageSyncImplTest, UploadCommitAlreadyInCloud) {
 
   // Upload should fail.
   cloud_provider_.commit_status_to_return =
-      cloud_provider::Status::SERVER_ERROR;
+      cloud_provider_firebase::Status::SERVER_ERROR;
   StartPageSync();
 
   EXPECT_TRUE(RunLoopUntil([this] {
@@ -1185,8 +1193,9 @@ TEST_F(PageSyncImplTest, UploadCommitAlreadyInCloud) {
   EXPECT_EQ(1, backoff_get_next_calls_);
 
   // Let's receive the same commit from the remote side.
-  std::vector<cloud_provider::Record> records;
-  records.emplace_back(cloud_provider::Commit("id1", "content1"), "44");
+  std::vector<cloud_provider_firebase::Record> records;
+  records.emplace_back(cloud_provider_firebase::Commit("id1", "content1"),
+                       "44");
   page_sync_->OnRemoteCommits(std::move(records));
 
   EXPECT_TRUE(RunLoopUntil([this] { return page_sync_->IsIdle(); }));

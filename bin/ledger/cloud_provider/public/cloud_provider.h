@@ -17,7 +17,7 @@
 #include "mx/socket.h"
 #include "mx/vmo.h"
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 
 // This API captures Ledger requirements for a cloud sync provider.
 //
@@ -96,6 +96,6 @@ class CloudProvider {
   FTL_DISALLOW_COPY_AND_ASSIGN(CloudProvider);
 };
 
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase
 
 #endif  // APPS_LEDGER_SRC_CLOUD_PROVIDER_PUBLIC_CLOUD_PROVIDER_H_

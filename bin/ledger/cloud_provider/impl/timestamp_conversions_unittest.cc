@@ -7,7 +7,7 @@
 #include "gtest/gtest.h"
 #include "lib/ftl/time/time_delta.h"
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 
 TEST(TimestampConversions, BackAndForth) {
   int64_t timestamp = 0;
@@ -40,4 +40,4 @@ TEST(TimestampConversions, BackAndForth) {
             BytesToServerTimestamp(ServerTimestampToBytes(timestamp)));
 }
 
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase

@@ -15,7 +15,7 @@
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/vmo/strings.h"
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 namespace {
 // The root path under which all commits are stored.
 constexpr ftl::StringView kCommitRoot = "commits";
@@ -127,4 +127,4 @@ std::vector<std::string> CloudProviderImpl::GetQueryParams(
   return result;
 }
 
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase

@@ -9,7 +9,7 @@
 
 #include "lib/ftl/strings/string_view.h"
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 
 // Returns the common object name prefix used for all objects stored on behalf
 // of the given user and app.
@@ -32,6 +32,6 @@ std::string GetFirebasePathForApp(ftl::StringView user_id,
 std::string GetFirebasePathForPage(ftl::StringView app_path,
                                    ftl::StringView page_id);
 
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase
 
 #endif  // APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_PATHS_H_

@@ -28,7 +28,7 @@
 
 #include <rapidjson/document.h>
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 namespace {
 
 class CloudProviderImplTest : public test::TestWithMessageLoop,
@@ -192,7 +192,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
 
 TEST_F(CloudProviderImplTest, AddCommit) {
   Commit commit("commit_id", "some_content");
-  std::vector<cloud_provider::Commit> commits;
+  std::vector<Commit> commits;
   commits.push_back(std::move(commit));
 
   Status status;
@@ -222,7 +222,7 @@ TEST_F(CloudProviderImplTest, AddCommit) {
 TEST_F(CloudProviderImplTest, AddMultipleCommits) {
   Commit commit1("id1", "content1");
   Commit commit2("id2", "content2");
-  std::vector<cloud_provider::Commit> commits;
+  std::vector<Commit> commits;
   commits.push_back(std::move(commit1));
   commits.push_back(std::move(commit2));
 
@@ -695,4 +695,4 @@ TEST_F(CloudProviderImplTest, GetObjectNotFound) {
 }
 
 }  // namespace
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase

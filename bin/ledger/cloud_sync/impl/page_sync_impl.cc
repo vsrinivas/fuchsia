@@ -17,13 +17,14 @@
 
 namespace cloud_sync {
 
-PageSyncImpl::PageSyncImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
-                           storage::PageStorage* storage,
-                           cloud_provider::CloudProvider* cloud_provider,
-                           auth_provider::AuthProvider* auth_provider,
-                           std::unique_ptr<backoff::Backoff> backoff,
-                           ftl::Closure on_error,
-                           std::unique_ptr<SyncStateWatcher> ledger_watcher)
+PageSyncImpl::PageSyncImpl(
+    ftl::RefPtr<ftl::TaskRunner> task_runner,
+    storage::PageStorage* storage,
+    cloud_provider_firebase::CloudProvider* cloud_provider,
+    auth_provider::AuthProvider* auth_provider,
+    std::unique_ptr<backoff::Backoff> backoff,
+    ftl::Closure on_error,
+    std::unique_ptr<SyncStateWatcher> ledger_watcher)
     : task_runner_(std::move(task_runner)),
       storage_(storage),
       cloud_provider_(cloud_provider),
@@ -117,30 +118,33 @@ void PageSyncImpl::GetObject(
         callback) {
   GetAuthToken([ this, object_id = object_id.ToString(),
                  callback ](std::string auth_token) mutable {
-    cloud_provider_->GetObject(auth_token, object_id, [
-      this, object_id, callback = std::move(callback)
-    ](cloud_provider::Status status, uint64_t size, mx::socket data) mutable {
-      if (status == cloud_provider::Status::NETWORK_ERROR) {
-        FTL_LOG(WARNING)
-            << log_prefix_
-            << "GetObject() failed due to a connection error, retrying.";
-        Retry([
-          this, object_id = std::move(object_id), callback = std::move(callback)
-        ] { GetObject(object_id, callback); });
-        return;
-      }
+    cloud_provider_->GetObject(
+        auth_token, object_id,
+        [ this, object_id, callback = std::move(callback) ](
+            cloud_provider_firebase::Status status, uint64_t size,
+            mx::socket data) mutable {
+          if (status == cloud_provider_firebase::Status::NETWORK_ERROR) {
+            FTL_LOG(WARNING)
+                << log_prefix_
+                << "GetObject() failed due to a connection error, retrying.";
+            Retry([
+              this, object_id = std::move(object_id),
+              callback = std::move(callback)
+            ] { GetObject(object_id, callback); });
+            return;
+          }
 
-      backoff_->Reset();
-      if (status != cloud_provider::Status::OK) {
-        FTL_LOG(WARNING) << log_prefix_
-                         << "Fetching remote object failed with status: "
-                         << status;
-        callback(storage::Status::IO_ERROR, 0, mx::socket());
-        return;
-      }
+          backoff_->Reset();
+          if (status != cloud_provider_firebase::Status::OK) {
+            FTL_LOG(WARNING)
+                << log_prefix_
+                << "Fetching remote object failed with status: " << status;
+            callback(storage::Status::IO_ERROR, 0, mx::socket());
+            return;
+          }
 
-      callback(storage::Status::OK, size, std::move(data));
-    });
+          callback(storage::Status::OK, size, std::move(data));
+        });
   },
                [this, callback] {
                  FTL_LOG(ERROR)
@@ -151,7 +155,7 @@ void PageSyncImpl::GetObject(
 }
 
 void PageSyncImpl::OnRemoteCommits(
-    std::vector<cloud_provider::Record> records) {
+    std::vector<cloud_provider_firebase::Record> records) {
   if (batch_download_) {
     // If there is already a commit batch being downloaded, save the new commits
     // to be downloaded when it is done.
@@ -217,9 +221,9 @@ void PageSyncImpl::StartDownload() {
         // TODO(ppi): handle pagination when the response is huge.
         cloud_provider_->GetCommits(
             auth_token, last_commit_ts,
-            [this](cloud_provider::Status cloud_status,
-                   std::vector<cloud_provider::Record> records) {
-              if (cloud_status != cloud_provider::Status::OK) {
+            [this](cloud_provider_firebase::Status cloud_status,
+                   std::vector<cloud_provider_firebase::Record> records) {
+              if (cloud_status != cloud_provider_firebase::Status::OK) {
                 // Fetching the remote commits failed, schedule a retry.
                 FTL_LOG(WARNING)
                     << log_prefix_
@@ -271,8 +275,9 @@ void PageSyncImpl::StartUpload() {
   UploadUnsyncedCommits();
 }
 
-void PageSyncImpl::DownloadBatch(std::vector<cloud_provider::Record> records,
-                                 ftl::Closure on_done) {
+void PageSyncImpl::DownloadBatch(
+    std::vector<cloud_provider_firebase::Record> records,
+    ftl::Closure on_done) {
   FTL_DCHECK(!batch_download_);
   batch_download_ = std::make_unique<BatchDownload>(
       storage_, std::move(records), [ this, on_done = std::move(on_done) ] {

@@ -12,12 +12,12 @@
 // CloudProvider API is more general and operates on opaque bytes - these
 // functions convert back and forth.
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 
 std::string ServerTimestampToBytes(int64_t timestamp);
 
 int64_t BytesToServerTimestamp(const std::string& bytes);
 
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase
 
 #endif  // APPS_LEDGER_SRC_CLOUD_PROVIDER_IMPL_TIMESTAMP_CONVERSIONS_H_

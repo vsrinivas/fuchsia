@@ -22,7 +22,7 @@ namespace cloud_sync {
 struct PageSyncContext {
   std::unique_ptr<firebase::Firebase> firebase;
   std::unique_ptr<gcs::CloudStorage> cloud_storage;
-  std::unique_ptr<cloud_provider::CloudProvider> cloud_provider;
+  std::unique_ptr<cloud_provider_firebase::CloudProvider> cloud_provider;
   std::unique_ptr<PageSync> page_sync;
 };
 

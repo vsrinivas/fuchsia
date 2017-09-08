@@ -40,7 +40,7 @@ cloud_sync::UserConfig GetUserConfig(
   user_config.auth_provider = auth_provider;
   auto user_firebase = std::make_unique<firebase::FirebaseImpl>(
       environment->network_service(), user_config.server_id,
-      cloud_provider::GetFirebasePathForUser(user_config.user_id));
+      cloud_provider_firebase::GetFirebasePathForUser(user_config.user_id));
   user_config.cloud_device_set =
       std::make_unique<cloud_provider_firebase::CloudDeviceSetImpl>(
           std::move(user_firebase));

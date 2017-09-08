@@ -10,10 +10,11 @@
 
 namespace cloud_sync {
 
-BatchDownload::BatchDownload(storage::PageStorage* storage,
-                             std::vector<cloud_provider::Record> records,
-                             ftl::Closure on_done,
-                             ftl::Closure on_error)
+BatchDownload::BatchDownload(
+    storage::PageStorage* storage,
+    std::vector<cloud_provider_firebase::Record> records,
+    ftl::Closure on_done,
+    ftl::Closure on_error)
     : storage_(storage),
       records_(std::move(records)),
       on_done_(std::move(on_done)),

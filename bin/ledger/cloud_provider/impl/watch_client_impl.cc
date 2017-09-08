@@ -13,7 +13,7 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_delta.h"
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 
 WatchClientImpl::WatchClientImpl(firebase::Firebase* firebase,
                                  const std::string& firebase_key,
@@ -175,4 +175,4 @@ void WatchClientImpl::HandleError() {
   firebase_->UnWatch(this);
 }
 
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase

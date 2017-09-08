@@ -10,7 +10,7 @@
 #include "apps/ledger/src/storage/public/constants.h"
 #include "lib/ftl/strings/concatenate.h"
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 
 namespace {
 constexpr char kGcsSeparator[] = "%2F";
@@ -64,4 +64,4 @@ std::string GetFirebasePathForPage(ftl::StringView app_path,
       {app_path, kFirebaseSeparator, firebase::EncodeKey(page_id)});
 }
 
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase

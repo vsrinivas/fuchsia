@@ -4,7 +4,7 @@
 
 #include "apps/ledger/src/cloud_provider/public/record.h"
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 
 Record::Record() = default;
 
@@ -20,4 +20,4 @@ Record::Record(Record&& other) = default;
 
 Record& Record::operator=(Record&& other) = default;
 
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase

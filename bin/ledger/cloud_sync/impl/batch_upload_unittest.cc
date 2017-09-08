@@ -145,23 +145,24 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   std::vector<std::unique_ptr<const storage::Commit>> unsynced_commits;
 };
 
-// Fake implementation of cloud_provider::CloudProvider. Injects the returned
-// status for the upload operations, allowing the test to make them fail.
-// Registers the data uploaded by BatchUpload.
-class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
+// Fake implementation of cloud_provider_firebase::CloudProvider. Injects the
+// returned status for the upload operations, allowing the test to make them
+// fail. Registers the data uploaded by BatchUpload.
+class TestCloudProvider
+    : public cloud_provider_firebase::test::CloudProviderEmptyImpl {
  public:
   explicit TestCloudProvider(mtl::MessageLoop* message_loop)
       : message_loop_(message_loop) {}
 
   ~TestCloudProvider() override = default;
 
-  void AddCommits(
-      const std::string& auth_token,
-      std::vector<cloud_provider::Commit> commits,
-      const std::function<void(cloud_provider::Status)>& callback) override {
+  void AddCommits(const std::string& auth_token,
+                  std::vector<cloud_provider_firebase::Commit> commits,
+                  const std::function<void(cloud_provider_firebase::Status)>&
+                      callback) override {
     add_commits_calls++;
     received_commit_tokens.push_back(auth_token);
-    if (commit_status_to_return == cloud_provider::Status::OK) {
+    if (commit_status_to_return == cloud_provider_firebase::Status::OK) {
       std::move(commits.begin(), commits.end(),
                 std::back_inserter(received_commits));
     }
@@ -171,9 +172,9 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
 
   void AddObject(
       const std::string& auth_token,
-      cloud_provider::ObjectIdView object_id,
+      cloud_provider_firebase::ObjectIdView object_id,
       mx::vmo data,
-      std::function<void(cloud_provider::Status)> callback) override {
+      std::function<void(cloud_provider_firebase::Status)> callback) override {
     add_object_calls++;
     received_object_tokens.push_back(auth_token);
     std::string received_data;
@@ -191,7 +192,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
     }
 
     if (reset_object_status_after_call) {
-      object_status_to_return = cloud_provider::Status::OK;
+      object_status_to_return = cloud_provider_firebase::Status::OK;
     }
   }
 
@@ -204,15 +205,17 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
 
   bool delay_add_object_callbacks = false;
   std::vector<ftl::Closure> pending_add_object_callbacks;
-  cloud_provider::Status object_status_to_return = cloud_provider::Status::OK;
+  cloud_provider_firebase::Status object_status_to_return =
+      cloud_provider_firebase::Status::OK;
   bool reset_object_status_after_call = false;
-  cloud_provider::Status commit_status_to_return = cloud_provider::Status::OK;
+  cloud_provider_firebase::Status commit_status_to_return =
+      cloud_provider_firebase::Status::OK;
   unsigned int add_object_calls = 0u;
   unsigned int add_commits_calls = 0u;
   std::vector<std::string> received_commit_tokens;
-  std::vector<cloud_provider::Commit> received_commits;
+  std::vector<cloud_provider_firebase::Commit> received_commits;
   std::vector<std::string> received_object_tokens;
-  std::map<cloud_provider::ObjectId, std::string> received_objects;
+  std::map<cloud_provider_firebase::ObjectId, std::string> received_objects;
 
  private:
   mtl::MessageLoop* message_loop_;
@@ -433,7 +436,7 @@ TEST_F(BatchUploadTest, FailedObjectUpload) {
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
   cloud_provider_.object_status_to_return =
-      cloud_provider::Status::NETWORK_ERROR;
+      cloud_provider_firebase::Status::NETWORK_ERROR;
   batch_upload->Start();
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(0u, done_calls_);
@@ -460,7 +463,7 @@ TEST_F(BatchUploadTest, FailedCommitUpload) {
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
   cloud_provider_.commit_status_to_return =
-      cloud_provider::Status::NETWORK_ERROR;
+      cloud_provider_firebase::Status::NETWORK_ERROR;
   batch_upload->Start();
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(0u, done_calls_);
@@ -492,7 +495,7 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
   cloud_provider_.object_status_to_return =
-      cloud_provider::Status::NETWORK_ERROR;
+      cloud_provider_firebase::Status::NETWORK_ERROR;
   batch_upload->Start();
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(0u, done_calls_);
@@ -507,7 +510,7 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
       std::make_unique<TestObject>("obj_id1", "obj_data1");
   storage_.unsynced_objects_to_return["obj_id2"] =
       std::make_unique<TestObject>("obj_id2", "obj_data2");
-  cloud_provider_.object_status_to_return = cloud_provider::Status::OK;
+  cloud_provider_.object_status_to_return = cloud_provider_firebase::Status::OK;
   batch_upload->Retry();
   ASSERT_FALSE(RunLoopWithTimeout());
 
@@ -543,7 +546,7 @@ TEST_F(BatchUploadTest, ErrorOneOfMultipleObject) {
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
   cloud_provider_.object_status_to_return =
-      cloud_provider::Status::NETWORK_ERROR;
+      cloud_provider_firebase::Status::NETWORK_ERROR;
   cloud_provider_.reset_object_status_after_call = true;
   batch_upload->Start();
   ASSERT_FALSE(RunLoopWithTimeout());
@@ -600,7 +603,7 @@ TEST_F(BatchUploadTest, DoNotUploadSyncedCommitsOnRetry) {
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
   cloud_provider_.commit_status_to_return =
-      cloud_provider::Status::NETWORK_ERROR;
+      cloud_provider_firebase::Status::NETWORK_ERROR;
 
   batch_upload->Start();
   ASSERT_FALSE(RunLoopWithTimeout());
@@ -616,7 +619,7 @@ TEST_F(BatchUploadTest, DoNotUploadSyncedCommitsOnRetry) {
   EXPECT_EQ(0u, storage_.unsynced_commits.size());
 
   // Retry
-  cloud_provider_.commit_status_to_return = cloud_provider::Status::OK;
+  cloud_provider_.commit_status_to_return = cloud_provider_firebase::Status::OK;
   batch_upload->Retry();
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1u, done_calls_);

@@ -4,7 +4,7 @@
 
 #include "apps/ledger/src/cloud_provider/public/types.h"
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 
 ftl::StringView StatusToString(Status status) {
   switch (status) {
@@ -63,4 +63,4 @@ Status ConvertFirebaseStatus(firebase::Status firebase_status) {
   }
 }
 
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase

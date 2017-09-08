@@ -13,7 +13,7 @@
 
 #include <rapidjson/document.h>
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 
 // These methods encode and decode commits specifically for storing in Firebase
 // Realtime Database.
@@ -39,6 +39,6 @@ bool DecodeCommitFromValue(const rapidjson::Value& value,
 bool DecodeMultipleCommitsFromValue(const rapidjson::Value& value,
                                     std::vector<Record>* output_records);
 
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase
 
 #endif  // APPS_LEDGER_SRC_CLOUD_PROVIDER_IMPL_ENCODING_H_

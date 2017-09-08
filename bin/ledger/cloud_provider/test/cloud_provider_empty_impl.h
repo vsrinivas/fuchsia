@@ -13,7 +13,7 @@
 #include "mx/socket.h"
 #include "mx/vmo.h"
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 namespace test {
 
 // Empty implementation of CloudProvider.  All methods do nothing and return
@@ -51,6 +51,6 @@ class CloudProviderEmptyImpl : public CloudProvider {
 };
 
 }  // namespace test
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase
 
 #endif  // APPS_LEDGER_SRC_CLOUD_PROVIDER_TEST_CLOUD_PROVIDER_EMPTY_IMPL_H_

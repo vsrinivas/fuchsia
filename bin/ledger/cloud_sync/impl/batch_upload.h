@@ -42,7 +42,7 @@ namespace cloud_sync {
 class BatchUpload {
  public:
   BatchUpload(storage::PageStorage* storage,
-              cloud_provider::CloudProvider* cloud_provider,
+              cloud_provider_firebase::CloudProvider* cloud_provider,
               auth_provider::AuthProvider* auth_provider,
               std::vector<std::unique_ptr<const storage::Commit>> commits,
               ftl::Closure on_done,
@@ -75,7 +75,7 @@ class BatchUpload {
   void RefreshAuthToken(ftl::Closure on_refreshed);
 
   storage::PageStorage* const storage_;
-  cloud_provider::CloudProvider* const cloud_provider_;
+  cloud_provider_firebase::CloudProvider* const cloud_provider_;
   auth_provider::AuthProvider* const auth_provider_;
   std::vector<std::unique_ptr<const storage::Commit>> commits_;
   ftl::Closure on_done_;

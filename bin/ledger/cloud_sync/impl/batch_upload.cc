@@ -19,7 +19,7 @@ namespace cloud_sync {
 
 BatchUpload::BatchUpload(
     storage::PageStorage* storage,
-    cloud_provider::CloudProvider* cloud_provider,
+    cloud_provider_firebase::CloudProvider* cloud_provider,
     auth_provider::AuthProvider* auth_provider,
     std::vector<std::unique_ptr<const storage::Commit>> commits,
     ftl::Closure on_done,
@@ -103,45 +103,45 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
   FTL_DCHECK(status == storage::Status::OK);
 
   storage::ObjectId id = object->GetId();
-  cloud_provider_->AddObject(
-      auth_token_, object->GetId(), std::move(data),
-      [ this, id = std::move(id) ](cloud_provider::Status status) mutable {
-        FTL_DCHECK(current_uploads_ > 0);
-        current_uploads_--;
+  cloud_provider_->AddObject(auth_token_, object->GetId(), std::move(data), [
+    this, id = std::move(id)
+  ](cloud_provider_firebase::Status status) mutable {
+    FTL_DCHECK(current_uploads_ > 0);
+    current_uploads_--;
 
-        if (status != cloud_provider::Status::OK) {
-          errored_ = true;
-          // Re-enqueue the object for another upload attempt.
-          remaining_object_ids_.push(std::move(id));
+    if (status != cloud_provider_firebase::Status::OK) {
+      errored_ = true;
+      // Re-enqueue the object for another upload attempt.
+      remaining_object_ids_.push(std::move(id));
 
-          if (current_uploads_ == 0u) {
-            on_error_();
-          }
-          return;
-        }
+      if (current_uploads_ == 0u) {
+        on_error_();
+      }
+      return;
+    }
 
-        // Uploading the object succeeded.
-        storage_->MarkPieceSynced(id, [this](storage::Status status) {
-          FTL_DCHECK(status == storage::Status::OK);
+    // Uploading the object succeeded.
+    storage_->MarkPieceSynced(id, [this](storage::Status status) {
+      FTL_DCHECK(status == storage::Status::OK);
 
-          // Notify the user about the error once all pending uploads of the
-          // recent retry complete.
-          if (errored_ && current_uploads_ == 0u) {
-            on_error_();
-            return;
-          }
+      // Notify the user about the error once all pending uploads of the
+      // recent retry complete.
+      if (errored_ && current_uploads_ == 0u) {
+        on_error_();
+        return;
+      }
 
-          if (current_uploads_ == 0 && remaining_object_ids_.empty()) {
-            // All the referenced objects are uploaded, upload the commits.
-            FilterAndUploadCommits();
-            return;
-          }
+      if (current_uploads_ == 0 && remaining_object_ids_.empty()) {
+        // All the referenced objects are uploaded, upload the commits.
+        FilterAndUploadCommits();
+        return;
+      }
 
-          if (!errored_ && !remaining_object_ids_.empty()) {
-            UploadNextObject();
-          }
-        });
-      });
+      if (!errored_ && !remaining_object_ids_.empty()) {
+        UploadNextObject();
+      }
+    });
+  });
 }
 
 void BatchUpload::FilterAndUploadCommits() {
@@ -175,34 +175,34 @@ void BatchUpload::FilterAndUploadCommits() {
 
 void BatchUpload::UploadCommits() {
   FTL_DCHECK(!errored_);
-  std::vector<cloud_provider::Commit> commits;
+  std::vector<cloud_provider_firebase::Commit> commits;
   std::vector<storage::CommitId> ids;
   for (auto& storage_commit : commits_) {
     storage::CommitId id = storage_commit->GetId();
-    cloud_provider::Commit commit(id,
-                                  storage_commit->GetStorageBytes().ToString());
+    cloud_provider_firebase::Commit commit(
+        id, storage_commit->GetStorageBytes().ToString());
     commits.push_back(std::move(commit));
     ids.push_back(std::move(id));
   }
-  cloud_provider_->AddCommits(
-      auth_token_, std::move(commits),
-      [ this, commit_ids = std::move(ids) ](cloud_provider::Status status) {
-        // UploadCommit() is called as a last step of a so-far-successful upload
-        // attempt, so we couldn't have failed before.
-        FTL_DCHECK(!errored_);
-        if (status != cloud_provider::Status::OK) {
-          errored_ = true;
-          on_error_();
-          return;
-        }
-        for (auto& id : commit_ids) {
-          auto ret = storage_->MarkCommitSynced(id);
-          FTL_DCHECK(ret == storage::Status::OK);
-        }
-        // This object can be deleted in the on_done_() callback, don't do
-        // anything after the call.
-        on_done_();
-      });
+  cloud_provider_->AddCommits(auth_token_, std::move(commits), [
+    this, commit_ids = std::move(ids)
+  ](cloud_provider_firebase::Status status) {
+    // UploadCommit() is called as a last step of a so-far-successful upload
+    // attempt, so we couldn't have failed before.
+    FTL_DCHECK(!errored_);
+    if (status != cloud_provider_firebase::Status::OK) {
+      errored_ = true;
+      on_error_();
+      return;
+    }
+    for (auto& id : commit_ids) {
+      auto ret = storage_->MarkCommitSynced(id);
+      FTL_DCHECK(ret == storage::Status::OK);
+    }
+    // This object can be deleted in the on_done_() callback, don't do
+    // anything after the call.
+    on_done_();
+  });
 }
 
 void BatchUpload::RefreshAuthToken(ftl::Closure on_refreshed) {

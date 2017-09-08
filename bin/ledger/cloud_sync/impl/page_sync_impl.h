@@ -55,11 +55,11 @@ namespace cloud_sync {
 class PageSyncImpl : public PageSync,
                      public storage::CommitWatcher,
                      public storage::PageSyncDelegate,
-                     public cloud_provider::CommitWatcher {
+                     public cloud_provider_firebase::CommitWatcher {
  public:
   PageSyncImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                storage::PageStorage* storage,
-               cloud_provider::CloudProvider* cloud_provider,
+               cloud_provider_firebase::CloudProvider* cloud_provider,
                auth_provider::AuthProvider* auth_provider,
                std::unique_ptr<backoff::Backoff> backoff,
                ftl::Closure on_error,
@@ -97,8 +97,9 @@ class PageSyncImpl : public PageSync,
                                     uint64_t size,
                                     mx::socket data)> callback) override;
 
-  // cloud_provider::CommitWatcher:
-  void OnRemoteCommits(std::vector<cloud_provider::Record> records) override;
+  // cloud_provider_firebase::CommitWatcher:
+  void OnRemoteCommits(
+      std::vector<cloud_provider_firebase::Record> records) override;
 
   void OnConnectionError() override;
 
@@ -116,7 +117,7 @@ class PageSyncImpl : public PageSync,
   void StartUpload();
 
   // Downloads the given batch of commits.
-  void DownloadBatch(std::vector<cloud_provider::Record> records,
+  void DownloadBatch(std::vector<cloud_provider_firebase::Record> records,
                      ftl::Closure on_done);
 
   void SetRemoteWatcher(bool is_retry);
@@ -152,7 +153,7 @@ class PageSyncImpl : public PageSync,
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   storage::PageStorage* const storage_;
-  cloud_provider::CloudProvider* const cloud_provider_;
+  cloud_provider_firebase::CloudProvider* const cloud_provider_;
   auth_provider::AuthProvider* const auth_provider_;
   const std::unique_ptr<backoff::Backoff> backoff_;
   const ftl::Closure on_error_;
@@ -182,7 +183,7 @@ class PageSyncImpl : public PageSync,
   // The current batch of remote commits being downloaded.
   std::unique_ptr<BatchDownload> batch_download_;
   // Pending remote commits to download.
-  std::vector<cloud_provider::Record> commits_to_download_;
+  std::vector<cloud_provider_firebase::Record> commits_to_download_;
   // Called on destruction.
   std::function<void()> on_delete_;
 

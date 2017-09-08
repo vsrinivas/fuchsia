@@ -18,7 +18,7 @@
 #include "mx/socket.h"
 #include "mx/vmo.h"
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 
 class CloudProviderImpl : public CloudProvider {
  public:
@@ -66,6 +66,6 @@ class CloudProviderImpl : public CloudProvider {
   std::map<CommitWatcher*, std::unique_ptr<WatchClientImpl>> watchers_;
 };
 
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase
 
 #endif  // APPS_LEDGER_SRC_CLOUD_PROVIDER_IMPL_CLOUD_PROVIDER_IMPL_H_

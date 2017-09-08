@@ -8,7 +8,7 @@
 #include "apps/ledger/src/cloud_provider/public/commit.h"
 #include "lib/ftl/macros.h"
 
-namespace cloud_provider {
+namespace cloud_provider_firebase {
 
 // Represents a commit received from the cloud, along with its server-side
 // timestamp and batch position.
@@ -30,6 +30,6 @@ struct Record {
   FTL_DISALLOW_COPY_AND_ASSIGN(Record);
 };
 
-}  // namespace cloud_provider
+}  // namespace cloud_provider_firebase
 
 #endif  // APPS_LEDGER_SRC_CLOUD_PROVIDER_PUBLIC_RECORD_H_

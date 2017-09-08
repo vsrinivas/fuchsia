@@ -75,8 +75,9 @@ class BatchDownloadTest : public test::TestWithMessageLoop {
 TEST_F(BatchDownloadTest, AddCommit) {
   int done_calls = 0;
   int error_calls = 0;
-  std::vector<cloud_provider::Record> records;
-  records.emplace_back(cloud_provider::Commit("id1", "content1"), "42");
+  std::vector<cloud_provider_firebase::Record> records;
+  records.emplace_back(cloud_provider_firebase::Commit("id1", "content1"),
+                       "42");
   BatchDownload batch_download(&storage_, std::move(records),
                                [this, &done_calls] {
                                  done_calls++;
@@ -96,9 +97,11 @@ TEST_F(BatchDownloadTest, AddCommit) {
 TEST_F(BatchDownloadTest, AddMultipleCommits) {
   int done_calls = 0;
   int error_calls = 0;
-  std::vector<cloud_provider::Record> records;
-  records.emplace_back(cloud_provider::Commit("id1", "content1"), "42");
-  records.emplace_back(cloud_provider::Commit("id2", "content2"), "43");
+  std::vector<cloud_provider_firebase::Record> records;
+  records.emplace_back(cloud_provider_firebase::Commit("id1", "content1"),
+                       "42");
+  records.emplace_back(cloud_provider_firebase::Commit("id2", "content2"),
+                       "43");
   BatchDownload batch_download(&storage_, std::move(records),
                                [this, &done_calls] {
                                  done_calls++;
@@ -119,8 +122,9 @@ TEST_F(BatchDownloadTest, AddMultipleCommits) {
 TEST_F(BatchDownloadTest, FailToAddCommit) {
   int done_calls = 0;
   int error_calls = 0;
-  std::vector<cloud_provider::Record> records;
-  records.emplace_back(cloud_provider::Commit("id1", "content1"), "42");
+  std::vector<cloud_provider_firebase::Record> records;
+  records.emplace_back(cloud_provider_firebase::Commit("id1", "content1"),
+                       "42");
   BatchDownload batch_download(&storage_, std::move(records),
                                [&done_calls] { done_calls++; },
                                [this, &error_calls] {
