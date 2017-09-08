@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 import 'dart:fuchsia';
+import 'dart:zircon';
 
 import 'package:lib.fidl.dart/bindings.dart';
-import 'package:lib.fidl.dart/core.dart' as core;
-
 import 'package:application.services/application_environment.fidl.dart';
 import 'package:application.services/application_launcher.fidl.dart';
 import 'package:application.services/service_provider.fidl.dart';
@@ -23,19 +22,19 @@ class ApplicationContext {
   factory ApplicationContext.fromStartupInfo() {
     final ApplicationContext context = new ApplicationContext();
 
-    final core.Handle environmentHandle = MxStartupInfo.takeEnvironment();
+    final Handle environmentHandle = MxStartupInfo.takeEnvironment();
     if (environmentHandle != null) {
       context.environment
         ..ctrl.bind(new InterfaceHandle<ApplicationEnvironment>(
-            new core.Channel(environmentHandle), 0))
+            new Channel(environmentHandle), 0))
         ..getApplicationLauncher(context.launcher.ctrl.request())
         ..getServices(context.environmentServices.ctrl.request());
     }
 
-    final core.Handle outgoingServicesHandle = MxStartupInfo.takeOutgoingServices();
+    final Handle outgoingServicesHandle = MxStartupInfo.takeOutgoingServices();
     if (outgoingServicesHandle != null) {
       context.outgoingServices.bind(
-          new InterfaceRequest<ServiceProvider>(new core.Channel(outgoingServicesHandle)));
+          new InterfaceRequest<ServiceProvider>(new Channel(outgoingServicesHandle)));
     }
 
     return context;
@@ -59,9 +58,9 @@ void connectToService(
 
 InterfaceHandle connectToServiceByName(
     ServiceProvider serviceProvider, String serviceName) {
-  final core.ChannelPair pair = new core.ChannelPair();
-  serviceProvider.connectToService(serviceName, pair.channel0);
-  return new InterfaceHandle(pair.channel1, 0);
+  final ChannelPair pair = new ChannelPair();
+  serviceProvider.connectToService(serviceName, pair.first);
+  return new InterfaceHandle(pair.second, 0);
 }
 
 typedef void ServiceConnector<T>(InterfaceRequest<T> request);
@@ -89,7 +88,7 @@ class ServiceProviderImpl extends ServiceProvider {
   }
 
   @override
-  void connectToService(String serviceName, core.Channel channel) {
+  void connectToService(String serviceName, Channel channel) {
     final ServiceConnector connector = _connectors[serviceName];
     if (connector != null) {
       connector(new InterfaceRequest(channel));
