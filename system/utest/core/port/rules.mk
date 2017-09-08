@@ -13,7 +13,7 @@ MODULE_USERTEST_GROUP := core
 MODULE_SRCS += \
     $(LOCAL_DIR)/ports.cpp \
 
-MODULE_NAME := port2-test
+MODULE_NAME := port-test
 
 MODULE_LIBS := \
     system/ulib/unittest system/ulib/mxio system/ulib/magenta system/ulib/c
