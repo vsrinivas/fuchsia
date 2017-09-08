@@ -186,8 +186,8 @@ abstract class Binding<T> {
     ChannelPair pair = new ChannelPair();
     if (pair.status != ZX.OK) return null;
     _impl = impl;
-    _reader.bind(pair.passFirst());
-    return new InterfaceHandle<T>(pair.passSecond(), version);
+    _reader.bind(pair.first);
+    return new InterfaceHandle<T>(pair.second, version);
   }
 
   /// Binds the given implementation to the given interface request.
@@ -350,8 +350,8 @@ class ProxyController<T> {
     ChannelPair pair = new ChannelPair();
     assert(pair.status == ZX.OK);
     _version = version;
-    _reader.bind(pair.passFirst());
-    return new InterfaceRequest<T>(pair.passSecond());
+    _reader.bind(pair.first);
+    return new InterfaceRequest<T>(pair.second);
   }
 
   /// Binds the proxy to the given interface handle.
