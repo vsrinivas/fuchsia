@@ -55,11 +55,10 @@ constexpr size_t kHighHandleCount = (kMaxHandleCount * 7) / 8;
 // The handle arena and its mutex. It also guards Dispatcher::handle_count_.
 static fbl::Mutex handle_mutex;
 static fbl::Arena TA_GUARDED(handle_mutex) handle_arena;
-static size_t outstanding_handles TA_GUARDED(handle_mutex) = 0u;
 
 size_t internal::OutstandingHandles() {
     AutoLock lock(&handle_mutex);
-    return outstanding_handles;
+    return handle_arena.DiagnosticCount();
 }
 
 // All jobs and processes are rooted at the |root_job|.
@@ -158,14 +157,14 @@ Handle* MakeHandle(fbl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights) {
     {
         AutoLock lock(&handle_mutex);
         addr = handle_arena.Alloc();
+        const size_t outstanding_handles = handle_arena.DiagnosticCount();
         if (addr == nullptr) {
-            const auto oh = outstanding_handles;
             lock.release();
             printf("WARNING: Could not allocate new handle (%zu outstanding)\n",
-                   oh);
+                   outstanding_handles);
             return nullptr;
         }
-        if (++outstanding_handles > kHighHandleCount)
+        if (outstanding_handles > kHighHandleCount)
             high_handle_count(outstanding_handles);
 
         handle_count = dispatcher->get_handle_count_ptr();
@@ -192,14 +191,14 @@ Handle* DupHandle(Handle* source, mx_rights_t rights, bool is_replace) {
     {
         AutoLock lock(&handle_mutex);
         addr = handle_arena.Alloc();
+        const size_t outstanding_handles = handle_arena.DiagnosticCount();
         if (addr == nullptr) {
-            const auto oh = outstanding_handles;
             lock.release();
-            printf(
-                "WARNING: Could not allocate duplicate handle (%zu outstanding)\n", oh);
+            printf("WARNING: Could not allocate duplicate handle (%zu outstanding)\n",
+                   outstanding_handles);
             return nullptr;
         }
-        if (++outstanding_handles > kHighHandleCount)
+        if (outstanding_handles > kHighHandleCount)
             high_handle_count(outstanding_handles);
 
         handle_count = dispatcher->get_handle_count_ptr();
@@ -234,7 +233,6 @@ void DeleteHandle(Handle* handle) {
     uint32_t* handle_count;
     {
         AutoLock lock(&handle_mutex);
-        --outstanding_handles;
 
         handle_count = dispatcher->get_handle_count_ptr();
         (*handle_count)--;
