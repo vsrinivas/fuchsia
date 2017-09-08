@@ -4,7 +4,7 @@
 
 import("//garnet/public/lib/fidl/fidl.gni")
 
-fidl("views") {
+fidl("fidl") {
   sources = [
     "view_containers.fidl",
     "view_manager.fidl",

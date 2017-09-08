@@ -495,10 +495,22 @@ def ParseStringAttribute(attribute):
   assert isinstance(attribute, basestring)
   return attribute
 
+# See //build/dart/label_to_package_name.py
+_LAYER_PREFIX = [
+  "garnet/public/",
+  "peridot/public/",
+]
+
+def _remove_layer(label):
+  for prefix in _LAYER_PREFIX:
+    if label.startswith(prefix):
+      return label[len(prefix):]
+  return label
+
 def GetPackage(module):
   if module.path.startswith('/'):
     raise Exception('Uh oh, path %s looks absolute' % module.path)
-  return os.path.dirname(module.path).replace('/', '.')
+  return os.path.dirname(_remove_layer(module.path)).replace('/', '.')
 
 def GetImportUri(module):
   return os.path.join(GetPackage(module), module.name)

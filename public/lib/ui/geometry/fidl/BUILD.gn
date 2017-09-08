@@ -4,7 +4,7 @@
 
 import("//garnet/public/lib/fidl/fidl.gni")
 
-fidl("geometry") {
+fidl("fidl") {
   sources = [
     "geometry.fidl",
   ]

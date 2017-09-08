@@ -4,7 +4,7 @@
 
 import("//garnet/public/lib/fidl/fidl.gni")
 
-fidl("images") {
+fidl("fidl") {
   sources = [
     "image_info.fidl",
     "image_pipe.fidl",

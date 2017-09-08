@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//packages/package.gni")
-import("config.gni")
+import("//garnet/public/lib/ui/config.gni")
 
 config("vulkan_config") {
   if (mozart_use_vulkan) {
@@ -11,26 +11,14 @@ config("vulkan_config") {
   }
 }
 
-group("all") {
-  public_deps = [
-    "examples",
-    "lib/input",
-    "lib/scenic",
-    "lib/skia",
-    "lib/view_framework",
-    "services",
-    "src",
-  ]
-}
-
 package("mozart_tests") {
   testonly = true
 
   deps = [
-    "services/geometry/cpp:apptests",
-    "src/input_reader/tests",
-    "src/scene_manager/tests",
-    "src/view_manager/tests",
+    "//garnet/public/lib/ui/geometry/cpp:apptests",
+    "input_reader/tests",
+    "scene_manager/tests",
+    "view_manager/tests",
   ]
 
   tests = [
@@ -56,7 +44,7 @@ package("root_presenter") {
   archive = true
 
   deps = [
-    "src/root_presenter",
+    "root_presenter",
   ]
 
   binaries = [ {
@@ -65,12 +53,12 @@ package("root_presenter") {
       } ]
 
   resources = [ {
-        path = rebase_path("src/root_presenter/resources/cursor32.png")
+        path = rebase_path("root_presenter/resources/cursor32.png")
         dest = "cursor32.png"
       } ]
 
   meta = [ {
-        path = rebase_path("src/root_presenter/meta/sandbox")
+        path = rebase_path("root_presenter/meta/sandbox")
         dest = "sandbox"
       } ]
 }
@@ -79,7 +67,7 @@ package("ime_service") {
   archive = true
 
   deps = [
-    "src/ime",
+    "ime",
   ]
 
   binaries = [ {
@@ -92,7 +80,7 @@ package("view_manager") {
   archive = true
 
   deps = [
-    "src/view_manager",
+    "view_manager",
   ]
 
   binaries = [ {
@@ -105,7 +93,7 @@ package("jank_view") {
   archive = true
 
   deps = [
-    "examples/jank",
+    "//garnet/examples/ui/jank",
   ]
 
   binaries = [ {
@@ -118,7 +106,7 @@ package("noodles_view") {
   archive = true
 
   deps = [
-    "examples/noodles",
+    "//garnet/examples/ui//noodles",
   ]
 
   binaries = [ {
@@ -131,7 +119,7 @@ package("paint_view") {
   archive = true
 
   deps = [
-    "examples/paint",
+    "//garnet/examples/ui//paint",
   ]
 
   binaries = [ {
@@ -144,7 +132,7 @@ package("shapes_view") {
   archive = true
 
   deps = [
-    "examples/shapes",
+    "//garnet/examples/ui//shapes",
   ]
 
   binaries = [ {
@@ -157,7 +145,7 @@ package("spinning_square_view") {
   archive = true
 
   deps = [
-    "examples/spinning_square",
+    "//garnet/examples/ui//spinning_square",
   ]
 
   binaries = [ {
@@ -170,7 +158,7 @@ package("tile_view") {
   archive = true
 
   deps = [
-    "examples/tile",
+    "//garnet/examples/ui//tile",
   ]
 
   binaries = [ {
@@ -183,12 +171,12 @@ package("basic_wm") {
   app = true
 
   deps = [
-    "examples/basic_wm",
+    "//garnet/examples/ui//basic_wm",
   ]
 
   binaries = [ {
         name = "basic_wm"
-        source = "gen/apps/mozart/examples/basic_wm/basic_wm.flx"
+        source = "gen/garnet/examples/ui/basic_wm/basic_wm.flx"
       } ]
 }
 
@@ -196,12 +184,12 @@ package("hello_material") {
   app = true
 
   deps = [
-    "examples/hello_material",
+    "//garnet/examples/ui//hello_material",
   ]
 
   binaries = [ {
         name = "hello_material"
-        source = "gen/apps/mozart/examples/hello_material/hello_material.flx"
+        source = "gen/garnet/examples/ui/hello_material/hello_material.flx"
       } ]
 }
 
@@ -209,8 +197,8 @@ package("shadertoy") {
   archive = true
 
   deps = [
-    "examples/shadertoy/client",
-    "examples/shadertoy/service",
+    "//garnet/examples/ui//shadertoy/client",
+    "//garnet/examples/ui//shadertoy/service",
   ]
 
   binaries = [
@@ -229,8 +217,8 @@ package("sketchy") {
   archive = true
 
   deps = [
-    "examples/sketchy",
-    "src/sketchy",
+    "//garnet/examples/ui/sketchy",
+    "sketchy",
   ]
 
   binaries = [
@@ -249,7 +237,15 @@ package("mozart") {
   app = true
 
   deps = [
-    ":all",
+    "scene_manager",
+    "input",
+    "launch",
+    "print_input",
+    "//garnet/examples/ui/hello_scene_manager",
+    "//garnet/examples/ui/shadertoy/client",
+    "//garnet/examples/ui/shadertoy/service",
+    "//garnet/examples/ui/sketchy",
+    "sketchy",
   ]
 
   binaries = [
