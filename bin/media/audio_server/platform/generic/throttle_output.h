@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/media/src/audio_server/platform/generic/standard_output_base.h"
+#include "garnet/bin/media/audio_server/platform/generic/standard_output_base.h"
 
 namespace media {
 namespace audio {

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/audio_server/audio_output.h"
+#include "garnet/bin/media/audio_server/audio_output.h"
 
-#include "apps/media/src/audio_server/audio_output_manager.h"
-#include "apps/media/src/audio_server/audio_renderer_to_output_link.h"
+#include "garnet/bin/media/audio_server/audio_output_manager.h"
+#include "garnet/bin/media/audio_server/audio_renderer_to_output_link.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/tools/flog_viewer/handlers/media_packet_producer.h"
+#include "garent/bin/flog_viewer/handlers/media_packet_producer.h"
 
 #include <iostream>
 
-#include "apps/media/services/logs/media_packet_producer_channel.fidl.h"
-#include "apps/media/tools/flog_viewer/flog_viewer.h"
-#include "apps/media/tools/flog_viewer/handlers/media_formatting.h"
+#include "lib/media/fidl/logs/media_packet_producer_channel.fidl.h"
+#include "garent/bin/flog_viewer/flog_viewer.h"
+#include "garent/bin/flog_viewer/handlers/media_formatting.h"
 
 namespace flog {
 namespace handlers {

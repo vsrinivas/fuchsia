@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/demux/sparse_byte_buffer.h"
+#include "garnet/bin/media/demux/sparse_byte_buffer.h"
 
 #include "lib/ftl/logging.h"
 

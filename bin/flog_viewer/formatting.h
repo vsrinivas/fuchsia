@@ -6,9 +6,9 @@
 
 #include <ostream>
 
-#include "apps/media/services/flog/flog.fidl.h"
-#include "apps/media/tools/flog_viewer/binding.h"
-#include "apps/media/tools/flog_viewer/channel.h"
+#include "lib/media/fidl/flog/flog.fidl.h"
+#include "garent/bin/flog_viewer/binding.h"
+#include "garent/bin/flog_viewer/channel.h"
 
 //
 // This file declares a bunch of << operator overloads for formatting stuff.

@@ -8,10 +8,10 @@
 #include <queue>
 #include <vector>
 
-#include "apps/media/lib/timeline/timeline_function.h"
-#include "apps/media/lib/transport/media_packet_consumer_base.h"
-#include "apps/media/services/media_renderer.fidl.h"
-#include "apps/media/services/media_transport.fidl.h"
+#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/transport/media_packet_consumer_base.h"
+#include "lib/media/fidl/media_renderer.fidl.h"
+#include "lib/media/fidl/media_transport.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace media {

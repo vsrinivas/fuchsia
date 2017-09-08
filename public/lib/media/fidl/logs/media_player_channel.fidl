@@ -4,8 +4,8 @@
 
 module media.logs;
 
-import "apps/media/services/media_types.fidl";
-import "apps/media/services/timelines.fidl";
+import "lib/media/fidl/media_types.fidl";
+import "lib/media/fidl/timelines.fidl";
 
 [ServiceName="media::logs::MediaPlayerChannel"]
 interface MediaPlayerChannel {

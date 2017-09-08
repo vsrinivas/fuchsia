@@ -9,7 +9,7 @@
 #include <string>
 
 #include "application/lib/app/application_context.h"
-#include "apps/media/services/flog/flog.fidl.h"
+#include "lib/media/fidl/flog/flog.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/message.h"
 #include "lib/ftl/logging.h"

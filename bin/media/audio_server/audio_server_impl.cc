@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/audio_server/audio_server_impl.h"
+#include "garnet/bin/media/audio_server/audio_server_impl.h"
 
-#include "apps/media/lib/flog/flog.h"
-#include "apps/media/src/audio_server/audio_output_manager.h"
-#include "apps/media/src/audio_server/audio_renderer_impl.h"
+#include "lib/media/flog/flog.h"
+#include "garnet/bin/media/audio_server/audio_output_manager.h"
+#include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace media {

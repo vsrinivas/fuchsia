@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "apps/media/lib/transport/media_packet_producer_base.h"
-#include "apps/media/services/media_transport.fidl.h"
-#include "apps/media/src/framework/models/active_sink.h"
-#include "apps/media/src/framework/payload_allocator.h"
+#include "lib/media/transport/media_packet_producer_base.h"
+#include "lib/media/fidl/media_transport.fidl.h"
+#include "garnet/bin/media/framework/models/active_sink.h"
+#include "garnet/bin/media/framework/payload_allocator.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/tasks/task_runner.h"
 

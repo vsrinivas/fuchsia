@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "apps/media/lib/flog/flog.h"
-#include "apps/media/lib/timeline/timeline_function.h"
-#include "apps/media/services/logs/media_timeline_control_point_channel.fidl.h"
-#include "apps/media/services/timeline_controller.fidl.h"
-#include "apps/media/src/util/fidl_publisher.h"
+#include "lib/media/flog/flog.h"
+#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/fidl/logs/media_timeline_control_point_channel.fidl.h"
+#include "lib/media/fidl/timeline_controller.fidl.h"
+#include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"

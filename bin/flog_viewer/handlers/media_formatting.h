@@ -6,13 +6,13 @@
 
 #include <vector>
 
-#include "apps/media/lib/timeline/timeline_rate.h"
-#include "apps/media/services/media_result.fidl.h"
-#include "apps/media/services/media_source.fidl.h"
-#include "apps/media/services/media_transport.fidl.h"
-#include "apps/media/services/media_types.fidl.h"
-#include "apps/media/services/timelines.fidl.h"
-#include "apps/media/tools/flog_viewer/formatting.h"
+#include "lib/media/timeline/timeline_rate.h"
+#include "lib/media/fidl/media_result.fidl.h"
+#include "lib/media/fidl/media_source.fidl.h"
+#include "lib/media/fidl/media_transport.fidl.h"
+#include "lib/media/fidl/media_types.fidl.h"
+#include "lib/media/fidl/timelines.fidl.h"
+#include "garent/bin/flog_viewer/formatting.h"
 
 namespace flog {
 namespace handlers {

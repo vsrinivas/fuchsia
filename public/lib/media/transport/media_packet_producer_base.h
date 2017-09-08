@@ -6,11 +6,11 @@
 
 #include <limits>
 
-#include "apps/media/lib/flog/flog.h"
-#include "apps/media/lib/timeline/timeline_rate.h"
-#include "apps/media/lib/transport/shared_buffer_set_allocator.h"
-#include "apps/media/services/logs/media_packet_producer_channel.fidl.h"
-#include "apps/media/services/media_transport.fidl.h"
+#include "lib/media/flog/flog.h"
+#include "lib/media/timeline/timeline_rate.h"
+#include "lib/media/transport/shared_buffer_set_allocator.h"
+#include "lib/media/fidl/logs/media_packet_producer_channel.fidl.h"
+#include "lib/media/fidl/media_transport.fidl.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 #include "lib/ftl/synchronization/thread_checker.h"

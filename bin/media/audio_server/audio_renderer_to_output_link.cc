@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/audio_server/audio_renderer_to_output_link.h"
+#include "garnet/bin/media/audio_server/audio_renderer_to_output_link.h"
 
-#include "apps/media/src/audio_server/audio_output.h"
-#include "apps/media/src/audio_server/audio_renderer_format_info.h"
-#include "apps/media/src/audio_server/audio_renderer_impl.h"
+#include "garnet/bin/media/audio_server/audio_output.h"
+#include "garnet/bin/media/audio_server/audio_renderer_format_info.h"
+#include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "apps/media/src/framework/types/bytes.h"
+#include "garnet/bin/media/framework/types/bytes.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

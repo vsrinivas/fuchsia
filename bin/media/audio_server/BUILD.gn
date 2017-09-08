@@ -25,16 +25,16 @@ executable("audio_server") {
   ]
 
   public_deps = [
-    "//apps/media/lib/flog",
+    "//garnet/public/lib/media/flog",
   ]
 
   deps = [
     "//application/lib/app",
-    "//apps/media/lib/timeline",
-    "//apps/media/lib/transport",
-    "//apps/media/services",
-    "//apps/media/src/audio",
-    "//apps/media/src/util",
+    "//garnet/public/lib/media/timeline",
+    "//garnet/public/lib/media/transport",
+    "//garnet/public/lib/media/fidl",
+    "//garnet/bin/media/audio",
+    "//garnet/bin/media/util",
     "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",

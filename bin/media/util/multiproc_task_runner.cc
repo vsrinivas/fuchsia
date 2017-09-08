@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/util/multiproc_task_runner.h"
+#include "garnet/bin/media/util/multiproc_task_runner.h"
 
 #include <magenta/syscalls/port.h>
 

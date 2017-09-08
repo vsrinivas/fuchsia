@@ -7,7 +7,7 @@
 #include <limits>
 #include <type_traits>
 
-#include "apps/media/src/audio_server/gain.h"
+#include "garnet/bin/media/audio_server/gain.h"
 
 namespace media {
 namespace audio {

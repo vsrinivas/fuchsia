@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/media/src/framework/types/stream_type.h"
-#include "apps/media/src/framework/types/video_stream_type.h"
+#include "garnet/bin/media/framework/types/stream_type.h"
+#include "garnet/bin/media/framework/types/video_stream_type.h"
 extern "C" {
 #include "third_party/ffmpeg/libavformat/avformat.h"
 }

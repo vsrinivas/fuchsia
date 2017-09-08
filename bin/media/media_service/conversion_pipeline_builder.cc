@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/media_service/conversion_pipeline_builder.h"
+#include "garnet/bin/media/media_service/conversion_pipeline_builder.h"
 
-#include "apps/media/src/audio/lpcm_reformatter.h"
-#include "apps/media/src/decode/decoder.h"
-#include "apps/media/src/framework/formatting.h"
+#include "garnet/bin/media/audio/lpcm_reformatter.h"
+#include "garnet/bin/media/decode/decoder.h"
+#include "garnet/bin/media/framework/formatting.h"
 
 namespace media {
 

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/framework/stages/multistream_source_stage.h"
+#include "garnet/bin/media/framework/stages/multistream_source_stage.h"
 
-#include "apps/media/src/framework/stages/util.h"
+#include "garnet/bin/media/framework/stages/util.h"
 
 namespace media {
 

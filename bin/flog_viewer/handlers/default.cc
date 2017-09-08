@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/tools/flog_viewer/handlers/default.h"
+#include "garent/bin/flog_viewer/handlers/default.h"
 
 #include <iomanip>
 #include <iostream>
 
-#include "apps/media/tools/flog_viewer/flog_viewer.h"
-#include "apps/media/tools/flog_viewer/formatting.h"
+#include "garent/bin/flog_viewer/flog_viewer.h"
+#include "garent/bin/flog_viewer/formatting.h"
 
 namespace flog {
 namespace handlers {

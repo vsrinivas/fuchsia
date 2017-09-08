@@ -1,6 +1,6 @@
 # Flutter-based Media Player Example App
 
-This directory contains an application that uses apps/media and Flutter to
+This directory contains an application that uses media and Flutter to
 create a media player.
 
 ## USAGE

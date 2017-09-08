@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include "apps/media/services/media_metadata.fidl.h"
-#include "apps/media/services/media_result.fidl.h"
-#include "apps/media/services/media_types.fidl.h"
-#include "apps/media/src/framework/metadata.h"
-#include "apps/media/src/framework/result.h"
-#include "apps/media/src/framework/types/audio_stream_type.h"
-#include "apps/media/src/framework/types/stream_type.h"
-#include "apps/media/src/framework/types/video_stream_type.h"
+#include "lib/media/fidl/media_metadata.fidl.h"
+#include "lib/media/fidl/media_result.fidl.h"
+#include "lib/media/fidl/media_types.fidl.h"
+#include "garnet/bin/media/framework/metadata.h"
+#include "garnet/bin/media/framework/result.h"
+#include "garnet/bin/media/framework/types/audio_stream_type.h"
+#include "garnet/bin/media/framework/types/stream_type.h"
+#include "garnet/bin/media/framework/types/video_stream_type.h"
 
 namespace media {
 

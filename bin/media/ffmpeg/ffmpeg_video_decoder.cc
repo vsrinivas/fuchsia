@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/ffmpeg/ffmpeg_video_decoder.h"
+#include "garnet/bin/media/ffmpeg/ffmpeg_video_decoder.h"
 
 #include <algorithm>
 
-#include "apps/media/lib/timeline/timeline.h"
-#include "apps/media/lib/timeline/timeline_rate.h"
-#include "apps/media/src/ffmpeg/ffmpeg_formatting.h"
+#include "lib/media/timeline/timeline.h"
+#include "lib/media/timeline/timeline_rate.h"
+#include "garnet/bin/media/ffmpeg/ffmpeg_formatting.h"
 #include "lib/ftl/logging.h"
 extern "C" {
 #include "third_party/ffmpeg/libavutil/imgutils.h"

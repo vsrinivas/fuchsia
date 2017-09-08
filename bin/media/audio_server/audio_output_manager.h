@@ -7,11 +7,11 @@
 #include <fbl/ref_ptr.h>
 #include <set>
 
-#include "apps/media/services/media_result.fidl.h"
-#include "apps/media/services/media_transport.fidl.h"
-#include "apps/media/src/audio_server/audio_output.h"
-#include "apps/media/src/audio_server/audio_plug_detector.h"
-#include "apps/media/src/audio_server/fwd_decls.h"
+#include "lib/media/fidl/media_result.fidl.h"
+#include "lib/media/fidl/media_transport.fidl.h"
+#include "garnet/bin/media/audio_server/audio_output.h"
+#include "garnet/bin/media/audio_server/audio_plug_detector.h"
+#include "garnet/bin/media/audio_server/fwd_decls.h"
 
 namespace media {
 namespace audio {

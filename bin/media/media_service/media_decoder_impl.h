@@ -6,14 +6,14 @@
 
 #include <memory>
 
-#include "apps/media/lib/flog/flog.h"
-#include "apps/media/services/logs/media_type_converter_channel.fidl.h"
-#include "apps/media/services/media_type_converter.fidl.h"
-#include "apps/media/src/decode/decoder.h"
-#include "apps/media/src/fidl/fidl_packet_consumer.h"
-#include "apps/media/src/fidl/fidl_packet_producer.h"
-#include "apps/media/src/framework/graph.h"
-#include "apps/media/src/media_service/media_service_impl.h"
+#include "lib/media/flog/flog.h"
+#include "lib/media/fidl/logs/media_type_converter_channel.fidl.h"
+#include "lib/media/fidl/media_type_converter.fidl.h"
+#include "garnet/bin/media/decode/decoder.h"
+#include "garnet/bin/media/fidl/fidl_packet_consumer.h"
+#include "garnet/bin/media/fidl/fidl_packet_producer.h"
+#include "garnet/bin/media/framework/graph.h"
+#include "garnet/bin/media/media_service/media_service_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace media {

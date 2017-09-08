@@ -1,6 +1,6 @@
 # Audio Player Example App
 
-This directory contains an application that uses apps/media to create an audio
+This directory contains an application that uses media to create an audio
 player.
 
 ## USAGE

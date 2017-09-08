@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/media_service/test/fake_renderer.h"
+#include "garnet/bin/media/media_service/test/fake_renderer.h"
 
 #include <iomanip>
 #include <iostream>
 #include <limits>
 
-#include "apps/media/lib/timeline/fidl_type_conversions.h"
-#include "apps/media/lib/timeline/timeline.h"
+#include "lib/media/timeline/fidl_type_conversions.h"
+#include "lib/media/timeline/timeline.h"
 
 namespace media {
 

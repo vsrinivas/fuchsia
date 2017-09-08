@@ -4,9 +4,9 @@
 
 #include <unordered_map>
 
-#include "apps/media/src/framework/types/video_stream_type.h"
+#include "garnet/bin/media/framework/types/video_stream_type.h"
 
-#include "apps/media/src/util/safe_clone.h"
+#include "garnet/bin/media/util/safe_clone.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

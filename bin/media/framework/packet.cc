@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/framework/packet.h"
+#include "garnet/bin/media/framework/packet.h"
 
-#include "apps/media/src/framework/payload_allocator.h"
+#include "garnet/bin/media/framework/payload_allocator.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

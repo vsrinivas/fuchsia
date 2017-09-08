@@ -8,10 +8,10 @@
 #include <memory>
 #include <vector>
 
-#include "apps/media/services/media_capturer.fidl.h"
-#include "apps/media/src/fidl/fidl_packet_producer.h"
-#include "apps/media/src/media_service/media_service_impl.h"
-#include "apps/media/src/framework/graph.h"
+#include "lib/media/fidl/media_capturer.fidl.h"
+#include "garnet/bin/media/fidl/fidl_packet_producer.h"
+#include "garnet/bin/media/media_service/media_service_impl.h"
+#include "garnet/bin/media/framework/graph.h"
 
 namespace media {
 

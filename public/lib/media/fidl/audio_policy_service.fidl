@@ -4,7 +4,7 @@
 
 module media;
 
-import "apps/media/services/net_media_player.fidl";
+import "lib/media/fidl/net_media_player.fidl";
 
 // Audio policy service definition.
 //

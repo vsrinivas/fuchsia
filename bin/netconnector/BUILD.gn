@@ -78,7 +78,7 @@ executable("netconnector") {
     "//application/lib/app",
     "//application/lib/svc",
     "//application/services",
-    "//apps/media/src/util",
+    "//garnet/bin/media/util",
     "//garnet/public/lib/netconnector/cpp",
     "//garnet/public/lib/netconnector/fidl",
     "//garnet/public/lib/netstack/fidl",

@@ -9,7 +9,7 @@ source_set("audio") {
   ]
 
   deps = [
-    "//apps/media/services",
+    "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/ftl",
   ]
 }

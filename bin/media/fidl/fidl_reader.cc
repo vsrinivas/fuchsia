@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/fidl/fidl_reader.h"
+#include "garnet/bin/media/fidl/fidl_reader.h"
 
 #include <limits>
 #include <string>
 
-#include "apps/media/src/fidl/fidl_type_conversions.h"
+#include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/examples/vu_meter/vu_meter_params.h"
+#include "garnet/examples/media/vu_meter/vu_meter_params.h"
 
 #include "lib/ftl/strings/split_string.h"
 

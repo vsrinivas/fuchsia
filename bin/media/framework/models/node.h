@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/media/src/framework/packet.h"
-#include "apps/media/src/framework/payload_allocator.h"
+#include "garnet/bin/media/framework/packet.h"
+#include "garnet/bin/media/framework/payload_allocator.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/tasks/task_runner.h"
 

@@ -4,7 +4,7 @@
 
 #include <trace-provider/provider.h>
 
-#include "apps/media/src/media_service/media_service_impl.h"
+#include "garnet/bin/media/media_service/media_service_impl.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 int main(int argc, const char** argv) {

@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/ffmpeg/av_codec_context.h"
+#include "garnet/bin/media/ffmpeg/av_codec_context.h"
 
-#include "apps/media/src/ffmpeg/ffmpeg_init.h"
-#include "apps/media/src/ffmpeg/ffmpeg_video_frame_layout.h"
-#include "apps/media/src/framework/types/audio_stream_type.h"
-#include "apps/media/src/framework/types/subpicture_stream_type.h"
-#include "apps/media/src/framework/types/text_stream_type.h"
-#include "apps/media/src/framework/types/video_stream_type.h"
+#include "garnet/bin/media/ffmpeg/ffmpeg_init.h"
+#include "garnet/bin/media/ffmpeg/ffmpeg_video_frame_layout.h"
+#include "garnet/bin/media/framework/types/audio_stream_type.h"
+#include "garnet/bin/media/framework/types/subpicture_stream_type.h"
+#include "garnet/bin/media/framework/types/text_stream_type.h"
+#include "garnet/bin/media/framework/types/video_stream_type.h"
 #include "lib/ftl/logging.h"
 extern "C" {
 #include "third_party/ffmpeg/libavformat/avformat.h"

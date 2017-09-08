@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/ffmpeg/ffmpeg_video_frame_layout.h"
+#include "garnet/bin/media/ffmpeg/ffmpeg_video_frame_layout.h"
 
-#include "apps/media/src/ffmpeg/av_codec_context.h"
+#include "garnet/bin/media/ffmpeg/av_codec_context.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

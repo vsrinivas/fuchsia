@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/tools/flog_viewer/formatting.h"
+#include "garent/bin/flog_viewer/formatting.h"
 
 #include <iomanip>
 #include <iostream>
 
-#include "apps/media/services/flog/flog.fidl.h"
+#include "lib/media/fidl/flog/flog.fidl.h"
 
 namespace flog {
 namespace {

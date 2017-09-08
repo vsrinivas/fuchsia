@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/util/callback_joiner.h"
+#include "garnet/bin/media/util/callback_joiner.h"
 
 namespace media {
 

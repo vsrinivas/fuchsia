@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/ffmpeg/ffmpeg_audio_decoder.h"
+#include "garnet/bin/media/ffmpeg/ffmpeg_audio_decoder.h"
 
-#include "apps/media/lib/timeline/timeline.h"
-#include "apps/media/lib/timeline/timeline_rate.h"
+#include "lib/media/timeline/timeline.h"
+#include "lib/media/timeline/timeline_rate.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

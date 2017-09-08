@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/media_service/video_renderer_impl.h"
+#include "garnet/bin/media/media_service/video_renderer_impl.h"
 
 #include <trace/event.h>
 
-#include "apps/media/lib/timeline/timeline.h"
+#include "lib/media/timeline/timeline.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

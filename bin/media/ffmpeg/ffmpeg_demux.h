@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "apps/media/src/demux/demux.h"
+#include "garnet/bin/media/demux/demux.h"
 
 namespace media {
 

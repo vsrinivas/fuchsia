@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/media/src/util/fidl_publisher.h"
+#include "garnet/bin/media/util/fidl_publisher.h"
 #include "garnet/bin/netconnector/mdns/mdns.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"

@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "apps/media/src/audio/mixdown_table.h"
+#include "garnet/bin/media/audio/mixdown_table.h"
 #include "gtest/gtest.h"
 
 namespace media {

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/media/src/audio_server/platform/generic/mixer.h"
+#include "garnet/bin/media/audio_server/platform/generic/mixer.h"
 
 namespace media {
 namespace audio {

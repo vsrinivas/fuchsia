@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/lib/audio/perceived_level.h"
+#include "lib/media/audio/perceived_level.h"
 
 #include <algorithm>
 #include <cmath>
 
-#include "apps/media/services/audio_renderer.fidl.h"
+#include "lib/media/fidl/audio_renderer.fidl.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

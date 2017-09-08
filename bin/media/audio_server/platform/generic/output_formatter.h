@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "apps/media/services/media_types.fidl.h"
+#include "lib/media/fidl/media_types.fidl.h"
 
 namespace media {
 namespace audio {

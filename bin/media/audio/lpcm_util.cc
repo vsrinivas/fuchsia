@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/audio/lpcm_util.h"
+#include "garnet/bin/media/audio/lpcm_util.h"
 
-#include "apps/media/src/framework/formatting.h"
+#include "garnet/bin/media/framework/formatting.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

@@ -46,10 +46,10 @@ executable("flog_viewer") {
 
   deps = [
     "//application/lib/app",
-    "//apps/media/lib/timeline",
-    "//apps/media/services",
-    "//apps/media/services/flog",
-    "//apps/media/src/util",
+    "//garnet/public/lib/media/timeline",
+    "//garnet/public/lib/media/fidl",
+    "//garnet/public/lib/media/fidl/flog",
+    "//garnet/bin/media/util",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
   ]

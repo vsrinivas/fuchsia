@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/media/tools/flog_viewer/channel_handler.h"
+#include "garent/bin/flog_viewer/channel_handler.h"
 
 namespace flog {
 namespace handlers {

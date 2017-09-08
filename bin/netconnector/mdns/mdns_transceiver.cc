@@ -12,7 +12,7 @@
 #include "garnet/go/src/netstack/apps/include/netconfig.h"
 #include "application/services/application_launcher.fidl.h"
 #include "application/services/service_provider.fidl.h"
-#include "apps/media/src/util/fidl_publisher.h"
+#include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/logging.h"

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/framework/types/subpicture_stream_type.h"
+#include "garnet/bin/media/framework/types/subpicture_stream_type.h"
 
-#include "apps/media/src/util/safe_clone.h"
+#include "garnet/bin/media/util/safe_clone.h"
 
 namespace media {
 

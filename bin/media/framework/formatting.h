@@ -6,12 +6,12 @@
 
 #include <ostream>
 
-#include "apps/media/src/framework/models/demand.h"
-#include "apps/media/src/framework/packet.h"
-#include "apps/media/src/framework/result.h"
-#include "apps/media/src/framework/types/audio_stream_type.h"
-#include "apps/media/src/framework/types/stream_type.h"
-#include "apps/media/src/framework/types/video_stream_type.h"
+#include "garnet/bin/media/framework/models/demand.h"
+#include "garnet/bin/media/framework/packet.h"
+#include "garnet/bin/media/framework/result.h"
+#include "garnet/bin/media/framework/types/audio_stream_type.h"
+#include "garnet/bin/media/framework/types/stream_type.h"
+#include "garnet/bin/media/framework/types/video_stream_type.h"
 
 //
 // This file declares a bunch of << operator overloads for dumping media stuff.

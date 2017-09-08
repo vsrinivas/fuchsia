@@ -6,16 +6,16 @@
 
 #include <vector>
 
-#include "apps/media/lib/flog/flog.h"
-#include "apps/media/services/logs/media_source_channel.fidl.h"
-#include "apps/media/services/media_source.fidl.h"
-#include "apps/media/services/seeking_reader.fidl.h"
-#include "apps/media/src/fidl/fidl_conversion_pipeline_builder.h"
-#include "apps/media/src/fidl/fidl_packet_producer.h"
-#include "apps/media/src/framework/types/stream_type.h"
-#include "apps/media/src/media_service/media_service_impl.h"
-#include "apps/media/src/util/fidl_publisher.h"
-#include "apps/media/src/util/incident.h"
+#include "lib/media/flog/flog.h"
+#include "lib/media/fidl/logs/media_source_channel.fidl.h"
+#include "lib/media/fidl/media_source.fidl.h"
+#include "lib/media/fidl/seeking_reader.fidl.h"
+#include "garnet/bin/media/fidl/fidl_conversion_pipeline_builder.h"
+#include "garnet/bin/media/fidl/fidl_packet_producer.h"
+#include "garnet/bin/media/framework/types/stream_type.h"
+#include "garnet/bin/media/media_service/media_service_impl.h"
+#include "garnet/bin/media/util/fidl_publisher.h"
+#include "garnet/bin/media/util/incident.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/tasks/task_runner.h"
 

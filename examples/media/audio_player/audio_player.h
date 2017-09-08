@@ -5,9 +5,9 @@
 #pragma once
 
 #include "application/lib/app/application_context.h"
-#include "apps/media/examples/audio_player/audio_player_params.h"
-#include "apps/media/lib/timeline/timeline_function.h"
-#include "apps/media/services/net_media_player.fidl.h"
+#include "garnet/examples/media/audio_player/audio_player_params.h"
+#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/fidl/net_media_player.fidl.h"
 #include "lib/ftl/macros.h"
 
 namespace examples {

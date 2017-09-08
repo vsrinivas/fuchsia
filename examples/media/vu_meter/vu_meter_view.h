@@ -8,10 +8,10 @@
 #include <queue>
 
 #include "application/lib/app/application_context.h"
-#include "apps/media/examples/vu_meter/vu_meter_params.h"
-#include "apps/media/lib/transport/media_packet_consumer_base.h"
-#include "apps/media/services/media_capturer.fidl.h"
-#include "apps/media/services/media_transport.fidl.h"
+#include "garnet/examples/media/vu_meter/vu_meter_params.h"
+#include "lib/media/transport/media_packet_consumer_base.h"
+#include "lib/media/fidl/media_capturer.fidl.h"
+#include "lib/media/fidl/media_transport.fidl.h"
 #include "lib/ui/view_framework/skia_view.h"
 #include "lib/ftl/macros.h"
 

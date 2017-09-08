@@ -6,7 +6,7 @@
 
 #include <limits>
 
-#include "apps/media/services/flog/flog.fidl.h"
+#include "lib/media/fidl/flog/flog.fidl.h"
 #include "lib/fidl/cpp/bindings/message.h"
 
 namespace flog {

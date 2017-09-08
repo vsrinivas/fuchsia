@@ -5,8 +5,8 @@
 #pragma once
 
 #include "application/lib/app/application_context.h"
-#include "apps/media/services/media_service.fidl.h"
-#include "apps/media/src/util/factory_service_base.h"
+#include "lib/media/fidl/media_service.fidl.h"
+#include "garnet/bin/media/util/factory_service_base.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 

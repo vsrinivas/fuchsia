@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/demux/reader_cache.h"
+#include "garnet/bin/media/demux/reader_cache.h"
 
 #include "lib/ftl/logging.h"
 

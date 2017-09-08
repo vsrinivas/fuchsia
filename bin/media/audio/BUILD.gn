@@ -34,9 +34,9 @@ source_set("audio") {
   ]
 
   deps = [
-    "//apps/media/lib/timeline",
-    "//apps/media/src/framework",
-    "//apps/media/src/util",
+    "//garnet/public/lib/media/timeline",
+    "//garnet/bin/media/framework",
+    "//garnet/bin/media/util",
     "//magenta/system/ulib/audio-proto-utils",
     "//magenta/system/ulib/audio-utils",
   ]
@@ -56,7 +56,7 @@ test("tests") {
 
   deps = [
     ":audio",
-    "//apps/media/lib/timeline",
-    "//apps/media/src/framework_create",
+    "//garnet/public/lib/media/timeline",
+    "//garnet/bin/media/framework_create",
   ]
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/flog_service/flog_reader_impl.h"
+#include "garnet/bin/media/flog_service/flog_reader_impl.h"
 
 #include <unistd.h>
 

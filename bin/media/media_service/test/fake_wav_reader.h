@@ -8,7 +8,7 @@
 
 #include <mx/socket.h>
 
-#include "apps/media/services/seeking_reader.fidl.h"
+#include "lib/media/fidl/seeking_reader.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/logging.h"
 

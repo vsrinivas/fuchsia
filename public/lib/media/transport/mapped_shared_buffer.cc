@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/lib/transport/mapped_shared_buffer.h"
+#include "lib/media/transport/mapped_shared_buffer.h"
 
 #include <magenta/types.h>
 #include <mx/vmar.h>
 #include <mx/vmo.h>
 
-#include "apps/media/lib/transport/fifo_allocator.h"
-#include "apps/media/services/media_transport.fidl.h"
+#include "lib/media/transport/fifo_allocator.h"
+#include "lib/media/fidl/media_transport.fidl.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/audio_server/platform/generic/mixers/linear_sampler.h"
+#include "garnet/bin/media/audio_server/platform/generic/mixers/linear_sampler.h"
 
 #include <algorithm>
 #include <limits>
 
-#include "apps/media/src/audio_server/platform/generic/mixers/mixer_utils.h"
+#include "garnet/bin/media/audio_server/platform/generic/mixers/mixer_utils.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

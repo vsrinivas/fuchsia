@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/audio_policy_service/audio_policy_service_impl.h"
+#include "garnet/bin/media/audio_policy_service/audio_policy_service_impl.h"
 
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"

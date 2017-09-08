@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "apps/media/src/framework/models/transform.h"
-#include "apps/media/src/framework/packet.h"
-#include "apps/media/src/framework/payload_allocator.h"
-#include "apps/media/src/framework/result.h"
-#include "apps/media/src/framework/types/stream_type.h"
+#include "garnet/bin/media/framework/models/transform.h"
+#include "garnet/bin/media/framework/packet.h"
+#include "garnet/bin/media/framework/payload_allocator.h"
+#include "garnet/bin/media/framework/result.h"
+#include "garnet/bin/media/framework/types/stream_type.h"
 
 namespace media {
 

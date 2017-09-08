@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "apps/media/src/framework/types/stream_type.h"
+#include "garnet/bin/media/framework/types/stream_type.h"
 
 namespace media {
 

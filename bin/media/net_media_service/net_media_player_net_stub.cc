@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/net_media_service/net_media_player_net_stub.h"
+#include "garnet/bin/media/net_media_service/net_media_player_net_stub.h"
 
 #include <vector>
 
 #include <mx/channel.h>
 
 #include "application/lib/app/application_context.h"
-#include "apps/media/lib/timeline/timeline.h"
+#include "lib/media/timeline/timeline.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

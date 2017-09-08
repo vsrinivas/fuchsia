@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "apps/media/src/framework/models/demand.h"
-#include "apps/media/src/framework/packet.h"
-#include "apps/media/src/framework/payload_allocator.h"
+#include "garnet/bin/media/framework/models/demand.h"
+#include "garnet/bin/media/framework/packet.h"
+#include "garnet/bin/media/framework/payload_allocator.h"
 
 namespace media {
 

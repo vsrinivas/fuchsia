@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/media/src/framework/models/transform.h"
-#include "apps/media/src/framework/stages/stage_impl.h"
+#include "garnet/bin/media/framework/models/transform.h"
+#include "garnet/bin/media/framework/stages/stage_impl.h"
 
 namespace media {
 

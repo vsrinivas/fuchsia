@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/media/services/logs/media_source_channel.fidl.h"
-#include "apps/media/tools/flog_viewer/channel_handler.h"
+#include "lib/media/fidl/logs/media_source_channel.fidl.h"
+#include "garent/bin/flog_viewer/channel_handler.h"
 
 namespace flog {
 namespace handlers {

@@ -9,10 +9,10 @@ source_set("framework_create") {
   ]
 
   deps = [
-    "//apps/media/src/decode",
-    "//apps/media/src/demux",
-    "//apps/media/src/ffmpeg",
-    "//apps/media/src/fidl",
-    "//apps/media/src/framework",
+    "//garnet/bin/media/decode",
+    "//garnet/bin/media/demux",
+    "//garnet/bin/media/ffmpeg",
+    "//garnet/bin/media/fidl",
+    "//garnet/bin/media/framework",
   ]
 }

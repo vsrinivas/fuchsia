@@ -6,14 +6,14 @@
 
 #include <list>
 
-#include "apps/media/src/framework/engine.h"
-#include "apps/media/src/framework/refs.h"
-#include "apps/media/src/framework/stages/active_multistream_source_stage.h"
-#include "apps/media/src/framework/stages/active_sink_stage.h"
-#include "apps/media/src/framework/stages/active_source_stage.h"
-#include "apps/media/src/framework/stages/multistream_source_stage.h"
-#include "apps/media/src/framework/stages/stage_impl.h"
-#include "apps/media/src/framework/stages/transform_stage.h"
+#include "garnet/bin/media/framework/engine.h"
+#include "garnet/bin/media/framework/refs.h"
+#include "garnet/bin/media/framework/stages/active_multistream_source_stage.h"
+#include "garnet/bin/media/framework/stages/active_sink_stage.h"
+#include "garnet/bin/media/framework/stages/active_source_stage.h"
+#include "garnet/bin/media/framework/stages/multistream_source_stage.h"
+#include "garnet/bin/media/framework/stages/stage_impl.h"
+#include "garnet/bin/media/framework/stages/transform_stage.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/tasks/task_runner.h"

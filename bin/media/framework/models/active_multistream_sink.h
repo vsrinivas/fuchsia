@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "apps/media/src/framework/models/demand.h"
-#include "apps/media/src/framework/models/node.h"
-#include "apps/media/src/framework/models/stage.h"
-#include "apps/media/src/framework/packet.h"
+#include "garnet/bin/media/framework/models/demand.h"
+#include "garnet/bin/media/framework/models/node.h"
+#include "garnet/bin/media/framework/models/stage.h"
+#include "garnet/bin/media/framework/packet.h"
 
 namespace media {
 

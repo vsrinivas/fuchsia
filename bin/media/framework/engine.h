@@ -6,8 +6,8 @@
 
 #include <vector>
 
-#include "apps/media/src/framework/refs.h"
-#include "apps/media/src/framework/stages/stage_impl.h"
+#include "garnet/bin/media/framework/refs.h"
+#include "garnet/bin/media/framework/stages/stage_impl.h"
 #include "lib/ftl/functional/closure.h"
 
 namespace media {

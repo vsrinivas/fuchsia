@@ -7,7 +7,7 @@
 #include <iterator>
 #include <memory>
 
-#include "apps/media/src/audio/level.h"
+#include "garnet/bin/media/audio/level.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

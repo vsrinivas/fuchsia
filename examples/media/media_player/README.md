@@ -1,6 +1,6 @@
 # Media Player Example App
 
-This directory contains an application that uses apps/media and apps/mozart to
+This directory contains an application that uses media and mozart to
 create a media player.
 
 ## USAGE

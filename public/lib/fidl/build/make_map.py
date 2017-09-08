@@ -15,7 +15,7 @@ from this module through a sequence of dependencies.
 
 An example entry is:
 
-pub //garnet/public/lib/ui/views/fidl/views.fidl: //apps/media/services:services //apps/mozart/services/views:views
+pub //garnet/public/lib/ui/views/fidl/views.fidl: //garnet/public/lib/media/fidl:services //apps/mozart/services/views:views
 """
 
 import ast

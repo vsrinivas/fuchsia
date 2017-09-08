@@ -9,17 +9,17 @@ source_set("video") {
   ]
 
   public_deps = [
-    "//apps/media/lib/flog",
+    "//garnet/public/lib/media/flog",
   ]
 
   deps = [
     ":video_converter",
-    "//apps/media/lib/timeline",
-    "//apps/media/lib/transport",
-    "//apps/media/services",
-    "//apps/media/src/fidl",
-    "//apps/media/src/framework",
-    "//apps/media/src/util",
+    "//garnet/public/lib/media/timeline",
+    "//garnet/public/lib/media/transport",
+    "//garnet/public/lib/media/fidl",
+    "//garnet/bin/media/fidl",
+    "//garnet/bin/media/framework",
+    "//garnet/bin/media/util",
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/ftl",
@@ -38,9 +38,9 @@ source_set("video_converter") {
   ]
 
   deps = [
-    "//apps/media/services",
-    "//apps/media/src/fidl",
-    "//apps/media/src/framework",
+    "//garnet/public/lib/media/fidl",
+    "//garnet/bin/media/fidl",
+    "//garnet/bin/media/framework",
     "//garnet/public/lib/ui/geometry/cpp",
     "//magenta/system/ulib/trace",
   ]

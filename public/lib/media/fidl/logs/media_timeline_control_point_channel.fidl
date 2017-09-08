@@ -4,7 +4,7 @@
 
 module media.logs;
 
-import "apps/media/services/timelines.fidl";
+import "lib/media/fidl/timelines.fidl";
 
 [ServiceName="media::logs::MediaTimelineControlPointChannel"]
 interface MediaTimelineControlPointChannel {

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/flog_service/flog_service_impl.h"
+#include "garnet/bin/media/flog_service/flog_service_impl.h"
 
 #include "application/lib/app/connect.h"
-#include "apps/media/src/flog_service/flog_directory.h"
-#include "apps/media/src/flog_service/flog_logger_impl.h"
-#include "apps/media/src/flog_service/flog_reader_impl.h"
+#include "garnet/bin/media/flog_service/flog_directory.h"
+#include "garnet/bin/media/flog_service/flog_logger_impl.h"
+#include "garnet/bin/media/flog_service/flog_reader_impl.h"
 #include "lib/ftl/functional/make_copyable.h"
 
 namespace flog {

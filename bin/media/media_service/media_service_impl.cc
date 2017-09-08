@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/media_service/media_service_impl.h"
+#include "garnet/bin/media/media_service/media_service_impl.h"
 
 #include <magenta/syscalls.h>
 
-#include "apps/media/services/audio_policy_service.fidl.h"
-#include "apps/media/services/audio_server.fidl.h"
-#include "apps/media/src/media_service/audio_capturer_impl.h"
-#include "apps/media/src/media_service/file_reader_impl.h"
-#include "apps/media/src/media_service/lpcm_reformatter_impl.h"
-#include "apps/media/src/media_service/media_decoder_impl.h"
-#include "apps/media/src/media_service/media_demux_impl.h"
-#include "apps/media/src/media_service/media_player_impl.h"
-#include "apps/media/src/media_service/media_sink_impl.h"
-#include "apps/media/src/media_service/media_source_impl.h"
-#include "apps/media/src/media_service/media_timeline_controller_impl.h"
-#include "apps/media/src/media_service/network_reader_impl.h"
-#include "apps/media/src/media_service/video_renderer_impl.h"
-#include "apps/media/src/util/multiproc_task_runner.h"
+#include "lib/media/fidl/audio_policy_service.fidl.h"
+#include "lib/media/fidl/audio_server.fidl.h"
+#include "garnet/bin/media/media_service/audio_capturer_impl.h"
+#include "garnet/bin/media/media_service/file_reader_impl.h"
+#include "garnet/bin/media/media_service/lpcm_reformatter_impl.h"
+#include "garnet/bin/media/media_service/media_decoder_impl.h"
+#include "garnet/bin/media/media_service/media_demux_impl.h"
+#include "garnet/bin/media/media_service/media_player_impl.h"
+#include "garnet/bin/media/media_service/media_sink_impl.h"
+#include "garnet/bin/media/media_service/media_source_impl.h"
+#include "garnet/bin/media/media_service/media_timeline_controller_impl.h"
+#include "garnet/bin/media/media_service/network_reader_impl.h"
+#include "garnet/bin/media/media_service/video_renderer_impl.h"
+#include "garnet/bin/media/util/multiproc_task_runner.h"
 #include "lib/ftl/functional/make_copyable.h"
 
 namespace media {

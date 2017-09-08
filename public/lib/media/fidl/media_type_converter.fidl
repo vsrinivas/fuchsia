@@ -4,8 +4,8 @@
 
 module media;
 
-import "apps/media/services/media_transport.fidl";
-import "apps/media/services/media_types.fidl";
+import "lib/media/fidl/media_transport.fidl";
+import "lib/media/fidl/media_types.fidl";
 
 // Performs a type conversion on a media stream.
 interface MediaTypeConverter {

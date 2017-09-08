@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/audio_server/audio_plug_detector.h"
+#include "garnet/bin/media/audio_server/audio_plug_detector.h"
 
 #include <dirent.h>
 #include <fcntl.h>
@@ -17,9 +17,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "apps/media/src/audio_server/audio_output.h"
-#include "apps/media/src/audio_server/audio_output_manager.h"
-#include "apps/media/src/audio_server/platform/driver_output.h"
+#include "garnet/bin/media/audio_server/audio_output.h"
+#include "garnet/bin/media/audio_server/audio_output_manager.h"
+#include "garnet/bin/media/audio_server/platform/driver_output.h"
 #include "lib/ftl/files/unique_fd.h"
 
 namespace media {

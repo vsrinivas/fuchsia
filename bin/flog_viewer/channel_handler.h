@@ -7,10 +7,10 @@
 #include <iostream>
 #include <streambuf>
 
-#include "apps/media/services/flog/flog.fidl.h"
-#include "apps/media/tools/flog_viewer/accumulator.h"
-#include "apps/media/tools/flog_viewer/binding.h"
-#include "apps/media/tools/flog_viewer/channel_manager.h"
+#include "lib/media/fidl/flog/flog.fidl.h"
+#include "garent/bin/flog_viewer/accumulator.h"
+#include "garent/bin/flog_viewer/binding.h"
+#include "garent/bin/flog_viewer/channel_manager.h"
 #include "lib/fidl/cpp/bindings/message.h"
 #include "lib/ftl/logging.h"
 

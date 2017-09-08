@@ -8,10 +8,10 @@
 #include <set>
 
 #include "application/lib/app/application_context.h"
-#include "apps/media/services/audio_renderer.fidl.h"
-#include "apps/media/services/audio_server.fidl.h"
-#include "apps/media/src/audio_server/audio_output_manager.h"
-#include "apps/media/src/audio_server/fwd_decls.h"
+#include "lib/media/fidl/audio_renderer.fidl.h"
+#include "lib/media/fidl/audio_server.fidl.h"
+#include "garnet/bin/media/audio_server/audio_output_manager.h"
+#include "garnet/bin/media/audio_server/fwd_decls.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/synchronization/mutex.h"

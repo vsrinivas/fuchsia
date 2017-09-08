@@ -4,7 +4,7 @@
 
 #include <ostream>
 
-#include "apps/media/src/ffmpeg/ffmpeg_formatting.h"
+#include "garnet/bin/media/ffmpeg/ffmpeg_formatting.h"
 
 extern "C" {
 #include "third_party/ffmpeg/libavformat/avformat.h"

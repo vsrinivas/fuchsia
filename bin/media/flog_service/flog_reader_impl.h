@@ -6,8 +6,8 @@
 
 #include <limits>
 
-#include "apps/media/services/flog/flog.fidl.h"
-#include "apps/media/src/flog_service/flog_service_impl.h"
+#include "lib/media/fidl/flog/flog.fidl.h"
+#include "garnet/bin/media/flog_service/flog_service_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace flog {

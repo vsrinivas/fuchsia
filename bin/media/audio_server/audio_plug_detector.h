@@ -10,7 +10,7 @@
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 
-#include "apps/media/services/media_result.fidl.h"
+#include "lib/media/fidl/media_result.fidl.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/mtl/io/device_watcher.h"
 

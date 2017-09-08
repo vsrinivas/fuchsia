@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/media/lib/timeline/timeline_rate.h"
+#include "lib/media/timeline/timeline_rate.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

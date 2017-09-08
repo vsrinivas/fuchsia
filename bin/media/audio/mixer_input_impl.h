@@ -8,10 +8,10 @@
 #include <limits>
 #include <memory>
 
-#include "apps/media/src/audio/mixdown_table.h"
-#include "apps/media/src/audio/mixer_input.h"
-#include "apps/media/src/framework/packet.h"
-#include "apps/media/src/util/priority_queue_of_unique_ptr.h"
+#include "garnet/bin/media/audio/mixdown_table.h"
+#include "garnet/bin/media/audio/mixer_input.h"
+#include "garnet/bin/media/framework/packet.h"
+#include "garnet/bin/media/util/priority_queue_of_unique_ptr.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

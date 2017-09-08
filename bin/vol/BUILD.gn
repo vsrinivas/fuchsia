@@ -9,8 +9,8 @@ executable("vol") {
 
   deps = [
     "//application/lib/app",
-    "//apps/media/lib/audio",
-    "//apps/media/services",
+    "//garnet/public/lib/media/audio",
+    "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
   ]

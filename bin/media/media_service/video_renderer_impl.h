@@ -8,10 +8,10 @@
 #include <memory>
 #include <vector>
 
-#include "apps/media/services/media_renderer.fidl.h"
-#include "apps/media/services/video_renderer.fidl.h"
-#include "apps/media/src/media_service/media_service_impl.h"
-#include "apps/media/src/video/video_frame_source.h"
+#include "lib/media/fidl/media_renderer.fidl.h"
+#include "lib/media/fidl/video_renderer.fidl.h"
+#include "garnet/bin/media/media_service/media_service_impl.h"
+#include "garnet/bin/media/video/video_frame_source.h"
 #include "lib/ui/scenic/client/host_image_cycler.h"
 #include "lib/ui/view_framework/base_view.h"
 #include "lib/fidl/cpp/bindings/binding.h"

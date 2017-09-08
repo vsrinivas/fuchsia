@@ -4,10 +4,10 @@
 
 #include <limits>
 
-#include "apps/media/src/ffmpeg/av_io_context.h"
+#include "garnet/bin/media/ffmpeg/av_io_context.h"
 
-#include "apps/media/src/demux/reader.h"
-#include "apps/media/src/ffmpeg/ffmpeg_init.h"
+#include "garnet/bin/media/demux/reader.h"
+#include "garnet/bin/media/ffmpeg/ffmpeg_init.h"
 #include "lib/ftl/logging.h"
 extern "C" {
 #include "third_party/ffmpeg/libavformat/avio.h"

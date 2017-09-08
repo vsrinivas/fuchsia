@@ -8,6 +8,6 @@ source_set("decode") {
   ]
 
   deps = [
-    "//apps/media/src/framework",
+    "//garnet/bin/media/framework",
   ]
 }

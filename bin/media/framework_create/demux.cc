@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/demux/demux.h"
-#include "apps/media/src/ffmpeg/ffmpeg_demux.h"
+#include "garnet/bin/media/demux/demux.h"
+#include "garnet/bin/media/ffmpeg/ffmpeg_demux.h"
 
 namespace media {
 

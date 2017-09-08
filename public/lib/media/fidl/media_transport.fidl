@@ -4,8 +4,8 @@
 
 module media;
 
-import "apps/media/services/media_result.fidl";
-import "apps/media/services/media_types.fidl";
+import "lib/media/fidl/media_result.fidl";
+import "lib/media/fidl/media_types.fidl";
 
 // Describes a fragment of media content, including metadata and a locator for
 // the payload.

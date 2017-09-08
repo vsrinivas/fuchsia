@@ -7,11 +7,11 @@
 #include <atomic>
 #include <queue>
 
-#include "apps/media/src/framework/models/stage.h"
-#include "apps/media/src/framework/packet.h"
-#include "apps/media/src/framework/payload_allocator.h"
-#include "apps/media/src/framework/stages/input.h"
-#include "apps/media/src/framework/stages/output.h"
+#include "garnet/bin/media/framework/models/stage.h"
+#include "garnet/bin/media/framework/packet.h"
+#include "garnet/bin/media/framework/payload_allocator.h"
+#include "garnet/bin/media/framework/stages/input.h"
+#include "garnet/bin/media/framework/stages/output.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"

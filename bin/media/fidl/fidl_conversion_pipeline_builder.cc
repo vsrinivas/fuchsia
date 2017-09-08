@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/fidl/fidl_conversion_pipeline_builder.h"
+#include "garnet/bin/media/fidl/fidl_conversion_pipeline_builder.h"
 
-#include "apps/media/lib/flog/flog.h"
-#include "apps/media/services/media_service.fidl.h"
-#include "apps/media/services/media_type_converter.fidl.h"
-#include "apps/media/src/fidl/fidl_type_conversions.h"
-#include "apps/media/src/framework/formatting.h"
-#include "apps/media/src/framework/types/audio_stream_type.h"
-#include "apps/media/src/framework/types/stream_type.h"
-#include "apps/media/src/framework/types/video_stream_type.h"
-#include "apps/media/src/util/callback_joiner.h"
+#include "lib/media/flog/flog.h"
+#include "lib/media/fidl/media_service.fidl.h"
+#include "lib/media/fidl/media_type_converter.fidl.h"
+#include "garnet/bin/media/fidl/fidl_type_conversions.h"
+#include "garnet/bin/media/framework/formatting.h"
+#include "garnet/bin/media/framework/types/audio_stream_type.h"
+#include "garnet/bin/media/framework/types/stream_type.h"
+#include "garnet/bin/media/framework/types/video_stream_type.h"
+#include "garnet/bin/media/util/callback_joiner.h"
 #include "lib/ftl/functional/make_copyable.h"
 
 namespace media {

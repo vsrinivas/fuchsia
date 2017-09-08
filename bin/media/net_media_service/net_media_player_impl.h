@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "apps/media/services/media_service.fidl.h"
-#include "apps/media/services/net_media_player.fidl.h"
-#include "apps/media/src/net_media_service/net_media_player_net_stub.h"
-#include "apps/media/src/net_media_service/net_media_service_impl.h"
+#include "lib/media/fidl/media_service.fidl.h"
+#include "lib/media/fidl/net_media_player.fidl.h"
+#include "garnet/bin/media/net_media_service/net_media_player_net_stub.h"
+#include "garnet/bin/media/net_media_service/net_media_service_impl.h"
 #include "lib/ftl/macros.h"
 #include "lib/netconnector/cpp/net_stub_responder.h"
 

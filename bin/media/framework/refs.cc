@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/framework/refs.h"
+#include "garnet/bin/media/framework/refs.h"
 
-#include "apps/media/src/framework/stages/input.h"
-#include "apps/media/src/framework/stages/output.h"
-#include "apps/media/src/framework/stages/stage_impl.h"
+#include "garnet/bin/media/framework/stages/input.h"
+#include "garnet/bin/media/framework/stages/output.h"
+#include "garnet/bin/media/framework/stages/stage_impl.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

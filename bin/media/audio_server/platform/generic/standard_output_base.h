@@ -4,15 +4,15 @@
 
 #pragma once
 
-#include "apps/media/lib/timeline/timeline.h"
-#include "apps/media/lib/timeline/timeline_function.h"
-#include "apps/media/services/media_result.fidl.h"
-#include "apps/media/services/media_types.fidl.h"
-#include "apps/media/src/audio_server/audio_output.h"
-#include "apps/media/src/audio_server/audio_renderer_to_output_link.h"
-#include "apps/media/src/audio_server/gain.h"
-#include "apps/media/src/audio_server/platform/generic/mixer.h"
-#include "apps/media/src/audio_server/platform/generic/output_formatter.h"
+#include "lib/media/timeline/timeline.h"
+#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/fidl/media_result.fidl.h"
+#include "lib/media/fidl/media_types.fidl.h"
+#include "garnet/bin/media/audio_server/audio_output.h"
+#include "garnet/bin/media/audio_server/audio_renderer_to_output_link.h"
+#include "garnet/bin/media/audio_server/gain.h"
+#include "garnet/bin/media/audio_server/platform/generic/mixer.h"
+#include "garnet/bin/media/audio_server/platform/generic/output_formatter.h"
 #include "lib/ftl/time/time_delta.h"
 
 namespace media {

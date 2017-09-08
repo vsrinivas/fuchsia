@@ -12,8 +12,8 @@ executable("vu_meter") {
   ]
 
   deps = [
-    "//apps/media/lib/transport",
-    "//apps/media/services",
+    "//garnet/public/lib/media/transport",
+    "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/ui/view_framework:skia",
     "//garnet/public/lib/ui/view_framework:view_provider",
     "//garnet/public/lib/mtl",

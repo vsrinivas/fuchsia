@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/tools/flog_viewer/channel_handler.h"
+#include "garent/bin/flog_viewer/channel_handler.h"
 
-#include "apps/media/tools/flog_viewer/flog_viewer.h"
-#include "apps/media/tools/flog_viewer/handlers/default.h"
-#include "apps/media/tools/flog_viewer/handlers/media_demux.h"
-#include "apps/media/tools/flog_viewer/handlers/media_packet_consumer.h"
-#include "apps/media/tools/flog_viewer/handlers/media_packet_producer.h"
-#include "apps/media/tools/flog_viewer/handlers/media_player.h"
-#include "apps/media/tools/flog_viewer/handlers/media_renderer.h"
-#include "apps/media/tools/flog_viewer/handlers/media_sink.h"
-#include "apps/media/tools/flog_viewer/handlers/media_source.h"
-#include "apps/media/tools/flog_viewer/handlers/media_timeline_control_point.h"
-#include "apps/media/tools/flog_viewer/handlers/media_type_converter.h"
+#include "garent/bin/flog_viewer/flog_viewer.h"
+#include "garent/bin/flog_viewer/handlers/default.h"
+#include "garent/bin/flog_viewer/handlers/media_demux.h"
+#include "garent/bin/flog_viewer/handlers/media_packet_consumer.h"
+#include "garent/bin/flog_viewer/handlers/media_packet_producer.h"
+#include "garent/bin/flog_viewer/handlers/media_player.h"
+#include "garent/bin/flog_viewer/handlers/media_renderer.h"
+#include "garent/bin/flog_viewer/handlers/media_sink.h"
+#include "garent/bin/flog_viewer/handlers/media_source.h"
+#include "garent/bin/flog_viewer/handlers/media_timeline_control_point.h"
+#include "garent/bin/flog_viewer/handlers/media_type_converter.h"
 
 namespace flog {
 

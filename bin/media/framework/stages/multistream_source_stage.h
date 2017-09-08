@@ -6,8 +6,8 @@
 
 #include <vector>
 
-#include "apps/media/src/framework/models/multistream_source.h"
-#include "apps/media/src/framework/stages/stage_impl.h"
+#include "garnet/bin/media/framework/models/multistream_source.h"
+#include "garnet/bin/media/framework/stages/stage_impl.h"
 
 namespace media {
 

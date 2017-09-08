@@ -7,7 +7,7 @@
 #include <list>
 #include <queue>
 
-#include "apps/media/src/audio/mixer_input.h"
+#include "garnet/bin/media/audio/mixer_input.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

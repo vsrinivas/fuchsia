@@ -6,10 +6,10 @@
 
 #include <limits>
 
-#include "apps/media/src/decode/decoder.h"
-#include "apps/media/src/ffmpeg/av_codec_context.h"
-#include "apps/media/src/ffmpeg/av_frame.h"
-#include "apps/media/src/ffmpeg/av_packet.h"
+#include "garnet/bin/media/decode/decoder.h"
+#include "garnet/bin/media/ffmpeg/av_codec_context.h"
+#include "garnet/bin/media/ffmpeg/av_frame.h"
+#include "garnet/bin/media/ffmpeg/av_packet.h"
 extern "C" {
 #include "third_party/ffmpeg/libavcodec/avcodec.h"
 }

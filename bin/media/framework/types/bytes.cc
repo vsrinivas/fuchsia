@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/framework/types/bytes.h"
+#include "garnet/bin/media/framework/types/bytes.h"
 
 namespace media {
 

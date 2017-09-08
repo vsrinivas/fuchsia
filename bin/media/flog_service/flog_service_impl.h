@@ -7,10 +7,10 @@
 #include <map>
 #include <memory>
 
-#include "apps/media/services/flog/flog.fidl.h"
-#include "apps/media/src/flog_service/flog_directory.h"
-#include "apps/media/src/util/factory_service_base.h"
-#include "apps/media/src/util/incident.h"
+#include "lib/media/fidl/flog/flog.fidl.h"
+#include "garnet/bin/media/flog_service/flog_directory.h"
+#include "garnet/bin/media/util/factory_service_base.h"
+#include "garnet/bin/media/util/incident.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace flog {

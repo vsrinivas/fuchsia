@@ -34,21 +34,21 @@ executable("media_service") {
   ]
 
   public_deps = [
-    "//apps/media/lib/flog",
+    "//garnet/public/lib/media/flog",
   ]
 
   deps = [
     "//application/lib/app",
-    "//apps/media/lib/timeline",
-    "//apps/media/services",
-    "//apps/media/src/audio",
-    "//apps/media/src/decode",
-    "//apps/media/src/demux",
-    "//apps/media/src/fidl",
-    "//apps/media/src/framework",
-    "//apps/media/src/framework_create",
-    "//apps/media/src/util",
-    "//apps/media/src/video",
+    "//garnet/public/lib/media/timeline",
+    "//garnet/public/lib/media/fidl",
+    "//garnet/bin/media/audio",
+    "//garnet/bin/media/decode",
+    "//garnet/bin/media/demux",
+    "//garnet/bin/media/fidl",
+    "//garnet/bin/media/framework",
+    "//garnet/bin/media/framework_create",
+    "//garnet/bin/media/util",
+    "//garnet/bin/media/video",
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/ui/views/fidl",
     "//apps/network",
@@ -75,11 +75,11 @@ executable("tests") {
   deps = [
     ":media_service",
     "//application/lib/app",
-    "//apps/media/lib/timeline",
-    "//apps/media/lib/transport",
-    "//apps/media/services",
-    "//apps/media/src/fidl",
-    "//apps/media/src/framework_create",
+    "//garnet/public/lib/media/timeline",
+    "//garnet/public/lib/media/transport",
+    "//garnet/public/lib/media/fidl",
+    "//garnet/bin/media/fidl",
+    "//garnet/bin/media/framework_create",
     "//garnet/public/lib/mtl",
   ]
 }

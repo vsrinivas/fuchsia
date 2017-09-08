@@ -4,7 +4,7 @@
 
 module media;
 
-import "apps/media/services/media_result.fidl";
+import "lib/media/fidl/media_result.fidl";
 
 // Reader with seek semantics.
 interface SeekingReader {

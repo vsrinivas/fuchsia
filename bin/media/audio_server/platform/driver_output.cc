@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/audio_server/platform/driver_output.h"
+#include "garnet/bin/media/audio_server/platform/driver_output.h"
 
 #include <fcntl.h>
 #include <magenta/device/audio.h>
@@ -13,7 +13,7 @@
 #include <fbl/limits.h>
 #include <iomanip>
 
-#include "apps/media/src/audio_server/audio_output_manager.h"
+#include "garnet/bin/media/audio_server/audio_output_manager.h"
 #include "lib/ftl/logging.h"
 
 static constexpr bool VERBOSE_TIMING_DEBUG = false;

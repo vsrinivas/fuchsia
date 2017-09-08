@@ -7,12 +7,12 @@
 #include <memory>
 #include <vector>
 
-#include "apps/media/src/demux/reader.h"
-#include "apps/media/src/framework/metadata.h"
-#include "apps/media/src/framework/models/active_multistream_source.h"
-#include "apps/media/src/framework/packet.h"
-#include "apps/media/src/framework/result.h"
-#include "apps/media/src/framework/types/stream_type.h"
+#include "garnet/bin/media/demux/reader.h"
+#include "garnet/bin/media/framework/metadata.h"
+#include "garnet/bin/media/framework/models/active_multistream_source.h"
+#include "garnet/bin/media/framework/packet.h"
+#include "garnet/bin/media/framework/result.h"
+#include "garnet/bin/media/framework/types/stream_type.h"
 
 namespace media {
 

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/video/video_converter.h"
+#include "garnet/bin/media/video/video_converter.h"
 
 #include <trace/event.h>
 
-#include "apps/media/src/fidl/fidl_type_conversions.h"
+#include "garnet/bin/media/fidl/fidl_type_conversions.h"
 
 namespace media {
 

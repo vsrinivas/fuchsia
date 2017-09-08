@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/media_service/media_player_impl.h"
+#include "garnet/bin/media/media_service/media_player_impl.h"
 
 #include "application/lib/app/connect.h"
-#include "apps/media/lib/timeline/fidl_type_conversions.h"
-#include "apps/media/lib/timeline/timeline.h"
-#include "apps/media/src/fidl/fidl_formatting.h"
-#include "apps/media/src/util/callback_joiner.h"
+#include "lib/media/timeline/fidl_type_conversions.h"
+#include "lib/media/timeline/timeline.h"
+#include "garnet/bin/media/fidl/fidl_formatting.h"
+#include "garnet/bin/media/util/callback_joiner.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 

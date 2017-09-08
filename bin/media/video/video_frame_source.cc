@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/video/video_frame_source.h"
+#include "garnet/bin/media/video/video_frame_source.h"
 
 #include <limits>
 
-#include "apps/media/lib/timeline/timeline.h"
-#include "apps/media/lib/timeline/timeline_function.h"
+#include "lib/media/timeline/timeline.h"
+#include "lib/media/timeline/timeline_function.h"
 
 namespace media {
 

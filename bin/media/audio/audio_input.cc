@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/audio/audio_input.h"
+#include "garnet/bin/media/audio/audio_input.h"
 
 #include <audio-utils/audio-input.h>
 #include <errno.h>
@@ -11,9 +11,9 @@
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>
 
-#include "apps/media/lib/timeline/timeline_function.h"
-#include "apps/media/lib/timeline/timeline_rate.h"
-#include "apps/media/src/audio/driver_utils.h"
+#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/timeline/timeline_rate.h"
+#include "garnet/bin/media/audio/driver_utils.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

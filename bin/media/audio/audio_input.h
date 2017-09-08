@@ -12,8 +12,8 @@
 #include <magenta/types.h>
 #include <fbl/unique_ptr.h>
 
-#include "apps/media/src/framework/models/active_source.h"
-#include "apps/media/src/framework/types/audio_stream_type.h"
+#include "garnet/bin/media/framework/models/active_source.h"
+#include "garnet/bin/media/framework/types/audio_stream_type.h"
 
 namespace audio {
 namespace utils {

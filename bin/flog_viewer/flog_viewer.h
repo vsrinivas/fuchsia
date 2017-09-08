@@ -8,10 +8,10 @@
 #include <unordered_set>
 
 #include "application/lib/app/application_context.h"
-#include "apps/media/services/flog/flog.fidl.h"
-#include "apps/media/tools/flog_viewer/channel.h"
-#include "apps/media/tools/flog_viewer/channel_handler.h"
-#include "apps/media/tools/flog_viewer/channel_manager.h"
+#include "lib/media/fidl/flog/flog.fidl.h"
+#include "garent/bin/flog_viewer/channel.h"
+#include "garent/bin/flog_viewer/channel_handler.h"
+#include "garent/bin/flog_viewer/channel_manager.h"
 
 class Shell;
 

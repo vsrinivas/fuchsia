@@ -8,7 +8,7 @@
 #include <functional>
 #include <memory>
 
-#include "apps/media/src/framework/result.h"
+#include "garnet/bin/media/framework/result.h"
 
 namespace media {
 

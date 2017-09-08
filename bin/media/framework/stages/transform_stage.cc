@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/framework/stages/transform_stage.h"
+#include "garnet/bin/media/framework/stages/transform_stage.h"
 
 namespace media {
 

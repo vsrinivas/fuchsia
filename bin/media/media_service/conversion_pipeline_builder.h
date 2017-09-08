@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "apps/media/src/framework/graph.h"
-#include "apps/media/src/framework/packet.h"
-#include "apps/media/src/framework/types/stream_type.h"
+#include "garnet/bin/media/framework/graph.h"
+#include "garnet/bin/media/framework/packet.h"
+#include "garnet/bin/media/framework/types/stream_type.h"
 
 namespace media {
 

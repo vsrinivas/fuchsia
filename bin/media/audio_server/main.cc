@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "application/lib/app/application_context.h"
-#include "apps/media/src/audio_server/audio_server_impl.h"
+#include "garnet/bin/media/audio_server/audio_server_impl.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 int main(int argc, const char** argv) {

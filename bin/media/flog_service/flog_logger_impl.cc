@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/flog_service/flog_logger_impl.h"
+#include "garnet/bin/media/flog_service/flog_logger_impl.h"
 
 #include "lib/ftl/files/file_descriptor.h"
 #include "lib/ftl/logging.h"

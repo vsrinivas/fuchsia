@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/examples/audio_player/audio_player_params.h"
+#include "garnet/examples/media/audio_player/audio_player_params.h"
 
 #include <iostream>
 

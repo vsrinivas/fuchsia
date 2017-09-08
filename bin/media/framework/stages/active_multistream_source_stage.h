@@ -7,8 +7,8 @@
 #include <deque>
 #include <vector>
 
-#include "apps/media/src/framework/models/active_multistream_source.h"
-#include "apps/media/src/framework/stages/stage_impl.h"
+#include "garnet/bin/media/framework/models/active_multistream_source.h"
+#include "garnet/bin/media/framework/stages/stage_impl.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 

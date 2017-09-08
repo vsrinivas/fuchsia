@@ -4,7 +4,7 @@
 
 module media;
 
-import "apps/media/services/media_player.fidl";
+import "lib/media/fidl/media_player.fidl";
 
 // Plays media.
 interface NetMediaPlayer {

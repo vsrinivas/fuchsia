@@ -4,10 +4,10 @@
 
 #include <atomic>
 
-#include "apps/media/src/framework/stages/input.h"
+#include "garnet/bin/media/framework/stages/input.h"
 
-#include "apps/media/src/framework/engine.h"
-#include "apps/media/src/framework/stages/stage_impl.h"
+#include "garnet/bin/media/framework/engine.h"
+#include "garnet/bin/media/framework/stages/stage_impl.h"
 
 namespace media {
 

@@ -7,9 +7,9 @@
 #include <deque>
 #include <memory>
 
-#include "apps/media/src/audio_server/audio_pipe.h"
-#include "apps/media/src/audio_server/fwd_decls.h"
-#include "apps/media/src/audio_server/gain.h"
+#include "garnet/bin/media/audio_server/audio_pipe.h"
+#include "garnet/bin/media/audio_server/fwd_decls.h"
+#include "garnet/bin/media/audio_server/gain.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 

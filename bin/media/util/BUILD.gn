@@ -17,12 +17,12 @@ source_set("util") {
   public_deps = [
     ":host_compatible",
     "//application/lib/app",
-    "//apps/media/lib/flog",
+    "//garnet/public/lib/media/flog",
   ]
 
   deps = [
-    "//apps/media/lib/timeline",
-    "//apps/media/services",
+    "//garnet/public/lib/media/timeline",
+    "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
   ]

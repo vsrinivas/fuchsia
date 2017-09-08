@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/media_service/audio_capturer_impl.h"
+#include "garnet/bin/media/media_service/audio_capturer_impl.h"
 
-#include "apps/media/lib/timeline/timeline.h"
-#include "apps/media/src/audio/audio_input.h"
-#include "apps/media/src/audio/audio_input_enum.h"
-#include "apps/media/src/fidl/fidl_type_conversions.h"
+#include "lib/media/timeline/timeline.h"
+#include "garnet/bin/media/audio/audio_input.h"
+#include "garnet/bin/media/audio/audio_input_enum.h"
+#include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include "apps/media/src/framework/formatting.h"
+#include "garnet/bin/media/framework/formatting.h"
 
 namespace media {
 

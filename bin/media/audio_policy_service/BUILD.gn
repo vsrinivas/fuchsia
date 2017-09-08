@@ -11,8 +11,8 @@ executable("audio_policy_service") {
 
   deps = [
     "//application/lib/app",
-    "//apps/media/services",
-    "//apps/media/src/util",
+    "//garnet/public/lib/media/fidl",
+    "//garnet/bin/media/util",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
   ]

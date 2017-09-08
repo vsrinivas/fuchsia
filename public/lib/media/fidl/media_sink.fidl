@@ -4,9 +4,9 @@
 
 module media;
 
-import "apps/media/services/media_transport.fidl";
-import "apps/media/services/media_types.fidl";
-import "apps/media/services/timeline_controller.fidl";
+import "lib/media/fidl/media_transport.fidl";
+import "lib/media/fidl/media_types.fidl";
+import "lib/media/fidl/timeline_controller.fidl";
 
 // TODO(dalesat): Define a media sink that multiplexes streams.
 

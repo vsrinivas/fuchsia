@@ -9,9 +9,9 @@
 
 #include <mx/socket.h>
 
-#include "apps/media/services/seeking_reader.fidl.h"
-#include "apps/media/src/demux/reader.h"
-#include "apps/media/src/util/incident.h"
+#include "lib/media/fidl/seeking_reader.fidl.h"
+#include "garnet/bin/media/demux/reader.h"
+#include "garnet/bin/media/util/incident.h"
 #include "lib/ftl/tasks/task_runner.h"
 
 namespace media {

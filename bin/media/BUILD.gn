@@ -6,34 +6,34 @@ import("//packages/package.gni")
 
 group("services") {
   public_deps = [
-    "//apps/media/src/audio_policy_service",
-    "//apps/media/src/audio_server",
-    "//apps/media/src/flog_service",
-    "//apps/media/src/media_service",
-    "//apps/media/src/net_media_service",
+    "//garnet/bin/media/audio_policy_service",
+    "//garnet/bin/media/audio_server",
+    "//garnet/bin/media/flog_service",
+    "//garnet/bin/media/media_service",
+    "//garnet/bin/media/net_media_service",
   ]
 }
 
 group("tools") {
   public_deps = [
-    "//apps/media/tools/flog_viewer",
-    "//apps/media/tools/vol",
+    "//garent/bin/flog_viewer",
+    "//garent/bin/vol",
   ]
 }
 
 group("examples") {
   public_deps = [
-    "//apps/media/examples/audio_player",
-    "//apps/media/examples/master_gain",
-    "//apps/media/examples/media_player",
-    "//apps/media/examples/media_player_flutter",
-    "//apps/media/examples/vu_meter",
+    "//garnet/examples/media/audio_player",
+    "//garnet/examples/media/master_gain",
+    "//garnet/examples/media/media_player",
+    "//garnet/examples/media/media_player_flutter",
+    "//garnet/examples/media/vu_meter",
   ]
 }
 
 group("lib") {
   public_deps = [
-    "//apps/media/lib/c",
+    "//garnet/public/lib/media/c",
   ]
 }
 
@@ -78,7 +78,7 @@ package("media") {
 
     {
       name = "media_player_flutter"
-      source = "gen/apps/media/examples/media_player_flutter/media_player_flutter.flx"
+      source = "gen/garnet/examples/media/media_player_flutter/media_player_flutter.flx"
     },
 
     {
@@ -115,13 +115,13 @@ package("tests") {
   package_name = "media_tests"
 
   deps = [
-    "//apps/media/lib/timeline:tests",
-    "//apps/media/lib/transport:tests",
-    "//apps/media/src/audio:tests",
-    "//apps/media/src/demux:tests",
-    "//apps/media/src/media_service:tests",
-    "//apps/media/src/net_media_service:tests",
-    "//apps/media/src/util:tests",
+    "//garnet/public/lib/media/timeline:tests",
+    "//garnet/public/lib/media/transport:tests",
+    "//garnet/bin/media/audio:tests",
+    "//garnet/bin/media/demux:tests",
+    "//garnet/bin/media/media_service:tests",
+    "//garnet/bin/media/net_media_service:tests",
+    "//garnet/bin/media/util:tests",
   ]
 
   tests = [

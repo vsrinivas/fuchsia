@@ -6,10 +6,10 @@
 
 #include <memory>
 
-#include "apps/media/services/media_types.fidl.h"
-#include "apps/media/src/audio_server/audio_pipe.h"
-#include "apps/media/src/audio_server/audio_renderer_impl.h"
-#include "apps/media/src/audio_server/gain.h"
+#include "lib/media/fidl/media_types.fidl.h"
+#include "garnet/bin/media/audio_server/audio_pipe.h"
+#include "garnet/bin/media/audio_server/audio_renderer_impl.h"
+#include "garnet/bin/media/audio_server/gain.h"
 
 namespace media {
 namespace audio {

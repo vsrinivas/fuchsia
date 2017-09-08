@@ -6,7 +6,7 @@
 
 #include <condition_variable>
 
-#include "apps/media/src/demux/reader.h"
+#include "garnet/bin/media/demux/reader.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/synchronization/cond_var.h"
 #include "lib/ftl/synchronization/mutex.h"

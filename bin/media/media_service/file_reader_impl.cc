@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/media_service/file_reader_impl.h"
+#include "garnet/bin/media/media_service/file_reader_impl.h"
 
 #include <fcntl.h>
 #include <sys/types.h>

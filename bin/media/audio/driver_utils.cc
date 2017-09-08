@@ -5,7 +5,7 @@
 #include <audio-proto-utils/format-utils.h>
 #include <map>
 
-#include "apps/media/src/audio/driver_utils.h"
+#include "garnet/bin/media/audio/driver_utils.h"
 
 namespace media {
 namespace driver_utils {

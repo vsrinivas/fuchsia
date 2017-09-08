@@ -8,7 +8,7 @@
 #include <mx/vmo.h>
 #include <string>
 
-#include "apps/media/src/audio_server/platform/generic/standard_output_base.h"
+#include "garnet/bin/media/audio_server/platform/generic/standard_output_base.h"
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
 
 namespace media {

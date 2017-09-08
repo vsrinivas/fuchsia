@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/net_media_service/net_media_player_impl.h"
+#include "garnet/bin/media/net_media_service/net_media_player_impl.h"
 
-#include "apps/media/services/seeking_reader.fidl.h"
+#include "lib/media/fidl/seeking_reader.fidl.h"
 #include "lib/ftl/logging.h"
 #include "lib/url/gurl.h"
 

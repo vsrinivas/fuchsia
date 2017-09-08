@@ -8,9 +8,9 @@
 #include <map>
 #include <vector>
 
-#include "apps/media/src/demux/reader.h"
-#include "apps/media/src/demux/sparse_byte_buffer.h"
-#include "apps/media/src/util/incident.h"
+#include "garnet/bin/media/demux/reader.h"
+#include "garnet/bin/media/demux/sparse_byte_buffer.h"
+#include "garnet/bin/media/util/incident.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 

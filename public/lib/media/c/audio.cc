@@ -10,7 +10,7 @@
 
 #include "lib/ftl/logging.h"
 
-#include "apps/media/lib/c/audio.h"
+#include "lib/media/c/audio.h"
 
 namespace {
 // Guard against already-freed (or just plain bad) structs: store a 4-char tag

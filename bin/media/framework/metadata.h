@@ -7,7 +7,7 @@
 #include <memory>
 #include <string>
 
-#include "apps/media/src/util/safe_clone.h"
+#include "garnet/bin/media/util/safe_clone.h"
 #include "lib/ftl/macros.h"
 
 namespace media {

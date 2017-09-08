@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/media_service/lpcm_reformatter_impl.h"
+#include "garnet/bin/media/media_service/lpcm_reformatter_impl.h"
 
-#include "apps/media/src/fidl/fidl_type_conversions.h"
+#include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

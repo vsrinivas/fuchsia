@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/tools/flog_viewer/flog_viewer.h"
+#include "garent/bin/flog_viewer/flog_viewer.h"
 
 #include <iomanip>
 #include <iostream>
 #include <limits>
 
 #include "application/lib/app/connect.h"
-#include "apps/media/src/util/callback_joiner.h"
-#include "apps/media/tools/flog_viewer/formatting.h"
+#include "garnet/bin/media/util/callback_joiner.h"
+#include "garent/bin/flog_viewer/formatting.h"
 #include "lib/fidl/cpp/bindings/message.h"
 
 namespace flog {

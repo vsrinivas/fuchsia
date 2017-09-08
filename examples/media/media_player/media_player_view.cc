@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/examples/media_player/media_player_view.h"
+#include "garnet/examples/media/media_player/media_player_view.h"
 
 #include <hid/usages.h>
 
 #include <iomanip>
 
 #include "application/lib/app/connect.h"
-#include "apps/media/examples/media_player/media_player_params.h"
-#include "apps/media/lib/timeline/fidl_type_conversions.h"
-#include "apps/media/lib/timeline/timeline.h"
-#include "apps/media/services/audio_renderer.fidl.h"
-#include "apps/media/services/media_service.fidl.h"
-#include "apps/media/services/net_media_service.fidl.h"
+#include "garnet/examples/media/media_player/media_player_params.h"
+#include "lib/media/timeline/fidl_type_conversions.h"
+#include "lib/media/timeline/timeline.h"
+#include "lib/media/fidl/audio_renderer.fidl.h"
+#include "lib/media/fidl/media_service.fidl.h"
+#include "lib/media/fidl/net_media_service.fidl.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/skia/include/core/SkColor.h"

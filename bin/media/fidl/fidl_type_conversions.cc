@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/fidl/fidl_type_conversions.h"
+#include "garnet/bin/media/fidl/fidl_type_conversions.h"
 
-#include "apps/media/src/framework/types/audio_stream_type.h"
-#include "apps/media/src/framework/types/subpicture_stream_type.h"
-#include "apps/media/src/framework/types/text_stream_type.h"
-#include "apps/media/src/framework/types/video_stream_type.h"
+#include "garnet/bin/media/framework/types/audio_stream_type.h"
+#include "garnet/bin/media/framework/types/subpicture_stream_type.h"
+#include "garnet/bin/media/framework/types/text_stream_type.h"
+#include "garnet/bin/media/framework/types/video_stream_type.h"
 
 namespace media {
 

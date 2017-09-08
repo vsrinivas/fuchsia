@@ -6,7 +6,7 @@
 
 #include <ostream>
 
-#include "apps/media/src/framework/formatting.h"
+#include "garnet/bin/media/framework/formatting.h"
 extern "C" {
 #include "third_party/ffmpeg/libavformat/avformat.h"
 }

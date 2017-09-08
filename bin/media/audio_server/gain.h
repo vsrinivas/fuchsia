@@ -7,7 +7,7 @@
 #include <atomic>
 #include <stdint.h>
 
-#include "apps/media/services/audio_renderer.fidl.h"
+#include "lib/media/fidl/audio_renderer.fidl.h"
 
 namespace media {
 namespace audio {

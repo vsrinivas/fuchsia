@@ -4,8 +4,8 @@
 
 module media;
 
-import "apps/media/services/audio_renderer.fidl";
-import "apps/media/services/media_renderer.fidl";
+import "lib/media/fidl/audio_renderer.fidl";
+import "lib/media/fidl/media_renderer.fidl";
 
 [ServiceName="media::AudioServer"]
 interface AudioServer {

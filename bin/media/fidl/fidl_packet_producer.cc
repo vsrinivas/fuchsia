@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/fidl/fidl_packet_producer.h"
+#include "garnet/bin/media/fidl/fidl_packet_producer.h"
 
-#include "apps/media/services/logs/media_packet_producer_channel.fidl.h"
-#include "apps/media/src/fidl/fidl_type_conversions.h"
+#include "lib/media/fidl/logs/media_packet_producer_channel.fidl.h"
+#include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"

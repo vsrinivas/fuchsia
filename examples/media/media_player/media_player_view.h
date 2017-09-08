@@ -8,11 +8,11 @@
 #include <queue>
 
 #include "application/lib/app/application_context.h"
-#include "apps/media/examples/media_player/media_player_params.h"
-#include "apps/media/lib/timeline/timeline_function.h"
-#include "apps/media/services/media_player.fidl.h"
-#include "apps/media/services/net_media_player.fidl.h"
-#include "apps/media/services/video_renderer.fidl.h"
+#include "garnet/examples/media/media_player/media_player_params.h"
+#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/fidl/media_player.fidl.h"
+#include "lib/media/fidl/net_media_player.fidl.h"
+#include "lib/media/fidl/video_renderer.fidl.h"
 #include "lib/ui/scenic/skia/host_canvas_cycler.h"
 #include "lib/ui/view_framework/base_view.h"
 #include "lib/ftl/macros.h"

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/audio_server/platform/generic/mixer.h"
+#include "garnet/bin/media/audio_server/platform/generic/mixer.h"
 
-#include "apps/media/lib/timeline/timeline_rate.h"
-#include "apps/media/src/audio_server/platform/generic/mixers/linear_sampler.h"
-#include "apps/media/src/audio_server/platform/generic/mixers/no_op.h"
-#include "apps/media/src/audio_server/platform/generic/mixers/point_sampler.h"
+#include "lib/media/timeline/timeline_rate.h"
+#include "garnet/bin/media/audio_server/platform/generic/mixers/linear_sampler.h"
+#include "garnet/bin/media/audio_server/platform/generic/mixers/no_op.h"
+#include "garnet/bin/media/audio_server/platform/generic/mixers/point_sampler.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

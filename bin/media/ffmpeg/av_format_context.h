@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/media/src/ffmpeg/av_io_context.h"
-#include "apps/media/src/ffmpeg/ffmpeg_init.h"
+#include "garnet/bin/media/ffmpeg/av_io_context.h"
+#include "garnet/bin/media/ffmpeg/ffmpeg_init.h"
 extern "C" {
 #include "third_party/ffmpeg/libavcodec/avcodec.h"
 #include "third_party/ffmpeg/libavformat/avformat.h"

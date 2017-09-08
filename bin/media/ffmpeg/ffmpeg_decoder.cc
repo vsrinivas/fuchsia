@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/ffmpeg/ffmpeg_decoder.h"
+#include "garnet/bin/media/ffmpeg/ffmpeg_decoder.h"
 
-#include "apps/media/src/ffmpeg/av_codec_context.h"
-#include "apps/media/src/ffmpeg/ffmpeg_audio_decoder.h"
-#include "apps/media/src/ffmpeg/ffmpeg_video_decoder.h"
+#include "garnet/bin/media/ffmpeg/av_codec_context.h"
+#include "garnet/bin/media/ffmpeg/ffmpeg_audio_decoder.h"
+#include "garnet/bin/media/ffmpeg/ffmpeg_video_decoder.h"
 
 namespace media {
 

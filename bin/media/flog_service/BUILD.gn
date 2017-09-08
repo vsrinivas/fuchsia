@@ -17,8 +17,8 @@ executable("flog_service") {
 
   deps = [
     "//application/lib/app",
-    "//apps/media/services/flog",
-    "//apps/media/src/util",
+    "//garnet/public/lib/media/fidl/flog",
+    "//garnet/bin/media/util",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
   ]

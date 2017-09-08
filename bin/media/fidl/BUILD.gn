@@ -19,15 +19,15 @@ source_set("fidl") {
   ]
 
   public_deps = [
-    "//apps/media/lib/flog",
+    "//garnet/public/lib/media/flog",
   ]
 
   deps = [
-    "//apps/media/lib/transport",
-    "//apps/media/services",
-    "//apps/media/src/demux",
-    "//apps/media/src/framework",
-    "//apps/media/src/util",
+    "//garnet/public/lib/media/transport",
+    "//garnet/public/lib/media/fidl",
+    "//garnet/bin/media/demux",
+    "//garnet/bin/media/framework",
+    "//garnet/bin/media/util",
     "//apps/network/services",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",

@@ -7,10 +7,10 @@
 #include <string>
 
 #include "application/lib/app/application_context.h"
-#include "apps/media/services/audio_policy_service.fidl.h"
-#include "apps/media/services/audio_renderer.fidl.h"
-#include "apps/media/services/audio_server.fidl.h"
-#include "apps/media/src/util/fidl_publisher.h"
+#include "lib/media/fidl/audio_policy_service.fidl.h"
+#include "lib/media/fidl/audio_renderer.fidl.h"
+#include "lib/media/fidl/audio_server.fidl.h"
+#include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 

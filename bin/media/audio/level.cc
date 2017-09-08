@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/audio/level.h"
+#include "garnet/bin/media/audio/level.h"
 
 #include <cmath>
 #include <limits>
 
-#include "apps/media/src/audio/gain.h"
+#include "garnet/bin/media/audio/gain.h"
 
 namespace media {
 

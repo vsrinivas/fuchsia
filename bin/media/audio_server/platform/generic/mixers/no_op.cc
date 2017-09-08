@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/audio_server/platform/generic/mixers/no_op.h"
+#include "garnet/bin/media/audio_server/platform/generic/mixers/no_op.h"
 
-#include "apps/media/src/audio_server/audio_renderer_impl.h"
+#include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

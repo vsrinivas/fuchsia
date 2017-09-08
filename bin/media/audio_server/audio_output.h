@@ -9,9 +9,9 @@
 #include <set>
 #include <thread>
 
-#include "apps/media/src/audio_server/audio_pipe.h"
-#include "apps/media/src/audio_server/audio_renderer_impl.h"
-#include "apps/media/src/audio_server/fwd_decls.h"
+#include "garnet/bin/media/audio_server/audio_pipe.h"
+#include "garnet/bin/media/audio_server/audio_renderer_impl.h"
+#include "garnet/bin/media/audio_server/fwd_decls.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 #include "lib/ftl/tasks/task_runner.h"

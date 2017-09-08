@@ -12,7 +12,7 @@
 #include <magenta/types.h>
 #include <mx/vmo.h>
 
-#include "apps/media/lib/transport/mapped_shared_buffer.h"
+#include "lib/media/transport/mapped_shared_buffer.h"
 
 namespace media {
 

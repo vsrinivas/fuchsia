@@ -4,17 +4,17 @@
 
 module media;
 
-import "apps/media/services/audio_renderer.fidl";
-import "apps/media/services/media_capturer.fidl";
-import "apps/media/services/media_player.fidl";
-import "apps/media/services/media_renderer.fidl";
-import "apps/media/services/media_sink.fidl";
-import "apps/media/services/media_source.fidl";
-import "apps/media/services/media_type_converter.fidl";
-import "apps/media/services/media_types.fidl";
-import "apps/media/services/seeking_reader.fidl";
-import "apps/media/services/timeline_controller.fidl";
-import "apps/media/services/video_renderer.fidl";
+import "lib/media/fidl/audio_renderer.fidl";
+import "lib/media/fidl/media_capturer.fidl";
+import "lib/media/fidl/media_player.fidl";
+import "lib/media/fidl/media_renderer.fidl";
+import "lib/media/fidl/media_sink.fidl";
+import "lib/media/fidl/media_source.fidl";
+import "lib/media/fidl/media_type_converter.fidl";
+import "lib/media/fidl/media_types.fidl";
+import "lib/media/fidl/seeking_reader.fidl";
+import "lib/media/fidl/timeline_controller.fidl";
+import "lib/media/fidl/video_renderer.fidl";
 
 // Primary media service definition.
 [ServiceName="media::MediaService"]

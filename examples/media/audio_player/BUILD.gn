@@ -13,8 +13,8 @@ executable("audio_player") {
 
   deps = [
     "//application/lib/app",
-    "//apps/media/lib/timeline",
-    "//apps/media/services",
+    "//garnet/public/lib/media/timeline",
+    "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/mtl",
   ]
 }

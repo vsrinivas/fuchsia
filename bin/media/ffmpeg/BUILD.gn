@@ -30,13 +30,13 @@ source_set("ffmpeg") {
   ]
 
   deps = [
-    "//apps/media/lib/timeline",
-    "//apps/media/services",
-    "//apps/media/src/audio",
-    "//apps/media/src/decode",
-    "//apps/media/src/demux",
-    "//apps/media/src/framework",
-    "//apps/media/src/util",
+    "//garnet/public/lib/media/timeline",
+    "//garnet/public/lib/media/fidl",
+    "//garnet/bin/media/audio",
+    "//garnet/bin/media/decode",
+    "//garnet/bin/media/demux",
+    "//garnet/bin/media/framework",
+    "//garnet/bin/media/util",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/trace",

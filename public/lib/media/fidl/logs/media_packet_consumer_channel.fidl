@@ -4,7 +4,7 @@
 
 module media.logs;
 
-import "apps/media/services/media_transport.fidl";
+import "lib/media/fidl/media_transport.fidl";
 
 [ServiceName="media::logs::MediaPacketConsumerChannel"]
 interface MediaPacketConsumerChannel {

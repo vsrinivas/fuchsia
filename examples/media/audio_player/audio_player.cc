@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/examples/audio_player/audio_player.h"
+#include "garnet/examples/media/audio_player/audio_player.h"
 
 #include <iomanip>
 
 #include "application/lib/app/connect.h"
-#include "apps/media/examples/audio_player/audio_player_params.h"
-#include "apps/media/lib/timeline/timeline.h"
-#include "apps/media/services/audio_renderer.fidl.h"
-#include "apps/media/services/media_service.fidl.h"
-#include "apps/media/services/net_media_service.fidl.h"
+#include "garnet/examples/media/audio_player/audio_player_params.h"
+#include "lib/media/timeline/timeline.h"
+#include "lib/media/fidl/audio_renderer.fidl.h"
+#include "lib/media/fidl/media_service.fidl.h"
+#include "lib/media/fidl/net_media_service.fidl.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 

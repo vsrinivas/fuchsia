@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/media/lib/timeline/timeline_function.h"
-#include "apps/media/services/timelines.fidl.h"
+#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/fidl/timelines.fidl.h"
 
 namespace fidl {
 

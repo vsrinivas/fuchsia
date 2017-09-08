@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/media/src/audio/gain.h"
+#include "garnet/bin/media/audio/gain.h"
 
 namespace media {
 

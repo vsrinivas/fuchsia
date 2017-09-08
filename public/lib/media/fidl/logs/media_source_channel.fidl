@@ -4,7 +4,7 @@
 
 module media.logs;
 
-import "apps/media/services/media_types.fidl";
+import "lib/media/fidl/media_types.fidl";
 
 [ServiceName="media::logs::MediaSourceChannel"]
 interface MediaSourceChannel {

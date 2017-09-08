@@ -7,15 +7,15 @@
 #include <deque>
 #include <set>
 
-#include "apps/media/lib/flog/flog.h"
-#include "apps/media/lib/timeline/timeline_function.h"
-#include "apps/media/lib/timeline/timeline_rate.h"
-#include "apps/media/services/audio_renderer.fidl.h"
-#include "apps/media/services/logs/media_renderer_channel.fidl.h"
-#include "apps/media/services/media_renderer.fidl.h"
-#include "apps/media/src/audio_server/audio_pipe.h"
-#include "apps/media/src/audio_server/fwd_decls.h"
-#include "apps/media/src/util/timeline_control_point.h"
+#include "lib/media/flog/flog.h"
+#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/timeline/timeline_rate.h"
+#include "lib/media/fidl/audio_renderer.fidl.h"
+#include "lib/media/fidl/logs/media_renderer_channel.fidl.h"
+#include "lib/media/fidl/media_renderer.fidl.h"
+#include "garnet/bin/media/audio_server/audio_pipe.h"
+#include "garnet/bin/media/audio_server/fwd_decls.h"
+#include "garnet/bin/media/util/timeline_control_point.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace media {

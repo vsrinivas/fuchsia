@@ -4,7 +4,7 @@
 
 module media;
 
-import "apps/media/services/timelines.fidl";
+import "lib/media/fidl/timelines.fidl";
 
 // Timing controller for a media graph.
 interface MediaTimelineController {

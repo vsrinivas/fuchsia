@@ -6,12 +6,12 @@
 
 #include <mx/handle.h>
 
-#include "apps/media/services/media_result.fidl.h"
-#include "apps/media/services/media_source.fidl.h"
-#include "apps/media/services/media_transport.fidl.h"
-#include "apps/media/services/media_types.fidl.h"
-#include "apps/media/services/timelines.fidl.h"
-#include "apps/media/src/framework/formatting.h"
+#include "lib/media/fidl/media_result.fidl.h"
+#include "lib/media/fidl/media_source.fidl.h"
+#include "lib/media/fidl/media_transport.fidl.h"
+#include "lib/media/fidl/media_types.fidl.h"
+#include "lib/media/fidl/timelines.fidl.h"
+#include "garnet/bin/media/framework/formatting.h"
 #include "apps/network/services/http_header.fidl.h"
 #include "apps/network/services/network_error.fidl.h"
 #include "apps/network/services/url_body.fidl.h"

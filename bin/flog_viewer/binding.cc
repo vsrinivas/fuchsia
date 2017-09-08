@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/tools/flog_viewer/binding.h"
+#include "garent/bin/flog_viewer/binding.h"
 
-#include "apps/media/tools/flog_viewer/channel.h"
+#include "garent/bin/flog_viewer/channel.h"
 #include "lib/ftl/logging.h"
 
 namespace flog {

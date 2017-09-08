@@ -7,7 +7,7 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
-#include "apps/media/services/audio_server.fidl.h"
+#include "lib/media/fidl/audio_server.fidl.h"
 #include "lib/ftl/command_line.h"
 #include "lib/mtl/tasks/message_loop.h"
 

@@ -6,7 +6,7 @@
 
 #include <magenta/device/audio.h>
 
-#include "apps/media/src/framework/types/audio_stream_type.h"
+#include "garnet/bin/media/framework/types/audio_stream_type.h"
 
 namespace media {
 namespace driver_utils {

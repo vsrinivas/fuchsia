@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "apps/media/src/decode/decoder.h"
+#include "garnet/bin/media/decode/decoder.h"
 
 namespace media {
 
