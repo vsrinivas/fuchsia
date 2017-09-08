@@ -4,7 +4,7 @@
 
 module display_pipe;
 
-import "apps/mozart/services/images/image_pipe.fidl";
+import "lib/images/fidl/image_pipe.fidl";
 
 struct DisplayInfo {
   uint32 width;   // Display width in pixels.

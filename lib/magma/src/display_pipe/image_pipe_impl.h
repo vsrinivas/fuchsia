@@ -7,7 +7,7 @@
 
 #include <unordered_map>
 
-#include "apps/mozart/services/images/image_pipe.fidl.h"
+#include "lib/images/fidl/image_pipe.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "magma/src/display_pipe/image.h"
 

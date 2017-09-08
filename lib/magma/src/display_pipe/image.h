@@ -5,7 +5,7 @@
 #ifndef MAGMA_IMAGE_H_
 #define MAGMA_IMAGE_H_
 
-#include "apps/mozart/services/images/image_info.fidl.h"
+#include "lib/images/fidl/image_info.fidl.h"
 #include "magma/src/display_pipe/magma_connection.h"
 
 namespace display_pipe {
