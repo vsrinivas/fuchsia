@@ -1,7 +1,6 @@
 {
     "languages": [
-        "cpp",
-        "go"
+        "cpp"
     ],
     "labels": [
         "//apps/tracing:host_utils"
