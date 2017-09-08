@@ -5,9 +5,9 @@
 module mozart;
 
 import "application/services/service_provider.fidl";
-import "apps/mozart/services/views/view_containers.fidl";
-import "apps/mozart/services/views/view_properties.fidl";
-import "apps/mozart/services/views/view_token.fidl";
+import "lib/ui/views/fidl/view_containers.fidl";
+import "lib/ui/views/fidl/view_properties.fidl";
+import "lib/ui/views/fidl/view_token.fidl";
 
 // A view is a graphical user interface component which is responsible
 // for drawing and supporting user interactions in the area of the screen

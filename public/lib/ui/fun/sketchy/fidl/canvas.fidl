@@ -4,9 +4,9 @@
 
 module sketchy;
 
-import "apps/mozart/services/fun/sketchy/ops.fidl";
-import "apps/mozart/services/fun/sketchy/types.fidl";
-import "apps/mozart/services/scenic/presentation_info.fidl";
+import "lib/ui/fun/sketchy/fidl/ops.fidl";
+import "lib/ui/fun/sketchy/fidl/types.fidl";
+import "lib/ui/scenic/fidl/presentation_info.fidl";
 
 // A Canvas allows clients to draw strokes, which are dynamically tessellated
 // and inserted into the global Scenic scene-graph.

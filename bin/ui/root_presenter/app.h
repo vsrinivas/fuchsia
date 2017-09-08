@@ -9,11 +9,11 @@
 #include <vector>
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/lib/input/input_device_impl.h"
-#include "apps/mozart/services/input/input_device_registry.fidl.h"
-#include "apps/mozart/services/presentation/presenter.fidl.h"
-#include "apps/mozart/services/views/view_manager.fidl.h"
-#include "apps/mozart/src/input_reader/input_reader.h"
+#include "lib/ui/input/input_device_impl.h"
+#include "lib/ui/input/fidl/input_device_registry.fidl.h"
+#include "lib/ui/presentation/fidl/presenter.fidl.h"
+#include "lib/ui/views/fidl/view_manager.fidl.h"
+#include "garnet/bin/ui/input_reader/input_reader.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/macros.h"

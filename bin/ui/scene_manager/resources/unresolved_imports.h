@@ -8,7 +8,7 @@
 
 #include "lib/mtl/tasks/message_loop.h"
 
-#include "apps/mozart/src/scene_manager/resources/import.h"
+#include "garnet/bin/ui/scene_manager/resources/import.h"
 
 namespace scene_manager {
 

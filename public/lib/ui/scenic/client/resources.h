@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/mozart/lib/scenic/client/session.h"
+#include "lib/ui/scenic/client/session.h"
 
 #include "lib/ftl/macros.h"
 

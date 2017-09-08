@@ -5,7 +5,7 @@
 module mozart;
 
 // TODO(jeffbrown): Redesign input event representation later.
-import "apps/mozart/services/input/input_events.fidl";
+import "lib/ui/input/fidl/input_events.fidl";
 
 // The input dispatcher service allows the component which owns and controls
 // a view tree to dispatch input events to the views that it contains.

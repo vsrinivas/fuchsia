@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/view_manager/input/input_connection_impl.h"
+#include "garnet/bin/ui/view_manager/input/input_connection_impl.h"
 
-#include "apps/mozart/services/input/cpp/formatting.h"
-#include "apps/mozart/services/views/cpp/formatting.h"
-#include "apps/mozart/src/view_manager/internal/input_owner.h"
-#include "apps/mozart/src/view_manager/internal/view_inspector.h"
+#include "lib/ui/input/cpp/formatting.h"
+#include "lib/ui/views/cpp/formatting.h"
+#include "garnet/bin/ui/view_manager/internal/input_owner.h"
+#include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "lib/ftl/functional/make_copyable.h"
 
 namespace view_manager {

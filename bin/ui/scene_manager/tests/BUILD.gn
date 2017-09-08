@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//apps/mozart/config.gni")
+import("//garnet/public/lib/ui/config.gni")
 
 group("tests") {
   testonly = true
@@ -22,9 +22,9 @@ source_set("testing_deps") {
   ]
   public_deps = [
     ":util",
-    "//apps/mozart/lib/scenic:fidl_helpers",
-    "//apps/mozart/lib/tests",
-    "//apps/mozart/src/scene_manager:common",
+    "//garnet/public/lib/ui/scenic:fidl_helpers",
+    "//garnet/public/lib/ui/tests",
+    "//garnet/bin/ui/scene_manager:common",
     "//third_party/gtest",
   ]
 }
@@ -53,7 +53,7 @@ executable("apptests") {
 
   deps = [
     ":testing_deps",
-    "//apps/mozart/src/tests:main",
+    "//garnet/bin/ui/tests:main",
   ]
 }
 
@@ -79,7 +79,7 @@ executable("unittests") {
 
   deps = [
     ":testing_deps",
-    "//apps/mozart/src/tests:main",
+    "//garnet/bin/ui/tests:main",
   ]
 }
 

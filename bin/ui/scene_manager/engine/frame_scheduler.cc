@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/scene_manager/engine/frame_scheduler.h"
+#include "garnet/bin/ui/scene_manager/engine/frame_scheduler.h"
 
 #include <magenta/syscalls.h>
 #include <trace/event.h>
 
-#include "apps/mozart/src/scene_manager/displays/display.h"
-#include "apps/mozart/src/scene_manager/engine/frame_timings.h"
+#include "garnet/bin/ui/scene_manager/displays/display.h"
+#include "garnet/bin/ui/scene_manager/engine/frame_timings.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 

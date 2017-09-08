@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/examples/shadertoy/client/view.h"
+#include "garnet/examples/ui/shadertoy/client/view.h"
 
-#include "apps/mozart/examples/shadertoy/client/glsl_strings.h"
-#include "apps/mozart/lib/scenic/fidl_helpers.h"
+#include "garnet/examples/ui/shadertoy/client/glsl_strings.h"
+#include "lib/ui/scenic/fidl_helpers.h"
 
 namespace shadertoy_client {
 

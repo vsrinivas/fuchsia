@@ -11,7 +11,7 @@
 #include "escher/impl/command_buffer_sequencer.h"
 #include "lib/ftl/logging.h"
 
-#include "apps/mozart/src/scene_manager/fence.h"
+#include "garnet/bin/ui/scene_manager/fence.h"
 
 namespace scene_manager {
 

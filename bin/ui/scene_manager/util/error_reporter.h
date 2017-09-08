@@ -6,7 +6,7 @@
 
 #include <sstream>
 
-#include "apps/mozart/src/scene_manager/print_op.h"
+#include "garnet/bin/ui/scene_manager/print_op.h"
 #include "lib/ftl/logging.h"
 
 namespace scene_manager {

@@ -4,7 +4,7 @@
 
 module mozart;
 
-import "apps/mozart/services/input/input_reports.fidl";
+import "lib/ui/input/fidl/input_reports.fidl";
 
 // Service to receive input events.
 //

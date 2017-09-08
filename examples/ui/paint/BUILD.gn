@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//apps/mozart/config.gni")
+import("//garnet/public/lib/ui/config.gni")
 
 executable("paint") {
   output_name = "paint_view"
@@ -14,10 +14,10 @@ executable("paint") {
   ]
 
   deps = [
-    "//apps/mozart/lib/view_framework:skia",
-    "//apps/mozart/lib/view_framework:view_provider",
-    "//apps/mozart/services/scenic",
-    "//apps/mozart/services/views",
+    "//garnet/public/lib/ui/view_framework:skia",
+    "//garnet/public/lib/ui/view_framework:view_provider",
+    "//garnet/public/lib/ui/scenic/fidl",
+    "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",

@@ -10,12 +10,12 @@
 #include "lib/mtl/threading/thread.h"
 #include "magenta/system/ulib/mx/include/mx/eventpair.h"
 
-#include "apps/mozart/lib/scenic/fidl_helpers.h"
-#include "apps/mozart/lib/tests/test_with_message_loop.h"
-#include "apps/mozart/src/scene_manager/resources/nodes/entity_node.h"
-#include "apps/mozart/src/scene_manager/resources/resource_linker.h"
-#include "apps/mozart/src/scene_manager/tests/session_test.h"
-#include "apps/mozart/src/scene_manager/tests/util.h"
+#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/tests/test_with_message_loop.h"
+#include "garnet/bin/ui/scene_manager/resources/nodes/entity_node.h"
+#include "garnet/bin/ui/scene_manager/resources/resource_linker.h"
+#include "garnet/bin/ui/scene_manager/tests/session_test.h"
+#include "garnet/bin/ui/scene_manager/tests/util.h"
 
 namespace scene_manager {
 namespace test {

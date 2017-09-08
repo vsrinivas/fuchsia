@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/services/input/ime_service.fidl.h"
-#include "apps/mozart/services/input/input_events.fidl.h"
+#include "lib/ui/input/fidl/ime_service.fidl.h"
+#include "lib/ui/input/fidl/input_events.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/macros.h"

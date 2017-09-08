@@ -5,7 +5,7 @@
 #ifndef APPS_MOZART_LIB_TESTS_MOCKS_MOCK_INPUT_DEVICE_H_
 #define APPS_MOZART_LIB_TESTS_MOCKS_MOCK_INPUT_DEVICE_H_
 
-#include "apps/mozart/services/input/input_device_registry.fidl.h"
+#include "lib/ui/input/fidl/input_device_registry.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
 

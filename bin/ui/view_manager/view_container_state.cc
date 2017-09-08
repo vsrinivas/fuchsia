@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/view_manager/view_container_state.h"
+#include "garnet/bin/ui/view_manager/view_container_state.h"
 
 #include <ostream>
 

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/scenic/client/resources.h"
+#include "lib/ui/scenic/client/resources.h"
 
-#include "apps/mozart/lib/scenic/fidl_helpers.h"
+#include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/ftl/logging.h"
 
 namespace scenic_lib {

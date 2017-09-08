@@ -5,10 +5,10 @@
 #ifndef APPS_MOZART_SRC_VIEW_MANAGER_INPUT_INPUT_CONNECTION_IMPL_H_
 #define APPS_MOZART_SRC_VIEW_MANAGER_INPUT_INPUT_CONNECTION_IMPL_H_
 
-#include "apps/mozart/services/input/ime_service.fidl.h"
-#include "apps/mozart/services/input/input_connection.fidl.h"
-#include "apps/mozart/services/input/text_input.fidl.h"
-#include "apps/mozart/services/views/views.fidl.h"
+#include "lib/ui/input/fidl/ime_service.fidl.h"
+#include "lib/ui/input/fidl/input_connection.fidl.h"
+#include "lib/ui/input/fidl/text_input.fidl.h"
+#include "lib/ui/views/fidl/views.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"

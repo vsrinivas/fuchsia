@@ -12,7 +12,7 @@ source_set("sketchy") {
 
   deps = [
     "//application/lib/app",
-    "//apps/mozart/lib/scenic:client",
-    "//apps/mozart/services/fun/sketchy",
+    "//garnet/public/lib/ui/scenic:client",
+    "//garnet/public/lib/ui/fun/sketchy/fidl",
   ]
 }

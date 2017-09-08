@@ -4,8 +4,8 @@
 
 #include <trace-provider/provider.h>
 
-#include "apps/mozart/examples/noodles/noodles_view.h"
-#include "apps/mozart/lib/view_framework/view_provider_app.h"
+#include "garnet/examples/ui/noodles/noodles_view.h"
+#include "lib/ui/view_framework/view_provider_app.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 int main(int argc, const char** argv) {

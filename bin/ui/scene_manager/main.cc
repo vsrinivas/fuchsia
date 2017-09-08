@@ -12,8 +12,8 @@
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-#include "apps/mozart/src/scene_manager/displays/display_manager.h"
-#include "apps/mozart/src/scene_manager/scene_manager_app.h"
+#include "garnet/bin/ui/scene_manager/displays/display_manager.h"
+#include "garnet/bin/ui/scene_manager/scene_manager_app.h"
 
 using namespace scene_manager;
 

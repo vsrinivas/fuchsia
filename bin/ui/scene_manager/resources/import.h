@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/mozart/src/scene_manager/resources/resource.h"
+#include "garnet/bin/ui/scene_manager/resources/resource.h"
 #include "lib/ftl/macros.h"
 #include "magenta/system/ulib/mx/include/mx/eventpair.h"
 

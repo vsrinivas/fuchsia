@@ -7,7 +7,7 @@
 
 #include <utility>
 
-#include "apps/mozart/services/views/view_associates.fidl.h"
+#include "lib/ui/views/fidl/view_associates.fidl.h"
 #include "lib/ftl/functional/closure.h"
 
 namespace test {

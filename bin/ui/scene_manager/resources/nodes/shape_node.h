@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "apps/mozart/src/scene_manager/resources/nodes/node.h"
+#include "garnet/bin/ui/scene_manager/resources/nodes/node.h"
 
-#include "apps/mozart/src/scene_manager/resources/material.h"
-#include "apps/mozart/src/scene_manager/resources/shapes/shape.h"
+#include "garnet/bin/ui/scene_manager/resources/material.h"
+#include "garnet/bin/ui/scene_manager/resources/shapes/shape.h"
 
 namespace scene_manager {
 

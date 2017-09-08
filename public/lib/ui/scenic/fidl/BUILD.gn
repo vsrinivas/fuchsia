@@ -19,8 +19,8 @@ fidl("scenic") {
 
   public_deps = [
     ":presentation_info",
-    "//apps/mozart/services/geometry",
-    "//apps/mozart/services/images",
+    "//garnet/public/lib/ui/geometry/fidl",
+    "//garnet/public/lib/images/fidl",
   ]
 }
 

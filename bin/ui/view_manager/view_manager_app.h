@@ -9,8 +9,8 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/services/application_environment.fidl.h"
-#include "apps/mozart/services/views/view_manager.fidl.h"
-#include "apps/mozart/src/view_manager/view_registry.h"
+#include "lib/ui/views/fidl/view_manager.fidl.h"
+#include "garnet/bin/ui/view_manager/view_registry.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 

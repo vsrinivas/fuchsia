@@ -5,9 +5,9 @@
 module mozart;
 
 // TODO(jeffbrown): Redesign input event representation later.
-import "apps/mozart/services/input/input_events.fidl";
-import "apps/mozart/services/input/text_input.fidl";
-import "apps/mozart/services/views/view_token.fidl";
+import "lib/ui/input/fidl/input_events.fidl";
+import "lib/ui/input/fidl/text_input.fidl";
+import "lib/ui/views/fidl/view_token.fidl";
 
 // The input connection service allows a view to receive input events
 // such as key presses and pointer movements.

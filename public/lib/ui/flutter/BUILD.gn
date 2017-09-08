@@ -11,8 +11,8 @@ dart_package("flutter") {
 
   deps = [
     "//application/lib/app/dart",
-    "//apps/mozart/services/geometry:geometry_dart",
-    "//apps/mozart/services/views:views_dart",
+    "//garnet/public/lib/ui/geometry/fidl:fidl_dart",
+    "//garnet/public/lib/ui/views/fidl:fidl_dart",
     "//lib/flutter/packages/flutter",
     "//third_party/dart-pkg/pub/meta",
   ]

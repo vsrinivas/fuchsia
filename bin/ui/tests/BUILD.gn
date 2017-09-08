@@ -10,7 +10,7 @@ source_set("main") {
   ]
 
   deps = [
-    "//apps/mozart/lib/tests",
+    "//garnet/public/lib/ui/tests",
     "//apps/test_runner/lib/reporting",
   ]
 }

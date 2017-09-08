@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/input_reader/input_interpreter.h"
+#include "garnet/bin/ui/input_reader/input_interpreter.h"
 
 #include <fcntl.h>
 #include <hid/acer12.h>
@@ -19,8 +19,8 @@
 
 #include <trace/event.h>
 
-#include "apps/mozart/services/input/cpp/formatting.h"
-#include "apps/mozart/services/input/usages.fidl.h"
+#include "lib/ui/input/cpp/formatting.h"
+#include "lib/ui/input/fidl/usages.fidl.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_point.h"
 

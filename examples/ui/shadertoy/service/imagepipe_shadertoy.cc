@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/examples/shadertoy/service/imagepipe_shadertoy.h"
+#include "garnet/examples/ui/shadertoy/service/imagepipe_shadertoy.h"
 
-#include "apps/mozart/examples/shadertoy/service/escher_utils.h"
-#include "apps/mozart/examples/shadertoy/service/renderer.h"
+#include "garnet/examples/ui/shadertoy/service/escher_utils.h"
+#include "garnet/examples/ui/shadertoy/service/renderer.h"
 #include "escher/renderer/framebuffer.h"
 #include "escher/renderer/image.h"
 #include "escher/renderer/simple_image_factory.h"

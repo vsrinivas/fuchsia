@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/services/scenic/ops.fidl.h"
-#include "apps/mozart/services/scenic/types.fidl.h"
+#include "lib/ui/scenic/fidl/ops.fidl.h"
+#include "lib/ui/scenic/fidl/types.fidl.h"
 
 #include <ostream>
 

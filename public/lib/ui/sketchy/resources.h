@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "apps/mozart/lib/scenic/client/session.h"
-#include "apps/mozart/services/fun/sketchy/ops.fidl.h"
-#include "apps/mozart/services/fun/sketchy/resources.fidl.h"
+#include "lib/ui/scenic/client/session.h"
+#include "lib/ui/fun/sketchy/fidl/ops.fidl.h"
+#include "lib/ui/fun/sketchy/fidl/resources.fidl.h"
 
 namespace sketchy_lib {
 

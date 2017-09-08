@@ -5,11 +5,11 @@
 #pragma once
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/examples/sketchy/scene.h"
-#include "apps/mozart/lib/scenic/client/session.h"
-#include "apps/mozart/lib/sketchy/canvas.h"
-#include "apps/mozart/services/scenic/display_info.fidl-common.h"
-#include "apps/mozart/services/scenic/scene_manager.fidl.h"
+#include "garnet/examples/ui/sketchy/scene.h"
+#include "lib/ui/scenic/client/session.h"
+#include "lib/ui/sketchy/canvas.h"
+#include "lib/ui/scenic/fidl/display_info.fidl-common.h"
+#include "lib/ui/scenic/fidl/scene_manager.fidl.h"
 
 namespace sketchy_example {
 

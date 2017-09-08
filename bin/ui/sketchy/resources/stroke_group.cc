@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/sketchy/resources/stroke_group.h"
+#include "garnet/bin/ui/sketchy/resources/stroke_group.h"
 
-#include "apps/mozart/lib/scenic/fidl_helpers.h"
+#include "lib/ui/scenic/fidl_helpers.h"
 
 #include "escher/escher.h"
 #include "escher/geometry/tessellation.h"

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/examples/shapes/shapes_view.h"
+#include "garnet/examples/ui/shapes/shapes_view.h"
 
 #include "lib/ftl/logging.h"
 

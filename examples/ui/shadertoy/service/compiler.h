@@ -10,7 +10,7 @@
 #include <thread>
 #include <vulkan/vulkan.hpp>
 
-#include "apps/mozart/examples/shadertoy/service/pipeline.h"
+#include "garnet/examples/ui/shadertoy/service/pipeline.h"
 #include "escher/escher.h"
 #include "escher/impl/model_data.h"
 

@@ -7,8 +7,8 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/services/application_environment.fidl.h"
-#include "apps/mozart/lib/skia/skia_font_loader.h"
-#include "apps/mozart/lib/view_framework/skia_view.h"
+#include "lib/ui/skia/skia_font_loader.h"
+#include "lib/ui/view_framework/skia_view.h"
 #include "garnet/bin/moterm/command.h"
 #include "garnet/bin/moterm/history.h"
 #include "garnet/bin/moterm/moterm_model.h"

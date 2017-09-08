@@ -5,8 +5,8 @@
 #ifndef APPS_MOZART_LIB_VIEW_FRAMEWORK_SKIA_VIEW_H_
 #define APPS_MOZART_LIB_VIEW_FRAMEWORK_SKIA_VIEW_H_
 
-#include "apps/mozart/lib/scenic/skia/host_canvas_cycler.h"
-#include "apps/mozart/lib/view_framework/base_view.h"
+#include "lib/ui/scenic/skia/host_canvas_cycler.h"
+#include "lib/ui/view_framework/base_view.h"
 #include "lib/ftl/macros.h"
 
 namespace mozart {

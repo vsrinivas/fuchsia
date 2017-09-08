@@ -9,8 +9,8 @@ executable("launch") {
 
   deps = [
     "//application/lib/app",
-    "//apps/mozart/services/presentation",
-    "//apps/mozart/services/views",
+    "//garnet/public/lib/ui/presentation/fidl",
+    "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
   ]

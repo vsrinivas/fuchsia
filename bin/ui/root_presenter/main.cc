@@ -4,7 +4,7 @@
 
 #include <trace-provider/provider.h>
 
-#include "apps/mozart/src/root_presenter/app.h"
+#include "garnet/bin/ui/root_presenter/app.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/log_settings_command_line.h"
 #include "lib/mtl/tasks/message_loop.h"

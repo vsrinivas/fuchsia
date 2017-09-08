@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/examples/hello_scene_manager/app.h"
+#include "garnet/examples/ui/hello_scene_manager/app.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/log_settings_command_line.h"
 

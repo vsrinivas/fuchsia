@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/view_manager/view_stub.h"
+#include "garnet/bin/ui/view_manager/view_stub.h"
 
 #include <utility>
 
-#include "apps/mozart/src/view_manager/view_registry.h"
-#include "apps/mozart/src/view_manager/view_state.h"
-#include "apps/mozart/src/view_manager/view_tree_state.h"
+#include "garnet/bin/ui/view_manager/view_registry.h"
+#include "garnet/bin/ui/view_manager/view_state.h"
+#include "garnet/bin/ui/view_manager/view_tree_state.h"
 #include "lib/ftl/logging.h"
 
 namespace view_manager {

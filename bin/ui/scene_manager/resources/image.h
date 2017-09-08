@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "apps/mozart/src/scene_manager/resources/gpu_memory.h"
-#include "apps/mozart/src/scene_manager/resources/host_memory.h"
-#include "apps/mozart/src/scene_manager/resources/image_base.h"
-#include "apps/mozart/src/scene_manager/resources/memory.h"
-#include "apps/mozart/src/scene_manager/resources/resource.h"
+#include "garnet/bin/ui/scene_manager/resources/gpu_memory.h"
+#include "garnet/bin/ui/scene_manager/resources/host_memory.h"
+#include "garnet/bin/ui/scene_manager/resources/image_base.h"
+#include "garnet/bin/ui/scene_manager/resources/memory.h"
+#include "garnet/bin/ui/scene_manager/resources/resource.h"
 #include "escher/renderer/image.h"
 
 namespace scene_manager {

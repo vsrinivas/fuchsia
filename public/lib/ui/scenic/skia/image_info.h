@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/mozart/services/images/image_info.fidl.h"
+#include "lib/images/fidl/image_info.fidl.h"
 #include "third_party/skia/include/core/SkImageInfo.h"
 
 namespace scenic_lib {

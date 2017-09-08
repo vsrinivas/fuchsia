@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//apps/mozart/config.gni")
+import("//garnet/public/lib/ui/config.gni")
 
 group("scenic") {
   deps = [
@@ -19,7 +19,7 @@ source_set("fidl_helpers") {
   ]
 
   public_deps = [
-    "//apps/mozart/services/scenic",
+    "//garnet/public/lib/ui/scenic/fidl",
   ]
 }
 

@@ -4,8 +4,8 @@
 
 module scenic;
 
-import "apps/mozart/services/scenic/display_info.fidl";
-import "apps/mozart/services/scenic/session.fidl";
+import "lib/ui/scenic/fidl/display_info.fidl";
+import "lib/ui/scenic/fidl/session.fidl";
 
 [ServiceName="scenic::SceneManager"]
 interface SceneManager {

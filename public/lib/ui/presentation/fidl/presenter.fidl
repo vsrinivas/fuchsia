@@ -4,7 +4,7 @@
 
 module mozart;
 
-import "apps/mozart/services/views/view_token.fidl";
+import "lib/ui/views/fidl/view_token.fidl";
 
 // The Presenter service provides a way for applications to ask that a
 // specified view be added to a view tree, leaving any window management

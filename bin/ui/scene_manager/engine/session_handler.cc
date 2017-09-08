@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/scene_manager/engine/session_handler.h"
+#include "garnet/bin/ui/scene_manager/engine/session_handler.h"
 
-#include "apps/mozart/src/scene_manager/scene_manager_impl.h"
+#include "garnet/bin/ui/scene_manager/scene_manager_impl.h"
 #include "lib/ftl/functional/make_copyable.h"
 
 namespace scene_manager {

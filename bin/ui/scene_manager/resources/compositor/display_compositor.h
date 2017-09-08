@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/mozart/src/scene_manager/resources/compositor/compositor.h"
+#include "garnet/bin/ui/scene_manager/resources/compositor/compositor.h"
 
 namespace scene_manager {
 

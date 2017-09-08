@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/lib/tests/test_with_message_loop.h"
+#include "lib/ui/tests/test_with_message_loop.h"
 #include "apps/test_runner/lib/reporting/gtest_listener.h"
 #include "apps/test_runner/lib/reporting/reporter.h"
 #include "gtest/gtest.h"

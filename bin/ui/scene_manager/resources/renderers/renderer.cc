@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
+#include "garnet/bin/ui/scene_manager/resources/renderers/renderer.h"
 
 #include <trace/event.h>
 
@@ -11,17 +11,17 @@
 #include "escher/scene/model.h"
 #include "escher/scene/stage.h"
 
-#include "apps/mozart/src/scene_manager/resources/camera.h"
-#include "apps/mozart/src/scene_manager/resources/dump_visitor.h"
-#include "apps/mozart/src/scene_manager/resources/import.h"
-#include "apps/mozart/src/scene_manager/resources/material.h"
-#include "apps/mozart/src/scene_manager/resources/nodes/entity_node.h"
-#include "apps/mozart/src/scene_manager/resources/nodes/node.h"
-#include "apps/mozart/src/scene_manager/resources/nodes/scene.h"
-#include "apps/mozart/src/scene_manager/resources/nodes/shape_node.h"
-#include "apps/mozart/src/scene_manager/resources/nodes/traversal.h"
-#include "apps/mozart/src/scene_manager/resources/shapes/circle_shape.h"
-#include "apps/mozart/src/scene_manager/resources/shapes/shape.h"
+#include "garnet/bin/ui/scene_manager/resources/camera.h"
+#include "garnet/bin/ui/scene_manager/resources/dump_visitor.h"
+#include "garnet/bin/ui/scene_manager/resources/import.h"
+#include "garnet/bin/ui/scene_manager/resources/material.h"
+#include "garnet/bin/ui/scene_manager/resources/nodes/entity_node.h"
+#include "garnet/bin/ui/scene_manager/resources/nodes/node.h"
+#include "garnet/bin/ui/scene_manager/resources/nodes/scene.h"
+#include "garnet/bin/ui/scene_manager/resources/nodes/shape_node.h"
+#include "garnet/bin/ui/scene_manager/resources/nodes/traversal.h"
+#include "garnet/bin/ui/scene_manager/resources/shapes/circle_shape.h"
+#include "garnet/bin/ui/scene_manager/resources/shapes/shape.h"
 
 namespace scene_manager {
 

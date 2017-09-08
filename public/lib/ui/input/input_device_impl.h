@@ -5,8 +5,8 @@
 #ifndef APPS_MOZART_LIB_INPUT_INPUT_DEVICE_IMPL_H_
 #define APPS_MOZART_LIB_INPUT_INPUT_DEVICE_IMPL_H_
 
-#include "apps/mozart/services/input/input_device_registry.fidl.h"
-#include "apps/mozart/services/input/input_reports.fidl.h"
+#include "lib/ui/input/fidl/input_device_registry.fidl.h"
+#include "lib/ui/input/fidl/input_reports.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace mozart {

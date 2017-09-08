@@ -9,9 +9,9 @@
 #include <vector>
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/lib/view_framework/base_view.h"
-#include "apps/mozart/services/views/view_manager.fidl.h"
-#include "apps/mozart/services/views/view_provider.fidl.h"
+#include "lib/ui/view_framework/base_view.h"
+#include "lib/ui/views/fidl/view_manager.fidl.h"
+#include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 

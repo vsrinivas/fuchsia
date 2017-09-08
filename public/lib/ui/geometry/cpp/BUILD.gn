@@ -11,7 +11,7 @@ source_set("cpp") {
   ]
 
   public_deps = [
-    "//apps/mozart/services/geometry",
+    "//garnet/public/lib/ui/geometry/fidl",
   ]
 }
 
@@ -26,8 +26,8 @@ executable("apptests") {
 
   deps = [
     ":cpp",
-    "//apps/mozart/lib/tests",
-    "//apps/mozart/src/tests:main",
+    "//garnet/public/lib/ui/tests",
+    "//garnet/bin/ui/tests:main",
     "//third_party/gtest",
   ]
 }

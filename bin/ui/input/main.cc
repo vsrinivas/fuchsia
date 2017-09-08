@@ -8,8 +8,8 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
-#include "apps/mozart/services/input/cpp/formatting.h"
-#include "apps/mozart/services/input/input_device_registry.fidl.h"
+#include "lib/ui/input/cpp/formatting.h"
+#include "lib/ui/input/fidl/input_device_registry.fidl.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/log_settings.h"

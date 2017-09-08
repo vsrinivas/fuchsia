@@ -5,8 +5,8 @@
 #ifndef APPS_MOZART_SRC_VIEW_MANAGER_INTERNAL_INPUT_OWNER_H_
 #define APPS_MOZART_SRC_VIEW_MANAGER_INTERNAL_INPUT_OWNER_H_
 
-#include "apps/mozart/services/input/input_connection.fidl.h"
-#include "apps/mozart/services/views/view_token.fidl.h"
+#include "lib/ui/input/fidl/input_connection.fidl.h"
+#include "lib/ui/views/fidl/view_token.fidl.h"
 
 namespace view_manager {
 

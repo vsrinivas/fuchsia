@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/scene_manager/resources/compositor/compositor.h"
+#include "garnet/bin/ui/scene_manager/resources/compositor/compositor.h"
 
 #include <trace/event.h>
 
@@ -13,13 +13,13 @@
 #include "escher/scene/model.h"
 #include "escher/scene/stage.h"
 
-#include "apps/mozart/src/scene_manager/engine/session.h"
-#include "apps/mozart/src/scene_manager/engine/swapchain.h"
-#include "apps/mozart/src/scene_manager/resources/camera.h"
-#include "apps/mozart/src/scene_manager/resources/compositor/layer.h"
-#include "apps/mozart/src/scene_manager/resources/compositor/layer_stack.h"
-#include "apps/mozart/src/scene_manager/resources/dump_visitor.h"
-#include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
+#include "garnet/bin/ui/scene_manager/engine/session.h"
+#include "garnet/bin/ui/scene_manager/engine/swapchain.h"
+#include "garnet/bin/ui/scene_manager/resources/camera.h"
+#include "garnet/bin/ui/scene_manager/resources/compositor/layer.h"
+#include "garnet/bin/ui/scene_manager/resources/compositor/layer_stack.h"
+#include "garnet/bin/ui/scene_manager/resources/dump_visitor.h"
+#include "garnet/bin/ui/scene_manager/resources/renderers/renderer.h"
 
 namespace scene_manager {
 

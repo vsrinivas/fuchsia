@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/examples/sketchy/app.h"
+#include "garnet/examples/ui/sketchy/app.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/log_settings_command_line.h"
 

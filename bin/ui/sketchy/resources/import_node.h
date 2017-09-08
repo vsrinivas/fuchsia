@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "apps/mozart/lib/scenic/client/resources.h"
-#include "apps/mozart/lib/scenic/client/session.h"
-#include "apps/mozart/src/sketchy/resources/resource.h"
+#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/client/session.h"
+#include "garnet/bin/ui/sketchy/resources/resource.h"
 #include "lib/ftl/memory/ref_counted.h"
 
 namespace sketchy_service {

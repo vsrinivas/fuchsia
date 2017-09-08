@@ -8,11 +8,11 @@
 #include <functional>
 #include <vector>
 
-#include "apps/mozart/services/geometry/geometry.fidl.h"
-#include "apps/mozart/services/input/ime_service.fidl.h"
-#include "apps/mozart/services/input/input_connection.fidl.h"
-#include "apps/mozart/services/views/view_token.fidl.h"
-#include "apps/mozart/services/views/view_tree_token.fidl.h"
+#include "lib/ui/geometry/fidl/geometry.fidl.h"
+#include "lib/ui/input/fidl/ime_service.fidl.h"
+#include "lib/ui/input/fidl/input_connection.fidl.h"
+#include "lib/ui/views/fidl/view_token.fidl.h"
+#include "lib/ui/views/fidl/view_tree_token.fidl.h"
 
 namespace view_manager {
 class InputConnectionImpl;

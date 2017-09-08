@@ -7,10 +7,10 @@
 
 #include <queue>
 
-#include "apps/mozart/services/geometry/geometry.fidl.h"
-#include "apps/mozart/services/input/input_dispatcher.fidl.h"
-#include "apps/mozart/services/views/view_trees.fidl.h"
-#include "apps/mozart/src/view_manager/internal/view_inspector.h"
+#include "lib/ui/geometry/fidl/geometry.fidl.h"
+#include "lib/ui/input/fidl/input_dispatcher.fidl.h"
+#include "lib/ui/views/fidl/view_trees.fidl.h"
+#include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"

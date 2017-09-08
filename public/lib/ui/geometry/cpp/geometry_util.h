@@ -5,7 +5,7 @@
 #ifndef APPS_MOZART_SERVICES_GEOMETRY_CPP_GEOMETRY_UTIL_H_
 #define APPS_MOZART_SERVICES_GEOMETRY_CPP_GEOMETRY_UTIL_H_
 
-#include "apps/mozart/services/geometry/geometry.fidl.h"
+#include "lib/ui/geometry/fidl/geometry.fidl.h"
 
 namespace mozart {
 

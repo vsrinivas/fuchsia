@@ -6,10 +6,10 @@
 
 #include "gtest/gtest.h"
 
-#include "apps/mozart/lib/tests/mocks/mock_input_device.h"
-#include "apps/mozart/lib/tests/mocks/mock_input_device_registry.h"
-#include "apps/mozart/lib/tests/test_with_message_loop.h"
-#include "apps/mozart/services/input/input_reports.fidl.h"
+#include "lib/ui/tests/mocks/mock_input_device.h"
+#include "lib/ui/tests/mocks/mock_input_device_registry.h"
+#include "lib/ui/tests/test_with_message_loop.h"
+#include "lib/ui/input/fidl/input_reports.fidl.h"
 
 namespace input {
 namespace test {

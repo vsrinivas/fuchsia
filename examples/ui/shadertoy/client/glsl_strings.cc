@@ -6,7 +6,7 @@
 // The copyright of this code is owned by the respective authors, as described
 // in each GLSL program below.
 
-#include "apps/mozart/examples/shadertoy/client/glsl_strings.h"
+#include "garnet/examples/ui/shadertoy/client/glsl_strings.h"
 
 namespace shadertoy_client {
 

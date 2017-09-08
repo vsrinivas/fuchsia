@@ -6,7 +6,7 @@
 
 #include <hid/usages.h>
 
-#include "apps/mozart/services/input/input_events.fidl.h"
+#include "lib/ui/input/fidl/input_events.fidl.h"
 #include "lib/ftl/logging.h"
 
 // TODO(vtl): Handle more stuff and verify that we're consistent about the

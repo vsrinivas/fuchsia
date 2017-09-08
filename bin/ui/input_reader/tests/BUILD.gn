@@ -20,10 +20,10 @@ executable("input_apptests") {
   ]
 
   deps = [
-    "//apps/mozart/lib/tests",
-    "//apps/mozart/lib/tests/mocks",
-    "//apps/mozart/services/input",
-    "//apps/mozart/src/tests:main",
+    "//garnet/public/lib/ui/tests",
+    "//garnet/public/lib/ui/tests/mocks",
+    "//garnet/public/lib/ui/input/fidl",
+    "//garnet/bin/ui/tests:main",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fidl/cpp/bindings:bindings",
     "//third_party/gtest",

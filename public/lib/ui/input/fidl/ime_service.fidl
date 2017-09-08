@@ -4,9 +4,9 @@
 
 module mozart;
 
-import "apps/mozart/services/input/text_editing.fidl";
-import "apps/mozart/services/input/text_input.fidl";
-import "apps/mozart/services/input/input_events.fidl";
+import "lib/ui/input/fidl/text_editing.fidl";
+import "lib/ui/input/fidl/text_input.fidl";
+import "lib/ui/input/fidl/input_events.fidl";
 
 // The service provided by an IME
 [ServiceName="mozart::ImeService"]

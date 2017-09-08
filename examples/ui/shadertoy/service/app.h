@@ -5,12 +5,12 @@
 #pragma once
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/examples/shadertoy/service/shadertoy_factory_impl.h"
+#include "garnet/examples/ui/shadertoy/service/shadertoy_factory_impl.h"
 #include "escher/escher.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 
-#include "apps/mozart/examples/shadertoy/service/compiler.h"
-#include "apps/mozart/examples/shadertoy/service/renderer.h"
+#include "garnet/examples/ui/shadertoy/service/compiler.h"
+#include "garnet/examples/ui/shadertoy/service/renderer.h"
 
 namespace shadertoy {
 

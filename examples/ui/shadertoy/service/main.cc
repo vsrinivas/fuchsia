@@ -5,7 +5,7 @@
 #include <trace-provider/provider.h>
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/examples/shadertoy/service/app.h"
+#include "garnet/examples/ui/shadertoy/service/app.h"
 #include "escher/escher.h"
 #include "escher/escher_process_init.h"
 #include "escher/vk/vulkan_device_queues.h"

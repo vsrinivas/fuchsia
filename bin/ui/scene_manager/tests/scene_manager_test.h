@@ -6,10 +6,10 @@
 
 #include "escher/forward_declarations.h"
 
-#include "apps/mozart/services/scenic/scene_manager.fidl.h"
-#include "apps/mozart/src/scene_manager/displays/display_manager.h"
-#include "apps/mozart/src/scene_manager/scene_manager_impl.h"
-#include "apps/mozart/src/scene_manager/tests/mocks.h"
+#include "lib/ui/scenic/fidl/scene_manager.fidl.h"
+#include "garnet/bin/ui/scene_manager/displays/display_manager.h"
+#include "garnet/bin/ui/scene_manager/scene_manager_impl.h"
+#include "garnet/bin/ui/scene_manager/tests/mocks.h"
 #include "lib/mtl/threading/thread.h"
 
 #include "gtest/gtest.h"

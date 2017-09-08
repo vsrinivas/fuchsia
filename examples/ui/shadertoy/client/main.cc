@@ -4,8 +4,8 @@
 
 #include <trace-provider/provider.h>
 
-#include "apps/mozart/examples/shadertoy/client/view.h"
-#include "apps/mozart/lib/view_framework/view_provider_app.h"
+#include "garnet/examples/ui/shadertoy/client/view.h"
+#include "lib/ui/view_framework/view_provider_app.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/log_settings_command_line.h"
 #include "lib/mtl/tasks/message_loop.h"

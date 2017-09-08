@@ -6,13 +6,13 @@
 
 #include <vector>
 
-#include "apps/mozart/services/scenic/session.fidl.h"
-#include "apps/mozart/src/scene_manager/acquire_fence_set.h"
-#include "apps/mozart/src/scene_manager/engine/engine.h"
-#include "apps/mozart/src/scene_manager/engine/event_reporter.h"
-#include "apps/mozart/src/scene_manager/resources/memory.h"
-#include "apps/mozart/src/scene_manager/resources/resource_map.h"
-#include "apps/mozart/src/scene_manager/util/error_reporter.h"
+#include "lib/ui/scenic/fidl/session.fidl.h"
+#include "garnet/bin/ui/scene_manager/acquire_fence_set.h"
+#include "garnet/bin/ui/scene_manager/engine/engine.h"
+#include "garnet/bin/ui/scene_manager/engine/event_reporter.h"
+#include "garnet/bin/ui/scene_manager/resources/memory.h"
+#include "garnet/bin/ui/scene_manager/resources/resource_map.h"
+#include "garnet/bin/ui/scene_manager/util/error_reporter.h"
 #include "lib/ftl/tasks/task_runner.h"
 
 namespace scene_manager {

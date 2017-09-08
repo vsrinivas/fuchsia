@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/scenic/client/host_image_cycler.h"
+#include "lib/ui/scenic/client/host_image_cycler.h"
 
 #include "lib/ftl/logging.h"
 

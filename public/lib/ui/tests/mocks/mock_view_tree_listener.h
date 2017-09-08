@@ -5,8 +5,8 @@
 #ifndef APPS_MOZART_LIB_TESTS_MOCKS_MOCK_VIEW_TREE_LISTENER_H_
 #define APPS_MOZART_LIB_TESTS_MOCKS_MOCK_VIEW_TREE_LISTENER_H_
 
-#include "apps/mozart/services/views/view_manager.fidl.h"
-#include "apps/mozart/services/views/views.fidl.h"
+#include "lib/ui/views/fidl/view_manager.fidl.h"
+#include "lib/ui/views/fidl/views.fidl.h"
 #include "lib/ftl/macros.h"
 
 #include <functional>

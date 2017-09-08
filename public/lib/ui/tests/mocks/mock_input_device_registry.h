@@ -9,8 +9,8 @@
 #include <unordered_map>
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/lib/tests/mocks/mock_input_device.h"
-#include "apps/mozart/services/input/input_device_registry.fidl.h"
+#include "lib/ui/tests/mocks/mock_input_device.h"
+#include "lib/ui/input/fidl/input_device_registry.fidl.h"
 #include "lib/ftl/macros.h"
 
 namespace mozart {

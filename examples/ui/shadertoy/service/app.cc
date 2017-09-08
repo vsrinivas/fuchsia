@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/examples/shadertoy/service/app.h"
+#include "garnet/examples/ui/shadertoy/service/app.h"
 
 #include "application/lib/app/application_context.h"
 #include "escher/vk/vulkan_device_queues.h"

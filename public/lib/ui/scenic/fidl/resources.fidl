@@ -4,12 +4,12 @@
 
 module scenic;
 
-import "apps/mozart/services/scenic/nodes.fidl";
-import "apps/mozart/services/scenic/shapes.fidl";
-import "apps/mozart/services/scenic/types.fidl";
-import "apps/mozart/services/images/image_info.fidl";
-import "apps/mozart/services/images/image_pipe.fidl";
-import "apps/mozart/services/images/memory_type.fidl";
+import "lib/ui/scenic/fidl/nodes.fidl";
+import "lib/ui/scenic/fidl/shapes.fidl";
+import "lib/ui/scenic/fidl/types.fidl";
+import "lib/images/fidl/image_info.fidl";
+import "lib/images/fidl/image_pipe.fidl";
+import "lib/images/fidl/memory_type.fidl";
 
 // These are all of the types of resources that can be created within a
 // |Session|.

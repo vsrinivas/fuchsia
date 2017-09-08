@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/root_presenter/presentation.h"
+#include "garnet/bin/ui/root_presenter/presentation.h"
 
 #include <cmath>
 
@@ -20,8 +20,8 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "application/lib/app/connect.h"
-#include "apps/mozart/services/input/cpp/formatting.h"
-#include "apps/mozart/services/views/cpp/formatting.h"
+#include "lib/ui/input/cpp/formatting.h"
+#include "lib/ui/views/cpp/formatting.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 

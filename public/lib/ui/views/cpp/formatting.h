@@ -7,8 +7,8 @@
 
 #include <iosfwd>
 
-#include "apps/mozart/services/geometry/cpp/formatting.h"
-#include "apps/mozart/services/views/view_manager.fidl.h"
+#include "lib/ui/geometry/cpp/formatting.h"
+#include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/fidl/cpp/bindings/formatting.h"
 
 namespace mozart {

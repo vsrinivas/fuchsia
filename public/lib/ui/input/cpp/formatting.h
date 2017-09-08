@@ -7,11 +7,11 @@
 
 #include <iosfwd>
 
-#include "apps/mozart/services/input/input_event_constants.fidl.h"
-#include "apps/mozart/services/input/input_events.fidl.h"
-#include "apps/mozart/services/input/input_reports.fidl.h"
-#include "apps/mozart/services/input/text_editing.fidl.h"
-#include "apps/mozart/services/input/text_input.fidl.h"
+#include "lib/ui/input/fidl/input_event_constants.fidl.h"
+#include "lib/ui/input/fidl/input_events.fidl.h"
+#include "lib/ui/input/fidl/input_reports.fidl.h"
+#include "lib/ui/input/fidl/text_editing.fidl.h"
+#include "lib/ui/input/fidl/text_input.fidl.h"
 
 namespace mozart {
 

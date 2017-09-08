@@ -5,7 +5,7 @@
 #include <trace-provider/provider.h>
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/src/sketchy/app.h"
+#include "garnet/bin/ui/sketchy/app.h"
 #include "escher/escher.h"
 
 int main(int argc, const char** argv) {

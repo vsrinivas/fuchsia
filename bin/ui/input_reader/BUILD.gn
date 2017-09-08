@@ -11,9 +11,9 @@ source_set("input_reader") {
   ]
 
   deps = [
-    "//apps/mozart/lib/input",
-    "//apps/mozart/services/input",
-    "//apps/mozart/services/input/cpp",
+    "//garnet/public/lib/ui/input",
+    "//garnet/public/lib/ui/input/fidl",
+    "//garnet/public/lib/ui/input/cpp",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",
     "//magenta/system/ulib/trace",

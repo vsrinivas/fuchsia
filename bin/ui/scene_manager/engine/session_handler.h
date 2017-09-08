@@ -8,11 +8,11 @@
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/ftl/tasks/task_runner.h"
 
-#include "apps/mozart/services/scenic/session.fidl.h"
-#include "apps/mozart/src/scene_manager/engine/engine.h"
-#include "apps/mozart/src/scene_manager/engine/event_reporter.h"
-#include "apps/mozart/src/scene_manager/engine/session.h"
-#include "apps/mozart/src/scene_manager/util/error_reporter.h"
+#include "lib/ui/scenic/fidl/session.fidl.h"
+#include "garnet/bin/ui/scene_manager/engine/engine.h"
+#include "garnet/bin/ui/scene_manager/engine/event_reporter.h"
+#include "garnet/bin/ui/scene_manager/engine/session.h"
+#include "garnet/bin/ui/scene_manager/util/error_reporter.h"
 
 namespace scene_manager {
 

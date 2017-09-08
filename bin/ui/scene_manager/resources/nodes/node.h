@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "apps/mozart/src/scene_manager/resources/resource.h"
+#include "garnet/bin/ui/scene_manager/resources/resource.h"
 #include "lib/escher/escher/geometry/transform.h"
 
 namespace scene_manager {

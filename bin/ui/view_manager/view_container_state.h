@@ -10,8 +10,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/mozart/services/views/view_containers.fidl.h"
-#include "apps/mozart/src/view_manager/view_stub.h"
+#include "lib/ui/views/fidl/view_containers.fidl.h"
+#include "garnet/bin/ui/view_manager/view_stub.h"
 #include "lib/ftl/macros.h"
 
 namespace view_manager {

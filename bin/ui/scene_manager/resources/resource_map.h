@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/mozart/src/scene_manager/resources/resource.h"
-#include "apps/mozart/src/scene_manager/util/error_reporter.h"
+#include "garnet/bin/ui/scene_manager/resources/resource.h"
+#include "garnet/bin/ui/scene_manager/util/error_reporter.h"
 
 #include <unordered_map>
 

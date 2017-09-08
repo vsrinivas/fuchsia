@@ -8,9 +8,9 @@ executable("print_input") {
   ]
 
   deps = [
-    "//apps/mozart/lib/input",
-    "//apps/mozart/services/input/cpp",
-    "//apps/mozart/src/input_reader",
+    "//garnet/public/lib/ui/input",
+    "//garnet/public/lib/ui/input/cpp",
+    "//garnet/bin/ui/input_reader",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
   ]

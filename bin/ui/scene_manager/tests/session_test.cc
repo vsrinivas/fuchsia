@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/scene_manager/tests/session_test.h"
+#include "garnet/bin/ui/scene_manager/tests/session_test.h"
 
 #include "lib/ftl/synchronization/waitable_event.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-#include "apps/mozart/src/scene_manager/tests/mocks.h"
+#include "garnet/bin/ui/scene_manager/tests/mocks.h"
 
 namespace scene_manager {
 namespace test {

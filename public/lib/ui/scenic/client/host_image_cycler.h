@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/mozart/lib/scenic/client/host_memory.h"
+#include "lib/ui/scenic/client/host_memory.h"
 
 namespace scenic_lib {
 

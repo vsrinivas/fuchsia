@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/skia/type_converters.h"
+#include "lib/ui/skia/type_converters.h"
 
 namespace fidl {
 

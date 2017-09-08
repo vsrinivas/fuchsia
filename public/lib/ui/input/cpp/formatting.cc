@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/services/input/cpp/formatting.h"
+#include "lib/ui/input/cpp/formatting.h"
 
 #include <iostream>
 
-#include "apps/mozart/services/input/usages.fidl.h"
+#include "lib/ui/input/fidl/usages.fidl.h"
 #include "lib/ftl/strings/string_printf.h"
 
 namespace mozart {

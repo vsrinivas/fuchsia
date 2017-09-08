@@ -10,8 +10,8 @@
 
 #include <mx/eventpair.h>
 
-#include "apps/mozart/lib/scenic/client/resources.h"
-#include "apps/mozart/services/views/views.fidl.h"
+#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/views/fidl/views.fidl.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/input_reader/input_reader.h"
+#include "garnet/bin/ui/input_reader/input_reader.h"
 
 #include <fcntl.h>
 #include <magenta/device/display.h>

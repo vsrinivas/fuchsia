@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/mozart/lib/scenic/client/resources.h"
-#include "apps/mozart/lib/scenic/client/session.h"
+#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/client/session.h"
 #include "escher/vk/buffer_factory.h"
 
 namespace sketchy_service {

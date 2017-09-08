@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/examples/spinning_square/spinning_square_view.h"
+#include "garnet/examples/ui/spinning_square/spinning_square_view.h"
 
 #include <math.h>
 

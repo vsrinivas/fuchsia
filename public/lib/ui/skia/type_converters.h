@@ -5,7 +5,7 @@
 #ifndef APPS_MOZART_LIB_SKIA_TYPE_CONVERTERS_H_
 #define APPS_MOZART_LIB_SKIA_TYPE_CONVERTERS_H_
 
-#include "apps/mozart/services/geometry/geometry.fidl.h"
+#include "lib/ui/geometry/fidl/geometry.fidl.h"
 #include "lib/fidl/cpp/bindings/type_converter.h"
 #include "third_party/skia/include/core/SkMatrix.h"
 #include "third_party/skia/include/core/SkMatrix44.h"

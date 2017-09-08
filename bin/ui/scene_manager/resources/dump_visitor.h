@@ -9,7 +9,7 @@
 
 #include "escher/renderer/image.h"
 
-#include "apps/mozart/src/scene_manager/resources/resource_visitor.h"
+#include "garnet/bin/ui/scene_manager/resources/resource_visitor.h"
 
 namespace scene_manager {
 

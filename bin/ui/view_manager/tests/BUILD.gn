@@ -21,11 +21,11 @@ executable("view_manager_apptests") {
   #  ]
 
   deps = [
-    "//apps/mozart/lib/tests",
-    "//apps/mozart/lib/tests/mocks",
-    "//apps/mozart/src/tests:main",
-    "//apps/mozart/src/view_manager:lib",
-    "//apps/mozart/src/view_manager/input",
+    "//garnet/public/lib/ui/tests",
+    "//garnet/public/lib/ui/tests/mocks",
+    "//garnet/bin/ui/tests:main",
+    "//garnet/bin/ui/view_manager:lib",
+    "//garnet/bin/ui/view_manager/input",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fidl/cpp/bindings:bindings",
     "//third_party/gtest",

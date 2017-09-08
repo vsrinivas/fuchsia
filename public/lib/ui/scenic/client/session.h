@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/mozart/services/scenic/scene_manager.fidl.h"
-#include "apps/mozart/services/scenic/session.fidl.h"
+#include "lib/ui/scenic/fidl/scene_manager.fidl.h"
+#include "lib/ui/scenic/fidl/session.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 #include <functional>

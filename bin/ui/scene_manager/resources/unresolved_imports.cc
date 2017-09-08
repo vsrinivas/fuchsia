@@ -4,7 +4,7 @@
 
 #include <algorithm>
 
-#include "apps/mozart/src/scene_manager/resources/resource_linker.h"
+#include "garnet/bin/ui/scene_manager/resources/resource_linker.h"
 #include "lib/fidl/cpp/waiter/default.h"
 #include "lib/mtl/tasks/message_loop.h"
 

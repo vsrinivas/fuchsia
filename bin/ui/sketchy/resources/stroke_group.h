@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "apps/mozart/lib/scenic/client/resources.h"
-#include "apps/mozart/lib/scenic/client/session.h"
-#include "apps/mozart/src/sketchy/buffer.h"
-#include "apps/mozart/src/sketchy/resources/resource.h"
+#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/client/session.h"
+#include "garnet/bin/ui/sketchy/buffer.h"
+#include "garnet/bin/ui/sketchy/resources/resource.h"
 
 namespace sketchy_service {
 

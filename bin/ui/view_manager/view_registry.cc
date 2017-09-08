@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/view_manager/view_registry.h"
+#include "garnet/bin/ui/view_manager/view_registry.h"
 
 #include <algorithm>
 #include <cmath>
 #include <utility>
 
 #include "application/lib/app/connect.h"
-#include "apps/mozart/lib/scenic/client/resources.h"
-#include "apps/mozart/services/input/cpp/formatting.h"
-#include "apps/mozart/services/input/ime_service.fidl.h"
-#include "apps/mozart/services/views/cpp/formatting.h"
-#include "apps/mozart/src/view_manager/view_impl.h"
-#include "apps/mozart/src/view_manager/view_tree_impl.h"
+#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/input/cpp/formatting.h"
+#include "lib/ui/input/fidl/ime_service.fidl.h"
+#include "lib/ui/views/cpp/formatting.h"
+#include "garnet/bin/ui/view_manager/view_impl.h"
+#include "garnet/bin/ui/view_manager/view_tree_impl.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/memory/weak_ptr.h"

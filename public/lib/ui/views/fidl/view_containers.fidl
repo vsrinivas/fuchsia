@@ -4,8 +4,8 @@
 
 module mozart;
 
-import "apps/mozart/services/views/view_properties.fidl";
-import "apps/mozart/services/views/view_token.fidl";
+import "lib/ui/views/fidl/view_properties.fidl";
+import "lib/ui/views/fidl/view_token.fidl";
 
 // A view container is an interface exposed by |View| and |ViewTree| to
 // manage their child views.  Although |View| may have any number of children,

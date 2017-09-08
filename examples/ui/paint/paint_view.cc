@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/examples/paint/paint_view.h"
+#include "garnet/examples/ui/paint/paint_view.h"
 
 #include <hid/usages.h>
 

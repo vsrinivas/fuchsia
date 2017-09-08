@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/lib/tests/test_with_message_loop.h"
-#include "apps/mozart/src/scene_manager/tests/escher_test_environment.h"
-#include "apps/mozart/src/scene_manager/tests/session_test.h"
+#include "lib/ui/tests/test_with_message_loop.h"
+#include "garnet/bin/ui/scene_manager/tests/escher_test_environment.h"
+#include "garnet/bin/ui/scene_manager/tests/session_test.h"
 #include "apps/test_runner/lib/reporting/gtest_listener.h"
 #include "apps/test_runner/lib/reporting/reporter.h"
 #include "gtest/gtest.h"

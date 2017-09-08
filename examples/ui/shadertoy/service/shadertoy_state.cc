@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/examples/shadertoy/service/shadertoy_state.h"
+#include "garnet/examples/ui/shadertoy/service/shadertoy_state.h"
 
-#include "apps/mozart/examples/shadertoy/service/app.h"
-#include "apps/mozart/examples/shadertoy/service/imagepipe_shadertoy.h"
-#include "apps/mozart/examples/shadertoy/service/pipeline.h"
-#include "apps/mozart/examples/shadertoy/service/renderer.h"
-#include "apps/mozart/examples/shadertoy/service/view_shadertoy.h"
+#include "garnet/examples/ui/shadertoy/service/app.h"
+#include "garnet/examples/ui/shadertoy/service/imagepipe_shadertoy.h"
+#include "garnet/examples/ui/shadertoy/service/pipeline.h"
+#include "garnet/examples/ui/shadertoy/service/renderer.h"
+#include "garnet/examples/ui/shadertoy/service/view_shadertoy.h"
 
 namespace shadertoy {
 

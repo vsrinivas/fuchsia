@@ -13,10 +13,10 @@ executable("hello_scene_manager") {
 
   deps = [
     "//application/lib/app",
-    "//apps/mozart/lib/scenic:client",
-    "//apps/mozart/lib/scenic:fidl_helpers",
-    "//apps/mozart/services/scenic",
-    "//apps/mozart/src/scene_manager/tests:util",
+    "//garnet/public/lib/ui/scenic:client",
+    "//garnet/public/lib/ui/scenic:fidl_helpers",
+    "//garnet/public/lib/ui/scenic/fidl",
+    "//garnet/bin/ui/scene_manager/tests:util",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",

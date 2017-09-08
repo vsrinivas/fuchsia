@@ -5,8 +5,8 @@
 #ifndef APPS_MOZART_EXAMPLES_JANK_JANK_VIEW_H_
 #define APPS_MOZART_EXAMPLES_JANK_JANK_VIEW_H_
 
-#include "apps/mozart/lib/skia/skia_font_loader.h"
-#include "apps/mozart/lib/view_framework/skia_view.h"
+#include "lib/ui/skia/skia_font_loader.h"
+#include "lib/ui/view_framework/skia_view.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/time/time_point.h"
 #include "third_party/skia/include/core/SkCanvas.h"

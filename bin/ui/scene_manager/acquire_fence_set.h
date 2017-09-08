@@ -13,7 +13,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
-#include "apps/mozart/src/scene_manager/fence.h"
+#include "garnet/bin/ui/scene_manager/fence.h"
 
 namespace scene_manager {
 

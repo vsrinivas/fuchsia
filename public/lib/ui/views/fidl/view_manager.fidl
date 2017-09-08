@@ -4,9 +4,9 @@
 
 module mozart;
 
-import "apps/mozart/services/scenic/scene_manager.fidl";
-import "apps/mozart/services/views/view_trees.fidl";
-import "apps/mozart/services/views/views.fidl";
+import "lib/ui/scenic/fidl/scene_manager.fidl";
+import "lib/ui/views/fidl/view_trees.fidl";
+import "lib/ui/views/fidl/views.fidl";
 
 // The view manager manages trees of views which represent user interface
 // components.

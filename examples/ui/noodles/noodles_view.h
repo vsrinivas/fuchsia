@@ -5,7 +5,7 @@
 #ifndef APPS_MOZART_EXAMPLES_NOODLES_NOODLES_VIEW_H_
 #define APPS_MOZART_EXAMPLES_NOODLES_NOODLES_VIEW_H_
 
-#include "apps/mozart/lib/view_framework/skia_view.h"
+#include "lib/ui/view_framework/skia_view.h"
 #include "lib/ftl/macros.h"
 
 class SkCanvas;

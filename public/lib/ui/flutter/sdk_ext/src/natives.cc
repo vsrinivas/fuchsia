@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/flutter/sdk_ext/src/natives.h"
+#include "lib/ui/flutter/sdk_ext/src/natives.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -10,7 +10,7 @@
 #include <memory>
 #include <vector>
 
-#include "apps/mozart/services/views/view_manager.fidl.h"
+#include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "dart-pkg/zircon/sdk_ext/handle.h"
 #include "lib/ftl/arraysize.h"
 #include "lib/ftl/logging.h"

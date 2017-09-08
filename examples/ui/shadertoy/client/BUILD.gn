@@ -15,13 +15,13 @@ executable("client") {
 
   deps = [
     "//application/lib/app",
-    "//apps/mozart/examples/shadertoy/service",
-    "//apps/mozart/examples/shadertoy/service/services",
-    "//apps/mozart/lib/scenic:client",
-    "//apps/mozart/lib/scenic:fidl_helpers",
-    "//apps/mozart/lib/view_framework:view_provider",
-    "//apps/mozart/services/scenic",
-    "//apps/mozart/services/views",
+    "//garnet/examples/ui/shadertoy/service",
+    "//garnet/examples/ui/shadertoy/service/services",
+    "//garnet/public/lib/ui/scenic:client",
+    "//garnet/public/lib/ui/scenic:fidl_helpers",
+    "//garnet/public/lib/ui/view_framework:view_provider",
+    "//garnet/public/lib/ui/scenic/fidl",
+    "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//magenta/system/ulib/trace-provider",
   ]

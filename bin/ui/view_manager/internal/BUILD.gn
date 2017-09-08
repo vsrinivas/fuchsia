@@ -9,8 +9,8 @@ source_set("internal") {
   ]
 
   public_deps = [
-    "//apps/mozart/services/input",
-    "//apps/mozart/services/views",
-    "//apps/mozart/services/views/cpp",
+    "//garnet/public/lib/ui/input/fidl",
+    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/cpp",
   ]
 }

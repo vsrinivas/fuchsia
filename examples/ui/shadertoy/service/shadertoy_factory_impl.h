@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/mozart/examples/shadertoy/service/services/shadertoy_factory.fidl.h"
-#include "apps/mozart/examples/shadertoy/service/shadertoy_impl.h"
+#include "garnet/examples/ui/shadertoy/service/services/shadertoy_factory.fidl.h"
+#include "garnet/examples/ui/shadertoy/service/shadertoy_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace shadertoy {

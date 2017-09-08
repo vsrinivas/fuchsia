@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/mozart/src/scene_manager/resources/nodes/node.h"
+#include "garnet/bin/ui/scene_manager/resources/nodes/node.h"
 
 namespace scene_manager {
 

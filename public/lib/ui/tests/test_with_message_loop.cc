@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/tests/test_with_message_loop.h"
+#include "lib/ui/tests/test_with_message_loop.h"
 
 #include "lib/ftl/functional/make_copyable.h"
 

@@ -9,14 +9,14 @@
 
 #include <deque>
 
-#include "apps/mozart/services/images/image_pipe.fidl.h"
-#include "apps/mozart/src/scene_manager/acquire_fence.h"
-#include "apps/mozart/src/scene_manager/resources/image.h"
-#include "apps/mozart/src/scene_manager/resources/image_base.h"
-#include "apps/mozart/src/scene_manager/resources/image_pipe.h"
-#include "apps/mozart/src/scene_manager/resources/image_pipe_handler.h"
-#include "apps/mozart/src/scene_manager/resources/resource.h"
-#include "apps/mozart/src/scene_manager/resources/resource_map.h"
+#include "lib/images/fidl/image_pipe.fidl.h"
+#include "garnet/bin/ui/scene_manager/acquire_fence.h"
+#include "garnet/bin/ui/scene_manager/resources/image.h"
+#include "garnet/bin/ui/scene_manager/resources/image_base.h"
+#include "garnet/bin/ui/scene_manager/resources/image_pipe.h"
+#include "garnet/bin/ui/scene_manager/resources/image_pipe_handler.h"
+#include "garnet/bin/ui/scene_manager/resources/resource.h"
+#include "garnet/bin/ui/scene_manager/resources/resource_map.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"

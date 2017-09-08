@@ -14,10 +14,10 @@ executable("tile") {
   ]
 
   deps = [
-    "//apps/mozart/lib/view_framework:view_provider",
-    "//apps/mozart/services/presentation",
-    "//apps/mozart/services/scenic",
-    "//apps/mozart/services/views",
+    "//garnet/public/lib/ui/view_framework:view_provider",
+    "//garnet/public/lib/ui/presentation/fidl",
+    "//garnet/public/lib/ui/scenic/fidl",
+    "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",

@@ -10,11 +10,11 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/services/application_launcher.fidl.h"
-#include "apps/mozart/examples/tile/tile_params.h"
-#include "apps/mozart/lib/scenic/client/resources.h"
-#include "apps/mozart/lib/view_framework/base_view.h"
-#include "apps/mozart/services/presentation/presenter.fidl.h"
-#include "apps/mozart/services/views/view_provider.fidl.h"
+#include "garnet/examples/ui/tile/tile_params.h"
+#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/view_framework/base_view.h"
+#include "lib/ui/presentation/fidl/presenter.fidl.h"
+#include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 

@@ -8,9 +8,9 @@
 #include <map>
 #include <utility>
 
-#include "apps/mozart/services/input/input_device_registry.fidl.h"
-#include "apps/mozart/services/input/input_reports.fidl.h"
-#include "apps/mozart/src/input_reader/input_interpreter.h"
+#include "lib/ui/input/fidl/input_device_registry.fidl.h"
+#include "lib/ui/input/fidl/input_reports.fidl.h"
+#include "garnet/bin/ui/input_reader/input_interpreter.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/io/device_watcher.h"
 #include "lib/mtl/tasks/message_loop.h"

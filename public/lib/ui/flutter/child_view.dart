@@ -11,18 +11,18 @@ import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/application_controller.fidl.dart';
 import 'package:application.services/application_launcher.fidl.dart';
 import 'package:application.services/service_provider.fidl.dart';
-import 'package:apps.mozart.services.geometry/geometry.fidl.dart' as fidl;
-import 'package:apps.mozart.services.views/view_containers.fidl.dart';
-import 'package:apps.mozart.services.views/view_properties.fidl.dart';
-import 'package:apps.mozart.services.views/view_provider.fidl.dart';
-import 'package:apps.mozart.services.views/view_token.fidl.dart';
+import 'package:lib.ui.geometry.fidl/geometry.fidl.dart' as fidl;
+import 'package:lib.ui.views.fidl/view_containers.fidl.dart';
+import 'package:lib.ui.views.fidl/view_properties.fidl.dart';
+import 'package:lib.ui.views.fidl/view_provider.fidl.dart';
+import 'package:lib.ui.views.fidl/view_token.fidl.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 import 'package:lib.fidl.dart/core.dart' as core;
 import 'package:meta/meta.dart';
 
-export 'package:apps.mozart.services.views/view_token.fidl.dart' show ViewOwner;
+export 'package:lib.ui.views.fidl/view_token.fidl.dart' show ViewOwner;
 
 ViewContainerProxy _initViewContainer() {
   final core.Handle handle = MozartStartupInfo.takeViewContainer();

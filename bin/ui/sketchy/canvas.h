@@ -6,10 +6,10 @@
 
 #include <unordered_map>
 
-#include "apps/mozart/lib/scenic/client/session.h"
-#include "apps/mozart/services/fun/sketchy/canvas.fidl.h"
-#include "apps/mozart/src/sketchy/resources/resource_map.h"
-#include "apps/mozart/src/sketchy/resources/types.h"
+#include "lib/ui/scenic/client/session.h"
+#include "lib/ui/fun/sketchy/fidl/canvas.fidl.h"
+#include "garnet/bin/ui/sketchy/resources/resource_map.h"
+#include "garnet/bin/ui/sketchy/resources/types.h"
 #include "escher/escher.h"
 #include "escher/vk/buffer_factory.h"
 

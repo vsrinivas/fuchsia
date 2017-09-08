@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/mozart/src/scene_manager/engine/session.h"
-#include "apps/mozart/src/scene_manager/resources/resource.h"
+#include "garnet/bin/ui/scene_manager/engine/session.h"
+#include "garnet/bin/ui/scene_manager/resources/resource.h"
 
 namespace scene_manager {
 

@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/mozart/src/scene_manager/engine/engine.h"
-#include "apps/mozart/src/scene_manager/engine/session.h"
+#include "garnet/bin/ui/scene_manager/engine/engine.h"
+#include "garnet/bin/ui/scene_manager/engine/session.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/synchronization/waitable_event.h"
 #include "lib/mtl/threading/thread.h"

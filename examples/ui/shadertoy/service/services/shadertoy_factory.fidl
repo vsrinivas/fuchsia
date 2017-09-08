@@ -4,9 +4,9 @@
 
 module mozart.example;
 
-import "apps/mozart/examples/shadertoy/service/services/shadertoy.fidl";
-import "apps/mozart/services/images/image_pipe.fidl";
-import "apps/mozart/services/views/view_token.fidl";
+import "garnet/examples/ui/shadertoy/service/services/shadertoy.fidl";
+import "lib/images/fidl/image_pipe.fidl";
+import "lib/ui/views/fidl/view_token.fidl";
 
 // ShadertoyFactory provides a number of methods for creating |Shadertoy|
 // instances.

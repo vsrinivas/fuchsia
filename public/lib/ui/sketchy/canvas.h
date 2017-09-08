@@ -5,10 +5,10 @@
 #pragma once
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/lib/scenic/client/resources.h"
-#include "apps/mozart/lib/scenic/client/session.h"
-#include "apps/mozart/lib/sketchy/resources.h"
-#include "apps/mozart/services/fun/sketchy/canvas.fidl.h"
+#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/client/session.h"
+#include "lib/ui/sketchy/resources.h"
+#include "lib/ui/fun/sketchy/fidl/canvas.fidl.h"
 
 namespace sketchy_lib {
 

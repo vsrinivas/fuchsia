@@ -5,12 +5,12 @@
 #include "gtest/gtest.h"
 #include "lib/ftl/synchronization/waitable_event.h"
 
-#include "apps/mozart/lib/scenic/fidl_helpers.h"
-#include "apps/mozart/lib/tests/test_with_message_loop.h"
-#include "apps/mozart/src/scene_manager/resources/nodes/entity_node.h"
-#include "apps/mozart/src/scene_manager/tests/mocks.h"
-#include "apps/mozart/src/scene_manager/tests/scene_manager_test.h"
-#include "apps/mozart/src/scene_manager/tests/util.h"
+#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/tests/test_with_message_loop.h"
+#include "garnet/bin/ui/scene_manager/resources/nodes/entity_node.h"
+#include "garnet/bin/ui/scene_manager/tests/mocks.h"
+#include "garnet/bin/ui/scene_manager/tests/scene_manager_test.h"
+#include "garnet/bin/ui/scene_manager/tests/util.h"
 
 namespace scene_manager {
 namespace test {

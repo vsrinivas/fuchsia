@@ -8,13 +8,13 @@
 #include <map>
 #include <memory>
 
-#include "apps/mozart/lib/input/device_state.h"
-#include "apps/mozart/lib/input/input_device_impl.h"
-#include "apps/mozart/lib/scenic/client/resources.h"
-#include "apps/mozart/services/geometry/geometry.fidl.h"
-#include "apps/mozart/services/input/input_dispatcher.fidl.h"
-#include "apps/mozart/services/views/view_manager.fidl.h"
-#include "apps/mozart/services/views/views.fidl.h"
+#include "lib/ui/input/device_state.h"
+#include "lib/ui/input/input_device_impl.h"
+#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/geometry/fidl/geometry.fidl.h"
+#include "lib/ui/input/fidl/input_dispatcher.fidl.h"
+#include "lib/ui/views/fidl/view_manager.fidl.h"
+#include "lib/ui/views/fidl/views.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"

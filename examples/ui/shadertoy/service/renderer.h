@@ -6,7 +6,7 @@
 
 #include "escher/renderer/renderer.h"
 
-#include "apps/mozart/examples/shadertoy/service/pipeline.h"
+#include "garnet/examples/ui/shadertoy/service/pipeline.h"
 #include "escher/geometry/types.h"
 #include "escher/impl/descriptor_set_pool.h"
 #include "escher/renderer/texture.h"

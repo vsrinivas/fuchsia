@@ -5,8 +5,8 @@
 #ifndef APPS_MOZART_SRC_VIEW_MANAGER_VIEW_MANAGER_IMPL_H_
 #define APPS_MOZART_SRC_VIEW_MANAGER_VIEW_MANAGER_IMPL_H_
 
-#include "apps/mozart/services/views/view_manager.fidl.h"
-#include "apps/mozart/src/view_manager/view_registry.h"
+#include "lib/ui/views/fidl/view_manager.fidl.h"
+#include "garnet/bin/ui/view_manager/view_registry.h"
 #include "lib/ftl/macros.h"
 
 namespace view_manager {

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/skia/skia_font_loader.h"
+#include "lib/ui/skia/skia_font_loader.h"
 
 #include <utility>
 
-#include "apps/mozart/lib/skia/skia_vmo_data.h"
+#include "lib/ui/skia/skia_vmo_data.h"
 #include "third_party/skia/include/ports/SkFontMgr.h"
 
 namespace mozart {

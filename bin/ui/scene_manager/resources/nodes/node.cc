@@ -4,11 +4,11 @@
 
 #include <algorithm>
 
-#include "apps/mozart/src/scene_manager/resources/nodes/node.h"
+#include "garnet/bin/ui/scene_manager/resources/nodes/node.h"
 
-#include "apps/mozart/src/scene_manager/resources/import.h"
-#include "apps/mozart/src/scene_manager/resources/nodes/traversal.h"
-#include "apps/mozart/src/scene_manager/util/error_reporter.h"
+#include "garnet/bin/ui/scene_manager/resources/import.h"
+#include "garnet/bin/ui/scene_manager/resources/nodes/traversal.h"
+#include "garnet/bin/ui/scene_manager/util/error_reporter.h"
 #include "lib/escher/escher/geometry/types.h"
 
 namespace scene_manager {

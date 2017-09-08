@@ -11,11 +11,11 @@ source_set("view_framework") {
   public_deps = [
     "//application/lib/app",
     "//application/services",
-    "//apps/mozart/lib/scenic:client",
-    "//apps/mozart/lib/scenic:fidl_helpers",
-    "//apps/mozart/services/input",
-    "//apps/mozart/services/scenic",
-    "//apps/mozart/services/views",
+    "//garnet/public/lib/ui/scenic:client",
+    "//garnet/public/lib/ui/scenic:fidl_helpers",
+    "//garnet/public/lib/ui/input/fidl",
+    "//garnet/public/lib/ui/scenic/fidl",
+    "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
   ]
@@ -44,7 +44,7 @@ source_set("skia") {
 
   public_deps = [
     ":view_framework",
-    "//apps/mozart/lib/scenic:skia",
+    "//garnet/public/lib/ui/scenic:skia",
     "//third_party/skia",
   ]
 }

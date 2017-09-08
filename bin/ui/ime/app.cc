@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/ime/app.h"
+#include "garnet/bin/ui/ime/app.h"
 
 #include <algorithm>
 
 #include "application/lib/app/connect.h"
-#include "apps/mozart/services/input/cpp/formatting.h"
-#include "apps/mozart/services/input/text_input.fidl.h"
-#include "apps/mozart/src/ime/ime_impl.h"
+#include "lib/ui/input/cpp/formatting.h"
+#include "lib/ui/input/fidl/text_input.fidl.h"
+#include "garnet/bin/ui/ime/ime_impl.h"
 #include "lib/ftl/logging.h"
 
 namespace ime {

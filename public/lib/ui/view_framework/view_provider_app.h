@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/lib/view_framework/view_provider_service.h"
+#include "lib/ui/view_framework/view_provider_service.h"
 #include "lib/ftl/macros.h"
 
 namespace mozart {

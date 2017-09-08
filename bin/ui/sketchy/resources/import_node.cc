@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/sketchy/resources/import_node.h"
+#include "garnet/bin/ui/sketchy/resources/import_node.h"
 
-#include "apps/mozart/src/sketchy/resources/stroke_group.h"
+#include "garnet/bin/ui/sketchy/resources/stroke_group.h"
 
 namespace sketchy_service {
 

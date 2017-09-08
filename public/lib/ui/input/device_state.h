@@ -11,9 +11,9 @@
 
 #include <vector>
 
-#include "apps/mozart/services/input/input_events.fidl.h"
-#include "apps/mozart/services/input/input_device_registry.fidl.h"
-#include "apps/mozart/services/input/input_reports.fidl.h"
+#include "lib/ui/input/fidl/input_events.fidl.h"
+#include "lib/ui/input/fidl/input_device_registry.fidl.h"
+#include "lib/ui/input/fidl/input_reports.fidl.h"
 #include "lib/ftl/memory/ref_counted.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"

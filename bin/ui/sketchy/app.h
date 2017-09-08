@@ -5,8 +5,8 @@
 #pragma once
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/services/fun/sketchy/canvas.fidl-common.h"
-#include "apps/mozart/src/sketchy/canvas.h"
+#include "lib/ui/fun/sketchy/fidl/canvas.fidl-common.h"
+#include "garnet/bin/ui/sketchy/canvas.h"
 #include "escher/escher.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 

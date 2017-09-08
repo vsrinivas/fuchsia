@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/tests/mocks/mock_input_device_registry.h"
+#include "lib/ui/tests/mocks/mock_input_device_registry.h"
 
 namespace mozart {
 namespace test {

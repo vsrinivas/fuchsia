@@ -18,9 +18,9 @@ fidl("views") {
   public_deps = [
     ":view_token",
     "//application/services:service_provider",
-    "//apps/mozart/services/geometry",
-    "//apps/mozart/services/input",
-    "//apps/mozart/services/scenic",
+    "//garnet/public/lib/ui/geometry/fidl",
+    "//garnet/public/lib/ui/input/fidl",
+    "//garnet/public/lib/ui/scenic/fidl",
   ]
 }
 

@@ -19,7 +19,7 @@ fidl("input") {
   ]
 
   public_deps = [
-    "//apps/mozart/services/geometry",
-    "//apps/mozart/services/views:view_token",
+    "//garnet/public/lib/ui/geometry/fidl",
+    "//garnet/public/lib/ui/views/fidl:view_token",
   ]
 }

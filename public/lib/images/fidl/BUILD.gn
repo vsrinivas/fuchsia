@@ -12,6 +12,6 @@ fidl("images") {
   ]
 
   public_deps = [
-    "//apps/mozart/services/scenic:presentation_info",
+    "//garnet/public/lib/ui/scenic/fidl:presentation_info",
   ]
 }

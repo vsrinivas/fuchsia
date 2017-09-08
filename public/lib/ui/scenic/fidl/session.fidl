@@ -4,9 +4,9 @@
 
 module scenic;
 
-import "apps/mozart/services/scenic/ops.fidl";
-import "apps/mozart/services/scenic/presentation_info.fidl";
-import "apps/mozart/services/scenic/types.fidl";
+import "lib/ui/scenic/fidl/ops.fidl";
+import "lib/ui/scenic/fidl/presentation_info.fidl";
+import "lib/ui/scenic/fidl/types.fidl";
 
 interface Session {
   // Enqueue a list of operations, which will not take effect until Present() is

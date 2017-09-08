@@ -33,8 +33,8 @@ executable("service") {
   deps = [
     "services",
     "//application/lib/app",
-    "//apps/mozart/lib/scenic:fidl_helpers",
-    "//apps/mozart/services/scenic",
+    "//garnet/public/lib/ui/scenic:fidl_helpers",
+    "//garnet/public/lib/ui/scenic/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",

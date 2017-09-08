@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/examples/hello_scene_manager/app.h"
+#include "garnet/examples/ui/hello_scene_manager/app.h"
 
 #if defined(countof)
 // Workaround for compiler error due to Magenta defining countof() as a macro.
@@ -25,13 +25,13 @@
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 
-#include "apps/mozart/lib/scenic/client/host_memory.h"
-#include "apps/mozart/lib/scenic/fidl_helpers.h"
-#include "apps/mozart/lib/scenic/types.h"
-#include "apps/mozart/services/scenic/ops.fidl.h"
-#include "apps/mozart/services/scenic/scene_manager.fidl.h"
-#include "apps/mozart/services/scenic/session.fidl.h"
-#include "apps/mozart/src/scene_manager/tests/util.h"
+#include "lib/ui/scenic/client/host_memory.h"
+#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/scenic/types.h"
+#include "lib/ui/scenic/fidl/ops.fidl.h"
+#include "lib/ui/scenic/fidl/scene_manager.fidl.h"
+#include "lib/ui/scenic/fidl/session.fidl.h"
+#include "garnet/bin/ui/scene_manager/tests/util.h"
 
 using namespace mozart;
 using namespace scenic_lib;

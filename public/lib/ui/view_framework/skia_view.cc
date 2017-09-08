@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/view_framework/skia_view.h"
+#include "lib/ui/view_framework/skia_view.h"
 
 namespace mozart {
 

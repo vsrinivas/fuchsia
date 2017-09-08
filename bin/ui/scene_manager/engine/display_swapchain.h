@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/mozart/src/scene_manager/engine/swapchain.h"
+#include "garnet/bin/ui/scene_manager/engine/swapchain.h"
 
 #include "escher/vk/vulkan_swapchain.h"
 

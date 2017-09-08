@@ -4,9 +4,9 @@
 
 module sketchy;
 
-import "apps/mozart/services/fun/sketchy/resources.fidl";
-import "apps/mozart/services/fun/sketchy/types.fidl";
-import "apps/mozart/services/scenic/ops.fidl";
+import "lib/ui/fun/sketchy/fidl/resources.fidl";
+import "lib/ui/fun/sketchy/fidl/types.fidl";
+import "lib/ui/scenic/fidl/ops.fidl";
 
 union Op {
   // Resource creation and lifecycle.

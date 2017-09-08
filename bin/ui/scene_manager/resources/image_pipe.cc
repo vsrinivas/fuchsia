@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/scene_manager/resources/image_pipe.h"
+#include "garnet/bin/ui/scene_manager/resources/image_pipe.h"
 
 #include <trace/event.h>
 
-#include "apps/mozart/src/scene_manager/engine/session.h"
-#include "apps/mozart/src/scene_manager/fence.h"
-#include "apps/mozart/src/scene_manager/resources/gpu_memory.h"
-#include "apps/mozart/src/scene_manager/resources/host_memory.h"
+#include "garnet/bin/ui/scene_manager/engine/session.h"
+#include "garnet/bin/ui/scene_manager/fence.h"
+#include "garnet/bin/ui/scene_manager/resources/gpu_memory.h"
+#include "garnet/bin/ui/scene_manager/resources/host_memory.h"
 
 namespace scene_manager {
 

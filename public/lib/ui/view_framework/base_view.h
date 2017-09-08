@@ -9,11 +9,11 @@
 #include <string>
 
 #include "application/services/service_provider.fidl.h"
-#include "apps/mozart/lib/scenic/client/resources.h"
-#include "apps/mozart/lib/scenic/client/session.h"
-#include "apps/mozart/services/input/input_connection.fidl.h"
-#include "apps/mozart/services/views/view_manager.fidl.h"
-#include "apps/mozart/services/views/views.fidl.h"
+#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/client/session.h"
+#include "lib/ui/input/fidl/input_connection.fidl.h"
+#include "lib/ui/views/fidl/view_manager.fidl.h"
+#include "lib/ui/views/fidl/views.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/ftl/functional/closure.h"

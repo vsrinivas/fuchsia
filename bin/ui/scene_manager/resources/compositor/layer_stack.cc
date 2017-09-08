@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/scene_manager/resources/compositor/layer_stack.h"
+#include "garnet/bin/ui/scene_manager/resources/compositor/layer_stack.h"
 
-#include "apps/mozart/src/scene_manager/resources/compositor/layer.h"
-#include "apps/mozart/src/scene_manager/util/error_reporter.h"
+#include "garnet/bin/ui/scene_manager/resources/compositor/layer.h"
+#include "garnet/bin/ui/scene_manager/util/error_reporter.h"
 
 namespace scene_manager {
 

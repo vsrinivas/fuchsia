@@ -6,8 +6,8 @@
 
 #include <memory>
 
-#include "apps/mozart/services/scenic/scene_manager.fidl.h"
-#include "apps/mozart/src/scene_manager/engine/engine.h"
+#include "lib/ui/scenic/fidl/scene_manager.fidl.h"
+#include "garnet/bin/ui/scene_manager/engine/engine.h"
 
 namespace scene_manager {
 

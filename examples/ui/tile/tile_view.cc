@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/examples/tile/tile_view.h"
+#include "garnet/examples/ui/tile/tile_view.h"
 
 #include <mxio/util.h>
 
 #include "application/lib/app/connect.h"
-#include "apps/mozart/services/views/view_provider.fidl.h"
+#include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/ftl/logging.h"
 
 namespace examples {

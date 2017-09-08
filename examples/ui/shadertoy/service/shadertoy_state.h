@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "apps/mozart/examples/shadertoy/service/glm_hack.h"
-#include "apps/mozart/examples/shadertoy/service/services/shadertoy.fidl.h"
-#include "apps/mozart/services/images/image_pipe.fidl.h"
-#include "apps/mozart/services/views/view_token.fidl.h"
+#include "garnet/examples/ui/shadertoy/service/glm_hack.h"
+#include "garnet/examples/ui/shadertoy/service/services/shadertoy.fidl.h"
+#include "lib/images/fidl/image_pipe.fidl.h"
+#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "escher/escher.h"
 #include "escher/util/stopwatch.h"
 #include "lib/ftl/memory/ref_counted.h"

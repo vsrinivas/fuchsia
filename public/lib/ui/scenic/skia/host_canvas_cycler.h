@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/mozart/lib/scenic/skia/host_surfaces.h"
+#include "lib/ui/scenic/skia/host_surfaces.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 
 namespace scenic_lib {

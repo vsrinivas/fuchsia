@@ -5,7 +5,7 @@
 #ifndef APPS_MOZART_SRC_VIEW_MANAGER_VIEW_IMPL_H_
 #define APPS_MOZART_SRC_VIEW_MANAGER_VIEW_IMPL_H_
 
-#include "apps/mozart/services/views/views.fidl.h"
+#include "lib/ui/views/fidl/views.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 

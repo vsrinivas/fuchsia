@@ -8,8 +8,8 @@
 #include <type_traits>
 #include <vector>
 
-#include "apps/mozart/lib/scenic/types.h"
-#include "apps/mozart/src/scene_manager/resources/resource_type_info.h"
+#include "lib/ui/scenic/types.h"
+#include "garnet/bin/ui/scene_manager/resources/resource_type_info.h"
 #include "lib/ftl/memory/ref_counted.h"
 
 namespace scene_manager {

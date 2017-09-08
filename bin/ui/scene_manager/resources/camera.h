@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/mozart/src/scene_manager/resources/nodes/scene.h"
-#include "apps/mozart/src/scene_manager/resources/resource.h"
+#include "garnet/bin/ui/scene_manager/resources/nodes/scene.h"
+#include "garnet/bin/ui/scene_manager/resources/resource.h"
 
 #include "escher/scene/camera.h"
 

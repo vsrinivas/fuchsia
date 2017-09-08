@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/scene_manager/resources/resource.h"
+#include "garnet/bin/ui/scene_manager/resources/resource.h"
 
 #include <algorithm>
 
-#include "apps/mozart/src/scene_manager/engine/session.h"
-#include "apps/mozart/src/scene_manager/resources/import.h"
-#include "apps/mozart/src/scene_manager/resources/resource_linker.h"
+#include "garnet/bin/ui/scene_manager/engine/session.h"
+#include "garnet/bin/ui/scene_manager/resources/import.h"
+#include "garnet/bin/ui/scene_manager/resources/resource_linker.h"
 
 namespace scene_manager {
 

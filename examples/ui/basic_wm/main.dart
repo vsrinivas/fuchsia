@@ -8,8 +8,8 @@ import 'package:application.services/application_environment.fidl.dart';
 import 'package:application.services/application_environment_host.fidl.dart';
 import 'package:application.services/application_launcher.fidl.dart';
 import 'package:application.services/service_provider.fidl.dart';
-import 'package:apps.mozart.lib.flutter/child_view.dart';
-import 'package:apps.mozart.services.presentation/presenter.fidl.dart';
+import 'package:lib.ui.flutter/child_view.dart';
+import 'package:lib.ui.presentation.fidl/presenter.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 import 'package:flutter/material.dart';
 

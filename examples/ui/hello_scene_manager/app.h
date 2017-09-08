@@ -6,8 +6,8 @@
 
 #include "lib/mtl/tasks/message_loop.h"
 
-#include "apps/mozart/lib/scenic/client/resources.h"
-#include "apps/mozart/lib/scenic/client/session.h"
+#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/client/session.h"
 
 namespace hello_scene_manager {
 

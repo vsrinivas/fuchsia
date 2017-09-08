@@ -10,7 +10,7 @@
 
 #include <mx/vmo.h>
 
-#include "apps/mozart/lib/scenic/client/resources.h"
+#include "lib/ui/scenic/client/resources.h"
 #include "lib/ftl/memory/ref_counted.h"
 
 namespace scenic_lib {

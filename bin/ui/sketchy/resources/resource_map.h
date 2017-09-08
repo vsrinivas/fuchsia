@@ -6,8 +6,8 @@
 
 #include <unordered_map>
 
-#include "apps/mozart/src/sketchy/resources/resource.h"
-#include "apps/mozart/src/sketchy/resources/types.h"
+#include "garnet/bin/ui/sketchy/resources/resource.h"
+#include "garnet/bin/ui/sketchy/resources/types.h"
 
 namespace sketchy_service {
 

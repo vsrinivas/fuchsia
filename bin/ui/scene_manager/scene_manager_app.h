@@ -6,9 +6,9 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/services/application_environment.fidl.h"
-#include "apps/mozart/services/scenic/scene_manager.fidl.h"
-#include "apps/mozart/src/scene_manager/displays/display_manager.h"
-#include "apps/mozart/src/scene_manager/scene_manager_impl.h"
+#include "lib/ui/scenic/fidl/scene_manager.fidl.h"
+#include "garnet/bin/ui/scene_manager/displays/display_manager.h"
+#include "garnet/bin/ui/scene_manager/scene_manager_impl.h"
 #include "lib/escher/examples/common/demo.h"
 #include "lib/escher/examples/common/demo_harness_fuchsia.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"

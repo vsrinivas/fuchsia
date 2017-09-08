@@ -10,9 +10,9 @@
 #include "lib/mtl/handles/object_info.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-#include "apps/mozart/services/scenic/ops.fidl-common.h"
-#include "apps/mozart/src/scene_manager/resources/resource.h"
-#include "apps/mozart/src/scene_manager/resources/unresolved_imports.h"
+#include "lib/ui/scenic/fidl/ops.fidl-common.h"
+#include "garnet/bin/ui/scene_manager/resources/resource.h"
+#include "garnet/bin/ui/scene_manager/resources/unresolved_imports.h"
 
 namespace scene_manager {
 

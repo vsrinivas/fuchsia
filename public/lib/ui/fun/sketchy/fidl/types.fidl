@@ -4,7 +4,7 @@
 
 module sketchy;
 
-import "apps/mozart/services/scenic/types.fidl";
+import "lib/ui/scenic/fidl/types.fidl";
 
 struct Touch {
   scenic.vec2 position;

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/sketchy/canvas.h"
+#include "lib/ui/sketchy/canvas.h"
 
 namespace sketchy_lib {
 

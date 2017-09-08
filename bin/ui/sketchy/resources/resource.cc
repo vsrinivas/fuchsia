@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/sketchy/resources/resource.h"
+#include "garnet/bin/ui/sketchy/resources/resource.h"
 
 namespace sketchy_service {
 

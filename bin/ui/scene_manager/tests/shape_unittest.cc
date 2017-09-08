@@ -4,11 +4,11 @@
 
 #include <math.h>
 
-#include "apps/mozart/lib/scenic/fidl_helpers.h"
-#include "apps/mozart/src/scene_manager/resources/shapes/circle_shape.h"
-#include "apps/mozart/src/scene_manager/resources/shapes/rectangle_shape.h"
-#include "apps/mozart/src/scene_manager/resources/shapes/rounded_rectangle_shape.h"
-#include "apps/mozart/src/scene_manager/tests/session_test.h"
+#include "lib/ui/scenic/fidl_helpers.h"
+#include "garnet/bin/ui/scene_manager/resources/shapes/circle_shape.h"
+#include "garnet/bin/ui/scene_manager/resources/shapes/rectangle_shape.h"
+#include "garnet/bin/ui/scene_manager/resources/shapes/rounded_rectangle_shape.h"
+#include "garnet/bin/ui/scene_manager/tests/session_test.h"
 
 #include "gtest/gtest.h"
 

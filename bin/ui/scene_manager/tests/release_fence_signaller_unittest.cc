@@ -5,9 +5,9 @@
 #include "escher/impl/command_buffer_sequencer.h"
 #include "gtest/gtest.h"
 
-#include "apps/mozart/src/scene_manager/fence.h"
-#include "apps/mozart/src/scene_manager/release_fence_signaller.h"
-#include "apps/mozart/src/scene_manager/tests/util.h"
+#include "garnet/bin/ui/scene_manager/fence.h"
+#include "garnet/bin/ui/scene_manager/release_fence_signaller.h"
+#include "garnet/bin/ui/scene_manager/tests/util.h"
 
 namespace scene_manager {
 namespace test {

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/examples/shadertoy/service/compiler.h"
+#include "garnet/examples/ui/shadertoy/service/compiler.h"
 
-#include "apps/mozart/examples/shadertoy/service/renderer.h"
+#include "garnet/examples/ui/shadertoy/service/renderer.h"
 #include "escher/impl/glsl_compiler.h"
 #include "escher/impl/mesh_shader_binding.h"
 #include "lib/mtl/tasks/message_loop.h"

@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include "apps/mozart/services/scenic/session.fidl.h"
+#include "lib/ui/scenic/fidl/session.fidl.h"
 
 namespace scenic_lib {
 

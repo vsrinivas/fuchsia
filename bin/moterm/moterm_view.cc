@@ -6,7 +6,7 @@
 
 #include <unistd.h>
 
-#include "apps/mozart/services/input/cpp/formatting.h"
+#include "lib/ui/input/cpp/formatting.h"
 #include "garnet/bin/moterm/command.h"
 #include "garnet/bin/moterm/key_util.h"
 #include "garnet/bin/moterm/moterm_model.h"

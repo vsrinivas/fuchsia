@@ -15,8 +15,8 @@ executable("sketchy") {
 
   deps = [
     "//application/lib/app",
-    "//apps/mozart/lib/scenic:client",
-    "//apps/mozart/lib/sketchy",
+    "//garnet/public/lib/ui/scenic:client",
+    "//garnet/public/lib/ui/sketchy",
     "//garnet/public/lib/fidl/cpp/bindings",
   ]
 }

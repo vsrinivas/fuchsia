@@ -5,10 +5,10 @@
 #pragma once
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/examples/shadertoy/service/services/shadertoy.fidl.h"
-#include "apps/mozart/examples/shadertoy/service/services/shadertoy_factory.fidl.h"
-#include "apps/mozart/lib/scenic/client/resources.h"
-#include "apps/mozart/lib/view_framework/base_view.h"
+#include "garnet/examples/ui/shadertoy/service/services/shadertoy.fidl.h"
+#include "garnet/examples/ui/shadertoy/service/services/shadertoy_factory.fidl.h"
+#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/view_framework/base_view.h"
 #include "lib/ftl/macros.h"
 
 namespace shadertoy_client {

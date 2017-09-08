@@ -9,7 +9,7 @@ source_set("cpp") {
   ]
 
   public_deps = [
-    "//apps/mozart/services/input",
+    "//garnet/public/lib/ui/input/fidl",
     "//garnet/public/lib/ftl",
   ]
 }

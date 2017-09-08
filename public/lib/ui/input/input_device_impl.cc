@@ -1,4 +1,4 @@
-#include "apps/mozart/lib/input/input_device_impl.h"
+#include "lib/ui/input/input_device_impl.h"
 
 #include "lib/ftl/logging.h"
 

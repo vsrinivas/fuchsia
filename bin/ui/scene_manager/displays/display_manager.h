@@ -6,8 +6,8 @@
 
 #include <cstdint>
 
-#include "apps/mozart/src/scene_manager/displays/display.h"
-#include "apps/mozart/src/scene_manager/displays/display_watcher.h"
+#include "garnet/bin/ui/scene_manager/displays/display.h"
+#include "garnet/bin/ui/scene_manager/displays/display_watcher.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 

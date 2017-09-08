@@ -4,7 +4,7 @@
 
 module mozart;
 
-import "apps/mozart/services/geometry/geometry.fidl";
+import "lib/ui/geometry/fidl/geometry.fidl";
 
 // Parameters and contextual information for a view provided by its container.
 //

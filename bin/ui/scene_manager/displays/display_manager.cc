@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/scene_manager/displays/display_manager.h"
+#include "garnet/bin/ui/scene_manager/displays/display_manager.h"
 
 #include <magenta/syscalls.h>
 
-#include "apps/mozart/src/scene_manager/displays/display_watcher.h"
-#include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
+#include "garnet/bin/ui/scene_manager/displays/display_watcher.h"
+#include "garnet/bin/ui/scene_manager/resources/renderers/renderer.h"
 
 namespace scene_manager {
 

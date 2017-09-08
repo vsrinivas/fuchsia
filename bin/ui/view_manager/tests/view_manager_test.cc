@@ -9,12 +9,12 @@
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"
 
-#include "apps/mozart/lib/tests/mocks/mock_view_container_listener.h"
-#include "apps/mozart/lib/tests/mocks/mock_view_listener.h"
-#include "apps/mozart/lib/tests/mocks/mock_view_tree_listener.h"
-#include "apps/mozart/lib/tests/test_with_message_loop.h"
-#include "apps/mozart/services/views/view_manager.fidl.h"
-#include "apps/mozart/services/views/views.fidl.h"
+#include "lib/ui/tests/mocks/mock_view_container_listener.h"
+#include "lib/ui/tests/mocks/mock_view_listener.h"
+#include "lib/ui/tests/mocks/mock_view_tree_listener.h"
+#include "lib/ui/tests/test_with_message_loop.h"
+#include "lib/ui/views/fidl/view_manager.fidl.h"
+#include "lib/ui/views/fidl/views.fidl.h"
 
 extern std::unique_ptr<app::ApplicationContext> g_application_context;
 

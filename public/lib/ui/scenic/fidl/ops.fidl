@@ -4,8 +4,8 @@
 
 module scenic;
 
-import "apps/mozart/services/scenic/events.fidl";
-import "apps/mozart/services/scenic/resources.fidl";
+import "lib/ui/scenic/fidl/events.fidl";
+import "lib/ui/scenic/fidl/resources.fidl";
 
 // Operations that are used to modify the state of a |Session|.
 // TODO(MZ-237): reorder Op definitions to match the order in this union.

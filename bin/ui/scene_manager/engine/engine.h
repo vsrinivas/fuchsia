@@ -14,14 +14,14 @@
 #include "lib/escher/escher/shape/rounded_rect_factory.h"
 #include "lib/escher/examples/common/demo_harness.h"
 
-#include "apps/mozart/src/scene_manager/displays/display_manager.h"
-#include "apps/mozart/src/scene_manager/engine/display_swapchain.h"
-#include "apps/mozart/src/scene_manager/engine/frame_scheduler.h"
-#include "apps/mozart/src/scene_manager/release_fence_signaller.h"
-#include "apps/mozart/src/scene_manager/resources/import.h"
-#include "apps/mozart/src/scene_manager/resources/nodes/scene.h"
-#include "apps/mozart/src/scene_manager/resources/resource_linker.h"
-#include "apps/mozart/src/scene_manager/util/event_timestamper.h"
+#include "garnet/bin/ui/scene_manager/displays/display_manager.h"
+#include "garnet/bin/ui/scene_manager/engine/display_swapchain.h"
+#include "garnet/bin/ui/scene_manager/engine/frame_scheduler.h"
+#include "garnet/bin/ui/scene_manager/release_fence_signaller.h"
+#include "garnet/bin/ui/scene_manager/resources/import.h"
+#include "garnet/bin/ui/scene_manager/resources/nodes/scene.h"
+#include "garnet/bin/ui/scene_manager/resources/resource_linker.h"
+#include "garnet/bin/ui/scene_manager/util/event_timestamper.h"
 
 namespace scene_manager {
 

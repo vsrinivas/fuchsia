@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/scenic/skia/host_surfaces.h"
+#include "lib/ui/scenic/skia/host_surfaces.h"
 
-#include "apps/mozart/lib/scenic/skia/image_info.h"
+#include "lib/ui/scenic/skia/image_info.h"
 #include "lib/ftl/logging.h"
 
 namespace scenic_lib {

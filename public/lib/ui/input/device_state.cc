@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/input/device_state.h"
+#include "lib/ui/input/device_state.h"
 
-#include "apps/mozart/services/input/input_event_constants.fidl.h"
-#include "apps/mozart/services/input/usages.fidl.h"
+#include "lib/ui/input/fidl/input_event_constants.fidl.h"
+#include "lib/ui/input/fidl/usages.fidl.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"

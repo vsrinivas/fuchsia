@@ -13,7 +13,7 @@ fidl("sketchy") {
   ]
 
   public_deps = [
-    "//apps/mozart/services/images",
-    "//apps/mozart/services/scenic",
+    "//garnet/public/lib/images/fidl",
+    "//garnet/public/lib/ui/scenic/fidl",
   ]
 }

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/mozart/src/sketchy/resources/types.h"
+#include "garnet/bin/ui/sketchy/resources/types.h"
 #include "escher/base/typed_reffable.h"
 #include "lib/ftl/memory/ref_counted.h"
 

@@ -4,8 +4,8 @@
 
 module mozart.example;
 
-import "apps/mozart/services/scenic/types.fidl";
-import "apps/mozart/services/images/image_pipe.fidl";
+import "lib/ui/scenic/fidl/types.fidl";
+import "lib/images/fidl/image_pipe.fidl";
 
 // Shadertoy (www.shadertoy.com) is an online community and tool for creating
 // and sharing GLSL shaders.  The genius of Shadertoy is that it side-steps the

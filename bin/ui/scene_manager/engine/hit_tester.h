@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "apps/mozart/src/scene_manager/engine/hit.h"
+#include "garnet/bin/ui/scene_manager/engine/hit.h"
 
 namespace scene_manager {
 

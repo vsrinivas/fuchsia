@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/examples/shadertoy/service/escher_utils.h"
+#include "garnet/examples/ui/shadertoy/service/escher_utils.h"
 
 #include "escher/vk/gpu_mem.h"
 

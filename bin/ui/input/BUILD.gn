@@ -9,8 +9,8 @@ executable("input") {
 
   deps = [
     "//application/lib/app",
-    "//apps/mozart/services/input",
-    "//apps/mozart/services/input/cpp",
+    "//garnet/public/lib/ui/input/fidl",
+    "//garnet/public/lib/ui/input/cpp",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
   ]

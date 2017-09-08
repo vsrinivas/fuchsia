@@ -11,8 +11,8 @@ fidl("services") {
   ]
 
   public_deps = [
-    "//apps/mozart/services/images",
-    "//apps/mozart/services/scenic",
-    "//apps/mozart/services/views",
+    "//garnet/public/lib/images/fidl",
+    "//garnet/public/lib/ui/scenic/fidl",
+    "//garnet/public/lib/ui/views/fidl",
   ]
 }
