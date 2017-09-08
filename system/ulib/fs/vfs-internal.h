@@ -23,7 +23,6 @@
 #endif
 #include <unistd.h>
 
-#include <mxio/dispatcher.h>
 #include <mxio/remoteio.h>
 
 #ifndef __Fuchsia__

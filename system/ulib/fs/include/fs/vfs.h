@@ -18,7 +18,6 @@
 #include <magenta/device/vfs.h>
 #include <magenta/types.h>
 
-#include <mxio/dispatcher.h>
 #include <mxio/vfs.h>
 
 #ifdef __Fuchsia__

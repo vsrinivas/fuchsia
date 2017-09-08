@@ -6,6 +6,7 @@
 
 #include <magenta/types.h>
 #include <magenta/compiler.h>
+#include <mxio/remoteio.h>
 
 __BEGIN_CDECLS
 
@@ -40,16 +41,5 @@ mx_status_t mxio_dispatcher_add(mxio_dispatcher_t* md, mx_handle_t h,
 mx_status_t mxio_dispatcher_add_etc(mxio_dispatcher_t* md, mx_handle_t h,
                                     mxio_dispatcher_cb_t callback,
                                     void* func, void* cookie);
-
-// dispatcher callback return code that there were no messages to read
-#define ERR_DISPATCHER_NO_WORK MX_ERR_SHOULD_WAIT
-
-// indicates message handed off to another server
-// used by rio remote handler for deferred reply pipe completion
-#define ERR_DISPATCHER_INDIRECT MX_ERR_NEXT
-
-// indicates that this was a close message and that no further
-// callbacks should be made to the dispatcher
-#define ERR_DISPATCHER_DONE MX_ERR_STOP
 
 __END_CDECLS

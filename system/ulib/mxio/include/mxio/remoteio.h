@@ -66,6 +66,17 @@ __BEGIN_CDECLS
     "getpeername", "getsockopt", "setsockopt", "getaddrinfo", \
     "setattr", "sync", "link", "mmap", "fcntl" }
 
+// dispatcher callback return code that there were no messages to read
+#define ERR_DISPATCHER_NO_WORK MX_ERR_SHOULD_WAIT
+
+// indicates message handed off to another server
+// used by rio remote handler for deferred reply pipe completion
+#define ERR_DISPATCHER_INDIRECT MX_ERR_NEXT
+
+// indicates that this was a close message and that no further
+// callbacks should be made to the dispatcher
+#define ERR_DISPATCHER_DONE MX_ERR_STOP
+
 const char* mxio_opname(uint32_t op);
 
 typedef struct mxrio_msg mxrio_msg_t;

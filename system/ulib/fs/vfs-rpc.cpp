@@ -13,7 +13,6 @@
 #include <magenta/process.h>
 #include <mx/event.h>
 #include <mxio/debug.h>
-#include <mxio/dispatcher.h>
 #include <mxio/io.h>
 #include <mxio/remoteio.h>
 #include <mxio/vfs.h>

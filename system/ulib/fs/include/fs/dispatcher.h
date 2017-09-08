@@ -10,7 +10,6 @@
 #include <magenta/types.h>
 #include <mx/channel.h>
 #include <fbl/ref_counted.h>
-#include <mxio/dispatcher.h>
 #include <mxio/remoteio.h>
 
 namespace fs {
