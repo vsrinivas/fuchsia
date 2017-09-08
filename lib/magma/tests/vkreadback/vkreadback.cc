@@ -23,31 +23,35 @@ public:
     static constexpr uint32_t kWidth = 64;
     static constexpr uint32_t kHeight = 64;
 
+    enum Extension { NONE, EXTERNAL_MEMORY_FD };
+
+    VkReadbackTest(Extension ext = NONE) : ext_(ext) {}
+
     bool Initialize();
     bool Exec();
     bool Readback();
 
-#if defined(MAGMA_TEST_IMPORT_EXPORT)
     uint32_t get_device_memory_handle() { return device_memory_handle_; }
     void set_device_memory_handle(uint32_t handle) { device_memory_handle_ = handle; }
-#endif
 
 private:
     bool InitVulkan();
     bool InitImage();
 
+    Extension ext_;
     bool is_initialized_ = false;
     VkPhysicalDevice vk_physical_device_;
     VkDevice vk_device_;
     VkQueue vk_queue_;
     VkImage vk_image_;
     VkDeviceMemory vk_device_memory_;
-#if defined(MAGMA_TEST_IMPORT_EXPORT)
+
+    // Import/export
     VkDeviceMemory vk_imported_device_memory_ = VK_NULL_HANDLE;
     uint32_t device_memory_handle_ = 0;
     PFN_vkGetMemoryFdKHR vk_get_memory_fd_khr_{};
     PFN_vkGetMemoryFdPropertiesKHR vk_get_memory_fd_properties_khr_{};
-#endif
+
     VkCommandPool vk_command_pool_;
     VkCommandBuffer vk_command_buffer_;
 };
@@ -147,9 +151,14 @@ bool VkReadbackTest::InitVulkan()
                                                  .pQueuePriorities = queue_priorities};
 
     std::vector<const char*> enabled_extension_names;
-#if defined(MAGMA_TEST_IMPORT_EXPORT)
-    enabled_extension_names.push_back(VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME);
-#endif
+    switch (ext_) {
+        case EXTERNAL_MEMORY_FD:
+            enabled_extension_names.push_back(VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME);
+            break;
+        default:
+            break;
+    }
+
     VkDeviceCreateInfo createInfo = {.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
                                      .pNext = nullptr,
                                      .flags = 0,
@@ -167,7 +176,6 @@ bool VkReadbackTest::InitVulkan()
                                  nullptr /* allocationcallbacks */, &vkdevice)) != VK_SUCCESS)
         return DRETF(false, "vkCreateDevice failed: %d", result);
 
-#if defined(MAGMA_TEST_IMPORT_EXPORT)
     vk_get_memory_fd_khr_ =
         reinterpret_cast<PFN_vkGetMemoryFdKHR>(vkGetInstanceProcAddr(instance, "vkGetMemoryFdKHR"));
     if (!vk_get_memory_fd_khr_)
@@ -176,7 +184,6 @@ bool VkReadbackTest::InitVulkan()
         vkGetInstanceProcAddr(instance, "vkGetMemoryFdPropertiesKHR"));
     if (!vk_get_memory_fd_properties_khr_)
         return DRETF(false, "Couldn't find vkGetMemoryFdPropertiesKHR");
-#endif
 
     vk_physical_device_ = physical_devices[0];
     vk_device_ = vkdevice;
@@ -240,14 +247,12 @@ bool VkReadbackTest::InitImage()
         VK_SUCCESS)
         return DRETF(false, "vkAllocateMemory failed");
 
-#if defined(MAGMA_TEST_IMPORT_EXPORT)
-    if (device_memory_handle_) {
+    if (ext_ == EXTERNAL_MEMORY_FD && device_memory_handle_) {
         size_t vmo_size;
         mx_vmo_get_size(device_memory_handle_, &vmo_size);
         VkImportMemoryFdInfoKHR magma_info = {VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR, nullptr,
                                               VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR,
                                               mxio_vmo_fd(device_memory_handle_, 0, vmo_size)};
-
         VkMemoryAllocateInfo info;
         info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         info.pNext = &magma_info;
@@ -257,7 +262,7 @@ bool VkReadbackTest::InitImage()
         if ((result = vkAllocateMemory(vk_device_, &info, nullptr, &vk_imported_device_memory_)) !=
             VK_SUCCESS)
             return DRETF(false, "vkAllocateMemory failed");
-    } else {
+    } else if (ext_ == EXTERNAL_MEMORY_FD) {
         mx_handle_t vmo_handle = 0;
         int fd = 0;
         VkMemoryGetFdInfoKHR get_fd_info = {VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR, nullptr,
@@ -277,10 +282,10 @@ bool VkReadbackTest::InitImage()
 
         mx_status_t status = mxio_get_exact_vmo(fd, &vmo_handle);
         if (status != MX_OK)
-            return DRETF(false, "mxio_get_exact_vmo failed");
+            return DRETF(false, "mxio_get_exact_vmo failed: %d", status);
         device_memory_handle_ = vmo_handle;
+        DLOG("got device_memory_handle_ 0x%x", device_memory_handle_);
     }
-#endif
 
     void* addr;
     if ((result = vkMapMemory(vk_device_, vk_device_memory_, 0, VK_WHOLE_SIZE, 0, &addr)) !=
@@ -382,11 +387,9 @@ bool VkReadbackTest::Readback()
     VkResult result;
     void* addr;
 
-#if defined(MAGMA_TEST_IMPORT_EXPORT)
-    VkDeviceMemory vk_device_memory = vk_imported_device_memory_;
-#else
-    VkDeviceMemory vk_device_memory = vk_device_memory_;
-#endif
+    VkDeviceMemory vk_device_memory =
+        ext_ == EXTERNAL_MEMORY_FD ? vk_imported_device_memory_ : vk_device_memory_;
+
     if ((result = vkMapMemory(vk_device_, vk_device_memory, 0, VK_WHOLE_SIZE, 0, &addr)) !=
         VK_SUCCESS)
         return DRETF(false, "vkMapMeory failed: %d", result);
@@ -414,15 +417,10 @@ bool VkReadbackTest::Readback()
     return mismatches == 0;
 }
 
-int main(void)
+int test_import_export(VkReadbackTest::Extension ext)
 {
-#if defined(MAGMA_USE_SHIM)
-    VulkanShimInit();
-#endif
-
-#if defined(MAGMA_TEST_IMPORT_EXPORT)
-    VkReadbackTest export_app;
-    VkReadbackTest import_app;
+    VkReadbackTest export_app(ext);
+    VkReadbackTest import_app(ext);
 
     if (!export_app.Initialize())
         return DRET_MSG(-1, "could not initialize export app");
@@ -437,6 +435,19 @@ int main(void)
 
     if (!import_app.Readback())
         return DRET_MSG(-1, "Readback failed");
+
+    return 0;
+}
+
+int main(void)
+{
+#if defined(MAGMA_USE_SHIM)
+    VulkanShimInit();
+#endif
+
+#if defined(MAGMA_TEST_IMPORT_EXPORT)
+    return test_import_export(VkReadbackTest::EXTERNAL_MEMORY_FD);
+
 #else
     VkReadbackTest app;
 
@@ -448,7 +459,7 @@ int main(void)
 
     if (!app.Readback())
         return DRET_MSG(-1, "Readback failed");
-#endif
 
     return 0;
+#endif
 }
