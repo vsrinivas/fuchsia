@@ -231,6 +231,12 @@ func (ns *netstack) addEth(path string) error {
 	linkID := stack.RegisterLinkEndpoint(ep)
 	lladdr := ipv6.LinkLocalAddr(tcpip.LinkAddress(ep.linkAddr))
 
+	if debug2 {
+		// A wrapper LinkEndpoint should encapsulate the underlying one,
+		// and manifest itself to 3rd party netstack.
+		linkID = sniffer.New(linkID)
+	}
+
 	ns.mu.Lock()
 	ifs.nic.Ipv6addrs = []tcpip.Address{lladdr}
 	copy(ifs.nic.Mac[:], ep.linkAddr)
@@ -258,11 +264,6 @@ func (ns *netstack) addEth(path string) error {
 	ns.mu.Unlock()
 
 	log.Printf("NIC %d added using ethernet device %q", nicid, path)
-
-	if debug2 {
-		linkID = sniffer.New(linkID)
-	}
-
 	log.Printf("NIC %d: ipv6addr: %v", nicid, lladdr)
 
 	if err := ns.stack.AddAddress(nicid, arp.ProtocolNumber, arp.ProtocolAddress); err != nil {
