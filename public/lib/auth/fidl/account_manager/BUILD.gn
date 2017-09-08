@@ -11,6 +11,6 @@ fidl("account_manager") {
 
   public_deps = [
     "//apps/auth/services/token_manager",
-    "//apps/mozart/services/views",
+    "//garnet/public/lib/ui/views/fidl",
   ]
 }
