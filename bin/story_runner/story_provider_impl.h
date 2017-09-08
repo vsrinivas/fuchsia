@@ -27,7 +27,7 @@
 #include "apps/modular/src/component/message_queue_manager.h"
 #include "apps/modular/src/story_runner/context_handler.h"
 #include "apps/modular/src/story_runner/story_storage_impl.h"
-#include "apps/mozart/services/views/view_token.fidl.h"
+#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"

@@ -14,7 +14,7 @@
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
-#include "apps/mozart/services/views/view_manager.fidl.h"
+#include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/logging.h"

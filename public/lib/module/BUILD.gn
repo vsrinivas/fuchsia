@@ -17,7 +17,7 @@ fidl("module") {
     "//apps/modular/services/component",
     "//apps/modular/services/story",
     "//apps/modular/services/surface",
-    "//apps/mozart/services/views",
+    "//garnet/public/lib/ui/views/fidl",
   ]
 
   public_deps = [

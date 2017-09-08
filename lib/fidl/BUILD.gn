@@ -108,7 +108,7 @@ source_set("single_service_app") {
     "//application/lib/app",
     "//application/services",
     "//apps/modular/services/lifecycle",
-    "//apps/mozart/services/views",
+    "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
   ]
@@ -125,8 +125,8 @@ source_set("view_host") {
   ]
 
   deps = [
-    "//apps/mozart/lib/view_framework",
-    "//apps/mozart/services/views",
+    "//garnet/public/lib/ui/view_framework",
+    "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
   ]

@@ -10,7 +10,7 @@ import "apps/modular/services/component/component_context.fidl";
 import "apps/modular/services/story/link.fidl";
 import "apps/modular/services/surface/surface.fidl";
 import "apps/modular/services/module/module_controller.fidl";
-import "apps/mozart/services/views/view_token.fidl";
+import "lib/ui/views/fidl/view_token.fidl";
 
 // This interface is exposed to all modules in a story. It allows to
 // create Link instances and run Module instances.

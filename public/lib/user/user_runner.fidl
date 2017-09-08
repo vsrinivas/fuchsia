@@ -8,7 +8,7 @@ import "apps/ledger/services/internal/internal.fidl";
 import "apps/modular/services/auth/account_provider.fidl";
 import "apps/modular/services/auth/account/account.fidl";
 import "apps/modular/services/config/config.fidl";
-import "apps/mozart/services/views/view_token.fidl";
+import "lib/ui/views/fidl/view_token.fidl";
 
 // The device_runner application (there is no |DeviceRunner| service) requests
 // an instance of this service in order to launch and display a |UserRunner| per

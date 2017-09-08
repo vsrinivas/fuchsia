@@ -106,7 +106,7 @@ flutter_app("example_flutter_hello_world") {
     "//application/lib/app/dart",               # needed for ApplicationContext
     "//apps/modular/services/module:module_dart", # module fidl dart bindings
     "//apps/modular/services/story:story_dart", # story fidl dart bindings
-    "//apps/mozart/services/views:views_dart",  # view fidl dart bindings
+    "//garnet/public/lib/ui/views/fidl:fidl_dart",  # view fidl dart bindings
     "//garnet/public/lib/fidl/dart",            # fidl dart libraries
     "//lib/flutter/packages/flutter",           # flutter package
   ]

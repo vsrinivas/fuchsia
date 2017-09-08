@@ -26,7 +26,7 @@
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/modular/src/agent_runner/agent_runner_storage_impl.h"
-#include "apps/mozart/services/views/view_token.fidl.h"
+#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/ftl/macros.h"

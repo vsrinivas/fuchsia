@@ -5,8 +5,8 @@
 import 'package:application.lib.app.dart/app.dart';
 import 'package:apps.modular.services.story/story_shell.fidl.dart';
 import 'package:apps.modular.services.surface/surface.fidl.dart';
-import 'package:apps.mozart.lib.flutter/child_view.dart';
-import 'package:apps.mozart.services.views/view_token.fidl.dart';
+import 'package:lib.ui.flutter/child_view.dart';
+import 'package:lib.ui.views.fidl/view_token.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
 import 'package:flutter/widgets.dart';

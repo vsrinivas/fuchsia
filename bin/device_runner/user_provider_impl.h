@@ -10,7 +10,7 @@
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/device/user_provider.fidl.h"
 #include "apps/modular/src/device_runner/user_controller_impl.h"
-#include "apps/mozart/services/views/view_token.fidl.h"
+#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 

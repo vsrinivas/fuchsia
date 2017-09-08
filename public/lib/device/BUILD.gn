@@ -14,6 +14,6 @@ fidl("device") {
   public_deps = [
     "//apps/modular/services/auth/account",
     "//apps/modular/services/config",
-    "//apps/mozart/services/views",
+    "//garnet/public/lib/ui/views/fidl",
   ]
 }

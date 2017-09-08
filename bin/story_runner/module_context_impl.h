@@ -12,7 +12,7 @@
 #include "apps/modular/services/module/module_context.fidl.h"
 #include "apps/modular/services/module/module_data.fidl.h"
 #include "apps/modular/src/component/component_context_impl.h"
-#include "apps/mozart/services/views/view_token.fidl.h"
+#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"

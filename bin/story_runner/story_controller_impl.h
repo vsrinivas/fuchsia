@@ -31,7 +31,7 @@
 #include "apps/modular/services/story/story_data.fidl.h"
 #include "apps/modular/services/story/story_shell.fidl.h"
 #include "apps/modular/services/surface/surface.fidl.h"
-#include "apps/mozart/services/views/view_token.fidl.h"
+#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"

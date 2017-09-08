@@ -7,7 +7,7 @@
 
 #include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/services/module/module.fidl.h"
-#include "apps/mozart/lib/view_framework/base_view.h"
+#include "lib/ui/view_framework/base_view.h"
 
 namespace modular_example {
 

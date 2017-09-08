@@ -6,7 +6,7 @@
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/module/module.fidl.h"
-#include "apps/mozart/services/views/view_token.fidl.h"
+#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 using modular::testing::TestPoint;

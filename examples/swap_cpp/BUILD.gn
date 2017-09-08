@@ -43,7 +43,7 @@ source_set("module") {
   deps = [
     "//apps/modular/services/module",
     "//apps/modular/services/story",
-    "//apps/mozart/lib/view_framework",
+    "//garnet/public/lib/ui/view_framework",
   ]
 }
 
@@ -55,7 +55,7 @@ executable("swap_recipe") {
     "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
-    "//apps/mozart/lib/view_framework",
+    "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/mtl",
   ]
 }

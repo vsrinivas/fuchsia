@@ -17,8 +17,8 @@ flutter_app("suggest_shell_view") {
     "//apps/modular/services/lifecycle:lifecycle_dart",
     "//apps/modular/services/module:module_dart",
     "//apps/modular/services/story:story_dart",
-    "//apps/mozart/lib/flutter",
-    "//apps/mozart/services/views:views_dart",
+    "//garnet/public/lib/ui/flutter",
+    "//garnet/public/lib/ui/views/fidl:fidl_dart",
     "//garnet/public/lib/fidl/dart",
     "//lib/flutter/packages/flutter",
   ]

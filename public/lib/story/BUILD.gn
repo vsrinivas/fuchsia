@@ -23,7 +23,7 @@ fidl("story") {
     "//apps/modular/services/module:module_controller",
     "//apps/modular/services/module:module_data",
     "//apps/modular/services/surface",
-    "//apps/mozart/services/views",
+    "//garnet/public/lib/ui/views/fidl",
   ]
 }
 
@@ -40,7 +40,7 @@ fidl("private") {
   deps = [
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
-    "//apps/mozart/services/views",
+    "//garnet/public/lib/ui/views/fidl",
   ]
 
   visibility = [ "//apps/modular/*" ]

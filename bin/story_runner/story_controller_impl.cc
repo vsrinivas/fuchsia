@@ -21,7 +21,7 @@
 #include "apps/modular/src/story_runner/module_context_impl.h"
 #include "apps/modular/src/story_runner/module_controller_impl.h"
 #include "apps/modular/src/story_runner/story_provider_impl.h"
-#include "apps/mozart/services/views/view_provider.fidl.h"
+#include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"

@@ -25,8 +25,8 @@ executable("example_module1") {
     "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
-    "//apps/mozart/lib/view_framework",
-    "//apps/mozart/services/views",
+    "//garnet/public/lib/ui/view_framework",
+    "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
   ]
@@ -44,8 +44,8 @@ executable("example_module2") {
     "//apps/modular/lib/rapidjson",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
-    "//apps/mozart/lib/view_framework",
-    "//apps/mozart/services/views",
+    "//garnet/public/lib/ui/view_framework",
+    "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
   ]
@@ -66,8 +66,8 @@ executable("example_recipe") {
     "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//apps/modular/services/user",
-    "//apps/mozart/lib/view_framework",
-    "//apps/mozart/services/views",
+    "//garnet/public/lib/ui/view_framework",
+    "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
   ]

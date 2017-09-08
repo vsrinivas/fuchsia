@@ -10,7 +10,7 @@ import "apps/modular/services/story/link.fidl";
 import "apps/modular/services/story/story_info.fidl";
 import "apps/modular/services/story/story_state.fidl";
 import "apps/modular/services/surface/surface.fidl";
-import "apps/mozart/services/views/view_token.fidl";
+import "lib/ui/views/fidl/view_token.fidl";
 
 // Used by the clients of StoryProvider (UserShell) to interact with a single
 // story. Created by StoryProvider.

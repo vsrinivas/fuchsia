@@ -23,7 +23,7 @@ executable("test_user_shell") {
     "//apps/modular/lib/testing",
     "//apps/modular/lib/testing:component_base",
     "//apps/modular/services/user",
-    "//apps/mozart/services/views",
+    "//garnet/public/lib/ui/views/fidl",
     "//apps/test_runner/services:test_runner",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",

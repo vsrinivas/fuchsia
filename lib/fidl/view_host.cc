@@ -4,8 +4,8 @@
 
 #include "apps/modular/lib/fidl/view_host.h"
 
-#include "apps/mozart/lib/view_framework/base_view.h"
-#include "apps/mozart/services/views/view_manager.fidl.h"
+#include "lib/ui/view_framework/base_view.h"
+#include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 

@@ -11,7 +11,7 @@
 #include "apps/modular/lib/fidl/app_client.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/module/module_controller.fidl.h"
-#include "apps/mozart/services/views/view_provider.fidl.h"
+#include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"

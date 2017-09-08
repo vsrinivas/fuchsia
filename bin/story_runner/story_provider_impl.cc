@@ -19,7 +19,7 @@
 #include "apps/modular/src/story_runner/link_impl.h"
 #include "apps/modular/src/story_runner/story_controller_impl.h"
 #include "apps/modular/src/user_runner/focus.h"
-#include "apps/mozart/services/views/view_provider.fidl.h"
+#include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"

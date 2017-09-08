@@ -21,7 +21,7 @@ executable("null_module") {
     "//apps/modular/lib/testing:component_base",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
-    "//apps/mozart/services/views",
+    "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/mtl",
   ]
 }

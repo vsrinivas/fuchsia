@@ -6,7 +6,7 @@ module modular;
 
 import "apps/modular/services/auth/account/account.fidl";
 import "apps/modular/services/config/config.fidl";
-import "apps/mozart/services/views/view_token.fidl";
+import "lib/ui/views/fidl/view_token.fidl";
 
 // Given by the |DeviceRunner| to the |DeviceShell| at Initialize() so the
 // |DeviceShell| can get information about the users of this device from the
