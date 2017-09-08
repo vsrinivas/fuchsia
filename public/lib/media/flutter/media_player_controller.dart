@@ -10,7 +10,7 @@ import 'package:apps.media.services/media_service.fidl.dart';
 import 'package:apps.media.services/video_renderer.fidl.dart';
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
-import 'package:apps.mozart.lib.flutter/child_view.dart';
+import 'package:lib.ui.flutter/child_view.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
 import 'package:flutter/foundation.dart';

@@ -4,8 +4,8 @@
 
 module media;
 
-import "apps/mozart/services/geometry/geometry.fidl";
-import "apps/mozart/services/views/view_token.fidl";
+import "lib/ui/geometry/fidl/geometry.fidl";
+import "lib/ui/views/fidl/view_token.fidl";
 
 // Video-specific renderer.
 interface VideoRenderer {

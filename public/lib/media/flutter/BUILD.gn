@@ -13,8 +13,8 @@ dart_package("flutter") {
     "//application/lib/app/dart",
     "//apps/media/lib/dart",
     "//apps/media/services:services_dart",
-    "//apps/mozart/lib/flutter",
-    "//apps/mozart/services/views:views_dart",
+    "//garnet/public/lib/ui/flutter",
+    "//garnet/public/lib/ui/views/fidl:fidl_dart",
     "//garnet/public/lib/fidl/dart",
     "//lib/flutter/packages/flutter",
   ]

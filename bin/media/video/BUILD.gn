@@ -20,8 +20,8 @@ source_set("video") {
     "//apps/media/src/fidl",
     "//apps/media/src/framework",
     "//apps/media/src/util",
-    "//apps/mozart/lib/view_framework",
-    "//apps/mozart/services/geometry/cpp",
+    "//garnet/public/lib/ui/view_framework",
+    "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/ftl",
     "//magenta/system/ulib/trace",
   ]
@@ -41,7 +41,7 @@ source_set("video_converter") {
     "//apps/media/services",
     "//apps/media/src/fidl",
     "//apps/media/src/framework",
-    "//apps/mozart/services/geometry/cpp",
+    "//garnet/public/lib/ui/geometry/cpp",
     "//magenta/system/ulib/trace",
   ]
 

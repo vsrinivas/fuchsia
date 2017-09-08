@@ -18,8 +18,8 @@
 #include "apps/media/src/util/fidl_publisher.h"
 #include "apps/media/src/util/timeline_control_point.h"
 #include "apps/media/src/video/video_converter.h"
-#include "apps/mozart/lib/view_framework/base_view.h"
-#include "apps/mozart/services/geometry/geometry.fidl.h"
+#include "lib/ui/view_framework/base_view.h"
+#include "lib/ui/geometry/fidl/geometry.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace media {

@@ -12,8 +12,8 @@
 #include "apps/media/services/video_renderer.fidl.h"
 #include "apps/media/src/media_service/media_service_impl.h"
 #include "apps/media/src/video/video_frame_source.h"
-#include "apps/mozart/lib/scenic/client/host_image_cycler.h"
-#include "apps/mozart/lib/view_framework/base_view.h"
+#include "lib/ui/scenic/client/host_image_cycler.h"
+#include "lib/ui/view_framework/base_view.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace media {

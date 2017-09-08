@@ -29,7 +29,7 @@ source_set("transport") {
     "//apps/media/lib/timeline",
     "//apps/media/services",
     "//apps/media/services/flog",
-    "//apps/mozart/services/geometry",
+    "//garnet/public/lib/ui/geometry/fidl",
     "//garnet/public/lib/ftl",
   ]
 }

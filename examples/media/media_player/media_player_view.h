@@ -13,8 +13,8 @@
 #include "apps/media/services/media_player.fidl.h"
 #include "apps/media/services/net_media_player.fidl.h"
 #include "apps/media/services/video_renderer.fidl.h"
-#include "apps/mozart/lib/scenic/skia/host_canvas_cycler.h"
-#include "apps/mozart/lib/view_framework/base_view.h"
+#include "lib/ui/scenic/skia/host_canvas_cycler.h"
+#include "lib/ui/view_framework/base_view.h"
 #include "lib/ftl/macros.h"
 
 namespace examples {

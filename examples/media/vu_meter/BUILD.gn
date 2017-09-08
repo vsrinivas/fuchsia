@@ -14,8 +14,8 @@ executable("vu_meter") {
   deps = [
     "//apps/media/lib/transport",
     "//apps/media/services",
-    "//apps/mozart/lib/view_framework:skia",
-    "//apps/mozart/lib/view_framework:view_provider",
+    "//garnet/public/lib/ui/view_framework:skia",
+    "//garnet/public/lib/ui/view_framework:view_provider",
     "//garnet/public/lib/mtl",
     "//third_party/skia",
   ]

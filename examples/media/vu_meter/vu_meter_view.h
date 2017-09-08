@@ -12,7 +12,7 @@
 #include "apps/media/lib/transport/media_packet_consumer_base.h"
 #include "apps/media/services/media_capturer.fidl.h"
 #include "apps/media/services/media_transport.fidl.h"
-#include "apps/mozart/lib/view_framework/skia_view.h"
+#include "lib/ui/view_framework/skia_view.h"
 #include "lib/ftl/macros.h"
 
 namespace examples {

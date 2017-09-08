@@ -4,7 +4,7 @@
 
 import 'package:apps.media.lib.flutter/media_player_controller.dart';
 import 'package:apps.media.lib.flutter/progress_notifier.dart';
-import 'package:apps.mozart.lib.flutter/child_view.dart';
+import 'package:lib.ui.flutter/child_view.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';

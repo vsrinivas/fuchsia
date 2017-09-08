@@ -39,6 +39,6 @@ fidl("services") {
   ]
 
   public_deps = [
-    "//apps/mozart/services/views",
+    "//garnet/public/lib/ui/views/fidl",
   ]
 }
