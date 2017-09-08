@@ -11,18 +11,18 @@
         "zlib"
     ],
     "packages": {
-        "mozart": "//apps/mozart",
-        "basic_wm": "//apps/mozart:basic_wm",
-        "hello_material": "//apps/mozart:hello_material",
-        "shapes_view": "//apps/mozart:shapes_view",
-        "noodles_view": "//apps/mozart:noodles_view",
-        "jank_view": "//apps/mozart:jank_view",
-        "paint_view": "//apps/mozart:paint_view",
-        "root_presenter": "//apps/mozart:root_presenter",
-        "spinning_square_view": "//apps/mozart:spinning_square_view",
-        "view_manager": "//apps/mozart:view_manager",
-        "ime_service": "//apps/mozart:ime_service",
-        "tile_view": "//apps/mozart:tile_view",
-        "mozart_tests": "//apps/mozart:mozart_tests"
+        "mozart": "//garnet/bin/ui:mozart",
+        "basic_wm": "//garnet/bin/ui:basic_wm",
+        "hello_material": "//garnet/bin/ui:hello_material",
+        "shapes_view": "//garnet/bin/ui:shapes_view",
+        "noodles_view": "//garnet/bin/ui:noodles_view",
+        "jank_view": "//garnet/bin/ui:jank_view",
+        "paint_view": "//garnet/bin/ui:paint_view",
+        "root_presenter": "//garnet/bin/ui:root_presenter",
+        "spinning_square_view": "//garnet/bin/ui:spinning_square_view",
+        "view_manager": "//garnet/bin/ui:view_manager",
+        "ime_service": "//garnet/bin/ui:ime_service",
+        "tile_view": "//garnet/bin/ui:tile_view",
+        "mozart_tests": "//garnet/bin/ui:mozart_tests"
     }
 }
