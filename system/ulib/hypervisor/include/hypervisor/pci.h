@@ -147,9 +147,11 @@ mx_status_t pci_bus_init(pci_bus_t* bus, const io_apic_t* io_apic);
  */
 mx_status_t pci_bus_connect(pci_bus_t* bus, pci_device_t* device, uint8_t slot);
 
-/* Handle MMIO access to the PCI config space. */
-mx_status_t pci_bus_handler(pci_bus_t* bus, const mx_packet_guest_mem_t* mem,
-                            const instruction_t* inst);
+/* Handle reads from the PCI ECAM region. */
+mx_status_t pci_ecam_read(pci_bus_t* bus, mx_vaddr_t addr, uint8_t access_size, mx_vcpu_io_t* io);
+
+/* Handle writes to the PCI ECAM region. */
+mx_status_t pci_ecam_write(pci_bus_t* bus, mx_vaddr_t addr, const mx_vcpu_io_t* io);
 
 /* Handle PIO reads to the PCI config space. */
 mx_status_t pci_bus_read(const pci_bus_t* bus, uint16_t port, uint8_t access_size,

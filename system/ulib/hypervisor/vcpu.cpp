@@ -124,6 +124,76 @@ static mx_status_t unhandled_mem(const mx_packet_guest_mem_t* mem, const instruc
     return MX_OK;
 }
 
+static mx_status_t handle_mmio_read(vcpu_ctx_t* vcpu_ctx, mx_vaddr_t addr, uint8_t access_size,
+                                    mx_vcpu_io_t* io) {
+    switch (addr) {
+    case PCI_ECAM_PHYS_BASE ... PCI_ECAM_PHYS_TOP:
+        return pci_ecam_read(vcpu_ctx->guest_ctx->bus, addr, access_size, io);
+    default:
+        return MX_ERR_NOT_FOUND;
+    }
+}
+
+static mx_status_t handle_mmio_write(vcpu_ctx_t* vcpu_ctx, mx_vaddr_t addr, mx_vcpu_io_t* io) {
+    switch (addr) {
+    case PCI_ECAM_PHYS_BASE ... PCI_ECAM_PHYS_TOP:
+        return pci_ecam_write(vcpu_ctx->guest_ctx->bus, addr, io);
+    default:
+        return MX_ERR_NOT_FOUND;
+    }
+}
+
+static mx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_mem_t* mem, const instruction_t* inst) {
+    mx_status_t status;
+    mx_vcpu_io_t mmio;
+    if (inst->type == INST_MOV_WRITE) {
+        switch (inst->mem) {
+        case 2:
+            status = inst_write16(inst, &mmio.u16);
+            break;
+        case 4:
+            status = inst_write32(inst, &mmio.u32);
+            break;
+        default:
+            return MX_ERR_NOT_SUPPORTED;
+        }
+        if (status != MX_OK)
+            return status;
+        mmio.access_size = inst->mem;
+        return handle_mmio_write(vcpu_ctx, mem->addr, &mmio);
+    }
+
+    if (inst->type == INST_MOV_READ) {
+        status = handle_mmio_read(vcpu_ctx, mem->addr, inst->mem, &mmio);
+        if (status != MX_OK)
+            return status;
+        switch (inst->mem) {
+        case 1:
+            return inst_read8(inst, mmio.u8);
+        case 2:
+            return inst_read16(inst, mmio.u16);
+        case 4:
+            return inst_read32(inst, mmio.u32);
+        default:
+            return MX_ERR_NOT_SUPPORTED;
+        }
+    }
+
+    if (inst->type == INST_TEST) {
+        status = handle_mmio_read(vcpu_ctx, mem->addr, inst->mem, &mmio);
+        if (status != MX_OK)
+            return status;
+        switch (inst->mem) {
+        case 1:
+            return inst_test8(inst, static_cast<uint8_t>(inst->imm), mmio.u8);
+        default:
+            return MX_ERR_NOT_SUPPORTED;
+        }
+    }
+
+    return MX_ERR_INVALID_ARGS;
+}
+
 static mx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_mem_t* mem) {
     mx_vcpu_state_t vcpu_state;
     mx_status_t status = vcpu_ctx->read_state(vcpu_ctx, MX_VCPU_STATE, &vcpu_state,
@@ -156,14 +226,13 @@ static mx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_mem_t*
         case IO_APIC_PHYS_BASE ... IO_APIC_PHYS_TOP:
             status = io_apic_handler(guest_ctx->io_apic, mem, &inst);
             break;
-        case PCI_ECAM_PHYS_BASE ... PCI_ECAM_PHYS_TOP: {
-            status = pci_bus_handler(vcpu_ctx->guest_ctx->bus, mem, &inst);
+        default: {
+            status = handle_mmio(vcpu_ctx, mem, &inst);
+            if (status == MX_ERR_NOT_FOUND)
+                status = unhandled_mem(mem, &inst);
             break;
         }
-        default:
-            status = unhandled_mem(mem, &inst);
-            break;
-        }
+    }
     }
 
     if (status != MX_OK) {

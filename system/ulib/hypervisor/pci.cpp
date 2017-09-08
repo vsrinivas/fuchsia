@@ -128,69 +128,27 @@ static void pci_addr_invalid_read(uint8_t len, uint32_t* value) {
     *value = bit_mask<uint32_t>(len * 8);
 }
 
-mx_status_t pci_bus_handler(pci_bus_t* bus, const mx_packet_guest_mem_t* mem,
-                            const instruction_t* inst) {
-    const mx_vaddr_t addr = mem->addr;
+mx_status_t pci_ecam_read(pci_bus_t* bus, mx_vaddr_t addr, uint8_t access_size, mx_vcpu_io_t* io) {
     const uint8_t device = PCI_ECAM_DEVICE(addr);
     const uint16_t reg = PCI_ECAM_REGISTER(addr);
     const bool valid = pci_addr_valid(bus, PCI_ECAM_BUS(addr), device, PCI_ECAM_FUNCTION(addr));
-
-    uint32_t value = 0;
-    mx_status_t status;
-    switch (inst->type) {
-    case INST_TEST:
-        if (!valid) {
-            pci_addr_invalid_read(inst->mem, &value);
-        } else {
-            status = pci_device_read(bus->device[device], reg, inst->mem, &value);
-            if (status != MX_OK)
-                return status;
-        }
-
-        switch (inst->mem) {
-        case 1:
-            return inst_test8(inst, static_cast<uint8_t>(inst->imm), static_cast<uint8_t>(value));
-        default:
-            return MX_ERR_NOT_SUPPORTED;
-        }
-    case INST_MOV_READ:
-        if (!valid) {
-            pci_addr_invalid_read(inst->mem, &value);
-        } else {
-            status = pci_device_read(bus->device[device], reg, inst->mem, &value);
-            if (status != MX_OK)
-                return status;
-        }
-
-        switch (inst->mem) {
-        case 1:
-            return inst_read8(inst, static_cast<uint8_t>(value));
-        case 2:
-            return inst_read16(inst, static_cast<uint16_t>(value));
-        case 4:
-            return inst_read32(inst, value);
-        default:
-            return MX_ERR_NOT_SUPPORTED;
-        }
-    case INST_MOV_WRITE:
-        if (!valid)
-            return MX_ERR_OUT_OF_RANGE;
-        switch (inst->mem) {
-        case 2:
-            status = inst_write16(inst, (uint16_t*)&value);
-            break;
-        case 4:
-            status = inst_write32(inst, &value);
-            break;
-        default:
-            return MX_ERR_NOT_SUPPORTED;
-        }
-        if (status != MX_OK)
-            return status;
-        return pci_device_write(bus->device[device], reg, inst->mem, value);
-    default:
-        return MX_ERR_NOT_SUPPORTED;
+    if (!valid) {
+        pci_addr_invalid_read(access_size, &io->u32);
+        return MX_OK;
     }
+
+    return pci_device_read(bus->device[device], reg, access_size, &io->u32);
+}
+
+mx_status_t pci_ecam_write(pci_bus_t* bus, mx_vaddr_t addr, const mx_vcpu_io_t* io) {
+    const uint8_t device = PCI_ECAM_DEVICE(addr);
+    const uint16_t reg = PCI_ECAM_REGISTER(addr);
+    const bool valid = pci_addr_valid(bus, PCI_ECAM_BUS(addr), device, PCI_ECAM_FUNCTION(addr));
+    if (!valid) {
+        return MX_ERR_OUT_OF_RANGE;
+    }
+
+    return pci_device_write(bus->device[device], reg, io->access_size, io->u32);
 }
 
 mx_status_t pci_bus_read(const pci_bus_t* bus, uint16_t port, uint8_t access_size,
