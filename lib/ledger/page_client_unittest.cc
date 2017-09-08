@@ -158,10 +158,10 @@ class PageClientTest : public TestWithMessageLoop {
         return true;
       },
 
-      // HACK(mesch): This test times out oocasionaly on CI, but that doesn't
-      // repro on qemu locally, so it's difficult to find out whether the ledger
-      // notifications just arrive slowly or something else is amiss. So we
-      // increase the timeout temporarily to watch what happens on CI.
+      // NOTE(mesch): Test cases here take about 300ms when running in CI.
+      // Occasionally they take much longer, presumably because of load on
+      // shared machines. With the default timeout, we see flakiness. Cf.
+      // FW-287.
       ftl::TimeDelta::FromSeconds(10));
   }
 
