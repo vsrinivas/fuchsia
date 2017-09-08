@@ -21,9 +21,10 @@ MODULE_LIBS := \
     system/ulib/fdio \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
+    system/ulib/hid \
+    system/ulib/virtio \
     system/ulib/zx \
     system/ulib/zxcpp \
-    system/ulib/fbl \
-    system/ulib/virtio \
 
 include make/module.mk

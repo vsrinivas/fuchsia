@@ -12,6 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/block.cpp \
     $(LOCAL_DIR)/gpu.cpp \
     $(LOCAL_DIR)/guest.cpp \
+    $(LOCAL_DIR)/input.cpp \
     $(LOCAL_DIR)/virtio_queue.cpp \
     $(LOCAL_DIR)/virtio_queue_fake.cpp \
 
@@ -35,15 +36,16 @@ MODULE_NAME := hypervisor-test
 
 MODULE_LIBS := \
     system/ulib/c \
-    system/ulib/hypervisor \
-    system/ulib/zircon \
     system/ulib/fdio \
+    system/ulib/hid \
+    system/ulib/hypervisor \
     system/ulib/unittest \
+    system/ulib/zircon \
 
 MODULE_STATIC_LIBS += \
     system/ulib/ddk \
-    system/ulib/virtio \
     system/ulib/fbl \
+    system/ulib/virtio \
     system/ulib/zx \
 
 include make/module.mk

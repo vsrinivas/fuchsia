@@ -18,6 +18,7 @@
 #include <hypervisor/block.h>
 #include <hypervisor/gpu.h>
 #include <hypervisor/guest.h>
+#include <hypervisor/input.h>
 #include <hypervisor/io_apic.h>
 #include <hypervisor/io_port.h>
 #include <hypervisor/pci.h>
@@ -307,15 +308,23 @@ int main(int argc, char** argv) {
         return status;
     if (balloon_poll_interval > 0)
         poll_balloon_stats(&balloon, balloon_poll_interval);
-
     // Setup Virtio GPU.
     VirtioGpu gpu(physmem_addr, physmem_size);
+    VirtioInput input(physmem_addr, physmem_size, "zircon-input", "serial-number");
     if (use_gpu) {
         status = gpu.Init("/dev/class/framebuffer/000");
         if (status != ZX_OK)
             return status;
 
         status = bus.Connect(&gpu.pci_device(), PCI_DEVICE_VIRTIO_GPU);
+        if (status != ZX_OK)
+            return status;
+
+        // Setup input device.
+        status = input.Start();
+        if (status != ZX_OK)
+            return status;
+        status = bus.Connect(&input.pci_device(), PCI_DEVICE_VIRTIO_INPUT);
         if (status != ZX_OK)
             return status;
     }

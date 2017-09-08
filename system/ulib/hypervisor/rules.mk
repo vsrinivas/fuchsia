@@ -19,6 +19,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/block.cpp \
     $(LOCAL_DIR)/gpu.cpp \
     $(LOCAL_DIR)/guest.cpp \
+    $(LOCAL_DIR)/input.cpp \
     $(LOCAL_DIR)/io_apic.cpp \
     $(LOCAL_DIR)/io_port.cpp \
     $(LOCAL_DIR)/local_apic.cpp \
@@ -36,15 +37,17 @@ endif
 
 MODULE_LIBS := \
     system/ulib/c \
-    system/ulib/zircon \
     system/ulib/fdio \
+    system/ulib/zircon \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
+    system/ulib/fbl \
+    system/ulib/fdio \
+    system/ulib/hid \
     system/ulib/virtio \
-    third_party/ulib/acpica \
     system/ulib/zx \
     system/ulib/zxcpp \
-    system/ulib/fbl \
+    third_party/ulib/acpica \
 
 include make/module.mk

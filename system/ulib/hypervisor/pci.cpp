@@ -40,8 +40,11 @@ static const uint8_t kPciCapNextOffset = 1;
 /* Per-device IRQ assignments.
  *
  * These are provided to the guest via the _SB section in the DSDT ACPI table.
+ *
+ * The DSDT defines interrupts for 5 devices (IRQ 32-36). Adding
+ * additional devices beyond that will require updates to the DSDT.
  */
-static const uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {32, 33, 34, 35};
+static const uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {32, 33, 34, 35, 36};
 
 static uint32_t pci_bar_base(pci_bar_t* bar) {
     switch (bar->aspace) {
