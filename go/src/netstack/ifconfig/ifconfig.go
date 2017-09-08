@@ -33,14 +33,19 @@ func (a *netstackClientApp) start() {
 	}
 
 	for _, iface := range ifaces {
-		printIface(iface)
+		stats, err := a.netstack.GetStats(iface.Id)
+		if err != nil {
+			fmt.Printf("Failed to lookup %v.\n\n", iface.Name)
+			continue
+		}
+		printIface(iface, stats)
 		fmt.Print("\n")
 	}
 
 	a.netstack.Close()
 }
 
-func printIface(iface netstack.NetInterface) {
+func printIface(iface netstack.NetInterface, stats netstack.NetInterfaceStats) {
 	fmt.Printf("%s\tHWaddr %s\n", iface.Name, hwAddrToString(iface.Hwaddr))
 	fmt.Printf("\tinet addr:%s  Bcast:%s  Mask:%s\n", netAddrToString(iface.Addr), netAddrToString(iface.Broadaddr), netAddrToString(iface.Netmask))
 	for _, addr := range iface.Ipv6addrs {
@@ -48,7 +53,12 @@ func printIface(iface netstack.NetInterface) {
 		fmt.Printf("\tinet6 addr: %s/%d Scope:Link\n", netAddrToString(addr.Addr), addr.PrefixLen)
 	}
 	fmt.Printf("\t%s\n", flagsToString(iface.Flags))
-	// TODO: more stats. MTU, RX/TX packets/errors/bytes
+
+	fmt.Printf("\tRX packets:%d\n", stats.RxPktsTotal)
+	fmt.Printf("\tTX packets:%d\n", stats.TxPktsTotal)
+	fmt.Printf("\tRX bytes:%s  TX bytes:%s\n",
+		bytesToString(stats.RxBytesTotal), bytesToString(stats.TxBytesTotal))
+	// TODO: more stats. MTU, RX/TX errors
 }
 
 func hwAddrToString(hwaddr []uint8) string {
@@ -80,6 +90,32 @@ func flagsToString(flags uint32) string {
 		str += "UP"
 	}
 	return str
+}
+
+// bytesToString returns a human-friendly display of the given byte count.
+// Values over 1K have an approximation appended in parentheses.
+// bytesToString(42) => "42"
+// bytesToString(42*1024 + 200) => "43208 (42.2 KB)"
+func bytesToString(bytes uint64) string {
+	if bytes == 0 {
+		return "0"
+	}
+
+	units := "BKMGT"
+	unitSize := uint64(1)
+	unit := "B"
+
+	for i := 0; i+1 < len(units) && bytes >= unitSize*1024; i++ {
+		unitSize *= 1024
+		unit = string(units[i+1]) + "B"
+	}
+
+	if unitSize == 1 {
+		return fmt.Sprintf("%d", bytes)
+	} else {
+		value := float32(bytes) / float32(unitSize)
+		return fmt.Sprintf("%d (%.1f %s)", bytes, value, unit)
+	}
 }
 
 func main() {
