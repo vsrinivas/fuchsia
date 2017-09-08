@@ -37,7 +37,17 @@ mx_status_t mxio_transfer_fd(int fd, int newfd, mx_handle_t* handles, uint32_t* 
 mx_status_t mxio_create_fd(mx_handle_t* handles, uint32_t* types, size_t hcount, int* fd_out);
 
 typedef struct bootfs_entry bootfs_entry_t;
-mx_status_t bootfs_parse(mx_handle_t vmo, size_t len,
+
+typedef struct bootfs {
+    mx_handle_t vmo;
+    uint32_t dirsize;
+    void* dir;
+} bootfs_t;
+
+mx_status_t bootfs_create(bootfs_t* bfs, mx_handle_t vmo);
+void bootfs_destroy(bootfs_t* bfs);
+mx_status_t bootfs_open(bootfs_t* bfs, const char* name, mx_handle_t* vmo);
+mx_status_t bootfs_parse(bootfs_t* bfs,
                          mx_status_t (*cb)(void* cookie, const bootfs_entry_t* entry),
                          void* cookie);
 

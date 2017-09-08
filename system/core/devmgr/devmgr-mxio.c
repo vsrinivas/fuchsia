@@ -160,7 +160,11 @@ static ssize_t setup_bootfs_vmo(uint32_t n, uint32_t type, mx_handle_t vmo) {
         has_secondary_bootfs = true;
         memfs_mount(vfs_create_global_root(), systemfs_get_root());
     }
-    bootfs_parse(vmo, size, callback, &cd);
+    bootfs_t bfs;
+    if (bootfs_create(&bfs, vmo) == MX_OK) {
+        bootfs_parse(&bfs, callback, &cd);
+        bootfs_destroy(&bfs);
+    }
     return cd.file_count;
 }
 
