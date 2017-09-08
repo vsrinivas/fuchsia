@@ -156,7 +156,13 @@ class PageClientTest : public TestWithMessageLoop {
         }
 
         return true;
-      });
+      },
+
+      // HACK(mesch): This test times out oocasionaly on CI, but that doesn't
+      // repro on qemu locally, so it's difficult to find out whether the ledger
+      // notifications just arrive slowly or something else is amiss. So we
+      // increase the timeout temporarily to watch what happens on CI.
+      ftl::TimeDelta::FromSeconds(10));
   }
 
  private:
