@@ -148,11 +148,7 @@ mark_lr_sp_inaccessible
     .cfi_startproc simple
     .cfi_signal_frame
     // The return address is in elr_el1, not lr.
-#ifndef __clang__
-    // TODO(dje): Add clang back when the upstream LLVM bug
-    // https://bugs.llvm.org/show_bug.cgi?id=33953 is fixed.
     .cfi_return_column elr1
-#endif
     .cfi_def_cfa sp, 0
 .endm
 
