@@ -6,10 +6,16 @@
 // https://opensource.org/licenses/MIT
 
 #include <arch/ops.h>
+#include <arch/x86.h>
 
-/* nothing to do to sync I & D cache on x86 */
 void arch_sync_cache_range(addr_t start, size_t len)
 {
+    // Invoke cpuid to act as a serializing instruction.  This will ensure we
+    // see modifications to future parts of the instruction stream.  See
+    // Intel Volume 3, 8.1.3 "Handling Self- and Cross-Modifying Code".  cpuid
+    // is the more conservative approach suggested in this section.
+    uint32_t v;
+    cpuid(0, &v, &v, &v, &v);
 }
 
 void arch_invalidate_cache_range(addr_t start, size_t len)
