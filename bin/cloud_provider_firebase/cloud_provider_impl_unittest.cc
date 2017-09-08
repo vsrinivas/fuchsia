@@ -21,24 +21,30 @@ ConfigPtr GetFirebaseConfig() {
   return config;
 }
 
+std::unique_ptr<auth_provider::AuthProvider> InitAuthProvider(
+    ftl::RefPtr<ftl::TaskRunner> task_runner,
+    auth_provider::test::TestAuthProvider** ptr) {
+  auto auth_provider = std::make_unique<auth_provider::test::TestAuthProvider>(
+      std::move(task_runner));
+  *ptr = auth_provider.get();
+  return auth_provider;
+}
+
 }  // namespace
 
 class CloudProviderImplTest : public test::TestWithMessageLoop {
  public:
   CloudProviderImplTest()
-      : fake_token_provider_("id_token", "local_id", "email", "client_id"),
-        token_provider_binding_(&fake_token_provider_,
-                                token_provider_.NewRequest()),
-        cloud_provider_impl_(message_loop_.task_runner(),
-                             GetFirebaseConfig(),
-                             std::move(token_provider_),
-                             cloud_provider_.NewRequest()) {}
+      : cloud_provider_impl_(
+            message_loop_.task_runner(),
+            "user_id",
+            GetFirebaseConfig(),
+            InitAuthProvider(message_loop_.task_runner(), &auth_provider_),
+            cloud_provider_.NewRequest()) {}
   ~CloudProviderImplTest() override {}
 
  protected:
-  modular::auth::TokenProviderPtr token_provider_;
-  test::FakeTokenProvider fake_token_provider_;
-  fidl::Binding<modular::auth::TokenProvider> token_provider_binding_;
+  auth_provider::test::TestAuthProvider* auth_provider_ = nullptr;
 
   cloud_provider::CloudProviderPtr cloud_provider_;
   CloudProviderImpl cloud_provider_impl_;

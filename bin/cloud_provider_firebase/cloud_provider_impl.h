@@ -27,8 +27,9 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
  public:
   CloudProviderImpl(
       ftl::RefPtr<ftl::TaskRunner> main_runner,
+      std::string user_id,
       ConfigPtr config,
-      fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
+      std::unique_ptr<auth_provider::AuthProvider> auth_provider,
       fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
   ~CloudProviderImpl() override;
 
@@ -46,8 +47,9 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
       const GetPageCloudCallback& callback) override;
 
   ftl::RefPtr<ftl::TaskRunner> main_runner_;
+  const std::string user_id_;
+  std::unique_ptr<auth_provider::AuthProvider> auth_provider_;
   fidl::Binding<cloud_provider::CloudProvider> binding_;
-  std::unique_ptr<auth_provider::AuthProviderImpl> auth_provider_;
   ftl::Closure on_empty_;
 
   callback::AutoCleanableSet<DeviceSetImpl> device_sets_;

@@ -11,6 +11,7 @@ module cloud_provider;
 // Response status for cloud provider operations.
 enum Status {
   OK = 0,
+  AUTH_ERROR,
   ARGUMENT_ERROR,
   INTERNAL_ERROR,
   NETWORK_ERROR,

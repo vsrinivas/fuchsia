@@ -9,6 +9,8 @@
 #include "apps/ledger/cloud_provider_firebase/services/factory.fidl.h"
 #include "apps/ledger/services/cloud_provider/cloud_provider.fidl.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
+#include "apps/ledger/src/callback/cancellable.h"
+#include "apps/modular/services/auth/token_provider.fidl.h"
 #include "garnet/public/lib/ftl/functional/closure.h"
 #include "garnet/public/lib/ftl/macros.h"
 
@@ -19,9 +21,7 @@ class FactoryImpl : public Factory {
   explicit FactoryImpl(ftl::RefPtr<ftl::TaskRunner> main_runner);
   ~FactoryImpl() override;
 
-  void set_on_empty(const ftl::Closure& on_empty) {
-    providers_.set_on_empty(on_empty);
-  }
+  void set_on_empty(const ftl::Closure& on_empty) { on_empty_ = on_empty; }
 
  private:
   // Factory:
@@ -31,8 +31,12 @@ class FactoryImpl : public Factory {
       fidl::InterfaceRequest<cloud_provider::CloudProvider> cloud_provider,
       const GetCloudProviderCallback& callback) override;
 
-  ftl::RefPtr<ftl::TaskRunner> main_runner_;
+  bool IsEmpty();
 
+  void CheckEmpty();
+
+  ftl::RefPtr<ftl::TaskRunner> main_runner_;
+  callback::CancellableContainer token_requests_;
   callback::AutoCleanableSet<CloudProviderImpl> providers_;
 
   ftl::Closure on_empty_;

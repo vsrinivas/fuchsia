@@ -25,7 +25,9 @@ namespace auth_provider {
 // the code to work without auth against public instances (e.g. for running
 // benchmarks).
 //
-// This is currently a placeholder that always returns an empty token.
+// *Warning*: if |token_provider| disconnects, all requests in progress are
+// dropped on the floor. TODO(ppi): keep track of pending requests and call the
+// callbacks with status TOKEN_PROVIDER_DISCONNECTED when this happens.
 class AuthProviderImpl : public AuthProvider {
  public:
   AuthProviderImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
