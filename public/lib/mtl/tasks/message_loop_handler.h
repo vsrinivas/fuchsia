@@ -11,6 +11,44 @@
 
 namespace mtl {
 
+//
+// This class is DEPRECATED.
+//
+// Please use |async::AutoWait| or |async::Wait| instead.
+//
+// EXAMPLE:
+//
+// #include <async/auto_wait.h>
+// #include <fbl/function.h>
+// #include <mx/channel.h>
+//
+// class MyWaiter {
+// public:
+//   MyWaiter(mx::channel channel) :
+//       channel_(std::move(channel)),
+//       wait_(mtl::MessageLoop::GetCurrent()->async(),
+//             channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED) {
+//     wait_.set_handler(fbl::BindMember(this, &MyWaiter::Handler));
+//     mx_status_t status = wait_.Begin();
+//     if (status != MX_OK) { /* handle the error */ }
+//   }
+//
+// private:
+//   async_wait_result_t Handle(async_t* async, mx_status_t status,
+//                              const mx_packet_signal* signal) {
+//     if (status == MX_OK && (signal->observed & MX_CHANNEL_READABLE)) {
+//       /* do something */
+//       return ASYNC_WAIT_AGAIN;
+//     }
+//
+//     /* do something else */
+//     return ASYNC_WAIT_FINISHED;
+//   }
+//
+//   mx::channel channel_;
+//   async::AutoWait wait_;
+// };
+//
 class FTL_EXPORT MessageLoopHandler {
  public:
   // Called when the handle receives signals that the handler was waiting for.
