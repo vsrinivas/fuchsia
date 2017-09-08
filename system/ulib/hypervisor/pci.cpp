@@ -50,7 +50,7 @@ static mx_status_t pci_bar_read_unsupported(const pci_device_t* device, uint8_t 
 }
 
 static mx_status_t pci_bar_write_unsupported(pci_device_t* device, uint8_t bar, uint16_t port,
-                                             const mx_packet_guest_io_t* io) {
+                                             const mx_vcpu_io_t* io) {
     return MX_ERR_NOT_SUPPORTED;
 }
 
@@ -564,16 +564,18 @@ uint16_t pci_bar_size(pci_bar_t* bar) {
 
 static mx_status_t pci_handler(mx_port_packet_t* packet, void* ctx) {
     pci_device_t* pci_device = static_cast<pci_device_t*>(ctx);
-    mx_packet_guest_io_t* io = &packet->guest_io;
-
-    if (packet->key > UINT8_MAX)
-        return MX_ERR_OUT_OF_RANGE;
 
     // We provide the bar number as the trap key.
+    if (packet->key > UINT8_MAX)
+        return MX_ERR_OUT_OF_RANGE;
     uint8_t bar = static_cast<uint8_t>(packet->key);
+
+    mx_vcpu_io_t io;
+    io.access_size = packet->guest_io.access_size;
+    io.u32 = packet->guest_io.u32;
     uint32_t bar_base = pci_bar_base(&pci_device->bar[bar]);
-    uint16_t device_port = static_cast<uint16_t>(io->port - bar_base);
-    return pci_device->ops->write_bar(pci_device, bar, device_port, io);
+    uint16_t device_port = static_cast<uint16_t>(packet->guest_io.port - bar_base);
+    return pci_device->ops->write_bar(pci_device, bar, device_port, &io);
 }
 
 mx_status_t pci_device_async(pci_device_t* device, mx_handle_t guest) {

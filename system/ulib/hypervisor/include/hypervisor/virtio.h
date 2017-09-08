@@ -24,7 +24,6 @@ struct vring_avail;
 struct vring_used;
 
 typedef struct io_apic io_apic_t;
-typedef struct mx_packet_guest_io mx_packet_guest_io_t;
 typedef struct mx_vcpu_io mx_vcpu_io_t;
 typedef struct virtio_device virtio_device_t;
 typedef struct virtio_queue virtio_queue_t;
@@ -36,7 +35,7 @@ typedef struct virtio_device_ops {
                         mx_vcpu_io_t* vcpu_io);
 
     // Write a device configuration field.
-    mx_status_t (*write)(virtio_device_t* device, uint16_t port, const mx_packet_guest_io_t* io);
+    mx_status_t (*write)(virtio_device_t* device, uint16_t port, const mx_vcpu_io_t* io);
 
     // Handle notify events for one of this devices queues.
     mx_status_t (*queue_notify)(virtio_device_t* device, uint16_t queue_sel);

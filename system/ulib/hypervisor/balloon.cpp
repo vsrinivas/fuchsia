@@ -139,7 +139,7 @@ static mx_status_t balloon_read(const virtio_device_t* device, uint16_t port, ui
 }
 
 static mx_status_t balloon_write(virtio_device_t* device, uint16_t port,
-                                 const mx_packet_guest_io_t* io) {
+                                 const mx_vcpu_io_t* io) {
     balloon_t* balloon = virtio_device_to_balloon(device);
 
     fbl::AutoLock lock(&balloon->mutex);

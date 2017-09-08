@@ -105,7 +105,7 @@ mx_status_t virtio_pci_legacy_read(const pci_device_t* pci_device, uint8_t bar, 
 }
 
 mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, uint8_t bar, uint16_t port,
-                                    const mx_packet_guest_io_t* io) {
+                                    const mx_vcpu_io_t* io) {
     if (bar != 0)
         return MX_ERR_NOT_SUPPORTED;
 

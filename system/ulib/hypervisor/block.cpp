@@ -35,7 +35,7 @@ static mx_status_t block_read(const virtio_device_t* device, uint16_t port, uint
 }
 
 static mx_status_t block_write(virtio_device_t* device, uint16_t port,
-                               const mx_packet_guest_io_t* io) {
+                               const mx_vcpu_io_t* io) {
     // No device fields are writable.
     return MX_ERR_NOT_SUPPORTED;
 }

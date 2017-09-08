@@ -291,7 +291,7 @@ mx_status_t virtio_device_config_read(const virtio_device_t* device, void* confi
 }
 
 mx_status_t virtio_device_config_write(const virtio_device_t* device, void* config, uint16_t port,
-                                       const mx_packet_guest_io_t* io) {
+                                       const mx_vcpu_io_t* io) {
     switch (io->access_size) {
     case 1: {
         uint8_t* buf = reinterpret_cast<uint8_t*>(config);

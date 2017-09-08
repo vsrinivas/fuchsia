@@ -60,7 +60,7 @@ typedef struct pci_device_ops {
 
     // Write to a region mapped by a BAR register.
     mx_status_t (*write_bar)(pci_device_t* device, uint8_t bar, uint16_t port,
-                             const mx_packet_guest_io_t* io);
+                             const mx_vcpu_io_t* io);
 } pci_device_ops_t;
 
 /* PCI capability structure.

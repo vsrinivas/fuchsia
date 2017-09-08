@@ -252,7 +252,7 @@ static void virtio_queue_update_addr(virtio_queue_t* queue) {
  * Virtio 1.0 Section 4.1.4.3.
  */
 static mx_status_t virtio_pci_common_cfg_write(pci_device_t* pci_device, uint16_t port,
-                                               const mx_packet_guest_io_t* io) {
+                                               const mx_vcpu_io_t* io) {
     virtio_device_t* device = pci_device_to_virtio(pci_device);
 
     switch (port) {
@@ -342,7 +342,7 @@ static mx_status_t virtio_pci_common_cfg_write(pci_device_t* pci_device, uint16_
 }
 
 static mx_status_t virtio_pci_write(pci_device_t* pci_device, uint8_t bar, uint16_t port,
-                                    const mx_packet_guest_io_t* io) {
+                                    const mx_vcpu_io_t* io) {
     if (bar != VirtioPciBar::MODERN)
         return MX_ERR_NOT_SUPPORTED;
 
@@ -368,7 +368,7 @@ static mx_status_t virtio_pci_write(pci_device_t* pci_device, uint8_t bar, uint1
 }
 
 static mx_status_t virtio_pci_transitional_write(pci_device_t* pci_device, uint8_t bar,
-                                                 uint16_t port, const mx_packet_guest_io_t* io) {
+                                                 uint16_t port, const mx_vcpu_io_t* io) {
     if (bar == VirtioPciBar::LEGACY)
         return virtio_pci_legacy_write(pci_device, bar, port, io);
 
