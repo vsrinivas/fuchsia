@@ -19,14 +19,12 @@ static_library("fs") {
     "include/fs/vfs.h",
     "async-dispatcher.cpp",
     "mapped-vmo.cpp",
-    "vfs-dispatcher.cpp",
-    "mapped-vmo.cpp",
     "vfs.cpp",
+    "vfs-dispatcher.cpp",
     "vfs-mount.cpp",
     "vfs-rpc.cpp",
     "vfs-unmount.cpp",
     "vfs-watcher.cpp",
-    "vfs.cpp",
   ]
 
   public_configs = [ ":fs_config" ]
