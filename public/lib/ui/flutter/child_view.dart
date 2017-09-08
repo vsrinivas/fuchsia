@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:mozart.internal';
 import 'dart:ui' as ui;
+import 'dart:zircon' show ZX;
 
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/application_controller.fidl.dart';
@@ -157,7 +158,7 @@ class ChildViewConnection {
     assert(_viewInfo == null);
     assert(_sceneHost == null);
     final core.Eventpair pair = new core.Eventpair();
-    assert(pair.status == core.NO_ERROR);
+    assert(pair.status == ZX.OK);
     _sceneHost = new ui.SceneHost(pair.passEndpoint0());
     _viewKey = _nextViewKey++;
     _viewContainer.addChild(_viewKey, _viewOwner, pair.passEndpoint1());
@@ -175,7 +176,7 @@ class ChildViewConnection {
     assert(_sceneHost != null);
     assert(_ViewContainerListenerImpl.instance._connections[_viewKey] == this);
     final core.ChannelPair pair = new core.ChannelPair();
-    assert(pair.status == core.NO_ERROR);
+    assert(pair.status == ZX.OK);
     _ViewContainerListenerImpl.instance._connections.remove(_viewKey);
     _viewOwner = new InterfaceHandle<ViewOwner>(pair.channel0, 0);
     _viewContainer.removeChild(
