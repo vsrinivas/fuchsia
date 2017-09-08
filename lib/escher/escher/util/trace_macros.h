@@ -5,7 +5,7 @@
 #include "lib/ftl/build_config.h"
 
 #ifdef OS_FUCHSIA
-#include "apps/tracing/lib/trace/event.h"
+#include <trace/event.h>
 #else
 // No-op placeholders.
 #define TRACE_DURATION(category, name, args...)
