@@ -11,7 +11,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
-#include <mxio/dispatcher.h>
 #include <mxio/remoteio.h>
 
 #include <magenta/types.h>

@@ -20,7 +20,6 @@
 #include <magenta/syscalls.h>
 
 #include <mxio/debug.h>
-#include <mxio/dispatcher.h>
 #include <mxio/io.h>
 #include <mxio/namespace.h>
 #include <mxio/remoteio.h>

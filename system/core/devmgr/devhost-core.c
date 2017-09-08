@@ -23,7 +23,6 @@
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 
-#include <mxio/dispatcher.h>
 #include <mxio/remoteio.h>
 
 #define TRACE 0
