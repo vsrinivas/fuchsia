@@ -12,7 +12,7 @@ dart_package("flutter") {
   deps = [
     "//application/lib/app/dart",
     "//garnet/public/lib/media/dart",
-    "//garnet/public/lib/media/fidl:services_dart",
+    "//garnet/public/lib/media/fidl:fidl_dart",
     "//garnet/public/lib/ui/flutter",
     "//garnet/public/lib/ui/views/fidl:fidl_dart",
     "//garnet/public/lib/fidl/dart",

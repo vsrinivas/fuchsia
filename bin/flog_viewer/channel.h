@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "garent/bin/flog_viewer/channel_handler.h"
+#include "garnet/bin/flog_viewer/channel_handler.h"
 
 namespace flog {
 

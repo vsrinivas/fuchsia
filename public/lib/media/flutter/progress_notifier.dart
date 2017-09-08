@@ -4,7 +4,7 @@
 
 import 'dart:async';
 
-import 'package:apps.media.lib.dart/audio_player_controller.dart';
+import 'package:lib.media.dart/audio_player_controller.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';

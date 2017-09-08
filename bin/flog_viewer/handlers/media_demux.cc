@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garent/bin/flog_viewer/handlers/media_demux.h"
+#include "garnet/bin/flog_viewer/handlers/media_demux.h"
 
 #include <iostream>
 
 #include "lib/media/fidl/logs/media_demux_channel.fidl.h"
-#include "garent/bin/flog_viewer/flog_viewer.h"
-#include "garent/bin/flog_viewer/handlers/media_formatting.h"
+#include "garnet/bin/flog_viewer/flog_viewer.h"
+#include "garnet/bin/flog_viewer/handlers/media_formatting.h"
 
 namespace flog {
 namespace handlers {

@@ -7,8 +7,8 @@
 #include <ostream>
 
 #include "lib/media/fidl/flog/flog.fidl.h"
-#include "garent/bin/flog_viewer/binding.h"
-#include "garent/bin/flog_viewer/channel.h"
+#include "garnet/bin/flog_viewer/binding.h"
+#include "garnet/bin/flog_viewer/channel.h"
 
 //
 // This file declares a bunch of << operator overloads for formatting stuff.

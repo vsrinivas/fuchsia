@@ -8,10 +8,10 @@
 #include <unordered_map>
 
 #include "lib/media/fidl/logs/media_packet_consumer_channel.fidl.h"
-#include "garent/bin/flog_viewer/accumulator.h"
-#include "garent/bin/flog_viewer/channel_handler.h"
-#include "garent/bin/flog_viewer/counted.h"
-#include "garent/bin/flog_viewer/tracked.h"
+#include "garnet/bin/flog_viewer/accumulator.h"
+#include "garnet/bin/flog_viewer/channel_handler.h"
+#include "garnet/bin/flog_viewer/counted.h"
+#include "garnet/bin/flog_viewer/tracked.h"
 
 namespace flog {
 namespace handlers {

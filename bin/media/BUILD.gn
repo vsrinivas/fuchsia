@@ -16,8 +16,8 @@ group("services") {
 
 group("tools") {
   public_deps = [
-    "//garent/bin/flog_viewer",
-    "//garent/bin/vol",
+    "//garnet/bin/flog_viewer",
+    "//garnet/bin/vol",
   ]
 }
 
@@ -104,7 +104,7 @@ package("media") {
 
   resources = [ {
       path = rebase_path(
-              "examples/media_player_flutter/media_player_flutter.config")
+              "//garnet/examples/media/media_player_flutter/media_player_flutter.config")
       dest = "media_player_flutter/media_player_flutter.config"
   } ]
 }

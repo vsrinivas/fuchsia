@@ -11,7 +11,7 @@ dart_package("dart") {
 
   deps = [
     "//application/lib/app/dart",
-    "//garnet/public/lib/media/fidl:services_dart",
+    "//garnet/public/lib/media/fidl:fidl_dart",
     "//garnet/public/lib/fidl/dart",
   ]
 

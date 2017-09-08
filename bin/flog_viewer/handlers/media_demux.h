@@ -7,8 +7,8 @@
 #include <vector>
 
 #include "lib/media/fidl/logs/media_demux_channel.fidl.h"
-#include "garent/bin/flog_viewer/accumulator.h"
-#include "garent/bin/flog_viewer/channel_handler.h"
+#include "garnet/bin/flog_viewer/accumulator.h"
+#include "garnet/bin/flog_viewer/channel_handler.h"
 
 namespace flog {
 namespace handlers {

@@ -8,10 +8,10 @@ import 'dart:isolate';
 
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
-import 'package:apps.media.lib.flutter/media_player.dart';
-import 'package:apps.media.lib.flutter/media_player_controller.dart';
-import 'package:apps.media.services/media_metadata.fidl.dart';
-import 'package:apps.media.services/problem.fidl.dart';
+import 'package:lib.media.flutter/media_player.dart';
+import 'package:lib.media.flutter/media_player_controller.dart';
+import 'package:lib.media.fidl/media_metadata.fidl.dart';
+import 'package:lib.media.fidl/problem.fidl.dart';
 import 'package:apps.modular.services.lifecycle/lifecycle.fidl.dart';
 import 'package:apps.modular.services.module/module.fidl.dart';
 import 'package:apps.modular.services.module/module_context.fidl.dart';

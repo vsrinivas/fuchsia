@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garent/bin/flog_viewer/formatting.h"
+#include "garnet/bin/flog_viewer/formatting.h"
 
 #include <iomanip>
 #include <iostream>

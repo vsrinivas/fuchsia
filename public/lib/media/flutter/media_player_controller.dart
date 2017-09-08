@@ -4,10 +4,10 @@
 
 import 'dart:async';
 
-import 'package:apps.media.lib.dart/audio_player_controller.dart';
-import 'package:apps.media.services/media_renderer.fidl.dart';
-import 'package:apps.media.services/media_service.fidl.dart';
-import 'package:apps.media.services/video_renderer.fidl.dart';
+import 'package:lib.media.dart/audio_player_controller.dart';
+import 'package:lib.media.fidl/media_renderer.fidl.dart';
+import 'package:lib.media.fidl/media_service.fidl.dart';
+import 'package:lib.media.fidl/video_renderer.fidl.dart';
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
 import 'package:lib.ui.flutter/child_view.dart';

@@ -8,9 +8,9 @@
 #include <streambuf>
 
 #include "lib/media/fidl/flog/flog.fidl.h"
-#include "garent/bin/flog_viewer/accumulator.h"
-#include "garent/bin/flog_viewer/binding.h"
-#include "garent/bin/flog_viewer/channel_manager.h"
+#include "garnet/bin/flog_viewer/accumulator.h"
+#include "garnet/bin/flog_viewer/binding.h"
+#include "garnet/bin/flog_viewer/channel_manager.h"
 #include "lib/fidl/cpp/bindings/message.h"
 #include "lib/ftl/logging.h"
 

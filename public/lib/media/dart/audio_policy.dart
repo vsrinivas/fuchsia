@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:apps.media.services/audio_policy_service.fidl.dart';
-import 'package:apps.media.services/audio_renderer.fidl.dart';
+import 'package:lib.media.fidl/audio_policy_service.fidl.dart';
+import 'package:lib.media.fidl/audio_renderer.fidl.dart';
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
 

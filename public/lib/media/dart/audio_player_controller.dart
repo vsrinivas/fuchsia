@@ -4,15 +4,15 @@
 
 import 'dart:async';
 
-import 'package:apps.media.lib.dart/timeline.dart';
-import 'package:apps.media.services/audio_renderer.fidl.dart';
-import 'package:apps.media.services/media_metadata.fidl.dart';
-import 'package:apps.media.services/media_player.fidl.dart' as mp;
-import 'package:apps.media.services/media_renderer.fidl.dart';
-import 'package:apps.media.services/media_service.fidl.dart';
-import 'package:apps.media.services/net_media_player.fidl.dart';
-import 'package:apps.media.services/net_media_service.fidl.dart';
-import 'package:apps.media.services/problem.fidl.dart';
+import 'package:lib.media.dart/timeline.dart';
+import 'package:lib.media.fidl/audio_renderer.fidl.dart';
+import 'package:lib.media.fidl/media_metadata.fidl.dart';
+import 'package:lib.media.fidl/media_player.fidl.dart' as mp;
+import 'package:lib.media.fidl/media_renderer.fidl.dart';
+import 'package:lib.media.fidl/media_service.fidl.dart';
+import 'package:lib.media.fidl/net_media_player.fidl.dart';
+import 'package:lib.media.fidl/net_media_service.fidl.dart';
+import 'package:lib.media.fidl/problem.fidl.dart';
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';

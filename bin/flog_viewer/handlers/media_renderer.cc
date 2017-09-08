@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garent/bin/flog_viewer/handlers/media_renderer.h"
+#include "garnet/bin/flog_viewer/handlers/media_renderer.h"
 
 #include <algorithm>
 #include <iostream>
@@ -11,10 +11,10 @@
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/timeline/timeline_rate.h"
 #include "lib/media/fidl/logs/media_renderer_channel.fidl.h"
-#include "garent/bin/flog_viewer/flog_viewer.h"
-#include "garent/bin/flog_viewer/handlers/media_formatting.h"
-#include "garent/bin/flog_viewer/handlers/media_packet_consumer.h"
-#include "garent/bin/flog_viewer/handlers/media_timeline_control_point.h"
+#include "garnet/bin/flog_viewer/flog_viewer.h"
+#include "garnet/bin/flog_viewer/handlers/media_formatting.h"
+#include "garnet/bin/flog_viewer/handlers/media_packet_consumer.h"
+#include "garnet/bin/flog_viewer/handlers/media_timeline_control_point.h"
 
 namespace flog {
 namespace handlers {

@@ -7,10 +7,10 @@
 #include <vector>
 
 #include "lib/media/fidl/logs/media_timeline_control_point_channel.fidl.h"
-#include "garent/bin/flog_viewer/accumulator.h"
-#include "garent/bin/flog_viewer/channel_handler.h"
-#include "garent/bin/flog_viewer/counted.h"
-#include "garent/bin/flog_viewer/tracked.h"
+#include "garnet/bin/flog_viewer/accumulator.h"
+#include "garnet/bin/flog_viewer/channel_handler.h"
+#include "garnet/bin/flog_viewer/counted.h"
+#include "garnet/bin/flog_viewer/tracked.h"
 
 namespace flog {
 namespace handlers {

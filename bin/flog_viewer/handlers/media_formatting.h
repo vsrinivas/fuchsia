@@ -12,7 +12,7 @@
 #include "lib/media/fidl/media_transport.fidl.h"
 #include "lib/media/fidl/media_types.fidl.h"
 #include "lib/media/fidl/timelines.fidl.h"
-#include "garent/bin/flog_viewer/formatting.h"
+#include "garnet/bin/flog_viewer/formatting.h"
 
 namespace flog {
 namespace handlers {

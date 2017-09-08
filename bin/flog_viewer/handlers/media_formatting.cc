@@ -4,7 +4,7 @@
 
 #include <iomanip>
 
-#include "garent/bin/flog_viewer/handlers/media_formatting.h"
+#include "garnet/bin/flog_viewer/handlers/media_formatting.h"
 
 namespace flog {
 namespace handlers {

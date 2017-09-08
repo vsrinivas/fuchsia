@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:apps.media.lib.flutter/media_player_controller.dart';
-import 'package:apps.media.lib.flutter/progress_notifier.dart';
+import 'package:lib.media.flutter/media_player_controller.dart';
+import 'package:lib.media.flutter/progress_notifier.dart';
 import 'package:lib.ui.flutter/child_view.dart';
 
 import 'package:flutter/material.dart';
