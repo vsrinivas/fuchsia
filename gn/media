@@ -4,7 +4,7 @@
         "dart"
     ],
     "packages": {
-        "media": "//apps/media",
-        "media_tests": "//apps/media:tests"
+        "media": "//garnet/bin/media",
+        "media_tests": "//garnet/bin/media:tests"
     }
 }
