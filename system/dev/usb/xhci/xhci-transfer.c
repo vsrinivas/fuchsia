@@ -2,31 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/debug.h>
+#include <ddk/protocol/usb.h>
 #include <magenta/assert.h>
 #include <magenta/hw/usb.h>
 #include <stdio.h>
 #include <string.h>
 #include <threads.h>
-#include <ddk/protocol/usb.h>
 
 #include "xhci-transfer.h"
 #include "xhci-util.h"
 
-//#define TRACE 1
-#include "xhci-debug.h"
-
-//#define TRACE_TRBS 1
-#ifdef TRACE_TRBS
 static void print_trb(xhci_t* xhci, xhci_transfer_ring_t* ring, xhci_trb_t* trb) {
     int index = trb - ring->start;
     uint32_t* ptr = (uint32_t *)trb;
     uint64_t paddr = io_buffer_phys(&ring->buffer) + index * sizeof(xhci_trb_t);
 
-    printf("trb[%03d] %p: %08X %08X %08X %08X\n", index, (void *)paddr, ptr[0], ptr[1], ptr[2], ptr[3]);
+    dprintf(LSPEW, "trb[%03d] %p: %08X %08X %08X %08X\n", index, (void *)paddr, ptr[0], ptr[1], ptr[2], ptr[3]);
 }
-#else
-#define print_trb(xhci, ring, trb) do {} while (0)
-#endif
 
 // reads a range of bits from an integer
 #define READ_FIELD(i, start, bits) (((i) >> (start)) & ((1 << (bits)) - 1))
@@ -49,7 +42,7 @@ static mx_status_t xhci_reset_dequeue_ptr_locked(xhci_t* xhci, uint32_t slot_id,
     xhci_post_command(xhci, TRB_CMD_SET_TR_DEQUEUE, ptr, control, &command.context);
     int cc = xhci_sync_command_wait(&command);
     if (cc != TRB_CC_SUCCESS) {
-        printf("TRB_CMD_SET_TR_DEQUEUE failed cc: %d\n", cc);
+        dprintf(ERROR, "TRB_CMD_SET_TR_DEQUEUE failed cc: %d\n", cc);
         return MX_ERR_INTERNAL;
     }
     transfer_ring->dequeue_ptr = transfer_ring->current;
@@ -75,7 +68,7 @@ mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
     }
 
     int ep_ctx_state = xhci_get_ep_ctx_state(ep);
-    xprintf("xhci_reset_endpoint %d %d ep_ctx_state %d\n", slot_id, endpoint, ep_ctx_state);
+    dprintf(TRACE, "xhci_reset_endpoint %d %d ep_ctx_state %d\n", slot_id, endpoint, ep_ctx_state);
 
     if (ep_ctx_state == EP_CTX_STATE_STOPPED || ep_ctx_state == EP_CTX_STATE_RUNNING) {
         ep->state = EP_STATE_RUNNING;
@@ -92,7 +85,7 @@ mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
         xhci_post_command(xhci, TRB_CMD_RESET_ENDPOINT, 0, control, &command.context);
         int cc = xhci_sync_command_wait(&command);
         if (cc != TRB_CC_SUCCESS) {
-            printf("TRB_CMD_RESET_ENDPOINT failed cc: %d\n", cc);
+            dprintf(ERROR, "xhci_reset_endpoint: TRB_CMD_RESET_ENDPOINT failed cc: %d\n", cc);
             mtx_unlock(&ep->lock);
             return MX_ERR_INTERNAL;
         }
@@ -160,7 +153,7 @@ mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
 static mx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep, iotxn_t* txn) {
     xhci_transfer_ring_t* ring = &ep->transfer_ring;
     if (ep->state != EP_STATE_RUNNING) {
-        printf("xhci_start_transfer_locked bad ep->state %d\n", ep->state);
+        dprintf(ERROR, "xhci_start_transfer_locked bad ep->state %d\n", ep->state);
         return MX_ERR_BAD_STATE;
     }
 
@@ -171,7 +164,7 @@ static mx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep,
     if (txn->length > 0) {
         mx_status_t status = iotxn_physmap(txn);
         if (status != MX_OK) {
-            printf("%s: iotxn_physmap failed: %d\n", __FUNCTION__, status);
+            dprintf(ERROR, "%s: iotxn_physmap failed: %d\n", __FUNCTION__, status);
             return status;
         }
     }
@@ -226,7 +219,7 @@ static mx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep,
                             (state->direction == USB_DIR_IN ? XFER_TRB_TRT_IN : XFER_TRB_TRT_OUT));
         control_bits |= XFER_TRB_IDT; // immediate data flag
         trb_set_control(trb, TRB_TRANSFER_SETUP, control_bits);
-        print_trb(xhci, ring, trb);
+        if (driver_get_log_flags() & DDK_LOG_SPEW) print_trb(xhci, ring, trb);
         xhci_increment_ring(ring);
     }
 
@@ -259,17 +252,17 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
 
     if (frame != 0) {
         if (!isochronous) {
-            printf("frame scheduling only supported for isochronous transfers\n");
+            dprintf(ERROR, "frame scheduling only supported for isochronous transfers\n");
             return MX_ERR_INVALID_ARGS;
         }
         uint64_t current_frame = xhci_get_current_frame(xhci);
         if (frame < current_frame) {
-            printf("can't schedule transfer into the past\n");
+            dprintf(ERROR, "can't schedule transfer into the past\n");
             return MX_ERR_INVALID_ARGS;
         }
         if (frame - current_frame >= 895) {
             // See XHCI spec, section 4.11.2.5
-            printf("can't schedule transfer more than 895ms into the future\n");
+            dprintf(ERROR, "can't schedule transfer more than 895ms into the future\n");
             return MX_ERR_INVALID_ARGS;
         }
     }
@@ -313,7 +306,7 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
         } else {
             trb_set_control(trb, TRB_TRANSFER_NORMAL, control_bits);
         }
-        print_trb(xhci, ring, trb);
+        if (driver_get_log_flags() & DDK_LOG_SPEW) print_trb(xhci, ring, trb);
         xhci_increment_ring(ring);
         free_trbs--;
 
@@ -341,7 +334,7 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
         XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS,
                         interrupter_target);
         trb_set_control(trb, TRB_TRANSFER_EVENT_DATA, XFER_TRB_IOC);
-        print_trb(xhci, ring, trb);
+        if (driver_get_log_flags() & DDK_LOG_SPEW) print_trb(xhci, ring, trb);
         xhci_increment_ring(ring);
         free_trbs--;
         state->needs_data_event = false;
@@ -365,7 +358,7 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
             control_bits |= TRB_CHAIN;
         }
         trb_set_control(trb, TRB_TRANSFER_STATUS, control_bits);
-        print_trb(xhci, ring, trb);
+        if (driver_get_log_flags() & DDK_LOG_SPEW) print_trb(xhci, ring, trb);
         xhci_increment_ring(ring);
         free_trbs--;
         state->needs_status = false;
@@ -385,7 +378,7 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
         XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS,
                         interrupter_target);
         trb_set_control(trb, TRB_TRANSFER_EVENT_DATA, XFER_TRB_IOC);
-        print_trb(xhci, ring, trb);
+        if (driver_get_log_flags() & DDK_LOG_SPEW) print_trb(xhci, ring, trb);
         xhci_increment_ring(ring);
         free_trbs--;
         state->needs_data_event = false;
@@ -458,7 +451,7 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
     uint8_t ep_index = xhci_endpoint_index(proto_data->ep_address);
     __UNUSED usb_setup_t* setup = (ep_index == 0 ? &proto_data->setup : NULL);
 
-    xprintf("xhci_queue_transfer slot_id: %d setup: %p ep_index: %d length: %lu\n",
+    dprintf(LTRACE, "xhci_queue_transfer slot_id: %d setup: %p ep_index: %d length: %lu\n",
             slot_id, setup, ep_index, txn->length);
 
     int rh_index = xhci_get_root_hub_index(xhci, slot_id);
@@ -523,7 +516,7 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
 }
 
 mx_status_t xhci_cancel_transfers(xhci_t* xhci, uint32_t slot_id, uint32_t endpoint) {
-    xprintf("xhci_cancel_transfers slot_id: %d ep_index: %d\n", slot_id, endpoint);
+    dprintf(TRACE, "xhci_cancel_transfers slot_id: %d ep_index: %d\n", slot_id, endpoint);
 
     if (slot_id < 1 || slot_id > xhci->max_slots) {
         return MX_ERR_INVALID_ARGS;
@@ -561,7 +554,7 @@ mx_status_t xhci_cancel_transfers(xhci_t* xhci, uint32_t slot_id, uint32_t endpo
         if (cc != TRB_CC_SUCCESS) {
             // TRB_CC_CONTEXT_STATE_ERROR is normal here in the case of a disconnected device,
             // since by then the endpoint would already be in error state.
-            printf("TRB_CMD_STOP_ENDPOINT failed cc: %d\n", cc);
+            dprintf(ERROR, "xhci_cancel_transfers: TRB_CMD_STOP_ENDPOINT failed cc: %d\n", cc);
             return MX_ERR_INTERNAL;
         }
         mtx_lock(&ep->lock);
@@ -607,8 +600,8 @@ static void xhci_control_complete(iotxn_t* txn, void* cookie) {
 int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, uint8_t request,
                          uint16_t value, uint16_t index, void* data, uint16_t length) {
 
-    xprintf("xhci_control_request slot_id: %d type: 0x%02X req: %d value: %d index: %d length: %d\n",
-            slot_id, request_type, request, value, index, length);
+    dprintf(LTRACE, "xhci_control_request slot_id: %d type: 0x%02X req: %d value: %d index: %d "
+            "length: %d\n", slot_id, request_type, request, value, index, length);
 
     iotxn_t* txn;
 
@@ -645,7 +638,7 @@ int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, u
     if (status == MX_OK) {
         status = txn->status;
     } else if (status == MX_ERR_TIMED_OUT) {
-        xprintf("xhci_control_request MX_ERR_TIMED_OUT\n");
+        dprintf(ERROR, "xhci_control_request MX_ERR_TIMED_OUT\n");
         completion_reset(&completion);
         status = xhci_cancel_transfers(xhci, slot_id, 0);
         if (status == MX_OK) {
@@ -653,7 +646,7 @@ int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, u
             status = MX_ERR_TIMED_OUT;
         }
     }
-    xprintf("xhci_cancel_transfer got %d\n", status);
+    dprintf(TRACE, "xhci_cancel_transfer got %d\n", status);
     if (status == MX_OK) {
         status = txn->actual;
 
@@ -662,7 +655,7 @@ int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, u
         }
     }
     iotxn_release(txn);
-    xprintf("xhci_control_request returning %d\n", status);
+    dprintf(TRACE, "xhci_control_request returning %d\n", status);
     return status;
 }
 
@@ -673,7 +666,7 @@ mx_status_t xhci_get_descriptor(xhci_t* xhci, uint32_t slot_id, uint8_t type, ui
 }
 
 void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
-    xprintf("xhci_handle_transfer_event: %08X %08X %08X %08X\n",
+    dprintf(LTRACE, "xhci_handle_transfer_event: %08X %08X %08X %08X\n",
             ((uint32_t*)trb)[0], ((uint32_t*)trb)[1], ((uint32_t*)trb)[2], ((uint32_t*)trb)[3]);
 
     uint32_t control = XHCI_READ32(&trb->control);
@@ -698,14 +691,14 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
             result = length;
             break;
         case TRB_CC_BABBLE_DETECTED_ERROR:
-            xprintf("TRB_CC_BABBLE_DETECTED_ERROR\n");
+            dprintf(TRACE, "xhci_handle_transfer_event: TRB_CC_BABBLE_DETECTED_ERROR\n");
             result = MX_ERR_IO_OVERRUN;
             break;
         case TRB_CC_USB_TRANSACTION_ERROR:
         case TRB_CC_TRB_ERROR:
         case TRB_CC_STALL_ERROR: {
             int ep_ctx_state = xhci_get_ep_ctx_state(ep);
-            xprintf("xhci_handle_transfer_event cc %d ep_ctx_state %d\n", cc, ep_ctx_state);
+            dprintf(TRACE, "xhci_handle_transfer_event: cc %d ep_ctx_state %d\n", cc, ep_ctx_state);
             if (ep_ctx_state == EP_CTX_STATE_HALTED || ep_ctx_state == EP_CTX_STATE_ERROR) {
                 result = MX_ERR_IO_REFUSED;
             } else {
@@ -715,16 +708,16 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         }
         case TRB_CC_RING_UNDERRUN:
             // non-fatal error that happens when no transfers are available for isochronous endpoint
-            xprintf("TRB_CC_RING_UNDERRUN\n");
+            dprintf(TRACE, "xhci_handle_transfer_event: TRB_CC_RING_UNDERRUN\n");
             mtx_unlock(&ep->lock);
             return;
         case TRB_CC_RING_OVERRUN:
             // non-fatal error that happens when no transfers are available for isochronous endpoint
-            xprintf("TRB_CC_RING_OVERRUN\n");
+            dprintf(TRACE, "xhci_handle_transfer_event: TRB_CC_RING_OVERRUN\n");
             mtx_unlock(&ep->lock);
             return;
        case TRB_CC_MISSED_SERVICE_ERROR:
-            xprintf("TRB_CC_MISSED_SERVICE_ERROR\n");
+            dprintf(TRACE, "xhci_handle_transfer_event: TRB_CC_MISSED_SERVICE_ERROR\n");
             result = MX_ERR_IO_MISSED_DEADLINE;
             break;
         case TRB_CC_STOPPED:
@@ -741,13 +734,13 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
                 result = MX_ERR_IO_NOT_PRESENT;
                 break;
             default:
-                printf("xhci_handle_transfer_event: bad state for stopped txn: %d\n", ep->state);
+                dprintf(ERROR, "xhci_handle_transfer_event: bad state for stopped txn: %d\n", ep->state);
                 result = MX_ERR_INTERNAL;
             }
             break;
         default: {
             int ep_ctx_state = xhci_get_ep_ctx_state(ep);
-            printf("xhci_handle_transfer_event: unhandled transfer event condition code %d "
+            dprintf(ERROR, "xhci_handle_transfer_event: unhandled transfer event condition code %d "
                    "ep_ctx_state %d:  %08X %08X %08X %08X\n", cc, ep_ctx_state,
                     ((uint32_t*)trb)[0], ((uint32_t*)trb)[1], ((uint32_t*)trb)[2], ((uint32_t*)trb)[3]);
             if (ep_ctx_state == EP_CTX_STATE_HALTED || ep_ctx_state == EP_CTX_STATE_ERROR) {
@@ -776,13 +769,13 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
 
     int ep_ctx_state = xhci_get_ep_ctx_state(ep);
     if (ep_ctx_state != EP_CTX_STATE_RUNNING) {
-        xprintf("xhci_handle_transfer_event: ep ep_ctx_state %d cc %d\n", ep_ctx_state, cc);
+        dprintf(TRACE, "xhci_handle_transfer_event: ep ep_ctx_state %d cc %d\n", ep_ctx_state, cc);
     }
 
     if (!txn) {
         // no txn expected for this condition code
         if (cc != TRB_CC_STOPPED_LENGTH_INVALID) {
-            printf("xhci_handle_transfer_event: unable to find iotxn to complete!\n");
+            dprintf(ERROR, "xhci_handle_transfer_event: unable to find iotxn to complete!\n");
         }
         mtx_unlock(&ep->lock);
         return;
@@ -800,7 +793,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         }
     }
     if (!found_txn) {
-        xprintf("ignoring transfer event for completed transfer\n");
+        dprintf(TRACE, "xhci_handle_transfer_event: ignoring transfer event for completed transfer\n");
         mtx_unlock(&ep->lock);
         return;
     }

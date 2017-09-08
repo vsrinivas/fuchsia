@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/debug.h>
 #include <ddk/iotxn.h>
 #include <ddk/protocol/usb.h>
 #include <stdlib.h>
@@ -11,11 +12,6 @@
 
 #include "xhci.h"
 #include "xhci-device-manager.h"
-
-//#define TRACE 1
-#include "xhci-debug.h"
-
-#define DEBUG_PORTSC    0
 
 #define MANUFACTURER_STRING 1
 #define PRODUCT_STRING_2    2
@@ -125,93 +121,91 @@ static const usb_speed_t xhci_rh_speeds[] = {
     USB_SPEED_SUPER,
 };
 
-#if DEBUG_PORTSC
 static void print_portsc(int port, uint32_t portsc) {
-    printf("port %d:", port);
-    if (portsc & PORTSC_CCS) printf(" CCS");
-    if (portsc & PORTSC_PED) printf(" PED");
-    if (portsc & PORTSC_OCA) printf(" OCA");
-    if (portsc & PORTSC_PR) printf(" PR");
+    dprintf(SPEW, "port %d:", port);
+    if (portsc & PORTSC_CCS) dprintf(SPEW, " CCS");
+    if (portsc & PORTSC_PED) dprintf(SPEW, " PED");
+    if (portsc & PORTSC_OCA) dprintf(SPEW, " OCA");
+    if (portsc & PORTSC_PR) dprintf(SPEW, " PR");
     uint32_t pls = (portsc >> PORTSC_PLS_START) & ((1 << PORTSC_PLS_BITS) - 1);
     switch (pls) {
         case 0:
-            printf(" U0");
+            dprintf(SPEW, " U0");
             break;
         case 1:
-            printf(" U1");
+            dprintf(SPEW, " U1");
             break;
         case 2:
-            printf(" U2");
+            dprintf(SPEW, " U2");
             break;
         case 3:
-            printf(" U3");
+            dprintf(SPEW, " U3");
             break;
         case 4:
-            printf(" Disabled");
+            dprintf(SPEW, " Disabled");
             break;
         case 5:
-            printf(" RxDetect");
+            dprintf(SPEW, " RxDetect");
             break;
         case 6:
-            printf(" Inactive");
+            dprintf(SPEW, " Inactive");
             break;
         case 7:
-            printf(" Polling");
+            dprintf(SPEW, " Polling");
             break;
         case 8:
-            printf(" Recovery");
+            dprintf(SPEW, " Recovery");
             break;
         case 9:
-            printf(" Hot Reset");
+            dprintf(SPEW, " Hot Reset");
             break;
         case 10:
-            printf(" Compliance Mode");
+            dprintf(SPEW, " Compliance Mode");
             break;
         case 11:
-            printf(" Test Mode");
+            dprintf(SPEW, " Test Mode");
             break;
         case 15:
-            printf(" Resume");
+            dprintf(SPEW, " Resume");
             break;
         default:
-            printf(" PLS%d", pls);
+            dprintf(SPEW, " PLS%d", pls);
             break;
     }
-    if (portsc & PORTSC_PP) printf(" PP");
+    if (portsc & PORTSC_PP) dprintf(SPEW, " PP");
     uint32_t speed = (portsc >> PORTSC_SPEED_START) & ((1 << PORTSC_SPEED_BITS) - 1);
     switch (speed) {
         case 1:
-            printf(" FULL_SPEED");
+            dprintf(SPEW, " FULL_SPEED");
             break;
         case 2:
-            printf(" LOW_SPEED");
+            dprintf(SPEW, " LOW_SPEED");
             break;
         case 3:
-            printf(" HIGH_SPEED");
+            dprintf(SPEW, " HIGH_SPEED");
             break;
         case 4:
-            printf(" SUPER_SPEED");
+            dprintf(SPEW, " SUPER_SPEED");
             break;
     }
     uint32_t pic = (portsc >> PORTSC_PIC_START) & ((1 << PORTSC_PIC_BITS) - 1);
-    printf(" PIC%d", pic);
-    if (portsc & PORTSC_LWS) printf(" LWS");
-    if (portsc & PORTSC_CSC) printf(" CSC");
-    if (portsc & PORTSC_PEC) printf(" PEC");
-    if (portsc & PORTSC_WRC) printf(" WRC");
-    if (portsc & PORTSC_OCC) printf(" OCC");
-    if (portsc & PORTSC_PRC) printf(" PRC");
-    if (portsc & PORTSC_PLC) printf(" PLC");
-    if (portsc & PORTSC_CEC) printf(" CEC");
-    if (portsc & PORTSC_CAS) printf(" CAS");
-    if (portsc & PORTSC_WCE) printf(" WCE");
-    if (portsc & PORTSC_WDE) printf(" WDE");
-    if (portsc & PORTSC_WOE) printf(" WOE");
-    if (portsc & PORTSC_DR) printf(" DR");
-    if (portsc & PORTSC_WPR) printf(" WPR");
-    printf("\n");
+    dprintf(SPEW, " PIC%d", pic);
+    if (portsc & PORTSC_LWS) dprintf(SPEW, " LWS");
+    if (portsc & PORTSC_CSC) dprintf(SPEW, " CSC");
+    if (portsc & PORTSC_PEC) dprintf(SPEW, " PEC");
+    if (portsc & PORTSC_WRC) dprintf(SPEW, " WRC");
+    if (portsc & PORTSC_OCC) dprintf(SPEW, " OCC");
+    if (portsc & PORTSC_PRC) dprintf(SPEW, " PRC");
+    if (portsc & PORTSC_PLC) dprintf(SPEW, " PLC");
+    if (portsc & PORTSC_CEC) dprintf(SPEW, " CEC");
+    if (portsc & PORTSC_CAS) dprintf(SPEW, " CAS");
+    if (portsc & PORTSC_WCE) dprintf(SPEW, " WCE");
+    if (portsc & PORTSC_WDE) dprintf(SPEW, " WDE");
+    if (portsc & PORTSC_WOE) dprintf(SPEW, " WOE");
+    if (portsc & PORTSC_DR) dprintf(SPEW, " DR");
+    if (portsc & PORTSC_WPR) dprintf(SPEW, " WPR");
+    dprintf(SPEW, "\n");
 }
-#endif // DEBUG_PORTSC
 
 static void xhci_reset_port(xhci_t* xhci, xhci_root_hub_t* rh, int rh_port_index) {
     volatile uint32_t* portsc = &xhci->op_regs->port_regs[rh_port_index].portsc;
@@ -292,12 +286,12 @@ static mx_status_t xhci_start_root_hub(xhci_t* xhci, xhci_root_hub_t* rh, int rh
 }
 
 mx_status_t xhci_start_root_hubs(xhci_t* xhci) {
-    xprintf("xhci_start_root_hubs\n");
+    dprintf(TRACE, "xhci_start_root_hubs\n");
 
     for (int i = 0; i < XHCI_RH_COUNT; i++) {
         mx_status_t status = xhci_start_root_hub(xhci, &xhci->root_hubs[i], i);
         if (status != MX_OK) {
-            printf("xhci_start_root_hub(%d) failed: %d\n", i, status);
+            dprintf(ERROR, "xhci_start_root_hub(%d) failed: %d\n", i, status);
             return status;
         }
     }
@@ -353,7 +347,7 @@ static mx_status_t xhci_rh_get_descriptor(uint8_t request_type, xhci_root_hub_t*
         }
     }
 
-    printf("xhci_rh_get_descriptor unsupported value: %d index: %d\n", value, index);
+    dprintf(ERROR, "xhci_rh_get_descriptor unsupported value: %d index: %d\n", value, index);
     iotxn_complete(txn, MX_ERR_NOT_SUPPORTED, 0);
     return MX_ERR_NOT_SUPPORTED;
 }
@@ -365,8 +359,8 @@ static mx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
     uint16_t value = le16toh(setup->wValue);
     uint16_t index = le16toh(setup->wIndex);
 
-//    xprintf("xhci_rh_control type: 0x%02X req: %d value: %d index: %d length: %d\n",
-//            request_type, request, value, index, le16toh(setup->wLength));
+    dprintf(TRACE, "xhci_rh_control type: 0x%02X req: %d value: %d index: %d length: %d\n",
+            request_type, request, value, index, le16toh(setup->wLength));
 
     if ((request_type & USB_DIR_MASK) == USB_DIR_IN && request == USB_REQ_GET_DESCRIPTOR) {
         return xhci_rh_get_descriptor(request_type, rh, value, index, le16toh(setup->wLength), txn);
@@ -428,7 +422,7 @@ static mx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
         return MX_OK;
     }
 
-    printf("unsupported root hub control request type: 0x%02X req: %d value: %d index: %d\n",
+    dprintf(ERROR, "unsupported root hub control request type: 0x%02X req: %d value: %d index: %d\n",
            request_type, request, value, index);
 
     iotxn_complete(txn, MX_ERR_NOT_SUPPORTED, 0);
@@ -436,7 +430,7 @@ static mx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
 }
 
 static void xhci_rh_handle_intr_req(xhci_root_hub_t* rh, iotxn_t* txn) {
-//    xprintf("xhci_rh_handle_intr_req\n");
+    dprintf(TRACE, "xhci_rh_handle_intr_req\n");
     uint8_t status_bits[128 / 8];
     bool have_status = 0;
     uint8_t* ptr = status_bits;
@@ -468,7 +462,7 @@ static void xhci_rh_handle_intr_req(xhci_root_hub_t* rh, iotxn_t* txn) {
 }
 
 mx_status_t xhci_rh_iotxn_queue(xhci_t* xhci, iotxn_t* txn, int rh_index) {
-//    xprintf("xhci_rh_iotxn_queue rh_index: %d\n", rh_index);
+    dprintf(TRACE, "xhci_rh_iotxn_queue rh_index: %d\n", rh_index);
 
     usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
     xhci_root_hub_t* rh = &xhci->root_hubs[rh_index];
@@ -488,15 +482,17 @@ mx_status_t xhci_rh_iotxn_queue(xhci_t* xhci, iotxn_t* txn, int rh_index) {
 void xhci_handle_root_hub_change(xhci_t* xhci) {
     volatile xhci_port_regs_t* port_regs = xhci->op_regs->port_regs;
 
-    xprintf("xhci_handle_root_hub_change\n");
+    dprintf(TRACE, "xhci_handle_root_hub_change\n");
 
     for (uint32_t i = 0; i < xhci->rh_num_ports; i++) {
         uint32_t portsc = XHCI_READ32(&port_regs[i].portsc);
         uint32_t speed = (portsc & XHCI_MASK(PORTSC_SPEED_START, PORTSC_SPEED_BITS)) >> PORTSC_SPEED_START;
         uint32_t status_bits = portsc & PORTSC_STATUS_BITS;
-#if DEBUG_PORTSC
-        print_portsc(i, portsc);
-#endif
+
+        if (driver_get_log_flags() & DDK_LOG_SPEW) {
+            print_portsc(i, portsc);
+        }
+
         if (status_bits) {
             bool connected = !!(portsc & PORTSC_CCS);
             bool enabled = !!(portsc & PORTSC_PED);
@@ -512,7 +508,7 @@ void xhci_handle_root_hub_change(xhci_t* xhci) {
 
             if (portsc & PORTSC_CSC) {
                 // connect status change
-                xprintf("port %d PORTSC_CSC connected: %d\n", i, connected);
+                dprintf(TRACE, "port %d PORTSC_CSC connected: %d\n", i, connected);
                 if (connected) {
                      status->wPortStatus |= USB_PORT_CONNECTION;
                 } else {
@@ -525,7 +521,7 @@ void xhci_handle_root_hub_change(xhci_t* xhci) {
             }
             if (portsc & PORTSC_PRC) {
                 // port reset change
-                xprintf("port %d PORTSC_PRC enabled: %d\n", i, enabled);
+                dprintf(TRACE, "port %d PORTSC_PRC enabled: %d\n", i, enabled);
                 if (enabled) {
                     status->wPortStatus &= ~USB_PORT_RESET;
                     status->wPortChange |= USB_C_PORT_RESET;

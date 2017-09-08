@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/usb-hci.h>
 #include <ddk/protocol/usb.h>
@@ -20,19 +21,16 @@
 #include "xhci-util.h"
 #include "xhci.h"
 
-//#define TRACE 1
-#include "xhci-debug.h"
-
 #define MAX_SLOTS 255
 
 #define DEFAULT_PRIORITY 16
 #define HIGH_PRIORITY    24
 
 mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed) {
-    xprintf("xhci_add_new_device\n");
+    dprintf(TRACE, "xhci_add_new_device\n");
 
     if (!xhci->bus.ops) {
-        printf("no bus device in xhci_add_device\n");
+        dprintf(ERROR, "no bus device in xhci_add_device\n");
         return MX_ERR_INTERNAL;
     }
 
@@ -40,10 +38,10 @@ mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int spee
 }
 
 void xhci_remove_device(xhci_t* xhci, int slot_id) {
-    xprintf("xhci_remove_device %d\n", slot_id);
+    dprintf(TRACE, "xhci_remove_device %d\n", slot_id);
 
     if (!xhci->bus.ops) {
-        printf("no bus device in xhci_remove_device\n");
+        dprintf(ERROR, "no bus device in xhci_remove_device\n");
         return;
     }
 
@@ -153,7 +151,7 @@ static void xhci_iotxn_queue(void* ctx, iotxn_t* txn) {
 
 static void xhci_unbind(void* ctx) {
     xhci_t* xhci = ctx;
-    xprintf("xhci_unbind\n");
+    dprintf(TRACE, "xhci_unbind\n");
 
     device_remove(xhci->mxdev);
 }
@@ -192,7 +190,7 @@ static int completer_thread(void *arg) {
 
         wait_res = mx_interrupt_wait(irq_handle);
         if (wait_res != MX_OK) {
-            printf("unexpected pci_wait_interrupt failure (%d)\n", wait_res);
+            dprintf(ERROR, "unexpected pci_wait_interrupt failure (%d)\n", wait_res);
             mx_interrupt_complete(irq_handle);
             break;
         }
@@ -200,14 +198,14 @@ static int completer_thread(void *arg) {
         xhci_handle_interrupt(completer->xhci, completer->xhci->legacy_irq_mode,
                               completer->interrupter);
     }
-    xprintf("xhci completer %u thread done\n", completer->interrupter);
+    dprintf(TRACE, "xhci completer %u thread done\n", completer->interrupter);
     free(completer);
     return 0;
 }
 
 static int xhci_start_thread(void* arg) {
     xhci_t* xhci = (xhci_t*)arg;
-    xprintf("xhci_start_thread start\n");
+    dprintf(TRACE, "xhci_start_thread start\n");
 
     mx_status_t status;
     completer_t* completers[xhci->num_interrupts];
@@ -255,7 +253,7 @@ static int xhci_start_thread(void* arg) {
         thrd_detach(thread);
     }
 
-    xprintf("xhci_start_thread done\n");
+    dprintf(TRACE, "xhci_start_thread done\n");
     return 0;
 
 error_return:
@@ -294,7 +292,7 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     status = pci_map_resource(&pci, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_UNCACHED_DEVICE,
                               &mmio, &mmio_len, &mmio_handle);
     if (status != MX_OK) {
-        printf("usb_xhci_bind could not find bar\n");
+        dprintf(ERROR, "usb_xhci_bind could not find bar\n");
         status = MX_ERR_INTERNAL;
          goto error_return;
     }
@@ -302,7 +300,7 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     uint32_t irq_cnt = 0;
     status = pci_query_irq_mode_caps(&pci, MX_PCIE_IRQ_MODE_MSI, &irq_cnt);
     if (status != MX_OK) {
-        printf("pci_query_irq_mode_caps failed %d\n", status);
+        dprintf(ERROR, "pci_query_irq_mode_caps failed %d\n", status);
         goto error_return;
     }
     xhci_num_interrupts_init(xhci, mmio, irq_cnt);
@@ -313,7 +311,7 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
         mx_status_t status_legacy = pci_set_irq_mode(&pci, MX_PCIE_IRQ_MODE_LEGACY, 1);
 
         if (status_legacy < 0) {
-            printf("usb_xhci_bind Failed to set IRQ mode to either MSI "
+            dprintf(ERROR, "usb_xhci_bind Failed to set IRQ mode to either MSI "
                    "(err = %d) or Legacy (err = %d)\n",
                    status, status_legacy);
             goto error_return;
@@ -327,7 +325,7 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
         // register for interrupts
         status = pci_map_interrupt(&pci, i, &xhci->irq_handles[i]);
         if (status != MX_OK) {
-            printf("usb_xhci_bind map_interrupt failed %d\n", status);
+            dprintf(ERROR, "usb_xhci_bind map_interrupt failed %d\n", status);
             goto error_return;
         }
         num_irq_handles_initialized++;

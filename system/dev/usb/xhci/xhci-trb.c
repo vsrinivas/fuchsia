@@ -4,9 +4,6 @@
 
 #include "xhci.h"
 
-//#define TRACE 1
-#include "xhci-debug.h"
-
 mx_status_t xhci_transfer_ring_init(xhci_transfer_ring_t* ring, int count) {
     mx_status_t status = io_buffer_init(&ring->buffer, count * sizeof(xhci_trb_t), IO_BUFFER_RW);
     if (status != MX_OK) return status;

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/debug.h>
 #include <hw/reg.h>
 #include <magenta/types.h>
 #include <magenta/syscalls.h>
@@ -17,9 +18,6 @@
 #include "xhci-device-manager.h"
 #include "xhci-root-hub.h"
 #include "xhci-transfer.h"
-
-//#define TRACE 1
-#include "xhci-debug.h"
 
 #define ROUNDUP_TO(x, multiple) ((x + multiple - 1) & ~(multiple - 1))
 #define PAGE_ROUNDUP(x) ROUNDUP_TO(x, PAGE_SIZE)
@@ -65,14 +63,12 @@ static void xhci_read_extended_caps(xhci_t* xhci, void* mmio, volatile uint32_t*
         if (cap_id == EXT_CAP_SUPPORTED_PROTOCOL) {
             uint32_t rev_major = XHCI_GET_BITS32(cap_ptr, EXT_CAP_SP_REV_MAJOR_START,
                                                  EXT_CAP_SP_REV_MAJOR_BITS);
-#if (TRACE == 1)
             uint32_t rev_minor = XHCI_GET_BITS32(cap_ptr, EXT_CAP_SP_REV_MINOR_START,
                                                  EXT_CAP_SP_REV_MINOR_BITS);
-            printf("EXT_CAP_SUPPORTED_PROTOCOL %d.%d\n", rev_major, rev_minor);
+            dprintf(TRACE, "EXT_CAP_SUPPORTED_PROTOCOL %d.%d\n", rev_major, rev_minor);
 
             uint32_t psic = XHCI_GET_BITS32(&cap_ptr[2], EXT_CAP_SP_PSIC_START,
                                             EXT_CAP_SP_PSIC_BITS);
-#endif
             // psic = count of PSI registers
             uint32_t compat_port_offset = XHCI_GET_BITS32(&cap_ptr[2],
                                                           EXT_CAP_SP_COMPAT_PORT_OFFSET_START,
@@ -81,8 +77,8 @@ static void xhci_read_extended_caps(xhci_t* xhci, void* mmio, volatile uint32_t*
                                                          EXT_CAP_SP_COMPAT_PORT_COUNT_START,
                                                          EXT_CAP_SP_COMPAT_PORT_COUNT_BITS);
 
-            xprintf("compat_port_offset: %d compat_port_count: %d psic: %d\n", compat_port_offset,
-                   compat_port_count, psic);
+            dprintf(TRACE, "compat_port_offset: %d compat_port_count: %d psic: %d\n",
+                    compat_port_offset, compat_port_count, psic);
 
             int rh_index;
             if (rev_major == 3) {
@@ -90,28 +86,26 @@ static void xhci_read_extended_caps(xhci_t* xhci, void* mmio, volatile uint32_t*
             } else if (rev_major == 2) {
                 rh_index = XHCI_RH_USB_2;
             } else {
-                printf("unsupported rev_major in XHCI extended capabilities\n");
+                dprintf(ERROR, "unsupported rev_major in XHCI extended capabilities\n");
                 rh_index = -1;
             }
             for (off_t i = 0; i < compat_port_count; i++) {
                 off_t index = compat_port_offset + i - 1;
                 if (index >= xhci->rh_num_ports) {
-                    printf("port index out of range in xhci_read_extended_caps\n");
+                    dprintf(ERROR, "port index out of range in xhci_read_extended_caps\n");
                     break;
                 }
                 xhci->rh_map[index] = rh_index;
             }
 
-#if (TRACE == 1)
             uint32_t* psi = &cap_ptr[4];
             for (uint32_t i = 0; i < psic; i++, psi++) {
                 uint32_t psiv = XHCI_GET_BITS32(psi, EXT_CAP_SP_PSIV_START, EXT_CAP_SP_PSIV_BITS);
                 uint32_t psie = XHCI_GET_BITS32(psi, EXT_CAP_SP_PSIE_START, EXT_CAP_SP_PSIE_BITS);
                 uint32_t plt = XHCI_GET_BITS32(psi, EXT_CAP_SP_PLT_START, EXT_CAP_SP_PLT_BITS);
                 uint32_t psim = XHCI_GET_BITS32(psi, EXT_CAP_SP_PSIM_START, EXT_CAP_SP_PSIM_BITS);
-                printf("PSI[%d] psiv: %d psie: %d plt: %d psim: %d\n", i, psiv, psie, plt, psim);
+                dprintf(TRACE, "PSI[%d] psiv: %d psie: %d plt: %d psim: %d\n", i, psiv, psie, plt, psim);
             }
-#endif
         } else if (cap_id == EXT_CAP_USB_LEGACY_SUPPORT) {
             xhci->usb_legacy_support_cap = (xhci_usb_legacy_support_cap_t*)cap_ptr;
         }
@@ -161,7 +155,7 @@ static mx_status_t xhci_vmo_init(size_t size, mx_handle_t* out_handle, mx_vaddr_
         status = mx_vmo_create(size, 0, &handle);
     }
     if (status != MX_OK) {
-        printf("xhci_vmo_init: vmo_create failed: %d\n", status);
+        dprintf(ERROR, "xhci_vmo_init: vmo_create failed: %d\n", status);
         return status;
     }
 
@@ -169,7 +163,7 @@ static mx_status_t xhci_vmo_init(size_t size, mx_handle_t* out_handle, mx_vaddr_
         // needs to be done before MX_VMO_OP_LOOKUP for non-contiguous VMOs
         status = mx_vmo_op_range(handle, MX_VMO_OP_COMMIT, 0, size, NULL, 0);
         if (status != MX_OK) {
-            printf("xhci_vmo_init: mx_vmo_op_range(MX_VMO_OP_COMMIT) failed %d\n", status);
+            dprintf(ERROR, "xhci_vmo_init: mx_vmo_op_range(MX_VMO_OP_COMMIT) failed %d\n", status);
             mx_handle_close(handle);
             return status;
         }
@@ -178,7 +172,7 @@ static mx_status_t xhci_vmo_init(size_t size, mx_handle_t* out_handle, mx_vaddr_
     status = mx_vmar_map(mx_vmar_root_self(), 0, handle, 0, size,
                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, out_virt);
     if (status != MX_OK) {
-        printf("xhci_vmo_init: mx_vmar_map failed: %d\n", status);
+        dprintf(ERROR, "xhci_vmo_init: mx_vmar_map failed: %d\n", status);
         mx_handle_close(handle);
         return status;
     }
@@ -263,19 +257,19 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
     // controller, but after we've read the extended capabilities.
     result = xhci_claim_ownership(xhci);
     if (result != MX_OK) {
-        printf("xhci_claim_ownership failed\n");
+        dprintf(ERROR, "xhci_claim_ownership failed\n");
         goto fail;
     }
 
     // Allocate DMA memory for various things
     result = xhci_vmo_init(PAGE_SIZE, &xhci->dcbaa_erst_handle, &xhci->dcbaa_erst_virt, false);
     if (result != MX_OK) {
-        printf("xhci_vmo_init failed for xhci->dcbaa_erst_handle\n");
+        dprintf(ERROR, "xhci_vmo_init failed for xhci->dcbaa_erst_handle\n");
         goto fail;
     }
     result = xhci_vmo_init(PAGE_SIZE, &xhci->input_context_handle, &xhci->input_context_virt, false);
     if (result != MX_OK) {
-        printf("xhci_vmo_init failed for xhci->input_context_handle\n");
+        dprintf(ERROR, "xhci_vmo_init failed for xhci->input_context_handle\n");
         goto fail;
     }
 
@@ -284,14 +278,14 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
         result = xhci_vmo_init(scratch_pad_pages_size, &xhci->scratch_pad_pages_handle,
                                &xhci->scratch_pad_pages_virt, xhci->page_size > PAGE_SIZE);
         if (result != MX_OK) {
-            printf("xhci_vmo_init failed for xhci->scratch_pad_pages_handle\n");
+            dprintf(ERROR, "xhci_vmo_init failed for xhci->scratch_pad_pages_handle\n");
             goto fail;
         }
         size_t scratch_pad_index_size = PAGE_ROUNDUP(scratch_pad_bufs * sizeof(uint64_t));
         result = xhci_vmo_init(scratch_pad_index_size, &xhci->scratch_pad_index_handle,
                                &xhci->scratch_pad_index_virt, scratch_pad_index_size > PAGE_SIZE);
         if (result != MX_OK) {
-            printf("xhci_vmo_init failed for xhci->scratch_pad_index_handle\n");
+            dprintf(ERROR, "xhci_vmo_init failed for xhci->scratch_pad_index_handle\n");
             goto fail;
         }
     }
@@ -301,14 +295,14 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
     result = mx_vmo_op_range(xhci->dcbaa_erst_handle, MX_VMO_OP_LOOKUP, 0, PAGE_SIZE,
                              &xhci->dcbaa_phys, sizeof(xhci->dcbaa_phys));
     if (result != MX_OK) {
-        printf("mx_vmo_op_range failed for xhci->dcbaa_erst_handle\n");
+        dprintf(ERROR, "mx_vmo_op_range failed for xhci->dcbaa_erst_handle\n");
         goto fail;
     }
     xhci->input_context = (uint8_t *)xhci->input_context_virt;
     result = mx_vmo_op_range(xhci->input_context_handle, MX_VMO_OP_LOOKUP, 0, PAGE_SIZE,
                              &xhci->input_context_phys, sizeof(xhci->input_context_phys));
     if (result != MX_OK) {
-        printf("mx_vmo_op_range failed for xhci->input_context_handle\n");
+        dprintf(ERROR, "mx_vmo_op_range failed for xhci->input_context_handle\n");
         goto fail;
     }
 
@@ -321,7 +315,7 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
     for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
         // Ran out of space in page.
         if (erst_offset + array_bytes > PAGE_SIZE) {
-            printf("only have space for %u ERST arrays, want %u\n", i, xhci->num_interrupts);
+            dprintf(ERROR, "only have space for %u ERST arrays, want %u\n", i, xhci->num_interrupts);
             goto fail;
         }
         xhci->erst_arrays[i] = (void *)xhci->dcbaa + erst_offset;
@@ -340,7 +334,7 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
             result = mx_vmo_op_range(xhci->scratch_pad_pages_handle, MX_VMO_OP_LOOKUP, offset,
                                      PAGE_SIZE, &scratch_pad_phys, sizeof(scratch_pad_phys));
             if (result != MX_OK) {
-                printf("mx_vmo_op_range failed for xhci->scratch_pad_pages_handle\n");
+                dprintf(ERROR, "mx_vmo_op_range failed for xhci->scratch_pad_pages_handle\n");
                 goto fail;
             }
             scratch_pad_index[i] = scratch_pad_phys;
@@ -351,7 +345,7 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
         result = mx_vmo_op_range(xhci->scratch_pad_index_handle, MX_VMO_OP_LOOKUP, 0, PAGE_SIZE,
                                   &scratch_pad_index_phys, sizeof(scratch_pad_index_phys));
         if (result != MX_OK) {
-            printf("mx_vmo_op_range failed for xhci->scratch_pad_index_handle\n");
+            dprintf(ERROR, "mx_vmo_op_range failed for xhci->scratch_pad_index_handle\n");
             goto fail;
         }
 
@@ -362,14 +356,14 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
 
     result = xhci_transfer_ring_init(&xhci->command_ring, COMMAND_RING_SIZE);
     if (result != MX_OK) {
-        printf("xhci_command_ring_init failed\n");
+        dprintf(ERROR, "xhci_command_ring_init failed\n");
         goto fail;
     }
 
     for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
         result = xhci_event_ring_init(xhci, i, EVENT_RING_SIZE);
         if (result != MX_OK) {
-            printf("xhci_event_ring_init failed\n");
+            dprintf(ERROR, "xhci_event_ring_init failed\n");
             goto fail;
         }
     }
@@ -477,7 +471,7 @@ mx_status_t xhci_start(xhci_t* xhci) {
     // enable bus master
     mx_status_t status = pci_enable_bus_master(&xhci->pci, true);
     if (status < 0) {
-        printf("usb_xhci_bind enable_bus_master failed %d\n", status);
+        dprintf(ERROR, "usb_xhci_bind enable_bus_master failed %d\n", status);
         return status;
     }
 
@@ -533,7 +527,7 @@ void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t co
 static void xhci_handle_command_complete_event(xhci_t* xhci, xhci_trb_t* event_trb) {
     xhci_trb_t* command_trb = xhci_read_trb_ptr(&xhci->command_ring, event_trb);
     uint32_t cc = XHCI_GET_BITS32(&event_trb->status, EVT_TRB_CC_START, EVT_TRB_CC_BITS);
-    xprintf("xhci_handle_command_complete_event slot_id: %d command: %d cc: %d\n",
+    dprintf(TRACE, "xhci_handle_command_complete_event slot_id: %d command: %d cc: %d\n",
             (event_trb->control >> TRB_SLOT_ID_START), trb_get_type(command_trb), cc);
 
     int index = command_trb - xhci->command_ring.start;
@@ -567,7 +561,7 @@ uint64_t xhci_get_current_frame(xhci_t* xhci) {
     // try to detect race condition where mfindex has wrapped but we haven't processed wrap event yet
     if (mfindex < 500) {
         if (mx_time_get(MX_CLOCK_MONOTONIC) - xhci->last_mfindex_wrap > MX_MSEC(1000)) {
-            xprintf("woah, mfindex wrapped before we got the event!\n");
+            dprintf(TRACE, "woah, mfindex wrapped before we got the event!\n");
             wrap_count++;
         }
     }
@@ -597,7 +591,7 @@ static void xhci_handle_events(xhci_t* xhci, int interrupter) {
             xhci_handle_mfindex_wrap(xhci);
             break;
         default:
-            printf("xhci_handle_events: unhandled event type %d\n", type);
+            dprintf(ERROR, "xhci_handle_events: unhandled event type %d\n", type);
             break;
         }
 

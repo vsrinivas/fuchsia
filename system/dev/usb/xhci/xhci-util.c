@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/debug.h>
 #include <stdio.h>
 
 #include "xhci-util.h"
@@ -42,7 +43,7 @@ mx_status_t xhci_send_command(xhci_t* xhci, uint32_t cmd, uint64_t ptr, uint32_t
          if (cc == TRB_CC_SUCCESS) {
             return MX_OK;
         }
-        printf("xhci_send_command %u failed, cc: %d\n", cmd, cc);
+        dprintf(ERROR, "xhci_send_command %u failed, cc: %d\n", cmd, cc);
         return MX_ERR_INTERNAL;
     } else if (status == MX_ERR_TIMED_OUT) {
         completion_reset(&command.completion);
