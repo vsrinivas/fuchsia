@@ -4,11 +4,14 @@
 
 #include "apps/ledger/src/cobalt/cobalt.h"
 
+#include <set>
+
 #include "application/lib/app/connect.h"
 #include "application/services/application_environment.fidl.h"
 #include "apps/cobalt_client/services/cobalt.fidl.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/callback/waiter.h"
+#include "lib/ftl/functional/auto_call.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
@@ -36,11 +39,10 @@ class CobaltContext {
   backoff::ExponentialBackoff backoff_;
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   app::ApplicationContext* app_context_;
-  app::ApplicationControllerPtr cobalt_controller_;
   cobalt::CobaltEncoderPtr encoder_;
 
-  std::vector<CobaltEvent> events_to_send_;
-  std::vector<CobaltEvent> events_in_transit_;
+  std::multiset<CobaltEvent> events_to_send_;
+  std::multiset<CobaltEvent> events_in_transit_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CobaltContext);
 };
@@ -74,17 +76,16 @@ void CobaltContext::ConnectToCobaltApplication() {
 void CobaltContext::OnConnectionError() {
   FTL_LOG(ERROR) << "Connection to cobalt failed. Reconnecting after a delay.";
 
-  events_to_send_.insert(events_to_send_.begin(), events_in_transit_.begin(),
+  events_to_send_.insert(events_in_transit_.begin(),
                          events_in_transit_.end());
   events_in_transit_.clear();
-  cobalt_controller_.reset();
   encoder_.reset();
   task_runner_->PostDelayedTask([this] { ConnectToCobaltApplication(); },
                                 backoff_.GetNext());
 }
 
 void CobaltContext::ReportEventOnMainThread(CobaltEvent event) {
-  events_to_send_.push_back(event);
+  events_to_send_.insert(event);
   if (!encoder_ || !events_in_transit_.empty()) {
     return;
   }
@@ -102,39 +103,54 @@ void CobaltContext::SendEvents() {
   events_in_transit_ = std::move(events_to_send_);
   events_to_send_.clear();
 
-  auto waiter =
-      callback::StatusWaiter<cobalt::Status>::Create(cobalt::Status::OK);
+  auto waiter = callback::CompletionWaiter::Create();
   for (auto event : events_in_transit_) {
-    encoder_->AddIndexObservation(kCobaltMetricId, kCobaltEncodingId,
-                                  static_cast<uint32_t>(event),
-                                  waiter->NewCallback());
+    auto callback = waiter->NewCallback();
+    encoder_->AddIndexObservation(
+        kCobaltMetricId, kCobaltEncodingId, static_cast<uint32_t>(event),
+        [ this, event, callback = std::move(callback) ](cobalt::Status status) {
+          auto cleanup = ftl::MakeAutoCall(callback);
+
+          switch (status) {
+            case cobalt::Status::INVALID_ARGUMENTS:
+            case cobalt::Status::FAILED_PRECONDITION:
+              FTL_DCHECK(false) << "Unexpected status: " << status;
+            case cobalt::Status::OBSERVATION_TOO_BIG:  // fall through
+              // Log the failure.
+              FTL_LOG(WARNING)
+                  << "Cobalt rejected event: " << static_cast<uint32_t>(event)
+                  << " with status: " << status;
+            case cobalt::Status::OK:  // fall through
+              // Remove the event from the set of
+              // events to send.
+              events_in_transit_.erase(event);
+              break;
+            case cobalt::Status::INTERNAL_ERROR:
+            case cobalt::Status::SEND_FAILED:
+            case cobalt::Status::TEMPORARILY_FULL:
+              // Keep the event for re-queueing.
+              break;
+          }
+        });
   }
-  waiter->Finalize([this](cobalt::Status status) {
-    if (status != cobalt::Status::OK) {
-      FTL_LOG(ERROR) << "Error sending observation to cobalt: " << status;
-      OnConnectionError();
+  waiter->Finalize([this]() {
+    // No transient errors.
+    if (events_in_transit_.empty()) {
+      backoff_.Reset();
+      // Send any event received while |events_in_transit_| was not empty.
+      SendEvents();
       return;
     }
 
-    backoff_.Reset();
-    encoder_->SendObservations(
-        [this](cobalt::Status status) {
-          if (status != cobalt::Status::OK) {
-            // Do not show errors when cobalt fail to send observation, see
-            // LE-285.
-            if (status != cobalt::Status::SEND_FAILED) {
-              FTL_LOG(ERROR)
-                  << "Error asking cobalt to send observation to server: "
-                  << status;
-            }
-            OnConnectionError();
-            return;
-          }
-
+    // A transient error happened, retry after a delay.
+    task_runner_->PostDelayedTask(
+        [this]() {
+          events_to_send_.insert(events_in_transit_.begin(),
+                                 events_in_transit_.end());
           events_in_transit_.clear();
-
           SendEvents();
-        });
+        },
+        backoff_.GetNext());
   });
 }
 
