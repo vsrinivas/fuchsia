@@ -40,9 +40,9 @@ static constexpr zx_duration_t kUnderflowCooldown = ZX_SEC(1);
 static fbl::atomic<zx_txid_t> TXID_GEN(1);
 static thread_local zx_txid_t TXID = TXID_GEN.fetch_add(1);
 
-AudioOutputPtr DriverOutput::Create(zx::channel channel,
-                                    AudioOutputManager* manager) {
-  return AudioOutputPtr(new DriverOutput(std::move(channel), manager));
+fbl::RefPtr<AudioOutput> DriverOutput::Create(zx::channel channel,
+                                              AudioOutputManager* manager) {
+  return fbl::AdoptRef(new DriverOutput(std::move(channel), manager));
 }
 
 DriverOutput::DriverOutput(zx::channel channel, AudioOutputManager* manager)
@@ -148,7 +148,7 @@ MediaResult DriverOutput::Init() {
     }
 
     // Create the reflector and hand the stream channel over to it.
-    reflector_ = EventReflector::Create(manager_, weak_self_);
+    reflector_ = EventReflector::Create(manager_, this);
     FXL_DCHECK(reflector_ != nullptr);
 
     res = reflector_->Activate(fbl::move(stream_channel_));
@@ -490,7 +490,7 @@ void DriverOutput::ScheduleNextLowWaterWakeup() {
 
 // static
 fbl::RefPtr<DriverOutput::EventReflector> DriverOutput::EventReflector::Create(
-    AudioOutputManager* manager, AudioOutputWeakPtr output) {
+    AudioOutputManager* manager, AudioOutput* output) {
   auto domain = ExecutionDomain::Create();
   if (domain == nullptr) {
     return nullptr;
@@ -585,13 +585,9 @@ void DriverOutput::EventReflector::ProcessChannelDeactivate(
   // which publishes our stream has been removed from the system (or the driver
   // has crashed).  We need to begin the process of shutting down this
   // AudioOutput.
-  manager_->ScheduleMessageLoopTask(
-      [ manager = manager_, weak_output = output_ ]() {
-        auto output = weak_output.lock();
-        if (output) {
-          manager->ShutdownOutput(output);
-        }
-      });
+  manager_->ScheduleMessageLoopTask([
+    manager = manager_, output = fbl::WrapRefPtr(output_)
+  ]() { manager->ShutdownOutput(output); });
 }
 
 void DriverOutput::EventReflector::HandlePlugStateChange(bool plugged,
@@ -603,13 +599,9 @@ void DriverOutput::EventReflector::HandlePlugStateChange(bool plugged,
 
   // Reflect this message to the AudioOutputManager so it can deal with the plug
   // state change.
-  manager_->ScheduleMessageLoopTask(
-      [ manager = manager_, weak_output = output_, plugged, plug_time ]() {
-        auto output = weak_output.lock();
-        if (output) {
-          manager->HandlePlugStateChange(output, plugged, plug_time);
-        }
-      });
+  manager_->ScheduleMessageLoopTask([
+    manager = manager_, output = fbl::WrapRefPtr(output_), plugged, plug_time
+  ]() { manager->HandlePlugStateChange(output, plugged, plug_time); });
 }
 
 }  // namespace audio

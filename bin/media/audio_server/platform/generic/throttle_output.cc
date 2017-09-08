@@ -20,8 +20,8 @@ ThrottleOutput::ThrottleOutput(AudioOutputManager* manager)
 ThrottleOutput::~ThrottleOutput() {}
 
 // static
-AudioOutputPtr ThrottleOutput::Create(AudioOutputManager* manager) {
-  return AudioOutputPtr(new ThrottleOutput(manager));
+fbl::RefPtr<AudioOutput> ThrottleOutput::Create(AudioOutputManager* manager) {
+  return fbl::AdoptRef<AudioOutput>(new ThrottleOutput(manager));
 }
 
 MediaResult ThrottleOutput::Init() {

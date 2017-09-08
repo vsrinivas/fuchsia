@@ -11,7 +11,6 @@
 namespace media {
 namespace audio {
 
-class AudioOutput;
 class AudioOutputManager;
 class AudioServerImpl;
 class AudioRendererFormatInfo;
@@ -20,13 +19,6 @@ class AudioRendererToOutputLink;
 
 // TODO(johngro) : Remove these aliases and move to a style where we always
 // explicitly declare our managed pointer types.
-using AudioOutputPtr = std::shared_ptr<AudioOutput>;
-using AudioOutputSet =
-    std::set<AudioOutputPtr, std::owner_less<AudioOutputPtr>>;
-using AudioOutputWeakPtr = std::weak_ptr<AudioOutput>;
-using AudioOutputWeakSet =
-    std::set<AudioOutputWeakPtr, std::owner_less<AudioOutputWeakPtr>>;
-
 using AudioRendererImplPtr = std::shared_ptr<AudioRendererImpl>;
 using AudioRendererImplSet =
     std::set<AudioRendererImplPtr, std::owner_less<AudioRendererImplPtr>>;

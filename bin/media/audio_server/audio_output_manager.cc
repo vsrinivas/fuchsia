@@ -22,7 +22,7 @@ AudioOutputManager::AudioOutputManager(AudioServerImpl* server)
 
 AudioOutputManager::~AudioOutputManager() {
   Shutdown();
-  FXL_DCHECK(outputs_.empty());
+  FXL_DCHECK(outputs_.is_empty());
 }
 
 MediaResult AudioOutputManager::Init() {
@@ -34,7 +34,7 @@ MediaResult AudioOutputManager::Init() {
     return MediaResult::INSUFFICIENT_RESOURCES;
   }
 
-  MediaResult res = throttle_output->Init(throttle_output);
+  MediaResult res = throttle_output->Startup();
   if (res != MediaResult::OK) {
     FXL_LOG(WARNING)
         << "AudioOutputManager failed to initalize the throttle output (res "
@@ -74,8 +74,8 @@ void AudioOutputManager::Shutdown() {
   // Step #3: Shut down each currently active output in the system.  It is
   // possible for this to take a bit of time as outputs release their hardware,
   // but it should not take long.
-  for (const auto& output_ptr : outputs_) {
-    output_ptr->Shutdown();
+  for (auto& output_ptr : outputs_) {
+    output_ptr.Shutdown();
   }
   outputs_.clear();
 
@@ -85,18 +85,18 @@ void AudioOutputManager::Shutdown() {
   // TODO(johngro) : shut down the thread pool
 }
 
-MediaResult AudioOutputManager::AddOutput(AudioOutputPtr output) {
+MediaResult AudioOutputManager::AddOutput(
+    const fbl::RefPtr<AudioOutput>& output) {
   FXL_DCHECK(output != nullptr);
   FXL_DCHECK(output != throttle_output_);
+  FXL_DCHECK(!output->InContainer());
 
   output->SetGain(master_gain());
+  outputs_.push_back(output);
 
-  auto emplace_res = outputs_.emplace(output);
-  FXL_DCHECK(emplace_res.second);
-
-  MediaResult res = output->Init(output);
+  MediaResult res = output->Startup();
   if (res != MediaResult::OK) {
-    outputs_.erase(emplace_res.first);
+    outputs_.erase(*output);
     output->Shutdown();
   }
 
@@ -107,24 +107,25 @@ MediaResult AudioOutputManager::AddOutput(AudioOutputPtr output) {
   return res;
 }
 
-void AudioOutputManager::ShutdownOutput(AudioOutputPtr output) {
+void AudioOutputManager::ShutdownOutput(
+    const fbl::RefPtr<AudioOutput>& output) {
   FXL_DCHECK(output != nullptr);
   FXL_DCHECK(output != throttle_output_);
 
-  auto iter = outputs_.find(output);
-  if (iter != outputs_.end()) {
+  if (output->InContainer()) {
     if (output->UpdatePlugState(false, output->plug_time())) {
       OnOutputUnplugged(output);
     }
     output->Shutdown();
-    outputs_.erase(iter);
+    outputs_.erase(*output);
   }
 }
 
-void AudioOutputManager::HandlePlugStateChange(AudioOutputPtr output,
-                                               bool plugged,
-                                               zx_time_t plug_time) {
-  FXL_DCHECK(output);
+void AudioOutputManager::HandlePlugStateChange(
+    const fbl::RefPtr<AudioOutput>& output,
+    bool plugged,
+    zx_time_t plug_time) {
+  FXL_DCHECK(output != nullptr);
   if (output->UpdatePlugState(plugged, plug_time)) {
     if (plugged) {
       OnOutputPlugged(output);
@@ -136,8 +137,8 @@ void AudioOutputManager::HandlePlugStateChange(AudioOutputPtr output,
 
 void AudioOutputManager::SetMasterGain(float db_gain) {
   master_gain_ = fbl::clamp(db_gain, AudioRenderer::kMutedGain, 0.0f);
-  for (auto output : outputs_) {
-    output->SetGain(master_gain_);
+  for (auto& output : outputs_) {
+    output.SetGain(master_gain_);
   }
 }
 
@@ -151,28 +152,28 @@ void AudioOutputManager::SelectOutputsForRenderer(
 
   // Regarless of policy, all renderers should always be linked to the special
   // throttle output.
-  LinkOutputToRenderer(throttle_output_, renderer);
+  LinkOutputToRenderer(throttle_output_.get(), renderer);
 
   switch (routing_policy_) {
     case RoutingPolicy::ALL_PLUGGED_OUTPUTS: {
-      for (auto output : outputs_) {
-        if (output->plugged()) {
-          LinkOutputToRenderer(output, renderer);
+      for (auto& output : outputs_) {
+        if (output.plugged()) {
+          LinkOutputToRenderer(&output, renderer);
         }
       }
     } break;
 
     case RoutingPolicy::LAST_PLUGGED_OUTPUT: {
-      AudioOutputPtr last_plugged = FindLastPluggedOutput();
+      fbl::RefPtr<AudioOutput> last_plugged = FindLastPluggedOutput();
       if (last_plugged != nullptr) {
-        LinkOutputToRenderer(last_plugged, renderer);
+        LinkOutputToRenderer(last_plugged.get(), renderer);
       }
 
     } break;
   }
 }
 
-void AudioOutputManager::LinkOutputToRenderer(AudioOutputPtr output,
+void AudioOutputManager::LinkOutputToRenderer(AudioOutput* output,
                                               AudioRendererImplPtr renderer) {
   FXL_DCHECK(output);
   FXL_DCHECK(renderer);
@@ -182,14 +183,15 @@ void AudioOutputManager::LinkOutputToRenderer(AudioOutputPtr output,
   // finally has its format set via AudioRendererImpl::SetMediaType
   if (!renderer->format_info_valid()) return;
 
-  auto link = AudioRendererToOutputLink::Create(renderer, output);
+  auto link = AudioRendererToOutputLink::Create(renderer,
+                                                fbl::WrapRefPtr(output));
   FXL_DCHECK(link);
 
   // If we cannot add this link to the output, it's because the output is in
   // the process of shutting down (we didn't want to hang out with that guy
   // anyway)
   if (output->AddRendererLink(link) == MediaResult::OK) {
-    if (output == throttle_output_) {
+    if (output == throttle_output_.get()) {
       renderer->SetThrottleOutput(link);
     } else {
       renderer->AddOutput(link);
@@ -202,20 +204,25 @@ void AudioOutputManager::ScheduleMessageLoopTask(const fxl::Closure& task) {
   server_->ScheduleMessageLoopTask(task);
 }
 
-AudioOutputPtr AudioOutputManager::FindLastPluggedOutput() {
-  AudioOutputPtr best_output = nullptr;
+fbl::RefPtr<AudioOutput> AudioOutputManager::FindLastPluggedOutput() {
+  AudioOutput* best_output = nullptr;
 
-  for (auto output : outputs_) {
-    if (output->plugged() &&
-       (!best_output || (best_output->plug_time() < output->plug_time()))) {
-      best_output = output;
+  // TODO(johngro) : Consider tracking last plugged time using a fbl::WAVLTree
+  // so that this operation becomes O(1).  N is pretty low right now, so the
+  // benefits do not currently outweigh the complexity of maintaining this
+  // index.
+  for (auto& output : outputs_) {
+    if (output.plugged() &&
+       (!best_output || (best_output->plug_time() < output.plug_time()))) {
+      best_output = &output;
     }
   }
 
-  return best_output;
+  return fbl::WrapRefPtr(best_output);
 }
 
-void AudioOutputManager::OnOutputUnplugged(AudioOutputPtr output) {
+void AudioOutputManager::OnOutputUnplugged(
+    const fbl::RefPtr<AudioOutput>& output) {
   FXL_DCHECK(output && !output->plugged() && (output != throttle_output_));
 
   // This output was just unplugged.  Unlink it from all of its currently
@@ -224,16 +231,17 @@ void AudioOutputManager::OnOutputUnplugged(AudioOutputPtr output) {
   output->UnlinkFromRenderers();
 
   if (routing_policy_ == RoutingPolicy::LAST_PLUGGED_OUTPUT) {
-    AudioOutputPtr replacement = FindLastPluggedOutput();
+    fbl::RefPtr<AudioOutput> replacement = FindLastPluggedOutput();
     if (replacement) {
       for (auto renderer : renderers_) {
-        LinkOutputToRenderer(replacement, renderer);
+        LinkOutputToRenderer(replacement.get(), renderer);
       }
     }
   }
 }
 
-void AudioOutputManager::OnOutputPlugged(AudioOutputPtr output) {
+void AudioOutputManager::OnOutputPlugged(
+    const fbl::RefPtr<AudioOutput>& output) {
   FXL_DCHECK(output && output->plugged() && (output != throttle_output_));
 
   switch (routing_policy_) {
@@ -241,7 +249,7 @@ void AudioOutputManager::OnOutputPlugged(AudioOutputPtr output) {
       // If we are following the 'all plugged outputs' routing policy, simply
       // add this newly plugged output to all of the active renderers.
       for (auto renderer : renderers_) {
-        LinkOutputToRenderer(output, renderer);
+        LinkOutputToRenderer(output.get(), renderer);
       }
       break;
 
@@ -257,14 +265,14 @@ void AudioOutputManager::OnOutputPlugged(AudioOutputPtr output) {
       // similar times, but we handle their plugged status out-of-order.
       if (FindLastPluggedOutput() != output) return;
 
-      for (const auto& unlink_tgt : outputs_) {
-        if (unlink_tgt != output) {
-          unlink_tgt->UnlinkFromRenderers();
+      for (auto& unlink_tgt : outputs_) {
+        if (&unlink_tgt != output.get()) {
+          unlink_tgt.UnlinkFromRenderers();
         }
       }
 
       for (const auto& renderer : renderers_) {
-        LinkOutputToRenderer(output, renderer);
+        LinkOutputToRenderer(output.get(), renderer);
       }
       break;
   }

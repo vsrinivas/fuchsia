@@ -9,6 +9,10 @@
 #include <set>
 #include <thread>
 
+#include <fbl/intrusive_double_list.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+
 #include "garnet/bin/media/audio_server/audio_pipe.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
@@ -20,7 +24,8 @@
 namespace media {
 namespace audio {
 
-class AudioOutput {
+class AudioOutput : public fbl::RefCounted<AudioOutput>,
+                    public fbl::DoublyLinkedListable<fbl::RefPtr<AudioOutput>> {
  public:
   virtual ~AudioOutput();
 
@@ -167,7 +172,6 @@ class AudioOutput {
   // links.
   AudioRendererToOutputLinkSet links_ FXL_GUARDED_BY(mutex_);
   AudioOutputManager* manager_;
-  AudioOutputWeakPtr weak_self_;
   fxl::Mutex mutex_;
 
  private:
@@ -177,13 +181,13 @@ class AudioOutput {
   friend class AudioOutputManager;
 
   // Thunk used to schedule delayed processing tasks on our task_runner.
-  static void ProcessThunk(AudioOutputWeakPtr weak_output);
+  void ProcessThunk();
 
   // Called from the AudioOutputManager after an output has been created.
   // Gives derived classes a chance to set up hardware, then sets up the
   // machinery needed for scheduling processing tasks and schedules the first
   // processing callback immediately in order to get the process running.
-  MediaResult Init(const AudioOutputPtr& self);
+  MediaResult Startup();
 
   // Called from Shutdown (main message loop) and ShutdowSelf (processing
   // context).  Starts the process of shutdown, preventing new processing tasks

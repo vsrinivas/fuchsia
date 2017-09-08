@@ -17,8 +17,8 @@ namespace audio {
 
 class DriverOutput : public StandardOutputBase {
  public:
-  static AudioOutputPtr Create(zx::channel channel,
-                               AudioOutputManager* manager);
+  static fbl::RefPtr<AudioOutput> Create(zx::channel channel,
+                                         AudioOutputManager* manager);
   ~DriverOutput();
 
   // AudioOutput implementation
@@ -77,14 +77,14 @@ class DriverOutput : public StandardOutputBase {
   class EventReflector : public fbl::RefCounted<EventReflector> {
    public:
     static fbl::RefPtr<EventReflector> Create(AudioOutputManager* manager,
-                                              AudioOutputWeakPtr output);
+                                              AudioOutput* output);
     zx_status_t Activate(zx::channel channel);
 
    private:
     using Channel = ::audio::dispatcher::Channel;
     using ExecutionDomain = ::audio::dispatcher::ExecutionDomain;
 
-    EventReflector(AudioOutputManager* manager, AudioOutputWeakPtr output,
+    EventReflector(AudioOutputManager* manager, AudioOutput* output,
                    fbl::RefPtr<ExecutionDomain>&& domain)
         : manager_(manager),
           output_(output),
@@ -95,7 +95,7 @@ class DriverOutput : public StandardOutputBase {
     void HandlePlugStateChange(bool plugged, zx_time_t plug_time);
 
     AudioOutputManager* manager_;
-    AudioOutputWeakPtr output_;
+    AudioOutput* output_;
     fbl::RefPtr<ExecutionDomain> default_domain_;
   };
 

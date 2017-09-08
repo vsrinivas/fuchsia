@@ -86,7 +86,6 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name) {
     return;
   }
 
-  AudioOutputPtr new_output;
   zx::channel channel;
   ssize_t res;
 
@@ -98,7 +97,7 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name) {
     return;
   }
 
-  new_output = DriverOutput::Create(std::move(channel), manager_);
+  auto new_output = DriverOutput::Create(std::move(channel), manager_);
   if (new_output == nullptr) {
     FXL_LOG(WARNING) << "Failed to instantiate audio output for \"" << name
                      << "\"";

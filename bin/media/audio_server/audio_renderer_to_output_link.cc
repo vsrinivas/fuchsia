@@ -17,10 +17,10 @@ AudioRendererToOutputLink::Bookkeeping::~Bookkeeping() {}
 AudioRendererToOutputLink::AudioRendererToOutputLink(
     AudioRendererImplWeakPtr renderer,
     fbl::RefPtr<AudioRendererFormatInfo> format_info,
-    AudioOutputWeakPtr output)
+    fbl::RefPtr<AudioOutput> output)
     : renderer_(renderer),
       format_info_(std::move(format_info)),
-      output_(output),
+      output_(fbl::move(output)),
       pending_queue_(new PacketQueue),
       valid_(true) {}
 
@@ -31,14 +31,14 @@ AudioRendererToOutputLink::~AudioRendererToOutputLink() {
 // static
 AudioRendererToOutputLinkPtr AudioRendererToOutputLink::Create(
     const AudioRendererImplPtr& renderer,
-    AudioOutputWeakPtr output) {
+    fbl::RefPtr<AudioOutput> output) {
   FXL_DCHECK(renderer);
   FXL_DCHECK(renderer->format_info_valid());
 
   return AudioRendererToOutputLinkPtr(
       new AudioRendererToOutputLink(renderer,
                                     renderer->format_info(),
-                                    output));
+                                    fbl::move(output)));
 }
 
 void AudioRendererToOutputLink::PushToPendingQueue(

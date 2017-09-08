@@ -6,6 +6,7 @@
 
 #include <deque>
 #include <memory>
+#include <fbl/ref_ptr.h>
 
 #include "garnet/bin/media/audio_server/audio_pipe.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
@@ -15,6 +16,8 @@
 
 namespace media {
 namespace audio {
+
+class AudioOutput;
 
 // AudioRendererToOutputLink is a small class which renderers the relationship
 // between an audio renderer and an audio output.  Renderers and outputs are
@@ -65,7 +68,7 @@ class AudioRendererToOutputLink {
   using PacketQueuePtr = std::unique_ptr<PacketQueue>;
 
   static AudioRendererToOutputLinkPtr Create(
-      const AudioRendererImplPtr& renderer, AudioOutputWeakPtr output);
+      const AudioRendererImplPtr& renderer, fbl::RefPtr<AudioOutput> output);
   virtual ~AudioRendererToOutputLink();
 
   // Accessor for the link's gain state tracking class.  Used by both the main
@@ -80,16 +83,9 @@ class AudioRendererToOutputLink {
   void Invalidate() { valid_.store(false); }
   bool valid() const { return valid_.load(); }
 
-  // Accessors for the renderer and output pointers.  Automatically attempts to
-  // promote the weak pointer to a strong pointer.
-  //
-  // TODO(johngro):  Given the way outputs are currently shut down, there is
-  // actually no need for the link to hold a weak pointer to output.  By the
-  // time it destructs, All references to it are guaranteed to have been removed
-  // from all renderers in the context of the main event loop.  Consider
-  // converting this from a weak pointer to a strong pointer.
+  // Accessors for the renderer and output pointers.
   AudioRendererImplPtr GetRenderer() { return renderer_.lock(); }
-  AudioOutputPtr GetOutput() { return output_.lock(); }
+  const fbl::RefPtr<AudioOutput>& GetOutput() { return output_; }
 
   // AudioRenderer PendingQueue operations.  Never call these from the
   // AudioOutput.
@@ -129,11 +125,11 @@ class AudioRendererToOutputLink {
 
   AudioRendererToOutputLink(AudioRendererImplWeakPtr renderer,
                             fbl::RefPtr<AudioRendererFormatInfo> format_info,
-                            AudioOutputWeakPtr output);
+                            fbl::RefPtr<AudioOutput> output);
 
   AudioRendererImplWeakPtr renderer_;
   fbl::RefPtr<AudioRendererFormatInfo> format_info_;
-  AudioOutputWeakPtr output_;
+  fbl::RefPtr<AudioOutput> output_;
   BookkeepingPtr output_bookkeeping_;
 
   fxl::Mutex flush_mutex_;

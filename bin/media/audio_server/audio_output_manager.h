@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <set>
 
@@ -59,21 +60,20 @@ class AudioOutputManager {
   void SelectOutputsForRenderer(AudioRendererImplPtr renderer);
 
   // Link an output to an audio renderer
-  void LinkOutputToRenderer(AudioOutputPtr output,
-                            AudioRendererImplPtr renderer);
+  void LinkOutputToRenderer(AudioOutput* output, AudioRendererImplPtr renderer);
 
   // Schedule a closure to run on our encapsulating server's main message loop.
   void ScheduleMessageLoopTask(const fxl::Closure& task);
 
   // Attempt to initialize an output and add it to the set of active outputs.
-  MediaResult AddOutput(AudioOutputPtr output);
+  MediaResult AddOutput(const fbl::RefPtr<AudioOutput>& output);
 
   // Shutdown the specified audio output and remove it from the set of active
   // outputs.
-  void ShutdownOutput(AudioOutputPtr output);
+  void ShutdownOutput(const fbl::RefPtr<AudioOutput>& output);
 
   // Handles a plugged/unplugged state change for the supplied audio output.
-  void HandlePlugStateChange(AudioOutputPtr output,
+  void HandlePlugStateChange(const fbl::RefPtr<AudioOutput>& output,
                              bool plugged,
                              zx_time_t plug_time);
 
@@ -97,13 +97,13 @@ class AudioOutputManager {
 
   // Find the last plugged (non-throttle_output) active output in the system, or
   // nullptr if none of the outputs are currently plugged.
-  AudioOutputPtr FindLastPluggedOutput();
+  fbl::RefPtr<AudioOutput> FindLastPluggedOutput();
 
   // Methods for dealing with routing policy when an output becomes unplugged or
   // completely removed from the system, or has become plugged/newly added to
   // the system.
-  void OnOutputUnplugged(AudioOutputPtr output);
-  void OnOutputPlugged(AudioOutputPtr output);
+  void OnOutputUnplugged(const fbl::RefPtr<AudioOutput>& output);
+  void OnOutputPlugged(const fbl::RefPtr<AudioOutput>& output);
 
   // A pointer to the server which encapsulates us.  It is not possible for this
   // pointer to be bad while we still exist.
@@ -113,12 +113,12 @@ class AudioOutputManager {
   //
   // Contents of these collections must only be manipulated on the main message
   // loop thread, so no synchronization should be needed.
-  AudioOutputSet outputs_;
+  fbl::DoublyLinkedList<fbl::RefPtr<AudioOutput>> outputs_;
   AudioRendererImplSet renderers_;
 
   // The special throttle output.  This output always exists, and is always used
   // by all renderers.
-  AudioOutputPtr throttle_output_;
+  fbl::RefPtr<AudioOutput> throttle_output_;
 
   // A helper class we will use to detect plug/unplug events for audio devices
   AudioPlugDetector plug_detector_;
