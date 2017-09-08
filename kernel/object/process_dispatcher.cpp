@@ -347,7 +347,7 @@ void ProcessDispatcher::SetStateLocked(State s) {
         //
         // Note: If an eport is bound, it will have a reference to the
         // ProcessDispatcher and thus keep the object around until someone
-        // unbinds the port or closes all handles to its underling
+        // unbinds the port or closes all handles to its underlying
         // PortDispatcher.
         //
         // There's no need to hold |exception_lock_| across OnProcessExit

@@ -415,7 +415,7 @@ void ThreadDispatcher::Exiting() {
         // Note: If an eport is bound, it will have a reference to the
         // ThreadDispatcher and thus keep the object, and the underlying
         // ThreadDispatcher object, around until someone unbinds the port or closes
-        // all handles to its underling PortDispatcher.
+        // all handles to its underlying PortDispatcher.
     }
 
     // Notify a debugger if attached. Do this before marking the thread as
