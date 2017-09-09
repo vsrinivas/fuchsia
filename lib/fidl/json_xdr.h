@@ -6,6 +6,8 @@
 #define APPS_MODULAR_LIB_FIDL_JSON_XDR_H_
 
 #include <string>
+#include <vector>
+#include <map>
 #include <type_traits>
 
 #include "apps/modular/lib/rapidjson/rapidjson.h"
@@ -135,6 +137,9 @@ class XdrContext {
   // 2. Fields with fidl array types. The filter is for an element,
   //    but the field is the array type.
   //
+  // 3. Fields with STL container types. The filter is for an element,
+  //    but the field is the container type.
+  //
   // We could handle this by specialization, however there is an
   // unfortunate combinatorial explosion:
   //
@@ -207,6 +212,9 @@ class XdrContext {
   // A fidl String is mapped to either (i.e., the union type of) JSON
   // null or JSON string.
   void Value(fidl::String* data);
+
+  // An STL string is mapped to a JSON string.
+  void Value(std::string* data);
 
   // A value of a custom type is mapped using the custom filter. See
   // the corresponding Field() method for why there are two type
@@ -361,6 +369,99 @@ class XdrContext {
   // filters from the type parameters of the map.
   template <typename K, typename V>
   void Value(fidl::Map<K, V>* const data) {
+    Value(data, XdrFilter<K>, XdrFilter<V>);
+  }
+
+  // An STL vector is mapped to JSON Array with a custom filter for the
+  // elements.
+  template <typename D, typename V>
+  void Value(std::vector<D>* const data, const XdrFilterType<V> filter) {
+    switch (op_) {
+      case XdrOp::TO_JSON:
+        value_->SetArray();
+        value_->Reserve(data->size(), allocator());
+
+        for (size_t i = 0; i < data->size(); ++i) {
+          Element(i).Value(&data->at(i), filter);
+        }
+        break;
+
+      case XdrOp::FROM_JSON:
+        if (!value_->IsArray()) {
+          AddError("Array type expected.");
+          return;
+        }
+
+        data->reserve(value_->Size());
+
+        for (size_t i = 0; i < value_->Size(); ++i) {
+          Element(i).Value(&data->at(i), filter);
+        }
+    }
+  }
+
+  // An STL vector with a simple element type can infer its element value filter
+  // from the type parameters of the array.
+  template <typename V>
+  void Value(std::vector<V>* const data) {
+    Value(data, XdrFilter<V>);
+  }
+
+  // An STL map is mapped to an array of pairs of key and value, because maps
+  // can have non-string keys. There are two filters, for the key type and the
+  // value type.
+  template <typename K, typename V>
+  void Value(std::map<K, V>* const data,
+             XdrFilterType<K> const key_filter,
+             XdrFilterType<V> const value_filter) {
+    switch (op_) {
+      case XdrOp::TO_JSON: {
+        value_->SetArray();
+        value_->Reserve(data->size(), allocator());
+
+        size_t index = 0;
+        for (auto i = data->begin(); i != data->end(); ++i) {
+          XdrContext&& element = Element(index++);
+          element.value_->SetObject();
+
+          K k{i->first};
+          element.Field("@k").Value(&k, key_filter);
+
+          V v{i->second};
+          element.Field("@v").Value(&v, value_filter);
+        }
+        break;
+      }
+
+      case XdrOp::FROM_JSON: {
+        if (!value_->IsArray()) {
+          AddError("Array type expected.");
+          return;
+        }
+
+        // Erase existing data in case there are some left.
+        data->clear();
+
+        size_t index = 0;
+        for (auto i = value_->Begin(); i != value_->End(); ++i) {
+          XdrContext&& element = Element(index++);
+
+          K k;
+          element.Field("@k").Value(&k, key_filter);
+
+          V v;
+          element.Field("@v").Value(&v, value_filter);
+
+          data->emplace(std::move(k), std::move(v));
+        }
+      }
+    }
+  }
+
+  // An STL map with only simple values can infer its key value filters from the
+  // type parameters of the map.
+  template <typename K, typename V>
+  void Value(std::map<K, V>* const data) {
     Value(data, XdrFilter<K>, XdrFilter<V>);
   }
 

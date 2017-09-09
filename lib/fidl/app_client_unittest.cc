@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/lib/fidl/app_client.h"
-
 #include "application/services/application_controller.fidl.h"
 #include "application/services/application_launcher.fidl.h"
+#include "apps/modular/lib/fidl/app_client.h"
 #include "apps/modular/lib/fidl/app_client_unittest.fidl.h"
 #include "apps/modular/lib/testing/test_with_message_loop.h"
 #include "gtest/gtest.h"

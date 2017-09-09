@@ -53,8 +53,6 @@ source_set("json_xdr") {
   # //third_party/rapidjson:rapidjson_config
   public_deps = [
     "//apps/modular/lib/rapidjson",
-  ]
-  deps = [
     "//garnet/public/lib/fidl/cpp/bindings",
   ]
 }
@@ -152,7 +150,16 @@ fidl("unittest_fidl") {
   ]
 }
 
-source_set("unittests") {
+group("unittests") {
+  testonly = true
+
+  deps = [
+    ":app_client_unittest",
+    ":json_xdr_unittest",
+  ]
+}
+
+source_set("app_client_unittest") {
   testonly = true
 
   sources = [
@@ -166,6 +173,19 @@ source_set("unittests") {
     "//apps/modular/lib/testing:test_with_message_loop",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
+    "//third_party/gtest",
+  ]
+}
+
+source_set("json_xdr_unittest") {
+  testonly = true
+
+  sources = [
+    "json_xdr_unittest.cc",
+  ]
+
+  deps = [
+    ":json_xdr",
     "//third_party/gtest",
   ]
 }

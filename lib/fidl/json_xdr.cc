@@ -104,6 +104,22 @@ void XdrContext::Value(fidl::String* const data) {
   }
 }
 
+void XdrContext::Value(std::string* const data) {
+  switch (op_) {
+    case XdrOp::TO_JSON:
+      value_->SetString(*data, allocator());
+      break;
+
+    case XdrOp::FROM_JSON:
+      if (value_->IsString()) {
+        *data = value_->GetString();
+      } else {
+        AddError("Value() of fidl::String: string expected");
+      }
+      break;
+  }
+}
+
 XdrContext XdrContext::Field(const char field[]) {
   switch (op_) {
     case XdrOp::TO_JSON:
