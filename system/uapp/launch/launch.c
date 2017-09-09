@@ -4,13 +4,14 @@
 
 #include <assert.h>
 #include <launchpad/launchpad.h>
+#include <launchpad/loader-service.h>
 #include <launchpad/vmo.h>
 #include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
 #include <magenta/syscalls/policy.h>
-#include <mxio/loader-service.h>
+
 #include <mxio/io.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -226,7 +227,7 @@ int main(int argc, char** argv) {
         bool already_sending = launchpad_send_loader_message(lp, true);
         if (!already_sending) {
             mx_handle_t loader_svc;
-            status = mxio_loader_service(NULL, NULL, &loader_svc);
+            status = loader_service_get_default(&loader_svc);
             check("mxio_loader_service", status);
             mx_handle_t old = launchpad_use_loader_service(lp, loader_svc);
             check("launchpad_use_loader_service", old);
@@ -240,7 +241,7 @@ int main(int argc, char** argv) {
 
     if (pass_loader_handle) {
         mx_handle_t loader_svc;
-        status = mxio_loader_service(NULL, NULL, &loader_svc);
+        status = loader_service_get_default(&loader_svc);
         check("mxio_loader_service", status);
         status = launchpad_add_handle(lp, loader_svc, PA_SVC_LOADER);
         check("launchpad_add_handle", status);

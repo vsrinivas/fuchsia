@@ -96,6 +96,6 @@ MODULE_SRCS := \
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/port
 
-MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/magenta system/ulib/c
+MODULE_LIBS := system/ulib/driver system/ulib/launchpad system/ulib/mxio system/ulib/magenta system/ulib/c
 
 include make/module.mk

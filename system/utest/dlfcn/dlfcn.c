@@ -5,11 +5,12 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <launchpad/vmo.h>
+#include <launchpad/loader-service.h>
 #include <magenta/device/dmctl.h>
 #include <magenta/dlfcn.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
-#include <mxio/loader-service.h>
+
 #include <stdatomic.h>
 #include <stdio.h>
 #include <string.h>
@@ -104,7 +105,7 @@ bool loader_service_test(void) {
 
     // Spin up our test service.
     mx_handle_t my_service;
-    mx_status_t status = mxio_loader_service(&my_loader_service, (void*)TEST_ACTUAL_NAME, &my_service);
+    mx_status_t status = loader_service_simple(&my_loader_service, (void*)TEST_ACTUAL_NAME, &my_service);
     EXPECT_EQ(status, MX_OK, "mxio_loader_service");
 
     // Install the service.

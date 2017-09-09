@@ -12,13 +12,14 @@
 #include <unistd.h>
 
 #include <launchpad/launchpad.h>
+#include <launchpad/loader-service.h>
 #include <magenta/dlfcn.h>
 #include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
 #include <magenta/status.h>
-#include <mxio/loader-service.h>
+
 #include <mxio/util.h>
 
 #include "devmgr.h"
@@ -370,7 +371,7 @@ int main(int argc, char** argv) {
 
     // Ensure that devmgr doesn't try to connect to the global
     // loader sevice (as this leads to deadlocks in devhost v2)
-    mxio_force_local_loader_service();
+    loader_service_force_local();
 
     devmgr_io_init();
 

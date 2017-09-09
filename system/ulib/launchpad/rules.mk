@@ -11,6 +11,7 @@ MODULE_TYPE := userlib
 MODULE_SRCS += \
     $(LOCAL_DIR)/elf.c \
     $(LOCAL_DIR)/launchpad.c \
+    $(LOCAL_DIR)/loader-service.c \
     $(LOCAL_DIR)/mxio.c \
     $(LOCAL_DIR)/vmo.c
 

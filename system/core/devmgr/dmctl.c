@@ -13,11 +13,11 @@
 #include "devcoordinator.h"
 
 #include <magenta/device/dmctl.h>
-#include <mxio/loader-service.h>
+#include <launchpad/loader-service.h>
 
 static mx_device_t* dmctl_dev;
 
-static mxio_multiloader_t* multiloader;
+static loader_service_t* loader_svc;
 
 static mx_status_t dmctl_cmd(uint32_t op, const char* cmd, size_t cmdlen, mx_handle_t h) {
     dc_msg_t msg;
@@ -50,13 +50,13 @@ static mx_status_t dmctl_ioctl(void* ctx, uint32_t op,
         if (in_len != 0 || out_buf == NULL || out_len != sizeof(mx_handle_t)) {
             return MX_ERR_INVALID_ARGS;
         }
-        if (multiloader == NULL) {
+        if (loader_svc == NULL) {
             // The allocation in dmctl_init() failed.
             return MX_ERR_NO_MEMORY;
         }
         // Create a new channel on the multiloader.
         mx_handle_t out_channel;
-        mx_status_t status = mxio_multiloader_new_service(multiloader, &out_channel);
+        mx_status_t status = loader_service_connect(loader_svc, &out_channel);
         if (status < 0) {
             return status;
         }
@@ -106,7 +106,7 @@ mx_status_t dmctl_bind(void* ctx, mx_device_t* parent, void** cookie) {
     // Don't try to ioctl to ourselves when this process loads libraries.
     // Call this before the device has been created; mxio_loader_service()
     // uses the device's presence as an invitation to use it.
-    mxio_force_local_loader_service();
+    loader_service_force_local();
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
@@ -120,7 +120,7 @@ mx_status_t dmctl_bind(void* ctx, mx_device_t* parent, void** cookie) {
     }
 
     // Loader service init.
-    if ((status = mxio_multiloader_create("dmctl-multiloader", &multiloader)) < 0) {
+    if ((status = loader_service_create("dmctl-multiloader", &loader_svc)) < 0) {
         // If this fails, IOCTL_DMCTL_GET_LOADER_SERVICE_CHANNEL will fail
         // and processes will fall back to using a local loader.
         // TODO: Make this fatal?

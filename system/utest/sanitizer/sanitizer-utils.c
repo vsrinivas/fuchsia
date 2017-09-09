@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <launchpad/loader-service.h>
 #include <magenta/dlfcn.h>
 #include <magenta/processargs.h>
 #include <magenta/sanitizer.h>
 #include <magenta/syscalls.h>
-#include <mxio/loader-service.h>
+
 #include <unittest/unittest.h>
 
 #define TEST_SINK_NAME "test-sink"
@@ -50,7 +51,7 @@ bool publish_data_test(void) {
 
     // Spin up our test service.
     mx_handle_t my_service;
-    mx_status_t status = mxio_loader_service(&sink_test_loader_service, NULL, &my_service);
+    mx_status_t status = loader_service_simple(&sink_test_loader_service, NULL, &my_service);
     ASSERT_EQ(status, MX_OK, "mxio_loader_service");
 
     // Install the service.
@@ -117,7 +118,7 @@ bool debug_config_test(void) {
     // Spin up our test service.
     mx_handle_t my_service;
     mx_status_t status =
-        mxio_loader_service(&config_test_loader_service, NULL, &my_service);
+        loader_service_simple(&config_test_loader_service, NULL, &my_service);
     ASSERT_EQ(status, MX_OK, "mxio_loader_service");
 
     // Install the service.

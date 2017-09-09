@@ -11,7 +11,7 @@
 #include <magenta/processargs.h>
 #include <magenta/stack.h>
 #include <magenta/syscalls.h>
-#include <mxio/loader-service.h>
+#include <launchpad/loader-service.h>
 #include <mxio/io.h>
 #include <assert.h>
 #include <stdatomic.h>
@@ -475,7 +475,7 @@ static mx_status_t setup_loader_svc(launchpad_t* lp) {
         return MX_OK;
 
     mx_handle_t loader_svc;
-    mx_status_t status = mxio_loader_service(NULL, NULL, &loader_svc);
+    mx_status_t status = loader_service_get_default(&loader_svc);
     if (status < 0)
         return status;
 

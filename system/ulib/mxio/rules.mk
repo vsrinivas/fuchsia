@@ -13,7 +13,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/bsdsocket.c \
     $(LOCAL_DIR)/dispatcher.c \
     $(LOCAL_DIR)/get-vmo.c \
-    $(LOCAL_DIR)/loader-service.c \
     $(LOCAL_DIR)/logger.c \
     $(LOCAL_DIR)/namespace.c \
     $(LOCAL_DIR)/null.c \
