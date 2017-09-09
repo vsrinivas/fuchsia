@@ -28,11 +28,11 @@ static mx_vaddr_t load(mx_handle_t log, mx_handle_t vmar, mx_handle_t vmo,
     elf_load_header_t header;
     uintptr_t phoff;
     mx_status_t status = elf_load_prepare(vmo, NULL, 0, &header, &phoff);
-    check(log, status, "elf_load_prepare failed\n");
+    check(log, status, "elf_load_prepare failed");
 
     elf_phdr_t phdrs[header.e_phnum];
     status = elf_load_read_phdrs(vmo, phdrs, phoff, header.e_phnum);
-    check(log, status, "elf_load_read_phdrs failed\n");
+    check(log, status, "elf_load_read_phdrs failed");
 
     if (interp_off != NULL &&
         elf_load_find_interp(phdrs, header.e_phnum, interp_off, interp_len))
@@ -50,7 +50,7 @@ static mx_vaddr_t load(mx_handle_t log, mx_handle_t vmar, mx_handle_t vmo,
                                    segments_vmar,
                                    return_entry ? NULL : &addr,
                                    return_entry ? &addr : NULL);
-    check(log, status, "elf_load_map_segments failed\n");
+    check(log, status, "elf_load_map_segments failed");
 
     if (close_vmo)
         mx_handle_close(vmo);
@@ -120,24 +120,24 @@ static void stuff_loader_bootstrap(mx_handle_t log,
     };
     check(log, mx_handle_duplicate(log, MX_RIGHT_SAME_RIGHTS,
                                    &handles[BOOTSTRAP_LOGGER]),
-          "mx_handle_duplicate failed\n");
+          "mx_handle_duplicate failed");
     check(log, mx_handle_duplicate(proc, MX_RIGHT_SAME_RIGHTS,
                                    &handles[BOOTSTRAP_PROC]),
-          "mx_handle_duplicate failed\n");
+          "mx_handle_duplicate failed");
     check(log, mx_handle_duplicate(root_vmar, MX_RIGHT_SAME_RIGHTS,
                                    &handles[BOOTSTRAP_ROOT_VMAR]),
-          "mx_handle_duplicate failed\n");
+          "mx_handle_duplicate failed");
     check(log, mx_handle_duplicate(thread, MX_RIGHT_SAME_RIGHTS,
                                    &handles[BOOTSTRAP_THREAD]),
-          "mx_handle_duplicate failed\n");
+          "mx_handle_duplicate failed");
     check(log, mx_channel_create(0, loader_svc,
                                  &handles[BOOTSTRAP_LOADER_SVC]),
-          "mx_channel_create failed\n");
+          "mx_channel_create failed");
 
     mx_status_t status = mx_channel_write(
         to_child, 0, &msg, sizeof(msg), handles, countof(handles));
     check(log, status,
-          "mx_channel_write of loader bootstrap message failed\n");
+          "mx_channel_write of loader bootstrap message failed");
 }
 
 mx_vaddr_t elf_load_bootfs(mx_handle_t log, struct bootfs *fs, mx_handle_t proc,
@@ -158,12 +158,12 @@ mx_vaddr_t elf_load_bootfs(mx_handle_t log, struct bootfs *fs, mx_handle_t proc,
             vmo, &interp[sizeof(INTERP_PREFIX) - 1],
             interp_off, interp_len, &n);
         if (status < 0)
-            fail(log, status, "mx_vmo_read failed\n");
+            fail(log, "mx_vmo_read failed: %d", status);
         if (n != interp_len)
-            fail(log, ERR_ELF_BAD_FORMAT, "mx_vmo_read short read\n");
+            fail(log, "mx_vmo_read short read");
         interp[sizeof(INTERP_PREFIX) - 1 + interp_len] = '\0';
 
-        print(log, filename, " has PT_INTERP \"", interp, "\"\n", NULL);
+        printl(log, "'%s' has PT_INTERP \"%s\"", filename, interp);
 
         mx_handle_t interp_vmo =
             bootfs_open(log, "dynamic linker", fs, interp);

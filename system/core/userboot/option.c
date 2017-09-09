@@ -56,7 +56,7 @@ void parse_options(mx_handle_t log, struct options *o, char** strings) {
     initialize_options(o);
     for (char** sp = strings; *sp != NULL; ++sp) {
         const char* arg = *sp;
-        print(log, "option \"", arg, "\"\n", NULL);
+        printl(log, "option \"%s\"", arg);
         apply_option(o, arg);
     }
 }

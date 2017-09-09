@@ -32,8 +32,7 @@ static void loader_config(struct loader_state* state, const char* string) {
         state->exclusive = true;
     }
     if (len >= sizeof(state->prefix) - 1) {
-        fail(state->log, MX_ERR_INVALID_ARGS,
-             "loader-service config string too long\n");
+        fail(state->log, "loader-service config string too long");
     }
     memcpy(state->prefix, string, len);
     state->prefix[len++] = '/';
@@ -57,7 +56,7 @@ static mx_handle_t load_object(struct loader_state* state, const char* name) {
     if (vmo == MX_HANDLE_INVALID && state->prefix_len > 0 && !state->exclusive)
         vmo = try_load_object(state, name, 0);
     if (vmo == MX_HANDLE_INVALID)
-        fail(state->log, MX_ERR_NOT_FOUND, "cannot find shared library\n");
+        fail(state->log, "cannot find shared library '%s'", name);
     return vmo;
 }
 
@@ -76,17 +75,15 @@ static bool handle_loader_rpc(struct loader_state* state,
     // This is the normal error for the other end going away,
     // which happens when the process dies.
     if (status == MX_ERR_PEER_CLOSED) {
-        print(state->log,
-              "loader-service channel peer closed on read\n", NULL);
+        printl(state->log, "loader-service channel peer closed on read");
         return false;
     }
 
     check(state->log, status,
-          "mx_channel_read on loader-service channel failed\n");
+          "mx_channel_read on loader-service channel failed");
 
     if (size < sizeof(msgbuf.msg))
-        fail(state->log, MX_ERR_OUT_OF_RANGE,
-             "loader-service request message too small\n");
+        fail(state->log, "loader-service request message too small");
 
     // Forcibly null-terminate the message data argument.
     msgbuf.buffer[sizeof(msgbuf) - 1] = 0;
@@ -94,11 +91,11 @@ static bool handle_loader_rpc(struct loader_state* state,
     mx_handle_t handle = MX_HANDLE_INVALID;
     switch (msgbuf.msg.opcode) {
     case LOADER_SVC_OP_DONE:
-        print(state->log, "loader-service received DONE request\n", NULL);
+        printl(state->log, "loader-service received DONE request");
         return false;
 
     case LOADER_SVC_OP_DEBUG_PRINT:
-        print(state->log, "loader-service: debug: ", string, "\n", NULL);
+        printl(state->log, "loader-service: debug: %s", string);
         break;
 
     case LOADER_SVC_OP_CONFIG:
@@ -110,13 +107,11 @@ static bool handle_loader_rpc(struct loader_state* state,
         break;
 
     case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
-        fail(state->log, MX_ERR_INVALID_ARGS,
-             "loader-service received LOAD_SCRIPT_INTERP request\n");
+        fail(state->log, "loader-service received LOAD_SCRIPT_INTERP request");
         break;
 
     default:
-        fail(state->log, MX_ERR_INVALID_ARGS,
-             "loader-service received invalid opcode\n");
+        fail(state->log, "loader-service received invalid opcode");
         break;
     }
 
@@ -128,14 +123,14 @@ static bool handle_loader_rpc(struct loader_state* state,
     status = mx_channel_write(channel, 0, &msgbuf.msg, sizeof(msgbuf.msg),
                               &handle, handle == MX_HANDLE_INVALID ? 0 : 1);
     check(state->log, status,
-          "mx_channel_write on loader-service channel failed\n");
+          "mx_channel_write on loader-service channel failed");
 
     return true;
 }
 
 void loader_service(mx_handle_t log, struct bootfs* bootfs,
                     mx_handle_t channel) {
-    print(log, "waiting for loader-service requests...\n", NULL);
+    printl(log, "waiting for loader-service requests...");
 
     struct loader_state state = {
         .log = log,
@@ -153,17 +148,16 @@ void loader_service(mx_handle_t log, struct bootfs* bootfs,
             break;
         }
         check(log, status,
-              "mx_object_wait_one failed on loader-service channel\n");
+              "mx_object_wait_one failed on loader-service channel");
         if (signals & MX_CHANNEL_PEER_CLOSED) {
-            print(log, "loader-service channel peer closed\n", NULL);
+            printl(log, "loader-service channel peer closed");
             break;
         }
         if (!(signals & MX_CHANNEL_READABLE)) {
-            fail(log, MX_ERR_BAD_STATE,
-                 "unexpected signal state on loader-service channel\n");
+            fail(log, "unexpected signal state on loader-service channel");
         }
     } while (handle_loader_rpc(&state, channel));
 
     check(log, mx_handle_close(channel),
-          "mx_handle_close failed on loader-service channel\n");
+          "mx_handle_close failed on loader-service channel");
 }

@@ -27,10 +27,9 @@
 #define STACK_VMO_NAME "userboot-child-initial-stack"
 
 static noreturn void do_shutdown(mx_handle_t log, mx_handle_t rroot) {
-    print(log, "Process exited.  Executing \"", SHUTDOWN_COMMAND, "\".\n",
-          NULL);
+    printl(log, "Process exited.  Executing \"" SHUTDOWN_COMMAND "\".");
     mx_debug_send_command(rroot, SHUTDOWN_COMMAND, strlen(SHUTDOWN_COMMAND));
-    print(log, "still here after shutdown!\n", NULL);
+    printl(log, "still here after shutdown!");
     while (true)
         __builtin_trap();
 }
@@ -64,7 +63,7 @@ static mx_handle_t reserve_low_address_space(mx_handle_t log,
     mx_info_vmar_t info;
     check(log, mx_object_get_info(root_vmar, MX_INFO_VMAR,
                                   &info, sizeof(info), NULL, NULL),
-          "mx_object_get_info failed on child root VMAR handle\n");
+          "mx_object_get_info failed on child root VMAR handle");
     mx_handle_t vmar;
     uintptr_t addr;
     size_t reserve_size =
@@ -73,9 +72,9 @@ static mx_handle_t reserve_low_address_space(mx_handle_t log,
                                           reserve_size - info.base,
                                           MX_VM_FLAG_SPECIFIC, &vmar, &addr);
     check(log, status,
-          "mx_vmar_allocate failed for low address space reservation\n");
+          "mx_vmar_allocate failed for low address space reservation");
     if (addr != info.base)
-        fail(log, MX_ERR_BAD_STATE, "mx_vmar_allocate gave wrong address?!?\n");
+        fail(log, "mx_vmar_allocate gave wrong address?!?");
     return vmar;
 }
 
@@ -97,7 +96,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     uint32_t nhandles;
 
     mx_status_t status = mxr_message_size(bootstrap_pipe, &nbytes, &nhandles);
-    check(log, status, "mxr_message_size failed on bootstrap pipe!\n");
+    check(log, status, "mxr_message_size failed on bootstrap pipe!");
 
     // Read the bootstrap message from the kernel.
     MXR_PROCESSARGS_BUFFER(buffer,
@@ -108,7 +107,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     status = mxr_processargs_read(bootstrap_pipe,
                                   buffer, nbytes, handles, nhandles,
                                   &pargs, &handle_info);
-    check(log, status, "mxr_processargs_read failed on bootstrap message!\n");
+    check(log, status, "mxr_processargs_read failed on bootstrap message!");
 
     // All done with the channel from the kernel now.  Let it go.
     mx_handle_close(bootstrap_pipe);
@@ -116,13 +115,11 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     // We're adding some extra handles, so we have to rearrange the
     // incoming message buffer to make space for their info slots.
     if (pargs->args_off != 0 || pargs->args_num != 0) {
-        fail(log, MX_ERR_INVALID_ARGS,
-             "unexpected bootstrap message layout: args\n");
+        fail(log, "unexpected bootstrap message layout: args");
     }
     if (pargs->environ_off != (pargs->handle_info_off +
                                nhandles * sizeof(uint32_t))) {
-        fail(log, MX_ERR_INVALID_ARGS,
-             "unexpected bootstrap message layout: environ\n");
+        fail(log, "unexpected bootstrap message layout: environ");
     }
     const size_t environ_size = nbytes - pargs->environ_off;
     pargs->environ_off += EXTRA_HANDLE_COUNT * sizeof(uint32_t);
@@ -135,7 +132,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     char* environ[pargs->environ_num + 1];
     status = mxr_processargs_strings(buffer, nbytes, NULL, environ, NULL);
     check(log, status,
-          "mxr_processargs_strings failed on bootstrap message\n");
+          "mxr_processargs_strings failed on bootstrap message");
 
     // Process the kernel command line, which gives us options and also
     // becomes the environment strings for our child.
@@ -182,17 +179,15 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
         }
     }
     if (vdso_vmo == MX_HANDLE_INVALID)
-        fail(log, MX_ERR_INVALID_ARGS, "no vDSO handle in bootstrap message\n");
+        fail(log, "no vDSO handle in bootstrap message");
     if (resource_root == MX_HANDLE_INVALID)
-        fail(log, MX_ERR_INVALID_ARGS,
-             "no resource handle in bootstrap message\n");
+        fail(log, "no resource handle in bootstrap message");
     if (job == MX_HANDLE_INVALID)
-        fail(log, MX_ERR_INVALID_ARGS, "no job handle in bootstrap message\n");
+        fail(log, "no job handle in bootstrap message");
     if (vmar_root_handle_loc == NULL)
-        fail(log, MX_ERR_INVALID_ARGS,
-             "no vmar root handle in bootstrap message\n");
+        fail(log, "no vmar root handle in bootstrap message");
     if (bootdata_vmo == MX_HANDLE_INVALID)
-        fail(log, MX_ERR_INVALID_ARGS, "no bootdata VMO in bootstrap message\n");
+        fail(log, "no bootdata VMO in bootstrap message");
 
     // Hang on to our own process handle.  If we closed it, our process
     // would be killed.  Exiting will clean it up.
@@ -204,7 +199,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     status = mx_handle_duplicate(resource_root, MX_RIGHT_SAME_RIGHTS,
                                  &root_resource_handle);
     if (status < 0)
-        fail(log, status, "mx_handle_duplicate failed\n");
+        fail(log, "mx_handle_duplicate failed: %d", status);
 
     // Locate the first bootfs bootdata section and decompress it.
     // We need it to load devmgr and libc from.
@@ -224,7 +219,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     mx_handle_t to_child;
     mx_handle_t child_start_handle;
     status = mx_channel_create(0, &to_child, &child_start_handle);
-    check(log, status, "mx_channel_create failed\n");
+    check(log, status, "mx_channel_create failed");
 
     const char* filename = o.value[OPTION_FILENAME];
     mx_handle_t proc;
@@ -232,7 +227,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     status = mx_process_create(job, filename, strlen(filename), 0,
                                &proc, &vmar);
     if (status < 0)
-        fail(log, status, "mx_process_create failed\n");
+        fail(log, "mx_process_create failed: %d", status);
 
     mx_handle_t reserve_vmar = reserve_low_address_space(log, vmar);
 
@@ -240,7 +235,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     mx_handle_t thread;
     status = mx_thread_create(proc, filename, strlen(filename), 0, &thread);
     if (status < 0)
-        fail(log, status, "mx_thread_create failed\n");
+        fail(log, "mx_thread_create failed: %d", status);
 
     mx_vaddr_t entry, vdso_base;
     size_t stack_size = MAGENTA_DEFAULT_STACK_SIZE;
@@ -254,14 +249,14 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     mx_handle_t stack_vmo;
     status = mx_vmo_create(stack_size, 0, &stack_vmo);
     if (status < 0)
-        fail(log, status, "mx_vmo_create failed for child stack\n");
+        fail(log, "mx_vmo_create failed for child stack: %d", status);
     mx_object_set_property(stack_vmo, MX_PROP_NAME,
                            STACK_VMO_NAME, sizeof(STACK_VMO_NAME) - 1);
     mx_vaddr_t stack_base;
     status = mx_vmar_map(vmar, 0, stack_vmo, 0, stack_size,
                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                          &stack_base);
-    check(log, status, "mx_vmar_map failed for child stack\n");
+    check(log, status, "mx_vmar_map failed for child stack");
     uintptr_t sp = compute_initial_stack_pointer(stack_base, stack_size);
     if (stack_vmo_handle_loc != NULL) {
         // This is our own stack VMO handle, but we don't need it for anything.
@@ -274,15 +269,14 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
 
     // We're done doing mappings, so clear out the reservation VMAR.
     check(log, mx_vmar_destroy(reserve_vmar),
-          "mx_vmar_destroy failed on reservation VMAR handle\n");
+          "mx_vmar_destroy failed on reservation VMAR handle");
     check(log, mx_handle_close(reserve_vmar),
-          "mx_handle_close failed on reservation VMAR handle\n");
+          "mx_handle_close failed on reservation VMAR handle");
 
     // Reuse the slot for the child's handle.
     status = mx_handle_duplicate(proc, MX_RIGHT_SAME_RIGHTS, proc_handle_loc);
     if (status < 0)
-        fail(log, status,
-             "mx_handle_duplicate failed on child process handle\n");
+        fail(log, "mx_handle_duplicate failed on child process handle: %d", status);
 
     if (thread_handle_loc != NULL) {
         // Reuse the slot for the child's handle.
@@ -290,8 +284,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
         status = mx_handle_duplicate(thread, MX_RIGHT_SAME_RIGHTS,
                                      thread_handle_loc);
         if (status < 0)
-            fail(log, status,
-                 "mx_handle_duplicate failed on child thread handle\n");
+            fail(log, "mx_handle_duplicate failed on child thread handle: %d", status);
     }
 
     // Reuse the slot for the child's root VMAR handle.  We don't need to hold
@@ -303,18 +296,18 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     // processes from here on.
     status = mx_channel_write(to_child, 0, buffer, nbytes,
                               handles, nhandles + EXTRA_HANDLE_COUNT);
-    check(log, status, "mx_channel_write to child failed\n");
+    check(log, status, "mx_channel_write to child failed");
     status = mx_handle_close(to_child);
-    check(log, status, "mx_handle_close failed on channel handle\n");
+    check(log, status, "mx_handle_close failed on channel handle");
 
     // Start the process going.
     status = mx_process_start(proc, thread, entry, sp,
                               child_start_handle, vdso_base);
-    check(log, status, "mx_process_start failed\n");
+    check(log, status, "mx_process_start failed");
     status = mx_handle_close(thread);
-    check(log, status, "mx_handle_close failed on thread handle\n");
+    check(log, status, "mx_handle_close failed on thread handle");
 
-    print(log, "process ", o.value[OPTION_FILENAME], " started.\n", NULL);
+    printl(log, "process %s started.", o.value[OPTION_FILENAME]);
 
     // Now become the loader service for as long as that's needed.
     if (loader_service_channel != MX_HANDLE_INVALID)
@@ -324,20 +317,19 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     bootfs_unmount(vmar_self, log, &bootfs);
 
     if (o.value[OPTION_SHUTDOWN] != NULL) {
-        print(log, "Waiting for ", o.value[OPTION_FILENAME], " to exit...\n",
-              NULL);
+        printl(log, "Waiting for %s to exit...", o.value[OPTION_FILENAME]);
         status = mx_object_wait_one(
             proc, MX_PROCESS_TERMINATED, MX_TIME_INFINITE, NULL);
-        check(log, status, "mx_object_wait_one on process failed\n");
+        check(log, status, "mx_object_wait_one on process failed");
         do_shutdown(log, root_resource_handle);
     }
 
     // Now we've accomplished our purpose in life, and we can die happy.
 
     status = mx_handle_close(proc);
-    check(log, status, "mx_handle_close failed on process handle\n");
+    check(log, status, "mx_handle_close failed on process handle");
 
-    print(log, "finished!\n", NULL);
+    printl(log, "finished!");
     mx_process_exit(0);
 }
 
@@ -347,8 +339,7 @@ noreturn void _start(void* start_arg) {
     mx_handle_t log = MX_HANDLE_INVALID;
     mx_log_create(0, &log);
     if (log == MX_HANDLE_INVALID)
-        print(log, "mx_log_create failed, using mx_debug_write instead\n",
-              NULL);
+        printl(log, "mx_log_create failed, using mx_debug_write instead");
 
     mx_handle_t bootstrap_pipe = (uintptr_t)start_arg;
     bootstrap(log, bootstrap_pipe);

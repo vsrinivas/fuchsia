@@ -11,16 +11,13 @@
 
 // printl() is printf-like, understanding %s %p %d %u %x %zu %zd %zx.
 // No other formatting features are supported.
-void printl(mx_handle_t log, const char* fmt, ...);
+void __PRINTFLIKE(2, 3) printl(mx_handle_t log, const char* fmt, ...);
 void vprintl(mx_handle_t log, const char* fmt, va_list ap);
 
-void print(mx_handle_t log, const char* s, ...) __attribute__((sentinel));
-_Noreturn void fail(mx_handle_t log, mx_status_t status, const char* msg);
+// fail() combines printl() with process exit
+_Noreturn void __PRINTFLIKE(2, 3) fail(mx_handle_t log, const char* fmt, ...);
 
-static inline void check(mx_handle_t log,
-                         mx_status_t status, const char* msg) {
-    if (status != MX_OK)
-        fail(log, status, msg);
-}
+#define check(log, status, msg...) \
+    do { if (status != MX_OK) fail(log, msg); } while (0)
 
 #pragma GCC visibility pop

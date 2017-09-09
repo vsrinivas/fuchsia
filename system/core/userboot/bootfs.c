@@ -43,11 +43,11 @@ static const bootfs_entry_t* bootfs_search(mx_handle_t log,
     const void* p = fs->contents;
 
     if (fs->len < sizeof(bootfs_header_t))
-        fail(log, MX_ERR_INVALID_ARGS, "bootfs is too small\n");
+        fail(log, "bootfs is too small");
 
     const bootfs_header_t* hdr = p;
     if ((hdr->magic != BOOTFS_MAGIC) || (hdr->dirsize > fs->len))
-        fail(log, MX_ERR_INVALID_ARGS, "bootfs bad magic or size\n");
+        fail(log, "bootfs bad magic or size");
 
     size_t filename_len = strlen(filename) + 1;
 
@@ -59,8 +59,7 @@ static const bootfs_entry_t* bootfs_search(mx_handle_t log,
 
         size_t sz = BOOTFS_RECSIZE(e);
         if ((e->name_len < 1) || (sz > avail))
-            fail(log, MX_ERR_INVALID_ARGS,
-                 "bootfs has bogus namelen in header\n");
+            fail(log, "bootfs has bogus namelen in header");
 
         if (e->name_len == filename_len) {
             if (!memcmp(e->name, filename, filename_len))
@@ -76,18 +75,17 @@ static const bootfs_entry_t* bootfs_search(mx_handle_t log,
 
 mx_handle_t bootfs_open(mx_handle_t log, const char* purpose,
                         struct bootfs *fs, const char* filename) {
-    print(log, "searching bootfs for ", purpose,
-          " \"", filename, "\"\n", NULL);
+    printl(log, "searching bootfs for '%s'", filename);
 
     const bootfs_entry_t* e = bootfs_search(log, fs, filename);
     if (e == NULL) {
-        print(log, "file not found\n", NULL);
+        printl(log, "file not found");
         return MX_HANDLE_INVALID;
     }
     if (e->data_off > fs->len)
-        fail(log, MX_ERR_INVALID_ARGS, "bogus offset in bootfs header!\n");
+        fail(log, "bogus offset in bootfs header!");
     if (fs->len - e->data_off < e->data_len)
-        fail(log, MX_ERR_INVALID_ARGS, "bogus size in bootfs header!\n");
+        fail(log, "bogus size in bootfs header!");
 
     // Clone a private copy of the file's subset of the bootfs VMO.
     // TODO(mcgrathr): Create a plain read-only clone when the feature
@@ -96,7 +94,7 @@ mx_handle_t bootfs_open(mx_handle_t log, const char* purpose,
     mx_status_t status = mx_vmo_clone(fs->vmo, MX_VMO_CLONE_COPY_ON_WRITE,
                                       e->data_off, e->data_len, &vmo);
     if (status != MX_OK)
-        fail(log, status, "mx_vmo_clone failed\n");
+        fail(log, "mx_vmo_clone failed: %d", status);
 
     mx_object_set_property(vmo, MX_PROP_NAME, filename, strlen(filename));
 
@@ -108,7 +106,7 @@ mx_handle_t bootfs_open(mx_handle_t log, const char* purpose,
         MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_GET_PROPERTY,
         &vmo);
     if (status != MX_OK)
-        fail(log, status, "mx_handle_replace failed\n");
+        fail(log, "mx_handle_replace failed: %d", status);
 
     return vmo;
 }
