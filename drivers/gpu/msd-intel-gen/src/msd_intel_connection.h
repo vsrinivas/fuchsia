@@ -17,6 +17,8 @@ class MsdIntelConnection {
 public:
     class Owner {
     public:
+        virtual ~Owner() = default;
+
         virtual magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
         virtual void DestroyContext(std::shared_ptr<ClientContext> client_context) = 0;
         virtual void ReleaseBuffer(std::shared_ptr<AddressSpace> address_space,

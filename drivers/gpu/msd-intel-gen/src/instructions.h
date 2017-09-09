@@ -11,6 +11,8 @@
 
 class InstructionWriter {
 public:
+    virtual ~InstructionWriter() = default;
+
     virtual void write_dword(uint32_t dword) = 0;
 };
 

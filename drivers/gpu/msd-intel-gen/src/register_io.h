@@ -41,6 +41,8 @@ public:
 
     class Hook {
     public:
+        virtual ~Hook() = default;
+
         virtual void Write32(uint32_t offset, uint32_t val) = 0;
         virtual void Read32(uint32_t offset, uint32_t val) = 0;
         virtual void Read64(uint32_t offset, uint64_t val) = 0;

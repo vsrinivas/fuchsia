@@ -12,6 +12,8 @@ class CommandBuffer;
 
 class Scheduler {
 public:
+    virtual ~Scheduler() = default;
+
     // Notifies the scheduler that a command buffer has been scheduled on the given context.
     virtual void CommandBufferQueued(std::weak_ptr<MsdIntelContext> context) = 0;
 
