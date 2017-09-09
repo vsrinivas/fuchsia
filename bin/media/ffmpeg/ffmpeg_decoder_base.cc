@@ -116,7 +116,6 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input,
 
     case AVERROR(EAGAIN):
       // Succeeded, no frame produced, need another input packet.
-      FTL_DCHECK(!input->end_of_stream());
       if (!input->end_of_stream() || input->size() == 0) {
         return true;
       }
