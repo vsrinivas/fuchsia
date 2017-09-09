@@ -18,7 +18,7 @@ class ThrottleOutput : public StandardOutputBase {
   explicit ThrottleOutput(AudioOutputManager* manager);
 
   // AudioOutput Implementation
-  MediaResult Init() override;
+  void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) override;
 
   // StandardOutputBase Implementation
   bool StartMixJob(MixJob* job, fxl::TimePoint process_start) override;
@@ -26,6 +26,7 @@ class ThrottleOutput : public StandardOutputBase {
 
  private:
   fxl::TimePoint last_sched_time_;
+  bool uninitialized_ = true;
 };
 
 }  // namespace audio

@@ -4,15 +4,16 @@
 
 #include "garnet/bin/media/audio_server/platform/generic/standard_output_base.h"
 
+#include <fbl/auto_call.h>
 #include <limits>
 
-#include "lib/media/flog/flog.h"
 #include "garnet/bin/media/audio_server/audio_renderer_format_info.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_server/audio_renderer_to_output_link.h"
 #include "garnet/bin/media/audio_server/platform/generic/mixer.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
+#include "lib/media/flog/flog.h"
 
 namespace media {
 namespace audio {
@@ -26,33 +27,41 @@ StandardOutputBase::RendererBookkeeping::~RendererBookkeeping() {}
 
 StandardOutputBase::StandardOutputBase(AudioOutputManager* manager)
     : AudioOutput(manager) {
-  setup_mix_ = [this](const AudioRendererImplPtr& renderer,
-                      RendererBookkeeping* info) -> bool {
-    return SetupMix(renderer, info);
-  };
-
-  process_mix_ = [this](const AudioRendererImplPtr& renderer,
-                        RendererBookkeeping* info,
-                        const AudioPipe::AudioPacketRefPtr& pkt_ref) -> bool {
-    return ProcessMix(renderer, info, pkt_ref);
-  };
-
-  setup_trim_ = [this](const AudioRendererImplPtr& renderer,
-                       RendererBookkeeping* info) -> bool {
-    return SetupTrim(renderer, info);
-  };
-
-  process_trim_ = [this](const AudioRendererImplPtr& renderer,
-                         RendererBookkeeping* info,
-                         const AudioPipe::AudioPacketRefPtr& pkt_ref) -> bool {
-    return ProcessTrim(renderer, info, pkt_ref);
-  };
-
   next_sched_time_ = fxl::TimePoint::Now();
   next_sched_time_known_ = true;
+  link_refs_.reserve(16u);
 }
 
 StandardOutputBase::~StandardOutputBase() {}
+
+MediaResult StandardOutputBase::Init() {
+  MediaResult res = AudioOutput::Init();
+  if (res != MediaResult::OK) {
+    return res;
+  }
+
+  mix_timer_ = ::audio::dispatcher::Timer::Create();
+  if (mix_timer_ == nullptr) {
+    return MediaResult::INSUFFICIENT_RESOURCES;
+  }
+
+  ::audio::dispatcher::Timer::ProcessHandler process_handler(
+    [ output = fbl::WrapRefPtr(this) ]
+    (::audio::dispatcher::Timer * timer) -> zx_status_t {
+      OBTAIN_EXECUTION_DOMAIN_TOKEN(token, output->mix_domain_);
+      output->Process();
+      return ZX_OK;
+    });
+
+  zx_status_t zx_res =
+      mix_timer_->Activate(mix_domain_, fbl::move(process_handler));
+  if (zx_res != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to activate mix_timer_ (res " << res << ")";
+    return MediaResult::INTERNAL_ERROR;
+  }
+
+  return MediaResult::OK;
+}
 
 void StandardOutputBase::Process() {
   bool mixed = false;
@@ -94,7 +103,7 @@ void StandardOutputBase::Process() {
 
       // Mix each renderer into the intermediate buffer, then clip/format into
       // the final buffer.
-      ForeachRenderer(setup_mix_, process_mix_);
+      ForeachRenderer(TaskType::Mix);
       output_formatter_->ProduceOutput(mix_buf_.get(), cur_mix_job_.buf,
                                        cur_mix_job_.buf_frames);
 
@@ -113,15 +122,22 @@ void StandardOutputBase::Process() {
   // queues.  No matter what is going on with the output hardware, we are not
   // allowed to hold onto the queued data past its presentation time.
   if (!mixed) {
-    ForeachRenderer(setup_trim_, process_trim_);
+    ForeachRenderer(TaskType::Trim);
   }
 
   // Figure out when we should wake up to do more work again.  No matter how
   // long our implementation wants to wait, we need to make sure to wake up and
   // periodically trim our input queues.
   fxl::TimePoint max_sched_time = now + kMaxTrimPeriod;
-  ScheduleCallback((next_sched_time_ > max_sched_time) ? max_sched_time
-                                                       : next_sched_time_);
+  if (next_sched_time_ > max_sched_time) {
+    next_sched_time_ = max_sched_time;
+  }
+
+  zx_time_t next_time =
+      static_cast<zx_time_t>(next_sched_time_.ToEpochDelta().ToNanoseconds());
+  if (mix_timer_->Arm(next_time)) {
+    ShutdownSelf();
+  }
 }
 
 MediaResult StandardOutputBase::InitializeLink(
@@ -164,22 +180,43 @@ void StandardOutputBase::SetupMixBuffer(uint32_t max_mix_frames) {
   mix_buf_.reset(new int32_t[mix_buf_frames_ * output_formatter_->channels()]);
 }
 
-void StandardOutputBase::ForeachRenderer(const RendererSetupTask& setup,
-                                         const RendererProcessTask& process) {
-  for (auto iter = links_.begin(); iter != links_.end();) {
+void StandardOutputBase::ForeachRenderer(TaskType task_type) {
+  // Make a copy of our currently active set of links so that we don't have to
+  // hold onto mutex_ for the entire mix operation.
+  {
+    fxl::MutexLocker locker(&mutex_);
+    ZX_DEBUG_ASSERT(link_refs_.empty());
+    for (auto iter = links_.begin(); iter != links_.end();) {
+      auto& link = *iter;
+      auto tmp_iter = iter++;
+
+      // TODO(johngro) : remove the entire concept of valid vs. invlaid links.
+      // We do not hold the set of active renderer links for very long at all
+      // anymore, when a link becomes invalid, it should just be atomically
+      // removed from the set instead of having an invalid flag set on it.
+      if (!link->valid()) {
+        links_.erase(tmp_iter);
+      } else {
+        link_refs_.push_back(link);
+      }
+    }
+  }
+
+  // No matter what happens, make sure we release our temporary references as
+  // soons a we exit this method.
+  auto cleanup = fbl::MakeAutoCall(
+      [this]() FXL_NO_THREAD_SAFETY_ANALYSIS { link_refs_.clear(); });
+
+  for (const auto& link : link_refs_) {
+    // Quit early if we should be shutting down.
     if (shutting_down()) {
       return;
     }
 
-    // Is the link still valid and the renderer still around?  If so, process
-    // it.  Otherwise, remove the renderer entry and move on.
-    const AudioRendererToOutputLinkPtr& link = *iter;
-    AudioRendererImplPtr renderer(link->valid() ? link->GetRenderer()
-                                                : nullptr);
-
-    auto tmp_iter = iter++;
-    if (!renderer) {
-      links_.erase(tmp_iter);
+    // Is the link's renderer still around?  If so, process it.  Otherwise,
+    // remove the renderer entry and move on.
+    AudioRendererImplPtr renderer(link->GetRenderer());
+    if (renderer == nullptr) {
       continue;
     }
 
@@ -197,8 +234,8 @@ void StandardOutputBase::ForeachRenderer(const RendererSetupTask& setup,
     AudioPipe::AudioPacketRefPtr pkt_ref;
 
 #ifdef FLOG_ENABLED
-    if (&setup == &setup_mix_) {
-      setup_done = setup(renderer, info);
+    if (task_type == TaskType::Mix) {
+      setup_done = SetupMix(renderer, info);
       if (!setup_done)
         return;
 
@@ -228,7 +265,8 @@ void StandardOutputBase::ForeachRenderer(const RendererSetupTask& setup,
       // If we have not set up for this renderer yet, do so.  If the setup fails
       // for any reason, stop processing packets for this renderer.
       if (!setup_done) {
-        setup_done = setup(renderer, info);
+        setup_done = (task_type == TaskType::Mix) ? SetupMix(renderer, info)
+                                                  : SetupTrim(renderer, info);
         if (!setup_done) {
           break;
         }
@@ -241,7 +279,10 @@ void StandardOutputBase::ForeachRenderer(const RendererSetupTask& setup,
       // Now process the packet which is at the front of the renderer's queue.
       // If the packet has been entirely consumed, pop it off the front and
       // proceed to the next one.  Otherwise, we are finished.
-      if (!process(renderer, info, pkt_ref)) {
+      bool process_result = (task_type == TaskType::Mix)
+                                ? ProcessMix(renderer, info, pkt_ref)
+                                : ProcessTrim(renderer, info, pkt_ref);
+      if (!process_result) {
         break;
       }
       link->UnlockPendingQueueFront(&pkt_ref, true);

@@ -24,10 +24,13 @@ fbl::RefPtr<AudioOutput> ThrottleOutput::Create(AudioOutputManager* manager) {
   return fbl::AdoptRef<AudioOutput>(new ThrottleOutput(manager));
 }
 
-MediaResult ThrottleOutput::Init() {
-  last_sched_time_ = fxl::TimePoint::Now();
-  UpdatePlugState(true, 0);
-  return MediaResult::OK;
+void ThrottleOutput::OnWakeup() {
+  if (uninitialized_) {
+    last_sched_time_ = fxl::TimePoint::Now();
+    UpdatePlugState(true, 0);
+    Process();
+    uninitialized_ = false;
+  }
 }
 
 bool ThrottleOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {

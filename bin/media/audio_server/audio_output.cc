@@ -17,14 +17,14 @@ namespace audio {
 AudioOutput::AudioOutput(AudioOutputManager* manager)
     : manager_(manager), db_gain_(0.0f) {
   FXL_DCHECK(manager_);
+  // TODO(johngro) : See MG-940.  Eliminate this priority boost as soon as we
+  // have a more official way of meeting real-time latency requirements.
+  mix_domain_ = ::audio::dispatcher::ExecutionDomain::Create(24);
+  mix_wakeup_ = ::audio::dispatcher::WakeupEvent::Create();
 }
 
 AudioOutput::~AudioOutput() {
-  FXL_DCHECK(!task_runner_ && shutting_down_);
-
-  if (worker_thread_.joinable()) {
-    worker_thread_.join();
-  }
+  FXL_DCHECK(shutting_down());
 }
 
 MediaResult AudioOutput::AddRendererLink(AudioRendererToOutputLinkPtr link) {
@@ -36,7 +36,7 @@ MediaResult AudioOutput::AddRendererLink(AudioRendererToOutputLinkPtr link) {
     // Assert that we are the output in this link.
     FXL_DCHECK(this == link->GetOutput().get());
 
-    if (shutting_down_) {
+    if (shutting_down()) {
       return MediaResult::SHUTTING_DOWN;
     }
 
@@ -54,7 +54,7 @@ MediaResult AudioOutput::RemoveRendererLink(
     const AudioRendererToOutputLinkPtr& link) {
   fxl::MutexLocker locker(&mutex_);
 
-  if (shutting_down_) {
+  if (shutting_down()) {
     return MediaResult::SHUTTING_DOWN;
   }
 
@@ -67,7 +67,34 @@ MediaResult AudioOutput::RemoveRendererLink(
   return MediaResult::OK;
 }
 
-MediaResult AudioOutput::Init() { return MediaResult::OK; }
+void AudioOutput::Wakeup() {
+  FXL_DCHECK(mix_wakeup_ != nullptr);
+  mix_wakeup_->Signal();
+}
+
+MediaResult AudioOutput::Init() {
+  if ((mix_domain_ == nullptr) || (mix_wakeup_ == nullptr)) {
+    return MediaResult::INSUFFICIENT_RESOURCES;
+  }
+
+  ::audio::dispatcher::WakeupEvent::ProcessHandler process_handler(
+      [ output = fbl::WrapRefPtr(this) ]
+      (::audio::dispatcher::WakeupEvent * event) -> zx_status_t {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, output->mix_domain_);
+        output->OnWakeup();
+        return ZX_OK;
+      });
+
+  zx_status_t res =
+      mix_wakeup_->Activate(mix_domain_, fbl::move(process_handler));
+  if (res != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to activate wakeup event for AudioOutput!  "
+                   << "(res " << res << ")";
+    return MediaResult::INTERNAL_ERROR;
+  }
+
+  return MediaResult::OK;
+}
 
 void AudioOutput::Cleanup() {}
 
@@ -77,46 +104,24 @@ MediaResult AudioOutput::InitializeLink(
   return MediaResult::OK;
 }
 
-void AudioOutput::ScheduleCallback(fxl::TimePoint when) {
-  // If we are in the process of shutting down, then we are no longer permitted
-  // to schedule callbacks.
-  if (shutting_down_) {
-    FXL_DCHECK(!task_runner_);
-    return;
-  }
-  FXL_DCHECK(task_runner_);
-
-  // TODO(johngro):  Someday, if there is ever a way to schedule delayed tasks
-  // with absolute time, or with resolution better than microseconds, do so.
-  // Until then figure out the relative time for scheduling the task and do so.
-  fxl::TimePoint now = fxl::TimePoint::Now();
-  fxl::TimeDelta sched_time =
-      (now > when) ? fxl::TimeDelta::FromMicroseconds(0) : (when - now);
-
-  task_runner_->PostDelayedTask(
-      [ self = fbl::WrapRefPtr(this) ]()
-      { self->ProcessThunk(); },
-      sched_time);
-}
-
 void AudioOutput::ShutdownSelf() {
   // If we are not already in the process of shutting down, send a message to
   // the main message loop telling it to complete the shutdown process.
-  if (!BeginShutdown()) {
+  if (!shutting_down()) {
+    FXL_DCHECK(mix_domain_);
+    mix_domain_->DeactivateFromWithinDomain();
+
     FXL_DCHECK(manager_);
     manager_->ScheduleMessageLoopTask(
-        [ manager = manager_, self = fbl::WrapRefPtr(this) ]()
-        { manager->ShutdownOutput(self); });
+      [ manager = manager_, self = fbl::WrapRefPtr(this) ]() {
+        manager->ShutdownOutput(self);
+      });
   }
 }
 
-void AudioOutput::ProcessThunk() {
-  fxl::MutexLocker locker(&mutex_);
-
-  // Make sure that we are not in the process of cleaning up before we start
-  // processing.
-  if (!shutting_down_) {
-    Process();
+void AudioOutput::DeactivateDomain() {
+  if (mix_domain_ != nullptr) {
+    mix_domain_->Deactivate();
   }
 }
 
@@ -126,38 +131,14 @@ MediaResult AudioOutput::Startup() {
   // active outputs as a result of us failing to initialize.
   MediaResult res = Init();
   if (res != MediaResult::OK) {
-    fxl::MutexLocker locker(&mutex_);
-    shutting_down_ = true;
+    DeactivateDomain();
     return res;
   }
 
-  FXL_DCHECK(worker_thread_.get_id() == std::thread::id());
-  worker_thread_ = fsl::CreateThread(&task_runner_);
-
-  // Schedule an immediate callback to get things running.
-  task_runner_->PostTask([self = fbl::WrapRefPtr(this)]() {
-    self->ProcessThunk();
-  });
+  // Poke the output once so it gets a chance to actually start running.
+  Wakeup();
 
   return MediaResult::OK;
-}
-
-bool AudioOutput::BeginShutdown() {
-  // Start the process of shutting down if we have not already.  This method may
-  // be called from either a processing context, or from the audio output
-  // manager.  After it finishes, any pending processing callbacks will have
-  // been nerfed, although there may still be callbacks in flight.
-  if (shutting_down_) {
-    return true;
-  }
-
-  // Shut down the thread created for this output.
-  task_runner_->PostTask([]() { fsl::MessageLoop::GetCurrent()->QuitNow(); });
-
-  shutting_down_ = true;
-  task_runner_ = nullptr;
-
-  return false;
 }
 
 void AudioOutput::Shutdown() {
@@ -165,15 +146,9 @@ void AudioOutput::Shutdown() {
     return;
   }
 
-  // TODO(johngro): Assert that we are running on the audio server's main
-  // message loop thread.
-
   // Make sure no new callbacks can be generated, and that pending callbacks
   // have been nerfed.
-  {
-    fxl::MutexLocker locker(&mutex_);
-    BeginShutdown();
-  }
+  DeactivateDomain();
 
   // Unlink ourselves from all of our renderers.
   UnlinkFromRenderers();

@@ -13,6 +13,8 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
+#include "drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
+#include "drivers/audio/dispatcher-pool/dispatcher-wakeup-event.h"
 #include "garnet/bin/media/audio_server/audio_pipe.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
@@ -38,6 +40,13 @@ class AudioOutput : public fbl::RefCounted<AudioOutput>,
   // called.
   MediaResult AddRendererLink(AudioRendererToOutputLinkPtr link);
   MediaResult RemoveRendererLink(const AudioRendererToOutputLinkPtr& link);
+
+  // Wakeup
+  //
+  // Called from outside the mixing ExecutionDomain to cause an
+  // AudioOutput's::OnWakeup handler to run from within the context of the
+  // mixing execution domain.
+  void Wakeup();
 
   // Accessor for the current value of the dB gain for the output.
   float db_gain() const { return db_gain_.load(std::memory_order_acquire); }
@@ -90,19 +99,6 @@ class AudioOutput : public fbl::RefCounted<AudioOutput>,
   // AudioRenderer renderers have been disconnected.  No locks are being held.
   virtual void Cleanup();
 
-  // Process
-  //
-  // Called from within the context of the processing lock any time a scheduled
-  // processing callback fires.  One callback will be automatically scheduled at
-  // the end of initialization.  After that, derived classes are responsible for
-  // scheduling all subsequent callbacks to keep the engine running.
-  //
-  // Note:  Process callbacks execute on one of the threads from the
-  // AudioOutputManager's base::SequencedWorkerPool.  While successive callbacks
-  // may not execute on the same thread, they are guaranteed to execute in a
-  // serialized fashion.
-  virtual void Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) = 0;
-
   // InitializeLink
   //
   // Called on the AudioServer's main message loop any time a renderer is being
@@ -117,17 +113,18 @@ class AudioOutput : public fbl::RefCounted<AudioOutput>,
   //////////////////////////////////////////////////////////////////////////////
   //
   // Methods which may used by derived classes from within the context of a
-  // processing callback.  Note; since these methods are intended to be called
-  // from the within a process callback, the processing_lock will always be held
-  // when they are called.
+  // mix_domain_ ExecutionDomain.  Note; since these methods are intended to be
+  // called from the within the mix_domain_, callers must be annotated properly
+  // to demonstrate that they are executing from within that domain.
   //
 
-  // ScheduleCallback
+  // OnWakeup
   //
-  // Schedule a processing callback at the specified absolute time on the local
-  // clock.
-  void ScheduleCallback(fxl::TimePoint when)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+  // Called in response to someone from outside the domain poking the
+  // mix_wakeup_ WakeupEvent.  At a minimum, the framework will call this once
+  // at startup to get the output running.
+  virtual void OnWakeup()
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) = 0;
 
   // ShutdownSelf
   //
@@ -136,14 +133,12 @@ class AudioOutput : public fbl::RefCounted<AudioOutput>,
   // main message loop finds out about our shutdown request, it will complete
   // the process of shutting us down, unlinking us from our renderers and
   // calling the Cleanup method.
-  void ShutdownSelf() FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+  void ShutdownSelf() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  // shutting_down
-  //
-  // Check the shutting down flag.  Only the base class may modify the flag, but
-  // derived classes are free to check it at any time.
-  inline bool shutting_down() const FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
-    return shutting_down_;
+  // Check the shutting down flag.  We are in the process of shutting down when
+  // we have become deactivated at the dispatcher framework level.
+  inline bool shutting_down() const {
+    return (!mix_domain_ || mix_domain_->deactivated());
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -174,28 +169,28 @@ class AudioOutput : public fbl::RefCounted<AudioOutput>,
   AudioOutputManager* manager_;
   fxl::Mutex mutex_;
 
+  // State used to manage asynchronous processing using the dispatcher
+  // framework.
+  fbl::RefPtr<::audio::dispatcher::ExecutionDomain> mix_domain_;
+  fbl::RefPtr<::audio::dispatcher::WakeupEvent> mix_wakeup_;
+
  private:
   // It's always nice when you manager is also your friend.  Seriously though,
   // the AudioOutputManager gets to call Init and Shutdown, no one else
   // (including derived classes) should be able to.
   friend class AudioOutputManager;
 
-  // Thunk used to schedule delayed processing tasks on our task_runner.
-  void ProcessThunk();
+  // DeactivateDomain
+  //
+  // deactivate our execution domain (if it exists) and synchronize with any
+  // operations taking place in the domain.
+  void DeactivateDomain() FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
   // Called from the AudioOutputManager after an output has been created.
   // Gives derived classes a chance to set up hardware, then sets up the
   // machinery needed for scheduling processing tasks and schedules the first
   // processing callback immediately in order to get the process running.
   MediaResult Startup();
-
-  // Called from Shutdown (main message loop) and ShutdowSelf (processing
-  // context).  Starts the process of shutdown, preventing new processing tasks
-  // from being scheduled, and nerfing any tasks in flight.
-  //
-  // @return true if this call just kicked off the process of shutting down,
-  // false otherwise.
-  bool BeginShutdown() FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Called from the AudioOutputManager on the main message loop
   // thread.  Makes certain that the process of shutdown has started,
@@ -209,9 +204,6 @@ class AudioOutput : public fbl::RefCounted<AudioOutput>,
   // output.
   void UnlinkFromRenderers();
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
-  std::thread worker_thread_;
-
   // Plug state is protected by the fact that it is only ever accessed on the
   // main message loop thread.
   bool plugged_ = false;
@@ -222,9 +214,6 @@ class AudioOutput : public fbl::RefCounted<AudioOutput>,
   // associated renderer-to-output-link amplitude scale factors.
   std::atomic<float> db_gain_;
 
-  // TODO(johngro): Eliminate the shutting down flag and just use the
-  // task_runner_'s nullness for this test?
-  volatile bool shutting_down_ FXL_GUARDED_BY(mutex_) = false;
   volatile bool shut_down_ = false;
 };
 
