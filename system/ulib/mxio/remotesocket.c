@@ -375,7 +375,9 @@ static ssize_t mxsio_recvmsg_dgram(mxio_t* io, struct msghdr* msg, int flags) {
         // TODO: support MSG_OOB
         return MX_ERR_NOT_SUPPORTED;
     }
-    size_t mlen = 0;
+    // Read 1 extra byte to detect if the buffer is too small to fit the whole
+    // packet, so we can set MSG_TRUNC flag if necessary.
+    size_t mlen = MXIO_SOCKET_MSG_HEADER_SIZE + 1;
     for (int i = 0; i < msg->msg_iovlen; i++) {
         struct iovec *iov = &msg->msg_iov[i];
         if (iov->iov_len <= 0) {
@@ -383,7 +385,6 @@ static ssize_t mxsio_recvmsg_dgram(mxio_t* io, struct msghdr* msg, int flags) {
         }
         mlen += iov->iov_len;
     }
-    mlen += MXIO_SOCKET_MSG_HEADER_SIZE;
 
     // TODO: avoid malloc
     mxio_socket_msg_t* m = malloc(mlen);
@@ -417,6 +418,12 @@ static ssize_t mxsio_recvmsg_dgram(mxio_t* io, struct msghdr* msg, int flags) {
             resid -= iov->iov_len;
         }
     }
+
+    if (resid > 0) {
+        msg->msg_flags |= MSG_TRUNC;
+        n -= resid;
+    }
+
     free(m);
     return n;
 }
