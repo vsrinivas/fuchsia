@@ -14,8 +14,6 @@ class SimpleAllocator : public AddressSpaceAllocator {
 public:
     static std::unique_ptr<SimpleAllocator> Create(uint64_t base, size_t size);
 
-    ~SimpleAllocator();
-
     bool Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out) override;
     bool Free(uint64_t addr) override;
     bool GetSize(uint64_t addr, size_t* size_out) override;

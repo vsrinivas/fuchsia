@@ -18,7 +18,7 @@ public:
         DASSERT(size <= UINT64_MAX - base);
     }
 
-    ~AddressSpaceAllocator() {}
+    virtual ~AddressSpaceAllocator() = default;
 
     uint64_t base() const { return base_; }
     size_t size() const { return size_; }

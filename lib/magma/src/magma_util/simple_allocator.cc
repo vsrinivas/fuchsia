@@ -75,8 +75,6 @@ std::unique_ptr<SimpleAllocator> SimpleAllocator::Create(uint64_t base, size_t s
 
 SimpleAllocator::SimpleAllocator(uint64_t base, size_t size) : AddressSpaceAllocator(base, size) {}
 
-SimpleAllocator::~SimpleAllocator() {}
-
 bool SimpleAllocator::Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out)
 {
     DLOG("Alloc size 0x%zx align_pow2 0x%x", size, align_pow2);

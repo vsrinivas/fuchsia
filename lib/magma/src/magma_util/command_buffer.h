@@ -21,6 +21,8 @@ namespace magma {
 //
 class CommandBuffer {
 public:
+    virtual ~CommandBuffer() = default;
+
     virtual PlatformBuffer* platform_buffer() = 0;
 
     bool Initialize();
