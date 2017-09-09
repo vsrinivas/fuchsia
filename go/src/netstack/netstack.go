@@ -11,13 +11,11 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"time"
 
 	"netstack/deviceid"
 	"netstack/eth"
 	"netstack/netiface"
-
-	nsfidl "garnet/public/lib/netstack/fidl/netstack"
+	"netstack/stats"
 
 	"github.com/google/netstack/dhcp"
 	"github.com/google/netstack/tcpip"
@@ -52,7 +50,8 @@ type ifState struct {
 	// guarded by ns.mu
 	nic *netiface.NIC
 
-	Stats nsfidl.NetInterfaceStats
+	// LinkEndpoint responsible to track traffic statistics
+	statsEP stats.StatsEndpoint
 }
 
 func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Config) {
@@ -167,15 +166,11 @@ func (ns *netstack) addLoopback() error {
 			},
 		},
 	}
-	loopbackIf := &ifState{
+	ifs := &ifState{
 		ns:     ns,
 		ctx:    ctx,
 		cancel: cancel,
 		nic:    nic,
-
-		Stats: nsfidl.NetInterfaceStats{
-			UpSince: time.Now().Unix(),
-		},
 	}
 
 	ns.mu.Lock()
@@ -183,14 +178,16 @@ func (ns *netstack) addLoopback() error {
 		ns.mu.Unlock()
 		return fmt.Errorf("loopback: other interfaces already registered")
 	}
-	ns.ifStates[nicid] = loopbackIf
+	ns.ifStates[nicid] = ifs
 	ns.mu.Unlock()
 
-	loopbackID := loopback.New()
+	linkID := loopback.New()
 	if debug2 {
-		loopbackID = sniffer.New(loopbackID)
+		linkID = sniffer.New(linkID)
 	}
-	if err := ns.stack.CreateNIC(nicid, loopbackID); err != nil {
+	linkID = ifs.statsEP.Wrap(linkID)
+
+	if err := ns.stack.CreateNIC(nicid, linkID); err != nil {
 		return fmt.Errorf("loopback: could not create interface: %v", err)
 	}
 	if err := ns.stack.AddAddress(nicid, ipv4.ProtocolNumber, header.IPv4Loopback); err != nil {
@@ -213,10 +210,6 @@ func (ns *netstack) addEth(path string) error {
 		ctx:    ctx,
 		cancel: cancel,
 		nic:    &netiface.NIC{},
-
-		Stats: nsfidl.NetInterfaceStats{
-			UpSince: time.Now().Unix(),
-		},
 	}
 
 	client, err := eth.NewClient("netstack", path, ns.arena, ifs.stateChange)
@@ -231,11 +224,14 @@ func (ns *netstack) addEth(path string) error {
 	linkID := stack.RegisterLinkEndpoint(ep)
 	lladdr := ipv6.LinkLocalAddr(tcpip.LinkAddress(ep.linkAddr))
 
+	// LinkEndpoint chains:
+	// Put sniffer as close as the NIC.
 	if debug2 {
 		// A wrapper LinkEndpoint should encapsulate the underlying one,
 		// and manifest itself to 3rd party netstack.
 		linkID = sniffer.New(linkID)
 	}
+	linkID = ifs.statsEP.Wrap(linkID)
 
 	ns.mu.Lock()
 	ifs.nic.Ipv6addrs = []tcpip.Address{lladdr}

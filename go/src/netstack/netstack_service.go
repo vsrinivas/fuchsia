@@ -129,14 +129,7 @@ func (ni *netstackImpl) GetStats(nicid uint32) (stats nsfidl.NetInterfaceStats, 
 		return nsfidl.NetInterfaceStats{}, fmt.Errorf("no such interface id: %d", nicid)
 	}
 
-	{	// TODO (porce): Delete this block.
-		// Stats will be stored in ifState, not in ifState.<lower_layer>.
-		if ifState.eth != nil {
-			return ifState.eth.Stats, nil
-		}
-	}
-
-	return ifState.Stats, nil
+	return ifState.statsEP.Stats, nil
 }
 
 type netstackDelegate struct {
