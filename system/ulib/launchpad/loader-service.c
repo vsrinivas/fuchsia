@@ -47,13 +47,18 @@ static void __PRINTFLIKE(2, 3) log_printf(mx_handle_t log,
     mx_log_write(log, len, buf, 0u);
 }
 
+#define PREFIX_MAX 32
+
 struct loader_service {
     char name[MX_MAX_NAME_LEN];
     mtx_t dispatcher_lock;
     mxio_dispatcher_t* dispatcher;
     mx_handle_t dispatcher_log;
 
-    char config_prefix[32];
+    const loader_service_ops_t* ops;
+    void* ctx;
+
+    char config_prefix[PREFIX_MAX];
     bool config_exclusive;
 };
 
@@ -62,18 +67,7 @@ static const char* const libpaths[] = {
     "/boot/lib",
 };
 
-// Always consumes the fd.
-static mx_handle_t load_object_fd(int fd, const char* fn, mx_handle_t* out) {
-    mx_status_t status = mxio_get_vmo(fd, out);
-    close(fd);
-    if (status == MX_OK)
-        mx_object_set_property(*out, MX_PROP_NAME, fn, strlen(fn));
-    return status;
-}
-
-// For now, just publish data-sink VMOs as files under /tmp/<sink-name>/.
-// The individual file is named by its VMO's name.
-static mx_status_t publish_data_sink(mx_handle_t vmo, const char* sink_name) {
+mx_status_t loader_service_publish_data_sink_fs(const char* sink_name, mx_handle_t vmo) {
     union {
         vmo_create_config_t header;
         struct {
@@ -137,22 +131,56 @@ static mx_status_t publish_data_sink(mx_handle_t vmo, const char* sink_name) {
     return MX_OK;
 }
 
+
 // When loading a library object, search in the hard-coded locations.
-static int open_from_libpath(const char* prefix, const char* fn) {
+static int open_from_libpath(const char* fn) {
     int fd = -1;
     for (size_t n = 0; fd < 0 && n < countof(libpaths); ++n) {
         char path[PATH_MAX];
-        snprintf(path, sizeof(path), "%s/%s%s", libpaths[n], prefix, fn);
+        snprintf(path, sizeof(path), "%s/%s", libpaths[n], fn);
         fd = open(path, O_RDONLY);
     }
     return fd;
 }
 
-static mx_status_t default_load_object(void* cookie,
-                                       uint32_t load_op,
-                                       mx_handle_t request_handle,
-                                       const char* fn,
-                                       mx_handle_t* out) {
+// Always consumes the fd.
+static mx_handle_t load_object_fd(int fd, const char* fn, mx_handle_t* out) {
+    mx_status_t status = mxio_get_vmo(fd, out);
+    close(fd);
+    if (status == MX_OK)
+        mx_object_set_property(*out, MX_PROP_NAME, fn, strlen(fn));
+    return status;
+}
+
+static mx_status_t fs_load_object(void *ctx, const char* name, mx_handle_t* out) {
+    int fd = open_from_libpath(name);
+    if (fd >= 0)
+        return load_object_fd(fd, name, out);
+    return MX_ERR_NOT_FOUND;
+}
+
+static mx_status_t fs_load_abspath(void *ctx, const char* path, mx_handle_t* out) {
+    int fd = open(path, O_RDONLY);
+    if (fd >= 0)
+        return load_object_fd(fd, path, out);
+    return MX_ERR_NOT_FOUND;
+}
+
+// For now, just publish data-sink VMOs as files under /tmp/<sink-name>/.
+// The individual file is named by its VMO's name.
+static mx_status_t fs_publish_data_sink(void* ctx, const char* name, mx_handle_t vmo) {
+    return loader_service_publish_data_sink_fs(name, vmo);
+}
+
+static const loader_service_ops_t fs_ops = {
+    .load_object = fs_load_object,
+    .load_abspath = fs_load_abspath,
+    .publish_data_sink = fs_publish_data_sink,
+};
+
+static mx_status_t default_load_fn(void* cookie, uint32_t load_op,
+                                   mx_handle_t request_handle,
+                                   const char* fn, mx_handle_t* out) {
     loader_service_t* svc = cookie;
 
     if (request_handle != MX_HANDLE_INVALID &&
@@ -179,16 +207,22 @@ static mx_status_t default_load_object(void* cookie,
         svc->config_prefix[len + 1] = '\0';
         return MX_OK;
     }
-    case LOADER_SVC_OP_LOAD_OBJECT: {
-        int fd = -1;
-        if (svc->config_prefix[0] != '\0')
-            fd = open_from_libpath(svc->config_prefix, fn);
-        if (fd < 0 && !svc->config_exclusive)
-            fd = open_from_libpath("", fn);
-        if (fd >= 0)
-            return load_object_fd(fd, fn, out);
-        break;
-    }
+    case LOADER_SVC_OP_LOAD_OBJECT:
+        // If a prefix is configured, try loading with that prefix first
+        if (svc->config_prefix[0] != '\0') {
+            size_t maxlen = PREFIX_MAX + strlen(fn) + 1;
+            char pfn[maxlen];
+            snprintf(pfn, maxlen, "%s%s", svc->config_prefix, fn);
+            mx_status_t status = svc->ops->load_object(svc->ctx, pfn, out);
+            if (status == MX_OK) {
+                return MX_OK;
+            }
+            if (svc->config_exclusive) {
+                return status;
+            }
+            // if non-exclusive, try loading without the prefix
+        }
+        return svc->ops->load_object(svc->ctx, fn, out);
     case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
     case LOADER_SVC_OP_LOAD_DEBUG_CONFIG:
         // When loading a script interpreter or debug configuration file,
@@ -200,17 +234,13 @@ static mx_status_t default_load_object(void* cookie,
                     fn);
             return MX_ERR_NOT_FOUND;
         }
-        int fd = open(fn, O_RDONLY);
-        if (fd >= 0)
-            return load_object_fd(fd, fn, out);
-        break;
+        return svc->ops->load_abspath(svc->ctx, fn, out);
     case LOADER_SVC_OP_PUBLISH_DATA_SINK:
-        return publish_data_sink(request_handle, fn);
+        return svc->ops->publish_data_sink(svc->ctx, fn, request_handle);
     default:
         __builtin_trap();
     }
 
-    fprintf(stderr, "dlsvc: could not open '%s'\n", fn);
     return MX_ERR_NOT_FOUND;
 }
 
@@ -260,6 +290,10 @@ static mx_status_t handle_loader_rpc(mx_handle_t h,
         // other starvation attacks.
         r = (*loader)(loader_arg, msg->opcode,
                       request_handle, (const char*) msg->data, &handle);
+        if (r == MX_ERR_NOT_FOUND) {
+            fprintf(stderr, "dlsvc: could not open '%s'\n",
+                    (const char*) msg->data);
+        }
         request_handle = MX_HANDLE_INVALID;
         msg->arg = r;
         break;
@@ -321,8 +355,11 @@ static int loader_service_thread(void* arg) {
 }
 
 mx_status_t loader_service_create(const char* name,
+                                  const loader_service_ops_t* ops,
+                                  void* ctx,
                                   loader_service_t** out) {
-    if (name == NULL || name[0] == '\0' || out == NULL) {
+    if (name == NULL || name[0] == '\0' || out == NULL ||
+        ops == NULL) {
         return MX_ERR_INVALID_ARGS;
     }
     loader_service_t* svc = calloc(1, sizeof(loader_service_t));
@@ -330,10 +367,17 @@ mx_status_t loader_service_create(const char* name,
         return MX_ERR_NO_MEMORY;
     }
 
+    svc->ops = ops;
+    svc->ctx = ctx;
     strncpy(svc->name, name, sizeof(svc->name) - 1);
     *out = svc;
 
     return MX_OK;
+}
+
+mx_status_t loader_service_create_fs(const char* name,
+                                     loader_service_t** out) {
+    return loader_service_create(name, &fs_ops, NULL, out);
 }
 
 static mx_status_t multiloader_cb(mx_handle_t h, void* cb, void* cookie) {
@@ -344,7 +388,7 @@ static mx_status_t multiloader_cb(mx_handle_t h, void* cb, void* cookie) {
     // This uses svc->dispatcher_log without grabbing the lock, but
     // it will never change once the dispatcher that called us is created.
     loader_service_t* svc = cookie;
-    return handle_loader_rpc(h, default_load_object, svc, svc->dispatcher_log);
+    return handle_loader_rpc(h, default_load_fn, svc, svc->dispatcher_log);
 }
 
 // TODO(dbort): Provide a name/id for the process that this handle will
@@ -413,7 +457,8 @@ mx_status_t loader_service_get_system(mx_handle_t* out) {
 
 // In-process multiloader
 static loader_service_t local_loader_svc = {
-    .name = "local-loader-svc"
+    .name = "local-loader-svc",
+    .ops = &fs_ops,
 };
 
 mx_status_t loader_service_get_default(mx_handle_t* out) {

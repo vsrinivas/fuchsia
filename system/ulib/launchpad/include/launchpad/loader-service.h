@@ -59,9 +59,31 @@ typedef struct loader_service loader_service_t;
 
 // Create a new file-system backed loader service capable of handling
 // any number of clients.
-mx_status_t loader_service_create(const char* name, loader_service_t** out);
+mx_status_t loader_service_create_fs(const char* name, loader_service_t** out);
 
 // Returns a new dl_set_loader_service-compatible loader service channel.
 mx_status_t loader_service_connect(loader_service_t* svc, mx_handle_t* out);
+
+
+typedef struct loader_service_ops {
+    // attempt to load a DSO from suitable library paths
+    mx_status_t (*load_object)(void* ctx, const char* name, mx_handle_t* vmo);
+
+    // attempt to load a script interpreter or debug config file
+    mx_status_t (*load_abspath)(void* ctx, const char* path, mx_handle_t* vmo);
+
+    // attempt to publish a data sink
+    // takes ownership of the provided vmo on both success and failure
+    mx_status_t (*publish_data_sink)(void* ctx, const char* name, mx_handle_t vmo);
+} loader_service_ops_t;
+
+// Create a loader service backed by custom loader ops
+mx_status_t loader_service_create(const char* name,
+                                  const loader_service_ops_t* ops, void* ctx,
+                                  loader_service_t** out);
+
+// the default publish_data_sink implementation, which publishes
+// into /tmp, provided the fs there supports such publishing
+mx_status_t loader_service_publish_data_sink_fs(const char* name, mx_handle_t vmo);
 
 __END_CDECLS

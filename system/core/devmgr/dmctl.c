@@ -120,7 +120,7 @@ mx_status_t dmctl_bind(void* ctx, mx_device_t* parent, void** cookie) {
     }
 
     // Loader service init.
-    if ((status = loader_service_create("dmctl-multiloader", &loader_svc)) < 0) {
+    if ((status = loader_service_create_fs("dmctl-multiloader", &loader_svc)) < 0) {
         // If this fails, IOCTL_DMCTL_GET_LOADER_SERVICE_CHANNEL will fail
         // and processes will fall back to using a local loader.
         // TODO: Make this fatal?
