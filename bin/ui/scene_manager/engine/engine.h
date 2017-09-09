@@ -41,7 +41,7 @@ class Engine : private FrameSchedulerDelegate {
          escher::Escher* escher,
          std::unique_ptr<escher::VulkanSwapchain> swapchain);
 
-  ~Engine();
+  ~Engine() override;
 
   DisplayManager* display_manager() const { return display_manager_; }
   escher::Escher* escher() const { return escher_; }

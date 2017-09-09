@@ -31,7 +31,7 @@ class MeshManager : public MeshBuilderFactory {
               GpuAllocator* allocator,
               GpuUploader* uploader,
               ResourceRecycler* resource_recycler);
-  ~MeshManager();
+  virtual ~MeshManager();
 
   // The returned MeshBuilder is not thread-safe.
   MeshBuilderPtr NewMeshBuilder(const MeshSpec& spec,

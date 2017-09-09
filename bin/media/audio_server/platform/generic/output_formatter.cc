@@ -100,8 +100,6 @@ OutputFormatter::OutputFormatter(const AudioMediaTypeDetailsPtr& format,
       bytes_per_sample_(bytes_per_sample),
       bytes_per_frame_(bytes_per_sample * channels) {}
 
-OutputFormatter::~OutputFormatter() {}
-
 // Selection routines which will instantiate a particular templatized version of
 // the output formatter.
 template <typename DType>

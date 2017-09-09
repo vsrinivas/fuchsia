@@ -19,7 +19,7 @@ class OutputFormatter {
   static OutputFormatterPtr Select(
       const AudioMediaTypeDetailsPtr& output_format);
 
-  ~OutputFormatter();
+  virtual ~OutputFormatter() = default;
 
   /**
    * Take frames of audio from the source intermediate buffer and convert them

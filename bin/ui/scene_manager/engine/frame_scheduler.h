@@ -28,6 +28,8 @@ using FrameTimingsPtr = ftl::RefPtr<FrameTimings>;
 // response to a frame being scheduled.
 class FrameSchedulerDelegate {
  public:
+  virtual ~FrameSchedulerDelegate() = default;
+
   // Called when it's time to apply changes to the scene graph and render
   // a new frame.  The FrameTimings object is used to accumulate timing
   // for all swapchains that are used as render targets in that frame.

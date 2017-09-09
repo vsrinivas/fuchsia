@@ -20,6 +20,8 @@ class MixerInput {
         first_pts_(first_pts) {}
 
  public:
+  virtual ~MixerInput() = default;
+
   uint32_t in_channel_count() const { return in_channel_count_; }
 
   uint32_t out_channel_count() const { return out_channel_count_; }
