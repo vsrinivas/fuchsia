@@ -35,6 +35,7 @@ const debug2 = false
 
 const MX_SOCKET_HALF_CLOSE = 1
 const MXSIO_SIGNAL_INCOMING = mx.SignalUser0
+const MXSIO_SIGNAL_OUTGOING = mx.SignalUser1
 const MXSIO_SIGNAL_CONNECTED = mx.SignalUser3
 const MXSIO_SIGNAL_HALFCLOSED = mx.SignalUser4
 const LOCAL_SIGNAL_CLOSING = mx.SignalUser5
@@ -148,9 +149,10 @@ type iostate struct {
 	dataHandle     mx.Handle
 	peerDataHandle mx.Handle // other end of dataHandle
 
-	mu      sync.Mutex
-	refs    int
-	closing bool
+	mu        sync.Mutex
+	refs      int
+	closing   bool
+	lastError *tcpip.Error // if not-nil, next error returned via getsockopt
 
 	writeBufFlushed chan struct{}
 }
@@ -504,9 +506,9 @@ func (s *socketServer) newIostate(h mx.Handle, iosOrig *iostate, netProto tcpip.
 		if ep != nil {
 			switch transProto {
 			case tcp.ProtocolNumber, udp.ProtocolNumber:
-				var t uint32;
+				var t uint32
 				if transProto == tcp.ProtocolNumber {
-					t = mx.SocketStream;
+					t = mx.SocketStream
 				} else {
 					t = mx.SocketDatagram
 				}
@@ -779,8 +781,16 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *mxio.Msg) mx.Status {
 	if opt := val.Unpack(); opt != nil {
 		switch o := opt.(type) {
 		case tcpip.ErrorOption:
+			ios.mu.Lock()
+			err := ios.lastError
+			ios.lastError = nil
+			ios.mu.Unlock()
+
+			if err == nil {
+				err = ios.ep.GetSockOpt(o)
+			}
+
 			errno := uint32(0)
-			err := ios.ep.GetSockOpt(o)
 			if err != nil {
 				// TODO: should this be a unix errno?
 				errno = uint32(mxNetError(err))
@@ -1045,9 +1055,26 @@ func (s *socketServer) opConnect(ios *iostate, msg *mxio.Msg) (status mx.Status)
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	ios.wq.EventRegister(&waitEntry, waiter.EventOut)
 	e := ios.ep.Connect(*addr)
+
+	msg.SetOff(0)
+	msg.Datalen = 0
+
 	if e == tcpip.ErrConnectStarted {
-		<-notifyCh
-		e = ios.ep.GetSockOpt(tcpip.ErrorOption{})
+		go func() {
+			<-notifyCh
+			ios.wq.EventUnregister(&waitEntry)
+			sigs := mx.Signals(MXSIO_SIGNAL_OUTGOING)
+			e = ios.ep.GetSockOpt(tcpip.ErrorOption{})
+			if err != nil {
+				ios.mu.Lock()
+				ios.lastError = e
+				ios.mu.Unlock()
+			} else {
+				sigs |= MXSIO_SIGNAL_CONNECTED
+			}
+			mx.Handle(ios.dataHandle).SignalPeer(0, sigs)
+		}()
+		return mx.ErrShouldWait
 	}
 	ios.wq.EventUnregister(&waitEntry)
 	if e != nil {
@@ -1069,8 +1096,6 @@ func (s *socketServer) opConnect(ios *iostate, msg *mxio.Msg) (status mx.Status)
 		}
 	}
 
-	msg.SetOff(0)
-	msg.Datalen = 0
 	return mx.ErrOk
 }
 
