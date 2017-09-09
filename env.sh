@@ -415,11 +415,17 @@ function fset() {
   done
 
   export FUCHSIA_BUILD_DIR="${FUCHSIA_OUT_DIR}/${FUCHSIA_VARIANT}-${FUCHSIA_GEN_TARGET}"
+  export FUCHSIA_TOOLS_DIR="${FUCHSIA_BUILD_DIR}/tools"
   export FUCHSIA_BUILD_NINJA="${FUCHSIA_BUILD_DIR}/build.ninja"
   export FUCHSIA_GEN_ARGS_CACHE="${FUCHSIA_BUILD_DIR}/build.gen-args"
   export FUCHSIA_SETTINGS="${settings}"
   export FUCHSIA_ENSURE_GOMA="${ensure_goma}"
   export GOPATH="${FUCHSIA_BUILD_DIR}"
+
+  # Add tools to path, removing prior tools directory if any.  This also
+  # matches the Magenta tools directory added by mset, so add it back too.
+  export PATH="${PATH//:${FUCHSIA_OUT_DIR}\/*\/tools}\
+:${FUCHSIA_TOOLS_DIR}:${MAGENTA_TOOLS_DIR}"
 
   # If a goma directory wasn't specified explicitly then default to "~/goma".
   if [[ -n "${goma_dir}" ]]; then
