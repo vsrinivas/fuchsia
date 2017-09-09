@@ -23,7 +23,7 @@ class LedgerImpl : public Ledger {
   class Delegate {
    public:
     Delegate() {}
-    ~Delegate() {}
+    virtual ~Delegate() = default;
 
     virtual void GetPage(convert::ExtendedStringView page_id,
                          fidl::InterfaceRequest<Page> page_request,

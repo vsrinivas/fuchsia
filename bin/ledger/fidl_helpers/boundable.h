@@ -14,6 +14,8 @@ namespace fidl_helpers {
 template <class Interface>
 class Boundable {
  public:
+  virtual ~Boundable() = default;
+
   // Binds a single interface request to the object.
   virtual void Bind(fidl::InterfaceRequest<Interface> request) = 0;
 };
