@@ -422,10 +422,19 @@ TEST_F(NetDatagramTest, PartialRecv) {
   // Read only first 2 bytes of the message. recv() is expected to discard the
   // rest.
   const int kPartialReadSize = 2;
-  int recv_result = recv(recvfd_, &recv_buf, kPartialReadSize, 0);
+
+  struct iovec iov = {};
+  iov.iov_base = recv_buf;
+  iov.iov_len = kPartialReadSize;
+  struct msghdr msg = {};
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
+
+  int recv_result = recvmsg(recvfd_, &msg, 0);
   ASSERT_EQ(recv_result, kPartialReadSize);
   ASSERT_EQ(std::string(kTestMsg, kPartialReadSize),
             std::string(recv_buf, kPartialReadSize));
+  EXPECT_EQ(msg.msg_flags, MSG_TRUNC);
 
   // Send the second packet.
   ASSERT_EQ(sendto(sendfd, kTestMsg, kTestMsgSize, 0,
@@ -433,10 +442,13 @@ TEST_F(NetDatagramTest, PartialRecv) {
             kTestMsgSize);
 
   // Read the whole packet now.
-  recv_result = recv(recvfd_, &recv_buf, kTestMsgSize, 0);
+  recv_buf[0] = 0;
+  iov.iov_len = sizeof(recv_buf);
+  recv_result = recvmsg(recvfd_, &msg, 0);
   ASSERT_EQ(recv_result, kTestMsgSize);
   ASSERT_EQ(std::string(kTestMsg, kTestMsgSize),
             std::string(recv_buf, kTestMsgSize));
+  EXPECT_EQ(msg.msg_flags, 0);
 
   ASSERT_EQ(close(sendfd), 0);
 }
