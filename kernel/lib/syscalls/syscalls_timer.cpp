@@ -24,10 +24,15 @@ mx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_ptr<mx_ha
     if (clock_id != MX_CLOCK_MONOTONIC)
         return MX_ERR_INVALID_ARGS;
 
+    auto up = ProcessDispatcher::GetCurrent();
+    mx_status_t result = up->QueryPolicy(MX_POL_NEW_TIMER);
+    if (result != MX_OK)
+        return result;
+
     fbl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
 
-    mx_status_t result = TimerDispatcher::Create(options, &dispatcher, &rights);
+    result = TimerDispatcher::Create(options, &dispatcher, &rights);
 
     if (result != MX_OK)
         return result;
@@ -36,7 +41,6 @@ mx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_ptr<mx_ha
     if (!handle)
         return MX_ERR_NO_MEMORY;
 
-    auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t hv = up->MapHandleToValue(handle);
 
     if (_out.copy_to_user(hv) != MX_OK)

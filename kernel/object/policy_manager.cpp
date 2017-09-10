@@ -42,7 +42,8 @@ union Encoding {
         uint64_t new_port        :  4;
         uint64_t new_socket      :  4;
         uint64_t new_fifo        :  4;
-        uint64_t unused_bits     : 23;
+        uint64_t new_timer       :  4;
+        uint64_t unused_bits     : 19;
         uint64_t cookie_mode     :  1;  // see kPolicyInCookie.
     };
 
@@ -61,7 +62,7 @@ constexpr uint32_t kPolicyActionValidBits =
 static_assert(sizeof(Encoding) == sizeof(pol_cookie_t), "bitfield issue");
 
 // Make sure that adding new policies forces updating this file.
-static_assert(MX_POL_MAX == 11u, "please update PolicyManager AddPolicy and QueryBasicPolicy");
+static_assert(MX_POL_MAX == 12u, "please update PolicyManager AddPolicy and QueryBasicPolicy");
 
 PolicyManager* PolicyManager::Create(uint32_t default_action) {
     fbl::AllocChecker ac;
@@ -111,7 +112,7 @@ mx_status_t PolicyManager::AddPolicy(
 
         if (in.condition == MX_POL_NEW_ANY) {
             // loop over all MX_POL_NEW_xxxx conditions.
-            for (uint32_t it = MX_POL_NEW_VMO; it <= MX_POL_NEW_FIFO; ++it) {
+            for (uint32_t it = MX_POL_NEW_VMO; it <= MX_POL_NEW_TIMER; ++it) {
                 if ((res = AddPartial(mode, existing_policy, it, in.policy, &partials[it])) < 0)
                     return res;
             }
@@ -149,6 +150,7 @@ uint32_t PolicyManager::QueryBasicPolicy(pol_cookie_t policy, uint32_t condition
     case MX_POL_NEW_PORT: return GetEffectiveAction(existing.new_port);
     case MX_POL_NEW_SOCKET: return GetEffectiveAction(existing.new_socket);
     case MX_POL_NEW_FIFO: return GetEffectiveAction(existing.new_fifo);
+    case MX_POL_NEW_TIMER: return GetEffectiveAction(existing.new_fifo);
     case MX_POL_VMAR_WX: return GetEffectiveAction(existing.vmar_wx);
     default: return MX_POL_ACTION_DENY;
     }
@@ -171,7 +173,7 @@ bool PolicyManager::CanSetEntry(uint64_t existing, uint32_t new_action) {
             resultant = in_pol & Encoding::kActionBits;                 \
             resultant |= Encoding::kExplicitBit;                        \
         } else if (mode == MX_JOB_POL_ABSOLUTE) {                       \
-            return MX_ERR_ALREADY_EXISTS;                                  \
+            return MX_ERR_ALREADY_EXISTS;                               \
         }                                                               \
     } while (0)
 
@@ -213,6 +215,9 @@ mx_status_t PolicyManager::AddPartial(uint32_t mode, pol_cookie_t existing_polic
         break;
     case MX_POL_NEW_FIFO:
         POLMAN_SET_ENTRY(mode, existing.new_fifo, policy, result.new_fifo);
+        break;
+    case MX_POL_NEW_TIMER:
+        POLMAN_SET_ENTRY(mode, existing.new_timer, policy, result.new_timer);
         break;
     default:
         return MX_ERR_NOT_SUPPORTED;

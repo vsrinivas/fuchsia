@@ -65,6 +65,8 @@ Where *condition* is one of
   a new socket.
 + **MX_POL_NEW_FIFO** a process under this job is attempting to create
   a new fifo.
++ **MX_POL_NEW_TIMER** a process under this job is attempting to create
+  a new timer.
 + **MX_POL_NEW_ANY** is a special *condition* that stands for all of
   the above **MX_NEW** condtions such as **MX_POL_NEW_VMO**,
   **MX_POL_NEW_CHANNEL**, **MX_POL_NEW_EVENT**, **MX_POL_NEW_EVPAIR**,
