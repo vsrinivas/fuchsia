@@ -43,7 +43,7 @@ static_library("common") {
   }
 
   if (is_linux) {
-    deps += [ "third_party:glfw" ]
+    deps += [ "//third_party/glfw" ]
     sources += [
       "demo_harness_linux.cc",
       "demo_harness_linux.h",
@@ -55,6 +55,6 @@ static_library("common") {
       "Xrandr",
     ]
 
-    include_dirs += [ "third_party/glfw/include" ]
+    include_dirs += [ "//third_party/glfw/include" ]
   }
 }
