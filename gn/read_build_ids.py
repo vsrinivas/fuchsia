@@ -12,32 +12,28 @@ import subprocess
 import sys
 
 
-def read_build_id(readobj, path):
-    buildid_re = re.compile('.*Build ID: ([0-9a-z]+)$')
+BUILDID_RE = re.compile('.*Build ID: ([0-9a-z]+)$')
+
+def read_build_id(path):
     if os.path.isfile(path):
         try:
-            readobj_cmd = [readobj, '-elf-output-style=GNU', '-notes', path]
-            readobj_output = subprocess.check_output(
-                readobj_cmd, stderr=subprocess.STDOUT)
+            readelf_output = subprocess.check_output(
+                [paths.build_tool('clang', 'llvm-readelf'), '-n', path],
+                stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError:
             return None
-        for readobj_line in readobj_output.split('\n'):
-            match = buildid_re.match(readobj_line)
+        for readelf_line in readelf_output.split('\n'):
+            match = BUILDID_RE.match(readelf_line)
             if match is not None:
                 return match.group(1)
     return None
 
 
-def readobj_path():
-    return os.path.join(paths.BUILDTOOLS_PATH, 'clang', 'bin', 'llvm-readobj')
-
-
 def main():
-    readobj = readobj_path()
     buildids = []
     build_id_file = sys.argv[1]
     for path in sys.argv[2:]:
-        buildid = read_build_id(readobj, path)
+        buildid = read_build_id(path)
         if buildid:
             # 'path' will be the path to the stripped binary e.g.:
             #   /foo/out/debug-x86-64/happy_bunny_test
@@ -53,8 +49,7 @@ def main():
                 unstripped_path = os.path.join(path_dir,
                                                location,
                                                path_base)
-                unstripped_buildid = read_build_id(readobj,
-                                                   unstripped_path)
+                unstripped_buildid = read_build_id(unstripped_path)
                 if unstripped_buildid == buildid:
                     path = unstripped_path
                     break

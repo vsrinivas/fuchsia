@@ -11,35 +11,17 @@ import re
 import subprocess
 import sys
 
-
-def read_build_id(readobj, path):
-    buildid_re = re.compile('.*Build ID: ([0-9a-z]+)$')
-    if os.path.isfile(path):
-        try:
-            readobj_cmd = [readobj, '-elf-output-style=GNU', '-notes', path]
-            readobj_output = subprocess.check_output(
-                readobj_cmd, stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError:
-            return None
-        for readobj_line in readobj_output.split('\n'):
-            match = buildid_re.match(readobj_line)
-            if match is not None:
-                return match.group(1)
-    return None
+from read_build_ids import read_build_id
 
 
-def readobj_path():
-    return os.path.join(paths.BUILDTOOLS_PATH, 'clang', 'bin', 'llvm-readobj')
-
-
-def parse_build_ids_from_manifest(manifest, buildids, readobj):
+def parse_build_ids_from_manifest(manifest, buildids):
     with open(manifest) as manifest_contents:
         for line in manifest_contents:
             equal_sign = line.find('=')
             if equal_sign == -1:
                 continue
             path = line[equal_sign + 1:].strip()
-            buildid = read_build_id(readobj, path)
+            buildid = read_build_id(path)
             if buildid:
                 # 'path' will be the path to the stripped binary e.g.:
                 #   /foo/out/debug-x86-64/happy_bunny_test
@@ -55,8 +37,7 @@ def parse_build_ids_from_manifest(manifest, buildids, readobj):
                     unstripped_path = os.path.join(path_dir,
                                                    location,
                                                    path_base)
-                    unstripped_buildid = read_build_id(readobj,
-                                                       unstripped_path)
+                    unstripped_buildid = read_build_id(unstripped_path)
                     if unstripped_buildid == buildid:
                         path = unstripped_path
                         break
@@ -86,13 +67,12 @@ def main():
     parser.add_argument('packages', nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
-    readobj = readobj_path()
     buildids = []
     out_targs = {}
 
     for manifest in [args.boot_manifest, args.system_manifest]:
         if os.path.exists(manifest):
-            parse_build_ids_from_manifest(manifest, buildids, readobj)
+            parse_build_ids_from_manifest(manifest, buildids)
 
     mkbootfs_cmd = [paths.MKBOOTFS_PATH, '-c']
     mkbootfs_cmd += ['-o', args.output_file]
