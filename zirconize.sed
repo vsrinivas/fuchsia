@@ -1,0 +1,12 @@
+s/magenta/zircon/g
+s/MAGENTA/ZIRCON/g
+s/Magenta/Zircon/g
+s/^mx\([^A-Za-z0-9]\)/zx\1/g
+s/^MX\([^A-Za-z0-9]\)/ZX\1/g
+s/\([^A-Za-z0-9]\)mx\([^A-Za-z0-9]\)/\1zx\2/g
+s/\([^A-Za-z0-9]\)MX\([^A-Za-z0-9]\)/\1ZX\2/g
+s/mx\([^A-Za-z0-9]\)$/zx\1/g
+s/MX\([^A-Za-z0-9]\)$/ZX\1/g
+s/mxtl/fbl/g
+s/mxio/fdio/g
+s/mxcpp/zxcpp/g
