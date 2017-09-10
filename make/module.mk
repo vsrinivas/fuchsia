@@ -157,11 +157,15 @@ MODULE_COMPILEFLAGS += -include $(MODULE_CONFIG)
 
 MODULE_SRCDEPS += $(MODULE_CONFIG)
 
-MODULE_ELIDED := false
 ifeq ($(call TOBOOL,$(ENABLE_ULIB_ONLY)),true)
-ifneq ($(MODULE_TYPE),userlib)
-MODULE_ELIDED := true
-endif
+# Build all userlib modules, and also always build devhost, which is
+# sort of like an inside-out userlib (drivers need their devhost like
+# executables need their shared libraries).  Elide everything else.
+MODULE_ELIDED := \
+    $(call TOBOOL,$(filter-out userlib:% userapp:system/core/devmgr.host,\
+			       $(MODULE_TYPE):$(MODULE)))
+else
+MODULE_ELIDED := false
 endif
 
 ifeq ($(MODULE_ELIDED),true)
