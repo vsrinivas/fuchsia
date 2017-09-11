@@ -90,7 +90,7 @@ struct arch_exception_context {
 };
 
 struct thread;
-extern void arm64_exception_base(void);
+extern void arm64_el1_exception_base(void);
 void arm64_el3_to_el1(void);
 void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags);
 

@@ -11,7 +11,7 @@
 #include <arch/arm64.h>
 #include <arch/arm64/exceptions.h>
 
-.section .text.boot.vectab,"ax",@progbits
+.section .text.boot.vectab.el1,"ax",@progbits
 .align 12
 
 #define DW_REG_lr   30
@@ -248,102 +248,103 @@ mark_lr_sp_inaccessible
     b  arm64_exc_shared_restore_long
 .endm
 
-FUNCTION_LABEL(arm64_exception_base)
+FUNCTION_LABEL(arm64_el1_exception_base)
 
 /* exceptions from current EL, using SP0 */
-LOCAL_FUNCTION_LABEL(arm64_sync_exc_current_el_SP0)
+.org 0x000
+LOCAL_FUNCTION_LABEL(arm64_el1_sync_exc_current_el_SP0)
     invalid_exception 0
-END_FUNCTION(arm64_sync_exc_current_el_SP0)
+END_FUNCTION(arm64_el1_sync_exc_current_el_SP0)
 
 .org 0x080
-LOCAL_FUNCTION_LABEL(arm64_irq_current_el_SP0)
+LOCAL_FUNCTION_LABEL(arm64_el1_irq_current_el_SP0)
     invalid_exception 1
-END_FUNCTION(arm64_irq_current_el_SP0)
+END_FUNCTION(arm64_el1_irq_current_el_SP0)
 
 .org 0x100
-LOCAL_FUNCTION_LABEL(arm64_fiq_current_el_SP0)
+LOCAL_FUNCTION_LABEL(arm64_el1_fiq_current_el_SP0)
     invalid_exception 2
-END_FUNCTION(arm64_fiq_current_el_SP0)
+END_FUNCTION(arm64_el1_fiq_current_el_SP0)
 
 .org 0x180
-LOCAL_FUNCTION_LABEL(arm64_err_exc_current_el_SP0)
+LOCAL_FUNCTION_LABEL(arm64_el1_err_exc_current_el_SP0)
     invalid_exception 3
-END_FUNCTION(arm64_err_exc_current_el_SP0)
+END_FUNCTION(arm64_el1_err_exc_current_el_SP0)
 
 /* exceptions from current EL, using SPx */
 .org 0x200
-LOCAL_FUNCTION_LABEL(arm64_sync_exc_current_el_SPx)
+LOCAL_FUNCTION_LABEL(arm64_el1_sync_exc_current_el_SPx)
     sync_exception #0 /* same EL, arm64 */
-END_FUNCTION(arm64_sync_exc_current_el_SPx)
+END_FUNCTION(arm64_el1_sync_exc_current_el_SPx)
 
 .org 0x280
-LOCAL_FUNCTION_LABEL(arm64_irq_current_el_SPx)
+LOCAL_FUNCTION_LABEL(arm64_el1_irq_current_el_SPx)
     irq_exception #0 /* same EL, arm64 */
-END_FUNCTION(arm64_irq_current_el_SPx)
+END_FUNCTION(arm64_el1_irq_current_el_SPx)
 
 .org 0x300
-LOCAL_FUNCTION_LABEL(arm64_fiq_current_el_SPx)
+LOCAL_FUNCTION_LABEL(arm64_el1_fiq_current_el_SPx)
     start_isr_func
     regsave_short
     mov x0, sp
     bl  platform_fiq
     b  arm64_exc_shared_restore_short
-END_FUNCTION(arm64_fiq_current_el_SPx)
+END_FUNCTION(arm64_el1_fiq_current_el_SPx)
 
 .org 0x380
-LOCAL_FUNCTION_LABEL(arm64_err_exc_current_el_SPx)
+LOCAL_FUNCTION_LABEL(arm64_el1_err_exc_current_el_SPx)
     invalid_exception 0x13
-END_FUNCTION(arm64_err_exc_current_el_SPx)
+END_FUNCTION(arm64_el1_err_exc_current_el_SPx)
 
 /* exceptions from lower EL, running arm64 */
 .org 0x400
-LOCAL_FUNCTION_LABEL(arm64_sync_exc_lower_el_64)
+LOCAL_FUNCTION_LABEL(arm64_el1_sync_exc_lower_el_64)
     sync_exception #(ARM64_EXCEPTION_FLAG_LOWER_EL)
-END_FUNCTION(arm64_sync_exc_lower_el_64)
+END_FUNCTION(arm64_el1_sync_exc_lower_el_64)
 
 .org 0x480
-LOCAL_FUNCTION_LABEL(arm64_irq_lower_el_64)
+LOCAL_FUNCTION_LABEL(arm64_el1_irq_lower_el_64)
     irq_exception #(ARM64_EXCEPTION_FLAG_LOWER_EL)
-END_FUNCTION(arm64_irq_lower_el_64)
+END_FUNCTION(arm64_el1_irq_lower_el_64)
 
 .org 0x500
-LOCAL_FUNCTION_LABEL(arm64_fiq_lower_el_64)
+LOCAL_FUNCTION_LABEL(arm64_el1_fiq_lower_el_64)
     start_isr_func
     regsave_short
     mov x0, sp
     bl  platform_fiq
     b  arm64_exc_shared_restore_short
-END_FUNCTION(arm64_fiq_lower_el_64)
+END_FUNCTION(arm64_el1_fiq_lower_el_64)
 
 .org 0x580
-LOCAL_FUNCTION_LABEL(arm64_err_exc_lower_el_64)
+LOCAL_FUNCTION_LABEL(arm64_el1_err_exc_lower_el_64)
     invalid_exception 0x23
-END_FUNCTION(arm64_err_exc_lower_el_64)
+END_FUNCTION(arm64_el1_err_exc_lower_el_64)
 
 /* exceptions from lower EL, running arm32 */
 .org 0x600
-LOCAL_FUNCTION_LABEL(arm64_sync_exc_lower_el_32)
+LOCAL_FUNCTION_LABEL(arm64_el1_sync_exc_lower_el_32)
     sync_exception #(ARM64_EXCEPTION_FLAG_LOWER_EL|ARM64_EXCEPTION_FLAG_ARM32)
-END_FUNCTION(arm64_sync_exc_lower_el_32)
+END_FUNCTION(arm64_el1_sync_exc_lower_el_32)
 
 .org 0x680
-LOCAL_FUNCTION_LABEL(arm64_irq_lower_el_32)
+LOCAL_FUNCTION_LABEL(arm64_el1_irq_lower_el_32)
     irq_exception #(ARM64_EXCEPTION_FLAG_LOWER_EL|ARM64_EXCEPTION_FLAG_ARM32)
-END_FUNCTION(arm64_irq_lower_el_32)
+END_FUNCTION(arm64_el1_irq_lower_el_32)
 
 .org 0x700
-LOCAL_FUNCTION_LABEL(arm64_fiq_lower_el_32)
+LOCAL_FUNCTION_LABEL(arm64_el1_fiq_lower_el_32)
     start_isr_func
     regsave_short
     mov x0, sp
     bl  platform_fiq
     b  arm64_exc_shared_restore_short
-END_FUNCTION(arm64_fiq_lower_el_32)
+END_FUNCTION(arm64_el1_fiq_lower_el_32)
 
 .org 0x780
-LOCAL_FUNCTION_LABEL(arm64_err_exc_lower_el_32)
+LOCAL_FUNCTION_LABEL(arm64_el1_err_exc_lower_el_32)
     invalid_exception 0x33
-END_FUNCTION(arm64_err_exc_lower_el_32)
+END_FUNCTION(arm64_el1_err_exc_lower_el_32)
 
 /* If an IRQ happened in userspace, and either the thread was signaled or
    needs to be rescheduled, then we end up here after arm64_irq returns.

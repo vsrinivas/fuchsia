@@ -185,7 +185,7 @@ static void arm64_cpu_early_init(void)
     ASSERT( (mmfr0 & ARM64_MMFR0_ASIDBITS_MASK) == ARM64_MMFR0_ASIDBITS_16);
 
     /* set the vector base */
-    ARM64_WRITE_SYSREG(VBAR_EL1, (uint64_t)&arm64_exception_base);
+    ARM64_WRITE_SYSREG(VBAR_EL1, (uint64_t)&arm64_el1_exception_base);
 
     /* set some control bits in sctlr */
     uint64_t sctlr = ARM64_READ_SYSREG(sctlr_el1);
