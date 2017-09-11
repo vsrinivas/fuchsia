@@ -13,11 +13,10 @@ const ResourceTypeInfo DisplayCompositor::kTypeInfo = {
     ResourceType::kCompositor | ResourceType::kDisplayCompositor,
     "DisplayCompositor"};
 
-DisplayCompositor::DisplayCompositor(
-    Session* session,
-    scenic::ResourceId id,
-    Display* display,
-    std::unique_ptr<DisplaySwapchain> swapchain)
+DisplayCompositor::DisplayCompositor(Session* session,
+                                     scenic::ResourceId id,
+                                     Display* display,
+                                     std::unique_ptr<Swapchain> swapchain)
     : Compositor(session,
                  id,
                  DisplayCompositor::kTypeInfo,

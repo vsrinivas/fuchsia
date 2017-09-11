@@ -12,6 +12,7 @@
 #include "garnet/bin/ui/scene_manager/engine/frame_timings.h"
 #include "garnet/bin/ui/scene_manager/engine/session.h"
 #include "garnet/bin/ui/scene_manager/engine/session_handler.h"
+#include "garnet/bin/ui/scene_manager/engine/vulkan_display_swapchain.h"
 #include "garnet/bin/ui/scene_manager/resources/compositor/compositor.h"
 #include "garnet/bin/ui/scene_manager/resources/nodes/traversal.h"
 #include "lib/escher/renderer/paper_renderer.h"
@@ -88,11 +89,10 @@ void Engine::CreateSession(
   ++session_count_;
 }
 
-std::unique_ptr<DisplaySwapchain> Engine::CreateDisplaySwapchain(
-    Display* display) {
+std::unique_ptr<Swapchain> Engine::CreateDisplaySwapchain(Display* display) {
   FXL_DCHECK(!display->is_claimed());
-  return std::make_unique<DisplaySwapchain>(display, event_timestamper(),
-                                            escher());
+  return std::make_unique<VulkanDisplaySwapchain>(display, event_timestamper(),
+                                                  escher());
 }
 
 std::unique_ptr<SessionHandler> Engine::CreateSessionHandler(

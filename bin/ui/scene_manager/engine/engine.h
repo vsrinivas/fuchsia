@@ -14,7 +14,6 @@
 #include "lib/escher/vk/simple_image_factory.h"
 
 #include "garnet/bin/ui/scene_manager/displays/display_manager.h"
-#include "garnet/bin/ui/scene_manager/engine/display_swapchain.h"
 #include "garnet/bin/ui/scene_manager/engine/frame_scheduler.h"
 #include "garnet/bin/ui/scene_manager/engine/resource_linker.h"
 #include "garnet/bin/ui/scene_manager/resources/import.h"
@@ -29,6 +28,7 @@ using SessionId = uint64_t;
 class Compositor;
 class Session;
 class SessionHandler;
+class Swapchain;
 
 // Owns a group of sessions which can share resources with one another
 // using the same resource linker and which coexist within the same timing
@@ -85,7 +85,7 @@ class Engine : private FrameSchedulerDelegate {
 
   // Create a swapchain for the specified display.  The display must not already
   // be claimed by another swapchain.
-  std::unique_ptr<DisplaySwapchain> CreateDisplaySwapchain(Display* display);
+  std::unique_ptr<Swapchain> CreateDisplaySwapchain(Display* display);
 
   // Finds the session handler corresponding to the given id.
   SessionHandler* FindSession(SessionId id);

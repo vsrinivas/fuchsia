@@ -6,10 +6,19 @@
 
 #include "garnet/bin/ui/scene_manager/engine/swapchain.h"
 
+#include <zx/event.h>
+#include <zx/handle.h>
+#include <zx/vmo.h>
+#include <vulkan/vulkan.hpp>
+
+#include "garnet/bin/ui/scene_manager/engine/magma_buffer.h"
+#include "garnet/bin/ui/scene_manager/engine/magma_connection.h"
+#include "garnet/bin/ui/scene_manager/engine/magma_semaphore.h"
+#include "garnet/bin/ui/scene_manager/sync/fence_listener.h"
 #include "lib/escher/resources/resource_manager.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/vk/vulkan_device_queues.h"
-#include "lib/escher/vk/vulkan_swapchain.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace scene_manager {
 
@@ -17,7 +26,7 @@ class Display;
 class EventTimestamper;
 
 // DisplaySwapchain implements the Swapchain interface by using a Vulkan
-// swapchain to present images to a physical display.
+// swapchain to present images to a physical display using the Magma API.
 class DisplaySwapchain : public Swapchain {
  public:
   DisplaySwapchain(Display* display,
@@ -25,26 +34,42 @@ class DisplaySwapchain : public Swapchain {
                    escher::Escher* escher);
   ~DisplaySwapchain() override;
 
-  void InitializeVulkanSwapchain(Display* display,
-                                 escher::VulkanDeviceQueues* device_queues,
-                                 escher::ResourceRecycler* recycler);
-
   // |Swapchain|
   bool DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
                            DrawCallback draw_callback) override;
 
  private:
+  struct Framebuffer {
+    zx::vmo vmo;
+    escher::GpuMemPtr device_memory;
+    escher::ImagePtr escher_image;
+    MagmaBuffer magma_buffer;
+  };
+
+  struct Semaphore {
+    std::unique_ptr<FenceListener> fence;
+    escher::SemaphorePtr escher_semaphore;
+    MagmaSemaphore magma_semaphore;
+  };
+
+  bool InitializeFramebuffers(escher::ResourceRecycler* resource_recycler);
+
+  Semaphore Export(escher::SemaphorePtr escher_semaphore);
+
   Display* const display_;
   EventTimestamper* const event_timestamper_;
-  escher::VulkanSwapchain swapchain_;
-  uint32_t swapchain_image_count_ = 0;
+  MagmaConnection magma_connection_;
+
+  vk::Format format_;
   vk::Device device_;
   vk::Queue queue_;
 
+  const escher::VulkanDeviceQueues::ProcAddrs& vulkan_proc_addresses_;
+
   size_t next_semaphore_index_ = 0;
 
-  std::vector<escher::SemaphorePtr> image_available_semaphores_;
-  std::vector<escher::SemaphorePtr> render_finished_semaphores_;
+  std::vector<Framebuffer> swapchain_buffers_;
+  std::vector<Semaphore> image_available_semaphores_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DisplaySwapchain);
 };

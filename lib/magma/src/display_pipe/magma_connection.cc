@@ -9,6 +9,7 @@
 #include "lib/fxl/logging.h"
 #include "garnet/lib/magma/src/display_pipe/magma_connection.h"
 
+// TODO(MZ-386): Don't hardcode display name.
 const char* kDeviceName = "/dev/class/display/000";
 
 MagmaConnection::MagmaConnection() : fd_(-1), conn_(nullptr) {

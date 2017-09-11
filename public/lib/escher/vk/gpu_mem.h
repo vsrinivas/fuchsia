@@ -28,7 +28,7 @@ class GpuMem : public fxl::RefCountedThreadSafe<GpuMem> {
                        vk::MemoryPropertyFlags flags);
 
   // Create a GpuMem that takes ownership of |mem|, which will be destroyed hen
-  // the GpuMem dies.
+  // the GpuMem dies. Guaranteed to return non-null result.
   static GpuMemPtr New(vk::Device device,
                        vk::DeviceMemory mem,
                        vk::DeviceSize size,

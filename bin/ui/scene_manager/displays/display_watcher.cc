@@ -46,6 +46,7 @@ void DisplayWatcher::HandleDevice(DisplayReadyCallback callback,
     return;
   }
 
+  // TODO(MZ-386): Use a MagmaConnection instead of ioctl_display_get_fb_t.
   // Perform an ioctl to get display width and height.
   ioctl_display_get_fb_t description;
   ssize_t result = ioctl_display_get_fb(fd.get(), &description);

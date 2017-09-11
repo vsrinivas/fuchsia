@@ -19,7 +19,7 @@ class DisplayCompositor : public Compositor {
   DisplayCompositor(Session* session,
                     scenic::ResourceId id,
                     Display* display,
-                    std::unique_ptr<DisplaySwapchain> swapchain);
+                    std::unique_ptr<Swapchain> swapchain);
 
   ~DisplayCompositor() override;
 

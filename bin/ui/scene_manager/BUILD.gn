@@ -52,6 +52,12 @@ source_set("common") {
     "engine/hit.h",
     "engine/hit_tester.cc",
     "engine/hit_tester.h",
+    "engine/magma_buffer.cc",
+    "engine/magma_buffer.h",
+    "engine/magma_connection.cc",
+    "engine/magma_connection.h",
+    "engine/magma_semaphore.cc",
+    "engine/magma_semaphore.h",
     "engine/resource_linker.cc",
     "engine/resource_linker.h",
     "engine/resource_map.cc",
@@ -63,6 +69,8 @@ source_set("common") {
     "engine/swapchain.h",
     "engine/unresolved_imports.cc",
     "engine/unresolved_imports.h",
+    "engine/vulkan_display_swapchain.cc",
+    "engine/vulkan_display_swapchain.h",
     "resources/buffer.cc",
     "resources/buffer.h",
     "resources/camera.cc",
@@ -163,6 +171,7 @@ source_set("common") {
   public_configs = [ ":common_include_dirs" ]
 
   deps = [
+    "//garnet/lib/magma:libmagma",
     "//garnet/public/lib/vulkan",
     "//zircon/system/ulib/trace",
   ]

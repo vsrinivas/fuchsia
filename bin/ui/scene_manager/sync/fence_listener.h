@@ -35,6 +35,8 @@ class FenceListener {
   // Returns whether this fence has been signalled.
   bool ready() const { return ready_; }
 
+  const zx::event& event() { return fence_; }
+
  private:
   async_wait_result_t OnFenceSignalled(zx_status_t status,
                                        const zx_packet_signal* signal);
