@@ -38,7 +38,7 @@ source_set("trace_app") {
 
   public_deps = [
     "//garnet/public/lib/app/cpp",
-    "//apps/network/services",
+    "//garnet/public/lib/network/fidl",
     "//apps/tracing/lib/measure",
     "//apps/tracing/lib/trace:internal_fields",
     "//apps/tracing/lib/trace:reader",

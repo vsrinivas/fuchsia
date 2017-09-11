@@ -8,8 +8,8 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include "apps/network/services/url_loader.fidl.h"
-#include "apps/network/services/url_request.fidl.h"
+#include "lib/network/fidl/url_loader.fidl.h"
+#include "lib/network/fidl/url_request.fidl.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/mtl/vmo/strings.h"
 

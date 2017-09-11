@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "apps/network/services/network_service.fidl.h"
+#include "lib/network/fidl/network_service.fidl.h"
 #include "apps/tracing/lib/measure/results.h"
 #include "apps/tracing/src/trace/spec.h"
 

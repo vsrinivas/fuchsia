@@ -6,7 +6,7 @@
 #include <iostream>
 #include <unordered_set>
 
-#include "apps/network/services/network_service.fidl.h"
+#include "lib/network/fidl/network_service.fidl.h"
 #include "apps/tracing/src/trace/commands/record.h"
 #include "apps/tracing/src/trace/results_output.h"
 #include "lib/fxl/files/file.h"
