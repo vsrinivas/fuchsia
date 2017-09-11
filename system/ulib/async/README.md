@@ -13,9 +13,10 @@ for other abstractions such as the FIDL bindings.
 The async package consists of three libraries:
 
 - `libasync.a` provides the client API which includes all of the functions
-declared in [async/wait.h](include/async/wait.h),
-[async/wait_with_timeout.h](include/async/wait_with_timeout.h),
-[async/task.h](include/async/task.h), and [async/receiver.h](include/async/receiver.h).
+and structures declared in [async/dispatcher.h](include/async/dispatcher.h),
+[async/wait.h](include/async/wait.h), [async/wait_with_timeout.h](include/async/wait_with_timeout.h),
+[async/task.h](include/async/task.h), [async/receiver.h](include/async/receiver.h),
+[async/auto_wait.h](include/async/auto_wait.h), and [async/auto_task.h](include/async/auto_task.h).
 This library must be statically linked into clients.
 
 - `libasync-loop.a` provides a general-purpose thread-safe message loop
