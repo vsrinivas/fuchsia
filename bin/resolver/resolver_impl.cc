@@ -8,8 +8,8 @@
 #include "apps/maxwell/src/resolver/resolver_impl.h"
 
 #include "apps/modular/lib/rapidjson/rapidjson.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/macros.h"
 #include "third_party/rapidjson/rapidjson/schema.h"
 
 namespace resolver {
@@ -49,7 +49,7 @@ bool MatchDataPrecondition(const rapidjson::Value& condition,
 bool MatchProperties(const rapidjson::Value& test_args,
                      const rapidjson::Value& data,
                      MatchScore* score) {
-  FTL_CHECK(test_args.IsObject());
+  FXL_CHECK(test_args.IsObject());
   if (!data.IsObject()) {
     return false;
   }
@@ -72,7 +72,7 @@ bool MatchProperties(const rapidjson::Value& test_args,
 bool MatchAny(const rapidjson::Value& test_args,
               const rapidjson::Value& member,
               MatchScore* score) {
-  FTL_CHECK(test_args.IsArray());
+  FXL_CHECK(test_args.IsArray());
 
   for (auto it = test_args.Begin(); it != test_args.End(); ++it) {
     if (MatchDataPrecondition(*it, member, score)) {
@@ -113,7 +113,7 @@ struct ModuleResolution {
 void ResolverImpl::ResolveModules(const fidl::String& contract,
                                   const fidl::String& json_data,
                                   const ResolveModulesCallback& callback) {
-  FTL_CHECK(!!component_index_);
+  FXL_CHECK(!!component_index_);
 
   rapidjson::Document document;
   document.SetObject();
@@ -132,7 +132,7 @@ void ResolverImpl::ResolveModules(const fidl::String& contract,
         rapidjson::Document data;
         if (!!json_data) {
           if (data.Parse(json_data.get().c_str()).HasParseError()) {
-            FTL_LOG(WARNING) << "Parse error.";
+            FXL_LOG(WARNING) << "Parse error.";
             callback(fidl::Array<ModuleInfoPtr>::New(0));
             return;
           }
@@ -143,7 +143,7 @@ void ResolverImpl::ResolveModules(const fidl::String& contract,
         for (auto it = components.begin(); components.end() != it; ++it) {
           rapidjson::Document manifest;
           if (manifest.Parse((*it)->raw.get().c_str()).HasParseError()) {
-            FTL_LOG(WARNING)
+            FXL_LOG(WARNING)
                 << "Parse error for manifest of " << (*it)->component->url;
             continue;
           }
@@ -158,19 +158,19 @@ void ResolverImpl::ResolveModules(const fidl::String& contract,
               MatchScore score =
                   (MatchScore)(modular::JsonValueToString(schema_doc).length() *
                                kSchemaMatchFactor);
-              FTL_LOG(INFO) << "Resolved to " << url << " with score " << score;
+              FXL_LOG(INFO) << "Resolved to " << url << " with score " << score;
               raw_results.push_back({url, score});
             }
           } else if (data.IsNull() ||
                      !module_facet.HasMember("data_preconditions")) {
-            FTL_LOG(INFO) << "Resolved to " << url << " with score "
+            FXL_LOG(INFO) << "Resolved to " << url << " with score "
                           << kDefaultMatch << " (default)";
             raw_results.push_back({url, kDefaultMatch});
           } else {
             MatchScore score;
             if (MatchDataPrecondition(module_facet["data_preconditions"], data,
                                       &score)) {
-              FTL_LOG(INFO) << "Resolved to " << url << " with score " << score;
+              FXL_LOG(INFO) << "Resolved to " << url << " with score " << score;
               raw_results.push_back({url, score});
             }
           }

@@ -97,11 +97,11 @@ ContextRepository::Id CreateSubscriptionId() {
 void LogInvalidAncestorMetadata(const ContextMetadataPtr& from,
                                 ContextMetadataPtr* to,
                                 const char* type) {
-  FTL_LOG(WARNING) << "Context value and ancestor both have metadata type ("
+  FXL_LOG(WARNING) << "Context value and ancestor both have metadata type ("
                    << type
                    << "), which is not allowed. Ignoring value metadata.";
-  FTL_LOG(WARNING) << "Value metadata: " << *to;
-  FTL_LOG(WARNING) << "Ancestor metadata: " << from;
+  FXL_LOG(WARNING) << "Value metadata: " << *to;
+  FXL_LOG(WARNING) << "Ancestor metadata: " << from;
 }
 
 void MergeMetadata(const ContextMetadataPtr& from, ContextMetadataPtr* to) {
@@ -137,7 +137,7 @@ bool ContextRepository::Contains(const Id& id) const {
 
 ContextRepository::Id ContextRepository::Add(const Id& parent_id,
                                              ContextValuePtr value) {
-  FTL_DCHECK(values_.find(parent_id) != values_.end()) << parent_id;
+  FXL_DCHECK(values_.find(parent_id) != values_.end()) << parent_id;
   return AddInternal(parent_id, std::move(value));
 }
 
@@ -150,7 +150,7 @@ void ContextRepository::Update(const Id& id, ContextValuePtr value) {
   // spurious update computation.
 
   auto it = values_.find(id);
-  FTL_DCHECK(it != values_.end()) << id;
+  FXL_DCHECK(it != values_.end()) << id;
   it->second.value = std::move(value);
   it->second.version++;
 
@@ -161,7 +161,7 @@ void ContextRepository::Update(const Id& id, ContextValuePtr value) {
   auto children = graph_.GetChildrenRecursive(id);
   for (const auto& child : children) {
     auto child_it = values_.find(child);
-    FTL_DCHECK(child_it != values_.end()) << child;
+    FXL_DCHECK(child_it != values_.end()) << child;
     update.updated_values.push_back(&child_it->second);
   }
   ReindexAndNotify(std::move(update));
@@ -170,7 +170,7 @@ void ContextRepository::Update(const Id& id, ContextValuePtr value) {
 
 ContextRepository::Id ContextRepository::AddInternal(const Id& parent_id,
                                                      ContextValuePtr value) {
-  FTL_DCHECK(value);
+  FXL_DCHECK(value);
   const auto new_id = CreateValueId();
 
   // Add the new value to |values_|.
@@ -201,7 +201,7 @@ ContextRepository::Id ContextRepository::AddInternal(const Id& parent_id,
 void ContextRepository::Remove(const Id& id) {
   auto it = values_.find(id);
   if (it == values_.end()) {
-    FTL_LOG(WARNING) << "Attempting to remove non-existent value: " << id;
+    FXL_LOG(WARNING) << "Attempting to remove non-existent value: " << id;
     return;
   }
   InProgressUpdate update;
@@ -211,7 +211,7 @@ void ContextRepository::Remove(const Id& id) {
   auto children = graph_.GetChildrenRecursive(id);
   for (const auto& child : children) {
     auto child_it = values_.find(child);
-    FTL_DCHECK(child_it != values_.end()) << child;
+    FXL_DCHECK(child_it != values_.end()) << child;
     update.updated_values.push_back(&child_it->second);
   }
   values_.erase(it);
@@ -251,7 +251,7 @@ ContextRepository::Id ContextRepository::AddSubscription(
   subscription.debug_info = std::move(debug_info);
   const auto id = CreateSubscriptionId();
   auto it = subscriptions_.emplace(id, std::move(subscription));
-  FTL_DCHECK(it.second);
+  FXL_DCHECK(it.second);
 
   // Notify the listener immediately of our current state.
   QueryAndMaybeNotify(&it.first->second, true /* force */);
@@ -279,7 +279,7 @@ void ContextRepository::AddDebugBinding(
 
 void ContextRepository::RemoveSubscription(Id id) {
   auto it = subscriptions_.find(id);
-  FTL_DCHECK(it != subscriptions_.end());
+  FXL_DCHECK(it != subscriptions_.end());
   subscriptions_.erase(it);
 
   debug_->OnSubscriptionRemoved(id);
@@ -300,7 +300,7 @@ void ContextRepository::QueryAndMaybeNotify(Subscription* const subscription,
     update->values[key] = fidl::Array<ContextValuePtr>::New(0);
     for (const auto& id : values) {
       auto it = values_.find(id);
-      FTL_DCHECK(it != values_.end()) << id;
+      FXL_DCHECK(it != values_.end()) << id;
       matching_id_version.insert(std::make_pair(id, it->second.version));
       update->values[key].push_back(GetMerged(id));
     }
@@ -349,7 +349,7 @@ void ContextRepository::RecomputeMergedMetadata(ValueInternal* const value) {
   std::vector<Id> ancestors = graph_.GetAncestors(value->id);
   for (const auto& ancestor_id : ancestors) {
     const auto& it = values_.find(ancestor_id);
-    FTL_DCHECK(it != values_.end());
+    FXL_DCHECK(it != values_.end());
     const auto& ancestor_value = it->second;
     MergeMetadata(ancestor_value.value->meta, &value->merged_metadata);
   }

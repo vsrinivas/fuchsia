@@ -112,7 +112,7 @@ void ContextIndex::Remove(Id id,
 void ContextIndex::Query(ContextValueType type,
                          const ContextMetadataPtr& metadata,
                          std::set<ContextIndex::Id>* out) {
-  FTL_DCHECK(out != nullptr);
+  FXL_DCHECK(out != nullptr);
 
   auto keys = internal::EncodeMetadataAndType(type, metadata);
   std::set<ContextIndex::Id> ret;

@@ -72,7 +72,7 @@ class TestDebugNextListener : public maxwell::NextProposalListener,
  public:
   void OnNextUpdate(
       fidl::Array<maxwell::ProposalSummaryPtr> proposals) override {
-    FTL_LOG(INFO) << "In OnNextUpdate debug";
+    FXL_LOG(INFO) << "In OnNextUpdate debug";
     UpdateProposals(std::move(proposals));
   }
 };

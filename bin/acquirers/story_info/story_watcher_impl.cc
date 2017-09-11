@@ -9,7 +9,7 @@
 #include "apps/maxwell/src/acquirers/story_info/modular.h"
 #include "apps/maxwell/src/acquirers/story_info/story_info.h"
 #include "apps/modular/lib/ledger/storage.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace maxwell {
 
@@ -80,7 +80,7 @@ void StoryWatcherImpl::OnModuleAdded(modular::ModuleDataPtr module_data) {
 
   auto path = modular::EncodeModulePath(module_data->module_path);
   context_value_id_.OnValue(
-      ftl::MakeCopyable([ this, value = std::move(value),
+      fxl::MakeCopyable([ this, value = std::move(value),
                           path ](const fidl::String& value_id) mutable {
         writer_->AddChildValue(value_id, std::move(value),
                                [this, path](const fidl::String& value_id) {
@@ -95,7 +95,7 @@ void StoryWatcherImpl::OnNewLink(modular::LinkPathPtr link_path) {
 }
 
 void StoryWatcherImpl::WatchLink(const modular::LinkPathPtr& link_path) {
-  context_value_id_.OnValue(ftl::MakeCopyable([ this, link_path = link_path.Clone() ](
+  context_value_id_.OnValue(fxl::MakeCopyable([ this, link_path = link_path.Clone() ](
       const fidl::String& value_id) {
     links_.emplace(std::make_pair(modular::MakeLinkKey(link_path),
                                   std::make_unique<LinkWatcherImpl>(

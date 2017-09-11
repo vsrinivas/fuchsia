@@ -8,8 +8,8 @@
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/maxwell/src/user/config.h"
 #include "apps/maxwell/src/user/user_intelligence_provider_impl.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/files/file.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/files/file.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "rapidjson/document.h"
 #include "rapidjson/error/en.h"
@@ -55,7 +55,7 @@ bool LoadAndValidateConfig(const std::string& path, Config* out) {
   // Load the config datafile to a string.
   std::string data;
   if (!files::ReadFileToString(path, &data)) {
-    FTL_LOG(FATAL) << "Missing config file: " << path;
+    FXL_LOG(FATAL) << "Missing config file: " << path;
     return false;
   }
 
@@ -71,7 +71,7 @@ bool LoadAndValidateConfig(const std::string& path, Config* out) {
 
   // Initialize our schema.
   rapidjson::Document schema;
-  FTL_DCHECK(!schema.Parse(kConfigSchema).HasParseError());
+  FXL_DCHECK(!schema.Parse(kConfigSchema).HasParseError());
   rapidjson::SchemaDocument schema_doc(schema);
 
   // Validate the config against the schema.
@@ -119,7 +119,7 @@ const char kUsage[] = R"USAGE(%s --config=<file>
 )USAGE";
 
 int main(int argc, const char** argv) {
-  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (command_line.HasOption("help")) {
     printf(kUsage, argv[0]);
     return 0;
@@ -132,7 +132,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  FTL_LOG(INFO) << "Starting Maxwell with config: \n" << config;
+  FXL_LOG(INFO) << "Starting Maxwell with config: \n" << config;
 
   mtl::MessageLoop loop;
   auto app_context = app::ApplicationContext::CreateFromStartupInfo();

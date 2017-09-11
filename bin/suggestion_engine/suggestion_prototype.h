@@ -7,14 +7,14 @@
 #include <strstream>
 
 #include "apps/maxwell/services/suggestion/proposal.fidl.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/time/time_point.h"
 
 namespace maxwell {
 
 struct SuggestionPrototype {
   std::string suggestion_id;
   std::string source_url;
-  ftl::TimePoint timestamp;
+  fxl::TimePoint timestamp;
   ProposalPtr proposal;
 };
 

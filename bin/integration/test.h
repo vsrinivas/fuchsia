@@ -9,16 +9,16 @@
 #include "apps/maxwell/src/application_environment_host_impl.h"
 #include "apps/maxwell/src/user/agent_launcher.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/time/time_delta.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/time/time_delta.h"
+#include "lib/fxl/time/time_point.h"
 
 // 5s timeout for asyncs on signals (e.g. WaitForIncomingMethodCall).
-constexpr auto kSignalDeadline = ftl::TimeDelta::FromSeconds(5);
+constexpr auto kSignalDeadline = fxl::TimeDelta::FromSeconds(5);
 
 // In practice, 100 ms is actually a bit short, so this may occasionally falsely
 // succeed tests that should fail. Flakiness should thus be considered failure.
-constexpr auto kAsyncCheckSteady = ftl::TimeDelta::FromMilliseconds(100);
-constexpr auto kAsyncCheckMax = ftl::TimeDelta::FromSeconds(5);
+constexpr auto kAsyncCheckSteady = fxl::TimeDelta::FromMilliseconds(100);
+constexpr auto kAsyncCheckMax = fxl::TimeDelta::FromSeconds(5);
 
 void Yield();
 
@@ -49,10 +49,10 @@ Predicate operator!(const Predicate& a);
   }
 
 // Becomes true after |duration|.
-Predicate Deadline(const ftl::TimeDelta& duration);
+Predicate Deadline(const fxl::TimeDelta& duration);
 
 // Sleeps for a time while processing messages.
-void Sleep(const ftl::TimeDelta& duration);
+void Sleep(const fxl::TimeDelta& duration);
 
 // Sleep for a default reasonable time for apps to start up.
 void Sleep();

@@ -27,7 +27,7 @@ std::string StoryStateToString(modular::StoryState state) {
     case modular::StoryState::ERROR:
       return "ERROR";
     default:
-      FTL_LOG(FATAL) << "Unknown modular::StoryState value: " << state;
+      FXL_LOG(FATAL) << "Unknown modular::StoryState value: " << state;
   }
 }
 

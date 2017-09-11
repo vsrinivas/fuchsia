@@ -133,7 +133,7 @@ source_set("scope_utils") {
   deps = [
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/user:scope",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//third_party/boringssl",  # for sha256
   ]
 }

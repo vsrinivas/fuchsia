@@ -28,7 +28,7 @@
 #include "apps/modular/services/user/focus.fidl.h"
 
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace maxwell {
 

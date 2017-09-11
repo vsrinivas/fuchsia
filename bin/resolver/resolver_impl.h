@@ -22,7 +22,7 @@ class ResolverImpl : public Resolver {
  private:
   component::ComponentIndexPtr component_index_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ResolverImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ResolverImpl);
 };
 
 }  // namespace resolver

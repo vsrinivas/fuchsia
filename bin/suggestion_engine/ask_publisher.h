@@ -7,7 +7,7 @@
 #include "apps/maxwell/services/suggestion/ask_handler.fidl.h"
 
 #include "apps/maxwell/src/suggestion_engine/proposal_publisher_impl.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace maxwell {
 
@@ -18,10 +18,10 @@ class ProposalPublisherImpl;
 // proposals.
 struct AskPublisher {
   AskHandlerPtr handler;
-  ftl::WeakPtr<ProposalPublisherImpl> const publisher;
+  fxl::WeakPtr<ProposalPublisherImpl> const publisher;
 
   AskPublisher(AskHandlerPtr handler,
-               ftl::WeakPtr<ProposalPublisherImpl> publisher)
+               fxl::WeakPtr<ProposalPublisherImpl> publisher)
       : handler(std::move(handler)), publisher(publisher) {}
 
   static AskHandlerPtr* GetHandler(std::unique_ptr<AskPublisher>* ask) {

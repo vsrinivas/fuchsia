@@ -47,7 +47,7 @@ class UserActionLogImpl : public UserActionLog {
   fidl::BindingSet<UserActionLog> bindings_;
   std::string last_email_rcpt_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(UserActionLogImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(UserActionLogImpl);
 };
 
 class ComponentActionLogImpl : public ComponentActionLog {
@@ -60,6 +60,6 @@ class ComponentActionLogImpl : public ComponentActionLog {
  private:
   const ActionLogger log_action_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ComponentActionLogImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ComponentActionLogImpl);
 };
 }  // namespace maxwell

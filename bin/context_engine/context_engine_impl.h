@@ -42,7 +42,7 @@ class ContextEngineImpl : ContextEngine {
   std::vector<std::unique_ptr<ContextReaderImpl>> readers_;
   std::vector<std::unique_ptr<ContextWriterImpl>> writers_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ContextEngineImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ContextEngineImpl);
 };
 
 }  // namespace maxwell

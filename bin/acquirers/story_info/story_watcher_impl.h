@@ -15,7 +15,7 @@
 #include "apps/modular/services/story/story_controller.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace maxwell {
 
@@ -66,7 +66,7 @@ class StoryWatcherImpl : modular::StoryWatcher, modular::StoryLinksWatcher {
   // serialized module path -> context value id.
   std::map<std::string, FutureValue<fidl::String>> module_value_ids_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
 };
 
 }  // namespace maxwell

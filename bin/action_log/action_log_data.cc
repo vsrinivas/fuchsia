@@ -4,7 +4,7 @@
 
 #include "apps/maxwell/src/action_log/action_log_data.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
@@ -37,7 +37,7 @@ ActionLogger ActionLogData::GetActionLogger(ComponentScopePtr scope) {
 
 void ActionLogData::Append(const ActionData& action_data) {
   rapidjson::Document params;
-  FTL_CHECK(!params.Parse(action_data.params).HasParseError());
+  FXL_CHECK(!params.Parse(action_data.params).HasParseError());
   listener_(action_data);
   log_.push_back(action_data);
 }

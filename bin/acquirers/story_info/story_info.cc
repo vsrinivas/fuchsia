@@ -25,7 +25,7 @@ StoryInfoAcquirer::StoryInfoAcquirer()
   // This ServiceProvider is handed out in Connect().
   agent_services_.AddService<StoryInfoInitializer>(
       [this](fidl::InterfaceRequest<StoryInfoInitializer> request) {
-        FTL_DCHECK(!initializer_binding_.is_bound());
+        FXL_DCHECK(!initializer_binding_.is_bound());
         initializer_binding_.Bind(std::move(request));
       });
 }
@@ -57,7 +57,7 @@ void StoryInfoAcquirer::Connect(
 
 void StoryInfoAcquirer::RunTask(const fidl::String& task_id,
                                 const RunTaskCallback& callback) {
-  FTL_LOG(FATAL) << "Not implemented.";
+  FXL_LOG(FATAL) << "Not implemented.";
 }
 
 void StoryInfoAcquirer::Initialize(

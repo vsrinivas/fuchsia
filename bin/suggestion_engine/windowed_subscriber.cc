@@ -7,7 +7,7 @@
 namespace maxwell {
 
 void WindowedSuggestionSubscriber::SetResultCount(int32_t count) {
-  FTL_LOG(INFO) << "WindowedSuggestionSubscriber::SetResultCount(" << count
+  FXL_LOG(INFO) << "WindowedSuggestionSubscriber::SetResultCount(" << count
                 << ")";
   if (count < 0)
     count = 0;

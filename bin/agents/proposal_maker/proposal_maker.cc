@@ -76,7 +76,7 @@ class ProposalMaker : ContextListener {
       }
       // TODO(travismart): Propose more deep links based on entity type.
       else {
-        FTL_LOG(ERROR) << "SelectedEntity type not recognized: " << e.GetType();
+        FXL_LOG(ERROR) << "SelectedEntity type not recognized: " << e.GetType();
       }
     }
     // TODO(travismart): UnPropose an unselected entity.

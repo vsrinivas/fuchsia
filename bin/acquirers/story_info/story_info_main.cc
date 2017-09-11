@@ -17,12 +17,12 @@ class StoryInfoApp : modular::Lifecycle {
       : agent_binding_(&story_info_acquirer_), lifecycle_binding_(this) {
     app_context->outgoing_services()->AddService<modular::Agent>(
         [this](fidl::InterfaceRequest<modular::Agent> request) {
-          FTL_DCHECK(!agent_binding_.is_bound());
+          FXL_DCHECK(!agent_binding_.is_bound());
           agent_binding_.Bind(std::move(request));
         });
     app_context->outgoing_services()->AddService<modular::Lifecycle>(
         [this](fidl::InterfaceRequest<modular::Lifecycle> request) {
-          FTL_DCHECK(!lifecycle_binding_.is_bound());
+          FXL_DCHECK(!lifecycle_binding_.is_bound());
           lifecycle_binding_.Bind(std::move(request));
         });
   }
@@ -38,7 +38,7 @@ class StoryInfoApp : modular::Lifecycle {
   fidl::Binding<modular::Agent> agent_binding_;
   fidl::Binding<modular::Lifecycle> lifecycle_binding_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryInfoApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StoryInfoApp);
 };
 
 }  // namespace maxwell

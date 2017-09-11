@@ -15,7 +15,7 @@ executable("resolver") {
     "//apps/maxwell/services/resolver",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/services/component",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//third_party/rapidjson",
   ]

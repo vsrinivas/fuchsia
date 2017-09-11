@@ -8,8 +8,8 @@
 #include <list>
 #include <memory>
 
-#include "garnet/public/lib/ftl/functional/make_copyable.h"
-#include "garnet/public/lib/ftl/macros.h"
+#include "garnet/public/lib/fxl/functional/make_copyable.h"
+#include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/mtl/tasks/message_loop.h"
 
 namespace maxwell {
@@ -30,7 +30,7 @@ namespace maxwell {
 // FutureValue<int> future_int;
 //
 // future_int.OnValue([] (const int& value) {
-//   FTL_LOG(INFO) << "Finally using the int: " << value;
+//   FXL_LOG(INFO) << "Finally using the int: " << value;
 // });
 //
 // ... some time later, asynchronously ...
@@ -48,7 +48,7 @@ class FutureValue {
 
   // Moves |value| to |value_| and dispatches all waiting tasks.
   void SetValue(T value) {
-    FTL_DCHECK(!value_) << "SetValue() called twice.";
+    FXL_DCHECK(!value_) << "SetValue() called twice.";
     value_.reset(new T(std::move(value)));
 
     for (auto it = on_ready_.begin(); it != on_ready_.end(); ++it) {
@@ -80,7 +80,7 @@ class FutureValue {
   std::shared_ptr<T> value_;
   std::list<UseValueFunction> on_ready_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FutureValue);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FutureValue);
 };
 
 }  // namespace maxwell

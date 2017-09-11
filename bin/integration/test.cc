@@ -4,11 +4,11 @@
 
 #include "apps/maxwell/src/integration/test.h"
 
-#include "lib/ftl/synchronization/sleep.h"
+#include "lib/fxl/synchronization/sleep.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-constexpr auto kYieldSleepPeriod = ftl::TimeDelta::FromMilliseconds(1);
-constexpr auto kYieldBatchPeriod = ftl::TimeDelta::FromMilliseconds(0);
+constexpr auto kYieldSleepPeriod = fxl::TimeDelta::FromMilliseconds(1);
+constexpr auto kYieldBatchPeriod = fxl::TimeDelta::FromMilliseconds(0);
 
 void Yield() {
   // Tried a combination of Thread::sleep_for (formerly required) and
@@ -25,7 +25,7 @@ void Yield() {
   // without the sleep.
   //
   // Based on those results, opt to sleep 1ms; post delayed w/ 0ms.
-  ftl::SleepFor(kYieldSleepPeriod);
+  fxl::SleepFor(kYieldSleepPeriod);
 
   // Combinations tried:
   //                      PostQuitTask QuitNow
@@ -50,17 +50,17 @@ Predicate operator!(const Predicate& a) {
   return [&a] { return !a(); };
 }
 
-Predicate Deadline(const ftl::TimeDelta& duration) {
-  const auto deadline = ftl::TimePoint::Now() + duration;
-  return [deadline] { return ftl::TimePoint::Now() >= deadline; };
+Predicate Deadline(const fxl::TimeDelta& duration) {
+  const auto deadline = fxl::TimePoint::Now() + duration;
+  return [deadline] { return fxl::TimePoint::Now() >= deadline; };
 }
 
-void Sleep(const ftl::TimeDelta& duration) {
+void Sleep(const fxl::TimeDelta& duration) {
   WaitUntil(Deadline(duration));
 }
 
 void Sleep() {
-  Sleep(ftl::TimeDelta::FromMilliseconds(1500));
+  Sleep(fxl::TimeDelta::FromMilliseconds(1500));
 }
 
 MaxwellTestBase::MaxwellTestBase()

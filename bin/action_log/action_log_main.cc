@@ -10,8 +10,8 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
@@ -37,7 +37,7 @@ class UserActionLogFactoryImpl : public UserActionLogFactory {
   fidl::BindingSet<UserActionLog, std::unique_ptr<UserActionLog>>
       user_action_log_bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(UserActionLogFactoryImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(UserActionLogFactoryImpl);
 };
 
 class UserActionLogFactoryApp {
@@ -60,7 +60,7 @@ class UserActionLogFactoryApp {
   std::unique_ptr<UserActionLogFactoryImpl> factory_impl_;
   fidl::BindingSet<UserActionLogFactory> factory_bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(UserActionLogFactoryApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(UserActionLogFactoryApp);
 };
 
 }  // namespace

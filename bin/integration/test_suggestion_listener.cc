@@ -13,7 +13,7 @@ bool suggestion_less(const maxwell::Suggestion* a,
 
 void TestSuggestionListener::OnAdd(
     fidl::Array<maxwell::SuggestionPtr> suggestions) {
-  FTL_LOG(INFO) << "OnAdd(" << suggestions << ")";
+  FXL_LOG(INFO) << "OnAdd(" << suggestions << ")";
 
   // Since OnAdd receives a snapshot of changes with self-consistent ordering
   // (TODO(rosswang): behavior not documented), we don't have to re-search from
@@ -32,7 +32,7 @@ void TestSuggestionListener::OnAdd(
 }
 
 void TestSuggestionListener::OnRemove(const fidl::String& uuid) {
-  FTL_LOG(INFO) << "OnRemove(" << uuid << ")";
+  FXL_LOG(INFO) << "OnRemove(" << uuid << ")";
   auto it = suggestions_by_id_.find(uuid);
   auto range =
       std::equal_range(ordered_suggestions_.begin(), ordered_suggestions_.end(),
@@ -46,7 +46,7 @@ void TestSuggestionListener::OnRemove(const fidl::String& uuid) {
 }
 
 void TestSuggestionListener::OnRemoveAll() {
-  FTL_LOG(INFO) << "OnRemoveAll";
+  FXL_LOG(INFO) << "OnRemoveAll";
   ordered_suggestions_.clear();
   suggestions_by_id_.clear();
 }

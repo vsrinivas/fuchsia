@@ -10,8 +10,8 @@
 #include "apps/modular/services/component/component.fidl.h"
 
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
@@ -53,7 +53,7 @@ class ResolverApp {
   app::ApplicationControllerPtr component_index_controller_;
   fidl::BindingSet<Resolver> resolver_bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ResolverApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ResolverApp);
 };
 
 }  // namespace

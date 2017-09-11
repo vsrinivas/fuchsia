@@ -120,7 +120,7 @@ class ContextRepository {
   std::unique_ptr<ContextDebugImpl> debug_;
   fidl::BindingSet<ContextDebug> debug_bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ContextRepository);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ContextRepository);
 };
 
 struct ContextRepository::ValueInternal {

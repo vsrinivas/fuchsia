@@ -33,7 +33,7 @@ executable("story_info") {
     "//apps/modular/services/lifecycle",
     "//apps/modular/services/story",
     "//apps/modular/services/user",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//third_party/rapidjson",
   ]

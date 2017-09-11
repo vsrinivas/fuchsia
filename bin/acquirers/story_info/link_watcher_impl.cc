@@ -9,7 +9,7 @@
 #include "apps/modular/lib/fidl/json_xdr.h"
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
-#include "garnet/public/lib/ftl/functional/make_copyable.h"
+#include "garnet/public/lib/fxl/functional/make_copyable.h"
 
 namespace maxwell {
 
@@ -79,7 +79,7 @@ void LinkWatcherImpl::Notify(const fidl::String& json) {
 void LinkWatcherImpl::ProcessContext(const fidl::String& value) {
   modular::JsonDoc doc;
   doc.Parse(value);
-  FTL_CHECK(!doc.HasParseError());
+  FXL_CHECK(!doc.HasParseError());
 
   if (!doc.IsObject()) {
     return;
@@ -120,7 +120,7 @@ void LinkWatcherImpl::ProcessContext(const fidl::String& value) {
   context_value->meta->entity = EntityMetadata::New();
   context_value->meta->entity->topic = context.topic;
 
-  FTL_LOG(INFO) << "Publishing context: " << context_value << std::endl
+  FXL_LOG(INFO) << "Publishing context: " << context_value << std::endl
                 << "Original link value: " << value << std::endl
                 << "Parent context value ID: " << parent_value_id_;
   auto it = value_ids_.find(context.topic);
@@ -136,7 +136,7 @@ void LinkWatcherImpl::ProcessContext(const fidl::String& value) {
                              value_ids_[topic] = value_id;
                            });
   } else {
-    it->second.OnValue(ftl::MakeCopyable([ this, value = std::move(context_value) ](
+    it->second.OnValue(fxl::MakeCopyable([ this, value = std::move(context_value) ](
         const fidl::String& value_id) mutable {
       writer_->Update(value_id, std::move(value));
     }));

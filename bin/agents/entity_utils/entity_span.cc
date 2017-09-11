@@ -5,7 +5,7 @@
 #include "apps/maxwell/src/agents/entity_utils/entity_span.h"
 
 #include "apps/modular/lib/rapidjson/rapidjson.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
@@ -27,7 +27,7 @@ EntitySpan EntitySpan::FromJson(const std::string& json_string) {
         e.HasMember("type") && e["type"].IsString() && e.HasMember("start") &&
         e["start"].IsInt() && e.HasMember("end") && e["end"].IsInt())) {
     // TODO(travismart): Validate this with rapidjson schema validation.
-    FTL_LOG(ERROR) << "Invalid parsing of Entity from JSON: " << json_string;
+    FXL_LOG(ERROR) << "Invalid parsing of Entity from JSON: " << json_string;
   }
   return EntitySpan(e["content"].GetString(), e["type"].GetString(),
                     e["start"].GetInt(), e["end"].GetInt());

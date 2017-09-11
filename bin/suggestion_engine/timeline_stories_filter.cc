@@ -11,7 +11,7 @@ namespace maxwell {
 TimelineStoriesFilter::TimelineStoriesFilter(
     TimelineStoriesWatcher* timeline_stories_watcher)
     : timeline_stories_watcher_(timeline_stories_watcher) {
-  FTL_CHECK(timeline_stories_watcher_);
+  FXL_CHECK(timeline_stories_watcher_);
 }
 
 bool TimelineStoriesFilter::operator()(const Proposal& proposal) {

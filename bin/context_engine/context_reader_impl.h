@@ -30,7 +30,7 @@ class ContextReaderImpl : ContextReader {
   SubscriptionDebugInfoPtr debug_;
   ContextRepository* const repository_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ContextReaderImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ContextReaderImpl);
 };
 
 }  // namespace maxwell

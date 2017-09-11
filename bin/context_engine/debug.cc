@@ -46,7 +46,7 @@ void ContextDebugImpl::OnSubscriptionRemoved(const Id& id) {
 
 void ContextDebugImpl::Watch(
     fidl::InterfaceHandle<ContextDebugListener> listener) {
-  FTL_LOG(INFO) << "Watch(): entered";
+  FXL_LOG(INFO) << "Watch(): entered";
   auto listener_ptr = ContextDebugListenerPtr::Create(std::move(listener));
   // Build a complete state snapshot and send it to |listener|.
   auto all_values = fidl::Array<ContextDebugValuePtr>::New(0);

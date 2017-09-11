@@ -38,7 +38,7 @@ class TestListener : public ContextListener {
   TestListener() : binding_(this) {}
 
   void OnContextUpdate(ContextUpdatePtr update) override {
-    FTL_LOG(INFO) << "OnUpdate(" << update << ")";
+    FXL_LOG(INFO) << "OnUpdate(" << update << ")";
     last_update = std::move(update);
   }
 

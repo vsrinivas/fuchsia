@@ -88,7 +88,7 @@ source_set("state") {
     ":models",
     ":ranking",
     "//apps/maxwell/services/suggestion",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }
 
@@ -100,7 +100,7 @@ source_set("models") {
 
   deps = [
     "//apps/maxwell/services/suggestion",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }
 
@@ -113,7 +113,7 @@ source_set("timeline_stories_filter") {
   deps = [
     ":timeline_stories_watcher",
     "//apps/maxwell/services/suggestion",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }
 
@@ -126,7 +126,7 @@ source_set("timeline_stories_watcher") {
   deps = [
     "//apps/modular/services/module",
     "//apps/modular/services/story",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }
 

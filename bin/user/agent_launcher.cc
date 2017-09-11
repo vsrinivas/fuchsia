@@ -27,7 +27,7 @@ void AgentLauncher::StartAgent(
 
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = url;
-  FTL_LOG(INFO) << "Starting Maxwell agent " << url;
+  FXL_LOG(INFO) << "Starting Maxwell agent " << url;
   agent_launcher->CreateApplication(std::move(launch_info), NULL);
 }
 

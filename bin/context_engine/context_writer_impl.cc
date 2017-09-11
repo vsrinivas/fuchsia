@@ -13,7 +13,7 @@ ContextWriterImpl::ContextWriterImpl(
     ContextRepository* repository,
     fidl::InterfaceRequest<ContextWriter> request)
     : binding_(this, std::move(request)), repository_(repository) {
-  FTL_DCHECK(repository != nullptr);
+  FXL_DCHECK(repository != nullptr);
 
   // Set up a query to the repository to get our parent id.
   // TODO(thatguy)
@@ -35,7 +35,7 @@ void MaybeFillEntityMetadata(ContextValuePtr* const value_ptr) {
   rapidjson::Document doc;
   doc.Parse(value->content);
   if (doc.HasParseError()) {
-    FTL_LOG(WARNING) << "Invalid JSON in value: " << value;
+    FXL_LOG(WARNING) << "Invalid JSON in value: " << value;
     return;
   }
   fidl::Array<fidl::String> new_types;
@@ -83,7 +83,7 @@ void ContextWriterImpl::AddChildValue(const fidl::String& parent_id,
 
 void ContextWriterImpl::Update(const fidl::String& id, ContextValuePtr new_value) {
   if (!repository_->Contains(id)) {
-    FTL_LOG(WARNING)
+    FXL_LOG(WARNING)
         << "Trying to update content on non-existent context value (" << id
         << "). New value: " << new_value;
   }
@@ -94,7 +94,7 @@ void ContextWriterImpl::UpdateContent(const fidl::String& id,
                                       const fidl::String& content) {
   auto value = repository_->Get(id);
   if (!value) {
-    FTL_LOG(WARNING)
+    FXL_LOG(WARNING)
         << "Trying to update content on non-existent context value (" << id
         << "). Content: " << content;
   }
@@ -107,7 +107,7 @@ void ContextWriterImpl::UpdateMetadata(const fidl::String& id,
                                        ContextMetadataPtr metadata) {
   auto value = repository_->Get(id);
   if (!value) {
-    FTL_LOG(WARNING)
+    FXL_LOG(WARNING)
         << "Trying to update metadata on non-existent context value (" << id
         << "). Metadata: " << metadata;
   }

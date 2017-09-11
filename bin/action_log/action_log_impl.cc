@@ -4,8 +4,8 @@
 
 #include "apps/maxwell/src/action_log/action_log_impl.h"
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 #include "apps/maxwell/services/suggestion/proposal.fidl.h"
@@ -197,7 +197,7 @@ void ComponentActionLogImpl::LogAction(const fidl::String& method,
                                        const fidl::String& json_params) {
   rapidjson::Document params;
   if (params.Parse(json_params.get().c_str()).HasParseError()) {
-    FTL_LOG(WARNING) << "Parse error.";
+    FXL_LOG(WARNING) << "Parse error.";
     return;
   }
 

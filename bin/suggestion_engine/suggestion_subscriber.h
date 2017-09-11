@@ -29,7 +29,7 @@ class SuggestionSubscriber {
 
   bool is_bound() { return listener_.is_bound(); }
 
-  void set_connection_error_handler(const ftl::Closure& error_handler) {
+  void set_connection_error_handler(const fxl::Closure& error_handler) {
     listener_.set_connection_error_handler(error_handler);
   }
 

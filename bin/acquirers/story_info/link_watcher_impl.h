@@ -15,7 +15,7 @@
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/services/story/story_controller.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace maxwell {
 
@@ -51,7 +51,7 @@ class LinkWatcherImpl : modular::LinkWatcher {
 
   fidl::Binding<modular::LinkWatcher> link_watcher_binding_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherImpl);
 };
 
 }  // namespace maxwell

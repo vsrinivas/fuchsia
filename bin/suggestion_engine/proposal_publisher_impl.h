@@ -9,7 +9,7 @@
 #include "apps/maxwell/src/bound_set.h"
 #include "apps/maxwell/src/suggestion_engine/suggestion_engine_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace maxwell {
 
@@ -66,7 +66,7 @@ class ProposalPublisherImpl : public ProposalPublisher {
   const std::string component_url_;
   BindingSet bindings_;
 
-  ftl::WeakPtrFactory<ProposalPublisherImpl> weak_ptr_factory_;
+  fxl::WeakPtrFactory<ProposalPublisherImpl> weak_ptr_factory_;
 };
 
 }  // namespace maxwell

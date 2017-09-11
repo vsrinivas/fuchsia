@@ -14,7 +14,7 @@
 #include "apps/modular/services/story/story_provider.fidl.h"
 #include "apps/modular/services/user/focus.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace maxwell {
 
@@ -94,7 +94,7 @@ class StoryInfoAcquirer : public modular::Agent,
 
   app::ServiceNamespace agent_services_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryInfoAcquirer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StoryInfoAcquirer);
 };
 
 }  // namespace maxwell

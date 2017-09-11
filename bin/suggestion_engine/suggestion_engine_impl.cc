@@ -10,7 +10,7 @@
 #include "apps/maxwell/src/suggestion_engine/interruptions_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
@@ -198,7 +198,7 @@ void SuggestionEngineImpl::NotifyInteraction(
                                ? short_proposal_str(*suggestion_prototype)
                                : "invalid";
 
-  FTL_LOG(INFO) << (interaction->type == InteractionType::SELECTED
+  FXL_LOG(INFO) << (interaction->type == InteractionType::SELECTED
                         ? "Accepted"
                         : "Dismissed")
                 << " suggestion " << suggestion_uuid << " (" << log_detail
@@ -254,7 +254,7 @@ SuggestionPrototype* SuggestionEngineImpl::CreateSuggestionPrototype(
   auto suggestion_prototype = prototype_pair.first->second.get();
   suggestion_prototype->suggestion_id = RandomUuid();
   suggestion_prototype->source_url = source->component_url();
-  suggestion_prototype->timestamp = ftl::TimePoint::Now();
+  suggestion_prototype->timestamp = fxl::TimePoint::Now();
   suggestion_prototype->proposal = std::move(proposal);
 
   return suggestion_prototype;
@@ -302,27 +302,27 @@ void SuggestionEngineImpl::PerformActions(
                 modular::StoryControllerPtr story_controller;
                 story_provider_->GetController(story_id,
                                                story_controller.NewRequest());
-                FTL_LOG(INFO) << "Creating story with module " << module_id;
+                FXL_LOG(INFO) << "Creating story with module " << module_id;
 
-                story_controller->GetInfo(ftl::MakeCopyable(
+                story_controller->GetInfo(fxl::MakeCopyable(
                     // TODO(thatguy): We should not be std::move()ing
                     // story_controller *while we're calling it*.
                     [ this, controller = std::move(story_controller) ](
                         modular::StoryInfoPtr story_info,
                         modular::StoryState state) {
-                      FTL_LOG(INFO)
+                      FXL_LOG(INFO)
                           << "Requesting focus for story_id " << story_info->id;
                       focus_provider_ptr_->Request(story_info->id);
                     }));
               });
         } else {
-          FTL_LOG(WARNING) << "Unable to add module; no story provider";
+          FXL_LOG(WARNING) << "Unable to add module; no story provider";
         }
         break;
       }
       case Action::Tag::FOCUS_STORY: {
         const auto& focus_story = action->get_focus_story();
-        FTL_LOG(INFO) << "Requesting focus for story_id "
+        FXL_LOG(INFO) << "Requesting focus for story_id "
                       << focus_story->story_id;
         focus_provider_ptr_->Request(focus_story->story_id);
         break;
@@ -337,7 +337,7 @@ void SuggestionEngineImpl::PerformActions(
           const auto& module_path = add_module_to_story->module_path;
           const auto& surface_relation = add_module_to_story->surface_relation;
 
-          FTL_LOG(INFO) << "Adding module " << module_url << " to story "
+          FXL_LOG(INFO) << "Adding module " << module_url << " to story "
                         << story_id;
 
           modular::StoryControllerPtr story_controller;
@@ -355,7 +355,7 @@ void SuggestionEngineImpl::PerformActions(
                                       module_url, link_name,
                                       surface_relation.Clone());
         } else {
-          FTL_LOG(WARNING) << "Unable to add module; no story provider";
+          FXL_LOG(WARNING) << "Unable to add module; no story provider";
         }
 
         break;
@@ -363,7 +363,7 @@ void SuggestionEngineImpl::PerformActions(
       case Action::Tag::CUSTOM_ACTION: {
         auto custom_action = maxwell::CustomActionPtr::Create(
             std::move(action->get_custom_action()));
-        custom_action->Execute(ftl::MakeCopyable([
+        custom_action->Execute(fxl::MakeCopyable([
           this, custom_action = std::move(custom_action), story_color
         ](fidl::Array<maxwell::ActionPtr> actions) {
           if (actions)
@@ -372,7 +372,7 @@ void SuggestionEngineImpl::PerformActions(
         break;
       }
       default:
-        FTL_LOG(WARNING) << "Unknown action tag " << (uint32_t)action->which();
+        FXL_LOG(WARNING) << "Unknown action tag " << (uint32_t)action->which();
     }
   }
 }

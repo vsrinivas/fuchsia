@@ -14,8 +14,8 @@
 #include "apps/maxwell/src/acquirers/story_info/initializer.fidl.h"
 #include "apps/maxwell/src/user/intelligence_services_impl.h"
 #include "apps/network/services/network_service.fidl.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace maxwell {
 
@@ -185,12 +185,12 @@ void UserIntelligenceProviderImpl::AddStandardServices(
        url](fidl::InterfaceRequest<cobalt::CobaltEncoderFactory> request) {
         app_context_->ConnectToEnvironmentService(std::move(request));
       });
-  agent_host->AddService<maxwell::ContextWriter>(ftl::MakeCopyable([
+  agent_host->AddService<maxwell::ContextWriter>(fxl::MakeCopyable([
     this, client_info = agent_info.Clone(), url
   ](fidl::InterfaceRequest<maxwell::ContextWriter> request) {
     context_engine_->GetWriter(client_info.Clone(), std::move(request));
   }));
-  agent_host->AddService<maxwell::ContextReader>(ftl::MakeCopyable([
+  agent_host->AddService<maxwell::ContextReader>(fxl::MakeCopyable([
     this, client_info = agent_info.Clone(), url
   ](fidl::InterfaceRequest<maxwell::ContextReader> request) {
     context_engine_->GetReader(client_info.Clone(), std::move(request));
@@ -248,7 +248,7 @@ void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(
         user_intelligence_provider_request) {
   // Fail if someone has already used this Factory to create an instance of
   // UserIntelligenceProvider.
-  FTL_CHECK(!impl_);
+  FXL_CHECK(!impl_);
   impl_.reset(new UserIntelligenceProviderImpl(
       app_context_, config_, std::move(component_context),
       std::move(story_provider), std::move(focus_provider),
