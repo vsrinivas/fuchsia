@@ -28,7 +28,7 @@ class LinkImpl::IncrementalWriteCall : Operation<> {
   LinkImpl* const impl_;  // not owned
   LinkChangePtr data_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(IncrementalWriteCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(IncrementalWriteCall);
 };
 
 class LinkImpl::IncrementalChangeCall : Operation<> {
@@ -47,7 +47,7 @@ class LinkImpl::IncrementalChangeCall : Operation<> {
 
   OperationQueue operation_queue_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(IncrementalChangeCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(IncrementalChangeCall);
 };
 
 // Reload needs to run if:
@@ -70,7 +70,7 @@ class LinkImpl::ReloadCall : Operation<> {
   // WriteCall is executed here.
   OperationQueue operation_queue_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ReloadCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ReloadCall);
 };
 
 

@@ -27,7 +27,7 @@ LinkImpl::IncrementalWriteCall::IncrementalWriteCall(
                 std::move(result_call)),
       impl_(impl),
       data_(std::move(data)) {
-  FTL_DCHECK(!data_->key.is_null());
+  FXL_DCHECK(!data_->key.is_null());
   Ready();
 }
 
@@ -70,7 +70,7 @@ void LinkImpl::IncrementalChangeCall::Run() {
       rapidjson::Document doc;
       doc.Parse(data_->json.get());
       if (doc.HasParseError()) {
-        FTL_LOG(ERROR) << "LinkImpl::IncrementalChangeCall::Run() "
+        FXL_LOG(ERROR) << "LinkImpl::IncrementalChangeCall::Run() "
                        << EncodeLinkPath(impl_->link_path_)
                        << " JSON parse failed error #" << doc.GetParseError()
                        << std::endl
@@ -98,7 +98,7 @@ void LinkImpl::IncrementalChangeCall::Run() {
       impl_->ValidateSchema("LinkImpl::IncrementalChangeCall::Run", ptr,
                             data_->json);
     } else {
-      FTL_LOG(WARNING) << "IncrementalChangeCall::Run - ApplyChange() failed ";
+      FXL_LOG(WARNING) << "IncrementalChangeCall::Run - ApplyChange() failed ";
     }
     impl_->latest_key_ = data_->key;
     Cont1(flow, src_);
@@ -121,8 +121,8 @@ void LinkImpl::Replay(fidl::Array<LinkChangePtr> changes) {
     bool it1_done = it1 == changes.end();
     bool it2_done = it2 == pending_ops_.end();
 
-    FTL_DCHECK(it1_done || !(*it1)->key.is_null());
-    FTL_DCHECK(it2_done || !(*it2)->key.is_null());
+    FXL_DCHECK(it1_done || !(*it1)->key.is_null());
+    FXL_DCHECK(it2_done || !(*it2)->key.is_null());
 
     if (it1_done && it2_done) {
       // Done
@@ -194,7 +194,7 @@ bool LinkImpl::ApplyChange(LinkChange* change) {
     case LinkChangeOp::ERASE:
       return ApplyEraseOp(ptr);
     default:
-      FTL_DCHECK(false);
+      FXL_DCHECK(false);
       return false;
   }
 }

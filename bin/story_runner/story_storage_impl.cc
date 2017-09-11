@@ -329,7 +329,7 @@ class StoryStorageImpl::WriteIncrementalLinkDataCall : Operation<> {
     page_->Put(to_array(link_key_), to_array(json_),
                [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
-                   FTL_LOG(ERROR) << "WriteIncrementalLinkDataCall() link key ="
+                   FXL_LOG(ERROR) << "WriteIncrementalLinkDataCall() link key ="
                                   << link_key_ << ", Page.Put() " << status;
                  }
                });
@@ -339,7 +339,7 @@ class StoryStorageImpl::WriteIncrementalLinkDataCall : Operation<> {
   const std::string link_key_;
   const fidl::String json_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(WriteIncrementalLinkDataCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(WriteIncrementalLinkDataCall);
 };
 
 void StoryStorageImpl::WriteIncrementalLinkData(const LinkPathPtr& link_path,

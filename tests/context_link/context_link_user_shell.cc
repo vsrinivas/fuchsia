@@ -117,7 +117,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
     user_shell_context_->GetContextReader(context_reader_.NewRequest());
     context_listener_.Listen(context_reader_.get());
     context_reader_.set_connection_error_handler([] {
-        FTL_LOG(ERROR) << "Lost ContextReader connection.";
+        FXL_LOG(ERROR) << "Lost ContextReader connection.";
       });
 
     CreateStory();

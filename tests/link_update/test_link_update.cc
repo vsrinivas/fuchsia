@@ -168,12 +168,12 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this, called] {
           if (!*called) {
-            FTL_LOG(WARNING) << "Shutdown timed out";
+            FXL_LOG(WARNING) << "Shutdown timed out";
             Logout();
             *called = true;
           }
         },
-        ftl::TimeDelta::FromSeconds(5u));
+        fxl::TimeDelta::FromSeconds(5u));
 
     // The code below does not work because it does not wait for the Ledger
     // to deliver all of its messages.
