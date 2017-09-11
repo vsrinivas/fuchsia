@@ -8,9 +8,9 @@
 #include <type_traits>
 #include <vector>
 
-#include "lib/ui/scenic/types.h"
 #include "garnet/bin/ui/scene_manager/resources/resource_type_info.h"
 #include "lib/fxl/memory/ref_counted.h"
+#include "lib/ui/scenic/types.h"
 
 namespace scene_manager {
 
@@ -104,9 +104,10 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   /// resources to act as the recipients of ops.
   virtual Resource* GetDelegate(const ResourceTypeInfo& type_info);
 
-  // Sets a ResourceLinker that must be called back before this resource is
-  // destroyed.
-  void SetExported(bool exported, ResourceLinker* resource_linker);
+  // Sets a flag that indicates if this resource is exported in ResourceLinker.
+  // If so, this resource is responsible for notifying ResourceLinker when it
+  // dies.
+  void SetExported(bool exported);
 
  private:
   Session* const session_;
@@ -115,9 +116,9 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   std::string label_;
   uint32_t event_mask_ = 0u;
   std::vector<Import*> imports_;
-  // ResourceLinker that must be called back before this resource is destroyed.
+  // If true, ResourceLinker  must be called back before this resource is
+  // destroyed.
   bool exported_ = false;
-  ResourceLinker* resource_linker_ = nullptr;
 };
 
 using ResourcePtr = fxl::RefPtr<Resource>;

@@ -3,17 +3,17 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/synchronization/waitable_event.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/thread.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/synchronization/waitable_event.h"
 #include "zircon/system/ulib/zx/include/zx/eventpair.h"
 
-#include "lib/ui/scenic/fidl_helpers.h"
-#include "lib/ui/tests/test_with_message_loop.h"
 #include "garnet/bin/ui/scene_manager/resources/nodes/entity_node.h"
 #include "garnet/bin/ui/scene_manager/tests/session_test.h"
 #include "garnet/bin/ui/scene_manager/tests/util.h"
+#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/tests/test_with_message_loop.h"
 
 namespace scene_manager {
 namespace test {
@@ -49,7 +49,7 @@ TEST_F(ImportTest, ImportsUnlinkedImportViaOp) {
   ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
       1 /* import resource ID */, scenic::ImportSpec::NODE, /* spec */
       std::move(destination))                               /* endpoint */
-                    ));
+  ));
 
   // Assert that the import node was correctly mapped in. It has not been linked
   // yet.
@@ -78,7 +78,7 @@ TEST_F(ImportTest, PerformsFullLinking) {
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
         1 /* import resource ID */, scenic::ImportSpec::NODE, /* spec */
         std::move(destination))                               /* endpoint */
-                      ));
+    ));
 
     // Assert that the import node was correctly mapped in. It has not been
     // linked yet.
@@ -138,8 +138,6 @@ TEST_F(ImportTest, PerformsFullLinking) {
 }
 
 TEST_F(ImportTest, HandlesDeadSourceHandle) {
-  ResourceLinker linker;
-
   zx::eventpair source_out;
   zx::eventpair destination;
   {
@@ -156,8 +154,6 @@ TEST_F(ImportTest, HandlesDeadSourceHandle) {
 }
 
 TEST_F(ImportTest, HandlesDeadDestinationHandle) {
-  ResourceLinker linker;
-
   zx::eventpair source_out;
   zx::eventpair destination_out;
   {
@@ -177,8 +173,6 @@ TEST_F(ImportTest, HandlesDeadDestinationHandle) {
 }
 
 TEST_F(ImportTest, DestroyingExportedResourceSendsEvent) {
-  ResourceLinker linker;
-
   zx::eventpair source;
   zx::eventpair destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
@@ -206,8 +200,6 @@ TEST_F(ImportTest, DestroyingExportedResourceSendsEvent) {
 }
 
 TEST_F(ImportTest, ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
-  ResourceLinker linker;
-
   zx::eventpair source;
   zx::eventpair destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
@@ -257,7 +249,7 @@ TEST_F(ImportThreadedTest, KillingImportedResourceEvictsFromResourceLinker) {
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
         1 /* import resource ID */, scenic::ImportSpec::NODE, /* spec */
         std::move(destination))                               /* endpoint */
-                      ));
+    ));
 
     // Assert that the import node was correctly mapped in. It has not been
     // linked yet.
@@ -295,8 +287,6 @@ TEST_F(ImportThreadedTest, KillingImportedResourceEvictsFromResourceLinker) {
 // For a given resource, export it and bind a node to it. Additionally, keep
 // an import handle open. Then, verify that the resource is not unexported until
 // both the import node and the import handle are released.
-// This test is identical to the previous one except the order in which the
-// import node and import handle are released is switched.
 TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
   scenic::ResourceId exported_node_id = 1;
   scenic::ResourceId import_node_id = 2;
@@ -350,7 +340,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
         import_node_id, scenic::ImportSpec::NODE, /* spec */
         CopyEventPair(destination))               /* endpoint */
-                      ));
+    ));
     auto import_node = FindResource<Import>(import_node_id);
     ASSERT_TRUE(import_node);
 
@@ -400,6 +390,8 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
 // For a given resource, export it and bind a node to it. Additionally, keep
 // an import handle open. Then, verify that the resource is not unexported until
 // both the import node and the import handle are released.
+// This test is identical to the previous one except the order in which the
+// import node and import handle are released is switched.
 TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
   scenic::ResourceId exported_node_id = 1;
   scenic::ResourceId import_node_id = 2;
@@ -454,7 +446,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
         import_node_id, scenic::ImportSpec::NODE, /* spec */
         CopyEventPair(destination))               /* endpoint */
-                      ));
+    ));
     auto import_node = FindResource<Import>(import_node_id);
     ASSERT_TRUE(import_node);
 
@@ -563,7 +555,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
         import_node_id, scenic::ImportSpec::NODE, /* spec */
         CopyEventPair(destination1))              /* endpoint */
-                      ));
+    ));
     auto import_node = FindResource<Import>(import_node_id);
     ASSERT_TRUE(import_node);
 
@@ -691,11 +683,11 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
         import_node_id1, scenic::ImportSpec::NODE, /* spec */
         CopyEventPair(destination1))               /* endpoint */
-                      ));
+    ));
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
         import_node_id2, scenic::ImportSpec::NODE, /* spec */
         CopyEventPair(destination1))               /* endpoint */
-                      ));
+    ));
     auto import_node1 = FindResource<Import>(import_node_id1);
     ASSERT_TRUE(import_node1);
     auto import_node2 = FindResource<Import>(import_node_id2);
@@ -787,7 +779,7 @@ TEST_F(ImportTest,
   ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
       1 /* import resource ID */, scenic::ImportSpec::NODE, /* spec */
       std::move(destination))                               /* endpoint */
-                    ));
+  ));
 
   // Assert that the import node was correctly mapped in. It has not been
   // linked yet.
@@ -831,7 +823,7 @@ TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptOps) {
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
         1 /* import resource ID */, scenic::ImportSpec::NODE, /* spec */
         std::move(destination))                               /* endpoint */
-                      ));
+    ));
 
     // Assert that the import node was correctly mapped in. It has not been
     // linked yet.
@@ -872,7 +864,7 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptOps) {
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
         1 /* import resource ID */, scenic::ImportSpec::NODE, /* spec */
         std::move(destination))                               /* endpoint */
-                      ));
+    ));
 
     // Assert that the import node was correctly mapped in. It has not been
     // linked yet.

@@ -226,8 +226,7 @@ bool Session::ApplyImportResourceOp(const scenic::ImportResourceOpPtr& op) {
            "no token provided.";
     return false;
   }
-  ImportPtr import = fxl::MakeRefCounted<Import>(this, op->id, op->spec,
-                                                 engine_->resource_linker());
+  ImportPtr import = fxl::MakeRefCounted<Import>(this, op->id, op->spec);
   return engine_->resource_linker()->ImportResource(import.get(), op->spec,
                                                     std::move(op->token)) &&
          resources_.AddResource(op->id, std::move(import));

@@ -23,24 +23,19 @@ ResourcePtr CreateDelegate(Session* session,
 constexpr ResourceTypeInfo Import::kTypeInfo = {ResourceType::kImport,
                                                 "Import"};
 
-Import::Import(Session* session,
-               scenic::ResourceId id,
-               scenic::ImportSpec spec,
-               ResourceLinker* resource_linker)
+Import::Import(Session* session, scenic::ResourceId id, scenic::ImportSpec spec)
     : Resource(session, id, Import::kTypeInfo),
       import_spec_(spec),
-      delegate_(CreateDelegate(session, id, spec)),
-      resource_linker_(resource_linker) {
+      delegate_(CreateDelegate(session, id, spec)) {
   FXL_DCHECK(delegate_);
   FXL_DCHECK(!delegate_->type_info().IsKindOf(Import::kTypeInfo));
-  FXL_DCHECK(resource_linker_);
 }
 
 Import::~Import() {
   if (imported_resource_ != nullptr) {
     imported_resource_->RemoveImport(this);
   }
-  resource_linker_->OnImportDestroyed(this);
+  session_->engine()->resource_linker()->OnImportDestroyed(this);
 }
 
 Resource* Import::GetDelegate(const ResourceTypeInfo& type_info) {
