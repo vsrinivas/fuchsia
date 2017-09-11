@@ -51,3 +51,7 @@ void vfs_global_init(VnodeDir* root) {
 mx_handle_t vfs_create_global_root_handle() {
     return vfs_create_root_handle(memfs::global_vfs_root);
 }
+
+mx_status_t vfs_connect_global_root_handle(mx_handle_t h) {
+    return vfs_connect_root_handle(memfs::global_vfs_root, h);
+}

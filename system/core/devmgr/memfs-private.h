@@ -174,7 +174,9 @@ void vfs_global_init(VnodeDir* root);
 
 // generate mxremoteio handles
 mx_handle_t vfs_create_global_root_handle(void);
+mx_status_t vfs_connect_global_root_handle(mx_handle_t h);
 mx_handle_t vfs_create_root_handle(VnodeMemfs* vn);
+mx_status_t vfs_connect_root_handle(VnodeMemfs* vn, mx_handle_t h);
 
 // device fs
 mx_status_t devfs_mount(mx_handle_t h);

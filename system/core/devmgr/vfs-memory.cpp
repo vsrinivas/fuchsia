@@ -809,3 +809,8 @@ mx_handle_t vfs_create_root_handle(VnodeMemfs* vn) {
     }
     return h2.release();
 }
+
+mx_status_t vfs_connect_root_handle(VnodeMemfs* vn, mx_handle_t h) {
+    mx::channel ch(h);
+    return memfs::vfs.ServeDirectory(fbl::RefPtr<fs::Vnode>(vn), fbl::move(ch));
+}
