@@ -17,23 +17,32 @@ import 'package:path/path.dart' as path;
 
 // ignore_for_file: unawaited_futures
 
-const String _optionSdkPath = "sdk-path";
-const String _optionSourceDir = "source-dir";
-const String _optionShowResults = "show-results";
-const String _optionCachePath = "cache-path";
+const String _optionSdkPath = 'sdk-path';
+const String _optionSourceDir = 'source-dir';
+const String _optionShowResults = 'show-results';
+const String _optionCachePath = 'cache-path';
+const String _optionStamp = 'stamp';
+const String _optionDepName = 'depname';
+const String _optionDepFile = 'depfile';
 const List<String> _requiredOptions = const [
   _optionSdkPath,
   _optionSourceDir,
   _optionCachePath,
+  _optionStamp,
+  _optionDepName,
+  _optionDepFile,
 ];
 
 Future<Null> main(List<String> args) async {
   final ArgParser parser = new ArgParser()
-    ..addOption(_optionSdkPath, help: "Path to the Dart SDK")
-    ..addOption(_optionSourceDir, help: "The source directory")
+    ..addOption(_optionSdkPath, help: 'Path to the Dart SDK')
+    ..addOption(_optionSourceDir, help: 'The source directory')
     ..addFlag(_optionShowResults,
-        help: "Whether to always show results", negatable: true)
-    ..addOption(_optionCachePath, help: "Path to the analysis cache");
+        help: 'Whether to always show results', negatable: true)
+    ..addOption(_optionCachePath, help: 'Path to the analysis cache')
+    ..addOption(_optionStamp, help: 'Stamp file to update on success')
+    ..addOption(_optionDepName, help: 'Name of the target in the dep file')
+    ..addOption(_optionDepFile, help: 'Path to the depfile to write');
   final argResults = parser.parse(args);
   if (_requiredOptions
       .any((String option) => !argResults.options.contains(option))) {
@@ -47,7 +56,7 @@ Future<Null> main(List<String> args) async {
     sdkPath: path.canonicalize(argResults[_optionSdkPath]),
     clientId: 'Fuchsia Dart build analyzer',
     clientVersion: '0.1',
-    serverArgs: ["--cache", path.canonicalize(argResults[_optionCachePath])],
+    serverArgs: ['--cache', path.canonicalize(argResults[_optionCachePath])],
   );
 
   final completer = new Completer();
@@ -147,6 +156,16 @@ Future<Null> main(List<String> args) async {
         'issue${errors.isEmpty ? "" : "(s)"} '
         'found; analyzed ${sources.length} source file(s) '
         'in ${secondsFormat.format(seconds)}s.');
+  }
+
+  // Write the depfile.
+  final depname = argResults[_optionDepName];
+  new File(argResults[_optionDepFile])
+      .writeAsStringSync('$depname: ${sources.join(" ")}');
+
+  if (errors.isEmpty) {
+    // Write the stamp file.
+    new File(argResults[_optionStamp]).writeAsStringSync('Success!');
   }
 
   exit(errors.isEmpty ? 0 : 1);
