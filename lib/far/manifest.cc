@@ -8,21 +8,21 @@
 
 #include "garnet/lib/far/archive_entry.h"
 #include "garnet/lib/far/archive_writer.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/strings/split_string.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/strings/split_string.h"
 
 namespace archive {
 
-bool ReadManifest(ftl::StringView path, ArchiveWriter* writer) {
+bool ReadManifest(fxl::StringView path, ArchiveWriter* writer) {
   std::string manifest;
   if (!files::ReadFileToString(path.ToString(), &manifest)) {
     fprintf(stderr, "error: Faile to read '%s'\n", path.ToString().c_str());
     return false;
   }
 
-  std::vector<ftl::StringView> lines =
-      ftl::SplitString(manifest, "\n", ftl::WhiteSpaceHandling::kKeepWhitespace,
-                       ftl::SplitResult::kSplitWantNonEmpty);
+  std::vector<fxl::StringView> lines =
+      fxl::SplitString(manifest, "\n", fxl::WhiteSpaceHandling::kKeepWhitespace,
+                       fxl::SplitResult::kSplitWantNonEmpty);
 
   for (const auto& line : lines) {
     size_t offset = line.find('=');

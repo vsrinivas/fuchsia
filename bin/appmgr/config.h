@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "lib/app/fidl/application_launcher.fidl.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace app {
 
@@ -47,7 +47,7 @@ class Config {
   std::vector<std::string> path_;
   std::vector<ApplicationLaunchInfoPtr> initial_apps_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Config);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Config);
 };
 
 }  // namespace app

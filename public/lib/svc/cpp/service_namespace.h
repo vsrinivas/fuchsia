@@ -16,7 +16,7 @@
 
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/vfs/vfs_dispatcher.h"
 
 namespace app {
@@ -125,7 +125,7 @@ class ServiceNamespace : public svcfs::ServiceProvider,
   fbl::RefPtr<svcfs::VnodeDir> directory_;
   fidl::BindingSet<app::ServiceProvider> bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ServiceNamespace);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ServiceNamespace);
 };
 
 }  // namespace app

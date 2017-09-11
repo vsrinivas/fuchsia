@@ -13,7 +13,7 @@
 #include <mx/vmo.h>
 
 #include "lib/app/fidl/application_loader.fidl.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace app {
 
@@ -29,7 +29,7 @@ class RootApplicationLoader : public ApplicationLoader {
  private:
   std::vector<std::string> path_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(RootApplicationLoader);
+  FXL_DISALLOW_COPY_AND_ASSIGN(RootApplicationLoader);
 };
 
 }  // namespace app

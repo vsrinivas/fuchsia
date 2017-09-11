@@ -14,7 +14,7 @@
 
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace app {
 
@@ -126,7 +126,7 @@ class ServiceProviderImpl : public ServiceProvider {
   std::unordered_map<std::string, ServiceConnector> name_to_service_connector_;
   DefaultServiceConnector default_service_connector_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderImpl);
 };
 
 }  // namespace app

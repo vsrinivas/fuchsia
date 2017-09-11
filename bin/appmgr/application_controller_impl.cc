@@ -7,7 +7,7 @@
 #include <utility>
 
 #include "garnet/bin/appmgr/application_environment_impl.h"
-#include "lib/ftl/functional/closure.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace app {
@@ -46,7 +46,7 @@ void ApplicationControllerImpl::Kill() {
 }
 
 void ApplicationControllerImpl::Detach() {
-  binding_.set_connection_error_handler(ftl::Closure());
+  binding_.set_connection_error_handler(fxl::Closure());
 }
 
 bool ApplicationControllerImpl::SendReturnCodeIfTerminated() {
@@ -54,7 +54,7 @@ bool ApplicationControllerImpl::SendReturnCodeIfTerminated() {
   mx_info_process_t process_info;
   mx_status_t result = process_.get_info(MX_INFO_PROCESS, &process_info,
                                          sizeof(process_info), NULL, NULL);
-  FTL_DCHECK(result == MX_OK);
+  FXL_DCHECK(result == MX_OK);
 
   if (process_info.exited) {
     // If the process has exited, call the callbacks.
@@ -76,12 +76,12 @@ void ApplicationControllerImpl::Wait(const WaitCallback& callback) {
 void ApplicationControllerImpl::OnHandleReady(mx_handle_t handle,
                                               mx_signals_t pending,
                                               uint64_t count) {
-  FTL_DCHECK(handle == process_.get());
-  FTL_DCHECK(pending & MX_TASK_TERMINATED);
+  FXL_DCHECK(handle == process_.get());
+  FXL_DCHECK(pending & MX_TASK_TERMINATED);
 
   if (!wait_callbacks_.empty()) {
     bool terminated = SendReturnCodeIfTerminated();
-    FTL_DCHECK(terminated);
+    FXL_DCHECK(terminated);
   }
 
   process_.reset();

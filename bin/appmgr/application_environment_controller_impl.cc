@@ -7,7 +7,7 @@
 #include <utility>
 
 #include "garnet/bin/appmgr/application_environment_impl.h"
-#include "lib/ftl/functional/closure.h"
+#include "lib/fxl/functional/closure.h"
 
 namespace app {
 
@@ -37,7 +37,7 @@ void ApplicationEnvironmentControllerImpl::Kill(const KillCallback& callback) {
 }
 
 void ApplicationEnvironmentControllerImpl::Detach() {
-  binding_.set_connection_error_handler(ftl::Closure());
+  binding_.set_connection_error_handler(fxl::Closure());
 }
 
 }  // namespace app

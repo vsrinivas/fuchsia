@@ -12,7 +12,7 @@
 #include <memory>
 
 #include "garnet/lib/far/archive_reader.h"
-#include "lib/ftl/files/unique_fd.h"
+#include "lib/fxl/files/unique_fd.h"
 #include "lib/mtl/vfs/vfs_dispatcher.h"
 
 namespace archive {
@@ -36,10 +36,10 @@ class FileSystem {
   //
   // The VMO is a copy-on-write clone of the contents of the file, which means
   // writes to the VMO do not mutate the data in the underlying archive.
-  mx::vmo GetFileAsVMO(ftl::StringView path);
+  mx::vmo GetFileAsVMO(fxl::StringView path);
 
   // Returns the contents of the the given path as a string.
-  bool GetFileAsString(ftl::StringView path, std::string* result);
+  bool GetFileAsString(fxl::StringView path, std::string* result);
 
  private:
   void CreateDirectory();

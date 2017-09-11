@@ -9,9 +9,9 @@
 #include <utility>
 
 #include "garnet/bin/appmgr/url_resolver.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/concatenate.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/concatenate.h"
 #include "lib/mtl/vmo/file.h"
 
 namespace app {
@@ -28,10 +28,10 @@ void RootApplicationLoader::LoadApplication(
   if (path.empty()) {
     // TODO(abarth): Support URL schemes other than file:// by querying the host
     // for an application runner.
-    FTL_LOG(ERROR) << "Cannot load " << url
+    FXL_LOG(ERROR) << "Cannot load " << url
                    << " because the scheme is not supported.";
   } else {
-    ftl::UniqueFD fd(open(path.c_str(), O_RDONLY));
+    fxl::UniqueFD fd(open(path.c_str(), O_RDONLY));
     if (!fd.is_valid() && path[0] != '/') {
       for (const auto& entry : path_) {
         std::string qualified_path = entry + "/" + path;
@@ -46,11 +46,11 @@ void RootApplicationLoader::LoadApplication(
     if (fd.is_valid() && mtl::VmoFromFd(std::move(fd), &data)) {
       ApplicationPackagePtr package = ApplicationPackage::New();
       package->data = std::move(data);
-      package->resolved_url = ftl::Concatenate({"file://", path});
+      package->resolved_url = fxl::Concatenate({"file://", path});
       callback(std::move(package));
       return;
     }
-    FTL_LOG(ERROR) << "Could not load url: " << url;
+    FXL_LOG(ERROR) << "Could not load url: " << url;
   }
 
   callback(nullptr);

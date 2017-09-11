@@ -7,21 +7,21 @@
 #include <fcntl.h>
 
 #include "garnet/lib/far/alignment.h"
-#include "lib/ftl/files/unique_fd.h"
+#include "lib/fxl/files/unique_fd.h"
 
 namespace archive {
 
 bool CopyPathToFile(const char* src_path, int dst_fd, uint64_t length) {
-  ftl::UniqueFD src_fd(open(src_path, O_RDONLY));
+  fxl::UniqueFD src_fd(open(src_path, O_RDONLY));
   if (!src_fd.is_valid()) {
-    FTL_LOG(INFO) << "Failed to open " << src_path;
+    FXL_LOG(INFO) << "Failed to open " << src_path;
     return false;
   }
   return CopyFileToFile(src_fd.get(), dst_fd, length);
 }
 
 bool CopyFileToPath(int src_fd, const char* dst_path, uint64_t length) {
-  ftl::UniqueFD dst_fd(open(dst_path, O_WRONLY | O_CREAT | O_TRUNC,
+  fxl::UniqueFD dst_fd(open(dst_path, O_WRONLY | O_CREAT | O_TRUNC,
                             S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH));
   if (!dst_fd.is_valid())
     return false;
@@ -38,7 +38,7 @@ bool CopyFileToFile(int src_fd, int dst_fd, uint64_t length) {
     actual = read(src_fd, buffer, requested);
     if (actual <= 0)
       return false;
-    if (!ftl::WriteFileDescriptor(dst_fd, buffer, actual))
+    if (!fxl::WriteFileDescriptor(dst_fd, buffer, actual))
       return false;
   }
   return true;

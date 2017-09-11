@@ -12,7 +12,7 @@
 
 #include "lib/app/fidl/flat_namespace.fidl.h"
 #include "garnet/bin/appmgr/sandbox_metadata.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace app {
 
@@ -57,7 +57,7 @@ class NamespaceBuilder {
   std::vector<const char*> path_data_;
   mxio_flat_namespace_t flat_ns_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(NamespaceBuilder);
+  FXL_DISALLOW_COPY_AND_ASSIGN(NamespaceBuilder);
 };
 
 }  // namespace app

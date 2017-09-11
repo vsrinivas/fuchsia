@@ -25,7 +25,7 @@ bool far_reader_destroy(far_reader_t reader) {
 }
 
 bool far_reader_read_fd(far_reader_t reader, int fd) {
-  reader->impl = new archive::ArchiveReader(ftl::UniqueFD(fd));
+  reader->impl = new archive::ArchiveReader(fxl::UniqueFD(fd));
   return reader->impl->Read();
 }
 
@@ -39,7 +39,7 @@ bool far_reader_get_index(far_reader_t reader,
                           size_t path_length,
                           uint64_t* index) {
   return reader->impl->GetDirectoryIndexByPath(
-      ftl::StringView(path, path_length), index);
+      fxl::StringView(path, path_length), index);
 }
 
 bool far_reader_get_path(far_reader_t reader,
@@ -49,7 +49,7 @@ bool far_reader_get_path(far_reader_t reader,
   archive::DirectoryTableEntry entry;
   if (!reader->impl->GetDirectoryEntryByIndex(index, &entry))
     return false;
-  ftl::StringView path_view = reader->impl->GetPathView(entry);
+  fxl::StringView path_view = reader->impl->GetPathView(entry);
   *path = path_view.data();
   *path_length = path_view.size();
   return true;

@@ -11,8 +11,8 @@
 #include <magenta/processargs.h>
 
 #include "lib/app/cpp/connect.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 
 namespace bootstrap {
 namespace {
@@ -44,12 +44,12 @@ constexpr char kConfigDir[] = "/system/data/bootstrap/";
 App::App()
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       env_host_binding_(this) {
-  FTL_DCHECK(application_context_);
+  FXL_DCHECK(application_context_);
 
   Config config;
   char buf[PATH_MAX];
   if (strlcpy(buf, kConfigDir, PATH_MAX) >= PATH_MAX) {
-    FTL_LOG(ERROR) << "Config directory path too long";
+    FXL_LOG(ERROR) << "Config directory path too long";
   } else {
     const size_t dir_len = strlen(buf);
     DIR* cfg_dir = opendir(kConfigDir);
@@ -60,7 +60,7 @@ App::App()
           continue;
         }
         if (strlcat(buf, cfg->d_name, PATH_MAX) >= PATH_MAX) {
-          FTL_LOG(WARNING) << "Could not read config file, path too long";
+          FXL_LOG(WARNING) << "Could not read config file, path too long";
           continue;
         }
         config.ReadFrom(buf);
@@ -68,7 +68,7 @@ App::App()
       }
       closedir(cfg_dir);
     } else {
-      FTL_LOG(WARNING) << "Could not open config directory" << kConfigDir;
+      FXL_LOG(WARNING) << "Could not open config directory" << kConfigDir;
     }
   }
 
@@ -105,15 +105,15 @@ App::~App() {}
 void App::RegisterSingleton(std::string service_name,
                             app::ApplicationLaunchInfoPtr launch_info) {
   env_services_.AddServiceForName(
-      ftl::MakeCopyable([
+      fxl::MakeCopyable([
         this, service_name, launch_info = std::move(launch_info),
         controller = app::ApplicationControllerPtr()
       ](mx::channel client_handle) mutable {
-        FTL_VLOG(2) << "Servicing singleton service request for "
+        FXL_VLOG(2) << "Servicing singleton service request for "
                     << service_name;
         auto it = services_.find(launch_info->url);
         if (it == services_.end()) {
-          FTL_VLOG(1) << "Starting singleton " << launch_info->url
+          FXL_VLOG(1) << "Starting singleton " << launch_info->url
                       << " for service " << service_name;
           app::Services services;
           auto dup_launch_info = app::ApplicationLaunchInfo::New();
@@ -124,7 +124,7 @@ void App::RegisterSingleton(std::string service_name,
                                            controller.NewRequest());
           controller.set_connection_error_handler(
               [ this, url = launch_info->url, &controller ] {
-                FTL_LOG(ERROR) << "Singleton " << url << " died";
+                FXL_LOG(ERROR) << "Singleton " << url << " died";
                 controller.reset();  // kills the singleton application
                 services_.erase(url);
               });
@@ -151,7 +151,7 @@ void App::RegisterAppLoaders(Config::ServiceMap app_loaders) {
 }
 
 void App::LaunchApplication(app::ApplicationLaunchInfoPtr launch_info) {
-  FTL_VLOG(1) << "Bootstrapping application " << launch_info->url;
+  FXL_VLOG(1) << "Bootstrapping application " << launch_info->url;
   env_launcher_->CreateApplication(std::move(launch_info), nullptr);
 }
 

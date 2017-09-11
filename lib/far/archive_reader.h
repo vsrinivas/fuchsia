@@ -8,14 +8,14 @@
 #include <vector>
 
 #include "garnet/lib/far/format.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace archive {
 
 class ArchiveReader {
  public:
-  explicit ArchiveReader(ftl::UniqueFD fd);
+  explicit ArchiveReader(fxl::UniqueFD fd);
   ~ArchiveReader();
   ArchiveReader(const ArchiveReader& other) = delete;
 
@@ -35,21 +35,21 @@ class ArchiveReader {
       callback(entry);
   }
 
-  bool Extract(ftl::StringView output_dir) const;
-  bool ExtractFile(ftl::StringView archive_path, const char* output_path) const;
-  bool CopyFile(ftl::StringView archive_path, int dst_fd) const;
+  bool Extract(fxl::StringView output_dir) const;
+  bool ExtractFile(fxl::StringView archive_path, const char* output_path) const;
+  bool CopyFile(fxl::StringView archive_path, int dst_fd) const;
 
   bool GetDirectoryEntryByIndex(uint64_t index,
                                 DirectoryTableEntry* entry) const;
-  bool GetDirectoryEntryByPath(ftl::StringView archive_path,
+  bool GetDirectoryEntryByPath(fxl::StringView archive_path,
                                DirectoryTableEntry* entry) const;
 
-  bool GetDirectoryIndexByPath(ftl::StringView archive_path,
+  bool GetDirectoryIndexByPath(fxl::StringView archive_path,
                                uint64_t* index) const;
 
-  ftl::UniqueFD TakeFileDescriptor();
+  fxl::UniqueFD TakeFileDescriptor();
 
-  ftl::StringView GetPathView(const DirectoryTableEntry& entry) const;
+  fxl::StringView GetPathView(const DirectoryTableEntry& entry) const;
 
  private:
   bool ReadIndex();
@@ -57,7 +57,7 @@ class ArchiveReader {
 
   const IndexEntry* GetIndexEntry(uint64_t type) const;
 
-  ftl::UniqueFD fd_;
+  fxl::UniqueFD fd_;
   std::vector<IndexEntry> index_;
   std::vector<DirectoryTableEntry> directory_table_;
   std::vector<char> path_data_;

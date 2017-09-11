@@ -13,7 +13,7 @@
 #include "garnet/bin/appmgr/root_application_loader.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace app {
 
@@ -44,7 +44,7 @@ class RootEnvironmentHost : public ApplicationEnvironmentHost,
   std::vector<std::string> path_;
   std::unique_ptr<ApplicationEnvironmentImpl> environment_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(RootEnvironmentHost);
+  FXL_DISALLOW_COPY_AND_ASSIGN(RootEnvironmentHost);
 };
 
 }  // namespace app

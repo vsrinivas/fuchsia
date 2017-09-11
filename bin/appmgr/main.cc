@@ -12,15 +12,15 @@
 
 #include "garnet/bin/appmgr/config.h"
 #include "garnet/bin/appmgr/root_environment_host.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/log_settings.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/log_settings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 constexpr char kDefaultConfigPath[] = "/system/data/appmgr/initial.config";
 
 int main(int argc, char** argv) {
-  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   std::string config_file;
   command_line.GetOptionValue("config", &config_file);

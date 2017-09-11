@@ -12,9 +12,9 @@
 
 #include "garnet/lib/far/file_operations.h"
 #include "garnet/lib/far/format.h"
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/files/path.h"
-#include "lib/ftl/strings/concatenate.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/path.h"
+#include "lib/fxl/strings/concatenate.h"
 
 namespace archive {
 namespace {
@@ -22,14 +22,14 @@ namespace {
 struct PathComparator {
   const ArchiveReader* reader = nullptr;
 
-  bool operator()(const DirectoryTableEntry& lhs, const ftl::StringView& rhs) {
+  bool operator()(const DirectoryTableEntry& lhs, const fxl::StringView& rhs) {
     return reader->GetPathView(lhs) < rhs;
   }
 };
 
 }  // namespace
 
-ArchiveReader::ArchiveReader(ftl::UniqueFD fd) : fd_(std::move(fd)) {}
+ArchiveReader::ArchiveReader(fxl::UniqueFD fd) : fd_(std::move(fd)) {}
 
 ArchiveReader::~ArchiveReader() = default;
 
@@ -37,9 +37,9 @@ bool ArchiveReader::Read() {
   return ReadIndex() && ReadDirectory();
 }
 
-bool ArchiveReader::Extract(ftl::StringView output_dir) const {
+bool ArchiveReader::Extract(fxl::StringView output_dir) const {
   for (const auto& entry : directory_table_) {
-    std::string path = ftl::Concatenate({output_dir, "/", GetPathView(entry)});
+    std::string path = fxl::Concatenate({output_dir, "/", GetPathView(entry)});
     std::string dir = files::GetDirectoryName(path);
     if (!dir.empty() && !files::IsDirectory(dir) &&
         !files::CreateDirectory(dir)) {
@@ -58,7 +58,7 @@ bool ArchiveReader::Extract(ftl::StringView output_dir) const {
   return true;
 }
 
-bool ArchiveReader::ExtractFile(ftl::StringView archive_path,
+bool ArchiveReader::ExtractFile(fxl::StringView archive_path,
                                 const char* output_path) const {
   DirectoryTableEntry entry;
   if (!GetDirectoryEntryByPath(archive_path, &entry))
@@ -74,7 +74,7 @@ bool ArchiveReader::ExtractFile(ftl::StringView archive_path,
   return true;
 }
 
-bool ArchiveReader::CopyFile(ftl::StringView archive_path, int dst_fd) const {
+bool ArchiveReader::CopyFile(fxl::StringView archive_path, int dst_fd) const {
   DirectoryTableEntry entry;
   if (!GetDirectoryEntryByPath(archive_path, &entry))
     return false;
@@ -97,14 +97,14 @@ bool ArchiveReader::GetDirectoryEntryByIndex(uint64_t index,
   return true;
 }
 
-bool ArchiveReader::GetDirectoryEntryByPath(ftl::StringView archive_path,
+bool ArchiveReader::GetDirectoryEntryByPath(fxl::StringView archive_path,
                                             DirectoryTableEntry* entry) const {
   uint64_t index = 0;
   return GetDirectoryIndexByPath(archive_path, &index) &&
          GetDirectoryEntryByIndex(index, entry);
 }
 
-bool ArchiveReader::GetDirectoryIndexByPath(ftl::StringView archive_path,
+bool ArchiveReader::GetDirectoryIndexByPath(fxl::StringView archive_path,
                                             uint64_t* index) const {
   PathComparator comparator;
   comparator.reader = this;
@@ -117,13 +117,13 @@ bool ArchiveReader::GetDirectoryIndexByPath(ftl::StringView archive_path,
   return true;
 }
 
-ftl::UniqueFD ArchiveReader::TakeFileDescriptor() {
+fxl::UniqueFD ArchiveReader::TakeFileDescriptor() {
   return std::move(fd_);
 }
 
-ftl::StringView ArchiveReader::GetPathView(
+fxl::StringView ArchiveReader::GetPathView(
     const DirectoryTableEntry& entry) const {
-  return ftl::StringView(path_data_.data() + entry.name_offset,
+  return fxl::StringView(path_data_.data() + entry.name_offset,
                          entry.name_length);
 }
 

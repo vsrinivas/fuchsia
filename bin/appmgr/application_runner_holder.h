@@ -9,8 +9,8 @@
 
 #include "lib/app/fidl/application_controller.fidl.h"
 #include "lib/app/fidl/application_runner.fidl.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/macros.h"
 
 namespace app {
 
@@ -30,7 +30,7 @@ class ApplicationRunnerHolder {
   ApplicationControllerPtr controller_;
   ApplicationRunnerPtr runner_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ApplicationRunnerHolder);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationRunnerHolder);
 };
 
 }  // namespace app

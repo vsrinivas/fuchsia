@@ -10,7 +10,7 @@
 
 #include <utility>
 
-#include "lib/ftl/files/unique_fd.h"
+#include "lib/fxl/files/unique_fd.h"
 
 namespace app {
 
@@ -75,7 +75,7 @@ bool ServiceNamespace::MountAtPath(const char* path) {
   if (!ServeDirectory(std::move(h1)))
     return false;
 
-  ftl::UniqueFD fd(open(path, O_DIRECTORY | O_RDWR));
+  fxl::UniqueFD fd(open(path, O_DIRECTORY | O_RDWR));
   if (fd.get() < 0)
     return false;
 

@@ -15,6 +15,6 @@ source_set("cpp") {
     "//garnet/public/lib/svc/cpp",
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }

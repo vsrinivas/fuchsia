@@ -8,7 +8,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace app {
 namespace {
@@ -47,7 +47,7 @@ ApplicationContext::~ApplicationContext() = default;
 std::unique_ptr<ApplicationContext>
 ApplicationContext::CreateFromStartupInfo() {
   auto startup_info = CreateFromStartupInfoNotChecked();
-  FTL_CHECK(startup_info->environment().get() != nullptr)
+  FXL_CHECK(startup_info->environment().get() != nullptr)
       << "The ApplicationEnvironment is null. If this is expected, use "
          "CreateFromStartupInfoNotChecked() to allow |environment| to be null.";
   return startup_info;

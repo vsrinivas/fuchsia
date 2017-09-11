@@ -35,7 +35,7 @@ source_set("lib") {
     "//garnet/lib/farfs",
     "//garnet/public/lib/svc/cpp",
     "//garnet/public/lib/app/fidl",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",
     "//third_party/rapidjson",

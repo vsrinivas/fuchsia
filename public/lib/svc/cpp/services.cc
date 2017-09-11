@@ -6,7 +6,7 @@
 
 #include <mxio/util.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace app {
 
@@ -24,7 +24,7 @@ Services& Services::operator=(Services&& other) {
 
 mx::channel Services::NewRequest() {
   mx::channel request;
-  FTL_CHECK(mx::channel::create(0, &request, &directory_) == MX_OK);
+  FXL_CHECK(mx::channel::create(0, &request, &directory_) == MX_OK);
   return request;
 }
 

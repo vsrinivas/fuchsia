@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "lib/ftl/files/unique_fd.h"
+#include "lib/fxl/files/unique_fd.h"
 
 namespace app {
 namespace {
@@ -75,12 +75,12 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
   if (sandbox.dev().empty())
     return;
 
-  ftl::UniqueFD dir(open("/dev", O_DIRECTORY | O_RDWR));
+  fxl::UniqueFD dir(open("/dev", O_DIRECTORY | O_RDWR));
   if (!dir.is_valid())
     return;
   const auto& dev = sandbox.dev();
   for (const auto& path : dev) {
-    ftl::UniqueFD entry(openat(dir.get(), path.c_str(), O_DIRECTORY | O_RDWR));
+    fxl::UniqueFD entry(openat(dir.get(), path.c_str(), O_DIRECTORY | O_RDWR));
     if (!entry.is_valid())
       continue;
     mx::channel handle = CloneChannel(entry.get());
@@ -100,7 +100,7 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
 void NamespaceBuilder::PushDirectoryFromPath(std::string path, int oflags) {
   if (std::find(paths_.begin(), paths_.end(), path) != paths_.end())
     return;
-  ftl::UniqueFD dir(open(path.c_str(), O_DIRECTORY | oflags));
+  fxl::UniqueFD dir(open(path.c_str(), O_DIRECTORY | oflags));
   if (!dir.is_valid())
     return;
   mx::channel handle = CloneChannel(dir.get());
@@ -111,7 +111,7 @@ void NamespaceBuilder::PushDirectoryFromPath(std::string path, int oflags) {
 
 void NamespaceBuilder::PushDirectoryFromChannel(std::string path,
                                                 mx::channel channel) {
-  FTL_DCHECK(std::find(paths_.begin(), paths_.end(), path) == paths_.end());
+  FXL_DCHECK(std::find(paths_.begin(), paths_.end(), path) == paths_.end());
   types_.push_back(PA_HND(PA_NS_DIR, types_.size()));
   handles_.push_back(channel.get());
   paths_.push_back(std::move(path));

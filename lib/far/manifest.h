@@ -5,12 +5,12 @@
 #ifndef APPLICATION_LIB_FAR_MANIFEST_H_
 #define APPLICATION_LIB_FAR_MANIFEST_H_
 
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace archive {
 class ArchiveWriter;
 
-bool ReadManifest(ftl::StringView path, ArchiveWriter* writer);
+bool ReadManifest(fxl::StringView path, ArchiveWriter* writer);
 
 }  // namespace archive
 

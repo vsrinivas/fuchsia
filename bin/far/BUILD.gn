@@ -9,6 +9,6 @@ executable("far") {
 
   deps = [
     "//garnet/lib/far",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }

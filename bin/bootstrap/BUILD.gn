@@ -17,7 +17,7 @@ executable("bootstrap") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/svc/cpp",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/url",
     "//garnet/public/lib/mtl",
     "//third_party/rapidjson",

@@ -6,7 +6,7 @@
 
 #include <utility>
 
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace app {
 
@@ -63,7 +63,7 @@ void ServiceProviderImpl::SetDefaultServiceProvider(
   }
 
   default_service_connector_ =
-      ftl::MakeCopyable([provider = std::move(provider)](
+      fxl::MakeCopyable([provider = std::move(provider)](
           std::string service_name, mx::channel client_handle) {
         provider->ConnectToService(service_name, std::move(client_handle));
       });

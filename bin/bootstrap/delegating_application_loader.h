@@ -8,7 +8,7 @@
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/app/fidl/application_loader.fidl.h"
 #include "garnet/bin/bootstrap/config.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace bootstrap {
 
@@ -53,7 +53,7 @@ class DelegatingApplicationLoader : public app::ApplicationLoader {
   std::unordered_map<std::string, ApplicationLoaderRecord*>
       delegates_by_scheme_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DelegatingApplicationLoader);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DelegatingApplicationLoader);
 };
 
 }  // namespace bootstrap

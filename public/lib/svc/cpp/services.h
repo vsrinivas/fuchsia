@@ -8,8 +8,8 @@
 #include <mx/channel.h>
 
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
 
 namespace app {
 
@@ -48,7 +48,7 @@ class Services {
  private:
   mx::channel directory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Services);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Services);
 };
 
 }  // namespace app

@@ -10,7 +10,7 @@
 #include "garnet/lib/farfs/file_system.h"
 #include "lib/app/fidl/application_controller.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
@@ -50,7 +50,7 @@ class ApplicationControllerImpl : public ApplicationController,
 
   mtl::MessageLoop::HandlerKey termination_handler_ = 0u;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ApplicationControllerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationControllerImpl);
 };
 
 }  // namespace app

@@ -16,7 +16,7 @@
 
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/vfs/vfs_dispatcher.h"
 
 namespace app {
@@ -78,7 +78,7 @@ class ServiceProviderBridge : public svcfs::ServiceProvider,
   std::map<std::string, ServiceConnector> name_to_service_connector_;
   app::ServiceProviderPtr backend_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderBridge);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderBridge);
 };
 
 }  // namespace app

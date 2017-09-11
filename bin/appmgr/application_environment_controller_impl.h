@@ -9,7 +9,7 @@
 
 #include "lib/app/fidl/application_environment_controller.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace app {
 class ApplicationEnvironmentImpl;
@@ -34,7 +34,7 @@ class ApplicationEnvironmentControllerImpl
   fidl::Binding<ApplicationEnvironmentController> binding_;
   std::unique_ptr<ApplicationEnvironmentImpl> environment_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ApplicationEnvironmentControllerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationEnvironmentControllerImpl);
 };
 
 }  // namespace app

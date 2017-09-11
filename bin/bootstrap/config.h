@@ -10,7 +10,7 @@
 #include <utility>
 
 #include "lib/app/fidl/application_launcher.fidl.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace bootstrap {
 
@@ -39,7 +39,7 @@ class Config {
   ServiceMap app_loaders_;
   AppVector apps_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Config);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Config);
 };
 
 }  // namespace bootstrap

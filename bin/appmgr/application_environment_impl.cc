@@ -21,9 +21,9 @@
 #include "garnet/bin/appmgr/namespace_builder.h"
 #include "garnet/bin/appmgr/runtime_metadata.h"
 #include "garnet/bin/appmgr/url_resolver.h"
-#include "lib/ftl/functional/auto_call.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/functional/auto_call.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "lib/mtl/handles/object_info.h"
 
 namespace app {
@@ -124,7 +124,7 @@ mx::process Launch(const mx::job& job,
   const char* errmsg;
   auto status = launchpad_go(lp, &proc, &errmsg);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "Cannot run executable " << label << " due to error "
+    FXL_LOG(ERROR) << "Cannot run executable " << label << " due to error "
                    << status << " (" << mx_status_get_string(status)
                    << "): " << errmsg;
     return mx::process();
@@ -191,8 +191,8 @@ ApplicationEnvironmentImpl::ApplicationEnvironmentImpl(
   // derive from the application manager's job.
   mx_handle_t parent_job =
       parent_ != nullptr ? parent_->job_.get() : mx_job_default();
-  FTL_CHECK(mx::job::create(parent_job, 0u, &job_) == MX_OK);
-  FTL_CHECK(job_.duplicate(kChildJobRights, &job_for_child_) == MX_OK);
+  FXL_CHECK(mx::job::create(parent_job, 0u, &job_) == MX_OK);
+  FXL_CHECK(job_.duplicate(kChildJobRights, &job_for_child_) == MX_OK);
 
   // Get the ApplicationLoader service up front.
   ServiceProviderPtr service_provider;
@@ -200,7 +200,7 @@ ApplicationEnvironmentImpl::ApplicationEnvironmentImpl(
   loader_ = ConnectToService<ApplicationLoader>(service_provider.get());
 
   if (label.size() == 0)
-    label_ = ftl::StringPrintf(kNumberedLabelFormat, next_numbered_label_++);
+    label_ = fxl::StringPrintf(kNumberedLabelFormat, next_numbered_label_++);
   else
     label_ = label.get().substr(0, ApplicationEnvironment::kLabelMaxLength);
 
@@ -283,13 +283,13 @@ void ApplicationEnvironmentImpl::CreateApplication(
     ApplicationLaunchInfoPtr launch_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
   if (launch_info->url.get().empty()) {
-    FTL_LOG(ERROR) << "Cannot create application because launch_info contains"
+    FXL_LOG(ERROR) << "Cannot create application because launch_info contains"
                       " an empty url";
     return;
   }
   std::string canon_url = CanonicalizeURL(launch_info->url);
   if (canon_url.empty()) {
-    FTL_LOG(ERROR) << "Cannot run " << launch_info->url
+    FXL_LOG(ERROR) << "Cannot run " << launch_info->url
                    << " because the url could not be canonicalized";
     return;
   }
@@ -298,7 +298,7 @@ void ApplicationEnvironmentImpl::CreateApplication(
   // launch_info is moved before LoadApplication() gets at its first argument.
   fidl::String url = launch_info->url;
   loader_->LoadApplication(
-      url, ftl::MakeCopyable([
+      url, fxl::MakeCopyable([
         this, launch_info = std::move(launch_info),
         controller = std::move(controller)
       ](ApplicationPackagePtr package) mutable {
@@ -351,7 +351,7 @@ void ApplicationEnvironmentImpl::CreateApplicationWithRunner(
 
   auto* runner_ptr = GetOrCreateRunner(runner);
   if (runner_ptr == nullptr) {
-    FTL_LOG(ERROR) << "Could not create runner " << runner << " to run "
+    FXL_LOG(ERROR) << "Could not create runner " << runner << " to run "
                    << launch_info->url;
   }
   runner_ptr->StartApplication(std::move(package), std::move(startup_info),
@@ -411,7 +411,7 @@ void ApplicationEnvironmentImpl::CreateApplicationFromArchive(
   if (file_system->GetFileAsString(kSandboxPath, &sandbox_data)) {
     SandboxMetadata sandbox;
     if (!sandbox.Parse(sandbox_data)) {
-      FTL_LOG(ERROR) << "Failed to parse sandbox metadata for "
+      FXL_LOG(ERROR) << "Failed to parse sandbox metadata for "
                      << launch_info->url;
       return;
     }
@@ -428,7 +428,7 @@ void ApplicationEnvironmentImpl::CreateApplicationFromArchive(
   if (file_system->GetFileAsString(kRuntimePath, &runtime_data)) {
     RuntimeMetadata runtime;
     if (!runtime.Parse(runtime_data)) {
-      FTL_LOG(ERROR) << "Failed to parse runtime metadata for "
+      FXL_LOG(ERROR) << "Failed to parse runtime metadata for "
                      << launch_info->url;
       return;
     }
@@ -453,7 +453,7 @@ void ApplicationEnvironmentImpl::CreateApplicationFromArchive(
 
     auto* runner = GetOrCreateRunner(runtime.runner());
     if (runner == nullptr) {
-      FTL_LOG(ERROR) << "Cannot create " << runner << " to run "
+      FXL_LOG(ERROR) << "Cannot create " << runner << " to run "
                      << launch_info->url;
       return;
     }
@@ -496,7 +496,7 @@ ApplicationRunnerHolder* ApplicationEnvironmentImpl::GetOrCreateRunner(
         std::move(runner_services), std::move(runner_controller));
   } else if (!result.first->second) {
     // There was a cycle in the runner graph.
-    FTL_LOG(ERROR) << "Detected a cycle in the runner graph for " << runner
+    FXL_LOG(ERROR) << "Detected a cycle in the runner graph for " << runner
                    << ".";
     return nullptr;
   }

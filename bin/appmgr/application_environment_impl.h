@@ -17,8 +17,8 @@
 #include "garnet/bin/appmgr/application_environment_controller_impl.h"
 #include "garnet/bin/appmgr/application_runner_holder.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace app {
 
@@ -112,7 +112,7 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
   std::unordered_map<std::string, std::unique_ptr<ApplicationRunnerHolder>>
       runners_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ApplicationEnvironmentImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationEnvironmentImpl);
 };
 
 }  // namespace app

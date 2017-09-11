@@ -15,7 +15,7 @@
 #include "lib/app/fidl/application_controller.fidl.h"
 #include "lib/app/fidl/application_environment.fidl.h"
 #include "garnet/bin/bootstrap/delegating_application_loader.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace bootstrap {
 
@@ -60,7 +60,7 @@ class App : public app::ApplicationEnvironmentHost {
   std::unique_ptr<DelegatingApplicationLoader> app_loader_;
   fidl::BindingSet<app::ApplicationLoader> app_loader_bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(App);
+  FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
 }  // namespace bootstrap
