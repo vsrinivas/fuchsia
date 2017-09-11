@@ -14,7 +14,7 @@ executable("e2e_sync") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/ledger/src/callback",
     "//apps/ledger/src/convert",
     "//apps/ledger/src/fidl_helpers",

@@ -26,7 +26,7 @@ executable("launch_benchmark") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
     "//apps/ledger/src/test/benchmark/lib",

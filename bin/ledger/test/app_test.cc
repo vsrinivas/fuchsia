@@ -4,7 +4,7 @@
 
 #include "apps/ledger/src/test/app_test.h"
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/ledger/src/test/get_ledger.h"
 #include "apps/test_runner/lib/reporting/gtest_listener.h"
 #include "apps/test_runner/lib/reporting/reporter.h"

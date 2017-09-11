@@ -4,7 +4,7 @@
 
 #include <trace-provider/provider.h>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/ledger/cloud_provider_firebase/factory_impl.h"
 #include "apps/modular/services/lifecycle/lifecycle.fidl.h"
 #include "garnet/public/lib/fidl/cpp/bindings/binding_set.h"

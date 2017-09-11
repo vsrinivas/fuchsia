@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 
 // Benchmark that executes a given app multiple times, each with a different
 // value for a given test argument.

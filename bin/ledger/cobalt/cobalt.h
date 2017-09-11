@@ -5,7 +5,7 @@
 #ifndef APPS_LEDGER_SRC_COBALT_COBALT_H_
 #define APPS_LEDGER_SRC_COBALT_COBALT_H_
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/ftl/functional/auto_call.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/memory/ref_ptr.h"

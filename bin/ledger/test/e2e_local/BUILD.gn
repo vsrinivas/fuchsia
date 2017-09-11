@@ -14,7 +14,7 @@ executable("e2e_local") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/ledger/services/internal",
     "//apps/ledger/services/internal:internal_sync",
     "//apps/ledger/services/public:public_sync",

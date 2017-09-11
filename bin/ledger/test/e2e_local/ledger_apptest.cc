@@ -4,8 +4,8 @@
 
 #include <string.h>
 
-#include "application/lib/app/connect.h"
-#include "application/services/application_environment.fidl.h"
+#include "lib/app/cpp/connect.h"
+#include "lib/app/fidl/application_environment.fidl.h"
 #include "apps/ledger/services/internal/internal.fidl-sync.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl-sync.h"

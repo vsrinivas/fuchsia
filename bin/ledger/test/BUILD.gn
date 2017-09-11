@@ -24,7 +24,7 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/ledger/services/public",
     "//apps/ledger/src/fidl_helpers",
     "//apps/ledger/src/test/token_provider",
@@ -57,7 +57,7 @@ source_set("app_test") {
 
   public_deps = [
     ":lib",
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
   ]
 
   deps = [

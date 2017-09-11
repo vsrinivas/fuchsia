@@ -16,7 +16,7 @@ executable("ledger_benchmark_sync") {
   testonly = true
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
     "//apps/ledger/src/convert",

@@ -18,7 +18,7 @@ executable("tool") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/ledger/src/app:lib",
     "//apps/ledger/src/cloud_provider/impl",
     "//apps/ledger/src/cloud_sync/impl",

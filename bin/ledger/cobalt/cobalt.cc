@@ -6,8 +6,8 @@
 
 #include <set>
 
-#include "application/lib/app/connect.h"
-#include "application/services/application_environment.fidl.h"
+#include "lib/app/cpp/connect.h"
+#include "lib/app/fidl/application_environment.fidl.h"
 #include "apps/cobalt_client/services/cobalt.fidl.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/callback/waiter.h"

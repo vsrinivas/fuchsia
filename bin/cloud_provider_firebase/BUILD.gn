@@ -11,7 +11,7 @@ executable("cloud_provider_firebase") {
 
   deps = [
     ":lib",
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/modular/services/lifecycle",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",

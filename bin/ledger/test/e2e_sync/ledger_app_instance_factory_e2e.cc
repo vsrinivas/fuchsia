@@ -6,8 +6,8 @@
 
 #include <thread>
 
-#include "application/lib/app/application_context.h"
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/connect.h"
 #include "apps/ledger/src/callback/synchronous_task.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/fidl_helpers/bound_interface_set.h"

@@ -8,7 +8,7 @@
 #include <functional>
 #include <string>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/fidl_helpers/boundable.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"

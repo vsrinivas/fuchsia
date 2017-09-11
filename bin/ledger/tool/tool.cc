@@ -7,7 +7,7 @@
 #include <iostream>
 #include <unordered_set>
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
 #include "apps/ledger/src/firebase/encoding.h"

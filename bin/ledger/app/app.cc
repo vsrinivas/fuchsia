@@ -11,7 +11,7 @@
 #include <magenta/device/vfs.h>
 #include <trace-provider/provider.h>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/src/app/erase_remote_repository_operation.h"
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"

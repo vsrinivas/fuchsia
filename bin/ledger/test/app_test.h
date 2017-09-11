@@ -5,7 +5,7 @@
 #ifndef APPS_LEDGER_SRC_TEST_APP_TEST_H_
 #define APPS_LEDGER_SRC_TEST_APP_TEST_H_
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 
 namespace test {

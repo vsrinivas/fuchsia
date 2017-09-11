@@ -6,7 +6,7 @@
 
 #include <utility>
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/convert/convert.h"
