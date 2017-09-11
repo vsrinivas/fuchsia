@@ -1,6 +1,6 @@
 #include "display_provider_impl.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace display_pipe {
 DisplayProviderImpl::DisplayProviderImpl() :
@@ -8,7 +8,7 @@ DisplayProviderImpl::DisplayProviderImpl() :
     image_pipe_(conn_)
     {
     if (!conn_->Open()) {
-        FTL_LOG(ERROR) << "Unable to open connection to magma.";
+        FXL_LOG(ERROR) << "Unable to open connection to magma.";
         exit(1);
         return;
     }
@@ -23,7 +23,7 @@ void DisplayProviderImpl::GetInfo(const GetInfoCallback& callback) {
         info->width = display_width;
         info->height = display_height;
     } else {
-        FTL_LOG(ERROR) << "Unable to query display size.";
+        FXL_LOG(ERROR) << "Unable to query display size.";
         exit(1);
     }
 

@@ -11,9 +11,9 @@
 #include <mx/vmo.h>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/log_settings_command_line.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/log_settings_command_line.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "magma.h"
 #include "magma_util/macros.h"
@@ -37,17 +37,17 @@ class App {
   std::unique_ptr<app::ApplicationContext> context_;
   DisplayProviderImpl display_provider_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(App);
+  FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
 }  // namespace display_pipe
 
 int main(int argc, const char** argv) {
-  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
-  if (!ftl::SetLogSettingsFromCommandLine(command_line))
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  FTL_DLOG(INFO) << "display_pipe started";
+  FXL_DLOG(INFO) << "display_pipe started";
   mtl::MessageLoop loop;
   display_pipe::App app;
   loop.Run();

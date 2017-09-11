@@ -139,7 +139,7 @@ VkResult ImagePipeSwapchain::Initialize(VkDevice device,
 
         result = pDisp->CreateImage(device, &create_info, pAllocator, &image);
         if (result != VK_SUCCESS) {
-            FTL_DLOG(ERROR) << "VkCreateImage failed: " << result;
+            FXL_DLOG(ERROR) << "VkCreateImage failed: " << result;
             return result;
         }
         images_.push_back(image);
@@ -161,19 +161,19 @@ VkResult ImagePipeSwapchain::Initialize(VkDevice device,
         VkDeviceMemory device_mem;
         result = pDisp->AllocateMemory(device, &alloc_info, pAllocator, &device_mem);
         if (result != VK_SUCCESS) {
-            FTL_DLOG(ERROR) << "vkAllocMemory failed: " << result;
+            FXL_DLOG(ERROR) << "vkAllocMemory failed: " << result;
             return result;
         }
         memories_.push_back(device_mem);
         result = pDisp->BindImageMemory(device, image, device_mem, 0);
         if (result != VK_SUCCESS) {
-            FTL_DLOG(ERROR) << "vkBindImageMemory failed: " << result;
+            FXL_DLOG(ERROR) << "vkBindImageMemory failed: " << result;
             return result;
         }
         uint32_t vmo_handle;
         result = pDisp->ExportDeviceMemoryMAGMA(device, device_mem, &vmo_handle);
         if (result != VK_SUCCESS) {
-            FTL_DLOG(ERROR) << "vkExportDeviceMemoryMAGMA failed: " << result;
+            FXL_DLOG(ERROR) << "vkExportDeviceMemoryMAGMA failed: " << result;
             return result;
         }
 
@@ -211,7 +211,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device,
     ret = swapchain->Initialize(device, pCreateInfo, pAllocator);
     if (ret != VK_SUCCESS) {
         swapchain->Cleanup(device, pAllocator);
-        FTL_DLOG(ERROR) << "failed to create swapchain: " << ret;
+        FXL_DLOG(ERROR) << "failed to create swapchain: " << ret;
         return ret;
     }
     *pSwapchain = reinterpret_cast<VkSwapchainKHR>(swapchain.release());
@@ -268,7 +268,7 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns, VkSemaphore s
     if (available_ids_.empty()) {
         // only way this can happen is if there are 0 images or if the client has already acquired
         // all images
-        FTL_DCHECK(!pending_images_.empty());
+        FXL_DCHECK(!pending_images_.empty());
         if (timeout_ns == 0)
             return VK_NOT_READY;
         // wait for image to become available
@@ -280,10 +280,10 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns, VkSemaphore s
         if (status == MX_ERR_TIMED_OUT) {
             return VK_TIMEOUT;
         } else if (status != MX_OK) {
-            FTL_DLOG(ERROR) << "event::wait_one returned " << status;
+            FXL_DLOG(ERROR) << "event::wait_one returned " << status;
             return VK_ERROR_DEVICE_LOST;
         }
-        FTL_DCHECK(pending & MX_EVENT_SIGNALED);
+        FXL_DCHECK(pending & MX_EVENT_SIGNALED);
 
         available_ids_.push_back(pending_images_[0].image_index);
         pending_images_.erase(pending_images_.begin());
@@ -299,8 +299,8 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
                                                    VkFence fence, uint32_t* pImageIndex)
 {
     // TODO(MA-264) handle this correctly
-    FTL_CHECK(fence == VK_NULL_HANDLE);
-    FTL_CHECK(semaphore == VK_NULL_HANDLE);
+    FXL_CHECK(fence == VK_NULL_HANDLE);
+    FXL_CHECK(semaphore == VK_NULL_HANDLE);
 
     auto swapchain = reinterpret_cast<ImagePipeSwapchain*>(vk_swapchain);
     return swapchain->AcquireNextImage(timeout, semaphore, pImageIndex);
@@ -312,7 +312,7 @@ VkResult ImagePipeSwapchain::Present(uint32_t index)
         return VK_ERROR_DEVICE_LOST;
 
     auto iter = std::find(acquired_ids_.begin(), acquired_ids_.end(), index);
-    FTL_DCHECK(iter != acquired_ids_.end());
+    FXL_DCHECK(iter != acquired_ids_.end());
     acquired_ids_.erase(iter);
 
     mx::event acquire_fence, release_fence;
@@ -327,7 +327,7 @@ VkResult ImagePipeSwapchain::Present(uint32_t index)
 
     status = acquire_fence.signal(0u, MX_EVENT_SIGNALED);
     if (status) {
-        FTL_DLOG(ERROR) << "failed to signal fence event, mx::event::signal() failed with status "
+        FXL_DLOG(ERROR) << "failed to signal fence event, mx::event::signal() failed with status "
                         << status;
         return VK_ERROR_DEVICE_LOST;
     }
@@ -335,7 +335,7 @@ VkResult ImagePipeSwapchain::Present(uint32_t index)
     mx::event image_release_fence;
     status = release_fence.duplicate(MX_RIGHT_SAME_RIGHTS, &image_release_fence);
     if (status) {
-        FTL_DLOG(ERROR)
+        FXL_DLOG(ERROR)
             << "failed to duplicate release fence, mx::event::duplicate() failed with status "
             << status;
         return VK_ERROR_DEVICE_LOST;
@@ -438,7 +438,7 @@ GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice, const VkSurf
         *pCount = supported_properties.formats.size();
         return VK_SUCCESS;
     }
-    FTL_DCHECK(*pCount >= supported_properties.formats.size());
+    FXL_DCHECK(*pCount >= supported_properties.formats.size());
     memcpy(pSurfaceFormats, supported_properties.formats.data(),
            supported_properties.formats.size() * sizeof(VkSurfaceFormatKHR));
     *pCount = supported_properties.formats.size();
@@ -455,7 +455,7 @@ GetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice physicalDevice, const V
         *pCount = present_mode_count;
         return VK_SUCCESS;
     }
-    FTL_DCHECK(*pCount >= present_mode_count);
+    FXL_DCHECK(*pCount >= present_mode_count);
     memcpy(pPresentModes, present_modes, present_mode_count);
     *pCount = present_mode_count;
     return VK_SUCCESS;
@@ -708,7 +708,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance,
                                                                    const char* funcName)
 {
-    FTL_DCHECK(instance);
+    FXL_DCHECK(instance);
 
     LayerData* my_data;
     my_data = GetLayerDataPtr(get_dispatch_key(instance), layer_data_map);

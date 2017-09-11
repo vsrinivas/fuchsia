@@ -36,9 +36,9 @@
 #if defined(CUBE_USE_IMAGE_PIPE)
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/log_settings.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/log_settings.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "magma/src/display_pipe/client/buffer.h"
 #include "magma/src/display_pipe/services/display_provider.fidl.h"

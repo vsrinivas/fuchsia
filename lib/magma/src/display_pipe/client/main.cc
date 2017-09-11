@@ -4,9 +4,9 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/log_settings_command_line.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/log_settings_command_line.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "magenta/status.h"
 #include "magma/src/display_pipe/client/buffer.h"
@@ -104,7 +104,7 @@ class BufferHandler : public mtl::MessageLoopHandler {
   }
 
   void OnHandleError(mx_handle_t handle, mx_status_t error) override {
-      FTL_LOG(ERROR) << "BufferHandler received an error ("
+      FXL_LOG(ERROR) << "BufferHandler received an error ("
           << mx_status_get_string(error) << ").  Exiting.";
       mtl::MessageLoop::GetCurrent()->PostQuitTask();
   };
@@ -139,8 +139,8 @@ void allocate_buffer(uint32_t index, uint32_t width, uint32_t height) {
 }
 
 int main(int argc, char* argv[]) {
-  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
-  if (!ftl::SetLogSettingsFromCommandLine(command_line))
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
   mtl::MessageLoop loop;

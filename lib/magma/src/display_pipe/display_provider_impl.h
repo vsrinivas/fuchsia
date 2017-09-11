@@ -30,7 +30,7 @@ class DisplayProviderImpl : public DisplayProvider {
   ImagePipeImpl image_pipe_;
 
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DisplayProviderImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DisplayProviderImpl);
 };
 }  // namespace display_pipe
 

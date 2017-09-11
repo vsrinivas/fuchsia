@@ -53,7 +53,7 @@
 #include <trace-provider/provider.h>
 #endif
 
-#include "lib/ftl/log_settings_command_line.h"
+#include "lib/fxl/log_settings_command_line.h"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
@@ -2758,8 +2758,8 @@ void demo_init(struct demo* demo, int argc, char** argv)
 
 void demo_run_image_pipe(struct demo* demo, int argc, char** argv)
 {
-    auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
-    if (!ftl::SetLogSettingsFromCommandLine(command_line)) {
+    auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+    if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
         printf("Failed to set log settings from command line\n");
         return;
     }

@@ -4,7 +4,7 @@
 
 #include "magma/src/display_pipe/image.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace display_pipe {
 
@@ -18,12 +18,12 @@ std::unique_ptr<Image> Image::Create(std::shared_ptr<MagmaConnection> conn,
                                      const scenic::ImageInfo &info,
                                      mx::vmo memory, uint64_t offset) {
   if (offset != 0) {
-      FTL_LOG(ERROR) << "Can't import an image with a non-zero offset.";
+      FXL_LOG(ERROR) << "Can't import an image with a non-zero offset.";
       return nullptr;
   }
   magma_buffer_t buffer;
   if (!conn->ImportBuffer(memory, &buffer)) {
-      FTL_LOG(ERROR) << "Can't import buffer info magma.";
+      FXL_LOG(ERROR) << "Can't import buffer info magma.";
       return nullptr;
   }
 

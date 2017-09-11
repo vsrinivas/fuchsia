@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "magma/src/display_pipe/magma_connection.h"
 
 const char* kDeviceName = "/dev/class/display/000";
@@ -27,14 +27,14 @@ MagmaConnection::~MagmaConnection() {
 bool MagmaConnection::Open() {
     fd_ = open(kDeviceName, O_RDONLY);
     if (fd_ < 0) {
-        FTL_LOG(ERROR) << "Failed to open display device: "
+        FXL_LOG(ERROR) << "Failed to open display device: "
             << kDeviceName << ".";
         return false;
     }
 
     conn_ = magma_create_connection(fd_, MAGMA_CAPABILITY_DISPLAY);
     if (conn_ == nullptr) {
-        FTL_LOG(ERROR) << "Failed to open magma connection";
+        FXL_LOG(ERROR) << "Failed to open magma connection";
         close(fd_);
         return false;
     }
@@ -47,7 +47,7 @@ bool MagmaConnection::GetDisplaySize(uint32_t *width, uint32_t *height) {
     magma_display_size display_size;
     status = magma_display_get_size(fd_, &display_size);
     if (status != MAGMA_STATUS_OK) {
-        FTL_LOG(ERROR) << "Failed to get display size: " << status << ".";
+        FXL_LOG(ERROR) << "Failed to get display size: " << status << ".";
         return false;
     }
 

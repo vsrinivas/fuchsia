@@ -31,7 +31,7 @@ private:
     std::unordered_map<uint32_t, std::unique_ptr<Image>> images_;
     fidl::BindingSet<scenic::ImagePipe> bindings_;
 
-    FTL_DISALLOW_COPY_AND_ASSIGN(ImagePipeImpl);
+    FXL_DISALLOW_COPY_AND_ASSIGN(ImagePipeImpl);
 };
 } // namespace display_pipe
 
