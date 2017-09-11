@@ -70,8 +70,8 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
     TRACE_DURATION("gfx", "DisplaySwapchain::DrawAndPresent() acquire");
 
     auto result = device_.acquireNextImageKHR(
-        swapchain_.swapchain, UINT64_MAX, image_available_semaphore->value(),
-        nullptr);
+        swapchain_.swapchain, UINT64_MAX,
+        image_available_semaphore->vk_semaphore(), nullptr);
 
     if (result.result == vk::Result::eSuboptimalKHR) {
       FXL_DLOG(WARNING) << "suboptimal swapchain configuration";
@@ -95,7 +95,7 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
   TRACE_DURATION("gfx", "DisplaySwapchain::DrawAndPresent() present");
   vk::PresentInfoKHR info;
   info.waitSemaphoreCount = 1;
-  auto sema = render_finished_semaphore->value();
+  auto sema = render_finished_semaphore->vk_semaphore();
   info.pWaitSemaphores = &sema;
   info.swapchainCount = 1;
   info.pSwapchains = &swapchain_.swapchain;

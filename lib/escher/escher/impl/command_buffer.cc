@@ -83,7 +83,7 @@ void CommandBuffer::AddWaitSemaphore(SemaphorePtr semaphore,
   FXL_DCHECK(is_active_);
   if (semaphore) {
     // Build up list that will be used when frame is submitted.
-    wait_semaphores_for_submit_.push_back(semaphore->value());
+    wait_semaphores_for_submit_.push_back(semaphore->vk_semaphore());
     wait_semaphore_stages_.push_back(stage);
     // Retain semaphore to ensure that it doesn't prematurely die.
     wait_semaphores_.push_back(std::move(semaphore));
@@ -94,7 +94,7 @@ void CommandBuffer::AddSignalSemaphore(SemaphorePtr semaphore) {
   FXL_DCHECK(is_active_);
   if (semaphore) {
     // Build up list that will be used when frame is submitted.
-    signal_semaphores_for_submit_.push_back(semaphore->value());
+    signal_semaphores_for_submit_.push_back(semaphore->vk_semaphore());
     // Retain semaphore to ensure that it doesn't prematurely die.
     signal_semaphores_.push_back(std::move(semaphore));
   }
