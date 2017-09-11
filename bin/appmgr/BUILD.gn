@@ -1,0 +1,74 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("lib") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "application_controller_impl.cc",
+    "application_controller_impl.h",
+    "application_environment_controller_impl.cc",
+    "application_environment_controller_impl.h",
+    "application_environment_impl.cc",
+    "application_environment_impl.h",
+    "application_runner_holder.cc",
+    "application_runner_holder.h",
+    "config.cc",
+    "config.h",
+    "namespace_builder.cc",
+    "namespace_builder.h",
+    "root_application_loader.cc",
+    "root_application_loader.h",
+    "root_environment_host.cc",
+    "root_environment_host.h",
+    "runtime_metadata.cc",
+    "runtime_metadata.h",
+    "sandbox_metadata.cc",
+    "sandbox_metadata.h",
+    "url_resolver.cc",
+    "url_resolver.h",
+  ]
+
+  public_deps = [
+    "//application/lib/app",
+    "//application/lib/farfs",
+    "//application/lib/svc",
+    "//application/services",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/mx",
+    "//third_party/rapidjson",
+  ]
+
+  libs = [ "launchpad" ]
+}
+
+executable("manager") {
+  output_name = "appmgr"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+  ]
+}
+
+executable("tests") {
+  testonly = true
+
+  output_name = "appmgr_unittests"
+
+  sources = [
+    "namespace_builder_unittest.cc",
+    "runtime_metadata_unittest.cc",
+    "sandbox_metadata_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/mtl/test",
+  ]
+}

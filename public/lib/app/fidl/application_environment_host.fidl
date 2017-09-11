@@ -1,0 +1,19 @@
+// Copyright 2016 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module app;
+
+import "application/services/service_provider.fidl";
+
+// An interface used by an environment to interact with its creator.
+//
+// Typically provided to an |ApplicationEnvironment| via
+// |ApplicationEnvironment.CreateNestedEnvironment|.
+interface ApplicationEnvironmentHost {
+  // Gets the services associated with this environment.
+  //
+  // Applications created in this environment will be given the
+  // |environment_services| returned here.
+  GetApplicationEnvironmentServices(ServiceProvider& environment_services);
+};

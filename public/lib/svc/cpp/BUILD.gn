@@ -1,0 +1,28 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("svc") {
+  sources = [
+    "service_namespace.cc",
+    "service_namespace.h",
+    "service_provider_bridge.cc",
+    "service_provider_bridge.h",
+    "services.cc",
+    "services.h",
+  ]
+
+  public_deps = [
+    "//application/services",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/mx",
+    "//magenta/system/ulib/fbl",
+    "//magenta/system/ulib/svcfs",
+  ]
+
+  deps = [
+    "//garnet/public/lib/mtl",
+  ]
+}

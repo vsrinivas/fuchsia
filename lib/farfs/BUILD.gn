@@ -1,0 +1,19 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("farfs") {
+  sources = [
+    "file_system.cc",
+    "file_system.h",
+  ]
+
+  public_deps = [
+    "//application/lib/far",
+    "//application/lib/far:far_vmo",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/mx",
+    "//magenta/system/ulib/vmofs",
+  ]
+}

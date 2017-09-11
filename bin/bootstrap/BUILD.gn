@@ -1,0 +1,25 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("bootstrap") {
+  sources = [
+    "app.cc",
+    "app.h",
+    "config.cc",
+    "config.h",
+    "delegating_application_loader.cc",
+    "delegating_application_loader.h",
+    "main.cc",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//application/lib/svc",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/url",
+    "//garnet/public/lib/mtl",
+    "//third_party/rapidjson",
+  ]
+}

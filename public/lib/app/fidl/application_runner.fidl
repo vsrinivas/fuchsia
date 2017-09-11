@@ -1,0 +1,60 @@
+// Copyright 2016 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module app;
+
+import "application/services/application_controller.fidl";
+import "application/services/application_environment.fidl";
+import "application/services/flat_namespace.fidl";
+
+// Information given to applications at startup.
+//
+// For ELF binaries, this information is provided in the initialization message
+// given to libc by launchpad.
+struct ApplicationStartupInfo {
+  // The application launch info for the application to start.
+  ApplicationLaunchInfo launch_info;
+
+  // The namespace in which to run the application.
+  FlatNamespace flat_namespace;
+
+  // TODO(abarth): Add more fields to this struct relating to application and
+  // environment identity.
+};
+
+// A binary representation of an application.
+//
+// Typically provided to |ApplicationRunner.StartApplication| when starting an
+// application.
+struct ApplicationPackage {
+  // A read-only binary representation of the application. For example, if the
+  // application is intended to run in the Dart virtual machine, this data might
+  // contain a dartx package.
+  handle<vmo> data;
+
+  // Resolved URL of the application. This is the url specified in startup_info
+  // after following redirects and resolving relative paths.
+  string resolved_url;
+};
+
+// An interface for running applications.
+//
+// Typically exposed by applications that provide execution environments for
+// particular classes of programs. For example, the Dart virtual machine exposes
+// this interface to run Dart programs.
+[ServiceName="app.ApplicationRunner"]
+interface ApplicationRunner {
+  // Execute the given application.
+  //
+  // Upon startup, the application is to be given the information in
+  // |startup_info|, but the mechanism by which the application receives that
+  // information is up to the application runner.
+  //
+  // The |controller| interface request typically originates from the
+  // |ApplicationLauncher.CreateApplication| message that caused this
+  // application to be started.
+  StartApplication(ApplicationPackage application,
+                   ApplicationStartupInfo startup_info,
+                   ApplicationController&? controller);
+};

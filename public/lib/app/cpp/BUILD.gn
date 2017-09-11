@@ -1,0 +1,20 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("app") {
+  sources = [
+    "application_context.cc",
+    "application_context.h",
+    "connect.h",
+    "service_provider_impl.cc",
+    "service_provider_impl.h",
+  ]
+
+  public_deps = [
+    "//application/lib/svc",
+    "//application/services",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
+  ]
+}

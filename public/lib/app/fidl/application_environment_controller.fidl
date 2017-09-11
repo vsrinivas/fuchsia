@@ -1,0 +1,28 @@
+// Copyright 2016 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module app;
+
+// An interface for controlling an environment.
+//
+// Closing this interface implicitly kills the controlled environment unless
+// the |Detach| method has been called.
+//
+// If the environment is destroyed, this interface will be closed.
+//
+// Typically obtained via |ApplicationEnvironment.CreateNestedEnvironment|.
+interface ApplicationEnvironmentController {
+  // Terminates the environment.
+  //
+  // When an |ApplicationEnvironment| is terminated, all applications launched
+  // in the environment (and in all transitively nested environments) are also
+  // killed.
+  Kill() => ();
+
+  // Decouples the lifetime of the environment from this controller.
+  //
+  // After calling |Detach|, the environment will not be implicitly killed when
+  // this interface is closed.
+  Detach();
+};

@@ -1,0 +1,37 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("far") {
+  sources = [
+    "alignment.h",
+    "archive_entry.cc",
+    "archive_entry.h",
+    "archive_reader.cc",
+    "archive_reader.h",
+    "archive_writer.cc",
+    "archive_writer.h",
+    "far.cc",
+    "far.h",
+    "file_operations.cc",
+    "file_operations.h",
+    "format.h",
+    "manifest.cc",
+    "manifest.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/ftl",
+  ]
+}
+
+source_set("far_vmo") {
+  sources = [
+    "far_vmo.cc",
+  ]
+
+  deps = [
+    ":far",
+    "//garnet/public/lib/ftl",
+  ]
+}

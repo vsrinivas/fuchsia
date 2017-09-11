@@ -1,0 +1,58 @@
+// Copyright 2016 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module app;
+
+import "application/services/application_launcher.fidl";
+import "application/services/application_environment_controller.fidl";
+import "application/services/application_environment_host.fidl";
+import "application/services/service_provider.fidl";
+
+// An interface for managing a set of applications.
+//
+// Applications run inside environments, which provide ambient services and
+// support for their lifecycle.
+[ServiceName="app.ApplicationEnvironment"]
+interface ApplicationEnvironment {
+  // Maximum length for an environment label.
+  const uint32 kLabelMaxLength = 32;
+
+  // Creates a new environment nested inside this environment.
+  //
+  // When applications are created inside the nested environment using the
+  // environment's |ApplicationLauncher|, the environment requests the
+  // environment services from |host| before passing those services to
+  // the newly created application in its |ApplicationStartupInfo|.
+  //
+  // Typically the |host| will make the newly created |environment| available in
+  // the environment services, giving child applications to launch other
+  // applications in the environment and to create nested environments.
+  //
+  // The |host| must provide an |ApplicationLoader| service (or inherit one from
+  // its parent) if it wishes to allow new applications to be loaded in the
+  // nested environment.
+  //
+  // The |controller| can be used to control the lifecycle of the created
+  // environment. If an |ApplicationEnvironmentController|'s interface is
+  // request, the environment will be killed when the interface is closed.
+  //
+  // The |label| is an optional name to associate with the environment for
+  // diagnostic purposes.  The label will be truncated if it is longer
+  // than |kLabelMaxLength|.
+  CreateNestedEnvironment(ApplicationEnvironmentHost host,
+                          ApplicationEnvironment& environment,
+                          ApplicationEnvironmentController&? controller,
+                          string? label);
+
+  // Gets the ApplicationLauncher associated with this environment.
+  //
+  // Applications created using this application launcher will be given the
+  // environment services provided by this environment's
+  // |ApplicationEnvironmentHost|.
+  GetApplicationLauncher(ApplicationLauncher& launcher);
+
+  // Gets the services provided by this environment's
+  // |ApplicationEnvironmentHost|.
+  GetServices(ServiceProvider& services);
+};

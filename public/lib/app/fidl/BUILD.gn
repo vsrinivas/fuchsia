@@ -1,0 +1,28 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+fidl("services") {
+  sources = [
+    "application_controller.fidl",
+    "application_environment.fidl",
+    "application_environment_controller.fidl",
+    "application_environment_host.fidl",
+    "application_launcher.fidl",
+    "application_loader.fidl",
+    "application_runner.fidl",
+    "flat_namespace.fidl",
+  ]
+
+  public_deps = [
+    ":service_provider",
+  ]
+}
+
+fidl("service_provider") {
+  sources = [
+    "service_provider.fidl",
+  ]
+}
