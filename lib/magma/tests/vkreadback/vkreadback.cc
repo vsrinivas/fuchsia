@@ -23,7 +23,7 @@ public:
     static constexpr uint32_t kWidth = 64;
     static constexpr uint32_t kHeight = 64;
 
-    enum Extension { NONE, EXTERNAL_MEMORY_FD };
+    enum Extension { NONE, EXTERNAL_MEMORY_FD, EXTERNAL_MEMORY_FUCHSIA };
 
     VkReadbackTest(Extension ext = NONE) : ext_(ext) {}
 
@@ -51,6 +51,8 @@ private:
     uint32_t device_memory_handle_ = 0;
     PFN_vkGetMemoryFdKHR vk_get_memory_fd_khr_{};
     PFN_vkGetMemoryFdPropertiesKHR vk_get_memory_fd_properties_khr_{};
+    PFN_vkGetMemoryFuchsiaHandleKHR vk_get_memory_fuchsia_handle_khr_{};
+    PFN_vkGetMemoryFuchsiaHandlePropertiesKHR vk_get_memory_fuchsia_handle_properties_khr_{};
 
     VkCommandPool vk_command_pool_;
     VkCommandBuffer vk_command_buffer_;
@@ -176,14 +178,35 @@ bool VkReadbackTest::InitVulkan()
                                  nullptr /* allocationcallbacks */, &vkdevice)) != VK_SUCCESS)
         return DRETF(false, "vkCreateDevice failed: %d", result);
 
-    vk_get_memory_fd_khr_ =
-        reinterpret_cast<PFN_vkGetMemoryFdKHR>(vkGetInstanceProcAddr(instance, "vkGetMemoryFdKHR"));
-    if (!vk_get_memory_fd_khr_)
-        return DRETF(false, "Couldn't find vkGetMemoryFdKHR");
-    vk_get_memory_fd_properties_khr_ = reinterpret_cast<PFN_vkGetMemoryFdPropertiesKHR>(
-        vkGetInstanceProcAddr(instance, "vkGetMemoryFdPropertiesKHR"));
-    if (!vk_get_memory_fd_properties_khr_)
-        return DRETF(false, "Couldn't find vkGetMemoryFdPropertiesKHR");
+    switch (ext_) {
+        case EXTERNAL_MEMORY_FD:
+            vk_get_memory_fd_khr_ = reinterpret_cast<PFN_vkGetMemoryFdKHR>(
+                vkGetInstanceProcAddr(instance, "vkGetMemoryFdKHR"));
+            if (!vk_get_memory_fd_khr_)
+                return DRETF(false, "Couldn't find vkGetMemoryFdKHR");
+
+            vk_get_memory_fd_properties_khr_ = reinterpret_cast<PFN_vkGetMemoryFdPropertiesKHR>(
+                vkGetInstanceProcAddr(instance, "vkGetMemoryFdPropertiesKHR"));
+            if (!vk_get_memory_fd_properties_khr_)
+                return DRETF(false, "Couldn't find vkGetMemoryFdPropertiesKHR");
+            break;
+
+        case EXTERNAL_MEMORY_FUCHSIA:
+            vk_get_memory_fuchsia_handle_khr_ = reinterpret_cast<PFN_vkGetMemoryFuchsiaHandleKHR>(
+                vkGetInstanceProcAddr(instance, "vkGetMemoryFuchsiaHandleKHR"));
+            if (!vk_get_memory_fuchsia_handle_khr_)
+                return DRETF(false, "Couldn't find vkGetMemoryFuchsiaHandleKHR");
+
+            vk_get_memory_fuchsia_handle_properties_khr_ =
+                reinterpret_cast<PFN_vkGetMemoryFuchsiaHandlePropertiesKHR>(
+                    vkGetInstanceProcAddr(instance, "vkGetMemoryFuchsiaHandlePropertiesKHR"));
+            if (!vk_get_memory_fuchsia_handle_properties_khr_)
+                return DRETF(false, "Couldn't find vkGetMemoryFuchsiaHandlePropertiesKHR");
+            break;
+
+        default:
+            break;
+    }
 
     vk_physical_device_ = physical_devices[0];
     vk_device_ = vkdevice;
@@ -285,6 +308,42 @@ bool VkReadbackTest::InitImage()
             return DRETF(false, "mxio_get_exact_vmo failed: %d", status);
         device_memory_handle_ = vmo_handle;
         DLOG("got device_memory_handle_ 0x%x", device_memory_handle_);
+    } else if (ext_ == EXTERNAL_MEMORY_FUCHSIA && device_memory_handle_) {
+        size_t vmo_size;
+        mx_vmo_get_size(device_memory_handle_, &vmo_size);
+        VkImportMemoryFuchsiaHandleInfoKHR magma_info = {
+            VK_STRUCTURE_TYPE_IMPORT_MEMORY_FUCHSIA_HANDLE_INFO_KHR, nullptr,
+            VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR, device_memory_handle_};
+
+        VkMemoryAllocateInfo info;
+        info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        info.pNext = &magma_info;
+        info.allocationSize = vmo_size;
+        info.memoryTypeIndex = 0;
+
+        if ((result = vkAllocateMemory(vk_device_, &info, nullptr, &vk_imported_device_memory_)) !=
+            VK_SUCCESS)
+            return DRETF(false, "vkAllocateMemory failed");
+    } else if (ext_ == EXTERNAL_MEMORY_FUCHSIA) {
+        uint32_t handle;
+        VkMemoryGetFuchsiaHandleInfoKHR get_handle_info = {
+            VK_STRUCTURE_TYPE_MEMORY_GET_FUCHSIA_HANDLE_INFO_KHR, nullptr, vk_device_memory_,
+            VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR};
+        if ((result = vk_get_memory_fuchsia_handle_khr_(vk_device_, &get_handle_info, &handle)) !=
+            VK_SUCCESS)
+            return DRETF(false, "vkGetMemoryFuchsiaHandleKHR failed");
+
+        VkMemoryFuchsiaHandlePropertiesKHR properties{
+            .sType = VK_STRUCTURE_TYPE_MEMORY_FUCHSIA_HANDLE_PROPERTIES_KHR, .pNext = nullptr,
+        };
+        result = vk_get_memory_fuchsia_handle_properties_khr_(
+            vk_device_, VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR, handle, &properties);
+        if (result != VK_SUCCESS)
+            return DRETF(false, "vkGetMemoryFuchsiaHandlePropertiesKHR returned %d", result);
+
+        device_memory_handle_ = handle;
+        DLOG("got device_memory_handle_ 0x%x memoryTypeBits 0x%x", device_memory_handle_,
+             properties.memoryTypeBits);
     }
 
     void* addr;
@@ -388,7 +447,7 @@ bool VkReadbackTest::Readback()
     void* addr;
 
     VkDeviceMemory vk_device_memory =
-        ext_ == EXTERNAL_MEMORY_FD ? vk_imported_device_memory_ : vk_device_memory_;
+        ext_ == VkReadbackTest::NONE ? vk_device_memory_ : vk_imported_device_memory_;
 
     if ((result = vkMapMemory(vk_device_, vk_device_memory, 0, VK_WHOLE_SIZE, 0, &addr)) !=
         VK_SUCCESS)
@@ -446,7 +505,11 @@ int main(void)
 #endif
 
 #if defined(MAGMA_TEST_IMPORT_EXPORT)
-    return test_import_export(VkReadbackTest::EXTERNAL_MEMORY_FD);
+    int result = test_import_export(VkReadbackTest::EXTERNAL_MEMORY_FD);
+    if (result != 0)
+        return result;
+
+    return test_import_export(VkReadbackTest::EXTERNAL_MEMORY_FUCHSIA);
 
 #else
     VkReadbackTest app;
