@@ -24,10 +24,10 @@ fi
 
 case "$(uname -s)" in
   Darwin)
-    readonly HOST_PLATFORM="mac-x64"
+    export HOST_PLATFORM="mac-x64"
     ;;
   Linux)
-    readonly HOST_PLATFORM="linux-x64"
+    export HOST_PLATFORM="linux-x64"
     ;;
 esac
 
