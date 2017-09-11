@@ -12,7 +12,7 @@ executable("action_log") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/maxwell/services/action_log",
     "//apps/maxwell/services/suggestion",
     "//apps/maxwell/services/user:scope",

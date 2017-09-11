@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
 #include "apps/maxwell/src/agents/entity_utils/entity_span.h"

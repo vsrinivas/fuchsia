@@ -6,7 +6,7 @@
 
 #include <map>
 
-#include "application/lib/svc/service_namespace.h"
+#include "lib/svc/cpp/service_namespace.h"
 #include "apps/maxwell/services/context/context_writer.fidl.h"
 #include "apps/maxwell/src/acquirers/story_info/initializer.fidl.h"
 #include "apps/modular/services/agent/agent.fidl.h"

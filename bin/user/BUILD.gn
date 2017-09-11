@@ -26,7 +26,7 @@ executable("maxwell_main") {
   deps = [
     ":config",
     ":user_intelligence_provider",
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/maxwell/services/user",
     "//garnet/public/lib/mtl",
     "//third_party/rapidjson",
@@ -47,7 +47,7 @@ source_set("user_intelligence_provider") {
   ]
 
   public_deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
   ]
 
   deps = [
@@ -95,7 +95,7 @@ source_set("agent_launcher") {
   ]
 
   public_deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
   ]
 
   deps = [

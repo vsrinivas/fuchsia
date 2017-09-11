@@ -13,7 +13,7 @@ dart_app("usage_log_dart") {
   source_dir = "."
 
   deps = [
-    "//application/lib/app/dart",
+    "//garnet/public/lib/app/dart",
     "//apps/cobalt_client/services:cobalt_dart",
     "//apps/maxwell/lib/context/dart",
     "//apps/maxwell/services/context:context_dart",

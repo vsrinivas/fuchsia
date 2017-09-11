@@ -22,7 +22,7 @@ source_set("context_engine_test") {
   ]
 
   public_deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
   ]
 
   deps = [
@@ -54,7 +54,7 @@ source_set("suggestion_engine_test") {
   ]
 
   public_deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
   ]
 
   deps = [
@@ -106,7 +106,7 @@ source_set("common") {
   ]
 
   public_deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//third_party/gtest",
   ]
 }

@@ -6,7 +6,7 @@
 
 #include <rapidjson/document.h>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
 #include "lib/mtl/tasks/message_loop.h"

@@ -10,7 +10,7 @@ executable("proposal_maker") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
     "//apps/maxwell/src/agents/entity_utils:entity_span",

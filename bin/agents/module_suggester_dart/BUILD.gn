@@ -12,7 +12,7 @@ dart_app("module_suggester_dart") {
   source_dir = "."
 
   deps = [
-    "//application/lib/app/dart",
+    "//garnet/public/lib/app/dart",
     "//apps/maxwell/lib/dart",
     "//apps/maxwell/services/suggestion:suggestion_dart",
     "//apps/web_runner/lib/dart:web_view",

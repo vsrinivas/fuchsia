@@ -9,7 +9,7 @@ executable("context_engine") {
 
   deps = [
     ":context_engine_impl",
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/mtl",
   ]
 }
@@ -112,7 +112,7 @@ source_set("context_engine_impl") {
   ]
 
   public_deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
   ]
 
   deps = [

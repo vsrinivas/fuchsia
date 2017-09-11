@@ -4,7 +4,7 @@
 
 #include "apps/maxwell/src/context_engine/context_engine_impl.h"
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/maxwell/src/context_engine/context_reader_impl.h"
 #include "apps/maxwell/src/context_engine/context_repository.h"
 #include "apps/maxwell/src/context_engine/context_writer_impl.h"

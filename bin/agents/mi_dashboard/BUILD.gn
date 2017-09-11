@@ -13,7 +13,7 @@ dart_app("mi_dashboard_dart") {
   source_dir = "."
 
   deps = [
-    "//application/lib/app/dart",
+    "//garnet/public/lib/app/dart",
     "//apps/maxwell/lib/context/dart",
     "//apps/maxwell/services/context:context_dart",
     "//apps/maxwell/services/suggestion:debug_dart",

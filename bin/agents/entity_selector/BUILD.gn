@@ -10,7 +10,7 @@ executable("entity_selector") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/maxwell/services/context",
     "//apps/maxwell/src/agents/entity_utils:entity_span",
     "//apps/maxwell/src/agents/entity_utils:entity_utils",

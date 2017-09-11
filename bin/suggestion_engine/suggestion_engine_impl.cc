@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "apps/maxwell/src/suggestion_engine/suggestion_engine_impl.h"
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
 #include "apps/maxwell/services/suggestion/user_input.fidl.h"
 #include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"

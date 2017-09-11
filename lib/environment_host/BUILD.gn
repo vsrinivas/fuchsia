@@ -9,8 +9,8 @@ source_set("application_environment_host_impl") {
   ]
 
   public_deps = [
-    "//application/lib/app",
-    "//application/lib/svc",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/svc/cpp",
   ]
 }
 
@@ -20,7 +20,7 @@ source_set("bound_set") {
   ]
 
   public_deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
   ]
 }
 

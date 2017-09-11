@@ -21,7 +21,7 @@ executable("suggestion_engine") {
     ":subscribers",
     ":timeline_stories_filter",
     ":timeline_stories_watcher",
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
     "//apps/maxwell/src:bound_set",

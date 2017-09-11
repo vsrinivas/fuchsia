@@ -18,7 +18,7 @@
 
 import 'dart:collection';
 
-import 'package:application.lib.app.dart/app.dart';
+import 'package:lib.app.dart/app.dart';
 import 'package:apps.cobalt_client.services..cobalt/cobalt.fidl.dart';
 import 'package:apps.maxwell.lib.context.dart/context_listener_impl.dart';
 import 'package:apps.maxwell.services.context/context_reader.fidl.dart';

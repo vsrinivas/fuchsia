@@ -8,7 +8,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 
 #include "apps/maxwell/src/bound_set.h"
 #include "apps/maxwell/src/suggestion_engine/ask_dispatcher.h"

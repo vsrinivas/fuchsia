@@ -10,8 +10,8 @@ executable("resolver") {
   ]
 
   deps = [
-    "//application/lib/app",
-    "//application/services:services_sync",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl:fidl_sync",
     "//apps/maxwell/services/resolver",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/services/component",

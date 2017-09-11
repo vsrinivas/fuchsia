@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/maxwell/src/user/config.h"
 #include "apps/maxwell/src/user/user_intelligence_provider_impl.h"

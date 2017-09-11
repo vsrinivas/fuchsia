@@ -4,7 +4,7 @@
 
 import 'dart:io';
 
-import 'package:application.lib.app.dart/app.dart';
+import 'package:lib.app.dart/app.dart';
 
 /// Signature for method that sends WebSocket messages
 typedef void SendWebSocketMessage(String message);

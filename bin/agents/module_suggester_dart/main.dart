@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:convert' show JSON;
-import 'package:application.lib.app.dart/app.dart';
+import 'package:lib.app.dart/app.dart';
 import 'package:apps.maxwell.lib.dart/decomposition.dart';
 import 'package:apps.maxwell.services.suggestion/ask_handler.fidl.dart';
 import 'package:apps.maxwell.services.suggestion/proposal.fidl.dart';

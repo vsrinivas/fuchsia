@@ -6,8 +6,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:isolate';
 
-import 'package:application.lib.app.dart/app.dart';
-import 'package:application.services/service_provider.fidl.dart';
+import 'package:lib.app.dart/app.dart';
+import 'package:lib.app.fidl/service_provider.fidl.dart';
 import 'package:apps.maxwell.services.context/context_writer.fidl.dart';
 import 'package:apps.maxwell.services.context/context_reader.fidl.dart';
 import 'package:apps.maxwell.services.context/metadata.fidl.dart';

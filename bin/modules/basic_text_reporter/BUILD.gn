@@ -7,7 +7,7 @@ import("//flutter/build/flutter_app.gni")
 flutter_app("basic_text_reporter") {
   main_dart = "lib/main.dart"
   deps = [
-    "//application/lib/app/dart",
+    "//garnet/public/lib/app/dart",
     "//apps/maxwell/lib/dart",
     "//apps/maxwell/services/context:context_dart",
     "//apps/maxwell/services/user:user_dart",

@@ -21,8 +21,8 @@ executable("story_info") {
 
   deps = [
     ":initializer",
-    "//application/lib/app",
-    "//application/lib/svc",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/svc/cpp",
     "//apps/maxwell/lib/async:future_value",
     "//apps/maxwell/lib/context:formatting",
     "//apps/maxwell/services/context",

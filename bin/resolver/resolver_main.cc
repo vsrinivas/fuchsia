@@ -5,8 +5,8 @@
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
 #include "apps/maxwell/src/resolver/resolver_impl.h"
 
-#include "application/lib/app/application_context.h"
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/connect.h"
 #include "apps/modular/services/component/component.fidl.h"
 
 #include "lib/fidl/cpp/bindings/binding.h"

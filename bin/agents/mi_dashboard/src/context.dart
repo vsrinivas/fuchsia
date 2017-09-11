@@ -5,7 +5,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:application.lib.app.dart/app.dart';
+import 'package:lib.app.dart/app.dart';
 import 'package:apps.maxwell.services.context/debug.fidl.dart';
 import 'package:apps.maxwell.services.user/scope.fidl.dart';
 

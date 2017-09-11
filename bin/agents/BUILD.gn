@@ -25,7 +25,7 @@ executable("carmen_sandiego") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/maxwell/services/context",
     "//apps/maxwell/src/acquirers:gps",
     "//apps/modular/lib/rapidjson",
@@ -43,7 +43,7 @@ executable("ideas") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
     "//apps/modular/lib/rapidjson",

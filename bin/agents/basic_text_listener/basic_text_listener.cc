@@ -5,7 +5,7 @@
 #include <regex>
 #include <vector>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/maxwell/services/context/context_writer.fidl.h"
 #include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/maxwell/src/agents/entity_utils/entity_span.h"
