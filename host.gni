@@ -1,0 +1,88 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # This is the directory where host tools intended for manual use by
+  # developers get installed.  It's something a developer might put
+  # into their shell's $PATH.  Host tools that are just needed as part
+  # of the build do not get copied here.  This directory is only for
+  # things that are generally useful for testing or debugging or
+  # whatnot outside of the GN build itself.  These are only installed
+  # by an explicit install_host_tools() rule (see //build/host.gni).
+  host_tools_dir = "$root_build_dir/tools"
+}
+
+# This declares that a host tool (a target built in host_toolchain)
+# should be installed in host_tools_dir.  This target can be used in
+# any toolchain, and it will forward to host_toolchain.
+#
+# Parameters
+#
+#   outputs (required)
+#     [files list] Simple file name of each tool, should be the
+#     same as the output_name in the executable() or similar rule
+#     (which is usually just that target's name).
+#
+#   deps (recommended)
+#     [label list] Should list each target that actually builds each output.
+#     It does not need to use explicit toolchain suffixes; the only target
+#     using the deps will be instantiated only in host_toolchain.
+#
+#   visibility (optional)
+#     [label pattern list] Standard GN meaning.
+#
+# Example of usage:
+#
+#   executable("frob") { ... }
+#   install_host_tools("fiddlers") {
+#     deps = [ ":frob", "//some/other/dir:twiddle" ]
+#     outputs = [ "frob", "twiddle" ]
+#   }
+template("install_host_tools") {
+  assert(defined(invoker.outputs), "install_host_tools() must define outputs")
+
+  # There is more than one host_toolchain when variants are involved,
+  # but all those copy their executables to the base host_toolchain
+  # (which current_base_toolchain points to in every host_toolchain).
+  if (current_toolchain == host_toolchain &&
+      current_toolchain == current_base_toolchain) {
+    copy(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "visibility",
+                             ])
+      if (defined(visibility)) {
+        visibility += [ ":$target_name" ]
+      }
+      outputs = [
+        "$host_tools_dir/{{source_file_part}}",
+      ]
+      sources = []
+      foreach(output_name, invoker.outputs) {
+        sources += [ "$root_out_dir/$output_name" ]
+      }
+    }
+  } else {
+    # Redirect to the base host_toolchain, where the copy rule above is.
+    # In a variant host_toolchain context, current_base_toolchain points
+    # there, while host_toolchain always matches current_toolchain.
+    group(target_name) {
+      if (current_toolchain == host_toolchain) {
+        toolchain = current_base_toolchain
+      } else {
+        toolchain = host_toolchain
+      }
+      deps = [
+        ":$target_name($toolchain)",
+      ]
+      forward_variables_from(invoker, [ "visibility" ])
+      not_needed(invoker,
+                 [
+                   "deps",
+                   "outputs",
+                 ])
+    }
+  }
+}
