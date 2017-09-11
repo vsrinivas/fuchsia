@@ -4,9 +4,9 @@
 
 module network;
 
-import "apps/network/services/http_header.fidl";
-import "apps/network/services/network_error.fidl";
-import "apps/network/services/url_body.fidl";
+import "lib/network/fidl/http_header.fidl";
+import "lib/network/fidl/network_error.fidl";
+import "lib/network/fidl/url_body.fidl";
 
 struct URLResponse {
   // If the response resulted in a network level error, this field will be set.

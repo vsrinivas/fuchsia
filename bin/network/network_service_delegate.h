@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/network/network_service_impl.h"
+#include "garnet/bin/network/network_service_impl.h"
 
 namespace network {
 

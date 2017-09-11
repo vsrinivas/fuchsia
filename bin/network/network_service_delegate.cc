@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/network/network_service_delegate.h"
+#include "garnet/bin/network/network_service_delegate.h"
 
 namespace network {
 

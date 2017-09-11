@@ -13,7 +13,7 @@ executable("postfile_bin") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//apps/network/services",
+    "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",

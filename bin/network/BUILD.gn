@@ -27,7 +27,7 @@ executable("network") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//apps/network/services",
+    "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//garnet/public/lib/netstack/fidl:net_address",
@@ -51,7 +51,7 @@ package("network_pkg") {
 
   deps = [
     ":network",
-    "//apps/network/application_loader",
+    "//garnet/bin/application_loader",
   ]
 
   binaries = [

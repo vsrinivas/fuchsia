@@ -4,8 +4,8 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "apps/network/services/network_service.fidl.h"
-#include "apps/network/services/url_loader.fidl.h"
+#include "lib/network/fidl/network_service.fidl.h"
+#include "lib/network/fidl/url_loader.fidl.h"
 #include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 

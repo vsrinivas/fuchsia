@@ -7,8 +7,8 @@
 #include <mx/socket.h>
 
 #include "lib/app/cpp/connect.h"
-#include "apps/network/net_errors.h"
-#include "apps/network/services/network_service.fidl.h"
+#include "garnet/bin/network/net_errors.h"
+#include "lib/network/fidl/network_service.fidl.h"
 #include "lib/fxl/logging.h"
 
 namespace media {

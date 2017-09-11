@@ -6,10 +6,10 @@
 
 #include <utility>
 
-#include "apps/network/net_adapters.h"
-#include "apps/network/net_errors.h"
-#include "apps/network/network_service_impl.h"
-#include "apps/network/url_loader_impl.h"
+#include "garnet/bin/network/net_adapters.h"
+#include "garnet/bin/network/net_errors.h"
+#include "garnet/bin/network/network_service_impl.h"
+#include "garnet/bin/network/url_loader_impl.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"

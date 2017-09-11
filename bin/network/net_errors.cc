@@ -22,7 +22,7 @@ std::string ErrorToShortString(int error) {
   case NETWORK_ERR_##label:     \
     error_string = #label;      \
     break;
-#include "apps/network/net_error_list.h"
+#include "garnet/bin/network/net_error_list.h"
 #undef NET_ERROR
     default:
       FXL_NOTREACHED();

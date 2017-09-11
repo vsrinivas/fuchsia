@@ -9,7 +9,7 @@ Network Service.
             |                    |
     +-------v--------------+     |
     | FIDL network service |     |
-    |   (//apps/network)   |     |
+    |   (//garnet/bin/network)   |     |
     +-------+--------------+     |
             |                    |
       +-----v--------------------v-----+

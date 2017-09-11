@@ -9,7 +9,7 @@
 #include "lib/media/fidl/seeking_reader.fidl.h"
 #include "garnet/bin/media/media_service/media_service_impl.h"
 #include "garnet/bin/media/util/incident.h"
-#include "apps/network/services/url_loader.fidl.h"
+#include "lib/network/fidl/url_loader.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace media {

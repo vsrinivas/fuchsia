@@ -12,11 +12,11 @@
 #include "lib/media/fidl/media_types.fidl.h"
 #include "lib/media/fidl/timelines.fidl.h"
 #include "garnet/bin/media/framework/formatting.h"
-#include "apps/network/services/http_header.fidl.h"
-#include "apps/network/services/network_error.fidl.h"
-#include "apps/network/services/url_body.fidl.h"
-#include "apps/network/services/url_request.fidl.h"
-#include "apps/network/services/url_response.fidl.h"
+#include "lib/network/fidl/http_header.fidl.h"
+#include "lib/network/fidl/network_error.fidl.h"
+#include "lib/network/fidl/url_body.fidl.h"
+#include "lib/network/fidl/url_request.fidl.h"
+#include "lib/network/fidl/url_response.fidl.h"
 
 namespace media {
 

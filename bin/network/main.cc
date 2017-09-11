@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "lib/mtl/tasks/message_loop.h"
-#include "apps/network/network_service_delegate.h"
+#include "garnet/bin/network/network_service_delegate.h"
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;

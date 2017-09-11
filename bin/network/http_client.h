@@ -7,8 +7,8 @@
 
 #include <magenta/status.h>
 
-#include "apps/network/net_errors.h"
-#include "apps/network/upload_element_reader.h"
+#include "garnet/bin/network/net_errors.h"
+#include "garnet/bin/network/upload_element_reader.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/ascii.h"
 

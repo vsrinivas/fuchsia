@@ -10,7 +10,7 @@ Netstack serves as a back-end for mxio socket API.
             |                    |
     +-------v--------------+     |
     | FIDL network service |     |
-    |   (//apps/network)   |     |
+    |   (//garnet/bin/network)   |     |
     +-------+--------------+     |
             |                    |
       +-----v--------------------v-----+

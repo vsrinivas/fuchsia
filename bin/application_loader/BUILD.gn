@@ -12,7 +12,7 @@ executable("application_loader") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
-    "//apps/network/services",
+    "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]

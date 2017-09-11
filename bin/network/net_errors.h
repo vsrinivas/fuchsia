@@ -14,7 +14,7 @@ enum Error {
   OK = 0,
 
 #define NET_ERROR(label, value) NETWORK_ERR_##label = value,
-#include "apps/network/net_error_list.h"
+#include "garnet/bin/network/net_error_list.h"
 #undef NET_ERROR
 };
 

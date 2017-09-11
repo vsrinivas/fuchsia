@@ -7,8 +7,8 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "apps/network/services/network_service.fidl.h"
-#include "apps/network/services/url_loader.fidl.h"
+#include "lib/network/fidl/network_service.fidl.h"
+#include "lib/network/fidl/url_loader.fidl.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/file_descriptor.h"

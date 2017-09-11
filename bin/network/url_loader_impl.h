@@ -5,7 +5,7 @@
 #ifndef APPS_NETWORK_URL_LOADER_IMPL_H_
 #define APPS_NETWORK_URL_LOADER_IMPL_H_
 
-#include "apps/network/services/url_loader.fidl.h"
+#include "lib/network/fidl/url_loader.fidl.h"
 
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/url/gurl.h"

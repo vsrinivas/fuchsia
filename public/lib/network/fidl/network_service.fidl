@@ -4,8 +4,8 @@
 
 module network;
 
-import "apps/network/services/network_error.fidl";
-import "apps/network/services/url_loader.fidl";
+import "lib/network/fidl/network_error.fidl";
+import "lib/network/fidl/url_loader.fidl";
 import "lib/netstack/fidl/net_address.fidl";
 
 [ServiceName="network::NetworkService"]

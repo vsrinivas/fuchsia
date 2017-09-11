@@ -6,7 +6,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/fidl/application_loader.fidl.h"
-#include "apps/network/services/network_service.fidl.h"
+#include "lib/network/fidl/network_service.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/weak_ptr.h"

@@ -5,14 +5,14 @@
 #ifndef APPS_NETWORK_NETWORK_SERVICE_IMPL_H_
 #define APPS_NETWORK_NETWORK_SERVICE_IMPL_H_
 
-#include "apps/network/services/network_service.fidl.h"
+#include "lib/network/fidl/network_service.fidl.h"
 #include "lib/netstack/fidl/net_address.fidl.h"
 
 #include <list>
 #include <memory>
 #include <queue>
 
-#include "apps/network/url_loader_impl.h"
+#include "garnet/bin/network/url_loader_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"

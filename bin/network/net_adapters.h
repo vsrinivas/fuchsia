@@ -5,7 +5,7 @@
 #ifndef APPS_NETWORK_NET_ADAPTERS_H_
 #define APPS_NETWORK_NET_ADAPTERS_H_
 
-#include "apps/network/services/network_error.fidl.h"
+#include "lib/network/fidl/network_error.fidl.h"
 
 namespace network {
 

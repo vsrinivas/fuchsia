@@ -28,7 +28,7 @@ source_set("fidl") {
     "//garnet/bin/media/demux",
     "//garnet/bin/media/framework",
     "//garnet/bin/media/util",
-    "//apps/network/services",
+    "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]

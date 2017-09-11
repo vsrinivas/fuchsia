@@ -4,8 +4,8 @@
 
 module network;
 
-import "apps/network/services/http_header.fidl";
-import "apps/network/services/url_body.fidl";
+import "lib/network/fidl/http_header.fidl";
+import "lib/network/fidl/url_body.fidl";
 
 struct URLRequest {
   // Specify the cache behavior of the request.
