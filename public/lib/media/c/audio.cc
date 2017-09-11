@@ -4,13 +4,31 @@
 
 #include <cstring>
 #include <string>
+#include <vector>
 
 #include <magenta/errors.h>
 #include <magenta/syscalls.h>
 
 #include "lib/fxl/logging.h"
 
-#include "lib/media/c/audio.h"
+#include "garnet/public/lib/media/c/audio.h"
+
+// Currently this file is a stub implementation of the interface in audio.h.
+// TODO(mpuryear): Convert the stub implementation. Enumerate audio playback
+// devices, connect to the selected devices, and play audio to said devices.
+namespace {
+constexpr int kStubNumDevices = 2;
+
+static const char* kStubDeviceIds[kStubNumDevices] = {"dummy1", "dummy2"};
+static const char* kStubDeviceNames[kStubNumDevices] = {"Dummy Audio Output 1",
+                                                        "Dummy Audio Output 2"};
+constexpr int kStubDeviceRates[kStubNumDevices] = {44100, 48000};
+constexpr int kStubDeviceNumChans[kStubNumDevices] = {2, 1};
+constexpr int kStubDeviceBufferSizes[kStubNumDevices] = {1024, 3000};
+constexpr mx_duration_t kStubDeviceMinDelaysNSec[kStubNumDevices] = {200000,
+                                                                     100000000};
+}  // namespace
+// End of stub-related placeholder values
 
 namespace {
 // Guard against already-freed (or just plain bad) structs: store a 4-char tag
@@ -27,9 +45,14 @@ struct _fuchsia_audio_output_stream {
   fuchsia_audio_parameters stream_params;
   mx_time_t delay_nsec;
   bool received_first_pres_time;
+  fuchsia_audio_manager* manager;
 };
+
+// At creation time, audio_manager constructs a vector to hold its associated
+// streams. During audio_manager shutdown, it frees any leftover streams.
 struct _fuchsia_audio_manager {
   char tag[kTagSize];
+  std::vector<fuchsia_audio_output_stream*>* streams;
 };
 
 namespace {
@@ -38,25 +61,6 @@ constexpr int kMinSampleRate = 8000;
 constexpr int kMaxSampleRate = 96000;
 constexpr int kMinNumChannels = 1;
 constexpr int kMaxNumChannels = 2;
-
-// Currently this file is a stub implementation of the interface in audio.h.
-
-// TODO(mpuryear): Convert the stub implementation to a full implementation that
-// connects to the rest of the audio subsystem, including enumerating audio
-// playback devices, connecting to selected devices, and playing audio to said
-// devices.
-
-constexpr int kStubNumDevices = 2;
-
-static const char* kStubDeviceIds[kStubNumDevices] = {"dummy1", "dummy2"};
-static const char* kStubDeviceNames[kStubNumDevices] = {"Dummy Audio Output 1",
-                                                        "Dummy Audio Output 2"};
-constexpr int kStubDeviceRates[kStubNumDevices] = {44100, 48000};
-constexpr int kStubDeviceNumChans[kStubNumDevices] = {2, 1};
-constexpr int kStubDeviceBufferSizes[kStubNumDevices] = {1024, 3000};
-constexpr mx_duration_t kStubDeviceMinDelaysNSec[kStubNumDevices] = {102400000,
-                                                                     1000000};
-// End of stub-related placeholder values
 
 // (Private) utility functions
 bool is_valid_manager(fuchsia_audio_manager* manager) {
@@ -71,9 +75,9 @@ bool is_valid_stream(fuchsia_audio_output_stream* stream) {
 // Public API functions
 fuchsia_audio_manager* fuchsia_audio_manager_create() {
   fuchsia_audio_manager* manager = new fuchsia_audio_manager();
-  strncpy(manager->tag, kFuchsiaAudioManagerTag, 4);
 
-  // TODO(mpuryear): initialize whatever container tracks this mgr's streams
+  manager->streams = new std::vector<fuchsia_audio_output_stream*>();
+  strncpy(manager->tag, kFuchsiaAudioManagerTag, 4);
 
   return manager;
 }
@@ -84,9 +88,12 @@ int fuchsia_audio_manager_free(fuchsia_audio_manager* manager) {
     return MX_ERR_BAD_HANDLE;
   }
 
-  // TODO(mpuryear): When manager is freed, free its associated streams
-
   strncpy(manager->tag, kFuchsiaAudioBlankTag, 4);
+  while (!manager->streams->empty()) {
+    fuchsia_audio_output_stream_free(manager->streams->back());
+  }
+
+  delete manager->streams;
   delete manager;
   return MX_OK;
 }
@@ -161,9 +168,9 @@ int fuchsia_audio_manager_create_output_stream(
   }
 
   int dev_num = 0;
-  // Open default device when |device_id| isn't specified.
+  // Use |device_id| if present, else use the default device (0)
   if (device_id && strlen(device_id)) {
-    for (dev_num = 0; dev_num < kStubNumDevices; ++dev_num) {
+    for (; dev_num < kStubNumDevices; ++dev_num) {
       if (strcmp(kStubDeviceIds[dev_num], device_id) == 0) {
         break;
       }
@@ -191,10 +198,11 @@ int fuchsia_audio_manager_create_output_stream(
       .stream_params = *stream_params,
       .delay_nsec = kStubDeviceMinDelaysNSec[dev_num],
       .received_first_pres_time = false,
+      .manager = manager,
   };
-  strncpy((*stream_out)->tag, kFuchsiaAudioOutputStreamTag, 4);
 
-  // TODO(mpuryear): Store stream in stream->manager's container of streams
+  manager->streams->push_back(*stream_out);
+  strncpy((*stream_out)->tag, kFuchsiaAudioOutputStreamTag, 4);
 
   return MX_OK;
 }
@@ -205,9 +213,16 @@ int fuchsia_audio_output_stream_free(fuchsia_audio_output_stream* stream) {
     return MX_ERR_BAD_HANDLE;
   }
 
-  // TODO(mpuryear): Remove stream from stream->manager's container of streams
-
   strncpy(stream->tag, kFuchsiaAudioBlankTag, 4);
+  std::vector<fuchsia_audio_output_stream*>* streams = stream->manager->streams;
+
+  for (auto str_iter = streams->begin(); str_iter != streams->end();
+       ++str_iter) {
+    if (*str_iter == stream) {
+      streams->erase(str_iter);
+      break;
+    }
+  }
 
   delete stream;
   return MX_OK;
@@ -255,8 +270,8 @@ int fuchsia_audio_output_stream_write(fuchsia_audio_output_stream* stream,
       !stream->received_first_pres_time) {
     return MX_ERR_BAD_STATE;
   }
-  mx_time_t horizon = stream->delay_nsec + mx_time_get(MX_CLOCK_MONOTONIC);
-  if (pres_time < horizon) {
+  mx_time_t deadline = stream->delay_nsec + mx_time_get(MX_CLOCK_MONOTONIC);
+  if (pres_time < deadline) {
     return MX_ERR_IO_MISSED_DEADLINE;
   }
 

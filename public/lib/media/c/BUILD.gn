@@ -18,3 +18,16 @@ shared_library("c") {
 
   output_name = "media_client"
 }
+
+test("tests") {
+  output_name = "media_client_tests"
+
+  sources = [
+    "test/audio_wrapper.c",
+    "test/audio_test.cc",
+  ]
+
+  deps = [
+    ":c",
+  ]
+}

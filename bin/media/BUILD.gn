@@ -115,6 +115,7 @@ package("tests") {
   package_name = "media_tests"
 
   deps = [
+    "//garnet/public/lib/media/c:tests",
     "//garnet/public/lib/media/timeline:tests",
     "//garnet/public/lib/media/transport:tests",
     "//garnet/bin/media/audio:tests",
@@ -127,6 +128,10 @@ package("tests") {
   tests = [
     {
       name = "media_audio_tests"
+    },
+
+    {
+      name = "media_client_tests"
     },
 
     {
