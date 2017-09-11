@@ -9,7 +9,7 @@
 #include <unordered_map>
 
 #include "apps/ledger/src/test/cloud_server/server.h"
-#include "apps/network/services/network_service.fidl.h"
+#include "lib/network/fidl/network_service.fidl.h"
 
 namespace ledger {
 

@@ -16,7 +16,7 @@ source_set("network") {
   public_deps = [
     "//apps/ledger/src/backoff",
     "//apps/ledger/src/callback",
-    "//apps/network/services",
+    "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/fxl",
     "//magenta/system/ulib/mx",
   ]

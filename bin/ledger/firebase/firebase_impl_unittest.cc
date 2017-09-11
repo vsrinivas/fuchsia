@@ -13,7 +13,7 @@
 #include "apps/ledger/src/network/fake_network_service.h"
 #include "apps/ledger/src/network/network_service_impl.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
-#include "apps/network/services/network_service.fidl.h"
+#include "lib/network/fidl/network_service.fidl.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"

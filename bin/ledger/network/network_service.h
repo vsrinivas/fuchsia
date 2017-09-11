@@ -6,8 +6,8 @@
 #define APPS_LEDGER_SRC_NETWORK_NETWORK_SERVICE_H_
 
 #include "apps/ledger/src/callback/cancellable.h"
-#include "apps/network/services/url_request.fidl.h"
-#include "apps/network/services/url_response.fidl.h"
+#include "lib/network/fidl/url_request.fidl.h"
+#include "lib/network/fidl/url_response.fidl.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 

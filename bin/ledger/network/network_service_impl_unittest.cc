@@ -11,7 +11,7 @@
 #include <mx/socket.h>
 
 #include "apps/ledger/src/test/test_with_message_loop.h"
-#include "apps/network/services/network_service.fidl.h"
+#include "lib/network/fidl/network_service.fidl.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/functional/make_copyable.h"

@@ -20,7 +20,7 @@
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/network/network_service_impl.h"
 #include "apps/ledger/src/network/no_network_service.h"
-#include "apps/network/services/network_service.fidl.h"
+#include "lib/network/fidl/network_service.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/unique_fd.h"

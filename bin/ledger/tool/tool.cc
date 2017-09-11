@@ -13,7 +13,7 @@
 #include "apps/ledger/src/firebase/encoding.h"
 #include "apps/ledger/src/tool/convert.h"
 #include "apps/ledger/src/tool/inspect_command.h"
-#include "apps/network/services/network_service.fidl.h"
+#include "lib/network/fidl/network_service.fidl.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_view.h"
