@@ -22,7 +22,7 @@ executable("service") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/bluetooth/lib",
     "//apps/bluetooth/service/interfaces",
     "//garnet/public/lib/mtl",

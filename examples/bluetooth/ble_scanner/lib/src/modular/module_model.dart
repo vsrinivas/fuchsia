@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:application.lib.app.dart/app.dart';
-import 'package:application.services/service_provider.fidl.dart';
+import 'package:lib.app.dart/app.dart';
+import 'package:lib.app.fidl/service_provider.fidl.dart';
 import 'package:apps.bluetooth.service.interfaces/common.fidl.dart' as bt;
 import 'package:apps.bluetooth.service.interfaces/low_energy.fidl.dart' as ble;
 import 'package:apps.modular.services.module/module_context.fidl.dart';

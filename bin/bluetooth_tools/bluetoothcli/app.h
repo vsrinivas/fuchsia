@@ -7,7 +7,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/bluetooth/service/interfaces/control.fidl.h"
 #include "apps/bluetooth/tools/lib//command_dispatcher.h"
 #include "lib/ftl/macros.h"

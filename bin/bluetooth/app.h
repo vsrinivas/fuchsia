@@ -7,7 +7,7 @@
 #include <memory>
 #include <vector>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/bluetooth/service/interfaces/control.fidl.h"
 #include "apps/bluetooth/service/src/adapter_manager.h"
 #include "apps/bluetooth/service/src/adapter_manager_fidl_impl.h"
