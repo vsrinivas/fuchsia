@@ -41,6 +41,7 @@ mx_handle_t Handle::ReleaseHandle() {
   while (waiters_.size()) {
     // HandleWaiter::Cancel calls Handle::ReleaseWaiter which removes the
     // HandleWaiter from waiters_.
+    FXL_DCHECK(waiters_.back()->is_pending());
     waiters_.back()->Cancel();
   }
 

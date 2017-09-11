@@ -31,11 +31,14 @@ source_set("sdk_ext") {
 
   deps = [
     "//dart/runtime:dart_api",
-    "//garnet/public/lib/fidl/c/waiter",
-    "//garnet/public/lib/fidl/cpp/waiter",
     "//garnet/public/lib/fxl",
     "//lib/tonic",
+    "//magenta/system/ulib/async:default",
     "//magenta/system/ulib/mx",
+  ]
+
+  public_deps = [
+    "//magenta/system/ulib/async",
   ]
 }
 

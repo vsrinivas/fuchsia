@@ -4,7 +4,8 @@
 
 #include "dart-pkg/zircon/sdk_ext/handle_waiter.h"
 
-#include "lib/fidl/cpp/waiter/default.h"
+#include <async/default.h>
+
 #include "dart-pkg/zircon/sdk_ext/handle.h"
 #include "lib/tonic/converter/dart_converter.h"
 #include "lib/tonic/dart_args.h"
@@ -39,15 +40,19 @@ fxl::RefPtr<HandleWaiter> HandleWaiter::Create(Handle* handle,
 HandleWaiter::HandleWaiter(Handle* handle,
                            mx_signals_t signals,
                            Dart_Handle callback)
-    : waiter_(fidl::GetDefaultAsyncWaiter()),
+    : wait_(async_get_default(), handle->handle(), signals),
       handle_(handle),
       callback_(DartState::Current(), callback) {
   FXL_CHECK(handle_ != nullptr);
   FXL_CHECK(handle_->is_valid());
 
-  wait_id_ = waiter_->AsyncWait(handle_->handle(), signals, MX_TIME_INFINITE,
-                                HandleWaiter::CallOnWaitComplete, this);
-  FXL_DCHECK(wait_id_ != 0);
+  wait_.set_handler([this](async_t* async, mx_status_t status,
+                           const mx_packet_signal_t* signal) {
+    OnWaitComplete(status, signal->observed);
+    return ASYNC_WAIT_FINISHED;
+  });
+  mx_status_t status = wait_.Begin();
+  FXL_DCHECK(status == MX_OK);
 }
 
 HandleWaiter::~HandleWaiter() {
@@ -56,28 +61,26 @@ HandleWaiter::~HandleWaiter() {
   FXL_DCHECK(!handle_);
   // Destructor shouldn't be called until the wait has completed or been
   // cancelled.
-  FXL_DCHECK(!wait_id_);
+  FXL_DCHECK(!wait_.is_pending());
 }
 
 void HandleWaiter::Cancel() {
-  if (wait_id_ && handle_) {
+  if (wait_.is_pending() && handle_) {
     // Hold a reference to this object.
     fxl::RefPtr<HandleWaiter> ref(this);
 
     // Cancel the wait and clear wait_id_.
-    waiter_->CancelWait(wait_id_);
-    wait_id_ = 0;
+    wait_.Cancel();
 
     // Release this object from the handle and clear handle_.
     handle_->ReleaseWaiter(this);
     handle_ = nullptr;
   }
   FXL_DCHECK(handle_ == nullptr);
-  FXL_DCHECK(wait_id_ == 0);
+  FXL_DCHECK(!wait_.is_pending());
 }
 
 void HandleWaiter::OnWaitComplete(mx_status_t status, mx_signals_t pending) {
-  FXL_DCHECK(wait_id_);
   FXL_DCHECK(handle_);
 
   FXL_DCHECK(!callback_.is_empty());
@@ -86,27 +89,18 @@ void HandleWaiter::OnWaitComplete(mx_status_t status, mx_signals_t pending) {
   // Hold a reference to this object.
   fxl::RefPtr<HandleWaiter> ref(this);
 
-  // Ask the handle to release this waiter.
+  // Remove this waiter from the handle.
   handle_->ReleaseWaiter(this);
 
-  // Clear handle_ and wait_id_.
+  // Clear handle_.
   handle_ = nullptr;
-  wait_id_ = 0;
 
   DartState::Scope scope(callback_.dart_state().get());
 
   std::vector<Dart_Handle> args{ToDart(status), ToDart(pending)};
+  FXL_DCHECK(!callback_.is_empty());
   tonic::LogIfError(
       Dart_InvokeClosure(callback_.Release(), args.size(), args.data()));
-}
-
-void HandleWaiter::CallOnWaitComplete(mx_status_t status,
-                                      mx_signals_t pending,
-                                      uint64_t count,
-                                      void* closure) {
-  HandleWaiter* handle_waiter = static_cast<HandleWaiter*>(closure);
-  // TODO: plumb count through to Dart.
-  handle_waiter->OnWaitComplete(status, pending);
 }
 
 }  // namespace dart

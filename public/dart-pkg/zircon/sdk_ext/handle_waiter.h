@@ -6,10 +6,8 @@
 #define DART_PKG_ZIRCON_SDK_EXT_HANDLE_WAITER_H_
 
 #include <mx/handle.h>
+#include <async/auto_wait.h>
 
-#include <mutex>
-
-#include "lib/fidl/c/waiter/async_waiter.h"
 #include "lib/tonic/dart_wrappable.h"
 
 namespace tonic {
@@ -34,7 +32,7 @@ class HandleWaiter : public fxl::RefCountedThreadSafe<HandleWaiter>,
 
   void Cancel();
 
-  bool is_valid() const { return wait_id_ != 0; }
+  bool is_pending() { return wait_.is_pending(); }
 
   static void RegisterNatives(tonic::DartLibraryNatives* natives);
 
@@ -45,15 +43,10 @@ class HandleWaiter : public fxl::RefCountedThreadSafe<HandleWaiter>,
   ~HandleWaiter();
 
   void OnWaitComplete(mx_status_t status, mx_signals_t pending);
-  static void CallOnWaitComplete(mx_status_t status,
-                                 mx_signals_t pending,
-                                 uint64_t count,
-                                 void* closure);
 
-  const FidlAsyncWaiter* waiter_;
+  async::AutoWait wait_;
   Handle* handle_;
   tonic::DartPersistentValue callback_;
-  FidlAsyncWaitID wait_id_ = 0;
 };
 
 }  // namespace dart
