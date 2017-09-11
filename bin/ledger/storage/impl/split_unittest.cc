@@ -14,7 +14,7 @@
 #include "apps/ledger/src/storage/impl/object_id.h"
 #include "apps/ledger/src/storage/public/data_source.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace storage {
 namespace {
@@ -79,7 +79,7 @@ struct SplitResult {
 
 void DoSplit(DataSource* source, std::function<void(SplitResult)> callback) {
   auto result = std::make_unique<SplitResult>();
-  SplitDataSource(source, ftl::MakeCopyable([
+  SplitDataSource(source, fxl::MakeCopyable([
                     result = std::move(result), callback = std::move(callback)
                   ](IterationStatus status, ObjectId id,
                           std::unique_ptr<DataSource::DataChunk> data) mutable {
@@ -183,7 +183,7 @@ TEST_P(SplitBigValueTest, BigValues) {
   // 1 termination
   ASSERT_GE(split_result.calls.size(), 4u);
 
-  ftl::StringView current = content;
+  fxl::StringView current = content;
   for (const auto& call : split_result.calls) {
     if (call.status == IterationStatus::IN_PROGRESS &&
         GetObjectIdType(call.id) == ObjectIdType::VALUE_HASH) {
@@ -298,7 +298,7 @@ TEST(SplitTest, CollectPieces) {
   CollectPieces(
       MakeIndexId(0),
       [&objects](ObjectIdView id,
-                 std::function<void(Status, ftl::StringView)> callback) {
+                 std::function<void(Status, fxl::StringView)> callback) {
         callback(Status::OK, objects[id.ToString()]->Get());
       },
       [&status, &ids](IterationStatus received_status, ObjectIdView id) {
@@ -325,7 +325,7 @@ TEST(SplitTest, CollectPiecesError) {
   CollectPieces(
       MakeIndexId(0),
       [&called](ObjectIdView id,
-                std::function<void(Status, ftl::StringView)> callback) {
+                std::function<void(Status, fxl::StringView)> callback) {
         if (called >= nb_successfull_called) {
           callback(Status::INTERNAL_IO_ERROR, "");
           return;

@@ -9,10 +9,10 @@
 #include <utility>
 
 #include "apps/ledger/src/glue/socket/socket_drainer_client.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/ascii.h"
-#include "lib/ftl/strings/join_strings.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/ascii.h"
+#include "lib/fxl/strings/join_strings.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace firebase {
@@ -27,12 +27,12 @@ std::function<network::URLRequestPtr()> MakeRequest(
   mx::vmo body;
   if (!message.empty()) {
     if (!mtl::VmoFromString(message, &body)) {
-      FTL_LOG(ERROR) << "Unable to create VMO from string.";
+      FXL_LOG(ERROR) << "Unable to create VMO from string.";
       return nullptr;
     }
   }
 
-  return ftl::MakeCopyable(
+  return fxl::MakeCopyable(
       [ url, method, body = std::move(body), stream_request ]() {
         network::URLRequestPtr request(network::URLRequest::New());
         request->url = url;
@@ -73,7 +73,7 @@ FirebaseImpl::FirebaseImpl(ledger::NetworkService* network_service,
                            const std::string& db_id,
                            const std::string& prefix)
     : network_service_(network_service), api_url_(BuildApiUrl(db_id, prefix)) {
-  FTL_DCHECK(network_service_);
+  FXL_DCHECK(network_service_);
 }
 
 FirebaseImpl::~FirebaseImpl() {}
@@ -158,13 +158,13 @@ std::string FirebaseImpl::BuildApiUrl(const std::string& db_id,
   std::string api_url = "https://" + db_id + ".firebaseio.com";
 
   if (!prefix.empty()) {
-    FTL_DCHECK(prefix.front() != '/');
-    FTL_DCHECK(prefix.back() != '/');
+    FXL_DCHECK(prefix.front() != '/');
+    FXL_DCHECK(prefix.back() != '/');
     api_url.append("/");
     api_url.append(prefix);
   }
 
-  FTL_DCHECK(api_url.back() != '/');
+  FXL_DCHECK(api_url.back() != '/');
   return api_url;
 }
 
@@ -177,7 +177,7 @@ std::string FirebaseImpl::BuildRequestUrl(
   if (query_params.empty()) {
     return result.str();
   }
-  result << "?" << ftl::JoinStrings(query_params, "&");
+  result << "?" << fxl::JoinStrings(query_params, "&");
   return result.str();
 }
 
@@ -197,7 +197,7 @@ void FirebaseImpl::OnResponse(
     const std::function<void(Status status, std::string response)>& callback,
     network::URLResponsePtr response) {
   if (response->error) {
-    FTL_LOG(ERROR) << response->url << " error "
+    FXL_LOG(ERROR) << response->url << " error "
                    << response->error->description;
     callback(Status::NETWORK_ERROR, "");
     return;
@@ -206,11 +206,11 @@ void FirebaseImpl::OnResponse(
   if (response->status_code != 200 && response->status_code != 204) {
     const std::string& url = response->url;
     const std::string& status_line = response->status_line;
-    FTL_DCHECK(response->body->is_stream());
+    FXL_DCHECK(response->body->is_stream());
     auto& drainer = drainers_.emplace();
     drainer.Start(std::move(response->body->get_stream()),
                   [callback, url, status_line](const std::string& body) {
-                    FTL_LOG(ERROR)
+                    FXL_LOG(ERROR)
                         << url << " error " << status_line << ":" << std::endl
                         << body;
                     callback(Status::SERVER_ERROR, "");
@@ -218,7 +218,7 @@ void FirebaseImpl::OnResponse(
     return;
   }
 
-  FTL_DCHECK(response->body->is_stream());
+  FXL_DCHECK(response->body->is_stream());
   auto& drainer = drainers_.emplace();
   drainer.Start(
       std::move(response->body->get_stream()),
@@ -228,14 +228,14 @@ void FirebaseImpl::OnResponse(
 void FirebaseImpl::OnStream(WatchClient* watch_client,
                             network::URLResponsePtr response) {
   if (response->error) {
-    FTL_LOG(ERROR) << response->url << " error "
+    FXL_LOG(ERROR) << response->url << " error "
                    << response->error->description;
     watch_client->OnConnectionError();
     watch_data_.erase(watch_client);
     return;
   }
 
-  FTL_DCHECK(response->body->is_stream());
+  FXL_DCHECK(response->body->is_stream());
 
   if (response->status_code != 200 && response->status_code != 204) {
     const std::string& url = response->url;
@@ -245,7 +245,7 @@ void FirebaseImpl::OnStream(WatchClient* watch_client,
     watch_data_[watch_client]->drainer->Start(
         std::move(response->body->get_stream()),
         [this, watch_client, url, status_line](const std::string& body) {
-          FTL_LOG(ERROR) << url << " error " << status_line << ":" << std::endl
+          FXL_LOG(ERROR) << url << " error " << status_line << ":" << std::endl
                          << body;
           watch_client->OnConnectionError();
           watch_data_.erase(watch_client);
@@ -316,7 +316,7 @@ void FirebaseImpl::OnStreamEvent(WatchClient* watch_client,
       watch_client->OnPatch(parsed_payload["path"].GetString(),
                             parsed_payload["data"]);
     } else {
-      FTL_NOTREACHED();
+      FXL_NOTREACHED();
     }
   } else if (event == "keep-alive") {
     // Do nothing.
@@ -334,9 +334,9 @@ void FirebaseImpl::HandleMalformedEvent(WatchClient* watch_client,
                                         const std::string& event,
                                         const std::string& payload,
                                         const char error_description[]) {
-  FTL_LOG(ERROR) << "Error processing a Firebase event: " << error_description;
-  FTL_LOG(ERROR) << "Event: " << event;
-  FTL_LOG(ERROR) << "Data: " << payload;
+  FXL_LOG(ERROR) << "Error processing a Firebase event: " << error_description;
+  FXL_LOG(ERROR) << "Event: " << event;
+  FXL_LOG(ERROR) << "Data: " << payload;
   watch_client->OnMalformedEvent();
 }
 

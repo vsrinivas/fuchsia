@@ -7,7 +7,7 @@
 
 #include "apps/ledger/src/fidl_helpers/boundable.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace ledger {
 namespace fidl_helpers {
@@ -28,7 +28,7 @@ class BoundInterface : public Boundable<Interface> {
     binding_.Bind(std::move(request));
   }
 
-  void set_on_empty(const ftl::Closure& on_empty_callback) {
+  void set_on_empty(const fxl::Closure& on_empty_callback) {
     binding_.set_connection_error_handler([this, on_empty_callback]() {
       binding_.Close();
       if (on_empty_callback)
@@ -42,7 +42,7 @@ class BoundInterface : public Boundable<Interface> {
   Impl impl_;
   fidl::Binding<Interface> binding_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(BoundInterface);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BoundInterface);
 };
 }  // namespace fidl_helpers
 }  // namespace ledger

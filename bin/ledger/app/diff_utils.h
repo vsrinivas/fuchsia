@@ -9,7 +9,7 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace ledger {
 namespace diff_utils {

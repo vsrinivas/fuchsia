@@ -32,7 +32,7 @@ executable("launch_benchmark") {
     "//apps/ledger/src/test/benchmark/lib",
     "//apps/ledger/src/test/benchmark/put:lib",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }

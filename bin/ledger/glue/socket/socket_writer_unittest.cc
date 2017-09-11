@@ -9,7 +9,7 @@
 #include "apps/ledger/src/glue/socket/socket_drainer_client.h"
 #include "apps/ledger/src/glue/socket/socket_pair.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace glue {
@@ -21,8 +21,8 @@ class StringClient : public SocketWriter::Client {
 
   void GetNext(size_t offset,
                size_t max_size,
-               std::function<void(ftl::StringView)> callback) override {
-    ftl::StringView data = value_;
+               std::function<void(fxl::StringView)> callback) override {
+    fxl::StringView data = value_;
     callback(data.substr(offset, max_size));
   }
 

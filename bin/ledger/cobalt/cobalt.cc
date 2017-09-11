@@ -11,10 +11,10 @@
 #include "apps/cobalt_client/services/cobalt.fidl.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/callback/waiter.h"
-#include "lib/ftl/functional/auto_call.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/functional/auto_call.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 
 namespace ledger {
 namespace {
@@ -24,7 +24,7 @@ constexpr int32_t kCobaltEncodingId = 2;
 
 class CobaltContext {
  public:
-  CobaltContext(ftl::RefPtr<ftl::TaskRunner> task_runner,
+  CobaltContext(fxl::RefPtr<fxl::TaskRunner> task_runner,
                 app::ApplicationContext* app_context);
   ~CobaltContext();
 
@@ -37,17 +37,17 @@ class CobaltContext {
   void SendEvents();
 
   backoff::ExponentialBackoff backoff_;
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   app::ApplicationContext* app_context_;
   cobalt::CobaltEncoderPtr encoder_;
 
   std::multiset<CobaltEvent> events_to_send_;
   std::multiset<CobaltEvent> events_in_transit_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CobaltContext);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CobaltContext);
 };
 
-CobaltContext::CobaltContext(ftl::RefPtr<ftl::TaskRunner> task_runner,
+CobaltContext::CobaltContext(fxl::RefPtr<fxl::TaskRunner> task_runner,
                              app::ApplicationContext* app_context)
     : task_runner_(std::move(task_runner)), app_context_(app_context) {
   ConnectToCobaltApplication();
@@ -55,7 +55,7 @@ CobaltContext::CobaltContext(ftl::RefPtr<ftl::TaskRunner> task_runner,
 
 CobaltContext::~CobaltContext() {
   if (!events_in_transit_.empty() || !events_to_send_.empty()) {
-    FTL_LOG(WARNING) << "Disconnecting connection to cobalt with event still "
+    FXL_LOG(WARNING) << "Disconnecting connection to cobalt with event still "
                         "pending... Events will be lost.";
   }
 }
@@ -74,7 +74,7 @@ void CobaltContext::ConnectToCobaltApplication() {
 }
 
 void CobaltContext::OnConnectionError() {
-  FTL_LOG(ERROR) << "Connection to cobalt failed. Reconnecting after a delay.";
+  FXL_LOG(ERROR) << "Connection to cobalt failed. Reconnecting after a delay.";
 
   events_to_send_.insert(events_in_transit_.begin(),
                          events_in_transit_.end());
@@ -94,7 +94,7 @@ void CobaltContext::ReportEventOnMainThread(CobaltEvent event) {
 }
 
 void CobaltContext::SendEvents() {
-  FTL_DCHECK(events_in_transit_.empty());
+  FXL_DCHECK(events_in_transit_.empty());
 
   if (events_to_send_.empty()) {
     return;
@@ -109,15 +109,15 @@ void CobaltContext::SendEvents() {
     encoder_->AddIndexObservation(
         kCobaltMetricId, kCobaltEncodingId, static_cast<uint32_t>(event),
         [ this, event, callback = std::move(callback) ](cobalt::Status status) {
-          auto cleanup = ftl::MakeAutoCall(callback);
+          auto cleanup = fxl::MakeAutoCall(callback);
 
           switch (status) {
             case cobalt::Status::INVALID_ARGUMENTS:
             case cobalt::Status::FAILED_PRECONDITION:
-              FTL_DCHECK(false) << "Unexpected status: " << status;
+              FXL_DCHECK(false) << "Unexpected status: " << status;
             case cobalt::Status::OBSERVATION_TOO_BIG:  // fall through
               // Log the failure.
-              FTL_LOG(WARNING)
+              FXL_LOG(WARNING)
                   << "Cobalt rejected event: " << static_cast<uint32_t>(event)
                   << " with status: " << status;
             case cobalt::Status::OK:  // fall through
@@ -158,15 +158,15 @@ CobaltContext* g_cobalt_context = nullptr;
 
 }  // namespace
 
-ftl::AutoCall<ftl::Closure> InitializeCobalt(
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
+fxl::AutoCall<fxl::Closure> InitializeCobalt(
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
     app::ApplicationContext* app_context) {
-  FTL_DCHECK(!g_cobalt_context);
+  FXL_DCHECK(!g_cobalt_context);
   auto context =
       std::make_unique<CobaltContext>(std::move(task_runner), app_context);
   g_cobalt_context = context.get();
-  return ftl::MakeAutoCall<ftl::Closure>(
-      ftl::MakeCopyable([context = std::move(context)]() mutable {
+  return fxl::MakeAutoCall<fxl::Closure>(
+      fxl::MakeCopyable([context = std::move(context)]() mutable {
         context.reset();
         g_cobalt_context = nullptr;
       }));

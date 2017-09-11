@@ -11,7 +11,7 @@
 
 #include "apps/ledger/src/firebase/status.h"
 #include "apps/ledger/src/firebase/watch_client.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 #include <rapidjson/document.h>
 
@@ -69,7 +69,7 @@ class Firebase {
   virtual void UnWatch(WatchClient* watch_client) = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Firebase);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Firebase);
 };
 
 }  // namespace firebase

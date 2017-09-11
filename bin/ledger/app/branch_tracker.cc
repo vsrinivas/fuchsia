@@ -11,8 +11,8 @@
 #include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/app/page_utils.h"
 #include "apps/ledger/src/callback/waiter.h"
-#include "lib/ftl/functional/auto_call.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/auto_call.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace ledger {
 class BranchTracker::PageWatcherContainer {
@@ -47,10 +47,10 @@ class BranchTracker::PageWatcherContainer {
     if (handler_) {
       handler_->Continue(true);
     }
-    FTL_DCHECK(!handler_);
+    FXL_DCHECK(!handler_);
   }
 
-  void set_on_empty(ftl::Closure on_empty_callback) {
+  void set_on_empty(fxl::Closure on_empty_callback) {
     on_empty_callback_ = std::move(on_empty_callback);
   }
 
@@ -65,7 +65,7 @@ class BranchTracker::PageWatcherContainer {
   // again to set a new callback after the first one is called. Setting a
   // callback while a previous one is still active will execute the previous
   // callback.
-  void SetOnDrainedCallback(ftl::Closure on_drained) {
+  void SetOnDrainedCallback(fxl::Closure on_drained) {
     // If a transaction is committed or rolled back before all watchers have
     // been drained, we do not want to continue blocking until they drain. Thus,
     // we declare them drained right away and proceed.
@@ -135,9 +135,9 @@ class BranchTracker::PageWatcherContainer {
   void SendChange(PageChangePtr page_change,
                   ResultState state,
                   std::unique_ptr<const storage::Commit> new_commit,
-                  ftl::Closure on_done) {
+                  fxl::Closure on_done) {
     interface_->OnChange(
-        std::move(page_change), state, ftl::MakeCopyable([
+        std::move(page_change), state, fxl::MakeCopyable([
           this, state, new_commit = std::move(new_commit),
           on_done = std::move(on_done)
         ](fidl::InterfaceRequest<PageSnapshot> snapshot_request) mutable {
@@ -179,14 +179,14 @@ class BranchTracker::PageWatcherContainer {
     diff_utils::ComputePageChange(
         storage_, *last_commit_, *current_commit_, key_prefix_, key_prefix_,
         diff_utils::PaginationBehavior::NO_PAGINATION,
-        ftl::MakeCopyable([ this, new_commit = std::move(current_commit_) ](
+        fxl::MakeCopyable([ this, new_commit = std::move(current_commit_) ](
             Status status,
             std::pair<PageChangePtr, std::string> page_change_ptr) mutable {
           if (status != Status::OK) {
             // This change notification is abandonned. At the next commit,
             // we will try again (but not before). The next notification
             // will cover both this change and the next.
-            FTL_LOG(ERROR) << "Unable to compute PageChange for Watch update.";
+            FXL_LOG(ERROR) << "Unable to compute PageChange for Watch update.";
             change_in_flight_ = false;
             return;
           }
@@ -204,12 +204,12 @@ class BranchTracker::PageWatcherContainer {
                        std::move(new_commit), [] {});
             return;
           }
-          coroutine_service_->StartCoroutine(ftl::MakeCopyable([
+          coroutine_service_->StartCoroutine(fxl::MakeCopyable([
             this, new_commit = std::move(new_commit),
             paginated_changes = std::move(paginated_changes)
           ](coroutine::CoroutineHandler * handler) mutable {
-            auto guard = ftl::MakeAutoCall([this] { handler_ = nullptr; });
-            FTL_DCHECK(!handler_);
+            auto guard = fxl::MakeAutoCall([this] { handler_ = nullptr; });
+            FXL_DCHECK(!handler_);
             handler_ = handler;
             for (size_t i = 0; i < paginated_changes.size(); ++i) {
               ResultState state;
@@ -221,10 +221,10 @@ class BranchTracker::PageWatcherContainer {
                 state = ResultState::PARTIAL_CONTINUED;
               }
               if (coroutine::SyncCall(
-                      handler, ftl::MakeCopyable([
+                      handler, fxl::MakeCopyable([
                         this, change = std::move(paginated_changes[i]), state,
                         new_commit = new_commit->Clone()
-                      ](ftl::Closure on_done) mutable {
+                      ](fxl::Closure on_done) mutable {
                         SendChange(std::move(change), state,
                                    std::move(new_commit), std::move(on_done));
 
@@ -236,8 +236,8 @@ class BranchTracker::PageWatcherContainer {
         }));
   }
 
-  ftl::Closure on_drained_ = nullptr;
-  ftl::Closure on_empty_callback_ = nullptr;
+  fxl::Closure on_drained_ = nullptr;
+  fxl::Closure on_empty_callback_ = nullptr;
   bool change_in_flight_;
   std::unique_ptr<const storage::Commit> last_commit_;
   std::unique_ptr<const storage::Commit> current_commit_;
@@ -277,14 +277,14 @@ void BranchTracker::Init(std::function<void(Status)> on_done) {
       return;
     }
 
-    FTL_DCHECK(!commit_ids.empty());
+    FXL_DCHECK(!commit_ids.empty());
     weak_this->InitCommitAndSetWatcher(std::move(commit_ids[0]));
 
     on_done(Status::OK);
   });
 }
 
-void BranchTracker::set_on_empty(ftl::Closure on_empty_callback) {
+void BranchTracker::set_on_empty(fxl::Closure on_empty_callback) {
   on_empty_callback_ = on_empty_callback;
 }
 
@@ -325,8 +325,8 @@ void BranchTracker::OnNewCommits(
   }
 }
 
-void BranchTracker::StartTransaction(ftl::Closure watchers_drained_callback) {
-  FTL_DCHECK(!transaction_in_progress_);
+void BranchTracker::StartTransaction(fxl::Closure watchers_drained_callback) {
+  FXL_DCHECK(!transaction_in_progress_);
   transaction_in_progress_ = true;
   auto waiter = callback::CompletionWaiter::Create();
   for (auto& watcher : watchers_) {
@@ -337,7 +337,7 @@ void BranchTracker::StartTransaction(ftl::Closure watchers_drained_callback) {
 
 void BranchTracker::StopTransaction(
     std::unique_ptr<const storage::Commit> commit) {
-  FTL_DCHECK(transaction_in_progress_ || !commit);
+  FXL_DCHECK(transaction_in_progress_ || !commit);
 
   if (!transaction_in_progress_) {
     return;
@@ -377,7 +377,7 @@ bool BranchTracker::IsEmpty() {
 void BranchTracker::InitCommitAndSetWatcher(storage::CommitId commit_id) {
   // current_commit_ will be updated to have a correct value after the first
   // Commit received in OnNewCommits or StopTransaction.
-  FTL_DCHECK(!current_commit_);
+  FXL_DCHECK(!current_commit_);
   current_commit_id_ = std::move(commit_id);
   storage_->AddCommitWatcher(this);
 }

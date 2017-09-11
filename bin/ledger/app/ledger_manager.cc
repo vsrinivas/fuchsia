@@ -13,8 +13,8 @@
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 
 namespace ledger {
 
@@ -29,7 +29,7 @@ class LedgerManager::PageManagerContainer {
     }
   }
 
-  void set_on_empty(const ftl::Closure& on_empty_callback) {
+  void set_on_empty(const fxl::Closure& on_empty_callback) {
     on_empty_callback_ = on_empty_callback;
     if (page_manager_) {
       page_manager_->set_on_empty(on_empty_callback);
@@ -55,8 +55,8 @@ class LedgerManager::PageManagerContainer {
   // all awaiting callbacks and binds all pages in case of success.
   void SetPageManager(Status status,
                       std::unique_ptr<PageManager> page_manager) {
-    FTL_DCHECK(!page_manager_);
-    FTL_DCHECK((status != Status::OK) == !page_manager);
+    FXL_DCHECK(!page_manager_);
+    FXL_DCHECK((status != Status::OK) == !page_manager);
     status_ = status;
     page_manager_ = std::move(page_manager);
     for (auto& request : requests_) {
@@ -83,9 +83,9 @@ class LedgerManager::PageManagerContainer {
   std::vector<
       std::pair<fidl::InterfaceRequest<Page>, std::function<void(Status)>>>
       requests_;
-  ftl::Closure on_empty_callback_;
+  fxl::Closure on_empty_callback_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageManagerContainer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageManagerContainer);
 };
 
 LedgerManager::LedgerManager(Environment* environment,
@@ -175,7 +175,7 @@ LedgerManager::PageManagerContainer* LedgerManager::AddPageManagerContainer(
   auto ret = page_managers_.emplace(std::piecewise_construct,
                                     std::forward_as_tuple(page_id.ToString()),
                                     std::forward_as_tuple());
-  FTL_DCHECK(ret.second);
+  FXL_DCHECK(ret.second);
   return &ret.first->second;
 }
 
@@ -186,7 +186,7 @@ std::unique_ptr<PageManager> LedgerManager::NewPageManager(
   if (sync_) {
     page_sync_context = sync_->CreatePageContext(page_storage.get(), [] {
       // TODO(ppi): reinitialize the sync?
-      FTL_LOG(ERROR) << "Page Sync stopped due to unrecoverable error.";
+      FXL_LOG(ERROR) << "Page Sync stopped due to unrecoverable error.";
     });
   }
   return std::make_unique<PageManager>(

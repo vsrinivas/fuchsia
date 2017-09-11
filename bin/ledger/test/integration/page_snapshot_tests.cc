@@ -12,7 +12,7 @@
 #include "apps/ledger/src/test/integration/test_utils.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
 #include "mx/vmo.h"
@@ -27,7 +27,7 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
   ~PageSnapshotIntegrationTest() override {}
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageSnapshotIntegrationTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageSnapshotIntegrationTest);
 };
 
 TEST_F(PageSnapshotIntegrationTest, PageSnapshotGet) {

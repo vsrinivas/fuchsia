@@ -17,7 +17,7 @@
 #include "apps/ledger/src/cloud_sync/public/user_config.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace ledger {
 
@@ -33,7 +33,7 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
         std::function<void(bool)> callback) = 0;
 
    private:
-    FTL_DISALLOW_COPY_AND_ASSIGN(Delegate);
+    FXL_DISALLOW_COPY_AND_ASSIGN(Delegate);
   };
 
   enum class ConfigPersistence { PERSIST, FORGET };
@@ -86,7 +86,7 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
   // Pending auth provider requests to be cancelled when this class goes away.
   callback::CancellableContainer auth_provider_requests_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryImpl);
 };
 
 }  // namespace ledger

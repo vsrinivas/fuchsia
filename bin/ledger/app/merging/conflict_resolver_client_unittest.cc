@@ -19,8 +19,8 @@
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace ledger {
@@ -82,7 +82,7 @@ class ConflictResolverClientTest : public test::TestWithPageStorage {
   Environment environment_;
   std::unique_ptr<PageManager> page_manager_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ConflictResolverClientTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ConflictResolverClientTest);
 };
 
 class ConflictResolverImpl : public ConflictResolver {

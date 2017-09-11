@@ -6,7 +6,7 @@
 #define APPS_LEDGER_SRC_FIDL_HELPERS_BOUNDABLE_H_
 
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace ledger {
 namespace fidl_helpers {

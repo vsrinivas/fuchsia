@@ -7,7 +7,7 @@
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/impl/storage_test_utils.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace storage {
 namespace test {
@@ -53,7 +53,7 @@ ObjectIdView CommitRandomImpl::GetRootId() const {
   return root_node_id_;
 }
 
-ftl::StringView CommitRandomImpl::GetStorageBytes() const {
+fxl::StringView CommitRandomImpl::GetStorageBytes() const {
   return storage_bytes_;
 }
 

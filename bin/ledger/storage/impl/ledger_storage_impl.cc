@@ -13,27 +13,27 @@
 #include "apps/ledger/src/storage/impl/directory_reader.h"
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/files/path.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/concatenate.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/path.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/concatenate.h"
 
 namespace storage {
 
 namespace {
 
 // Encodes opaque bytes in a way that is usable as a directory name.
-std::string GetDirectoryName(ftl::StringView bytes) {
+std::string GetDirectoryName(fxl::StringView bytes) {
   return glue::Base64UrlEncode(bytes);
 }
 
 // Decodes opaque bytes used as a directory names into an id. This is the
 // opposite transformation of GetDirectoryName.
-std::string GetObjectId(ftl::StringView bytes) {
+std::string GetObjectId(fxl::StringView bytes) {
   std::string decoded;
   bool result = glue::Base64UrlDecode(bytes, &decoded);
-  FTL_DCHECK(result);
+  FXL_DCHECK(result);
   return decoded;
 }
 
@@ -44,7 +44,7 @@ LedgerStorageImpl::LedgerStorageImpl(
     const std::string& base_storage_dir,
     const std::string& ledger_name)
     : coroutine_service_(coroutine_service) {
-  storage_dir_ = ftl::Concatenate({base_storage_dir, "/", kSerializationVersion,
+  storage_dir_ = fxl::Concatenate({base_storage_dir, "/", kSerializationVersion,
                                    "/", GetDirectoryName(ledger_name)});
 }
 
@@ -55,17 +55,17 @@ void LedgerStorageImpl::CreatePageStorage(
     std::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
   std::string path = GetPathFor(page_id);
   if (!files::CreateDirectory(path)) {
-    FTL_LOG(ERROR) << "Failed to create the storage directory in " << path;
+    FXL_LOG(ERROR) << "Failed to create the storage directory in " << path;
     callback(Status::INTERNAL_IO_ERROR, nullptr);
     return;
   }
   auto result = std::make_unique<PageStorageImpl>(coroutine_service_, path,
                                                   std::move(page_id));
-  result->Init(ftl::MakeCopyable([
+  result->Init(fxl::MakeCopyable([
     callback = std::move(callback), result = std::move(result)
   ](Status status) mutable {
     if (status != Status::OK) {
-      FTL_LOG(ERROR) << "Failed to initialize PageStorage. Status: " << status;
+      FXL_LOG(ERROR) << "Failed to initialize PageStorage. Status: " << status;
       callback(status, nullptr);
       return;
     }
@@ -80,7 +80,7 @@ void LedgerStorageImpl::GetPageStorage(
   if (files::IsDirectory(path)) {
     auto result = std::make_unique<PageStorageImpl>(coroutine_service_, path,
                                                     std::move(page_id));
-    result->Init(ftl::MakeCopyable([
+    result->Init(fxl::MakeCopyable([
       callback = std::move(callback), result = std::move(result)
     ](Status status) mutable {
       if (status != Status::OK) {
@@ -103,7 +103,7 @@ bool LedgerStorageImpl::DeletePageStorage(PageIdView page_id) {
     return false;
   }
   if (!files::DeletePath(path, true)) {
-    FTL_LOG(ERROR) << "Unable to delete: " << path;
+    FXL_LOG(ERROR) << "Unable to delete: " << path;
     return false;
   }
   return true;
@@ -112,7 +112,7 @@ bool LedgerStorageImpl::DeletePageStorage(PageIdView page_id) {
 std::vector<PageId> LedgerStorageImpl::ListLocalPages() {
   std::vector<PageId> local_pages;
   DirectoryReader::GetDirectoryEntries(
-      storage_dir_, [&local_pages](ftl::StringView encoded_page_id) {
+      storage_dir_, [&local_pages](fxl::StringView encoded_page_id) {
         local_pages.emplace_back(GetObjectId(encoded_page_id));
         return true;
       });
@@ -120,8 +120,8 @@ std::vector<PageId> LedgerStorageImpl::ListLocalPages() {
 }
 
 std::string LedgerStorageImpl::GetPathFor(PageIdView page_id) {
-  FTL_DCHECK(!page_id.empty());
-  return ftl::Concatenate({storage_dir_, "/", GetDirectoryName(page_id)});
+  FXL_DCHECK(!page_id.empty());
+  return fxl::Concatenate({storage_dir_, "/", GetDirectoryName(page_id)});
 }
 
 }  // namespace storage

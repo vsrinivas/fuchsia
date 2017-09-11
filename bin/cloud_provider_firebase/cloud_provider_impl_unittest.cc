@@ -9,7 +9,7 @@
 #include "apps/ledger/src/test/fake_token_provider.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "garnet/public/lib/fidl/cpp/bindings/binding.h"
-#include "garnet/public/lib/ftl/macros.h"
+#include "garnet/public/lib/fxl/macros.h"
 
 namespace cloud_provider_firebase {
 
@@ -22,7 +22,7 @@ ConfigPtr GetFirebaseConfig() {
 }
 
 std::unique_ptr<auth_provider::AuthProvider> InitAuthProvider(
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
     auth_provider::test::TestAuthProvider** ptr) {
   auto auth_provider = std::make_unique<auth_provider::test::TestAuthProvider>(
       std::move(task_runner));
@@ -50,7 +50,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop {
   CloudProviderImpl cloud_provider_impl_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(CloudProviderImplTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CloudProviderImplTest);
 };
 
 TEST_F(CloudProviderImplTest, EmptyWhenDisconnected) {

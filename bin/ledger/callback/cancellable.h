@@ -8,10 +8,10 @@
 #include <set>
 
 #include "apps/ledger/src/callback/auto_cleanable.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_counted.h"
-#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_ptr.h"
 
 namespace callback {
 
@@ -24,7 +24,7 @@ class AutoCancel;
 // the client called |Cancel|.
 // If the client calls |Cancel|, or when the service calls any completion
 // callbacks, the |IsDone| method must return |true|.
-class Cancellable : public ftl::RefCountedThreadSafe<Cancellable> {
+class Cancellable : public fxl::RefCountedThreadSafe<Cancellable> {
  public:
   virtual void Cancel() = 0;
   virtual bool IsDone() = 0;
@@ -37,7 +37,7 @@ class Cancellable : public ftl::RefCountedThreadSafe<Cancellable> {
   // done. If the |OnDone| method has been called, the service must call the
   // |callback| after having called any completion callbacks. It must not call
   // the callback if the |Cancel| method has been called.
-  virtual void SetOnDone(ftl::Closure callback) = 0;
+  virtual void SetOnDone(fxl::Closure callback) = 0;
 
  private:
   friend AutoCancel;
@@ -49,23 +49,23 @@ class Cancellable : public ftl::RefCountedThreadSafe<Cancellable> {
 // when this object is deleted.
 class AutoCancel {
  public:
-  explicit AutoCancel(ftl::RefPtr<Cancellable> cancellable = nullptr);
+  explicit AutoCancel(fxl::RefPtr<Cancellable> cancellable = nullptr);
   ~AutoCancel();
 
   // Cancels any wrapped |Cancellable|s and starts wrapping |cancellable|.
-  void Reset(ftl::RefPtr<Cancellable> cancellable = nullptr);
+  void Reset(fxl::RefPtr<Cancellable> cancellable = nullptr);
 
   // The client can call the |set_on_empty| method once. |callback| will then be
   // executed when the underlying |Cancellable| finishes.
-  void set_on_empty(ftl::Closure callback);
+  void set_on_empty(fxl::Closure callback);
 
  private:
   void OnDone();
 
-  ftl::RefPtr<Cancellable> cancellable_;
-  ftl::Closure on_empty_;
+  fxl::RefPtr<Cancellable> cancellable_;
+  fxl::Closure on_empty_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AutoCancel);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AutoCancel);
 };
 
 // RAII container for multiple |Cancellable|s. The |Cancellable|s will be

@@ -4,14 +4,14 @@
 
 #include "apps/ledger/src/device_set/cloud_device_set_impl.h"
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/concatenate.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/concatenate.h"
 
 namespace cloud_provider_firebase {
 
 namespace {
-std::string GetDeviceMapKey(ftl::StringView fingerprint) {
-  return ftl::Concatenate({kDeviceMapRelpath, "/", fingerprint});
+std::string GetDeviceMapKey(fxl::StringView fingerprint) {
+  return fxl::Concatenate({kDeviceMapRelpath, "/", fingerprint});
 }
 }  // namespace
 
@@ -39,7 +39,7 @@ void CloudDeviceSetImpl::CheckFingerprint(
       [callback = std::move(callback)](firebase::Status status,
                                        const rapidjson::Value& value) {
         if (status != firebase::Status::OK) {
-          FTL_LOG(WARNING) << "Unable to read version from the cloud.";
+          FXL_LOG(WARNING) << "Unable to read version from the cloud.";
           callback(Status::NETWORK_ERROR);
           return;
         }
@@ -66,7 +66,7 @@ void CloudDeviceSetImpl::SetFingerprint(std::string auth_token,
       GetDeviceMapKey(fingerprint), query_params,
       "true", [callback = std::move(callback)](firebase::Status status) {
         if (status != firebase::Status::OK) {
-          FTL_LOG(WARNING) << "Unable to set local version on the cloud.";
+          FXL_LOG(WARNING) << "Unable to set local version on the cloud.";
           callback(Status::NETWORK_ERROR);
           return;
         }
@@ -95,7 +95,7 @@ void CloudDeviceSetImpl::WatchFingerprint(
 
 void CloudDeviceSetImpl::OnPut(const std::string& /*path*/,
                                const rapidjson::Value& value) {
-  FTL_DCHECK(firebase_watcher_set_ && watch_callback_);
+  FXL_DCHECK(firebase_watcher_set_ && watch_callback_);
   if (value.IsNull()) {
     if (destruction_sentinel_.DestructedWhile(
             [this] { watch_callback_(Status::ERASED); })) {
@@ -110,13 +110,13 @@ void CloudDeviceSetImpl::OnPut(const std::string& /*path*/,
 
 void CloudDeviceSetImpl::OnPatch(const std::string& /*path*/,
                                  const rapidjson::Value& /*value*/) {
-  FTL_DCHECK(firebase_watcher_set_ && watch_callback_);
-  FTL_NOTIMPLEMENTED();
+  FXL_DCHECK(firebase_watcher_set_ && watch_callback_);
+  FXL_NOTIMPLEMENTED();
 }
 
 void CloudDeviceSetImpl::OnCancel() {
-  FTL_DCHECK(firebase_watcher_set_ && watch_callback_);
-  FTL_NOTIMPLEMENTED();
+  FXL_DCHECK(firebase_watcher_set_ && watch_callback_);
+  FXL_NOTIMPLEMENTED();
 }
 
 void CloudDeviceSetImpl::OnAuthRevoked(const std::string& /*reason*/) {
@@ -128,8 +128,8 @@ void CloudDeviceSetImpl::OnAuthRevoked(const std::string& /*reason*/) {
 }
 
 void CloudDeviceSetImpl::OnMalformedEvent() {
-  FTL_DCHECK(firebase_watcher_set_ && watch_callback_);
-  FTL_NOTIMPLEMENTED();
+  FXL_DCHECK(firebase_watcher_set_ && watch_callback_);
+  FXL_NOTIMPLEMENTED();
 }
 
 void CloudDeviceSetImpl::OnConnectionError() {
@@ -141,7 +141,7 @@ void CloudDeviceSetImpl::OnConnectionError() {
 }
 
 void CloudDeviceSetImpl::ResetWatcher() {
-  FTL_DCHECK(firebase_watcher_set_ && watch_callback_);
+  FXL_DCHECK(firebase_watcher_set_ && watch_callback_);
   user_firebase_->UnWatch(this);
   firebase_watcher_set_ = false;
   watch_callback_ = nullptr;

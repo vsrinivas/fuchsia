@@ -40,16 +40,16 @@ class BTreeIterator {
 
   // Skips the iteration until the first key that is greater than or equal to
   // |min_key|.
-  Status SkipTo(ftl::StringView min_key);
+  Status SkipTo(fxl::StringView min_key);
 
   // Skips to the index where key could be found, within the current node. The
   // current index will only be updated if the new index is after the current
   // one. Returns true if either the key was found in this node, or if it is
   // guaranteed not to be found in any of this nodes children; false otherwise.
-  bool SkipToIndex(ftl::StringView key);
+  bool SkipToIndex(fxl::StringView key);
 
   // Returns the identifier of the next child that will be explored.
-  ftl::StringView GetNextChild() const;
+  fxl::StringView GetNextChild() const;
 
   // Returns whether the iterator is currently on a value. The method
   // |CurrentEntry| is only valid when |HasValue| is true.
@@ -81,7 +81,7 @@ class BTreeIterator {
   size_t& CurrentIndex();
   size_t CurrentIndex() const;
   const TreeNode& CurrentNode() const;
-  Status Descend(ftl::StringView node_id);
+  Status Descend(fxl::StringView node_id);
 
   SynchronousStorage* storage_;
   // Stack representing the current iteration state. Each level represents the
@@ -91,7 +91,7 @@ class BTreeIterator {
   std::vector<std::pair<std::unique_ptr<const TreeNode>, size_t>> stack_;
   bool descending_ = true;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(BTreeIterator);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BTreeIterator);
 };
 
 // Retrieves the ids of all objects in the B-Tree, i.e tree nodes and values of

@@ -13,8 +13,8 @@
 #include "apps/ledger/src/storage/fake/fake_commit.h"
 #include "apps/ledger/src/storage/fake/fake_journal.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -24,11 +24,11 @@ namespace {
 
 class FakeObject : public Object {
  public:
-  FakeObject(ObjectIdView id, ftl::StringView content)
+  FakeObject(ObjectIdView id, fxl::StringView content)
       : id_(id.ToString()), content_(content.ToString()) {}
   ~FakeObject() override {}
   ObjectId GetId() const override { return id_; }
-  Status GetData(ftl::StringView* data) const override {
+  Status GetData(fxl::StringView* data) const override {
     *data = content_;
     return Status::OK;
   }
@@ -38,7 +38,7 @@ class FakeObject : public Object {
   std::string content_;
 };
 
-storage::ObjectId ComputeObjectId(ftl::StringView value) {
+storage::ObjectId ComputeObjectId(fxl::StringView value) {
   return glue::SHA256Hash(value);
 }
 
@@ -84,7 +84,7 @@ void FakePageStorage::GetCommit(
         callback(Status::OK,
                  std::make_unique<FakeCommit>(journals_[commit_id].get()));
       },
-      ftl::TimeDelta::FromMilliseconds(5));
+      fxl::TimeDelta::FromMilliseconds(5));
 }
 
 void FakePageStorage::StartCommit(
@@ -121,7 +121,7 @@ void FakePageStorage::AddObjectFromLocal(
     std::function<void(Status, ObjectId)> callback) {
   auto value = std::make_unique<std::string>();
   auto data_source_ptr = data_source.get();
-  data_source_ptr->Get(ftl::MakeCopyable([
+  data_source_ptr->Get(fxl::MakeCopyable([
     this, data_source = std::move(data_source), value = std::move(value),
     callback = std::move(callback)
   ](std::unique_ptr<DataSource::DataChunk> chunk,
@@ -162,7 +162,7 @@ void FakePageStorage::GetPiece(
     callback(Status::OK, std::make_unique<FakeObject>(object_id, it->second));
   });
   mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      [this] { SendNextObject(); }, ftl::TimeDelta::FromMilliseconds(5));
+      [this] { SendNextObject(); }, fxl::TimeDelta::FromMilliseconds(5));
 }
 
 void FakePageStorage::GetCommitContents(const Commit& commit,

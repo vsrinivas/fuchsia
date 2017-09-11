@@ -9,7 +9,7 @@
 
 #include "apps/ledger/src/cloud_provider/public/commit.h"
 #include "apps/ledger/src/cloud_provider/public/record.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace cloud_provider_firebase {
 
@@ -36,7 +36,7 @@ class CommitWatcher {
   virtual void OnMalformedNotification() = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(CommitWatcher);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CommitWatcher);
 };
 
 }  // namespace cloud_provider_firebase

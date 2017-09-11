@@ -35,7 +35,7 @@ Status PageDbEmptyImpl::GetImplicitJournal(
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::GetJournalValue(const JournalId& /*journal_id*/,
-                                        ftl::StringView /*key*/,
+                                        fxl::StringView /*key*/,
                                         std::string* /*value*/) {
   return Status::NOT_IMPLEMENTED;
 }
@@ -70,7 +70,7 @@ Status PageDbEmptyImpl::GetUnsyncedPieces(
     std::vector<ObjectId>* /*object_ids*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::GetSyncMetadata(ftl::StringView /*key*/,
+Status PageDbEmptyImpl::GetSyncMetadata(fxl::StringView /*key*/,
                                         std::string* /*value*/) {
   return Status::NOT_IMPLEMENTED;
 }
@@ -86,7 +86,7 @@ Status PageDbEmptyImpl::RemoveHead(CoroutineHandler* /*handler*/,
 Status PageDbEmptyImpl::AddCommitStorageBytes(
     CoroutineHandler* /*handler*/,
     const CommitId& /*commit_id*/,
-    ftl::StringView /*storage_bytes*/) {
+    fxl::StringView /*storage_bytes*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::RemoveCommit(CoroutineHandler* /*handler*/,
@@ -113,8 +113,8 @@ Status PageDbEmptyImpl::RemoveJournal(const JournalId& /*journal_id*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::AddJournalEntry(const JournalId& /*journal_id*/,
-                                        ftl::StringView /*key*/,
-                                        ftl::StringView /*value*/,
+                                        fxl::StringView /*key*/,
+                                        fxl::StringView /*value*/,
                                         KeyPriority /*priority*/) {
   return Status::NOT_IMPLEMENTED;
 }
@@ -149,8 +149,8 @@ Status PageDbEmptyImpl::MarkCommitIdUnsynced(CoroutineHandler* /*handler*/,
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::SetSyncMetadata(CoroutineHandler* /*handler*/,
-                                        ftl::StringView /*key*/,
-                                        ftl::StringView /*value*/) {
+                                        fxl::StringView /*key*/,
+                                        fxl::StringView /*value*/) {
   return Status::NOT_IMPLEMENTED;
 }
 

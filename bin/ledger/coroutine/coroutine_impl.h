@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "apps/ledger/src/coroutine/coroutine.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace context {
 class Stack;
@@ -31,7 +31,7 @@ class CoroutineServiceImpl : public CoroutineService {
   std::vector<std::unique_ptr<context::Stack>> available_stack_;
   std::vector<std::unique_ptr<CoroutineHandlerImpl>> handlers_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CoroutineServiceImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CoroutineServiceImpl);
 };
 
 }  // namespace coroutine

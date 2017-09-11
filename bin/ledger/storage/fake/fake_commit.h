@@ -34,11 +34,11 @@ class FakeCommit : public Commit {
 
   ObjectIdView GetRootId() const override;
 
-  ftl::StringView GetStorageBytes() const override;
+  fxl::StringView GetStorageBytes() const override;
 
  private:
   FakeJournalDelegate* journal_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(FakeCommit);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakeCommit);
 };
 
 }  // namespace fake

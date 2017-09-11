@@ -6,8 +6,8 @@
 
 #include "apps/ledger/src/glue/socket/socket_pair.h"
 #include "apps/ledger/src/glue/socket/socket_writer.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/mtl/vmo/strings.h"
 #include "lib/url/gurl.h"
 
@@ -43,7 +43,7 @@ void GcsServer::HandlePost(
 
   std::string content;
   if (!mtl::StringFromVmo(request->body->get_buffer(), &content)) {
-    FTL_NOTREACHED() << "Unable to read vmo.";
+    FXL_NOTREACHED() << "Unable to read vmo.";
   }
   data_[std::move(path)] = std::move(content);
   callback(BuildResponse(request->url, Server::ResponseCode::kOk, "Ok"));

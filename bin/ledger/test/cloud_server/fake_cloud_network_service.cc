@@ -4,7 +4,7 @@
 
 #include "apps/ledger/src/test/cloud_server/fake_cloud_network_service.h"
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace ledger {
 
@@ -18,18 +18,18 @@ void FakeCloudNetworkService::CreateURLLoader(
 }
 
 void FakeCloudNetworkService::GetCookieStore(mx::channel /*cookie_store*/) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void FakeCloudNetworkService::CreateWebSocket(mx::channel /*socket*/) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void FakeCloudNetworkService::CreateTCPBoundSocket(
     netstack::NetAddressPtr /*local_address*/,
     mx::channel /*bound_socket*/,
     const CreateTCPBoundSocketCallback& /*callback*/) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void FakeCloudNetworkService::CreateTCPConnectedSocket(
@@ -38,28 +38,28 @@ void FakeCloudNetworkService::CreateTCPConnectedSocket(
     mx::socket /*receive_stream*/,
     mx::channel /*client_socket*/,
     const CreateTCPConnectedSocketCallback& /*callback*/) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void FakeCloudNetworkService::CreateUDPSocket(mx::channel /*socket*/) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void FakeCloudNetworkService::CreateHttpServer(
     netstack::NetAddressPtr /*local_address*/,
     mx::channel /*delegate*/,
     const CreateHttpServerCallback& /*callback*/) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void FakeCloudNetworkService::RegisterURLLoaderInterceptor(
     mx::channel /*factory*/) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void FakeCloudNetworkService::CreateHostResolver(
     mx::channel /*host_resolver*/) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void FakeCloudNetworkService::AddBinding(

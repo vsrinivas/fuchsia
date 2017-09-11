@@ -6,10 +6,10 @@
 #define APPS_LEDGER_SRC_COBALT_COBALT_H_
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/ftl/functional/auto_call.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/functional/auto_call.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace ledger {
 
@@ -26,8 +26,8 @@ enum class CobaltEvent : uint32_t {
 
 // Cobalt initialization. When cobalt is not need, the returned object must be
 // deleted. This method must not be called again until then.
-ftl::AutoCall<ftl::Closure> InitializeCobalt(
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
+fxl::AutoCall<fxl::Closure> InitializeCobalt(
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
     app::ApplicationContext* app_context);
 
 // Report an event to Cobalt.

@@ -11,17 +11,17 @@
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/callback/cancellable.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
-#include "garnet/public/lib/ftl/functional/closure.h"
-#include "garnet/public/lib/ftl/macros.h"
+#include "garnet/public/lib/fxl/functional/closure.h"
+#include "garnet/public/lib/fxl/macros.h"
 
 namespace cloud_provider_firebase {
 
 class FactoryImpl : public Factory {
  public:
-  explicit FactoryImpl(ftl::RefPtr<ftl::TaskRunner> main_runner);
+  explicit FactoryImpl(fxl::RefPtr<fxl::TaskRunner> main_runner);
   ~FactoryImpl() override;
 
-  void set_on_empty(const ftl::Closure& on_empty) { on_empty_ = on_empty; }
+  void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
 
  private:
   // Factory:
@@ -35,13 +35,13 @@ class FactoryImpl : public Factory {
 
   void CheckEmpty();
 
-  ftl::RefPtr<ftl::TaskRunner> main_runner_;
+  fxl::RefPtr<fxl::TaskRunner> main_runner_;
   callback::CancellableContainer token_requests_;
   callback::AutoCleanableSet<CloudProviderImpl> providers_;
 
-  ftl::Closure on_empty_;
+  fxl::Closure on_empty_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FactoryImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FactoryImpl);
 };
 
 }  // namespace cloud_provider_firebase

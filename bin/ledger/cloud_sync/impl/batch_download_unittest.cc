@@ -10,8 +10,8 @@
 #include "apps/ledger/src/storage/test/page_storage_empty_impl.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace cloud_sync {
@@ -35,7 +35,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
           [callback]() { callback(storage::Status::IO_ERROR); });
       return;
     }
-    message_loop_->task_runner()->PostTask(ftl::MakeCopyable(
+    message_loop_->task_runner()->PostTask(fxl::MakeCopyable(
         [ this, ids_and_bytes = std::move(ids_and_bytes), callback ]() mutable {
           for (auto& commit : ids_and_bytes) {
             received_commits[std::move(commit.id)] = std::move(commit.bytes);
@@ -44,8 +44,8 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
         }));
   }
 
-  void SetSyncMetadata(ftl::StringView key,
-                       ftl::StringView value,
+  void SetSyncMetadata(fxl::StringView key,
+                       fxl::StringView value,
                        std::function<void(storage::Status)> callback) override {
     sync_metadata[key.ToString()] = value.ToString();
     message_loop_->task_runner()->PostTask(
@@ -69,7 +69,7 @@ class BatchDownloadTest : public test::TestWithMessageLoop {
   TestPageStorage storage_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(BatchDownloadTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BatchDownloadTest);
 };
 
 TEST_F(BatchDownloadTest, AddCommit) {

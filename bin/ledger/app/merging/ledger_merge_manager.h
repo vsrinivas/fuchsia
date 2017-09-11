@@ -12,7 +12,7 @@
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace ledger {
 // Manages the strategies for handling merges and conflicts for a ledger as
@@ -41,7 +41,7 @@ class LedgerMergeManager {
 
   std::unordered_map<storage::PageId, MergeResolver*> resolvers_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LedgerMergeManager);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerMergeManager);
 };
 }  // namespace ledger
 #endif  // APPS_LEDGER_SRC_APP_MERGING_LEDGER_MERGE_MANAGER_H_

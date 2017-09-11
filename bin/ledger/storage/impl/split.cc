@@ -15,9 +15,9 @@
 #include "apps/ledger/src/storage/impl/object_id.h"
 #include "apps/ledger/src/storage/public/data_source.h"
 #include "apps/ledger/src/third_party/bup/bupsplit.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/macros.h"
 
 namespace storage {
 
@@ -72,7 +72,7 @@ class SplitContext {
       return;
     }
 
-    FTL_DCHECK(chunk || status == DataSource::Status::DONE);
+    FXL_DCHECK(chunk || status == DataSource::Status::DONE);
 
     if (chunk) {
       ProcessChunk(std::move(chunk));
@@ -89,10 +89,10 @@ class SplitContext {
     }
 
     // No data remains.
-    FTL_DCHECK(current_chunks_.empty());
+    FXL_DCHECK(current_chunks_.empty());
 
     // The final id to send exists.
-    FTL_DCHECK(!current_identifiers_per_level_.back().empty());
+    FXL_DCHECK(!current_identifiers_per_level_.back().empty());
 
     // This traverses the stack of indices, sending each level until a single
     // top level index is produced.
@@ -113,13 +113,13 @@ class SplitContext {
       BuildIndexAtLevel(i);
     }
 
-    FTL_NOTREACHED();
+    FXL_NOTREACHED();
   }
 
  private:
   std::vector<ObjectIdAndSize>& GetCurrentIdentifiersAtLevel(size_t level) {
     if (level >= current_identifiers_per_level_.size()) {
-      FTL_DCHECK(level == current_identifiers_per_level_.size());
+      FXL_DCHECK(level == current_identifiers_per_level_.size());
       current_identifiers_per_level_.resize(level + 1);
     }
     return current_identifiers_per_level_[level];
@@ -144,7 +144,7 @@ class SplitContext {
 
       size_t level = GetLevel(bits);
       for (size_t i = 0; i < level; ++i) {
-        FTL_DCHECK(!current_identifiers_per_level_[i].empty());
+        FXL_DCHECK(!current_identifiers_per_level_[i].empty());
         BuildIndexAtLevel(i);
       }
     }
@@ -168,7 +168,7 @@ class SplitContext {
       return;
     }
 
-    FTL_DCHECK(current_identifiers_per_level_[level].size() ==
+    FXL_DCHECK(current_identifiers_per_level_[level].size() ==
                kMaxIdentifiersPerIndex);
     // The level contains the max number of identifiers. Creating the index
     // file.
@@ -192,28 +192,28 @@ class SplitContext {
   }
 
   ObjectIdAndSize BuildAndSendIndex(std::vector<ObjectIdAndSize> ids) {
-    FTL_DCHECK(ids.size() > 1);
-    FTL_DCHECK(ids.size() <= kMaxIdentifiersPerIndex);
+    FXL_DCHECK(ids.size() > 1);
+    FXL_DCHECK(ids.size() <= kMaxIdentifiersPerIndex);
 
     std::unique_ptr<DataSource::DataChunk> chunk;
     size_t total_size;
     FileIndexSerialization::BuildFileIndex(ids, &chunk, &total_size);
 
-    FTL_DCHECK(chunk->Get().size() <= kMaxChunkSize) << chunk->Get().size();
+    FXL_DCHECK(chunk->Get().size() <= kMaxChunkSize) << chunk->Get().size();
     ObjectId object_id = ComputeObjectId(ObjectType::INDEX, chunk->Get());
     callback_(IterationStatus::IN_PROGRESS, object_id, std::move(chunk));
     return {std::move(object_id), total_size};
   }
 
   static size_t GetLevel(size_t bits) {
-    FTL_DCHECK(bits >= bup::kBlobBits);
+    FXL_DCHECK(bits >= bup::kBlobBits);
     return (bits - bup::kBlobBits) / kBitsPerLevel;
   }
 
   std::unique_ptr<DataSource::DataChunk> BuildNextChunk(size_t index) {
-    FTL_DCHECK(current_chunks_.size() == views_.size());
-    FTL_DCHECK(!current_chunks_.empty());
-    FTL_DCHECK(views_.back().size() >= index);
+    FXL_DCHECK(current_chunks_.size() == views_.size());
+    FXL_DCHECK(!current_chunks_.empty());
+    FXL_DCHECK(views_.back().size() >= index);
 
     if (views_.size() == 1 && views_.front().size() == index &&
         views_.front().size() == current_chunks_.front()->Get().size()) {
@@ -235,7 +235,7 @@ class SplitContext {
       data.append(views_[i].data(), views_[i].size());
     }
 
-    ftl::StringView last = views_.back();
+    fxl::StringView last = views_.back();
     data.append(last.data(), index);
 
     if (index < last.size()) {
@@ -250,7 +250,7 @@ class SplitContext {
       views_.clear();
     }
 
-    FTL_DCHECK(current_chunks_.size() == views_.size());
+    FXL_DCHECK(current_chunks_.size() == views_.size());
     return DataSource::DataChunk::Create(std::move(data));
   }
 
@@ -263,26 +263,26 @@ class SplitContext {
   std::vector<std::unique_ptr<DataSource::DataChunk>> current_chunks_;
   // The list of data that has not yet been consumed. For all indexes, the view
   // at the given index is a view to the chunk at the same index.
-  std::vector<ftl::StringView> views_;
+  std::vector<fxl::StringView> views_;
   // List of unsent indices per level.
   std::vector<std::vector<ObjectIdAndSize>> current_identifiers_per_level_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SplitContext);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SplitContext);
 };
 
 class CollectPiecesState
-    : public ftl::RefCountedThreadSafe<CollectPiecesState> {
+    : public fxl::RefCountedThreadSafe<CollectPiecesState> {
  public:
   std::function<void(ObjectIdView,
-                     std::function<void(Status, ftl::StringView)>)>
+                     std::function<void(Status, fxl::StringView)>)>
       data_accessor;
   std::function<bool(IterationStatus, ObjectIdView)> callback;
   bool running = true;
 };
 
 void CollectPiecesInternal(ObjectIdView root,
-                           ftl::RefPtr<CollectPiecesState> state,
-                           ftl::Closure on_done) {
+                           fxl::RefPtr<CollectPiecesState> state,
+                           fxl::Closure on_done) {
   if (!state->callback(IterationStatus::IN_PROGRESS, root)) {
     on_done();
     return;
@@ -294,14 +294,14 @@ void CollectPiecesInternal(ObjectIdView root,
   }
 
   state->data_accessor(root, [ state, on_done = std::move(on_done) ](
-                                 Status status, ftl::StringView data) mutable {
+                                 Status status, fxl::StringView data) mutable {
     if (!state->running) {
       on_done();
       return;
     }
 
     if (status != Status::OK) {
-      FTL_LOG(WARNING) << "Unable to read object content.";
+      FXL_LOG(WARNING) << "Unable to read object content.";
       state->running = false;
       on_done();
       return;
@@ -330,14 +330,14 @@ void SplitDataSource(
                        ObjectId,
                        std::unique_ptr<DataSource::DataChunk>)> callback) {
   SplitContext context(std::move(callback));
-  source->Get(ftl::MakeCopyable([context = std::move(context)](
+  source->Get(fxl::MakeCopyable([context = std::move(context)](
       std::unique_ptr<DataSource::DataChunk> chunk,
       DataSource::Status status) mutable {
     context.AddChunk(std::move(chunk), status);
   }));
 }
 
-Status ForEachPiece(ftl::StringView index_content,
+Status ForEachPiece(fxl::StringView index_content,
                     std::function<Status(ObjectIdView)> callback) {
   const FileIndex* file_index;
   Status status =
@@ -359,10 +359,10 @@ Status ForEachPiece(ftl::StringView index_content,
 void CollectPieces(
     ObjectIdView root,
     std::function<void(ObjectIdView,
-                       std::function<void(Status, ftl::StringView)>)>
+                       std::function<void(Status, fxl::StringView)>)>
         data_accessor,
     std::function<bool(IterationStatus, ObjectIdView)> callback) {
-  auto state = ftl::AdoptRef(new CollectPiecesState());
+  auto state = fxl::AdoptRef(new CollectPiecesState());
   state->data_accessor = std::move(data_accessor);
   state->callback = std::move(callback);
 

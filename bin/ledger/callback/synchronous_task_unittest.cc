@@ -12,7 +12,7 @@
 
 TEST(SynchronousTaskTest, RunSynchronouslyOnOtherThread) {
   constexpr size_t nb_values = 1000;
-  ftl::RefPtr<ftl::TaskRunner> task_runner;
+  fxl::RefPtr<fxl::TaskRunner> task_runner;
   std::thread thread = mtl::CreateThread(&task_runner);
 
   bool values[nb_values];
@@ -23,7 +23,7 @@ TEST(SynchronousTaskTest, RunSynchronouslyOnOtherThread) {
   bool called = false;
   ASSERT_TRUE(callback::RunSynchronously(task_runner,
                                          [&called] { called = true; },
-                                         ftl::TimeDelta::FromSeconds(1)));
+                                         fxl::TimeDelta::FromSeconds(1)));
   for (bool value : values) {
     EXPECT_TRUE(value);
   }
@@ -38,12 +38,12 @@ TEST(SynchronousTaskTest, RunOnCurrentThreadTimeout) {
   bool called = false;
   EXPECT_FALSE(callback::RunSynchronously(
       loop.task_runner(), [&called] { called = true; },
-      ftl::TimeDelta::FromMilliseconds(100)));
+      fxl::TimeDelta::FromMilliseconds(100)));
   EXPECT_FALSE(called);
 }
 
 TEST(SynchronousTaskTest, RunOnDeletedMessageLoop) {
-  ftl::RefPtr<ftl::TaskRunner> task_runner;
+  fxl::RefPtr<fxl::TaskRunner> task_runner;
   {
     mtl::MessageLoop loop;
     task_runner = loop.task_runner();
@@ -51,6 +51,6 @@ TEST(SynchronousTaskTest, RunOnDeletedMessageLoop) {
   bool called = false;
   EXPECT_FALSE(
       callback::RunSynchronously(task_runner, [&called] { called = true; },
-                                 ftl::TimeDelta::FromMilliseconds(100)));
+                                 fxl::TimeDelta::FromMilliseconds(100)));
   EXPECT_FALSE(called);
 }

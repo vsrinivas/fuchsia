@@ -9,7 +9,7 @@
 #include <limits>
 
 #include "gtest/gtest.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace bup {
 namespace {
@@ -34,7 +34,7 @@ TEST_F(RollSumSplitTest, CheckMinMax) {
   RollSumSplit rh(min, max);
 
   std::string value = GetValue(1024 * 1024);
-  ftl::StringView view = value;
+  fxl::StringView view = value;
   while (!view.empty()) {
     size_t index = rh.Feed(view, nullptr);
     if (index > 0) {
@@ -59,7 +59,7 @@ TEST_F(RollSumSplitTest, CheckSameResult) {
   RollSumSplit rh(4 * 1024, 64 * 1024 - 1);
 
   std::string value = GetValue(1024 * 1024);
-  ftl::StringView view = value;
+  fxl::StringView view = value;
   std::vector<Cut> feed_all_cuts;
   while (!view.empty()) {
     Cut cut;
@@ -113,7 +113,7 @@ TEST_F(RollSumSplitTest, CheckWindowed) {
 
     // Feed kWindowSize characters.
     std::string value = GetValue(kWindowSize);
-    ftl::StringView view = value;
+    fxl::StringView view = value;
     for (size_t i = 0; i < view.size(); ++i) {
       auto f1 = r1.Feed(view.substr(i, 1), nullptr);
       auto f2 = r2.Feed(view.substr(i, 1), nullptr);

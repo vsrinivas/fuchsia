@@ -9,7 +9,7 @@
 
 #include <dirent.h>
 
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace storage {
 namespace {
@@ -22,8 +22,8 @@ void SafeCloseDir(DIR* dir) {
 }  // namespace
 
 bool DirectoryReader::GetDirectoryEntries(
-    ftl::StringView directory,
-    std::function<bool(ftl::StringView)> callback) {
+    fxl::StringView directory,
+    std::function<bool(fxl::StringView)> callback) {
   std::unique_ptr<DIR, decltype(&SafeCloseDir)> dir(opendir(directory.data()),
                                                     SafeCloseDir);
   if (!dir.get())
@@ -38,7 +38,7 @@ bool DirectoryReader::GetDirectoryEntries(
           continue;
         }
       }
-      if (!callback(ftl::StringView(name))) {
+      if (!callback(fxl::StringView(name))) {
         break;
       }
     }

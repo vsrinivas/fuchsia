@@ -8,8 +8,8 @@
 #include <type_traits>
 
 #include "apps/ledger/src/callback/cancellable.h"
-#include "lib/ftl/functional/auto_call.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/functional/auto_call.h"
+#include "lib/fxl/logging.h"
 
 namespace callback {
 
@@ -20,11 +20,11 @@ class WrappedCancellableCallback {
  public:
   WrappedCancellableCallback(T wrapped_callback,
                              bool* is_done_ptr,
-                             ftl::Closure post_run)
+                             fxl::Closure post_run)
       : wrapped_callback_(std::move(wrapped_callback)),
         post_run_(std::move(post_run)),
         is_done_ptr_(is_done_ptr) {
-    FTL_DCHECK(post_run_);
+    FXL_DCHECK(post_run_);
   }
 
   template <typename... ArgType>
@@ -33,13 +33,13 @@ class WrappedCancellableCallback {
       return;
     }
     *is_done_ptr_ = true;
-    auto call_on_exit = ftl::MakeAutoCall(std::move(post_run_));
+    auto call_on_exit = fxl::MakeAutoCall(std::move(post_run_));
     return wrapped_callback_(std::forward<ArgType>(args)...);
   }
 
  private:
   T wrapped_callback_;
-  ftl::Closure post_run_;
+  fxl::Closure post_run_;
   // This is safe as long as a refptr to the CancellableImpl is held by
   // |post_run_| callback.
   bool* is_done_ptr_;
@@ -60,15 +60,15 @@ class WrappedCancellableCallback {
 //    client callback is not called
 class CancellableImpl final : public Cancellable {
  public:
-  inline static ftl::RefPtr<CancellableImpl> Create(ftl::Closure on_cancel) {
-    return ftl::AdoptRef(new CancellableImpl(std::move(on_cancel)));
+  inline static fxl::RefPtr<CancellableImpl> Create(fxl::Closure on_cancel) {
+    return fxl::AdoptRef(new CancellableImpl(std::move(on_cancel)));
   }
 
   template <typename T>
   internal::WrappedCancellableCallback<T> WrapCallback(T callback) {
     return internal::WrappedCancellableCallback<T>(
-        callback, &is_done_, [ref_ptr = ftl::RefPtr<CancellableImpl>(this)] {
-          FTL_DCHECK(ref_ptr->is_done_);
+        callback, &is_done_, [ref_ptr = fxl::RefPtr<CancellableImpl>(this)] {
+          FXL_DCHECK(ref_ptr->is_done_);
           // Never call the done callback after Cancel(). Note that Cancel() can
           // be called from within the wrapped callback.
           if (ref_ptr->is_cancelled_) {
@@ -83,19 +83,19 @@ class CancellableImpl final : public Cancellable {
   // Cancellable
   void Cancel() override;
   bool IsDone() override;
-  void SetOnDone(ftl::Closure callback) override;
+  void SetOnDone(fxl::Closure callback) override;
 
  private:
-  explicit CancellableImpl(ftl::Closure on_cancel);
+  explicit CancellableImpl(fxl::Closure on_cancel);
 
   bool is_cancelled_;
-  ftl::Closure on_cancel_;
+  fxl::Closure on_cancel_;
   bool is_done_;
-  ftl::Closure on_done_;
+  fxl::Closure on_done_;
 };
 
 // Creates a cancellable that is already done.
-ftl::RefPtr<callback::Cancellable> CreateDoneCancellable();
+fxl::RefPtr<callback::Cancellable> CreateDoneCancellable();
 
 }  // namespace callback
 

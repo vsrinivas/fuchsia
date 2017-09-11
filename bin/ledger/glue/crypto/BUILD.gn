@@ -20,7 +20,7 @@ source_set("crypto") {
 
   deps = [
     "//apps/ledger/src/third_party/modp_b64",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//third_party/boringssl",
   ]
 

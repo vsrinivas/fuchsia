@@ -15,9 +15,9 @@
 #include "apps/ledger/src/coroutine/coroutine.h"
 #include "apps/ledger/src/storage/impl/page_db_impl.h"
 #include "apps/ledger/src/storage/public/page_sync_delegate.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/strings/string_view.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/strings/string_view.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 #include <unordered_set>
 #include <vector>
@@ -89,10 +89,10 @@ class PageStorageImpl : public PageStorage {
   void GetPiece(ObjectIdView object_id,
                 std::function<void(Status, std::unique_ptr<const Object>)>
                     callback) override;
-  void SetSyncMetadata(ftl::StringView key,
-                       ftl::StringView value,
+  void SetSyncMetadata(fxl::StringView key,
+                       fxl::StringView value,
                        std::function<void(Status)> callback) override;
-  Status GetSyncMetadata(ftl::StringView key, std::string* value) override;
+  Status GetSyncMetadata(fxl::StringView key, std::string* value) override;
 
   // Commit contents.
   void GetCommitContents(const Commit& commit,

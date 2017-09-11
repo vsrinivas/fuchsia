@@ -4,31 +4,31 @@
 
 #include "apps/ledger/src/cloud_sync/test/page_sync_empty_impl.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace cloud_sync {
 namespace test {
 
 void PageSyncEmptyImpl::Start() {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
-void PageSyncEmptyImpl::SetOnIdle(ftl::Closure /*on_idle_callback*/) {
-  FTL_NOTIMPLEMENTED();
+void PageSyncEmptyImpl::SetOnIdle(fxl::Closure /*on_idle_callback*/) {
+  FXL_NOTIMPLEMENTED();
 }
 
 bool PageSyncEmptyImpl::IsIdle() {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
   return true;
 }
 
 void PageSyncEmptyImpl::SetOnBacklogDownloaded(
-    ftl::Closure /*on_backlog_downloaded_callback*/) {
-  FTL_NOTIMPLEMENTED();
+    fxl::Closure /*on_backlog_downloaded_callback*/) {
+  FXL_NOTIMPLEMENTED();
 }
 
 void PageSyncEmptyImpl::SetSyncWatcher(SyncStateWatcher* /*watcher*/) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 }  // namespace test

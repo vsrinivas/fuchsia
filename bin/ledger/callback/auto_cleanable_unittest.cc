@@ -11,7 +11,7 @@ namespace {
 class Cleanable {
  public:
   explicit Cleanable(int id = 0) : id(id) {}
-  void set_on_empty(const ftl::Closure& on_empty_callback) {
+  void set_on_empty(const fxl::Closure& on_empty_callback) {
     on_empty_callback_ = on_empty_callback;
   }
 
@@ -23,7 +23,7 @@ class Cleanable {
   int id;
 
  private:
-  ftl::Closure on_empty_callback_;
+  fxl::Closure on_empty_callback_;
 };
 
 TEST(AutoCleanableSet, ClearsOnEmpty) {

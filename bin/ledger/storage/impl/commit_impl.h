@@ -7,7 +7,7 @@
 
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
-#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/fxl/memory/ref_ptr.h"
 
 namespace storage {
 
@@ -34,7 +34,7 @@ class CommitImpl : public Commit {
 
   // Checks whether the given |storage_bytes| are a valid serialization of a
   // commit.
-  static bool CheckValidSerialization(ftl::StringView storage_bytes);
+  static bool CheckValidSerialization(fxl::StringView storage_bytes);
 
   // Commit:
   std::unique_ptr<Commit> Clone() const override;
@@ -43,7 +43,7 @@ class CommitImpl : public Commit {
   int64_t GetTimestamp() const override;
   uint64_t GetGeneration() const override;
   ObjectIdView GetRootId() const override;
-  ftl::StringView GetStorageBytes() const override;
+  fxl::StringView GetStorageBytes() const override;
 
  private:
   class SharedStorageBytes;
@@ -56,7 +56,7 @@ class CommitImpl : public Commit {
              uint64_t generation,
              ObjectIdView root_node_id,
              std::vector<CommitIdView> parent_ids,
-             ftl::RefPtr<SharedStorageBytes> storage_bytes);
+             fxl::RefPtr<SharedStorageBytes> storage_bytes);
 
   PageStorage* page_storage_;
   const CommitId id_;
@@ -64,7 +64,7 @@ class CommitImpl : public Commit {
   const uint64_t generation_;
   const ObjectIdView root_node_id_;
   const std::vector<CommitIdView> parent_ids_;
-  const ftl::RefPtr<SharedStorageBytes> storage_bytes_;
+  const fxl::RefPtr<SharedStorageBytes> storage_bytes_;
 };
 
 }  // namespace storage

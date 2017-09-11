@@ -7,7 +7,7 @@
 
 #include <iostream>
 
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace gcs {
 
@@ -21,7 +21,7 @@ enum class Status {
   SERVER_ERROR
 };
 
-ftl::StringView StatusToString(Status status);
+fxl::StringView StatusToString(Status status);
 
 inline std::ostream& operator<<(std::ostream& os, Status status) {
   return os << StatusToString(status);

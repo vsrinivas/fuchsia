@@ -29,7 +29,7 @@ class PageDbBatchImpl : public PageDb::Batch {
   // Commits.
   Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler,
                                const CommitId& commit_id,
-                               ftl::StringView storage_bytes) override;
+                               fxl::StringView storage_bytes) override;
   Status RemoveCommit(coroutine::CoroutineHandler* handler,
                       const CommitId& commit_id) override;
 
@@ -47,8 +47,8 @@ class PageDbBatchImpl : public PageDb::Batch {
 
   // Journal entries.
   Status AddJournalEntry(const JournalId& journal_id,
-                         ftl::StringView key,
-                         ftl::StringView value,
+                         fxl::StringView key,
+                         fxl::StringView value,
                          KeyPriority priority) override;
   Status RemoveJournalEntry(const JournalId& journal_id,
                             convert::ExtendedStringView key) override;
@@ -73,8 +73,8 @@ class PageDbBatchImpl : public PageDb::Batch {
 
   // Object sync metadata.
   Status SetSyncMetadata(coroutine::CoroutineHandler* handler,
-                         ftl::StringView key,
-                         ftl::StringView value) override;
+                         fxl::StringView key,
+                         fxl::StringView value) override;
 
   Status Execute() override;
 
@@ -86,7 +86,7 @@ class PageDbBatchImpl : public PageDb::Batch {
   coroutine::CoroutineService* coroutine_service_;
   PageStorageImpl* page_storage_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageDbBatchImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageDbBatchImpl);
 };
 
 }  // namespace storage

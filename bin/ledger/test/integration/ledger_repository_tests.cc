@@ -19,7 +19,7 @@ class LedgerRepositoryIntegrationTest : public IntegrationTest {
   ~LedgerRepositoryIntegrationTest() override {}
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryIntegrationTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryIntegrationTest);
 };
 
 class EmptyTokenProvider : public modular::auth::TokenProvider {
@@ -55,14 +55,14 @@ class EmptyTokenProvider : public modular::auth::TokenProvider {
 
   fidl::Binding<modular::auth::TokenProvider> binding_;
   modular::auth::AuthErrPtr error_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(EmptyTokenProvider);
+  FXL_DISALLOW_COPY_AND_ASSIGN(EmptyTokenProvider);
 };
 
 // Verifies that the LedgerRepository and its children are shut down on token
 // manager connection error.
 TEST_F(LedgerRepositoryIntegrationTest, ShutDownOnTokenProviderError) {
   auto instance = NewLedgerAppInstance();
-  const auto timeout = ftl::TimeDelta::FromSeconds(1);
+  const auto timeout = fxl::TimeDelta::FromSeconds(1);
 
   ledger::LedgerRepositoryPtr repository = instance->GetTestLedgerRepository();
   bool repository_disconnected = false;

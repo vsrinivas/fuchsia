@@ -9,7 +9,7 @@
 #include "apps/ledger/src/auth_provider/auth_provider.h"
 #include "garnet/public/lib/fidl/cpp/bindings/array.h"
 #include "garnet/public/lib/fidl/cpp/bindings/binding.h"
-#include "garnet/public/lib/ftl/macros.h"
+#include "garnet/public/lib/fxl/macros.h"
 
 namespace cloud_provider_firebase {
 
@@ -23,12 +23,12 @@ class DeviceSetImpl : public cloud_provider::DeviceSet {
                 fidl::InterfaceRequest<cloud_provider::DeviceSet> request);
   ~DeviceSetImpl() override;
 
-  void set_on_empty(const ftl::Closure& on_empty) { on_empty_ = on_empty; }
+  void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
 
  private:
   auth_provider::AuthProvider* const auth_provider_;
   fidl::Binding<cloud_provider::DeviceSet> binding_;
-  ftl::Closure on_empty_;
+  fxl::Closure on_empty_;
 
   void CheckFingerprint(fidl::Array<uint8_t> fingerprint,
                         const CheckFingerprintCallback& callback) override;
@@ -41,7 +41,7 @@ class DeviceSetImpl : public cloud_provider::DeviceSet {
       fidl::Array<uint8_t> fingerprint,
       const SetWatcherCallback& callback) override;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DeviceSetImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DeviceSetImpl);
 };
 
 }  // namespace cloud_provider_firebase

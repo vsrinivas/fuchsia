@@ -22,28 +22,28 @@
 #include "apps/ledger/src/network/no_network_service.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/log_settings_command_line.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/time/time_delta.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/log_settings_command_line.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/time/time_delta.h"
+#include "lib/fxl/time/time_point.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace ledger {
 
 namespace {
 
-constexpr ftl::StringView kPersistentFileSystem = "/data";
-constexpr ftl::StringView kMinFsName = "minfs";
-constexpr ftl::TimeDelta kMaxPollingDelay = ftl::TimeDelta::FromSeconds(10);
-constexpr ftl::StringView kNoMinFsFlag = "no_minfs_wait";
-constexpr ftl::StringView kNoPersistedConfig = "no_persisted_config";
-constexpr ftl::StringView kNoNetworkForTesting = "no_network_for_testing";
-constexpr ftl::StringView kNoStatisticsReporting =
+constexpr fxl::StringView kPersistentFileSystem = "/data";
+constexpr fxl::StringView kMinFsName = "minfs";
+constexpr fxl::TimeDelta kMaxPollingDelay = fxl::TimeDelta::FromSeconds(10);
+constexpr fxl::StringView kNoMinFsFlag = "no_minfs_wait";
+constexpr fxl::StringView kNoPersistedConfig = "no_persisted_config";
+constexpr fxl::StringView kNoNetworkForTesting = "no_network_for_testing";
+constexpr fxl::StringView kNoStatisticsReporting =
     "no_statistics_reporting_for_testing";
-constexpr ftl::StringView kTriggerCloudErasedForTesting =
+constexpr fxl::StringView kTriggerCloudErasedForTesting =
     "trigger_cloud_erased_for_testing";
 
 struct AppParams {
@@ -54,12 +54,12 @@ struct AppParams {
   bool disable_statistics = false;
 };
 
-ftl::AutoCall<ftl::Closure> SetupCobalt(
+fxl::AutoCall<fxl::Closure> SetupCobalt(
     bool disable_statistics,
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
     app::ApplicationContext* application_context) {
   if (disable_statistics) {
-    return ftl::MakeAutoCall<ftl::Closure>([] {});
+    return fxl::MakeAutoCall<fxl::Closure>([] {});
   }
   return InitializeCobalt(std::move(task_runner), application_context);
 };
@@ -81,7 +81,7 @@ class App : public LedgerController,
                                     loop_.task_runner(),
                                     application_context_.get())),
         config_persistence_(app_params_.config_persistence) {
-    FTL_DCHECK(application_context_);
+    FXL_DCHECK(application_context_);
 
     ReportEvent(CobaltEvent::LEDGER_STARTED);
   }
@@ -169,7 +169,7 @@ class App : public LedgerController,
   mtl::MessageLoop loop_;
   trace::TraceProvider trace_provider_;
   std::unique_ptr<app::ApplicationContext> application_context_;
-  ftl::AutoCall<ftl::Closure> cobalt_cleaner_;
+  fxl::AutoCall<fxl::Closure> cobalt_cleaner_;
   const LedgerRepositoryFactoryImpl::ConfigPersistence config_persistence_;
   std::unique_ptr<NetworkService> network_service_;
   std::unique_ptr<Environment> environment_;
@@ -178,21 +178,21 @@ class App : public LedgerController,
   fidl::BindingSet<LedgerController> controller_bindings_;
   callback::PendingOperationManager pending_operation_manager_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(App);
+  FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
 void WaitForData() {
-  backoff::ExponentialBackoff backoff(ftl::TimeDelta::FromMilliseconds(10), 2,
-                                      ftl::TimeDelta::FromSeconds(1));
-  ftl::TimePoint now = ftl::TimePoint::Now();
-  while (ftl::TimePoint::Now() - now < kMaxPollingDelay) {
-    ftl::UniqueFD fd(open(kPersistentFileSystem.data(), O_RDWR));
-    FTL_DCHECK(fd.is_valid());
+  backoff::ExponentialBackoff backoff(fxl::TimeDelta::FromMilliseconds(10), 2,
+                                      fxl::TimeDelta::FromSeconds(1));
+  fxl::TimePoint now = fxl::TimePoint::Now();
+  while (fxl::TimePoint::Now() - now < kMaxPollingDelay) {
+    fxl::UniqueFD fd(open(kPersistentFileSystem.data(), O_RDWR));
+    FXL_DCHECK(fd.is_valid());
     char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
     vfs_query_info_t* info = reinterpret_cast<vfs_query_info_t*>(buf);
     ssize_t len = ioctl_vfs_query_fs(fd.get(), info, sizeof(buf) - 1);
-    FTL_DCHECK(len > static_cast<ssize_t>(sizeof(vfs_query_info_t)));
-    ftl::StringView fs_name(info->name, len - sizeof(vfs_query_info_t));
+    FXL_DCHECK(len > static_cast<ssize_t>(sizeof(vfs_query_info_t)));
+    fxl::StringView fs_name(info->name, len - sizeof(vfs_query_info_t));
 
     if (fs_name == kMinFsName) {
       return;
@@ -201,7 +201,7 @@ void WaitForData() {
     usleep(backoff.GetNext().ToMicroseconds());
   }
 
-  FTL_LOG(WARNING) << kPersistentFileSystem
+  FXL_LOG(WARNING) << kPersistentFileSystem
                    << " is not persistent. Did you forget to configure it?";
 }
 
@@ -209,8 +209,8 @@ void WaitForData() {
 }  // namespace ledger
 
 int main(int argc, const char** argv) {
-  const auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
-  ftl::SetLogSettingsFromCommandLine(command_line);
+  const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  fxl::SetLogSettingsFromCommandLine(command_line);
 
   ledger::AppParams app_params;
   if (command_line.HasOption(ledger::kNoPersistedConfig)) {

@@ -6,7 +6,7 @@
 
 #include "apps/ledger/src/coroutine/context/context.h"
 #include "apps/ledger/src/coroutine/context/stack.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace coroutine {
 
@@ -41,23 +41,23 @@ class CoroutineServiceImpl::CoroutineHandlerImpl : public CoroutineHandler {
   bool interrupted_ = false;
   bool finished_ = false;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CoroutineHandlerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CoroutineHandlerImpl);
 };
 
 CoroutineServiceImpl::CoroutineHandlerImpl::CoroutineHandlerImpl(
     std::unique_ptr<context::Stack> stack,
     std::function<void(CoroutineHandler*)> runnable)
     : stack_(std::move(stack)), runnable_(std::move(runnable)) {
-  FTL_DCHECK(stack_);
-  FTL_DCHECK(runnable_);
+  FXL_DCHECK(stack_);
+  FXL_DCHECK(runnable_);
 }
 
 CoroutineServiceImpl::CoroutineHandlerImpl::~CoroutineHandlerImpl() {
-  FTL_DCHECK(!stack_);
+  FXL_DCHECK(!stack_);
 }
 
 bool CoroutineServiceImpl::CoroutineHandlerImpl::Yield() {
-  FTL_DCHECK(!interrupted_);
+  FXL_DCHECK(!interrupted_);
 
   if (interrupted_) {
     return true;
@@ -92,7 +92,7 @@ void CoroutineServiceImpl::CoroutineHandlerImpl::Run() {
   runnable_(this);
   finished_ = true;
   DoYield();
-  FTL_NOTREACHED() << "Last yield should never return.";
+  FXL_NOTREACHED() << "Last yield should never return.";
 }
 
 bool CoroutineServiceImpl::CoroutineHandlerImpl::DoYield() {

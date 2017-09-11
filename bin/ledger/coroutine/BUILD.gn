@@ -13,7 +13,7 @@ source_set("coroutine") {
 
   public_deps = [
     "//apps/ledger/src/callback",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 
   deps = [
@@ -32,7 +32,7 @@ source_set("unittests") {
 
   deps = [
     ":coroutine",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//third_party/gtest",
   ]
 

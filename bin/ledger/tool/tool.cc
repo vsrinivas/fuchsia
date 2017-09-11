@@ -14,14 +14,14 @@
 #include "apps/ledger/src/tool/convert.h"
 #include "apps/ledger/src/tool/inspect_command.h"
 #include "apps/network/services/network_service.fidl.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/strings/concatenate.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/strings/concatenate.h"
+#include "lib/fxl/strings/string_view.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace tool {
 
-ToolApp::ToolApp(ftl::CommandLine command_line)
+ToolApp::ToolApp(fxl::CommandLine command_line)
     : command_line_(std::move(command_line)),
       context_(app::ApplicationContext::CreateFromStartupInfo()) {
   if (Initialize()) {
@@ -74,14 +74,14 @@ bool ToolApp::Initialize() {
 }
 
 void ToolApp::Start() {
-  FTL_DCHECK(command_);
+  FXL_DCHECK(command_);
   command_->Start([] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
 }
 
 }  // namespace tool
 
 int main(int argc, const char** argv) {
-  ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   mtl::MessageLoop loop;
 

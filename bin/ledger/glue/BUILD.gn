@@ -18,7 +18,7 @@ source_set("unittests") {
   deps = [
     "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/glue/socket",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//third_party/gtest",
   ]
 

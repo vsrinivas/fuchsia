@@ -9,13 +9,13 @@
 #include <string>
 
 #include "apps/ledger/src/convert/convert.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/random/rand.h"
-#include "lib/ftl/strings/concatenate.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/random/rand.h"
+#include "lib/fxl/strings/concatenate.h"
 
 namespace test {
 
-DataGenerator::DataGenerator() : generator_(ftl::RandUint64()) {}
+DataGenerator::DataGenerator() : generator_(fxl::RandUint64()) {}
 
 DataGenerator::DataGenerator(uint64_t seed) : generator_(seed) {}
 
@@ -23,11 +23,11 @@ DataGenerator::~DataGenerator() {}
 
 fidl::Array<uint8_t> DataGenerator::MakeKey(int i, size_t size) {
   std::string i_str = std::to_string(i);
-  FTL_DCHECK(i_str.size() + 1 <= size);
+  FXL_DCHECK(i_str.size() + 1 <= size);
   auto rand_bytes = MakeValue(size - i_str.size() - 1);
 
   return convert::ToArray(
-      ftl::Concatenate({i_str, "-", convert::ExtendedStringView(rand_bytes)}));
+      fxl::Concatenate({i_str, "-", convert::ExtendedStringView(rand_bytes)}));
 }
 
 fidl::Array<uint8_t> DataGenerator::MakeValue(size_t size) {

@@ -21,7 +21,7 @@ source_set("convert") {
 
   public_deps = [
     ":byte_storage",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//magenta/system/ulib/mx",
     "//third_party/leveldb",
     "//third_party/rapidjson",

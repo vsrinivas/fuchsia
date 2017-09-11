@@ -16,7 +16,7 @@ source_set("device_set") {
 
   public_deps = [
     "//apps/ledger/src/firebase",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 
   deps = [

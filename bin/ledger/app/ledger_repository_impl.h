@@ -16,7 +16,7 @@
 #include "apps/ledger/src/environment/environment.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace ledger {
 
@@ -28,7 +28,7 @@ class LedgerRepositoryImpl : public LedgerRepository {
                        std::unique_ptr<cloud_sync::UserSync> user_sync);
   ~LedgerRepositoryImpl() override;
 
-  void set_on_empty(const ftl::Closure& on_empty_callback) {
+  void set_on_empty(const fxl::Closure& on_empty_callback) {
     on_empty_callback_ = on_empty_callback;
   }
 
@@ -60,9 +60,9 @@ class LedgerRepositoryImpl : public LedgerRepository {
                              convert::StringViewComparator>
       ledger_managers_;
   fidl::BindingSet<LedgerRepository> bindings_;
-  ftl::Closure on_empty_callback_;
+  fxl::Closure on_empty_callback_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryImpl);
 };
 
 }  // namespace ledger

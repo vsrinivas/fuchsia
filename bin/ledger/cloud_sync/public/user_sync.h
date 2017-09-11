@@ -10,9 +10,9 @@
 #include "apps/ledger/src/cloud_sync/public/ledger_sync.h"
 #include "apps/ledger/src/cloud_sync/public/sync_state_watcher.h"
 #include "apps/ledger/src/cloud_sync/public/user_config.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace cloud_sync {
 
@@ -23,10 +23,10 @@ class UserSync {
   virtual ~UserSync() {}
 
   virtual std::unique_ptr<LedgerSync> CreateLedgerSync(
-      ftl::StringView app_id) = 0;
+      fxl::StringView app_id) = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(UserSync);
+  FXL_DISALLOW_COPY_AND_ASSIGN(UserSync);
 };
 
 }  // namespace cloud_sync

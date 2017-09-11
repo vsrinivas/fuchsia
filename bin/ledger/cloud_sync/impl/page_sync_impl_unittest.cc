@@ -19,8 +19,8 @@
 #include "apps/ledger/src/storage/test/page_storage_empty_impl.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -47,7 +47,7 @@ class TestCommit : public storage::test::CommitEmptyImpl {
 
   const storage::CommitId& GetId() const override { return id; }
 
-  ftl::StringView GetStorageBytes() const override { return content; }
+  fxl::StringView GetStorageBytes() const override { return content; }
 
   storage::CommitId id;
   std::string content;
@@ -114,7 +114,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
       return;
     }
 
-    ftl::Closure confirm = ftl::MakeCopyable(
+    fxl::Closure confirm = fxl::MakeCopyable(
         [ this, ids_and_bytes = std::move(ids_and_bytes), callback ]() mutable {
           for (auto& commit : ids_and_bytes) {
             received_commits[commit.id] = std::move(commit.bytes);
@@ -188,14 +188,14 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     callback(storage::Status::OK);
   }
 
-  void SetSyncMetadata(ftl::StringView key,
-                       ftl::StringView value,
+  void SetSyncMetadata(fxl::StringView key,
+                       fxl::StringView value,
                        std::function<void(storage::Status)> callback) override {
     sync_metadata[key.ToString()] = value.ToString();
     callback(storage::Status::OK);
   }
 
-  storage::Status GetSyncMetadata(ftl::StringView key,
+  storage::Status GetSyncMetadata(fxl::StringView key,
                                   std::string* value) override {
     auto it = sync_metadata.find(key.ToString());
     if (it == sync_metadata.end()) {
@@ -217,7 +217,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   bool should_fail_get_commit = false;
   bool should_fail_add_commit_from_sync = false;
   bool should_delay_add_commit_confirmation = false;
-  std::vector<ftl::Closure> delayed_add_commit_confirmations;
+  std::vector<fxl::Closure> delayed_add_commit_confirmations;
   unsigned int add_commits_from_sync_calls = 0u;
 
   std::set<storage::CommitId> commits_marked_as_synced;
@@ -266,7 +266,7 @@ class TestCloudProvider
   void DeliverRemoteCommits() {
     for (auto& record : notifications_to_deliver) {
       message_loop_->task_runner()->PostTask(
-          ftl::MakeCopyable([ this, record = std::move(record) ]() mutable {
+          fxl::MakeCopyable([ this, record = std::move(record) ]() mutable {
             std::vector<cloud_provider_firebase::Record> records;
             records.push_back(std::move(record));
             watcher_->OnRemoteCommits(std::move(records));
@@ -354,9 +354,9 @@ class TestBackoff : public backoff::Backoff {
   explicit TestBackoff(int* get_next_count) : get_next_count_(get_next_count) {}
   ~TestBackoff() override {}
 
-  ftl::TimeDelta GetNext() override {
+  fxl::TimeDelta GetNext() override {
     (*get_next_count_)++;
-    return ftl::TimeDelta::FromMilliseconds(50);
+    return fxl::TimeDelta::FromMilliseconds(50);
   }
 
   void Reset() override {}
@@ -421,7 +421,7 @@ class PageSyncImplTest : public ::test::TestWithMessageLoop {
   int error_callback_calls_ = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageSyncImplTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageSyncImplTest);
 };
 
 // Verifies that the backlog of commits to upload returned from

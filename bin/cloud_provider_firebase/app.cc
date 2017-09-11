@@ -8,8 +8,8 @@
 #include "apps/ledger/cloud_provider_firebase/factory_impl.h"
 #include "apps/modular/services/lifecycle/lifecycle.fidl.h"
 #include "garnet/public/lib/fidl/cpp/bindings/binding_set.h"
-#include "garnet/public/lib/ftl/command_line.h"
-#include "garnet/public/lib/ftl/log_settings_command_line.h"
+#include "garnet/public/lib/fxl/command_line.h"
+#include "garnet/public/lib/fxl/log_settings_command_line.h"
 #include "garnet/public/lib/mtl/tasks/message_loop.h"
 
 namespace cloud_provider_firebase {
@@ -21,7 +21,7 @@ class App : public modular::Lifecycle {
       : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
         trace_provider_(loop_.async()),
         factory_impl_(loop_.task_runner()) {
-    FTL_DCHECK(application_context_);
+    FXL_DCHECK(application_context_);
     factory_impl_.set_on_empty([this] { loop_.PostQuitTask(); });
   }
 
@@ -47,15 +47,15 @@ class App : public modular::Lifecycle {
   fidl::BindingSet<modular::Lifecycle> lifecycle_bindings_;
   fidl::BindingSet<Factory> factory_bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(App);
+  FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 }  // namespace
 
 }  // namespace cloud_provider_firebase
 
 int main(int argc, const char** argv) {
-  const auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
-  ftl::SetLogSettingsFromCommandLine(command_line);
+  const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  fxl::SetLogSettingsFromCommandLine(command_line);
 
   cloud_provider_firebase::App app;
   app.Run();

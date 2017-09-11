@@ -15,7 +15,7 @@
 #include "apps/ledger/src/storage/impl/object_impl.h"
 #include "apps/ledger/src/storage/impl/page_db_batch_impl.h"
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
-#include "lib/ftl/strings/concatenate.h"
+#include "lib/fxl/strings/concatenate.h"
 
 #define RETURN_ON_ERROR(expr)   \
   do {                          \
@@ -118,7 +118,7 @@ PageDbImpl::PageDbImpl(coroutine::CoroutineService* coroutine_service,
     : coroutine_service_(coroutine_service),
       page_storage_(page_storage),
       db_(std::move(db_path)) {
-  FTL_DCHECK(page_storage);
+  FXL_DCHECK(page_storage);
 }
 
 PageDbImpl::~PageDbImpl() {}
@@ -156,8 +156,8 @@ Status PageDbImpl::GetImplicitJournalIds(CoroutineHandler* /*handler*/,
 Status PageDbImpl::GetImplicitJournal(CoroutineHandler* /*handler*/,
                                       const JournalId& journal_id,
                                       std::unique_ptr<Journal>* journal) {
-  FTL_DCHECK(journal_id.size() == JournalEntryRow::kJournalIdSize);
-  FTL_DCHECK(journal_id[0] == JournalEntryRow::kImplicitPrefix);
+  FXL_DCHECK(journal_id.size() == JournalEntryRow::kJournalIdSize);
+  FXL_DCHECK(journal_id[0] == JournalEntryRow::kImplicitPrefix);
   CommitId base;
   RETURN_ON_ERROR(
       db_.Get(ImplicitJournalMetaRow::GetKeyFor(journal_id), &base));
@@ -167,7 +167,7 @@ Status PageDbImpl::GetImplicitJournal(CoroutineHandler* /*handler*/,
 }
 
 Status PageDbImpl::GetJournalValue(const JournalId& journal_id,
-                                   ftl::StringView key,
+                                   fxl::StringView key,
                                    std::string* value) {
   std::string db_value;
   RETURN_ON_ERROR(
@@ -247,7 +247,7 @@ Status PageDbImpl::GetUnsyncedPieces(std::vector<ObjectId>* object_ids) {
   return db_.GetByPrefix(convert::ToSlice(LocalObjectRow::kPrefix), object_ids);
 }
 
-Status PageDbImpl::GetSyncMetadata(ftl::StringView key, std::string* value) {
+Status PageDbImpl::GetSyncMetadata(fxl::StringView key, std::string* value) {
   return db_.Get(SyncMetadataRow::GetKeyFor(key), value);
 }
 
@@ -267,7 +267,7 @@ Status PageDbImpl::RemoveHead(CoroutineHandler* handler, CommitIdView head) {
 
 Status PageDbImpl::AddCommitStorageBytes(CoroutineHandler* handler,
                                          const CommitId& commit_id,
-                                         ftl::StringView storage_bytes) {
+                                         fxl::StringView storage_bytes) {
   auto batch = StartBatch();
   batch->AddCommitStorageBytes(handler, commit_id, storage_bytes);
   return batch->Execute();
@@ -311,8 +311,8 @@ Status PageDbImpl::RemoveJournal(const JournalId& journal_id) {
 }
 
 Status PageDbImpl::AddJournalEntry(const JournalId& journal_id,
-                                   ftl::StringView key,
-                                   ftl::StringView value,
+                                   fxl::StringView key,
+                                   fxl::StringView value,
                                    KeyPriority priority) {
   auto batch = StartBatch();
   batch->AddJournalEntry(journal_id, key, value, priority);
@@ -366,8 +366,8 @@ Status PageDbImpl::MarkCommitIdUnsynced(CoroutineHandler* handler,
 }
 
 Status PageDbImpl::SetSyncMetadata(CoroutineHandler* handler,
-                                   ftl::StringView key,
-                                   ftl::StringView value) {
+                                   fxl::StringView key,
+                                   fxl::StringView value) {
   auto batch = StartBatch();
   batch->SetSyncMetadata(handler, key, value);
   return batch->Execute();

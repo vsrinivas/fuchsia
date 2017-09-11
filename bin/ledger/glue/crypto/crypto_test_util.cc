@@ -4,16 +4,16 @@
 
 #include "apps/ledger/src/glue/crypto/crypto_test_util.h"
 
-#include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/fxl/strings/string_number_conversions.h"
 
 namespace glue {
 
-std::string FromHex(ftl::StringView data) {
+std::string FromHex(fxl::StringView data) {
   std::string result;
   result.reserve(data.size() / 2);
   while (!data.empty()) {
     result.push_back(
-        ftl::StringToNumber<uint8_t>(data.substr(0, 2), ftl::Base::k16));
+        fxl::StringToNumber<uint8_t>(data.substr(0, 2), fxl::Base::k16));
     data = data.substr(2);
   }
   return result;

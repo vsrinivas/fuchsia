@@ -9,7 +9,7 @@
 #include <string>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace test {
 namespace benchmark {
@@ -17,7 +17,7 @@ namespace benchmark {
 // Logs an error and posts a quit task on the current message loop if the given
 // ledger status is not ledger::Status::OK. Returns true if the quit task was
 // posted.
-bool QuitOnError(ledger::Status status, ftl::StringView description);
+bool QuitOnError(ledger::Status status, fxl::StringView description);
 
 std::function<void(ledger::Status)> QuitOnErrorCallback(
     std::string description);

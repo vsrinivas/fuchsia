@@ -11,7 +11,7 @@
 #include "apps/ledger/src/app/merging/merge_strategy.h"
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace ledger {
 // Strategy for merging commits using the CUSTOM policy.
@@ -21,7 +21,7 @@ class CustomMergeStrategy : public MergeStrategy {
   ~CustomMergeStrategy() override;
 
   // MergeStrategy:
-  void SetOnError(ftl::Closure on_error) override;
+  void SetOnError(fxl::Closure on_error) override;
 
   void Merge(storage::PageStorage* storage,
              PageManager* page_manager,
@@ -33,13 +33,13 @@ class CustomMergeStrategy : public MergeStrategy {
   void Cancel() override;
 
  private:
-  ftl::Closure on_error_;
+  fxl::Closure on_error_;
 
   ConflictResolverPtr conflict_resolver_;
 
   std::unique_ptr<ConflictResolverClient> in_progress_merge_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CustomMergeStrategy);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CustomMergeStrategy);
 };
 
 }  // namespace ledger

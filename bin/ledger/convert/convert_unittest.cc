@@ -102,7 +102,7 @@ TEST(Convert, ImplicitConversion) {
 
   // Suppress check warning that |string_view| is never modified so we could use
   // |esv| instead.
-  ftl::StringView string_view = esv;  // NOLINT
+  fxl::StringView string_view = esv;  // NOLINT
   EXPECT_EQ(str, ToString(string_view));
 }
 

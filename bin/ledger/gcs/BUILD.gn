@@ -21,7 +21,7 @@ source_set("gcs") {
     "//apps/ledger/src/callback",
     "//apps/ledger/src/glue/socket",
     "//apps/ledger/src/network",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//magenta/system/ulib/mx",
   ]
 
@@ -39,7 +39,7 @@ source_set("unittests") {
     ":gcs",
     "//apps/ledger/src/network:fake",
     "//apps/ledger/src/test:lib",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]

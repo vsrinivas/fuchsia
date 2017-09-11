@@ -49,7 +49,7 @@ class LevelDb : public Db {
 
   uint64_t active_batches_count_ = 0;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LevelDb);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LevelDb);
 };
 
 }  // namespace storage

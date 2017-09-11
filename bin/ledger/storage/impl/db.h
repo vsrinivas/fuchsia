@@ -21,7 +21,7 @@ class Db {
 
     // Inserts the given key-value pair in the database.
     virtual Status Put(convert::ExtendedStringView key,
-                       ftl::StringView value) = 0;
+                       fxl::StringView value) = 0;
 
     // Deletes the entry in the database with the given |key|.
     virtual Status Delete(convert::ExtendedStringView key) = 0;
@@ -34,7 +34,7 @@ class Db {
     virtual Status Execute() = 0;
 
    private:
-    FTL_DISALLOW_COPY_AND_ASSIGN(Batch);
+    FXL_DISALLOW_COPY_AND_ASSIGN(Batch);
   };
 
   Db() {}

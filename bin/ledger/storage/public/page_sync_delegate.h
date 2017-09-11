@@ -10,7 +10,7 @@
 #include <mx/socket.h>
 
 #include "apps/ledger/src/storage/public/types.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace storage {
 
@@ -30,7 +30,7 @@ class PageSyncDelegate {
           callback) = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageSyncDelegate);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageSyncDelegate);
 };
 
 }  // namespace storage

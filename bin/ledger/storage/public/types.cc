@@ -25,7 +25,7 @@ bool operator!=(const EntryChange& lhs, const EntryChange& rhs) {
   return !(lhs == rhs);
 }
 
-ftl::StringView StatusToString(Status status) {
+fxl::StringView StatusToString(Status status) {
   switch (status) {
     case Status::OK:
       return "OK";

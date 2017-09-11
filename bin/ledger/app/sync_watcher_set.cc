@@ -62,7 +62,7 @@ class SyncWatcherSet::SyncWatcherContainer
     SendIfPending();
   }
 
-  void set_on_empty(ftl::Closure on_empty_callback) {
+  void set_on_empty(fxl::Closure on_empty_callback) {
     if (on_empty_callback) {
       watcher_.set_connection_error_handler(std::move(on_empty_callback));
     }
@@ -97,7 +97,7 @@ class SyncWatcherSet::SyncWatcherContainer
   // last_ contains the last sent notification.
   SyncStateContainer last_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherContainer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherContainer);
 };
 
 SyncWatcherSet::SyncWatcherSet() {}

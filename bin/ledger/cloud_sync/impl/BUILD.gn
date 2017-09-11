@@ -62,7 +62,7 @@ source_set("unittests") {
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/storage/test",
     "//apps/ledger/src/test:lib",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]

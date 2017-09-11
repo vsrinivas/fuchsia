@@ -9,7 +9,7 @@
 #include <string>
 
 #include "apps/ledger/src/gcs/status.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "mx/socket.h"
 #include "mx/vmo.h"
 
@@ -32,7 +32,7 @@ class CloudStorage {
           callback) = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(CloudStorage);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CloudStorage);
 };
 
 }  // namespace gcs

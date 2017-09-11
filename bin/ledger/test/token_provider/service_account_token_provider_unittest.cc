@@ -11,17 +11,17 @@
 #include "apps/ledger/src/network/fake_network_service.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace test {
 namespace {
 
-constexpr ftl::StringView kTestConfig =
+constexpr fxl::StringView kTestConfig =
     "{"
     "\"private_key\": \""
     "-----BEGIN RSA PRIVATE KEY-----\\n"
@@ -38,7 +38,7 @@ constexpr ftl::StringView kTestConfig =
     "\"client_id\": \"fake_id\""
     "}";
 
-constexpr ftl::StringView kWrongKeyTestConfig =
+constexpr fxl::StringView kWrongKeyTestConfig =
     "{"
     "\"private_key\": \""
     "-----BEGIN DSA PRIVATE KEY-----\\n"
@@ -61,7 +61,7 @@ class ServiceAccountTokenProviderTest : public TestWithMessageLoop {
         token_provider_(&network_service_, "user_id") {}
 
  protected:
-  std::string GetConfigFile(ftl::StringView config) {
+  std::string GetConfigFile(fxl::StringView config) {
     std::string path;
     if (!dir_.NewTempFile(&path)) {
       ADD_FAILURE() << "Unable to create file.";
@@ -85,7 +85,7 @@ class ServiceAccountTokenProviderTest : public TestWithMessageLoop {
     writer.String(token);
 
     writer.Key("expiresIn");
-    writer.String(ftl::NumberToString(expiration));
+    writer.String(fxl::NumberToString(expiration));
 
     writer.EndObject();
 

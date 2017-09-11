@@ -25,7 +25,7 @@ class InlinedObject : public Object {
 
   // Object:
   ObjectId GetId() const override;
-  Status GetData(ftl::StringView* data) const override;
+  Status GetData(fxl::StringView* data) const override;
 
  private:
   const ObjectId id_;
@@ -39,7 +39,7 @@ class StringObject : public Object {
 
   // Object:
   ObjectId GetId() const override;
-  Status GetData(ftl::StringView* data) const override;
+  Status GetData(fxl::StringView* data) const override;
 
  private:
   const ObjectId id_;
@@ -54,7 +54,7 @@ class LevelDBObject : public Object {
 
   // Object:
   ObjectId GetId() const override;
-  Status GetData(ftl::StringView* data) const override;
+  Status GetData(fxl::StringView* data) const override;
 
  private:
   const ObjectId id_;
@@ -69,7 +69,7 @@ class VmoObject : public Object {
 
   // Object:
   ObjectId GetId() const override;
-  Status GetData(ftl::StringView* data) const override;
+  Status GetData(fxl::StringView* data) const override;
   Status GetVmo(mx::vmo* vmo) const override;
 
  private:
@@ -79,7 +79,7 @@ class VmoObject : public Object {
   const ObjectId id_;
   mx::vmo vmo_;
   mutable mx::vmar vmar_;
-  mutable ftl::StringView data_;
+  mutable fxl::StringView data_;
 };
 
 }  // namespace storage

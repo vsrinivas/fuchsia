@@ -11,7 +11,7 @@
 #include "apps/ledger/src/network/network_service.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace test {
 
@@ -60,7 +60,7 @@ class ServiceAccountTokenProvider : public modular::auth::TokenProvider {
       in_progress_callbacks_;
   callback::CancellableContainer in_progress_requests_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ServiceAccountTokenProvider);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ServiceAccountTokenProvider);
 };
 
 };  // namespace test

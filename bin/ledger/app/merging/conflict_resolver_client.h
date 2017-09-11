@@ -14,8 +14,8 @@
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 // Client handling communication with a ConflictResolver interface in order to
@@ -39,7 +39,7 @@ class ConflictResolverClient : public MergeResultProvider {
  private:
   void OnNextMergeResult(
       const MergedValuePtr& merged_value,
-      const ftl::RefPtr<callback::Waiter<storage::Status, storage::ObjectId>>&
+      const fxl::RefPtr<callback::Waiter<storage::Status, storage::ObjectId>>&
           waiter);
   void Finalize(Status status);
 
@@ -81,9 +81,9 @@ class ConflictResolverClient : public MergeResultProvider {
   fidl::Binding<MergeResultProvider> merge_result_provider_binding_;
 
   // This must be the last member of the class.
-  ftl::WeakPtrFactory<ConflictResolverClient> weak_factory_;
+  fxl::WeakPtrFactory<ConflictResolverClient> weak_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ConflictResolverClient);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ConflictResolverClient);
 };
 
 }  // namespace ledger

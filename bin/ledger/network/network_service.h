@@ -8,8 +8,8 @@
 #include "apps/ledger/src/callback/cancellable.h"
 #include "apps/network/services/url_request.fidl.h"
 #include "apps/network/services/url_response.fidl.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
 
@@ -22,12 +22,12 @@ class NetworkService {
   virtual ~NetworkService() {}
 
   // Starts a url network request.
-  virtual ftl::RefPtr<callback::Cancellable> Request(
+  virtual fxl::RefPtr<callback::Cancellable> Request(
       std::function<network::URLRequestPtr()> request_factory,
       std::function<void(network::URLResponsePtr)> callback) = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(NetworkService);
+  FXL_DISALLOW_COPY_AND_ASSIGN(NetworkService);
 };
 
 }  // namespace ledger

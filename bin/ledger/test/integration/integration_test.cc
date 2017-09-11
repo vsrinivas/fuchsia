@@ -15,8 +15,8 @@
 #include "apps/ledger/src/test/fake_token_provider.h"
 #include "apps/ledger/src/test/integration/test_utils.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
@@ -39,7 +39,7 @@ void IntegrationTest::TearDown() {
 
 mx::socket IntegrationTest::StreamDataToSocket(std::string data) {
   glue::SocketPair sockets;
-  socket_task_runner_->PostTask(ftl::MakeCopyable([
+  socket_task_runner_->PostTask(fxl::MakeCopyable([
     socket = std::move(sockets.socket1), data = std::move(data)
   ]() mutable {
     auto writer = new glue::StringSocketWriter();

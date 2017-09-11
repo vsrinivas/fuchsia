@@ -16,11 +16,11 @@
 
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/glue/crypto/base64.h"
-#include "lib/ftl/arraysize.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/arraysize.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_number_conversions.h"
+#include "lib/fxl/strings/string_view.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace test {
@@ -72,7 +72,7 @@ std::string GetHeader() {
   writer.EndObject();
 
   return glue::Base64UrlEncode(
-      ftl::StringView(string_buffer.GetString(), string_buffer.GetSize()));
+      fxl::StringView(string_buffer.GetString(), string_buffer.GetSize()));
 }
 
 modular::auth::AuthErrPtr GetError(modular::auth::Status status,
@@ -86,7 +86,7 @@ modular::auth::AuthErrPtr GetError(modular::auth::Status status,
 std::unique_ptr<rapidjson::SchemaDocument> InitSchema(const char schemaSpec[]) {
   rapidjson::Document schema_document;
   if (schema_document.Parse(schemaSpec).HasParseError()) {
-    FTL_DCHECK(false) << "Schema validation spec itself is not valid JSON.";
+    FXL_DCHECK(false) << "Schema validation spec itself is not valid JSON.";
   }
   return std::make_unique<rapidjson::SchemaDocument>(schema_document);
 }
@@ -97,7 +97,7 @@ bool ValidateSchema(const rapidjson::Value& value,
   if (!value.Accept(validator)) {
     rapidjson::StringBuffer uri_buffer;
     validator.GetInvalidSchemaPointer().StringifyUriFragment(uri_buffer);
-    FTL_LOG(ERROR) << "Incorrect schema at " << uri_buffer.GetString()
+    FXL_LOG(ERROR) << "Incorrect schema at " << uri_buffer.GetString()
                    << " , schema violation: "
                    << validator.GetInvalidSchemaKeyword();
     return false;
@@ -139,14 +139,14 @@ bool ServiceAccountTokenProvider::LoadCredentials(
     const std::string& json_file) {
   std::string file_content;
   if (!files::ReadFileToString(json_file, &file_content)) {
-    FTL_LOG(ERROR) << "Unable to read file at: " << json_file;
+    FXL_LOG(ERROR) << "Unable to read file at: " << json_file;
     return false;
   }
 
   rapidjson::Document document;
   document.Parse(file_content.c_str(), file_content.size());
   if (document.HasParseError() || !document.IsObject()) {
-    FTL_LOG(ERROR) << "Json file is incorrect at: " << json_file;
+    FXL_LOG(ERROR) << "Json file is incorrect at: " << json_file;
     return false;
   }
 
@@ -166,7 +166,7 @@ bool ServiceAccountTokenProvider::LoadCredentials(
       PEM_read_bio_PrivateKey(bio.get(), nullptr, nullptr, nullptr));
 
   if (EVP_PKEY_id(credentials_->private_key.get()) != EVP_PKEY_RSA) {
-    FTL_LOG(ERROR) << "Provided key is not a RSA key.";
+    FXL_LOG(ERROR) << "Provided key is not a RSA key.";
     return false;
   }
 
@@ -177,14 +177,14 @@ bool ServiceAccountTokenProvider::LoadCredentials(
 
 void ServiceAccountTokenProvider::GetAccessToken(
     const GetAccessTokenCallback& callback) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
   callback(nullptr,
            GetError(modular::auth::Status::INTERNAL_ERROR, "Not implemented."));
 }
 
 void ServiceAccountTokenProvider::GetIdToken(
     const GetIdTokenCallback& callback) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
   callback(nullptr,
            GetError(modular::auth::Status::INTERNAL_ERROR, "Not implemented."));
 }
@@ -269,7 +269,7 @@ std::string ServiceAccountTokenProvider::GetClaims() {
   writer.EndObject();
 
   return glue::Base64UrlEncode(
-      ftl::StringView(string_buffer.GetString(), string_buffer.GetSize()));
+      fxl::StringView(string_buffer.GetString(), string_buffer.GetSize()));
 }
 
 bool ServiceAccountTokenProvider::GetCustomToken(std::string* custom_token) {
@@ -278,31 +278,31 @@ bool ServiceAccountTokenProvider::GetCustomToken(std::string* custom_token) {
   bssl::ScopedEVP_MD_CTX md_ctx;
   if (EVP_DigestSignInit(md_ctx.get(), nullptr, EVP_sha256(), nullptr,
                          credentials_->private_key.get()) != 1) {
-    FTL_LOG(ERROR) << ERR_reason_error_string(ERR_get_error());
+    FXL_LOG(ERROR) << ERR_reason_error_string(ERR_get_error());
     return false;
   }
 
   if (EVP_DigestSignUpdate(md_ctx.get(), message.c_str(), message.size()) !=
       1) {
-    FTL_LOG(ERROR) << ERR_reason_error_string(ERR_get_error());
+    FXL_LOG(ERROR) << ERR_reason_error_string(ERR_get_error());
     return false;
   }
 
   size_t result_length;
   if (EVP_DigestSignFinal(md_ctx.get(), nullptr, &result_length) != 1) {
-    FTL_LOG(ERROR) << ERR_reason_error_string(ERR_get_error());
+    FXL_LOG(ERROR) << ERR_reason_error_string(ERR_get_error());
     return false;
   }
 
   char result[result_length];
   if (EVP_DigestSignFinal(md_ctx.get(), reinterpret_cast<uint8_t*>(result),
                           &result_length) != 1) {
-    FTL_LOG(ERROR) << ERR_reason_error_string(ERR_get_error());
+    FXL_LOG(ERROR) << ERR_reason_error_string(ERR_get_error());
     return false;
   }
 
   std::string signature =
-      glue::Base64UrlEncode(ftl::StringView(result, result_length));
+      glue::Base64UrlEncode(fxl::StringView(result, result_length));
 
   *custom_token = message + "." + signature;
   return true;
@@ -343,7 +343,7 @@ network::URLRequestPtr ServiceAccountTokenProvider::GetIdentityRequest(
 
   mx::vmo data;
   bool result = mtl::VmoFromString(GetIdentityRequestBody(custom_token), &data);
-  FTL_DCHECK(result);
+  FXL_DCHECK(result);
 
   request->body = network::URLBody::New();
   request->body->set_buffer(std::move(data));
@@ -379,7 +379,7 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
 
   std::string response_body;
   if (!response->body.is_null()) {
-    FTL_DCHECK(response->body->is_buffer());
+    FXL_DCHECK(response->body->is_buffer());
     if (!mtl::StringFromVmo(response->body->get_buffer(), &response_body)) {
       ResolveCallbacks(api_key, nullptr,
                        GetError(modular::auth::Status::INTERNAL_ERROR,
@@ -415,7 +415,7 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
   cached_token->id_token = convert::ToString(document["idToken"]);
   cached_token->expiration_time =
       time(nullptr) + (9u *
-                       ftl::StringToNumber<time_t>(
+                       fxl::StringToNumber<time_t>(
                            convert::ToStringView(document["expiresIn"])) /
                        10u);
   const auto& id_token = cached_token->id_token;

@@ -12,7 +12,7 @@
 #include "apps/ledger/src/app/page_utils.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/storage/public/object.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace ledger {
@@ -96,12 +96,12 @@ void ComputePageChange(
   };
 
   // |on_done| is called when the full diff is computed.
-  auto on_done = ftl::MakeCopyable([
+  auto on_done = fxl::MakeCopyable([
     waiter = std::move(waiter), context = std::move(context),
     callback = std::move(callback)
   ](storage::Status status) mutable {
     if (status != storage::Status::OK) {
-      FTL_LOG(ERROR) << "Unable to compute diff for PageChange: " << status;
+      FXL_LOG(ERROR) << "Unable to compute diff for PageChange: " << status;
       callback(PageUtils::ConvertStatus(status), std::make_pair(nullptr, ""));
       return;
     }
@@ -118,17 +118,17 @@ void ComputePageChange(
     // We need to retrieve the values for each changed key/value pair in order
     // to send it inside the PageChange object. |waiter| collates these
     // asynchronous calls and |result_callback| processes them.
-    auto result_callback = ftl::MakeCopyable([
+    auto result_callback = fxl::MakeCopyable([
       context = std::move(context), callback = std::move(callback)
     ](Status status, std::vector<mx::vmo> results) mutable {
       if (status != Status::OK) {
-        FTL_LOG(ERROR)
+        FXL_LOG(ERROR)
             << "Error while reading changed values when computing PageChange: "
             << status;
         callback(status, std::make_pair(nullptr, ""));
         return;
       }
-      FTL_DCHECK(results.size() == context->page_change->changes.size());
+      FXL_DCHECK(results.size() == context->page_change->changes.size());
       for (size_t i = 0; i < results.size(); i++) {
         context->page_change->changes[i]->value = std::move(results[i]);
       }

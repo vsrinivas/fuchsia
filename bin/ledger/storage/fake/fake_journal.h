@@ -11,7 +11,7 @@
 #include "apps/ledger/src/storage/fake/fake_journal_delegate.h"
 #include "apps/ledger/src/storage/public/journal.h"
 #include "apps/ledger/src/storage/public/types.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace storage {
 namespace fake {
@@ -36,7 +36,7 @@ class FakeJournal : public Journal {
 
  private:
   FakeJournalDelegate* delegate_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(FakeJournal);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakeJournal);
 };
 
 }  // namespace fake

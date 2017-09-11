@@ -12,8 +12,8 @@
 #include "apps/ledger/src/auth_provider/auth_provider.h"
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
-#include "lib/ftl/memory/weak_ptr.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace auth_provider {
 
@@ -30,17 +30,17 @@ namespace auth_provider {
 // callbacks with status TOKEN_PROVIDER_DISCONNECTED when this happens.
 class AuthProviderImpl : public AuthProvider {
  public:
-  AuthProviderImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
+  AuthProviderImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
                    std::string api_key,
                    modular::auth::TokenProviderPtr token_provider,
                    std::unique_ptr<backoff::Backoff> backoff);
 
   // AuthProvider:
-  ftl::RefPtr<callback::Cancellable> GetFirebaseToken(
+  fxl::RefPtr<callback::Cancellable> GetFirebaseToken(
       std::function<void(auth_provider::AuthStatus, std::string)> callback)
       override;
 
-  ftl::RefPtr<callback::Cancellable> GetFirebaseUserId(
+  fxl::RefPtr<callback::Cancellable> GetFirebaseUserId(
       std::function<void(auth_provider::AuthStatus, std::string)> callback)
       override;
 
@@ -50,13 +50,13 @@ class AuthProviderImpl : public AuthProvider {
   void GetToken(std::function<void(auth_provider::AuthStatus,
                                    modular::auth::FirebaseTokenPtr)> callback);
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   const std::string api_key_;
   modular::auth::TokenProviderPtr token_provider_;
   const std::unique_ptr<backoff::Backoff> backoff_;
 
   // Must be the last member field.
-  ftl::WeakPtrFactory<AuthProviderImpl> weak_factory_;
+  fxl::WeakPtrFactory<AuthProviderImpl> weak_factory_;
 };
 
 }  // namespace auth_provider

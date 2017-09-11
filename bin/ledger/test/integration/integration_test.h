@@ -14,7 +14,7 @@
 #include "apps/ledger/src/test/ledger_app_instance_factory.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace test {
 namespace integration {
@@ -42,11 +42,11 @@ class IntegrationTest : public test::TestWithMessageLoop {
  private:
   // Thread used to run the network service and the token provider.
   std::thread socket_thread_;
-  ftl::RefPtr<ftl::TaskRunner> socket_task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> socket_task_runner_;
 
   std::unique_ptr<LedgerAppInstanceFactory> app_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(IntegrationTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(IntegrationTest);
 };
 
 }  // namespace integration

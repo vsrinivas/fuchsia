@@ -21,7 +21,7 @@ source_set("public") {
     "//apps/ledger/src/firebase",
     "//apps/ledger/src/gcs",
     "//apps/ledger/src/storage/public",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

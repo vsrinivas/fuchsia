@@ -24,7 +24,7 @@ source_set("test") {
     "//apps/ledger/src/glue/socket",
     "//apps/ledger/src/storage/impl/btree:lib",
     "//apps/ledger/src/test:lib",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

@@ -6,7 +6,7 @@
 
 namespace gcs {
 
-ftl::StringView StatusToString(Status status) {
+fxl::StringView StatusToString(Status status) {
   switch (status) {
     case Status::OK:
       return "OK";

@@ -10,13 +10,13 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
-#include "lib/ftl/memory/ref_counted.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/memory/ref_counted.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace ledger {
 
 void FindCommonAncestor(
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
     storage::PageStorage* storage,
     std::unique_ptr<const storage::Commit> head1,
     std::unique_ptr<const storage::Commit> head2,

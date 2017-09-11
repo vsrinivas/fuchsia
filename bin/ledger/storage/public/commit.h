@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "apps/ledger/src/storage/public/types.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace storage {
 
@@ -41,10 +41,10 @@ class Commit {
 
   // Returns the byte representation of this |Commit| as they will be synced to
   // the cloud.
-  virtual ftl::StringView GetStorageBytes() const = 0;
+  virtual fxl::StringView GetStorageBytes() const = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Commit);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Commit);
 };
 
 }  // namespace storage

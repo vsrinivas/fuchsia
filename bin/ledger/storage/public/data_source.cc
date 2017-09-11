@@ -18,7 +18,7 @@ class StringLikeDataChunk : public DataSource::DataChunk {
   explicit StringLikeDataChunk(S value) : value_(std::move(value)) {}
 
  private:
-  ftl::StringView Get() override { return convert::ExtendedStringView(value_); }
+  fxl::StringView Get() override { return convert::ExtendedStringView(value_); }
 
   S value_;
 };
@@ -35,7 +35,7 @@ class StringLikeDataSource : public DataSource {
   void Get(std::function<void(std::unique_ptr<DataChunk>, Status)> callback)
       override {
 #ifndef NDEBUG
-    FTL_DCHECK(!called_);
+    FXL_DCHECK(!called_);
     called_ = true;
 #endif
     callback(std::make_unique<StringLikeDataChunk<S>>(std::move(value_)),
@@ -72,8 +72,8 @@ class VmoDataChunk : public DataSource::DataChunk {
     return (value + PAGE_SIZE - 1) & (~(PAGE_SIZE - 1));
   }
 
-  ftl::StringView Get() override {
-    return ftl::StringView(reinterpret_cast<char*>(mapped_address_), vmo_size_);
+  fxl::StringView Get() override {
+    return fxl::StringView(reinterpret_cast<char*>(mapped_address_), vmo_size_);
   }
 
   mx::vmo vmo_;
@@ -85,7 +85,7 @@ class VmoDataChunk : public DataSource::DataChunk {
 class VmoDataSource : public DataSource {
  public:
   explicit VmoDataSource(mx::vmo value) : vmo_(std::move(value)) {
-    FTL_DCHECK(vmo_);
+    FXL_DCHECK(vmo_);
     mx_status_t status = vmo_.get_size(&vmo_size_);
     if (status != MX_OK) {
       vmo_.reset();
@@ -98,7 +98,7 @@ class VmoDataSource : public DataSource {
   void Get(std::function<void(std::unique_ptr<DataChunk>, Status)> callback)
       override {
 #ifndef NDEBUG
-    FTL_DCHECK(!called_);
+    FXL_DCHECK(!called_);
     called_ = true;
 #endif
     if (!vmo_) {
@@ -126,7 +126,7 @@ class SocketDataSource : public DataSource, public mtl::SocketDrainer::Client {
       : socket_(std::move(socket)),
         expected_size_(expected_size),
         remaining_bytes_(expected_size) {
-    FTL_DCHECK(socket_);
+    FXL_DCHECK(socket_);
   }
 
  private:
@@ -134,7 +134,7 @@ class SocketDataSource : public DataSource, public mtl::SocketDrainer::Client {
 
   void Get(std::function<void(std::unique_ptr<DataChunk>, Status)> callback)
       override {
-    FTL_DCHECK(socket_);
+    FXL_DCHECK(socket_);
     callback_ = std::move(callback);
     socket_drainer_ = std::make_unique<mtl::SocketDrainer>(this);
     socket_drainer_->Start(std::move(socket_));
@@ -143,7 +143,7 @@ class SocketDataSource : public DataSource, public mtl::SocketDrainer::Client {
 
   void OnDataAvailable(const void* data, size_t num_bytes) override {
     if (num_bytes > remaining_bytes_) {
-      FTL_LOG(ERROR) << "Received incorrect number of bytes. Expected: "
+      FXL_LOG(ERROR) << "Received incorrect number of bytes. Expected: "
                      << expected_size_ << ", but received at least "
                      << (num_bytes - remaining_bytes_) << " more.";
       socket_drainer_.reset();
@@ -160,7 +160,7 @@ class SocketDataSource : public DataSource, public mtl::SocketDrainer::Client {
   void OnDataComplete() override {
     socket_drainer_.reset();
     if (remaining_bytes_ != 0) {
-      FTL_LOG(ERROR) << "Received incorrect number of bytes. Expected: "
+      FXL_LOG(ERROR) << "Received incorrect number of bytes. Expected: "
                      << expected_size_ << ", but received "
                      << (expected_size_ - remaining_bytes_);
       callback_(nullptr, Status::ERROR);
@@ -185,8 +185,8 @@ class FlatBufferDataChunk : public DataSource::DataChunk {
       : value_(std::move(value)) {}
 
  private:
-  ftl::StringView Get() override {
-    return ftl::StringView(reinterpret_cast<char*>(value_->GetBufferPointer()),
+  fxl::StringView Get() override {
+    return fxl::StringView(reinterpret_cast<char*>(value_->GetBufferPointer()),
                            value_->GetSize());
   }
 

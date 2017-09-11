@@ -14,8 +14,8 @@
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
 
 namespace cloud_sync {
 
@@ -45,8 +45,8 @@ class BatchUpload {
               cloud_provider_firebase::CloudProvider* cloud_provider,
               auth_provider::AuthProvider* auth_provider,
               std::vector<std::unique_ptr<const storage::Commit>> commits,
-              ftl::Closure on_done,
-              ftl::Closure on_error,
+              fxl::Closure on_done,
+              fxl::Closure on_error,
               unsigned int max_concurrent_uploads = 10);
   ~BatchUpload();
 
@@ -72,14 +72,14 @@ class BatchUpload {
   // Uploads the commits.
   void UploadCommits();
 
-  void RefreshAuthToken(ftl::Closure on_refreshed);
+  void RefreshAuthToken(fxl::Closure on_refreshed);
 
   storage::PageStorage* const storage_;
   cloud_provider_firebase::CloudProvider* const cloud_provider_;
   auth_provider::AuthProvider* const auth_provider_;
   std::vector<std::unique_ptr<const storage::Commit>> commits_;
-  ftl::Closure on_done_;
-  ftl::Closure on_error_;
+  fxl::Closure on_done_;
+  fxl::Closure on_error_;
   const unsigned int max_concurrent_uploads_;
 
   // Auth token to be used for uploading the objects and the commit. It is
@@ -98,7 +98,7 @@ class BatchUpload {
   // Pending auth token requests to be cancelled when this class goes away.
   callback::CancellableContainer auth_token_requests_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(BatchUpload);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BatchUpload);
 };
 
 }  // namespace cloud_sync

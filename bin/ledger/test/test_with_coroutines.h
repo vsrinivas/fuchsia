@@ -7,8 +7,8 @@
 
 #include "apps/ledger/src/coroutine/coroutine_impl.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
-#include "garnet/public/lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
+#include "garnet/public/lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
 
 namespace test {
 
@@ -25,7 +25,7 @@ class TestWithCoroutines : public TestWithMessageLoop {
   coroutine::CoroutineServiceImpl coroutine_service_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestWithCoroutines);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestWithCoroutines);
 };
 
 }  // namespace test

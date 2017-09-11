@@ -29,7 +29,7 @@ source_set("lib") {
   public_deps = [
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/storage/test",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 
   deps = [

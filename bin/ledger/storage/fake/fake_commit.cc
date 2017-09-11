@@ -41,8 +41,8 @@ ObjectIdView FakeCommit::GetRootId() const {
   return journal_->GetId();
 }
 
-ftl::StringView FakeCommit::GetStorageBytes() const {
-  return ftl::StringView();
+fxl::StringView FakeCommit::GetStorageBytes() const {
+  return fxl::StringView();
 }
 
 }  // namespace fake

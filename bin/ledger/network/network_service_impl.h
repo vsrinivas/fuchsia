@@ -9,19 +9,19 @@
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/network/network_service.h"
 #include "apps/network/services/network_service.fidl.h"
-#include "lib/ftl/memory/weak_ptr.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace ledger {
 
 class NetworkServiceImpl : public NetworkService {
  public:
   NetworkServiceImpl(
-      ftl::RefPtr<ftl::TaskRunner> task_runner,
+      fxl::RefPtr<fxl::TaskRunner> task_runner,
       std::function<network::NetworkServicePtr()> network_service_factory);
   ~NetworkServiceImpl() override;
 
-  ftl::RefPtr<callback::Cancellable> Request(
+  fxl::RefPtr<callback::Cancellable> Request(
       std::function<network::URLRequestPtr()> request_factory,
       std::function<void(network::URLResponsePtr)> callback) override;
 
@@ -32,7 +32,7 @@ class NetworkServiceImpl : public NetworkService {
 
   void RetryGetNetworkService();
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   backoff::ExponentialBackoff backoff_;
   bool in_backoff_ = false;
   std::function<network::NetworkServicePtr()> network_service_factory_;
@@ -40,7 +40,7 @@ class NetworkServiceImpl : public NetworkService {
   callback::AutoCleanableSet<RunningRequest> running_requests_;
 
   // Must be the last member field.
-  ftl::WeakPtrFactory<NetworkServiceImpl> weak_factory_;
+  fxl::WeakPtrFactory<NetworkServiceImpl> weak_factory_;
 };
 
 }  // namespace ledger

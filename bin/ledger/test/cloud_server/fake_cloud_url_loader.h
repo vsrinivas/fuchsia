@@ -10,7 +10,7 @@
 #include "apps/ledger/src/test/cloud_server/firebase_server.h"
 #include "apps/ledger/src/test/cloud_server/gcs_server.h"
 #include "apps/network/services/network_service.fidl.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace ledger {
 
@@ -31,7 +31,7 @@ class FakeCloudURLLoader : public network::URLLoader {
   std::unordered_map<std::string, FirebaseServer> firebase_servers_;
   std::unordered_map<std::string, GcsServer> gcs_servers_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FakeCloudURLLoader);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakeCloudURLLoader);
 };
 
 }  // namespace ledger

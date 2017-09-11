@@ -42,7 +42,7 @@ class SynchronousStorage {
   PageStorage* page_storage_;
   coroutine::CoroutineHandler* handler_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SynchronousStorage);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SynchronousStorage);
 };
 
 }  // namespace btree

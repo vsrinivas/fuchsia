@@ -21,7 +21,7 @@ ObjectId InlinedObject::GetId() const {
   return id_;
 }
 
-Status InlinedObject::GetData(ftl::StringView* data) const {
+Status InlinedObject::GetData(fxl::StringView* data) const {
   *data = id_;
   return Status::OK;
 }
@@ -35,7 +35,7 @@ ObjectId StringObject::GetId() const {
   return id_;
 }
 
-Status StringObject::GetData(ftl::StringView* data) const {
+Status StringObject::GetData(fxl::StringView* data) const {
   *data = content_;
   return Status::OK;
 }
@@ -50,7 +50,7 @@ ObjectId LevelDBObject::GetId() const {
   return id_;
 }
 
-Status LevelDBObject::GetData(ftl::StringView* data) const {
+Status LevelDBObject::GetData(fxl::StringView* data) const {
   *data = convert::ExtendedStringView(iterator_->value());
   return Status::OK;
 }
@@ -68,7 +68,7 @@ ObjectId VmoObject::GetId() const {
   return id_;
 }
 
-Status VmoObject::GetData(ftl::StringView* data) const {
+Status VmoObject::GetData(fxl::StringView* data) const {
   Status status = Initialize();
   if (status != Status::OK) {
     return status;
@@ -100,7 +100,7 @@ Status VmoObject::Initialize() const {
   size_t size;
   mx_status_t mx_status = vmo_.get_size(&size);
   if (mx_status != MX_OK) {
-    FTL_LOG(ERROR) << "Unable to get VMO size. Error: " << mx_status;
+    FXL_LOG(ERROR) << "Unable to get VMO size. Error: " << mx_status;
     return Status::INTERNAL_IO_ERROR;
   }
 
@@ -111,7 +111,7 @@ Status VmoObject::Initialize() const {
                                                  MX_VM_FLAG_CAN_MAP_SPECIFIC,
                                              &vmar_, &allocate_address);
   if (mx_status != MX_OK) {
-    FTL_LOG(ERROR) << "Unable to allocate VMAR. Error: " << mx_status;
+    FXL_LOG(ERROR) << "Unable to allocate VMAR. Error: " << mx_status;
     return Status::INTERNAL_IO_ERROR;
   }
 
@@ -121,12 +121,12 @@ Status VmoObject::Initialize() const {
       MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
       reinterpret_cast<uintptr_t*>(&mapped_address));
   if (mx_status != MX_OK) {
-    FTL_LOG(ERROR) << "Unable to map VMO. Error: " << mx_status;
+    FXL_LOG(ERROR) << "Unable to map VMO. Error: " << mx_status;
     vmar_.reset();
     return Status::INTERNAL_IO_ERROR;
   }
 
-  data_ = ftl::StringView(mapped_address, size);
+  data_ = fxl::StringView(mapped_address, size);
   initialized_ = true;
 
   return Status::OK;

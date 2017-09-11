@@ -7,7 +7,7 @@
 
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/public/types.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace storage {
 
@@ -31,7 +31,7 @@ ObjectType GetObjectType(ObjectIdType id_type);
 // Extracts the data from |object_id|. If |object_id| type is |INLINE|, the
 // returned data is the content of the object, otherwise, it is the hash of the
 // object.
-ftl::StringView ExtractObjectIdData(ObjectIdView object_id);
+fxl::StringView ExtractObjectIdData(ObjectIdView object_id);
 
 // Computes the id of the object of the given |type| with the given |content|.
 ObjectId ComputeObjectId(ObjectType type, convert::ExtendedStringView content);

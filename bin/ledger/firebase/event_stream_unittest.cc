@@ -10,7 +10,7 @@
 
 #include "apps/ledger/src/glue/socket/socket_pair.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -61,7 +61,7 @@ class EventStreamTest : public ::testing::Test {
   bool delete_on_event_ = false;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(EventStreamTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(EventStreamTest);
 };
 
 namespace {

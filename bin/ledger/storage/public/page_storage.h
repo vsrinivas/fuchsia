@@ -16,8 +16,8 @@
 #include "apps/ledger/src/storage/public/object.h"
 #include "apps/ledger/src/storage/public/page_sync_delegate.h"
 #include "apps/ledger/src/storage/public/types.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace storage {
 
@@ -34,7 +34,7 @@ class PageStorage {
     std::string bytes;
 
    private:
-    FTL_DISALLOW_COPY_AND_ASSIGN(CommitIdAndBytes);
+    FXL_DISALLOW_COPY_AND_ASSIGN(CommitIdAndBytes);
   };
 
   // Location where to search an object. See |GetObject| call for usage.
@@ -143,13 +143,13 @@ class PageStorage {
   // Sets the opaque sync metadata associated with this page associated with the
   // given |key|. This state is persisted through restarts and can be retrieved
   // using |GetSyncMetadata()|.
-  virtual void SetSyncMetadata(ftl::StringView key,
-                               ftl::StringView value,
+  virtual void SetSyncMetadata(fxl::StringView key,
+                               fxl::StringView value,
                                std::function<void(Status)> callback) = 0;
 
   // Retrieves the opaque sync metadata associated with this page and the given
   // |key|.
-  virtual Status GetSyncMetadata(ftl::StringView key, std::string* value) = 0;
+  virtual Status GetSyncMetadata(fxl::StringView key, std::string* value) = 0;
 
   // Commit contents.
 
@@ -184,7 +184,7 @@ class PageStorage {
       std::function<void(Status)> on_done) = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageStorage);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageStorage);
 };
 
 }  // namespace storage

@@ -17,7 +17,7 @@
 #include "apps/ledger/src/device_set/cloud_device_set_impl.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/firebase/firebase.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace cloud_sync {
 
@@ -30,11 +30,11 @@ class UserSyncImpl : public UserSync {
                UserConfig user_config,
                std::unique_ptr<backoff::Backoff> backoff,
                SyncStateWatcher* watcher,
-               ftl::Closure on_version_mismatch);
+               fxl::Closure on_version_mismatch);
   ~UserSyncImpl() override;
 
   // UserSync:
-  std::unique_ptr<LedgerSync> CreateLedgerSync(ftl::StringView app_id) override;
+  std::unique_ptr<LedgerSync> CreateLedgerSync(fxl::StringView app_id) override;
 
   // Starts UserSyncImpl. This method must be called before any other method.
   void Start();
@@ -61,7 +61,7 @@ class UserSyncImpl : public UserSync {
   ledger::Environment* environment_;
   const UserConfig user_config_;
   std::unique_ptr<backoff::Backoff> backoff_;
-  ftl::Closure on_version_mismatch_;
+  fxl::Closure on_version_mismatch_;
 
   // UserSyncImpl must be started before it can be used.
   bool started_ = false;
@@ -80,7 +80,7 @@ class UserSyncImpl : public UserSync {
   Aggregator aggregator_;
 
   // This must be the last member of this class.
-  ftl::WeakPtrFactory<UserSyncImpl> weak_ptr_factory_;
+  fxl::WeakPtrFactory<UserSyncImpl> weak_ptr_factory_;
 };
 
 }  // namespace cloud_sync

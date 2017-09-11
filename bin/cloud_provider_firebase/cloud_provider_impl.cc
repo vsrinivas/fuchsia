@@ -5,12 +5,12 @@
 #include "apps/ledger/cloud_provider_firebase/cloud_provider_impl.h"
 
 #include "apps/ledger/src/convert/convert.h"
-#include "garnet/public/lib/ftl/logging.h"
+#include "garnet/public/lib/fxl/logging.h"
 
 namespace cloud_provider_firebase {
 
 CloudProviderImpl::CloudProviderImpl(
-    ftl::RefPtr<ftl::TaskRunner> main_runner,
+    fxl::RefPtr<fxl::TaskRunner> main_runner,
     std::string user_id,
     ConfigPtr config,
     std::unique_ptr<auth_provider::AuthProvider> auth_provider,

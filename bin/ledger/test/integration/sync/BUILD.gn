@@ -21,7 +21,7 @@ source_set("sync") {
     "//apps/ledger/src/test:ledger_instance_factory",
     "//apps/ledger/src/test:lib",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]

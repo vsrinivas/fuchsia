@@ -16,9 +16,9 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
 

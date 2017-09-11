@@ -9,7 +9,7 @@
 #include "apps/ledger/src/storage/impl/db_serialization.h"
 #include "apps/ledger/src/storage/impl/journal_db_impl.h"
 #include "apps/ledger/src/storage/impl/number_serialization.h"
-#include "lib/ftl/strings/concatenate.h"
+#include "lib/fxl/strings/concatenate.h"
 
 namespace storage {
 
@@ -39,7 +39,7 @@ Status PageDbBatchImpl::RemoveHead(CoroutineHandler* /*handler*/,
 
 Status PageDbBatchImpl::AddCommitStorageBytes(CoroutineHandler* /*handler*/,
                                               const CommitId& commit_id,
-                                              ftl::StringView storage_bytes) {
+                                              fxl::StringView storage_bytes) {
   return batch_->Put(CommitRow::GetKeyFor(commit_id), storage_bytes);
 }
 
@@ -73,8 +73,8 @@ Status PageDbBatchImpl::CreateMergeJournal(CoroutineHandler* /*handler*/,
 
 Status PageDbBatchImpl::RemoveExplicitJournals(CoroutineHandler* /*handler*/) {
   static std::string kExplicitJournalPrefix =
-      ftl::Concatenate({JournalEntryRow::kPrefix,
-                        ftl::StringView(&JournalEntryRow::kImplicitPrefix, 1)});
+      fxl::Concatenate({JournalEntryRow::kPrefix,
+                        fxl::StringView(&JournalEntryRow::kImplicitPrefix, 1)});
   return batch_->DeleteByPrefix(kExplicitJournalPrefix);
 }
 
@@ -90,8 +90,8 @@ Status PageDbBatchImpl::RemoveJournal(const JournalId& journal_id) {
 }
 
 Status PageDbBatchImpl::AddJournalEntry(const JournalId& journal_id,
-                                        ftl::StringView key,
-                                        ftl::StringView value,
+                                        fxl::StringView key,
+                                        fxl::StringView value,
                                         KeyPriority priority) {
   return batch_->Put(JournalEntryRow::GetKeyFor(journal_id, key),
                      JournalEntryRow::GetValueFor(value, priority));
@@ -108,7 +108,7 @@ Status PageDbBatchImpl::WriteObject(
     ObjectIdView object_id,
     std::unique_ptr<DataSource::DataChunk> content,
     PageDbObjectStatus object_status) {
-  FTL_DCHECK(object_status > PageDbObjectStatus::UNKNOWN);
+  FXL_DCHECK(object_status > PageDbObjectStatus::UNKNOWN);
 
   auto object_key = ObjectRow::GetKeyFor(object_id);
   bool has_key;
@@ -123,7 +123,7 @@ Status PageDbBatchImpl::WriteObject(
   batch_->Put(object_key, content->Get());
   switch (object_status) {
     case PageDbObjectStatus::UNKNOWN:
-      FTL_NOTREACHED();
+      FXL_NOTREACHED();
       break;
     case PageDbObjectStatus::TRANSIENT:
       batch_->Put(TransientObjectRow::GetKeyFor(object_id), "");
@@ -149,8 +149,8 @@ Status PageDbBatchImpl::DeleteObject(CoroutineHandler* /*handler*/,
 Status PageDbBatchImpl::SetObjectStatus(CoroutineHandler* /*handler*/,
                                         ObjectIdView object_id,
                                         PageDbObjectStatus object_status) {
-  FTL_DCHECK(object_status >= PageDbObjectStatus::LOCAL);
-  FTL_DCHECK(CheckHasObject(object_id))
+  FXL_DCHECK(object_status >= PageDbObjectStatus::LOCAL);
+  FXL_DCHECK(CheckHasObject(object_id))
       << "Unknown object: " << convert::ToHex(object_id);
 
   auto transient_key = TransientObjectRow::GetKeyFor(object_id);
@@ -159,7 +159,7 @@ Status PageDbBatchImpl::SetObjectStatus(CoroutineHandler* /*handler*/,
   switch (object_status) {
     case PageDbObjectStatus::UNKNOWN:
     case PageDbObjectStatus::TRANSIENT: {
-      FTL_NOTREACHED();
+      FXL_NOTREACHED();
       break;
     }
     case PageDbObjectStatus::LOCAL: {
@@ -197,8 +197,8 @@ Status PageDbBatchImpl::MarkCommitIdUnsynced(CoroutineHandler* /*handler*/,
 }
 
 Status PageDbBatchImpl::SetSyncMetadata(CoroutineHandler* /*handler*/,
-                                        ftl::StringView key,
-                                        ftl::StringView value) {
+                                        fxl::StringView key,
+                                        fxl::StringView value) {
   return batch_->Put(SyncMetadataRow::GetKeyFor(key), value);
 }
 

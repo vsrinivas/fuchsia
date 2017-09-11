@@ -21,7 +21,7 @@ executable("app") {
     "//apps/ledger/src/storage/public",
     "//apps/network/services",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/trace-provider",
   ]
@@ -100,7 +100,7 @@ source_set("lib") {
     "//apps/ledger/src/storage/public",
     "//apps/modular/services/auth",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/trace",
   ]
@@ -137,7 +137,7 @@ source_set("unittests") {
     "//apps/ledger/src/test:lib",
     "//apps/modular/services/auth",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]

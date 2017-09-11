@@ -33,16 +33,16 @@
 #include "apps/ledger/src/storage/impl/object_impl.h"
 #include "apps/ledger/src/storage/impl/split.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "lib/ftl/arraysize.h"
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/files/file_descriptor.h"
-#include "lib/ftl/files/path.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/memory/weak_ptr.h"
-#include "lib/ftl/strings/concatenate.h"
+#include "lib/fxl/arraysize.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/files/file_descriptor.h"
+#include "lib/fxl/files/path.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fxl/strings/concatenate.h"
 #include "mx/vmar.h"
 #include "mx/vmo.h"
 
@@ -148,7 +148,7 @@ void PageStorageImpl::GetCommit(
 void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<const Commit> commit,
                                          std::vector<ObjectId> new_objects,
                                          std::function<void(Status)> callback) {
-  coroutine_service_->StartCoroutine(ftl::MakeCopyable([
+  coroutine_service_->StartCoroutine(fxl::MakeCopyable([
     this, commit = std::move(commit), new_objects = std::move(new_objects),
     final_callback = std::move(callback)
   ](CoroutineHandler * handler) mutable {
@@ -172,7 +172,7 @@ void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<const Commit> commit,
 void PageStorageImpl::AddCommitsFromSync(
     std::vector<CommitIdAndBytes> ids_and_bytes,
     std::function<void(Status)> callback) {
-  coroutine_service_->StartCoroutine(ftl::MakeCopyable([
+  coroutine_service_->StartCoroutine(fxl::MakeCopyable([
     this, ids_and_bytes = std::move(ids_and_bytes),
     final_callback = std::move(callback)
   ](CoroutineHandler * handler) mutable {
@@ -232,7 +232,7 @@ void PageStorageImpl::CommitJournal(
   JournalDBImpl* journal_ptr = static_cast<JournalDBImpl*>(journal.get());
   // |journal| will now be owned by the Commit callback, making sure that it is
   // not deleted before the end of the computation.
-  journal_ptr->Commit(ftl::MakeCopyable([
+  journal_ptr->Commit(fxl::MakeCopyable([
     journal = std::move(journal), callback = std::move(callback)
   ](Status status, std::unique_ptr<const Commit> commit) mutable {
     if (status != Status::OK) {
@@ -319,7 +319,7 @@ void PageStorageImpl::AddObjectFromLocal(
   auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
   SplitDataSource(
       handler.first->get(),
-      ftl::MakeCopyable([
+      fxl::MakeCopyable([
         this, waiter, cleanup = std::move(handler.second),
         callback = std::move(traced_callback)
       ](IterationStatus status, ObjectId object_id,
@@ -329,7 +329,7 @@ void PageStorageImpl::AddObjectFromLocal(
           return;
         }
         if (chunk) {
-          FTL_DCHECK(status == IterationStatus::IN_PROGRESS);
+          FXL_DCHECK(status == IterationStatus::IN_PROGRESS);
 
           if (GetObjectIdType(object_id) != ObjectIdType::INLINE) {
             AddPiece(std::move(object_id), std::move(chunk),
@@ -338,7 +338,7 @@ void PageStorageImpl::AddObjectFromLocal(
           return;
         }
 
-        FTL_DCHECK(status == IterationStatus::DONE);
+        FXL_DCHECK(status == IterationStatus::DONE);
         waiter->Finalize([
           object_id = std::move(object_id), callback = std::move(callback)
         ](Status status) mutable { callback(status, std::move(object_id)); });
@@ -367,7 +367,7 @@ void PageStorageImpl::GetObject(
       return;
     }
 
-    FTL_DCHECK(object);
+    FXL_DCHECK(object);
     ObjectIdType id_type = GetObjectIdType(object_id);
 
     if (id_type == ObjectIdType::INLINE ||
@@ -376,9 +376,9 @@ void PageStorageImpl::GetObject(
       return;
     }
 
-    FTL_DCHECK(id_type == ObjectIdType::INDEX_HASH);
+    FXL_DCHECK(id_type == ObjectIdType::INDEX_HASH);
 
-    ftl::StringView content;
+    fxl::StringView content;
     status = object->GetData(&content);
     if (status != Status::OK) {
       callback(status, nullptr);
@@ -409,7 +409,7 @@ void PageStorageImpl::GetObject(
       mx_status_t mx_status =
           vmo.duplicate(MX_RIGHT_DUPLICATE | MX_RIGHT_WRITE, &vmo_copy);
       if (mx_status != MX_OK) {
-        FTL_LOG(ERROR) << "Unable to duplicate vmo. Status: " << mx_status;
+        FXL_LOG(ERROR) << "Unable to duplicate vmo. Status: " << mx_status;
         callback(Status::INTERNAL_IO_ERROR, nullptr);
         return;
       }
@@ -418,7 +418,7 @@ void PageStorageImpl::GetObject(
       offset += child->size();
     }
     if (offset != file_index->size()) {
-      FTL_LOG(ERROR) << "Built file size doesn't add up.";
+      FXL_LOG(ERROR) << "Built file size doesn't add up.";
       callback(Status::FORMAT_ERROR, nullptr);
       return;
     }
@@ -426,7 +426,7 @@ void PageStorageImpl::GetObject(
     auto final_object =
         std::make_unique<VmoObject>(std::move(object_id), std::move(vmo));
 
-    waiter->Finalize(ftl::MakeCopyable([
+    waiter->Finalize(fxl::MakeCopyable([
       object = std::move(final_object), callback = std::move(callback)
     ](Status status) mutable { callback(status, std::move(object)); }));
   });
@@ -446,8 +446,8 @@ void PageStorageImpl::GetPiece(
   callback(status, std::move(object));
 }
 
-void PageStorageImpl::SetSyncMetadata(ftl::StringView key,
-                                      ftl::StringView value,
+void PageStorageImpl::SetSyncMetadata(fxl::StringView key,
+                                      fxl::StringView value,
                                       std::function<void(Status)> callback) {
   coroutine_service_->StartCoroutine([
     this, key = key.ToString(), value = value.ToString(),
@@ -460,7 +460,7 @@ void PageStorageImpl::SetSyncMetadata(ftl::StringView key,
   });
 }
 
-Status PageStorageImpl::GetSyncMetadata(ftl::StringView key,
+Status PageStorageImpl::GetSyncMetadata(fxl::StringView key,
                                         std::string* value) {
   return db_.GetSyncMetadata(key, value);
 }
@@ -491,7 +491,7 @@ void PageStorageImpl::GetEntryFromCommit(
     return false;
   };
 
-  auto on_done = ftl::MakeCopyable([
+  auto on_done = fxl::MakeCopyable([
     key_found = std::move(key_found), callback = std::move(callback)
   ](Status s) mutable {
     if (*key_found) {
@@ -536,7 +536,7 @@ Status PageStorageImpl::MarkAllPiecesLocal(CoroutineHandler* handler,
     auto it = seen_ids.insert(std::move(object_ids.back()));
     object_ids.pop_back();
     const ObjectId& object_id = *(it.first);
-    FTL_DCHECK(GetObjectIdType(object_id) != ObjectIdType::INLINE);
+    FXL_DCHECK(GetObjectIdType(object_id) != ObjectIdType::INLINE);
     batch->SetObjectStatus(handler, object_id, PageDbObjectStatus::LOCAL);
     if (GetObjectIdType(object_id) == ObjectIdType::INDEX_HASH) {
       std::unique_ptr<const Object> object;
@@ -545,7 +545,7 @@ Status PageStorageImpl::MarkAllPiecesLocal(CoroutineHandler* handler,
         return status;
       }
 
-      ftl::StringView content;
+      fxl::StringView content;
       status = object->GetData(&content);
       if (status != Status::OK) {
         return status;
@@ -588,7 +588,7 @@ void PageStorageImpl::AddPiece(ObjectId object_id,
                                std::unique_ptr<DataSource::DataChunk> data,
                                ChangeSource source,
                                std::function<void(Status)> callback) {
-  coroutine_service_->StartCoroutine(ftl::MakeCopyable([
+  coroutine_service_->StartCoroutine(fxl::MakeCopyable([
     this, object_id = std::move(object_id), data = std::move(data), source,
     final_callback = std::move(callback)
   ](CoroutineHandler * handler) mutable {
@@ -601,8 +601,8 @@ void PageStorageImpl::AddPiece(ObjectId object_id,
 
 void PageStorageImpl::DownloadFullObject(ObjectIdView object_id,
                                          std::function<void(Status)> callback) {
-  FTL_DCHECK(page_sync_);
-  FTL_DCHECK(GetObjectIdType(object_id) != ObjectIdType::INLINE);
+  FXL_DCHECK(page_sync_);
+  FXL_DCHECK(GetObjectIdType(object_id) != ObjectIdType::INLINE);
 
   page_sync_->GetObject(object_id, [
     this, callback = std::move(callback), object_id = object_id.ToString()
@@ -620,7 +620,7 @@ void PageStorageImpl::DownloadFullObject(ObjectIdView object_id,
       }
 
       auto object_id_type = GetObjectIdType(object_id);
-      FTL_DCHECK(object_id_type == ObjectIdType::VALUE_HASH ||
+      FXL_DCHECK(object_id_type == ObjectIdType::VALUE_HASH ||
                  object_id_type == ObjectIdType::INDEX_HASH);
 
       if (object_id !=
@@ -654,7 +654,7 @@ void PageStorageImpl::DownloadFullObject(ObjectIdView object_id,
         return;
       }
 
-      waiter->Finalize(ftl::MakeCopyable([
+      waiter->Finalize(fxl::MakeCopyable([
         this, object_id = std::move(object_id), chunk = std::move(chunk),
         callback = std::move(callback)
       ](Status status) mutable {
@@ -699,7 +699,7 @@ bool PageStorageImpl::ObjectIsUntracked(ObjectIdView object_id) {
 
   PageDbObjectStatus object_status;
   Status status = db_.GetObjectStatus(object_id, &object_status);
-  FTL_DCHECK(status == Status::OK);
+  FXL_DCHECK(status == Status::OK);
   return object_status == PageDbObjectStatus::TRANSIENT;
 }
 
@@ -709,7 +709,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
     size_t offset,
     size_t size,
     std::function<void(Status)> callback) {
-  GetPiece(object_id, ftl::MakeCopyable([
+  GetPiece(object_id, fxl::MakeCopyable([
              this, vmo = std::move(vmo), offset, size,
              callback = std::move(callback)
            ](Status status, std::unique_ptr<const Object> object) mutable {
@@ -718,8 +718,8 @@ void PageStorageImpl::FillBufferWithObjectContent(
                return;
              }
 
-             FTL_DCHECK(object);
-             ftl::StringView content;
+             FXL_DCHECK(object);
+             fxl::StringView content;
              status = object->GetData(&content);
              if (status != Status::OK) {
                callback(status);
@@ -730,7 +730,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
              if (id_type == ObjectIdType::INLINE ||
                  id_type == ObjectIdType::VALUE_HASH) {
                if (size != content.size()) {
-                 FTL_LOG(ERROR)
+                 FXL_LOG(ERROR)
                      << "Error in serialization format. Expecting object: "
                      << convert::ToHex(object->GetId())
                      << " to have size: " << size
@@ -742,13 +742,13 @@ void PageStorageImpl::FillBufferWithObjectContent(
                mx_status_t mx_status =
                    vmo.write(content.data(), offset, size, &written_size);
                if (mx_status != MX_OK) {
-                 FTL_LOG(ERROR)
+                 FXL_LOG(ERROR)
                      << "Unable to write to vmo. Status: " << mx_status;
                  callback(Status::INTERNAL_IO_ERROR);
                  return;
                }
                if (written_size != size) {
-                 FTL_LOG(ERROR)
+                 FXL_LOG(ERROR)
                      << "Error when writing content to vmo. Expected to write:"
                      << size << " but only wrote: " << written_size;
                  callback(Status::INTERNAL_IO_ERROR);
@@ -766,7 +766,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
                return;
              }
              if (file_index->size() != size) {
-               FTL_LOG(ERROR)
+               FXL_LOG(ERROR)
                    << "Error in serialization format. Expecting object: "
                    << convert::ToHex(object->GetId())
                    << " to have size: " << size
@@ -787,7 +787,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
                mx_status_t mx_status = vmo.duplicate(
                    MX_RIGHT_DUPLICATE | MX_RIGHT_WRITE, &vmo_copy);
                if (mx_status != MX_OK) {
-                 FTL_LOG(ERROR)
+                 FXL_LOG(ERROR)
                      << "Unable to duplicate vmo. Status: " << mx_status;
                  callback(Status::INTERNAL_IO_ERROR);
                  return;
@@ -808,7 +808,7 @@ void PageStorageImpl::ReadDataSource(
   auto handler = pending_operation_manager_.Manage(std::move(data_source));
   auto chunks = std::vector<std::unique_ptr<DataSource::DataChunk>>();
   (*handler.first)
-      ->Get(ftl::MakeCopyable([
+      ->Get(fxl::MakeCopyable([
         cleanup = std::move(handler.second), chunks = std::move(chunks),
         callback = std::move(callback)
       ](std::unique_ptr<DataSource::DataChunk> chunk,
@@ -826,7 +826,7 @@ void PageStorageImpl::ReadDataSource(
           return;
         }
 
-        FTL_DCHECK(status == DataSource::Status::DONE);
+        FXL_DCHECK(status == DataSource::Status::DONE);
 
         if (chunks.empty()) {
           callback(Status::OK, DataSource::DataChunk::Create(""));
@@ -890,7 +890,7 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
     std::unique_ptr<Journal> journal;
     s = db_.GetImplicitJournal(handler, id, &journal);
     if (s != Status::OK) {
-      FTL_LOG(ERROR) << "Failed to get implicit journal with status " << s
+      FXL_LOG(ERROR) << "Failed to get implicit journal with status " << s
                      << ". journal id: " << id;
       return s;
     }
@@ -899,7 +899,7 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
         std::move(journal), [status_callback = waiter->NewCallback()](
                                 Status status, std::unique_ptr<const Commit>) {
           if (status != Status::OK) {
-            FTL_LOG(ERROR) << "Failed to commit implicit journal created in "
+            FXL_LOG(ERROR) << "Failed to commit implicit journal created in "
                               "previous Ledger execution.";
           }
           status_callback(status);
@@ -986,7 +986,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
     std::unique_ptr<const Commit> commit =
         CommitImpl::FromStorageBytes(this, id, std::move(storage_bytes));
     if (!commit) {
-      FTL_LOG(ERROR) << "Unable to add commit. Id: " << convert::ToHex(id);
+      FXL_LOG(ERROR) << "Unable to add commit. Id: " << convert::ToHex(id);
       return Status::FORMAT_ERROR;
     }
 
@@ -1100,7 +1100,7 @@ Status PageStorageImpl::SynchronousAddCommits(
         if (added_commits.count(&parent_id) == 0) {
           s = ContainsCommit(handler, parent_id);
           if (s != Status::OK) {
-            FTL_LOG(ERROR) << "Failed to find parent commit \""
+            FXL_LOG(ERROR) << "Failed to find parent commit \""
                            << ToHex(parent_id) << "\" of commit \""
                            << convert::ToHex(commit->GetId())
                            << "\". Temporarily skipping in case the commits "
@@ -1187,10 +1187,10 @@ Status PageStorageImpl::SynchronousAddCommits(
     ledger::ReportEvent(ledger::CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER);
   }
   if (!commits.empty()) {
-    FTL_DCHECK(commits_were_out_of_order);
+    FXL_DCHECK(commits_were_out_of_order);
     ledger::ReportEvent(
         ledger::CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER_NOT_RECOVERED);
-    FTL_LOG(ERROR) << "Failed adding commits. Found " << commits.size()
+    FXL_LOG(ERROR) << "Failed adding commits. Found " << commits.size()
                    << " orphaned commits.";
     return Status::ILLEGAL_STATE;
   }
@@ -1213,8 +1213,8 @@ Status PageStorageImpl::SynchronousAddPiece(
     ObjectId object_id,
     std::unique_ptr<DataSource::DataChunk> data,
     ChangeSource source) {
-  FTL_DCHECK(GetObjectIdType(object_id) != ObjectIdType::INLINE);
-  FTL_DCHECK(
+  FXL_DCHECK(GetObjectIdType(object_id) != ObjectIdType::INLINE);
+  FXL_DCHECK(
       object_id ==
       ComputeObjectId(GetObjectType(GetObjectIdType(object_id)), data->Get()));
 

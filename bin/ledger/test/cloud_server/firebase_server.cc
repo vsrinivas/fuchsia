@@ -19,22 +19,22 @@
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/glue/socket/socket_pair.h"
 #include "apps/ledger/src/glue/socket/socket_writer.h"
-#include "lib/ftl/arraysize.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/concatenate.h"
-#include "lib/ftl/strings/split_string.h"
-#include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/fxl/arraysize.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/concatenate.h"
+#include "lib/fxl/strings/split_string.h"
+#include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/mtl/vmo/strings.h"
 #include "lib/url/gurl.h"
 
 namespace ledger {
 
 namespace {
-constexpr ftl::StringView kAuth = "auth";
-constexpr ftl::StringView kOrderBy = "orderBy";
-constexpr ftl::StringView kStartAt = "startAt";
+constexpr fxl::StringView kAuth = "auth";
+constexpr fxl::StringView kOrderBy = "orderBy";
+constexpr fxl::StringView kStartAt = "startAt";
 
-constexpr ftl::StringView kExpectedQueryParameters[] = {kAuth, kOrderBy,
+constexpr fxl::StringView kExpectedQueryParameters[] = {kAuth, kOrderBy,
                                                         kStartAt};
 
 // Filter for a Firebase query. |key| is the name of the field to consider, and
@@ -57,12 +57,12 @@ class ListenerContainer : public glue::SocketWriter::Client {
   void Start(mx::socket socket) { writer_.Start(std::move(socket)); }
 
   void SendChunk(std::string data) {
-    FTL_DCHECK(!data.empty());
+    FXL_DCHECK(!data.empty());
     content_.push_back(std::move(data));
     CallWriterBack();
   }
 
-  void set_on_empty(ftl::Closure on_done) { on_done_ = std::move(on_done); }
+  void set_on_empty(fxl::Closure on_done) { on_done_ = std::move(on_done); }
 
  private:
   void CallWriterBack() {
@@ -70,10 +70,10 @@ class ListenerContainer : public glue::SocketWriter::Client {
       return;
     }
 
-    FTL_DCHECK(max_size_ > 0);
-    ftl::StringView to_send = content_[0];
+    FXL_DCHECK(max_size_ > 0);
+    fxl::StringView to_send = content_[0];
     to_send = to_send.substr(0, max_size_);
-    FTL_DCHECK(!to_send.empty());
+    FXL_DCHECK(!to_send.empty());
     // writer_callback_ needs to be reset before calling it, because GetNext
     // might be called synchronously.
     auto callback = std::move(writer_callback_);
@@ -84,10 +84,10 @@ class ListenerContainer : public glue::SocketWriter::Client {
   // glue::SocketWriter::Client
   void GetNext(size_t offset,
                size_t max_size,
-               std::function<void(ftl::StringView)> callback) override {
+               std::function<void(fxl::StringView)> callback) override {
     size_t to_remove = offset - current_offset_;
     while (to_remove > 0) {
-      FTL_DCHECK(!content_.empty());
+      FXL_DCHECK(!content_.empty());
       if (content_[0].size() <= to_remove) {
         to_remove -= content_[0].size();
         content_.pop_front();
@@ -102,20 +102,20 @@ class ListenerContainer : public glue::SocketWriter::Client {
     CallWriterBack();
   }
   void OnDataComplete() override {
-    FTL_DCHECK(on_done_);
+    FXL_DCHECK(on_done_);
     on_done_();
   }
 
   glue::SocketWriter writer_;
   const std::unique_ptr<Filter> filter_;
   std::deque<std::string> content_;
-  ftl::Closure on_done_;
-  std::function<void(ftl::StringView)> writer_callback_;
+  fxl::Closure on_done_;
+  std::function<void(fxl::StringView)> writer_callback_;
   size_t current_offset_ = 0u;
   size_t max_size_ = 0u;
 };
 
-std::string UrlDecode(ftl::StringView value) {
+std::string UrlDecode(fxl::StringView value) {
   std::ostringstream result;
   while (!value.empty()) {
     if (value[0] != '%') {
@@ -123,10 +123,10 @@ std::string UrlDecode(ftl::StringView value) {
       value = value.substr(1);
       continue;
     }
-    FTL_DCHECK(value.size() >= 3);
+    FXL_DCHECK(value.size() >= 3);
     unsigned char c;
-    if (!ftl::StringToNumberWithError(value.substr(1, 2), &c, ftl::Base::k16)) {
-      FTL_NOTREACHED();
+    if (!fxl::StringToNumberWithError(value.substr(1, 2), &c, fxl::Base::k16)) {
+      FXL_NOTREACHED();
     }
     result << c;
     value = value.substr(3);
@@ -154,7 +154,7 @@ std::string Serialize(rapidjson::Value* value, Filter* filter) {
   for (auto it = value->MemberBegin(); it != value->MemberEnd(); ++it) {
     if (!it->value.IsObject() || !it->value.HasMember(filter->key) ||
         !it->value[filter->key].IsInt64()) {
-      FTL_NOTREACHED()
+      FXL_NOTREACHED()
           << "Data does not conform to the expected schema, cannot find field "
           << filter->key << " in " << Serialize(&it->value, nullptr);
     }
@@ -179,11 +179,11 @@ std::string BuildPathRepresentation(FirebaseServer::PathView path) {
   return result.str();
 }
 
-std::string BuildEvent(ftl::StringView event_name,
+std::string BuildEvent(fxl::StringView event_name,
                        FirebaseServer::PathView path,
                        rapidjson::Value* value,
                        Filter* filter) {
-  return ftl::Concatenate({"event: ", event_name, "\ndata: {\"path\":\"",
+  return fxl::Concatenate({"event: ", event_name, "\ndata: {\"path\":\"",
                            BuildPathRepresentation(path),
                            "\",\"data\":", Serialize(value, filter), "}\n\n"});
 }
@@ -197,14 +197,14 @@ std::unique_ptr<Filter> ExtractFilter(const url::GURL& url) {
 
   std::string query_string = url.query();
   std::unordered_map<std::string, std::string> queries;
-  for (const auto& query : ftl::SplitString(
-           query_string, "&", ftl::WhiteSpaceHandling::kKeepWhitespace,
-           ftl::SplitResult::kSplitWantAll)) {
+  for (const auto& query : fxl::SplitString(
+           query_string, "&", fxl::WhiteSpaceHandling::kKeepWhitespace,
+           fxl::SplitResult::kSplitWantAll)) {
     auto split =
-        ftl::SplitString(query, "=", ftl::WhiteSpaceHandling::kKeepWhitespace,
-                         ftl::SplitResult::kSplitWantAll);
-    FTL_DCHECK(split.size() == 2) << "Unparseable query: " << query;
-    FTL_DCHECK(std::find(kExpectedQueryParameters,
+        fxl::SplitString(query, "=", fxl::WhiteSpaceHandling::kKeepWhitespace,
+                         fxl::SplitResult::kSplitWantAll);
+    FXL_DCHECK(split.size() == 2) << "Unparseable query: " << query;
+    FXL_DCHECK(std::find(kExpectedQueryParameters,
                          kExpectedQueryParameters +
                              arraysize(kExpectedQueryParameters),
                          split[0]) !=
@@ -213,7 +213,7 @@ std::unique_ptr<Filter> ExtractFilter(const url::GURL& url) {
     queries[UrlDecode(split[0])] = UrlDecode(split[1]);
   }
 
-  FTL_DCHECK(queries.count(kOrderBy.ToString()) ==
+  FXL_DCHECK(queries.count(kOrderBy.ToString()) ==
              queries.count(kStartAt.ToString()))
       << "Both orderBy and startAt must be present.";
   if (!queries.count(kOrderBy.ToString())) {
@@ -221,17 +221,17 @@ std::unique_ptr<Filter> ExtractFilter(const url::GURL& url) {
   }
 
   std::string& order_by = queries[kOrderBy.ToString()];
-  FTL_DCHECK(order_by[0] == '"' && order_by[order_by.size() - 1] == '"')
+  FXL_DCHECK(order_by[0] == '"' && order_by[order_by.size() - 1] == '"')
       << order_by;
-  FTL_DCHECK(std::find(order_by.begin(), order_by.end(), '/') == order_by.end())
+  FXL_DCHECK(std::find(order_by.begin(), order_by.end(), '/') == order_by.end())
       << "Not handling complex path in orderBy";
   order_by = order_by.substr(1, order_by.size() - 2);
   std::string& start_at = queries[kStartAt.ToString()];
 
   auto result = std::make_unique<Filter>();
   result->key = order_by;
-  if (!ftl::StringToNumberWithError(start_at, &result->start_at)) {
-    FTL_NOTREACHED() << "Invalid filter, " << start_at << " is not an int.";
+  if (!fxl::StringToNumberWithError(start_at, &result->start_at)) {
+    FXL_NOTREACHED() << "Invalid filter, " << start_at << " is not an int.";
   }
   return result;
 }
@@ -286,18 +286,18 @@ void FillTimestamp(rapidjson::Value* value,
 }
 
 FirebaseServer::Path GetPath(const url::GURL& url) {
-  constexpr ftl::StringView json_suffix = ".json";
+  constexpr fxl::StringView json_suffix = ".json";
 
   std::string path = url.path();
-  ftl::StringView path_view = path;
-  FTL_DCHECK(path_view[0] == '/');
+  fxl::StringView path_view = path;
+  FXL_DCHECK(path_view[0] == '/');
   path_view = path_view.substr(1);
-  FTL_DCHECK(path_view.substr(path_view.size() - json_suffix.size()) ==
+  FXL_DCHECK(path_view.substr(path_view.size() - json_suffix.size()) ==
              json_suffix);
   path_view = path_view.substr(0, path_view.size() - json_suffix.size());
-  return ftl::SplitStringCopy(path_view, "/",
-                              ftl::WhiteSpaceHandling::kKeepWhitespace,
-                              ftl::SplitResult::kSplitWantAll);
+  return fxl::SplitStringCopy(path_view, "/",
+                              fxl::WhiteSpaceHandling::kKeepWhitespace,
+                              fxl::SplitResult::kSplitWantAll);
 }
 }  // namespace
 
@@ -391,7 +391,7 @@ void FirebaseServer::HandlePatch(
     const std::function<void(network::URLResponsePtr)> callback) {
   std::string body;
   if (!mtl::StringFromVmo(request->body->get_buffer(), &body)) {
-    FTL_NOTREACHED();
+    FXL_NOTREACHED();
   }
 
   url::GURL url(request->url);
@@ -400,7 +400,7 @@ void FirebaseServer::HandlePatch(
 
   rapidjson::Document new_value;
   new_value.Parse(body.c_str(), body.size());
-  FTL_DCHECK(!new_value.HasParseError());
+  FXL_DCHECK(!new_value.HasParseError());
 
   FillTimestamp(&new_value, &new_value);
 
@@ -430,12 +430,12 @@ void FirebaseServer::HandlePut(
     const std::function<void(network::URLResponsePtr)> callback) {
   std::string body;
   if (!mtl::StringFromVmo(request->body->get_buffer(), &body)) {
-    FTL_NOTREACHED();
+    FXL_NOTREACHED();
   }
 
   url::GURL url(request->url);
   auto path = GetPath(url);
-  FTL_DCHECK(!path.empty());
+  FXL_DCHECK(!path.empty());
   auto sub_path = PathView(path, path.begin(), path.end() - 1);
   rapidjson::Value* value = GetValueAtPath(sub_path, true);
 
@@ -447,7 +447,7 @@ void FirebaseServer::HandlePut(
 
   rapidjson::Document new_value;
   new_value.Parse(body.c_str(), body.size());
-  FTL_DCHECK(!new_value.HasParseError());
+  FXL_DCHECK(!new_value.HasParseError());
 
   FillTimestamp(&new_value, &new_value);
   rapidjson::Value key(path.back().c_str(), document_.GetAllocator());

@@ -9,9 +9,9 @@
 namespace test {
 namespace benchmark {
 
-bool QuitOnError(ledger::Status status, ftl::StringView description) {
+bool QuitOnError(ledger::Status status, fxl::StringView description) {
   if (status != ledger::Status::OK) {
-    FTL_LOG(ERROR) << description << " failed";
+    FXL_LOG(ERROR) << description << " failed";
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
     return true;
   }

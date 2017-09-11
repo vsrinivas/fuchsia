@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "apps/ledger/src/storage/public/types.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 #define RETURN_ON_ERROR(expr)   \
   do {                          \
@@ -24,7 +24,7 @@ namespace btree {
 // Returns the index of |entries| that contains |key|, or the first entry that
 // has a key greather than |key|. In the second case, the key, if present, will
 // be found in the children at the returned index.
-size_t GetEntryOrChildIndex(std::vector<Entry> entries, ftl::StringView key);
+size_t GetEntryOrChildIndex(std::vector<Entry> entries, fxl::StringView key);
 
 }  // namespace btree
 }  // namespace storage

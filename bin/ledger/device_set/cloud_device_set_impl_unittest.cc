@@ -9,7 +9,7 @@
 #include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace cloud_provider_firebase {
 namespace {
@@ -43,14 +43,14 @@ class FakeFirebase : public firebase::Firebase {
       const std::vector<std::string>& /*query_params*/,
       const std::string& /*data*/,
       std::function<void(firebase::Status status)> /*callback*/) override {
-    FTL_NOTREACHED();
+    FXL_NOTREACHED();
   }
 
   void Delete(
       const std::string& /*key*/,
       const std::vector<std::string>& /*query_params*/,
       std::function<void(firebase::Status status)> /*callback*/) override {
-    FTL_NOTREACHED();
+    FXL_NOTREACHED();
   }
 
   void Watch(const std::string& key,

@@ -15,8 +15,8 @@
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -82,7 +82,7 @@ class FirebaseImplTest : public test::TestWithMessageLoop, public WatchClient {
  private:
   // Used for its allocator which we use to make copies of rapidjson Values.
   rapidjson::Document document_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(FirebaseImplTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FirebaseImplTest);
 };
 
 // Verifies that GET requests are handled correctly.
@@ -420,7 +420,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
 
   // TODO(ppi): how to avoid the wait?
   message_loop_.task_runner()->PostDelayedTask(
-      MakeQuitTask(), ftl::TimeDelta::FromMilliseconds(100));
+      MakeQuitTask(), fxl::TimeDelta::FromMilliseconds(100));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(2u, put_count_);

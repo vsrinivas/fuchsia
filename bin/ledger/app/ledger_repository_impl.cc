@@ -69,7 +69,7 @@ void LedgerRepositoryImpl::GetLedger(
         std::forward_as_tuple(std::move(name_as_string)),
         std::forward_as_tuple(environment_, std::move(ledger_storage),
                               std::move(ledger_sync)));
-    FTL_DCHECK(result.second);
+    FXL_DCHECK(result.second);
     it = result.first;
   }
 

@@ -8,7 +8,7 @@
 #include "apps/ledger/src/auth_provider/test/test_auth_provider.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "garnet/public/lib/fidl/cpp/bindings/binding.h"
-#include "garnet/public/lib/ftl/macros.h"
+#include "garnet/public/lib/fxl/macros.h"
 
 namespace cloud_provider_firebase {
 
@@ -24,7 +24,7 @@ class PageCloudImplTest : public test::TestWithMessageLoop {
   PageCloudImpl page_cloud_impl_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageCloudImplTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageCloudImplTest);
 };
 
 TEST_F(PageCloudImplTest, EmptyWhenDisconnected) {

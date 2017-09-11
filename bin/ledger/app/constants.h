@@ -6,7 +6,7 @@
 #define APPS_LEDGER_SRC_APP_CONSTANTS_H_
 
 #include "apps/ledger/src/storage/public/types.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace ledger {
 
@@ -14,11 +14,11 @@ namespace ledger {
 constexpr size_t kPageIdSize = 16;
 
 // The root id. The array size must be equal to |kPageIdSize|.
-extern const ftl::StringView kRootPageId;
+extern const fxl::StringView kRootPageId;
 
 // Filename under which the server id used to sync a given user is stored within
 // the repository dir of that user.
-constexpr ftl::StringView kServerIdFilename = "server_id";
+constexpr fxl::StringView kServerIdFilename = "server_id";
 
 }  // namespace ledger
 

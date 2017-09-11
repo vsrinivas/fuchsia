@@ -8,7 +8,7 @@
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/cloud_sync/public/sync_state_watcher.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace ledger {
 
@@ -33,7 +33,7 @@ class SyncWatcherSet : public cloud_sync::SyncStateWatcher {
   SyncStateContainer current_;
   callback::AutoCleanableSet<SyncWatcherContainer> watchers_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherSet);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherSet);
 };
 
 }  // namespace ledger

@@ -19,7 +19,7 @@
 #include "apps/ledger/src/storage/test/commit_empty_impl.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace ledger {
@@ -30,7 +30,7 @@ std::unique_ptr<MergeResolver> GetDummyResolver(Environment* environment,
   return std::make_unique<MergeResolver>(
       [] {}, environment, storage,
       std::make_unique<backoff::ExponentialBackoff>(
-          ftl::TimeDelta::FromSeconds(0), 1u, ftl::TimeDelta::FromSeconds(0)));
+          fxl::TimeDelta::FromSeconds(0), 1u, fxl::TimeDelta::FromSeconds(0)));
 }
 
 class FakePageSync : public cloud_sync::test::PageSyncEmptyImpl {
@@ -38,12 +38,12 @@ class FakePageSync : public cloud_sync::test::PageSyncEmptyImpl {
   void Start() override { start_called = true; }
 
   void SetOnBacklogDownloaded(
-      ftl::Closure on_backlog_downloaded_callback) override {
+      fxl::Closure on_backlog_downloaded_callback) override {
     this->on_backlog_downloaded_callback =
         std::move(on_backlog_downloaded_callback);
   }
 
-  void SetOnIdle(ftl::Closure on_idle) override { this->on_idle = on_idle; }
+  void SetOnIdle(fxl::Closure on_idle) override { this->on_idle = on_idle; }
 
   void SetSyncWatcher(cloud_sync::SyncStateWatcher* watcher) override {
     this->watcher = watcher;
@@ -51,8 +51,8 @@ class FakePageSync : public cloud_sync::test::PageSyncEmptyImpl {
 
   bool start_called = false;
   cloud_sync::SyncStateWatcher* watcher = nullptr;
-  ftl::Closure on_backlog_downloaded_callback;
-  ftl::Closure on_idle;
+  fxl::Closure on_backlog_downloaded_callback;
+  fxl::Closure on_idle;
 };
 
 class PageManagerTest : public test::TestWithMessageLoop {
@@ -72,7 +72,7 @@ class PageManagerTest : public test::TestWithMessageLoop {
   Environment environment_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageManagerTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageManagerTest);
 };
 
 TEST_F(PageManagerTest, OnEmptyCallback) {
@@ -227,14 +227,14 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   page_manager.BindPage(page.NewRequest(),
                         callback::Capture(MakeQuitTask(), &status));
   // The page shouldn't be bound until sync backlog is downloaded.
-  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(200)));
+  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(200)));
 
   page->GetId([this, &called](fidl::Array<uint8_t> id) {
     called = true;
     message_loop_.PostQuitTask();
   });
 
-  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(200)));
+  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(200)));
   EXPECT_FALSE(called);
 
   fake_page_sync_ptr->on_backlog_downloaded_callback();
@@ -275,7 +275,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
   PageManager page_manager(&environment_, std::move(storage),
                            std::move(page_sync_context), std::move(merger),
                            PageManager::PageStorageState::NEW,
-                           ftl::TimeDelta::FromSeconds(0));
+                           fxl::TimeDelta::FromSeconds(0));
 
   EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
   EXPECT_TRUE(fake_page_sync_ptr->start_called);
@@ -312,7 +312,7 @@ TEST_F(PageManagerTest, ExitWhenSyncFinishes) {
   PageManager page_manager(&environment_, std::move(storage),
                            std::move(page_sync_context), std::move(merger),
                            PageManager::PageStorageState::NEW,
-                           ftl::TimeDelta::FromSeconds(0));
+                           fxl::TimeDelta::FromSeconds(0));
 
   EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
 
@@ -345,7 +345,7 @@ TEST_F(PageManagerTest, DontDelayBindingWithLocalPageStorage) {
       &environment_, std::move(storage), std::move(page_sync_context),
       std::move(merger), PageManager::PageStorageState::EXISTING,
       // Use a long timeout to ensure the test does not hit it.
-      ftl::TimeDelta::FromSeconds(3600));
+      fxl::TimeDelta::FromSeconds(3600));
 
   EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
   EXPECT_TRUE(fake_page_sync_ptr->start_called);

@@ -30,14 +30,14 @@
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/arraysize.h"
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/files/path.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/arraysize.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/files/path.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
@@ -90,7 +90,7 @@ class FakeCommitWatcher : public CommitWatcher {
 class DelayingFakeSyncDelegate : public PageSyncDelegate {
  public:
   explicit DelayingFakeSyncDelegate(
-      std::function<void(ftl::Closure)> on_get_object)
+      std::function<void(fxl::Closure)> on_get_object)
       : on_get_object_(std::move(on_get_object)) {}
 
   void AddObject(ObjectIdView object_id, const std::string& value) {
@@ -112,14 +112,14 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
   std::set<ObjectId> object_requests;
 
  private:
-  std::function<void(ftl::Closure)> on_get_object_;
+  std::function<void(fxl::Closure)> on_get_object_;
   std::map<ObjectId, std::string> id_to_value_;
 };
 
 class FakeSyncDelegate : public DelayingFakeSyncDelegate {
  public:
   FakeSyncDelegate()
-      : DelayingFakeSyncDelegate([](ftl::Closure callback) { callback(); }) {}
+      : DelayingFakeSyncDelegate([](fxl::Closure callback) { callback(); }) {}
 };
 
 // Implements |Init()|, |CreateJournal() and |CreateMergeJournal()| and
@@ -254,7 +254,7 @@ class PageStorageTest : public StorageTest {
     EXPECT_NE(nullptr, journal);
 
     for (int i = 0; i < keys; ++i) {
-      auto key = ftl::StringPrintf("key%05d", i);
+      auto key = fxl::StringPrintf("key%05d", i);
       if (key.size() < min_key_size) {
         key.resize(min_key_size);
       }
@@ -270,7 +270,7 @@ class PageStorageTest : public StorageTest {
     std::vector<Entry> entries = GetCommitContents(*commit);
     EXPECT_EQ(static_cast<size_t>(keys), entries.size());
     for (int i = 0; i < keys; ++i) {
-      auto key = ftl::StringPrintf("key%05d", i);
+      auto key = fxl::StringPrintf("key%05d", i);
       if (key.size() < min_key_size) {
         key.resize(min_key_size);
       }
@@ -365,7 +365,7 @@ class PageStorageTest : public StorageTest {
   std::unique_ptr<PageStorageImpl> storage_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageStorageTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageStorageTest);
 };
 
 TEST_F(PageStorageTest, AddGetLocalCommits) {
@@ -486,7 +486,7 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
     std::unique_ptr<const Object> root_object =
         TryGetObject(root_id, PageStorage::Location::NETWORK);
 
-    ftl::StringView root_data;
+    fxl::StringView root_data;
     ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
     sync.AddObject(root_id, root_data.ToString());
 
@@ -545,7 +545,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSynced) {
   std::unique_ptr<const Object> root_object =
       TryGetObject(root_id, PageStorage::Location::NETWORK);
 
-  ftl::StringView root_data;
+  fxl::StringView root_data;
   ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
   sync.AddObject(root_id, root_data.ToString());
 
@@ -673,7 +673,7 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
       CollectPieces(
           id,
           [this](ObjectIdView id,
-                 std::function<void(Status, ftl::StringView)> callback) {
+                 std::function<void(Status, fxl::StringView)> callback) {
             storage_->GetPiece(
                 id, [callback = std::move(callback)](
                         Status status, std::unique_ptr<const Object> object) {
@@ -681,7 +681,7 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
                     callback(status, "");
                     return;
                   }
-                  ftl::StringView data;
+                  fxl::StringView data;
                   status = object->GetData(&data);
                   callback(status, data);
                 });
@@ -771,7 +771,7 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
 
   std::unique_ptr<const Object> object;
   ASSERT_EQ(Status::OK, ReadObject(object_id, &object));
-  ftl::StringView content;
+  fxl::StringView content;
   ASSERT_EQ(Status::OK, object->GetData(&content));
   EXPECT_EQ(data.value, content);
   EXPECT_TRUE(storage_->ObjectIsUntracked(object_id));
@@ -838,7 +838,7 @@ TEST_F(PageStorageTest, AddLocalPiece) {
 
   std::unique_ptr<const Object> object;
   ASSERT_EQ(Status::OK, ReadObject(data.object_id, &object));
-  ftl::StringView content;
+  fxl::StringView content;
   ASSERT_EQ(Status::OK, object->GetData(&content));
   EXPECT_EQ(data.value, content);
   EXPECT_TRUE(storage_->ObjectIsUntracked(data.object_id));
@@ -857,7 +857,7 @@ TEST_F(PageStorageTest, AddSyncPiece) {
 
   std::unique_ptr<const Object> object;
   ASSERT_EQ(Status::OK, ReadObject(data.object_id, &object));
-  ftl::StringView content;
+  fxl::StringView content;
   ASSERT_EQ(Status::OK, object->GetData(&content));
   EXPECT_EQ(data.value, content);
   EXPECT_FALSE(storage_->ObjectIsUntracked(data.object_id));
@@ -871,7 +871,7 @@ TEST_F(PageStorageTest, GetObject) {
     std::unique_ptr<const Object> object =
         TryGetObject(data.object_id, PageStorage::Location::LOCAL);
     EXPECT_EQ(data.object_id, object->GetId());
-    ftl::StringView object_data;
+    fxl::StringView object_data;
     ASSERT_EQ(Status::OK, object->GetData(&object_data));
     EXPECT_EQ(data.value, convert::ToString(object_data));
   }));
@@ -886,7 +886,7 @@ TEST_F(PageStorageTest, GetObjectFromSync) {
   std::unique_ptr<const Object> object =
       TryGetObject(data.object_id, PageStorage::Location::NETWORK);
   EXPECT_EQ(data.object_id, object->GetId());
-  ftl::StringView object_data;
+  fxl::StringView object_data;
   ASSERT_EQ(Status::OK, object->GetData(&object_data));
   EXPECT_EQ(data.value, convert::ToString(object_data));
 
@@ -928,7 +928,7 @@ TEST_F(PageStorageTest, AddAndGetHugeObjectFromLocal) {
 
   std::unique_ptr<const Object> object =
       TryGetObject(object_id, PageStorage::Location::LOCAL);
-  ftl::StringView content;
+  fxl::StringView content;
   ASSERT_EQ(Status::OK, object->GetData(&content));
   EXPECT_EQ(data.value, content);
   EXPECT_TRUE(storage_->ObjectIsUntracked(object_id));
@@ -936,7 +936,7 @@ TEST_F(PageStorageTest, AddAndGetHugeObjectFromLocal) {
   // Check that the object is encoded with an index, and is different than the
   // piece obtained at |object_id|.
   std::unique_ptr<const Object> piece = TryGetPiece(object_id);
-  ftl::StringView piece_content;
+  fxl::StringView piece_content;
   ASSERT_EQ(Status::OK, piece->GetData(&piece_content));
   EXPECT_NE(content, piece_content);
 }
@@ -965,7 +965,7 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
     EXPECT_EQ(Status::OK, status);
 
     EXPECT_EQ(Status::OK,
-              journal->Put(ftl::StringPrintf("key%lu", i),
+              journal->Put(fxl::StringPrintf("key%lu", i),
                            data_array[i].object_id, KeyPriority::LAZY));
     TryCommitJournal(std::move(journal), Status::OK);
     commits.push_back(GetFirstHead()->GetId());
@@ -1145,7 +1145,7 @@ TEST_F(PageStorageTest, OrderOfCommitWatch) {
 }
 
 TEST_F(PageStorageTest, SyncMetadata) {
-  std::vector<std::pair<ftl::StringView, ftl::StringView>> keys_and_values = {
+  std::vector<std::pair<fxl::StringView, fxl::StringView>> keys_and_values = {
       {"foo1", "foo2"}, {"bar1", " bar2 "}};
   for (auto key_and_value : keys_and_values) {
     auto key = key_and_value.first;
@@ -1186,7 +1186,7 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
       sync.AddObject(value.object_id, value.value);
       std::unique_ptr<const Object> root_object =
           TryGetObject(object_ids[i], PageStorage::Location::NETWORK);
-      ftl::StringView root_data;
+      fxl::StringView root_data;
       ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
       sync.AddObject(object_ids[i], root_data.ToString());
 
@@ -1256,12 +1256,12 @@ TEST_F(PageStorageTest, Generation) {
 
 TEST_F(PageStorageTest, DeletionOnIOThread) {
   std::thread io_thread;
-  ftl::RefPtr<ftl::TaskRunner> io_runner;
+  fxl::RefPtr<fxl::TaskRunner> io_runner;
   io_thread = mtl::CreateThread(&io_runner);
   io_runner->PostTask([] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   bool called = false;
   EXPECT_FALSE(callback::RunSynchronously(
-      io_runner, [&called] { called = true; }, ftl::TimeDelta::FromSeconds(1)));
+      io_runner, [&called] { called = true; }, fxl::TimeDelta::FromSeconds(1)));
   EXPECT_FALSE(called);
   io_thread.join();
 }
@@ -1280,7 +1280,7 @@ TEST_F(PageStorageTest, GetEntryFromCommit) {
   ASSERT_EQ(Status::NOT_FOUND, status);
 
   for (int i = 0; i < size; ++i) {
-    std::string expected_key = ftl::StringPrintf("key%05d", i);
+    std::string expected_key = fxl::StringPrintf("key%05d", i);
     storage_->GetEntryFromCommit(
         *commit, expected_key,
         callback::Capture(MakeQuitTask(), &status, &entry));
@@ -1310,7 +1310,7 @@ TEST_F(PageStorageTest, WatcherForReEntrantCommits) {
 
   storage_->AddCommitFromLocal(
       std::move(commit1), {},
-      ftl::MakeCopyable([ this, commit2 = std::move(commit2) ](
+      fxl::MakeCopyable([ this, commit2 = std::move(commit2) ](
           Status status) mutable {
         EXPECT_EQ(Status::OK, status);
         storage_->AddCommitFromLocal(std::move(commit2), {}, [](Status status) {
@@ -1353,7 +1353,7 @@ TEST_F(PageStorageTest, NoOpCommit) {
 // Check that receiving a remote commit and commiting locally at the same time
 // do not prevent the commit to be marked as unsynced.
 TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
-  ftl::Closure sync_delegate_call;
+  fxl::Closure sync_delegate_call;
   DelayingFakeSyncDelegate sync(
       callback::Capture(MakeQuitTask(), &sync_delegate_call));
   storage_->SetSyncDelegate(&sync);

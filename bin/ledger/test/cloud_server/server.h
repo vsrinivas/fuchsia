@@ -8,7 +8,7 @@
 #include <unordered_map>
 
 #include "apps/network/services/network_service.fidl.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace ledger {
 
@@ -50,7 +50,7 @@ class Server {
                                         std::string body);
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Server);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Server);
 };
 
 }  // namespace ledger

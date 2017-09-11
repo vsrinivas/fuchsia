@@ -13,7 +13,7 @@
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/cloud_provider/public/commit.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace cloud_sync {
@@ -23,8 +23,8 @@ BatchUpload::BatchUpload(
     cloud_provider_firebase::CloudProvider* cloud_provider,
     auth_provider::AuthProvider* auth_provider,
     std::vector<std::unique_ptr<const storage::Commit>> commits,
-    ftl::Closure on_done,
-    ftl::Closure on_error,
+    fxl::Closure on_done,
+    fxl::Closure on_error,
     unsigned int max_concurrent_uploads)
     : storage_(storage),
       cloud_provider_(cloud_provider),
@@ -35,9 +35,9 @@ BatchUpload::BatchUpload(
       max_concurrent_uploads_(max_concurrent_uploads) {
   TRACE_ASYNC_BEGIN("ledger", "batch_upload",
                     reinterpret_cast<uintptr_t>(this));
-  FTL_DCHECK(storage_);
-  FTL_DCHECK(cloud_provider_);
-  FTL_DCHECK(auth_provider_);
+  FXL_DCHECK(storage_);
+  FXL_DCHECK(cloud_provider_);
+  FXL_DCHECK(auth_provider_);
 }
 
 BatchUpload::~BatchUpload() {
@@ -45,14 +45,14 @@ BatchUpload::~BatchUpload() {
 }
 
 void BatchUpload::Start() {
-  FTL_DCHECK(!started_);
-  FTL_DCHECK(!errored_);
+  FXL_DCHECK(!started_);
+  FXL_DCHECK(!errored_);
   started_ = true;
   RefreshAuthToken([this] {
     storage_->GetUnsyncedPieces(
         [this](storage::Status status,
                std::vector<storage::ObjectId> object_ids) {
-          FTL_DCHECK(status == storage::Status::OK);
+          FXL_DCHECK(status == storage::Status::OK);
           for (auto& object_id : object_ids) {
             remaining_object_ids_.push(std::move(object_id));
           }
@@ -62,14 +62,14 @@ void BatchUpload::Start() {
 }
 
 void BatchUpload::Retry() {
-  FTL_DCHECK(started_);
-  FTL_DCHECK(errored_);
+  FXL_DCHECK(started_);
+  FXL_DCHECK(errored_);
   errored_ = false;
   RefreshAuthToken([this] { StartObjectUpload(); });
 }
 
 void BatchUpload::StartObjectUpload() {
-  FTL_DCHECK(current_uploads_ == 0u);
+  FXL_DCHECK(current_uploads_ == 0u);
   // If there are no unsynced objects left, upload the commits.
   if (remaining_object_ids_.empty()) {
     FilterAndUploadCommits();
@@ -83,8 +83,8 @@ void BatchUpload::StartObjectUpload() {
 }
 
 void BatchUpload::UploadNextObject() {
-  FTL_DCHECK(!remaining_object_ids_.empty());
-  FTL_DCHECK(current_uploads_ < max_concurrent_uploads_);
+  FXL_DCHECK(!remaining_object_ids_.empty());
+  FXL_DCHECK(current_uploads_ < max_concurrent_uploads_);
   current_uploads_++;
   auto object_id_to_send = std::move(remaining_object_ids_.front());
   // Pop the object from the queue - if the upload fails, we will re-enqueue it.
@@ -92,7 +92,7 @@ void BatchUpload::UploadNextObject() {
   storage_->GetPiece(object_id_to_send,
                      [this](storage::Status storage_status,
                             std::unique_ptr<const storage::Object> object) {
-                       FTL_DCHECK(storage_status == storage::Status::OK);
+                       FXL_DCHECK(storage_status == storage::Status::OK);
                        UploadObject(std::move(object));
                      });
 }
@@ -101,13 +101,13 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
   mx::vmo data;
   auto status = object->GetVmo(&data);
   // TODO(ppi): LE-225 Handle disk IO errors.
-  FTL_DCHECK(status == storage::Status::OK);
+  FXL_DCHECK(status == storage::Status::OK);
 
   storage::ObjectId id = object->GetId();
   cloud_provider_->AddObject(auth_token_, object->GetId(), std::move(data), [
     this, id = std::move(id)
   ](cloud_provider_firebase::Status status) mutable {
-    FTL_DCHECK(current_uploads_ > 0);
+    FXL_DCHECK(current_uploads_ > 0);
     current_uploads_--;
 
     if (status != cloud_provider_firebase::Status::OK) {
@@ -123,7 +123,7 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
 
     // Uploading the object succeeded.
     storage_->MarkPieceSynced(id, [this](storage::Status status) {
-      FTL_DCHECK(status == storage::Status::OK);
+      FXL_DCHECK(status == storage::Status::OK);
 
       // Notify the user about the error once all pending uploads of the
       // recent retry complete.
@@ -175,7 +175,7 @@ void BatchUpload::FilterAndUploadCommits() {
 }
 
 void BatchUpload::UploadCommits() {
-  FTL_DCHECK(!errored_);
+  FXL_DCHECK(!errored_);
   std::vector<cloud_provider_firebase::Commit> commits;
   std::vector<storage::CommitId> ids;
   for (auto& storage_commit : commits_) {
@@ -190,7 +190,7 @@ void BatchUpload::UploadCommits() {
   ](cloud_provider_firebase::Status status) {
     // UploadCommit() is called as a last step of a so-far-successful upload
     // attempt, so we couldn't have failed before.
-    FTL_DCHECK(!errored_);
+    FXL_DCHECK(!errored_);
     if (status != cloud_provider_firebase::Status::OK) {
       errored_ = true;
       on_error_();
@@ -204,7 +204,7 @@ void BatchUpload::UploadCommits() {
     }
     waiter->Finalize([this](storage::Status status) {
       // TODO(nellyv): Handle IO errors. See LE-225.
-      FTL_DCHECK(status == storage::Status::OK);
+      FXL_DCHECK(status == storage::Status::OK);
       // This object can be deleted in the on_done_() callback, don't do
       // anything after the call.
       on_done_();
@@ -212,12 +212,12 @@ void BatchUpload::UploadCommits() {
   });
 }
 
-void BatchUpload::RefreshAuthToken(ftl::Closure on_refreshed) {
+void BatchUpload::RefreshAuthToken(fxl::Closure on_refreshed) {
   auth_token_requests_.emplace(auth_provider_->GetFirebaseToken([
     this, on_refreshed = std::move(on_refreshed)
   ](auth_provider::AuthStatus auth_status, std::string auth_token) {
     if (auth_status != auth_provider::AuthStatus::OK) {
-      FTL_LOG(ERROR) << "Failed to retrieve the auth token for upload.";
+      FXL_LOG(ERROR) << "Failed to retrieve the auth token for upload.";
       errored_ = true;
       on_error_();
       return;

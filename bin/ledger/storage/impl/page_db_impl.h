@@ -12,7 +12,7 @@
 #include "apps/ledger/src/coroutine/coroutine.h"
 #include "apps/ledger/src/storage/impl/leveldb.h"
 #include "apps/ledger/src/storage/impl/page_db.h"
-#include "lib/ftl/functional/auto_call.h"
+#include "lib/fxl/functional/auto_call.h"
 
 namespace storage {
 
@@ -40,7 +40,7 @@ class PageDbImpl : public PageDb {
                             const JournalId& journal_id,
                             std::unique_ptr<Journal>* journal) override;
   Status GetJournalValue(const JournalId& journal_id,
-                         ftl::StringView key,
+                         fxl::StringView key,
                          std::string* value) override;
   Status GetJournalEntries(
       const JournalId& journal_id,
@@ -56,7 +56,7 @@ class PageDbImpl : public PageDb {
   Status GetUnsyncedPieces(std::vector<ObjectId>* object_ids) override;
   Status GetObjectStatus(ObjectIdView object_id,
                          PageDbObjectStatus* object_status) override;
-  Status GetSyncMetadata(ftl::StringView key, std::string* value) override;
+  Status GetSyncMetadata(fxl::StringView key, std::string* value) override;
 
   Status AddHead(coroutine::CoroutineHandler* handler,
                  CommitIdView head,
@@ -65,7 +65,7 @@ class PageDbImpl : public PageDb {
                     CommitIdView head) override;
   Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler,
                                const CommitId& commit_id,
-                               ftl::StringView storage_bytes) override;
+                               fxl::StringView storage_bytes) override;
   Status RemoveCommit(coroutine::CoroutineHandler* handler,
                       const CommitId& commit_id) override;
   Status CreateJournal(coroutine::CoroutineHandler* handler,
@@ -79,8 +79,8 @@ class PageDbImpl : public PageDb {
   Status RemoveExplicitJournals(coroutine::CoroutineHandler* handler) override;
   Status RemoveJournal(const JournalId& journal_id) override;
   Status AddJournalEntry(const JournalId& journal_id,
-                         ftl::StringView key,
-                         ftl::StringView value,
+                         fxl::StringView key,
+                         fxl::StringView value,
                          KeyPriority priority) override;
   Status RemoveJournalEntry(const JournalId& journal_id,
                             convert::ExtendedStringView key) override;
@@ -99,8 +99,8 @@ class PageDbImpl : public PageDb {
                          ObjectIdView object_id,
                          PageDbObjectStatus object_status) override;
   Status SetSyncMetadata(coroutine::CoroutineHandler* handler,
-                         ftl::StringView key,
-                         ftl::StringView value) override;
+                         fxl::StringView key,
+                         fxl::StringView value) override;
 
  private:
   coroutine::CoroutineService* const coroutine_service_;

@@ -7,17 +7,17 @@
 #include <openssl/digest.h>
 #include <openssl/hkdf.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace glue {
 
-std::string HMAC256KDF(ftl::StringView data, size_t length) {
+std::string HMAC256KDF(fxl::StringView data, size_t length) {
   std::string output;
   output.resize(length);
   int result = HKDF(reinterpret_cast<uint8_t*>(&output[0]), output.size(),
                     EVP_sha256(), reinterpret_cast<const uint8_t*>(data.data()),
                     data.size(), nullptr, 0u, nullptr, 0u);
-  FTL_CHECK(result == 1);
+  FXL_CHECK(result == 1);
   return output;
 }
 

@@ -31,7 +31,7 @@ source_set("lib") {
     "//apps/ledger/src/test:lib",
     "//apps/ledger/src/test/benchmark/lib",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }
@@ -41,7 +41,7 @@ executable("ledger_benchmark_put") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/trace-provider",
   ]

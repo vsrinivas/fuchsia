@@ -33,7 +33,7 @@ void SplitDataSource(
                        std::unique_ptr<DataSource::DataChunk>)> callback);
 
 // Recurse over all pieces of an index object.
-Status ForEachPiece(ftl::StringView index_content,
+Status ForEachPiece(fxl::StringView index_content,
                     std::function<Status(ObjectIdView)> callback);
 
 // Collects all pieces ids needed to build the object with id |root|. This
@@ -42,7 +42,7 @@ Status ForEachPiece(ftl::StringView index_content,
 void CollectPieces(
     ObjectIdView root,
     std::function<void(ObjectIdView,
-                       std::function<void(Status, ftl::StringView)>)>
+                       std::function<void(Status, fxl::StringView)>)>
         data_accessor,
     std::function<bool(IterationStatus, ObjectIdView)> callback);
 

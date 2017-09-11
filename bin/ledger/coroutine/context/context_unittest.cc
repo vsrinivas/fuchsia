@@ -7,8 +7,8 @@
 #include <string.h>
 
 #include "gtest/gtest.h"
-#include "lib/ftl/compiler_specific.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/compiler_specific.h"
+#include "lib/fxl/logging.h"
 
 namespace context {
 
@@ -82,7 +82,7 @@ TEST(Context, MakeContext) {
 
 // Force to set the pointed address to 1. This must be no-inline to prevent the
 // compiler to optimize away the set.
-FTL_NOINLINE void ForceSet(volatile char* addr) {
+FXL_NOINLINE void ForceSet(volatile char* addr) {
   *addr = 1;
 }
 

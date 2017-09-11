@@ -22,7 +22,7 @@ class EntryChangeIterator : public Iterator<const storage::EntryChange> {
   ~EntryChangeIterator() override {}
 
   Iterator<const storage::EntryChange>& Next() override {
-    FTL_DCHECK(Valid()) << "Iterator::Next iterator not valid";
+    FXL_DCHECK(Valid()) << "Iterator::Next iterator not valid";
     ++it_;
     return *this;
   }
@@ -38,7 +38,7 @@ class EntryChangeIterator : public Iterator<const storage::EntryChange> {
   std::vector<EntryChange>::const_iterator it_;
   std::vector<EntryChange>::const_iterator end_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(EntryChangeIterator);
+  FXL_DISALLOW_COPY_AND_ASSIGN(EntryChangeIterator);
 };
 
 }  // namespace btree

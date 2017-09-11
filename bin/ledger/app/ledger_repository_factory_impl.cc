@@ -12,27 +12,27 @@
 #include "apps/ledger/src/cloud_provider/impl/paths.h"
 #include "apps/ledger/src/cloud_sync/impl/user_sync_impl.h"
 #include "apps/ledger/src/device_set/cloud_device_set_impl.h"
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/files/path.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/strings/concatenate.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/files/path.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/strings/concatenate.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace ledger {
 
-constexpr ftl::StringView kContentPath = "/content";
-constexpr ftl::StringView kStagingPath = "/staging";
+constexpr fxl::StringView kContentPath = "/content";
+constexpr fxl::StringView kStagingPath = "/staging";
 
 namespace {
 cloud_sync::UserConfig GetUserConfig(
     Environment* environment,
     const FirebaseConfigPtr& firebase_config,
-    ftl::StringView user_id,
-    ftl::StringView user_directory,
+    fxl::StringView user_id,
+    fxl::StringView user_directory,
     auth_provider::AuthProvider* auth_provider) {
-  FTL_DCHECK(firebase_config);
+  FXL_DCHECK(firebase_config);
   cloud_sync::UserConfig user_config;
   user_config.server_id = firebase_config->server_id.get();
   user_config.user_id = user_id.ToString();
@@ -62,7 +62,7 @@ bool GetRepositoryName(const fidl::String& repository_path, std::string* name) {
   new_name.resize(16);
   glue::RandBytes(&new_name[0], new_name.size());
   if (!files::WriteFile(name_path, new_name.c_str(), new_name.size())) {
-    FTL_LOG(ERROR) << "Unable to write file at: " << name_path;
+    FXL_LOG(ERROR) << "Unable to write file at: " << name_path;
     return false;
   }
 
@@ -87,7 +87,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
     }
   }
 
-  void set_on_empty(const ftl::Closure& on_empty_callback) {
+  void set_on_empty(const fxl::Closure& on_empty_callback) {
     on_empty_callback_ = on_empty_callback;
     if (ledger_repository_) {
       ledger_repository_->set_on_empty(on_empty_callback);
@@ -114,8 +114,8 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
   // notifies all awaiting callbacks and binds all pages in case of success.
   void SetRepository(Status status,
                      std::unique_ptr<LedgerRepositoryImpl> ledger_repository) {
-    FTL_DCHECK(!ledger_repository_);
-    FTL_DCHECK(status != Status::OK || ledger_repository);
+    FXL_DCHECK(!ledger_repository_);
+    FXL_DCHECK(status != Status::OK || ledger_repository);
     status_ = status;
     ledger_repository_ = std::move(ledger_repository);
     for (auto& request : requests_) {
@@ -157,18 +157,18 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
   std::vector<std::pair<fidl::InterfaceRequest<LedgerRepository>,
                         std::function<void(Status)>>>
       requests_;
-  ftl::Closure on_empty_callback_;
+  fxl::Closure on_empty_callback_;
   std::vector<fidl::InterfaceRequest<LedgerRepository>> detached_handles_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryContainer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryContainer);
 };
 
 struct LedgerRepositoryFactoryImpl::RepositoryInformation {
  public:
   explicit RepositoryInformation(const fidl::String& repository_path)
       : base_path(files::SimplifyPath(repository_path.get())),
-        content_path(ftl::Concatenate({base_path, kContentPath})),
-        staging_path(ftl::Concatenate({base_path, kStagingPath})) {}
+        content_path(fxl::Concatenate({base_path, kContentPath})),
+        staging_path(fxl::Concatenate({base_path, kStagingPath})) {}
 
   RepositoryInformation(const RepositoryInformation& other) = default;
   RepositoryInformation(RepositoryInformation&& other) = default;
@@ -210,7 +210,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   }
 
   if (!firebase_config || !token_provider) {
-    FTL_LOG(WARNING) << "No sync configuration - Ledger will work locally but "
+    FXL_LOG(WARNING) << "No sync configuration - Ledger will work locally but "
                      << "not sync. (running in Guest mode?)";
 
     auto ret = repositories_.emplace(
@@ -232,10 +232,10 @@ void LedgerRepositoryFactoryImpl::GetRepository(
       modular::auth::TokenProviderPtr::Create(std::move(token_provider));
   token_provider_ptr.set_connection_error_handler(
       [ this, name = repository_information.name ] {
-        FTL_LOG(ERROR) << "Lost connection to TokenProvider, "
+        FXL_LOG(ERROR) << "Lost connection to TokenProvider, "
                        << "shutting down the repository.";
         auto find_repository = repositories_.find(name);
-        FTL_DCHECK(find_repository != repositories_.end());
+        FXL_DCHECK(find_repository != repositories_.end());
         repositories_.erase(find_repository);
       });
 
@@ -252,12 +252,12 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   LedgerRepositoryContainer* container = &ret.first->second;
   container->BindRepository(std::move(repository_request), callback);
 
-  auto request = auth_provider_ptr->GetFirebaseUserId(ftl::MakeCopyable([
+  auto request = auth_provider_ptr->GetFirebaseUserId(fxl::MakeCopyable([
     this, repository_information, firebase_config = std::move(firebase_config),
     auth_provider_ptr, container
   ](auth_provider::AuthStatus auth_status, std::string user_id) {
     if (auth_status != auth_provider::AuthStatus::OK) {
-      FTL_LOG(ERROR) << "Failed to retrieve Firebase user ID from the token "
+      FXL_LOG(ERROR) << "Failed to retrieve Firebase user ID from the token "
                      << " manager, shutting down the repository.";
       container->SetRepository(Status::AUTHENTICATION_ERROR, nullptr);
       return;
@@ -285,7 +285,7 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
 
   auto find_repository = repositories_.find(repository_information.name);
   if (find_repository != repositories_.end()) {
-    FTL_LOG(WARNING) << "The repository to be erased is running, "
+    FXL_LOG(WARNING) << "The repository to be erased is running, "
                      << "shutting it down before erasing.";
     find_repository->second.Detach();
   }
@@ -320,7 +320,7 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
           environment_->main_runner(), environment_->network_service(),
           firebase_config->server_id, firebase_config->api_key,
           std::move(token_provider_ptr)),
-      ftl::MakeCopyable([final_callback =
+      fxl::MakeCopyable([final_callback =
                              std::move(final_callback)](bool succeeded) {
         final_callback(succeeded ? Status::OK : Status::INTERNAL_ERROR);
       }));
@@ -334,12 +334,12 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
 bool LedgerRepositoryFactoryImpl::CheckSyncConfig(
     const cloud_sync::UserConfig& user_config,
     const RepositoryInformation& repository_information) {
-  std::string server_id_path = ftl::Concatenate(
+  std::string server_id_path = fxl::Concatenate(
       {repository_information.content_path, "/", kServerIdFilename});
   if (files::IsFile(server_id_path)) {
     std::string previous_server_id;
     if (!files::ReadFileToString(server_id_path, &previous_server_id)) {
-      FTL_LOG(ERROR) << "Failed to read the previous server id for "
+      FXL_LOG(ERROR) << "Failed to read the previous server id for "
                      << "compatibility check";
       return false;
     }
@@ -348,15 +348,15 @@ bool LedgerRepositoryFactoryImpl::CheckSyncConfig(
       return true;
     }
 
-    FTL_LOG(WARNING) << "Mismatch between the previous server id: "
+    FXL_LOG(WARNING) << "Mismatch between the previous server id: "
                      << previous_server_id
                      << " and the current one: " << user_config.server_id
                      << ".";
-    FTL_LOG(WARNING) << "Ledger does not support cloud migrations: "
+    FXL_LOG(WARNING) << "Ledger does not support cloud migrations: "
                      << "Deleting local state at "
                      << repository_information.content_path << ".";
     if (DeleteRepositoryDirectory(repository_information) != Status::OK) {
-      FTL_LOG(ERROR) << "Unable to delete ledger directory. "
+      FXL_LOG(ERROR) << "Unable to delete ledger directory. "
                      << "Reset Ledger using "
                      << "`rm -rf " << repository_information.content_path
                      << "`";
@@ -366,7 +366,7 @@ bool LedgerRepositoryFactoryImpl::CheckSyncConfig(
 
   if (!files::WriteFileInTwoPhases(server_id_path, user_config.server_id,
                                    repository_information.staging_path)) {
-    FTL_LOG(ERROR) << "Failed to write the current server_id for compatibility "
+    FXL_LOG(ERROR) << "Failed to write the current server_id for compatibility "
                    << "check.";
     return false;
   }
@@ -384,7 +384,7 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
     return;
   }
   std::unique_ptr<SyncWatcherSet> watchers = std::make_unique<SyncWatcherSet>();
-  ftl::Closure on_version_mismatch = [this, repository_information]() mutable {
+  fxl::Closure on_version_mismatch = [this, repository_information]() mutable {
     OnVersionMismatch(repository_information);
   };
   auto user_sync = std::make_unique<cloud_sync::UserSyncImpl>(
@@ -400,14 +400,14 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
 
 void LedgerRepositoryFactoryImpl::OnVersionMismatch(
     RepositoryInformation repository_information) {
-  FTL_LOG(WARNING)
+  FXL_LOG(WARNING)
       << "Data in the cloud was wiped out, erasing local state. "
       << "This should log you out, log back in to start syncing again.";
 
   // First, shut down the repository so that we can delete the files while it's
   // not running.
   auto find_repository = repositories_.find(repository_information.name);
-  FTL_DCHECK(find_repository != repositories_.end());
+  FXL_DCHECK(find_repository != repositories_.end());
   find_repository->second.Detach();
   DeleteRepositoryDirectory(repository_information);
   repositories_.erase(find_repository);
@@ -420,13 +420,13 @@ Status LedgerRepositoryFactoryImpl::DeleteRepositoryDirectory(
 
   if (rename(repository_information.content_path.c_str(),
              destination.c_str()) != 0) {
-    FTL_LOG(ERROR) << "Unable to move repository local storage at "
+    FXL_LOG(ERROR) << "Unable to move repository local storage at "
                    << repository_information.content_path << " to "
                    << destination << ". Error: " << strerror(errno);
     return Status::IO_ERROR;
   }
   if (!files::DeletePath(destination, true)) {
-    FTL_LOG(ERROR) << "Unable to delete repository staging storage at "
+    FXL_LOG(ERROR) << "Unable to delete repository staging storage at "
                    << destination;
     return Status::IO_ERROR;
   }

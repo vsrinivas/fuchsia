@@ -32,8 +32,8 @@
 
 #include <stdint.h>
 
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace bup {
 
@@ -67,7 +67,7 @@ class RollSumSplit {
   // If |bits| is not null, and a cut has been found, |*bits| will be the number
   // of trailing 1s in the current hash. It will always be greater of equals to
   // |kBlobBits|.
-  size_t Feed(ftl::StringView buffer, size_t* bits);
+  size_t Feed(fxl::StringView buffer, size_t* bits);
 
  private:
   void Add(uint8_t drop, uint8_t add);

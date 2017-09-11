@@ -8,19 +8,19 @@
 #include <functional>
 
 #include "gtest/gtest.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace test {
 
 bool RunGivenLoopWithTimeout(
     mtl::MessageLoop* message_loop,
-    ftl::TimeDelta timeout = ftl::TimeDelta::FromSeconds(1));
+    fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(1));
 
 bool RunGivenLoopUntil(mtl::MessageLoop* message_loop,
                        std::function<bool()> condition,
-                       ftl::TimeDelta timeout = ftl::TimeDelta::FromSeconds(1));
+                       fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(1));
 
 class TestWithMessageLoop : public ::testing::Test {
  public:
@@ -30,21 +30,21 @@ class TestWithMessageLoop : public ::testing::Test {
   // Runs the loop for at most |timeout|. Returns |true| if the timeout has been
   // reached.
   bool RunLoopWithTimeout(
-      ftl::TimeDelta timeout = ftl::TimeDelta::FromSeconds(1));
+      fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(1));
 
   // Runs the loop until the condition returns true or the timeout is reached.
   // Returns |true| if the condition was met, and |false| if the timeout was
   // reached.
   bool RunLoopUntil(std::function<bool()> condition,
-                    ftl::TimeDelta timeout = ftl::TimeDelta::FromSeconds(1));
+                    fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(1));
 
   // Creates a closure that quits the test message loop when executed.
-  ftl::Closure MakeQuitTask();
+  fxl::Closure MakeQuitTask();
 
   mtl::MessageLoop message_loop_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestWithMessageLoop);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestWithMessageLoop);
 };
 
 }  // namespace test

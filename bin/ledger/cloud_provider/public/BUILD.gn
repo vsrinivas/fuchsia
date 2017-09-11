@@ -19,7 +19,7 @@ source_set("public") {
   public_deps = [
     "//apps/ledger/src/firebase",
     "//apps/ledger/src/gcs",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//magenta/system/ulib/mx",
   ]
 

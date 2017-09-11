@@ -12,24 +12,24 @@
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/test/benchmark/lib/logging.h"
 #include "apps/ledger/src/test/get_ledger.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace {
-constexpr ftl::StringView kStoragePath = "/data/benchmark/ledger/sync";
-constexpr ftl::StringView kEntryCountFlag = "entry-count";
-constexpr ftl::StringView kValueSizeFlag = "value-size";
-constexpr ftl::StringView kRefsFlag = "refs";
-constexpr ftl::StringView kServerIdFlag = "server-id";
+constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/sync";
+constexpr fxl::StringView kEntryCountFlag = "entry-count";
+constexpr fxl::StringView kValueSizeFlag = "value-size";
+constexpr fxl::StringView kRefsFlag = "refs";
+constexpr fxl::StringView kServerIdFlag = "server-id";
 
-constexpr ftl::StringView kRefsOnFlag = "on";
-constexpr ftl::StringView kRefsOffFlag = "off";
-constexpr ftl::StringView kRefsAutoFlag = "auto";
+constexpr fxl::StringView kRefsOnFlag = "on";
+constexpr fxl::StringView kRefsOffFlag = "off";
+constexpr fxl::StringView kRefsAutoFlag = "auto";
 
 constexpr size_t kKeySize = 100;
 constexpr size_t kMaxInlineDataSize = MX_CHANNEL_MAX_MSG_BYTES * 9 / 10;
@@ -62,8 +62,8 @@ SyncBenchmark::SyncBenchmark(size_t entry_count,
                            "sync_user",
                            "sync_user@google.com",
                            "client_id") {
-  FTL_DCHECK(entry_count > 0);
-  FTL_DCHECK(value_size > 0);
+  FXL_DCHECK(entry_count > 0);
+  FXL_DCHECK(value_size > 0);
 }
 
 void SyncBenchmark::Run() {
@@ -71,11 +71,11 @@ void SyncBenchmark::Run() {
   // most nested directory has the same name to make the ledgers sync.
   std::string alpha_path = alpha_tmp_dir_.path() + "/sync_user";
   bool ret = files::CreateDirectory(alpha_path);
-  FTL_DCHECK(ret);
+  FXL_DCHECK(ret);
 
   std::string beta_path = beta_tmp_dir_.path() + "/sync_user";
   ret = files::CreateDirectory(beta_path);
-  FTL_DCHECK(ret);
+  FXL_DCHECK(ret);
 
   ledger::LedgerPtr alpha;
   ledger::Status status = test::GetLedger(
@@ -113,8 +113,8 @@ void SyncBenchmark::Run() {
 void SyncBenchmark::OnChange(ledger::PageChangePtr page_change,
                              ledger::ResultState result_state,
                              const OnChangeCallback& callback) {
-  FTL_DCHECK(page_change->changes.size() == 1);
-  FTL_DCHECK(result_state == ledger::ResultState::COMPLETED);
+  FXL_DCHECK(page_change->changes.size() == 1);
+  FXL_DCHECK(result_state == ledger::ResultState::COMPLETED);
   size_t i = std::stoul(convert::ToString(page_change->changes[0]->key));
   TRACE_ASYNC_END("benchmark", "sync latency", i);
   RunSingle(i + 1);
@@ -140,7 +140,7 @@ void SyncBenchmark::RunSingle(size_t i) {
     }
     alpha_page_->CreateReferenceFromVmo(
         std::move(vmo),
-        ftl::MakeCopyable([ this, key = std::move(key) ](
+        fxl::MakeCopyable([ this, key = std::move(key) ](
             ledger::Status status, ledger::ReferencePtr reference) mutable {
           if (benchmark::QuitOnError(status, "Page::CreateReferenceFromVmo")) {
             return;
@@ -158,7 +158,7 @@ void SyncBenchmark::RunSingle(size_t i) {
 void SyncBenchmark::Backlog() {
   std::string gamma_path = gamma_tmp_dir_.path() + "/sync_user";
   bool ret = files::CreateDirectory(gamma_path);
-  FTL_DCHECK(ret);
+  FXL_DCHECK(ret);
 
   ledger::Status status = test::GetLedger(
       mtl::MessageLoop::GetCurrent(), application_context_.get(),
@@ -183,7 +183,7 @@ void SyncBenchmark::VerifyBacklog() {
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   snapshot_ptr->GetEntries(
       nullptr, nullptr,
-      ftl::MakeCopyable([ this, snapshot = std::move(snapshot) ](
+      fxl::MakeCopyable([ this, snapshot = std::move(snapshot) ](
           ledger::Status status, auto entries, auto next_token) {
         if (benchmark::QuitOnError(status, "GetEntries")) {
           return;
@@ -200,20 +200,20 @@ void SyncBenchmark::VerifyBacklog() {
 void SyncBenchmark::ShutDown() {
   alpha_controller_->Kill();
   alpha_controller_.WaitForIncomingResponseWithTimeout(
-      ftl::TimeDelta::FromSeconds(5));
+      fxl::TimeDelta::FromSeconds(5));
   beta_controller_->Kill();
   beta_controller_.WaitForIncomingResponseWithTimeout(
-      ftl::TimeDelta::FromSeconds(5));
+      fxl::TimeDelta::FromSeconds(5));
   gamma_controller_->Kill();
   gamma_controller_.WaitForIncomingResponseWithTimeout(
-      ftl::TimeDelta::FromSeconds(5));
+      fxl::TimeDelta::FromSeconds(5));
   mtl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 }  // namespace benchmark
 }  // namespace test
 
 int main(int argc, const char** argv) {
-  ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   std::string entry_count_str;
   size_t entry_count;
@@ -223,11 +223,11 @@ int main(int argc, const char** argv) {
   std::string server_id;
   if (!command_line.GetOptionValue(kEntryCountFlag.ToString(),
                                    &entry_count_str) ||
-      !ftl::StringToNumberWithError(entry_count_str, &entry_count) ||
+      !fxl::StringToNumberWithError(entry_count_str, &entry_count) ||
       entry_count <= 0 ||
       !command_line.GetOptionValue(kValueSizeFlag.ToString(),
                                    &value_size_str) ||
-      !ftl::StringToNumberWithError(value_size_str, &value_size) ||
+      !fxl::StringToNumberWithError(value_size_str, &value_size) ||
       value_size <= 0 ||
       !command_line.GetOptionValue(kRefsFlag.ToString(),
                                    &reference_strategy_str) ||

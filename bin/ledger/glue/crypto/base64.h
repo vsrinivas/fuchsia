@@ -7,17 +7,17 @@
 
 #include <string>
 
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace glue {
 
 // Encodes the input string in base64url.
-std::string Base64UrlEncode(ftl::StringView input);
+std::string Base64UrlEncode(fxl::StringView input);
 
 // Decodes the base64url input string. Returns true if successful and false
 // otherwise. The output string is only modified if successful. The decoding can
 // be done in-place.
-bool Base64UrlDecode(ftl::StringView input, std::string* output);
+bool Base64UrlDecode(fxl::StringView input, std::string* output);
 
 }  // namespace glue
 

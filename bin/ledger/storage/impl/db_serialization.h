@@ -6,73 +6,73 @@
 #define _APPS_LEDGER_SRC_STORAGE_IMPL_DB_SERIALIZATION_H_
 
 #include "apps/ledger/src/storage/public/types.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace storage {
 
 class HeadRow {
  public:
-  static constexpr ftl::StringView kPrefix = "heads/";
+  static constexpr fxl::StringView kPrefix = "heads/";
 
   static std::string GetKeyFor(CommitIdView head);
 };
 
 class CommitRow {
  public:
-  static constexpr ftl::StringView kPrefix = "commits/";
+  static constexpr fxl::StringView kPrefix = "commits/";
 
   static std::string GetKeyFor(CommitIdView commit_id);
 };
 
 class ObjectRow {
  public:
-  static constexpr ftl::StringView kPrefix = "objects/";
+  static constexpr fxl::StringView kPrefix = "objects/";
 
   static std::string GetKeyFor(ObjectIdView object_id);
 };
 
 class UnsyncedCommitRow {
  public:
-  static constexpr ftl::StringView kPrefix = "unsynced/commits/";
+  static constexpr fxl::StringView kPrefix = "unsynced/commits/";
 
   static std::string GetKeyFor(const CommitId& commit_id);
 };
 
 class TransientObjectRow {
  public:
-  static constexpr ftl::StringView kPrefix = "transient/object_ids/";
+  static constexpr fxl::StringView kPrefix = "transient/object_ids/";
 
   static std::string GetKeyFor(ObjectIdView object_id);
 };
 
 class LocalObjectRow {
  public:
-  static constexpr ftl::StringView kPrefix = "local/object_ids/";
+  static constexpr fxl::StringView kPrefix = "local/object_ids/";
 
   static std::string GetKeyFor(ObjectIdView object_id);
 };
 
 class ImplicitJournalMetaRow {
  public:
-  static constexpr ftl::StringView kPrefix = "journals/implicit/";
+  static constexpr fxl::StringView kPrefix = "journals/implicit/";
 
   static std::string GetKeyFor(const JournalId& journal_id);
 };
 
 class SyncMetadataRow {
  public:
-  static constexpr ftl::StringView kPrefix = "sync-metadata/";
+  static constexpr fxl::StringView kPrefix = "sync-metadata/";
 
-  static std::string GetKeyFor(ftl::StringView key);
+  static std::string GetKeyFor(fxl::StringView key);
 };
 
 class JournalEntryRow {
  public:
   // Journal keys
   static const size_t kJournalIdSize = 16;
-  static constexpr ftl::StringView kPrefix = "journals/";
+  static constexpr fxl::StringView kPrefix = "journals/";
 
-  static constexpr ftl::StringView kJournalEntry = "entry/";
+  static constexpr fxl::StringView kJournalEntry = "entry/";
   static const char kImplicitPrefix = 'I';
   static const char kExplicitPrefix = 'E';
   static const size_t kPrefixSize =
@@ -80,7 +80,7 @@ class JournalEntryRow {
 
   // Journal values
   static const char kAddPrefix = 'A';
-  static constexpr ftl::StringView kDeletePrefix = "D";
+  static constexpr fxl::StringView kDeletePrefix = "D";
   static const char kLazyPrefix = 'L';
   static const char kEagerPrefix = 'E';
   static const size_t kAddPrefixSize = 2;
@@ -89,11 +89,11 @@ class JournalEntryRow {
 
   static std::string GetPrefixFor(const JournalId& journal_id);
 
-  static std::string GetKeyFor(const JournalId& id, ftl::StringView key);
+  static std::string GetKeyFor(const JournalId& id, fxl::StringView key);
 
-  static std::string GetValueFor(ftl::StringView value, KeyPriority priority);
+  static std::string GetValueFor(fxl::StringView value, KeyPriority priority);
 
-  static Status ExtractObjectId(ftl::StringView db_value, ObjectId* id);
+  static Status ExtractObjectId(fxl::StringView db_value, ObjectId* id);
 };
 
 }  // namespace storage

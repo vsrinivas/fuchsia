@@ -14,7 +14,7 @@
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/gcs/cloud_storage.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace cloud_sync {
 
@@ -39,10 +39,10 @@ class LedgerSync {
   // unrecoverable error.
   virtual std::unique_ptr<PageSyncContext> CreatePageContext(
       storage::PageStorage* page_storage,
-      ftl::Closure error_callback) = 0;
+      fxl::Closure error_callback) = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(LedgerSync);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerSync);
 };
 
 }  // namespace cloud_sync

@@ -7,12 +7,12 @@
 #include <utility>
 
 #include "apps/ledger/src/callback/cancellable_helper.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/mtl/socket/strings.h"
 
 namespace ledger {
 
-FakeNetworkService::FakeNetworkService(ftl::RefPtr<ftl::TaskRunner> task_runner)
+FakeNetworkService::FakeNetworkService(fxl::RefPtr<fxl::TaskRunner> task_runner)
     : task_runner_(std::move(task_runner)) {}
 
 FakeNetworkService::~FakeNetworkService() {}
@@ -43,13 +43,13 @@ void FakeNetworkService::SetStringResponse(const std::string& body,
   SetSocketResponse(mtl::WriteStringToSocket(body), status_code);
 }
 
-ftl::RefPtr<callback::Cancellable> FakeNetworkService::Request(
+fxl::RefPtr<callback::Cancellable> FakeNetworkService::Request(
     std::function<network::URLRequestPtr()> request_factory,
     std::function<void(network::URLResponsePtr)> callback) {
   std::unique_ptr<bool> cancelled = std::make_unique<bool>(false);
 
   bool* cancelled_ptr = cancelled.get();
-  auto cancellable = callback::CancellableImpl::Create(ftl::MakeCopyable(
+  auto cancellable = callback::CancellableImpl::Create(fxl::MakeCopyable(
       [cancelled = std::move(cancelled)] { *cancelled = true; }));
   if (!response_to_return_) {
     return cancellable;

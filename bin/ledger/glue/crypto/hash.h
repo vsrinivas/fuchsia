@@ -8,8 +8,8 @@
 #include <memory>
 #include <string>
 
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace glue {
 
@@ -19,17 +19,17 @@ class SHA256StreamingHash {
 
   SHA256StreamingHash();
   ~SHA256StreamingHash();
-  void Update(ftl::StringView data);
+  void Update(fxl::StringView data);
   void Finish(std::string* output);
 
  private:
   struct Context;
   std::unique_ptr<Context> context_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SHA256StreamingHash);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SHA256StreamingHash);
 };
 
-std::string SHA256Hash(ftl::StringView data);
+std::string SHA256Hash(fxl::StringView data);
 
 }  // namespace glue
 

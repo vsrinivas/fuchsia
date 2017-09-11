@@ -9,13 +9,13 @@
 #include <random>
 
 #include "gtest/gtest.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 
 namespace backoff {
 
-constexpr ftl::TimeDelta kDefaultInitialValue =
-    ftl::TimeDelta::FromMilliseconds(10);
+constexpr fxl::TimeDelta kDefaultInitialValue =
+    fxl::TimeDelta::FromMilliseconds(10);
 
 uint64_t GetSeed() {
   return 1u;
@@ -27,16 +27,16 @@ class ExponentialBackoffTest : public ::testing::Test {
   ~ExponentialBackoffTest() override {}
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(ExponentialBackoffTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ExponentialBackoffTest);
 };
 
 TEST_F(ExponentialBackoffTest, GrowExponentionally) {
-  ExponentialBackoff backoff(kDefaultInitialValue, 2, ftl::TimeDelta::Max(),
+  ExponentialBackoff backoff(kDefaultInitialValue, 2, fxl::TimeDelta::Max(),
                              GetSeed);
 
   int factor = 1;
   for (size_t i = 0; i < 5u; i++) {
-    ftl::TimeDelta delay = backoff.GetNext();
+    fxl::TimeDelta delay = backoff.GetNext();
     EXPECT_GE(delay, kDefaultInitialValue * factor);
     EXPECT_LE(delay, kDefaultInitialValue * factor * 2);
     factor *= 2;
@@ -44,11 +44,11 @@ TEST_F(ExponentialBackoffTest, GrowExponentionally) {
 }
 
 TEST_F(ExponentialBackoffTest, Reset) {
-  ExponentialBackoff backoff(kDefaultInitialValue, 2, ftl::TimeDelta::Max(),
+  ExponentialBackoff backoff(kDefaultInitialValue, 2, fxl::TimeDelta::Max(),
                              GetSeed);
 
   for (size_t i = 0; i < 4; ++i) {
-    ftl::TimeDelta delay = backoff.GetNext();
+    fxl::TimeDelta delay = backoff.GetNext();
     EXPECT_GE(delay, kDefaultInitialValue);
     EXPECT_LT(delay, kDefaultInitialValue * 2);
     backoff.Reset();
@@ -56,24 +56,24 @@ TEST_F(ExponentialBackoffTest, Reset) {
 }
 
 TEST_F(ExponentialBackoffTest, NoOverflow) {
-  ExponentialBackoff backoff(kDefaultInitialValue, 2, ftl::TimeDelta::Max(),
+  ExponentialBackoff backoff(kDefaultInitialValue, 2, fxl::TimeDelta::Max(),
                              GetSeed);
 
-  ftl::TimeDelta previous = backoff.GetNext();
+  fxl::TimeDelta previous = backoff.GetNext();
   for (size_t i = 0; i < 200u; i++) {
-    ftl::TimeDelta next = backoff.GetNext();
+    fxl::TimeDelta next = backoff.GetNext();
     EXPECT_GE(next, previous);
     previous = next;
   }
 }
 
 TEST_F(ExponentialBackoffTest, MaxDelay) {
-  constexpr ftl::TimeDelta kMaxDelay = ftl::TimeDelta::FromSeconds(20);
+  constexpr fxl::TimeDelta kMaxDelay = fxl::TimeDelta::FromSeconds(20);
 
   ExponentialBackoff backoff(kDefaultInitialValue, 2, kMaxDelay, GetSeed);
 
   for (size_t i = 0; i < 64; i++) {
-    ftl::TimeDelta delay = backoff.GetNext();
+    fxl::TimeDelta delay = backoff.GetNext();
     EXPECT_GE(delay, kDefaultInitialValue);
     EXPECT_LE(delay, kMaxDelay);
   }

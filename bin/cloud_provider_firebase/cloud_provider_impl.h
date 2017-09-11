@@ -13,9 +13,9 @@
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
 #include "garnet/public/lib/fidl/cpp/bindings/binding.h"
-#include "garnet/public/lib/ftl/functional/closure.h"
-#include "garnet/public/lib/ftl/macros.h"
-#include "garnet/public/lib/ftl/tasks/task_runner.h"
+#include "garnet/public/lib/fxl/functional/closure.h"
+#include "garnet/public/lib/fxl/macros.h"
+#include "garnet/public/lib/fxl/tasks/task_runner.h"
 
 namespace cloud_provider_firebase {
 
@@ -26,14 +26,14 @@ namespace cloud_provider_firebase {
 class CloudProviderImpl : public cloud_provider::CloudProvider {
  public:
   CloudProviderImpl(
-      ftl::RefPtr<ftl::TaskRunner> main_runner,
+      fxl::RefPtr<fxl::TaskRunner> main_runner,
       std::string user_id,
       ConfigPtr config,
       std::unique_ptr<auth_provider::AuthProvider> auth_provider,
       fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
   ~CloudProviderImpl() override;
 
-  void set_on_empty(const ftl::Closure& on_empty) { on_empty_ = on_empty; }
+  void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
 
  private:
   void GetDeviceSet(
@@ -46,17 +46,17 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
       fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
       const GetPageCloudCallback& callback) override;
 
-  ftl::RefPtr<ftl::TaskRunner> main_runner_;
+  fxl::RefPtr<fxl::TaskRunner> main_runner_;
   const std::string user_id_;
   std::unique_ptr<auth_provider::AuthProvider> auth_provider_;
   fidl::Binding<cloud_provider::CloudProvider> binding_;
-  ftl::Closure on_empty_;
+  fxl::Closure on_empty_;
 
   callback::AutoCleanableSet<DeviceSetImpl> device_sets_;
 
   callback::AutoCleanableSet<PageCloudImpl> page_clouds_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CloudProviderImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CloudProviderImpl);
 };
 
 }  // namespace cloud_provider_firebase

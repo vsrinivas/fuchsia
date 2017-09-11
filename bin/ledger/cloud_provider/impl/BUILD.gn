@@ -28,7 +28,7 @@ source_set("impl") {
     "//apps/ledger/src/gcs",
     "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/public",  # For serialization version constant.
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",
   ]
@@ -50,7 +50,7 @@ source_set("unittests") {
     "//apps/ledger/src/firebase",
     "//apps/ledger/src/gcs",
     "//apps/ledger/src/test:lib",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]

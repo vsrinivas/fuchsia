@@ -16,8 +16,8 @@
 #include "apps/ledger/src/test/ledger_app_instance_factory.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/macros.h"
 
 namespace test {
 namespace integration {

@@ -7,20 +7,20 @@
 
 #include "apps/ledger/src/auth_provider/auth_provider.h"
 
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace auth_provider {
 namespace test {
 
 class TestAuthProvider : public AuthProvider {
  public:
-  explicit TestAuthProvider(ftl::RefPtr<ftl::TaskRunner> task_runner);
+  explicit TestAuthProvider(fxl::RefPtr<fxl::TaskRunner> task_runner);
 
   // AuthProvider:
-  ftl::RefPtr<callback::Cancellable> GetFirebaseToken(
+  fxl::RefPtr<callback::Cancellable> GetFirebaseToken(
       std::function<void(AuthStatus, std::string)> callback) override;
 
-  ftl::RefPtr<callback::Cancellable> GetFirebaseUserId(
+  fxl::RefPtr<callback::Cancellable> GetFirebaseUserId(
       std::function<void(AuthStatus, std::string)> callback) override;
 
   std::string token_to_return;
@@ -30,7 +30,7 @@ class TestAuthProvider : public AuthProvider {
   std::string user_id_to_return;
 
  private:
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
 };
 
 }  // namespace test

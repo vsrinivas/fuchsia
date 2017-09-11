@@ -13,7 +13,7 @@
 #include "apps/ledger/src/cloud_provider/public/commit_watcher.h"
 #include "apps/ledger/src/cloud_provider/public/record.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "mx/socket.h"
 #include "mx/vmo.h"
 
@@ -93,7 +93,7 @@ class CloudProvider {
           callback) = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(CloudProvider);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CloudProvider);
 };
 
 }  // namespace cloud_provider_firebase

@@ -7,7 +7,7 @@
 
 #include <functional>
 
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace storage {
 
@@ -15,8 +15,8 @@ class DirectoryReader {
  public:
   // Returns the list of directories inside the provided directory.
   static bool GetDirectoryEntries(
-      ftl::StringView directory,
-      std::function<bool(ftl::StringView)> callback);
+      fxl::StringView directory,
+      std::function<bool(fxl::StringView)> callback);
 };
 
 }  // namespace storage

@@ -16,8 +16,8 @@
 #include "apps/ledger/src/storage/public/journal.h"
 #include "apps/ledger/src/storage/public/object.h"
 #include "apps/ledger/src/storage/public/types.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace storage {
 
@@ -56,7 +56,7 @@ class PageDbMutator {
   // Adds the given |commit| in the database.
   virtual Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler,
                                        const CommitId& commit_id,
-                                       ftl::StringView storage_bytes) = 0;
+                                       fxl::StringView storage_bytes) = 0;
 
   // Removes the commit with the given |commit_id| from the commits.
   virtual Status RemoveCommit(coroutine::CoroutineHandler* handler,
@@ -88,8 +88,8 @@ class PageDbMutator {
   // Adds a new |key|-|value| pair with the given |priority| to the journal with
   // the given |journal_id|.
   virtual Status AddJournalEntry(const JournalId& journal_id,
-                                 ftl::StringView key,
-                                 ftl::StringView value,
+                                 fxl::StringView key,
+                                 fxl::StringView value,
                                  KeyPriority priority) = 0;
 
   // Removes the given key from the journal with the given |journal_id|.
@@ -125,11 +125,11 @@ class PageDbMutator {
 
   // Sets the opaque sync metadata associated with this page for the given key.
   virtual Status SetSyncMetadata(coroutine::CoroutineHandler* handler,
-                                 ftl::StringView key,
-                                 ftl::StringView value) = 0;
+                                 fxl::StringView key,
+                                 fxl::StringView value) = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageDbMutator);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageDbMutator);
 };
 
 // |PageDb| manages all Ledger related data that are locally stored. This
@@ -150,7 +150,7 @@ class PageDb : public PageDbMutator {
     virtual Status Execute() = 0;
 
    private:
-    FTL_DISALLOW_COPY_AND_ASSIGN(Batch);
+    FXL_DISALLOW_COPY_AND_ASSIGN(Batch);
   };
 
   PageDb() {}
@@ -193,7 +193,7 @@ class PageDb : public PageDbMutator {
 
   // Finds the value for the given |key| in the journal with the given id.
   virtual Status GetJournalValue(const JournalId& journal_id,
-                                 ftl::StringView key,
+                                 fxl::StringView key,
                                  std::string* value) = 0;
 
   // Finds all the entries of the journal with the given |journal_id| and stores
@@ -237,10 +237,10 @@ class PageDb : public PageDbMutator {
   // Sync metadata.
   // Retrieves the opaque sync metadata associated with this page for the given
   // key.
-  virtual Status GetSyncMetadata(ftl::StringView key, std::string* value) = 0;
+  virtual Status GetSyncMetadata(fxl::StringView key, std::string* value) = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageDb);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageDb);
 };
 
 }  // namespace storage

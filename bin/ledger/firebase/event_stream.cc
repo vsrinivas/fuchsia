@@ -6,8 +6,8 @@
 
 #include <utility>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/trim.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/trim.h"
 
 namespace firebase {
 
@@ -46,7 +46,7 @@ void EventStream::OnDataComplete() {
 }
 
 // See https://www.w3.org/TR/eventsource/#event-stream-interpretation.
-bool EventStream::ProcessLine(ftl::StringView line) {
+bool EventStream::ProcessLine(fxl::StringView line) {
   // If the line is empty, dispatch the event.
   if (line.empty()) {
     // If data is empty, clear event type and abort.
@@ -77,9 +77,9 @@ bool EventStream::ProcessLine(ftl::StringView line) {
   // If the line contains a colon, process the field.
   size_t colon_pos = line.find(':');
   if (colon_pos != std::string::npos) {
-    ftl::StringView field(line.substr(0, colon_pos));
-    ftl::StringView value = line.substr(colon_pos + 1);
-    ProcessField(field, ftl::TrimString(value, " "));
+    fxl::StringView field(line.substr(0, colon_pos));
+    fxl::StringView value = line.substr(colon_pos + 1);
+    ProcessField(field, fxl::TrimString(value, " "));
     return true;
   }
 
@@ -89,7 +89,7 @@ bool EventStream::ProcessLine(ftl::StringView line) {
   return true;
 }
 
-void EventStream::ProcessField(ftl::StringView field, ftl::StringView value) {
+void EventStream::ProcessField(fxl::StringView field, fxl::StringView value) {
   if (field == "event") {
     event_type_ = value.ToString();
   } else if (field == "data") {
@@ -97,10 +97,10 @@ void EventStream::ProcessField(ftl::StringView field, ftl::StringView value) {
     data_.append("\n");
   } else if (field == "id" || field == "retry") {
     // Not implemented.
-    FTL_LOG(WARNING) << "Event stream - field type not implemented: " << field;
+    FXL_LOG(WARNING) << "Event stream - field type not implemented: " << field;
   } else {
     // The spec says to ignore unknown field names.
-    FTL_LOG(WARNING) << "Event stream - unknown field name: " << field;
+    FXL_LOG(WARNING) << "Event stream - unknown field name: " << field;
   }
 }
 

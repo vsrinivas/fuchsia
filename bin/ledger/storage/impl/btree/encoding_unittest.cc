@@ -8,7 +8,7 @@
 #include "apps/ledger/src/storage/impl/storage_test_utils.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace storage {
 namespace btree {
@@ -110,7 +110,7 @@ TEST(EncodingTest, Errors) {
       children.push_back(CreateChildStorage(
           builder, 1,
           convert::ToFlatBufferVector(
-              &builder, MakeObjectId(ftl::StringPrintf("c%lu", i)))));
+              &builder, MakeObjectId(fxl::StringPrintf("c%lu", i)))));
     }
     return builder.CreateVector(children);
   };

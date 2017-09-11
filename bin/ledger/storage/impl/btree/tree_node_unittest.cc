@@ -12,7 +12,7 @@
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace storage {
 namespace btree {
@@ -59,7 +59,7 @@ class TreeNodeTest : public StorageTest {
   fake::FakePageStorage fake_storage_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(TreeNodeTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TreeNodeTest);
 };
 
 TEST_F(TreeNodeTest, CreateGetTreeNode) {
@@ -149,7 +149,7 @@ TEST_F(TreeNodeTest, Serialization) {
   std::unique_ptr<const TreeNode> retrieved_node;
   ASSERT_TRUE(CreateNodeFromId(object->GetId(), &retrieved_node));
 
-  ftl::StringView data;
+  fxl::StringView data;
   EXPECT_EQ(Status::OK, object->GetData(&data));
   uint8_t level;
   std::vector<Entry> parsed_entries;

@@ -17,9 +17,9 @@
 #include "apps/ledger/src/gcs/cloud_storage.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
@@ -187,7 +187,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   unsigned int malformed_notification_calls_ = 0u;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(CloudProviderImplTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CloudProviderImplTest);
 };
 
 TEST_F(CloudProviderImplTest, AddCommit) {

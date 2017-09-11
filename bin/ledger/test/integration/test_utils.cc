@@ -14,9 +14,9 @@
 #include "apps/ledger/src/convert/convert.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
 
@@ -49,7 +49,7 @@ fidl::Array<uint8_t> PageGetId(ledger::PagePtr* page) {
   (*page)->GetId(
       [&page_id](fidl::Array<uint8_t> id) { page_id = std::move(id); });
   EXPECT_TRUE(
-      page->WaitForIncomingResponseWithTimeout(ftl::TimeDelta::FromSeconds(1)));
+      page->WaitForIncomingResponseWithTimeout(fxl::TimeDelta::FromSeconds(1)));
   return page_id;
 }
 
@@ -60,7 +60,7 @@ ledger::PageSnapshotPtr PageGetSnapshot(ledger::PagePtr* page,
       snapshot.NewRequest(), std::move(prefix), nullptr,
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(
-      page->WaitForIncomingResponseWithTimeout(ftl::TimeDelta::FromSeconds(1)));
+      page->WaitForIncomingResponseWithTimeout(fxl::TimeDelta::FromSeconds(1)));
   return snapshot;
 }
 
@@ -97,7 +97,7 @@ fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(
           next_token = std::move(new_next_token);
         });
     EXPECT_TRUE(snapshot->WaitForIncomingResponseWithTimeout(
-        ftl::TimeDelta::FromSeconds(1)));
+        fxl::TimeDelta::FromSeconds(1)));
     token = std::move(next_token);
     next_token = nullptr;  // Suppress misc-use-after-move.
   } while (token);
@@ -138,7 +138,7 @@ fidl::Array<ledger::EntryPtr> SnapshotGetEntries(
           next_token = std::move(new_next_token);
         });
     EXPECT_TRUE(snapshot->WaitForIncomingResponseWithTimeout(
-        ftl::TimeDelta::FromSeconds(1)));
+        fxl::TimeDelta::FromSeconds(1)));
     token = std::move(next_token);
     next_token = nullptr;  // Suppress misc-use-after-move.
   } while (token);
@@ -148,7 +148,7 @@ fidl::Array<ledger::EntryPtr> SnapshotGetEntries(
 std::string ToString(const mx::vmo& vmo) {
   std::string value;
   bool status = mtl::StringFromVmo(vmo, &value);
-  FTL_DCHECK(status);
+  FXL_DCHECK(status);
   return value;
 }
 
@@ -167,7 +167,7 @@ std::string SnapshotFetchPartial(ledger::PageSnapshotPtr* snapshot,
                               EXPECT_TRUE(mtl::StringFromVmo(buffer, &result));
                             });
   EXPECT_TRUE(snapshot->WaitForIncomingResponseWithTimeout(
-      ftl::TimeDelta::FromSeconds(1)));
+      fxl::TimeDelta::FromSeconds(1)));
   return result;
 }
 

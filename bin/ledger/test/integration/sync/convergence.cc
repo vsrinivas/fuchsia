@@ -12,8 +12,8 @@
 #include "apps/ledger/src/storage/public/types.h"
 #include "apps/ledger/src/test/data_generator.h"
 #include "apps/ledger/src/test/get_ledger.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/mtl/vmo/vector.h"
 
 namespace test {
@@ -43,7 +43,7 @@ fidl::Array<uint8_t> DoubleToArray(double dbl) {
 }
 
 class RefCountedPageSnapshot
-    : public ftl::RefCountedThreadSafe<RefCountedPageSnapshot> {
+    : public fxl::RefCountedThreadSafe<RefCountedPageSnapshot> {
  public:
   RefCountedPageSnapshot() {}
 
@@ -57,7 +57,7 @@ class RefCountedPageSnapshot
 class PageWatcherImpl : public ledger::PageWatcher {
  public:
   PageWatcherImpl(fidl::InterfaceRequest<ledger::PageWatcher> request,
-                  ftl::RefPtr<RefCountedPageSnapshot> base_snapshot)
+                  fxl::RefPtr<RefCountedPageSnapshot> base_snapshot)
       : binding_(this, std::move(request)),
         current_snapshot_(std::move(base_snapshot)) {}
 
@@ -82,14 +82,14 @@ class PageWatcherImpl : public ledger::PageWatcher {
                 ledger::ResultState /*result_state*/,
                 const OnChangeCallback& callback) override {
     changes++;
-    current_snapshot_ = ftl::AdoptRef(new RefCountedPageSnapshot());
+    current_snapshot_ = fxl::AdoptRef(new RefCountedPageSnapshot());
     callback((**current_snapshot_).NewRequest());
   }
 
   fidl::Binding<ledger::PageWatcher> binding_;
-  ftl::RefPtr<RefCountedPageSnapshot> current_snapshot_;
+  fxl::RefPtr<RefCountedPageSnapshot> current_snapshot_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageWatcherImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageWatcherImpl);
 };
 
 class SyncWatcherImpl : public ledger::SyncWatcher {
@@ -113,7 +113,7 @@ class SyncWatcherImpl : public ledger::SyncWatcher {
 
   fidl::Binding<ledger::SyncWatcher> binding_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherImpl);
 };
 
 // NonAssociativeConflictResolverImpl uses a merge function which is neither
@@ -152,7 +152,7 @@ class NonAssociativeConflictResolverImpl : public ledger::ConflictResolver {
                      fidl::Array<uint8_t> next_token) {
           callback(status, std::move(change));
         });
-    waiter->Finalize(ftl::MakeCopyable([merge_result_provider =
+    waiter->Finalize(fxl::MakeCopyable([merge_result_provider =
                                             std::move(merge_result_provider)](
         ledger::Status status,
         std::vector<ledger::PageChangePtr> changes) mutable {
@@ -177,11 +177,11 @@ class NonAssociativeConflictResolverImpl : public ledger::ConflictResolver {
       merge_result_provider->Merge(std::move(merged_values),
                                    callback::Capture([] {}, &merge_status));
       ASSERT_TRUE(merge_result_provider.WaitForIncomingResponseWithTimeout(
-          ftl::TimeDelta::FromSeconds(1)));
+          fxl::TimeDelta::FromSeconds(1)));
       ASSERT_EQ(ledger::Status::OK, merge_status);
       merge_result_provider->Done(callback::Capture([] {}, &merge_status));
       ASSERT_TRUE(merge_result_provider.WaitForIncomingResponseWithTimeout(
-          ftl::TimeDelta::FromSeconds(1)));
+          fxl::TimeDelta::FromSeconds(1)));
       ASSERT_EQ(ledger::Status::OK, merge_status);
     }));
   }
@@ -256,8 +256,8 @@ class ConvergenceTest
  protected:
   std::unique_ptr<PageWatcherImpl> WatchPageContents(ledger::PagePtr* page) {
     ledger::PageWatcherPtr page_watcher;
-    ftl::RefPtr<RefCountedPageSnapshot> page_snapshot =
-        ftl::AdoptRef(new RefCountedPageSnapshot());
+    fxl::RefPtr<RefCountedPageSnapshot> page_snapshot =
+        fxl::AdoptRef(new RefCountedPageSnapshot());
     fidl::InterfaceRequest<ledger::PageSnapshot> page_snapshot_request =
         (**page_snapshot).NewRequest();
     std::unique_ptr<PageWatcherImpl> watcher =
@@ -267,7 +267,7 @@ class ConvergenceTest
     (*page)->GetSnapshot(std::move(page_snapshot_request), nullptr,
                          std::move(page_watcher),
                          callback::Capture(MakeQuitTask(), &status));
-    EXPECT_FALSE(RunLoopWithTimeout(ftl::TimeDelta::FromSeconds(10)));
+    EXPECT_FALSE(RunLoopWithTimeout(fxl::TimeDelta::FromSeconds(10)));
     EXPECT_EQ(ledger::Status::OK, status);
     return watcher;
   }
@@ -294,7 +294,7 @@ class ConvergenceTest
       watchers[i]->GetInlineOnLatestSnapshot(
           convert::ToArray(key),
           callback::Capture(MakeQuitTask(), &status, &values[i]));
-      EXPECT_FALSE(RunLoopWithTimeout(ftl::TimeDelta::FromSeconds(10)));
+      EXPECT_FALSE(RunLoopWithTimeout(fxl::TimeDelta::FromSeconds(10)));
       EXPECT_EQ(ledger::Status::OK, status);
     }
 
@@ -337,7 +337,7 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
       ledger->SetConflictResolverFactory(
           std::move(resolver_factory_ptr),
           callback::Capture(MakeQuitTask(), &status));
-      EXPECT_FALSE(RunLoopWithTimeout(ftl::TimeDelta::FromSeconds(10)));
+      EXPECT_FALSE(RunLoopWithTimeout(fxl::TimeDelta::FromSeconds(10)));
       EXPECT_EQ(ledger::Status::OK, status);
     }
 
@@ -393,7 +393,7 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
 
   // If |RunLoopUntil| returns true, the condition is met, thus the ledgers have
   // converged. There is no need for additional tests.
-  EXPECT_TRUE(RunLoopUntil(until, ftl::TimeDelta::FromSeconds(60)));
+  EXPECT_TRUE(RunLoopUntil(until, fxl::TimeDelta::FromSeconds(60)));
   int num_changes = 0;
   for (int i = 0; i < num_ledgers_; i++) {
     num_changes += watchers[i]->changes;

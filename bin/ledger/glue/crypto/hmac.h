@@ -5,12 +5,12 @@
 #ifndef APPS_LEDGER_SRC_GLUE_CRYPTO_HMAC_H_
 #define APPS_LEDGER_SRC_GLUE_CRYPTO_HMAC_H_
 
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace glue {
 // Compute the HMAC defined by RFC 2104 using SHA-256 for the hash algorithm.
 // |key| must be at least 256 bits long.
-std::string SHA256HMAC(ftl::StringView key, ftl::StringView data);
+std::string SHA256HMAC(fxl::StringView key, fxl::StringView data);
 }  // namespace glue
 
 #endif  // APPS_LEDGER_SRC_GLUE_CRYPTO_HMAC_H_

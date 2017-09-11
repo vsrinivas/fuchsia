@@ -16,7 +16,7 @@
 #include "apps/ledger/src/app/page_utils.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/convert/convert.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/mtl/socket/strings.h"
 
 namespace ledger {
@@ -71,13 +71,13 @@ void PageDelegate::GetSnapshot(
   // TODO(qsr): Update this so that only |GetCurrentCommitId| is done in a the
   // operation serializer.
   operation_serializer_.Serialize(
-      callback, ftl::MakeCopyable([
+      callback, fxl::MakeCopyable([
         this, snapshot_request = std::move(snapshot_request),
         key_prefix = std::move(key_prefix), watcher = std::move(watcher)
       ](Page::GetSnapshotCallback callback) mutable {
         storage_->GetCommit(
             GetCurrentCommitId(),
-            ftl::MakeCopyable([
+            fxl::MakeCopyable([
               this, snapshot_request = std::move(snapshot_request),
               key_prefix = std::move(key_prefix), watcher = std::move(watcher),
               callback = std::move(callback)
@@ -122,10 +122,10 @@ void PageDelegate::PutWithPriority(
                                promise->NewCallback());
 
   operation_serializer_.Serialize(
-      callback, ftl::MakeCopyable([
+      callback, fxl::MakeCopyable([
         this, promise = std::move(promise), key = std::move(key), priority
       ](Page::PutWithPriorityCallback callback) mutable {
-        promise->Finalize(ftl::MakeCopyable([
+        promise->Finalize(fxl::MakeCopyable([
           this, key = std::move(key), priority, callback = std::move(callback)
         ](storage::Status status, storage::ObjectId object_id) mutable {
           if (status != storage::Status::OK) {
@@ -155,11 +155,11 @@ void PageDelegate::PutReference(fidl::Array<uint8_t> key,
                       promise->NewCallback());
 
   operation_serializer_.Serialize(
-      callback, ftl::MakeCopyable([
+      callback, fxl::MakeCopyable([
         this, promise = std::move(promise), key = std::move(key),
         object_id = std::move(reference->opaque_id), priority
       ](Page::PutReferenceCallback callback) mutable {
-        promise->Finalize(ftl::MakeCopyable([
+        promise->Finalize(fxl::MakeCopyable([
           this, key = std::move(key), object_id = std::move(object_id),
           priority, callback = std::move(callback)
         ](storage::Status status,
@@ -181,10 +181,10 @@ void PageDelegate::PutReference(fidl::Array<uint8_t> key,
 void PageDelegate::Delete(fidl::Array<uint8_t> key,
                           const Page::DeleteCallback& callback) {
   operation_serializer_.Serialize(
-      callback, ftl::MakeCopyable([ this, key = std::move(key) ](
+      callback, fxl::MakeCopyable([ this, key = std::move(key) ](
                     Page::DeleteCallback callback) mutable {
 
-        RunInTransaction(ftl::MakeCopyable([key = std::move(key)](
+        RunInTransaction(fxl::MakeCopyable([key = std::move(key)](
                              storage::Journal * journal) {
                            return PageUtils::ConvertStatus(
                                journal->Delete(key), Status::KEY_NOT_FOUND);
@@ -288,7 +288,7 @@ void PageDelegate::PutInCommit(fidl::Array<uint8_t> key,
                                storage::KeyPriority priority,
                                std::function<void(Status)> callback) {
   RunInTransaction(
-      ftl::MakeCopyable([
+      fxl::MakeCopyable([
         key = std::move(key), value = std::move(value), priority
       ](storage::Journal * journal) {
         return PageUtils::ConvertStatus(journal->Put(key, value, priority));

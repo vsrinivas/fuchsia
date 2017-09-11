@@ -16,7 +16,7 @@ source_set("token_provider") {
     "//apps/ledger/src/callback",
     "//apps/ledger/src/network",
     "//apps/modular/services/auth",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 
   deps = [

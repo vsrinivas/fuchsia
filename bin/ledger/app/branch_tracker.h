@@ -14,7 +14,7 @@
 #include "apps/ledger/src/storage/public/commit_watcher.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/types.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 class PageManager;
@@ -32,7 +32,7 @@ class BranchTracker : public storage::CommitWatcher {
 
   void Init(std::function<void(Status)> on_done);
 
-  void set_on_empty(ftl::Closure on_empty_callback);
+  void set_on_empty(fxl::Closure on_empty_callback);
 
   // Returns the head commit of the currently tracked branch.
   const storage::CommitId& GetBranchHeadId();
@@ -47,7 +47,7 @@ class BranchTracker : public storage::CommitWatcher {
   // |StopTransaction| is called. |watchers_drained_callback| is called when all
   // watcher updates have been processed by the clients. This should be used by
   // |PageDelegate| when a transaction is in progress.
-  void StartTransaction(ftl::Closure watchers_drained_callback);
+  void StartTransaction(fxl::Closure watchers_drained_callback);
 
   // Informs the BranchTracker that a transaction is no longer in progress.
   // Resumes sending updates to registered watchers. This should be used by
@@ -75,7 +75,7 @@ class BranchTracker : public storage::CommitWatcher {
   PageManager* manager_;
   storage::PageStorage* storage_;
   callback::AutoCleanableSet<PageWatcherContainer> watchers_;
-  ftl::Closure on_empty_callback_;
+  fxl::Closure on_empty_callback_;
 
   bool transaction_in_progress_;
   // The following two variables hold the commit object and id correspondingly
@@ -91,9 +91,9 @@ class BranchTracker : public storage::CommitWatcher {
   storage::CommitId current_commit_id_;
 
   // This must be the last member of the class.
-  ftl::WeakPtrFactory<BranchTracker> weak_factory_;
+  fxl::WeakPtrFactory<BranchTracker> weak_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(BranchTracker);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BranchTracker);
 };
 
 }  // namespace ledger

@@ -11,13 +11,13 @@
 #include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace test {
 namespace {
-constexpr ftl::TimeDelta kTimeout = ftl::TimeDelta::FromSeconds(10);
+constexpr fxl::TimeDelta kTimeout = fxl::TimeDelta::FromSeconds(10);
 }  // namespace
 
 ledger::Status GetLedger(
@@ -61,7 +61,7 @@ ledger::Status GetLedger(
         std::move(token_provider_ptr), callback::Capture([] {}, &status));
     if (!repository_factory.WaitForIncomingResponseWithTimeout(kTimeout) ||
         status != ledger::Status::OK) {
-      FTL_LOG(ERROR) << "Unable to erase repository.";
+      FXL_LOG(ERROR) << "Unable to erase repository.";
       return ledger::Status::INTERNAL_ERROR;
     }
   }
@@ -73,26 +73,26 @@ ledger::Status GetLedger(
       std::move(token_provider_ptr), repository.NewRequest(),
       callback::Capture([] {}, &status));
   if (!repository_factory.WaitForIncomingResponseWithTimeout(kTimeout)) {
-    FTL_LOG(ERROR) << "Unable to get repository.";
+    FXL_LOG(ERROR) << "Unable to get repository.";
     return ledger::Status::INTERNAL_ERROR;
   }
   if (status != ledger::Status::OK) {
-    FTL_LOG(ERROR) << "Failure while getting repository.";
+    FXL_LOG(ERROR) << "Failure while getting repository.";
     return status;
   }
 
   repository->GetLedger(convert::ToArray(ledger_name), ledger_ptr->NewRequest(),
                         callback::Capture([] {}, &status));
   if (!repository.WaitForIncomingResponseWithTimeout(kTimeout)) {
-    FTL_LOG(ERROR) << "Unable to get ledger.";
+    FXL_LOG(ERROR) << "Unable to get ledger.";
     return ledger::Status::INTERNAL_ERROR;
   }
   if (status != ledger::Status::OK) {
-    FTL_LOG(ERROR) << "Failure while getting ledger.";
+    FXL_LOG(ERROR) << "Failure while getting ledger.";
     return status;
   }
   ledger_ptr->set_connection_error_handler([&loop] {
-    FTL_LOG(ERROR) << "The ledger connection was closed, quitting.";
+    FXL_LOG(ERROR) << "The ledger connection was closed, quitting.";
     loop->PostQuitTask();
   });
 
@@ -108,7 +108,7 @@ ledger::Status GetPageEnsureInitialized(mtl::MessageLoop* loop,
   (*ledger)->GetPage(std::move(requested_id), page->NewRequest(),
                      callback::Capture([] {}, &status));
   if (!ledger->WaitForIncomingResponseWithTimeout(kTimeout)) {
-    FTL_LOG(ERROR) << "Unable to get page.";
+    FXL_LOG(ERROR) << "Unable to get page.";
     return ledger::Status::INTERNAL_ERROR;
   }
   if (status != ledger::Status::OK) {
@@ -116,7 +116,7 @@ ledger::Status GetPageEnsureInitialized(mtl::MessageLoop* loop,
   }
 
   page->set_connection_error_handler([loop] {
-    FTL_LOG(ERROR) << "The page connection was closed, quitting.";
+    FXL_LOG(ERROR) << "The page connection was closed, quitting.";
     loop->PostQuitTask();
   });
 

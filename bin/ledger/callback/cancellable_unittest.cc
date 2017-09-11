@@ -10,8 +10,8 @@ namespace {
 
 class FakeCancellable : public Cancellable {
  public:
-  static ftl::RefPtr<FakeCancellable> Create(bool* destructed = nullptr) {
-    return ftl::AdoptRef(new FakeCancellable(destructed));
+  static fxl::RefPtr<FakeCancellable> Create(bool* destructed = nullptr) {
+    return fxl::AdoptRef(new FakeCancellable(destructed));
   }
 
   explicit FakeCancellable(bool* destructed) : destructed_(destructed) {}
@@ -27,7 +27,7 @@ class FakeCancellable : public Cancellable {
     return is_done_;
   }
 
-  void SetOnDone(ftl::Closure callback) override {
+  void SetOnDone(fxl::Closure callback) override {
     ++nb_set_on_done;
     this->callback = callback;
   }
@@ -41,7 +41,7 @@ class FakeCancellable : public Cancellable {
   int nb_is_done = 0;
   int nb_set_on_done = 0;
 
-  ftl::Closure callback;
+  fxl::Closure callback;
 
  private:
   ~FakeCancellable() override {

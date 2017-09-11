@@ -13,10 +13,10 @@
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
@@ -56,7 +56,7 @@ class CloudStorageImplTest : public test::TestWithMessageLoop {
 
     network::HttpHeaderPtr content_length_header = network::HttpHeader::New();
     content_length_header->name = "content-length";
-    content_length_header->value = ftl::NumberToString(content_length);
+    content_length_header->value = fxl::NumberToString(content_length);
 
     server_response->headers.push_back(std::move(content_length_header));
 
@@ -74,7 +74,7 @@ class CloudStorageImplTest : public test::TestWithMessageLoop {
   CloudStorageImpl gcs_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(CloudStorageImplTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CloudStorageImplTest);
 };
 
 TEST_F(CloudStorageImplTest, TestUpload) {
@@ -104,7 +104,7 @@ TEST_F(CloudStorageImplTest, TestUpload) {
       GetHeader(fake_network_service_.GetRequest()->headers, "content-length");
   EXPECT_TRUE(content_length_header);
   unsigned content_length;
-  EXPECT_TRUE(ftl::StringToNumberWithError(content_length_header->value.get(),
+  EXPECT_TRUE(fxl::StringToNumberWithError(content_length_header->value.get(),
                                            &content_length));
   EXPECT_EQ(content.size(), content_length);
 }

@@ -5,8 +5,8 @@
 #ifndef APPS_LEDGER_SRC_GLUE_SOCKET_SOCKET_PAIR_H_
 #define APPS_LEDGER_SRC_GLUE_SOCKET_SOCKET_PAIR_H_
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 #include "mx/socket.h"
 
 namespace glue {
@@ -21,11 +21,11 @@ class SocketPair {
   mx::socket socket2;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(SocketPair);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SocketPair);
 };
 
 inline SocketPair::SocketPair() {
-  FTL_CHECK(mx::socket::create(0u, &socket1, &socket2) == MX_OK);
+  FXL_CHECK(mx::socket::create(0u, &socket1, &socket2) == MX_OK);
 }
 
 inline SocketPair::~SocketPair() {}

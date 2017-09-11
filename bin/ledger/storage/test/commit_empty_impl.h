@@ -34,7 +34,7 @@ class CommitEmptyImpl : public Commit {
 
   ObjectIdView GetRootId() const override;
 
-  ftl::StringView GetStorageBytes() const override;
+  fxl::StringView GetStorageBytes() const override;
 };
 
 }  // namespace test

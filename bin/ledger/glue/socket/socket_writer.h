@@ -11,8 +11,8 @@
 
 #include "lib/fidl/c/waiter/async_waiter.h"
 #include "lib/fidl/cpp/waiter/default.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 #include "mx/socket.h"
 
 namespace glue {
@@ -25,7 +25,7 @@ class SocketWriter {
    public:
     virtual void GetNext(size_t offset,
                          size_t max_size,
-                         std::function<void(ftl::StringView)> callback) = 0;
+                         std::function<void(fxl::StringView)> callback) = 0;
     virtual void OnDataComplete() = 0;
 
    protected:
@@ -41,7 +41,7 @@ class SocketWriter {
 
  private:
   void GetData();
-  void WriteData(ftl::StringView data);
+  void WriteData(fxl::StringView data);
   void WaitForSocket();
   static void WaitComplete(mx_status_t result,
                            mx_signals_t pending,
@@ -55,12 +55,12 @@ class SocketWriter {
   // Data left to send from last call to |GetNext|.
   std::string data_;
   // Data left to send.
-  ftl::StringView data_view_;
+  fxl::StringView data_view_;
   mx::socket destination_;
   const FidlAsyncWaiter* waiter_;
   FidlAsyncWaitID wait_id_ = 0;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SocketWriter);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SocketWriter);
 };
 
 // Writes the content of a string to a socket. Deletes itself when done.
@@ -74,7 +74,7 @@ class StringSocketWriter : public SocketWriter::Client {
  private:
   void GetNext(size_t offset,
                size_t max_size,
-               std::function<void(ftl::StringView)> callback) override;
+               std::function<void(fxl::StringView)> callback) override;
   void OnDataComplete() override;
 
   SocketWriter socket_writer_;

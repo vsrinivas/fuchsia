@@ -14,7 +14,7 @@ executable("cloud_provider_firebase") {
     "//garnet/public/lib/app/cpp",
     "//apps/modular/services/lifecycle",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/trace-provider",
   ]
@@ -38,7 +38,7 @@ source_set("lib") {
     "//apps/ledger/src/auth_provider",
     "//apps/modular/services/auth",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 
   deps = [
@@ -67,7 +67,7 @@ executable("cloud_provider_firebase_unittests") {
     "//apps/modular/services/auth",
     "//apps/test_runner/src:gtest_main",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl:ftl_printers",
+    "//garnet/public/lib/fxl:fxl_printers",
   ]
 }
 

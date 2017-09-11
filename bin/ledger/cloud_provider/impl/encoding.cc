@@ -8,7 +8,7 @@
 
 #include "apps/ledger/src/cloud_provider/impl/timestamp_conversions.h"
 #include "apps/ledger/src/firebase/encoding.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
@@ -75,7 +75,7 @@ bool EncodeCommits(const std::vector<Commit>& commits,
   }
   writer.EndObject();
 
-  FTL_DCHECK(writer.IsComplete());
+  FXL_DCHECK(writer.IsComplete());
 
   std::string result = string_buffer.GetString();
   output_json->swap(result);
@@ -100,8 +100,8 @@ bool DecodeMultipleCommits(const std::string& json,
 
 bool DecodeMultipleCommitsFromValue(const rapidjson::Value& value,
                                     std::vector<Record>* output_records) {
-  FTL_DCHECK(output_records);
-  FTL_DCHECK(value.IsObject());
+  FXL_DCHECK(output_records);
+  FXL_DCHECK(value.IsObject());
 
   std::vector<Record> records;
   for (auto& it : value.GetObject()) {
@@ -115,7 +115,7 @@ bool DecodeMultipleCommitsFromValue(const rapidjson::Value& value,
     if (!DecodeCommitFromValue(it.value, &record)) {
       return false;
     }
-    FTL_DCHECK(record);
+    FXL_DCHECK(record);
     records.push_back(std::move(*record));
   }
 
@@ -134,8 +134,8 @@ bool DecodeMultipleCommitsFromValue(const rapidjson::Value& value,
 
 bool DecodeCommitFromValue(const rapidjson::Value& value,
                            std::unique_ptr<Record>* output_record) {
-  FTL_DCHECK(output_record);
-  FTL_DCHECK(value.IsObject());
+  FXL_DCHECK(output_record);
+  FXL_DCHECK(value.IsObject());
 
   // TODO(ppi): use a JSON schema to validate the format.
   CommitId commit_id;

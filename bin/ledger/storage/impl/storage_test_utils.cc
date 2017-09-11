@@ -14,13 +14,13 @@
 #include "apps/ledger/src/storage/impl/object_id.h"
 #include "apps/ledger/src/storage/impl/split.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace storage {
 
 namespace {
 std::vector<size_t> GetEnumeration(size_t size) {
-  FTL_CHECK(size <= 100);
+  FXL_CHECK(size <= 100);
 
   std::vector<size_t> values(size);
   std::iota(values.begin(), values.end(), 0u);
@@ -147,14 +147,14 @@ StorageTest::~StorageTest(){};
     std::vector<Entry>* entries) {
   std::vector<Entry> result;
   for (auto i : values) {
-    FTL_DCHECK(i < 100);
+    FXL_DCHECK(i < 100);
     std::unique_ptr<const Object> object;
     ::testing::AssertionResult assertion_result =
-        AddObject(ftl::StringPrintf("object%02" PRIuMAX, i), &object);
+        AddObject(fxl::StringPrintf("object%02" PRIuMAX, i), &object);
     if (!assertion_result) {
       return assertion_result;
     }
-    result.push_back(Entry{ftl::StringPrintf("key%02" PRIuMAX, i),
+    result.push_back(Entry{fxl::StringPrintf("key%02" PRIuMAX, i),
                            object->GetId(), KeyPriority::EAGER});
   }
   entries->swap(result);

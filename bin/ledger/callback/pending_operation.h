@@ -9,10 +9,10 @@
 #include <utility>
 #include <vector>
 
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace callback {
 
@@ -26,10 +26,10 @@ class PendingOperationManager {
   // the callback is called, |operation| is owned by the
   // |PendingOperationManager| object.
   template <typename A>
-  std::pair<A*, ftl::Closure> Manage(A operation) {
+  std::pair<A*, fxl::Closure> Manage(A operation) {
     auto deleter = std::make_unique<Deleter<A>>(std::move(operation));
     A* result = deleter->operation();
-    ftl::Closure cleanup = ManagePendingOperation(std::move(deleter));
+    fxl::Closure cleanup = ManagePendingOperation(std::move(deleter));
     return std::make_pair(result, std::move(cleanup));
   }
 
@@ -42,7 +42,7 @@ class PendingOperationManager {
     virtual ~PendingOperation() {}
 
    private:
-    FTL_DISALLOW_COPY_AND_ASSIGN(PendingOperation);
+    FXL_DISALLOW_COPY_AND_ASSIGN(PendingOperation);
   };
 
   template <typename A>
@@ -56,11 +56,11 @@ class PendingOperationManager {
     A operation_;
   };
 
-  ftl::Closure ManagePendingOperation(
+  fxl::Closure ManagePendingOperation(
       std::unique_ptr<PendingOperation> operation);
 
   std::vector<std::unique_ptr<PendingOperation>> pending_operations_;
-  ftl::WeakPtrFactory<PendingOperationManager> weak_ptr_factory_;
+  fxl::WeakPtrFactory<PendingOperationManager> weak_ptr_factory_;
 };
 
 }  // namespace callback

@@ -14,15 +14,15 @@
 #include "apps/ledger/src/test/fake_token_provider.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
 
 namespace test {
 namespace {
-constexpr ftl::StringView kLedgerName = "AppTests";
+constexpr fxl::StringView kLedgerName = "AppTests";
 
 class LedgerAppInstanceImpl final
     : public LedgerAppInstanceFactory::LedgerAppInstance {
@@ -31,7 +31,7 @@ class LedgerAppInstanceImpl final
       app::ApplicationControllerPtr controller,
       ledger::FirebaseConfigPtr firebase_config,
       ledger::LedgerRepositoryFactoryPtr ledger_repository_factory,
-      ftl::RefPtr<ftl::TaskRunner> services_task_runner);
+      fxl::RefPtr<fxl::TaskRunner> services_task_runner);
 
  private:
   app::ApplicationControllerPtr controller_;
@@ -41,7 +41,7 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     app::ApplicationControllerPtr controller,
     ledger::FirebaseConfigPtr firebase_config,
     ledger::LedgerRepositoryFactoryPtr ledger_repository_factory,
-    ftl::RefPtr<ftl::TaskRunner> services_task_runner)
+    fxl::RefPtr<fxl::TaskRunner> services_task_runner)
     : test::LedgerAppInstanceFactory::LedgerAppInstance(
           std::move(firebase_config),
           convert::ToArray(kLedgerName),
@@ -66,7 +66,7 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
 
   // Thread used to do services.
   std::thread services_thread_;
-  ftl::RefPtr<ftl::TaskRunner> services_task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> services_task_runner_;
   std::string server_id_;
 };
 

@@ -15,10 +15,10 @@
 #include "apps/ledger/src/callback/trace_callback.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/convert/convert.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/memory/ref_counted.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/tasks/task_runner.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace ledger {
@@ -68,7 +68,7 @@ storage::Status FillSingleEntry(const storage::Object& object,
 // Fills an InlinedEntry from the content of object.
 storage::Status FillSingleEntry(const storage::Object& object,
                                 InlinedEntryPtr* entry) {
-  ftl::StringView data;
+  fxl::StringView data;
   storage::Status status = object.GetData(&data);
   (*entry)->value = convert::ToArray(data);
   return status;
@@ -123,7 +123,7 @@ void FillEntries(
   std::string start = token
                           ? convert::ToString(token)
                           : std::max(key_prefix, convert::ToString(key_start));
-  auto on_next = ftl::MakeCopyable([
+  auto on_next = fxl::MakeCopyable([
     page_storage, &key_prefix, context = context.get(), waiter
   ](storage::Entry entry) {
     if (!PageUtils::MatchesPrefix(entry.key, key_prefix)) {
@@ -153,26 +153,26 @@ void FillEntries(
     return true;
   });
 
-  auto on_done = ftl::MakeCopyable([
+  auto on_done = fxl::MakeCopyable([
     waiter, context = std::move(context), callback = std::move(timed_callback)
   ](storage::Status status) mutable {
     if (status != storage::Status::OK) {
-      FTL_LOG(ERROR) << "Error while reading.";
+      FXL_LOG(ERROR) << "Error while reading.";
       callback(Status::IO_ERROR, nullptr, nullptr);
       return;
     }
     std::function<void(storage::Status,
                        std::vector<std::unique_ptr<const storage::Object>>)>
-        result_callback = ftl::MakeCopyable([
+        result_callback = fxl::MakeCopyable([
           callback = std::move(callback), context = std::move(context)
         ](storage::Status status,
           std::vector<std::unique_ptr<const storage::Object>> results) mutable {
           if (status != storage::Status::OK) {
-            FTL_LOG(ERROR) << "Error while reading.";
+            FXL_LOG(ERROR) << "Error while reading.";
             callback(Status::IO_ERROR, nullptr, nullptr);
             return;
           }
-          FTL_DCHECK(context->entries.size() == results.size());
+          FXL_DCHECK(context->entries.size() == results.size());
           size_t real_size = 0;
           size_t i = 0;
           for (; i < results.size(); i++) {
@@ -272,7 +272,7 @@ void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_start,
   auto timed_callback = TRACE_CALLBACK(callback, "ledger", "snapshot_get_keys");
 
   auto context = std::make_unique<Context>();
-  auto on_next = ftl::MakeCopyable(
+  auto on_next = fxl::MakeCopyable(
       [ this, context = context.get() ](storage::Entry entry) {
         if (!PageUtils::MatchesPrefix(entry.key, key_prefix_)) {
           return false;
@@ -285,7 +285,7 @@ void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_start,
         context->keys.push_back(convert::ToArray(entry.key));
         return true;
       });
-  auto on_done = ftl::MakeCopyable([
+  auto on_done = fxl::MakeCopyable([
     context = std::move(context), callback = std::move(timed_callback)
   ](storage::Status s) {
     if (context->next_token.empty()) {
@@ -342,7 +342,7 @@ void PageSnapshotImpl::GetInline(fidl::Array<uint8_t> key,
         page_storage_, entry.object_id, storage::PageStorage::Location::LOCAL,
         Status::NEEDS_FETCH,
         [callback = std::move(callback)](Status status,
-                                         ftl::StringView data_view) {
+                                         fxl::StringView data_view) {
           if (fidl_serialization::GetByteArraySize(data_view.size()) +
                   // Size of the Status.
                   fidl_serialization::kEnumSize >

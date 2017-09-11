@@ -7,20 +7,20 @@
 #include "apps/ledger/src/callback/synchronous_task.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace test {
 namespace {
-constexpr ftl::TimeDelta kTimeout = ftl::TimeDelta::FromSeconds(10);
+constexpr fxl::TimeDelta kTimeout = fxl::TimeDelta::FromSeconds(10);
 }
 
 LedgerAppInstanceFactory::LedgerAppInstance::LedgerAppInstance(
     ledger::FirebaseConfigPtr firebase_config,
     fidl::Array<uint8_t> test_ledger_name,
     ledger::LedgerRepositoryFactoryPtr ledger_repository_factory,
-    ftl::RefPtr<ftl::TaskRunner> services_task_runner)
+    fxl::RefPtr<fxl::TaskRunner> services_task_runner)
     : firebase_config_(std::move(firebase_config)),
       test_ledger_name_(std::move(test_ledger_name)),
       ledger_repository_factory_(std::move(ledger_repository_factory)),
@@ -45,7 +45,7 @@ LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
 
   modular::auth::TokenProviderPtr token_provider;
   EXPECT_TRUE(callback::RunSynchronously(
-      services_task_runner_, ftl::MakeCopyable([
+      services_task_runner_, fxl::MakeCopyable([
         this, request = token_provider.NewRequest()
       ]() mutable { token_provider_impl_.AddBinding(std::move(request)); }),
       kTimeout));
@@ -63,7 +63,7 @@ LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
 void LedgerAppInstanceFactory::LedgerAppInstance::EraseTestLedgerRepository() {
   modular::auth::TokenProviderPtr token_provider;
   EXPECT_TRUE(callback::RunSynchronously(
-      services_task_runner_, ftl::MakeCopyable([
+      services_task_runner_, fxl::MakeCopyable([
         this, request = token_provider.NewRequest()
       ]() mutable { token_provider_impl_.AddBinding(std::move(request)); }),
       kTimeout));
@@ -96,7 +96,7 @@ ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestPage() {
   ledger->GetPage(nullptr, page.NewRequest(),
                   [&status](ledger::Status s) { status = s; });
   EXPECT_TRUE(ledger.WaitForIncomingResponseWithTimeout(
-      ftl::TimeDelta::FromSeconds(1)));
+      fxl::TimeDelta::FromSeconds(1)));
   EXPECT_EQ(ledger::Status::OK, status);
 
   return fidl::InterfacePtr<ledger::Page>::Create(std::move(page));
@@ -111,7 +111,7 @@ ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(
   ledger->GetPage(page_id.Clone(), page_ptr.NewRequest(),
                   [&status](ledger::Status s) { status = s; });
   EXPECT_TRUE(ledger.WaitForIncomingResponseWithTimeout(
-      ftl::TimeDelta::FromSeconds(1)));
+      fxl::TimeDelta::FromSeconds(1)));
   EXPECT_EQ(expected_status, status);
 
   return page_ptr;
@@ -126,7 +126,7 @@ void LedgerAppInstanceFactory::LedgerAppInstance::DeletePage(
   ledger->DeletePage(page_id.Clone(),
                      [&status](ledger::Status s) { status = s; });
   EXPECT_TRUE(ledger.WaitForIncomingResponseWithTimeout(
-      ftl::TimeDelta::FromSeconds(1)));
+      fxl::TimeDelta::FromSeconds(1)));
   EXPECT_EQ(expected_status, status);
 }
 
@@ -134,7 +134,7 @@ void LedgerAppInstanceFactory::LedgerAppInstance::UnbindTokenProvider() {
   ASSERT_TRUE(callback::RunSynchronously(
       services_task_runner_,
       [this] { token_provider_impl_.CloseAllBindings(); },
-      ftl::TimeDelta::FromSeconds(1)));
+      fxl::TimeDelta::FromSeconds(1)));
 }
 
 }  // namespace test

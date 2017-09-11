@@ -8,7 +8,7 @@
 #include "apps/ledger/src/auth_provider/test/test_auth_provider.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "garnet/public/lib/fidl/cpp/bindings/binding.h"
-#include "garnet/public/lib/ftl/macros.h"
+#include "garnet/public/lib/fxl/macros.h"
 
 namespace cloud_provider_firebase {
 
@@ -26,7 +26,7 @@ class DeviceSetImplTest : public test::TestWithMessageLoop {
   DeviceSetImpl device_set_impl_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(DeviceSetImplTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DeviceSetImplTest);
 };
 
 TEST_F(DeviceSetImplTest, EmptyWhenDisconnected) {

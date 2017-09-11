@@ -10,12 +10,12 @@
 
 namespace ledger {
 
-NoNetworkService::NoNetworkService(ftl::RefPtr<ftl::TaskRunner> task_runner)
+NoNetworkService::NoNetworkService(fxl::RefPtr<fxl::TaskRunner> task_runner)
     : task_runner_(std::move(task_runner)) {}
 
 NoNetworkService::~NoNetworkService() {}
 
-ftl::RefPtr<callback::Cancellable> NoNetworkService::Request(
+fxl::RefPtr<callback::Cancellable> NoNetworkService::Request(
     std::function<network::URLRequestPtr()> /*request_factory*/,
     std::function<void(network::URLResponsePtr)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});

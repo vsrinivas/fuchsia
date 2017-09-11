@@ -7,13 +7,13 @@
 
 #include <iostream>
 
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace firebase {
 
 enum class Status { OK, NETWORK_ERROR, PARSE_ERROR, SERVER_ERROR };
 
-ftl::StringView StatusToString(Status status);
+fxl::StringView StatusToString(Status status);
 
 std::ostream& operator<<(std::ostream& os, Status status);
 

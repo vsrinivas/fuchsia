@@ -11,7 +11,7 @@
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/types.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace storage {
 namespace fake {
@@ -66,7 +66,7 @@ class FakeJournalDelegate {
   std::function<void(Status, std::unique_ptr<const storage::Commit>)>
       commit_callback_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FakeJournalDelegate);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakeJournalDelegate);
 };
 
 }  // namespace fake

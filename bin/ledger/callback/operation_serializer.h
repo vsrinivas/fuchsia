@@ -8,9 +8,9 @@
 #include <functional>
 #include <queue>
 
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 
 namespace callback {
 
@@ -60,13 +60,13 @@ class OperationSerializer {
   // otherwise.
   bool empty() { return queued_operations_.empty(); }
 
-  void set_on_empty(ftl::Closure on_empty) { on_empty_ = on_empty; }
+  void set_on_empty(fxl::Closure on_empty) { on_empty_ = on_empty; }
 
  private:
-  std::queue<ftl::Closure> queued_operations_;
-  ftl::Closure on_empty_;
+  std::queue<fxl::Closure> queued_operations_;
+  fxl::Closure on_empty_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(OperationSerializer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(OperationSerializer);
 };
 
 }  // namespace callback

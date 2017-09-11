@@ -12,18 +12,18 @@
 
 #include "apps/ledger/src/cloud_sync/impl/constants.h"
 #include "apps/ledger/src/storage/public/types.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 
 namespace cloud_sync {
 
 PageSyncImpl::PageSyncImpl(
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
     storage::PageStorage* storage,
     cloud_provider_firebase::CloudProvider* cloud_provider,
     auth_provider::AuthProvider* auth_provider,
     std::unique_ptr<backoff::Backoff> backoff,
-    ftl::Closure on_error,
+    fxl::Closure on_error,
     std::unique_ptr<SyncStateWatcher> ledger_watcher)
     : task_runner_(std::move(task_runner)),
       storage_(storage),
@@ -34,9 +34,9 @@ PageSyncImpl::PageSyncImpl(
       log_prefix_("Page " + convert::ToHex(storage->GetId()) + " sync: "),
       ledger_watcher_(std::move(ledger_watcher)),
       weak_factory_(this) {
-  FTL_DCHECK(storage_);
-  FTL_DCHECK(cloud_provider_);
-  FTL_DCHECK(auth_provider_);
+  FXL_DCHECK(storage_);
+  FXL_DCHECK(cloud_provider_);
+  FXL_DCHECK(auth_provider_);
 }
 
 PageSyncImpl::~PageSyncImpl() {
@@ -63,16 +63,16 @@ void PageSyncImpl::EnableUpload() {
 }
 
 void PageSyncImpl::Start() {
-  FTL_DCHECK(!started_);
+  FXL_DCHECK(!started_);
   started_ = true;
   storage_->SetSyncDelegate(this);
 
   StartDownload();
 }
 
-void PageSyncImpl::SetOnIdle(ftl::Closure on_idle) {
-  FTL_DCHECK(!on_idle_);
-  FTL_DCHECK(!started_);
+void PageSyncImpl::SetOnIdle(fxl::Closure on_idle) {
+  FXL_DCHECK(!on_idle_);
+  FXL_DCHECK(!started_);
   on_idle_ = std::move(on_idle);
 }
 
@@ -86,9 +86,9 @@ bool PageSyncImpl::IsIdle() {
          upload_state_ != UPLOAD_PENDING && commits_to_download_.empty();
 }
 
-void PageSyncImpl::SetOnBacklogDownloaded(ftl::Closure on_backlog_downloaded) {
-  FTL_DCHECK(!on_backlog_downloaded_);
-  FTL_DCHECK(!started_);
+void PageSyncImpl::SetOnBacklogDownloaded(fxl::Closure on_backlog_downloaded) {
+  FXL_DCHECK(!on_backlog_downloaded_);
+  FXL_DCHECK(!started_);
   on_backlog_downloaded_ = on_backlog_downloaded;
 }
 
@@ -124,7 +124,7 @@ void PageSyncImpl::GetObject(
             cloud_provider_firebase::Status status, uint64_t size,
             mx::socket data) mutable {
           if (status == cloud_provider_firebase::Status::NETWORK_ERROR) {
-            FTL_LOG(WARNING)
+            FXL_LOG(WARNING)
                 << log_prefix_
                 << "GetObject() failed due to a connection error, retrying.";
             Retry([
@@ -136,7 +136,7 @@ void PageSyncImpl::GetObject(
 
           backoff_->Reset();
           if (status != cloud_provider_firebase::Status::OK) {
-            FTL_LOG(WARNING)
+            FXL_LOG(WARNING)
                 << log_prefix_
                 << "Fetching remote object failed with status: " << status;
             callback(storage::Status::IO_ERROR, 0, mx::socket());
@@ -147,7 +147,7 @@ void PageSyncImpl::GetObject(
         });
   },
                [this, callback] {
-                 FTL_LOG(ERROR)
+                 FXL_LOG(ERROR)
                      << log_prefix_ << "Failed to retrieve the auth token, "
                      << "cannot download the object.";
                  callback(storage::Status::IO_ERROR, 0, mx::socket());
@@ -168,22 +168,22 @@ void PageSyncImpl::OnRemoteCommits(
 }
 
 void PageSyncImpl::OnConnectionError() {
-  FTL_DCHECK(remote_watch_set_);
+  FXL_DCHECK(remote_watch_set_);
   // Reset the watcher and schedule a retry.
   cloud_provider_->UnwatchCommits(this);
   remote_watch_set_ = false;
-  FTL_LOG(WARNING)
+  FXL_LOG(WARNING)
       << log_prefix_
       << "Connection error in the remote commit watcher, retrying.";
   Retry([this] { SetRemoteWatcher(true); });
 }
 
 void PageSyncImpl::OnTokenExpired() {
-  FTL_DCHECK(remote_watch_set_);
+  FXL_DCHECK(remote_watch_set_);
   // Reset the watcher and schedule a retry.
   cloud_provider_->UnwatchCommits(this);
   remote_watch_set_ = false;
-  FTL_LOG(INFO) << log_prefix_ << "Firebase token expired, refreshing.";
+  FXL_LOG(INFO) << log_prefix_ << "Firebase token expired, refreshing.";
   Retry([this] { SetRemoteWatcher(true); });
 }
 
@@ -205,11 +205,11 @@ void PageSyncImpl::StartDownload() {
     return;
   }
   if (last_commit_ts.empty()) {
-    FTL_VLOG(1) << log_prefix_ << "starting sync for the first time, "
+    FXL_VLOG(1) << log_prefix_ << "starting sync for the first time, "
                 << "retrieving all remote commits";
   } else {
     // TODO(ppi): print the timestamp out as human-readable wall time.
-    FTL_VLOG(1) << log_prefix_ << "starting sync again, "
+    FXL_VLOG(1) << log_prefix_ << "starting sync again, "
                 << "retrieving commits uploaded after: " << last_commit_ts;
   }
 
@@ -225,7 +225,7 @@ void PageSyncImpl::StartDownload() {
                    std::vector<cloud_provider_firebase::Record> records) {
               if (cloud_status != cloud_provider_firebase::Status::OK) {
                 // Fetching the remote commits failed, schedule a retry.
-                FTL_LOG(WARNING)
+                FXL_LOG(WARNING)
                     << log_prefix_
                     << "fetching the remote commits failed due to a "
                     << "connection error, status: " << cloud_status
@@ -238,18 +238,18 @@ void PageSyncImpl::StartDownload() {
               if (records.empty()) {
                 // If there is no remote commits to add, announce that we're
                 // done.
-                FTL_VLOG(1) << log_prefix_
+                FXL_VLOG(1) << log_prefix_
                             << "initial sync finished, no new remote commits";
                 BacklogDownloaded();
               } else {
-                FTL_VLOG(1) << log_prefix_ << "retrieved " << records.size()
+                FXL_VLOG(1) << log_prefix_ << "retrieved " << records.size()
                             << " (possibly) new remote commits, "
                             << "adding them to storage.";
                 // If not, fire the backlog download callback when the remote
                 // commits are downloaded.
                 const auto record_count = records.size();
                 DownloadBatch(std::move(records), [this, record_count] {
-                  FTL_VLOG(1) << log_prefix_ << "initial sync finished, added "
+                  FXL_VLOG(1) << log_prefix_ << "initial sync finished, added "
                               << record_count << " remote commits.";
                   BacklogDownloaded();
                 });
@@ -277,8 +277,8 @@ void PageSyncImpl::StartUpload() {
 
 void PageSyncImpl::DownloadBatch(
     std::vector<cloud_provider_firebase::Record> records,
-    ftl::Closure on_done) {
-  FTL_DCHECK(!batch_download_);
+    fxl::Closure on_done) {
+  FXL_DCHECK(!batch_download_);
   batch_download_ = std::make_unique<BatchDownload>(
       storage_, std::move(records), [ this, on_done = std::move(on_done) ] {
         if (on_done) {
@@ -303,7 +303,7 @@ void PageSyncImpl::DownloadBatch(
 }
 
 void PageSyncImpl::SetRemoteWatcher(bool is_retry) {
-  FTL_DCHECK(!remote_watch_set_);
+  FXL_DCHECK(!remote_watch_set_);
   // Retrieve the server-side timestamp of the last commit we received.
   std::string last_commit_ts;
   auto status = storage_->GetSyncMetadata(kTimestampKey, &last_commit_ts);
@@ -319,7 +319,7 @@ void PageSyncImpl::SetRemoteWatcher(bool is_retry) {
         cloud_provider_->WatchCommits(auth_token, last_commit_ts, this);
         remote_watch_set_ = true;
         if (is_retry) {
-          FTL_LOG(INFO) << log_prefix_ << "Cloud watcher re-established";
+          FXL_LOG(INFO) << log_prefix_ << "Cloud watcher re-established";
         }
       },
       [this] {
@@ -381,7 +381,7 @@ void PageSyncImpl::VerifyUnsyncedCommits(
   }
 
   SetUploadState(UPLOAD_PENDING);
-  storage_->GetHeadCommitIds(ftl::MakeCopyable([
+  storage_->GetHeadCommitIds(fxl::MakeCopyable([
     this, commits = std::move(commits)
   ](storage::Status status, std::vector<storage::CommitId> heads) mutable {
     if (status != storage::Status::OK) {
@@ -393,7 +393,7 @@ void PageSyncImpl::VerifyUnsyncedCommits(
       // If we are already uploading a commit batch, return early.
       return;
     }
-    FTL_DCHECK(!heads.empty());
+    FXL_DCHECK(!heads.empty());
 
     if (heads.size() > 1u) {
       // Too many local heads.
@@ -410,8 +410,8 @@ void PageSyncImpl::VerifyUnsyncedCommits(
 
 void PageSyncImpl::HandleUnsyncedCommits(
     std::vector<std::unique_ptr<const storage::Commit>> commits) {
-  FTL_DCHECK(!batch_upload_);
-  FTL_DCHECK(commits_to_upload_);
+  FXL_DCHECK(!batch_upload_);
+  FXL_DCHECK(commits_to_upload_);
   batch_upload_ =
       std::make_unique<BatchUpload>(
           storage_, cloud_provider_, auth_provider_, std::move(commits),
@@ -422,7 +422,7 @@ void PageSyncImpl::HandleUnsyncedCommits(
             UploadUnsyncedCommits();
           },
           [this] {
-            FTL_LOG(WARNING)
+            FXL_LOG(WARNING)
                 << log_prefix_
                 << "commit upload failed due to a connection error, retrying.";
             SetUploadState(UPLOAD_PENDING);
@@ -435,7 +435,7 @@ void PageSyncImpl::HandleUnsyncedCommits(
 }
 
 void PageSyncImpl::HandleError(const char error_description[]) {
-  FTL_LOG(ERROR) << log_prefix_ << error_description << " Stopping sync.";
+  FXL_LOG(ERROR) << log_prefix_ << error_description << " Stopping sync.";
   if (local_watch_set_) {
     storage_->RemoveCommitWatcher(this);
   }
@@ -465,7 +465,7 @@ void PageSyncImpl::BacklogDownloaded() {
   StartUpload();
 }
 
-void PageSyncImpl::Retry(ftl::Closure callable) {
+void PageSyncImpl::Retry(fxl::Closure callable) {
   task_runner_->PostDelayedTask(
       [
         weak_this = weak_factory_.GetWeakPtr(), callable = std::move(callable)
@@ -504,7 +504,7 @@ void PageSyncImpl::SetState(DownloadSyncState download_state,
 }
 
 void PageSyncImpl::GetAuthToken(std::function<void(std::string)> on_token_ready,
-                                ftl::Closure on_failed) {
+                                fxl::Closure on_failed) {
   auto request = auth_provider_->GetFirebaseToken([
     on_token_ready = std::move(on_token_ready), on_failed = std::move(on_failed)
   ](auth_provider::AuthStatus auth_status, std::string auth_token) {

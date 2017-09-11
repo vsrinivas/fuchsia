@@ -8,8 +8,8 @@
 
 #include <atomic>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/random/rand.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/random/rand.h"
 
 namespace glue {
 
@@ -18,7 +18,7 @@ namespace {
 void InitEntropy() {
   auto current_time = mx_time_get(MX_CLOCK_UTC);
   if (mx_cprng_add_entropy(&current_time, sizeof(current_time)) != MX_OK) {
-    FTL_LOG(WARNING)
+    FXL_LOG(WARNING)
         << "Unable to add entropy to the kernel. No additional entropy added.";
     return;
   }
@@ -35,7 +35,7 @@ void EnsureInitEntropy() {
 
 void RandBytes(void* buffer, size_t size) {
   EnsureInitEntropy();
-  FTL_CHECK(ftl::RandBytes(static_cast<uint8_t*>(buffer), size));
+  FXL_CHECK(fxl::RandBytes(static_cast<uint8_t*>(buffer), size));
 }
 
 uint64_t RandUint64() {

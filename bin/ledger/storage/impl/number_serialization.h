@@ -8,16 +8,16 @@
 namespace storage {
 
 template <typename I>
-I DeserializeNumber(ftl::StringView value) {
-  FTL_DCHECK(value.size() == sizeof(I));
+I DeserializeNumber(fxl::StringView value) {
+  FXL_DCHECK(value.size() == sizeof(I));
   I result;
   memcpy(&result, value.data(), sizeof(I));
   return result;
 }
 
 template <typename I>
-ftl::StringView SerializeNumber(const I& value) {
-  return ftl::StringView(reinterpret_cast<const char*>(&value), sizeof(I));
+fxl::StringView SerializeNumber(const I& value) {
+  return fxl::StringView(reinterpret_cast<const char*>(&value), sizeof(I));
 }
 
 }  // namespace storage

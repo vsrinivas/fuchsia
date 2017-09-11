@@ -58,7 +58,7 @@ class CloudDeviceSet {
                                 std::function<void(Status)> callback) = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(CloudDeviceSet);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CloudDeviceSet);
 };
 
 }  // namespace cloud_provider_firebase

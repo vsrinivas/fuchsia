@@ -33,7 +33,7 @@ class CommitRandomImpl : public Commit {
 
   ObjectIdView GetRootId() const override;
 
-  ftl::StringView GetStorageBytes() const override;
+  fxl::StringView GetStorageBytes() const override;
 
  private:
   CommitRandomImpl(const CommitRandomImpl& other);

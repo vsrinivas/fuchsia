@@ -8,7 +8,7 @@
 
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/impl/btree/tree_node_generated.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace storage {
 namespace btree {
@@ -38,7 +38,7 @@ Entry ToEntry(const EntryStorage* entry_storage) {
 }
 }  // namespace
 
-bool CheckValidTreeNodeSerialization(ftl::StringView data) {
+bool CheckValidTreeNodeSerialization(fxl::StringView data) {
   flatbuffers::Verifier verifier(
       reinterpret_cast<const unsigned char*>(data.data()), data.size());
   if (!VerifyTreeNodeStorageBuffer(verifier)) {
@@ -124,11 +124,11 @@ std::string EncodeNode(uint8_t level,
                      builder.GetSize());
 }
 
-bool DecodeNode(ftl::StringView data,
+bool DecodeNode(fxl::StringView data,
                 uint8_t* level,
                 std::vector<Entry>* res_entries,
                 std::vector<ObjectId>* res_children) {
-  FTL_DCHECK(CheckValidTreeNodeSerialization(data));
+  FXL_DCHECK(CheckValidTreeNodeSerialization(data));
 
   const TreeNodeStorage* tree_node =
       GetTreeNodeStorage(reinterpret_cast<const unsigned char*>(data.data()));

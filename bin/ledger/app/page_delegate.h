@@ -21,7 +21,7 @@
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/types.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace ledger {
 class PageManager;
@@ -44,7 +44,7 @@ class PageDelegate {
 
   void Init(std::function<void(Status)> on_done);
 
-  void set_on_empty(ftl::Closure on_empty_callback) {
+  void set_on_empty(fxl::Closure on_empty_callback) {
     on_empty_callback_ = on_empty_callback;
   }
 
@@ -116,14 +116,14 @@ class PageDelegate {
   fidl_helpers::BoundInterface<Page, PageImpl> interface_;
   BranchTracker branch_tracker_;
 
-  ftl::Closure on_empty_callback_;
+  fxl::Closure on_empty_callback_;
 
   storage::CommitId journal_parent_commit_;
   std::unique_ptr<storage::Journal> journal_;
   callback::OperationSerializer<Status> operation_serializer_;
   SyncWatcherSet* watcher_set_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageDelegate);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageDelegate);
 };
 
 }  // namespace ledger

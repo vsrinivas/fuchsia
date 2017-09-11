@@ -10,11 +10,11 @@ class DoneCancellable : public Cancellable {
  public:
   void Cancel() override {}
   bool IsDone() override { return true; }
-  void SetOnDone(ftl::Closure /*callback*/) override {}
+  void SetOnDone(fxl::Closure /*callback*/) override {}
 };
 }  // namespace
 
-CancellableImpl::CancellableImpl(ftl::Closure on_cancel)
+CancellableImpl::CancellableImpl(fxl::Closure on_cancel)
     : is_cancelled_(false), on_cancel_(std::move(on_cancel)), is_done_(false) {}
 
 void CancellableImpl::Cancel() {
@@ -29,13 +29,13 @@ bool CancellableImpl::IsDone() {
   return is_done_;
 }
 
-void CancellableImpl::SetOnDone(ftl::Closure callback) {
-  FTL_DCHECK(!on_done_);
+void CancellableImpl::SetOnDone(fxl::Closure callback) {
+  FXL_DCHECK(!on_done_);
   on_done_ = std::move(callback);
 }
 
-ftl::RefPtr<callback::Cancellable> CreateDoneCancellable() {
-  return ftl::AdoptRef(new DoneCancellable());
+fxl::RefPtr<callback::Cancellable> CreateDoneCancellable() {
+  return fxl::AdoptRef(new DoneCancellable());
 }
 
 }  // namespace callback

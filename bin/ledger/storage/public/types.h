@@ -9,7 +9,7 @@
 #include <string>
 
 #include "apps/ledger/src/convert/convert.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace storage {
 
@@ -70,7 +70,7 @@ enum class Status {
   NOT_IMPLEMENTED,
 };
 
-ftl::StringView StatusToString(Status status);
+fxl::StringView StatusToString(Status status);
 std::ostream& operator<<(std::ostream& os, Status status);
 
 }  // namespace storage

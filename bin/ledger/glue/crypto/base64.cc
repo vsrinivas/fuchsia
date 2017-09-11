@@ -5,11 +5,11 @@
 #include "apps/ledger/src/glue/crypto/base64.h"
 
 #include "apps/ledger/src/third_party/modp_b64/modp_b64.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace glue {
 
-std::string Base64UrlEncode(ftl::StringView input) {
+std::string Base64UrlEncode(fxl::StringView input) {
   std::string output;
   size_t output_length = modp_b64_encode_strlen(input.size());
   // In C++11, std::string guarantees that output[output.size()] is
@@ -17,11 +17,11 @@ std::string Base64UrlEncode(ftl::StringView input) {
   // a '\0' that will override output[output.size()].
   output.resize(output_length);
   size_t written = modp_b64_encode(&output[0], input.data(), input.size());
-  FTL_DCHECK(output_length == written);
+  FXL_DCHECK(output_length == written);
   return output;
 }
 
-bool Base64UrlDecode(ftl::StringView input, std::string* output) {
+bool Base64UrlDecode(fxl::StringView input, std::string* output) {
   std::string tmp_output;
   size_t output_maxlength = modp_b64_decode_len(input.size());
   tmp_output.resize(output_maxlength);

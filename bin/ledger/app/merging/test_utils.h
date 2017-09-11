@@ -15,7 +15,7 @@
 #include "apps/ledger/src/storage/public/types.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
 
 namespace ledger {
 namespace test {
@@ -26,7 +26,7 @@ class TestBackoff : public backoff::Backoff {
   explicit TestBackoff(int* get_next_count);
   ~TestBackoff() override;
 
-  ftl::TimeDelta GetNext() override;
+  fxl::TimeDelta GetNext() override;
 
   void Reset() override;
 

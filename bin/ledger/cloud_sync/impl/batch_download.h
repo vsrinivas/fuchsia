@@ -7,7 +7,7 @@
 
 #include "apps/ledger/src/cloud_provider/public/record.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
-#include "lib/ftl/functional/closure.h"
+#include "lib/fxl/functional/closure.h"
 
 namespace cloud_sync {
 
@@ -23,8 +23,8 @@ class BatchDownload {
  public:
   BatchDownload(storage::PageStorage* storage,
                 std::vector<cloud_provider_firebase::Record> records,
-                ftl::Closure on_done,
-                ftl::Closure on_error);
+                fxl::Closure on_done,
+                fxl::Closure on_error);
   ~BatchDownload();
 
   // Can be called only once.
@@ -35,11 +35,11 @@ class BatchDownload {
 
   storage::PageStorage* const storage_;
   std::vector<cloud_provider_firebase::Record> records_;
-  ftl::Closure on_done_;
-  ftl::Closure on_error_;
+  fxl::Closure on_done_;
+  fxl::Closure on_error_;
   bool started_ = false;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(BatchDownload);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BatchDownload);
 };
 
 }  // namespace cloud_sync

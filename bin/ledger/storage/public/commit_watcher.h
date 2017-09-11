@@ -21,7 +21,7 @@ class CommitWatcher {
       ChangeSource source) = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(CommitWatcher);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CommitWatcher);
 };
 
 }  // namespace storage

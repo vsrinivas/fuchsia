@@ -13,11 +13,11 @@ namespace btree {
 // has key greather than |key|. In the second case, the key, if present, will
 // be found in the children at the returned index.
 size_t GetEntryOrChildIndex(const std::vector<Entry> entries,
-                            ftl::StringView key) {
+                            fxl::StringView key) {
   auto lower = std::lower_bound(
       entries.begin(), entries.end(), key,
-      [](const Entry& entry, ftl::StringView key) { return entry.key < key; });
-  FTL_DCHECK(lower == entries.end() || lower->key >= key);
+      [](const Entry& entry, fxl::StringView key) { return entry.key < key; });
+  FXL_DCHECK(lower == entries.end() || lower->key >= key);
   return lower - entries.begin();
 }
 

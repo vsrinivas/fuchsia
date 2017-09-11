@@ -17,13 +17,13 @@
 
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/tool/convert.h"
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/files/eintr_wrapper.h"
-#include "lib/ftl/files/file_descriptor.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/functional/auto_call.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/eintr_wrapper.h"
+#include "lib/fxl/files/file_descriptor.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/functional/auto_call.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 #define FILE_CREATE_MODE 0666
@@ -35,7 +35,7 @@ namespace {
 const size_t kDataSizeLimit = 400;
 
 // Returns a printable, truncated to kDataSizeLimit string from the argument.
-std::string ToPrintable(ftl::StringView string) {
+std::string ToPrintable(fxl::StringView string) {
   for (char i : string) {
     // Check if the character is "normal" (printable, or new line) for the
     // current locale.
@@ -60,15 +60,15 @@ class FileStreamWriter {
 
   bool IsValid() { return fd_.is_valid(); }
 
-  FileStreamWriter& operator<<(ftl::StringView str) {
-    FTL_DCHECK(IsValid());
-    bool result = ftl::WriteFileDescriptor(fd_.get(), str.data(), str.size());
-    FTL_DCHECK(result);
+  FileStreamWriter& operator<<(fxl::StringView str) {
+    FXL_DCHECK(IsValid());
+    bool result = fxl::WriteFileDescriptor(fd_.get(), str.data(), str.size());
+    FXL_DCHECK(result);
     return *this;
   }
 
  private:
-  ftl::UniqueFD fd_;
+  fxl::UniqueFD fd_;
 };
 
 }  // namespace
@@ -76,7 +76,7 @@ class FileStreamWriter {
 InspectCommand::InspectCommand(std::vector<std::string> args)
     : args_(std::move(args)) {}
 
-void InspectCommand::Start(ftl::Closure on_done) {
+void InspectCommand::Start(fxl::Closure on_done) {
   if (args_.size() < 3) {
     PrintHelp(std::move(on_done));
     return;
@@ -101,7 +101,7 @@ void InspectCommand::Start(ftl::Closure on_done) {
   }
 }
 
-void InspectCommand::ListPages(ftl::Closure on_done) {
+void InspectCommand::ListPages(fxl::Closure on_done) {
   std::cout << "List of pages for app " << app_id_ << ":" << std::endl;
   std::unique_ptr<storage::LedgerStorageImpl> ledger_storage(
       GetLedgerStorage());
@@ -109,22 +109,22 @@ void InspectCommand::ListPages(ftl::Closure on_done) {
   auto waiter = callback::CompletionWaiter::Create();
   for (const storage::PageId& page_id : page_ids) {
     ledger_storage->GetPageStorage(
-        page_id, ftl::MakeCopyable([
-          completer = ftl::MakeAutoCall(waiter->NewCallback()),
+        page_id, fxl::MakeCopyable([
+          completer = fxl::MakeAutoCall(waiter->NewCallback()),
           page_id = page_id
         ](storage::Status status,
                  std::unique_ptr<storage::PageStorage> storage) mutable {
           if (status != storage::Status::OK) {
-            FTL_LOG(FATAL) << "Unable to retrieve page "
+            FXL_LOG(FATAL) << "Unable to retrieve page "
                            << convert::ToHex(page_id) << " due to error "
                            << status;
           }
-          storage->GetHeadCommitIds(ftl::MakeCopyable([
+          storage->GetHeadCommitIds(fxl::MakeCopyable([
             completer = std::move(completer), page_id = std::move(page_id)
           ](storage::Status get_status, std::vector<storage::CommitId> heads) {
             std::cout << "Page " << convert::ToHex(page_id) << std::endl;
             if (get_status != storage::Status::OK) {
-              FTL_LOG(FATAL)
+              FXL_LOG(FATAL)
                   << "Unable to retrieve commits for page "
                   << convert::ToHex(page_id) << " due to error " << get_status;
             }
@@ -138,18 +138,18 @@ void InspectCommand::ListPages(ftl::Closure on_done) {
   waiter->Finalize(std::move(on_done));
 }
 
-void InspectCommand::DisplayCommit(ftl::Closure on_done) {
+void InspectCommand::DisplayCommit(fxl::Closure on_done) {
   std::unique_ptr<storage::LedgerStorageImpl> ledger_storage(
       GetLedgerStorage());
   storage::PageId page_id;
   if (!FromHexString(args_[4], &page_id)) {
-    FTL_LOG(ERROR) << "Unable to parse page id " << args_[4];
+    FXL_LOG(ERROR) << "Unable to parse page id " << args_[4];
     on_done();
     return;
   }
   storage::CommitId commit_id;
   if (!FromHexString(args_[5], &commit_id)) {
-    FTL_LOG(ERROR) << "Unable to parse commit id " << args_[5];
+    FXL_LOG(ERROR) << "Unable to parse commit id " << args_[5];
     on_done();
     return;
   }
@@ -159,7 +159,7 @@ void InspectCommand::DisplayCommit(ftl::Closure on_done) {
                    storage::Status status,
                    std::unique_ptr<storage::PageStorage> storage) mutable {
         if (status != storage::Status::OK) {
-          FTL_LOG(ERROR) << "Unable to retrieve page due to error " << status;
+          FXL_LOG(ERROR) << "Unable to retrieve page due to error " << status;
           on_done();
           return;
         }
@@ -170,7 +170,7 @@ void InspectCommand::DisplayCommit(ftl::Closure on_done) {
                 storage::Status status,
                 std::unique_ptr<const storage::Commit> commit) mutable {
               if (status != storage::Status::OK) {
-                FTL_LOG(ERROR)
+                FXL_LOG(ERROR)
                     << "Unable to retrieve commit " << convert::ToHex(commit_id)
                     << " on page " << convert::ToHex(storage_->GetId())
                     << " due to error " << status;
@@ -183,7 +183,7 @@ void InspectCommand::DisplayCommit(ftl::Closure on_done) {
 }
 
 void InspectCommand::PrintCommit(std::unique_ptr<const storage::Commit> commit,
-                                 ftl::Closure on_done) {
+                                 fxl::Closure on_done) {
   // Print commit info
   std::cout << "Commit " << args_[4] << std::endl;
   std::cout << " timestamp " << commit->GetTimestamp() << std::endl;
@@ -191,7 +191,7 @@ void InspectCommand::PrintCommit(std::unique_ptr<const storage::Commit> commit,
     std::cout << " parent " << convert::ToHex(parent_commit) << std::endl;
   }
   std::cout << "Page state at this commit: " << std::endl;
-  coroutine_service_.StartCoroutine(ftl::MakeCopyable([
+  coroutine_service_.StartCoroutine(fxl::MakeCopyable([
     this, commit = std::move(commit), on_done = std::move(on_done)
   ](coroutine::CoroutineHandler * handler) mutable {
     storage_->GetCommitContents(
@@ -210,11 +210,11 @@ void InspectCommand::PrintCommit(std::unique_ptr<const storage::Commit> commit,
                                         std::move(callback));
                   },
                   &status, &object)) {
-            FTL_NOTREACHED();
+            FXL_NOTREACHED();
           }
           std::string priority_str =
               entry.priority == storage::KeyPriority::EAGER ? "EAGER" : "LAZY";
-          ftl::StringView data;
+          fxl::StringView data;
           object->GetData(&data);
           std::cout << " Key " << entry.key << " (" << priority_str << "): ";
           std::cout << ToPrintable(data) << std::endl;
@@ -222,7 +222,7 @@ void InspectCommand::PrintCommit(std::unique_ptr<const storage::Commit> commit,
         },
         [on_done = std::move(on_done)](storage::Status status) {
           if (status != storage::Status::OK) {
-            FTL_LOG(FATAL) << "Unable to retrieve commit contents due to error "
+            FXL_LOG(FATAL) << "Unable to retrieve commit contents due to error "
                            << status;
           }
           on_done();
@@ -230,12 +230,12 @@ void InspectCommand::PrintCommit(std::unique_ptr<const storage::Commit> commit,
   }));
 }
 
-void InspectCommand::DisplayCommitGraph(ftl::Closure on_done) {
+void InspectCommand::DisplayCommitGraph(fxl::Closure on_done) {
   std::unique_ptr<storage::LedgerStorageImpl> ledger_storage(
       GetLedgerStorage());
   storage::PageId page_id;
   if (!FromHexString(args_[4], &page_id)) {
-    FTL_LOG(ERROR) << "Unable to parse page id " << args_[4];
+    FXL_LOG(ERROR) << "Unable to parse page id " << args_[4];
     on_done();
     return;
   }
@@ -244,12 +244,12 @@ void InspectCommand::DisplayCommitGraph(ftl::Closure on_done) {
                    storage::Status status,
                    std::unique_ptr<storage::PageStorage> storage) mutable {
         if (status != storage::Status::OK) {
-          FTL_LOG(ERROR) << "Unable to retrieve page due to error " << status;
+          FXL_LOG(ERROR) << "Unable to retrieve page due to error " << status;
           on_done();
           return;
         }
         storage_ = std::move(storage);
-        coroutine_service_.StartCoroutine(ftl::MakeCopyable([
+        coroutine_service_.StartCoroutine(fxl::MakeCopyable([
           this, page_id = std::move(page_id), on_done = std::move(on_done)
         ](coroutine::CoroutineHandler * handler) mutable {
           DisplayGraphCoroutine(handler, page_id, std::move(on_done));
@@ -259,7 +259,7 @@ void InspectCommand::DisplayCommitGraph(ftl::Closure on_done) {
 
 void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
                                            storage::PageId page_id,
-                                           ftl::Closure on_done) {
+                                           fxl::Closure on_done) {
   storage::Status status;
   std::vector<std::unique_ptr<const storage::Commit>> unsynced_commits;
   if (coroutine::SyncCall(
@@ -271,7 +271,7 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
             storage_->GetUnsyncedCommits(std::move(callback));
           },
           &status, &unsynced_commits)) {
-    FTL_NOTREACHED();
+    FXL_NOTREACHED();
   }
 
   std::unordered_set<storage::CommitId> unsynced_commit_ids;
@@ -289,12 +289,12 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
             storage_->GetHeadCommitIds(std::move(callback));
           },
           &status, &heads)) {
-    FTL_NOTREACHED();
+    FXL_NOTREACHED();
   }
   std::unordered_set<storage::CommitId> commit_ids;
   std::deque<storage::CommitId> to_explore;
   if (status != storage::Status::OK) {
-    FTL_LOG(FATAL) << "Unable to get head commits due to error " << status;
+    FXL_LOG(FATAL) << "Unable to get head commits due to error " << status;
   }
 
   commit_ids.insert(heads.begin(), heads.end());
@@ -322,7 +322,7 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
               storage_->GetCommit(commit_id, std::move(callback));
             },
             &status, &commit)) {
-      FTL_NOTREACHED();
+      FXL_NOTREACHED();
     }
     std::vector<storage::CommitIdView> parents = commit->GetParentIds();
     for (const storage::CommitIdView& parent : parents) {
@@ -344,7 +344,7 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
       writer << "bgcolor=red, ";
     }
     writer << "tooltip=\"timestamp="
-           << ftl::NumberToString(commit->GetTimestamp())
+           << fxl::NumberToString(commit->GetTimestamp())
            << " root_id=" << convert::ToHex(commit->GetRootId()) << "\"];\n";
   }
   writer << "}\n";
@@ -352,7 +352,7 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
   on_done();
 }
 
-void InspectCommand::PrintHelp(ftl::Closure on_done) {
+void InspectCommand::PrintHelp(fxl::Closure on_done) {
   std::cout
       << "inspect command: inspects the contents of a ledger.\n"
       << "Note: you must stop Ledger before running this tool.\n\n"

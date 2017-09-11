@@ -11,10 +11,10 @@
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/impl/btree/encoding.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/memory/ref_counted.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "lib/mtl/socket/strings.h"
 
 namespace storage {
@@ -30,7 +30,7 @@ TreeNode::TreeNode(PageStorage* page_storage,
       level_(level),
       entries_(std::move(entries)),
       children_(std::move(children)) {
-  FTL_DCHECK(entries_.size() + 1 == children_.size());
+  FXL_DCHECK(entries_.size() + 1 == children_.size());
 }
 
 TreeNode::~TreeNode() {}
@@ -64,7 +64,7 @@ void TreeNode::FromEntries(PageStorage* page_storage,
                            const std::vector<Entry>& entries,
                            const std::vector<ObjectId>& children,
                            std::function<void(Status, ObjectId)> callback) {
-  FTL_DCHECK(entries.size() + 1 == children.size());
+  FXL_DCHECK(entries.size() + 1 == children.size());
   std::string encoding = EncodeNode(level, entries, children);
   page_storage->AddObjectFromLocal(
       storage::DataSource::Create(std::move(encoding)), std::move(callback));
@@ -75,7 +75,7 @@ int TreeNode::GetKeyCount() const {
 }
 
 Status TreeNode::GetEntry(int index, Entry* entry) const {
-  FTL_DCHECK(index >= 0 && index < GetKeyCount());
+  FXL_DCHECK(index >= 0 && index < GetKeyCount());
   *entry = entries_[index];
   return Status::OK;
 }
@@ -84,7 +84,7 @@ void TreeNode::GetChild(
     int index,
     std::function<void(Status, std::unique_ptr<const TreeNode>)> callback)
     const {
-  FTL_DCHECK(index >= 0 && index <= GetKeyCount());
+  FXL_DCHECK(index >= 0 && index <= GetKeyCount());
   if (children_[index].empty()) {
     callback(Status::NO_SUCH_CHILD, nullptr);
     return;
@@ -93,7 +93,7 @@ void TreeNode::GetChild(
 }
 
 ObjectIdView TreeNode::GetChildId(int index) const {
-  FTL_DCHECK(index >= 0 && index <= GetKeyCount());
+  FXL_DCHECK(index >= 0 && index <= GetKeyCount());
   return children_[index];
 }
 
@@ -127,7 +127,7 @@ const ObjectId& TreeNode::GetId() const {
 Status TreeNode::FromObject(PageStorage* page_storage,
                             std::unique_ptr<const Object> object,
                             std::unique_ptr<const TreeNode>* node) {
-  ftl::StringView data;
+  fxl::StringView data;
   Status status = object->GetData(&data);
   if (status != Status::OK) {
     return status;

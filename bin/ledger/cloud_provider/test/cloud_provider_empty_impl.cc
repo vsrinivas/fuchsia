@@ -4,7 +4,7 @@
 
 #include "apps/ledger/src/cloud_provider/test/cloud_provider_empty_impl.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace cloud_provider_firebase {
 namespace test {
@@ -13,24 +13,24 @@ void CloudProviderEmptyImpl::AddCommits(
     const std::string& /*auth_token*/,
     std::vector<Commit> /*commits*/,
     const std::function<void(Status)>& /*callback*/) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void CloudProviderEmptyImpl::WatchCommits(const std::string& /*auth_token*/,
                                           const std::string& /*min_timestamp*/,
                                           CommitWatcher* /*watcher*/) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void CloudProviderEmptyImpl::UnwatchCommits(CommitWatcher* /*watcher*/) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void CloudProviderEmptyImpl::GetCommits(
     const std::string& /*auth_token*/,
     const std::string& /*min_timestamp*/,
     std::function<void(Status, std::vector<Record>)> /*callback*/) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void CloudProviderEmptyImpl::AddObject(
@@ -38,7 +38,7 @@ void CloudProviderEmptyImpl::AddObject(
     ObjectIdView /*object_id*/,
     mx::vmo /*data*/,
     std::function<void(Status)> /*callback*/) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void CloudProviderEmptyImpl::GetObject(
@@ -46,7 +46,7 @@ void CloudProviderEmptyImpl::GetObject(
     ObjectIdView /*object_id*/,
     std::function<void(Status status, uint64_t size, mx::socket data)>
     /*callback*/) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 }  // namespace test

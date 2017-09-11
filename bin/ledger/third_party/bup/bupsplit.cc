@@ -60,7 +60,7 @@ void RollSumSplit::Reset() {
   memset(window_, 0, kWindowSize);
 }
 
-size_t RollSumSplit::Feed(ftl::StringView buffer, size_t* bits) {
+size_t RollSumSplit::Feed(fxl::StringView buffer, size_t* bits) {
   for (size_t i = 0; i < buffer.size(); i++) {
     Roll(buffer[i]);
     ++current_length_;

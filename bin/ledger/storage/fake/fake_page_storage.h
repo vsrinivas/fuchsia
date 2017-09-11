@@ -13,9 +13,9 @@
 #include "apps/ledger/src/storage/fake/fake_journal_delegate.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/test/page_storage_empty_impl.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace storage {
 namespace fake {
@@ -79,10 +79,10 @@ class FakePageStorage : public test::PageStorageEmptyImpl {
   std::default_random_engine rng_;
   std::map<std::string, std::unique_ptr<FakeJournalDelegate>> journals_;
   std::map<ObjectId, std::string, convert::StringViewComparator> objects_;
-  std::vector<ftl::Closure> object_requests_;
+  std::vector<fxl::Closure> object_requests_;
   PageId page_id_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FakePageStorage);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakePageStorage);
 };
 
 }  // namespace fake

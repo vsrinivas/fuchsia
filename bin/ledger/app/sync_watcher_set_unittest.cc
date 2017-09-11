@@ -10,7 +10,7 @@
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace ledger {
@@ -25,7 +25,7 @@ class SyncWatcherSetTest : public test::TestWithMessageLoop {
   void SetUp() override { ::testing::Test::SetUp(); }
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherSetTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherSetTest);
 };
 
 class SyncWatcherImpl : public SyncWatcher {
@@ -47,7 +47,7 @@ class SyncWatcherImpl : public SyncWatcher {
  private:
   fidl::Binding<SyncWatcher> binding_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherImpl);
 };
 
 TEST_F(SyncWatcherSetTest, OneWatcher) {

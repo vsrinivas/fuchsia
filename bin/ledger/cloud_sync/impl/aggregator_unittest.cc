@@ -26,7 +26,7 @@ class AggregatorTest : public ::testing::Test {
   ~AggregatorTest() override {}
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(AggregatorTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AggregatorTest);
 };
 
 TEST_F(AggregatorTest, SendFirstNotification) {

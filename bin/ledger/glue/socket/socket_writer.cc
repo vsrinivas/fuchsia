@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <utility>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace glue {
 
@@ -32,9 +32,9 @@ void SocketWriter::Start(mx::socket destination) {
 }
 
 void SocketWriter::GetData() {
-  FTL_DCHECK(data_.empty());
+  FXL_DCHECK(data_.empty());
   client_->GetNext(offset_, kDefaultSocketBufferSize,
-                   [this](ftl::StringView data) {
+                   [this](fxl::StringView data) {
                      if (data.empty()) {
                        Done();
                        return;
@@ -44,7 +44,7 @@ void SocketWriter::GetData() {
                    });
 }
 
-void SocketWriter::WriteData(ftl::StringView data) {
+void SocketWriter::WriteData(fxl::StringView data) {
   mx_status_t status = MX_OK;
   while (status == MX_OK && !data.empty()) {
     size_t written;
@@ -55,14 +55,14 @@ void SocketWriter::WriteData(ftl::StringView data) {
   }
 
   if (status == MX_OK) {
-    FTL_DCHECK(data.empty());
+    FXL_DCHECK(data.empty());
     data_.clear();
     data_view_ = "";
     GetData();
     return;
   }
 
-  FTL_DCHECK(!data.empty());
+  FXL_DCHECK(!data.empty());
 
   if (status == MX_ERR_PEER_CLOSED) {
     Done();
@@ -79,7 +79,7 @@ void SocketWriter::WriteData(ftl::StringView data) {
     WaitForSocket();
     return;
   }
-  FTL_DCHECK(false) << "Unhandled mx_status_t: " << status;
+  FXL_DCHECK(false) << "Unhandled mx_status_t: " << status;
 }
 
 void SocketWriter::WaitForSocket() {
@@ -114,8 +114,8 @@ void StringSocketWriter::Start(std::string data, mx::socket destination) {
 void StringSocketWriter::GetNext(
     size_t offset,
     size_t max_size,
-    std::function<void(ftl::StringView)> callback) {
-  ftl::StringView data = data_;
+    std::function<void(fxl::StringView)> callback) {
+  fxl::StringView data = data_;
   callback(data.substr(offset, max_size));
 }
 

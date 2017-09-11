@@ -13,7 +13,7 @@
 #include "apps/ledger/src/fidl_helpers/bound_interface_set.h"
 #include "apps/ledger/src/test/data_generator.h"
 #include "apps/ledger/src/test/fake_token_provider.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
 
 namespace test {
 namespace benchmark {
@@ -67,7 +67,7 @@ class ConvergenceBenchmark : public ledger::PageWatcher {
   std::unordered_multiset<std::string> remaining_keys_;
   int current_step_ = -1;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ConvergenceBenchmark);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ConvergenceBenchmark);
 };
 
 }  // namespace benchmark

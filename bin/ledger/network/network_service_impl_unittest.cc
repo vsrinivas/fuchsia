@@ -14,8 +14,8 @@
 #include "apps/network/services/network_service.fidl.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/netstack/fidl/net_address.fidl.h"
@@ -36,14 +36,14 @@ class FakeURLLoader : public network::URLLoader {
       : binding_(this, std::move(request)),
         response_to_return_(std::move(response_to_return)),
         request_received_(request_received) {
-    FTL_DCHECK(response_to_return_);
+    FXL_DCHECK(response_to_return_);
   }
   ~FakeURLLoader() override {}
 
   // URLLoader:
   void Start(network::URLRequestPtr request,
              const StartCallback& callback) override {
-    FTL_DCHECK(response_to_return_);
+    FXL_DCHECK(response_to_return_);
     *request_received_ = std::move(request);
     callback(std::move(response_to_return_));
   }
@@ -55,7 +55,7 @@ class FakeURLLoader : public network::URLLoader {
   network::URLResponsePtr response_to_return_;
   network::URLRequestPtr* request_received_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FakeURLLoader);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakeURLLoader);
 };
 
 // Fake implementation of network service, allowing to inspect the last request
@@ -77,19 +77,19 @@ class FakeNetworkService : public network::NetworkService {
   // NetworkService:
   void CreateURLLoader(
       fidl::InterfaceRequest<network::URLLoader> loader) override {
-    FTL_DCHECK(response_to_return_);
+    FXL_DCHECK(response_to_return_);
     loaders_.push_back(std::make_unique<FakeURLLoader>(
         std::move(loader), std::move(response_to_return_), &request_received_));
   }
   void GetCookieStore(mx::channel /*cookie_store*/) override {
-    FTL_DCHECK(false);
+    FXL_DCHECK(false);
   }
-  void CreateWebSocket(mx::channel /*socket*/) override { FTL_DCHECK(false); }
+  void CreateWebSocket(mx::channel /*socket*/) override { FXL_DCHECK(false); }
   void CreateTCPBoundSocket(
       netstack::NetAddressPtr /*local_address*/,
       mx::channel /*bound_socket*/,
       const CreateTCPBoundSocketCallback& /*callback*/) override {
-    FTL_DCHECK(false);
+    FXL_DCHECK(false);
   }
   void CreateTCPConnectedSocket(
       netstack::NetAddressPtr /*remote_address*/,
@@ -97,19 +97,19 @@ class FakeNetworkService : public network::NetworkService {
       mx::socket /*receive_stream*/,
       mx::channel /*client_socket*/,
       const CreateTCPConnectedSocketCallback& /*callback*/) override {
-    FTL_DCHECK(false);
+    FXL_DCHECK(false);
   }
-  void CreateUDPSocket(mx::channel /*socket*/) override { FTL_DCHECK(false); }
+  void CreateUDPSocket(mx::channel /*socket*/) override { FXL_DCHECK(false); }
   void CreateHttpServer(netstack::NetAddressPtr /*local_address*/,
                         mx::channel /*delegate*/,
                         const CreateHttpServerCallback& /*callback*/) override {
-    FTL_DCHECK(false);
+    FXL_DCHECK(false);
   }
   void RegisterURLLoaderInterceptor(mx::channel /*factory*/) override {
-    FTL_DCHECK(false);
+    FXL_DCHECK(false);
   }
   void CreateHostResolver(mx::channel /*host_resolver*/) override {
-    FTL_DCHECK(false);
+    FXL_DCHECK(false);
   }
 
  private:
@@ -118,21 +118,21 @@ class FakeNetworkService : public network::NetworkService {
   network::URLRequestPtr request_received_;
   network::URLResponsePtr response_to_return_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FakeNetworkService);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakeNetworkService);
 };
 
-class DestroyWatcher : public ftl::RefCountedThreadSafe<DestroyWatcher> {
+class DestroyWatcher : public fxl::RefCountedThreadSafe<DestroyWatcher> {
  public:
-  static ftl::RefPtr<DestroyWatcher> Create(const ftl::Closure& callback) {
-    return ftl::AdoptRef(new DestroyWatcher(callback));
+  static fxl::RefPtr<DestroyWatcher> Create(const fxl::Closure& callback) {
+    return fxl::AdoptRef(new DestroyWatcher(callback));
   }
 
  private:
-  explicit DestroyWatcher(ftl::Closure callback)
+  explicit DestroyWatcher(fxl::Closure callback)
       : callback_(std::move(callback)) {}
   ~DestroyWatcher() { callback_(); }
 
-  ftl::Closure callback_;
+  fxl::Closure callback_;
 
   FRIEND_REF_COUNTED_THREAD_SAFE(DestroyWatcher);
 };
@@ -288,7 +288,7 @@ TEST_F(NetworkServiceImplTest, Redirection) {
 }
 
 TEST_F(NetworkServiceImplTest, CancelOnCallback) {
-  ftl::RefPtr<callback::Cancellable> request;
+  fxl::RefPtr<callback::Cancellable> request;
   network::URLResponsePtr response;
   request = network_service_.Request(
       [this] {

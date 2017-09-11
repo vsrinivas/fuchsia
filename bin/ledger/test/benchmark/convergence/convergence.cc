@@ -13,18 +13,18 @@
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/test/benchmark/lib/logging.h"
 #include "apps/ledger/src/test/get_ledger.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
-constexpr ftl::StringView kStoragePath = "/data/benchmark/ledger/sync";
-constexpr ftl::StringView kEntryCountFlag = "entry-count";
-constexpr ftl::StringView kValueSizeFlag = "value-size";
-constexpr ftl::StringView kServerIdFlag = "server-id";
+constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/sync";
+constexpr fxl::StringView kEntryCountFlag = "entry-count";
+constexpr fxl::StringView kValueSizeFlag = "value-size";
+constexpr fxl::StringView kServerIdFlag = "server-id";
 
 void PrintUsage(const char* executable_name) {
   std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
@@ -54,8 +54,8 @@ ConvergenceBenchmark::ConvergenceBenchmark(int entry_count,
       beta_watcher_binding_(this),
       alpha_tmp_dir_(kStoragePath),
       beta_tmp_dir_(kStoragePath) {
-  FTL_DCHECK(entry_count > 0);
-  FTL_DCHECK(value_size > 0);
+  FXL_DCHECK(entry_count > 0);
+  FXL_DCHECK(value_size > 0);
 }
 
 void ConvergenceBenchmark::Run() {
@@ -63,11 +63,11 @@ void ConvergenceBenchmark::Run() {
   // most nested directory has the same name to make the ledgers sync.
   std::string alpha_path = alpha_tmp_dir_.path() + "/sync_user";
   bool ret = files::CreateDirectory(alpha_path);
-  FTL_DCHECK(ret);
+  FXL_DCHECK(ret);
 
   std::string beta_path = beta_tmp_dir_.path() + "/sync_user";
   ret = files::CreateDirectory(beta_path);
-  FTL_DCHECK(ret);
+  FXL_DCHECK(ret);
 
   ledger::Status status = test::GetLedger(
       mtl::MessageLoop::GetCurrent(), application_context_.get(),
@@ -148,7 +148,7 @@ void ConvergenceBenchmark::Start(int step) {
 void ConvergenceBenchmark::OnChange(ledger::PageChangePtr page_change,
                                     ledger::ResultState result_state,
                                     const OnChangeCallback& callback) {
-  FTL_DCHECK(result_state == ledger::ResultState::COMPLETED);
+  FXL_DCHECK(result_state == ledger::ResultState::COMPLETED);
   for (auto& change : page_change->changes) {
     auto find_one = remaining_keys_.find(convert::ToString(change->key));
     remaining_keys_.erase(find_one);
@@ -163,17 +163,17 @@ void ConvergenceBenchmark::OnChange(ledger::PageChangePtr page_change,
 void ConvergenceBenchmark::ShutDown() {
   alpha_controller_->Kill();
   alpha_controller_.WaitForIncomingResponseWithTimeout(
-      ftl::TimeDelta::FromSeconds(5));
+      fxl::TimeDelta::FromSeconds(5));
   beta_controller_->Kill();
   beta_controller_.WaitForIncomingResponseWithTimeout(
-      ftl::TimeDelta::FromSeconds(5));
+      fxl::TimeDelta::FromSeconds(5));
   mtl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 }  // namespace benchmark
 }  // namespace test
 
 int main(int argc, const char** argv) {
-  ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   std::string entry_count_str;
   int entry_count;
@@ -182,11 +182,11 @@ int main(int argc, const char** argv) {
   std::string server_id;
   if (!command_line.GetOptionValue(kEntryCountFlag.ToString(),
                                    &entry_count_str) ||
-      !ftl::StringToNumberWithError(entry_count_str, &entry_count) ||
+      !fxl::StringToNumberWithError(entry_count_str, &entry_count) ||
       entry_count <= 0 ||
       !command_line.GetOptionValue(kValueSizeFlag.ToString(),
                                    &value_size_str) ||
-      !ftl::StringToNumberWithError(value_size_str, &value_size) ||
+      !fxl::StringToNumberWithError(value_size_str, &value_size) ||
       value_size <= 0 ||
       !command_line.GetOptionValue(kServerIdFlag.ToString(), &server_id)) {
     PrintUsage(argv[0]);

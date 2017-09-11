@@ -11,9 +11,9 @@
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 class PageManager;
@@ -23,13 +23,13 @@ class MergeStrategy;
 // provided merge strategy.
 class MergeResolver : public storage::CommitWatcher {
  public:
-  MergeResolver(ftl::Closure on_destroyed,
+  MergeResolver(fxl::Closure on_destroyed,
                 Environment* environment,
                 storage::PageStorage* storage,
                 std::unique_ptr<backoff::Backoff> backoff);
   ~MergeResolver() override;
 
-  void set_on_empty(ftl::Closure on_empty_callback);
+  void set_on_empty(fxl::Closure on_empty_callback);
 
   // Returns true if no merge is currently in progress.
   bool IsEmpty();
@@ -63,13 +63,13 @@ class MergeResolver : public storage::CommitWatcher {
   std::unique_ptr<MergeStrategy> next_strategy_;
   bool has_next_strategy_ = false;
   bool merge_in_progress_ = false;
-  ftl::Closure on_empty_callback_;
-  ftl::Closure on_destroyed_;
+  fxl::Closure on_empty_callback_;
+  fxl::Closure on_destroyed_;
 
   // WeakPtrFactory must be the last field of the class.
-  ftl::WeakPtrFactory<MergeResolver> weak_ptr_factory_;
+  fxl::WeakPtrFactory<MergeResolver> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MergeResolver);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MergeResolver);
 };
 
 }  // namespace ledger

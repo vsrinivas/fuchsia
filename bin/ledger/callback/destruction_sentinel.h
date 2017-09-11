@@ -5,9 +5,9 @@
 #ifndef APPS_LEDGER_SRC_CALLBACK_DESTRUCTION_SENTINEL_H_
 #define APPS_LEDGER_SRC_CALLBACK_DESTRUCTION_SENTINEL_H_
 
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 
 namespace callback {
 
@@ -26,8 +26,8 @@ class DestructionSentinel {
 
   // Executes |closure| and returns |true| if the sentinel has been destroyed
   // while executing it.
-  inline bool DestructedWhile(const ftl::Closure& closure) {
-    FTL_DCHECK(!is_destructed_ptr_) << "DestructionSentinel is not reentrant. "
+  inline bool DestructedWhile(const fxl::Closure& closure) {
+    FXL_DCHECK(!is_destructed_ptr_) << "DestructionSentinel is not reentrant. "
                                        "Please fix if reentrance is needed.";
     bool is_destructed = false;
     is_destructed_ptr_ = &is_destructed;
@@ -41,7 +41,7 @@ class DestructionSentinel {
  private:
   bool* is_destructed_ptr_ = nullptr;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DestructionSentinel);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DestructionSentinel);
 };
 
 }  // namespace callback

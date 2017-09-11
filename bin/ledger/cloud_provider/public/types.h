@@ -9,7 +9,7 @@
 
 #include "apps/ledger/src/firebase/status.h"
 #include "apps/ledger/src/gcs/status.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace cloud_provider_firebase {
 
@@ -17,7 +17,7 @@ using AppId = std::string;
 using PageId = std::string;
 using CommitId = std::string;
 using ObjectId = std::string;
-using ObjectIdView = ftl::StringView;
+using ObjectIdView = fxl::StringView;
 using Data = std::string;
 
 enum class Status {
@@ -30,7 +30,7 @@ enum class Status {
   SERVER_ERROR,
 };
 
-ftl::StringView StatusToString(Status status);
+fxl::StringView StatusToString(Status status);
 std::ostream& operator<<(std::ostream& os, Status status);
 
 Status ConvertGcsStatus(gcs::Status gcs_status);

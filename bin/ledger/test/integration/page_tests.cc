@@ -13,8 +13,8 @@
 #include "apps/ledger/src/test/integration/test_utils.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/macros.h"
 
 namespace test {
 namespace integration {
@@ -26,7 +26,7 @@ class PageIntegrationTest : public IntegrationTest {
   ~PageIntegrationTest() override {}
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageIntegrationTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageIntegrationTest);
 };
 
 TEST_F(PageIntegrationTest, LedgerRepositoryDuplicate) {

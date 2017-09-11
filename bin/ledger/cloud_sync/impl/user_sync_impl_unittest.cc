@@ -12,9 +12,9 @@
 #include "apps/ledger/src/device_set/cloud_device_set.h"
 #include "apps/ledger/src/network/fake_network_service.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/macros.h"
 
 namespace cloud_sync {
 
@@ -30,7 +30,7 @@ class TestSyncStateWatcher : public SyncStateWatcher {
 
 class TestCloudDeviceSet : public cloud_provider_firebase::CloudDeviceSet {
  public:
-  explicit TestCloudDeviceSet(ftl::RefPtr<ftl::TaskRunner> task_runner)
+  explicit TestCloudDeviceSet(fxl::RefPtr<fxl::TaskRunner> task_runner)
       : task_runner_(std::move(task_runner)) {}
   ~TestCloudDeviceSet() override {}
 
@@ -67,7 +67,7 @@ class TestCloudDeviceSet : public cloud_provider_firebase::CloudDeviceSet {
   std::function<void(Status)> watch_callback;
 
  private:
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
 };
 
 class UserSyncImplTest : public ::test::TestWithMessageLoop {
@@ -114,7 +114,7 @@ class UserSyncImplTest : public ::test::TestWithMessageLoop {
   int on_version_mismatch_calls_ = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(UserSyncImplTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(UserSyncImplTest);
 };
 
 // Verifies that the mismatch callback is called if the fingerprint appears to

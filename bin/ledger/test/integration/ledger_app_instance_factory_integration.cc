@@ -17,8 +17,8 @@
 #include "apps/ledger/src/test/integration/test_utils.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
@@ -29,7 +29,7 @@ class LedgerAppInstanceImpl final
     : public LedgerAppInstanceFactory::LedgerAppInstance {
  public:
   LedgerAppInstanceImpl(
-      ftl::RefPtr<ftl::TaskRunner> services_task_runner,
+      fxl::RefPtr<fxl::TaskRunner> services_task_runner,
       std::function<network::NetworkServicePtr()> network_factory,
       ledger::FirebaseConfigPtr firebase_config,
       fidl::InterfaceRequest<ledger::LedgerRepositoryFactory>
@@ -43,7 +43,7 @@ class LedgerAppInstanceImpl final
       : public ledger::LedgerRepositoryFactoryImpl::Delegate {
    public:
     LedgerRepositoryFactoryContainer(
-        ftl::RefPtr<ftl::TaskRunner> task_runner,
+        fxl::RefPtr<fxl::TaskRunner> task_runner,
         std::function<network::NetworkServicePtr()> network_factory,
         fidl::InterfaceRequest<ledger::LedgerRepositoryFactory> request)
         : network_service_(task_runner, std::move(network_factory)),
@@ -62,7 +62,7 @@ class LedgerAppInstanceImpl final
             EraseRemoteRepositoryOperation /*erase_remote_repository_operation*/
         ,
         std::function<void(bool)> callback) override {
-      FTL_NOTIMPLEMENTED();
+      FXL_NOTIMPLEMENTED();
       callback(true);
     }
     ledger::NetworkServiceImpl network_service_;
@@ -70,16 +70,16 @@ class LedgerAppInstanceImpl final
     ledger::LedgerRepositoryFactoryImpl factory_impl_;
     fidl::Binding<ledger::LedgerRepositoryFactory> factory_binding_;
 
-    FTL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryContainer);
+    FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryContainer);
   };
 
   std::unique_ptr<LedgerRepositoryFactoryContainer> factory_container_;
   std::thread thread_;
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
 };
 
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
-    ftl::RefPtr<ftl::TaskRunner> services_task_runner,
+    fxl::RefPtr<fxl::TaskRunner> services_task_runner,
     std::function<network::NetworkServicePtr()> network_factory,
     ledger::FirebaseConfigPtr firebase_config,
     fidl::InterfaceRequest<ledger::LedgerRepositoryFactory>
@@ -91,7 +91,7 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
           std::move(repository_factory_ptr),
           std::move(services_task_runner)) {
   thread_ = mtl::CreateThread(&task_runner_);
-  task_runner_->PostTask(ftl::MakeCopyable([
+  task_runner_->PostTask(fxl::MakeCopyable([
     this, request = std::move(repository_factory_request),
     network_factory = std::move(network_factory)
   ]() mutable {
@@ -121,7 +121,7 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
  private:
   // Thread used to do services.
   std::thread services_thread_;
-  ftl::RefPtr<ftl::TaskRunner> services_task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> services_task_runner_;
   ledger::FakeCloudNetworkService network_service_;
   std::string server_id_ = "server-id";
 };
@@ -145,7 +145,7 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   auto network_factory = [this]() {
     network::NetworkServicePtr result;
     services_task_runner_->PostTask(
-        ftl::MakeCopyable([ this, request = result.NewRequest() ]() mutable {
+        fxl::MakeCopyable([ this, request = result.NewRequest() ]() mutable {
           network_service_.AddBinding(std::move(request));
         }));
     return result;

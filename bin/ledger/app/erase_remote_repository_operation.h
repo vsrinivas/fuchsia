@@ -12,9 +12,9 @@
 #include "apps/ledger/src/callback/cancellable.h"
 #include "apps/ledger/src/firebase/firebase_impl.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace ledger {
 
@@ -23,7 +23,7 @@ namespace ledger {
 class EraseRemoteRepositoryOperation {
  public:
   EraseRemoteRepositoryOperation(
-      ftl::RefPtr<ftl::TaskRunner> task_runner,
+      fxl::RefPtr<fxl::TaskRunner> task_runner,
       ledger::NetworkService* network_service,
       std::string server_id,
       std::string api_key,
@@ -41,7 +41,7 @@ class EraseRemoteRepositoryOperation {
 
   void EraseRemote();
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   ledger::NetworkService* network_service_;
   std::string repository_path_;
   std::string server_id_;
@@ -56,7 +56,7 @@ class EraseRemoteRepositoryOperation {
   // Pending auth provider requests to be cancelled when this class goes away.
   callback::CancellableContainer auth_provider_requests_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(EraseRemoteRepositoryOperation);
+  FXL_DISALLOW_COPY_AND_ASSIGN(EraseRemoteRepositoryOperation);
 };
 
 }  // namespace ledger

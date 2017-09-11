@@ -4,11 +4,11 @@
 
 #include "apps/ledger/src/tool/convert.h"
 
-#include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/fxl/strings/string_number_conversions.h"
 
 namespace tool {
 
-bool FromHexString(ftl::StringView hex_string, std::string* result) {
+bool FromHexString(fxl::StringView hex_string, std::string* result) {
   if (hex_string.size() % 2 != 0) {
     return false;
   }
@@ -17,8 +17,8 @@ bool FromHexString(ftl::StringView hex_string, std::string* result) {
   bytes.reserve(hex_string.size() / 2);
   for (size_t i = 0; i < hex_string.size(); i += 2) {
     uint8_t byte;
-    if (!ftl::StringToNumberWithError(hex_string.substr(i, 2), &byte,
-                                      ftl::Base::k16)) {
+    if (!fxl::StringToNumberWithError(hex_string.substr(i, 2), &byte,
+                                      fxl::Base::k16)) {
       return false;
     }
     bytes.push_back(byte);

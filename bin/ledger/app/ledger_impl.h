@@ -11,8 +11,8 @@
 #include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/public/ledger_storage.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace ledger {
 
@@ -35,7 +35,7 @@ class LedgerImpl : public Ledger {
         fidl::InterfaceHandle<ConflictResolverFactory> factory) = 0;
 
    private:
-    FTL_DISALLOW_COPY_AND_ASSIGN(Delegate);
+    FXL_DISALLOW_COPY_AND_ASSIGN(Delegate);
   };
 
   // |delegate| outlives LedgerImpl.
@@ -58,7 +58,7 @@ class LedgerImpl : public Ledger {
 
   Delegate* const delegate_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LedgerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerImpl);
 };
 }  // namespace ledger
 

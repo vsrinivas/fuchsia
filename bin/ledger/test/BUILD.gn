@@ -30,7 +30,7 @@ source_set("lib") {
     "//apps/ledger/src/test/token_provider",
     "//apps/modular/services/auth",
     "//garnet/public/lib/fidl/cpp/bindings:serialization",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]
@@ -40,7 +40,7 @@ source_set("lib") {
     "//apps/ledger/src/callback",
     "//apps/ledger/src/convert",
     "//apps/ledger/src/coroutine",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 
@@ -62,7 +62,7 @@ source_set("app_test") {
 
   deps = [
     "//apps/test_runner/lib/reporting",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]
@@ -111,7 +111,7 @@ source_set("ledger_instance_factory") {
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
     "//apps/ledger/src/fidl_helpers",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 
   deps = [

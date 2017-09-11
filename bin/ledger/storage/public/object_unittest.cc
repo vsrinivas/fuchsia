@@ -17,7 +17,7 @@ class StringObject : public Object {
 
   ObjectId GetId() const override { return "id"; }
 
-  Status GetData(ftl::StringView* data) const override {
+  Status GetData(fxl::StringView* data) const override {
     *data = value_;
     return Status::OK;
   }

@@ -8,7 +8,7 @@
 
 #include "apps/ledger/src/firebase/encoding.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "lib/ftl/strings/concatenate.h"
+#include "lib/fxl/strings/concatenate.h"
 
 namespace cloud_provider_firebase {
 
@@ -21,46 +21,46 @@ constexpr char kDefaultCloudPrefix[] = "__default__";
 // Even though this yields a path to be used in GCS, we use Firebase key
 // encoding, as it happens to produce valid GCS object names. To be revisited
 // when we redo the encoding in LE-118.
-std::string GetGcsPrefixForApp(ftl::StringView user_id,
-                               ftl::StringView app_id) {
+std::string GetGcsPrefixForApp(fxl::StringView user_id,
+                               fxl::StringView app_id) {
   // TODO(ppi): remove the fallback to encoded user id once we drop support for
   // non authenticated sync.
   std::string encoded_user_id = firebase::CanKeyBeVerbatim(user_id)
                                     ? user_id.ToString()
                                     : firebase::EncodeKey(user_id);
-  return ftl::Concatenate({firebase::EncodeKey(kDefaultCloudPrefix),
+  return fxl::Concatenate({firebase::EncodeKey(kDefaultCloudPrefix),
                            kGcsSeparator, encoded_user_id, kGcsSeparator,
                            storage::kSerializationVersion, kGcsSeparator,
                            firebase::EncodeKey(app_id)});
 }
 
-std::string GetGcsPrefixForPage(ftl::StringView app_path,
-                                ftl::StringView page_id) {
-  return ftl::Concatenate(
+std::string GetGcsPrefixForPage(fxl::StringView app_path,
+                                fxl::StringView page_id) {
+  return fxl::Concatenate(
       {app_path, kGcsSeparator, firebase::EncodeKey(page_id), kGcsSeparator});
 }
 
-std::string GetFirebasePathForUser(ftl::StringView user_id) {
+std::string GetFirebasePathForUser(fxl::StringView user_id) {
   // TODO(ppi): remove the fallback to encoded user id once we drop support for
   // non authenticated sync.
   std::string encoded_user_id = firebase::CanKeyBeVerbatim(user_id)
                                     ? user_id.ToString()
                                     : firebase::EncodeKey(user_id);
-  return ftl::Concatenate({firebase::EncodeKey(kDefaultCloudPrefix),
+  return fxl::Concatenate({firebase::EncodeKey(kDefaultCloudPrefix),
                            kFirebaseSeparator, encoded_user_id,
                            kFirebaseSeparator, storage::kSerializationVersion});
 }
 
-std::string GetFirebasePathForApp(ftl::StringView user_id,
-                                  ftl::StringView app_id) {
+std::string GetFirebasePathForApp(fxl::StringView user_id,
+                                  fxl::StringView app_id) {
   std::string user_path = GetFirebasePathForUser(user_id);
-  return ftl::Concatenate(
+  return fxl::Concatenate(
       {user_path, kFirebaseSeparator, firebase::EncodeKey(app_id)});
 }
 
-std::string GetFirebasePathForPage(ftl::StringView app_path,
-                                   ftl::StringView page_id) {
-  return ftl::Concatenate(
+std::string GetFirebasePathForPage(fxl::StringView app_path,
+                                   fxl::StringView page_id) {
+  return fxl::Concatenate(
       {app_path, kFirebaseSeparator, firebase::EncodeKey(page_id)});
 }
 

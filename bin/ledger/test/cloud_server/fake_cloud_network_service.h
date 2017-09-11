@@ -8,7 +8,7 @@
 #include "apps/ledger/src/test/cloud_server/fake_cloud_url_loader.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/netstack/fidl/net_address.fidl.h"
 
 namespace ledger {
@@ -56,7 +56,7 @@ class FakeCloudNetworkService : public network::NetworkService {
   fidl::BindingSet<network::URLLoader> loader_bindings_;
   fidl::BindingSet<network::NetworkService> bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FakeCloudNetworkService);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakeCloudNetworkService);
 };
 
 }  // namespace ledger

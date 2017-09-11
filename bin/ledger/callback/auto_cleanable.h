@@ -10,14 +10,14 @@
 #include <unordered_set>
 #include <utility>
 
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/logging.h"
 
 namespace callback {
 
 // List that will delete its elements when they call their on_empty_callback.
 // The elements must have a setter method:
-// |void set_on_empty(const ftl::Closure&)|.
+// |void set_on_empty(const fxl::Closure&)|.
 template <typename V>
 class AutoCleanableSet {
  public:
@@ -74,14 +74,14 @@ class AutoCleanableSet {
   template <class... Args>
   V& emplace(Args&&... args) {
     auto pair = set_.emplace(std::forward<Args>(args)...);
-    FTL_DCHECK(pair.second);
+    FXL_DCHECK(pair.second);
     // Set iterators are const because modifying the element would change the
     // hash. In this particular case, this is safe because this set uses
     // reference equality.
     V& item = const_cast<V&>(*(pair.first));
     item.set_on_empty([this, &item] {
       size_t erase_count = set_.erase(item);
-      FTL_DCHECK(erase_count == 1);
+      FXL_DCHECK(erase_count == 1);
       CheckEmpty();
     });
     return item;
@@ -91,7 +91,7 @@ class AutoCleanableSet {
 
   iterator end() { return iterator(set_.end()); }
 
-  void set_on_empty(const ftl::Closure& on_empty_callback) {
+  void set_on_empty(const fxl::Closure& on_empty_callback) {
     on_empty_callback_ = on_empty_callback;
   }
 
@@ -106,12 +106,12 @@ class AutoCleanableSet {
   }
 
   Set_ set_;
-  ftl::Closure on_empty_callback_;
+  fxl::Closure on_empty_callback_;
 };
 
 // Map that will delete its elements when they call their on_empty_callback.
 // The elements must have a setter method:
-// |void set_on_empty(const // ftl::Closure&)|.
+// |void set_on_empty(const // fxl::Closure&)|.
 template <typename K, typename V, typename Compare = std::less<K>>
 class AutoCleanableMap {
  public:
@@ -160,7 +160,7 @@ class AutoCleanableMap {
     return map_.end();
   }
 
-  void set_on_empty(const ftl::Closure& on_empty_callback) {
+  void set_on_empty(const fxl::Closure& on_empty_callback) {
     on_empty_callback_ = on_empty_callback;
   }
 
@@ -171,7 +171,7 @@ class AutoCleanableMap {
   }
 
   Map_ map_;
-  ftl::Closure on_empty_callback_;
+  fxl::Closure on_empty_callback_;
 };
 
 }  // namespace callback

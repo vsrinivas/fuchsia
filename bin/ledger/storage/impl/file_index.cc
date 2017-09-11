@@ -7,13 +7,13 @@
 namespace storage {
 
 bool FileIndexSerialization::CheckValidFileIndexSerialization(
-    ftl::StringView data) {
+    fxl::StringView data) {
   flatbuffers::Verifier verifier(
       reinterpret_cast<const unsigned char*>(data.data()), data.size());
   return VerifyFileIndexBuffer(verifier);
 }
 
-Status FileIndexSerialization::ParseFileIndex(ftl::StringView content,
+Status FileIndexSerialization::ParseFileIndex(fxl::StringView content,
                                               const FileIndex** file_index) {
   if (!CheckValidFileIndexSerialization(content)) {
     return Status::FORMAT_ERROR;

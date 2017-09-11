@@ -14,7 +14,7 @@
 namespace ledger {
 
 EraseRemoteRepositoryOperation::EraseRemoteRepositoryOperation(
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
     ledger::NetworkService* network_service,
     std::string server_id,
     std::string api_key,
@@ -24,9 +24,9 @@ EraseRemoteRepositoryOperation::EraseRemoteRepositoryOperation(
       server_id_(std::move(server_id)),
       api_key_(std::move(api_key)) {
   token_provider.set_connection_error_handler([this] {
-    FTL_LOG(ERROR) << "Lost connection to TokenProvider "
+    FXL_LOG(ERROR) << "Lost connection to TokenProvider "
                    << "while trying to erase the repository";
-    FTL_DCHECK(on_done_);
+    FXL_DCHECK(on_done_);
     on_done_(false);
   });
   auth_provider_ = std::make_unique<auth_provider::AuthProviderImpl>(
@@ -43,15 +43,15 @@ EraseRemoteRepositoryOperation& EraseRemoteRepositoryOperation::operator=(
     EraseRemoteRepositoryOperation&& other) = default;
 
 void EraseRemoteRepositoryOperation::Start(std::function<void(bool)> on_done) {
-  FTL_DCHECK(!on_done_);
+  FXL_DCHECK(!on_done_);
   on_done_ = std::move(on_done);
-  FTL_DCHECK(on_done_);
+  FXL_DCHECK(on_done_);
 
   auto user_id_request =
       auth_provider_->GetFirebaseUserId(
           [this](auth_provider::AuthStatus auth_status, std::string user_id) {
             if (auth_status != auth_provider::AuthStatus::OK) {
-              FTL_LOG(ERROR)
+              FXL_LOG(ERROR)
                   << "Failed to retrieve Firebase user id from token provider.";
               on_done_(false);
               return;
@@ -61,7 +61,7 @@ void EraseRemoteRepositoryOperation::Start(std::function<void(bool)> on_done) {
                 [this](auth_provider::AuthStatus auth_status,
                        std::string auth_token) {
                   if (auth_status != auth_provider::AuthStatus::OK) {
-                    FTL_LOG(ERROR) << "Failed to retrieve the auth token to "
+                    FXL_LOG(ERROR) << "Failed to retrieve the auth token to "
                                       "clean the remote state.";
                     on_done_(false);
                     return;
@@ -77,7 +77,7 @@ void EraseRemoteRepositoryOperation::Start(std::function<void(bool)> on_done) {
 
 void EraseRemoteRepositoryOperation::ClearDeviceMap() {
   if (user_id_.empty()) {
-    FTL_LOG(ERROR) << "Missing credentials from the token provider, "
+    FXL_LOG(ERROR) << "Missing credentials from the token provider, "
                    << "will not erase the remote state. (running as guest?)";
     on_done_(true);
     return;
@@ -95,13 +95,13 @@ void EraseRemoteRepositoryOperation::ClearDeviceMap() {
       cloud_provider_firebase::kDeviceMapRelpath, query_params,
       [this](firebase::Status status) {
         if (status != firebase::Status::OK) {
-          FTL_LOG(ERROR) << "Failed to erase the device map: " << status;
+          FXL_LOG(ERROR) << "Failed to erase the device map: " << status;
           on_done_(false);
           return;
         }
-        FTL_LOG(INFO) << "Erased the device map, will clear the state next.";
+        FXL_LOG(INFO) << "Erased the device map, will clear the state next.";
         task_runner_->PostDelayedTask([this] { EraseRemote(); },
-                                      ftl::TimeDelta::FromSeconds(3));
+                                      fxl::TimeDelta::FromSeconds(3));
       });
 }
 
@@ -112,11 +112,11 @@ void EraseRemoteRepositoryOperation::EraseRemote() {
   }
   firebase_->Delete("", query_params, [this](firebase::Status status) {
     if (status != firebase::Status::OK) {
-      FTL_LOG(ERROR) << "Failed to erase the remote state: " << status;
+      FXL_LOG(ERROR) << "Failed to erase the remote state: " << status;
       on_done_(false);
       return;
     }
-    FTL_LOG(INFO) << "Erased remote data at " << firebase_->api_url();
+    FXL_LOG(INFO) << "Erased remote data at " << firebase_->api_url();
     on_done_(true);
   });
 }

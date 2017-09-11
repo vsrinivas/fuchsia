@@ -6,7 +6,7 @@
 
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/storage/impl/constants.h"
-#include "lib/ftl/strings/concatenate.h"
+#include "lib/fxl/strings/concatenate.h"
 
 namespace storage {
 
@@ -37,7 +37,7 @@ ObjectIdType GetObjectIdType(ObjectIdView object_id) {
       return ObjectIdType::INDEX_HASH;
   }
 
-  FTL_NOTREACHED();
+  FXL_NOTREACHED();
   return ObjectIdType::VALUE_HASH;
 }
 
@@ -51,12 +51,12 @@ ObjectType GetObjectType(ObjectIdType id_type) {
   }
 }
 
-ftl::StringView ExtractObjectIdData(ObjectIdView object_id) {
+fxl::StringView ExtractObjectIdData(ObjectIdView object_id) {
   if (object_id.size() <= kStorageHashSize) {
     return object_id;
   }
 
-  FTL_DCHECK(object_id[0] == kValueHashPrefix ||
+  FXL_DCHECK(object_id[0] == kValueHashPrefix ||
              object_id[0] == kIndexHashPrefix);
 
   return object_id.substr(1);

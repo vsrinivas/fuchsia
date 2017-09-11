@@ -12,7 +12,7 @@
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/fidl_helpers/boundable.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace test {

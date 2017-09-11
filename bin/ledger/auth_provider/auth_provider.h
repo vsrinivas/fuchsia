@@ -9,7 +9,7 @@
 #include <string>
 
 #include "apps/ledger/src/callback/cancellable.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace auth_provider {
 
@@ -29,15 +29,15 @@ class AuthProvider {
 
   // Retrieves the Firebase ID token suitable to use with Firebase Real-time
   // Database and Firebase Storage.
-  virtual ftl::RefPtr<callback::Cancellable> GetFirebaseToken(
+  virtual fxl::RefPtr<callback::Cancellable> GetFirebaseToken(
       std::function<void(AuthStatus, std::string)> callback) = 0;
 
   // Retrieves the Firebase user ID of the user.
-  virtual ftl::RefPtr<callback::Cancellable> GetFirebaseUserId(
+  virtual fxl::RefPtr<callback::Cancellable> GetFirebaseUserId(
       std::function<void(AuthStatus, std::string)> callback) = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(AuthProvider);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AuthProvider);
 };
 
 }  // namespace auth_provider

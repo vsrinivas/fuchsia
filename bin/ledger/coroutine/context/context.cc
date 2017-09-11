@@ -4,7 +4,7 @@
 
 #include "apps/ledger/src/coroutine/context/context.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 static_assert(__has_feature(safe_stack),
               "Context code must be compiled with safe stack");
@@ -18,7 +18,7 @@ void SwapContext(Context* out_context, Context* in_context) {
   }
   SetContext(in_context);
 
-  FTL_NOTREACHED() << "SetContext should not return.";
+  FXL_NOTREACHED() << "SetContext should not return.";
 }
 
 void MakeContext(Context* context,

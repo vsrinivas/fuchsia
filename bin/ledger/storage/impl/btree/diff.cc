@@ -23,7 +23,7 @@ class IteratorPair {
   // Initialize the pair with the ids of both roots.
   Status Init(ObjectIdView left_node_id,
               ObjectIdView right_node_id,
-              ftl::StringView min_key) {
+              fxl::StringView min_key) {
     RETURN_ON_ERROR(left_.Init(left_node_id));
     RETURN_ON_ERROR(right_.Init(right_node_id));
     if (!min_key.empty()) {
@@ -38,14 +38,14 @@ class IteratorPair {
   }
 
   bool Finished() {
-    FTL_DCHECK(IsNormalized());
+    FXL_DCHECK(IsNormalized());
     return right_.Finished();
   }
 
   // Send the actual diff to the client. Returns |false| if the iteration must
   // be stopped.
   bool SendDiff() {
-    FTL_DCHECK(HasDiff());
+    FXL_DCHECK(HasDiff());
 
     // If the 2 iterators are on 2 equals values, nothing to do.
     if (left_.HasValue() && right_.HasValue() &&
@@ -77,9 +77,9 @@ class IteratorPair {
 
   // Advance the iterator until there is potentially a diff to send.
   Status Advance() {
-    FTL_DCHECK(!Finished());
+    FXL_DCHECK(!Finished());
     do {
-      FTL_DCHECK(IsNormalized());
+      FXL_DCHECK(IsNormalized());
 
       // If the 2 next children are identical, skip these.
       if (HasSameNextChild()) {
@@ -108,7 +108,7 @@ class IteratorPair {
   // is greater than or equal to min_key and 2) might be different between the
   // two iterators. We consider that the two entries might be different, if they
   // are in btree nodes with different ids.
-  Status SkipIteratorsTo(ftl::StringView min_key) {
+  Status SkipIteratorsTo(fxl::StringView min_key) {
     for (;;) {
       if (left_.SkipToIndex(min_key)) {
         right_.SkipTo(min_key);
@@ -224,7 +224,7 @@ class IteratorPair {
 
   // Returns whether there is a potential diff to send at the current state.
   bool HasDiff() const {
-    FTL_DCHECK(IsNormalized());
+    FXL_DCHECK(IsNormalized());
     return (right_.HasValue() && (left_.Finished() || left_.HasValue())) ||
            (left_.HasValue() && HasSameNextChild());
   }

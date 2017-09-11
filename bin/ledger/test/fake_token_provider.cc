@@ -19,7 +19,7 @@ void FakeTokenProvider::GetAccessToken(const GetAccessTokenCallback& callback) {
   modular::auth::AuthErrPtr error = modular::auth::AuthErr::New();
   error->status = modular::auth::Status::OK;
   error->message = "";
-  FTL_NOTIMPLEMENTED() << "FakeTokenProvider::GetAccessToken not implemented";
+  FXL_NOTIMPLEMENTED() << "FakeTokenProvider::GetAccessToken not implemented";
   callback(nullptr, std::move(error));
 }
 
@@ -27,7 +27,7 @@ void FakeTokenProvider::GetIdToken(const GetIdTokenCallback& callback) {
   modular::auth::AuthErrPtr error = modular::auth::AuthErr::New();
   error->status = modular::auth::Status::OK;
   error->message = "";
-  FTL_NOTIMPLEMENTED() << "FakeTokenProvider::GetIdToken not implemented";
+  FXL_NOTIMPLEMENTED() << "FakeTokenProvider::GetIdToken not implemented";
   callback(nullptr, std::move(error));
 }
 

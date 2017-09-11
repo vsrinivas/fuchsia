@@ -14,9 +14,9 @@
 #include "apps/ledger/src/test/integration/test_utils.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace test {
@@ -29,13 +29,13 @@ class MergingIntegrationTest : public IntegrationTest {
   ~MergingIntegrationTest() override {}
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(MergingIntegrationTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MergingIntegrationTest);
 };
 
 class Watcher : public ledger::PageWatcher {
  public:
   Watcher(fidl::InterfaceRequest<ledger::PageWatcher> request,
-          ftl::Closure change_callback)
+          fxl::Closure change_callback)
       : binding_(this, std::move(request)),
         change_callback_(std::move(change_callback)) {}
 
@@ -48,8 +48,8 @@ class Watcher : public ledger::PageWatcher {
   void OnChange(ledger::PageChangePtr page_change,
                 ledger::ResultState result_state,
                 const OnChangeCallback& callback) override {
-    FTL_DCHECK(page_change);
-    FTL_DCHECK(result_state == ledger::ResultState::COMPLETED)
+    FXL_DCHECK(page_change);
+    FXL_DCHECK(result_state == ledger::ResultState::COMPLETED)
         << "Handling OnChange pagination not implemented yet";
     changes_seen++;
     last_page_change_ = std::move(page_change);
@@ -59,7 +59,7 @@ class Watcher : public ledger::PageWatcher {
   }
 
   fidl::Binding<PageWatcher> binding_;
-  ftl::Closure change_callback_;
+  fxl::Closure change_callback_;
 };
 
 ledger::PageChangePtr NewPageChange() {
@@ -154,7 +154,7 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
     ::testing::AssertionResult Merge(
         fidl::Array<ledger::MergedValuePtr> results,
         MergeType merge_type = MergeType::SIMPLE) {
-      FTL_DCHECK(merge_type == MergeType::SIMPLE || results.size() >= 2);
+      FXL_DCHECK(merge_type == MergeType::SIMPLE || results.size() >= 2);
       if (merge_type == MergeType::SIMPLE) {
         ::testing::AssertionResult merge_status =
             PartialMerge(std::move(results));
@@ -283,8 +283,8 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
   TestConflictResolverFactory(
       ledger::MergePolicy policy,
       fidl::InterfaceRequest<ledger::ConflictResolverFactory> request,
-      ftl::Closure on_get_policy_called_callback,
-      ftl::TimeDelta response_delay = ftl::TimeDelta::FromMilliseconds(0))
+      fxl::Closure on_get_policy_called_callback,
+      fxl::TimeDelta response_delay = fxl::TimeDelta::FromMilliseconds(0))
       : policy_(policy),
         binding_(this, std::move(request)),
         callback_(std::move(on_get_policy_called_callback)),
@@ -318,15 +318,15 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
 
   ledger::MergePolicy policy_;
   fidl::Binding<ConflictResolverFactory> binding_;
-  ftl::Closure callback_;
-  ftl::TimeDelta response_delay_;
+  fxl::Closure callback_;
+  fxl::TimeDelta response_delay_;
 };
 
 ::testing::AssertionResult ChangesMatch(
     std::vector<std::string> expected_keys,
     std::vector<std::string> expected_values,
     const fidl::Array<ledger::EntryPtr>& found_entries) {
-  FTL_DCHECK(expected_keys.size() == expected_values.size());
+  FXL_DCHECK(expected_keys.size() == expected_values.size());
   if (found_entries.size() != expected_keys.size()) {
     return ::testing::AssertionFailure()
            << "Wrong changes size. Expected " << expected_keys.size()
@@ -729,7 +729,7 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
   int N = 50;
   std::vector<std::string> page1_keys;
   for (int i = 0; i < N; ++i) {
-    page1_keys.push_back(ftl::StringPrintf("page1_key_%02d", i));
+    page1_keys.push_back(fxl::StringPrintf("page1_key_%02d", i));
     page1->Put(convert::ToArray(page1_keys.back()), convert::ToArray("value"),
                status_ok_callback);
     EXPECT_TRUE(page1.WaitForIncomingResponse());
@@ -739,7 +739,7 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
   EXPECT_TRUE(page2.WaitForIncomingResponse());
   std::vector<std::string> page2_keys;
   for (int i = 0; i < N; ++i) {
-    page2_keys.push_back(ftl::StringPrintf("page2_key_%02d", i));
+    page2_keys.push_back(fxl::StringPrintf("page2_key_%02d", i));
     page2->Put(convert::ToArray(page2_keys.back()), convert::ToArray("value"),
                status_ok_callback);
     EXPECT_TRUE(page2.WaitForIncomingResponse());
@@ -847,13 +847,13 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
   // Remove all references to a page:
   page1 = nullptr;
   page2 = nullptr;
-  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(500)));
+  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(500)));
 
   // Resolution should not crash the Ledger
   fidl::Array<ledger::MergedValuePtr> merged_values =
       fidl::Array<ledger::MergedValuePtr>::New(0);
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
-  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(200)));
+  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(200)));
 }
 
 TEST_F(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
@@ -945,14 +945,14 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
   // Remove all references to a page:
   page1 = nullptr;
   page2 = nullptr;
-  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(500)));
+  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(500)));
 
   // Resolution should not crash the Ledger
   fidl::Array<ledger::MergedValuePtr> merged_values =
       fidl::Array<ledger::MergedValuePtr>::New(0);
 
   EXPECT_TRUE(resolver_impl2->requests[0].Merge(std::move(merged_values)));
-  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(200)));
+  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(200)));
 }
 
 // Tests for a race between setting the new conflict resolver and sending the
@@ -1020,7 +1020,7 @@ TEST_F(MergingIntegrationTest,
   std::unique_ptr<TestConflictResolverFactory> resolver_factory2 =
       std::make_unique<TestConflictResolverFactory>(
           ledger::MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr2),
-          nullptr, ftl::TimeDelta::FromMilliseconds(250));
+          nullptr, fxl::TimeDelta::FromMilliseconds(250));
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr2),
       [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });

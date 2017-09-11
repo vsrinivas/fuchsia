@@ -12,7 +12,7 @@
 #include "apps/ledger/src/storage/impl/ledger_storage_impl.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/tool/command.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace tool {
 
@@ -23,21 +23,21 @@ class InspectCommand : public Command {
   ~InspectCommand() override {}
 
   // Command:
-  void Start(ftl::Closure on_done) override;
+  void Start(fxl::Closure on_done) override;
 
  private:
-  void ListPages(ftl::Closure on_done);
+  void ListPages(fxl::Closure on_done);
 
-  void DisplayCommit(ftl::Closure on_done);
+  void DisplayCommit(fxl::Closure on_done);
   void PrintCommit(std::unique_ptr<const storage::Commit> commit,
-                   ftl::Closure on_done);
+                   fxl::Closure on_done);
 
-  void DisplayCommitGraph(ftl::Closure on_done);
+  void DisplayCommitGraph(fxl::Closure on_done);
   void DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
                              storage::PageId page_id,
-                             ftl::Closure on_done);
+                             fxl::Closure on_done);
 
-  void PrintHelp(ftl::Closure on_done);
+  void PrintHelp(fxl::Closure on_done);
 
   std::unique_ptr<storage::LedgerStorageImpl> GetLedgerStorage();
 
@@ -47,7 +47,7 @@ class InspectCommand : public Command {
   std::string user_repository_path_;
   coroutine::CoroutineServiceImpl coroutine_service_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(InspectCommand);
+  FXL_DISALLOW_COPY_AND_ASSIGN(InspectCommand);
 };
 
 }  // namespace tool

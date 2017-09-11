@@ -17,13 +17,13 @@
 #include "apps/ledger/src/app/page_utils.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/cobalt/cobalt.h"
-#include "lib/ftl/functional/auto_call.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/functional/auto_call.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 
-MergeResolver::MergeResolver(ftl::Closure on_destroyed,
+MergeResolver::MergeResolver(fxl::Closure on_destroyed,
                              Environment* environment,
                              storage::PageStorage* storage,
                              std::unique_ptr<backoff::Backoff> backoff)
@@ -41,7 +41,7 @@ MergeResolver::~MergeResolver() {
   on_destroyed_();
 }
 
-void MergeResolver::set_on_empty(ftl::Closure on_empty_callback) {
+void MergeResolver::set_on_empty(fxl::Closure on_empty_callback) {
   on_empty_callback_ = std::move(on_empty_callback);
 }
 
@@ -51,7 +51,7 @@ bool MergeResolver::IsEmpty() {
 
 void MergeResolver::SetMergeStrategy(std::unique_ptr<MergeStrategy> strategy) {
   if (merge_in_progress_) {
-    FTL_DCHECK(strategy_);
+    FXL_DCHECK(strategy_);
     // The new strategy can be the empty strategy (nullptr), so we need a
     // separate boolean to know if we have a pending strategy change to make.
     has_next_strategy_ = true;
@@ -66,7 +66,7 @@ void MergeResolver::SetMergeStrategy(std::unique_ptr<MergeStrategy> strategy) {
 }
 
 void MergeResolver::SetPageManager(PageManager* page_manager) {
-  FTL_DCHECK(page_manager_ == nullptr);
+  FXL_DCHECK(page_manager_ == nullptr);
   page_manager_ = page_manager;
 }
 
@@ -92,7 +92,7 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
   storage_->GetHeadCommitIds(
       [this, delayed_status](storage::Status s,
                              std::vector<storage::CommitId> heads) {
-        FTL_DCHECK(s == storage::Status::OK);
+        FXL_DCHECK(s == storage::Status::OK);
         if (heads.size() == 1) {
           // No conflict.
           return;
@@ -104,10 +104,10 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
 
 void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                                      std::vector<storage::CommitId> heads) {
-  FTL_DCHECK(heads.size() == 2);
+  FXL_DCHECK(heads.size() == 2);
 
   merge_in_progress_ = true;
-  auto cleanup = ftl::MakeAutoCall([this] {
+  auto cleanup = fxl::MakeAutoCall([this] {
     // |merge_in_progress_| must be reset before calling |on_empty_callback_|.
     merge_in_progress_ = false;
 
@@ -129,12 +129,12 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
   for (const storage::CommitId& id : heads) {
     storage_->GetCommit(id, waiter->NewCallback());
   }
-  waiter->Finalize(ftl::MakeCopyable([
+  waiter->Finalize(fxl::MakeCopyable([
     this, delayed_status, cleanup = std::move(cleanup)
   ](storage::Status status,
     std::vector<std::unique_ptr<const storage::Commit>> commits) mutable {
-    FTL_DCHECK(commits.size() == 2);
-    FTL_DCHECK(commits[0]->GetTimestamp() <= commits[1]->GetTimestamp());
+    FXL_DCHECK(commits.size() == 2);
+    FXL_DCHECK(commits[0]->GetTimestamp() <= commits[1]->GetTimestamp());
 
     if (commits[0]->GetParentIds().size() == 2 &&
         commits[1]->GetParentIds().size() == 2 &&
@@ -160,16 +160,16 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
       // In that case, the result must be a commit with the same content.
       storage_->StartMergeCommit(
           commits[0]->GetId(), commits[1]->GetId(),
-          ftl::MakeCopyable([ this, cleanup = std::move(cleanup) ](
+          fxl::MakeCopyable([ this, cleanup = std::move(cleanup) ](
               storage::Status status,
               std::unique_ptr<storage::Journal> journal) mutable {
             storage_->CommitJournal(
                 std::move(journal),
-                ftl::MakeCopyable([cleanup = std::move(cleanup)](
+                fxl::MakeCopyable([cleanup = std::move(cleanup)](
                     storage::Status status,
                     std::unique_ptr<const storage::Commit>) {
                   if (status != storage::Status::OK) {
-                    FTL_LOG(ERROR) << "Unable to merge identical commits.";
+                    FXL_LOG(ERROR) << "Unable to merge identical commits.";
                     return;
                   }
 
@@ -186,7 +186,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
     }
 
     if (status != storage::Status::OK) {
-      FTL_LOG(ERROR) << "Failed to retrieve head commits.";
+      FXL_LOG(ERROR) << "Failed to retrieve head commits.";
       return;
     }
 
@@ -195,7 +195,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
     auto head2 = std::move(commits[1]);
     FindCommonAncestor(
         environment_->main_runner(), storage_, head1->Clone(), head2->Clone(),
-        ftl::MakeCopyable([
+        fxl::MakeCopyable([
           this, head1 = std::move(head1), head2 = std::move(head2),
           cleanup = std::move(cleanup)
         ](Status status,
@@ -206,15 +206,15 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
           }
 
           if (status != Status::OK) {
-            FTL_LOG(ERROR) << "Failed to find common ancestor of head commits.";
+            FXL_LOG(ERROR) << "Failed to find common ancestor of head commits.";
             return;
           }
           strategy_->Merge(
               storage_, page_manager_, std::move(head1), std::move(head2),
               std::move(common_ancestor),
-              ftl::MakeCopyable([cleanup = std::move(cleanup)](Status status) {
+              fxl::MakeCopyable([cleanup = std::move(cleanup)](Status status) {
                 if (status != Status::OK) {
-                  FTL_LOG(WARNING) << "Merging failed. Will try again later.";
+                  FXL_LOG(WARNING) << "Merging failed. Will try again later.";
                   return;
                 }
                 ReportEvent(CobaltEvent::COMMITS_MERGED);

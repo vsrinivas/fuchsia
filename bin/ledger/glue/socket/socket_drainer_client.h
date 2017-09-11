@@ -10,8 +10,8 @@
 #include <string>
 
 #include "apps/ledger/src/callback/destruction_sentinel.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/socket/socket_drainer.h"
 
 namespace glue {
@@ -25,7 +25,7 @@ class SocketDrainerClient : public mtl::SocketDrainer::Client {
   void Start(mx::socket source,
              const std::function<void(std::string)>& callback);
 
-  void set_on_empty(ftl::Closure on_empty_callback) {
+  void set_on_empty(fxl::Closure on_empty_callback) {
     on_empty_callback_ = std::move(on_empty_callback);
   }
 
@@ -37,10 +37,10 @@ class SocketDrainerClient : public mtl::SocketDrainer::Client {
   std::function<void(std::string)> callback_;
   std::string data_;
   mtl::SocketDrainer drainer_;
-  ftl::Closure on_empty_callback_;
+  fxl::Closure on_empty_callback_;
   callback::DestructionSentinel destruction_sentinel_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SocketDrainerClient);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SocketDrainerClient);
 };
 
 }  // namespace glue

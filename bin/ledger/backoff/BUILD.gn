@@ -16,7 +16,7 @@ source_set("backoff") {
 
   public_deps = [
     "//apps/ledger/src/glue/crypto",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

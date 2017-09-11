@@ -7,12 +7,12 @@
 #include <utility>
 
 #include "apps/ledger/src/callback/cancellable_helper.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace auth_provider {
 
 AuthProviderImpl::AuthProviderImpl(
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
     std::string api_key,
     modular::auth::TokenProviderPtr token_provider,
     std::unique_ptr<backoff::Backoff> backoff)
@@ -22,10 +22,10 @@ AuthProviderImpl::AuthProviderImpl(
       backoff_(std::move(backoff)),
       weak_factory_(this) {}
 
-ftl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseToken(
+fxl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseToken(
     std::function<void(auth_provider::AuthStatus, std::string)> callback) {
   if (api_key_.empty()) {
-    FTL_LOG(WARNING) << "No Firebase API key provided. Connection to Firebase "
+    FXL_LOG(WARNING) << "No Firebase API key provided. Connection to Firebase "
                         "may be unauthenticated.";
   }
   auto cancellable = callback::CancellableImpl::Create([] {});
@@ -34,7 +34,7 @@ ftl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseToken(
   return cancellable;
 }
 
-ftl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseUserId(
+fxl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseUserId(
     std::function<void(auth_provider::AuthStatus, std::string)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
   GetToken([callback = cancellable->WrapCallback(callback)](
@@ -54,11 +54,11 @@ void AuthProviderImpl::GetToken(
             // This should not happen - the token provider returns nullptr when
             // running in the guest mode, but in this case we don't initialize
             // sync and should never call auth provider.
-            FTL_LOG(ERROR)
+            FXL_LOG(ERROR)
                 << "null Firebase token returned from token provider, "
                 << "this should never happen. Retrying.";
           } else {
-            FTL_LOG(ERROR)
+            FXL_LOG(ERROR)
                 << "Error retrieving the Firebase token from token provider: "
                 << error->status << ", '" << error->message << "', retrying.";
           }

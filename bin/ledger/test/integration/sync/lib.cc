@@ -5,14 +5,14 @@
 #include "apps/ledger/src/test/integration/sync/lib.h"
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/files/directory.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/files/directory.h"
 
 namespace test {
 namespace integration {
 namespace sync {
 namespace {
-constexpr ftl::StringView kServerIdFlag = "server-id";
+constexpr fxl::StringView kServerIdFlag = "server-id";
 std::string* server_id = nullptr;
 
 void PrintUsage(const char* executable_name) {
@@ -40,9 +40,9 @@ SyncTest::NewLedgerAppInstance() {
 }
 
 void ProcessCommandLine(int argc, char** argv) {
-  FTL_DCHECK(!test::integration::sync::server_id);
+  FXL_DCHECK(!test::integration::sync::server_id);
 
-  ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   // TODO(etiennej): Refactor this code to use a different run loop for each
   // test. See LE-268.

@@ -11,7 +11,7 @@
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace auth_provider {
 
@@ -19,7 +19,7 @@ namespace {
 
 class TestTokenProvider : public modular::auth::TokenProvider {
  public:
-  explicit TestTokenProvider(ftl::RefPtr<ftl::TaskRunner> task_runner)
+  explicit TestTokenProvider(fxl::RefPtr<fxl::TaskRunner> task_runner)
       : task_runner_(std::move(task_runner)) {
     error_to_return = modular::auth::AuthErr::New();
     error_to_return->status = modular::auth::Status::OK;
@@ -28,17 +28,17 @@ class TestTokenProvider : public modular::auth::TokenProvider {
 
   // modular::auth::TokenProvider:
   void GetAccessToken(const GetAccessTokenCallback& /*callback*/) override {
-    FTL_NOTIMPLEMENTED();
+    FXL_NOTIMPLEMENTED();
   }
 
   void GetIdToken(const GetIdTokenCallback& /*callback*/) override {
-    FTL_NOTIMPLEMENTED();
+    FXL_NOTIMPLEMENTED();
   }
 
   void GetFirebaseAuthToken(
       const fidl::String& /*firebase_api_key*/,
       const GetFirebaseAuthTokenCallback& callback) override {
-    task_runner_->PostTask(ftl::MakeCopyable([
+    task_runner_->PostTask(fxl::MakeCopyable([
       token_to_return = token_to_return.Clone(),
       error_to_return = error_to_return.Clone(), callback
     ]() mutable {
@@ -47,7 +47,7 @@ class TestTokenProvider : public modular::auth::TokenProvider {
   }
 
   void GetClientId(const GetClientIdCallback& /*callback*/) override {
-    FTL_NOTIMPLEMENTED();
+    FXL_NOTIMPLEMENTED();
   }
 
   void Set(std::string id_token, std::string local_id, std::string email) {
@@ -63,8 +63,8 @@ class TestTokenProvider : public modular::auth::TokenProvider {
   modular::auth::AuthErrPtr error_to_return;
 
  private:
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestTokenProvider);
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestTokenProvider);
 };
 
 class AuthProviderImplTest : public test::TestWithMessageLoop {
@@ -92,7 +92,7 @@ class AuthProviderImplTest : public test::TestWithMessageLoop {
   backoff::test::TestBackoff* backoff_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(AuthProviderImplTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AuthProviderImplTest);
 };
 
 TEST_F(AuthProviderImplTest, GetFirebaseToken) {

@@ -8,7 +8,7 @@
 #include "apps/ledger/src/test/get_ledger.h"
 #include "apps/test_runner/lib/reporting/gtest_listener.h"
 #include "apps/test_runner/lib/reporting/reporter.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace test {
 

@@ -85,7 +85,7 @@ executable("ledger_unittests") {
     "//apps/ledger/src/test/token_provider:unittests",
     "//apps/ledger/src/third_party/bup:unittests",
     "//apps/test_runner/src:gtest_main",
-    "//garnet/public/lib/ftl:ftl_printers",
+    "//garnet/public/lib/fxl:fxl_printers",
   ]
 
   configs += [ ":ledger_config" ]

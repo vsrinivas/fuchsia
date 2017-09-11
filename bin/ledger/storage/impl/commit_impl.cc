@@ -15,16 +15,16 @@
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
 #include "apps/ledger/src/storage/impl/commit_generated.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "lib/ftl/build_config.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/build_config.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace storage {
 
 class CommitImpl::SharedStorageBytes
-    : public ftl::RefCountedThreadSafe<SharedStorageBytes> {
+    : public fxl::RefCountedThreadSafe<SharedStorageBytes> {
  public:
-  inline static ftl::RefPtr<SharedStorageBytes> Create(std::string bytes) {
+  inline static fxl::RefPtr<SharedStorageBytes> Create(std::string bytes) {
     return AdoptRef(new SharedStorageBytes(std::move(bytes)));
   }
 
@@ -68,7 +68,7 @@ CommitImpl::CommitImpl(PageStorage* page_storage,
                        uint64_t generation,
                        ObjectIdView root_node_id,
                        std::vector<CommitIdView> parent_ids,
-                       ftl::RefPtr<SharedStorageBytes> storage_bytes)
+                       fxl::RefPtr<SharedStorageBytes> storage_bytes)
     : page_storage_(page_storage),
       id_(std::move(id)),
       timestamp_(timestamp),
@@ -76,8 +76,8 @@ CommitImpl::CommitImpl(PageStorage* page_storage,
       root_node_id_(std::move(root_node_id)),
       parent_ids_(std::move(parent_ids)),
       storage_bytes_(std::move(storage_bytes)) {
-  FTL_DCHECK(page_storage_ != nullptr);
-  FTL_DCHECK(id_ == kFirstPageCommitId ||
+  FXL_DCHECK(page_storage_ != nullptr);
+  FXL_DCHECK(id_ == kFirstPageCommitId ||
              (!parent_ids_.empty() && parent_ids_.size() <= 2));
 }
 
@@ -87,11 +87,11 @@ std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
     PageStorage* page_storage,
     CommitId id,
     std::string storage_bytes) {
-  FTL_DCHECK(id != kFirstPageCommitId);
-  ftl::RefPtr<SharedStorageBytes> storage_ptr =
+  FXL_DCHECK(id != kFirstPageCommitId);
+  fxl::RefPtr<SharedStorageBytes> storage_ptr =
       SharedStorageBytes::Create(std::move(storage_bytes));
 
-  FTL_DCHECK(CheckValidSerialization(storage_ptr->bytes()));
+  FXL_DCHECK(CheckValidSerialization(storage_ptr->bytes()));
 
   const CommitStorage* commit_storage =
       GetCommitStorage(storage_ptr->bytes().data());
@@ -112,7 +112,7 @@ std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
     PageStorage* page_storage,
     ObjectIdView root_node_id,
     std::vector<std::unique_ptr<const Commit>> parent_commits) {
-  FTL_DCHECK(parent_commits.size() == 1 || parent_commits.size() == 2);
+  FXL_DCHECK(parent_commits.size() == 1 || parent_commits.size() == 2);
 
   uint64_t parent_generation = 0;
   for (const auto& commit : parent_commits) {
@@ -158,7 +158,7 @@ void CommitImpl::Empty(
           return;
         }
 
-        ftl::RefPtr<SharedStorageBytes> storage_ptr =
+        fxl::RefPtr<SharedStorageBytes> storage_ptr =
             SharedStorageBytes::Create(std::move(root_node_id));
 
         const auto& bytes = storage_ptr->bytes();
@@ -169,7 +169,7 @@ void CommitImpl::Empty(
       });
 }
 
-bool CommitImpl::CheckValidSerialization(ftl::StringView storage_bytes) {
+bool CommitImpl::CheckValidSerialization(fxl::StringView storage_bytes) {
   flatbuffers::Verifier verifier(
       reinterpret_cast<const unsigned char*>(storage_bytes.data()),
       storage_bytes.size());
@@ -209,7 +209,7 @@ ObjectIdView CommitImpl::GetRootId() const {
   return root_node_id_;
 }
 
-ftl::StringView CommitImpl::GetStorageBytes() const {
+fxl::StringView CommitImpl::GetStorageBytes() const {
   return storage_bytes_->bytes();
 }
 

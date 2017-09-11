@@ -7,7 +7,7 @@
 #include <algorithm>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace ledger {
 
@@ -17,7 +17,7 @@ PageManager::PageManager(
     std::unique_ptr<cloud_sync::PageSyncContext> page_sync_context,
     std::unique_ptr<MergeResolver> merge_resolver,
     PageManager::PageStorageState state,
-    ftl::TimeDelta sync_timeout)
+    fxl::TimeDelta sync_timeout)
     : environment_(environment),
       page_storage_(std::move(page_storage)),
       page_sync_context_(std::move(page_sync_context)),
@@ -39,7 +39,7 @@ PageManager::PageManager(
       environment_->main_runner()->PostDelayedTask(
           [weak_this = weak_factory_.GetWeakPtr()]() {
             if (weak_this && !weak_this->sync_backlog_downloaded_) {
-              FTL_LOG(INFO) << "Initial sync will continue in background, "
+              FXL_LOG(INFO) << "Initial sync will continue in background, "
                             << "in the meantime binding to local page data "
                             << "(might be stale or empty).";
               weak_this->OnSyncBacklogDownloaded();
@@ -93,7 +93,7 @@ void PageManager::CheckEmpty() {
 
 void PageManager::OnSyncBacklogDownloaded() {
   if (sync_backlog_downloaded_) {
-    FTL_LOG(INFO) << "Initial sync in background finished. "
+    FXL_LOG(INFO) << "Initial sync in background finished. "
                   << "Clients will receive a change notification.";
   }
   sync_backlog_downloaded_ = true;

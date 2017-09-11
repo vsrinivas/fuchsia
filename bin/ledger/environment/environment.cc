@@ -10,14 +10,14 @@
 
 namespace ledger {
 
-Environment::Environment(ftl::RefPtr<ftl::TaskRunner> main_runner,
+Environment::Environment(fxl::RefPtr<fxl::TaskRunner> main_runner,
                          NetworkService* network_service,
-                         ftl::RefPtr<ftl::TaskRunner> io_runner)
+                         fxl::RefPtr<fxl::TaskRunner> io_runner)
     : main_runner_(std::move(main_runner)),
       network_service_(network_service),
       coroutine_service_(std::make_unique<coroutine::CoroutineServiceImpl>()),
       io_runner_(std::move(io_runner)) {
-  FTL_DCHECK(main_runner_);
+  FXL_DCHECK(main_runner_);
 }
 
 Environment::~Environment() {
@@ -27,7 +27,7 @@ Environment::~Environment() {
   }
 }
 
-const ftl::RefPtr<ftl::TaskRunner> Environment::GetIORunner() {
+const fxl::RefPtr<fxl::TaskRunner> Environment::GetIORunner() {
   if (!io_runner_) {
     io_thread_ = mtl::CreateThread(&io_runner_, "io thread");
   }
@@ -35,7 +35,7 @@ const ftl::RefPtr<ftl::TaskRunner> Environment::GetIORunner() {
 }
 
 void Environment::SetTriggerCloudErasedForTesting() {
-  FTL_LOG(WARNING)
+  FXL_LOG(WARNING)
       << "Setting up the environment to trigger cloud erased recovery: "
       << "THIS SHOULD ONLY HAPPEN IN TESTS";
   trigger_cloud_erased_for_testing_ = true;

@@ -23,8 +23,8 @@
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
@@ -35,7 +35,7 @@ namespace {
 std::string ToString(const mx::vmo& vmo) {
   std::string value;
   bool status = mtl::StringFromVmo(vmo, &value);
-  FTL_DCHECK(status);
+  FXL_DCHECK(status);
   return value;
 }
 
@@ -55,8 +55,8 @@ class PageImplTest : public test::TestWithMessageLoop {
     auto resolver = std::make_unique<MergeResolver>(
         [] {}, &environment_, fake_storage_,
         std::make_unique<backoff::ExponentialBackoff>(
-            ftl::TimeDelta::FromSeconds(0), 1u,
-            ftl::TimeDelta::FromSeconds(0)));
+            fxl::TimeDelta::FromSeconds(0), 1u,
+            fxl::TimeDelta::FromSeconds(0)));
 
     manager_ = std::make_unique<PageManager>(
         &environment_, std::move(fake_storage), nullptr, std::move(resolver),
@@ -106,13 +106,13 @@ class PageImplTest : public test::TestWithMessageLoop {
   }
 
   std::string GetKey(size_t index, size_t min_key_size = 0u) {
-    std::string result = ftl::StringPrintf("key %04" PRIuMAX, index);
+    std::string result = fxl::StringPrintf("key %04" PRIuMAX, index);
     result.resize(std::max(result.size(), min_key_size));
     return result;
   }
 
   std::string GetValue(size_t index, size_t min_value_size = 0u) {
-    std::string result = ftl::StringPrintf("val %zu", index);
+    std::string result = fxl::StringPrintf("val %zu", index);
     result.resize(std::max(result.size(), min_value_size));
     return result;
   }
@@ -120,7 +120,7 @@ class PageImplTest : public test::TestWithMessageLoop {
   void AddEntries(int entry_count,
                   size_t min_key_size = 0u,
                   size_t min_value_size = 0u) {
-    FTL_DCHECK(entry_count <= 10000);
+    FXL_DCHECK(entry_count <= 10000);
     auto callback_statusok = [this](Status status) {
       EXPECT_EQ(Status::OK, status);
       message_loop_.PostQuitTask();
@@ -158,7 +158,7 @@ class PageImplTest : public test::TestWithMessageLoop {
   Environment environment_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageImplTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageImplTest);
 };
 
 TEST_F(PageImplTest, GetId) {
@@ -1266,7 +1266,7 @@ TEST_F(PageImplTest, SerializedOperations) {
   // 3 first operations need to be serialized and blocked on commits.
   for (size_t i = 0; i < 3; ++i) {
     // Callbacks are blocked until operation commits.
-    EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(20)));
+    EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(20)));
 
     // The commit queue contains the new commit.
     ASSERT_EQ(i + 1, fake_storage_->GetJournals().size());
@@ -1282,7 +1282,7 @@ TEST_F(PageImplTest, SerializedOperations) {
   }
 
   // But committing the transaction should still be blocked.
-  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(20)));
+  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(20)));
 
   // Unblocking the transaction commit.
   CommitFirstPendingJournal(fake_storage_->GetJournals());

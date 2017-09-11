@@ -12,7 +12,7 @@ PendingOperationManager::PendingOperationManager() : weak_ptr_factory_(this) {}
 
 PendingOperationManager::~PendingOperationManager() {}
 
-ftl::Closure PendingOperationManager::ManagePendingOperation(
+fxl::Closure PendingOperationManager::ManagePendingOperation(
     std::unique_ptr<PendingOperation> operation) {
   PendingOperation* ptr = operation.get();
   pending_operations_.push_back(std::move(operation));
@@ -29,7 +29,7 @@ ftl::Closure PendingOperationManager::ManagePendingOperation(
                            [ptr](const std::unique_ptr<PendingOperation>& c) {
                              return c.get() == ptr;
                            });
-    FTL_DCHECK(it != weak_this->pending_operations_.end());
+    FXL_DCHECK(it != weak_this->pending_operations_.end());
     weak_this->pending_operations_.erase(it);
   };
 }

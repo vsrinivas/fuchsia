@@ -5,7 +5,7 @@
 #include "apps/ledger/src/cloud_provider/impl/timestamp_conversions.h"
 
 #include "gtest/gtest.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/time/time_delta.h"
 
 namespace cloud_provider_firebase {
 
@@ -18,24 +18,24 @@ TEST(TimestampConversions, BackAndForth) {
   EXPECT_EQ(timestamp,
             BytesToServerTimestamp(ServerTimestampToBytes(timestamp)));
 
-  timestamp = ftl::TimeDelta::FromSeconds(42).ToMilliseconds();
+  timestamp = fxl::TimeDelta::FromSeconds(42).ToMilliseconds();
   EXPECT_EQ(timestamp,
             BytesToServerTimestamp(ServerTimestampToBytes(timestamp)));
 
-  timestamp = ftl::TimeDelta::FromSeconds(42 * 60).ToMilliseconds();
+  timestamp = fxl::TimeDelta::FromSeconds(42 * 60).ToMilliseconds();
   EXPECT_EQ(timestamp,
             BytesToServerTimestamp(ServerTimestampToBytes(timestamp)));
 
-  timestamp = ftl::TimeDelta::FromSeconds(42 * 60 * 60).ToMilliseconds();
+  timestamp = fxl::TimeDelta::FromSeconds(42 * 60 * 60).ToMilliseconds();
   EXPECT_EQ(timestamp,
             BytesToServerTimestamp(ServerTimestampToBytes(timestamp)));
 
-  timestamp = ftl::TimeDelta::FromSeconds(42 * 60 * 60 * 24).ToMilliseconds();
+  timestamp = fxl::TimeDelta::FromSeconds(42 * 60 * 60 * 24).ToMilliseconds();
   EXPECT_EQ(timestamp,
             BytesToServerTimestamp(ServerTimestampToBytes(timestamp)));
 
   timestamp =
-      ftl::TimeDelta::FromSeconds(42 * 60 * 60 * 24 * 365).ToMilliseconds();
+      fxl::TimeDelta::FromSeconds(42 * 60 * 60 * 24 * 365).ToMilliseconds();
   EXPECT_EQ(timestamp,
             BytesToServerTimestamp(ServerTimestampToBytes(timestamp)));
 }

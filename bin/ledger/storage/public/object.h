@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "apps/ledger/src/storage/public/types.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 #include "mx/vmo.h"
 
 namespace storage {
@@ -24,13 +24,13 @@ class Object {
 
   // Returns the data of this object. The returned view is valid as long as this
   // object is not deleted.
-  virtual Status GetData(ftl::StringView* data) const = 0;
+  virtual Status GetData(fxl::StringView* data) const = 0;
 
   // Returns a vmo containing the data.
   virtual Status GetVmo(mx::vmo* vmo) const;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Object);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Object);
 };
 
 }  // namespace storage

@@ -21,8 +21,8 @@
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/test/test_with_coroutines.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace storage {
@@ -59,7 +59,7 @@ class PageDbTest : public ::test::TestWithCoroutines {
   PageStorageImpl page_storage_;
   PageDbImpl page_db_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageDbTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageDbTest);
 };
 
 TEST_F(PageDbTest, HeadCommits) {
@@ -224,7 +224,7 @@ TEST_F(PageDbTest, ObjectStorage) {
     page_db_.GetObjectStatus(object_id, &object_status);
     EXPECT_EQ(PageDbObjectStatus::TRANSIENT, object_status);
     ASSERT_EQ(Status::OK, page_db_.ReadObject(object_id, &object));
-    ftl::StringView object_content;
+    fxl::StringView object_content;
     EXPECT_EQ(Status::OK, object->GetData(&object_content));
     EXPECT_EQ(content, object_content);
     EXPECT_EQ(Status::OK, page_db_.DeleteObject(handler, object_id));
@@ -367,7 +367,7 @@ TEST_F(PageDbTest, PageDbObjectStatus) {
 
 TEST_F(PageDbTest, SyncMetadata) {
   EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
-    std::vector<std::pair<ftl::StringView, ftl::StringView>> keys_and_values = {
+    std::vector<std::pair<fxl::StringView, fxl::StringView>> keys_and_values = {
         {"foo1", "foo2"}, {"bar1", " bar2 "}};
     for (auto key_and_value : keys_and_values) {
       auto key = key_and_value.first;

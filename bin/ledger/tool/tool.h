@@ -14,14 +14,14 @@
 #include "apps/ledger/src/firebase/firebase_impl.h"
 #include "apps/ledger/src/network/network_service_impl.h"
 #include "apps/ledger/src/tool/command.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/macros.h"
 
 namespace tool {
 
 class ToolApp {
  public:
-  explicit ToolApp(ftl::CommandLine command_line);
+  explicit ToolApp(fxl::CommandLine command_line);
 
  private:
   std::unique_ptr<Command> CommandFromArgs(
@@ -35,11 +35,11 @@ class ToolApp {
 
   void Start();
 
-  ftl::CommandLine command_line_;
+  fxl::CommandLine command_line_;
   std::unique_ptr<app::ApplicationContext> context_;
   std::unique_ptr<Command> command_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ToolApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ToolApp);
 };
 
 }  // namespace tool

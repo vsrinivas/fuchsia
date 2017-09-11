@@ -4,7 +4,7 @@
 
 #include "apps/ledger/src/cloud_provider/impl/timestamp_conversions.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace cloud_provider_firebase {
 
@@ -32,7 +32,7 @@ int64_t BytesToServerTimestamp(const std::string& bytes) {
   if (bytes.substr(0u, kVersionSize) == kTimestampVersion) {
     return *reinterpret_cast<const int64_t*>(bytes.data() + kVersionSize);
   }
-  FTL_NOTREACHED();
+  FXL_NOTREACHED();
   return 0;
 }
 

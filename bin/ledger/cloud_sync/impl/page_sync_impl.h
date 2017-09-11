@@ -20,10 +20,10 @@
 #include "apps/ledger/src/storage/public/commit_watcher.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/page_sync_delegate.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/memory/weak_ptr.h"
-#include "lib/ftl/tasks/task_runner.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fxl/tasks/task_runner.h"
+#include "lib/fxl/time/time_delta.h"
 
 namespace cloud_sync {
 
@@ -57,18 +57,18 @@ class PageSyncImpl : public PageSync,
                      public storage::PageSyncDelegate,
                      public cloud_provider_firebase::CommitWatcher {
  public:
-  PageSyncImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
+  PageSyncImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
                storage::PageStorage* storage,
                cloud_provider_firebase::CloudProvider* cloud_provider,
                auth_provider::AuthProvider* auth_provider,
                std::unique_ptr<backoff::Backoff> backoff,
-               ftl::Closure on_error,
+               fxl::Closure on_error,
                std::unique_ptr<SyncStateWatcher> ledger_watcher = nullptr);
   ~PageSyncImpl() override;
 
   // |on_delete| will be called when this class is deleted.
   void set_on_delete(std::function<void()> on_delete) {
-    FTL_DCHECK(!on_delete_);
+    FXL_DCHECK(!on_delete_);
     on_delete_ = on_delete;
   }
 
@@ -78,11 +78,11 @@ class PageSyncImpl : public PageSync,
   // PageSync:
   void Start() override;
 
-  void SetOnIdle(ftl::Closure on_idle) override;
+  void SetOnIdle(fxl::Closure on_idle) override;
 
   bool IsIdle() override;
 
-  void SetOnBacklogDownloaded(ftl::Closure on_backlog_downloaded) override;
+  void SetOnBacklogDownloaded(fxl::Closure on_backlog_downloaded) override;
 
   void SetSyncWatcher(SyncStateWatcher* watcher) override;
 
@@ -118,7 +118,7 @@ class PageSyncImpl : public PageSync,
 
   // Downloads the given batch of commits.
   void DownloadBatch(std::vector<cloud_provider_firebase::Record> records,
-                     ftl::Closure on_done);
+                     fxl::Closure on_done);
 
   void SetRemoteWatcher(bool is_retry);
 
@@ -138,7 +138,7 @@ class PageSyncImpl : public PageSync,
 
   // Schedules the given closure to execute after the delay determined by
   // |backoff_|, but only if |this| still is valid and |errored_| is not set.
-  void Retry(ftl::Closure callable);
+  void Retry(fxl::Closure callable);
 
   // Notify the state watcher of a change of synchronization state.
   void NotifyStateWatcher();
@@ -149,18 +149,18 @@ class PageSyncImpl : public PageSync,
   // Retrieves the auth token from token provider and executes the given
   // callback. Fails hard and stops the sync if the token can't be retrieved.
   void GetAuthToken(std::function<void(std::string)> on_token_ready,
-                    ftl::Closure on_failed);
+                    fxl::Closure on_failed);
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   storage::PageStorage* const storage_;
   cloud_provider_firebase::CloudProvider* const cloud_provider_;
   auth_provider::AuthProvider* const auth_provider_;
   const std::unique_ptr<backoff::Backoff> backoff_;
-  const ftl::Closure on_error_;
+  const fxl::Closure on_error_;
   const std::string log_prefix_;
 
-  ftl::Closure on_idle_;
-  ftl::Closure on_backlog_downloaded_;
+  fxl::Closure on_idle_;
+  fxl::Closure on_backlog_downloaded_;
   // Ensures that each instance is started only once.
   bool started_ = false;
   // Track which watchers are set, so that we know which to unset on hard error.
@@ -197,7 +197,7 @@ class PageSyncImpl : public PageSync,
   // Pending auth token requests to be cancelled when this class goes away.
   callback::CancellableContainer auth_token_requests_;
   // Must be the last member field.
-  ftl::WeakPtrFactory<PageSyncImpl> weak_factory_;
+  fxl::WeakPtrFactory<PageSyncImpl> weak_factory_;
 };
 
 }  // namespace cloud_sync

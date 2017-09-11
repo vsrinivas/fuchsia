@@ -7,13 +7,13 @@
 
 #include <string>
 
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace tool {
 
 // Inverse of the transformation currently used by DeviceRunner to translate
 // human-readable username to user ID.
-bool FromHexString(ftl::StringView hex_string, std::string* result);
+bool FromHexString(fxl::StringView hex_string, std::string* result);
 
 }  // namespace tool
 

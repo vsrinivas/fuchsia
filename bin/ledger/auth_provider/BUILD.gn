@@ -18,7 +18,7 @@ source_set("auth_provider") {
     "//apps/ledger/src/backoff",
     "//apps/ledger/src/callback",
     "//apps/modular/services/auth",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

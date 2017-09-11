@@ -19,8 +19,8 @@
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace ledger {
@@ -29,7 +29,7 @@ class RecordingTestStrategy : public MergeStrategy {
  public:
   RecordingTestStrategy() {}
   ~RecordingTestStrategy() override {}
-  void SetOnError(ftl::Closure on_error) override {
+  void SetOnError(fxl::Closure on_error) override {
     this->on_error = std::move(on_error);
   }
 
@@ -45,7 +45,7 @@ class RecordingTestStrategy : public MergeStrategy {
 
   void Cancel() override { cancel_calls++; }
 
-  ftl::Closure on_error;
+  fxl::Closure on_error;
   std::function<void(Status)> callback;
   uint32_t merge_calls = 0;
   uint32_t cancel_calls = 0;
@@ -130,7 +130,7 @@ class MergeResolverTest : public test::TestWithPageStorage {
   Environment environment_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(MergeResolverTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MergeResolverTest);
 };
 
 TEST_F(MergeResolverTest, Empty) {
@@ -165,7 +165,7 @@ TEST_F(MergeResolverTest, Empty) {
 
 class VerifyingMergeStrategy : public MergeStrategy {
  public:
-  VerifyingMergeStrategy(ftl::RefPtr<ftl::TaskRunner> task_runner,
+  VerifyingMergeStrategy(fxl::RefPtr<fxl::TaskRunner> task_runner,
                          storage::CommitId head1,
                          storage::CommitId head2,
                          storage::CommitId ancestor)
@@ -202,7 +202,7 @@ class VerifyingMergeStrategy : public MergeStrategy {
   void Cancel() override{};
 
  private:
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   const storage::CommitId head1_;
   const storage::CommitId head2_;
   const storage::CommitId ancestor_;

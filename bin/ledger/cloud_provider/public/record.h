@@ -6,7 +6,7 @@
 #define APPS_LEDGER_SRC_CLOUD_PROVIDER_PUBLIC_RECORD_H_
 
 #include "apps/ledger/src/cloud_provider/public/commit.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace cloud_provider_firebase {
 
@@ -27,7 +27,7 @@ struct Record {
   size_t batch_size;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Record);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Record);
 };
 
 }  // namespace cloud_provider_firebase

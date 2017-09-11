@@ -9,7 +9,7 @@
 
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/types.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace storage {
 
@@ -36,7 +36,7 @@ class LedgerStorage {
   virtual bool DeletePageStorage(PageIdView page_id) = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(LedgerStorage);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerStorage);
 };
 
 }  // namespace storage

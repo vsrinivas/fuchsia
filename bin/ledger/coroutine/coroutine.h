@@ -8,8 +8,8 @@
 #include <functional>
 
 #include "apps/ledger/src/callback/capture.h"
-#include "lib/ftl/functional/auto_call.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/auto_call.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 // This Coroutine library allows to use coroutines. A coroutine is a function
 // that can interrupt itself by yielding, and the computation will resume at the
@@ -65,13 +65,13 @@ bool SyncCall(CoroutineHandler* handler,
               const A& async_call,
               Args*... parameters) {
   class TerminationSentinel
-      : public ftl::RefCountedThreadSafe<TerminationSentinel> {
+      : public fxl::RefCountedThreadSafe<TerminationSentinel> {
    public:
     bool terminated = false;
   };
 
-  auto termination_sentinel = ftl::AdoptRef(new TerminationSentinel());
-  auto on_return = ftl::MakeAutoCall(
+  auto termination_sentinel = fxl::AdoptRef(new TerminationSentinel());
+  auto on_return = fxl::MakeAutoCall(
       [termination_sentinel] { termination_sentinel->terminated = true; });
 
   volatile bool sync_state = true;
@@ -79,7 +79,7 @@ bool SyncCall(CoroutineHandler* handler,
   // Unblock the coroutine (by having it return early) if the asynchronous call
   // drops its callback without ever calling it.
   auto unblocker =
-      ftl::MakeAutoCall([termination_sentinel, &handler, &sync_state] {
+      fxl::MakeAutoCall([termination_sentinel, &handler, &sync_state] {
         if (termination_sentinel->terminated) {
           return;
         }
@@ -91,7 +91,7 @@ bool SyncCall(CoroutineHandler* handler,
         handler->Continue(true);
       });
   async_call(
-      callback::Capture(ftl::MakeCopyable([
+      callback::Capture(fxl::MakeCopyable([
                           termination_sentinel, &sync_state, &callback_called,
                           handler, unblocker = std::move(unblocker)
                         ]() mutable {

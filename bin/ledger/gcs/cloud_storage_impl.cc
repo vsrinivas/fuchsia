@@ -10,17 +10,17 @@
 
 #include "apps/ledger/src/glue/socket/socket_pair.h"
 #include "lib/fidl/cpp/bindings/array.h"
-#include "lib/ftl/files/eintr_wrapper.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/files/file_descriptor.h"
-#include "lib/ftl/files/path.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/ascii.h"
-#include "lib/ftl/strings/concatenate.h"
-#include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/files/eintr_wrapper.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/files/file_descriptor.h"
+#include "lib/fxl/files/path.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/ascii.h"
+#include "lib/fxl/strings/concatenate.h"
+#include "lib/fxl/strings/string_number_conversions.h"
+#include "lib/fxl/strings/string_view.h"
 #include "lib/mtl/socket/files.h"
 #include "lib/mtl/vmo/file.h"
 
@@ -31,15 +31,15 @@ namespace {
 const char kAuthorizationHeader[] = "authorization";
 const char kContentLengthHeader[] = "content-length";
 
-constexpr ftl::StringView kApiEndpoint =
+constexpr fxl::StringView kApiEndpoint =
     "https://firebasestorage.googleapis.com/v0/b/";
-constexpr ftl::StringView kBucketNameSuffix = ".appspot.com";
+constexpr fxl::StringView kBucketNameSuffix = ".appspot.com";
 
 network::HttpHeaderPtr GetHeader(
     const fidl::Array<network::HttpHeaderPtr>& headers,
     const std::string& header_name) {
   for (const auto& header : headers.storage()) {
-    if (ftl::EqualsCaseInsensitiveASCII(header->name.get(), header_name)) {
+    if (fxl::EqualsCaseInsensitiveASCII(header->name.get(), header_name)) {
       return header.Clone();
     }
   }
@@ -66,13 +66,13 @@ void RunUploadObjectCallback(std::function<void(Status)> callback,
 
 std::string GetUrlPrefix(const std::string& firebase_id,
                          const std::string& cloud_prefix) {
-  return ftl::Concatenate(
+  return fxl::Concatenate(
       {kApiEndpoint, firebase_id, kBucketNameSuffix, "/o/", cloud_prefix});
 }
 
 }  // namespace
 
-CloudStorageImpl::CloudStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
+CloudStorageImpl::CloudStorageImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
                                    ledger::NetworkService* network_service,
                                    const std::string& firebase_id,
                                    const std::string& cloud_prefix)
@@ -91,12 +91,12 @@ void CloudStorageImpl::UploadObject(std::string auth_token,
   uint64_t data_size;
   mx_status_t status = data.get_size(&data_size);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "Failed to retrieve the size of the vmo.";
+    FXL_LOG(ERROR) << "Failed to retrieve the size of the vmo.";
     callback(Status::INTERNAL_ERROR);
     return;
   }
 
-  auto request_factory = ftl::MakeCopyable([
+  auto request_factory = fxl::MakeCopyable([
     auth_token = std::move(auth_token), url = std::move(url),
     task_runner = task_runner_, data = std::move(data), data_size
   ] {
@@ -113,7 +113,7 @@ void CloudStorageImpl::UploadObject(std::string auth_token,
     // Content-Length header.
     network::HttpHeaderPtr content_length_header = network::HttpHeader::New();
     content_length_header->name = kContentLengthHeader;
-    content_length_header->value = ftl::NumberToString(data_size);
+    content_length_header->value = fxl::NumberToString(data_size);
     request->headers.push_back(std::move(content_length_header));
 
     mx::vmo duplicated_data;
@@ -155,14 +155,14 @@ void CloudStorageImpl::DownloadObject(
           });
 }
 
-std::string CloudStorageImpl::GetDownloadUrl(ftl::StringView key) {
-  FTL_DCHECK(key.find('/') == std::string::npos);
-  return ftl::Concatenate({url_prefix_, key, "?alt=media"});
+std::string CloudStorageImpl::GetDownloadUrl(fxl::StringView key) {
+  FXL_DCHECK(key.find('/') == std::string::npos);
+  return fxl::Concatenate({url_prefix_, key, "?alt=media"});
 }
 
-std::string CloudStorageImpl::GetUploadUrl(ftl::StringView key) {
-  FTL_DCHECK(key.find('/') == std::string::npos);
-  return ftl::Concatenate({url_prefix_, key});
+std::string CloudStorageImpl::GetUploadUrl(fxl::StringView key) {
+  FXL_DCHECK(key.find('/') == std::string::npos);
+  return fxl::Concatenate({url_prefix_, key});
 }
 
 void CloudStorageImpl::Request(
@@ -181,7 +181,7 @@ void CloudStorageImpl::OnResponse(
         callback,
     network::URLResponsePtr response) {
   if (response->error) {
-    FTL_LOG(ERROR) << response->url << " error "
+    FXL_LOG(ERROR) << response->url << " error "
                    << response->error->description;
     callback(Status::NETWORK_ERROR, std::move(response));
     return;
@@ -193,7 +193,7 @@ void CloudStorageImpl::OnResponse(
   }
 
   if (response->status_code != 200 && response->status_code != 204) {
-    FTL_LOG(ERROR) << response->url << " error " << response->status_line;
+    FXL_LOG(ERROR) << response->url << " error " << response->status_line;
     callback(Status::SERVER_ERROR, std::move(response));
     return;
   }
@@ -219,14 +219,14 @@ void CloudStorageImpl::OnDownloadResponseReceived(
   }
 
   uint64_t expected_file_size;
-  if (!ftl::StringToNumberWithError(size_header->value.get(),
+  if (!fxl::StringToNumberWithError(size_header->value.get(),
                                     &expected_file_size)) {
     callback(Status::PARSE_ERROR, 0u, mx::socket());
     return;
   }
 
   network::URLBodyPtr body = std::move(response->body);
-  FTL_DCHECK(body->is_stream());
+  FXL_DCHECK(body->is_stream());
   callback(Status::OK, expected_file_size, std::move(body->get_stream()));
 }
 

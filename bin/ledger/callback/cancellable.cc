@@ -12,7 +12,7 @@ Cancellable::Cancellable() {}
 
 Cancellable::~Cancellable() {}
 
-AutoCancel::AutoCancel(ftl::RefPtr<Cancellable> cancellable)
+AutoCancel::AutoCancel(fxl::RefPtr<Cancellable> cancellable)
     : cancellable_(std::move(cancellable)) {
   if (cancellable_) {
     cancellable_->SetOnDone([this] { OnDone(); });
@@ -24,7 +24,7 @@ AutoCancel::~AutoCancel() {
     cancellable_->Cancel();
 }
 
-void AutoCancel::Reset(ftl::RefPtr<Cancellable> cancellable) {
+void AutoCancel::Reset(fxl::RefPtr<Cancellable> cancellable) {
   if (cancellable == cancellable_)
     return;
   if (cancellable_)
@@ -34,8 +34,8 @@ void AutoCancel::Reset(ftl::RefPtr<Cancellable> cancellable) {
     cancellable_->SetOnDone([this] { OnDone(); });
 }
 
-void AutoCancel::set_on_empty(ftl::Closure callback) {
-  FTL_DCHECK(!on_empty_);
+void AutoCancel::set_on_empty(fxl::Closure callback) {
+  FXL_DCHECK(!on_empty_);
   on_empty_ = callback;
   if (cancellable_->IsDone()) {
     OnDone();

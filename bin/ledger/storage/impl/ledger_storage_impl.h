@@ -9,7 +9,7 @@
 
 #include "apps/ledger/src/coroutine/coroutine.h"
 #include "apps/ledger/src/storage/public/ledger_storage.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace storage {
 
@@ -37,7 +37,7 @@ class LedgerStorageImpl : public LedgerStorage {
  private:
   std::string GetPathFor(PageIdView page_id);
 
-  ftl::RefPtr<ftl::TaskRunner> main_runner_;
+  fxl::RefPtr<fxl::TaskRunner> main_runner_;
   coroutine::CoroutineService* const coroutine_service_;
   std::string storage_dir_;
 };

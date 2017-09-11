@@ -5,7 +5,7 @@
 #include "apps/ledger/src/firebase/encoding.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/strings/utf_codecs.h"
+#include "lib/fxl/strings/utf_codecs.h"
 
 #include <string>
 
@@ -21,7 +21,7 @@ std::string operator"" _s(const char* str, size_t size) {
 // See
 // https://www.firebase.com/docs/rest/guide/understanding-data.html#section-limitations
 bool IsValidKey(const std::string& s) {
-  if (!ftl::IsStringUTF8(s)) {
+  if (!fxl::IsStringUTF8(s)) {
     return false;
   }
 
@@ -43,7 +43,7 @@ bool IsValidKey(const std::string& s) {
 }
 
 bool IsValidValue(const std::string s) {
-  if (!ftl::IsStringUTF8(s)) {
+  if (!fxl::IsStringUTF8(s)) {
     return false;
   }
 
@@ -132,7 +132,7 @@ TEST(EncodingTest, BackAndForth) {
   for (size_t i = 0; i < 10000; ++i) {
     size_t size = glue::RandUint64() % 4;
     char buffer[size];
-    ftl::StringView view(buffer, size);
+    fxl::StringView view(buffer, size);
     glue::RandBytes(buffer, size);
     EXPECT_TRUE(Decode(EncodeKey(view), &ret_key));
     EXPECT_EQ(view, ret_key);

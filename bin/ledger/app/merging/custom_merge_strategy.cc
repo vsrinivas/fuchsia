@@ -7,7 +7,7 @@
 #include <memory>
 
 #include "apps/ledger/src/app/page_manager.h"
-#include "lib/ftl/functional/closure.h"
+#include "lib/fxl/functional/closure.h"
 
 namespace ledger {
 CustomMergeStrategy::CustomMergeStrategy(ConflictResolverPtr conflict_resolver)
@@ -29,7 +29,7 @@ CustomMergeStrategy::CustomMergeStrategy(ConflictResolverPtr conflict_resolver)
 
 CustomMergeStrategy::~CustomMergeStrategy() {}
 
-void CustomMergeStrategy::SetOnError(ftl::Closure on_error) {
+void CustomMergeStrategy::SetOnError(fxl::Closure on_error) {
   on_error_ = on_error;
 }
 
@@ -39,8 +39,8 @@ void CustomMergeStrategy::Merge(storage::PageStorage* storage,
                                 std::unique_ptr<const storage::Commit> head_2,
                                 std::unique_ptr<const storage::Commit> ancestor,
                                 std::function<void(Status)> callback) {
-  FTL_DCHECK(head_1->GetTimestamp() <= head_2->GetTimestamp());
-  FTL_DCHECK(!in_progress_merge_);
+  FXL_DCHECK(head_1->GetTimestamp() <= head_2->GetTimestamp());
+  FXL_DCHECK(!in_progress_merge_);
 
   in_progress_merge_ = std::make_unique<ConflictResolverClient>(
       storage, page_manager, conflict_resolver_.get(), std::move(head_2),

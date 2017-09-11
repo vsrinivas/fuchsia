@@ -13,19 +13,19 @@ namespace cloud_sync {
 BatchDownload::BatchDownload(
     storage::PageStorage* storage,
     std::vector<cloud_provider_firebase::Record> records,
-    ftl::Closure on_done,
-    ftl::Closure on_error)
+    fxl::Closure on_done,
+    fxl::Closure on_error)
     : storage_(storage),
       records_(std::move(records)),
       on_done_(std::move(on_done)),
       on_error_(std::move(on_error)) {
-  FTL_DCHECK(storage);
+  FXL_DCHECK(storage);
 }
 
 BatchDownload::~BatchDownload() {}
 
 void BatchDownload::Start() {
-  FTL_DCHECK(!started_);
+  FXL_DCHECK(!started_);
   started_ = true;
   std::vector<storage::PageStorage::CommitIdAndBytes> commits;
   for (auto& record : records_) {

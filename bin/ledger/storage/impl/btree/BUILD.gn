@@ -39,7 +39,7 @@ source_set("lib") {
     "//apps/ledger/src/convert",
     "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/public",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//third_party/murmurhash",
   ]
 
@@ -92,7 +92,7 @@ source_set("unittests") {
     "//apps/ledger/src/storage/test",
     "//apps/ledger/src/test:lib",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//third_party/gtest",
   ]
 

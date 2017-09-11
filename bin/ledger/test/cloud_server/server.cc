@@ -6,7 +6,7 @@
 
 #include "apps/ledger/src/glue/socket/socket_pair.h"
 #include "apps/ledger/src/glue/socket/socket_writer.h"
-#include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/fxl/strings/string_number_conversions.h"
 
 namespace ledger {
 
@@ -17,7 +17,7 @@ Server::~Server() {}
 void Server::Serve(
     network::URLRequestPtr request,
     const std::function<void(network::URLResponsePtr)> callback) {
-  FTL_DCHECK(!request->body || request->body->is_buffer());
+  FXL_DCHECK(!request->body || request->body->is_buffer());
 
   if (request->method == "GET") {
     for (const auto& header : request->headers) {
@@ -28,7 +28,7 @@ void Server::Serve(
       if (header->name == "authorization") {
         continue;
       }
-      FTL_LOG(WARNING) << "Unknown header: " << header->name << " -> "
+      FXL_LOG(WARNING) << "Unknown header: " << header->name << " -> "
                        << header->value;
     }
     HandleGet(std::move(request), callback);
@@ -50,7 +50,7 @@ void Server::Serve(
     return;
   }
 
-  FTL_NOTREACHED();
+  FXL_NOTREACHED();
 }
 
 void Server::HandleGet(
@@ -107,7 +107,7 @@ network::URLResponsePtr Server::BuildResponse(
       response->status_line = "404 Not found";
       break;
     default:
-      FTL_NOTREACHED();
+      FXL_NOTREACHED();
   }
   for (const auto& pair : headers) {
     network::HttpHeaderPtr header = network::HttpHeader::New();
@@ -129,7 +129,7 @@ network::URLResponsePtr Server::BuildResponse(const std::string& url,
   auto* writer = new glue::StringSocketWriter();
   writer->Start(body, std::move(sockets.socket2));
   std::unordered_map<std::string, std::string> headers;
-  headers["content-length"] = ftl::NumberToString(body.size());
+  headers["content-length"] = fxl::NumberToString(body.size());
   return BuildResponse(url, code, std::move(sockets.socket1), headers);
 }
 

@@ -7,24 +7,24 @@
 #include <trace-provider/provider.h>
 
 #include "apps/ledger/src/test/benchmark/put/put.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/random/rand.h"
-#include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/random/rand.h"
+#include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
 
-constexpr ftl::StringView kEntryCountFlag = "entry-count";
-constexpr ftl::StringView kTransactionSizeFlag = "transaction-size";
-constexpr ftl::StringView kKeySizeFlag = "key-size";
-constexpr ftl::StringView kValueSizeFlag = "value-size";
-constexpr ftl::StringView kRefsFlag = "refs";
-constexpr ftl::StringView kUpdateFlag = "update";
-constexpr ftl::StringView kSeedFlag = "seed";
+constexpr fxl::StringView kEntryCountFlag = "entry-count";
+constexpr fxl::StringView kTransactionSizeFlag = "transaction-size";
+constexpr fxl::StringView kKeySizeFlag = "key-size";
+constexpr fxl::StringView kValueSizeFlag = "value-size";
+constexpr fxl::StringView kRefsFlag = "refs";
+constexpr fxl::StringView kUpdateFlag = "update";
+constexpr fxl::StringView kSeedFlag = "seed";
 
-constexpr ftl::StringView kRefsOnFlag = "on";
-constexpr ftl::StringView kRefsOffFlag = "off";
-constexpr ftl::StringView kRefsAutoFlag = "auto";
+constexpr fxl::StringView kRefsOnFlag = "on";
+constexpr fxl::StringView kRefsOffFlag = "off";
+constexpr fxl::StringView kRefsAutoFlag = "auto";
 
 void PrintUsage(const char* executable_name) {
   std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
@@ -35,13 +35,13 @@ void PrintUsage(const char* executable_name) {
             << "]" << std::endl;
 }
 
-bool GetPositiveIntValue(const ftl::CommandLine& command_line,
-                         ftl::StringView flag,
+bool GetPositiveIntValue(const fxl::CommandLine& command_line,
+                         fxl::StringView flag,
                          int* value) {
   std::string value_str;
   int found_value;
   if (!command_line.GetOptionValue(flag.ToString(), &value_str) ||
-      !ftl::StringToNumberWithError(value_str, &found_value) ||
+      !fxl::StringToNumberWithError(value_str, &found_value) ||
       found_value <= 0) {
     return false;
   }
@@ -52,7 +52,7 @@ bool GetPositiveIntValue(const ftl::CommandLine& command_line,
 }  // namespace
 
 int main(int argc, const char** argv) {
-  ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   int entry_count;
   int transaction_size;
@@ -90,12 +90,12 @@ int main(int argc, const char** argv) {
   int seed;
   std::string seed_str;
   if (command_line.GetOptionValue(kSeedFlag.ToString(), &seed_str)) {
-    if (!ftl::StringToNumberWithError(seed_str, &seed)) {
+    if (!fxl::StringToNumberWithError(seed_str, &seed)) {
       PrintUsage(argv[0]);
       return -1;
     }
   } else {
-    seed = ftl::RandUint64();
+    seed = fxl::RandUint64();
   }
 
   mtl::MessageLoop loop;
@@ -104,7 +104,7 @@ int main(int argc, const char** argv) {
                                     value_size, update, ref_strategy, seed);
   // TODO(nellyv): A delayed task is necessary because of US-257.
   loop.task_runner()->PostDelayedTask([&app] { app.Run(); },
-                                      ftl::TimeDelta::FromSeconds(1));
+                                      fxl::TimeDelta::FromSeconds(1));
   loop.Run();
   return 0;
 }

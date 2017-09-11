@@ -5,7 +5,7 @@
 #include "apps/ledger/src/firebase/encoding.h"
 
 #include "apps/ledger/src/glue/crypto/base64.h"
-#include "lib/ftl/strings/utf_codecs.h"
+#include "lib/fxl/strings/utf_codecs.h"
 
 namespace firebase {
 
@@ -16,10 +16,10 @@ namespace {
 // control characters in strings. We disallow backslash and double quote to
 // avoid reasoning about escaping. Note: this is a stop-gap solution, see
 // LE-118.
-bool CanValueBeVerbatim(ftl::StringView bytes) {
+bool CanValueBeVerbatim(fxl::StringView bytes) {
   // Once encryption is in place this won't be useful. Until then, storing valid
   // utf8 strings verbatim simplifies debugging.
-  if (!ftl::IsStringUTF8(bytes)) {
+  if (!fxl::IsStringUTF8(bytes)) {
     return false;
   }
 
@@ -41,7 +41,7 @@ const char kIllegalKeyChars[] = ".$#[]/+";
 // Encodes the given bytes for storage in Firebase. We use the same encoding
 // function for both values and keys for simplicity, yielding values that can be
 // always safely used as either. Note: this is a stop-gap solution, see LE-118.
-std::string Encode(ftl::StringView s, bool verbatim) {
+std::string Encode(fxl::StringView s, bool verbatim) {
   if (verbatim) {
     return s.ToString() + "V";
   }
@@ -54,7 +54,7 @@ std::string Encode(ftl::StringView s, bool verbatim) {
 
 // Returns true if the given value can be used as a Firebase key without
 // encoding.
-bool CanKeyBeVerbatim(ftl::StringView bytes) {
+bool CanKeyBeVerbatim(fxl::StringView bytes) {
   if (!CanValueBeVerbatim(bytes)) {
     return false;
   }
@@ -79,7 +79,7 @@ bool Decode(convert::ExtendedStringView input, std::string* output) {
     return false;
   }
 
-  ftl::StringView data = input.substr(0, input.size() - 1);
+  fxl::StringView data = input.substr(0, input.size() - 1);
 
   if (input.back() == 'V') {
     *output = data.ToString();

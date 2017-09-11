@@ -7,30 +7,30 @@
 
 #include <string>
 
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace cloud_provider_firebase {
 
 // Returns the common object name prefix used for all objects stored on behalf
 // of the given user and app.
-std::string GetGcsPrefixForApp(ftl::StringView user_id, ftl::StringView app_id);
+std::string GetGcsPrefixForApp(fxl::StringView user_id, fxl::StringView app_id);
 
 // Returns the common object name prefix used for all objects stored for the
 // given page, based on the prefix for the app.
-std::string GetGcsPrefixForPage(ftl::StringView app_path,
-                                ftl::StringView page_id);
+std::string GetGcsPrefixForPage(fxl::StringView app_path,
+                                fxl::StringView page_id);
 
 // Returns the Firebase path under which the data for the given user is stored.
-std::string GetFirebasePathForUser(ftl::StringView user_id);
+std::string GetFirebasePathForUser(fxl::StringView user_id);
 
 // Returns the Firebase path under which the data for the given app is stored.
-std::string GetFirebasePathForApp(ftl::StringView user_id,
-                                  ftl::StringView app_id);
+std::string GetFirebasePathForApp(fxl::StringView user_id,
+                                  fxl::StringView app_id);
 
 // Returns the Firebase path under which the data for the given page is stored,
 // given the path for the app.
-std::string GetFirebasePathForPage(ftl::StringView app_path,
-                                   ftl::StringView page_id);
+std::string GetFirebasePathForPage(fxl::StringView app_path,
+                                   fxl::StringView page_id);
 
 }  // namespace cloud_provider_firebase
 

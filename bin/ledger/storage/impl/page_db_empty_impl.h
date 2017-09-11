@@ -28,7 +28,7 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
                             const JournalId& journal_id,
                             std::unique_ptr<Journal>* journal) override;
   Status GetJournalValue(const JournalId& journal_id,
-                         ftl::StringView key,
+                         fxl::StringView key,
                          std::string* value) override;
   Status GetJournalEntries(
       const JournalId& journal_id,
@@ -46,7 +46,7 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
   Status GetUnsyncedPieces(std::vector<ObjectId>* object_ids) override;
   Status GetObjectStatus(ObjectIdView object_id,
                          PageDbObjectStatus* object_status) override;
-  Status GetSyncMetadata(ftl::StringView key, std::string* value) override;
+  Status GetSyncMetadata(fxl::StringView key, std::string* value) override;
 
   Status AddHead(coroutine::CoroutineHandler* handler,
                  CommitIdView head,
@@ -55,7 +55,7 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
                     CommitIdView head) override;
   Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler,
                                const CommitId& commit_id,
-                               ftl::StringView storage_bytes) override;
+                               fxl::StringView storage_bytes) override;
   Status RemoveCommit(coroutine::CoroutineHandler* handler,
                       const CommitId& commit_id) override;
   Status CreateJournal(coroutine::CoroutineHandler* handler,
@@ -69,8 +69,8 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
   Status RemoveExplicitJournals(coroutine::CoroutineHandler* handler) override;
   Status RemoveJournal(const JournalId& journal_id) override;
   Status AddJournalEntry(const JournalId& journal_id,
-                         ftl::StringView key,
-                         ftl::StringView value,
+                         fxl::StringView key,
+                         fxl::StringView value,
                          KeyPriority priority) override;
   Status RemoveJournalEntry(const JournalId& journal_id,
                             convert::ExtendedStringView key) override;
@@ -89,8 +89,8 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
                          ObjectIdView object_id,
                          PageDbObjectStatus object_status) override;
   Status SetSyncMetadata(coroutine::CoroutineHandler* handler,
-                         ftl::StringView key,
-                         ftl::StringView value) override;
+                         fxl::StringView key,
+                         fxl::StringView value) override;
 
   // PageDb::Batch:
   Status Execute() override;

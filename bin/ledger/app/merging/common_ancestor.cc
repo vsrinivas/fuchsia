@@ -8,7 +8,7 @@
 
 #include "apps/ledger/src/app/page_utils.h"
 #include "apps/ledger/src/callback/waiter.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace ledger {
@@ -31,13 +31,13 @@ struct GenerationComparator {
 // set, i.e. the commits with the highest generation. The recursion stops when
 // only one commit is left in the set, which is the lowest common ancestor.
 void FindCommonAncestorInGeneration(
-    const ftl::RefPtr<ftl::TaskRunner> task_runner,
+    const fxl::RefPtr<fxl::TaskRunner> task_runner,
     storage::PageStorage* storage,
     std::set<std::unique_ptr<const storage::Commit>, GenerationComparator>*
         commits,
     std::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
-  FTL_DCHECK(!commits->empty());
+  FXL_DCHECK(!commits->empty());
   // If there is only one commit in the set it is the lowest common ancestor.
   if (commits->size() == 1) {
     callback(Status::OK,
@@ -90,7 +90,7 @@ void FindCommonAncestorInGeneration(
 }  // namespace
 
 void FindCommonAncestor(
-    const ftl::RefPtr<ftl::TaskRunner> task_runner,
+    const fxl::RefPtr<fxl::TaskRunner> task_runner,
     storage::PageStorage* const storage,
     std::unique_ptr<const storage::Commit> head1,
     std::unique_ptr<const storage::Commit> head2,
@@ -111,7 +111,7 @@ void FindCommonAncestor(
   commits->emplace(std::move(head1));
   commits->emplace(std::move(head2));
   FindCommonAncestorInGeneration(
-      task_runner, storage, commits.get(), ftl::MakeCopyable([
+      task_runner, storage, commits.get(), fxl::MakeCopyable([
         commits = std::move(commits), callback = std::move(callback)
       ](Status status, std::unique_ptr<const storage::Commit> ancestor) {
         callback(status, std::move(ancestor));

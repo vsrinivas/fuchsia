@@ -11,9 +11,9 @@
 #include "apps/ledger/src/test/integration/test_utils.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace test {

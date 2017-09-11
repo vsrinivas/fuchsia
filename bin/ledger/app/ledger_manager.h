@@ -18,8 +18,8 @@
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/storage/public/types.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace ledger {
 
@@ -47,7 +47,7 @@ class LedgerManager : public LedgerImpl::Delegate {
   void SetConflictResolverFactory(
       fidl::InterfaceHandle<ConflictResolverFactory> factory) override;
 
-  void set_on_empty(const ftl::Closure& on_empty_callback) {
+  void set_on_empty(const fxl::Closure& on_empty_callback) {
     on_empty_callback_ = on_empty_callback;
   }
 
@@ -84,9 +84,9 @@ class LedgerManager : public LedgerImpl::Delegate {
                              PageManagerContainer,
                              convert::StringViewComparator>
       page_managers_;
-  ftl::Closure on_empty_callback_;
+  fxl::Closure on_empty_callback_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LedgerManager);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerManager);
 };
 
 }  // namespace ledger

@@ -12,7 +12,7 @@ TestBackoff::TestBackoff() {}
 
 TestBackoff::~TestBackoff() {}
 
-ftl::TimeDelta TestBackoff::GetNext() {
+fxl::TimeDelta TestBackoff::GetNext() {
   get_next_count++;
   if (on_get_next_) {
     on_get_next_();
@@ -24,7 +24,7 @@ void TestBackoff::Reset() {
   reset_count++;
 }
 
-void TestBackoff::SetOnGetNext(ftl::Closure on_get_next) {
+void TestBackoff::SetOnGetNext(fxl::Closure on_get_next) {
   on_get_next_ = on_get_next;
 }
 

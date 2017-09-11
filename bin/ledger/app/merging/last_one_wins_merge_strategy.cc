@@ -9,8 +9,8 @@
 
 #include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/app/page_utils.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 
@@ -42,7 +42,7 @@ class LastOneWinsMergeStrategy::LastOneWinsMerger {
   bool cancelled_ = false;
 
   // This must be the last member of the class.
-  ftl::WeakPtrFactory<LastOneWinsMerger> weak_factory_;
+  fxl::WeakPtrFactory<LastOneWinsMerger> weak_factory_;
 };
 
 LastOneWinsMergeStrategy::LastOneWinsMerger::LastOneWinsMerger(
@@ -57,7 +57,7 @@ LastOneWinsMergeStrategy::LastOneWinsMerger::LastOneWinsMerger(
       ancestor_(std::move(ancestor)),
       callback_(std::move(callback)),
       weak_factory_(this) {
-  FTL_DCHECK(callback_);
+  FXL_DCHECK(callback_);
 }
 
 LastOneWinsMergeStrategy::LastOneWinsMerger::~LastOneWinsMerger() {
@@ -74,7 +74,7 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::Start() {
         if (!weak_this) {
           return;
         }
-        FTL_DCHECK(s == storage::Status::OK);
+        FXL_DCHECK(s == storage::Status::OK);
         weak_this->journal_ = std::move(journal);
         weak_this->BuildAndCommitJournal();
       });
@@ -110,7 +110,7 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::BuildAndCommitJournal() {
                                    change.entry.priority);
     }
     if (s != storage::Status::OK) {
-      FTL_LOG(ERROR) << "Error while merging commits: " << s;
+      FXL_LOG(ERROR) << "Error while merging commits: " << s;
     }
     return true;
   };
@@ -125,7 +125,7 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::BuildAndCommitJournal() {
       return;
     }
     if (s != storage::Status::OK) {
-      FTL_LOG(ERROR) << "Unable to create diff for merging: " << s;
+      FXL_LOG(ERROR) << "Unable to create diff for merging: " << s;
       weak_this->Done(PageUtils::ConvertStatus(s));
       return;
     }
@@ -133,7 +133,7 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::BuildAndCommitJournal() {
         std::move(weak_this->journal_),
         [weak_this](storage::Status s, std::unique_ptr<const storage::Commit>) {
           if (s != storage::Status::OK) {
-            FTL_LOG(ERROR) << "Unable to commit merge journal: " << s;
+            FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
           }
           if (weak_this) {
             weak_this->Done(
@@ -158,8 +158,8 @@ void LastOneWinsMergeStrategy::Merge(
     std::unique_ptr<const storage::Commit> head_2,
     std::unique_ptr<const storage::Commit> ancestor,
     std::function<void(Status)> callback) {
-  FTL_DCHECK(!in_progress_merge_);
-  FTL_DCHECK(head_1->GetTimestamp() <= head_2->GetTimestamp());
+  FXL_DCHECK(!in_progress_merge_);
+  FXL_DCHECK(head_1->GetTimestamp() <= head_2->GetTimestamp());
 
   in_progress_merge_ =
       std::make_unique<LastOneWinsMergeStrategy::LastOneWinsMerger>(

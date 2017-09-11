@@ -17,7 +17,7 @@
 #include "apps/ledger/src/storage/public/ledger_storage.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace ledger {
@@ -32,7 +32,7 @@ storage::PageId RandomId() {
 
 class FakeLedgerStorage : public storage::LedgerStorage {
  public:
-  explicit FakeLedgerStorage(ftl::RefPtr<ftl::TaskRunner> task_runner)
+  explicit FakeLedgerStorage(fxl::RefPtr<fxl::TaskRunner> task_runner)
       : task_runner_(std::move(task_runner)) {}
   ~FakeLedgerStorage() override {}
 
@@ -78,29 +78,29 @@ class FakeLedgerStorage : public storage::LedgerStorage {
   std::vector<storage::PageId> delete_page_calls;
 
  private:
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerStorage);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerStorage);
 };
 
 class FakeLedgerSync : public cloud_sync::LedgerSync {
  public:
-  explicit FakeLedgerSync(ftl::RefPtr<ftl::TaskRunner> task_runner)
+  explicit FakeLedgerSync(fxl::RefPtr<fxl::TaskRunner> task_runner)
       : called(false), task_runner_(std::move(task_runner)) {}
   ~FakeLedgerSync() override {}
 
   std::unique_ptr<cloud_sync::PageSyncContext> CreatePageContext(
       storage::PageStorage* /*page_storage*/,
-      ftl::Closure /*error_callback*/) override {
+      fxl::Closure /*error_callback*/) override {
     return nullptr;
   }
 
   bool called;
 
  private:
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerSync);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerSync);
 };
 
 class LedgerManagerTest : public test::TestWithMessageLoop {

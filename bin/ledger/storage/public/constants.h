@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace storage {
 
@@ -16,11 +16,11 @@ constexpr uint64_t kCommitIdSize = 32;
 
 // The id of the first commit of a page.
 constexpr char kFirstPageCommitIdArray[kCommitIdSize] = {0};
-constexpr const ftl::StringView kFirstPageCommitId(kFirstPageCommitIdArray,
+constexpr const fxl::StringView kFirstPageCommitId(kFirstPageCommitIdArray,
                                                    kCommitIdSize);
 
 // The serialization version of the ledger.
-constexpr const ftl::StringView kSerializationVersion = "17";
+constexpr const fxl::StringView kSerializationVersion = "17";
 
 }  // namespace storage
 

@@ -17,7 +17,7 @@ source_set("network") {
     "//apps/ledger/src/backoff",
     "//apps/ledger/src/callback",
     "//apps/network/services",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//magenta/system/ulib/mx",
   ]
 
@@ -34,7 +34,7 @@ source_set("fake") {
 
   public_deps = [
     ":network",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 
   deps = [

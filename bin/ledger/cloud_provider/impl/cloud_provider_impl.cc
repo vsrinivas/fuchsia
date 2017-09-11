@@ -8,17 +8,17 @@
 #include "apps/ledger/src/cloud_provider/impl/timestamp_conversions.h"
 #include "apps/ledger/src/firebase/encoding.h"
 #include "apps/ledger/src/firebase/status.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/concatenate.h"
-#include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/concatenate.h"
+#include "lib/fxl/strings/string_number_conversions.h"
+#include "lib/fxl/strings/string_view.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace cloud_provider_firebase {
 namespace {
 // The root path under which all commits are stored.
-constexpr ftl::StringView kCommitRoot = "commits";
+constexpr fxl::StringView kCommitRoot = "commits";
 }  // namespace
 
 CloudProviderImpl::CloudProviderImpl(firebase::Firebase* firebase,
@@ -33,7 +33,7 @@ void CloudProviderImpl::AddCommits(
     const std::function<void(Status)>& callback) {
   std::string encoded_batch;
   bool ok = EncodeCommits(commits, &encoded_batch);
-  FTL_DCHECK(ok);
+  FXL_DCHECK(ok);
 
   firebase_->Patch(kCommitRoot.ToString(), GetQueryParams(auth_token, ""),
                    encoded_batch, [callback](firebase::Status status) {
@@ -120,7 +120,7 @@ std::vector<std::string> CloudProviderImpl::GetQueryParams(
 
   if (!min_timestamp.empty()) {
     result.emplace_back("orderBy=\"timestamp\"");
-    result.push_back("startAt=" + ftl::NumberToString(
+    result.push_back("startAt=" + fxl::NumberToString(
                                       BytesToServerTimestamp(min_timestamp)));
   }
 

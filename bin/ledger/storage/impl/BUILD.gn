@@ -76,7 +76,7 @@ source_set("lib") {
     "//apps/ledger/src/storage/impl/btree:lib",
     "//apps/ledger/src/storage/public",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//magenta/system/ulib/trace",
   ]
 
@@ -108,7 +108,7 @@ source_set("test_utils") {
     "//apps/ledger/src/storage/impl/btree:lib",
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/test:lib",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }
@@ -142,7 +142,7 @@ source_set("unittests") {
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/storage/test",
     "//apps/ledger/src/test:lib",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]

@@ -9,7 +9,7 @@
 #include <unordered_set>
 
 #include "apps/ledger/src/cloud_sync/public/sync_state_watcher.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace cloud_sync {
 
@@ -38,7 +38,7 @@ class Aggregator {
   std::unordered_set<Listener*> listeners_;
   SyncStateWatcher* base_watcher_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Aggregator);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Aggregator);
 };
 
 }  // namespace cloud_sync

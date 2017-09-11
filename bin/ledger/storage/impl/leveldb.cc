@@ -10,8 +10,8 @@
 
 #include "apps/ledger/src/cobalt/cobalt.h"
 #include "apps/ledger/src/storage/impl/object_impl.h"
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/files/path.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/path.h"
 
 namespace storage {
 
@@ -22,7 +22,7 @@ Status ConvertStatus(leveldb::Status s) {
     return Status::NOT_FOUND;
   }
   if (!s.ok()) {
-    FTL_LOG(ERROR) << "LevelDB error: " << s.ToString();
+    FXL_LOG(ERROR) << "LevelDB error: " << s.ToString();
     return Status::INTERNAL_IO_ERROR;
   }
   return Status::OK;
@@ -45,20 +45,20 @@ class BatchImpl : public Db::Batch {
       callback_(nullptr);
   }
 
-  Status Put(convert::ExtendedStringView key, ftl::StringView value) override {
-    FTL_DCHECK(batch_);
+  Status Put(convert::ExtendedStringView key, fxl::StringView value) override {
+    FXL_DCHECK(batch_);
     batch_->Put(key, convert::ToSlice(value));
     return Status::OK;
   }
 
   Status Delete(convert::ExtendedStringView key) override {
-    FTL_DCHECK(batch_);
+    FXL_DCHECK(batch_);
     batch_->Delete(key);
     return Status::OK;
   }
 
   Status DeleteByPrefix(convert::ExtendedStringView prefix) override {
-    FTL_DCHECK(batch_);
+    FXL_DCHECK(batch_);
     std::unique_ptr<leveldb::Iterator> it(db_->NewIterator(read_options_));
     for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix);
          it->Next()) {
@@ -68,7 +68,7 @@ class BatchImpl : public Db::Batch {
   }
 
   Status Execute() override {
-    FTL_DCHECK(batch_);
+    FXL_DCHECK(batch_);
     return callback_(std::move(batch_));
   }
 
@@ -142,14 +142,14 @@ class RowIterator
 LevelDb::LevelDb(std::string db_path) : db_path_(std::move(db_path)) {}
 
 LevelDb::~LevelDb() {
-  FTL_DCHECK(!active_batches_count_)
+  FXL_DCHECK(!active_batches_count_)
       << "Not all LevelDb batches have been executed or rolled back.";
 }
 
 Status LevelDb::Init() {
   TRACE_DURATION("ledger", "leveldb_init");
   if (!files::CreateDirectory(db_path_)) {
-    FTL_LOG(ERROR) << "Failed to create directory under " << db_path_;
+    FXL_LOG(ERROR) << "Failed to create directory under " << db_path_;
     return Status::INTERNAL_IO_ERROR;
   }
   leveldb::DB* db = nullptr;
@@ -157,25 +157,25 @@ Status LevelDb::Init() {
   options.create_if_missing = true;
   leveldb::Status status = leveldb::DB::Open(options, db_path_, &db);
   if (status.IsCorruption()) {
-    FTL_LOG(ERROR) << "Ledger state corrupted at " << db_path_
+    FXL_LOG(ERROR) << "Ledger state corrupted at " << db_path_
                    << " with leveldb status: " << status.ToString();
-    FTL_LOG(WARNING) << "Trying to recover by erasing the local state.";
-    FTL_LOG(WARNING)
+    FXL_LOG(WARNING) << "Trying to recover by erasing the local state.";
+    FXL_LOG(WARNING)
         << "***** ALL LOCAL CHANGES IN THIS PAGE WILL BE LOST *****";
     ledger::ReportEvent(ledger::CobaltEvent::LEDGER_LEVELDB_STATE_CORRUPTED);
 
     if (!files::DeletePath(db_path_, true)) {
-      FTL_LOG(ERROR) << "Failed to delete corrupted ledger at " << db_path_;
+      FXL_LOG(ERROR) << "Failed to delete corrupted ledger at " << db_path_;
       return Status::INTERNAL_IO_ERROR;
     }
     leveldb::Status status = leveldb::DB::Open(options, db_path_, &db);
     if (!status.ok()) {
-      FTL_LOG(ERROR) << "Failed to create a new LevelDB at " << db_path_
+      FXL_LOG(ERROR) << "Failed to create a new LevelDB at " << db_path_
                      << " with leveldb status: " << status.ToString();
       return Status::INTERNAL_IO_ERROR;
     }
   } else if (!status.ok()) {
-    FTL_LOG(ERROR) << "Failed to open ledger at " << db_path_
+    FXL_LOG(ERROR) << "Failed to open ledger at " << db_path_
                    << " with leveldb status: " << status.ToString();
     return Status::INTERNAL_IO_ERROR;
   }
@@ -193,7 +193,7 @@ std::unique_ptr<Db::Batch> LevelDb::StartBatch() {
         if (db_batch) {
           leveldb::Status status = db_->Write(write_options_, db_batch.get());
           if (!status.ok()) {
-            FTL_LOG(ERROR) << "Failed to execute batch with status: "
+            FXL_LOG(ERROR) << "Failed to execute batch with status: "
                            << status.ToString();
             return Status::INTERNAL_IO_ERROR;
           }

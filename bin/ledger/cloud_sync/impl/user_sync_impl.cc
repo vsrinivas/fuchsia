@@ -11,9 +11,9 @@
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/firebase/firebase_impl.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/concatenate.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/concatenate.h"
 
 namespace cloud_sync {
 
@@ -26,23 +26,23 @@ UserSyncImpl::UserSyncImpl(ledger::Environment* environment,
                            UserConfig user_config,
                            std::unique_ptr<backoff::Backoff> backoff,
                            SyncStateWatcher* watcher,
-                           ftl::Closure on_version_mismatch)
+                           fxl::Closure on_version_mismatch)
     : environment_(environment),
       user_config_(std::move(user_config)),
       backoff_(std::move(backoff)),
       on_version_mismatch_(std::move(on_version_mismatch)),
       aggregator_(watcher),
       weak_ptr_factory_(this) {
-  FTL_DCHECK(on_version_mismatch_);
+  FXL_DCHECK(on_version_mismatch_);
 }
 
 UserSyncImpl::~UserSyncImpl() {
-  FTL_DCHECK(active_ledger_syncs_.empty());
+  FXL_DCHECK(active_ledger_syncs_.empty());
 }
 
 std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
-    ftl::StringView app_id) {
-  FTL_DCHECK(started_);
+    fxl::StringView app_id) {
+  FXL_DCHECK(started_);
 
   auto result = std::make_unique<LedgerSyncImpl>(
       environment_, &user_config_, app_id, aggregator_.GetNewStateWatcher());
@@ -57,11 +57,11 @@ std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
 }
 
 std::string UserSyncImpl::GetFingerprintPath() {
-  return ftl::Concatenate({user_config_.user_directory, "/fingerprint"});
+  return fxl::Concatenate({user_config_.user_directory, "/fingerprint"});
 }
 
 void UserSyncImpl::Start() {
-  FTL_DCHECK(!started_);
+  FXL_DCHECK(!started_);
 
   CheckCloudNotErased();
 
@@ -69,7 +69,7 @@ void UserSyncImpl::Start() {
 }
 
 void UserSyncImpl::CheckCloudNotErased() {
-  FTL_DCHECK(user_config_.auth_provider);
+  FXL_DCHECK(user_config_.auth_provider);
 
   std::string fingerprint_path = GetFingerprintPath();
   if (!files::IsFile(fingerprint_path)) {
@@ -78,7 +78,7 @@ void UserSyncImpl::CheckCloudNotErased() {
   }
 
   if (!files::ReadFileToString(fingerprint_path, &fingerprint_)) {
-    FTL_LOG(ERROR) << "Unable to read the fingerprint file at: "
+    FXL_LOG(ERROR) << "Unable to read the fingerprint file at: "
                    << fingerprint_path << ", sync upload will not work.";
     return;
   }
@@ -88,7 +88,7 @@ void UserSyncImpl::CheckCloudNotErased() {
           [this](auth_provider::AuthStatus auth_status,
                  std::string auth_token) {
             if (auth_status != auth_provider::AuthStatus::OK) {
-              FTL_LOG(ERROR)
+              FXL_LOG(ERROR)
                   << "Failed to retrieve the auth token for version check, "
                   << "sync upload will not work.";
               return;
@@ -108,12 +108,12 @@ void UserSyncImpl::CreateFingerprint() {
   char fingerprint_array[kFingerprintSize];
   glue::RandBytes(fingerprint_array, kFingerprintSize);
   fingerprint_ =
-      convert::ToHex(ftl::StringView(fingerprint_array, kFingerprintSize));
+      convert::ToHex(fxl::StringView(fingerprint_array, kFingerprintSize));
 
   auto request = user_config_.auth_provider->GetFirebaseToken(
       [this](auth_provider::AuthStatus auth_status, std::string auth_token) {
         if (auth_status != auth_provider::AuthStatus::OK) {
-          FTL_LOG(ERROR)
+          FXL_LOG(ERROR)
               << "Failed to retrieve the auth token for fingerprint check, "
               << "sync upload will not work.";
           return;
@@ -125,10 +125,10 @@ void UserSyncImpl::CreateFingerprint() {
               if (status ==
                   cloud_provider_firebase::CloudDeviceSet::Status::OK) {
                 // Persist the new fingerprint.
-                FTL_DCHECK(!fingerprint_.empty());
+                FXL_DCHECK(!fingerprint_.empty());
                 if (!files::WriteFile(GetFingerprintPath(), fingerprint_.data(),
                                       fingerprint_.size())) {
-                  FTL_LOG(ERROR) << "Failed to persist the fingerprint, "
+                  FXL_LOG(ERROR) << "Failed to persist the fingerprint, "
                                  << "sync upload will not work.";
                   return;
                 }
@@ -176,7 +176,7 @@ void UserSyncImpl::SetCloudErasedWatcher() {
   auto request = user_config_.auth_provider->GetFirebaseToken(
       [this](auth_provider::AuthStatus auth_status, std::string auth_token) {
         if (auth_status != auth_provider::AuthStatus::OK) {
-          FTL_LOG(ERROR) << "Failed to retrieve the auth token for fingerprint "
+          FXL_LOG(ERROR) << "Failed to retrieve the auth token for fingerprint "
                          << "watcher.";
           return;
         }

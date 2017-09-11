@@ -7,7 +7,7 @@
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/impl/object_id.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/mtl/vmo/strings.h"
 #include "third_party/leveldb/include/leveldb/db.h"
 
@@ -22,15 +22,15 @@ std::string RandomString(size_t size) {
 }
 
 ::testing::AssertionResult CheckObjectValue(const Object& object,
-                                            ftl::StringView id,
-                                            ftl::StringView data) {
+                                            fxl::StringView id,
+                                            fxl::StringView data) {
   if (object.GetId() != id) {
     return ::testing::AssertionFailure()
            << "Expected id: " << convert::ToHex(id)
            << ", but got: " << convert::ToHex(object.GetId());
   }
 
-  ftl::StringView found_data;
+  fxl::StringView found_data;
   Status status = object.GetData(&found_data);
   if (status != Status::OK) {
     return ::testing::AssertionFailure()

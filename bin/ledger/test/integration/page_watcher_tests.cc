@@ -12,9 +12,9 @@
 #include "apps/ledger/src/test/integration/test_utils.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_printf.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_printf.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace test {
@@ -27,13 +27,13 @@ class PageWatcherIntegrationTest : public IntegrationTest {
   ~PageWatcherIntegrationTest() override {}
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageWatcherIntegrationTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageWatcherIntegrationTest);
 };
 
 class Watcher : public ledger::PageWatcher {
  public:
   Watcher(fidl::InterfaceRequest<PageWatcher> request,
-          ftl::Closure change_callback)
+          fxl::Closure change_callback)
       : binding_(this, std::move(request)),
         change_callback_(std::move(change_callback)) {}
 
@@ -47,7 +47,7 @@ class Watcher : public ledger::PageWatcher {
   void OnChange(ledger::PageChangePtr page_change,
                 ledger::ResultState result_state,
                 const OnChangeCallback& callback) override {
-    FTL_DCHECK(page_change);
+    FXL_DCHECK(page_change);
     changes_seen++;
     last_result_state_ = result_state;
     last_page_change_ = std::move(page_change);
@@ -57,7 +57,7 @@ class Watcher : public ledger::PageWatcher {
   }
 
   fidl::Binding<PageWatcher> binding_;
-  ftl::Closure change_callback_;
+  fxl::Closure change_callback_;
 };
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherSimple) {
@@ -126,7 +126,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
     std::string filler(
         ledger::fidl_serialization::kMaxInlineDataSize * 3 / 2 / entry_count,
         'k');
-    return ftl::StringPrintf("key%02" PRIuMAX "%s", i, filler.c_str());
+    return fxl::StringPrintf("key%02" PRIuMAX "%s", i, filler.c_str());
   };
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
@@ -149,7 +149,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
     EXPECT_TRUE(page.WaitForIncomingResponse());
   }
 
-  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(100)));
+  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(100)));
   EXPECT_EQ(0u, watcher.changes_seen);
 
   page->Commit(
@@ -201,14 +201,14 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
       [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
   for (size_t i = 0; i < entry_count; ++i) {
-    page->Put(convert::ToArray(ftl::StringPrintf("key%02" PRIuMAX, i)),
+    page->Put(convert::ToArray(fxl::StringPrintf("key%02" PRIuMAX, i)),
               convert::ToArray("value"), [](ledger::Status status) {
                 EXPECT_EQ(status, ledger::Status::OK);
               });
     EXPECT_TRUE(page.WaitForIncomingResponse());
   }
 
-  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(100)));
+  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(100)));
   EXPECT_EQ(0u, watcher.changes_seen);
 
   page->Commit(
@@ -222,7 +222,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
   ledger::PageChangePtr change = std::move(watcher.last_page_change_);
   size_t initial_size = change->changes.size();
   for (size_t i = 0; i < initial_size; ++i) {
-    EXPECT_EQ(ftl::StringPrintf("key%02" PRIuMAX, i),
+    EXPECT_EQ(fxl::StringPrintf("key%02" PRIuMAX, i),
               convert::ToString(change->changes[i]->key));
     EXPECT_EQ("value", ToString(change->changes[i]->value));
     EXPECT_EQ(ledger::Priority::EAGER, change->changes[i]->priority);
@@ -236,7 +236,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
 
   ASSERT_EQ(entry_count, initial_size + change->changes.size());
   for (size_t i = 0; i < change->changes.size(); ++i) {
-    EXPECT_EQ(ftl::StringPrintf("key%02" PRIuMAX, i + initial_size),
+    EXPECT_EQ(fxl::StringPrintf("key%02" PRIuMAX, i + initial_size),
               convert::ToString(change->changes[i]->key));
     EXPECT_EQ("value", ToString(change->changes[i]->value));
     EXPECT_EQ(ledger::Priority::EAGER, change->changes[i]->priority);
@@ -380,7 +380,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
 
   mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
       [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); },
-      ftl::TimeDelta::FromSeconds(1));
+      fxl::TimeDelta::FromSeconds(1));
   mtl::MessageLoop::GetCurrent()->Run();
   // A merge happens now. Only the first watcher should see a change.
   EXPECT_EQ(2u, watcher1.changes_seen);
@@ -472,7 +472,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
 class WaitingWatcher : public ledger::PageWatcher {
  public:
   WaitingWatcher(fidl::InterfaceRequest<ledger::PageWatcher> request,
-                 ftl::Closure change_callback)
+                 fxl::Closure change_callback)
       : binding_(this, std::move(request)),
         change_callback_(std::move(change_callback)) {}
 
@@ -491,15 +491,15 @@ class WaitingWatcher : public ledger::PageWatcher {
   void OnChange(ledger::PageChangePtr page_change,
                 ledger::ResultState result_state,
                 const OnChangeCallback& callback) override {
-    FTL_DCHECK(page_change);
-    FTL_DCHECK(result_state == ledger::ResultState::COMPLETED)
+    FXL_DCHECK(page_change);
+    FXL_DCHECK(result_state == ledger::ResultState::COMPLETED)
         << "Handling OnChange pagination not implemented yet";
     changes.emplace_back(std::move(page_change), callback);
     change_callback_();
   }
 
   fidl::Binding<ledger::PageWatcher> binding_;
-  ftl::Closure change_callback_;
+  fxl::Closure change_callback_;
 };
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {

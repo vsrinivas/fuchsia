@@ -11,9 +11,9 @@
 #include "apps/ledger/src/app/merging/conflict_resolver_client.h"
 #include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/app/page_utils.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 class AutoMergeStrategy::AutoMerger {
@@ -55,7 +55,7 @@ class AutoMergeStrategy::AutoMerger {
   bool cancelled_ = false;
 
   // This must be the last member of the class.
-  ftl::WeakPtrFactory<AutoMergeStrategy::AutoMerger> weak_factory_;
+  fxl::WeakPtrFactory<AutoMergeStrategy::AutoMerger> weak_factory_;
 };
 
 AutoMergeStrategy::AutoMerger::AutoMerger(
@@ -74,7 +74,7 @@ AutoMergeStrategy::AutoMerger::AutoMerger(
       ancestor_(std::move(ancestor)),
       callback_(std::move(callback)),
       weak_factory_(this) {
-  FTL_DCHECK(callback_);
+  FXL_DCHECK(callback_);
 }
 
 AutoMergeStrategy::AutoMerger::~AutoMerger() {}
@@ -97,7 +97,7 @@ void AutoMergeStrategy::AutoMerger::Start() {
     return true;
   };
 
-  auto callback = ftl::MakeCopyable([
+  auto callback = fxl::MakeCopyable([
     weak_this = weak_factory_.GetWeakPtr(), changes = std::move(changes)
   ](storage::Status status) mutable {
     if (weak_this) {
@@ -118,7 +118,7 @@ void AutoMergeStrategy::AutoMerger::OnRightChangeReady(
   }
 
   if (status != storage::Status::OK) {
-    FTL_LOG(ERROR) << "Unable to compute right diff due to error " << status
+    FXL_LOG(ERROR) << "Unable to compute right diff due to error " << status
                    << ", aborting.";
     Done(PageUtils::ConvertStatus(status));
     return;
@@ -136,7 +136,7 @@ void AutoMergeStrategy::AutoMerger::OnRightChangeReady(
 
   std::unique_ptr<PageChangeIndex> index(new PageChangeIndex());
 
-  auto on_next = ftl::MakeCopyable([
+  auto on_next = fxl::MakeCopyable([
     weak_this = weak_factory_.GetWeakPtr(), index = index.get(),
     right_change = right_change.get()
   ](storage::EntryChange change) {
@@ -165,7 +165,7 @@ void AutoMergeStrategy::AutoMerger::OnRightChangeReady(
   });
 
   // |callback| is called when the full diff is computed.
-  auto callback = ftl::MakeCopyable([
+  auto callback = fxl::MakeCopyable([
     weak_this = weak_factory_.GetWeakPtr(),
     right_change = std::move(right_change), index = std::move(index)
   ](storage::Status status) mutable {
@@ -189,7 +189,7 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
   }
 
   if (status != storage::Status::OK) {
-    FTL_LOG(ERROR) << "Unable to compute left diff due to error " << status
+    FXL_LOG(ERROR) << "Unable to compute left diff due to error " << status
                    << ", aborting.";
     Done(PageUtils::ConvertStatus(status));
     return;
@@ -216,7 +216,7 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
   // StartMergeCommit uses the left commit (first parameter) as its base, we
   // only have to apply the right diff to it and we are done.
   storage_->StartMergeCommit(
-      left_->GetId(), right_->GetId(), ftl::MakeCopyable([
+      left_->GetId(), right_->GetId(), fxl::MakeCopyable([
         weak_this = weak_factory_.GetWeakPtr(),
         right_changes = std::move(right_changes)
       ](storage::Status s, std::unique_ptr<storage::Journal> journal) {
@@ -224,7 +224,7 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
           return;
         }
         if (s != storage::Status::OK) {
-          FTL_LOG(ERROR) << "Unable to start merge commit: " << s;
+          FXL_LOG(ERROR) << "Unable to start merge commit: " << s;
           weak_this->Done(PageUtils::ConvertStatus(s));
           return;
         }
@@ -242,7 +242,7 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
                                     std::unique_ptr<
                                         const storage::Commit> /*commit*/) {
               if (s != storage::Status::OK) {
-                FTL_LOG(ERROR) << "Unable to commit merge journal: " << s;
+                FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
               }
               if (weak_this) {
                 weak_this->Done(PageUtils::ConvertStatus(s));
@@ -282,7 +282,7 @@ AutoMergeStrategy::AutoMergeStrategy(ConflictResolverPtr conflict_resolver)
 
 AutoMergeStrategy::~AutoMergeStrategy() {}
 
-void AutoMergeStrategy::SetOnError(ftl::Closure on_error) {
+void AutoMergeStrategy::SetOnError(fxl::Closure on_error) {
   on_error_ = std::move(on_error);
 }
 
@@ -292,8 +292,8 @@ void AutoMergeStrategy::Merge(storage::PageStorage* storage,
                               std::unique_ptr<const storage::Commit> head_2,
                               std::unique_ptr<const storage::Commit> ancestor,
                               std::function<void(Status)> callback) {
-  FTL_DCHECK(head_1->GetTimestamp() <= head_2->GetTimestamp());
-  FTL_DCHECK(!in_progress_merge_);
+  FXL_DCHECK(head_1->GetTimestamp() <= head_2->GetTimestamp());
+  FXL_DCHECK(!in_progress_merge_);
 
   in_progress_merge_ = std::make_unique<AutoMergeStrategy::AutoMerger>(
       storage, page_manager, conflict_resolver_.get(), std::move(head_2),

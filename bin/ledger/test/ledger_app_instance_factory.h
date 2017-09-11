@@ -11,10 +11,10 @@
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/fidl_helpers/bound_interface_set.h"
 #include "apps/ledger/src/test/fake_token_provider.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace test {
 
@@ -31,7 +31,7 @@ class LedgerAppInstanceFactory {
         ledger::FirebaseConfigPtr firebase_config,
         fidl::Array<uint8_t> test_ledger_name,
         ledger::LedgerRepositoryFactoryPtr ledger_repository_factory,
-        ftl::RefPtr<ftl::TaskRunner> services_task_runner);
+        fxl::RefPtr<fxl::TaskRunner> services_task_runner);
     virtual ~LedgerAppInstance();
 
     // Returns the LedgerRepositoryFactory associated with this application
@@ -63,11 +63,11 @@ class LedgerAppInstanceFactory {
     ledger::fidl_helpers::BoundInterfaceSet<modular::auth::TokenProvider,
                                             FakeTokenProvider>
         token_provider_impl_;
-    ftl::RefPtr<ftl::TaskRunner> services_task_runner_;
+    fxl::RefPtr<fxl::TaskRunner> services_task_runner_;
 
     files::ScopedTempDir dir_;
 
-    FTL_DISALLOW_COPY_AND_ASSIGN(LedgerAppInstance);
+    FXL_DISALLOW_COPY_AND_ASSIGN(LedgerAppInstance);
   };
 
   LedgerAppInstanceFactory() {}

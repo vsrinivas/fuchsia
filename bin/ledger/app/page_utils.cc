@@ -37,7 +37,7 @@ void PageUtils::GetReferenceAsStringView(
     convert::ExtendedStringView opaque_id,
     storage::PageStorage::Location location,
     Status not_found_status,
-    std::function<void(Status, ftl::StringView)> callback) {
+    std::function<void(Status, fxl::StringView)> callback) {
   storage->GetObject(
       opaque_id, location,
       [not_found_status, callback](
@@ -45,14 +45,14 @@ void PageUtils::GetReferenceAsStringView(
           std::unique_ptr<const storage::Object> object) {
         if (status != storage::Status::OK) {
           callback(PageUtils::ConvertStatus(status, not_found_status),
-                   ftl::StringView());
+                   fxl::StringView());
           return;
         }
-        ftl::StringView data;
+        fxl::StringView data;
         status = object->GetData(&data);
         if (status != storage::Status::OK) {
           callback(PageUtils::ConvertStatus(status, not_found_status),
-                   ftl::StringView());
+                   fxl::StringView());
           return;
         }
 
@@ -68,12 +68,12 @@ Status PageUtils::ConvertStatus(storage::Status status,
     case storage::Status::IO_ERROR:
       return Status::IO_ERROR;
     case storage::Status::NOT_FOUND:
-      FTL_DCHECK(not_found_status != Status::INTERNAL_ERROR);
+      FXL_DCHECK(not_found_status != Status::INTERNAL_ERROR);
       return not_found_status;
     case storage::Status::NOT_CONNECTED_ERROR:
       return Status::NETWORK_ERROR;
     default:
-      FTL_DCHECK(false) << "Internal error in Ledger storage. Status: "
+      FXL_DCHECK(false) << "Internal error in Ledger storage. Status: "
                         << status;
       return Status::INTERNAL_ERROR;
   }
@@ -89,7 +89,7 @@ void PageUtils::GetPartialReferenceAsBuffer(
     std::function<void(Status, mx::vmo)> callback) {
   GetReferenceAsStringView(
       storage, reference_id, location, not_found_status,
-      [offset, max_size, callback](Status status, ftl::StringView data) {
+      [offset, max_size, callback](Status status, fxl::StringView data) {
         if (status != Status::OK) {
           callback(status, mx::vmo());
           return;

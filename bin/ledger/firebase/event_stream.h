@@ -11,8 +11,8 @@
 
 #include "apps/ledger/src/callback/destruction_sentinel.h"
 #include "apps/ledger/src/firebase/status.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 #include "lib/mtl/socket/socket_drainer.h"
 
 namespace firebase {
@@ -42,9 +42,9 @@ class EventStream : public mtl::SocketDrainer::Client {
   void OnDataComplete() override;
 
   // Returns false if the object has been destroyed within this method.
-  bool ProcessLine(ftl::StringView line);
+  bool ProcessLine(fxl::StringView line);
 
-  void ProcessField(ftl::StringView field, ftl::StringView value);
+  void ProcessField(fxl::StringView field, fxl::StringView value);
 
   std::function<EventCallback> event_callback_;
   std::function<CompletionCallback> completion_callback_;
@@ -58,7 +58,7 @@ class EventStream : public mtl::SocketDrainer::Client {
 
   callback::DestructionSentinel destruction_sentinel_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(EventStream);
+  FXL_DISALLOW_COPY_AND_ASSIGN(EventStream);
 };
 
 }  // namespace firebase

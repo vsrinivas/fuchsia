@@ -7,10 +7,10 @@
 
 #include <string>
 
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace glue {
-std::string FromHex(ftl::StringView data);
+std::string FromHex(fxl::StringView data);
 }
 
 #endif  // APPS_LEDGER_SRC_GLUE_CRYPTO_CRYPTO_TEST_UTIL_H_

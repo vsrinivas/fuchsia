@@ -16,7 +16,7 @@ namespace cloud_sync {
 
 LedgerSyncImpl::LedgerSyncImpl(ledger::Environment* environment,
                                const UserConfig* user_config,
-                               ftl::StringView app_id,
+                               fxl::StringView app_id,
                                std::unique_ptr<SyncStateWatcher> watcher)
     : environment_(environment),
       user_config_(user_config),
@@ -32,11 +32,11 @@ LedgerSyncImpl::LedgerSyncImpl(ledger::Environment* environment,
           app_firebase_path_)),
       user_watcher_(std::move(watcher)),
       aggregator_(user_watcher_.get()) {
-  FTL_DCHECK(!user_config->server_id.empty());
+  FXL_DCHECK(!user_config->server_id.empty());
 }
 
 LedgerSyncImpl::~LedgerSyncImpl() {
-  FTL_DCHECK(active_page_syncs_.empty());
+  FXL_DCHECK(active_page_syncs_.empty());
 
   if (on_delete_) {
     on_delete_();
@@ -45,8 +45,8 @@ LedgerSyncImpl::~LedgerSyncImpl() {
 
 std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
     storage::PageStorage* page_storage,
-    ftl::Closure error_callback) {
-  FTL_DCHECK(page_storage);
+    fxl::Closure error_callback) {
+  FXL_DCHECK(page_storage);
 
   auto result = std::make_unique<PageSyncContext>();
   result->firebase = std::make_unique<firebase::FirebaseImpl>(

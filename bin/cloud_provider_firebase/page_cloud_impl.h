@@ -9,7 +9,7 @@
 #include "apps/ledger/src/auth_provider/auth_provider.h"
 #include "garnet/public/lib/fidl/cpp/bindings/array.h"
 #include "garnet/public/lib/fidl/cpp/bindings/binding.h"
-#include "garnet/public/lib/ftl/macros.h"
+#include "garnet/public/lib/fxl/macros.h"
 
 namespace cloud_provider_firebase {
 
@@ -19,12 +19,12 @@ class PageCloudImpl : public cloud_provider::PageCloud {
                 fidl::InterfaceRequest<cloud_provider::PageCloud> request);
   ~PageCloudImpl() override;
 
-  void set_on_empty(const ftl::Closure& on_empty) { on_empty_ = on_empty; }
+  void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
 
  private:
   auth_provider::AuthProvider* const auth_provider_;
   fidl::Binding<cloud_provider::PageCloud> binding_;
-  ftl::Closure on_empty_;
+  fxl::Closure on_empty_;
 
   void AddCommits(fidl::Array<cloud_provider::CommitPtr> commits,
                   const AddCommitsCallback& callback) override;
@@ -40,7 +40,7 @@ class PageCloudImpl : public cloud_provider::PageCloud {
       fidl::Array<uint8_t> min_position_token,
       const SetWatcherCallback& callback) override;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageCloudImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageCloudImpl);
 };
 
 }  // namespace cloud_provider_firebase

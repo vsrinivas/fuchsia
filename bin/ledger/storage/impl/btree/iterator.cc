@@ -6,7 +6,7 @@
 
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/storage/impl/btree/internal_helper.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace storage {
 namespace btree {
@@ -16,7 +16,7 @@ namespace {
 Status ForEachEntryInternal(
     SynchronousStorage* storage,
     ObjectIdView root_id,
-    ftl::StringView min_key,
+    fxl::StringView min_key,
     const std::function<bool(EntryAndNodeId)>& on_next) {
   BTreeIterator iterator(storage);
   RETURN_ON_ERROR(iterator.Init(root_id));
@@ -45,7 +45,7 @@ Status BTreeIterator::Init(ObjectIdView node_id) {
   return Descend(node_id);
 }
 
-Status BTreeIterator::SkipTo(ftl::StringView min_key) {
+Status BTreeIterator::SkipTo(fxl::StringView min_key) {
   descending_ = true;
   for (;;) {
     if (SkipToIndex(min_key)) {
@@ -59,7 +59,7 @@ Status BTreeIterator::SkipTo(ftl::StringView min_key) {
   }
 }
 
-bool BTreeIterator::SkipToIndex(ftl::StringView key) {
+bool BTreeIterator::SkipToIndex(fxl::StringView key) {
   auto& entries = CurrentNode().entries();
   size_t skip_count = GetEntryOrChildIndex(entries, key);
   if (skip_count < CurrentIndex()) {
@@ -73,7 +73,7 @@ bool BTreeIterator::SkipToIndex(ftl::StringView key) {
   return false;
 }
 
-ftl::StringView BTreeIterator::GetNextChild() const {
+fxl::StringView BTreeIterator::GetNextChild() const {
   auto index = CurrentIndex();
   auto& children_ids = CurrentNode().children_ids();
   if (descending_) {
@@ -95,7 +95,7 @@ bool BTreeIterator::Finished() const {
 }
 
 const Entry& BTreeIterator::CurrentEntry() const {
-  FTL_DCHECK(HasValue());
+  FXL_DCHECK(HasValue());
   return CurrentNode().entries()[CurrentIndex()];
 }
 
@@ -150,8 +150,8 @@ const TreeNode& BTreeIterator::CurrentNode() const {
   return *stack_.back().first;
 }
 
-Status BTreeIterator::Descend(ftl::StringView node_id) {
-  FTL_DCHECK(descending_);
+Status BTreeIterator::Descend(fxl::StringView node_id) {
+  FXL_DCHECK(descending_);
   if (node_id.empty()) {
     descending_ = false;
     return Status::OK;
@@ -167,7 +167,7 @@ void GetObjectIds(coroutine::CoroutineService* coroutine_service,
                   PageStorage* page_storage,
                   ObjectIdView root_id,
                   std::function<void(Status, std::set<ObjectId>)> callback) {
-  FTL_DCHECK(!root_id.empty());
+  FXL_DCHECK(!root_id.empty());
   auto object_ids = std::make_unique<std::set<ObjectId>>();
   object_ids->insert(root_id.ToString());
 
@@ -176,7 +176,7 @@ void GetObjectIds(coroutine::CoroutineService* coroutine_service,
     object_ids->insert(e.node_id);
     return true;
   };
-  auto on_done = ftl::MakeCopyable([
+  auto on_done = fxl::MakeCopyable([
     object_ids = std::move(object_ids), callback = std::move(callback)
   ](Status status) {
     if (status != Status::OK) {
@@ -193,7 +193,7 @@ void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
                         PageStorage* page_storage,
                         ObjectIdView root_id,
                         std::function<void(Status)> callback) {
-  ftl::RefPtr<callback::Waiter<Status, std::unique_ptr<const Object>>> waiter_ =
+  fxl::RefPtr<callback::Waiter<Status, std::unique_ptr<const Object>>> waiter_ =
       callback::Waiter<Status, std::unique_ptr<const Object>>::Create(
           Status::OK);
   auto on_next = [page_storage, waiter_](EntryAndNodeId e) {
@@ -224,7 +224,7 @@ void ForEachEntry(coroutine::CoroutineService* coroutine_service,
                   std::string min_key,
                   std::function<bool(EntryAndNodeId)> on_next,
                   std::function<void(Status)> on_done) {
-  FTL_DCHECK(!root_id.empty());
+  FXL_DCHECK(!root_id.empty());
   coroutine_service->StartCoroutine([
     page_storage, root_id, min_key = std::move(min_key),
     on_next = std::move(on_next), on_done = std::move(on_done)

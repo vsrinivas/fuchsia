@@ -19,8 +19,8 @@
 #include "apps/ledger/src/storage/test/page_storage_empty_impl.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
 
@@ -36,7 +36,7 @@ class TestCommit : public storage::test::CommitEmptyImpl {
 
   const storage::CommitId& GetId() const override { return id; }
 
-  ftl::StringView GetStorageBytes() const override { return storage_bytes; }
+  fxl::StringView GetStorageBytes() const override { return storage_bytes; }
 
   std::unique_ptr<storage::Commit> Clone() const override {
     return std::make_unique<TestCommit>(id, storage_bytes);
@@ -56,8 +56,8 @@ class TestObject : public storage::Object {
 
   storage::ObjectId GetId() const override { return id; };
 
-  storage::Status GetData(ftl::StringView* result) const override {
-    *result = ftl::StringView(data);
+  storage::Status GetData(fxl::StringView* result) const override {
+    *result = fxl::StringView(data);
     return storage::Status::OK;
   }
 
@@ -183,7 +183,7 @@ class TestCloudProvider
     ASSERT_TRUE(mtl::StringFromVmo(data, &received_data));
     received_objects.insert(
         std::make_pair(object_id.ToString(), received_data));
-    ftl::Closure report_result =
+    fxl::Closure report_result =
         [ callback, status = object_status_to_return ] {
       callback(status);
     };
@@ -206,7 +206,7 @@ class TestCloudProvider
   }
 
   bool delay_add_object_callbacks = false;
-  std::vector<ftl::Closure> pending_add_object_callbacks;
+  std::vector<fxl::Closure> pending_add_object_callbacks;
   cloud_provider_firebase::Status object_status_to_return =
       cloud_provider_firebase::Status::OK;
   bool reset_object_status_after_call = false;
@@ -255,7 +255,7 @@ class BatchUploadTest : public ::test::TestWithMessageLoop {
   }
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(BatchUploadTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BatchUploadTest);
 };
 
 // Test an upload of a single commit with no unsynced objects.
@@ -403,7 +403,7 @@ TEST_F(BatchUploadTest, ThrottleConcurrentUploads) {
   cloud_provider_.delay_add_object_callbacks = true;
   batch_upload->Start();
   // TODO(ppi): how to avoid the wait?
-  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(50)));
+  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(50)));
   // Verify that only two object uploads are in progress.
   EXPECT_EQ(2u, cloud_provider_.add_object_calls);
 

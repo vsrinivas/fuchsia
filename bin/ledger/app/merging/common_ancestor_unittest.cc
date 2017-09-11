@@ -16,7 +16,7 @@
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace ledger {
@@ -90,7 +90,7 @@ class CommonAncestorTest : public test::TestWithPageStorage {
   std::unique_ptr<storage::PageStorage> storage_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(CommonAncestorTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CommonAncestorTest);
 };
 
 TEST_F(CommonAncestorTest, TwoChildrenOfRoot) {
@@ -186,7 +186,7 @@ TEST_F(CommonAncestorTest, LongChain) {
                      std::move(last_commit), std::move(commit_b),
                      callback::Capture(MakeQuitTask(), &status, &result));
   // This test lasts ~2.5s on x86+qemu+kvm.
-  EXPECT_FALSE(RunLoopWithTimeout(ftl::TimeDelta::FromSeconds(10)));
+  EXPECT_FALSE(RunLoopWithTimeout(fxl::TimeDelta::FromSeconds(10)));
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(storage::kFirstPageCommitId, result->GetId());
 }

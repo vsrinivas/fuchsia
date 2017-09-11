@@ -11,7 +11,7 @@
 #include "apps/ledger/src/callback/cancellable.h"
 #include "apps/ledger/src/gcs/cloud_storage.h"
 #include "apps/ledger/src/network/network_service.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/tasks/task_runner.h"
 #include "mx/socket.h"
 #include "mx/vmo.h"
 
@@ -21,7 +21,7 @@ namespace gcs {
 // the backend.
 class CloudStorageImpl : public CloudStorage {
  public:
-  CloudStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
+  CloudStorageImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
                    ledger::NetworkService* network_service,
                    const std::string& firebase_id,
                    const std::string& cloud_prefix);
@@ -40,9 +40,9 @@ class CloudStorageImpl : public CloudStorage {
           callback) override;
 
  private:
-  std::string GetDownloadUrl(ftl::StringView key);
+  std::string GetDownloadUrl(fxl::StringView key);
 
-  std::string GetUploadUrl(ftl::StringView key);
+  std::string GetUploadUrl(fxl::StringView key);
 
   void Request(std::function<network::URLRequestPtr()> request_factory,
                std::function<void(Status status,
@@ -58,7 +58,7 @@ class CloudStorageImpl : public CloudStorage {
       Status status,
       network::URLResponsePtr response);
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   ledger::NetworkService* const network_service_;
   const std::string url_prefix_;
   callback::CancellableContainer requests_;

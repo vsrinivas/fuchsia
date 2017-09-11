@@ -20,9 +20,9 @@
 #include "apps/ledger/src/storage/public/types.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/arraysize.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/arraysize.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -115,7 +115,7 @@ class BTreeUtilsTest : public StorageTest {
   TrackGetObjectFakePageStorage fake_storage_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(BTreeUtilsTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BTreeUtilsTest);
 };
 
 TEST_F(BTreeUtilsTest, GetNodeLevel) {
@@ -123,7 +123,7 @@ TEST_F(BTreeUtilsTest, GetNodeLevel) {
   memset(level_distribution, 0, sizeof(level_distribution));
 
   for (size_t i = 0; i < 1000; ++i) {
-    ftl::StringView key(reinterpret_cast<char*>(&i), sizeof(i));
+    fxl::StringView key(reinterpret_cast<char*>(&i), sizeof(i));
     uint8_t node_level =
         std::min(arraysize(level_distribution) - 1,
                  static_cast<size_t>(
@@ -271,7 +271,7 @@ TEST_F(BTreeUtilsTest, UpdateValue) {
   for (size_t i = 0; i < entries_to_update.size(); ++i) {
     std::unique_ptr<const Object> object;
     ASSERT_TRUE(
-        AddObject(ftl::StringPrintf("new_object%02" PRIuMAX, i), &object));
+        AddObject(fxl::StringPrintf("new_object%02" PRIuMAX, i), &object));
     entries_to_update[i].object_id = object->GetId();
     update_changes.push_back(EntryChange{entries_to_update[i], false});
   }
@@ -323,7 +323,7 @@ TEST_F(BTreeUtilsTest, UpdateValueLevel1) {
   for (size_t i = 0; i < entries_to_update.size(); ++i) {
     std::unique_ptr<const Object> object;
     ASSERT_TRUE(
-        AddObject(ftl::StringPrintf("new_object%02" PRIuMAX, i), &object));
+        AddObject(fxl::StringPrintf("new_object%02" PRIuMAX, i), &object));
     entries_to_update[i].object_id = object->GetId();
     update_changes.push_back(EntryChange{entries_to_update[i], false});
   }
@@ -781,7 +781,7 @@ TEST_F(BTreeUtilsTest, ForEachAllEntries) {
 
   int current_key = 0;
   auto on_next = [&current_key](EntryAndNodeId e) {
-    EXPECT_EQ(ftl::StringPrintf("key%02d", current_key), e.entry.key);
+    EXPECT_EQ(fxl::StringPrintf("key%02d", current_key), e.entry.key);
     current_key++;
     return true;
   };
@@ -807,7 +807,7 @@ TEST_F(BTreeUtilsTest, ForEachEntryPrefix) {
     if (e.entry.key.substr(0, prefix.length()) != prefix) {
       return false;
     }
-    EXPECT_EQ(ftl::StringPrintf("key%02d", current_key++), e.entry.key);
+    EXPECT_EQ(fxl::StringPrintf("key%02d", current_key++), e.entry.key);
     return true;
   };
   auto on_done = [this, &current_key](Status status) {

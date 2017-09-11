@@ -10,7 +10,7 @@
 #include "apps/ledger/src/storage/impl/storage_test_utils.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace storage {
 namespace {
@@ -41,7 +41,7 @@ class CommitImplTest : public StorageTest {
   fake::FakePageStorage page_storage_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(CommitImplTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CommitImplTest);
 };
 
 TEST_F(CommitImplTest, CommitStorageBytes) {

@@ -7,15 +7,15 @@
 #include <utility>
 
 #include "apps/ledger/src/callback/cancellable_helper.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace auth_provider {
 namespace test {
 
-TestAuthProvider::TestAuthProvider(ftl::RefPtr<ftl::TaskRunner> task_runner)
+TestAuthProvider::TestAuthProvider(fxl::RefPtr<fxl::TaskRunner> task_runner)
     : task_runner_(std::move(task_runner)) {}
 
-ftl::RefPtr<callback::Cancellable> TestAuthProvider::GetFirebaseToken(
+fxl::RefPtr<callback::Cancellable> TestAuthProvider::GetFirebaseToken(
     std::function<void(AuthStatus, std::string)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
 
@@ -25,7 +25,7 @@ ftl::RefPtr<callback::Cancellable> TestAuthProvider::GetFirebaseToken(
   return cancellable;
 }
 
-ftl::RefPtr<callback::Cancellable> TestAuthProvider::GetFirebaseUserId(
+fxl::RefPtr<callback::Cancellable> TestAuthProvider::GetFirebaseUserId(
     std::function<void(AuthStatus, std::string)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
 

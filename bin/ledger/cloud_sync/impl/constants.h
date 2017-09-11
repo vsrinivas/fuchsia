@@ -5,12 +5,12 @@
 #ifndef APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_CONSTANTS_H_
 #define APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_CONSTANTS_H_
 
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace cloud_sync {
 
 // Key for the timestamp metadata in the SyncMetadata KV store.
-constexpr ftl::StringView kTimestampKey = "timestamp";
+constexpr fxl::StringView kTimestampKey = "timestamp";
 
 }  // namespace cloud_sync
 

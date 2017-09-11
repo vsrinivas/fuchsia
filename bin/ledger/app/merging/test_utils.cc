@@ -18,9 +18,9 @@ TestBackoff::TestBackoff(int* get_next_count)
     : get_next_count_(get_next_count) {}
 TestBackoff::~TestBackoff() {}
 
-ftl::TimeDelta TestBackoff::GetNext() {
+fxl::TimeDelta TestBackoff::GetNext() {
   (*get_next_count_)++;
-  return ftl::TimeDelta::FromSeconds(0);
+  return fxl::TimeDelta::FromSeconds(0);
 }
 
 void TestBackoff::Reset() {}
@@ -70,7 +70,7 @@ TestWithPageStorage::DeleteKeyFromJournal(const std::string& key) {
            << "PageStorage::GetObject returned status: " << status;
   }
 
-  ftl::StringView data;
+  fxl::StringView data;
   status = object->GetData(&data);
   if (status != storage::Status::OK) {
     return ::testing::AssertionFailure()

@@ -10,8 +10,8 @@
 
 #include "apps/ledger/src/cloud_provider/impl/encoding.h"
 #include "apps/ledger/src/cloud_provider/impl/timestamp_conversions.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/time/time_delta.h"
 
 namespace cloud_provider_firebase {
 
@@ -89,7 +89,7 @@ void WatchClientImpl::ProcessRecord(Record record) {
     // There is a pending batch already, verify that the new commits is part of
     // it.
     if (record.timestamp != batch_timestamp_) {
-      FTL_LOG(ERROR) << "Two batches of commits are intermixed. "
+      FXL_LOG(ERROR) << "Two batches of commits are intermixed. "
                      << "This should not have happened, please file a bug.";
       HandleError();
       return;
@@ -97,14 +97,14 @@ void WatchClientImpl::ProcessRecord(Record record) {
 
     // Received record is for the current batch.
     if (record.batch_size != batch_size_) {
-      FTL_LOG(ERROR) << "The size of the commit batch is inconsistent. "
+      FXL_LOG(ERROR) << "The size of the commit batch is inconsistent. "
                      << "This should not have happened, please file a bug.";
       HandleError();
       return;
     }
   } else {
     // There is no pending batch, start a new one.
-    FTL_DCHECK(batch_.empty());
+    FXL_DCHECK(batch_.empty());
     batch_timestamp_ = record.timestamp;
     batch_size_ = record.batch_size;
     batch_.reserve(batch_size_);
@@ -120,7 +120,7 @@ void WatchClientImpl::ProcessRecord(Record record) {
 }
 
 void WatchClientImpl::CommitBatch() {
-  FTL_DCHECK(batch_.size() == batch_size_);
+  FXL_DCHECK(batch_.size() == batch_size_);
   std::sort(batch_.begin(), batch_.end(), [](const auto& lhs, const auto& rhs) {
     return lhs.batch_position < rhs.batch_position;
   });
@@ -131,13 +131,13 @@ void WatchClientImpl::CommitBatch() {
 }
 
 void WatchClientImpl::OnCancel() {
-  FTL_LOG(ERROR) << "Firebase cancelled the watch request.";
+  FXL_LOG(ERROR) << "Firebase cancelled the watch request.";
   HandleError();
   commit_watcher_->OnConnectionError();
 }
 
 void WatchClientImpl::OnAuthRevoked(const std::string& reason) {
-  FTL_LOG(INFO) << "Remote watcher needs a new token: " << reason;
+  FXL_LOG(INFO) << "Remote watcher needs a new token: " << reason;
   HandleError();
   commit_watcher_->OnTokenExpired();
 }
@@ -161,16 +161,16 @@ void WatchClientImpl::HandleDecodingError(const std::string& path,
   rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
   value.Accept(writer);
 
-  FTL_LOG(ERROR) << "Error processing received commits: " << error_description;
-  FTL_LOG(ERROR) << "Path: " << path;
-  FTL_LOG(ERROR) << "Content: " << buffer.GetString();
+  FXL_LOG(ERROR) << "Error processing received commits: " << error_description;
+  FXL_LOG(ERROR) << "Path: " << path;
+  FXL_LOG(ERROR) << "Content: " << buffer.GetString();
 
   HandleError();
   commit_watcher_->OnMalformedNotification();
 }
 
 void WatchClientImpl::HandleError() {
-  FTL_DCHECK(!errored_);
+  FXL_DCHECK(!errored_);
   errored_ = true;
   firebase_->UnWatch(this);
 }

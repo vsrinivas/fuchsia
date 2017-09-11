@@ -7,7 +7,7 @@
 #include "apps/ledger/src/cloud_sync/impl/aggregator.h"
 
 #include "apps/ledger/src/cloud_sync/public/sync_state_watcher.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace cloud_sync {
 class Aggregator::Listener : public SyncStateWatcher {
@@ -45,13 +45,13 @@ SyncStateWatcher::SyncStateContainer Aggregator::Listener::GetCurrentState() {
 
 Aggregator::Aggregator(SyncStateWatcher* base_watcher)
     : base_watcher_(base_watcher) {
-  FTL_DCHECK(base_watcher_);
+  FXL_DCHECK(base_watcher_);
   base_watcher_->Notify(state_);
 }
 
 Aggregator::~Aggregator() {
   // There should be no listener left when destroying this object.
-  FTL_DCHECK(listeners_.empty());
+  FXL_DCHECK(listeners_.empty());
 }
 
 std::unique_ptr<SyncStateWatcher> Aggregator::GetNewStateWatcher() {

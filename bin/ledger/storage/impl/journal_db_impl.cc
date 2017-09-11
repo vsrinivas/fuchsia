@@ -14,7 +14,7 @@
 #include "apps/ledger/src/storage/impl/commit_impl.h"
 #include "apps/ledger/src/storage/impl/page_db.h"
 #include "apps/ledger/src/storage/public/commit.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace storage {
 
@@ -36,7 +36,7 @@ JournalDBImpl::JournalDBImpl(JournalType type,
 JournalDBImpl::~JournalDBImpl() {
   // Log a warning if the journal was not committed or rolled back.
   if (valid_) {
-    FTL_LOG(WARNING) << "Journal not committed or rolled back.";
+    FXL_LOG(WARNING) << "Journal not committed or rolled back.";
   }
 }
 
@@ -93,7 +93,7 @@ void JournalDBImpl::Commit(
     btree::ApplyChanges(
         coroutine_service_, page_storage_, parents[0]->GetRootId(),
         std::move(entries),
-        ftl::MakeCopyable([
+        fxl::MakeCopyable([
           this, parents = std::move(parents), callback = std::move(callback)
         ](Status status, ObjectId object_id,
           std::unordered_set<ObjectId> new_nodes) mutable {
@@ -104,7 +104,7 @@ void JournalDBImpl::Commit(
           // If the commit is a no-op, return early.
           if (parents.size() == 1 &&
               parents.front()->GetRootId() == object_id) {
-            FTL_DCHECK(new_nodes.empty());
+            FXL_DCHECK(new_nodes.empty());
             callback(Rollback(), std::move(parents.front()));
             return;
           }
@@ -124,7 +124,7 @@ void JournalDBImpl::Commit(
                                  new_nodes.end());
           page_storage_->AddCommitFromLocal(
               commit->Clone(), std::move(objects_to_sync),
-              ftl::MakeCopyable([ this, commit = std::move(commit),
+              fxl::MakeCopyable([ this, commit = std::move(commit),
                                   callback ](Status status) mutable {
                 valid_ = false;
                 if (status != Status::OK) {

@@ -11,7 +11,7 @@
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/types.h"
 #include "apps/ledger/src/test/test_with_coroutines.h"
-#include "lib/ftl/functional/closure.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/mtl/socket/strings.h"
 
 namespace storage {
@@ -125,7 +125,7 @@ class StorageTest : public ::test::TestWithCoroutines {
       std::unique_ptr<const btree::TreeNode>* node);
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(StorageTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StorageTest);
 };
 
 }  // namespace storage

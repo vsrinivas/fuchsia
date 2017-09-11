@@ -23,13 +23,13 @@ class LedgerSyncImpl : public LedgerSync {
  public:
   LedgerSyncImpl(ledger::Environment* environment,
                  const UserConfig* user_config,
-                 ftl::StringView app_id,
+                 fxl::StringView app_id,
                  std::unique_ptr<SyncStateWatcher> watcher);
   ~LedgerSyncImpl() override;
 
   std::unique_ptr<PageSyncContext> CreatePageContext(
       storage::PageStorage* page_storage,
-      ftl::Closure error_callback) override;
+      fxl::Closure error_callback) override;
 
   // Enables upload. Has no effect if this method has already been called.
   void EnableUpload();
@@ -38,7 +38,7 @@ class LedgerSyncImpl : public LedgerSync {
 
   // |on_delete| will be called when this class is deleted.
   void set_on_delete(std::function<void()> on_delete) {
-    FTL_DCHECK(!on_delete_);
+    FXL_DCHECK(!on_delete_);
     on_delete_ = on_delete;
   }
 

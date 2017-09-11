@@ -10,7 +10,7 @@
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace ledger {
 // Strategy for merging commits using a last-one-wins policy for conflicts.

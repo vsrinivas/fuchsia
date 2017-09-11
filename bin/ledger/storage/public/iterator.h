@@ -6,7 +6,7 @@
 #define APPS_LEDGER_SRC_STORAGE_PUBLIC_ITERATOR_H_
 
 #include "apps/ledger/src/storage/public/types.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace storage {
 
@@ -33,7 +33,7 @@ class Iterator {
   virtual T* operator->() const = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Iterator);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Iterator);
 };
 
 }  // namespace storage

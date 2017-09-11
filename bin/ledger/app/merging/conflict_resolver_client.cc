@@ -14,9 +14,9 @@
 #include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/app/page_utils.h"
 #include "apps/ledger/src/callback/waiter.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/mtl/socket/strings.h"
 
 namespace ledger {
@@ -38,8 +38,8 @@ ConflictResolverClient::ConflictResolverClient(
       callback_(std::move(callback)),
       merge_result_provider_binding_(this),
       weak_factory_(this) {
-  FTL_DCHECK(left_->GetTimestamp() >= right_->GetTimestamp());
-  FTL_DCHECK(callback_);
+  FXL_DCHECK(left_->GetTimestamp() >= right_->GetTimestamp());
+  FXL_DCHECK(callback_);
 }
 
 ConflictResolverClient::~ConflictResolverClient() {
@@ -59,7 +59,7 @@ void ConflictResolverClient::Start() {
         }
         weak_this->journal_ = std::move(journal);
         if (status != storage::Status::OK) {
-          FTL_LOG(ERROR) << "Unable to start merge commit: " << status;
+          FXL_LOG(ERROR) << "Unable to start merge commit: " << status;
           weak_this->Finalize(PageUtils::ConvertStatus(status));
           return;
         }
@@ -94,7 +94,7 @@ void ConflictResolverClient::Cancel() {
 
 void ConflictResolverClient::OnNextMergeResult(
     const MergedValuePtr& merged_value,
-    const ftl::RefPtr<callback::Waiter<storage::Status, storage::ObjectId>>&
+    const fxl::RefPtr<callback::Waiter<storage::Status, storage::ObjectId>>&
         waiter) {
   switch (merged_value->source) {
     case ValueSource::RIGHT: {
@@ -105,7 +105,7 @@ void ConflictResolverClient::OnNextMergeResult(
                                                     storage::Entry entry) {
             if (status != storage::Status::OK) {
               if (status == storage::Status::NOT_FOUND) {
-                FTL_LOG(ERROR)
+                FXL_LOG(ERROR)
                     << "Key " << key
                     << " is not present in the right change. Unable to proceed";
               }
@@ -121,7 +121,7 @@ void ConflictResolverClient::OnNextMergeResult(
         storage_->AddObjectFromLocal(
             storage::DataSource::Create(
                 std::move(merged_value->new_value->get_bytes())),
-            ftl::MakeCopyable([callback = waiter->NewCallback()](
+            fxl::MakeCopyable([callback = waiter->NewCallback()](
                 storage::Status status, storage::ObjectId object_id) {
               callback(status, std::move(object_id));
             }));
@@ -187,7 +187,7 @@ void ConflictResolverClient::GetDiff(
           return;
         }
         if (status != Status::OK) {
-          FTL_LOG(ERROR) << "Unable to compute diff due to error " << status
+          FXL_LOG(ERROR) << "Unable to compute diff due to error " << status
                          << ", aborting.";
           callback(status, nullptr, nullptr);
           weak_this->Finalize(status);
@@ -205,7 +205,7 @@ void ConflictResolverClient::GetDiff(
 void ConflictResolverClient::Merge(fidl::Array<MergedValuePtr> merged_values,
                                    const MergeCallback& callback) {
   operation_serializer_.Serialize(
-      callback, ftl::MakeCopyable([
+      callback, fxl::MakeCopyable([
         weak_this = weak_factory_.GetWeakPtr(),
         merged_values = std::move(merged_values)
       ](MergeCallback callback) mutable {
@@ -219,7 +219,7 @@ void ConflictResolverClient::Merge(fidl::Array<MergedValuePtr> merged_values,
         for (const MergedValuePtr& merged_value : merged_values) {
           weak_this->OnNextMergeResult(merged_value, waiter);
         }
-        waiter->Finalize(ftl::MakeCopyable(ftl::MakeCopyable([
+        waiter->Finalize(fxl::MakeCopyable(fxl::MakeCopyable([
           weak_this, merged_values = std::move(merged_values),
           callback = std::move(callback)
         ](storage::Status status, std::vector<storage::ObjectId> object_ids) {
@@ -265,14 +265,14 @@ void ConflictResolverClient::Merge(fidl::Array<MergedValuePtr> merged_values,
 // Done() => (Status status);
 void ConflictResolverClient::Done(const DoneCallback& callback) {
   in_client_request_ = false;
-  FTL_DCHECK(!cancelled_);
-  FTL_DCHECK(journal_);
+  FXL_DCHECK(!cancelled_);
+  FXL_DCHECK(journal_);
 
   storage_->CommitJournal(std::move(journal_), [
     weak_this = weak_factory_.GetWeakPtr(), callback
   ](storage::Status status, std::unique_ptr<const storage::Commit>) {
     if (status != storage::Status::OK) {
-      FTL_LOG(ERROR) << "Unable to commit merge journal: " << status;
+      FXL_LOG(ERROR) << "Unable to commit merge journal: " << status;
     }
     Status ledger_status = PageUtils::ConvertStatus(status);
     callback(ledger_status);

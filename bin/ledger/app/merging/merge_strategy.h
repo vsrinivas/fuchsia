@@ -42,7 +42,7 @@ class MergeStrategy {
   virtual void Cancel() = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(MergeStrategy);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MergeStrategy);
 };
 
 }  // namespace ledger

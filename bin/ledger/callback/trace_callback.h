@@ -10,8 +10,8 @@
 
 #include <trace/event.h>
 
-#include "lib/ftl/functional/auto_call.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/auto_call.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace callback {
 
@@ -45,7 +45,7 @@ class TracingLambda {
         callback_(std::move(other.callback_)),
         did_run_or_moved_out_(other.did_run_or_moved_out_),
         trace_enabled_(other.trace_enabled_) {
-    FTL_DCHECK(!other.did_run_or_moved_out_);
+    FXL_DCHECK(!other.did_run_or_moved_out_);
     other.did_run_or_moved_out_ = true;
   }
 
@@ -57,10 +57,10 @@ class TracingLambda {
 
   template <typename... ArgType>
   auto operator()(ArgType&&... args) const {
-    FTL_DCHECK(!did_run_or_moved_out_);
+    FXL_DCHECK(!did_run_or_moved_out_);
     did_run_or_moved_out_ = true;
 
-    auto guard = ftl::MakeAutoCall([
+    auto guard = fxl::MakeAutoCall([
       trace_enabled = trace_enabled_, id = id_, category = category_,
       name = name_
     ] {
@@ -80,7 +80,7 @@ class TracingLambda {
   mutable bool did_run_or_moved_out_;
   bool trace_enabled_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TracingLambda);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TracingLambda);
 };
 
 template <typename C, typename... ArgType>
@@ -90,13 +90,13 @@ auto TraceCallback(C callback,
                    ArgType... args) {
   uint64_t id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN(category, name, id, std::forward<ArgType>(args)...);
-  return ftl::MakeCopyable(
+  return fxl::MakeCopyable(
       TracingLambda<C>(std::move(callback), id, category, name));
 }
 
 template <typename C>
 auto TraceCallback(C callback) {
-  return ftl::MakeCopyable(TracingLambda<C>(std::move(callback)));
+  return fxl::MakeCopyable(TracingLambda<C>(std::move(callback)));
 }
 
 // Identity functions. This is used to ensure that a C string is a compile time

@@ -13,6 +13,6 @@ const char kNullPageId[kPageIdSize] = {};
 }  // namespace
 
 // The zero-initialized root id.
-constexpr ftl::StringView kRootPageId(kNullPageId, kPageIdSize);
+constexpr fxl::StringView kRootPageId(kNullPageId, kPageIdSize);
 
 }  // namespace ledger

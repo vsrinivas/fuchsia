@@ -5,8 +5,8 @@
 #ifndef APPS_LEDGER_SRC_TOOL_COMMAND_H_
 #define APPS_LEDGER_SRC_TOOL_COMMAND_H_
 
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
 
 namespace tool {
 
@@ -15,10 +15,10 @@ class Command {
   Command() {}
   virtual ~Command() {}
 
-  virtual void Start(ftl::Closure on_done) = 0;
+  virtual void Start(fxl::Closure on_done) = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Command);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Command);
 };
 
 }  // namespace tool

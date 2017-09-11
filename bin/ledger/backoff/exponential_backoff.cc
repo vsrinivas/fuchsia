@@ -6,40 +6,40 @@
 
 #include <stdlib.h>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/time/time_delta.h"
 
 namespace backoff {
 
 ExponentialBackoff::ExponentialBackoff(std::function<uint64_t()> seed_generator)
-    : ExponentialBackoff(ftl::TimeDelta::FromMilliseconds(100),
+    : ExponentialBackoff(fxl::TimeDelta::FromMilliseconds(100),
                          2u,
-                         ftl::TimeDelta::FromSeconds(60 * 60),
+                         fxl::TimeDelta::FromSeconds(60 * 60),
                          seed_generator) {}
 
-ExponentialBackoff::ExponentialBackoff(ftl::TimeDelta initial_delay,
+ExponentialBackoff::ExponentialBackoff(fxl::TimeDelta initial_delay,
                                        uint32_t retry_factor,
-                                       ftl::TimeDelta max_delay,
+                                       fxl::TimeDelta max_delay,
                                        std::function<uint64_t()> seed_generator)
     : initial_delay_(initial_delay),
       retry_factor_(retry_factor),
       max_delay_(max_delay),
       max_delay_divided_by_factor_(max_delay_ / retry_factor_),
       rng_(seed_generator()) {
-  FTL_DCHECK(ftl::TimeDelta() <= initial_delay_ &&
+  FXL_DCHECK(fxl::TimeDelta() <= initial_delay_ &&
              initial_delay_ <= max_delay_);
-  FTL_DCHECK(0 < retry_factor_);
-  FTL_DCHECK(ftl::TimeDelta() <= max_delay_);
+  FXL_DCHECK(0 < retry_factor_);
+  FXL_DCHECK(fxl::TimeDelta() <= max_delay_);
 }
 
 ExponentialBackoff::~ExponentialBackoff() {}
 
-ftl::TimeDelta ExponentialBackoff::GetNext() {
+fxl::TimeDelta ExponentialBackoff::GetNext() {
   // Add a random component in [0, next_delay).
   std::uniform_int_distribution<uint64_t> distribution(
       0u, next_delay_.ToMilliseconds());
-  ftl::TimeDelta r = ftl::TimeDelta::FromMilliseconds(distribution(rng_));
-  ftl::TimeDelta result =
+  fxl::TimeDelta r = fxl::TimeDelta::FromMilliseconds(distribution(rng_));
+  fxl::TimeDelta result =
       max_delay_ - r >= next_delay_ ? next_delay_ + r : max_delay_;
 
   // Calculate the next delay.

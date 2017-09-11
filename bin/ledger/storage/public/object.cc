@@ -9,7 +9,7 @@
 namespace storage {
 
 Status Object::GetVmo(mx::vmo* vmo) const {
-  ftl::StringView data;
+  fxl::StringView data;
   Status status = GetData(&data);
   if (status != Status::OK) {
     return status;

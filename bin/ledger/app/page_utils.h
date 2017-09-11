@@ -10,8 +10,8 @@
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 #include "mx/vmo.h"
 
 namespace ledger {
@@ -30,7 +30,7 @@ class PageUtils {
       convert::ExtendedStringView opaque_id,
       storage::PageStorage::Location location,
       Status not_found_status,
-      std::function<void(Status, ftl::StringView)> callback);
+      std::function<void(Status, fxl::StringView)> callback);
 
   // Returns a subset of a Reference contents as a buffer. |offset| can be
   // negative. In that case, the offset is understood as starting from the end
@@ -48,7 +48,7 @@ class PageUtils {
   static bool MatchesPrefix(const std::string& key, const std::string& prefix);
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageUtils);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageUtils);
 };
 
 }  // namespace ledger

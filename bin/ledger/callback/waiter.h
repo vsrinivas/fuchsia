@@ -9,8 +9,8 @@
 #include <utility>
 #include <vector>
 
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace callback {
 
@@ -28,16 +28,16 @@ namespace internal {
 //   R Result();
 // };
 template <typename A, typename R, typename... Args>
-class BaseWaiter : public ftl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
+class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
  public:
   std::function<void(Args...)> NewCallback() {
-    FTL_DCHECK(!finalized_);
+    FXL_DCHECK(!finalized_);
     if (done_) {
       return [](Args...) {};
     }
     ++pending_callbacks_;
     return [
-      waiter_ref = ftl::RefPtr<BaseWaiter<A, R, Args...>>(this),
+      waiter_ref = fxl::RefPtr<BaseWaiter<A, R, Args...>>(this),
       token = accumulator_.PrepareCall()
     ](Args && ... args) mutable {
       waiter_ref->ReturnResult(std::move(token), std::forward<Args>(args)...);
@@ -45,7 +45,7 @@ class BaseWaiter : public ftl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
   }
 
   void Finalize(std::function<void(R)> callback) {
-    FTL_DCHECK(!finalized_) << "Waiter already finalized, can't finalize more!";
+    FXL_DCHECK(!finalized_) << "Waiter already finalized, can't finalize more!";
     result_callback_ = std::move(callback);
     finalized_ = true;
     ExecuteCallbackIfFinished();
@@ -58,7 +58,7 @@ class BaseWaiter : public ftl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
   template <typename T>
   void ReturnResult(T token, Args... args) {
     if (done_) {
-      FTL_DCHECK(!pending_callbacks_);
+      FXL_DCHECK(!pending_callbacks_);
       return;
     }
     done_ = !accumulator_.Update(std::move(token), std::forward<Args>(args)...);
@@ -71,7 +71,7 @@ class BaseWaiter : public ftl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
   }
 
   void ExecuteCallbackIfFinished() {
-    FTL_DCHECK(!finished_) << "Waiter already finished.";
+    FXL_DCHECK(!finished_) << "Waiter already finished.";
     if (finalized_ && !pending_callbacks_) {
       result_callback_(accumulator_.Result());
       finished_ = true;
@@ -190,8 +190,8 @@ class Waiter : public internal::BaseWaiter<internal::ResultAccumulator<S, T>,
                                            S,
                                            T> {
  public:
-  static ftl::RefPtr<Waiter<S, T>> Create(S success_status) {
-    return ftl::AdoptRef(new Waiter<S, T>(success_status));
+  static fxl::RefPtr<Waiter<S, T>> Create(S success_status) {
+    return fxl::AdoptRef(new Waiter<S, T>(success_status));
   }
 
   void Finalize(std::function<void(S, std::vector<T>)> callback) {
@@ -220,8 +220,8 @@ template <class S>
 class StatusWaiter
     : public internal::BaseWaiter<internal::StatusAccumulator<S>, S, S> {
  public:
-  static ftl::RefPtr<StatusWaiter<S>> Create(S success_status) {
-    return ftl::AdoptRef(new StatusWaiter<S>(success_status));
+  static fxl::RefPtr<StatusWaiter<S>> Create(S success_status) {
+    return fxl::AdoptRef(new StatusWaiter<S>(success_status));
   }
 
  private:
@@ -249,9 +249,9 @@ class Promise : public internal::BaseWaiter<internal::PromiseAccumulator<S, V>,
  public:
   // Creates a new promise. |default_status| and |default_value| will be
   // returned to the callback in |Finalize| if |NewCallback| is not called.
-  static ftl::RefPtr<Promise<S, V>> Create(S default_status,
+  static fxl::RefPtr<Promise<S, V>> Create(S default_status,
                                            V default_value = V()) {
-    return ftl::AdoptRef(
+    return fxl::AdoptRef(
         new Promise<S, V>(default_status, std::move(default_value)));
   }
 
@@ -278,8 +278,8 @@ class Promise : public internal::BaseWaiter<internal::PromiseAccumulator<S, V>,
 class CompletionWaiter
     : public internal::BaseWaiter<internal::CompletionAccumulator, bool> {
  public:
-  static ftl::RefPtr<CompletionWaiter> Create() {
-    return ftl::AdoptRef(new CompletionWaiter());
+  static fxl::RefPtr<CompletionWaiter> Create() {
+    return fxl::AdoptRef(new CompletionWaiter());
   }
 
   void Finalize(std::function<void()> callback) {

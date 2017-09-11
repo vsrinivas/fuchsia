@@ -8,7 +8,7 @@
 #include "apps/ledger/src/storage/impl/file_index_generated.h"
 #include "apps/ledger/src/storage/public/data_source.h"
 #include "apps/ledger/src/storage/public/types.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace storage {
 
@@ -22,10 +22,10 @@ class FileIndexSerialization {
   };
 
   // Checks that |data| is a correct encoding for a |FileIndex|.
-  static bool CheckValidFileIndexSerialization(ftl::StringView data);
+  static bool CheckValidFileIndexSerialization(fxl::StringView data);
 
   // Parses a |FileIndex| from |content|.
-  static Status ParseFileIndex(ftl::StringView content,
+  static Status ParseFileIndex(fxl::StringView content,
                                const FileIndex** file_index);
 
   // Builds the |FileIndex| representing the given children.

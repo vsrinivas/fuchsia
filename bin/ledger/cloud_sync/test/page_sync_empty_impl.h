@@ -14,10 +14,10 @@ class PageSyncEmptyImpl : public PageSync {
  public:
   // PageSync:
   void Start() override;
-  void SetOnIdle(ftl::Closure on_idle_callback) override;
+  void SetOnIdle(fxl::Closure on_idle_callback) override;
   bool IsIdle() override;
   void SetOnBacklogDownloaded(
-      ftl::Closure on_backlog_downloaded_callback) override;
+      fxl::Closure on_backlog_downloaded_callback) override;
   void SetSyncWatcher(SyncStateWatcher* watcher) override;
 };
 

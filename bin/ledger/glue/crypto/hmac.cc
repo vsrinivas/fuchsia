@@ -10,8 +10,8 @@
 
 namespace glue {
 
-std::string SHA256HMAC(ftl::StringView key, ftl::StringView data) {
-  FTL_CHECK(key.size() >= SHA256_DIGEST_LENGTH);
+std::string SHA256HMAC(fxl::StringView key, fxl::StringView data) {
+  FXL_CHECK(key.size() >= SHA256_DIGEST_LENGTH);
 
   std::string result;
   result.resize(SHA256_DIGEST_LENGTH);
@@ -20,8 +20,8 @@ std::string SHA256HMAC(ftl::StringView key, ftl::StringView data) {
       HMAC(EVP_sha256(), key.data(), key.size(),
            reinterpret_cast<const uint8_t*>(data.data()), data.size(),
            reinterpret_cast<uint8_t*>(&result[0]), &result_size);
-  FTL_CHECK(out);
-  FTL_DCHECK(result_size == SHA256_DIGEST_LENGTH);
+  FXL_CHECK(out);
+  FXL_DCHECK(result_size == SHA256_DIGEST_LENGTH);
   result.resize(result_size);
   return result;
 }

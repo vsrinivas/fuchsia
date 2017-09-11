@@ -11,8 +11,8 @@
 #include <memory>
 
 #include "lib/fidl/cpp/bindings/array.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 #include "mx/socket.h"
 #include "mx/vmo.h"
 #include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
@@ -29,7 +29,7 @@ class DataSource {
     DataChunk() {}
     virtual ~DataChunk() {}
 
-    virtual ftl::StringView Get() = 0;
+    virtual fxl::StringView Get() = 0;
 
     // Factory methods.
     static std::unique_ptr<DataChunk> Create(std::string value);
@@ -37,7 +37,7 @@ class DataSource {
         std::unique_ptr<flatbuffers::FlatBufferBuilder> builder);
 
    private:
-    FTL_DISALLOW_COPY_AND_ASSIGN(DataChunk);
+    FXL_DISALLOW_COPY_AND_ASSIGN(DataChunk);
   };
 
   enum Status {
@@ -66,7 +66,7 @@ class DataSource {
       std::function<void(std::unique_ptr<DataChunk>, Status)> callback) = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(DataSource);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DataSource);
 };
 
 }  // namespace storage

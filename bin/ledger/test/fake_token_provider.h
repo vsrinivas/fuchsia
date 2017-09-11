@@ -32,7 +32,7 @@ class FakeTokenProvider : public modular::auth::TokenProvider {
   std::string firebase_local_id_;
   std::string email_;
   std::string client_id_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(FakeTokenProvider);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakeTokenProvider);
 };
 
 }  // namespace test

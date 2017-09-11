@@ -10,12 +10,12 @@
 namespace storage {
 namespace {
 
-ftl::StringView operator"" _s(const char* str, size_t size) {
-  return ftl::StringView(str, size);
+fxl::StringView operator"" _s(const char* str, size_t size) {
+  return fxl::StringView(str, size);
 }
 
 // Test for object ids smaller than the inlining threshold.
-class ObjectIdSmallTest : public ::testing::TestWithParam<ftl::StringView> {};
+class ObjectIdSmallTest : public ::testing::TestWithParam<fxl::StringView> {};
 
 TEST_P(ObjectIdSmallTest, Index) {
   ObjectId object_id = ComputeObjectId(ObjectType::INDEX, GetParam());
@@ -37,7 +37,7 @@ INSTANTIATE_TEST_CASE_P(ObjectIdTest,
                                           "01234567890123456789012345678901"));
 
 // Test for object ids bigger than the inlining threshold.
-class ObjectIdBigTest : public ::testing::TestWithParam<ftl::StringView> {};
+class ObjectIdBigTest : public ::testing::TestWithParam<fxl::StringView> {};
 
 TEST_P(ObjectIdBigTest, Index) {
   ObjectId object_id = ComputeObjectId(ObjectType::INDEX, GetParam());

@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <iterator>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace convert {
 
@@ -61,12 +61,12 @@ class CollectionView {
   }
 
   const auto& operator[](size_t pos) const {
-    FTL_DCHECK(pos < size());
+    FXL_DCHECK(pos < size());
     return *std::next(begin_, pos);
   }
 
   auto& operator[](size_t pos) {
-    FTL_DCHECK(pos < static_cast<size_t>(std::distance(begin_, end_)));
+    FXL_DCHECK(pos < static_cast<size_t>(std::distance(begin_, end_)));
     return *std::next(begin_, pos);
   }
 

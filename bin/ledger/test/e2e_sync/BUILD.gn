@@ -23,7 +23,7 @@ executable("e2e_sync") {
     "//apps/ledger/src/test:lib",
     "//apps/ledger/src/test/integration/sync",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]

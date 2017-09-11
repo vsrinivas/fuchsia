@@ -10,8 +10,8 @@
 #include "apps/ledger/src/test/fake_token_provider.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "garnet/public/lib/fidl/cpp/bindings/binding.h"
-#include "garnet/public/lib/ftl/macros.h"
-#include "garnet/public/lib/ftl/time/time_delta.h"
+#include "garnet/public/lib/fxl/macros.h"
+#include "garnet/public/lib/fxl/time/time_delta.h"
 
 namespace cloud_provider_firebase {
 namespace {
@@ -43,7 +43,7 @@ class FactoryImplTest : public test::TestWithMessageLoop {
   fidl::Binding<cloud_provider_firebase::Factory> factory_binding_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(FactoryImplTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FactoryImplTest);
 };
 
 TEST_F(FactoryImplTest, EmptyWhenNoCloudProviders) {

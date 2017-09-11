@@ -5,80 +5,80 @@
 #include "apps/ledger/src/storage/impl/db_serialization.h"
 
 #include "apps/ledger/src/glue/crypto/rand.h"
-#include "lib/ftl/strings/concatenate.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/concatenate.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace storage {
 
 // HeadRow.
 
-constexpr ftl::StringView HeadRow::kPrefix;
+constexpr fxl::StringView HeadRow::kPrefix;
 
 std::string HeadRow::GetKeyFor(CommitIdView head) {
-  return ftl::Concatenate({kPrefix, head});
+  return fxl::Concatenate({kPrefix, head});
 }
 
 // CommitRow.
 
-constexpr ftl::StringView CommitRow::kPrefix;
+constexpr fxl::StringView CommitRow::kPrefix;
 
 std::string CommitRow::GetKeyFor(CommitIdView commit_id) {
-  return ftl::Concatenate({kPrefix, commit_id});
+  return fxl::Concatenate({kPrefix, commit_id});
 }
 
 // ObjectRow.
 
-constexpr ftl::StringView ObjectRow::kPrefix;
+constexpr fxl::StringView ObjectRow::kPrefix;
 
 std::string ObjectRow::GetKeyFor(ObjectIdView object_id) {
-  return ftl::Concatenate({kPrefix, object_id});
+  return fxl::Concatenate({kPrefix, object_id});
 }
 
 // UnsyncedCommitRow.
 
-constexpr ftl::StringView UnsyncedCommitRow::kPrefix;
+constexpr fxl::StringView UnsyncedCommitRow::kPrefix;
 
 std::string UnsyncedCommitRow::GetKeyFor(const CommitId& commit_id) {
-  return ftl::Concatenate({kPrefix, commit_id});
+  return fxl::Concatenate({kPrefix, commit_id});
 }
 
 // TransientObjectRow.
 
-constexpr ftl::StringView TransientObjectRow::kPrefix;
+constexpr fxl::StringView TransientObjectRow::kPrefix;
 
 std::string TransientObjectRow::GetKeyFor(ObjectIdView object_id) {
-  return ftl::Concatenate({kPrefix, object_id});
+  return fxl::Concatenate({kPrefix, object_id});
 }
 
 // LocalObjectRow.
 
-constexpr ftl::StringView LocalObjectRow::kPrefix;
+constexpr fxl::StringView LocalObjectRow::kPrefix;
 
 std::string LocalObjectRow::GetKeyFor(ObjectIdView object_id) {
-  return ftl::Concatenate({kPrefix, object_id});
+  return fxl::Concatenate({kPrefix, object_id});
 }
 
 // ImplicitJournalMetaRow.
 
-constexpr ftl::StringView ImplicitJournalMetaRow::kPrefix;
+constexpr fxl::StringView ImplicitJournalMetaRow::kPrefix;
 
 std::string ImplicitJournalMetaRow::GetKeyFor(const JournalId& journal_id) {
-  return ftl::Concatenate({kPrefix, journal_id});
+  return fxl::Concatenate({kPrefix, journal_id});
 }
 
 // SyncMetadataRow.
 
-constexpr ftl::StringView SyncMetadataRow::kPrefix;
+constexpr fxl::StringView SyncMetadataRow::kPrefix;
 
-std::string SyncMetadataRow::GetKeyFor(ftl::StringView key) {
-  return ftl::Concatenate({kPrefix, key});
+std::string SyncMetadataRow::GetKeyFor(fxl::StringView key) {
+  return fxl::Concatenate({kPrefix, key});
 }
 
 // JournalEntryRow.
 
-constexpr ftl::StringView JournalEntryRow::kPrefix;
-constexpr ftl::StringView JournalEntryRow::kJournalEntry;
-constexpr ftl::StringView JournalEntryRow::kDeletePrefix;
+constexpr fxl::StringView JournalEntryRow::kPrefix;
+constexpr fxl::StringView JournalEntryRow::kJournalEntry;
+constexpr fxl::StringView JournalEntryRow::kDeletePrefix;
 constexpr const char JournalEntryRow::kImplicitPrefix;
 constexpr const char JournalEntryRow::kAddPrefix;
 
@@ -92,22 +92,22 @@ std::string JournalEntryRow::NewJournalId(JournalType journal_type) {
 }
 
 std::string JournalEntryRow::GetPrefixFor(const JournalId& journal_id) {
-  return ftl::Concatenate({kPrefix, journal_id, "/", kJournalEntry});
+  return fxl::Concatenate({kPrefix, journal_id, "/", kJournalEntry});
 }
 
 std::string JournalEntryRow::GetKeyFor(const JournalId& id,
-                                       ftl::StringView key) {
-  return ftl::Concatenate({JournalEntryRow::GetPrefixFor(id), key});
+                                       fxl::StringView key) {
+  return fxl::Concatenate({JournalEntryRow::GetPrefixFor(id), key});
 }
 
-std::string JournalEntryRow::GetValueFor(ftl::StringView value,
+std::string JournalEntryRow::GetValueFor(fxl::StringView value,
                                          KeyPriority priority) {
   char priority_byte =
       (priority == KeyPriority::EAGER) ? kEagerPrefix : kLazyPrefix;
-  return ftl::Concatenate({{&kAddPrefix, 1}, {&priority_byte, 1}, value});
+  return fxl::Concatenate({{&kAddPrefix, 1}, {&priority_byte, 1}, value});
 }
 
-Status JournalEntryRow::ExtractObjectId(ftl::StringView db_value,
+Status JournalEntryRow::ExtractObjectId(fxl::StringView db_value,
                                         ObjectId* id) {
   if (db_value[0] == kDeletePrefix[0]) {
     return Status::NOT_FOUND;

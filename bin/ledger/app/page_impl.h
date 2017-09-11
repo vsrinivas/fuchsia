@@ -6,7 +6,7 @@
 #define APPS_LEDGER_SRC_APP_PAGE_IMPL_H_
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace ledger {
 class PageDelegate;
@@ -64,7 +64,7 @@ class PageImpl : public Page {
 
   PageDelegate* delegate_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageImpl);
 };
 
 }  // namespace ledger

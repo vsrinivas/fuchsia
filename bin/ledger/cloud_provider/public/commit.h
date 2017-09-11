@@ -9,7 +9,7 @@
 #include <string>
 
 #include "apps/ledger/src/cloud_provider/public/types.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace cloud_provider_firebase {
 
@@ -34,7 +34,7 @@ struct Commit {
   Data content;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Commit);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Commit);
 };
 
 }  // namespace cloud_provider_firebase
