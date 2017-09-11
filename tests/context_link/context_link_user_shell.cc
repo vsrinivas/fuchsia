@@ -59,7 +59,7 @@ class ContextListenerImpl : maxwell::ContextListener {
 
     context_reader->Subscribe(std::move(query), binding_.NewBinding());
     binding_.set_connection_error_handler(
-        [] { FTL_LOG(ERROR) << "Lost connection to ContextReader."; });
+        [] { FTL_LOG(ERROR) << "Lost ContextListener connection to ContextReader."; });
   }
 
   using Handler = std::function<void(const maxwell::ContextValuePtr&)>;
@@ -114,9 +114,11 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
 
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
-    // HACK(mesch): If done here, context reader connection just closes.
-    // user_shell_context_->GetContextReader(context_reader_.NewRequest());
-    // context_listener_.Listen(context_reader_.get());
+    user_shell_context_->GetContextReader(context_reader_.NewRequest());
+    context_listener_.Listen(context_reader_.get());
+    context_reader_.set_connection_error_handler([] {
+        FTL_LOG(ERROR) << "Lost ContextReader connection.";
+      });
 
     CreateStory();
   }
@@ -138,8 +140,6 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
   void StartStory() {
     start_story_enter_.Pass();
 
-    user_shell_context_->GetContextReader(context_reader_.NewRequest());
-    context_listener_.Listen(context_reader_.get());
     context_listener_.Handle(
         [this](const maxwell::ContextValuePtr& value) {
           GetContextTopic(value);
