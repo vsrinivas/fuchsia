@@ -4,7 +4,7 @@
 
 import("//garnet/public/lib/fidl/fidl.gni")
 
-fidl("services") {
+fidl("fidl") {
   sources = [
     "http_header.fidl",
     "network_error.fidl",

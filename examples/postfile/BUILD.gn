@@ -2,7 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("postfile") {
+import("//packages/package.gni")
+
+executable("postfile_bin") {
+  output_name = "postfile"
+
   sources = [
     "postfile.cc",
   ]
@@ -13,5 +17,15 @@ executable("postfile") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
+  ]
+}
+
+package("postfile") {
+  deps = [ ":postfile_bin" ]
+
+  binaries = [
+    {
+      name = "postfile"
+    },
   ]
 }

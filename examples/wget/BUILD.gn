@@ -2,7 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("wget") {
+import("//packages/package.gni")
+
+executable("wget_bin") {
+  output_name = "wget"
+
   sources = [
     "wget.cc",
   ]
@@ -13,5 +17,15 @@ executable("wget") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
+  ]
+}
+
+package("wget") {
+  deps = [ ":wget_bin" ]
+
+  binaries = [
+    {
+      name = "wget"
+    },
   ]
 }
