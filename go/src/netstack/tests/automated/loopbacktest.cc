@@ -288,7 +288,7 @@ void PollSignal(struct sockaddr_in* addr, short events, short* revents,
   NotifySuccess(ntfyfd);
 }
 
-TEST_F(NetStreamTest, Shutdown) {
+TEST_F(NetStreamTest, DISABLED_Shutdown) {
   int ret = listen(acptfd_, 10);
   ASSERT_EQ(0, ret) << "listen failed: " << errno;
 
