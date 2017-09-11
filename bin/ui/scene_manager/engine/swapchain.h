@@ -24,7 +24,7 @@ using FrameTimingsPtr = fxl::RefPtr<FrameTimings>;
 // present the result (to a physical display or elsewhere).
 class Swapchain {
  public:
-  // The three arguments are:
+  // Callback used to draw a frame. Arguments are:
   // - the framebuffer to render into.
   // - the semaphore to wait upon before rendering into the framebuffer
   // - the semaphore to signal when rendering is complete.
@@ -32,9 +32,12 @@ class Swapchain {
                                           const escher::SemaphorePtr&,
                                           const escher::SemaphorePtr&)>;
 
-  // Returns false if the frame could not be drawn.  Otherwise, registers itself
-  // with the FrameTimings; once it does so it is responsible for eventually
-  // invoking upon it both OnFrameFinishedRendering() and OnFramePresented().
+  // Returns false if the frame could not be drawn.  Otherwise,
+  //   1. Registers itself with |frame_timings| using
+  //      FrameTimings::AddSwapchain().
+  //   2. Invokes |draw_callback| to draw the frame.
+  //   3. Eventually invokes FrameTimings::OnFrameFinishedRendering() and
+  //      FrameTimings::OnFramePresented() on |frame_timings|.
   virtual bool DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
                                    DrawCallback draw_callback) = 0;
 
