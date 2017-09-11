@@ -94,7 +94,7 @@ zx_status_t Device::Bind(pci_protocol_t* pci,
 
         size_t off = pci_config_->capabilities_ptr;
         for (int i = 0; i < 64; i++) { // only loop so many times in case things out of whack
-            virtio_pci_cap *cap;
+            volatile virtio_pci_cap *cap;
 
             if (off > PAGE_SIZE) {
                 VIRTIO_ERROR("capability pointer is out of whack %zu\n", off);
