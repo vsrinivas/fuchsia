@@ -13,8 +13,8 @@
 #include <sstream>
 #include <string>
 
-#include "application/lib/app/application_context.h"
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/connect.h"
 #include "apps/cobalt_client/services/cobalt.fidl-sync.h"
 #include "apps/cobalt_client/services/cobalt.fidl.h"
 #include "apps/cobalt_client/services/cobalt_controller.fidl-sync.h"

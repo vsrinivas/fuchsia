@@ -38,7 +38,7 @@ executable("cobalt") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/cobalt_client/services:cobalt",
     "//third_party/cobalt/encoder",
     "//garnet/public/lib/ftl",
@@ -57,7 +57,7 @@ executable("cobalt_testapp") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/cobalt_client/services:cobalt_sync",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",

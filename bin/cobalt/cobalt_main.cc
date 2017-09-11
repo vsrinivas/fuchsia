@@ -8,7 +8,7 @@
 #include <thread>
 #include <utility>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/cobalt_client/services/cobalt.fidl.h"
 #include "apps/cobalt_client/services/cobalt_controller.fidl.h"
 #include "apps/cobalt_client/src/config.h"
