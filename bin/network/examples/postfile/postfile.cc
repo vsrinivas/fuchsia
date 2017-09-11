@@ -9,11 +9,11 @@
 #include "lib/app/cpp/connect.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "apps/network/services/url_loader.fidl.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/files/file_descriptor.h"
-#include "lib/ftl/files/path.h"
-#include "lib/ftl/files/unique_fd.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/files/file_descriptor.h"
+#include "lib/fxl/files/path.h"
+#include "lib/fxl/files/unique_fd.h"
 #include "lib/mtl/socket/files.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -89,7 +89,7 @@ class PostFileApp {
 
     std::string boundary = "XXXX";  // TODO: make an option to change this
 
-    ftl::UniqueFD fd(open(upload_file.c_str(), O_RDONLY));
+    fxl::UniqueFD fd(open(upload_file.c_str(), O_RDONLY));
     if (!fd.is_valid()) {
       printf("cannot open %s\n", upload_file.c_str());
       return false;
@@ -118,7 +118,7 @@ class PostFileApp {
 
     auto task_runner = mtl::MessageLoop::GetCurrent()->task_runner();
     mtl::CopyFromFileDescriptor(std::move(fd), std::move(producer), task_runner,
-                                [](bool result, ftl::UniqueFD fd) {
+                                [](bool result, fxl::UniqueFD fd) {
                                   if (!result) {
                                     printf("file read error\n");
                                     mtl::MessageLoop::GetCurrent()->QuitNow();

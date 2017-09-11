@@ -11,7 +11,7 @@ executable("postfile") {
     "//garnet/public/lib/app/cpp",
     "//apps/network/services",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }

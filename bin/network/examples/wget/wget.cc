@@ -6,7 +6,7 @@
 #include "lib/app/cpp/connect.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "apps/network/services/url_loader.fidl.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace examples {
@@ -72,7 +72,7 @@ class WGetApp {
   WGetApp() : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     network_service_ =
         context_->ConnectToEnvironmentService<network::NetworkService>();
-    FTL_DCHECK(network_service_);
+    FXL_DCHECK(network_service_);
   }
 
   bool Start(const std::vector<std::string>& args) {

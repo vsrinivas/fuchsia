@@ -13,8 +13,8 @@
 #include "apps/network/http_client.h"
 #include "apps/network/net_adapters.h"
 #include "apps/network/net_errors.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 #include "lib/url/gurl.h"
 
 namespace network {
@@ -26,22 +26,22 @@ URLLoaderImpl::~URLLoaderImpl() {}
 
 void URLLoaderImpl::Start(URLRequestPtr request, const Callback& callback) {
   callback_ = std::move(callback);
-  coordinator_->RequestNetworkSlot(ftl::MakeCopyable(
-      [ this, request = std::move(request) ](ftl::Closure on_inactive) mutable {
+  coordinator_->RequestNetworkSlot(fxl::MakeCopyable(
+      [ this, request = std::move(request) ](fxl::Closure on_inactive) mutable {
         StartInternal(std::move(request));
         on_inactive();
       }));
 }
 
 void URLLoaderImpl::FollowRedirect(const Callback& callback) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
   callback_ = callback;
   SendError(network::NETWORK_ERR_NOT_IMPLEMENTED);
 }
 
 void URLLoaderImpl::QueryStatus(const QueryStatusCallback& callback) {
   URLLoaderStatusPtr status(URLLoaderStatus::New());
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
   status->error = MakeNetworkError(network::NETWORK_ERR_NOT_IMPLEMENTED);
   callback(std::move(status));
 }
@@ -134,7 +134,7 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
         }
       }
 #else
-      FTL_LOG(WARNING) << "https is not built-in. "
+      FXL_LOG(WARNING) << "https is not built-in. "
                           "please build with NETWORK_SERVICE_USE_HTTPS";
       SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
       break;

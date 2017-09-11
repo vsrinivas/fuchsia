@@ -15,7 +15,7 @@
 #include "apps/network/url_loader_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "mx/socket.h"
 
 namespace network {
@@ -54,14 +54,14 @@ class NetworkServiceImpl : public NetworkService,
 
   // URLLoaderImpl::Coordinator:
   void RequestNetworkSlot(
-      std::function<void(ftl::Closure)> slot_request) override;
+      std::function<void(fxl::Closure)> slot_request) override;
 
   void OnSlotReturned();
 
   size_t available_slots_;
   fidl::BindingSet<NetworkService> bindings_;
   std::list<UrlLoaderContainer> loaders_;
-  std::queue<std::function<void(ftl::Closure)>> slot_requests_;
+  std::queue<std::function<void(fxl::Closure)>> slot_requests_;
 };
 
 }  // namespace network

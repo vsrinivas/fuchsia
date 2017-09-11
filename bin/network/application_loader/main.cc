@@ -8,8 +8,8 @@
 #include "lib/app/fidl/application_loader.fidl.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
@@ -26,7 +26,7 @@ class RetryingLoader {
         // TODO(rosswang): deadline support
         quiet_tries_(5),
         // TODO(rosswang): randomness
-        retry_delay_(ftl::TimeDelta::FromSeconds(1)),
+        retry_delay_(fxl::TimeDelta::FromSeconds(1)),
         weak_ptr_factory_(this) {}
 
   void Attempt() {
@@ -39,7 +39,7 @@ class RetryingLoader {
         });
   }
 
-  void SetDeleter(const ftl::Closure& fn) { deleter_ = fn; }
+  void SetDeleter(const fxl::Closure& fn) { deleter_ = fn; }
 
  private:
   // Need to create a new request each time because a URLRequest's body can
@@ -62,7 +62,7 @@ class RetryingLoader {
     } else if (response->error) {
       Retry(response);
     } else {
-      FTL_LOG(WARNING) << "Failed to load application from " << url_ << ": "
+      FXL_LOG(WARNING) << "Failed to load application from " << url_ << ": "
                        << response->status_line << " (" << response->status_code
                        << ")";
       SendResponse(nullptr);
@@ -79,16 +79,16 @@ class RetryingLoader {
         retry_delay_);
 
     if (quiet_tries_ > 0) {
-      FTL_VLOG(2) << "Retrying load of " << url_ << " due to "
+      FXL_VLOG(2) << "Retrying load of " << url_ << " due to "
                   << response->error->description << " ("
                   << response->error->code << ")";
 
       quiet_tries_--;
       // TODO(rosswang): Randomness, and factor out the delay fn.
       retry_delay_ =
-          ftl::TimeDelta::FromSecondsF(retry_delay_.ToSecondsF() * 1.5f);
+          fxl::TimeDelta::FromSecondsF(retry_delay_.ToSecondsF() * 1.5f);
     } else if (quiet_tries_ == 0) {
-      FTL_LOG(WARNING) << "Error while attempting to load application from "
+      FXL_LOG(WARNING) << "Error while attempting to load application from "
                        << url_ << ": " << response->error->description << " ("
                        << response->error->code
                        << "); continuing to retry every "
@@ -98,7 +98,7 @@ class RetryingLoader {
   }
 
   void SendResponse(app::ApplicationPackagePtr package) {
-    FTL_DCHECK(!package || package->resolved_url);
+    FXL_DCHECK(!package || package->resolved_url);
     callback_(std::move(package));
     deleter_();
   }
@@ -106,13 +106,13 @@ class RetryingLoader {
   const network::URLLoaderPtr url_loader_;
   const std::string url_;
   const app::ApplicationLoader::LoadApplicationCallback callback_;
-  ftl::Closure deleter_;
+  fxl::Closure deleter_;
   // Tries before an error is printed. No errors will be printed afterwards
   // either.
   int quiet_tries_;
-  ftl::TimeDelta retry_delay_;
+  fxl::TimeDelta retry_delay_;
 
-  ftl::WeakPtrFactory<RetryingLoader> weak_ptr_factory_;
+  fxl::WeakPtrFactory<RetryingLoader> weak_ptr_factory_;
 };
 
 class NetworkApplicationLoader : public app::ApplicationLoader {

@@ -4,7 +4,7 @@
 
 #include "net_errors.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace network {
 
@@ -25,7 +25,7 @@ std::string ErrorToShortString(int error) {
 #include "apps/network/net_error_list.h"
 #undef NET_ERROR
     default:
-      FTL_NOTREACHED();
+      FXL_NOTREACHED();
       error_string = "<unknown>";
   }
   return std::string("NETWORK_ERR_") + error_string;

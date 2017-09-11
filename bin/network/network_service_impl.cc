@@ -10,9 +10,9 @@
 #include "apps/network/net_errors.h"
 #include "apps/network/network_service_impl.h"
 #include "apps/network/url_loader_impl.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/thread.h"
 
@@ -44,12 +44,12 @@ class NetworkServiceImpl::UrlLoaderContainer
     io_task_runner_->PostTask([this] { StartOnIOThread(); });
   }
 
-  void set_on_done(ftl::Closure on_done) { on_done_ = std::move(on_done); }
+  void set_on_done(fxl::Closure on_done) { on_done_ = std::move(on_done); }
 
  private:
   // URLLoaderImpl::Coordinator:
   void RequestNetworkSlot(
-      std::function<void(ftl::Closure)> slot_request) override {
+      std::function<void(fxl::Closure)> slot_request) override {
     // On IO Thread.
     main_task_runner_->PostTask(
         [ weak_this = weak_ptr_, slot_request = std::move(slot_request) ] {
@@ -59,7 +59,7 @@ class NetworkServiceImpl::UrlLoaderContainer
 
           weak_this->top_coordinator_->RequestNetworkSlot([
             weak_this, slot_request = std::move(slot_request)
-          ](ftl::Closure on_inactive) {
+          ](fxl::Closure on_inactive) {
             if (!weak_this) {
               on_inactive();
               return;
@@ -123,27 +123,27 @@ class NetworkServiceImpl::UrlLoaderContainer
 
   // These variables can only be accessed on the main thread.
   URLLoaderImpl::Coordinator* top_coordinator_;
-  ftl::Closure on_inactive_;
-  ftl::Closure on_done_;
+  fxl::Closure on_inactive_;
+  fxl::Closure on_done_;
   mtl::Thread thread_;
   bool stopped_ = true;
   bool joined_ = false;
 
   // There are thread-safe.
-  ftl::RefPtr<ftl::TaskRunner> main_task_runner_;
-  ftl::RefPtr<ftl::TaskRunner> io_task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> main_task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> io_task_runner_;
 
   // The binding and the implementation can only be accessed on the io thread.
   std::unique_ptr<fidl::Binding<URLLoader>> binding_;
   std::unique_ptr<URLLoaderImpl> url_loader_;
 
   // Copyable on any thread, but can only be de-referenced on the main thread.
-  ftl::WeakPtr<UrlLoaderContainer> weak_ptr_;
+  fxl::WeakPtr<UrlLoaderContainer> weak_ptr_;
 
   // The weak ptr factory is only accessed on the main thread.
-  ftl::WeakPtrFactory<UrlLoaderContainer> weak_ptr_factory_;
+  fxl::WeakPtrFactory<UrlLoaderContainer> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(UrlLoaderContainer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(UrlLoaderContainer);
 };
 
 NetworkServiceImpl::NetworkServiceImpl() : available_slots_(kMaxSlots) {}
@@ -169,18 +169,18 @@ void NetworkServiceImpl::CreateURLLoader(
 }
 
 void NetworkServiceImpl::GetCookieStore(mx::channel cookie_store) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void NetworkServiceImpl::CreateWebSocket(mx::channel socket) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void NetworkServiceImpl::CreateTCPBoundSocket(
     netstack::NetAddressPtr local_address,
     mx::channel bound_socket,
     const CreateTCPBoundSocketCallback& callback) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
   callback(MakeNetworkError(network::NETWORK_ERR_NOT_IMPLEMENTED), nullptr);
 }
 
@@ -190,32 +190,32 @@ void NetworkServiceImpl::CreateTCPConnectedSocket(
     mx::socket receive_stream,
     mx::channel client_socket,
     const CreateTCPConnectedSocketCallback& callback) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
   callback(MakeNetworkError(network::NETWORK_ERR_NOT_IMPLEMENTED), nullptr);
 }
 
 void NetworkServiceImpl::CreateUDPSocket(mx::channel request) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void NetworkServiceImpl::CreateHttpServer(
     netstack::NetAddressPtr local_address,
     mx::channel delegate,
     const CreateHttpServerCallback& callback) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
   callback(MakeNetworkError(network::NETWORK_ERR_NOT_IMPLEMENTED), nullptr);
 }
 
 void NetworkServiceImpl::RegisterURLLoaderInterceptor(mx::channel factory) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void NetworkServiceImpl::CreateHostResolver(mx::channel host_resolver) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void NetworkServiceImpl::RequestNetworkSlot(
-    std::function<void(ftl::Closure)> slot_request) {
+    std::function<void(fxl::Closure)> slot_request) {
   if (available_slots_ == 0) {
     slot_requests_.push(std::move(slot_request));
     return;
@@ -225,7 +225,7 @@ void NetworkServiceImpl::RequestNetworkSlot(
 }
 
 void NetworkServiceImpl::OnSlotReturned() {
-  FTL_DCHECK(available_slots_ < kMaxSlots);
+  FXL_DCHECK(available_slots_ < kMaxSlots);
 
   if (slot_requests_.empty()) {
     ++available_slots_;

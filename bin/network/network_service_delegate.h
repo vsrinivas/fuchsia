@@ -21,7 +21,7 @@ class NetworkServiceDelegate {
   std::unique_ptr<app::ApplicationContext> context_;
   network::NetworkServiceImpl network_provider_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(NetworkServiceDelegate);
+  FXL_DISALLOW_COPY_AND_ASSIGN(NetworkServiceDelegate);
 };
 
 }  // namespace network

@@ -19,7 +19,7 @@ class URLLoaderImpl : public URLLoader {
    public:
     virtual ~Coordinator() {}
     virtual void RequestNetworkSlot(
-        std::function<void(ftl::Closure)> slot_request) = 0;
+        std::function<void(fxl::Closure)> slot_request) = 0;
   };
 
   URLLoaderImpl(Coordinator* coordinator);

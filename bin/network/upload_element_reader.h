@@ -5,7 +5,7 @@
 #ifndef APPS_NETWORK_UPLOAD_ELEMENT_READER_H_
 #define APPS_NETWORK_UPLOAD_ELEMENT_READER_H_
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "mx/socket.h"
 #include "mx/vmo.h"
 
@@ -23,7 +23,7 @@ class UploadElementReader {
   virtual mx_status_t ReadAll(std::ostream* os) = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(UploadElementReader);
+  FXL_DISALLOW_COPY_AND_ASSIGN(UploadElementReader);
 };
 
 class SocketUploadElementReader : public UploadElementReader {
