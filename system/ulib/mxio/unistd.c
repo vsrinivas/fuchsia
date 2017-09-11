@@ -595,6 +595,37 @@ void __libc_extensions_init(uint32_t handle_count,
     atexit(mxio_exit);
 }
 
+
+mx_status_t mxio_ns_install(mxio_ns_t* ns) {
+    mxio_t* io = mxio_ns_open_root(ns);
+    if (io == NULL) {
+        return MX_ERR_IO;
+    }
+
+    mxio_t* old_root = NULL;
+    mx_status_t status;
+
+    mtx_lock(&mxio_lock);
+    if (mxio_root_ns != NULL) {
+        //TODO: support replacing an active namespace
+        status = MX_ERR_ALREADY_EXISTS;
+    } else {
+        if (mxio_root_handle) {
+            old_root = mxio_root_handle;
+        }
+        mxio_root_handle = io;
+        status = MX_OK;
+    }
+    mtx_unlock(&mxio_lock);
+
+    if (old_root) {
+        mxio_close(old_root);
+        mxio_release(old_root);
+    }
+    return status;
+}
+
+
 mx_status_t mxio_clone_root(mx_handle_t* handles, uint32_t* types) {
     // The root handle is established in the init hook called from
     // libc startup (or, in the special case of devmgr, installed

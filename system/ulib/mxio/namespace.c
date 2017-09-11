@@ -661,12 +661,6 @@ mx_status_t mxio_ns_chdir(mxio_ns_t* ns) {
     return MX_OK;
 }
 
-mx_status_t mxio_ns_install(mxio_ns_t* ns) {
-    //TODO
-    return MX_ERR_NOT_SUPPORTED;
-}
-
-
 static mx_status_t ns_enum_callback(mxvn_t* vn, void* cookie,
                                     mx_status_t (*func)(void* cookie, const char* path,
                                                         size_t len, mx_handle_t h)) {
