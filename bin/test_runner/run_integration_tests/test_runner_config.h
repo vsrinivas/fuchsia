@@ -8,7 +8,7 @@
 #include <map>
 #include <string>
 #include <vector>
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace test_runner {
 
@@ -35,7 +35,7 @@ class TestRunnerConfig {
   std::vector<std::string> test_names_;
   std::map<std::string, std::string> test_commands_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestRunnerConfig);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestRunnerConfig);
 };
 
 }  // namespace test_runner

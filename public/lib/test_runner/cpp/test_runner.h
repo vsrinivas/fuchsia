@@ -10,7 +10,7 @@
 #include "apps/test_runner/lib/scope.h"
 #include "apps/test_runner/lib/test_runner_store_impl.h"
 #include "apps/test_runner/services/test_runner.fidl.h"
-#include "lib/ftl/tasks/one_shot_timer.h"
+#include "lib/fxl/tasks/one_shot_timer.h"
 
 namespace test_runner {
 
@@ -68,11 +68,11 @@ class TestRunnerImpl : public TestRunner {
   TestRunContext* const test_run_context_;
   std::string program_name_ = "UNKNOWN";
   bool waiting_for_termination_ = false;
-  ftl::OneShotTimer termination_timer_;
+  fxl::OneShotTimer termination_timer_;
   bool teardown_after_termination_ = false;
   int64_t remaining_test_points_ = -1;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestRunnerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestRunnerImpl);
 };
 
 // TestRunContext represents a single run of a test program. Given a test
@@ -108,7 +108,7 @@ class TestRunContext {
   const std::string test_id_;
   bool success_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestRunContext);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestRunContext);
 };
 
 }  // namespace test_runner

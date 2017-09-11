@@ -39,10 +39,10 @@
 #include <string>
 #include <vector>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/split_string.h"
-#include "lib/ftl/strings/string_view.h"
-#include "lib/ftl/synchronization/sleep.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/split_string.h"
+#include "lib/fxl/strings/string_view.h"
+#include "lib/fxl/synchronization/sleep.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
@@ -58,7 +58,7 @@ TestRunnerImpl::TestRunnerImpl(
     : binding_(this, std::move(request)), test_run_context_(test_run_context) {
   binding_.set_connection_error_handler([this] {
     if (waiting_for_termination_) {
-      FTL_LOG(INFO) << "Test " << program_name_ << " terminated as expected.";
+      FXL_LOG(INFO) << "Test " << program_name_ << " terminated as expected.";
       // Client terminated but that was expected.
       termination_timer_.Stop();
       if (teardown_after_termination_) {
@@ -118,7 +118,7 @@ void TestRunnerImpl::WillTerminate(const double withinSeconds) {
   waiting_for_termination_ = true;
   termination_timer_.Start(mtl::MessageLoop::GetCurrent()->task_runner().get(),
                            [this, withinSeconds] {
-                             FTL_LOG(ERROR) << program_name_
+                             FXL_LOG(ERROR) << program_name_
                                             << " termination timed out after "
                                             << withinSeconds << "s.";
                              binding_.set_connection_error_handler(nullptr);
@@ -128,22 +128,22 @@ void TestRunnerImpl::WillTerminate(const double withinSeconds) {
                              }
                              test_run_context_->StopTrackingClient(this, false);
                            },
-                           ftl::TimeDelta::FromSecondsF(withinSeconds));
+                           fxl::TimeDelta::FromSecondsF(withinSeconds));
 }
 
 void TestRunnerImpl::SetTestPointCount(int64_t count) {
   // Check that the count hasn't been set yet.
-  FTL_CHECK(remaining_test_points_ == -1);
+  FXL_CHECK(remaining_test_points_ == -1);
 
   // Check that the count makes sense.
-  FTL_CHECK(count >= 0);
+  FXL_CHECK(count >= 0);
 
   remaining_test_points_ = count;
 }
 
 void TestRunnerImpl::PassTestPoint() {
   // Check that the test point count has been set.
-  FTL_CHECK(remaining_test_points_ >= 0);
+  FXL_CHECK(remaining_test_points_ >= 0);
 
   if (remaining_test_points_ == 0) {
     Fail(program_name_ + " passed more test points than expected.");
@@ -188,7 +188,7 @@ TestRunContext::TestRunContext(
 
   // If the child app closes, the test is reported as a failure.
   child_app_controller_.set_connection_error_handler([this] {
-    FTL_LOG(WARNING) << "Child app connection closed unexpectedly. Remaining "
+    FXL_LOG(WARNING) << "Child app connection closed unexpectedly. Remaining "
                         "TestRunner clients = "
                      << test_runner_clients_.size();
     test_runner_connection_->Teardown(test_id_, false);
@@ -224,7 +224,7 @@ void TestRunContext::Fail(const fidl::String& log_msg) {
 
 void TestRunContext::StopTrackingClient(TestRunnerImpl* client, bool crashed) {
   if (crashed) {
-    FTL_LOG(WARNING) << client->program_name()
+    FXL_LOG(WARNING) << client->program_name()
                      << " finished without calling"
                         " test_runner::reporting::Done().";
     test_runner_connection_->Teardown(test_id_, false);
@@ -232,7 +232,7 @@ void TestRunContext::StopTrackingClient(TestRunnerImpl* client, bool crashed) {
   }
 
   if (client->TestPointsRemaining()) {
-    FTL_LOG(WARNING) << client->program_name()
+    FXL_LOG(WARNING) << client->program_name()
                      << " finished without passing all test points.";
     test_runner_connection_->Teardown(test_id_, false);
     return;
@@ -244,7 +244,7 @@ void TestRunContext::StopTrackingClient(TestRunnerImpl* client, bool crashed) {
                      return client_it.get() == client;
                    });
 
-  FTL_DCHECK(find_it != test_runner_clients_.end());
+  FXL_DCHECK(find_it != test_runner_clients_.end());
   test_runner_clients_.erase(find_it);
 }
 
@@ -256,12 +256,12 @@ void TestRunContext::Teardown(TestRunnerImpl* teardown_client) {
     }
     if (client->waiting_for_termination()) {
       client->TeardownAfterTermination();
-      FTL_LOG(INFO) << "Teardown blocked by test waiting for termination: "
+      FXL_LOG(INFO) << "Teardown blocked by test waiting for termination: "
                     << client->program_name();
       waiting_for_termination = true;
       continue;
     }
-    FTL_LOG(ERROR) << "Test " << client->program_name()
+    FXL_LOG(ERROR) << "Test " << client->program_name()
                    << " not done before Teardown().";
     success_ = false;
   }

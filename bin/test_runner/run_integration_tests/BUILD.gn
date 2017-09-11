@@ -11,7 +11,7 @@ executable("run_integration_tests") {
   deps = [
     "//apps/test_runner/lib",
     "//apps/test_runner/services:test_runner",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//third_party/rapidjson",
   ]
 }

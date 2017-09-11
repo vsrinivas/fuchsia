@@ -10,7 +10,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "apps/test_runner/services/test_runner.fidl.h"
-#include "lib/ftl/time/stopwatch.h"
+#include "lib/fxl/time/stopwatch.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 class Reporter {
@@ -42,7 +42,7 @@ class Reporter {
  private:
   std::string name_;
   test_runner::TestRunner* test_runner_;
-  ftl::Stopwatch stopwatch_;
+  fxl::Stopwatch stopwatch_;
 };
 
 void ReadPipe(int pipe, std::stringstream* stream) {

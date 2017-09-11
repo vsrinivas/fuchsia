@@ -33,7 +33,7 @@ class TestRunnerStoreImpl : public TestRunnerStore {
   std::map<fidl::String, std::queue<std::string>> store_;
   fidl::BindingSet<TestRunnerStore> binding_set_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestRunnerStoreImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestRunnerStoreImpl);
 };
 
 }  // namespace test_runner

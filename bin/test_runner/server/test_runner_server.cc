@@ -42,11 +42,11 @@
 #include "apps/test_runner/lib/scope.h"
 #include "apps/test_runner/lib/test_runner.h"
 #include "apps/test_runner/lib/test_runner_store_impl.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/split_string.h"
-#include "lib/ftl/strings/string_view.h"
-#include "lib/ftl/synchronization/sleep.h"
-#include "lib/ftl/tasks/one_shot_timer.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/split_string.h"
+#include "lib/fxl/strings/string_view.h"
+#include "lib/fxl/synchronization/sleep.h"
+#include "lib/fxl/tasks/one_shot_timer.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 // TODO(vardhan): Make listen port command-line configurable.
@@ -64,7 +64,7 @@ class TestRunnerConnection : public TestRunObserver {
       : app_context_(app_context), socket_(socket_fd) {}
 
   void Start() {
-    FTL_CHECK(!test_context_);
+    FXL_CHECK(!test_context_);
     ReadAndRunCommand();
   }
 
@@ -75,14 +75,14 @@ class TestRunnerConnection : public TestRunObserver {
     stream << test_id << " " << operation << " " << msg << "\n";
 
     std::string bytes = stream.str();
-    FTL_CHECK(write(socket_, bytes.data(), bytes.size()) > 0);
+    FXL_CHECK(write(socket_, bytes.data(), bytes.size()) > 0);
   }
 
   // Called by TestRunContext when it has finished running its test. This will
   // trigger reading more commands from TCP socket.
   void Teardown(const std::string& test_id, bool success) override {
-    FTL_CHECK(test_context_);
-    FTL_LOG(INFO) << "test_runner: teardown " << test_id
+    FXL_CHECK(test_context_);
+    FXL_LOG(INFO) << "test_runner: teardown " << test_id
                   << " success=" << success;
 
     SendMessage(test_id, "teardown", success ? "pass" : "fail");
@@ -133,15 +133,15 @@ class TestRunnerConnection : public TestRunObserver {
     // command_parse[1] = test_id
     // command_parse[2] = url
     // command_parse[3..] = args (optional)
-    std::vector<std::string> command_parse = ftl::SplitStringCopy(
-        command, " ", ftl::kTrimWhitespace, ftl::kSplitWantNonEmpty);
+    std::vector<std::string> command_parse = fxl::SplitStringCopy(
+        command, " ", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
 
-    FTL_CHECK(command_parse.size() >= 3)
+    FXL_CHECK(command_parse.size() >= 3)
         << "Not enough args. Must be: `run <test id> <command to run>`";
-    FTL_CHECK(command_parse[0] == "run")
+    FXL_CHECK(command_parse[0] == "run")
         << command_parse[0] << " is not a supported command.";
 
-    FTL_LOG(INFO) << "test_runner: run " << command_parse[1];
+    FXL_LOG(INFO) << "test_runner: run " << command_parse[1];
 
     std::vector<std::string> args;
     for (size_t i = 3; i < command_parse.size(); i++) {
@@ -161,7 +161,7 @@ class TestRunnerConnection : public TestRunObserver {
   const int socket_;
   std::string command_buffer_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestRunnerConnection);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestRunnerConnection);
 };
 
 // TestRunnerTCPServer is a TCP server that accepts connections and launches
@@ -180,23 +180,23 @@ class TestRunnerTCPServer {
     // 1. Make a TCP socket.
     // We need to retry because there's a race condition at boot
     // between netstack initializing and us calling socket().
-    const auto duration = ftl::TimeDelta::FromMilliseconds(200u);
+    const auto duration = fxl::TimeDelta::FromMilliseconds(200u);
 
     for (int i = 0; i < 5 * 10; ++i) {
       listener_ = socket(addr.sin6_family, SOCK_STREAM, IPPROTO_TCP);
       if (listener_ != -1) {
         break;
       }
-      ftl::SleepFor(duration);
+      fxl::SleepFor(duration);
     }
-    FTL_CHECK(listener_ != -1);
+    FXL_CHECK(listener_ != -1);
 
     // 2. Bind it to an address.
-    FTL_CHECK(bind(listener_, reinterpret_cast<struct sockaddr*>(&addr),
+    FXL_CHECK(bind(listener_, reinterpret_cast<struct sockaddr*>(&addr),
                    sizeof(addr)) != -1);
 
     // 3. Make it a listening socket.
-    FTL_CHECK(listen(listener_, 100) != -1);
+    FXL_CHECK(listen(listener_, 100) != -1);
   }
 
   ~TestRunnerTCPServer() { close(listener_); }
@@ -205,7 +205,7 @@ class TestRunnerTCPServer {
   TestRunnerConnection* AcceptConnection() {
     int sockfd = accept(listener_, nullptr, nullptr);
     if (sockfd == -1) {
-      FTL_LOG(INFO) << "accept() oops";
+      FXL_LOG(INFO) << "accept() oops";
     }
     return new TestRunnerConnection(sockfd, app_context_);
   }
@@ -214,7 +214,7 @@ class TestRunnerTCPServer {
   int listener_;
   std::shared_ptr<app::ApplicationContext> app_context_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestRunnerTCPServer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestRunnerTCPServer);
 };
 
 }  // namespace test_runner

@@ -14,9 +14,9 @@
 
 #include "apps/test_runner/lib/test_runner.h"
 #include "apps/test_runner/src/run_integration_tests/test_runner_config.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/strings/split_string.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/strings/split_string.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace test_runner {
@@ -29,11 +29,11 @@ class TestRunObserverImpl : public test_runner::TestRunObserver {
   void SendMessage(const std::string& test_id,
                    const std::string& operation,
                    const std::string& msg) override {
-    FTL_CHECK(test_id == test_id_);
+    FXL_CHECK(test_id == test_id_);
   }
 
   void Teardown(const std::string& test_id, bool success) override {
-    FTL_CHECK(test_id == test_id_);
+    FXL_CHECK(test_id == test_id_);
     success_ = success;
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
   }
@@ -51,7 +51,7 @@ bool RunTest(std::shared_ptr<app::ApplicationContext> app_context,
   uint64_t random_number;
   size_t random_size;
   mx_cprng_draw(&random_number, sizeof random_number, &random_size);
-  std::string test_id = ftl::StringPrintf("test_%lX", random_number);
+  std::string test_id = fxl::StringPrintf("test_%lX", random_number);
   TestRunObserverImpl observer(test_id);
   test_runner::TestRunContext context(app_context, &observer, test_id, url,
                                       args);
@@ -70,7 +70,7 @@ void PrintKnownTests(const TestRunnerConfig& config) {
 
 int RunIntegrationTestsMain(int argc, char** argv) {
   mtl::MessageLoop loop;
-  ftl::CommandLine settings = ftl::CommandLineFromArgcArgv(argc, argv);
+  fxl::CommandLine settings = fxl::CommandLineFromArgcArgv(argc, argv);
   std::string test_file;
   if (!settings.GetOptionValue("test_file", &test_file) ||
       settings.HasOption("help")) {
@@ -110,8 +110,8 @@ int RunIntegrationTestsMain(int argc, char** argv) {
       continue;
     }
     std::vector<std::string> args =
-        ftl::SplitStringCopy(config.GetTestCommand(test_name), " ",
-                             ftl::kTrimWhitespace, ftl::kSplitWantNonEmpty);
+        fxl::SplitStringCopy(config.GetTestCommand(test_name), " ",
+                             fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
     auto url = args.front();
     args.erase(args.begin());
 
