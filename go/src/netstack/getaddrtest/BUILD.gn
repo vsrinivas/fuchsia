@@ -27,6 +27,7 @@ go_binary("getaddrtest") {
   ]
 
   deps = [
+    "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/netstack/fidl",
   ]
 }

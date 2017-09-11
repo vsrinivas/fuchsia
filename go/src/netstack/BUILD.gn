@@ -18,11 +18,14 @@ package("netstack") {
   binaries = [
     {
       name = "netstack"
-    }, {
+    },
+    {
       name = "ifconfig"
-    }, {
+    },
+    {
       name = "ifinfo"
-    }, {
+    },
+    {
       name = "getaddrtest"
     },
   ]
@@ -66,9 +69,23 @@ go_binary("netstack_bin") {
       package = "github.com/google/netstack"
       source = "//third_party/netstack"
     },
+    {
+      package = "garnet/public/lib/netstack/fidl/netstack"
+      source = "$root_gen_dir/go/src/garnet/public/lib/netstack/fidl/netstack"
+    },
+    {
+      package = "garnet/public/lib/netstack/fidl/net_address"
+      source =
+          "$root_gen_dir/go/src/garnet/public/lib/netstack/fidl/net_address"
+    },
+    {
+      package = "garnet/public/lib/app/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
+    },
   ]
 
   deps = [
+    "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/netstack/fidl",
   ]
 }
