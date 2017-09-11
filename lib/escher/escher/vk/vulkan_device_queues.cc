@@ -28,11 +28,14 @@ VulkanDeviceQueues::Caps::Caps(vk::PhysicalDeviceProperties props)
 VulkanDeviceQueues::ProcAddrs::ProcAddrs(
     vk::Device device,
     const std::set<std::string>& extension_names) {
-  GET_DEVICE_PROC_ADDR(CreateSwapchainKHR);
-  GET_DEVICE_PROC_ADDR(DestroySwapchainKHR);
-  GET_DEVICE_PROC_ADDR(GetSwapchainImagesKHR);
-  GET_DEVICE_PROC_ADDR(AcquireNextImageKHR);
-  GET_DEVICE_PROC_ADDR(QueuePresentKHR);
+  if (extension_names.find(VK_KHR_SWAPCHAIN_EXTENSION_NAME) !=
+      extension_names.end()) {
+    GET_DEVICE_PROC_ADDR(CreateSwapchainKHR);
+    GET_DEVICE_PROC_ADDR(DestroySwapchainKHR);
+    GET_DEVICE_PROC_ADDR(GetSwapchainImagesKHR);
+    GET_DEVICE_PROC_ADDR(AcquireNextImageKHR);
+    GET_DEVICE_PROC_ADDR(QueuePresentKHR);
+  }
 #if defined(OS_FUCHSIA)
   if (extension_names.find(VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME) !=
       extension_names.end()) {
@@ -130,6 +133,10 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
     // is supported so that we can render to that surface.
     params.extension_names.insert(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
   }
+#if defined(OS_FUCHSIA)
+  params.extension_names.insert(
+      VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME);
+#endif
 
   vk::PhysicalDevice physical_device;
   uint32_t main_queue_family;
