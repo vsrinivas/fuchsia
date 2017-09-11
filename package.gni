@@ -261,7 +261,7 @@ template("package") {
 
         write_file(archive_manifest, package_manifest_contents)
 
-        archiver_label = "//application/src/archiver($host_toolchain)"
+        archiver_label = "//garnet/bin/far($host_toolchain)"
         deps += [ archiver_label ]
 
         archiver_out_dir = get_label_info(archiver_label, "root_out_dir")

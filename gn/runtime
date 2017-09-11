@@ -7,10 +7,13 @@
         "mtl"
     ],
     "labels": [
-        "//application"
+        "//garnet/bin/appmgr",
+        "//garnet/bin/appmgr:tests",
+        "//garnet/bin/bootstrap",
+        "//garnet/bin/far"
     ],
     "packages": {
-        "run": "//application/src/run"
+        "run": "//garnet/bin/run"
     },
     "binaries": [
         {
