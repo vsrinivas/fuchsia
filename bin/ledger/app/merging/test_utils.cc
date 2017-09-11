@@ -41,15 +41,21 @@ TestWithPageStorage::AddKeyValueToJournal(const std::string& key,
         callback::Capture(MakeQuitTask(), &status, &object_id));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, status);
-    EXPECT_EQ(storage::Status::OK,
-              journal->Put(key, object_id, storage::KeyPriority::EAGER));
+
+    journal->Put(key, object_id, storage::KeyPriority::EAGER,
+                 callback::Capture(MakeQuitTask(), &status));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(storage::Status::OK, status);
   };
 }
 
 std::function<void(storage::Journal*)>
 TestWithPageStorage::DeleteKeyFromJournal(const std::string& key) {
-  return [key](storage::Journal* journal) {
-    EXPECT_EQ(storage::Status::OK, journal->Delete(key));
+  return [this, key](storage::Journal* journal) {
+    storage::Status status;
+    journal->Delete(key, callback::Capture(MakeQuitTask(), &status));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(storage::Status::OK, status);
   };
 }
 

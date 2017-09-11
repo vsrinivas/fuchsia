@@ -29,10 +29,12 @@ class FakeJournal : public Journal {
   Status Rollback();
 
   // Journal:
-  Status Put(convert::ExtendedStringView key,
-             ObjectIdView object_id,
-             KeyPriority priority) override;
-  Status Delete(convert::ExtendedStringView key) override;
+  void Put(convert::ExtendedStringView key,
+           ObjectIdView object_id,
+           KeyPriority priority,
+           std::function<void(Status)> callback) override;
+  void Delete(convert::ExtendedStringView key,
+              std::function<void(Status)> callback) override;
 
  private:
   FakeJournalDelegate* delegate_;

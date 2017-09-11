@@ -99,7 +99,8 @@ class PageDelegate {
   // new one and commits it before calling |callback|. This method is not
   // serialized, and should only be called from a callsite that is serialized.
   void RunInTransaction(
-      std::function<Status(storage::Journal* journal)> runnable,
+      std::function<void(storage::Journal*, std::function<void(Status)>)>
+          runnable,
       StatusCallback callback);
 
   void CommitJournal(

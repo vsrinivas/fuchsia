@@ -135,8 +135,10 @@ void ConflictResolverClient::OnNextMergeResult(
       break;
     }
     case ValueSource::DELETE: {
-      journal_->Delete(merged_value->key);
-      waiter->NewCallback()(storage::Status::OK, storage::ObjectId());
+      journal_->Delete(merged_value->key, [callback = waiter->NewCallback()](
+                                              storage::Status status) {
+        callback(status, storage::ObjectId());
+      });
       break;
     }
   }
@@ -245,21 +247,22 @@ void ConflictResolverClient::Merge(fidl::Array<MergedValuePtr> merged_values,
             return;
           }
 
+          auto waiter = callback::StatusWaiter<storage::Status>::Create(
+              storage::Status::OK);
           for (size_t i = 0; i < object_ids.size(); ++i) {
             if (object_ids[i].empty()) {
               continue;
             }
-            storage::Status status = weak_this->journal_->Put(
+            weak_this->journal_->Put(
                 merged_values[i]->key, object_ids[i],
                 merged_values[i]->priority == Priority::EAGER
                     ? storage::KeyPriority::EAGER
-                    : storage::KeyPriority::LAZY);
-            if (status != storage::Status::OK) {
-              callback(PageUtils::ConvertStatus(status));
-              return;
-            }
+                    : storage::KeyPriority::LAZY,
+                waiter->NewCallback());
           }
-          callback(Status::OK);
+          waiter->Finalize([callback](storage::Status status) {
+            callback(PageUtils::ConvertStatus(status));
+          });
         })));
       }));
 }

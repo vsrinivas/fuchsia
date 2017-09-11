@@ -20,13 +20,15 @@ class Journal {
 
   // Adds an entry with the given |key| and |object_id| to this |Journal|.
   // Returns |OK| on success or the error code otherwise.
-  virtual Status Put(convert::ExtendedStringView key,
-                     ObjectIdView object_id,
-                     KeyPriority priority) = 0;
+  virtual void Put(convert::ExtendedStringView key,
+                   ObjectIdView object_id,
+                   KeyPriority priority,
+                   std::function<void(Status)> callback) = 0;
 
   // Deletes the entry with the given |key| from this |Journal|. Returns |OK|
   // on success or the error code otherwise.
-  virtual Status Delete(convert::ExtendedStringView key) = 0;
+  virtual void Delete(convert::ExtendedStringView key,
+                      std::function<void(Status)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Journal);

@@ -184,12 +184,17 @@ void PageDelegate::Delete(fidl::Array<uint8_t> key,
       callback, fxl::MakeCopyable([ this, key = std::move(key) ](
                     Page::DeleteCallback callback) mutable {
 
-        RunInTransaction(fxl::MakeCopyable([key = std::move(key)](
-                             storage::Journal * journal) {
-                           return PageUtils::ConvertStatus(
-                               journal->Delete(key), Status::KEY_NOT_FOUND);
-                         }),
-                         std::move(callback));
+        RunInTransaction(
+            fxl::MakeCopyable([key = std::move(key)](
+                storage::Journal * journal,
+                std::function<void(Status)> callback) {
+              journal->Delete(key, [callback = std::move(callback)](
+                                       storage::Status status) {
+                callback(
+                    PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND));
+              });
+            }),
+            std::move(callback));
       }));
 }
 
@@ -297,18 +302,24 @@ void PageDelegate::PutInCommit(fidl::Array<uint8_t> key,
   RunInTransaction(
       fxl::MakeCopyable([
         key = std::move(key), value = std::move(value), priority
-      ](storage::Journal * journal) {
-        return PageUtils::ConvertStatus(journal->Put(key, value, priority));
+      ](storage::Journal * journal,
+        std::function<void(Status status)> callback) {
+        journal->Put(
+            key, value,
+            priority, [callback = std::move(callback)](storage::Status status) {
+              callback(PageUtils::ConvertStatus(status));
+            });
       }),
       std::move(callback));
 }
 
 void PageDelegate::RunInTransaction(
-    std::function<Status(storage::Journal* journal)> runnable,
+    std::function<void(storage::Journal*, std::function<void(Status)>)>
+        runnable,
     std::function<void(Status)> callback) {
   if (journal_) {
     // A transaction is in progress; add this change to it.
-    callback(runnable(journal_.get()));
+    runnable(journal_.get(), std::move(callback));
     return;
   }
   // No transaction is in progress; create one just for this change.
@@ -329,23 +340,27 @@ void PageDelegate::RunInTransaction(
       branch_tracker_.StopTransaction(nullptr);
       return;
     }
-    Status ledger_status = runnable(journal.get());
-    if (ledger_status != Status::OK) {
-      callback(ledger_status);
-      storage_->RollbackJournal(std::move(journal),
-                                [](storage::Status /*rollback_status*/) {});
-      branch_tracker_.StopTransaction(nullptr);
-      return;
-    }
+    runnable(
+        journal.get(),
+        fxl::MakeCopyable([ this, journal = std::move(journal),
+                            callback ](Status ledger_status) mutable {
+          if (ledger_status != Status::OK) {
+            callback(ledger_status);
+            storage_->RollbackJournal(
+                std::move(journal), [](storage::Status /*rollback_status*/) {});
+            branch_tracker_.StopTransaction(nullptr);
+            return;
+          }
 
-    CommitJournal(
-        std::move(journal),
-        [this, callback](Status status,
-                         std::unique_ptr<const storage::Commit> commit) {
-          branch_tracker_.StopTransaction(
-              status == Status::OK ? std::move(commit) : nullptr);
-          callback(status);
-        });
+          CommitJournal(
+              std::move(journal),
+              [this, callback](Status status,
+                               std::unique_ptr<const storage::Commit> commit) {
+                branch_tracker_.StopTransaction(
+                    status == Status::OK ? std::move(commit) : nullptr);
+                callback(status);
+              });
+        }));
   });
 }
 

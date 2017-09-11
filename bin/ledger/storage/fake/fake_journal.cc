@@ -23,14 +23,16 @@ Status FakeJournal::Rollback() {
   return delegate_->Rollback();
 }
 
-Status FakeJournal::Put(convert::ExtendedStringView key,
-                        ObjectIdView object_id,
-                        KeyPriority priority) {
-  return delegate_->SetValue(key, object_id, priority);
+void FakeJournal::Put(convert::ExtendedStringView key,
+                      ObjectIdView object_id,
+                      KeyPriority priority,
+                      std::function<void(Status)> callback) {
+  callback(delegate_->SetValue(key, object_id, priority));
 }
 
-Status FakeJournal::Delete(convert::ExtendedStringView key) {
-  return delegate_->Delete(key);
+void FakeJournal::Delete(convert::ExtendedStringView key,
+                         std::function<void(Status)> callback) {
+  callback(delegate_->Delete(key));
 }
 
 }  // namespace fake

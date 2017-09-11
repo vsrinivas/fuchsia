@@ -72,102 +72,78 @@ const JournalId& JournalDBImpl::GetId() const {
 void JournalDBImpl::Commit(
     std::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
-  if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
-    callback(Status::ILLEGAL_STATE, nullptr);
-    return;
-  }
+  serializer_.Serialize<Status, std::unique_ptr<const storage::Commit>>(
+      std::move(callback),
+      [this](std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+                 callback) {
+        if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
+          callback(Status::ILLEGAL_STATE, nullptr);
+          return;
+        }
 
-  GetParents([ this, callback = std::move(callback) ](
-      Status status,
-      std::vector<std::unique_ptr<const storage::Commit>> parents) mutable {
-    if (status != Status::OK) {
-      callback(status, nullptr);
-      return;
-    }
-    std::unique_ptr<Iterator<const EntryChange>> entries;
-    status = db_->GetJournalEntries(id_, &entries);
-    if (status != Status::OK) {
-      callback(status, nullptr);
-      return;
-    }
-    btree::ApplyChanges(
-        coroutine_service_, page_storage_, parents[0]->GetRootId(),
-        std::move(entries),
-        fxl::MakeCopyable([
-          this, parents = std::move(parents), callback = std::move(callback)
-        ](Status status, ObjectId object_id,
-          std::unordered_set<ObjectId> new_nodes) mutable {
+        GetParents([
+          this, callback = std::move(callback)
+        ](Status status,
+          std::vector<std::unique_ptr<const storage::Commit>> parents) mutable {
           if (status != Status::OK) {
             callback(status, nullptr);
             return;
           }
-          // If the commit is a no-op, return early.
-          if (parents.size() == 1 &&
-              parents.front()->GetRootId() == object_id) {
-            FXL_DCHECK(new_nodes.empty());
-            Rollback(fxl::MakeCopyable([
-              parent = std::move(parents.front()),
-              callback = std::move(callback)
-            ](Status status) mutable { callback(status, std::move(parent)); }));
+          std::unique_ptr<Iterator<const EntryChange>> changes;
+          status = db_->GetJournalEntries(id_, &changes);
+          if (status != Status::OK) {
+            callback(status, nullptr);
             return;
           }
-          std::unique_ptr<storage::Commit> commit =
-              CommitImpl::FromContentAndParents(page_storage_, object_id,
-                                                std::move(parents));
-          GetObjectsToSync(fxl::MakeCopyable([
-            this, new_nodes = std::move(new_nodes), commit = std::move(commit),
-            callback = std::move(callback)
-          ](Status status, std::vector<ObjectId> objects_to_sync) mutable {
-            if (status != Status::OK) {
-              callback(status, nullptr);
-              return;
-            }
+          CreateCommitFromChanges(std::move(parents), std::move(changes),
+                                  std::move(callback));
 
-            objects_to_sync.reserve(objects_to_sync.size() + new_nodes.size());
-            // TODO(qsr): When using C++17, move data out of the set using
-            // extract.
-            objects_to_sync.insert(objects_to_sync.end(), new_nodes.begin(),
-                                   new_nodes.end());
-            page_storage_->AddCommitFromLocal(
-                commit->Clone(), std::move(objects_to_sync), fxl::MakeCopyable([
-                  this, commit = std::move(commit),
-                  callback = std::move(callback)
-                ](Status status) mutable {
-                  valid_ = false;
-                  if (status != Status::OK) {
-                    callback(status, nullptr);
-                    return;
-                  }
-                  callback(db_->RemoveJournal(id_), std::move(commit));
-                }));
-          }));
-        }));
+        });
+      });
+}
+
+void JournalDBImpl::Rollback(std::function<void(Status)> callback) {
+  serializer_.Serialize<Status>(std::move(callback),
+                                [this](std::function<void(Status)> callback) {
+                                  RollbackInternal(std::move(callback));
+                                });
+}
+
+void JournalDBImpl::Put(convert::ExtendedStringView key,
+                        ObjectIdView object_id,
+                        KeyPriority priority,
+                        std::function<void(Status)> callback) {
+  serializer_.Serialize<Status>(std::move(callback), [
+    this, key = key.ToString(), object_id = object_id.ToString(), priority
+  ](std::function<void(Status)> callback) {
+    if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
+      callback(Status::ILLEGAL_STATE);
+      return;
+    }
+    Status s = db_->AddJournalEntry(id_, key, object_id, priority);
+    if (s != Status::OK) {
+      failed_operation_ = true;
+    }
+    callback(s);
   });
 }
 
-Status JournalDBImpl::Put(convert::ExtendedStringView key,
-                          ObjectIdView object_id,
-                          KeyPriority priority) {
-  if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
-    return Status::ILLEGAL_STATE;
-  }
-  Status s = db_->AddJournalEntry(id_, key, object_id, priority);
-  if (s != Status::OK) {
-    failed_operation_ = true;
-  }
-  return s;
-}
+void JournalDBImpl::Delete(convert::ExtendedStringView key,
+                           std::function<void(Status)> callback) {
+  serializer_.Serialize<Status>(
+      std::move(callback),
+      [ this, key = key.ToString() ](std::function<void(Status)> callback) {
+        if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
+          callback(Status::ILLEGAL_STATE);
+          return;
+        }
 
-Status JournalDBImpl::Delete(convert::ExtendedStringView key) {
-  if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
-    return Status::ILLEGAL_STATE;
-  }
-
-  Status s = db_->RemoveJournalEntry(id_, key);
-  if (s != Status::OK) {
-    failed_operation_ = true;
-  }
-  return s;
+        Status s = db_->RemoveJournalEntry(id_, key);
+        if (s != Status::OK) {
+          failed_operation_ = true;
+        }
+        callback(s);
+      });
 }
 
 void JournalDBImpl::GetParents(
@@ -184,16 +160,63 @@ void JournalDBImpl::GetParents(
   waiter->Finalize(std::move(callback));
 }
 
-void JournalDBImpl::Rollback(std::function<void(Status)> callback) {
-  if (!valid_) {
-    callback(Status::ILLEGAL_STATE);
-    return;
-  }
-  Status s = db_->RemoveJournal(id_);
-  if (s == Status::OK) {
-    valid_ = false;
-  }
-  callback(s);
+void JournalDBImpl::CreateCommitFromChanges(
+    std::vector<std::unique_ptr<const storage::Commit>> parents,
+    std::unique_ptr<Iterator<const EntryChange>> changes,
+    std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+        callback) {
+  btree::ApplyChanges(
+      coroutine_service_, page_storage_, parents[0]->GetRootId(),
+      std::move(changes),
+      fxl::MakeCopyable([
+        this, parents = std::move(parents), callback = std::move(callback)
+      ](Status status, ObjectId object_id,
+        std::unordered_set<ObjectId> new_nodes) mutable {
+        if (status != Status::OK) {
+          callback(status, nullptr);
+          return;
+        }
+        // If the commit is a no-op, return early.
+        if (parents.size() == 1 && parents.front()->GetRootId() == object_id) {
+          FXL_DCHECK(new_nodes.empty());
+          // We are in an operation from the serializer: make sure not to sent
+          // the rollback operation in the serializer as well, or a deadlock
+          // will be created.
+          RollbackInternal(fxl::MakeCopyable([
+            parent = std::move(parents.front()), callback = std::move(callback)
+          ](Status status) mutable { callback(status, std::move(parent)); }));
+          return;
+        }
+        std::unique_ptr<storage::Commit> commit =
+            CommitImpl::FromContentAndParents(page_storage_, object_id,
+                                              std::move(parents));
+        GetObjectsToSync(fxl::MakeCopyable([
+          this, new_nodes = std::move(new_nodes), commit = std::move(commit),
+          callback = std::move(callback)
+        ](Status status, std::vector<ObjectId> objects_to_sync) mutable {
+          if (status != Status::OK) {
+            callback(status, nullptr);
+            return;
+          }
+
+          objects_to_sync.reserve(objects_to_sync.size() + new_nodes.size());
+          // TODO(qsr): When using C++17, move data out of the set using
+          // extract.
+          objects_to_sync.insert(objects_to_sync.end(), new_nodes.begin(),
+                                 new_nodes.end());
+          page_storage_->AddCommitFromLocal(
+              commit->Clone(), std::move(objects_to_sync), fxl::MakeCopyable([
+                this, commit = std::move(commit), callback = std::move(callback)
+              ](Status status) mutable {
+                valid_ = false;
+                if (status != Status::OK) {
+                  callback(status, nullptr);
+                  return;
+                }
+                callback(db_->RemoveJournal(id_), std::move(commit));
+              }));
+        }));
+      }));
 }
 
 void JournalDBImpl::GetObjectsToSync(
@@ -228,6 +251,18 @@ void JournalDBImpl::GetObjectsToSync(
   std::copy(result_set.begin(), result_set.end(),
             std::back_inserter(objects_to_sync));
   callback(Status::OK, std::move(objects_to_sync));
+}
+
+void JournalDBImpl::RollbackInternal(std::function<void(Status)> callback) {
+  if (!valid_) {
+    callback(Status::ILLEGAL_STATE);
+    return;
+  }
+  Status s = db_->RemoveJournal(id_);
+  if (s == Status::OK) {
+    valid_ = false;
+  }
+  callback(s);
 }
 
 }  // namespace storage

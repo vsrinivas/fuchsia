@@ -39,6 +39,9 @@ class AutoMergeStrategy::AutoMerger {
       storage::Status status,
       std::unique_ptr<std::vector<storage::EntryChange>> right_changes,
       bool distinct);
+  void ApplyDiffOnJournal(
+      std::unique_ptr<storage::Journal> journal,
+      std::unique_ptr<std::vector<storage::EntryChange>> diff);
 
   storage::PageStorage* const storage_;
   PageManager* const manager_;
@@ -228,27 +231,49 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
           weak_this->Done(PageUtils::ConvertStatus(s));
           return;
         }
-        for (const storage::EntryChange& change : *right_changes) {
-          if (change.deleted) {
-            journal->Delete(change.entry.key);
-          } else {
-            journal->Put(change.entry.key, change.entry.object_id,
-                         change.entry.priority);
-          }
-        }
-        weak_this->storage_->CommitJournal(
-            std::move(journal), [weak_this = std::move(weak_this)](
-                                    storage::Status s,
-                                    std::unique_ptr<
-                                        const storage::Commit> /*commit*/) {
-              if (s != storage::Status::OK) {
-                FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
-              }
-              if (weak_this) {
-                weak_this->Done(PageUtils::ConvertStatus(s));
-              }
-            });
+        weak_this->ApplyDiffOnJournal(std::move(journal),
+                                      std::move(right_changes));
       }));
+}
+
+void AutoMergeStrategy::AutoMerger::ApplyDiffOnJournal(
+    std::unique_ptr<storage::Journal> journal,
+    std::unique_ptr<std::vector<storage::EntryChange>> diff) {
+  auto waiter =
+      callback::StatusWaiter<storage::Status>::Create(storage::Status::OK);
+  for (const storage::EntryChange& change : *diff) {
+    if (change.deleted) {
+      journal->Delete(change.entry.key, waiter->NewCallback());
+    } else {
+      journal->Put(change.entry.key, change.entry.object_id,
+                   change.entry.priority, waiter->NewCallback());
+    }
+  }
+
+  waiter->Finalize(fxl::MakeCopyable([
+    weak_this = weak_factory_.GetWeakPtr(), journal = std::move(journal)
+  ](storage::Status s) mutable {
+    if (!weak_this) {
+      return;
+    }
+    if (s != storage::Status::OK) {
+      FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
+      weak_this->Done(PageUtils::ConvertStatus(s));
+      return;
+    }
+    weak_this->storage_->CommitJournal(
+        std::move(journal), [weak_this = std::move(weak_this)](
+                                storage::Status s,
+                                std::unique_ptr<
+                                    const storage::Commit> /*commit*/) {
+          if (s != storage::Status::OK) {
+            FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
+          }
+          if (weak_this) {
+            weak_this->Done(PageUtils::ConvertStatus(s));
+          }
+        });
+  }));
 }
 
 void AutoMergeStrategy::AutoMerger::Cancel() {

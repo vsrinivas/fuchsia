@@ -61,7 +61,7 @@ class OperationSerializer {
       this, callback = std::move(callback), operation = std::move(operation)
     ] {
       operation([ this, callback = std::move(callback) ](C... args) {
-        callback(args...);
+        callback(std::forward<C>(args)...);
         queued_operations_.pop();
         if (!queued_operations_.empty()) {
           queued_operations_.front()();

@@ -55,6 +55,41 @@ class PageDbTest : public ::test::TestWithCoroutines {
   }
 
  protected:
+  ::testing::AssertionResult PutInJournal(Journal* journal,
+                                          const std::string& key,
+                                          const std::string& object_id,
+                                          KeyPriority priority) {
+    Status status;
+    journal->Put(key, object_id, priority,
+                 callback::Capture(MakeQuitTask(), &status));
+
+    if (RunLoopWithTimeout()) {
+      return ::testing::AssertionFailure()
+             << "Journal::Put for key " << key << " didn't return.";
+    }
+    if (status != Status::OK) {
+      return ::testing::AssertionFailure() << "Journal::Put for key " << key
+                                           << " returned status: " << status;
+    }
+    return ::testing::AssertionSuccess();
+  }
+
+  ::testing::AssertionResult DeleteFromJournal(Journal* journal,
+                                               const std::string& key) {
+    Status status;
+    journal->Delete(key, callback::Capture(MakeQuitTask(), &status));
+
+    if (RunLoopWithTimeout()) {
+      return ::testing::AssertionFailure()
+             << "Journal::Delete for key " << key << " didn't return.";
+    }
+    if (status != Status::OK) {
+      return ::testing::AssertionFailure() << "Journal::Delete for key " << key
+                                           << " returned status: " << status;
+    }
+    return ::testing::AssertionSuccess();
+  }
+
   files::ScopedTempDir tmp_dir_;
   PageStorageImpl page_storage_;
   PageDbImpl page_db_;
@@ -181,13 +216,13 @@ TEST_F(PageDbTest, JournalEntries) {
     std::unique_ptr<Journal> implicit_journal;
     EXPECT_EQ(Status::OK, page_db_.CreateJournal(handler, JournalType::IMPLICIT,
                                                  commit_id, &implicit_journal));
-    EXPECT_EQ(Status::OK,
-              implicit_journal->Put("add-key-1", "value1", KeyPriority::LAZY));
-    EXPECT_EQ(Status::OK,
-              implicit_journal->Put("add-key-2", "value2", KeyPriority::EAGER));
-    EXPECT_EQ(Status::OK,
-              implicit_journal->Put("add-key-1", "value3", KeyPriority::LAZY));
-    EXPECT_EQ(Status::OK, implicit_journal->Delete("remove-key"));
+    EXPECT_TRUE(PutInJournal(implicit_journal.get(), "add-key-1", "value1",
+                             KeyPriority::LAZY));
+    EXPECT_TRUE(PutInJournal(implicit_journal.get(), "add-key-2", "value2",
+                             KeyPriority::EAGER));
+    EXPECT_TRUE(PutInJournal(implicit_journal.get(), "add-key-1", "value3",
+                             KeyPriority::LAZY));
+    EXPECT_TRUE(DeleteFromJournal(implicit_journal.get(), "remove-key"));
 
     EntryChange expected_changes[] = {
         NewEntryChange("add-key-1", "value3", KeyPriority::LAZY),
