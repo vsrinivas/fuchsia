@@ -206,6 +206,10 @@ struct mx_loader_svc_msg {
 // arg=0, data[] configuration string to affect later loading (asciiz)
 // e.g. "asan"
 
+#define LOADER_SVC_OP_CLONE 8
+// obtain a new loader service connection/context
+// arg=0, data[] empty, request includes channel for new connection
+
 #ifdef __cplusplus
 }
 #endif

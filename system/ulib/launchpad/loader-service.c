@@ -182,20 +182,15 @@ static mx_status_t default_load_fn(void* cookie, uint32_t load_op,
                                    mx_handle_t request_handle,
                                    const char* fn, mx_handle_t* out) {
     loader_service_t* svc = cookie;
-
-    if (request_handle != MX_HANDLE_INVALID &&
-        load_op != LOADER_SVC_OP_PUBLISH_DATA_SINK) {
-        fprintf(stderr, "dlsvc: unused handle (%#x) opcode=%#x data=\"%s\"\n",
-                request_handle, load_op, fn);
-        mx_handle_close(request_handle);
-    }
+    mx_status_t status;
 
     switch (load_op) {
     case LOADER_SVC_OP_CONFIG: {
         size_t len = strlen(fn);
         if (len < 2 || len >= sizeof(svc->config_prefix) - 1 ||
             strchr(fn, '/') != NULL) {
-            return MX_ERR_INVALID_ARGS;
+            status = MX_ERR_INVALID_ARGS;
+            break;
         }
         strncpy(svc->config_prefix, fn, len + 1);
         svc->config_exclusive = false;
@@ -205,7 +200,8 @@ static mx_status_t default_load_fn(void* cookie, uint32_t load_op,
         }
         svc->config_prefix[len] = '/';
         svc->config_prefix[len + 1] = '\0';
-        return MX_OK;
+        status = MX_OK;
+        break;
     }
     case LOADER_SVC_OP_LOAD_OBJECT:
         // If a prefix is configured, try loading with that prefix first
@@ -213,16 +209,17 @@ static mx_status_t default_load_fn(void* cookie, uint32_t load_op,
             size_t maxlen = PREFIX_MAX + strlen(fn) + 1;
             char pfn[maxlen];
             snprintf(pfn, maxlen, "%s%s", svc->config_prefix, fn);
-            mx_status_t status = svc->ops->load_object(svc->ctx, pfn, out);
-            if (status == MX_OK) {
-                return MX_OK;
+            if (((status = svc->ops->load_object(svc->ctx, pfn, out)) == MX_OK) ||
+                svc->config_exclusive) {
+                // if loading with prefix succeeds, or loading
+                // with prefix is configured to be exclusive of
+                // non-prefix loading, stop here
+                break;
             }
-            if (svc->config_exclusive) {
-                return status;
-            }
-            // if non-exclusive, try loading without the prefix
+            // otherwise, if non-exclusive, try loading without the prefix
         }
-        return svc->ops->load_object(svc->ctx, fn, out);
+        status = svc->ops->load_object(svc->ctx, fn, out);
+        break;
     case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
     case LOADER_SVC_OP_LOAD_DEBUG_CONFIG:
         // When loading a script interpreter or debug configuration file,
@@ -234,14 +231,27 @@ static mx_status_t default_load_fn(void* cookie, uint32_t load_op,
                     fn);
             return MX_ERR_NOT_FOUND;
         }
-        return svc->ops->load_abspath(svc->ctx, fn, out);
+        status = svc->ops->load_abspath(svc->ctx, fn, out);
+        break;
     case LOADER_SVC_OP_PUBLISH_DATA_SINK:
-        return svc->ops->publish_data_sink(svc->ctx, fn, request_handle);
+        status = svc->ops->publish_data_sink(svc->ctx, fn, request_handle);
+        request_handle = MX_HANDLE_INVALID;
+        break;
+    case LOADER_SVC_OP_CLONE:
+        status = loader_service_attach(svc, request_handle);
+        request_handle = MX_HANDLE_INVALID;
+        break;
     default:
         __builtin_trap();
     }
 
-    return MX_ERR_NOT_FOUND;
+    if (request_handle != MX_HANDLE_INVALID) {
+        fprintf(stderr, "dlsvc: unused handle (%#x) opcode=%#x data=\"%s\"\n",
+                request_handle, load_op, fn);
+        mx_handle_close(request_handle);
+    }
+
+    return status;
 }
 
 struct startup {
@@ -286,6 +296,7 @@ static mx_status_t handle_loader_rpc(mx_handle_t h,
     case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
     case LOADER_SVC_OP_LOAD_DEBUG_CONFIG:
     case LOADER_SVC_OP_PUBLISH_DATA_SINK:
+    case LOADER_SVC_OP_CLONE:
         // TODO(MG-491): Use a threadpool for loading, and guard against
         // other starvation attacks.
         r = (*loader)(loader_arg, msg->opcode,
@@ -391,10 +402,7 @@ static mx_status_t multiloader_cb(mx_handle_t h, void* cb, void* cookie) {
     return handle_loader_rpc(h, default_load_fn, svc, svc->dispatcher_log);
 }
 
-// TODO(dbort): Provide a name/id for the process that this handle will
-// be used for, to make error messages more useful? Would need to pass
-// the same through IOCTL_DMCTL_GET_LOADER_SERVICE_CHANNEL.
-mx_status_t loader_service_connect(loader_service_t* svc, mx_handle_t* out) {
+mx_status_t loader_service_attach(loader_service_t* svc, mx_handle_t h) {
     if (svc == NULL) {
         return MX_ERR_INVALID_ARGS;
     }
@@ -416,20 +424,32 @@ mx_status_t loader_service_connect(loader_service_t* svc, mx_handle_t* out) {
             svc->dispatcher_log = MX_HANDLE_INVALID;
         }
     }
-    mx_handle_t h0, h1;
-    if ((r = mx_channel_create(0, &h0, &h1)) < 0) {
-        goto done;
-    }
-    if ((r = mxio_dispatcher_add(svc->dispatcher, h1, NULL, svc)) < 0) {
-        mx_handle_close(h0);
-        mx_handle_close(h1);
-    } else {
-        *out = h0;
-    }
+
+    r = mxio_dispatcher_add(svc->dispatcher, h, NULL, svc);
 
 done:
     mtx_unlock(&svc->dispatcher_lock);
+    if (r != MX_OK) {
+        mx_handle_close(r);
+    }
     return r;
+}
+
+// TODO(dbort): Provide a name/id for the process that this handle will
+// be used for, to make error messages more useful? Would need to pass
+// the same through IOCTL_DMCTL_GET_LOADER_SERVICE_CHANNEL.
+mx_status_t loader_service_connect(loader_service_t* svc, mx_handle_t* out) {
+    mx_handle_t h0, h1;
+    mx_status_t r;
+    if ((r = mx_channel_create(0, &h0, &h1)) != MX_OK) {
+        return r;
+    }
+    if ((r = loader_service_attach(svc, h1)) != MX_OK) {
+        mx_handle_close(h0);
+        return r;
+    }
+    *out = h0;
+    return MX_OK;
 }
 
 static bool force_local_loader_service = false;

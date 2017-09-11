@@ -64,6 +64,9 @@ mx_status_t loader_service_create_fs(const char* name, loader_service_t** out);
 // Returns a new dl_set_loader_service-compatible loader service channel.
 mx_status_t loader_service_connect(loader_service_t* svc, mx_handle_t* out);
 
+// Same as connect except caller provides the channel endpoint (which
+// is connected on success, closed on failure)
+mx_status_t loader_service_attach(loader_service_t* svc, mx_handle_t channel);
 
 typedef struct loader_service_ops {
     // attempt to load a DSO from suitable library paths
