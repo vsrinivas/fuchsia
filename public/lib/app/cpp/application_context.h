@@ -35,7 +35,7 @@ class ApplicationContext {
   // retrieve the handles supplied to the application by the application
   // manager.
   //
-  // This function will call FTL_CHECK and stack dump if the environment is
+  // This function will call FXL_CHECK and stack dump if the environment is
   // null. However, a null environment services pointer is allowed.
   //
   // The returned unique_ptr is never null.
@@ -98,7 +98,7 @@ class ApplicationContext {
   mx::channel service_root_;
   ApplicationLauncherPtr launcher_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ApplicationContext);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationContext);
 };
 
 }  // namespace app
