@@ -5,8 +5,8 @@
 #include <cstdio>
 #include <fcntl.h>
 
-#include "application/lib/app/application_context.h"
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/connect.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "apps/network/services/url_loader.fidl.h"
 #include "lib/ftl/files/unique_fd.h"

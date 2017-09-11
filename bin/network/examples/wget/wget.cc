@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/lib/app/application_context.h"
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/connect.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "apps/network/services/url_loader.fidl.h"
 #include "lib/ftl/macros.h"

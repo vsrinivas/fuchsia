@@ -8,7 +8,7 @@ executable("wget") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/network/services",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",

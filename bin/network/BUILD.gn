@@ -26,7 +26,7 @@ executable("network") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/network/services",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",

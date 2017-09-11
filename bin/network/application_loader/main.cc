@@ -4,8 +4,8 @@
 
 #include <unordered_map>
 
-#include "application/lib/app/application_context.h"
-#include "application/services/application_loader.fidl.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/app/fidl/application_loader.fidl.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/functional/make_copyable.h"
