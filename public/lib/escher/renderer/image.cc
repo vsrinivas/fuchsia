@@ -5,6 +5,7 @@
 #include "lib/escher/renderer/image.h"
 
 #include "lib/escher/impl/vulkan_utils.h"
+#include "lib/escher/resources/resource_manager.h"
 #include "lib/escher/vk/gpu_mem.h"
 
 namespace escher {
@@ -13,6 +14,23 @@ const ResourceTypeInfo Image::kTypeInfo("Image",
                                         ResourceType::kResource,
                                         ResourceType::kWaitableResource,
                                         ResourceType::kImage);
+
+ImagePtr Image::New(ResourceManager* image_owner,
+                    ImageInfo info,
+                    vk::Image vk_image,
+                    GpuMemPtr mem,
+                    bool bind_image_memory) {
+  if (mem && bind_image_memory) {
+    auto bind_result = image_owner->device().bindImageMemory(
+        vk_image, mem->base(), mem->offset());
+    if (bind_result != vk::Result::eSuccess) {
+      FXL_DLOG(ERROR) << "vkBindImageMemory failed: "
+                      << vk::to_string(bind_result);
+      return nullptr;
+    }
+  }
+  return fxl::AdoptRef(new Image(image_owner, info, vk_image, mem));
+}
 
 Image::Image(ResourceManager* image_owner,
              ImageInfo info,

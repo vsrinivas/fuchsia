@@ -36,14 +36,20 @@ class Image : public WaitableResource {
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
-  // Returns image_ and mem_ to the owner.
-  ~Image() override;
-
   // Constructor.  In some cases it is necessary to wrap an un-owned vk::Image,
   // which should not be destroyed when this Image is destroyed (e.g. when
   // working with images associated with a vk::SwapchainKHR); this is done by
   // passing nullptr as the |mem| argument.
-  Image(ResourceManager* image_owner, ImageInfo info, vk::Image, GpuMemPtr mem);
+  // If |mem| is passed and |bind_image_memory| is true, this method also binds
+  // the memory to the image.
+  static ImagePtr New(ResourceManager* image_owner,
+                      ImageInfo info,
+                      vk::Image,
+                      GpuMemPtr mem,
+                      bool bind_image_memory = true);
+
+  // Returns image_ and mem_ to the owner.
+  ~Image() override;
 
   const ImageInfo& info() const { return info_; }
   vk::Image get() const { return image_; }
@@ -56,6 +62,13 @@ class Image : public WaitableResource {
   // Offset of the Image within it's GpuMem + the offset of the GpuMem within
   // its slab.  NOTE: not the same as memory()->offset().
   vk::DeviceSize memory_offset() const;
+
+ protected:
+  // Constructor.  In some cases it is necessary to wrap an un-owned vk::Image,
+  // which should not be destroyed when this Image is destroyed (e.g. when
+  // working with images associated with a vk::SwapchainKHR); this is done by
+  // passing nullptr as the |mem| argument.
+  Image(ResourceManager* image_owner, ImageInfo info, vk::Image, GpuMemPtr mem);
 
  private:
   const ImageInfo info_;

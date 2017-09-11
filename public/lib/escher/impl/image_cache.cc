@@ -30,11 +30,11 @@ ImagePtr ImageCache::NewImage(const ImageInfo& info) {
   // Allocate memory and bind it to the image.
   vk::MemoryRequirements reqs = device().getImageMemoryRequirements(image);
   GpuMemPtr memory = allocator_->Allocate(reqs, info.memory_flags);
-  vk::Result result =
-      device().bindImageMemory(image, memory->base(), memory->offset());
-  FXL_CHECK(result == vk::Result::eSuccess);
 
-  return fxl::MakeRefCounted<Image>(this, info, image, std::move(memory));
+  ImagePtr escher_image = Image::New(this, info, image, std::move(memory));
+  FXL_CHECK(escher_image);
+
+  return escher_image;
 }
 
 ImagePtr ImageCache::FindImage(const ImageInfo& info) {

@@ -15,6 +15,9 @@ class GpuUploader;
 }
 namespace image_utils {
 
+// Returns the number of bytes per pixel for the given format.
+size_t BytesPerPixel(vk::Format format);
+
 // Helper function that creates a VkImage given the parameters in ImageInfo.
 // This does not bind the the VkImage to memory; the caller must do that
 // separately after calling this function.

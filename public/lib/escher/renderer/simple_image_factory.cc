@@ -24,12 +24,10 @@ ImagePtr SimpleImageFactory::NewImage(const ImageInfo& info) {
   vk::MemoryRequirements reqs =
       resource_manager_->device().getImageMemoryRequirements(image);
   escher::GpuMemPtr memory = allocator_->Allocate(reqs, info.memory_flags);
-  vk::Result result = resource_manager_->device().bindImageMemory(
-      image, memory->base(), memory->offset());
-  FXL_CHECK(result == vk::Result::eSuccess);
-
-  return fxl::MakeRefCounted<Image>(resource_manager_, info, image,
-                                    std::move(memory));
+  ImagePtr escher_image =
+      Image::New(resource_manager_, info, image, std::move(memory));
+  FXL_CHECK(escher_image);
+  return escher_image;
 }
 
 }  // namespace escher

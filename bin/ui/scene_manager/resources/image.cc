@@ -27,13 +27,12 @@ Image::Image(Session* session,
              GpuMemoryPtr memory,
              escher::ImageInfo image_info,
              vk::Image vk_image)
-    : ImageBase(session, id, Image::kTypeInfo),
-      memory_(std::move(memory)),
-      image_(fxl::MakeRefCounted<escher::Image>(
-          session->engine()->escher_resource_recycler(),
-          image_info,
-          vk_image,
-          static_cast<GpuMemory*>(memory_.get())->escher_gpu_mem())) {}
+    : ImageBase(session, id, Image::kTypeInfo), memory_(std::move(memory)) {
+  image_ = escher::Image::New(
+      session->engine()->escher_resource_recycler(), image_info, vk_image,
+      static_cast<GpuMemory*>(memory_.get())->escher_gpu_mem());
+  FXL_CHECK(image_);
+}
 
 ImagePtr Image::New(Session* session,
                     scenic::ResourceId id,
@@ -125,6 +124,7 @@ ImagePtr Image::New(Session* session,
         session->engine()->escher_gpu_uploader(), pixel_format,
         image_info->width, image_info->height,
         static_cast<uint8_t*>(host_memory->memory_base()) + memory_offset);
+
     return fxl::AdoptRef(new Image(session, id, std::move(host_memory),
                                    std::move(escher_image)));
 
@@ -163,9 +163,6 @@ ImagePtr Image::New(Session* session,
       return nullptr;
     }
 
-    vk::DeviceMemory vk_mem = gpu_memory->escher_gpu_mem()->base();
-    VkDeviceSize offset = memory_offset;
-    vk_device.bindImageMemory(vk_image, vk_mem, offset);
     return fxl::AdoptRef(new Image(session, id, std::move(gpu_memory),
                                    escher_image_info, vk_image));
   } else {
@@ -178,9 +175,9 @@ ImagePtr Image::NewForTesting(Session* session,
                               scenic::ResourceId id,
                               escher::ResourceManager* image_owner,
                               MemoryPtr host_memory) {
-  escher::ImagePtr escher_image = fxl::MakeRefCounted<escher::Image>(
+  escher::ImagePtr escher_image = escher::Image::New(
       image_owner, escher::ImageInfo(), vk::Image(), nullptr);
-
+  FXL_CHECK(escher_image);
   return fxl::AdoptRef(new Image(session, id, host_memory, escher_image));
 }
 

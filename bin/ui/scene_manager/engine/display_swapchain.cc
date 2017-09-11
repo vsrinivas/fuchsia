@@ -210,8 +210,9 @@ void DisplaySwapchain::InitializeVulkanSwapchain(
       image_info.width = swapchain_extent.width;
       image_info.height = swapchain_extent.height;
       image_info.usage = vk::ImageUsageFlagBits::eColorAttachment;
-      escher_images.push_back(fxl::MakeRefCounted<escher::Image>(
-          recycler, image_info, im, nullptr));
+      auto escher_image = escher::Image::New(recycler, image_info, im, nullptr);
+      FXL_CHECK(escher_image);
+      escher_images.push_back(escher_image);
     }
     swapchain_ = escher::VulkanSwapchain(
         swapchain, escher_images, swapchain_extent.width,

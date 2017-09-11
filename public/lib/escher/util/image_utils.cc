@@ -23,6 +23,19 @@ struct RGBA {
 namespace escher {
 namespace image_utils {
 
+size_t BytesPerPixel(vk::Format format) {
+  switch (format) {
+    case vk::Format::eR8G8B8A8Unorm:
+    case vk::Format::eB8G8R8A8Unorm:
+      return 4;
+    case vk::Format::eR8Unorm:
+      return 1;
+    default:
+      FXL_CHECK(false);
+      return 0;
+  }
+}
+
 vk::Image CreateVkImage(const vk::Device& device, ImageInfo info) {
   vk::ImageCreateInfo create_info;
   create_info.imageType = vk::ImageType::e2D;
@@ -96,18 +109,7 @@ ImagePtr NewImageFromPixels(ImageFactory* image_factory,
   FXL_DCHECK(image_factory);
   FXL_DCHECK(gpu_uploader);
 
-  size_t bytes_per_pixel = 0;
-  switch (format) {
-    case vk::Format::eR8G8B8A8Unorm:
-    case vk::Format::eB8G8R8A8Unorm:
-      bytes_per_pixel = 4;
-      break;
-    case vk::Format::eR8Unorm:
-      bytes_per_pixel = 1;
-      break;
-    default:
-      FXL_CHECK(false);
-  }
+  size_t bytes_per_pixel = BytesPerPixel(format);
 
   auto writer = gpu_uploader->GetWriter(width * height * bytes_per_pixel);
   memcpy(writer.ptr(), pixels, width * height * bytes_per_pixel);
