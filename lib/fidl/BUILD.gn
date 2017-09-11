@@ -11,7 +11,7 @@ source_set("app_client") {
   ]
 
   public_deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
   ]
 
   deps = [
@@ -88,7 +88,7 @@ source_set("scope") {
   ]
 
   public_deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
   ]
 
   deps = [
@@ -103,8 +103,8 @@ source_set("single_service_app") {
   ]
 
   public_deps = [
-    "//application/lib/app",
-    "//application/services",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
     "//apps/modular/services/lifecycle",
     "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
@@ -119,7 +119,7 @@ source_set("view_host") {
   ]
 
   public_deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
   ]
 
   deps = [
@@ -169,7 +169,7 @@ source_set("app_client_unittest") {
   deps = [
     ":app_client",
     ":unittest_fidl",
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/modular/lib/testing:test_with_message_loop",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",

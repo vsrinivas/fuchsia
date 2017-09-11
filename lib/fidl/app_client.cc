@@ -10,7 +10,7 @@
 
 #include <fcntl.h>
 
-#include "application/services/flat_namespace.fidl.h"
+#include "lib/app/fidl/flat_namespace.fidl.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/unique_fd.h"
 

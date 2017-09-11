@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "apps/modular/src/agent_runner/agent_runner.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/tasks/message_loop.h"

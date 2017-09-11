@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include "application/services/application_launcher.fidl.h"
+#include "lib/app/fidl/application_launcher.fidl.h"
 #include "apps/modular/lib/fidl/app_client.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/module/module_controller.fidl.h"

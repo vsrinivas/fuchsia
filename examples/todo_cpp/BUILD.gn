@@ -6,7 +6,7 @@ executable("todo_cpp") {
   output_name = "example_todo_headless"
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
     "//apps/modular/services/component",

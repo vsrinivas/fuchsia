@@ -5,7 +5,7 @@
 #ifndef APPS_MODULAR_SRC_DEVICE_RUNNER_USER_PROVIDER_IMPL_H_
 #define APPS_MODULAR_SRC_DEVICE_RUNNER_USER_PROVIDER_IMPL_H_
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/modular/services/auth/account_provider.fidl.h"
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/device/user_provider.fidl.h"

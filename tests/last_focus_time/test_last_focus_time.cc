@@ -5,8 +5,8 @@
 #include <memory>
 #include <string>
 
-#include "application/lib/app/connect.h"
-#include "application/services/service_provider.fidl.h"
+#include "lib/app/cpp/connect.h"
+#include "lib/app/fidl/service_provider.fidl.h"
 #include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/testing.h"

@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "apps/maxwell/services/suggestion/proposal.fidl.h"
 #include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
 #include "apps/modular/lib/fidl/single_service_app.h"

@@ -12,7 +12,7 @@ fidl("module") {
   ]
 
   deps = [
-    "//application/services:service_provider",
+    "//garnet/public/lib/app/fidl:service_provider",
     "//apps/maxwell/services/user",
     "//apps/modular/services/component",
     "//apps/modular/services/story",

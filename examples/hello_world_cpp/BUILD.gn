@@ -14,7 +14,7 @@ group("hello_world_cpp") {
 executable("hello_app_parent") {
   deps = [
     ":interfaces",
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/mtl",
   ]
 
@@ -26,7 +26,7 @@ executable("hello_app_parent") {
 executable("hello_app_child") {
   deps = [
     ":interfaces",
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/mtl",
   ]
 

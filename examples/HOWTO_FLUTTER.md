@@ -103,7 +103,7 @@ import("//flutter/build/flutter_app.gni")
 flutter_app("example_flutter_hello_world") {
   main_dart = "lib/main.dart"
   deps = [
-    "//application/lib/app/dart",               # needed for ApplicationContext
+    "//garnet/public/lib/app/dart",               # needed for ApplicationContext
     "//apps/modular/services/module:module_dart", # module fidl dart bindings
     "//apps/modular/services/story:story_dart", # story fidl dart bindings
     "//garnet/public/lib/ui/views/fidl:fidl_dart",  # view fidl dart bindings
@@ -165,8 +165,8 @@ fuchsia looks a bit different than normal dart packages. Let's look at the
 import statements in `main.dart` of the hello_world example.
 
 ```dart
-import 'package:application.lib.app.dart/app.dart';
-import 'package:application.services/service_provider.fidl.dart';
+import 'package:lib.app.dart/app.dart';
+import 'package:lib.app.fidl/service_provider.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
 import 'package:apps.modular.services.module/module.fidl.dart';
 import 'package:apps.modular.services.module/module_context.fidl.dart';

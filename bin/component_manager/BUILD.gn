@@ -18,7 +18,7 @@ executable("component_manager_main") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/modular/services/component",
     "//apps/network/services",
     "//garnet/public/lib/ftl",

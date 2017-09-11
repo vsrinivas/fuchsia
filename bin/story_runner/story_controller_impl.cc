@@ -6,10 +6,10 @@
 
 #include <memory>
 
-#include "application/lib/app/application_context.h"
-#include "application/lib/app/connect.h"
-#include "application/services/application_launcher.fidl.h"
-#include "application/services/service_provider.fidl.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/connect.h"
+#include "lib/app/fidl/application_launcher.fidl.h"
+#include "lib/app/fidl/service_provider.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/ledger/storage.h"

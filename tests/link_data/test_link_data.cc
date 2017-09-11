@@ -5,7 +5,7 @@
 #include <memory>
 #include <utility>
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "apps/modular/examples/counter_cpp/store.h"
 #include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"

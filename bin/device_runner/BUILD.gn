@@ -25,8 +25,8 @@ executable("device_runner") {
 
   deps = [
     ":lib",
-    "//application/lib/app",
-    "//application/services",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
     "//apps/modular/lib/fidl:app_client",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:scope",
@@ -54,8 +54,8 @@ source_set("lib") {
 
   deps = [
     ":users",
-    "//application/lib/app",
-    "//application/services",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
     "//apps/modular/lib/fidl:app_client",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:scope",
@@ -78,8 +78,8 @@ executable("device_runner_monitor") {
   ]
 
   deps = [
-    "//application/lib/app",
-    "//application/services",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
     "//apps/modular/services/device",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
@@ -110,7 +110,7 @@ source_set("unittests") {
 
   deps = [
     ":lib",
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/modular/lib/testing:test_with_message_loop",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",

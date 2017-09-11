@@ -14,8 +14,8 @@
 
 #include <trace-provider/provider.h>
 
-#include "application/lib/app/application_context.h"
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/connect.h"
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/auth/account_provider.fidl.h"

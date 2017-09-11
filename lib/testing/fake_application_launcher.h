@@ -8,7 +8,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "application/services/application_launcher.fidl.h"
+#include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"

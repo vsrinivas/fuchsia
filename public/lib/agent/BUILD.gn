@@ -12,7 +12,7 @@ fidl("agent") {
   ]
 
   deps = [
-    "//application/services:service_provider",
+    "//garnet/public/lib/app/fidl:service_provider",
     "//apps/maxwell/services/user",
     "//apps/modular/services/agent/agent_controller",
     "//apps/modular/services/auth",

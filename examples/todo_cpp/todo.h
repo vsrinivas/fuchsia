@@ -7,7 +7,7 @@
 
 #include <random>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/examples/todo_cpp/generator.h"
 #include "apps/modular/services/component/component_context.fidl.h"

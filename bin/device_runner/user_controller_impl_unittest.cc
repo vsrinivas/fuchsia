@@ -4,7 +4,7 @@
 
 #include "apps/modular/src/device_runner/user_controller_impl.h"
 
-#include "application/services/application_launcher.fidl.h"
+#include "lib/app/fidl/application_launcher.fidl.h"
 #include "apps/modular/lib/testing/test_with_message_loop.h"
 #include "gtest/gtest.h"
 

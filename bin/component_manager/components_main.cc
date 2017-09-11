@@ -4,9 +4,9 @@
 
 #include <iostream>
 
-#include "application/lib/app/application_context.h"
-#include "application/lib/app/connect.h"
-#include "application/services/service_provider.fidl.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/connect.h"
+#include "lib/app/fidl/service_provider.fidl.h"
 #include "apps/modular/services/component/component.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"

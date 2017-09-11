@@ -5,7 +5,7 @@
 #include <memory>
 #include <utility>
 
-#include "application/services/service_provider.fidl.h"
+#include "lib/app/fidl/service_provider.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"

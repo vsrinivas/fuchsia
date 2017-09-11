@@ -5,7 +5,7 @@
 #ifndef APPS_MODULAR_LIB_TESTING_COMPONENT_BASE_H_
 #define APPS_MODULAR_LIB_TESTING_COMPONENT_BASE_H_
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"

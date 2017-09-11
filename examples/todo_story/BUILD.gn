@@ -13,7 +13,7 @@ group("todo_story") {
 flutter_app("example_todo_story") {
   main_dart = "lib/main.dart"
   deps = [
-    "//application/lib/app/dart",
+    "//garnet/public/lib/app/dart",
     "//apps/modular/services/lifecycle:lifecycle_dart",
     "//apps/modular/services/module:module_dart",
     "//apps/modular/services/story:story_dart",

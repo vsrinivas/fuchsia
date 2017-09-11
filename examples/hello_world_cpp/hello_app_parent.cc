@@ -7,8 +7,8 @@
 #include <memory>
 #include <string>
 
-#include "application/lib/app/application_context.h"
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/connect.h"
 #include "apps/modular/examples/hello_world_cpp/hello.fidl.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/macros.h"

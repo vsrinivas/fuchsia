@@ -6,8 +6,8 @@
 #include <sstream>
 #include <string>
 
-#include "application/lib/app/connect.h"
-#include "application/services/service_provider.fidl.h"
+#include "lib/app/cpp/connect.h"
+#include "lib/app/fidl/service_provider.fidl.h"
 #include "apps/maxwell/lib/context/formatting.h"
 #include "apps/maxwell/services/context/context_writer.fidl.h"
 #include "apps/maxwell/services/context/context_reader.fidl.h"

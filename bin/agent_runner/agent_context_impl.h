@@ -7,9 +7,9 @@
 
 #include <string>
 
-#include "application/services/application_controller.fidl.h"
-#include "application/services/application_launcher.fidl.h"
-#include "application/services/service_provider.fidl.h"
+#include "lib/app/fidl/application_controller.fidl.h"
+#include "lib/app/fidl/application_launcher.fidl.h"
+#include "lib/app/fidl/service_provider.fidl.h"
 #include "apps/maxwell/services/user/intelligence_services.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/lib/fidl/app_client.h"

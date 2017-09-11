@@ -10,8 +10,8 @@
 #include <string>
 #include <unordered_map>
 
-#include "application/services/application_launcher.fidl.h"
-#include "application/services/service_provider.fidl.h"
+#include "lib/app/fidl/application_launcher.fidl.h"
+#include "lib/app/fidl/service_provider.fidl.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"

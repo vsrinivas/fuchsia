@@ -18,7 +18,7 @@ fidl("story") {
   ]
 
   deps = [
-    "//application/services:service_provider",
+    "//garnet/public/lib/app/fidl:service_provider",
     "//apps/modular/services/component",
     "//apps/modular/services/module:module_controller",
     "//apps/modular/services/module:module_data",

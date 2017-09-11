@@ -4,8 +4,8 @@
 
 #include <memory>
 
-#include "application/lib/app/service_provider_impl.h"
-#include "application/services/service_provider.fidl.h"
+#include "lib/app/cpp/service_provider_impl.h"
+#include "lib/app/fidl/service_provider.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/ledger/ledger_client.h"

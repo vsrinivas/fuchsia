@@ -16,7 +16,7 @@ executable("suggest_shell_controller") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/maxwell/services/suggestion",
     "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/lib/fidl:view_host",

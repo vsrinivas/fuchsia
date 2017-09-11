@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-#include "application/services/application_controller.fidl.h"
+#include "lib/app/fidl/application_controller.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/lib/fidl/context.h"

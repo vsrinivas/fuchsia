@@ -21,7 +21,7 @@ executable("example_module1") {
   deps = [
     ":calculator",
     ":store",
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
@@ -39,7 +39,7 @@ executable("example_module2") {
 
   deps = [
     ":store",
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/services/module",

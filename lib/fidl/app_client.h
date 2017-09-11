@@ -8,8 +8,8 @@
 #include <memory>
 #include <string>
 
-#include "application/lib/app/connect.h"
-#include "application/services/application_launcher.fidl.h"
+#include "lib/app/cpp/connect.h"
+#include "lib/app/fidl/application_launcher.fidl.h"
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/lifecycle/lifecycle.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"

@@ -4,7 +4,7 @@
 
 #include <utility>
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "apps/modular/lib/fidl/message_receiver_client.h"
 #include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/reporting.h"

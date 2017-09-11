@@ -23,7 +23,7 @@ executable("oauth_token_manager") {
 
   deps = [
     ":credentials",
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/modular/lib/fidl:operation",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/services/auth",

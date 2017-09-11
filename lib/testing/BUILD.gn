@@ -11,7 +11,7 @@ source_set("testing") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/test_runner/services:test_runner",
   ]
 }
@@ -25,7 +25,7 @@ source_set("component_base") {
 
   public_deps = [
     ":testing",
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/modular/lib/fidl:single_service_app",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
@@ -84,8 +84,8 @@ source_set("fake_application_launcher") {
   ]
 
   deps = [
-    "//application/lib/app",
-    "//application/services",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
   ]
@@ -100,8 +100,8 @@ source_set("ledger_repository_for_testing") {
   ]
 
   deps = [
-    "//application/lib/app",
-    "//application/services",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
     "//apps/modular/lib/fidl:app_client",

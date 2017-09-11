@@ -7,8 +7,8 @@
 
 #include <memory>
 
-#include "application/lib/app/application_context.h"
-#include "application/services/service_provider.fidl.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/app/fidl/service_provider.fidl.h"
 #include "apps/modular/services/lifecycle/lifecycle.fidl.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"

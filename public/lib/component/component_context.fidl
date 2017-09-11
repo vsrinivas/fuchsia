@@ -4,7 +4,7 @@
 
 module modular;
 
-import "application/services/service_provider.fidl";
+import "lib/app/fidl/service_provider.fidl";
 import "apps/ledger/services/public/ledger.fidl";
 import "apps/modular/services/agent/agent_controller/agent_controller.fidl";
 import "apps/modular/services/component/message_queue.fidl";

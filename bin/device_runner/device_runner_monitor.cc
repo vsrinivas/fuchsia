@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/modular/services/device/device_runner_monitor.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/logging.h"

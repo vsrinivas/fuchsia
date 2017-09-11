@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
 #include "apps/modular/lib/fidl/proxy.h"

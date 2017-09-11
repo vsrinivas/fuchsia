@@ -4,7 +4,7 @@
 
 module modular;
 
-import "application/services/service_provider.fidl";
+import "lib/app/fidl/service_provider.fidl";
 import "apps/maxwell/services/user/intelligence_services.fidl";
 import "apps/modular/services/component/component_context.fidl";
 import "apps/modular/services/story/link.fidl";

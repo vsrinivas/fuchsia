@@ -16,8 +16,8 @@ source_set("agent_runner") {
   ]
 
   deps = [
-    "//application/lib/app",
-    "//application/services",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
     "//apps/ledger/services/public",
     "//apps/maxwell/services/user",
     "//apps/modular/lib/fidl:app_client",
@@ -49,8 +49,8 @@ source_set("unittests") {
   deps = [
     ":agent_runner",
     ":public",
-    "//application/lib/app",
-    "//application/services",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
     "//apps/maxwell/services/user",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/ledger:page_client",
@@ -77,7 +77,7 @@ source_set("public") {
   ]
 
   deps = [
-    "//application/services",
+    "//garnet/public/lib/app/fidl",
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
     "//apps/maxwell/services/user",

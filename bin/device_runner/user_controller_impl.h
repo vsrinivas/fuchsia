@@ -5,8 +5,8 @@
 #ifndef APPS_MODULAR_SRC_DEVICE_RUNNER_USER_CONTROLLER_IMPL_H_
 #define APPS_MODULAR_SRC_DEVICE_RUNNER_USER_CONTROLLER_IMPL_H_
 
-#include "application/lib/app/application_context.h"
-#include "application/services/application_environment.fidl.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/app/fidl/application_environment.fidl.h"
 #include "apps/modular/lib/fidl/app_client.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/auth/account/account.fidl.h"

@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/lib/testing/component_base.h"

@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/test_runner/services/test_runner.fidl.h"
 
 namespace modular {

@@ -13,7 +13,7 @@ group("story_shell_flutter") {
 flutter_app("example_flutter_story_shell") {
   main_dart = "lib/main.dart"
   deps = [
-    "//application/lib/app/dart",
+    "//garnet/public/lib/app/dart",
     "//apps/modular/services/story:story_dart",
     "//garnet/public/lib/ui/flutter",
     "//garnet/public/lib/ui/views/fidl:fidl_dart",
