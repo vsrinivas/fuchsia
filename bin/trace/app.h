@@ -11,7 +11,7 @@
 #include <string>
 
 #include "apps/tracing/src/trace/command.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace tracing {
 
@@ -20,7 +20,7 @@ class App : public Command {
   App(app::ApplicationContext* context);
   ~App();
 
-  void Run(const ftl::CommandLine& command_line) override;
+  void Run(const fxl::CommandLine& command_line) override;
 
  private:
   void RegisterCommand(Command::Info info);
@@ -29,7 +29,7 @@ class App : public Command {
   std::map<std::string, Command::Info> known_commands_;
   std::unique_ptr<Command> command_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(App);
+  FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
 }  // namespace tracing

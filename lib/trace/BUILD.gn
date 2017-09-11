@@ -11,7 +11,7 @@ source_set("types") {
   ]
 
   deps = [
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 
   if (!is_fuchsia) {
@@ -28,7 +28,7 @@ source_set("types") {
 # in your application and make sure to register a TraceProvider when your
 # application starts up.
 #
-# This target only depends on ftl, standard library, and system headers
+# This target only depends on fxl, standard library, and system headers
 # so that it can safely be referenced from most low-level libraries with
 # minimum impact.
 source_set("trace") {
@@ -47,7 +47,7 @@ source_set("trace") {
 
   deps = [
     ":internal_fields",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 
   public_deps = [
@@ -68,7 +68,7 @@ source_set("writer") {
   ]
 
   deps = [
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 
@@ -95,7 +95,7 @@ source_set("provider") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//apps/tracing/services",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 
@@ -113,7 +113,7 @@ source_set("reader") {
 
   deps = [
     ":internal_fields",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 
   public_deps = [

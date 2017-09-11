@@ -14,8 +14,8 @@
 
 #include "apps/tracing/lib/trace/internal/fields.h"
 #include "apps/tracing/lib/trace/types.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace tracing {
 namespace reader {
@@ -35,7 +35,7 @@ class Chunk {
   bool ReadInt64(int64_t* out_value);
   bool ReadUint64(uint64_t* out_value);
   bool ReadDouble(double* out_value);
-  bool ReadString(size_t length, ftl::StringView* out_string);
+  bool ReadString(size_t length, fxl::StringView* out_string);
   bool ReadChunk(size_t num_words, Chunk* out_chunk);
 
  private:
@@ -102,7 +102,7 @@ class TraceContext {
   std::unordered_map<ProviderId, std::unique_ptr<ProviderInfo>> providers_;
   ProviderInfo* current_provider_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TraceContext);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TraceContext);
 };
 
 // A typed argument value.
@@ -149,42 +149,42 @@ class ArgumentValue {
   ArgumentType type() const { return type_; }
 
   int32_t GetInt32() const {
-    FTL_DCHECK(type_ == ArgumentType::kInt32);
+    FXL_DCHECK(type_ == ArgumentType::kInt32);
     return int32_;
   }
 
   uint32_t GetUint32() const {
-    FTL_DCHECK(type_ == ArgumentType::kUint32);
+    FXL_DCHECK(type_ == ArgumentType::kUint32);
     return uint32_;
   }
 
   int64_t GetInt64() const {
-    FTL_DCHECK(type_ == ArgumentType::kInt64);
+    FXL_DCHECK(type_ == ArgumentType::kInt64);
     return int64_;
   }
 
   uint64_t GetUint64() const {
-    FTL_DCHECK(type_ == ArgumentType::kUint64);
+    FXL_DCHECK(type_ == ArgumentType::kUint64);
     return uint64_;
   }
 
   double GetDouble() const {
-    FTL_DCHECK(type_ == ArgumentType::kDouble);
+    FXL_DCHECK(type_ == ArgumentType::kDouble);
     return double_;
   }
 
   const std::string& GetString() const {
-    FTL_DCHECK(type_ == ArgumentType::kString);
+    FXL_DCHECK(type_ == ArgumentType::kString);
     return string_;
   }
 
   uintptr_t GetPointer() const {
-    FTL_DCHECK(type_ == ArgumentType::kPointer);
+    FXL_DCHECK(type_ == ArgumentType::kPointer);
     return uint64_;
   }
 
   mx_koid_t GetKoid() const {
-    FTL_DCHECK(type_ == ArgumentType::kKoid);
+    FXL_DCHECK(type_ == ArgumentType::kKoid);
     return uint64_;
   }
 
@@ -263,12 +263,12 @@ class MetadataData {
         provider_section_(provider_section) {}
 
   const ProviderInfo& GetProviderInfo() const {
-    FTL_DCHECK(type_ == MetadataType::kProviderInfo);
+    FXL_DCHECK(type_ == MetadataType::kProviderInfo);
     return provider_info_;
   };
 
   const ProviderSection& GetProviderSection() const {
-    FTL_DCHECK(type_ == MetadataType::kProviderSection);
+    FXL_DCHECK(type_ == MetadataType::kProviderSection);
     return provider_section_;
   }
 
@@ -373,52 +373,52 @@ class EventData {
       : type_(EventType::kFlowEnd), flow_end_(flow_end) {}
 
   const Instant& GetInstant() const {
-    FTL_DCHECK(type_ == EventType::kInstant);
+    FXL_DCHECK(type_ == EventType::kInstant);
     return instant_;
   }
 
   const Counter& GetCounter() const {
-    FTL_DCHECK(type_ == EventType::kCounter);
+    FXL_DCHECK(type_ == EventType::kCounter);
     return counter_;
   }
 
   const DurationBegin& GetDurationBegin() const {
-    FTL_DCHECK(type_ == EventType::kDurationBegin);
+    FXL_DCHECK(type_ == EventType::kDurationBegin);
     return duration_begin_;
   }
 
   const DurationEnd& GetDurationEnd() const {
-    FTL_DCHECK(type_ == EventType::kDurationEnd);
+    FXL_DCHECK(type_ == EventType::kDurationEnd);
     return duration_end_;
   }
 
   const AsyncBegin& GetAsyncBegin() const {
-    FTL_DCHECK(type_ == EventType::kAsyncStart);
+    FXL_DCHECK(type_ == EventType::kAsyncStart);
     return async_begin_;
   };
 
   const AsyncInstant& GetAsyncInstant() const {
-    FTL_DCHECK(type_ == EventType::kAsyncInstant);
+    FXL_DCHECK(type_ == EventType::kAsyncInstant);
     return async_instant_;
   }
 
   const AsyncEnd& GetAsyncEnd() const {
-    FTL_DCHECK(type_ == EventType::kAsyncEnd);
+    FXL_DCHECK(type_ == EventType::kAsyncEnd);
     return async_end_;
   }
 
   const FlowBegin& GetFlowBegin() const {
-    FTL_DCHECK(type_ == EventType::kFlowBegin);
+    FXL_DCHECK(type_ == EventType::kFlowBegin);
     return flow_begin_;
   }
 
   const FlowStep& GetFlowStep() const {
-    FTL_DCHECK(type_ == EventType::kFlowStep);
+    FXL_DCHECK(type_ == EventType::kFlowStep);
     return flow_step_;
   }
 
   const FlowEnd& GetFlowEnd() const {
-    FTL_DCHECK(type_ == EventType::kFlowEnd);
+    FXL_DCHECK(type_ == EventType::kFlowEnd);
     return flow_end_;
   }
 
@@ -540,42 +540,42 @@ class Record {
   Record& operator=(const Record& rhs) { return Destroy().Copy(rhs); }
 
   const Metadata& GetMetadata() const {
-    FTL_DCHECK(type_ == RecordType::kMetadata);
+    FXL_DCHECK(type_ == RecordType::kMetadata);
     return metadata_;
   }
 
   const Initialization& GetInitialization() const {
-    FTL_DCHECK(type_ == RecordType::kInitialization);
+    FXL_DCHECK(type_ == RecordType::kInitialization);
     return initialization_;
   }
 
   const String& GetString() const {
-    FTL_DCHECK(type_ == RecordType::kString);
+    FXL_DCHECK(type_ == RecordType::kString);
     return string_;
   }
 
   const Thread& GetThread() const {
-    FTL_DCHECK(type_ == RecordType::kThread);
+    FXL_DCHECK(type_ == RecordType::kThread);
     return thread_;
   };
 
   const Event& GetEvent() const {
-    FTL_DCHECK(type_ == RecordType::kEvent);
+    FXL_DCHECK(type_ == RecordType::kEvent);
     return event_;
   }
 
   const KernelObject& GetKernelObject() const {
-    FTL_DCHECK(type_ == RecordType::kKernelObject);
+    FXL_DCHECK(type_ == RecordType::kKernelObject);
     return kernel_object_;
   }
 
   const ContextSwitch& GetContextSwitch() const {
-    FTL_DCHECK(type_ == RecordType::kContextSwitch);
+    FXL_DCHECK(type_ == RecordType::kContextSwitch);
     return context_switch_;
   }
 
   const Log& GetLog() const {
-    FTL_DCHECK(type_ == RecordType::kLog);
+    FXL_DCHECK(type_ == RecordType::kLog);
     return log_;
   }
 

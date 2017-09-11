@@ -23,7 +23,7 @@ App::App(app::ApplicationContext* context) : Command(context) {
 
 App::~App() {}
 
-void App::Run(const ftl::CommandLine& command_line) {
+void App::Run(const fxl::CommandLine& command_line) {
   if (command_line.HasOption("help")) {
     PrintHelp();
     exit(0);
@@ -51,7 +51,7 @@ void App::Run(const ftl::CommandLine& command_line) {
   }
 
   command_ = it->second.factory(context());
-  command_->Run(ftl::CommandLineFromIteratorsWithArgv0(
+  command_->Run(fxl::CommandLineFromIteratorsWithArgv0(
       positional_args.front(), positional_args.begin() + 1,
       positional_args.end()));
 }

@@ -17,18 +17,18 @@
 #include "apps/tracing/src/trace_manager/tracee.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/string.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_counted.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/memory/weak_ptr.h"
-#include "lib/ftl/tasks/one_shot_timer.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fxl/tasks/one_shot_timer.h"
 
 namespace tracing {
 
 // TraceSession keeps track of all TraceProvider instances that
 // are active for a tracing session.
-class TraceSession : public ftl::RefCountedThreadSafe<TraceSession> {
+class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
  public:
   // Initializes a new instances that streams results
   // to |destination|. Every provider active in this
@@ -40,14 +40,14 @@ class TraceSession : public ftl::RefCountedThreadSafe<TraceSession> {
   explicit TraceSession(mx::socket destination,
                         fidl::Array<fidl::String> categories,
                         size_t trace_buffer_size,
-                        ftl::Closure abort_handler);
+                        fxl::Closure abort_handler);
   // Frees all allocated resources and closes the outgoing
   // connection.
   ~TraceSession();
 
   // Invokes |callback| when all providers in this session have acknowledged
   // the start request, or after |timeout| has elapsed.
-  void WaitForProvidersToStart(ftl::Closure callback, ftl::TimeDelta timeout);
+  void WaitForProvidersToStart(fxl::Closure callback, fxl::TimeDelta timeout);
 
   // Starts |provider| and adds it to this session.
   void AddProvider(TraceProviderBundle* provider);
@@ -58,7 +58,7 @@ class TraceSession : public ftl::RefCountedThreadSafe<TraceSession> {
   //
   // If stopping providers takes longer than |timeout|, we forcefully
   // shutdown operations and invoke |done_callback|.
-  void Stop(ftl::Closure done_callback, const ftl::TimeDelta& timeout);
+  void Stop(fxl::Closure done_callback, const fxl::TimeDelta& timeout);
 
  private:
   enum class State { kReady, kStarted, kStopping, kStopped };
@@ -78,14 +78,14 @@ class TraceSession : public ftl::RefCountedThreadSafe<TraceSession> {
   size_t trace_buffer_size_;
   std::vector<uint8_t> buffer_;
   std::list<std::unique_ptr<Tracee>> tracees_;
-  ftl::OneShotTimer session_start_timeout_;
-  ftl::OneShotTimer session_finalize_timeout_;
-  ftl::Closure start_callback_;
-  ftl::Closure done_callback_;
-  ftl::Closure abort_handler_;
+  fxl::OneShotTimer session_start_timeout_;
+  fxl::OneShotTimer session_finalize_timeout_;
+  fxl::Closure start_callback_;
+  fxl::Closure done_callback_;
+  fxl::Closure abort_handler_;
 
-  ftl::WeakPtrFactory<TraceSession> weak_ptr_factory_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(TraceSession);
+  fxl::WeakPtrFactory<TraceSession> weak_ptr_factory_;
+  FXL_DISALLOW_COPY_AND_ASSIGN(TraceSession);
 };
 
 }  // namespace tracing

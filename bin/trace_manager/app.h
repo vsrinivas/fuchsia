@@ -10,7 +10,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "apps/tracing/src/trace_manager/trace_manager.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace tracing {
 
@@ -25,7 +25,7 @@ class TraceManagerApp {
   fidl::BindingSet<TraceRegistry> trace_registry_bindings_;
   fidl::BindingSet<TraceController> trace_controller_bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TraceManagerApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TraceManagerApp);
 };
 
 }  // namespace tracing

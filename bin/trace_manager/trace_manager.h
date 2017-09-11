@@ -16,8 +16,8 @@
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/tasks/one_shot_timer.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/tasks/one_shot_timer.h"
 
 namespace tracing {
 
@@ -49,11 +49,11 @@ class TraceManager : public TraceRegistry, public TraceController {
   const Config& config_;
 
   uint32_t next_provider_id_ = 1u;
-  ftl::RefPtr<TraceSession> session_;
-  ftl::OneShotTimer session_finalize_timeout_;
+  fxl::RefPtr<TraceSession> session_;
+  fxl::OneShotTimer session_finalize_timeout_;
   std::list<TraceProviderBundle> providers_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TraceManager);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TraceManager);
 };
 
 }  // namespace tracing

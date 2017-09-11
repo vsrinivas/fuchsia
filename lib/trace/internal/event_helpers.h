@@ -262,7 +262,7 @@ class DurationEventScope {
   const char* const category_;
   const char* const name_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DurationEventScope);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DurationEventScope);
 };
 
 }  // namespace internal

@@ -14,9 +14,9 @@
 #include "apps/tracing/src/trace_manager/trace_provider_bundle.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/string.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
@@ -58,7 +58,7 @@ class Tracee : private mtl::MessageLoopHandler {
   bool operator==(TraceProviderBundle* bundle) const;
   bool Start(size_t buffer_size,
              fidl::Array<fidl::String> categories,
-             ftl::Closure stop_callback,
+             fxl::Closure stop_callback,
              ProviderStartedCallback provider_started_callback);
   void Stop();
   TransferStatus TransferRecords(const mx::socket& socket) const;
@@ -83,11 +83,11 @@ class Tracee : private mtl::MessageLoopHandler {
   size_t buffer_vmo_size_ = 0u;
   mx::eventpair fence_;
   ProviderStartedCallback start_callback_;
-  ftl::Closure stop_callback_;
+  fxl::Closure stop_callback_;
   mtl::MessageLoop::HandlerKey fence_handler_key_{};
 
-  ftl::WeakPtrFactory<Tracee> weak_ptr_factory_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(Tracee);
+  fxl::WeakPtrFactory<Tracee> weak_ptr_factory_;
+  FXL_DISALLOW_COPY_AND_ASSIGN(Tracee);
 };
 
 std::ostream& operator<<(std::ostream& out, Tracee::State state);

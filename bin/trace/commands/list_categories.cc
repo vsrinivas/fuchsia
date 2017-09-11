@@ -22,7 +22,7 @@ Command::Info ListCategories::Describe() {
 ListCategories::ListCategories(app::ApplicationContext* context)
     : CommandWithTraceController(context) {}
 
-void ListCategories::Run(const ftl::CommandLine& command_line) {
+void ListCategories::Run(const fxl::CommandLine& command_line) {
   if (!(command_line.options().empty() &&
         command_line.positional_args().empty())) {
     err() << "We encountered unknown options, please check your "

@@ -10,7 +10,7 @@
 
 #include "apps/network/services/url_loader.fidl.h"
 #include "apps/network/services/url_request.fidl.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace tracing {
@@ -169,7 +169,7 @@ void UploadResults(std::ostream& out,
 
   out << "starting upload to " << url_request->url << std::endl;
   url_loader_ptr->Start(
-      std::move(url_request), ftl::MakeCopyable([
+      std::move(url_request), fxl::MakeCopyable([
         url_loader = std::move(url_loader), on_done, &out, &err
       ](auto url_response) {
         out << "response";

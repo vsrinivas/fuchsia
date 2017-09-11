@@ -10,7 +10,7 @@
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace tracing {
 namespace {
@@ -142,7 +142,7 @@ bool DecodeAnchor(std::string anchor_str,
   } else if (anchor_str == kAnchorEnd) {
     *result = measure::Anchor::End;
   } else {
-    FTL_LOG(ERROR) << "Incorrect value of " << key;
+    FXL_LOG(ERROR) << "Incorrect value of " << key;
     return false;
   }
 
@@ -173,7 +173,7 @@ bool DecodeMeasureTimeBetween(const rapidjson::Value& value,
 std::unique_ptr<rapidjson::SchemaDocument> InitSchema(const char schemaSpec[]) {
   rapidjson::Document schema_document;
   if (schema_document.Parse(schemaSpec).HasParseError()) {
-    FTL_DCHECK(false) << "Schema validation spec itself is not valid JSON.";
+    FXL_DCHECK(false) << "Schema validation spec itself is not valid JSON.";
     return nullptr;
   }
   return std::make_unique<rapidjson::SchemaDocument>(schema_document);
@@ -185,7 +185,7 @@ bool ValidateSchema(const rapidjson::Value& value,
   if (!value.Accept(validator)) {
     rapidjson::StringBuffer uri_buffer;
     validator.GetInvalidSchemaPointer().StringifyUriFragment(uri_buffer);
-    FTL_LOG(ERROR) << "Incorrect schema of tracing spec at "
+    FXL_LOG(ERROR) << "Incorrect schema of tracing spec at "
                    << uri_buffer.GetString() << " , schema violation: "
                    << validator.GetInvalidSchemaKeyword();
     return false;
@@ -208,7 +208,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   rapidjson::Document document;
   document.Parse(json.c_str(), json.size());
   if (document.HasParseError()) {
-    FTL_LOG(ERROR) << "Couldn't parse the tracing spec file.";
+    FXL_LOG(ERROR) << "Couldn't parse the tracing spec file.";
     return false;
   }
   if (!ValidateSchema(document, *root_schema)) {
@@ -232,7 +232,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
 
   if (document.HasMember(kDurationKey)) {
     result.duration =
-        ftl::TimeDelta::FromSeconds(document[kDurationKey].GetUint());
+        fxl::TimeDelta::FromSeconds(document[kDurationKey].GetUint());
   }
 
   if (document.HasMember(kTestSuiteNameKey)) {
@@ -267,7 +267,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
       }
       result.measurements.time_between.push_back(std::move(spec));
     } else {
-      FTL_LOG(ERROR) << "Unrecognized measurement type: " << type;
+      FXL_LOG(ERROR) << "Unrecognized measurement type: " << type;
       return false;
     }
 
@@ -276,7 +276,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
         if (!result.measurements.split_samples_at[counter].empty() &&
             value.GetUint() <=
                 result.measurements.split_samples_at[counter].back()) {
-          FTL_LOG(ERROR)
+          FXL_LOG(ERROR)
               << "Incorrect split samples at values - not strictly increasing.";
           return false;
         }

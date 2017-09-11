@@ -9,8 +9,8 @@
 #include <magenta/syscalls.h>
 
 #include "apps/tracing/src/ktrace_provider/reader.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/time/time_point.h"
 
 namespace ktrace_provider {
 namespace {
@@ -40,7 +40,7 @@ constexpr trace_thread_state_t ToTraceThreadState(int value) {
     case 6:  // THREAD_DEATH
       return MX_THREAD_STATE_DEAD;
     default:  // ???
-      FTL_LOG(WARNING) << "Imported unknown thread state from ktrace: "
+      FXL_LOG(WARNING) << "Imported unknown thread state from ktrace: "
                        << value;
       return INT32_MAX;
   }
@@ -78,20 +78,20 @@ bool Importer::Import(Reader& reader) {
   trace_context_write_process_info_record(context_, kNoProcess,
                                           &kernel_string_ref_);
 
-  auto start = ftl::TimePoint::Now();
+  auto start = fxl::TimePoint::Now();
 
   while (true) {
     if (auto record = reader.ReadNextRecord()) {
       if (!ImportRecord(record, KTRACE_LEN(record->tag))) {
-        FTL_VLOG(2) << "Skipped ktrace record, tag=" << record->tag;
+        FXL_VLOG(2) << "Skipped ktrace record, tag=" << record->tag;
       }
     } else {
       break;
     }
   }
 
-  FTL_VLOG(2) << "Import of ktrace records took: "
-              << (ftl::TimePoint::Now() - start).ToMicroseconds() << " us";
+  FXL_VLOG(2) << "Import of ktrace records took: "
+              << (fxl::TimePoint::Now() - start).ToMicroseconds() << " us";
 
   return true;
 }
@@ -124,7 +124,7 @@ bool Importer::ImportRecord(const ktrace_header_t* record, size_t record_size) {
 
 bool Importer::ImportBasicRecord(const ktrace_header_t* record,
                                  const TagInfo& tag_info) {
-  FTL_VLOG(2) << "BASIC: tag=0x" << std::hex << record->tag << " ("
+  FXL_VLOG(2) << "BASIC: tag=0x" << std::hex << record->tag << " ("
               << tag_info.name << "), tid=" << std::dec << record->tid
               << ", timestamp=" << record->ts;
 
@@ -146,7 +146,7 @@ bool Importer::ImportBasicRecord(const ktrace_header_t* record,
 
 bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record,
                                 const TagInfo& tag_info) {
-  FTL_VLOG(2) << "QUAD: tag=0x" << std::hex << record->tag << " ("
+  FXL_VLOG(2) << "QUAD: tag=0x" << std::hex << record->tag << " ("
               << tag_info.name << "), tid=" << std::dec << record->tid
               << ", timestamp=" << record->ts << ", a=0x" << std::hex
               << record->a << ", b=0x" << record->b << ", c=0x" << record->c
@@ -161,7 +161,7 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record,
           ToUInt64(record->a, record->b) * 1000u;
       trace_ticks_t user_ticks_per_second = mx_ticks_per_second();
       if (kernel_ticks_per_second != user_ticks_per_second) {
-        FTL_LOG(WARNING) << "Kernel and userspace are using different tracing "
+        FXL_LOG(WARNING) << "Kernel and userspace are using different tracing "
                             "timebases, "
                             "tracks may be misaligned: "
                          << "kernel_ticks_per_second="
@@ -222,7 +222,7 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record,
 bool Importer::ImportNameRecord(const ktrace_rec_name_t* record,
                                 const TagInfo& tag_info) {
   fbl::StringPiece name(record->name, strnlen(record->name, KTRACE_NAMESIZE));
-  FTL_VLOG(2) << "NAME: tag=0x" << std::hex << record->tag << " ("
+  FXL_VLOG(2) << "NAME: tag=0x" << std::hex << record->tag << " ("
               << tag_info.name << "), id=0x" << record->id << ", arg=0x"
               << record->arg << ", name='" << fbl::String(name).c_str() << "'";
 
@@ -250,14 +250,14 @@ bool Importer::ImportProbeRecord(const ktrace_header_t* record,
   if (record_size >= 24) {
     uint32_t arg0 = reinterpret_cast<const uint32_t*>(record + 1)[0];
     uint32_t arg1 = reinterpret_cast<const uint32_t*>(record + 1)[1];
-    FTL_VLOG(2) << "PROBE: tag=0x" << std::hex << record->tag << ", probe=0x"
+    FXL_VLOG(2) << "PROBE: tag=0x" << std::hex << record->tag << ", probe=0x"
                 << probe << ", tid=" << std::dec << record->tid
                 << ", ts=" << record->ts << ", arg0=0x" << std::hex << arg0
                 << ", arg1=0x" << arg1;
     return HandleProbe(record->ts, record->tid, probe, arg0, arg1);
   }
 
-  FTL_VLOG(2) << "PROBE: tag=0x" << std::hex << record->tag << ", probe=0x"
+  FXL_VLOG(2) << "PROBE: tag=0x" << std::hex << record->tag << ", probe=0x"
               << probe << ", tid=" << std::dec << record->tid
               << ", ts=" << record->ts;
   return HandleProbe(record->ts, record->tid, probe);
@@ -265,7 +265,7 @@ bool Importer::ImportProbeRecord(const ktrace_header_t* record,
 
 bool Importer::ImportUnknownRecord(const ktrace_header_t* record,
                                    size_t record_size) {
-  FTL_VLOG(2) << "UNKNOWN: tag=0x" << std::hex << record->tag
+  FXL_VLOG(2) << "UNKNOWN: tag=0x" << std::hex << record->tag
               << ", size=" << std::dec << record_size;
   return false;
 }
@@ -467,7 +467,7 @@ bool Importer::HandleChannelCreate(trace_ticks_t event_time,
                                    uint32_t flags) {
   if (channels_.ids_.count(channel0) != 0 ||
       channels_.ids_.count(channel1) != 0) {
-    FTL_LOG(WARNING)
+    FXL_LOG(WARNING)
         << "Channel creation for an already known channel was requested, "
         << "ignoring the request.";
     return false;

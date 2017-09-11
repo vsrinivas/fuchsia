@@ -11,7 +11,7 @@
 #include <memory>
 #include <sstream>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace tracing {
 
@@ -27,7 +27,7 @@ class Dump {
   mx::socket socket_;
   std::ostringstream out_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Dump);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Dump);
 };
 
 // Callback to dump the state of the provider in a human-readable form.

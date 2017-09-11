@@ -7,7 +7,7 @@
 #include "apps/tracing/lib/trace/internal/cevent_helpers.h"
 #include "apps/tracing/lib/trace/internal/trace_engine.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 using EventType = tracing::EventType;
 using Payload = tracing::writer::Payload;
@@ -43,7 +43,7 @@ void ctrace_writer_release(ctrace_writer_t* writer) {
 
 void ctrace_register_current_thread(ctrace_writer_t* writer,
                                     ctrace_threadref_t* out_ref) {
-  FTL_DCHECK(writer);
+  FXL_DCHECK(writer);
   auto engine = ToEngine(writer);
   ThreadRef tr(engine->RegisterCurrentThread());
   *out_ref = tr.c_ref();
@@ -54,7 +54,7 @@ bool ctrace_register_category_string(
     const char* string,
     bool check_category,
     ctrace_stringref_t* out_ref) {
-  FTL_DCHECK(writer);
+  FXL_DCHECK(writer);
   auto engine = ToEngine(writer);
   StringRef sr(engine->RegisterString(string, check_category));
   if (check_category && sr.is_empty())
@@ -68,7 +68,7 @@ void ctrace_register_string(
     const char* string,
     ctrace_stringref_t* out_ref) {
   bool success = ctrace_register_category_string(writer, string, false, out_ref);
-  FTL_DCHECK(success);
+  FXL_DCHECK(success);
 }
 
 namespace tracing {
@@ -91,7 +91,7 @@ class ArgListWriter final {
   // This saves having to re-register the string in WriteTo().
   ctrace_stringref_t name_crefs_[CTRACE_MAX_ARGS];
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ArgListWriter);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ArgListWriter);
 };
 
 ArgListWriter::ArgListWriter(ctrace_writer_t* writer,
@@ -151,7 +151,7 @@ ArgListWriter::ArgListWriter(ctrace_writer_t* writer,
         break;
       }
       default:
-        FTL_NOTREACHED();
+        FXL_NOTREACHED();
     }
   }
 }
@@ -213,7 +213,7 @@ void ArgListWriter::WriteTo(Payload& payload) const {
         break;
       }
       default:
-        FTL_NOTREACHED();
+        FXL_NOTREACHED();
     }
   }
 }
@@ -235,7 +235,7 @@ static inline void WriteEventRecord0(
     const ctrace_stringref_t* name_ref,
     const ctrace_arglist_t* c_args,
     EventType event_type) {
-  FTL_DCHECK(writer);
+  FXL_DCHECK(writer);
   auto engine = ToEngine(writer);
   if (!c_args)
     c_args = &empty_arg_list;
@@ -257,7 +257,7 @@ static inline void WriteEventRecord1(
     const ctrace_arglist_t* c_args,
     EventType event_type,
     uint64_t extra_arg) {
-  FTL_DCHECK(writer);
+  FXL_DCHECK(writer);
   auto engine = ToEngine(writer);
   if (!c_args)
     c_args = &empty_arg_list;
@@ -566,7 +566,7 @@ void ctrace_write_kernel_object_record(
     ctrace_writer_t* writer,
     mx_handle_t handle,
     const ctrace_arglist_t* c_args) {
-  FTL_DCHECK(writer);
+  FXL_DCHECK(writer);
   auto engine = ToEngine(writer);
   ArgListWriter args(writer, c_args);
   if (Payload payload = engine->WriteKernelObjectRecordBase(

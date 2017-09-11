@@ -5,7 +5,7 @@
 #include "apps/tracing/lib/trace/provider.h"
 
 #include "apps/tracing/lib/trace/internal/trace_provider_impl.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 using namespace tracing::internal;
 
@@ -18,7 +18,7 @@ TraceProviderImpl* g_tracer = nullptr;
 }  // namespace
 
 bool InitializeTracerFromCommandLine(app::ApplicationContext* app_context,
-                                     const ftl::CommandLine& command_line,
+                                     const fxl::CommandLine& command_line,
                                      const TraceSettings default_settings) {
   TraceSettings settings = default_settings;
   if (!ParseTraceSettings(command_line, &settings))
@@ -35,7 +35,7 @@ void InitializeTracer(app::ApplicationContext* app_context,
 
 void InitializeTracer(TraceRegistryPtr registry,
                       const TraceSettings& settings) {
-  FTL_CHECK(!g_tracer) << "Tracer is already initialized.";
+  FXL_CHECK(!g_tracer) << "Tracer is already initialized.";
   g_tracer = new TraceProviderImpl(std::move(registry), settings);
 }
 
@@ -45,7 +45,7 @@ void DestroyTracer() {
 }
 
 void SetDumpCallback(DumpCallback callback) {
-  FTL_CHECK(g_tracer)
+  FXL_CHECK(g_tracer)
       << "Trace must be initialized before setting dump callback";
   g_tracer->SetDumpCallback(std::move(callback));
 }

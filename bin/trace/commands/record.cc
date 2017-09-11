@@ -9,11 +9,11 @@
 #include "apps/network/services/network_service.fidl.h"
 #include "apps/tracing/src/trace/commands/record.h"
 #include "apps/tracing/src/trace/results_output.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/files/path.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/split_string.h"
-#include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/files/path.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/split_string.h"
+#include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace tracing {
@@ -35,7 +35,7 @@ const char kUploadBot[] = "upload-bot";
 const char kUploadPointId[] = "upload-point-id";
 
 bool EnsureNonEmpty(std::ostream& err,
-                    const ftl::CommandLine& command_line,
+                    const fxl::CommandLine& command_line,
                     size_t index) {
   if (command_line.options()[index].value.empty()) {
     err << "--" << command_line.options()[index].name << " can't be empty";
@@ -46,7 +46,7 @@ bool EnsureNonEmpty(std::ostream& err,
 
 }  // namespace
 
-bool Record::Options::Setup(const ftl::CommandLine& command_line) {
+bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   const std::unordered_set<std::string> known_options = {
       kSpecFile,        kCategories,   kAppendArgs, kOutputFile,
       kDuration,        kDetach,       kDecouple,   kBufferSize,
@@ -92,15 +92,15 @@ bool Record::Options::Setup(const ftl::CommandLine& command_line) {
   // --categories=<cat1>,<cat2>,...
   if (command_line.HasOption(kCategories, &index)) {
     categories =
-        ftl::SplitStringCopy(command_line.options()[index].value, ",",
-                             ftl::kTrimWhitespace, ftl::kSplitWantNonEmpty);
+        fxl::SplitStringCopy(command_line.options()[index].value, ",",
+                             fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
   }
 
   // --append-args=<arg1>,<arg2>,...
   if (command_line.HasOption(kAppendArgs, &index)) {
     auto append_args =
-        ftl::SplitStringCopy(command_line.options()[index].value, ",",
-                             ftl::kTrimWhitespace, ftl::kSplitWantNonEmpty);
+        fxl::SplitStringCopy(command_line.options()[index].value, ",",
+                             fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
     std::move(std::begin(append_args), std::end(append_args),
               std::back_inserter(args));
   }
@@ -113,13 +113,13 @@ bool Record::Options::Setup(const ftl::CommandLine& command_line) {
   // --duration=<seconds>
   if (command_line.HasOption(kDuration, &index)) {
     uint64_t seconds;
-    if (!ftl::StringToNumberWithError(command_line.options()[index].value,
+    if (!fxl::StringToNumberWithError(command_line.options()[index].value,
                                       &seconds)) {
       err() << "Failed to parse command-line option duration: "
             << command_line.options()[index].value;
       return false;
     }
-    duration = ftl::TimeDelta::FromSeconds(seconds);
+    duration = fxl::TimeDelta::FromSeconds(seconds);
   }
 
   // --detach
@@ -131,7 +131,7 @@ bool Record::Options::Setup(const ftl::CommandLine& command_line) {
   // --buffer-size=<megabytes>
   if (command_line.HasOption(kBufferSize, &index)) {
     uint32_t megabytes;
-    if (!ftl::StringToNumberWithError(command_line.options()[index].value,
+    if (!fxl::StringToNumberWithError(command_line.options()[index].value,
                                       &megabytes)) {
       err() << "Failed to parse command-line option buffer-size: "
             << command_line.options()[index].value;
@@ -190,7 +190,7 @@ bool Record::Options::Setup(const ftl::CommandLine& command_line) {
       return false;
     }
     uint64_t point_id;
-    if (!ftl::StringToNumberWithError(command_line.options()[index].value,
+    if (!fxl::StringToNumberWithError(command_line.options()[index].value,
                                       &point_id)) {
       err() << "Failed to parse command-line option upload-point-id: "
             << command_line.options()[index].value;
@@ -204,7 +204,7 @@ bool Record::Options::Setup(const ftl::CommandLine& command_line) {
   const auto& positional_args = command_line.positional_args();
   if (!positional_args.empty()) {
     if (!app.empty() || !args.empty()) {
-      FTL_LOG(WARNING) << "The app and args passed on the command line"
+      FXL_LOG(WARNING) << "The app and args passed on the command line"
                        << "override those from the tspec file.";
     }
     app = positional_args[0];
@@ -248,7 +248,7 @@ Command::Info Record::Describe() {
 Record::Record(app::ApplicationContext* context)
     : CommandWithTraceController(context), weak_ptr_factory_(this) {}
 
-void Record::Run(const ftl::CommandLine& command_line) {
+void Record::Run(const fxl::CommandLine& command_line) {
   if (!options_.Setup(command_line)) {
     err() << "Error parsing options from command line - aborting" << std::endl;
     exit(1);
@@ -309,7 +309,7 @@ void Record::StopTrace() {
   }
 }
 
-void Record::ProcessMeasurements(ftl::Closure on_done) {
+void Record::ProcessMeasurements(fxl::Closure on_done) {
   if (!events_.empty()) {
     std::sort(
         std::begin(events_), std::end(events_),
@@ -338,7 +338,7 @@ void Record::ProcessMeasurements(ftl::Closure on_done) {
   }
 
   uint64_t ticks_per_second = GetTicksPerSecond();
-  FTL_DCHECK(ticks_per_second);
+  FXL_DCHECK(ticks_per_second);
   std::vector<measure::Result> results =
       measure::ComputeResults(options_.measurements, ticks, ticks_per_second);
 

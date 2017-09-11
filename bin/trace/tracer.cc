@@ -8,7 +8,7 @@
 
 #include "apps/tracing/lib/trace/internal/fields.h"
 #include "apps/tracing/lib/trace/reader.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 using namespace tracing::internal;
@@ -22,7 +22,7 @@ constexpr size_t kReadBufferSize = RecordFields::kMaxRecordSizeBytes * 4;
 }  // namespace
 
 Tracer::Tracer(TraceController* controller) : controller_(controller) {
-  FTL_DCHECK(controller_);
+  FXL_DCHECK(controller_);
 }
 
 Tracer::~Tracer() {
@@ -32,9 +32,9 @@ Tracer::~Tracer() {
 void Tracer::Start(TraceOptionsPtr options,
                    RecordConsumer record_consumer,
                    ErrorHandler error_handler,
-                   ftl::Closure start_callback,
-                   ftl::Closure done_callback) {
-  FTL_DCHECK(state_ == State::kStopped);
+                   fxl::Closure start_callback,
+                   fxl::Closure done_callback) {
+  FXL_DCHECK(state_ == State::kStopped);
 
   state_ = State::kStarted;
   done_callback_ = std::move(done_callback);
@@ -43,7 +43,7 @@ void Tracer::Start(TraceOptionsPtr options,
   mx::socket outgoing_socket;
   mx_status_t status = mx::socket::create(0u, &socket_, &outgoing_socket);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "Failed to create socket: status=" << status;
+    FXL_LOG(ERROR) << "Failed to create socket: status=" << status;
     Done();
     return;
   }
@@ -69,14 +69,14 @@ void Tracer::Stop() {
 void Tracer::OnHandleReady(mx_handle_t handle,
                            mx_signals_t pending,
                            uint64_t count) {
-  FTL_DCHECK(state_ == State::kStarted || state_ == State::kStopping);
+  FXL_DCHECK(state_ == State::kStarted || state_ == State::kStopping);
 
   if (pending & MX_SOCKET_READABLE) {
     DrainSocket();
   } else if (pending & MX_SOCKET_PEER_CLOSED) {
     Done();
   } else {
-    FTL_CHECK(false);
+    FXL_CHECK(false);
   }
 }
 
@@ -91,7 +91,7 @@ void Tracer::DrainSocket() {
 
     if (status || actual == 0) {
       if (status != MX_ERR_PEER_CLOSED) {
-        FTL_LOG(ERROR) << "Failed to read data from socket: status=" << status;
+        FXL_LOG(ERROR) << "Failed to read data from socket: status=" << status;
       }
       Done();
       return;
@@ -99,12 +99,12 @@ void Tracer::DrainSocket() {
 
     buffer_end_ += actual;
     size_t bytes_available = buffer_end_;
-    FTL_DCHECK(bytes_available > 0);
+    FXL_DCHECK(bytes_available > 0);
 
     reader::Chunk chunk(reinterpret_cast<const uint64_t*>(buffer_.data()),
                         BytesToWords(bytes_available));
     if (!reader_->ReadRecords(chunk)) {
-      FTL_LOG(ERROR) << "Trace stream is corrupted";
+      FXL_LOG(ERROR) << "Trace stream is corrupted";
       Done();
       return;
     }
@@ -125,7 +125,7 @@ void Tracer::CloseSocket() {
 }
 
 void Tracer::Done() {
-  FTL_DCHECK(state_ == State::kStarted || state_ == State::kStopping);
+  FXL_DCHECK(state_ == State::kStarted || state_ == State::kStopping);
 
   state_ = State::kStopped;
   reader_.reset();

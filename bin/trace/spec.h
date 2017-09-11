@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/time/time_delta.h"
 
 namespace tracing {
 
@@ -28,7 +28,7 @@ struct Spec {
   std::vector<std::string> categories;
 
   // Duration of the benchmark.
-  ftl::TimeDelta duration = ftl::TimeDelta::FromSeconds(10);
+  fxl::TimeDelta duration = fxl::TimeDelta::FromSeconds(10);
 
   // Measurements to be performed on the captured traces.
   measure::Measurements measurements;

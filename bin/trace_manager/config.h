@@ -9,7 +9,7 @@
 #include <string>
 
 #include "lib/app/fidl/application_launcher.fidl.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace tracing {
 

@@ -8,7 +8,7 @@
 #include <magenta/syscalls/log.h>
 #include <trace-engine/instrumentation.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace ktrace_provider {
@@ -27,7 +27,7 @@ void LogImporter::Start() {
 
   mx_status_t status = mx::log::create(&log_, MX_LOG_FLAG_READABLE);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "Failed to open kernel log: status=" << status;
+    FXL_LOG(ERROR) << "Failed to open kernel log: status=" << status;
     return;
   }
 
@@ -37,7 +37,7 @@ void LogImporter::Start() {
   wait_.set_object(log_.get());
   wait_.set_trigger(MX_LOG_READABLE);
   status = wait_.Begin(mtl::MessageLoop::GetCurrent()->async());
-  FTL_CHECK(status == MX_OK) << "status=" << status;
+  FXL_CHECK(status == MX_OK) << "status=" << status;
 }
 
 void LogImporter::Stop() {
@@ -45,7 +45,7 @@ void LogImporter::Stop() {
     return;
 
   mx_status_t status = wait_.Cancel(mtl::MessageLoop::GetCurrent()->async());
-  FTL_CHECK(status == MX_OK) << "status=" << status;
+  FXL_CHECK(status == MX_OK) << "status=" << status;
 
   log_.reset();
 }
@@ -60,7 +60,7 @@ async_wait_result_t LogImporter::Handle(async_t* async,
     mx_status_t status = log_.read(MX_LOG_RECORD_MAX, log_record, 0);
     if (status == MX_ERR_SHOULD_WAIT)
       break;
-    FTL_CHECK(status >= MX_OK) << "status=" << status;
+    FXL_CHECK(status >= MX_OK) << "status=" << status;
 
     if (log_record->timestamp < start_time_)
       continue;

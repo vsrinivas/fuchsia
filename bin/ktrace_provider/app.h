@@ -9,15 +9,15 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "apps/tracing/src/ktrace_provider/log_importer.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/macros.h"
 
 namespace ktrace_provider {
 
 class App {
  public:
-  explicit App(const ftl::CommandLine& command_line);
+  explicit App(const fxl::CommandLine& command_line);
   ~App();
 
  private:
@@ -32,7 +32,7 @@ class App {
   uint32_t current_group_mask_ = 0u;
   trace_context_t* context_ = nullptr;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(App);
+  FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
 }  // namespace ktrace_provider

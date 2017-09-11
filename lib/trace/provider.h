@@ -17,7 +17,7 @@ namespace tracing {
 // there was an error parsing the options.
 bool InitializeTracerFromCommandLine(
     app::ApplicationContext* app_context,
-    const ftl::CommandLine& command_line,
+    const fxl::CommandLine& command_line,
     const TraceSettings default_settings = TraceSettings());
 
 // Initializes the global |Tracer| and registers its underlying

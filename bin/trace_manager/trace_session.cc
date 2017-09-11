@@ -6,7 +6,7 @@
 
 #include "apps/tracing/lib/trace/internal/fields.h"
 #include "apps/tracing/src/trace_manager/trace_session.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace tracing {
@@ -14,7 +14,7 @@ namespace tracing {
 TraceSession::TraceSession(mx::socket destination,
                            fidl::Array<fidl::String> categories,
                            size_t trace_buffer_size,
-                           ftl::Closure abort_handler)
+                           fxl::Closure abort_handler)
     : destination_(std::move(destination)),
       categories_(std::move(categories)),
       trace_buffer_size_(trace_buffer_size),
@@ -26,14 +26,14 @@ TraceSession::~TraceSession() {
   destination_.reset();
 }
 
-void TraceSession::WaitForProvidersToStart(ftl::Closure callback,
-                                           ftl::TimeDelta timeout) {
+void TraceSession::WaitForProvidersToStart(fxl::Closure callback,
+                                           fxl::TimeDelta timeout) {
   start_callback_ = std::move(callback);
   session_start_timeout_.Start(
       mtl::MessageLoop::GetCurrent()->task_runner().get(),
       [weak = weak_ptr_factory_.GetWeakPtr()]() {
         if (weak) {
-          FTL_LOG(WARNING) << "Waiting for start timed out.";
+          FXL_LOG(WARNING) << "Waiting for start timed out.";
           weak->NotifyStarted();
         }
       },
@@ -67,8 +67,8 @@ void TraceSession::RemoveDeadProvider(TraceProviderBundle* bundle) {
   FinishProvider(bundle);
 }
 
-void TraceSession::Stop(ftl::Closure done_callback,
-                        const ftl::TimeDelta& timeout) {
+void TraceSession::Stop(fxl::Closure done_callback,
+                        const fxl::TimeDelta& timeout) {
   if (!(state_ == State::kReady || state_ == State::kStarted))
     return;
 
@@ -128,12 +128,12 @@ void TraceSession::FinishProvider(TraceProviderBundle* bundle) {
         case Tracee::TransferStatus::kComplete:
           break;
         case Tracee::TransferStatus::kCorrupted:
-          FTL_LOG(ERROR) << "Encountered unrecoverable error writing socket, "
+          FXL_LOG(ERROR) << "Encountered unrecoverable error writing socket, "
                             "aborting trace";
           Abort();
           return;
         case Tracee::TransferStatus::kReceiverDead:
-          FTL_LOG(ERROR) << "Peer is closed, aborting trace";
+          FXL_LOG(ERROR) << "Peer is closed, aborting trace";
           Abort();
           return;
         default:
@@ -162,7 +162,7 @@ void TraceSession::FinishSessionDueToTimeout() {
     TransitionToState(State::kStopped);
     for (auto& tracee : tracees_) {
       if (tracee->state() != Tracee::State::kStopped)
-        FTL_LOG(WARNING) << "Timed out waiting for trace provider '"
+        FXL_LOG(WARNING) << "Timed out waiting for trace provider '"
                          << tracee->bundle()->label << "' to finish";
     }
     done_callback_();
@@ -170,7 +170,7 @@ void TraceSession::FinishSessionDueToTimeout() {
 }
 
 void TraceSession::TransitionToState(State new_state) {
-  FTL_VLOG(2) << "Transitioning from " << static_cast<uint32_t>(state_)
+  FXL_VLOG(2) << "Transitioning from " << static_cast<uint32_t>(state_)
               << " to " << static_cast<uint32_t>(new_state);
   state_ = new_state;
 }

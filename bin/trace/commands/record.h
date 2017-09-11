@@ -19,20 +19,20 @@
 #include "apps/tracing/src/trace/results_upload.h"
 #include "apps/tracing/src/trace/spec.h"
 #include "apps/tracing/src/trace/tracer.h"
-#include "lib/ftl/memory/weak_ptr.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fxl/time/time_delta.h"
 
 namespace tracing {
 
 class Record : public CommandWithTraceController {
  public:
   struct Options {
-    bool Setup(const ftl::CommandLine&);
+    bool Setup(const fxl::CommandLine&);
 
     std::string app;
     std::vector<std::string> args;
     std::vector<std::string> categories = {};
-    ftl::TimeDelta duration = ftl::TimeDelta::FromSeconds(10);
+    fxl::TimeDelta duration = fxl::TimeDelta::FromSeconds(10);
     bool detach = false;
     bool decouple = false;
     uint32_t buffer_size_megabytes_hint = 4;
@@ -45,11 +45,11 @@ class Record : public CommandWithTraceController {
   static Info Describe();
 
   explicit Record(app::ApplicationContext* context);
-  void Run(const ftl::CommandLine& command_line) override;
+  void Run(const fxl::CommandLine& command_line) override;
 
  private:
   void StopTrace();
-  void ProcessMeasurements(ftl::Closure on_done);
+  void ProcessMeasurements(fxl::Closure on_done);
   void DoneTrace();
   void LaunchApp();
   void StartTimer();
@@ -66,7 +66,7 @@ class Record : public CommandWithTraceController {
   bool tracing_ = false;
   Options options_;
 
-  ftl::WeakPtrFactory<Record> weak_ptr_factory_;
+  fxl::WeakPtrFactory<Record> weak_ptr_factory_;
 };
 
 }  // namespace tracing

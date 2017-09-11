@@ -10,7 +10,7 @@
 #include "apps/tracing/lib/trace/event.h"
 #include "apps/tracing/lib/trace/tests/cevent_unittest.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace tracing {

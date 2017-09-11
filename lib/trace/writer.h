@@ -19,7 +19,7 @@
 #include "apps/tracing/lib/trace/cwriter.h"
 #include "apps/tracing/lib/trace/internal/fields.h"
 #include "apps/tracing/lib/trace/types.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace tracing {
 
@@ -819,7 +819,7 @@ class TraceWriter final {
 
   ::tracing::internal::TraceEngine* engine_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TraceWriter);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TraceWriter);
 };
 
 // Helps construct named arguments using SFINAE to coerce types.

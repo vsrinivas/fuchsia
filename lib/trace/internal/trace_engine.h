@@ -16,9 +16,9 @@
 #include <vector>
 
 #include "apps/tracing/lib/trace/writer.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fxl/strings/string_view.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 #include "lib/mtl/vmo/shared_vmo.h"
@@ -54,7 +54,7 @@ class TraceEngine final : private mtl::MessageLoopHandler {
       mx::eventpair fence,
       std::vector<std::string> enabled_categories);
 
-  const ftl::RefPtr<ftl::TaskRunner>& task_runner() const {
+  const fxl::RefPtr<fxl::TaskRunner>& task_runner() const {
     return task_runner_;
   }
 
@@ -109,7 +109,7 @@ class TraceEngine final : private mtl::MessageLoopHandler {
                       size_t log_message_length);
 
  private:
-  explicit TraceEngine(ftl::RefPtr<mtl::SharedVmo> buffer,
+  explicit TraceEngine(fxl::RefPtr<mtl::SharedVmo> buffer,
                        mx::eventpair fence,
                        std::vector<std::string> enabled_categories);
 
@@ -128,7 +128,7 @@ class TraceEngine final : private mtl::MessageLoopHandler {
 
   uint32_t const generation_;
 
-  ftl::RefPtr<mtl::SharedVmo> const buffer_;
+  fxl::RefPtr<mtl::SharedVmo> const buffer_;
   uintptr_t const buffer_start_;
   uintptr_t const buffer_end_;
   std::atomic<uintptr_t> buffer_current_;
@@ -137,9 +137,9 @@ class TraceEngine final : private mtl::MessageLoopHandler {
   // We must keep both the vector and the set since the set contains
   // string views into the strings which are backed by the vector.
   std::vector<std::string> const enabled_categories_;
-  std::set<ftl::StringView> enabled_category_set_;
+  std::set<fxl::StringView> enabled_category_set_;
 
-  ftl::RefPtr<ftl::TaskRunner> const task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> const task_runner_;
   mtl::MessageLoop::HandlerKey fence_handler_key_{};
 
   TraceFinishedCallback finished_callback_;
@@ -158,9 +158,9 @@ class TraceEngine final : private mtl::MessageLoopHandler {
   std::unordered_map<ProcessThread, ThreadRef>
       process_thread_table_;  // guarded by table_mutex_
 
-  ftl::WeakPtrFactory<TraceEngine> weak_ptr_factory_;
+  fxl::WeakPtrFactory<TraceEngine> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TraceEngine);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TraceEngine);
 };
 
 }  // namespace internal

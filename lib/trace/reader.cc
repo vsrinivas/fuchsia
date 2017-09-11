@@ -6,8 +6,8 @@
 
 #include "apps/tracing/lib/trace/internal/fields.h"
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 using namespace ::tracing::internal;
 
@@ -60,13 +60,13 @@ bool Chunk::ReadChunk(size_t num_words, Chunk* out_chunk) {
   return true;
 }
 
-bool Chunk::ReadString(size_t length, ftl::StringView* out_string) {
+bool Chunk::ReadString(size_t length, fxl::StringView* out_string) {
   auto num_words = BytesToWords(Pad(length));
   if (current_ + num_words > end_)
     return false;
 
   *out_string =
-      ftl::StringView(reinterpret_cast<const char*>(current_), length);
+      fxl::StringView(reinterpret_cast<const char*>(current_), length);
   current_ += num_words;
   return true;
 }
@@ -99,7 +99,7 @@ bool TraceContext::DecodeStringRef(Chunk& chunk,
 
   if (string_ref & StringRefFields::kInlineFlag) {
     size_t length = string_ref & StringRefFields::kLengthMask;
-    ftl::StringView string_view;
+    fxl::StringView string_view;
     if (!chunk.ReadString(length, &string_view)) {
       ReportError("Could not read inline string");
       return false;
@@ -149,14 +149,14 @@ void TraceContext::RegisterProvider(ProviderId id, std::string name) {
 }
 
 void TraceContext::RegisterString(StringIndex index, std::string string) {
-  FTL_DCHECK(index != StringRefFields::kInvalidIndex &&
+  FXL_DCHECK(index != StringRefFields::kInvalidIndex &&
              index <= StringRefFields::kMaxIndex);
   current_provider_->string_table[index] = std::move(string);
 }
 
 void TraceContext::RegisterThread(ThreadIndex index,
                                   const ProcessThread& process_thread) {
-  FTL_DCHECK(index != ThreadRefFields::kInline &&
+  FXL_DCHECK(index != ThreadRefFields::kInline &&
              index <= ThreadRefFields::kMaxIndex);
   current_provider_->thread_table[index] = process_thread;
 }
@@ -325,7 +325,7 @@ bool TraceReader::ReadRecords(Chunk& chunk) {
       context_.ReportError("Unexpected record of size 0");
       return false;  // fatal error
     }
-    FTL_DCHECK(size <= RecordFields::kMaxRecordSizeWords);
+    FXL_DCHECK(size <= RecordFields::kMaxRecordSizeWords);
 
     Chunk record;
     if (!chunk.ReadChunk(size - 1, &record))
@@ -383,7 +383,7 @@ bool TraceReader::ReadRecords(Chunk& chunk) {
       }
       default: {
         // Ignore unknown record types for forward compatibility.
-        context_.ReportError(ftl::StringPrintf(
+        context_.ReportError(fxl::StringPrintf(
             "Skipping record of unknown type %d", static_cast<uint32_t>(type)));
         break;
       }
@@ -400,7 +400,7 @@ bool TraceReader::ReadMetadataRecord(Chunk& record, RecordHeader header) {
       auto id = ProviderInfoMetadataRecordFields::Id::Get<ProviderId>(header);
       auto name_length =
           ProviderInfoMetadataRecordFields::NameLength::Get<size_t>(header);
-      ftl::StringView name_view;
+      fxl::StringView name_view;
       if (!record.ReadString(name_length, &name_view))
         return false;
       std::string name = name_view.ToString();
@@ -421,7 +421,7 @@ bool TraceReader::ReadMetadataRecord(Chunk& record, RecordHeader header) {
     }
     default: {
       // Ignore unknown metadata types for forward compatibility.
-      context_.ReportError(ftl::StringPrintf(
+      context_.ReportError(fxl::StringPrintf(
           "Skipping metadata of unknown type %d", static_cast<uint32_t>(type)));
       break;
     }
@@ -446,7 +446,7 @@ bool TraceReader::ReadStringRecord(Chunk& record, RecordHeader header) {
   }
 
   auto length = StringRecordFields::StringLength::Get<size_t>(header);
-  ftl::StringView string_view;
+  fxl::StringView string_view;
   if (!record.ReadString(length, &string_view))
     return false;
   std::string string = string_view.ToString();
@@ -582,7 +582,7 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
     }
     default: {
       // Ignore unknown event types for forward compatibility.
-      context_.ReportError(ftl::StringPrintf(
+      context_.ReportError(fxl::StringPrintf(
           "Skipping event of unknown type %d", static_cast<uint32_t>(type)));
       break;
     }
@@ -647,7 +647,7 @@ bool TraceReader::ReadLogRecord(Chunk& record, RecordHeader header) {
   auto thread_ref = LogRecordFields::ThreadRef::Get<EncodedThreadRef>(header);
   Ticks timestamp;
   ProcessThread process_thread;
-  ftl::StringView log_message;
+  fxl::StringView log_message;
   if (!record.Read(&timestamp) ||
       !context_.DecodeThreadRef(record, thread_ref, &process_thread) ||
       !record.ReadString(log_message_length, &log_message))
@@ -763,7 +763,7 @@ bool TraceReader::ReadArguments(Chunk& record,
       }
       default: {
         // Ignore unknown argument types for forward compatibility.
-        context_.ReportError(ftl::StringPrintf(
+        context_.ReportError(fxl::StringPrintf(
             "Skipping argument of unknown type %d, argument name %s",
             static_cast<uint32_t>(type), name.c_str()));
         break;

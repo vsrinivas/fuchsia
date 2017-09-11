@@ -6,13 +6,13 @@
 
 #include <magenta/compiler.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace tracing {
 namespace internal {
 
 __WEAK void ReleaseEngine() {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 }  // namespace internal
@@ -56,43 +56,43 @@ __WEAK TraceWriter TraceWriter::Prepare() {
 
 __WEAK StringRef TraceWriter::RegisterString(const char* constant,
                                              bool check_category) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
   return StringRef::MakeEmpty();
 }
 
 __WEAK StringRef TraceWriter::RegisterStringCopy(const std::string& string) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
   return StringRef::MakeEmpty();
 }
 
 __WEAK ThreadRef TraceWriter::RegisterCurrentThread() {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
   return ThreadRef::MakeUnknown();
 }
 
 __WEAK ThreadRef TraceWriter::RegisterThread(mx_koid_t process_koid,
                                              mx_koid_t thread_koid) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
   return ThreadRef::MakeUnknown();
 }
 
 __WEAK void TraceWriter::WriteProcessDescription(
     mx_koid_t process_koid,
     const std::string& process_name) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void TraceWriter::WriteThreadDescription(
     mx_koid_t process_koid,
     mx_koid_t thread_koid,
     const std::string& thread_name) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK Payload TraceWriter::WriteKernelObjectRecordBase(mx_handle_t handle,
                                                         size_t argument_count,
                                                         size_t payload_size) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
   return Payload(nullptr);
 }
 
@@ -102,14 +102,14 @@ __WEAK void TraceWriter::WriteContextSwitchRecord(
     ThreadState outgoing_thread_state,
     const ThreadRef& outgoing_thread_ref,
     const ThreadRef& incoming_thread_ref) {
-  FTL_DCHECK(engine_);
+  FXL_DCHECK(engine_);
 }
 
 __WEAK void TraceWriter::WriteLogRecord(Ticks event_time,
                                         const ThreadRef& thread_ref,
                                         const char* log_message,
                                         size_t log_message_length) {
-  FTL_DCHECK(engine_);
+  FXL_DCHECK(engine_);
 }
 
 __WEAK Payload TraceWriter::WriteEventRecordBase(EventType type,
@@ -119,7 +119,7 @@ __WEAK Payload TraceWriter::WriteEventRecordBase(EventType type,
                                                  const StringRef& name_ref,
                                                  size_t argument_count,
                                                  size_t payload_size) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
   return Payload(nullptr);
 }
 

@@ -14,7 +14,7 @@ class DumpProvider : public CommandWithTraceController {
   static Info Describe();
 
   explicit DumpProvider(app::ApplicationContext* context);
-  void Run(const ftl::CommandLine& command_line) override;
+  void Run(const fxl::CommandLine& command_line) override;
 };
 
 }  // namespace tracing

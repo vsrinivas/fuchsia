@@ -5,7 +5,7 @@
 #include "apps/tracing/lib/trace/internal/trace_provider_impl.h"
 
 #include "apps/tracing/lib/trace/writer.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/handles/object_info.h"
 
 namespace tracing {
@@ -64,8 +64,8 @@ void TraceProviderImpl::Dump(mx::socket output) {
 }
 
 void TraceProviderImpl::StartPendingTrace() {
-  FTL_DCHECK(pending_trace_);
-  FTL_DCHECK(state_ == State::kStopped);
+  FXL_DCHECK(pending_trace_);
+  FXL_DCHECK(state_ == State::kStopped);
 
   auto pending_trace = std::move(pending_trace_);
 
@@ -74,7 +74,7 @@ void TraceProviderImpl::StartPendingTrace() {
       std::move(pending_trace->enabled_categories),
       [weak = weak_ptr_factory_.GetWeakPtr()](
           tracing::writer::TraceDisposition disposition) {
-        FTL_VLOG(2) << "Trace finished: disposition="
+        FXL_VLOG(2) << "Trace finished: disposition="
                     << ToUnderlyingType(disposition);
         if (weak)
           weak->FinishedTrace();
@@ -82,16 +82,16 @@ void TraceProviderImpl::StartPendingTrace() {
 
   if (result) {
     state_ = State::kStarted;
-    FTL_VLOG(2) << "Successfully started pending trace";
+    FXL_VLOG(2) << "Successfully started pending trace";
   } else {
-    FTL_LOG(WARNING) << "Failed to start pending trace";
+    FXL_LOG(WARNING) << "Failed to start pending trace";
   }
 
   pending_trace->start_callback(result);
 }
 
 void TraceProviderImpl::FinishedTrace() {
-  FTL_DCHECK(state_ == State::kStarted || state_ == State::kStopping);
+  FXL_DCHECK(state_ == State::kStarted || state_ == State::kStopping);
 
   state_ = State::kStopped;
   if (pending_trace_)

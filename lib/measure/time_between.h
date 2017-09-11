@@ -12,7 +12,7 @@
 
 #include "apps/tracing/lib/measure/event_spec.h"
 #include "apps/tracing/lib/trace/reader.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace tracing {
 namespace measure {
@@ -62,7 +62,7 @@ class MeasureTimeBetween {
   // occurence of the first event.
   std::unordered_map<uint64_t, Ticks> pending_time_between_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MeasureTimeBetween);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MeasureTimeBetween);
 };
 
 }  // namespace measure

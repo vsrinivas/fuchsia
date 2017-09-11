@@ -18,8 +18,8 @@
 #include "apps/tracing/services/trace_provider.fidl.h"
 #include "apps/tracing/services/trace_registry.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace tracing {
 namespace internal {
@@ -59,9 +59,9 @@ class TraceProviderImpl : public TraceProvider {
   };
   std::unique_ptr<PendingTrace> pending_trace_;
 
-  ftl::WeakPtrFactory<TraceProviderImpl> weak_ptr_factory_;
+  fxl::WeakPtrFactory<TraceProviderImpl> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TraceProviderImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TraceProviderImpl);
 };
 
 }  // namespace internal

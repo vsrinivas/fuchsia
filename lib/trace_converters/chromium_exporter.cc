@@ -8,7 +8,7 @@
 
 #include <utility>
 
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 
 namespace tracing {
@@ -196,7 +196,7 @@ void ChromiumExporter::ExportEvent(const reader::Record::Event& event) {
       if (event.data.GetCounter().id) {
         writer_.Key("id");
         writer_.String(
-            ftl::StringPrintf("0x%" PRIx64, event.data.GetCounter().id)
+            fxl::StringPrintf("0x%" PRIx64, event.data.GetCounter().id)
                 .c_str());
       }
       break;
@@ -283,12 +283,12 @@ void ChromiumExporter::ExportEvent(const reader::Record::Event& event) {
         case ArgumentType::kPointer:
           writer_.Key(arg.name.data(), arg.name.size());
           writer_.String(
-              ftl::StringPrintf("0x%" PRIx64, arg.value.GetPointer()).c_str());
+              fxl::StringPrintf("0x%" PRIx64, arg.value.GetPointer()).c_str());
           break;
         case ArgumentType::kKoid:
           writer_.Key(arg.name.data(), arg.name.size());
           writer_.String(
-              ftl::StringPrintf("#%" PRIu64, arg.value.GetKoid()).c_str());
+              fxl::StringPrintf("#%" PRIu64, arg.value.GetKoid()).c_str());
           break;
         default:
           break;

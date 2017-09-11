@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace tracing {
@@ -65,7 +65,7 @@ TEST_F(WriterTest, BulkStringRegistrationAndRetrieval) {
   std::map<std::unique_ptr<std::string>, StringRef> ids;
 
   for (int i = 1; i < 4095; i++) {
-    auto value = std::make_unique<std::string>(ftl::StringPrintf("%d", i));
+    auto value = std::make_unique<std::string>(fxl::StringPrintf("%d", i));
     StringRef string_ref = writer.RegisterString(value->c_str());
     EXPECT_NE(0u, string_ref.encoded_value());
     ids.emplace(std::move(value), std::move(string_ref));

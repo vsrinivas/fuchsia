@@ -17,7 +17,7 @@
 #include <trace-engine/context.h>
 
 #include "apps/tracing/src/ktrace_provider/tags.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace ktrace_provider {
 
@@ -203,7 +203,7 @@ class Importer {
         message_counters_;
   } channels_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Importer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Importer);
 };
 
 }  // namespace ktrace_provider

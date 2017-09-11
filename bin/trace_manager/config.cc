@@ -9,7 +9,7 @@
 #include <rapidjson/istreamwrapper.h>
 
 #include "apps/tracing/src/trace_manager/config.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace tracing {
 namespace {
@@ -29,9 +29,9 @@ bool Config::ReadFrom(const std::string& config_file) {
   rapidjson::Document document;
 
   if (!document.ParseStream(isw).IsObject()) {
-    FTL_LOG(ERROR) << "Failed to parse JSON object from: " << config_file;
+    FXL_LOG(ERROR) << "Failed to parse JSON object from: " << config_file;
     if (document.HasParseError()) {
-      FTL_LOG(ERROR) << "Parse error "
+      FXL_LOG(ERROR) << "Parse error "
         << GetParseError_En(document.GetParseError())
         << " (" << document.GetErrorOffset() << ")";
     }
@@ -42,12 +42,12 @@ bool Config::ReadFrom(const std::string& config_file) {
   if (categories_it != document.MemberEnd()) {
     const auto& value = categories_it->value;
     if (!value.IsObject()) {
-      FTL_LOG(ERROR) << "Expecting " << kCategories << " to be an object";
+      FXL_LOG(ERROR) << "Expecting " << kCategories << " to be an object";
       return false;
     }
     for (auto it = value.MemberBegin(); it != value.MemberEnd(); ++it) {
       if (!(it->name.IsString() && it->value.IsString())) {
-        FTL_LOG(ERROR) << "Expecting both name and value to be strings";
+        FXL_LOG(ERROR) << "Expecting both name and value to be strings";
         return false;
       }
       known_categories_[it->name.GetString()] = it->value.GetString();

@@ -8,7 +8,7 @@
 #include <unordered_map>
 
 #include "apps/tracing/lib/trace/internal/trace_engine.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 using namespace ::tracing::writer;
 using namespace ::tracing::internal;
@@ -17,7 +17,7 @@ namespace tracing {
 namespace internal {
 namespace {
 
-// Unfortunately, we can't use ordinary ftl::RefPtrs or std::shared_ptrs
+// Unfortunately, we can't use ordinary fxl::RefPtrs or std::shared_ptrs
 // since the smart pointers themselves are not atomic.  For performance
 // reasons, we need to be able to atomically acquire an engine reference
 // without grabbing a mutex except when changing states.
@@ -56,18 +56,18 @@ void NotifyHandlers(const TraceHandlerMap& handlers, TraceState state) {
 
 // Called on the engine thread when tracing has completely finished.
 void FinishedTracing() {
-  FTL_VLOG(1) << "FinishedTracing";
-  FTL_DCHECK(g_active_engine.load(std::memory_order_relaxed) == nullptr);
+  FXL_VLOG(1) << "FinishedTracing";
+  FXL_DCHECK(g_active_engine.load(std::memory_order_relaxed) == nullptr);
 
   TraceHandlerMap handlers;
   TraceFinishedCallback finished_callback;
   TraceDisposition trace_disposition;
   {
     std::lock_guard<std::mutex> lock(g_mutex);
-    FTL_DCHECK(g_state == TraceState::kStopped);
-    FTL_DCHECK(g_owned_engine);
-    FTL_DCHECK(g_owned_engine->task_runner()->RunsTasksOnCurrentThread());
-    FTL_DCHECK(g_finished_posted);
+    FXL_DCHECK(g_state == TraceState::kStopped);
+    FXL_DCHECK(g_owned_engine);
+    FXL_DCHECK(g_owned_engine->task_runner()->RunsTasksOnCurrentThread());
+    FXL_DCHECK(g_finished_posted);
 
     g_finished_posted = false;
     g_state = TraceState::kFinished;
@@ -86,15 +86,15 @@ void FinishedTracing() {
 // Called on the engine thread when the engine has stopped accepting
 // new trace events.
 void StoppedTracing(TraceDisposition trace_disposition) {
-  FTL_VLOG(1) << "StoppedTracing: trace_disposition="
+  FXL_VLOG(1) << "StoppedTracing: trace_disposition="
               << static_cast<int>(trace_disposition);
   TraceHandlerMap handlers;
   {
     std::lock_guard<std::mutex> lock(g_mutex);
-    FTL_DCHECK(g_state == TraceState::kStarted ||
+    FXL_DCHECK(g_state == TraceState::kStarted ||
                g_state == TraceState::kStopping);
-    FTL_DCHECK(g_owned_engine);
-    FTL_DCHECK(g_owned_engine->task_runner()->RunsTasksOnCurrentThread());
+    FXL_DCHECK(g_owned_engine);
+    FXL_DCHECK(g_owned_engine->task_runner()->RunsTasksOnCurrentThread());
 
     // Clear the engine so no new references to it will be taken.
     g_active_engine.store(nullptr, std::memory_order_relaxed);
@@ -115,7 +115,7 @@ void StoppedTracing(TraceDisposition trace_disposition) {
 void ReleasedLastReference() {
   std::lock_guard<std::mutex> lock(g_mutex);
   if (g_state == TraceState::kStopped && !g_finished_posted) {
-    FTL_DCHECK(g_owned_engine);
+    FXL_DCHECK(g_owned_engine);
     g_finished_posted = true;
     g_owned_engine->task_runner()->PostTask([] { FinishedTracing(); });
   }
@@ -161,18 +161,18 @@ bool StartTracing(mx::vmo buffer,
                   mx::eventpair fence,
                   std::vector<std::string> enabled_categories,
                   TraceFinishedCallback finished_callback) {
-  FTL_VLOG(1) << "StartTracing";
-  FTL_DCHECK(buffer);
-  FTL_DCHECK(fence);
+  FXL_VLOG(1) << "StartTracing";
+  FXL_DCHECK(buffer);
+  FXL_DCHECK(fence);
 
   TraceHandlerMap handlers;
   {
     std::lock_guard<std::mutex> lock(g_mutex);
-    FTL_CHECK(g_state == TraceState::kFinished)
+    FXL_CHECK(g_state == TraceState::kFinished)
         << "Cannot start new trace session until previous session has "
            "completely finished";
-    FTL_DCHECK(!g_owned_engine);
-    FTL_DCHECK(!g_finished_posted);
+    FXL_DCHECK(!g_owned_engine);
+    FXL_DCHECK(!g_finished_posted);
 
     // Start the engine.
     auto engine = TraceEngine::Create(std::move(buffer), std::move(fence),
@@ -197,7 +197,7 @@ bool StartTracing(mx::vmo buffer,
 }
 
 void StopTracing() {
-  FTL_VLOG(1) << "StopTracing";
+  FXL_VLOG(1) << "StopTracing";
 
   // Set stopping state.
   TraceHandlerMap handlers;
@@ -206,8 +206,8 @@ void StopTracing() {
     if (g_state != TraceState::kStarted)
       return;
 
-    FTL_DCHECK(g_owned_engine);
-    FTL_DCHECK(g_owned_engine->task_runner()->RunsTasksOnCurrentThread());
+    FXL_DCHECK(g_owned_engine);
+    FXL_DCHECK(g_owned_engine->task_runner()->RunsTasksOnCurrentThread());
     g_state = TraceState::kStopping;
     handlers = g_handlers;
   }
@@ -273,43 +273,43 @@ TraceWriter TraceWriter::Prepare() {
 
 StringRef TraceWriter::RegisterString(const char* constant,
                                       bool check_category) {
-  FTL_DCHECK(engine_);
+  FXL_DCHECK(engine_);
   return engine_->RegisterString(constant, check_category);
 }
 
 StringRef TraceWriter::RegisterStringCopy(const std::string& string) {
-  FTL_DCHECK(engine_);
+  FXL_DCHECK(engine_);
   return engine_->RegisterStringCopy(string);
 }
 
 ThreadRef TraceWriter::RegisterCurrentThread() {
-  FTL_DCHECK(engine_);
+  FXL_DCHECK(engine_);
   return engine_->RegisterCurrentThread();
 }
 
 ThreadRef TraceWriter::RegisterThread(mx_koid_t process_koid,
                                       mx_koid_t thread_koid) {
-  FTL_DCHECK(engine_);
+  FXL_DCHECK(engine_);
   return engine_->RegisterThread(process_koid, thread_koid);
 }
 
 void TraceWriter::WriteProcessDescription(mx_koid_t process_koid,
                                           const std::string& process_name) {
-  FTL_DCHECK(engine_);
+  FXL_DCHECK(engine_);
   engine_->WriteProcessDescription(process_koid, process_name);
 }
 
 void TraceWriter::WriteThreadDescription(mx_koid_t process_koid,
                                          mx_koid_t thread_koid,
                                          const std::string& thread_name) {
-  FTL_DCHECK(engine_);
+  FXL_DCHECK(engine_);
   engine_->WriteThreadDescription(process_koid, thread_koid, thread_name);
 }
 
 Payload TraceWriter::WriteKernelObjectRecordBase(mx_handle_t handle,
                                                  size_t argument_count,
                                                  size_t payload_size) {
-  FTL_DCHECK(engine_);
+  FXL_DCHECK(engine_);
   return engine_->WriteKernelObjectRecordBase(handle, argument_count,
                                               payload_size);
 }
@@ -320,7 +320,7 @@ void TraceWriter::WriteContextSwitchRecord(
     ThreadState outgoing_thread_state,
     const ThreadRef& outgoing_thread_ref,
     const ThreadRef& incoming_thread_ref) {
-  FTL_DCHECK(engine_);
+  FXL_DCHECK(engine_);
   engine_->WriteContextSwitchRecord(event_time, cpu_number,
                                     outgoing_thread_state, outgoing_thread_ref,
                                     incoming_thread_ref);
@@ -330,7 +330,7 @@ void TraceWriter::WriteLogRecord(Ticks event_time,
                                  const ThreadRef& thread_ref,
                                  const char* log_message,
                                  size_t log_message_length) {
-  FTL_DCHECK(engine_);
+  FXL_DCHECK(engine_);
   engine_->WriteLogRecord(event_time, thread_ref, log_message,
                           log_message_length);
 }
@@ -342,7 +342,7 @@ Payload TraceWriter::WriteEventRecordBase(EventType event_type,
                                           const StringRef& name_ref,
                                           size_t argument_count,
                                           size_t payload_size) {
-  FTL_DCHECK(engine_);
+  FXL_DCHECK(engine_);
   return engine_->WriteEventRecordBase(event_type, event_time, thread_ref,
                                        category_ref, name_ref, argument_count,
                                        payload_size);

@@ -7,7 +7,7 @@
 #include <magenta/compiler.h>
 
 #include "apps/tracing/lib/trace/internal/cevent_helpers.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 __WEAK bool ctrace_is_enabled() {
   return false;
@@ -27,7 +27,7 @@ __WEAK void ctrace_writer_release(ctrace_writer_t* writer) {
 __WEAK void ctrace_register_current_thread(
     ctrace_writer_t* writer,
     ctrace_threadref_t* out_ref) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
   *out_ref = {};
 }
 
@@ -36,7 +36,7 @@ __WEAK bool ctrace_register_category_string(
     const char* string,
     bool check_category,
     ctrace_stringref_t* out_ref) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
   return false;
 }
 
@@ -44,7 +44,7 @@ __WEAK void ctrace_register_string(
     ctrace_writer_t* writer,
     const char* string,
     ctrace_stringref_t* out_ref) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
   *out_ref = {};
 }
 
@@ -56,7 +56,7 @@ __WEAK void ctrace_internal_write_instant_event_record(
     const char* name,
     ctrace_scope_t scope,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void ctrace_internal_write_counter_event_record(
@@ -65,7 +65,7 @@ __WEAK void ctrace_internal_write_counter_event_record(
     const char* name,
     uint64_t id,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void ctrace_internal_write_duration_begin_event_record(
@@ -73,7 +73,7 @@ __WEAK void ctrace_internal_write_duration_begin_event_record(
     const ctrace_stringref_t* category_ref,
     const char* name,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void ctrace_internal_write_duration_end_event_record(
@@ -81,7 +81,7 @@ __WEAK void ctrace_internal_write_duration_end_event_record(
     const ctrace_stringref_t* category_ref,
     const char* name,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void ctrace_internal_write_async_begin_event_record(
@@ -90,7 +90,7 @@ __WEAK void ctrace_internal_write_async_begin_event_record(
     const char* name,
     uint64_t id,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void ctrace_internal_write_async_instant_event_record(
@@ -99,7 +99,7 @@ __WEAK void ctrace_internal_write_async_instant_event_record(
     const char* name,
     uint64_t id,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void ctrace_internal_write_async_end_event_record(
@@ -108,7 +108,7 @@ __WEAK void ctrace_internal_write_async_end_event_record(
     const char* name,
     uint64_t id,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void ctrace_internal_write_flow_begin_event_record(
@@ -117,7 +117,7 @@ __WEAK void ctrace_internal_write_flow_begin_event_record(
     const char* name,
     uint64_t id,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void ctrace_internal_write_flow_step_event_record(
@@ -126,7 +126,7 @@ __WEAK void ctrace_internal_write_flow_step_event_record(
     const char* name,
     uint64_t id,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void ctrace_internal_write_flow_end_event_record(
@@ -135,14 +135,14 @@ __WEAK void ctrace_internal_write_flow_end_event_record(
     const char* name,
     uint64_t id,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void ctrace_internal_write_kernel_object_record(
     ctrace_writer_t* writer,
     mx_handle_t handle,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 // Stubs for the public facing API.
@@ -155,7 +155,7 @@ __WEAK void ctrace_write_instant_event_record(
     const ctrace_stringref_t* name_ref,
     ctrace_scope_t scope,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void ctrace_write_counter_event_record(
@@ -166,7 +166,7 @@ __WEAK void ctrace_write_counter_event_record(
     const ctrace_stringref_t* name_ref,
     uint64_t id,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void ctrace_write_duration_event_record(
@@ -177,7 +177,7 @@ __WEAK void ctrace_write_duration_event_record(
     const ctrace_stringref_t* category_ref,
     const ctrace_stringref_t* name_ref,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 __WEAK void ctrace_write_duration_begin_event_record(
     ctrace_writer_t* writer,
@@ -186,7 +186,7 @@ __WEAK void ctrace_write_duration_begin_event_record(
     const ctrace_stringref_t* category_ref,
     const ctrace_stringref_t* name_ref,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void ctrace_write_duration_end_event_record(
@@ -196,7 +196,7 @@ __WEAK void ctrace_write_duration_end_event_record(
     const ctrace_stringref_t* category_ref,
     const ctrace_stringref_t* name_ref,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void ctrace_write_async_begin_event_record(
@@ -207,7 +207,7 @@ __WEAK void ctrace_write_async_begin_event_record(
     const ctrace_stringref_t* name_ref,
     uint64_t id,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void ctrace_write_async_instant_event_record(
@@ -218,7 +218,7 @@ __WEAK void ctrace_write_async_instant_event_record(
     const ctrace_stringref_t* name_ref,
     uint64_t id,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void ctrace_write_async_end_event_record(
@@ -229,7 +229,7 @@ __WEAK void ctrace_write_async_end_event_record(
     const ctrace_stringref_t* name_ref,
     uint64_t id,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void ctrace_write_flow_begin_event_record(
@@ -240,7 +240,7 @@ __WEAK void ctrace_write_flow_begin_event_record(
     const ctrace_stringref_t* name_ref,
     uint64_t id,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void ctrace_write_flow_step_event_record(
@@ -251,7 +251,7 @@ __WEAK void ctrace_write_flow_step_event_record(
     const ctrace_stringref_t* name_ref,
     uint64_t id,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void ctrace_write_flow_end_event_record(
@@ -262,12 +262,12 @@ __WEAK void ctrace_write_flow_end_event_record(
     const ctrace_stringref_t* name_ref,
     uint64_t id,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 __WEAK void ctrace_write_kernel_object_record(
     ctrace_writer_t* writer,
     mx_handle_t handle,
     const ctrace_arglist_t* args) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }

@@ -5,7 +5,7 @@
 #ifndef APPS_TRACING_LIB_TRACE_SETTINGS_H_
 #define APPS_TRACING_LIB_TRACE_SETTINGS_H_
 
-#include "lib/ftl/command_line.h"
+#include "lib/fxl/command_line.h"
 
 namespace tracing {
 
@@ -24,7 +24,7 @@ struct TraceSettings {
 // Returns false and leaves |out_settings| unchanged if there was an
 // error parsing the options.  Otherwise updates |out_settings| with any
 // values which were overridden by the command-line.
-bool ParseTraceSettings(const ftl::CommandLine& command_line,
+bool ParseTraceSettings(const fxl::CommandLine& command_line,
                         TraceSettings* out_settings);
 
 }  // namespace tracing

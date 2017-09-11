@@ -14,7 +14,7 @@ using namespace tracing::internal;
 namespace tracing {
 namespace {
 
-const ftl::TimeDelta kStopTimeout = ftl::TimeDelta::FromSeconds(20);
+const fxl::TimeDelta kStopTimeout = fxl::TimeDelta::FromSeconds(20);
 static constexpr uint32_t kMinBufferSizeMegabytes = 1;
 static constexpr uint32_t kMaxBufferSizeMegabytes = 32;
 
@@ -44,38 +44,38 @@ void TraceManager::StartTracing(TraceOptionsPtr options,
                                 mx::socket output,
                                 const StartTracingCallback& start_callback) {
   if (session_) {
-    FTL_LOG(ERROR) << "Trace already in progress";
+    FXL_LOG(ERROR) << "Trace already in progress";
     return;
   }
 
   uint32_t buffer_size_megabytes = std::min(
       std::max(options->buffer_size_megabytes_hint, kMinBufferSizeMegabytes),
       kMaxBufferSizeMegabytes);
-  FTL_LOG(INFO) << "Starting trace with " << buffer_size_megabytes
+  FXL_LOG(INFO) << "Starting trace with " << buffer_size_megabytes
                 << " MB buffers";
 
-  session_ = ftl::MakeRefCounted<TraceSession>(
+  session_ = fxl::MakeRefCounted<TraceSession>(
       std::move(output), std::move(options->categories),
       buffer_size_megabytes * 1024 * 1024, [this]() { session_ = nullptr; });
 
   for (auto& bundle : providers_) {
-    FTL_VLOG(1) << "  for provider " << bundle;
+    FXL_VLOG(1) << "  for provider " << bundle;
     session_->AddProvider(&bundle);
   }
 
   session_->WaitForProvidersToStart(
       start_callback,
-      ftl::TimeDelta::FromMilliseconds(options->start_timeout_milliseconds));
+      fxl::TimeDelta::FromMilliseconds(options->start_timeout_milliseconds));
 }
 
 void TraceManager::StopTracing() {
   if (!session_)
     return;
 
-  FTL_LOG(INFO) << "Stopping trace";
+  FXL_LOG(INFO) << "Stopping trace";
   session_->Stop(
       [this]() {
-        FTL_LOG(INFO) << "Stopped trace";
+        FXL_LOG(INFO) << "Stopped trace";
         session_ = nullptr;
       },
       kStopTimeout);
@@ -84,12 +84,12 @@ void TraceManager::StopTracing() {
 void TraceManager::DumpProvider(uint32_t provider_id, mx::socket output) {
   for (const auto& provider : providers_) {
     if (provider.id == provider_id) {
-      FTL_LOG(INFO) << "Dumping provider: " << provider;
+      FXL_LOG(INFO) << "Dumping provider: " << provider;
       provider.provider->Dump(std::move(output));
       return;
     }
   }
-  FTL_LOG(ERROR) << "Failed to dump provider " << provider_id
+  FXL_LOG(ERROR) << "Failed to dump provider " << provider_id
                  << ", provider not found";
 }
 
@@ -115,7 +115,7 @@ void TraceManager::GetRegisteredProviders(
 void TraceManager::RegisterTraceProvider(
     fidl::InterfaceHandle<TraceProvider> handle,
     const fidl::String& label) {
-  FTL_VLOG(1) << "Registering provider with label: " << label;
+  FXL_VLOG(1) << "Registering provider with label: " << label;
 
   auto it = providers_.emplace(
       providers_.end(),
@@ -137,7 +137,7 @@ void TraceManager::LaunchConfiguredProviders() {
     return;
 
   if (!context_->launcher()) {
-    FTL_LOG(ERROR)
+    FXL_LOG(ERROR)
         << "Cannot access application launcher to launch configured providers";
     return;
   }
@@ -146,7 +146,7 @@ void TraceManager::LaunchConfiguredProviders() {
     // TODO(jeffbrown): Only do this if the provider isn't already running.
     // Also keep track of the provider so we can kill it when the trace
     // manager exits or restart it if needed.
-    FTL_VLOG(1) << "Starting configured provider: " << pair.first;
+    FXL_VLOG(1) << "Starting configured provider: " << pair.first;
     auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = pair.second->url;
     launch_info->arguments = pair.second->arguments.Clone();

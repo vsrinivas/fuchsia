@@ -14,9 +14,9 @@
 
 #include "apps/tracing/src/ktrace_provider/importer.h"
 #include "apps/tracing/src/ktrace_provider/reader.h"
-#include "lib/ftl/arraysize.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/arraysize.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace ktrace_provider {
@@ -43,29 +43,29 @@ constexpr KTraceCategory kGroupCategories[] = {
 
 constexpr char kLogCategory[] = "log";
 
-ftl::UniqueFD OpenKTrace() {
+fxl::UniqueFD OpenKTrace() {
   int result = open(kKTraceDev, O_WRONLY);
   if (result < 0) {
-    FTL_LOG(ERROR) << "Failed to open " << kKTraceDev << ": errno=" << errno;
+    FXL_LOG(ERROR) << "Failed to open " << kKTraceDev << ": errno=" << errno;
   }
-  return ftl::UniqueFD(result);  // take ownership here
+  return fxl::UniqueFD(result);  // take ownership here
 }
 
 void IoctlKtraceStop(int fd) {
   mx_status_t status = ioctl_ktrace_stop(fd);
   if (status != MX_OK)
-    FTL_LOG(ERROR) << "ioctl_ktrace_stop failed: status=" << status;
+    FXL_LOG(ERROR) << "ioctl_ktrace_stop failed: status=" << status;
 }
 
 void IoctlKtraceStart(int fd, uint32_t group_mask) {
   mx_status_t status = ioctl_ktrace_start(fd, &group_mask);
   if (status != MX_OK)
-    FTL_LOG(ERROR) << "ioctl_ktrace_start failed: status=" << status;
+    FXL_LOG(ERROR) << "ioctl_ktrace_start failed: status=" << status;
 }
 
 }  // namespace
 
-App::App(const ftl::CommandLine& command_line)
+App::App(const fxl::CommandLine& command_line)
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
   trace_observer_.Start(mtl::MessageLoop::GetCurrent()->async(),
                         [this] { UpdateState(); });
@@ -99,14 +99,14 @@ void App::UpdateState() {
 }
 
 void App::StartKTrace(uint32_t group_mask) {
-  FTL_DCHECK(!context_);
+  FXL_DCHECK(!context_);
   if (!group_mask) {
     return;  // nothing to trace
   }
 
-  FTL_LOG(INFO) << "Starting ktrace";
+  FXL_LOG(INFO) << "Starting ktrace";
 
-  ftl::UniqueFD fd = OpenKTrace();
+  fxl::UniqueFD fd = OpenKTrace();
   if (!fd.is_valid()) {
     return;
   }
@@ -121,18 +121,18 @@ void App::StartKTrace(uint32_t group_mask) {
   IoctlKtraceStop(fd.get());
   IoctlKtraceStart(fd.get(), group_mask);
 
-  FTL_LOG(INFO) << "Started ktrace";
+  FXL_LOG(INFO) << "Started ktrace";
 }
 
 void App::StopKTrace() {
   if (!context_) {
     return;  // not currently tracing
   }
-  FTL_DCHECK(current_group_mask_);
+  FXL_DCHECK(current_group_mask_);
 
-  FTL_LOG(INFO) << "Stopping ktrace";
+  FXL_LOG(INFO) << "Stopping ktrace";
 
-  ftl::UniqueFD fd = OpenKTrace();
+  fxl::UniqueFD fd = OpenKTrace();
   if (fd.is_valid()) {
     IoctlKtraceStop(fd.get());
   }
@@ -140,7 +140,7 @@ void App::StopKTrace() {
   Reader reader;
   Importer importer(context_);
   if (!importer.Import(reader)) {
-    FTL_LOG(ERROR) << "Errors encountered while importing ktrace data";
+    FXL_LOG(ERROR) << "Errors encountered while importing ktrace data";
   }
 
   trace_release_context(context_);

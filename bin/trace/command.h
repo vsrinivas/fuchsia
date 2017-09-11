@@ -13,8 +13,8 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "apps/tracing/services/trace_controller.fidl.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/macros.h"
 
 namespace tracing {
 
@@ -32,7 +32,7 @@ class Command {
 
   virtual ~Command();
 
-  virtual void Run(const ftl::CommandLine& command_line) = 0;
+  virtual void Run(const fxl::CommandLine& command_line) = 0;
 
  protected:
   static std::istream& in();
@@ -46,7 +46,7 @@ class Command {
 
  private:
   app::ApplicationContext* context_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(Command);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Command);
 };
 
 class CommandWithTraceController : public Command {
@@ -60,7 +60,7 @@ class CommandWithTraceController : public Command {
   std::unique_ptr<app::ApplicationContext> context_;
   TraceControllerPtr trace_controller_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CommandWithTraceController);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CommandWithTraceController);
 };
 
 }  // namespace tracing

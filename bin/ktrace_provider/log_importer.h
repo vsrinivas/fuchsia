@@ -9,7 +9,7 @@
 #include <mx/log.h>
 #include <trace-engine/types.h>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace ktrace_provider {
 
@@ -31,7 +31,7 @@ class LogImporter {
   mx_time_t start_time_;
   async::Wait wait_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LogImporter);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LogImporter);
 };
 
 }  // namespace ktrace_provider

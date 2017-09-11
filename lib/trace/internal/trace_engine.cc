@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/handles/object_info.h"
 
 namespace tracing {
@@ -49,7 +49,7 @@ inline uint64_t MakeRecordHeader(RecordType type, size_t size) {
 
 }  // namespace
 
-TraceEngine::TraceEngine(ftl::RefPtr<mtl::SharedVmo> buffer,
+TraceEngine::TraceEngine(fxl::RefPtr<mtl::SharedVmo> buffer,
                          mx::eventpair fence,
                          std::vector<std::string> enabled_categories)
     : generation_(g_next_generation.fetch_add(1u, std::memory_order_relaxed)),
@@ -61,7 +61,7 @@ TraceEngine::TraceEngine(ftl::RefPtr<mtl::SharedVmo> buffer,
       enabled_categories_(std::move(enabled_categories)),
       task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
       weak_ptr_factory_(this) {
-  FTL_DCHECK(task_runner_);
+  FXL_DCHECK(task_runner_);
 
   for (const auto& category : enabled_categories_) {
     enabled_category_set_.emplace(category);
@@ -72,21 +72,21 @@ TraceEngine::TraceEngine(ftl::RefPtr<mtl::SharedVmo> buffer,
 }
 
 TraceEngine::~TraceEngine() {
-  FTL_DCHECK(!fence_handler_key_);
+  FXL_DCHECK(!fence_handler_key_);
 }
 
 std::unique_ptr<TraceEngine> TraceEngine::Create(
     mx::vmo buffer,
     mx::eventpair fence,
     std::vector<std::string> enabled_categories) {
-  FTL_DCHECK(buffer);
-  FTL_DCHECK(fence);
-  FTL_DCHECK(mtl::MessageLoop::GetCurrent());
+  FXL_DCHECK(buffer);
+  FXL_DCHECK(fence);
+  FXL_DCHECK(mtl::MessageLoop::GetCurrent());
 
-  auto buffer_shared_vmo = ftl::MakeRefCounted<mtl::SharedVmo>(
+  auto buffer_shared_vmo = fxl::MakeRefCounted<mtl::SharedVmo>(
       std::move(buffer), MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
   if (!buffer_shared_vmo->Map()) {
-    FTL_LOG(ERROR) << "Could not map trace buffer.";
+    FXL_LOG(ERROR) << "Could not map trace buffer.";
     return nullptr;
   }
   return std::unique_ptr<TraceEngine>(
@@ -95,11 +95,11 @@ std::unique_ptr<TraceEngine> TraceEngine::Create(
 }
 
 void TraceEngine::StartTracing(TraceFinishedCallback finished_callback) {
-  FTL_DCHECK(finished_callback);
-  FTL_DCHECK(!finished_callback_);
-  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(finished_callback);
+  FXL_DCHECK(!finished_callback_);
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
 
-  FTL_VLOG(1) << "Started tracing...";
+  FXL_VLOG(1) << "Started tracing...";
   finished_callback_ = std::move(finished_callback);
 
   WriteInitializationRecord(GetTicksPerSecond());
@@ -115,7 +115,7 @@ void TraceEngine::StopTracing() {
 
 bool TraceEngine::IsCategoryEnabled(const char* category) const {
   return enabled_category_set_.empty() ||
-         enabled_category_set_.count(ftl::StringView(category)) > 0;
+         enabled_category_set_.count(fxl::StringView(category)) > 0;
 }
 
 TraceEngine::StringRef TraceEngine::RegisterString(const char* constant,
@@ -279,7 +279,7 @@ void TraceEngine::WriteInitializationRecord(Ticks ticks_per_second) {
 }
 
 void TraceEngine::WriteStringRecord(StringIndex index, const char* value) {
-  FTL_DCHECK(index != StringRefFields::kInvalidIndex);
+  FXL_DCHECK(index != StringRefFields::kInvalidIndex);
 
   const size_t length = strlen(value);
   const size_t record_size = sizeof(RecordHeader) + Pad(length);
@@ -297,7 +297,7 @@ void TraceEngine::WriteStringRecord(StringIndex index, const char* value) {
 void TraceEngine::WriteThreadRecord(ThreadIndex index,
                                     mx_koid_t process_koid,
                                     mx_koid_t thread_koid) {
-  FTL_DCHECK(index != ThreadRefFields::kInline);
+  FXL_DCHECK(index != ThreadRefFields::kInline);
 
   const size_t record_size = sizeof(RecordHeader) + WordsToBytes(2);
   Payload payload = AllocateRecord(record_size);
@@ -445,13 +445,13 @@ TraceEngine::Payload TraceEngine::AllocateRecord(size_t num_bytes) {
 void TraceEngine::OnHandleReady(mx_handle_t handle,
                                 mx_signals_t pending,
                                 uint64_t count) {
-  FTL_DCHECK(pending & MX_EPAIR_PEER_CLOSED);
+  FXL_DCHECK(pending & MX_EPAIR_PEER_CLOSED);
 
   StopTracing(TraceDisposition::kConnectionLost, true);
 }
 
 void TraceEngine::OnHandleError(mx_handle_t handle, mx_status_t error) {
-  FTL_DCHECK(error == MX_ERR_CANCELED);
+  FXL_DCHECK(error == MX_ERR_CANCELED);
 
   StopTracing(TraceDisposition::kConnectionLost, true);
 }
@@ -479,20 +479,20 @@ void TraceEngine::StopTracing(TraceDisposition disposition, bool immediate) {
 }
 
 void TraceEngine::StopTracingOnMessageLoop(TraceDisposition disposition) {
-  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
 
   mtl::MessageLoop::GetCurrent()->RemoveHandler(fence_handler_key_);
   fence_handler_key_ = 0u;
 
   switch (disposition) {
     case TraceDisposition::kFinishedNormally:
-      FTL_VLOG(1) << "Trace finished normally";
+      FXL_VLOG(1) << "Trace finished normally";
       break;
     case TraceDisposition::kConnectionLost:
-      FTL_LOG(WARNING) << "Trace aborted: connection lost";
+      FXL_LOG(WARNING) << "Trace aborted: connection lost";
       break;
     case TraceDisposition::kBufferExhausted:
-      FTL_LOG(WARNING) << "Trace aborted: buffer exhausted";
+      FXL_LOG(WARNING) << "Trace aborted: buffer exhausted";
       break;
   }
 

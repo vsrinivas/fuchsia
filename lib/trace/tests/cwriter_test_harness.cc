@@ -9,7 +9,7 @@
 #include "apps/tracing/lib/trace/tests/cwriter_unittest.h"
 #include "apps/tracing/lib/trace/writer.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace tracing {

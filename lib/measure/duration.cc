@@ -26,11 +26,11 @@ bool MeasureDuration::Process(const reader::Record::Event& event) {
 }
 
 bool MeasureDuration::ProcessAsyncStart(const reader::Record::Event& event) {
-  FTL_DCHECK(event.type() == EventType::kAsyncStart);
+  FXL_DCHECK(event.type() == EventType::kAsyncStart);
   const PendingAsyncKey key = {event.category, event.name,
                                event.data.GetAsyncBegin().id};
   if (pending_async_begins_.count(key)) {
-    FTL_LOG(WARNING) << "Ignoring a trace event: duplicate async begin event";
+    FXL_LOG(WARNING) << "Ignoring a trace event: duplicate async begin event";
     return false;
   }
   pending_async_begins_[key] = event.timestamp;
@@ -38,12 +38,12 @@ bool MeasureDuration::ProcessAsyncStart(const reader::Record::Event& event) {
 }
 
 bool MeasureDuration::ProcessAsyncEnd(const reader::Record::Event& event) {
-  FTL_DCHECK(event.type() == EventType::kAsyncEnd);
+  FXL_DCHECK(event.type() == EventType::kAsyncEnd);
 
   const PendingAsyncKey key = {event.category, event.name,
                                event.data.GetAsyncEnd().id};
   if (pending_async_begins_.count(key) == 0) {
-    FTL_LOG(WARNING)
+    FXL_LOG(WARNING)
         << "Ignoring a trace event: async end not preceded by async begin.";
     return false;
   }
@@ -61,16 +61,16 @@ bool MeasureDuration::ProcessAsyncEnd(const reader::Record::Event& event) {
 }
 
 bool MeasureDuration::ProcessDurationStart(const reader::Record::Event& event) {
-  FTL_DCHECK(event.type() == EventType::kDurationBegin);
+  FXL_DCHECK(event.type() == EventType::kDurationBegin);
   duration_stacks_[event.process_thread].push(event.timestamp);
   return true;
 }
 
 bool MeasureDuration::ProcessDurationEnd(const reader::Record::Event& event) {
-  FTL_DCHECK(event.type() == EventType::kDurationEnd);
+  FXL_DCHECK(event.type() == EventType::kDurationEnd);
   const auto key = event.process_thread;
   if (duration_stacks_.count(key) == 0 || duration_stacks_[key].empty()) {
-    FTL_LOG(WARNING)
+    FXL_LOG(WARNING)
         << "Ignoring a trace event: duration end not matched by a previous "
         << "duration begin.";
     return false;

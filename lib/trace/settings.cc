@@ -6,7 +6,7 @@
 
 namespace tracing {
 
-bool ParseTraceSettings(const ftl::CommandLine& command_line,
+bool ParseTraceSettings(const fxl::CommandLine& command_line,
                         TraceSettings* out_settings) {
   TraceSettings settings = *out_settings;
 

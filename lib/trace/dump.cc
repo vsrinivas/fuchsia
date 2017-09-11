@@ -4,7 +4,7 @@
 
 #include "apps/tracing/lib/trace/dump.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace tracing {
 
@@ -33,7 +33,7 @@ Dump::~Dump() {
   }
 
   if (status != MX_OK) {
-    FTL_LOG(WARNING) << "Failed to write entire dump to socket: status="
+    FXL_LOG(WARNING) << "Failed to write entire dump to socket: status="
                      << status;
   }
 }

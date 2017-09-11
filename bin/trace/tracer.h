@@ -13,8 +13,8 @@
 
 #include "apps/tracing/lib/trace/reader.h"
 #include "apps/tracing/services/trace_controller.fidl.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
@@ -35,8 +35,8 @@ class Tracer : private mtl::MessageLoopHandler {
   void Start(TraceOptionsPtr options,
              RecordConsumer record_consumer,
              ErrorHandler error_handler,
-             ftl::Closure start_callback,
-             ftl::Closure done_callback);
+             fxl::Closure start_callback,
+             fxl::Closure done_callback);
 
   // Stops the trace.
   // Does nothing if not started or if already stopping.
@@ -57,15 +57,15 @@ class Tracer : private mtl::MessageLoopHandler {
   enum class State { kStopped, kStarted, kStopping };
 
   State state_ = State::kStopped;
-  ftl::Closure start_callback_;
-  ftl::Closure done_callback_;
+  fxl::Closure start_callback_;
+  fxl::Closure done_callback_;
   mx::socket socket_;
   mtl::MessageLoop::HandlerKey handler_key_;
   std::unique_ptr<reader::TraceReader> reader_;
   std::vector<uint8_t> buffer_;
   size_t buffer_end_ = 0u;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Tracer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Tracer);
 };
 
 }  // namespace tracing

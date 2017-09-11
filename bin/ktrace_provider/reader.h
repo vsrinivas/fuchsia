@@ -7,8 +7,8 @@
 
 #include <magenta/ktrace.h>
 
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/macros.h"
 
 namespace ktrace_provider {
 
@@ -27,13 +27,13 @@ class Reader {
 
   void ReadMoreData();
 
-  ftl::UniqueFD fd_;
+  fxl::UniqueFD fd_;
   char buffer_[kChunkSize];
   char* current_ = buffer_;
   char* marker_ = buffer_;
   char* end_ = buffer_ + kChunkSize;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Reader);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Reader);
 };
 
 }  // namespace ktrace_provider
