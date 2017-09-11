@@ -5,7 +5,7 @@
 #ifndef APPS_TRACING_LIB_TRACE_PROVIDER_H_
 #define APPS_TRACING_LIB_TRACE_PROVIDER_H_
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/tracing/lib/trace/dump.h"
 #include "apps/tracing/lib/trace/settings.h"
 #include "apps/tracing/services/trace_registry.fidl.h"

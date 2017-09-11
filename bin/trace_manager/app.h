@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/tracing/src/trace_manager/trace_manager.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"

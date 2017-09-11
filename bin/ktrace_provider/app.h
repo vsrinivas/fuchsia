@@ -7,7 +7,7 @@
 
 #include <trace/observer.h>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/tracing/src/ktrace_provider/log_importer.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/files/unique_fd.h"

@@ -9,8 +9,8 @@
 #include <string>
 #include <vector>
 
-#include "application/services/application_controller.fidl.h"
-#include "application/services/application_launcher.fidl.h"
+#include "lib/app/fidl/application_controller.fidl.h"
+#include "lib/app/fidl/application_launcher.fidl.h"
 #include "apps/tracing/lib/measure/duration.h"
 #include "apps/tracing/lib/measure/measurements.h"
 #include "apps/tracing/lib/measure/time_between.h"

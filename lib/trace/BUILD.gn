@@ -52,7 +52,7 @@ source_set("trace") {
 
   public_deps = [
     ":types",
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//magenta/system/ulib/mx",
   ]
 }
@@ -93,7 +93,7 @@ source_set("provider") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/tracing/services",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
