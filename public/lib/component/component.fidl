@@ -5,7 +5,7 @@
 module component;
 
 import "lib/app/fidl/service_provider.fidl";
-import "apps/network/services/network_error.fidl";
+import "lib/network/fidl/network_error.fidl";
 
 // Represents the contents of the fuchsia:component facet.
 struct ComponentFacet {

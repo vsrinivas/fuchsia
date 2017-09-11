@@ -9,7 +9,7 @@
 
 #include "apps/modular/services/component/component.fidl.h"
 #include "apps/modular/src/component_manager/resource_loader.h"
-#include "apps/network/services/network_service.fidl.h"
+#include "lib/network/fidl/network_service.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace component {

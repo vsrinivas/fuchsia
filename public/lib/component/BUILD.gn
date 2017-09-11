@@ -15,6 +15,6 @@ fidl("component") {
     "//garnet/public/lib/app/fidl",
     "//apps/ledger/services/public",
     "//apps/modular/services/agent/agent_controller",
-    "//apps/network/services",
+    "//garnet/public/lib/network/fidl",
   ]
 }

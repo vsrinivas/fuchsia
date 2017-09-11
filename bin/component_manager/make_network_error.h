@@ -5,7 +5,7 @@
 #ifndef APPS_COMPONENT_MANAGER_MAKE_NETWORK_ERROR_H_
 #define APPS_COMPONENT_MANAGER_MAKE_NETWORK_ERROR_H_
 
-#include "apps/network/services/network_error.fidl.h"
+#include "lib/network/fidl/network_error.fidl.h"
 
 namespace component {
 

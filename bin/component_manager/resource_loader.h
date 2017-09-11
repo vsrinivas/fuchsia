@@ -5,8 +5,8 @@
 #ifndef APPS_COMPONENT_MANAGER_RESOURCE_LOADER_H_
 #define APPS_COMPONENT_MANAGER_RESOURCE_LOADER_H_
 
-#include "apps/network/services/network_error.fidl.h"
-#include "apps/network/services/network_service.fidl.h"
+#include "lib/network/fidl/network_error.fidl.h"
+#include "lib/network/fidl/network_service.fidl.h"
 
 namespace component {
 
