@@ -46,6 +46,7 @@ private:
     VkDeviceMemory vk_imported_device_memory_ = VK_NULL_HANDLE;
     uint32_t device_memory_handle_ = 0;
     PFN_vkGetMemoryFdKHR vk_get_memory_fd_khr_{};
+    PFN_vkGetMemoryFdPropertiesKHR vk_get_memory_fd_properties_khr_{};
 #endif
     VkCommandPool vk_command_pool_;
     VkCommandBuffer vk_command_buffer_;
@@ -171,6 +172,10 @@ bool VkReadbackTest::InitVulkan()
         reinterpret_cast<PFN_vkGetMemoryFdKHR>(vkGetInstanceProcAddr(instance, "vkGetMemoryFdKHR"));
     if (!vk_get_memory_fd_khr_)
         return DRETF(false, "Couldn't find vkGetMemoryFdKHR");
+    vk_get_memory_fd_properties_khr_ = reinterpret_cast<PFN_vkGetMemoryFdPropertiesKHR>(
+        vkGetInstanceProcAddr(instance, "vkGetMemoryFdPropertiesKHR"));
+    if (!vk_get_memory_fd_properties_khr_)
+        return DRETF(false, "Couldn't find vkGetMemoryFdPropertiesKHR");
 #endif
 
     vk_physical_device_ = physical_devices[0];
@@ -260,6 +265,15 @@ bool VkReadbackTest::InitImage()
                                             VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR};
         if ((result = vk_get_memory_fd_khr_(vk_device_, &get_fd_info, &fd)) != VK_SUCCESS)
             return DRETF(false, "vkGetMemoryFdKHR failed");
+
+        VkMemoryFdPropertiesKHR properties{
+            .sType = VK_STRUCTURE_TYPE_MEMORY_FD_PROPERTIES_KHR, .pNext = nullptr,
+        };
+        // 'handleType must not be one of the handle types defined as opaque.'
+        result = vk_get_memory_fd_properties_khr_(
+            vk_device_, VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR, fd, &properties);
+        if (result != VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR)
+            return DRETF(false, "vkGetMemoryFdPropertiesKHR returned %d", result);
 
         mx_status_t status = mxio_get_exact_vmo(fd, &vmo_handle);
         if (status != MX_OK)
