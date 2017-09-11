@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/src/manager/root_environment_host.h"
+#include "garnet/bin/appmgr/root_environment_host.h"
 
 #include <utility>
 
-#include "application/services/application_environment.fidl.h"
+#include "lib/app/fidl/application_environment.fidl.h"
 
 namespace app {
 namespace {

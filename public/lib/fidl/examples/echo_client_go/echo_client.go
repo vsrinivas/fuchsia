@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 
-	"application/lib/app/context"
+	"app/context"
 	"fidl/bindings"
 
 	"lib/fidl/examples/services/echo"

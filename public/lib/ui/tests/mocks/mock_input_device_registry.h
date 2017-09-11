@@ -8,7 +8,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/ui/tests/mocks/mock_input_device.h"
 #include "lib/ui/input/fidl/input_device_registry.fidl.h"
 #include "lib/ftl/macros.h"

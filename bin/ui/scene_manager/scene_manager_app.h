@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "application/lib/app/application_context.h"
-#include "application/services/application_environment.fidl.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/app/fidl/application_environment.fidl.h"
 #include "lib/ui/scenic/fidl/scene_manager.fidl.h"
 #include "garnet/bin/ui/scene_manager/displays/display_manager.h"
 #include "garnet/bin/ui/scene_manager/scene_manager_impl.h"

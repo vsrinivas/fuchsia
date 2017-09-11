@@ -6,7 +6,7 @@
 
 #include <mx/vmar.h>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/icu_data/cpp/constants.h"
 #include "lib/icu_data/fidl/icu_data.fidl.h"
 #include "third_party/icu/source/common/unicode/udata.h"

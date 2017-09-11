@@ -8,7 +8,7 @@ flutter_app("media_player_flutter") {
   main_dart = "lib/main.dart"
 
   deps = [
-    "//application/lib/app/dart",
+    "//garnet/public/lib/app/dart",
     "//garnet/public/lib/media/flutter",
     "//apps/modular/services/lifecycle:lifecycle_dart",
     "//apps/modular/services/module:module_dart",

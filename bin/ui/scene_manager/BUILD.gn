@@ -142,7 +142,7 @@ source_set("common") {
   ]
 
   public_deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/ui/geometry/fidl",
     "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/ui/scenic/fidl",

@@ -31,10 +31,10 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//application/lib/app",
-    "//application/lib/farfs",
-    "//application/lib/svc",
-    "//application/services",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/lib/farfs",
+    "//garnet/public/lib/svc/cpp",
+    "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",

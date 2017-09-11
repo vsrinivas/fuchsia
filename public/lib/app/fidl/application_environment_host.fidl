@@ -4,7 +4,7 @@
 
 module app;
 
-import "application/services/service_provider.fidl";
+import "lib/app/fidl/service_provider.fidl";
 
 // An interface used by an environment to interact with its creator.
 //

@@ -19,7 +19,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "escher/util/image_utils.h"
 
 #include "lib/ftl/functional/make_copyable.h"

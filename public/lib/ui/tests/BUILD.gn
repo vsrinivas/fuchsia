@@ -10,7 +10,7 @@ source_set("tests") {
     "test_with_message_loop.h",
   ]
   public_deps = [
-    "//application/lib/app:app",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
     "//third_party/gtest",

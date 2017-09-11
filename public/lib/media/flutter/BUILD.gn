@@ -10,7 +10,7 @@ dart_package("flutter") {
   source_dir = "."
 
   deps = [
-    "//application/lib/app/dart",
+    "//garnet/public/lib/app/dart",
     "//garnet/public/lib/media/dart",
     "//garnet/public/lib/media/fidl:fidl_dart",
     "//garnet/public/lib/ui/flutter",

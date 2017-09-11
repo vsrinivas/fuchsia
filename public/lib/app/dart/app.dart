@@ -6,9 +6,9 @@ import 'dart:fuchsia';
 import 'dart:zircon';
 
 import 'package:lib.fidl.dart/bindings.dart';
-import 'package:application.services/application_environment.fidl.dart';
-import 'package:application.services/application_launcher.fidl.dart';
-import 'package:application.services/service_provider.fidl.dart';
+import 'package:lib.app.fidl/application_environment.fidl.dart';
+import 'package:lib.app.fidl/application_launcher.fidl.dart';
+import 'package:lib.app.fidl/service_provider.fidl.dart';
 
 class ApplicationContext {
   ApplicationContext();

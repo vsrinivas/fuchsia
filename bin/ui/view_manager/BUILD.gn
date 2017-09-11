@@ -38,7 +38,7 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/modular/lib/rapidjson",
     "//garnet/public/lib/ui/scenic:client",
     "//garnet/public/lib/ui/geometry/cpp",

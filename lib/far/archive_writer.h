@@ -9,7 +9,7 @@
 
 #include <vector>
 
-#include "application/lib/far/archive_entry.h"
+#include "garnet/lib/far/archive_entry.h"
 
 namespace archive {
 

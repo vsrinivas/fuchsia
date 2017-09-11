@@ -6,7 +6,7 @@
 
 #include <mxio/util.h>
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/ftl/logging.h"
 

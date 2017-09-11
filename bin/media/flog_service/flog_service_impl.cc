@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/flog_service/flog_service_impl.h"
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "garnet/bin/media/flog_service/flog_directory.h"
 #include "garnet/bin/media/flog_service/flog_logger_impl.h"
 #include "garnet/bin/media/flog_service/flog_reader_impl.h"

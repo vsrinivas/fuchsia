@@ -6,7 +6,7 @@
 #include <limits>
 #include <vector>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "garnet/bin/flog_viewer/channel_handler.h"
 #include "garnet/bin/flog_viewer/flog_viewer.h"
 #include "lib/ftl/command_line.h"

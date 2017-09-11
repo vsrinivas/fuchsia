@@ -4,9 +4,9 @@
 
 module app;
 
-import "application/services/application_controller.fidl";
-import "application/services/application_environment.fidl";
-import "application/services/flat_namespace.fidl";
+import "lib/app/fidl/application_controller.fidl";
+import "lib/app/fidl/application_environment.fidl";
+import "lib/app/fidl/flat_namespace.fidl";
 
 // Information given to applications at startup.
 //

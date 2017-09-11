@@ -4,7 +4,7 @@
 
 module escher_demo;
 
-import "application/services/service_provider.fidl";
+import "lib/app/fidl/service_provider.fidl";
 
 [ServiceName="escher_demo::EscherDemo"]
 interface EscherDemo {

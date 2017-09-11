@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "lib/media/timeline/timeline_rate.h"
 #include "lib/media/fidl/media_service.fidl.h"
 #include "garnet/bin/media/fidl/fidl_formatting.h"

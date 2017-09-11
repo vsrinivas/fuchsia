@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/lib/far/far.h"
+#include "garnet/lib/far/far.h"
 
 #include <magenta/syscalls.h>
 #include <mxio/io.h>

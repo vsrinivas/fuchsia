@@ -7,12 +7,12 @@
 
 #include <memory>
 
-#include "application/lib/app/service_provider_impl.h"
-#include "application/lib/svc/service_namespace.h"
-#include "application/services/application_environment.fidl.h"
-#include "application/services/application_launcher.fidl.h"
-#include "application/services/application_runner.fidl.h"
-#include "application/services/service_provider.fidl.h"
+#include "lib/app/cpp/service_provider_impl.h"
+#include "lib/svc/cpp/service_namespace.h"
+#include "lib/app/fidl/application_environment.fidl.h"
+#include "lib/app/fidl/application_launcher.fidl.h"
+#include "lib/app/fidl/application_runner.fidl.h"
+#include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 

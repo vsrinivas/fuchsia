@@ -9,9 +9,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "application/lib/far/archive_reader.h"
-#include "application/lib/far/archive_writer.h"
-#include "application/lib/far/manifest.h"
+#include "garnet/lib/far/archive_reader.h"
+#include "garnet/lib/far/archive_writer.h"
+#include "garnet/lib/far/manifest.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/files/unique_fd.h"
 

@@ -10,6 +10,6 @@ dart_package("dart") {
   source_dir = "."
 
   deps = [
-    "//application/services:services_dart",
+    "//garnet/public/lib/app/fidl:fidl_dart",
   ]
 }

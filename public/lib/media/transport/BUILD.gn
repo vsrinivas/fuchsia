@@ -21,7 +21,7 @@ source_set("transport") {
   ]
 
   public_deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/media/flog",
   ]
 

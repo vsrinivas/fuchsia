@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include "application/lib/far/format.h"
+#include "garnet/lib/far/format.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/strings/string_view.h"
 

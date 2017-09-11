@@ -7,7 +7,7 @@ package main
 import (
 	"log"
 
-	"application/lib/app/context"
+	"app/context"
 	"fidl/bindings"
 
 	"syscall/mx"

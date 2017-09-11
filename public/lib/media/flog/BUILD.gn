@@ -18,7 +18,7 @@ source_set("flog") {
   ]
 
   public_deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
   ]
 
   deps = [

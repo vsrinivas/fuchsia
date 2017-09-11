@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "garnet/examples/ui/sketchy/scene.h"
 #include "lib/ui/scenic/client/session.h"
 #include "lib/ui/sketchy/canvas.h"

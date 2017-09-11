@@ -4,10 +4,10 @@
 
 module app;
 
-import "application/services/application_launcher.fidl";
-import "application/services/application_environment_controller.fidl";
-import "application/services/application_environment_host.fidl";
-import "application/services/service_provider.fidl";
+import "lib/app/fidl/application_launcher.fidl";
+import "lib/app/fidl/application_environment_controller.fidl";
+import "lib/app/fidl/application_environment_host.fidl";
+import "lib/app/fidl/service_provider.fidl";
 
 // An interface for managing a set of applications.
 //

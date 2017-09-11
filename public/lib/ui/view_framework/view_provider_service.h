@@ -8,7 +8,7 @@
 #include <functional>
 #include <vector>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/ui/view_framework/base_view.h"
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"

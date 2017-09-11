@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/src/manager/url_resolver.h"
+#include "garnet/bin/appmgr/url_resolver.h"
 
 namespace app {
 namespace {

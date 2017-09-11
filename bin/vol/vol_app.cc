@@ -8,7 +8,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/media/audio/perceived_level.h"
 #include "lib/media/fidl/audio_policy_service.fidl.h"
 #include "lib/ftl/command_line.h"

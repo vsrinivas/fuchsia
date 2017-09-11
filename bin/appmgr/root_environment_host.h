@@ -7,10 +7,10 @@
 
 #include <memory>
 
-#include "application/services/application_environment_host.fidl.h"
-#include "application/services/service_provider.fidl.h"
-#include "application/src/manager/application_environment_impl.h"
-#include "application/src/manager/root_application_loader.h"
+#include "lib/app/fidl/application_environment_host.fidl.h"
+#include "lib/app/fidl/service_provider.fidl.h"
+#include "garnet/bin/appmgr/application_environment_impl.h"
+#include "garnet/bin/appmgr/root_application_loader.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"

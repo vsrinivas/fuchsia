@@ -8,7 +8,7 @@ import (
 	"log"
 	"strings"
 
-	"application/lib/app/context"
+	"app/context"
 
 	"netstack/eth"
 	"netstack/watcher"

@@ -7,7 +7,7 @@
 #include <limits.h>
 #include <unistd.h>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "garnet/bin/netconnector/socket_address.h"
 #include "garnet/go/src/netstack/apps/include/netconfig.h"
 #include "lib/ftl/files/unique_fd.h"

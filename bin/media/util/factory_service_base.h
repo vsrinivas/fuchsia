@@ -8,7 +8,7 @@
 #include <thread>
 #include <unordered_set>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/synchronization/mutex.h"

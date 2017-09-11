@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/lib/far/manifest.h"
+#include "garnet/lib/far/manifest.h"
 
 #include <stdio.h>
 
-#include "application/lib/far/archive_entry.h"
-#include "application/lib/far/archive_writer.h"
+#include "garnet/lib/far/archive_entry.h"
+#include "garnet/lib/far/archive_writer.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/strings/split_string.h"
 

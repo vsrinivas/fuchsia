@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:application.lib.app.dart/app.dart';
-import 'package:application.services/application_controller.fidl.dart';
-import 'package:application.services/application_environment.fidl.dart';
-import 'package:application.services/application_environment_host.fidl.dart';
-import 'package:application.services/application_launcher.fidl.dart';
-import 'package:application.services/service_provider.fidl.dart';
+import 'package:lib.app.dart/app.dart';
+import 'package:lib.app.fidl/application_controller.fidl.dart';
+import 'package:lib.app.fidl/application_environment.fidl.dart';
+import 'package:lib.app.fidl/application_environment_host.fidl.dart';
+import 'package:lib.app.fidl/application_launcher.fidl.dart';
+import 'package:lib.app.fidl/service_provider.fidl.dart';
 import 'package:lib.ui.flutter/child_view.dart';
 import 'package:lib.ui.presentation.fidl/presenter.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';

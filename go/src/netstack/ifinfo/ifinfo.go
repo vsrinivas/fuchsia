@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"application/lib/app/context"
+	"app/context"
 	"fidl/bindings"
 
 	"garnet/public/lib/netstack/fidl/netstack"

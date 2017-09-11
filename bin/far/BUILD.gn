@@ -10,7 +10,7 @@ executable("archiver") {
   ]
 
   deps = [
-    "//application/lib/far",
+    "//garnet/lib/far",
     "//garnet/public/lib/ftl",
   ]
 }

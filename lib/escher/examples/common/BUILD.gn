@@ -30,7 +30,7 @@ static_library("common") {
 
   if (is_fuchsia) {
     deps += [
-      "//application/lib/app:app",
+      "//garnet/public/lib/app/cpp",
       "//apps/modular/services/lifecycle",
       "//apps/modular/services/module",
       "//garnet/lib/escher/examples/common/services",

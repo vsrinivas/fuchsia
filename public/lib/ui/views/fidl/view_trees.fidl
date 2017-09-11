@@ -4,7 +4,7 @@
 
 module mozart;
 
-import "application/services/service_provider.fidl";
+import "lib/app/fidl/service_provider.fidl";
 import "lib/ui/views/fidl/view_containers.fidl";
 import "lib/ui/views/fidl/view_tree_token.fidl";
 

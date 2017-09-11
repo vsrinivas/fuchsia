@@ -12,8 +12,8 @@ source_set("cpp") {
   ]
 
   deps = [
-    "//application/lib/app",
-    "//application/lib/svc",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/svc/cpp",
     "//garnet/public/lib/netconnector/fidl",
     "//garnet/public/lib/fidl/cpp/waiter",
     "//garnet/public/lib/ftl",

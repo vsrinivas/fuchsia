@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/netstack/tcpip"
 
-	"application/lib/app/context"
+	"app/context"
 	"fidl/bindings"
 
 	"garnet/public/lib/netstack/fidl/net_address"

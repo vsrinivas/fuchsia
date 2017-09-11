@@ -6,7 +6,7 @@
 
 #include <algorithm>
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "garnet/bin/ui/root_presenter/presentation.h"

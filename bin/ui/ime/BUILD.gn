@@ -14,7 +14,7 @@ executable("ime") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/ui/input",
     "//garnet/public/lib/ui/input/fidl",
     "//garnet/public/lib/ui/input/cpp",

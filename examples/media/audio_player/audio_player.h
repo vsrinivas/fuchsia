@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "garnet/examples/media/audio_player/audio_player_params.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/fidl/net_media_player.fidl.h"

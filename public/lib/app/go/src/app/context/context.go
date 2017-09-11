@@ -5,7 +5,7 @@
 package context
 
 import (
-	"application/lib/svc/svcns"
+	"svc/svcns"
 	"fidl/bindings"
 	"fmt"
 
@@ -13,9 +13,9 @@ import (
 	"syscall/mx/mxio"
 	"syscall/mx/mxruntime"
 
-	"application/services/application_environment"
-	"application/services/application_launcher"
-	"application/services/service_provider"
+	"garnet/public/lib/app/fidl/application_environment"
+	"garnet/public/lib/app/fidl/application_launcher"
+	"garnet/public/lib/app/fidl/service_provider"
 )
 
 type Context struct {

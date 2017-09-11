@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-#include "application/services/service_provider.fidl.h"
+#include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/scenic/client/session.h"
 #include "lib/ui/input/fidl/input_connection.fidl.h"

@@ -8,7 +8,7 @@ executable("launch") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/ui/presentation/fidl",
     "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/ftl",

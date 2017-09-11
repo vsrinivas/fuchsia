@@ -12,7 +12,7 @@
 
 #include <mx/vmo.h>
 
-#include "application/services/application_loader.fidl.h"
+#include "lib/app/fidl/application_loader.fidl.h"
 #include "lib/ftl/macros.h"
 
 namespace app {

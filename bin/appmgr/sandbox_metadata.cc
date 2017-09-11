@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/src/manager/sandbox_metadata.h"
+#include "garnet/bin/appmgr/sandbox_metadata.h"
 
 #include "third_party/rapidjson/rapidjson/document.h"
 

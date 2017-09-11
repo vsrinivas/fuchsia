@@ -10,8 +10,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "application/src/manager/config.h"
-#include "application/src/manager/root_environment_host.h"
+#include "garnet/bin/appmgr/config.h"
+#include "garnet/bin/appmgr/root_environment_host.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/log_settings.h"

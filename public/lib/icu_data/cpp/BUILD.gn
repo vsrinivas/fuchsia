@@ -32,8 +32,8 @@ source_set("cpp") {
 
   deps = [
     ":generate_icu_constants",
-    "//application/lib/app",
-    "//application/services",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/icu_data/fidl",
     "//third_party/icu",
   ]

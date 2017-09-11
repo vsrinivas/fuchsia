@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/src/manager/application_environment_impl.h"
+#include "garnet/bin/appmgr/application_environment_impl.h"
 
 #include <fcntl.h>
 #include <launchpad/launchpad.h>
@@ -16,11 +16,11 @@
 
 #include <utility>
 
-#include "application/lib/app/connect.h"
-#include "application/lib/far/format.h"
-#include "application/src/manager/namespace_builder.h"
-#include "application/src/manager/runtime_metadata.h"
-#include "application/src/manager/url_resolver.h"
+#include "lib/app/cpp/connect.h"
+#include "garnet/lib/far/format.h"
+#include "garnet/bin/appmgr/namespace_builder.h"
+#include "garnet/bin/appmgr/runtime_metadata.h"
+#include "garnet/bin/appmgr/url_resolver.h"
 #include "lib/ftl/functional/auto_call.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/strings/string_printf.h"

@@ -12,8 +12,8 @@ source_set("app") {
   ]
 
   public_deps = [
-    "//application/lib/svc",
-    "//application/services",
+    "//garnet/public/lib/svc/cpp",
+    "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
   ]

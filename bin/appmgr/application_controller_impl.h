@@ -7,8 +7,8 @@
 
 #include <mx/process.h>
 
-#include "application/lib/farfs/file_system.h"
-#include "application/services/application_controller.fidl.h"
+#include "garnet/lib/farfs/file_system.h"
+#include "lib/app/fidl/application_controller.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"

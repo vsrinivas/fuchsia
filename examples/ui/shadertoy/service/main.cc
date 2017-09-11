@@ -4,7 +4,7 @@
 
 #include <trace-provider/provider.h>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "garnet/examples/ui/shadertoy/service/app.h"
 #include "escher/escher.h"
 #include "escher/escher_process_init.h"

@@ -10,12 +10,12 @@
 #include <string>
 #include <unordered_map>
 
-#include "application/lib/svc/service_provider_bridge.h"
-#include "application/services/application_environment.fidl.h"
-#include "application/services/application_loader.fidl.h"
-#include "application/src/manager/application_controller_impl.h"
-#include "application/src/manager/application_environment_controller_impl.h"
-#include "application/src/manager/application_runner_holder.h"
+#include "lib/svc/cpp/service_provider_bridge.h"
+#include "lib/app/fidl/application_environment.fidl.h"
+#include "lib/app/fidl/application_loader.fidl.h"
+#include "garnet/bin/appmgr/application_controller_impl.h"
+#include "garnet/bin/appmgr/application_environment_controller_impl.h"
+#include "garnet/bin/appmgr/application_runner_holder.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"

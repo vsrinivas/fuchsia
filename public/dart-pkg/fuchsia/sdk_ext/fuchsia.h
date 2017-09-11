@@ -5,8 +5,8 @@
 #ifndef DART_PKG_FUCHSIA_SDK_EXT_FUCHSIA_H_
 #define DART_PKG_FUCHSIA_SDK_EXT_FUCHSIA_H_
 
-#include "application/services/application_environment.fidl.h"
-#include "application/services/service_provider.fidl.h"
+#include "lib/app/fidl/application_environment.fidl.h"
+#include "lib/app/fidl/service_provider.fidl.h"
 
 namespace fuchsia {
 namespace dart {

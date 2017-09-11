@@ -38,7 +38,7 @@ executable("media_service") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/media/fidl",
     "//garnet/bin/media/audio",
@@ -74,7 +74,7 @@ executable("tests") {
 
   deps = [
     ":media_service",
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/media/transport",
     "//garnet/public/lib/media/fidl",

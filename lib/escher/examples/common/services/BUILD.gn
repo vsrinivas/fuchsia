@@ -10,6 +10,6 @@ fidl("services") {
   ]
 
   public_deps = [
-    "//application/services:service_provider",
+    "//garnet/public/lib/app/fidl:service_provider",
   ]
 }

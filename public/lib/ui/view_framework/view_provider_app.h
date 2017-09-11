@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/ui/view_framework/view_provider_service.h"
 #include "lib/ftl/macros.h"
 

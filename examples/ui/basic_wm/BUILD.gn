@@ -10,8 +10,8 @@ flutter_app("basic_wm") {
   source_dir = "."
 
   deps = [
-    "//application/lib/app/dart",
-    "//application/services:services_dart",
+    "//garnet/public/lib/app/dart",
+    "//garnet/public/lib/app/fidl:fidl_dart",
     "//garnet/public/lib/ui/flutter",
     "//garnet/public/lib/ui/presentation/fidl:fidl_dart",
     "//garnet/public/lib/fidl/dart",

@@ -13,12 +13,12 @@ go_binary("getaddrtest") {
       source = "//garnet/go/src/netstack"
     },
     {
-      package = "application/lib/app"
-      source = "//application/lib/app/go/src/app"
+      package = "app"
+      source = "//garnet/public/lib/app/go/src/app"
     },
     {
-      package = "application/lib/svc"
-      source = "//application/lib/svc/go/src/svc"
+      package = "svc"
+      source = "//garnet/public/lib/svc/go/src/svc"
     },
     {
       package = "fidl"

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/src/manager/application_runner_holder.h"
+#include "garnet/bin/appmgr/application_runner_holder.h"
 
 #include <sys/stat.h>
 #include <sys/types.h>

@@ -5,8 +5,8 @@
 #ifndef APPS_MOTERM_MOTERM_VIEW_H_
 #define APPS_MOTERM_MOTERM_VIEW_H_
 
-#include "application/lib/app/application_context.h"
-#include "application/services/application_environment.fidl.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/app/fidl/application_environment.fidl.h"
 #include "lib/ui/skia/skia_font_loader.h"
 #include "lib/ui/view_framework/skia_view.h"
 #include "garnet/bin/moterm/command.h"

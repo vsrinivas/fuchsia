@@ -7,8 +7,8 @@
 #include <memory>
 #include <unordered_set>
 
-#include "application/lib/app/application_context.h"
-#include "application/lib/svc/service_namespace.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/svc/cpp/service_namespace.h"
 #include "lib/ftl/macros.h"
 #include "lib/netconnector/fidl/netconnector.fidl.h"
 

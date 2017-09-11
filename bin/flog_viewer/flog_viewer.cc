@@ -8,7 +8,7 @@
 #include <iostream>
 #include <limits>
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "garnet/bin/flog_viewer/formatting.h"
 #include "lib/fidl/cpp/bindings/message.h"

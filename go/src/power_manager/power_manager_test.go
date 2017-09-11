@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"application/lib/app/context"
+	"app/context"
 	"fidl/bindings"
 
 	"garnet/public/lib/power/fidl/power_manager"

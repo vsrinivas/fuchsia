@@ -9,8 +9,8 @@ source_set("view_framework") {
   ]
 
   public_deps = [
-    "//application/lib/app",
-    "//application/services",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/ui/scenic:client",
     "//garnet/public/lib/ui/scenic:fidl_helpers",
     "//garnet/public/lib/ui/input/fidl",

@@ -22,7 +22,7 @@
 #include <thread>
 #include <vector>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_printf.h"

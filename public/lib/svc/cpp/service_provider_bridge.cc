@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/lib/svc/service_provider_bridge.h"
+#include "lib/svc/cpp/service_provider_bridge.h"
 
 #include <fcntl.h>
 #include <magenta/device/vfs.h>

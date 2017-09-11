@@ -17,7 +17,7 @@ fidl("fidl") {
 
   public_deps = [
     ":view_token",
-    "//application/services:service_provider",
+    "//garnet/public/lib/app/fidl:service_provider",
     "//garnet/public/lib/ui/geometry/fidl",
     "//garnet/public/lib/ui/input/fidl",
     "//garnet/public/lib/ui/scenic/fidl",

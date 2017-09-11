@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/src/manager/namespace_builder.h"
+#include "garnet/bin/appmgr/namespace_builder.h"
 
 #include <magenta/processargs.h>
 #include <mxio/limits.h>

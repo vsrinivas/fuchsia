@@ -4,7 +4,7 @@
 
 #include "garnet/bin/netconnector/responding_service_host.h"
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"log"
 
-	"application/lib/app/context"
+	"app/context"
 
 	"fidl/bindings"
 

@@ -14,7 +14,7 @@ executable("client") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//garnet/examples/ui/shadertoy/service",
     "//garnet/examples/ui/shadertoy/service/services",
     "//garnet/public/lib/ui/scenic:client",

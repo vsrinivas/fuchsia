@@ -8,7 +8,7 @@
 
 #include <iomanip>
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "garnet/examples/media/media_player/media_player_params.h"
 #include "lib/media/timeline/fidl_type_conversions.h"
 #include "lib/media/timeline/timeline.h"

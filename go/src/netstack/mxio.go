@@ -17,7 +17,7 @@ import (
 	"syscall/mx/mxio"
 	"syscall/mx/mxruntime"
 
-	"application/lib/app/context"
+	"app/context"
 
 	"github.com/google/netstack/dns"
 	"github.com/google/netstack/tcpip"

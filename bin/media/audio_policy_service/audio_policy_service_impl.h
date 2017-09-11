@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/media/fidl/audio_policy_service.fidl.h"
 #include "lib/media/fidl/audio_renderer.fidl.h"
 #include "lib/media/fidl/audio_server.fidl.h"

@@ -6,7 +6,7 @@
 
 #include <iomanip>
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "garnet/examples/media/audio_player/audio_player_params.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/fidl/audio_renderer.fidl.h"

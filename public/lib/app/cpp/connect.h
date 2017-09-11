@@ -7,7 +7,7 @@
 #ifndef APPLICATION_LIB_APP_CONNECT_H_
 #define APPLICATION_LIB_APP_CONNECT_H_
 
-#include "application/services/service_provider.fidl.h"
+#include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 
 namespace app {

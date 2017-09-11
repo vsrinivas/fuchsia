@@ -7,7 +7,7 @@ executable("listen") {
     "listen.cc",
   ]
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",

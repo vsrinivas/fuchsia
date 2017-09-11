@@ -7,7 +7,7 @@
 #include <list>
 #include <set>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/media/fidl/audio_renderer.fidl.h"
 #include "lib/media/fidl/audio_server.fidl.h"
 #include "garnet/bin/media/audio_server/audio_output_manager.h"

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "garnet/examples/ui/shadertoy/service/services/shadertoy.fidl.h"
 #include "garnet/examples/ui/shadertoy/service/services/shadertoy_factory.fidl.h"
 #include "lib/ui/scenic/client/resources.h"

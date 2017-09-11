@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/lib/far/archive_reader.h"
+#include "garnet/lib/far/archive_reader.h"
 
 #include <inttypes.h>
 #include <unistd.h>
@@ -10,8 +10,8 @@
 #include <limits>
 #include <utility>
 
-#include "application/lib/far/file_operations.h"
-#include "application/lib/far/format.h"
+#include "garnet/lib/far/file_operations.h"
+#include "garnet/lib/far/format.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/path.h"
 #include "lib/ftl/strings/concatenate.h"

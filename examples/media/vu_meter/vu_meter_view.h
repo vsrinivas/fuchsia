@@ -7,7 +7,7 @@
 #include <memory>
 #include <queue>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "garnet/examples/media/vu_meter/vu_meter_params.h"
 #include "lib/media/transport/media_packet_consumer_base.h"
 #include "lib/media/fidl/media_capturer.fidl.h"

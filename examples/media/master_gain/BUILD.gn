@@ -8,7 +8,7 @@ executable("master_gain") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/mtl",
   ]

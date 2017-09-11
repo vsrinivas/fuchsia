@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "garnet/examples/ui/sketchy/app.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/log_settings_command_line.h"

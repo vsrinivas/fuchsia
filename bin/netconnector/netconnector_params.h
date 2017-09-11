@@ -7,7 +7,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "application/services/application_launcher.fidl.h"
+#include "lib/app/fidl/application_launcher.fidl.h"
 #include "garnet/bin/netconnector/ip_address.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/macros.h"

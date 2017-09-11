@@ -6,7 +6,7 @@
 
 #include <rapidjson/document.h>
 
-#include "application/services/application_launcher.fidl.h"
+#include "lib/app/fidl/application_launcher.fidl.h"
 #include "garnet/bin/netconnector/ip_address.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/logging.h"

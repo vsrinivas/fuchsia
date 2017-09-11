@@ -29,7 +29,7 @@ source_set("sdk_ext") {
     "//magenta/system/ulib/mx",
   ]
   public_deps = [
-    "//application/services",
+    "//garnet/public/lib/app/fidl",
     "//garnet/public/dart-pkg/zircon",
   ]
 }

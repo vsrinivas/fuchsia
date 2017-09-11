@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "application/services/application_environment_controller.fidl.h"
+#include "lib/app/fidl/application_environment_controller.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
 

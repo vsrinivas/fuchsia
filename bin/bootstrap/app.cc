@@ -5,12 +5,12 @@
 #include <dirent.h>
 #include <sys/types.h>
 
-#include "application/src/bootstrap/app.h"
+#include "garnet/bin/bootstrap/app.h"
 
 #include <magenta/process.h>
 #include <magenta/processargs.h>
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 

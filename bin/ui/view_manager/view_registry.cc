@@ -8,7 +8,7 @@
 #include <cmath>
 #include <utility>
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/input/fidl/ime_service.fidl.h"

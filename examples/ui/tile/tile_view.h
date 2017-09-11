@@ -8,8 +8,8 @@
 #include <map>
 #include <memory>
 
-#include "application/lib/app/application_context.h"
-#include "application/services/application_launcher.fidl.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/app/fidl/application_launcher.fidl.h"
 #include "garnet/examples/ui/tile/tile_params.h"
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/view_framework/base_view.h"

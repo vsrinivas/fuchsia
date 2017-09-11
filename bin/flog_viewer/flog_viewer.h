@@ -7,7 +7,7 @@
 #include <map>
 #include <unordered_set>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/media/fidl/flog/flog.fidl.h"
 #include "garnet/bin/flog_viewer/channel.h"
 #include "garnet/bin/flog_viewer/channel_handler.h"

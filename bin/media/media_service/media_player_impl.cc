@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/media_service/media_player_impl.h"
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "lib/media/timeline/fidl_type_conversions.h"
 #include "lib/media/timeline/timeline.h"
 #include "garnet/bin/media/fidl/fidl_formatting.h"

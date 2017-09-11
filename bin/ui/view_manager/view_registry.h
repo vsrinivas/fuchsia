@@ -8,7 +8,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/ui/scenic/client/session.h"
 #include "lib/ui/scenic/fidl/scene_manager.fidl.h"
 #include "lib/ui/views/fidl/view_trees.fidl.h"

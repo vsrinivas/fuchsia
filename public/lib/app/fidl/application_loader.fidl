@@ -4,7 +4,7 @@
 
 module app;
 
-import "application/services/application_runner.fidl";
+import "lib/app/fidl/application_runner.fidl";
 
 // An interface for loading applications.
 [ServiceName="app.ApplicationLoader"]

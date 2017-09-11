@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/src/manager/application_environment_controller_impl.h"
+#include "garnet/bin/appmgr/application_environment_controller_impl.h"
 
 #include <utility>
 
-#include "application/src/manager/application_environment_impl.h"
+#include "garnet/bin/appmgr/application_environment_impl.h"
 #include "lib/ftl/functional/closure.h"
 
 namespace app {

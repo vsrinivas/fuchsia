@@ -12,7 +12,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include "application/services/service_provider.fidl.h"
+#include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 

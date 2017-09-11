@@ -7,7 +7,7 @@ package svcns
 import (
 	"fmt"
 
-	"application/lib/svc/svcfs"
+	"svc/svcfs"
 
 	"syscall/mx"
 	"syscall/mx/mxio"

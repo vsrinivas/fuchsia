@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/src/manager/root_application_loader.h"
+#include "garnet/bin/appmgr/root_application_loader.h"
 
 #include <fcntl.h>
 
 #include <utility>
 
-#include "application/src/manager/url_resolver.h"
+#include "garnet/bin/appmgr/url_resolver.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/concatenate.h"

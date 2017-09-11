@@ -8,7 +8,7 @@
 
 #include <iomanip>
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "garnet/examples/media/vu_meter/vu_meter_params.h"
 #include "lib/media/fidl/media_service.fidl.h"
 #include "lib/ftl/logging.h"

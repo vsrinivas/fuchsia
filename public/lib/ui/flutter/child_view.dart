@@ -8,10 +8,10 @@ import 'dart:mozart.internal';
 import 'dart:ui' as ui;
 import 'dart:zircon';
 
-import 'package:application.lib.app.dart/app.dart';
-import 'package:application.services/application_controller.fidl.dart';
-import 'package:application.services/application_launcher.fidl.dart';
-import 'package:application.services/service_provider.fidl.dart';
+import 'package:lib.app.dart/app.dart';
+import 'package:lib.app.fidl/application_controller.fidl.dart';
+import 'package:lib.app.fidl/application_launcher.fidl.dart';
+import 'package:lib.app.fidl/service_provider.fidl.dart';
 import 'package:lib.ui.geometry.fidl/geometry.fidl.dart' as fidl;
 import 'package:lib.ui.views.fidl/view_containers.fidl.dart';
 import 'package:lib.ui.views.fidl/view_properties.fidl.dart';

@@ -11,7 +11,7 @@
 
 #include <memory>
 
-#include "application/lib/far/archive_reader.h"
+#include "garnet/lib/far/archive_reader.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/mtl/vfs/vfs_dispatcher.h"
 

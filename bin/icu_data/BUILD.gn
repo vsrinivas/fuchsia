@@ -12,7 +12,7 @@ executable("icu_data_provider") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/icu_data/cpp",
     "//garnet/public/lib/icu_data/fidl",

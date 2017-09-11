@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/src/bootstrap/delegating_application_loader.h"
+#include "garnet/bin/bootstrap/delegating_application_loader.h"
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "lib/url/gurl.h"
 
 namespace bootstrap {

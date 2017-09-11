@@ -9,7 +9,7 @@
 
 #include <netinet/in.h>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "garnet/bin/netconnector/mdns/mdns_interface_transceiver.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/tasks/task_runner.h"

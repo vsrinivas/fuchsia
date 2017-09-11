@@ -14,7 +14,7 @@ executable("font_server") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fonts/fidl",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",

@@ -9,12 +9,12 @@
 #include <memory>
 #include <vector>
 
-#include "application/lib/app/application_context.h"
-#include "application/lib/svc/service_namespace.h"
-#include "application/lib/svc/services.h"
-#include "application/services/application_controller.fidl.h"
-#include "application/services/application_environment.fidl.h"
-#include "application/src/bootstrap/delegating_application_loader.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/svc/cpp/service_namespace.h"
+#include "lib/svc/cpp/services.h"
+#include "lib/app/fidl/application_controller.fidl.h"
+#include "lib/app/fidl/application_environment.fidl.h"
+#include "garnet/bin/bootstrap/delegating_application_loader.h"
 #include "lib/ftl/macros.h"
 
 namespace bootstrap {

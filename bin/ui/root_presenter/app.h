@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/ui/input/input_device_impl.h"
 #include "lib/ui/input/fidl/input_device_registry.fidl.h"
 #include "lib/ui/presentation/fidl/presenter.fidl.h"

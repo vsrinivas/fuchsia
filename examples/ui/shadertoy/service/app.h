@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "garnet/examples/ui/shadertoy/service/shadertoy_factory_impl.h"
 #include "escher/escher.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"

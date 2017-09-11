@@ -12,7 +12,7 @@ executable("hello_scene_manager") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/ui/scenic:client",
     "//garnet/public/lib/ui/scenic:fidl_helpers",
     "//garnet/public/lib/ui/scenic/fidl",

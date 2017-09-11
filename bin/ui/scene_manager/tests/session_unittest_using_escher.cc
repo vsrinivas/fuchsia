@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/ui/tests/test_with_message_loop.h"
 #include "garnet/bin/ui/scene_manager/tests/escher_test_environment.h"
 #include "garnet/bin/ui/scene_manager/tests/session_test.h"

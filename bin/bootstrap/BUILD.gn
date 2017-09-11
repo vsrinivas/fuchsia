@@ -14,8 +14,8 @@ executable("bootstrap") {
   ]
 
   deps = [
-    "//application/lib/app",
-    "//application/lib/svc",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/svc/cpp",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/url",

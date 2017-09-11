@@ -4,7 +4,7 @@
 
 #include "garnet/examples/ui/shadertoy/service/app.h"
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "escher/vk/vulkan_device_queues.h"
 #include "escher/vk/vulkan_instance.h"
 

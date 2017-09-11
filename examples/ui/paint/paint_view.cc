@@ -6,7 +6,7 @@
 
 #include <hid/usages.h>
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "third_party/skia/include/core/SkColor.h"

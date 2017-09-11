@@ -7,8 +7,8 @@
 
 #include <mx/vmo.h>
 
-#include "application/services/application_controller.fidl.h"
-#include "application/services/application_runner.fidl.h"
+#include "lib/app/fidl/application_controller.fidl.h"
+#include "lib/app/fidl/application_runner.fidl.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/macros.h"
 

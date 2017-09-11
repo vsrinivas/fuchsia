@@ -5,7 +5,7 @@
 package main
 
 import (
-	"application/lib/app/context"
+	"app/context"
 	"bufio"
 	"fidl/bindings"
 	"flag"

@@ -7,7 +7,7 @@
 #include <memory>
 #include <queue>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "garnet/examples/media/media_player/media_player_params.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/fidl/media_player.fidl.h"

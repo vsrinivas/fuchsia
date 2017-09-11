@@ -5,9 +5,9 @@
 #ifndef APPLICATION_SRC_BOOTSTRAP_DELEGATING_APPLICATION_LOADER_H_
 #define APPLICATION_SRC_BOOTSTRAP_DELEGATING_APPLICATION_LOADER_H_
 
-#include "application/services/application_launcher.fidl.h"
-#include "application/services/application_loader.fidl.h"
-#include "application/src/bootstrap/config.h"
+#include "lib/app/fidl/application_launcher.fidl.h"
+#include "lib/app/fidl/application_loader.fidl.h"
+#include "garnet/bin/bootstrap/config.h"
 #include "lib/ftl/macros.h"
 
 namespace bootstrap {

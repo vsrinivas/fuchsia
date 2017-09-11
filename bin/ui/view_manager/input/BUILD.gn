@@ -11,7 +11,7 @@ source_set("input") {
   ]
 
   public_deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/ui/input/fidl",
     "//garnet/public/lib/ui/input/cpp",

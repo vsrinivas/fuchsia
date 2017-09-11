@@ -13,8 +13,8 @@ import 'package:lib.media.fidl/media_service.fidl.dart';
 import 'package:lib.media.fidl/net_media_player.fidl.dart';
 import 'package:lib.media.fidl/net_media_service.fidl.dart';
 import 'package:lib.media.fidl/problem.fidl.dart';
-import 'package:application.lib.app.dart/app.dart';
-import 'package:application.services/service_provider.fidl.dart';
+import 'package:lib.app.dart/app.dart';
+import 'package:lib.app.fidl/service_provider.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
 /// Type for |AudioPlayerController| update callbacks.

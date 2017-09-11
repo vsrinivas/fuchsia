@@ -6,7 +6,7 @@
 
 #include <trace/event.h>
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_point.h"
 

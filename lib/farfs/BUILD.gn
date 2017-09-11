@@ -9,8 +9,8 @@ source_set("farfs") {
   ]
 
   public_deps = [
-    "//application/lib/far",
-    "//application/lib/far:far_vmo",
+    "//garnet/lib/far",
+    "//garnet/lib/far:far_vmo",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",

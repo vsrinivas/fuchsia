@@ -9,9 +9,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "application/lib/app/application_context.h"
-#include "application/services/application_launcher.fidl.h"
-#include "application/services/service_provider.fidl.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/app/fidl/application_launcher.fidl.h"
+#include "lib/app/fidl/service_provider.fidl.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "garnet/bin/netconnector/device_service_provider.h"
 #include "garnet/bin/netconnector/ip_port.h"

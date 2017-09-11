@@ -19,7 +19,7 @@
 #endif
 #include <glm/gtc/type_ptr.hpp>
 
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/connect.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/views/cpp/formatting.h"
 #include "lib/ftl/functional/make_copyable.h"

@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "application/services/application_launcher.fidl.h"
+#include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/ftl/macros.h"
 
 namespace app {
