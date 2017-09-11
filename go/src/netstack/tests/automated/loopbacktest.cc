@@ -306,7 +306,7 @@ TEST_F(NetStreamTest, GetTcpInfo) {
   ASSERT_EQ(close(connfd), 0);
 }
 
-TEST_F(NetStreamTest, DISABLED_Shutdown) {
+TEST_F(NetStreamTest, Shutdown) {
   int ret = listen(acptfd_, 10);
   ASSERT_EQ(0, ret) << "listen failed: " << errno;
 

@@ -34,7 +34,6 @@ const debug2 = false
 const ZX_SOCKET_HALF_CLOSE = 1
 const ZXSIO_SIGNAL_INCOMING = zx.SignalUser0
 const ZXSIO_SIGNAL_CONNECTED = zx.SignalUser3
-const ZXSIO_SIGNAL_HALFCLOSED = zx.SignalUser4
 const LOCAL_SIGNAL_CLOSING = zx.SignalUser5
 
 const defaultNIC = 2
@@ -140,7 +139,10 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 	dataHandle := zx.Socket(ios.dataHandle)
 
 	// Warm up.
-	_, err := dataHandle.WaitOne(zx.SignalSocketReadable|zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING, zx.TimensecInfinite)
+	_, err := dataHandle.WaitOne(
+		zx.SignalSocketReadable|zx.SignalSocketReadDisabled|
+			zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING,
+		zx.TimensecInfinite)
 	switch mxerror.Status(err) {
 	case zx.ErrOk:
 		// NOP
@@ -162,9 +164,17 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 		case zx.ErrOk:
 			// Success. Pass the data to the endpoint and loop.
 		case zx.ErrBadState:
-			return // This side of the socket is closed.
+			// This side of the socket is closed.
+			err := ios.ep.Shutdown(tcpip.ShutdownWrite)
+			if err != nil {
+				log.Printf("loopSocketWrite: ShutdownWrite failed: %v", err)
+			}
+			return
 		case zx.ErrShouldWait:
-			obs, err := dataHandle.WaitOne(zx.SignalSocketReadable|zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING, zx.TimensecInfinite)
+			obs, err := dataHandle.WaitOne(
+				zx.SignalSocketReadable|zx.SignalSocketReadDisabled|
+					zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING,
+				zx.TimensecInfinite)
 			switch mxerror.Status(err) {
 			case zx.ErrOk:
 				// Handle signal below.
@@ -177,6 +187,9 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 			switch {
 			case obs&zx.SignalSocketPeerClosed != 0:
 				return
+			case obs&zx.SignalSocketReadDisabled != 0:
+				// The next Read will return zx.BadState.
+				continue
 			case obs&zx.SignalSocketReadable != 0:
 				continue
 			case obs&LOCAL_SIGNAL_CLOSING != 0:
@@ -215,7 +228,10 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 	dataHandle := zx.Socket(ios.dataHandle)
 
 	// Warm up.
-	obs, err := dataHandle.WaitOne(zx.SignalSocketWritable|zx.SignalSocketPeerClosed, zx.TimensecInfinite)
+	obs, err := dataHandle.WaitOne(
+		zx.SignalSocketWritable|zx.SignalSocketWriteDisabled|
+			zx.SignalSocketPeerClosed,
+		zx.TimensecInfinite)
 	switch mxerror.Status(err) {
 	case zx.ErrOk:
 		// NOP
@@ -226,6 +242,12 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 	}
 	switch {
 	case obs&zx.SignalSocketPeerClosed != 0:
+		return
+	case obs&zx.SignalSocketWriteDisabled != 0:
+		err := ios.ep.Shutdown(tcpip.ShutdownRead)
+		if err != nil {
+			log.Printf("loopSocketRead: ShutdownRead failed: %v", err)
+		}
 		return
 	}
 
@@ -271,15 +293,20 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 			case zx.ErrOk:
 				// Success. Loop and keep writing.
 			case zx.ErrBadState:
-				return // This side of the socket is closed.
+				// This side of the socket is closed.
+				err := ios.ep.Shutdown(tcpip.ShutdownRead)
+				if err != nil {
+					log.Printf("loopSocketRead: ShutdownRead failed: %v", err)
+				}
+				return
 			case zx.ErrShouldWait:
 				if debug2 {
-					log.Printf("loopSocketRead: gto zx.ErrShouldWait")
+					log.Printf("loopSocketRead: got zx.ErrShouldWait")
 				}
 				obs, err := dataHandle.WaitOne(
-					zx.SignalSocketWritable|zx.SignalSocketPeerClosed,
-					zx.TimensecInfinite,
-				)
+					zx.SignalSocketWritable|zx.SignalSocketWriteDisabled|
+						zx.SignalSocketPeerClosed,
+					zx.TimensecInfinite)
 				switch mxerror.Status(err) {
 				case zx.ErrOk:
 					// Handle signal below.
@@ -292,6 +319,9 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 				switch {
 				case obs&zx.SignalSocketPeerClosed != 0:
 					return
+				case obs&zx.SignalSocketWriteDisabled != 0:
+					// The next Write will return zx.ErrBadState.
+					continue
 				case obs&zx.SignalSocketWritable != 0:
 					continue
 				}
@@ -300,31 +330,6 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 			default:
 				log.Printf("socket write failed: %v", err) // TODO: communicate this
 				break writeLoop
-			}
-		}
-	}
-}
-
-func (ios *iostate) loopShutdown() {
-	defer ios.ep.Close()
-	for {
-		obs, err := ios.dataHandle.WaitOne(zx.SignalSocketPeerClosed|ZXSIO_SIGNAL_HALFCLOSED, zx.TimensecInfinite)
-		switch mxerror.Status(err) {
-		case zx.ErrOk:
-			// NOP
-		case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
-			return
-		default:
-			log.Printf("shutdown wait failed: %v", err)
-			return
-		}
-		switch {
-		case obs&zx.SignalSocketPeerClosed != 0:
-			return
-		case obs&ZXSIO_SIGNAL_HALFCLOSED != 0:
-			err := ios.ep.Shutdown(tcpip.ShutdownRead | tcpip.ShutdownWrite)
-			if debug2 && err != nil {
-				log.Printf("shutdown: %v", err) // typically ignored
 			}
 		}
 	}
@@ -538,12 +543,10 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 	switch transProto {
 	case tcp.ProtocolNumber:
 		if ep != nil {
-			go ios.loopShutdown()
 			go ios.loopSocketRead(s.stack)
 			go ios.loopSocketWrite(s.stack)
 		}
 	case udp.ProtocolNumber:
-		go ios.loopShutdown()
 		go ios.loopDgramRead(s.stack)
 		go ios.loopDgramWrite(s.stack)
 	}
@@ -1184,7 +1187,8 @@ func (s *socketServer) iosCloseHandler(ios *iostate, cookie cookie) {
 				log.Printf("close: signal failed: %v", err)
 			}
 
-			ios.dataHandle.Close() // loopShutdown closes ep
+			ios.ep.Close()
+			ios.dataHandle.Close()
 			if ios.peerDataHandle != 0 {
 				ios.peerDataHandle.Close()
 			}
