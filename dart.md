@@ -188,13 +188,13 @@ The `log` object is a `Logger` instance as documented [here][logger-doc].
 The log methods are named after the supported log levels. To list the log
 methods in descending order of severity:
 ```dart
-log.shout()    // maps to LOG_FATAL in FTL.
-log.severe()   // maps to LOG_ERROR in FTL.
-log.warning()  // maps to LOG_WARNING in FTL.
-log.info()     // maps to LOG_INFO in FTL.
-log.fine()     // maps to VLOG(1) in FTL.
-log.finer()    // maps to VLOG(2) in FTL.
-log.finest()   // maps to VLOG(3) in FTL.
+log.shout()    // maps to LOG_FATAL in FXL.
+log.severe()   // maps to LOG_ERROR in FXL.
+log.warning()  // maps to LOG_WARNING in FXL.
+log.info()     // maps to LOG_INFO in FXL.
+log.fine()     // maps to VLOG(1) in FXL.
+log.finer()    // maps to VLOG(2) in FXL.
+log.finest()   // maps to VLOG(3) in FXL.
 ```
 
 By default, all the logs of which level is INFO or higher will be shown in the

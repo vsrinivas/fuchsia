@@ -24,7 +24,7 @@ handles. It otherwise takes no opinions around naming or policy.
 For more information about libmx, see
 [its documentation](https://fuchsia.googlesource.com/magenta/+/master/system/ulib/mx/README.md).
 
-## FDL
+## FBL
 
 Much of Magenta is written in C++, both in kernel and in
 userspace. Linking against the C++ standard library is not especially
@@ -38,21 +38,21 @@ also includes constructs not present in the standard library but which
 are useful library code for kernel and device driver environments (for
 instance, slab allocation).
 
-For more information about FDL,
-[read its overview](https://fuchsia.googlesource.com/magenta/+/master/docs/cxx.md#fdl).
+For more information about FBL,
+[read its overview](https://fuchsia.googlesource.com/magenta/+/master/docs/cxx.md#fbl).
 
-# Fuchsia Template Library (FTL)
+# FXL
 
-FTL is a platform-independent library containing basic C++ building blocks, such
-as logging and reference counting. FTL depends on the C++ standard library but
-not on any Magenta- or Fuchsia-specific libraries. We build FTL both for target
+FXL is a platform-independent library containing basic C++ building blocks, such
+as logging and reference counting. FXL depends on the C++ standard library but
+not on any Magenta- or Fuchsia-specific libraries. We build FXL both for target
 (Fuchsia) and for host (Linux, Mac) systems.
 
 Generally speaking, we try to use the C++ standard library for basic building
 blocks, but in some cases the C++ standard library either doesn't have something
 we need (e.g., a featureful logging system) or has a version of what we need
 doesn't meet our requirements (e.g., `std::shared_ptr` is twice as large as
-`ftl::RefPtr`).
+`fxl::RefPtr`).
 
 # Magenta Template Libary (MTL)
 
@@ -62,6 +62,6 @@ abstraction on top of Magenta's underlying waiting primitives. MTL also contains
 helpers for working with Magenta primitives asynchronously that build upon
 `mtl::MessageLoop` (e.g., for draining a socket asynchronously).
 
-MTL depends on FTL and implements some interfaces defined in FTL, such as
-`ftl::TaskRunner`. MTL also depends on `libfidl` and implements FIDL's
+MTL depends on FXL and implements some interfaces defined in FXL, such as
+`fxl::TaskRunner`. MTL also depends on `libfidl` and implements FIDL's
 asynchronous waiter mechanism using `mtl::MessageLoop`.
