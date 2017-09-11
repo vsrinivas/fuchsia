@@ -44,9 +44,7 @@ source_set("lib") {
   libs = [ "launchpad" ]
 }
 
-executable("manager") {
-  output_name = "appmgr"
-
+executable("appmgr") {
   sources = [
     "main.cc",
   ]
