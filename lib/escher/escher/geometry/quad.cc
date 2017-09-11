@@ -4,7 +4,7 @@
 
 #include "escher/geometry/quad.h"
 
-#include "lib/ftl/arraysize.h"
+#include "lib/fxl/arraysize.h"
 
 namespace escher {
 namespace {

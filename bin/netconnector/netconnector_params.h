@@ -9,14 +9,14 @@
 
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "garnet/bin/netconnector/ip_address.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/macros.h"
 
 namespace netconnector {
 
 class NetConnectorParams {
  public:
-  NetConnectorParams(const ftl::CommandLine& command_line);
+  NetConnectorParams(const fxl::CommandLine& command_line);
 
   bool is_valid() const { return is_valid_; }
 
@@ -56,7 +56,7 @@ class NetConnectorParams {
       launch_infos_by_service_name_;
   std::unordered_map<std::string, IpAddress> device_addresses_by_name_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(NetConnectorParams);
+  FXL_DISALLOW_COPY_AND_ASSIGN(NetConnectorParams);
 };
 
 }  // namespace netconnector

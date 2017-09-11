@@ -7,7 +7,7 @@
 #include <limits>
 
 #include "lib/fidl/cpp/bindings/internal/bindings_serialization.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace fidl {
 namespace internal {
@@ -23,14 +23,14 @@ BoundsChecker::BoundsChecker(const void* data,
     // The calculation of |data_end_| overflowed.
     // It shouldn't happen but if it does, set the range to empty so
     // IsValidRange() and ClaimMemory() always fail.
-    FTL_DCHECK(false) << "Not reached";
+    FXL_DCHECK(false) << "Not reached";
     data_end_ = data_begin_;
   }
   if (handle_end_ < num_handles ||
       num_handles > std::numeric_limits<int32_t>::max()) {
     // Assigning |num_handles| to |handle_end_| overflowed.
     // It shouldn't happen but if it does, set the handle index range to empty.
-    FTL_DCHECK(false) << "Not reached";
+    FXL_DCHECK(false) << "Not reached";
     handle_end_ = 0;
   }
 }

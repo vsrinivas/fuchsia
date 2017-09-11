@@ -6,7 +6,7 @@
 
 #include "garnet/bin/netconnector/mdns/mdns_fidl_util.h"
 #include "garnet/bin/netconnector/mdns/mdns_names.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace netconnector {
 namespace mdns {
@@ -32,7 +32,7 @@ void MdnsServiceImpl::SubscribeToService(
     auto pair = subscriptions_by_service_name_.emplace(
         service_name,
         std::make_unique<MdnsServiceSubscriptionImpl>(this, service_name));
-    FTL_DCHECK(pair.second);
+    FXL_DCHECK(pair.second);
     iter = pair.first;
   }
 
@@ -52,7 +52,7 @@ void MdnsServiceImpl::ResolveHostName(const fidl::String& host_name,
                                       const ResolveHostNameCallback& callback) {
   mdns_.ResolveHostName(
       host_name,
-      ftl::TimePoint::Now() + ftl::TimeDelta::FromMilliseconds(timeout_ms),
+      fxl::TimePoint::Now() + fxl::TimeDelta::FromMilliseconds(timeout_ms),
       [this, callback](const std::string& host_name,
                        const IpAddress& v4_address,
                        const IpAddress& v6_address) {
@@ -65,7 +65,7 @@ void MdnsServiceImpl::SubscribeToService(
     const fidl::String& service_name,
     fidl::InterfaceRequest<MdnsServiceSubscription> subscription_request) {
   if (!MdnsNames::IsValidServiceName(service_name)) {
-    FTL_LOG(ERROR)
+    FXL_LOG(ERROR)
         << "Client supplied invalid service name " << service_name
         << " in call to SubscribeToService, resetting subscription request.";
     subscription_request = nullptr;
@@ -78,7 +78,7 @@ void MdnsServiceImpl::SubscribeToService(
     auto pair = subscriptions_by_service_name_.emplace(
         service_name,
         std::make_unique<MdnsServiceSubscriptionImpl>(this, service_name));
-    FTL_DCHECK(pair.second);
+    FXL_DCHECK(pair.second);
     iter = pair.first;
   }
 
@@ -90,7 +90,7 @@ void MdnsServiceImpl::PublishServiceInstance(const fidl::String& service_name,
                                              uint16_t port,
                                              fidl::Array<fidl::String> text) {
   if (!MdnsNames::IsValidServiceName(service_name)) {
-    FTL_LOG(ERROR) << "Client supplied invalid service name " << service_name
+    FXL_LOG(ERROR) << "Client supplied invalid service name " << service_name
                    << " in call to PublishServiceInstance, ignoring.";
     return;
   }
@@ -104,7 +104,7 @@ void MdnsServiceImpl::UnpublishServiceInstance(
     const fidl::String& service_name,
     const fidl::String& instance_name) {
   if (!MdnsNames::IsValidServiceName(service_name)) {
-    FTL_LOG(ERROR) << "Client supplied invalid service name " << service_name
+    FXL_LOG(ERROR) << "Client supplied invalid service name " << service_name
                    << " in call to UnpublishServiceInstance, ignoring.";
     return;
   }

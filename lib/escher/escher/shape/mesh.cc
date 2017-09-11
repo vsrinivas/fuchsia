@@ -33,9 +33,9 @@ Mesh::Mesh(ResourceRecycler* resource_recycler,
       index_buffer_(std::move(index_buffer)),
       vertex_buffer_offset_(vertex_buffer_offset),
       index_buffer_offset_(index_buffer_offset) {
-  FTL_DCHECK(num_vertices_ * spec_.GetStride() + vertex_buffer_offset_ <=
+  FXL_DCHECK(num_vertices_ * spec_.GetStride() + vertex_buffer_offset_ <=
              vertex_buffer_->size());
-  FTL_DCHECK(num_indices_ * sizeof(uint32_t) + index_buffer_offset_ <=
+  FXL_DCHECK(num_indices_ * sizeof(uint32_t) + index_buffer_offset_ <=
              index_buffer_->size());
 }
 

@@ -48,7 +48,7 @@ class AudioCapturerImpl : public MediaServiceImpl::Product<MediaCapturer>,
   std::shared_ptr<AudioInput> source_;
   std::shared_ptr<FidlPacketProducer> producer_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AudioCapturerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AudioCapturerImpl);
 };
 
 }  // namespace media

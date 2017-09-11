@@ -7,14 +7,14 @@
 #include <set>
 
 #include "escher/impl/vulkan_utils.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace escher {
 
 template <typename FuncT>
 static FuncT GetInstanceProcAddr(vk::Instance inst, const char* func_name) {
   FuncT func = reinterpret_cast<FuncT>(inst.getProcAddr(func_name));
-  FTL_CHECK(func) << "Could not find Vulkan Instance ProcAddr: " << func_name;
+  FXL_CHECK(func) << "Could not find Vulkan Instance ProcAddr: " << func_name;
   return func;
 }
 
@@ -30,9 +30,9 @@ VulkanInstance::ProcAddrs::ProcAddrs(vk::Instance instance,
   }
 }
 
-ftl::RefPtr<VulkanInstance> VulkanInstance::New(Params params) {
-  FTL_DCHECK(ValidateLayers(params.layer_names));
-  FTL_DCHECK(ValidateExtensions(params.extension_names));
+fxl::RefPtr<VulkanInstance> VulkanInstance::New(Params params) {
+  FXL_DCHECK(ValidateLayers(params.layer_names));
+  FXL_DCHECK(ValidateExtensions(params.extension_names));
 
   // Gather names of layers/extensions to populate InstanceCreateInfo.
   std::vector<const char*> layer_names;
@@ -52,11 +52,11 @@ ftl::RefPtr<VulkanInstance> VulkanInstance::New(Params params) {
 
   auto result = vk::createInstance(info);
   if (result.result != vk::Result::eSuccess) {
-    FTL_LOG(WARNING) << "Could not create Vulkan Instance.";
-    return ftl::RefPtr<VulkanInstance>();
+    FXL_LOG(WARNING) << "Could not create Vulkan Instance.";
+    return fxl::RefPtr<VulkanInstance>();
   }
 
-  return ftl::AdoptRef(new VulkanInstance(result.value, std::move(params)));
+  return fxl::AdoptRef(new VulkanInstance(result.value, std::move(params)));
 }
 
 VulkanInstance::VulkanInstance(vk::Instance instance, Params params)
@@ -80,7 +80,7 @@ bool VulkanInstance::ValidateLayers(
                                                 VK_MAX_EXTENSION_NAME_SIZE);
                               });
     if (found == properties.end()) {
-      FTL_LOG(WARNING) << "Vulkan has no instance layer named: " << name;
+      FXL_LOG(WARNING) << "Vulkan has no instance layer named: " << name;
       return false;
     }
   }
@@ -100,7 +100,7 @@ bool VulkanInstance::ValidateExtensions(
                                        VK_MAX_EXTENSION_NAME_SIZE);
                      });
     if (found == extensions.end()) {
-      FTL_LOG(WARNING) << "Vulkan has no instance extension named: " << name;
+      FXL_LOG(WARNING) << "Vulkan has no instance extension named: " << name;
       return false;
     }
   }

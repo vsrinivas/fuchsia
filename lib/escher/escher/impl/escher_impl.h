@@ -7,7 +7,7 @@
 #include "escher/forward_declarations.h"
 #include "escher/status.h"
 #include "escher/vk/vulkan_context.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace escher {
 class Escher;
@@ -67,7 +67,7 @@ class EscherImpl {
   bool supports_timer_queries_ = false;
   float timestamp_period_ = 0.f;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(EscherImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(EscherImpl);
 };
 
 }  // namespace impl

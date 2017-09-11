@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERNAL_VALIDATE_PARAMS_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_VALIDATE_PARAMS_H_
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace fidl {
 namespace internal {
@@ -40,7 +40,7 @@ class ArrayValidateParams {
   ArrayValidateParams* element_validate_params;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(ArrayValidateParams);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ArrayValidateParams);
 };
 
 }  // namespace internal

@@ -9,9 +9,9 @@
 
 #include "lib/url/gurl.h"
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/ascii.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/ascii.h"
+#include "lib/fxl/strings/string_view.h"
 #include "lib/url/url_canon_stdstring.h"
 #include "lib/url/url_util.h"
 #include "lib/url/url_util_internal.h"
@@ -59,7 +59,7 @@ GURL::GURL(std::string canonical_spec, const url::Parsed& parsed, bool is_valid)
   InitializeFromCanonicalSpec();
 }
 
-void GURL::InitCanonical(ftl::StringView input_spec, bool trim_path_end) {
+void GURL::InitCanonical(fxl::StringView input_spec, bool trim_path_end) {
   // Reserve enough room in the output for the input, plus some extra so that
   // we have room if we have to escape a few things without reallocating.
   spec_.reserve(input_spec.size() + 32);
@@ -82,17 +82,17 @@ void GURL::InitializeFromCanonicalSpec() {
     // removed from a "foo:hello #ref" URL (see http://crbug.com/291747).
     GURL test_url(spec_, RETAIN_TRAILING_PATH_WHITEPACE);
 
-    FTL_DCHECK(test_url.is_valid_ == is_valid_);
-    FTL_DCHECK(test_url.spec_ == spec_);
+    FXL_DCHECK(test_url.is_valid_ == is_valid_);
+    FXL_DCHECK(test_url.spec_ == spec_);
 
-    FTL_DCHECK(test_url.parsed_.scheme == parsed_.scheme);
-    FTL_DCHECK(test_url.parsed_.username == parsed_.username);
-    FTL_DCHECK(test_url.parsed_.password == parsed_.password);
-    FTL_DCHECK(test_url.parsed_.host == parsed_.host);
-    FTL_DCHECK(test_url.parsed_.port == parsed_.port);
-    FTL_DCHECK(test_url.parsed_.path == parsed_.path);
-    FTL_DCHECK(test_url.parsed_.query == parsed_.query);
-    FTL_DCHECK(test_url.parsed_.ref == parsed_.ref);
+    FXL_DCHECK(test_url.parsed_.scheme == parsed_.scheme);
+    FXL_DCHECK(test_url.parsed_.username == parsed_.username);
+    FXL_DCHECK(test_url.parsed_.password == parsed_.password);
+    FXL_DCHECK(test_url.parsed_.host == parsed_.host);
+    FXL_DCHECK(test_url.parsed_.port == parsed_.port);
+    FXL_DCHECK(test_url.parsed_.path == parsed_.path);
+    FXL_DCHECK(test_url.parsed_.query == parsed_.query);
+    FXL_DCHECK(test_url.parsed_.ref == parsed_.ref);
   }
 #endif
 }
@@ -107,7 +107,7 @@ GURL& GURL::operator=(GURL other) {
 const std::string& GURL::spec() const {
   if (is_valid_ || spec_.empty()) return spec_;
 
-  FTL_DCHECK(false) << "Trying to get the spec of an invalid URL!";
+  FXL_DCHECK(false) << "Trying to get the spec of an invalid URL!";
   return EmptyStringForGURL();
 }
 
@@ -169,8 +169,8 @@ bool GURL::IsStandard() const { return url::IsStandard(spec_.data(), parsed_.sch
 bool GURL::SchemeIs(const char* lower_ascii_scheme) const {
   if (parsed_.scheme.is_invalid_or_empty()) return lower_ascii_scheme == NULL;
   return url::LowerCaseEqualsASCII(
-      ftl::StringView(spec_.data() + parsed_.scheme.begin, parsed_.scheme.len()),
-      ftl::StringView(lower_ascii_scheme));
+      fxl::StringView(spec_.data() + parsed_.scheme.begin, parsed_.scheme.len()),
+      fxl::StringView(lower_ascii_scheme));
 }
 
 bool GURL::SchemeIsHTTPOrHTTPS() const {
@@ -198,7 +198,7 @@ std::string GURL::ExtractFileName() const {
 }
 
 std::string GURL::PathForRequest() const {
-  FTL_DCHECK(parsed_.path.is_nonempty()) << "Canonical path for requests should be non-empty";
+  FXL_DCHECK(parsed_.path.is_nonempty()) << "Canonical path for requests should be non-empty";
   if (parsed_.ref.is_valid()) {
     // Clip off the reference when it exists. The reference starts after the
     // #-sign, so we have to subtract one to also remove it.
@@ -244,7 +244,7 @@ const GURL& GURL::EmptyGURL() {
   return *empty_gurl;
 }
 
-bool GURL::DomainIs(ftl::StringView lower_ascii_domain) const {
+bool GURL::DomainIs(fxl::StringView lower_ascii_domain) const {
   if (!is_valid_ || lower_ascii_domain.empty()) return false;
 
   if (parsed_.host.is_invalid_or_empty()) return false;
@@ -265,7 +265,7 @@ bool GURL::DomainIs(ftl::StringView lower_ascii_domain) const {
   // start of the whole host name.
   const char* host_first_pos = spec_.data() + parsed_.host.begin + host_len - domain_len;
 
-  if (!url::LowerCaseEqualsASCII(ftl::StringView(host_first_pos, domain_len), lower_ascii_domain))
+  if (!url::LowerCaseEqualsASCII(fxl::StringView(host_first_pos, domain_len), lower_ascii_domain))
     return false;
 
   // Make sure there aren't extra characters in host before the compared part;

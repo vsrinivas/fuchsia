@@ -34,7 +34,7 @@ BufferPtr Buffer::New(ResourceManager* manager,
   auto mem = allocator->Allocate(device.getBufferMemoryRequirements(vk_buffer),
                                  memory_property_flags);
 
-  return ftl::MakeRefCounted<Buffer>(manager, std::move(mem), vk_buffer, size);
+  return fxl::MakeRefCounted<Buffer>(manager, std::move(mem), vk_buffer, size);
 }
 
 BufferPtr Buffer::New(ResourceManager* manager,
@@ -52,7 +52,7 @@ BufferPtr Buffer::New(ResourceManager* manager,
   auto vk_buffer =
       ESCHER_CHECKED_VK_RESULT(device.createBuffer(buffer_create_info));
 
-  return ftl::MakeRefCounted<Buffer>(manager, std::move(mem), vk_buffer, size,
+  return fxl::MakeRefCounted<Buffer>(manager, std::move(mem), vk_buffer, size,
                                      offset);
 }
 
@@ -66,7 +66,7 @@ Buffer::Buffer(ResourceManager* manager,
       buffer_(buffer),
       size_(size),
       ptr_(mem_->mapped_ptr()) {
-  FTL_DCHECK(size + offset <= mem_->size());
+  FXL_DCHECK(size + offset <= mem_->size());
   vulkan_context().device.bindBufferMemory(buffer_, mem_->base(),
                                            mem_->offset() + offset);
 }

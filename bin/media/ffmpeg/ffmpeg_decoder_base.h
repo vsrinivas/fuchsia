@@ -27,7 +27,7 @@ class FfmpegDecoderBase : public Decoder {
   std::unique_ptr<StreamType> output_stream_type() override;
 
   // Transform implementation.
-  ftl::RefPtr<ftl::TaskRunner> GetTaskRunner() override;
+  fxl::RefPtr<fxl::TaskRunner> GetTaskRunner() override;
 
   void Flush() override;
 
@@ -63,7 +63,7 @@ class FfmpegDecoderBase : public Decoder {
                  av_buffer_ref->data),
           av_buffer_ref_(av_buffer_ref),
           owner_(owner) {
-      FTL_DCHECK(av_buffer_ref->size >= 0);
+      FXL_DCHECK(av_buffer_ref->size >= 0);
     }
 
    private:
@@ -106,7 +106,7 @@ class FfmpegDecoderBase : public Decoder {
   AVBufferRef* CreateAVBuffer(uint8_t* payload_buffer,
                               size_t payload_buffer_size,
                               PayloadAllocator* allocator) {
-    FTL_DCHECK(payload_buffer_size <=
+    FXL_DCHECK(payload_buffer_size <=
                static_cast<size_t>(std::numeric_limits<int>::max()));
     return av_buffer_create(payload_buffer,
                             static_cast<int>(payload_buffer_size),
@@ -129,7 +129,7 @@ class FfmpegDecoderBase : public Decoder {
 
   // The task runner to be used for running this node and its stage. We need
   // a single-threaded task runner, because ffmpeg decoders are thread-hostile.
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
 
   // The allocator used by avcodec_send_packet and avcodec_receive_frame to
   // provide context for AllocateBufferForAvFrame. This is set only during

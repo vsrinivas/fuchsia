@@ -7,12 +7,12 @@
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/scenic/client/session.h"
 #include "garnet/bin/ui/sketchy/resources/resource.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace sketchy_service {
 
 class StrokeGroup;
-using StrokeGroupPtr = ftl::RefPtr<StrokeGroup>;
+using StrokeGroupPtr = fxl::RefPtr<StrokeGroup>;
 
 // Wrapper of scenic_lib::ImportNode. To import a node, client should
 // export it as token, and this class takes that token, so that it functions
@@ -31,7 +31,7 @@ class ImportNode final : public Resource {
  private:
   scenic_lib::ImportNode node_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ImportNode);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ImportNode);
 };
 
 }  // namespace sketchy_service

@@ -10,7 +10,7 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace moterm {
 
@@ -25,7 +25,7 @@ class History : public ledger::PageWatcher {
     virtual void OnRemoteEntry(const std::string& entry) = 0;
 
    private:
-    FTL_DISALLOW_COPY_AND_ASSIGN(Client);
+    FXL_DISALLOW_COPY_AND_ASSIGN(Client);
   };
 
   History();
@@ -71,7 +71,7 @@ class History : public ledger::PageWatcher {
       pending_read_entries_;
   std::unordered_set<std::string> local_entry_keys_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(History);
+  FXL_DISALLOW_COPY_AND_ASSIGN(History);
 };
 
 }  // namespace moterm

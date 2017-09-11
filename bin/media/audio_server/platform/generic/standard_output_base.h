@@ -13,7 +13,7 @@
 #include "garnet/bin/media/audio_server/gain.h"
 #include "garnet/bin/media/audio_server/platform/generic/mixer.h"
 #include "garnet/bin/media/audio_server/platform/generic/output_formatter.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/time/time_delta.h"
 
 namespace media {
 namespace audio {
@@ -63,22 +63,22 @@ class StandardOutputBase : public AudioOutput {
 
   explicit StandardOutputBase(AudioOutputManager* manager);
 
-  void Process() FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) final;
+  void Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) final;
   MediaResult InitializeLink(const AudioRendererToOutputLinkPtr& link) final;
 
-  void SetNextSchedTime(ftl::TimePoint next_sched_time) {
+  void SetNextSchedTime(fxl::TimePoint next_sched_time) {
     next_sched_time_ = next_sched_time;
     next_sched_time_known_ = true;
   }
 
-  void SetNextSchedDelay(const ftl::TimeDelta& next_sched_delay) {
-    SetNextSchedTime(ftl::TimePoint::Now() + next_sched_delay);
+  void SetNextSchedDelay(const fxl::TimeDelta& next_sched_delay) {
+    SetNextSchedTime(fxl::TimePoint::Now() + next_sched_delay);
   }
 
-  virtual bool StartMixJob(MixJob* job, ftl::TimePoint process_start)
-    FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) = 0;
+  virtual bool StartMixJob(MixJob* job, fxl::TimePoint process_start)
+    FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) = 0;
   virtual bool FinishMixJob(const MixJob& job)
-    FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) = 0;
+    FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) = 0;
   virtual RendererBookkeeping* AllocBookkeeping();
   void SetupMixBuffer(uint32_t max_mix_frames);
 
@@ -96,7 +96,7 @@ class StandardOutputBase : public AudioOutput {
 
   void ForeachRenderer(const RendererSetupTask& setup,
                        const RendererProcessTask& process)
-      FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   bool SetupMix(const AudioRendererImplPtr& renderer,
                 RendererBookkeeping* info);
@@ -110,7 +110,7 @@ class StandardOutputBase : public AudioOutput {
                    RendererBookkeeping* info,
                    const AudioPipe::AudioPacketRefPtr& pkt_ref);
 
-  ftl::TimePoint next_sched_time_;
+  fxl::TimePoint next_sched_time_;
   bool next_sched_time_known_;
 
   // State for the internal buffer which holds intermediate mix results.

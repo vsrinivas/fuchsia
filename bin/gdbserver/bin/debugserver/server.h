@@ -8,9 +8,9 @@
 #include <memory>
 #include <queue>
 
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 
 #include "inferior-control/exception-port.h"
 #include "inferior-control/process.h"
@@ -50,23 +50,23 @@ class RspServer final : public Server {
   // A notification will time out if the remote end does not acknowledge it
   // within |timeout|. If a notification times out, it will be sent again.
   void QueueNotification(
-      const ftl::StringView& name,
-      const ftl::StringView& event,
-      const ftl::TimeDelta& timeout =
-          ftl::TimeDelta::FromSeconds(kDefaultTimeoutSeconds));
+      const fxl::StringView& name,
+      const fxl::StringView& event,
+      const fxl::TimeDelta& timeout =
+          fxl::TimeDelta::FromSeconds(kDefaultTimeoutSeconds));
 
   // Wrapper of QueueNotification for "Stop" notifications.
   void QueueStopNotification(
-      const ftl::StringView& event,
-      const ftl::TimeDelta& timeout =
-          ftl::TimeDelta::FromSeconds(kDefaultTimeoutSeconds));
+      const fxl::StringView& event,
+      const fxl::TimeDelta& timeout =
+          fxl::TimeDelta::FromSeconds(kDefaultTimeoutSeconds));
 
   // Set |parameter| to |value|. Return true if success.
-  bool SetParameter(const ftl::StringView& parameter,
-                    const ftl::StringView& value);
+  bool SetParameter(const fxl::StringView& parameter,
+                    const fxl::StringView& value);
 
   // Store the value of |parameter| in |*value|. Return true if success.
-  bool GetParameter(const ftl::StringView& parameter,
+  bool GetParameter(const fxl::StringView& parameter,
                     std::string* value);
 
  private:
@@ -75,13 +75,13 @@ class RspServer final : public Server {
 
   // Represents a pending notification packet.
   struct PendingNotification {
-    PendingNotification(const ftl::StringView& name,
-                        const ftl::StringView& event,
-                        const ftl::TimeDelta& timeout);
+    PendingNotification(const fxl::StringView& name,
+                        const fxl::StringView& event,
+                        const fxl::TimeDelta& timeout);
 
     std::string name;
     std::string event;
-    ftl::TimeDelta timeout;
+    fxl::TimeDelta timeout;
   };
 
   RspServer() = default;
@@ -102,10 +102,10 @@ class RspServer final : public Server {
   // computing the checksum. If |notify| is true, then a notification packet
   // will be sent (where the first byte of the packet equals '%'), otherwise a
   // regular packet will be sent (first byte is '$').
-  void PostWriteTask(bool notify, const ftl::StringView& data);
+  void PostWriteTask(bool notify, const fxl::StringView& data);
 
   // Convenience helpers for PostWriteTask
-  void PostPacketWriteTask(const ftl::StringView& data);
+  void PostPacketWriteTask(const fxl::StringView& data);
   void PostPendingNotificationWriteTask();
 
   // If |pending_notification_| is NULL, this pops the next lined-up
@@ -121,7 +121,7 @@ class RspServer final : public Server {
   void PostNotificationTimeoutHandler();
 
   // IOLoop::Delegate overrides.
-  void OnBytesRead(const ftl::StringView& bytes) override;
+  void OnBytesRead(const fxl::StringView& bytes) override;
   void OnDisconnected() override;
   void OnIOError() override;
 
@@ -146,7 +146,7 @@ class RspServer final : public Server {
 
   // File descriptor for the socket used for listening for incoming
   // connections (e.g. from gdb or lldb).
-  ftl::UniqueFD server_sock_;
+  fxl::UniqueFD server_sock_;
 
   // Buffer used for writing outgoing bytes.
   std::array<char, kMaxBufferSize> out_buffer_;
@@ -162,7 +162,7 @@ class RspServer final : public Server {
   // acknowledged by the remote end yet.
   std::unique_ptr<PendingNotification> pending_notification_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(RspServer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(RspServer);
 };
 
 }  // namespace debugserver

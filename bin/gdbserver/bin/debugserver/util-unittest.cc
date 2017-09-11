@@ -74,7 +74,7 @@ TEST(UtilTest, ParseThreadId) {
 }
 
 TEST(UtilTest, VerifyPacket) {
-  ftl::StringView result;
+  fxl::StringView result;
 
 #define TEST_PACKET(var, type) EXPECT_##type(VerifyPacket(var, &result))
 #define TEST_VALID(var) TEST_PACKET(var, TRUE)
@@ -104,7 +104,7 @@ TEST(UtilTest, VerifyPacket) {
 }
 
 TEST(UtilTest, ExtractParameters) {
-  ftl::StringView prefix, params;
+  fxl::StringView prefix, params;
 
 #define TEST_PARAMS(packet, expected_prefix, expected_params) \
   ExtractParameters(packet, &prefix, &params);                \

@@ -12,7 +12,7 @@
 #include "lib/media/fidl/seeking_reader.fidl.h"
 #include "garnet/bin/media/demux/reader.h"
 #include "garnet/bin/media/util/incident.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace media {
 
@@ -63,7 +63,7 @@ class FidlReader : public Reader,
   size_t size_ = kUnknownSize;
   bool can_seek_ = false;
   Incident ready_;
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
 
   std::atomic_bool read_in_progress_;
   size_t read_at_position_;

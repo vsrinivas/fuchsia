@@ -13,7 +13,7 @@
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace mozart {
 
@@ -53,7 +53,7 @@ class ViewProviderService : public ViewProvider {
   fidl::BindingSet<ViewProvider> bindings_;
   std::vector<std::unique_ptr<BaseView>> views_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ViewProviderService);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ViewProviderService);
 };
 
 }  // namespace mozart

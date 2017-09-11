@@ -5,13 +5,13 @@
 #include "garnet/bin/ui/view_manager/view_manager_app.h"
 
 #include "garnet/bin/ui/view_manager/view_manager_impl.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace view_manager {
 
 ViewManagerApp::ViewManagerApp()
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
-  FTL_DCHECK(application_context_);
+  FXL_DCHECK(application_context_);
 
   registry_.reset(new ViewRegistry(application_context_.get()));
 

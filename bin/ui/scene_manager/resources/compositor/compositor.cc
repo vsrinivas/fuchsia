@@ -33,7 +33,7 @@ Compositor::Compositor(Session* session,
     : Resource(session, id, type_info),
       escher_(session->engine()->escher()),
       swapchain_(std::move(swapchain)) {
-  FTL_DCHECK(swapchain_.get());
+  FXL_DCHECK(swapchain_.get());
 
   session->engine()->AddCompositor(this);
 }
@@ -75,7 +75,7 @@ void Compositor::DrawLayer(escher::PaperRenderer* escher_renderer,
                            const escher::SemaphorePtr& frame_done_semaphore,
                            const escher::Model* overlay_model) {
   TRACE_DURATION("gfx", "Compositor::DrawLayer");
-  FTL_DCHECK(layer->IsDrawable());
+  FXL_DCHECK(layer->IsDrawable());
 
   float stage_width = static_cast<float>(output_image->width());
   float stage_height = static_cast<float>(output_image->height());
@@ -164,11 +164,11 @@ void Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
                   overlay);
       });
 
-  if (FTL_VLOG_IS_ON(3)) {
+  if (FXL_VLOG_IS_ON(3)) {
     std::ostringstream output;
     DumpVisitor visitor(output);
     Accept(&visitor);
-    FTL_VLOG(3) << "Renderer dump\n" << output.str();
+    FXL_VLOG(3) << "Renderer dump\n" << output.str();
   }
 }
 

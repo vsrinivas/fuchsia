@@ -11,10 +11,10 @@
 #include <memory>
 #include <string>
 
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/ftl_export.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/fxl_export.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
@@ -24,7 +24,7 @@ namespace mtl {
 //
 // TODO(jeffbrown): Generalize to watching arbitrary directories or dealing
 // with removal when mxio has a protocol for it.
-class FTL_EXPORT DeviceWatcher : private mtl::MessageLoopHandler {
+class FXL_EXPORT DeviceWatcher : private mtl::MessageLoopHandler {
  public:
   // Callback function which is invoked whenever a device is found.
   // |dir_fd| is the file descriptor of the directory (use for openat()).
@@ -42,22 +42,22 @@ class FTL_EXPORT DeviceWatcher : private mtl::MessageLoopHandler {
                                                Callback callback);
 
  private:
-  DeviceWatcher(ftl::UniqueFD dir_fd, mx::channel dir_watch, Callback callback);
+  DeviceWatcher(fxl::UniqueFD dir_fd, mx::channel dir_watch, Callback callback);
 
-  static void ListDevices(ftl::WeakPtr<DeviceWatcher> weak, int dir_fd);
+  static void ListDevices(fxl::WeakPtr<DeviceWatcher> weak, int dir_fd);
 
   // |MessageLoopHandler|:
   void OnHandleReady(mx_handle_t handle,
                      mx_signals_t pending,
                      uint64_t count) override;
 
-  ftl::UniqueFD dir_fd_;
+  fxl::UniqueFD dir_fd_;
   mx::channel dir_watch_;
   Callback callback_;
   mtl::MessageLoop::HandlerKey handler_key_;
-  ftl::WeakPtrFactory<DeviceWatcher> weak_ptr_factory_;
+  fxl::WeakPtrFactory<DeviceWatcher> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DeviceWatcher);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DeviceWatcher);
 };
 
 }  // namespace mtl

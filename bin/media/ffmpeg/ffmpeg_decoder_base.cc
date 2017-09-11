@@ -7,7 +7,7 @@
 #include <trace/event.h>
 
 #include "garnet/bin/media/ffmpeg/av_codec_context.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
 
@@ -16,7 +16,7 @@ namespace media {
 FfmpegDecoderBase::FfmpegDecoderBase(AvCodecContextPtr av_codec_context)
     : av_codec_context_(std::move(av_codec_context)),
       av_frame_ptr_(ffmpeg::AvFrame::Create()) {
-  FTL_DCHECK(av_codec_context_);
+  FXL_DCHECK(av_codec_context_);
 
   // Ffmpeg decoders need to run on a single thread, so we create one here.
   // The task runner for the thread is returned by |GetTaskRunner|, so all
@@ -38,12 +38,12 @@ std::unique_ptr<StreamType> FfmpegDecoderBase::output_stream_type() {
   return AvCodecContext::GetStreamType(*av_codec_context_);
 }
 
-ftl::RefPtr<ftl::TaskRunner> FfmpegDecoderBase::GetTaskRunner() {
+fxl::RefPtr<fxl::TaskRunner> FfmpegDecoderBase::GetTaskRunner() {
   return task_runner_;
 }
 
 void FfmpegDecoderBase::Flush() {
-  FTL_DCHECK(av_codec_context_);
+  FXL_DCHECK(av_codec_context_);
   avcodec_flush_buffers(av_codec_context_.get());
   next_pts_ = Packet::kUnknownPts;
 }
@@ -56,9 +56,9 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input,
       "motown", "DecodePacket", "type",
       (av_codec_context_->codec_type == AVMEDIA_TYPE_VIDEO ? "video"
                                                            : "audio"));
-  FTL_DCHECK(input);
-  FTL_DCHECK(allocator);
-  FTL_DCHECK(output);
+  FXL_DCHECK(input);
+  FXL_DCHECK(allocator);
+  FXL_DCHECK(output);
 
   *output = nullptr;
 
@@ -89,7 +89,7 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input,
     allocator_ = nullptr;
 
     if (result != 0) {
-      FTL_DLOG(ERROR) << "avcodec_send_packet failed " << result;
+      FXL_DLOG(ERROR) << "avcodec_send_packet failed " << result;
       if (input->end_of_stream()) {
         // The input packet was end-of-stream. We won't get called again before
         // a flush, so make sure the output gets an end-of-stream packet.
@@ -109,7 +109,7 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input,
   switch (result) {
     case 0:
       // Succeeded, frame produced.
-      FTL_DCHECK(allocator);
+      FXL_DCHECK(allocator);
       *output = CreateOutputPacket(*av_frame_ptr_, allocator);
       av_frame_unref(av_frame_ptr_.get());
       return false;
@@ -131,12 +131,12 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input,
 
     case AVERROR_EOF:
       // Succeeded, no frame produced, end-of-stream sequence complete.
-      FTL_DCHECK(input->end_of_stream());
+      FXL_DCHECK(input->end_of_stream());
       *output = Packet::CreateEndOfStream(next_pts_, pts_rate_);
       return true;
 
     default:
-      FTL_DLOG(ERROR) << "avcodec_receive_frame failed " << result;
+      FXL_DLOG(ERROR) << "avcodec_receive_frame failed " << result;
       if (input->end_of_stream()) {
         // The input packet was end-of-stream. We won't get called again before
         // a flush, so make sure the output gets an end-of-stream packet.
@@ -160,26 +160,26 @@ int FfmpegDecoderBase::AllocateBufferForAvFrame(
   // self->av_codec_context_.
 
   // CODEC_CAP_DR1 is required in order to do allocation this way.
-  FTL_DCHECK(av_codec_context->codec->capabilities & CODEC_CAP_DR1);
+  FXL_DCHECK(av_codec_context->codec->capabilities & CODEC_CAP_DR1);
 
   FfmpegDecoderBase* self =
       reinterpret_cast<FfmpegDecoderBase*>(av_codec_context->opaque);
-  FTL_DCHECK(self);
-  FTL_DCHECK(self->allocator_);
+  FXL_DCHECK(self);
+  FXL_DCHECK(self->allocator_);
 
   return self->BuildAVFrame(*av_codec_context, av_frame, self->allocator_);
 }
 
 // static
 void FfmpegDecoderBase::ReleaseBufferForAvFrame(void* opaque, uint8_t* buffer) {
-  FTL_DCHECK(opaque);
-  FTL_DCHECK(buffer);
+  FXL_DCHECK(opaque);
+  FXL_DCHECK(buffer);
   PayloadAllocator* allocator = reinterpret_cast<PayloadAllocator*>(opaque);
   allocator->ReleasePayloadBuffer(buffer);
 }
 
 FfmpegDecoderBase::DecoderPacket::~DecoderPacket() {
-  FTL_DCHECK(owner_);
+  FXL_DCHECK(owner_);
   owner_->PostTask([av_buffer_ref = av_buffer_ref_]() mutable {
     av_buffer_unref(&av_buffer_ref);
   });

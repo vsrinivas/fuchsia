@@ -66,7 +66,7 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
     auto acquire_semaphore_pair = NewSemaphoreEventPair(escher());
     auto release_semaphore_pair = NewSemaphoreEventPair(escher());
     if (!acquire_semaphore_pair.first || !release_semaphore_pair.first) {
-      FTL_LOG(ERROR) << "OnSetResolution() failed.";
+      FXL_LOG(ERROR) << "OnSetResolution() failed.";
       ClearFramebuffers();
       Close();
       return;
@@ -79,13 +79,13 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
     auto image = factory.NewImage(escher_image_info);
     mx::vmo vmo = ExportMemoryAsVMO(escher(), image->memory());
     if (!vmo) {
-      FTL_LOG(ERROR) << "OnSetResolution() failed.";
+      FXL_LOG(ERROR) << "OnSetResolution() failed.";
       ClearFramebuffers();
       Close();
       return;
     }
 
-    fb.framebuffer = ftl::MakeRefCounted<escher::Framebuffer>(
+    fb.framebuffer = fxl::MakeRefCounted<escher::Framebuffer>(
         escher(), width(), height(), std::vector<escher::ImagePtr>{image},
         renderer()->render_pass());
     fb.acquire_semaphore = std::move(acquire_semaphore_pair.first);
@@ -110,7 +110,7 @@ static mx::event DuplicateEvent(const mx::event& evt) {
   mx::event dup;
   auto result = evt.duplicate(MX_RIGHT_SAME_RIGHTS, &dup);
   if (result != MX_OK) {
-    FTL_LOG(ERROR) << "Failed to duplicate event (status: " << result << ").";
+    FXL_LOG(ERROR) << "Failed to duplicate event (status: " << result << ").";
   }
   return dup;
 }

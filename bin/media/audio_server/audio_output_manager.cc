@@ -22,21 +22,21 @@ AudioOutputManager::AudioOutputManager(AudioServerImpl* server)
 
 AudioOutputManager::~AudioOutputManager() {
   Shutdown();
-  FTL_DCHECK(outputs_.empty());
+  FXL_DCHECK(outputs_.empty());
 }
 
 MediaResult AudioOutputManager::Init() {
   // Step #1: Instantiate and initialize the default throttle output.
   auto throttle_output = ThrottleOutput::Create(this);
   if (throttle_output == nullptr) {
-    FTL_LOG(WARNING)
+    FXL_LOG(WARNING)
         << "AudioOutputManager failed to create default throttle output!";
     return MediaResult::INSUFFICIENT_RESOURCES;
   }
 
   MediaResult res = throttle_output->Init(throttle_output);
   if (res != MediaResult::OK) {
-    FTL_LOG(WARNING)
+    FXL_LOG(WARNING)
         << "AudioOutputManager failed to initalize the throttle output (res "
         << res << ")";
     throttle_output->Shutdown();
@@ -47,7 +47,7 @@ MediaResult AudioOutputManager::Init() {
   // output devices.
   res = plug_detector_.Start(this);
   if (res != MediaResult::OK) {
-    FTL_LOG(WARNING) << "AudioOutputManager failed to start plug detector (res "
+    FXL_LOG(WARNING) << "AudioOutputManager failed to start plug detector (res "
                      << res << ")";
     return res;
   }
@@ -68,7 +68,7 @@ void AudioOutputManager::Shutdown() {
     size_t size_before = renderers_.size();
     (*renderers_.begin())->Shutdown();
     size_t size_after = renderers_.size();
-    FTL_DCHECK(size_after < size_before);
+    FXL_DCHECK(size_after < size_before);
   }
 
   // Step #3: Shut down each currently active output in the system.  It is
@@ -86,13 +86,13 @@ void AudioOutputManager::Shutdown() {
 }
 
 MediaResult AudioOutputManager::AddOutput(AudioOutputPtr output) {
-  FTL_DCHECK(output != nullptr);
-  FTL_DCHECK(output != throttle_output_);
+  FXL_DCHECK(output != nullptr);
+  FXL_DCHECK(output != throttle_output_);
 
   output->SetGain(master_gain());
 
   auto emplace_res = outputs_.emplace(output);
-  FTL_DCHECK(emplace_res.second);
+  FXL_DCHECK(emplace_res.second);
 
   MediaResult res = output->Init(output);
   if (res != MediaResult::OK) {
@@ -108,8 +108,8 @@ MediaResult AudioOutputManager::AddOutput(AudioOutputPtr output) {
 }
 
 void AudioOutputManager::ShutdownOutput(AudioOutputPtr output) {
-  FTL_DCHECK(output != nullptr);
-  FTL_DCHECK(output != throttle_output_);
+  FXL_DCHECK(output != nullptr);
+  FXL_DCHECK(output != throttle_output_);
 
   auto iter = outputs_.find(output);
   if (iter != outputs_.end()) {
@@ -124,7 +124,7 @@ void AudioOutputManager::ShutdownOutput(AudioOutputPtr output) {
 void AudioOutputManager::HandlePlugStateChange(AudioOutputPtr output,
                                                bool plugged,
                                                mx_time_t plug_time) {
-  FTL_DCHECK(output);
+  FXL_DCHECK(output);
   if (output->UpdatePlugState(plugged, plug_time)) {
     if (plugged) {
       OnOutputPlugged(output);
@@ -143,8 +143,8 @@ void AudioOutputManager::SetMasterGain(float db_gain) {
 
 void AudioOutputManager::SelectOutputsForRenderer(
     AudioRendererImplPtr renderer) {
-  FTL_DCHECK(renderer);
-  FTL_DCHECK(renderer->format_info_valid());
+  FXL_DCHECK(renderer);
+  FXL_DCHECK(renderer->format_info_valid());
 
   // TODO(johngro): Add some way to assert that we are executing on the main
   // message loop thread.
@@ -174,8 +174,8 @@ void AudioOutputManager::SelectOutputsForRenderer(
 
 void AudioOutputManager::LinkOutputToRenderer(AudioOutputPtr output,
                                               AudioRendererImplPtr renderer) {
-  FTL_DCHECK(output);
-  FTL_DCHECK(renderer);
+  FXL_DCHECK(output);
+  FXL_DCHECK(renderer);
 
   // Do not create any links if the renderer's output format has not been set.
   // Links will be created during SelectOutputsForRenderer when the renderer
@@ -183,7 +183,7 @@ void AudioOutputManager::LinkOutputToRenderer(AudioOutputPtr output,
   if (!renderer->format_info_valid()) return;
 
   auto link = AudioRendererToOutputLink::Create(renderer, output);
-  FTL_DCHECK(link);
+  FXL_DCHECK(link);
 
   // If we cannot add this link to the output, it's because the output is in
   // the process of shutting down (we didn't want to hang out with that guy
@@ -197,8 +197,8 @@ void AudioOutputManager::LinkOutputToRenderer(AudioOutputPtr output,
   }
 }
 
-void AudioOutputManager::ScheduleMessageLoopTask(const ftl::Closure& task) {
-  FTL_DCHECK(server_);
+void AudioOutputManager::ScheduleMessageLoopTask(const fxl::Closure& task) {
+  FXL_DCHECK(server_);
   server_->ScheduleMessageLoopTask(task);
 }
 
@@ -216,7 +216,7 @@ AudioOutputPtr AudioOutputManager::FindLastPluggedOutput() {
 }
 
 void AudioOutputManager::OnOutputUnplugged(AudioOutputPtr output) {
-  FTL_DCHECK(output && !output->plugged() && (output != throttle_output_));
+  FXL_DCHECK(output && !output->plugged() && (output != throttle_output_));
 
   // This output was just unplugged.  Unlink it from all of its currently
   // linked renderers.  If we are applying 'last plugged' policy, replace it
@@ -234,7 +234,7 @@ void AudioOutputManager::OnOutputUnplugged(AudioOutputPtr output) {
 }
 
 void AudioOutputManager::OnOutputPlugged(AudioOutputPtr output) {
-  FTL_DCHECK(output && output->plugged() && (output != throttle_output_));
+  FXL_DCHECK(output && output->plugged() && (output != throttle_output_));
 
   switch (routing_policy_) {
       case RoutingPolicy::ALL_PLUGGED_OUTPUTS:

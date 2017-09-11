@@ -9,9 +9,9 @@
 #include <string>
 
 #include "lib/app/cpp/connect.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/time/time_delta.h"
 
 namespace examples {
 
@@ -34,7 +34,7 @@ JankView::JankView(mozart::ViewManagerPtr view_manager,
     : SkiaView(std::move(view_manager), std::move(view_owner_request), "Jank"),
       font_loader_(std::move(font_provider)) {
   font_loader_.LoadDefaultFont([this](sk_sp<SkTypeface> typeface) {
-    FTL_CHECK(typeface);  // TODO(jeffbrown): Fail gracefully.
+    FXL_CHECK(typeface);  // TODO(jeffbrown): Fail gracefully.
     typeface_ = std::move(typeface);
     InvalidateScene();
   });
@@ -54,7 +54,7 @@ void JankView::OnSceneInvalidated(
   ReleaseAndSwapCanvas();
 
   // Stutter if needed.
-  if (stutter_end_time_ > ftl::TimePoint::Now())
+  if (stutter_end_time_ > fxl::TimePoint::Now())
     sleep(2);
 
   // Animate.
@@ -64,7 +64,7 @@ void JankView::OnSceneInvalidated(
 void JankView::DrawContent(SkCanvas* canvas) {
   SkScalar hsv[3] = {
       static_cast<SkScalar>(
-          fmod(ftl::TimePoint::Now().ToEpochDelta().ToSecondsF() * 60, 360.)),
+          fmod(fxl::TimePoint::Now().ToEpochDelta().ToSecondsF() * 60, 360.)),
       1, 1};
   canvas->clear(SkHSVToColor(hsv));
 
@@ -128,7 +128,7 @@ void JankView::OnClick(const Button& button) {
 
     case Action::kStutter30: {
       stutter_end_time_ =
-          ftl::TimePoint::Now() + ftl::TimeDelta::FromSeconds(30);
+          fxl::TimePoint::Now() + fxl::TimeDelta::FromSeconds(30);
       break;
     }
 

@@ -4,17 +4,17 @@
 
 #include "lib/ui/tests/test_with_message_loop.h"
 
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace mozart {
 namespace test {
 
-bool RunLoopWithTimeout(ftl::TimeDelta timeout) {
+bool RunLoopWithTimeout(fxl::TimeDelta timeout) {
   auto canceled = std::make_unique<bool>(false);
   bool* canceled_ptr = canceled.get();
   bool timed_out = false;
   mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      ftl::MakeCopyable([ canceled = std::move(canceled), &timed_out ] {
+      fxl::MakeCopyable([ canceled = std::move(canceled), &timed_out ] {
         if (*canceled) {
           return;
         }

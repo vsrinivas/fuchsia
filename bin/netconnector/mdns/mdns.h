@@ -15,9 +15,9 @@
 #include "garnet/bin/netconnector/mdns/mdns_transceiver.h"
 #include "garnet/bin/netconnector/mdns/resource_renewer.h"
 #include "garnet/bin/netconnector/socket_address.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/tasks/task_runner.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/tasks/task_runner.h"
+#include "lib/fxl/time/time_point.h"
 
 namespace netconnector {
 namespace mdns {
@@ -57,7 +57,7 @@ class Mdns : public MdnsAgent::Host {
 
   // Resolves |host_name| to one or two |IpAddress|es.
   void ResolveHostName(const std::string& host_name,
-                       ftl::TimePoint timeout,
+                       fxl::TimePoint timeout,
                        const ResolveHostNameCallback& callback);
 
   // Starts publishing the indicated service instance.
@@ -83,10 +83,10 @@ class Mdns : public MdnsAgent::Host {
       : public std::priority_queue<T, std::vector<T>, std::greater<T>> {};
 
   struct WakeQueueEntry {
-    WakeQueueEntry(ftl::TimePoint time, std::shared_ptr<MdnsAgent> agent)
+    WakeQueueEntry(fxl::TimePoint time, std::shared_ptr<MdnsAgent> agent)
         : time_(time), agent_(agent) {}
 
-    ftl::TimePoint time_;
+    fxl::TimePoint time_;
     std::shared_ptr<MdnsAgent> agent_;
 
     bool operator>(const WakeQueueEntry& other) const {
@@ -95,11 +95,11 @@ class Mdns : public MdnsAgent::Host {
   };
 
   struct QuestionQueueEntry {
-    QuestionQueueEntry(ftl::TimePoint time,
+    QuestionQueueEntry(fxl::TimePoint time,
                        std::shared_ptr<DnsQuestion> question)
         : time_(time), question_(question) {}
 
-    ftl::TimePoint time_;
+    fxl::TimePoint time_;
     std::shared_ptr<DnsQuestion> question_;
 
     bool operator>(const QuestionQueueEntry& other) const {
@@ -108,12 +108,12 @@ class Mdns : public MdnsAgent::Host {
   };
 
   struct ResourceQueueEntry {
-    ResourceQueueEntry(ftl::TimePoint time,
+    ResourceQueueEntry(fxl::TimePoint time,
                        std::shared_ptr<DnsResource> resource,
                        MdnsResourceSection section)
         : time_(time), resource_(resource), section_(section) {}
 
-    ftl::TimePoint time_;
+    fxl::TimePoint time_;
     std::shared_ptr<DnsResource> resource_;
     MdnsResourceSection section_;
 
@@ -123,16 +123,16 @@ class Mdns : public MdnsAgent::Host {
   };
 
   // MdnsAgent::Host implementation.
-  void WakeAt(std::shared_ptr<MdnsAgent> agent, ftl::TimePoint when) override;
+  void WakeAt(std::shared_ptr<MdnsAgent> agent, fxl::TimePoint when) override;
 
   void SendQuestion(std::shared_ptr<DnsQuestion> question,
-                    ftl::TimePoint when) override;
+                    fxl::TimePoint when) override;
 
   void SendResource(std::shared_ptr<DnsResource> resource,
                     MdnsResourceSection section,
-                    ftl::TimePoint when) override;
+                    fxl::TimePoint when) override;
 
-  void SendAddresses(MdnsResourceSection section, ftl::TimePoint when) override;
+  void SendAddresses(MdnsResourceSection section, fxl::TimePoint when) override;
 
   void Renew(const DnsResource& resource) override;
 
@@ -151,11 +151,11 @@ class Mdns : public MdnsAgent::Host {
 
   void TellAgentToQuit(const std::string& name);
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   MdnsTransceiver transceiver_;
   std::string host_full_name_;
   bool started_ = false;
-  reverse_priority_queue<ftl::TimePoint> post_task_queue_;
+  reverse_priority_queue<fxl::TimePoint> post_task_queue_;
   reverse_priority_queue<WakeQueueEntry> wake_queue_;
   reverse_priority_queue<QuestionQueueEntry> question_queue_;
   reverse_priority_queue<ResourceQueueEntry> resource_queue_;
@@ -164,7 +164,7 @@ class Mdns : public MdnsAgent::Host {
   bool verbose_ = false;
   std::shared_ptr<ResourceRenewer> resource_renewer_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Mdns);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Mdns);
 };
 
 }  // namespace mdns

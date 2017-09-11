@@ -19,7 +19,7 @@
 #include "escher/scene/stage.h"
 #include "escher/util/stopwatch.h"
 #include "escher/vk/vulkan_swapchain_helper.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 class WaterfallDemo : public Demo {
  public:

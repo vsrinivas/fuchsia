@@ -12,7 +12,7 @@
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "garnet/bin/ui/view_manager/view_registry.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace view_manager {
 
@@ -31,7 +31,7 @@ class ViewManagerApp {
   fidl::BindingSet<mozart::ViewManager, std::unique_ptr<ViewManagerImpl>>
       view_manager_bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ViewManagerApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ViewManagerApp);
 };
 
 }  // namespace view_manager

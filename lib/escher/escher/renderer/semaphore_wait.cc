@@ -18,7 +18,7 @@ Semaphore::~Semaphore() {
 }
 
 SemaphorePtr Semaphore::New(vk::Device device) {
-  return ftl::MakeRefCounted<Semaphore>(device);
+  return fxl::MakeRefCounted<Semaphore>(device);
 }
 
 }  // namespace escher

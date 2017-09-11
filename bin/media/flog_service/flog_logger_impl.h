@@ -50,7 +50,7 @@ class FlogLoggerImpl : public FlogServiceImpl::ProductBase,
   uint32_t id_;
   std::string label_;
   std::unique_ptr<fidl::internal::Router> router_;
-  ftl::UniqueFD fd_;
+  fxl::UniqueFD fd_;
 };
 
 }  // namespace flog

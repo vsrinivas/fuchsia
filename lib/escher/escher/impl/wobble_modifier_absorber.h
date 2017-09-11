@@ -9,7 +9,7 @@
 #include "escher/impl/model_data.h"
 #include "escher/scene/model.h"
 #include "escher/scene/object.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace escher {
 namespace impl {
@@ -40,7 +40,7 @@ class WobbleModifierAbsorber {
   const BufferPtr per_model_uniform_buffer_;
   ModelData::PerModel* const per_model_uniform_data_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(WobbleModifierAbsorber);
+  FXL_DISALLOW_COPY_AND_ASSIGN(WobbleModifierAbsorber);
 };
 
 }  // namespace impl

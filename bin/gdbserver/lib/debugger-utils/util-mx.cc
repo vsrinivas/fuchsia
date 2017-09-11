@@ -9,9 +9,9 @@
 
 #include <magenta/status.h>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_number_conversions.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "byte-block.h"
 
@@ -19,7 +19,7 @@ namespace debugserver {
 namespace util {
 
 std::string MxErrorString(mx_status_t status) {
-  return ftl::StringPrintf("%s(%d)", mx_status_get_string(status), status);
+  return fxl::StringPrintf("%s(%d)", mx_status_get_string(status), status);
 }
 
 const char* ExceptionName(mx_excp_type_t type) {

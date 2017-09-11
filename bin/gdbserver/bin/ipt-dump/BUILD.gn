@@ -19,7 +19,7 @@ executable("ipt-dump") {
     "//garnet/bin/gdbserver/lib/debugger-utils",
     "//garnet/bin/gdbserver/lib/intel-pt-decode",
     "//garnet/bin/gdbserver/third_party/simple-pt:printer",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//third_party/processor-trace/libipt",
   ]
 

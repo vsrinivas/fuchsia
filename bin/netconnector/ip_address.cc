@@ -20,7 +20,7 @@ const IpAddress IpAddress::kInvalid;
 // static
 IpAddress IpAddress::FromString(const std::string address_string,
                                 sa_family_t family) {
-  FTL_DCHECK(family == AF_UNSPEC || family == AF_INET || family == AF_INET6);
+  FXL_DCHECK(family == AF_UNSPEC || family == AF_INET || family == AF_INET6);
   struct addrinfo hints;
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = family;
@@ -31,7 +31,7 @@ IpAddress IpAddress::FromString(const std::string address_string,
   struct addrinfo* addrinfos;
   int result = getaddrinfo(address_string.c_str(), nullptr, &hints, &addrinfos);
   if (result != 0) {
-    FTL_DLOG(ERROR) << "Failed to getaddrinfo for address " << address_string
+    FXL_DLOG(ERROR) << "Failed to getaddrinfo for address " << address_string
                     << ", errno" << errno;
     return kInvalid;
   }
@@ -40,7 +40,7 @@ IpAddress IpAddress::FromString(const std::string address_string,
     return kInvalid;
   }
 
-  FTL_DCHECK(addrinfos->ai_family == family ||
+  FXL_DCHECK(addrinfos->ai_family == family ||
              (family == AF_UNSPEC && (addrinfos->ai_family == AF_INET ||
                                       addrinfos->ai_family == AF_INET6)));
 
@@ -109,8 +109,8 @@ IpAddress::IpAddress(const in6_addr& addr) {
 }
 
 IpAddress::IpAddress(const sockaddr* addr) {
-  FTL_DCHECK(addr != nullptr);
-  FTL_DCHECK(addr->sa_family == AF_INET || addr->sa_family == AF_INET6);
+  FXL_DCHECK(addr != nullptr);
+  FXL_DCHECK(addr->sa_family == AF_INET || addr->sa_family == AF_INET6);
   family_ = addr->sa_family;
   if (is_v4()) {
     v4_ = reinterpret_cast<const sockaddr_in*>(addr)->sin_addr;
@@ -120,7 +120,7 @@ IpAddress::IpAddress(const sockaddr* addr) {
 }
 
 IpAddress::IpAddress(const netstack::NetAddress* addr) {
-  FTL_DCHECK(addr != nullptr);
+  FXL_DCHECK(addr != nullptr);
   switch (addr->family) {
     case netstack::NetAddressFamily::IPV4:
       family_ = AF_INET;
@@ -131,7 +131,7 @@ IpAddress::IpAddress(const netstack::NetAddress* addr) {
       memcpy(&v6_, &addr->ipv6[0], 16);
       break;
     default:
-      FTL_DCHECK(false);
+      FXL_DCHECK(false);
       break;
   }
 }

@@ -13,7 +13,7 @@ executable("sysinfo") {
     "magenta",
   ]
   deps = [
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }
 

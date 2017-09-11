@@ -7,7 +7,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "garnet/bin/icu_data/icu_data_provider_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace icu_data {
@@ -27,7 +27,7 @@ class App {
   std::unique_ptr<app::ApplicationContext> context_;
   ICUDataProviderImpl icu_data_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(App);
+  FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
 }  // namespace icu_data

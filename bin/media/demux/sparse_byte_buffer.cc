@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/demux/sparse_byte_buffer.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -41,8 +41,8 @@ void SparseByteBuffer::Initialize(size_t size) {
 
 SparseByteBuffer::Region SparseByteBuffer::FindRegionContaining(size_t position,
                                                                 Region hint) {
-  FTL_DCHECK(size_ > 0u);
-  FTL_DCHECK(position < size_);
+  FXL_DCHECK(size_ > 0u);
+  FXL_DCHECK(position < size_);
 
   RegionsIter iter = hint.iter_;
 
@@ -63,7 +63,7 @@ SparseByteBuffer::Region SparseByteBuffer::FindRegionContaining(size_t position,
   if (iter != regions_.begin() &&
       (iter == regions_.end() || iter->first > position)) {
     --iter;
-    FTL_DCHECK(iter->first <= position);
+    FXL_DCHECK(iter->first <= position);
     if (iter->first + iter->second.size() <= position) {
       iter = regions_.end();
     }
@@ -74,8 +74,8 @@ SparseByteBuffer::Region SparseByteBuffer::FindRegionContaining(size_t position,
 
 SparseByteBuffer::Hole SparseByteBuffer::FindOrCreateHole(size_t position,
                                                           Hole hint) {
-  FTL_DCHECK(size_ > 0u);
-  FTL_DCHECK(!holes_.empty());
+  FXL_DCHECK(size_ > 0u);
+  FXL_DCHECK(!holes_.empty());
 
   HolesIter result = hint.iter_;
 
@@ -88,15 +88,15 @@ SparseByteBuffer::Hole SparseByteBuffer::FindOrCreateHole(size_t position,
         result->first + result->second <= position) {
       // Need to find the hole containing the requested position.
       result = FindHoleContaining(position).iter_;
-      FTL_DCHECK(result != holes_.end());
+      FXL_DCHECK(result != holes_.end());
     }
 
     if (result->first != position) {
       // Need to split this hole.
-      FTL_DCHECK(position > result->first);
+      FXL_DCHECK(position > result->first);
       size_t front_size = position - result->first;
 
-      FTL_DCHECK(result->second > front_size);
+      FXL_DCHECK(result->second > front_size);
       size_t back_size = result->second - front_size;
 
       result->second = front_size;
@@ -106,18 +106,18 @@ SparseByteBuffer::Hole SparseByteBuffer::FindOrCreateHole(size_t position,
     }
   }
 
-  FTL_DCHECK(result->first == position);
+  FXL_DCHECK(result->first == position);
 
   return Hole(result);
 }
 
 SparseByteBuffer::Hole SparseByteBuffer::FindHoleContaining(size_t position) {
-  FTL_DCHECK(size_ > 0u);
+  FXL_DCHECK(size_ > 0u);
   HolesIter iter = holes_.lower_bound(position);
   if (iter != holes_.begin() &&
       (iter == holes_.end() || iter->first > position)) {
     --iter;
-    FTL_DCHECK(iter->first <= position);
+    FXL_DCHECK(iter->first <= position);
     if (iter->first + iter->second < position) {
       iter = holes_.end();
     }
@@ -128,10 +128,10 @@ SparseByteBuffer::Hole SparseByteBuffer::FindHoleContaining(size_t position) {
 
 SparseByteBuffer::Hole SparseByteBuffer::Fill(Hole hole,
                                               std::vector<uint8_t>&& buffer) {
-  FTL_DCHECK(size_ > 0u);
-  FTL_DCHECK(hole.iter_ != holes_.end());
-  FTL_DCHECK(buffer.size() != 0);
-  FTL_DCHECK(buffer.size() <= hole.size());
+  FXL_DCHECK(size_ > 0u);
+  FXL_DCHECK(hole.iter_ != holes_.end());
+  FXL_DCHECK(buffer.size() != 0);
+  FXL_DCHECK(buffer.size() <= hole.size());
 
   HolesIter holes_iter = hole.iter_;
 
@@ -142,8 +142,8 @@ SparseByteBuffer::Hole SparseByteBuffer::Fill(Hole hole,
 
   // Remove the region from holes_.
   while (buffer_size != 0) {
-    FTL_DCHECK(holes_iter != holes_.end());
-    FTL_DCHECK(holes_iter->first == position);
+    FXL_DCHECK(holes_iter != holes_.end());
+    FXL_DCHECK(holes_iter->first == position);
 
     if (buffer_size < holes_iter->second) {
       // We've filled part of *holes_iter. Insert a hole after it to
@@ -165,7 +165,7 @@ SparseByteBuffer::Hole SparseByteBuffer::Fill(Hole hole,
 
     holes_iter = holes_.erase(holes_iter);
     if (holes_iter == holes_.end()) {
-      FTL_DCHECK(buffer_size == 0);
+      FXL_DCHECK(buffer_size == 0);
       holes_iter = holes_.begin();
     }
   }

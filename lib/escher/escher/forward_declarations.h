@@ -4,10 +4,10 @@
 
 #pragma once
 
-namespace ftl {
+namespace fxl {
 template <typename T>
 class RefPtr;
-}  // namespace ftl
+}  // namespace fxl
 
 namespace escher {
 
@@ -40,19 +40,19 @@ class ViewingVolume;
 struct VulkanContext;
 struct VulkanSwapchain;
 
-typedef ftl::RefPtr<Buffer> BufferPtr;
-typedef ftl::RefPtr<Framebuffer> FramebufferPtr;
-typedef ftl::RefPtr<GpuMem> GpuMemPtr;
-typedef ftl::RefPtr<Image> ImagePtr;
-typedef ftl::RefPtr<Material> MaterialPtr;
-typedef ftl::RefPtr<Mesh> MeshPtr;
-typedef ftl::RefPtr<MeshBuilder> MeshBuilderPtr;
-typedef ftl::RefPtr<PaperRenderer> PaperRendererPtr;
-typedef ftl::RefPtr<Resource> ResourcePtr;
-typedef ftl::RefPtr<Renderer> RendererPtr;
-typedef ftl::RefPtr<Semaphore> SemaphorePtr;
-typedef ftl::RefPtr<Texture> TexturePtr;
-typedef ftl::RefPtr<TimestampProfiler> TimestampProfilerPtr;
+typedef fxl::RefPtr<Buffer> BufferPtr;
+typedef fxl::RefPtr<Framebuffer> FramebufferPtr;
+typedef fxl::RefPtr<GpuMem> GpuMemPtr;
+typedef fxl::RefPtr<Image> ImagePtr;
+typedef fxl::RefPtr<Material> MaterialPtr;
+typedef fxl::RefPtr<Mesh> MeshPtr;
+typedef fxl::RefPtr<MeshBuilder> MeshBuilderPtr;
+typedef fxl::RefPtr<PaperRenderer> PaperRendererPtr;
+typedef fxl::RefPtr<Resource> ResourcePtr;
+typedef fxl::RefPtr<Renderer> RendererPtr;
+typedef fxl::RefPtr<Semaphore> SemaphorePtr;
+typedef fxl::RefPtr<Texture> TexturePtr;
+typedef fxl::RefPtr<TimestampProfiler> TimestampProfilerPtr;
 
 namespace impl {
 class CommandBuffer;
@@ -74,8 +74,8 @@ class Pipeline;
 class SsdoAccelerator;
 class SsdoSampler;
 
-typedef ftl::RefPtr<ModelDisplayList> ModelDisplayListPtr;
-typedef ftl::RefPtr<Pipeline> PipelinePtr;
+typedef fxl::RefPtr<ModelDisplayList> ModelDisplayListPtr;
+typedef fxl::RefPtr<Pipeline> PipelinePtr;
 
 }  // namespace impl
 

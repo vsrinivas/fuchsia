@@ -6,7 +6,7 @@
 
 namespace media {
 
-Graph::Graph(ftl::RefPtr<ftl::TaskRunner> default_task_runner)
+Graph::Graph(fxl::RefPtr<fxl::TaskRunner> default_task_runner)
     : default_task_runner_(default_task_runner) {}
 
 Graph::~Graph() {
@@ -14,7 +14,7 @@ Graph::~Graph() {
 }
 
 void Graph::RemoveNode(NodeRef node) {
-  FTL_DCHECK(node);
+  FXL_DCHECK(node);
 
   StageImpl* stage = node.stage_;
 
@@ -42,8 +42,8 @@ void Graph::RemoveNode(NodeRef node) {
 }
 
 NodeRef Graph::Connect(const OutputRef& output, const InputRef& input) {
-  FTL_DCHECK(output);
-  FTL_DCHECK(input);
+  FXL_DCHECK(output);
+  FXL_DCHECK(input);
 
   if (output.connected()) {
     DisconnectOutput(output);
@@ -59,42 +59,42 @@ NodeRef Graph::Connect(const OutputRef& output, const InputRef& input) {
 }
 
 NodeRef Graph::ConnectNodes(NodeRef upstream_node, NodeRef downstream_node) {
-  FTL_DCHECK(upstream_node);
-  FTL_DCHECK(downstream_node);
+  FXL_DCHECK(upstream_node);
+  FXL_DCHECK(downstream_node);
   Connect(upstream_node.output(), downstream_node.input());
   return downstream_node;
 }
 
 NodeRef Graph::ConnectOutputToNode(const OutputRef& output,
                                    NodeRef downstream_node) {
-  FTL_DCHECK(output);
-  FTL_DCHECK(downstream_node);
+  FXL_DCHECK(output);
+  FXL_DCHECK(downstream_node);
   Connect(output, downstream_node.input());
   return downstream_node;
 }
 
 NodeRef Graph::ConnectNodeToInput(NodeRef upstream_node,
                                   const InputRef& input) {
-  FTL_DCHECK(upstream_node);
-  FTL_DCHECK(input);
+  FXL_DCHECK(upstream_node);
+  FXL_DCHECK(input);
   Connect(upstream_node.output(), input);
   return input.node();
 }
 
 void Graph::DisconnectOutput(const OutputRef& output) {
-  FTL_DCHECK(output);
+  FXL_DCHECK(output);
 
   if (!output.connected()) {
     return;
   }
 
   Output* actual_output = output.actual();
-  FTL_DCHECK(actual_output);
+  FXL_DCHECK(actual_output);
   Input* mate = actual_output->mate();
-  FTL_DCHECK(mate);
+  FXL_DCHECK(mate);
 
   if (mate->prepared()) {
-    FTL_CHECK(false) << "attempt to disconnect prepared output";
+    FXL_CHECK(false) << "attempt to disconnect prepared output";
     return;
   }
 
@@ -103,19 +103,19 @@ void Graph::DisconnectOutput(const OutputRef& output) {
 }
 
 void Graph::DisconnectInput(const InputRef& input) {
-  FTL_DCHECK(input);
+  FXL_DCHECK(input);
 
   if (!input.connected()) {
     return;
   }
 
   Input* actual_input = input.actual();
-  FTL_DCHECK(actual_input);
+  FXL_DCHECK(actual_input);
   Output* mate = actual_input->mate();
-  FTL_DCHECK(mate);
+  FXL_DCHECK(mate);
 
   if (actual_input->prepared()) {
-    FTL_CHECK(false) << "attempt to disconnect prepared input";
+    FXL_CHECK(false) << "attempt to disconnect prepared input";
     return;
   }
 
@@ -124,7 +124,7 @@ void Graph::DisconnectInput(const InputRef& input) {
 }
 
 void Graph::RemoveNodesConnectedToNode(NodeRef node) {
-  FTL_DCHECK(node);
+  FXL_DCHECK(node);
 
   std::deque<NodeRef> to_remove{node};
 
@@ -145,7 +145,7 @@ void Graph::RemoveNodesConnectedToNode(NodeRef node) {
 }
 
 void Graph::RemoveNodesConnectedToOutput(const OutputRef& output) {
-  FTL_DCHECK(output);
+  FXL_DCHECK(output);
 
   if (!output.connected()) {
     return;
@@ -157,7 +157,7 @@ void Graph::RemoveNodesConnectedToOutput(const OutputRef& output) {
 }
 
 void Graph::RemoveNodesConnectedToInput(const InputRef& input) {
-  FTL_DCHECK(input);
+  FXL_DCHECK(input);
 
   if (!input.connected()) {
     return;
@@ -187,24 +187,24 @@ void Graph::Prepare() {
 }
 
 void Graph::PrepareInput(const InputRef& input) {
-  FTL_DCHECK(input);
+  FXL_DCHECK(input);
   engine_.PrepareInput(input.actual());
 }
 
 void Graph::FlushOutput(const OutputRef& output, bool hold_frame) {
-  FTL_DCHECK(output);
+  FXL_DCHECK(output);
   engine_.FlushOutput(output.actual(), hold_frame);
 }
 
 void Graph::FlushAllOutputs(NodeRef node, bool hold_frame) {
-  FTL_DCHECK(node);
+  FXL_DCHECK(node);
   size_t output_count = node.output_count();
   for (size_t output_index = 0; output_index < output_count; output_index++) {
     FlushOutput(node.output(output_index), hold_frame);
   }
 }
 
-void Graph::PostTask(const ftl::Closure& task,
+void Graph::PostTask(const fxl::Closure& task,
                      std::initializer_list<NodeRef> nodes) {
   std::vector<StageImpl*> stages;
   for (NodeRef node : nodes) {
@@ -212,12 +212,12 @@ void Graph::PostTask(const ftl::Closure& task,
   }
 
   struct PostedTask {
-    PostedTask(const ftl::Closure& task, std::vector<StageImpl*> stages)
+    PostedTask(const fxl::Closure& task, std::vector<StageImpl*> stages)
         : task_(task), stages_(std::move(stages)) {
       unacquired_stage_counter_ = stages_.size();
     }
 
-    ftl::Closure task_;
+    fxl::Closure task_;
     std::vector<StageImpl*> stages_;
     std::atomic_uint32_t unacquired_stage_counter_;
   };
@@ -240,9 +240,9 @@ void Graph::PostTask(const ftl::Closure& task,
   }
 }
 
-NodeRef Graph::Add(StageImpl* stage, ftl::RefPtr<ftl::TaskRunner> task_runner) {
-  FTL_DCHECK(stage);
-  FTL_DCHECK(task_runner || default_task_runner_);
+NodeRef Graph::Add(StageImpl* stage, fxl::RefPtr<fxl::TaskRunner> task_runner) {
+  FXL_DCHECK(stage);
+  FXL_DCHECK(task_runner || default_task_runner_);
 
   stage->SetTaskRunner(task_runner ? task_runner : default_task_runner_);
   stages_.push_back(stage);

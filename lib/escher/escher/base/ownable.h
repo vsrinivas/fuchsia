@@ -42,7 +42,7 @@ class Ownable : public TypedReffable<TypeInfoT> {
   // the responsiblity of the |owner_|, which is notified via ReceiveOwnable().
   bool OnZeroRefCount() final override {
     if (owner_) {
-      // FTL_DCHECK(this->IsKindOf<OwnableT>());
+      // FXL_DCHECK(this->IsKindOf<OwnableT>());
       owner_->OnReceiveOwnable(
           std::unique_ptr<OwnableT>(static_cast<OwnableT*>(this)));
       return false;

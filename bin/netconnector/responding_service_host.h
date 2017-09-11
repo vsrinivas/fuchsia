@@ -9,7 +9,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/svc/cpp/service_namespace.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace netconnector {
 
@@ -43,7 +43,7 @@ class RespondingServiceHost {
   app::ServiceNamespace service_namespace_;
   app::ApplicationLauncherPtr launcher_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(RespondingServiceHost);
+  FXL_DISALLOW_COPY_AND_ASSIGN(RespondingServiceHost);
 };
 
 }  // namespace netconnector

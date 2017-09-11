@@ -16,8 +16,8 @@
 
 #include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
 #include "lib/fidl/cpp/waiter/default.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/arraysize.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/arraysize.h"
 
 namespace fidl {
 namespace {
@@ -40,21 +40,21 @@ FidlAsyncWaitID AsyncWait(mx_handle_t handle,
                           mx_time_t /* timeout */,
                           FidlAsyncWaitCallback callback,
                           void* context) {
-  FTL_CHECK(g_port);
+  FXL_CHECK(g_port);
   FidlAsyncWaitID wait_id = g_next_key++;
   struct WaitHolder* holder = new WaitHolder{handle, callback, context};
   auto result = mx_object_wait_async(handle, g_port->get(), wait_id, signals,
                                      MX_WAIT_ASYNC_ONCE);
-  FTL_CHECK(result == MX_OK);
+  FXL_CHECK(result == MX_OK);
   g_holders.emplace(wait_id, holder);
   return wait_id;
 }
 
 void CancelWait(FidlAsyncWaitID wait_id) {
-  FTL_DCHECK(g_port);
+  FXL_DCHECK(g_port);
   auto* holder = g_holders[wait_id];
   auto result = g_port->cancel(holder->handle, wait_id);
-  FTL_CHECK(result == MX_OK);
+  FXL_CHECK(result == MX_OK);
   g_holders.erase(wait_id);
   delete holder;
 }
@@ -70,8 +70,8 @@ void WaitForAsyncWaiter() {
     mx_port_packet_t packet;
     mx_status_t result = g_port->wait(0, &packet, 0);
     if (result == MX_OK) {
-      FTL_CHECK(packet.type == MX_PKT_TYPE_SIGNAL_ONE) << packet.type;
-      FTL_CHECK(packet.status == MX_OK) << packet.status;
+      FXL_CHECK(packet.type == MX_PKT_TYPE_SIGNAL_ONE) << packet.type;
+      FXL_CHECK(packet.status == MX_OK) << packet.status;
       FidlAsyncWaitID wait_id = packet.key;
 
       // This wait was already canceled. TODO(cpu): Remove once canceled waits
@@ -86,7 +86,7 @@ void WaitForAsyncWaiter() {
       delete holder;
       cb(packet.status, packet.signal.observed, 1, context);
     } else {
-      FTL_CHECK(result == MX_ERR_TIMED_OUT) << result;
+      FXL_CHECK(result == MX_ERR_TIMED_OUT) << result;
       return;
     }
   }
@@ -97,7 +97,7 @@ void ClearAsyncWaiter() {
     FidlAsyncWaitID wait_id = entry.first;
     auto* holder = entry.second;
     auto result = g_port->cancel(holder->handle, wait_id);
-    FTL_CHECK(result == MX_OK) << result;
+    FXL_CHECK(result == MX_OK) << result;
     delete holder;
   }
   g_holders.clear();
@@ -110,7 +110,7 @@ const FidlAsyncWaiter* GetDefaultAsyncWaiter() {
   if (!g_port) {
     g_port = new mx::port;
     auto result = mx::port::create(0, g_port);
-    FTL_CHECK(result == MX_OK) << result;
+    FXL_CHECK(result == MX_OK) << result;
   }
   return &kDefaultAsyncWaiter;
 }

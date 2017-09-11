@@ -64,7 +64,7 @@ bool {{union.name}}::is_{{field.name}}() const {
 }
 
 {{field.kind|cpp_union_getter_return_type}} {{union.name}}::get_{{field.name}}() const {
-  FTL_DCHECK(tag_ == Tag::{{field.name|upper}});
+  FXL_DCHECK(tag_ == Tag::{{field.name|upper}});
 {%    if field.kind|is_object_kind or field.kind|is_any_handle_kind
           or field.kind|is_interface_kind %}
   return *(data_.{{field.name}});
@@ -111,7 +111,7 @@ void {{union.name}}::SetActive(Tag new_active) {
       break;
 {%- endfor %}
     case Tag::__UNKNOWN__:
-      FTL_DCHECK(false) << "Do not set a union tag to unknown.";
+      FXL_DCHECK(false) << "Do not set a union tag to unknown.";
       break;
   }
 

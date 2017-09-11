@@ -16,9 +16,9 @@
 #include "garnet/bin/netconnector/mdns/mdns_interface_transceiver_v4.h"
 #include "garnet/bin/netconnector/mdns/mdns_interface_transceiver_v6.h"
 #include "lib/netstack/fidl/netstack.fidl.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace netconnector {
@@ -52,18 +52,18 @@ MdnsInterfaceTransceiver::~MdnsInterfaceTransceiver() {}
 
 bool MdnsInterfaceTransceiver::Start(const std::string& host_full_name,
                                      const InboundMessageCallback& callback) {
-  FTL_DCHECK(callback);
-  FTL_DCHECK(!socket_fd_.is_valid()) << "Start called when already started.";
+  FXL_DCHECK(callback);
+  FXL_DCHECK(!socket_fd_.is_valid()) << "Start called when already started.";
 
-  FTL_LOG(INFO) << "Starting mDNS on interface " << name_ << ", address "
+  FXL_LOG(INFO) << "Starting mDNS on interface " << name_ << ", address "
                 << address_;
 
   address_resource_ = MakeAddressResource(host_full_name, address_);
 
-  socket_fd_ = ftl::UniqueFD(socket(address_.family(), SOCK_DGRAM, 0));
+  socket_fd_ = fxl::UniqueFD(socket(address_.family(), SOCK_DGRAM, 0));
 
   if (!socket_fd_.is_valid()) {
-    FTL_LOG(ERROR) << "Failed to open socket, errno " << errno;
+    FXL_LOG(ERROR) << "Failed to open socket, errno " << errno;
     return false;
   }
 
@@ -85,24 +85,24 @@ bool MdnsInterfaceTransceiver::Start(const std::string& host_full_name,
 void MdnsInterfaceTransceiver::SetAlternateAddress(
     const std::string& host_full_name,
     const IpAddress& alternate_address) {
-  FTL_DCHECK(!alternate_address_resource_);
-  FTL_DCHECK(alternate_address.family() != address_.family());
+  FXL_DCHECK(!alternate_address_resource_);
+  FXL_DCHECK(alternate_address.family() != address_.family());
 
   alternate_address_resource_ =
       MakeAddressResource(host_full_name, alternate_address);
 }
 
 void MdnsInterfaceTransceiver::Stop() {
-  FTL_DCHECK(socket_fd_.is_valid()) << "BeginStop called when stopped.";
+  FXL_DCHECK(socket_fd_.is_valid()) << "BeginStop called when stopped.";
   fd_waiter_.Cancel();
   socket_fd_.reset();
 }
 
 void MdnsInterfaceTransceiver::SendMessage(DnsMessage* message,
                                            const SocketAddress& address) {
-  FTL_DCHECK(message);
-  FTL_DCHECK(address.is_valid());
-  FTL_DCHECK(address.family() == address_.family() ||
+  FXL_DCHECK(message);
+  FXL_DCHECK(address.is_valid());
+  FXL_DCHECK(address.family() == address_.family() ||
              address == MdnsAddresses::kV4Multicast);
 
   FixUpAddresses(&message->answers_);
@@ -118,7 +118,7 @@ void MdnsInterfaceTransceiver::SendMessage(DnsMessage* message,
   ssize_t result = SendTo(outbound_buffer_.data(), packet_size, address);
 
   if (result < 0) {
-    FTL_LOG(ERROR) << "Failed to sendto, errno " << errno;
+    FXL_LOG(ERROR) << "Failed to sendto, errno " << errno;
     return;
   }
 }
@@ -128,7 +128,7 @@ int MdnsInterfaceTransceiver::SetOptionSharePort() {
   int result = setsockopt(socket_fd_.get(), SOL_SOCKET, SO_REUSEADDR, &param,
                           sizeof(param));
   if (result < 0) {
-    FTL_LOG(ERROR) << "Failed to set socket option SO_REUSEADDR, errno "
+    FXL_LOG(ERROR) << "Failed to set socket option SO_REUSEADDR, errno "
                    << errno;
   }
 
@@ -151,10 +151,10 @@ void MdnsInterfaceTransceiver::InboundReady(mx_status_t status,
                0, reinterpret_cast<sockaddr*>(&source_address_storage),
                &source_address_length);
   if (result < 0) {
-    FTL_LOG(ERROR) << "Failed to recvfrom, errno " << errno;
+    FXL_LOG(ERROR) << "Failed to recvfrom, errno " << errno;
     // Wait a bit before trying again to avoid spamming the log.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this]() { WaitForInbound(); }, ftl::TimeDelta::FromSeconds(10));
+        [this]() { WaitForInbound(); }, fxl::TimeDelta::FromSeconds(10));
     return;
   }
 
@@ -166,11 +166,11 @@ void MdnsInterfaceTransceiver::InboundReady(mx_status_t status,
   reader >> *message.get();
 
   if (reader.complete()) {
-    FTL_DCHECK(inbound_message_callback_);
+    FXL_DCHECK(inbound_message_callback_);
     inbound_message_callback_(std::move(message), source_address, index_);
   } else {
     inbound_buffer_.resize(result);
-    FTL_LOG(ERROR) << "Couldn't parse message from " << source_address << ", "
+    FXL_LOG(ERROR) << "Couldn't parse message from " << source_address << ", "
                    << result << " bytes: " << inbound_buffer_;
     inbound_buffer_.resize(kMaxPacketSize);
   }

@@ -47,9 +47,9 @@ class Resource : public Ownable<Resource, ResourceTypeInfo> {
 
   uint64_t sequence_number_ = 0;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Resource);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Resource);
 };
 
-typedef ftl::RefPtr<Resource> ResourcePtr;
+typedef fxl::RefPtr<Resource> ResourcePtr;
 
 }  // namespace escher

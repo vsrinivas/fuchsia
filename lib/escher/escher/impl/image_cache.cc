@@ -32,9 +32,9 @@ ImagePtr ImageCache::NewImage(const ImageInfo& info) {
   GpuMemPtr memory = allocator_->Allocate(reqs, info.memory_flags);
   vk::Result result =
       device().bindImageMemory(image, memory->base(), memory->offset());
-  FTL_CHECK(result == vk::Result::eSuccess);
+  FXL_CHECK(result == vk::Result::eSuccess);
 
-  return ftl::MakeRefCounted<Image>(this, info, image, std::move(memory));
+  return fxl::MakeRefCounted<Image>(this, info, image, std::move(memory));
 }
 
 ImagePtr ImageCache::FindImage(const ImageInfo& info) {
@@ -49,7 +49,7 @@ ImagePtr ImageCache::FindImage(const ImageInfo& info) {
 }
 
 void ImageCache::OnReceiveOwnable(std::unique_ptr<Resource> resource) {
-  FTL_DCHECK(resource->IsKindOf<Image>());
+  FXL_DCHECK(resource->IsKindOf<Image>());
   std::unique_ptr<Image> image(static_cast<Image*>(resource.release()));
   auto& queue = unused_images_[image->info()];
   queue.push(std::move(image));

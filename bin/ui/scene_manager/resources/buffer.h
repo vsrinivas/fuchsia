@@ -31,6 +31,6 @@ class Buffer : public Resource {
   escher::BufferPtr escher_buffer_;
 };
 
-using BufferPtr = ftl::RefPtr<Buffer>;
+using BufferPtr = fxl::RefPtr<Buffer>;
 
 }  // namespace scene_manager

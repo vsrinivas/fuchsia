@@ -8,7 +8,7 @@
 #include <magenta/syscalls.h>
 #include <vector>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace mtl {
 
@@ -16,12 +16,12 @@ namespace {
 
 template <typename Container>
 bool VmoFromContainer(const Container& container, mx::vmo* handle_ptr) {
-  FTL_CHECK(handle_ptr);
+  FXL_CHECK(handle_ptr);
 
   uint64_t num_bytes = container.size();
   mx_status_t status = mx::vmo::create(num_bytes, 0u, handle_ptr);
   if (status < 0) {
-    FTL_LOG(WARNING) << "mx::vmo::create failed: " << status;
+    FXL_LOG(WARNING) << "mx::vmo::create failed: " << status;
     return false;
   }
 
@@ -32,11 +32,11 @@ bool VmoFromContainer(const Container& container, mx::vmo* handle_ptr) {
   size_t actual;
   status = handle_ptr->write(container.data(), 0, num_bytes, &actual);
   if (status < 0) {
-    FTL_LOG(WARNING) << "mx::vmo::write failed: " << status;
+    FXL_LOG(WARNING) << "mx::vmo::write failed: " << status;
     return false;
   }
   if ((size_t)actual != num_bytes) {
-    FTL_LOG(WARNING) << "mx::vmo::write wrote " << actual
+    FXL_LOG(WARNING) << "mx::vmo::write wrote " << actual
                      << " bytes instead of " << num_bytes << " bytes.";
     return false;
   }
@@ -46,12 +46,12 @@ bool VmoFromContainer(const Container& container, mx::vmo* handle_ptr) {
 
 template <typename Container>
 bool ContainerFromVmo(const mx::vmo& buffer, Container* container_ptr) {
-  FTL_CHECK(container_ptr);
+  FXL_CHECK(container_ptr);
 
   uint64_t num_bytes;
   mx_status_t status = buffer.get_size(&num_bytes);
   if (status != MX_OK) {
-    FTL_LOG(WARNING) << "mx::vmo::get_size failed: " << status;
+    FXL_LOG(WARNING) << "mx::vmo::get_size failed: " << status;
     return false;
   }
 
@@ -64,12 +64,12 @@ bool ContainerFromVmo(const mx::vmo& buffer, Container* container_ptr) {
   size_t num_read;
   status = buffer.read(&(*container_ptr)[0], 0, num_bytes, &num_read);
   if (status < 0) {
-    FTL_LOG(WARNING) << "mx::vmo::read failed: " << status;
+    FXL_LOG(WARNING) << "mx::vmo::read failed: " << status;
     return false;
   }
 
   if ((size_t)num_read != num_bytes) {
-    FTL_LOG(WARNING) << "mx::vmo::write wrote " << num_read
+    FXL_LOG(WARNING) << "mx::vmo::write wrote " << num_read
                      << " bytes instead of " << num_bytes << " bytes.";
     return false;
   }
@@ -79,8 +79,8 @@ bool ContainerFromVmo(const mx::vmo& buffer, Container* container_ptr) {
 
 }  // namespace
 
-bool VmoFromString(const ftl::StringView& string, mx::vmo* handle_ptr) {
-  return VmoFromContainer<ftl::StringView>(string, handle_ptr);
+bool VmoFromString(const fxl::StringView& string, mx::vmo* handle_ptr) {
+  return VmoFromContainer<fxl::StringView>(string, handle_ptr);
 }
 
 bool StringFromVmo(const mx::vmo& shared_buffer, std::string* string_ptr) {

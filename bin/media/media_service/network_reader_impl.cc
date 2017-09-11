@@ -9,7 +9,7 @@
 #include "lib/app/cpp/connect.h"
 #include "apps/network/net_errors.h"
 #include "apps/network/services/network_service.fidl.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -46,7 +46,7 @@ NetworkReaderImpl::NetworkReaderImpl(
   url_loader_->Start(
       std::move(url_request), [this](network::URLResponsePtr response) {
         if (response->error) {
-          FTL_LOG(ERROR) << "HEAD response error " << response->error->code
+          FXL_LOG(ERROR) << "HEAD response error " << response->error->code
                          << " "
                          << (response->error->description
                                  ? response->error->description
@@ -60,7 +60,7 @@ NetworkReaderImpl::NetworkReaderImpl(
         }
 
         if (response->status_code != kStatusOk) {
-          FTL_LOG(ERROR) << "HEAD response status code "
+          FXL_LOG(ERROR) << "HEAD response status code "
                          << response->status_code;
           result_ = response->status_code == kStatusNotFound
                         ? MediaResult::NOT_FOUND
@@ -121,15 +121,15 @@ void NetworkReaderImpl::ReadAt(uint64_t position,
         std::move(request), [this, callback](network::URLResponsePtr response) {
           if (response->status_code != kStatusOk &&
               response->status_code != kStatusPartialContent) {
-            FTL_LOG(WARNING)
+            FXL_LOG(WARNING)
                 << "GET response status code " << response->status_code;
             result_ = MediaResult::UNKNOWN_ERROR;
             callback(result_, mx::socket());
             return;
           }
 
-          FTL_DCHECK(response->body);
-          FTL_DCHECK(response->body->get_stream());
+          FXL_DCHECK(response->body);
+          FXL_DCHECK(response->body->get_stream());
           callback(result_, std::move(response->body->get_stream()));
         });
   });

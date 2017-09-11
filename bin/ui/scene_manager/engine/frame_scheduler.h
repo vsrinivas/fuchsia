@@ -7,12 +7,12 @@
 #include <mx/time.h>
 #include <queue>
 
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
 
-namespace ftl {
+namespace fxl {
 class TaskRunner;
-}  // namespace ftl
+}  // namespace fxl
 
 namespace scenic {
 class Metrics;
@@ -22,7 +22,7 @@ namespace scene_manager {
 
 class Display;
 class FrameTimings;
-using FrameTimingsPtr = ftl::RefPtr<FrameTimings>;
+using FrameTimingsPtr = fxl::RefPtr<FrameTimings>;
 
 // Interface implemented by the engine to perform per-frame processing in
 // response to a frame being scheduled.
@@ -92,7 +92,7 @@ class FrameScheduler {
   friend class FrameTimings;
   void ReceiveFrameTimings(FrameTimings* timings);
 
-  ftl::TaskRunner* const task_runner_;
+  fxl::TaskRunner* const task_runner_;
   FrameSchedulerDelegate* delegate_;
   Display* const display_;
 
@@ -105,7 +105,7 @@ class FrameScheduler {
   std::vector<FrameTimingsPtr> outstanding_frames_;
   bool back_pressure_applied_ = false;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FrameScheduler);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FrameScheduler);
 };
 
 }  // namespace scene_manager

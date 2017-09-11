@@ -11,7 +11,7 @@
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
 #include "lib/fidl/cpp/bindings/strong_binding.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/fidl/compiler/interfaces/tests/versioning_test_service.fidl.h"
 
 namespace fidl {
@@ -26,7 +26,7 @@ struct EmployeeInfo {
   Array<uint8_t> finger_print;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(EmployeeInfo);
+  FXL_DISALLOW_COPY_AND_ASSIGN(EmployeeInfo);
 };
 
 class HumanResourceDatabaseImpl : public HumanResourceDatabase {
@@ -92,7 +92,7 @@ class HumanResourceDatabaseImpl : public HumanResourceDatabase {
 
   StrongBinding<HumanResourceDatabase> strong_binding_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(HumanResourceDatabaseImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(HumanResourceDatabaseImpl);
 };
 
 class HumanResourceSystemServer : public ApplicationImplBase {
@@ -113,7 +113,7 @@ class HumanResourceSystemServer : public ApplicationImplBase {
   }
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(HumanResourceSystemServer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(HumanResourceSystemServer);
 };
 
 }  // namespace versioning

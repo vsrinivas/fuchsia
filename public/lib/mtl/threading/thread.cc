@@ -11,7 +11,7 @@ namespace mtl {
 
 Thread::Thread()
     : thread_([this] { Main(); }),
-      task_runner_(ftl::MakeRefCounted<mtl::internal::IncomingTaskQueue>()) {}
+      task_runner_(fxl::MakeRefCounted<mtl::internal::IncomingTaskQueue>()) {}
 
 Thread::~Thread() {}
 
@@ -23,7 +23,7 @@ bool Thread::IsRunning() const {
   return thread_.IsRunning();
 }
 
-ftl::RefPtr<ftl::TaskRunner> Thread::TaskRunner() const {
+fxl::RefPtr<fxl::TaskRunner> Thread::TaskRunner() const {
   return task_runner_;
 }
 

@@ -11,13 +11,13 @@
 #include <mx/vmo.h>
 
 #include "lib/ui/scenic/client/resources.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace scenic_lib {
 
 // Provides access to data stored in a host-accessible shared memory region.
 // The memory is unmapped once all references to this object have been released.
-class HostData : public ftl::RefCountedThreadSafe<HostData> {
+class HostData : public fxl::RefCountedThreadSafe<HostData> {
  public:
   // Maps a range of an existing VMO into memory.
   HostData(const mx::vmo& vmo,
@@ -39,7 +39,7 @@ class HostData : public ftl::RefCountedThreadSafe<HostData> {
   size_t const size_;
   void* ptr_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(HostData);
+  FXL_DISALLOW_COPY_AND_ASSIGN(HostData);
 };
 
 // Represents a host-accessible shared memory backed memory resource in a
@@ -55,7 +55,7 @@ class HostMemory final : public Memory {
   ~HostMemory();
 
   // Gets a reference to the underlying shared memory region.
-  const ftl::RefPtr<HostData>& data() const { return data_; }
+  const fxl::RefPtr<HostData>& data() const { return data_; }
 
   // Gets the size of the data in bytes.
   size_t data_size() const { return data_->size(); }
@@ -65,11 +65,11 @@ class HostMemory final : public Memory {
 
  private:
   explicit HostMemory(Session* session,
-                      std::pair<mx::vmo, ftl::RefPtr<HostData>> init);
+                      std::pair<mx::vmo, fxl::RefPtr<HostData>> init);
 
-  ftl::RefPtr<HostData> data_;
+  fxl::RefPtr<HostData> data_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(HostMemory);
+  FXL_DISALLOW_COPY_AND_ASSIGN(HostMemory);
 };
 
 // Represents an image resource backed by host-accessible shared memory bound to
@@ -85,13 +85,13 @@ class HostImage final : public Image {
   HostImage(Session* session,
             uint32_t memory_id,
             off_t memory_offset,
-            ftl::RefPtr<HostData> data,
+            fxl::RefPtr<HostData> data,
             scenic::ImageInfoPtr info);
   HostImage(HostImage&& moved);
   ~HostImage();
 
   // Gets a reference to the underlying shared memory region.
-  const ftl::RefPtr<HostData>& data() const { return data_; }
+  const fxl::RefPtr<HostData>& data() const { return data_; }
 
   // Gets a pointer to the image data.
   void* image_ptr() const {
@@ -99,9 +99,9 @@ class HostImage final : public Image {
   }
 
  private:
-  ftl::RefPtr<HostData> data_;
+  fxl::RefPtr<HostData> data_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(HostImage);
+  FXL_DISALLOW_COPY_AND_ASSIGN(HostImage);
 };
 
 // Represents a pool of image resources backed by host-accessible shared memory
@@ -143,7 +143,7 @@ class HostImagePool {
   std::vector<std::unique_ptr<HostImage>> image_ptrs_;
   std::vector<std::unique_ptr<HostMemory>> memory_ptrs_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(HostImagePool);
+  FXL_DISALLOW_COPY_AND_ASSIGN(HostImagePool);
 };
 
 }  // namespace scenic_lib

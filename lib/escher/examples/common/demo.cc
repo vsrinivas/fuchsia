@@ -4,7 +4,7 @@
 
 #include "demo.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 Demo::Demo(DemoHarness* harness)
     : harness_(harness),
@@ -24,8 +24,8 @@ bool Demo::HandleKeyPress(std::string key) {
       return false;
     } else {
       // Illegal value.
-      FTL_LOG(ERROR) << "Cannot handle key value: " << key;
-      FTL_CHECK(false);
+      FXL_LOG(ERROR) << "Cannot handle key value: " << key;
+      FXL_CHECK(false);
       return false;
     }
   }

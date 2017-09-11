@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "lib/fidl/cpp/bindings/internal/message_internal.h"
-#include "lib/ftl/compiler_specific.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/compiler_specific.h"
+#include "lib/fxl/logging.h"
 
 namespace fidl {
 
@@ -47,13 +47,13 @@ class Message {
   // Access the request_id field (if present).
   bool has_request_id() const { return data_->header.version >= 1; }
   uint64_t request_id() const {
-    FTL_DCHECK(has_request_id());
+    FXL_DCHECK(has_request_id());
     return static_cast<const internal::MessageHeaderWithRequestID*>(
                &data_->header)
         ->request_id;
   }
   void set_request_id(uint64_t request_id) {
-    FTL_DCHECK(has_request_id());
+    FXL_DCHECK(has_request_id());
     static_cast<internal::MessageHeaderWithRequestID*>(&data_->header)
         ->request_id = request_id;
   }
@@ -66,7 +66,7 @@ class Message {
     return reinterpret_cast<uint8_t*>(data_) + data_->header.num_bytes;
   }
   uint32_t payload_num_bytes() const {
-    FTL_DCHECK(data_num_bytes_ >= data_->header.num_bytes);
+    FXL_DCHECK(data_num_bytes_ >= data_->header.num_bytes);
     return data_num_bytes_ - data_->header.num_bytes;
   }
 
@@ -82,7 +82,7 @@ class Message {
   internal::MessageData* data_;
   std::vector<mx_handle_t> handles_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Message);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Message);
 };
 
 class MessageReceiver {
@@ -92,7 +92,7 @@ class MessageReceiver {
   // The receiver may mutate the given message.  Returns true if the message
   // was accepted and false otherwise, indicating that the message was invalid
   // or malformed.
-  virtual bool Accept(Message* message) FTL_WARN_UNUSED_RESULT = 0;
+  virtual bool Accept(Message* message) FXL_WARN_UNUSED_RESULT = 0;
 };
 
 class MessageReceiverWithResponder : public MessageReceiver {
@@ -109,7 +109,7 @@ class MessageReceiverWithResponder : public MessageReceiver {
   // its own destruction.
   //
   virtual bool AcceptWithResponder(Message* message, MessageReceiver* responder)
-      FTL_WARN_UNUSED_RESULT = 0;
+      FXL_WARN_UNUSED_RESULT = 0;
 };
 
 // A MessageReceiver that is also able to provide status about the state
@@ -143,7 +143,7 @@ class MessageReceiverWithResponderStatus : public MessageReceiver {
   //
   virtual bool AcceptWithResponder(Message* message,
                                    MessageReceiverWithStatus* responder)
-      FTL_WARN_UNUSED_RESULT = 0;
+      FXL_WARN_UNUSED_RESULT = 0;
 };
 
 // Read a single message from the channel into the supplied |message|. |handle|

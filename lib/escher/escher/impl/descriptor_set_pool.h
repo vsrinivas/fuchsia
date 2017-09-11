@@ -41,7 +41,7 @@ class DescriptorSetAllocation : public Resource {
   std::vector<vk::DescriptorSet> sets_;
 };
 
-typedef ftl::RefPtr<DescriptorSetAllocation> DescriptorSetAllocationPtr;
+typedef fxl::RefPtr<DescriptorSetAllocation> DescriptorSetAllocationPtr;
 
 // Interface that allows acquisition of DescriptorSets for a single use within
 // a particular CommandBuffer.  When that CommandBuffer is retired, all such
@@ -79,7 +79,7 @@ class DescriptorSetPool : public ResourceManager {
   std::vector<vk::DescriptorSet> free_sets_;
   std::vector<vk::DescriptorPool> pools_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DescriptorSetPool);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DescriptorSetPool);
 };
 
 }  // namespace impl

@@ -10,8 +10,8 @@
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "escher/escher.h"
 #include "escher/util/stopwatch.h"
-#include "lib/ftl/memory/ref_counted.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/memory/ref_counted.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace shadertoy {
 
@@ -19,19 +19,19 @@ class Compiler;
 class Pipeline;
 class Renderer;
 class App;
-using PipelinePtr = ftl::RefPtr<Pipeline>;
+using PipelinePtr = fxl::RefPtr<Pipeline>;
 
 // Core implementation of the Shadertoy API.  Subclasses must provide some
 // functionality, such as the method for obtaining a framebuffer to render into.
-class ShadertoyState : public ftl::RefCountedThreadSafe<ShadertoyState> {
+class ShadertoyState : public fxl::RefCountedThreadSafe<ShadertoyState> {
  public:
   // Factory constructor.
-  static ftl::RefPtr<ShadertoyState> NewForImagePipe(
+  static fxl::RefPtr<ShadertoyState> NewForImagePipe(
       App* app,
       ::fidl::InterfaceHandle<scenic::ImagePipe> image_pipe);
 
   // Factory constructor.
-  static ftl::RefPtr<ShadertoyState> NewForView(
+  static fxl::RefPtr<ShadertoyState> NewForView(
       App* app,
       ::fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       bool handle_input_events);
@@ -70,7 +70,7 @@ class ShadertoyState : public ftl::RefCountedThreadSafe<ShadertoyState> {
   escher::Texture* channel2() const { return nullptr; }
   escher::Texture* channel3() const { return nullptr; }
   glm::vec4 i_mouse() const { return i_mouse_; }
-  ftl::WeakPtrFactory<ShadertoyState>* weak_ptr_factory() {
+  fxl::WeakPtrFactory<ShadertoyState>* weak_ptr_factory() {
     return &weak_ptr_factory_;
   }
 
@@ -91,7 +91,7 @@ class ShadertoyState : public ftl::RefCountedThreadSafe<ShadertoyState> {
   escher::Escher* const escher_;
   Compiler* const compiler_;
   Renderer* const renderer_;
-  ftl::WeakPtrFactory<ShadertoyState> weak_ptr_factory_;
+  fxl::WeakPtrFactory<ShadertoyState> weak_ptr_factory_;
   PipelinePtr pipeline_;
   uint32_t width_ = 0;
   uint32_t height_ = 0;

@@ -9,30 +9,30 @@
 
 #include <functional>
 
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/ftl_export.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/fxl_export.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace mtl {
 
 // Asynchronously copies data from source to the destination file descriptor.
 // The given |callback| is run upon completion. File writes and |callback| will
 // be scheduled on the given |task_runner|.
-FTL_EXPORT void CopyToFileDescriptor(
+FXL_EXPORT void CopyToFileDescriptor(
     mx::socket source,
-    ftl::UniqueFD destination,
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
-    const std::function<void(bool /*success*/, ftl::UniqueFD /*destination*/)>&
+    fxl::UniqueFD destination,
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    const std::function<void(bool /*success*/, fxl::UniqueFD /*destination*/)>&
         callback);
 
 // Asynchronously copies data from source file to the destination. The given
 // |callback| is run upon completion. File reads and |callback| will be
 // scheduled to the given |task_runner|.
-FTL_EXPORT void CopyFromFileDescriptor(
-    ftl::UniqueFD source,
+FXL_EXPORT void CopyFromFileDescriptor(
+    fxl::UniqueFD source,
     mx::socket destination,
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
-    const std::function<void(bool /*success*/, ftl::UniqueFD /*source*/)>&
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    const std::function<void(bool /*success*/, fxl::UniqueFD /*source*/)>&
         callback);
 
 }  // namespace mtl

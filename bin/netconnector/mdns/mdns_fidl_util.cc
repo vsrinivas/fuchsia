@@ -4,7 +4,7 @@
 
 #include "garnet/bin/netconnector/mdns/mdns_fidl_util.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace netconnector {
 namespace mdns {
@@ -88,14 +88,14 @@ netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
     return nullptr;
   }
 
-  FTL_DCHECK(ip_address.is_v4());
+  FXL_DCHECK(ip_address.is_v4());
 
   netstack::SocketAddressPtr result = netstack::SocketAddress::New();
   result->addr = netstack::NetAddress::New();
   result->addr->ipv4 = fidl::Array<uint8_t>::New(4);
   result->port = 0;
 
-  FTL_DCHECK(result->addr->ipv4.size() == ip_address.byte_count());
+  FXL_DCHECK(result->addr->ipv4.size() == ip_address.byte_count());
   std::memcpy(result->addr->ipv4.data(), ip_address.as_bytes(), result->addr->ipv4.size());
 
   return result;
@@ -108,14 +108,14 @@ netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
     return nullptr;
   }
 
-  FTL_DCHECK(ip_address.is_v6());
+  FXL_DCHECK(ip_address.is_v6());
 
   netstack::SocketAddressPtr result = netstack::SocketAddress::New();
   result->addr = netstack::NetAddress::New();
   result->addr->ipv6 = fidl::Array<uint8_t>::New(16);
   result->port = 0;
 
-  FTL_DCHECK(result->addr->ipv6.size() == ip_address.byte_count());
+  FXL_DCHECK(result->addr->ipv6.size() == ip_address.byte_count());
   std::memcpy(result->addr->ipv6.data(), ip_address.as_bytes(), result->addr->ipv6.size());
 
   return result;
@@ -128,7 +128,7 @@ netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
     return nullptr;
   }
 
-  FTL_DCHECK(socket_address.is_v4());
+  FXL_DCHECK(socket_address.is_v4());
 
   netstack::SocketAddressPtr result =
       CreateSocketAddressIPv4(socket_address.address());
@@ -145,7 +145,7 @@ netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
     return nullptr;
   }
 
-  FTL_DCHECK(socket_address.is_v6());
+  FXL_DCHECK(socket_address.is_v6());
 
   netstack::SocketAddressPtr result =
       CreateSocketAddressIPv6(socket_address.address());
@@ -159,8 +159,8 @@ netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
 bool MdnsFidlUtil::UpdateSocketAddressIPv4(
     const netstack::SocketAddressPtr& net_address,
     const SocketAddress& socket_address) {
-  FTL_DCHECK(net_address);
-  FTL_DCHECK(socket_address.is_v4());
+  FXL_DCHECK(net_address);
+  FXL_DCHECK(socket_address.is_v4());
 
   bool changed = false;
 
@@ -169,7 +169,7 @@ bool MdnsFidlUtil::UpdateSocketAddressIPv4(
     changed = true;
   }
 
-  FTL_DCHECK(net_address->addr->ipv4.size() == socket_address.address().byte_count());
+  FXL_DCHECK(net_address->addr->ipv4.size() == socket_address.address().byte_count());
   if (std::memcmp(net_address->addr->ipv4.data(), socket_address.address().as_bytes(),
                   net_address->addr->ipv4.size()) != 0) {
     std::memcpy(net_address->addr->ipv4.data(), socket_address.address().as_bytes(),
@@ -184,8 +184,8 @@ bool MdnsFidlUtil::UpdateSocketAddressIPv4(
 bool MdnsFidlUtil::UpdateSocketAddressIPv6(
     const netstack::SocketAddressPtr& net_address,
     const SocketAddress& socket_address) {
-  FTL_DCHECK(net_address);
-  FTL_DCHECK(socket_address.is_v4());
+  FXL_DCHECK(net_address);
+  FXL_DCHECK(socket_address.is_v4());
 
   bool changed = false;
 
@@ -194,7 +194,7 @@ bool MdnsFidlUtil::UpdateSocketAddressIPv6(
     changed = true;
   }
 
-  FTL_DCHECK(net_address->addr->ipv6.size() == socket_address.address().byte_count());
+  FXL_DCHECK(net_address->addr->ipv6.size() == socket_address.address().byte_count());
   if (std::memcmp(net_address->addr->ipv6.data(), socket_address.address().as_bytes(),
                   net_address->addr->ipv6.size()) != 0) {
     std::memcpy(net_address->addr->ipv6.data(), socket_address.address().as_bytes(),

@@ -7,7 +7,7 @@
 
 #include "lib/fidl/cpp/bindings/macros.h"
 #include "lib/fidl/cpp/bindings/internal/template_util.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace fidl {
 

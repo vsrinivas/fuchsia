@@ -13,7 +13,7 @@ namespace shadertoy {
 // ShadertoyState.
 class ShadertoyImpl : public mozart::example::Shadertoy {
  public:
-  explicit ShadertoyImpl(ftl::RefPtr<ShadertoyState> state);
+  explicit ShadertoyImpl(fxl::RefPtr<ShadertoyState> state);
   ~ShadertoyImpl() override;
 
  private:
@@ -34,9 +34,9 @@ class ShadertoyImpl : public mozart::example::Shadertoy {
   void SetImage(uint32_t channel,
                 ::fidl::InterfaceRequest<scenic::ImagePipe> request) override;
 
-  ftl::RefPtr<ShadertoyState> state_;
+  fxl::RefPtr<ShadertoyState> state_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ShadertoyImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ShadertoyImpl);
 };
 
 }  // namespace shadertoy

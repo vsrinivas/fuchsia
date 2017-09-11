@@ -14,16 +14,16 @@ FDWaiter::~FDWaiter() {
   if (io_)
     Cancel();
 
-  FTL_DCHECK(!io_);
-  FTL_DCHECK(!key_);
+  FXL_DCHECK(!io_);
+  FXL_DCHECK(!key_);
 }
 
 bool FDWaiter::Wait(Callback callback,
                     int fd,
                     uint32_t events,
-                    ftl::TimeDelta timeout) {
-  FTL_DCHECK(!io_);
-  FTL_DCHECK(!key_);
+                    fxl::TimeDelta timeout) {
+  FXL_DCHECK(!io_);
+  FXL_DCHECK(!key_);
 
   io_ = __mxio_fd_to_io(fd);
   if (!io_)
@@ -46,7 +46,7 @@ bool FDWaiter::Wait(Callback callback,
 }
 
 void FDWaiter::Cancel() {
-  FTL_DCHECK(io_);
+  FXL_DCHECK(io_);
 
   if (key_)
     MessageLoop::GetCurrent()->RemoveHandler(key_);
@@ -62,8 +62,8 @@ void FDWaiter::Cancel() {
 void FDWaiter::OnHandleReady(mx_handle_t handle,
                              mx_signals_t pending,
                              uint64_t count) {
-  FTL_DCHECK(io_);
-  FTL_DCHECK(key_);
+  FXL_DCHECK(io_);
+  FXL_DCHECK(key_);
 
   uint32_t events = 0;
   __mxio_wait_end(io_, pending, &events);

@@ -10,10 +10,10 @@
 #include <mx/channel.h>
 
 #include "lib/netconnector/cpp/message_relay.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/synchronization/mutex.h"
-#include "lib/ftl/synchronization/thread_annotations.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/synchronization/mutex.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
+#include "lib/fxl/tasks/task_runner.h"
 #include "lib/mtl/tasks/fd_waiter.h"
 
 namespace netconnector {
@@ -65,7 +65,7 @@ class MessageTransceiver {
   virtual ~MessageTransceiver();
 
  protected:
-  MessageTransceiver(ftl::UniqueFD socket_fd);
+  MessageTransceiver(fxl::UniqueFD socket_fd);
 
   // Sets the channel that the transceiver should use to forward messages.
   void SetChannel(mx::channel channel);
@@ -170,8 +170,8 @@ class MessageTransceiver {
   // Parses string out of receive_buffer_.
   std::string ParsePayloadString();
 
-  ftl::UniqueFD socket_fd_;
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::UniqueFD socket_fd_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   mx::channel channel_;
   MessageRelay message_relay_;
 
@@ -190,7 +190,7 @@ class MessageTransceiver {
   mtl::FDWaiter fd_send_waiter_;
   std::queue<std::function<void()>> send_tasks_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MessageTransceiver);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MessageTransceiver);
 };
 
 }  // namespace netconnector

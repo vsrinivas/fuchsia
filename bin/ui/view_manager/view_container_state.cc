@@ -6,7 +6,7 @@
 
 #include <ostream>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace view_manager {
 
@@ -16,9 +16,9 @@ ViewContainerState::~ViewContainerState() {}
 
 void ViewContainerState::LinkChild(uint32_t key,
                                    std::unique_ptr<ViewStub> child) {
-  FTL_DCHECK(children_.find(key) == children_.end());
-  FTL_DCHECK(child);
-  FTL_DCHECK(!child->is_linked());
+  FXL_DCHECK(children_.find(key) == children_.end());
+  FXL_DCHECK(child);
+  FXL_DCHECK(!child->is_linked());
 
   child->SetContainer(this, key);
   children_.emplace(key, std::move(child));
@@ -26,7 +26,7 @@ void ViewContainerState::LinkChild(uint32_t key,
 
 std::unique_ptr<ViewStub> ViewContainerState::UnlinkChild(uint32_t key) {
   auto child_it = children_.find(key);
-  FTL_DCHECK(child_it != children_.end());
+  FXL_DCHECK(child_it != children_.end());
   std::unique_ptr<ViewStub> child(std::move(child_it->second));
   child->Unlink();
   children_.erase(child_it);

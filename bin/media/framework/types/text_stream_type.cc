@@ -5,7 +5,7 @@
 #include "garnet/bin/media/framework/types/text_stream_type.h"
 
 #include "garnet/bin/media/util/safe_clone.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 

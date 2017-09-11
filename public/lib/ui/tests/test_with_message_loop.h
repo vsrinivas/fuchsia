@@ -5,8 +5,8 @@
 #ifndef APPS_MOZART_SRC_VIEW_MANAGER_TESTS_TEST_WITH_MESSAGE_LOOP_H_
 #define APPS_MOZART_SRC_VIEW_MANAGER_TESTS_TEST_WITH_MESSAGE_LOOP_H_
 
-#include "lib/ftl/macros.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 // Run message loop *while* condition is true (timeout after 400*10ms = 4000ms)
@@ -14,7 +14,7 @@
   {                                                                   \
     for (int i = 0; condition && i < 400; i++) {                      \
       ::mozart::test::RunLoopWithTimeout(                             \
-          ftl::TimeDelta::FromMilliseconds(10));                      \
+          fxl::TimeDelta::FromMilliseconds(10));                      \
     }                                                                 \
     ASSERT_FALSE(condition) << "Message loop timeout must not occur"; \
   }
@@ -24,7 +24,7 @@
   {                                                                  \
     for (int i = 0; !(condition) && i < 400; i++) {                  \
       ::mozart::test::RunLoopWithTimeout(                            \
-          ftl::TimeDelta::FromMilliseconds(10));                     \
+          fxl::TimeDelta::FromMilliseconds(10));                     \
     }                                                                \
     ASSERT_TRUE(condition) << "Message loop timeout must not occur"; \
   }
@@ -35,7 +35,7 @@ namespace test {
 // Run the loop for at most |timeout|. Returns |true| if the timeout has
 // been reached.
 bool RunLoopWithTimeout(
-    ftl::TimeDelta timeout = ftl::TimeDelta::FromSeconds(1));
+    fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(1));
 
 }  // namespace test
 }  // namespace mozart

@@ -12,9 +12,9 @@
 #include <utility>
 
 #include "garnet/bin/moterm/ledger_helpers.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
 
@@ -33,7 +33,7 @@ std::string ToString(fidl::Array<uint8_t>& data) {
 std::string ToString(const mx::vmo& value) {
   std::string ret;
   if (!mtl::StringFromVmo(value, &ret)) {
-    FTL_DCHECK(false);
+    FXL_DCHECK(false);
   }
   return ret;
 }
@@ -47,7 +47,7 @@ fidl::Array<uint8_t> ToArray(const std::string& val) {
 using Key = fidl::Array<uint8_t>;
 
 std::string MakeKey() {
-  return ftl::StringPrintf("%120lu-%u", mx_time_get(MX_CLOCK_UTC), rand());
+  return fxl::StringPrintf("%120lu-%u", mx_time_get(MX_CLOCK_UTC), rand());
 }
 
 void GetMoreEntries(
@@ -57,13 +57,13 @@ void GetMoreEntries(
     std::function<void(ledger::Status, std::vector<ledger::EntryPtr>)>
         callback) {
   snapshot->GetEntries(
-      nullptr, std::move(token), ftl::MakeCopyable([
+      nullptr, std::move(token), fxl::MakeCopyable([
         snapshot, existing_entries = std::move(existing_entries),
         callback = std::move(callback)
       ](ledger::Status status, auto entries, auto next_token) mutable {
         if (status != ledger::Status::OK &&
             status != ledger::Status::PARTIAL_RESULT) {
-          FTL_LOG(ERROR) << "GetEntries failed";
+          FXL_LOG(ERROR) << "GetEntries failed";
           callback(status, {});
           return;
         }
@@ -71,12 +71,12 @@ void GetMoreEntries(
           existing_entries.push_back(std::move(entry));
         }
         if (!next_token) {
-          FTL_DCHECK(status == ledger::Status::OK);
+          FXL_DCHECK(status == ledger::Status::OK);
           callback(ledger::Status::OK, std::move(existing_entries));
           return;
         }
 
-        FTL_DCHECK(status == ledger::Status::PARTIAL_RESULT);
+        FXL_DCHECK(status == ledger::Status::PARTIAL_RESULT);
         GetMoreEntries(snapshot, std::move(next_token),
                        std::move(existing_entries), std::move(callback));
       }));
@@ -96,7 +96,7 @@ History::History() : page_watcher_binding_(this) {}
 History::~History() {}
 
 void History::Initialize(ledger::PagePtr page) {
-  FTL_DCHECK(!initialized_);
+  FXL_DCHECK(!initialized_);
   initialized_ = true;
   page_ = std::move(page);
 
@@ -118,9 +118,9 @@ void History::ReadInitialEntries(
 
 void History::DoReadEntries(
     std::function<void(std::vector<std::string>)> callback) {
-  FTL_DCHECK(!snapshot_.is_bound());
+  FXL_DCHECK(!snapshot_.is_bound());
   if (!page_) {
-    FTL_LOG(WARNING)
+    FXL_LOG(WARNING)
         << "Ignoring a call to retrieve history. (running outside of story?)";
     callback({});
     return;
@@ -133,7 +133,7 @@ void History::DoReadEntries(
                                   ledger::Status status,
                                   std::vector<ledger::EntryPtr> entries) {
     if (status != ledger::Status::OK) {
-      FTL_LOG(ERROR) << "Failed to retrieve the history entries from Ledger.";
+      FXL_LOG(ERROR) << "Failed to retrieve the history entries from Ledger.";
       callback({});
       return;
     }
@@ -168,7 +168,7 @@ void History::UnregisterClient(Client* client) {
 void History::OnChange(ledger::PageChangePtr page_change,
                        ledger::ResultState result_state,
                        const OnChangeCallback& callback) {
-  FTL_DCHECK(result_state == ledger::ResultState::COMPLETED);
+  FXL_DCHECK(result_state == ledger::ResultState::COMPLETED);
   for (auto& entry : page_change->changes) {
     if (local_entry_keys_.count(ToString(entry->key)) == 0) {
       // Notify clients about the remote entry.
@@ -188,10 +188,10 @@ void History::Trim() {
                      LogLedgerErrorCallback("GetSnapshot"));
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   GetEntries(snapshot_ptr,
-             ftl::MakeCopyable([ this, snapshot = std::move(snapshot) ](
+             fxl::MakeCopyable([ this, snapshot = std::move(snapshot) ](
                  ledger::Status status, std::vector<ledger::EntryPtr> entries) {
                if (status != ledger::Status::OK) {
-                 FTL_LOG(ERROR)
+                 FXL_LOG(ERROR)
                      << "Failed to retrieve the history entries from Ledger.";
                  return;
                }

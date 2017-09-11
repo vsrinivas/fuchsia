@@ -16,9 +16,9 @@
 #include "lib/fidl/cpp/bindings/internal/interface_ptr_internal.h"
 #include "lib/fidl/cpp/bindings/macros.h"
 #include "lib/fidl/cpp/waiter/default.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/time/time_delta.h"
 
 namespace fidl {
 
@@ -97,7 +97,7 @@ class InterfacePtr {
   // Upon return from .NewRequest(), |table| is ready to have methods called
   // on it.
   InterfaceRequest<Interface> NewRequest() {
-    FTL_DCHECK(!is_bound()) << "An existing handle is already bound.";
+    FXL_DCHECK(!is_bound()) << "An existing handle is already bound.";
 
     mx::channel endpoint0;
     mx::channel endpoint1;
@@ -163,7 +163,7 @@ class InterfacePtr {
   // This method may only be called after the InterfacePtr has been bound to a
   // channel.
   bool WaitForIncomingResponse() {
-    return internal_state_.WaitForIncomingResponse(ftl::TimeDelta::Max());
+    return internal_state_.WaitForIncomingResponse(fxl::TimeDelta::Max());
   }
 
   // Blocks the current thread until the next incoming response callback
@@ -173,7 +173,7 @@ class InterfacePtr {
   //
   // This method may only be called after the InterfacePtr has been bound to a
   // channel.
-  bool WaitForIncomingResponseWithTimeout(ftl::TimeDelta timeout) {
+  bool WaitForIncomingResponseWithTimeout(fxl::TimeDelta timeout) {
     return internal_state_.WaitForIncomingResponse(timeout);
   }
 
@@ -187,7 +187,7 @@ class InterfacePtr {
   //
   // This method may only be called after the InterfacePtr has been bound to a
   // channel.
-  void set_connection_error_handler(ftl::Closure error_handler) {
+  void set_connection_error_handler(fxl::Closure error_handler) {
     internal_state_.set_connection_error_handler(std::move(error_handler));
   }
 

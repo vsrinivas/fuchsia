@@ -9,7 +9,7 @@
 
 #include <magenta/types.h>
 
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace debugserver {
 
@@ -53,12 +53,12 @@ class StopReplyPacket final {
   // type is equal to kReceivedSignal. |value| must contain a series of bytes in
   // target byte order, with each byte represent by a two digit ASCII hex
   // number.
-  void AddRegisterValue(uint8_t register_number, const ftl::StringView& value);
+  void AddRegisterValue(uint8_t register_number, const fxl::StringView& value);
 
   // Sets a stop reason. This can only be set if the packet type is equal to
   // kReceivedSignal. Setting a stop-reason overrides any previously set signal
   // number in favor of "05", the trap signal.
-  void SetStopReason(const ftl::StringView& reason);
+  void SetStopReason(const fxl::StringView& reason);
 
   // Returns the encoded packet payload. Returns an empty string if the minimum
   // required parameters have not been set for the type this object was

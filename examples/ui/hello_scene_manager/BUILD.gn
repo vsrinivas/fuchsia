@@ -18,7 +18,7 @@ executable("hello_scene_manager") {
     "//garnet/public/lib/ui/scenic/fidl",
     "//garnet/bin/ui/scene_manager/tests:util",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//garnet/lib/escher/escher",
   ]

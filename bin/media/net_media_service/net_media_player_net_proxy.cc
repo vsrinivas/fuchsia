@@ -9,7 +9,7 @@
 #include <mx/channel.h>
 
 #include "lib/media/timeline/timeline.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/netconnector/fidl/netconnector.fidl.h"
 
 namespace media {
@@ -33,7 +33,7 @@ NetMediaPlayerNetProxy::NetMediaPlayerNetProxy(
                                                    std::move(request),
                                                    owner),
       status_(MediaPlayerStatus::New()) {
-  FTL_DCHECK(owner);
+  FXL_DCHECK(owner);
 
   status_publisher_.SetCallbackRunner(
       [this](const GetStatusCallback& callback, uint64_t version) {
@@ -54,7 +54,7 @@ NetMediaPlayerNetProxy::NetMediaPlayerNetProxy(
   mx::channel remote;
   mx_status_t status = mx::channel::create(0u, &local, &remote);
 
-  FTL_CHECK(status == MX_OK) << "mx::channel::create failed, status "
+  FXL_CHECK(status == MX_OK) << "mx::channel::create failed, status "
                                 << status;
 
   // Give the local end of the channel to the relay.
@@ -109,16 +109,16 @@ void NetMediaPlayerNetProxy::HandleReceivedMessage(
   deserializer >> message;
 
   if (!deserializer.complete()) {
-    FTL_LOG(ERROR) << "Malformed message received";
+    FXL_LOG(ERROR) << "Malformed message received";
     message_relay_.CloseChannel();
     return;
   }
 
-  FTL_DCHECK(message);
+  FXL_DCHECK(message);
 
   switch (message->type_) {
     case NetMediaPlayerOutMessageType::kTimeCheckResponse: {
-      FTL_DCHECK(message->time_check_response_);
+      FXL_DCHECK(message->time_check_response_);
       // Estimate the local system system time when the responder's clock was
       // samples on the remote machine. Assume the clock was sampled halfway
       // between the time we sent the original TimeCheckRequestMessage and the
@@ -138,7 +138,7 @@ void NetMediaPlayerNetProxy::HandleReceivedMessage(
     } break;
 
     case NetMediaPlayerOutMessageType::kStatusNotification:
-      FTL_DCHECK(message->status_notification_);
+      FXL_DCHECK(message->status_notification_);
       status_ = std::move(message->status_notification_->status_);
       if (status_->timeline_transform) {
         // Use the remote-to-local conversion established after the time check

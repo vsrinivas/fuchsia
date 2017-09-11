@@ -42,7 +42,7 @@ static_library("url") {
   defines = [ "URL_IMPLEMENTATION" ]
 
   deps = [
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//third_party/icu",
   ]
 
@@ -86,7 +86,7 @@ package("url_tests") {
 #
 #   deps = [
 #     ":url",
-#     "//garnet/public/lib/ftl",
+#     "//garnet/public/lib/fxl",
 #     "//mojo/public/cpp/application:standalone",
 #     "//mojo/public/cpp/application:test_support_standalone",
 #     "//mojo/system",

@@ -7,7 +7,7 @@
 
 #include "lib/ui/scenic/skia/host_canvas_cycler.h"
 #include "lib/ui/view_framework/base_view.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace mozart {
 
@@ -38,7 +38,7 @@ class SkiaView : public BaseView {
  private:
   scenic_lib::skia::HostCanvasCycler canvas_cycler_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SkiaView);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SkiaView);
 };
 
 }  // namespace mozart

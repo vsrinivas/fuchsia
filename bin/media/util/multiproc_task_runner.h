@@ -9,24 +9,24 @@
 
 #include <mx/port.h>
 
-#include "lib/ftl/macros.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace media {
 
 // Runs tasks on multiple processes.
-class MultiprocTaskRunner : public ftl::TaskRunner {
+class MultiprocTaskRunner : public fxl::TaskRunner {
  public:
   MultiprocTaskRunner(uint32_t thread_count);
 
   ~MultiprocTaskRunner();
 
   // TaskRunner implementation.
-  void PostTask(ftl::Closure task) override;
+  void PostTask(fxl::Closure task) override;
 
-  void PostTaskForTime(ftl::Closure task, ftl::TimePoint target_time) override;
+  void PostTaskForTime(fxl::Closure task, fxl::TimePoint target_time) override;
 
-  void PostDelayedTask(ftl::Closure task, ftl::TimeDelta delay) override;
+  void PostDelayedTask(fxl::Closure task, fxl::TimeDelta delay) override;
 
   bool RunsTasksOnCurrentThread() override;
 
@@ -38,7 +38,7 @@ class MultiprocTaskRunner : public ftl::TaskRunner {
   mx::port port_;
   std::vector<std::thread> threads_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MultiprocTaskRunner);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MultiprocTaskRunner);
 };
 
 }  // namespace media

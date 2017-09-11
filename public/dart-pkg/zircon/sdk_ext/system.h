@@ -16,7 +16,7 @@
 namespace zircon {
 namespace dart {
 
-class System : public ftl::RefCountedThreadSafe<System>,
+class System : public fxl::RefCountedThreadSafe<System>,
                public tonic::DartWrappable {
   DEFINE_WRAPPERTYPEINFO();
   FRIEND_REF_COUNTED_THREAD_SAFE(System);
@@ -24,27 +24,27 @@ class System : public ftl::RefCountedThreadSafe<System>,
 
  public:
   static Dart_Handle ChannelCreate(uint32_t options);
-  static mx_status_t ChannelWrite(ftl::RefPtr<Handle> channel,
+  static mx_status_t ChannelWrite(fxl::RefPtr<Handle> channel,
                                   const tonic::DartByteData& data,
                                   std::vector<Handle*> handles);
   // TODO(ianloic): Add ChannelRead
-  static Dart_Handle ChannelQueryAndRead(ftl::RefPtr<Handle> channel);
+  static Dart_Handle ChannelQueryAndRead(fxl::RefPtr<Handle> channel);
 
   static Dart_Handle EventpairCreate(uint32_t options);
 
   static Dart_Handle SocketCreate(uint32_t options);
-  static Dart_Handle SocketWrite(ftl::RefPtr<Handle> socket,
+  static Dart_Handle SocketWrite(fxl::RefPtr<Handle> socket,
                                  const tonic::DartByteData& data,
                                  int options);
-  static Dart_Handle SocketRead(ftl::RefPtr<Handle> socket, size_t size);
+  static Dart_Handle SocketRead(fxl::RefPtr<Handle> socket, size_t size);
 
   static Dart_Handle VmoCreate(uint64_t size, uint32_t options);
-  static Dart_Handle VmoGetSize(ftl::RefPtr<Handle> vmo);
-  static mx_status_t VmoSetSize(ftl::RefPtr<Handle> vmo, uint64_t size);
-  static Dart_Handle VmoWrite(ftl::RefPtr<Handle> vmo,
+  static Dart_Handle VmoGetSize(fxl::RefPtr<Handle> vmo);
+  static mx_status_t VmoSetSize(fxl::RefPtr<Handle> vmo, uint64_t size);
+  static Dart_Handle VmoWrite(fxl::RefPtr<Handle> vmo,
                               uint64_t offset,
                               const tonic::DartByteData& data);
-  static Dart_Handle VmoRead(ftl::RefPtr<Handle> vmo,
+  static Dart_Handle VmoRead(fxl::RefPtr<Handle> vmo,
                              uint64_t offset,
                              size_t size);
 

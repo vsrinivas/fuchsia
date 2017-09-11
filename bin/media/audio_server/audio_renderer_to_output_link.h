@@ -10,8 +10,8 @@
 #include "garnet/bin/media/audio_server/audio_pipe.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
 #include "garnet/bin/media/audio_server/gain.h"
-#include "lib/ftl/synchronization/mutex.h"
-#include "lib/ftl/synchronization/thread_annotations.h"
+#include "lib/fxl/synchronization/mutex.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media {
 namespace audio {
@@ -97,7 +97,7 @@ class AudioRendererToOutputLink {
   void FlushPendingQueue();
   void InitPendingQueue(const AudioRendererToOutputLinkPtr& source);
   bool pending_queue_empty() const {
-      ftl::MutexLocker locker(&pending_queue_mutex_);
+      fxl::MutexLocker locker(&pending_queue_mutex_);
       return pending_queue_->empty();
   }
 
@@ -115,10 +115,10 @@ class AudioRendererToOutputLink {
   // returned to the user in the order which they were queued in without forcing
   // AudioRenderers to wait to queue new data if a mix operation is in progress.
   AudioPipe::AudioPacketRefPtr LockPendingQueueFront(bool* was_flushed)
-      FTL_ACQUIRE(flush_mutex_);
+      FXL_ACQUIRE(flush_mutex_);
   void UnlockPendingQueueFront(AudioPipe::AudioPacketRefPtr* pkt,
                                bool release_packet)
-      FTL_THREAD_ANNOTATION_ATTRIBUTE__(release_capability(flush_mutex_));
+      FXL_THREAD_ANNOTATION_ATTRIBUTE__(release_capability(flush_mutex_));
 
   // Bookkeeping access.
   //
@@ -136,10 +136,10 @@ class AudioRendererToOutputLink {
   AudioOutputWeakPtr output_;
   BookkeepingPtr output_bookkeeping_;
 
-  ftl::Mutex flush_mutex_;
-  mutable ftl::Mutex pending_queue_mutex_;
-  PacketQueuePtr pending_queue_ FTL_GUARDED_BY(pending_queue_mutex_);
-  bool flushed_ FTL_GUARDED_BY(flush_mutex_) = true;
+  fxl::Mutex flush_mutex_;
+  mutable fxl::Mutex pending_queue_mutex_;
+  PacketQueuePtr pending_queue_ FXL_GUARDED_BY(pending_queue_mutex_);
+  bool flushed_ FXL_GUARDED_BY(flush_mutex_) = true;
   Gain gain_;
   std::atomic_bool valid_;
 };

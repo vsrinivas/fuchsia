@@ -30,7 +30,7 @@ class PipelineCache {
       map_;
   std::mutex mutex_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(PipelineCache);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PipelineCache);
 };
 
 }  // namespace impl

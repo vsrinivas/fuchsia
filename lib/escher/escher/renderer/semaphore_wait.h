@@ -6,18 +6,18 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 
 class Semaphore;
-typedef ftl::RefPtr<Semaphore> SemaphorePtr;
+typedef fxl::RefPtr<Semaphore> SemaphorePtr;
 
 // TODO: rename file.
 // TODO: perhaps return semaphores to a pool instead of destroying them.
 // TODO: make this a subclass of Reffable.
-class Semaphore : public ftl::RefCountedThreadSafe<Semaphore> {
+class Semaphore : public fxl::RefCountedThreadSafe<Semaphore> {
  public:
   explicit Semaphore(vk::Device device);
   ~Semaphore();
@@ -33,7 +33,7 @@ class Semaphore : public ftl::RefCountedThreadSafe<Semaphore> {
   vk::Device device_;
   vk::Semaphore value_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Semaphore);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Semaphore);
 };
 
 }  // namespace escher

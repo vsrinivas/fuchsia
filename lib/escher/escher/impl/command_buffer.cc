@@ -11,7 +11,7 @@
 #include "escher/shape/mesh.h"
 #include "escher/util/trace_macros.h"
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace escher {
 namespace impl {
@@ -26,29 +26,29 @@ CommandBuffer::CommandBuffer(vk::Device device,
       pipeline_stage_mask_(pipeline_stage_mask) {}
 
 CommandBuffer::~CommandBuffer() {
-  FTL_DCHECK(!is_active_ && !is_submitted_);
+  FXL_DCHECK(!is_active_ && !is_submitted_);
   // Owner is responsible for destroying command buffer and fence.
 }
 
 void CommandBuffer::Begin(uint64_t sequence_number) {
-  FTL_DCHECK(!is_active_ && !is_submitted_);
-  FTL_DCHECK(sequence_number > sequence_number_);
+  FXL_DCHECK(!is_active_ && !is_submitted_);
+  FXL_DCHECK(sequence_number > sequence_number_);
   is_active_ = true;
   sequence_number_ = sequence_number;
   auto result = command_buffer_.begin(vk::CommandBufferBeginInfo());
-  FTL_DCHECK(result == vk::Result::eSuccess);
+  FXL_DCHECK(result == vk::Result::eSuccess);
 }
 
 bool CommandBuffer::Submit(vk::Queue queue,
                            CommandBufferFinishedCallback callback) {
   TRACE_DURATION("gfx", "escher::CommandBuffer::Submit");
 
-  FTL_DCHECK(is_active_ && !is_submitted_);
+  FXL_DCHECK(is_active_ && !is_submitted_);
   is_submitted_ = true;
   callback_ = std::move(callback);
 
   auto end_command_buffer_result = command_buffer_.end();
-  FTL_DCHECK(end_command_buffer_result == vk::Result::eSuccess);
+  FXL_DCHECK(end_command_buffer_result == vk::Result::eSuccess);
 
   vk::SubmitInfo submit_info;
   submit_info.commandBufferCount = 1;
@@ -61,7 +61,7 @@ bool CommandBuffer::Submit(vk::Queue queue,
 
   auto submit_result = queue.submit(1, &submit_info, fence_);
   if (submit_result != vk::Result::eSuccess) {
-    FTL_LOG(WARNING) << "failed queue submission: " << to_string(submit_result);
+    FXL_LOG(WARNING) << "failed queue submission: " << to_string(submit_result);
     // Clearing these flags allows Retire() to make progress.
     is_active_ = is_submitted_ = false;
     return false;
@@ -74,13 +74,13 @@ vk::Result CommandBuffer::Wait(uint64_t nanoseconds) {
     // The command buffer is already finished.
     return vk::Result::eSuccess;
   }
-  FTL_DCHECK(is_submitted_);
+  FXL_DCHECK(is_submitted_);
   return device_.waitForFences(1, &fence_, true, nanoseconds);
 }
 
 void CommandBuffer::AddWaitSemaphore(SemaphorePtr semaphore,
                                      vk::PipelineStageFlags stage) {
-  FTL_DCHECK(is_active_);
+  FXL_DCHECK(is_active_);
   if (semaphore) {
     // Build up list that will be used when frame is submitted.
     wait_semaphores_for_submit_.push_back(semaphore->value());
@@ -91,7 +91,7 @@ void CommandBuffer::AddWaitSemaphore(SemaphorePtr semaphore,
 }
 
 void CommandBuffer::AddSignalSemaphore(SemaphorePtr semaphore) {
-  FTL_DCHECK(is_active_);
+  FXL_DCHECK(is_active_);
   if (semaphore) {
     // Build up list that will be used when frame is submitted.
     signal_semaphores_for_submit_.push_back(semaphore->value());
@@ -101,13 +101,13 @@ void CommandBuffer::AddSignalSemaphore(SemaphorePtr semaphore) {
 }
 
 void CommandBuffer::KeepAlive(Resource* resource) {
-  FTL_DCHECK(is_active_);
+  FXL_DCHECK(is_active_);
   if (sequence_number_ == resource->sequence_number()) {
     // The resource is already being kept alive by this CommandBuffer.
     return;
   }
 
-  FTL_DCHECK(resource->sequence_number() <= sequence_number_);
+  FXL_DCHECK(resource->sequence_number() <= sequence_number_);
   resource->set_sequence_number(sequence_number_);
   if (resource->IsKindOf<DescriptorSetAllocation>()) {
     // TODO: DescriptorSetPool will immediately recycle allocations, even while
@@ -216,10 +216,10 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
       src_stage_mask = vk::PipelineStageFlagBits::eTopOfPipe;
       break;
     default:
-      FTL_LOG(ERROR)
+      FXL_LOG(ERROR)
           << "CommandBuffer does not know how to transition from layout: "
           << vk::to_string(old_layout);
-      FTL_DCHECK(false);
+      FXL_DCHECK(false);
   }
 
   switch (new_layout) {
@@ -260,10 +260,10 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
       dst_stage_mask = vk::PipelineStageFlagBits::eTransfer;
       break;
     default:
-      FTL_LOG(ERROR)
+      FXL_LOG(ERROR)
           << "CommandBuffer does not know how to transition to layout: "
           << vk::to_string(new_layout);
-      FTL_DCHECK(false);
+      FXL_DCHECK(false);
   }
 
   src_stage_mask = src_stage_mask & pipeline_stage_mask_;
@@ -288,7 +288,7 @@ void CommandBuffer::BeginRenderPass(vk::RenderPass render_pass,
                                     const FramebufferPtr& framebuffer,
                                     const vk::ClearValue* clear_values,
                                     size_t clear_value_count) {
-  FTL_DCHECK(is_active_);
+  FXL_DCHECK(is_active_);
   uint32_t width = framebuffer->width();
   uint32_t height = framebuffer->height();
 
@@ -325,12 +325,12 @@ void CommandBuffer::BeginRenderPass(vk::RenderPass render_pass,
 bool CommandBuffer::Retire() {
   if (!is_active_) {
     // Submission failed, so proceed with cleanup.
-    FTL_DLOG(INFO)
+    FXL_DLOG(INFO)
         << "CommandBuffer submission failed, proceeding with retirement";
   } else if (!is_submitted_) {
     return false;
   } else {
-    FTL_DCHECK(is_active_);
+    FXL_DCHECK(is_active_);
     // Check if fence has been reached.
     auto fence_status = device_.getFenceStatus(fence_);
     if (fence_status == vk::Result::eNotReady) {
@@ -356,7 +356,7 @@ bool CommandBuffer::Retire() {
   signal_semaphores_for_submit_.clear();
 
   auto result = command_buffer_.reset(vk::CommandBufferResetFlags());
-  FTL_DCHECK(result == vk::Result::eSuccess);
+  FXL_DCHECK(result == vk::Result::eSuccess);
 
   return true;
 }

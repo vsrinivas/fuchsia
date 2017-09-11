@@ -13,12 +13,12 @@ namespace scene_manager {
 static mx_signals_t kEventPairDeathSignals = MX_EPAIR_PEER_CLOSED;
 
 #define ASSERT_INTERNAL_EXPORTS_CONSISTENCY                \
-  FTL_DCHECK(imports_.size() == handles_to_koids_.size()); \
+  FXL_DCHECK(imports_.size() == handles_to_koids_.size()); \
   {                                                        \
     size_t i = 0;                                          \
     for (auto& it : koids_to_import_ptrs_)                 \
       i += it.second.size();                               \
-    FTL_DCHECK(imports_.size() == i);                      \
+    FXL_DCHECK(imports_.size() == i);                      \
   }
 
 UnresolvedImports::UnresolvedImports(ResourceLinker* resource_linker)
@@ -27,14 +27,14 @@ UnresolvedImports::UnresolvedImports(ResourceLinker* resource_linker)
 UnresolvedImports::~UnresolvedImports() {
   auto message_loop = mtl::MessageLoop::GetCurrent();
   for (auto& entry_iter : imports_) {
-    FTL_DCHECK(entry_iter.second.import_token);
+    FXL_DCHECK(entry_iter.second.import_token);
     message_loop->RemoveHandler(entry_iter.second.death_handler_key);
 #ifndef NDEBUG
     num_handler_keys_--;
 #endif
   }
 #ifndef NDEBUG
-  FTL_DCHECK(num_handler_keys_ == 0);
+  FXL_DCHECK(num_handler_keys_ == 0);
 #endif
 }
 
@@ -42,14 +42,14 @@ void UnresolvedImports::AddUnresolvedImport(Import* import,
                                             mx::eventpair import_token,
                                             mx_koid_t import_koid) {
   // Make sure the import koid we've been passed is valid.
-  FTL_DCHECK(import_koid != MX_KOID_INVALID);
-  FTL_DCHECK(import_koid == mtl::GetKoid(import_token.get()));
+  FXL_DCHECK(import_koid != MX_KOID_INVALID);
+  FXL_DCHECK(import_koid == mtl::GetKoid(import_token.get()));
 
   // Make sure we're not using the same import twice.
-  FTL_DCHECK(imports_.find(import) == imports_.end());
+  FXL_DCHECK(imports_.find(import) == imports_.end());
 
   // Add to our data structures.
-  FTL_DCHECK(handles_to_koids_.find(import_token.get()) ==
+  FXL_DCHECK(handles_to_koids_.find(import_token.get()) ==
              handles_to_koids_.end());
   handles_to_koids_[import_token.get()] = import_koid;
   imports_[import] = ImportEntry{.import_ptr = import,
@@ -71,7 +71,7 @@ void UnresolvedImports::ListenForPeerHandleDeath(Import* import) {
             this,                                          // handler
             import_entry_iter->second.import_token.get(),  // handle
             kEventPairDeathSignals,                        // trigger
-            ftl::TimeDelta::Max()                          // timeout
+            fxl::TimeDelta::Max()                          // timeout
         );
     import_entry_iter->second.death_handler_key = death_key;
 #ifndef NDEBUG
@@ -80,14 +80,14 @@ void UnresolvedImports::ListenForPeerHandleDeath(Import* import) {
   }
   ASSERT_INTERNAL_EXPORTS_CONSISTENCY;
 #ifndef NDEBUG
-  FTL_DCHECK(imports_.size() == num_handler_keys_);
+  FXL_DCHECK(imports_.size() == num_handler_keys_);
 #endif
 }
 
 std::vector<Import*> UnresolvedImports::RemoveUnresolvedImportsForHandle(
     mx_handle_t import_handle) {
   auto import_koid_iter = handles_to_koids_.find(import_handle);
-  FTL_DCHECK(import_koid_iter != handles_to_koids_.end());
+  FXL_DCHECK(import_koid_iter != handles_to_koids_.end());
 
   auto imports = GetAndRemoveUnresolvedImportsForKoid(import_koid_iter->second);
 
@@ -103,7 +103,7 @@ std::vector<Import*> UnresolvedImports::GetAndRemoveUnresolvedImportsForKoid(
     mx_koid_t import_koid) {
   // Look up the import entries for this koid.
   auto import_ptr_collection_iter = koids_to_import_ptrs_.find(import_koid);
-  FTL_DCHECK(import_ptr_collection_iter != koids_to_import_ptrs_.end());
+  FXL_DCHECK(import_ptr_collection_iter != koids_to_import_ptrs_.end());
 
   // Construct a list of the callbacks, and erase the imports from our data
   // structures.
@@ -112,16 +112,16 @@ std::vector<Import*> UnresolvedImports::GetAndRemoveUnresolvedImportsForKoid(
   for (auto& import_ptr : imports) {
     // Look up entry and add its resolution_callback to |callbacks|.
     auto entry_iter = imports_.find(import_ptr);
-    FTL_DCHECK(entry_iter != imports_.end());
+    FXL_DCHECK(entry_iter != imports_.end());
 
     // Remove from |handles_to_koids_|.
     size_t num_removed =
         handles_to_koids_.erase(entry_iter->second.import_token.get());
-    FTL_DCHECK(num_removed == 1);
+    FXL_DCHECK(num_removed == 1);
 
     // Unregister the handler
     if (entry_iter->second.death_handler_key != 0) {
-      FTL_DCHECK(entry_iter->second.import_token);
+      FXL_DCHECK(entry_iter->second.import_token);
       mtl::MessageLoop::GetCurrent()->RemoveHandler(
           entry_iter->second.death_handler_key);
 #ifndef NDEBUG
@@ -138,7 +138,7 @@ std::vector<Import*> UnresolvedImports::GetAndRemoveUnresolvedImportsForKoid(
 
   ASSERT_INTERNAL_EXPORTS_CONSISTENCY;
 #ifndef NDEBUG
-  FTL_DCHECK(imports_.size() == num_handler_keys_);
+  FXL_DCHECK(imports_.size() == num_handler_keys_);
 #endif
 
   return imports;
@@ -146,7 +146,7 @@ std::vector<Import*> UnresolvedImports::GetAndRemoveUnresolvedImportsForKoid(
 
 void Remove(Import* import, std::vector<Import*>* vec) {
   auto it = std::find(vec->begin(), vec->end(), import);
-  FTL_DCHECK(it != vec->end());
+  FXL_DCHECK(it != vec->end());
   vec->erase(it);
 }
 
@@ -166,11 +166,11 @@ void UnresolvedImports::OnImportDestroyed(Import* import) {
   // Remove from |handles_to_koids_|.
   size_t num_removed =
       handles_to_koids_.erase(entry_iter->second.import_token.get());
-  FTL_DCHECK(num_removed == 1);
+  FXL_DCHECK(num_removed == 1);
 
   // Unregister the handler
   if (entry_iter->second.death_handler_key != 0) {
-    FTL_DCHECK(entry_iter->second.import_token);
+    FXL_DCHECK(entry_iter->second.import_token);
     mtl::MessageLoop::GetCurrent()->RemoveHandler(
         entry_iter->second.death_handler_key);
 #ifndef NDEBUG
@@ -186,7 +186,7 @@ void UnresolvedImports::OnImportDestroyed(Import* import) {
 
   ASSERT_INTERNAL_EXPORTS_CONSISTENCY;
 #ifndef NDEBUG
-  FTL_DCHECK(imports_.size() == num_handler_keys_);
+  FXL_DCHECK(imports_.size() == num_handler_keys_);
 #endif
 }
 

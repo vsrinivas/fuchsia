@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "garnet/bin/netconnector/mdns/dns_reading.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace netconnector {
 namespace mdns {
@@ -150,7 +150,7 @@ PacketReader& operator>>(PacketReader& reader, DnsResourceDataTxt& value) {
     reader >> length;
 
     if (length > reader.bytes_remaining()) {
-      FTL_DLOG(ERROR) << "Bad string length, offset "
+      FXL_DLOG(ERROR) << "Bad string length, offset "
                       << reader.bytes_consumed();
       reader.MarkUnhealthy();
       return reader;
@@ -162,8 +162,8 @@ PacketReader& operator>>(PacketReader& reader, DnsResourceDataTxt& value) {
     value.strings_.emplace_back(s);
   }
 
-  FTL_DCHECK(reader.healthy());
-  FTL_DCHECK(reader.bytes_remaining() == 0);
+  FXL_DCHECK(reader.healthy());
+  FXL_DCHECK(reader.bytes_remaining() == 0);
 
   return reader;
 }
@@ -186,8 +186,8 @@ PacketReader& operator>>(PacketReader& reader, DnsResourceDataOpt& value) {
   value.options_.resize(reader.bytes_remaining());
   reader.GetBytes(reader.bytes_remaining(), value.options_.data());
 
-  FTL_DCHECK(reader.healthy());
-  FTL_DCHECK(reader.bytes_remaining() == 0);
+  FXL_DCHECK(reader.healthy());
+  FXL_DCHECK(reader.bytes_remaining() == 0);
 
   return reader;
 }
@@ -204,8 +204,8 @@ PacketReader& operator>>(PacketReader& reader, DnsResourceDataNSec& value) {
   value.bits_.resize(reader.bytes_remaining());
   reader.GetBytes(reader.bytes_remaining(), value.bits_.data());
 
-  FTL_DCHECK(reader.healthy());
-  FTL_DCHECK(reader.bytes_remaining() == 0);
+  FXL_DCHECK(reader.healthy());
+  FXL_DCHECK(reader.bytes_remaining() == 0);
 
   return reader;
 }
@@ -220,7 +220,7 @@ PacketReader& operator>>(PacketReader& reader, DnsResource& value) {
 
   if (data_size > reader.bytes_remaining()) {
     reader.MarkUnhealthy();
-    FTL_DLOG(ERROR) << "data_size is " << data_size << ", remaining is "
+    FXL_DLOG(ERROR) << "data_size is " << data_size << ", remaining is "
                     << reader.bytes_remaining();
     return reader;
   }
@@ -248,7 +248,7 @@ PacketReader& operator>>(PacketReader& reader, DnsResource& value) {
       reader.SetBytesRemaining(data_size);
       reader >> value.txt_;
       if (reader.healthy()) {
-        FTL_DCHECK(reader.bytes_remaining() == 0);
+        FXL_DCHECK(reader.bytes_remaining() == 0);
         reader.SetBytesRemaining(bytes_remaining - data_size);
       }
     } break;
@@ -266,7 +266,7 @@ PacketReader& operator>>(PacketReader& reader, DnsResource& value) {
       reader.SetBytesRemaining(data_size);
       reader >> value.opt_;
       if (reader.healthy()) {
-        FTL_DCHECK(reader.bytes_remaining() == 0);
+        FXL_DCHECK(reader.bytes_remaining() == 0);
         reader.SetBytesRemaining(bytes_remaining - data_size);
       }
     } break;
@@ -276,12 +276,12 @@ PacketReader& operator>>(PacketReader& reader, DnsResource& value) {
       reader.SetBytesRemaining(data_size);
       reader >> value.nsec_;
       if (reader.healthy()) {
-        FTL_DCHECK(reader.bytes_remaining() == 0);
+        FXL_DCHECK(reader.bytes_remaining() == 0);
         reader.SetBytesRemaining(bytes_remaining - data_size);
       }
     } break;
     default:
-      FTL_DLOG(WARNING) << "Skipping data for unsupported resource type "
+      FXL_DLOG(WARNING) << "Skipping data for unsupported resource type "
                         << static_cast<uint16_t>(value.type_);
       reader.Bytes(data_size);
       break;
@@ -297,7 +297,7 @@ PacketReader& operator>>(PacketReader& reader, DnsMessage& value) {
       value.header_.answer_count_ > kMaxAnswers ||
       value.header_.authority_count_ > kMaxAuthorities ||
       value.header_.additional_count_ > kMaxAdditionals) {
-    FTL_DLOG(ERROR) << "Max record count exceeded; rejecting message.";
+    FXL_DLOG(ERROR) << "Max record count exceeded; rejecting message.";
     reader.MarkUnhealthy();
     return reader;
   }

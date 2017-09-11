@@ -8,7 +8,7 @@
 #include "garnet/bin/media/audio_server/platform/generic/mixers/linear_sampler.h"
 #include "garnet/bin/media/audio_server/platform/generic/mixers/no_op.h"
 #include "garnet/bin/media/audio_server/platform/generic/mixers/point_sampler.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 namespace audio {
@@ -25,7 +25,7 @@ Mixer::Mixer(uint32_t pos_filter_width, uint32_t neg_filter_width)
 MixerPtr Mixer::Select(const AudioMediaTypeDetailsPtr& src_format,
                        const AudioMediaTypeDetailsPtr* optional_dst_format) {
   // We should always have a source format.
-  FTL_DCHECK(src_format);
+  FXL_DCHECK(src_format);
 
   // If we don't have a destination format, just stick with no-op.  This is
   // probably the ThrottleOutput we are picking a mixer for.
@@ -34,7 +34,7 @@ MixerPtr Mixer::Select(const AudioMediaTypeDetailsPtr& src_format,
   }
 
   const AudioMediaTypeDetailsPtr& dst_format = *optional_dst_format;
-  FTL_DCHECK(dst_format);
+  FXL_DCHECK(dst_format);
 
   // If the source sample rate is an integer multiple of the destination sample
   // rate, just use the point sampler.  Otherwise, use the linear re-sampler.

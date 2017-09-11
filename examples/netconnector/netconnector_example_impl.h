@@ -9,7 +9,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "garnet/examples/netconnector/netconnector_example_params.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/netconnector/cpp/message_relay.h"
 
 namespace examples {
@@ -29,7 +29,7 @@ class NetConnectorExampleImpl {
   netconnector::MessageRelay message_relay_;
   std::vector<std::string>::const_iterator conversation_iter_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(NetConnectorExampleImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(NetConnectorExampleImpl);
 };
 
 }  // namespace examples

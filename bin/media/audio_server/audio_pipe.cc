@@ -26,19 +26,19 @@ AudioPipe::AudioPacketRef::AudioPacketRef(SuppliedPacketPtr supplied_packet,
       start_pts_(start_pts),
       end_pts_(end_pts),
       frame_count_(frame_count) {
-  FTL_DCHECK(supplied_packet_);
-  FTL_DCHECK(server_);
+  FXL_DCHECK(supplied_packet_);
+  FXL_DCHECK(server_);
 }
 
 AudioPipe::AudioPacketRef::~AudioPacketRef() {
-  FTL_DCHECK(server_);
+  FXL_DCHECK(server_);
   server_->SchedulePacketCleanup(std::move(supplied_packet_));
 }
 
 AudioPipe::AudioPipe(AudioRendererImpl* owner, AudioServerImpl* server)
     : owner_(owner), server_(server) {
-  FTL_DCHECK(owner_);
-  FTL_DCHECK(server_);
+  FXL_DCHECK(owner_);
+  FXL_DCHECK(server_);
 }
 
 AudioPipe::~AudioPipe() {}
@@ -46,7 +46,7 @@ AudioPipe::~AudioPipe() {}
 void AudioPipe::ProgramRangeSet(uint64_t program,
                                 int64_t min_pts,
                                 int64_t max_pts) {
-  FTL_DCHECK(program == 0) << "Non-zero program not implemented";
+  FXL_DCHECK(program == 0) << "Non-zero program not implemented";
   min_pts_ = min_pts * (owner_->format_info()->frame_to_media_ratio() *
                         owner_->format_info()->frames_per_ns());
 }
@@ -55,7 +55,7 @@ void AudioPipe::PrimeRequested(
     const MediaTimelineControlPoint::PrimeCallback& cbk) {
   if (prime_callback_) {
     // Prime was already requested. Complete the old one and warn.
-    FTL_LOG(WARNING) << "multiple prime requests received";
+    FXL_LOG(WARNING) << "multiple prime requests received";
     prime_callback_();
   }
 
@@ -71,18 +71,18 @@ void AudioPipe::PrimeRequested(
 }
 
 void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
-  FTL_DCHECK(supplied_packet);
-  FTL_DCHECK(owner_);
+  FXL_DCHECK(supplied_packet);
+  FXL_DCHECK(owner_);
 
   if (!owner_->format_info_valid()) {
-    FTL_LOG(ERROR) << "Packet supplied, but format has not set.";
+    FXL_LOG(ERROR) << "Packet supplied, but format has not set.";
     Reset();
     return;
   }
 
-  FTL_DCHECK(supplied_packet->packet()->pts_rate_ticks ==
+  FXL_DCHECK(supplied_packet->packet()->pts_rate_ticks ==
              owner_->format_info()->format()->frames_per_second);
-  FTL_DCHECK(supplied_packet->packet()->pts_rate_seconds == 1);
+  FXL_DCHECK(supplied_packet->packet()->pts_rate_seconds == 1);
 
   // Start by making sure that the region we are receiving is made from an
   // integral number of audio frames.  Count the total number of frames in the
@@ -93,7 +93,7 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
   uint32_t frame_size = owner_->format_info()->bytes_per_frame();
 
   if ((frame_size > 1) && (supplied_packet->payload_size() % frame_size)) {
-    FTL_LOG(ERROR) << "Region length (" << supplied_packet->payload_size()
+    FXL_LOG(ERROR) << "Region length (" << supplied_packet->payload_size()
                    << ") is not divisible by by audio frame size ("
                    << frame_size << ")";
     Reset();
@@ -104,7 +104,7 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
                                          AudioRendererImpl::PTS_FRACTIONAL_BITS;
   uint32_t frame_count = (supplied_packet->payload_size() / frame_size);
   if (frame_count > kMaxFrames) {
-    FTL_LOG(ERROR) << "Audio frame count (" << frame_count
+    FXL_LOG(ERROR) << "Audio frame count (" << frame_count
                    << ") exceeds maximum allowed (" << kMaxFrames << ")";
     Reset();
     return;
@@ -150,7 +150,7 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
 }
 
 void AudioPipe::OnFlushRequested(bool hold_frame, const FlushCallback& cbk) {
-  FTL_DCHECK(owner_);
+  FXL_DCHECK(owner_);
   next_pts_known_ = false;
   owner_->OnFlushRequested(cbk);
 }

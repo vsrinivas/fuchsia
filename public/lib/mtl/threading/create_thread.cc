@@ -13,7 +13,7 @@
 namespace mtl {
 namespace {
 
-void RunMessageLoop(ftl::RefPtr<internal::IncomingTaskQueue> task_queue,
+void RunMessageLoop(fxl::RefPtr<internal::IncomingTaskQueue> task_queue,
                     std::string thread_name) {
   // Note: The kernel's default thread name is an empty string so we only
   // need to set the name when we want it to be non-empty.
@@ -26,9 +26,9 @@ void RunMessageLoop(ftl::RefPtr<internal::IncomingTaskQueue> task_queue,
 
 }  // namespace
 
-std::thread CreateThread(ftl::RefPtr<ftl::TaskRunner>* task_runner,
+std::thread CreateThread(fxl::RefPtr<fxl::TaskRunner>* task_runner,
                          std::string thread_name) {
-  auto incoming_queue = ftl::MakeRefCounted<internal::IncomingTaskQueue>();
+  auto incoming_queue = fxl::MakeRefCounted<internal::IncomingTaskQueue>();
   *task_runner = incoming_queue;
   return std::thread(RunMessageLoop, std::move(incoming_queue),
                      std::move(thread_name));

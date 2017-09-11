@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "garnet/bin/media/framework/types/stream_type.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -89,13 +89,13 @@ class VideoStreamType : public StreamType {
   struct PixelFormatInfo {
     // Returns the number of bytes per element for the specified plane.
     uint32_t bytes_per_element_for_plane(uint32_t plane) const {
-      FTL_DCHECK(plane < plane_count_);
+      FXL_DCHECK(plane < plane_count_);
       return bytes_per_element_[plane];
     }
 
     // Returns the sample size of the specified plane.
     const Extent& sample_size_for_plane(uint32_t plane) const {
-      FTL_DCHECK(plane < plane_count_);
+      FXL_DCHECK(plane < plane_count_);
       return sample_size_[plane];
     }
 
@@ -188,83 +188,83 @@ class VideoStreamType : public StreamType {
   std::unique_ptr<StreamType> Clone() const override;
 
   uint32_t line_stride_for_plane(uint32_t plane) const {
-    FTL_DCHECK(plane < pixel_format_info_.plane_count_);
+    FXL_DCHECK(plane < pixel_format_info_.plane_count_);
     return line_stride_[plane];
   }
 
   uint32_t plane_offset_for_plane(uint32_t plane) const {
-    FTL_DCHECK(plane < pixel_format_info_.plane_count_);
+    FXL_DCHECK(plane < pixel_format_info_.plane_count_);
     return plane_offset_[plane];
   }
 
   uint32_t line_stride_for_argb_plane() const {
-    FTL_DCHECK(pixel_format_info_.plane_indices_.argb_ <
+    FXL_DCHECK(pixel_format_info_.plane_indices_.argb_ <
                pixel_format_info_.plane_count_);
     return line_stride_for_plane(pixel_format_info_.plane_indices_.argb_);
   }
 
   uint32_t line_stride_for_y_plane() const {
-    FTL_DCHECK(pixel_format_info_.plane_indices_.y_ <
+    FXL_DCHECK(pixel_format_info_.plane_indices_.y_ <
                pixel_format_info_.plane_count_);
     return line_stride_for_plane(pixel_format_info_.plane_indices_.y_);
   }
 
   uint32_t line_stride_for_u_plane() const {
-    FTL_DCHECK(pixel_format_info_.plane_indices_.u_ <
+    FXL_DCHECK(pixel_format_info_.plane_indices_.u_ <
                pixel_format_info_.plane_count_);
     return line_stride_for_plane(pixel_format_info_.plane_indices_.u_);
   }
 
   uint32_t line_stride_for_v_plane() const {
-    FTL_DCHECK(pixel_format_info_.plane_indices_.v_ <
+    FXL_DCHECK(pixel_format_info_.plane_indices_.v_ <
                pixel_format_info_.plane_count_);
     return line_stride_for_plane(pixel_format_info_.plane_indices_.v_);
   }
 
   uint32_t line_stride_for_uv_plane() const {
-    FTL_DCHECK(pixel_format_info_.plane_indices_.uv_ <
+    FXL_DCHECK(pixel_format_info_.plane_indices_.uv_ <
                pixel_format_info_.plane_count_);
     return line_stride_for_plane(pixel_format_info_.plane_indices_.uv_);
   }
 
   uint32_t line_stride_for_a_plane() const {
-    FTL_DCHECK(pixel_format_info_.plane_indices_.a_ <
+    FXL_DCHECK(pixel_format_info_.plane_indices_.a_ <
                pixel_format_info_.plane_count_);
     return line_stride_for_plane(pixel_format_info_.plane_indices_.a_);
   }
 
   uint32_t plane_offset_for_argb_plane() const {
-    FTL_DCHECK(pixel_format_info_.plane_indices_.argb_ <
+    FXL_DCHECK(pixel_format_info_.plane_indices_.argb_ <
                pixel_format_info_.plane_count_);
     return plane_offset_for_plane(pixel_format_info_.plane_indices_.argb_);
   }
 
   uint32_t plane_offset_for_y_plane() const {
-    FTL_DCHECK(pixel_format_info_.plane_indices_.y_ <
+    FXL_DCHECK(pixel_format_info_.plane_indices_.y_ <
                pixel_format_info_.plane_count_);
     return plane_offset_for_plane(pixel_format_info_.plane_indices_.y_);
   }
 
   uint32_t plane_offset_for_u_plane() const {
-    FTL_DCHECK(pixel_format_info_.plane_indices_.u_ <
+    FXL_DCHECK(pixel_format_info_.plane_indices_.u_ <
                pixel_format_info_.plane_count_);
     return plane_offset_for_plane(pixel_format_info_.plane_indices_.u_);
   }
 
   uint32_t plane_offset_for_v_plane() const {
-    FTL_DCHECK(pixel_format_info_.plane_indices_.v_ <
+    FXL_DCHECK(pixel_format_info_.plane_indices_.v_ <
                pixel_format_info_.plane_count_);
     return plane_offset_for_plane(pixel_format_info_.plane_indices_.v_);
   }
 
   uint32_t plane_offset_for_uv_plane() const {
-    FTL_DCHECK(pixel_format_info_.plane_indices_.uv_ <
+    FXL_DCHECK(pixel_format_info_.plane_indices_.uv_ <
                pixel_format_info_.plane_count_);
     return plane_offset_for_plane(pixel_format_info_.plane_indices_.uv_);
   }
 
   uint32_t plane_offset_for_a_plane() const {
-    FTL_DCHECK(pixel_format_info_.plane_indices_.a_ <
+    FXL_DCHECK(pixel_format_info_.plane_indices_.a_ <
                pixel_format_info_.plane_count_);
     return plane_offset_for_plane(pixel_format_info_.plane_indices_.a_);
   }

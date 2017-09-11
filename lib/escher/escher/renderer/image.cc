@@ -51,7 +51,7 @@ Image::Image(ResourceManager* image_owner,
 Image::~Image() {
   if (!mem_) {
     // Probably a swapchain image.  We don't own the image or the memory.
-    FTL_LOG(INFO) << "Destroying Image with unowned VkImage (perhaps a "
+    FXL_LOG(INFO) << "Destroying Image with unowned VkImage (perhaps a "
                      "swapchain image?)";
   } else {
     vulkan_context().device.destroyImage(image_);

@@ -14,7 +14,7 @@
 #include <iomanip>
 
 #include "garnet/bin/media/audio_server/audio_output_manager.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 static constexpr bool VERBOSE_TIMING_DEBUG = false;
 
@@ -58,7 +58,7 @@ mx_status_t DriverOutput::SyncDriverCall(const mx::channel& channel,
   constexpr mx_time_t CALL_TIMEOUT = MX_MSEC(500u);
   mx_channel_call_args_t args;
 
-  FTL_DCHECK((resp_handle_out == nullptr) ||
+  FXL_DCHECK((resp_handle_out == nullptr) ||
              (*resp_handle_out == MX_HANDLE_INVALID));
 
   args.wr_bytes = const_cast<ReqType*>(&req);
@@ -78,13 +78,13 @@ mx_status_t DriverOutput::SyncDriverCall(const mx::channel& channel,
 
   if (write_status != MX_OK) {
     if (write_status == MX_ERR_CALL_FAILED) {
-      FTL_LOG(WARNING) << "Cmd read failure (cmd 0x" << std::hex
+      FXL_LOG(WARNING) << "Cmd read failure (cmd 0x" << std::hex
                        << std::setfill('0') << std::setw(4) << req.hdr.cmd
                        << ", res " << std::dec << std::setfill(' ')
                        << std::setw(0) << read_status << ")";
       return read_status;
     } else {
-      FTL_LOG(WARNING) << "Cmd read failure (cmd 0x" << std::hex
+      FXL_LOG(WARNING) << "Cmd read failure (cmd 0x" << std::hex
                        << std::setfill('0') << std::setw(4) << req.hdr.cmd
                        << ", res " << std::dec << std::setfill(' ')
                        << std::setw(0) << write_status << ")";
@@ -93,7 +93,7 @@ mx_status_t DriverOutput::SyncDriverCall(const mx::channel& channel,
   }
 
   if (bytes != sizeof(RespType)) {
-    FTL_LOG(WARNING) << "Unexpected response size (got " << bytes
+    FXL_LOG(WARNING) << "Unexpected response size (got " << bytes
                      << ", expected " << sizeof(RespType) << ")";
     return MX_ERR_INTERNAL;
   }
@@ -127,7 +127,7 @@ MediaResult DriverOutput::Init() {
                          &resp,
                          rb_channel_.reset_and_get_address());
     if (res != MX_OK) {
-      FTL_LOG(ERROR) << "Failed to set format " << req.frames_per_second
+      FXL_LOG(ERROR) << "Failed to set format " << req.frames_per_second
                      << "Hz " << req.channels << "-Ch 0x" << std::hex
                      << req.sample_format << "(res " << std::dec << res << ")";
       return MediaResult::UNSUPPORTED_CONFIG;
@@ -145,18 +145,18 @@ MediaResult DriverOutput::Init() {
 
     res = stream_channel_.write(0, &req, sizeof(req), nullptr, 0);
     if (res != MX_OK) {
-      FTL_LOG(ERROR) << "Failed to request initial plug state (res "
+      FXL_LOG(ERROR) << "Failed to request initial plug state (res "
                      << res << ")";
       return MediaResult::INTERNAL_ERROR;
     }
 
     // Create the reflector and hand the stream channel over to it.
     reflector_ = EventReflector::Create(manager_, weak_self_);
-    FTL_DCHECK(reflector_ != nullptr);
+    FXL_DCHECK(reflector_ != nullptr);
 
     res = reflector_->Activate(fbl::move(stream_channel_));
     if (res != MX_OK) {
-      FTL_LOG(ERROR) << "Failed to activate event reflector (res "
+      FXL_LOG(ERROR) << "Failed to activate event reflector (res "
                      << res << ")";
       return MediaResult::INTERNAL_ERROR;
     }
@@ -174,7 +174,7 @@ MediaResult DriverOutput::Init() {
 
     res = SyncDriverCall(rb_channel_, req, &resp);
     if (res != MX_OK) {
-      FTL_LOG(ERROR) << "Failed to fetch ring buffer fifo depth (res " << res
+      FXL_LOG(ERROR) << "Failed to fetch ring buffer fifo depth (res " << res
                      << ")";
       return MediaResult::INTERNAL_ERROR;
     }
@@ -193,7 +193,7 @@ MediaResult DriverOutput::Init() {
 
   output_formatter_ = OutputFormatter::Select(config);
   if (!output_formatter_) {
-    FTL_LOG(ERROR) << "Failed to find output formatter for format "
+    FXL_LOG(ERROR) << "Failed to find output formatter for format "
                    << config->frames_per_second << "Hz " << config->channels
                    << "-Ch 0x" << std::hex << config->sample_format;
     return MediaResult::UNSUPPORTED_CONFIG;
@@ -216,7 +216,7 @@ MediaResult DriverOutput::Init() {
 
     // TODO(johngro): Do a better job of translating errors.
     if (res != MX_OK) {
-      FTL_LOG(ERROR) << "Failed to get ring buffer VMO (res " << res << ")";
+      FXL_LOG(ERROR) << "Failed to get ring buffer VMO (res " << res << ")";
       return MediaResult::INSUFFICIENT_RESOURCES;
     }
   }
@@ -225,18 +225,18 @@ MediaResult DriverOutput::Init() {
   // channel.
   res = rb_vmo_.get_size(&rb_size_);
   if (res != MX_OK) {
-    FTL_LOG(ERROR) << "Failed to get ring buffer VMO size (res " << res << ")";
+    FXL_LOG(ERROR) << "Failed to get ring buffer VMO size (res " << res << ")";
     return MediaResult::INTERNAL_ERROR;
   }
 
   if (rb_size_ < kDefaultRingBufferBytes) {
-    FTL_LOG(ERROR) << "Ring buffer size is smaller than we asked for ("
+    FXL_LOG(ERROR) << "Ring buffer size is smaller than we asked for ("
                    << rb_size_ << " < " << kDefaultRingBufferBytes << ")";
     return MediaResult::INTERNAL_ERROR;
   }
 
   if (rb_size_ % kDefaultFrameSize) {
-    FTL_LOG(ERROR) << "Ring buffer size (" << rb_size_
+    FXL_LOG(ERROR) << "Ring buffer size (" << rb_size_
                    << ") is not a multiple of the frame size ("
                    << kDefaultFrameSize << ")";
     return MediaResult::INTERNAL_ERROR;
@@ -250,7 +250,7 @@ MediaResult DriverOutput::Init() {
                     MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                     reinterpret_cast<uintptr_t*>(&rb_virt_));
   if (res != MX_OK) {
-    FTL_LOG(ERROR) << "Failed to map ring buffer VMO (res " << res << ")";
+    FXL_LOG(ERROR) << "Failed to map ring buffer VMO (res " << res << ")";
     return MediaResult::INTERNAL_ERROR;
   }
 
@@ -292,7 +292,7 @@ void DriverOutput::Cleanup() {
   stream_channel_.reset();
 }
 
-bool DriverOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
+bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
   int64_t now;
 
   // TODO(johngro) : See MG-940.  Eliminate this as soon as we have a more
@@ -314,7 +314,7 @@ bool DriverOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
       // TODO(johngro): Ugh... if we cannot start the ring buffer, return
       // without scheduling a callback.  The StandardOutputBase implementation
       // will interpret this as a fatal error and should shut this output down.
-      FTL_LOG(ERROR) << "Failed to start ring buffer (res " << res << ")";
+      FXL_LOG(ERROR) << "Failed to start ring buffer (res " << res << ")";
       return false;
     }
 
@@ -326,7 +326,7 @@ bool DriverOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
     // CLOCK_MONOTONIC.  Eventually, we need to work clock recovery into this
     // mix, so this may all become a moot point.
     uint64_t ticks_per_sec = mx_ticks_per_second();
-    FTL_DCHECK(ticks_per_sec <= fbl::numeric_limits<uint32_t>::max());
+    FXL_DCHECK(ticks_per_sec <= fbl::numeric_limits<uint32_t>::max());
     int64_t local_start =
         TimelineRate::Scale(resp.start_ticks, 1000000000u, ticks_per_sec);
 
@@ -339,7 +339,7 @@ bool DriverOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
     frames_sent_ = low_water_frames_;
 
     if (VERBOSE_TIMING_DEBUG) {
-      FTL_LOG(INFO)
+      FXL_LOG(INFO)
         << "Audio output: FIFO depth (" << fifo_frames_
         << " frames " << std::fixed << std::setprecision(3)
         << local_to_frames_.Inverse().Scale(fifo_frames_) / 1000000.0
@@ -374,7 +374,7 @@ bool DriverOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
         int64_t fifo_limit_miss      = rd_limit_miss + fifo_frames_;
         int64_t low_water_limit_miss = rd_limit_miss + low_water_frames_;
 
-        FTL_LOG(ERROR)
+        FXL_LOG(ERROR)
           << "UNDERFLOW: Missed mix target by (Rd, Fifo, LowWater) = ("
           << std::fixed << std::setprecision(3)
           << local_to_frames_.Inverse().Scale(rd_limit_miss) / 1000000.0
@@ -409,7 +409,7 @@ bool DriverOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
         return false;
       } else {
         // Looks like we recovered.  Log and go back to mixing.
-        FTL_LOG(INFO)
+        FXL_LOG(INFO)
           << "UNDERFLOW: Recovered after "
           << std::fixed << std::setprecision(3)
           << (now - underflow_start_time_) / 1000000.0
@@ -420,15 +420,15 @@ bool DriverOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
     }
 
     int64_t frames_in_flight = frames_sent_ - rd_ptr_frames;
-    FTL_DCHECK((frames_in_flight >= 0) && (frames_in_flight <= rb_frames_));
-    FTL_DCHECK(frames_sent_ < fill_target);
+    FXL_DCHECK((frames_in_flight >= 0) && (frames_in_flight <= rb_frames_));
+    FXL_DCHECK(frames_sent_ < fill_target);
 
     uint32_t rb_space = rb_frames_ - static_cast<uint32_t>(frames_in_flight);
     int64_t desired_frames = fill_target - frames_sent_;
-    FTL_DCHECK(desired_frames >= 0);
+    FXL_DCHECK(desired_frames >= 0);
 
     if (desired_frames > rb_frames_) {
-      FTL_LOG(ERROR) << "Fatal underflow: want to produce " << desired_frames
+      FXL_LOG(ERROR) << "Fatal underflow: want to produce " << desired_frames
                      << " but the ring buffer is only " << rb_frames_
                      << " frames long.";
       return false;
@@ -460,20 +460,20 @@ bool DriverOutput::FinishMixJob(const MixJob& job) {
   // TODO(johngro): Flush cache here!
 
   if (VERBOSE_TIMING_DEBUG) {
-    int64_t now = ftl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
+    int64_t now = fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
     int64_t rd_ptr_frames = local_to_output_.Apply(now);
     int64_t playback_lead_start = frames_sent_ - rd_ptr_frames;
     int64_t playback_lead_end = playback_lead_start + job.buf_frames;
     int64_t dma_lead_start = playback_lead_start - fifo_frames_;
     int64_t dma_lead_end = playback_lead_end - fifo_frames_;
 
-    FTL_LOG(INFO) << "PLead [" << std::setw(4) << playback_lead_start << ", "
+    FXL_LOG(INFO) << "PLead [" << std::setw(4) << playback_lead_start << ", "
                   << std::setw(4) << playback_lead_end << "] DLead ["
                   << std::setw(4) << dma_lead_start << ", " << std::setw(4)
                   << dma_lead_end << "]";
   }
 
-  FTL_DCHECK(frames_to_mix_ >= job.buf_frames);
+  FXL_DCHECK(frames_to_mix_ >= job.buf_frames);
   frames_sent_ += job.buf_frames;
   frames_to_mix_ -= job.buf_frames;
 
@@ -490,8 +490,8 @@ void DriverOutput::ScheduleNextLowWaterWakeup() {
   // the write pointer.
   int64_t low_water_frames = frames_sent_ - low_water_frames_;
   int64_t low_water_time   = local_to_output_.ApplyInverse(low_water_frames);
-  SetNextSchedTime(ftl::TimePoint::FromEpochDelta(
-      ftl::TimeDelta::FromNanoseconds(low_water_time)));
+  SetNextSchedTime(fxl::TimePoint::FromEpochDelta(
+      fxl::TimeDelta::FromNanoseconds(low_water_time)));
 }
 
 mx_status_t DriverOutput::EventReflector::Activate(
@@ -510,7 +510,7 @@ mx_status_t DriverOutput::EventReflector::Activate(
 
 mx_status_t DriverOutput::EventReflector::ProcessChannel(
     DispatcherChannel* channel) {
-  FTL_DCHECK(channel != nullptr);
+  FXL_DCHECK(channel != nullptr);
 
   union {
     audio_cmd_hdr_t hdr;
@@ -521,7 +521,7 @@ mx_status_t DriverOutput::EventReflector::ProcessChannel(
   uint32_t bytes;
   mx_status_t res = channel->Read(&msg, sizeof(msg), &bytes);
   if (res != MX_OK) {
-    FTL_LOG(ERROR) << "Failed to read message from driver (res " << res << ")";
+    FXL_LOG(ERROR) << "Failed to read message from driver (res " << res << ")";
     return res;
   }
 
@@ -530,7 +530,7 @@ mx_status_t DriverOutput::EventReflector::ProcessChannel(
   switch (msg.hdr.cmd) {
     case AUDIO_STREAM_CMD_PLUG_DETECT: {
       if (bytes != sizeof(msg.pd_resp)) {
-        FTL_LOG(ERROR) << "Bad message length.  Expected "
+        FXL_LOG(ERROR) << "Bad message length.  Expected "
                        << sizeof(msg.pd_resp)
                        << " Got " << bytes;
         return MX_ERR_INVALID_ARGS;
@@ -546,7 +546,7 @@ mx_status_t DriverOutput::EventReflector::ProcessChannel(
 
     case AUDIO_STREAM_PLUG_DETECT_NOTIFY: {
       if (bytes != sizeof(msg.pd_notify)) {
-        FTL_LOG(ERROR) << "Bad message length.  Expected "
+        FXL_LOG(ERROR) << "Bad message length.  Expected "
                        << sizeof(msg.pd_notify) << " Got "
                        << bytes;
         return MX_ERR_INVALID_ARGS;
@@ -558,7 +558,7 @@ mx_status_t DriverOutput::EventReflector::ProcessChannel(
     }
 
     default:
-      FTL_LOG(ERROR) << "Unexpected message type 0x" << std::hex << msg.hdr.cmd;
+      FXL_LOG(ERROR) << "Unexpected message type 0x" << std::hex << msg.hdr.cmd;
       return MX_ERR_INVALID_ARGS;
   }
 }

@@ -5,13 +5,13 @@
 #pragma once
 
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "magenta/system/ulib/mx/include/mx/eventpair.h"
 
 namespace scene_manager {
 
 class Import;
-using ImportPtr = ftl::RefPtr<Import>;
+using ImportPtr = fxl::RefPtr<Import>;
 
 // Callback used by ResourceLinker and UnresolvedImports to indicate the result
 // of resolving a resource.
@@ -90,7 +90,7 @@ class Import final : public Resource {
 
   FRIEND_MAKE_REF_COUNTED(Import);
   FRIEND_REF_COUNTED_THREAD_SAFE(Import);
-  FTL_DISALLOW_COPY_AND_ASSIGN(Import);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Import);
 };
 
 }  // namespace scene_manager

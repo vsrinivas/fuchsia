@@ -10,11 +10,11 @@
 #include <cstring>
 #include <map>
 
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/files/path.h"
-#include "lib/ftl/functional/auto_call.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/path.h"
+#include "lib/fxl/functional/auto_call.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "util.h"
 
@@ -22,14 +22,14 @@ namespace debugserver {
 namespace util {
 
 bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
-  FTL_LOG(INFO) << "Loading load maps from " << file;
+  FXL_LOG(INFO) << "Loading load maps from " << file;
 
   FILE* f = fopen(file.c_str(), "r");
   if (!f) {
-    FTL_LOG(ERROR) << "error opening file, " << ErrnoString(errno);
+    FXL_LOG(ERROR) << "error opening file, " << ErrnoString(errno);
     return false;
   }
-  auto close_file = ftl::MakeAutoCall([&]() {
+  auto close_file = fxl::MakeAutoCall([&]() {
       fclose(f);
     });
 
@@ -49,7 +49,7 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
   char* name = reinterpret_cast<char*>(malloc(kMaxLineLen));
   char* so_name = reinterpret_cast<char*>(malloc(kMaxLineLen));
 
-  auto free_mem = ftl::MakeAutoCall([&]() {
+  auto free_mem = fxl::MakeAutoCall([&]() {
       free(line);
       free(prefix);
       free(build_id);
@@ -58,7 +58,7 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
     });
 
   if (!prefix || !build_id || !name || !so_name) {
-    FTL_LOG(ERROR) << "Out of memory";
+    FXL_LOG(ERROR) << "Out of memory";
     return false;
   }
 
@@ -66,16 +66,16 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
     // For paranoia's sake, watch for embedded NULs.
     size_t n = strlen(line);
     if (static_cast<ssize_t>(n) != line_len) {
-      FTL_LOG(WARNING) << "Line contains embedded NULs: "
+      FXL_LOG(WARNING) << "Line contains embedded NULs: "
                        << std::string(line, line_len);
       continue;
     }
     if (n > 0 && line[n - 1] == '\n')
       line[n - 1] = '\0';
-    FTL_VLOG(2) << ftl::StringPrintf("%d: %s", lineno, line);
+    FXL_VLOG(2) << fxl::StringPrintf("%d: %s", lineno, line);
 
     if (n > kMaxLineLen) {
-      FTL_VLOG(2) << ftl::StringPrintf("%d: too long, ignoring", lineno);
+      FXL_VLOG(2) << fxl::StringPrintf("%d: too long, ignoring", lineno);
     }
 
     if (!strcmp(line, "\n"))
@@ -85,7 +85,7 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
 
     // If this is a new boot, start over.
     if (strstr(line, "welcome to lk/MP")) {
-      FTL_VLOG(1) << "Restarting reading of load maps, machine rebooted";
+      FXL_VLOG(1) << "Restarting reading of load maps, machine rebooted";
       map_data.clear();
       Clear();
       continue;
@@ -111,7 +111,7 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
                prefix, &pid, &seqno, &base_addr, &load_addr, &end_addr) == 6) {
       uint64_t id = GET_ENTRY_ID(pid, seqno);
       if (map_data.find(id) != map_data.end()) {
-        FTL_LOG(ERROR) << "Already have map entry for: " << line;
+        FXL_LOG(ERROR) << "Already have map entry for: " << line;
         continue;
       }
       struct LoadMap entry;
@@ -127,7 +127,7 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
       uint64_t id = GET_ENTRY_ID(pid, seqno);
       auto entry_iter = map_data.find(id);
       if (entry_iter == map_data.end()) {
-        FTL_LOG(ERROR) << "Missing entry (A record) for: " << line;
+        FXL_LOG(ERROR) << "Missing entry (A record) for: " << line;
         continue;
       }
       (*entry_iter).second.build_id = build_id;
@@ -138,7 +138,7 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
       uint64_t id = GET_ENTRY_ID(pid, seqno);
       auto entry_iter = map_data.find(id);
       if (entry_iter == map_data.end()) {
-        FTL_LOG(ERROR) << "Missing entry (A record) for: " << line;
+        FXL_LOG(ERROR) << "Missing entry (A record) for: " << line;
         continue;
       }
       LoadMap& entry = (*entry_iter).second;
@@ -147,12 +147,12 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
       // We should now have the full record.
       AddLoadMap(entry);
     } else {
-      FTL_VLOG(2) << ftl::StringPrintf("%d: ignoring", lineno);
+      FXL_VLOG(2) << fxl::StringPrintf("%d: ignoring", lineno);
     }
   }
 
   if (!feof(f)) {
-    FTL_LOG(ERROR) << "Error reading file";
+    FXL_LOG(ERROR) << "Error reading file";
     return false;
   }
 
@@ -160,7 +160,7 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
 }
 
 void LoadMapTable::AddLoadMap(const LoadMap& map) {
-  FTL_VLOG(2) << ftl::StringPrintf(
+  FXL_VLOG(2) << fxl::StringPrintf(
       "Adding map entry, pid %" PRIu64 " %s 0x%" PRIx64 "-0x%" PRIx64, map.pid,
       map.name.c_str(), map.load_addr, map.end_addr);
   maps_.push_back(map);

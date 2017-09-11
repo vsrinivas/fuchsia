@@ -9,7 +9,7 @@
 
 #include <mx/event.h>
 #include "escher/impl/command_buffer_sequencer.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 #include "garnet/bin/ui/scene_manager/fence.h"
 

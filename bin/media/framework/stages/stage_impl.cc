@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/framework/stages/stage_impl.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -46,10 +46,10 @@ void StageImpl::UpdateUntilDone() {
   }
 }
 
-void StageImpl::Acquire(const ftl::Closure& callback) {
+void StageImpl::Acquire(const fxl::Closure& callback) {
   PostTask([this, callback]() {
     {
-      ftl::MutexLocker locker(&tasks_mutex_);
+      fxl::MutexLocker locker(&tasks_mutex_);
       tasks_suspended_ = true;
     }
 
@@ -59,7 +59,7 @@ void StageImpl::Acquire(const ftl::Closure& callback) {
 
 void StageImpl::Release() {
   {
-    ftl::MutexLocker locker(&tasks_mutex_);
+    fxl::MutexLocker locker(&tasks_mutex_);
     tasks_suspended_ = false;
     if (tasks_.empty()) {
       // Don't need to run tasks.
@@ -67,21 +67,21 @@ void StageImpl::Release() {
     }
   }
 
-  FTL_DCHECK(task_runner_);
+  FXL_DCHECK(task_runner_);
   task_runner_->PostTask([this]() { RunTasks(); });
 }
 
-void StageImpl::SetTaskRunner(ftl::RefPtr<ftl::TaskRunner> task_runner) {
-  FTL_DCHECK(task_runner);
-  ftl::RefPtr<ftl::TaskRunner> node_task_runner = GetNodeTaskRunner();
+void StageImpl::SetTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner) {
+  FXL_DCHECK(task_runner);
+  fxl::RefPtr<fxl::TaskRunner> node_task_runner = GetNodeTaskRunner();
   task_runner_ = node_task_runner ? node_task_runner : task_runner;
 }
 
-void StageImpl::PostTask(const ftl::Closure& task) {
-  FTL_DCHECK(task);
+void StageImpl::PostTask(const fxl::Closure& task) {
+  FXL_DCHECK(task);
 
   {
-    ftl::MutexLocker locker(&tasks_mutex_);
+    fxl::MutexLocker locker(&tasks_mutex_);
     tasks_.push(task);
     if (tasks_.size() != 1 || tasks_suspended_) {
       // Don't need to run tasks, either because there were already tasks in
@@ -90,7 +90,7 @@ void StageImpl::PostTask(const ftl::Closure& task) {
     }
   }
 
-  FTL_DCHECK(task_runner_);
+  FXL_DCHECK(task_runner_);
   task_runner_->PostTask([this]() { RunTasks(); });
 }
 
@@ -98,7 +98,7 @@ void StageImpl::RunTasks() {
   tasks_mutex_.Lock();
 
   while (!tasks_.empty() && !tasks_suspended_) {
-    ftl::Closure& task = tasks_.front();
+    fxl::Closure& task = tasks_.front();
     tasks_mutex_.Unlock();
     task();
     tasks_mutex_.Lock();

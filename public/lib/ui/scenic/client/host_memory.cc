@@ -8,7 +8,7 @@
 #include <mx/vmo.h>
 
 #include "lib/ui/scenic/fidl_helpers.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace scenic_lib {
 namespace {
@@ -19,19 +19,19 @@ bool CanReuseMemory(const HostMemory& memory, size_t desired_size) {
          memory.data_size() <= desired_size * 2;
 }
 
-std::pair<mx::vmo, ftl::RefPtr<HostData>> AllocateMemory(size_t size) {
+std::pair<mx::vmo, fxl::RefPtr<HostData>> AllocateMemory(size_t size) {
   // Create the vmo and map it into this process.
   mx::vmo local_vmo;
   mx_status_t status = mx::vmo::create(size, 0u, &local_vmo);
-  FTL_CHECK(status == MX_OK) << "vmo create failed: status=" << status;
-  auto data = ftl::MakeRefCounted<HostData>(local_vmo, 0u, size);
+  FXL_CHECK(status == MX_OK) << "vmo create failed: status=" << status;
+  auto data = fxl::MakeRefCounted<HostData>(local_vmo, 0u, size);
 
   // Drop rights before we transfer the VMO to the session manager.
   mx::vmo remote_vmo;
   status = local_vmo.replace(
       MX_RIGHT_READ | MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_MAP,
       &remote_vmo);
-  FTL_CHECK(status == MX_OK) << "replace rights failed: status=" << status;
+  FXL_CHECK(status == MX_OK) << "replace rights failed: status=" << status;
   return std::make_pair(std::move(remote_vmo), std::move(data));
 }
 
@@ -45,21 +45,21 @@ HostData::HostData(const mx::vmo& vmo,
   uintptr_t ptr;
   mx_status_t status =
       mx::vmar::root_self().map(0, vmo, offset, size, flags, &ptr);
-  FTL_CHECK(status == MX_OK) << "map failed: status=" << status;
+  FXL_CHECK(status == MX_OK) << "map failed: status=" << status;
   ptr_ = reinterpret_cast<void*>(ptr);
 }
 
 HostData::~HostData() {
   mx_status_t status =
       mx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(ptr_), size_);
-  FTL_CHECK(status == MX_OK) << "unmap failed: status=" << status;
+  FXL_CHECK(status == MX_OK) << "unmap failed: status=" << status;
 }
 
 HostMemory::HostMemory(Session* session, size_t size)
     : HostMemory(session, AllocateMemory(size)) {}
 
 HostMemory::HostMemory(Session* session,
-                       std::pair<mx::vmo, ftl::RefPtr<HostData>> init)
+                       std::pair<mx::vmo, fxl::RefPtr<HostData>> init)
     : Memory(session, std::move(init.first), scenic::MemoryType::HOST_MEMORY),
       data_(std::move(init.second)) {}
 
@@ -80,7 +80,7 @@ HostImage::HostImage(const HostMemory& memory,
 HostImage::HostImage(Session* session,
                      uint32_t memory_id,
                      off_t memory_offset,
-                     ftl::RefPtr<HostData> data,
+                     fxl::RefPtr<HostData> data,
                      scenic::ImageInfoPtr info)
     : Image(session, memory_id, memory_offset, std::move(info)),
       data_(std::move(data)) {}
@@ -113,9 +113,9 @@ bool HostImagePool::Configure(const scenic::ImageInfo* image_info) {
     image_ptrs_[i].reset();
 
   if (image_info_) {
-    FTL_DCHECK(image_info_->width > 0);
-    FTL_DCHECK(image_info_->height > 0);
-    FTL_DCHECK(image_info_->stride > 0);
+    FXL_DCHECK(image_info_->width > 0);
+    FXL_DCHECK(image_info_->height > 0);
+    FXL_DCHECK(image_info_->stride > 0);
 
     size_t desired_size = Image::ComputeSize(*image_info_);
     for (uint32_t i = 0; i < num_images(); i++) {
@@ -127,7 +127,7 @@ bool HostImagePool::Configure(const scenic::ImageInfo* image_info) {
 }
 
 const HostImage* HostImagePool::GetImage(uint32_t index) {
-  FTL_DCHECK(index < num_images());
+  FXL_DCHECK(index < num_images());
 
   if (image_ptrs_[index])
     return image_ptrs_[index].get();
@@ -146,7 +146,7 @@ const HostImage* HostImagePool::GetImage(uint32_t index) {
 }
 
 void HostImagePool::DiscardImage(uint32_t index) {
-  FTL_DCHECK(index < num_images());
+  FXL_DCHECK(index < num_images());
 
   image_ptrs_[index].reset();
 }

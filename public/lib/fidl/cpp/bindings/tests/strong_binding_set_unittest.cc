@@ -7,7 +7,7 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "mojo/public/cpp/utility/run_loop.h"
 #include "lib/fidl/compiler/interfaces/tests/minimal_interface.fidl.h"
 
@@ -28,7 +28,7 @@ class MinimalInterfaceImpl : public test::MinimalInterface {
   bool* deleted_flag_;
   int call_count_ = 0;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MinimalInterfaceImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MinimalInterfaceImpl);
 };
 
 // Tests all of the functionality of StrongBindingSet.

@@ -12,10 +12,10 @@
 #include "garnet/bin/media/audio_server/audio_pipe.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
-#include "lib/ftl/synchronization/mutex.h"
-#include "lib/ftl/synchronization/thread_annotations.h"
-#include "lib/ftl/tasks/task_runner.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/synchronization/mutex.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
+#include "lib/fxl/tasks/task_runner.h"
+#include "lib/fxl/time/time_point.h"
 
 namespace media {
 namespace audio {
@@ -96,7 +96,7 @@ class AudioOutput {
   // AudioOutputManager's base::SequencedWorkerPool.  While successive callbacks
   // may not execute on the same thread, they are guaranteed to execute in a
   // serialized fashion.
-  virtual void Process() FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) = 0;
+  virtual void Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) = 0;
 
   // InitializeLink
   //
@@ -121,8 +121,8 @@ class AudioOutput {
   //
   // Schedule a processing callback at the specified absolute time on the local
   // clock.
-  void ScheduleCallback(ftl::TimePoint when)
-      FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+  void ScheduleCallback(fxl::TimePoint when)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // ShutdownSelf
   //
@@ -131,13 +131,13 @@ class AudioOutput {
   // main message loop finds out about our shutdown request, it will complete
   // the process of shutting us down, unlinking us from our renderers and
   // calling the Cleanup method.
-  void ShutdownSelf() FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+  void ShutdownSelf() FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // shutting_down
   //
   // Check the shutting down flag.  Only the base class may modify the flag, but
   // derived classes are free to check it at any time.
-  inline bool shutting_down() const FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
+  inline bool shutting_down() const FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
     return shutting_down_;
   }
 
@@ -165,10 +165,10 @@ class AudioOutput {
   //
   // Right now, we have no priorities, so this is just a set of renderer/output
   // links.
-  AudioRendererToOutputLinkSet links_ FTL_GUARDED_BY(mutex_);
+  AudioRendererToOutputLinkSet links_ FXL_GUARDED_BY(mutex_);
   AudioOutputManager* manager_;
   AudioOutputWeakPtr weak_self_;
-  ftl::Mutex mutex_;
+  fxl::Mutex mutex_;
 
  private:
   // It's always nice when you manager is also your friend.  Seriously though,
@@ -191,7 +191,7 @@ class AudioOutput {
   //
   // @return true if this call just kicked off the process of shutting down,
   // false otherwise.
-  bool BeginShutdown() FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+  bool BeginShutdown() FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Called from the AudioOutputManager on the main message loop
   // thread.  Makes certain that the process of shutdown has started,
@@ -205,7 +205,7 @@ class AudioOutput {
   // output.
   void UnlinkFromRenderers();
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   std::thread worker_thread_;
 
   // Plug state is protected by the fact that it is only ever accessed on the
@@ -220,7 +220,7 @@ class AudioOutput {
 
   // TODO(johngro): Eliminate the shutting down flag and just use the
   // task_runner_'s nullness for this test?
-  volatile bool shutting_down_ FTL_GUARDED_BY(mutex_) = false;
+  volatile bool shutting_down_ FXL_GUARDED_BY(mutex_) = false;
   volatile bool shut_down_ = false;
 };
 

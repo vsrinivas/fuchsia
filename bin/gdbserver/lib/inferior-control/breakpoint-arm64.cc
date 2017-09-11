@@ -4,7 +4,7 @@
 
 #include "breakpoint.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace debugserver {
 namespace arch {
@@ -19,32 +19,32 @@ namespace {
 }  // namespace
 
 bool SoftwareBreakpoint::Insert() {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
   return false;
 }
 
 bool SoftwareBreakpoint::Remove() {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
   return false;
 }
 
 bool SoftwareBreakpoint::IsInserted() const {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
   return false;
 }
 
 bool SingleStepBreakpoint::Insert() {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
   return false;
 }
 
 bool SingleStepBreakpoint::Remove() {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
   return false;
 }
 
 bool SingleStepBreakpoint::IsInserted() const {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
   return false;
 }
 

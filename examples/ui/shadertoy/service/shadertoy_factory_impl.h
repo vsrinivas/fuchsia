@@ -36,7 +36,7 @@ class ShadertoyFactoryImpl final : public mozart::example::ShadertoyFactory {
                    std::unique_ptr<mozart::example::Shadertoy>>
       bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ShadertoyFactoryImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ShadertoyFactoryImpl);
 };
 
 }  // namespace shadertoy

@@ -8,8 +8,8 @@
 
 #include <magenta/device/display.h>
 
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/logging.h"
 
 namespace scene_manager {
 
@@ -26,7 +26,7 @@ DisplayWatcher::DisplayWatcher() = default;
 DisplayWatcher::~DisplayWatcher() = default;
 
 void DisplayWatcher::WaitForDisplay(DisplayReadyCallback callback) {
-  FTL_DCHECK(!device_watcher_);
+  FXL_DCHECK(!device_watcher_);
 
   device_watcher_ = mtl::DeviceWatcher::Create(
       kDisplayDir,
@@ -42,10 +42,10 @@ void DisplayWatcher::HandleDevice(DisplayReadyCallback callback,
   // Get display info.
   std::string path = kDisplayDir + "/" + filename;
 
-  FTL_LOG(INFO) << "SceneManager: Acquired display " << path << ".";
-  ftl::UniqueFD fd(open(path.c_str(), O_RDWR));
+  FXL_LOG(INFO) << "SceneManager: Acquired display " << path << ".";
+  fxl::UniqueFD fd(open(path.c_str(), O_RDWR));
   if (!fd.is_valid()) {
-    FTL_DLOG(ERROR) << "Failed to open " << path << ": errno=" << errno;
+    FXL_DLOG(ERROR) << "Failed to open " << path << ": errno=" << errno;
     callback(false, 0, 0, 0.f);
     return;
   }
@@ -54,7 +54,7 @@ void DisplayWatcher::HandleDevice(DisplayReadyCallback callback,
   ioctl_display_get_fb_t description;
   ssize_t result = ioctl_display_get_fb(fd.get(), &description);
   if (result < 0) {
-    FTL_DLOG(ERROR) << "IOCTL_DISPLAY_GET_FB failed: result=" << result;
+    FXL_DLOG(ERROR) << "IOCTL_DISPLAY_GET_FB failed: result=" << result;
     callback(false, 0, 0, 0.f);
     return;
   }

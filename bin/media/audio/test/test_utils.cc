@@ -44,7 +44,7 @@ void VerifyBuffer(float* buffer,
     for (uint32_t channel = 0; channel < channel_count; ++channel) {
       if (!RoughlyEquals(sample_func(channel, first_pts + frame_index),
                          buffer[channel_count * frame_index + channel])) {
-        FTL_LOG(WARNING) << "VerifyBuffer expected "
+        FXL_LOG(WARNING) << "VerifyBuffer expected "
                          << sample_func(channel, first_pts + frame_index)
                          << " got "
                          << buffer[channel_count * frame_index + channel]

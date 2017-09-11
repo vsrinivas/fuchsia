@@ -57,7 +57,7 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
   // auto timing_index = frame->AddSwapchain(this);
   if (event_timestamper_ && !event_timestamper_) {
     // Avoid unused-variable error.
-    FTL_CHECK(false) << "I don't believe you.";
+    FXL_CHECK(false) << "I don't believe you.";
   }
 
   auto& image_available_semaphore =
@@ -74,9 +74,9 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
         nullptr);
 
     if (result.result == vk::Result::eSuboptimalKHR) {
-      FTL_DLOG(WARNING) << "suboptimal swapchain configuration";
+      FXL_DLOG(WARNING) << "suboptimal swapchain configuration";
     } else if (result.result != vk::Result::eSuccess) {
-      FTL_LOG(WARNING) << "failed to acquire next swapchain image"
+      FXL_LOG(WARNING) << "failed to acquire next swapchain image"
                        << " : " << to_string(result.result);
       return false;
     }
@@ -103,7 +103,7 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
 
   // TODO(MZ-244): handle this more robustly.
   if (queue_.presentKHR(info) != vk::Result::eSuccess) {
-    FTL_DCHECK(false) << "DisplaySwapchain::DrawAndPresentFrame(): failed to "
+    FXL_DCHECK(false) << "DisplaySwapchain::DrawAndPresentFrame(): failed to "
                          "present rendered image.";
   }
   return true;

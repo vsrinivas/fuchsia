@@ -19,7 +19,7 @@
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "garnet/bin/media/util/incident.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace media {
 
@@ -91,7 +91,7 @@ class MediaDemuxImpl : public MediaServiceImpl::Product<MediaSource>,
   // Reports a problem via status.
   void ReportProblem(const std::string& type, const std::string& details);
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   Graph graph_;
   NodeRef demux_node_;
   std::shared_ptr<Demux> demux_;

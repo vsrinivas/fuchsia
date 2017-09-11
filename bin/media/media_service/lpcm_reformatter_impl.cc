@@ -5,7 +5,7 @@
 #include "garnet/bin/media/media_service/lpcm_reformatter_impl.h"
 
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -31,7 +31,7 @@ LpcmReformatterImpl::LpcmReformatterImpl(
       graph_(owner->multiproc_task_runner()),
       consumer_(FidlPacketConsumer::Create()),
       producer_(FidlPacketProducer::Create()) {
-  FTL_DCHECK(input_media_type);
+  FXL_DCHECK(input_media_type);
 
   FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding()), "lpcm_reformatter"));
 
@@ -42,7 +42,7 @@ LpcmReformatterImpl::LpcmReformatterImpl(
 
   reformatter_ = LpcmReformatter::Create(*input_stream_type->audio(),
                                          Convert(output_sample_format));
-  FTL_DCHECK(reformatter_);
+  FXL_DCHECK(reformatter_);
 
   FLOG(log_channel_,
        Config(std::move(input_media_type),
@@ -59,7 +59,7 @@ LpcmReformatterImpl::LpcmReformatterImpl(
   consumer_->SetFlushRequestedCallback(
       [this, consumer_ref](bool hold_frame,
                            const MediaPacketConsumer::FlushCallback& callback) {
-        FTL_DCHECK(producer_);
+        FXL_DCHECK(producer_);
         graph_.FlushOutput(consumer_ref.output(), hold_frame);
         producer_->FlushConnection(hold_frame, callback);
       });
@@ -70,7 +70,7 @@ LpcmReformatterImpl::LpcmReformatterImpl(
 LpcmReformatterImpl::~LpcmReformatterImpl() {}
 
 void LpcmReformatterImpl::GetOutputType(const GetOutputTypeCallback& callback) {
-  FTL_DCHECK(reformatter_);
+  FXL_DCHECK(reformatter_);
   callback(MediaType::From(reformatter_->output_stream_type()));
 }
 

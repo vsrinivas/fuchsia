@@ -44,7 +44,7 @@ TEST_F(ImagePipeTest, SimpleAcquireFenceSignalling) {
 
   // Expect that it is not signalled initially.
   EXPECT_FALSE(buffer_fence1.ready());
-  EXPECT_FALSE(buffer_fence1.WaitReady(ftl::TimeDelta::Zero()));
+  EXPECT_FALSE(buffer_fence1.WaitReady(fxl::TimeDelta::Zero()));
 
   // Still should not be ready.
   EXPECT_FALSE(buffer_fence1.ready());
@@ -53,7 +53,7 @@ TEST_F(ImagePipeTest, SimpleAcquireFenceSignalling) {
   fence1.signal(0u, kFenceSignalled);
 
   // Expect that it is signalled now.
-  EXPECT_TRUE(buffer_fence1.WaitReady(ftl::TimeDelta::Zero()));
+  EXPECT_TRUE(buffer_fence1.WaitReady(fxl::TimeDelta::Zero()));
   EXPECT_TRUE(buffer_fence1.ready());
 }
 
@@ -64,7 +64,7 @@ TEST_F(ImagePipeTest, AsyncAcquireFenceSignalling) {
   AcquireFence buffer_fence1(CopyEvent(fence1));
 
   // Expect that it is not signalled initially.
-  EXPECT_FALSE(buffer_fence1.WaitReady(ftl::TimeDelta::Zero()));
+  EXPECT_FALSE(buffer_fence1.WaitReady(fxl::TimeDelta::Zero()));
   EXPECT_FALSE(buffer_fence1.ready());
 
   bool signalled = false;
@@ -78,7 +78,7 @@ TEST_F(ImagePipeTest, AsyncAcquireFenceSignalling) {
   EXPECT_TRUE(signalled);
 }
 
-ftl::RefPtr<mtl::SharedVmo> CreateVmoWithBuffer(
+fxl::RefPtr<mtl::SharedVmo> CreateVmoWithBuffer(
     size_t buffer_size,
     std::unique_ptr<uint8_t[]> buffer_pixels) {
   auto shared_vmo = CreateSharedVmo(buffer_size);
@@ -87,14 +87,14 @@ ftl::RefPtr<mtl::SharedVmo> CreateVmoWithBuffer(
   return shared_vmo;
 }
 
-ftl::RefPtr<mtl::SharedVmo> CreateVmoWithCheckerboardPixels(size_t w,
+fxl::RefPtr<mtl::SharedVmo> CreateVmoWithCheckerboardPixels(size_t w,
                                                             size_t h) {
   size_t pixels_size;
   auto pixels = escher::image_utils::NewCheckerboardPixels(w, h, &pixels_size);
   return CreateVmoWithBuffer(pixels_size, std::move(pixels));
 }
 
-ftl::RefPtr<mtl::SharedVmo> CreateVmoWithGradientPixels(size_t w, size_t h) {
+fxl::RefPtr<mtl::SharedVmo> CreateVmoWithGradientPixels(size_t w, size_t h) {
   size_t pixels_size;
   auto pixels = escher::image_utils::NewGradientPixels(w, h, &pixels_size);
   return CreateVmoWithBuffer(pixels_size, std::move(pixels));
@@ -124,7 +124,7 @@ class ImagePipeThatCreatesDummyImages : public ImagePipe {
 // listened to and release fences are signalled.
 TEST_F(ImagePipeTest, ImagePipeImageIdMustNotBeZero) {
   ImagePipePtr image_pipe =
-      ftl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
+      fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
                                                            this);
 
   uint32_t imageId1 = 0;
@@ -154,7 +154,7 @@ TEST_F(ImagePipeTest, ImagePipeImageIdMustNotBeZero) {
 // being listened to and release fences are signalled.
 TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   ImagePipePtr image_pipe =
-      ftl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
+      fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
                                                            this);
 
   uint32_t imageId1 = 1;
@@ -197,7 +197,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   // Run until image1 is presented.
   for (int i = 0; !image_pipe->GetEscherImage() && i < 400; i++) {
     image_pipe->Update(0u, 0u);
-    ::mozart::test::RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(10));
+    ::mozart::test::RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(10));
   }
 
   ASSERT_TRUE(image_pipe->GetEscherImage());

@@ -16,7 +16,7 @@ source_set("timeline") {
 
   deps = [
     "//garnet/public/lib/media/fidl",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }
 
@@ -30,7 +30,7 @@ source_set("host_compatible") {
   ]
 
   deps = [
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }
 

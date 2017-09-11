@@ -7,7 +7,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "garnet/bin/fonts/font_provider_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace fonts {
@@ -27,7 +27,7 @@ class App {
   std::unique_ptr<app::ApplicationContext> context_;
   FontProviderImpl font_provider_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(App);
+  FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
 }  // namespace fonts

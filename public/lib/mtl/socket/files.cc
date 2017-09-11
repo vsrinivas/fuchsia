@@ -14,7 +14,7 @@
 
 #include "lib/fidl/c/waiter/async_waiter.h"
 #include "lib/fidl/cpp/waiter/default.h"
-#include "lib/ftl/files/file_descriptor.h"
+#include "lib/fxl/files/file_descriptor.h"
 
 namespace mtl {
 namespace {
@@ -24,9 +24,9 @@ namespace {
 class CopyToFileHandler {
  public:
   CopyToFileHandler(mx::socket source,
-                    ftl::UniqueFD destination,
-                    ftl::RefPtr<ftl::TaskRunner> task_runner,
-                    const std::function<void(bool, ftl::UniqueFD)>& callback);
+                    fxl::UniqueFD destination,
+                    fxl::RefPtr<fxl::TaskRunner> task_runner,
+                    const std::function<void(bool, fxl::UniqueFD)>& callback);
 
  private:
   ~CopyToFileHandler();
@@ -39,20 +39,20 @@ class CopyToFileHandler {
                            void* context);
 
   mx::socket source_;
-  ftl::UniqueFD destination_;
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
-  std::function<void(bool, ftl::UniqueFD)> callback_;
+  fxl::UniqueFD destination_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  std::function<void(bool, fxl::UniqueFD)> callback_;
   const FidlAsyncWaiter* waiter_;
   FidlAsyncWaitID wait_id_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CopyToFileHandler);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CopyToFileHandler);
 };
 
 CopyToFileHandler::CopyToFileHandler(
     mx::socket source,
-    ftl::UniqueFD destination,
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
-    const std::function<void(bool, ftl::UniqueFD)>& callback)
+    fxl::UniqueFD destination,
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    const std::function<void(bool, fxl::UniqueFD)>& callback)
     : source_(std::move(source)),
       destination_(std::move(destination)),
       task_runner_(std::move(task_runner)),
@@ -65,7 +65,7 @@ CopyToFileHandler::CopyToFileHandler(
 CopyToFileHandler::~CopyToFileHandler() {}
 
 void CopyToFileHandler::SendCallback(bool value) {
-  FTL_DCHECK(!wait_id_);
+  FXL_DCHECK(!wait_id_);
   auto callback = callback_;
   auto destination = std::move(destination_);
   delete this;
@@ -79,7 +79,7 @@ void CopyToFileHandler::OnHandleReady(mx_status_t result) {
     result = source_.read(0u, buffer.data(), buffer.size(), &size);
     if (result == MX_OK) {
       bool write_success =
-          ftl::WriteFileDescriptor(destination_.get(), buffer.data(), size);
+          fxl::WriteFileDescriptor(destination_.get(), buffer.data(), size);
       if (!write_success) {
         SendCallback(false);
       } else {
@@ -114,10 +114,10 @@ void CopyToFileHandler::WaitComplete(mx_status_t result,
 
 class CopyFromFileHandler {
  public:
-  CopyFromFileHandler(ftl::UniqueFD source,
+  CopyFromFileHandler(fxl::UniqueFD source,
                       mx::socket destination,
-                      ftl::RefPtr<ftl::TaskRunner> task_runner,
-                      const std::function<void(bool, ftl::UniqueFD)>& callback);
+                      fxl::RefPtr<fxl::TaskRunner> task_runner,
+                      const std::function<void(bool, fxl::UniqueFD)>& callback);
 
  private:
   ~CopyFromFileHandler();
@@ -130,24 +130,24 @@ class CopyFromFileHandler {
                            uint64_t count,
                            void* context);
 
-  ftl::UniqueFD source_;
+  fxl::UniqueFD source_;
   mx::socket destination_;
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
-  std::function<void(bool, ftl::UniqueFD)> callback_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  std::function<void(bool, fxl::UniqueFD)> callback_;
   const FidlAsyncWaiter* waiter_;
   std::vector<char> buffer_;
   size_t buffer_offset_;
   size_t buffer_end_;
   FidlAsyncWaitID wait_id_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CopyFromFileHandler);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CopyFromFileHandler);
 };
 
 CopyFromFileHandler::CopyFromFileHandler(
-    ftl::UniqueFD source,
+    fxl::UniqueFD source,
     mx::socket destination,
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
-    const std::function<void(bool, ftl::UniqueFD)>& callback)
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    const std::function<void(bool, fxl::UniqueFD)>& callback)
     : source_(std::move(source)),
       destination_(std::move(destination)),
       task_runner_(std::move(task_runner)),
@@ -161,7 +161,7 @@ CopyFromFileHandler::CopyFromFileHandler(
 CopyFromFileHandler::~CopyFromFileHandler() {}
 
 void CopyFromFileHandler::SendCallback(bool value) {
-  FTL_DCHECK(!wait_id_);
+  FXL_DCHECK(!wait_id_);
   auto callback = callback_;
   auto source = std::move(source_);
   delete this;
@@ -170,7 +170,7 @@ void CopyFromFileHandler::SendCallback(bool value) {
 
 void CopyFromFileHandler::FillBuffer() {
   ssize_t bytes_read =
-      ftl::ReadFileDescriptor(source_.get(), buffer_.data(), buffer_.size());
+      fxl::ReadFileDescriptor(source_.get(), buffer_.data(), buffer_.size());
   if (bytes_read <= 0) {
     SendCallback(bytes_read == 0);
     return;
@@ -217,18 +217,18 @@ void CopyFromFileHandler::WaitComplete(mx_status_t result,
 
 void CopyToFileDescriptor(
     mx::socket source,
-    ftl::UniqueFD destination,
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
-    const std::function<void(bool, ftl::UniqueFD)>& callback) {
+    fxl::UniqueFD destination,
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    const std::function<void(bool, fxl::UniqueFD)>& callback) {
   new CopyToFileHandler(std::move(source), std::move(destination), task_runner,
                         callback);
 }
 
 void CopyFromFileDescriptor(
-    ftl::UniqueFD source,
+    fxl::UniqueFD source,
     mx::socket destination,
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
-    const std::function<void(bool, ftl::UniqueFD)>& callback) {
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    const std::function<void(bool, fxl::UniqueFD)>& callback) {
   new CopyFromFileHandler(std::move(source), std::move(destination),
                           task_runner, callback);
 }

@@ -13,8 +13,8 @@ namespace scene_manager {
 
 class Camera;
 class Scene;
-using CameraPtr = ftl::RefPtr<Camera>;
-using ScenePtr = ftl::RefPtr<Scene>;
+using CameraPtr = fxl::RefPtr<Camera>;
+using ScenePtr = fxl::RefPtr<Scene>;
 
 // Placeholder Renderer. Doesn't deal with framerate, framebuffer, etc. yet.
 class Renderer : public Resource {
@@ -80,9 +80,9 @@ class Renderer : public Resource {
   CameraPtr camera_;
   escher::MaterialPtr default_material_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Renderer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Renderer);
 };
 
-using RendererPtr = ftl::RefPtr<Renderer>;
+using RendererPtr = fxl::RefPtr<Renderer>;
 
 }  // namespace scene_manager

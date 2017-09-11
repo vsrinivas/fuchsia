@@ -5,7 +5,7 @@
 #include "garnet/bin/flog_viewer/binding.h"
 
 #include "garnet/bin/flog_viewer/channel.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace flog {
 
@@ -14,8 +14,8 @@ Binding::Binding() {}
 Binding::~Binding() {}
 
 void Binding::SetChannel(std::shared_ptr<Channel> channel) {
-  FTL_DCHECK(channel);
-  FTL_DCHECK(!channel_);
+  FXL_DCHECK(channel);
+  FXL_DCHECK(!channel_);
 
   channel_ = channel;
 }

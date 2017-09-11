@@ -10,11 +10,11 @@
 #include <mxio/io.h>
 #include <sys/types.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace mtl {
 
-DeviceWatcher::DeviceWatcher(ftl::UniqueFD dir_fd,
+DeviceWatcher::DeviceWatcher(fxl::UniqueFD dir_fd,
                              mx::channel dir_watch,
                              Callback callback)
     : dir_fd_(std::move(dir_fd)),
@@ -22,7 +22,7 @@ DeviceWatcher::DeviceWatcher(ftl::UniqueFD dir_fd,
       callback_(std::move(callback)),
       weak_ptr_factory_(this) {
   MessageLoop* message_loop = MessageLoop::GetCurrent();
-  FTL_DCHECK(message_loop);
+  FXL_DCHECK(message_loop);
 
   handler_key_ = message_loop->AddHandler(
       this, dir_watch_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
@@ -37,11 +37,11 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::Create(std::string directory_path,
   // Open the directory.
   int open_result = open(directory_path.c_str(), O_DIRECTORY | O_RDONLY);
   if (open_result < 0) {
-    FTL_LOG(ERROR) << "Failed to open " << directory_path
+    FXL_LOG(ERROR) << "Failed to open " << directory_path
                    << ", errno=" << errno;
     return nullptr;
   }
-  ftl::UniqueFD dir_fd(open_result);  // take ownership of fd here
+  fxl::UniqueFD dir_fd(open_result);  // take ownership of fd here
 
   // Create the directory watch channel.
   vfs_watch_dir_t wd;
@@ -55,7 +55,7 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::Create(std::string directory_path,
   if (ioctl_result < 0) {
     mx_handle_close(wd.channel);
     mx_handle_close(dir_watch_handle);
-    FTL_LOG(ERROR) << "Failed to create device watcher for " << directory_path
+    FXL_LOG(ERROR) << "Failed to create device watcher for " << directory_path
                    << ", result=" << ioctl_result;
     return nullptr;
   }
@@ -73,7 +73,7 @@ void DeviceWatcher::OnHandleReady(mx_handle_t handle,
     uint8_t buf[VFS_WATCH_MSG_MAX];
     mx_status_t status =
         dir_watch_.read(0, buf, sizeof(buf), &size, nullptr, 0, nullptr);
-    FTL_CHECK(status == MX_OK)
+    FXL_CHECK(status == MX_OK)
         << "Failed to read from directory watch channel";
 
     auto weak = weak_ptr_factory_.GetWeakPtr();
@@ -103,7 +103,7 @@ void DeviceWatcher::OnHandleReady(mx_handle_t handle,
     return;
   }
 
-  FTL_CHECK(false);
+  FXL_CHECK(false);
 }
 
 }  // namespace mtl

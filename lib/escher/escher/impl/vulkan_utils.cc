@@ -57,7 +57,7 @@ uint32_t GetMemoryTypeIndex(vk::PhysicalDevice device,
     }
     type_bits >>= 1;
   }
-  FTL_CHECK(false);
+  FXL_CHECK(false);
   return 0;
 }
 
@@ -100,7 +100,7 @@ vk::SampleCountFlagBits SampleCountFlagBitsFromInt(uint32_t sample_count) {
     case 64:
       return vk::SampleCountFlagBits::e64;
     default:
-      FTL_CHECK(false);
+      FXL_CHECK(false);
       return vk::SampleCountFlagBits::e1;
   }
 }

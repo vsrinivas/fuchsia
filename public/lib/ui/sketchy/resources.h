@@ -56,7 +56,7 @@ class Resource {
   Canvas* const canvas_;
   const ResourceId id_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Resource);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Resource);
 };
 
 // Represents a stroke in a canvas.
@@ -65,7 +65,7 @@ class Stroke final : public Resource {
   Stroke(Canvas* canvas);
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Stroke);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Stroke);
 };
 
 // Represents a group of stroke(s) in a canvas.
@@ -75,7 +75,7 @@ class StrokeGroup final : public Resource {
   void AddStroke(Stroke& stroke);
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(StrokeGroup);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StrokeGroup);
 };
 
 // Represents an imported node in a canvas.
@@ -85,7 +85,7 @@ class ImportNode final : public Resource {
   void AddChild(const Resource& child);
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(ImportNode);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ImportNode);
 };
 
 }  // namespace sketchy_lib

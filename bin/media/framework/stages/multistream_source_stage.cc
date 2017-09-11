@@ -11,7 +11,7 @@ namespace media {
 MultistreamSourceStageImpl::MultistreamSourceStageImpl(
     std::shared_ptr<MultistreamSource> source)
     : source_(source), ended_streams_(0) {
-  FTL_DCHECK(source);
+  FXL_DCHECK(source);
 
   for (size_t index = 0; index < source->stream_count(); ++index) {
     outputs_.emplace_back(this, index);
@@ -25,7 +25,7 @@ size_t MultistreamSourceStageImpl::input_count() const {
 };
 
 Input& MultistreamSourceStageImpl::input(size_t index) {
-  FTL_CHECK(false) << "input requested from source";
+  FXL_CHECK(false) << "input requested from source";
   abort();
 }
 
@@ -34,12 +34,12 @@ size_t MultistreamSourceStageImpl::output_count() const {
 }
 
 Output& MultistreamSourceStageImpl::output(size_t index) {
-  FTL_DCHECK(index < outputs_.size());
+  FXL_DCHECK(index < outputs_.size());
   return outputs_[index];
 }
 
 PayloadAllocator* MultistreamSourceStageImpl::PrepareInput(size_t index) {
-  FTL_CHECK(false) << "PrepareInput called on source";
+  FXL_CHECK(false) << "PrepareInput called on source";
   return nullptr;
 }
 
@@ -47,7 +47,7 @@ void MultistreamSourceStageImpl::PrepareOutput(
     size_t index,
     PayloadAllocator* allocator,
     const UpstreamCallback& callback) {
-  FTL_DCHECK(index < outputs_.size());
+  FXL_DCHECK(index < outputs_.size());
 
   if (allocator != nullptr) {
     // Currently, we don't support a source that uses provided allocators. If
@@ -60,18 +60,18 @@ void MultistreamSourceStageImpl::PrepareOutput(
 void MultistreamSourceStageImpl::UnprepareOutput(
     size_t index,
     const UpstreamCallback& callback) {
-  FTL_DCHECK(index < outputs_.size());
+  FXL_DCHECK(index < outputs_.size());
   outputs_[index].SetCopyAllocator(nullptr);
 }
 
-ftl::RefPtr<ftl::TaskRunner> MultistreamSourceStageImpl::GetNodeTaskRunner() {
+fxl::RefPtr<fxl::TaskRunner> MultistreamSourceStageImpl::GetNodeTaskRunner() {
   return source_->GetTaskRunner();
 }
 
 void MultistreamSourceStageImpl::Update() {
   while (true) {
     if (cached_packet_ && HasPositiveDemand(outputs_)) {
-      FTL_DCHECK(cached_packet_output_index_ < outputs_.size());
+      FXL_DCHECK(cached_packet_output_index_ < outputs_.size());
       Output& output = outputs_[cached_packet_output_index_];
 
       if (output.demand() != Demand::kNegative) {
@@ -92,8 +92,8 @@ void MultistreamSourceStageImpl::Update() {
 
     // Pull a packet from the source.
     cached_packet_ = source_->PullPacket(&cached_packet_output_index_);
-    FTL_DCHECK(cached_packet_);
-    FTL_DCHECK(cached_packet_output_index_ < outputs_.size());
+    FXL_DCHECK(cached_packet_);
+    FXL_DCHECK(cached_packet_output_index_ < outputs_.size());
 
     if (cached_packet_->end_of_stream()) {
       ended_streams_++;
@@ -105,12 +105,12 @@ void MultistreamSourceStageImpl::FlushInput(
     size_t index,
     bool hold_frame,
     const DownstreamCallback& callback) {
-  FTL_CHECK(false) << "FlushInput called on source";
+  FXL_CHECK(false) << "FlushInput called on source";
 }
 
 void MultistreamSourceStageImpl::FlushOutput(size_t index) {
-  FTL_DCHECK(index < outputs_.size());
-  FTL_DCHECK(source_);
+  FXL_DCHECK(index < outputs_.size());
+  FXL_DCHECK(source_);
   source_->Flush();
   cached_packet_.reset();
   cached_packet_output_index_ = 0;
@@ -118,12 +118,12 @@ void MultistreamSourceStageImpl::FlushOutput(size_t index) {
 }
 
 void MultistreamSourceStageImpl::SetTaskRunner(
-    ftl::RefPtr<ftl::TaskRunner> task_runner) {
-  ftl::RefPtr<ftl::TaskRunner> node_task_runner = source_->GetTaskRunner();
+    fxl::RefPtr<fxl::TaskRunner> task_runner) {
+  fxl::RefPtr<fxl::TaskRunner> node_task_runner = source_->GetTaskRunner();
   StageImpl::SetTaskRunner(node_task_runner ? node_task_runner : task_runner);
 }
 
-void MultistreamSourceStageImpl::PostTask(const ftl::Closure& task) {
+void MultistreamSourceStageImpl::PostTask(const fxl::Closure& task) {
   StageImpl::PostTask(task);
 }
 

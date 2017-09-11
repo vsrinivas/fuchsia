@@ -53,9 +53,9 @@ class Framebuffer : public Resource {
   // not destroyed before the Framebuffer is.
   std::vector<ImagePtr> images_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Framebuffer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Framebuffer);
 };
 
-typedef ftl::RefPtr<Framebuffer> FramebufferPtr;
+typedef fxl::RefPtr<Framebuffer> FramebufferPtr;
 
 }  // namespace escher

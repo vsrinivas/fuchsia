@@ -11,7 +11,7 @@
 #include "lib/ui/views/fidl/views.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace view_manager {
 
@@ -88,7 +88,7 @@ class InputConnectionImpl : public mozart::InputConnection,
   mozart::SoftKeyboardContainerPtr container_;
   mozart::ImeServicePtr ime_service_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(InputConnectionImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(InputConnectionImpl);
 };
 
 }  // namespace view_manager

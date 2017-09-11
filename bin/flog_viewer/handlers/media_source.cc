@@ -64,8 +64,8 @@ void MediaSource::CreatedDemux(uint64_t related_koid) {
 void MediaSource::NewStream(uint32_t index,
                             media::MediaTypePtr output_type,
                             fidl::Array<uint64_t> converter_koids) {
-  FTL_DCHECK(output_type);
-  FTL_DCHECK(converter_koids);
+  FXL_DCHECK(output_type);
+  FXL_DCHECK(converter_koids);
 
   terse_out() << EntryHeader(entry(), entry_index())
               << "MediaSource.NewStream\n";

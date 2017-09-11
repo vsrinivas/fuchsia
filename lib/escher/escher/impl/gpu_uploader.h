@@ -65,7 +65,7 @@ class GpuUploader : public ResourceRecycler {
     uint8_t* ptr_;
     bool has_writes_;
 
-    FTL_DISALLOW_COPY_AND_ASSIGN(Writer);
+    FXL_DISALLOW_COPY_AND_ASSIGN(Writer);
   };
 
   // |ResourceRecycler|
@@ -102,7 +102,7 @@ class GpuUploader : public ResourceRecycler {
   // The offset within the buffer that will be used for the next created Writer.
   vk::DeviceSize current_offset_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(GpuUploader);
+  FXL_DISALLOW_COPY_AND_ASSIGN(GpuUploader);
 };
 
 }  // namespace impl

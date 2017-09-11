@@ -17,14 +17,14 @@ namespace sketchy {
 
 Page::Page(escher::Escher* escher)
     : escher_(escher),
-      page_material_(ftl::MakeRefCounted<escher::Material>()),
+      page_material_(fxl::MakeRefCounted<escher::Material>()),
       wobble_absorber_(
           std::make_unique<escher::impl::WobbleModifierAbsorber>(escher)) {
   page_material_->set_color(vec3(0.6f, 0.6f, 0.6f));
 
   constexpr float h_step = 360.0 / kStrokeColorCount;
   for (size_t i = 0; i < kStrokeColorCount; ++i) {
-    stroke_materials_[i] = ftl::MakeRefCounted<escher::Material>();
+    stroke_materials_[i] = fxl::MakeRefCounted<escher::Material>();
     stroke_materials_[i]->set_color(
         escher::HsvToLinear(escher::vec3(i * h_step, 0.7f, 0.8f)));
   }
@@ -33,7 +33,7 @@ Page::Page(escher::Escher* escher)
 Page::~Page() {}
 
 Stroke* Page::NewStroke(StrokeId id) {
-  FTL_DCHECK(strokes_.find(id) == strokes_.end());
+  FXL_DCHECK(strokes_.find(id) == strokes_.end());
   auto stroke = new Stroke(this, id);
   strokes_[id] = std::unique_ptr<Stroke>(stroke);
   return stroke;

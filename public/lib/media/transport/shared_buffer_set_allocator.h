@@ -11,9 +11,9 @@
 
 #include "lib/media/transport/fifo_allocator.h"
 #include "lib/media/transport/shared_buffer_set.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/synchronization/mutex.h"
-#include "lib/ftl/synchronization/thread_annotations.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/synchronization/mutex.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media {
 
@@ -153,38 +153,38 @@ class SharedBufferSetAllocator : public SharedBufferSet {
 
   // Allocates a region using the whole region strategy.
   Locator AllocateWholeRegion(uint64_t size)
-      FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Releases a region using the whole region strategy.
   void ReleaseWholeRegion(const Locator& locator)
-      FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Allocates a region using the sliced region strategy.
   Locator AllocateSlicedRegion(uint64_t size)
-      FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Releases a region using the sliced region strategy.
   void ReleaseSlicedRegion(const Locator& locator)
-      FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Creates a new buffer and notifies the caller that this has occurred.
   uint32_t CreateBuffer(bool whole, uint64_t size)
-      FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Deletes a buffer and notifies the caller that this has occurred.
-  void DeleteBuffer(uint32_t id) FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+  void DeleteBuffer(uint32_t id) FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Deletes the buffer if it's fully released.
   void MaybeDeleteSlicedBuffer(uint32_t id)
-      FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   mx_rights_t remote_rights_;
-  mutable ftl::Mutex mutex_;
-  std::vector<Buffer> buffers_ FTL_GUARDED_BY(mutex_);
+  mutable fxl::Mutex mutex_;
+  std::vector<Buffer> buffers_ FXL_GUARDED_BY(mutex_);
   std::multimap<uint64_t, uint32_t> free_whole_buffer_ids_by_size_
-      FTL_GUARDED_BY(mutex_);
-  uint32_t active_sliced_buffer_id_ FTL_GUARDED_BY(mutex_) = kNullBufferId;
-  std::queue<BufferUpdate> buffer_updates_ FTL_GUARDED_BY(mutex_);
+      FXL_GUARDED_BY(mutex_);
+  uint32_t active_sliced_buffer_id_ FXL_GUARDED_BY(mutex_) = kNullBufferId;
+  std::queue<BufferUpdate> buffer_updates_ FXL_GUARDED_BY(mutex_);
 };
 
 }  // namespace media

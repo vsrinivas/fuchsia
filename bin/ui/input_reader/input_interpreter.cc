@@ -21,12 +21,12 @@
 
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/input/fidl/usages.fidl.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/time/time_point.h"
 
 namespace {
 int64_t InputEventTimestampNow() {
-  return ftl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
+  return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
 }
 }  // namespace
 
@@ -39,7 +39,7 @@ std::unique_ptr<InputInterpreter> InputInterpreter::Open(
     mozart::InputDeviceRegistry* registry) {
   int fd = openat(dirfd, filename.c_str(), O_RDONLY);
   if (fd < 0) {
-    FTL_LOG(ERROR) << "Failed to open device " << filename;
+    FXL_LOG(ERROR) << "Failed to open device " << filename;
     return nullptr;
   }
 
@@ -64,12 +64,12 @@ InputInterpreter::~InputInterpreter() {}
 bool InputInterpreter::Initialize() {
   int protocol;
   if (!GetProtocol(&protocol)) {
-    FTL_LOG(ERROR) << "Failed to retrieve HID protocol for " << name_;
+    FXL_LOG(ERROR) << "Failed to retrieve HID protocol for " << name_;
     return false;
   }
 
   if (protocol == INPUT_PROTO_KBD) {
-    FTL_VLOG(2) << "Device " << name_ << " has keyboard";
+    FXL_VLOG(2) << "Device " << name_ << " has keyboard";
     has_keyboard_ = true;
     keyboard_descriptor_ = mozart::KeyboardDescriptor::New();
     keyboard_descriptor_->keys.resize(HID_USAGE_KEY_RIGHT_GUI -
@@ -82,7 +82,7 @@ bool InputInterpreter::Initialize() {
     keyboard_report_ = mozart::InputReport::New();
     keyboard_report_->keyboard = mozart::KeyboardReport::New();
   } else if (protocol == INPUT_PROTO_MOUSE) {
-    FTL_VLOG(2) << "Device " << name_ << " has mouse";
+    FXL_VLOG(2) << "Device " << name_ << " has mouse";
     has_mouse_ = true;
     mouse_descriptor_ = mozart::MouseDescriptor::New();
     mouse_descriptor_->rel_x = mozart::Axis::New();
@@ -106,26 +106,26 @@ bool InputInterpreter::Initialize() {
   } else if (protocol == INPUT_PROTO_NONE) {
     size_t report_desc_len;
     if (!GetReportDescriptionLength(&report_desc_len)) {
-      FTL_LOG(ERROR) << "Failed to retrieve HID description length for "
+      FXL_LOG(ERROR) << "Failed to retrieve HID description length for "
                      << name_;
       return false;
     }
 
     std::vector<uint8_t> desc(report_desc_len);
     if (!GetReportDescription(desc.data(), desc.size())) {
-      FTL_LOG(ERROR) << "Failed to retrieve HID description for " << name_;
+      FXL_LOG(ERROR) << "Failed to retrieve HID description for " << name_;
       return false;
     }
 
     if (is_acer12_touch_report_desc(desc.data(), desc.size())) {
       mx_status_t setup_res = setup_acer12_touch(fd_);
       if (setup_res != MX_OK) {
-        FTL_LOG(ERROR) << "Failed to setup Acer12 touch (res " << setup_res
+        FXL_LOG(ERROR) << "Failed to setup Acer12 touch (res " << setup_res
                        << ")";
         return false;
       }
 
-      FTL_VLOG(2) << "Device " << name_ << " has stylus";
+      FXL_VLOG(2) << "Device " << name_ << " has stylus";
       has_stylus_ = true;
       stylus_descriptor_ = mozart::StylusDescriptor::New();
       stylus_descriptor_->x = mozart::Axis::New();
@@ -147,7 +147,7 @@ bool InputInterpreter::Initialize() {
       stylus_report_ = mozart::InputReport::New();
       stylus_report_->stylus = mozart::StylusReport::New();
 
-      FTL_VLOG(2) << "Device " << name_ << " has touchscreen";
+      FXL_VLOG(2) << "Device " << name_ << " has touchscreen";
       has_touchscreen_ = true;
       touchscreen_descriptor_ = mozart::TouchscreenDescriptor::New();
       touchscreen_descriptor_->x = mozart::Axis::New();
@@ -172,12 +172,12 @@ bool InputInterpreter::Initialize() {
     } else if (is_samsung_touch_report_desc(desc.data(), desc.size())) {
       mx_status_t setup_res = setup_samsung_touch(fd_);
       if (setup_res != MX_OK) {
-        FTL_LOG(ERROR) << "Failed to setup Samsung touch (res " << setup_res
+        FXL_LOG(ERROR) << "Failed to setup Samsung touch (res " << setup_res
                        << ")";
         return false;
       }
 
-      FTL_VLOG(2) << "Device " << name_ << " has touchscreen";
+      FXL_VLOG(2) << "Device " << name_ << " has touchscreen";
       has_touchscreen_ = true;
       touchscreen_descriptor_ = mozart::TouchscreenDescriptor::New();
       touchscreen_descriptor_->x = mozart::Axis::New();
@@ -202,14 +202,14 @@ bool InputInterpreter::Initialize() {
     } else if (is_paradise_touch_report_desc(desc.data(), desc.size())) {
       mx_status_t setup_res = setup_paradise_touch(fd_);
       if (setup_res != MX_OK) {
-        FTL_LOG(ERROR) << "Failed to setup Paradise touch (res " << setup_res
+        FXL_LOG(ERROR) << "Failed to setup Paradise touch (res " << setup_res
                        << ")";
         return false;
       }
 
       // TODO(cpu): Add support for stylus.
 
-      FTL_VLOG(2) << "Device " << name_ << " has touchscreen";
+      FXL_VLOG(2) << "Device " << name_ << " has touchscreen";
       has_touchscreen_ = true;
       touchscreen_descriptor_ = mozart::TouchscreenDescriptor::New();
       touchscreen_descriptor_->x = mozart::Axis::New();
@@ -232,11 +232,11 @@ bool InputInterpreter::Initialize() {
 
       touch_device_type_ = TouchDeviceType::PARADISE;
     } else {
-      FTL_VLOG(2) << "Device " << name_ << " has unsupported HID device";
+      FXL_VLOG(2) << "Device " << name_ << " has unsupported HID device";
       return false;
     }
   } else {
-    FTL_VLOG(2) << "Device " << name_ << " has unsupported HID protocol";
+    FXL_VLOG(2) << "Device " << name_ << " has unsupported HID protocol";
     return false;
   }
 
@@ -244,14 +244,14 @@ bool InputInterpreter::Initialize() {
   mx_handle_t handle;
   ssize_t rc = ioctl_device_get_event_handle(fd_, &handle);
   if (rc < 0) {
-    FTL_LOG(ERROR) << "Could not convert file descriptor to handle";
+    FXL_LOG(ERROR) << "Could not convert file descriptor to handle";
     return false;
   }
 
   event_.reset(handle);
 
   if (!GetMaxReportLength(&max_report_len_)) {
-    FTL_LOG(ERROR) << "Failed to retrieve maximum HID report length for "
+    FXL_LOG(ERROR) << "Failed to retrieve maximum HID report length for "
                    << name_;
     return false;
   }
@@ -284,7 +284,7 @@ void InputInterpreter::NotifyRegistry() {
 bool InputInterpreter::Read(bool discard) {
   int rc = read(fd_, report_.data(), max_report_len_);
   if (rc < 1) {
-    FTL_LOG(ERROR) << "Failed to read from input: " << rc;
+    FXL_LOG(ERROR) << "Failed to read from input: " << rc;
     // TODO(jpoichet) check whether the device was actually closed or not
     return false;
   }
@@ -361,7 +361,7 @@ void InputInterpreter::ParseKeyboardReport(uint8_t* report, size_t len) {
     keyboard_report_->keyboard->pressed_keys[index] = keycode;
     index++;
   }
-  FTL_VLOG(2) << name_ << " parsed: " << *keyboard_report_;
+  FXL_VLOG(2) << name_ << " parsed: " << *keyboard_report_;
 }
 
 void InputInterpreter::ParseMouseReport(uint8_t* r, size_t len) {
@@ -371,7 +371,7 @@ void InputInterpreter::ParseMouseReport(uint8_t* r, size_t len) {
   mouse_report_->mouse->rel_x = report->rel_x;
   mouse_report_->mouse->rel_y = report->rel_y;
   mouse_report_->mouse->pressed_buttons = report->buttons;
-  FTL_VLOG(2) << name_ << " parsed: " << *mouse_report_;
+  FXL_VLOG(2) << name_ << " parsed: " << *mouse_report_;
 }
 
 bool InputInterpreter::ParseAcer12StylusReport(uint8_t* r, size_t len) {
@@ -402,7 +402,7 @@ bool InputInterpreter::ParseAcer12StylusReport(uint8_t* r, size_t len) {
   if (acer12_stylus_status_barrel(report->status)) {
     stylus_report_->stylus->pressed_buttons |= kStylusBarrel;
   }
-  FTL_VLOG(2) << name_ << " parsed: " << *stylus_report_;
+  FXL_VLOG(2) << name_ << " parsed: " << *stylus_report_;
 
   return true;
 }
@@ -443,7 +443,7 @@ bool InputInterpreter::ParseAcer12TouchscreenReport(uint8_t* r, size_t len) {
       touchscreen_report_->touchscreen->touches[index++] = std::move(touch);
     }
   }
-  FTL_VLOG(2) << name_ << " parsed: " << *touchscreen_report_;
+  FXL_VLOG(2) << name_ << " parsed: " << *touchscreen_report_;
   return true;
 }
 
@@ -479,7 +479,7 @@ bool InputInterpreter::ParseSamsungTouchscreenReport(uint8_t* r, size_t len) {
 
 bool InputInterpreter::ParseParadiseTouchscreenReport(uint8_t* r, size_t len) {
   if (len != sizeof(paradise_touch_t)) {
-    FTL_LOG(INFO) << "paradise wrong size " << len;
+    FXL_LOG(INFO) << "paradise wrong size " << len;
     return false;
   }
 
@@ -503,7 +503,7 @@ bool InputInterpreter::ParseParadiseTouchscreenReport(uint8_t* r, size_t len) {
     touchscreen_report_->touchscreen->touches[index++] = std::move(touch);
   }
 
-  FTL_VLOG(2) << name_ << " parsed: " << *touchscreen_report_;
+  FXL_VLOG(2) << name_ << " parsed: " << *touchscreen_report_;
   return true;
 }
 
@@ -511,7 +511,7 @@ bool InputInterpreter::ParseParadiseTouchscreenReport(uint8_t* r, size_t len) {
 mx_status_t InputInterpreter::GetProtocol(int* out_proto) {
   ssize_t rc = ioctl_input_get_protocol(fd_, out_proto);
   if (rc < 0) {
-    FTL_LOG(ERROR) << "hid: could not get protocol from " << name_
+    FXL_LOG(ERROR) << "hid: could not get protocol from " << name_
                    << " (status=" << rc << ")";
   }
   return rc;
@@ -521,7 +521,7 @@ mx_status_t InputInterpreter::GetReportDescriptionLength(
     size_t* out_report_desc_len) {
   ssize_t rc = ioctl_input_get_report_desc_size(fd_, out_report_desc_len);
   if (rc < 0) {
-    FTL_LOG(ERROR) << "hid: could not get report descriptor length from "
+    FXL_LOG(ERROR) << "hid: could not get report descriptor length from "
                    << name_ << "  (status=" << rc << ")";
   }
   return rc;
@@ -531,7 +531,7 @@ mx_status_t InputInterpreter::GetReportDescription(uint8_t* out_buf,
                                                    size_t out_report_desc_len) {
   ssize_t rc = ioctl_input_get_report_desc(fd_, out_buf, out_report_desc_len);
   if (rc < 0) {
-    FTL_LOG(ERROR) << "hid: could not get report descriptor from " << name_
+    FXL_LOG(ERROR) << "hid: could not get report descriptor from " << name_
                    << " (status=" << rc << ")";
   }
   return rc;
@@ -541,7 +541,7 @@ mx_status_t InputInterpreter::GetMaxReportLength(
     input_report_size_t* out_max_report_len) {
   ssize_t rc = ioctl_input_get_max_reportsize(fd_, out_max_report_len);
   if (rc < 0) {
-    FTL_LOG(ERROR) << "hid: could not get max report size from " << name_
+    FXL_LOG(ERROR) << "hid: could not get max report size from " << name_
                    << " (status=" << rc << ")";
   }
   return rc;

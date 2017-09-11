@@ -9,7 +9,7 @@ namespace impl {
 
 PipelineLayout::PipelineLayout(vk::Device device, vk::PipelineLayout layout)
     : device_(device), layout_(layout) {
-  FTL_DCHECK(layout);
+  FXL_DCHECK(layout);
 }
 
 PipelineLayout::~PipelineLayout() {

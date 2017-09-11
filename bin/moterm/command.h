@@ -13,8 +13,8 @@
 #include <functional>
 #include <vector>
 
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/functional/closure.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/mtl/io/redirection.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
@@ -32,7 +32,7 @@ class Command : mtl::MessageLoopHandler {
   bool Start(std::vector<std::string> command,
              std::vector<mtl::StartupHandle> startup_handles,
              ReceiveCallback receive_callback,
-             ftl::Closure termination_callback);
+             fxl::Closure termination_callback);
 
   void SendData(const void* bytes, size_t num_bytes);
 
@@ -40,7 +40,7 @@ class Command : mtl::MessageLoopHandler {
   // |mtl::MessageLoopHandler|:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count);
 
-  ftl::Closure termination_callback_;
+  fxl::Closure termination_callback_;
   ReceiveCallback receive_callback_;
   mx::socket stdin_;
   mx::socket stdout_;

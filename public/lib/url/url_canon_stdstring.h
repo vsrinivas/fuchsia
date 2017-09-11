@@ -11,8 +11,8 @@
 
 #include <string>
 
-#include "lib/ftl/compiler_specific.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/compiler_specific.h"
+#include "lib/fxl/strings/string_view.h"
 #include "lib/url/url_canon.h"
 #include "lib/url/url_export.h"
 

@@ -7,7 +7,7 @@
 #include <memory>
 
 #include "garnet/bin/netconnector/message_transceiver.h"
-#include "lib/ftl/files/unique_fd.h"
+#include "lib/fxl/files/unique_fd.h"
 #include "lib/netconnector/fidl/netconnector.fidl.h"
 
 namespace netconnector {
@@ -16,7 +16,7 @@ class NetConnectorImpl;
 
 class ServiceAgent : public MessageTransceiver {
  public:
-  static std::unique_ptr<ServiceAgent> Create(ftl::UniqueFD socket_fd,
+  static std::unique_ptr<ServiceAgent> Create(fxl::UniqueFD socket_fd,
                                               NetConnectorImpl* owner);
 
   ~ServiceAgent();
@@ -30,11 +30,11 @@ class ServiceAgent : public MessageTransceiver {
   void OnConnectionClosed() override;
 
  private:
-  ServiceAgent(ftl::UniqueFD socket_fd, NetConnectorImpl* owner);
+  ServiceAgent(fxl::UniqueFD socket_fd, NetConnectorImpl* owner);
 
   NetConnectorImpl* owner_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ServiceAgent);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ServiceAgent);
 };
 
 }  // namespace netconnector

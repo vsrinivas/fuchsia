@@ -5,14 +5,14 @@
 #include "garnet/bin/netconnector/responding_service_host.h"
 
 #include "lib/app/cpp/connect.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 
 namespace netconnector {
 
 RespondingServiceHost::RespondingServiceHost(
     const app::ApplicationEnvironmentPtr& environment) {
-  FTL_DCHECK(environment);
+  FXL_DCHECK(environment);
   environment->GetApplicationLauncher(launcher_.NewRequest());
 }
 
@@ -22,16 +22,16 @@ void RespondingServiceHost::RegisterSingleton(
     const std::string& service_name,
     app::ApplicationLaunchInfoPtr launch_info) {
   service_namespace_.AddServiceForName(
-      ftl::MakeCopyable([
+      fxl::MakeCopyable([
         this, service_name, launch_info = std::move(launch_info),
         controller = app::ApplicationControllerPtr()
       ](mx::channel client_handle) mutable {
-        FTL_VLOG(2) << "Handling request for service " << service_name;
+        FXL_VLOG(2) << "Handling request for service " << service_name;
 
         auto iter = service_providers_by_name_.find(service_name);
 
         if (iter == service_providers_by_name_.end()) {
-          FTL_VLOG(1) << "Launching " << launch_info->url << " for service "
+          FXL_VLOG(1) << "Launching " << launch_info->url << " for service "
                       << service_name;
 
           // TODO(dalesat): Create application-specific environment.
@@ -50,7 +50,7 @@ void RespondingServiceHost::RegisterSingleton(
 
           service_provider.set_connection_error_handler(
               [this, service_name, &controller] {
-                FTL_LOG(INFO)
+                FXL_LOG(INFO)
                     << "Service " << service_name << " provider disconnected";
                 controller.reset();  // kills the singleton application
                 service_providers_by_name_.erase(service_name);
@@ -72,7 +72,7 @@ void RespondingServiceHost::RegisterProvider(
       app::ServiceProviderPtr::Create(std::move(handle));
 
   service_provider.set_connection_error_handler([this, service_name] {
-    FTL_LOG(INFO) << "Service " << service_name << " provider disconnected";
+    FXL_LOG(INFO) << "Service " << service_name << " provider disconnected";
     service_providers_by_name_.erase(service_name);
   });
 
@@ -80,10 +80,10 @@ void RespondingServiceHost::RegisterProvider(
 
   service_namespace_.AddServiceForName(
       [this, service_name](mx::channel client_handle) {
-        FTL_VLOG(2) << "Servicing provided service request for "
+        FXL_VLOG(2) << "Servicing provided service request for "
                     << service_name;
         auto iter = service_providers_by_name_.find(service_name);
-        FTL_DCHECK(iter != service_providers_by_name_.end());
+        FXL_DCHECK(iter != service_providers_by_name_.end());
         iter->second->ConnectToService(service_name, std::move(client_handle));
       },
       service_name);

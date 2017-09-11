@@ -11,8 +11,8 @@
 #include "escher/status.h"
 #include "escher/vk/vulkan_context.h"
 #include "escher/vk/vulkan_device_queues.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
 
 namespace escher {
 
@@ -101,7 +101,7 @@ class Escher : public MeshBuilderFactory {
 
   std::unique_ptr<impl::EscherImpl> impl_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Escher);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Escher);
 };
 
 }  // namespace escher

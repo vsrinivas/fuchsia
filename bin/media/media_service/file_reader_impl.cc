@@ -8,8 +8,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "lib/ftl/files/file_descriptor.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/files/file_descriptor.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace media {
@@ -54,7 +54,7 @@ void FileReaderImpl::Describe(const DescribeCallback& callback) {
 }
 
 void FileReaderImpl::ReadAt(uint64_t position, const ReadAtCallback& callback) {
-  FTL_DCHECK(position < size_);
+  FXL_DCHECK(position < size_);
 
   if (result_ != MediaResult::OK) {
     callback(result_, mx::socket());
@@ -72,7 +72,7 @@ void FileReaderImpl::ReadAt(uint64_t position, const ReadAtCallback& callback) {
   off_t seek_result = lseek(fd_.get(), position, SEEK_SET);
   if (seek_result < 0) {
     // TODO(dalesat): More specific error code.
-    FTL_LOG(ERROR) << "seek failed, result " << seek_result;
+    FXL_LOG(ERROR) << "seek failed, result " << seek_result;
     result_ = MediaResult::UNKNOWN_ERROR;
     callback(result_, mx::socket());
     return;
@@ -82,7 +82,7 @@ void FileReaderImpl::ReadAt(uint64_t position, const ReadAtCallback& callback) {
   mx_status_t status = mx::socket::create(0u, &socket_, &other_socket);
   if (status != MX_OK) {
     // TODO(dalesat): More specific error code.
-    FTL_LOG(ERROR) << "mx::socket::create failed, status " << status;
+    FXL_LOG(ERROR) << "mx::socket::create failed, status " << status;
     result_ = MediaResult::UNKNOWN_ERROR;
     callback(result_, mx::socket());
     return;
@@ -95,7 +95,7 @@ void FileReaderImpl::ReadAt(uint64_t position, const ReadAtCallback& callback) {
 
   if (result_ != MediaResult::OK) {
     // Error occurred during WriteToSocket.
-    FTL_LOG(ERROR) << "error occurred during WriteToSocket, result_ "
+    FXL_LOG(ERROR) << "error occurred during WriteToSocket, result_ "
                    << result_;
     callback(result_, mx::socket());
     return;
@@ -118,7 +118,7 @@ void FileReaderImpl::WriteToSocketStatic(mx_status_t status,
   }
 
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "mx::socket::write failed, status " << status;
+    FXL_LOG(ERROR) << "mx::socket::write failed, status " << status;
     reader->socket_.reset();
     return;
   }
@@ -136,7 +136,7 @@ void FileReaderImpl::WriteToSocket() {
       return;
     }
 
-    FTL_DCHECK(remaining_buffer_bytes_ != nullptr);
+    FXL_DCHECK(remaining_buffer_bytes_ != nullptr);
 
     size_t byte_count;
     mx_status_t status =
@@ -144,7 +144,7 @@ void FileReaderImpl::WriteToSocket() {
                       remaining_buffer_bytes_count_, &byte_count);
 
     if (status == MX_OK) {
-      FTL_DCHECK(byte_count != 0);
+      FXL_DCHECK(byte_count != 0);
       remaining_buffer_bytes_ += byte_count;
       remaining_buffer_bytes_count_ -= byte_count;
       continue;
@@ -164,7 +164,7 @@ void FileReaderImpl::WriteToSocket() {
       return;
     }
 
-    FTL_LOG(ERROR) << "mx::socket::write failed, status " << status;
+    FXL_LOG(ERROR) << "mx::socket::write failed, status " << status;
     socket_.reset();
     // TODO(dalesat): More specific error code.
     result_ = MediaResult::UNKNOWN_ERROR;
@@ -173,11 +173,11 @@ void FileReaderImpl::WriteToSocket() {
 }
 
 void FileReaderImpl::ReadFromFile() {
-  FTL_DCHECK(buffer_.size() == kBufferSize);
-  FTL_DCHECK(!reached_end_);
+  FXL_DCHECK(buffer_.size() == kBufferSize);
+  FXL_DCHECK(!reached_end_);
 
   ssize_t result =
-      ftl::ReadFileDescriptor(fd_.get(), buffer_.data(), kBufferSize);
+      fxl::ReadFileDescriptor(fd_.get(), buffer_.data(), kBufferSize);
   if (result < 0) {
     // TODO(dalesat): More specific error code.
     result_ = MediaResult::UNKNOWN_ERROR;

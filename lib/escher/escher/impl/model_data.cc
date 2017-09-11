@@ -86,7 +86,7 @@ const MeshShaderBinding& ModelData::GetMeshShaderBinding(MeshSpec spec) {
   if (ptr) {
     return *ptr;
   }
-  FTL_DCHECK(spec.IsValid());
+  FXL_DCHECK(spec.IsValid());
 
   std::vector<vk::VertexInputAttributeDescription> attributes;
 

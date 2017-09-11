@@ -10,8 +10,8 @@
 #include <magenta/device/intel-pt.h>
 #include <magenta/syscalls.h>
 
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 
 #include "inferior-control/exception-port.h"
 #include "inferior-control/process.h"
@@ -100,7 +100,7 @@ class IptServer final : public Server {
   bool DumpResults();
 
   // IOLoop::Delegate overrides.
-  void OnBytesRead(const ftl::StringView& bytes) override;
+  void OnBytesRead(const fxl::StringView& bytes) override;
   void OnDisconnected() override;
   void OnIOError() override;
 
@@ -122,7 +122,7 @@ class IptServer final : public Server {
 
   IptConfig config_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(IptServer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(IptServer);
 };
 
 }  // namespace debugserver

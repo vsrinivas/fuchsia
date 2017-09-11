@@ -7,7 +7,7 @@
 #include "escher/base/type_info.h"
 
 #include "gtest/gtest.h"
-#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/fxl/memory/ref_ptr.h"
 
 namespace {
 
@@ -92,7 +92,7 @@ class TestOwner
   explicit TestOwner(size_t& destroyed_count)
       : destroyed_count_(destroyed_count) {}
 
-  ftl::RefPtr<Ownable1> NewOwnable1() {
+  fxl::RefPtr<Ownable1> NewOwnable1() {
     auto result = escher::Make<Ownable1>(destroyed_count_);
     EXPECT_EQ(1U, result->ref_count());
     BecomeOwnerOf(result.get());
@@ -103,7 +103,7 @@ class TestOwner
       std::unique_ptr<OwnableBaseClassForTest> unreffed) override {
     EXPECT_EQ(0U, unreffed->ref_count());
     unreffed_.push_back(
-        ftl::RefPtr<OwnableBaseClassForTest>(unreffed.release()));
+        fxl::RefPtr<OwnableBaseClassForTest>(unreffed.release()));
   }
 
   size_t GetUnreffedCount() const { return unreffed_.size(); }
@@ -117,7 +117,7 @@ class TestOwner
 
  private:
   size_t& destroyed_count_;
-  std::vector<ftl::RefPtr<OwnableBaseClassForTest>> unreffed_;
+  std::vector<fxl::RefPtr<OwnableBaseClassForTest>> unreffed_;
 };
 
 TEST(Ownable, ReceiveOwnables) {

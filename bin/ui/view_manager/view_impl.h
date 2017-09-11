@@ -7,7 +7,7 @@
 
 #include "lib/ui/views/fidl/views.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace view_manager {
 
@@ -58,7 +58,7 @@ class ViewImpl : public mozart::View,
   fidl::BindingSet<app::ServiceProvider> service_provider_bindings_;
   fidl::BindingSet<mozart::ViewContainer> container_bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ViewImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ViewImpl);
 };
 
 }  // namespace view_manager

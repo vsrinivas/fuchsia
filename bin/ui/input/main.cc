@@ -10,17 +10,17 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/input/fidl/input_device_registry.fidl.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/log_settings.h"
-#include "lib/ftl/log_settings_command_line.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/log_settings.h"
+#include "lib/fxl/log_settings_command_line.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
 int64_t InputEventTimestampNow() {
-  return ftl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
+  return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
 }
 
 }  // namespace
@@ -37,7 +37,7 @@ class InputApp {
 
   ~InputApp() {}
 
-  void Run(const ftl::CommandLine& command_line) {
+  void Run(const fxl::CommandLine& command_line) {
     const auto& positional_args = command_line.positional_args();
     if (positional_args.empty()) {
       Usage();
@@ -47,7 +47,7 @@ class InputApp {
     uint32_t duration_ms = 0;
     std::string duration_str;
     if (command_line.GetOptionValue("duration", &duration_str)) {
-      if (!ftl::StringToNumberWithError(duration_str, &duration_ms)) {
+      if (!fxl::StringToNumberWithError(duration_str, &duration_ms)) {
         Error("Invalid duration parameter");
         return;
       }
@@ -57,7 +57,7 @@ class InputApp {
       uint32_t width = 1000;
       std::string width_str;
       if (command_line.GetOptionValue("width", &width_str)) {
-        if (!ftl::StringToNumberWithError(width_str, &width)) {
+        if (!fxl::StringToNumberWithError(width_str, &width)) {
           Error("Invalid width parameter");
           return;
         }
@@ -66,7 +66,7 @@ class InputApp {
       uint32_t height = 1000;
       std::string height_str;
       if (command_line.GetOptionValue("height", &height_str)) {
-        if (!ftl::StringToNumberWithError(height_str, &height)) {
+        if (!fxl::StringToNumberWithError(height_str, &height)) {
           Error("Invalid width height");
           return;
         }
@@ -135,7 +135,7 @@ class InputApp {
     mozart::DeviceDescriptorPtr descriptor = mozart::DeviceDescriptor::New();
     descriptor->touchscreen = std::move(touchscreen);
 
-    FTL_VLOG(1) << "Registering " << *descriptor;
+    FXL_VLOG(1) << "Registering " << *descriptor;
     registry_->RegisterDevice(std::move(descriptor), input_device.NewRequest());
     return input_device;
   }
@@ -151,16 +151,16 @@ class InputApp {
 
     int32_t x, y;
 
-    if (!ftl::StringToNumberWithError(args[1], &x)) {
+    if (!fxl::StringToNumberWithError(args[1], &x)) {
       Error("Invavlid x coordinate");
       return;
     }
-    if (!ftl::StringToNumberWithError(args[2], &y)) {
+    if (!fxl::StringToNumberWithError(args[2], &y)) {
       Error("Invavlid y coordinate");
       return;
     }
 
-    FTL_VLOG(1) << "TapEvent " << x << "x" << y;
+    FXL_VLOG(1) << "TapEvent " << x << "x" << y;
 
     mozart::InputDevicePtr input_device = RegisterTouchscreen(width, height);
     SendTap(std::move(input_device), x, y, duration_ms);
@@ -175,7 +175,7 @@ class InputApp {
 
     uint32_t usage;
 
-    if (!ftl::StringToNumberWithError(args[1], &usage)) {
+    if (!fxl::StringToNumberWithError(args[1], &usage)) {
       Error("Invalid HID usage value");
       return;
     }
@@ -185,7 +185,7 @@ class InputApp {
       return;
     }
 
-    FTL_VLOG(1) << "KeyEvent " << usage;
+    FXL_VLOG(1) << "KeyEvent " << usage;
 
     mozart::KeyboardDescriptorPtr keyboard = mozart::KeyboardDescriptor::New();
     keyboard->keys.resize(HID_USAGE_KEY_RIGHT_GUI - HID_USAGE_KEY_A);
@@ -197,7 +197,7 @@ class InputApp {
     descriptor->keyboard = std::move(keyboard);
 
     mozart::InputDevicePtr input_device;
-    FTL_VLOG(1) << "Registering " << *descriptor;
+    FXL_VLOG(1) << "Registering " << *descriptor;
     registry_->RegisterDevice(std::move(descriptor), input_device.NewRequest());
 
     SendKeyPress(std::move(input_device), usage, duration_ms);
@@ -214,24 +214,24 @@ class InputApp {
 
     int32_t x0, y0, x1, y1;
 
-    if (!ftl::StringToNumberWithError(args[1], &x0)) {
+    if (!fxl::StringToNumberWithError(args[1], &x0)) {
       Error("Invalid x0 coordinate");
       return;
     }
-    if (!ftl::StringToNumberWithError(args[2], &y0)) {
+    if (!fxl::StringToNumberWithError(args[2], &y0)) {
       Error("Invalid y0 coordinate");
       return;
     }
-    if (!ftl::StringToNumberWithError(args[3], &x1)) {
+    if (!fxl::StringToNumberWithError(args[3], &x1)) {
       Error("Invalid x1 coordinate");
       return;
     }
-    if (!ftl::StringToNumberWithError(args[4], &y1)) {
+    if (!fxl::StringToNumberWithError(args[4], &y1)) {
       Error("Invalid y1 coordinate");
       return;
     }
 
-    FTL_VLOG(1) << "SwipeEvent " << x0 << "x" << y0 << " -> " << x1 << "x"
+    FXL_VLOG(1) << "SwipeEvent " << x0 << "x" << y0 << " -> " << x1 << "x"
                 << y1;
     mozart::InputDevicePtr input_device = RegisterTouchscreen(width, height);
 
@@ -255,12 +255,12 @@ class InputApp {
     report->event_time = InputEventTimestampNow();
     report->touchscreen = std::move(touchscreen);
 
-    FTL_VLOG(1) << "SendTap " << *report;
+    FXL_VLOG(1) << "SendTap " << *report;
     input_device->DispatchReport(std::move(report));
 
-    ftl::TimeDelta delta = ftl::TimeDelta::FromMilliseconds(duration_ms);
+    fxl::TimeDelta delta = fxl::TimeDelta::FromMilliseconds(duration_ms);
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        ftl::MakeCopyable([device = std::move(input_device)]() mutable {
+        fxl::MakeCopyable([device = std::move(input_device)]() mutable {
           // UP
           mozart::TouchscreenReportPtr touchscreen =
               mozart::TouchscreenReport::New();
@@ -270,7 +270,7 @@ class InputApp {
           report->event_time = InputEventTimestampNow();
           report->touchscreen = std::move(touchscreen);
 
-          FTL_VLOG(1) << "SendTap " << *report;
+          FXL_VLOG(1) << "SendTap " << *report;
           device->DispatchReport(std::move(report));
           mtl::MessageLoop::GetCurrent()->PostQuitTask();
         }),
@@ -288,12 +288,12 @@ class InputApp {
     mozart::InputReportPtr report = mozart::InputReport::New();
     report->event_time = InputEventTimestampNow();
     report->keyboard = std::move(keyboard);
-    FTL_VLOG(1) << "SendKeyPress " << *report;
+    FXL_VLOG(1) << "SendKeyPress " << *report;
     input_device->DispatchReport(std::move(report));
 
-    ftl::TimeDelta delta = ftl::TimeDelta::FromMilliseconds(duration_ms);
+    fxl::TimeDelta delta = fxl::TimeDelta::FromMilliseconds(duration_ms);
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        ftl::MakeCopyable([device = std::move(input_device)]() mutable {
+        fxl::MakeCopyable([device = std::move(input_device)]() mutable {
 
           // RELEASED
           mozart::KeyboardReportPtr keyboard = mozart::KeyboardReport::New();
@@ -302,7 +302,7 @@ class InputApp {
           mozart::InputReportPtr report = mozart::InputReport::New();
           report->event_time = InputEventTimestampNow();
           report->keyboard = std::move(keyboard);
-          FTL_VLOG(1) << "SendKeyPress " << *report;
+          FXL_VLOG(1) << "SendKeyPress " << *report;
           device->DispatchReport(std::move(report));
           mtl::MessageLoop::GetCurrent()->PostQuitTask();
         }),
@@ -327,12 +327,12 @@ class InputApp {
     mozart::InputReportPtr report = mozart::InputReport::New();
     report->event_time = InputEventTimestampNow();
     report->touchscreen = std::move(touchscreen);
-    FTL_VLOG(1) << "SendSwipe " << *report;
+    FXL_VLOG(1) << "SendSwipe " << *report;
     input_device->DispatchReport(std::move(report));
 
-    ftl::TimeDelta delta = ftl::TimeDelta::FromMilliseconds(duration_ms);
+    fxl::TimeDelta delta = fxl::TimeDelta::FromMilliseconds(duration_ms);
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        ftl::MakeCopyable(
+        fxl::MakeCopyable(
             [ device = std::move(input_device), x1, y1 ]() mutable {
               // MOVE
               mozart::TouchPtr touch = mozart::Touch::New();
@@ -347,7 +347,7 @@ class InputApp {
               mozart::InputReportPtr report = mozart::InputReport::New();
               report->event_time = InputEventTimestampNow();
               report->touchscreen = std::move(touchscreen);
-              FTL_VLOG(1) << "SendSwipe " << *report;
+              FXL_VLOG(1) << "SendSwipe " << *report;
               device->DispatchReport(std::move(report));
 
               // UP
@@ -357,7 +357,7 @@ class InputApp {
               report = mozart::InputReport::New();
               report->event_time = InputEventTimestampNow();
               report->touchscreen = std::move(touchscreen);
-              FTL_VLOG(1) << "SendSwipe " << *report;
+              FXL_VLOG(1) << "SendSwipe " << *report;
               device->DispatchReport(std::move(report));
 
               mtl::MessageLoop::GetCurrent()->PostQuitTask();
@@ -371,8 +371,8 @@ class InputApp {
 }  // namespace input
 
 int main(int argc, char** argv) {
-  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
-  if (!ftl::SetLogSettingsFromCommandLine(command_line))
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
   mtl::MessageLoop loop;

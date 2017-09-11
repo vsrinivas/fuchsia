@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <limits>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_server/platform/generic/mixers/mixer_utils.h"
 
@@ -61,10 +61,10 @@ inline bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
   uint32_t doff = *dst_offset;
   int32_t soff = *frac_src_offset;
 
-  FTL_DCHECK(frac_src_frames <=
+  FXL_DCHECK(frac_src_frames <=
              static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
-  FTL_DCHECK(soff < static_cast<int32_t>(frac_src_frames));
-  FTL_DCHECK(soff >= 0);
+  FXL_DCHECK(soff < static_cast<int32_t>(frac_src_frames));
+  FXL_DCHECK(soff >= 0);
 
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets.

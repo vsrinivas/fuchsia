@@ -9,7 +9,7 @@
 #include <memory>
 #include <string>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 #include "elf-reader.h"
 
@@ -63,7 +63,7 @@ class SymbolTable {
   // strings here.
   std::unique_ptr<SectionContents> string_section_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SymbolTable);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SymbolTable);
 };
 
 }  // namespace elf

@@ -7,8 +7,8 @@
 
 #include "lib/ui/skia/skia_font_loader.h"
 #include "lib/ui/view_framework/skia_view.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/time/time_point.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkRect.h"
@@ -49,9 +49,9 @@ class JankView : public mozart::SkiaView {
   mozart::SkiaFontLoader font_loader_;
   sk_sp<SkTypeface> typeface_;
 
-  ftl::TimePoint stutter_end_time_;
+  fxl::TimePoint stutter_end_time_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(JankView);
+  FXL_DISALLOW_COPY_AND_ASSIGN(JankView);
 };
 
 }  // namespace examples

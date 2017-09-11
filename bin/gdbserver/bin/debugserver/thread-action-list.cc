@@ -6,7 +6,7 @@
 
 #include "debugger-utils/util.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 #include "util.h"
 
@@ -20,24 +20,24 @@ ThreadActionList::Entry::Entry(ThreadActionList::Action action,
                                mx_koid_t pid,
                                mx_koid_t tid)
     : action_(action), pid_(pid), tid_(tid) {
-  FTL_DCHECK(pid_ != 0);
+  FXL_DCHECK(pid_ != 0);
   // A tid value of zero is ok.
 }
 
 void ThreadActionList::Entry::set_picked_tid(mx_koid_t tid) {
-  FTL_DCHECK(tid != 0);
-  FTL_DCHECK(tid_ == 0);
+  FXL_DCHECK(tid != 0);
+  FXL_DCHECK(tid_ == 0);
   tid_ = tid;
 }
 
 bool ThreadActionList::Entry::Contains(mx_koid_t pid, mx_koid_t tid) const {
-  FTL_DCHECK(pid != 0 && pid != kAll);
-  FTL_DCHECK(tid != 0 && tid != kAll);
+  FXL_DCHECK(pid != 0 && pid != kAll);
+  FXL_DCHECK(tid != 0 && tid != kAll);
   // A "0" meaning "arbitrary process" is resolved to the current process at
   // construction time. A "0" meaning "arbitrary thread" must be resolved by
   // the caller. If it cannot be resolved it is left as zero, and there is
   // no match.
-  FTL_DCHECK(pid_ != 0);
+  FXL_DCHECK(pid_ != 0);
   if (pid != pid_ && pid_ != kAll)
     return false;
   if (tid != tid_ && tid_ != kAll)
@@ -75,14 +75,14 @@ const char* ThreadActionList::ActionToString(ThreadActionList::Action action) {
   return "(unknown)";
 }
 
-ThreadActionList::ThreadActionList(const ftl::StringView& str,
+ThreadActionList::ThreadActionList(const fxl::StringView& str,
                                    mx_koid_t cur_proc) {
   size_t len = str.size();
   size_t s = 0;
   Action default_action = Action::kNone;
 
   if (len == 0) {
-    FTL_LOG(ERROR) << "Empty action string";
+    FXL_LOG(ERROR) << "Empty action string";
     return;
   }
 
@@ -94,17 +94,17 @@ ThreadActionList::ThreadActionList(const ftl::StringView& str,
     else
       n = semi - s;
     if (n == 0) {
-      FTL_LOG(ERROR) << "Missing action: " << str;
+      FXL_LOG(ERROR) << "Missing action: " << str;
       return;
     }
     Action action;
     if (!DecodeAction(str[s], &action)) {
-      FTL_LOG(ERROR) << "Bad action: " << str;
+      FXL_LOG(ERROR) << "Bad action: " << str;
       return;
     }
     if (n == 1) {
       if (default_action != Action::kNone) {
-        FTL_LOG(ERROR) << "Multiple default actions: " << str;
+        FXL_LOG(ERROR) << "Multiple default actions: " << str;
         return;
       }
       default_action = action;
@@ -114,23 +114,23 @@ ThreadActionList::ThreadActionList(const ftl::StringView& str,
       int64_t pid, tid;
       if (!util::ParseThreadId(str.substr(s + 2, n - 2), &has_pid, &pid,
                                &tid)) {
-        FTL_LOG(ERROR) << "Bad thread id in action: " << str;
+        FXL_LOG(ERROR) << "Bad thread id in action: " << str;
         return;
       }
       if ((has_pid && pid <= -2) || tid <= -2) {
-        FTL_LOG(ERROR) << "Bad thread id in action: " << str;
+        FXL_LOG(ERROR) << "Bad thread id in action: " << str;
         return;
       }
       if (!has_pid || pid == 0)
         pid = cur_proc;
       if (pid == -1 && tid != -1) {
-        FTL_LOG(ERROR) << "All processes and one thread: " << str;
+        FXL_LOG(ERROR) << "All processes and one thread: " << str;
         return;
       }
       actions_.push_back(
           Entry(action, pid == -1 ? kAll : pid, tid == -1 ? kAll : tid));
     } else {
-      FTL_LOG(ERROR) << "Syntax error in action: " << str;
+      FXL_LOG(ERROR) << "Syntax error in action: " << str;
       return;
     }
     if (semi == str.npos)
@@ -145,7 +145,7 @@ ThreadActionList::ThreadActionList(const ftl::StringView& str,
 
 ThreadActionList::Action ThreadActionList::GetAction(mx_koid_t pid,
                                                      mx_koid_t tid) const {
-  FTL_DCHECK(pick_ones_resolved_);
+  FXL_DCHECK(pick_ones_resolved_);
 
   for (auto e : actions_) {
     if (e.Contains(pid, tid))

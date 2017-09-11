@@ -8,7 +8,7 @@
 #include <mx/handle.h>
 #include <mx/socket.h>
 
-#include "lib/ftl/ftl_export.h"
+#include "lib/fxl/fxl_export.h"
 
 namespace mtl {
 
@@ -30,7 +30,7 @@ struct StartupHandle {
 // |out_socket| receives the local end of the socket.
 // |out_startup_handle| receives the startup handle which must be passed to
 // the launcher to bind the remote end of the socket in the new process.
-FTL_EXPORT mx_status_t
+FXL_EXPORT mx_status_t
 CreateRedirectedSocket(int startup_fd,
                        mx::socket* out_socket,
                        StartupHandle* out_startup_handle);

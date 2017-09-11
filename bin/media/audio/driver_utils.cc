@@ -40,7 +40,7 @@ static const std::map<AST::SampleFormat, audio_sample_format_t>
 bool SampleFormatToDriverSampleFormat(
     AudioStreamType::SampleFormat sample_format,
     audio_sample_format_t* driver_sample_format_out) {
-  FTL_DCHECK(driver_sample_format_out != nullptr);
+  FXL_DCHECK(driver_sample_format_out != nullptr);
 
   auto iter = kSampleFormatToDriverSampleFormatMap.find(sample_format);
   if (iter == kSampleFormatToDriverSampleFormatMap.end()) {
@@ -67,7 +67,7 @@ bool DriverSampleFormatToSampleFormat(
 void AddAudioStreamTypeSets(
     audio_stream_format_range_t fmt,
     std::vector<std::unique_ptr<media::StreamTypeSet>>* typeset_target) {
-  FTL_DCHECK(typeset_target != nullptr);
+  FXL_DCHECK(typeset_target != nullptr);
 
   uint32_t flags = fmt.sample_formats & AUDIO_SAMPLE_FORMAT_FLAG_MASK;
   uint32_t noflags = fmt.sample_formats & ~AUDIO_SAMPLE_FORMAT_FLAG_MASK;
@@ -82,7 +82,7 @@ void AddAudioStreamTypeSets(
     auto driver_sample_format = static_cast<audio_sample_format_t>(i | flags);
     if (!DriverSampleFormatToSampleFormat(driver_sample_format,
                                           &sample_format)) {
-      FTL_LOG(WARNING) << "Failed to map driver sample format 0x"
+      FXL_LOG(WARNING) << "Failed to map driver sample format 0x"
                        << std::hex << driver_sample_format
                        << " to AudioStreamType::SampleFormat.  Skipping.";
       continue;

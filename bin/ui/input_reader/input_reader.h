@@ -11,7 +11,7 @@
 #include "lib/ui/input/fidl/input_device_registry.fidl.h"
 #include "lib/ui/input/fidl/input_reports.fidl.h"
 #include "garnet/bin/ui/input_reader/input_interpreter.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/io/device_watcher.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
@@ -40,7 +40,7 @@ class InputReader : mtl::MessageLoopHandler {
     std::unique_ptr<InputInterpreter> interpreter_;
     mtl::MessageLoop::HandlerKey key_;
 
-    FTL_DISALLOW_COPY_AND_ASSIGN(DeviceInfo);
+    FXL_DISALLOW_COPY_AND_ASSIGN(DeviceInfo);
   };
 
   void WatchDisplayOwnershipChanges(int dir_fd);
@@ -67,7 +67,7 @@ class InputReader : mtl::MessageLoopHandler {
   bool ignore_console_;
   bool display_owned_ = true;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(InputReader);
+  FXL_DISALLOW_COPY_AND_ASSIGN(InputReader);
 };
 
 }  // namespace input

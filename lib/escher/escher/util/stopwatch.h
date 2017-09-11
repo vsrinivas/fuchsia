@@ -5,11 +5,11 @@
 #pragma once
 
 #include <chrono>
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace escher {
 
-// TODO: augment ftl::Stopwatch to support Stop/Reset, and use that instead.
+// TODO: augment fxl::Stopwatch to support Stop/Reset, and use that instead.
 class Stopwatch {
   typedef std::chrono::high_resolution_clock ClockT;
   typedef std::chrono::microseconds UnitT;
@@ -29,7 +29,7 @@ class Stopwatch {
   uint64_t elapsed_microseconds_ = 0;
   std::chrono::time_point<ClockT> start_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Stopwatch);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Stopwatch);
 };
 
 // Inline function definitions.

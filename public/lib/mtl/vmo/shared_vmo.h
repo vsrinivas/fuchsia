@@ -9,9 +9,9 @@
 
 #include <mx/vmo.h>
 
-#include "lib/ftl/ftl_export.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/fxl_export.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace mtl {
 
@@ -20,7 +20,7 @@ namespace mtl {
 // object have been released.
 //
 // This object is thread-safe.
-class FTL_EXPORT SharedVmo : public ftl::RefCountedThreadSafe<SharedVmo> {
+class FXL_EXPORT SharedVmo : public fxl::RefCountedThreadSafe<SharedVmo> {
  public:
   // Initializes a shared VMO.
   //
@@ -53,7 +53,7 @@ class FTL_EXPORT SharedVmo : public ftl::RefCountedThreadSafe<SharedVmo> {
   uintptr_t mapping_ = 0u;
 
   FRIEND_REF_COUNTED_THREAD_SAFE(SharedVmo);
-  FTL_DISALLOW_COPY_AND_ASSIGN(SharedVmo);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SharedVmo);
 };
 
 }  // namespace mtl

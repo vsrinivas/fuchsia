@@ -8,16 +8,16 @@
 #include <string>
 #include <vulkan/vulkan.hpp>
 
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 
 class VulkanInstance;
-using VulkanInstancePtr = ftl::RefPtr<VulkanInstance>;
+using VulkanInstancePtr = fxl::RefPtr<VulkanInstance>;
 
 // Convenient wrapper for creating and managing the lifecycle of a VkInstance
 // that is suitable for use by Escher.
-class VulkanInstance : public ftl::RefCountedThreadSafe<VulkanInstance> {
+class VulkanInstance : public fxl::RefCountedThreadSafe<VulkanInstance> {
  public:
   // Parameters used to construct a new Vulkan Instance.
   struct Params {
@@ -37,7 +37,7 @@ class VulkanInstance : public ftl::RefCountedThreadSafe<VulkanInstance> {
   };
 
   // Constructor.
-  static ftl::RefPtr<VulkanInstance> New(Params params);
+  static fxl::RefPtr<VulkanInstance> New(Params params);
 
   ~VulkanInstance();
 

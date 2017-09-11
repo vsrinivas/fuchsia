@@ -7,7 +7,7 @@
 
 #include <queue>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace fidl {
 class Message;
@@ -34,7 +34,7 @@ class MessageQueue {
 
   std::queue<Message*> queue_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MessageQueue);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MessageQueue);
 };
 
 }  // namespace test

@@ -4,18 +4,18 @@
 
 #include "escher/base/ownable.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace escher {
 
 Reffable::~Reffable() {
-  FTL_DCHECK(ref_count_ == 0);
+  FXL_DCHECK(ref_count_ == 0);
 }
 
 #ifndef NDEBUG
 void Reffable::Adopt() {
-  FTL_DCHECK(adoption_required_);
-  FTL_DCHECK(ref_count_ == 1);
+  FXL_DCHECK(adoption_required_);
+  FXL_DCHECK(ref_count_ == 1);
   adoption_required_ = false;
 }
 #endif

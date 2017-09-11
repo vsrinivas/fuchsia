@@ -16,11 +16,11 @@
 #include "garnet/bin/gdbserver/third_party/simple-pt/elf.h"
 #include "garnet/bin/gdbserver/third_party/simple-pt/symtab.h"
 
-#include "lib/ftl/files/path.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/functional/auto_call.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/files/path.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/functional/auto_call.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace intel_processor_trace {
 
@@ -46,47 +46,47 @@ int DecoderState::ProcessKtraceRecord(debugserver::ktrace::KtraceRecord* rec,
       uint64_t kernel_cr3 = r->c | ((uint64_t)r->d << 32);
       state->set_nom_freq(r->a);
       state->set_kernel_cr3(kernel_cr3);
-      FTL_LOG(INFO) << ftl::StringPrintf("Ktrace IPT start, ts %" PRIu64
+      FXL_LOG(INFO) << fxl::StringPrintf("Ktrace IPT start, ts %" PRIu64
                                          ", nom_freq %u, kernel cr3 0x%" PRIx64,
                                          rec->hdr.ts, r->a, kernel_cr3);
       break;
     }
     case TAG_IPT_CPU_INFO: {
-      FTL_LOG(INFO) << "Ktrace IPT start, ts " << rec->hdr.ts;
+      FXL_LOG(INFO) << "Ktrace IPT start, ts " << rec->hdr.ts;
       const ktrace_rec_32b* r = &rec->r_32B;
       state->set_family(r->b);
       state->set_model(r->c);
       state->set_stepping(r->d);
-      FTL_LOG(INFO) << ftl::StringPrintf("Ktrace IPT CPU INFO, ts %" PRIu64
+      FXL_LOG(INFO) << fxl::StringPrintf("Ktrace IPT CPU INFO, ts %" PRIu64
                                          ", family %u, model %u, stepping %u",
                                          rec->hdr.ts, r->b, r->c, r->d);
       break;
     }
     case TAG_IPT_STOP:
-      FTL_LOG(INFO) << "Ktrace IPT stop, ts " << rec->hdr.ts;
+      FXL_LOG(INFO) << "Ktrace IPT stop, ts " << rec->hdr.ts;
       break;
     case TAG_IPT_PROCESS_CREATE: {
       const ktrace_rec_32b* r = &rec->r_32B;
       uint64_t pid = r->a | ((uint64_t)r->b << 32);
       uint64_t cr3 = r->c | ((uint64_t)r->d << 32);
-      FTL_LOG(INFO) << ftl::StringPrintf("Ktrace process create, ts %" PRIu64
+      FXL_LOG(INFO) << fxl::StringPrintf("Ktrace process create, ts %" PRIu64
                                          ", pid %" PRIu64 ", cr3 0x%" PRIx64,
                                          rec->hdr.ts, pid, cr3);
       if (!state->AddProcess(pid, cr3, rec->hdr.ts)) {
-        FTL_LOG(ERROR) << "Error adding process: " << pid;
+        FXL_LOG(ERROR) << "Error adding process: " << pid;
       }
       break;
     }
     case TAG_PROC_EXIT: {
       const ktrace_rec_32b* r = &rec->r_32B;
       uint64_t pid = r->a | ((uint64_t)r->b << 32);
-      FTL_LOG(INFO) << ftl::StringPrintf("Ktrace process exit, ts %" PRIu64
+      FXL_LOG(INFO) << fxl::StringPrintf("Ktrace process exit, ts %" PRIu64
                                          ", pid %" PRIu64,
                                          rec->hdr.ts, pid);
       // N.B. We don't remove the process from any table here. This pass is run
       // before we scan the actual PT dump.
       if (!state->MarkProcessExited(pid, rec->hdr.ts)) {
-        FTL_LOG(ERROR) << "Error marking process exit: " << pid;
+        FXL_LOG(ERROR) << "Error marking process exit: " << pid;
       }
       break;
     }
@@ -96,18 +96,18 @@ int DecoderState::ProcessKtraceRecord(debugserver::ktrace::KtraceRecord* rec,
 }
 
 bool DecoderState::ReadKtraceFile(const std::string& file) {
-  FTL_LOG(INFO) << "Loading ktrace data from " << file;
+  FXL_LOG(INFO) << "Loading ktrace data from " << file;
 
-  ftl::UniqueFD fd(open(file.c_str(), O_RDONLY));
+  fxl::UniqueFD fd(open(file.c_str(), O_RDONLY));
   if (!fd.is_valid()) {
-    FTL_LOG(ERROR) << "error opening ktrace file" << ", " << ErrnoString(errno);
+    FXL_LOG(ERROR) << "error opening ktrace file" << ", " << ErrnoString(errno);
     return false;
   }
 
   KtraceData data = {this};
   int rc = debugserver::ktrace::ReadFile(fd.get(), ProcessKtraceRecord, &data);
   if (rc != 0) {
-    FTL_LOG(ERROR) << ftl::StringPrintf("Error %d reading ktrace file", rc);
+    FXL_LOG(ERROR) << fxl::StringPrintf("Error %d reading ktrace file", rc);
     return false;
   }
 
@@ -125,11 +125,11 @@ bool DecoderState::ReadIdsFile(const std::string& file) {
 }
 
 bool DecoderState::ReadPtListFile(const std::string& file) {
-  FTL_LOG(INFO) << "Loading pt file list from " << file;
+  FXL_LOG(INFO) << "Loading pt file list from " << file;
 
   FILE* f = fopen(file.c_str(), "r");
   if (!f) {
-    FTL_LOG(ERROR) << "error opening pt file list file" << ", "
+    FXL_LOG(ERROR) << "error opening pt file list file" << ", "
                    << ErrnoString(errno);
     return false;
   }
@@ -138,7 +138,7 @@ bool DecoderState::ReadPtListFile(const std::string& file) {
   size_t linelen = 0;
   int lineno = 1;
 
-  auto cleanup = ftl::MakeAutoCall([line, f]() {
+  auto cleanup = fxl::MakeAutoCall([line, f]() {
     free(line);
     fclose(f);
   });
@@ -147,11 +147,11 @@ bool DecoderState::ReadPtListFile(const std::string& file) {
     size_t n = strlen(line);
     if (n > 0 && line[n - 1] == '\n')
       line[n - 1] = '\0';
-    FTL_VLOG(2) << ftl::StringPrintf("read %d: %s", lineno, line);
+    FXL_VLOG(2) << fxl::StringPrintf("read %d: %s", lineno, line);
 
 #define MAX_LINE_LEN 1024
     if (linelen > MAX_LINE_LEN) {
-      FTL_VLOG(2) << ftl::StringPrintf("%d: ignoring: %s", lineno, line);
+      FXL_VLOG(2) << fxl::StringPrintf("%d: ignoring: %s", lineno, line);
       continue;
     }
 
@@ -165,7 +165,7 @@ bool DecoderState::ReadPtListFile(const std::string& file) {
     if (sscanf(line, "%llu %s", &id, path) == 2) {
       AddPtFile(files::GetDirectoryName(file), id, path);
     } else {
-      FTL_VLOG(2) << ftl::StringPrintf("%d: ignoring: %s", lineno, line);
+      FXL_VLOG(2) << fxl::StringPrintf("%d: ignoring: %s", lineno, line);
     }
   }
 
@@ -181,7 +181,7 @@ bool DecoderState::ReadElf(const std::string& file_name,
                            uint64_t cr3,
                            uint64_t file_off,
                            uint64_t map_len) {
-  FTL_DCHECK(image_);
+  FXL_DCHECK(image_);
 
   std::unique_ptr<SymbolTable> symtab;
   std::unique_ptr<SymbolTable> dynsym;
@@ -198,7 +198,7 @@ bool DecoderState::ReadElf(const std::string& file_name,
 }
 
 bool DecoderState::ReadKernelElf(const std::string& file_name, uint64_t cr3) {
-  FTL_DCHECK(image_);
+  FXL_DCHECK(image_);
 
   std::unique_ptr<SymbolTable> symtab;
   std::unique_ptr<SymbolTable> dynsym;
@@ -210,7 +210,7 @@ bool DecoderState::ReadKernelElf(const std::string& file_name, uint64_t cr3) {
   if (symtab)
     AddSymtab(std::move(symtab));
   if (dynsym)
-    FTL_LOG(WARNING) << "Kernel has SHT_DYNSYM symtab?";
+    FXL_LOG(WARNING) << "Kernel has SHT_DYNSYM symtab?";
   return true;
 }
 

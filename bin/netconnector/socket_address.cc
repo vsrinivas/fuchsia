@@ -40,7 +40,7 @@ SocketAddress::SocketAddress(in_addr_t addr, IpPort port) {
 }
 
 SocketAddress::SocketAddress(const sockaddr_in& addr) {
-  FTL_DCHECK(addr.sin_family == AF_INET);
+  FXL_DCHECK(addr.sin_family == AF_INET);
   v4_ = addr;
 }
 
@@ -84,7 +84,7 @@ SocketAddress::SocketAddress(const in6_addr& addr, IpPort port) {
 }
 
 SocketAddress::SocketAddress(const sockaddr_in6& addr) {
-  FTL_DCHECK(addr.sin6_family == AF_INET6);
+  FXL_DCHECK(addr.sin6_family == AF_INET6);
   v6_ = addr;
 }
 
@@ -108,7 +108,7 @@ SocketAddress::SocketAddress(const IpAddress& addr, IpPort port) {
 }
 
 SocketAddress::SocketAddress(const sockaddr_storage& addr) {
-  FTL_DCHECK(addr.ss_family == AF_INET || addr.ss_family == AF_INET6);
+  FXL_DCHECK(addr.ss_family == AF_INET || addr.ss_family == AF_INET6);
   if (addr.ss_family == AF_INET) {
     v4_ = *reinterpret_cast<const sockaddr_in*>(&addr);
   } else {

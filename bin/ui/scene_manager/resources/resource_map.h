@@ -36,12 +36,12 @@ class ResourceMap {
   // example:
   // ResourceType someResource = map.FindResource<ResourceType>();
   template <class ResourceT>
-  ftl::RefPtr<ResourceT> FindResource(scenic::ResourceId id) {
+  fxl::RefPtr<ResourceT> FindResource(scenic::ResourceId id) {
     auto it = resources_.find(id);
 
     if (it == resources_.end()) {
       error_reporter_->ERROR() << "No resource exists with ID " << id;
-      return ftl::RefPtr<ResourceT>();
+      return fxl::RefPtr<ResourceT>();
     };
 
     auto resource_ptr = it->second->GetDelegate(ResourceT::kTypeInfo);
@@ -51,10 +51,10 @@ class ResourceMap {
           << "Type mismatch for resource ID " << id << ": actual type is "
           << it->second->type_info().name << ", expected a sub-type of "
           << ResourceT::kTypeInfo.name;
-      return ftl::RefPtr<ResourceT>();
+      return fxl::RefPtr<ResourceT>();
     }
 
-    return ftl::RefPtr<ResourceT>(static_cast<ResourceT*>(resource_ptr));
+    return fxl::RefPtr<ResourceT>(static_cast<ResourceT*>(resource_ptr));
   }
 
  private:

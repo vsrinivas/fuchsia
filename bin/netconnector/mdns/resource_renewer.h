@@ -76,8 +76,8 @@ class ResourceRenewer : public MdnsAgent,
     std::string name_;
     DnsType type_;
 
-    ftl::TimePoint time_;
-    ftl::TimeDelta interval_;
+    fxl::TimePoint time_;
+    fxl::TimeDelta interval_;
     uint32_t queries_remaining_;
 
     // Time value used for |schedule|. In some cases, we want to postpone a
@@ -85,7 +85,7 @@ class ResourceRenewer : public MdnsAgent,
     // will be increased, but |schedule_time_| will remain unchanged. When the
     // entry comes up in the schedule, the entry should be rescheduled if
     // |time_| is different from |schedule_time_|.
-    ftl::TimePoint schedule_time_;
+    fxl::TimePoint schedule_time_;
 
     bool delete_ = false;
 
@@ -100,7 +100,7 @@ class ResourceRenewer : public MdnsAgent,
 
   struct Hash {
     size_t operator()(const Entry* m) {
-      FTL_DCHECK(m != nullptr);
+      FXL_DCHECK(m != nullptr);
       return std::hash<std::string>{}(m->name_) ^
              std::hash<DnsType>{}(m->type_);
     }
@@ -108,16 +108,16 @@ class ResourceRenewer : public MdnsAgent,
 
   struct Equals {
     size_t operator()(const Entry* a, const Entry* b) {
-      FTL_DCHECK(a != nullptr);
-      FTL_DCHECK(b != nullptr);
+      FXL_DCHECK(a != nullptr);
+      FXL_DCHECK(b != nullptr);
       return a->name_ == b->name_ && a->type_ == b->type_;
     }
   };
 
   struct LaterScheduleTime {
     size_t operator()(const Entry* a, const Entry* b) {
-      FTL_DCHECK(a != nullptr);
-      FTL_DCHECK(b != nullptr);
+      FXL_DCHECK(a != nullptr);
+      FXL_DCHECK(b != nullptr);
       return a->schedule_time_ > b->schedule_time_;
     }
   };

@@ -18,7 +18,7 @@ TEST(SharedVmos, Unmappable) {
   ASSERT_TRUE(VmoFromString(content, &vmo));
   mx_handle_t vmo_handle = vmo.get();
 
-  auto shared_vmo = ftl::MakeRefCounted<SharedVmo>(std::move(vmo));
+  auto shared_vmo = fxl::MakeRefCounted<SharedVmo>(std::move(vmo));
   ASSERT_NE(nullptr, shared_vmo.get());
   EXPECT_EQ(vmo_handle, shared_vmo->vmo().get());
   EXPECT_EQ(content.size(), shared_vmo->vmo_size());
@@ -33,7 +33,7 @@ TEST(SharedVmos, Mapped) {
   mx_handle_t vmo_handle = vmo.get();
 
   auto shared_vmo =
-      ftl::MakeRefCounted<SharedVmo>(std::move(vmo), MX_VM_FLAG_PERM_READ);
+      fxl::MakeRefCounted<SharedVmo>(std::move(vmo), MX_VM_FLAG_PERM_READ);
   ASSERT_NE(nullptr, shared_vmo.get());
   EXPECT_EQ(vmo_handle, shared_vmo->vmo().get());
   EXPECT_EQ(content.size(), shared_vmo->vmo_size());

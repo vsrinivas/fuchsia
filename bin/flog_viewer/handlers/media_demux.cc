@@ -59,7 +59,7 @@ void MediaDemux::BoundAs(uint64_t koid) {
 void MediaDemux::NewStream(uint32_t index,
                            media::MediaTypePtr type,
                            uint64_t producer_address) {
-  FTL_DCHECK(type);
+  FXL_DCHECK(type);
 
   terse_out() << EntryHeader(entry(), entry_index())
               << "MediaDemux.NewStream\n";

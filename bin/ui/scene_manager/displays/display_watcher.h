@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/io/device_watcher.h"
 
 namespace scene_manager {
@@ -37,7 +37,7 @@ class DisplayWatcher {
 
   std::unique_ptr<mtl::DeviceWatcher> device_watcher_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DisplayWatcher);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DisplayWatcher);
 };
 
 }  // namespace scene_manager

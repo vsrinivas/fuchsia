@@ -7,7 +7,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include "escher/vk/gpu_mem.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace escher {
 
@@ -16,7 +16,7 @@ class GpuAllocator;
 namespace impl {
 
 class GpuMemSlab;
-typedef ftl::RefPtr<GpuMemSlab> GpuMemSlabPtr;
+typedef fxl::RefPtr<GpuMemSlab> GpuMemSlabPtr;
 
 // GpuMemSlab represents a single Vulkan memory allocation, which a GpuAllocator
 // may use to sub-allocate multiple GpuMem instances.  It can only be created
@@ -52,7 +52,7 @@ class GpuMemSlab final : public GpuMem {
   uint32_t memory_type_index_;
   GpuAllocator* allocator_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(GpuMemSlab);
+  FXL_DISALLOW_COPY_AND_ASSIGN(GpuMemSlab);
 };
 
 }  // namespace impl

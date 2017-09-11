@@ -5,8 +5,8 @@
 #include "garnet/bin/netconnector/mdns/address_responder.h"
 
 #include "garnet/bin/netconnector/mdns/mdns_names.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/time/time_point.h"
 
 namespace netconnector {
 namespace mdns {
@@ -27,7 +27,7 @@ void AddressResponder::Wake() {}
 void AddressResponder::ReceiveQuestion(const DnsQuestion& question) {
   if ((question.type_ == DnsType::kA || question.type_ == DnsType::kAaaa) &&
       question.name_.dotted_string_ == host_full_name_) {
-    host_->SendAddresses(MdnsResourceSection::kAnswer, ftl::TimePoint::Now());
+    host_->SendAddresses(MdnsResourceSection::kAnswer, fxl::TimePoint::Now());
   }
 }
 

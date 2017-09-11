@@ -11,7 +11,7 @@
 #include "lib/app/cpp/connect.h"
 #include "garnet/examples/media/vu_meter/vu_meter_params.h"
 #include "lib/media/fidl/media_service.fidl.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkPath.h"
@@ -31,14 +31,14 @@ VuMeterView::VuMeterView(
       fast_right_(kFastDecay),
       slow_left_(kSlowDecay),
       slow_right_(kSlowDecay) {
-  FTL_DCHECK(params.is_valid());
+  FXL_DCHECK(params.is_valid());
 
   auto media_service =
       application_context->ConnectToEnvironmentService<media::MediaService>();
   media_service->CreateAudioCapturer(media_capturer_.NewRequest());
 
   media_capturer_.set_connection_error_handler([this]() {
-    FTL_LOG(ERROR) << "Connection error occurred. Quitting.";
+    FXL_LOG(ERROR) << "Connection error occurred. Quitting.";
     media_capturer_.reset();
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
   });
@@ -69,7 +69,7 @@ VuMeterView::VuMeterView(
 VuMeterView::~VuMeterView() {}
 
 bool VuMeterView::OnInputEvent(mozart::InputEventPtr event) {
-  FTL_DCHECK(event);
+  FXL_DCHECK(event);
   bool handled = false;
   if (event->is_pointer()) {
     auto& pointer = event->get_pointer();
@@ -151,8 +151,8 @@ void VuMeterView::OnGotSupportedMediaTypes(
       continue;
     }
 
-    FTL_DCHECK(!type->details.is_null());
-    FTL_DCHECK(type->details->is_audio());
+    FXL_DCHECK(!type->details.is_null());
+    FXL_DCHECK(type->details->is_audio());
     const auto& audio_details = *(type->details->get_audio());
     if (audio_details.sample_format != media::AudioSampleFormat::SIGNED_16)
       continue;
@@ -174,7 +174,7 @@ void VuMeterView::OnGotSupportedMediaTypes(
     cfg->details = media::MediaTypeDetails::New();
     cfg->details->set_audio(std::move(tmp));
 
-    FTL_LOG(INFO) << "Configured capture for "
+    FXL_LOG(INFO) << "Configured capture for "
                   << channels_
                   << " channel" << ((channels_ == 1) ? " " : "s ")
                   << frames_per_second_
@@ -185,7 +185,7 @@ void VuMeterView::OnGotSupportedMediaTypes(
     return;
   }
 
-  FTL_LOG(WARNING) << "No compatible media types detect among the "
+  FXL_LOG(WARNING) << "No compatible media types detect among the "
                    << media_types.size()
                    << " supplied.";
 }
@@ -194,7 +194,7 @@ void VuMeterView::OnPacketSupplied(
     std::unique_ptr<media::MediaPacketConsumerBase::SuppliedPacket>
         supplied_packet) {
   // TODO(dalesat): Synchronize display and captured audio.
-  FTL_DCHECK(supplied_packet->payload_size() % (kBytesPerSample * channels_) ==
+  FXL_DCHECK(supplied_packet->payload_size() % (kBytesPerSample * channels_) ==
              0);
   int16_t* sample = static_cast<int16_t*>(supplied_packet->payload());
   uint32_t frame_count =
@@ -218,7 +218,7 @@ void VuMeterView::OnPacketSupplied(
 
 VuMeterView::PacketConsumer::PacketConsumer(VuMeterView* owner)
     : owner_(owner) {
-  FTL_DCHECK(owner_);
+  FXL_DCHECK(owner_);
 }
 
 void VuMeterView::PacketConsumer::OnPacketSupplied(

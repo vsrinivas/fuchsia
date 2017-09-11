@@ -6,7 +6,7 @@
 
 #include <endian.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -23,7 +23,7 @@ void Serializer::PutBytes(size_t count, const void* source) {
     return;
   }
 
-  FTL_DCHECK(source != nullptr);
+  FXL_DCHECK(source != nullptr);
 
   size_t prev_size = serial_message_.size();
   serial_message_.resize(prev_size + count);
@@ -102,7 +102,7 @@ bool Deserializer::GetBytes(size_t count, void* dest) {
     return true;
   }
 
-  FTL_DCHECK(dest != nullptr);
+  FXL_DCHECK(dest != nullptr);
   std::memcpy(dest, bytes, count);
   return true;
 }

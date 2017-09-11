@@ -10,8 +10,8 @@
 #include "lib/app/cpp/application_context.h"
 #include "garnet/bin/netconnector/socket_address.h"
 #include "garnet/go/src/netstack/apps/include/netconfig.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/logging.h"
 #include "lib/netstack/fidl/netstack.fidl.h"
 
 namespace netconnector {
@@ -34,9 +34,9 @@ class NetstackClient {
  private:
   NetstackClient()
       : context_(app::ApplicationContext::CreateFromStartupInfo()) {
-    FTL_DCHECK(context_);
+    FXL_DCHECK(context_);
     netstack_ = context_->ConnectToEnvironmentService<netstack::Netstack>();
-    FTL_DCHECK(netstack_);
+    FXL_DCHECK(netstack_);
   }
 
   std::unique_ptr<app::ApplicationContext> context_;
@@ -82,7 +82,7 @@ std::string GetHostName() {
   std::string host_name;
 
   if (result < 0) {
-    FTL_LOG(ERROR) << "gethostname failed, errno " << errno;
+    FXL_LOG(ERROR) << "gethostname failed, errno " << errno;
     host_name = kFuchsia;
   } else {
     host_name = host_name_buffer;

@@ -5,7 +5,7 @@
 #include <limits>
 
 #include "garnet/bin/netconnector/mdns/dns_writing.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace netconnector {
 namespace mdns {
@@ -42,13 +42,13 @@ PacketWriter& operator<<(PacketWriter& writer, const DnsName& value) {
 }
 
 PacketWriter& operator<<(PacketWriter& writer, const DnsV4Address& value) {
-  FTL_DCHECK(value.address_.is_v4());
+  FXL_DCHECK(value.address_.is_v4());
   writer.PutBytes(value.address_.byte_count(), value.address_.as_bytes());
   return writer;
 }
 
 PacketWriter& operator<<(PacketWriter& writer, const DnsV6Address& value) {
-  FTL_DCHECK(value.address_.is_v6());
+  FXL_DCHECK(value.address_.is_v6());
   writer.PutBytes(value.address_.byte_count(), value.address_.as_bytes());
   return writer;
 }
@@ -180,7 +180,7 @@ PacketWriter& operator<<(PacketWriter& writer, const DnsResource& value) {
       writer << value.nsec_;
       break;
     default:
-      FTL_DCHECK(false) << "Unsupported resource type "
+      FXL_DCHECK(false) << "Unsupported resource type "
                         << static_cast<uint16_t>(value.type_);
       break;
   }
@@ -196,10 +196,10 @@ PacketWriter& operator<<(PacketWriter& writer, const DnsResource& value) {
 }
 
 PacketWriter& operator<<(PacketWriter& writer, const DnsMessage& value) {
-  FTL_DCHECK(value.header_.question_count_ == value.questions_.size());
-  FTL_DCHECK(value.header_.answer_count_ == value.answers_.size());
-  FTL_DCHECK(value.header_.authority_count_ == value.authorities_.size());
-  FTL_DCHECK(value.header_.additional_count_ == value.additionals_.size());
+  FXL_DCHECK(value.header_.question_count_ == value.questions_.size());
+  FXL_DCHECK(value.header_.answer_count_ == value.answers_.size());
+  FXL_DCHECK(value.header_.authority_count_ == value.authorities_.size());
+  FXL_DCHECK(value.header_.additional_count_ == value.additionals_.size());
 
   writer << value.header_;
 

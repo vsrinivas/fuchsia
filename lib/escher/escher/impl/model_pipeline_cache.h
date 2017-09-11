@@ -11,7 +11,7 @@
 #include "escher/impl/glsl_compiler.h"
 #include "escher/impl/model_pipeline_spec.h"
 #include "escher/util/hash.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace escher {
 namespace impl {
@@ -47,7 +47,7 @@ class ModelPipelineCache {
       pipelines_;
   GlslToSpirvCompiler compiler_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ModelPipelineCache);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ModelPipelineCache);
 };
 
 }  // namespace impl

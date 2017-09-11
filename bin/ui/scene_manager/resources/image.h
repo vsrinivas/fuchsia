@@ -14,7 +14,7 @@
 namespace scene_manager {
 
 class Image;
-using ImagePtr = ftl::RefPtr<Image>;
+using ImagePtr = fxl::RefPtr<Image>;
 
 class Image : public ImageBase {
  public:

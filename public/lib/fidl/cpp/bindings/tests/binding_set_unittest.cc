@@ -8,7 +8,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/fidl/compiler/interfaces/tests/minimal_interface.fidl.h"
 
 namespace fidl {
@@ -27,7 +27,7 @@ class MinimalInterfaceImpl : public MinimalInterface {
  private:
   int call_count_ = 0;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MinimalInterfaceImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MinimalInterfaceImpl);
 };
 
 // Tests all of the functionality of BindingSet.

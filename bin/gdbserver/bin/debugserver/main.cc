@@ -10,10 +10,10 @@
 
 #include "inferior-control/process.h"
 
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/log_settings_command_line.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/log_settings_command_line.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/mtl/handles/object_info.h"
 
 #include "server.h"
@@ -55,7 +55,7 @@ void PrintUsageString() {
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  ftl::CommandLine cl = ftl::CommandLineFromArgcArgv(argc, argv);
+  fxl::CommandLine cl = fxl::CommandLineFromArgcArgv(argc, argv);
 
   if (cl.HasOption("help", nullptr)) {
     PrintUsageString();
@@ -66,26 +66,26 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  if (!ftl::SetLogSettingsFromCommandLine(cl))
+  if (!fxl::SetLogSettingsFromCommandLine(cl))
     return EXIT_FAILURE;
 
   std::string attach_pid_str;
   mx_koid_t attach_pid = MX_KOID_INVALID;
   if (cl.GetOptionValue("attach", &attach_pid_str)) {
-    if (!ftl::StringToNumberWithError<mx_koid_t>(attach_pid_str,
+    if (!fxl::StringToNumberWithError<mx_koid_t>(attach_pid_str,
                                                  &attach_pid)) {
-      FTL_LOG(ERROR) << "Not a valid process id: " << attach_pid_str;
+      FXL_LOG(ERROR) << "Not a valid process id: " << attach_pid_str;
       return EXIT_FAILURE;
     }
   }
 
   uint16_t port;
-  if (!ftl::StringToNumberWithError<uint16_t>(cl.positional_args()[0], &port)) {
-    FTL_LOG(ERROR) << "Not a valid port number: " << cl.positional_args()[0];
+  if (!fxl::StringToNumberWithError<uint16_t>(cl.positional_args()[0], &port)) {
+    FXL_LOG(ERROR) << "Not a valid port number: " << cl.positional_args()[0];
     return EXIT_FAILURE;
   }
 
-  FTL_LOG(INFO) << "Starting server.";
+  FXL_LOG(INFO) << "Starting server.";
 
   // Give this thread an identifiable name for debugging purposes.
   mtl::SetCurrentThreadName("server (main)");
@@ -98,13 +98,13 @@ int main(int argc, char* argv[]) {
 
   // Are we passed a pid or a program?
   if (attach_pid != MX_KOID_INVALID && inferior_argv.size() != 0) {
-    FTL_LOG(ERROR) << "Cannot specify both --attach=pid and a program";
+    FXL_LOG(ERROR) << "Cannot specify both --attach=pid and a program";
     return EXIT_FAILURE;
   }
 
   if (attach_pid != MX_KOID_INVALID) {
     if (!inferior->Initialize(attach_pid)) {
-      FTL_LOG(ERROR) << "Failed to set up inferior";
+      FXL_LOG(ERROR) << "Failed to set up inferior";
       return EXIT_FAILURE;
     }
     // Note: We're not attached yet, that happens later.
@@ -122,7 +122,7 @@ int main(int argc, char* argv[]) {
 
   bool status = server.Run();
   if (!status) {
-    FTL_LOG(ERROR) << "Server exited with error";
+    FXL_LOG(ERROR) << "Server exited with error";
     return EXIT_FAILURE;
   }
 

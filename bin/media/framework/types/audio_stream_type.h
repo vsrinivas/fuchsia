@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "garnet/bin/media/framework/types/stream_type.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -63,8 +63,8 @@ class AudioStreamType : public StreamType {
   }
 
   uint64_t frame_count(uint64_t size) const {
-    FTL_DCHECK(bytes_per_frame() != 0);
-    FTL_DCHECK(size % bytes_per_frame() == 0);
+    FXL_DCHECK(bytes_per_frame() != 0);
+    FXL_DCHECK(size % bytes_per_frame() == 0);
     return size / bytes_per_frame();
   }
 

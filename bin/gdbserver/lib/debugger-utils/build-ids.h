@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace debugserver {
 namespace util {
@@ -32,7 +32,7 @@ class BuildIdTable {
 
   std::vector<BuildId> build_ids_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(BuildIdTable);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BuildIdTable);
 };
 
 }  // namespace util

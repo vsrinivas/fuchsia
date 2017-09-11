@@ -19,7 +19,7 @@ source_set("input") {
     "//garnet/public/lib/ui/views/cpp",
     "//garnet/bin/ui/view_manager/internal",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }

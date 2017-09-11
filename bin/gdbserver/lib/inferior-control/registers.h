@@ -10,8 +10,8 @@
 #include <magenta/syscalls/exception.h>
 #include <magenta/types.h>
 
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace debugserver {
 
@@ -59,7 +59,7 @@ class Registers {
   bool RefreshGeneralRegisters();
   bool WriteGeneralRegisters();
   std::string GetGeneralRegistersAsString();
-  bool SetGeneralRegistersFromString(const ftl::StringView& value);
+  bool SetGeneralRegistersFromString(const fxl::StringView& value);
 
   // TODO(armansito): The Get/Set AsString/FromString methods work with
   // strings that conform to the GDB remote serial protocol. We should change
@@ -82,7 +82,7 @@ class Registers {
   // GetRegsetAsString(), as described above.
   // WriteRegset() must be called afterwards.
   // Returns true on success.
-  virtual bool SetRegsetFromString(int regset, const ftl::StringView& value) = 0;
+  virtual bool SetRegsetFromString(int regset, const fxl::StringView& value) = 0;
 
   // Gets the value of the register numbered |regno|. Returns an empty
   // string in case of an error or if |regno| is invalid. This avoids
@@ -151,7 +151,7 @@ class Registers {
   // This does not write the values to the cpu.
   // N.B. This helper assumes there is no padding in the regset buffer.
   bool SetRegsetFromStringHelper(int regset, void* buffer, size_t buf_size,
-                                 const ftl::StringView& value);
+                                 const fxl::StringView& value);
 
  private:
   Thread* thread_;  // weak
@@ -159,7 +159,7 @@ class Registers {
   // Helper function for GetPC,GetSP,GetFP.
   mx_vaddr_t GetIntRegister(int regno);
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Registers);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Registers);
 };
 
 }  // namespace arch

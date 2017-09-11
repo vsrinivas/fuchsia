@@ -39,7 +39,7 @@ class DisplaySwapchain : public Swapchain {
   std::vector<escher::SemaphorePtr> image_available_semaphores_;
   std::vector<escher::SemaphorePtr> render_finished_semaphores_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DisplaySwapchain);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DisplaySwapchain);
 };
 
 }  // namespace scene_manager

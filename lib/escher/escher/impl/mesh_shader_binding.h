@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <vulkan/vulkan.hpp>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace escher {
 namespace impl {
@@ -37,7 +37,7 @@ class MeshShaderBinding {
   // The binding contains raw pointers into the vector of attributes,
   // which would no longer be valid if a MeshShaderBinding is copied, and the
   // original destroyed.
-  FTL_DISALLOW_COPY_AND_ASSIGN(MeshShaderBinding);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MeshShaderBinding);
 };
 
 }  // namespace impl

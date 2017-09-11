@@ -8,10 +8,10 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/files/path.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/path.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "util.h"
 
@@ -19,11 +19,11 @@ namespace debugserver {
 namespace util {
 
 bool BuildIdTable::ReadIdsFile(const std::string& file) {
-  FTL_LOG(INFO) << "Loading ids data from " << file;
+  FXL_LOG(INFO) << "Loading ids data from " << file;
 
   FILE* f = fopen(file.c_str(), "r");
   if (!f) {
-    FTL_LOG(ERROR) << "error opening ids file, " << ErrnoString(errno);
+    FXL_LOG(ERROR) << "error opening ids file, " << ErrnoString(errno);
     return false;
   }
 
@@ -35,11 +35,11 @@ bool BuildIdTable::ReadIdsFile(const std::string& file) {
     size_t n = strlen(line);
     if (n > 0 && line[n - 1] == '\n')
       line[n - 1] = '\0';
-    FTL_VLOG(2) << ftl::StringPrintf("read %d: %s", lineno, line);
+    FXL_VLOG(2) << fxl::StringPrintf("read %d: %s", lineno, line);
 
 #define MAX_LINE_LEN 1024
     if (linelen > MAX_LINE_LEN) {
-      FTL_VLOG(2) << ftl::StringPrintf("%d: ignoring: %s", lineno, line);
+      FXL_VLOG(2) << fxl::StringPrintf("%d: ignoring: %s", lineno, line);
       continue;
     }
 
@@ -53,7 +53,7 @@ bool BuildIdTable::ReadIdsFile(const std::string& file) {
     if (sscanf(line, "%s %s", build_id, path) == 2) {
       AddBuildId(files::GetDirectoryName(file), build_id, path);
     } else {
-      FTL_VLOG(2) << ftl::StringPrintf("%d: ignoring: %s", lineno, line);
+      FXL_VLOG(2) << fxl::StringPrintf("%d: ignoring: %s", lineno, line);
     }
   }
 
@@ -75,7 +75,7 @@ void BuildIdTable::AddBuildId(const std::string& file_dir,
   } else {
     abs_path = path;
   }
-  FTL_VLOG(2) << ftl::StringPrintf("build_id %s, file %s", build_id.c_str(),
+  FXL_VLOG(2) << fxl::StringPrintf("build_id %s, file %s", build_id.c_str(),
                                    abs_path.c_str());
   BuildId build_id_object;
   build_id_object.build_id = build_id;

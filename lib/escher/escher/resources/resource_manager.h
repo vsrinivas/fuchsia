@@ -35,7 +35,7 @@ class ResourceManager : public Owner<Resource, ResourceTypeInfo> {
   Escher* const escher_;
   VulkanContext vulkan_context_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ResourceManager);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ResourceManager);
 };
 
 }  // namespace escher

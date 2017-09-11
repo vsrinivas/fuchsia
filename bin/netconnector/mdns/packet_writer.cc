@@ -6,7 +6,7 @@
 
 #include <endian.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace netconnector {
 namespace mdns {
@@ -36,7 +36,7 @@ void PacketWriter::PutBytes(size_t count, const void* source) {
     return;
   }
 
-  FTL_DCHECK(source != nullptr);
+  FXL_DCHECK(source != nullptr);
 
   if (packet_.size() < position_ + count) {
     packet_.resize(position_ + count);

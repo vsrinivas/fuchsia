@@ -8,7 +8,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/media/fidl/audio_server.fidl.h"
-#include "lib/ftl/command_line.h"
+#include "lib/fxl/command_line.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 void usage(const char* prog_name) {
@@ -18,7 +18,7 @@ void usage(const char* prog_name) {
 }
 
 int main(int argc, const char** argv) {
-  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (command_line.positional_args().size() > 1) {
     usage(argv[0]);
     return 0;

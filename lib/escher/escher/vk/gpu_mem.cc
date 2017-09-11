@@ -28,7 +28,7 @@ GpuMemPtr GpuMem::New(vk::Device device,
                       vk::DeviceMemory mem,
                       vk::DeviceSize size,
                       uint32_t memory_type_index) {
-  return ftl::AdoptRef(new impl::GpuMemSlab(device, mem, size, nullptr,
+  return fxl::AdoptRef(new impl::GpuMemSlab(device, mem, size, nullptr,
                                             memory_type_index, nullptr));
 }
 
@@ -36,7 +36,7 @@ GpuMemPtr GpuMem::Allocate(vk::DeviceSize size, vk::DeviceSize offset) {
   if (offset + size > size_) {
     return GpuMemPtr();
   }
-  return ftl::AdoptRef(
+  return fxl::AdoptRef(
       new impl::GpuMemSuballocation(GpuMemPtr(this), size, offset));
 }
 

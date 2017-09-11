@@ -39,7 +39,7 @@
 #include "garnet/bin/gdbserver/lib/debugger-utils/elf-symtab.h"
 #include "garnet/bin/gdbserver/lib/debugger-utils/util.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
 

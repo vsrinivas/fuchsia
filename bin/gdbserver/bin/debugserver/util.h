@@ -13,7 +13,7 @@
 #include <magenta/syscalls/exception.h>
 #include <magenta/types.h>
 
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace debugserver {
 namespace util {
@@ -71,7 +71,7 @@ std::string BuildErrorPacket(ErrorCode error_code);
 // (See
 // https://sourceware.org/gdb/current/onlinedocs/gdb/Packets.html#thread%2did%20syntax
 // for reference).
-bool ParseThreadId(const ftl::StringView& bytes,
+bool ParseThreadId(const fxl::StringView& bytes,
                    bool* out_has_pid,
                    int64_t* out_pid,
                    int64_t* out_tid);
@@ -86,7 +86,7 @@ std::string EncodeThreadId(mx_koid_t pid, mx_koid_t tid);
 // Finds and returns the index of the first occurence of |val| within |packet|,
 // such that it is not preceded by an escape character.
 bool FindUnescapedChar(const char val,
-                       const ftl::StringView& packet,
+                       const fxl::StringView& packet,
                        size_t* out_index);
 
 // Verifies that the given command is formatted correctly and that the checksum
@@ -97,16 +97,16 @@ bool FindUnescapedChar(const char val,
 //
 //   $<packet-data>#<2-digit checksum>
 //
-bool VerifyPacket(ftl::StringView packet, ftl::StringView* out_packet_data);
+bool VerifyPacket(fxl::StringView packet, fxl::StringView* out_packet_data);
 
 // Extracts the prefix and the parameters from |packet| and returns them in the
 // |out_*| variables. The prefix and the parameters should be separated by a
 // colon (':'). If |packet| does not contain a colon, or if there are no
 // characters following a colon, the returned parameters will be an empty
 // string. |packet| cannot be empty.
-void ExtractParameters(const ftl::StringView& packet,
-                       ftl::StringView* out_prefix,
-                       ftl::StringView* out_params);
+void ExtractParameters(const fxl::StringView& packet,
+                       fxl::StringView* out_prefix,
+                       fxl::StringView* out_params);
 
 }  // namespace util
 }  // namespace debugserver

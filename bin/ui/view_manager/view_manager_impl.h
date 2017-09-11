@@ -7,7 +7,7 @@
 
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "garnet/bin/ui/view_manager/view_registry.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace view_manager {
 
@@ -33,7 +33,7 @@ class ViewManagerImpl : public mozart::ViewManager {
 
   ViewRegistry* registry_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ViewManagerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ViewManagerImpl);
 };
 
 }  // namespace view_manager

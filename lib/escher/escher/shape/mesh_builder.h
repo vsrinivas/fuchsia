@@ -5,7 +5,7 @@
 #pragma once
 
 #include "escher/shape/mesh.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 
@@ -13,7 +13,7 @@ namespace escher {
 // obtain one via Esher::NewMeshBuilder(), repeatedly call AddVertex() and
 // AddIndex() to add data for the Mesh, and then call Build() once all data has
 // been added.
-class MeshBuilder : public ftl::RefCountedThreadSafe<MeshBuilder> {
+class MeshBuilder : public fxl::RefCountedThreadSafe<MeshBuilder> {
  public:
   // Return a mesh constructed from the indices and vertices added by AddIndex()
   // and AddVertex(), respectively.  This can only be called once.
@@ -48,12 +48,12 @@ class MeshBuilder : public ftl::RefCountedThreadSafe<MeshBuilder> {
 
   // Return pointer to start of data for the vertex at the specified index.
   uint8_t* GetVertex(size_t index) {
-    FTL_DCHECK(index < vertex_count_);
+    FXL_DCHECK(index < vertex_count_);
     return vertex_staging_buffer_ + (index * vertex_stride_);
   }
   // Return pointer to the i-th index that was added.
   uint32_t* GetIndex(size_t i) {
-    FTL_DCHECK(i < index_count_);
+    FXL_DCHECK(i < index_count_);
     return index_staging_buffer_ + i;
   }
 
@@ -74,22 +74,22 @@ class MeshBuilder : public ftl::RefCountedThreadSafe<MeshBuilder> {
   size_t vertex_count_ = 0;
   size_t index_count_ = 0;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MeshBuilder);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MeshBuilder);
 };
 
-typedef ftl::RefPtr<MeshBuilder> MeshBuilderPtr;
+typedef fxl::RefPtr<MeshBuilder> MeshBuilderPtr;
 
 // Inline function definitions.
 
 inline MeshBuilder& MeshBuilder::AddIndex(uint32_t index) {
-  FTL_DCHECK(index_count_ < max_index_count_);
+  FXL_DCHECK(index_count_ < max_index_count_);
   index_staging_buffer_[index_count_++] = index;
   return *this;
 }
 
 inline MeshBuilder& MeshBuilder::AddVertexData(const void* ptr, size_t size) {
-  FTL_DCHECK(vertex_count_ < max_vertex_count_);
-  FTL_DCHECK(size <= vertex_stride_);
+  FXL_DCHECK(vertex_count_ < max_vertex_count_);
+  FXL_DCHECK(size <= vertex_stride_);
   size_t offset = vertex_stride_ * vertex_count_++;
   memcpy(vertex_staging_buffer_ + offset, ptr, size);
   return *this;

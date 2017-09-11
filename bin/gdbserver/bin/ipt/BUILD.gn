@@ -23,7 +23,7 @@ executable("ipt") {
   deps = [
     "../../lib/debugger-utils",
     "../../lib/inferior-control",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 

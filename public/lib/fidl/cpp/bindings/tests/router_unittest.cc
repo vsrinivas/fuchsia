@@ -10,8 +10,8 @@
 #include "lib/fidl/cpp/bindings/internal/router.h"
 #include "lib/fidl/cpp/bindings/tests/util/message_queue.h"
 #include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/time/time_delta.h"
 
 namespace fidl {
 namespace test {
@@ -193,8 +193,8 @@ TEST_F(RouterTest, BasicRequestResponse_Synchronous) {
   MessageQueue message_queue;
   router0.AcceptWithResponder(&request, new MessageAccumulator(&message_queue));
 
-  router1.WaitForIncomingMessage(ftl::TimeDelta::Max());
-  router0.WaitForIncomingMessage(ftl::TimeDelta::Max());
+  router1.WaitForIncomingMessage(fxl::TimeDelta::Max());
+  router0.WaitForIncomingMessage(fxl::TimeDelta::Max());
 
   EXPECT_FALSE(message_queue.IsEmpty());
 
@@ -211,8 +211,8 @@ TEST_F(RouterTest, BasicRequestResponse_Synchronous) {
   router0.AcceptWithResponder(&request2,
                               new MessageAccumulator(&message_queue));
 
-  router1.WaitForIncomingMessage(ftl::TimeDelta::Max());
-  router0.WaitForIncomingMessage(ftl::TimeDelta::Max());
+  router1.WaitForIncomingMessage(fxl::TimeDelta::Max());
+  router0.WaitForIncomingMessage(fxl::TimeDelta::Max());
 
   EXPECT_FALSE(message_queue.IsEmpty());
 
@@ -232,21 +232,21 @@ TEST_F(RouterTest, BasicRequestResponse_SynchronousTimeout) {
   Message request;
   AllocRequestMessage(1, "hello", &request);
 
-  EXPECT_FALSE(router1.WaitForIncomingMessage(ftl::TimeDelta::Zero()));
-  EXPECT_FALSE(router0.WaitForIncomingMessage(ftl::TimeDelta::Zero()));
+  EXPECT_FALSE(router1.WaitForIncomingMessage(fxl::TimeDelta::Zero()));
+  EXPECT_FALSE(router0.WaitForIncomingMessage(fxl::TimeDelta::Zero()));
   EXPECT_FALSE(router0.encountered_error());
   EXPECT_FALSE(router1.encountered_error());
 
   MessageQueue message_queue;
   router0.AcceptWithResponder(&request, new MessageAccumulator(&message_queue));
 
-  router1.WaitForIncomingMessage(ftl::TimeDelta::Max());
-  router0.WaitForIncomingMessage(ftl::TimeDelta::Max());
+  router1.WaitForIncomingMessage(fxl::TimeDelta::Max());
+  router0.WaitForIncomingMessage(fxl::TimeDelta::Max());
 
   EXPECT_FALSE(message_queue.IsEmpty());
 
-  EXPECT_FALSE(router1.WaitForIncomingMessage(ftl::TimeDelta::Zero()));
-  EXPECT_FALSE(router0.WaitForIncomingMessage(ftl::TimeDelta::Zero()));
+  EXPECT_FALSE(router1.WaitForIncomingMessage(fxl::TimeDelta::Zero()));
+  EXPECT_FALSE(router0.WaitForIncomingMessage(fxl::TimeDelta::Zero()));
   EXPECT_FALSE(router0.encountered_error());
   EXPECT_FALSE(router1.encountered_error());
 
@@ -263,8 +263,8 @@ TEST_F(RouterTest, BasicRequestResponse_SynchronousTimeout) {
   router0.AcceptWithResponder(&request2,
                               new MessageAccumulator(&message_queue));
 
-  router1.WaitForIncomingMessage(ftl::TimeDelta::Max());
-  router0.WaitForIncomingMessage(ftl::TimeDelta::Max());
+  router1.WaitForIncomingMessage(fxl::TimeDelta::Max());
+  router0.WaitForIncomingMessage(fxl::TimeDelta::Max());
 
   EXPECT_FALSE(message_queue.IsEmpty());
 
@@ -418,7 +418,7 @@ TEST_F(RouterTest, MissingResponses_Timeout) {
   // Check that no response was received.
   EXPECT_TRUE(message_queue.IsEmpty());
 
-  EXPECT_FALSE(router0.WaitForIncomingMessage(ftl::TimeDelta::Zero()));
+  EXPECT_FALSE(router0.WaitForIncomingMessage(fxl::TimeDelta::Zero()));
   EXPECT_TRUE(router0.encountered_error());
 
   PumpMessages();

@@ -10,7 +10,7 @@ Material::Material() = default;
 Material::~Material() = default;
 
 MaterialPtr Material::New(vec4 color, TexturePtr texture) {
-  auto material = ftl::MakeRefCounted<Material>();
+  auto material = fxl::MakeRefCounted<Material>();
   material->set_color(color);
   material->SetTexture(std::move(texture));
   return material;

@@ -19,7 +19,7 @@ executable("netconnector_example_bin") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/netconnector/cpp",
     "//garnet/public/lib/netconnector/fidl",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }

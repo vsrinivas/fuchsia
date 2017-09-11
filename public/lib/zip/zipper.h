@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "lib/zip/unique_zipper.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace zip {
 
@@ -28,7 +28,7 @@ class Zipper {
   std::vector<char> buffer_;
   UniqueZipper encoder_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Zipper);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Zipper);
 };
 
 }  // namespace zip

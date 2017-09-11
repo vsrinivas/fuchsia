@@ -24,6 +24,6 @@ class Memory : public Resource {
          const ResourceTypeInfo& type_info);
 };
 
-using MemoryPtr = ftl::RefPtr<Memory>;
+using MemoryPtr = fxl::RefPtr<Memory>;
 
 }  // namespace scene_manager

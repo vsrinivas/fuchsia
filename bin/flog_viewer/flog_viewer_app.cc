@@ -9,7 +9,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "garnet/bin/flog_viewer/channel_handler.h"
 #include "garnet/bin/flog_viewer/flog_viewer.h"
-#include "lib/ftl/command_line.h"
+#include "lib/fxl/command_line.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace flog {
@@ -52,7 +52,7 @@ std::istream& operator>>(std::istream& istream, std::vector<T>& value_vector) {
 // Parses a string to produce the specified value.
 template <typename T>
 bool Parse(const std::string& string_value, T* value_out) {
-  FTL_DCHECK(value_out);
+  FXL_DCHECK(value_out);
 
   std::istringstream istream(string_value);
   return (istream >> *value_out) && istream.eof();
@@ -68,7 +68,7 @@ class FlogViewerApp {
       mtl::MessageLoop::GetCurrent()->PostQuitTask();
     });
 
-    ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+    fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
     std::vector<uint32_t> log_ids;
     for (const std::string& log_id_string : command_line.positional_args()) {

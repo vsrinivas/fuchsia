@@ -15,11 +15,11 @@
 #include "garnet/bin/gdbserver/lib/intel-pt-decode/decoder.h"
 #include "garnet/bin/gdbserver/third_party/simple-pt/printer-util.h"
 
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/log_settings.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/log_settings.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_number_conversions.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
 
@@ -32,7 +32,7 @@ std::unique_ptr<RawPrinter> RawPrinter::Create(DecoderState* state,
   if (config.output_file_name != "") {
     out_file = fopen(output_file_name.c_str(), "w");
     if (!out_file) {
-      FTL_LOG(ERROR) << "Unable to open file for writing: "
+      FXL_LOG(ERROR) << "Unable to open file for writing: "
                      << config.output_file_name;
       return nullptr;
     }
@@ -172,7 +172,7 @@ int RawPrinter::ProcessNextInsn(struct pt_insn_decoder* pt_decoder,
 
 uint64_t RawPrinter::PrintOneFile(const PtFile& pt_file) {
   if (!state_->AllocDecoder(pt_file.file)) {
-    FTL_LOG(ERROR) << "Unable to open pt file: " << pt_file.file;
+    FXL_LOG(ERROR) << "Unable to open pt file: " << pt_file.file;
     return 0;
   }
 
@@ -191,12 +191,12 @@ uint64_t RawPrinter::PrintOneFile(const PtFile& pt_file) {
     pt_insn_get_offset(pt_decoder, &ps.current_pos);
     if (err < 0) {
       std::string message =
-          ftl::StringPrintf("0x%" PRIx64 ": sync forward: %s\n", ps.current_pos,
+          fxl::StringPrintf("0x%" PRIx64 ": sync forward: %s\n", ps.current_pos,
                             pt_errstr(pt_errcode(err)));
       if (err == -pte_eos) {
-        FTL_LOG(INFO) << message;
+        FXL_LOG(INFO) << message;
       } else {
-        FTL_LOG(ERROR) << message;
+        FXL_LOG(ERROR) << message;
       }
       break;
     }
@@ -212,7 +212,7 @@ uint64_t RawPrinter::PrintOneFile(const PtFile& pt_file) {
       continue;
     }
 
-    FTL_LOG(ERROR) << ftl::StringPrintf(
+    FXL_LOG(ERROR) << fxl::StringPrintf(
         "[%8" PRIu64 "] @0x%" PRIx64 ": %" PRIx64 ":%" PRIx64 ": error %s",
         ps.total_insncnt, ps.current_pos, ps.current_cr3, ps.current_pc,
         pt_errstr(pt_errcode(err)));

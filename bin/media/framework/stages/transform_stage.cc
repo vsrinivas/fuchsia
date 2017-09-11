@@ -12,7 +12,7 @@ TransformStageImpl::TransformStageImpl(std::shared_ptr<Transform> transform)
       transform_(transform),
       allocator_(nullptr),
       input_packet_is_new_(true) {
-  FTL_DCHECK(transform_);
+  FXL_DCHECK(transform_);
 }
 
 TransformStageImpl::~TransformStageImpl() {}
@@ -22,7 +22,7 @@ size_t TransformStageImpl::input_count() const {
 };
 
 Input& TransformStageImpl::input(size_t index) {
-  FTL_DCHECK(index == 0u);
+  FXL_DCHECK(index == 0u);
   return input_;
 }
 
@@ -31,19 +31,19 @@ size_t TransformStageImpl::output_count() const {
 }
 
 Output& TransformStageImpl::output(size_t index) {
-  FTL_DCHECK(index == 0u);
+  FXL_DCHECK(index == 0u);
   return output_;
 }
 
 PayloadAllocator* TransformStageImpl::PrepareInput(size_t index) {
-  FTL_DCHECK(index == 0u);
+  FXL_DCHECK(index == 0u);
   return nullptr;
 }
 
 void TransformStageImpl::PrepareOutput(size_t index,
                                        PayloadAllocator* allocator,
                                        const UpstreamCallback& callback) {
-  FTL_DCHECK(index == 0u);
+  FXL_DCHECK(index == 0u);
 
   allocator_ =
       allocator == nullptr ? PayloadAllocator::GetDefault() : allocator;
@@ -57,12 +57,12 @@ void TransformStageImpl::UnprepareOutput(size_t index,
   callback(0);
 }
 
-ftl::RefPtr<ftl::TaskRunner> TransformStageImpl::GetNodeTaskRunner() {
+fxl::RefPtr<fxl::TaskRunner> TransformStageImpl::GetNodeTaskRunner() {
   return transform_->GetTaskRunner();
 }
 
 void TransformStageImpl::Update() {
-  FTL_DCHECK(allocator_);
+  FXL_DCHECK(allocator_);
 
   while (input_.packet() && output_.demand() != Demand::kNegative) {
     PacketPtr output_packet;
@@ -85,24 +85,24 @@ void TransformStageImpl::Update() {
 void TransformStageImpl::FlushInput(size_t index,
                                     bool hold_frame,
                                     const DownstreamCallback& callback) {
-  FTL_DCHECK(index == 0u);
+  FXL_DCHECK(index == 0u);
   input_.Flush();
   callback(0);
 }
 
 void TransformStageImpl::FlushOutput(size_t index) {
-  FTL_DCHECK(index == 0u);
-  FTL_DCHECK(transform_);
+  FXL_DCHECK(index == 0u);
+  FXL_DCHECK(transform_);
   PostTask([this]() { transform_->Flush(); });
   input_packet_is_new_ = true;
 }
 
 void TransformStageImpl::SetTaskRunner(
-    ftl::RefPtr<ftl::TaskRunner> task_runner) {
+    fxl::RefPtr<fxl::TaskRunner> task_runner) {
   StageImpl::SetTaskRunner(task_runner);
 }
 
-void TransformStageImpl::PostTask(const ftl::Closure& task) {
+void TransformStageImpl::PostTask(const fxl::Closure& task) {
   StageImpl::PostTask(task);
 }
 

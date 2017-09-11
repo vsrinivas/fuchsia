@@ -43,5 +43,5 @@ class WobblyRingsScene : public Scene {
   escher::MaterialPtr ring3_color_;
   escher::MaterialPtr checkerboard_material_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(WobblyRingsScene);
+  FXL_DISALLOW_COPY_AND_ASSIGN(WobblyRingsScene);
 };

@@ -7,7 +7,7 @@
 
 #include "lib/ui/views/fidl/view_trees.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace view_manager {
 
@@ -54,7 +54,7 @@ class ViewTreeImpl : public mozart::ViewTree,
   fidl::BindingSet<app::ServiceProvider> service_provider_bindings_;
   fidl::BindingSet<mozart::ViewContainer> container_bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ViewTreeImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ViewTreeImpl);
 };
 
 }  // namespace view_manager

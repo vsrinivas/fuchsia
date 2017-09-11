@@ -32,7 +32,7 @@
   }
 
   const {{class_name}}* object = static_cast<const {{class_name}}*>(data);
-  FTL_ALLOW_UNUSED_LOCAL(object);
+  FXL_ALLOW_UNUSED_LOCAL(object);
 
   if (object->is_null())
     return ::fidl::internal::ValidationError::NONE;
@@ -77,7 +77,7 @@ void {{class_name}}::EncodePointersAndHandles(
     }
 {%- endfor %}
     case {{enum_name}}::__UNKNOWN__: {
-      FTL_DCHECK(false) << "No sane way to serialize a union with an unknown tag.";
+      FXL_DCHECK(false) << "No sane way to serialize a union with an unknown tag.";
       break;
     }
   }

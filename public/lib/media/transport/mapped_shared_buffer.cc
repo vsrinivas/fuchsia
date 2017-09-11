@@ -10,7 +10,7 @@
 
 #include "lib/media/transport/fifo_allocator.h"
 #include "lib/media/fidl/media_transport.fidl.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -21,20 +21,20 @@ MappedSharedBuffer::~MappedSharedBuffer() {
 }
 
 mx_status_t MappedSharedBuffer::InitNew(uint64_t size, uint32_t map_flags) {
-  FTL_DCHECK(size > 0);
+  FXL_DCHECK(size > 0);
 
   mx::vmo vmo;
 
   mx_status_t status = mx::vmo::create(size, 0, &vmo);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "mx::vmo::create failed, status " << status;
+    FXL_LOG(ERROR) << "mx::vmo::create failed, status " << status;
     return status;
   }
 
   // Allocate physical memory for the buffer.
   status = vmo.op_range(MX_VMO_OP_COMMIT, 0u, size, nullptr, 0u);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "mx::vmo::op_range failed, status " << status;
+    FXL_LOG(ERROR) << "mx::vmo::op_range failed, status " << status;
     return status;
   }
 
@@ -51,12 +51,12 @@ mx_status_t MappedSharedBuffer::InitInternal(mx::vmo vmo, uint32_t map_flags) {
   uint64_t size;
   mx_status_t status = vmo.get_size(&size);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "mx::vmo::get_size failed, status " << status;
+    FXL_LOG(ERROR) << "mx::vmo::get_size failed, status " << status;
     return status;
   }
 
   if (size == 0 || size > MediaPacketConsumer::kMaxBufferLen) {
-    FTL_LOG(ERROR) << "mx::vmo::get_size returned invalid size " << size;
+    FXL_LOG(ERROR) << "mx::vmo::get_size returned invalid size " << size;
     return MX_ERR_OUT_OF_RANGE;
   }
 
@@ -67,7 +67,7 @@ mx_status_t MappedSharedBuffer::InitInternal(mx::vmo vmo, uint32_t map_flags) {
   status =
       mx::vmar::root_self().map(0, vmo, 0u, size, map_flags, &mapped_buffer);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "mx::vmar::map failed, status " << status;
+    FXL_LOG(ERROR) << "mx::vmar::map failed, status " << status;
     return status;
   }
 
@@ -86,10 +86,10 @@ bool MappedSharedBuffer::initialized() const {
 
 void MappedSharedBuffer::Reset() {
   if (buffer_ptr_ != nullptr) {
-    FTL_DCHECK(size_ != 0);
+    FXL_DCHECK(size_ != 0);
     mx_status_t status = mx::vmar::root_self().unmap(
         reinterpret_cast<uintptr_t>(buffer_ptr_), size_);
-    FTL_CHECK(status == MX_OK);
+    FXL_CHECK(status == MX_OK);
     buffer_ptr_ = nullptr;
   }
 
@@ -102,39 +102,39 @@ uint64_t MappedSharedBuffer::size() const {
 }
 
 mx::vmo MappedSharedBuffer::GetDuplicateVmo(mx_rights_t rights) const {
-  FTL_DCHECK(initialized());
+  FXL_DCHECK(initialized());
   mx::vmo vmo;
   mx_status_t status = vmo_.duplicate(rights, &vmo);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "mx::handle::duplicate failed, status " << status;
+    FXL_LOG(ERROR) << "mx::handle::duplicate failed, status " << status;
   }
 
   return vmo;
 }
 
 bool MappedSharedBuffer::Validate(uint64_t offset, uint64_t size) {
-  FTL_DCHECK(buffer_ptr_ != nullptr);
+  FXL_DCHECK(buffer_ptr_ != nullptr);
   return offset < size_ && size <= size_ - offset;
 }
 
 void* MappedSharedBuffer::PtrFromOffset(uint64_t offset) const {
-  FTL_DCHECK(buffer_ptr_ != nullptr);
+  FXL_DCHECK(buffer_ptr_ != nullptr);
 
   if (offset == FifoAllocator::kNullOffset) {
     return nullptr;
   }
 
-  FTL_DCHECK(offset < size_);
+  FXL_DCHECK(offset < size_);
   return buffer_ptr_ + offset;
 }
 
 uint64_t MappedSharedBuffer::OffsetFromPtr(void* ptr) const {
-  FTL_DCHECK(buffer_ptr_ != nullptr);
+  FXL_DCHECK(buffer_ptr_ != nullptr);
   if (ptr == nullptr) {
     return FifoAllocator::kNullOffset;
   }
   uint64_t offset = reinterpret_cast<uint8_t*>(ptr) - buffer_ptr_;
-  FTL_DCHECK(offset < size_);
+  FXL_DCHECK(offset < size_);
   return offset;
 }
 

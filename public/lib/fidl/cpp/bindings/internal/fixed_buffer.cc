@@ -9,7 +9,7 @@
 #include <algorithm>
 
 #include "lib/fidl/cpp/bindings/internal/bindings_serialization.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace fidl {
 namespace internal {
@@ -28,7 +28,7 @@ void* FixedBuffer::Allocate(size_t delta) {
   delta = internal::Align(delta);
 
   if (delta == 0 || delta > size_ - cursor_) {
-    FTL_DCHECK(false) << "Not reached";
+    FXL_DCHECK(false) << "Not reached";
     return nullptr;
   }
 

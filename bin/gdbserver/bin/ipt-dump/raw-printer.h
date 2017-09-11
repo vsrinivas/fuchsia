@@ -11,7 +11,7 @@
 
 #include "garnet/bin/gdbserver/lib/intel-pt-decode/decoder.h"
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace intel_processor_trace {
 
@@ -73,7 +73,7 @@ class RawPrinter {
   DecoderState* state_;
   Config config_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(RawPrinter);
+  FXL_DISALLOW_COPY_AND_ASSIGN(RawPrinter);
 };
 
 }  // namespace intel_processor_trace

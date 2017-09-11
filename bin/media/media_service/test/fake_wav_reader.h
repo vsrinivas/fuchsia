@@ -10,7 +10,7 @@
 
 #include "lib/media/fidl/seeking_reader.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -23,7 +23,7 @@ class FakeWavReader : public SeekingReader {
   ~FakeWavReader() override;
 
   void SetSize(uint64_t size) {
-    FTL_DCHECK(size > kMasterChunkHeaderSize + kFormatChunkSize +
+    FXL_DCHECK(size > kMasterChunkHeaderSize + kFormatChunkSize +
                           kDataChunkHeaderSize);
     size_ = size;
     WriteHeader();

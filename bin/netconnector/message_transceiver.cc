@@ -10,17 +10,17 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace netconnector {
 
-MessageTransceiver::MessageTransceiver(ftl::UniqueFD socket_fd)
+MessageTransceiver::MessageTransceiver(fxl::UniqueFD socket_fd)
     : socket_fd_(std::move(socket_fd)),
       task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
       receive_buffer_(kRecvBufferSize) {
-  FTL_DCHECK(socket_fd_.is_valid());
-  FTL_DCHECK(task_runner_);
+  FXL_DCHECK(socket_fd_.is_valid());
+  FXL_DCHECK(task_runner_);
 
   message_relay_.SetMessageReceivedCallback(
       [this](std::vector<uint8_t> message) {
@@ -39,7 +39,7 @@ MessageTransceiver::~MessageTransceiver() {
 }
 
 void MessageTransceiver::SetChannel(mx::channel channel) {
-  FTL_DCHECK(channel);
+  FXL_DCHECK(channel);
 
   if (!socket_fd_.is_valid()) {
     return;
@@ -57,7 +57,7 @@ void MessageTransceiver::SetChannel(mx::channel channel) {
 
 void MessageTransceiver::SendServiceName(const std::string& service_name) {
   if (!socket_fd_.is_valid()) {
-    FTL_LOG(WARNING) << "SendServiceName called with closed connection";
+    FXL_LOG(WARNING) << "SendServiceName called with closed connection";
     return;
   }
 
@@ -69,7 +69,7 @@ void MessageTransceiver::SendServiceName(const std::string& service_name) {
 
 void MessageTransceiver::SendMessage(std::vector<uint8_t> message) {
   if (!socket_fd_.is_valid()) {
-    FTL_LOG(WARNING) << "SendMessage called with closed connection";
+    FXL_LOG(WARNING) << "SendMessage called with closed connection";
     return;
   }
 
@@ -104,7 +104,7 @@ void MessageTransceiver::SendVersionPacket() {
 }
 
 void MessageTransceiver::PostSendTask(std::function<void()> task) {
-  FTL_DCHECK(socket_fd_.is_valid()) << "PostSendTask with invalid socket.";
+  FXL_DCHECK(socket_fd_.is_valid()) << "PostSendTask with invalid socket.";
   send_tasks_.push(task);
   if (send_tasks_.size() == 1) {
     MaybeWaitToSend();
@@ -118,7 +118,7 @@ void MessageTransceiver::MaybeWaitToSend() {
 
   if (!fd_send_waiter_.Wait(
           [this](mx_status_t status, uint32_t events) {
-            FTL_DCHECK(!send_tasks_.empty());
+            FXL_DCHECK(!send_tasks_.empty());
             auto task = send_tasks_.front();
             send_tasks_.pop();
             task();
@@ -136,7 +136,7 @@ void MessageTransceiver::MaybeWaitToSend() {
 void MessageTransceiver::SendPacket(PacketType type,
                                     const void* payload,
                                     size_t payload_size) {
-  FTL_DCHECK(payload_size == 0 || payload != nullptr);
+  FXL_DCHECK(payload_size == 0 || payload != nullptr);
 
   PacketHeader packet_header;
 
@@ -147,12 +147,12 @@ void MessageTransceiver::SendPacket(PacketType type,
 
   int result = send(socket_fd_.get(), &packet_header, sizeof(packet_header), 0);
   if (result == -1) {
-    FTL_LOG(ERROR) << "Failed to send, errno " << errno;
+    FXL_LOG(ERROR) << "Failed to send, errno " << errno;
     CloseConnection();
     return;
   }
 
-  FTL_DCHECK(result == static_cast<int>(sizeof(packet_header)));
+  FXL_DCHECK(result == static_cast<int>(sizeof(packet_header)));
 
   if (payload_size == 0) {
     MaybeWaitToSend();
@@ -161,12 +161,12 @@ void MessageTransceiver::SendPacket(PacketType type,
 
   result = send(socket_fd_.get(), payload, payload_size, 0);
   if (result == -1) {
-    FTL_LOG(ERROR) << "Failed to send, errno " << errno;
+    FXL_LOG(ERROR) << "Failed to send, errno " << errno;
     CloseConnection();
     return;
   }
 
-  FTL_DCHECK(result == static_cast<int>(payload_size));
+  FXL_DCHECK(result == static_cast<int>(payload_size));
   MaybeWaitToSend();
 }
 
@@ -190,7 +190,7 @@ void MessageTransceiver::ReceiveMessage() {
     // If we got EIO and socket_fd_ isn't valid, recv failed because the
     // socket was closed locally.
     if (errno != EIO || socket_fd_.is_valid()) {
-      FTL_LOG(ERROR) << "Failed to receive, errno " << errno;
+      FXL_LOG(ERROR) << "Failed to receive, errno " << errno;
     }
 
     CloseConnection();
@@ -227,7 +227,7 @@ void MessageTransceiver::ParseReceivedBytes(size_t byte_count) {
 
       if (PacketHeaderFieldReceived(sentinel_) &&
           receive_packet_header_.sentinel_ != kSentinel) {
-        FTL_LOG(ERROR) << "Received bad packet sentinel "
+        FXL_LOG(ERROR) << "Received bad packet sentinel "
                        << receive_packet_header_.sentinel_;
         CloseConnection();
         return;
@@ -235,7 +235,7 @@ void MessageTransceiver::ParseReceivedBytes(size_t byte_count) {
 
       if (PacketHeaderFieldReceived(type_) &&
           receive_packet_header_.type_ > PacketType::kMax) {
-        FTL_LOG(ERROR) << "Received bad packet type "
+        FXL_LOG(ERROR) << "Received bad packet type "
                        << static_cast<uint8_t>(receive_packet_header_.type_);
         CloseConnection();
         return;
@@ -245,7 +245,7 @@ void MessageTransceiver::ParseReceivedBytes(size_t byte_count) {
       // order exactly once. For now, 0 is 0 regardless of byte order.
       if (PacketHeaderFieldReceived(channel_) &&
           receive_packet_header_.channel_ != 0) {
-        FTL_LOG(ERROR) << "Received bad channel id "
+        FXL_LOG(ERROR) << "Received bad channel id "
                        << receive_packet_header_.channel_;
         CloseConnection();
         return;
@@ -255,7 +255,7 @@ void MessageTransceiver::ParseReceivedBytes(size_t byte_count) {
         receive_packet_header_.payload_size_ =
             ntohl(receive_packet_header_.payload_size_);
         if (receive_packet_header_.payload_size_ > kMaxPayloadSize) {
-          FTL_LOG(ERROR) << "Received bad payload size "
+          FXL_LOG(ERROR) << "Received bad payload size "
                          << receive_packet_header_.payload_size_;
           CloseConnection();
           return;
@@ -280,13 +280,13 @@ bool MessageTransceiver::CopyReceivedBytes(uint8_t** bytes,
                                            uint8_t* dest,
                                            size_t dest_size,
                                            size_t dest_packet_offset) {
-  FTL_DCHECK(bytes != nullptr);
-  FTL_DCHECK(*bytes != nullptr);
-  FTL_DCHECK(byte_count != nullptr);
-  FTL_DCHECK(dest != nullptr);
-  FTL_DCHECK(dest_size != 0);
-  FTL_DCHECK(dest_packet_offset <= receive_packet_offset_);
-  FTL_DCHECK(receive_packet_offset_ < dest_packet_offset + dest_size);
+  FXL_DCHECK(bytes != nullptr);
+  FXL_DCHECK(*bytes != nullptr);
+  FXL_DCHECK(byte_count != nullptr);
+  FXL_DCHECK(dest != nullptr);
+  FXL_DCHECK(dest_size != 0);
+  FXL_DCHECK(dest_packet_offset <= receive_packet_offset_);
+  FXL_DCHECK(receive_packet_offset_ < dest_packet_offset + dest_size);
 
   size_t dest_offset = receive_packet_offset_ - dest_packet_offset;
   size_t bytes_to_copy = std::min(*byte_count, dest_size - dest_offset);
@@ -307,13 +307,13 @@ void MessageTransceiver::OnReceivedPacketComplete() {
   switch (receive_packet_header_.type_) {
     case PacketType::kVersion:
       if (version_ != kNullVersion) {
-        FTL_LOG(ERROR) << "Version packet received out of order";
+        FXL_LOG(ERROR) << "Version packet received out of order";
         CloseConnection();
         return;
       }
 
       if (receive_packet_header_.payload_size_ != sizeof(uint32_t)) {
-        FTL_LOG(ERROR) << "Version packet has bad payload size "
+        FXL_LOG(ERROR) << "Version packet has bad payload size "
                        << receive_packet_header_.payload_size_;
         CloseConnection();
         return;
@@ -322,7 +322,7 @@ void MessageTransceiver::OnReceivedPacketComplete() {
       version_ = ParsePayloadUint32();
 
       if (version_ < kMinSupportedVersion) {
-        FTL_LOG(ERROR) << "Unsupported version " << version_;
+        FXL_LOG(ERROR) << "Unsupported version " << version_;
         CloseConnection();
         return;
       }
@@ -344,7 +344,7 @@ void MessageTransceiver::OnReceivedPacketComplete() {
 
     case PacketType::kServiceName:
       if (version_ == kNullVersion) {
-        FTL_LOG(ERROR) << "Service name packet received when version "
+        FXL_LOG(ERROR) << "Service name packet received when version "
                           "packet was expected";
         CloseConnection();
         return;
@@ -352,7 +352,7 @@ void MessageTransceiver::OnReceivedPacketComplete() {
 
       if (receive_packet_header_.payload_size_ == 0 ||
           receive_packet_header_.payload_size_ > kMaxServiceNameLength) {
-        FTL_LOG(ERROR) << "Service name packet has bad payload size "
+        FXL_LOG(ERROR) << "Service name packet has bad payload size "
                        << receive_packet_header_.payload_size_;
         CloseConnection();
         return;
@@ -365,7 +365,7 @@ void MessageTransceiver::OnReceivedPacketComplete() {
 
     case PacketType::kMessage:
       if (version_ == kNullVersion) {
-        FTL_LOG(ERROR) << "Message packet received when version "
+        FXL_LOG(ERROR) << "Message packet received when version "
                           "packet was expected";
         CloseConnection();
         return;
@@ -377,14 +377,14 @@ void MessageTransceiver::OnReceivedPacketComplete() {
       break;
 
     default:
-      FTL_CHECK(false);  // ParseReceivedBytes shouldn't have let this through.
+      FXL_CHECK(false);  // ParseReceivedBytes shouldn't have let this through.
       break;
   }
 }
 
 uint32_t MessageTransceiver::ParsePayloadUint32() {
   uint32_t net_byte_order_result;
-  FTL_DCHECK(receive_packet_payload_.size() == sizeof(net_byte_order_result));
+  FXL_DCHECK(receive_packet_payload_.size() == sizeof(net_byte_order_result));
   std::memcpy(&net_byte_order_result, receive_packet_payload_.data(),
               sizeof(net_byte_order_result));
   return ntohl(net_byte_order_result);

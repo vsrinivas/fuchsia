@@ -6,13 +6,13 @@
 
 #include <utility>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/socket/blocking_drain.h"
 
 namespace mtl {
 
 bool BlockingCopyToString(mx::socket source, std::string* result) {
-  FTL_CHECK(result);
+  FXL_CHECK(result);
   result->clear();
   return BlockingDrainFrom(
       std::move(source), [result](const void* buffer, uint32_t num_bytes) {
@@ -21,7 +21,7 @@ bool BlockingCopyToString(mx::socket source, std::string* result) {
       });
 }
 
-bool BlockingCopyFromString(ftl::StringView source,
+bool BlockingCopyFromString(fxl::StringView source,
                             const mx::socket& destination) {
   const char* ptr = source.data();
   size_t to_write = source.size();
@@ -47,10 +47,10 @@ bool BlockingCopyFromString(ftl::StringView source,
   }
 }
 
-mx::socket WriteStringToSocket(ftl::StringView source) {
+mx::socket WriteStringToSocket(fxl::StringView source) {
   // TODO(qsr): Check that source.size() <= socket max capacity when the
   // information is retrievable. Until then use the know socket capacity.
-  FTL_DCHECK(source.size() < 256 * 1024);
+  FXL_DCHECK(source.size() < 256 * 1024);
   mx::socket socket1, socket2;
   mx::socket::create(0u, &socket1, &socket2);
   BlockingCopyFromString(source, std::move(socket1));

@@ -35,7 +35,7 @@ class App {
   Renderer renderer_;
   Compiler compiler_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(App);
+  FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
 }  // namespace shadertoy

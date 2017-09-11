@@ -49,8 +49,8 @@ void UniformBufferPool::InternalAllocate() {
   vk::MemoryRequirements reqs =
       device().getBufferMemoryRequirements(new_buffers[0]);
   // If necessary, we can write the logic to deal with the conditions below.
-  FTL_CHECK(buffer_size_ == reqs.size);
-  FTL_CHECK(buffer_size_ % reqs.alignment == 0);
+  FXL_CHECK(buffer_size_ == reqs.size);
+  FXL_CHECK(buffer_size_ % reqs.alignment == 0);
 
   // Allocate enough memory for all of the buffers.
   reqs.size *= kBufferBatchSize;
@@ -69,13 +69,13 @@ void UniformBufferPool::InternalAllocate() {
     // Workaround for dealing with RefPtr/Reffable Adopt() semantics.  Let the
     // RefPtr go out of scope immediately; the Buffer will be added to
     // free_buffers_ via OnReceiveOwnable().
-    ftl::MakeRefCounted<Buffer>(this, std::move(mem), new_buffers[i],
+    fxl::MakeRefCounted<Buffer>(this, std::move(mem), new_buffers[i],
                                 buffer_size_);
   }
 }
 
 void UniformBufferPool::OnReceiveOwnable(std::unique_ptr<Resource> resource) {
-  FTL_DCHECK(resource->IsKindOf<Buffer>());
+  FXL_DCHECK(resource->IsKindOf<Buffer>());
   free_buffers_.emplace_back(static_cast<Buffer*>(resource.release()));
 }
 

@@ -47,5 +47,5 @@ class Scene {
  private:
   Demo* demo_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Scene);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Scene);
 };

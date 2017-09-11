@@ -76,38 +76,38 @@ inline bool IsVariable(const ValuePtrT& val) {
 
 // Caller must verify that the value is a Matrix4x4 before calling this.
 inline escher::mat4 UnwrapMatrix4x4(const scenic::ValuePtr& val) {
-  FTL_DCHECK(IsMatrix4x4(val));
+  FXL_DCHECK(IsMatrix4x4(val));
   return Unwrap(val->get_matrix4x4());
 }
 
 // Caller must verify that the value is a Transform before calling this.
 inline escher::Transform UnwrapTransform(const scenic::ValuePtr& val) {
-  FTL_DCHECK(IsTransform(val));
+  FXL_DCHECK(IsTransform(val));
   return Unwrap(val->get_transform());
 }
 
 inline float UnwrapFloat(const scenic::FloatValuePtr& val) {
-  FTL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
+  FXL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
   return val->value;
 }
 
 inline escher::vec2 UnwrapVector2(const scenic::Vector2ValuePtr& val) {
-  FTL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
+  FXL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
   return Unwrap(val->value);
 }
 
 inline escher::vec3 UnwrapVector3(const scenic::Vector3ValuePtr& val) {
-  FTL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
+  FXL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
   return Unwrap(val->value);
 }
 
 inline escher::vec4 UnwrapVector4(const scenic::Vector4ValuePtr& val) {
-  FTL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
+  FXL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
   return Unwrap(val->value);
 }
 
 inline escher::quat UnwrapQuaternion(const scenic::QuaternionValuePtr& val) {
-  FTL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
+  FXL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
   return Unwrap(val->value);
 }
 

@@ -26,7 +26,7 @@ class PingServiceImpl : public test::PingService {
   void Ping(const Callback<void()>& callback) override;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(PingServiceImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PingServiceImpl);
 };
 
 void PingServiceImpl::Ping(const Callback<void()>& callback) {
@@ -46,7 +46,7 @@ class PingPongTest {
   unsigned int iterations_to_run_;
   unsigned int current_iterations_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(PingPongTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PingPongTest);
 };
 
 PingPongTest::PingPongTest(test::PingServicePtr service)

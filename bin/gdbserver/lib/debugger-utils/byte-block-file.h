@@ -26,7 +26,7 @@ class FileByteBlock final : public util::ByteBlock {
  private:
   int fd_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FileByteBlock);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FileByteBlock);
 };
 
 }  // namespace util

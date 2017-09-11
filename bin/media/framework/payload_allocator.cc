@@ -6,7 +6,7 @@
 
 #include <cstdlib>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -23,12 +23,12 @@ class DefaultAllocator : public PayloadAllocator {
 };
 
 void* DefaultAllocator::AllocatePayloadBuffer(size_t size) {
-  FTL_DCHECK(size > 0);
+  FXL_DCHECK(size > 0);
   return std::malloc(size);
 }
 
 void DefaultAllocator::ReleasePayloadBuffer(void* buffer) {
-  FTL_DCHECK(buffer);
+  FXL_DCHECK(buffer);
   std::free(buffer);
 }
 

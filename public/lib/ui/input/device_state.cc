@@ -6,20 +6,20 @@
 
 #include "lib/ui/input/fidl/input_event_constants.fidl.h"
 #include "lib/ui/input/fidl/usages.fidl.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/time/time_delta.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/time/time_delta.h"
+#include "lib/fxl/time/time_point.h"
 
 namespace {
 int64_t InputEventTimestampNow() {
-  return ftl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
+  return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
 }
 }  // namespace
 
 namespace mozart {
 
-constexpr ftl::TimeDelta kKeyRepeatSlow = ftl::TimeDelta::FromMilliseconds(250);
-constexpr ftl::TimeDelta kKeyRepeatFast = ftl::TimeDelta::FromMilliseconds(75);
+constexpr fxl::TimeDelta kKeyRepeatSlow = fxl::TimeDelta::FromMilliseconds(250);
+constexpr fxl::TimeDelta kKeyRepeatFast = fxl::TimeDelta::FromMilliseconds(75);
 
 #pragma mark - KeyboardState
 
@@ -53,7 +53,7 @@ void KeyboardState::SendEvent(mozart::KeyboardEvent::Phase phase,
 }
 
 void KeyboardState::Update(mozart::InputReportPtr input_report) {
-  FTL_DCHECK(input_report->keyboard);
+  FXL_DCHECK(input_report->keyboard);
 
   uint64_t now = input_report->event_time;
   std::vector<uint32_t> old_keys = keys_;
@@ -169,7 +169,7 @@ void KeyboardState::Repeat(uint64_t sequence) {
   ScheduleRepeat(sequence, kKeyRepeatFast);
 }
 
-void KeyboardState::ScheduleRepeat(uint64_t sequence, ftl::TimeDelta delta) {
+void KeyboardState::ScheduleRepeat(uint64_t sequence, fxl::TimeDelta delta) {
   task_runner_->PostDelayedTask(
       [ weak = weak_ptr_factory_.GetWeakPtr(), sequence ] {
         if (weak)
@@ -205,7 +205,7 @@ void MouseState::SendEvent(float rel_x,
 
 void MouseState::Update(mozart::InputReportPtr input_report,
                         mozart::Size display_size) {
-  FTL_DCHECK(input_report->mouse);
+  FXL_DCHECK(input_report->mouse);
   uint64_t now = input_report->event_time;
   uint8_t pressed = (input_report->mouse->pressed_buttons ^ buttons_) &
                     input_report->mouse->pressed_buttons;
@@ -263,10 +263,10 @@ void StylusState::SendEvent(int64_t timestamp,
 
 void StylusState::Update(mozart::InputReportPtr input_report,
                          mozart::Size display_size) {
-  FTL_DCHECK(input_report->stylus);
+  FXL_DCHECK(input_report->stylus);
 
   mozart::StylusDescriptor* descriptor = device_state_->stylus_descriptor();
-  FTL_DCHECK(descriptor);
+  FXL_DCHECK(descriptor);
 
   const bool previous_stylus_down = stylus_down_;
   const bool previous_stylus_in_range = stylus_in_range_;
@@ -329,10 +329,10 @@ void StylusState::Update(mozart::InputReportPtr input_report,
 
 void TouchscreenState::Update(mozart::InputReportPtr input_report,
                               mozart::Size display_size) {
-  FTL_DCHECK(input_report->touchscreen);
+  FXL_DCHECK(input_report->touchscreen);
   mozart::TouchscreenDescriptor* descriptor =
       device_state_->touchscreen_descriptor();
-  FTL_DCHECK(descriptor);
+  FXL_DCHECK(descriptor);
 
   std::vector<mozart::PointerEvent> old_pointers = pointers_;
   pointers_.clear();
@@ -346,7 +346,7 @@ void TouchscreenState::Update(mozart::InputReportPtr input_report,
     pt->device_id = device_state_->device_id();
     pt->phase = mozart::PointerEvent::Phase::DOWN;
     for (auto it = old_pointers.begin(); it != old_pointers.end(); ++it) {
-      FTL_DCHECK(touch->finger_id >= 0);
+      FXL_DCHECK(touch->finger_id >= 0);
       if (it->pointer_id == static_cast<uint32_t>(touch->finger_id)) {
         pt->phase = mozart::PointerEvent::Phase::MOVE;
         old_pointers.erase(it);

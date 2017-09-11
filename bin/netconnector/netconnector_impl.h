@@ -22,7 +22,7 @@
 #include "garnet/bin/netconnector/responding_service_host.h"
 #include "garnet/bin/netconnector/service_agent.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/netconnector/fidl/netconnector.fidl.h"
 
 namespace netconnector {
@@ -95,7 +95,7 @@ class NetConnectorImpl : public NetConnector {
 
   media::FidlPublisher<GetKnownDeviceNamesCallback> device_names_publisher_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(NetConnectorImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(NetConnectorImpl);
 };
 
 }  // namespace netconnector

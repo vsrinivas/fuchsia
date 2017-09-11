@@ -116,7 +116,7 @@ size_t GetSerializedSize_(const {{union.name}}Ptr& input) {
 {%- endfor %}
       default:
         // TODO(vardhan): Should this return an error code instead?
-        FTL_CHECK(false) << "No sane way to serialize a union with an unknown tag.";
+        FXL_CHECK(false) << "No sane way to serialize a union with an unknown tag.";
         break;
     }
   } else {
@@ -165,7 +165,7 @@ void Deserialize_(internal::{{union.name}}_Data* input,
       }
 {%- endfor %}
       default:
-        FTL_LOG(WARNING) << "Deserializing {{union.name}} with unknown tag!";
+        FXL_LOG(WARNING) << "Deserializing {{union.name}} with unknown tag!";
         // No way to deserialize the data when we encounter an unknown tag.
         break;
     }

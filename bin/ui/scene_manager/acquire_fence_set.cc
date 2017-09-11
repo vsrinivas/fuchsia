@@ -5,7 +5,7 @@
 #include "garnet/bin/ui/scene_manager/acquire_fence_set.h"
 
 #include <mx/time.h>
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace scene_manager {
 
@@ -16,12 +16,12 @@ AcquireFenceSet::~AcquireFenceSet() {
   ClearHandlers();
 }
 
-void AcquireFenceSet::WaitReadyAsync(ftl::Closure ready_callback) {
+void AcquireFenceSet::WaitReadyAsync(fxl::Closure ready_callback) {
   if (!ready_callback)
     return;
 
   // Make sure callback was not set before.
-  FTL_DCHECK(!ready_callback_);
+  FXL_DCHECK(!ready_callback_);
 
   if (ready()) {
     mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
@@ -29,7 +29,7 @@ void AcquireFenceSet::WaitReadyAsync(ftl::Closure ready_callback) {
     return;
   }
 
-  FTL_DCHECK(handler_keys_.empty());
+  FXL_DCHECK(handler_keys_.empty());
   for (auto& fence : fences_) {
     handler_keys_.push_back(mtl::MessageLoop::GetCurrent()->AddHandler(
         this, fence.get(), kFenceSignalledOrClosed));
@@ -52,15 +52,15 @@ void AcquireFenceSet::ClearHandlers() {
 void AcquireFenceSet::OnHandleReady(mx_handle_t handle,
                                     mx_signals_t pending,
                                     uint64_t count) {
-  FTL_DCHECK(pending & kFenceSignalledOrClosed);
-  FTL_DCHECK(ready_callback_);
+  FXL_DCHECK(pending & kFenceSignalledOrClosed);
+  FXL_DCHECK(ready_callback_);
 
   // TODO: Handle the case where there is an error condition, probably want to
   // close the session.
   num_signalled_fences_++;
 
   // Remove the handler that is associated with this handle.
-  FTL_DCHECK(fences_.size() == handler_keys_.size());
+  FXL_DCHECK(fences_.size() == handler_keys_.size());
   size_t handler_index = 0;
   for (; handler_index < fences_.size(); handler_index++) {
     if (fences_[handler_index].get() == handle) {
@@ -68,12 +68,12 @@ void AcquireFenceSet::OnHandleReady(mx_handle_t handle,
     }
   }
   mtl::MessageLoop::HandlerKey handler_key = handler_keys_[handler_index];
-  FTL_DCHECK(handler_key != 0);
+  FXL_DCHECK(handler_key != 0);
   mtl::MessageLoop::GetCurrent()->RemoveHandler(handler_key);
   // Set the handler key to 0 so we don't try to remove it twice.
   handler_keys_[handler_index] = 0;
   if (ready()) {
-    ftl::Closure callback = std::move(ready_callback_);
+    fxl::Closure callback = std::move(ready_callback_);
     handler_keys_.clear();
 
     callback();

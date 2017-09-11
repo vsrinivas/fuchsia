@@ -13,7 +13,7 @@
 #include "lib/fidl/cpp/bindings/map.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fidl/cpp/bindings/tests/util/container_test_util.h"
-#include "lib/ftl/arraysize.h"
+#include "lib/fxl/arraysize.h"
 
 namespace fidl {
 namespace test {

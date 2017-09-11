@@ -12,7 +12,7 @@ Shape::Shape(Session* session,
              scenic::ResourceId id,
              const ResourceTypeInfo& type_info)
     : Resource(session, id, type_info) {
-  FTL_DCHECK(type_info.IsKindOf(Shape::kTypeInfo));
+  FXL_DCHECK(type_info.IsKindOf(Shape::kTypeInfo));
 }
 
 }  // namespace scene_manager

@@ -11,8 +11,8 @@
 #include "garnet/bin/netconnector/mdns/dns_message.h"
 #include "garnet/bin/netconnector/socket_address.h"
 #include "garnet/go/src/netstack/apps/include/netconfig.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/fd_waiter.h"
 
 namespace netstack {
@@ -71,7 +71,7 @@ class MdnsInterfaceTransceiver {
 
   uint32_t index() const { return index_; }
 
-  const ftl::UniqueFD& socket_fd() const { return socket_fd_; }
+  const fxl::UniqueFD& socket_fd() const { return socket_fd_; }
 
   virtual int SetOptionJoinMulticastGroup() = 0;
   virtual int SetOptionOutboundInterface() = 0;
@@ -103,7 +103,7 @@ class MdnsInterfaceTransceiver {
   IpAddress address_;
   uint32_t index_;
   std::string name_;
-  ftl::UniqueFD socket_fd_;
+  fxl::UniqueFD socket_fd_;
   mtl::FDWaiter fd_waiter_;
   std::vector<uint8_t> inbound_buffer_;
   std::vector<uint8_t> outbound_buffer_;
@@ -111,7 +111,7 @@ class MdnsInterfaceTransceiver {
   std::shared_ptr<DnsResource> address_resource_;
   std::shared_ptr<DnsResource> alternate_address_resource_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MdnsInterfaceTransceiver);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MdnsInterfaceTransceiver);
 };
 
 }  // namespace mdns

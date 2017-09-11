@@ -93,13 +93,13 @@ class MediaTimelineControllerImpl
       callback_joiner_.Spawn();
 
       std::shared_ptr<TimelineTransition> this_ptr = shared_from_this();
-      FTL_DCHECK(!this_ptr.unique());
+      FXL_DCHECK(!this_ptr.unique());
 
       return
           [this_ptr](bool completed) {
-            FTL_DCHECK(this_ptr);
+            FXL_DCHECK(this_ptr);
             if (!completed && !this_ptr->cancelled_) {
-              FTL_LOG(WARNING)
+              FXL_LOG(WARNING)
                   << "A control point transition was cancelled unexpectedly.";
             }
             this_ptr->callback_joiner_.Complete();
@@ -108,7 +108,7 @@ class MediaTimelineControllerImpl
 
     // Cancels this transition.
     void Cancel() {
-      FTL_DCHECK(!cancelled_);
+      FXL_DCHECK(!cancelled_);
       cancelled_ = true;
       if (callback_) {
         callback_(false);
@@ -120,7 +120,7 @@ class MediaTimelineControllerImpl
     // Specifies a callback to be called if and when the transition is complete.
     // The callback will never be called if the transition is cancelled.
     void WhenCompleted(const std::function<void()>& completed_callback) {
-      FTL_DCHECK(!completed_callback_);
+      FXL_DCHECK(!completed_callback_);
       if (!callback_ && !cancelled_) {
         completed_callback();
       } else {

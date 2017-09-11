@@ -65,10 +65,10 @@ class Image : public WaitableResource {
   bool has_depth_;
   bool has_stencil_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Image);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Image);
 };
 
-typedef ftl::RefPtr<Image> ImagePtr;
+typedef fxl::RefPtr<Image> ImagePtr;
 
 // Debugging.
 ESCHER_DEBUG_PRINTABLE(ImageInfo);

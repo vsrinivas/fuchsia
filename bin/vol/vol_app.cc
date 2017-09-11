@@ -11,7 +11,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/media/audio/perceived_level.h"
 #include "lib/media/fidl/audio_policy_service.fidl.h"
-#include "lib/ftl/command_line.h"
+#include "lib/fxl/command_line.h"
 #include "lib/mtl/tasks/fd_waiter.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -54,7 +54,7 @@ class VolApp {
  public:
   VolApp(int argc, const char** argv)
       : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
-    ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+    fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
     if (command_line.HasOption("help")) {
       Usage();
@@ -140,7 +140,7 @@ class VolApp {
   }
 
   bool Parse(const std::string& string_value, float* float_out) {
-    FTL_DCHECK(float_out);
+    FXL_DCHECK(float_out);
 
     std::istringstream istream(string_value);
     return (istream >> *float_out) && istream.eof();

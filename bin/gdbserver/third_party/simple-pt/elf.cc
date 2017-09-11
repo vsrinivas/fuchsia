@@ -40,7 +40,7 @@
 #include "garnet/bin/gdbserver/lib/debugger-utils/byte-block-file.h"
 #include "garnet/bin/gdbserver/lib/debugger-utils/util.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
 
@@ -66,7 +66,7 @@ static bool ReadSymtabs(elf::Reader* elf,
 
   elf::Error rc = elf->ReadSectionHeaders();
   if (rc != elf::Error::OK) {
-    FTL_LOG(ERROR) << "Error reading ELF section headers: "
+    FXL_LOG(ERROR) << "Error reading ELF section headers: "
                    << elf::ErrorName(rc);
     return false;
   }
@@ -115,7 +115,7 @@ static bool ReadSymtabs(elf::Reader* elf,
   }
 
   if (!symtab && !dynsym)
-    FTL_LOG(WARNING) << elf->file_name() << " has no symbols";
+    FXL_LOG(WARNING) << elf->file_name() << " has no symbols";
   *out_symtab = std::move(symtab);
   *out_dynsym = std::move(dynsym);
 
@@ -216,7 +216,7 @@ static bool ElfOpen(const char* file_name,
                     std::unique_ptr<elf::Reader>* out_elf) {
   int fd = open(file_name, O_RDONLY);
   if (fd < 0) {
-    FTL_LOG(ERROR) << file_name << ", " << util::ErrnoString(errno);
+    FXL_LOG(ERROR) << file_name << ", " << util::ErrnoString(errno);
     return false;
   }
 
@@ -225,13 +225,13 @@ static bool ElfOpen(const char* file_name,
   std::unique_ptr<elf::Reader> elf;
   elf::Error rc = elf::Reader::Create(file_name, bb, 0, 0, &elf);
   if (rc != elf::Error::OK) {
-    FTL_LOG(ERROR) << "Error creating ELF reader: " << elf::ErrorName(rc);
+    FXL_LOG(ERROR) << "Error creating ELF reader: " << elf::ErrorName(rc);
     return false;
   }
 
   rc = elf->ReadSegmentHeaders();
   if (rc != elf::Error::OK) {
-    FTL_LOG(ERROR) << "Error reading ELF segment headers: "
+    FXL_LOG(ERROR) << "Error reading ELF segment headers: "
                    << elf::ErrorName(rc);
     return false;
   }
@@ -253,7 +253,7 @@ bool ReadElf(const char* file_name, struct pt_image* image,
   const elf::Header& hdr = elf->header();
   pic = hdr.e_type == ET_DYN;
   if (pic && base == 0) {
-    FTL_LOG(ERROR) << "PIC/PIE ELF with base 0 is not supported";
+    FXL_LOG(ERROR) << "PIC/PIE ELF with base 0 is not supported";
     return false;
   }
 

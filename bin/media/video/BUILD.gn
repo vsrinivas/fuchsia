@@ -22,7 +22,7 @@ source_set("video") {
     "//garnet/bin/media/util",
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/ui/geometry/cpp",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//magenta/system/ulib/trace",
   ]
 }

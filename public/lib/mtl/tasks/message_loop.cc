@@ -10,7 +10,7 @@
 #include <async/wait_with_timeout.h>
 #include <magenta/syscalls.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace mtl {
 namespace {
@@ -21,7 +21,7 @@ thread_local MessageLoop* g_current;
 
 class MessageLoop::TaskRecord {
  public:
-  TaskRecord(mx_time_t deadline, ftl::Closure closure);
+  TaskRecord(mx_time_t deadline, fxl::Closure closure);
   ~TaskRecord();
 
   async::Task& task() { return task_; }
@@ -54,27 +54,27 @@ class MessageLoop::HandlerRecord {
 };
 
 MessageLoop::MessageLoop()
-    : MessageLoop(ftl::MakeRefCounted<internal::IncomingTaskQueue>()) {}
+    : MessageLoop(fxl::MakeRefCounted<internal::IncomingTaskQueue>()) {}
 
 MessageLoop::MessageLoop(
-    ftl::RefPtr<internal::IncomingTaskQueue> incoming_tasks)
+    fxl::RefPtr<internal::IncomingTaskQueue> incoming_tasks)
     : loop_config_{.make_default_for_current_thread = true,
                    .epilogue = &MessageLoop::Epilogue,
                    .data = this},
       loop_(&loop_config_),
       task_runner_(std::move(incoming_tasks)) {
-  FTL_DCHECK(!g_current) << "At most one message loop per thread.";
+  FXL_DCHECK(!g_current) << "At most one message loop per thread.";
   g_current = this;
 
   MessageLoop::incoming_tasks()->InitDelegate(this);
 }
 
 MessageLoop::~MessageLoop() {
-  FTL_DCHECK(g_current == this)
+  FXL_DCHECK(g_current == this)
       << "Message loops must be destroyed on their own threads.";
 
   loop_.Shutdown();
-  FTL_DCHECK(handlers_.empty());
+  FXL_DCHECK(handlers_.empty());
 
   incoming_tasks()->ClearDelegate();
 
@@ -85,7 +85,7 @@ MessageLoop* MessageLoop::GetCurrent() {
   return g_current;
 }
 
-void MessageLoop::PostTask(ftl::Closure task, ftl::TimePoint target_time) {
+void MessageLoop::PostTask(fxl::Closure task, fxl::TimePoint target_time) {
   // TODO(jeffbrown): Consider allocating tasks from a pool.
   auto record = new TaskRecord(target_time.ToEpochDelta().ToNanoseconds(),
                                std::move(task));
@@ -98,22 +98,22 @@ void MessageLoop::PostTask(ftl::Closure task, ftl::TimePoint target_time) {
   }
 
   // The record will be destroyed when the task runs.
-  FTL_CHECK(status == MX_OK) << "Failed to post task: status=" << status;
+  FXL_CHECK(status == MX_OK) << "Failed to post task: status=" << status;
 }
 
 MessageLoop::HandlerKey MessageLoop::AddHandler(MessageLoopHandler* handler,
                                                 mx_handle_t handle,
                                                 mx_signals_t trigger,
-                                                ftl::TimeDelta timeout) {
-  FTL_DCHECK(g_current == this);
-  FTL_DCHECK(handler);
-  FTL_DCHECK(handle != MX_HANDLE_INVALID);
+                                                fxl::TimeDelta timeout) {
+  FXL_DCHECK(g_current == this);
+  FXL_DCHECK(handler);
+  FXL_DCHECK(handle != MX_HANDLE_INVALID);
 
   // TODO(jeffbrown): Consider allocating handlers from a pool.
   HandlerKey key = next_handler_key_++;
   auto record =
       new HandlerRecord(handle, trigger,
-                        timeout == ftl::TimeDelta::Max()
+                        timeout == fxl::TimeDelta::Max()
                             ? MX_TIME_INFINITE
                             : mx_deadline_after(timeout.ToNanoseconds()),
                         this, handler, key);
@@ -125,13 +125,13 @@ MessageLoop::HandlerKey MessageLoop::AddHandler(MessageLoopHandler* handler,
   }
 
   // The record will be destroyed when the handler runs or is removed.
-  FTL_CHECK(status == MX_OK) << "Failed to add handler: status=" << status;
+  FXL_CHECK(status == MX_OK) << "Failed to add handler: status=" << status;
   handlers_.emplace(key, record);
   return key;
 }
 
 void MessageLoop::RemoveHandler(HandlerKey key) {
-  FTL_DCHECK(g_current == this);
+  FXL_DCHECK(g_current == this);
 
   auto it = handlers_.find(key);
   if (it == handlers_.end())
@@ -144,37 +144,37 @@ void MessageLoop::RemoveHandler(HandlerKey key) {
     current_handler_removed_ = true;  // defer cleanup
   } else {
     mx_status_t status = record->wait().Cancel(loop_.async());
-    FTL_CHECK(status == MX_OK) << "Failed to cancel handler: status=" << status;
+    FXL_CHECK(status == MX_OK) << "Failed to cancel handler: status=" << status;
     delete record;
   }
 }
 
 bool MessageLoop::HasHandler(HandlerKey key) const {
-  FTL_DCHECK(g_current == this);
+  FXL_DCHECK(g_current == this);
 
   return handlers_.find(key) != handlers_.end();
 }
 
 void MessageLoop::Run() {
-  FTL_DCHECK(g_current == this);
+  FXL_DCHECK(g_current == this);
 
-  FTL_CHECK(!is_running_) << "Cannot run a nested message loop.";
+  FXL_CHECK(!is_running_) << "Cannot run a nested message loop.";
   is_running_ = true;
 
   mx_status_t status = loop_.Run();
-  FTL_CHECK(status == MX_OK || status == MX_ERR_CANCELED)
+  FXL_CHECK(status == MX_OK || status == MX_ERR_CANCELED)
       << "Loop stopped abnormally: status=" << status;
 
   status = loop_.ResetQuit();
-  FTL_DCHECK(status == MX_OK)
+  FXL_DCHECK(status == MX_OK)
       << "Failed to reset quit state: status=" << status;
 
-  FTL_DCHECK(is_running_);
+  FXL_DCHECK(is_running_);
   is_running_ = false;
 }
 
 void MessageLoop::QuitNow() {
-  FTL_DCHECK(g_current == this);
+  FXL_DCHECK(g_current == this);
 
   if (is_running_)
     loop_.Quit();
@@ -188,16 +188,16 @@ bool MessageLoop::RunsTasksOnCurrentThread() {
   return g_current == this;
 }
 
-void MessageLoop::SetAfterTaskCallback(ftl::Closure callback) {
-  FTL_DCHECK(g_current == this);
+void MessageLoop::SetAfterTaskCallback(fxl::Closure callback) {
+  FXL_DCHECK(g_current == this);
 
   after_task_callback_ = std::move(callback);
 }
 
 void MessageLoop::ClearAfterTaskCallback() {
-  FTL_DCHECK(g_current == this);
+  FXL_DCHECK(g_current == this);
 
-  after_task_callback_ = ftl::Closure();
+  after_task_callback_ = fxl::Closure();
 }
 
 void MessageLoop::Epilogue(async_t* async, void* data) {
@@ -206,7 +206,7 @@ void MessageLoop::Epilogue(async_t* async, void* data) {
     loop->after_task_callback_();
 }
 
-MessageLoop::TaskRecord::TaskRecord(mx_time_t deadline, ftl::Closure closure)
+MessageLoop::TaskRecord::TaskRecord(mx_time_t deadline, fxl::Closure closure)
     : task_(deadline, ASYNC_FLAG_HANDLE_SHUTDOWN) {
   task_.set_handler(
       [ this, closure = std::move(closure) ](async_t*, mx_status_t status) {
@@ -239,7 +239,7 @@ async_wait_result_t MessageLoop::HandlerRecord::Handle(
     async_t* async,
     mx_status_t status,
     const mx_packet_signal_t* signal) {
-  FTL_DCHECK(!loop_->current_handler_);
+  FXL_DCHECK(!loop_->current_handler_);
   loop_->current_handler_ = this;
 
   if (status == MX_OK) {
@@ -249,13 +249,13 @@ async_wait_result_t MessageLoop::HandlerRecord::Handle(
 
     if (!loop_->current_handler_removed_) {
       auto it = loop_->handlers_.find(key_);
-      FTL_DCHECK(it != loop_->handlers_.end());
+      FXL_DCHECK(it != loop_->handlers_.end());
       loop_->handlers_.erase(it);
       loop_->current_handler_removed_ = true;
     }
   }
 
-  FTL_DCHECK(loop_->current_handler_ == this);
+  FXL_DCHECK(loop_->current_handler_ == this);
   loop_->current_handler_ = nullptr;
   if (!loop_->current_handler_removed_)
     return ASYNC_WAIT_AGAIN;

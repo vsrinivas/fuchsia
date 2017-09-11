@@ -56,8 +56,8 @@ void MediaRenderer::Config(fidl::Array<media::MediaTypeSetPtr> supported_types,
               << "\n";
   terse_out() << outdent;
 
-  FTL_DCHECK(supported_types);
-  FTL_DCHECK(consumer_address);
+  FXL_DCHECK(supported_types);
+  FXL_DCHECK(consumer_address);
 
   accumulator_->supported_types_ = std::move(supported_types);
   accumulator_->consumer_channel_ = AsChannel(consumer_address);
@@ -74,13 +74,13 @@ void MediaRenderer::SetMediaType(media::MediaTypePtr type) {
   terse_out() << begl << "type: " << type << "\n";
   terse_out() << outdent;
 
-  FTL_DCHECK(type);
+  FXL_DCHECK(type);
 
   if (type->encoding == media::MediaType::kAudioEncodingLpcm) {
-    FTL_DCHECK(type->details);
-    FTL_DCHECK(type->details->is_audio());
+    FXL_DCHECK(type->details);
+    FXL_DCHECK(type->details->is_audio());
     media::AudioMediaTypeDetails* details = type->details->get_audio().get();
-    FTL_DCHECK(details != nullptr);
+    FXL_DCHECK(details != nullptr);
 
     audio_frame_rate_ = media::TimelineRate(details->frames_per_second, 1);
 
@@ -282,9 +282,9 @@ void MediaRenderer::RenderRange(int64_t pts, uint32_t duration) {
 
     if (pts < packet_pts) {
       // We've found a gap.
-      FTL_DCHECK(packet_pts - pts <= std::numeric_limits<uint32_t>::max());
+      FXL_DCHECK(packet_pts - pts <= std::numeric_limits<uint32_t>::max());
       uint32_t gap_size = static_cast<uint32_t>(packet_pts - pts);
-      FTL_DCHECK(gap_size <= duration);
+      FXL_DCHECK(gap_size <= duration);
 
       if (was_paused_) {
         accumulator_->gaps_in_frames_before_first_.Add(gap_size);
@@ -347,8 +347,8 @@ MediaPacketConsumer* MediaRenderer::GetConsumer() {
 void MediaRenderer::RecordPacketEarliness(
     MediaPacketConsumerAccumulator::Packet* packet,
     MediaTimelineControlPoint* timeline_control_point) {
-  FTL_DCHECK(packet != nullptr);
-  FTL_DCHECK(timeline_control_point != nullptr);
+  FXL_DCHECK(packet != nullptr);
+  FXL_DCHECK(timeline_control_point != nullptr);
 
   if (packet->label_ <= earliness_prev_packet_label_) {
     // Already added this one.
@@ -393,7 +393,7 @@ void MediaRendererAccumulator::Print(std::ostream& os) {
 
   if (consumer_channel_) {
     os << begl << "consumer: " << *consumer_channel_ << " ";
-    FTL_DCHECK(consumer_channel_->resolved());
+    FXL_DCHECK(consumer_channel_->resolved());
     consumer_channel_->PrintAccumulator(os);
     os << "\n";
   } else {
@@ -403,7 +403,7 @@ void MediaRendererAccumulator::Print(std::ostream& os) {
   if (timeline_control_point_channel_) {
     os << begl << "timeline control point: " << *timeline_control_point_channel_
        << " ";
-    FTL_DCHECK(timeline_control_point_channel_->resolved());
+    FXL_DCHECK(timeline_control_point_channel_->resolved());
     timeline_control_point_channel_->PrintAccumulator(os);
     os << "\n";
   } else {

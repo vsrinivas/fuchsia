@@ -165,7 +165,7 @@ ModelPipelineCache::ModelPipelineCache(ModelData* model_data,
     : model_data_(model_data),
       depth_prepass_(depth_prepass),
       lighting_pass_(lighting_pass) {
-  FTL_DCHECK(model_data_);
+  FXL_DCHECK(model_data_);
 }
 
 ModelPipelineCache::~ModelPipelineCache() {
@@ -417,7 +417,7 @@ std::unique_ptr<ModelPipeline> ModelPipelineCache::NewPipeline(
   // TODO: create customized pipelines for different shapes/materials/etc.
 
   // Only specs with materials may be opaque.
-  FTL_DCHECK(!spec.is_opaque || spec.has_material);
+  FXL_DCHECK(!spec.is_opaque || spec.has_material);
 
   std::future<SpirvData> vertex_spirv_future;
   std::future<SpirvData> fragment_spirv_future;

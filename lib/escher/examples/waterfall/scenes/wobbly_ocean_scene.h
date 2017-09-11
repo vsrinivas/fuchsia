@@ -35,5 +35,5 @@ class WobblyOceanScene : public Scene {
   escher::MeshPtr ring_mesh3_;
   escher::MeshPtr wobbly_ocean_mesh_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(WobblyOceanScene);
+  FXL_DISALLOW_COPY_AND_ASSIGN(WobblyOceanScene);
 };

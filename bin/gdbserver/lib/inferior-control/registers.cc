@@ -9,8 +9,8 @@
 
 #include "debugger-utils/util.h"
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "thread.h"
 
@@ -18,8 +18,8 @@ namespace debugserver {
 namespace arch {
 
 Registers::Registers(Thread* thread) : thread_(thread) {
-  FTL_DCHECK(thread);
-  FTL_DCHECK(thread->handle() != MX_HANDLE_INVALID);
+  FXL_DCHECK(thread);
+  FXL_DCHECK(thread->handle() != MX_HANDLE_INVALID);
 }
 
 bool Registers::RefreshGeneralRegisters() {
@@ -34,7 +34,7 @@ std::string Registers::GetGeneralRegistersAsString() {
   return GetRegsetAsString(MX_THREAD_STATE_REGSET0);
 }
 
-bool Registers::SetGeneralRegistersFromString(const ftl::StringView& value) {
+bool Registers::SetGeneralRegistersFromString(const fxl::StringView& value) {
   return SetRegsetFromString(MX_THREAD_STATE_REGSET0, value);
 }
 
@@ -49,14 +49,14 @@ bool Registers::RefreshRegsetHelper(int regset, void* buf, size_t buf_size) {
   mx_status_t status = mx_thread_read_state(
     thread()->handle(), regset, buf, buf_size, &regset_size);
   if (status < 0) {
-    FTL_LOG(ERROR) << "Failed to read regset " << regset << ": "
+    FXL_LOG(ERROR) << "Failed to read regset " << regset << ": "
                    << util::MxErrorString(status);
     return false;
   }
 
-  FTL_DCHECK(regset_size == buf_size);
+  FXL_DCHECK(regset_size == buf_size);
 
-  FTL_VLOG(1) << "Regset " << regset << " refreshed";
+  FXL_VLOG(1) << "Regset " << regset << " refreshed";
   return true;
 }
 
@@ -65,34 +65,34 @@ bool Registers::WriteRegsetHelper(int regset, const void* buf,
   mx_status_t status = mx_thread_write_state(thread()->handle(), regset,
                                              buf, buf_size);
   if (status < 0) {
-    FTL_LOG(ERROR) << "Failed to write regset " << regset << ": "
+    FXL_LOG(ERROR) << "Failed to write regset " << regset << ": "
                    << util::MxErrorString(status);
     return false;
   }
 
-  FTL_VLOG(1) << "Regset " << regset << " written";
+  FXL_VLOG(1) << "Regset " << regset << " written";
   return true;
 }
 
 bool Registers::SetRegsetFromStringHelper(int regset,
                                           void* buffer, size_t buf_size,
-                                          const ftl::StringView& value) {
+                                          const fxl::StringView& value) {
   auto bytes = util::DecodeByteArrayString(value);
   if (bytes.size() != buf_size) {
-    FTL_LOG(ERROR) << "|value| doesn't match regset " << regset << " size of "
+    FXL_LOG(ERROR) << "|value| doesn't match regset " << regset << " size of "
                    << buf_size << ": " << value;
     return false;
   }
 
   memcpy(buffer, bytes.data(), buf_size);
-  FTL_VLOG(1) << "Regset " << regset << " cache written";
+  FXL_VLOG(1) << "Regset " << regset << " cache written";
   return true;
 }
 
 mx_vaddr_t Registers::GetIntRegister(int regno) {
   mx_vaddr_t value;
   bool success = GetRegister(regno, &value, sizeof(value));
-  FTL_DCHECK(success);
+  FXL_DCHECK(success);
   return value;
 }
 

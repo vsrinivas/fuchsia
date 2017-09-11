@@ -7,7 +7,7 @@
 
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/view_framework/base_view.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 class SkCanvas;
 
@@ -29,7 +29,7 @@ class ShapesView : public mozart::BaseView {
   scenic_lib::ShapeNode card_node_;
   scenic_lib::ShapeNode circle_node_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ShapesView);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ShapesView);
 };
 
 }  // namespace examples

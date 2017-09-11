@@ -16,7 +16,7 @@ AudioServerImpl::AudioServerImpl(std::unique_ptr<app::ApplicationContext> applic
     : application_context_(std::move(application_context)),
       output_manager_(this),
       cleanup_queue_(new CleanupQueue) {
-  FTL_DCHECK(application_context_);
+  FXL_DCHECK(application_context_);
 
   FLOG_INITIALIZE(application_context_.get(), "audio_server");
 
@@ -26,9 +26,9 @@ AudioServerImpl::AudioServerImpl(std::unique_ptr<app::ApplicationContext> applic
       });
 
   // Stash a pointer to our task runner.
-  FTL_DCHECK(mtl::MessageLoop::GetCurrent());
+  FXL_DCHECK(mtl::MessageLoop::GetCurrent());
   task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
-  FTL_DCHECK(task_runner_);
+  FXL_DCHECK(task_runner_);
 
   // TODO(johngro) : See MG-940
   //
@@ -47,13 +47,13 @@ AudioServerImpl::AudioServerImpl(std::unique_ptr<app::ApplicationContext> applic
   // Set up our output manager.
   MediaResult res = output_manager_.Init();
   // TODO(johngro): Do better at error handling than this weak check.
-  FTL_DCHECK(res == MediaResult::OK);
+  FXL_DCHECK(res == MediaResult::OK);
 }
 
 AudioServerImpl::~AudioServerImpl() {
   Shutdown();
-  FTL_DCHECK(cleanup_queue_);
-  FTL_DCHECK(cleanup_queue_->empty());
+  FXL_DCHECK(cleanup_queue_);
+  FXL_DCHECK(cleanup_queue_->empty());
 }
 
 void AudioServerImpl::Shutdown() {
@@ -95,7 +95,7 @@ void AudioServerImpl::DoPacketCleanup() {
   std::unique_ptr<CleanupQueue> tmp_queue(new CleanupQueue());
 
   {
-    ftl::MutexLocker locker(&cleanup_queue_mutex_);
+    fxl::MutexLocker locker(&cleanup_queue_mutex_);
     cleanup_queue_.swap(tmp_queue);
     cleanup_scheduled_ = false;
   }
@@ -113,12 +113,12 @@ void AudioServerImpl::DoPacketCleanup() {
 
 void AudioServerImpl::SchedulePacketCleanup(
     std::unique_ptr<MediaPacketConsumerBase::SuppliedPacket> supplied_packet) {
-  ftl::MutexLocker locker(&cleanup_queue_mutex_);
+  fxl::MutexLocker locker(&cleanup_queue_mutex_);
 
   cleanup_queue_->emplace_back(std::move(supplied_packet));
 
   if (!cleanup_scheduled_ && !shutting_down_) {
-    FTL_DCHECK(task_runner_);
+    FXL_DCHECK(task_runner_);
     task_runner_->PostTask([this]() { DoPacketCleanup(); });
     cleanup_scheduled_ = true;
   }

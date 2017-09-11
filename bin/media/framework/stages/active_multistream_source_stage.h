@@ -9,8 +9,8 @@
 
 #include "garnet/bin/media/framework/models/active_multistream_source.h"
 #include "garnet/bin/media/framework/stages/stage_impl.h"
-#include "lib/ftl/synchronization/mutex.h"
-#include "lib/ftl/synchronization/thread_annotations.h"
+#include "lib/fxl/synchronization/mutex.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media {
 
@@ -48,15 +48,15 @@ class ActiveMultistreamSourceStageImpl : public StageImpl,
 
  protected:
   // StageImpl implementation.
-  ftl::RefPtr<ftl::TaskRunner> GetNodeTaskRunner() override;
+  fxl::RefPtr<fxl::TaskRunner> GetNodeTaskRunner() override;
 
   void Update() override;
 
  private:
   // ActiveMultistreamSourceStage implementation.
-  void SetTaskRunner(ftl::RefPtr<ftl::TaskRunner> task_runner) override;
+  void SetTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner) override;
 
-  void PostTask(const ftl::Closure& task) override;
+  void PostTask(const fxl::Closure& task) override;
 
   void SupplyPacket(size_t output_index, PacketPtr packet) override;
 
@@ -64,9 +64,9 @@ class ActiveMultistreamSourceStageImpl : public StageImpl,
   std::vector<std::deque<PacketPtr>> packets_per_output_;
   std::shared_ptr<ActiveMultistreamSource> source_;
 
-  mutable ftl::Mutex mutex_;
-  size_t ended_streams_ FTL_GUARDED_BY(mutex_) = 0;
-  bool packet_request_outstanding_ FTL_GUARDED_BY(mutex_) = false;
+  mutable fxl::Mutex mutex_;
+  size_t ended_streams_ FXL_GUARDED_BY(mutex_) = 0;
+  bool packet_request_outstanding_ FXL_GUARDED_BY(mutex_) = false;
 };
 
 }  // namespace media

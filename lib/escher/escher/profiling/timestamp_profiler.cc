@@ -15,7 +15,7 @@ TimestampProfiler::TimestampProfiler(vk::Device device, float timestamp_period)
     : device_(device), timestamp_period_(timestamp_period) {}
 
 TimestampProfiler::~TimestampProfiler() {
-  FTL_DCHECK(ranges_.empty() && pools_.empty() && query_count_ == 0 &&
+  FXL_DCHECK(ranges_.empty() && pools_.empty() && query_count_ == 0 &&
              current_pool_index_ == 0);
 }
 
@@ -39,11 +39,11 @@ std::vector<TimestampProfiler::Result> TimestampProfiler::GetQueryResults() {
         range.pool, range.start_index, range.count,
         vk::ArrayProxy<Result>(range.count, &results_[result_index]),
         sizeof(Result), vk::QueryResultFlagBits::e64);
-    FTL_DCHECK(status == vk::Result::eSuccess);
+    FXL_DCHECK(status == vk::Result::eSuccess);
 
     result_index += range.count;
   }
-  FTL_CHECK(result_index == query_count_);
+  FXL_CHECK(result_index == query_count_);
 
   for (auto& pool : pools_) {
     device_.destroyQueryPool(pool);
@@ -75,12 +75,12 @@ TimestampProfiler::QueryRange* TimestampProfiler::ObtainRange(
     return CreateRange(cmd_buf);
   } else {
     auto range = &ranges_.back();
-    FTL_DCHECK(current_pool_index_ < kPoolSize);
+    FXL_DCHECK(current_pool_index_ < kPoolSize);
     if (current_pool_index_ != range->start_index + range->count) {
-      FTL_LOG(INFO) << current_pool_index_ << "  " << range->start_index << "  "
+      FXL_LOG(INFO) << current_pool_index_ << "  " << range->start_index << "  "
                     << range->count;
     }
-    FTL_DCHECK(current_pool_index_ == range->start_index + range->count);
+    FXL_DCHECK(current_pool_index_ == range->start_index + range->count);
     return range;
   }
 }
@@ -109,15 +109,15 @@ TimestampProfiler::QueryRange* TimestampProfiler::CreateRangeAndPool(
 TimestampProfiler::QueryRange* TimestampProfiler::CreateRange(
     impl::CommandBuffer* cmd_buf) {
   QueryRange& prev = ranges_.back();
-  FTL_DCHECK(!ranges_.empty() && current_pool_index_ < kPoolSize);
-  FTL_DCHECK(current_pool_index_ == prev.start_index + prev.count);
+  FXL_DCHECK(!ranges_.empty() && current_pool_index_ < kPoolSize);
+  FXL_DCHECK(current_pool_index_ == prev.start_index + prev.count);
 
   QueryRange range;
   range.pool = prev.pool;
   range.command_buffer = cmd_buf->get();
   range.start_index = prev.start_index + prev.count;
   range.count = 0;
-  FTL_DCHECK(range.start_index == current_pool_index_);
+  FXL_DCHECK(range.start_index == current_pool_index_);
 
   ranges_.push_back(range);
   return &ranges_.back();

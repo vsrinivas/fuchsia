@@ -9,7 +9,7 @@
 #include "garnet/bin/media/framework/models/active_sink.h"
 #include "garnet/bin/media/framework/payload_allocator.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace media {
 
@@ -83,7 +83,7 @@ class FidlPacketProducer
 
   fidl::Binding<MediaPacketProducer> binding_;
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   ConnectionStateChangedCallback connectionStateChangedCallback_;
 };
 

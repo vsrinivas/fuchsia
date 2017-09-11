@@ -43,7 +43,7 @@ Channel::~Channel() {}
 void Channel::Resolve(uint32_t channel_id,
                       uint32_t creation_entry_index,
                       std::unique_ptr<ChannelHandler> handler) {
-  FTL_DCHECK(!resolved());
+  FXL_DCHECK(!resolved());
   channel_id_ = channel_id;
   creation_entry_index_ = creation_entry_index;
   handler_ = std::move(handler);

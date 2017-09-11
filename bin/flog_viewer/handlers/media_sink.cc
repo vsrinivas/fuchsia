@@ -43,8 +43,8 @@ void MediaSink::Config(media::MediaTypePtr input_type,
                        media::MediaTypePtr output_type,
                        fidl::Array<uint64_t> converter_koids,
                        uint64_t renderer_koid) {
-  FTL_DCHECK(input_type);
-  FTL_DCHECK(output_type);
+  FXL_DCHECK(input_type);
+  FXL_DCHECK(output_type);
 
   terse_out() << EntryHeader(entry(), entry_index())
               << "MediaSink.Config\n";

@@ -4,16 +4,16 @@
 
 #pragma once
 
-#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/fxl/memory/ref_ptr.h"
 
 namespace escher {
 
 // Convenient syntax for instantiating a new Reffable object.  For example,
-// assuming that Foo inherits from Reffable or ftl::RefCountedThreadSafe:
-//   ftl::RefPtr<Foo> foo = Make<Foo>(int_arg, "string_arg");
+// assuming that Foo inherits from Reffable or fxl::RefCountedThreadSafe:
+//   fxl::RefPtr<Foo> foo = Make<Foo>(int_arg, "string_arg");
 template <typename T, typename... Args>
-ftl::RefPtr<T> Make(Args&&... args) {
-  return ftl::internal::MakeRefCountedHelper<T>::MakeRefCounted(
+fxl::RefPtr<T> Make(Args&&... args) {
+  return fxl::internal::MakeRefCountedHelper<T>::MakeRefCounted(
       std::forward<Args>(args)...);
 }
 

@@ -11,7 +11,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/ui/tests/mocks/mock_input_device.h"
 #include "lib/ui/input/fidl/input_device_registry.fidl.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace mozart {
 namespace test {
@@ -36,7 +36,7 @@ class MockInputDeviceRegistry : public mozart::InputDeviceRegistry {
   uint32_t next_device_token_ = 0;
   std::unordered_map<uint32_t, std::unique_ptr<MockInputDevice>> devices_by_id_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MockInputDeviceRegistry);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MockInputDeviceRegistry);
 };
 
 }  // namespace test

@@ -12,7 +12,7 @@
 
 #include "lib/ui/views/fidl/view_containers.fidl.h"
 #include "garnet/bin/ui/view_manager/view_stub.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace view_manager {
 
@@ -64,7 +64,7 @@ class ViewContainerState {
   mozart::ViewContainerListenerPtr view_container_listener_;
   ChildrenMap children_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ViewContainerState);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ViewContainerState);
 };
 
 std::ostream& operator<<(std::ostream& os, ViewContainerState* view_state);

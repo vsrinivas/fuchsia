@@ -8,7 +8,7 @@ namespace media {
 
 ActiveSinkStageImpl::ActiveSinkStageImpl(std::shared_ptr<ActiveSink> sink)
     : input_(this, 0), sink_(sink) {
-  FTL_DCHECK(sink_);
+  FXL_DCHECK(sink_);
 }
 
 ActiveSinkStageImpl::~ActiveSinkStageImpl() {}
@@ -18,7 +18,7 @@ size_t ActiveSinkStageImpl::input_count() const {
 };
 
 Input& ActiveSinkStageImpl::input(size_t index) {
-  FTL_DCHECK(index == 0u);
+  FXL_DCHECK(index == 0u);
   return input_;
 }
 
@@ -27,32 +27,32 @@ size_t ActiveSinkStageImpl::output_count() const {
 }
 
 Output& ActiveSinkStageImpl::output(size_t index) {
-  FTL_CHECK(false) << "output requested from sink";
+  FXL_CHECK(false) << "output requested from sink";
   abort();
 }
 
 PayloadAllocator* ActiveSinkStageImpl::PrepareInput(size_t index) {
-  FTL_DCHECK(index == 0u);
+  FXL_DCHECK(index == 0u);
   return sink_->allocator();
 }
 
 void ActiveSinkStageImpl::PrepareOutput(size_t index,
                                         PayloadAllocator* allocator,
                                         const UpstreamCallback& callback) {
-  FTL_CHECK(false) << "PrepareOutput called on sink";
+  FXL_CHECK(false) << "PrepareOutput called on sink";
 }
 
-ftl::RefPtr<ftl::TaskRunner> ActiveSinkStageImpl::GetNodeTaskRunner() {
+fxl::RefPtr<fxl::TaskRunner> ActiveSinkStageImpl::GetNodeTaskRunner() {
   return sink_->GetTaskRunner();
 }
 
 void ActiveSinkStageImpl::Update() {
-  FTL_DCHECK(sink_);
+  FXL_DCHECK(sink_);
 
   Demand demand;
 
   {
-    ftl::MutexLocker locker(&mutex_);
+    fxl::MutexLocker locker(&mutex_);
 
     if (input_.packet()) {
       sink_demand_ = sink_->SupplyPacket(input_.TakePacket(Demand::kNegative));
@@ -69,24 +69,24 @@ void ActiveSinkStageImpl::Update() {
 void ActiveSinkStageImpl::FlushInput(size_t index,
                                      bool hold_frame,
                                      const DownstreamCallback& callback) {
-  FTL_DCHECK(index == 0u);
-  FTL_DCHECK(sink_);
+  FXL_DCHECK(index == 0u);
+  FXL_DCHECK(sink_);
   input_.Flush();
   sink_->Flush(hold_frame);
-  ftl::MutexLocker locker(&mutex_);
+  fxl::MutexLocker locker(&mutex_);
   sink_demand_ = Demand::kNegative;
 }
 
 void ActiveSinkStageImpl::FlushOutput(size_t index) {
-  FTL_CHECK(false) << "FlushOutput called on sink";
+  FXL_CHECK(false) << "FlushOutput called on sink";
 }
 
 void ActiveSinkStageImpl::SetTaskRunner(
-    ftl::RefPtr<ftl::TaskRunner> task_runner) {
+    fxl::RefPtr<fxl::TaskRunner> task_runner) {
   StageImpl::SetTaskRunner(task_runner);
 }
 
-void ActiveSinkStageImpl::PostTask(const ftl::Closure& task) {
+void ActiveSinkStageImpl::PostTask(const fxl::Closure& task) {
   StageImpl::PostTask(task);
 }
 
@@ -94,7 +94,7 @@ void ActiveSinkStageImpl::SetDemand(Demand demand) {
   bool needs_update = false;
 
   {
-    ftl::MutexLocker locker(&mutex_);
+    fxl::MutexLocker locker(&mutex_);
     if (sink_demand_ != demand) {
       sink_demand_ = demand;
       needs_update = true;

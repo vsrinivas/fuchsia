@@ -6,7 +6,7 @@
 
 #include <arpa/inet.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace netstack {
 class NetAddress;
@@ -67,17 +67,17 @@ class IpAddress {
   bool is_v6() const { return family() == AF_INET6; }
 
   const in_addr& as_in_addr() const {
-    FTL_DCHECK(is_v4());
+    FXL_DCHECK(is_v4());
     return v4_;
   }
 
   in_addr_t as_in_addr_t() const {
-    FTL_DCHECK(is_v4());
+    FXL_DCHECK(is_v4());
     return v4_.s_addr;
   }
 
   const in6_addr& as_in6_addr() const {
-    FTL_DCHECK(is_v6());
+    FXL_DCHECK(is_v6());
     return v6_;
   }
 

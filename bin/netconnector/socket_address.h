@@ -11,7 +11,7 @@
 
 #include "garnet/bin/netconnector/ip_address.h"
 #include "garnet/bin/netconnector/ip_port.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace netconnector {
 
@@ -73,12 +73,12 @@ class SocketAddress {
   IpPort port() const { return IpPort::From_in_port_t(v4_.sin_port); }
 
   const sockaddr_in& as_sockaddr_in() const {
-    FTL_DCHECK(is_v4());
+    FXL_DCHECK(is_v4());
     return v4_;
   }
 
   const sockaddr_in6& as_sockaddr_in6() const {
-    FTL_DCHECK(is_v6());
+    FXL_DCHECK(is_v6());
     return v6_;
   }
 

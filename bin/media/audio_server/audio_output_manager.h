@@ -44,14 +44,14 @@ class AudioOutputManager {
 
   // Add a renderer to the set of active audio renderers.
   void AddRenderer(AudioRendererImplPtr renderer) {
-    FTL_DCHECK(renderer);
+    FXL_DCHECK(renderer);
     renderers_.insert(std::move(renderer));
   }
 
   // Remove a renderer from the set of active audio renderers.
   void RemoveRenderer(AudioRendererImplPtr renderer) {
     size_t removed = renderers_.erase(renderer);
-    FTL_DCHECK(removed);
+    FXL_DCHECK(removed);
   }
 
   // Select the initial set of outputs for a renderer which has just been
@@ -63,7 +63,7 @@ class AudioOutputManager {
                             AudioRendererImplPtr renderer);
 
   // Schedule a closure to run on our encapsulating server's main message loop.
-  void ScheduleMessageLoopTask(const ftl::Closure& task);
+  void ScheduleMessageLoopTask(const fxl::Closure& task);
 
   // Attempt to initialize an output and add it to the set of active outputs.
   MediaResult AddOutput(AudioOutputPtr output);

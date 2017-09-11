@@ -40,5 +40,5 @@ class RingTricks2 : public Scene {
   escher::MeshPtr rounded_rect3_;
   escher::MeshPtr sphere_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(RingTricks2);
+  FXL_DISALLOW_COPY_AND_ASSIGN(RingTricks2);
 };

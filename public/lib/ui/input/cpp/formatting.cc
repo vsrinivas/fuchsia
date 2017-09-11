@@ -7,7 +7,7 @@
 #include <iostream>
 
 #include "lib/ui/input/fidl/usages.fidl.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace mozart {
 
@@ -69,7 +69,7 @@ std::ostream& operator<<(std::ostream& os, const PointerEvent& value) {
       os << "UNDEFINED";
   }
   os << ", x=" << value.x << ", y=" << value.y;
-  os << ", buttons = " << ftl::StringPrintf("0x%08X", value.buttons);
+  os << ", buttons = " << fxl::StringPrintf("0x%08X", value.buttons);
   os << ", timestamp=" << value.event_time;
   return os << "}";
 }
@@ -117,7 +117,7 @@ std::ostream& operator<<(std::ostream& os, const KeyboardEvent& value) {
     }
   }
 
-  os << ", hid=" << ftl::StringPrintf("0x%08X", value.hid_usage);
+  os << ", hid=" << fxl::StringPrintf("0x%08X", value.hid_usage);
   os << ", timestamp=" << value.event_time;
   return os << "}";
 }

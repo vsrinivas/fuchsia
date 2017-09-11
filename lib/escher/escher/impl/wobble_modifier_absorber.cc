@@ -193,7 +193,7 @@ void WobbleModifierAbsorber::AbsorbWobbleIfAny(Model* model) {
 
     MeshPtr original_mesh = object.shape().mesh();
     MeshPtr modified_mesh =
-        ftl::MakeRefCounted<Mesh>(recycler_,
+        fxl::MakeRefCounted<Mesh>(recycler_,
                                   original_mesh->spec(),
                                   original_mesh->bounding_box(),
                                   original_mesh->num_vertices(),

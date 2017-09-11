@@ -10,7 +10,7 @@
 #include "garnet/bin/media/framework/types/subpicture_stream_type.h"
 #include "garnet/bin/media/framework/types/text_stream_type.h"
 #include "garnet/bin/media/framework/types/video_stream_type.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 extern "C" {
 #include "third_party/ffmpeg/libavformat/avformat.h"
 }
@@ -40,7 +40,7 @@ AudioStreamType::SampleFormat Convert(AVSampleFormat av_sample_format) {
     case AV_SAMPLE_FMT_DBLP:
     case AV_SAMPLE_FMT_NB:
     default:
-      FTL_LOG(ERROR) << "unsupported av_sample_format " << av_sample_format;
+      FXL_LOG(ERROR) << "unsupported av_sample_format " << av_sample_format;
       abort();
   }
 }
@@ -91,7 +91,7 @@ const char* EncodingFromCodecId(AVCodecID from) {
     case AV_CODEC_ID_VP9:
       return StreamType::kVideoEncodingVp9;
     default:
-      FTL_LOG(WARNING) << "unsupported codec_id " << from;
+      FXL_LOG(WARNING) << "unsupported codec_id " << from;
       return StreamType::kMediaEncodingUnsupported;
   }
 }
@@ -282,7 +282,7 @@ std::unique_ptr<StreamType> StreamTypeFromSubtitleCodecParameters(
 // Creates an AVCodecContext from an AudioStreamType.
 AvCodecContextPtr AVCodecContextFromAudioStreamType(
     const AudioStreamType& stream_type) {
-  FTL_DCHECK(stream_type.medium() == StreamType::Medium::kAudio);
+  FXL_DCHECK(stream_type.medium() == StreamType::Medium::kAudio);
 
   AVCodecID codec_id;
   AVSampleFormat sample_format = AV_SAMPLE_FMT_NONE;
@@ -306,7 +306,7 @@ AvCodecContextPtr AVCodecContextFromAudioStreamType(
         sample_format = AV_SAMPLE_FMT_FLT;
         break;
       default:
-        FTL_LOG(ERROR) << "unsupported sample format";
+        FXL_LOG(ERROR) << "unsupported sample format";
         abort();
     }
   } else if (stream_type.encoding() == StreamType::kAudioEncodingAac) {
@@ -330,7 +330,7 @@ AvCodecContextPtr AVCodecContextFromAudioStreamType(
   } else if (stream_type.encoding() == StreamType::kMediaEncodingUnsupported) {
     codec_id = AV_CODEC_ID_NONE;
   } else {
-    FTL_LOG(WARNING) << "unsupported encoding " << stream_type.encoding();
+    FXL_LOG(WARNING) << "unsupported encoding " << stream_type.encoding();
     codec_id = AV_CODEC_ID_NONE;
   }
 
@@ -371,7 +371,7 @@ AvCodecContextPtr AVCodecContextFromVideoStreamType(
   } else if (stream_type.encoding() == StreamType::kMediaEncodingUnsupported) {
     codec_id = AV_CODEC_ID_NONE;
   } else {
-    FTL_LOG(WARNING) << "unsupported encoding " << stream_type.encoding();
+    FXL_LOG(WARNING) << "unsupported encoding " << stream_type.encoding();
     codec_id = AV_CODEC_ID_NONE;
   }
 
@@ -404,7 +404,7 @@ AvCodecContextPtr AVCodecContextFromVideoStreamType(
 AvCodecContextPtr AVCodecContextFromTextStreamType(
     const TextStreamType& stream_type) {
   // TODO(dalesat): Implement.
-  FTL_LOG(ERROR) << "AVCodecContextFromTextStreamType not implemented";
+  FXL_LOG(ERROR) << "AVCodecContextFromTextStreamType not implemented";
   abort();
 }
 
@@ -412,7 +412,7 @@ AvCodecContextPtr AVCodecContextFromTextStreamType(
 AvCodecContextPtr AVCodecContextFromSubpictureStreamType(
     const SubpictureStreamType& stream_type) {
   // TODO(dalesat): Implement.
-  FTL_LOG(ERROR) << "AVCodecContextFromSupictureStreamType not implemented";
+  FXL_LOG(ERROR) << "AVCodecContextFromSupictureStreamType not implemented";
   abort();
 }
 
@@ -484,7 +484,7 @@ std::unique_ptr<StreamType> AvCodecContext::GetStreamType(
     case AVMEDIA_TYPE_ATTACHMENT:
     case AVMEDIA_TYPE_NB:
     default:
-      FTL_LOG(ERROR) << "unsupported code type " << from.codec_type;
+      FXL_LOG(ERROR) << "unsupported code type " << from.codec_type;
       abort();
   }
 }
@@ -506,7 +506,7 @@ std::unique_ptr<StreamType> AvCodecContext::GetStreamType(
     case AVMEDIA_TYPE_ATTACHMENT:
     case AVMEDIA_TYPE_NB:
     default:
-      FTL_LOG(ERROR) << "unsupported code type " << from.codecpar->codec_type;
+      FXL_LOG(ERROR) << "unsupported code type " << from.codecpar->codec_type;
       abort();
   }
 }

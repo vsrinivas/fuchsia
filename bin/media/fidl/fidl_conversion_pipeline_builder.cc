@@ -13,7 +13,7 @@
 #include "garnet/bin/media/framework/types/stream_type.h"
 #include "garnet/bin/media/framework/types/video_stream_type.h"
 #include "garnet/bin/media/util/callback_joiner.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace media {
 
@@ -51,9 +51,9 @@ class Builder {
         original_type_(std::move(type)),
         callback_(callback),
         type_(&original_type_) {
-    FTL_DCHECK(media_service_);
-    FTL_DCHECK(original_type_);
-    FTL_DCHECK(callback_);
+    FXL_DCHECK(media_service_);
+    FXL_DCHECK(original_type_);
+    FXL_DCHECK(callback_);
   }
 
   // Attempts to advance the build process. If the current type is already in
@@ -146,7 +146,7 @@ int Score(const AudioStreamType& in_type,
         score += 3;
         break;
       default:
-        FTL_DCHECK(false) << "unsupported sample format "
+        FXL_DCHECK(false) << "unsupported sample format "
                           << out_type_set.sample_format();
     }
   }
@@ -220,9 +220,9 @@ void Builder::AddConverter(MediaTypeConverterPtr converter) {
 }
 
 void Builder::AddConverterForCompressedAudio() {
-  FTL_DCHECK((*type_)->medium() == StreamType::Medium::kAudio);
-  FTL_DCHECK((*type_)->audio() != nullptr);
-  FTL_DCHECK((*type_)->encoding() != StreamType::kAudioEncodingLpcm);
+  FXL_DCHECK((*type_)->medium() == StreamType::Medium::kAudio);
+  FXL_DCHECK((*type_)->audio() != nullptr);
+  FXL_DCHECK((*type_)->encoding() != StreamType::kAudioEncodingLpcm);
 
   // See if LPCM audio is in the goal set.
   if (!GoalTypeSetsIncludeEncoding(StreamType::kAudioEncodingLpcm)) {
@@ -240,9 +240,9 @@ void Builder::AddConverterForCompressedAudio() {
 }
 
 void Builder::AddConverterForCompressedVideo() {
-  FTL_DCHECK((*type_)->medium() == StreamType::Medium::kVideo);
-  FTL_DCHECK((*type_)->video() != nullptr);
-  FTL_DCHECK((*type_)->encoding() != StreamType::kVideoEncodingUncompressed);
+  FXL_DCHECK((*type_)->medium() == StreamType::Medium::kVideo);
+  FXL_DCHECK((*type_)->video() != nullptr);
+  FXL_DCHECK((*type_)->encoding() != StreamType::kVideoEncodingUncompressed);
 
   // See if uncompressed video is in the goal set.
   if (!GoalTypeSetsIncludeEncoding(StreamType::kVideoEncodingUncompressed)) {
@@ -260,9 +260,9 @@ void Builder::AddConverterForCompressedVideo() {
 }
 
 void Builder::AddConverterForLpcm(const AudioStreamTypeSet& goal_type_set) {
-  FTL_DCHECK((*type_)->medium() == StreamType::Medium::kAudio);
-  FTL_DCHECK((*type_)->audio() != nullptr);
-  FTL_DCHECK((*type_)->encoding() == StreamType::kAudioEncodingLpcm);
+  FXL_DCHECK((*type_)->medium() == StreamType::Medium::kAudio);
+  FXL_DCHECK((*type_)->audio() != nullptr);
+  FXL_DCHECK((*type_)->encoding() == StreamType::kAudioEncodingLpcm);
 
   // TODO(dalesat): Room for more intelligence here wrt transform ordering and
   // transforms that handle more than one conversion.
@@ -286,34 +286,34 @@ void Builder::AddConverterForLpcm(const AudioStreamTypeSet& goal_type_set) {
   } else {
     // We only get here if there's some attribute of audio types that isn't
     // covered above. That shouldn't happen.
-    FTL_DCHECK(false) << "Can't determine what conversion is required";
+    FXL_DCHECK(false) << "Can't determine what conversion is required";
   }
 
   Fail();
 }
 
 void Builder::AddConverterForLpcm() {
-  FTL_DCHECK((*type_)->medium() == StreamType::Medium::kAudio);
-  FTL_DCHECK((*type_)->audio() != nullptr);
-  FTL_DCHECK((*type_)->encoding() == StreamType::kAudioEncodingLpcm);
+  FXL_DCHECK((*type_)->medium() == StreamType::Medium::kAudio);
+  FXL_DCHECK((*type_)->audio() != nullptr);
+  FXL_DCHECK((*type_)->encoding() == StreamType::kAudioEncodingLpcm);
 
   const std::unique_ptr<StreamTypeSet>* best =
       FindBestLpcm(*(*type_)->audio(), goal_type_sets_);
   if (best == nullptr) {
     // TODO(dalesat): Support a compressed output type by encoding.
-    FTL_LOG(WARNING) << "Conversion requires encoding - not supported";
+    FXL_LOG(WARNING) << "Conversion requires encoding - not supported";
     Fail();
     return;
   }
 
-  FTL_DCHECK((*best)->medium() == StreamType::Medium::kAudio);
+  FXL_DCHECK((*best)->medium() == StreamType::Medium::kAudio);
 
   return AddConverterForLpcm(*(*best)->audio());
 }
 
 void Builder::AddConverters() {
   if ((*type_)->encoding() == StreamType::kMediaEncodingUnsupported) {
-    FTL_DLOG(WARNING) << "Conversion not supported for encoding "
+    FXL_DLOG(WARNING) << "Conversion not supported for encoding "
                       << StreamType::kMediaEncodingUnsupported;
     Fail();
     return;
@@ -335,7 +335,7 @@ void Builder::AddConverters() {
 
     case StreamType::Medium::kVideo:
       if ((*type_)->encoding() == StreamType::kVideoEncodingUncompressed) {
-        FTL_LOG(WARNING) << "Conversion of uncompressed video not supported";
+        FXL_LOG(WARNING) << "Conversion of uncompressed video not supported";
         Fail();
       } else {
         AddConverterForCompressedVideo();
@@ -343,7 +343,7 @@ void Builder::AddConverters() {
       break;
 
     default:
-      FTL_LOG(WARNING) << "Conversion not supported for medium "
+      FXL_LOG(WARNING) << "Conversion not supported for medium "
                        << (*type_)->medium();
       Fail();
   }
@@ -369,7 +369,7 @@ void Builder::Succeed() {
 
       callback_joiner->Spawn();
       // Capture producer to keep it alive through the callback.
-      producer->Connect(std::move(consumer), ftl::MakeCopyable([
+      producer->Connect(std::move(consumer), fxl::MakeCopyable([
                           callback_joiner, producer = std::move(producer)
                         ]() { callback_joiner->Complete(); }));
     }
@@ -384,13 +384,13 @@ void Builder::Succeed() {
   if (consumer_getter_ && producer) {
     // We have a consumer getter and something to connect the consumer to.
     // Get the consumer and connect it to the producer.
-    FTL_DCHECK(producer);
+    FXL_DCHECK(producer);
     MediaPacketConsumerPtr consumer;
     consumer_getter_(consumer.NewRequest());
 
     callback_joiner->Spawn();
     // Capture producer to keep it alive through the callback.
-    producer->Connect(std::move(consumer), ftl::MakeCopyable([
+    producer->Connect(std::move(consumer), fxl::MakeCopyable([
                         callback_joiner, producer = std::move(producer)
                       ]() { callback_joiner->Complete(); }));
   }
@@ -445,7 +445,7 @@ void Builder::Succeed() {
       // A ProducerGetter wasn't provided, so the caller will need a
       // ConsumerGetter to connect a producer later on.
       consumer_getter_to_return =
-          ftl::MakeCopyable([converter = std::move(converters_.front())](
+          fxl::MakeCopyable([converter = std::move(converters_.front())](
               fidl::InterfaceRequest<MediaPacketConsumer> request) {
             converter->GetPacketConsumer(std::move(request));
           });
@@ -456,7 +456,7 @@ void Builder::Succeed() {
       // A ConsumerGetter wasn't provided, so the caller will need a
       // ProducerGetter to connect a consumer later on.
       producer_getter_to_return =
-          ftl::MakeCopyable([converter = std::move(converters_.back())](
+          fxl::MakeCopyable([converter = std::move(converters_.back())](
               fidl::InterfaceRequest<MediaPacketProducer> request) {
             converter->GetPacketProducer(std::move(request));
           });
@@ -487,9 +487,9 @@ void BuildFidlConversionPipeline(
                              const ProducerGetter&,
                              std::unique_ptr<StreamType>,
                              std::vector<mx_koid_t>)>& callback) {
-  FTL_DCHECK(media_service);
-  FTL_DCHECK(type);
-  FTL_DCHECK(callback);
+  FXL_DCHECK(media_service);
+  FXL_DCHECK(type);
+  FXL_DCHECK(callback);
 
   Builder* builder = new Builder(media_service, goal_type_sets, producer_getter,
                                  consumer_getter, std::move(type), callback);

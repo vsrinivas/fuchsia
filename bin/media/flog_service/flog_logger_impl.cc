@@ -4,8 +4,8 @@
 
 #include "garnet/bin/media/flog_service/flog_logger_impl.h"
 
-#include "lib/ftl/files/file_descriptor.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/files/file_descriptor.h"
+#include "lib/fxl/logging.h"
 
 namespace flog {
 
@@ -43,9 +43,9 @@ FlogLoggerImpl::FlogLoggerImpl(fidl::InterfaceRequest<FlogLogger> request,
 FlogLoggerImpl::~FlogLoggerImpl() {}
 
 bool FlogLoggerImpl::Accept(fidl::Message* message) {
-  FTL_DCHECK(message != nullptr);
-  FTL_DCHECK(message->data_num_bytes() > 0);
-  FTL_DCHECK(message->data() != nullptr);
+  FXL_DCHECK(message != nullptr);
+  FXL_DCHECK(message->data_num_bytes() > 0);
+  FXL_DCHECK(message->data() != nullptr);
 
   uint32_t message_size = message->data_num_bytes();
 
@@ -58,15 +58,15 @@ bool FlogLoggerImpl::Accept(fidl::Message* message) {
 bool FlogLoggerImpl::AcceptWithResponder(
     fidl::Message* message,
     fidl::MessageReceiverWithStatus* responder) {
-  FTL_DCHECK(false) << "FlogLogger has no methods with responses";
+  FXL_DCHECK(false) << "FlogLogger has no methods with responses";
   abort();
 }
 
 void FlogLoggerImpl::WriteData(uint32_t data_size, const void* data) {
-  FTL_DCHECK(data_size > 0);
-  FTL_DCHECK(data != nullptr);
+  FXL_DCHECK(data_size > 0);
+  FXL_DCHECK(data != nullptr);
 
-  if (!ftl::WriteFileDescriptor(fd_.get(), reinterpret_cast<const char*>(data),
+  if (!fxl::WriteFileDescriptor(fd_.get(), reinterpret_cast<const char*>(data),
                                 data_size)) {
     // TODO(dalesat): Handle error.
   }

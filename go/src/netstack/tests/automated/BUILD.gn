@@ -11,7 +11,7 @@ executable("netstack_loopback_test") {
 
   deps = [
     "//apps/test_runner/src:gtest_main",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]

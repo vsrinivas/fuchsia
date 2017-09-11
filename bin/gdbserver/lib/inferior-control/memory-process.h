@@ -23,7 +23,7 @@ class ProcessMemory final : public util::ByteBlock {
  private:
   Process* process_;  // weak
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ProcessMemory);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ProcessMemory);
 };
 
 }  // namespace debugserver

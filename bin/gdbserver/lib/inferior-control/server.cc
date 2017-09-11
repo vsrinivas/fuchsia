@@ -10,8 +10,8 @@
 #include <string>
 #include <vector>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "debugger-utils/util.h"
 

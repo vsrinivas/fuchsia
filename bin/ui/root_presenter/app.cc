@@ -10,14 +10,14 @@
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "garnet/bin/ui/root_presenter/presentation.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace root_presenter {
 
-App::App(const ftl::CommandLine& command_line)
+App::App(const fxl::CommandLine& command_line)
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       input_reader_(this) {
-  FTL_DCHECK(application_context_);
+  FXL_DCHECK(application_context_);
 
   input_reader_.Start();
 
@@ -48,7 +48,7 @@ void App::Present(fidl::InterfaceHandle<mozart::ViewOwner> view_owner_handle) {
             [presentation](const std::unique_ptr<Presentation>& other) {
               return other.get() == presentation;
             });
-        FTL_DCHECK(it != presentations_.end());
+        FXL_DCHECK(it != presentations_.end());
         presentations_.erase(it);
       });
 
@@ -63,7 +63,7 @@ void App::RegisterDevice(
     fidl::InterfaceRequest<mozart::InputDevice> input_device_request) {
   uint32_t device_id = ++next_device_token_;
 
-  FTL_VLOG(1) << "RegisterDevice " << device_id << " " << *descriptor;
+  FXL_VLOG(1) << "RegisterDevice " << device_id << " " << *descriptor;
   std::unique_ptr<mozart::InputDeviceImpl> input_device =
       std::make_unique<mozart::InputDeviceImpl>(
           device_id, std::move(descriptor), std::move(input_device_request),
@@ -80,7 +80,7 @@ void App::OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) {
   if (devices_by_id_.count(input_device->id()) == 0)
     return;
 
-  FTL_VLOG(1) << "UnregisterDevice " << input_device->id();
+  FXL_VLOG(1) << "UnregisterDevice " << input_device->id();
 
   for (auto& presentation : presentations_) {
     presentation->OnDeviceRemoved(input_device->id());
@@ -90,11 +90,11 @@ void App::OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) {
 
 void App::OnReport(mozart::InputDeviceImpl* input_device,
                    mozart::InputReportPtr report) {
-  FTL_VLOG(2) << "OnReport from " << input_device->id() << " " << *report;
+  FXL_VLOG(2) << "OnReport from " << input_device->id() << " " << *report;
   if (devices_by_id_.count(input_device->id()) == 0)
     return;
 
-  FTL_VLOG(2) << "OnReport to " << presentations_.size();
+  FXL_VLOG(2) << "OnReport to " << presentations_.size();
   for (auto& presentation : presentations_) {
     presentation->OnReport(input_device->id(), report.Clone());
   }
@@ -105,13 +105,13 @@ void App::InitializeServices() {
     application_context_->ConnectToEnvironmentService(
         view_manager_.NewRequest());
     view_manager_.set_connection_error_handler([this] {
-      FTL_LOG(ERROR) << "ViewManager died, destroying view trees.";
+      FXL_LOG(ERROR) << "ViewManager died, destroying view trees.";
       Reset();
     });
 
     view_manager_->GetSceneManager(scene_manager_.NewRequest());
     scene_manager_.set_connection_error_handler([this] {
-      FTL_LOG(ERROR) << "SceneManager died, destroying view trees.";
+      FXL_LOG(ERROR) << "SceneManager died, destroying view trees.";
       Reset();
     });
   }

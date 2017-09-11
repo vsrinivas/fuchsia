@@ -479,7 +479,7 @@ std::pair<PipelinePtr, PipelinePtr> CreatePipelines(
   pipeline_layout_info.pushConstantRangeCount = 1;
   pipeline_layout_info.pPushConstantRanges = &push_constants;
 
-  auto pipeline_layout = ftl::MakeRefCounted<PipelineLayout>(
+  auto pipeline_layout = fxl::MakeRefCounted<PipelineLayout>(
       device, ESCHER_CHECKED_VK_RESULT(
                   device.createPipelineLayout(pipeline_layout_info, nullptr)));
 
@@ -513,7 +513,7 @@ std::pair<PipelinePtr, PipelinePtr> CreatePipelines(
   fragment_stage_info.module = sampler_fragment_module;
   vk::Pipeline vk_sampler_pipeline = ESCHER_CHECKED_VK_RESULT(
       device.createGraphicsPipeline(nullptr, pipeline_info));
-  auto sampler_pipeline = ftl::MakeRefCounted<Pipeline>(
+  auto sampler_pipeline = fxl::MakeRefCounted<Pipeline>(
       device, vk_sampler_pipeline, pipeline_layout, PipelineSpec());
 
   // Pipeline configuration specific to the SSDO filter pass.
@@ -530,7 +530,7 @@ std::pair<PipelinePtr, PipelinePtr> CreatePipelines(
   fragment_stage_info.module = filter_fragment_module;
   vk::Pipeline vk_filter_pipeline = ESCHER_CHECKED_VK_RESULT(
       device.createGraphicsPipeline(nullptr, pipeline_info));
-  auto filter_pipeline = ftl::MakeRefCounted<Pipeline>(
+  auto filter_pipeline = fxl::MakeRefCounted<Pipeline>(
       device, vk_filter_pipeline, pipeline_layout, PipelineSpec());
 
   device.destroyShaderModule(vertex_module);
@@ -619,7 +619,7 @@ SsdoSampler::SsdoSampler(Escher* escher,
     : device_(escher->vulkan_context().device),
       pool_(escher, GetDescriptorSetLayoutCreateInfo(), 6),
       full_screen_(full_screen),
-      noise_texture_(ftl::MakeRefCounted<Texture>(escher->resource_recycler(),
+      noise_texture_(fxl::MakeRefCounted<Texture>(escher->resource_recycler(),
                                                   noise_image,
                                                   vk::Filter::eNearest)),
       // TODO: VulkanProvider should know the swapchain format and we should use
@@ -631,10 +631,10 @@ SsdoSampler::SsdoSampler(Escher* escher,
                       {},
                       sizeof(SamplerConfig),
                       g_sampler_kernel_src) {
-  FTL_DCHECK(noise_image->width() == kNoiseSize &&
+  FXL_DCHECK(noise_image->width() == kNoiseSize &&
              noise_image->height() == kNoiseSize);
 
-  FTL_DCHECK(full_screen_->spec() ==
+  FXL_DCHECK(full_screen_->spec() ==
              MeshSpec{MeshAttribute::kPosition2D | MeshAttribute::kUV});
 
   auto pipelines =
@@ -768,8 +768,8 @@ void SsdoSampler::SampleUsingKernel(CommandBuffer* command_buffer,
                                     const TexturePtr& depth_texture,
                                     const TexturePtr& output_texture,
                                     const SamplerConfig* push_constants) {
-  FTL_DCHECK(depth_texture->width() == output_texture->width());
-  FTL_DCHECK(depth_texture->height() == output_texture->height());
+  FXL_DCHECK(depth_texture->width() == output_texture->width());
+  FXL_DCHECK(depth_texture->height() == output_texture->height());
   uint32_t width = depth_texture->width();
   uint32_t height = depth_texture->width();
 

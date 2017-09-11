@@ -77,9 +77,9 @@ struct ArraySerializer<
       Buffer* buf,
       Array_Data<F>* output,
       const ArrayValidateParams* validate_params) {
-    FTL_DCHECK(!validate_params->element_is_nullable)
+    FXL_DCHECK(!validate_params->element_is_nullable)
         << "Primitive type should be non-nullable";
-    FTL_DCHECK(!validate_params->element_validate_params)
+    FXL_DCHECK(!validate_params->element_validate_params)
         << "Primitive type should not have array validate params";
     for (size_t i = 0; i < num_elements; ++i, ++it)
       output->at(i) = static_cast<F>(*it);
@@ -95,9 +95,9 @@ struct ArraySerializer<
       Buffer* buf,
       Array_Data<F>* output,
       const ArrayValidateParams* validate_params) {
-    FTL_DCHECK(!validate_params->element_is_nullable)
+    FXL_DCHECK(!validate_params->element_is_nullable)
         << "Primitive type should be non-nullable";
-    FTL_DCHECK(!validate_params->element_validate_params)
+    FXL_DCHECK(!validate_params->element_validate_params)
         << "Primitive type should not have array validate params";
     if (num_elements)
       memcpy(output->storage(), &(*it), num_elements * sizeof(E));
@@ -127,9 +127,9 @@ struct ArraySerializer<bool, bool, false> {
       Buffer* buf,
       Array_Data<bool>* output,
       const ArrayValidateParams* validate_params) {
-    FTL_DCHECK(!validate_params->element_is_nullable)
+    FXL_DCHECK(!validate_params->element_is_nullable)
         << "Primitive type should be non-nullable";
-    FTL_DCHECK(!validate_params->element_validate_params)
+    FXL_DCHECK(!validate_params->element_validate_params)
         << "Primitive type should not have array validate params";
 
     // TODO(darin): Can this be a memcpy somehow instead of a bit-by-bit copy?
@@ -167,7 +167,7 @@ struct ArraySerializer<H,
       Buffer* buf,
       Array_Data<WrappedHandle>* output,
       const ArrayValidateParams* validate_params) {
-    FTL_DCHECK(!validate_params->element_validate_params)
+    FXL_DCHECK(!validate_params->element_validate_params)
         << "Handle type should not have array validate params";
 
     for (size_t i = 0; i < num_elements; ++i, ++it) {
@@ -211,7 +211,7 @@ struct ArraySerializer<InterfaceRequest<I>, WrappedHandle, false> {
       Buffer* buf,
       Array_Data<WrappedHandle>* output,
       const ArrayValidateParams* validate_params) {
-    FTL_DCHECK(!validate_params->element_validate_params)
+    FXL_DCHECK(!validate_params->element_validate_params)
         << "Handle type should not have array validate params";
 
     for (size_t i = 0; i < num_elements; ++i, ++it) {
@@ -257,7 +257,7 @@ struct ArraySerializer<InterfaceHandle<Interface>, Interface_Data, false> {
       Buffer* buf,
       Array_Data<Interface_Data>* output,
       const ArrayValidateParams* validate_params) {
-    FTL_DCHECK(!validate_params->element_validate_params)
+    FXL_DCHECK(!validate_params->element_validate_params)
         << "Interface type should not have array validate params";
 
     for (size_t i = 0; i < num_elements; ++i, ++it) {
@@ -360,7 +360,7 @@ struct ArraySerializer<
                                Buffer* buf,
                                typename WrapperTraits<T>::DataType* output,
                                const ArrayValidateParams* validate_params) {
-      FTL_DCHECK(!validate_params)
+      FXL_DCHECK(!validate_params)
           << "Struct type should not have array validate params";
       return Serialize_(UnwrapStructPtr<T>::value(*input), buf, output);
     }
@@ -369,7 +369,7 @@ struct ArraySerializer<
                                Buffer* buf,
                                String_Data** output,
                                const ArrayValidateParams* validate_params) {
-      FTL_DCHECK(validate_params && !validate_params->element_validate_params &&
+      FXL_DCHECK(validate_params && !validate_params->element_validate_params &&
                  !validate_params->element_is_nullable &&
                  validate_params->expected_num_elements == 0)
           << "String type has unexpected array validate params";
@@ -497,7 +497,7 @@ inline internal::ValidationError SerializeArray_(
     internal::Buffer* buf,
     internal::Array_Data<F>** output,
     const internal::ArrayValidateParams* validate_params) {
-  FTL_DCHECK(input);
+  FXL_DCHECK(input);
   if (!*input) {
     // It is up to the caller to make sure the given |Array| is not null if it
     // is not nullable.

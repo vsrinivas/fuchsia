@@ -8,7 +8,7 @@
 #include <utility>
 
 #include "gtest/gtest.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/fidl/compiler/interfaces/tests/sample_service.fidl.h"
 
 namespace fidl {

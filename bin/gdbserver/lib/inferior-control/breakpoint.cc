@@ -6,8 +6,8 @@
 
 #include <cinttypes>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace debugserver {
 namespace arch {
@@ -19,7 +19,7 @@ ProcessBreakpoint::ProcessBreakpoint(uintptr_t address,
                                      size_t kind,
                                      ProcessBreakpointSet* owner)
     : Breakpoint(address, kind), owner_(owner) {
-  FTL_DCHECK(owner_);
+  FXL_DCHECK(owner_);
 }
 
 SoftwareBreakpoint::SoftwareBreakpoint(uintptr_t address,
@@ -34,13 +34,13 @@ SoftwareBreakpoint::~SoftwareBreakpoint() {
 
 ProcessBreakpointSet::ProcessBreakpointSet(Process* process)
     : process_(process) {
-  FTL_DCHECK(process_);
+  FXL_DCHECK(process_);
 }
 
 bool ProcessBreakpointSet::InsertSoftwareBreakpoint(uintptr_t address,
                                                     size_t kind) {
   if (breakpoints_.find(address) != breakpoints_.end()) {
-    FTL_LOG(ERROR) << ftl::StringPrintf(
+    FXL_LOG(ERROR) << fxl::StringPrintf(
         "Breakpoint already inserted at address: 0x%" PRIxPTR, address);
     return false;
   }
@@ -48,7 +48,7 @@ bool ProcessBreakpointSet::InsertSoftwareBreakpoint(uintptr_t address,
   std::unique_ptr<ProcessBreakpoint> breakpoint(
       new SoftwareBreakpoint(address, kind, this));
   if (!breakpoint->Insert()) {
-    FTL_LOG(ERROR) << "Failed to insert software breakpoint";
+    FXL_LOG(ERROR) << "Failed to insert software breakpoint";
     return false;
   }
 
@@ -59,13 +59,13 @@ bool ProcessBreakpointSet::InsertSoftwareBreakpoint(uintptr_t address,
 bool ProcessBreakpointSet::RemoveSoftwareBreakpoint(uintptr_t address) {
   auto iter = breakpoints_.find(address);
   if (iter == breakpoints_.end()) {
-    FTL_LOG(ERROR) << ftl::StringPrintf(
+    FXL_LOG(ERROR) << fxl::StringPrintf(
         "No breakpoint inserted at address: 0x%" PRIxPTR, address);
     return false;
   }
 
   if (!iter->second->Remove()) {
-    FTL_LOG(ERROR) << "Failed to remove breakpoint";
+    FXL_LOG(ERROR) << "Failed to remove breakpoint";
     return false;
   }
 
@@ -77,7 +77,7 @@ ThreadBreakpoint::ThreadBreakpoint(uintptr_t address,
                                    size_t kind,
                                    ThreadBreakpointSet* owner)
     : Breakpoint(address, kind), owner_(owner) {
-  FTL_DCHECK(owner_);
+  FXL_DCHECK(owner_);
 }
 
 SingleStepBreakpoint::SingleStepBreakpoint(uintptr_t address,
@@ -90,12 +90,12 @@ SingleStepBreakpoint::~SingleStepBreakpoint() {
 }
 
 ThreadBreakpointSet::ThreadBreakpointSet(Thread* thread) : thread_(thread) {
-  FTL_DCHECK(thread_);
+  FXL_DCHECK(thread_);
 }
 
 bool ThreadBreakpointSet::InsertSingleStepBreakpoint(uintptr_t address) {
   if (single_step_breakpoint_) {
-    FTL_LOG(ERROR) << ftl::StringPrintf(
+    FXL_LOG(ERROR) << fxl::StringPrintf(
         "S/S bkpt already inserted at 0x%" PRIxPTR
         ", requested address: 0x%" PRIxPTR,
         single_step_breakpoint_->address(), address);
@@ -105,7 +105,7 @@ bool ThreadBreakpointSet::InsertSingleStepBreakpoint(uintptr_t address) {
   std::unique_ptr<ThreadBreakpoint> breakpoint(
       new SingleStepBreakpoint(address, this));
   if (!breakpoint->Insert()) {
-    FTL_LOG(ERROR) << "Failed to insert s/s bkpt";
+    FXL_LOG(ERROR) << "Failed to insert s/s bkpt";
     return false;
   }
 
@@ -115,7 +115,7 @@ bool ThreadBreakpointSet::InsertSingleStepBreakpoint(uintptr_t address) {
 
 bool ThreadBreakpointSet::RemoveSingleStepBreakpoint() {
   if (!single_step_breakpoint_) {
-    FTL_LOG(ERROR) << ftl::StringPrintf("No s/s bkpt inserted");
+    FXL_LOG(ERROR) << fxl::StringPrintf("No s/s bkpt inserted");
     return false;
   }
 

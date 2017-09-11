@@ -22,8 +22,8 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/views/cpp/formatting.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 
 namespace root_presenter {
 namespace {
@@ -70,7 +70,7 @@ Presentation::Presentation(mozart::ViewManager* view_manager,
       view_listener_binding_(this),
       weak_factory_(this) {
   session_.set_connection_error_handler([this] {
-    FTL_LOG(ERROR)
+    FXL_LOG(ERROR)
         << "Root presenter: Scene manager session died unexpectedly.";
     Shutdown();
   });
@@ -92,13 +92,13 @@ Presentation::Presentation(mozart::ViewManager* view_manager,
 Presentation::~Presentation() {}
 
 void Presentation::Present(mozart::ViewOwnerPtr view_owner,
-                           ftl::Closure shutdown_callback) {
-  FTL_DCHECK(view_owner);
-  FTL_DCHECK(!display_info_);
+                           fxl::Closure shutdown_callback) {
+  FXL_DCHECK(view_owner);
+  FXL_DCHECK(!display_info_);
 
   shutdown_callback_ = std::move(shutdown_callback);
 
-  scene_manager_->GetDisplayInfo(ftl::MakeCopyable([
+  scene_manager_->GetDisplayInfo(fxl::MakeCopyable([
     weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner)
   ](scenic::DisplayInfoPtr display_info) mutable {
     if (weak)
@@ -108,8 +108,8 @@ void Presentation::Present(mozart::ViewOwnerPtr view_owner,
 
 void Presentation::CreateViewTree(mozart::ViewOwnerPtr view_owner,
                                   scenic::DisplayInfoPtr display_info) {
-  FTL_DCHECK(!display_info_);
-  FTL_DCHECK(display_info);
+  FXL_DCHECK(!display_info_);
+  FXL_DCHECK(display_info);
   display_info_ = std::move(display_info);
   device_pixel_ratio_ = display_info_->device_pixel_ratio;
   logical_width_ = display_info_->physical_width / device_pixel_ratio_;
@@ -125,14 +125,14 @@ void Presentation::CreateViewTree(mozart::ViewOwnerPtr view_owner,
   view_manager_->CreateViewTree(tree_.NewRequest(), std::move(tree_listener),
                                 "Presentation");
   tree_.set_connection_error_handler([this] {
-    FTL_LOG(ERROR) << "Root presenter: View tree connection error.";
+    FXL_LOG(ERROR) << "Root presenter: View tree connection error.";
     Shutdown();
   });
 
   // Prepare the view container for the root.
   tree_->GetContainer(tree_container_.NewRequest());
   tree_container_.set_connection_error_handler([this] {
-    FTL_LOG(ERROR) << "Root presenter: Tree view container connection error.";
+    FXL_LOG(ERROR) << "Root presenter: Tree view container connection error.";
     Shutdown();
   });
   mozart::ViewContainerListenerPtr tree_container_listener;
@@ -147,7 +147,7 @@ void Presentation::CreateViewTree(mozart::ViewOwnerPtr view_owner,
   input_dispatcher_.set_connection_error_handler([this] {
     // This isn't considered a fatal error right now since it is still useful
     // to be able to test a view system that has graphics but no input.
-    FTL_LOG(WARNING)
+    FXL_LOG(WARNING)
         << "Input dispatcher connection error, input will not work.";
     input_dispatcher_.reset();
   });
@@ -189,9 +189,9 @@ void Presentation::CreateViewTree(mozart::ViewOwnerPtr view_owner,
 }
 
 void Presentation::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {
-  FTL_VLOG(1) << "OnDeviceAdded: device_id=" << input_device->id();
+  FXL_VLOG(1) << "OnDeviceAdded: device_id=" << input_device->id();
 
-  FTL_DCHECK(device_states_by_id_.count(input_device->id()) == 0);
+  FXL_DCHECK(device_states_by_id_.count(input_device->id()) == 0);
   std::unique_ptr<mozart::DeviceState> state =
       std::make_unique<mozart::DeviceState>(
           input_device->id(), input_device->descriptor(),
@@ -203,7 +203,7 @@ void Presentation::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {
 }
 
 void Presentation::OnDeviceRemoved(uint32_t device_id) {
-  FTL_VLOG(1) << "OnDeviceRemoved: device_id=" << device_id;
+  FXL_VLOG(1) << "OnDeviceRemoved: device_id=" << device_id;
   if (device_states_by_id_.count(device_id) != 0) {
     device_states_by_id_[device_id].second->OnUnregistered();
     auto it = cursors_.find(device_id);
@@ -218,12 +218,12 @@ void Presentation::OnDeviceRemoved(uint32_t device_id) {
 
 void Presentation::OnReport(uint32_t device_id,
                             mozart::InputReportPtr input_report) {
-  FTL_VLOG(2) << "OnReport device=" << device_id
+  FXL_VLOG(2) << "OnReport device=" << device_id
               << ", count=" << device_states_by_id_.count(device_id)
               << ", report=" << *(input_report);
 
   if (device_states_by_id_.count(device_id) == 0) {
-    FTL_VLOG(1) << "OnReport: Unknown device " << device_id;
+    FXL_VLOG(1) << "OnReport: Unknown device " << device_id;
     return;
   }
 
@@ -238,7 +238,7 @@ void Presentation::OnReport(uint32_t device_id,
 }
 
 void Presentation::OnEvent(mozart::InputEventPtr event) {
-  FTL_VLOG(1) << "OnEvent " << *(event);
+  FXL_VLOG(1) << "OnEvent " << *(event);
 
   bool invalidate = false;
   if (event->is_pointer()) {
@@ -350,10 +350,10 @@ bool Presentation::UpdateAnimation(uint64_t presentation_time) {
 void Presentation::OnChildAttached(uint32_t child_key,
                                    mozart::ViewInfoPtr child_view_info,
                                    const OnChildAttachedCallback& callback) {
-  FTL_DCHECK(child_view_info);
+  FXL_DCHECK(child_view_info);
 
   if (kContentViewKey == child_key) {
-    FTL_VLOG(1) << "OnChildAttached(content): child_view_info="
+    FXL_VLOG(1) << "OnChildAttached(content): child_view_info="
                 << child_view_info;
   }
   callback();
@@ -363,10 +363,10 @@ void Presentation::OnChildUnavailable(
     uint32_t child_key,
     const OnChildUnavailableCallback& callback) {
   if (kRootViewKey == child_key) {
-    FTL_LOG(ERROR) << "Root presenter: Root view terminated unexpectedly.";
+    FXL_LOG(ERROR) << "Root presenter: Root view terminated unexpectedly.";
     Shutdown();
   } else if (kContentViewKey == child_key) {
-    FTL_LOG(ERROR) << "Root presenter: Content view terminated unexpectedly.";
+    FXL_LOG(ERROR) << "Root presenter: Content view terminated unexpectedly.";
     Shutdown();
   }
   callback();

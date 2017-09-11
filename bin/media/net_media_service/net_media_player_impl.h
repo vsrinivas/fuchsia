@@ -8,7 +8,7 @@
 #include "lib/media/fidl/net_media_player.fidl.h"
 #include "garnet/bin/media/net_media_service/net_media_player_net_stub.h"
 #include "garnet/bin/media/net_media_service/net_media_service_impl.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/netconnector/cpp/net_stub_responder.h"
 
 namespace media {
@@ -49,7 +49,7 @@ class NetMediaPlayerImpl : public NetMediaServiceImpl::Product<NetMediaPlayer>,
   netconnector::NetStubResponder<NetMediaPlayer, NetMediaPlayerNetStub>
       responder_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(NetMediaPlayerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(NetMediaPlayerImpl);
 };
 
 }  // namespace media

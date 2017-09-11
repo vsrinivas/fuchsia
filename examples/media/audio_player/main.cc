@@ -4,11 +4,11 @@
 
 #include "garnet/examples/media/audio_player/audio_player.h"
 #include "garnet/examples/media/audio_player/audio_player_params.h"
-#include "lib/ftl/command_line.h"
+#include "lib/fxl/command_line.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 int main(int argc, const char** argv) {
-  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   examples::AudioPlayerParams params(command_line);
   if (!params.is_valid()) {
     return 1;

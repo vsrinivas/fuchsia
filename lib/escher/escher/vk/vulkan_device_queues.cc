@@ -7,14 +7,14 @@
 #include <set>
 
 #include "escher/impl/vulkan_utils.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace escher {
 
 template <typename FuncT>
 static FuncT GetDeviceProcAddr(vk::Device device, const char* func_name) {
   FuncT func = reinterpret_cast<FuncT>(device.getProcAddr(func_name));
-  FTL_CHECK(func) << "failed to find function address for: " << func_name;
+  FXL_CHECK(func) << "failed to find function address for: " << func_name;
   return func;
 }
 
@@ -88,9 +88,9 @@ FindSuitablePhysicalDeviceAndQueueFamilies(
           auto result =
               instance->proc_addrs().GetPhysicalDeviceSurfaceSupportKHR(
                   physical_device, i, params.surface, &supports_present);
-          FTL_CHECK(result == VK_SUCCESS);
+          FXL_CHECK(result == VK_SUCCESS);
           if (supports_present != VK_TRUE) {
-            FTL_LOG(INFO)
+            FXL_LOG(INFO)
                 << "Queue supports graphics/compute, but not presentation";
             continue;
           }
@@ -120,7 +120,7 @@ FindSuitablePhysicalDeviceAndQueueFamilies(
 
 }  // namespace
 
-ftl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
+fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
     VulkanInstancePtr instance,
     Params params) {
   if (params.surface) {
@@ -135,7 +135,7 @@ ftl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
   {
     SuitablePhysicalDeviceAndQueueFamilies result =
         FindSuitablePhysicalDeviceAndQueueFamilies(instance, params);
-    FTL_CHECK(result.physical_device)
+    FXL_CHECK(result.physical_device)
         << "Unable to find a suitable physical device.";
     physical_device = result.physical_device;
     main_queue_family = result.main_queue_family;
@@ -187,8 +187,8 @@ ftl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
   // Create the device.
   auto result = physical_device.createDevice(device_info);
   if (result.result != vk::Result::eSuccess) {
-    FTL_LOG(WARNING) << "Could not create Vulkan Device.";
-    return ftl::RefPtr<VulkanDeviceQueues>();
+    FXL_LOG(WARNING) << "Could not create Vulkan Device.";
+    return fxl::RefPtr<VulkanDeviceQueues>();
   }
   vk::Device device = result.value;
 
@@ -197,7 +197,7 @@ ftl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
   vk::Queue transfer_queue =
       device.getQueue(transfer_queue_family, transfer_queue_index);
 
-  return ftl::AdoptRef(new VulkanDeviceQueues(
+  return fxl::AdoptRef(new VulkanDeviceQueues(
       device, physical_device, main_queue, main_queue_family, transfer_queue,
       transfer_queue_family, std::move(instance), std::move(params)));
 }

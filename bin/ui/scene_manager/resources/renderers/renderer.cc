@@ -34,7 +34,7 @@ const uint32_t Renderer::kRequiredSwapchainPixelMultiple =
 Renderer::Renderer(Session* session, scenic::ResourceId id)
     : Resource(session, id, Renderer::kTypeInfo) {
   escher::MaterialPtr default_material_ =
-      ftl::MakeRefCounted<escher::Material>();
+      fxl::MakeRefCounted<escher::Material>();
   default_material_->set_color(escher::vec3(0.f, 0.f, 0.f));
 }
 
@@ -63,23 +63,23 @@ std::vector<escher::Object> Renderer::Visitor::TakeDisplayList() {
 }
 
 void Renderer::Visitor::Visit(GpuMemory* r) {
-  FTL_CHECK(false);
+  FXL_CHECK(false);
 }
 
 void Renderer::Visitor::Visit(HostMemory* r) {
-  FTL_CHECK(false);
+  FXL_CHECK(false);
 }
 
 void Renderer::Visitor::Visit(Image* r) {
-  FTL_CHECK(false);
+  FXL_CHECK(false);
 }
 
 void Renderer::Visitor::Visit(ImagePipe* r) {
-  FTL_CHECK(false);
+  FXL_CHECK(false);
 }
 
 void Renderer::Visitor::Visit(Buffer* r) {
-  FTL_CHECK(false);
+  FXL_CHECK(false);
 }
 
 void Renderer::Visitor::Visit(EntityNode* r) {
@@ -120,7 +120,7 @@ void Renderer::Visitor::VisitNode(Node* r) {
       // TODO(MZ-167): accept non-ShapeNode parts.  This might already work
       // (i.e. it might be as simple as saying
       // "part->Accept(&part_visitor)"), but this hasn't been tested.
-      FTL_LOG(WARNING) << "Renderer::Visitor::VisitNode(): Clipping only "
+      FXL_LOG(WARNING) << "Renderer::Visitor::VisitNode(): Clipping only "
                           "supports ShapeNode parts.";
     }
   });
@@ -158,15 +158,15 @@ void Renderer::Visitor::Visit(Scene* r) {
 }
 
 void Renderer::Visitor::Visit(DisplayCompositor* r) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 void Renderer::Visitor::Visit(LayerStack* r) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 void Renderer::Visitor::Visit(Layer* r) {
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 void Renderer::Visitor::Visit(ShapeNode* r) {
@@ -185,19 +185,19 @@ void Renderer::Visitor::Visit(ShapeNode* r) {
 }
 
 void Renderer::Visitor::Visit(CircleShape* r) {
-  FTL_CHECK(false);
+  FXL_CHECK(false);
 }
 
 void Renderer::Visitor::Visit(RectangleShape* r) {
-  FTL_CHECK(false);
+  FXL_CHECK(false);
 }
 
 void Renderer::Visitor::Visit(RoundedRectangleShape* r) {
-  FTL_CHECK(false);
+  FXL_CHECK(false);
 }
 
 void Renderer::Visitor::Visit(MeshShape* r) {
-  FTL_CHECK(false);
+  FXL_CHECK(false);
 }
 
 void Renderer::Visitor::Visit(Material* r) {
@@ -205,7 +205,7 @@ void Renderer::Visitor::Visit(Material* r) {
 }
 
 void Renderer::Visitor::Visit(Import* r) {
-  FTL_CHECK(false);
+  FXL_CHECK(false);
 }
 
 void Renderer::Visitor::Visit(Camera* r) {
@@ -214,11 +214,11 @@ void Renderer::Visitor::Visit(Camera* r) {
 }
 
 void Renderer::Visitor::Visit(Renderer* r) {
-  FTL_CHECK(false);
+  FXL_CHECK(false);
 }
 
 void Renderer::Visitor::Visit(DirectionalLight* r) {
-  FTL_CHECK(false);
+  FXL_CHECK(false);
 }
 
 }  // namespace scene_manager

@@ -13,8 +13,8 @@
 #include "lib/ui/input/fidl/input_events.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/macros.h"
 
 namespace ime {
 
@@ -43,7 +43,7 @@ class ImeImpl : public mozart::InputMethodEditor {
   mozart::InputMethodAction action_ = mozart::InputMethodAction::UNSPECIFIED;
   mozart::TextInputStatePtr state_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ImeImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ImeImpl);
 };
 
 }  // namespace ime

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 #include "mojo/public/cpp/application/application_test_base.h"
 #include "mojo/services/icu_data/cpp/icu_data.h"
 
@@ -24,15 +24,15 @@ class IcuUnitTestBase : public mojo::test::ApplicationTestBase {
     mojo::ApplicationConnectorPtr application_connector;
     shell()->CreateApplicationConnector(mojo::GetProxy(&application_connector));
     bool icu_success = icu_data::Initialize(application_connector.get());
-    FTL_DCHECK(icu_success);
+    FXL_DCHECK(icu_success);
   }
   void TearDown() override {
     mojo::test::ApplicationTestBase::TearDown();
     bool icu_success = icu_data::Release();
-    FTL_DCHECK(icu_success);
+    FXL_DCHECK(icu_success);
   }
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(IcuUnitTestBase);
+  FXL_DISALLOW_COPY_AND_ASSIGN(IcuUnitTestBase);
 };
 
 }  // namespace test

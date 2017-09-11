@@ -5,23 +5,23 @@
 #include "garnet/bin/ui/scene_manager/acquire_fence.h"
 
 #include <mx/time.h>
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace scene_manager {
 
 AcquireFence::AcquireFence(mx::event fence) : fence_(std::move(fence)) {
-  FTL_DCHECK(fence_);
+  FXL_DCHECK(fence_);
 }
 
 AcquireFence::~AcquireFence() {
   ClearHandler();
 }
 
-bool AcquireFence::WaitReady(ftl::TimeDelta timeout) {
+bool AcquireFence::WaitReady(fxl::TimeDelta timeout) {
   mx_time_t mx_deadline;
-  if (timeout <= ftl::TimeDelta::Zero())
+  if (timeout <= fxl::TimeDelta::Zero())
     mx_deadline = 0u;
-  else if (timeout == ftl::TimeDelta::Max())
+  else if (timeout == fxl::TimeDelta::Max())
     mx_deadline = MX_TIME_INFINITE;
   else
     mx_deadline = mx::deadline_after(timeout.ToNanoseconds());
@@ -30,7 +30,7 @@ bool AcquireFence::WaitReady(ftl::TimeDelta timeout) {
   while (!ready_) {
     mx_status_t status =
         fence_.wait_one(kFenceSignalledOrClosed, mx_deadline, &pending);
-    FTL_DCHECK(status == MX_OK || status == MX_ERR_TIMED_OUT);
+    FXL_DCHECK(status == MX_OK || status == MX_ERR_TIMED_OUT);
     ready_ = pending & kFenceSignalledOrClosed;
     if (mx_deadline != MX_TIME_INFINITE)
       break;
@@ -38,12 +38,12 @@ bool AcquireFence::WaitReady(ftl::TimeDelta timeout) {
   return ready_;
 }
 
-void AcquireFence::WaitReadyAsync(ftl::Closure ready_callback) {
+void AcquireFence::WaitReadyAsync(fxl::Closure ready_callback) {
   if (!ready_callback)
     return;
 
   // Make sure callback was not set before.
-  FTL_DCHECK(!ready_callback_);
+  FXL_DCHECK(!ready_callback_);
 
   if (ready_) {
     mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
@@ -52,7 +52,7 @@ void AcquireFence::WaitReadyAsync(ftl::Closure ready_callback) {
   }
 
   // Returned key will always be non-zero.
-  FTL_DCHECK(handler_key_ == 0);
+  FXL_DCHECK(handler_key_ == 0);
   handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
       this, fence_.get(), kFenceSignalledOrClosed);
   ready_callback_ = std::move(ready_callback);
@@ -68,15 +68,15 @@ void AcquireFence::ClearHandler() {
 void AcquireFence::OnHandleReady(mx_handle_t handle,
                                  mx_signals_t pending,
                                  uint64_t count) {
-  FTL_DCHECK(handle == fence_.get());
-  FTL_DCHECK(pending & kFenceSignalledOrClosed);
-  FTL_DCHECK(ready_callback_);
+  FXL_DCHECK(handle == fence_.get());
+  FXL_DCHECK(pending & kFenceSignalledOrClosed);
+  FXL_DCHECK(ready_callback_);
 
   // TODO: Handle the case where there is an error condition, probably want to
   // close the session.
 
   ready_ = true;
-  ftl::Closure callback = std::move(ready_callback_);
+  fxl::Closure callback = std::move(ready_callback_);
   ClearHandler();
 
   callback();

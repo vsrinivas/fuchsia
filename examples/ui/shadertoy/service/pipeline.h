@@ -6,14 +6,14 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace shadertoy {
 
 class Pipeline;
-using PipelinePtr = ftl::RefPtr<Pipeline>;
+using PipelinePtr = fxl::RefPtr<Pipeline>;
 
-class Pipeline : public ftl::RefCountedThreadSafe<Pipeline> {
+class Pipeline : public fxl::RefCountedThreadSafe<Pipeline> {
  public:
   explicit Pipeline(vk::Device device,
                     vk::Pipeline pipeline,

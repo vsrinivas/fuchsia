@@ -6,7 +6,7 @@
 
 #include <unistd.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/handles/object_info.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
@@ -17,9 +17,9 @@ namespace debugserver {
 
 IOLoop::IOLoop(int fd, Delegate* delegate)
     : quit_called_(false), fd_(fd), delegate_(delegate), is_running_(false) {
-  FTL_DCHECK(fd_ >= 0);
-  FTL_DCHECK(delegate_);
-  FTL_DCHECK(mtl::MessageLoop::GetCurrent());
+  FXL_DCHECK(fd_ >= 0);
+  FXL_DCHECK(delegate_);
+  FXL_DCHECK(mtl::MessageLoop::GetCurrent());
 
   origin_task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
 }
@@ -29,7 +29,7 @@ IOLoop::~IOLoop() {
 }
 
 void IOLoop::Run() {
-  FTL_DCHECK(!is_running_);
+  FXL_DCHECK(!is_running_);
 
   is_running_ = true;
   read_thread_ = mtl::CreateThread(&read_task_runner_, "i/o loop read task");
@@ -39,15 +39,15 @@ void IOLoop::Run() {
 }
 
 void IOLoop::Quit() {
-  FTL_DCHECK(is_running_);
+  FXL_DCHECK(is_running_);
 
-  FTL_LOG(INFO) << "Quitting socket I/O loop";
+  FXL_LOG(INFO) << "Quitting socket I/O loop";
 
   quit_called_ = true;
 
   auto quit_task = [] {
     // Tell the thread-local message loop to quit.
-    FTL_DCHECK(mtl::MessageLoop::GetCurrent());
+    FXL_DCHECK(mtl::MessageLoop::GetCurrent());
     mtl::MessageLoop::GetCurrent()->QuitNow();
   };
   read_task_runner_->PostTask(quit_task);
@@ -58,18 +58,18 @@ void IOLoop::Quit() {
   if (write_thread_.joinable())
     write_thread_.join();
 
-  FTL_LOG(INFO) << "Socket I/O loop exited";
+  FXL_LOG(INFO) << "Socket I/O loop exited";
 }
 
 void IOLoop::StartReadLoop() {
   // Make sure the call is coming from the origin thread.
-  FTL_DCHECK(mtl::MessageLoop::GetCurrent()->task_runner().get() ==
+  FXL_DCHECK(mtl::MessageLoop::GetCurrent()->task_runner().get() ==
              origin_task_runner_.get());
 
   read_task_runner_->PostTask(std::bind(&IOLoop::OnReadTask, this));
 }
 
-void IOLoop::PostWriteTask(const ftl::StringView& bytes) {
+void IOLoop::PostWriteTask(const fxl::StringView& bytes) {
   // We copy the data into the closure.
   // TODO(armansito): Pass a refptr/weaktpr to |this|?
   write_task_runner_->PostTask([ this, bytes = bytes.ToString() ] {
@@ -79,12 +79,12 @@ void IOLoop::PostWriteTask(const ftl::StringView& bytes) {
     // impossible to send a large enough packet to cause an overflow (at
     // least with the GDB Remote protocol).
     if (bytes_written != static_cast<ssize_t>(bytes.size())) {
-      FTL_LOG(ERROR) << "Failed to send bytes" << ", "
+      FXL_LOG(ERROR) << "Failed to send bytes" << ", "
                      << util::ErrnoString(errno);
       ReportError();
       return;
     }
-    FTL_VLOG(2) << "<- " << util::EscapeNonPrintableString(bytes);
+    FXL_VLOG(2) << "<- " << util::EscapeNonPrintableString(bytes);
   });
 }
 

@@ -36,7 +36,7 @@ class VulkanSwapchainHelper {
   std::vector<SemaphorePtr> image_available_semaphores_;
   std::vector<SemaphorePtr> render_finished_semaphores_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(VulkanSwapchainHelper);
+  FXL_DISALLOW_COPY_AND_ASSIGN(VulkanSwapchainHelper);
 };
 
 }  // namespace escher

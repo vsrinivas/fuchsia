@@ -9,17 +9,17 @@
 
 #include <string>
 
-#include "lib/ftl/ftl_export.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/fxl_export.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace mtl {
 
 // Make a new shared buffer with the contents of a string.
-FTL_EXPORT bool VmoFromString(const ftl::StringView& string,
+FXL_EXPORT bool VmoFromString(const fxl::StringView& string,
                               mx::vmo* handle_ptr);
 
 // Copy the contents of a shared buffer into a string.
-FTL_EXPORT bool StringFromVmo(const mx::vmo& handle, std::string* string_ptr);
+FXL_EXPORT bool StringFromVmo(const mx::vmo& handle, std::string* string_ptr);
 
 }  // namespace mtl
 

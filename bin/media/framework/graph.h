@@ -14,9 +14,9 @@
 #include "garnet/bin/media/framework/stages/multistream_source_stage.h"
 #include "garnet/bin/media/framework/stages/stage_impl.h"
 #include "garnet/bin/media/framework/stages/transform_stage.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/synchronization/mutex.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/synchronization/mutex.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace media {
 
@@ -112,7 +112,7 @@ class Graph {
  public:
   // Constructs a graph. If |default_task_runner| is null, every call to |Add|
   // or |AddAndConnectAll| must supply a task runner.
-  Graph(ftl::RefPtr<ftl::TaskRunner> default_task_runner);
+  Graph(fxl::RefPtr<fxl::TaskRunner> default_task_runner);
 
   ~Graph();
 
@@ -120,8 +120,8 @@ class Graph {
   // runner was provided in the graph constructor.
   template <typename T>
   NodeRef Add(std::shared_ptr<T> t_ptr,
-              ftl::RefPtr<ftl::TaskRunner> task_runner = nullptr) {
-    FTL_DCHECK(t_ptr);
+              fxl::RefPtr<fxl::TaskRunner> task_runner = nullptr) {
+    FXL_DCHECK(t_ptr);
     return Add(internal::StageCreator<T>::Create(t_ptr), task_runner);
   }
 
@@ -170,7 +170,7 @@ class Graph {
   OutputRef AddAndConnectAll(
       OutputRef output,
       const T& t,
-      ftl::RefPtr<ftl::TaskRunner> task_runner = nullptr) {
+      fxl::RefPtr<fxl::TaskRunner> task_runner = nullptr) {
     for (const auto& element : t) {
       NodeRef node =
           Add(internal::StageCreator<T>::Create(element), task_runner);
@@ -202,13 +202,13 @@ class Graph {
 
   // Executes |task| after having acquired |nodes|. No update or other
   // task will touch any of the nodes while |task| is executing.
-  void PostTask(const ftl::Closure& task, std::initializer_list<NodeRef> nodes);
+  void PostTask(const fxl::Closure& task, std::initializer_list<NodeRef> nodes);
 
  private:
   // Adds a stage to the graph.
-  NodeRef Add(StageImpl* stage, ftl::RefPtr<ftl::TaskRunner> task_runner);
+  NodeRef Add(StageImpl* stage, fxl::RefPtr<fxl::TaskRunner> task_runner);
 
-  ftl::RefPtr<ftl::TaskRunner> default_task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> default_task_runner_;
 
   std::list<StageImpl*> stages_;
   std::list<StageImpl*> sources_;

@@ -8,7 +8,7 @@
 #include "garnet/bin/media/flog_service/flog_directory.h"
 #include "garnet/bin/media/flog_service/flog_logger_impl.h"
 #include "garnet/bin/media/flog_service/flog_reader_impl.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace flog {
 
@@ -24,7 +24,7 @@ FlogServiceImpl::FlogServiceImpl(
   directory_->GetExistingFiles([this](
       std::unique_ptr<std::map<uint32_t, std::string>> labels_by_id) {
     log_labels_by_id_ = std::move(labels_by_id);
-    FTL_DCHECK(log_labels_by_id_);
+    FXL_DCHECK(log_labels_by_id_);
     for (const std::pair<uint32_t, std::string>& pair : *log_labels_by_id_) {
       if (pair.first > last_allocated_log_id_) {
         last_allocated_log_id_ = pair.first;
@@ -39,7 +39,7 @@ FlogServiceImpl::~FlogServiceImpl() {}
 
 void FlogServiceImpl::CreateLogger(fidl::InterfaceRequest<FlogLogger> request,
                                    const fidl::String& label) {
-  ready_.When(ftl::MakeCopyable([
+  ready_.When(fxl::MakeCopyable([
     this, request = std::move(request), label
   ]() mutable {
     std::shared_ptr<FlogLoggerImpl> logger = FlogLoggerImpl::Create(
@@ -52,7 +52,7 @@ void FlogServiceImpl::CreateLogger(fidl::InterfaceRequest<FlogLogger> request,
 void FlogServiceImpl::GetLogDescriptions(
     const GetLogDescriptionsCallback& callback) {
   ready_.When([this, callback]() {
-    FTL_DCHECK(log_labels_by_id_);
+    FXL_DCHECK(log_labels_by_id_);
     fidl::Array<FlogDescriptionPtr> descriptions =
         fidl::Array<FlogDescriptionPtr>::New(log_labels_by_id_->size());
 
@@ -72,8 +72,8 @@ void FlogServiceImpl::GetLogDescriptions(
 void FlogServiceImpl::CreateReader(fidl::InterfaceRequest<FlogReader> reader,
                                    uint32_t log_id) {
   ready_.When(
-      ftl::MakeCopyable([ this, reader = std::move(reader), log_id ]() mutable {
-        FTL_DCHECK(log_labels_by_id_);
+      fxl::MakeCopyable([ this, reader = std::move(reader), log_id ]() mutable {
+        FXL_DCHECK(log_labels_by_id_);
         auto iter = log_labels_by_id_->find(log_id);
         AddProduct(FlogReaderImpl::Create(
             std::move(reader), log_id,
@@ -84,7 +84,7 @@ void FlogServiceImpl::CreateReader(fidl::InterfaceRequest<FlogReader> reader,
 
 void FlogServiceImpl::DeleteLog(uint32_t log_id) {
   ready_.When([this, log_id]() {
-    FTL_DCHECK(log_labels_by_id_);
+    FXL_DCHECK(log_labels_by_id_);
     auto iter = log_labels_by_id_->find(log_id);
     if (iter == log_labels_by_id_->end()) {
       return;
@@ -97,7 +97,7 @@ void FlogServiceImpl::DeleteLog(uint32_t log_id) {
 
 void FlogServiceImpl::DeleteAllLogs() {
   ready_.When([this]() {
-    FTL_DCHECK(log_labels_by_id_);
+    FXL_DCHECK(log_labels_by_id_);
 
     for (const std::pair<uint32_t, std::string>& pair : *log_labels_by_id_) {
       directory_->DeleteFile(pair.first, pair.second);

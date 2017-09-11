@@ -17,7 +17,7 @@ source_set("demux") {
   deps = [
     "//garnet/bin/media/framework",
     "//garnet/bin/media/util",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }
 

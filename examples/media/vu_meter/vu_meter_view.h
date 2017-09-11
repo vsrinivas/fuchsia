@@ -13,7 +13,7 @@
 #include "lib/media/fidl/media_capturer.fidl.h"
 #include "lib/media/fidl/media_transport.fidl.h"
 #include "lib/ui/view_framework/skia_view.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace examples {
 
@@ -94,7 +94,7 @@ class VuMeterView : public mozart::SkiaView {
   PeakFilter slow_left_;
   PeakFilter slow_right_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(VuMeterView);
+  FXL_DISALLOW_COPY_AND_ASSIGN(VuMeterView);
 };
 
 }  // namespace examples

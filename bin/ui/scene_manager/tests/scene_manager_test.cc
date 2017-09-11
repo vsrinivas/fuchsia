@@ -5,7 +5,7 @@
 #include "garnet/bin/ui/scene_manager/tests/scene_manager_test.h"
 
 #include "lib/ui/tests/test_with_message_loop.h"
-#include "lib/ftl/synchronization/waitable_event.h"
+#include "lib/fxl/synchronization/waitable_event.h"
 
 namespace scene_manager {
 namespace test {
@@ -29,7 +29,7 @@ void SceneManagerTest::SetUp() {
 
   auto interface_request = manager_.NewRequest();
 
-  ftl::ManualResetWaitableEvent wait;
+  fxl::ManualResetWaitableEvent wait;
   thread_->TaskRunner()->PostTask([this, &interface_request, &wait]() {
     this->manager_binding_->Bind(std::move(interface_request));
     this->manager_binding_->set_connection_error_handler(

@@ -8,7 +8,7 @@
 #include <mx/channel.h>
 
 #include "lib/fidl/cpp/bindings/message.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace fidl {
 namespace internal {
@@ -39,7 +39,7 @@ class SynchronousConnector {
  private:
   mx::channel handle_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SynchronousConnector);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SynchronousConnector);
 };
 
 }  // namespace internal

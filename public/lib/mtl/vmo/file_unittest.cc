@@ -8,8 +8,8 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
-#include "lib/ftl/files/unique_fd.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/files/unique_fd.h"
 #include "lib/mtl/vmo/file.h"
 #include "lib/mtl/vmo/strings.h"
 
@@ -22,7 +22,7 @@ TEST(VMOAndFile, VmoFromFd) {
   std::string path;
   EXPECT_TRUE(temp_dir.NewTempFile(&path));
 
-  ftl::UniqueFD fd(open(path.c_str(), O_RDWR));
+  fxl::UniqueFD fd(open(path.c_str(), O_RDWR));
   EXPECT_TRUE(fd.is_valid());
   EXPECT_EQ(7, write(fd.get(), "Payload", 7));
 
@@ -41,7 +41,7 @@ TEST(VMOAndFile, VmoFromFilename) {
   std::string path;
   EXPECT_TRUE(temp_dir.NewTempFile(&path));
 
-  ftl::UniqueFD fd(open(path.c_str(), O_RDWR));
+  fxl::UniqueFD fd(open(path.c_str(), O_RDWR));
   EXPECT_TRUE(fd.is_valid());
   EXPECT_EQ(16, write(fd.get(), "Another playload", 16));
   fd.reset();

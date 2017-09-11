@@ -9,7 +9,7 @@
 #include <utility>
 
 #include "lib/zip/memory_io.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "third_party/zlib/contrib/minizip/zip.h"
 
 namespace zip {
@@ -25,7 +25,7 @@ Zipper::~Zipper() {}
 bool Zipper::AddCompressedFile(const std::string& path,
                                const char* data,
                                size_t size) {
-  FTL_DCHECK(encoder_.is_valid());
+  FXL_DCHECK(encoder_.is_valid());
 
   zip_fileinfo file_info;
   memset(&file_info, 0, sizeof(file_info));
@@ -33,14 +33,14 @@ bool Zipper::AddCompressedFile(const std::string& path,
                                    nullptr, 0, nullptr, 0, nullptr, Z_DEFLATED,
                                    Z_DEFAULT_COMPRESSION);
   if (result != ZIP_OK) {
-    FTL_LOG(WARNING) << "Unable to create '" << path << "' in archive.";
+    FXL_LOG(WARNING) << "Unable to create '" << path << "' in archive.";
     return false;
   }
 
   result = zipWriteInFileInZip(encoder_.get(), data, size);
 
   if (result < 0) {
-    FTL_LOG(WARNING) << "Unable to write data into '" << path
+    FXL_LOG(WARNING) << "Unable to write data into '" << path
                      << "' in archive.";
     return false;
   }
@@ -48,7 +48,7 @@ bool Zipper::AddCompressedFile(const std::string& path,
   result = zipCloseFileInZip(encoder_.get());
 
   if (result != ZIP_OK) {
-    FTL_LOG(WARNING) << "Unable to close '" << path << "' in archive.";
+    FXL_LOG(WARNING) << "Unable to close '" << path << "' in archive.";
     return false;
   }
 

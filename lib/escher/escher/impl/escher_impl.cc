@@ -39,10 +39,10 @@ EscherImpl::EscherImpl(Escher* escher, const VulkanContext& context)
                                    escher->gpu_uploader(),
                                    escher->resource_recycler())),
       renderer_count_(0) {
-  FTL_DCHECK(context.instance);
-  FTL_DCHECK(context.physical_device);
-  FTL_DCHECK(context.device);
-  FTL_DCHECK(context.queue);
+  FXL_DCHECK(context.instance);
+  FXL_DCHECK(context.physical_device);
+  FXL_DCHECK(context.device);
+  FXL_DCHECK(context.queue);
   // TODO: additional validation, e.g. ensure that queue supports both graphics
   // and compute.
 
@@ -55,7 +55,7 @@ EscherImpl::EscherImpl(Escher* escher, const VulkanContext& context)
 }
 
 EscherImpl::~EscherImpl() {
-  FTL_DCHECK(renderer_count_ == 0);
+  FXL_DCHECK(renderer_count_ == 0);
 
   vulkan_context_.device.waitIdle();
 

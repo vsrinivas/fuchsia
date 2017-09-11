@@ -9,15 +9,15 @@
 #include <algorithm>
 #include <limits>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace {
 
 // Moterm -> teken conversions:
 
 teken_pos_t MotermToTekenSize(const MotermModel::Size& size) {
-  FTL_DCHECK(size.rows <= std::numeric_limits<teken_unit_t>::max());
-  FTL_DCHECK(size.columns <= std::numeric_limits<teken_unit_t>::max());
+  FXL_DCHECK(size.rows <= std::numeric_limits<teken_unit_t>::max());
+  FXL_DCHECK(size.columns <= std::numeric_limits<teken_unit_t>::max());
   teken_pos_t rv = {static_cast<teken_unit_t>(size.rows),
                     static_cast<teken_unit_t>(size.columns)};
   return rv;
@@ -63,7 +63,7 @@ MotermModel::Color TekenToMotermColor(teken_color_t color, bool bold) {
       {0x00, 0xff, 0xff},  // Cyan.
       {0xff, 0xff, 0xff}   // White.
   };
-  FTL_DCHECK(color < static_cast<unsigned>(TC_NCOLORS));
+  FXL_DCHECK(color < static_cast<unsigned>(TC_NCOLORS));
   return bold ? MotermModel::Color(bold_rgb[color][0], bold_rgb[color][1],
                                    bold_rgb[color][2])
               : MotermModel::Color(rgb[color][0], rgb[color][1], rgb[color][2]);
@@ -87,8 +87,8 @@ MotermModel::Rectangle EnclosingRectangle(const MotermModel::Rectangle& rect1,
   int end_col =
       std::max(rect1.position.column + static_cast<int>(rect1.size.columns),
                rect2.position.column + static_cast<int>(rect2.size.columns));
-  FTL_DCHECK(start_row <= end_row);
-  FTL_DCHECK(start_col <= end_col);
+  FXL_DCHECK(start_row <= end_row);
+  FXL_DCHECK(start_col <= end_col);
   return MotermModel::Rectangle(start_row, start_col,
                                 static_cast<unsigned>(end_row - start_row),
                                 static_cast<unsigned>(end_col - start_col));
@@ -106,8 +106,8 @@ MotermModel::MotermModel(const Size& size, Delegate* delegate)
       cursor_visible_(true),
       terminal_(),
       current_state_changes_() {
-  FTL_DCHECK(size_.rows > 0u);
-  FTL_DCHECK(size_.columns > 0u);
+  FXL_DCHECK(size_.rows > 0u);
+  FXL_DCHECK(size_.columns > 0u);
 
   num_chars_ = size_.rows * size_.columns;
   characters_.reset(new teken_char_t[num_chars_]);
@@ -131,8 +131,8 @@ MotermModel::~MotermModel() {}
 void MotermModel::ProcessInput(const void* input_bytes,
                                size_t num_input_bytes,
                                StateChanges* state_changes) {
-  FTL_DCHECK(state_changes);
-  FTL_DCHECK(!current_state_changes_);
+  FXL_DCHECK(state_changes);
+  FXL_DCHECK(!current_state_changes_);
   current_state_changes_ = state_changes;
 
   // Get the initial cursor position, so we'll be able to tell if it moved.
@@ -182,10 +182,10 @@ bool MotermModel::GetCursorVisibility() const {
 
 MotermModel::CharacterInfo MotermModel::GetCharacterInfoAt(
     const Position& position) const {
-  FTL_DCHECK(position.row >= 0);
-  FTL_DCHECK(position.row < static_cast<int>(GetSize().rows));
-  FTL_DCHECK(position.column >= 0);
-  FTL_DCHECK(position.column < static_cast<int>(GetSize().columns));
+  FXL_DCHECK(position.row >= 0);
+  FXL_DCHECK(position.row < static_cast<int>(GetSize().rows));
+  FXL_DCHECK(position.column >= 0);
+  FXL_DCHECK(position.column < static_cast<int>(GetSize().columns));
 
   uint32_t ch = characters_[position.row * size_.columns + position.column];
   const teken_attr_t& teken_attr =
@@ -206,8 +206,8 @@ MotermModel::CharacterInfo MotermModel::GetCharacterInfoAt(
 }
 
 void MotermModel::SetSize(const Size& size, bool reset) {
-  FTL_DCHECK(size.rows > 0u);
-  FTL_DCHECK(size.columns > 0u);
+  FXL_DCHECK(size.rows > 0u);
+  FXL_DCHECK(size.columns > 0u);
   Size old_size = size_;
   size_ = size;
   size_t new_num_chars = size_.rows * size_.columns;
@@ -255,12 +255,12 @@ void MotermModel::SetSize(const Size& size, bool reset) {
 }
 
 void MotermModel::OnBell() {
-  FTL_DCHECK(current_state_changes_);
+  FXL_DCHECK(current_state_changes_);
   current_state_changes_->bell_count++;
 }
 
 void MotermModel::OnCursor(const teken_pos_t* pos) {
-  FTL_DCHECK(current_state_changes_);
+  FXL_DCHECK(current_state_changes_);
   // Don't do anything. We'll just compare initial and final cursor positions.
 }
 
@@ -271,7 +271,7 @@ void MotermModel::OnPutchar(const teken_pos_t* pos,
   attribute_at(pos->tp_row, pos->tp_col) = *attr;
 
   // Update dirty rect.
-  FTL_DCHECK(current_state_changes_);
+  FXL_DCHECK(current_state_changes_);
   current_state_changes_->dirty_rect =
       EnclosingRectangle(current_state_changes_->dirty_rect,
                          Rectangle(pos->tp_row, pos->tp_col, 1, 1));
@@ -288,7 +288,7 @@ void MotermModel::OnFill(const teken_rect_t* rect,
   }
 
   // Update dirty rect.
-  FTL_DCHECK(current_state_changes_);
+  FXL_DCHECK(current_state_changes_);
   current_state_changes_->dirty_rect = EnclosingRectangle(
       current_state_changes_->dirty_rect, TekenToMotermRectangle(*rect));
 }
@@ -325,7 +325,7 @@ void MotermModel::OnCopy(const teken_rect_t* rect, const teken_pos_t* pos) {
   }
 
   // Update dirty rect.
-  FTL_DCHECK(current_state_changes_);
+  FXL_DCHECK(current_state_changes_);
   current_state_changes_->dirty_rect = EnclosingRectangle(
       current_state_changes_->dirty_rect,
       Rectangle(static_cast<int>(pos->tp_row), static_cast<int>(pos->tp_col),
@@ -333,7 +333,7 @@ void MotermModel::OnCopy(const teken_rect_t* rect, const teken_pos_t* pos) {
 }
 
 void MotermModel::OnParam(int cmd, unsigned val) {
-  FTL_DCHECK(current_state_changes_);
+  FXL_DCHECK(current_state_changes_);
 
   // Note: |val| is usually a "boolean", except for |TP_SETBELLPD| (for which
   // |val| can be decomposed using |TP_SETBELLPD_{PITCH, DURATION}()|).
@@ -352,10 +352,10 @@ void MotermModel::OnParam(int cmd, unsigned val) {
     case TP_SETBELLPD:
     case TP_MOUSE:
       // TODO(vtl): TP_KEYPADAPP seems especially common.
-      FTL_NOTIMPLEMENTED() << "OnParam(" << cmd << ", " << val << ")";
+      FXL_NOTIMPLEMENTED() << "OnParam(" << cmd << ", " << val << ")";
       break;
     default:
-      FTL_NOTREACHED() << "OnParam(): unknown command: " << cmd;
+      FXL_NOTREACHED() << "OnParam(): unknown command: " << cmd;
       break;
   }
 }
@@ -364,18 +364,18 @@ void MotermModel::OnRespond(const void* buf, size_t size) {
   if (delegate_)
     delegate_->OnResponse(buf, size);
   else
-    FTL_LOG(WARNING) << "Ignoring response: no delegate";
+    FXL_LOG(WARNING) << "Ignoring response: no delegate";
 }
 
 // static
 void MotermModel::OnBellThunk(void* ctx) {
-  FTL_DCHECK(ctx);
+  FXL_DCHECK(ctx);
   return static_cast<MotermModel*>(ctx)->OnBell();
 }
 
 // static
 void MotermModel::OnCursorThunk(void* ctx, const teken_pos_t* pos) {
-  FTL_DCHECK(ctx);
+  FXL_DCHECK(ctx);
   return static_cast<MotermModel*>(ctx)->OnCursor(pos);
 }
 
@@ -384,7 +384,7 @@ void MotermModel::OnPutcharThunk(void* ctx,
                                  const teken_pos_t* pos,
                                  teken_char_t ch,
                                  const teken_attr_t* attr) {
-  FTL_DCHECK(ctx);
+  FXL_DCHECK(ctx);
   return static_cast<MotermModel*>(ctx)->OnPutchar(pos, ch, attr);
 }
 
@@ -393,7 +393,7 @@ void MotermModel::OnFillThunk(void* ctx,
                               const teken_rect_t* rect,
                               teken_char_t ch,
                               const teken_attr_t* attr) {
-  FTL_DCHECK(ctx);
+  FXL_DCHECK(ctx);
   return static_cast<MotermModel*>(ctx)->OnFill(rect, ch, attr);
 }
 
@@ -401,18 +401,18 @@ void MotermModel::OnFillThunk(void* ctx,
 void MotermModel::OnCopyThunk(void* ctx,
                               const teken_rect_t* rect,
                               const teken_pos_t* pos) {
-  FTL_DCHECK(ctx);
+  FXL_DCHECK(ctx);
   return static_cast<MotermModel*>(ctx)->OnCopy(rect, pos);
 }
 
 // static
 void MotermModel::OnParamThunk(void* ctx, int cmd, unsigned val) {
-  FTL_DCHECK(ctx);
+  FXL_DCHECK(ctx);
   return static_cast<MotermModel*>(ctx)->OnParam(cmd, val);
 }
 
 // static
 void MotermModel::OnRespondThunk(void* ctx, const void* buf, size_t size) {
-  FTL_DCHECK(ctx);
+  FXL_DCHECK(ctx);
   return static_cast<MotermModel*>(ctx)->OnRespond(buf, size);
 }

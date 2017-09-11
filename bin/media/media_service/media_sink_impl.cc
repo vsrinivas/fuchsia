@@ -6,8 +6,8 @@
 
 #include "garnet/bin/media/fidl/fidl_conversion_pipeline_builder.h"
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -28,7 +28,7 @@ MediaSinkImpl::MediaSinkImpl(
                                            std::move(sink_request),
                                            owner),
       renderer_(MediaRendererPtr::Create(std::move(renderer_handle))) {
-  FTL_DCHECK(renderer_);
+  FXL_DCHECK(renderer_);
 
   FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding())));
 
@@ -36,7 +36,7 @@ MediaSinkImpl::MediaSinkImpl(
 
   renderer_->GetSupportedMediaTypes([this](fidl::Array<MediaTypeSetPtr>
                                                supported_media_types) {
-    FTL_DCHECK(supported_media_types);
+    FXL_DCHECK(supported_media_types);
 
     supported_stream_types_ = supported_media_types.To<
         std::unique_ptr<std::vector<std::unique_ptr<media::StreamTypeSet>>>>();
@@ -49,14 +49,14 @@ MediaSinkImpl::~MediaSinkImpl() {}
 
 void MediaSinkImpl::GetTimelineControlPoint(
     fidl::InterfaceRequest<MediaTimelineControlPoint> request) {
-  FTL_DCHECK(renderer_);
+  FXL_DCHECK(renderer_);
   renderer_->GetTimelineControlPoint(std::move(request));
 }
 
 void MediaSinkImpl::ConsumeMediaType(MediaTypePtr media_type,
                                      const ConsumeMediaTypeCallback& callback) {
   if (consume_media_type_callback_) {
-    FTL_DLOG(ERROR) << "ConsumeMediaType called while already pending.";
+    FXL_DLOG(ERROR) << "ConsumeMediaType called while already pending.";
     callback(nullptr);
     UnbindAndReleaseFromOwner();
     return;
@@ -80,11 +80,11 @@ void MediaSinkImpl::BuildConversionPipeline() {
              const ProducerGetter& producer_getter,
              std::unique_ptr<StreamType> stream_type,
              std::vector<mx_koid_t> converter_koids) {
-        FTL_DCHECK(!producer_getter);
-        FTL_DCHECK(consume_media_type_callback_);
+        FXL_DCHECK(!producer_getter);
+        FXL_DCHECK(consume_media_type_callback_);
 
         if (!succeeded) {
-          FTL_LOG(WARNING) << "Failed to create conversion pipeline.";
+          FXL_LOG(WARNING) << "Failed to create conversion pipeline.";
           // TODO(dalesat): Log this to flog.
           consume_media_type_callback_(nullptr);
           consume_media_type_callback_ = nullptr;
@@ -92,7 +92,7 @@ void MediaSinkImpl::BuildConversionPipeline() {
           return;
         }
 
-        FTL_DCHECK(consumer_getter);
+        FXL_DCHECK(consumer_getter);
 
         stream_type_ = std::move(stream_type);
 

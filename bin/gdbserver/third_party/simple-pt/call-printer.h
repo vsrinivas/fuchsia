@@ -36,7 +36,7 @@
 
 #include "garnet/bin/gdbserver/lib/intel-pt-decode/decoder.h"
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 #include "instruction.h"
 
@@ -110,7 +110,7 @@ class CallPrinter {
   DecoderState* state_;
   Config config_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CallPrinter);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CallPrinter);
 };
 
 }  // namespace simple_pt

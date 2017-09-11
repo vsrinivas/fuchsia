@@ -8,8 +8,8 @@
 #include <sstream>
 #include <string>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 
 namespace fidl {
 namespace internal {
@@ -80,7 +80,7 @@ class ValidationErrorObserverForTesting {
  private:
   ValidationError last_error_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ValidationErrorObserverForTesting);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ValidationErrorObserverForTesting);
 };
 
 // This takes in a string pointer, and provides a string stream which you can
@@ -96,7 +96,7 @@ class ValidationErrorStringStream {
   std::string* err_msg_;
   std::ostringstream stream_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ValidationErrorStringStream);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ValidationErrorStringStream);
 };
 
 }  // namespace internal
@@ -105,7 +105,7 @@ class ValidationErrorStringStream {
 // In a debug build, logs a serialization warning.
 // TODO(vardhan): Make this work like an ostream.
 #define FIDL_INTERNAL_DLOG_SERIALIZATION_WARNING(error, description) \
-  FTL_DLOG(WARNING) << "The outgoing message will trigger "          \
+  FXL_DLOG(WARNING) << "The outgoing message will trigger "          \
                     << ValidationErrorToString(error)                \
                     << " at the receiving side (" << description << ")."
 
@@ -118,7 +118,7 @@ class ValidationErrorStringStream {
 // this macro's use semantically valid.
 #define FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err_msg) \
   true ? (void)0                                   \
-       : ::ftl::LogMessageVoidify() &              \
+       : ::fxl::LogMessageVoidify() &              \
              ::fidl::internal::ValidationErrorStringStream(err_msg).stream()
 #else
 #define FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err_msg) \

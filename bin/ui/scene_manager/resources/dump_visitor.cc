@@ -26,7 +26,7 @@
 #include "garnet/bin/ui/scene_manager/resources/shapes/mesh_shape.h"
 #include "garnet/bin/ui/scene_manager/resources/shapes/rectangle_shape.h"
 #include "garnet/bin/ui/scene_manager/resources/shapes/rounded_rectangle_shape.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace scene_manager {
 
@@ -339,7 +339,7 @@ void DumpVisitor::BeginSection(const char* label) {
 }
 
 void DumpVisitor::EndSection() {
-  FTL_DCHECK(!partial_line_);
+  FXL_DCHECK(!partial_line_);
   indentation_ -= 2;
 }
 

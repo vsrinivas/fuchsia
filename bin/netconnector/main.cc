@@ -4,11 +4,11 @@
 
 #include "garnet/bin/netconnector/netconnector_impl.h"
 #include "garnet/bin/netconnector/netconnector_params.h"
-#include "lib/ftl/command_line.h"
+#include "lib/fxl/command_line.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 int main(int argc, const char** argv) {
-  ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   netconnector::NetConnectorParams params(command_line);
   if (!params.is_valid()) {
     return 1;

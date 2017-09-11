@@ -12,8 +12,8 @@
 #include "lib/ui/input/fidl/ime_service.fidl.h"
 #include "lib/ui/input/fidl/input_events.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/macros.h"
 
 namespace ime {
 
@@ -21,7 +21,7 @@ class ImeImpl;
 
 class App : public mozart::ImeService {
  public:
-  explicit App(const ftl::CommandLine& command_line);
+  explicit App(const fxl::CommandLine& command_line);
   ~App();
 
  private:
@@ -39,7 +39,7 @@ class App : public mozart::ImeService {
   std::vector<std::unique_ptr<ImeImpl>> ime_;
   fidl::BindingSet<mozart::ImeService> ime_bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(App);
+  FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
 }  // namespace ime

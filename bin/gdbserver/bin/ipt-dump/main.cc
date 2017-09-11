@@ -10,13 +10,13 @@
 
 #include "garnet/bin/gdbserver/lib/intel-pt-decode/decoder.h"
 
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/log_settings.h"
-#include "lib/ftl/log_settings_command_line.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/ftl/strings/string_printf.h"
-#include "lib/ftl/time/stopwatch.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/log_settings.h"
+#include "lib/fxl/log_settings_command_line.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_number_conversions.h"
+#include "lib/fxl/strings/string_printf.h"
+#include "lib/fxl/time/stopwatch.h"
 
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
 
@@ -97,7 +97,7 @@ static void Usage(FILE* f) {
 }
 
 static bool ParseOption(const char* arg,
-                        ftl::StringView* out_name,
+                        fxl::StringView* out_name,
                         const char** out_value) {
   size_t len = strlen(arg);
   if (len < 2u || arg[0] != '-' || arg[1] != '-')
@@ -112,12 +112,12 @@ static bool ParseOption(const char* arg,
   // (Passing a starting |pos| that's "too big" is OK.)
   const char* equals = strchr(arg + 3, '=');
   if (!equals) {
-    *out_name = ftl::StringView(arg + 2);
+    *out_name = fxl::StringView(arg + 2);
     *out_value = "";
     return true;
   }
 
-  *out_name = ftl::StringView(arg + 2, equals - arg - 2);
+  *out_name = fxl::StringView(arg + 2, equals - arg - 2);
   *out_value = equals + 1;
   return true;
 }
@@ -126,13 +126,13 @@ static int ParseArgv(int argc,
                      char** argv,
                      DecoderConfig* decoder_config,
                      CommandLineSettings* printer_config) {
-  // While IWBN to use ftl::CommandLine here we need to support passing
+  // While IWBN to use fxl::CommandLine here we need to support passing
   // multiple values for certain options (akin to -I options to the compiler).
-  // So we do our own parsing, but we support the same syntax as ftl.
+  // So we do our own parsing, but we support the same syntax as fxl.
 
   int n;
   for (n = 1; n < argc; ++n) {
-    ftl::StringView option;
+    fxl::StringView option;
     const char* value;
 
     if (strcmp(argv[n], "--") == 0)
@@ -151,7 +151,7 @@ static int ParseArgv(int argc,
       } else if (strcmp(value, "chrome") == 0) {
         printer_config->output_format = OutputFormat::kChrome;
       } else {
-        FTL_LOG(ERROR) << "Bad value for --output-format: " << value;
+        FXL_LOG(ERROR) << "Bad value for --output-format: " << value;
         return -1;
       }
       continue;
@@ -168,7 +168,7 @@ static int ParseArgv(int argc,
       } else if (strcmp(value, "rel") == 0) {
         printer_config->abstime = false;
       } else {
-        FTL_LOG(ERROR) << "Bad value for --time: " << value;
+        FXL_LOG(ERROR) << "Bad value for --time: " << value;
         return -1;
       }
       continue;
@@ -176,7 +176,7 @@ static int ParseArgv(int argc,
 
     if (option == "elf") {
       if (strlen(value) == 0) {
-        FTL_LOG(ERROR) << "Empty ELF file name";
+        FXL_LOG(ERROR) << "Empty ELF file name";
         return -1;
       }
       decoder_config->elf_file_names.push_back(value);
@@ -185,12 +185,12 @@ static int ParseArgv(int argc,
 
     if (option == "pt") {
       if (strlen(value) == 0) {
-        FTL_LOG(ERROR) << "Empty PT file name";
+        FXL_LOG(ERROR) << "Empty PT file name";
         return -1;
       }
       if (decoder_config->pt_file_name != "" ||
           decoder_config->pt_list_file_name != "") {
-        FTL_LOG(ERROR) << "Only one of --pt/--pt-list supported";
+        FXL_LOG(ERROR) << "Only one of --pt/--pt-list supported";
         return -1;
       }
       decoder_config->pt_file_name = value;
@@ -199,12 +199,12 @@ static int ParseArgv(int argc,
 
     if (option == "pt-list") {
       if (strlen(value) == 0) {
-        FTL_LOG(ERROR) << "Empty PT-list file name";
+        FXL_LOG(ERROR) << "Empty PT-list file name";
         return -1;
       }
       if (decoder_config->pt_file_name != "" ||
           decoder_config->pt_list_file_name != "") {
-        FTL_LOG(ERROR) << "Only one of --pt/--pt-list supported";
+        FXL_LOG(ERROR) << "Only one of --pt/--pt-list supported";
         return -1;
       }
       decoder_config->pt_list_file_name = value;
@@ -227,9 +227,9 @@ static int ParseArgv(int argc,
     }
 
     if (option == "id") {
-      if (!ftl::StringToNumberWithError<uint32_t>(
-              ftl::StringView(value), &printer_config->id, ftl::Base::k16)) {
-        FTL_LOG(ERROR) << "Not a hex number: " << value;
+      if (!fxl::StringToNumberWithError<uint32_t>(
+              fxl::StringView(value), &printer_config->id, fxl::Base::k16)) {
+        FXL_LOG(ERROR) << "Not a hex number: " << value;
         return -1;
       }
       continue;
@@ -241,7 +241,7 @@ static int ParseArgv(int argc,
       } else if (strcmp(value, "process") == 0) {
         printer_config->view = OutputView::kProcess;
       } else {
-        FTL_LOG(ERROR) << "Bad value for --view: " << value;
+        FXL_LOG(ERROR) << "Bad value for --view: " << value;
         return -1;
       }
       continue;
@@ -249,7 +249,7 @@ static int ParseArgv(int argc,
 
     if (option == "kernel") {
       if (strlen(value) == 0) {
-        FTL_LOG(ERROR) << "Empty kernel file name";
+        FXL_LOG(ERROR) << "Empty kernel file name";
         return -1;
       }
       decoder_config->kernel_file_name = value;
@@ -257,10 +257,10 @@ static int ParseArgv(int argc,
     }
 
     if (option == "kernel-cr3") {
-      if (!ftl::StringToNumberWithError<uint64_t>(ftl::StringView(value),
+      if (!fxl::StringToNumberWithError<uint64_t>(fxl::StringView(value),
                                                   &decoder_config->kernel_cr3,
-                                                  ftl::Base::k16)) {
-        FTL_LOG(ERROR) << "Not a valid cr3 number: " << value;
+                                                  fxl::Base::k16)) {
+        FXL_LOG(ERROR) << "Not a valid cr3 number: " << value;
         return -1;
       }
       continue;
@@ -268,7 +268,7 @@ static int ParseArgv(int argc,
 
     if (option == "ids") {
       if (strlen(value) == 0) {
-        FTL_LOG(ERROR) << "Empty ids file name";
+        FXL_LOG(ERROR) << "Empty ids file name";
         return -1;
       }
       decoder_config->ids_file_names.push_back(value);
@@ -277,7 +277,7 @@ static int ParseArgv(int argc,
 
     if (option == "ktrace") {
       if (strlen(value) == 0) {
-        FTL_LOG(ERROR) << "Empty ktrace file name";
+        FXL_LOG(ERROR) << "Empty ktrace file name";
         return -1;
       }
       decoder_config->ktrace_file_name = value;
@@ -286,7 +286,7 @@ static int ParseArgv(int argc,
 
     if (option == "map") {
       if (strlen(value) == 0) {
-        FTL_LOG(ERROR) << "Empty map file name";
+        FXL_LOG(ERROR) << "Empty map file name";
         return -1;
       }
       decoder_config->map_file_names.push_back(value);
@@ -294,11 +294,11 @@ static int ParseArgv(int argc,
     }
 
     if (option == "verbose") {
-      // already processed by ftl::SetLogSettingsFromCommandLine
+      // already processed by fxl::SetLogSettingsFromCommandLine
       continue;
     }
 
-    FTL_LOG(ERROR) << "Unrecognized option: " << option;
+    FXL_LOG(ERROR) << "Unrecognized option: " << option;
     return -1;
   }
 
@@ -308,25 +308,25 @@ static int ParseArgv(int argc,
 
   if (decoder_config->pt_file_name == "" &&
       decoder_config->pt_list_file_name == "") {
-    FTL_LOG(ERROR) << "One of --pt=FILE, --pt-list=FILE must be specified";
+    FXL_LOG(ERROR) << "One of --pt=FILE, --pt-list=FILE must be specified";
     return -1;
   }
   if (decoder_config->ktrace_file_name == "") {
-    FTL_LOG(WARNING) << "missing --ktrace=FILE, output may be limited";
+    FXL_LOG(WARNING) << "missing --ktrace=FILE, output may be limited";
   }
   if (decoder_config->ids_file_names.size() == 0) {
-    FTL_LOG(WARNING) << "missing --ids=FILE, output will be limited";
+    FXL_LOG(WARNING) << "missing --ids=FILE, output will be limited";
   }
   if (decoder_config->map_file_names.size() == 0) {
-    FTL_LOG(WARNING) << "missing --map=FILE, output will be limited";
+    FXL_LOG(WARNING) << "missing --map=FILE, output will be limited";
   }
 
   return n;
 }
 
 int main(int argc, char** argv) {
-  ftl::CommandLine cl = ftl::CommandLineFromArgcArgv(argc, argv);
-  if (!ftl::SetLogSettingsFromCommandLine(cl))
+  fxl::CommandLine cl = fxl::CommandLineFromArgcArgv(argc, argv);
+  if (!fxl::SetLogSettingsFromCommandLine(cl))
     return EXIT_FAILURE;
 
   if (cl.HasOption("help")) {
@@ -341,16 +341,16 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
 
   if (n != argc) {
-    FTL_LOG(ERROR) << "No positional parameters";
+    FXL_LOG(ERROR) << "No positional parameters";
     return EXIT_FAILURE;
   }
 
-  ftl::Stopwatch stop_watch;
+  fxl::Stopwatch stop_watch;
   stop_watch.Start();
 
   auto decoder = DecoderState::Create(decoder_config);
   if (!decoder) {
-    FTL_LOG(ERROR) << "Error creating decoder";
+    FXL_LOG(ERROR) << "Error creating decoder";
     return EXIT_FAILURE;
   }
 
@@ -359,7 +359,7 @@ int main(int argc, char** argv) {
     auto printer = RawPrinter::Create(decoder.get(),
                                       printer_config.ToRawPrinterConfig());
     if (!printer) {
-      FTL_LOG(ERROR) << "Error creating printer";
+      FXL_LOG(ERROR) << "Error creating printer";
       return EXIT_FAILURE;
     }
     total_insns = printer->PrintFiles();
@@ -367,19 +367,19 @@ int main(int argc, char** argv) {
     auto printer = CallPrinter::Create(decoder.get(),
                                        printer_config.ToCallPrinterConfig());
     if (!printer) {
-      FTL_LOG(ERROR) << "Error creating printer";
+      FXL_LOG(ERROR) << "Error creating printer";
       return EXIT_FAILURE;
     }
     total_insns = printer->PrintFiles();
   } else {
-    FTL_LOG(ERROR) << "Invalid output format\n";
+    FXL_LOG(ERROR) << "Invalid output format\n";
     return EXIT_FAILURE;
   }
 
-  ftl::TimeDelta delta = stop_watch.Elapsed();
+  fxl::TimeDelta delta = stop_watch.Elapsed();
   int64_t seconds = delta.ToSeconds();
   int milliseconds = delta.ToMilliseconds() % 1000;
-  FTL_LOG(INFO) << ftl::StringPrintf(
+  FXL_LOG(INFO) << fxl::StringPrintf(
       "%" PRIu64 " instructions processed in %" PRId64 ".%03d seconds\n",
       total_insns, seconds, milliseconds);
 

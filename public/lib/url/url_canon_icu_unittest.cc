@@ -20,7 +20,7 @@ class URLCanonIcuTest : public url::test::IcuUnitTestBase {
   URLCanonIcuTest() {}
   ~URLCanonIcuTest() override {}
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(URLCanonIcuTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(URLCanonIcuTest);
 };
 
 // Wrapper around a UConverter object that managers creation and destruction.

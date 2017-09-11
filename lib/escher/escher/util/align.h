@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace escher {
 
@@ -15,7 +15,7 @@ inline size_t AlignedToNext(size_t position, size_t alignment) {
   if (alignment && position % alignment) {
     size_t result = position + (alignment - position % alignment);
     // TODO: remove DCHECK and add unit test.
-    FTL_DCHECK(result % alignment == 0);
+    FXL_DCHECK(result % alignment == 0);
     return result;
   }
   return position;

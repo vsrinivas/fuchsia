@@ -9,7 +9,7 @@
 
 #include "garnet/bin/netconnector/ip_port.h"
 #include "garnet/bin/netconnector/netconnector_impl.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace netconnector {
 
@@ -19,19 +19,19 @@ std::unique_ptr<RequestorAgent> RequestorAgent::Create(
     const std::string& service_name,
     mx::channel local_channel,
     NetConnectorImpl* owner) {
-  FTL_DCHECK(address.is_valid());
-  FTL_DCHECK(!service_name.empty());
-  FTL_DCHECK(local_channel);
-  FTL_DCHECK(owner != nullptr);
+  FXL_DCHECK(address.is_valid());
+  FXL_DCHECK(!service_name.empty());
+  FXL_DCHECK(local_channel);
+  FXL_DCHECK(owner != nullptr);
 
-  ftl::UniqueFD fd(socket(address.family(), SOCK_STREAM, 0));
+  fxl::UniqueFD fd(socket(address.family(), SOCK_STREAM, 0));
   if (!fd.is_valid()) {
-    FTL_LOG(WARNING) << "Failed to open requestor agent socket, errno" << errno;
+    FXL_LOG(WARNING) << "Failed to open requestor agent socket, errno" << errno;
     return std::unique_ptr<RequestorAgent>();
   }
 
   if (connect(fd.get(), address.as_sockaddr(), address.socklen()) < 0) {
-    FTL_LOG(WARNING) << "Failed to connect, errno" << errno;
+    FXL_LOG(WARNING) << "Failed to connect, errno" << errno;
     return std::unique_ptr<RequestorAgent>();
   }
 
@@ -39,7 +39,7 @@ std::unique_ptr<RequestorAgent> RequestorAgent::Create(
       std::move(fd), service_name, std::move(local_channel), owner));
 }
 
-RequestorAgent::RequestorAgent(ftl::UniqueFD socket_fd,
+RequestorAgent::RequestorAgent(fxl::UniqueFD socket_fd,
                                const std::string& service_name,
                                mx::channel local_channel,
                                NetConnectorImpl* owner)
@@ -47,9 +47,9 @@ RequestorAgent::RequestorAgent(ftl::UniqueFD socket_fd,
       service_name_(service_name),
       local_channel_(std::move(local_channel)),
       owner_(owner) {
-  FTL_DCHECK(!service_name_.empty());
-  FTL_DCHECK(local_channel_);
-  FTL_DCHECK(owner_ != nullptr);
+  FXL_DCHECK(!service_name_.empty());
+  FXL_DCHECK(local_channel_);
+  FXL_DCHECK(owner_ != nullptr);
 }
 
 RequestorAgent::~RequestorAgent() {}
@@ -60,12 +60,12 @@ void RequestorAgent::OnVersionReceived(uint32_t version) {
 }
 
 void RequestorAgent::OnServiceNameReceived(const std::string& service_name) {
-  FTL_LOG(ERROR) << "RequestorAgent received service name";
+  FXL_LOG(ERROR) << "RequestorAgent received service name";
   CloseConnection();
 }
 
 void RequestorAgent::OnConnectionClosed() {
-  FTL_DCHECK(owner_ != nullptr);
+  FXL_DCHECK(owner_ != nullptr);
   owner_->ReleaseRequestorAgent(this);
 }
 

@@ -22,8 +22,8 @@ ReleaseFenceSignaller::~ReleaseFenceSignaller() {
 
 void ReleaseFenceSignaller::AddVulkanReleaseFence(mx::event fence) {
   // TODO: Submit a command buffer with the vulkan fence as a semaphore
-  FTL_LOG(ERROR) << "Vulkan Release Fences not yet supported.";
-  FTL_DCHECK(false);
+  FXL_LOG(ERROR) << "Vulkan Release Fences not yet supported.";
+  FXL_DCHECK(false);
 }
 
 void ReleaseFenceSignaller::AddCPUReleaseFence(mx::event fence) {
@@ -37,7 +37,7 @@ void ReleaseFenceSignaller::AddCPUReleaseFence(mx::event fence) {
     // marked finished.
     fence.signal(0u, kFenceSignalled);
   } else {
-    FTL_CHECK(false) << "ReleaseFenceSignaller::AddCPUReleaseFence: sequence "
+    FXL_CHECK(false) << "ReleaseFenceSignaller::AddCPUReleaseFence: sequence "
                         "numbers are in an invalid state";
   }
 }

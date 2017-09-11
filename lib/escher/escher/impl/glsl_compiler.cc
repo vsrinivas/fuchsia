@@ -14,7 +14,7 @@
 #include "spirv-tools/optimizer.hpp"
 
 #include "escher/util/trace_macros.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace escher {
 namespace impl {
@@ -22,7 +22,7 @@ namespace impl {
 GlslToSpirvCompiler::GlslToSpirvCompiler() : active_compile_count_(0) {}
 
 GlslToSpirvCompiler::~GlslToSpirvCompiler() {
-  FTL_CHECK(active_compile_count_ == 0);
+  FXL_CHECK(active_compile_count_ == 0);
 }
 
 std::future<SpirvData> GlslToSpirvCompiler::Compile(
@@ -89,7 +89,7 @@ SpirvData GlslToSpirvCompiler::SynchronousCompileImpl(
       stage = EShLangCompute;
       break;
     default:
-      FTL_LOG(WARNING) << "invalid shader stage";
+      FXL_LOG(WARNING) << "invalid shader stage";
       return SpirvData();
   }
 
@@ -116,7 +116,7 @@ SpirvData GlslToSpirvCompiler::SynchronousCompileImpl(
 
   if (!shader.parse(&glslang::DefaultTBuiltInResource, kDefaultGlslVersion,
                     false, kMessageFlags)) {
-    FTL_LOG(WARNING) << "failed to parse shader \n\tinfo log: "
+    FXL_LOG(WARNING) << "failed to parse shader \n\tinfo log: "
                      << shader.getInfoLog()
                      << "\n\tdebug log: " << shader.getInfoDebugLog();
     return SpirvData();
@@ -125,7 +125,7 @@ SpirvData GlslToSpirvCompiler::SynchronousCompileImpl(
   glslang::TProgram program;
   program.addShader(&shader);
   if (!program.link(kMessageFlags)) {
-    FTL_LOG(WARNING) << "failed to link program \n\tinfo log: "
+    FXL_LOG(WARNING) << "failed to link program \n\tinfo log: "
                      << program.getInfoLog()
                      << "\n\tdebug log: " << program.getInfoDebugLog();
     return SpirvData();
@@ -133,7 +133,7 @@ SpirvData GlslToSpirvCompiler::SynchronousCompileImpl(
 
   glslang::TIntermediate* intermediate = program.getIntermediate(stage);
   if (!intermediate) {
-    FTL_LOG(WARNING) << "failed to obtain program intermediate representation"
+    FXL_LOG(WARNING) << "failed to obtain program intermediate representation"
                      << "\n\tinfo log : " << program.getInfoLog()
                      << "\n\tdebug log: " << program.getInfoDebugLog();
     return SpirvData();
@@ -144,7 +144,7 @@ SpirvData GlslToSpirvCompiler::SynchronousCompileImpl(
   spv::SpvBuildLogger logger;
   glslang::GlslangToSpv(*intermediate, spirv, &logger);
   if (spirv.empty()) {
-    FTL_LOG(WARNING) << "failed to generate SPIR-V from GLSL IR: "
+    FXL_LOG(WARNING) << "failed to generate SPIR-V from GLSL IR: "
                      << logger.getAllMessages();
   }
 
@@ -161,12 +161,12 @@ SpirvData GlslToSpirvCompiler::SynchronousCompileImpl(
   optimizer.RegisterPass(spvtools::CreateUnifyConstantPass());
   auto optimizer_error_logger = [](spv_message_level_t, const char*,
                                    const spv_position_t&, const char* m) {
-    FTL_LOG(WARNING) << "Error while running SPIR-V optimizer: " << m;
+    FXL_LOG(WARNING) << "Error while running SPIR-V optimizer: " << m;
   };
   optimizer.SetMessageConsumer(optimizer_error_logger);
 
   if (!optimizer.Run(spirv.data(), spirv.size(), &spirv)) {
-    FTL_LOG(WARNING) << "failed to optimize SPIR-V";
+    FXL_LOG(WARNING) << "failed to optimize SPIR-V";
     return SpirvData();
   }
   return spirv;

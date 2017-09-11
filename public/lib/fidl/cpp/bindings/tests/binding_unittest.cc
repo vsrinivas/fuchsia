@@ -10,7 +10,7 @@
 #include "lib/fidl/compiler/interfaces/tests/sample_service.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace fidl {
 namespace test {
@@ -26,7 +26,7 @@ class BindingTestBase : public testing::Test {
   void PumpMessages() { WaitForAsyncWaiter(); }
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(BindingTestBase);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BindingTestBase);
 };
 
 class ServiceImpl : public sample::Service {
@@ -50,7 +50,7 @@ class ServiceImpl : public sample::Service {
 
   bool* const was_deleted_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ServiceImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ServiceImpl);
 };
 
 // BindingTest -----------------------------------------------------------------
@@ -151,7 +151,7 @@ class ServiceImplWithBinding : public ServiceImpl {
  private:
   Binding<sample::Service> binding_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ServiceImplWithBinding);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ServiceImplWithBinding);
 };
 
 // Tests that the binding may be deleted in the connection error handler.
@@ -210,7 +210,7 @@ class IntegerAccessorImpl : public sample::IntegerAccessor {
   }
   void SetInteger(int64_t data, sample::Enum type) override {}
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(IntegerAccessorImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(IntegerAccessorImpl);
 };
 
 TEST_F(BindingTest, SetInterfaceHandleVersion) {

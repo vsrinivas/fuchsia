@@ -4,7 +4,7 @@
 
 #include "elf-symtab.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace debugserver {
 namespace elf {
@@ -19,17 +19,17 @@ SymbolTable::~SymbolTable() {
 }
 
 bool SymbolTable::Populate(elf::Reader* elf, unsigned symtab_type) {
-  FTL_DCHECK(symtab_type == SHT_SYMTAB || symtab_type == SHT_DYNSYM);
+  FXL_DCHECK(symtab_type == SHT_SYMTAB || symtab_type == SHT_DYNSYM);
 
   // TODO(dje): Add support for loading both SHT_SYMTAB and SHT_DYNSYM.
   if (symbols_) {
-    FTL_LOG(ERROR) << "Already populated";
+    FXL_LOG(ERROR) << "Already populated";
     return false;
   }
 
   elf::Error rc = elf->ReadSectionHeaders();
   if (rc != Error::OK) {
-    FTL_LOG(ERROR) << "Error reading ELF section headers: " << ErrorName(rc);
+    FXL_LOG(ERROR) << "Error reading ELF section headers: " << ErrorName(rc);
     return false;
   }
 
@@ -40,7 +40,7 @@ bool SymbolTable::Populate(elf::Reader* elf, unsigned symtab_type) {
   size_t num_sections = elf->GetNumSections();
   size_t string_section = shdr->sh_link;
   if (string_section >= num_sections) {
-    FTL_LOG(ERROR) << "Bad string section: " << string_section;
+    FXL_LOG(ERROR) << "Bad string section: " << string_section;
     return false;
   }
   const SectionHeader& str_shdr = elf->GetSectionHeader(string_section);
@@ -48,13 +48,13 @@ bool SymbolTable::Populate(elf::Reader* elf, unsigned symtab_type) {
   std::unique_ptr<SectionContents> contents;
   rc = elf->GetSectionContents(*shdr, &contents);
   if (rc != Error::OK) {
-    FTL_LOG(ERROR) << "Error reading ELF section: " << ErrorName(rc);
+    FXL_LOG(ERROR) << "Error reading ELF section: " << ErrorName(rc);
     return false;
   }
 
   rc = elf->GetSectionContents(str_shdr, &string_section_);
   if (rc != Error::OK) {
-    FTL_LOG(ERROR) << "Error reading ELF string section: " << ErrorName(rc);
+    FXL_LOG(ERROR) << "Error reading ELF string section: " << ErrorName(rc);
     return false;
   }
 
@@ -68,7 +68,7 @@ bool SymbolTable::Populate(elf::Reader* elf, unsigned symtab_type) {
   for (size_t i = 0; i < num_raw_symbols; ++i) {
     const RawSymbol& sym = contents->GetSymbolEntry(i);
     if (sym.st_name >= max_string_offset) {
-      FTL_LOG(ERROR) << "Bad symbol string name offset: " << sym.st_name;
+      FXL_LOG(ERROR) << "Bad symbol string name offset: " << sym.st_name;
       continue;
     }
     Symbol* s = &symbols_[num_symbols++];

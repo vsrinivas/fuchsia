@@ -24,7 +24,7 @@ source_set("sdk_ext") {
   deps = [
     "//dart/runtime:dart_api",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//lib/tonic",
     "//magenta/system/ulib/mx",
   ]

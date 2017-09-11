@@ -7,7 +7,7 @@
 #include <sstream>
 
 #include "garnet/bin/ui/scene_manager/print_op.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace scene_manager {
 
@@ -32,28 +32,28 @@ class ErrorReporter {
    private:
     // Only ErrorReporter can create reports.
     friend class ErrorReporter;
-    Report(ErrorReporter* owner, ftl::LogSeverity severity);
+    Report(ErrorReporter* owner, fxl::LogSeverity severity);
 
     ErrorReporter* owner_;
-    ftl::LogSeverity severity_;
+    fxl::LogSeverity severity_;
     std::ostringstream stream_;
 
-    FTL_DISALLOW_COPY_AND_ASSIGN(Report);
+    FXL_DISALLOW_COPY_AND_ASSIGN(Report);
   };
 
   // Create a new Report which will, upon destruction, invoke ReportError()
   // upon this ErrorReporter.
-  Report INFO() { return Report(this, ftl::LOG_INFO); }
-  Report WARN() { return Report(this, ftl::LOG_WARNING); }
-  Report ERROR() { return Report(this, ftl::LOG_ERROR); }
-  Report FATAL() { return Report(this, ftl::LOG_FATAL); }
+  Report INFO() { return Report(this, fxl::LOG_INFO); }
+  Report WARN() { return Report(this, fxl::LOG_WARNING); }
+  Report ERROR() { return Report(this, fxl::LOG_ERROR); }
+  Report FATAL() { return Report(this, fxl::LOG_FATAL); }
 
   // Return a default ErrorReporter that is always available, which simply logs
-  // the error using FTL_LOG(severity).
+  // the error using FXL_LOG(severity).
   static ErrorReporter* Default();
 
  private:
-  virtual void ReportError(ftl::LogSeverity severity,
+  virtual void ReportError(fxl::LogSeverity severity,
                            std::string error_string) = 0;
 };
 

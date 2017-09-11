@@ -10,7 +10,7 @@
 
 #include <magenta/types.h>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace debugserver {
 namespace util {
@@ -39,7 +39,7 @@ class LoadMapTable {
 
   std::vector<LoadMap> maps_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LoadMapTable);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LoadMapTable);
 };
 
 }  // namespace util

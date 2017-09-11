@@ -55,9 +55,9 @@ class Mesh : public WaitableResource {
   const vk::DeviceSize vertex_buffer_offset_;
   const vk::DeviceSize index_buffer_offset_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Mesh);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Mesh);
 };
 
-typedef ftl::RefPtr<Mesh> MeshPtr;
+typedef fxl::RefPtr<Mesh> MeshPtr;
 
 }  // namespace escher

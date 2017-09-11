@@ -11,8 +11,8 @@
 #include "garnet/bin/media/demux/reader.h"
 #include "garnet/bin/media/demux/sparse_byte_buffer.h"
 #include "garnet/bin/media/util/incident.h"
-#include "lib/ftl/synchronization/mutex.h"
-#include "lib/ftl/synchronization/thread_annotations.h"
+#include "lib/fxl/synchronization/mutex.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media {
 
@@ -130,21 +130,21 @@ class ReaderCache : public Reader {
    private:
     // Attempts to progress satisfaction of the current read request.
     void ServeRequest()
-        FTL_THREAD_ANNOTATION_ATTRIBUTE__(release_capability(mutex_));
+        FXL_THREAD_ANNOTATION_ATTRIBUTE__(release_capability(mutex_));
 
     // These fields are stable after Initialize.
     size_t size_ = kUnknownSize;
     bool can_seek_ = false;
 
-    mutable ftl::Mutex mutex_;
-    Result result_ FTL_GUARDED_BY(mutex_) = Result::kOk;
-    SparseByteBuffer sparse_byte_buffer_ FTL_GUARDED_BY(mutex_);
-    SparseByteBuffer::Hole intake_hole_ FTL_GUARDED_BY(mutex_);
-    SparseByteBuffer::Hole read_hole_ FTL_GUARDED_BY(mutex_);
-    SparseByteBuffer::Region read_region_ FTL_GUARDED_BY(mutex_);
-    ReadAtRequest* read_request_ FTL_GUARDED_BY(mutex_) = nullptr;
-    size_t read_request_position_ FTL_GUARDED_BY(mutex_);
-    size_t read_request_remaining_bytes_ FTL_GUARDED_BY(mutex_);
+    mutable fxl::Mutex mutex_;
+    Result result_ FXL_GUARDED_BY(mutex_) = Result::kOk;
+    SparseByteBuffer sparse_byte_buffer_ FXL_GUARDED_BY(mutex_);
+    SparseByteBuffer::Hole intake_hole_ FXL_GUARDED_BY(mutex_);
+    SparseByteBuffer::Hole read_hole_ FXL_GUARDED_BY(mutex_);
+    SparseByteBuffer::Region read_region_ FXL_GUARDED_BY(mutex_);
+    ReadAtRequest* read_request_ FXL_GUARDED_BY(mutex_) = nullptr;
+    size_t read_request_position_ FXL_GUARDED_BY(mutex_);
+    size_t read_request_remaining_bytes_ FXL_GUARDED_BY(mutex_);
   };
 
   // Reads from the upstream reader into the store.

@@ -14,7 +14,7 @@ ResourcePtr CreateDelegate(Session* session,
                            scenic::ImportSpec spec) {
   switch (spec) {
     case scenic::ImportSpec::NODE:
-      return ftl::MakeRefCounted<EntityNode>(session, id);
+      return fxl::MakeRefCounted<EntityNode>(session, id);
   }
   return nullptr;
 }
@@ -31,9 +31,9 @@ Import::Import(Session* session,
       import_spec_(spec),
       delegate_(CreateDelegate(session, id, spec)),
       resource_linker_(resource_linker) {
-  FTL_DCHECK(delegate_);
-  FTL_DCHECK(!delegate_->type_info().IsKindOf(Import::kTypeInfo));
-  FTL_DCHECK(resource_linker_);
+  FXL_DCHECK(delegate_);
+  FXL_DCHECK(!delegate_->type_info().IsKindOf(Import::kTypeInfo));
+  FXL_DCHECK(resource_linker_);
 }
 
 Import::~Import() {

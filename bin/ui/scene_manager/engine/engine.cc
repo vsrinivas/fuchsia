@@ -15,7 +15,7 @@
 #include "garnet/bin/ui/scene_manager/resources/compositor/compositor.h"
 #include "garnet/bin/ui/scene_manager/resources/nodes/traversal.h"
 #include "escher/renderer/paper_renderer.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace scene_manager {
 
@@ -24,7 +24,7 @@ Engine::Engine(DisplayManager* display_manager,
                std::unique_ptr<escher::VulkanSwapchain> swapchain)
     : display_manager_(display_manager),
       escher_(escher),
-      paper_renderer_(ftl::MakeRefCounted<escher::PaperRenderer>(escher)),
+      paper_renderer_(fxl::MakeRefCounted<escher::PaperRenderer>(escher)),
       image_factory_(std::make_unique<escher::SimpleImageFactory>(
           escher->resource_recycler(),
           escher->gpu_allocator())),
@@ -34,9 +34,9 @@ Engine::Engine(DisplayManager* display_manager,
           escher->command_buffer_sequencer())),
       swapchain_(std::move(swapchain)),
       session_count_(0) {
-  FTL_DCHECK(display_manager_);
-  FTL_DCHECK(escher_);
-  FTL_DCHECK(swapchain_);
+  FXL_DCHECK(display_manager_);
+  FXL_DCHECK(escher_);
+  FXL_DCHECK(swapchain_);
 
   InitializeFrameScheduler();
   paper_renderer_->set_sort_by_pipeline(false);
@@ -47,7 +47,7 @@ Engine::Engine(DisplayManager* display_manager,
     : display_manager_(display_manager),
       escher_(nullptr),
       release_fence_signaller_(std::move(release_fence_signaller)) {
-  FTL_DCHECK(display_manager_);
+  FXL_DCHECK(display_manager_);
 
   InitializeFrameScheduler();
 }
@@ -63,7 +63,7 @@ void Engine::InitializeFrameScheduler() {
 }
 
 void Engine::ScheduleSessionUpdate(uint64_t presentation_time,
-                                   ftl::RefPtr<Session> session) {
+                                   fxl::RefPtr<Session> session) {
   if (session->is_valid()) {
     updatable_sessions_.insert({presentation_time, std::move(session)});
     ScheduleUpdate(presentation_time);
@@ -75,7 +75,7 @@ void Engine::ScheduleUpdate(uint64_t presentation_time) {
     frame_scheduler_->RequestFrame(presentation_time);
   } else {
     // Apply update immediately.  This is done for tests.
-    FTL_LOG(WARNING)
+    FXL_LOG(WARNING)
         << "No FrameScheduler available; applying update immediately";
     RenderFrame(FrameTimingsPtr(), presentation_time, 0);
   }
@@ -94,7 +94,7 @@ void Engine::CreateSession(
 
 std::unique_ptr<DisplaySwapchain> Engine::CreateDisplaySwapchain(
     Display* display) {
-  FTL_DCHECK(!display->is_claimed());
+  FXL_DCHECK(!display->is_claimed());
   return std::make_unique<DisplaySwapchain>(display, event_timestamper(),
                                             escher(), GetVulkanSwapchain());
 }
@@ -117,18 +117,18 @@ SessionHandler* Engine::FindSession(SessionId id) {
 
 void Engine::TearDownSession(SessionId id) {
   auto it = sessions_.find(id);
-  FTL_DCHECK(it != sessions_.end());
+  FXL_DCHECK(it != sessions_.end());
   if (it != sessions_.end()) {
     std::unique_ptr<SessionHandler> handler = std::move(it->second);
     sessions_.erase(it);
-    FTL_DCHECK(session_count_ > 0);
+    FXL_DCHECK(session_count_ > 0);
     --session_count_;
     handler->TearDown();
 
     // Don't destroy handler immediately, since it may be the one calling
     // TearDownSession().
     mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-        ftl::MakeCopyable([handler = std::move(handler)]{}));
+        fxl::MakeCopyable([handler = std::move(handler)]{}));
   }
 }
 
@@ -173,24 +173,24 @@ bool Engine::ApplyScheduledSessionUpdates(uint64_t presentation_time,
 }
 
 escher::VulkanSwapchain Engine::GetVulkanSwapchain() const {
-  FTL_DCHECK(swapchain_);
+  FXL_DCHECK(swapchain_);
   return *(swapchain_.get());
 }
 
 void Engine::AddCompositor(Compositor* compositor) {
-  FTL_DCHECK(compositor);
-  FTL_DCHECK(compositor->session()->engine() == this);
+  FXL_DCHECK(compositor);
+  FXL_DCHECK(compositor->session()->engine() == this);
 
   bool success = compositors_.insert(compositor).second;
-  FTL_DCHECK(success);
+  FXL_DCHECK(success);
 }
 
 void Engine::RemoveCompositor(Compositor* compositor) {
-  FTL_DCHECK(compositor);
-  FTL_DCHECK(compositor->session()->engine() == this);
+  FXL_DCHECK(compositor);
+  FXL_DCHECK(compositor->session()->engine() == this);
 
   size_t count = compositors_.erase(compositor);
-  FTL_DCHECK(count == 1);
+  FXL_DCHECK(count == 1);
 }
 
 void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {

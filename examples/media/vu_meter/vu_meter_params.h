@@ -6,21 +6,21 @@
 
 #include <string>
 
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/macros.h"
 
 namespace examples {
 
 class VuMeterParams {
  public:
-  VuMeterParams(const ftl::CommandLine& command_line);
+  VuMeterParams(const fxl::CommandLine& command_line);
 
   bool is_valid() const { return is_valid_; }
 
  private:
   bool is_valid_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(VuMeterParams);
+  FXL_DISALLOW_COPY_AND_ASSIGN(VuMeterParams);
 };
 
 }  // namespace examples

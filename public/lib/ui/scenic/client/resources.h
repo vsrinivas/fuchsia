@@ -6,7 +6,7 @@
 
 #include "lib/ui/scenic/client/session.h"
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace scenic_lib {
 
@@ -19,7 +19,7 @@ class Resource {
  public:
   // Gets the session which owns this resource.
   Session* session() const {
-    FTL_DCHECK(session_);
+    FXL_DCHECK(session_);
     return session_;
   }
 
@@ -50,7 +50,7 @@ class Resource {
   Session* const session_;
   uint32_t const id_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Resource);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Resource);
 };
 
 // Represents a memory resource in a session.
@@ -68,7 +68,7 @@ class Memory : public Resource {
   Memory(Memory&& moved);
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Memory);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Memory);
 
   scenic::MemoryType const memory_type_;
 };
@@ -82,7 +82,7 @@ class Shape : public Resource {
   ~Shape();
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Shape);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Shape);
 };
 
 // Represents a circle shape resource in a session.
@@ -93,7 +93,7 @@ class Circle final : public Shape {
   ~Circle();
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Circle);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Circle);
 };
 
 // Represents a rectangle shape resource in a session.
@@ -104,7 +104,7 @@ class Rectangle final : public Shape {
   ~Rectangle();
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Rectangle);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Rectangle);
 };
 
 // Represents a rounded rectangle shape resource in a session.
@@ -121,7 +121,7 @@ class RoundedRectangle final : public Shape {
   ~RoundedRectangle();
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(RoundedRectangle);
+  FXL_DISALLOW_COPY_AND_ASSIGN(RoundedRectangle);
 };
 
 // Represents an image resource in a session.
@@ -152,7 +152,7 @@ class Image : public Resource {
   off_t const memory_offset_;
   scenic::ImageInfo const info_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Image);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Image);
 };
 
 // Represents a buffer that is immutably bound to a range of a memory resource.
@@ -167,7 +167,7 @@ class Buffer final : public Resource {
   ~Buffer();
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Buffer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Buffer);
 };
 
 // Represents a mesh resource in a session.  Before it can be rendered, it
@@ -191,7 +191,7 @@ class Mesh final : public Shape {
                    const float bounding_box_max[3]);
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Mesh);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Mesh);
 };
 
 // Represents a material resource in a session.
@@ -209,7 +209,7 @@ class Material final : public Resource {
   void SetColor(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha);
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Material);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Material);
 };
 
 // Represents an abstract node resource in a session.
@@ -249,7 +249,7 @@ class Node : public Resource {
   ~Node();
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Node);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Node);
 };
 
 // Represents an shape node resource in a session.
@@ -268,7 +268,7 @@ class ShapeNode final : public Node {
   void SetMaterial(uint32_t material_id);
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(ShapeNode);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ShapeNode);
 };
 
 // Abstract base class for nodes which can have child nodes.
@@ -290,7 +290,7 @@ class ContainerNode : public Node {
   ContainerNode(ContainerNode&& moved);
   ~ContainerNode();
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ContainerNode);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ContainerNode);
 };
 
 // Represents an entity node resource in a session.
@@ -303,7 +303,7 @@ class EntityNode : public ContainerNode {
   void SetClip(uint32_t clip_id, bool clip_to_self);
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(EntityNode);
+  FXL_DISALLOW_COPY_AND_ASSIGN(EntityNode);
 };
 
 // Represents an imported node resource in a session.
@@ -326,7 +326,7 @@ class ImportNode final : public ContainerNode {
   bool is_bound() const { return is_bound_; }
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(ImportNode);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ImportNode);
 
   bool is_bound_ = false;
 };
@@ -340,7 +340,7 @@ class ClipNode final : public ContainerNode {
   ~ClipNode();
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(ClipNode);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ClipNode);
 };
 
 // Creates a node that renders its hierarchy with the specified opacity.
@@ -355,7 +355,7 @@ class OpacityNode final : public ContainerNode {
   void SetOpacity(double opacity);
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(OpacityNode);
+  FXL_DISALLOW_COPY_AND_ASSIGN(OpacityNode);
 };
 
 // Represents a scene resource in a session.
@@ -368,7 +368,7 @@ class Scene final : public ContainerNode {
  private:
   void Detach() = delete;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Scene);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Scene);
 };
 
 // Represents a camera resource in a session.
@@ -386,7 +386,7 @@ class Camera final : public Resource {
                      float fovy);
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Camera);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Camera);
 };
 
 // Represents a renderer resource in a session.
@@ -401,7 +401,7 @@ class Renderer final : public Resource {
   void SetCamera(uint32_t camera_id);
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Renderer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Renderer);
 };
 
 // Represents a layer resource in a session.
@@ -426,7 +426,7 @@ class Layer final : public Resource {
   void SetRenderer(uint32_t renderer_id);
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Layer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Layer);
 };
 
 // Represents a layer-stack resource in a session.
@@ -440,7 +440,7 @@ class LayerStack final : public Resource {
   void AddLayer(uint32_t layer_id);
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(LayerStack);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LayerStack);
 };
 
 // Represents a display-compositor resource in a session.
@@ -457,7 +457,7 @@ class DisplayCompositor final : public Resource {
   void SetLayerStack(uint32_t layer_stack_id);
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(DisplayCompositor);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DisplayCompositor);
 };
 
 }  // namespace scenic_lib

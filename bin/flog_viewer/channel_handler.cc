@@ -84,20 +84,20 @@ std::shared_ptr<Accumulator> ChannelHandler::GetAccumulator() {
 }
 
 std::shared_ptr<Channel> ChannelHandler::AsChannel(uint64_t subject_address) {
-  FTL_DCHECK(manager_ != nullptr);
+  FXL_DCHECK(manager_ != nullptr);
   return manager_->FindChannelBySubjectAddress(channel_->log_id(),
                                                subject_address);
 }
 
 void ChannelHandler::BindAs(uint64_t koid) {
-  FTL_DCHECK(manager_ != nullptr);
+  FXL_DCHECK(manager_ != nullptr);
   manager_->BindAs(channel_, koid);
 }
 
 void ChannelHandler::SetBindingKoid(Binding* binding, uint64_t koid) {
-  FTL_DCHECK(binding != nullptr);
-  FTL_DCHECK(koid != 0);
-  FTL_DCHECK(manager_ != nullptr);
+  FXL_DCHECK(binding != nullptr);
+  FXL_DCHECK(koid != 0);
+  FXL_DCHECK(manager_ != nullptr);
 
   manager_->SetBindingKoid(binding, koid);
 }

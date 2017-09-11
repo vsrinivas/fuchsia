@@ -12,8 +12,8 @@ GpuAllocator::GpuAllocator(const VulkanContext& context)
     : physical_device_(context.physical_device), device_(context.device) {}
 
 GpuAllocator::~GpuAllocator() {
-  FTL_CHECK(total_slab_bytes_ == 0);
-  FTL_CHECK(slab_count_ == 0);
+  FXL_CHECK(total_slab_bytes_ == 0);
+  FXL_CHECK(slab_count_ == 0);
 }
 
 GpuMemPtr GpuAllocator::AllocateSlab(vk::MemoryRequirements reqs,

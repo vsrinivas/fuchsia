@@ -16,8 +16,8 @@ CommandBufferPool::CommandBufferPool(vk::Device device,
                                      CommandBufferSequencer* sequencer,
                                      bool supports_graphics_and_compute)
     : device_(device), queue_(queue), sequencer_(sequencer) {
-  FTL_DCHECK(device);
-  FTL_DCHECK(queue);
+  FXL_DCHECK(device);
+  FXL_DCHECK(queue);
   vk::CommandPoolCreateInfo info;
   info.flags = vk::CommandPoolCreateFlagBits::eTransient |
                vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
@@ -59,7 +59,7 @@ CommandBufferPool::~CommandBufferPool() {
     device_.waitIdle();
     Cleanup();
   }
-  FTL_DCHECK(pending_buffers_.empty());
+  FXL_DCHECK(pending_buffers_.empty());
   if (free_buffers_.size() > 0) {
     std::vector<vk::CommandBuffer> buffers_to_free;
     buffers_to_free.reserve(free_buffers_.size());

@@ -41,7 +41,7 @@ class HostCanvasCycler : public EntityNode {
   float logical_width_ = 0.f;
   float logical_height_ = 0.f;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(HostCanvasCycler);
+  FXL_DISALLOW_COPY_AND_ASSIGN(HostCanvasCycler);
 };
 
 }  // namespace skia

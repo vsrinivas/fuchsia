@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "third_party/icu/source/common/unicode/ucnv.h"
 #include "third_party/icu/source/common/unicode/ucnv_cb.h"
 #include "third_party/icu/source/common/unicode/uidna.h"
@@ -32,7 +32,7 @@ void appendURLEscapedChar(const void* context, UConverterFromUnicodeArgs* from_a
     const static char prefix[prefix_len + 1] = "%26%23";  // "&#" percent-escaped
     ucnv_cbFromUWriteBytes(from_args, prefix, prefix_len, 0, err);
 
-    FTL_DCHECK(code_point < 0x110000);
+    FXL_DCHECK(code_point < 0x110000);
     char number[8];  // Max Unicode code point is 7 digits.
     IntToString(code_point, number, 10);
     size_t number_len = strlen(number);
@@ -94,7 +94,7 @@ struct UIDNAWrapper {
     // registrars, search engines) converge toward a consensus.
     value = uidna_openUTS46(UIDNA_CHECK_BIDI, &err);
     if (U_FAILURE(err)) {
-      FTL_CHECK(false) << "failed to open UTS46 data with error: " << err;
+      FXL_CHECK(false) << "failed to open UTS46 data with error: " << err;
       value = NULL;
     }
   }
@@ -149,12 +149,12 @@ void ICUCharsetConverter::ConvertFromUTF16(const uint16_t* input, size_t input_l
 // version with StringByteSink. That way, we can avoid C wrappers and additional
 // string conversion.
 bool IDNToASCII(const uint16_t* src, size_t src_len, CanonOutputW* output) {
-  FTL_DCHECK(output->length() == 0);  // Output buffer is assumed empty.
+  FXL_DCHECK(output->length() == 0);  // Output buffer is assumed empty.
 
   static UIDNAWrapper static_uidna;
 
   UIDNA* uidna = static_uidna.value;
-  FTL_DCHECK(uidna != NULL);
+  FXL_DCHECK(uidna != NULL);
   while (true) {
     UErrorCode err = U_ZERO_ERROR;
     UIDNAInfo info = UIDNA_INFO_INITIALIZER;

@@ -4,7 +4,7 @@
 
 #include "arch.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 #include "debugger-utils/util.h"
 #include "debugger-utils/x86-cpuid.h"
@@ -83,7 +83,7 @@ GdbSignal ComputeGdbSignal(const mx_exception_context_t& context) {
       break;
   }
 
-  FTL_VLOG(1) << "x86 (AMD64) exception (" << arch_exception
+  FXL_VLOG(1) << "x86 (AMD64) exception (" << arch_exception
               << ") mapped to: " << static_cast<int>(sigval);
 
   return sigval;

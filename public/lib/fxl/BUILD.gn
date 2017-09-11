@@ -1,0 +1,318 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+if (is_fuchsia) {
+  import("//packages/package.gni")
+}
+
+if (is_android) {
+  import("//build/config/android/config.gni")
+}
+
+source_set("fxl_common") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "arraysize.h",
+    "build_config.h",
+    "compiler_specific.h",
+    "fxl_export.h",
+    "macros.h",
+  ]
+
+  public_configs = [
+    "//garnet/public:config",
+  ]
+}
+
+source_set("fxl_header_only_types") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "functional/closure.h",
+    "time/time_delta.h",
+  ]
+
+  public_configs = [
+    "//garnet/public:config",
+  ]
+}
+
+# These are sources that store static global state that may impose potential
+# constraints on dynamic linking. We separate these out here.
+source_set("stateful_sources") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "log_level.h",
+    "log_settings.h",
+    "log_settings_state.cc",
+  ]
+
+  public_deps = [
+    ":fxl_common",
+  ]
+}
+
+source_set("fxl_lib") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "command_line.cc",
+    "command_line.h",
+    "log_settings_command_line.cc",
+    "log_settings_command_line.h",
+
+    # TODO(abarth): Move files/* out to its own library.
+    "files/directory.cc",
+    "files/directory.h",
+    "files/eintr_wrapper.h",
+    "files/file.cc",
+    "files/file.h",
+    "files/file_descriptor.cc",
+    "files/file_descriptor.h",
+    "files/path.h",
+    "files/scoped_temp_dir.cc",
+    "files/scoped_temp_dir.h",
+    "files/symlink.h",
+    "files/unique_fd.cc",
+    "files/unique_fd.h",
+    "functional/apply.h",
+    "functional/cancelable_callback.h",
+    "functional/make_copyable.h",
+    "inttypes.h",
+    "memory/ref_counted.h",
+    "memory/ref_counted_internal.h",
+    "memory/ref_ptr.h",
+    "memory/ref_ptr_internal.h",
+    "memory/unique_object.h",
+    "memory/weak_ptr.h",
+    "memory/weak_ptr_internal.cc",
+    "memory/weak_ptr_internal.h",
+    "random/rand.cc",
+    "random/uuid.cc",
+    "strings/ascii.cc",
+    "strings/ascii.h",
+    "strings/concatenate.cc",
+    "strings/concatenate.h",
+    "strings/join_strings.h",
+    "strings/split_string.cc",
+    "strings/split_string.h",
+    "strings/string_number_conversions.cc",
+    "strings/string_number_conversions.h",
+    "strings/string_printf.cc",
+    "strings/string_printf.h",
+    "strings/string_view.cc",
+    "strings/string_view.h",
+    "strings/trim.cc",
+    "strings/trim.h",
+    "strings/utf_codecs.cc",
+    "strings/utf_codecs.h",
+    "synchronization/cond_var.h",
+    "synchronization/monitor.cc",
+    "synchronization/monitor.h",
+    "synchronization/mutex.h",
+    "synchronization/sleep.cc",
+    "synchronization/sleep.h",
+    "synchronization/thread_annotations.h",
+    "synchronization/thread_checker.h",
+    "synchronization/waitable_event.cc",
+    "synchronization/waitable_event.h",
+    "tasks/one_shot_timer.cc",
+    "tasks/one_shot_timer.h",
+    "tasks/task_runner.cc",
+    "tasks/task_runner.h",
+    "third_party/icu/icu_utf.cc",
+    "third_party/icu/icu_utf.h",
+    "threading/thread.cc",
+    "threading/thread.h",
+    "time/stopwatch.cc",
+    "time/stopwatch.h",
+    "time/time_point.cc",
+    "time/time_point.h",
+  ]
+
+  if (is_win) {
+    sources += [
+      "files/path_win.cc",
+      "files/symlink_win.cc",
+      "synchronization/cond_var_win.cc",
+      "synchronization/mutex_win.cc",
+    ]
+  } else {
+    sources += [
+      "files/path_posix.cc",
+      "files/symlink_posix.cc",
+      "synchronization/cond_var_posix.cc",
+      "synchronization/mutex_posix.cc",
+    ]
+  }
+
+  if (is_fuchsia) {
+    libs = [ "magenta" ]
+  }
+
+  public_deps = [
+    ":fxl_common",
+    ":fxl_logging",
+  ]
+}
+
+source_set("fxl_logging_lib") {
+  visibility = [
+    ":fxl_logging",
+    ":fxl_logging_shlib",
+  ]
+  sources = [
+    "debug/debugger.cc",
+    "debug/debugger.h",
+    "log_settings.cc",
+    "logging.cc",
+    "logging.h",
+  ]
+
+  if (is_android) {
+    defines = [ "ANDROID_LOG_TAG=$android_log_tag" ]
+    libs = [ "log" ]
+  }
+
+  public_deps = [
+    ":fxl_common",
+    ":fxl_header_only_types",
+    ":stateful_sources",
+  ]
+}
+
+if (is_fuchsia) {
+  shared_library("fxl_logging") {
+    public_deps = [
+      ":fxl_logging_lib",
+    ]
+
+    public_configs = [
+      "//garnet/public:config",
+    ]
+  }
+} else {
+  group("fxl_logging") {
+    public_deps = [
+      ":fxl_logging_lib",
+    ]
+  }
+}
+
+if (is_fuchsia) {
+  shared_library("fxl") {
+    public_deps = [
+      ":fxl_lib",
+    ]
+  }
+} else {
+  group("fxl") {
+    public_deps = [
+      ":fxl_lib",
+    ]
+  }
+}
+
+source_set("fxl_printers") {
+  testonly = true
+
+  sources = [
+    "time/time_printers.cc",
+  ]
+  deps = [
+    ":fxl",
+  ]
+}
+
+executable("fxl_unittests") {
+  testonly = true
+
+  sources = [
+    "arraysize_unittest.cc",
+    "command_line_unittest.cc",
+    "files/directory_unittest.cc",
+    "files/file_descriptor_unittest.cc",
+    "files/file_unittest.cc",
+    "files/path_unittest.cc",
+    "files/scoped_temp_dir_unittest.cc",
+    "functional/apply_unittest.cc",
+    "functional/auto_call_unittest.cc",
+    "functional/cancelable_callback_unittest.cc",
+    "functional/make_copyable_unittest.cc",
+    "log_settings_unittest.cc",
+    "memory/ref_counted_unittest.cc",
+    "memory/weak_ptr_unittest.cc",
+    "random/rand_unittest.cc",
+    "random/uuid_unittest.cc",
+    "strings/ascii_unittest.cc",
+    "strings/concatenate_unittest.cc",
+    "strings/join_strings_unittest.cc",
+    "strings/split_string_unittest.cc",
+    "strings/string_number_conversions_unittest.cc",
+    "strings/string_printf_unittest.cc",
+    "strings/string_view_unittest.cc",
+    "strings/trim_unittest.cc",
+    "synchronization/cond_var_unittest.cc",
+    "synchronization/mutex_unittest.cc",
+    "synchronization/thread_annotations_unittest.cc",
+    "synchronization/thread_checker_unittest.cc",
+    "synchronization/waitable_event_unittest.cc",
+    "tasks/one_shot_timer_unittest.cc",
+    "test/run_all_unittests.cc",
+    "test/timeout_tolerance.h",
+    "threading/thread_unittest.cc",
+    "time/stopwatch_unittest.cc",
+    "time/time_delta_unittest.cc",
+    "time/time_point_unittest.cc",
+    "time/time_unittest.cc",
+  ]
+
+  deps = [
+    ":fxl",
+    ":fxl_logging",
+    ":fxl_printers",
+    "//third_party/gtest",
+  ]
+}
+
+if (is_fuchsia) {
+  package("package") {
+    package_name = "fxl"
+
+    deps = [
+      ":fxl",
+    ]
+
+    libraries = [ {
+          name = "libfxl.so"
+        } ]
+  }
+
+  package("logging_package") {
+    package_name = "fxl_logging"
+    deps = [
+      ":fxl_logging",
+    ]
+    libraries = [ {
+          # libfxl_logging.so is depended on by FIDL generated code which is used in some drivers.
+          used_by_drivers = true
+          name = "libfxl_logging.so"
+        } ]
+  }
+
+  package("unittests_package") {
+    package_name = "fxl_unittests"
+
+    testonly = true
+
+    deps = [
+      ":fxl_unittests",
+    ]
+    tests = [ {
+          name = "fxl_unittests"
+        } ]
+  }
+}

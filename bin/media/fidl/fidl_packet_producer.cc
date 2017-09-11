@@ -6,15 +6,15 @@
 
 #include "lib/media/fidl/logs/media_packet_producer_channel.fidl.h"
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace media {
 
 FidlPacketProducer::FidlPacketProducer() : binding_(this) {
   task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
-  FTL_DCHECK(task_runner_);
+  FXL_DCHECK(task_runner_);
 }
 
 FidlPacketProducer::~FidlPacketProducer() {
@@ -46,7 +46,7 @@ PayloadAllocator* FidlPacketProducer::allocator() {
 }
 
 Demand FidlPacketProducer::SupplyPacket(PacketPtr packet) {
-  FTL_DCHECK(packet);
+  FXL_DCHECK(packet);
 
   bool end_of_stream = packet->end_of_stream();
 
@@ -64,7 +64,7 @@ Demand FidlPacketProducer::SupplyPacket(PacketPtr packet) {
   // possible races (it does).
   Demand demand = end_of_stream ? Demand::kNegative : CurrentDemand(1);
 
-  task_runner_->PostTask(ftl::MakeCopyable([
+  task_runner_->PostTask(fxl::MakeCopyable([
     weak_this = std::weak_ptr<FidlPacketProducer>(shared_from_this()),
     packet = std::move(packet)
   ]() mutable {
@@ -80,7 +80,7 @@ Demand FidlPacketProducer::SupplyPacket(PacketPtr packet) {
 void FidlPacketProducer::Connect(
     fidl::InterfaceHandle<MediaPacketConsumer> consumer,
     const ConnectCallback& callback) {
-  FTL_DCHECK(consumer);
+  FXL_DCHECK(consumer);
   MediaPacketProducerBase::Connect(
       MediaPacketConsumerPtr::Create(std::move(consumer)), callback);
 
@@ -119,12 +119,12 @@ void FidlPacketProducer::OnFailure() {
 }
 
 void FidlPacketProducer::SendPacket(PacketPtr packet) {
-  FTL_DCHECK(packet);
+  FXL_DCHECK(packet);
 
   ProducePacket(packet->payload(), packet->size(), packet->pts(),
                 packet->pts_rate(), packet->keyframe(), packet->end_of_stream(),
                 MediaType::From(packet->revised_stream_type()),
-                ftl::MakeCopyable([ this, packet = std::move(packet) ]() {
+                fxl::MakeCopyable([ this, packet = std::move(packet) ]() {
                   stage().SetDemand(CurrentDemand());
                 }));
 }

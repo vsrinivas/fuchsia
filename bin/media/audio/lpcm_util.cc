@@ -5,7 +5,7 @@
 #include "garnet/bin/media/audio/lpcm_util.h"
 
 #include "garnet/bin/media/framework/formatting.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -50,7 +50,7 @@ std::unique_ptr<LpcmUtil> LpcmUtil::Create(const AudioStreamType& stream_type) {
       result = new LpcmUtilImpl<float>(stream_type);
       break;
     default:
-      FTL_DCHECK(false) << "unsupported sample format "
+      FXL_DCHECK(false) << "unsupported sample format "
                         << stream_type.sample_format();
       result = nullptr;
       break;
@@ -130,15 +130,15 @@ void LpcmUtilImpl<T>::Interleave(const void* in,
                                  size_t in_byte_count,
                                  void* out,
                                  size_t frame_count) const {
-  FTL_DCHECK(in);
-  FTL_DCHECK(in_byte_count);
-  FTL_DCHECK(out);
-  FTL_DCHECK(frame_count);
+  FXL_DCHECK(in);
+  FXL_DCHECK(in_byte_count);
+  FXL_DCHECK(out);
+  FXL_DCHECK(frame_count);
 
   uint32_t channels = stream_type_.channels();
-  FTL_DCHECK(channels);
-  FTL_DCHECK(in_byte_count % stream_type_.bytes_per_frame() == 0);
-  FTL_DCHECK(in_byte_count >= frame_count * stream_type_.bytes_per_frame());
+  FXL_DCHECK(channels);
+  FXL_DCHECK(in_byte_count % stream_type_.bytes_per_frame() == 0);
+  FXL_DCHECK(in_byte_count >= frame_count * stream_type_.bytes_per_frame());
   uint64_t in_channel_stride = in_byte_count / stream_type_.bytes_per_frame();
 
   const T* in_channel = reinterpret_cast<const T*>(in);

@@ -12,7 +12,7 @@
 
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/macros.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace fidl {
 
@@ -72,7 +72,7 @@ class InterfaceHandle {
   // InterfaceHandle<> should be passed to whatever will construct a proxy to
   // the implementation (presumably using an InterfacePtr<> or equivalent).
   InterfaceRequest<Interface> NewRequest() {
-    FTL_DCHECK(!is_valid()) << "An existing handle is already bound.";
+    FXL_DCHECK(!is_valid()) << "An existing handle is already bound.";
 
     mx::channel request_endpoint;
     mx::channel::create(0, &handle_, &request_endpoint);

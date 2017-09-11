@@ -41,15 +41,15 @@ class TransformStageImpl : public TransformStage, public StageImpl {
 
  protected:
   // StageImpl implementation.
-  ftl::RefPtr<ftl::TaskRunner> GetNodeTaskRunner() override;
+  fxl::RefPtr<fxl::TaskRunner> GetNodeTaskRunner() override;
 
   void Update() override;
 
  private:
   // TransformStage implementation.
-  void SetTaskRunner(ftl::RefPtr<ftl::TaskRunner> task_runner) override;
+  void SetTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner) override;
 
-  void PostTask(const ftl::Closure& task) override;
+  void PostTask(const fxl::Closure& task) override;
 
   Input input_;
   Output output_;

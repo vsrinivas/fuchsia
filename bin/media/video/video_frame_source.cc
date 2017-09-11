@@ -20,7 +20,7 @@ VideoFrameSource::VideoFrameSource() : media_renderer_binding_(this) {
 
   timeline_control_point_.SetProgramRangeSetCallback(
       [this](uint64_t program, int64_t min_pts, int64_t max_pts) {
-        FTL_DCHECK(program == 0) << "Non-zero program not implemented";
+        FXL_DCHECK(program == 0) << "Non-zero program not implemented";
         min_pts_ = min_pts;
       });
 
@@ -118,10 +118,10 @@ void VideoFrameSource::GetSupportedMediaTypes(
 
 void VideoFrameSource::SetMediaType(MediaTypePtr media_type) {
   // TODO(dalesat): Shouldn't DCHECK these...need an RCHECK.
-  FTL_DCHECK(media_type);
-  FTL_DCHECK(media_type->details);
+  FXL_DCHECK(media_type);
+  FXL_DCHECK(media_type->details);
   const VideoMediaTypeDetailsPtr& details = media_type->details->get_video();
-  FTL_DCHECK(details);
+  FXL_DCHECK(details);
 
   converter_.SetMediaType(media_type);
   status_publisher_.SendUpdates();
@@ -163,10 +163,10 @@ fidl::Array<MediaTypeSetPtr> VideoFrameSource::SupportedMediaTypes() {
 
 void VideoFrameSource::OnPacketSupplied(
     std::unique_ptr<SuppliedPacket> supplied_packet) {
-  FTL_DCHECK(supplied_packet);
-  FTL_DCHECK(supplied_packet->packet()->pts_rate_ticks ==
+  FXL_DCHECK(supplied_packet);
+  FXL_DCHECK(supplied_packet->packet()->pts_rate_ticks ==
              TimelineRate::NsPerSecond.subject_delta());
-  FTL_DCHECK(supplied_packet->packet()->pts_rate_seconds ==
+  FXL_DCHECK(supplied_packet->packet()->pts_rate_seconds ==
              TimelineRate::NsPerSecond.reference_delta());
 
   if (supplied_packet->packet()->end_of_stream) {
@@ -263,7 +263,7 @@ void VideoFrameSource::DiscardOldPackets() {
 }
 
 void VideoFrameSource::CheckForRevisedMediaType(const MediaPacketPtr& packet) {
-  FTL_DCHECK(packet);
+  FXL_DCHECK(packet);
 
   const MediaTypePtr& revised_media_type = packet->revised_media_type;
 

@@ -12,7 +12,7 @@
 #include "lib/media/fidl/audio_server.fidl.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace media {
 
@@ -69,7 +69,7 @@ class AudioPolicyServiceImpl : public AudioPolicyService {
   AudioServerPtr audio_service_;
   uint32_t initialize_attempts_remaining_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AudioPolicyServiceImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AudioPolicyServiceImpl);
 };
 
 }  // namespace media

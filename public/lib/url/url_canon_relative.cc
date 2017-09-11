@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/url/url_canon.h"
 #include "lib/url/url_canon_internal.h"
 #include "lib/url/url_constants.h"
@@ -149,7 +149,7 @@ bool DoResolveRelativePath(const char* base_url, const Parsed& base_parsed, bool
 
   // We should always have something to do in this function, the caller checks
   // that some component is being replaced.
-  FTL_DCHECK(false) << "Not reached";
+  FXL_DCHECK(false) << "Not reached";
   return success;
 }
 

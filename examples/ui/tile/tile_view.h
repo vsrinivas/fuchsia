@@ -16,7 +16,7 @@
 #include "lib/ui/presentation/fidl/presenter.fidl.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace examples {
 
@@ -99,7 +99,7 @@ class TileView : public mozart::BaseView,
 
   fidl::BindingSet<mozart::Presenter> presenter_bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TileView);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TileView);
 };
 
 }  // namespace examples

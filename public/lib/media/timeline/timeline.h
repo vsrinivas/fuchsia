@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "lib/ftl/time/time_delta.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/time/time_delta.h"
+#include "lib/fxl/time/time_point.h"
 
 namespace media {
 
@@ -14,22 +14,22 @@ class Timeline {
  public:
   // Returns the current local time in nanoseconds since epoch.
   static int64_t local_now() {
-    return (ftl::TimePoint::Now() - ftl::TimePoint()).ToNanoseconds();
+    return (fxl::TimePoint::Now() - fxl::TimePoint()).ToNanoseconds();
   }
 
   template <typename T>
   static constexpr int64_t ns_from_seconds(T seconds) {
-    return ftl::TimeDelta::FromSeconds(seconds).ToNanoseconds();
+    return fxl::TimeDelta::FromSeconds(seconds).ToNanoseconds();
   }
 
   template <typename T>
   static constexpr int64_t ns_from_ms(T milliseconds) {
-    return ftl::TimeDelta::FromMilliseconds(milliseconds).ToNanoseconds();
+    return fxl::TimeDelta::FromMilliseconds(milliseconds).ToNanoseconds();
   }
 
   template <typename T>
   static constexpr int64_t ns_from_us(T microseconds) {
-    return ftl::TimeDelta::FromMicroseconds(microseconds).ToNanoseconds();
+    return fxl::TimeDelta::FromMicroseconds(microseconds).ToNanoseconds();
   }
 };
 

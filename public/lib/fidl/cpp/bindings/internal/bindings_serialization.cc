@@ -4,7 +4,7 @@
 
 #include "lib/fidl/cpp/bindings/internal/bindings_serialization.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace fidl {
 namespace internal {
@@ -40,7 +40,7 @@ void EncodePointer(const void* ptr, uint64_t* offset) {
 
   const char* p_obj = reinterpret_cast<const char*>(ptr);
   const char* p_slot = reinterpret_cast<const char*>(offset);
-  FTL_DCHECK(p_obj > p_slot);
+  FXL_DCHECK(p_obj > p_slot);
 
   *offset = static_cast<uint64_t>(p_obj - p_slot);
 }
@@ -69,7 +69,7 @@ void DecodeHandle(WrappedHandle* handle, std::vector<mx_handle_t>* handles) {
     handle->value = MX_HANDLE_INVALID;
     return;
   }
-  FTL_DCHECK(static_cast<size_t>(handle->value) < handles->size());
+  FXL_DCHECK(static_cast<size_t>(handle->value) < handles->size());
   // Just leave holes in the vector so we don't screw up other indices.
   handle->value = FetchAndReset(&handles->at(handle->value));
 }

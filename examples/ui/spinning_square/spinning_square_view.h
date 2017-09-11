@@ -7,7 +7,7 @@
 
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/view_framework/base_view.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace examples {
 
@@ -28,7 +28,7 @@ class SpinningSquareView : public mozart::BaseView {
 
   uint64_t start_time_ = 0u;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SpinningSquareView);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SpinningSquareView);
 };
 
 }  // namespace examples

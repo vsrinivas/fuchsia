@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace debugserver {
 
@@ -46,7 +46,7 @@ class Breakpoint {
   uintptr_t address_;
   size_t kind_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Breakpoint);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Breakpoint);
 };
 
 class ProcessBreakpoint : public Breakpoint {
@@ -61,7 +61,7 @@ class ProcessBreakpoint : public Breakpoint {
 
   ProcessBreakpointSet* owner_;  // weak
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ProcessBreakpoint);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ProcessBreakpoint);
 };
 
 // Represents a software breakpoint.
@@ -85,7 +85,7 @@ class SoftwareBreakpoint final : public ProcessBreakpoint {
   // original bytes while removing this breakpoint.
   std::vector<uint8_t> original_bytes_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SoftwareBreakpoint);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SoftwareBreakpoint);
 };
 
 // Represents a collection of breakpoints managed by a process and defines
@@ -115,7 +115,7 @@ class ProcessBreakpointSet final {
   // All currently inserted breakpoints.
   std::unordered_map<uintptr_t, std::unique_ptr<Breakpoint>> breakpoints_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ProcessBreakpointSet);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ProcessBreakpointSet);
 };
 
 class ThreadBreakpoint : public Breakpoint {
@@ -128,7 +128,7 @@ class ThreadBreakpoint : public Breakpoint {
 
   ThreadBreakpointSet* owner_;  // weak
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ThreadBreakpoint);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ThreadBreakpoint);
 };
 
 // Represents a single-step breakpoint.
@@ -148,7 +148,7 @@ class SingleStepBreakpoint final : public ThreadBreakpoint {
 
   bool inserted_ = false;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SingleStepBreakpoint);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SingleStepBreakpoint);
 };
 
 // Represents a collection of breakpoints managed by a thread and defines
@@ -183,7 +183,7 @@ class ThreadBreakpointSet final {
   // There can be only one singlestep breakpoint.
   std::unique_ptr<ThreadBreakpoint> single_step_breakpoint_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ThreadBreakpointSet);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ThreadBreakpointSet);
 };
 
 }  // namespace arch

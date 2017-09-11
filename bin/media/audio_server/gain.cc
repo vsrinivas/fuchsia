@@ -7,7 +7,7 @@
 #include <math.h>
 #include <fbl/algorithm.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 namespace audio {
@@ -43,7 +43,7 @@ Gain::AScale Gain::GetGainScale(float output_db_gain) {
     // Compute the amplitude scale factor as a double and sanity check before
     // converting to the fixed point representation.
     double amp_scale = pow(10.0, effective_gain / 20.0);
-    FTL_DCHECK(amp_scale <
+    FXL_DCHECK(amp_scale <
               (1u << ((sizeof(AScale) * 8) - kFractionalScaleBits)));
 
     amp_scale *= static_cast<double>(kUnityScale);

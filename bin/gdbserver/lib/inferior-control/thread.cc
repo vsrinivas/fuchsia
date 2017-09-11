@@ -10,8 +10,8 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/exception.h>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "debugger-utils/util.h"
 
@@ -46,31 +46,31 @@ Thread::Thread(Process* process, mx_handle_t handle, mx_koid_t id)
       state_(State::kNew),
       breakpoints_(this),
       weak_ptr_factory_(this) {
-  FTL_DCHECK(process_);
-  FTL_DCHECK(handle_ != MX_HANDLE_INVALID);
-  FTL_DCHECK(id_ != MX_KOID_INVALID);
+  FXL_DCHECK(process_);
+  FXL_DCHECK(handle_ != MX_HANDLE_INVALID);
+  FXL_DCHECK(id_ != MX_KOID_INVALID);
 
   registers_ = arch::Registers::Create(this);
-  FTL_DCHECK(registers_.get());
+  FXL_DCHECK(registers_.get());
 }
 
 Thread::~Thread() {
-  FTL_VLOG(2) << "Destructing thread " << GetDebugName();
+  FXL_VLOG(2) << "Destructing thread " << GetDebugName();
 
   Clear();
 }
 
 std::string Thread::GetName() const {
-  return ftl::StringPrintf("%" PRId64 ".%" PRId64, process_->id(), id());
+  return fxl::StringPrintf("%" PRId64 ".%" PRId64, process_->id(), id());
 }
 
 std::string Thread::GetDebugName() const {
-  return ftl::StringPrintf("%" PRId64 ".%" PRId64 "(%" PRIx64 ".%" PRIx64 ")",
+  return fxl::StringPrintf("%" PRId64 ".%" PRId64 "(%" PRIx64 ".%" PRIx64 ")",
                            process_->id(), id(), process_->id(), id());
 }
 
 void Thread::set_state(State state) {
-  FTL_DCHECK(state != State::kNew);
+  FXL_DCHECK(state != State::kNew);
   state_ = state;
 }
 
@@ -93,7 +93,7 @@ void Thread::Clear() {
   handle_ = MX_HANDLE_INVALID;
 }
 
-ftl::WeakPtr<Thread> Thread::AsWeakPtr() {
+fxl::WeakPtr<Thread> Thread::AsWeakPtr() {
   return weak_ptr_factory_.GetWeakPtr();
 }
 
@@ -121,18 +121,18 @@ void Thread::OnException(const mx_excp_type_t type,
   // If the thread has exited we may not be able to, and there's no point
   // anyway.
   if (prev_state == State::kStepping && type != MX_EXCP_THREAD_EXITING) {
-    FTL_DCHECK(breakpoints_.SingleStepBreakpointInserted());
+    FXL_DCHECK(breakpoints_.SingleStepBreakpointInserted());
     if (!breakpoints_.RemoveSingleStepBreakpoint()) {
-      FTL_LOG(ERROR) << "Unable to clear single-step bkpt";
+      FXL_LOG(ERROR) << "Unable to clear single-step bkpt";
     } else {
-      FTL_VLOG(2) << "Single-step bkpt cleared";
+      FXL_VLOG(2) << "Single-step bkpt cleared";
     }
   }
 }
 
 bool Thread::Resume() {
   if (state() != State::kStopped && state() != State::kNew) {
-    FTL_LOG(ERROR) << "Cannot resume a thread while in state: "
+    FXL_LOG(ERROR) << "Cannot resume a thread while in state: "
                    << StateName(state());
     return false;
   }
@@ -140,11 +140,11 @@ bool Thread::Resume() {
   // This is printed here before resuming the task so that this is always
   // printed before any subsequent exception report (which is read by another
   // thread).
-  FTL_VLOG(2) << "Thread " << GetName() << " is now running";
+  FXL_VLOG(2) << "Thread " << GetName() << " is now running";
 
   mx_status_t status = mx_task_resume(handle_, MX_RESUME_EXCEPTION);
   if (status < 0) {
-    FTL_LOG(ERROR) << "Failed to resume thread: "
+    FXL_LOG(ERROR) << "Failed to resume thread: "
                    << util::MxErrorString(status);
     return false;
   }
@@ -160,11 +160,11 @@ void Thread::ResumeForExit() {
     case State::kExiting:
       break;
     default:
-      FTL_DCHECK(false) << "unexpected state " << StateName(state());
+      FXL_DCHECK(false) << "unexpected state " << StateName(state());
       break;
   }
 
-  FTL_VLOG(2) << "Thread " << GetName() << " is exiting";
+  FXL_VLOG(2) << "Thread " << GetName() << " is exiting";
 
   auto status = mx_task_resume(handle_, MX_RESUME_EXCEPTION);
   if (status < 0) {
@@ -176,13 +176,13 @@ void Thread::ResumeForExit() {
                                           MX_INFO_PROCESS, &info,
                                           sizeof(info), nullptr, nullptr);
     if (info_status != MX_OK) {
-      FTL_LOG(ERROR) << "error getting process info: "
+      FXL_LOG(ERROR) << "error getting process info: "
                      << util::MxErrorString(info_status);
     }
     if (info_status == MX_OK && info.exited) {
-      FTL_VLOG(2) << "Process " << process()->GetName() << " exited too";
+      FXL_VLOG(2) << "Process " << process()->GetName() << " exited too";
     } else {
-      FTL_LOG(ERROR) << "Failed to resume thread for exit: "
+      FXL_LOG(ERROR) << "Failed to resume thread for exit: "
                      << util::MxErrorString(status);
     }
   }
@@ -193,13 +193,13 @@ void Thread::ResumeForExit() {
 
 bool Thread::Step() {
   if (state() != State::kStopped) {
-    FTL_LOG(ERROR) << "Cannot resume a thread while in state: "
+    FXL_LOG(ERROR) << "Cannot resume a thread while in state: "
                    << StateName(state());
     return false;
   }
 
   if (!registers_->RefreshGeneralRegisters()) {
-    FTL_LOG(ERROR) << "Failed refreshing gregs";
+    FXL_LOG(ERROR) << "Failed refreshing gregs";
     return false;
   }
   mx_vaddr_t pc = registers_->GetPC();
@@ -210,12 +210,12 @@ bool Thread::Step() {
   // This is printed here before resuming the task so that this is always
   // printed before any subsequent exception report (which is read by another
   // thread).
-  FTL_LOG(INFO) << "Thread " << GetName() << " is now stepping";
+  FXL_LOG(INFO) << "Thread " << GetName() << " is now stepping";
 
   mx_status_t status = mx_task_resume(handle_, MX_RESUME_EXCEPTION);
   if (status < 0) {
     breakpoints_.RemoveSingleStepBreakpoint();
-    FTL_LOG(ERROR) << "Failed to resume thread for step: "
+    FXL_LOG(ERROR) << "Failed to resume thread for step: "
                    << util::MxErrorString(status);
     return false;
   }

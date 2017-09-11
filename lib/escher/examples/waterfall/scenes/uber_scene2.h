@@ -41,5 +41,5 @@ class UberScene2 : public Scene {
   escher::MeshPtr ring_mesh4_;
   escher::MeshPtr ring_mesh5_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(UberScene2);
+  FXL_DISALLOW_COPY_AND_ASSIGN(UberScene2);
 };

@@ -32,12 +32,12 @@ Node::Node(Session* session,
            scenic::ResourceId node_id,
            const ResourceTypeInfo& type_info)
     : Resource(session, node_id, type_info) {
-  FTL_DCHECK(type_info.IsKindOf(Node::kTypeInfo));
+  FXL_DCHECK(type_info.IsKindOf(Node::kTypeInfo));
 }
 
 Node::~Node() {
   ForEachDirectDescendantFrontToBack(*this, [](Node* node) {
-    FTL_DCHECK(node->parent_relation_ != ParentRelation::kNone);
+    FXL_DCHECK(node->parent_relation_ != ParentRelation::kNone);
     node->parent_relation_ = ParentRelation::kNone;
     node->parent_ = nullptr;
   });
@@ -114,7 +114,7 @@ bool Node::Detach() {
         error_reporter()->ERROR() << "An imported node cannot be detached.";
         return false;
       case ParentRelation::kNone:
-        FTL_NOTREACHED();
+        FXL_NOTREACHED();
         break;
     }
 
@@ -129,7 +129,7 @@ void Node::ErasePart(Node* part) {
   auto it =
       std::find_if(parts_.begin(), parts_.end(),
                    [part](const NodePtr& ptr) { return part == ptr.get(); });
-  FTL_DCHECK(it != parts_.end());
+  FXL_DCHECK(it != parts_.end());
   parts_.erase(it);
 }
 
@@ -137,7 +137,7 @@ void Node::EraseChild(Node* child) {
   auto it =
       std::find_if(children_.begin(), children_.end(),
                    [child](const NodePtr& ptr) { return child == ptr.get(); });
-  FTL_DCHECK(it != children_.end());
+  FXL_DCHECK(it != children_.end());
   children_.erase(it);
 }
 
@@ -259,7 +259,7 @@ void Node::AddImport(Import* import) {
   Resource::AddImport(import);
 
   auto delegate = static_cast<Node*>(import->delegate());
-  FTL_DCHECK(delegate->parent_relation_ == ParentRelation::kNone);
+  FXL_DCHECK(delegate->parent_relation_ == ParentRelation::kNone);
   delegate->parent_ = this;
   delegate->parent_relation_ = ParentRelation::kImportDelegate;
 
@@ -270,7 +270,7 @@ void Node::RemoveImport(Import* import) {
   Resource::RemoveImport(import);
 
   auto delegate = static_cast<Node*>(import->delegate());
-  FTL_DCHECK(delegate->parent_relation_ == ParentRelation::kImportDelegate);
+  FXL_DCHECK(delegate->parent_relation_ == ParentRelation::kImportDelegate);
   delegate->parent_relation_ = ParentRelation::kNone;
   delegate->parent_ = nullptr;
 

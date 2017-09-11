@@ -104,7 +104,7 @@ class FlogViewer : public ChannelManager {
     }
 
     void ConsumeEntry() {
-      FTL_DCHECK(!consumed());
+      FXL_DCHECK(!consumed());
       ++entries_consumed_;
     }
 

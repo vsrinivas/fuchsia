@@ -13,9 +13,9 @@
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/internal/message_header_validator.h"
 #include "lib/fidl/cpp/bindings/internal/router.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/time/time_delta.h"
 
 struct FidlAsyncWaiter;
 
@@ -55,22 +55,22 @@ class InterfacePtrState {
   }
 
   void Bind(InterfaceHandle<Interface> info, const FidlAsyncWaiter* waiter) {
-    FTL_DCHECK(!proxy_);
-    FTL_DCHECK(!router_);
-    FTL_DCHECK(!(bool)handle_);
-    FTL_DCHECK(!waiter_);
-    FTL_DCHECK(version_ == 0u);
-    FTL_DCHECK(info.is_valid());
+    FXL_DCHECK(!proxy_);
+    FXL_DCHECK(!router_);
+    FXL_DCHECK(!(bool)handle_);
+    FXL_DCHECK(!waiter_);
+    FXL_DCHECK(version_ == 0u);
+    FXL_DCHECK(info.is_valid());
 
     handle_ = info.PassHandle();
     waiter_ = waiter;
     version_ = info.version();
   }
 
-  bool WaitForIncomingResponse(ftl::TimeDelta timeout = ftl::TimeDelta::Max()) {
+  bool WaitForIncomingResponse(fxl::TimeDelta timeout = fxl::TimeDelta::Max()) {
     ConfigureProxyIfNecessary();
 
-    FTL_DCHECK(router_);
+    FXL_DCHECK(router_);
     return router_->WaitForIncomingMessage(timeout);
   }
 
@@ -87,10 +87,10 @@ class InterfacePtrState {
     return router_ ? router_->encountered_error() : false;
   }
 
-  void set_connection_error_handler(ftl::Closure error_handler) {
+  void set_connection_error_handler(fxl::Closure error_handler) {
     ConfigureProxyIfNecessary();
 
-    FTL_DCHECK(router_);
+    FXL_DCHECK(router_);
     router_->set_connection_error_handler(std::move(error_handler));
   }
 
@@ -105,12 +105,12 @@ class InterfacePtrState {
   void ConfigureProxyIfNecessary() {
     // The proxy has been configured.
     if (proxy_) {
-      FTL_DCHECK(router_);
+      FXL_DCHECK(router_);
       return;
     }
     // The object hasn't been bound.
     if (!waiter_) {
-      FTL_DCHECK(!(bool)handle_);
+      FXL_DCHECK(!(bool)handle_);
       return;
     }
 
@@ -137,7 +137,7 @@ class InterfacePtrState {
 
   uint32_t version_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(InterfacePtrState);
+  FXL_DISALLOW_COPY_AND_ASSIGN(InterfacePtrState);
 };
 
 }  // namespace internal

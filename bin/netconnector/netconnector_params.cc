@@ -8,9 +8,9 @@
 
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "garnet/bin/netconnector/ip_address.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/split_string.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/split_string.h"
 
 namespace netconnector {
 namespace {
@@ -21,7 +21,7 @@ constexpr char kDefaultConfigFileName[] =
     "/system/data/netconnector/netconnector.config";
 }  // namespace
 
-NetConnectorParams::NetConnectorParams(const ftl::CommandLine& command_line) {
+NetConnectorParams::NetConnectorParams(const fxl::CommandLine& command_line) {
   is_valid_ = false;
 
   listen_ = command_line.HasOption("listen");
@@ -29,7 +29,7 @@ NetConnectorParams::NetConnectorParams(const ftl::CommandLine& command_line) {
   mdns_verbose_ = command_line.HasOption("mdns-verbose");
 
   if (listen_ && show_devices_) {
-    FTL_LOG(ERROR) << "--listen and --show-devices are mutually exclusive";
+    FXL_LOG(ERROR) << "--listen and --show-devices are mutually exclusive";
     Usage();
     return;
   }
@@ -45,7 +45,7 @@ NetConnectorParams::NetConnectorParams(const ftl::CommandLine& command_line) {
   }
 
   if (listen_ && !ReadConfigFrom(config_file_name)) {
-    FTL_LOG(ERROR) << "Failed to parse config file " << config_file_name;
+    FXL_LOG(ERROR) << "Failed to parse config file " << config_file_name;
     return;
   }
 
@@ -53,15 +53,15 @@ NetConnectorParams::NetConnectorParams(const ftl::CommandLine& command_line) {
 }
 
 void NetConnectorParams::Usage() {
-  FTL_LOG(INFO) << "netconnector usage:";
-  FTL_LOG(INFO) << "    netconnector [ options ]";
-  FTL_LOG(INFO) << "options:";
-  FTL_LOG(INFO)
+  FXL_LOG(INFO) << "netconnector usage:";
+  FXL_LOG(INFO) << "    netconnector [ options ]";
+  FXL_LOG(INFO) << "options:";
+  FXL_LOG(INFO)
       << "    --config=<file>                  read config file (default "
       << kDefaultConfigFileName << ")";
-  FTL_LOG(INFO) << "    --show-devices                   show known devices";
-  FTL_LOG(INFO) << "    --mdns-verbose                   log mDNS traffic";
-  FTL_LOG(INFO) << "    --listen                         run as listener";
+  FXL_LOG(INFO) << "    --show-devices                   show known devices";
+  FXL_LOG(INFO) << "    --mdns-verbose                   log mDNS traffic";
+  FXL_LOG(INFO) << "    --listen                         run as listener";
 }
 
 void NetConnectorParams::RegisterService(
@@ -71,7 +71,7 @@ void NetConnectorParams::RegisterService(
       launch_infos_by_service_name_.emplace(name, std::move(launch_info));
 
   if (!result.second) {
-    FTL_DCHECK(result.first != launch_infos_by_service_name_.end());
+    FXL_DCHECK(result.first != launch_infos_by_service_name_.end());
     result.first->second = std::move(launch_info);
   }
 }
@@ -81,7 +81,7 @@ void NetConnectorParams::RegisterDevice(const std::string& name,
   auto result = device_addresses_by_name_.emplace(name, address);
 
   if (!result.second) {
-    FTL_DCHECK(result.first != device_addresses_by_name_.end());
+    FXL_DCHECK(result.first != device_addresses_by_name_.end());
     result.first->second = address;
   }
 }
@@ -154,7 +154,7 @@ bool NetConnectorParams::ParseConfig(const std::string& string) {
 
       IpAddress address = IpAddress::FromString(pair.value.GetString());
       if (!address.is_valid()) {
-        FTL_LOG(ERROR) << "Config file contains invalid IP address "
+        FXL_LOG(ERROR) << "Config file contains invalid IP address "
                        << pair.value.GetString();
         return false;
       }

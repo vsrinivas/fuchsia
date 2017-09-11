@@ -5,7 +5,7 @@
 #include "garnet/bin/ui/scene_manager/engine/session_handler.h"
 
 #include "garnet/bin/ui/scene_manager/scene_manager_impl.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace scene_manager {
 
@@ -15,14 +15,14 @@ SessionHandler::SessionHandler(
     ::fidl::InterfaceRequest<scenic::Session> request,
     ::fidl::InterfaceHandle<scenic::SessionListener> listener)
     : engine_(engine),
-      session_(::ftl::MakeRefCounted<scene_manager::Session>(
+      session_(::fxl::MakeRefCounted<scene_manager::Session>(
           session_id,
           engine_,
           this,
           static_cast<ErrorReporter*>(this))),
       listener_(::fidl::InterfacePtr<scenic::SessionListener>::Create(
           std::move(listener))) {
-  FTL_DCHECK(engine);
+  FXL_DCHECK(engine);
 
   bindings_.set_on_empty_set_handler([this]() { BeginTearDown(); });
   bindings_.AddBinding(this, std::move(request));
@@ -62,33 +62,33 @@ void SessionHandler::HitTest(uint32_t node_id,
                     callback);
 }
 
-void SessionHandler::ReportError(ftl::LogSeverity severity,
+void SessionHandler::ReportError(fxl::LogSeverity severity,
                                  std::string error_string) {
   switch (severity) {
-    case ftl::LOG_INFO:
-      FTL_LOG(INFO) << error_string;
+    case fxl::LOG_INFO:
+      FXL_LOG(INFO) << error_string;
       break;
-    case ftl::LOG_WARNING:
-      FTL_LOG(WARNING) << error_string;
+    case fxl::LOG_WARNING:
+      FXL_LOG(WARNING) << error_string;
       break;
-    case ftl::LOG_ERROR:
-      FTL_LOG(ERROR) << error_string;
+    case fxl::LOG_ERROR:
+      FXL_LOG(ERROR) << error_string;
       if (listener_) {
         listener_->OnError(error_string);
       }
       break;
-    case ftl::LOG_FATAL:
-      FTL_LOG(FATAL) << error_string;
+    case fxl::LOG_FATAL:
+      FXL_LOG(FATAL) << error_string;
       break;
     default:
       // Invalid severity.
-      FTL_DCHECK(false);
+      FXL_DCHECK(false);
   }
 }
 
 void SessionHandler::BeginTearDown() {
   engine_->TearDownSession(session_->id());
-  FTL_DCHECK(!session_->is_valid());
+  FXL_DCHECK(!session_->is_valid());
 }
 
 void SessionHandler::TearDown() {

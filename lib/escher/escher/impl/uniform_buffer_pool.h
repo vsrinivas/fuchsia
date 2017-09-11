@@ -50,7 +50,7 @@ class UniformBufferPool : public ResourceManager {
   // List of free buffers that are available for allocation.
   std::vector<std::unique_ptr<Buffer>> free_buffers_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(UniformBufferPool);
+  FXL_DISALLOW_COPY_AND_ASSIGN(UniformBufferPool);
 };
 
 }  // namespace impl

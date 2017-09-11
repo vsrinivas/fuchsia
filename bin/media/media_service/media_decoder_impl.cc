@@ -5,7 +5,7 @@
 #include "garnet/bin/media/media_service/media_decoder_impl.h"
 
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -28,7 +28,7 @@ MediaDecoderImpl::MediaDecoderImpl(
       graph_(owner->multiproc_task_runner()),
       consumer_(FidlPacketConsumer::Create()),
       producer_(FidlPacketProducer::Create()) {
-  FTL_DCHECK(input_media_type);
+  FXL_DCHECK(input_media_type);
 
   FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding()), "decoder"));
 
@@ -36,7 +36,7 @@ MediaDecoderImpl::MediaDecoderImpl(
       input_media_type.To<std::unique_ptr<StreamType>>();
 
   if (Decoder::Create(*input_stream_type, &decoder_) != Result::kOk) {
-    FTL_LOG(WARNING) << "Couldn't find decoder for stream type";
+    FXL_LOG(WARNING) << "Couldn't find decoder for stream type";
     RCHECK(false);
     return;
   }
@@ -56,7 +56,7 @@ MediaDecoderImpl::MediaDecoderImpl(
   consumer_->SetFlushRequestedCallback(
       [this, consumer_ref](bool hold_frame,
                            const MediaPacketConsumer::FlushCallback& callback) {
-        FTL_DCHECK(producer_);
+        FXL_DCHECK(producer_);
         graph_.FlushOutput(consumer_ref.output(), hold_frame);
         producer_->FlushConnection(hold_frame, callback);
       });
@@ -67,7 +67,7 @@ MediaDecoderImpl::MediaDecoderImpl(
 MediaDecoderImpl::~MediaDecoderImpl() {}
 
 void MediaDecoderImpl::GetOutputType(const GetOutputTypeCallback& callback) {
-  FTL_DCHECK(decoder_);
+  FXL_DCHECK(decoder_);
   callback(MediaType::From(decoder_->output_stream_type()));
 }
 

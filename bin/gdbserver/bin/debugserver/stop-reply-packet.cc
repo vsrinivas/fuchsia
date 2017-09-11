@@ -6,7 +6,7 @@
 
 #include "debugger-utils/util.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 #include "util.h"
 
@@ -38,14 +38,14 @@ void StopReplyPacket::SetSignalNumber(uint8_t signal_number) {
 }
 
 void StopReplyPacket::SetThreadId(mx_koid_t process_id, mx_koid_t thread_id) {
-  FTL_DCHECK(type_ == Type::kReceivedSignal || type_ == Type::kThreadExited);
+  FXL_DCHECK(type_ == Type::kReceivedSignal || type_ == Type::kThreadExited);
   tid_string_ = util::EncodeThreadId(process_id, thread_id);
 }
 
 void StopReplyPacket::AddRegisterValue(uint8_t register_number,
-                                       const ftl::StringView& value) {
-  FTL_DCHECK(type_ == Type::kReceivedSignal);
-  FTL_DCHECK(!value.empty());
+                                       const fxl::StringView& value) {
+  FXL_DCHECK(type_ == Type::kReceivedSignal);
+  FXL_DCHECK(!value.empty());
 
   // Encode the register value here as it will appear in the packet:
   // XX:value
@@ -61,8 +61,8 @@ void StopReplyPacket::AddRegisterValue(uint8_t register_number,
   register_values_.push_back(std::move(result));
 }
 
-void StopReplyPacket::SetStopReason(const ftl::StringView& reason) {
-  FTL_DCHECK(type_ == Type::kReceivedSignal);
+void StopReplyPacket::SetStopReason(const fxl::StringView& reason) {
+  FXL_DCHECK(type_ == Type::kReceivedSignal);
   stop_reason_ = reason.ToString() + ":";
 }
 
@@ -71,7 +71,7 @@ std::vector<char> StopReplyPacket::Build() const {
 
   switch (type_) {
     case Type::kReceivedSignal:
-      FTL_DCHECK(signo_) << "A signal number is required";
+      FXL_DCHECK(signo_) << "A signal number is required";
       type = HasParameters() ? 'T' : 'S';
       break;
     case Type::kProcessTerminatedWithSignal:
@@ -84,7 +84,7 @@ std::vector<char> StopReplyPacket::Build() const {
       type = 'w';
       break;
     default:
-      FTL_DCHECK(false) << "Bad stop reply packet type";
+      FXL_DCHECK(false) << "Bad stop reply packet type";
   }
 
   std::vector<char> packet;
@@ -117,7 +117,7 @@ std::vector<char> StopReplyPacket::Build() const {
         packet.push_back(';');
         break;
       default:
-        FTL_DCHECK(false) << "bad stop reply type for thread";
+        FXL_DCHECK(false) << "bad stop reply type for thread";
     }
   }
 
@@ -131,7 +131,7 @@ std::vector<char> StopReplyPacket::Build() const {
 }
 
 bool StopReplyPacket::HasParameters() const {
-  FTL_DCHECK(type_ == Type::kReceivedSignal);
+  FXL_DCHECK(type_ == Type::kReceivedSignal);
   return !tid_string_.empty() || !register_values_.empty() ||
          !stop_reason_.empty();
 }

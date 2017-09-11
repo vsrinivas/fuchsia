@@ -4,7 +4,7 @@
 
 #include "lib/media/transport/media_packet_producer_base.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -18,7 +18,7 @@ MediaPacketProducerBase::MediaPacketProducerBase()
 }
 
 MediaPacketProducerBase::~MediaPacketProducerBase() {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   // Reset the consumer first so all our callbacks get deleted.
   consumer_ = nullptr;
 }
@@ -26,8 +26,8 @@ MediaPacketProducerBase::~MediaPacketProducerBase() {
 void MediaPacketProducerBase::Connect(
     MediaPacketConsumerPtr consumer,
     const MediaPacketProducer::ConnectCallback& callback) {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FTL_DCHECK(consumer);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK(consumer);
 
   FLOG(log_channel_, ConnectedTo(FLOG_PTR_KOID(consumer)));
 
@@ -42,7 +42,7 @@ void MediaPacketProducerBase::Connect(
 }
 
 void MediaPacketProducerBase::Reset() {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FLOG(log_channel_, Resetting());
   Disconnect();
   allocator_.Reset();
@@ -51,13 +51,13 @@ void MediaPacketProducerBase::Reset() {
 void MediaPacketProducerBase::FlushConsumer(
     bool hold_frame,
     const MediaPacketConsumer::FlushCallback& callback) {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FTL_DCHECK(consumer_.is_bound());
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK(consumer_.is_bound());
 
   FLOG(log_channel_, RequestingFlush());
 
   {
-    ftl::MutexLocker locker(&mutex_);
+    fxl::MutexLocker locker(&mutex_);
     end_of_stream_ = false;
   }
 
@@ -97,8 +97,8 @@ void MediaPacketProducerBase::ProducePacket(
     bool end_of_stream,
     MediaTypePtr revised_media_type,
     const ProducePacketCallback& callback) {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FTL_DCHECK(size == 0 || payload != nullptr);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK(size == 0 || payload != nullptr);
 
   if (!consumer_.is_bound()) {
     callback();
@@ -121,7 +121,7 @@ void MediaPacketProducerBase::ProducePacket(
   uint32_t packets_outstanding;
 
   {
-    ftl::MutexLocker locker(&mutex_);
+    fxl::MutexLocker locker(&mutex_);
     packets_outstanding = ++packets_outstanding_;
     pts_last_produced_ = pts;
     end_of_stream_ = end_of_stream;
@@ -148,12 +148,12 @@ void MediaPacketProducerBase::ProducePacket(
   consumer_->SupplyPacket(
       std::move(media_packet),
       [this, callback, label](MediaPacketDemandPtr demand) {
-        FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+        FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
         uint32_t packets_outstanding;
 
         {
-          ftl::MutexLocker locker(&mutex_);
+          fxl::MutexLocker locker(&mutex_);
           packets_outstanding = --packets_outstanding_;
         }
 
@@ -170,7 +170,7 @@ void MediaPacketProducerBase::ProducePacket(
 
 bool MediaPacketProducerBase::ShouldProducePacket(
     uint32_t additional_packets_outstanding) {
-  ftl::MutexLocker locker(&mutex_);
+  fxl::MutexLocker locker(&mutex_);
 
   // Shouldn't send any more after end of stream.
   if (end_of_stream_) {
@@ -189,25 +189,25 @@ bool MediaPacketProducerBase::ShouldProducePacket(
 }
 
 void MediaPacketProducerBase::OnFailure() {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 }
 
 void MediaPacketProducerBase::HandleDemandUpdate(MediaPacketDemandPtr demand) {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   if (demand) {
     UpdateDemand(*demand);
   }
 
   if (consumer_.is_bound()) {
     consumer_->PullDemandUpdate([this](MediaPacketDemandPtr demand) {
-      FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+      FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
       HandleDemandUpdate(std::move(demand));
     });
   }
 }
 
 void MediaPacketProducerBase::UpdateDemand(const MediaPacketDemand& demand) {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   if (flush_in_progress_) {
     // While flushing, we ignore demand changes, because the consumer may have
@@ -218,7 +218,7 @@ void MediaPacketProducerBase::UpdateDemand(const MediaPacketDemand& demand) {
   bool updated = false;
 
   {
-    ftl::MutexLocker locker(&mutex_);
+    fxl::MutexLocker locker(&mutex_);
     if (demand_.min_packets_outstanding != demand.min_packets_outstanding ||
         demand_.min_pts != demand.min_pts) {
       demand_.min_packets_outstanding = demand.min_packets_outstanding;

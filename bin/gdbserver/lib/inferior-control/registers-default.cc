@@ -4,7 +4,7 @@
 
 #include "registers.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace debugserver {
 namespace arch {
@@ -37,7 +37,7 @@ class RegistersDefault final : public Registers {
 
   std::string GetRegsetAsString(int regset) override { return ""; }
 
-  bool SetRegsetFromString(int regset, const ftl::StringView& value) override {
+  bool SetRegsetFromString(int regset, const fxl::StringView& value) override {
     return false;
   }
 

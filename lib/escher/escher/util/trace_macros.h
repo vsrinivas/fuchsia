@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ftl/build_config.h"
+#include "lib/fxl/build_config.h"
 
 #ifdef OS_FUCHSIA
 #include <trace/event.h>

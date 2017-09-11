@@ -10,8 +10,8 @@
 #include <cstdio>
 #include <string>
 
-#include "lib/ftl/strings/utf_codecs.h"
-#include "lib/ftl/third_party/icu/icu_utf.h"
+#include "lib/fxl/strings/utf_codecs.h"
+#include "lib/fxl/third_party/icu/icu_utf.h"
 
 namespace url {
 
@@ -40,22 +40,22 @@ void DoAppendInvalidNarrowString(const CHAR* spec, size_t begin, size_t end, Can
 
 static inline bool ReadUnicodeCharacter(const uint16_t* src, size_t src_len, size_t* char_index,
                                         uint32_t* code_point) {
-  if (FTL_U16_IS_SURROGATE(src[*char_index])) {
-    if (!FTL_U16_IS_SURROGATE_LEAD(src[*char_index]) || *char_index + 1 >= src_len ||
-        !FTL_U16_IS_TRAIL(src[*char_index + 1])) {
+  if (FXL_U16_IS_SURROGATE(src[*char_index])) {
+    if (!FXL_U16_IS_SURROGATE_LEAD(src[*char_index]) || *char_index + 1 >= src_len ||
+        !FXL_U16_IS_TRAIL(src[*char_index + 1])) {
       // Invalid surrogate pair.
       return false;
     }
 
     // Valid surrogate pair.
-    *code_point = FTL_U16_GET_SUPPLEMENTARY(src[*char_index], src[*char_index + 1]);
+    *code_point = FXL_U16_GET_SUPPLEMENTARY(src[*char_index], src[*char_index + 1]);
     (*char_index)++;
   } else {
     // Not a surrogate, just one 16-bit word.
     *code_point = src[*char_index];
   }
 
-  return ftl::IsValidCodepoint(*code_point);
+  return fxl::IsValidCodepoint(*code_point);
 }
 
 }  // namespace
@@ -213,8 +213,8 @@ bool ReadUTFChar(const char* str, size_t* begin, size_t length, uint32_t* code_p
   // This depends on ints and int32s being the same thing. If they're not, it
   // will fail to compile.
   // TODO(mmenke): This should probably be fixed.
-  if (!ftl::ReadUnicodeCharacter(str, length, begin, code_point_out) ||
-      !ftl::IsValidCharacter(*code_point_out)) {
+  if (!fxl::ReadUnicodeCharacter(str, length, begin, code_point_out) ||
+      !fxl::IsValidCharacter(*code_point_out)) {
     *code_point_out = kUnicodeReplacementCharacter;
     return false;
   }
@@ -226,7 +226,7 @@ bool ReadUTFChar(const uint16_t* str, size_t* begin, size_t length, unsigned* co
   // will fail to compile.
   // TODO(mmenke): This should probably be fixed.
   if (!ReadUnicodeCharacter(str, length, begin, code_point_out) ||
-      !ftl::IsValidCharacter(*code_point_out)) {
+      !fxl::IsValidCharacter(*code_point_out)) {
     *code_point_out = kUnicodeReplacementCharacter;
     return false;
   }

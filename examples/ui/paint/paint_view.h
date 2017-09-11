@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "lib/ui/view_framework/skia_view.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkPath.h"
 
@@ -33,7 +33,7 @@ class PaintView : public mozart::SkiaView {
   std::map<uint32_t, std::vector<SkPoint>> points_;
   std::vector<SkPath> paths_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(PaintView);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PaintView);
 };
 
 }  // namespace examples

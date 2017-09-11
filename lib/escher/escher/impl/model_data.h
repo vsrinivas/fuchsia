@@ -12,7 +12,7 @@
 #include "escher/impl/descriptor_set_pool.h"
 #include "escher/impl/uniform_buffer_pool.h"
 #include "escher/shape/modifier_wobble.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace escher {
 namespace impl {
@@ -108,7 +108,7 @@ class ModelData {
                      MeshSpec::Hash>
       mesh_shader_binding_cache_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ModelData);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ModelData);
 };
 
 }  // namespace impl

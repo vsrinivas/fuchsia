@@ -55,7 +55,7 @@ class NetMediaPlayerNetProxy
   MediaPlayerStatusPtr status_;
   TimelineFunction remote_to_local_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(NetMediaPlayerNetProxy);
+  FXL_DISALLOW_COPY_AND_ASSIGN(NetMediaPlayerNetProxy);
 };
 
 }  // namespace media

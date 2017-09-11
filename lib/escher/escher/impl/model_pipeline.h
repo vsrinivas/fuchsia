@@ -7,7 +7,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include "escher/impl/model_pipeline_spec.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace escher {
 namespace impl {
@@ -35,7 +35,7 @@ class ModelPipeline {
   vk::Pipeline pipeline_;
   vk::PipelineLayout pipeline_layout_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ModelPipeline);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ModelPipeline);
 };
 
 }  // namespace impl

@@ -8,14 +8,14 @@
 #include <fs/dispatcher.h>
 #include <mx/channel.h>
 
-#include "lib/ftl/ftl_export.h"
+#include "lib/fxl/fxl_export.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
 namespace mtl {
 class VFSDispatcher;
 
-class FTL_EXPORT VFSHandler : public MessageLoopHandler {
+class FXL_EXPORT VFSHandler : public MessageLoopHandler {
  public:
   explicit VFSHandler(VFSDispatcher* dispatcher);
   ~VFSHandler() override;
@@ -39,7 +39,7 @@ class FTL_EXPORT VFSHandler : public MessageLoopHandler {
   fs::vfs_dispatcher_cb_t callback_;
   void* iostate_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(VFSHandler);
+  FXL_DISALLOW_COPY_AND_ASSIGN(VFSHandler);
 };
 
 }  // namespace mtl

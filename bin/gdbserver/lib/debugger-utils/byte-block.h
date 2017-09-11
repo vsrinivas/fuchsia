@@ -7,7 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace debugserver {
 namespace util {
@@ -38,7 +38,7 @@ class ByteBlock {
   ByteBlock() = default;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(ByteBlock);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ByteBlock);
 };
 
 }  // namespace util

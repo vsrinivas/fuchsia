@@ -15,8 +15,8 @@ DisplayManager::DisplayManager() = default;
 
 DisplayManager::~DisplayManager() = default;
 
-void DisplayManager::WaitForDefaultDisplay(ftl::Closure callback) {
-  FTL_DCHECK(!default_display_);
+void DisplayManager::WaitForDefaultDisplay(fxl::Closure callback) {
+  FXL_DCHECK(!default_display_);
 
   display_watcher_.WaitForDisplay([ this, callback = std::move(callback) ](
       bool success, uint32_t width, uint32_t height, float device_pixel_ratio) {
@@ -34,7 +34,7 @@ void DisplayManager::CreateDefaultDisplay(uint32_t width,
   if (width % multiple != 0) {
     // Round up to the nearest multiple.
     uint32_t new_width = multiple * (width / multiple) + multiple;
-    FTL_LOG(WARNING) << "Mozart SceneManager: Screen width " << width
+    FXL_LOG(WARNING) << "Mozart SceneManager: Screen width " << width
                      << " is not a multiple of " << multiple
                      << ", rounding up to " << new_width << ".";
     width = new_width;
@@ -43,7 +43,7 @@ void DisplayManager::CreateDefaultDisplay(uint32_t width,
   if (height % multiple != 0) {
     // Round up to the nearest multiple.
     uint32_t new_height = multiple * (height / multiple) + multiple;
-    FTL_LOG(WARNING) << "Mozart SceneManager: Screen width " << height
+    FXL_LOG(WARNING) << "Mozart SceneManager: Screen width " << height
                      << " is not a multiple of " << multiple
                      << ", rounding up to " << new_height << ".";
     height = new_height;

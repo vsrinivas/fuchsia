@@ -10,7 +10,7 @@ TileParams::TileParams() {}
 
 TileParams::~TileParams() {}
 
-bool TileParams::Parse(const ftl::CommandLine& command_line) {
+bool TileParams::Parse(const fxl::CommandLine& command_line) {
   std::string value;
 
   // Parse --horizontal and --vertical.

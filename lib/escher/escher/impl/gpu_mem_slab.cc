@@ -6,7 +6,7 @@
 
 #include "escher/impl/vulkan_utils.h"
 #include "escher/vk/gpu_allocator.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace escher {
 namespace impl {
@@ -65,7 +65,7 @@ GpuMemSlabPtr GpuMemSlab::New(vk::Device device,
     }
   }
 
-  return ftl::AdoptRef(new GpuMemSlab(device, vk_mem, reqs.size, mapped_ptr,
+  return fxl::AdoptRef(new GpuMemSlab(device, vk_mem, reqs.size, mapped_ptr,
                                       memory_type_index, allocator));
 }
 

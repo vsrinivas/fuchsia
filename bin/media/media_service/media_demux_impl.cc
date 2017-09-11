@@ -8,7 +8,7 @@
 #include "garnet/bin/media/fidl/fidl_reader.h"
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "garnet/bin/media/util/callback_joiner.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace media {
@@ -28,11 +28,11 @@ MediaDemuxImpl::MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,
     : MediaServiceImpl::Product<MediaSource>(this, std::move(request), owner),
       task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
       graph_(owner->multiproc_task_runner()) {
-  FTL_DCHECK(reader);
+  FXL_DCHECK(reader);
 
   FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding())));
 
-  FTL_DCHECK(task_runner_);
+  FXL_DCHECK(task_runner_);
 
   status_publisher_.SetCallbackRunner(
       [this](const GetStatusCallback& callback, uint64_t version) {
@@ -187,8 +187,8 @@ MediaDemuxImpl::Stream::Stream(OutputRef output,
                                std::unique_ptr<StreamType> stream_type,
                                Graph* graph)
     : stream_type_(std::move(stream_type)), graph_(graph), output_(output) {
-  FTL_DCHECK(stream_type_);
-  FTL_DCHECK(graph);
+  FXL_DCHECK(stream_type_);
+  FXL_DCHECK(graph);
 
   producer_ = FidlPacketProducer::Create();
   graph_->ConnectOutputToNode(output_, graph_->Add(producer_));
@@ -198,14 +198,14 @@ MediaDemuxImpl::Stream::~Stream() {}
 
 void MediaDemuxImpl::Stream::BindPacketProducer(
     fidl::InterfaceRequest<MediaPacketProducer> producer) {
-  FTL_DCHECK(producer_);
+  FXL_DCHECK(producer_);
   producer_->Bind(std::move(producer));
 }
 
 void MediaDemuxImpl::Stream::FlushConnection(
     bool hold_frame,
     const FidlPacketProducer::FlushConnectionCallback callback) {
-  FTL_DCHECK(producer_);
+  FXL_DCHECK(producer_);
   producer_->FlushConnection(hold_frame, callback);
 }
 

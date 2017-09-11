@@ -5,7 +5,7 @@
 #include "garnet/bin/media/net_media_service/net_media_player_impl.h"
 
 #include "lib/media/fidl/seeking_reader.fidl.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/url/gurl.h"
 
 namespace media {
@@ -32,7 +32,7 @@ NetMediaPlayerImpl::NetMediaPlayerImpl(
           owner),
       media_player_(MediaPlayerPtr::Create(std::move(media_player))),
       responder_(this, service_name, owner->application_context()) {
-  FTL_DCHECK(owner);
+  FXL_DCHECK(owner);
 
   media_player_.set_connection_error_handler([this]() {
     media_player_.reset();
@@ -55,7 +55,7 @@ void NetMediaPlayerImpl::SetUrl(const fidl::String& url_as_string) {
   url::GURL url = url::GURL(url_as_string);
 
   if (!url.is_valid()) {
-    FTL_DLOG(ERROR) << "Invalid URL " << url_as_string << " specified";
+    FXL_DLOG(ERROR) << "Invalid URL " << url_as_string << " specified";
     return;
   }
 

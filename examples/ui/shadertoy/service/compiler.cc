@@ -109,8 +109,8 @@ Compiler::Compiler(escher::Escher* escher,
       model_data_(escher),
       render_pass_(render_pass),
       descriptor_set_layout_(descriptor_set_layout) {
-  FTL_DCHECK(render_pass_);
-  FTL_DCHECK(descriptor_set_layout);
+  FXL_DCHECK(render_pass_);
+  FXL_DCHECK(descriptor_set_layout);
 }
 
 Compiler::~Compiler() {
@@ -123,7 +123,7 @@ Compiler::~Compiler() {
     // TODO: This isn't a big deal, because it only happens when the process
     // is shutting down, but it would be tidier to wait for the thread to
     // finish.
-    FTL_LOG(WARNING) << "Destroying while compile thread is still active.";
+    FXL_LOG(WARNING) << "Destroying while compile thread is still active.";
   }
 }
 
@@ -221,7 +221,7 @@ PipelinePtr Compiler::CompileGlslToPipeline(const std::string& glsl_code) {
     module_info.pCode = spirv.data();
     auto result = vk_device.createShaderModule(module_info);
     if (result.result != vk::Result::eSuccess) {
-      FTL_LOG(WARNING) << "Failed to compile vertex shader.";
+      FXL_LOG(WARNING) << "Failed to compile vertex shader.";
       return PipelinePtr();
     }
     vertex_module = result.value;
@@ -235,7 +235,7 @@ PipelinePtr Compiler::CompileGlslToPipeline(const std::string& glsl_code) {
     module_info.pCode = spirv.data();
     auto result = vk_device.createShaderModule(module_info);
     if (result.result != vk::Result::eSuccess) {
-      FTL_LOG(WARNING) << "Failed to compile fragment shader.";
+      FXL_LOG(WARNING) << "Failed to compile fragment shader.";
       vk_device.destroyShaderModule(vertex_module);
       return PipelinePtr();
     }
@@ -361,7 +361,7 @@ PipelinePtr Compiler::ConstructPipeline(vk::ShaderModule vertex_module,
   vk::PipelineLayout pipeline_layout;
   {
     auto result = device.createPipelineLayout(pipeline_layout_info, nullptr);
-    FTL_DCHECK(result.result == vk::Result::eSuccess);
+    FXL_DCHECK(result.result == vk::Result::eSuccess);
     pipeline_layout = result.value;
   }
 
@@ -389,11 +389,11 @@ PipelinePtr Compiler::ConstructPipeline(vk::ShaderModule vertex_module,
   vk::Pipeline pipeline;
   {
     auto result = device.createGraphicsPipeline(nullptr, pipeline_info);
-    FTL_DCHECK(result.result == vk::Result::eSuccess);
+    FXL_DCHECK(result.result == vk::Result::eSuccess);
     pipeline = result.value;
   }
 
-  return ftl::MakeRefCounted<Pipeline>(device, pipeline, pipeline_layout);
+  return fxl::MakeRefCounted<Pipeline>(device, pipeline, pipeline_layout);
 }
 
 escher::impl::GlslToSpirvCompiler* Compiler::glsl_compiler() {

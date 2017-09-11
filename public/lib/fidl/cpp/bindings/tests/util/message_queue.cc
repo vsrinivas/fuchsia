@@ -5,7 +5,7 @@
 #include "lib/fidl/cpp/bindings/tests/util/message_queue.h"
 
 #include "lib/fidl/cpp/bindings/message.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace fidl {
 namespace test {
@@ -27,13 +27,13 @@ void MessageQueue::Push(Message* message) {
 }
 
 void MessageQueue::Pop(Message* message) {
-  FTL_DCHECK(!queue_.empty());
+  FXL_DCHECK(!queue_.empty());
   queue_.front()->MoveTo(message);
   Pop();
 }
 
 void MessageQueue::Pop() {
-  FTL_DCHECK(!queue_.empty());
+  FXL_DCHECK(!queue_.empty());
   delete queue_.front();
   queue_.pop();
 }

@@ -10,7 +10,7 @@
 
 #include "garnet/bin/netconnector/mdns/mdns_agent.h"
 #include "garnet/bin/netconnector/socket_address.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/time/time_delta.h"
 
 namespace netconnector {
 namespace mdns {
@@ -92,7 +92,7 @@ class InstanceSubscriber
   ServiceInstanceCallback callback_;
   std::unordered_map<std::string, InstanceInfo> instance_infos_by_full_name_;
   std::unordered_map<std::string, TargetInfo> target_infos_by_full_name_;
-  ftl::TimeDelta query_delay_;
+  fxl::TimeDelta query_delay_;
   std::shared_ptr<DnsQuestion> question_;
 };
 

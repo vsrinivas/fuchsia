@@ -16,11 +16,11 @@ sk_sp<SkSurface> MakeSkSurface(const HostImage& image);
 
 // Creates a Skia surface backed by host-accessible shared memory.
 sk_sp<SkSurface> MakeSkSurface(const scenic::ImageInfo& image_info,
-                               ftl::RefPtr<HostData> data,
+                               fxl::RefPtr<HostData> data,
                                off_t memory_offset);
 sk_sp<SkSurface> MakeSkSurface(SkImageInfo image_info,
                                size_t row_bytes,
-                               ftl::RefPtr<HostData> data,
+                               fxl::RefPtr<HostData> data,
                                off_t memory_offset);
 
 // Represents a pool of Skia surfaces and image resources backed by
@@ -70,7 +70,7 @@ class HostSkSurfacePool {
   HostImagePool image_pool_;
   std::vector<sk_sp<SkSurface>> surface_ptrs_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(HostSkSurfacePool);
+  FXL_DISALLOW_COPY_AND_ASSIGN(HostSkSurfacePool);
 };
 
 }  // namespace skia

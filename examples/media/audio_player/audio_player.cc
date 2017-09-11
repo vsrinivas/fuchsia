@@ -12,14 +12,14 @@
 #include "lib/media/fidl/audio_renderer.fidl.h"
 #include "lib/media/fidl/media_service.fidl.h"
 #include "lib/media/fidl/net_media_service.fidl.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace examples {
 
 AudioPlayer::AudioPlayer(const AudioPlayerParams& params)
     : quit_when_done_(!params.stay()) {
-  FTL_DCHECK(params.is_valid());
+  FXL_DCHECK(params.is_valid());
 
   auto application_context = app::ApplicationContext::CreateFromStartupInfo();
 
@@ -60,17 +60,17 @@ void AudioPlayer::HandleStatusUpdates(uint64_t version,
     // Process status received from the player.
     if (status->end_of_stream && quit_when_done_) {
       mtl::MessageLoop::GetCurrent()->PostQuitTask();
-      FTL_LOG(INFO) << "Reached end-of-stream. Quitting.";
+      FXL_LOG(INFO) << "Reached end-of-stream. Quitting.";
     }
 
     if (status->problem) {
       if (!problem_shown_) {
-        FTL_DLOG(INFO) << "PROBLEM: " << status->problem->type << ", "
+        FXL_DLOG(INFO) << "PROBLEM: " << status->problem->type << ", "
                        << status->problem->details;
         problem_shown_ = true;
         if (quit_when_done_) {
           mtl::MessageLoop::GetCurrent()->PostQuitTask();
-          FTL_LOG(INFO) << "Problem detected. Quitting.";
+          FXL_LOG(INFO) << "Problem detected. Quitting.";
         }
       }
     } else {
@@ -78,26 +78,26 @@ void AudioPlayer::HandleStatusUpdates(uint64_t version,
     }
 
     if (status->metadata && !metadata_shown_) {
-      FTL_LOG(INFO) << "duration   " << std::fixed << std::setprecision(1)
+      FXL_LOG(INFO) << "duration   " << std::fixed << std::setprecision(1)
                     << double(status->metadata->duration) / 1000000000.0
                     << " seconds";
       if (status->metadata->title) {
-        FTL_LOG(INFO) << "title      " << status->metadata->title;
+        FXL_LOG(INFO) << "title      " << status->metadata->title;
       }
       if (status->metadata->artist) {
-        FTL_LOG(INFO) << "artist     " << status->metadata->artist;
+        FXL_LOG(INFO) << "artist     " << status->metadata->artist;
       }
       if (status->metadata->album) {
-        FTL_LOG(INFO) << "album      " << status->metadata->album;
+        FXL_LOG(INFO) << "album      " << status->metadata->album;
       }
       if (status->metadata->publisher) {
-        FTL_LOG(INFO) << "publisher  " << status->metadata->publisher;
+        FXL_LOG(INFO) << "publisher  " << status->metadata->publisher;
       }
       if (status->metadata->genre) {
-        FTL_LOG(INFO) << "genre      " << status->metadata->genre;
+        FXL_LOG(INFO) << "genre      " << status->metadata->genre;
       }
       if (status->metadata->composer) {
-        FTL_LOG(INFO) << "composer   " << status->metadata->composer;
+        FXL_LOG(INFO) << "composer   " << status->metadata->composer;
       }
       metadata_shown_ = true;
     }

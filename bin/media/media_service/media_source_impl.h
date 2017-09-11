@@ -17,7 +17,7 @@
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "garnet/bin/media/util/incident.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace media {
 
@@ -95,7 +95,7 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
   FidlPublisher<GetStatusCallback> status_publisher_;
 
   FLOG_INSTANCE_CHANNEL(logs::MediaSourceChannel, log_channel_);
-  FTL_DISALLOW_COPY_AND_ASSIGN(MediaSourceImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MediaSourceImpl);
 };
 
 }  // namespace media

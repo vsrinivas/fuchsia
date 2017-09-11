@@ -53,7 +53,7 @@ executable("media_service") {
     "//garnet/public/lib/ui/views/fidl",
     "//apps/network",
     "//apps/network/services",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/trace-provider",
   ]

@@ -7,7 +7,7 @@
 
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/ui/views/fidl/views.fidl.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 #include <functional>
 
@@ -29,7 +29,7 @@ class MockViewListener : public mozart::ViewListener {
 
  private:
   OnMockViewPropertiesCallback callback_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(MockViewListener);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MockViewListener);
 };
 
 }  // namespace test

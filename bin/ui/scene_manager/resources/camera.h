@@ -43,6 +43,6 @@ class Camera final : public Resource {
   float fovy_ = 0;
 };
 
-using CameraPtr = ftl::RefPtr<Camera>;
+using CameraPtr = fxl::RefPtr<Camera>;
 
 }  // namespace scene_manager

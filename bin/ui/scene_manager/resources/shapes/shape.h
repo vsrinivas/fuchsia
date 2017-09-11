@@ -36,6 +36,6 @@ class Shape : public Resource {
         const ResourceTypeInfo& type_info);
 };
 
-using ShapePtr = ftl::RefPtr<Shape>;
+using ShapePtr = fxl::RefPtr<Shape>;
 
 }  // namespace scene_manager

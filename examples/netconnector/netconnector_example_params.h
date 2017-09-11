@@ -6,14 +6,14 @@
 
 #include <string>
 
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/macros.h"
 
 namespace examples {
 
 class NetConnectorExampleParams {
  public:
-  NetConnectorExampleParams(const ftl::CommandLine& command_line);
+  NetConnectorExampleParams(const fxl::CommandLine& command_line);
 
   bool is_valid() const { return is_valid_; }
 
@@ -30,7 +30,7 @@ class NetConnectorExampleParams {
   bool register_provider_;
   std::string request_device_name_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(NetConnectorExampleParams);
+  FXL_DISALLOW_COPY_AND_ASSIGN(NetConnectorExampleParams);
 };
 
 }  // namespace examples

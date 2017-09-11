@@ -44,7 +44,7 @@ class InstancePublisher
   void Quit() override;
 
  private:
-  void SendRecords(ftl::TimePoint when);
+  void SendRecords(fxl::TimePoint when);
 
   MdnsAgent::Host* host_;
   std::string instance_full_name_;

@@ -25,7 +25,7 @@ class RspIOLoop final : public IOLoop {
   // Buffer used for reading incoming bytes.
   std::array<char, kMaxBufferSize> in_buffer_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(RspIOLoop);
+  FXL_DISALLOW_COPY_AND_ASSIGN(RspIOLoop);
 };
 
 }  // namespace debugserver

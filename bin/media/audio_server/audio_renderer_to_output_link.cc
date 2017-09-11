@@ -7,7 +7,7 @@
 #include "garnet/bin/media/audio_server/audio_output.h"
 #include "garnet/bin/media/audio_server/audio_renderer_format_info.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 namespace audio {
@@ -32,8 +32,8 @@ AudioRendererToOutputLink::~AudioRendererToOutputLink() {
 AudioRendererToOutputLinkPtr AudioRendererToOutputLink::Create(
     const AudioRendererImplPtr& renderer,
     AudioOutputWeakPtr output) {
-  FTL_DCHECK(renderer);
-  FTL_DCHECK(renderer->format_info_valid());
+  FXL_DCHECK(renderer);
+  FXL_DCHECK(renderer->format_info_valid());
 
   return AudioRendererToOutputLinkPtr(
       new AudioRendererToOutputLink(renderer,
@@ -43,7 +43,7 @@ AudioRendererToOutputLinkPtr AudioRendererToOutputLink::Create(
 
 void AudioRendererToOutputLink::PushToPendingQueue(
     const AudioPipe::AudioPacketRefPtr& pkt) {
-  ftl::MutexLocker locker(&pending_queue_mutex_);
+  fxl::MutexLocker locker(&pending_queue_mutex_);
   pending_queue_->emplace_back(pkt);
 }
 
@@ -64,14 +64,14 @@ void AudioRendererToOutputLink::FlushPendingQueue() {
   PacketQueuePtr new_queue(new PacketQueue);
 
   {
-    ftl::MutexLocker locker(&flush_mutex_);
+    fxl::MutexLocker locker(&flush_mutex_);
     {
       // TODO(johngro): Assuming that it is impossible to push a new packet
       // while a flush is in progress, it's pretty easy to show that this lock
       // can never be contended.  Because of this, we could consider removing
       // this lock operation (although, flush is a relatively rare operation, so
       // the extra overhead is pretty insignificant.
-      ftl::MutexLocker locker(&pending_queue_mutex_);
+      fxl::MutexLocker locker(&pending_queue_mutex_);
       pending_queue_.swap(new_queue);
     }
     flushed_ = true;
@@ -82,14 +82,14 @@ void AudioRendererToOutputLink::FlushPendingQueue() {
 
 void AudioRendererToOutputLink::InitPendingQueue(
     const AudioRendererToOutputLinkPtr& source) {
-  FTL_DCHECK(source != nullptr);
-  FTL_DCHECK(this != source.get());
+  FXL_DCHECK(source != nullptr);
+  FXL_DCHECK(this != source.get());
 
-  ftl::MutexLocker source_locker(&source->pending_queue_mutex_);
+  fxl::MutexLocker source_locker(&source->pending_queue_mutex_);
   if (source->pending_queue_->empty()) return;
 
-  ftl::MutexLocker locker(&pending_queue_mutex_);
-  FTL_DCHECK(pending_queue_->empty());
+  fxl::MutexLocker locker(&pending_queue_mutex_);
+  FXL_DCHECK(pending_queue_->empty());
   *pending_queue_ = *source->pending_queue_;
 }
 
@@ -97,12 +97,12 @@ AudioPipe::AudioPacketRefPtr AudioRendererToOutputLink::LockPendingQueueFront(
     bool* was_flushed) {
   flush_mutex_.Lock();
 
-  FTL_DCHECK(was_flushed);
+  FXL_DCHECK(was_flushed);
   *was_flushed = flushed_;
   flushed_ = false;
 
   {
-    ftl::MutexLocker locker(&pending_queue_mutex_);
+    fxl::MutexLocker locker(&pending_queue_mutex_);
     if (pending_queue_->size()) {
       return pending_queue_->front();
     } else {
@@ -115,13 +115,13 @@ void AudioRendererToOutputLink::UnlockPendingQueueFront(
     AudioPipe::AudioPacketRefPtr* pkt,
     bool release_packet) {
   {
-    ftl::MutexLocker locker(&pending_queue_mutex_);
+    fxl::MutexLocker locker(&pending_queue_mutex_);
 
     // Assert that the user either got no packet when they locked the queue
     // (because the queue was empty), or that they got the front of the queue
     // and that the front of the queue has not changed.
-    FTL_DCHECK(pkt);
-    FTL_DCHECK((*pkt == nullptr) ||
+    FXL_DCHECK(pkt);
+    FXL_DCHECK((*pkt == nullptr) ||
                (pending_queue_->size() && (*pkt == pending_queue_->front())));
 
     if (*pkt) {

@@ -7,7 +7,7 @@
 
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/ui/views/fidl/views.fidl.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 #include <functional>
 
@@ -20,7 +20,7 @@ class MockViewTreeListener : public mozart::ViewTreeListener {
   ~MockViewTreeListener();
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(MockViewTreeListener);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MockViewTreeListener);
 };
 
 }  // namespace test

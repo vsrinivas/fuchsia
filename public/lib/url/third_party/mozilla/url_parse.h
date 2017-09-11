@@ -7,7 +7,7 @@
 
 #include <stddef.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/url/url_export.h"
 
 namespace url {
@@ -47,7 +47,7 @@ struct Component {
   size_t begin;  // Byte offset in the string of this component.
 
   size_t len() const {
-    FTL_DCHECK(is_valid_);
+    FXL_DCHECK(is_valid_);
     return len_;
   }
 

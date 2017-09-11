@@ -14,8 +14,8 @@
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "garnet/bin/ui/view_manager/view_container_state.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace view_manager {
 
@@ -53,7 +53,7 @@ class ViewState : public ViewContainerState {
             const std::string& label);
   ~ViewState() override;
 
-  ftl::WeakPtr<ViewState> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
+  fxl::WeakPtr<ViewState> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
   // Gets the token used to refer to this view globally.
   // Caller does not obtain ownership of the token.
@@ -137,9 +137,9 @@ class ViewState : public ViewContainerState {
   app::ServiceProviderPtr service_provider_;
   fidl::Array<fidl::String> service_names_;
 
-  ftl::WeakPtrFactory<ViewState> weak_factory_;  // must be last
+  fxl::WeakPtrFactory<ViewState> weak_factory_;  // must be last
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ViewState);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ViewState);
 };
 
 }  // namespace view_manager

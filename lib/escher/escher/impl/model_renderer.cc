@@ -66,7 +66,7 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
   const std::vector<Object>& objects = model.objects();
 
   // TODO(ES-29): not low-hanging fruit, but maybe someday...
-  FTL_DCHECK(
+  FXL_DCHECK(
       !(flags & ModelDisplayListFlag::kShareDescriptorSetsBetweenObjects))
       << "unimplemented (ES-29).";
 
@@ -116,7 +116,7 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
       }
     }
   }
-  FTL_DCHECK(opaque_objects.size() == objects.size());
+  FXL_DCHECK(opaque_objects.size() == objects.size());
 
   TRACE_DURATION("gfx", "escher::ModelRenderer::CreateDisplayList[build]");
 
@@ -232,7 +232,7 @@ const MeshPtr& ModelRenderer::GetMeshForShape(const Shape& shape) const {
     case Shape::Type::kMesh:
       return shape.mesh();
     case Shape::Type::kNone: {
-      FTL_DCHECK(false);
+      FXL_DCHECK(false);
       static const MeshPtr kNone;
       return kNone;
     }
@@ -254,7 +254,7 @@ TexturePtr ModelRenderer::CreateWhiteTexture(EscherImpl* escher) {
 
   auto image = image_utils::NewRgbaImage(
       escher->image_cache(), escher->gpu_uploader(), 1, 1, channels);
-  return ftl::MakeRefCounted<Texture>(escher->resource_recycler(),
+  return fxl::MakeRefCounted<Texture>(escher->resource_recycler(),
                                       std::move(image), vk::Filter::eNearest);
 }
 

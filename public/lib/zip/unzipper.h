@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "lib/zip/unique_unzipper.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace zip {
 
@@ -26,7 +26,7 @@ class Unzipper {
   std::vector<char> buffer_;
   UniqueUnzipper decoder_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Unzipper);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Unzipper);
 };
 
 }  // namespace zip

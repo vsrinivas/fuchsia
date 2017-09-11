@@ -29,7 +29,7 @@ GpuUploader::Writer::Writer(BufferPtr buffer,
       offset_(offset),
       ptr_(buffer_->ptr() + offset_),
       has_writes_(false) {
-  FTL_DCHECK(buffer_ && command_buffer_ && queue_ && ptr_);
+  FXL_DCHECK(buffer_ && command_buffer_ && queue_ && ptr_);
 }
 
 GpuUploader::Writer::Writer(Writer&& other)
@@ -49,7 +49,7 @@ GpuUploader::Writer::Writer(Writer&& other)
 }
 
 void GpuUploader::Writer::Submit() {
-  FTL_CHECK(command_buffer_);
+  FXL_CHECK(command_buffer_);
   if (has_writes_) {
     if (has_writes_) {
       command_buffer_->KeepAlive(std::move(buffer_));
@@ -57,7 +57,7 @@ void GpuUploader::Writer::Submit() {
     } else {
       // We need to submit the buffer anyway, otherwise we'll stall the
       // CommandPool.
-      FTL_DLOG(WARNING) << "Submitting command-buffer without any writes.";
+      FXL_DLOG(WARNING) << "Submitting command-buffer without any writes.";
       command_buffer_->Submit(queue_, nullptr);
     }
   }
@@ -71,7 +71,7 @@ void GpuUploader::Writer::Submit() {
 }
 
 GpuUploader::Writer::~Writer() {
-  FTL_CHECK(!command_buffer_);
+  FXL_CHECK(!command_buffer_);
 }
 
 void GpuUploader::Writer::WriteBuffer(const BufferPtr& target,
@@ -119,8 +119,8 @@ GpuUploader::GpuUploader(Escher* escher,
       queue_(command_buffer_pool_->queue()),
       allocator_(allocator ? allocator : escher->gpu_allocator()),
       current_offset_(0) {
-  FTL_DCHECK(command_buffer_pool_);
-  FTL_DCHECK(allocator_);
+  FXL_DCHECK(command_buffer_pool_);
+  FXL_DCHECK(allocator_);
 }
 
 GpuUploader::~GpuUploader() {
@@ -129,7 +129,7 @@ GpuUploader::~GpuUploader() {
 
 GpuUploader::Writer GpuUploader::GetWriter(size_t s) {
   vk::DeviceSize size = s;
-  FTL_DCHECK(size == s);
+  FXL_DCHECK(size == s);
   PrepareForWriterOfSize(size);
   Writer writer(current_buffer_, command_buffer_pool_->GetCommandBuffer(),
                 queue_, size, current_offset_);
@@ -178,7 +178,7 @@ void GpuUploader::PrepareForWriterOfSize(vk::DeviceSize size) {
 }
 
 void GpuUploader::RecycleResource(std::unique_ptr<Resource> resource) {
-  FTL_DCHECK(resource->IsKindOf<Buffer>());
+  FXL_DCHECK(resource->IsKindOf<Buffer>());
   free_buffers_.emplace_back(static_cast<Buffer*>(resource.release()));
 }
 

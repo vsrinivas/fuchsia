@@ -9,14 +9,14 @@
 #include "escher/forward_declarations.h"
 #include "escher/geometry/types.h"
 #include "escher/renderer/texture.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 
 class Material;
-using MaterialPtr = ftl::RefPtr<Material>;
+using MaterialPtr = fxl::RefPtr<Material>;
 
-class Material : public ftl::RefCountedThreadSafe<Material> {
+class Material : public fxl::RefCountedThreadSafe<Material> {
  public:
   explicit Material();
   ~Material();

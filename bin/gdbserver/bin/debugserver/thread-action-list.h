@@ -9,8 +9,8 @@
 
 #include <magenta/types.h>
 
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace debugserver {
 
@@ -69,7 +69,7 @@ class ThreadActionList final {
 
   static const char* ActionToString(Action action);
 
-  ThreadActionList(const ftl::StringView& str, mx_koid_t cur_proc);
+  ThreadActionList(const fxl::StringView& str, mx_koid_t cur_proc);
 
   ~ThreadActionList() = default;
 
@@ -100,7 +100,7 @@ class ThreadActionList final {
   Action default_action_ = Action::kNone;
   std::vector<Entry> actions_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ThreadActionList);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ThreadActionList);
 };
 
 }  // namespace debugserver

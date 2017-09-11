@@ -4,19 +4,19 @@
 
 #include "escher/geometry/bounding_box.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace escher {
 
 BoundingBox::BoundingBox(vec3 min, vec3 max) : min_(min), max_(max) {
 #ifndef NDEBUG
-  FTL_DCHECK(min.x <= max.x) << min << " " << max;
-  FTL_DCHECK(min.y <= max.y) << min << " " << max;
-  FTL_DCHECK(min.z <= max.z) << min << " " << max;
+  FXL_DCHECK(min.x <= max.x) << min << " " << max;
+  FXL_DCHECK(min.y <= max.y) << min << " " << max;
+  FXL_DCHECK(min.z <= max.z) << min << " " << max;
   int dimensions = (min.x != max.x ? 1 : 0) + (min.y != max.y ? 1 : 0) +
                    (min.z != max.z ? 1 : 0);
   // Should use empty bounding-box if box is 1D or 0D.
-  FTL_DCHECK(dimensions >= 2);
+  FXL_DCHECK(dimensions >= 2);
 #endif
 }
 
@@ -55,7 +55,7 @@ BoundingBox& BoundingBox::Intersect(const BoundingBox& box) {
 }
 
 BoundingBox operator*(const mat4& matrix, const BoundingBox& box) {
-  FTL_DCHECK(matrix[3][3] == 1.f);  // No perspective allowed.
+  FXL_DCHECK(matrix[3][3] == 1.f);  // No perspective allowed.
 
   if (box.is_empty()) {
     return box;

@@ -13,9 +13,9 @@ namespace scene_manager {
 static mx_signals_t kEventPairDeathSignals = MX_EPAIR_PEER_CLOSED;
 
 #define ASSERT_INTERNAL_EXPORTS_CONSISTENCY                \
-  FTL_DCHECK(export_handles_to_import_koids_.size() ==     \
+  FXL_DCHECK(export_handles_to_import_koids_.size() ==     \
              export_entries_.size());                      \
-  FTL_DCHECK(exported_resources_to_import_koids_.size() == \
+  FXL_DCHECK(exported_resources_to_import_koids_.size() == \
              export_entries_.size());
 
 ResourceLinker::ResourceLinker() : unresolved_imports_(this){};
@@ -28,7 +28,7 @@ ResourceLinker::~ResourceLinker() {
     if (item.second.resource != nullptr) {
       item.second.resource->SetExported(false, nullptr);
     }
-    FTL_DCHECK(item.second.export_token);
+    FXL_DCHECK(item.second.export_token);
     message_loop->RemoveHandler(item.second.death_handler_key);
   }
 }
@@ -36,7 +36,7 @@ ResourceLinker::~ResourceLinker() {
 bool ResourceLinker::ExportResource(Resource* resource,
                                     mx::eventpair export_token) {
   // Basic sanity checks for resource validity.
-  FTL_DCHECK(resource);
+  FXL_DCHECK(resource);
 
   mx_koid_t import_koid = mtl::GetRelatedKoid(export_token.get());
   if (import_koid == MX_KOID_INVALID) {
@@ -59,7 +59,7 @@ bool ResourceLinker::ExportResource(Resource* resource,
           this,                    // handler
           export_token.get(),      // handle
           kEventPairDeathSignals,  // trigger
-          ftl::TimeDelta::Max()    // timeout
+          fxl::TimeDelta::Max()    // timeout
       );
 
   // Add the resource and export token to our data structures.
@@ -115,7 +115,7 @@ void ResourceLinker::OnImportResolvedForResource(
 
 void ResourceLinker::RemoveExportedResourceIfUnbound(
     Resource* exported_resource) {
-  FTL_DCHECK(exported_resource);
+  FXL_DCHECK(exported_resource);
 
   if (!exported_resource->imports().empty()) {
     // |exported_resource| still has imports bound to it.
@@ -194,14 +194,14 @@ Resource* ResourceLinker::RemoveExportEntryForExpiredHandle(
     mx_handle_t export_handle) {
   // Find the import_koid that maps to |export_handle|.
   auto import_koid_iter = export_handles_to_import_koids_.find(export_handle);
-  FTL_DCHECK(import_koid_iter != export_handles_to_import_koids_.end());
+  FXL_DCHECK(import_koid_iter != export_handles_to_import_koids_.end());
   mx_koid_t import_koid = import_koid_iter->second;
 
   // Remove from |export_handles_to_import_koids_|.
   export_handles_to_import_koids_.erase(import_koid_iter);
 
   auto export_entry_iter = export_entries_.find(import_koid);
-  FTL_DCHECK(export_entry_iter != export_entries_.end());
+  FXL_DCHECK(export_entry_iter != export_entries_.end());
   Resource* resource = export_entry_iter->second.resource;
 
   // Unregister handler.
@@ -223,7 +223,7 @@ Resource* ResourceLinker::RemoveExportEntryForExpiredHandle(
 }
 
 void ResourceLinker::OnExportedResourceDestroyed(Resource* resource) {
-  FTL_DCHECK(resource);
+  FXL_DCHECK(resource);
 
   // Find all the exports for the Resource (it could have been
   // exported more than once).
@@ -232,7 +232,7 @@ void ResourceLinker::OnExportedResourceDestroyed(Resource* resource) {
     mx_koid_t import_koid = import_koid_iter->second;
 
     auto export_entry_iter = export_entries_.find(import_koid);
-    FTL_DCHECK(export_entry_iter != export_entries_.end());
+    FXL_DCHECK(export_entry_iter != export_entries_.end());
 
     // Unregister our handler.
     mtl::MessageLoop::GetCurrent()->RemoveHandler(
@@ -241,7 +241,7 @@ void ResourceLinker::OnExportedResourceDestroyed(Resource* resource) {
     // Remove from |export_handles_to_import_koids_|.
     auto handle_iter = export_handles_to_import_koids_.find(
         export_entry_iter->second.export_token.get());
-    FTL_DCHECK(handle_iter != export_handles_to_import_koids_.end());
+    FXL_DCHECK(handle_iter != export_handles_to_import_koids_.end());
     export_handles_to_import_koids_.erase(handle_iter);
 
     // Remove from |export_entries_|.
@@ -259,7 +259,7 @@ void ResourceLinker::OnExportedResourceDestroyed(Resource* resource) {
   // Remove from |resources_|.
   size_t num_removed = exported_resources_.erase(resource);
 
-  FTL_DCHECK(num_removed == 1);
+  FXL_DCHECK(num_removed == 1);
 
   InvokeExpirationCallback(resource, ExpirationCause::kResourceDestroyed);
 

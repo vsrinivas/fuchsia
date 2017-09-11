@@ -7,7 +7,7 @@
 #include "garnet/bin/ui/scene_manager/engine/engine.h"
 #include "garnet/bin/ui/scene_manager/engine/session.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/synchronization/waitable_event.h"
+#include "lib/fxl/synchronization/waitable_event.h"
 #include "lib/mtl/threading/thread.h"
 
 namespace scene_manager {
@@ -28,7 +28,7 @@ class SessionTest : public ::testing::Test,
 
  protected:
   // |ErrorReporter|
-  void ReportError(ftl::LogSeverity severity,
+  void ReportError(fxl::LogSeverity severity,
                    std::string error_string) override;
 
   // |EventReporter|
@@ -38,7 +38,7 @@ class SessionTest : public ::testing::Test,
   bool Apply(scenic::OpPtr op) { return session_->ApplyOp(std::move(op)); }
 
   template <class ResourceT>
-  ftl::RefPtr<ResourceT> FindResource(scenic::ResourceId id) {
+  fxl::RefPtr<ResourceT> FindResource(scenic::ResourceId id) {
     return session_->resources()->FindResource<ResourceT>(id);
   }
 
@@ -68,11 +68,11 @@ class SessionThreadedTest : public SessionTest {
   void TearDown() override;
 
  protected:
-  ftl::RefPtr<ftl::TaskRunner> TaskRunner() const;
+  fxl::RefPtr<fxl::TaskRunner> TaskRunner() const;
 
-  void PostTaskSync(ftl::Closure callback);
+  void PostTaskSync(fxl::Closure callback);
 
-  void PostTask(ftl::AutoResetWaitableEvent& latch, ftl::Closure callback);
+  void PostTask(fxl::AutoResetWaitableEvent& latch, fxl::Closure callback);
 
  private:
   mtl::Thread thread_;

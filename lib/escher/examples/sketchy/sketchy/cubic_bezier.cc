@@ -4,7 +4,7 @@
 
 #include "sketchy/cubic_bezier.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace sketchy {
 
@@ -61,7 +61,7 @@ template <typename VecT>
 float CubicBezier<VecT>::ArcLength(uint8_t debug_depth) const {
   constexpr float kMaxErrorRate = 0.01f;
   constexpr float kEpsilon = 0.000005f;
-  FTL_DCHECK(debug_depth < 100);
+  FXL_DCHECK(debug_depth < 100);
 
   float upper_bound = distance(pts[0], pts[1]) + distance(pts[1], pts[2]) +
                       distance(pts[2], pts[3]);

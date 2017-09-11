@@ -7,7 +7,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include "escher/forward_declarations.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace escher {
 namespace impl {
@@ -77,7 +77,7 @@ class SsdoAccelerator {
   // negligible cost.
   bool enabled_ = true;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SsdoAccelerator);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SsdoAccelerator);
 };
 
 }  // namespace impl

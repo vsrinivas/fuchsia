@@ -24,5 +24,5 @@ class DemoScene : public Scene {
 
   escher::MaterialPtr purple_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DemoScene);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DemoScene);
 };

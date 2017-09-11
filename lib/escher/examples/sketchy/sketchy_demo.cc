@@ -50,7 +50,7 @@ bool SketchyDemo::HandleKeyPress(std::string key) {
 void SketchyDemo::BeginTouch(uint64_t touch_id,
                              double x_position,
                              double y_position) {
-  FTL_DCHECK(stroke_fitters_.find(touch_id) == stroke_fitters_.end());
+  FXL_DCHECK(stroke_fitters_.find(touch_id) == stroke_fitters_.end());
   auto& fitter =
       (stroke_fitters_[touch_id] =
            std::make_unique<sketchy::StrokeFitter>(&page_, next_stroke_id_++));
@@ -63,7 +63,7 @@ void SketchyDemo::ContinueTouch(uint64_t touch_id,
                                 const double* y_positions,
                                 size_t position_count) {
   auto it = stroke_fitters_.find(touch_id);
-  FTL_CHECK(it != stroke_fitters_.end());
+  FXL_CHECK(it != stroke_fitters_.end());
   auto& fitter = it->second;
   std::vector<sketchy::vec2> positions;
   positions.reserve(position_count);
@@ -78,7 +78,7 @@ void SketchyDemo::EndTouch(uint64_t touch_id,
                            double x_position,
                            double y_position) {
   auto it = stroke_fitters_.find(touch_id);
-  FTL_CHECK(it != stroke_fitters_.end());
+  FXL_CHECK(it != stroke_fitters_.end());
   auto& fitter = it->second;
   fitter->ContinueStroke({sketchy::vec2(static_cast<float>(x_position),
                                         static_cast<float>(y_position))},

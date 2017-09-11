@@ -149,7 +149,7 @@ source_set("common") {
     "//garnet/lib/escher/escher",
     "//garnet/lib/escher/examples/common",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 

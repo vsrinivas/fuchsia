@@ -112,7 +112,7 @@ const DataT* Object::shape_modifier_data() const {
   if (it == shape_modifier_data_.end()) {
     return nullptr;
   } else {
-    FTL_DCHECK(it->second.size() == sizeof(DataT));
+    FXL_DCHECK(it->second.size() == sizeof(DataT));
     return reinterpret_cast<const DataT*>(it->second.data());
   }
 }

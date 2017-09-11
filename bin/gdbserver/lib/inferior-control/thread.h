@@ -9,8 +9,8 @@
 #include <magenta/syscalls/exception.h>
 #include <magenta/types.h>
 
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 #include "arch.h"
 #include "breakpoint.h"
@@ -46,7 +46,7 @@ class Thread final {
   std::string GetDebugName() const;
 
   // Returns a weak pointer to this Thread instance.
-  ftl::WeakPtr<Thread> AsWeakPtr();
+  fxl::WeakPtr<Thread> AsWeakPtr();
 
   // Returns a pointer to the arch::Registers object associated with this
   // thread. The returned pointer is owned by this Thread instance and should
@@ -133,9 +133,9 @@ class Thread final {
 
   // Note: This should remain the last member so it'll be destroyed and
   // invalidate its weak pointers before any other members are destroyed.
-  ftl::WeakPtrFactory<Thread> weak_ptr_factory_;
+  fxl::WeakPtrFactory<Thread> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Thread);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Thread);
 };
 
 }  // namespace debugserver

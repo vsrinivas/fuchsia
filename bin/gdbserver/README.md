@@ -254,7 +254,7 @@ finished for basic debugging to work:
 - user muscle memory will make them want to type "debugserver :7000 ..."
   instead of "debugserver 7000 ...", should stay consistent
 - downgrade some errors to INFO (e.g., for unsupported optional commands)
-- some FTL_DCHECKs in application independent code assume the app is gdbserver,
+- some FXL_DCHECKs in application independent code assume the app is gdbserver,
   and may need to be replaced with non-fatal failures
 - attach (waiting on suspend/resume)
 - Ctrl-C from host gdb (waiting on suspend/resume)

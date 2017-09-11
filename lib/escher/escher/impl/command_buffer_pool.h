@@ -9,7 +9,7 @@
 #include "escher/impl/command_buffer.h"
 #include "escher/impl/command_buffer_sequencer.h"
 #include "escher/vk/vulkan_context.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace escher {
 namespace impl {
@@ -60,7 +60,7 @@ class CommandBufferPool : CommandBufferSequencerController {
   std::queue<std::unique_ptr<CommandBuffer>> free_buffers_;
   std::queue<std::unique_ptr<CommandBuffer>> pending_buffers_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CommandBufferPool);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CommandBufferPool);
 };
 
 }  // namespace impl

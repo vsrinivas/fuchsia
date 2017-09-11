@@ -14,7 +14,7 @@
 namespace scene_manager {
 
 class HostMemory;
-using HostMemoryPtr = ftl::RefPtr<HostMemory>;
+using HostMemoryPtr = fxl::RefPtr<HostMemory>;
 
 // Wraps a CPU host memory-backed VMO.
 class HostMemory : public Memory {
@@ -51,7 +51,7 @@ class HostMemory : public Memory {
   uint64_t size() const { return size_; }
 
  private:
-  ftl::RefPtr<mtl::SharedVmo> shared_vmo_;
+  fxl::RefPtr<mtl::SharedVmo> shared_vmo_;
   uint64_t size_;
 };
 

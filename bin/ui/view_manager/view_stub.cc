@@ -9,7 +9,7 @@
 #include "garnet/bin/ui/view_manager/view_registry.h"
 #include "garnet/bin/ui/view_manager/view_state.h"
 #include "garnet/bin/ui/view_manager/view_tree_state.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace view_manager {
 
@@ -38,9 +38,9 @@ ViewStub::ViewStub(ViewRegistry* registry,
       owner_(mozart::ViewOwnerPtr::Create(std::move(owner))),
       host_import_token_(std::move(host_import_token)),
       weak_factory_(this) {
-  FTL_DCHECK(registry_);
-  FTL_DCHECK(owner_);
-  FTL_DCHECK(host_import_token_);
+  FXL_DCHECK(registry_);
+  FXL_DCHECK(owner_);
+  FXL_DCHECK(host_import_token_);
 
   owner_.set_connection_error_handler([this] { OnViewResolved(nullptr); });
 
@@ -54,7 +54,7 @@ ViewStub::~ViewStub() {
   // destroyed.  The |ViewRegistry| is responsible for maintaining the
   // invariant that all |ViewState| objects are owned so by the time we
   // get here, the view should have found a new owner or been unregistered.
-  FTL_DCHECK(is_unavailable());
+  FXL_DCHECK(is_unavailable());
 }
 
 ViewContainerState* ViewStub::container() const {
@@ -62,9 +62,9 @@ ViewContainerState* ViewStub::container() const {
 }
 
 void ViewStub::AttachView(ViewState* state) {
-  FTL_DCHECK(state);
-  FTL_DCHECK(!state->view_stub());
-  FTL_DCHECK(is_pending());
+  FXL_DCHECK(state);
+  FXL_DCHECK(!state->view_stub());
+  FXL_DCHECK(is_pending());
 
   state_ = state;
   state_->set_view_stub(this);
@@ -72,7 +72,7 @@ void ViewStub::AttachView(ViewState* state) {
 }
 
 void ViewStub::SetProperties(mozart::ViewPropertiesPtr properties) {
-  FTL_DCHECK(!is_unavailable());
+  FXL_DCHECK(!is_unavailable());
 
   properties_ = std::move(properties);
 }
@@ -83,7 +83,7 @@ ViewState* ViewStub::ReleaseView() {
 
   ViewState* state = state_;
   if (state) {
-    FTL_DCHECK(state->view_stub() == this);
+    FXL_DCHECK(state->view_stub() == this);
     state->set_view_stub(nullptr);
     state_ = nullptr;
     SetTreeForChildrenOfView(state, nullptr);
@@ -94,8 +94,8 @@ ViewState* ViewStub::ReleaseView() {
 }
 
 void ViewStub::SetContainer(ViewContainerState* container, uint32_t key) {
-  FTL_DCHECK(container);
-  FTL_DCHECK(!tree_ && !parent_);
+  FXL_DCHECK(container);
+  FXL_DCHECK(!tree_ && !parent_);
 
   key_ = key;
   parent_ = container->AsViewState();
@@ -104,7 +104,7 @@ void ViewStub::SetContainer(ViewContainerState* container, uint32_t key) {
       SetTreeRecursively(parent_->view_stub()->tree());
   } else {
     ViewTreeState* tree = container->AsViewTreeState();
-    FTL_DCHECK(tree);
+    FXL_DCHECK(tree);
     SetTreeRecursively(tree);
   }
 }
@@ -136,11 +136,11 @@ void ViewStub::OnViewResolved(mozart::ViewTokenPtr view_token) {
     // While we were waiting for GetToken(), the view was transferred to a new
     // ViewOwner). Now that we got the GetToken() call, transfer the ownership
     // correctly internally.
-    FTL_DCHECK(!container());  // Make sure we're removed from the view tree
-    FTL_DCHECK(pending_view_owner_transfer_->view_stub_ != nullptr);
-    FTL_DCHECK(pending_view_owner_transfer_->transferred_view_owner_request_
+    FXL_DCHECK(!container());  // Make sure we're removed from the view tree
+    FXL_DCHECK(pending_view_owner_transfer_->view_stub_ != nullptr);
+    FXL_DCHECK(pending_view_owner_transfer_->transferred_view_owner_request_
                    .is_pending());
-    FTL_DCHECK(owner_);
+    FXL_DCHECK(owner_);
     owner_.reset();
 
     registry_->TransferViewOwner(
@@ -159,7 +159,7 @@ void ViewStub::OnViewResolved(mozart::ViewTokenPtr view_token) {
     // 1. We got the ViewOwner GetToken() callback as expected.
     // 2. Or, the ViewOwner was closed before the GetToken() callback (in
     // which case view_token is null).
-    FTL_DCHECK(owner_);
+    FXL_DCHECK(owner_);
     owner_.reset();
     registry_->OnViewResolved(this, std::move(view_token));
   }
@@ -168,8 +168,8 @@ void ViewStub::OnViewResolved(mozart::ViewTokenPtr view_token) {
 void ViewStub::TransferViewOwnerWhenViewResolved(
     std::unique_ptr<ViewStub> view_stub,
     fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
-  FTL_DCHECK(!container());  // Make sure we've been removed from the view tree
-  FTL_DCHECK(!pending_view_owner_transfer_);
+  FXL_DCHECK(!container());  // Make sure we've been removed from the view tree
+  FXL_DCHECK(!pending_view_owner_transfer_);
 
   // When |OnViewResolved| gets called, we'll just transfer ownership
   // of the view instead of calling |ViewRegistry.OnViewResolved|.
@@ -187,8 +187,8 @@ void ViewStub::ReleaseHost() {
 }
 
 void ViewStub::ImportHostNode(scenic_lib::Session* session) {
-  FTL_DCHECK(host_import_token_);
-  FTL_DCHECK(!host_node_);
+  FXL_DCHECK(host_import_token_);
+  FXL_DCHECK(!host_node_);
 
   host_node_.reset(new scenic_lib::ImportNode(session));
   host_node_->Bind(std::move(host_import_token_));

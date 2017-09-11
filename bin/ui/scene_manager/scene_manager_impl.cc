@@ -19,7 +19,7 @@ void SceneManagerImpl::CreateSession(
 
 void SceneManagerImpl::GetDisplayInfo(const GetDisplayInfoCallback& callback) {
   Display* display = engine_->display_manager()->default_display();
-  FTL_CHECK(display) << "There must be a default display.";
+  FXL_CHECK(display) << "There must be a default display.";
 
   auto info = scenic::DisplayInfo::New();
   info->physical_width = display->width();

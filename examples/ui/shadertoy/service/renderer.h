@@ -14,7 +14,7 @@
 namespace shadertoy {
 
 class Renderer;
-using RendererPtr = ftl::RefPtr<Renderer>;
+using RendererPtr = fxl::RefPtr<Renderer>;
 
 class Renderer : public escher::Renderer {
  public:

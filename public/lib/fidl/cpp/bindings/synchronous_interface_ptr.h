@@ -14,8 +14,8 @@
 #include "lib/fidl/cpp/bindings/internal/synchronous_connector.h"
 #include "lib/fidl/cpp/bindings/macros.h"
 #include "lib/fidl/cpp/bindings/message_validator.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 
 namespace fidl {
 
@@ -61,8 +61,8 @@ class SynchronousInterfacePtr {
   typename Interface::Synchronous_* get() { return proxy_.get(); }
 
   typename Interface::Synchronous_* operator->() {
-    FTL_DCHECK(connector_);
-    FTL_DCHECK(proxy_);
+    FXL_DCHECK(connector_);
+    FXL_DCHECK(proxy_);
     return proxy_.get();
   }
   typename Interface::Synchronous_& operator*() { return *operator->(); }

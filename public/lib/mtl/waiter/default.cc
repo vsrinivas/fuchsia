@@ -4,7 +4,7 @@
 
 #include "lib/fidl/cpp/waiter/default.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace mtl {
@@ -24,23 +24,23 @@ class HandleWatcher : public MessageLoopHandler {
 
   void Start(mx_signals_t signals, mx_time_t timeout) {
     MessageLoop* message_loop = MessageLoop::GetCurrent();
-    FTL_DCHECK(message_loop) << "DefaultAsyncWaiter requires a MessageLoop";
-    ftl::TimeDelta timeout_delta;
+    FXL_DCHECK(message_loop) << "DefaultAsyncWaiter requires a MessageLoop";
+    fxl::TimeDelta timeout_delta;
     if (timeout == MX_TIME_INFINITE)
-      timeout_delta = ftl::TimeDelta::Max();
+      timeout_delta = fxl::TimeDelta::Max();
     else
-      timeout_delta = ftl::TimeDelta::FromNanoseconds(timeout);
+      timeout_delta = fxl::TimeDelta::FromNanoseconds(timeout);
     key_ = message_loop->AddHandler(this, handle_, signals, timeout_delta);
   }
 
  protected:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override {
-    FTL_DCHECK(handle_ == handle);
+    FXL_DCHECK(handle_ == handle);
     CallCallback(MX_OK, pending, count);
   }
 
   void OnHandleError(mx_handle_t handle, mx_status_t status) override {
-    FTL_DCHECK(handle_ == handle);
+    FXL_DCHECK(handle_ == handle);
     CallCallback(status, MX_SIGNAL_NONE, 0);
   }
 
@@ -57,7 +57,7 @@ class HandleWatcher : public MessageLoopHandler {
   FidlAsyncWaitCallback callback_;
   void* context_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(HandleWatcher);
+  FXL_DISALLOW_COPY_AND_ASSIGN(HandleWatcher);
 };
 
 FidlAsyncWaitID AsyncWait(mx_handle_t handle,
@@ -82,7 +82,7 @@ constexpr FidlAsyncWaiter kDefaultAsyncWaiter = {AsyncWait, CancelWait};
 
 namespace fidl {
 
-FTL_EXPORT const FidlAsyncWaiter* GetDefaultAsyncWaiter() {
+FXL_EXPORT const FidlAsyncWaiter* GetDefaultAsyncWaiter() {
   return &mtl::kDefaultAsyncWaiter;
 }
 

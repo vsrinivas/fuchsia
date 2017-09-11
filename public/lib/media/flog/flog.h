@@ -12,7 +12,7 @@
 #include "lib/media/fidl/flog/flog.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/message.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/handles/object_info.h"
 
 namespace flog {
@@ -157,7 +157,7 @@ class Flog {
 
   // Deletes the flog logger singleton.
   static void Destroy() {
-    FTL_DCHECK(logger_);
+    FXL_DCHECK(logger_);
     logger_.reset();
   }
 
@@ -225,8 +225,8 @@ class FlogProxy : public T::Proxy_ {
 
 template <typename T>
 mx_koid_t GetInterfaceRequestKoid(fidl::InterfaceRequest<T>* request) {
-  FTL_DCHECK(request != nullptr);
-  FTL_DCHECK(*request);
+  FXL_DCHECK(request != nullptr);
+  FXL_DCHECK(*request);
   mx::channel channel = request->PassChannel();
   mx_koid_t result = mtl::GetKoid(channel.get());
   request->Bind(std::move(channel));
@@ -235,8 +235,8 @@ mx_koid_t GetInterfaceRequestKoid(fidl::InterfaceRequest<T>* request) {
 
 template <typename T>
 mx_koid_t GetInterfacePtrRelatedKoid(fidl::InterfacePtr<T>* ptr) {
-  FTL_DCHECK(ptr != nullptr);
-  FTL_DCHECK(*ptr);
+  FXL_DCHECK(ptr != nullptr);
+  FXL_DCHECK(*ptr);
   fidl::InterfaceHandle<T> handle = ptr->PassInterfaceHandle();
   mx_koid_t result = mtl::GetRelatedKoid(handle.handle().get());
   ptr->Bind(std::move(handle));

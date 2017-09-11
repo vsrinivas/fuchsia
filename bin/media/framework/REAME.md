@@ -102,7 +102,7 @@ external events.
 
 ## Threading Model
 
-The framework has a highly flexible threading model based on FTL's `TaskRunner`
+The framework has a highly flexible threading model based on FXL's `TaskRunner`
 class. Each node (and its hosting stage) has its own task queue that allows
 the execution of code in the node (and stage) to be effectively serialized.
 The node may call its `PostTask` to post tasks to this queue. 'Active' nodes

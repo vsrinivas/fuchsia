@@ -6,8 +6,8 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 namespace impl {
@@ -15,10 +15,10 @@ class GpuMemSuballocation;
 }
 
 class GpuMem;
-typedef ftl::RefPtr<GpuMem> GpuMemPtr;
+typedef fxl::RefPtr<GpuMem> GpuMemPtr;
 
 // Ref-counted wrapper around a vk::DeviceMemory.  Supports sub-allocation.
-class GpuMem : public ftl::RefCountedThreadSafe<GpuMem> {
+class GpuMem : public fxl::RefCountedThreadSafe<GpuMem> {
  public:
   // Create a GpuMem that wraps a newly-allocated vk::DeviceMemory, which will
   // be destroyed when the GpuMem dies.
@@ -71,7 +71,7 @@ class GpuMem : public ftl::RefCountedThreadSafe<GpuMem> {
   vk::DeviceSize offset_;
   uint8_t* mapped_ptr_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(GpuMem);
+  FXL_DISALLOW_COPY_AND_ASSIGN(GpuMem);
 };
 
 }  // namespace escher

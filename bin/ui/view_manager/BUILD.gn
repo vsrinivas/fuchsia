@@ -50,7 +50,7 @@ source_set("lib") {
     "//garnet/bin/ui/view_manager/input",
     "//garnet/bin/ui/view_manager/internal",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }

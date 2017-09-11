@@ -12,8 +12,8 @@
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
 #include "lib/fidl/cpp/bindings/message_validator.h"
 #include "lib/fidl/cpp/waiter/default.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/time/time_delta.h"
 
 namespace fidl {
 namespace internal {
@@ -36,7 +36,7 @@ class Router : public MessageReceiverWithResponder {
   // Sets the error handler to receive notifications when an error is
   // encountered while reading from the channel or waiting to read from the
   // channel.
-  void set_connection_error_handler(ftl::Closure error_handler) {
+  void set_connection_error_handler(fxl::Closure error_handler) {
     connector_.set_connection_error_handler(std::move(error_handler));
   }
 
@@ -62,7 +62,7 @@ class Router : public MessageReceiverWithResponder {
   // for returning |false| was |MX_ERR_SHOULD_WAIT| or
   // |MX_ERR_TIMED_OUT|.
   // Use |encountered_error| to see if an error occurred.
-  bool WaitForIncomingMessage(ftl::TimeDelta timeout) {
+  bool WaitForIncomingMessage(fxl::TimeDelta timeout) {
     return connector_.WaitForIncomingMessage(timeout);
   }
 

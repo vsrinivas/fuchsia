@@ -29,7 +29,7 @@ class WaitableResource : public Resource {
  private:
   SemaphorePtr wait_semaphore_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(WaitableResource);
+  FXL_DISALLOW_COPY_AND_ASSIGN(WaitableResource);
 };
 
 // Inline function definitions.
@@ -37,7 +37,7 @@ class WaitableResource : public Resource {
 inline void WaitableResource::SetWaitSemaphore(SemaphorePtr semaphore) {
   // This is not necessarily an error, but the consequences will depend on the
   // specific usage-pattern that first triggers it; we'll deal with it then.
-  FTL_CHECK(!wait_semaphore_);
+  FXL_CHECK(!wait_semaphore_);
   wait_semaphore_ = std::move(semaphore);
 }
 

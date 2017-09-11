@@ -15,8 +15,8 @@
 #include "garnet/bin/netconnector/mdns/mdns_addresses.h"
 #include "garnet/bin/netconnector/mdns/mdns_names.h"
 #include "garnet/bin/netconnector/mdns/resource_renewer.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace netconnector {
@@ -26,8 +26,8 @@ namespace {
 static constexpr uint32_t kCancelTimeToLive =
     std::numeric_limits<uint32_t>::max();
 
-static const ftl::TimeDelta kMessageAggregationWindowSize =
-    ftl::TimeDelta::FromMilliseconds(100);
+static const fxl::TimeDelta kMessageAggregationWindowSize =
+    fxl::TimeDelta::FromMilliseconds(100);
 
 }  // namespace
 
@@ -61,7 +61,7 @@ bool Mdns::Start(const std::string& host_name) {
       [this](std::unique_ptr<DnsMessage> message,
              const SocketAddress& source_address, uint32_t interface_index) {
         if (verbose_) {
-          FTL_LOG(INFO) << "Inbound message from " << source_address
+          FXL_LOG(INFO) << "Inbound message from " << source_address
                         << " through interface " << interface_index << ":"
                         << *message;
         }
@@ -109,9 +109,9 @@ void Mdns::Stop() {
 }
 
 void Mdns::ResolveHostName(const std::string& host_name,
-                           ftl::TimePoint timeout,
+                           fxl::TimePoint timeout,
                            const ResolveHostNameCallback& callback) {
-  FTL_DCHECK(callback);
+  FXL_DCHECK(callback);
 
   std::string host_full_name = MdnsNames::LocalHostFullName(host_name);
 
@@ -122,8 +122,8 @@ void Mdns::ResolveHostName(const std::string& host_name,
 
 void Mdns::SubscribeToService(const std::string& service_name,
                               const ServiceInstanceCallback& callback) {
-  FTL_DCHECK(MdnsNames::IsValidServiceName(service_name));
-  FTL_DCHECK(callback);
+  FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
+  FXL_DCHECK(callback);
 
   std::string service_full_name = MdnsNames::LocalServiceFullName(service_name);
 
@@ -133,7 +133,7 @@ void Mdns::SubscribeToService(const std::string& service_name,
 }
 
 void Mdns::UnsubscribeToService(const std::string& service_name) {
-  FTL_DCHECK(MdnsNames::IsValidServiceName(service_name));
+  FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
 
   TellAgentToQuit(MdnsNames::LocalServiceFullName(service_name));
 }
@@ -142,7 +142,7 @@ void Mdns::PublishServiceInstance(const std::string& service_name,
                                   const std::string& instance_name,
                                   IpPort port,
                                   const std::vector<std::string>& text) {
-  FTL_DCHECK(MdnsNames::IsValidServiceName(service_name));
+  FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
 
   std::string instance_full_name =
       MdnsNames::LocalInstanceFullName(instance_name, service_name);
@@ -156,26 +156,26 @@ void Mdns::PublishServiceInstance(const std::string& service_name,
 
 void Mdns::UnpublishServiceInstance(const std::string& instance_name,
                                     const std::string& service_name) {
-  FTL_DCHECK(MdnsNames::IsValidServiceName(service_name));
+  FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
   TellAgentToQuit(
       MdnsNames::LocalInstanceFullName(instance_name, service_name));
 }
 
-void Mdns::WakeAt(std::shared_ptr<MdnsAgent> agent, ftl::TimePoint when) {
-  FTL_DCHECK(agent);
+void Mdns::WakeAt(std::shared_ptr<MdnsAgent> agent, fxl::TimePoint when) {
+  FXL_DCHECK(agent);
   wake_queue_.emplace(when, agent);
 }
 
 void Mdns::SendQuestion(std::shared_ptr<DnsQuestion> question,
-                        ftl::TimePoint when) {
-  FTL_DCHECK(question);
+                        fxl::TimePoint when) {
+  FXL_DCHECK(question);
   question_queue_.emplace(when, question);
 }
 
 void Mdns::SendResource(std::shared_ptr<DnsResource> resource,
                         MdnsResourceSection section,
-                        ftl::TimePoint when) {
-  FTL_DCHECK(resource);
+                        fxl::TimePoint when) {
+  FXL_DCHECK(resource);
 
   if (section == MdnsResourceSection::kExpired) {
     // Expirations are distributed to local agents.
@@ -189,7 +189,7 @@ void Mdns::SendResource(std::shared_ptr<DnsResource> resource,
   resource_queue_.emplace(when, resource, section);
 }
 
-void Mdns::SendAddresses(MdnsResourceSection section, ftl::TimePoint when) {
+void Mdns::SendAddresses(MdnsResourceSection section, fxl::TimePoint when) {
   // Placeholder for address resource record.
   resource_queue_.emplace(when, address_placeholder_, section);
 }
@@ -216,7 +216,7 @@ void Mdns::SendMessage() {
   // advantages:
   // 1) We get more records per message, which is more efficient.
   // 2) Agents can schedule records in short sequences if sequence is important.
-  ftl::TimePoint now = ftl::TimePoint::Now() + kMessageAggregationWindowSize;
+  fxl::TimePoint now = fxl::TimePoint::Now() + kMessageAggregationWindowSize;
 
   DnsMessage message;
 
@@ -258,7 +258,7 @@ void Mdns::SendMessage() {
         message.additionals_.push_back(resource_queue_.top().resource_);
         break;
       case MdnsResourceSection::kExpired:
-        FTL_DCHECK(false);
+        FXL_DCHECK(false);
         break;
     }
 
@@ -278,7 +278,7 @@ void Mdns::SendMessage() {
   }
 
   if (verbose_) {
-    FTL_LOG(INFO) << "Outbound message: " << message;
+    FXL_LOG(INFO) << "Outbound message: " << message;
   }
 
   // V6 interface transceivers will treat this as |kV6Multicast|.
@@ -320,7 +320,7 @@ void Mdns::ReceiveResource(const DnsResource& resource,
 }
 
 void Mdns::PostTask() {
-  ftl::TimePoint when = ftl::TimePoint::Max();
+  fxl::TimePoint when = fxl::TimePoint::Max();
 
   if (!wake_queue_.empty()) {
     when = wake_queue_.top().time_;
@@ -334,7 +334,7 @@ void Mdns::PostTask() {
     when = resource_queue_.top().time_;
   }
 
-  if (when == ftl::TimePoint::Max()) {
+  if (when == fxl::TimePoint::Max()) {
     return;
   }
 
@@ -351,7 +351,7 @@ void Mdns::PostTask() {
           post_task_queue_.pop();
         }
 
-        ftl::TimePoint now = ftl::TimePoint::Now();
+        fxl::TimePoint now = fxl::TimePoint::Now();
 
         while (!wake_queue_.empty() && wake_queue_.top().time_ <= now) {
           std::shared_ptr<MdnsAgent> agent = wake_queue_.top().agent_;

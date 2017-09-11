@@ -10,8 +10,8 @@ namespace debugserver {
 namespace {
 
 void ExpectPacketEquals(const std::vector<char>& packet,
-                        const ftl::StringView& expected) {
-  EXPECT_EQ(expected, ftl::StringView(packet.data(), packet.size()));
+                        const fxl::StringView& expected) {
+  EXPECT_EQ(expected, fxl::StringView(packet.data(), packet.size()));
 }
 
 TEST(StopReplyPacketTest, ReceivedSignal) {

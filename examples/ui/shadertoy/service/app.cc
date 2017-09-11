@@ -20,7 +20,7 @@ App::App(app::ApplicationContext* app_context, escher::Escher* escher)
   app_context->outgoing_services()
       ->AddService<mozart::example::ShadertoyFactory>([this](
           fidl::InterfaceRequest<mozart::example::ShadertoyFactory> request) {
-        FTL_LOG(INFO) << "Accepting connection to ShadertoyFactory";
+        FXL_LOG(INFO) << "Accepting connection to ShadertoyFactory";
         bindings_.AddBinding(factory_.get(), std::move(request));
       });
 }

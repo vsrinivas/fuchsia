@@ -4,7 +4,7 @@
 
 #include "breakpoint.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 #include "process.h"
 #include "registers.h"
@@ -24,13 +24,13 @@ bool SoftwareBreakpoint::Insert() {
   // TODO: Handle breakpoints in unloaded solibs.
 
   if (IsInserted()) {
-    FTL_LOG(WARNING) << "Breakpoint already inserted";
+    FXL_LOG(WARNING) << "Breakpoint already inserted";
     return false;
   }
 
   // We only support inserting the single byte Int3 instruction.
   if (kind() != 1) {
-    FTL_LOG(ERROR) << "Software breakpoint kind must be 1 on amd64";
+    FXL_LOG(ERROR) << "Software breakpoint kind must be 1 on amd64";
     return false;
   }
 
@@ -38,13 +38,13 @@ bool SoftwareBreakpoint::Insert() {
   // that it can be restored later.
   uint8_t orig;
   if (!owner()->process()->ReadMemory(address(), &orig, 1)) {
-    FTL_LOG(ERROR) << "Failed to obtain current contents of memory";
+    FXL_LOG(ERROR) << "Failed to obtain current contents of memory";
     return false;
   }
 
   // Insert the Int3 instruction.
   if (!owner()->process()->WriteMemory(address(), &kInt3, 1)) {
-    FTL_LOG(ERROR) << "Failed to insert software breakpoint";
+    FXL_LOG(ERROR) << "Failed to insert software breakpoint";
     return false;
   }
 
@@ -54,15 +54,15 @@ bool SoftwareBreakpoint::Insert() {
 
 bool SoftwareBreakpoint::Remove() {
   if (!IsInserted()) {
-    FTL_LOG(WARNING) << "Breakpoint not inserted";
+    FXL_LOG(WARNING) << "Breakpoint not inserted";
     return false;
   }
 
-  FTL_DCHECK(original_bytes_.size() == 1);
+  FXL_DCHECK(original_bytes_.size() == 1);
 
   // Restore the original contents.
   if (!owner()->process()->WriteMemory(address(), original_bytes_.data(), 1)) {
-    FTL_LOG(ERROR) << "Failed to restore original instructions";
+    FXL_LOG(ERROR) << "Failed to restore original instructions";
     return false;
   }
 
@@ -82,15 +82,15 @@ bool SetRflagsTF(Thread* thread, bool enable) {
   arch::Registers* registers = thread->registers();
 
   if (!registers->RefreshGeneralRegisters()) {
-    FTL_LOG(ERROR) << "Failed to refresh general regs";
+    FXL_LOG(ERROR) << "Failed to refresh general regs";
     return false;
   }
   if (!registers->SetSingleStep(enable)) {
-    FTL_LOG(ERROR) << "Failed to set rflags.TF";
+    FXL_LOG(ERROR) << "Failed to set rflags.TF";
     return false;
   }
   if (!registers->WriteGeneralRegisters()) {
-    FTL_LOG(ERROR) << "Failed to write general regs";
+    FXL_LOG(ERROR) << "Failed to write general regs";
     return false;
   }
 
@@ -101,7 +101,7 @@ bool SetRflagsTF(Thread* thread, bool enable) {
 
 bool SingleStepBreakpoint::Insert() {
   if (IsInserted()) {
-    FTL_LOG(WARNING) << "Breakpoint already inserted";
+    FXL_LOG(WARNING) << "Breakpoint already inserted";
     return false;
   }
 
@@ -116,7 +116,7 @@ bool SingleStepBreakpoint::Insert() {
 
 bool SingleStepBreakpoint::Remove() {
   if (!IsInserted()) {
-    FTL_LOG(WARNING) << "Breakpoint not inserted";
+    FXL_LOG(WARNING) << "Breakpoint not inserted";
     return false;
   }
 

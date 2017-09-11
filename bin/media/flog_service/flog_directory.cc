@@ -17,9 +17,9 @@
 #include <string>
 #include <utility>
 
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/files/eintr_wrapper.h"
-#include "lib/ftl/files/path.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/eintr_wrapper.h"
+#include "lib/fxl/files/path.h"
 
 namespace flog {
 namespace {
@@ -59,7 +59,7 @@ const std::string FlogDirectory::kDirName = "/app_local/flog_viewer";
 
 FlogDirectory::FlogDirectory() {
   bool result = files::CreateDirectory(kDirName);
-  FTL_DCHECK(result) << "Failed to create directory " << kDirName;
+  FXL_DCHECK(result) << "Failed to create directory " << kDirName;
 }
 
 FlogDirectory::~FlogDirectory() {}
@@ -83,14 +83,14 @@ void FlogDirectory::GetExistingFiles(GetExistingFilesCallback callback) {
   callback(std::move(labels_by_id));
 }
 
-ftl::UniqueFD FlogDirectory::GetFile(uint32_t id,
+fxl::UniqueFD FlogDirectory::GetFile(uint32_t id,
                                      const std::string& label,
                                      bool create) {
   std::string path = LogFilePath(id, label);
   if (create) {
-    return ftl::UniqueFD(HANDLE_EINTR(creat(path.c_str(), 0644)));
+    return fxl::UniqueFD(HANDLE_EINTR(creat(path.c_str(), 0644)));
   } else {
-    return ftl::UniqueFD(open(path.c_str(), O_RDONLY));
+    return fxl::UniqueFD(open(path.c_str(), O_RDONLY));
   }
 }
 
@@ -110,8 +110,8 @@ std::string FlogDirectory::LogFilePath(uint32_t id, const std::string& label) {
 bool FlogDirectory::ParseLogFilePath(const std::string& path,
                                      uint32_t* id_out,
                                      std::string* label_out) {
-  FTL_DCHECK(id_out != nullptr);
-  FTL_DCHECK(label_out != nullptr);
+  FXL_DCHECK(id_out != nullptr);
+  FXL_DCHECK(label_out != nullptr);
 
   size_t separator = path.rfind('/');
   std::string name = path.substr(separator + 1);

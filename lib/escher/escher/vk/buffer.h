@@ -10,7 +10,7 @@
 namespace escher {
 
 class Buffer;
-typedef ftl::RefPtr<Buffer> BufferPtr;
+typedef fxl::RefPtr<Buffer> BufferPtr;
 
 // Escher's standard interface to Vulkan buffer objects.
 class Buffer : public WaitableResource {

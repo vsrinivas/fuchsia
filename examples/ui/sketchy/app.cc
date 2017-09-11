@@ -14,11 +14,11 @@ App::App()
       session_(std::make_unique<scenic_lib::Session>(scene_manager_.get())),
       canvas_(std::make_unique<Canvas>(context_.get())) {
   session_->set_connection_error_handler([this] {
-    FTL_LOG(INFO) << "sketchy_example: lost connection to scenic::Session.";
+    FXL_LOG(INFO) << "sketchy_example: lost connection to scenic::Session.";
     loop_->QuitNow();
   });
   scene_manager_.set_connection_error_handler([this] {
-    FTL_LOG(INFO)
+    FXL_LOG(INFO)
         << "sketchy_example: lost connection to scenic::SceneManager.";
     loop_->QuitNow();
   });

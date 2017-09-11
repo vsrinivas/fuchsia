@@ -4,7 +4,7 @@
 
 #include "lib/ui/scenic/client/host_image_cycler.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace scenic_lib {
 
@@ -25,7 +25,7 @@ const HostImage* HostImageCycler::AcquireImage(
     uint32_t stride,
     scenic::ImageInfo::PixelFormat pixel_format,
     scenic::ImageInfo::ColorSpace color_space) {
-  FTL_DCHECK(!acquired_image_);
+  FXL_DCHECK(!acquired_image_);
 
   // Update the image pool and content shape.
   scenic::ImageInfo image_info;
@@ -38,17 +38,17 @@ const HostImage* HostImageCycler::AcquireImage(
   reconfigured_ = image_pool_.Configure(&image_info);
 
   const HostImage* image = image_pool_.GetImage(image_index_);
-  FTL_DCHECK(image);
+  FXL_DCHECK(image);
   acquired_image_ = true;
   return image;
 }
 
 void HostImageCycler::ReleaseAndSwapImage() {
-  FTL_DCHECK(acquired_image_);
+  FXL_DCHECK(acquired_image_);
   acquired_image_ = false;
 
   const HostImage* image = image_pool_.GetImage(image_index_);
-  FTL_DCHECK(image);
+  FXL_DCHECK(image);
   content_material_.SetTexture(*image);
 
   if (reconfigured_) {

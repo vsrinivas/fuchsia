@@ -199,7 +199,7 @@ TEST(GpuMem, RecursiveAllocations) {
   const vk::DeviceSize kOffset3 = 10;
 
   GpuMemPtr mem =
-      ftl::MakeRefCounted<FakeGpuMem>(kVkMem, kSize0, kOffset0, nullptr);
+      fxl::MakeRefCounted<FakeGpuMem>(kVkMem, kSize0, kOffset0, nullptr);
   auto sub = mem->Allocate(kSize1, kOffset1);
   auto subsub = sub->Allocate(kSize2, kOffset2);
   auto subsubsub = subsub->Allocate(kSize3, kOffset3);
@@ -226,7 +226,7 @@ TEST(GpuMem, MappedPointer) {
   const vk::DeviceSize kSize3 = 20;
   const vk::DeviceSize kOffset3 = 20;
 
-  GpuMemPtr mem = ftl::MakeRefCounted<FakeGpuMem>(vk::DeviceMemory(), kSize1,
+  GpuMemPtr mem = fxl::MakeRefCounted<FakeGpuMem>(vk::DeviceMemory(), kSize1,
                                                   kOffset1, kNullPtr);
   GpuMemPtr sub = mem->Allocate(kSize2, kOffset2);
   GpuMemPtr subsub = sub->Allocate(kSize3, kOffset3);
@@ -234,7 +234,7 @@ TEST(GpuMem, MappedPointer) {
   EXPECT_EQ(nullptr, sub->mapped_ptr());
   EXPECT_EQ(nullptr, subsub->mapped_ptr());
 
-  mem = ftl::MakeRefCounted<FakeGpuMem>(vk::DeviceMemory(), kSize1, kOffset1,
+  mem = fxl::MakeRefCounted<FakeGpuMem>(vk::DeviceMemory(), kSize1, kOffset1,
                                         kFakePtr);
   sub = mem->Allocate(kSize2, kOffset2);
   subsub = sub->Allocate(kSize3, kOffset3);

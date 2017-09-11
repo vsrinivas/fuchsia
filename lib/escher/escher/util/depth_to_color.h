@@ -27,7 +27,7 @@ class DepthToColor {
   ImageFactory* const image_factory_;
   std::unique_ptr<impl::ComputeShader> kernel_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DepthToColor);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DepthToColor);
 };
 
 }  // namespace escher

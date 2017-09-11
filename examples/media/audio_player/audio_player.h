@@ -8,7 +8,7 @@
 #include "garnet/examples/media/audio_player/audio_player_params.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/fidl/net_media_player.fidl.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace examples {
 
@@ -30,7 +30,7 @@ class AudioPlayer {
   bool problem_shown_ = false;
   bool quit_when_done_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AudioPlayer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AudioPlayer);
 };
 
 }  // namespace examples

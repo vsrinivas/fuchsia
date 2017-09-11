@@ -7,7 +7,7 @@
 
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/ui/views/fidl/views.fidl.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace mozart {
 namespace test {
@@ -33,7 +33,7 @@ class MockViewContainerListener : public mozart::ViewContainerListener {
 
   OnMockChildAttachedCallback child_attached_callback_;
   OnMockChildUnavailable child_unavailable_callback_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(MockViewContainerListener);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MockViewContainerListener);
 };
 
 }  // namespace test

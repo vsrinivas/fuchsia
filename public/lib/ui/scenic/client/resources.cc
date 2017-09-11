@@ -5,7 +5,7 @@
 #include "lib/ui/scenic/client/resources.h"
 
 #include "lib/ui/scenic/fidl_helpers.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace scenic_lib {
 
@@ -105,14 +105,14 @@ Image::Image(Image&& moved)
 Image::~Image() = default;
 
 size_t Image::ComputeSize(const scenic::ImageInfo& image_info) {
-  FTL_DCHECK(image_info.tiling == scenic::ImageInfo::Tiling::LINEAR);
+  FXL_DCHECK(image_info.tiling == scenic::ImageInfo::Tiling::LINEAR);
 
   switch (image_info.pixel_format) {
     case scenic::ImageInfo::PixelFormat::BGRA_8:
       return image_info.height * image_info.stride;
   }
 
-  FTL_NOTREACHED();
+  FXL_NOTREACHED();
 }
 
 Buffer::Buffer(const Memory& memory, off_t memory_offset, size_t num_bytes)
@@ -267,18 +267,18 @@ ImportNode::ImportNode(Session* session) : ContainerNode(session) {}
 ImportNode::ImportNode(ImportNode&& moved) : ContainerNode(std::move(moved)) {}
 
 ImportNode::~ImportNode() {
-  FTL_DCHECK(is_bound_) << "Import was never bound.";
+  FXL_DCHECK(is_bound_) << "Import was never bound.";
 }
 
 void ImportNode::Bind(mx::eventpair import_token) {
-  FTL_DCHECK(!is_bound_);
+  FXL_DCHECK(!is_bound_);
   session()->Enqueue(NewImportResourceOp(id(), scenic::ImportSpec::NODE,
                                          std::move(import_token)));
   is_bound_ = true;
 }
 
 void ImportNode::BindAsRequest(mx::eventpair* out_export_token) {
-  FTL_DCHECK(!is_bound_);
+  FXL_DCHECK(!is_bound_);
   session()->Enqueue(NewImportResourceOpAsRequest(
       id(), scenic::ImportSpec::NODE, out_export_token));
   is_bound_ = true;

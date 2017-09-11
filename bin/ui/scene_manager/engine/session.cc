@@ -61,12 +61,12 @@ Session::Session(SessionId id,
       event_reporter_(event_reporter),
       resources_(error_reporter),
       weak_factory_(this) {
-  FTL_DCHECK(engine);
-  FTL_DCHECK(error_reporter);
+  FXL_DCHECK(engine);
+  FXL_DCHECK(error_reporter);
 }
 
 Session::~Session() {
-  FTL_DCHECK(!is_valid_);
+  FXL_DCHECK(!is_valid_);
 }
 
 bool Session::ApplyOp(const scenic::OpPtr& op) {
@@ -131,7 +131,7 @@ bool Session::ApplyOp(const scenic::OpPtr& op) {
       return ApplySetLabelOp(op->get_set_label());
     case scenic::Op::Tag::__UNKNOWN__:
       // FIDL validation should make this impossible.
-      FTL_CHECK(false);
+      FXL_CHECK(false);
       return false;
   }
 }
@@ -194,7 +194,7 @@ bool Session::ApplyCreateResourceOp(const scenic::CreateResourceOpPtr& op) {
       return ApplyCreateVariable(id, op->resource->get_variable());
     case scenic::Resource::Tag::__UNKNOWN__:
       // FIDL validation should make this impossible.
-      FTL_CHECK(false);
+      FXL_CHECK(false);
       return false;
   }
 }
@@ -224,7 +224,7 @@ bool Session::ApplyImportResourceOp(const scenic::ImportResourceOpPtr& op) {
            "no token provided.";
     return false;
   }
-  ImportPtr import = ftl::MakeRefCounted<Import>(this, op->id, op->spec,
+  ImportPtr import = fxl::MakeRefCounted<Import>(this, op->id, op->spec,
                                                  engine_->resource_linker());
   return engine_->resource_linker()->ImportResource(import.get(), op->spec,
                                                     std::move(op->token)) &&
@@ -538,7 +538,7 @@ bool Session::ApplyCreateImage(scenic::ResourceId id,
 
 bool Session::ApplyCreateImagePipe(scenic::ResourceId id,
                                    const scenic::ImagePipeArgsPtr& args) {
-  auto image_pipe = ftl::MakeRefCounted<ImagePipe>(
+  auto image_pipe = fxl::MakeRefCounted<ImagePipe>(
       this, id, std::move(args->image_pipe_request));
   return resources_.AddResource(id, image_pipe);
 }
@@ -767,32 +767,32 @@ ResourcePtr Session::CreateBuffer(scenic::ResourceId id,
     return ResourcePtr();
   }
 
-  return ftl::MakeRefCounted<Buffer>(this, id, std::move(gpu_memory), num_bytes,
+  return fxl::MakeRefCounted<Buffer>(this, id, std::move(gpu_memory), num_bytes,
                                      memory_offset);
 }
 
 ResourcePtr Session::CreateScene(scenic::ResourceId id,
                                  const scenic::ScenePtr& args) {
-  return ftl::MakeRefCounted<Scene>(this, id);
+  return fxl::MakeRefCounted<Scene>(this, id);
 }
 
 ResourcePtr Session::CreateCamera(scenic::ResourceId id,
                                   const scenic::CameraPtr& args) {
   if (auto scene = resources_.FindResource<Scene>(args->scene_id)) {
-    return ftl::MakeRefCounted<Camera>(this, id, std::move(scene));
+    return fxl::MakeRefCounted<Camera>(this, id, std::move(scene));
   }
   return ResourcePtr();
 }
 
 ResourcePtr Session::CreateRenderer(scenic::ResourceId id,
                                     const scenic::RendererPtr& args) {
-  return ftl::MakeRefCounted<Renderer>(this, id);
+  return fxl::MakeRefCounted<Renderer>(this, id);
 }
 
 ResourcePtr Session::CreateDirectionalLight(scenic::ResourceId id,
                                             escher::vec3 direction,
                                             float intensity) {
-  return ftl::MakeRefCounted<DirectionalLight>(this, id, direction, intensity);
+  return fxl::MakeRefCounted<DirectionalLight>(this, id, direction, intensity);
 }
 
 ResourcePtr Session::CreateClipNode(scenic::ResourceId id,
@@ -804,12 +804,12 @@ ResourcePtr Session::CreateClipNode(scenic::ResourceId id,
 
 ResourcePtr Session::CreateEntityNode(scenic::ResourceId id,
                                       const scenic::EntityNodePtr& args) {
-  return ftl::MakeRefCounted<EntityNode>(this, id);
+  return fxl::MakeRefCounted<EntityNode>(this, id);
 }
 
 ResourcePtr Session::CreateShapeNode(scenic::ResourceId id,
                                      const scenic::ShapeNodePtr& args) {
-  return ftl::MakeRefCounted<ShapeNode>(this, id);
+  return fxl::MakeRefCounted<ShapeNode>(this, id);
 }
 
 ResourcePtr Session::CreateDisplayCompositor(
@@ -826,7 +826,7 @@ ResourcePtr Session::CreateDisplayCompositor(
                                 "by another compositor.";
     return nullptr;
   }
-  return ftl::MakeRefCounted<DisplayCompositor>(
+  return fxl::MakeRefCounted<DisplayCompositor>(
       this, id, display, engine()->CreateDisplaySwapchain(display));
 }
 
@@ -842,22 +842,22 @@ ResourcePtr Session::CreateImagePipeCompositor(
 
 ResourcePtr Session::CreateLayerStack(scenic::ResourceId id,
                                       const scenic::LayerStackPtr& args) {
-  return ftl::MakeRefCounted<LayerStack>(this, id);
+  return fxl::MakeRefCounted<LayerStack>(this, id);
 }
 
 ResourcePtr Session::CreateLayer(scenic::ResourceId id,
                                  const scenic::LayerPtr& args) {
-  return ftl::MakeRefCounted<Layer>(this, id);
+  return fxl::MakeRefCounted<Layer>(this, id);
 }
 
 ResourcePtr Session::CreateCircle(scenic::ResourceId id, float initial_radius) {
-  return ftl::MakeRefCounted<CircleShape>(this, id, initial_radius);
+  return fxl::MakeRefCounted<CircleShape>(this, id, initial_radius);
 }
 
 ResourcePtr Session::CreateRectangle(scenic::ResourceId id,
                                      float width,
                                      float height) {
-  return ftl::MakeRefCounted<RectangleShape>(this, id, width, height);
+  return fxl::MakeRefCounted<RectangleShape>(this, id, width, height);
 }
 
 ResourcePtr Session::CreateRoundedRectangle(scenic::ResourceId id,
@@ -881,16 +881,16 @@ ResourcePtr Session::CreateRoundedRectangle(scenic::ResourceId id,
   escher::MeshSpec mesh_spec{escher::MeshAttribute::kPosition2D |
                              escher::MeshAttribute::kUV};
 
-  return ftl::MakeRefCounted<RoundedRectangleShape>(
+  return fxl::MakeRefCounted<RoundedRectangleShape>(
       this, id, rect_spec, factory->NewRoundedRect(rect_spec, mesh_spec));
 }
 
 ResourcePtr Session::CreateMesh(scenic::ResourceId id) {
-  return ftl::MakeRefCounted<MeshShape>(this, id);
+  return fxl::MakeRefCounted<MeshShape>(this, id);
 }
 
 ResourcePtr Session::CreateMaterial(scenic::ResourceId id) {
-  return ftl::MakeRefCounted<Material>(this, id);
+  return fxl::MakeRefCounted<Material>(this, id);
 }
 
 void Session::TearDown() {
@@ -904,7 +904,7 @@ void Session::TearDown() {
   if (resource_count_ != 0) {
     auto exported_count =
         engine()->resource_linker()->NumExportsForSession(this);
-    FTL_CHECK(resource_count_ == 0)
+    FXL_CHECK(resource_count_ == 0)
         << "Session::TearDown(): Not all resources have been collected. "
            "Exported resources: "
         << exported_count
@@ -920,7 +920,7 @@ ErrorReporter* Session::error_reporter() const {
 bool Session::AssertValueIsOfType(const scenic::ValuePtr& value,
                                   const scenic::Value::Tag* tags,
                                   size_t tag_count) {
-  FTL_DCHECK(tag_count > 0);
+  FXL_DCHECK(tag_count > 0);
   for (size_t i = 0; i < tag_count; ++i) {
     if (value->which() == tags[i]) {
       return true;
@@ -1001,7 +1001,7 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
       // presentation_time was to the requested time.
     } else {
       // An error was encountered while applying the update.
-      FTL_LOG(WARNING) << "mozart::Session::ApplyScheduledUpdates(): "
+      FXL_LOG(WARNING) << "mozart::Session::ApplyScheduledUpdates(): "
                           "An error was encountered while applying the update. "
                           "Initiating teardown.";
 
@@ -1027,7 +1027,7 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
 
 void Session::EnqueueEvent(scenic::EventPtr event) {
   if (is_valid()) {
-    FTL_DCHECK(event);
+    FXL_DCHECK(event);
     if (buffered_events_.empty()) {
       mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
           [weak = weak_factory_.GetWeakPtr()] {
@@ -1092,7 +1092,7 @@ void Session::HitTest(uint32_t node_id,
 
 void Session::BeginTearDown() {
   engine()->TearDownSession(id());
-  FTL_DCHECK(!is_valid());
+  FXL_DCHECK(!is_valid());
 }
 
 }  // namespace scene_manager

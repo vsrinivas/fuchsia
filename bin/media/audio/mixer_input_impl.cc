@@ -15,8 +15,8 @@ void MixerInputImpl<float, float, float>::Job::MixUnity(
     uint32_t in_channel_count,
     uint32_t out_channel_count,
     uint32_t frame_count) {
-  FTL_DCHECK(from_level_ == Level<float>::Unity);
-  FTL_DCHECK(to_level_ == Level<float>::Unity);
+  FXL_DCHECK(from_level_ == Level<float>::Unity);
+  FXL_DCHECK(to_level_ == Level<float>::Unity);
   while (frame_count) {
     *out += *in;
     in += in_channel_count;
@@ -32,7 +32,7 @@ void MixerInputImpl<float, float, float>::Job::MixConstant(
     uint32_t in_channel_count,
     uint32_t out_channel_count,
     uint32_t frame_count) {
-  FTL_DCHECK(from_level_ == to_level_);
+  FXL_DCHECK(from_level_ == to_level_);
   float level = from_level_.value();
   while (frame_count) {
     *out += *in * level;
@@ -55,7 +55,7 @@ void MixerInputImpl<float, float, float>::Job::MixFade(
   // interpolate.
   float level = from_level_.value();
   if (pts != from_pts_) {
-    FTL_DCHECK(to_pts_ != from_pts_);
+    FXL_DCHECK(to_pts_ != from_pts_);
     level += (to_level_.value() - level) * static_cast<float>(pts - from_pts_) /
              static_cast<float>(to_pts_ - from_pts_);
   }

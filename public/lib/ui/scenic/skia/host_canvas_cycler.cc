@@ -4,7 +4,7 @@
 
 #include "lib/ui/scenic/skia/host_canvas_cycler.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace scenic_lib {
 namespace skia {
@@ -24,7 +24,7 @@ SkCanvas* HostCanvasCycler::AcquireCanvas(float logical_width,
                                           float logical_height,
                                           float scale_x,
                                           float scale_y) {
-  FTL_DCHECK(!acquired_surface_);
+  FXL_DCHECK(!acquired_surface_);
 
   // Update the surface pool and content shape.
   scenic::ImageInfo image_info;
@@ -38,7 +38,7 @@ SkCanvas* HostCanvasCycler::AcquireCanvas(float logical_width,
 
   // Acquire the surface.
   acquired_surface_ = surface_pool_.GetSkSurface(surface_index_);
-  FTL_DCHECK(acquired_surface_);
+  FXL_DCHECK(acquired_surface_);
   logical_width_ = logical_width;
   logical_height_ = logical_height;
 
@@ -49,14 +49,14 @@ SkCanvas* HostCanvasCycler::AcquireCanvas(float logical_width,
 }
 
 void HostCanvasCycler::ReleaseAndSwapCanvas() {
-  FTL_DCHECK(acquired_surface_);
+  FXL_DCHECK(acquired_surface_);
 
   acquired_surface_->getCanvas()->restoreToCount(1);
   acquired_surface_->flush();
   acquired_surface_.reset();
 
   const scenic_lib::HostImage* image = surface_pool_.GetImage(surface_index_);
-  FTL_DCHECK(image);
+  FXL_DCHECK(image);
   content_material_.SetTexture(*image);
 
   if (reconfigured_) {

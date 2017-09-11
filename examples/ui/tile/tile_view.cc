@@ -8,7 +8,7 @@
 
 #include "lib/app/cpp/connect.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace examples {
 
@@ -93,14 +93,14 @@ void TileView::OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) {
 void TileView::OnChildAttached(uint32_t child_key,
                                mozart::ViewInfoPtr child_view_info) {
   auto it = views_.find(child_key);
-  FTL_DCHECK(it != views_.end());
+  FXL_DCHECK(it != views_.end());
 
   ViewData* view_data = it->second.get();
   view_data->view_info = std::move(child_view_info);
 }
 
 void TileView::OnChildUnavailable(uint32_t child_key) {
-  FTL_LOG(ERROR) << "View died unexpectedly: child_key=" << child_key;
+  FXL_LOG(ERROR) << "View died unexpectedly: child_key=" << child_key;
   RemoveChildView(child_key);
 }
 
@@ -125,7 +125,7 @@ void TileView::AddChildView(
 
 void TileView::RemoveChildView(uint32_t child_key) {
   auto it = views_.find(child_key);
-  FTL_DCHECK(it != views_.end());
+  FXL_DCHECK(it != views_.end());
 
   it->second->host_node.Detach();
   views_.erase(it);

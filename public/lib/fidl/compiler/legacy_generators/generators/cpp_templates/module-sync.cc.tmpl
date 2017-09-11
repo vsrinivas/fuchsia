@@ -28,7 +28,7 @@
 #include "lib/fidl/cpp/bindings/internal/validation_util.h"
 #include "lib/fidl/cpp/bindings/message.h"
 #include "lib/fidl/cpp/bindings/message_validator.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "{{module.path}}-internal.h"
 #include "{{module.path}}-common.h"
 
@@ -81,13 +81,13 @@ bool {{interface.name}}_SynchronousProxy::{{method.name}}(
   if (::fidl::internal::RunValidatorsOnMessage(validators_, &response_msg,
                                              &response_err)
         != ::fidl::internal::ValidationError::NONE) {
-    FTL_LOG(WARNING) << response_err;
+    FXL_LOG(WARNING) << response_err;
     return false;
   }
   
 {#- TODO(vardhan): Add support for synchronous control messages. #} 
   if (response_msg.name() != msg_name) {
-    FTL_LOG(ERROR) << "Expecting response for message = " << msg_name <<
+    FXL_LOG(ERROR) << "Expecting response for message = " << msg_name <<
                        ", but received message = " << response_msg.name();
     return false;
   }

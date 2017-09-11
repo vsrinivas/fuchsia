@@ -6,7 +6,7 @@
 
 #include "garnet/bin/ui/sketchy/resources/types.h"
 #include "escher/base/typed_reffable.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace sketchy_service {
 
@@ -24,9 +24,9 @@ class Resource : public escher::TypedReffable<ResourceTypeInfo> {
  protected:
   Resource() {}
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Resource);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Resource);
 };
 
-using ResourcePtr = ftl::RefPtr<Resource>;
+using ResourcePtr = fxl::RefPtr<Resource>;
 
 }  // namespace sketchy_service

@@ -10,10 +10,10 @@
 namespace scene_manager {
 
 class ImageBase;
-using ImageBasePtr = ftl::RefPtr<ImageBase>;
+using ImageBasePtr = fxl::RefPtr<ImageBase>;
 
 class Material;
-using MaterialPtr = ftl::RefPtr<Material>;
+using MaterialPtr = fxl::RefPtr<Material>;
 
 class Material : public Resource {
  public:
@@ -28,7 +28,7 @@ class Material : public Resource {
   float green() const { return escher_material_->color().y; }
   float blue() const { return escher_material_->color().z; }
   float alpha() const {
-    FTL_CHECK(false);
+    FXL_CHECK(false);
     return 0.f;
   }
   const ImageBasePtr& texture_image() const { return texture_; }

@@ -7,7 +7,7 @@
 #include "garnet/bin/ui/view_manager/view_impl.h"
 #include "garnet/bin/ui/view_manager/view_registry.h"
 #include "garnet/bin/ui/view_manager/view_stub.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace view_manager {
 
@@ -25,8 +25,8 @@ ViewState::ViewState(ViewRegistry* registry,
       view_binding_(impl_.get(), std::move(view_request)),
       owner_binding_(impl_.get()),
       weak_factory_(this) {
-  FTL_DCHECK(view_token_);
-  FTL_DCHECK(view_listener_);
+  FXL_DCHECK(view_token_);
+  FXL_DCHECK(view_listener_);
 
   view_binding_.set_connection_error_handler([this, registry] {
     registry->OnViewDied(this, "View connection closed");
@@ -47,12 +47,12 @@ void ViewState::IssueProperties(mozart::ViewPropertiesPtr properties) {
 
 void ViewState::BindOwner(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-  FTL_DCHECK(!owner_binding_.is_bound());
+  FXL_DCHECK(!owner_binding_.is_bound());
   owner_binding_.Bind(std::move(view_owner_request));
 }
 
 void ViewState::ReleaseOwner() {
-  FTL_DCHECK(owner_binding_.is_bound());
+  FXL_DCHECK(owner_binding_.is_bound());
   owner_binding_.Close();
 }
 
@@ -64,8 +64,8 @@ const std::string& ViewState::FormattedLabel() const {
   if (formatted_label_cache_.empty()) {
     formatted_label_cache_ =
         label_.empty()
-            ? ftl::StringPrintf("<V%d>", view_token_->value)
-            : ftl::StringPrintf("<V%d:%s>", view_token_->value, label_.c_str());
+            ? fxl::StringPrintf("<V%d>", view_token_->value)
+            : fxl::StringPrintf("<V%d:%s>", view_token_->value, label_.c_str());
   }
   return formatted_label_cache_;
 }

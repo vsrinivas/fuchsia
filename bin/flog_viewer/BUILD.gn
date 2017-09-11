@@ -50,7 +50,7 @@ executable("flog_viewer") {
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/media/fidl/flog",
     "//garnet/bin/media/util",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }

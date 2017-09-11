@@ -4,7 +4,7 @@
 
 #include <errno.h>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "third_party/gtest/include/gtest/gtest.h"
 #include "lib/url/test/icu_unittest_base.h"
 #include "lib/url/third_party/mozilla/url_parse.h"
@@ -22,7 +22,7 @@ class URLCanonTest : public url::test::IcuUnitTestBase {
   URLCanonTest() {}
   ~URLCanonTest() override {}
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(URLCanonTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(URLCanonTest);
 };
 
 struct ComponentCase {

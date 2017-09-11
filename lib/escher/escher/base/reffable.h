@@ -7,17 +7,17 @@
 #include <cstdint>
 
 #include "escher/base/make.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/memory/ref_ptr.h"
 
 namespace escher {
 
 // Reffable is a non-threadsafe ref-counted base class that is suitable for use
-// with ftl::RefPtr.  It provides a virtual OnZeroRefCount() method that
+// with fxl::RefPtr.  It provides a virtual OnZeroRefCount() method that
 // subclasses can use to avoid immediate destruction when their ref-count
 // becomes zero.
 //
-// Use this class similarly to ftl::RefCountedThreadSafe.  For example, instead
+// Use this class similarly to fxl::RefCountedThreadSafe.  For example, instead
 // of:
 //    class Foo : public RefCountedThreadSafe<Foo> { ...
 // simply say:
@@ -43,9 +43,9 @@ class Reffable {
 
  private:
   template <typename T>
-  friend class ftl::RefPtr;
+  friend class fxl::RefPtr;
 
-  // Called by ftl::RefPtr.
+  // Called by fxl::RefPtr.
   void Release() {
     if (--ref_count_ == 0) {
       if (OnZeroRefCount()) {
@@ -54,10 +54,10 @@ class Reffable {
     }
   }
 
-  // Called by ftl::RefPtr.
+  // Called by fxl::RefPtr.
   void AddRef() const {
 #ifndef NDEBUG
-    FTL_DCHECK(!adoption_required_);
+    FXL_DCHECK(!adoption_required_);
 #endif
     ++ref_count_;
   }
@@ -65,14 +65,14 @@ class Reffable {
   mutable uint32_t ref_count_ = 1;
 
 #ifndef NDEBUG
-  // Called by ftl::RefPtr, but only in debug builds.
+  // Called by fxl::RefPtr, but only in debug builds.
   template <typename U>
-  friend ftl::RefPtr<U> ftl::AdoptRef(U*);
+  friend fxl::RefPtr<U> fxl::AdoptRef(U*);
   void Adopt();
   bool adoption_required_ = true;
 #endif
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Reffable);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Reffable);
 };
 
 }  // namespace escher

@@ -4,7 +4,7 @@
 
 #include "garnet/bin/moterm/moterm_params.h"
 
-#include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/fxl/strings/string_number_conversions.h"
 
 namespace moterm {
 
@@ -12,11 +12,11 @@ MotermParams::MotermParams() {}
 
 MotermParams::~MotermParams() {}
 
-bool MotermParams::Parse(const ftl::CommandLine& command_line) {
+bool MotermParams::Parse(const fxl::CommandLine& command_line) {
   // --font-size=<size>
   std::string value;
   if (command_line.GetOptionValue("font-size", &value) &&
-      !ftl::StringToNumberWithError(value, &font_size)) {
+      !fxl::StringToNumberWithError(value, &font_size)) {
     return false;
   }
 

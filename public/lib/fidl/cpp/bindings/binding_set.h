@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace fidl {
@@ -68,7 +68,7 @@ class BindingSet {
 
   size_t size() const { return bindings_.size(); }
 
-  void set_on_empty_set_handler(ftl::Closure on_empty_set_handler) {
+  void set_on_empty_set_handler(fxl::Closure on_empty_set_handler) {
     on_empty_set_handler_ = std::move(on_empty_set_handler);
   }
 
@@ -99,9 +99,9 @@ class BindingSet {
   }
 
   StorageType bindings_;
-  ftl::Closure on_empty_set_handler_;
+  fxl::Closure on_empty_set_handler_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(BindingSet);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BindingSet);
 };
 
 }  // namespace fidl

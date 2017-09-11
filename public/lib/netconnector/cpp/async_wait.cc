@@ -5,7 +5,7 @@
 #include "lib/netconnector/cpp/async_wait.h"
 
 #include "lib/fidl/cpp/waiter/default.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace netconnector {
 
@@ -20,10 +20,10 @@ void AsyncWait::Start(mx_handle_t handle,
                       mx_signals_t signals,
                       mx_time_t timeout,
                       const std::function<void()> callback) {
-  FTL_DCHECK(handle != MX_HANDLE_INVALID);
-  FTL_DCHECK(signals != MX_SIGNAL_NONE);
-  FTL_DCHECK(callback);
-  FTL_DCHECK(!is_waiting());
+  FXL_DCHECK(handle != MX_HANDLE_INVALID);
+  FXL_DCHECK(signals != MX_SIGNAL_NONE);
+  FXL_DCHECK(callback);
+  FXL_DCHECK(!is_waiting());
 
   callback_ = callback;
   status_ = MX_ERR_SHOULD_WAIT;

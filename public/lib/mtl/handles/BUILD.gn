@@ -11,6 +11,6 @@ source_set("handles") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }

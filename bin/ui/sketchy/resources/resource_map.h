@@ -31,7 +31,7 @@ class ResourceMap {
   // example:
   // ResourceType someResource = map.FindResource<ResourceType>();
   template <class ResourceT>
-  ftl::RefPtr<ResourceT> FindResource(ResourceId id);
+  fxl::RefPtr<ResourceT> FindResource(ResourceId id);
 
   size_t size() const { return resources_.size(); }
 

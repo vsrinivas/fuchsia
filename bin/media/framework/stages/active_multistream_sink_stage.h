@@ -10,8 +10,8 @@
 
 #include "garnet/bin/media/framework/models/active_multistream_sink.h"
 #include "garnet/bin/media/framework/stages/stage_impl.h"
-#include "lib/ftl/synchronization/mutex.h"
-#include "lib/ftl/synchronization/thread_annotations.h"
+#include "lib/fxl/synchronization/mutex.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media {
 
@@ -46,15 +46,15 @@ class ActiveMultistreamSinkStageImpl : public StageImpl,
 
  protected:
   // StageImpl implementation.
-  ftl::RefPtr<ftl::TaskRunner> GetNodeTaskRunner() override;
+  fxl::RefPtr<fxl::TaskRunner> GetNodeTaskRunner() override;
 
   void Update() override;
 
  private:
   // ActiveMultistreamSinkStage implementation.
-  void SetTaskRunner(ftl::RefPtr<ftl::TaskRunner> task_runner) override;
+  void SetTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner) override;
 
-  void PostTask(const ftl::Closure& task) override;
+  void PostTask(const fxl::Closure& task) override;
 
   size_t AllocateInput() override;
 
@@ -72,10 +72,10 @@ class ActiveMultistreamSinkStageImpl : public StageImpl,
 
   std::shared_ptr<ActiveMultistreamSink> sink_;
 
-  mutable ftl::Mutex mutex_;
-  std::vector<std::unique_ptr<StageInput>> inputs_ FTL_GUARDED_BY(mutex_);
-  std::set<size_t> unallocated_inputs_ FTL_GUARDED_BY(mutex_);
-  std::list<size_t> pending_inputs_ FTL_GUARDED_BY(mutex_);
+  mutable fxl::Mutex mutex_;
+  std::vector<std::unique_ptr<StageInput>> inputs_ FXL_GUARDED_BY(mutex_);
+  std::set<size_t> unallocated_inputs_ FXL_GUARDED_BY(mutex_);
+  std::list<size_t> pending_inputs_ FXL_GUARDED_BY(mutex_);
 };
 
 }  // namespace media

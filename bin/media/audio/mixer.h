@@ -8,7 +8,7 @@
 #include <queue>
 
 #include "garnet/bin/media/audio/mixer_input.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -17,7 +17,7 @@ template <typename TOutSample>
 class Mixer {
  public:
   Mixer(uint32_t out_channel_count) : out_channel_count_(out_channel_count) {
-    FTL_DCHECK(out_channel_count > 0);
+    FXL_DCHECK(out_channel_count > 0);
   }
 
   // Add an input to the mixer. The input and the mixer must agree on the
@@ -27,8 +27,8 @@ class Mixer {
   // of input->first_pts() or less. Inputs are removed when their Mix method
   // returns false.
   void AddInput(std::shared_ptr<MixerInput<TOutSample>> input) {
-    FTL_DCHECK(input);
-    FTL_DCHECK(input->out_channel_count() == out_channel_count_);
+    FXL_DCHECK(input);
+    FXL_DCHECK(input->out_channel_count() == out_channel_count_);
     pending_inputs_.push(input);
   }
 
@@ -40,8 +40,8 @@ class Mixer {
   // to pts + out_frame_count from the previous Mix call, but any pts values
   // are tolerated. pts values are in frame units.
   void Mix(TOutSample* out_buffer, uint32_t out_frame_count, int64_t pts) {
-    FTL_DCHECK(out_buffer);
-    FTL_DCHECK(out_frame_count > 0);
+    FXL_DCHECK(out_buffer);
+    FXL_DCHECK(out_frame_count > 0);
 
     // Move ready inputs from the pending queue to the active list.
     while (!pending_inputs_.empty() &&

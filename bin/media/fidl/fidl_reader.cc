@@ -8,7 +8,7 @@
 #include <string>
 
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace media {
@@ -16,7 +16,7 @@ namespace media {
 FidlReader::FidlReader(fidl::InterfaceHandle<SeekingReader> seeking_reader)
     : seeking_reader_(SeekingReaderPtr::Create(std::move(seeking_reader))) {
   task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
-  FTL_DCHECK(task_runner_);
+  FXL_DCHECK(task_runner_);
 
   read_in_progress_ = false;
 
@@ -45,10 +45,10 @@ void FidlReader::ReadAt(size_t position,
                         uint8_t* buffer,
                         size_t bytes_to_read,
                         const ReadAtCallback& callback) {
-  FTL_DCHECK(buffer);
-  FTL_DCHECK(bytes_to_read);
+  FXL_DCHECK(buffer);
+  FXL_DCHECK(bytes_to_read);
 
-  FTL_DCHECK(!read_in_progress_)
+  FXL_DCHECK(!read_in_progress_)
       << "ReadAt called while previous call still in progress";
   read_in_progress_ = true;
   read_at_position_ = position;
@@ -73,7 +73,7 @@ void FidlReader::ContinueReadAt() {
       return;
     }
 
-    FTL_DCHECK(read_at_position_ < size_);
+    FXL_DCHECK(read_at_position_ < size_);
 
     if (read_at_position_ + read_at_bytes_to_read_ > size_) {
       read_at_bytes_to_read_ = size_ - read_at_position_;
@@ -111,7 +111,7 @@ void FidlReader::ContinueReadAt() {
 
 void FidlReader::ReadFromSocket() {
   while (true) {
-    FTL_DCHECK(read_at_bytes_remaining_ < std::numeric_limits<uint32_t>::max());
+    FXL_DCHECK(read_at_bytes_remaining_ < std::numeric_limits<uint32_t>::max());
     size_t byte_count = 0;
     mx_status_t status = socket_.read(0u, read_at_buffer_,
                                       read_at_bytes_remaining_, &byte_count);
@@ -124,7 +124,7 @@ void FidlReader::ReadFromSocket() {
     }
 
     if (status != MX_OK) {
-      FTL_LOG(ERROR) << "mx::socket::read failed, status " << status;
+      FXL_LOG(ERROR) << "mx::socket::read failed, status " << status;
       FailReadAt(status);
       break;
     }
@@ -154,7 +154,7 @@ void FidlReader::FailReadAt(mx_status_t status) {
       break;
     // TODO(dalesat): Expect more statuses here.
     default:
-      FTL_LOG(ERROR) << "Unexpected status " << status;
+      FXL_LOG(ERROR) << "Unexpected status " << status;
       result_ = Result::kUnknownError;
       break;
   }
@@ -174,7 +174,7 @@ void FidlReader::ReadFromSocketStatic(mx_status_t status,
   reader->wait_id_ = 0;
 
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "AsyncWait failed, status " << status;
+    FXL_LOG(ERROR) << "AsyncWait failed, status " << status;
     reader->FailReadAt(status);
     return;
   }

@@ -6,18 +6,18 @@
 
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_rate.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
 FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
     : FfmpegDecoderBase(std::move(av_codec_context)) {
-  FTL_DCHECK(context());
-  FTL_DCHECK(context()->channels > 0);
+  FXL_DCHECK(context());
+  FXL_DCHECK(context()->channels > 0);
 
   std::unique_ptr<StreamType> stream_type = output_stream_type();
-  FTL_DCHECK(stream_type);
-  FTL_DCHECK(stream_type->audio());
+  FXL_DCHECK(stream_type);
+  FXL_DCHECK(stream_type->audio());
   set_pts_rate(TimelineRate(stream_type->audio()->frames_per_second(), 1));
 
   if (av_sample_fmt_is_planar(context()->sample_fmt)) {
@@ -34,7 +34,7 @@ void FfmpegAudioDecoder::OnNewInputPacket(const PacketPtr& packet) {
 
   if (next_pts() == Packet::kUnknownPts) {
     if (packet->pts() == Packet::kUnknownPts) {
-      FTL_DLOG(WARNING) << "No PTS established, using 0 by default.";
+      FXL_DLOG(WARNING) << "No PTS established, using 0 by default.";
       set_next_pts(0);
     } else {
       set_next_pts(packet->GetPts(pts_rate()));
@@ -45,8 +45,8 @@ void FfmpegAudioDecoder::OnNewInputPacket(const PacketPtr& packet) {
 int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
                                      AVFrame* av_frame,
                                      PayloadAllocator* allocator) {
-  FTL_DCHECK(av_frame);
-  FTL_DCHECK(allocator);
+  FXL_DCHECK(av_frame);
+  FXL_DCHECK(allocator);
 
   // Use the provided allocator unless we intend to interleave later, in which
   // case use the default allocator. We'll interleave into a buffer from the
@@ -62,7 +62,7 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
       &av_frame->linesize[0], av_codec_context.channels, av_frame->nb_samples,
       av_sample_format, FfmpegAudioDecoder::kChannelAlign);
   if (buffer_size < 0) {
-    FTL_LOG(WARNING) << "av_samples_get_buffer_size failed";
+    FXL_LOG(WARNING) << "av_samples_get_buffer_size failed";
     return buffer_size;
   }
 
@@ -78,11 +78,11 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
     int bytes_per_channel = buffer_size / channels;
     uint8_t* channel_buffer = buffer;
 
-    FTL_DCHECK(buffer != nullptr || bytes_per_channel == 0);
+    FXL_DCHECK(buffer != nullptr || bytes_per_channel == 0);
 
     if (channels <= AV_NUM_DATA_POINTERS) {
       // The buffer pointers will fit in av_frame->data.
-      FTL_DCHECK(av_frame->extended_data == av_frame->data);
+      FXL_DCHECK(av_frame->extended_data == av_frame->data);
       for (int channel = 0; channel < channels; ++channel) {
         av_frame->data[channel] = channel_buffer;
         channel_buffer += bytes_per_channel;
@@ -117,7 +117,7 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
 
 PacketPtr FfmpegAudioDecoder::CreateOutputPacket(const AVFrame& av_frame,
                                                  PayloadAllocator* allocator) {
-  FTL_DCHECK(allocator);
+  FXL_DCHECK(allocator);
 
   // We infer the PTS for a packet based on the assumption that the decoder
   // produces an uninterrupted stream of frames. The PTS value in av_frame is
@@ -132,8 +132,8 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(const AVFrame& av_frame,
     // was allocated from the default allocator. That buffer will get released
     // later in ReleaseBufferForAvFrame. We need a new buffer for the
     // interleaved frames, which we get from the provided allocator.
-    FTL_DCHECK(stream_type_);
-    FTL_DCHECK(stream_type_->audio());
+    FXL_DCHECK(stream_type_);
+    FXL_DCHECK(stream_type_->audio());
     uint64_t payload_size =
         stream_type_->audio()->min_buffer_size(av_frame.nb_samples);
     void* payload_buffer = allocator->AllocatePayloadBuffer(payload_size);

@@ -15,10 +15,10 @@
 #include "lib/ui/views/cpp/formatting.h"
 #include "garnet/bin/ui/view_manager/view_impl.h"
 #include "garnet/bin/ui/view_manager/view_tree_impl.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/memory/weak_ptr.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace view_manager {
 namespace {
@@ -77,7 +77,7 @@ std::unique_ptr<FocusChain> CopyFocusChain(const FocusChain* chain) {
 }
 
 mozart::TransformPtr ToTransform(scenic::mat4Ptr matrix) {
-  FTL_DCHECK(matrix);
+  FXL_DCHECK(matrix);
   // Note: mat4 is column-major but transform is row-major
   auto transform = mozart::Transform::New();
   const auto& in = matrix->matrix;
@@ -114,12 +114,12 @@ ViewRegistry::ViewRegistry(app::ApplicationContext* application_context)
   // content nodes become unavailable.
 
   scene_manager_.set_connection_error_handler([] {
-    FTL_LOG(ERROR) << "Exiting due to scene manager connection error.";
+    FXL_LOG(ERROR) << "Exiting due to scene manager connection error.";
     exit(1);
   });
 
   session_.set_connection_error_handler([] {
-    FTL_LOG(ERROR) << "Exiting due to session connection error.";
+    FXL_LOG(ERROR) << "Exiting due to session connection error.";
     exit(1);
   });
 }
@@ -142,15 +142,15 @@ void ViewRegistry::CreateView(
     mozart::ViewListenerPtr view_listener,
     mx::eventpair parent_export_token,
     const fidl::String& label) {
-  FTL_DCHECK(view_request.is_pending());
-  FTL_DCHECK(view_owner_request.is_pending());
-  FTL_DCHECK(view_listener);
-  FTL_DCHECK(parent_export_token);
+  FXL_DCHECK(view_request.is_pending());
+  FXL_DCHECK(view_owner_request.is_pending());
+  FXL_DCHECK(view_listener);
+  FXL_DCHECK(parent_export_token);
 
   auto view_token = mozart::ViewToken::New();
   view_token->value = next_view_token_value_++;
-  FTL_CHECK(view_token->value);
-  FTL_CHECK(!FindView(view_token->value));
+  FXL_CHECK(view_token->value);
+  FXL_CHECK(!FindView(view_token->value));
 
   // Create the state and bind the interfaces to it.
   ViewState* view_state =
@@ -166,20 +166,20 @@ void ViewRegistry::CreateView(
 
   // Add to registry and return token.
   views_by_token_.emplace(view_state->view_token()->value, view_state);
-  FTL_VLOG(1) << "CreateView: view=" << view_state;
+  FXL_VLOG(1) << "CreateView: view=" << view_state;
 }
 
 void ViewRegistry::OnViewDied(ViewState* view_state,
                               const std::string& reason) {
-  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
-  FTL_VLOG(1) << "OnViewDied: view=" << view_state << ", reason=" << reason;
+  FXL_DCHECK(IsViewStateRegisteredDebug(view_state));
+  FXL_VLOG(1) << "OnViewDied: view=" << view_state << ", reason=" << reason;
 
   UnregisterView(view_state);
 }
 
 void ViewRegistry::UnregisterView(ViewState* view_state) {
-  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
-  FTL_VLOG(1) << "UnregisterView: view=" << view_state;
+  FXL_DCHECK(IsViewStateRegisteredDebug(view_state));
+  FXL_VLOG(1) << "UnregisterView: view=" << view_state;
 
   HijackView(view_state);
   UnregisterChildren(view_state);
@@ -199,13 +199,13 @@ void ViewRegistry::CreateViewTree(
     fidl::InterfaceRequest<mozart::ViewTree> view_tree_request,
     mozart::ViewTreeListenerPtr view_tree_listener,
     const fidl::String& label) {
-  FTL_DCHECK(view_tree_request.is_pending());
-  FTL_DCHECK(view_tree_listener);
+  FXL_DCHECK(view_tree_request.is_pending());
+  FXL_DCHECK(view_tree_listener);
 
   auto view_tree_token = mozart::ViewTreeToken::New();
   view_tree_token->value = next_view_tree_token_value_++;
-  FTL_CHECK(view_tree_token->value);
-  FTL_CHECK(!FindViewTree(view_tree_token->value));
+  FXL_CHECK(view_tree_token->value);
+  FXL_CHECK(!FindViewTree(view_tree_token->value));
 
   // Create the state and bind the interfaces to it.
   ViewTreeState* tree_state = new ViewTreeState(
@@ -215,20 +215,20 @@ void ViewRegistry::CreateViewTree(
   // Add to registry.
   view_trees_by_token_.emplace(tree_state->view_tree_token()->value,
                                tree_state);
-  FTL_VLOG(1) << "CreateViewTree: tree=" << tree_state;
+  FXL_VLOG(1) << "CreateViewTree: tree=" << tree_state;
 }
 
 void ViewRegistry::OnViewTreeDied(ViewTreeState* tree_state,
                                   const std::string& reason) {
-  FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
-  FTL_VLOG(1) << "OnViewTreeDied: tree=" << tree_state << ", reason=" << reason;
+  FXL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
+  FXL_VLOG(1) << "OnViewTreeDied: tree=" << tree_state << ", reason=" << reason;
 
   UnregisterViewTree(tree_state);
 }
 
 void ViewRegistry::UnregisterViewTree(ViewTreeState* tree_state) {
-  FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
-  FTL_VLOG(1) << "UnregisterViewTree: tree=" << tree_state;
+  FXL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
+  FXL_VLOG(1) << "UnregisterViewTree: tree=" << tree_state;
 
   UnregisterChildren(tree_state);
 
@@ -241,7 +241,7 @@ void ViewRegistry::UnregisterViewTree(ViewTreeState* tree_state) {
 
 void ViewRegistry::UnregisterViewContainer(
     ViewContainerState* container_state) {
-  FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
+  FXL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
 
   ViewState* view_state = container_state->AsViewState();
   if (view_state)
@@ -251,7 +251,7 @@ void ViewRegistry::UnregisterViewContainer(
 }
 
 void ViewRegistry::UnregisterViewStub(std::unique_ptr<ViewStub> view_stub) {
-  FTL_DCHECK(view_stub);
+  FXL_DCHECK(view_stub);
 
   ViewState* view_state = view_stub->ReleaseView();
   if (view_state)
@@ -261,7 +261,7 @@ void ViewRegistry::UnregisterViewStub(std::unique_ptr<ViewStub> view_stub) {
 }
 
 void ViewRegistry::UnregisterChildren(ViewContainerState* container_state) {
-  FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
+  FXL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
 
   // Recursively unregister all children since they will become unowned
   // at this point taking care to unlink each one before its unregistration.
@@ -281,16 +281,16 @@ void ViewRegistry::AddChild(
     uint32_t child_key,
     fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
     mx::eventpair host_import_token) {
-  FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
-  FTL_DCHECK(child_view_owner);
-  FTL_DCHECK(host_import_token);
-  FTL_VLOG(1) << "AddChild: container=" << container_state
+  FXL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
+  FXL_DCHECK(child_view_owner);
+  FXL_DCHECK(host_import_token);
+  FXL_VLOG(1) << "AddChild: container=" << container_state
               << ", child_key=" << child_key;
 
   // Ensure there are no other children with the same key.
   if (container_state->children().find(child_key) !=
       container_state->children().end()) {
-    FTL_LOG(ERROR) << "Attempted to add a child with a duplicate key: "
+    FXL_LOG(ERROR) << "Attempted to add a child with a duplicate key: "
                    << "container=" << container_state
                    << ", child_key=" << child_key;
     UnregisterViewContainer(container_state);
@@ -300,7 +300,7 @@ void ViewRegistry::AddChild(
   // If this is a view tree, ensure it only has one root.
   ViewTreeState* view_tree_state = container_state->AsViewTreeState();
   if (view_tree_state && !container_state->children().empty()) {
-    FTL_LOG(ERROR) << "Attempted to add a second child to a view tree: "
+    FXL_LOG(ERROR) << "Attempted to add a second child to a view tree: "
                    << "container=" << container_state
                    << ", child_key=" << child_key;
     UnregisterViewContainer(container_state);
@@ -319,14 +319,14 @@ void ViewRegistry::RemoveChild(
     ViewContainerState* container_state,
     uint32_t child_key,
     fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
-  FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
-  FTL_VLOG(1) << "RemoveChild: container=" << container_state
+  FXL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
+  FXL_VLOG(1) << "RemoveChild: container=" << container_state
               << ", child_key=" << child_key;
 
   // Ensure the child key exists in the container.
   auto child_it = container_state->children().find(child_key);
   if (child_it == container_state->children().end()) {
-    FTL_LOG(ERROR) << "Attempted to remove a child with an invalid key: "
+    FXL_LOG(ERROR) << "Attempted to remove a child with an invalid key: "
                    << "container=" << container_state
                    << ", child_key=" << child_key;
     UnregisterViewContainer(container_state);
@@ -342,14 +342,14 @@ void ViewRegistry::SetChildProperties(
     ViewContainerState* container_state,
     uint32_t child_key,
     mozart::ViewPropertiesPtr child_properties) {
-  FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
-  FTL_VLOG(1) << "SetChildProperties: container=" << container_state
+  FXL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
+  FXL_VLOG(1) << "SetChildProperties: container=" << container_state
               << ", child_key=" << child_key
               << ", child_properties=" << child_properties;
 
   // Check whether the properties are well-formed.
   if (child_properties && !Validate(*child_properties)) {
-    FTL_LOG(ERROR) << "Attempted to set invalid child view properties: "
+    FXL_LOG(ERROR) << "Attempted to set invalid child view properties: "
                    << "container=" << container_state
                    << ", child_key=" << child_key
                    << ", child_properties=" << child_properties;
@@ -360,7 +360,7 @@ void ViewRegistry::SetChildProperties(
   // Check whether the child key exists in the container.
   auto child_it = container_state->children().find(child_key);
   if (child_it == container_state->children().end()) {
-    FTL_LOG(ERROR) << "Attempted to modify child with an invalid key: "
+    FXL_LOG(ERROR) << "Attempted to modify child with an invalid key: "
                    << "container=" << container_state
                    << ", child_key=" << child_key
                    << ", child_properties=" << child_properties;
@@ -387,14 +387,14 @@ void ViewRegistry::SetChildProperties(
 
 void ViewRegistry::RequestFocus(ViewContainerState* container_state,
                                 uint32_t child_key) {
-  FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
-  FTL_VLOG(1) << "RequestFocus: container=" << container_state
+  FXL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
+  FXL_VLOG(1) << "RequestFocus: container=" << container_state
               << ", child_key=" << child_key;
 
   // Check whether the child key exists in the container.
   auto child_it = container_state->children().find(child_key);
   if (child_it == container_state->children().end()) {
-    FTL_LOG(ERROR) << "Attempted to modify child with an invalid key: "
+    FXL_LOG(ERROR) << "Attempted to modify child with an invalid key: "
                    << "container=" << container_state
                    << ", child_key=" << child_key;
     UnregisterViewContainer(container_state);
@@ -413,7 +413,7 @@ void ViewRegistry::RequestFocus(ViewContainerState* container_state,
 
 void ViewRegistry::OnViewResolved(ViewStub* view_stub,
                                   mozart::ViewTokenPtr view_token) {
-  FTL_DCHECK(view_stub);
+  FXL_DCHECK(view_stub);
 
   ViewState* view_state = view_token ? FindView(view_token->value) : nullptr;
   if (view_state)
@@ -425,8 +425,8 @@ void ViewRegistry::OnViewResolved(ViewStub* view_stub,
 void ViewRegistry::TransferViewOwner(
     mozart::ViewTokenPtr view_token,
     fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
-  FTL_DCHECK(view_token);
-  FTL_DCHECK(transferred_view_owner_request.is_pending());
+  FXL_DCHECK(view_token);
+  FXL_DCHECK(transferred_view_owner_request.is_pending());
 
   ViewState* view_state = view_token ? FindView(view_token->value) : nullptr;
   if (view_state) {
@@ -437,9 +437,9 @@ void ViewRegistry::TransferViewOwner(
 
 void ViewRegistry::AttachResolvedViewAndNotify(ViewStub* view_stub,
                                                ViewState* view_state) {
-  FTL_DCHECK(view_stub);
-  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
-  FTL_VLOG(2) << "AttachViewStubAndNotify: view=" << view_state;
+  FXL_DCHECK(view_stub);
+  FXL_DCHECK(IsViewStateRegisteredDebug(view_state));
+  FXL_VLOG(2) << "AttachViewStubAndNotify: view=" << view_state;
 
   // Hijack the view from its current container, if needed.
   HijackView(view_state);
@@ -462,18 +462,18 @@ void ViewRegistry::AttachResolvedViewAndNotify(ViewStub* view_stub,
 }
 
 void ViewRegistry::ReleaseUnavailableViewAndNotify(ViewStub* view_stub) {
-  FTL_DCHECK(view_stub);
-  FTL_VLOG(2) << "ReleaseUnavailableViewAndNotify: key=" << view_stub->key();
+  FXL_DCHECK(view_stub);
+  FXL_VLOG(2) << "ReleaseUnavailableViewAndNotify: key=" << view_stub->key();
 
   ViewState* view_state = view_stub->ReleaseView();
-  FTL_DCHECK(!view_state);
+  FXL_DCHECK(!view_state);
 
   if (view_stub->container())
     SendChildUnavailable(view_stub->container(), view_stub->key());
 }
 
 void ViewRegistry::HijackView(ViewState* view_state) {
-  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
+  FXL_DCHECK(IsViewStateRegisteredDebug(view_state));
 
   ViewStub* view_stub = view_state->view_stub();
   if (view_stub) {
@@ -486,7 +486,7 @@ void ViewRegistry::HijackView(ViewState* view_state) {
 void ViewRegistry::TransferOrUnregisterViewStub(
     std::unique_ptr<ViewStub> view_stub,
     fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
-  FTL_DCHECK(view_stub);
+  FXL_DCHECK(view_stub);
 
   if (transferred_view_owner_request.is_pending()) {
     ReleaseViewStubChildHost(view_stub.get());
@@ -499,7 +499,7 @@ void ViewRegistry::TransferOrUnregisterViewStub(
     }
 
     if (view_stub->is_pending()) {
-      FTL_DCHECK(!view_stub->state());
+      FXL_DCHECK(!view_stub->state());
 
       // Handle transfer of pending view.
       view_stub->TransferViewOwnerWhenViewResolved(
@@ -514,8 +514,8 @@ void ViewRegistry::TransferOrUnregisterViewStub(
 // INVALIDATION
 
 void ViewRegistry::InvalidateView(ViewState* view_state, uint32_t flags) {
-  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
-  FTL_VLOG(2) << "InvalidateView: view=" << view_state << ", flags=" << flags;
+  FXL_DCHECK(IsViewStateRegisteredDebug(view_state));
+  FXL_VLOG(2) << "InvalidateView: view=" << view_state << ", flags=" << flags;
 
   view_state->set_invalidation_flags(view_state->invalidation_flags() | flags);
   if (view_state->view_stub() && view_state->view_stub()->tree()) {
@@ -526,8 +526,8 @@ void ViewRegistry::InvalidateView(ViewState* view_state, uint32_t flags) {
 
 void ViewRegistry::InvalidateViewTree(ViewTreeState* tree_state,
                                       uint32_t flags) {
-  FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
-  FTL_VLOG(2) << "InvalidateViewTree: tree=" << tree_state
+  FXL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
+  FXL_VLOG(2) << "InvalidateViewTree: tree=" << tree_state
               << ", flags=" << flags;
 
   tree_state->set_invalidation_flags(tree_state->invalidation_flags() | flags);
@@ -546,7 +546,7 @@ void ViewRegistry::ScheduleTraversal() {
 }
 
 void ViewRegistry::Traverse() {
-  FTL_DCHECK(traversal_scheduled_);
+  FXL_DCHECK(traversal_scheduled_);
 
   traversal_scheduled_ = false;
   for (const auto& pair : view_trees_by_token_)
@@ -554,8 +554,8 @@ void ViewRegistry::Traverse() {
 }
 
 void ViewRegistry::TraverseViewTree(ViewTreeState* tree_state) {
-  FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
-  FTL_VLOG(2) << "TraverseViewTree: tree=" << tree_state
+  FXL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
+  FXL_VLOG(2) << "TraverseViewTree: tree=" << tree_state
               << ", invalidation_flags=" << tree_state->invalidation_flags();
 
   uint32_t flags = tree_state->invalidation_flags();
@@ -571,8 +571,8 @@ void ViewRegistry::TraverseViewTree(ViewTreeState* tree_state) {
 
 void ViewRegistry::TraverseView(ViewState* view_state,
                                 bool parent_properties_changed) {
-  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
-  FTL_VLOG(2) << "TraverseView: view=" << view_state
+  FXL_DCHECK(IsViewStateRegisteredDebug(view_state));
+  FXL_VLOG(2) << "TraverseView: view=" << view_state
               << ", parent_properties_changed=" << parent_properties_changed
               << ", invalidation_flags=" << view_state->invalidation_flags();
 
@@ -598,7 +598,7 @@ void ViewRegistry::TraverseView(ViewState* view_state,
   // If we don't have view properties yet then we cannot pursue traversals
   // any further.
   if (!view_state->issued_properties()) {
-    FTL_VLOG(2) << "View has no valid properties: view=" << view_state;
+    FXL_VLOG(2) << "View has no valid properties: view=" << view_state;
     view_state->set_invalidation_flags(flags);
     return;
   }
@@ -612,7 +612,7 @@ void ViewRegistry::TraverseView(ViewState* view_state,
                             view_state->issued_properties().Clone());
       flags = ViewState::INVALIDATION_IN_PROGRESS;
     } else {
-      FTL_VLOG(2) << "View invalidation stalled awaiting response: view="
+      FXL_VLOG(2) << "View invalidation stalled awaiting response: view="
                   << view_state;
       if (send_properties)
         flags |= ViewState::INVALIDATION_RESEND_PROPERTIES;
@@ -639,7 +639,7 @@ void ViewRegistry::TraverseView(ViewState* view_state,
 
 mozart::ViewPropertiesPtr ViewRegistry::ResolveViewProperties(
     ViewState* view_state) {
-  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
+  FXL_DCHECK(IsViewStateRegisteredDebug(view_state));
 
   ViewStub* view_stub = view_state->view_stub();
   if (!view_stub || !view_stub->properties())
@@ -654,7 +654,7 @@ mozart::ViewPropertiesPtr ViewRegistry::ResolveViewProperties(
     return properties;
   } else if (view_stub->is_root_of_tree()) {
     if (!view_stub->properties() || !IsComplete(*view_stub->properties())) {
-      FTL_VLOG(2) << "View tree properties are incomplete: root=" << view_state
+      FXL_VLOG(2) << "View tree properties are incomplete: root=" << view_state
                   << ", properties=" << view_stub->properties();
       return nullptr;
     }
@@ -676,7 +676,7 @@ void ViewRegistry::SchedulePresentSession() {
 }
 
 void ViewRegistry::PresentSession() {
-  FTL_DCHECK(present_session_scheduled_);
+  FXL_DCHECK(present_session_scheduled_);
 
   present_session_scheduled_ = false;
   session_.Present(0, [this](scenic::PresentationInfoPtr info) {});
@@ -687,7 +687,7 @@ void ViewRegistry::PresentSession() {
 void ViewRegistry::ConnectToViewService(ViewState* view_state,
                                         const fidl::String& service_name,
                                         mx::channel client_handle) {
-  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
+  FXL_DCHECK(IsViewStateRegisteredDebug(view_state));
   if (service_name == mozart::InputConnection::Name_) {
     CreateInputConnection(view_state->view_token()->Clone(),
                           fidl::InterfaceRequest<mozart::InputConnection>(
@@ -698,7 +698,7 @@ void ViewRegistry::ConnectToViewService(ViewState* view_state,
 void ViewRegistry::ConnectToViewTreeService(ViewTreeState* tree_state,
                                             const fidl::String& service_name,
                                             mx::channel client_handle) {
-  FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
+  FXL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
   if (service_name == mozart::InputDispatcher::Name_) {
     CreateInputDispatcher(tree_state->view_tree_token()->Clone(),
                           fidl::InterfaceRequest<mozart::InputDispatcher>(
@@ -711,7 +711,7 @@ void ViewRegistry::ConnectToViewTreeService(ViewTreeState* tree_state,
 void ViewRegistry::HitTest(const mozart::ViewTreeToken& view_tree_token,
                            const mozart::PointF& point,
                            HitTestCallback callback) {
-  FTL_VLOG(1) << "HitTest: tree=" << view_tree_token;
+  FXL_VLOG(1) << "HitTest: tree=" << view_tree_token;
 
   ViewTreeState* view_tree = FindViewTree(view_tree_token.value);
   if (!view_tree || !view_tree->GetRoot() ||
@@ -746,8 +746,8 @@ void ViewRegistry::HitTest(const mozart::ViewTreeToken& view_tree_token,
 void ViewRegistry::ResolveFocusChain(
     mozart::ViewTreeTokenPtr view_tree_token,
     const ResolveFocusChainCallback& callback) {
-  FTL_DCHECK(view_tree_token);
-  FTL_VLOG(1) << "ResolveFocusChain: view_tree_token=" << view_tree_token;
+  FXL_DCHECK(view_tree_token);
+  FXL_VLOG(1) << "ResolveFocusChain: view_tree_token=" << view_tree_token;
 
   auto it = view_trees_by_token_.find(view_tree_token->value);
   if (it != view_trees_by_token_.end()) {
@@ -760,8 +760,8 @@ void ViewRegistry::ResolveFocusChain(
 void ViewRegistry::ActivateFocusChain(
     mozart::ViewTokenPtr view_token,
     const ActivateFocusChainCallback& callback) {
-  FTL_DCHECK(view_token);
-  FTL_VLOG(1) << "ActivateFocusChain: view_token=" << view_token;
+  FXL_DCHECK(view_token);
+  FXL_VLOG(1) << "ActivateFocusChain: view_token=" << view_token;
 
   ViewState* view = FindView(view_token->value);
   if (!view) {
@@ -778,8 +778,8 @@ void ViewRegistry::ActivateFocusChain(
 
 void ViewRegistry::HasFocus(mozart::ViewTokenPtr view_token,
                             const HasFocusCallback& callback) {
-  FTL_DCHECK(view_token);
-  FTL_VLOG(1) << "HasFocus: view_token=" << view_token;
+  FXL_DCHECK(view_token);
+  FXL_VLOG(1) << "HasFocus: view_token=" << view_token;
   ViewState* view = FindView(view_token->value);
   if (!view) {
     callback(false);
@@ -819,9 +819,9 @@ app::ServiceProvider* ViewRegistry::FindViewServiceProvider(
 void ViewRegistry::GetSoftKeyboardContainer(
     mozart::ViewTokenPtr view_token,
     fidl::InterfaceRequest<mozart::SoftKeyboardContainer> container) {
-  FTL_DCHECK(view_token);
-  FTL_DCHECK(container.is_pending());
-  FTL_VLOG(1) << "GetSoftKeyboardContainer: view_token=" << view_token;
+  FXL_DCHECK(view_token);
+  FXL_DCHECK(container.is_pending());
+  FXL_VLOG(1) << "GetSoftKeyboardContainer: view_token=" << view_token;
 
   auto provider = FindViewServiceProvider(view_token->value,
                                           mozart::SoftKeyboardContainer::Name_);
@@ -833,9 +833,9 @@ void ViewRegistry::GetSoftKeyboardContainer(
 void ViewRegistry::GetImeService(
     mozart::ViewTokenPtr view_token,
     fidl::InterfaceRequest<mozart::ImeService> ime_service) {
-  FTL_DCHECK(view_token);
-  FTL_DCHECK(ime_service.is_pending());
-  FTL_VLOG(1) << "GetImeService: view_token=" << view_token;
+  FXL_DCHECK(view_token);
+  FXL_DCHECK(ime_service.is_pending());
+  FXL_VLOG(1) << "GetImeService: view_token=" << view_token;
 
   auto provider =
       FindViewServiceProvider(view_token->value, mozart::ImeService::Name_);
@@ -850,10 +850,10 @@ void ViewRegistry::GetImeService(
 
 void ViewRegistry::SendPropertiesChanged(ViewState* view_state,
                                          mozart::ViewPropertiesPtr properties) {
-  FTL_DCHECK(view_state);
-  FTL_DCHECK(view_state->view_listener());
+  FXL_DCHECK(view_state);
+  FXL_DCHECK(view_state->view_listener());
 
-  FTL_VLOG(1) << "SendPropertiesChanged: view_state=" << view_state
+  FXL_VLOG(1) << "SendPropertiesChanged: view_state=" << view_state
               << ", properties=" << properties;
 
   // It's safe to capture the view state because the ViewListener is closed
@@ -862,14 +862,14 @@ void ViewRegistry::SendPropertiesChanged(ViewState* view_state,
   view_state->view_listener()->OnPropertiesChanged(
       std::move(properties), [this, view_state] {
         uint32_t old_flags = view_state->invalidation_flags();
-        FTL_DCHECK(old_flags & ViewState::INVALIDATION_IN_PROGRESS);
+        FXL_DCHECK(old_flags & ViewState::INVALIDATION_IN_PROGRESS);
 
         view_state->set_invalidation_flags(
             old_flags & ~(ViewState::INVALIDATION_IN_PROGRESS |
                           ViewState::INVALIDATION_STALLED));
 
         if (old_flags & ViewState::INVALIDATION_STALLED) {
-          FTL_VLOG(2) << "View recovered from stalled invalidation: view_state="
+          FXL_VLOG(2) << "View recovered from stalled invalidation: view_state="
                       << view_state;
           InvalidateView(view_state, 0u);
         }
@@ -879,14 +879,14 @@ void ViewRegistry::SendPropertiesChanged(ViewState* view_state,
 void ViewRegistry::SendChildAttached(ViewContainerState* container_state,
                                      uint32_t child_key,
                                      mozart::ViewInfoPtr child_view_info) {
-  FTL_DCHECK(container_state);
-  FTL_DCHECK(child_view_info);
+  FXL_DCHECK(container_state);
+  FXL_DCHECK(child_view_info);
 
   if (!container_state->view_container_listener())
     return;
 
   // TODO: Detect ANRs
-  FTL_VLOG(1) << "SendChildAttached: container_state=" << container_state
+  FXL_VLOG(1) << "SendChildAttached: container_state=" << container_state
               << ", child_key=" << child_key
               << ", child_view_info=" << child_view_info;
   container_state->view_container_listener()->OnChildAttached(
@@ -895,13 +895,13 @@ void ViewRegistry::SendChildAttached(ViewContainerState* container_state,
 
 void ViewRegistry::SendChildUnavailable(ViewContainerState* container_state,
                                         uint32_t child_key) {
-  FTL_DCHECK(container_state);
+  FXL_DCHECK(container_state);
 
   if (!container_state->view_container_listener())
     return;
 
   // TODO: Detect ANRs
-  FTL_VLOG(1) << "SendChildUnavailable: container=" << container_state
+  FXL_VLOG(1) << "SendChildUnavailable: container=" << container_state
               << ", child_key=" << child_key;
   container_state->view_container_listener()->OnChildUnavailable(child_key,
                                                                  [] {});
@@ -910,14 +910,14 @@ void ViewRegistry::SendChildUnavailable(ViewContainerState* container_state,
 void ViewRegistry::DeliverEvent(const mozart::ViewToken* view_token,
                                 mozart::InputEventPtr event,
                                 ViewInspector::OnEventDelivered callback) {
-  FTL_DCHECK(view_token);
-  FTL_DCHECK(event);
-  FTL_VLOG(1) << "DeliverEvent: view_token=" << *view_token
+  FXL_DCHECK(view_token);
+  FXL_DCHECK(event);
+  FXL_VLOG(1) << "DeliverEvent: view_token=" << *view_token
               << ", event=" << *event;
 
   auto it = input_connections_by_view_token_.find(view_token->value);
   if (it == input_connections_by_view_token_.end()) {
-    FTL_VLOG(1)
+    FXL_VLOG(1)
         << "DeliverEvent: dropped because there was no input connection";
     if (callback)
       callback(false);
@@ -933,9 +933,9 @@ void ViewRegistry::DeliverEvent(const mozart::ViewToken* view_token,
 void ViewRegistry::CreateInputConnection(
     mozart::ViewTokenPtr view_token,
     fidl::InterfaceRequest<mozart::InputConnection> request) {
-  FTL_DCHECK(view_token);
-  FTL_DCHECK(request.is_pending());
-  FTL_VLOG(1) << "CreateInputConnection: view_token=" << view_token;
+  FXL_DCHECK(view_token);
+  FXL_DCHECK(request.is_pending());
+  FXL_VLOG(1) << "CreateInputConnection: view_token=" << view_token;
 
   const uint32_t view_token_value = view_token->value;
   input_connections_by_view_token_.emplace(
@@ -945,12 +945,12 @@ void ViewRegistry::CreateInputConnection(
 }
 
 void ViewRegistry::OnInputConnectionDied(InputConnectionImpl* connection) {
-  FTL_DCHECK(connection);
+  FXL_DCHECK(connection);
   auto it =
       input_connections_by_view_token_.find(connection->view_token()->value);
-  FTL_DCHECK(it != input_connections_by_view_token_.end());
-  FTL_DCHECK(it->second.get() == connection);
-  FTL_VLOG(1) << "OnInputConnectionDied: view_token="
+  FXL_DCHECK(it != input_connections_by_view_token_.end());
+  FXL_DCHECK(it->second.get() == connection);
+  FXL_VLOG(1) << "OnInputConnectionDied: view_token="
               << connection->view_token();
 
   input_connections_by_view_token_.erase(it);
@@ -959,9 +959,9 @@ void ViewRegistry::OnInputConnectionDied(InputConnectionImpl* connection) {
 void ViewRegistry::CreateInputDispatcher(
     mozart::ViewTreeTokenPtr view_tree_token,
     fidl::InterfaceRequest<mozart::InputDispatcher> request) {
-  FTL_DCHECK(view_tree_token);
-  FTL_DCHECK(request.is_pending());
-  FTL_VLOG(1) << "CreateInputDispatcher: view_tree_token=" << view_tree_token;
+  FXL_DCHECK(view_tree_token);
+  FXL_DCHECK(request.is_pending());
+  FXL_VLOG(1) << "CreateInputDispatcher: view_tree_token=" << view_tree_token;
 
   const uint32_t view_tree_token_value = view_tree_token->value;
   input_dispatchers_by_view_tree_token_.emplace(
@@ -971,14 +971,14 @@ void ViewRegistry::CreateInputDispatcher(
 }
 
 void ViewRegistry::OnInputDispatcherDied(InputDispatcherImpl* dispatcher) {
-  FTL_DCHECK(dispatcher);
-  FTL_VLOG(1) << "OnInputDispatcherDied: view_tree_token="
+  FXL_DCHECK(dispatcher);
+  FXL_VLOG(1) << "OnInputDispatcherDied: view_tree_token="
               << dispatcher->view_tree_token();
 
   auto it = input_dispatchers_by_view_tree_token_.find(
       dispatcher->view_tree_token()->value);
-  FTL_DCHECK(it != input_dispatchers_by_view_tree_token_.end());
-  FTL_DCHECK(it->second.get() == dispatcher);
+  FXL_DCHECK(it != input_dispatchers_by_view_tree_token_.end());
+  FXL_DCHECK(it->second.get() == dispatcher);
 
   input_dispatchers_by_view_tree_token_.erase(it);
 }

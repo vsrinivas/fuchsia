@@ -8,7 +8,7 @@
 #include <mx/vmo.h>
 
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/icu_data/fidl/icu_data.fidl.h"
 
 namespace icu_data {
@@ -32,7 +32,7 @@ class ICUDataProviderImpl : public ICUDataProvider {
 
   mx::vmo icu_data_vmo_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ICUDataProviderImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ICUDataProviderImpl);
 };
 
 }  // namespace icu_data

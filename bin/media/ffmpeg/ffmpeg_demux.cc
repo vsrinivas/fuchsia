@@ -15,12 +15,12 @@
 #include "garnet/bin/media/ffmpeg/ffmpeg_demux.h"
 #include "garnet/bin/media/util/incident.h"
 #include "garnet/bin/media/util/safe_clone.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/synchronization/cond_var.h"
-#include "lib/ftl/synchronization/mutex.h"
-#include "lib/ftl/synchronization/thread_annotations.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/synchronization/cond_var.h"
+#include "lib/fxl/synchronization/mutex.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
+#include "lib/fxl/tasks/task_runner.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace media {
@@ -87,7 +87,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
               static_cast<size_t>(av_packet->size),
               av_packet->size == 0 ? nullptr : av_packet->data),
           av_packet_(std::move(av_packet)) {
-      FTL_DCHECK(av_packet_->size >= 0);
+      FXL_DCHECK(av_packet_->size >= 0);
     }
 
    private:
@@ -114,24 +114,24 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   // Sets the problem values and sends status.
   void ReportProblem(const std::string& type, const std::string& details);
 
-  ftl::Mutex mutex_;
-  ftl::CondVar condition_variable_ FTL_GUARDED_BY(mutex_);
+  fxl::Mutex mutex_;
+  fxl::CondVar condition_variable_ FXL_GUARDED_BY(mutex_);
   std::thread ffmpeg_thread_;
 
-  int64_t seek_position_ FTL_GUARDED_BY(mutex_) = kNotSeeking;
-  SeekCallback seek_callback_ FTL_GUARDED_BY(mutex_);
-  bool packet_requested_ FTL_GUARDED_BY(mutex_) = false;
-  bool terminating_ FTL_GUARDED_BY(mutex_) = false;
-  std::unique_ptr<Metadata> metadata_ FTL_GUARDED_BY(mutex_);
-  std::string problem_type_ FTL_GUARDED_BY(mutex_);
-  std::string problem_details_ FTL_GUARDED_BY(mutex_);
+  int64_t seek_position_ FXL_GUARDED_BY(mutex_) = kNotSeeking;
+  SeekCallback seek_callback_ FXL_GUARDED_BY(mutex_);
+  bool packet_requested_ FXL_GUARDED_BY(mutex_) = false;
+  bool terminating_ FXL_GUARDED_BY(mutex_) = false;
+  std::unique_ptr<Metadata> metadata_ FXL_GUARDED_BY(mutex_);
+  std::string problem_type_ FXL_GUARDED_BY(mutex_);
+  std::string problem_details_ FXL_GUARDED_BY(mutex_);
 
   // These should be stable after init until the desctructor terminates.
   std::shared_ptr<Reader> reader_;
   std::vector<DemuxStream*> streams_;
   Incident init_complete_;
   Result result_;
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
 
   // After Init, only the ffmpeg thread accesses these.
   AvFormatContextPtr format_context_;
@@ -150,13 +150,13 @@ std::shared_ptr<Demux> FfmpegDemux::Create(std::shared_ptr<Reader> reader) {
 FfmpegDemuxImpl::FfmpegDemuxImpl(std::shared_ptr<Reader> reader)
     : reader_(reader) {
   task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
-  FTL_DCHECK(task_runner_);
+  FXL_DCHECK(task_runner_);
   ffmpeg_thread_ = std::thread([this]() { Worker(); });
 }
 
 FfmpegDemuxImpl::~FfmpegDemuxImpl() {
   {
-    ftl::MutexLocker locker(&mutex_);
+    fxl::MutexLocker locker(&mutex_);
     terminating_ = true;
     condition_variable_.SignalAll();
   }
@@ -179,7 +179,7 @@ const std::vector<Demux::DemuxStream*>& FfmpegDemuxImpl::streams() const {
 }
 
 void FfmpegDemuxImpl::Seek(int64_t position, const SeekCallback& callback) {
-  ftl::MutexLocker locker(&mutex_);
+  fxl::MutexLocker locker(&mutex_);
   seek_position_ = position;
   seek_callback_ = callback;
   condition_variable_.SignalAll();
@@ -190,7 +190,7 @@ size_t FfmpegDemuxImpl::stream_count() const {
 }
 
 void FfmpegDemuxImpl::RequestPacket() {
-  ftl::MutexLocker locker(&mutex_);
+  fxl::MutexLocker locker(&mutex_);
   packet_requested_ = true;
   condition_variable_.SignalAll();
 }
@@ -200,7 +200,7 @@ void FfmpegDemuxImpl::Worker() {
 
   result_ = AvIoContext::Create(reader_, &io_context_);
   if (result_ != Result::kOk) {
-    FTL_LOG(ERROR) << "AvIoContext::Create failed, result "
+    FXL_LOG(ERROR) << "AvIoContext::Create failed, result "
                    << static_cast<int>(result_);
     ReportProblem(result_ == Result::kNotFound ? Problem::kProblemAssetNotFound
                                                : Problem::kProblemInternal,
@@ -209,11 +209,11 @@ void FfmpegDemuxImpl::Worker() {
     return;
   }
 
-  FTL_DCHECK(io_context_);
+  FXL_DCHECK(io_context_);
 
   format_context_ = AvFormatContext::OpenInput(io_context_);
   if (!format_context_) {
-    FTL_LOG(ERROR) << "AvFormatContext::OpenInput failed";
+    FXL_LOG(ERROR) << "AvFormatContext::OpenInput failed";
     result_ = Result::kUnsupportedOperation;
     ReportProblem(Problem::kProblemContainerNotSupported, "");
     init_complete_.Occur();
@@ -222,7 +222,7 @@ void FfmpegDemuxImpl::Worker() {
 
   int r = avformat_find_stream_info(format_context_.get(), nullptr);
   if (r < 0) {
-    FTL_LOG(ERROR) << "avformat_find_stream_info failed, result " << r;
+    FXL_LOG(ERROR) << "avformat_find_stream_info failed, result " << r;
     result_ = Result::kInternalError;
     ReportProblem(Problem::kProblemInternal,
                   "avformat_find_stream_info failed");
@@ -239,7 +239,7 @@ void FfmpegDemuxImpl::Worker() {
   }
 
   {
-    ftl::MutexLocker locker(&mutex_);
+    fxl::MutexLocker locker(&mutex_);
     metadata_ =
         Metadata::Create(format_context_->duration * kNanosecondsPerMicrosecond,
                          metadata_map["TITLE"], metadata_map["ARTIST"],
@@ -258,7 +258,7 @@ void FfmpegDemuxImpl::Worker() {
     SeekCallback seek_callback;
 
     {
-      ftl::MutexLocker locker(&mutex_);
+      fxl::MutexLocker locker(&mutex_);
       while (!packet_requested_ && !terminating_ &&
              seek_position_ == kNotSeeking) {
         condition_variable_.Wait(&mutex_);
@@ -286,7 +286,7 @@ void FfmpegDemuxImpl::Worker() {
       int r = av_seek_frame(format_context_.get(), -1, seek_position / 1000,
                             AVSEEK_FLAG_BACKWARD);
       if (r < 0) {
-        FTL_LOG(WARNING) << "av_seek_frame failed, result " << r;
+        FXL_LOG(WARNING) << "av_seek_frame failed, result " << r;
       }
       next_stream_to_end_ = -1;
       seek_callback();
@@ -295,10 +295,10 @@ void FfmpegDemuxImpl::Worker() {
     if (packet_requested) {
       size_t stream_index;
       PacketPtr packet = PullPacket(&stream_index);
-      FTL_DCHECK(packet);
+      FXL_DCHECK(packet);
 
       // TODO(dalesat): Resolve the race that makes this necessary.
-      task_runner_->PostTask(ftl::MakeCopyable([
+      task_runner_->PostTask(fxl::MakeCopyable([
         this, stream_index, packet = std::move(packet)
       ]() mutable { stage().SupplyPacket(stream_index, std::move(packet)); }));
     }
@@ -306,7 +306,7 @@ void FfmpegDemuxImpl::Worker() {
 }
 
 PacketPtr FfmpegDemuxImpl::PullPacket(size_t* stream_index_out) {
-  FTL_DCHECK(stream_index_out);
+  FXL_DCHECK(stream_index_out);
 
   if (next_stream_to_end_ != -1) {
     // We're producing end-of-stream packets for all the streams.
@@ -328,18 +328,18 @@ PacketPtr FfmpegDemuxImpl::PullPacket(size_t* stream_index_out) {
   // TODO(dalesat): What if the packet has no PTS or duration?
   next_pts_ = av_packet->pts + av_packet->duration;
   // TODO(dalesat): Implement packet side data.
-  FTL_DCHECK(av_packet->side_data == nullptr) << "side data not implemented";
-  FTL_DCHECK(av_packet->side_data_elems == 0);
+  FXL_DCHECK(av_packet->side_data == nullptr) << "side data not implemented";
+  FXL_DCHECK(av_packet->side_data_elems == 0);
 
   return DemuxPacket::Create(std::move(av_packet),
                              streams_[*stream_index_out]->pts_rate());
 }
 
 PacketPtr FfmpegDemuxImpl::PullEndOfStreamPacket(size_t* stream_index_out) {
-  FTL_DCHECK(next_stream_to_end_ >= 0);
+  FXL_DCHECK(next_stream_to_end_ >= 0);
 
   if (static_cast<std::size_t>(next_stream_to_end_) >= streams_.size()) {
-    FTL_DCHECK(false) << "PullPacket called after all streams have ended";
+    FXL_DCHECK(false) << "PullPacket called after all streams have ended";
     return nullptr;
   }
 
@@ -374,7 +374,7 @@ void FfmpegDemuxImpl::SendStatus() {
   std::string problem_details;
 
   {
-    ftl::MutexLocker locker(&mutex_);
+    fxl::MutexLocker locker(&mutex_);
     metadata = SafeClone(metadata_);
     problem_type = problem_type_;
     problem_details = problem_details_;
@@ -386,7 +386,7 @@ void FfmpegDemuxImpl::SendStatus() {
 void FfmpegDemuxImpl::ReportProblem(const std::string& type,
                                     const std::string& details) {
   {
-    ftl::MutexLocker locker(&mutex_);
+    fxl::MutexLocker locker(&mutex_);
     problem_type_ = type;
     problem_details_ = details;
   }

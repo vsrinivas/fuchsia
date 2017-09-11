@@ -10,7 +10,7 @@
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "garnet/bin/netconnector/socket_address.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace netconnector {
 
@@ -41,7 +41,7 @@ class DeviceServiceProvider : public app::ServiceProvider {
   fidl::Binding<app::ServiceProvider> binding_;
   NetConnectorImpl* owner_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DeviceServiceProvider);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DeviceServiceProvider);
 };
 
 }  // namespace netconnector

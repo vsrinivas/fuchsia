@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "garnet/bin/media/framework/types/bytes.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -85,7 +85,7 @@ class StreamType {
 template <typename T>
 struct Range {
   Range(T min_param, T max_param) : min(min_param), max(max_param) {
-    FTL_DCHECK(min_param <= max_param);
+    FXL_DCHECK(min_param <= max_param);
   }
 
   T min;

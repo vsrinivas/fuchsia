@@ -10,7 +10,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/media/timeline/timeline.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -20,8 +20,8 @@ NetMediaPlayerNetStub::NetMediaPlayerNetStub(
     netconnector::NetStubResponder<NetMediaPlayer, NetMediaPlayerNetStub>*
         responder)
     : player_(player), responder_(responder) {
-  FTL_DCHECK(player_);
-  FTL_DCHECK(responder_);
+  FXL_DCHECK(player_);
+  FXL_DCHECK(responder_);
 
   message_relay_.SetMessageReceivedCallback(
       [this](std::vector<uint8_t> message) { HandleReceivedMessage(message); });
@@ -41,16 +41,16 @@ void NetMediaPlayerNetStub::HandleReceivedMessage(
   deserializer >> message;
 
   if (!deserializer.complete()) {
-    FTL_LOG(ERROR) << "Malformed message received";
+    FXL_LOG(ERROR) << "Malformed message received";
     message_relay_.CloseChannel();
     return;
   }
 
-  FTL_DCHECK(message);
+  FXL_DCHECK(message);
 
   switch (message->type_) {
     case NetMediaPlayerInMessageType::kTimeCheckRequest:
-      FTL_DCHECK(message->time_check_request_);
+      FXL_DCHECK(message->time_check_request_);
       message_relay_.SendMessage(
           Serializer::Serialize(NetMediaPlayerOutMessage::TimeCheckResponse(
               message->time_check_request_->requestor_time_,
@@ -62,7 +62,7 @@ void NetMediaPlayerNetStub::HandleReceivedMessage(
       break;
 
     case NetMediaPlayerInMessageType::kSetUrlRequest:
-      FTL_DCHECK(message->set_url_request_);
+      FXL_DCHECK(message->set_url_request_);
       player_->SetUrl(message->set_url_request_->url_);
       break;
 
@@ -75,7 +75,7 @@ void NetMediaPlayerNetStub::HandleReceivedMessage(
       break;
 
     case NetMediaPlayerInMessageType::kSeekRequest:
-      FTL_DCHECK(message->seek_request_);
+      FXL_DCHECK(message->seek_request_);
       player_->Seek(message->seek_request_->position_);
       break;
   }

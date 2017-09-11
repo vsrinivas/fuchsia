@@ -11,9 +11,9 @@
 #include "lib/media/transport/shared_buffer_set_allocator.h"
 #include "lib/media/fidl/logs/media_packet_producer_channel.fidl.h"
 #include "lib/media/fidl/media_transport.fidl.h"
-#include "lib/ftl/synchronization/mutex.h"
-#include "lib/ftl/synchronization/thread_annotations.h"
-#include "lib/ftl/synchronization/thread_checker.h"
+#include "lib/fxl/synchronization/mutex.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
+#include "lib/fxl/synchronization/thread_checker.h"
 
 namespace media {
 
@@ -97,14 +97,14 @@ class MediaPacketProducerBase {
   bool flush_in_progress_ = false;
   uint64_t prev_packet_label_ = 0;
 
-  mutable ftl::Mutex mutex_;
-  MediaPacketDemand demand_ FTL_GUARDED_BY(mutex_);
-  uint32_t packets_outstanding_ FTL_GUARDED_BY(mutex_) = 0;
-  int64_t pts_last_produced_ FTL_GUARDED_BY(mutex_) =
+  mutable fxl::Mutex mutex_;
+  MediaPacketDemand demand_ FXL_GUARDED_BY(mutex_);
+  uint32_t packets_outstanding_ FXL_GUARDED_BY(mutex_) = 0;
+  int64_t pts_last_produced_ FXL_GUARDED_BY(mutex_) =
       std::numeric_limits<int64_t>::min();
-  bool end_of_stream_ FTL_GUARDED_BY(mutex_) = false;
+  bool end_of_stream_ FXL_GUARDED_BY(mutex_) = false;
 
-  FTL_DECLARE_THREAD_CHECKER(thread_checker_);
+  FXL_DECLARE_THREAD_CHECKER(thread_checker_);
 
  protected:
   FLOG_INSTANCE_CHANNEL(logs::MediaPacketProducerChannel, log_channel_);

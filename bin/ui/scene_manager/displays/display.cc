@@ -6,7 +6,7 @@
 
 #include <magenta/syscalls.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace scene_manager {
 
@@ -40,12 +40,12 @@ uint64_t Display::GetVsyncInterval() const {
 }
 
 void Display::Claim() {
-  FTL_DCHECK(!claimed_);
+  FXL_DCHECK(!claimed_);
   claimed_ = true;
 }
 
 void Display::Unclaim() {
-  FTL_DCHECK(claimed_);
+  FXL_DCHECK(claimed_);
   claimed_ = false;
 }
 

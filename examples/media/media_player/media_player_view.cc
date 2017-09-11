@@ -15,7 +15,7 @@
 #include "lib/media/fidl/audio_renderer.fidl.h"
 #include "lib/media/fidl/media_service.fidl.h"
 #include "lib/media/fidl/net_media_service.fidl.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkPath.h"
@@ -56,7 +56,7 @@ MediaPlayerView::MediaPlayerView(
                        "Media Player"),
       background_node_(session()),
       controls_widget_(session()) {
-  FTL_DCHECK(params.is_valid());
+  FXL_DCHECK(params.is_valid());
 
   scenic_lib::Material background_material(session());
   background_material.SetColor(0x1a, 0x23, 0x7e, 0xff);  // Indigo 900
@@ -136,7 +136,7 @@ MediaPlayerView::MediaPlayerView(
 MediaPlayerView::~MediaPlayerView() {}
 
 bool MediaPlayerView::OnInputEvent(mozart::InputEventPtr event) {
-  FTL_DCHECK(event);
+  FXL_DCHECK(event);
   bool handled = false;
   if (event->is_pointer()) {
     const auto& pointer = event->get_pointer();
@@ -176,7 +176,7 @@ bool MediaPlayerView::OnInputEvent(mozart::InputEventPtr event) {
 
 void MediaPlayerView::OnPropertiesChanged(
     mozart::ViewPropertiesPtr old_properties) {
-  FTL_DCHECK(properties());
+  FXL_DCHECK(properties());
 
   Layout();
 }
@@ -266,9 +266,9 @@ void MediaPlayerView::OnSceneInvalidated(
 
   // Log the frame rate every five seconds.
   if (state_ == State::kPlaying &&
-      ftl::TimeDelta::FromNanoseconds(frame_time_).ToSeconds() / 5 !=
-          ftl::TimeDelta::FromNanoseconds(prev_frame_time_).ToSeconds() / 5) {
-    FTL_DLOG(INFO) << "frame rate " << frame_rate() << " fps";
+      fxl::TimeDelta::FromNanoseconds(frame_time_).ToSeconds() / 5 !=
+          fxl::TimeDelta::FromNanoseconds(prev_frame_time_).ToSeconds() / 5) {
+    FXL_DLOG(INFO) << "frame rate " << frame_rate() << " fps";
   }
 
   // Position the video.
@@ -297,15 +297,15 @@ void MediaPlayerView::OnSceneInvalidated(
 
 void MediaPlayerView::OnChildAttached(uint32_t child_key,
                                       mozart::ViewInfoPtr child_view_info) {
-  FTL_DCHECK(child_key == kVideoChildKey);
+  FXL_DCHECK(child_key == kVideoChildKey);
 
   parent_node().AddChild(*video_host_node_);
   Layout();
 }
 
 void MediaPlayerView::OnChildUnavailable(uint32_t child_key) {
-  FTL_DCHECK(child_key == kVideoChildKey);
-  FTL_LOG(ERROR) << "Video view died unexpectedly";
+  FXL_DCHECK(child_key == kVideoChildKey);
+  FXL_LOG(ERROR) << "Video view died unexpectedly";
 
   video_host_node_->Detach();
   video_host_node_.reset();
@@ -378,7 +378,7 @@ void MediaPlayerView::HandlePlayerStatusUpdates(
     // TODO(dalesat): Display problems on the screen.
     if (status->problem) {
       if (!problem_shown_) {
-        FTL_DLOG(INFO) << "PROBLEM: " << status->problem->type << ", "
+        FXL_DLOG(INFO) << "PROBLEM: " << status->problem->type << ", "
                        << status->problem->details;
         problem_shown_ = true;
       }
@@ -390,21 +390,21 @@ void MediaPlayerView::HandlePlayerStatusUpdates(
 
     // TODO(dalesat): Display metadata on the screen.
     if (metadata_ && !metadata_shown_) {
-      FTL_DLOG(INFO) << "duration   " << std::fixed << std::setprecision(1)
+      FXL_DLOG(INFO) << "duration   " << std::fixed << std::setprecision(1)
                      << double(metadata_->duration) / 1000000000.0
                      << " seconds";
-      FTL_DLOG(INFO) << "title      "
+      FXL_DLOG(INFO) << "title      "
                      << (metadata_->title ? metadata_->title : "<none>");
-      FTL_DLOG(INFO) << "artist     "
+      FXL_DLOG(INFO) << "artist     "
                      << (metadata_->artist ? metadata_->artist : "<none>");
-      FTL_DLOG(INFO) << "album      "
+      FXL_DLOG(INFO) << "album      "
                      << (metadata_->album ? metadata_->album : "<none>");
-      FTL_DLOG(INFO) << "publisher  "
+      FXL_DLOG(INFO) << "publisher  "
                      << (metadata_->publisher ? metadata_->publisher
                                               : "<none>");
-      FTL_DLOG(INFO) << "genre      "
+      FXL_DLOG(INFO) << "genre      "
                      << (metadata_->genre ? metadata_->genre : "<none>");
-      FTL_DLOG(INFO) << "composer   "
+      FXL_DLOG(INFO) << "composer   "
                      << (metadata_->composer ? metadata_->composer : "<none>");
       metadata_shown_ = true;
     }
@@ -426,7 +426,7 @@ void MediaPlayerView::HandleVideoRendererStatusUpdates(
     media::VideoRendererStatusPtr status) {
   if (status) {
     // Process status received from the video renderer.
-    FTL_LOG(INFO) << "video size " << status->video_size->width << "x"
+    FXL_LOG(INFO) << "video size " << status->video_size->width << "x"
                   << status->video_size->height << ", pixel aspect ratio "
                   << status->pixel_aspect_ratio->width << "x"
                   << status->pixel_aspect_ratio->height;

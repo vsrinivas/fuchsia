@@ -4,8 +4,8 @@
 
 #include "garnet/bin/media/audio_policy_service/audio_policy_service_impl.h"
 
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/files/file.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/file.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace media {
@@ -13,8 +13,8 @@ namespace {
 
 static constexpr float kMaxSystemAudioGain = 0.0f;
 static constexpr uint32_t kInitializeAttempts = 30;
-static constexpr ftl::TimeDelta kInitializeAttemptInterval =
-    ftl::TimeDelta::FromMilliseconds(100);
+static constexpr fxl::TimeDelta kInitializeAttemptInterval =
+    fxl::TimeDelta::FromMilliseconds(100);
 static const std::string kStatusFilePath =
     "/data/app_local/audio_policy_service/status";
 static const std::string kStatusFileDir =
@@ -116,14 +116,14 @@ void AudioPolicyServiceImpl::LoadStatus() {
   std::vector<uint8_t> buffer;
 
   if (!files::ReadFileToVector(kStatusFilePath, &buffer)) {
-    FTL_LOG(WARNING) << "Failed to read status";
+    FXL_LOG(WARNING) << "Failed to read status";
     return;
   }
 
   AudioPolicyStatus status;
 
   if (!status.Deserialize(buffer.data(), buffer.size())) {
-    FTL_LOG(WARNING) << "Failed to deserialize status";
+    FXL_LOG(WARNING) << "Failed to deserialize status";
     return;
   }
 
@@ -137,21 +137,21 @@ void AudioPolicyServiceImpl::SaveStatus() {
   size_t actual_size;
 
   if (!status->Serialize(buffer.data(), buffer.size(), &actual_size)) {
-    FTL_LOG(WARNING) << "Failed to serialize status";
+    FXL_LOG(WARNING) << "Failed to serialize status";
     return;
   }
 
-  FTL_DCHECK(actual_size <= buffer.size());
+  FXL_DCHECK(actual_size <= buffer.size());
 
   if (!files::IsDirectory(kStatusFileDir) &&
       !files::CreateDirectory(kStatusFileDir)) {
-    FTL_LOG(WARNING) << "Failed to create directory " << kStatusFileDir;
+    FXL_LOG(WARNING) << "Failed to create directory " << kStatusFileDir;
   }
 
   if (!files::WriteFile(kStatusFilePath,
                         reinterpret_cast<const char*>(buffer.data()),
                         actual_size)) {
-    FTL_LOG(WARNING) << "Failed to write status to " << kStatusFilePath;
+    FXL_LOG(WARNING) << "Failed to write status to " << kStatusFilePath;
     return;
   }
 }

@@ -9,9 +9,9 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_number_conversions.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "util.h"
 
@@ -32,7 +32,7 @@ Error Reader::Create(const std::string& file_name,
                      std::shared_ptr<util::ByteBlock> byte_block,
                      uint32_t options, uint64_t base,
                      std::unique_ptr<Reader>* out) {
-  FTL_DCHECK(options == 0);
+  FXL_DCHECK(options == 0);
   Reader* er = new Reader(file_name, byte_block, base);
   if (!ReadHeader(*byte_block, base, &er->header_)) {
     delete er;
@@ -100,8 +100,8 @@ void Reader::FreeSegmentHeaders() {
 }
 
 const SegmentHeader& Reader::GetSegmentHeader(size_t segment_number) {
-  FTL_DCHECK(segment_headers_);
-  FTL_DCHECK(segment_number < GetNumSegments());
+  FXL_DCHECK(segment_headers_);
+  FXL_DCHECK(segment_number < GetNumSegments());
   return segment_headers_[segment_number];
 }
 
@@ -126,8 +126,8 @@ void Reader::FreeSectionHeaders() {
 }
 
 const SectionHeader& Reader::GetSectionHeader(size_t section_number) {
-  FTL_DCHECK(section_headers_);
-  FTL_DCHECK(section_number < GetNumSections());
+  FXL_DCHECK(section_headers_);
+  FXL_DCHECK(section_number < GetNumSections());
   return section_headers_[section_number];
 }
 
@@ -146,12 +146,12 @@ Error Reader::GetSectionContents(
     std::unique_ptr<SectionContents>* out_contents) {
   void* buffer = malloc(sh.sh_size);
   if (!buffer) {
-    FTL_LOG(ERROR) << "OOM getting space for section contents";
+    FXL_LOG(ERROR) << "OOM getting space for section contents";
     return Error::NOMEM;
   }
 
   if (!byte_block_->Read(base_ + sh.sh_offset, buffer, sh.sh_size)) {
-    FTL_LOG(ERROR) << "Error reading section contents";
+    FXL_LOG(ERROR) << "Error reading section contents";
     return Error::IO;
   }
 
@@ -164,7 +164,7 @@ Error Reader::GetSectionContents(
 Error Reader::ReadBuildId(char* buf, size_t buf_size) {
   uint64_t vaddr = base_;
 
-  FTL_DCHECK(buf_size >= kMaxBuildIdSize * 2 + 1);
+  FXL_DCHECK(buf_size >= kMaxBuildIdSize * 2 + 1);
 
   Error rc = ReadSegmentHeaders();
   if (rc != Error::OK)
@@ -219,7 +219,7 @@ Error Reader::ReadBuildId(char* buf, size_t buf_size) {
 
 SectionContents::SectionContents(const SectionHeader& header, void* contents)
   : header_(header), contents_(contents) {
-  FTL_DCHECK(contents);
+  FXL_DCHECK(contents);
 }
 
 SectionContents::~SectionContents() {
@@ -235,13 +235,13 @@ size_t SectionContents::GetNumEntries() const {
     return 0;
   }
 
-  FTL_DCHECK(header_.sh_entsize != 0);
+  FXL_DCHECK(header_.sh_entsize != 0);
   return header_.sh_size / header_.sh_entsize;
 }
 
 const RawSymbol& SectionContents::GetSymbolEntry(size_t entry_number) {
-  FTL_DCHECK(header_.sh_type == SHT_SYMTAB || header_.sh_type == SHT_DYNSYM);
-  FTL_DCHECK(entry_number < GetNumEntries());
+  FXL_DCHECK(header_.sh_type == SHT_SYMTAB || header_.sh_type == SHT_DYNSYM);
+  FXL_DCHECK(entry_number < GetNumEntries());
   auto buf = reinterpret_cast<const char*>(contents_);
   auto sym = buf + entry_number * header_.sh_entsize;
   return *reinterpret_cast<const RawSymbol*>(sym);

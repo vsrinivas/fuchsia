@@ -67,7 +67,7 @@ TexturePtr Texture::New(ResourceRecycler* resource_recycler,
                         vk::Filter filter,
                         vk::ImageAspectFlags aspect_mask,
                         bool use_unnormalized_coordinates) {
-  return ftl::MakeRefCounted<Texture>(resource_recycler, std::move(image),
+  return fxl::MakeRefCounted<Texture>(resource_recycler, std::move(image),
                                       filter, aspect_mask,
                                       use_unnormalized_coordinates);
 }

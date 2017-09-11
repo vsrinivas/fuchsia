@@ -15,9 +15,9 @@
 #include <magenta/types.h>
 #include <mx/port.h>
 
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace debugserver {
 
@@ -87,7 +87,7 @@ class ExceptionPort final {
 
   // The origin task runner used to post observer callback events to the thread
   // that created this object.
-  ftl::RefPtr<ftl::TaskRunner> origin_task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> origin_task_runner_;
 
   // The exception port handle and a mutex for synchronizing access to it.
   // |io_thread_| only ever reads from |eport_handle_| but a call to Quit() can
@@ -103,7 +103,7 @@ class ExceptionPort final {
   // All callbacks that are currently bound to this port.
   std::unordered_map<Key, BindData> callbacks_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ExceptionPort);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ExceptionPort);
 };
 
 // Print an exception in user-friendly form.

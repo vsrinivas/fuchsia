@@ -8,14 +8,14 @@
 #include "escher/renderer/semaphore_wait.h"
 #include "escher/renderer/timestamper.h"
 #include "escher/vk/vulkan_context.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 
 typedef std::function<void()> FrameRetiredCallback;
 
-class Renderer : public ftl::RefCountedThreadSafe<Renderer>,
+class Renderer : public fxl::RefCountedThreadSafe<Renderer>,
                  public Timestamper {
  public:
   void RunOffscreenBenchmark(
@@ -65,7 +65,7 @@ class Renderer : public ftl::RefCountedThreadSafe<Renderer>,
   TimestampProfilerPtr profiler_;
 
   FRIEND_REF_COUNTED_THREAD_SAFE(Renderer);
-  FTL_DISALLOW_COPY_AND_ASSIGN(Renderer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Renderer);
 };
 
 }  // namespace escher

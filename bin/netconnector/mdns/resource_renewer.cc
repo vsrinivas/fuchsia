@@ -4,8 +4,8 @@
 
 #include "garnet/bin/netconnector/mdns/resource_renewer.h"
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/time/time_point.h"
 
 namespace netconnector {
 namespace mdns {
@@ -16,14 +16,14 @@ const std::string ResourceRenewer::kName = "##resource renewer##";
 ResourceRenewer::ResourceRenewer(MdnsAgent::Host* host) : host_(host) {}
 
 ResourceRenewer::~ResourceRenewer() {
-  FTL_DCHECK(entries_.size() == schedule_.size());
+  FXL_DCHECK(entries_.size() == schedule_.size());
   for (Entry* entry : entries_) {
     delete entry;
   }
 }
 
 void ResourceRenewer::Renew(const DnsResource& resource) {
-  FTL_DCHECK(resource.time_to_live_ != 0);
+  FXL_DCHECK(resource.time_to_live_ != 0);
 
   Entry key(resource.name_.dotted_string_, resource.type_);
   auto iter = entries_.find(&key);
@@ -48,7 +48,7 @@ void ResourceRenewer::Renew(const DnsResource& resource) {
 void ResourceRenewer::Start() {}
 
 void ResourceRenewer::Wake() {
-  ftl::TimePoint now = ftl::TimePoint::Now();
+  fxl::TimePoint now = fxl::TimePoint::Now();
 
   while (!schedule_.empty() && schedule_.top()->schedule_time_ <= now) {
     Entry* entry = const_cast<Entry*>(schedule_.top());
@@ -86,7 +86,7 @@ void ResourceRenewer::ReceiveQuestion(const DnsQuestion& question) {}
 
 void ResourceRenewer::ReceiveResource(const DnsResource& resource,
                                       MdnsResourceSection section) {
-  FTL_DCHECK(section != MdnsResourceSection::kExpired);
+  FXL_DCHECK(section != MdnsResourceSection::kExpired);
 
   Entry key(resource.name_.dotted_string_, resource.type_);
   auto iter = entries_.find(&key);
@@ -99,7 +99,7 @@ void ResourceRenewer::EndOfMessage() {}
 
 void ResourceRenewer::Quit() {
   // This never gets called.
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
 }
 
 void ResourceRenewer::Schedule(Entry* entry) {
@@ -108,15 +108,15 @@ void ResourceRenewer::Schedule(Entry* entry) {
 }
 
 void ResourceRenewer::Entry::SetFirstQuery(uint32_t time_to_live) {
-  time_ = ftl::TimePoint::Now() + ftl::TimeDelta::FromMilliseconds(
+  time_ = fxl::TimePoint::Now() + fxl::TimeDelta::FromMilliseconds(
                                       time_to_live * kFirstQueryPerThousand);
-  interval_ = ftl::TimeDelta::FromMilliseconds(time_to_live *
+  interval_ = fxl::TimeDelta::FromMilliseconds(time_to_live *
                                                kQueryIntervalPerThousand);
   queries_remaining_ = kQueriesToAttempt;
 }
 
 void ResourceRenewer::Entry::SetNextQueryOrExpiration() {
-  FTL_DCHECK(queries_remaining_ != 0);
+  FXL_DCHECK(queries_remaining_ != 0);
   time_ = time_ + interval_;
   --queries_remaining_;
 }

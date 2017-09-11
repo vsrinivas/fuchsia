@@ -17,7 +17,7 @@ source_set("vfs") {
   defines = [ "_ALL_SOURCE=1" ]
 
   public_deps = [
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl/tasks",
     "//magenta/system/ulib/fs",
     "//magenta/system/ulib/mx",

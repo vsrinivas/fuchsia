@@ -81,7 +81,7 @@ class GpuAllocator {
   vk::DeviceSize total_slab_bytes_ = 0;
   size_t slab_count_ = 0;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(GpuAllocator);
+  FXL_DISALLOW_COPY_AND_ASSIGN(GpuAllocator);
 };
 
 }  // namespace escher

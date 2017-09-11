@@ -5,7 +5,7 @@
 #include "garnet/bin/media/ffmpeg/ffmpeg_video_frame_layout.h"
 
 #include "garnet/bin/media/ffmpeg/av_codec_context.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -40,7 +40,7 @@ VideoStreamType::Extent FfmpegAlignedSize(
   const VideoStreamType::Extent adjusted = VideoStreamType::Extent(
       RoundUpToAlign(unaligned_size.width(), alignment.width()),
       RoundUpToAlign(unaligned_size.height(), alignment.height()));
-  FTL_DCHECK((adjusted.width() % alignment.width() == 0) &&
+  FXL_DCHECK((adjusted.width() % alignment.width() == 0) &&
              (adjusted.height() % alignment.height() == 0));
   return adjusted;
 }
@@ -53,8 +53,8 @@ size_t FfmpegVideoFrameLayout::LayoutFrame(
     const VideoStreamType::Extent& coded_size,
     std::vector<uint32_t>* line_stride_out,
     std::vector<uint32_t>* plane_offset_out) {
-  FTL_DCHECK(line_stride_out != nullptr);
-  FTL_DCHECK(plane_offset_out != nullptr);
+  FXL_DCHECK(line_stride_out != nullptr);
+  FXL_DCHECK(plane_offset_out != nullptr);
 
   const VideoStreamType::PixelFormatInfo& info =
       VideoStreamType::InfoForPixelFormat(pixel_format);

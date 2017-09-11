@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <limits>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/url/url_canon_internal.h"
 
 namespace url {
@@ -365,7 +365,7 @@ bool CheckIPv6ComponentsSize(const IPv6Parsed& parsed, size_t* out_num_bytes_of_
 // already verified that each character in the string was a hex digit, and
 // that there were no more than 4 characters.
 uint16_t IPv6HexComponentToNumber(const char* spec, const Component& component) {
-  FTL_DCHECK(component.len() <= 4);
+  FXL_DCHECK(component.len() <= 4);
 
   // Copy the hex string into a C-string.
   char buf[5];
@@ -562,7 +562,7 @@ void AppendIPv6Address(const unsigned char address[16], CanonOutput* output) {
 
   for (size_t i = 0; i <= 14;) {
     // We check 2 bytes at a time, from bytes (0, 1) to (14, 15), inclusive.
-    FTL_DCHECK(i % 2 == 0);
+    FXL_DCHECK(i % 2 == 0);
     if (contraction_range.is_valid() && i == contraction_range.begin &&
         contraction_range.is_nonempty()) {
       // Jump over the contraction.

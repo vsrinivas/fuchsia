@@ -6,7 +6,7 @@
 
 #include <mx/vmo.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -19,7 +19,7 @@ mx_status_t SharedBufferSet::AddBuffer(uint32_t buffer_id, mx::vmo vmo) {
   if (buffer_id >= buffers_.size()) {
     buffers_.resize(buffer_id + 1);
   } else {
-    FTL_DCHECK(!buffers_[buffer_id]);
+    FXL_DCHECK(!buffers_[buffer_id]);
   }
 
   MappedSharedBuffer* mapped_shared_buffer = new MappedSharedBuffer();
@@ -37,9 +37,9 @@ mx_status_t SharedBufferSet::CreateNewBuffer(uint64_t size,
                                              uint32_t* buffer_id_out,
                                              mx_rights_t vmo_rights,
                                              mx::vmo* out_vmo) {
-  FTL_DCHECK(size != 0);
-  FTL_DCHECK(buffer_id_out != nullptr);
-  FTL_DCHECK(out_vmo != nullptr);
+  FXL_DCHECK(size != 0);
+  FXL_DCHECK(buffer_id_out != nullptr);
+  FXL_DCHECK(out_vmo != nullptr);
 
   uint32_t buffer_id = AllocateBufferId();
 
@@ -56,8 +56,8 @@ mx_status_t SharedBufferSet::CreateNewBuffer(uint64_t size,
 }
 
 void SharedBufferSet::RemoveBuffer(uint32_t buffer_id) {
-  FTL_DCHECK(buffer_id < buffers_.size());
-  FTL_DCHECK(buffers_[buffer_id]);
+  FXL_DCHECK(buffer_id < buffers_.size());
+  FXL_DCHECK(buffers_[buffer_id]);
   buffer_ids_by_base_address_.erase(
       reinterpret_cast<uint8_t*>(buffers_[buffer_id]->PtrFromOffset(0)));
   buffers_[buffer_id].reset();
@@ -88,10 +88,10 @@ void* SharedBufferSet::PtrFromLocator(const Locator& locator) const {
     return nullptr;
   }
 
-  FTL_DCHECK(locator.buffer_id() < buffers_.size());
+  FXL_DCHECK(locator.buffer_id() < buffers_.size());
   const std::unique_ptr<MappedSharedBuffer>& buffer =
       buffers_[locator.buffer_id()];
-  FTL_DCHECK(buffer);
+  FXL_DCHECK(buffer);
   return buffer->PtrFromOffset(locator.offset());
 }
 
@@ -100,7 +100,7 @@ SharedBufferSet::Locator SharedBufferSet::LocatorFromPtr(void* ptr) const {
     return Locator::Null();
   }
 
-  FTL_DCHECK(!buffer_ids_by_base_address_.empty());
+  FXL_DCHECK(!buffer_ids_by_base_address_.empty());
 
   uint8_t* byte_ptr = reinterpret_cast<uint8_t*>(ptr);
 
@@ -109,10 +109,10 @@ SharedBufferSet::Locator SharedBufferSet::LocatorFromPtr(void* ptr) const {
   // returns begin(), the pointer is less than any of the base addresses and
   // isn't valid.
   auto iter = buffer_ids_by_base_address_.upper_bound(byte_ptr);
-  FTL_DCHECK(iter != buffer_ids_by_base_address_.begin());
+  FXL_DCHECK(iter != buffer_ids_by_base_address_.begin());
 
   uint32_t buffer_id = (--iter)->second;
-  FTL_DCHECK(buffers_[buffer_id]);
+  FXL_DCHECK(buffers_[buffer_id]);
 
   return Locator(buffer_id, buffers_[buffer_id]->OffsetFromPtr(byte_ptr));
 }

@@ -14,11 +14,11 @@
 #include "garnet/bin/moterm/moterm_model.h"
 #include "garnet/bin/moterm/moterm_params.h"
 #include "garnet/bin/moterm/shell_controller.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/memory/weak_ptr.h"
-#include "lib/ftl/tasks/task_runner.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fxl/tasks/task_runner.h"
+#include "lib/fxl/time/time_point.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkTypeface.h"
 
@@ -78,8 +78,8 @@ class MotermView : public mozart::SkiaView, public MotermModel::Delegate {
   // Keyboard state.
   bool keypad_application_mode_;
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
-  ftl::TimePoint last_key_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  fxl::TimePoint last_key_;
   bool blink_on_ = true;
   uint64_t blink_timer_id_ = 0;
   bool focused_ = false;
@@ -89,9 +89,9 @@ class MotermView : public mozart::SkiaView, public MotermModel::Delegate {
   MotermParams params_;
   std::unique_ptr<Command> command_;
 
-  ftl::WeakPtrFactory<MotermView> weak_ptr_factory_;
+  fxl::WeakPtrFactory<MotermView> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MotermView);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MotermView);
 };
 }  // namespace moterm
 

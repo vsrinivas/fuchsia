@@ -28,7 +28,7 @@ DemoHarnessFuchsia::DemoHarnessFuchsia(WindowParams window_params)
 
   application_context_->outgoing_services()->AddService<modular::Module>(
       [this](fidl::InterfaceRequest<modular::Module> request) {
-        FTL_DCHECK(!module_binding_.is_bound());
+        FXL_DCHECK(!module_binding_.is_bound());
         module_binding_.Bind(std::move(request));
       });
 }
@@ -44,7 +44,7 @@ vk::SurfaceKHR DemoHarnessFuchsia::CreateWindowAndSurface(
   VkSurfaceKHR surface;
   VkResult err =
       vkCreateMagmaSurfaceKHR(instance(), &create_info, nullptr, &surface);
-  FTL_CHECK(!err);
+  FXL_CHECK(!err);
   return surface;
 }
 
@@ -57,21 +57,21 @@ void DemoHarnessFuchsia::AppendPlatformSpecificInstanceExtensionNames(
 void DemoHarnessFuchsia::ShutdownWindowSystem() {}
 
 void DemoHarnessFuchsia::Run(Demo* demo) {
-  FTL_CHECK(!demo_);
+  FXL_CHECK(!demo_);
   demo_ = demo;
   loop_->task_runner()->PostTask([this] { this->RenderFrameOrQuit(); });
   loop_->Run();
 }
 
 void DemoHarnessFuchsia::RenderFrameOrQuit() {
-  FTL_CHECK(demo_);  // Must be running.
+  FXL_CHECK(demo_);  // Must be running.
   if (ShouldQuit()) {
     loop_->QuitNow();
     device().waitIdle();
   } else {
     demo_->DrawFrame();
     loop_->task_runner()->PostDelayedTask([this] { this->RenderFrameOrQuit(); },
-                                          ftl::TimeDelta::FromMilliseconds(1));
+                                          fxl::TimeDelta::FromMilliseconds(1));
   }
 }
 
@@ -109,7 +109,7 @@ void DemoHarnessFuchsia::Initialize(
       std::make_unique<app::ServiceProviderImpl>(std::move(outgoing_services));
   outgoing_services_->AddService<escher_demo::EscherDemo>(
       [this](fidl::InterfaceRequest<escher_demo::EscherDemo> request) {
-        FTL_DCHECK(!escher_demo_binding_.is_bound());
+        FXL_DCHECK(!escher_demo_binding_.is_bound());
         escher_demo_binding_.Bind(std::move(request));
       });
 }

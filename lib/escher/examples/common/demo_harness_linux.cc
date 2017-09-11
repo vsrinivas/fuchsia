@@ -7,7 +7,7 @@
 #include <GLFW/glfw3.h>
 
 #include "examples/common/demo.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 static DemoHarness* g_harness = nullptr;
 static GLFWwindow* g_window;
@@ -18,7 +18,7 @@ static bool g_touching = false;
 
 // Helper for DemoHarness::InitWindowSystem().
 static void DemoGlfwErrorCallback(int err_code, const char* err_desc) {
-  FTL_LOG(WARNING) << "GLFW ERROR: " << err_code << " " << err_desc
+  FXL_LOG(WARNING) << "GLFW ERROR: " << err_code << " " << err_desc
                    << std::endl;
 }
 
@@ -117,11 +117,11 @@ static void DemoGlfwMouseButtonCallback(GLFWwindow* window,
 
   if (auto demo = g_harness->GetRunningDemo()) {
     if (action == GLFW_PRESS) {
-      FTL_CHECK(!g_touching);
+      FXL_CHECK(!g_touching);
       g_touching = true;
       demo->BeginTouch(0, g_x_pos, g_y_pos);
     } else {
-      FTL_CHECK(g_touching);
+      FXL_CHECK(g_touching);
       g_touching = false;
       demo->EndTouch(0, g_x_pos, g_y_pos);
     }
@@ -141,16 +141,16 @@ DemoHarnessLinux::DemoHarnessLinux(WindowParams window_params)
     : DemoHarness(window_params) {}
 
 void DemoHarnessLinux::InitWindowSystem() {
-  FTL_CHECK(!g_harness);
+  FXL_CHECK(!g_harness);
   g_harness = this;
 
   glfwSetErrorCallback(DemoGlfwErrorCallback);
-  FTL_CHECK(glfwInit());
+  FXL_CHECK(glfwInit());
 }
 
 vk::SurfaceKHR DemoHarnessLinux::CreateWindowAndSurface(
     const WindowParams& params) {
-  FTL_CHECK(!g_window);
+  FXL_CHECK(!g_window);
 
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
@@ -158,11 +158,11 @@ vk::SurfaceKHR DemoHarnessLinux::CreateWindowAndSurface(
       params.use_fullscreen ? glfwGetPrimaryMonitor() : nullptr;
   g_window = glfwCreateWindow(params.width, params.height,
                               params.window_name.c_str(), monitor, NULL);
-  FTL_CHECK(g_window);
+  FXL_CHECK(g_window);
 
   VkSurfaceKHR surface;
   VkResult err = glfwCreateWindowSurface(instance(), g_window, NULL, &surface);
-  FTL_CHECK(!err);
+  FXL_CHECK(!err);
 
   glfwSetKeyCallback(g_window, DemoGlfwKeyCallback);
   glfwSetCursorPosCallback(g_window, DemoGlfwCursorPosCallback);
@@ -183,14 +183,14 @@ void DemoHarnessLinux::AppendPlatformSpecificInstanceExtensionNames(
 }
 
 void DemoHarnessLinux::ShutdownWindowSystem() {
-  FTL_CHECK(g_harness);
+  FXL_CHECK(g_harness);
   g_harness = nullptr;
   g_window = nullptr;
   glfwTerminate();
 }
 
 void DemoHarnessLinux::Run(Demo* demo) {
-  FTL_CHECK(!demo_);
+  FXL_CHECK(!demo_);
   demo_ = demo;
 
   while (!this->ShouldQuit()) {

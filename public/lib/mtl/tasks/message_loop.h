@@ -9,16 +9,16 @@
 
 #include <async/loop.h>
 
-#include "lib/ftl/ftl_export.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/fxl_export.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/tasks/task_runner.h"
 #include "lib/mtl/tasks/incoming_task_queue.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
 namespace mtl {
 
-class FTL_EXPORT MessageLoop : private internal::TaskQueueDelegate {
+class FXL_EXPORT MessageLoop : private internal::TaskQueueDelegate {
  public:
   using HandlerKey = uint64_t;
 
@@ -29,7 +29,7 @@ class FTL_EXPORT MessageLoop : private internal::TaskQueueDelegate {
   // Constructs a message loop that will begin by draining the tasks already
   // present in the |incoming_tasks| queue. The message loop is bound to the
   // current thread.
-  explicit MessageLoop(ftl::RefPtr<internal::IncomingTaskQueue> incoming_tasks);
+  explicit MessageLoop(fxl::RefPtr<internal::IncomingTaskQueue> incoming_tasks);
 
   ~MessageLoop() override;
 
@@ -41,7 +41,7 @@ class FTL_EXPORT MessageLoop : private internal::TaskQueueDelegate {
   async_t* async() const { return loop_.async(); }
 
   // Return an interface for posting tasks to this message loop.
-  const ftl::RefPtr<ftl::TaskRunner>& task_runner() const {
+  const fxl::RefPtr<fxl::TaskRunner>& task_runner() const {
     return task_runner_;
   }
 
@@ -56,7 +56,7 @@ class FTL_EXPORT MessageLoop : private internal::TaskQueueDelegate {
   HandlerKey AddHandler(MessageLoopHandler* handler,
                         mx_handle_t handle,
                         mx_signals_t trigger,
-                        ftl::TimeDelta timeout = ftl::TimeDelta::Max());
+                        fxl::TimeDelta timeout = fxl::TimeDelta::Max());
 
   // The message loop will no longer call the handler identified by the key. It
   // is an error to call this function with a key that doesn't correspond to a
@@ -70,7 +70,7 @@ class FTL_EXPORT MessageLoop : private internal::TaskQueueDelegate {
   // The message loop will call |callback| after each task that execute and
   // after each time it signals a handler. If the message loop already has an
   // after task callback set, this function will replace it with this one.
-  void SetAfterTaskCallback(ftl::Closure callback);
+  void SetAfterTaskCallback(fxl::Closure callback);
 
   // The message loop will no longer call the registered after task callback, if
   // any.
@@ -92,7 +92,7 @@ class FTL_EXPORT MessageLoop : private internal::TaskQueueDelegate {
 
  private:
   // |internal::TaskQueueDelegate| implementation:
-  void PostTask(ftl::Closure task, ftl::TimePoint target_time) override;
+  void PostTask(fxl::Closure task, fxl::TimePoint target_time) override;
   bool RunsTasksOnCurrentThread() override;
 
   static void Epilogue(async_t* async, void* data);
@@ -107,8 +107,8 @@ class FTL_EXPORT MessageLoop : private internal::TaskQueueDelegate {
   async_loop_config_t loop_config_;
   async::Loop loop_;
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
-  ftl::Closure after_task_callback_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  fxl::Closure after_task_callback_;
   bool is_running_ = false;
 
   HandlerKey next_handler_key_ = 1u;
@@ -120,7 +120,7 @@ class FTL_EXPORT MessageLoop : private internal::TaskQueueDelegate {
   // Set to true if the current handler needs to be destroyed once it returns.
   bool current_handler_removed_ = false;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MessageLoop);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MessageLoop);
 };
 
 }  // namespace mtl

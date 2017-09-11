@@ -16,7 +16,7 @@ const ResourceTypeInfo Material::kTypeInfo = {ResourceType::kMaterial,
 
 Material::Material(Session* session, scenic::ResourceId id)
     : Resource(session, id, Material::kTypeInfo),
-      escher_material_(ftl::MakeRefCounted<escher::Material>()) {}
+      escher_material_(fxl::MakeRefCounted<escher::Material>()) {}
 
 void Material::SetColor(float red, float green, float blue, float alpha) {
   // TODO: need to add alpha into escher material
@@ -38,7 +38,7 @@ void Material::UpdateEscherMaterial() {
   if (!escher_texture || escher_image != escher_texture->image()) {
     escher::TexturePtr texture;
     if (escher_image) {
-      texture = ftl::MakeRefCounted<escher::Texture>(
+      texture = fxl::MakeRefCounted<escher::Texture>(
           session()->engine()->escher_resource_recycler(), escher_image,
           vk::Filter::eLinear);
     }

@@ -7,7 +7,7 @@
 #include "garnet/bin/media/framework/types/video_stream_type.h"
 
 #include "garnet/bin/media/util/safe_clone.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -58,27 +58,27 @@ const VideoStreamType::PixelFormatInfo& VideoStreamType::InfoForPixelFormat(
       {PixelFormat::kMjpeg, {1, {}, {0}, {Extent(1, 1)}}},
       {PixelFormat::kMt21, {2, {}, {1, 2}, {Extent(1, 1), Extent(2, 2)}}}};
 
-  FTL_DCHECK(table.find(pixel_format) != table.end());
+  FXL_DCHECK(table.find(pixel_format) != table.end());
   return table.find(pixel_format)->second;
 }
 
 uint32_t VideoStreamType::PixelFormatInfo::RowCount(uint32_t plane,
                                                     uint32_t height) const {
-  FTL_DCHECK(plane < plane_count_);
+  FXL_DCHECK(plane < plane_count_);
   const uint32_t sample_height = sample_size_for_plane(plane).height();
   return RoundUpToAlign(height, sample_height) / sample_height;
 }
 
 uint32_t VideoStreamType::PixelFormatInfo::ColumnCount(uint32_t plane,
                                                        uint32_t width) const {
-  FTL_DCHECK(plane < plane_count_);
+  FXL_DCHECK(plane < plane_count_);
   const uint32_t sample_width = sample_size_for_plane(plane).width();
   return RoundUpToAlign(width, sample_width) / sample_width;
 }
 
 uint32_t VideoStreamType::PixelFormatInfo::BytesPerRow(uint32_t plane,
                                                        uint32_t width) const {
-  FTL_DCHECK(plane < plane_count_);
+  FXL_DCHECK(plane < plane_count_);
   return bytes_per_element_for_plane(plane) * ColumnCount(plane, width);
 }
 
@@ -147,7 +147,7 @@ bool VideoStreamTypeSet::Includes(const StreamType& type) const {
     return false;
   }
 
-  FTL_DCHECK(type.video() != nullptr);
+  FXL_DCHECK(type.video() != nullptr);
 
   return width().contains(type.video()->width()) &&
          height().contains(type.video()->height());

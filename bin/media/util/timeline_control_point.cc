@@ -7,7 +7,7 @@
 #include "lib/media/timeline/fidl_type_conversions.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace media {
@@ -16,7 +16,7 @@ namespace media {
 // Checks the condition, and, if it's false, resets and calls return.
 #define RCHECK(condition)                                             \
   if (!(condition)) {                                                 \
-    FTL_LOG(ERROR) << "request precondition failed: " #condition "."; \
+    FXL_LOG(ERROR) << "request precondition failed: " #condition "."; \
     PostReset();                                                      \
     return;                                                           \
   }
@@ -24,16 +24,16 @@ namespace media {
 TimelineControlPoint::TimelineControlPoint()
     : control_point_binding_(this), consumer_binding_(this) {
   task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
-  FTL_DCHECK(task_runner_);
+  FXL_DCHECK(task_runner_);
 
-  ftl::MutexLocker locker(&mutex_);
+  fxl::MutexLocker locker(&mutex_);
   ClearPendingTimelineFunction(false);
 
   status_publisher_.SetCallbackRunner(
       [this](const GetStatusCallback& callback, uint64_t version) {
         MediaTimelineControlPointStatusPtr status;
         {
-          ftl::MutexLocker locker(&mutex_);
+          fxl::MutexLocker locker(&mutex_);
           status = MediaTimelineControlPointStatus::New();
           status->timeline_transform =
               TimelineTransform::From(current_timeline_function_);
@@ -76,7 +76,7 @@ void TimelineControlPoint::Reset() {
   }
 
   {
-    ftl::MutexLocker locker(&mutex_);
+    fxl::MutexLocker locker(&mutex_);
     current_timeline_function_ = TimelineFunction();
     ClearPendingTimelineFunction(false);
     generation_ = 1;
@@ -88,8 +88,8 @@ void TimelineControlPoint::Reset() {
 void TimelineControlPoint::SnapshotCurrentFunction(int64_t reference_time,
                                                    TimelineFunction* out,
                                                    uint32_t* generation) {
-  FTL_DCHECK(out);
-  ftl::MutexLocker locker(&mutex_);
+  FXL_DCHECK(out);
+  fxl::MutexLocker locker(&mutex_);
   ApplyPendingChanges(reference_time);
   *out = current_timeline_function_;
   if (generation) {
@@ -104,7 +104,7 @@ void TimelineControlPoint::SnapshotCurrentFunction(int64_t reference_time,
 }
 
 void TimelineControlPoint::SetEndOfStreamPts(int64_t end_of_stream_pts) {
-  ftl::MutexLocker locker(&mutex_);
+  fxl::MutexLocker locker(&mutex_);
   if (end_of_stream_pts_ != end_of_stream_pts) {
     end_of_stream_pts_ = end_of_stream_pts;
     end_of_stream_published_ = false;
@@ -112,7 +112,7 @@ void TimelineControlPoint::SetEndOfStreamPts(int64_t end_of_stream_pts) {
 }
 
 void TimelineControlPoint::ClearEndOfStream() {
-  ftl::MutexLocker locker(&mutex_);
+  fxl::MutexLocker locker(&mutex_);
   ClearEndOfStreamInternal();
 }
 
@@ -174,7 +174,7 @@ void TimelineControlPoint::SetTimelineTransform(
     const SetTimelineTransformCallback& callback) {
   FLOG(log_channel_, ScheduleTimelineTransform(timeline_transform.Clone()));
 
-  ftl::MutexLocker locker(&mutex_);
+  fxl::MutexLocker locker(&mutex_);
 
   RCHECK(timeline_transform);
   RCHECK(timeline_transform->reference_delta != 0);

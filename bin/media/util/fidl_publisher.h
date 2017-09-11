@@ -7,7 +7,7 @@
 #include <functional>
 #include <vector>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -21,14 +21,14 @@ class FidlPublisher {
   // or Updated. The callback runner calls a single callback using current
   // information.
   void SetCallbackRunner(const CallbackRunner& callback_runner) {
-    FTL_DCHECK(callback_runner);
+    FXL_DCHECK(callback_runner);
     callback_runner_ = callback_runner;
   }
 
   // Handles a get request from the client. This method should be called from
   // the fidl 'get' method (e.g. MediaPlayer::GetStatus).
   void Get(uint64_t version_last_seen, const TCallback& callback) {
-    FTL_DCHECK(callback_runner_);
+    FXL_DCHECK(callback_runner_);
 
     if (version_last_seen < version_) {
       callback_runner_(callback, version_);
@@ -41,7 +41,7 @@ class FidlPublisher {
   // should be called whenever the published information should be sent to
   // subscribing clients.
   void SendUpdates() {
-    FTL_DCHECK(callback_runner_);
+    FXL_DCHECK(callback_runner_);
 
     ++version_;
 

@@ -6,8 +6,8 @@
 
 #include "garnet/bin/media/framework/packet.h"
 #include "garnet/bin/media/framework/payload_allocator.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace media {
 
@@ -19,7 +19,7 @@ class Node {
 
   // Sets |stage_|. This method is called only by the graph.
   void SetStage(TStage* stage) {
-    FTL_DCHECK(stage_ == nullptr);
+    FXL_DCHECK(stage_ == nullptr);
     stage_ = stage;
   }
 
@@ -27,19 +27,19 @@ class Node {
   // returns nullptr, indicating that this node can use whatever task runner
   // is provided for it, either via the |Graph| constructor or via the
   // |Graph::Add| methods.
-  virtual ftl::RefPtr<ftl::TaskRunner> GetTaskRunner() { return nullptr; }
+  virtual fxl::RefPtr<fxl::TaskRunner> GetTaskRunner() { return nullptr; }
 
  protected:
   // Returns a reference to the stage for this node.
   TStage& stage() {
-    FTL_DCHECK(stage_);
+    FXL_DCHECK(stage_);
     return *stage_;
   }
 
   // Posts a task to run as soon as possible. A task posted with this method is
   // run exclusive of any other such tasks.
-  void PostTask(const ftl::Closure& task) {
-    FTL_DCHECK(stage_);
+  void PostTask(const fxl::Closure& task) {
+    FXL_DCHECK(stage_);
     stage_->PostTask(task);
   }
 

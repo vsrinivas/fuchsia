@@ -1,0 +1,24 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef FXL_RANDOM_RAND_H_
+#define FXL_RANDOM_RAND_H_
+
+#include <stddef.h>
+#include <stdint.h>
+
+#include <string>
+
+#include "lib/fxl/fxl_export.h"
+
+namespace fxl {
+
+// Returns a random number in range [0, UINT64_MAX]
+FXL_EXPORT uint64_t RandUint64();
+
+FXL_EXPORT bool RandBytes(unsigned char* output, size_t output_length);
+
+}  // namespace fxl
+
+#endif  // FXL_RANDOM_RAND_H_

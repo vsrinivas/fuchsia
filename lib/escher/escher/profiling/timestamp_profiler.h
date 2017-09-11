@@ -8,11 +8,11 @@
 
 #include "escher/forward_declarations.h"
 #include "escher/vk/vulkan_context.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 
-class TimestampProfiler : public ftl::RefCountedThreadSafe<TimestampProfiler> {
+class TimestampProfiler : public fxl::RefCountedThreadSafe<TimestampProfiler> {
  public:
   TimestampProfiler(vk::Device device, float timestamp_period);
   ~TimestampProfiler();

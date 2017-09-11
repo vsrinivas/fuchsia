@@ -66,14 +66,14 @@ void VideoConverter::BuildColorspaceTable() {
 }
 
 void VideoConverter::SetMediaType(const MediaTypePtr& media_type) {
-  FTL_DCHECK(media_type);
+  FXL_DCHECK(media_type);
 
   stream_type_ = media_type.To<std::unique_ptr<StreamType>>();
-  FTL_DCHECK(stream_type_->medium() == StreamType::Medium::kVideo);
+  FXL_DCHECK(stream_type_->medium() == StreamType::Medium::kVideo);
   video_stream_type_ = stream_type_->video();
-  FTL_DCHECK(video_stream_type_ != nullptr);
+  FXL_DCHECK(video_stream_type_ != nullptr);
 
-  FTL_DCHECK(video_stream_type_->pixel_format() ==
+  FXL_DCHECK(video_stream_type_->pixel_format() ==
              VideoStreamType::PixelFormat::kYv12)
       << "only YV12 video conversion is currently implemented";
 }
@@ -108,12 +108,12 @@ void VideoConverter::ConvertFrame(uint8_t* rgba_buffer,
                                   void* payload,
                                   uint64_t payload_size) {
   TRACE_DURATION("motown", "ConvertFrame");
-  FTL_DCHECK(rgba_buffer != nullptr);
-  FTL_DCHECK(view_width != 0);
-  FTL_DCHECK(view_height != 0);
-  FTL_DCHECK(payload != nullptr);
-  FTL_DCHECK(payload_size != 0);
-  FTL_DCHECK(video_stream_type_ != nullptr)
+  FXL_DCHECK(rgba_buffer != nullptr);
+  FXL_DCHECK(view_width != 0);
+  FXL_DCHECK(view_height != 0);
+  FXL_DCHECK(payload != nullptr);
+  FXL_DCHECK(payload_size != 0);
+  FXL_DCHECK(video_stream_type_ != nullptr)
       << "need to call SetMediaType before ConvertFrame";
 
   uint32_t height = std::min(video_stream_type_->height(), view_height);

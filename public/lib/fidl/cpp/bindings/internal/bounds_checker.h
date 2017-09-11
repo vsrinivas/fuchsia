@@ -10,7 +10,7 @@
 #include <stdint.h>
 
 #include "lib/fidl/cpp/bindings/internal/bindings_internal.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace fidl {
 namespace internal {
@@ -54,7 +54,7 @@ class BoundsChecker {
   uint32_t handle_begin_;
   uint32_t handle_end_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(BoundsChecker);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BoundsChecker);
 };
 
 }  // namespace internal

@@ -6,8 +6,8 @@
 
 #include <trace/event.h>
 
-#include "lib/ftl/time/time_delta.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/time/time_delta.h"
+#include "lib/fxl/time/time_point.h"
 
 namespace flog {
 
@@ -19,7 +19,7 @@ uint64_t Flog::next_entry_index_ = 0;
 // static
 void Flog::Initialize(app::ApplicationContext* application_context,
                       const std::string& label) {
-  FTL_DCHECK(!logger_);
+  FXL_DCHECK(!logger_);
 
   FlogServicePtr flog_service =
       application_context->ConnectToEnvironmentService<FlogService>();
@@ -77,7 +77,7 @@ void Flog::LogChannelDeletion(uint32_t channel_id) {
 
 // static
 int64_t Flog::GetTime() {
-  return (ftl::TimePoint::Now() - ftl::TimePoint()).ToNanoseconds();
+  return (fxl::TimePoint::Now() - fxl::TimePoint()).ToNanoseconds();
 }
 
 // static
@@ -103,7 +103,7 @@ bool FlogChannel::Accept(fidl::Message* message) {
 
 bool FlogChannel::AcceptWithResponder(fidl::Message* message,
                                       MessageReceiver* responder) {
-  FTL_DCHECK(false) << "Flog doesn't support messages with responses";
+  FXL_DCHECK(false) << "Flog doesn't support messages with responses";
   abort();
 }
 

@@ -7,7 +7,7 @@
 #include <future>
 
 #include "escher/impl/vk/pipeline.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 namespace impl {
@@ -16,13 +16,13 @@ namespace impl {
 // The "type" field of the PipelineSpec allows the PipelineFactory to quickly
 // decide whether it is able to create the requested pipeline, and also to
 // validate whether the spec's "data" is compatible with the requested "type".
-class PipelineFactory : public ftl::RefCountedThreadSafe<PipelineFactory> {
+class PipelineFactory : public fxl::RefCountedThreadSafe<PipelineFactory> {
  public:
   virtual ~PipelineFactory() {}
   virtual std::future<PipelinePtr> NewPipeline(PipelineSpec spec) = 0;
 };
 
-typedef ftl::RefPtr<PipelineFactory> PipelineFactoryPtr;
+typedef fxl::RefPtr<PipelineFactory> PipelineFactoryPtr;
 
 }  // namespace impl
 }  // namespace escher

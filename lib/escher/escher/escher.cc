@@ -103,14 +103,14 @@ ImagePtr Escher::NewNoiseImage(uint32_t width, uint32_t height) {
 }
 
 PaperRendererPtr Escher::NewPaperRenderer() {
-  return ftl::MakeRefCounted<PaperRenderer>(this);
+  return fxl::MakeRefCounted<PaperRenderer>(this);
 }
 
 TexturePtr Escher::NewTexture(ImagePtr image,
                               vk::Filter filter,
                               vk::ImageAspectFlags aspect_mask,
                               bool use_unnormalized_coordinates) {
-  return ftl::MakeRefCounted<Texture>(resource_recycler(), std::move(image),
+  return fxl::MakeRefCounted<Texture>(resource_recycler(), std::move(image),
                                       filter, aspect_mask,
                                       use_unnormalized_coordinates);
 }

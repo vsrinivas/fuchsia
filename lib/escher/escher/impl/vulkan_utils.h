@@ -8,7 +8,7 @@
 
 #include <vector>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 #if defined(ESCHER_VK_UTILS)
 #error "vulkan_utils.h should not be included from header files"
@@ -21,7 +21,7 @@
     vk::Result error = ERR;                                     \
     const char* message = MSG;                                  \
     if (error != vk::Result::eSuccess) {                        \
-      FTL_LOG(WARNING) << message << " : " << to_string(error); \
+      FXL_LOG(WARNING) << message << " : " << to_string(error); \
     }                                                           \
   }
 
@@ -30,7 +30,7 @@ namespace escher {
 // Panic if operation was unsuccessful.
 template <typename T>
 auto ESCHER_CHECKED_VK_RESULT(typename vk::ResultValue<T> result) -> T {
-  FTL_CHECK(result.result == vk::Result::eSuccess);
+  FXL_CHECK(result.result == vk::Result::eSuccess);
   return result.value;
 }
 

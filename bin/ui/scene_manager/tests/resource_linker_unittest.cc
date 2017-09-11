@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/synchronization/waitable_event.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/synchronization/waitable_event.h"
 #include "lib/mtl/handles/object_info.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/thread.h"
@@ -44,7 +44,7 @@ TEST_F(ResourceLinkerTest, AllowsExport) {
   ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
   auto resource =
-      ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
+      fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
 
   ASSERT_TRUE(linker.ExportResource(resource.get(), std::move(source)));
 
@@ -58,7 +58,7 @@ TEST_F(ResourceLinkerTest, AllowsImport) {
   ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
   auto exported =
-      ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
+      fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
 
   ASSERT_TRUE(linker.ExportResource(exported.get(), std::move(source)));
 
@@ -75,7 +75,7 @@ TEST_F(ResourceLinkerTest, AllowsImport) {
         ASSERT_NE(0u, resource->type_flags() & kEntityNode);
         ASSERT_EQ(ImportResolutionResult::kSuccess, cause);
       });
-  ImportPtr import = ftl::MakeRefCounted<Import>(
+  ImportPtr import = fxl::MakeRefCounted<Import>(
       session_.get(), 2, scenic::ImportSpec::NODE, &linker);
   linker.ImportResource(import.get(),
                         scenic::ImportSpec::NODE,  // import spec
@@ -105,7 +105,7 @@ TEST_F(ResourceLinkerTest, CannotImportWithDeadSourceAndDestinationHandles) {
                      ImportResolutionResult cause) -> void {
         did_resolve = true;
       });
-  ImportPtr import = ftl::MakeRefCounted<Import>(
+  ImportPtr import = fxl::MakeRefCounted<Import>(
       session_.get(), 1, scenic::ImportSpec::NODE, &linker);
   ASSERT_FALSE(
       linker.ImportResource(import.get(),
@@ -135,7 +135,7 @@ TEST_F(ResourceLinkerTest, CannotImportWithDeadDestinationHandles) {
                      ImportResolutionResult cause) -> void {
         did_resolve = true;
       });
-  ImportPtr import = ftl::MakeRefCounted<Import>(
+  ImportPtr import = fxl::MakeRefCounted<Import>(
       session_.get(), 1, scenic::ImportSpec::NODE, &linker);
   ASSERT_FALSE(
       linker.ImportResource(import.get(),
@@ -160,12 +160,12 @@ TEST_F(ResourceLinkerTest, CanImportWithDeadSourceHandle) {
   mtl::Thread thread;
   thread.Run();
 
-  ftl::AutoResetWaitableEvent latch;
+  fxl::AutoResetWaitableEvent latch;
   ResourceLinker linker;
   scene_manager::ResourcePtr resource;
   ImportPtr import;
 
-  thread.TaskRunner()->PostTask(ftl::MakeCopyable([
+  thread.TaskRunner()->PostTask(fxl::MakeCopyable([
     this, &import, &resource, &linker, &latch,
     destination = std::move(destination)
   ]() mutable {
@@ -187,7 +187,7 @@ TEST_F(ResourceLinkerTest, CanImportWithDeadSourceHandle) {
                        ImportResolutionResult cause) -> void {
           did_resolve = true;
         });
-    import = ftl::MakeRefCounted<Import>(session_.get(), 1,
+    import = fxl::MakeRefCounted<Import>(session_.get(), 1,
                                          scenic::ImportSpec::NODE, &linker);
     ASSERT_TRUE(
         linker.ImportResource(import.get(),
@@ -219,7 +219,7 @@ TEST_F(ResourceLinkerTest, CannotExportWithDeadSourceAndDestinationHandles) {
   }
 
   auto resource =
-      ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
+      fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
   ASSERT_FALSE(linker.ExportResource(resource.get(), std::move(source_out)));
   ASSERT_EQ(0u, linker.NumExports());
 }
@@ -237,7 +237,7 @@ TEST_F(ResourceLinkerTest, CannotExportWithDeadSourceHandle) {
   }
 
   auto resource =
-      ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
+      fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
 
   ASSERT_FALSE(linker.ExportResource(resource.get(), std::move(source_out)));
   ASSERT_EQ(0u, linker.NumExports());
@@ -258,14 +258,14 @@ TEST_F(ResourceLinkerTest, CanExportWithDeadDestinationHandle) {
   mtl::Thread thread;
   thread.Run();
 
-  ftl::AutoResetWaitableEvent latch;
+  fxl::AutoResetWaitableEvent latch;
   scene_manager::ResourcePtr resource;
 
-  thread.TaskRunner()->PostTask(ftl::MakeCopyable([
+  thread.TaskRunner()->PostTask(fxl::MakeCopyable([
     this, &resource, &linker, &latch, source = std::move(source)
   ]() mutable {
     resource =
-        ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
+        fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
 
     ASSERT_TRUE(linker.ExportResource(resource.get(), std::move(source)));
     ASSERT_EQ(1u, linker.NumExports());
@@ -297,16 +297,16 @@ TEST_F(ResourceLinkerTest,
   mtl::Thread thread;
   thread.Run();
 
-  ftl::AutoResetWaitableEvent latch;
+  fxl::AutoResetWaitableEvent latch;
   ResourceLinker linker;
   scene_manager::ResourcePtr resource;
 
-  thread.TaskRunner()->PostTask(ftl::MakeCopyable([
+  thread.TaskRunner()->PostTask(fxl::MakeCopyable([
     this, &resource, &linker, &latch, source = std::move(source), &destination
   ]() mutable {
     // Register the resource.
     resource =
-        ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
+        fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
 
     ASSERT_TRUE(linker.ExportResource(resource.get(), std::move(source)));
     ASSERT_EQ(1u, linker.NumExports());
@@ -340,18 +340,18 @@ TEST_F(ResourceLinkerTest,
   mtl::Thread thread;
   thread.Run();
 
-  ftl::AutoResetWaitableEvent latch;
+  fxl::AutoResetWaitableEvent latch;
   ResourceLinker linker;
   scene_manager::ResourcePtr resource;
   ImportPtr import;
 
-  thread.TaskRunner()->PostTask(ftl::MakeCopyable([
+  thread.TaskRunner()->PostTask(fxl::MakeCopyable([
     this, &import, &resource, &linker, &latch, source = std::move(source),
     &destination
   ]() mutable {
     // Register the resource.
     resource =
-        ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
+        fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
 
     // Import.
     bool did_resolve = false;
@@ -365,7 +365,7 @@ TEST_F(ResourceLinkerTest,
           latch.Signal();
         });
 
-    import = ftl::MakeRefCounted<Import>(session_.get(), 2,
+    import = fxl::MakeRefCounted<Import>(session_.get(), 2,
                                          scenic::ImportSpec::NODE, &linker);
     linker.ImportResource(import.get(),
                           scenic::ImportSpec::NODE,     // import spec
@@ -393,16 +393,16 @@ TEST_F(ResourceLinkerTest, ResourceDeathAutomaticallyCleansUpResourceExport) {
   mtl::Thread thread;
   thread.Run();
 
-  ftl::AutoResetWaitableEvent latch;
+  fxl::AutoResetWaitableEvent latch;
   ResourceLinker linker;
 
-  thread.TaskRunner()->PostTask(ftl::MakeCopyable([
+  thread.TaskRunner()->PostTask(fxl::MakeCopyable([
     this, &linker, &latch, source = std::move(source), &destination
   ]() mutable {
 
     // Register the resource.
     auto resource =
-        ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
+        fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
     ASSERT_TRUE(linker.ExportResource(resource.get(), std::move(source)));
     ASSERT_EQ(1u, linker.NumExports());
 
@@ -433,7 +433,7 @@ TEST_F(ResourceLinkerTest, ImportsBeforeExportsAreServiced) {
   ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
   auto exported =
-      ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
+      fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
 
   // Import.
   bool did_resolve = false;
@@ -446,7 +446,7 @@ TEST_F(ResourceLinkerTest, ImportsBeforeExportsAreServiced) {
         ASSERT_NE(0u, resource->type_flags() & kEntityNode);
         ASSERT_EQ(ImportResolutionResult::kSuccess, cause);
       });
-  ImportPtr import = ftl::MakeRefCounted<Import>(
+  ImportPtr import = fxl::MakeRefCounted<Import>(
       session_.get(), 2, scenic::ImportSpec::NODE, &linker);
   linker.ImportResource(import.get(),
                         scenic::ImportSpec::NODE,  // import spec
@@ -473,7 +473,7 @@ TEST_F(ResourceLinkerTest, ImportAfterReleasedExportedResourceFails) {
   bool did_resolve = false;
   {
     auto exported =
-        ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
+        fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
 
     // Import.
     linker.SetOnImportResolvedCallback(
@@ -495,7 +495,7 @@ TEST_F(ResourceLinkerTest, ImportAfterReleasedExportedResourceFails) {
   ASSERT_EQ(0u, linker.NumExports());
 
   // Now try to import. We should get a resolution callback that it failed.
-  ImportPtr import = ftl::MakeRefCounted<Import>(
+  ImportPtr import = fxl::MakeRefCounted<Import>(
       session_.get(), 2, scenic::ImportSpec::NODE, &linker);
   linker.ImportResource(import.get(),
                         scenic::ImportSpec::NODE,  // import spec
@@ -512,7 +512,7 @@ TEST_F(ResourceLinkerTest, DuplicatedDestinationHandlesAllowMultipleImports) {
   ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
   auto exported =
-      ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
+      fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
 
   // Import multiple times.
   size_t resolution_count = 0;
@@ -532,7 +532,7 @@ TEST_F(ResourceLinkerTest, DuplicatedDestinationHandlesAllowMultipleImports) {
   for (size_t i = 1; i <= kImportCount; ++i) {
     mx::eventpair duplicate_destination = CopyEventPair(destination);
 
-    ImportPtr import = ftl::MakeRefCounted<Import>(
+    ImportPtr import = fxl::MakeRefCounted<Import>(
         session_.get(), i + 1, scenic::ImportSpec::NODE, &linker);
     // Need to keep the import alive.
     imports.push_back(import);
@@ -560,7 +560,7 @@ TEST_F(ResourceLinkerTest, UnresolvedImportIsRemovedIfDestroyed) {
   ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
   auto exported =
-      ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
+      fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
 
   // Import multiple times.
   size_t resolution_count = 0;
@@ -576,7 +576,7 @@ TEST_F(ResourceLinkerTest, UnresolvedImportIsRemovedIfDestroyed) {
   for (size_t i = 1; i <= kImportCount; ++i) {
     mx::eventpair duplicate_destination = CopyEventPair(destination);
 
-    ImportPtr import = ftl::MakeRefCounted<Import>(
+    ImportPtr import = fxl::MakeRefCounted<Import>(
         session_.get(), i + 1, scenic::ImportSpec::NODE, &linker);
     linker.ImportResource(import.get(),
                           scenic::ImportSpec::NODE,           // import spec

@@ -10,23 +10,23 @@ namespace escher {
 
 Shape::Shape(Type type, ShapeModifiers modifiers)
     : type_(type), modifiers_(modifiers) {
-  FTL_DCHECK(type != Type::kMesh);
+  FXL_DCHECK(type != Type::kMesh);
   if (modifiers_ & ShapeModifier::kWobble) {
-    FTL_LOG(ERROR) << "ShapeModifier::kWobble only supported for kMesh shapes.";
-    FTL_CHECK(false);
+    FXL_LOG(ERROR) << "ShapeModifier::kWobble only supported for kMesh shapes.";
+    FXL_CHECK(false);
   }
 }
 
 Shape::Shape(MeshPtr mesh, ShapeModifiers modifiers)
     : type_(Type::kMesh), modifiers_(modifiers), mesh_(mesh) {
-  FTL_DCHECK(mesh);
+  FXL_DCHECK(mesh);
   if (modifiers_ & ShapeModifier::kWobble) {
     const MeshAttributes required =
         MeshAttribute::kPositionOffset | MeshAttribute::kPerimeterPos;
     if (required != (mesh_->spec().flags & required)) {
-      FTL_LOG(ERROR) << "ShapeModifier::kWobble requires both kPositionOffset "
+      FXL_LOG(ERROR) << "ShapeModifier::kWobble requires both kPositionOffset "
                         "and kPerimeterPos";
-      FTL_CHECK(false);
+      FXL_CHECK(false);
     }
   }
 }
@@ -47,7 +47,7 @@ BoundingBox Shape::bounding_box() const {
 }
 
 void Shape::set_mesh(MeshPtr mesh) {
-  FTL_DCHECK(type_ == Type::kMesh);
+  FXL_DCHECK(type_ == Type::kMesh);
   mesh_ = std::move(mesh);
 }
 

@@ -13,30 +13,30 @@
 #include "garnet/bin/ui/scene_manager/resources/memory.h"
 #include "garnet/bin/ui/scene_manager/resources/resource_map.h"
 #include "garnet/bin/ui/scene_manager/util/error_reporter.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace scene_manager {
 
 using SessionId = uint64_t;
 
 class Image;
-using ImagePtr = ::ftl::RefPtr<Image>;
+using ImagePtr = ::fxl::RefPtr<Image>;
 
 class ImageBase;
-using ImageBasePtr = ::ftl::RefPtr<ImageBase>;
+using ImageBasePtr = ::fxl::RefPtr<ImageBase>;
 
 class ImagePipe;
-using ImagePipePtr = ::ftl::RefPtr<ImagePipe>;
+using ImagePipePtr = ::fxl::RefPtr<ImagePipe>;
 
 class Session;
-using SessionPtr = ::ftl::RefPtr<Session>;
+using SessionPtr = ::fxl::RefPtr<Session>;
 
 class Engine;
 class SessionHandler;
 
 // TODO: use unsafe ref-counting for better performance (our architecture
 // guarantees that this is safe).
-class Session : public ftl::RefCountedThreadSafe<Session> {
+class Session : public fxl::RefCountedThreadSafe<Session> {
  public:
   Session(SessionId id,
           Engine* engine,
@@ -270,7 +270,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   size_t resource_count_ = 0;
   bool is_valid_ = true;
 
-  ftl::WeakPtrFactory<Session> weak_factory_;  // must be last
+  fxl::WeakPtrFactory<Session> weak_factory_;  // must be last
 };
 
 }  // namespace scene_manager

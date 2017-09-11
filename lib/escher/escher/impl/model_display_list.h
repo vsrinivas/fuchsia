@@ -43,10 +43,10 @@ class ModelDisplayList : public Resource {
   std::vector<TexturePtr> textures_;
   std::vector<ResourcePtr> resources_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ModelDisplayList);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ModelDisplayList);
 };
 
-typedef ftl::RefPtr<ModelDisplayList> ModelDisplayListPtr;
+typedef fxl::RefPtr<ModelDisplayList> ModelDisplayListPtr;
 
 }  // namespace impl
 }  // namespace escher

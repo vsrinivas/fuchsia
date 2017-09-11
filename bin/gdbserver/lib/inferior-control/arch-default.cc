@@ -4,23 +4,23 @@
 
 #include "arch.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace debugserver {
 namespace arch {
 
 GdbSignal ComputeGdbSignal(const mx_exception_context_t& context) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
   return GdbSignal::kUnsupported;
 }
 
 bool IsSingleStepException(const mx_exception_context_t& context) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
   return false;
 }
 
 void DumpArch(FILE* out) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 }  // namespace arch

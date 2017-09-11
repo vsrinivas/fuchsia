@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/net_media_service/net_media_player_messages.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -105,41 +105,41 @@ Serializer& operator<<(Serializer& serializer,
 Serializer& operator<<(
     Serializer& serializer,
     const std::unique_ptr<NetMediaPlayerTimeCheckRequest>& value) {
-  FTL_DCHECK(value);
+  FXL_DCHECK(value);
   return serializer << value->requestor_time_;
 }
 
 Serializer& operator<<(
     Serializer& serializer,
     const std::unique_ptr<NetMediaPlayerTimeCheckResponse>& value) {
-  FTL_DCHECK(value);
+  FXL_DCHECK(value);
   return serializer << value->requestor_time_ << value->responder_time_;
 }
 
 Serializer& operator<<(
     Serializer& serializer,
     const std::unique_ptr<NetMediaPlayerSetUrlRequest>& value) {
-  FTL_DCHECK(value);
+  FXL_DCHECK(value);
   return serializer << value->url_;
 }
 
 Serializer& operator<<(
     Serializer& serializer,
     const std::unique_ptr<NetMediaPlayerSeekRequest>& value) {
-  FTL_DCHECK(value);
+  FXL_DCHECK(value);
   return serializer << value->position_;
 }
 
 Serializer& operator<<(
     Serializer& serializer,
     const std::unique_ptr<NetMediaPlayerStatusNotification>& value) {
-  FTL_DCHECK(value);
+  FXL_DCHECK(value);
   return serializer << value->status_;
 }
 
 Serializer& operator<<(Serializer& serializer,
                        const MediaPlayerStatusPtr& value) {
-  FTL_DCHECK(value);
+  FXL_DCHECK(value);
   return serializer << Optional(value->timeline_transform)
                     << value->end_of_stream << value->content_has_audio
                     << value->content_has_video << value->audio_connected
@@ -149,13 +149,13 @@ Serializer& operator<<(Serializer& serializer,
 
 Serializer& operator<<(Serializer& serializer,
                        const TimelineTransformPtr& value) {
-  FTL_DCHECK(value);
+  FXL_DCHECK(value);
   return serializer << value->reference_time << value->subject_time
                     << value->reference_delta << value->subject_delta;
 }
 
 Serializer& operator<<(Serializer& serializer, const MediaMetadataPtr& value) {
-  FTL_DCHECK(value);
+  FXL_DCHECK(value);
   return serializer << value->duration << Optional(value->title)
                     << Optional(value->artist) << Optional(value->album)
                     << Optional(value->publisher) << Optional(value->genre)
@@ -163,13 +163,13 @@ Serializer& operator<<(Serializer& serializer, const MediaMetadataPtr& value) {
 }
 
 Serializer& operator<<(Serializer& serializer, const ProblemPtr& value) {
-  FTL_DCHECK(value);
+  FXL_DCHECK(value);
   return serializer << value->type << Optional(value->details);
 }
 
 Serializer& operator<<(Serializer& serializer,
                        const std::unique_ptr<NetMediaPlayerInMessage>& value) {
-  FTL_DCHECK(value);
+  FXL_DCHECK(value);
   serializer << value->type_;
   switch (value->type_) {
     case NetMediaPlayerInMessageType::kTimeCheckRequest:
@@ -192,7 +192,7 @@ Serializer& operator<<(Serializer& serializer,
 
 Serializer& operator<<(Serializer& serializer,
                        const std::unique_ptr<NetMediaPlayerOutMessage>& value) {
-  FTL_DCHECK(value);
+  FXL_DCHECK(value);
   serializer << value->type_;
   switch (value->type_) {
     case NetMediaPlayerOutMessageType::kTimeCheckResponse:
@@ -349,7 +349,7 @@ Deserializer& operator>>(Deserializer& deserializer,
       deserializer >> value->seek_request_;
       break;
     default:
-      FTL_LOG(ERROR) << "Unsupported media player in-message type "
+      FXL_LOG(ERROR) << "Unsupported media player in-message type "
                      << static_cast<uint8_t>(value->type_);
       deserializer.MarkUnhealthy();
       break;
@@ -374,7 +374,7 @@ Deserializer& operator>>(Deserializer& deserializer,
       deserializer >> value->status_notification_;
       break;
     default:
-      FTL_LOG(ERROR) << "Unsupported media player out-message type "
+      FXL_LOG(ERROR) << "Unsupported media player out-message type "
                      << static_cast<uint8_t>(value->type_);
       deserializer.MarkUnhealthy();
       break;

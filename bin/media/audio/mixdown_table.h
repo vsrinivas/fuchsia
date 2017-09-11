@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "garnet/bin/media/audio/level.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -81,8 +81,8 @@ class MixdownTable {
   // Gets a non-const reference to the level applied to in_channel when mixing
   // to out_channel.
   Level<TLevel>& get_level(uint32_t in_channel, uint32_t out_channel) {
-    FTL_DCHECK(in_channel < in_channel_count_);
-    FTL_DCHECK(out_channel < out_channel_count_);
+    FXL_DCHECK(in_channel < in_channel_count_);
+    FXL_DCHECK(out_channel < out_channel_count_);
     // Level indexing needs to happen such that when iterating across all levels
     // with an outer out_channel loop and an inner in_channel loop, simply
     // incrementing a Level pointer is adequate.

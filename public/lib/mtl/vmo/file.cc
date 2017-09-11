@@ -8,12 +8,12 @@
 #include <mxio/io.h>
 #include <unistd.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace mtl {
 
-bool VmoFromFd(ftl::UniqueFD fd, mx::vmo* handle_ptr) {
-  FTL_CHECK(handle_ptr);
+bool VmoFromFd(fxl::UniqueFD fd, mx::vmo* handle_ptr) {
+  FXL_CHECK(handle_ptr);
 
   mx_handle_t result = MX_HANDLE_INVALID;
   mx_status_t status = mxio_get_vmo(fd.get(), &result);
@@ -26,10 +26,10 @@ bool VmoFromFd(ftl::UniqueFD fd, mx::vmo* handle_ptr) {
 bool VmoFromFilename(const std::string& filename, mx::vmo* handle_ptr) {
   int fd = open(filename.c_str(), O_RDONLY);
   if (fd == -1) {
-    FTL_LOG(WARNING) << "mx::vmo::open failed to open file " << filename;
+    FXL_LOG(WARNING) << "mx::vmo::open failed to open file " << filename;
     return false;
   }
-  return VmoFromFd(ftl::UniqueFD(fd), handle_ptr);
+  return VmoFromFd(fxl::UniqueFD(fd), handle_ptr);
 }
 
 }  // namespace mtl

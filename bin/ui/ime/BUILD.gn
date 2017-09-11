@@ -19,7 +19,7 @@ executable("ime") {
     "//garnet/public/lib/ui/input/fidl",
     "//garnet/public/lib/ui/input/cpp",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }

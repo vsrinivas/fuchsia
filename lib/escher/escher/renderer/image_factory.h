@@ -5,7 +5,7 @@
 #pragma once
 
 #include "escher/renderer/image.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 

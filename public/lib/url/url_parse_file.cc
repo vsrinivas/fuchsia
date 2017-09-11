@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/url/third_party/mozilla/url_parse.h"
 #include "lib/url/url_file.h"
 #include "lib/url/url_parse_internal.h"
@@ -96,7 +96,7 @@ void DoParseLocalFile(const char* spec, size_t path_begin, size_t spec_len, Pars
 // character following the "file:" at the beginning of the spec. If so,
 // this is usually a slash, but needn't be; we allow paths like "file:c:\foo".
 void ParseFileURL(const char* spec, size_t spec_len, Parsed* parsed) {
-  FTL_DCHECK(spec_len >= 0);
+  FXL_DCHECK(spec_len >= 0);
 
   // Get the parts we never use for file URLs out of the way.
   parsed->username.reset();

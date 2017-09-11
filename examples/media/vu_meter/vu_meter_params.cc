@@ -4,11 +4,11 @@
 
 #include "garnet/examples/media/vu_meter/vu_meter_params.h"
 
-#include "lib/ftl/strings/split_string.h"
+#include "lib/fxl/strings/split_string.h"
 
 namespace examples {
 
-VuMeterParams::VuMeterParams(const ftl::CommandLine& command_line) {
+VuMeterParams::VuMeterParams(const fxl::CommandLine& command_line) {
   is_valid_ = true;
 }
 

@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include "lib/ftl/command_line.h"
+#include "lib/fxl/command_line.h"
 
 namespace examples {
 
@@ -20,7 +20,7 @@ struct TileParams {
   TileParams();
   ~TileParams();
 
-  bool Parse(const ftl::CommandLine& command_line);
+  bool Parse(const fxl::CommandLine& command_line);
 
   OrientationMode orientation_mode = OrientationMode::kHorizontal;
 

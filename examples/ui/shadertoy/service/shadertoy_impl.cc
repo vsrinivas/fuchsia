@@ -6,7 +6,7 @@
 
 namespace shadertoy {
 
-ShadertoyImpl::ShadertoyImpl(ftl::RefPtr<ShadertoyState> state)
+ShadertoyImpl::ShadertoyImpl(fxl::RefPtr<ShadertoyState> state)
     : state_(std::move(state)) {}
 
 ShadertoyImpl::~ShadertoyImpl() = default;

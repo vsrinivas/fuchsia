@@ -6,7 +6,7 @@
 
 #include "escher/geometry/types.h"
 #include "escher/shape/mesh_spec.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace escher {
 
@@ -63,7 +63,7 @@ void GenerateRoundedRectIndices(const RoundedRectSpec& spec,
                                 const MeshSpec& mesh_spec,
                                 void* indices_out,
                                 uint32_t max_bytes) {
-  FTL_DCHECK(max_bytes == kIndexCount * sizeof(uint32_t));
+  FXL_DCHECK(max_bytes == kIndexCount * sizeof(uint32_t));
   uint32_t* indices = static_cast<uint32_t*>(indices_out);
 
   // Central square triangles.
@@ -146,7 +146,7 @@ void GenerateRoundedRectIndices(const RoundedRectSpec& spec,
     indices[out++] = corner_tris[corner * 3 + 1];
   }
 
-  FTL_DCHECK(out == kIndexCount);
+  FXL_DCHECK(out == kIndexCount);
 }
 
 void GenerateRoundedRectVertices(const RoundedRectSpec& spec,
@@ -155,16 +155,16 @@ void GenerateRoundedRectVertices(const RoundedRectSpec& spec,
                                  uint32_t max_bytes) {
   const float width = spec.width;
   const float height = spec.height;
-  FTL_DCHECK(width >= spec.top_left_radius + spec.top_right_radius);
-  FTL_DCHECK(width >= spec.bottom_left_radius + spec.bottom_right_radius);
-  FTL_DCHECK(height >= spec.top_left_radius + spec.bottom_left_radius);
-  FTL_DCHECK(height >= spec.top_right_radius + spec.bottom_right_radius);
-  FTL_DCHECK(max_bytes == kVertexCount * mesh_spec.GetStride());
-  FTL_DCHECK(mesh_spec.flags ==
+  FXL_DCHECK(width >= spec.top_left_radius + spec.top_right_radius);
+  FXL_DCHECK(width >= spec.bottom_left_radius + spec.bottom_right_radius);
+  FXL_DCHECK(height >= spec.top_left_radius + spec.bottom_left_radius);
+  FXL_DCHECK(height >= spec.top_right_radius + spec.bottom_right_radius);
+  FXL_DCHECK(max_bytes == kVertexCount * mesh_spec.GetStride());
+  FXL_DCHECK(mesh_spec.flags ==
              (MeshAttribute::kPosition2D | MeshAttribute::kUV));
-  FTL_DCHECK(0U == mesh_spec.GetAttributeOffset(MeshAttribute::kPosition2D));
-  FTL_DCHECK(sizeof(vec2) == mesh_spec.GetAttributeOffset(MeshAttribute::kUV));
-  FTL_DCHECK(sizeof(PosUvVertex) == mesh_spec.GetStride());
+  FXL_DCHECK(0U == mesh_spec.GetAttributeOffset(MeshAttribute::kPosition2D));
+  FXL_DCHECK(sizeof(vec2) == mesh_spec.GetAttributeOffset(MeshAttribute::kUV));
+  FXL_DCHECK(sizeof(PosUvVertex) == mesh_spec.GetStride());
 
   // NOTE: for clarity, we first generate the UV-coordinates for each vertex,
   // then make a second pass where we use these UV-coords to generate the vertex
@@ -242,7 +242,7 @@ void GenerateRoundedRectVertices(const RoundedRectSpec& spec,
 
   // The hard part is finished!  Make one final pass to generate the vertex
   // positions from the UV-coordinates.
-  FTL_DCHECK(out == kVertexCount);
+  FXL_DCHECK(out == kVertexCount);
   const vec2 extent(width, height);
   const vec2 offset = -0.5f * extent;
   for (size_t i = 0; i < kVertexCount; ++i) {

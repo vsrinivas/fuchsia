@@ -13,7 +13,7 @@
 namespace scene_manager {
 
 class GpuMemory;
-using GpuMemoryPtr = ftl::RefPtr<GpuMemory>;
+using GpuMemoryPtr = fxl::RefPtr<GpuMemory>;
 
 // Wraps Vulkan memory (VkDeviceMemory).
 class GpuMemory : public Memory {

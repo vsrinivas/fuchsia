@@ -7,7 +7,7 @@
 #include <functional>
 
 #include "lib/fidl/cpp/waiter/default.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace netconnector {
 
@@ -47,7 +47,7 @@ class AsyncWait {
   mx_status_t status_;
   mx_signals_t pending_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AsyncWait);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AsyncWait);
 };
 
 }  // namespace netconnector

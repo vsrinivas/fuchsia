@@ -7,7 +7,7 @@
 
 // ICU integration functions.
 
-#include "lib/ftl/compiler_specific.h"
+#include "lib/fxl/compiler_specific.h"
 #include "lib/url/url_canon.h"
 #include "lib/url/url_canon_internal.h"
 #include "lib/url/url_export.h"

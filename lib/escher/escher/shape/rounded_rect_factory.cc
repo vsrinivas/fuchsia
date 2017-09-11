@@ -42,7 +42,7 @@ MeshPtr RoundedRectFactory::NewRoundedRect(const RoundedRectSpec& spec,
 
   BoundingBox bounding_box(-0.5f * vec3(spec.width, spec.height, 0),
                            0.5f * vec3(spec.width, spec.height, 0));
-  return ftl::MakeRefCounted<Mesh>(
+  return fxl::MakeRefCounted<Mesh>(
       static_cast<ResourceRecycler*>(this), mesh_spec, bounding_box,
       vertex_count, index_count, vertex_buffer, std::move(index_buffer));
 }

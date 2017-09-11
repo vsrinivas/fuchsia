@@ -7,7 +7,7 @@
 #pragma once
 
 #include "lib/media/timeline/timeline_rate.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -72,7 +72,7 @@ class Resampler {
  public:
   Resampler(uint32_t channel_count)
       : channel_count_(channel_count), in_sample_stride_(channel_count) {
-    FTL_DCHECK(channel_count > 0);
+    FXL_DCHECK(channel_count > 0);
     carry_frame_.resize(channel_count);
   }
 
@@ -188,7 +188,7 @@ class Resampler {
   // Advances the input buffer by |steps| * |in_sample_stride_|.
   void AdvanceInput(size_t steps) {
     in_frames_ += steps * in_sample_stride_;
-    FTL_DCHECK(in_frames_ <= in_frames_end_);
+    FXL_DCHECK(in_frames_ <= in_frames_end_);
   }
 
   // Advances the output buffer by |frame_count| * |channel_count_| and |pts_|
@@ -196,16 +196,16 @@ class Resampler {
   void AdvanceOutput(size_t frame_count) {
     out_frames_ += channel_count_ * frame_count;
     pts_ += frame_count;
-    FTL_DCHECK(out_frames_ <= out_frames_end_);
-    FTL_DCHECK(out_frames_ <= out_frame_next_rate_change_);
+    FXL_DCHECK(out_frames_ <= out_frames_end_);
+    FXL_DCHECK(out_frames_ <= out_frame_next_rate_change_);
   }
 
   // Advances the output buffer by |channel_count_| and |pts_| by 1.
   void IncrementOutput() {
     out_frames_ += channel_count_;
     pts_ += 1;
-    FTL_DCHECK(out_frames_ <= out_frames_end_);
-    FTL_DCHECK(out_frames_ <= out_frame_next_rate_change_);
+    FXL_DCHECK(out_frames_ <= out_frames_end_);
+    FXL_DCHECK(out_frames_ <= out_frame_next_rate_change_);
   }
 
   TSubframeIndex SubframeStrideFromRate(TimelineRate rate);
@@ -267,12 +267,12 @@ class Resampler {
 
 template <typename TSample, typename TSubframeIndex>
 void Resampler<TSample, TSubframeIndex>::Resample() {
-  FTL_DCHECK(in_frames_ != nullptr);
-  FTL_DCHECK(in_frames_ < in_frames_end_);
-  FTL_DCHECK((in_frames_end_ - in_frames_) % channel_count_ == 0);
-  FTL_DCHECK(out_frames_ != nullptr);
-  FTL_DCHECK(out_frames_ < out_frames_end_);
-  FTL_DCHECK((out_frames_end_ - out_frames_) % channel_count_ == 0);
+  FXL_DCHECK(in_frames_ != nullptr);
+  FXL_DCHECK(in_frames_ < in_frames_end_);
+  FXL_DCHECK((in_frames_end_ - in_frames_) % channel_count_ == 0);
+  FXL_DCHECK(out_frames_ != nullptr);
+  FXL_DCHECK(out_frames_ < out_frames_end_);
+  FXL_DCHECK((out_frames_end_ - out_frames_) % channel_count_ == 0);
 
   while (one_based_in_frame_index_ == 0) {
     // We need to interpolate from |carry_frame_|. We'll be producing output,
@@ -329,7 +329,7 @@ void Resampler<TSample, TSubframeIndex>::UpdateRate() {
 
     in_subframe_stride_ = SubframeStrideFromRate(rate);
 
-    FTL_DCHECK(in_subframe_stride_ < kMaxSubframeIndex);
+    FXL_DCHECK(in_subframe_stride_ < kMaxSubframeIndex);
   }
 
   if (rate_schedule_.empty()) {
@@ -350,15 +350,15 @@ void Resampler<TSample, TSubframeIndex>::UpdateRate() {
 
 template <typename TSample, typename TSubframeIndex>
 void Resampler<TSample, TSubframeIndex>::ResampleSegment() {
-  FTL_DCHECK(in_frames_ != nullptr);
-  FTL_DCHECK(in_frames_ < in_frames_end_);
-  FTL_DCHECK((in_frames_end_ - in_frames_) % channel_count_ == 0);
-  FTL_DCHECK(out_frames_ != nullptr);
-  FTL_DCHECK(out_frames_ < out_frames_end_);
-  FTL_DCHECK((out_frames_end_ - out_frames_) % channel_count_ == 0);
-  FTL_DCHECK(out_frames_ < out_frame_next_rate_change_);
-  FTL_DCHECK(out_frame_next_rate_change_ <= out_frames_end_);
-  FTL_DCHECK((out_frame_next_rate_change_ - out_frames_) % channel_count_ == 0);
+  FXL_DCHECK(in_frames_ != nullptr);
+  FXL_DCHECK(in_frames_ < in_frames_end_);
+  FXL_DCHECK((in_frames_end_ - in_frames_) % channel_count_ == 0);
+  FXL_DCHECK(out_frames_ != nullptr);
+  FXL_DCHECK(out_frames_ < out_frames_end_);
+  FXL_DCHECK((out_frames_end_ - out_frames_) % channel_count_ == 0);
+  FXL_DCHECK(out_frames_ < out_frame_next_rate_change_);
+  FXL_DCHECK(out_frame_next_rate_change_ <= out_frames_end_);
+  FXL_DCHECK((out_frame_next_rate_change_ - out_frames_) % channel_count_ == 0);
 
   if (in_subframe_index_ == 0 && in_subframe_stride_ == 0) {
     // We don't need to interpolate.

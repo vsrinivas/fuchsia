@@ -6,19 +6,19 @@
 
 #include <functional>
 
-#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/fxl/memory/ref_ptr.h"
 
 namespace escher {
 class Image;
 class Semaphore;
-using ImagePtr = ftl::RefPtr<Image>;
-using SemaphorePtr = ftl::RefPtr<Semaphore>;
+using ImagePtr = fxl::RefPtr<Image>;
+using SemaphorePtr = fxl::RefPtr<Semaphore>;
 };  // namespace escher
 
 namespace scene_manager {
 
 class FrameTimings;
-using FrameTimingsPtr = ftl::RefPtr<FrameTimings>;
+using FrameTimingsPtr = fxl::RefPtr<FrameTimings>;
 
 // Swapchain is an interface used used to render into an escher::Image and
 // present the result (to a physical display or elsewhere).

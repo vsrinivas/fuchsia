@@ -10,44 +10,44 @@
 
 #include <string>
 
-#include "lib/ftl/ftl_export.h"
+#include "lib/fxl/fxl_export.h"
 
 namespace mtl {
 
 // Gets the kernel object id (koid) of the object associated with the handle.
 // Returns |MX_KOID_INVALID| if the handle is invalid.
-FTL_EXPORT mx_koid_t GetKoid(mx_handle_t handle);
+FXL_EXPORT mx_koid_t GetKoid(mx_handle_t handle);
 
 // Gets the kernel object id (koid) of the objected related to the object
 // associated with the handle. For example, if the object associated with the
 // handle is a channel, this function returns the koid of the channel object at
 // the opposite end. Returns |MX_KOID_INVALID| if the handle is invalid or
 // the object associated with the handle has no related object.
-FTL_EXPORT mx_koid_t GetRelatedKoid(mx_handle_t handle);
+FXL_EXPORT mx_koid_t GetRelatedKoid(mx_handle_t handle);
 
 // Gets the name of a kernel object.
-FTL_EXPORT std::string GetObjectName(mx_handle_t handle);
+FXL_EXPORT std::string GetObjectName(mx_handle_t handle);
 
 // Sets the name of a kernel object.
 // Note: The kernel truncates names to |MX_MAX_NAME_LEN|.
-FTL_EXPORT mx_status_t SetObjectName(mx_handle_t handle,
+FXL_EXPORT mx_status_t SetObjectName(mx_handle_t handle,
                                      const std::string& name);
 
 // Gets the kernel object id of the current process.
-FTL_EXPORT mx_koid_t GetCurrentProcessKoid();
+FXL_EXPORT mx_koid_t GetCurrentProcessKoid();
 
 // Gets the current process name.
-FTL_EXPORT std::string GetCurrentProcessName();
+FXL_EXPORT std::string GetCurrentProcessName();
 
 // Gets the kernel object id of the current thread.
-FTL_EXPORT mx_koid_t GetCurrentThreadKoid();
+FXL_EXPORT mx_koid_t GetCurrentThreadKoid();
 
 // Gets the current thread name.
-FTL_EXPORT std::string GetCurrentThreadName();
+FXL_EXPORT std::string GetCurrentThreadName();
 
 // Sets the name of the current thread.
 // Note: The kernel truncates names to |MX_MAX_NAME_LEN|.
-FTL_EXPORT mx_status_t SetCurrentThreadName(const std::string& name);
+FXL_EXPORT mx_status_t SetCurrentThreadName(const std::string& name);
 
 }  // namespace mtl
 

@@ -9,11 +9,11 @@
 #include <unordered_set>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/synchronization/mutex.h"
-#include "lib/ftl/synchronization/thread_annotations.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/synchronization/mutex.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
+#include "lib/fxl/tasks/task_runner.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
 
@@ -32,7 +32,7 @@ class FactoryServiceBase {
     void QuitOnDestruct() { quit_on_destruct_ = true; }
 
    protected:
-    explicit ProductBase(Factory* owner) : owner_(owner) { FTL_DCHECK(owner_); }
+    explicit ProductBase(Factory* owner) : owner_(owner) { FXL_DCHECK(owner_); }
 
     // Returns the owner.
     Factory* owner() { return owner_; }
@@ -59,7 +59,7 @@ class FactoryServiceBase {
             fidl::InterfaceRequest<Interface> request,
             Factory* owner)
         : ProductBase(owner), binding_(impl, std::move(request)) {
-      FTL_DCHECK(impl);
+      FXL_DCHECK(impl);
       Retain();
       binding_.set_connection_error_handler([this]() {
         binding_.set_connection_error_handler(nullptr);
@@ -121,15 +121,15 @@ class FactoryServiceBase {
   // Adds a product to the factory's collection of products. Threadsafe.
   template <typename ProductImpl>
   void AddProduct(std::shared_ptr<ProductImpl> product) {
-    ftl::MutexLocker locker(&mutex_);
+    fxl::MutexLocker locker(&mutex_);
     products_.insert(std::static_pointer_cast<ProductBase>(product));
   }
 
   // Removes a product from the factory's collection of products. Threadsafe.
   void RemoveProduct(std::shared_ptr<ProductBase> product) {
-    ftl::MutexLocker locker(&mutex_);
+    fxl::MutexLocker locker(&mutex_);
     bool erased = products_.erase(product);
-    FTL_DCHECK(erased);
+    FXL_DCHECK(erased);
   }
 
   // Creates a new product (by calling |product_creator|) on a new thread. The
@@ -137,7 +137,7 @@ class FactoryServiceBase {
   template <typename ProductImpl>
   void CreateProductOnNewThread(
       const std::function<std::shared_ptr<ProductImpl>()>& product_creator) {
-    ftl::RefPtr<ftl::TaskRunner> task_runner;
+    fxl::RefPtr<fxl::TaskRunner> task_runner;
     std::thread thread = mtl::CreateThread(&task_runner);
     task_runner->PostTask([this, product_creator]() {
       std::shared_ptr<ProductImpl> product = product_creator();
@@ -149,12 +149,12 @@ class FactoryServiceBase {
 
  private:
   std::unique_ptr<app::ApplicationContext> application_context_;
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
-  mutable ftl::Mutex mutex_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  mutable fxl::Mutex mutex_;
   std::unordered_set<std::shared_ptr<ProductBase>> products_
-      FTL_GUARDED_BY(mutex_);
+      FXL_GUARDED_BY(mutex_);
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FactoryServiceBase);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FactoryServiceBase);
 };
 
 // For use by products when handling fidl requests.
@@ -163,7 +163,7 @@ class FactoryServiceBase {
 // TODO(dalesat): Support stream arguments.
 #define RCHECK(condition)                                             \
   if (!(condition)) {                                                 \
-    FTL_LOG(ERROR) << "request precondition failed: " #condition "."; \
+    FXL_LOG(ERROR) << "request precondition failed: " #condition "."; \
     mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(          \
         [this]() { UnbindAndReleaseFromOwner(); });                   \
     return;                                                           \

@@ -9,7 +9,7 @@
 #include "escher/shape/mesh.h"
 #include "escher/util/debug_print.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace escher {
 
@@ -29,7 +29,7 @@ class Shape {
   void remove_modifier(ShapeModifier modifier) { modifiers_ &= ~modifier; }
 
   const MeshPtr& mesh() const {
-    FTL_DCHECK(type_ == Type::kMesh);
+    FXL_DCHECK(type_ == Type::kMesh);
     return mesh_;
   }
 

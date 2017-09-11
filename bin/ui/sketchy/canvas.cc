@@ -16,7 +16,7 @@ CanvasImpl::CanvasImpl(scenic_lib::Session* session, escher::Escher* escher)
 
 void CanvasImpl::Init(::fidl::InterfaceHandle<CanvasListener> listener) {
   // TODO(MZ-269): unimplemented.
-  FTL_LOG(ERROR) << "Init: unimplemented.";
+  FXL_LOG(ERROR) << "Init: unimplemented.";
 }
 
 void CanvasImpl::Enqueue(::fidl::Array<OpPtr> ops) {
@@ -52,7 +52,7 @@ bool CanvasImpl::ApplyOp(const OpPtr& op) {
     case Op::Tag::SCENIC_ADD_CHILD:
       return ApplyScenicAddChildOp(op->get_scenic_add_child());
     default:
-      FTL_DCHECK(false) << "Unsupported op: "
+      FXL_DCHECK(false) << "Unsupported op: "
                         << static_cast<uint32_t>(op->which());
       return false;
   }
@@ -68,7 +68,7 @@ bool CanvasImpl::ApplyCreateResourceOp(
       return CreateStrokeGroup(create_resource->id,
                                create_resource->args->get_stroke_group());
     default:
-      FTL_DCHECK(false) << "Unsupported resource: "
+      FXL_DCHECK(false) << "Unsupported resource: "
                         << static_cast<uint32_t>(
                                create_resource->args->which());
       return false;
@@ -77,7 +77,7 @@ bool CanvasImpl::ApplyCreateResourceOp(
 
 bool CanvasImpl::CreateStroke(ResourceId id, const sketchy::StrokePtr& stroke) {
   // TODO(MZ-269): unimplemented.
-  FTL_LOG(ERROR) << "CreateStroke: unimplemented.";
+  FXL_LOG(ERROR) << "CreateStroke: unimplemented.";
   // This dummy true is for the client demo.
   return true;
 }
@@ -86,7 +86,7 @@ bool CanvasImpl::CreateStrokeGroup(
     ResourceId id,
     const sketchy::StrokeGroupPtr& stroke_group) {
   return resource_map_.AddResource(
-      id, ftl::MakeRefCounted<StrokeGroup>(session_, &buffer_factory_));
+      id, fxl::MakeRefCounted<StrokeGroup>(session_, &buffer_factory_));
 }
 
 bool CanvasImpl::ApplyReleaseResourceOp(const ReleaseResourceOpPtr& op) {
@@ -95,14 +95,14 @@ bool CanvasImpl::ApplyReleaseResourceOp(const ReleaseResourceOpPtr& op) {
 
 bool CanvasImpl::ApplyAddStrokeOp(const AddStrokeOpPtr& op) {
   // TODO(MZ-269): unimplemented.
-  FTL_LOG(ERROR) << "ApplyAddStrokeOp: unimplemented.";
+  FXL_LOG(ERROR) << "ApplyAddStrokeOp: unimplemented.";
   // This dummy true is for the client demo.
   return true;
 }
 
 bool CanvasImpl::ApplyRemoveStrokeOp(const RemoveStrokeOpPtr& op) {
   // TODO(MZ-269): unimplemented.
-  FTL_LOG(ERROR) << "ApplyRemoveStrokeOp: unimplemented.";
+  FXL_LOG(ERROR) << "ApplyRemoveStrokeOp: unimplemented.";
   return false;
 }
 
@@ -119,9 +119,9 @@ bool CanvasImpl::ApplyScenicImportResourceOp(
 // @param id Id of the node that the client exports.
 // @param token Token of the node that the client exports.
 bool CanvasImpl::ScenicImportNode(ResourceId id, mx::eventpair token) {
-  FTL_LOG(INFO) << "CanvasImpl::ScenicImportNode()";
+  FXL_LOG(INFO) << "CanvasImpl::ScenicImportNode()";
   // As a client of Scenic, Canvas creates an ImportNode given token.
-  auto node = ftl::MakeRefCounted<ImportNode>(session_, std::move(token));
+  auto node = fxl::MakeRefCounted<ImportNode>(session_, std::move(token));
   resource_map_.AddResource(id, std::move(node));
   return true;
 }

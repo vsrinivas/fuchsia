@@ -4,7 +4,7 @@
 
 #include "lib/ui/scenic/fidl_helpers.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace scenic_lib {
 
@@ -363,7 +363,7 @@ scenic::OpPtr NewReleaseResourceOp(uint32_t id) {
 
 scenic::OpPtr NewExportResourceOp(uint32_t resource_id,
                                   mx::eventpair export_token) {
-  FTL_DCHECK(export_token);
+  FXL_DCHECK(export_token);
 
   auto export_resource = scenic::ExportResourceOp::New();
   export_resource->id = resource_id;
@@ -378,7 +378,7 @@ scenic::OpPtr NewExportResourceOp(uint32_t resource_id,
 scenic::OpPtr NewImportResourceOp(uint32_t resource_id,
                                   scenic::ImportSpec spec,
                                   mx::eventpair import_token) {
-  FTL_DCHECK(import_token);
+  FXL_DCHECK(import_token);
 
   auto import_resource = scenic::ImportResourceOp::New();
   import_resource->id = resource_id;
@@ -393,26 +393,26 @@ scenic::OpPtr NewImportResourceOp(uint32_t resource_id,
 
 scenic::OpPtr NewExportResourceOpAsRequest(uint32_t resource_id,
                                            mx::eventpair* out_import_token) {
-  FTL_DCHECK(out_import_token);
-  FTL_DCHECK(!*out_import_token);
+  FXL_DCHECK(out_import_token);
+  FXL_DCHECK(!*out_import_token);
 
   mx::eventpair export_token;
   mx_status_t status =
       mx::eventpair::create(0u, &export_token, out_import_token);
-  FTL_CHECK(status == MX_OK) << "event pair create failed: status=" << status;
+  FXL_CHECK(status == MX_OK) << "event pair create failed: status=" << status;
   return NewExportResourceOp(resource_id, std::move(export_token));
 }
 
 scenic::OpPtr NewImportResourceOpAsRequest(uint32_t resource_id,
                                            scenic::ImportSpec import_spec,
                                            mx::eventpair* out_export_token) {
-  FTL_DCHECK(out_export_token);
-  FTL_DCHECK(!*out_export_token);
+  FXL_DCHECK(out_export_token);
+  FXL_DCHECK(!*out_export_token);
 
   mx::eventpair import_token;
   mx_status_t status =
       mx::eventpair::create(0u, &import_token, out_export_token);
-  FTL_CHECK(status == MX_OK) << "event pair create failed: status=" << status;
+  FXL_CHECK(status == MX_OK) << "event pair create failed: status=" << status;
   return NewImportResourceOp(resource_id, import_spec, std::move(import_token));
 }
 

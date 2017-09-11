@@ -10,13 +10,13 @@
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/input/fidl/text_input.fidl.h"
 #include "garnet/bin/ui/ime/ime_impl.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace ime {
 
-App::App(const ftl::CommandLine& command_line)
+App::App(const fxl::CommandLine& command_line)
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
-  FTL_DCHECK(application_context_);
+  FXL_DCHECK(application_context_);
   application_context_->outgoing_services()->AddService<mozart::ImeService>(
       [this](fidl::InterfaceRequest<mozart::ImeService> request) {
         ime_bindings_.AddBinding(this, std::move(request));
@@ -31,11 +31,11 @@ void App::GetInputMethodEditor(
     mozart::TextInputStatePtr initial_state,
     fidl::InterfaceHandle<mozart::InputMethodEditorClient> client,
     fidl::InterfaceRequest<mozart::InputMethodEditor> editor_request) {
-  FTL_DCHECK(initial_state);
-  FTL_DCHECK(client);
-  FTL_DCHECK(editor_request.is_pending());
+  FXL_DCHECK(initial_state);
+  FXL_DCHECK(client);
+  FXL_DCHECK(editor_request.is_pending());
 
-  FTL_VLOG(1) << "GetInputMethodEditor: "
+  FXL_VLOG(1) << "GetInputMethodEditor: "
               << ", keyboard_type=" << keyboard_type << ", action=" << action
               << ", initial_state=" << *initial_state;
 

@@ -32,20 +32,20 @@ Renderer::Renderer(Escher* escher)
 }
 
 Renderer::~Renderer() {
-  FTL_DCHECK(!current_frame_);
+  FXL_DCHECK(!current_frame_);
   escher_impl()->DecrementRendererCount();
 }
 
 void Renderer::BeginFrame() {
   TRACE_DURATION("gfx", "escher::Renderer::BeginFrame");
 
-  FTL_DCHECK(!current_frame_);
+  FXL_DCHECK(!current_frame_);
   ++frame_number_;
   current_frame_ = pool_->GetCommandBuffer();
 
-  FTL_DCHECK(!profiler_);
+  FXL_DCHECK(!profiler_);
   if (enable_profiling_ && escher_impl()->supports_timer_queries()) {
-    profiler_ = ftl::MakeRefCounted<TimestampProfiler>(
+    profiler_ = fxl::MakeRefCounted<TimestampProfiler>(
         context_.device, escher_impl()->timestamp_period());
     AddTimestamp("throwaway");  // Intel/Mesa workaround; see EndFrame().
     AddTimestamp("start of frame");
@@ -54,7 +54,7 @@ void Renderer::BeginFrame() {
 
 void Renderer::SubmitPartialFrame() {
   TRACE_DURATION("gfx", "escher::Renderer::SubmitPartialFrame");
-  FTL_DCHECK(current_frame_);
+  FXL_DCHECK(current_frame_);
   current_frame_->Submit(context_.queue, nullptr);
   current_frame_ = pool_->GetCommandBuffer();
 }
@@ -63,7 +63,7 @@ void Renderer::EndFrame(const SemaphorePtr& frame_done,
                         FrameRetiredCallback frame_retired_callback) {
   TRACE_DURATION("gfx", "escher::Renderer::EndFrame");
 
-  FTL_DCHECK(current_frame_);
+  FXL_DCHECK(current_frame_);
   current_frame_->AddSignalSemaphore(frame_done);
   if (profiler_) {
     // Avoid implicit reference to this in closure.
@@ -74,10 +74,10 @@ void Renderer::EndFrame(const SemaphorePtr& frame_done,
       if (frame_retired_callback) {
         frame_retired_callback();
       }
-      FTL_LOG(INFO) << "------------------------------------------------------";
-      FTL_LOG(INFO) << "Timestamps for frame #" << frame_number;
-      FTL_LOG(INFO) << "total\t | \tsince previous (all times in microseconds)";
-      FTL_LOG(INFO) << "------------------------------------------------------";
+      FXL_LOG(INFO) << "------------------------------------------------------";
+      FXL_LOG(INFO) << "Timestamps for frame #" << frame_number;
+      FXL_LOG(INFO) << "total\t | \tsince previous (all times in microseconds)";
+      FXL_LOG(INFO) << "------------------------------------------------------";
       auto timestamps = profiler->GetQueryResults();
       // Workaround: Intel/Mesa gives a screwed-up value for the second time.
       // So, we add a throwaway value first (see BeginFrame()), and then fix up
@@ -86,10 +86,10 @@ void Renderer::EndFrame(const SemaphorePtr& frame_done,
       timestamps[1].elapsed = 0;
       timestamps[2].elapsed = timestamps[2].time;
       for (size_t i = 1; i < timestamps.size(); ++i) {
-        FTL_LOG(INFO) << timestamps[i].time << " \t | \t"
+        FXL_LOG(INFO) << timestamps[i].time << " \t | \t"
                       << timestamps[i].elapsed << "   \t" << timestamps[i].name;
       }
-      FTL_LOG(INFO) << "------------------------------------------------------";
+      FXL_LOG(INFO) << "------------------------------------------------------";
     });
   } else {
     current_frame_->Submit(context_.queue, std::move(frame_retired_callback));
@@ -100,7 +100,7 @@ void Renderer::EndFrame(const SemaphorePtr& frame_done,
 }
 
 void Renderer::AddTimestamp(const char* name) {
-  FTL_DCHECK(current_frame_);
+  FXL_DCHECK(current_frame_);
   if (profiler_) {
     profiler_->AddTimestamp(current_frame_,
                             vk::PipelineStageFlagBits::eBottomOfPipe, name);
@@ -140,7 +140,7 @@ void Renderer::RunOffscreenBenchmark(
     // frames to finish.
     auto command_buffer = pool_->GetCommandBuffer();
     command_buffer->Submit(context_.queue, nullptr);
-    FTL_CHECK(vk::Result::eSuccess ==
+    FXL_CHECK(vk::Result::eSuccess ==
               command_buffer->Wait(kSwapchainSize * kSecondsToNanoseconds));
   }
 
@@ -164,7 +164,7 @@ void Renderer::RunOffscreenBenchmark(
     // to finish.
     if (image_index == 0) {
       if (throttle) {
-        FTL_CHECK(vk::Result::eSuccess ==
+        FXL_CHECK(vk::Result::eSuccess ==
                   throttle->Wait(kSwapchainSize * kSecondsToNanoseconds));
       }
       throttle = command_buffer;
@@ -181,16 +181,16 @@ void Renderer::RunOffscreenBenchmark(
       semaphores[(frame_count - 1) % kSwapchainSize],
       vk::PipelineStageFlagBits::eBottomOfPipe);
   command_buffer->Submit(context_.queue, nullptr);
-  FTL_CHECK(vk::Result::eSuccess ==
+  FXL_CHECK(vk::Result::eSuccess ==
             command_buffer->Wait(kSwapchainSize * kSecondsToNanoseconds));
   stopwatch.Stop();
 
-  FTL_LOG(INFO) << "------------------------------------------------------";
-  FTL_LOG(INFO) << "Offscreen benchmark";
-  FTL_LOG(INFO) << "Rendered " << frame_count << " frames in "
+  FXL_LOG(INFO) << "------------------------------------------------------";
+  FXL_LOG(INFO) << "Offscreen benchmark";
+  FXL_LOG(INFO) << "Rendered " << frame_count << " frames in "
                 << stopwatch.GetElapsedSeconds() << " seconds";
-  FTL_LOG(INFO) << (frame_count / stopwatch.GetElapsedSeconds()) << " FPS";
-  FTL_LOG(INFO) << "------------------------------------------------------";
+  FXL_LOG(INFO) << (frame_count / stopwatch.GetElapsedSeconds()) << " FPS";
+  FXL_LOG(INFO) << "------------------------------------------------------";
 }
 
 }  // namespace escher

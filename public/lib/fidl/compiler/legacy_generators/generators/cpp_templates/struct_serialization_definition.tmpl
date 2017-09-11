@@ -7,7 +7,7 @@ size_t {{struct.name}}::GetSerializedSize() const {
 bool {{struct.name}}::Serialize(void* buf,
                                 size_t buf_size,
                                 size_t* bytes_written) {
-  FTL_DCHECK(buf);
+  FXL_DCHECK(buf);
 
   ::fidl::internal::FixedBuffer overlay_buf;
   overlay_buf.Initialize(buf, buf_size);
@@ -18,7 +18,7 @@ bool {{struct.name}}::Serialize(void* buf,
     // TODO(vardhan): Once Serialize_() outputs handles that it serialized
     // (even partially, if there are failures), we should CHECK fail here if
     // handles are non-empty.
-    FTL_DLOG(ERROR) << "Could not serialize: " <<
+    FXL_DLOG(ERROR) << "Could not serialize: " <<
         ::fidl::internal::ValidationErrorToString(err);
 
     if (bytes_written)
@@ -28,7 +28,7 @@ bool {{struct.name}}::Serialize(void* buf,
 
   std::vector<mx_handle_t> handles;
   output_ptr->EncodePointersAndHandles(&handles);
-  FTL_CHECK(handles.empty()) << "Serialize() does not support handles.";
+  FXL_CHECK(handles.empty()) << "Serialize() does not support handles.";
 
   if (bytes_written)
     *bytes_written = overlay_buf.BytesUsed();
@@ -36,7 +36,7 @@ bool {{struct.name}}::Serialize(void* buf,
 }
 
 bool {{struct.name}}::Deserialize(void* buf, size_t buf_size) {
-  FTL_DCHECK(buf);
+  FXL_DCHECK(buf);
 
   ::fidl::internal::BoundsChecker checker(buf, buf_size, 0);
 
@@ -49,7 +49,7 @@ bool {{struct.name}}::Deserialize(void* buf, size_t buf_size) {
   ::fidl::internal::ValidationError err =
       internal::{{struct.name}}_Data::Validate(buf, &checker, err_str);
   if (err != ::fidl::internal::ValidationError::NONE) {
-    FTL_DLOG(ERROR) << "Deserialization error "
+    FXL_DLOG(ERROR) << "Deserialization error "
                      << ::fidl::internal::ValidationErrorToString(err)
                      << ": " << *err_str;
     return false;
@@ -62,13 +62,13 @@ bool {{struct.name}}::Deserialize(void* buf, size_t buf_size) {
 // TODO(vardhan): Make this |buf| a |const void*| once deserialization becomes
 // immutable.
 void {{struct.name}}::DeserializeWithoutValidation(void* buf) {
-  FTL_DCHECK(buf);
+  FXL_DCHECK(buf);
 
   internal::{{struct.name}}_Data* input =
       static_cast<internal::{{struct.name}}_Data*>(buf);
   std::vector<mx_handle_t> handles;
   input->DecodePointersAndHandles(&handles);
-  FTL_CHECK(handles.empty()) << "Deserialization does not support handles.";
+  FXL_CHECK(handles.empty()) << "Deserialization does not support handles.";
 
   Deserialize_(input, this);
 }

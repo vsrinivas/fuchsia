@@ -23,7 +23,7 @@ source_set("flog") {
 
   deps = [
     "//garnet/public/lib/media/fidl/flog",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/trace",
   ]

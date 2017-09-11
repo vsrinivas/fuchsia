@@ -4,7 +4,7 @@
 
 #include "arch.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace debugserver {
 namespace arch {
@@ -31,7 +31,7 @@ GdbSignal ComputeGdbSignal(const mx_exception_context_t& context) {
       break;
     case 0b010001: /* syscall from arm32 */
     case 0b010101: /* syscall from arm64 */
-      FTL_NOTREACHED();
+      FXL_NOTREACHED();
       break;
     case 0b100000: /* instruction abort from lower level */
     case 0b100001: /* instruction abort from same level */
@@ -47,19 +47,19 @@ GdbSignal ComputeGdbSignal(const mx_exception_context_t& context) {
       break;
   }
 
-  FTL_VLOG(1) << "ARM64 exception class (" << exception_class
+  FXL_VLOG(1) << "ARM64 exception class (" << exception_class
               << ") mapped to: " << static_cast<int>(sigval);
 
   return sigval;
 }
 
 bool IsSingleStepException(const mx_exception_context_t& context) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
   return false;
 }
 
 void DumpArch(FILE* out) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 }  // namespace arch

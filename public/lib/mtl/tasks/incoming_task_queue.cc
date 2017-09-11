@@ -13,24 +13,24 @@ IncomingTaskQueue::IncomingTaskQueue() {}
 
 IncomingTaskQueue::~IncomingTaskQueue() {}
 
-void IncomingTaskQueue::PostTask(ftl::Closure task) {
-  AddTask(std::move(task), ftl::TimePoint());
+void IncomingTaskQueue::PostTask(fxl::Closure task) {
+  AddTask(std::move(task), fxl::TimePoint());
 }
 
-void IncomingTaskQueue::PostTaskForTime(ftl::Closure task,
-                                        ftl::TimePoint target_time) {
+void IncomingTaskQueue::PostTaskForTime(fxl::Closure task,
+                                        fxl::TimePoint target_time) {
   AddTask(std::move(task), target_time);
 }
 
-void IncomingTaskQueue::PostDelayedTask(ftl::Closure task,
-                                        ftl::TimeDelta delay) {
-  AddTask(std::move(task), delay > ftl::TimeDelta::Zero()
-                               ? ftl::TimePoint::Now() + delay
-                               : ftl::TimePoint());
+void IncomingTaskQueue::PostDelayedTask(fxl::Closure task,
+                                        fxl::TimeDelta delay) {
+  AddTask(std::move(task), delay > fxl::TimeDelta::Zero()
+                               ? fxl::TimePoint::Now() + delay
+                               : fxl::TimePoint());
 }
 
-void IncomingTaskQueue::AddTask(ftl::Closure task, ftl::TimePoint target_time) {
-  ftl::MutexLocker locker(&mutex_);
+void IncomingTaskQueue::AddTask(fxl::Closure task, fxl::TimePoint target_time) {
+  fxl::MutexLocker locker(&mutex_);
 
   if (drop_incoming_tasks_)
     return;
@@ -42,15 +42,15 @@ void IncomingTaskQueue::AddTask(ftl::Closure task, ftl::TimePoint target_time) {
 }
 
 bool IncomingTaskQueue::RunsTasksOnCurrentThread() {
-  ftl::MutexLocker locker(&mutex_);
+  fxl::MutexLocker locker(&mutex_);
   return delegate_ && delegate_->RunsTasksOnCurrentThread();
 }
 
 void IncomingTaskQueue::InitDelegate(TaskQueueDelegate* delegate) {
-  FTL_DCHECK(delegate);
+  FXL_DCHECK(delegate);
 
-  ftl::MutexLocker locker(&mutex_);
-  FTL_DCHECK(!drop_incoming_tasks_);
+  fxl::MutexLocker locker(&mutex_);
+  FXL_DCHECK(!drop_incoming_tasks_);
 
   delegate_ = delegate;
   for (auto& task : incoming_queue_)
@@ -59,9 +59,9 @@ void IncomingTaskQueue::InitDelegate(TaskQueueDelegate* delegate) {
 }
 
 void IncomingTaskQueue::ClearDelegate() {
-  ftl::MutexLocker locker(&mutex_);
+  fxl::MutexLocker locker(&mutex_);
 
-  FTL_DCHECK(!drop_incoming_tasks_);
+  FXL_DCHECK(!drop_incoming_tasks_);
   drop_incoming_tasks_ = true;
   delegate_ = nullptr;
 }

@@ -12,7 +12,7 @@
 namespace sketchy_service {
 
 class StrokeGroup;
-using StrokeGroupPtr = ftl::RefPtr<StrokeGroup>;
+using StrokeGroupPtr = fxl::RefPtr<StrokeGroup>;
 
 class StrokeGroup final : public Resource {
  public:
@@ -37,7 +37,7 @@ class StrokeGroup final : public Resource {
   std::unique_ptr<Buffer> vertex_buffer_;
   std::unique_ptr<Buffer> index_buffer_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StrokeGroup);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StrokeGroup);
 };
 
 }  // namespace sketchy_service

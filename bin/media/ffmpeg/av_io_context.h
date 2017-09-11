@@ -7,10 +7,10 @@
 #include <condition_variable>
 
 #include "garnet/bin/media/demux/reader.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/synchronization/cond_var.h"
-#include "lib/ftl/synchronization/mutex.h"
-#include "lib/ftl/synchronization/thread_annotations.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/synchronization/cond_var.h"
+#include "lib/fxl/synchronization/mutex.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
 extern "C" {
 #include "third_party/ffmpeg/libavformat/avio.h"
 }
@@ -67,7 +67,7 @@ class AvIoContextOpaque {
   int64_t Seek(int64_t offset, int whence);
 
   void WaitForCallback() {
-    ftl::MutexLocker locker(&mutex_);
+    fxl::MutexLocker locker(&mutex_);
     while (!callback_happened_) {
       condition_variable_.Wait(&mutex_);
     }
@@ -75,8 +75,8 @@ class AvIoContextOpaque {
   }
 
   void CallbackComplete() {
-    ftl::MutexLocker locker(&mutex_);
-    FTL_DCHECK(!callback_happened_);
+    fxl::MutexLocker locker(&mutex_);
+    FXL_DCHECK(!callback_happened_);
     callback_happened_ = true;
     condition_variable_.SignalAll();
   }
@@ -86,9 +86,9 @@ class AvIoContextOpaque {
   int64_t size_;
   bool can_seek_;
   int64_t position_ = 0;
-  ftl::Mutex mutex_;
-  ftl::CondVar condition_variable_ FTL_GUARDED_BY(mutex_);
-  bool callback_happened_ FTL_GUARDED_BY(mutex_) = false;
+  fxl::Mutex mutex_;
+  fxl::CondVar condition_variable_ FXL_GUARDED_BY(mutex_);
+  bool callback_happened_ FXL_GUARDED_BY(mutex_) = false;
 
   friend class AvIoContext;
 };

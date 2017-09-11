@@ -30,7 +30,7 @@ void VulkanSwapchainHelper::DrawFrame(PaperRenderer* renderer,
                                       const Model& model,
                                       const Camera& camera,
                                       const Model* overlay_model) {
-  FTL_DCHECK(renderer);
+  FXL_DCHECK(renderer);
 
   auto& image_available_semaphore =
       image_available_semaphores_[next_semaphore_index_];
@@ -46,9 +46,9 @@ void VulkanSwapchainHelper::DrawFrame(PaperRenderer* renderer,
         nullptr);
 
     if (result.result == vk::Result::eSuboptimalKHR) {
-      FTL_DLOG(WARNING) << "suboptimal swapchain configuration";
+      FXL_DLOG(WARNING) << "suboptimal swapchain configuration";
     } else if (result.result != vk::Result::eSuccess) {
-      FTL_LOG(WARNING) << "failed to acquire next swapchain image"
+      FXL_LOG(WARNING) << "failed to acquire next swapchain image"
                        << " : " << to_string(result.result);
       return;
     }

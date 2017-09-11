@@ -20,7 +20,7 @@
 #include "garnet/bin/media/media_service/network_reader_impl.h"
 #include "garnet/bin/media/media_service/video_renderer_impl.h"
 #include "garnet/bin/media/util/multiproc_task_runner.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace media {
 
@@ -70,7 +70,7 @@ void MediaServiceImpl::CreateSink(
 void MediaServiceImpl::CreateDemux(
     fidl::InterfaceHandle<SeekingReader> reader,
     fidl::InterfaceRequest<MediaSource> request) {
-  CreateProductOnNewThread<MediaDemuxImpl>(ftl::MakeCopyable([
+  CreateProductOnNewThread<MediaDemuxImpl>(fxl::MakeCopyable([
     this, reader = std::move(reader), request = std::move(request)
   ]() mutable {
     return MediaDemuxImpl::Create(std::move(reader), std::move(request), this);
@@ -80,7 +80,7 @@ void MediaServiceImpl::CreateDemux(
 void MediaServiceImpl::CreateDecoder(
     MediaTypePtr input_media_type,
     fidl::InterfaceRequest<MediaTypeConverter> request) {
-  CreateProductOnNewThread<MediaDecoderImpl>(ftl::MakeCopyable([
+  CreateProductOnNewThread<MediaDecoderImpl>(fxl::MakeCopyable([
     this, input_media_type = std::move(input_media_type),
     request = std::move(request)
   ]() mutable {
@@ -92,7 +92,7 @@ void MediaServiceImpl::CreateDecoder(
 void MediaServiceImpl::CreateNetworkReader(
     const fidl::String& url,
     fidl::InterfaceRequest<SeekingReader> request) {
-  CreateProductOnNewThread<NetworkReaderImpl>(ftl::MakeCopyable(
+  CreateProductOnNewThread<NetworkReaderImpl>(fxl::MakeCopyable(
       [ this, url = url, request = std::move(request) ]() mutable {
         return NetworkReaderImpl::Create(url, std::move(request), this);
       }));
@@ -101,7 +101,7 @@ void MediaServiceImpl::CreateNetworkReader(
 void MediaServiceImpl::CreateFileReader(
     const fidl::String& path,
     fidl::InterfaceRequest<SeekingReader> request) {
-  CreateProductOnNewThread<FileReaderImpl>(ftl::MakeCopyable(
+  CreateProductOnNewThread<FileReaderImpl>(fxl::MakeCopyable(
       [ this, path = path, request = std::move(request) ]() mutable {
         return FileReaderImpl::Create(path, std::move(request), this);
       }));
@@ -126,7 +126,7 @@ void MediaServiceImpl::CreateAudioRenderer(
 void MediaServiceImpl::CreateVideoRenderer(
     fidl::InterfaceRequest<VideoRenderer> video_renderer_request,
     fidl::InterfaceRequest<MediaRenderer> media_renderer_request) {
-  CreateProductOnNewThread<VideoRendererImpl>(ftl::MakeCopyable([
+  CreateProductOnNewThread<VideoRendererImpl>(fxl::MakeCopyable([
     this, video_renderer_request = std::move(video_renderer_request),
     media_renderer_request = std::move(media_renderer_request)
   ]() mutable {
@@ -138,7 +138,7 @@ void MediaServiceImpl::CreateVideoRenderer(
 void MediaServiceImpl::CreateAudioCapturer(
     fidl::InterfaceRequest<MediaCapturer> request) {
   CreateProductOnNewThread<AudioCapturerImpl>(
-      ftl::MakeCopyable([ this, request = std::move(request) ]() mutable {
+      fxl::MakeCopyable([ this, request = std::move(request) ]() mutable {
         return AudioCapturerImpl::Create(std::move(request), this);
       }));
 }
@@ -153,7 +153,7 @@ void MediaServiceImpl::CreateLpcmReformatter(
     MediaTypePtr input_media_type,
     AudioSampleFormat output_sample_format,
     fidl::InterfaceRequest<MediaTypeConverter> request) {
-  CreateProductOnNewThread<LpcmReformatterImpl>(ftl::MakeCopyable([
+  CreateProductOnNewThread<LpcmReformatterImpl>(fxl::MakeCopyable([
     this, input_media_type = std::move(input_media_type), output_sample_format,
     request = std::move(request)
   ]() mutable {

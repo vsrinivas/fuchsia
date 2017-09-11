@@ -5,7 +5,7 @@
 #include "lib/ui/scenic/skia/host_surfaces.h"
 
 #include "lib/ui/scenic/skia/image_info.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace scenic_lib {
 namespace skia {
@@ -20,7 +20,7 @@ sk_sp<SkSurface> MakeSkSurface(const HostImage& image) {
 }
 
 sk_sp<SkSurface> MakeSkSurface(const scenic::ImageInfo& image_info,
-                               ftl::RefPtr<HostData> data,
+                               fxl::RefPtr<HostData> data,
                                off_t memory_offset) {
   return MakeSkSurface(MakeSkImageInfo(image_info), image_info.stride,
                        std::move(data), memory_offset);
@@ -28,7 +28,7 @@ sk_sp<SkSurface> MakeSkSurface(const scenic::ImageInfo& image_info,
 
 sk_sp<SkSurface> MakeSkSurface(SkImageInfo image_info,
                                size_t row_bytes,
-                               ftl::RefPtr<HostData> data,
+                               fxl::RefPtr<HostData> data,
                                off_t memory_offset) {
   data->AddRef();
   return SkSurface::MakeRasterDirectReleaseProc(
@@ -51,7 +51,7 @@ bool HostSkSurfacePool::Configure(const scenic::ImageInfo* image_info) {
 }
 
 sk_sp<SkSurface> HostSkSurfacePool::GetSkSurface(uint32_t index) {
-  FTL_DCHECK(index < num_images());
+  FXL_DCHECK(index < num_images());
 
   if (surface_ptrs_[index])
     return surface_ptrs_[index];

@@ -36,7 +36,7 @@ executable("audio_server") {
     "//garnet/bin/media/audio",
     "//garnet/bin/media/util",
     "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",
     "//magenta/system/ulib/fbl",

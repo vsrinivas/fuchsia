@@ -10,11 +10,11 @@
 
 #include <magenta/processargs.h>
 
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/files/path.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/split_string.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/files/path.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/split_string.h"
 
 namespace moterm {
 
@@ -53,7 +53,7 @@ std::vector<mtl::StartupHandle> ShellController::GetStartupHandles() {
   mx::channel shell_handle;
   mx_status_t status = mx::channel::create(0, &channel_, &shell_handle);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "Failed to create an mx::channel for the shell, status: "
+    FXL_LOG(ERROR) << "Failed to create an mx::channel for the shell, status: "
                    << status;
     return {};
   }
@@ -86,7 +86,7 @@ void ShellController::OnRemoteEntry(const std::string& entry) {
   mx_status_t status =
       channel_.write(0, command.data(), command.size(), nullptr, 0);
   if (status != MX_OK && status != MX_ERR_NO_MEMORY) {
-    FTL_LOG(ERROR) << "Failed to write a " << kAddRemoteEntryCommand
+    FXL_LOG(ERROR) << "Failed to write a " << kAddRemoteEntryCommand
                    << " command, status: " << status;
   }
 }
@@ -96,7 +96,7 @@ bool ShellController::SendBackHistory(std::vector<std::string> entries) {
 
   mx::vmo data;
   if (!mtl::VmoFromString(history_str, &data)) {
-    FTL_LOG(ERROR) << "Failed to write terminal history to a vmo.";
+    FXL_LOG(ERROR) << "Failed to write terminal history to a vmo.";
     return false;
   }
 
@@ -105,7 +105,7 @@ bool ShellController::SendBackHistory(std::vector<std::string> entries) {
   mx_status_t status =
       channel_.write(0, command.data(), command.size(), handles, 1);
   if (status != MX_OK) {
-    FTL_LOG(ERROR)
+    FXL_LOG(ERROR)
         << "Failed to write the terminal history response to channel.";
     mx_handle_close(handles[0]);
     return false;
@@ -135,7 +135,7 @@ void ShellController::ReadCommand() {
                kAddLocalEntryCommand) {
       HandleAddToHistory(command.substr(strlen(kAddLocalEntryCommand)));
     } else {
-      FTL_LOG(ERROR) << "Unrecognized shell command: " << command;
+      FXL_LOG(ERROR) << "Unrecognized shell command: " << command;
       return;
     }
 
@@ -144,17 +144,17 @@ void ShellController::ReadCommand() {
     WaitForShell();
   } else if (rv == MX_ERR_BUFFER_TOO_SMALL) {
     // Ignore the command.
-    FTL_LOG(WARNING) << "The command sent by shell didn't fit in the buffer.";
+    FXL_LOG(WARNING) << "The command sent by shell didn't fit in the buffer.";
   } else if (rv == MX_ERR_PEER_CLOSED) {
     channel_.reset();
     return;
   } else {
-    FTL_DCHECK(false) << "Unhandled mx_status_t: " << rv;
+    FXL_DCHECK(false) << "Unhandled mx_status_t: " << rv;
   }
 }
 
 void ShellController::WaitForShell() {
-  FTL_DCHECK(!wait_id_);
+  FXL_DCHECK(!wait_id_);
   wait_id_ = waiter_->AsyncWait(channel_.get(),
                                 MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                                 MX_TIME_INFINITE, &WaitComplete, this);

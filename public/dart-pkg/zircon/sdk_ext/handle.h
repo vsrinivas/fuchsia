@@ -21,7 +21,7 @@ namespace dart {
  * Handle is the native peer of a Dart object (Handle in dart:zircon)
  * that holds an mx_handle_t. It tracks active waiters on handle too.
  */
-class Handle : public ftl::RefCountedThreadSafe<Handle>,
+class Handle : public fxl::RefCountedThreadSafe<Handle>,
                public tonic::DartWrappable {
   DEFINE_WRAPPERTYPEINFO();
   FRIEND_REF_COUNTED_THREAD_SAFE(Handle);
@@ -32,13 +32,13 @@ class Handle : public ftl::RefCountedThreadSafe<Handle>,
 
   static void RegisterNatives(tonic::DartLibraryNatives* natives);
 
-  static ftl::RefPtr<Handle> Create(mx_handle_t handle);
-  static ftl::RefPtr<Handle> Create(mx::handle handle) {
+  static fxl::RefPtr<Handle> Create(mx_handle_t handle);
+  static fxl::RefPtr<Handle> Create(mx::handle handle) {
     return Create(handle.release());
   }
 
-  static ftl::RefPtr<Handle> Unwrap(Dart_Handle handle) {
-    return ftl::RefPtr<Handle>(
+  static fxl::RefPtr<Handle> Unwrap(Dart_Handle handle) {
+    return fxl::RefPtr<Handle>(
         tonic::DartConverter<zircon::dart::Handle*>::FromDart(handle));
   }
 
@@ -52,7 +52,7 @@ class Handle : public ftl::RefCountedThreadSafe<Handle>,
 
   mx_status_t Close();
 
-  ftl::RefPtr<HandleWaiter> AsyncWait(mx_signals_t signals,
+  fxl::RefPtr<HandleWaiter> AsyncWait(mx_signals_t signals,
                                       Dart_Handle callback);
 
   void ReleaseWaiter(HandleWaiter* waiter);

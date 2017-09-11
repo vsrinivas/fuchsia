@@ -6,14 +6,14 @@
 
 #include "garnet/examples/ui/tile/tile_view.h"
 #include "lib/ui/view_framework/view_provider_app.h"
-#include "lib/ftl/command_line.h"
+#include "lib/fxl/command_line.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 int main(int argc, const char** argv) {
-  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   examples::TileParams params;
   if (!params.Parse(command_line)) {
-    FTL_LOG(ERROR) << "Missing or invalid URL parameters.  See README.";
+    FXL_LOG(ERROR) << "Missing or invalid URL parameters.  See README.";
     return 1;
   }
 

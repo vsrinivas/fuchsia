@@ -7,7 +7,7 @@
 #include <trace/event.h>
 
 #include "lib/media/timeline/timeline.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -42,7 +42,7 @@ void VideoRendererImpl::GetStatus(uint64_t version_last_seen,
 
 void VideoRendererImpl::CreateView(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-  FTL_DCHECK(video_frame_source_);
+  FXL_DCHECK(video_frame_source_);
   new View(owner()->ConnectToEnvironmentService<mozart::ViewManager>(),
            std::move(view_owner_request), video_frame_source_);
 }
@@ -58,7 +58,7 @@ VideoRendererImpl::View::View(
       image_cycler_(session()) {
   parent_node().AddChild(image_cycler_);
 
-  FTL_DCHECK(video_frame_source_);
+  FXL_DCHECK(video_frame_source_);
   video_frame_source_->RegisterView(this);
 }
 
@@ -82,7 +82,7 @@ void VideoRendererImpl::View::OnSceneInvalidated(
       video_size.width, video_size.height, video_size.width * 4u,
       scenic::ImageInfo::PixelFormat::BGRA_8,
       scenic::ImageInfo::ColorSpace::SRGB);
-  FTL_DCHECK(image);
+  FXL_DCHECK(image);
   video_frame_source_->GetRgbaFrame(static_cast<uint8_t*>(image->image_ptr()),
                                     video_size);
   image_cycler_.ReleaseAndSwapImage();

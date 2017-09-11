@@ -15,8 +15,8 @@
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/macros.h"
 
 namespace root_presenter {
 
@@ -32,7 +32,7 @@ class App : public mozart::Presenter,
             public mozart::InputDeviceRegistry,
             public mozart::InputDeviceImpl::Listener {
  public:
-  explicit App(const ftl::CommandLine& command_line);
+  explicit App(const fxl::CommandLine& command_line);
   ~App();
 
   // |InputDeviceImpl::Listener|
@@ -66,7 +66,7 @@ class App : public mozart::Presenter,
   std::unordered_map<uint32_t, std::unique_ptr<mozart::InputDeviceImpl>>
       devices_by_id_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(App);
+  FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
 }  // namespace root_presenter

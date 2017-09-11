@@ -6,8 +6,8 @@
 
 #include <functional>
 
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace debugserver {
 
@@ -28,79 +28,79 @@ class CommandHandler final {
   // If this method returns false, then |callback| will never be called. If this
   // returns true, |callback| is guaranteed to be called exactly once.
   // |callback| can be called before HandleCommand returns.
-  using ResponseCallback = std::function<void(const ftl::StringView& rsp)>;
-  bool HandleCommand(const ftl::StringView& packet,
+  using ResponseCallback = std::function<void(const fxl::StringView& rsp)>;
+  bool HandleCommand(const fxl::StringView& packet,
                      const ResponseCallback& callback);
 
  private:
   // Command handlers for each "letter" packet. We use underscores in the method
   // names to clearly delineate lowercase letters.
   bool HandleQuestionMark(const ResponseCallback& callback);
-  bool Handle_c(const ftl::StringView& packet,
+  bool Handle_c(const fxl::StringView& packet,
                 const ResponseCallback& callback);
-  bool Handle_C(const ftl::StringView& packet,
+  bool Handle_C(const fxl::StringView& packet,
                 const ResponseCallback& callback);
-  bool Handle_D(const ftl::StringView& packet,
+  bool Handle_D(const fxl::StringView& packet,
                 const ResponseCallback& callback);
   bool Handle_g(const ResponseCallback& callback);
-  bool Handle_G(const ftl::StringView& packet,
+  bool Handle_G(const fxl::StringView& packet,
                 const ResponseCallback& callback);
-  bool Handle_H(const ftl::StringView& packet,
+  bool Handle_H(const fxl::StringView& packet,
                 const ResponseCallback& callback);
-  bool Handle_m(const ftl::StringView& packet,
+  bool Handle_m(const fxl::StringView& packet,
                 const ResponseCallback& callback);
-  bool Handle_M(const ftl::StringView& packet,
+  bool Handle_M(const fxl::StringView& packet,
                 const ResponseCallback& callback);
-  bool Handle_q(const ftl::StringView& prefix,
-                const ftl::StringView& params,
+  bool Handle_q(const fxl::StringView& prefix,
+                const fxl::StringView& params,
                 const ResponseCallback& callback);
-  bool Handle_Q(const ftl::StringView& prefix,
-                const ftl::StringView& params,
+  bool Handle_Q(const fxl::StringView& prefix,
+                const fxl::StringView& params,
                 const ResponseCallback& callback);
-  bool Handle_T(const ftl::StringView& packet,
+  bool Handle_T(const fxl::StringView& packet,
                 const ResponseCallback& callback);
-  bool Handle_v(const ftl::StringView& packet,
+  bool Handle_v(const fxl::StringView& packet,
                 const ResponseCallback& callback);
   bool Handle_zZ(bool insert,
-                 const ftl::StringView& packet,
+                 const fxl::StringView& packet,
                  const ResponseCallback& callback);
 
   // q/Q packets:
   // qAttached
-  bool HandleQueryAttached(const ftl::StringView& params,
+  bool HandleQueryAttached(const fxl::StringView& params,
                            const ResponseCallback& callback);
   // qC
-  bool HandleQueryCurrentThreadId(const ftl::StringView& params,
+  bool HandleQueryCurrentThreadId(const fxl::StringView& params,
                                   const ResponseCallback& callback);
   // qRcmd
-  bool HandleQueryRcmd(const ftl::StringView& command,
+  bool HandleQueryRcmd(const fxl::StringView& command,
                        const ResponseCallback& callback);
   // qSupported
-  bool HandleQuerySupported(const ftl::StringView& params,
+  bool HandleQuerySupported(const fxl::StringView& params,
                             const ResponseCallback& callback);
   // qfThreadInfo and qsThreadInfo
   bool HandleQueryThreadInfo(bool is_first, const ResponseCallback& callback);
   // qXfer
-  bool HandleQueryXfer(const ftl::StringView& params,
+  bool HandleQueryXfer(const fxl::StringView& params,
                        const ResponseCallback& callback);
   // QNonStop
-  bool HandleSetNonStop(const ftl::StringView& params,
+  bool HandleSetNonStop(const fxl::StringView& params,
                         const ResponseCallback& callback);
 
   // v packets:
-  bool Handle_vAttach(const ftl::StringView& packet,
+  bool Handle_vAttach(const fxl::StringView& packet,
                       const ResponseCallback& callback);
-  bool Handle_vCont(const ftl::StringView& packet,
+  bool Handle_vCont(const fxl::StringView& packet,
                     const ResponseCallback& callback);
-  bool Handle_vKill(const ftl::StringView& packet,
+  bool Handle_vKill(const fxl::StringView& packet,
                     const ResponseCallback& callback);
-  bool Handle_vRun(const ftl::StringView& packet,
+  bool Handle_vRun(const fxl::StringView& packet,
                    const ResponseCallback& callback);
 
   // Breakpoints
   bool InsertSoftwareBreakpoint(uintptr_t addr,
                                 size_t kind,
-                                const ftl::StringView& optional_params,
+                                const fxl::StringView& optional_params,
                                 const ResponseCallback& callback);
   bool RemoveSoftwareBreakpoint(uintptr_t addr,
                                 size_t kind,
@@ -112,7 +112,7 @@ class CommandHandler final {
   // Indicates whether we are currently in a qfThreadInfo/qsThreadInfo sequence.
   bool in_thread_info_sequence_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CommandHandler);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CommandHandler);
 };
 
 }  // namespace debugserver

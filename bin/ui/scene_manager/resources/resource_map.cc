@@ -16,7 +16,7 @@ void ResourceMap::Clear() {
 }
 
 bool ResourceMap::AddResource(scenic::ResourceId id, ResourcePtr resource) {
-  FTL_DCHECK(resource);
+  FXL_DCHECK(resource);
 
   auto result = resources_.insert(std::make_pair(id, std::move(resource)));
   if (!result.second) {

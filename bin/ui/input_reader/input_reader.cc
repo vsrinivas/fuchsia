@@ -37,7 +37,7 @@ InputReader::~InputReader() {
 }
 
 void InputReader::Start() {
-  FTL_CHECK(registry_);
+  FXL_CHECK(registry_);
 
   device_watcher_ = mtl::DeviceWatcher::Create(
       DEV_INPUT, [this](int dir_fd, std::string filename) {
@@ -67,25 +67,25 @@ void InputReader::WatchDisplayOwnershipChanges(int dir_fd) {
           mtl::MessageLoop::GetCurrent()->AddHandler(
               this, display_ownership_event_, signals);
     } else {
-      FTL_DLOG(ERROR)
+      FXL_DLOG(ERROR)
           << "IOCTL_DISPLAY_GET_OWNERSHIP_CHANGE_EVENT failed: result="
           << result;
     }
     close(gfx_console_fd);
   } else {
-    FTL_DLOG(ERROR) << "Failed to open " << DEV_VC << ": errno=" << errno;
+    FXL_DLOG(ERROR) << "Failed to open " << DEV_VC << ": errno=" << errno;
   }
 }
 
 void InputReader::DeviceRemoved(mx_handle_t handle) {
-  FTL_VLOG(1) << "Input device " << devices_.at(handle)->interpreter()->name()
+  FXL_VLOG(1) << "Input device " << devices_.at(handle)->interpreter()->name()
               << " removed";
   mtl::MessageLoop::GetCurrent()->RemoveHandler(devices_.at(handle)->key());
   devices_.erase(handle);
 }
 
 void InputReader::DeviceAdded(std::unique_ptr<InputInterpreter> interpreter) {
-  FTL_VLOG(1) << "Input device " << interpreter->name() << " added ";
+  FXL_VLOG(1) << "Input device " << interpreter->name() << " added ";
   mx_handle_t handle = interpreter->handle();
   mx_signals_t signals = MX_USER_SIGNAL_0;
   mtl::MessageLoop::HandlerKey key =

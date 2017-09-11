@@ -9,22 +9,22 @@
 
 #include <string>
 
-#include "lib/ftl/ftl_export.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/fxl_export.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace mtl {
 
 // Copies the data from |source| into |contents| and returns true on success and
 // false on error. In case of I/O error, |contents| holds the data that could
 // be read from source before the error occurred.
-FTL_EXPORT bool BlockingCopyToString(mx::socket source, std::string* contents);
+FXL_EXPORT bool BlockingCopyToString(mx::socket source, std::string* contents);
 
-FTL_EXPORT bool BlockingCopyFromString(ftl::StringView source,
+FXL_EXPORT bool BlockingCopyFromString(fxl::StringView source,
                                        const mx::socket& destination);
 
 // Copies the string |contents| to a temporary socket and returns the
 // consumer handle.
-FTL_EXPORT mx::socket WriteStringToSocket(ftl::StringView source);
+FXL_EXPORT mx::socket WriteStringToSocket(fxl::StringView source);
 
 }  // namespace mtl
 

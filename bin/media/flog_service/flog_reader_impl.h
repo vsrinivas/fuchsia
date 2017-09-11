@@ -70,7 +70,7 @@ class FlogReaderImpl : public FlogServiceImpl::Product<FlogReader>,
   void LogChannelDeletion(int64_t time_ns, uint32_t channel_id) override;
 
   uint32_t log_id_;
-  ftl::UniqueFD fd_;
+  fxl::UniqueFD fd_;
   uint32_t current_entry_index_ = 0;
   std::vector<uint8_t> read_buffer_;
   size_t read_buffer_bytes_used_;

@@ -15,19 +15,19 @@ StrokeSegment::StrokeSegment(CubicBezier2f curve) : curve_(curve) {
   arc_length_parameterization_ = pair.first;
   length_ = pair.second;
 
-  FTL_DCHECK(!std::isnan(curve_.pts[0].x));
-  FTL_DCHECK(!std::isnan(curve_.pts[0].y));
-  FTL_DCHECK(!std::isnan(curve_.pts[1].x));
-  FTL_DCHECK(!std::isnan(curve_.pts[1].y));
-  FTL_DCHECK(!std::isnan(curve_.pts[2].x));
-  FTL_DCHECK(!std::isnan(curve_.pts[2].y));
-  FTL_DCHECK(!std::isnan(curve_.pts[3].x));
-  FTL_DCHECK(!std::isnan(curve_.pts[3].y));
-  FTL_DCHECK(!std::isnan(arc_length_parameterization_.pts[0]));
-  FTL_DCHECK(!std::isnan(arc_length_parameterization_.pts[1]));
-  FTL_DCHECK(!std::isnan(arc_length_parameterization_.pts[2]));
-  FTL_DCHECK(!std::isnan(arc_length_parameterization_.pts[3]));
-  FTL_DCHECK(!std::isnan(length_));
+  FXL_DCHECK(!std::isnan(curve_.pts[0].x));
+  FXL_DCHECK(!std::isnan(curve_.pts[0].y));
+  FXL_DCHECK(!std::isnan(curve_.pts[1].x));
+  FXL_DCHECK(!std::isnan(curve_.pts[1].y));
+  FXL_DCHECK(!std::isnan(curve_.pts[2].x));
+  FXL_DCHECK(!std::isnan(curve_.pts[2].y));
+  FXL_DCHECK(!std::isnan(curve_.pts[3].x));
+  FXL_DCHECK(!std::isnan(curve_.pts[3].y));
+  FXL_DCHECK(!std::isnan(arc_length_parameterization_.pts[0]));
+  FXL_DCHECK(!std::isnan(arc_length_parameterization_.pts[1]));
+  FXL_DCHECK(!std::isnan(arc_length_parameterization_.pts[2]));
+  FXL_DCHECK(!std::isnan(arc_length_parameterization_.pts[3]));
+  FXL_DCHECK(!std::isnan(length_));
 }
 
 }  // namespace sketchy

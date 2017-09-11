@@ -15,7 +15,7 @@
 #include "lib/media/fidl/video_renderer.fidl.h"
 #include "lib/ui/scenic/skia/host_canvas_cycler.h"
 #include "lib/ui/view_framework/base_view.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace examples {
 
@@ -95,7 +95,7 @@ class MediaPlayerView : public mozart::BaseView {
   int64_t frame_time_;
   int64_t prev_frame_time_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerView);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerView);
 };
 
 }  // namespace examples

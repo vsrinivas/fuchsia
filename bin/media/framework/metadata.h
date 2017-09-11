@@ -8,7 +8,7 @@
 #include <string>
 
 #include "garnet/bin/media/util/safe_clone.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace media {
 
@@ -64,7 +64,7 @@ class Metadata {
   std::string genre_;
   std::string composer_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Metadata);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Metadata);
 };
 
 }  // namespace media

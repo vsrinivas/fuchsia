@@ -40,7 +40,7 @@ source_set("client") {
   ]
 
   deps = [
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }
 
@@ -56,7 +56,7 @@ source_set("skia") {
 
   public_deps = [
     ":client",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//third_party/skia",
   ]
 }

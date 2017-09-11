@@ -8,7 +8,7 @@
 #include "lib/media/fidl/net_media_service.fidl.h"
 #include "garnet/bin/media/util/factory_service_base.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace media {
 
@@ -33,7 +33,7 @@ class NetMediaServiceImpl : public FactoryServiceBase<NetMediaServiceImpl>,
  private:
   fidl::BindingSet<NetMediaService> bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(NetMediaServiceImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(NetMediaServiceImpl);
 };
 
 }  // namespace media

@@ -17,7 +17,7 @@ StrokeFitter::StrokeFitter(Page* page, StrokeId id)
       error_threshold_(kErrorThreshold) {}
 
 StrokeFitter::~StrokeFitter() {
-  FTL_DCHECK(finished_);
+  FXL_DCHECK(finished_);
 }
 
 void StrokeFitter::StartStroke(vec2 pt) {
@@ -27,7 +27,7 @@ void StrokeFitter::StartStroke(vec2 pt) {
 
 void StrokeFitter::ContinueStroke(std::vector<vec2> sampled_points,
                                   std::vector<vec2> predicted_points) {
-  FTL_DCHECK(page_->GetStroke(stroke_id_) != nullptr);
+  FXL_DCHECK(page_->GetStroke(stroke_id_) != nullptr);
 
   bool changed = false;
 
@@ -88,12 +88,12 @@ void StrokeFitter::ContinueStroke(std::vector<vec2> sampled_points,
   // new parameter t' (also in [0,1]) such that evaluating the original
   // curve-segment at t' returns the point on the segment where the cumulative
   // arc-length to that point is t * total_segment_length.
-  FTL_DCHECK(!path_.empty());
+  FXL_DCHECK(!path_.empty());
   stroke_->SetPath(std::move(path_));
 }
 
 void StrokeFitter::FinishStroke() {
-  FTL_DCHECK(page_->GetStroke(stroke_id_) != nullptr);
+  FXL_DCHECK(page_->GetStroke(stroke_id_) != nullptr);
   stroke_->Finalize();
   points_.clear();
   params_.clear();
@@ -101,7 +101,7 @@ void StrokeFitter::FinishStroke() {
 }
 
 void StrokeFitter::CancelStroke() {
-  FTL_DCHECK(page_->GetStroke(stroke_id_) != nullptr);
+  FXL_DCHECK(page_->GetStroke(stroke_id_) != nullptr);
   page_->DeleteStroke(stroke_id_);
   points_.clear();
   params_.clear();
@@ -112,9 +112,9 @@ void StrokeFitter::FitSampleRange(int start_index,
                                   int end_index,
                                   vec2 left_tangent,
                                   vec2 right_tangent) {
-  FTL_DCHECK(glm::length(left_tangent) > 0 && glm::length(right_tangent))
+  FXL_DCHECK(glm::length(left_tangent) > 0 && glm::length(right_tangent))
       << "  left: " << left_tangent << "  right: " << right_tangent;
-  FTL_DCHECK(end_index > start_index);
+  FXL_DCHECK(end_index > start_index);
   if (end_index - start_index == 1) {
     // Only two points... use a heuristic.
     // TODO: Double-check this heuristic (perhaps normalization needed?)
@@ -125,14 +125,14 @@ void StrokeFitter::FitSampleRange(int start_index,
     line.pts[3] = points_[end_index];
     line.pts[1] = line.pts[0] + (left_tangent * 0.25f);
     line.pts[2] = line.pts[3] + (right_tangent * 0.25f);
-    FTL_DCHECK(!std::isnan(line.pts[0].x));
-    FTL_DCHECK(!std::isnan(line.pts[0].y));
-    FTL_DCHECK(!std::isnan(line.pts[1].x));
-    FTL_DCHECK(!std::isnan(line.pts[1].y));
-    FTL_DCHECK(!std::isnan(line.pts[2].x));
-    FTL_DCHECK(!std::isnan(line.pts[2].y));
-    FTL_DCHECK(!std::isnan(line.pts[3].x));
-    FTL_DCHECK(!std::isnan(line.pts[3].y));
+    FXL_DCHECK(!std::isnan(line.pts[0].x));
+    FXL_DCHECK(!std::isnan(line.pts[0].y));
+    FXL_DCHECK(!std::isnan(line.pts[1].x));
+    FXL_DCHECK(!std::isnan(line.pts[1].y));
+    FXL_DCHECK(!std::isnan(line.pts[2].x));
+    FXL_DCHECK(!std::isnan(line.pts[2].y));
+    FXL_DCHECK(!std::isnan(line.pts[3].x));
+    FXL_DCHECK(!std::isnan(line.pts[3].y));
     path_.push_back(line);
     return;
   }
@@ -160,20 +160,20 @@ void StrokeFitter::FitSampleRange(int start_index,
 
   // The current fit is good enough... add it to the path and stop recursion.
   if (max_error < error_threshold_) {
-    FTL_DCHECK(!std::isnan(bez.pts[0].x));
-    FTL_DCHECK(!std::isnan(bez.pts[0].y));
-    FTL_DCHECK(!std::isnan(bez.pts[1].x));
-    FTL_DCHECK(!std::isnan(bez.pts[1].y));
-    FTL_DCHECK(!std::isnan(bez.pts[2].x));
-    FTL_DCHECK(!std::isnan(bez.pts[2].y));
-    FTL_DCHECK(!std::isnan(bez.pts[3].x));
-    FTL_DCHECK(!std::isnan(bez.pts[3].y));
+    FXL_DCHECK(!std::isnan(bez.pts[0].x));
+    FXL_DCHECK(!std::isnan(bez.pts[0].y));
+    FXL_DCHECK(!std::isnan(bez.pts[1].x));
+    FXL_DCHECK(!std::isnan(bez.pts[1].y));
+    FXL_DCHECK(!std::isnan(bez.pts[2].x));
+    FXL_DCHECK(!std::isnan(bez.pts[2].y));
+    FXL_DCHECK(!std::isnan(bez.pts[3].x));
+    FXL_DCHECK(!std::isnan(bez.pts[3].y));
     path_.push_back(bez);
     return;
   }
 
   // Error is too large... split into two ranges and fit each.
-  FTL_DCHECK(split_index > start_index && split_index < end_index);
+  FXL_DCHECK(split_index > start_index && split_index < end_index);
   // Compute the tangent on each side of the split point.
   // TODO: some filtering may be desirable here.
   vec2 right_middle_tangent = points_[split_index + 1] - points_[split_index];

@@ -8,7 +8,7 @@
 #include "lib/media/fidl/media_service.fidl.h"
 #include "garnet/bin/media/util/factory_service_base.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace media {
 
@@ -40,7 +40,7 @@ class MediaServiceImpl : public FactoryServiceBase<MediaServiceImpl>,
       std::unique_ptr<app::ApplicationContext> application_context);
   ~MediaServiceImpl() override;
 
-  ftl::RefPtr<ftl::TaskRunner> multiproc_task_runner() {
+  fxl::RefPtr<fxl::TaskRunner> multiproc_task_runner() {
     return multiproc_task_runner_;
   }
 
@@ -92,9 +92,9 @@ class MediaServiceImpl : public FactoryServiceBase<MediaServiceImpl>,
 
  private:
   fidl::BindingSet<MediaService> bindings_;
-  ftl::RefPtr<ftl::TaskRunner> multiproc_task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> multiproc_task_runner_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MediaServiceImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MediaServiceImpl);
 };
 
 }  // namespace media

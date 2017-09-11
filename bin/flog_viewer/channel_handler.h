@@ -12,7 +12,7 @@
 #include "garnet/bin/flog_viewer/binding.h"
 #include "garnet/bin/flog_viewer/channel_manager.h"
 #include "lib/fidl/cpp/bindings/message.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace flog {
 
@@ -80,17 +80,17 @@ class ChannelHandler {
   virtual void HandleMessage(fidl::Message* message) = 0;
 
   std::ostream& ReportProblem() {
-    FTL_DCHECK(entry_) << "ReportProblem called outside of HandleMessage";
+    FXL_DCHECK(entry_) << "ReportProblem called outside of HandleMessage";
     return GetAccumulator()->ReportProblem(entry_index(), entry());
   }
 
   uint32_t entry_index() const {
-    FTL_DCHECK(entry_) << "entry_index called outside of HandleMessage";
+    FXL_DCHECK(entry_) << "entry_index called outside of HandleMessage";
     return entry_index_;
   }
 
   const FlogEntryPtr& entry() const {
-    FTL_DCHECK(entry_) << "entry called outside of HandleMessage";
+    FXL_DCHECK(entry_) << "entry called outside of HandleMessage";
     return *entry_;
   }
 

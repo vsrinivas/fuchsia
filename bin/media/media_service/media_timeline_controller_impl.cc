@@ -8,7 +8,7 @@
 #include "lib/media/timeline/timeline.h"
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "garnet/bin/media/util/callback_joiner.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -248,14 +248,14 @@ MediaTimelineControllerImpl::TimelineTransition::TimelineTransition(
                              reference_delta,
                              subject_delta),
       callback_(callback) {
-  FTL_DCHECK(callback_);
+  FXL_DCHECK(callback_);
   callback_joiner_.WhenJoined([this]() {
     if (cancelled_) {
-      FTL_DCHECK(!callback_);
+      FXL_DCHECK(!callback_);
       return;
     }
 
-    FTL_DCHECK(callback_);
+    FXL_DCHECK(callback_);
     callback_(true);
     callback_ = nullptr;
     if (completed_callback_) {

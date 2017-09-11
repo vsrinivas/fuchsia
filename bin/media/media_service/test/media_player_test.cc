@@ -8,7 +8,7 @@
 #include "garnet/bin/media/fidl/fidl_formatting.h"
 #include "garnet/bin/media/media_service/test/fake_renderer.h"
 #include "garnet/bin/media/media_service/test/fake_wav_reader.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace media {
@@ -19,12 +19,12 @@ class MediaPlayerTester {
   MediaPlayerTester()
       : application_context_(
             app::ApplicationContext::CreateFromStartupInfo()) {
-    FTL_LOG(INFO) << "MediaPlayerTest starting";
+    FXL_LOG(INFO) << "MediaPlayerTest starting";
 
-    FTL_LOG(INFO) << "connecting to MediaService";
+    FXL_LOG(INFO) << "connecting to MediaService";
     MediaServicePtr media_service =
         application_context_->ConnectToEnvironmentService<MediaService>();
-    FTL_LOG(INFO) << "connected to MediaService "
+    FXL_LOG(INFO) << "connected to MediaService "
                   << (media_service ? "ok" : "NULL PTR");
 
     fake_renderer_.SetPtsRate(TimelineRate(48000, 1));
@@ -57,16 +57,16 @@ class MediaPlayerTester {
         fake_renderer_ptr.NewRequest();
     fake_renderer_.Bind(std::move(renderer_request));
 
-    FTL_LOG(INFO) << "creating player";
+    FXL_LOG(INFO) << "creating player";
     media_service->CreatePlayer(std::move(fake_reader_ptr),
                                 std::move(fake_renderer_ptr), nullptr,
                                 media_player_.NewRequest());
-    FTL_LOG(INFO) << "player created " << (media_player_ ? "ok" : "NULL PTR");
+    FXL_LOG(INFO) << "player created " << (media_player_ ? "ok" : "NULL PTR");
 
     HandleStatusUpdates();
-    FTL_LOG(INFO) << "calling play";
+    FXL_LOG(INFO) << "calling play";
     media_player_->Play();
-    FTL_LOG(INFO) << "called play";
+    FXL_LOG(INFO) << "called play";
   }
 
  private:
@@ -75,7 +75,7 @@ class MediaPlayerTester {
     if (status) {
       if (status->end_of_stream) {
         ended_ = true;
-        FTL_LOG(INFO) << "MediaPlayerTest "
+        FXL_LOG(INFO) << "MediaPlayerTest "
                       << (fake_renderer_.expected() ? "SUCCEEDED" : "FAILED");
         mtl::MessageLoop::GetCurrent()->PostQuitTask();
       }

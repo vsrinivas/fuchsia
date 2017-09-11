@@ -7,8 +7,8 @@
 #include <functional>
 #include <vector>
 
-#include "lib/ftl/synchronization/mutex.h"
-#include "lib/ftl/synchronization/thread_annotations.h"
+#include "lib/fxl/synchronization/mutex.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
 
 // The Incident class provides a facility for executing code as the consequence
 // of some occurrence. This can be useful for building state machines and
@@ -90,7 +90,7 @@ class ThreadsafeIncident {
   // immediately after this method returns, so there's no guarantee that the
   // result is still valid.
   bool occurred() {
-    ftl::MutexLocker locker(&mutex_);
+    fxl::MutexLocker locker(&mutex_);
     return occurred_;
   }
 
@@ -105,7 +105,7 @@ class ThreadsafeIncident {
   // and when the consequence is actually run.
   void When(const std::function<void()>& consequence) {
     {
-      ftl::MutexLocker locker(&mutex_);
+      fxl::MutexLocker locker(&mutex_);
       if (!occurred_) {
         consequences_.push_back(consequence);
         return;
@@ -123,13 +123,13 @@ class ThreadsafeIncident {
   // Resets this ThreadsafeIncident to initial state and clears the list of
   // consequences.
   void Reset() {
-    ftl::MutexLocker locker(&mutex_);
+    fxl::MutexLocker locker(&mutex_);
     occurred_ = false;
     consequences_.clear();
   }
 
  private:
-  mutable ftl::Mutex mutex_;
-  bool occurred_ FTL_GUARDED_BY(mutex_) = false;
-  std::vector<std::function<void()>> consequences_ FTL_GUARDED_BY(mutex_);
+  mutable fxl::Mutex mutex_;
+  bool occurred_ FXL_GUARDED_BY(mutex_) = false;
+  std::vector<std::function<void()>> consequences_ FXL_GUARDED_BY(mutex_);
 };

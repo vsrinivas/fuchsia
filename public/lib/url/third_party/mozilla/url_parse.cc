@@ -38,7 +38,7 @@
 
 #include <stdlib.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/url/url_parse_internal.h"
 #include "lib/url/url_util.h"
 #include "lib/url/url_util_internal.h"
@@ -126,7 +126,7 @@ void ParseServerInfo(const char* spec, const Component& serverinfo, Component* h
 // is invalid.
 void DoParseAuthority(const char* spec, const Component& auth, Component* username,
                       Component* password, Component* hostname, Component* port_num) {
-  FTL_DCHECK(auth.is_valid()) << "We should always get an authority";
+  FXL_DCHECK(auth.is_valid()) << "We should always get an authority";
   if (auth.is_invalid_or_empty()) {
     username->reset();
     password->reset();
@@ -163,7 +163,7 @@ void ParsePath(const char* spec, const Component& path, Component* filepath, Com
     ref->reset();
     return;
   }
-  FTL_DCHECK(path.is_nonempty()) << "We should never have 0 length paths";
+  FXL_DCHECK(path.is_nonempty()) << "We should never have 0 length paths";
 
   // Search for first occurrence of either ? or #.
   size_t path_end = path.begin + path.len();
@@ -277,7 +277,7 @@ void DoParseAfterScheme(const char* spec, size_t spec_len, size_t after_scheme, 
 // The main parsing function for standard URLs. Standard URLs have a scheme,
 // host, path, etc.
 void DoParseStandardURL(const char* spec, size_t spec_len, Parsed* parsed) {
-  FTL_DCHECK(spec_len >= 0);
+  FXL_DCHECK(spec_len >= 0);
 
   // Strip leading & trailing spaces and control characters.
   size_t begin = 0;
@@ -334,13 +334,13 @@ void DoParsePathURL(const char* spec, size_t spec_len, bool trim_path_end, Parse
   }
 
   if (path_begin == spec_len) return;
-  FTL_DCHECK(path_begin < spec_len);
+  FXL_DCHECK(path_begin < spec_len);
 
   ParsePath(spec, MakeRange(path_begin, spec_len), &parsed->path, &parsed->query, &parsed->ref);
 }
 
 void DoParseMailtoURL(const char* spec, size_t spec_len, Parsed* parsed) {
-  FTL_DCHECK(spec_len >= 0);
+  FXL_DCHECK(spec_len >= 0);
 
   // Get the non-path and non-scheme parts of the URL out of the way, we never
   // use them.

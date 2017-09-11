@@ -51,7 +51,7 @@ StreamType::Medium Convert(MediaTypeMedium media_type_medium) {
     case MediaTypeMedium::SUBPICTURE:
       return StreamType::Medium::kSubpicture;
   }
-  FTL_LOG(ERROR) << "unrecognized medium";
+  FXL_LOG(ERROR) << "unrecognized medium";
   abort();
 }
 
@@ -70,7 +70,7 @@ AudioStreamType::SampleFormat Convert(AudioSampleFormat audio_sample_format) {
     case AudioSampleFormat::FLOAT:
       return AudioStreamType::SampleFormat::kFloat;
   }
-  FTL_LOG(ERROR) << "unrecognized sample format";
+  FXL_LOG(ERROR) << "unrecognized sample format";
   abort();
 }
 
@@ -103,7 +103,7 @@ VideoStreamType::VideoProfile Convert(VideoProfile video_profile) {
     case VideoProfile::H264_MULTIVIEW_HIGH:
       return VideoStreamType::VideoProfile::kH264MultiviewHigh;
   }
-  FTL_LOG(ERROR);
+  FXL_LOG(ERROR);
   abort();
 }
 
@@ -173,7 +173,7 @@ MediaTypeMedium Convert(StreamType::Medium medium) {
       return MediaTypeMedium::SUBPICTURE;
   }
 
-  FTL_LOG(ERROR) << "unrecognized medium";
+  FXL_LOG(ERROR) << "unrecognized medium";
   abort();
 }
 
@@ -193,7 +193,7 @@ AudioSampleFormat Convert(AudioStreamType::SampleFormat sample_format) {
       return AudioSampleFormat::FLOAT;
   }
 
-  FTL_LOG(ERROR) << "unrecognized sample format";
+  FXL_LOG(ERROR) << "unrecognized sample format";
   abort();
 }
 
@@ -227,7 +227,7 @@ VideoProfile Convert(VideoStreamType::VideoProfile video_profile) {
       return VideoProfile::H264_MULTIVIEW_HIGH;
   }
 
-  FTL_LOG(ERROR) << "unrecognized video profile";
+  FXL_LOG(ERROR) << "unrecognized video profile";
   abort();
 }
 
@@ -267,7 +267,7 @@ PixelFormat Convert(VideoStreamType::PixelFormat pixel_format) {
       return PixelFormat::MT21;
   }
 
-  FTL_LOG(ERROR) << "unrecognized pixel format";
+  FXL_LOG(ERROR) << "unrecognized pixel format";
   abort();
 }
 
@@ -285,7 +285,7 @@ ColorSpace Convert(VideoStreamType::ColorSpace color_space) {
       return ColorSpace::SD_REC601;
   }
 
-  FTL_LOG(ERROR) << "unrecognized color space";
+  FXL_LOG(ERROR) << "unrecognized color space";
   abort();
 }
 
@@ -339,7 +339,7 @@ namespace fidl {
 media::MediaTypePtr
 TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>>::Convert(
     const std::unique_ptr<media::StreamType>& input) {
-  FTL_DCHECK(KnownEncodingsMatch());
+  FXL_DCHECK(KnownEncodingsMatch());
 
   if (input == nullptr) {
     return nullptr;
@@ -417,14 +417,14 @@ TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>>::Convert(
     }
   }
 
-  FTL_LOG(ERROR) << "unrecognized medium";
+  FXL_LOG(ERROR) << "unrecognized medium";
   abort();
 }
 
 std::unique_ptr<media::StreamType>
 TypeConverter<std::unique_ptr<media::StreamType>, media::MediaTypePtr>::Convert(
     const media::MediaTypePtr& input) {
-  FTL_DCHECK(KnownEncodingsMatch());
+  FXL_DCHECK(KnownEncodingsMatch());
 
   if (!input) {
     return nullptr;
@@ -468,7 +468,7 @@ TypeConverter<std::unique_ptr<media::StreamType>, media::MediaTypePtr>::Convert(
 media::MediaTypeSetPtr
 TypeConverter<media::MediaTypeSetPtr, std::unique_ptr<media::StreamTypeSet>>::
     Convert(const std::unique_ptr<media::StreamTypeSet>& input) {
-  FTL_DCHECK(KnownEncodingsMatch());
+  FXL_DCHECK(KnownEncodingsMatch());
 
   if (input == nullptr) {
     return nullptr;
@@ -533,14 +533,14 @@ TypeConverter<media::MediaTypeSetPtr, std::unique_ptr<media::StreamTypeSet>>::
     }
   }
 
-  FTL_LOG(ERROR) << "unrecognized medium";
+  FXL_LOG(ERROR) << "unrecognized medium";
   abort();
 }
 
 std::unique_ptr<media::StreamTypeSet> TypeConverter<
     std::unique_ptr<media::StreamTypeSet>,
     media::MediaTypeSetPtr>::Convert(const media::MediaTypeSetPtr& input) {
-  FTL_DCHECK(KnownEncodingsMatch());
+  FXL_DCHECK(KnownEncodingsMatch());
 
   if (!input) {
     return nullptr;

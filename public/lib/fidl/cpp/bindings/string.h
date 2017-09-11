@@ -10,7 +10,7 @@
 
 #include "lib/fidl/cpp/bindings/internal/array_internal.h"
 #include "lib/fidl/cpp/bindings/type_converter.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace fidl {
 
@@ -163,7 +163,7 @@ struct TypeConverter<std::string, String> {
 template <size_t N>
 struct TypeConverter<String, char[N]> {
   static String Convert(const char input[N]) {
-    FTL_DCHECK(input);
+    FXL_DCHECK(input);
     return String(input, N - 1);
   }
 };
@@ -172,7 +172,7 @@ struct TypeConverter<String, char[N]> {
 template <size_t N>
 struct TypeConverter<String, const char[N]> {
   static String Convert(const char input[N]) {
-    FTL_DCHECK(input);
+    FXL_DCHECK(input);
     return String(input, N - 1);
   }
 };

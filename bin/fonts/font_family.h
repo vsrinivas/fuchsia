@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "lib/fonts/fidl/font_provider.fidl.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/rapidjson.h"
 
@@ -41,7 +41,7 @@ class FontFamily {
   std::string name_;
   std::vector<Font> fonts_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FontFamily);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FontFamily);
 };
 
 }  // namespace fonts

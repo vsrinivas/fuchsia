@@ -29,7 +29,7 @@ MeshManager::MeshManager(CommandBufferPool* command_buffer_pool,
       builder_count_(0) {}
 
 MeshManager::~MeshManager() {
-  FTL_DCHECK(builder_count_ == 0);
+  FXL_DCHECK(builder_count_ == 0);
 }
 
 MeshBuilderPtr MeshManager::NewMeshBuilder(const MeshSpec& spec,
@@ -62,7 +62,7 @@ MeshManager::MeshBuilder::MeshBuilder(MeshManager* manager,
 MeshManager::MeshBuilder::~MeshBuilder() {}
 
 BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox2D() const {
-  FTL_DCHECK(spec_.flags & MeshAttribute::kPosition2D);
+  FXL_DCHECK(spec_.flags & MeshAttribute::kPosition2D);
   uint8_t* vertex_ptr = vertex_staging_buffer_;
 
   vec2* pos = reinterpret_cast<vec2*>(vertex_ptr);
@@ -80,7 +80,7 @@ BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox2D() const {
 }
 
 BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox3D() const {
-  FTL_DCHECK(spec_.flags & MeshAttribute::kPosition3D);
+  FXL_DCHECK(spec_.flags & MeshAttribute::kPosition3D);
   uint8_t* vertex_ptr = vertex_staging_buffer_;
 
   vec3* pos = reinterpret_cast<vec3*>(vertex_ptr);
@@ -98,14 +98,14 @@ BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox3D() const {
 }
 
 BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox() const {
-  FTL_DCHECK(vertex_count_ > 0);
-  FTL_DCHECK(spec_.IsValid());
+  FXL_DCHECK(vertex_count_ > 0);
+  FXL_DCHECK(spec_.IsValid());
   return spec_.flags & MeshAttribute::kPosition2D ? ComputeBoundingBox2D()
                                                   : ComputeBoundingBox3D();
 }
 
 MeshPtr MeshManager::MeshBuilder::Build() {
-  FTL_DCHECK(!is_built_);
+  FXL_DCHECK(!is_built_);
   if (is_built_) {
     return MeshPtr();
   }
@@ -135,7 +135,7 @@ MeshPtr MeshManager::MeshBuilder::Build() {
                             SemaphorePtr());
   index_writer_.Submit();
 
-  auto mesh = ftl::MakeRefCounted<Mesh>(
+  auto mesh = fxl::MakeRefCounted<Mesh>(
       manager_->resource_recycler(), spec_, ComputeBoundingBox(), vertex_count_,
       index_count_, vertex_buffer, std::move(index_buffer));
 

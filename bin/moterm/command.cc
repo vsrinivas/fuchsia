@@ -7,7 +7,7 @@
 #include <magenta/status.h>
 #include <unistd.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace moterm {
 namespace {
@@ -49,22 +49,22 @@ Command::~Command() {
 bool Command::Start(std::vector<std::string> command,
                     std::vector<mtl::StartupHandle> startup_handles,
                     ReceiveCallback receive_callback,
-                    ftl::Closure termination_callback) {
-  FTL_DCHECK(!command.empty());
+                    fxl::Closure termination_callback) {
+  FXL_DCHECK(!command.empty());
 
   mx_status_t status;
   if ((status = AddRedirectedSocket(&startup_handles, STDIN_FILENO, &stdin_))) {
-    FTL_LOG(ERROR) << "Failed to create stdin pipe: status=" << status;
+    FXL_LOG(ERROR) << "Failed to create stdin pipe: status=" << status;
     return false;
   }
   if ((status =
            AddRedirectedSocket(&startup_handles, STDOUT_FILENO, &stdout_))) {
-    FTL_LOG(ERROR) << "Failed to create stdout pipe: status=" << status;
+    FXL_LOG(ERROR) << "Failed to create stdout pipe: status=" << status;
     return false;
   }
   if ((status =
            AddRedirectedSocket(&startup_handles, STDERR_FILENO, &stderr_))) {
-    FTL_LOG(ERROR) << "Failed to create stderr pipe: status=" << status;
+    FXL_LOG(ERROR) << "Failed to create stderr pipe: status=" << status;
     return false;
   }
 
@@ -86,7 +86,7 @@ bool Command::Start(std::vector<std::string> command,
   const char* errmsg;
   status = launchpad_go(lp, &proc, &errmsg);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "Cannot run executable " << command[0] << " due to error "
+    FXL_LOG(ERROR) << "Cannot run executable " << command[0] << " due to error "
                    << status << " (" << mx_status_get_string(status)
                    << "): " << errmsg;
     return false;
@@ -136,7 +136,7 @@ void Command::SendData(const void* bytes, size_t num_bytes) {
   size_t len;
   if (stdin_.write(0, bytes, num_bytes, &len) != MX_OK) {
     // TODO: Deal with the socket being full.
-    FTL_LOG(ERROR) << "Failed to send";
+    FXL_LOG(ERROR) << "Failed to send";
   }
 }
 

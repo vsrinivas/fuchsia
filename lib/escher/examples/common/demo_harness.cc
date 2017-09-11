@@ -9,13 +9,13 @@
 #include "escher/renderer/image.h"
 #include "escher/vk/gpu_mem.h"
 #include "escher/vk/vulkan_instance.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/memory/ref_ptr.h"
 
 #include <iostream>
 #include <set>
 
-#define VK_CHECK_RESULT(XXX) FTL_CHECK(XXX.result == vk::Result::eSuccess)
+#define VK_CHECK_RESULT(XXX) FXL_CHECK(XXX.result == vk::Result::eSuccess)
 
 DemoHarness::DemoHarness(WindowParams window_params)
     : window_params_(window_params) {
@@ -23,11 +23,11 @@ DemoHarness::DemoHarness(WindowParams window_params)
 }
 
 DemoHarness::~DemoHarness() {
-  FTL_DCHECK(shutdown_complete_);
+  FXL_DCHECK(shutdown_complete_);
 }
 
 void DemoHarness::Init(InstanceParams instance_params) {
-  FTL_LOG(INFO) << "Initializing " << window_params_.window_name
+  FXL_LOG(INFO) << "Initializing " << window_params_.window_name
                 << (window_params_.use_fullscreen ? " (fullscreen "
                                                   : " (windowed ")
                 << window_params_.width << "x" << window_params_.height << ")";
@@ -40,7 +40,7 @@ void DemoHarness::Init(InstanceParams instance_params) {
 }
 
 void DemoHarness::Shutdown() {
-  FTL_DCHECK(!shutdown_complete_);
+  FXL_DCHECK(!shutdown_complete_);
   shutdown_complete_ = true;
 
   escher::GlslangFinalizeProcess();
@@ -62,7 +62,7 @@ void DemoHarness::CreateInstance(InstanceParams params) {
   params.extension_names.insert("VK_EXT_debug_report");
 
   instance_ = escher::VulkanInstance::New(std::move(params));
-  FTL_CHECK(instance_);
+  FXL_CHECK(instance_);
 
   // Set up debug callback.
   {
@@ -78,7 +78,7 @@ void DemoHarness::CreateInstance(InstanceParams params) {
     // We use the C API here due to dynamically loading the extension function.
     VkResult result = instance_proc_addrs().CreateDebugReportCallbackEXT(
         instance(), &dbgCreateInfo, nullptr, &debug_report_callback_);
-    FTL_CHECK(result == VK_SUCCESS);
+    FXL_CHECK(result == VK_SUCCESS);
   }
 }
 
@@ -89,9 +89,9 @@ void DemoHarness::CreateDeviceAndQueue(
 }
 
 void DemoHarness::CreateSwapchain(const WindowParams& window_params) {
-  FTL_CHECK(!swapchain_.swapchain);
-  FTL_CHECK(swapchain_.images.empty());
-  FTL_CHECK(!swapchain_image_owner_);
+  FXL_CHECK(!swapchain_.swapchain);
+  FXL_CHECK(swapchain_.images.empty());
+  FXL_CHECK(!swapchain_image_owner_);
   swapchain_image_owner_ = std::make_unique<SwapchainImageOwner>();
 
   vk::SurfaceCapabilitiesKHR surface_caps;
@@ -117,8 +117,8 @@ void DemoHarness::CreateSwapchain(const WindowParams& window_params) {
   if (swapchain_extent.height == VK_UNDEFINED_WIDTH_OR_HEIGHT) {
     swapchain_extent.height = window_params.height;
   }
-  FTL_CHECK(swapchain_extent.width == window_params.width);
-  FTL_CHECK(swapchain_extent.height == window_params.height);
+  FXL_CHECK(swapchain_extent.width == window_params.width);
+  FXL_CHECK(swapchain_extent.height == window_params.height);
 
   // FIFO mode is always available, but we will try to find a more efficient
   // mode.
@@ -177,7 +177,7 @@ void DemoHarness::CreateSwapchain(const WindowParams& window_params) {
       }
     }
   }
-  FTL_CHECK(format != vk::Format::eUndefined);
+  FXL_CHECK(format != vk::Format::eUndefined);
 
   // TODO: old_swapchain will come into play (I think) when we support
   // resizing the window.
@@ -232,7 +232,7 @@ void DemoHarness::CreateSwapchain(const WindowParams& window_params) {
       image_info.width = swapchain_extent.width;
       image_info.height = swapchain_extent.height;
       image_info.usage = vk::ImageUsageFlagBits::eColorAttachment;
-      escher_images.push_back(ftl::MakeRefCounted<escher::Image>(
+      escher_images.push_back(fxl::MakeRefCounted<escher::Image>(
           swapchain_image_owner_.get(), image_info, im, nullptr));
     }
     swapchain_ = escher::VulkanSwapchain(
@@ -244,7 +244,7 @@ void DemoHarness::CreateSwapchain(const WindowParams& window_params) {
 void DemoHarness::DestroySwapchain() {
   swapchain_.images.clear();
 
-  FTL_CHECK(swapchain_.swapchain);
+  FXL_CHECK(swapchain_.swapchain);
   device().destroySwapchainKHR(swapchain_.swapchain);
   swapchain_.swapchain = nullptr;
 }
@@ -284,7 +284,7 @@ VkBool32 DemoHarness::HandleDebugReport(
 
   if (flags == vk::DebugReportFlagBitsEXT::eInformation) {
     // Paranoid check that there aren't multiple flags.
-    FTL_DCHECK(flags == vk::DebugReportFlagBitsEXT::eInformation);
+    FXL_DCHECK(flags == vk::DebugReportFlagBitsEXT::eInformation);
 
     std::cerr << "## Vulkan Information: ";
   } else if (flags == vk::DebugReportFlagBitsEXT::eWarning) {
@@ -332,7 +332,7 @@ VkBool32 DemoHarness::HandleDebugReport(
             << "  object: " << object << ")" << std::endl;
 
   // Crash immediately on fatal errors.
-  FTL_CHECK(!fatal);
+  FXL_CHECK(!fatal);
 
   return false;
 }
@@ -346,6 +346,6 @@ DemoHarness::SwapchainImageOwner::SwapchainImageOwner()
 
 void DemoHarness::SwapchainImageOwner::OnReceiveOwnable(
     std::unique_ptr<escher::Resource> resource) {
-  FTL_DCHECK(resource->IsKindOf<escher::Image>());
-  FTL_LOG(INFO) << "Destroying Image for swapchain image";
+  FXL_DCHECK(resource->IsKindOf<escher::Image>());
+  FXL_LOG(INFO) << "Destroying Image for swapchain image";
 }

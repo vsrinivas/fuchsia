@@ -7,7 +7,7 @@
 #include "escher/gl/mesh.h"
 #include "escher/scene/model.h"
 #include "escher/scene/viewing_volume.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 class AppTestScene {
  public:
@@ -28,7 +28,7 @@ class AppTestScene {
   escher::Material green_material_;
   escher::Material checkerboard_material_;
   escher::Material null_material_;
-  ftl::RefPtr<escher::Mesh> circle_mesh_;
+  fxl::RefPtr<escher::Mesh> circle_mesh_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AppTestScene);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AppTestScene);
 };

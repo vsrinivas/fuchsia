@@ -14,7 +14,7 @@ MeshShaderBinding::MeshShaderBinding(
     vk::VertexInputBindingDescription binding,
     std::vector<vk::VertexInputAttributeDescription> attributes)
     : binding_(std::move(binding)), attributes_(std::move(attributes)) {
-  FTL_DCHECK(binding.binding == kTheOnlyCurrentlySupportedBinding);
+  FXL_DCHECK(binding.binding == kTheOnlyCurrentlySupportedBinding);
 }
 
 }  // namespace impl

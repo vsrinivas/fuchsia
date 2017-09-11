@@ -17,12 +17,12 @@ void Stroke::Finalize() {
   bool was_finalized = finalized_.exchange(true);
   if (!was_finalized) {
     page_->FinalizeStroke(id_);
-    FTL_DLOG(INFO) << "finalized " << *this;
+    FXL_DLOG(INFO) << "finalized " << *this;
   }
 }
 
 void Stroke::SetPath(StrokePath path) {
-  FTL_DCHECK(!finalized_);
+  FXL_DCHECK(!finalized_);
   path_ = std::move(path);
   length_ = 0.f;
   for (auto& seg : path_) {
@@ -34,14 +34,14 @@ void Stroke::SetPath(StrokePath path) {
 // TODO: Tessellate stroke on GPU.
 void Stroke::Tessellate() {
   if (path_.empty()) {
-    FTL_LOG(INFO) << "Stroke::Tessellate() PATH IS EMPTY";
+    FXL_LOG(INFO) << "Stroke::Tessellate() PATH IS EMPTY";
     return;
   }
 
   std::vector<size_t> vertex_counts = page_->ComputeVertexCounts(path_);
   size_t total_vertex_count = 0;
   for (size_t count : vertex_counts) {
-    FTL_DCHECK(count % 2 == 0);
+    FXL_DCHECK(count % 2 == 0);
     total_vertex_count += count;
   }
   vertex_count_ = total_vertex_count;

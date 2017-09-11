@@ -7,7 +7,7 @@
 #include <mx/channel.h>
 
 #include "garnet/examples/netconnector/netconnector_example_params.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/netconnector/fidl/netconnector.fidl.h"
 
@@ -32,9 +32,9 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
   if (params->register_provider()) {
     message_relay_.SetChannelClosedCallback([this]() {
       if (conversation_iter_ == kConversation.end()) {
-        FTL_LOG(INFO) << "Channel closed, quitting";
+        FXL_LOG(INFO) << "Channel closed, quitting";
       } else {
-        FTL_LOG(ERROR) << "Channel closed unexpectedly, quitting";
+        FXL_LOG(ERROR) << "Channel closed unexpectedly, quitting";
       }
 
       mtl::MessageLoop::GetCurrent()->PostQuitTask();
@@ -47,7 +47,7 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
 
   if (params->request_device_name().empty()) {
     // Params say we should be responding. Register the responding service.
-    FTL_LOG(INFO) << "Running as responder";
+    FXL_LOG(INFO) << "Running as responder";
     application_context_->outgoing_services()->AddServiceForName(
         [this](mx::channel channel) {
           message_relay_.SetChannel(std::move(channel));
@@ -56,7 +56,7 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
 
     if (params->register_provider()) {
       // Register our provider with netconnector.
-      FTL_LOG(INFO) << "Registering provider";
+      FXL_LOG(INFO) << "Registering provider";
       netconnector::NetConnectorPtr connector =
           application_context_
               ->ConnectToEnvironmentService<netconnector::NetConnector>();
@@ -65,14 +65,14 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
       application_context_->outgoing_services()->AddBinding(
           handle.NewRequest());
 
-      FTL_DCHECK(handle);
+      FXL_DCHECK(handle);
 
       connector->RegisterServiceProvider(kRespondingServiceName,
                                          std::move(handle));
     }
   } else {
     // Params say we should be a requestor.
-    FTL_LOG(INFO) << "Running as requestor";
+    FXL_LOG(INFO) << "Running as requestor";
     netconnector::NetConnectorPtr connector =
         application_context_
             ->ConnectToEnvironmentService<netconnector::NetConnector>();
@@ -82,7 +82,7 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
     mx::channel remote;
     mx_status_t status = mx::channel::create(0u, &local, &remote);
 
-    FTL_CHECK(status == MX_OK)
+    FXL_CHECK(status == MX_OK)
         << "mx::channel::create failed, status " << status;
 
     // Give the local end of the channel to the relay.
@@ -99,14 +99,14 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
     // Start the conversation.
     SendMessage(*conversation_iter_);
     ++conversation_iter_;
-    FTL_DCHECK(conversation_iter_ != kConversation.end());
+    FXL_DCHECK(conversation_iter_ != kConversation.end());
   }
 }
 
 NetConnectorExampleImpl::~NetConnectorExampleImpl() {}
 
 void NetConnectorExampleImpl::SendMessage(const std::string& message_string) {
-  FTL_LOG(INFO) << "Sending message: '" << message_string << "'";
+  FXL_LOG(INFO) << "Sending message: '" << message_string << "'";
 
   std::vector<uint8_t> message(message_string.size());
   std::memcpy(message.data(), message_string.data(), message.size());
@@ -119,16 +119,16 @@ void NetConnectorExampleImpl::HandleReceivedMessage(
   std::string message_string(reinterpret_cast<char*>(message.data()), 0,
                              message.size());
 
-  FTL_LOG(INFO) << "Message received: '" << message_string << "'";
+  FXL_LOG(INFO) << "Message received: '" << message_string << "'";
 
   if (conversation_iter_ == kConversation.end()) {
-    FTL_LOG(ERROR) << "Expected the channel to close, closing channel";
+    FXL_LOG(ERROR) << "Expected the channel to close, closing channel";
     message_relay_.CloseChannel();
     return;
   }
 
   if (message_string != *conversation_iter_) {
-    FTL_LOG(ERROR) << "Expected '" << *conversation_iter_
+    FXL_LOG(ERROR) << "Expected '" << *conversation_iter_
                    << "', closing channel";
     message_relay_.CloseChannel();
     return;
@@ -136,7 +136,7 @@ void NetConnectorExampleImpl::HandleReceivedMessage(
 
   ++conversation_iter_;
   if (conversation_iter_ == kConversation.end()) {
-    FTL_LOG(INFO) << "Conversation complete, closing channel";
+    FXL_LOG(INFO) << "Conversation complete, closing channel";
     message_relay_.CloseChannel();
     return;
   }

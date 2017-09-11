@@ -7,7 +7,7 @@
 
 #include "lib/ui/input/fidl/input_device_registry.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace mozart {
 namespace test {
@@ -35,7 +35,7 @@ class MockInputDevice : public mozart::InputDevice {
   fidl::Binding<mozart::InputDevice> input_device_binding_;
   OnReportCallback on_report_callback_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MockInputDevice);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MockInputDevice);
 };
 
 }  // namespace test

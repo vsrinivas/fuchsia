@@ -37,8 +37,8 @@ WaterfallDemo::~WaterfallDemo() {
   auto microseconds = stopwatch_.GetElapsedMicroseconds();
   double fps = (frame_count_ - 2) * 1000000.0 /
                (microseconds - first_frame_microseconds_);
-  FTL_LOG(INFO) << "Average frame rate: " << fps;
-  FTL_LOG(INFO) << "First frame took: " << first_frame_microseconds_ / 1000.0
+  FXL_LOG(INFO) << "Average frame rate: " << fps;
+  FXL_LOG(INFO) << "First frame took: " << first_frame_microseconds_ / 1000.0
                 << " milliseconds";
 }
 
@@ -46,12 +46,12 @@ void WaterfallDemo::ProcessCommandLineArgs(int argc, char** argv) {
   for (int i = 1; i < argc; ++i) {
     if (!strcmp("--scene", argv[i])) {
       if (i == argc - 1) {
-        FTL_LOG(ERROR) << "--scene must be followed by a numeric argument";
+        FXL_LOG(ERROR) << "--scene must be followed by a numeric argument";
       } else {
         char* end;
         int scene = strtol(argv[i + 1], &end, 10);
         if (argv[i + 1] == end) {
-          FTL_LOG(ERROR) << "--scene must be followed by a numeric argument";
+          FXL_LOG(ERROR) << "--scene must be followed by a numeric argument";
         } else {
           current_scene_ = scene;
         }
@@ -126,7 +126,7 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
     switch (key_char) {
       case 'A':
         enable_ssdo_acceleration_ = !enable_ssdo_acceleration_;
-        FTL_LOG(INFO) << "Enable SSDO acceleration: "
+        FXL_LOG(INFO) << "Enable SSDO acceleration: "
                       << (enable_ssdo_acceleration_ ? "true" : "false");
         return true;
       case 'B':
@@ -134,7 +134,7 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
         return true;
       case 'C':
         camera_projection_mode_ = (camera_projection_mode_ + 1) % 3;
-        FTL_LOG(INFO) << "Camera projection mode: " << camera_projection_mode_;
+        FXL_LOG(INFO) << "Camera projection mode: " << camera_projection_mode_;
         return true;
       case 'D':
         show_debug_info_ = !show_debug_info_;
@@ -144,7 +144,7 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
         return true;
       case 'S':
         sort_by_pipeline_ = !sort_by_pipeline_;
-        FTL_LOG(INFO) << "Sort object by pipeline: "
+        FXL_LOG(INFO) << "Sort object by pipeline: "
                       << (sort_by_pipeline_ ? "true" : "false");
         return true;
       case 'T':
@@ -205,7 +205,7 @@ static escher::Camera GenerateCamera(int camera_projection_mode,
     } break;
     default:
       // Should not happen.
-      FTL_DCHECK(false);
+      FXL_DCHECK(false);
       return escher::Camera::NewOrtho(volume);
   }
 }
@@ -276,8 +276,8 @@ void WaterfallDemo::DrawFrame() {
     auto microseconds = stopwatch_.GetElapsedMicroseconds();
     double fps = (frame_count_ - 2) * 1000000.0 /
                  (microseconds - first_frame_microseconds_);
-    FTL_LOG(INFO) << "---- Average frame rate: " << fps;
-    FTL_LOG(INFO) << "---- Total GPU memory: "
+    FXL_LOG(INFO) << "---- Average frame rate: " << fps;
+    FXL_LOG(INFO) << "---- Total GPU memory: "
                   << (escher()->GetNumGpuBytesAllocated() / 1024) << "kB";
   }
 }

@@ -34,7 +34,7 @@ class Bench : public PayloadAllocator {
                         std::unique_ptr<MixdownTable<TLevel>> table,
                         int64_t pts,
                         bool fade) {
-    FTL_DCHECK(input_index < inputs_.size());
+    FXL_DCHECK(input_index < inputs_.size());
     inputs_[input_index]->AddMixdownScheduleEntry(std::move(table), pts, fade);
   }
 
@@ -45,7 +45,7 @@ class Bench : public PayloadAllocator {
                       int64_t pts,
                       const SampleFunc<TInSample>& sample_func,
                       bool end_of_stream = false) {
-    FTL_DCHECK(input_index < inputs_.size());
+    FXL_DCHECK(input_index < inputs_.size());
     MixerInputImpl<TInSample, TOutSample, TLevel>& input =
         *inputs_[input_index];
     size_t size = frame_count * input.in_channel_count() * sizeof(TInSample);

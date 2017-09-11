@@ -8,8 +8,8 @@
 
 #include "garnet/bin/ui/scene_manager/displays/display.h"
 #include "garnet/bin/ui/scene_manager/displays/display_watcher.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
 
 namespace scene_manager {
 
@@ -21,7 +21,7 @@ class DisplayManager {
 
   // Waits for the default display to become available then invokes the
   // callback.
-  void WaitForDefaultDisplay(ftl::Closure callback);
+  void WaitForDefaultDisplay(fxl::Closure callback);
 
   // Gets information about the default display.
   // May return null if there isn't one.
@@ -40,7 +40,7 @@ class DisplayManager {
   DisplayWatcher display_watcher_;
   std::unique_ptr<Display> default_display_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DisplayManager);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DisplayManager);
 };
 
 }  // namespace scene_manager

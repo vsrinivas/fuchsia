@@ -6,7 +6,7 @@
 
 #include <algorithm>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/vmo/file.h"
 
 namespace fonts {
@@ -57,32 +57,32 @@ FontFamily::~FontFamily() = default;
 
 bool FontFamily::Load(const rapidjson::Document::ValueType& family) {
   if (!family.IsObject()) {
-    FTL_LOG(ERROR) << "Font manifest contained an invalid family.";
+    FXL_LOG(ERROR) << "Font manifest contained an invalid family.";
     return false;
   }
 
   const auto& name = family.FindMember(kFamily);
   if (name == family.MemberEnd() || !name->value.IsString()) {
-    FTL_LOG(ERROR) << "Font manifest contained a family without a valid name.";
+    FXL_LOG(ERROR) << "Font manifest contained a family without a valid name.";
     return false;
   }
 
   name_ = name->value.GetString();
   const auto& fonts = family.FindMember(kFonts);
   if (fonts == family.MemberEnd() || !fonts->value.IsArray()) {
-    FTL_LOG(ERROR) << "Font family '" << name_ << "' did not contain any fonts.";
+    FXL_LOG(ERROR) << "Font family '" << name_ << "' did not contain any fonts.";
     return false;
   }
   for (const auto& font : fonts->value.GetArray()) {
     if (!font.IsObject()) {
-      FTL_LOG(ERROR) << "Font family '" << name_ << "' contained an invalid font.";
+      FXL_LOG(ERROR) << "Font family '" << name_ << "' contained an invalid font.";
       return false;
     }
     Font record;
 
     const auto& asset = font.FindMember(kAsset);
     if (asset == font.MemberEnd() || !asset->value.IsString()) {
-      FTL_LOG(ERROR) << "Font family '" << name_
+      FXL_LOG(ERROR) << "Font family '" << name_
                      << "' contained a font without a valid asset.";
       return false;
     }
@@ -91,7 +91,7 @@ bool FontFamily::Load(const rapidjson::Document::ValueType& family) {
     const auto& slant = font.FindMember(kSlant);
     if (slant != font.MemberEnd()) {
       if (!slant->value.IsString()) {
-        FTL_LOG(ERROR) << "Font family '" << name_
+        FXL_LOG(ERROR) << "Font family '" << name_
                        << "' contained a font whose slant was not a string.";
         return false;
       }
@@ -99,7 +99,7 @@ bool FontFamily::Load(const rapidjson::Document::ValueType& family) {
       if (slant_string == kItalic) {
         record.slant = FontSlant::ITALIC;
       } else if (slant_string != kUpright) {
-        FTL_LOG(ERROR) << "Font family '" << name_
+        FXL_LOG(ERROR) << "Font family '" << name_
                        << "' contained a font with slant '" << slant_string
                        << "', which is not valid.";
         return false;
@@ -109,7 +109,7 @@ bool FontFamily::Load(const rapidjson::Document::ValueType& family) {
     const auto& weight = font.FindMember(kWeight);
     if (weight != font.MemberEnd()) {
       if (!weight->value.IsInt()) {
-        FTL_LOG(ERROR) << "Font family '" << name_
+        FXL_LOG(ERROR) << "Font family '" << name_
                        << "' contained a font whose weight was not an integer.";
         return false;
       }

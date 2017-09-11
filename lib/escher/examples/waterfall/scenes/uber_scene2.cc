@@ -25,12 +25,12 @@ using escher::vec4;
 UberScene2::UberScene2(Demo* demo) : Scene(demo) {}
 
 void UberScene2::Init(escher::Stage* stage) {
-  blue_ = ftl::MakeRefCounted<escher::Material>();
-  red_ = ftl::MakeRefCounted<escher::Material>();
-  purple_ = ftl::MakeRefCounted<escher::Material>();
-  bg_ = ftl::MakeRefCounted<escher::Material>();
-  gray1_ = ftl::MakeRefCounted<escher::Material>();
-  gray2_ = ftl::MakeRefCounted<escher::Material>();
+  blue_ = fxl::MakeRefCounted<escher::Material>();
+  red_ = fxl::MakeRefCounted<escher::Material>();
+  purple_ = fxl::MakeRefCounted<escher::Material>();
+  bg_ = fxl::MakeRefCounted<escher::Material>();
+  gray1_ = fxl::MakeRefCounted<escher::Material>();
+  gray2_ = fxl::MakeRefCounted<escher::Material>();
   blue_->set_color(vec3(0.188f, 0.188f, 0.788f));
   red_->set_color(vec3(0.98f, 0.15f, 0.15f));
   purple_->set_color(vec3(0.588f, 0.239f, 0.729f));

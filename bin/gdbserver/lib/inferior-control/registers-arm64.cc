@@ -12,8 +12,8 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/debug.h>
 
-#include "lib/ftl/arraysize.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/arraysize.h"
+#include "lib/fxl/logging.h"
 
 #include "debugger-utils/util.h"
 
@@ -59,25 +59,25 @@ class RegistersArm64 final : public Registers {
   bool IsSupported() override { return true; }
 
   bool RefreshRegset(int regset) override {
-    FTL_DCHECK(regset == 0);
+    FXL_DCHECK(regset == 0);
     return RefreshRegsetHelper(regset, &gregs_, sizeof(gregs_));
   }
 
   bool WriteRegset(int regset) override {
-    FTL_DCHECK(regset == 0);
+    FXL_DCHECK(regset == 0);
     return WriteRegsetHelper(regset, &gregs_, sizeof(gregs_));
   }
 
   std::string GetRegsetAsString(int regset) override {
-    FTL_DCHECK(regset == 0);
+    FXL_DCHECK(regset == 0);
     RspArm64GeneralRegs rsp_gregs;
     TranslateToRsp(&rsp_gregs);
     const uint8_t* greg_bytes = reinterpret_cast<const uint8_t*>(&rsp_gregs);
     return util::EncodeByteArrayString(greg_bytes, sizeof(rsp_gregs));
   }
 
-  bool SetRegsetFromString(int regset, const ftl::StringView& value) override {
-    FTL_DCHECK(regset == 0);
+  bool SetRegsetFromString(int regset, const fxl::StringView& value) override {
+    FXL_DCHECK(regset == 0);
     RspArm64GeneralRegs rsp_gregs;
     if (!SetRegsetFromStringHelper(regset, &rsp_gregs, sizeof(rsp_gregs),
                                    value))
@@ -88,7 +88,7 @@ class RegistersArm64 final : public Registers {
 
   std::string GetRegisterAsString(int regno) override {
     if (regno < 0 || regno >= static_cast<int>(Arm64Register::NUM_REGISTERS)) {
-      FTL_LOG(ERROR) << "Bad register number: " << regno;
+      FXL_LOG(ERROR) << "Bad register number: " << regno;
       return "";
     }
 
@@ -104,46 +104,46 @@ class RegistersArm64 final : public Registers {
 
   bool GetRegister(int regno, void* buffer, size_t buf_size) override {
     if (regno < 0 || regno >= static_cast<int>(Arm64Register::NUM_REGISTERS)) {
-      FTL_LOG(ERROR) << "Bad register_number: " << regno;
+      FXL_LOG(ERROR) << "Bad register_number: " << regno;
       return false;
     }
     // On arm64 all general register values are 64-bit.
     // Note that this includes CPSR, whereas in the GDB RSP CPSR is 32 bits.
     if (buf_size != sizeof(uint64_t)) {
-      FTL_LOG(ERROR) << "Bad buffer size: " << buf_size;
+      FXL_LOG(ERROR) << "Bad buffer size: " << buf_size;
       return false;
     }
 
     auto greg_bytes = reinterpret_cast<const uint8_t*>(&gregs_);
     greg_bytes += regno * sizeof(uint64_t);
     std::memcpy(buffer, greg_bytes, buf_size);
-    FTL_VLOG(1) << "Get register " << regno << " = "
+    FXL_VLOG(1) << "Get register " << regno << " = "
                 << util::EncodeByteArrayString(greg_bytes, buf_size);
     return true;
   }
 
   bool SetRegister(int regno, const void* value, size_t value_size) override {
     if (regno < 0 || regno >= static_cast<int>(Arm64Register::NUM_REGISTERS)) {
-      FTL_LOG(ERROR) << "Invalid arm64 register number: " << regno;
+      FXL_LOG(ERROR) << "Invalid arm64 register number: " << regno;
       return false;
     }
     // On arm64 all general register values are 64-bit.
     // Note that this includes CPSR, whereas in the GDB RSP CPSR is 32 bits.
     if (value_size != sizeof(uint64_t)) {
-      FTL_LOG(ERROR) << "Invalid arm64 register value size: " << value_size;
+      FXL_LOG(ERROR) << "Invalid arm64 register value size: " << value_size;
       return false;
     }
 
     auto greg_bytes = reinterpret_cast<uint8_t*>(&gregs_);
     greg_bytes += regno * sizeof(uint64_t);
     std::memcpy(greg_bytes, value, value_size);
-    FTL_VLOG(1) << "Set register " << regno << " = "
+    FXL_VLOG(1) << "Set register " << regno << " = "
                 << util::EncodeByteArrayString(greg_bytes, value_size);
     return true;
   }
 
   bool SetSingleStep(bool enable) override {
-    FTL_NOTIMPLEMENTED();
+    FXL_NOTIMPLEMENTED();
     return false;
   }
 

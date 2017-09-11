@@ -9,7 +9,7 @@
 
 #include "garnet/bin/ui/scene_manager/displays/display.h"
 #include "garnet/bin/ui/scene_manager/engine/frame_timings.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace scene_manager {
@@ -60,7 +60,7 @@ uint64_t FrameScheduler::ComputeTargetPresentationTime(uint64_t now) const {
   // frame, then target the next Vsync.
   if (now > target_time - kPredictedFrameRenderTime) {
     target_time += vsync_interval;
-    FTL_DCHECK(now <= target_time + kPredictedFrameRenderTime);
+    FXL_DCHECK(now <= target_time + kPredictedFrameRenderTime);
   }
 
   // There may be a frame already scheduled for the same or earlier time; if so,
@@ -76,10 +76,10 @@ uint64_t FrameScheduler::ComputeTargetPresentationTime(uint64_t now) const {
     }
   } else {
     // There was no frame scheduled.
-    FTL_DCHECK(next_presentation_time_ == last_presentation_time_);
+    FXL_DCHECK(next_presentation_time_ == last_presentation_time_);
   }
 
-  FTL_DCHECK(target_time > last_presentation_time_);
+  FXL_DCHECK(target_time > last_presentation_time_);
   return target_time;
 }
 
@@ -87,7 +87,7 @@ void FrameScheduler::MaybeScheduleFrame() {
   uint64_t target_time =
       ComputeTargetPresentationTime(mx_time_get(MX_CLOCK_MONOTONIC));
   if (target_time <= last_presentation_time_) {
-    FTL_DCHECK(target_time == last_presentation_time_);
+    FXL_DCHECK(target_time == last_presentation_time_);
     return;
   }
 
@@ -95,7 +95,7 @@ void FrameScheduler::MaybeScheduleFrame() {
   // that we can render and present the resulting image on time.
   next_presentation_time_ = target_time;
   auto time_to_start_rendering =
-      ftl::TimePoint::FromEpochDelta(ftl::TimeDelta::FromNanoseconds(
+      fxl::TimePoint::FromEpochDelta(fxl::TimeDelta::FromNanoseconds(
           next_presentation_time_ - kPredictedFrameRenderTime));
   task_runner_->PostTaskForTime([this] { MaybeRenderFrame(); },
                                 time_to_start_rendering);
@@ -103,7 +103,7 @@ void FrameScheduler::MaybeScheduleFrame() {
 
 void FrameScheduler::MaybeRenderFrame() {
   if (last_presentation_time_ >= next_presentation_time_) {
-    FTL_DCHECK(last_presentation_time_ == next_presentation_time_);
+    FXL_DCHECK(last_presentation_time_ == next_presentation_time_);
 
     // An earlier frame than us was scheduled, and rendered first.  Therefore,
     // don't render immediately; instead, check if another frame should be
@@ -127,8 +127,8 @@ void FrameScheduler::MaybeRenderFrame() {
 
   // Go render the frame.
   if (delegate_) {
-    FTL_DCHECK(outstanding_frames_.size() < kMaxOutstandingFrames);
-    auto frame_timings = ftl::MakeRefCounted<FrameTimings>(
+    FXL_DCHECK(outstanding_frames_.size() < kMaxOutstandingFrames);
+    auto frame_timings = fxl::MakeRefCounted<FrameTimings>(
         this, ++frame_number_, next_presentation_time_);
     delegate_->RenderFrame(frame_timings, next_presentation_time_,
                            display_->GetVsyncInterval());
@@ -143,11 +143,11 @@ void FrameScheduler::MaybeRenderFrame() {
 }
 
 void FrameScheduler::ReceiveFrameTimings(FrameTimings* timings) {
-  FTL_DCHECK(!outstanding_frames_.empty());
+  FXL_DCHECK(!outstanding_frames_.empty());
   // TODO: how should we handle this case?  It is theoretically possible, but if
   // if it happens then it means that the EventTimestamper is receiving signals
   // out-of-order and is therefore generating bogus data.
-  FTL_DCHECK(outstanding_frames_[0].get() == timings) << "out-of-order.";
+  FXL_DCHECK(outstanding_frames_[0].get() == timings) << "out-of-order.";
 
 // TODO(MZ-260): enable this.
 #if 0

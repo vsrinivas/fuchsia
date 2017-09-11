@@ -11,7 +11,7 @@
 #include <magenta/syscalls/exception.h>
 #include <magenta/types.h>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
@@ -293,7 +293,7 @@ class Process final {
   // If true then building the dso list failed, don't try again.
   bool dsos_build_failed_ = false;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Process);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Process);
 };
 
 }  // namespace debugserver

@@ -79,18 +79,18 @@ void FakeRenderer::GetSupportedMediaTypes(
 }
 
 void FakeRenderer::SetMediaType(MediaTypePtr media_type) {
-  FTL_DCHECK(media_type);
-  FTL_DCHECK(media_type->details);
+  FXL_DCHECK(media_type);
+  FXL_DCHECK(media_type->details);
   if (media_type->details->is_video()) {
     const VideoMediaTypeDetailsPtr& details = media_type->details->get_video();
-    FTL_DCHECK(details);
+    FXL_DCHECK(details);
     pts_rate_ = TimelineRate::NsPerSecond;
   } else if (media_type->details->is_audio()) {
     const AudioMediaTypeDetailsPtr& details = media_type->details->get_audio();
-    FTL_DCHECK(details);
+    FXL_DCHECK(details);
     pts_rate_ = TimelineRate(details->frames_per_second, 1);
   } else {
-    FTL_DCHECK(false) << "Media type is neither audio nor video";
+    FXL_DCHECK(false) << "Media type is neither audio nor video";
   }
 
   SetPtsRate(pts_rate_);
@@ -108,10 +108,10 @@ void FakeRenderer::GetTimelineControlPoint(
 
 void FakeRenderer::OnPacketSupplied(
     std::unique_ptr<SuppliedPacket> supplied_packet) {
-  FTL_DCHECK(supplied_packet);
-  FTL_DCHECK(supplied_packet->packet()->pts_rate_ticks ==
+  FXL_DCHECK(supplied_packet);
+  FXL_DCHECK(supplied_packet->packet()->pts_rate_ticks ==
              pts_rate_.subject_delta());
-  FTL_DCHECK(supplied_packet->packet()->pts_rate_seconds ==
+  FXL_DCHECK(supplied_packet->packet()->pts_rate_seconds ==
              pts_rate_.reference_delta());
   if (supplied_packet->packet()->end_of_stream) {
     end_of_stream_ = true;
@@ -130,7 +130,7 @@ void FakeRenderer::OnPacketSupplied(
 
   if (!expected_packets_info_.empty()) {
     if (expected_packets_info_iter_ == expected_packets_info_.end()) {
-      FTL_DLOG(ERROR) << "packet supplied after expected packets";
+      FXL_DLOG(ERROR) << "packet supplied after expected packets";
       expected_ = false;
     }
 
@@ -141,7 +141,7 @@ void FakeRenderer::OnPacketSupplied(
             supplied_packet->payload_size() ||
         expected_packets_info_iter_->hash() !=
             Hash(supplied_packet->payload(), supplied_packet->payload_size())) {
-      FTL_DLOG(ERROR) << "supplied packet doesn't match expected packet info";
+      FXL_DLOG(ERROR) << "supplied packet doesn't match expected packet info";
       expected_ = false;
     }
 
@@ -204,8 +204,8 @@ void FakeRenderer::Prime(const PrimeCallback& callback) {
 void FakeRenderer::SetTimelineTransform(
     TimelineTransformPtr timeline_transform,
     const SetTimelineTransformCallback& callback) {
-  FTL_DCHECK(timeline_transform);
-  FTL_DCHECK(timeline_transform->reference_delta != 0);
+  FXL_DCHECK(timeline_transform);
+  FXL_DCHECK(timeline_transform->reference_delta != 0);
 
   if (timeline_transform->subject_time != kUnspecifiedTime) {
     end_of_stream_ = false;

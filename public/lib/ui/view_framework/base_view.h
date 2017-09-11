@@ -16,8 +16,8 @@
 #include "lib/ui/views/fidl/views.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
 
 namespace mozart {
 
@@ -103,7 +103,7 @@ class BaseView : private ViewListener,
   //
   // This should be used to implement cleanup policies to release resources
   // associated with the view (including the object itself).
-  void SetReleaseHandler(ftl::Closure callback);
+  void SetReleaseHandler(fxl::Closure callback);
 
   // Invalidates the scene, causing |OnSceneInvalidated()| to be invoked
   // during the next frame.
@@ -189,7 +189,7 @@ class BaseView : private ViewListener,
   bool invalidate_pending_ = false;
   bool present_pending_ = false;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(BaseView);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BaseView);
 };
 
 }  // namespace mozart

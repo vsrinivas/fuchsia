@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERNAL_SHARED_DATA_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_SHARED_DATA_H_
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace fidl {
 namespace internal {
@@ -63,7 +63,7 @@ class SharedData {
 
    private:
     int ref_count_;
-    FTL_DISALLOW_COPY_AND_ASSIGN(Holder);
+    FXL_DISALLOW_COPY_AND_ASSIGN(Holder);
   };
 
   Holder* holder_;

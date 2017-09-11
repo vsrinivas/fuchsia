@@ -7,7 +7,7 @@
 #include "escher/scene/viewing_volume.h"
 #include "escher/util/debug_print.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace escher {
 
@@ -17,7 +17,7 @@ static std::pair<float, float> ComputeNearAndFarPlanes(
   float width = volume.width();
   float height = volume.height();
   float depth = volume.top() - volume.bottom();
-  FTL_DCHECK(volume.bottom() == 0);
+  FXL_DCHECK(volume.bottom() == 0);
 
   vec3 corners[] = {{0, 0, 0},          {width, 0, 0},
                     {0, 0, depth},      {width, 0, depth},
@@ -55,7 +55,7 @@ static std::pair<float, float> ComputeNearAndFarPlanes(
              camera_transform[3][2]);
     vec3 dir(camera_transform * vec4(0, 0, -1, 0));
 
-    FTL_LOG(FATAL) << "ViewingVolume must be entirely in front of the "
+    FXL_LOG(FATAL) << "ViewingVolume must be entirely in front of the "
                       "camera\nCamera Position: "
                    << pos << "\nCamera Direction: " << dir << "\n"
                    << volume;

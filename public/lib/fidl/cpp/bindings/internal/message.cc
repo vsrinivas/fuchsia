@@ -8,7 +8,7 @@
 
 #include <algorithm>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace fidl {
 
@@ -28,19 +28,19 @@ void Message::Reset() {
 }
 
 void Message::AllocData(uint32_t num_bytes) {
-  FTL_DCHECK(!data_);
+  FXL_DCHECK(!data_);
   data_num_bytes_ = num_bytes;
   data_ = static_cast<internal::MessageData*>(calloc(num_bytes, 1));
 }
 
 void Message::AllocUninitializedData(uint32_t num_bytes) {
-  FTL_DCHECK(!data_);
+  FXL_DCHECK(!data_);
   data_num_bytes_ = num_bytes;
   data_ = static_cast<internal::MessageData*>(malloc(num_bytes));
 }
 
 void Message::MoveTo(Message* destination) {
-  FTL_DCHECK(this != destination);
+  FXL_DCHECK(this != destination);
 
   destination->FreeDataAndCloseHandles();
 
@@ -69,10 +69,10 @@ void Message::FreeDataAndCloseHandles() {
 }
 
 mx_status_t ReadMessage(const mx::channel& handle, Message* message) {
-  FTL_DCHECK(handle);
-  FTL_DCHECK(message);
-  FTL_DCHECK(message->handles()->empty());
-  FTL_DCHECK(message->data_num_bytes() == 0);
+  FXL_DCHECK(handle);
+  FXL_DCHECK(message);
+  FXL_DCHECK(message->handles()->empty());
+  FXL_DCHECK(message->data_num_bytes() == 0);
 
   uint32_t num_bytes = 0;
   uint32_t num_handles = 0;
@@ -93,8 +93,8 @@ mx_status_t ReadMessage(const mx::channel& handle, Message* message) {
                              &message->mutable_handles()->front()),
                    num_handles, &num_handles_actual);
 
-  FTL_DCHECK(num_bytes == num_bytes_actual);
-  FTL_DCHECK(num_handles == num_handles_actual);
+  FXL_DCHECK(num_bytes == num_bytes_actual);
+  FXL_DCHECK(num_handles == num_handles_actual);
 
   return rv;
 }

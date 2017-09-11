@@ -10,7 +10,7 @@
 #include "garnet/bin/netconnector/ip_address.h"
 #include "garnet/bin/netconnector/mdns/mdns.h"
 #include "garnet/bin/netconnector/mdns/mdns_agent.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/time/time_point.h"
 
 namespace netconnector {
 namespace mdns {
@@ -23,7 +23,7 @@ class HostNameResolver : public MdnsAgent,
   HostNameResolver(MdnsAgent::Host* host,
                    const std::string& host_name,
                    const std::string& host_full_name,
-                   ftl::TimePoint timeout,
+                   fxl::TimePoint timeout,
                    const Mdns::ResolveHostNameCallback& callback);
 
   ~HostNameResolver() override;
@@ -46,7 +46,7 @@ class HostNameResolver : public MdnsAgent,
   MdnsAgent::Host* host_;
   std::string host_name_;
   std::string host_full_name_;
-  ftl::TimePoint timeout_;
+  fxl::TimePoint timeout_;
   Mdns::ResolveHostNameCallback callback_;
   IpAddress v4_address_;
   IpAddress v6_address_;

@@ -75,7 +75,7 @@ bool MeshShape::BindBuffers(BufferPtr index_buffer,
       return false;
   }
   auto escher = session()->escher();
-  mesh_ = ftl::MakeRefCounted<escher::Mesh>(
+  mesh_ = fxl::MakeRefCounted<escher::Mesh>(
       escher->resource_recycler(), spec, bounding_box, vertex_count,
       index_count, vertex_buffer->escher_buffer(),
       index_buffer->escher_buffer(), vertex_offset, index_offset);

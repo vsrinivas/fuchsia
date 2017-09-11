@@ -4,7 +4,7 @@
 
 #include "lib/media/transport/media_packet_consumer_base.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace media {
@@ -19,7 +19,7 @@ uint64_t SizeOf(const mx::vmo& vmo) {
   mx_status_t status = vmo.get_size(&size);
 
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "mx::vmo::get_size failed, status " << status;
+    FXL_LOG(ERROR) << "mx::vmo::get_size failed, status " << status;
     return 0;
   }
 
@@ -34,21 +34,21 @@ uint64_t SizeOf(const mx::vmo& vmo) {
 // Checks the condition, and, if it's false, calls Fail and returns.
 #define RCHECK(condition, message) \
   if (!(condition)) {              \
-    FTL_DLOG(ERROR) << message;    \
+    FXL_DLOG(ERROR) << message;    \
     Fail();                        \
     return;                        \
   }
 
 MediaPacketConsumerBase::MediaPacketConsumerBase() : binding_(this) {
   Reset();
-  FTL_DCHECK(counter_);
+  FXL_DCHECK(counter_);
 }
 
 MediaPacketConsumerBase::~MediaPacketConsumerBase() {
   // The destructor may be called on an arbitrary thread so long as Reset has
   // been called first on the creation thread.
   if (!is_reset_) {
-    FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+    FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
     // Prevent the counter from calling us back.
     counter_->Detach();
@@ -61,7 +61,7 @@ MediaPacketConsumerBase::~MediaPacketConsumerBase() {
 
 void MediaPacketConsumerBase::Bind(
     fidl::InterfaceRequest<MediaPacketConsumer> request) {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   binding_.Bind(std::move(request));
   binding_.set_connection_error_handler([this]() { Reset(); });
   is_reset_ = false;
@@ -70,7 +70,7 @@ void MediaPacketConsumerBase::Bind(
 
 void MediaPacketConsumerBase::Bind(
     fidl::InterfaceHandle<MediaPacketConsumer>* handle) {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   binding_.Bind(handle);
   binding_.set_connection_error_handler([this]() { Reset(); });
   is_reset_ = false;
@@ -78,13 +78,13 @@ void MediaPacketConsumerBase::Bind(
 }
 
 bool MediaPacketConsumerBase::is_bound() {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   return binding_.is_bound();
 }
 
 void MediaPacketConsumerBase::SetDemand(uint32_t min_packets_outstanding,
                                         int64_t min_pts) {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   if (flush_pending_) {
     // We're currently flushing, so ignore spurious demand updates.
     return;
@@ -106,7 +106,7 @@ void MediaPacketConsumerBase::SetDemand(uint32_t min_packets_outstanding,
 }
 
 void MediaPacketConsumerBase::Reset() {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FLOG(log_channel_, Reset());
 
   bool unbind = binding_.is_bound();
@@ -136,7 +136,7 @@ void MediaPacketConsumerBase::Reset() {
 }
 
 void MediaPacketConsumerBase::Fail() {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FLOG(log_channel_, Failed());
   Reset();
   OnFailure();
@@ -150,20 +150,20 @@ void MediaPacketConsumerBase::OnFlushRequested(bool hold_frame,
 }
 
 void MediaPacketConsumerBase::OnUnbind() {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 }
 
 void MediaPacketConsumerBase::OnFailure() {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 }
 
 void MediaPacketConsumerBase::PullDemandUpdate(
     const PullDemandUpdateCallback& callback) {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   if (get_demand_update_callback_) {
     // There's already a pending request. This isn't harmful, but it indicates
     // that the client doesn't know what it's doing.
-    FTL_DLOG(WARNING) << "PullDemandUpdate was called when another "
+    FXL_DLOG(WARNING) << "PullDemandUpdate was called when another "
                          "PullDemandUpdate call was pending";
     FLOG(log_channel_, RespondingToGetDemandUpdate(demand_.Clone()));
     get_demand_update_callback_(demand_.Clone());
@@ -176,8 +176,8 @@ void MediaPacketConsumerBase::PullDemandUpdate(
 
 void MediaPacketConsumerBase::AddPayloadBuffer(uint32_t payload_buffer_id,
                                                mx::vmo payload_buffer) {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FTL_DCHECK(payload_buffer);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK(payload_buffer);
   FLOG(log_channel_,
        AddPayloadBufferRequested(payload_buffer_id, SizeOf(payload_buffer)));
   mx_status_t status = counter_->buffer_set().AddBuffer(
@@ -186,7 +186,7 @@ void MediaPacketConsumerBase::AddPayloadBuffer(uint32_t payload_buffer_id,
 }
 
 void MediaPacketConsumerBase::RemovePayloadBuffer(uint32_t payload_buffer_id) {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FLOG(log_channel_, RemovePayloadBufferRequested(payload_buffer_id));
   counter_->buffer_set().RemoveBuffer(payload_buffer_id);
 }
@@ -194,12 +194,12 @@ void MediaPacketConsumerBase::RemovePayloadBuffer(uint32_t payload_buffer_id) {
 void MediaPacketConsumerBase::SupplyPacket(
     MediaPacketPtr media_packet,
     const SupplyPacketCallback& callback) {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FTL_DCHECK(media_packet);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK(media_packet);
 
   if (media_packet->revised_media_type && !accept_revised_media_type_) {
     // TODO(dalesat): FLOG this.
-    FTL_DLOG(WARNING) << "Media type revision rejected. Resetting.";
+    FXL_DLOG(WARNING) << "Media type revision rejected. Resetting.";
     callback(nullptr);
     Reset();
     return;
@@ -231,7 +231,7 @@ void MediaPacketConsumerBase::SupplyPacket(
 
 void MediaPacketConsumerBase::Flush(bool hold_frame,
                                     const FlushCallback& callback) {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FLOG(log_channel_, FlushRequested());
 
   demand_.min_packets_outstanding = 0;
@@ -247,7 +247,7 @@ void MediaPacketConsumerBase::Flush(bool hold_frame,
 }
 
 void MediaPacketConsumerBase::MaybeCompletePullDemandUpdate() {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   // If we're in the middle of returning a packet, we want to use the
   // SupplyPacket callback for demand updates rather than the PullDemandUpdate
   // callback.
@@ -264,7 +264,7 @@ void MediaPacketConsumerBase::MaybeCompletePullDemandUpdate() {
 
 MediaPacketDemandPtr MediaPacketConsumerBase::GetDemandForPacketDeparture(
     uint64_t label) {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   FLOG(log_channel_, ReturningPacket(label, counter_->packets_outstanding()));
 
@@ -314,9 +314,9 @@ MediaPacketConsumerBase::SuppliedPacket::SuppliedPacket(
       payload_(payload),
       callback_(callback),
       counter_(counter) {
-  FTL_DCHECK(packet_);
-  FTL_DCHECK(callback);
-  FTL_DCHECK(counter_);
+  FXL_DCHECK(packet_);
+  FXL_DCHECK(callback);
+  FXL_DCHECK(counter_);
   counter_->OnPacketArrival();
 }
 
@@ -331,13 +331,13 @@ MediaPacketConsumerBase::SuppliedPacketCounter::SuppliedPacketCounter(
     : owner_(owner),
       buffer_set_(MX_VM_FLAG_PERM_READ),
       packets_outstanding_(0) {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
-  FTL_DCHECK(task_runner_);
+  FXL_DCHECK(task_runner_);
 }
 
 MediaPacketConsumerBase::SuppliedPacketCounter::~SuppliedPacketCounter() {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 }
 
 }  // namespace media

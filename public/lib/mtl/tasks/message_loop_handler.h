@@ -7,7 +7,7 @@
 
 #include <magenta/types.h>
 
-#include "lib/ftl/ftl_export.h"
+#include "lib/fxl/fxl_export.h"
 
 namespace mtl {
 
@@ -49,7 +49,7 @@ namespace mtl {
 //   async::AutoWait wait_;
 // };
 //
-class FTL_EXPORT MessageLoopHandler {
+class FXL_EXPORT MessageLoopHandler {
  public:
   // Called when the handle receives signals that the handler was waiting for.
   //

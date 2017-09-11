@@ -6,19 +6,19 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/ui/presentation/fidl/presenter.fidl.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/log_settings_command_line.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/log_settings_command_line.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 int main(int argc, const char** argv) {
-  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
-  if (!ftl::SetLogSettingsFromCommandLine(command_line))
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
   const auto& positional_args = command_line.positional_args();
   if (positional_args.empty()) {
-    FTL_LOG(ERROR) << "Launch requires the url of a view provider application "
+    FXL_LOG(ERROR) << "Launch requires the url of a view provider application "
                       "to launch.";
     return 1;
   }
@@ -38,7 +38,7 @@ int main(int argc, const char** argv) {
   application_context_->launcher()->CreateApplication(std::move(launch_info),
                                                       controller.NewRequest());
   controller.set_connection_error_handler([&loop] {
-    FTL_LOG(INFO) << "Launched application terminated.";
+    FXL_LOG(INFO) << "Launched application terminated.";
     loop.PostQuitTask();
   });
 

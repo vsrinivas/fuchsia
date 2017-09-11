@@ -7,7 +7,7 @@
 #include <magenta/types.h>
 #include <cstdint>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace scene_manager {
 
@@ -51,7 +51,7 @@ class Display {
 
   bool claimed_ = false;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Display);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Display);
 };
 
 }  // namespace scene_manager

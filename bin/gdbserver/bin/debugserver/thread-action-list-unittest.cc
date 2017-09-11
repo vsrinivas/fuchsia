@@ -57,8 +57,8 @@ const ActionTest basic_tests[] = {
 TEST(ThreadActionListTest, Basic) {
   for (size_t i = 0; i < countof(basic_tests); ++i) {
     const ActionTest* t = &basic_tests[i];
-    FTL_LOG(INFO) << "Testing \"" << t->str << "\"";
-    ThreadActionList actions(ftl::StringView(t->str), kCurProc);
+    FXL_LOG(INFO) << "Testing \"" << t->str << "\"";
+    ThreadActionList actions(fxl::StringView(t->str), kCurProc);
     EXPECT_EQ(t->ok, actions.valid());
     if (t->ok) {
       EXPECT_EQ(t->default_action, actions.default_action());

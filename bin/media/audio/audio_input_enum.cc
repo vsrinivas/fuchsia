@@ -9,9 +9,9 @@
 #include <fcntl.h>
 #include <dirent.h>
 
-#include "lib/ftl/files/eintr_wrapper.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/files/eintr_wrapper.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -37,13 +37,13 @@ AudioInputEnum::AudioInputEnum() {
     device_path_stream << kAudioInputDeviceClassPath << "/" << entry->d_name;
     const std::string& device_path = device_path_stream.str();
 
-    ftl::UniqueFD fd(open(device_path.c_str(), O_RDWR));
+    fxl::UniqueFD fd(open(device_path.c_str(), O_RDWR));
     if (!fd.is_valid()) {
-      FTL_DLOG(WARNING) << "Failed to open audio device " << device_path;
+      FXL_DLOG(WARNING) << "Failed to open audio device " << device_path;
       continue;
     }
 
-    FTL_DLOG(INFO) << "Enumerated input device " << device_path;
+    FXL_DLOG(INFO) << "Enumerated input device " << device_path;
     input_device_paths_.push_back(device_path);
   }
 

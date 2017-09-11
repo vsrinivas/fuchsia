@@ -14,7 +14,7 @@ namespace scene_manager {
 class FrameTimings;
 class FrameScheduler;
 class Swapchain;
-using FrameTimingsPtr = ftl::RefPtr<FrameTimings>;
+using FrameTimingsPtr = fxl::RefPtr<FrameTimings>;
 
 // Each frame, an instance of FrameTimings is used by the FrameScheduler to
 // collect timing information about all swapchains that were rendered to during

@@ -5,15 +5,15 @@
 #include "garnet/bin/netconnector/mdns/instance_subscriber.h"
 
 #include "garnet/bin/netconnector/mdns/mdns_names.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace netconnector {
 namespace mdns {
 namespace {
 
 // static
-static constexpr ftl::TimeDelta kMaxQueryInterval =
-    ftl::TimeDelta::FromSeconds(60 * 60);
+static constexpr fxl::TimeDelta kMaxQueryInterval =
+    fxl::TimeDelta::FromSeconds(60 * 60);
 
 }  // namespace
 
@@ -27,7 +27,7 @@ InstanceSubscriber::InstanceSubscriber(MdnsAgent::Host* host,
       callback_(callback),
       question_(
           std::make_shared<DnsQuestion>(service_full_name_, DnsType::kPtr)) {
-  FTL_DCHECK(callback_);
+  FXL_DCHECK(callback_);
 }
 
 InstanceSubscriber::~InstanceSubscriber() {}
@@ -37,10 +37,10 @@ void InstanceSubscriber::Start() {
 }
 
 void InstanceSubscriber::Wake() {
-  host_->SendQuestion(question_, ftl::TimePoint::Now());
+  host_->SendQuestion(question_, fxl::TimePoint::Now());
 
-  if (query_delay_ == ftl::TimeDelta::Zero()) {
-    query_delay_ = ftl::TimeDelta::FromSeconds(1);
+  if (query_delay_ == fxl::TimeDelta::Zero()) {
+    query_delay_ = fxl::TimeDelta::FromSeconds(1);
   } else {
     query_delay_ = query_delay_ * 2;
     if (query_delay_ > kMaxQueryInterval) {
@@ -48,7 +48,7 @@ void InstanceSubscriber::Wake() {
     }
   }
 
-  host_->WakeAt(shared_from_this(), ftl::TimePoint::Now() + query_delay_);
+  host_->WakeAt(shared_from_this(), fxl::TimePoint::Now() + query_delay_);
 }
 
 void InstanceSubscriber::ReceiveQuestion(const DnsQuestion& question) {}
@@ -105,7 +105,7 @@ void InstanceSubscriber::EndOfMessage() {
     }
 
     auto iter = target_infos_by_full_name_.find(instance_info.target_);
-    FTL_DCHECK(iter != target_infos_by_full_name_.end());
+    FXL_DCHECK(iter != target_infos_by_full_name_.end());
     TargetInfo& target_info = iter->second;
 
     // Keep this target info around.
@@ -168,7 +168,7 @@ void InstanceSubscriber::ReceivePtrResource(const DnsResource& resource,
       instance_infos_by_full_name_.end()) {
     auto pair = instance_infos_by_full_name_.emplace(instance_full_name,
                                                      InstanceInfo{});
-    FTL_DCHECK(pair.second);
+    FXL_DCHECK(pair.second);
     pair.first->second.instance_name_ = instance_name;
   }
 

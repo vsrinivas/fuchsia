@@ -5,7 +5,7 @@
 #pragma once
 
 #include "lib/media/timeline/timeline_rate.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -32,7 +32,7 @@ class TimelineFunction {
       int64_t subject_time,
       TimelineRate rate,  // subject_delta / reference_delta
       int64_t subject_input) {
-    FTL_DCHECK(rate.reference_delta() != 0u);
+    FXL_DCHECK(rate.reference_delta() != 0u);
     return Apply(subject_time, reference_time, rate.Inverse(), subject_input);
   }
 
@@ -71,7 +71,7 @@ class TimelineFunction {
   // Applies the inverse of the function. Returns TimelineRate::kOverflow on
   // overflow.
   int64_t ApplyInverse(int64_t subject_input) const {
-    FTL_DCHECK(rate_.reference_delta() != 0u);
+    FXL_DCHECK(rate_.reference_delta() != 0u);
     return ApplyInverse(reference_time_, subject_time_, rate_, subject_input);
   }
 
@@ -82,7 +82,7 @@ class TimelineFunction {
 
   // Returns a timeline function that is the inverse if this timeline function.
   TimelineFunction Inverse() const {
-    FTL_DCHECK(rate_.reference_delta() != 0u);
+    FXL_DCHECK(rate_.reference_delta() != 0u);
     return TimelineFunction(subject_time_, reference_time_, rate_.Inverse());
   }
 

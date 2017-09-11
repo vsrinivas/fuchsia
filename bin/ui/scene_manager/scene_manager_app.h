@@ -12,7 +12,7 @@
 #include "lib/escher/examples/common/demo.h"
 #include "lib/escher/examples/common/demo_harness_fuchsia.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/command_line.h"
+#include "lib/fxl/command_line.h"
 
 namespace scene_manager {
 
@@ -21,7 +21,7 @@ class SceneManagerApp {
  public:
   class Params {
    public:
-    bool Setup(const ftl::CommandLine& command_line) { return true; }
+    bool Setup(const fxl::CommandLine& command_line) { return true; }
   };
 
   SceneManagerApp(app::ApplicationContext* app_context,
@@ -39,7 +39,7 @@ class SceneManagerApp {
 
   fidl::BindingSet<scenic::SceneManager> bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SceneManagerApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SceneManagerApp);
 };
 
 }  // namespace scene_manager

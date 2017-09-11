@@ -7,8 +7,8 @@
 #include <trace/event.h>
 
 #include "lib/app/cpp/connect.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/time/time_point.h"
 
 namespace mozart {
 namespace {
@@ -30,8 +30,8 @@ BaseView::BaseView(ViewManagerPtr view_manager,
       input_listener_binding_(this),
       session_(GetSceneManager(view_manager_.get()).get()),
       parent_node_(&session_) {
-  FTL_DCHECK(view_manager_);
-  FTL_DCHECK(view_owner_request);
+  FXL_DCHECK(view_manager_);
+  FXL_DCHECK(view_owner_request);
 
   mx::eventpair parent_export_token;
   parent_node_.BindAsRequest(&parent_export_token);
@@ -64,7 +64,7 @@ ViewContainer* BaseView::GetViewContainer() {
   return view_container_.get();
 }
 
-void BaseView::SetReleaseHandler(ftl::Closure callback) {
+void BaseView::SetReleaseHandler(fxl::Closure callback) {
   view_listener_binding_.set_connection_error_handler(callback);
 }
 
@@ -78,12 +78,12 @@ void BaseView::InvalidateScene() {
 }
 
 void BaseView::PresentScene(mx_time_t presentation_time) {
-  FTL_DCHECK(!present_pending_);
+  FXL_DCHECK(!present_pending_);
 
   present_pending_ = true;
   session()->Present(
       presentation_time, [this](scenic::PresentationInfoPtr info) {
-        FTL_DCHECK(present_pending_);
+        FXL_DCHECK(present_pending_);
 
         mx_time_t next_presentation_time =
             info->presentation_time + info->presentation_interval;
@@ -157,7 +157,7 @@ void BaseView::OnChildUnavailable(uint32_t child_key) {}
 void BaseView::OnPropertiesChanged(
     ViewPropertiesPtr properties,
     const OnPropertiesChangedCallback& callback) {
-  FTL_DCHECK(properties);
+  FXL_DCHECK(properties);
   TRACE_DURATION("view", "OnPropertiesChanged");
 
   ViewPropertiesPtr old_properties = std::move(properties_);
@@ -176,7 +176,7 @@ void BaseView::OnPropertiesChanged(
 void BaseView::OnChildAttached(uint32_t child_key,
                                ViewInfoPtr child_view_info,
                                const OnChildUnavailableCallback& callback) {
-  FTL_DCHECK(child_view_info);
+  FXL_DCHECK(child_view_info);
 
   TRACE_DURATION("view", "OnChildAttached", "child_key", child_key);
   OnChildAttached(child_key, std::move(child_view_info));

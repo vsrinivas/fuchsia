@@ -9,8 +9,8 @@
 #include "lib/media/timeline/timeline.h"
 #include "garnet/bin/media/fidl/fidl_formatting.h"
 #include "garnet/bin/media/util/callback_joiner.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -35,7 +35,7 @@ MediaPlayerImpl::MediaPlayerImpl(
     : MediaServiceImpl::Product<MediaPlayer>(this, std::move(request), owner),
       reader_handle_(std::move(reader_handle)) {
   RCHECK(audio_renderer_handle || video_renderer_handle);
-  FTL_DCHECK(owner);
+  FXL_DCHECK(owner);
 
   if (audio_renderer_handle) {
     streams_by_medium_[MediaTypeMedium::AUDIO].renderer_handle_ =
@@ -118,7 +118,7 @@ void MediaPlayerImpl::MaybeCreateSource() {
   HandleSourceStatusUpdates();
 
   source_->Describe(
-      ftl::MakeCopyable([this](fidl::Array<MediaTypePtr> stream_types) mutable {
+      fxl::MakeCopyable([this](fidl::Array<MediaTypePtr> stream_types) mutable {
         FLOG(log_channel_, ReceivedSourceDescription(stream_types.Clone()));
         stream_types_ = std::move(stream_types);
         ConnectSinks();
@@ -135,7 +135,7 @@ void MediaPlayerImpl::ConnectSinks() {
     if (iter != streams_by_medium_.end()) {
       if (iter->second.connected_) {
         // TODO(dalesat): How do we choose the right stream?
-        FTL_DLOG(INFO) << "Stream " << stream_index
+        FXL_DLOG(INFO) << "Stream " << stream_index
                        << " redundant, already connected to sink with medium "
                        << stream_type->medium;
         ++stream_index;
@@ -161,10 +161,10 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
                                     size_t index,
                                     const MediaTypePtr& input_media_type,
                                     const std::function<void()>& callback) {
-  FTL_DCHECK(media_service_);
+  FXL_DCHECK(media_service_);
 
   if (!stream->sink_) {
-    FTL_DCHECK(stream->renderer_handle_);
+    FXL_DCHECK(stream->renderer_handle_);
     media_service_->CreateSink(std::move(stream->renderer_handle_),
                                stream->sink_.NewRequest());
     FLOG(log_channel_, CreatedSink(index, FLOG_PTR_KOID(stream->sink_)));
@@ -192,7 +192,7 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
 
         // Capture producer so it survives through the callback.
         producer->Connect(MediaPacketConsumerPtr::Create(std::move(consumer)),
-                          ftl::MakeCopyable([
+                          fxl::MakeCopyable([
                             this, callback, producer = std::move(producer)
                           ]() { callback(); }));
       });

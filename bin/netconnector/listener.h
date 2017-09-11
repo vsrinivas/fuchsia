@@ -8,9 +8,9 @@
 #include <thread>
 
 #include "garnet/bin/netconnector/ip_port.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace netconnector {
 
@@ -27,7 +27,7 @@ class Listener {
   // Starts listening on |port|. |new_connection_callback| is called when a new
   // connection is requested.
   void Start(IpPort port,
-             std::function<void(ftl::UniqueFD)> new_connection_callback);
+             std::function<void(fxl::UniqueFD)> new_connection_callback);
 
   // Stops the listener.
   void Stop();
@@ -37,12 +37,12 @@ class Listener {
 
   void Worker();
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
-  std::function<void(ftl::UniqueFD)> new_connection_callback_;
-  ftl::UniqueFD socket_fd_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  std::function<void(fxl::UniqueFD)> new_connection_callback_;
+  fxl::UniqueFD socket_fd_;
   std::thread worker_thread_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Listener);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Listener);
 };
 
 }  // namespace netconnector

@@ -5,7 +5,7 @@
 #include "garnet/bin/media/framework/packet.h"
 
 #include "garnet/bin/media/framework/payload_allocator.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -21,7 +21,7 @@ Packet::Packet(int64_t pts,
       end_of_stream_(end_of_stream),
       size_(size),
       payload_(payload) {
-  FTL_DCHECK((size == 0) == (payload == nullptr));
+  FXL_DCHECK((size == 0) == (payload == nullptr));
 }
 
 Packet::~Packet() {}
@@ -67,7 +67,7 @@ class PacketImpl : public Packet {
     // In the default implementation, payload() will be nullptr if and only if
     // allocator_ is nullptr.
     if (payload()) {
-      FTL_DCHECK(allocator_);
+      FXL_DCHECK(allocator_);
       allocator_->ReleasePayloadBuffer(payload());
     }
   };
@@ -84,7 +84,7 @@ PacketPtr Packet::Create(int64_t pts,
                          size_t size,
                          void* payload,
                          PayloadAllocator* allocator) {
-  FTL_DCHECK(payload == nullptr || allocator != nullptr);
+  FXL_DCHECK(payload == nullptr || allocator != nullptr);
   return std::make_shared<PacketImpl>(pts, pts_rate, keyframe, end_of_stream,
                                       size, payload, allocator);
 }

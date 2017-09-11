@@ -14,20 +14,20 @@
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace netconnector {
 namespace mdns {
 
 // static
-const ftl::TimeDelta MdnsTransceiver::kMinAddressRecheckDelay =
-    ftl::TimeDelta::FromSeconds(1);
+const fxl::TimeDelta MdnsTransceiver::kMinAddressRecheckDelay =
+    fxl::TimeDelta::FromSeconds(1);
 
 // static
-const ftl::TimeDelta MdnsTransceiver::kMaxAddressRecheckDelay =
-    ftl::TimeDelta::FromSeconds(5 * 60);
+const fxl::TimeDelta MdnsTransceiver::kMaxAddressRecheckDelay =
+    fxl::TimeDelta::FromSeconds(5 * 60);
 
 MdnsTransceiver::MdnsTransceiver()
     : task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
@@ -45,8 +45,8 @@ void MdnsTransceiver::EnableInterface(const std::string& name,
 bool MdnsTransceiver::Start(
     const std::string& host_full_name,
     const InboundMessageCallback& inbound_message_callback) {
-  FTL_DCHECK(host_full_name.size() > 0);
-  FTL_DCHECK(inbound_message_callback);
+  FXL_DCHECK(host_full_name.size() > 0);
+  FXL_DCHECK(inbound_message_callback);
 
   inbound_message_callback_ = inbound_message_callback;
   host_full_name_ = host_full_name;
@@ -83,7 +83,7 @@ bool MdnsTransceiver::InterfaceEnabled(const netstack::NetInterface* if_info) {
 void MdnsTransceiver::SendMessage(DnsMessage* message,
                                   const SocketAddress& dest_address,
                                   uint32_t interface_index) {
-  FTL_DCHECK(message);
+  FXL_DCHECK(message);
 
   if (dest_address == MdnsAddresses::kV4Multicast) {
     for (auto& i : interfaces_) {
@@ -93,7 +93,7 @@ void MdnsTransceiver::SendMessage(DnsMessage* message,
     return;
   }
 
-  FTL_DCHECK(interface_index < interfaces_.size());
+  FXL_DCHECK(interface_index < interfaces_.size());
   interfaces_[interface_index]->SendMessage(message, dest_address);
 }
 
@@ -112,7 +112,7 @@ bool MdnsTransceiver::FindNewInterfaces() {
           // IP
           // address, but we check anyway.
           if (if_info->addr->family == netstack::NetAddressFamily::UNSPECIFIED) {
-            FTL_LOG(ERROR) << "Not starting mDNS for interface "
+            FXL_LOG(ERROR) << "Not starting mDNS for interface "
                            << if_info->name << ": unspecified address family";
             continue;
           }

@@ -64,7 +64,7 @@ GpuMemoryPtr GpuMemory::New(Session* session,
   // vkImportDeviceMemoryMAGMA.
   uint32_t memory_type_index = 0;
 
-  return ftl::MakeRefCounted<GpuMemory>(
+  return fxl::MakeRefCounted<GpuMemory>(
       session, id, vk::Device(device), vk::DeviceMemory(memory),
       vk::DeviceSize(vmo_size), memory_type_index);
 }

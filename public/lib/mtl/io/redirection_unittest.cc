@@ -7,7 +7,7 @@
 #include <magenta/processargs.h>
 
 #include "gtest/gtest.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace mtl {
 namespace {

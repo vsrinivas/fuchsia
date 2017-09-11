@@ -6,7 +6,7 @@
 #define APPS_MOZART_EXAMPLES_NOODLES_NOODLES_VIEW_H_
 
 #include "lib/ui/view_framework/skia_view.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 class SkCanvas;
 
@@ -33,7 +33,7 @@ class NoodlesView : public mozart::SkiaView {
   int wx_ = 0;
   int wy_ = 0;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(NoodlesView);
+  FXL_DISALLOW_COPY_AND_ASSIGN(NoodlesView);
 };
 
 }  // namespace examples

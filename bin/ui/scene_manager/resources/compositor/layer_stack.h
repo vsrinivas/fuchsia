@@ -12,8 +12,8 @@ namespace scene_manager {
 
 class Layer;
 class LayerStack;
-using LayerPtr = ftl::RefPtr<Layer>;
-using LayerStackPtr = ftl::RefPtr<LayerStack>;
+using LayerPtr = fxl::RefPtr<Layer>;
+using LayerStackPtr = fxl::RefPtr<LayerStack>;
 
 // A stack of Layers that can be composited by a Compositor.
 class LayerStack : public Resource {

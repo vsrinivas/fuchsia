@@ -28,7 +28,7 @@ class AudioRendererFormatInfo :
   uint32_t bytes_per_frame() const { return bytes_per_frame_; }
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(AudioRendererFormatInfo);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AudioRendererFormatInfo);
 
   AudioRendererFormatInfo(AudioMediaTypeDetailsPtr format);
 

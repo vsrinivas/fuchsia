@@ -8,9 +8,9 @@
 #include <cinttypes>
 #include <cstring>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_number_conversions.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace debugserver {
 namespace util {
@@ -37,7 +37,7 @@ bool HexCharToByte(char hex_char, uint8_t* out_byte) {
 }
 
 char HalfByteToHexChar(uint8_t byte) {
-  FTL_DCHECK(byte < 0x10);
+  FXL_DCHECK(byte < 0x10);
 
   if (byte < 10)
     return '0' + byte;
@@ -48,7 +48,7 @@ char HalfByteToHexChar(uint8_t byte) {
 }  // namespace
 
 bool DecodeByteString(const char hex[2], uint8_t* out_byte) {
-  FTL_DCHECK(out_byte);
+  FXL_DCHECK(out_byte);
 
   uint8_t msb, lsb;
   if (!HexCharToByte(hex[0], &msb) || !HexCharToByte(hex[1], &lsb))
@@ -59,7 +59,7 @@ bool DecodeByteString(const char hex[2], uint8_t* out_byte) {
 }
 
 void EncodeByteString(const uint8_t byte, char out_hex[2]) {
-  FTL_DCHECK(out_hex);
+  FXL_DCHECK(out_hex);
 
   out_hex[0] = HalfByteToHexChar(byte >> 4);
   out_hex[1] = HalfByteToHexChar(byte & 0x0f);
@@ -80,15 +80,15 @@ std::string EncodeByteArrayString(const uint8_t* bytes, size_t num_bytes) {
   return result;
 }
 
-std::string EncodeString(const ftl::StringView& string) {
+std::string EncodeString(const fxl::StringView& string) {
   auto bytes = reinterpret_cast<const uint8_t*>(string.data());
   return EncodeByteArrayString(bytes, string.size());
 }
 
-std::vector<uint8_t> DecodeByteArrayString(const ftl::StringView& string) {
+std::vector<uint8_t> DecodeByteArrayString(const fxl::StringView& string) {
   std::vector<uint8_t> result;
   if (string.size() % 2) {
-    FTL_LOG(ERROR)
+    FXL_LOG(ERROR)
         << "Byte array string must have an even number of characters";
     return result;
   }
@@ -106,12 +106,12 @@ std::vector<uint8_t> DecodeByteArrayString(const ftl::StringView& string) {
   return result;
 }
 
-std::string DecodeString(const ftl::StringView& string) {
+std::string DecodeString(const fxl::StringView& string) {
   std::vector<uint8_t> charvec = DecodeByteArrayString(string);
   return std::string(charvec.begin(), charvec.end());
 }
 
-std::string EscapeNonPrintableString(const ftl::StringView& data) {
+std::string EscapeNonPrintableString(const fxl::StringView& data) {
   std::string result;
   for (char c : data) {
     if (std::isprint(c)) {
@@ -130,30 +130,30 @@ std::string EscapeNonPrintableString(const ftl::StringView& data) {
 }
 
 std::string ErrnoString(int err) {
-  return ftl::StringPrintf("%s(%d)", strerror(err), err);
+  return fxl::StringPrintf("%s(%d)", strerror(err), err);
 }
 
 size_t JoinStrings(const std::deque<std::string>& strings,
                    const char delimiter,
                    char* buffer,
                    size_t buffer_size) {
-  FTL_DCHECK(buffer);
+  FXL_DCHECK(buffer);
 
   size_t index = 0, count = 0;
   for (const auto& str : strings) {
-    FTL_DCHECK(index + str.length() <= buffer_size);
+    FXL_DCHECK(index + str.length() <= buffer_size);
     memcpy(buffer + index, str.data(), str.length());
     index += str.length();
     if (++count == strings.size())
       break;
-    FTL_DCHECK(index < buffer_size);
+    FXL_DCHECK(index < buffer_size);
     buffer[index++] = delimiter;
   }
 
   return index;
 }
 
-Argv BuildArgv(const ftl::StringView& args) {
+Argv BuildArgv(const fxl::StringView& args) {
   Argv result;
 
   // TODO: quoting, escapes, etc.

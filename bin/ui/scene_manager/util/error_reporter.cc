@@ -8,35 +8,35 @@ namespace scene_manager {
 
 namespace {
 
-#define LOG_HELPER(severity) FTL_LOG(severity) << error_string;
+#define LOG_HELPER(severity) FXL_LOG(severity) << error_string;
 
 class DefaultErrorReporter : public ErrorReporter {
  public:
-  void ReportError(ftl::LogSeverity severity,
+  void ReportError(fxl::LogSeverity severity,
                    std::string error_string) override {
     switch (severity) {
-      case ftl::LOG_INFO:
-        FTL_LOG(INFO) << error_string;
+      case fxl::LOG_INFO:
+        FXL_LOG(INFO) << error_string;
         break;
-      case ftl::LOG_WARNING:
-        FTL_LOG(WARNING) << error_string;
+      case fxl::LOG_WARNING:
+        FXL_LOG(WARNING) << error_string;
         break;
-      case ftl::LOG_ERROR:
-        FTL_LOG(ERROR) << error_string;
+      case fxl::LOG_ERROR:
+        FXL_LOG(ERROR) << error_string;
         break;
-      case ftl::LOG_FATAL:
-        FTL_LOG(FATAL) << error_string;
+      case fxl::LOG_FATAL:
+        FXL_LOG(FATAL) << error_string;
         break;
       default:
         // Invalid severity.
-        FTL_DCHECK(false);
+        FXL_DCHECK(false);
     }
   }
 };
 
 }  // anonymous namespace
 
-ErrorReporter::Report::Report(ErrorReporter* owner, ftl::LogSeverity severity)
+ErrorReporter::Report::Report(ErrorReporter* owner, fxl::LogSeverity severity)
     : owner_(owner), severity_(severity) {}
 
 ErrorReporter::Report::Report(Report&& other)

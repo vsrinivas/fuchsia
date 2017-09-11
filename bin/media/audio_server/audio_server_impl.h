@@ -13,10 +13,10 @@
 #include "garnet/bin/media/audio_server/audio_output_manager.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/synchronization/mutex.h"
-#include "lib/ftl/synchronization/thread_annotations.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/synchronization/mutex.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace media {
 namespace audio {
@@ -47,8 +47,8 @@ class AudioServerImpl : public AudioServer {
       std::unique_ptr<MediaPacketConsumerBase::SuppliedPacket> supplied_packet);
 
   // Schedule a closure to run on the server's main message loop.
-  void ScheduleMessageLoopTask(const ftl::Closure& task) {
-    FTL_DCHECK(task_runner_);
+  void ScheduleMessageLoopTask(const fxl::Closure& task) {
+    FXL_DCHECK(task_runner_);
     task_runner_->PostTask(task);
   }
 
@@ -68,19 +68,19 @@ class AudioServerImpl : public AudioServer {
   // A reference to our message loop's task runner.  Allows us to post events to
   // be handled by our main application thread from things like the output
   // manager's thread pool.
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
 
   // State for dealing with outputs.
   AudioOutputManager output_manager_;
 
   // State for dealing with cleanup tasks.
-  ftl::Mutex cleanup_queue_mutex_;
+  fxl::Mutex cleanup_queue_mutex_;
   std::unique_ptr<CleanupQueue> cleanup_queue_
-      FTL_GUARDED_BY(cleanup_queue_mutex_);
-  bool cleanup_scheduled_ FTL_GUARDED_BY(cleanup_queue_mutex_) = false;
+      FXL_GUARDED_BY(cleanup_queue_mutex_);
+  bool cleanup_scheduled_ FXL_GUARDED_BY(cleanup_queue_mutex_) = false;
   bool shutting_down_ = false;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AudioServerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AudioServerImpl);
 };
 
 }  // namespace audio

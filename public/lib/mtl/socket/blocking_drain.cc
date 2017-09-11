@@ -7,7 +7,7 @@
 #include <mx/socket.h>
 #include <vector>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace mtl {
 
@@ -22,7 +22,7 @@ bool BlockingDrainFrom(
     if (result == MX_OK) {
       size_t bytes_written = write_bytes(buffer.data(), bytes_read);
       if (bytes_written < bytes_read) {
-        FTL_LOG(ERROR) << "write_bytes callback wrote fewer bytes ("
+        FXL_LOG(ERROR) << "write_bytes callback wrote fewer bytes ("
                        << bytes_written << ") than expected (" << bytes_read
                        << ") in BlockingDrainFrom (socket closed? out of disk "
                           "space?)";
@@ -39,7 +39,7 @@ bool BlockingDrainFrom(
       // If the socket was closed, then treat as EOF.
       return true;
     } else {
-      FTL_LOG(ERROR) << "Unhandled error " << result << " in BlockingDrainFrom";
+      FXL_LOG(ERROR) << "Unhandled error " << result << " in BlockingDrainFrom";
       // Some other error occurred.
       return false;
     }

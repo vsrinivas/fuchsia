@@ -12,9 +12,9 @@
 
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "dart-pkg/zircon/sdk_ext/handle.h"
-#include "lib/ftl/arraysize.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/arraysize.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 
 namespace mozart {
 
@@ -76,17 +76,17 @@ const uint8_t* NativeSymbol(Dart_NativeFunction native_function) {
   {                                                                            \
     Dart_Handle __arg = Dart_GetNativeArgument(args, num);                     \
     if (Dart_IsError(__arg)) {                                                 \
-      FTL_LOG(WARNING) << "GetNativeArgumentFailed: " << Dart_GetError(__arg); \
+      FXL_LOG(WARNING) << "GetNativeArgumentFailed: " << Dart_GetError(__arg); \
       return;                                                                  \
     }                                                                          \
     Dart_Handle __err = Dart_Null();                                           \
     *result = tonic::HandleTable::Current().Unwrap(__arg, &__err);             \
     if (Dart_IsError(__err)) {                                                 \
-      FTL_LOG(ERROR) << "Error unwrapping handle";  \
+      FXL_LOG(ERROR) << "Error unwrapping handle";  \
       return;                                                                  \
     }                                                                          \
     if (*result == MX_HANDLE_INVALID) {                                        \
-      FTL_LOG(INFO) << "Invalid handle from unwrap"; \
+      FXL_LOG(INFO) << "Invalid handle from unwrap"; \
       return;                                                                  \
     }                                                                          \
   }
@@ -97,7 +97,7 @@ NativesDelegate::~NativesDelegate() {}
 void Mozart_offerServiceProvider(Dart_NativeArguments args) {
   intptr_t context = 0;
   CHECK_INTEGER_ARGUMENT(args, 0, &context);
-  ftl::RefPtr<zircon::dart::Handle> handle =
+  fxl::RefPtr<zircon::dart::Handle> handle =
       zircon::dart::Handle::Unwrap(Dart_GetNativeArgument(args, 1));
 
   if (!context || !handle)

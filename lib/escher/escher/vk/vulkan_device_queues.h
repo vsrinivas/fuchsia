@@ -10,17 +10,17 @@
 
 #include "escher/vk/vulkan_context.h"
 #include "escher/vk/vulkan_instance.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 
 class VulkanDeviceQueues;
-using VulkanDeviceQueuesPtr = ftl::RefPtr<VulkanDeviceQueues>;
+using VulkanDeviceQueuesPtr = fxl::RefPtr<VulkanDeviceQueues>;
 
 // Convenient wrapper for creating and managing the lifecycle of a VkDevice
 // and a set of VkQueues that are suitable for use by Escher.
 class VulkanDeviceQueues
-    : public ftl::RefCountedThreadSafe<VulkanDeviceQueues> {
+    : public fxl::RefCountedThreadSafe<VulkanDeviceQueues> {
  public:
   // Parameters used to construct a new Vulkan Device and Queues.
   struct Params {
@@ -50,7 +50,7 @@ class VulkanDeviceQueues
   };
 
   // Constructor.
-  static ftl::RefPtr<VulkanDeviceQueues> New(VulkanInstancePtr instance,
+  static fxl::RefPtr<VulkanDeviceQueues> New(VulkanInstancePtr instance,
                                              Params params);
 
   ~VulkanDeviceQueues();

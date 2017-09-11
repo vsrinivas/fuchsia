@@ -10,7 +10,7 @@
 
 #include "garnet/bin/netconnector/message_transceiver.h"
 #include "garnet/bin/netconnector/socket_address.h"
-#include "lib/ftl/files/unique_fd.h"
+#include "lib/fxl/files/unique_fd.h"
 
 namespace netconnector {
 
@@ -34,7 +34,7 @@ class RequestorAgent : public MessageTransceiver {
   void OnConnectionClosed() override;
 
  private:
-  RequestorAgent(ftl::UniqueFD socket_fd,
+  RequestorAgent(fxl::UniqueFD socket_fd,
                  const std::string& service_name,
                  mx::channel local_channel,
                  NetConnectorImpl* owner);
@@ -43,7 +43,7 @@ class RequestorAgent : public MessageTransceiver {
   mx::channel local_channel_;
   NetConnectorImpl* owner_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(RequestorAgent);
+  FXL_DISALLOW_COPY_AND_ASSIGN(RequestorAgent);
 };
 
 }  // namespace netconnector

@@ -5,7 +5,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 #include "lib/fidl/examples/services/echo.fidl.h"
@@ -20,7 +20,7 @@ class EchoImpl : public Echo {
 
   void EchoString(const fidl::String& value,
                   const EchoStringCallback& callback) override {
-    FTL_LOG(INFO) << "EchoString: " << value;
+    FXL_LOG(INFO) << "EchoString: " << value;
     callback(value);
   }
 
@@ -44,7 +44,7 @@ class EchoDelegate {
   std::unique_ptr<app::ApplicationContext> context_;
   echo::EchoImpl echo_provider_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(EchoDelegate);
+  FXL_DISALLOW_COPY_AND_ASSIGN(EchoDelegate);
 };
 
 }  // namespace echo

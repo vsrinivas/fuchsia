@@ -10,8 +10,8 @@
 
 #include "lib/media/fidl/seeking_reader.fidl.h"
 #include "garnet/bin/media/media_service/media_service_impl.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/macros.h"
 
 namespace media {
 
@@ -50,7 +50,7 @@ class FileReaderImpl : public MediaServiceImpl::Product<SeekingReader>,
   // Reads from the file into buffer_;
   void ReadFromFile();
 
-  ftl::UniqueFD fd_;
+  fxl::UniqueFD fd_;
   MediaResult result_ = MediaResult::OK;
   uint64_t size_ = kUnknownSize;
   mx::socket socket_;
@@ -60,7 +60,7 @@ class FileReaderImpl : public MediaServiceImpl::Product<SeekingReader>,
   char* remaining_buffer_bytes_;
   bool reached_end_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FileReaderImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FileReaderImpl);
 };
 
 }  // namespace media

@@ -26,11 +26,11 @@ using escher::TexturePtr;
 WobblyOceanScene::WobblyOceanScene(Demo* demo) : Scene(demo) {}
 
 void WobblyOceanScene::Init(escher::Stage* stage) {
-  bg_ = ftl::MakeRefCounted<escher::Material>();
-  color1_ = ftl::MakeRefCounted<escher::Material>();
-  color2_ = ftl::MakeRefCounted<escher::Material>();
-  color3_ = ftl::MakeRefCounted<escher::Material>();
-  color4_ = ftl::MakeRefCounted<escher::Material>();
+  bg_ = fxl::MakeRefCounted<escher::Material>();
+  color1_ = fxl::MakeRefCounted<escher::Material>();
+  color2_ = fxl::MakeRefCounted<escher::Material>();
+  color3_ = fxl::MakeRefCounted<escher::Material>();
+  color4_ = fxl::MakeRefCounted<escher::Material>();
 
   bg_->set_color(vec3(0.8f, 0.8f, 0.8f));
   color1_->set_color(vec3(63.f / 255.f, 138.f / 255.f, 153.f / 255.f));
@@ -40,7 +40,7 @@ void WobblyOceanScene::Init(escher::Stage* stage) {
 
   TexturePtr checkerboard = escher()->NewTexture(
       escher()->NewCheckerboardImage(14, 4), vk::Filter::eNearest);
-  checkerboard_material_ = ftl::MakeRefCounted<escher::Material>();
+  checkerboard_material_ = fxl::MakeRefCounted<escher::Material>();
   checkerboard_material_->SetTexture(checkerboard);
 
   checkerboard_material_->set_color(

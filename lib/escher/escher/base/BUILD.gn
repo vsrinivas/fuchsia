@@ -15,6 +15,6 @@ static_library("escher_base") {
 
   public_configs = [ "//garnet/lib/escher/escher:public_includes" ]
   public_deps = [
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }

@@ -29,7 +29,7 @@ class SceneManagerTest : public ::testing::Test {
 
  protected:
   SceneManagerImpl* manager_impl() {
-    FTL_DCHECK(manager_impl_);
+    FXL_DCHECK(manager_impl_);
     return manager_impl_.get();
   }
   Engine* engine() { return manager_impl()->engine(); }

@@ -8,7 +8,7 @@
 
 #include <magenta/syscalls.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace fidl {
 namespace test {
@@ -31,7 +31,7 @@ bool ReadTextMessage(const mx::channel& handle, std::string* text) {
     rv = handle.read(0, nullptr, 0, &num_bytes, nullptr, 0, &num_handles);
     if (rv == MX_ERR_SHOULD_WAIT) {
       if (did_wait) {
-        FTL_DCHECK(false);  // Looping endlessly!?
+        FXL_DCHECK(false);  // Looping endlessly!?
         return false;
       }
       rv = mx_object_wait_one(handle.get(),
@@ -41,7 +41,7 @@ bool ReadTextMessage(const mx::channel& handle, std::string* text) {
         return false;
       did_wait = true;
     } else {
-      FTL_DCHECK(!num_handles);
+      FXL_DCHECK(!num_handles);
       break;
     }
   }

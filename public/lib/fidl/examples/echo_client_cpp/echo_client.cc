@@ -6,7 +6,7 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 #include "lib/fidl/examples/services/echo.fidl.h"
 
@@ -25,7 +25,7 @@ class EchoClientApp {
  public:
   EchoClientApp()
     : context_(app::ApplicationContext::CreateFromStartupInfo()) {
-    FTL_DCHECK(context_);
+    FXL_DCHECK(context_);
   }
 
   bool Start(std::string server_url, std::string msg) {
@@ -37,7 +37,7 @@ class EchoClientApp {
                                             controller_.NewRequest());
 
     app::ConnectToService(echo_provider_.get(), echo_.NewRequest());
-    FTL_DCHECK(echo_);
+    FXL_DCHECK(echo_);
 
     echo_->EchoString(msg,
                       [this](fidl::String value) {

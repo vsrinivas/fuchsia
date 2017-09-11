@@ -13,8 +13,8 @@
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace view_manager {
 
@@ -71,9 +71,9 @@ class InputDispatcherImpl : public mozart::InputDispatcher {
 
   std::unique_ptr<FocusChain> active_focus_chain_;
 
-  ftl::WeakPtrFactory<InputDispatcherImpl> weak_factory_;
+  fxl::WeakPtrFactory<InputDispatcherImpl> weak_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(InputDispatcherImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(InputDispatcherImpl);
 };
 
 }  // namespace view_manager

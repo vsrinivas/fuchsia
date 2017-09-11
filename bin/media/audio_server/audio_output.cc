@@ -6,8 +6,8 @@
 
 #include "garnet/bin/media/audio_server/audio_output_manager.h"
 #include "garnet/bin/media/audio_server/audio_renderer_to_output_link.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
 
@@ -27,11 +27,11 @@ static void FinishShutdownSelf(AudioOutputManager* manager,
 AudioOutput::AudioOutput(AudioOutputManager* manager)
   : manager_(manager),
     db_gain_(0.0f) {
-  FTL_DCHECK(manager_);
+  FXL_DCHECK(manager_);
 }
 
 AudioOutput::~AudioOutput() {
-  FTL_DCHECK(!task_runner_ && shutting_down_);
+  FXL_DCHECK(!task_runner_ && shutting_down_);
 
   if (worker_thread_.joinable()) {
     worker_thread_.join();
@@ -42,17 +42,17 @@ MediaResult AudioOutput::AddRendererLink(AudioRendererToOutputLinkPtr link) {
   MediaResult res = InitializeLink(link);
 
   if (res == MediaResult::OK) {
-    ftl::MutexLocker locker(&mutex_);
+    fxl::MutexLocker locker(&mutex_);
 
     // Assert that we are the output in this link.
-    FTL_DCHECK(this == link->GetOutput().get());
+    FXL_DCHECK(this == link->GetOutput().get());
 
     if (shutting_down_) {
       return MediaResult::SHUTTING_DOWN;
     }
 
     auto insert_result = links_.emplace(link);
-    FTL_DCHECK(insert_result.second);
+    FXL_DCHECK(insert_result.second);
   } else {
     // TODO(johngro): Output didn't like this renderer for some reason... Should
     // probably log something about this.
@@ -63,7 +63,7 @@ MediaResult AudioOutput::AddRendererLink(AudioRendererToOutputLinkPtr link) {
 
 MediaResult AudioOutput::RemoveRendererLink(
     const AudioRendererToOutputLinkPtr& link) {
-  ftl::MutexLocker locker(&mutex_);
+  fxl::MutexLocker locker(&mutex_);
 
   if (shutting_down_) {
     return MediaResult::SHUTTING_DOWN;
@@ -86,25 +86,25 @@ void AudioOutput::Cleanup() {}
 
 MediaResult AudioOutput::InitializeLink(
     const AudioRendererToOutputLinkPtr& link) {
-  FTL_DCHECK(link);
+  FXL_DCHECK(link);
   return MediaResult::OK;
 }
 
-void AudioOutput::ScheduleCallback(ftl::TimePoint when) {
+void AudioOutput::ScheduleCallback(fxl::TimePoint when) {
   // If we are in the process of shutting down, then we are no longer permitted
   // to schedule callbacks.
   if (shutting_down_) {
-    FTL_DCHECK(!task_runner_);
+    FXL_DCHECK(!task_runner_);
     return;
   }
-  FTL_DCHECK(task_runner_);
+  FXL_DCHECK(task_runner_);
 
   // TODO(johngro):  Someday, if there is ever a way to schedule delayed tasks
   // with absolute time, or with resolution better than microseconds, do so.
   // Until then figure out the relative time for scheduling the task and do so.
-  ftl::TimePoint now = ftl::TimePoint::Now();
-  ftl::TimeDelta sched_time =
-      (now > when) ? ftl::TimeDelta::FromMicroseconds(0) : (when - now);
+  fxl::TimePoint now = fxl::TimePoint::Now();
+  fxl::TimeDelta sched_time =
+      (now > when) ? fxl::TimeDelta::FromMicroseconds(0) : (when - now);
 
   AudioOutputWeakPtr weak_self = weak_self_;
   task_runner_->PostDelayedTask([weak_self]() { ProcessThunk(weak_self); },
@@ -115,7 +115,7 @@ void AudioOutput::ShutdownSelf() {
   // If we are not already in the process of shutting down, send a message to
   // the main message loop telling it to complete the shutdown process.
   if (!BeginShutdown()) {
-    FTL_DCHECK(manager_);
+    FXL_DCHECK(manager_);
     AudioOutputManager* manager = manager_;
     AudioOutputWeakPtr weak_self = weak_self_;
     manager_->ScheduleMessageLoopTask(
@@ -128,7 +128,7 @@ void AudioOutput::ProcessThunk(AudioOutputWeakPtr weak_output) {
   // lock and dispatch to our derived class's implementation.
   auto output = weak_output.lock();
   if (output) {
-    ftl::MutexLocker locker(&output->mutex_);
+    fxl::MutexLocker locker(&output->mutex_);
 
     // Make sure that we are not in the process of cleaning up before we start
     // processing.
@@ -139,7 +139,7 @@ void AudioOutput::ProcessThunk(AudioOutputWeakPtr weak_output) {
 }
 
 MediaResult AudioOutput::Init(const AudioOutputPtr& self) {
-  FTL_DCHECK(this == self.get());
+  FXL_DCHECK(this == self.get());
 
   // Hold a weak reference to ourself.
   weak_self_ = self;
@@ -149,12 +149,12 @@ MediaResult AudioOutput::Init(const AudioOutputPtr& self) {
   // active outputs as a result of us failing to initialize.
   MediaResult res = Init();
   if (res != MediaResult::OK) {
-    ftl::MutexLocker locker(&mutex_);
+    fxl::MutexLocker locker(&mutex_);
     shutting_down_ = true;
     return res;
   }
 
-  FTL_DCHECK(worker_thread_.get_id() == std::thread::id());
+  FXL_DCHECK(worker_thread_.get_id() == std::thread::id());
   worker_thread_ = mtl::CreateThread(&task_runner_);
 
   // Schedule an immediate callback to get things running.
@@ -193,7 +193,7 @@ void AudioOutput::Shutdown() {
   // Make sure no new callbacks can be generated, and that pending callbacks
   // have been nerfed.
   {
-    ftl::MutexLocker locker(&mutex_);
+    fxl::MutexLocker locker(&mutex_);
     BeginShutdown();
   }
 
@@ -212,12 +212,12 @@ void AudioOutput::UnlinkFromRenderers() {
   AudioRendererToOutputLinkSet old_links;
 
   {
-    ftl::MutexLocker locker(&mutex_);
+    fxl::MutexLocker locker(&mutex_);
     old_links.swap(links_);
   }
 
   for (const auto& link : old_links) {
-    FTL_DCHECK(link);
+    FXL_DCHECK(link);
     AudioRendererImplPtr renderer = link->GetRenderer();
     if (renderer) {
       renderer->RemoveOutput(link);

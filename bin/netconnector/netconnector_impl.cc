@@ -10,8 +10,8 @@
 #include "garnet/bin/netconnector/host_name.h"
 #include "garnet/bin/netconnector/mdns/mdns_names.h"
 #include "garnet/bin/netconnector/netconnector_params.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace netconnector {
@@ -46,7 +46,7 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
     if (params_->show_devices()) {
       net_connector->GetKnownDeviceNames(
           NetConnector::kInitialKnownDeviceNames,
-          ftl::MakeCopyable([ this, net_connector = std::move(net_connector) ](
+          fxl::MakeCopyable([ this, net_connector = std::move(net_connector) ](
               uint64_t version, fidl::Array<fidl::String> device_names) {
             if (device_names.size() == 0) {
               std::cout << "No remote devices found\n";
@@ -85,7 +85,7 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
                                                std::move(pair.second));
   }
 
-  listener_.Start(kPort, [this](ftl::UniqueFD fd) {
+  listener_.Start(kPort, [this](fxl::UniqueFD fd) {
     AddServiceAgent(ServiceAgent::Create(std::move(fd), this));
   });
 
@@ -106,17 +106,17 @@ NetConnectorImpl::~NetConnectorImpl() {}
 void NetConnectorImpl::ReleaseDeviceServiceProvider(
     DeviceServiceProvider* device_service_provider) {
   size_t removed = device_service_providers_.erase(device_service_provider);
-  FTL_DCHECK(removed == 1);
+  FXL_DCHECK(removed == 1);
 }
 
 void NetConnectorImpl::ReleaseRequestorAgent(RequestorAgent* requestor_agent) {
   size_t removed = requestor_agents_.erase(requestor_agent);
-  FTL_DCHECK(removed == 1);
+  FXL_DCHECK(removed == 1);
 }
 
 void NetConnectorImpl::ReleaseServiceAgent(ServiceAgent* service_agent) {
   size_t removed = service_agents_.erase(service_agent);
-  FTL_DCHECK(removed == 1);
+  FXL_DCHECK(removed == 1);
 }
 
 void NetConnectorImpl::GetDeviceServiceProvider(
@@ -129,7 +129,7 @@ void NetConnectorImpl::GetDeviceServiceProvider(
 
   auto iter = params_->devices().find(device_name);
   if (iter == params_->devices().end()) {
-    FTL_LOG(ERROR) << "Unrecognized device name " << device_name;
+    FXL_LOG(ERROR) << "Unrecognized device name " << device_name;
     return;
   }
 
@@ -147,7 +147,7 @@ void NetConnectorImpl::GetKnownDeviceNames(
 void NetConnectorImpl::RegisterServiceProvider(
     const fidl::String& name,
     fidl::InterfaceHandle<app::ServiceProvider> handle) {
-  FTL_LOG(INFO) << "Service '" << name << "' provider registered.";
+  FXL_LOG(INFO) << "Service '" << name << "' provider registered.";
   responding_service_host_.RegisterProvider(name, std::move(handle));
 }
 
@@ -174,18 +174,18 @@ void NetConnectorImpl::StartMdns() {
   // TODO: Remove this check when NET-79 is fixed.
   if (!NetworkIsReady()) {
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this]() { StartMdns(); }, ftl::TimeDelta::FromSeconds(5));
+        [this]() { StartMdns(); }, fxl::TimeDelta::FromSeconds(5));
     return;
   }
 
   host_name_ = GetHostName();
 
   if (!mdns_service_impl_.Start(host_name_)) {
-    FTL_LOG(ERROR) << "mDNS failed to start";
+    FXL_LOG(ERROR) << "mDNS failed to start";
     return;
   }
 
-  FTL_LOG(INFO) << "mDNS started, host name " << host_name_;
+  FXL_LOG(INFO) << "mDNS started, host name " << host_name_;
 
   mdns_service_impl_.PublishServiceInstance(kFuchsiaServiceName, host_name_,
                                             kPort, std::vector<std::string>());
@@ -196,15 +196,15 @@ void NetConnectorImpl::StartMdns() {
              const SocketAddress& v4_address, const SocketAddress& v6_address,
              const std::vector<std::string>& text) {
         if (v4_address.is_valid()) {
-          FTL_LOG(INFO) << "Device '" << instance_name
+          FXL_LOG(INFO) << "Device '" << instance_name
                         << "' discovered at address " << v4_address.address();
           params_->RegisterDevice(instance_name, v4_address.address());
         } else if (v6_address.is_valid()) {
-          FTL_LOG(INFO) << "Device '" << instance_name
+          FXL_LOG(INFO) << "Device '" << instance_name
                         << "' discovered at address " << v6_address.address();
           params_->RegisterDevice(instance_name, v6_address.address());
         } else {
-          FTL_LOG(INFO) << "Device '" << instance_name << "' lost";
+          FXL_LOG(INFO) << "Device '" << instance_name << "' lost";
           params_->UnregisterDevice(instance_name);
         }
 

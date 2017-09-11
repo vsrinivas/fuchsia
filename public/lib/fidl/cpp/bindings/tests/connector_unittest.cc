@@ -12,9 +12,9 @@
 #include "lib/fidl/cpp/bindings/internal/message_builder.h"
 #include "lib/fidl/cpp/bindings/tests/util/message_queue.h"
 #include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
-#include "lib/ftl/arraysize.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/arraysize.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 
 namespace fidl {
 namespace test {
@@ -43,7 +43,7 @@ class ConnectorTest : public testing::Test {
   mx::channel handle1_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(ConnectorTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ConnectorTest);
 };
 
 class MessageAccumulator : public MessageReceiver {
@@ -62,7 +62,7 @@ class MessageAccumulator : public MessageReceiver {
  private:
   MessageQueue queue_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MessageAccumulator);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MessageAccumulator);
 };
 
 TEST_F(ConnectorTest, Basic) {
@@ -105,7 +105,7 @@ TEST_F(ConnectorTest, Basic_Synchronous) {
   MessageAccumulator accumulator;
   connector1.set_incoming_receiver(&accumulator);
 
-  connector1.WaitForIncomingMessage(ftl::TimeDelta::Max());
+  connector1.WaitForIncomingMessage(fxl::TimeDelta::Max());
 
   ASSERT_FALSE(accumulator.IsEmpty());
 
@@ -189,7 +189,7 @@ TEST_F(ConnectorTest, Basic_TwoMessages_Synchronous) {
   MessageAccumulator accumulator;
   connector1.set_incoming_receiver(&accumulator);
 
-  connector1.WaitForIncomingMessage(ftl::TimeDelta::Max());
+  connector1.WaitForIncomingMessage(fxl::TimeDelta::Max());
 
   ASSERT_FALSE(accumulator.IsEmpty());
 
@@ -266,7 +266,7 @@ TEST_F(ConnectorTest, WaitForIncomingMessageWithError) {
   internal::Connector connector0(std::move(handle0_));
   // Close the other end of the pipe.
   handle1_.reset();
-  ASSERT_FALSE(connector0.WaitForIncomingMessage(ftl::TimeDelta::Max()));
+  ASSERT_FALSE(connector0.WaitForIncomingMessage(fxl::TimeDelta::Max()));
 }
 
 class ConnectorDeletingMessageAccumulator : public MessageAccumulator {
@@ -283,7 +283,7 @@ class ConnectorDeletingMessageAccumulator : public MessageAccumulator {
  private:
   internal::Connector** connector_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ConnectorDeletingMessageAccumulator);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ConnectorDeletingMessageAccumulator);
 };
 
 TEST_F(ConnectorTest, WaitForIncomingMessageWithDeletion) {
@@ -300,7 +300,7 @@ TEST_F(ConnectorTest, WaitForIncomingMessageWithDeletion) {
   ConnectorDeletingMessageAccumulator accumulator(&connector1);
   connector1->set_incoming_receiver(&accumulator);
 
-  connector1->WaitForIncomingMessage(ftl::TimeDelta::Max());
+  connector1->WaitForIncomingMessage(fxl::TimeDelta::Max());
 
   ASSERT_FALSE(connector1);
   ASSERT_FALSE(accumulator.IsEmpty());
@@ -323,7 +323,7 @@ class ReentrantMessageAccumulator : public MessageAccumulator {
       return false;
     number_of_calls_++;
     if (number_of_calls_ == 1) {
-      return connector_->WaitForIncomingMessage(ftl::TimeDelta::Max());
+      return connector_->WaitForIncomingMessage(fxl::TimeDelta::Max());
     }
     return true;
   }
@@ -334,7 +334,7 @@ class ReentrantMessageAccumulator : public MessageAccumulator {
   internal::Connector* connector_;
   int number_of_calls_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ReentrantMessageAccumulator);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ReentrantMessageAccumulator);
 };
 
 TEST_F(ConnectorTest, WaitForIncomingMessageWithReentrancy) {
@@ -375,7 +375,7 @@ class NoTaskStarvationReplier : public MessageReceiver {
  public:
   explicit NoTaskStarvationReplier(MessageReceiver* reply_to)
       : reply_to_(reply_to) {
-    FTL_CHECK(reply_to_ != this);
+    FXL_CHECK(reply_to_ != this);
   }
 
   bool Accept(Message* message) override {
@@ -398,7 +398,7 @@ class NoTaskStarvationReplier : public MessageReceiver {
       return true;
 
     MessageBuilder builder(name + 1u, 0u);
-    FTL_CHECK(reply_to_->Accept(builder.message()));
+    FXL_CHECK(reply_to_->Accept(builder.message()));
 
     return true;
   }
@@ -409,7 +409,7 @@ class NoTaskStarvationReplier : public MessageReceiver {
   MessageReceiver* const reply_to_;
   unsigned num_accepted_ = 0;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(NoTaskStarvationReplier);
+  FXL_DISALLOW_COPY_AND_ASSIGN(NoTaskStarvationReplier);
 };
 
 // TODO(vtl): This test currently fails. See the discussion on issue #604

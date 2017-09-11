@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/synchronization/waitable_event.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/synchronization/waitable_event.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/thread.h"
 #include "magenta/system/ulib/mx/include/mx/eventpair.h"
@@ -238,7 +238,7 @@ TEST_F(ImportTest, ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
 
 TEST_F(ImportThreadedTest, KillingImportedResourceEvictsFromResourceLinker) {
   // Setup a latch on the resource expiring in the linker.
-  ftl::AutoResetWaitableEvent import_expired_latch;
+  fxl::AutoResetWaitableEvent import_expired_latch;
   engine_->resource_linker()->SetOnExpiredCallback(
       [this, &import_expired_latch](Resource*,
                                     ResourceLinker::ExpirationCause cause) {
@@ -305,7 +305,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
   bool import_node_released = false;
 
   // Setup a latch on the resource becoming unexported in the linker.
-  ftl::AutoResetWaitableEvent export_expired_latch;
+  fxl::AutoResetWaitableEvent export_expired_latch;
   engine_->resource_linker()->SetOnExpiredCallback(
       [&](Resource*, ResourceLinker::ExpirationCause cause) {
         ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
@@ -408,7 +408,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
   bool import_node_released = false;
 
   // Setup a latch on the resource becoming unexported in the linker.
-  ftl::AutoResetWaitableEvent export_expired_latch;
+  fxl::AutoResetWaitableEvent export_expired_latch;
   engine_->resource_linker()->SetOnExpiredCallback(
       [&](Resource*, ResourceLinker::ExpirationCause cause) {
         ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
@@ -515,7 +515,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
   bool import_node_released = false;
 
   // Setup a latch on the resource becoming unexported in the linker.
-  ftl::AutoResetWaitableEvent export_expired_latch;
+  fxl::AutoResetWaitableEvent export_expired_latch;
   engine_->resource_linker()->SetOnExpiredCallback(
       [&](Resource*, ResourceLinker::ExpirationCause cause) {
         ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
@@ -642,7 +642,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
   bool import_node2_released = false;
 
   // Setup a latch on the resource becoming unexported in the linker.
-  ftl::AutoResetWaitableEvent export_expired_latch;
+  fxl::AutoResetWaitableEvent export_expired_latch;
   engine_->resource_linker()->SetOnExpiredCallback(
       [&](Resource*, ResourceLinker::ExpirationCause cause) {
         ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);

@@ -7,7 +7,7 @@
 #include <algorithm>
 
 #include "lib/app/cpp/connect.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace mozart {
 
@@ -15,7 +15,7 @@ ViewProviderService::ViewProviderService(
     app::ApplicationContext* application_context,
     ViewFactory view_factory)
     : application_context_(application_context), view_factory_(view_factory) {
-  FTL_DCHECK(application_context_);
+  FXL_DCHECK(application_context_);
 
   application_context_->outgoing_services()->AddService<ViewProvider>(
       [this](fidl::InterfaceRequest<ViewProvider> request) {
@@ -44,7 +44,7 @@ void ViewProviderService::CreateView(
                              [view](const std::unique_ptr<BaseView>& other) {
                                return other.get() == view;
                              });
-      FTL_DCHECK(it != views_.end());
+      FXL_DCHECK(it != views_.end());
       views_.erase(it);
     });
     views_.push_back(std::move(view));

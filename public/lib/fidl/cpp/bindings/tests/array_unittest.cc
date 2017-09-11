@@ -11,7 +11,7 @@
 #include "lib/fidl/cpp/bindings/tests/util/iterator_test_util.h"
 #include "lib/fidl/compiler/interfaces/tests/test_arrays.fidl.h"
 #include "lib/fidl/compiler/interfaces/tests/test_structs.fidl.h"
-#include "lib/ftl/arraysize.h"
+#include "lib/fxl/arraysize.h"
 
 namespace fidl {
 namespace test {

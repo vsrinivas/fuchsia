@@ -11,11 +11,11 @@ ShadertoyStateForView::ShadertoyStateForView(
     ::fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     bool handle_input_events)
     : ShadertoyState(app) {
-  FTL_CHECK(false) << "not implemented";
+  FXL_CHECK(false) << "not implemented";
 }
 
 void ShadertoyStateForView::OnSetResolution() {
-  FTL_CHECK(false) << "not implemented";
+  FXL_CHECK(false) << "not implemented";
 }
 
 }  // namespace shadertoy

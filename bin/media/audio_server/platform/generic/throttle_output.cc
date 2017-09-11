@@ -5,14 +5,14 @@
 #include "garnet/bin/media/audio_server/platform/generic/throttle_output.h"
 
 #include "garnet/bin/media/audio_server/audio_output_manager.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/time/time_delta.h"
 
 namespace media {
 namespace audio {
 
-static constexpr ftl::TimeDelta TRIM_PERIOD =
-    ftl::TimeDelta::FromMilliseconds(10);
+static constexpr fxl::TimeDelta TRIM_PERIOD =
+    fxl::TimeDelta::FromMilliseconds(10);
 
 ThrottleOutput::ThrottleOutput(AudioOutputManager* manager)
     : StandardOutputBase(manager) {}
@@ -25,12 +25,12 @@ AudioOutputPtr ThrottleOutput::Create(AudioOutputManager* manager) {
 }
 
 MediaResult ThrottleOutput::Init() {
-  last_sched_time_ = ftl::TimePoint::Now();
+  last_sched_time_ = fxl::TimePoint::Now();
   UpdatePlugState(true, 0);
   return MediaResult::OK;
 }
 
-bool ThrottleOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
+bool ThrottleOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
   // Compute our next callback time, and check to see if we are falling behind
   // in the process.
   last_sched_time_ = last_sched_time_ + TRIM_PERIOD;
@@ -63,7 +63,7 @@ bool ThrottleOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
 
 bool ThrottleOutput::FinishMixJob(const MixJob& job) {
   // Since we never start any jobs, this should never be called.
-  FTL_DCHECK(false);
+  FXL_DCHECK(false);
   return false;
 }
 

@@ -401,14 +401,14 @@ TexturePtr SsdoAccelerator::GenerateLookupTable(CommandBuffer* command_buffer,
   ImagePtr tmp_image = image_factory_->NewImage(
       {vk::Format::eR8G8B8A8Unorm, packed_width, packed_height, 1,
        image_flags | vk::ImageUsageFlagBits::eStorage});
-  TexturePtr tmp_texture = ftl::MakeRefCounted<Texture>(
+  TexturePtr tmp_texture = fxl::MakeRefCounted<Texture>(
       escher_->resource_recycler(), tmp_image, vk::Filter::eNearest,
       vk::ImageAspectFlagBits::eColor, true);
   command_buffer->TransitionImageLayout(tmp_image, vk::ImageLayout::eUndefined,
                                         vk::ImageLayout::eGeneral);
 
   if (!kernel_) {
-    FTL_DLOG(INFO) << "Lazily instantiating kernel_";
+    FXL_DLOG(INFO) << "Lazily instantiating kernel_";
     kernel_ = std::make_unique<ComputeShader>(
         escher_,
         std::vector<vk::ImageLayout>{vk::ImageLayout::eShaderReadOnlyOptimal,
@@ -445,14 +445,14 @@ TexturePtr SsdoAccelerator::GenerateNullLookupTable(
   ImagePtr tmp_image = image_factory_->NewImage(
       {vk::Format::eR8G8B8A8Unorm, packed_width, packed_height, 1,
        image_flags | vk::ImageUsageFlagBits::eStorage});
-  TexturePtr tmp_texture = ftl::MakeRefCounted<Texture>(
+  TexturePtr tmp_texture = fxl::MakeRefCounted<Texture>(
       escher_->resource_recycler(), tmp_image, vk::Filter::eNearest,
       vk::ImageAspectFlagBits::eColor, true);
   command_buffer->TransitionImageLayout(tmp_image, vk::ImageLayout::eUndefined,
                                         vk::ImageLayout::eGeneral);
 
   if (!null_kernel_) {
-    FTL_DLOG(INFO) << "Lazily instantiating null_kernel_";
+    FXL_DLOG(INFO) << "Lazily instantiating null_kernel_";
     null_kernel_ = std::make_unique<ComputeShader>(
         escher_,
         std::vector<vk::ImageLayout>{vk::ImageLayout::eShaderReadOnlyOptimal,
@@ -474,10 +474,10 @@ TexturePtr SsdoAccelerator::UnpackLookupTable(
     uint32_t height,
     Timestamper* timestamper) {
   constexpr uint32_t kSize = 8;
-  FTL_DCHECK(width <= packed_lookup_table->width() * 4);
-  FTL_DCHECK(height <= packed_lookup_table->height() * 4);
-  FTL_DCHECK(width + kSize > packed_lookup_table->width() * 4);
-  FTL_DCHECK(height + kSize > packed_lookup_table->height() * 4);
+  FXL_DCHECK(width <= packed_lookup_table->width() * 4);
+  FXL_DCHECK(height <= packed_lookup_table->height() * 4);
+  FXL_DCHECK(width + kSize > packed_lookup_table->width() * 4);
+  FXL_DCHECK(height + kSize > packed_lookup_table->height() * 4);
 
   ImagePtr result_image =
       image_factory_->NewImage({vk::Format::eR8G8B8A8Unorm, width, height, 1,
@@ -485,7 +485,7 @@ TexturePtr SsdoAccelerator::UnpackLookupTable(
                                     vk::ImageUsageFlagBits::eTransferSrc});
   command_buffer->TransitionImageLayout(
       result_image, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
-  TexturePtr result_texture = ftl::MakeRefCounted<Texture>(
+  TexturePtr result_texture = fxl::MakeRefCounted<Texture>(
       escher_->resource_recycler(), result_image, vk::Filter::eNearest,
       vk::ImageAspectFlagBits::eColor);
 
@@ -493,7 +493,7 @@ TexturePtr SsdoAccelerator::UnpackLookupTable(
   uint32_t work_groups_y = height / kSize + (height % kSize > 0 ? 1 : 0);
 
   if (!unpack_kernel_) {
-    FTL_DLOG(INFO) << "Lazily instantiating unpack_kernel_";
+    FXL_DLOG(INFO) << "Lazily instantiating unpack_kernel_";
     unpack_kernel_ = std::make_unique<ComputeShader>(
         escher_,
         std::vector<vk::ImageLayout>{vk::ImageLayout::eGeneral,

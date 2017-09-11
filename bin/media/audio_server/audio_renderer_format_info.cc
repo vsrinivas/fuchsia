@@ -42,7 +42,7 @@ AudioRendererFormatInfo::AudioRendererFormatInfo(
       // AudioRendererImpl::SetMediaType.  It should never be attempting to
       // create a FormatInfo structure with a sample format that we do not
       // understand.
-      FTL_CHECK(false) << "unrecognized sample format";
+      FXL_CHECK(false) << "unrecognized sample format";
       bytes_per_frame_ = 2;
       break;
   }

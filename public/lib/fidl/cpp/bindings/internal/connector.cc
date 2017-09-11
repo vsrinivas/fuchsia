@@ -4,9 +4,9 @@
 
 #include "lib/fidl/cpp/bindings/internal/connector.h"
 
-#include "lib/ftl/compiler_specific.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/compiler_specific.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 
 #include <mx/time.h>
 
@@ -46,13 +46,13 @@ mx::channel Connector::PassChannel() {
   return std::move(channel_);
 }
 
-bool Connector::WaitForIncomingMessage(ftl::TimeDelta timeout) {
+bool Connector::WaitForIncomingMessage(fxl::TimeDelta timeout) {
   if (error_)
     return false;
 
   mx_signals_t pending = MX_SIGNAL_NONE;
   mx_status_t rv = channel_.wait_one(MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
-                                     timeout == ftl::TimeDelta::Max()
+                                     timeout == fxl::TimeDelta::Max()
                                          ? MX_TIME_INFINITE
                                          : mx::deadline_after(timeout.ToNanoseconds()),
                                      &pending);
@@ -64,11 +64,11 @@ bool Connector::WaitForIncomingMessage(ftl::TimeDelta timeout) {
   }
   if (pending & MX_CHANNEL_READABLE) {
     bool ok = ReadSingleMessage(&rv);
-    FTL_ALLOW_UNUSED_LOCAL(ok);
+    FXL_ALLOW_UNUSED_LOCAL(ok);
     return (rv == MX_OK);
   }
 
-  FTL_DCHECK(pending & MX_CHANNEL_PEER_CLOSED);
+  FXL_DCHECK(pending & MX_CHANNEL_PEER_CLOSED);
   NotifyError();
   return false;
 }
@@ -77,7 +77,7 @@ bool Connector::Accept(Message* message) {
   if (error_)
     return false;
 
-  FTL_CHECK(channel_);
+  FXL_CHECK(channel_);
   if (drop_writes_)
     return true;
 
@@ -122,13 +122,13 @@ void Connector::CallOnHandleReady(mx_status_t result,
 void Connector::OnHandleReady(mx_status_t result,
                               mx_signals_t pending,
                               uint64_t count) {
-  FTL_CHECK(async_wait_id_ != 0);
+  FXL_CHECK(async_wait_id_ != 0);
   async_wait_id_ = 0;
   if (result != MX_OK) {
     NotifyError();
     return;
   }
-  FTL_DCHECK(!error_);
+  FXL_DCHECK(!error_);
 
   if (pending & MX_CHANNEL_READABLE) {
     // Return immediately if |this| was destroyed. Do not touch any members!
@@ -139,7 +139,7 @@ void Connector::OnHandleReady(mx_status_t result,
 
       // If we get MX_ERR_PEER_CLOSED (or another error), we'll already have
       // notified the error and likely been destroyed.
-      FTL_DCHECK(rv == MX_OK || rv == MX_ERR_SHOULD_WAIT);
+      FXL_DCHECK(rv == MX_OK || rv == MX_ERR_SHOULD_WAIT);
       if (rv != MX_OK) {
         break;
       }
@@ -155,7 +155,7 @@ void Connector::OnHandleReady(mx_status_t result,
 }
 
 void Connector::WaitToReadMore() {
-  FTL_CHECK(!async_wait_id_);
+  FXL_CHECK(!async_wait_id_);
   async_wait_id_ = waiter_->AsyncWait(
       channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
       MX_TIME_INFINITE, &Connector::CallOnHandleReady, this);

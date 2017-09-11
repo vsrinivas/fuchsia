@@ -23,7 +23,7 @@ View::View(app::ApplicationContext* application_context,
                          mozart::example::ShadertoyFactory>()),
       start_time_(mx_time_get(MX_CLOCK_MONOTONIC)) {
   shadertoy_factory_.set_connection_error_handler([this] {
-    FTL_LOG(INFO) << "Lost connection to ShadertoyFactory.";
+    FXL_LOG(INFO) << "Lost connection to ShadertoyFactory.";
     loop_->QuitNow();
   });
 
@@ -34,7 +34,7 @@ View::View(app::ApplicationContext* application_context,
   shadertoy_factory_->NewImagePipeShadertoy(shadertoy_.NewRequest(),
                                             std::move(image_pipe_handle));
   shadertoy_.set_connection_error_handler([this] {
-    FTL_LOG(INFO) << "Lost connection to Shadertoy.";
+    FXL_LOG(INFO) << "Lost connection to Shadertoy.";
     loop_->QuitNow();
   });
 
@@ -44,10 +44,10 @@ View::View(app::ApplicationContext* application_context,
   shadertoy_->SetResolution(kShapeWidth, kShapeHeight);
   shadertoy_->SetShaderCode(GetSeascapeSourceCode(), [this](bool success) {
     if (success) {
-      FTL_LOG(INFO) << "GLSL code was successfully compiled.";
+      FXL_LOG(INFO) << "GLSL code was successfully compiled.";
       shadertoy_->SetPaused(false);
     } else {
-      FTL_LOG(ERROR) << "GLSL code compilation failed";
+      FXL_LOG(ERROR) << "GLSL code compilation failed";
       loop_->QuitNow();
     }
   });

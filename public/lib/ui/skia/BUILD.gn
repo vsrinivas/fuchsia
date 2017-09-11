@@ -22,7 +22,7 @@ source_set("fonts") {
     ":type_converters",
     ":vmo",
     "//garnet/public/lib/fonts/fidl",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//third_party/skia",
   ]
 }
@@ -46,7 +46,7 @@ source_set("vmo") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",
     "//third_party/skia",

@@ -12,9 +12,9 @@
 #include "lib/media/fidl/logs/media_packet_consumer_channel.fidl.h"
 #include "lib/media/fidl/media_transport.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/synchronization/thread_checker.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/synchronization/thread_checker.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace media {
 
@@ -53,7 +53,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
     SupplyPacketCallback callback_;
     std::shared_ptr<SuppliedPacketCounter> counter_;
 
-    FTL_DECLARE_THREAD_CHECKER(thread_checker_);
+    FXL_DECLARE_THREAD_CHECKER(thread_checker_);
 
     // So the constructor can be private.
     friend class MediaPacketConsumerBase;
@@ -140,24 +140,24 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
 
     ~SuppliedPacketCounter();
 
-    ftl::RefPtr<ftl::TaskRunner>& task_runner() { return task_runner_; }
+    fxl::RefPtr<fxl::TaskRunner>& task_runner() { return task_runner_; }
 
     // Prevents any subsequent calls to the owner.
     void Detach() {
-      FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+      FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
       owner_ = nullptr;
     }
 
     // Records the arrival of a packet.
     void OnPacketArrival() {
-      FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+      FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
       ++packets_outstanding_;
     }
 
     // Records the departure of a packet and returns the current demand update,
     // if any.
     MediaPacketDemandPtr OnPacketDeparture(uint64_t label) {
-      FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+      FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
       --packets_outstanding_;
       return (owner_ == nullptr) ? nullptr
                                  : owner_->GetDemandForPacketDeparture(label);
@@ -171,11 +171,11 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
    private:
     MediaPacketConsumerBase* owner_;
     // We keep the buffer set here, because it needs to outlive SuppliedPackets.
-    ftl::RefPtr<ftl::TaskRunner> task_runner_;
+    fxl::RefPtr<fxl::TaskRunner> task_runner_;
     SharedBufferSet buffer_set_;
     std::atomic_uint32_t packets_outstanding_;
 
-    FTL_DECLARE_THREAD_CHECKER(thread_checker_);
+    FXL_DECLARE_THREAD_CHECKER(thread_checker_);
   };
 
   // Completes a pending PullDemandUpdate if there is one and if there's an
@@ -202,7 +202,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   bool flush_pending_ = false;
   bool is_reset_ = true;
 
-  FTL_DECLARE_THREAD_CHECKER(thread_checker_);
+  FXL_DECLARE_THREAD_CHECKER(thread_checker_);
 
   FLOG_INSTANCE_CHANNEL(logs::MediaPacketConsumerChannel, log_channel_);
 };

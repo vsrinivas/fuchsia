@@ -8,10 +8,10 @@
 #include <array>
 #include <thread>
 
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/strings/string_view.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/strings/string_view.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace debugserver {
 
@@ -37,7 +37,7 @@ class IOLoop {
     virtual ~Delegate() = default;
 
     // Called when new bytes have been read from the socket.
-    virtual void OnBytesRead(const ftl::StringView& bytes_read) = 0;
+    virtual void OnBytesRead(const fxl::StringView& bytes_read) = 0;
 
     // Called when the remote end closes the TCP connection.
     virtual void OnDisconnected() = 0;
@@ -62,19 +62,19 @@ class IOLoop {
   void Quit();
 
   // Posts an asynchronous task on the message loop to send a packet.
-  void PostWriteTask(const ftl::StringView& bytes);
+  void PostWriteTask(const fxl::StringView& bytes);
 
  protected:
   bool quit_called() const { return quit_called_; }
   int fd() const { return fd_; }
   Delegate* delegate() const { return delegate_; }
-  const ftl::RefPtr<ftl::TaskRunner>& origin_task_runner() const {
+  const fxl::RefPtr<fxl::TaskRunner>& origin_task_runner() const {
     return origin_task_runner_;
   }
-  const ftl::RefPtr<ftl::TaskRunner>& read_task_runner() const {
+  const fxl::RefPtr<fxl::TaskRunner>& read_task_runner() const {
     return read_task_runner_;
   }
-  const ftl::RefPtr<ftl::TaskRunner>& write_task_runner() const {
+  const fxl::RefPtr<fxl::TaskRunner>& write_task_runner() const {
     return write_task_runner_;
   }
 
@@ -108,17 +108,17 @@ class IOLoop {
 
   // The origin task runner used to post delegate events to the thread that
   // created this object.
-  ftl::RefPtr<ftl::TaskRunner> origin_task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> origin_task_runner_;
 
   // The task runners for the I/O threads.
-  ftl::RefPtr<ftl::TaskRunner> read_task_runner_;
-  ftl::RefPtr<ftl::TaskRunner> write_task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> read_task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> write_task_runner_;
 
   // The I/O threads.
   std::thread read_thread_;
   std::thread write_thread_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(IOLoop);
+  FXL_DISALLOW_COPY_AND_ASSIGN(IOLoop);
 };
 
 }  // namespace debugserver

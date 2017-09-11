@@ -4,13 +4,13 @@
 
 #include "garnet/bin/moterm/ledger_helpers.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace moterm {
 
 void LogLedgerError(ledger::Status status, const std::string& description) {
   if (status != ledger::Status::OK) {
-    FTL_LOG(ERROR) << description << " failed, status: " << status;
+    FXL_LOG(ERROR) << description << " failed, status: " << status;
   }
 }
 

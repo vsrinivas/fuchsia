@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -67,7 +67,7 @@ class CallbackJoiner : public std::enable_shared_from_this<CallbackJoiner> {
 
   // Indicates the completion of a child operation.
   void Complete() {
-    FTL_DCHECK(counter_ != 0);
+    FXL_DCHECK(counter_ != 0);
     --counter_;
     if (counter_ == 0 && join_callback_) {
       std::function<void()> join_callback;
@@ -82,9 +82,9 @@ class CallbackJoiner : public std::enable_shared_from_this<CallbackJoiner> {
   std::function<void()> NewCallback() {
     Spawn();
     std::shared_ptr<CallbackJoiner> this_ptr = shared_from_this();
-    FTL_DCHECK(!this_ptr.unique());
+    FXL_DCHECK(!this_ptr.unique());
     return [this_ptr]() {
-      FTL_DCHECK(this_ptr);
+      FXL_DCHECK(this_ptr);
       this_ptr->Complete();
     };
   }
@@ -95,8 +95,8 @@ class CallbackJoiner : public std::enable_shared_from_this<CallbackJoiner> {
   // copy called later (and reset) when all child oeprations have completed.
   // Only one callback at a time can be registered with WhenJoined.
   void WhenJoined(const std::function<void()>& join_callback) {
-    FTL_DCHECK(join_callback);
-    FTL_DCHECK(!join_callback_);
+    FXL_DCHECK(join_callback);
+    FXL_DCHECK(!join_callback_);
     if (counter_ == 0) {
       join_callback();
     } else {

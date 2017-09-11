@@ -21,12 +21,12 @@ Handle::Handle(mx_handle_t handle) : handle_(handle) {}
 Handle::~Handle() {
   if (is_valid()) {
     mx_status_t status = Close();
-    FTL_DCHECK(status == MX_OK);
+    FXL_DCHECK(status == MX_OK);
   }
 }
 
-ftl::RefPtr<Handle> Handle::Create(mx_handle_t handle) {
-  return ftl::MakeRefCounted<Handle>(handle);
+fxl::RefPtr<Handle> Handle::Create(mx_handle_t handle) {
+  return fxl::MakeRefCounted<Handle>(handle);
 }
 
 Dart_Handle Handle::CreateInvalid() {
@@ -34,7 +34,7 @@ Dart_Handle Handle::CreateInvalid() {
 }
 
 mx_handle_t Handle::ReleaseHandle() {
-  FTL_DCHECK(is_valid());
+  FXL_DCHECK(is_valid());
 
   mx_handle_t handle = handle_;
   handle_ = MX_HANDLE_INVALID;
@@ -44,7 +44,7 @@ mx_handle_t Handle::ReleaseHandle() {
     waiters_.back()->Cancel();
   }
 
-  FTL_DCHECK(!is_valid());
+  FXL_DCHECK(!is_valid());
 
   return handle;
 }
@@ -57,14 +57,14 @@ mx_status_t Handle::Close() {
   return MX_ERR_BAD_HANDLE;
 }
 
-ftl::RefPtr<HandleWaiter> Handle::AsyncWait(mx_signals_t signals,
+fxl::RefPtr<HandleWaiter> Handle::AsyncWait(mx_signals_t signals,
                                             Dart_Handle callback) {
   if (!is_valid()) {
-    FTL_LOG(WARNING) << "Attempt to wait on an invalid handle.";
+    FXL_LOG(WARNING) << "Attempt to wait on an invalid handle.";
     return nullptr;
   }
 
-  ftl::RefPtr<HandleWaiter> waiter =
+  fxl::RefPtr<HandleWaiter> waiter =
       HandleWaiter::Create(this, signals, callback);
   waiters_.push_back(waiter.get());
 
@@ -72,10 +72,10 @@ ftl::RefPtr<HandleWaiter> Handle::AsyncWait(mx_signals_t signals,
 }
 
 void Handle::ReleaseWaiter(HandleWaiter* waiter) {
-  FTL_DCHECK(waiter);
+  FXL_DCHECK(waiter);
   auto iter = std::find(waiters_.cbegin(), waiters_.cend(), waiter);
-  FTL_DCHECK(iter != waiters_.cend());
-  FTL_DCHECK(*iter == waiter);
+  FXL_DCHECK(iter != waiters_.cend());
+  FXL_DCHECK(*iter == waiter);
   waiters_.erase(iter);
 }
 

@@ -76,7 +76,7 @@ class MessageRelay : public MessageRelayBase {
   std::function<void(std::vector<uint8_t>)> message_received_callback_;
   std::function<void()> channel_closed_callback_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MessageRelay);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MessageRelay);
 };
 
 }  // namespace netconnector

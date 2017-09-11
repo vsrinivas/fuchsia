@@ -12,7 +12,7 @@ source_set("sdk_ext") {
     "//garnet/public/lib/ui/views/fidl",
     "//dart/runtime:dart_api",
     "//garnet/public/dart-pkg/zircon",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//lib/tonic",
     "//magenta/system/ulib/mx",
   ]

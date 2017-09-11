@@ -9,7 +9,7 @@
 #include "garnet/examples/ui/shadertoy/service/services/shadertoy_factory.fidl.h"
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/view_framework/base_view.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace shadertoy_client {
 
@@ -36,7 +36,7 @@ class View : public mozart::BaseView {
 
   const mx_time_t start_time_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(View);
+  FXL_DISALLOW_COPY_AND_ASSIGN(View);
 };
 
 }  // namespace shadertoy_client

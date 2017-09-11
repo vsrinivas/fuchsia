@@ -30,10 +30,10 @@ void HandleWaiter::RegisterNatives(tonic::DartLibraryNatives* natives) {
   natives->Register({FOR_EACH_BINDING(DART_REGISTER_NATIVE)});
 }
 
-ftl::RefPtr<HandleWaiter> HandleWaiter::Create(Handle* handle,
+fxl::RefPtr<HandleWaiter> HandleWaiter::Create(Handle* handle,
                                                mx_signals_t signals,
                                                Dart_Handle callback) {
-  return ftl::MakeRefCounted<HandleWaiter>(handle, signals, callback);
+  return fxl::MakeRefCounted<HandleWaiter>(handle, signals, callback);
 }
 
 HandleWaiter::HandleWaiter(Handle* handle,
@@ -42,27 +42,27 @@ HandleWaiter::HandleWaiter(Handle* handle,
     : waiter_(fidl::GetDefaultAsyncWaiter()),
       handle_(handle),
       callback_(DartState::Current(), callback) {
-  FTL_CHECK(handle_ != nullptr);
-  FTL_CHECK(handle_->is_valid());
+  FXL_CHECK(handle_ != nullptr);
+  FXL_CHECK(handle_->is_valid());
 
   wait_id_ = waiter_->AsyncWait(handle_->handle(), signals, MX_TIME_INFINITE,
                                 HandleWaiter::CallOnWaitComplete, this);
-  FTL_DCHECK(wait_id_ != 0);
+  FXL_DCHECK(wait_id_ != 0);
 }
 
 HandleWaiter::~HandleWaiter() {
   // Destructor shouldn't be called until it has been released from its
   // Handle.
-  FTL_DCHECK(!handle_);
+  FXL_DCHECK(!handle_);
   // Destructor shouldn't be called until the wait has completed or been
   // cancelled.
-  FTL_DCHECK(!wait_id_);
+  FXL_DCHECK(!wait_id_);
 }
 
 void HandleWaiter::Cancel() {
   if (wait_id_ && handle_) {
     // Hold a reference to this object.
-    ftl::RefPtr<HandleWaiter> ref(this);
+    fxl::RefPtr<HandleWaiter> ref(this);
 
     // Cancel the wait and clear wait_id_.
     waiter_->CancelWait(wait_id_);
@@ -72,19 +72,19 @@ void HandleWaiter::Cancel() {
     handle_->ReleaseWaiter(this);
     handle_ = nullptr;
   }
-  FTL_DCHECK(handle_ == nullptr);
-  FTL_DCHECK(wait_id_ == 0);
+  FXL_DCHECK(handle_ == nullptr);
+  FXL_DCHECK(wait_id_ == 0);
 }
 
 void HandleWaiter::OnWaitComplete(mx_status_t status, mx_signals_t pending) {
-  FTL_DCHECK(wait_id_);
-  FTL_DCHECK(handle_);
+  FXL_DCHECK(wait_id_);
+  FXL_DCHECK(handle_);
 
-  FTL_DCHECK(!callback_.is_empty());
-  FTL_DCHECK(callback_.dart_state());
+  FXL_DCHECK(!callback_.is_empty());
+  FXL_DCHECK(callback_.dart_state());
 
   // Hold a reference to this object.
-  ftl::RefPtr<HandleWaiter> ref(this);
+  fxl::RefPtr<HandleWaiter> ref(this);
 
   // Ask the handle to release this waiter.
   handle_->ReleaseWaiter(this);

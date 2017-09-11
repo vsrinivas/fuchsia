@@ -15,7 +15,7 @@
 #include "escher/shape/mesh_builder.h"
 #include "escher/shape/mesh_builder_factory.h"
 #include "escher/vk/vulkan_context.h"
-#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/fxl/memory/ref_ptr.h"
 
 namespace escher {
 namespace impl {

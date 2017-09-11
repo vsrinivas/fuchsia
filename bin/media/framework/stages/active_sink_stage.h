@@ -8,8 +8,8 @@
 
 #include "garnet/bin/media/framework/models/active_sink.h"
 #include "garnet/bin/media/framework/stages/stage_impl.h"
-#include "lib/ftl/synchronization/mutex.h"
-#include "lib/ftl/synchronization/thread_annotations.h"
+#include "lib/fxl/synchronization/mutex.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media {
 
@@ -43,23 +43,23 @@ class ActiveSinkStageImpl : public StageImpl, public ActiveSinkStage {
 
  protected:
   // StageImpl implementation.
-  ftl::RefPtr<ftl::TaskRunner> GetNodeTaskRunner() override;
+  fxl::RefPtr<fxl::TaskRunner> GetNodeTaskRunner() override;
 
   void Update() override;
 
  private:
   // ActiveSinkStage implementation.
-  void SetTaskRunner(ftl::RefPtr<ftl::TaskRunner> task_runner) override;
+  void SetTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner) override;
 
-  void PostTask(const ftl::Closure& task) override;
+  void PostTask(const fxl::Closure& task) override;
 
   void SetDemand(Demand demand) override;
 
   Input input_;
   std::shared_ptr<ActiveSink> sink_;
 
-  mutable ftl::Mutex mutex_;
-  Demand sink_demand_ FTL_GUARDED_BY(mutex_) = Demand::kNegative;
+  mutable fxl::Mutex mutex_;
+  Demand sink_demand_ FXL_GUARDED_BY(mutex_) = Demand::kNegative;
 };
 
 }  // namespace media

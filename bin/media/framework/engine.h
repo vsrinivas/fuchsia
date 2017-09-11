@@ -8,7 +8,7 @@
 
 #include "garnet/bin/media/framework/refs.h"
 #include "garnet/bin/media/framework/stages/stage_impl.h"
-#include "lib/ftl/functional/closure.h"
+#include "lib/fxl/functional/closure.h"
 
 namespace media {
 

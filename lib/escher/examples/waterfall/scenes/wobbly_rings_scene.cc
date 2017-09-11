@@ -32,12 +32,12 @@ WobblyRingsScene::WobblyRingsScene(Demo* demo,
                                    vec3 circle_color,
                                    vec3 checkerboard_color)
     : Scene(demo), clear_color_(clear_color) {
-  ring1_color_ = ftl::MakeRefCounted<escher::Material>();
-  ring2_color_ = ftl::MakeRefCounted<escher::Material>();
-  ring3_color_ = ftl::MakeRefCounted<escher::Material>();
-  circle_color_ = ftl::MakeRefCounted<escher::Material>();
-  clip_color_ = ftl::MakeRefCounted<escher::Material>();
-  checkerboard_material_ = ftl::MakeRefCounted<escher::Material>();
+  ring1_color_ = fxl::MakeRefCounted<escher::Material>();
+  ring2_color_ = fxl::MakeRefCounted<escher::Material>();
+  ring3_color_ = fxl::MakeRefCounted<escher::Material>();
+  circle_color_ = fxl::MakeRefCounted<escher::Material>();
+  clip_color_ = fxl::MakeRefCounted<escher::Material>();
+  checkerboard_material_ = fxl::MakeRefCounted<escher::Material>();
 
   ring1_color_->set_color(ring1_color);
   ring2_color_->set_color(ring2_color);
@@ -70,7 +70,7 @@ void WobblyRingsScene::Init(escher::Stage* stage) {
   TexturePtr checkerboard = escher()->NewTexture(
       escher()->NewCheckerboardImage(16, 16), vk::Filter::eNearest);
   auto checkerboard_color = checkerboard_material_->color();
-  checkerboard_material_ = ftl::MakeRefCounted<escher::Material>();
+  checkerboard_material_ = fxl::MakeRefCounted<escher::Material>();
   checkerboard_material_->SetTexture(checkerboard);
   checkerboard_material_->set_color(checkerboard_color);
 }

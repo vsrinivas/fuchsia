@@ -109,7 +109,7 @@ class ModelDisplayListBuilder {
   ModelPipelineSpec pipeline_spec_;
   uint32_t clip_depth_ = 0;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ModelDisplayListBuilder);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ModelDisplayListBuilder);
 };
 
 }  // namespace impl

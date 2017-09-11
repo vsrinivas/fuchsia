@@ -43,7 +43,7 @@ static_library("debugger-utils") {
   }
 
   deps = [
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 
   if (is_fuchsia) {
@@ -73,7 +73,7 @@ executable("util-unittests") {
   ]
 
   deps = [
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//third_party/gtest",
   ]
 

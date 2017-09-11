@@ -106,7 +106,7 @@ class PaperRenderer : public Renderer {
   bool sort_by_pipeline_ = true;
 
   FRIEND_REF_COUNTED_THREAD_SAFE(PaperRenderer);
-  FTL_DISALLOW_COPY_AND_ASSIGN(PaperRenderer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PaperRenderer);
 };
 
 }  // namespace escher

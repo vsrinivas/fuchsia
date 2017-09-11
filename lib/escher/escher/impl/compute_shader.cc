@@ -34,9 +34,9 @@ inline std::vector<vk::DescriptorSetLayoutBinding> CreateLayoutBindings(
         descriptor_type = vk::DescriptorType::eStorageImage;
         break;
       default:
-        FTL_LOG(ERROR) << "unsupported layout: "
+        FXL_LOG(ERROR) << "unsupported layout: "
                        << vk::to_string(layouts[index]);
-        FTL_CHECK(false);
+        FXL_CHECK(false);
         descriptor_type = vk::DescriptorType::eStorageImage;
     }
     result.push_back({index, descriptor_type, 1,
@@ -90,7 +90,7 @@ PipelinePtr CreatePipeline(vk::Device device,
   pipeline_layout_info.pPushConstantRanges =
       push_constants_size > 0 ? &push_constants : nullptr;
 
-  auto pipeline_layout = ftl::MakeRefCounted<PipelineLayout>(
+  auto pipeline_layout = fxl::MakeRefCounted<PipelineLayout>(
       device, ESCHER_CHECKED_VK_RESULT(
                   device.createPipelineLayout(pipeline_layout_info, nullptr)));
 
@@ -105,7 +105,7 @@ PipelinePtr CreatePipeline(vk::Device device,
 
   vk::Pipeline vk_pipeline = ESCHER_CHECKED_VK_RESULT(
       device.createComputePipeline(nullptr, pipeline_info));
-  auto pipeline = ftl::MakeRefCounted<Pipeline>(
+  auto pipeline = fxl::MakeRefCounted<Pipeline>(
       device, vk_pipeline, pipeline_layout, PipelineSpec());
 
   device.destroyShaderModule(module);
@@ -143,7 +143,7 @@ ComputeShader::ComputeShader(Escher* escher,
                                push_constants_size_,
                                source_code,
                                escher->glsl_compiler())) {
-  FTL_DCHECK(push_constants_size == push_constants_size_);  // detect overflow
+  FXL_DCHECK(push_constants_size == push_constants_size_);  // detect overflow
   descriptor_image_info_.reserve(layouts.size());
   descriptor_buffer_info_.reserve(buffer_types.size());
   descriptor_set_writes_.reserve(layouts.size() + buffer_types.size());
@@ -183,7 +183,7 @@ void ComputeShader::Dispatch(std::vector<TexturePtr> textures,
                              const void* push_constants) {
   // Push constants must be provided if and only if the pipeline is configured
   // to use them.
-  FTL_DCHECK((push_constants_size_ == 0) == (push_constants == nullptr));
+  FXL_DCHECK((push_constants_size_ == 0) == (push_constants == nullptr));
 
   auto descriptor_set = pool_.Allocate(1, command_buffer)->get(0);
   for (uint32_t i = 0; i < textures.size(); ++i) {

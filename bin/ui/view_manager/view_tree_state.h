@@ -13,8 +13,8 @@
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "garnet/bin/ui/view_manager/view_container_state.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace view_manager {
 
@@ -39,7 +39,7 @@ class ViewTreeState : public ViewContainerState {
                 const std::string& label);
   ~ViewTreeState() override;
 
-  ftl::WeakPtr<ViewTreeState> GetWeakPtr() {
+  fxl::WeakPtr<ViewTreeState> GetWeakPtr() {
     return weak_factory_.GetWeakPtr();
   }
 
@@ -82,11 +82,11 @@ class ViewTreeState : public ViewContainerState {
 
   uint32_t invalidation_flags_ = 0u;
 
-  ftl::WeakPtr<ViewStub> focused_view_;
+  fxl::WeakPtr<ViewStub> focused_view_;
 
-  ftl::WeakPtrFactory<ViewTreeState> weak_factory_;  // must be last
+  fxl::WeakPtrFactory<ViewTreeState> weak_factory_;  // must be last
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ViewTreeState);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ViewTreeState);
 };
 
 }  // namespace view_manager

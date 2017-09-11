@@ -24,9 +24,9 @@
 #include <mx/vmo.h>
 #include <mxio/util.h>
 
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "debugger-utils/util.h"
 #include "debugger-utils/x86-pt.h"
@@ -49,8 +49,8 @@ static constexpr char pt_list_output_path_suffix[] = "ptlist";
 static constexpr uint32_t kKtraceGroupMask =
   KTRACE_GRP_ARCH | KTRACE_GRP_TASKS;
 
-static bool OpenDevices(ftl::UniqueFD* out_ipt_fd,
-                        ftl::UniqueFD* out_ktrace_fd,
+static bool OpenDevices(fxl::UniqueFD* out_ipt_fd,
+                        fxl::UniqueFD* out_ktrace_fd,
                         mx::handle* out_ktrace_handle) {
   int ipt_fd = -1;
   int ktrace_fd = -1;
@@ -59,7 +59,7 @@ static bool OpenDevices(ftl::UniqueFD* out_ipt_fd,
   if (out_ipt_fd) {
     ipt_fd = open(ipt_device_path, O_RDONLY);
     if (ipt_fd < 0) {
-      FTL_LOG(ERROR) << "open intel-pt"
+      FXL_LOG(ERROR) << "open intel-pt"
                      << ", " << util::ErrnoString(errno);
       return false;
     }
@@ -68,7 +68,7 @@ static bool OpenDevices(ftl::UniqueFD* out_ipt_fd,
   if (out_ktrace_fd || out_ktrace_handle) {
     ktrace_fd = open(ktrace_device_path, O_RDONLY);
     if (ktrace_fd < 0) {
-      FTL_LOG(ERROR) << "open ktrace"
+      FXL_LOG(ERROR) << "open ktrace"
                      << ", " << util::ErrnoString(errno);
       close(ipt_fd);
       return false;
@@ -78,7 +78,7 @@ static bool OpenDevices(ftl::UniqueFD* out_ipt_fd,
   if (out_ktrace_handle) {
     ssize_t ssize = ioctl_ktrace_get_handle(ktrace_fd, &ktrace_handle);
     if (ssize != sizeof(ktrace_handle)) {
-      FTL_LOG(ERROR) << "get ktrace handle" << ", " << util::ErrnoString(errno);
+      FXL_LOG(ERROR) << "get ktrace handle" << ", " << util::ErrnoString(errno);
       close(ipt_fd);
       close(ktrace_fd);
       return false;
@@ -102,16 +102,16 @@ static bool OpenDevices(ftl::UniqueFD* out_ipt_fd,
 }
 
 bool SetPerfMode(const IptConfig& config) {
-  FTL_LOG(INFO) << "SetPerfMode called";
+  FXL_LOG(INFO) << "SetPerfMode called";
 
-  ftl::UniqueFD ipt_fd;
+  fxl::UniqueFD ipt_fd;
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return false;
 
   uint32_t mode = config.mode;
   ssize_t ssize = ioctl_ipt_set_mode(ipt_fd.get(), &mode);
   if (ssize < 0) {
-    FTL_LOG(ERROR) << "set perf mode: " << util::MxErrorString(ssize);
+    FXL_LOG(ERROR) << "set perf mode: " << util::MxErrorString(ssize);
     goto Fail;
   }
 
@@ -136,10 +136,10 @@ static void InitIptBufferConfig(ioctl_ipt_buffer_config_t* ipt_config,
 }
 
 bool InitCpuPerf(const IptConfig& config) {
-  FTL_LOG(INFO) << "InitCpuPerf called";
-  FTL_DCHECK(config.mode == IPT_MODE_CPUS);
+  FXL_LOG(INFO) << "InitCpuPerf called";
+  FXL_DCHECK(config.mode == IPT_MODE_CPUS);
 
-  ftl::UniqueFD ipt_fd;
+  fxl::UniqueFD ipt_fd;
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return false;
 
@@ -152,7 +152,7 @@ bool InitCpuPerf(const IptConfig& config) {
     uint32_t descriptor;
     ssize = ioctl_ipt_alloc_buffer(ipt_fd.get(), &ipt_config, &descriptor);
     if (ssize < 0) {
-      FTL_LOG(ERROR) << "init cpu perf: " << util::MxErrorString(ssize);
+      FXL_LOG(ERROR) << "init cpu perf: " << util::MxErrorString(ssize);
       goto Fail;
     }
     // Buffers are automagically assigned to cpus, descriptor == cpu#,
@@ -161,7 +161,7 @@ bool InitCpuPerf(const IptConfig& config) {
 
   ssize = ioctl_ipt_cpu_mode_alloc(ipt_fd.get());
   if (ssize < 0) {
-    FTL_LOG(ERROR) << "init perf: " << util::MxErrorString(ssize);
+    FXL_LOG(ERROR) << "init perf: " << util::MxErrorString(ssize);
     goto Fail;
   }
 
@@ -172,10 +172,10 @@ bool InitCpuPerf(const IptConfig& config) {
 }
 
 bool InitThreadPerf(Thread* thread, const IptConfig& config) {
-  FTL_LOG(INFO) << "InitThreadPerf called";
-  FTL_DCHECK(config.mode == IPT_MODE_THREADS);
+  FXL_LOG(INFO) << "InitThreadPerf called";
+  FXL_DCHECK(config.mode == IPT_MODE_THREADS);
 
-  ftl::UniqueFD ipt_fd;
+  fxl::UniqueFD ipt_fd;
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return false;
 
@@ -186,7 +186,7 @@ bool InitThreadPerf(Thread* thread, const IptConfig& config) {
   ssize_t ssize = ioctl_ipt_alloc_buffer(ipt_fd.get(), &ipt_config,
                                          &descriptor);
   if (ssize < 0) {
-    FTL_LOG(ERROR) << "init thread perf: " << util::MxErrorString(ssize);
+    FXL_LOG(ERROR) << "init thread perf: " << util::MxErrorString(ssize);
     goto Fail;
   }
 
@@ -201,7 +201,7 @@ bool InitThreadPerf(Thread* thread, const IptConfig& config) {
 // process start record for it.
 
 bool InitPerfPreProcess(const IptConfig& config) {
-  FTL_LOG(INFO) << "InitPerfPreProcess called";
+  FXL_LOG(INFO) << "InitPerfPreProcess called";
 
   mx::handle ktrace_handle;
   mx_status_t status;
@@ -226,13 +226,13 @@ bool InitPerfPreProcess(const IptConfig& config) {
   status = mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_STOP, 0,
                              nullptr);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "ktrace stop: " << util::MxErrorString(status);
+    FXL_LOG(ERROR) << "ktrace stop: " << util::MxErrorString(status);
     goto Fail;
   }
   status = mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_REWIND, 0,
                              nullptr);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "ktrace rewind: " << util::MxErrorString(status);
+    FXL_LOG(ERROR) << "ktrace rewind: " << util::MxErrorString(status);
     goto Fail;
   }
 #endif
@@ -251,7 +251,7 @@ bool InitPerfPreProcess(const IptConfig& config) {
   status = mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_START,
                              kKtraceGroupMask, nullptr);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "ktrace start: " << util::MxErrorString(status);
+    FXL_LOG(ERROR) << "ktrace start: " << util::MxErrorString(status);
     goto Fail;
   }
 
@@ -269,16 +269,16 @@ bool InitPerfPreProcess(const IptConfig& config) {
 }
 
 bool StartCpuPerf(const IptConfig& config) {
-  FTL_LOG(INFO) << "StartCpuPerf called";
-  FTL_DCHECK(config.mode == IPT_MODE_CPUS);
+  FXL_LOG(INFO) << "StartCpuPerf called";
+  FXL_DCHECK(config.mode == IPT_MODE_CPUS);
 
-  ftl::UniqueFD ipt_fd;
+  fxl::UniqueFD ipt_fd;
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return false;
 
   ssize_t ssize = ioctl_ipt_cpu_mode_start(ipt_fd.get());
   if (ssize < 0) {
-    FTL_LOG(ERROR) << "start cpu perf: " << util::MxErrorString(ssize);
+    FXL_LOG(ERROR) << "start cpu perf: " << util::MxErrorString(ssize);
     ioctl_ipt_cpu_mode_free(ipt_fd.get());
     goto Fail;
   }
@@ -290,17 +290,17 @@ bool StartCpuPerf(const IptConfig& config) {
 }
 
 bool StartThreadPerf(Thread* thread, const IptConfig& config) {
-  FTL_LOG(INFO) << "StartThreadPerf called";
-  FTL_DCHECK(config.mode == IPT_MODE_THREADS);
+  FXL_LOG(INFO) << "StartThreadPerf called";
+  FXL_DCHECK(config.mode == IPT_MODE_THREADS);
 
   if (thread->ipt_buffer() < 0) {
-    FTL_LOG(INFO) << ftl::StringPrintf("Thread %" PRIu64 " has no IPT buffer",
+    FXL_LOG(INFO) << fxl::StringPrintf("Thread %" PRIu64 " has no IPT buffer",
                                        thread->id());
     // TODO(dje): For now. This isn't an error in the normal sense.
     return true;
   }
 
-  ftl::UniqueFD ipt_fd;
+  fxl::UniqueFD ipt_fd;
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return false;
 
@@ -311,14 +311,14 @@ bool StartThreadPerf(Thread* thread, const IptConfig& config) {
   status = mx_handle_duplicate(thread->handle(), MX_RIGHT_SAME_RIGHTS,
                                &assign.thread);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "duplicating thread handle: "
+    FXL_LOG(ERROR) << "duplicating thread handle: "
                    << util::MxErrorString(status);
     goto Fail;
   }
   assign.descriptor = thread->ipt_buffer();
   ssize = ioctl_ipt_assign_buffer_thread(ipt_fd.get(), &assign);
   if (ssize < 0) {
-    FTL_LOG(ERROR) << "assigning ipt buffer to thread: "
+    FXL_LOG(ERROR) << "assigning ipt buffer to thread: "
                    << util::MxErrorString(ssize);
     goto Fail;
   }
@@ -330,31 +330,31 @@ bool StartThreadPerf(Thread* thread, const IptConfig& config) {
 }
 
 void StopCpuPerf(const IptConfig& config) {
-  FTL_LOG(INFO) << "StopCpuPerf called";
-  FTL_DCHECK(config.mode == IPT_MODE_CPUS);
+  FXL_LOG(INFO) << "StopCpuPerf called";
+  FXL_DCHECK(config.mode == IPT_MODE_CPUS);
 
-  ftl::UniqueFD ipt_fd;
+  fxl::UniqueFD ipt_fd;
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return;
 
   ssize_t ssize = ioctl_ipt_cpu_mode_stop(ipt_fd.get());
   if (ssize < 0) {
     // TODO(dje): This is really bad, this shouldn't fail.
-    FTL_LOG(ERROR) << "stop cpu perf: " << util::MxErrorString(ssize);
+    FXL_LOG(ERROR) << "stop cpu perf: " << util::MxErrorString(ssize);
   }
 }
 
 void StopThreadPerf(Thread* thread, const IptConfig& config) {
-  FTL_LOG(INFO) << "StopThreadPerf called";
-  FTL_DCHECK(config.mode == IPT_MODE_THREADS);
+  FXL_LOG(INFO) << "StopThreadPerf called";
+  FXL_DCHECK(config.mode == IPT_MODE_THREADS);
 
   if (thread->ipt_buffer() < 0) {
-    FTL_LOG(INFO) << ftl::StringPrintf("Thread %" PRIu64 " has no IPT buffer",
+    FXL_LOG(INFO) << fxl::StringPrintf("Thread %" PRIu64 " has no IPT buffer",
                                        thread->id());
     return;
   }
 
-  ftl::UniqueFD ipt_fd;
+  fxl::UniqueFD ipt_fd;
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return;
 
@@ -365,14 +365,14 @@ void StopThreadPerf(Thread* thread, const IptConfig& config) {
   status = mx_handle_duplicate(thread->handle(), MX_RIGHT_SAME_RIGHTS,
                                &assign.thread);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "duplicating thread handle: "
+    FXL_LOG(ERROR) << "duplicating thread handle: "
                    << util::MxErrorString(status);
     goto Fail;
   }
   assign.descriptor = thread->ipt_buffer();
   ssize = ioctl_ipt_release_buffer_thread(ipt_fd.get(), &assign);
   if (ssize < 0) {
-    FTL_LOG(ERROR) << "releasing ipt buffer from thread: "
+    FXL_LOG(ERROR) << "releasing ipt buffer from thread: "
                    << util::MxErrorString(ssize);
     goto Fail;
   }
@@ -382,7 +382,7 @@ void StopThreadPerf(Thread* thread, const IptConfig& config) {
 }
 
 void StopPerf(const IptConfig& config) {
-  FTL_LOG(INFO) << "StopPerf called";
+  FXL_LOG(INFO) << "StopPerf called";
 
   mx::handle ktrace_handle;
   if (!OpenDevices(nullptr, nullptr, &ktrace_handle))
@@ -394,21 +394,21 @@ void StopPerf(const IptConfig& config) {
     mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_STOP, 0, nullptr);
   if (status != MX_OK) {
     // TODO(dje): This shouldn't fail either, should it?
-    FTL_LOG(ERROR) << "stop ktrace: " << util::MxErrorString(status);
+    FXL_LOG(ERROR) << "stop ktrace: " << util::MxErrorString(status);
   }
 }
 
 static std::string GetCpuPtFileName(const std::string& output_path_prefix,
                                     uint64_t id) {
   const char* name_prefix = "cpu";
-  return ftl::StringPrintf("%s.%s%" PRIu64 ".%s", output_path_prefix.c_str(),
+  return fxl::StringPrintf("%s.%s%" PRIu64 ".%s", output_path_prefix.c_str(),
                            name_prefix, id, buffer_output_path_suffix);
 }
 
 static std::string GetThreadPtFileName(const std::string& output_path_prefix,
                                        uint64_t id) {
   const char* name_prefix = "thr";
-  return ftl::StringPrintf("%s.%s%" PRIu64 ".%s", output_path_prefix.c_str(),
+  return fxl::StringPrintf("%s.%s%" PRIu64 ".%s", output_path_prefix.c_str(),
                            name_prefix, id, buffer_output_path_suffix);
 }
 
@@ -416,7 +416,7 @@ static std::string GetThreadPtFileName(const std::string& output_path_prefix,
 // The file's name is $output_path_prefix.$name_prefix$id.pt.
 
 static mx_status_t WriteBufferData(const IptConfig& config,
-                                   const ftl::UniqueFD& ipt_fd,
+                                   const fxl::UniqueFD& ipt_fd,
                                    uint32_t descriptor,
                                    uint64_t id) {
   std::string output_path;
@@ -435,7 +435,7 @@ static mx_status_t WriteBufferData(const IptConfig& config,
   ssize_t ssize = ioctl_ipt_get_buffer_config(ipt_fd.get(), &descriptor,
                                               &buffer_config);
   if (ssize < 0) {
-    FTL_LOG(ERROR) << ftl::StringPrintf(
+    FXL_LOG(ERROR) << fxl::StringPrintf(
                           "ioctl_ipt_get_buffer_config: buffer %u: ",
                           descriptor)
                    << util::MxErrorString(ssize);
@@ -445,15 +445,15 @@ static mx_status_t WriteBufferData(const IptConfig& config,
   ioctl_ipt_buffer_info_t info;
   ssize = ioctl_ipt_get_buffer_info(ipt_fd.get(), &descriptor, &info);
   if (ssize < 0) {
-    FTL_LOG(ERROR) << ftl::StringPrintf(
+    FXL_LOG(ERROR) << fxl::StringPrintf(
                           "ioctl_ipt_get_buffer_info: buffer %u: ", descriptor)
                    << util::MxErrorString(ssize);
     return ssize;
   }
 
-  ftl::UniqueFD fd(open(c_path, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR));
+  fxl::UniqueFD fd(open(c_path, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR));
   if (!fd.is_valid()) {
-    FTL_LOG(ERROR) << ftl::StringPrintf("unable to write file: %s", c_path)
+    FXL_LOG(ERROR) << fxl::StringPrintf("unable to write file: %s", c_path)
                    << ", " << util::ErrnoString(errno);
     return MX_ERR_BAD_PATH;
   }
@@ -480,8 +480,8 @@ static mx_status_t WriteBufferData(const IptConfig& config,
     ssize = ioctl_ipt_get_buffer_handle(ipt_fd.get(), &handle_rqst,
                                         &vmo_handle);
     if (ssize < 0) {
-      FTL_LOG(ERROR)
-          << ftl::StringPrintf(
+      FXL_LOG(ERROR)
+          << fxl::StringPrintf(
                  "ioctl_ipt_get_buffer_handle: buffer %u, buffer %u: ",
                  descriptor, i)
           << util::MxErrorString(ssize);
@@ -502,14 +502,14 @@ static mx_status_t WriteBufferData(const IptConfig& config,
       // left for another day.
       status = vmo.read(buf, offset, to_write, &actual);
       if (status != MX_OK) {
-        FTL_LOG(ERROR) << ftl::StringPrintf(
+        FXL_LOG(ERROR) << fxl::StringPrintf(
                               "mx_vmo_read: buffer %u, buffer %u, offset %zu: ",
                               descriptor, i, offset)
                        << util::MxErrorString(status);
         goto Fail;
       }
       if (write(fd.get(), buf, to_write) != (ssize_t) to_write) {
-        FTL_LOG(ERROR) << ftl::StringPrintf("short write, file: %s\n", c_path);
+        FXL_LOG(ERROR) << fxl::StringPrintf("short write, file: %s\n", c_path);
         status = MX_ERR_IO;
         goto Fail;
       }
@@ -533,10 +533,10 @@ static mx_status_t WriteBufferData(const IptConfig& config,
 // This assumes tracing has already been stopped.
 
 void DumpCpuPerf(const IptConfig& config) {
-  FTL_LOG(INFO) << "DumpCpuPerf called";
-  FTL_DCHECK(config.mode == IPT_MODE_CPUS);
+  FXL_LOG(INFO) << "DumpCpuPerf called";
+  FXL_DCHECK(config.mode == IPT_MODE_CPUS);
 
-  ftl::UniqueFD ipt_fd;
+  fxl::UniqueFD ipt_fd;
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return;
 
@@ -544,7 +544,7 @@ void DumpCpuPerf(const IptConfig& config) {
     // Buffer descriptors for cpus is the cpu number.
     auto status = WriteBufferData(config, ipt_fd, cpu, cpu);
     if (status != MX_OK) {
-      FTL_LOG(ERROR) << ftl::StringPrintf("dump perf of cpu %u: ", cpu)
+      FXL_LOG(ERROR) << fxl::StringPrintf("dump perf of cpu %u: ", cpu)
                      << util::MxErrorString(status);
       // Keep trying to dump other cpu's data.
     }
@@ -555,53 +555,53 @@ void DumpCpuPerf(const IptConfig& config) {
 // This assumes the thread is stopped.
 
 void DumpThreadPerf(Thread* thread, const IptConfig& config) {
-  FTL_LOG(INFO) << "DumpThreadPerf called";
-  FTL_DCHECK(config.mode == IPT_MODE_THREADS);
+  FXL_LOG(INFO) << "DumpThreadPerf called";
+  FXL_DCHECK(config.mode == IPT_MODE_THREADS);
 
   mx_koid_t id = thread->id();
 
   if (thread->ipt_buffer() < 0) {
-    FTL_LOG(INFO) << ftl::StringPrintf("Thread %" PRIu64 " has no IPT buffer",
+    FXL_LOG(INFO) << fxl::StringPrintf("Thread %" PRIu64 " has no IPT buffer",
                                        id);
     return;
   }
 
-  ftl::UniqueFD ipt_fd;
+  fxl::UniqueFD ipt_fd;
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return;
 
   auto status = WriteBufferData(config, ipt_fd, thread->ipt_buffer(), id);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << ftl::StringPrintf("dump perf of thread %" PRIu64 ": ", id)
+    FXL_LOG(ERROR) << fxl::StringPrintf("dump perf of thread %" PRIu64 ": ", id)
                    << util::MxErrorString(status);
   }
 }
 
 void DumpPerf(const IptConfig& config) {
-  FTL_LOG(INFO) << "DumpPerf called";
+  FXL_LOG(INFO) << "DumpPerf called";
 
   {
-    ftl::UniqueFD ktrace_fd;
+    fxl::UniqueFD ktrace_fd;
     if (!OpenDevices(nullptr, &ktrace_fd, nullptr))
       return;
 
     std::string ktrace_output_path =
-      ftl::StringPrintf("%s.%s", config.output_path_prefix.c_str(),
+      fxl::StringPrintf("%s.%s", config.output_path_prefix.c_str(),
                         ktrace_output_path_suffix);
     const char* ktrace_c_path = ktrace_output_path.c_str();
 
-    ftl::UniqueFD dest_fd(open(ktrace_c_path, O_CREAT | O_TRUNC | O_RDWR,
+    fxl::UniqueFD dest_fd(open(ktrace_c_path, O_CREAT | O_TRUNC | O_RDWR,
                                S_IRUSR | S_IWUSR));
     if (dest_fd.is_valid()) {
       ssize_t count;
       char buf[1024];
       while ((count = read(ktrace_fd.get(), buf, sizeof(buf))) != 0) {
         if (write(dest_fd.get(), buf, count) != count) {
-          FTL_LOG(ERROR) << "error writing " << ktrace_c_path;
+          FXL_LOG(ERROR) << "error writing " << ktrace_c_path;
         }
       }
     } else {
-      FTL_LOG(ERROR) << ftl::StringPrintf("unable to create %s", ktrace_c_path)
+      FXL_LOG(ERROR) << fxl::StringPrintf("unable to create %s", ktrace_c_path)
                      << ", " << util::ErrnoString(errno);
     }
   }
@@ -609,7 +609,7 @@ void DumpPerf(const IptConfig& config) {
   // TODO(dje): UniqueFILE?
   {
     std::string cpuid_output_path =
-      ftl::StringPrintf("%s.%s", config.output_path_prefix.c_str(),
+      fxl::StringPrintf("%s.%s", config.output_path_prefix.c_str(),
                         cpuid_output_path_suffix);
     const char* cpuid_c_path = cpuid_output_path.c_str();
 
@@ -625,7 +625,7 @@ void DumpPerf(const IptConfig& config) {
       // TODO(dje): verify writes succeed
       fclose(f);
     } else {
-      FTL_LOG(ERROR) << "unable to write PT config to " << cpuid_c_path;
+      FXL_LOG(ERROR) << "unable to write PT config to " << cpuid_c_path;
     }
   }
 
@@ -633,7 +633,7 @@ void DumpPerf(const IptConfig& config) {
   // TODO(dje): Handle IPT_MODE_THREADS
   if (config.mode == IPT_MODE_CPUS) {
     std::string pt_list_output_path =
-      ftl::StringPrintf("%s.%s", config.output_path_prefix.c_str(),
+      fxl::StringPrintf("%s.%s", config.output_path_prefix.c_str(),
                         pt_list_output_path_suffix);
     const char* pt_list_c_path = pt_list_output_path.c_str();
 
@@ -646,7 +646,7 @@ void DumpPerf(const IptConfig& config) {
       // TODO(dje): verify writes succeed
       fclose(f);
     } else {
-      FTL_LOG(ERROR) << "unable to write PT list to " << pt_list_c_path;
+      FXL_LOG(ERROR) << "unable to write PT list to " << pt_list_c_path;
     }
   }
 }
@@ -656,37 +656,37 @@ void DumpPerf(const IptConfig& config) {
 // This assumes tracing has already been stopped.
 
 void ResetCpuPerf(const IptConfig& config) {
-  FTL_LOG(INFO) << "ResetCpuPerf called";
-  FTL_DCHECK(config.mode == IPT_MODE_CPUS);
+  FXL_LOG(INFO) << "ResetCpuPerf called";
+  FXL_DCHECK(config.mode == IPT_MODE_CPUS);
 
-  ftl::UniqueFD ipt_fd;
+  fxl::UniqueFD ipt_fd;
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return;
 
   ssize_t ssize = ioctl_ipt_cpu_mode_free(ipt_fd.get());
   if (ssize < 0) {
-    FTL_LOG(ERROR) << "end perf: " << util::MxErrorString(ssize);
+    FXL_LOG(ERROR) << "end perf: " << util::MxErrorString(ssize);
   }
 }
 
 void ResetThreadPerf(Thread* thread, const IptConfig& config) {
-  FTL_LOG(INFO) << "ResetThreadPerf called";
-  FTL_DCHECK(config.mode == IPT_MODE_THREADS);
+  FXL_LOG(INFO) << "ResetThreadPerf called";
+  FXL_DCHECK(config.mode == IPT_MODE_THREADS);
 
   if (thread->ipt_buffer() < 0) {
-    FTL_LOG(INFO) << ftl::StringPrintf("Thread %" PRIu64 " has no IPT buffer",
+    FXL_LOG(INFO) << fxl::StringPrintf("Thread %" PRIu64 " has no IPT buffer",
                                        thread->id());
     return;
   }
 
-  ftl::UniqueFD ipt_fd;
+  fxl::UniqueFD ipt_fd;
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return;
 
   uint32_t descriptor = thread->ipt_buffer();
   ssize_t ssize = ioctl_ipt_free_buffer(ipt_fd.get(), &descriptor);
   if (ssize < 0) {
-    FTL_LOG(ERROR) << "freeing ipt buffer: " << util::MxErrorString(ssize);
+    FXL_LOG(ERROR) << "freeing ipt buffer: " << util::MxErrorString(ssize);
     goto Fail;
   }
 
@@ -699,9 +699,9 @@ void ResetThreadPerf(Thread* thread, const IptConfig& config) {
 // This assumes tracing has already been stopped.
 
 void ResetPerf(const IptConfig& config) {
-  FTL_LOG(INFO) << "ResetPerf called";
+  FXL_LOG(INFO) << "ResetPerf called";
 
-  ftl::UniqueFD ipt_fd;
+  fxl::UniqueFD ipt_fd;
   mx::handle ktrace_handle;
   if (!OpenDevices(&ipt_fd, nullptr, &ktrace_handle))
     return;
@@ -711,7 +711,7 @@ void ResetPerf(const IptConfig& config) {
   uint32_t mode = IPT_MODE_CPUS;
   ssize_t ssize = ioctl_ipt_set_mode(ipt_fd.get(), &mode);
   if (ssize < 0) {
-    FTL_LOG(ERROR) << "reset perf mode: " << util::MxErrorString(ssize);
+    FXL_LOG(ERROR) << "reset perf mode: " << util::MxErrorString(ssize);
   }
 
   // TODO(dje): Resume original ktracing? Need ability to get old value.

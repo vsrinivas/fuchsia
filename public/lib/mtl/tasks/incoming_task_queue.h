@@ -8,21 +8,21 @@
 #include <utility>
 #include <vector>
 
-#include "lib/ftl/ftl_export.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_counted.h"
-#include "lib/ftl/synchronization/mutex.h"
-#include "lib/ftl/synchronization/thread_annotations.h"
-#include "lib/ftl/tasks/task_runner.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/fxl_export.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_counted.h"
+#include "lib/fxl/synchronization/mutex.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
+#include "lib/fxl/tasks/task_runner.h"
+#include "lib/fxl/time/time_point.h"
 
 namespace mtl {
 namespace internal {
 
-class FTL_EXPORT TaskQueueDelegate {
+class FXL_EXPORT TaskQueueDelegate {
  public:
-  virtual void PostTask(ftl::Closure task, ftl::TimePoint target_time) = 0;
+  virtual void PostTask(fxl::Closure task, fxl::TimePoint target_time) = 0;
   virtual bool RunsTasksOnCurrentThread() = 0;
 
  protected:
@@ -33,15 +33,15 @@ class FTL_EXPORT TaskQueueDelegate {
 // is ready to receive them.
 //
 // This object is threadsafe.
-class FTL_EXPORT IncomingTaskQueue : public ftl::TaskRunner {
+class FXL_EXPORT IncomingTaskQueue : public fxl::TaskRunner {
  public:
   IncomingTaskQueue();
   ~IncomingTaskQueue() override;
 
   // |TaskRunner| implementation:
-  void PostTask(ftl::Closure task) override;
-  void PostTaskForTime(ftl::Closure task, ftl::TimePoint target_time) override;
-  void PostDelayedTask(ftl::Closure task, ftl::TimeDelta delay) override;
+  void PostTask(fxl::Closure task) override;
+  void PostTaskForTime(fxl::Closure task, fxl::TimePoint target_time) override;
+  void PostDelayedTask(fxl::Closure task, fxl::TimeDelta delay) override;
   bool RunsTasksOnCurrentThread() override;
 
   // Sets the delegate and schedules all pending tasks with it.
@@ -51,16 +51,16 @@ class FTL_EXPORT IncomingTaskQueue : public ftl::TaskRunner {
   void ClearDelegate();
 
  private:
-  void AddTask(ftl::Closure task, ftl::TimePoint target_time);
+  void AddTask(fxl::Closure task, fxl::TimePoint target_time);
 
-  using Task = std::pair<ftl::Closure, ftl::TimePoint>;
+  using Task = std::pair<fxl::Closure, fxl::TimePoint>;
 
-  ftl::Mutex mutex_;
-  std::vector<Task> incoming_queue_ FTL_GUARDED_BY(mutex_);
-  TaskQueueDelegate* delegate_ FTL_GUARDED_BY(mutex_) = nullptr;
-  bool drop_incoming_tasks_ FTL_GUARDED_BY(mutex_) = false;
+  fxl::Mutex mutex_;
+  std::vector<Task> incoming_queue_ FXL_GUARDED_BY(mutex_);
+  TaskQueueDelegate* delegate_ FXL_GUARDED_BY(mutex_) = nullptr;
+  bool drop_incoming_tasks_ FXL_GUARDED_BY(mutex_) = false;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(IncomingTaskQueue);
+  FXL_DISALLOW_COPY_AND_ASSIGN(IncomingTaskQueue);
 };
 
 }  // namespace internal

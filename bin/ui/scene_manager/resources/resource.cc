@@ -18,8 +18,8 @@ Resource::Resource(Session* session,
                    scenic::ResourceId id,
                    const ResourceTypeInfo& type_info)
     : session_(session), id_(id), type_info_(type_info) {
-  FTL_DCHECK(session);
-  FTL_DCHECK(type_info.IsKindOf(Resource::kTypeInfo));
+  FXL_DCHECK(session);
+  FXL_DCHECK(type_info.IsKindOf(Resource::kTypeInfo));
   session_->IncrementResourceCount();
 }
 
@@ -28,7 +28,7 @@ Resource::~Resource() {
     import->UnbindImportedResource();
   }
   if (exported_) {
-    FTL_DCHECK(resource_linker_);
+    FXL_DCHECK(resource_linker_);
     resource_linker_->OnExportedResourceDestroyed(this);
   }
   session_->DecrementResourceCount();
@@ -62,7 +62,7 @@ void Resource::AddImport(Import* import) {
 
 void Resource::RemoveImport(Import* import) {
   auto it = std::find(imports_.begin(), imports_.end(), import);
-  FTL_DCHECK(it != imports_.end())
+  FXL_DCHECK(it != imports_.end())
       << "Import must not already be unbound from this resource.";
   imports_.erase(it);
 }
@@ -78,7 +78,7 @@ Resource* Resource::GetDelegate(const ResourceTypeInfo& type_info) {
 }
 
 void Resource::SetExported(bool exported, ResourceLinker* resource_linker) {
-  FTL_DCHECK(exported == (resource_linker != nullptr));
+  FXL_DCHECK(exported == (resource_linker != nullptr));
   exported_ = exported;
   resource_linker_ = resource_linker;
 }

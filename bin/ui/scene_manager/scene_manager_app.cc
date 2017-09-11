@@ -4,7 +4,7 @@
 
 #include "garnet/bin/ui/scene_manager/scene_manager_app.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace scene_manager {
 
@@ -20,11 +20,11 @@ SceneManagerApp::SceneManagerApp(app::ApplicationContext* app_context,
                                    &escher_,
                                    std::make_unique<escher::VulkanSwapchain>(
                                        demo_harness_->GetVulkanSwapchain())))) {
-  FTL_DCHECK(application_context_);
+  FXL_DCHECK(application_context_);
 
   application_context_->outgoing_services()->AddService<scenic::SceneManager>(
       [this](fidl::InterfaceRequest<scenic::SceneManager> request) {
-        FTL_LOG(INFO) << "Accepting connection to SceneManagerImpl";
+        FXL_LOG(INFO) << "Accepting connection to SceneManagerImpl";
         bindings_.AddBinding(scene_manager_.get(), std::move(request));
       });
 }

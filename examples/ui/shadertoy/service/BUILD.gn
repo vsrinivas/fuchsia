@@ -36,7 +36,7 @@ executable("service") {
     "//garnet/public/lib/ui/scenic:fidl_helpers",
     "//garnet/public/lib/ui/scenic/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//garnet/lib/escher/escher",
     "//garnet/lib/escher/examples/common",

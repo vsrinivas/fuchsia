@@ -13,9 +13,9 @@ SharedBufferSetAllocator::SharedBufferSetAllocator(uint32_t local_map_flags,
 SharedBufferSetAllocator::~SharedBufferSetAllocator() {}
 
 void* SharedBufferSetAllocator::AllocateRegion(uint64_t size) {
-  FTL_DCHECK(size != 0);
+  FXL_DCHECK(size != 0);
 
-  ftl::MutexLocker locker(&mutex_);
+  fxl::MutexLocker locker(&mutex_);
 
   Locator locator;
 
@@ -29,12 +29,12 @@ void* SharedBufferSetAllocator::AllocateRegion(uint64_t size) {
 }
 
 void SharedBufferSetAllocator::ReleaseRegion(void* ptr) {
-  FTL_DCHECK(ptr != nullptr);
+  FXL_DCHECK(ptr != nullptr);
 
-  ftl::MutexLocker locker(&mutex_);
+  fxl::MutexLocker locker(&mutex_);
 
   Locator locator = LocatorFromPtr(ptr);
-  FTL_DCHECK(locator.buffer_id() < buffers_.size());
+  FXL_DCHECK(locator.buffer_id() < buffers_.size());
 
   if (buffers_[locator.buffer_id()].whole()) {
     ReleaseWholeRegion(locator);
@@ -45,10 +45,10 @@ void SharedBufferSetAllocator::ReleaseRegion(void* ptr) {
 
 bool SharedBufferSetAllocator::PollForBufferUpdate(uint32_t* buffer_id_out,
                                                    mx::vmo* handle_out) {
-  FTL_DCHECK(buffer_id_out != nullptr);
-  FTL_DCHECK(handle_out != nullptr);
+  FXL_DCHECK(buffer_id_out != nullptr);
+  FXL_DCHECK(handle_out != nullptr);
 
-  ftl::MutexLocker locker(&mutex_);
+  fxl::MutexLocker locker(&mutex_);
 
   if (buffer_updates_.empty()) {
     return false;
@@ -74,7 +74,7 @@ SharedBufferSet::Locator SharedBufferSetAllocator::AllocateWholeRegion(
   free_whole_buffer_ids_by_size_.erase(free_whole_buffer_ids_by_size_.begin(),
                                        lower_bound);
 
-  FTL_DCHECK(lower_bound == free_whole_buffer_ids_by_size_.begin());
+  FXL_DCHECK(lower_bound == free_whole_buffer_ids_by_size_.begin());
 
   if (lower_bound != free_whole_buffer_ids_by_size_.end()) {
     // Found a free buffer that's large enough. Use it.
@@ -93,9 +93,9 @@ SharedBufferSet::Locator SharedBufferSetAllocator::AllocateWholeRegion(
 }
 
 void SharedBufferSetAllocator::ReleaseWholeRegion(const Locator& locator) {
-  FTL_DCHECK(locator);
-  FTL_DCHECK(locator.buffer_id() < buffers_.size());
-  FTL_DCHECK(!buffers_[locator.buffer_id()].allocator_);
+  FXL_DCHECK(locator);
+  FXL_DCHECK(locator.buffer_id() < buffers_.size());
+  FXL_DCHECK(!buffers_[locator.buffer_id()].allocator_);
 
   free_whole_buffer_ids_by_size_.insert(
       std::make_pair(buffers_[locator.buffer_id()].size_, locator.buffer_id()));
@@ -113,7 +113,7 @@ SharedBufferSet::Locator SharedBufferSetAllocator::AllocateSlicedRegion(
   }
 
   // Try allocating from the buffer.
-  FTL_DCHECK(buffers_[active_sliced_buffer_id_].allocator_);
+  FXL_DCHECK(buffers_[active_sliced_buffer_id_].allocator_);
   uint64_t offset =
       buffers_[active_sliced_buffer_id_].allocator_->AllocateRegion(size);
 
@@ -143,19 +143,19 @@ SharedBufferSet::Locator SharedBufferSetAllocator::AllocateSlicedRegion(
 
   active_sliced_buffer_id_ = buffer_id;
 
-  FTL_DCHECK(buffers_[active_sliced_buffer_id_].allocator_);
+  FXL_DCHECK(buffers_[active_sliced_buffer_id_].allocator_);
   offset = buffers_[active_sliced_buffer_id_].allocator_->AllocateRegion(size);
   // The allocation must succeed since the new buffer is at least
   // kSlicedBufferInitialSizeMultiplier times larger than size.
-  FTL_DCHECK(offset != FifoAllocator::kNullOffset);
+  FXL_DCHECK(offset != FifoAllocator::kNullOffset);
 
   return Locator(active_sliced_buffer_id_, offset);
 }
 
 void SharedBufferSetAllocator::ReleaseSlicedRegion(const Locator& locator) {
-  FTL_DCHECK(locator);
-  FTL_DCHECK(locator.buffer_id() < buffers_.size());
-  FTL_DCHECK(buffers_[locator.buffer_id()].allocator_);
+  FXL_DCHECK(locator);
+  FXL_DCHECK(locator.buffer_id() < buffers_.size());
+  FXL_DCHECK(buffers_[locator.buffer_id()].allocator_);
 
   buffers_[locator.buffer_id()].allocator_->ReleaseRegion(locator.offset());
 
@@ -190,7 +190,7 @@ uint32_t SharedBufferSetAllocator::CreateBuffer(bool whole, uint64_t size) {
 }
 
 void SharedBufferSetAllocator::DeleteBuffer(uint32_t id) {
-  FTL_DCHECK(buffers_.size() > id);
+  FXL_DCHECK(buffers_.size() > id);
   RemoveBuffer(id);
   buffers_[id].size_ = 0;
   buffers_[id].allocator_.reset();
@@ -199,7 +199,7 @@ void SharedBufferSetAllocator::DeleteBuffer(uint32_t id) {
 }
 
 void SharedBufferSetAllocator::MaybeDeleteSlicedBuffer(uint32_t id) {
-  FTL_DCHECK(buffers_[id].allocator_);
+  FXL_DCHECK(buffers_[id].allocator_);
   if (!buffers_[id].allocator_->AnyCurrentAllocatedRegions()) {
     DeleteBuffer(id);
   }

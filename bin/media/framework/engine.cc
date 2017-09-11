@@ -11,12 +11,12 @@ Engine::Engine() {}
 Engine::~Engine() {}
 
 void Engine::PrepareInput(Input* input) {
-  FTL_DCHECK(input);
+  FXL_DCHECK(input);
   VisitUpstream(input, [](Input* input, Output* output,
                           const StageImpl::UpstreamCallback& callback) {
-    FTL_DCHECK(input);
-    FTL_DCHECK(output);
-    FTL_DCHECK(!input->prepared());
+    FXL_DCHECK(input);
+    FXL_DCHECK(output);
+    FXL_DCHECK(!input->prepared());
     PayloadAllocator* allocator = input->stage()->PrepareInput(input->index());
     input->set_prepared(true);
     output->stage()->PrepareOutput(output->index(), allocator, callback);
@@ -24,19 +24,19 @@ void Engine::PrepareInput(Input* input) {
 }
 
 void Engine::UnprepareInput(Input* input) {
-  FTL_DCHECK(input);
+  FXL_DCHECK(input);
   VisitUpstream(input, [](Input* input, Output* output,
                           const StageImpl::UpstreamCallback& callback) {
-    FTL_DCHECK(input);
-    FTL_DCHECK(output);
-    FTL_DCHECK(input->prepared());
+    FXL_DCHECK(input);
+    FXL_DCHECK(output);
+    FXL_DCHECK(input->prepared());
     input->stage()->UnprepareInput(input->index());
     output->stage()->UnprepareOutput(output->index(), callback);
   });
 }
 
 void Engine::FlushOutput(Output* output, bool hold_frame) {
-  FTL_DCHECK(output);
+  FXL_DCHECK(output);
   if (!output->connected()) {
     return;
   }
@@ -44,16 +44,16 @@ void Engine::FlushOutput(Output* output, bool hold_frame) {
   VisitDownstream(
       output, [hold_frame](Output* output, Input* input,
                            const StageImpl::DownstreamCallback& callback) {
-        FTL_DCHECK(output);
-        FTL_DCHECK(input);
-        FTL_DCHECK(input->prepared());
+        FXL_DCHECK(output);
+        FXL_DCHECK(input);
+        FXL_DCHECK(input->prepared());
         output->stage()->FlushOutput(output->index());
         input->stage()->FlushInput(input->index(), hold_frame, callback);
       });
 }
 
 void Engine::VisitUpstream(Input* input, const UpstreamVisitor& visitor) {
-  FTL_DCHECK(input);
+  FXL_DCHECK(input);
 
   std::queue<Input*> backlog;
   backlog.push(input);
@@ -61,8 +61,8 @@ void Engine::VisitUpstream(Input* input, const UpstreamVisitor& visitor) {
   while (!backlog.empty()) {
     Input* input = backlog.front();
     backlog.pop();
-    FTL_DCHECK(input);
-    FTL_DCHECK(input->connected());
+    FXL_DCHECK(input);
+    FXL_DCHECK(input->connected());
 
     Output* output = input->mate();
     StageImpl* output_stage = output->stage();
@@ -74,7 +74,7 @@ void Engine::VisitUpstream(Input* input, const UpstreamVisitor& visitor) {
 }
 
 void Engine::VisitDownstream(Output* output, const DownstreamVisitor& visitor) {
-  FTL_DCHECK(output);
+  FXL_DCHECK(output);
 
   std::queue<Output*> backlog;
   backlog.push(output);
@@ -82,8 +82,8 @@ void Engine::VisitDownstream(Output* output, const DownstreamVisitor& visitor) {
   while (!backlog.empty()) {
     Output* output = backlog.front();
     backlog.pop();
-    FTL_DCHECK(output);
-    FTL_DCHECK(output->connected());
+    FXL_DCHECK(output);
+    FXL_DCHECK(output->connected());
 
     Input* input = output->mate();
     StageImpl* input_stage = input->stage();

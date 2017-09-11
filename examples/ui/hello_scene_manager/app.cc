@@ -22,8 +22,8 @@
 #include "lib/app/cpp/connect.h"
 #include "escher/util/image_utils.h"
 
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 
 #include "lib/ui/scenic/client/host_memory.h"
 #include "lib/ui/scenic/fidl_helpers.h"
@@ -47,7 +47,7 @@ App::App()
   scene_manager_ =
       application_context_->ConnectToEnvironmentService<scenic::SceneManager>();
   scene_manager_.set_connection_error_handler([this] {
-    FTL_LOG(INFO) << "Lost connection to SceneManager service.";
+    FXL_LOG(INFO) << "Lost connection to SceneManager service.";
     loop_->QuitNow();
   });
   scene_manager_->GetDisplayInfo([this](scenic::DisplayInfoPtr display_info) {
@@ -189,12 +189,12 @@ void App::CreateExampleScene(float display_width, float display_height) {
 }
 
 void App::Init(scenic::DisplayInfoPtr display_info) {
-  FTL_LOG(INFO) << "Creating new Session";
+  FXL_LOG(INFO) << "Creating new Session";
 
   // TODO: set up SessionListener.
   session_ = std::make_unique<scenic_lib::Session>(scene_manager_.get());
   session_->set_connection_error_handler([this] {
-    FTL_LOG(INFO) << "Session terminated.";
+    FXL_LOG(INFO) << "Session terminated.";
     loop_->QuitNow();
   });
 
@@ -202,7 +202,7 @@ void App::Init(scenic::DisplayInfoPtr display_info) {
   constexpr int kSessionDuration = 40;
   loop_->task_runner()->PostDelayedTask(
       [this] { ReleaseSessionResources(); },
-      ftl::TimeDelta::FromSeconds(kSessionDuration));
+      fxl::TimeDelta::FromSeconds(kSessionDuration));
 
   // Set up initial scene.
   const float display_width = static_cast<float>(display_info->physical_width);
@@ -279,7 +279,7 @@ void App::Update(uint64_t next_presentation_time) {
 }
 
 void App::ReleaseSessionResources() {
-  FTL_LOG(INFO) << "Closing session.";
+  FXL_LOG(INFO) << "Closing session.";
 
   compositor_.reset();
   camera_.reset();

@@ -21,8 +21,8 @@
 #include "garnet/bin/ui/view_manager/view_state.h"
 #include "garnet/bin/ui/view_manager/view_stub.h"
 #include "garnet/bin/ui/view_manager/view_tree_state.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace view_manager {
 
@@ -237,9 +237,9 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   std::unordered_map<uint32_t, std::unique_ptr<InputDispatcherImpl>>
       input_dispatchers_by_view_tree_token_;
 
-  ftl::WeakPtrFactory<ViewRegistry> weak_factory_;  // must be last
+  fxl::WeakPtrFactory<ViewRegistry> weak_factory_;  // must be last
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ViewRegistry);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ViewRegistry);
 };
 
 }  // namespace view_manager

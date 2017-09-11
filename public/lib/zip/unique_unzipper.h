@@ -5,7 +5,7 @@
 #ifndef LIB_ZIP_UNIQUE_UNZIPPER_H_
 #define LIB_ZIP_UNIQUE_UNZIPPER_H_
 
-#include "lib/ftl/memory/unique_object.h"
+#include "lib/fxl/memory/unique_object.h"
 
 namespace zip {
 
@@ -15,7 +15,7 @@ struct UniqueUnzipperTraits {
   static void Free(void* file);
 };
 
-using UniqueUnzipper = ftl::UniqueObject<void*, UniqueUnzipperTraits>;
+using UniqueUnzipper = fxl::UniqueObject<void*, UniqueUnzipperTraits>;
 
 }  // namespace zip
 

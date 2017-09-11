@@ -6,14 +6,14 @@
 
 #include <string>
 
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/macros.h"
 
 namespace examples {
 
 class AudioPlayerParams {
  public:
-  AudioPlayerParams(const ftl::CommandLine& command_line);
+  AudioPlayerParams(const fxl::CommandLine& command_line);
 
   bool is_valid() const { return is_valid_; }
 
@@ -32,7 +32,7 @@ class AudioPlayerParams {
   std::string service_name_;
   bool stay_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AudioPlayerParams);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AudioPlayerParams);
 };
 
 }  // namespace examples

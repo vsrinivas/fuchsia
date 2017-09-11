@@ -28,5 +28,5 @@ class UberScene3 : public Scene {
   escher::MaterialPtr color1_;
   escher::MaterialPtr color2_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(UberScene3);
+  FXL_DISALLOW_COPY_AND_ASSIGN(UberScene3);
 };

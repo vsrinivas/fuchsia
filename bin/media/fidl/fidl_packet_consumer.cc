@@ -18,7 +18,7 @@ void FidlPacketConsumer::Bind(
     const std::function<void()>& unbind_handler) {
   unbind_handler_ = unbind_handler;
   task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
-  FTL_DCHECK(task_runner_);
+  FXL_DCHECK(task_runner_);
   MediaPacketConsumerBase::Bind(std::move(packet_consumer_request));
 }
 
@@ -29,7 +29,7 @@ void FidlPacketConsumer::SetFlushRequestedCallback(
 
 void FidlPacketConsumer::OnPacketSupplied(
     std::unique_ptr<SuppliedPacket> supplied_packet) {
-  FTL_DCHECK(supplied_packet);
+  FXL_DCHECK(supplied_packet);
   stage().SupplyPacket(PacketImpl::Create(std::move(supplied_packet)));
 }
 
@@ -48,7 +48,7 @@ void FidlPacketConsumer::OnFlushRequested(bool hold_frame,
   if (flush_requested_callback_) {
     flush_requested_callback_(hold_frame, callback);
   } else {
-    FTL_DLOG(WARNING) << "flush requested but no callback registered";
+    FXL_DLOG(WARNING) << "flush requested but no callback registered";
     callback();
   }
 }
@@ -65,7 +65,7 @@ bool FidlPacketConsumer::can_accept_allocator() const {
 }
 
 void FidlPacketConsumer::set_allocator(PayloadAllocator* allocator) {
-  FTL_DLOG(ERROR) << "set_allocator called on FidlPacketConsumer";
+  FXL_DLOG(ERROR) << "set_allocator called on FidlPacketConsumer";
 }
 
 void FidlPacketConsumer::SetDownstreamDemand(Demand demand) {

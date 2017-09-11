@@ -5,7 +5,7 @@
 #include "lib/ui/scenic/client/session.h"
 
 #include "lib/ui/scenic/fidl_helpers.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace scenic_lib {
 
@@ -13,26 +13,26 @@ Session::Session(
     scenic::SessionPtr session,
     fidl::InterfaceRequest<scenic::SessionListener> session_listener)
     : session_(std::move(session)), session_listener_binding_(this) {
-  FTL_DCHECK(session_);
+  FXL_DCHECK(session_);
   if (session_listener.is_pending())
     session_listener_binding_.Bind(std::move(session_listener));
 }
 
 Session::Session(scenic::SceneManager* scene_manager)
     : session_listener_binding_(this) {
-  FTL_DCHECK(scene_manager);
+  FXL_DCHECK(scene_manager);
   scene_manager->CreateSession(session_.NewRequest(),
                                session_listener_binding_.NewBinding());
 }
 
 Session::~Session() {
-  FTL_DCHECK(resource_count_ == 0)
+  FXL_DCHECK(resource_count_ == 0)
       << "Some resources outlived the session: " << resource_count_;
 }
 
 uint32_t Session::AllocResourceId() {
   uint32_t resource_id = next_resource_id_++;
-  FTL_DCHECK(resource_id);
+  FXL_DCHECK(resource_id);
   resource_count_++;
   return resource_id;
 }
@@ -43,17 +43,17 @@ void Session::ReleaseResource(uint32_t resource_id) {
 }
 
 void Session::Enqueue(scenic::OpPtr op) {
-  FTL_DCHECK(op);
+  FXL_DCHECK(op);
   ops_.push_back(std::move(op));
 }
 
 void Session::EnqueueAcquireFence(mx::event fence) {
-  FTL_DCHECK(fence);
+  FXL_DCHECK(fence);
   acquire_fences_.push_back(std::move(fence));
 }
 
 void Session::EnqueueReleaseFence(mx::event fence) {
-  FTL_DCHECK(fence);
+  FXL_DCHECK(fence);
   release_fences_.push_back(std::move(fence));
 }
 
@@ -92,7 +92,7 @@ void Session::HitTest(uint32_t node_id,
 }
 
 void Session::OnError(const fidl::String& error) {
-  FTL_LOG(ERROR) << "Session error: " << error;
+  FXL_LOG(ERROR) << "Session error: " << error;
 }
 
 void Session::OnEvent(fidl::Array<scenic::EventPtr> events) {

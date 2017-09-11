@@ -85,7 +85,7 @@ static vk::RenderPass CreateRenderPass(vk::Device device,
 
   auto result = device.createRenderPass(info);
   if (result.result != vk::Result::eSuccess) {
-    FTL_LOG(ERROR) << "Failed to create Vulkan RenderPass.";
+    FXL_LOG(ERROR) << "Failed to create Vulkan RenderPass.";
   }
   return result.value;
 }
@@ -195,7 +195,7 @@ escher::TexturePtr Renderer::CreateWhiteTexture() {
 
   auto image = escher::image_utils::NewRgbaImage(
       &image_factory, escher()->gpu_uploader(), 1, 1, channels);
-  return ftl::MakeRefCounted<escher::Texture>(
+  return fxl::MakeRefCounted<escher::Texture>(
       escher()->resource_recycler(), std::move(image), vk::Filter::eNearest);
 }
 

@@ -14,8 +14,8 @@
 #include "escher/resources/resource_manager.h"
 #include "escher/util/hash.h"
 #include "escher/vk/gpu_mem.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 namespace impl {
@@ -63,7 +63,7 @@ class ImageCache : public ResourceManager, public ImageFactory {
                      Hash<ImageInfo>>
       unused_images_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ImageCache);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ImageCache);
 };
 
 }  // namespace impl

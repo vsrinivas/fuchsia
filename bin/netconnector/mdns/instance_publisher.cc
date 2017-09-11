@@ -4,8 +4,8 @@
 
 #include "garnet/bin/netconnector/mdns/instance_publisher.h"
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/time/time_point.h"
 
 namespace netconnector {
 namespace mdns {
@@ -36,10 +36,10 @@ InstancePublisher::InstancePublisher(MdnsAgent::Host* host,
 InstancePublisher::~InstancePublisher() {}
 
 void InstancePublisher::Start() {
-  SendRecords(ftl::TimePoint::Now());
-  SendRecords(ftl::TimePoint::Now() + ftl::TimeDelta::FromSeconds(1));
-  SendRecords(ftl::TimePoint::Now() + ftl::TimeDelta::FromSeconds(3));
-  SendRecords(ftl::TimePoint::Now() + ftl::TimeDelta::FromSeconds(7));
+  SendRecords(fxl::TimePoint::Now());
+  SendRecords(fxl::TimePoint::Now() + fxl::TimeDelta::FromSeconds(1));
+  SendRecords(fxl::TimePoint::Now() + fxl::TimeDelta::FromSeconds(3));
+  SendRecords(fxl::TimePoint::Now() + fxl::TimeDelta::FromSeconds(7));
 }
 
 void InstancePublisher::Wake() {}
@@ -48,13 +48,13 @@ void InstancePublisher::ReceiveQuestion(const DnsQuestion& question) {
   switch (question.type_) {
     case DnsType::kPtr:
       if (question.name_.dotted_string_ == service_full_name_) {
-        SendRecords(ftl::TimePoint::Now());
+        SendRecords(fxl::TimePoint::Now());
       }
       break;
     case DnsType::kSrv:
     case DnsType::kTxt:
       if (question.name_.dotted_string_ == instance_full_name_) {
-        SendRecords(ftl::TimePoint::Now());
+        SendRecords(fxl::TimePoint::Now());
       }
       break;
     default:
@@ -74,12 +74,12 @@ void InstancePublisher::Quit() {
     additional->time_to_live_ = 0;
   }
 
-  SendRecords(ftl::TimePoint::Now());
+  SendRecords(fxl::TimePoint::Now());
 
   host_->RemoveAgent(service_full_name_);
 }
 
-void InstancePublisher::SendRecords(ftl::TimePoint when) {
+void InstancePublisher::SendRecords(fxl::TimePoint when) {
   // We schedule these a nanosecond apart to ensure proper sequence.
   int64_t sequence = 0;
 
@@ -87,11 +87,11 @@ void InstancePublisher::SendRecords(ftl::TimePoint when) {
 
   for (auto& additional : additionals_) {
     host_->SendResource(additional, MdnsResourceSection::kAdditional,
-                        when + ftl::TimeDelta::FromNanoseconds(++sequence));
+                        when + fxl::TimeDelta::FromNanoseconds(++sequence));
   }
 
   host_->SendAddresses(MdnsResourceSection::kAdditional,
-                       when + ftl::TimeDelta::FromNanoseconds(++sequence));
+                       when + fxl::TimeDelta::FromNanoseconds(++sequence));
 }
 
 }  // namespace mdns

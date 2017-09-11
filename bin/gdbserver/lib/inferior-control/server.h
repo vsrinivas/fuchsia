@@ -8,9 +8,9 @@
 #include <memory>
 #include <queue>
 
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 #include "exception-port.h"
@@ -75,7 +75,7 @@ class Server : public IOLoop::Delegate, public Process::Delegate {
 
   // The current thread under debug. We only keep a weak pointer here, since the
   // instance itself is owned by a Process and may get removed.
-  ftl::WeakPtr<Thread> current_thread_;
+  fxl::WeakPtr<Thread> current_thread_;
 
   // The main loop.
   mtl::MessageLoop message_loop_;
@@ -87,7 +87,7 @@ class Server : public IOLoop::Delegate, public Process::Delegate {
 
   // File descriptor for the socket (or terminal) used for communication.
   // TODO(dje): Rename from *sock* after things are working.
-  ftl::UniqueFD client_sock_;
+  fxl::UniqueFD client_sock_;
 
   // The ExceptionPort used by inferiors to receive exceptions.
   // (This is declared after |message_loop_| since that needs to have been
@@ -105,7 +105,7 @@ class Server : public IOLoop::Delegate, public Process::Delegate {
   bool run_status_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Server);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Server);
 };
 
 }  // namespace debugserver

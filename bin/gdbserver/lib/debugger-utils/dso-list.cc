@@ -13,8 +13,8 @@
 #include <magenta/types.h>
 #include <magenta/syscalls.h>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "dso-list.h"
 #include "util.h"
@@ -35,7 +35,7 @@ static dsoinfo_t* dsolist_add(dsoinfo_t** list,
   size_t alloc_bytes = sizeof(dsoinfo_t) + len + 1;
   auto dso = reinterpret_cast<dsoinfo_t*>(calloc(1, alloc_bytes));
   if (dso == nullptr) {
-    FTL_LOG(FATAL) << "OOM allocating " << alloc_bytes << " bytes";
+    FXL_LOG(FATAL) << "OOM allocating " << alloc_bytes << " bytes";
     exit(1);
   }
   memcpy(dso->name, name, len + 1);
@@ -82,14 +82,14 @@ dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, mx_vaddr_t lmap_addr,
     elf::Error rc = elf::Reader::Create(file_name, bb, 0, dso->base,
                                         &elf_reader);
     if (rc != elf::Error::OK) {
-      FTL_LOG(ERROR) << "Unable to read ELF file: " << elf::ErrorName(rc);
+      FXL_LOG(ERROR) << "Unable to read ELF file: " << elf::ErrorName(rc);
       break;
     }
 
     auto hdr = elf_reader->header();
     rc = elf_reader->ReadSegmentHeaders();
     if (rc != elf::Error::OK) {
-      FTL_LOG(ERROR) << "Error reading ELF segment headers: "
+      FXL_LOG(ERROR) << "Error reading ELF segment headers: "
                      << elf::ErrorName(rc);
     } else {
       size_t num_segments = elf_reader->GetNumSegments();
@@ -115,18 +115,18 @@ dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, mx_vaddr_t lmap_addr,
           if (phdr.p_type == PT_LOAD)
             loadable_phdrs[j++] = phdr;
         }
-        FTL_DCHECK(j == num_loadable_phdrs);
+        FXL_DCHECK(j == num_loadable_phdrs);
         dso->num_loadable_phdrs = num_loadable_phdrs;
         dso->loadable_phdrs = loadable_phdrs;
       } else {
-        FTL_LOG(ERROR) << "OOM reading phdrs";
+        FXL_LOG(ERROR) << "OOM reading phdrs";
       }
     }
 
     rc = elf_reader->ReadBuildId(dso->buildid, sizeof(dso->buildid));
     if (rc != elf::Error::OK) {
       // This isn't fatal so don't flag as an error.
-      FTL_VLOG(1) << "Unable to read build id: " << elf::ErrorName(rc);
+      FXL_VLOG(1) << "Unable to read build id: " << elf::ErrorName(rc);
     }
 
     dso->is_main_exec = is_main_exec;
@@ -179,7 +179,7 @@ void dso_print_list(FILE* out, const dsoinfo_t* dso_list) {
 
 void dso_vlog_list(const dsoinfo_t* dso_list) {
   for (auto dso = dso_list; dso != nullptr; dso = dso->next) {
-    FTL_VLOG(2) << ftl::StringPrintf("dso: id=%s base=%p name=%s", dso->buildid,
+    FXL_VLOG(2) << fxl::StringPrintf("dso: id=%s base=%p name=%s", dso->buildid,
                                      (void*)dso->base, dso->name);
   }
 }
@@ -192,11 +192,11 @@ mx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
   if (dso->debug_file_tried) {
     switch (dso->debug_file_status) {
       case MX_OK:
-        FTL_DCHECK(dso->debug_file != nullptr);
+        FXL_DCHECK(dso->debug_file != nullptr);
         *out_debug_file = dso->debug_file;
       // fall through
       default:
-        FTL_VLOG(2) << "returning " << dso->debug_file_status
+        FXL_VLOG(2) << "returning " << dso->debug_file_status
                     << ", already tried to find debug file for " << dso->name;
         return dso->debug_file_status;
     }
@@ -207,20 +207,20 @@ mx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
   char* path;
   if (asprintf(&path, "%s/%s%s", kDebugDirectory, dso->buildid, kDebugSuffix) <
       0) {
-    FTL_VLOG(1) << "OOM building debug file path for dso " << dso->name;
+    FXL_VLOG(1) << "OOM building debug file path for dso " << dso->name;
     dso->debug_file_status = MX_ERR_NO_MEMORY;
     return dso->debug_file_status;
   }
 
-  FTL_VLOG(1) << "looking for debug file " << path;
+  FXL_VLOG(1) << "looking for debug file " << path;
 
   int fd = open(path, O_RDONLY);
   if (fd < 0) {
-    FTL_VLOG(1) << "debug file for dso " << dso->name << " not found: " << path;
+    FXL_VLOG(1) << "debug file for dso " << dso->name << " not found: " << path;
     free(path);
     dso->debug_file_status = MX_ERR_NOT_FOUND;
   } else {
-    FTL_VLOG(1) << "found debug file for dso " << dso->name << ": " << path;
+    FXL_VLOG(1) << "found debug file for dso " << dso->name << ": " << path;
     close(fd);
     dso->debug_file = path;
     *out_debug_file = path;

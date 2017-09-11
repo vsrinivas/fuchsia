@@ -6,8 +6,8 @@
 
 #include <mx/event.h>
 
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/mtl/vmo/shared_vmo.h"
 #include "magenta/system/ulib/mx/include/mx/event.h"
 #include "magenta/system/ulib/mx/include/mx/eventpair.h"
@@ -17,8 +17,8 @@ namespace test {
 
 // How long to run the message loop when we want to allow a task in the
 // task queue to run.
-constexpr ftl::TimeDelta kPumpMessageLoopDuration =
-    ftl::TimeDelta::FromMilliseconds(16);
+constexpr fxl::TimeDelta kPumpMessageLoopDuration =
+    fxl::TimeDelta::FromMilliseconds(16);
 
 // Synchronously checks whether the event has signalled any of the bits in
 // |signal|.
@@ -36,7 +36,7 @@ mx::vmo CopyVmo(const mx::vmo& vmo);
 // Creates a VMO with the specified size, immediately allocate physical memory
 // for it, and wraps in a |mtl::SharedVmo| to make it easy to map it into the
 // caller's address space.
-ftl::RefPtr<mtl::SharedVmo> CreateSharedVmo(size_t size);
+fxl::RefPtr<mtl::SharedVmo> CreateSharedVmo(size_t size);
 
 }  // namespace test
 }  // namespace scene_manager

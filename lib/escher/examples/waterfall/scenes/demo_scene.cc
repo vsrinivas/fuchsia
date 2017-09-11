@@ -30,7 +30,7 @@ void DemoScene::Init(escher::Stage* stage) {
   TexturePtr checkerboard = escher()->NewTexture(
       escher()->NewCheckerboardImage(16, 16), vk::Filter::eNearest);
 
-  purple_ = ftl::MakeRefCounted<escher::Material>();
+  purple_ = fxl::MakeRefCounted<escher::Material>();
   purple_->SetTexture(checkerboard);
   purple_->set_color(vec3(0.588f, 0.239f, 0.729f));
 }

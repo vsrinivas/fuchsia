@@ -8,13 +8,13 @@
 
 #include "escher/impl/vk/pipeline_layout.h"
 #include "escher/impl/vk/pipeline_spec.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 namespace impl {
 
 // Manages the lifecycle of Vulkan Pipelines and PipelineLayouts.
-class Pipeline : public ftl::RefCountedThreadSafe<Pipeline> {
+class Pipeline : public fxl::RefCountedThreadSafe<Pipeline> {
  public:
   // The vk::Pipeline becomes owned by this Pipeline instance, and is destroyed
   // in the destructor.  The vk::Device is not owned; it is used for destroying
@@ -36,7 +36,7 @@ class Pipeline : public ftl::RefCountedThreadSafe<Pipeline> {
   PipelineSpec spec_;
 };
 
-typedef ftl::RefPtr<Pipeline> PipelinePtr;
+typedef fxl::RefPtr<Pipeline> PipelinePtr;
 
 }  // namespace impl
 }  // namespace escher

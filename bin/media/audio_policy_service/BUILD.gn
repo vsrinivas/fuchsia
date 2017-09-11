@@ -13,7 +13,7 @@ executable("audio_policy_service") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/media/fidl",
     "//garnet/bin/media/util",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }

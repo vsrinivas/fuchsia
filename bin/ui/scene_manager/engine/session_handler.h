@@ -6,7 +6,7 @@
 
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 #include "lib/ui/scenic/fidl/session.fidl.h"
 #include "garnet/bin/ui/scene_manager/engine/engine.h"
@@ -54,7 +54,7 @@ class SessionHandler : public scenic::Session,
   friend class Engine;
 
   // Customize behavior of ErrorReporter::ReportError().
-  void ReportError(ftl::LogSeverity severity,
+  void ReportError(fxl::LogSeverity severity,
                    std::string error_string) override;
 
   // Called by |binding_| when the connection closes. Must be invoked within

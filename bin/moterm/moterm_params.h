@@ -5,7 +5,7 @@
 #ifndef APPS_MOTERM_MOTERM_PARAMS_H_
 #define APPS_MOTERM_MOTERM_PARAMS_H_
 
-#include "lib/ftl/command_line.h"
+#include "lib/fxl/command_line.h"
 
 namespace moterm {
 
@@ -13,7 +13,7 @@ struct MotermParams {
   MotermParams();
   ~MotermParams();
 
-  bool Parse(const ftl::CommandLine& command_line);
+  bool Parse(const fxl::CommandLine& command_line);
 
   std::vector<std::string> command;
   uint32_t font_size = 12;

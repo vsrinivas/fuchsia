@@ -9,7 +9,7 @@
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "garnet/bin/media/framework/formatting.h"
 #include "garnet/bin/media/util/callback_joiner.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace media {
@@ -33,7 +33,7 @@ MediaSourceImpl::MediaSourceImpl(
       allowed_stream_types_(
           allowed_media_types.To<std::unique_ptr<
               std::vector<std::unique_ptr<media::StreamTypeSet>>>>()) {
-  FTL_DCHECK(reader);
+  FXL_DCHECK(reader);
 
   FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding())));
 
@@ -153,10 +153,10 @@ MediaSourceImpl::Stream::Stream(
     const std::unique_ptr<std::vector<std::unique_ptr<StreamTypeSet>>>&
         allowed_stream_types,
     const std::function<void()>& callback) {
-  FTL_DCHECK(media_service);
-  FTL_DCHECK(producer_getter);
-  FTL_DCHECK(stream_type);
-  FTL_DCHECK(callback);
+  FXL_DCHECK(media_service);
+  FXL_DCHECK(producer_getter);
+  FXL_DCHECK(stream_type);
+  FXL_DCHECK(callback);
 
   if (allowed_stream_types == nullptr) {
     // No conversion requested.
@@ -181,9 +181,9 @@ MediaSourceImpl::Stream::Stream(
           const ProducerGetter& producer_getter,
           std::unique_ptr<StreamType> stream_type,
           std::vector<mx_koid_t> converter_koids) {
-        FTL_DCHECK(!consumer_getter);
+        FXL_DCHECK(!consumer_getter);
         if (succeeded) {
-          FTL_DCHECK(producer_getter);
+          FXL_DCHECK(producer_getter);
           producer_getter_ = producer_getter;
 
           FLOG(log_channel,
@@ -204,7 +204,7 @@ MediaTypePtr MediaSourceImpl::Stream::media_type() const {
 
 void MediaSourceImpl::Stream::GetPacketProducer(
     fidl::InterfaceRequest<MediaPacketProducer> request) {
-  FTL_DCHECK(producer_getter_);
+  FXL_DCHECK(producer_getter_);
   producer_getter_(std::move(request));
 }
 

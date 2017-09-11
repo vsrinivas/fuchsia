@@ -9,7 +9,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/svc/cpp/service_namespace.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/netconnector/fidl/netconnector.fidl.h"
 
 namespace netconnector {
@@ -24,9 +24,9 @@ class NetStubResponder {
                    const std::string& service_name,
                    app::ApplicationContext* application_context)
       : actual_(actual) {
-    FTL_DCHECK(actual_);
-    FTL_DCHECK(!service_name.empty());
-    FTL_DCHECK(application_context);
+    FXL_DCHECK(actual_);
+    FXL_DCHECK(!service_name.empty());
+    FXL_DCHECK(application_context);
 
     service_namespace_.AddServiceForName(
         [this](mx::channel channel) {
@@ -41,7 +41,7 @@ class NetStubResponder {
 
     fidl::InterfaceHandle<app::ServiceProvider> handle;
     service_namespace_.AddBinding(handle.NewRequest());
-    FTL_DCHECK(handle);
+    FXL_DCHECK(handle);
 
     connector->RegisterServiceProvider(service_name, std::move(handle));
   }
@@ -55,7 +55,7 @@ class NetStubResponder {
   app::ServiceNamespace service_namespace_;
   std::unordered_set<std::shared_ptr<TStub>> stubs_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(NetStubResponder);
+  FXL_DISALLOW_COPY_AND_ASSIGN(NetStubResponder);
 };
 
 }  // namespace netconnector

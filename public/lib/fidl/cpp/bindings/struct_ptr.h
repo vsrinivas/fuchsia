@@ -11,8 +11,8 @@
 
 #include "lib/fidl/cpp/bindings/macros.h"
 #include "lib/fidl/cpp/bindings/type_converter.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 
 namespace fidl {
 namespace internal {
@@ -61,11 +61,11 @@ class StructPtr {
   bool is_null() const { return !ptr_; }
 
   Struct& operator*() const {
-    FTL_DCHECK(ptr_);
+    FXL_DCHECK(ptr_);
     return *ptr_;
   }
   Struct* operator->() const {
-    FTL_DCHECK(ptr_);
+    FXL_DCHECK(ptr_);
     return ptr_.get();
   }
   Struct* get() const { return ptr_.get(); }
@@ -86,7 +86,7 @@ class StructPtr {
  private:
   friend class internal::StructHelper<Struct>;
   void Initialize() {
-    FTL_DCHECK(!ptr_);
+    FXL_DCHECK(!ptr_);
     ptr_.reset(new Struct());
   }
 
@@ -138,11 +138,11 @@ class InlinedStructPtr {
   bool is_null() const { return is_null_; }
 
   Struct& operator*() const {
-    FTL_DCHECK(!is_null_);
+    FXL_DCHECK(!is_null_);
     return value_;
   }
   Struct* operator->() const {
-    FTL_DCHECK(!is_null_);
+    FXL_DCHECK(!is_null_);
     return &value_;
   }
   Struct* get() const { return is_null() ? nullptr : &value_; }

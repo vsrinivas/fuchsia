@@ -45,7 +45,7 @@ source_set("serialization") {
 
   public_deps = [
     "//garnet/public/lib/fidl/cpp/waiter",
-    "//garnet/public/lib/ftl:ftl_logging",
+    "//garnet/public/lib/fxl:fxl_logging",
     "//magenta/system/ulib/mx",
   ]
 

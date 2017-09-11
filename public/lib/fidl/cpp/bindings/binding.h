@@ -16,10 +16,10 @@
 #include "lib/fidl/cpp/bindings/internal/message_header_validator.h"
 #include "lib/fidl/cpp/bindings/internal/router.h"
 #include "lib/fidl/cpp/waiter/default.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/time/time_delta.h"
 
 namespace fidl {
 
@@ -118,7 +118,7 @@ class Binding {
   // specified implementation. See class comment for definition of |waiter|.
   void Bind(mx::channel handle,
             const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter()) {
-    FTL_DCHECK(!internal_router_);
+    FXL_DCHECK(!internal_router_);
 
     internal::MessageValidatorList validators;
     validators.push_back(std::unique_ptr<internal::MessageValidator>(
@@ -164,15 +164,15 @@ class Binding {
   // bound channel, the timeout is exceeded, or an error occurs. Returns
   // true if a method was successfully read and dispatched.
   bool WaitForIncomingMethodCall(
-      ftl::TimeDelta timeout = ftl::TimeDelta::Max()) {
-    FTL_DCHECK(internal_router_);
+      fxl::TimeDelta timeout = fxl::TimeDelta::Max()) {
+    FXL_DCHECK(internal_router_);
     return internal_router_->WaitForIncomingMessage(timeout);
   }
 
   // Closes the channel that was previously bound. Put this object into a
   // state where it can be rebound to a new channel.
   void Close() {
-    FTL_DCHECK(internal_router_);
+    FXL_DCHECK(internal_router_);
     internal_router_.reset();
   }
 
@@ -188,7 +188,7 @@ class Binding {
 
   // Sets an error handler that will be called if a connection error occurs on
   // the bound channel.
-  void set_connection_error_handler(ftl::Closure error_handler) {
+  void set_connection_error_handler(fxl::Closure error_handler) {
     connection_error_handler_ = std::move(error_handler);
   }
 
@@ -205,7 +205,7 @@ class Binding {
   // bound. Ownership of the handle is retained by the Binding, it is not
   // transferred to the caller.
   mx_handle_t handle() const {
-    FTL_DCHECK(is_bound());
+    FXL_DCHECK(is_bound());
     return internal_router_->handle();
   }
 
@@ -216,9 +216,9 @@ class Binding {
   std::unique_ptr<internal::Router> internal_router_;
   typename Interface::Stub_ stub_;
   ImplPtr impl_;
-  ftl::Closure connection_error_handler_;
+  fxl::Closure connection_error_handler_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Binding);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Binding);
 };
 
 }  // namespace fidl

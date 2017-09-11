@@ -19,7 +19,7 @@ source_set("socket") {
   public_deps = [
     "//garnet/public/lib/fidl/c/waiter",
     "//garnet/public/lib/fidl/cpp/waiter",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//magenta/system/ulib/mx",
   ]
 }

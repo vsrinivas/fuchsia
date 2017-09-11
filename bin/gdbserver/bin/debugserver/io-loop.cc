@@ -8,7 +8,7 @@
 
 #include "debugger-utils/util.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace debugserver {
@@ -18,28 +18,28 @@ RspIOLoop::RspIOLoop(int in_fd, Delegate* delegate)
 }
 
 void RspIOLoop::OnReadTask() {
-  FTL_DCHECK(mtl::MessageLoop::GetCurrent()->task_runner().get() ==
+  FXL_DCHECK(mtl::MessageLoop::GetCurrent()->task_runner().get() ==
              read_task_runner().get());
 
   ssize_t read_size = read(fd(), in_buffer_.data(), kMaxBufferSize);
 
   // 0 bytes means that the remote end closed the TCP connection.
   if (read_size == 0) {
-    FTL_VLOG(1) << "Client closed connection";
+    FXL_VLOG(1) << "Client closed connection";
     ReportDisconnected();
     return;
   }
 
   // There was an error
   if (read_size < 0) {
-    FTL_LOG(ERROR) << "Error occurred while waiting for a packet" << ", "
+    FXL_LOG(ERROR) << "Error occurred while waiting for a packet" << ", "
                    << util::ErrnoString(errno);
     ReportError();
     return;
   }
 
-  ftl::StringView bytes_read(in_buffer_.data(), read_size);
-  FTL_VLOG(2) << "-> " << util::EscapeNonPrintableString(bytes_read);
+  fxl::StringView bytes_read(in_buffer_.data(), read_size);
+  FXL_VLOG(2) << "-> " << util::EscapeNonPrintableString(bytes_read);
 
   // Notify the delegate that we read some bytes. We copy the buffer data
   // into the closure as |in_buffer_| can get modified before the closure

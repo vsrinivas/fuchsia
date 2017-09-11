@@ -12,7 +12,7 @@
 #include "garnet/bin/media/audio/mixer_input.h"
 #include "garnet/bin/media/framework/packet.h"
 #include "garnet/bin/media/util/priority_queue_of_unique_ptr.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -23,8 +23,8 @@ class MixerInputImpl : public MixerInput<TOutSample> {
   static std::shared_ptr<MixerInputImpl> Create(uint32_t in_channel_count,
                                                 uint32_t out_channel_count,
                                                 int64_t first_pts) {
-    FTL_DCHECK(in_channel_count != 0);
-    FTL_DCHECK(out_channel_count != 0);
+    FXL_DCHECK(in_channel_count != 0);
+    FXL_DCHECK(out_channel_count != 0);
     return std::shared_ptr<MixerInputImpl>(
         new MixerInputImpl(in_channel_count, out_channel_count, first_pts));
   }
@@ -98,7 +98,7 @@ class MixerInputImpl : public MixerInput<TOutSample> {
              uint32_t out_channel_count,
              uint32_t frame_count,
              int64_t pts) {
-      FTL_DCHECK(active()) << "Attempt to perform mix of silent channel.";
+      FXL_DCHECK(active()) << "Attempt to perform mix of silent channel.";
 
       // Align to correct channels.
       in += in_channel_;
@@ -146,8 +146,8 @@ class MixerInputImpl : public MixerInput<TOutSample> {
 
   // Gets the job for the given channels.
   Job& get_job(uint32_t in_channel, uint32_t out_channel) {
-    FTL_DCHECK(in_channel < this->in_channel_count());
-    FTL_DCHECK(out_channel < this->out_channel_count());
+    FXL_DCHECK(in_channel < this->in_channel_count());
+    FXL_DCHECK(out_channel < this->out_channel_count());
     // Job indexing needs to happen such that when iterating across all jobs
     // with an outer out_channel loop and an inner in_channel loop, simply
     // incrementing a Job pointer is adequate.
@@ -173,10 +173,10 @@ class MixerInputImpl : public MixerInput<TOutSample> {
     job->frontward_ = nullptr;
     job->backward_ = active_jobs_front_;
     if (active_jobs_front_ == nullptr) {
-      FTL_DCHECK(active_jobs_back_ == nullptr);
+      FXL_DCHECK(active_jobs_back_ == nullptr);
       active_jobs_back_ = job;
     } else {
-      FTL_DCHECK(active_jobs_front_->frontward_ == nullptr);
+      FXL_DCHECK(active_jobs_front_->frontward_ == nullptr);
       active_jobs_front_->frontward_ = job;
     }
     active_jobs_front_ = job;
@@ -185,18 +185,18 @@ class MixerInputImpl : public MixerInput<TOutSample> {
   // Remove job from the active_jobs_ list.
   void EraseJob(Job* job) {
     if (active_jobs_front_ == job) {
-      FTL_DCHECK(job->frontward_ == nullptr);
+      FXL_DCHECK(job->frontward_ == nullptr);
       active_jobs_front_ = job->backward_;
     } else {
-      FTL_DCHECK(job->frontward_ != nullptr);
+      FXL_DCHECK(job->frontward_ != nullptr);
       job->frontward_->backward_ = job->backward_;
     }
 
     if (active_jobs_back_ == job) {
-      FTL_DCHECK(job->backward_ == nullptr);
+      FXL_DCHECK(job->backward_ == nullptr);
       active_jobs_back_ = job->frontward_;
     } else {
-      FTL_DCHECK(job->backward_ != nullptr);
+      FXL_DCHECK(job->backward_ != nullptr);
       job->backward_->frontward_ = job->frontward_;
     }
   }
@@ -242,14 +242,14 @@ MixerInputImpl<TInSample, TOutSample, TLevel>::MixerInputImpl(
           false)),
       mixdown_to_(mixdown_from_.get()),
       all_jobs_(new Job[in_channel_count * out_channel_count]) {
-  FTL_DCHECK(in_channel_count != 0);
-  FTL_DCHECK(out_channel_count != 0);
+  FXL_DCHECK(in_channel_count != 0);
+  FXL_DCHECK(out_channel_count != 0);
   Job* job = &all_jobs_[0];
   for (uint32_t out_channel = 0; out_channel < this->out_channel_count();
        ++out_channel) {
     for (uint32_t in_channel = 0; in_channel < this->in_channel_count();
          ++in_channel) {
-      FTL_DCHECK(&get_job(in_channel, out_channel) == job);
+      FXL_DCHECK(&get_job(in_channel, out_channel) == job);
       job->in_channel_ = in_channel;
       job->out_channel_ = out_channel;
       ++job;
@@ -262,15 +262,15 @@ void MixerInputImpl<TInSample, TOutSample, TLevel>::AddMixdownScheduleEntry(
     std::unique_ptr<MixdownTable<TLevel>> mixdown_table,
     int64_t pts,
     bool fade) {
-  FTL_DCHECK(mixdown_table);
-  FTL_DCHECK(mixdown_table->in_channel_count() == this->in_channel_count());
-  FTL_DCHECK(mixdown_table->out_channel_count() == this->out_channel_count());
-  FTL_DCHECK(mixdown_from_);
-  FTL_DCHECK(mixdown_to_);
+  FXL_DCHECK(mixdown_table);
+  FXL_DCHECK(mixdown_table->in_channel_count() == this->in_channel_count());
+  FXL_DCHECK(mixdown_table->out_channel_count() == this->out_channel_count());
+  FXL_DCHECK(mixdown_from_);
+  FXL_DCHECK(mixdown_to_);
 
   if (pts < mixdown_from_->pts_) {
     // The new entry would be older than the current 'from' entry. Ignore it.
-    FTL_DLOG(WARNING) << "Mixdown schedule entry added at PTS " << pts
+    FXL_DLOG(WARNING) << "Mixdown schedule entry added at PTS " << pts
                       << " has already expired due to entry at PTS "
                       << mixdown_from_->pts_;
     return;
@@ -335,10 +335,10 @@ bool MixerInputImpl<TInSample, TOutSample, TLevel>::Mix(
     TOutSample* out_buffer,
     uint32_t out_frame_count,
     int64_t pts) {
-  FTL_DCHECK(out_buffer);
-  FTL_DCHECK(out_frame_count);
-  FTL_DCHECK(pts < next_transition_pts_);  // TODO(dalesat): Relax this.
-  FTL_DCHECK(next_transition_pts_ == next_packet_transition_pts_ ||
+  FXL_DCHECK(out_buffer);
+  FXL_DCHECK(out_frame_count);
+  FXL_DCHECK(pts < next_transition_pts_);  // TODO(dalesat): Relax this.
+  FXL_DCHECK(next_transition_pts_ == next_packet_transition_pts_ ||
              next_transition_pts_ == next_mixdown_schedule_transition_pts_);
 
   // Loop until we've dealt with the entire output buffer. For every
@@ -406,7 +406,7 @@ void MixerInputImpl<TInSample, TOutSample, TLevel>::OnPacketTransition(
 
     if (packets_.empty()) {
       // Starving!
-      FTL_DLOG(WARNING) << "Input starved at PTS " << pts << ".";
+      FXL_DLOG(WARNING) << "Input starved at PTS " << pts << ".";
       next_packet_transition_pts_ = std::numeric_limits<int64_t>::max();
       break;
     }
@@ -414,7 +414,7 @@ void MixerInputImpl<TInSample, TOutSample, TLevel>::OnPacketTransition(
     const PacketPtr& next_packet = packets_.front();
     if (next_packet->pts() > pts) {
       // Gap!
-      FTL_DLOG(WARNING) << "Gap in input stream at PTS " << pts << ", "
+      FXL_DLOG(WARNING) << "Gap in input stream at PTS " << pts << ", "
                         << (next_packet->pts() - pts) << " frames missing.";
       next_packet_transition_pts_ = next_packet->pts();
       break;
@@ -434,7 +434,7 @@ void MixerInputImpl<TInSample, TOutSample, TLevel>::OnPacketTransition(
 
     if (next_packet_transition_pts_ > pts) {
       // The front of this packet is too late.
-      FTL_DLOG(WARNING) << "Packet with PTS " << current_packet_->pts()
+      FXL_DLOG(WARNING) << "Packet with PTS " << current_packet_->pts()
                         << " arrived late, discarding "
                         << (next_packet_transition_pts_ - pts) << " frames.";
       remaining_in_buffer_ +=
@@ -443,7 +443,7 @@ void MixerInputImpl<TInSample, TOutSample, TLevel>::OnPacketTransition(
     }
 
     // The entire packet is too late. Eject it and try again.
-    FTL_DLOG(WARNING) << "Packet with PTS " << current_packet_->pts()
+    FXL_DLOG(WARNING) << "Packet with PTS " << current_packet_->pts()
                       << " arrived late, discarding.";
   }  // while(true)
 
@@ -454,9 +454,9 @@ void MixerInputImpl<TInSample, TOutSample, TLevel>::OnPacketTransition(
 template <typename TInSample, typename TOutSample, typename TLevel>
 void MixerInputImpl<TInSample, TOutSample, TLevel>::OnMixdownScheduleTransition(
     int64_t pts) {
-  FTL_DCHECK(mixdown_from_);
-  FTL_DCHECK(mixdown_to_);
-  FTL_DCHECK(!mixdown_schedule_.empty());
+  FXL_DCHECK(mixdown_from_);
+  FXL_DCHECK(mixdown_to_);
+  FXL_DCHECK(!mixdown_schedule_.empty());
 
   mixdown_from_ = mixdown_schedule_.pop_and_move();
 
@@ -483,8 +483,8 @@ void MixerInputImpl<TInSample, TOutSample, TLevel>::OnMixdownScheduleTransition(
 
 template <typename TInSample, typename TOutSample, typename TLevel>
 void MixerInputImpl<TInSample, TOutSample, TLevel>::UpdateActiveJobs() {
-  FTL_DCHECK(mixdown_from_);
-  FTL_DCHECK(mixdown_to_);
+  FXL_DCHECK(mixdown_from_);
+  FXL_DCHECK(mixdown_to_);
 
   Job* job = &all_jobs_[0];
   auto from_iter = mixdown_from_->table_->begin();
@@ -493,8 +493,8 @@ void MixerInputImpl<TInSample, TOutSample, TLevel>::UpdateActiveJobs() {
        ++out_channel) {
     for (uint32_t in_channel = 0; in_channel < this->in_channel_count();
          ++in_channel) {
-      FTL_DCHECK(job->in_channel_ == in_channel);
-      FTL_DCHECK(job->out_channel_ == out_channel);
+      FXL_DCHECK(job->in_channel_ == in_channel);
+      FXL_DCHECK(job->out_channel_ == out_channel);
 
       bool was_active = job->active();
 

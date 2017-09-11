@@ -8,7 +8,7 @@
 #include "garnet/bin/media/audio/audio_input.h"
 #include "garnet/bin/media/audio/audio_input_enum.h"
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -29,7 +29,7 @@ AudioCapturerImpl::AudioCapturerImpl(
   AudioInputEnum audio_enum;
 
   if (audio_enum.input_device_paths().empty()) {
-    FTL_LOG(WARNING) << "No audio input devices found";
+    FXL_LOG(WARNING) << "No audio input devices found";
     RCHECK(false);
     return;
   }

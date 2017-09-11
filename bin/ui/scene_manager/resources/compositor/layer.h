@@ -14,8 +14,8 @@ class Layer;
 class LayerStack;
 class Renderer;
 class Scene;
-using LayerPtr = ftl::RefPtr<Layer>;
-using RendererPtr = ftl::RefPtr<Renderer>;
+using LayerPtr = fxl::RefPtr<Layer>;
+using RendererPtr = fxl::RefPtr<Renderer>;
 
 // A Layer can appear in a LayerStack, and be displayed by a Compositor.
 // TODO(MZ-249): Layers can currently only use a rendered scene as content, but

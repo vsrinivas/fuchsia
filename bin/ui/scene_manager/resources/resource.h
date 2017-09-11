@@ -10,7 +10,7 @@
 
 #include "lib/ui/scenic/types.h"
 #include "garnet/bin/ui/scene_manager/resources/resource_type_info.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace scene_manager {
 
@@ -23,7 +23,7 @@ class Session;
 // are created in response to a CreateResourceOp operation).
 // TODO: use unsafe ref-counting for better performance (our architecture
 // guarantees that this is safe).
-class Resource : public ftl::RefCountedThreadSafe<Resource> {
+class Resource : public fxl::RefCountedThreadSafe<Resource> {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
@@ -63,12 +63,12 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
   // Downcasts the reference to the specified subclass. Throws an exception
   // in debug mode if the type of the object does not match.
   //
-  // Example usage: ftl::RefPtr<Subclass> = object.As<Subclass>();
+  // Example usage: fxl::RefPtr<Subclass> = object.As<Subclass>();
   // TODO: Move this to a separate class we inherit from.
   template <typename T>
-  ftl::RefPtr<T> As() {
-    FTL_DCHECK(this->IsKindOf<T>());
-    return ftl::RefPtr<T>(static_cast<T*>(this));
+  fxl::RefPtr<T> As() {
+    FXL_DCHECK(this->IsKindOf<T>());
+    return fxl::RefPtr<T>(static_cast<T*>(this));
   }
 
   /// The list of import resource that currently have a binding to this
@@ -120,6 +120,6 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
   ResourceLinker* resource_linker_ = nullptr;
 };
 
-using ResourcePtr = ftl::RefPtr<Resource>;
+using ResourcePtr = fxl::RefPtr<Resource>;
 
 }  // namespace scene_manager

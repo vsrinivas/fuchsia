@@ -12,8 +12,8 @@
 
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/views/fidl/views.fidl.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace view_manager {
 
@@ -53,7 +53,7 @@ class ViewStub {
            mx::eventpair host_import_token);
   ~ViewStub();
 
-  ftl::WeakPtr<ViewStub> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
+  fxl::WeakPtr<ViewStub> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
   // Gets the view state referenced by the stub, or null if the view
   // has not yet been resolved or is unavailable.
@@ -162,9 +162,9 @@ class ViewStub {
   ViewState* parent_ = nullptr;
   uint32_t key_ = 0u;
 
-  ftl::WeakPtrFactory<ViewStub> weak_factory_;
+  fxl::WeakPtrFactory<ViewStub> weak_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ViewStub);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ViewStub);
 };
 
 }  // namespace view_manager

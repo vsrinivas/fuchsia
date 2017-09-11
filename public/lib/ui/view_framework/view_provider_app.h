@@ -9,7 +9,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/ui/view_framework/view_provider_service.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace mozart {
 
@@ -25,7 +25,7 @@ class ViewProviderApp {
   std::unique_ptr<app::ApplicationContext> application_context_;
   ViewProviderService service_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ViewProviderApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ViewProviderApp);
 };
 
 }  // namespace mozart

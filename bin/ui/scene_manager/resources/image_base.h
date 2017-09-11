@@ -23,6 +23,6 @@ class ImageBase : public Resource {
             const ResourceTypeInfo& type_info);
 };
 
-using ImageBasePtr = ftl::RefPtr<ImageBase>;
+using ImageBasePtr = fxl::RefPtr<ImageBase>;
 
 }  // namespace scene_manager

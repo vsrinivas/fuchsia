@@ -47,9 +47,9 @@ class Texture : public Resource {
   uint32_t width_;
   uint32_t height_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Texture);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Texture);
 };
 
-typedef ftl::RefPtr<Texture> TexturePtr;
+typedef fxl::RefPtr<Texture> TexturePtr;
 
 }  // namespace escher

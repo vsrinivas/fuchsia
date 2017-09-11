@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "escher/scene/object.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace escher {
 
@@ -37,7 +37,7 @@ class Model {
   std::vector<Object> objects_;
   float time_ = 0.0f;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Model);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Model);
 };
 
 }  // namespace escher

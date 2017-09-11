@@ -47,7 +47,7 @@ class Map {
   // corresponding |values|.
   Map(fidl::Array<KeyType> keys, fidl::Array<ValueType> values)
       : is_null_(false) {
-    FTL_DCHECK(keys.size() == values.size());
+    FXL_DCHECK(keys.size() == values.size());
     for (size_t i = 0; i < keys.size(); ++i)
       Traits::Insert(&map_, keys[i], values[i]);
   }

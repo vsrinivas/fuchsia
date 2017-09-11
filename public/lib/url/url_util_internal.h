@@ -7,8 +7,8 @@
 
 #include <string>
 
-#include "lib/ftl/strings/ascii.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/ascii.h"
+#include "lib/fxl/strings/string_view.h"
 #include "lib/url/third_party/mozilla/url_parse.h"
 
 namespace url {
@@ -17,10 +17,10 @@ namespace url {
 // lower-case |compare_to| buffer.
 bool CompareSchemeComponent(const char* spec, const Component& component, const char* compare_to);
 
-static inline bool LowerCaseEqualsASCII(ftl::StringView str, ftl::StringView lowercase_ascii) {
+static inline bool LowerCaseEqualsASCII(fxl::StringView str, fxl::StringView lowercase_ascii) {
   if (str.size() != lowercase_ascii.size()) return false;
   for (size_t i = 0; i < str.size(); i++) {
-    if (ftl::ToLowerASCII(str[i]) != lowercase_ascii[i]) return false;
+    if (fxl::ToLowerASCII(str[i]) != lowercase_ascii[i]) return false;
   }
   return true;
 }

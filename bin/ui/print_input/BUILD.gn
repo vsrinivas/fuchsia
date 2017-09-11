@@ -11,7 +11,7 @@ executable("print_input") {
     "//garnet/public/lib/ui/input",
     "//garnet/public/lib/ui/input/cpp",
     "//garnet/bin/ui/input_reader",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }

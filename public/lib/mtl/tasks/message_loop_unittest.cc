@@ -17,10 +17,10 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/fd_waiter.h"
 
 namespace mtl {
@@ -36,7 +36,7 @@ TEST(MessageLoop, Current) {
 }
 
 TEST(MessageLoop, RunsTasksOnCurrentThread) {
-  ftl::RefPtr<ftl::TaskRunner> task_runner;
+  fxl::RefPtr<fxl::TaskRunner> task_runner;
 
   {
     MessageLoop loop;
@@ -68,7 +68,7 @@ TEST(MessageLoop, CanRunTasks) {
 TEST(MessageLoop, CanPostTasksFromTasks) {
   bool did_run = false;
   MessageLoop loop;
-  ftl::Closure nested_task = [&did_run, &loop]() {
+  fxl::Closure nested_task = [&did_run, &loop]() {
     EXPECT_FALSE(did_run);
     did_run = true;
     loop.QuitNow();
@@ -113,7 +113,7 @@ TEST(MessageLoop, CanRunTasksInOrder) {
 }
 
 TEST(MessageLoop, CanPreloadTasks) {
-  auto incoming_queue = ftl::MakeRefCounted<internal::IncomingTaskQueue>();
+  auto incoming_queue = fxl::MakeRefCounted<internal::IncomingTaskQueue>();
 
   bool did_run = false;
   MessageLoop* loop_ptr = nullptr;
@@ -165,25 +165,25 @@ TEST(MessageLoop, RemoveAfterTaskCallbacksDuringCallback) {
 
 class DestructorObserver {
  public:
-  DestructorObserver(ftl::Closure callback) : callback_(std::move(callback)) {}
+  DestructorObserver(fxl::Closure callback) : callback_(std::move(callback)) {}
   ~DestructorObserver() { callback_(); }
 
  private:
-  ftl::Closure callback_;
+  fxl::Closure callback_;
 };
 
 TEST(MessageLoop, TaskDestructionTime) {
   bool destructed = false;
-  ftl::RefPtr<ftl::TaskRunner> task_runner;
+  fxl::RefPtr<fxl::TaskRunner> task_runner;
 
   {
     MessageLoop loop;
-    task_runner = ftl::RefPtr<ftl::TaskRunner>(loop.task_runner());
+    task_runner = fxl::RefPtr<fxl::TaskRunner>(loop.task_runner());
     loop.PostQuitTask();
     loop.Run();
     auto observer1 = std::make_unique<DestructorObserver>(
         [&destructed] { destructed = true; });
-    task_runner->PostTask(ftl::MakeCopyable([p = std::move(observer1)](){}));
+    task_runner->PostTask(fxl::MakeCopyable([p = std::move(observer1)](){}));
     EXPECT_FALSE(destructed);
   }
   EXPECT_TRUE(destructed);
@@ -191,7 +191,7 @@ TEST(MessageLoop, TaskDestructionTime) {
   destructed = false;
   auto observer2 = std::make_unique<DestructorObserver>(
       [&destructed] { destructed = true; });
-  task_runner->PostTask(ftl::MakeCopyable([p = std::move(observer2)](){}));
+  task_runner->PostTask(fxl::MakeCopyable([p = std::move(observer2)](){}));
   EXPECT_TRUE(destructed);
 }
 
@@ -245,7 +245,7 @@ class TestMessageLoopHandler : public MessageLoopHandler {
   int error_count_ = 0;
   mx_status_t last_error_result_ = MX_OK;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestMessageLoopHandler);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestMessageLoopHandler);
 };
 
 class QuitOnReadyMessageLoopHandler : public TestMessageLoopHandler {
@@ -267,7 +267,7 @@ class QuitOnReadyMessageLoopHandler : public TestMessageLoopHandler {
  private:
   MessageLoop* message_loop_ = nullptr;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(QuitOnReadyMessageLoopHandler);
+  FXL_DISALLOW_COPY_AND_ASSIGN(QuitOnReadyMessageLoopHandler);
 };
 
 // Verifies Quit() from OnHandleReady() quits the loop.
@@ -282,7 +282,7 @@ TEST(MessageLoop, QuitFromReady) {
   MessageLoop message_loop;
   handler.set_message_loop(&message_loop);
   MessageLoop::HandlerKey key = message_loop.AddHandler(
-      &handler, endpoint0.get(), MX_CHANNEL_READABLE, ftl::TimeDelta::Max());
+      &handler, endpoint0.get(), MX_CHANNEL_READABLE, fxl::TimeDelta::Max());
   message_loop.Run();
   EXPECT_EQ(1, handler.ready_count());
   EXPECT_EQ(0, handler.error_count());
@@ -313,7 +313,7 @@ class RemoveOnReadyMessageLoopHandler : public TestMessageLoopHandler {
   MessageLoop* message_loop_ = nullptr;
   MessageLoop::HandlerKey key_ = 0;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(RemoveOnReadyMessageLoopHandler);
+  FXL_DISALLOW_COPY_AND_ASSIGN(RemoveOnReadyMessageLoopHandler);
 };
 
 TEST(MessageLoop, HandleReady) {
@@ -327,7 +327,7 @@ TEST(MessageLoop, HandleReady) {
   MessageLoop message_loop;
   handler.set_message_loop(&message_loop);
   MessageLoop::HandlerKey key = message_loop.AddHandler(
-      &handler, endpoint0.get(), MX_CHANNEL_READABLE, ftl::TimeDelta::Max());
+      &handler, endpoint0.get(), MX_CHANNEL_READABLE, fxl::TimeDelta::Max());
   handler.set_handler_key(key);
   message_loop.Run();
   EXPECT_EQ(1, handler.ready_count());
@@ -346,7 +346,7 @@ TEST(MessageLoop, AfterHandleReadyCallback) {
   MessageLoop message_loop;
   handler.set_message_loop(&message_loop);
   MessageLoop::HandlerKey key = message_loop.AddHandler(
-      &handler, endpoint0.get(), MX_CHANNEL_READABLE, ftl::TimeDelta::Max());
+      &handler, endpoint0.get(), MX_CHANNEL_READABLE, fxl::TimeDelta::Max());
   handler.set_handler_key(key);
   int after_task_callback_count = 0;
   message_loop.SetAfterTaskCallback(
@@ -366,10 +366,10 @@ TEST(MessageLoop, AfterDeadlineExpiredCallback) {
 
   MessageLoop message_loop;
   message_loop.AddHandler(&handler, endpoint0.get(), MX_CHANNEL_READABLE,
-                          ftl::TimeDelta::FromMicroseconds(10000));
+                          fxl::TimeDelta::FromMicroseconds(10000));
   message_loop.task_runner()->PostDelayedTask(
       [&message_loop] { message_loop.QuitNow(); },
-      ftl::TimeDelta::FromMicroseconds(15000));
+      fxl::TimeDelta::FromMicroseconds(15000));
   int after_task_callback_count = 0;
   message_loop.SetAfterTaskCallback(
       [&after_task_callback_count] { ++after_task_callback_count; });
@@ -394,7 +394,7 @@ class QuitOnErrorRunMessageHandler : public TestMessageLoopHandler {
  private:
   MessageLoop* message_loop_ = nullptr;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(QuitOnErrorRunMessageHandler);
+  FXL_DISALLOW_COPY_AND_ASSIGN(QuitOnErrorRunMessageHandler);
 };
 
 // Verifies Quit() when the deadline is reached works.
@@ -409,7 +409,7 @@ TEST(MessageLoop, QuitWhenDeadlineExpired) {
   handler.set_message_loop(&message_loop);
   MessageLoop::HandlerKey key =
       message_loop.AddHandler(&handler, endpoint0.get(), MX_CHANNEL_READABLE,
-                              ftl::TimeDelta::FromMicroseconds(10000));
+                              fxl::TimeDelta::FromMicroseconds(10000));
   message_loop.Run();
   EXPECT_EQ(0, handler.ready_count());
   EXPECT_EQ(1, handler.error_count());
@@ -426,7 +426,7 @@ TEST(MessageLoop, Destruction) {
   {
     MessageLoop message_loop;
     message_loop.AddHandler(&handler, endpoint0.get(), MX_CHANNEL_READABLE,
-                            ftl::TimeDelta::Max());
+                            fxl::TimeDelta::Max());
   }
   EXPECT_EQ(1, handler.error_count());
   EXPECT_EQ(MX_ERR_CANCELED, handler.last_error_result());
@@ -453,7 +453,7 @@ class RemoveManyMessageLoopHandler : public TestMessageLoopHandler {
   std::vector<MessageLoop::HandlerKey> keys_;
   MessageLoop* message_loop_ = nullptr;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(RemoveManyMessageLoopHandler);
+  FXL_DISALLOW_COPY_AND_ASSIGN(RemoveManyMessageLoopHandler);
 };
 
 class ChannelPair {
@@ -476,12 +476,12 @@ TEST(MessageLoop, MultipleHandleDestruction) {
     odd_handler.set_message_loop(&message_loop);
     odd_handler.add_handler_key(
         message_loop.AddHandler(&odd_handler, pipe1.endpoint0.get(),
-                                MX_CHANNEL_READABLE, ftl::TimeDelta::Max()));
+                                MX_CHANNEL_READABLE, fxl::TimeDelta::Max()));
     message_loop.AddHandler(&even_handler, pipe2.endpoint0.get(),
-                            MX_CHANNEL_READABLE, ftl::TimeDelta::Max());
+                            MX_CHANNEL_READABLE, fxl::TimeDelta::Max());
     odd_handler.add_handler_key(
         message_loop.AddHandler(&odd_handler, pipe3.endpoint0.get(),
-                                MX_CHANNEL_READABLE, ftl::TimeDelta::Max()));
+                                MX_CHANNEL_READABLE, fxl::TimeDelta::Max()));
   }
   EXPECT_EQ(1, odd_handler.error_count());
   EXPECT_EQ(1, even_handler.error_count());
@@ -500,14 +500,14 @@ class AddHandlerOnErrorHandler : public TestMessageLoopHandler {
 
   void OnHandleError(mx_handle_t handle, mx_status_t status) override {
     message_loop_->AddHandler(this, handle, MX_CHANNEL_READABLE,
-                              ftl::TimeDelta::Max());
+                              fxl::TimeDelta::Max());
     TestMessageLoopHandler::OnHandleError(handle, status);
   }
 
  private:
   MessageLoop* message_loop_ = nullptr;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AddHandlerOnErrorHandler);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AddHandlerOnErrorHandler);
 };
 
 // Ensures that the MessageLoop doesn't get into infinite loops if
@@ -522,7 +522,7 @@ TEST(MessageLoop, AddHandlerOnError) {
     MessageLoop message_loop;
     handler.set_message_loop(&message_loop);
     message_loop.AddHandler(&handler, endpoint0.get(), MX_CHANNEL_READABLE,
-                            ftl::TimeDelta::Max());
+                            fxl::TimeDelta::Max());
   }
   EXPECT_EQ(1, handler.error_count());
   EXPECT_EQ(MX_ERR_CANCELED, handler.last_error_result());
@@ -534,7 +534,7 @@ TEST(MessageLoop, FDWaiter) {
   // shares ownership of the event.
   mx::event fdevent;
   EXPECT_EQ(mx::event::create(0u, &fdevent), MX_OK);
-  ftl::UniqueFD fd(
+  fxl::UniqueFD fd(
       mxio_handle_fd(fdevent.get(), MX_USER_SIGNAL_0, 0, /*shared=*/true));
   EXPECT_TRUE(fd.is_valid());
 
@@ -618,7 +618,7 @@ TEST(MessageLoop, TaskRunnerAvailableDuringLoopDestruction) {
   bool task_observed_runs_tasks_on_current_thread = false;
   bool task_posted_from_task_ran = false;
   bool task_posted_from_task_destroyed = false;
-  ftl::Closure task =
+  fxl::Closure task =
       [d = DestructorObserver([
          task_runner = loop->task_runner(),            //
          &task_observed_runs_tasks_on_current_thread,  //

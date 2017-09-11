@@ -12,7 +12,7 @@
 
 #include <mx/event.h>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace scenic_lib {
 
@@ -47,7 +47,7 @@ class Session : private scenic::SessionListener {
   ~Session();
 
   // Sets a callback which is invoked if the session dies.
-  void set_connection_error_handler(ftl::Closure closure) {
+  void set_connection_error_handler(fxl::Closure closure) {
     session_.set_connection_error_handler(std::move(closure));
   }
 
@@ -108,7 +108,7 @@ class Session : private scenic::SessionListener {
   EventHandler event_handler_;
   fidl::Binding<scenic::SessionListener> session_listener_binding_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Session);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Session);
 };
 
 }  // namespace scenic_lib

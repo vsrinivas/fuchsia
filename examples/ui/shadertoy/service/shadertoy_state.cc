@@ -12,21 +12,21 @@
 
 namespace shadertoy {
 
-ftl::RefPtr<ShadertoyState> ShadertoyState::NewForImagePipe(
+fxl::RefPtr<ShadertoyState> ShadertoyState::NewForImagePipe(
     App* app,
     ::fidl::InterfaceHandle<scenic::ImagePipe> image_pipe) {
-  return ftl::AdoptRef(
+  return fxl::AdoptRef(
       new ShadertoyStateForImagePipe(app, std::move(image_pipe)));
 }
 
-ftl::RefPtr<ShadertoyState> ShadertoyState::NewForView(
+fxl::RefPtr<ShadertoyState> ShadertoyState::NewForView(
     App* app,
     ::fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     bool handle_input_events) {
-  FTL_CHECK(false) << "unimplemented.";
-  return ftl::RefPtr<ShadertoyState>();
+  FXL_CHECK(false) << "unimplemented.";
+  return fxl::RefPtr<ShadertoyState>();
 #if 0
-  return ftl::AdoptRef(new ShadertoyStateForView(
+  return fxl::AdoptRef(new ShadertoyStateForView(
       app, std::move(view_owner_request), handle_input_events));
 #endif
 }
@@ -77,12 +77,12 @@ void ShadertoyState::SetResolution(uint32_t width, uint32_t height) {
     return;
   }
   if (width > kMaxWidth) {
-    FTL_LOG(ERROR) << "Resolution max width exceeded, " << width << " > "
+    FXL_LOG(ERROR) << "Resolution max width exceeded, " << width << " > "
                    << kMaxWidth;
     return;
   }
   if (height > kMaxHeight) {
-    FTL_LOG(ERROR) << "Resolution max height exceeded, " << height << " > "
+    FXL_LOG(ERROR) << "Resolution max height exceeded, " << height << " > "
                    << kMaxHeight;
     return;
   }
@@ -103,7 +103,7 @@ void ShadertoyState::SetMouse(glm::vec4 i_mouse) {
 void ShadertoyState::SetImage(
     uint32_t channel,
     ::fidl::InterfaceRequest<scenic::ImagePipe> request) {
-  FTL_CHECK(false) << "unimplemented";
+  FXL_CHECK(false) << "unimplemented";
 }
 
 void ShadertoyState::RequestFrame(uint64_t presentation_time) {
@@ -117,13 +117,13 @@ void ShadertoyState::RequestFrame(uint64_t presentation_time) {
 }
 
 void ShadertoyState::OnFramePresented(const scenic::PresentationInfoPtr& info) {
-  FTL_DCHECK(is_drawing_);
+  FXL_DCHECK(is_drawing_);
   is_drawing_ = false;
   RequestFrame(info->presentation_time + info->presentation_interval);
 }
 
 void ShadertoyState::Close() {
-  FTL_CHECK(false) << "unimplemented";
+  FXL_CHECK(false) << "unimplemented";
 }
 
 }  // namespace shadertoy

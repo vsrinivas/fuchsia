@@ -7,9 +7,9 @@
 #include <string.h>
 #include <vector>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/ascii.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/ascii.h"
+#include "lib/fxl/strings/string_view.h"
 #include "lib/url/url_canon_internal.h"
 #include "lib/url/url_file.h"
 #include "lib/url/url_util_internal.h"
@@ -54,8 +54,8 @@ inline bool DoCompareSchemeComponent(const char* spec, const Component& componen
                                      const char* compare_to) {
   if (component.is_invalid_or_empty())
     return compare_to[0] == 0;  // When component is empty, match empty scheme.
-  return LowerCaseEqualsASCII(ftl::StringView(&spec[component.begin], component.len()),
-                              ftl::StringView(compare_to));
+  return LowerCaseEqualsASCII(fxl::StringView(&spec[component.begin], component.len()),
+                              fxl::StringView(compare_to));
 }
 
 }  // namespace
@@ -67,8 +67,8 @@ bool IsStandard(const char* spec, const Component& scheme) {
 
   InitStandardSchemes();
   for (size_t i = 0; i < standard_schemes->size(); i++) {
-    if (LowerCaseEqualsASCII(ftl::StringView(&spec[scheme.begin], scheme.len()),
-                             ftl::StringView(standard_schemes->at(i))))
+    if (LowerCaseEqualsASCII(fxl::StringView(&spec[scheme.begin], scheme.len()),
+                             fxl::StringView(standard_schemes->at(i))))
       return true;
   }
   return false;
@@ -212,7 +212,7 @@ void AddStandardScheme(const char* new_scheme) {
   // in your application's init process. Locate where your app does this
   // initialization and calls LockStandardSchemes, and add your new standard
   // scheme there.
-  FTL_DCHECK(!standard_schemes_locked)
+  FXL_DCHECK(!standard_schemes_locked)
       << "Trying to add a standard scheme after the list has been locked.";
 
   size_t scheme_len = strlen(new_scheme);

@@ -7,7 +7,7 @@
 #include <memory>
 
 #include "garnet/bin/netconnector/mdns/dns_message.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/time/time_point.h"
 
 namespace netconnector {
 namespace mdns {
@@ -25,11 +25,11 @@ class MdnsAgent {
 
     // Schedules a call to |agent->Wake| at the specified time.
     virtual void WakeAt(std::shared_ptr<MdnsAgent> agent,
-                        ftl::TimePoint when) = 0;
+                        fxl::TimePoint when) = 0;
 
     // Sends a question to the multicast address at the specified time.
     virtual void SendQuestion(std::shared_ptr<DnsQuestion> question,
-                              ftl::TimePoint when) = 0;
+                              fxl::TimePoint when) = 0;
 
     // Sends a resource to the multicast address at the specified time. After
     // a resource is sent with a TTL of zero, the resource is marked so that
@@ -38,11 +38,11 @@ class MdnsAgent {
     // TTLs to zero and resending.
     virtual void SendResource(std::shared_ptr<DnsResource> resource,
                               MdnsResourceSection section,
-                              ftl::TimePoint when) = 0;
+                              fxl::TimePoint when) = 0;
 
     // Sends address resources to the multicast address at the specified time.
     virtual void SendAddresses(MdnsResourceSection section,
-                               ftl::TimePoint when) = 0;
+                               fxl::TimePoint when) = 0;
 
     // Registers the resource for renewal. Before the resource's TTL expires,
     // an attempt will be made to renew the resource by issuing queries for it.

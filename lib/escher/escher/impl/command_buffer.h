@@ -11,7 +11,7 @@
 #include "escher/renderer/semaphore_wait.h"
 #include "escher/vk/vulkan_context.h"
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace escher {
 typedef std::function<void()> CommandBufferFinishedCallback;
@@ -59,7 +59,7 @@ class CommandBuffer {
   // running on the GPU.
   void KeepAlive(Resource* resource);
   template <typename ResourceT>
-  void KeepAlive(const ftl::RefPtr<ResourceT>& ptr) {
+  void KeepAlive(const fxl::RefPtr<ResourceT>& ptr) {
     KeepAlive(ptr.get());
   }
 
@@ -144,7 +144,7 @@ class CommandBuffer {
 
   CommandBufferFinishedCallback callback_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CommandBuffer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CommandBuffer);
 };
 
 }  // namespace impl

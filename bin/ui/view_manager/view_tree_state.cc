@@ -8,8 +8,8 @@
 #include "garnet/bin/ui/view_manager/view_state.h"
 #include "garnet/bin/ui/view_manager/view_stub.h"
 #include "garnet/bin/ui/view_manager/view_tree_impl.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace view_manager {
 
@@ -25,8 +25,8 @@ ViewTreeState::ViewTreeState(
       impl_(new ViewTreeImpl(registry, this)),
       view_tree_binding_(impl_.get(), std::move(view_tree_request)),
       weak_factory_(this) {
-  FTL_DCHECK(view_tree_token_);
-  FTL_DCHECK(view_tree_listener_);
+  FXL_DCHECK(view_tree_token_);
+  FXL_DCHECK(view_tree_listener_);
 
   view_tree_binding_.set_connection_error_handler([this, registry] {
     registry->OnViewTreeDied(this, "ViewTree connection closed");
@@ -61,8 +61,8 @@ const FocusChain* ViewTreeState::focus_chain() {
 const std::string& ViewTreeState::FormattedLabel() const {
   if (formatted_label_cache_.empty()) {
     formatted_label_cache_ =
-        label_.empty() ? ftl::StringPrintf("<T%d>", view_tree_token_->value)
-                       : ftl::StringPrintf("<T%d:%s>", view_tree_token_->value,
+        label_.empty() ? fxl::StringPrintf("<T%d>", view_tree_token_->value)
+                       : fxl::StringPrintf("<T%d:%s>", view_tree_token_->value,
                                            label_.c_str());
   }
   return formatted_label_cache_;

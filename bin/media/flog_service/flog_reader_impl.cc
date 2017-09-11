@@ -6,8 +6,8 @@
 
 #include <unistd.h>
 
-#include "lib/ftl/files/eintr_wrapper.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/files/eintr_wrapper.h"
+#include "lib/fxl/logging.h"
 #include "lib/fidl/cpp/bindings/internal/array_serialization.h"
 #include "lib/fidl/cpp/bindings/internal/string_serialization.h"
 
@@ -58,7 +58,7 @@ void FlogReaderImpl::GetEntries(uint32_t start_index,
     }
   }
 
-  FTL_DCHECK(current_entry_index_ == start_index);
+  FXL_DCHECK(current_entry_index_ == start_index);
 
   fidl::Array<FlogEntryPtr> entries = fidl::Array<FlogEntryPtr>::New(max_count);
 
@@ -87,7 +87,7 @@ bool FlogReaderImpl::DiscardEntry() {
   size_t bytes_read = ReadData(sizeof(message_size), &message_size);
   if (bytes_read < sizeof(message_size)) {
     if (bytes_read != 0) {
-      FTL_DLOG(WARNING) << "FlogReaderImpl::DiscardEntry: FAULT: bytes_read < "
+      FXL_DLOG(WARNING) << "FlogReaderImpl::DiscardEntry: FAULT: bytes_read < "
                            "sizeof(message_size)";
     }
     fault_ = bytes_read != 0;
@@ -95,7 +95,7 @@ bool FlogReaderImpl::DiscardEntry() {
   }
 
   if (message_size == 0) {
-    FTL_DLOG(WARNING)
+    FXL_DLOG(WARNING)
         << "FlogReaderImpl::DiscardEntry: FAULT: message_size == 0";
     fault_ = true;
     return false;
@@ -103,7 +103,7 @@ bool FlogReaderImpl::DiscardEntry() {
 
   bytes_read = ReadData(message_size, nullptr);
   if (bytes_read < message_size) {
-    FTL_DLOG(WARNING)
+    FXL_DLOG(WARNING)
         << "FlogReaderImpl::DiscardEntry: FAULT: bytes_read < message_size";
     fault_ = true;
     return false;
@@ -119,7 +119,7 @@ FlogEntryPtr FlogReaderImpl::GetEntry() {
   size_t bytes_read = ReadData(sizeof(message_size), &message_size);
   if (bytes_read < sizeof(message_size)) {
     if (bytes_read != 0) {
-      FTL_DLOG(WARNING) << "FlogReaderImpl::GetEntry: FAULT: bytes_read < "
+      FXL_DLOG(WARNING) << "FlogReaderImpl::GetEntry: FAULT: bytes_read < "
                            "sizeof(message_size)";
     }
     fault_ = bytes_read != 0;
@@ -127,7 +127,7 @@ FlogEntryPtr FlogReaderImpl::GetEntry() {
   }
 
   if (message_size == 0) {
-    FTL_DLOG(WARNING) << "FlogReaderImpl::GetEntry: FAULT: message_size == 0";
+    FXL_DLOG(WARNING) << "FlogReaderImpl::GetEntry: FAULT: message_size == 0";
     fault_ = true;
     return nullptr;
   }
@@ -138,7 +138,7 @@ FlogEntryPtr FlogReaderImpl::GetEntry() {
 
   bytes_read = ReadData(message_size, message->mutable_data());
   if (bytes_read < message_size) {
-    FTL_DLOG(WARNING)
+    FXL_DLOG(WARNING)
         << "FlogReaderImpl::GetEntry: FAULT: bytes_read < message_size";
     fault_ = true;
     return nullptr;
@@ -148,12 +148,12 @@ FlogEntryPtr FlogReaderImpl::GetEntry() {
 
   // Use the stub to deserialize into entry_.
   stub_.Accept(message.get());
-  FTL_DCHECK(entry_);
+  FXL_DCHECK(entry_);
   return std::move(entry_);
 }
 
 size_t FlogReaderImpl::ReadData(size_t data_size, void* data) {
-  FTL_DCHECK(data_size != 0);
+  FXL_DCHECK(data_size != 0);
 
   while (read_buffer_bytes_remaining() == 0) {
     if (read_buffer_.size() < kReadBufferSize) {
@@ -183,7 +183,7 @@ size_t FlogReaderImpl::ReadData(size_t data_size, void* data) {
     return initial_data_size;
   }
 
-  FTL_DCHECK(read_buffer_bytes_remaining() == 0);
+  FXL_DCHECK(read_buffer_bytes_remaining() == 0);
 
   // Read the remainder.
   return ReadData(data_size - initial_data_size,
@@ -202,7 +202,7 @@ void FlogReaderImpl::FillReadBuffer(bool restart) {
   ssize_t bytes_read =
       HANDLE_EINTR(read(fd_.get(), read_buffer_.data(), read_buffer_.size()));
   if (bytes_read < 0) {
-    FTL_DLOG(WARNING) << "FlogReaderImpl::FillReadBuffer failed";
+    FXL_DLOG(WARNING) << "FlogReaderImpl::FillReadBuffer failed";
     fault_ = true;
     read_buffer_.clear();
     return;

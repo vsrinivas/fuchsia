@@ -20,7 +20,7 @@
 #include "garnet/bin/media/audio_server/audio_output.h"
 #include "garnet/bin/media/audio_server/audio_output_manager.h"
 #include "garnet/bin/media/audio_server/platform/driver_output.h"
-#include "lib/ftl/files/unique_fd.h"
+#include "lib/fxl/files/unique_fd.h"
 
 namespace media {
 namespace audio {
@@ -28,11 +28,11 @@ namespace audio {
 static const char* AUDIO_OUTPUT_DEVNODES = "/dev/class/audio-output";
 
 AudioPlugDetector::~AudioPlugDetector() {
-  FTL_DCHECK(manager_ == nullptr);
+  FXL_DCHECK(manager_ == nullptr);
 }
 
 MediaResult AudioPlugDetector::Start(AudioOutputManager* manager) {
-  FTL_DCHECK(manager != nullptr);
+  FXL_DCHECK(manager != nullptr);
 
   // If we fail to set up monitoring for any of our target directories,
   // automatically stop monitoring all sources of device nodes.
@@ -41,7 +41,7 @@ MediaResult AudioPlugDetector::Start(AudioOutputManager* manager) {
   // If we are already running, we cannot start again.  Cancel the cleanup
   // operation and report that things are successfully started.
   if (manager_ != nullptr) {
-    FTL_DLOG(WARNING) << "Attempted to start the AudioPlugDetector twice!";
+    FXL_DLOG(WARNING) << "Attempted to start the AudioPlugDetector twice!";
     error_cleanup.cancel();
     return MediaResult::OK;
   }
@@ -55,7 +55,7 @@ MediaResult AudioPlugDetector::Start(AudioOutputManager* manager) {
       });
 
   if (watcher_ == nullptr) {
-    FTL_LOG(ERROR)
+    FXL_LOG(ERROR)
         << "AudioPlugDetector failed to create DeviceWatcher for \""
         << AUDIO_OUTPUT_DEVNODES
         << "\".";
@@ -77,9 +77,9 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name) {
     return;
 
   // Open the device node.
-  ftl::UniqueFD dev_node(::openat(dir_fd, name.c_str(), O_RDONLY));
+  fxl::UniqueFD dev_node(::openat(dir_fd, name.c_str(), O_RDONLY));
   if (!dev_node.is_valid()) {
-    FTL_LOG(WARNING) << "AudioPlugDetector failed to open device node at \""
+    FXL_LOG(WARNING) << "AudioPlugDetector failed to open device node at \""
                      << name << "\". ("
                      << strerror(errno) << " : " << errno
                      << ")";
@@ -93,14 +93,14 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name) {
   res = ioctl_audio_get_channel(dev_node.get(),
                                  channel.reset_and_get_address());
   if (res < 0) {
-    FTL_LOG(INFO) << "Failed to open channel to Audio output (res " << res
+    FXL_LOG(INFO) << "Failed to open channel to Audio output (res " << res
                   << ")";
     return;
   }
 
   new_output = DriverOutput::Create(std::move(channel), manager_);
   if (new_output == nullptr) {
-    FTL_LOG(WARNING) << "Failed to instantiate audio output for \"" << name
+    FXL_LOG(WARNING) << "Failed to instantiate audio output for \"" << name
                      << "\"";
     return;
   }

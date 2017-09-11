@@ -19,7 +19,7 @@ void FakeWavReader::WriteHeader() {
   WriteHeader4CC("RIFF");
   WriteHeaderUint32(size_ - kChunkSizeDeficit);
   WriteHeader4CC("WAVE");  // Format
-  FTL_DCHECK(header_.size() == kMasterChunkHeaderSize);
+  FXL_DCHECK(header_.size() == kMasterChunkHeaderSize);
 
   // Format subchunk.
   WriteHeader4CC("fmt ");
@@ -32,13 +32,13 @@ void FakeWavReader::WriteHeader() {
   // Block alignment (frame size in bytes).
   WriteHeaderUint16(kSamplesPerFrame * kBitsPerSample / 8);
   WriteHeaderUint16(kBitsPerSample);
-  FTL_DCHECK(header_.size() == kMasterChunkHeaderSize + kFormatChunkSize);
+  FXL_DCHECK(header_.size() == kMasterChunkHeaderSize + kFormatChunkSize);
 
   // Data subchunk.
   WriteHeader4CC("data");
   WriteHeaderUint32(size_ - kMasterChunkHeaderSize - kFormatChunkSize -
                     kChunkSizeDeficit);
-  FTL_DCHECK(header_.size() ==
+  FXL_DCHECK(header_.size() ==
              kMasterChunkHeaderSize + kFormatChunkSize + kDataChunkHeaderSize);
 }
 
@@ -63,7 +63,7 @@ void FakeWavReader::ReadAt(uint64_t position, const ReadAtCallback& callback) {
 
   mx::socket other_socket;
   mx_status_t status = mx::socket::create(0u, &socket_, &other_socket);
-  FTL_DCHECK(status == MX_OK);
+  FXL_DCHECK(status == MX_OK);
   callback(MediaResult::OK, std::move(other_socket));
 
   position_ = position;
@@ -78,7 +78,7 @@ void FakeWavReader::WriteToSocket() {
 
     mx_status_t status = socket_.write(0u, &byte, 1u, &byte_count);
     if (status == MX_OK) {
-      FTL_DCHECK(byte_count == 1);
+      FXL_DCHECK(byte_count == 1);
       ++position_;
       continue;
     }
@@ -97,12 +97,12 @@ void FakeWavReader::WriteToSocket() {
       return;
     }
 
-    FTL_DCHECK(false) << "mx::socket::write failed, status " << status;
+    FXL_DCHECK(false) << "mx::socket::write failed, status " << status;
   }
 }
 
 void FakeWavReader::WriteHeader4CC(const std::string& value) {
-  FTL_DCHECK(value.size() == 4);
+  FXL_DCHECK(value.size() == 4);
   header_.push_back(static_cast<uint8_t>(value[0]));
   header_.push_back(static_cast<uint8_t>(value[1]));
   header_.push_back(static_cast<uint8_t>(value[2]));
@@ -144,7 +144,7 @@ void FakeWavReader::WriteToSocketStatic(mx_status_t status,
   }
 
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "AsyncWait failed " << status;
+    FXL_LOG(ERROR) << "AsyncWait failed " << status;
     reader->socket_.reset();
     return;
   }

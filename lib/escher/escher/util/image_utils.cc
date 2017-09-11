@@ -44,7 +44,7 @@ vk::Image CreateVkImage(const vk::Device& device, ImageInfo info) {
       create_info.samples = vk::SampleCountFlagBits::e8;
       break;
     default:
-      FTL_DCHECK(false);
+      FXL_DCHECK(false);
   }
   create_info.tiling = vk::ImageTiling::eOptimal;
   create_info.usage = info.usage;
@@ -59,7 +59,7 @@ ImagePtr NewDepthImage(ImageFactory* image_factory,
                        uint32_t width,
                        uint32_t height,
                        vk::ImageUsageFlags additional_flags) {
-  FTL_DCHECK(image_factory);
+  FXL_DCHECK(image_factory);
   ImageInfo info;
   info.format = format;
   info.width = width;
@@ -75,7 +75,7 @@ ImagePtr NewColorAttachmentImage(ImageFactory* image_factory,
                                  uint32_t width,
                                  uint32_t height,
                                  vk::ImageUsageFlags additional_flags) {
-  FTL_DCHECK(image_factory);
+  FXL_DCHECK(image_factory);
   ImageInfo info;
   info.format = vk::Format::eB8G8R8A8Unorm;
   info.width = width;
@@ -93,8 +93,8 @@ ImagePtr NewImageFromPixels(ImageFactory* image_factory,
                             uint32_t height,
                             uint8_t* pixels,
                             vk::ImageUsageFlags additional_flags) {
-  FTL_DCHECK(image_factory);
-  FTL_DCHECK(gpu_uploader);
+  FXL_DCHECK(image_factory);
+  FXL_DCHECK(gpu_uploader);
 
   size_t bytes_per_pixel = 0;
   switch (format) {
@@ -106,7 +106,7 @@ ImagePtr NewImageFromPixels(ImageFactory* image_factory,
       bytes_per_pixel = 1;
       break;
     default:
-      FTL_CHECK(false);
+      FXL_CHECK(false);
   }
 
   auto writer = gpu_uploader->GetWriter(width * height * bytes_per_pixel);
@@ -144,8 +144,8 @@ ImagePtr NewRgbaImage(ImageFactory* image_factory,
                       uint32_t width,
                       uint32_t height,
                       uint8_t* pixels) {
-  FTL_DCHECK(image_factory);
-  FTL_DCHECK(gpu_uploader);
+  FXL_DCHECK(image_factory);
+  FXL_DCHECK(gpu_uploader);
 
   return NewImageFromPixels(image_factory, gpu_uploader,
                             vk::Format::eR8G8B8A8Unorm, width, height, pixels);
@@ -155,8 +155,8 @@ ImagePtr NewCheckerboardImage(ImageFactory* image_factory,
                               impl::GpuUploader* gpu_uploader,
                               uint32_t width,
                               uint32_t height) {
-  FTL_DCHECK(image_factory);
-  FTL_DCHECK(gpu_uploader);
+  FXL_DCHECK(image_factory);
+  FXL_DCHECK(gpu_uploader);
 
   auto pixels = NewCheckerboardPixels(width, height);
   return NewImageFromPixels(image_factory, gpu_uploader,
@@ -168,8 +168,8 @@ ImagePtr NewGradientImage(ImageFactory* image_factory,
                           impl::GpuUploader* gpu_uploader,
                           uint32_t width,
                           uint32_t height) {
-  FTL_DCHECK(image_factory);
-  FTL_DCHECK(gpu_uploader);
+  FXL_DCHECK(image_factory);
+  FXL_DCHECK(gpu_uploader);
 
   auto pixels = NewGradientPixels(width, height);
   return NewImageFromPixels(image_factory, gpu_uploader,
@@ -182,8 +182,8 @@ ImagePtr NewNoiseImage(ImageFactory* image_factory,
                        uint32_t width,
                        uint32_t height,
                        vk::ImageUsageFlags additional_flags) {
-  FTL_DCHECK(image_factory);
-  FTL_DCHECK(gpu_uploader);
+  FXL_DCHECK(image_factory);
+  FXL_DCHECK(gpu_uploader);
 
   auto pixels = NewNoisePixels(width, height);
   return NewImageFromPixels(image_factory, gpu_uploader, vk::Format::eR8Unorm,
@@ -193,8 +193,8 @@ ImagePtr NewNoiseImage(ImageFactory* image_factory,
 std::unique_ptr<uint8_t[]> NewCheckerboardPixels(uint32_t width,
                                                  uint32_t height,
                                                  size_t* out_size) {
-  FTL_DCHECK(width % 2 == 0);
-  FTL_DCHECK(height % 2 == 0);
+  FXL_DCHECK(width % 2 == 0);
+  FXL_DCHECK(height % 2 == 0);
 
   size_t size_in_bytes = width * height * sizeof(RGBA);
   auto ptr = std::make_unique<uint8_t[]>(size_in_bytes);
@@ -218,8 +218,8 @@ std::unique_ptr<uint8_t[]> NewCheckerboardPixels(uint32_t width,
 std::unique_ptr<uint8_t[]> NewGradientPixels(uint32_t width,
                                              uint32_t height,
                                              size_t* out_size) {
-  FTL_DCHECK(width % 2 == 0);
-  FTL_DCHECK(height % 2 == 0);
+  FXL_DCHECK(width % 2 == 0);
+  FXL_DCHECK(height % 2 == 0);
 
   size_t size_in_bytes = width * height * sizeof(RGBA);
   auto ptr = std::make_unique<uint8_t[]>(size_in_bytes);

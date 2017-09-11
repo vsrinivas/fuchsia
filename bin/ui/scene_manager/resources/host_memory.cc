@@ -14,7 +14,7 @@ HostMemory::HostMemory(Session* session,
                        mx::vmo vmo,
                        uint64_t vmo_size)
     : Memory(session, id, HostMemory::kTypeInfo),
-      shared_vmo_(ftl::MakeRefCounted<mtl::SharedVmo>(std::move(vmo),
+      shared_vmo_(fxl::MakeRefCounted<mtl::SharedVmo>(std::move(vmo),
                                                       MX_VM_FLAG_PERM_READ)),
       size_(vmo_size) {}
 
@@ -38,7 +38,7 @@ HostMemoryPtr HostMemory::New(Session* session,
                               ErrorReporter* error_reporter) {
   uint64_t vmo_size;
   vmo.get_size(&vmo_size);
-  return ftl::MakeRefCounted<HostMemory>(session, id, std::move(vmo), vmo_size);
+  return fxl::MakeRefCounted<HostMemory>(session, id, std::move(vmo), vmo_size);
 }
 
 }  // namespace scene_manager

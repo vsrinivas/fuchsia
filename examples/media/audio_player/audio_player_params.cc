@@ -6,12 +6,12 @@
 
 #include <iostream>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/split_string.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/split_string.h"
 
 namespace examples {
 
-AudioPlayerParams::AudioPlayerParams(const ftl::CommandLine& command_line) {
+AudioPlayerParams::AudioPlayerParams(const fxl::CommandLine& command_line) {
   is_valid_ = false;
 
   bool url_found = false;

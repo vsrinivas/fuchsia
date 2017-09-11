@@ -8,7 +8,7 @@
 #include <limits>
 
 #include "garnet/bin/media/audio_server/platform/generic/mixers/mixer_utils.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 namespace audio {
@@ -69,11 +69,11 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
   int32_t soff = *frac_src_offset;
   int32_t send = static_cast<int32_t>(frac_src_frames - FRAC_ONE);
 
-  FTL_DCHECK(doff < dst_frames);
-  FTL_DCHECK(frac_src_frames >= FRAC_ONE);
-  FTL_DCHECK(frac_src_frames <=
+  FXL_DCHECK(doff < dst_frames);
+  FXL_DCHECK(frac_src_frames >= FRAC_ONE);
+  FXL_DCHECK(frac_src_frames <=
              static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
-  FTL_DCHECK((soff >= 0) || (static_cast<uint32_t>(-soff) < FRAC_ONE));
+  FXL_DCHECK((soff >= 0) || (static_cast<uint32_t>(-soff) < FRAC_ONE));
 
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets and hold onto

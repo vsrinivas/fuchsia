@@ -14,8 +14,8 @@ class Model;
 class PaperRenderer;
 class Semaphore;
 class Stage;
-using ImagePtr = ftl::RefPtr<Image>;
-using SemaphorePtr = ftl::RefPtr<Semaphore>;
+using ImagePtr = fxl::RefPtr<Image>;
+using SemaphorePtr = fxl::RefPtr<Semaphore>;
 }  // namespace escher
 
 namespace scene_manager {
@@ -25,8 +25,8 @@ class Layer;
 class LayerStack;
 class Scene;
 class Swapchain;
-using FrameTimingsPtr = ftl::RefPtr<FrameTimings>;
-using LayerStackPtr = ftl::RefPtr<LayerStack>;
+using FrameTimingsPtr = fxl::RefPtr<FrameTimings>;
+using LayerStackPtr = fxl::RefPtr<LayerStack>;
 
 // A Compositor composes multiple layers into a single image.  This is intended
 // to provide an abstraction that can make use of hardware overlay layers.
@@ -71,7 +71,7 @@ class Compositor : public Resource {
   std::unique_ptr<Swapchain> swapchain_;
   LayerStackPtr layer_stack_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Compositor);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Compositor);
 };
 
 }  // namespace scene_manager

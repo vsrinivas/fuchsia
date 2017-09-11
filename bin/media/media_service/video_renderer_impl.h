@@ -55,7 +55,7 @@ class VideoRendererImpl : public MediaServiceImpl::Product<VideoRenderer>,
 
     scenic_lib::HostImageCycler image_cycler_;
 
-    FTL_DISALLOW_COPY_AND_ASSIGN(View);
+    FXL_DISALLOW_COPY_AND_ASSIGN(View);
   };
 
   VideoRendererImpl(
@@ -65,7 +65,7 @@ class VideoRendererImpl : public MediaServiceImpl::Product<VideoRenderer>,
 
   std::shared_ptr<VideoFrameSource> video_frame_source_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(VideoRendererImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(VideoRendererImpl);
 };
 
 }  // namespace media

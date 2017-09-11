@@ -39,7 +39,7 @@ std::shared_future<PipelinePtr> PipelineCache::GetPipeline(
     auto pipeline = factory->NewPipeline(std::move(spec)).get();
     // If this fails, then subsequent requests for the same spec are
     // guaranteed to fail forever.
-    FTL_DCHECK(pipeline);
+    FXL_DCHECK(pipeline);
     promise->set_value(std::move(pipeline));
   }).detach();
 

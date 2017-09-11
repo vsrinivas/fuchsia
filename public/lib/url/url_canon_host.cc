@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/url/url_canon.h"
 #include "lib/url/url_canon_internal.h"
 
@@ -174,7 +174,7 @@ bool DoIDNHost(const uint16_t* src, size_t src_len, CanonOutput* output) {
   // unescaping. Although we unescaped everything before this function call, if
   // somebody does %00 as fullwidth, ICU will convert this to ASCII.
   bool success = DoSimpleHost(wide_output.data(), wide_output.length(), output, &has_non_ascii);
-  FTL_DCHECK(!has_non_ascii);
+  FXL_DCHECK(!has_non_ascii);
   return success;
 }
 
@@ -260,7 +260,7 @@ void CanonicalizeHostVerbose(const char* spec, const Component& host, CanonOutpu
   bool success;
   if (!has_non_ascii && !has_escaped) {
     success = DoSimpleHost(&spec[host.begin], host.len(), output, &has_non_ascii);
-    FTL_DCHECK(!has_non_ascii);
+    FXL_DCHECK(!has_non_ascii);
   } else {
     success = DoComplexHost(&spec[host.begin], host.len(), has_non_ascii, has_escaped, output);
   }

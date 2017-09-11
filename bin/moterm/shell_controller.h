@@ -16,7 +16,7 @@
 #include "garnet/bin/moterm/history.h"
 #include "lib/fidl/c/waiter/async_waiter.h"
 #include "lib/fidl/cpp/waiter/default.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/io/redirection.h"
 #include "lib/mtl/vmo/strings.h"
 
@@ -66,7 +66,7 @@ class ShellController : public History::Client {
 
   mx::channel channel_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ShellController);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ShellController);
 };
 
 }  // namespace moterm

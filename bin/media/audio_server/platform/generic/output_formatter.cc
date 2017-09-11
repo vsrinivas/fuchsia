@@ -7,7 +7,7 @@
 #include <limits>
 #include <type_traits>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 namespace audio {
@@ -111,14 +111,14 @@ static inline OutputFormatterPtr SelectOF(
     case 2:
       return OutputFormatterPtr(new OutputFormatterImpl<DType, 2>(format));
     default:
-      FTL_LOG(ERROR) << "Unsupported output channels " << format->channels;
+      FXL_LOG(ERROR) << "Unsupported output channels " << format->channels;
       return nullptr;
   }
 }
 
 OutputFormatterPtr OutputFormatter::Select(
     const AudioMediaTypeDetailsPtr& format) {
-  FTL_DCHECK(format);
+  FXL_DCHECK(format);
 
   switch (format->sample_format) {
     case AudioSampleFormat::UNSIGNED_8:
@@ -126,7 +126,7 @@ OutputFormatterPtr OutputFormatter::Select(
     case AudioSampleFormat::SIGNED_16:
       return SelectOF<int16_t>(format);
     default:
-      FTL_LOG(ERROR) << "Unsupported output sample format "
+      FXL_LOG(ERROR) << "Unsupported output sample format "
                      << format->sample_format;
       return nullptr;
   }

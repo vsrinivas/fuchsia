@@ -29,7 +29,7 @@ class DisplayCompositor : public Compositor {
  private:
   Display* const display_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DisplayCompositor);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DisplayCompositor);
 };
 
 }  // namespace scene_manager

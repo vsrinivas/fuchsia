@@ -13,13 +13,13 @@ std::pair<escher::SemaphorePtr, mx::event> NewSemaphoreEventPair(
   mx::event event;
   mx_status_t status = mx::event::create(0u, &event);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "Failed to create event to import as VkSemaphore.";
+    FXL_LOG(ERROR) << "Failed to create event to import as VkSemaphore.";
     return std::make_pair(escher::SemaphorePtr(), mx::event());
   }
 
   mx::event event_copy;
   if (event.duplicate(MX_RIGHT_SAME_RIGHTS, &event_copy) != MX_OK) {
-    FTL_LOG(ERROR) << "Failed to duplicate event.";
+    FXL_LOG(ERROR) << "Failed to duplicate event.";
     return std::make_pair(escher::SemaphorePtr(), mx::event());
   }
 
@@ -34,7 +34,7 @@ std::pair<escher::SemaphorePtr, mx::event> NewSemaphoreEventPair(
   if (VK_SUCCESS != device->proc_addrs().ImportSemaphoreFdKHR(
                         device->vk_device(),
                         reinterpret_cast<VkImportSemaphoreFdInfoKHR*>(&info))) {
-    FTL_LOG(ERROR) << "Failed to import event as VkSemaphore.";
+    FXL_LOG(ERROR) << "Failed to import event as VkSemaphore.";
     // Don't leak handle.
     mx_handle_close(info.fd);
     return std::make_pair(escher::SemaphorePtr(), mx::event());
@@ -47,7 +47,7 @@ mx::vmo ExportMemoryAsVMO(escher::Escher* escher,
                           const escher::GpuMemPtr& mem) {
   auto result = escher->vulkan_context().device.exportMemoryMAGMA(mem->base());
   if (result.result != vk::Result::eSuccess) {
-    FTL_LOG(ERROR) << "Failed to export escher::GpuMem as mx::vmo";
+    FXL_LOG(ERROR) << "Failed to export escher::GpuMem as mx::vmo";
     return mx::vmo();
   }
   return mx::vmo(result.value);

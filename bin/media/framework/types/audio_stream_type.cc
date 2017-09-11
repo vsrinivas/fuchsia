@@ -5,7 +5,7 @@
 #include "garnet/bin/media/framework/types/audio_stream_type.h"
 
 #include "garnet/bin/media/util/safe_clone.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -41,7 +41,7 @@ uint32_t AudioStreamType::SampleSizeFromFormat(SampleFormat sample_format) {
     case SampleFormat::kNone:
       return 0;
     case SampleFormat::kAny:
-      FTL_LOG(ERROR) << "sample size requested for SampleFormat::kAny";
+      FXL_LOG(ERROR) << "sample size requested for SampleFormat::kAny";
       abort();
     case SampleFormat::kUnsigned8:
       return sizeof(uint8_t);
@@ -86,7 +86,7 @@ bool AudioStreamTypeSet::Includes(const StreamType& type) const {
     return false;
   }
 
-  FTL_DCHECK(type.audio() != nullptr);
+  FXL_DCHECK(type.audio() != nullptr);
 
   return (sample_format() == type.audio()->sample_format() ||
           sample_format() == AudioStreamType::SampleFormat::kAny) &&

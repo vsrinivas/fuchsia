@@ -41,7 +41,7 @@ class HostImageCycler : public scenic_lib::EntityNode {
   bool reconfigured_ = false;
   uint32_t image_index_ = 0u;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(HostImageCycler);
+  FXL_DISALLOW_COPY_AND_ASSIGN(HostImageCycler);
 };
 
 }  // namespace scenic_lib

@@ -4,7 +4,7 @@
 
 #include "garnet/bin/netconnector/mdns/mdns_names.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace netconnector {
 namespace mdns {
@@ -35,13 +35,13 @@ const std::string MdnsNames::kLocalDomainName = "local.";
 
 // static
 std::string MdnsNames::LocalHostFullName(const std::string& host_name) {
-  FTL_DCHECK(!host_name.empty());
+  FXL_DCHECK(!host_name.empty());
   return Concatenate({host_name, ".", kLocalDomainName});
 }
 
 // static
 std::string MdnsNames::LocalServiceFullName(const std::string& service_name) {
-  FTL_DCHECK(IsValidServiceName(service_name));
+  FXL_DCHECK(IsValidServiceName(service_name));
 
   return Concatenate({service_name, kLocalDomainName});
 }
@@ -49,8 +49,8 @@ std::string MdnsNames::LocalServiceFullName(const std::string& service_name) {
 // static
 std::string MdnsNames::LocalInstanceFullName(const std::string& instance_name,
                                              const std::string& service_name) {
-  FTL_DCHECK(!instance_name.empty());
-  FTL_DCHECK(IsValidServiceName(service_name));
+  FXL_DCHECK(!instance_name.empty());
+  FXL_DCHECK(IsValidServiceName(service_name));
 
   return Concatenate({instance_name, ".", service_name, kLocalDomainName});
 }

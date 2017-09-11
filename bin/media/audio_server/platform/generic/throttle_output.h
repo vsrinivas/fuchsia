@@ -21,11 +21,11 @@ class ThrottleOutput : public StandardOutputBase {
   MediaResult Init() override;
 
   // StandardOutputBase Implementation
-  bool StartMixJob(MixJob* job, ftl::TimePoint process_start) override;
+  bool StartMixJob(MixJob* job, fxl::TimePoint process_start) override;
   bool FinishMixJob(const MixJob& job) override;
 
  private:
-  ftl::TimePoint last_sched_time_;
+  fxl::TimePoint last_sched_time_;
 };
 
 }  // namespace audio

@@ -9,14 +9,14 @@
 
 #include <functional>
 
-#include "lib/ftl/ftl_export.h"
+#include "lib/fxl/fxl_export.h"
 
 namespace mtl {
 
 // Drain the given socket and call |write_bytes| with pieces of data.
 // |write_bytes| must return the number of bytes consumed. Returns |true| if the
 // socket has been drained, |false| if an error occured.
-FTL_EXPORT bool BlockingDrainFrom(
+FXL_EXPORT bool BlockingDrainFrom(
     mx::socket source,
     const std::function<size_t(const void*, uint32_t)>& write_bytes);
 

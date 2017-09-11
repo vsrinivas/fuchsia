@@ -46,8 +46,8 @@ void MediaTypeConverter::Config(media::MediaTypePtr input_type,
                                 media::MediaTypePtr output_type,
                                 uint64_t consumer_address,
                                 uint64_t producer_address) {
-  FTL_DCHECK(input_type);
-  FTL_DCHECK(output_type);
+  FXL_DCHECK(input_type);
+  FXL_DCHECK(output_type);
 
   terse_out() << EntryHeader(entry(), entry_index())
               << "MediaTypeConverter.Config\n";
@@ -81,7 +81,7 @@ void MediaTypeConverterAccumulator::Print(std::ostream& os) {
 
   if (consumer_channel_) {
     os << begl << "consumer: " << *consumer_channel_ << " ";
-    FTL_DCHECK(consumer_channel_->resolved());
+    FXL_DCHECK(consumer_channel_->resolved());
     consumer_channel_->PrintAccumulator(os);
     os << "\n";
   } else {
@@ -90,7 +90,7 @@ void MediaTypeConverterAccumulator::Print(std::ostream& os) {
 
   if (producer_channel_) {
     os << begl << "producer: " << *producer_channel_ << " ";
-    FTL_DCHECK(producer_channel_->resolved());
+    FXL_DCHECK(producer_channel_->resolved());
     producer_channel_->PrintAccumulator(os);
   } else {
     os << begl << "producer: <none>";

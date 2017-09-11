@@ -77,7 +77,7 @@ class Engine : private FrameSchedulerDelegate {
   // that we can tell it to apply updates when the FrameScheduler notifies us
   // via OnPrepareFrame().
   void ScheduleSessionUpdate(uint64_t presentation_time,
-                             ftl::RefPtr<Session> session);
+                             fxl::RefPtr<Session> session);
 
   // Tell the FrameScheduler to schedule a frame. This is used for updates
   // triggered by something other than a Session update i.e. an ImagePipe with
@@ -157,9 +157,9 @@ class Engine : private FrameSchedulerDelegate {
 
   // Lists all Session that have updates to apply, sorted by the earliest
   // requested presentation time of each update.
-  std::set<std::pair<uint64_t, ftl::RefPtr<Session>>> updatable_sessions_;
+  std::set<std::pair<uint64_t, fxl::RefPtr<Session>>> updatable_sessions_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Engine);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Engine);
 };
 
 }  // namespace scene_manager

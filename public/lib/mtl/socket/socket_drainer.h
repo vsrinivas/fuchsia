@@ -9,12 +9,12 @@
 
 #include "lib/fidl/c/waiter/async_waiter.h"
 #include "lib/fidl/cpp/waiter/default.h"
-#include "lib/ftl/ftl_export.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/fxl_export.h"
+#include "lib/fxl/macros.h"
 
 namespace mtl {
 
-class FTL_EXPORT SocketDrainer {
+class FXL_EXPORT SocketDrainer {
  public:
   class Client {
    public:
@@ -45,7 +45,7 @@ class FTL_EXPORT SocketDrainer {
   FidlAsyncWaitID wait_id_;
   bool* destruction_sentinel_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SocketDrainer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SocketDrainer);
 };
 
 }  // namespace mtl

@@ -16,9 +16,9 @@
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/ui/views/fidl/views.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace root_presenter {
 
@@ -54,7 +54,7 @@ class Presentation : private mozart::ViewTreeListener,
   // Invokes the callback if an error occurs.
   // This method must be called at most once for the lifetime of the
   // presentation.
-  void Present(mozart::ViewOwnerPtr view_owner, ftl::Closure shutdown_callback);
+  void Present(mozart::ViewOwnerPtr view_owner, fxl::Closure shutdown_callback);
 
   void OnReport(uint32_t device_id, mozart::InputReportPtr report);
   void OnDeviceAdded(mozart::InputDeviceImpl* input_device);
@@ -110,7 +110,7 @@ class Presentation : private mozart::ViewTreeListener,
 
   mozart::ViewPtr root_view_;
 
-  ftl::Closure shutdown_callback_;
+  fxl::Closure shutdown_callback_;
 
   mozart::PointF mouse_coordinates_;
 
@@ -141,9 +141,9 @@ class Presentation : private mozart::ViewTreeListener,
       std::pair<mozart::InputDeviceImpl*, std::unique_ptr<mozart::DeviceState>>>
       device_states_by_id_;
 
-  ftl::WeakPtrFactory<Presentation> weak_factory_;
+  fxl::WeakPtrFactory<Presentation> weak_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Presentation);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Presentation);
 };
 
 }  // namespace root_presenter

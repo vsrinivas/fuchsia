@@ -5,7 +5,7 @@
 #include "garnet/bin/ui/scene_manager/engine/hit_tester.h"
 
 #include "garnet/bin/ui/scene_manager/resources/nodes/traversal.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace scene_manager {
 
@@ -14,17 +14,17 @@ HitTester::HitTester() {}
 HitTester::~HitTester() = default;
 
 std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {
-  FTL_DCHECK(node);
-  FTL_DCHECK(session_ == nullptr);
-  FTL_DCHECK(ray_info_ == nullptr);
-  FTL_DCHECK(tag_info_ == nullptr);
+  FXL_DCHECK(node);
+  FXL_DCHECK(session_ == nullptr);
+  FXL_DCHECK(ray_info_ == nullptr);
+  FXL_DCHECK(tag_info_ == nullptr);
 
   // Trace the ray.
   session_ = node->session();
   RayInfo local_ray_info{ray, escher::mat4(1.f)};
   ray_info_ = &local_ray_info;
   AccumulateHitsLocal(node);
-  FTL_DCHECK(tag_info_ == nullptr);
+  FXL_DCHECK(tag_info_ == nullptr);
   ray_info_ = nullptr;
   session_ = nullptr;
 

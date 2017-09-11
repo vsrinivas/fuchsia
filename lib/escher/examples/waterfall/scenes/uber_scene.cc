@@ -24,9 +24,9 @@ using escher::ShapeModifier;
 UberScene::UberScene(Demo* demo) : Scene(demo) {}
 
 void UberScene::Init(escher::Stage* stage) {
-  blue_ = ftl::MakeRefCounted<escher::Material>();
-  red_ = ftl::MakeRefCounted<escher::Material>();
-  bg_ = ftl::MakeRefCounted<escher::Material>();
+  blue_ = fxl::MakeRefCounted<escher::Material>();
+  red_ = fxl::MakeRefCounted<escher::Material>();
+  bg_ = fxl::MakeRefCounted<escher::Material>();
   purple_->set_color(vec3(0.588f, 0.239f, 0.729f));
   bg_->set_color(vec3(0.8f, 0.8f, 0.8f));
 

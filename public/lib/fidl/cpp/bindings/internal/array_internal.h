@@ -18,7 +18,7 @@
 #include "lib/fidl/cpp/bindings/internal/map_data_internal.h"
 #include "lib/fidl/cpp/bindings/internal/validate_params.h"
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace fidl {
 template <typename T>
@@ -50,7 +50,7 @@ struct ArrayDataTraits {
       (kMaxUint32 - sizeof(ArrayHeader)) / sizeof(StorageType);
 
   static uint32_t GetStorageSize(uint32_t num_elements) {
-    FTL_DCHECK(num_elements <= kMaxNumElements);
+    FXL_DCHECK(num_elements <= kMaxNumElements);
     return sizeof(ArrayHeader) + sizeof(StorageType) * num_elements;
   }
   static Ref ToRef(StorageType* storage, size_t offset) {
@@ -85,7 +85,7 @@ struct ArrayDataTraits<P*> {
       (kMaxUint32 - sizeof(ArrayHeader)) / sizeof(StorageType);
 
   static uint32_t GetStorageSize(uint32_t num_elements) {
-    FTL_DCHECK(num_elements <= kMaxNumElements);
+    FXL_DCHECK(num_elements <= kMaxNumElements);
     return sizeof(ArrayHeader) + sizeof(StorageType) * num_elements;
   }
   static Ref ToRef(StorageType* storage, size_t offset) {
@@ -106,7 +106,7 @@ struct ArrayDataTraits<Array_Data<T>*> {
       (kMaxUint32 - sizeof(ArrayHeader)) / sizeof(StorageType);
 
   static uint32_t GetStorageSize(uint32_t num_elements) {
-    FTL_DCHECK(num_elements <= kMaxNumElements);
+    FXL_DCHECK(num_elements <= kMaxNumElements);
     return sizeof(ArrayHeader) + sizeof(StorageType) * num_elements;
   }
   static Ref ToRef(StorageType* storage, size_t offset) {
@@ -187,9 +187,9 @@ struct ArraySerializationHelper<T, false, false> {
       BoundsChecker* bounds_checker,
       const ArrayValidateParams* validate_params,
       std::string* err) {
-    FTL_DCHECK(!validate_params->element_is_nullable)
+    FXL_DCHECK(!validate_params->element_is_nullable)
         << "Primitive type should be non-nullable";
-    FTL_DCHECK(!validate_params->element_validate_params)
+    FXL_DCHECK(!validate_params->element_validate_params)
         << "Primitive type should not have array validate params";
     return ValidationError::NONE;
   }
@@ -213,7 +213,7 @@ struct ArraySerializationHelper<WrappedHandle, true, false> {
       BoundsChecker* bounds_checker,
       const ArrayValidateParams* validate_params,
       std::string* err) {
-    FTL_DCHECK(!validate_params->element_validate_params)
+    FXL_DCHECK(!validate_params->element_validate_params)
         << "Handle type should not have array validate params";
 
     for (uint32_t i = 0; i < header->num_elements; ++i) {
@@ -320,7 +320,7 @@ struct ArraySerializationHelper<P*, false, false> {
                                BoundsChecker* bounds_checker,
                                const ArrayValidateParams* validate_params,
                                std::string* err) {
-      FTL_DCHECK(!validate_params)
+      FXL_DCHECK(!validate_params)
           << "Struct type should not have array validate params";
 
       return T::Validate(data, bounds_checker, err);
@@ -375,7 +375,7 @@ struct ArraySerializationHelper<P, false, true> {
       BoundsChecker* bounds_checker,
       const ArrayValidateParams* validate_params,
       std::string* err) {
-    FTL_DCHECK(!validate_params->element_validate_params)
+    FXL_DCHECK(!validate_params->element_validate_params)
         << "Union type should not have array validate params";
     for (uint32_t i = 0; i < header->num_elements; ++i) {
       if (!validate_params->element_is_nullable && elements[i].is_null()) {
@@ -464,12 +464,12 @@ class Array_Data {
   size_t size() const { return header_.num_elements; }
 
   Ref at(size_t offset) {
-    FTL_DCHECK(offset < static_cast<size_t>(header_.num_elements));
+    FXL_DCHECK(offset < static_cast<size_t>(header_.num_elements));
     return Traits::ToRef(storage(), offset);
   }
 
   ConstRef at(size_t offset) const {
-    FTL_DCHECK(offset < static_cast<size_t>(header_.num_elements));
+    FXL_DCHECK(offset < static_cast<size_t>(header_.num_elements));
     return Traits::ToConstRef(storage(), offset);
   }
 

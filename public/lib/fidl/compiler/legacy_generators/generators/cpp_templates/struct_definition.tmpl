@@ -166,7 +166,7 @@
 
 void {{class_name}}::EncodePointersAndHandles(
     std::vector<mx_handle_t>* handles) {
-  FTL_CHECK(header_.version == {{struct.versions[-1].version}});
+  FXL_CHECK(header_.version == {{struct.versions[-1].version}});
 {%- for pf in struct.packed.packed_fields_in_ordinal_order %}
 {%-   if pf.field.kind|is_union_kind %}
   {{pf.field.name}}.EncodePointersAndHandles(handles);

@@ -65,7 +65,7 @@ TEST_F(InputTest, InputKeyboardTest) {
   keyboard_report->pressed_keys[0] = HID_USAGE_KEY_A;
 
   mozart::InputReportPtr report = mozart::InputReport::New();
-  report->event_time = ftl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
+  report->event_time = fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
   report->keyboard = std::move(keyboard_report);
   input_device->DispatchReport(std::move(report));
 

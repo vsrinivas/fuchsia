@@ -9,7 +9,7 @@
 #include <sys/socket.h>
 
 #include "garnet/bin/netconnector/mdns/mdns_addresses.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace netconnector {
 namespace mdns {
@@ -29,7 +29,7 @@ int MdnsInterfaceTransceiverV6::SetOptionJoinMulticastGroup() {
   int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_JOIN_GROUP,
                           &param, sizeof(param));
   if (result < 0) {
-    FTL_LOG(ERROR) << "Failed to set socket option IPV6_JOIN_GROUP, errno "
+    FXL_LOG(ERROR) << "Failed to set socket option IPV6_JOIN_GROUP, errno "
                    << errno;
   }
 
@@ -41,7 +41,7 @@ int MdnsInterfaceTransceiverV6::SetOptionOutboundInterface() {
   int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_MULTICAST_IF,
                           &index, sizeof(index));
   if (result < 0) {
-    FTL_LOG(ERROR) << "Failed to set socket option IP_MULTICAST_IF, errno "
+    FXL_LOG(ERROR) << "Failed to set socket option IP_MULTICAST_IF, errno "
                    << errno;
   }
 
@@ -53,7 +53,7 @@ int MdnsInterfaceTransceiverV6::SetOptionUnicastTtl() {
   int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_UNICAST_HOPS,
                           &param, sizeof(param));
   if (result < 0) {
-    FTL_LOG(ERROR) << "Failed to set socket option IPV6_UNICAST_HOPS, errno "
+    FXL_LOG(ERROR) << "Failed to set socket option IPV6_UNICAST_HOPS, errno "
                    << errno;
   }
 
@@ -65,7 +65,7 @@ int MdnsInterfaceTransceiverV6::SetOptionMulticastTtl() {
   int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
                           &param, sizeof(param));
   if (result < 0) {
-    FTL_LOG(ERROR) << "Failed to set socket option IPV6_MULTICAST_HOPS, errno "
+    FXL_LOG(ERROR) << "Failed to set socket option IPV6_MULTICAST_HOPS, errno "
                    << errno;
   }
 
@@ -78,7 +78,7 @@ int MdnsInterfaceTransceiverV6::SetOptionFamilySpecific() {
   int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_HOPLIMIT,
                           &param, sizeof(param));
   if (result < 0) {
-    FTL_LOG(ERROR) << "Failed to set socket option IPV6_HOPLIMIT, errno "
+    FXL_LOG(ERROR) << "Failed to set socket option IPV6_HOPLIMIT, errno "
                    << errno;
     return result;
   }
@@ -88,7 +88,7 @@ int MdnsInterfaceTransceiverV6::SetOptionFamilySpecific() {
   result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_V6ONLY, &param,
                       sizeof(param));
   if (result < 0) {
-    FTL_LOG(ERROR) << "Failed to set socket option IPV6_V6ONLY, errno "
+    FXL_LOG(ERROR) << "Failed to set socket option IPV6_V6ONLY, errno "
                    << errno;
     return false;
   }
@@ -100,7 +100,7 @@ int MdnsInterfaceTransceiverV6::Bind() {
   int result = bind(socket_fd().get(), MdnsAddresses::kV6Bind.as_sockaddr(),
                     MdnsAddresses::kV6Bind.socklen());
   if (result < 0) {
-    FTL_LOG(ERROR) << "Failed to bind socket to V6 address, errno " << errno;
+    FXL_LOG(ERROR) << "Failed to bind socket to V6 address, errno " << errno;
   }
 
   return result;

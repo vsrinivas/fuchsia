@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace fidl {
 namespace internal {
@@ -59,21 +59,21 @@ void ReportValidationError(ValidationError error, std::string* description) {
   if (g_validation_error_observer) {
     g_validation_error_observer->set_last_error(error);
   } else if (description) {
-    FTL_LOG(ERROR) << "Invalid message: " << ValidationErrorToString(error)
+    FXL_LOG(ERROR) << "Invalid message: " << ValidationErrorToString(error)
                    << " (" << *description << ")";
   } else {
-    FTL_LOG(ERROR) << "Invalid message: " << ValidationErrorToString(error);
+    FXL_LOG(ERROR) << "Invalid message: " << ValidationErrorToString(error);
   }
 }
 
 ValidationErrorObserverForTesting::ValidationErrorObserverForTesting()
     : last_error_(ValidationError::NONE) {
-  FTL_DCHECK(!g_validation_error_observer);
+  FXL_DCHECK(!g_validation_error_observer);
   g_validation_error_observer = this;
 }
 
 ValidationErrorObserverForTesting::~ValidationErrorObserverForTesting() {
-  FTL_DCHECK(g_validation_error_observer == this);
+  FXL_DCHECK(g_validation_error_observer == this);
   g_validation_error_observer = nullptr;
 }
 

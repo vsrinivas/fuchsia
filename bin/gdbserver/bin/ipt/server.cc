@@ -15,9 +15,9 @@
 #include <launchpad/launchpad.h>
 #include <magenta/syscalls.h>
 
-#include "lib/ftl/arraysize.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/arraysize.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "debugger-utils/util.h"
 
@@ -83,12 +83,12 @@ uint64_t IptConfig::CtlMsr() const {
 }
 
 uint64_t IptConfig::AddrBegin(unsigned i) const {
-  FTL_DCHECK(i < arraysize(addr_range));
+  FXL_DCHECK(i < arraysize(addr_range));
   return addr_range[i].begin;
 }
 
 uint64_t IptConfig::AddrEnd(unsigned i) const {
-  FTL_DCHECK(i < arraysize(addr_range));
+  FXL_DCHECK(i < arraysize(addr_range));
   return addr_range[i].end;
 }
 
@@ -100,7 +100,7 @@ bool IptServer::StartInferior() {
   Process* process = current_process();
   const util::Argv& argv = process->argv();
 
-  FTL_LOG(INFO) << "Starting program: " << argv[0];
+  FXL_LOG(INFO) << "Starting program: " << argv[0];
 
   if (!SetPerfMode(config_))
     return false;
@@ -118,16 +118,16 @@ bool IptServer::StartInferior() {
   // only be opened once at a time.
 
   if (!process->Initialize()) {
-    FTL_LOG(ERROR) << "failed to set up inferior";
+    FXL_LOG(ERROR) << "failed to set up inferior";
     return false;
   }
 
-  FTL_DCHECK(!process->IsAttached());
+  FXL_DCHECK(!process->IsAttached());
   if (!process->Attach()) {
-    FTL_LOG(ERROR) << "failed to attach to process";
+    FXL_LOG(ERROR) << "failed to attach to process";
     return false;
   }
-  FTL_DCHECK(process->IsAttached());
+  FXL_DCHECK(process->IsAttached());
 
   if (!config_.cr3_match_set) {
     // TODO(dje): fetch cr3 for inferior and apply it to cr3_match
@@ -143,12 +143,12 @@ bool IptServer::StartInferior() {
     }
   }
 
-  FTL_DCHECK(!process->IsLive());
+  FXL_DCHECK(!process->IsLive());
   if (!process->Start()) {
-    FTL_LOG(ERROR) << "failed to start process";
+    FXL_LOG(ERROR) << "failed to start process";
     return false;
   }
-  FTL_DCHECK(process->IsLive());
+  FXL_DCHECK(process->IsLive());
 
   return true;
 }
@@ -167,35 +167,35 @@ bool IptServer::DumpResults() {
 }
 
 bool IptServer::Run() {
-  FTL_DCHECK(!io_loop_);
+  FXL_DCHECK(!io_loop_);
 
   if (!exception_port_.Run()) {
-    FTL_LOG(ERROR) << "Failed to initialize exception port!";
+    FXL_LOG(ERROR) << "Failed to initialize exception port!";
     return false;
   }
 
   if (!StartInferior()) {
-    FTL_LOG(ERROR) << "Failed to start inferior";
+    FXL_LOG(ERROR) << "Failed to start inferior";
     return false;
   }
 
   // Start the main loop.
   message_loop_.Run();
 
-  FTL_LOG(INFO) << "Main loop exited";
+  FXL_LOG(INFO) << "Main loop exited";
 
   // Tell the exception port to quit and wait for it to finish.
   exception_port_.Quit();
 
   if (!DumpResults()) {
-    FTL_LOG(ERROR) << "Error dumping results";
+    FXL_LOG(ERROR) << "Error dumping results";
     return false;
   }
 
   return run_status_;
 }
 
-void IptServer::OnBytesRead(const ftl::StringView& bytes_read) {
+void IptServer::OnBytesRead(const fxl::StringView& bytes_read) {
   // TODO(dje): Do we need an i/o loop?
 }
 
@@ -210,8 +210,8 @@ void IptServer::OnIOError() {
 void IptServer::OnThreadStarting(Process* process,
                                  Thread* thread,
                                  const mx_exception_context_t& context) {
-  FTL_DCHECK(process);
-  FTL_DCHECK(thread);
+  FXL_DCHECK(process);
+  FXL_DCHECK(thread);
 
   PrintException(stdout, process, thread, MX_EXCP_THREAD_STARTING, context);
 
@@ -220,7 +220,7 @@ void IptServer::OnThreadStarting(Process* process,
   case Process::State::kRunning:
     break;
   default:
-    FTL_DCHECK(false);
+    FXL_DCHECK(false);
   }
 
   if (config_.mode == IPT_MODE_THREADS) {
@@ -240,8 +240,8 @@ void IptServer::OnThreadExiting(Process* process,
                                 Thread* thread,
                                 const mx_excp_type_t type,
                                 const mx_exception_context_t& context) {
-  FTL_DCHECK(process);
-  FTL_DCHECK(thread);
+  FXL_DCHECK(process);
+  FXL_DCHECK(thread);
 
   PrintException(stdout, process, thread, type, context);
 
@@ -262,7 +262,7 @@ void IptServer::OnThreadExiting(Process* process,
 void IptServer::OnProcessExit(Process* process,
                               const mx_excp_type_t type,
                               const mx_exception_context_t& context) {
-  FTL_DCHECK(process);
+  FXL_DCHECK(process);
 
   PrintException(stdout, process, nullptr, type, context);
 
@@ -275,10 +275,10 @@ void IptServer::OnArchitecturalException(Process* process,
                                          Thread* thread,
                                          const mx_excp_type_t type,
                                          const mx_exception_context_t& context) {
-  FTL_DCHECK(process);
-  FTL_DCHECK(thread);
+  FXL_DCHECK(process);
+  FXL_DCHECK(thread);
   // TODO(armansito): Fine-tune this check if we ever support multi-processing.
-  FTL_DCHECK(process == current_process());
+  FXL_DCHECK(process == current_process());
 
   PrintException(stdout, process, thread, type, context);
 

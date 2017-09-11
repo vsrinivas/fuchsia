@@ -39,12 +39,12 @@
 
 #include "garnet/bin/gdbserver/lib/intel-pt-decode/decoder.h"
 
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/functional/auto_call.h"
-#include "lib/ftl/log_settings.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/functional/auto_call.h"
+#include "lib/fxl/log_settings.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_number_conversions.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
 
@@ -69,7 +69,7 @@ std::unique_ptr<CallPrinter> CallPrinter::Create(DecoderState* state,
   if (config.output_file_name != "") {
     f = fopen(config.output_file_name.c_str(), "w");
     if (!f) {
-      FTL_LOG(ERROR) << "Unable to open file for writing: "
+      FXL_LOG(ERROR) << "Unable to open file for writing: "
                      << config.output_file_name;
       return nullptr;
     }
@@ -185,7 +185,7 @@ void CallPrinter::PrintTime(uint64_t ts,
   uint64_t relative_time = ts - *first_ts;
   uint64_t delta_time = ts - *last_ts;
   Printf("%-24s",
-         ftl::StringPrintf("%-9" PRIu64 " [%-" PRIu64 "]",
+         fxl::StringPrintf("%-9" PRIu64 " [%-" PRIu64 "]",
                            relative_time, delta_time).c_str());
   *last_ts = ts;
 }
@@ -384,10 +384,10 @@ void CallPrinter::PrintHeader(uint64_t id) {
 
 uint64_t CallPrinter::PrintOneFile(const PtFile& pt_file) {
   if (!state_->AllocDecoder(pt_file.file)) {
-    FTL_LOG(ERROR) << "Unable to open pt file: " << pt_file.file;
+    FXL_LOG(ERROR) << "Unable to open pt file: " << pt_file.file;
     return 0;
   }
-  auto free_decoder = ftl::MakeAutoCall([&]() {
+  auto free_decoder = fxl::MakeAutoCall([&]() {
       state_->FreeDecoder();
     });
 

@@ -5,20 +5,20 @@
 #include "garnet/bin/netconnector/service_agent.h"
 
 #include "garnet/bin/netconnector/netconnector_impl.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace netconnector {
 
 // static
-std::unique_ptr<ServiceAgent> ServiceAgent::Create(ftl::UniqueFD socket_fd,
+std::unique_ptr<ServiceAgent> ServiceAgent::Create(fxl::UniqueFD socket_fd,
                                                    NetConnectorImpl* owner) {
   return std::unique_ptr<ServiceAgent>(
       new ServiceAgent(std::move(socket_fd), owner));
 }
 
-ServiceAgent::ServiceAgent(ftl::UniqueFD socket_fd, NetConnectorImpl* owner)
+ServiceAgent::ServiceAgent(fxl::UniqueFD socket_fd, NetConnectorImpl* owner)
     : MessageTransceiver(std::move(socket_fd)), owner_(owner) {
-  FTL_DCHECK(owner != nullptr);
+  FXL_DCHECK(owner != nullptr);
 }
 
 ServiceAgent::~ServiceAgent() {}
@@ -31,7 +31,7 @@ void ServiceAgent::OnServiceNameReceived(const std::string& service_name) {
   mx_status_t status = mx::channel::create(0u, &local, &remote);
 
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "Failed to create channel, status " << status;
+    FXL_LOG(ERROR) << "Failed to create channel, status " << status;
     CloseConnection();
     return;
   }
@@ -43,7 +43,7 @@ void ServiceAgent::OnServiceNameReceived(const std::string& service_name) {
 }
 
 void ServiceAgent::OnConnectionClosed() {
-  FTL_DCHECK(owner_ != nullptr);
+  FXL_DCHECK(owner_ != nullptr);
   owner_->ReleaseServiceAgent(this);
 }
 

@@ -12,12 +12,12 @@ namespace escher {
 const ResourceTypeInfo Resource::kTypeInfo("Resource", ResourceType::kResource);
 
 Resource::Resource(ResourceManager* owner) {
-  FTL_DCHECK(owner);
+  FXL_DCHECK(owner);
   owner->BecomeOwnerOf(this);
 }
 
 const VulkanContext& Resource::vulkan_context() const {
-  FTL_DCHECK(owner());
+  FXL_DCHECK(owner());
   return owner()->vulkan_context();
 }
 

@@ -8,7 +8,7 @@
 #include <cmath>
 
 #include "lib/media/fidl/audio_renderer.fidl.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 namespace {
@@ -46,7 +46,7 @@ float PerceivedLevel::LevelToGain(float level) {
 
 // static
 int PerceivedLevel::GainToLevel(float gain, int max_level) {
-  FTL_DCHECK(max_level > 0);
+  FXL_DCHECK(max_level > 0);
 
   if (gain <= kMinLevelGain) {
     return 0;
@@ -61,7 +61,7 @@ int PerceivedLevel::GainToLevel(float gain, int max_level) {
 
 // static
 float PerceivedLevel::LevelToGain(int level, int max_level) {
-  FTL_DCHECK(max_level > 0);
+  FXL_DCHECK(max_level > 0);
 
   if (level <= 0) {
     return AudioRenderer::kMutedGain;

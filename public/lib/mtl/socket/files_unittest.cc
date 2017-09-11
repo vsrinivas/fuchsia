@@ -10,8 +10,8 @@
 #include <sys/types.h>
 
 #include "gtest/gtest.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -24,14 +24,14 @@ TEST(SocketAndFile, CopyToFileDescriptor) {
   tmp_dir.NewTempFile(&tmp_file);
   MessageLoop message_loop;
 
-  ftl::UniqueFD destination(open(tmp_file.c_str(), O_WRONLY));
+  fxl::UniqueFD destination(open(tmp_file.c_str(), O_WRONLY));
   EXPECT_TRUE(destination.is_valid());
 
   bool success;
   CopyToFileDescriptor(
       mtl::WriteStringToSocket("Hello"), std::move(destination),
       message_loop.task_runner(),
-      [&message_loop, &success](bool success_value, ftl::UniqueFD fd) {
+      [&message_loop, &success](bool success_value, fxl::UniqueFD fd) {
         success = success_value;
         message_loop.PostQuitTask();
       });
@@ -50,7 +50,7 @@ TEST(SocketAndFile, CopyFromFileDescriptor) {
   MessageLoop message_loop;
 
   files::WriteFile(tmp_file, "Hello", 5);
-  ftl::UniqueFD source(open(tmp_file.c_str(), O_RDONLY));
+  fxl::UniqueFD source(open(tmp_file.c_str(), O_RDONLY));
   EXPECT_TRUE(source.is_valid());
 
   mx::socket socket1, socket2;
@@ -59,7 +59,7 @@ TEST(SocketAndFile, CopyFromFileDescriptor) {
   bool success;
   CopyFromFileDescriptor(
       std::move(source), std::move(socket1), message_loop.task_runner(),
-      [&message_loop, &success](bool success_value, ftl::UniqueFD fd) {
+      [&message_loop, &success](bool success_value, fxl::UniqueFD fd) {
         success = success_value;
         message_loop.PostQuitTask();
       });

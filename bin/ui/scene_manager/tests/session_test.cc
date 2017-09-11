@@ -4,7 +4,7 @@
 
 #include "garnet/bin/ui/scene_manager/tests/session_test.h"
 
-#include "lib/ftl/synchronization/waitable_event.h"
+#include "lib/fxl/synchronization/waitable_event.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 #include "garnet/bin/ui/scene_manager/tests/mocks.h"
@@ -14,7 +14,7 @@ namespace test {
 
 void SessionTest::SetUp() {
   engine_ = std::unique_ptr<Engine>(CreateEngine());
-  session_ = ftl::MakeRefCounted<Session>(1, engine_.get(), this, this);
+  session_ = fxl::MakeRefCounted<Session>(1, engine_.get(), this, this);
 }
 
 // ::testing::Test virtual method.
@@ -29,23 +29,23 @@ std::unique_ptr<Engine> SessionTest::CreateEngine() {
   return std::make_unique<EngineForTest>(&display_manager_, nullptr);
 }
 
-void SessionTest::ReportError(ftl::LogSeverity severity,
+void SessionTest::ReportError(fxl::LogSeverity severity,
                               std::string error_string) {
 // Typically, we don't want to log expected errors when running the tests.
 // However, it is useful to print these errors while writing the tests.
 #if 0
   switch (severity) {
-    case ::ftl::LOG_INFO:
-      FTL_LOG(INFO) << error_string;
+    case ::fxl::LOG_INFO:
+      FXL_LOG(INFO) << error_string;
       break;
-    case ::ftl::LOG_WARNING:
-      FTL_LOG(WARNING) << error_string;
+    case ::fxl::LOG_WARNING:
+      FXL_LOG(WARNING) << error_string;
       break;
-    case ::ftl::LOG_ERROR:
-      FTL_LOG(ERROR) << error_string;
+    case ::fxl::LOG_ERROR:
+      FXL_LOG(ERROR) << error_string;
       break;
-    case ::ftl::LOG_FATAL:
-      FTL_LOG(FATAL) << error_string;
+    case ::fxl::LOG_FATAL:
+      FXL_LOG(FATAL) << error_string;
       break;
   }
 #endif
@@ -58,13 +58,13 @@ void SessionTest::SendEvents(::fidl::Array<scenic::EventPtr> events) {
   }
 }
 
-ftl::RefPtr<ftl::TaskRunner> SessionThreadedTest::TaskRunner() const {
+fxl::RefPtr<fxl::TaskRunner> SessionThreadedTest::TaskRunner() const {
   return thread_.TaskRunner();
 }
 
 void SessionThreadedTest::SetUp() {
   thread_.Run();
-  ftl::AutoResetWaitableEvent setup_latch;
+  fxl::AutoResetWaitableEvent setup_latch;
   TaskRunner()->PostTask([this, &setup_latch]() {
     SessionTest::SetUp();
     setup_latch.Signal();
@@ -80,15 +80,15 @@ void SessionThreadedTest::TearDown() {
   thread_.Join();
 }
 
-void SessionThreadedTest::PostTaskSync(ftl::Closure callback) {
-  ftl::AutoResetWaitableEvent latch;
+void SessionThreadedTest::PostTaskSync(fxl::Closure callback) {
+  fxl::AutoResetWaitableEvent latch;
   PostTask(latch, callback);
   latch.Wait();
 }
 
-void SessionThreadedTest::PostTask(ftl::AutoResetWaitableEvent& latch,
-                                   ftl::Closure callback) {
-  FTL_DCHECK(callback);
+void SessionThreadedTest::PostTask(fxl::AutoResetWaitableEvent& latch,
+                                   fxl::Closure callback) {
+  FXL_DCHECK(callback);
   TaskRunner()->PostTask([&latch, callback]() {
     callback();
     latch.Signal();

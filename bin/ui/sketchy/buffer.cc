@@ -11,7 +11,7 @@ static scenic_lib::Buffer NewScenicBufferFromEscherBuffer(
     const escher::BufferPtr& buffer,
     scenic_lib::Session* session) {
   auto result = buffer->device().exportMemoryMAGMA(buffer->mem()->base());
-  FTL_CHECK(result.result == vk::Result::eSuccess);
+  FXL_CHECK(result.result == vk::Result::eSuccess);
 
   scenic_lib::Memory memory(session, mx::vmo(result.value),
                             scenic::MemoryType::VK_DEVICE_MEMORY);

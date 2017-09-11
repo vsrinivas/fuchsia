@@ -5,12 +5,12 @@
 #pragma once
 
 #include "garnet/bin/ui/scene_manager/resources/nodes/node.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace scene_manager {
 
 class Scene;
-using ScenePtr = ftl::RefPtr<Scene>;
+using ScenePtr = fxl::RefPtr<Scene>;
 
 class Scene final : public Node {
  public:
@@ -24,7 +24,7 @@ class Scene final : public Node {
   bool Detach() override;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Scene);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Scene);
 };
 
 }  // namespace scene_manager

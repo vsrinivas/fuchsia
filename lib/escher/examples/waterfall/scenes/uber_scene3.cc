@@ -26,9 +26,9 @@ using escher::Transform;
 UberScene3::UberScene3(Demo* demo) : Scene(demo) {}
 
 void UberScene3::Init(escher::Stage* stage) {
-  bg_ = ftl::MakeRefCounted<escher::Material>();
-  color1_ = ftl::MakeRefCounted<escher::Material>();
-  color2_ = ftl::MakeRefCounted<escher::Material>();
+  bg_ = fxl::MakeRefCounted<escher::Material>();
+  color1_ = fxl::MakeRefCounted<escher::Material>();
+  color2_ = fxl::MakeRefCounted<escher::Material>();
   bg_->set_color(vec3(0.8f, 0.8f, 0.8f));
   color1_->set_color(vec3(157.f / 255.f, 183.f / 255.f, 189.f / 255.f));
   color2_->set_color(vec3(63.f / 255.f, 138.f / 255.f, 153.f / 255.f));

@@ -6,7 +6,7 @@
 
 #include <endian.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace netconnector {
 namespace mdns {
@@ -26,7 +26,7 @@ bool PacketReader::GetBytes(size_t count, void* dest) {
     return true;
   }
 
-  FTL_DCHECK(dest != nullptr);
+  FXL_DCHECK(dest != nullptr);
   std::memcpy(dest, bytes, count);
   return true;
 }

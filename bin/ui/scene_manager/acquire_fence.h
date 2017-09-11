@@ -6,9 +6,9 @@
 
 #include <mx/event.h>
 
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
@@ -29,13 +29,13 @@ class AcquireFence : private mtl::MessageLoopHandler {
 
   // Waits for the fence to indicate that the buffer is ready or for the
   // timeout to expire, whichever comes first.
-  bool WaitReady(ftl::TimeDelta timeout = ftl::TimeDelta::Max());
+  bool WaitReady(fxl::TimeDelta timeout = fxl::TimeDelta::Max());
 
   // Invokes the callback when the fence has been signalled. The callback will
   // be invoked on the current message loop.
   // Can only be called after any previous WaitReadyAsync has invoked the
   // callback. |ready_callback| must be non-null.
-  void WaitReadyAsync(ftl::Closure ready_callback);
+  void WaitReadyAsync(fxl::Closure ready_callback);
 
   // Returns whether this fence has been signalled.
   bool ready() const { return ready_; }
@@ -51,10 +51,10 @@ class AcquireFence : private mtl::MessageLoopHandler {
   mx::event fence_;
 
   mtl::MessageLoop::HandlerKey handler_key_ = 0;
-  ftl::Closure ready_callback_;
+  fxl::Closure ready_callback_;
   bool ready_ = false;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AcquireFence);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AcquireFence);
 };
 
 }  // namespace scene_manager

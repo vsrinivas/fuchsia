@@ -7,7 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <utility>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace escher {
 
@@ -15,7 +15,7 @@ ViewingVolume::ViewingVolume() {}
 
 ViewingVolume::ViewingVolume(float width, float height, float top, float bottom)
     : width_(width), height_(height), top_(top), bottom_(bottom) {
-  FTL_DCHECK(width >= 0 && height >= 0 && top >= bottom);
+  FXL_DCHECK(width >= 0 && height >= 0 && top >= bottom);
 }
 
 ViewingVolume::~ViewingVolume() {}

@@ -23,7 +23,7 @@ DisplayCompositor::DisplayCompositor(
                  DisplayCompositor::kTypeInfo,
                  std::move(swapchain)),
       display_(display) {
-  FTL_DCHECK(display_);
+  FXL_DCHECK(display_);
 }
 
 DisplayCompositor::~DisplayCompositor() = default;

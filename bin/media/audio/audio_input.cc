@@ -14,7 +14,7 @@
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/timeline/timeline_rate.h"
 #include "garnet/bin/media/audio/driver_utils.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -27,7 +27,7 @@ std::shared_ptr<AudioInput> AudioInput::Create(const std::string& device_path) {
 
   mx_status_t result = device->Initalize();
   if (result != MX_OK) {
-    FTL_LOG(ERROR) << "Failed to open and initialize audio input device \""
+    FXL_LOG(ERROR) << "Failed to open and initialize audio input device \""
                    << device_path << "\" (res " << result << ")";
     return nullptr;
   }
@@ -86,9 +86,9 @@ AudioInput::GetSupportedStreamTypes() {
 }
 
 bool AudioInput::SetStreamType(std::unique_ptr<StreamType> stream_type) {
-  FTL_DCHECK(stream_type);
+  FXL_DCHECK(stream_type);
   if (state_ != State::kStopped) {
-    FTL_LOG(ERROR) << "SetStreamType called after Start";
+    FXL_LOG(ERROR) << "SetStreamType called after Start";
     return false;
   }
 
@@ -105,7 +105,7 @@ bool AudioInput::SetStreamType(std::unique_ptr<StreamType> stream_type) {
   }
 
   if (!compatible) {
-    FTL_LOG(ERROR) << "Unsupported stream type requested";
+    FXL_LOG(ERROR) << "Unsupported stream type requested";
     return false;
   }
 
@@ -114,7 +114,7 @@ bool AudioInput::SetStreamType(std::unique_ptr<StreamType> stream_type) {
   const auto& audio_stream_type = *stream_type->audio();
   if (!driver_utils::SampleFormatToDriverSampleFormat(
           audio_stream_type.sample_format(), &configured_sample_format_)) {
-    FTL_LOG(ERROR) << "Failed to convert SampleFormat ("
+    FXL_LOG(ERROR) << "Failed to convert SampleFormat ("
                    << static_cast<uint32_t>(audio_stream_type.sample_format())
                    << ") to audio_sample_format_t";
     return false;
@@ -130,15 +130,15 @@ bool AudioInput::SetStreamType(std::unique_ptr<StreamType> stream_type) {
 }
 
 void AudioInput::Start() {
-  FTL_DCHECK(state_ != State::kUninitialized);
+  FXL_DCHECK(state_ != State::kUninitialized);
 
   if (state_ != State::kStopped) {
-    FTL_DCHECK(state_ == State::kStarted);
+    FXL_DCHECK(state_ == State::kStarted);
     return;
   }
 
   if (!config_valid_) {
-    FTL_LOG(ERROR) << "Cannot start AudioInput.  "
+    FXL_LOG(ERROR) << "Cannot start AudioInput.  "
                    << "Configuration is currently invalid.";
     return;
   }
@@ -148,7 +148,7 @@ void AudioInput::Start() {
 }
 
 void AudioInput::Stop() {
-  FTL_DCHECK(state_ != State::kUninitialized);
+  FXL_DCHECK(state_ != State::kUninitialized);
 
   if (state_ != State::kStarted) {
     return;
@@ -160,7 +160,7 @@ void AudioInput::Stop() {
     worker_thread_.join();
   }
 
-  FTL_DCHECK(state_ == State::kStopped);
+  FXL_DCHECK(state_ == State::kStopped);
 }
 
 bool AudioInput::can_accept_allocator() const {
@@ -174,8 +174,8 @@ void AudioInput::set_allocator(PayloadAllocator* allocator) {
 void AudioInput::SetDownstreamDemand(Demand demand) {}
 
 void AudioInput::Worker() {
-  FTL_DCHECK((state_ == State::kStarted) || (state_ == State::kStopping));
-  FTL_DCHECK(config_valid_);
+  FXL_DCHECK((state_ == State::kStarted) || (state_ == State::kStopping));
+  FXL_DCHECK(config_valid_);
 
   mx_status_t res;
   uint32_t cached_frames_per_packet = frames_per_packet();
@@ -191,7 +191,7 @@ void AudioInput::Worker() {
       audio_input_->SetFormat(configured_frames_per_second_,
                               configured_channels_, configured_sample_format_);
   if (res != MX_OK) {
-    FTL_LOG(ERROR) << "Failed set device format to "
+    FXL_LOG(ERROR) << "Failed set device format to "
                    << configured_frames_per_second_ << " Hz "
                    << configured_channels_ << " channel"
                    << (configured_channels_ == 1 ? "" : "s") << " fmt "
@@ -204,15 +204,15 @@ void AudioInput::Worker() {
   uint32_t rb_frame_count = cached_packet_size * kPacketsPerRingBuffer;
   res = audio_input_->GetBuffer(rb_frame_count, 0);
   if (res != MX_OK) {
-    FTL_LOG(ERROR) << "Failed fetch ring buffer (" << rb_frame_count
+    FXL_LOG(ERROR) << "Failed fetch ring buffer (" << rb_frame_count
                    << " frames, res = " << res << ")";
     return;
   }
 
   // Sanity check how much space we actually got.
-  FTL_DCHECK(configured_bytes_per_frame_ != 0);
+  FXL_DCHECK(configured_bytes_per_frame_ != 0);
   if (audio_input_->ring_buffer_bytes() % configured_bytes_per_frame_) {
-    FTL_LOG(ERROR) << "Error driver supplied ring buffer size ("
+    FXL_LOG(ERROR) << "Error driver supplied ring buffer size ("
                    << audio_input_->ring_buffer_bytes()
                    << ") is not divisible by audio frame size ("
                    << configured_bytes_per_frame_ << ")";
@@ -225,7 +225,7 @@ void AudioInput::Worker() {
   // Start capturing audio.
   res = audio_input_->StartRingBuffer();
   if (res != MX_OK) {
-    FTL_LOG(ERROR) << "Failed to start capture (res = " << res << ")";
+    FXL_LOG(ERROR) << "Failed to start capture (res = " << res << ")";
     return;
   }
 
@@ -264,8 +264,8 @@ void AudioInput::Worker() {
       if (pending_packets >= rb_packet_count) {
         uint32_t skip_count = pending_packets - rb_packet_count + 1;
 
-        FTL_DCHECK(pending_packets > skip_count);
-        FTL_LOG(WARNING) << "Input overflowed by " << skip_count << " packets.";
+        FXL_DCHECK(pending_packets > skip_count);
+        FXL_LOG(WARNING) << "Input overflowed by " << skip_count << " packets.";
         frames_rxed +=
             static_cast<uint64_t>(skip_count) * cached_frames_per_packet;
         pending_packets -= skip_count;
@@ -274,13 +274,13 @@ void AudioInput::Worker() {
       // Now produce as many packets as we can given our pending packet count.
       uint32_t modulo_rd_ptr_bytes =
           (frames_rxed % rb_frame_count) * configured_bytes_per_frame_;
-      FTL_DCHECK(modulo_rd_ptr_bytes < audio_input_->ring_buffer_bytes());
+      FXL_DCHECK(modulo_rd_ptr_bytes < audio_input_->ring_buffer_bytes());
 
       while (pending_packets > 0) {
         auto buf = reinterpret_cast<uint8_t*>(
             allocator_->AllocatePayloadBuffer(cached_packet_size));
         if (buf == nullptr) {
-          FTL_LOG(ERROR) << "Allocator starved";
+          FXL_LOG(ERROR) << "Allocator starved";
           return;
         }
 
@@ -303,7 +303,7 @@ void AudioInput::Worker() {
           ::memcpy(buf + contig_space, audio_input_->ring_buffer(), leftover);
           modulo_rd_ptr_bytes = leftover;
         }
-        FTL_DCHECK(modulo_rd_ptr_bytes < audio_input_->ring_buffer_bytes());
+        FXL_DCHECK(modulo_rd_ptr_bytes < audio_input_->ring_buffer_bytes());
 
         stage().SupplyPacket(Packet::Create(frames_rxed, pts_rate_, false,
                                             false, cached_packet_size, buf,

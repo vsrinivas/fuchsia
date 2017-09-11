@@ -6,7 +6,7 @@
 
 #include <magenta/syscalls/port.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 namespace {
@@ -15,11 +15,11 @@ static const uint64_t kQuitKey = 1;
 }  // namespace
 
 MultiprocTaskRunner::MultiprocTaskRunner(uint32_t thread_count) {
-  FTL_DCHECK(thread_count > 0);
+  FXL_DCHECK(thread_count > 0);
 
   mx_status_t status = mx::port::create(0u, &port_);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "mx::port::create failed, status " << status;
+    FXL_LOG(ERROR) << "mx::port::create failed, status " << status;
   }
 
   while (thread_count-- != 0) {
@@ -40,19 +40,19 @@ MultiprocTaskRunner::~MultiprocTaskRunner() {
   }
 }
 
-void MultiprocTaskRunner::PostTask(ftl::Closure task) {
-  ftl::Closure* task_copy = new ftl::Closure(task);
+void MultiprocTaskRunner::PostTask(fxl::Closure task) {
+  fxl::Closure* task_copy = new fxl::Closure(task);
   QueuePacket(kUpdateKey, task_copy);
 }
 
-void MultiprocTaskRunner::PostTaskForTime(ftl::Closure task,
-                                          ftl::TimePoint target_time) {
-  FTL_CHECK(false) << "MultiprocTaskRunner::PostTaskForTime not implemented";
+void MultiprocTaskRunner::PostTaskForTime(fxl::Closure task,
+                                          fxl::TimePoint target_time) {
+  FXL_CHECK(false) << "MultiprocTaskRunner::PostTaskForTime not implemented";
 }
 
-void MultiprocTaskRunner::PostDelayedTask(ftl::Closure task,
-                                          ftl::TimeDelta delay) {
-  FTL_CHECK(false) << "MultiprocTaskRunner::PostDelayedTask not implemented";
+void MultiprocTaskRunner::PostDelayedTask(fxl::Closure task,
+                                          fxl::TimeDelta delay) {
+  FXL_CHECK(false) << "MultiprocTaskRunner::PostDelayedTask not implemented";
 }
 
 bool MultiprocTaskRunner::RunsTasksOnCurrentThread() {
@@ -64,21 +64,21 @@ void MultiprocTaskRunner::Worker(uint32_t thread_number) {
     mx_port_packet_t packet;
     mx_status_t status = port_.wait(MX_TIME_INFINITE, &packet, 0u);
     if (status != MX_OK) {
-      FTL_LOG(ERROR) << "mx::port::wait failed, status " << status;
+      FXL_LOG(ERROR) << "mx::port::wait failed, status " << status;
       break;
     }
 
-    FTL_DCHECK(packet.type == MX_PKT_TYPE_USER);
-    FTL_DCHECK(packet.key == kUpdateKey || packet.key == kQuitKey);
+    FXL_DCHECK(packet.type == MX_PKT_TYPE_USER);
+    FXL_DCHECK(packet.key == kUpdateKey || packet.key == kQuitKey);
 
     if (packet.key == kQuitKey) {
-      FTL_LOG(INFO) << "MultiprocTaskRunner::Worker#" << thread_number
+      FXL_LOG(INFO) << "MultiprocTaskRunner::Worker#" << thread_number
                     << ": quitting";
       break;
     }
 
-    ftl::Closure* task = reinterpret_cast<ftl::Closure*>(packet.user.u64[0]);
-    FTL_DCHECK(task);
+    fxl::Closure* task = reinterpret_cast<fxl::Closure*>(packet.user.u64[0]);
+    FXL_DCHECK(task);
     (*task)();
     delete task;
   }
@@ -91,7 +91,7 @@ void MultiprocTaskRunner::QueuePacket(uint64_t key, void* payload) {
   packet.user.u64[0] = reinterpret_cast<uint64_t>(payload);
   mx_status_t status = port_.queue(&packet, 0u);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "mx::port::queue failed, status " << status;
+    FXL_LOG(ERROR) << "mx::port::queue failed, status " << status;
   }
 }
 

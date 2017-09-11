@@ -4,13 +4,13 @@
 
 #include "lib/ui/scenic/skia/image_info.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace scenic_lib {
 namespace skia {
 
 SkImageInfo MakeSkImageInfo(const scenic::ImageInfo& image_info) {
-  FTL_DCHECK(image_info.tiling == scenic::ImageInfo::Tiling::LINEAR);
+  FXL_DCHECK(image_info.tiling == scenic::ImageInfo::Tiling::LINEAR);
 
   switch (image_info.pixel_format) {
     case scenic::ImageInfo::PixelFormat::BGRA_8:
@@ -18,7 +18,7 @@ SkImageInfo MakeSkImageInfo(const scenic::ImageInfo& image_info) {
                                kBGRA_8888_SkColorType, kOpaque_SkAlphaType);
   }
 
-  FTL_NOTREACHED();
+  FXL_NOTREACHED();
 }
 
 }  // namespace skia

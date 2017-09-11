@@ -4,27 +4,27 @@
 
 #include "escher/impl/command_buffer_sequencer.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace escher {
 namespace impl {
 
 void CommandBufferSequencerListener::Register(
     CommandBufferSequencer* sequencer) {
-  FTL_DCHECK(sequencer);
+  FXL_DCHECK(sequencer);
   sequencer->AddListener(this);
 }
 
 void CommandBufferSequencerListener::Unregister(
     CommandBufferSequencer* sequencer) {
-  FTL_DCHECK(sequencer);
+  FXL_DCHECK(sequencer);
   sequencer->RemoveListener(this);
 }
 
 CommandBufferSequencer::~CommandBufferSequencer() {
   // Ensure clean shutdown.
-  FTL_DCHECK(latest_sequence_number_ == last_finished_sequence_number_);
-  FTL_DCHECK(listeners_.size() == 0);
+  FXL_DCHECK(latest_sequence_number_ == last_finished_sequence_number_);
+  FXL_DCHECK(listeners_.size() == 0);
 }
 
 uint64_t CommandBufferSequencer::GenerateNextCommandBufferSequenceNumber() {
@@ -65,7 +65,7 @@ void CommandBufferSequencer::CommandBufferFinished(uint64_t sequence_number) {
 void CommandBufferSequencer::AddListener(
     CommandBufferSequencerListener* listener) {
   if (listener) {
-    FTL_DCHECK(std::find(listeners_.begin(), listeners_.end(), listener) ==
+    FXL_DCHECK(std::find(listeners_.begin(), listeners_.end(), listener) ==
                listeners_.end());
     listeners_.push_back(listener);
   }

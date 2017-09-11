@@ -5,7 +5,7 @@
 #pragma once
 
 #include "escher/base/ownable.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 
@@ -17,7 +17,7 @@ namespace escher {
 template <typename OwnableT, typename TypeInfoT>
 class Owner {
  public:
-  virtual ~Owner() { FTL_DCHECK(ownable_count_ == 0); }
+  virtual ~Owner() { FXL_DCHECK(ownable_count_ == 0); }
 
   // Return the number of Ownables currently owned by this owner.  Must be
   // zero when the Owner is destroyed.
@@ -27,7 +27,7 @@ class Owner {
   // Allow subclasses of Owner to take ownership of |unowned_ownable|, which
   // must not already have an owner.
   void BecomeOwnerOf(OwnableT* ownable) {
-    FTL_DCHECK(ownable && ownable->owner() == nullptr);
+    FXL_DCHECK(ownable && ownable->owner() == nullptr);
     ownable->set_owner(this);
     IncrementOwnableCount();
   }
@@ -36,7 +36,7 @@ class Owner {
   // it is safe for |ownable| to be destroyed.  This must not be called if
   // this Owner does not own |ownable|.
   void RelinquishOwnershipOf(OwnableT* ownable) {
-    FTL_DCHECK(ownable && ownable->owner() == this);
+    FXL_DCHECK(ownable && ownable->owner() == this);
     ownable->set_owner(nullptr);
     DecrementOwnableCount();
   }
@@ -47,7 +47,7 @@ class Owner {
   // Called by Ownable::OnZeroRefCount().  This owner is now responsible for
   // the lifecycle of the dereferenced Ownable.
   void ReceiveOwnable(std::unique_ptr<OwnableT> unreffed) {
-    FTL_DCHECK(unreffed && unreffed->owner() == this);
+    FXL_DCHECK(unreffed && unreffed->owner() == this);
     OnReceiveOwnable(std::move(unreffed));
   }
 

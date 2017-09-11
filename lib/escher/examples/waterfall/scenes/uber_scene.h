@@ -32,5 +32,5 @@ class UberScene : public Scene {
   escher::MeshPtr ring_mesh3_;
   escher::MeshPtr ring_mesh4_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(UberScene);
+  FXL_DISALLOW_COPY_AND_ASSIGN(UberScene);
 };

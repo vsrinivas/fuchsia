@@ -4,7 +4,7 @@
 
 #include "lib/netconnector/cpp/message_relay.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace netconnector {
@@ -14,8 +14,8 @@ MessageRelayBase::MessageRelayBase() {}
 MessageRelayBase::~MessageRelayBase() {}
 
 void MessageRelayBase::SetChannel(mx::channel channel) {
-  FTL_DCHECK(channel);
-  FTL_DCHECK(!channel_)
+  FXL_DCHECK(channel);
+  FXL_DCHECK(!channel_)
       << "SetChannel called twice without intervening call to CloseChannel";
 
   channel_.swap(channel);
@@ -66,13 +66,13 @@ void MessageRelayBase::ReadChannelMessages() {
     }
 
     if (status != MX_ERR_BUFFER_TOO_SMALL) {
-      FTL_LOG(ERROR) << "Failed to read (peek) from channel, status " << status;
+      FXL_LOG(ERROR) << "Failed to read (peek) from channel, status " << status;
       CloseChannel();
       return;
     }
 
     if (actual_handle_count != 0) {
-      FTL_LOG(ERROR)
+      FXL_LOG(ERROR)
           << "Message received over channel has handles, closing connection";
       CloseChannel();
       return;
@@ -84,12 +84,12 @@ void MessageRelayBase::ReadChannelMessages() {
                       nullptr, 0, &actual_handle_count);
 
     if (status != MX_OK) {
-      FTL_LOG(ERROR) << "Failed to read from channel, status " << status;
+      FXL_LOG(ERROR) << "Failed to read from channel, status " << status;
       CloseChannel();
       return;
     }
 
-    FTL_DCHECK(actual_byte_count == message.size());
+    FXL_DCHECK(actual_byte_count == message.size());
 
     OnMessageReceived(std::move(message));
   }
@@ -121,7 +121,7 @@ void MessageRelayBase::WriteChannelMessages() {
     }
 
     if (status != MX_OK) {
-      FTL_LOG(ERROR) << "mx::channel::write failed, status " << status;
+      FXL_LOG(ERROR) << "mx::channel::write failed, status " << status;
       CloseChannel();
       return;
     }

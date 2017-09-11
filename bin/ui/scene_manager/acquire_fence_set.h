@@ -7,9 +7,9 @@
 #include <mx/event.h>
 
 #include "lib/fidl/cpp/bindings/array.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
@@ -33,7 +33,7 @@ class AcquireFenceSet : private mtl::MessageLoopHandler {
   // will be invoked on the current message loop.
   // Can only be called after any previous WaitReadyAsync has invoked the
   // callback. |ready_callback| must be non-null.
-  void WaitReadyAsync(ftl::Closure ready_callback);
+  void WaitReadyAsync(fxl::Closure ready_callback);
 
   // Returns whether all the fences have been signalled.
   bool ready() const { return num_signalled_fences_ == fences_.size(); }
@@ -53,9 +53,9 @@ class AcquireFenceSet : private mtl::MessageLoopHandler {
   // |fences_|. The size of this array must match that of |fences_|.
   std::vector<mtl::MessageLoop::HandlerKey> handler_keys_;
 
-  ftl::Closure ready_callback_;
+  fxl::Closure ready_callback_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AcquireFenceSet);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AcquireFenceSet);
 };
 
 }  // namespace scene_manager

@@ -26,7 +26,7 @@
 
 #include <memory>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "third_party/libteken/teken/teken.h"
 
 class MotermModel {
@@ -121,7 +121,7 @@ class MotermModel {
     virtual ~Delegate() {}
 
    private:
-    FTL_DISALLOW_COPY_AND_ASSIGN(Delegate);
+    FXL_DISALLOW_COPY_AND_ASSIGN(Delegate);
   };
 
   // If non-null, |delegate| must outlive this object.
@@ -193,7 +193,7 @@ class MotermModel {
   // callback may be called -- it'll point to a stack variable.)
   StateChanges* current_state_changes_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MotermModel);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MotermModel);
 };
 
 #endif  // APPS_MOTERM_MOTERM_MODEL_H_

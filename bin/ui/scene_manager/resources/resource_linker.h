@@ -137,7 +137,7 @@ class ResourceLinker : private mtl::MessageLoopHandler {
   void RemoveFromExportedResourceToImportKoidsMap(Resource* resource,
                                                   mx_koid_t import_koid);
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ResourceLinker);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ResourceLinker);
 };
 
 }  // namespace scene_manager

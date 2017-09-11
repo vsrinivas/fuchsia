@@ -12,8 +12,8 @@
 #include <magenta/syscalls/object.h>
 #include <mxio/io.h>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "debugger-utils/util.h"
 
@@ -25,8 +25,8 @@ namespace {
 constexpr mx_time_t kill_timeout = MX_MSEC(10 * 1000);
 
 bool SetupLaunchpad(launchpad_t** out_lp, const util::Argv& argv) {
-  FTL_DCHECK(out_lp);
-  FTL_DCHECK(argv.size() > 0);
+  FXL_DCHECK(out_lp);
+  FXL_DCHECK(argv.size() > 0);
 
   // Construct the argument array.
   const char* c_args[argv.size()];
@@ -54,31 +54,31 @@ bool SetupLaunchpad(launchpad_t** out_lp, const util::Argv& argv) {
   return true;
 
 fail:
-  FTL_LOG(ERROR) << "Process setup failed: " << util::MxErrorString(status);
+  FXL_LOG(ERROR) << "Process setup failed: " << util::MxErrorString(status);
   if (lp)
     launchpad_destroy(lp);
   return false;
 }
 
 bool LoadBinary(launchpad_t* lp, const std::string& binary_path) {
-  FTL_DCHECK(lp);
+  FXL_DCHECK(lp);
 
   mx_handle_t vmo;
   mx_status_t status = launchpad_vmo_from_file(binary_path.c_str(), &vmo);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "Could not load binary: " << util::MxErrorString(status);
+    FXL_LOG(ERROR) << "Could not load binary: " << util::MxErrorString(status);
     return false;
   }
 
   status = launchpad_elf_load(lp, vmo);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "Could not load binary: " << util::MxErrorString(status);
+    FXL_LOG(ERROR) << "Could not load binary: " << util::MxErrorString(status);
     return false;
   }
 
   status = launchpad_load_vdso(lp, MX_HANDLE_INVALID);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "Could not load vDSO: " << util::MxErrorString(status);
+    FXL_LOG(ERROR) << "Could not load vDSO: " << util::MxErrorString(status);
     return false;
   }
 
@@ -86,25 +86,25 @@ bool LoadBinary(launchpad_t* lp, const std::string& binary_path) {
 }
 
 mx_koid_t GetProcessId(launchpad_t* lp) {
-  FTL_DCHECK(lp);
+  FXL_DCHECK(lp);
 
   // We use the mx_object_get_child syscall to obtain a debug-capable handle
   // to the process. For processes, the syscall expect the ID of the underlying
   // kernel object (koid, also passing for process id in Magenta).
   mx_handle_t process_handle = launchpad_get_process_handle(lp);
-  FTL_DCHECK(process_handle);
+  FXL_DCHECK(process_handle);
 
   mx_info_handle_basic_t info;
   mx_status_t status =
       mx_object_get_info(process_handle, MX_INFO_HANDLE_BASIC, &info,
                          sizeof(info), nullptr, nullptr);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "mx_object_get_info_failed: "
+    FXL_LOG(ERROR) << "mx_object_get_info_failed: "
                    << util::MxErrorString(status);
     return MX_KOID_INVALID;
   }
 
-  FTL_DCHECK(info.type == MX_OBJ_TYPE_PROCESS);
+  FXL_DCHECK(info.type == MX_OBJ_TYPE_PROCESS);
 
   return info.koid;
 }
@@ -114,7 +114,7 @@ mx_handle_t GetProcessDebugHandle(mx_koid_t pid) {
   mx_status_t status = mx_object_get_child(MX_HANDLE_INVALID, pid,
                                            MX_RIGHT_SAME_RIGHTS, &handle);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "mx_object_get_child failed: "
+    FXL_LOG(ERROR) << "mx_object_get_child failed: "
                    << util::MxErrorString(status);
     return MX_HANDLE_INVALID;
   }
@@ -123,9 +123,9 @@ mx_handle_t GetProcessDebugHandle(mx_koid_t pid) {
   // not to be set by anything at the moment but eventully we should check)?
 
   // Syscalls shouldn't return MX_HANDLE_INVALID in the case of MX_OK.
-  FTL_DCHECK(handle != MX_HANDLE_INVALID);
+  FXL_DCHECK(handle != MX_HANDLE_INVALID);
 
-  FTL_VLOG(1) << "Handle " << handle << " obtained for process " << pid;
+  FXL_VLOG(1) << "Handle " << handle << " obtained for process " << pid;
 
   return handle;
 }
@@ -154,8 +154,8 @@ Process::Process(Server* server, Delegate* delegate)
       delegate_(delegate),
       memory_(std::shared_ptr<util::ByteBlock>(new ProcessMemory(this))),
       breakpoints_(this) {
-  FTL_DCHECK(server_);
-  FTL_DCHECK(delegate_);
+  FXL_DCHECK(server_);
+  FXL_DCHECK(delegate_);
 }
 
 Process::~Process() {
@@ -173,13 +173,13 @@ Process::~Process() {
 }
 
 std::string Process::GetName() const {
-  return ftl::StringPrintf("%" PRId64, id());
+  return fxl::StringPrintf("%" PRId64, id());
 }
 
 bool Process::Initialize() {
-  FTL_DCHECK(!launchpad_);
-  FTL_DCHECK(!handle_);
-  FTL_DCHECK(!eport_key_);
+  FXL_DCHECK(!launchpad_);
+  FXL_DCHECK(!handle_);
+  FXL_DCHECK(!eport_key_);
 
   mx_status_t status;
 
@@ -192,37 +192,37 @@ bool Process::Initialize() {
       break;
     default:
       // Shouldn't get here if process is currently live.
-      FTL_DCHECK(false);
+      FXL_DCHECK(false);
   }
 
-  FTL_LOG(INFO) << "Initializing process";
+  FXL_LOG(INFO) << "Initializing process";
 
   attached_running_ = false;
 
   if (argv_.size() == 0 || argv_[0].size() == 0) {
-    FTL_LOG(ERROR) << "No program specified";
+    FXL_LOG(ERROR) << "No program specified";
     return false;
   }
 
-  FTL_LOG(INFO) << "argv: " << util::ArgvToString(argv_);
+  FXL_LOG(INFO) << "argv: " << util::ArgvToString(argv_);
 
   if (!SetupLaunchpad(&launchpad_, argv_))
     return false;
 
-  FTL_LOG(INFO) << "Process setup complete";
+  FXL_LOG(INFO) << "Process setup complete";
 
   if (!LoadBinary(launchpad_, argv_[0]))
     goto fail;
 
-  FTL_VLOG(1) << "Binary loaded";
+  FXL_VLOG(1) << "Binary loaded";
 
   // Initialize the PID.
   id_ = GetProcessId(launchpad_);
-  FTL_DCHECK(id_ != MX_KOID_INVALID);
+  FXL_DCHECK(id_ != MX_KOID_INVALID);
 
   status = launchpad_get_base_address(launchpad_, &base_address_);
   if (status != MX_OK) {
-    FTL_LOG(ERROR)
+    FXL_LOG(ERROR)
         << "Failed to obtain the dynamic linker base address for process: "
         << util::MxErrorString(status);
     goto fail;
@@ -230,16 +230,16 @@ bool Process::Initialize() {
 
   status = launchpad_get_entry_address(launchpad_, &entry_address_);
   if (status != MX_OK) {
-    FTL_LOG(ERROR)
+    FXL_LOG(ERROR)
         << "Failed to obtain the dynamic linker entry address for process: "
         << util::MxErrorString(status);
     goto fail;
   }
 
-  FTL_LOG(INFO) << "Obtained base load address: "
-                << ftl::StringPrintf("0x%" PRIxPTR, base_address_)
+  FXL_LOG(INFO) << "Obtained base load address: "
+                << fxl::StringPrintf("0x%" PRIxPTR, base_address_)
                 << ", entry address: "
-                << ftl::StringPrintf("0x%" PRIxPTR, entry_address_);
+                << fxl::StringPrintf("0x%" PRIxPTR, entry_address_);
 
   return true;
 
@@ -253,9 +253,9 @@ fail:
 // TODO(dje): Merge common parts with Initialize() after things settle down.
 
 bool Process::Initialize(mx_koid_t pid) {
-  FTL_DCHECK(!launchpad_);
-  FTL_DCHECK(!handle_);
-  FTL_DCHECK(!eport_key_);
+  FXL_DCHECK(!launchpad_);
+  FXL_DCHECK(!handle_);
+  FXL_DCHECK(!eport_key_);
 
   // The Process object survives run-after-run. Switch Gone back to New.
   switch (state_) {
@@ -266,21 +266,21 @@ bool Process::Initialize(mx_koid_t pid) {
       break;
     default:
       // Shouldn't get here if process is currently live.
-      FTL_DCHECK(false);
+      FXL_DCHECK(false);
   }
 
-  FTL_LOG(INFO) << "Initializing process";
+  FXL_LOG(INFO) << "Initializing process";
 
   attached_running_ = true;
   id_ = pid;
 
-  FTL_LOG(INFO) << "Process setup complete";
+  FXL_LOG(INFO) << "Process setup complete";
 
   return true;
 }
 
 bool Process::AllocDebugHandle() {
-  FTL_DCHECK(handle_ == MX_HANDLE_INVALID);
+  FXL_DCHECK(handle_ == MX_HANDLE_INVALID);
   auto handle = GetProcessDebugHandle(id_);
   if (handle == MX_HANDLE_INVALID)
     return false;
@@ -305,19 +305,19 @@ bool Process::BindExceptionPort() {
 }
 
 void Process::UnbindExceptionPort() {
-  FTL_DCHECK(eport_key_);
+  FXL_DCHECK(eport_key_);
   if (!server_->exception_port()->Unbind(eport_key_))
-    FTL_LOG(WARNING) << "Failed to unbind exception port; ignoring";
+    FXL_LOG(WARNING) << "Failed to unbind exception port; ignoring";
   eport_key_ = 0;
 }
 
 bool Process::Attach() {
   if (IsAttached()) {
-    FTL_LOG(ERROR) << "Cannot attach an already attached process";
+    FXL_LOG(ERROR) << "Cannot attach an already attached process";
     return false;
   }
 
-  FTL_LOG(INFO) << "Attaching to process " << id();
+  FXL_LOG(INFO) << "Attaching to process " << id();
 
   if (!AllocDebugHandle())
     return false;
@@ -339,10 +339,10 @@ void Process::RawDetach() {
   // A copy of the handle is kept in ExceptionPort.BindData.
   // We can't close the process handle until we unbind the exception port,
   // so verify it's still open.
-  FTL_DCHECK(handle_);
-  FTL_DCHECK(IsAttached());
+  FXL_DCHECK(handle_);
+  FXL_DCHECK(IsAttached());
 
-  FTL_LOG(INFO) << "Detaching from process " << id();
+  FXL_LOG(INFO) << "Detaching from process " << id();
 
   UnbindExceptionPort();
   CloseDebugHandle();
@@ -350,7 +350,7 @@ void Process::RawDetach() {
 
 bool Process::Detach() {
   if (!IsAttached()) {
-    FTL_LOG(ERROR) << "Not attached";
+    FXL_LOG(ERROR) << "Not attached";
     return false;
   }
   RawDetach();
@@ -359,11 +359,11 @@ bool Process::Detach() {
 }
 
 bool Process::Start() {
-  FTL_DCHECK(launchpad_);
-  FTL_DCHECK(handle_);
+  FXL_DCHECK(launchpad_);
+  FXL_DCHECK(handle_);
 
   if (state_ != State::kNew) {
-    FTL_LOG(ERROR) << "Process already started";
+    FXL_LOG(ERROR) << "Process already started";
     return false;
   }
 
@@ -377,7 +377,7 @@ bool Process::Start() {
   launchpad_ = nullptr;
 
   if (dup_handle < 0) {
-    FTL_LOG(ERROR) << "Failed to start inferior process: "
+    FXL_LOG(ERROR) << "Failed to start inferior process: "
                    << util::MxErrorString(dup_handle);
     return false;
   }
@@ -393,13 +393,13 @@ bool Process::Kill() {
   switch (state_) {
     case Process::State::kNew:
     case Process::State::kGone:
-      FTL_VLOG(1) << "Process is not live";
+      FXL_VLOG(1) << "Process is not live";
       return true;
     default:
       break;
   }
 
-  FTL_LOG(INFO) << "Killing process " << id();
+  FXL_LOG(INFO) << "Killing process " << id();
 
   // There's a few issues with sequencing here that we need to consider.
   // - OnProcessExit, called when we receive an exception indicating
@@ -409,10 +409,10 @@ bool Process::Kill() {
   //   we kill it
   // - we need the debug handle to kill the process
 
-  FTL_DCHECK(handle_ != MX_HANDLE_INVALID);
+  FXL_DCHECK(handle_ != MX_HANDLE_INVALID);
   auto status = mx_task_kill(handle_);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "Failed to kill process: " << util::MxErrorString(status);
+    FXL_LOG(ERROR) << "Failed to kill process: " << util::MxErrorString(status);
     return false;
   }
 
@@ -423,10 +423,10 @@ bool Process::Kill() {
   status = mx_object_wait_one(handle_, MX_TASK_TERMINATED,
                               mx_deadline_after(kill_timeout), &signals);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "Error waiting for process to die, ignoring: "
+    FXL_LOG(ERROR) << "Error waiting for process to die, ignoring: "
                    << util::MxErrorString(status);
   } else {
-    FTL_DCHECK(signals & MX_TASK_TERMINATED);
+    FXL_DCHECK(signals & MX_TASK_TERMINATED);
   }
 
   CloseDebugHandle();
@@ -438,25 +438,25 @@ bool Process::Kill() {
 void Process::set_state(State new_state) {
   switch (new_state) {
     case State::kNew:
-      FTL_DCHECK(state_ == State::kGone);
+      FXL_DCHECK(state_ == State::kGone);
       break;
     case State::kStarting:
-      FTL_DCHECK(state_ == State::kNew);
+      FXL_DCHECK(state_ == State::kNew);
       break;
     case State::kRunning:
-      FTL_DCHECK(state_ == State::kNew || state_ == State::kStarting);
+      FXL_DCHECK(state_ == State::kNew || state_ == State::kStarting);
       break;
     case State::kGone:
       break;
     default:
-      FTL_DCHECK(false);
+      FXL_DCHECK(false);
   }
   state_ = new_state;
 }
 
 void Process::Clear() {
   // The process must already be fully detached from.
-  FTL_DCHECK(!IsAttached());
+  FXL_DCHECK(!IsAttached());
 
   threads_.clear();
   thread_map_stale_ = false;
@@ -484,10 +484,10 @@ bool Process::IsLive() const {
 
 bool Process::IsAttached() const {
   if (eport_key_) {
-    FTL_DCHECK(handle_ != MX_HANDLE_INVALID);
+    FXL_DCHECK(handle_ != MX_HANDLE_INVALID);
     return true;
   } else {
-    FTL_DCHECK(handle_ == MX_HANDLE_INVALID);
+    FXL_DCHECK(handle_ == MX_HANDLE_INVALID);
     return false;
   }
 }
@@ -499,9 +499,9 @@ void Process::EnsureThreadMapFresh() {
 }
 
 Thread* Process::FindThreadById(mx_koid_t thread_id) {
-  FTL_DCHECK(handle_);
+  FXL_DCHECK(handle_);
   if (thread_id == MX_HANDLE_INVALID) {
-    FTL_LOG(ERROR) << "Invalid thread ID given: " << thread_id;
+    FXL_LOG(ERROR) << "Invalid thread ID given: " << thread_id;
     return nullptr;
   }
 
@@ -511,7 +511,7 @@ Thread* Process::FindThreadById(mx_koid_t thread_id) {
   if (iter != threads_.end()) {
     Thread* thread = iter->second.get();
     if (thread->state() == Thread::State::kGone) {
-      FTL_VLOG(1) << "FindThreadById: Thread " << thread->GetDebugName()
+      FXL_VLOG(1) << "FindThreadById: Thread " << thread->GetDebugName()
                   << " is gone";
       return nullptr;
     }
@@ -524,7 +524,7 @@ Thread* Process::FindThreadById(mx_koid_t thread_id) {
   mx_status_t status = mx_object_get_child(
       handle_, thread_id, MX_RIGHT_SAME_RIGHTS, &thread_handle);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "Could not obtain a debug handle to thread: "
+    FXL_LOG(ERROR) << "Could not obtain a debug handle to thread: "
                    << util::MxErrorString(status);
     return nullptr;
   }
@@ -544,7 +544,7 @@ Thread* Process::PickOneThread() {
 }
 
 bool Process::RefreshAllThreads() {
-  FTL_DCHECK(handle_);
+  FXL_DCHECK(handle_);
 
   // First get the thread count so that we can allocate an appropriately sized
   // buffer. This is racy but unless the caller stops all threads that's just
@@ -554,7 +554,7 @@ bool Process::RefreshAllThreads() {
       mx_object_get_info(handle_, MX_INFO_PROCESS_THREADS, nullptr, 0,
                          nullptr, &num_threads);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "Failed to get process thread info (#threads): "
+    FXL_LOG(ERROR) << "Failed to get process thread info (#threads): "
                    << util::MxErrorString(status);
     return false;
   }
@@ -565,12 +565,12 @@ bool Process::RefreshAllThreads() {
   status = mx_object_get_info(handle_, MX_INFO_PROCESS_THREADS,
                               koids.get(), buffer_size, &records_read, nullptr);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "Failed to get process thread info: "
+    FXL_LOG(ERROR) << "Failed to get process thread info: "
                    << util::MxErrorString(status);
     return false;
   }
 
-  FTL_DCHECK(records_read == num_threads);
+  FXL_DCHECK(records_read == num_threads);
 
   ThreadMap new_threads;
   for (size_t i = 0; i < num_threads; ++i) {
@@ -579,7 +579,7 @@ bool Process::RefreshAllThreads() {
     status = mx_object_get_child(handle_, thread_id, MX_RIGHT_SAME_RIGHTS,
                                  &thread_handle);
     if (status != MX_OK) {
-      FTL_LOG(ERROR) << "Could not obtain a debug handle to thread: "
+      FXL_LOG(ERROR) << "Could not obtain a debug handle to thread: "
                      << util::MxErrorString(status);
       continue;
     }
@@ -620,9 +620,9 @@ bool Process::WriteMemory(uintptr_t address, const void* data, size_t length) {
 }
 
 void Process::TryBuildLoadedDsosList(Thread* thread, bool check_ldso_bkpt) {
-  FTL_DCHECK(dsos_ == nullptr);
+  FXL_DCHECK(dsos_ == nullptr);
 
-  FTL_VLOG(2) << "Building dso list";
+  FXL_VLOG(2) << "Building dso list";
 
   uintptr_t debug_addr;
   mx_handle_t process_handle = thread->process()->handle();
@@ -630,14 +630,14 @@ void Process::TryBuildLoadedDsosList(Thread* thread, bool check_ldso_bkpt) {
                                               MX_PROP_PROCESS_DEBUG_ADDR,
                                               &debug_addr, sizeof(debug_addr));
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "mx_object_get_property failed, unable to fetch dso list: "
+    FXL_LOG(ERROR) << "mx_object_get_property failed, unable to fetch dso list: "
 		   << util::MxErrorString(status);
     return;
   }
 
   struct r_debug debug;
   if (!ReadMemory(debug_addr, &debug, sizeof(debug))) {
-    FTL_VLOG(2) << "unable to read _dl_debug_addr";
+    FXL_VLOG(2) << "unable to read _dl_debug_addr";
     // Don't set dsos_build_failed_ here, it may be too early to try.
     return;
   }
@@ -646,23 +646,23 @@ void Process::TryBuildLoadedDsosList(Thread* thread, bool check_ldso_bkpt) {
   // that far check to see if it has been filled in.
   // TODO(dje): Document our test in dynlink.c.
   if (debug.r_version == 0) {
-    FTL_VLOG(2) << "debug.r_version is 0";
+    FXL_VLOG(2) << "debug.r_version is 0";
     // Don't set dsos_build_failed_ here, it may be too early to try.
     return;
   }
 
   if (check_ldso_bkpt) {
-    FTL_DCHECK(thread);
+    FXL_DCHECK(thread);
     bool success = thread->registers()->RefreshGeneralRegisters();
-    FTL_DCHECK(success);
+    FXL_DCHECK(success);
     mx_vaddr_t pc = thread->registers()->GetPC();
     // TODO(dje): -1: adjust_pc_after_break
     if (pc - 1 != debug.r_brk) {
-      FTL_VLOG(2) << "not stopped at dynamic linker debug breakpoint";
+      FXL_VLOG(2) << "not stopped at dynamic linker debug breakpoint";
       return;
     }
   } else {
-    FTL_DCHECK(!thread);
+    FXL_DCHECK(!thread);
   }
 
   auto lmap_vaddr = reinterpret_cast<mx_vaddr_t>(debug.r_map);
@@ -671,7 +671,7 @@ void Process::TryBuildLoadedDsosList(Thread* thread, bool check_ldso_bkpt) {
   // dl_debug_state breakpoint is hit.
   if (dsos_ == nullptr) {
     // Don't keep trying.
-    FTL_VLOG(2) << "dso_fetch_list failed";
+    FXL_VLOG(2) << "dso_fetch_list failed";
     dsos_build_failed_ = true;
   } else {
     util::dso_vlog_list(dsos_);
@@ -692,7 +692,7 @@ void Process::OnException(const mx_port_packet_t& packet,
   // breakpoint. For now gdb sets that breakpoint. What we do is watch for
   // s/w breakpoint exceptions.
   if (type == MX_EXCP_SW_BREAKPOINT) {
-    FTL_DCHECK(thread);
+    FXL_DCHECK(thread);
     if (!DsosLoaded() && !dsos_build_failed_)
       TryBuildLoadedDsosList(thread, true);
   }
@@ -700,7 +700,7 @@ void Process::OnException(const mx_port_packet_t& packet,
   // |type| could either map to an architectural exception or Magenta-defined
   // synthetic exceptions.
   if (MX_EXCP_IS_ARCH(type)) {
-    FTL_DCHECK(thread);
+    FXL_DCHECK(thread);
     thread->OnException(type, context);
     delegate_->OnArchitecturalException(this, thread, type, context);
     return;
@@ -708,46 +708,46 @@ void Process::OnException(const mx_port_packet_t& packet,
 
   switch (type) {
     case MX_EXCP_THREAD_STARTING:
-      FTL_VLOG(1) << "Received MX_EXCP_THREAD_STARTING exception";
-      FTL_DCHECK(thread);
-      FTL_DCHECK(thread->state() == Thread::State::kNew);
+      FXL_VLOG(1) << "Received MX_EXCP_THREAD_STARTING exception";
+      FXL_DCHECK(thread);
+      FXL_DCHECK(thread->state() == Thread::State::kNew);
       thread->OnException(type, context);
       delegate_->OnThreadStarting(this, thread, context);
       break;
     case MX_EXCP_GONE:
-      FTL_VLOG(1) << "Received MX_EXCP_GONE exception for process "
+      FXL_VLOG(1) << "Received MX_EXCP_GONE exception for process "
                   << GetName();
       set_state(Process::State::kGone);
       delegate_->OnProcessExit(this, type, context);
       if (!Detach()) {
         // This is not a fatal error, just log it.
-        FTL_LOG(ERROR) << "Unexpected failure to detach (already detached)";
+        FXL_LOG(ERROR) << "Unexpected failure to detach (already detached)";
         Clear();
       }
       break;
     case MX_EXCP_THREAD_EXITING:
-      FTL_VLOG(1) << "Received MX_EXCP_THREAD_EXITING exception for thread "
+      FXL_VLOG(1) << "Received MX_EXCP_THREAD_EXITING exception for thread "
                   << thread->GetName();
-      FTL_DCHECK(thread);
+      FXL_DCHECK(thread);
       thread->OnException(type, context);
       delegate_->OnThreadExiting(this, thread, type, context);
       break;
     default:
-      FTL_LOG(ERROR) << "Ignoring unrecognized synthetic exception: " << type;
+      FXL_LOG(ERROR) << "Ignoring unrecognized synthetic exception: " << type;
       break;
   }
 }
 
 int Process::ExitCode() {
-  FTL_DCHECK(state_ == State::kGone);
+  FXL_DCHECK(state_ == State::kGone);
   mx_info_process_t info;
   auto status = mx_object_get_info(handle(), MX_INFO_PROCESS, &info,
                                    sizeof(info), NULL, NULL);
   if (status == MX_OK) {
-    FTL_LOG(INFO) << "Process exited with code " << info.return_code;
+    FXL_LOG(INFO) << "Process exited with code " << info.return_code;
     return info.return_code;
   } else {
-    FTL_LOG(ERROR) << "Error getting process exit code: "
+    FXL_LOG(ERROR) << "Error getting process exit code: "
                    << util::MxErrorString(status);
     return -1;
   }

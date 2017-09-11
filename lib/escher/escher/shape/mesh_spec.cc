@@ -5,7 +5,7 @@
 #include "escher/shape/mesh_spec.h"
 
 #include "escher/geometry/types.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace escher {
 
@@ -22,13 +22,13 @@ size_t GetMeshAttributeSize(MeshAttribute attr) {
     case MeshAttribute::kPerimeterPos:
       return sizeof(float);
     case MeshAttribute::kStride:
-      FTL_CHECK(false);
+      FXL_CHECK(false);
       return 0;
   }
 }
 
 size_t MeshSpec::GetAttributeOffset(MeshAttribute flag) const {
-  FTL_DCHECK(flags & flag || flag == MeshAttribute::kStride);
+  FXL_DCHECK(flags & flag || flag == MeshAttribute::kStride);
   size_t offset = 0;
 
   if (flag == MeshAttribute::kPosition2D) {
@@ -61,7 +61,7 @@ size_t MeshSpec::GetAttributeOffset(MeshAttribute flag) const {
     offset += sizeof(float);
   }
 
-  FTL_DCHECK(flag == MeshAttribute::kStride);
+  FXL_DCHECK(flag == MeshAttribute::kStride);
   return offset;
 }
 

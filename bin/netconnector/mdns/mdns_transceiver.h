@@ -11,9 +11,9 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "garnet/bin/netconnector/mdns/mdns_interface_transceiver.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/tasks/task_runner.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/tasks/task_runner.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/netstack/fidl/netstack.fidl.h"
 
 namespace netconnector {
@@ -50,8 +50,8 @@ class MdnsTransceiver {
                    uint32_t interface_index);
 
  private:
-  static const ftl::TimeDelta kMinAddressRecheckDelay;
-  static const ftl::TimeDelta kMaxAddressRecheckDelay;
+  static const fxl::TimeDelta kMinAddressRecheckDelay;
+  static const fxl::TimeDelta kMaxAddressRecheckDelay;
   static constexpr int64_t kAddressRecheckDelayMultiplier = 2;
 
   struct InterfaceId {
@@ -77,16 +77,16 @@ class MdnsTransceiver {
   // Determines if |address| has been set (e.g. via DHCP).
   bool AddressIsSet(const IpAddress& address);
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   std::vector<InterfaceId> enabled_interfaces_;
   InboundMessageCallback inbound_message_callback_;
   std::string host_full_name_;
   std::vector<std::unique_ptr<MdnsInterfaceTransceiver>> interfaces_;
-  ftl::TimeDelta address_recheck_delay_ = kMinAddressRecheckDelay;
+  fxl::TimeDelta address_recheck_delay_ = kMinAddressRecheckDelay;
   std::unique_ptr<app::ApplicationContext> application_context_;
   netstack::NetstackPtr netstack_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MdnsTransceiver);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MdnsTransceiver);
 };
 
 }  // namespace mdns

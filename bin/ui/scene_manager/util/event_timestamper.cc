@@ -11,7 +11,7 @@ namespace scene_manager {
 
 EventTimestamper::EventTimestamper()
     : main_loop_(mtl::MessageLoop::GetCurrent()), task_(0u) {
-  FTL_DCHECK(main_loop_);
+  FXL_DCHECK(main_loop_);
   background_loop_.StartThread();
   task_.set_handler([](async_t*, mx_status_t) {
     mx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
@@ -24,7 +24,7 @@ EventTimestamper::EventTimestamper()
 EventTimestamper::~EventTimestamper() {
   background_loop_.Shutdown();
 #ifndef NDEBUG
-  FTL_CHECK(watch_count_ == 0);
+  FXL_CHECK(watch_count_ == 0);
 #endif
 }
 
@@ -43,7 +43,7 @@ EventTimestamper::Watch::Watch(EventTimestamper* ts,
                                        trigger,
                                        std::move(callback))),
       timestamper_(ts) {
-  FTL_DCHECK(timestamper_);
+  FXL_DCHECK(timestamper_);
 #ifndef NDEBUG
   ++timestamper_->watch_count_;
 #endif
@@ -77,20 +77,20 @@ EventTimestamper::Watch::~Watch() {
       }
       break;
     case Wait::State::ABANDONED:
-      FTL_DCHECK(false) << "internal error.";
+      FXL_DCHECK(false) << "internal error.";
       break;
   }
 }
 
 void EventTimestamper::Watch::Start() {
-  FTL_DCHECK(wait_) << "invalid Watch (was it std::move()d?).";
-  FTL_DCHECK(wait_->state() == Wait::State::STOPPED)
+  FXL_DCHECK(wait_) << "invalid Watch (was it std::move()d?).";
+  FXL_DCHECK(wait_->state() == Wait::State::STOPPED)
       << "illegal to call Start() again before callback has been received.";
   wait_->set_state(Wait::State::STARTED);
   wait_->wait().Begin(timestamper_->background_loop_.async());
 }
 
-EventTimestamper::Wait::Wait(const ftl::RefPtr<ftl::TaskRunner>& task_runner,
+EventTimestamper::Wait::Wait(const fxl::RefPtr<fxl::TaskRunner>& task_runner,
                              mx::event event,
                              mx_status_t trigger,
                              Callback callback)
@@ -102,7 +102,7 @@ EventTimestamper::Wait::Wait(const ftl::RefPtr<ftl::TaskRunner>& task_runner,
 }
 
 EventTimestamper::Wait::~Wait() {
-  FTL_DCHECK(state_ == State::STOPPED || state_ == State::ABANDONED);
+  FXL_DCHECK(state_ == State::STOPPED || state_ == State::ABANDONED);
 }
 
 async_wait_result_t EventTimestamper::Wait::Handle(
@@ -117,7 +117,7 @@ async_wait_result_t EventTimestamper::Wait::Handle(
       delete this;
       return;
     }
-    FTL_DCHECK(state_ == State::STARTED) << "internal error.";
+    FXL_DCHECK(state_ == State::STARTED) << "internal error.";
     state_ = State::STOPPED;
     callback_(now);
   });

@@ -4,7 +4,7 @@
 
 #include "escher/impl/glsl_compiler.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace escher {
 namespace impl {
@@ -57,7 +57,7 @@ TEST(GlslCompiler, CompileFragmentShader) {
 TEST(GlslCompiler, CompileVertexShaderAsFragmentShader) {
   GlslToSpirvCompiler compiler;
   std::vector<std::string> src = {{vertex_src}};
-  FTL_LOG(INFO) << "NOTE: the compiler errors below are expected.";
+  FXL_LOG(INFO) << "NOTE: the compiler errors below are expected.";
   SpirvData spirv =
       compiler.Compile(vk::ShaderStageFlagBits::eFragment, src, "", "").get();
   EXPECT_EQ(spirv.size(), 0U);

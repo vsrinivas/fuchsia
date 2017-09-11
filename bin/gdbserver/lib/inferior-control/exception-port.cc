@@ -10,7 +10,7 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/port.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/handles/object_info.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -49,7 +49,7 @@ std::string IOPortPacketTypeToString(const mx_port_packet_t& pkt) {
 ExceptionPort::Key ExceptionPort::g_key_counter = 0;
 
 ExceptionPort::ExceptionPort() : keep_running_(false) {
-  FTL_DCHECK(mtl::MessageLoop::GetCurrent());
+  FXL_DCHECK(mtl::MessageLoop::GetCurrent());
   origin_task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
 }
 
@@ -59,18 +59,18 @@ ExceptionPort::~ExceptionPort() {
 }
 
 bool ExceptionPort::Run() {
-  FTL_DCHECK(!eport_handle_);
-  FTL_DCHECK(!keep_running_);
+  FXL_DCHECK(!eport_handle_);
+  FXL_DCHECK(!keep_running_);
 
   // Create an I/O port.
   mx_status_t status = mx::port::create(0, &eport_handle_);
   if (status < 0) {
-    FTL_LOG(ERROR) << "Failed to create the exception port: "
+    FXL_LOG(ERROR) << "Failed to create the exception port: "
                    << util::MxErrorString(status);
     return false;
   }
 
-  FTL_DCHECK(eport_handle_);
+  FXL_DCHECK(eport_handle_);
 
   keep_running_ = true;
   io_thread_ = std::thread(std::bind(&ExceptionPort::Worker, this));
@@ -79,10 +79,10 @@ bool ExceptionPort::Run() {
 }
 
 void ExceptionPort::Quit() {
-  FTL_DCHECK(eport_handle_);
-  FTL_DCHECK(keep_running_);
+  FXL_DCHECK(eport_handle_);
+  FXL_DCHECK(keep_running_);
 
-  FTL_LOG(INFO) << "Quitting exception port I/O loop";
+  FXL_LOG(INFO) << "Quitting exception port I/O loop";
 
   // Close the I/O port. This should cause mx_port_wait to return if one is
   // pending.
@@ -100,21 +100,21 @@ void ExceptionPort::Quit() {
 
   io_thread_.join();
 
-  FTL_LOG(INFO) << "Exception port I/O loop exited";
+  FXL_LOG(INFO) << "Exception port I/O loop exited";
 }
 
 ExceptionPort::Key ExceptionPort::Bind(mx_handle_t process_handle,
                                        const Callback& callback) {
-  FTL_DCHECK(process_handle != MX_HANDLE_INVALID);
-  FTL_DCHECK(callback);
-  FTL_DCHECK(eport_handle_);
+  FXL_DCHECK(process_handle != MX_HANDLE_INVALID);
+  FXL_DCHECK(callback);
+  FXL_DCHECK(eport_handle_);
 
   Key next_key = g_key_counter + 1;
 
   // Check for overflows. We don't keep track of which keys are ready to use and
   // which aren't. A 64-bit range is pretty big, so if we run out, we run out.
   if (!next_key) {
-    FTL_LOG(ERROR) << "Ran out of keys!";
+    FXL_LOG(ERROR) << "Ran out of keys!";
     return 0;
   }
 
@@ -122,18 +122,18 @@ ExceptionPort::Key ExceptionPort::Bind(mx_handle_t process_handle,
       mx_task_bind_exception_port(process_handle, eport_handle_.get(),
                                     next_key, MX_EXCEPTION_PORT_DEBUGGER);
   if (status < 0) {
-    FTL_LOG(ERROR) << "Failed to bind exception port: "
+    FXL_LOG(ERROR) << "Failed to bind exception port: "
                    << util::MxErrorString(status);
     return 0;
   }
 
   // |next_key| should not have been used before.
-  FTL_DCHECK(callbacks_.find(next_key) == callbacks_.end());
+  FXL_DCHECK(callbacks_.find(next_key) == callbacks_.end());
 
   callbacks_[next_key] = BindData(process_handle, callback);
   ++g_key_counter;
 
-  FTL_VLOG(1) << "Exception port bound to process handle " << process_handle
+  FXL_VLOG(1) << "Exception port bound to process handle " << process_handle
               << " with key " << next_key;
 
   return next_key;
@@ -142,7 +142,7 @@ ExceptionPort::Key ExceptionPort::Bind(mx_handle_t process_handle,
 bool ExceptionPort::Unbind(const Key key) {
   const auto& iter = callbacks_.find(key);
   if (iter == callbacks_.end()) {
-    FTL_VLOG(1) << "|key| not bound; Cannot unbind exception port";
+    FXL_VLOG(1) << "|key| not bound; Cannot unbind exception port";
     return false;
   }
 
@@ -156,12 +156,12 @@ bool ExceptionPort::Unbind(const Key key) {
 }
 
 void ExceptionPort::Worker() {
-  FTL_DCHECK(eport_handle_);
+  FXL_DCHECK(eport_handle_);
 
   // Give this thread an identifiable name for debugging purposes.
   mtl::SetCurrentThreadName("exception port reader");
 
-  FTL_VLOG(1) << "ExceptionPort I/O thread started";
+  FXL_VLOG(1) << "ExceptionPort I/O thread started";
 
   mx_handle_t eport;
   {
@@ -173,18 +173,18 @@ void ExceptionPort::Worker() {
     mx_status_t status =
         mx_port_wait(eport, MX_TIME_INFINITE, &packet, 0);
     if (status < 0) {
-      FTL_LOG(ERROR) << "mx_port_wait returned error: "
+      FXL_LOG(ERROR) << "mx_port_wait returned error: "
                      << util::MxErrorString(status);
     }
 
-    FTL_VLOG(2) << "IO port packet received - key: " << packet.key
+    FXL_VLOG(2) << "IO port packet received - key: " << packet.key
                 << " type: " << IOPortPacketTypeToString(packet);
 
     // TODO(armansito): How to handle this?
     if (!MX_PKT_IS_EXCEPTION(packet.type))
       continue;
 
-    FTL_VLOG(1) << "Exception received: "
+    FXL_VLOG(1) << "Exception received: "
                 << util::ExceptionName(static_cast<const mx_excp_type_t>(
                        packet.type))
                 << " (" << packet.type
@@ -195,7 +195,7 @@ void ExceptionPort::Worker() {
     origin_task_runner_->PostTask([packet, this] {
       const auto& iter = callbacks_.find(packet.key);
       if (iter == callbacks_.end()) {
-        FTL_VLOG(1) << "No handler registered for exception";
+        FXL_VLOG(1) << "No handler registered for exception";
         return;
       }
 
@@ -212,7 +212,7 @@ void ExceptionPort::Worker() {
                                                  MX_RIGHT_SAME_RIGHTS,
                                                  &thread);
         if (status < 0) {
-          FTL_VLOG(1) << "Failed to get a handle to [" << packet.exception.pid
+          FXL_VLOG(1) << "Failed to get a handle to [" << packet.exception.pid
                       << "." << packet.exception.tid << "]";
           return;
         }
@@ -220,7 +220,7 @@ void ExceptionPort::Worker() {
                                     &report, sizeof(report), NULL, NULL);
         mx_handle_close(thread);
         if (status < 0) {
-          FTL_VLOG(1) << "Failed to get exception report for [" << packet.exception.pid
+          FXL_VLOG(1) << "Failed to get exception report for [" << packet.exception.pid
                       << "." << packet.exception.tid << "]";
           return;
         }

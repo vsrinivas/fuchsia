@@ -28,5 +28,5 @@ class RingTricks1 : public Scene {
 
   escher::MeshPtr ring_mesh1_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(RingTricks1);
+  FXL_DISALLOW_COPY_AND_ASSIGN(RingTricks1);
 };

@@ -13,14 +13,14 @@ namespace media {
 
 Input::Input(StageImpl* stage, size_t index)
     : stage_(stage), index_(index), state_(State::kRefusesPacket) {
-  FTL_DCHECK(stage_);
+  FXL_DCHECK(stage_);
 }
 
 Input::~Input() {}
 
 void Input::Connect(Output* output) {
-  FTL_DCHECK(output);
-  FTL_DCHECK(!mate_);
+  FXL_DCHECK(output);
+  FXL_DCHECK(!mate_);
   mate_ = output;
 }
 
@@ -38,15 +38,15 @@ Demand Input::demand() const {
 }
 
 void Input::PutPacket(PacketPtr packet) {
-  FTL_DCHECK(packet);
-  FTL_DCHECK(demand() != Demand::kNegative);
+  FXL_DCHECK(packet);
+  FXL_DCHECK(demand() != Demand::kNegative);
   std::atomic_store(&packet_, packet);
   state_.store(State::kHasPacket);
   stage_->NeedsUpdate();
 }
 
 PacketPtr Input::TakePacket(Demand demand) {
-  FTL_DCHECK(mate_);
+  FXL_DCHECK(mate_);
 
   PacketPtr no_packet;
   PacketPtr packet = std::atomic_exchange(&packet_, no_packet);
@@ -63,7 +63,7 @@ PacketPtr Input::TakePacket(Demand demand) {
 }
 
 void Input::SetDemand(Demand demand) {
-  FTL_DCHECK(mate_);
+  FXL_DCHECK(mate_);
 
   State state = state_.load();
   if (state == State::kHasPacket) {
@@ -84,7 +84,7 @@ void Input::SetDemand(Demand demand) {
   }
 
   if (state != new_state) {
-    FTL_DCHECK(new_state != State::kRefusesPacket);
+    FXL_DCHECK(new_state != State::kRefusesPacket);
     state_.store(new_state);
     mate_->stage()->NeedsUpdate();
   }

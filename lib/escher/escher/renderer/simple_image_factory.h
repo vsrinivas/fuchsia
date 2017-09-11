@@ -9,7 +9,7 @@
 #include "escher/impl/gpu_uploader.h"
 #include "escher/renderer/image.h"
 #include "escher/renderer/image_factory.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 

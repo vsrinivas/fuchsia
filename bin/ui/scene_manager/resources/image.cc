@@ -29,7 +29,7 @@ Image::Image(Session* session,
              vk::Image vk_image)
     : ImageBase(session, id, Image::kTypeInfo),
       memory_(std::move(memory)),
-      image_(ftl::MakeRefCounted<escher::Image>(
+      image_(fxl::MakeRefCounted<escher::Image>(
           session->engine()->escher_resource_recycler(),
           image_info,
           vk_image,
@@ -125,7 +125,7 @@ ImagePtr Image::New(Session* session,
         session->engine()->escher_gpu_uploader(), pixel_format,
         image_info->width, image_info->height,
         static_cast<uint8_t*>(host_memory->memory_base()) + memory_offset);
-    return ftl::AdoptRef(new Image(session, id, std::move(host_memory),
+    return fxl::AdoptRef(new Image(session, id, std::move(host_memory),
                                    std::move(escher_image)));
 
     // Create from GPU memory.
@@ -166,10 +166,10 @@ ImagePtr Image::New(Session* session,
     vk::DeviceMemory vk_mem = gpu_memory->escher_gpu_mem()->base();
     VkDeviceSize offset = memory_offset;
     vk_device.bindImageMemory(vk_image, vk_mem, offset);
-    return ftl::AdoptRef(new Image(session, id, std::move(gpu_memory),
+    return fxl::AdoptRef(new Image(session, id, std::move(gpu_memory),
                                    escher_image_info, vk_image));
   } else {
-    FTL_CHECK(false);
+    FXL_CHECK(false);
     return nullptr;
   }
 }
@@ -178,10 +178,10 @@ ImagePtr Image::NewForTesting(Session* session,
                               scenic::ResourceId id,
                               escher::ResourceManager* image_owner,
                               MemoryPtr host_memory) {
-  escher::ImagePtr escher_image = ftl::MakeRefCounted<escher::Image>(
+  escher::ImagePtr escher_image = fxl::MakeRefCounted<escher::Image>(
       image_owner, escher::ImageInfo(), vk::Image(), nullptr);
 
-  return ftl::AdoptRef(new Image(session, id, host_memory, escher_image));
+  return fxl::AdoptRef(new Image(session, id, host_memory, escher_image));
 }
 
 }  // namespace scene_manager

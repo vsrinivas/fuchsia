@@ -10,13 +10,13 @@
 
 #include <functional>
 
-#include "lib/ftl/ftl_export.h"
+#include "lib/fxl/fxl_export.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
 namespace mtl {
 
-class FTL_EXPORT FDWaiter : public MessageLoopHandler {
+class FXL_EXPORT FDWaiter : public MessageLoopHandler {
  public:
   FDWaiter();
   ~FDWaiter() override;
@@ -47,7 +47,7 @@ class FTL_EXPORT FDWaiter : public MessageLoopHandler {
   bool Wait(Callback callback,
             int fd,
             uint32_t events,
-            ftl::TimeDelta timeout = ftl::TimeDelta::Max());
+            fxl::TimeDelta timeout = fxl::TimeDelta::Max());
 
   // Cancels an outstanding wait.
   //
@@ -64,7 +64,7 @@ class FTL_EXPORT FDWaiter : public MessageLoopHandler {
   MessageLoop::HandlerKey key_;
   Callback callback_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FDWaiter);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FDWaiter);
 };
 
 }  // namespace mtl

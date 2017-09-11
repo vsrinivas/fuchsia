@@ -9,16 +9,16 @@
 
 #include <string>
 
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/ftl_export.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/fxl_export.h"
 
 namespace mtl {
 
 // Make a new shared buffer with the contents of a file.
-FTL_EXPORT bool VmoFromFd(ftl::UniqueFD fd, mx::vmo* handle_ptr);
+FXL_EXPORT bool VmoFromFd(fxl::UniqueFD fd, mx::vmo* handle_ptr);
 
 // Make a new shared buffer with the contents of a file.
-FTL_EXPORT bool VmoFromFilename(const std::string& filename,
+FXL_EXPORT bool VmoFromFilename(const std::string& filename,
                                 mx::vmo* handle_ptr);
 
 }  // namespace mtl

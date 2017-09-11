@@ -11,7 +11,7 @@
 #include <async/wait.h>
 #include <mx/event.h>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace scene_manager {
@@ -58,7 +58,7 @@ class EventTimestamper {
     Wait* wait_;
     EventTimestamper* timestamper_;
 
-    FTL_DISALLOW_COPY_AND_ASSIGN(Watch);
+    FXL_DISALLOW_COPY_AND_ASSIGN(Watch);
   };
 
  private:
@@ -70,7 +70,7 @@ class EventTimestamper {
    public:
     enum class State { STARTED, STOPPED, ABANDONED };
 
-    Wait(const ftl::RefPtr<ftl::TaskRunner>& task_runner,
+    Wait(const fxl::RefPtr<fxl::TaskRunner>& task_runner,
          mx::event event,
          mx_status_t trigger,
          Callback callback);
@@ -86,7 +86,7 @@ class EventTimestamper {
                                mx_status_t status,
                                const mx_packet_signal_t* signal);
 
-    ftl::RefPtr<ftl::TaskRunner> task_runner_;
+    fxl::RefPtr<fxl::TaskRunner> task_runner_;
     mx::event event_;
     Callback callback_;
     State state_ = State::STOPPED;
@@ -109,7 +109,7 @@ class EventTimestamper {
   size_t watch_count_ = 0;
 #endif
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(EventTimestamper);
+  FXL_DISALLOW_COPY_AND_ASSIGN(EventTimestamper);
 };
 
 }  // namespace scene_manager

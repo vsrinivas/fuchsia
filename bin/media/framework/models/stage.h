@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace media {
 
@@ -19,11 +19,11 @@ class Stage {
   // calls the node's |GetTaskRunner| method to determine if the node has a
   // |TaskRunner| it would prefer to use. If so, it uses that one instead of
   // |task_runner|.
-  virtual void SetTaskRunner(ftl::RefPtr<ftl::TaskRunner> task_runner) = 0;
+  virtual void SetTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner) = 0;
 
   // Posts a task to run as soon as possible. A Task posted with this method is
   // run exclusive of any other such tasks.
-  virtual void PostTask(const ftl::Closure& task) = 0;
+  virtual void PostTask(const fxl::Closure& task) = 0;
 };
 
 }  // namespace media

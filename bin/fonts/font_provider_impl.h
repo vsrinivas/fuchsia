@@ -13,7 +13,7 @@
 #include "garnet/bin/fonts/font_family.h"
 #include "lib/fonts/fidl/font_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace fonts {
 
@@ -43,7 +43,7 @@ class FontProviderImpl : public FontProvider {
   std::string fallback_;
   std::unordered_map<std::string, std::unique_ptr<FontFamily>> families_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FontProviderImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FontProviderImpl);
 };
 
 }  // namespace fonts

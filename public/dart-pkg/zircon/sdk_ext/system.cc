@@ -30,9 +30,9 @@ class ByteDataScope {
 
   explicit ByteDataScope(size_t size) {
     dart_handle_ = Dart_NewTypedData(Dart_TypedData_kByteData, size);
-    FTL_DCHECK(!tonic::LogIfError(dart_handle_));
+    FXL_DCHECK(!tonic::LogIfError(dart_handle_));
     Acquire();
-    FTL_DCHECK(size == size_);
+    FXL_DCHECK(size == size_);
   }
 
   ~ByteDataScope() {
@@ -47,7 +47,7 @@ class ByteDataScope {
   bool is_valid() const { return is_valid_; }
 
   void Release() {
-    FTL_DCHECK(is_valid_);
+    FXL_DCHECK(is_valid_);
     Dart_Handle result = Dart_TypedDataReleaseData(dart_handle_);
     tonic::LogIfError(result);
     is_valid_ = false;
@@ -57,9 +57,9 @@ class ByteDataScope {
 
  private:
   void Acquire() {
-    FTL_DCHECK(size_ == 0);
-    FTL_DCHECK(data_ == nullptr);
-    FTL_DCHECK(!is_valid_);
+    FXL_DCHECK(size_ == 0);
+    FXL_DCHECK(data_ == nullptr);
+    FXL_DCHECK(!is_valid_);
 
     Dart_TypedData_Type type;
     intptr_t size;
@@ -99,7 +99,7 @@ Dart_Handle ConstructDartObject(const char* class_name, Args&&... args) {
       tonic::DartState::Current()->class_library();
   Dart_Handle type = Dart_HandleFromPersistent(
       class_library.GetClass("zircon", class_name));
-  FTL_DCHECK(!tonic::LogIfError(type));
+  FXL_DCHECK(!tonic::LogIfError(type));
 
   const char* cstr;
   Dart_StringToCString(Dart_ToString(type), &cstr);
@@ -108,7 +108,7 @@ Dart_Handle ConstructDartObject(const char* class_name, Args&&... args) {
       {std::forward<Args>(args)...}};
   Dart_Handle object =
       Dart_New(type, Dart_EmptyString(), sizeof...(Args), args_array.data());
-  FTL_DCHECK(!tonic::LogIfError(object));
+  FXL_DCHECK(!tonic::LogIfError(object));
   return object;
 }
 
@@ -128,7 +128,7 @@ Dart_Handle System::ChannelCreate(uint32_t options) {
   }
 }
 
-mx_status_t System::ChannelWrite(ftl::RefPtr<Handle> channel,
+mx_status_t System::ChannelWrite(fxl::RefPtr<Handle> channel,
                                  const tonic::DartByteData& data,
                                  std::vector<Handle*> handles) {
   if (!channel || !channel->is_valid()) {
@@ -153,7 +153,7 @@ mx_status_t System::ChannelWrite(ftl::RefPtr<Handle> channel,
   return status;
 }
 
-Dart_Handle System::ChannelQueryAndRead(ftl::RefPtr<Handle> channel) {
+Dart_Handle System::ChannelQueryAndRead(fxl::RefPtr<Handle> channel) {
   if (!channel || !channel->is_valid()) {
     return ConstructDartObject(kReadResult, ToDart(MX_ERR_BAD_HANDLE));
   }
@@ -171,19 +171,19 @@ Dart_Handle System::ChannelQueryAndRead(ftl::RefPtr<Handle> channel) {
 
   // Allocate space for the bytes and handles.
   ByteDataScope bytes(actual_bytes);
-  FTL_DCHECK(bytes.is_valid());
+  FXL_DCHECK(bytes.is_valid());
   std::vector<mx_handle_t> handles(actual_handles);
 
   // Make the call to actually get the message.
   status = mx_channel_read(channel->handle(), 0, bytes.data(), handles.data(),
                            bytes.size(), handles.size(), &actual_bytes,
                            &actual_handles);
-  FTL_DCHECK(status != MX_OK || bytes.size() == actual_bytes);
+  FXL_DCHECK(status != MX_OK || bytes.size() == actual_bytes);
 
   bytes.Release();
 
   if (status == MX_OK) {
-    FTL_DCHECK(handles.size() == actual_handles);
+    FXL_DCHECK(handles.size() == actual_handles);
 
     // return a ReadResult object.
     return ConstructDartObject(kReadResult, ToDart(status), bytes.dart_handle(),
@@ -217,7 +217,7 @@ Dart_Handle System::SocketCreate(uint32_t options) {
   }
 }
 
-Dart_Handle System::SocketWrite(ftl::RefPtr<Handle> socket,
+Dart_Handle System::SocketWrite(fxl::RefPtr<Handle> socket,
                                 const tonic::DartByteData& data,
                                 int options) {
   if (!socket || !socket->is_valid()) {
@@ -232,7 +232,7 @@ Dart_Handle System::SocketWrite(ftl::RefPtr<Handle> socket,
   return ConstructDartObject(kWriteResult, ToDart(status), ToDart(actual));
 }
 
-Dart_Handle System::SocketRead(ftl::RefPtr<Handle> socket, size_t size) {
+Dart_Handle System::SocketRead(fxl::RefPtr<Handle> socket, size_t size) {
   if (!socket || !socket->is_valid()) {
     return ConstructDartObject(kReadResult, ToDart(MX_ERR_BAD_HANDLE));
   }
@@ -243,7 +243,7 @@ Dart_Handle System::SocketRead(ftl::RefPtr<Handle> socket, size_t size) {
       mx_socket_read(socket->handle(), 0, bytes.data(), size, &actual);
   bytes.Release();
   if (status == MX_OK) {
-    FTL_DCHECK(actual <= size);
+    FXL_DCHECK(actual <= size);
     return ConstructDartObject(kReadResult, ToDart(status), bytes.dart_handle(),
                                ToDart(actual));
   }
@@ -262,7 +262,7 @@ Dart_Handle System::VmoCreate(uint64_t size, uint32_t options) {
   }
 }
 
-Dart_Handle System::VmoGetSize(ftl::RefPtr<Handle> vmo) {
+Dart_Handle System::VmoGetSize(fxl::RefPtr<Handle> vmo) {
   if (!vmo || !vmo->is_valid()) {
     return ConstructDartObject(kGetSizeResult, ToDart(MX_ERR_BAD_HANDLE));
   }
@@ -273,14 +273,14 @@ Dart_Handle System::VmoGetSize(ftl::RefPtr<Handle> vmo) {
   return ConstructDartObject(kGetSizeResult, ToDart(status), ToDart(size));
 }
 
-mx_status_t System::VmoSetSize(ftl::RefPtr<Handle> vmo, uint64_t size) {
+mx_status_t System::VmoSetSize(fxl::RefPtr<Handle> vmo, uint64_t size) {
   if (!vmo || !vmo->is_valid()) {
     return MX_ERR_BAD_HANDLE;
   }
   return mx_vmo_set_size(vmo->handle(), size);
 }
 
-Dart_Handle System::VmoWrite(ftl::RefPtr<Handle> vmo,
+Dart_Handle System::VmoWrite(fxl::RefPtr<Handle> vmo,
                              uint64_t offset,
                              const tonic::DartByteData& data) {
   if (!vmo || !vmo->is_valid()) {
@@ -294,7 +294,7 @@ Dart_Handle System::VmoWrite(ftl::RefPtr<Handle> vmo,
   return ConstructDartObject(kWriteResult, ToDart(status), ToDart(actual));
 }
 
-Dart_Handle System::VmoRead(ftl::RefPtr<Handle> vmo,
+Dart_Handle System::VmoRead(fxl::RefPtr<Handle> vmo,
                             uint64_t offset,
                             size_t size) {
   if (!vmo || !vmo->is_valid()) {
@@ -308,7 +308,7 @@ Dart_Handle System::VmoRead(ftl::RefPtr<Handle> vmo,
       mx_vmo_read(vmo->handle(), bytes.data(), offset, size, &actual);
   bytes.Release();
   if (status == MX_OK) {
-    FTL_DCHECK(actual <= size);
+    FXL_DCHECK(actual <= size);
     return ConstructDartObject(kReadResult, ToDart(status), bytes.dart_handle(),
                                ToDart(size));
   } else {

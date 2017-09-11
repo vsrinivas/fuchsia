@@ -14,8 +14,8 @@
 #include "garnet/bin/media/audio_server/audio_renderer_format_info.h"
 #include "garnet/bin/media/audio_server/audio_renderer_to_output_link.h"
 #include "garnet/bin/media/audio_server/audio_server_impl.h"
-#include "lib/ftl/arraysize.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/arraysize.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 namespace audio {
@@ -55,7 +55,7 @@ AudioRendererImpl::AudioRendererImpl(
       audio_renderer_binding_(this, std::move(audio_renderer_request)),
       media_renderer_binding_(this, std::move(media_renderer_request)),
       pipe_(this, owner) {
-  FTL_CHECK(nullptr != owner_);
+  FXL_CHECK(nullptr != owner_);
 
   FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(media_renderer_binding_)));
   FLOG(log_channel_,
@@ -98,8 +98,8 @@ AudioRendererImpl::AudioRendererImpl(
 
 AudioRendererImpl::~AudioRendererImpl() {
   // assert that we have been cleanly shutdown already.
-  FTL_DCHECK(!audio_renderer_binding_.is_bound());
-  FTL_DCHECK(!media_renderer_binding_.is_bound());
+  FXL_DCHECK(!audio_renderer_binding_.is_bound());
+  FXL_DCHECK(!media_renderer_binding_.is_bound());
 }
 
 AudioRendererImplPtr AudioRendererImpl::Create(
@@ -115,13 +115,13 @@ AudioRendererImplPtr AudioRendererImpl::Create(
 
 void AudioRendererImpl::Shutdown() {
   // If we have already been shutdown, then we are just waiting for the service
-  // to destroy us.  Run some FTL_DCHECK sanity checks and get out.
+  // to destroy us.  Run some FXL_DCHECK sanity checks and get out.
   if (is_shutdown_) {
-    FTL_DCHECK(!audio_renderer_binding_.is_bound());
-    FTL_DCHECK(!media_renderer_binding_.is_bound());
-    FTL_DCHECK(!pipe_.is_bound());
-    FTL_DCHECK(!timeline_control_point_.is_bound());
-    FTL_DCHECK(!output_links_.size());
+    FXL_DCHECK(!audio_renderer_binding_.is_bound());
+    FXL_DCHECK(!media_renderer_binding_.is_bound());
+    FXL_DCHECK(!pipe_.is_bound());
+    FXL_DCHECK(!timeline_control_point_.is_bound());
+    FXL_DCHECK(!output_links_.size());
     return;
   }
 
@@ -144,7 +144,7 @@ void AudioRendererImpl::Shutdown() {
   output_links_.clear();
   throttle_output_link_ = nullptr;
 
-  FTL_DCHECK(owner_);
+  FXL_DCHECK(owner_);
   AudioRendererImplPtr thiz = weak_this_.lock();
   owner_->GetOutputManager().RemoveRenderer(thiz);
 }
@@ -159,7 +159,7 @@ void AudioRendererImpl::SetMediaType(MediaTypePtr media_type) {
   if ((media_type->medium != MediaTypeMedium::AUDIO) ||
       (media_type->encoding != MediaType::kAudioEncodingLpcm) ||
       (!media_type->details->is_audio())) {
-    FTL_LOG(ERROR)
+    FXL_LOG(ERROR)
         << "Unsupported configuration requested in "
            "AudioRenderer::Configure.  Media type must be LPCM audio.";
     Shutdown();
@@ -183,7 +183,7 @@ void AudioRendererImpl::SetMediaType(MediaTypePtr media_type) {
   }
 
   if (i >= arraysize(kSupportedAudioTypeSets)) {
-    FTL_LOG(ERROR) << "Unsupported LPCM configuration requested in "
+    FXL_LOG(ERROR) << "Unsupported LPCM configuration requested in "
                    << "AudioRenderer::Configure.  "
                    << "(format = " << cfg->sample_format
                    << ", channels = " << static_cast<uint32_t>(cfg->channels)
@@ -204,7 +204,7 @@ void AudioRendererImpl::SetMediaType(MediaTypePtr media_type) {
   }
 
   if (has_pending) {
-    FTL_LOG(ERROR) << "Attempted to set format with audio still pending!";
+    FXL_LOG(ERROR) << "Attempted to set format with audio still pending!";
     Shutdown();
     return;
   }
@@ -239,8 +239,8 @@ void AudioRendererImpl::SetMediaType(MediaTypePtr media_type) {
 
   // If we cannot promote our own weak pointer, something is seriously wrong.
   AudioRendererImplPtr strong_this(weak_this_.lock());
-  FTL_DCHECK(strong_this);
-  FTL_DCHECK(owner_);
+  FXL_DCHECK(strong_this);
+  FXL_DCHECK(owner_);
   owner_->GetOutputManager().SelectOutputsForRenderer(strong_this);
 }
 
@@ -261,7 +261,7 @@ void AudioRendererImpl::GetTimelineControlPoint(
 
 void AudioRendererImpl::SetGain(float db_gain) {
   if (db_gain >= AudioRenderer::kMaxGain) {
-    FTL_LOG(ERROR) << "Gain value too large (" << db_gain
+    FXL_LOG(ERROR) << "Gain value too large (" << db_gain
                    << ") for audio renderer.";
     Shutdown();
     return;
@@ -270,18 +270,18 @@ void AudioRendererImpl::SetGain(float db_gain) {
   db_gain_ = db_gain;
 
   for (const auto& output : output_links_) {
-    FTL_DCHECK(output);
+    FXL_DCHECK(output);
     output->gain().SetRendererGain(db_gain_);
   }
 }
 
 void AudioRendererImpl::AddOutput(AudioRendererToOutputLinkPtr link) {
   // TODO(johngro): assert that we are on the main message loop thread.
-  FTL_DCHECK(link);
-  FTL_DCHECK(link->valid());
+  FXL_DCHECK(link);
+  FXL_DCHECK(link->valid());
 
   auto res = output_links_.emplace(link);
-  FTL_DCHECK(res.second);
+  FXL_DCHECK(res.second);
   link->gain().SetRendererGain(db_gain_);
 
   // Prime this new output with the pending contents of the throttle output.
@@ -292,7 +292,7 @@ void AudioRendererImpl::AddOutput(AudioRendererToOutputLinkPtr link) {
 
 void AudioRendererImpl::RemoveOutput(AudioRendererToOutputLinkPtr link) {
   // TODO(johngro): assert that we are on the main message loop thread.
-  FTL_DCHECK(link);
+  FXL_DCHECK(link);
 
   link->Invalidate();
 
@@ -306,7 +306,7 @@ void AudioRendererImpl::RemoveOutput(AudioRendererToOutputLinkPtr link) {
       // TODO(johngro): that's odd.  I can't think of a reason why we we should
       // not be able to find this link in our set of outputs... should we log
       // something about this?
-      FTL_DCHECK(false);
+      FXL_DCHECK(false);
     }
   }
 }
@@ -327,8 +327,8 @@ void AudioRendererImpl::RemoveAllOutputs() {
 void AudioRendererImpl::SetThrottleOutput(
     const AudioRendererToOutputLinkPtr& throttle_output_link) {
   // TODO(johngro): assert that we are on the main message loop thread.
-  FTL_DCHECK(throttle_output_link != nullptr);
-  FTL_DCHECK(throttle_output_link_ == nullptr);
+  FXL_DCHECK(throttle_output_link != nullptr);
+  FXL_DCHECK(throttle_output_link_ == nullptr);
   throttle_output_link_ = throttle_output_link;
 }
 
@@ -338,22 +338,22 @@ void AudioRendererImpl::OnRenderRange(int64_t presentation_time,
 }
 
 void AudioRendererImpl::OnPacketReceived(AudioPipe::AudioPacketRefPtr packet) {
-  FTL_DCHECK(packet);
-  FTL_DCHECK(format_info_valid());
+  FXL_DCHECK(packet);
+  FXL_DCHECK(format_info_valid());
 
   if (throttle_output_link_ != nullptr) {
     throttle_output_link_->PushToPendingQueue(packet);
   }
 
   for (const auto& output : output_links_) {
-    FTL_DCHECK(output);
+    FXL_DCHECK(output);
     output->PushToPendingQueue(packet);
   }
 
   if (packet->supplied_packet()->packet()->end_of_stream) {
-    FTL_DCHECK(packet->supplied_packet()->packet()->pts_rate_ticks ==
+    FXL_DCHECK(packet->supplied_packet()->packet()->pts_rate_ticks ==
                format_info_->format()->frames_per_second);
-    FTL_DCHECK(packet->supplied_packet()->packet()->pts_rate_seconds == 1);
+    FXL_DCHECK(packet->supplied_packet()->packet()->pts_rate_seconds == 1);
     timeline_control_point_.SetEndOfStreamPts(
         (packet->supplied_packet()->packet()->pts + packet->frame_count()) /
         format_info_->frames_per_ns());
@@ -367,7 +367,7 @@ bool AudioRendererImpl::OnFlushRequested(
   }
 
   for (const auto& output : output_links_) {
-    FTL_DCHECK(output);
+    FXL_DCHECK(output);
     output->FlushPendingQueue();
   }
   cbk();

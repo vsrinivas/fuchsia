@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
-#include "lib/ftl/synchronization/waitable_event.h"
+#include "lib/fxl/synchronization/waitable_event.h"
 
 #include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/ui/tests/test_with_message_loop.h"
@@ -27,7 +27,7 @@ TEST_F(SceneManagerTest, CreateAndDestroySession) {
 bool IsFenceSignalled(const mx::event& fence) {
   mx_signals_t signals = 0u;
   mx_status_t status = fence.wait_one(kFenceSignalledOrClosed, 0, &signals);
-  FTL_DCHECK(status == MX_OK || status == MX_ERR_TIMED_OUT);
+  FXL_DCHECK(status == MX_OK || status == MX_ERR_TIMED_OUT);
   return signals & kFenceSignalledOrClosed;
 }
 

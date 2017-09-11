@@ -10,8 +10,8 @@
 #include <magenta/syscalls.h>
 #include <utility>
 
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/logging.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/rapidjson.h"
 
@@ -34,7 +34,7 @@ FontProviderImpl::~FontProviderImpl() = default;
 bool FontProviderImpl::LoadFontsInternal() {
   std::string json_data;
   if (!files::ReadFileToString(kFontManifestPath, &json_data)) {
-    FTL_LOG(ERROR) << "Failed to read font manifest from '" << kFontManifestPath
+    FXL_LOG(ERROR) << "Failed to read font manifest from '" << kFontManifestPath
                    << "'.";
     return false;
   }
@@ -42,13 +42,13 @@ bool FontProviderImpl::LoadFontsInternal() {
   rapidjson::Document document;
   document.Parse(json_data.data());
   if (document.HasParseError() || !document.IsObject()) {
-    FTL_LOG(ERROR) << "Font manifest was not vaild JSON.";
+    FXL_LOG(ERROR) << "Font manifest was not vaild JSON.";
     return false;
   }
 
   const auto& fallback = document.FindMember(kFallback);
   if (fallback == document.MemberEnd() || !fallback->value.IsString()) {
-    FTL_LOG(ERROR)
+    FXL_LOG(ERROR)
         << "Font manifest did not contain a valid 'fallback' family.";
     return false;
   }
@@ -56,7 +56,7 @@ bool FontProviderImpl::LoadFontsInternal() {
 
   const auto& families = document.FindMember(kFamilies);
   if (families == document.MemberEnd() || !families->value.IsArray()) {
-    FTL_LOG(ERROR) << "Font manifest did not contain any families.";
+    FXL_LOG(ERROR) << "Font manifest did not contain any families.";
     return false;
   }
 
@@ -69,7 +69,7 @@ bool FontProviderImpl::LoadFontsInternal() {
   }
 
   if (families_.find(fallback_) == families_.end()) {
-    FTL_LOG(ERROR) << "Font manifest did not contain '" << fallback_
+    FXL_LOG(ERROR) << "Font manifest did not contain '" << fallback_
                    << "', which is the fallback family.";
     return false;
   }

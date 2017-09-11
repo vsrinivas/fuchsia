@@ -8,12 +8,12 @@
 #include <utility>
 
 #include "lib/ui/views/fidl/view_associates.fidl.h"
-#include "lib/ftl/functional/closure.h"
+#include "lib/fxl/functional/closure.h"
 
 namespace test {
 
 template <typename T>
-void Capture(const ftl::Closure& quit, T* out, T value) {
+void Capture(const fxl::Closure& quit, T* out, T value) {
   *out = std::move(value);
   quit();
 }

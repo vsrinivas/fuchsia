@@ -6,11 +6,11 @@
 
 #include <iostream>
 
-#include "lib/ftl/strings/split_string.h"
+#include "lib/fxl/strings/split_string.h"
 
 namespace examples {
 
-MediaPlayerParams::MediaPlayerParams(const ftl::CommandLine& command_line) {
+MediaPlayerParams::MediaPlayerParams(const fxl::CommandLine& command_line) {
   is_valid_ = false;
 
   stay_ = command_line.HasOption("stay");
@@ -50,8 +50,8 @@ MediaPlayerParams::MediaPlayerParams(const ftl::CommandLine& command_line) {
       return;
     }
 
-    auto split = ftl::SplitString(remote, "#", ftl::kTrimWhitespace,
-                                  ftl::kSplitWantNonEmpty);
+    auto split = fxl::SplitString(remote, "#", fxl::kTrimWhitespace,
+                                  fxl::kSplitWantNonEmpty);
 
     if (split.size() != 2) {
       Usage();

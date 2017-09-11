@@ -24,14 +24,14 @@ void FlogViewer::Initialize(app::ApplicationContext* application_context,
   terminate_callback_ = terminate_callback;
   service_ = application_context->ConnectToEnvironmentService<FlogService>();
   service_.set_connection_error_handler([this]() {
-    FTL_LOG(ERROR) << "FlogService connection failed";
+    FXL_LOG(ERROR) << "FlogService connection failed";
     service_.reset();
     terminate_callback_();
   });
 }
 
 void FlogViewer::ProcessLogs() {
-  FTL_DCHECK(service_);
+  FXL_DCHECK(service_);
 
   service_->GetLogDescriptions(
       [this](fidl::Array<FlogDescriptionPtr> descriptions) {
@@ -52,10 +52,10 @@ void FlogViewer::ProcessLogs() {
 }
 
 void FlogViewer::ProcessLogs(const std::vector<uint32_t>& log_ids) {
-  FTL_DCHECK(service_);
+  FXL_DCHECK(service_);
 
   for (uint32_t log_id : log_ids) {
-    FTL_DCHECK(log_id != 0);
+    FXL_DCHECK(log_id != 0);
     service_->CreateReader(logs_by_id_[log_id].reader_.NewRequest(), log_id);
   }
 
@@ -63,12 +63,12 @@ void FlogViewer::ProcessLogs(const std::vector<uint32_t>& log_ids) {
 }
 
 void FlogViewer::DeleteLog(uint32_t log_id) {
-  FTL_DCHECK(service_);
+  FXL_DCHECK(service_);
   service_->DeleteLog(log_id);
 }
 
 void FlogViewer::DeleteAllLogs() {
-  FTL_DCHECK(service_);
+  FXL_DCHECK(service_);
   service_->DeleteAllLogs();
 }
 
@@ -135,7 +135,7 @@ void FlogViewer::ProcessLoadedEntries() {
         continue;
       }
 
-      FTL_DCHECK(!log.consumed());
+      FXL_DCHECK(!log.consumed());
 
       if (best_time > log.current_entry()->time_ns) {
         best_time = log.current_entry()->time_ns;

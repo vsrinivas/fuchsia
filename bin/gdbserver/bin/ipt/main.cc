@@ -15,13 +15,13 @@
 
 #include <mxio/util.h>
 
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/log_settings.h"
-#include "lib/ftl/log_settings_command_line.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/split_string.h"
-#include "lib/ftl/strings/string_printf.h"
-#include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/log_settings.h"
+#include "lib/fxl/log_settings_command_line.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/split_string.h"
+#include "lib/fxl/strings/string_printf.h"
+#include "lib/fxl/strings/string_number_conversions.h"
 
 #ifdef __x86_64__  // for other arches we're just a stub, TO-128
 
@@ -145,8 +145,8 @@ static void PrintUsageString() {
   std::cout << kUsageString << std::endl;
 }
 
-static bool BeginsWith(ftl::StringView str, ftl::StringView prefix,
-                       ftl::StringView* arg) {
+static bool BeginsWith(fxl::StringView str, fxl::StringView prefix,
+                       fxl::StringView* arg) {
   size_t prefix_size = prefix.size();
   if (str.size() < prefix_size)
     return false;
@@ -156,34 +156,34 @@ static bool BeginsWith(ftl::StringView str, ftl::StringView prefix,
   return true;
 }
 
-static bool ParseFlag(const char* name, const ftl::StringView& arg,
+static bool ParseFlag(const char* name, const fxl::StringView& arg,
                       bool* value) {
   if (arg == "on")
     *value = true;
   else if (arg == "off")
     *value = false;
   else {
-    FTL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
+    FXL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
     return false;
   }
   return true;
 }
 
-// If only ftl string/number conversions supported 0x.
+// If only fxl string/number conversions supported 0x.
 
-static bool ParseNumber(const char* name, const ftl::StringView& arg,
+static bool ParseNumber(const char* name, const fxl::StringView& arg,
                         uint64_t* value) {
   if (arg.size() > 2 &&
       arg[0] == '0' &&
       (arg[1] == 'x' || arg[1] == 'X')) {
-    if (!ftl::StringToNumberWithError<uint64_t>(arg.substr(2), value,
-                                                ftl::Base::k16)) {
-      FTL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
+    if (!fxl::StringToNumberWithError<uint64_t>(arg.substr(2), value,
+                                                fxl::Base::k16)) {
+      FXL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
       return false;
     }
   } else {
-    if (!ftl::StringToNumberWithError<uint64_t>(arg, value)) {
-      FTL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
+    if (!fxl::StringToNumberWithError<uint64_t>(arg, value)) {
+      FXL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
       return false;
     }
   }
@@ -191,7 +191,7 @@ static bool ParseNumber(const char* name, const ftl::StringView& arg,
 }
 
 static bool ParseCr3Match(const char* name,
-                          const ftl::StringView& arg,
+                          const fxl::StringView& arg,
                           uint64_t* value) {
   if (arg == "off") {
     *value = 0;
@@ -201,7 +201,7 @@ static bool ParseCr3Match(const char* name,
   if (!ParseNumber(name, arg, value))
       return false;
   if ((*value & kCr3MatchReservedMask) != 0) {
-    FTL_LOG(ERROR) << "Invalid value (reserved bits set) for "
+    FXL_LOG(ERROR) << "Invalid value (reserved bits set) for "
                    << name << ": " << arg;
     return false;
   }
@@ -209,7 +209,7 @@ static bool ParseCr3Match(const char* name,
 }
 
 static bool ParseAddrConfig(const char* name,
-                            const ftl::StringView& arg,
+                            const fxl::StringView& arg,
                             debugserver::IptConfig::AddrFilter* value) {
   if (arg == "off")
     *value = debugserver::IptConfig::AddrFilter::kOff;
@@ -218,20 +218,20 @@ static bool ParseAddrConfig(const char* name,
   else if (arg == "stop")
     *value = debugserver::IptConfig::AddrFilter::kStop;
   else {
-    FTL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
+    FXL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
     return false;
   }
   return true;
 }
 
 static bool ParseAddrRange(const char* name,
-                           const ftl::StringView& arg,
+                           const fxl::StringView& arg,
                            debugserver::IptConfig::AddrRange* value) {
-  std::vector<ftl::StringView> range_strings =
-    ftl::SplitString(ftl::StringView(arg), ",",
-                     ftl::kTrimWhitespace, ftl::kSplitWantNonEmpty);
+  std::vector<fxl::StringView> range_strings =
+    fxl::SplitString(fxl::StringView(arg), ",",
+                     fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
   if (range_strings.size() != 2 && range_strings.size() != 3) {
-    FTL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
+    FXL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
     return false;
   }
   unsigned i = 0;
@@ -247,10 +247,10 @@ static bool ParseAddrRange(const char* name,
 }
 
 static bool ParseFreqValue(const char* name,
-                           const ftl::StringView& arg,
+                           const fxl::StringView& arg,
                            uint32_t* value) {
-  if (!ftl::StringToNumberWithError<uint32_t>(arg, value)) {
-    FTL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
+  if (!fxl::StringToNumberWithError<uint32_t>(arg, value)) {
+    FXL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
     return false;
   }
   return true;
@@ -258,11 +258,11 @@ static bool ParseFreqValue(const char* name,
 
 static bool ParseConfigOption(debugserver::IptConfig* config,
                               const std::string& options_string) {
-  std::vector<ftl::StringView> options =
-    ftl::SplitString(ftl::StringView(options_string), ";",
-                     ftl::kTrimWhitespace, ftl::kSplitWantNonEmpty);
+  std::vector<fxl::StringView> options =
+    fxl::SplitString(fxl::StringView(options_string), ";",
+                     fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
 
-  ftl::StringView arg;
+  fxl::StringView arg;
 
   for (const auto& o : options) {
     if (BeginsWith(o, "addr0=", &arg)) {
@@ -326,7 +326,7 @@ static bool ParseConfigOption(debugserver::IptConfig* config,
       if (!ParseFlag("user", arg, &config->user))
         return false;
     } else {
-      FTL_LOG(ERROR) << "Invalid value for --config: " << o;
+      FXL_LOG(ERROR) << "Invalid value for --config: " << o;
       return false;
     }
   }
@@ -334,15 +334,15 @@ static bool ParseConfigOption(debugserver::IptConfig* config,
   return true;
 }
 
-static debugserver::IptConfig GetIptConfig(const ftl::CommandLine& cl) {
+static debugserver::IptConfig GetIptConfig(const fxl::CommandLine& cl) {
   debugserver::IptConfig config;
   std::string arg;
 
   if (cl.GetOptionValue("buffer-order", &arg)) {
     size_t buffer_order;
-    if (!ftl::StringToNumberWithError<size_t>(ftl::StringView(arg),
+    if (!fxl::StringToNumberWithError<size_t>(fxl::StringView(arg),
                                               &buffer_order)) {
-      FTL_LOG(ERROR) << "Not a valid buffer order: " << arg;
+      FXL_LOG(ERROR) << "Not a valid buffer order: " << arg;
       exit(EXIT_FAILURE);
     }
     config.buffer_order = buffer_order;
@@ -359,7 +359,7 @@ static debugserver::IptConfig GetIptConfig(const ftl::CommandLine& cl) {
     } else if (arg == "thread") {
       mode = IPT_MODE_THREADS;
     } else {
-      FTL_LOG(ERROR) << "Not a valid mode value: " << arg;
+      FXL_LOG(ERROR) << "Not a valid mode value: " << arg;
       exit(EXIT_FAILURE);
     }
     config.mode = mode;
@@ -367,16 +367,16 @@ static debugserver::IptConfig GetIptConfig(const ftl::CommandLine& cl) {
 
   if (cl.GetOptionValue("num-buffers", &arg)) {
     size_t num_buffers;
-    if (!ftl::StringToNumberWithError<size_t>(ftl::StringView(arg),
+    if (!fxl::StringToNumberWithError<size_t>(fxl::StringView(arg),
                                               &num_buffers)) {
-      FTL_LOG(ERROR) << "Not a valid buffer size: " << arg;
+      FXL_LOG(ERROR) << "Not a valid buffer size: " << arg;
       exit(EXIT_FAILURE);
     }
     config.num_buffers = num_buffers;
   }
 
   // We support multiple --config options, so we can't use GetOptionValue here.
-  const std::vector<ftl::CommandLine::Option>& options = cl.options();
+  const std::vector<fxl::CommandLine::Option>& options = cl.options();
   for (const auto& o : options) {
     if (o.name == "config") {
       if (!ParseConfigOption(&config, o.value)) {
@@ -393,12 +393,12 @@ static debugserver::IptConfig GetIptConfig(const ftl::CommandLine& cl) {
 }
 
 static bool ControlIpt(const debugserver::IptConfig& config,
-                       const ftl::CommandLine& cl) {
+                       const fxl::CommandLine& cl) {
   // We only support the cpu mode here.
   // This isn't a full test as we only actually set the mode for "init".
   // But it catches obvious mistakes like passing --mode=thread.
   if (config.mode != IPT_MODE_CPUS) {
-    FTL_LOG(ERROR) << "--control requires cpu mode";
+    FXL_LOG(ERROR) << "--control requires cpu mode";
     return false;
   }
 
@@ -412,7 +412,7 @@ static bool ControlIpt(const debugserver::IptConfig& config,
         return false;
     } else if (action == "start") {
       if (!debugserver::StartCpuPerf(config)) {
-        FTL_LOG(WARNING) << "Start failed, but buffers not removed";
+        FXL_LOG(WARNING) << "Start failed, but buffers not removed";
         return false;
       }
     } else if (action == "stop") {
@@ -425,7 +425,7 @@ static bool ControlIpt(const debugserver::IptConfig& config,
       debugserver::ResetCpuPerf(config);
       debugserver::ResetPerf(config);
     } else {
-      FTL_LOG(ERROR) << "Unrecognized action: " << action;
+      FXL_LOG(ERROR) << "Unrecognized action: " << action;
       return false;
     }
   }
@@ -434,12 +434,12 @@ static bool ControlIpt(const debugserver::IptConfig& config,
 }
 
 static bool RunProgram(const debugserver::IptConfig& config,
-                       const ftl::CommandLine& cl) {
+                       const fxl::CommandLine& cl) {
   debugserver::util::Argv inferior_argv(cl.positional_args().begin(),
                                         cl.positional_args().end());
 
   if (inferior_argv.size() == 0) {
-    FTL_LOG(ERROR) << "Missing program";
+    FXL_LOG(ERROR) << "Missing program";
     return false;
   }
 
@@ -460,9 +460,9 @@ static bool RunProgram(const debugserver::IptConfig& config,
 }
 
 int main(int argc, char* argv[]) {
-  ftl::CommandLine cl = ftl::CommandLineFromArgcArgv(argc, argv);
+  fxl::CommandLine cl = fxl::CommandLineFromArgcArgv(argc, argv);
 
-  if (!ftl::SetLogSettingsFromCommandLine(cl))
+  if (!fxl::SetLogSettingsFromCommandLine(cl))
     return EXIT_FAILURE;
 
   if (cl.HasOption("help", nullptr)) {
@@ -476,13 +476,13 @@ int main(int argc, char* argv[]) {
   }
 
   if (!debugserver::arch::x86::HaveProcessorTrace()) {
-    FTL_LOG(ERROR) << "PT not supported";
+    FXL_LOG(ERROR) << "PT not supported";
     return EXIT_FAILURE;
   }
 
   debugserver::IptConfig config = GetIptConfig(cl);
 
-  FTL_LOG(INFO) << "ipt control program starting";
+  FXL_LOG(INFO) << "ipt control program starting";
 
   bool success;
   if (cl.HasOption("control", nullptr)) {
@@ -492,18 +492,18 @@ int main(int argc, char* argv[]) {
   }
 
   if (!success) {
-    FTL_LOG(INFO) << "ipt exited with error";
+    FXL_LOG(INFO) << "ipt exited with error";
     return EXIT_FAILURE;
   }
 
-  FTL_LOG(INFO) << "ipt control program exiting";
+  FXL_LOG(INFO) << "ipt control program exiting";
   return EXIT_SUCCESS;
 }
 
 #else  // !__x86_64
 
 int main(int argc, char* argv[]) {
-  FTL_LOG(ERROR) << "ipt is for x86_64 only";
+  FXL_LOG(ERROR) << "ipt is for x86_64 only";
   return EXIT_FAILURE;
 }
 

@@ -25,7 +25,7 @@ DescriptorSetAllocation::DescriptorSetAllocation(
 DescriptorSetAllocation::~DescriptorSetAllocation() {
   // We expect that any descriptor sets were recycled by our owner before our
   // destructor is called.
-  FTL_DCHECK(sets_.empty());
+  FXL_DCHECK(sets_.empty());
 }
 
 DescriptorSetPool::DescriptorSetPool(
@@ -76,7 +76,7 @@ DescriptorSetAllocationPtr DescriptorSetPool::Allocate(
   }
   free_sets_.resize(free_sets_.size() - count);
 
-  auto allocation = ftl::AdoptRef(
+  auto allocation = fxl::AdoptRef(
       new DescriptorSetAllocation(this, std::move(allocated_sets)));
 
   if (command_buffer) {
@@ -117,7 +117,7 @@ void DescriptorSetPool::InternalAllocate(uint32_t descriptor_set_count) {
 }
 
 void DescriptorSetPool::OnReceiveOwnable(std::unique_ptr<Resource> resource) {
-  FTL_DCHECK(resource->IsKindOf<DescriptorSetAllocation>());
+  FXL_DCHECK(resource->IsKindOf<DescriptorSetAllocation>());
   auto& returned = static_cast<DescriptorSetAllocation*>(resource.get())->sets_;
   free_sets_.insert(free_sets_.end(), returned.begin(), returned.end());
   returned.clear();

@@ -37,7 +37,7 @@ source_set("ffmpeg") {
     "//garnet/bin/media/demux",
     "//garnet/bin/media/framework",
     "//garnet/bin/media/util",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/trace",
     "//third_party/ffmpeg",

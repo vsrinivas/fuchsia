@@ -15,8 +15,8 @@ Pipeline::Pipeline(vk::Device device,
       pipeline_(pipeline),
       layout_(std::move(layout)),
       spec_(std::move(spec)) {
-  FTL_DCHECK(pipeline_);
-  FTL_DCHECK(layout_);
+  FXL_DCHECK(pipeline_);
+  FXL_DCHECK(layout_);
 }
 
 Pipeline::~Pipeline() {

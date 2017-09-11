@@ -9,7 +9,7 @@
 #include "escher/impl/vk/pipeline_cache.h"
 #include "escher/impl/vk/pipeline_factory.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace escher {
 namespace impl {
@@ -57,8 +57,8 @@ void TestPipelineFactory::ServiceOneRequest() {
   reinterpret_cast<uint32_t*>(&fake_layout)[0] = 1U;
   reinterpret_cast<uint32_t*>(&fake_pipeline)[0] = 1U;
 
-  auto layout = ftl::MakeRefCounted<PipelineLayout>(nullptr, fake_layout);
-  auto pipeline = ftl::MakeRefCounted<Pipeline>(nullptr, fake_pipeline, layout,
+  auto layout = fxl::MakeRefCounted<PipelineLayout>(nullptr, fake_layout);
+  auto pipeline = fxl::MakeRefCounted<Pipeline>(nullptr, fake_pipeline, layout,
                                                 request.spec);
   request.promise.set_value(pipeline);
 }
@@ -67,7 +67,7 @@ void TestPipelineFactory::ServiceOneRequest() {
 // TODO(ES-34): un-disable when possible.
 TEST(PipelineCache, DISABLED_SuperComprehensive) {
   PipelineCache cache;
-  auto factory = ftl::MakeRefCounted<TestPipelineFactory>();
+  auto factory = fxl::MakeRefCounted<TestPipelineFactory>();
 
   PipelineSpec spec1(1, {});
   PipelineSpec spec2(1, {1, 2, 3});

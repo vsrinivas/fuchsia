@@ -12,7 +12,7 @@ namespace mtl {
 
 VFSHandler::VFSHandler(VFSDispatcher* dispatcher)
     : dispatcher_(dispatcher), key_(0), iostate_(nullptr) {
-  FTL_DCHECK(dispatcher_);
+  FXL_DCHECK(dispatcher_);
 }
 
 VFSHandler::~VFSHandler() {
@@ -26,7 +26,7 @@ VFSHandler::~VFSHandler() {
 void VFSHandler::Start(mx::channel channel,
                        fs::vfs_dispatcher_cb_t callback,
                        void* iostate) {
-  FTL_DCHECK(!channel_);
+  FXL_DCHECK(!channel_);
   channel_ = std::move(channel);
   callback_ = callback;
   iostate_ = iostate;
@@ -44,18 +44,18 @@ void VFSHandler::OnHandleReady(mx_handle_t handle,
       return;
     Stop(status < 0);
   } else {
-    FTL_DCHECK(pending & MX_CHANNEL_PEER_CLOSED);
+    FXL_DCHECK(pending & MX_CHANNEL_PEER_CLOSED);
     Stop(true);
   }
 }
 
 void VFSHandler::OnHandleError(mx_handle_t handle, mx_status_t error) {
-  FTL_DLOG(ERROR) << "VFSHandler::OnHandleError error=" << error;
+  FXL_DLOG(ERROR) << "VFSHandler::OnHandleError error=" << error;
   Stop(true);
 }
 
 void VFSHandler::Stop(bool needs_close) {
-  FTL_DCHECK(key_);
+  FXL_DCHECK(key_);
   mtl::MessageLoop::GetCurrent()->RemoveHandler(key_);
   key_ = 0;
   if (needs_close)

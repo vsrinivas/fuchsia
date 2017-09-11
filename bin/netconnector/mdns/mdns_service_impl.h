@@ -7,7 +7,7 @@
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "garnet/bin/netconnector/mdns/mdns.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/netconnector/fidl/mdns.fidl.h"
 
 namespace netconnector {
@@ -80,7 +80,7 @@ class MdnsServiceImpl : public MdnsService {
     media::FidlPublisher<GetInstancesCallback> instances_publisher_;
     std::unordered_map<std::string, MdnsServiceInstancePtr> instances_by_name_;
 
-    FTL_DISALLOW_COPY_AND_ASSIGN(MdnsServiceSubscriptionImpl);
+    FXL_DISALLOW_COPY_AND_ASSIGN(MdnsServiceSubscriptionImpl);
   };
 
   fidl::BindingSet<MdnsService> bindings_;
@@ -88,7 +88,7 @@ class MdnsServiceImpl : public MdnsService {
   std::unordered_map<std::string, std::unique_ptr<MdnsServiceSubscriptionImpl>>
       subscriptions_by_service_name_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MdnsServiceImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MdnsServiceImpl);
 };
 
 }  // namespace mdns

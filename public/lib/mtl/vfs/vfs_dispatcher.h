@@ -10,13 +10,13 @@
 #include <memory>
 #include <set>
 
-#include "lib/ftl/ftl_export.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/fxl_export.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/vfs/vfs_handler.h"
 
 namespace mtl {
 
-class FTL_EXPORT VFSDispatcher : public fs::Dispatcher {
+class FXL_EXPORT VFSDispatcher : public fs::Dispatcher {
  public:
   VFSDispatcher();
   ~VFSDispatcher() override;
@@ -29,7 +29,7 @@ class FTL_EXPORT VFSDispatcher : public fs::Dispatcher {
  private:
   std::set<VFSHandler*> handlers_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(VFSDispatcher);
+  FXL_DISALLOW_COPY_AND_ASSIGN(VFSDispatcher);
 };
 
 }  // namespace mtl

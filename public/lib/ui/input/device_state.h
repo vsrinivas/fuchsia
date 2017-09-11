@@ -14,8 +14,8 @@
 #include "lib/ui/input/fidl/input_events.fidl.h"
 #include "lib/ui/input/fidl/input_device_registry.fidl.h"
 #include "lib/ui/input/fidl/input_reports.fidl.h"
-#include "lib/ftl/memory/ref_counted.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/memory/ref_counted.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace mozart {
@@ -41,12 +41,12 @@ class KeyboardState : public State {
                  uint64_t modifiers,
                  uint64_t timestamp);
   void Repeat(uint64_t sequence);
-  void ScheduleRepeat(uint64_t sequence, ftl::TimeDelta delta);
+  void ScheduleRepeat(uint64_t sequence, fxl::TimeDelta delta);
 
   DeviceState* device_state_;
   keychar_t* keymap_;  // assigned to a global static qwerty_map or dvorak_map
-  ftl::WeakPtrFactory<KeyboardState> weak_ptr_factory_;
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::WeakPtrFactory<KeyboardState> weak_ptr_factory_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
 
   std::vector<uint32_t> keys_;
   std::vector<uint32_t> repeat_keys_;

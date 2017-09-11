@@ -17,14 +17,14 @@
 #include "garnet/bin/ui/scene_manager/resources/image_pipe_handler.h"
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
 #include "garnet/bin/ui/scene_manager/resources/resource_map.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
 namespace scene_manager {
 
 class ImagePipe;
-using ImagePipePtr = ftl::RefPtr<ImagePipe>;
+using ImagePipePtr = fxl::RefPtr<ImagePipe>;
 
 class ImagePipe : public ImageBase {
  public:
@@ -81,7 +81,7 @@ class ImagePipe : public ImageBase {
                                uint64_t memory_offset,
                                ErrorReporter* error_reporter);
 
-  ftl::WeakPtrFactory<ImagePipe> weak_ptr_factory_;
+  fxl::WeakPtrFactory<ImagePipe> weak_ptr_factory_;
 
   // A |Frame| stores the arguments passed to a particular invocation of
   // Present().
@@ -105,7 +105,7 @@ class ImagePipe : public ImageBase {
   ResourceMap images_;
   bool is_valid_ = true;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ImagePipe);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ImagePipe);
 };
 
 }  // namespace scene_manager

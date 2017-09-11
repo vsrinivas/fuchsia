@@ -6,7 +6,7 @@
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_FIXED_BUFFER_H_
 
 #include "lib/fidl/cpp/bindings/internal/buffer.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace fidl {
 namespace internal {
@@ -62,7 +62,7 @@ class FixedBuffer : public Buffer {
   size_t cursor_;
   size_t size_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FixedBuffer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FixedBuffer);
 };
 
 class FixedBufferForTesting : public FixedBuffer {
@@ -77,7 +77,7 @@ class FixedBufferForTesting : public FixedBuffer {
   void* Leak();
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(FixedBufferForTesting);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FixedBufferForTesting);
 };
 
 }  // namespace internal

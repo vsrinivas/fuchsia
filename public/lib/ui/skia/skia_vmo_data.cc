@@ -9,7 +9,7 @@
 #include <trace/event.h>
 #include <mx/vmar.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 static_assert(sizeof(size_t) == sizeof(uint64_t),
               "Fuchsia should always be 64-bit");
@@ -28,7 +28,7 @@ void UnmapMemory(const void* buffer, void* context) {
   const uint64_t size = reinterpret_cast<uint64_t>(context);
   mx_status_t status =
       mx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(buffer), size);
-  FTL_CHECK(status == MX_OK);
+  FXL_CHECK(status == MX_OK);
   TraceCount(-1);
 }
 
@@ -50,9 +50,9 @@ sk_sp<SkData> MakeSkDataFromVMO(const mx::vmo& vmo) {
                                             size, &UnmapMemory,
                                             reinterpret_cast<void*>(size));
   if (!data) {
-    FTL_LOG(ERROR) << "Could not create SkData";
+    FXL_LOG(ERROR) << "Could not create SkData";
     status = mx::vmar::root_self().unmap(buffer, size);
-    FTL_CHECK(status == MX_OK);
+    FXL_CHECK(status == MX_OK);
     return nullptr;
   }
 

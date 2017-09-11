@@ -12,7 +12,7 @@ namespace mtl {
 namespace {
 
 TEST(CreateThread, DefaultName) {
-  ftl::RefPtr<ftl::TaskRunner> task_runner;
+  fxl::RefPtr<fxl::TaskRunner> task_runner;
   std::thread child = CreateThread(&task_runner);
 
   bool task_ran = false;
@@ -27,7 +27,7 @@ TEST(CreateThread, DefaultName) {
 }
 
 TEST(CreateThread, CustomName) {
-  ftl::RefPtr<ftl::TaskRunner> task_runner;
+  fxl::RefPtr<fxl::TaskRunner> task_runner;
   std::thread child = CreateThread(&task_runner, "custom name");
 
   bool task_ran = false;

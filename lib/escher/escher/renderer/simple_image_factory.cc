@@ -26,9 +26,9 @@ ImagePtr SimpleImageFactory::NewImage(const ImageInfo& info) {
   escher::GpuMemPtr memory = allocator_->Allocate(reqs, info.memory_flags);
   vk::Result result = resource_manager_->device().bindImageMemory(
       image, memory->base(), memory->offset());
-  FTL_CHECK(result == vk::Result::eSuccess);
+  FXL_CHECK(result == vk::Result::eSuccess);
 
-  return ftl::MakeRefCounted<Image>(resource_manager_, info, image,
+  return fxl::MakeRefCounted<Image>(resource_manager_, info, image,
                                     std::move(memory));
 }
 

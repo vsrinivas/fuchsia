@@ -9,7 +9,7 @@
 #include "garnet/bin/netconnector/netconnector_impl.h"
 #include "garnet/bin/netconnector/requestor_agent.h"
 #include "garnet/bin/netconnector/socket_address.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace netconnector {
 
@@ -32,13 +32,13 @@ DeviceServiceProvider::DeviceServiceProvider(
       address_(address),
       binding_(this, std::move(request)),
       owner_(owner) {
-  FTL_DCHECK(!device_name_.empty());
-  FTL_DCHECK(address_.is_valid());
-  FTL_DCHECK(binding_.is_bound());
-  FTL_DCHECK(owner_ != nullptr);
+  FXL_DCHECK(!device_name_.empty());
+  FXL_DCHECK(address_.is_valid());
+  FXL_DCHECK(binding_.is_bound());
+  FXL_DCHECK(owner_ != nullptr);
 
   binding_.set_connection_error_handler([this]() {
-    FTL_DCHECK(owner_ != nullptr);
+    FXL_DCHECK(owner_ != nullptr);
     binding_.set_connection_error_handler(nullptr);
     binding_.Close();
     owner_->ReleaseDeviceServiceProvider(this);
@@ -53,7 +53,7 @@ void DeviceServiceProvider::ConnectToService(const fidl::String& service_name,
       address_, service_name, std::move(channel), owner_);
 
   if (!requestor_agent) {
-    FTL_LOG(ERROR) << "Connection failed, device " << device_name_;
+    FXL_LOG(ERROR) << "Connection failed, device " << device_name_;
     return;
   }
 

@@ -64,7 +64,7 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
       per_object_descriptor_set_pool_(
           model_data->per_object_descriptor_set_pool()),
       pipeline_cache_(pipeline_cache) {
-  FTL_DCHECK(white_texture_);
+  FXL_DCHECK(white_texture_);
 
   // These fields of the pipeline spec are the same for the entire display list.
   pipeline_spec_.sample_count = sample_count;
@@ -127,7 +127,7 @@ void ModelDisplayListBuilder::AddClipperObject(const Object& object) {
     return;
   }
 
-  FTL_DCHECK(object.shape().modifiers() == ShapeModifiers());
+  FXL_DCHECK(object.shape().modifiers() == ShapeModifiers());
 
   PrepareUniformBufferForWriteOfSize(sizeof(ModelData::PerObject),
                                      kMinUniformBufferOffsetAlignment);
@@ -167,8 +167,8 @@ void ModelDisplayListBuilder::AddClipperAndClippeeObjects(
   // |clip_depth_| so that children can test against the correct value.
   AddClipperObject(object);
   for (auto& clipper : object.clippers()) {
-    FTL_DCHECK(clipper.clippers().empty());
-    FTL_DCHECK(clipper.clippees().empty());
+    FXL_DCHECK(clipper.clippers().empty());
+    FXL_DCHECK(clipper.clippees().empty());
     AddClipperObject(clipper);
   }
   // Remember the beginning and end of clipper-items, so that we can later
@@ -207,7 +207,7 @@ void ModelDisplayListBuilder::AddClipperAndClippeeObjects(
 }
 
 void ModelDisplayListBuilder::AddNonClipperObject(const Object& object) {
-  FTL_DCHECK(object.clippees().empty());
+  FXL_DCHECK(object.clippees().empty());
   if (object.material()) {
     // Simply push the item.
     PrepareUniformBufferForWriteOfSize(sizeof(ModelData::PerObject),
@@ -348,7 +348,7 @@ ModelDisplayListPtr ModelDisplayListBuilder::Build(
   }
   uniform_buffers_.clear();
 
-  auto display_list = ftl::MakeRefCounted<ModelDisplayList>(
+  auto display_list = fxl::MakeRefCounted<ModelDisplayList>(
       renderer_->resource_recycler(), per_model_descriptor_set_,
       std::move(items_), std::move(textures_), std::move(resources_));
   command_buffer->KeepAlive(display_list);

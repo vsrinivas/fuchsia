@@ -12,9 +12,9 @@
 #include "garnet/bin/media/framework/payload_allocator.h"
 #include "garnet/bin/media/framework/stages/input.h"
 #include "garnet/bin/media/framework/stages/output.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/synchronization/mutex.h"
-#include "lib/ftl/synchronization/thread_annotations.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/synchronization/mutex.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media {
 
@@ -80,7 +80,7 @@ class StageImpl {
 
   // Acquires the stage, preventing posted tasks from running until the stage
   // is released. |callback| is called when the stage is acquired.
-  void Acquire(const ftl::Closure& callback);
+  void Acquire(const fxl::Closure& callback);
 
   // Releases the stage previously acquired via |Acquire|.
   void Release();
@@ -91,13 +91,13 @@ class StageImpl {
   // calls the node's |GetTaskRunner| method to determine if the node has a
   // |TaskRunner| it would prefer to use. If so, it uses that one instead of
   // |task_runner|.
-  void SetTaskRunner(ftl::RefPtr<ftl::TaskRunner> task_runner);
+  void SetTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner);
 
-  void PostTask(const ftl::Closure& task);
+  void PostTask(const fxl::Closure& task);
 
  protected:
   // Gets the task runner specified by the node, if any.
-  virtual ftl::RefPtr<ftl::TaskRunner> GetNodeTaskRunner() = 0;
+  virtual fxl::RefPtr<fxl::TaskRunner> GetNodeTaskRunner() = 0;
 
   // Updates packet supply and demand.
   virtual void Update() = 0;
@@ -107,7 +107,7 @@ class StageImpl {
   // |task_runner_|.
   void RunTasks();
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
 
   // Used for ensuring the stage is properly updated. This value is zero
   // initially, indicating that there's no need to update the stage. When the
@@ -118,11 +118,11 @@ class StageImpl {
   // counter is reset to 0.
   std::atomic_uint32_t update_counter_;
 
-  mutable ftl::Mutex tasks_mutex_;
+  mutable fxl::Mutex tasks_mutex_;
   // Pending tasks. Only |RunTasks| may pop from this queue.
-  std::queue<ftl::Closure> tasks_ FTL_GUARDED_BY(tasks_mutex_);
+  std::queue<fxl::Closure> tasks_ FXL_GUARDED_BY(tasks_mutex_);
   // Set to true to suspend task execution.
-  bool tasks_suspended_ FTL_GUARDED_BY(tasks_mutex_) = false;
+  bool tasks_suspended_ FXL_GUARDED_BY(tasks_mutex_) = false;
 };
 
 }  // namespace media

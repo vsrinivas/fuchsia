@@ -12,7 +12,7 @@
 namespace scene_manager {
 
 class Node;
-using NodePtr = ftl::RefPtr<Node>;
+using NodePtr = fxl::RefPtr<Node>;
 
 // Node is an abstract base class for all the concrete node types listed in
 // scene/services/nodes.fidl.

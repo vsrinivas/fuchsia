@@ -30,7 +30,7 @@ source_set("transport") {
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/media/fidl/flog",
     "//garnet/public/lib/ui/geometry/fidl",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }
 

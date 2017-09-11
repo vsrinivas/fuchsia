@@ -11,7 +11,7 @@
 #include <fbl/mutex.h>
 
 #include "lib/media/fidl/media_result.fidl.h"
-#include "lib/ftl/files/unique_fd.h"
+#include "lib/fxl/files/unique_fd.h"
 #include "lib/mtl/io/device_watcher.h"
 
 namespace media {

@@ -6,7 +6,7 @@
 
 #include <map>
 
-#include "lib/ftl/files/unique_fd.h"
+#include "lib/fxl/files/unique_fd.h"
 
 namespace flog {
 
@@ -24,7 +24,7 @@ class FlogDirectory {
   void GetExistingFiles(GetExistingFilesCallback callback);
 
   // Gets a FilePtr for the indicated file.
-  ftl::UniqueFD GetFile(uint32_t id, const std::string& label, bool create);
+  fxl::UniqueFD GetFile(uint32_t id, const std::string& label, bool create);
 
   // Deletes the indicated file.
   void DeleteFile(uint32_t id, const std::string& label);

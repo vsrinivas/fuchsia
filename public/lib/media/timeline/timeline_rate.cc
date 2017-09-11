@@ -7,7 +7,7 @@
 #include <limits>
 #include <utility>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 
@@ -59,9 +59,9 @@ T BinaryGcd(T a, T b) {
 // Reduces the ratio of *numerator and *denominator.
 template <typename T>
 void ReduceRatio(T* numerator, T* denominator) {
-  FTL_DCHECK(numerator != nullptr);
-  FTL_DCHECK(denominator != nullptr);
-  FTL_DCHECK(*denominator != 0);
+  FXL_DCHECK(numerator != nullptr);
+  FXL_DCHECK(denominator != nullptr);
+  FXL_DCHECK(*denominator != 0);
 
   T gcd = BinaryGcd(*numerator, *denominator);
 
@@ -89,8 +89,8 @@ uint64_t ScaleUInt64(uint64_t value,
                      uint32_t reference_delta,
                      bool round_up,
                      bool* overflow) {
-  FTL_DCHECK(reference_delta != 0u);
-  FTL_DCHECK(overflow != nullptr);
+  FXL_DCHECK(reference_delta != 0u);
+  FXL_DCHECK(overflow != nullptr);
 
   constexpr uint64_t kLow32Bits = 0xffffffffu;
   constexpr uint64_t kHigh32Bits = kLow32Bits << 32u;
@@ -160,10 +160,10 @@ void TimelineRate::Product(uint32_t a_subject_delta,
                            uint32_t* product_subject_delta,
                            uint32_t* product_reference_delta,
                            bool exact) {
-  FTL_DCHECK(a_reference_delta != 0);
-  FTL_DCHECK(b_reference_delta != 0);
-  FTL_DCHECK(product_subject_delta != nullptr);
-  FTL_DCHECK(product_reference_delta != nullptr);
+  FXL_DCHECK(a_reference_delta != 0);
+  FXL_DCHECK(b_reference_delta != 0);
+  FXL_DCHECK(product_subject_delta != nullptr);
+  FXL_DCHECK(product_reference_delta != nullptr);
 
   uint64_t subject_delta =
       static_cast<uint64_t>(a_subject_delta) * b_subject_delta;
@@ -174,7 +174,7 @@ void TimelineRate::Product(uint32_t a_subject_delta,
 
   if (subject_delta > std::numeric_limits<uint32_t>::max() ||
       reference_delta > std::numeric_limits<uint32_t>::max()) {
-    FTL_DCHECK(!exact) << "subject_delta " << subject_delta
+    FXL_DCHECK(!exact) << "subject_delta " << subject_delta
                        << " reference_delta " << reference_delta;
 
     do {
@@ -203,7 +203,7 @@ int64_t TimelineRate::Scale(int64_t value,
   static constexpr uint64_t abs_of_min_int64 =
       static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) + 1;
 
-  FTL_DCHECK(reference_delta != 0u);
+  FXL_DCHECK(reference_delta != 0u);
 
   bool overflow;
 

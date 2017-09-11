@@ -8,8 +8,8 @@
 
 #include "garnet/bin/media/framework/models/active_source.h"
 #include "garnet/bin/media/framework/stages/stage_impl.h"
-#include "lib/ftl/synchronization/mutex.h"
-#include "lib/ftl/synchronization/thread_annotations.h"
+#include "lib/fxl/synchronization/mutex.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media {
 
@@ -45,15 +45,15 @@ class ActiveSourceStageImpl : public StageImpl, public ActiveSourceStage {
 
  protected:
   // StageImpl implementation.
-  ftl::RefPtr<ftl::TaskRunner> GetNodeTaskRunner() override;
+  fxl::RefPtr<fxl::TaskRunner> GetNodeTaskRunner() override;
 
   void Update() override;
 
  private:
   // ActiveSourceStage implementation.
-  void SetTaskRunner(ftl::RefPtr<ftl::TaskRunner> task_runner) override;
+  void SetTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner) override;
 
-  void PostTask(const ftl::Closure& task) override;
+  void PostTask(const fxl::Closure& task) override;
 
   void SupplyPacket(PacketPtr packet) override;
 
@@ -61,8 +61,8 @@ class ActiveSourceStageImpl : public StageImpl, public ActiveSourceStage {
   std::shared_ptr<ActiveSource> source_;
   bool prepared_;
 
-  mutable ftl::Mutex mutex_;
-  std::deque<PacketPtr> packets_ FTL_GUARDED_BY(mutex_);
+  mutable fxl::Mutex mutex_;
+  std::deque<PacketPtr> packets_ FXL_GUARDED_BY(mutex_);
 };
 
 }  // namespace media
