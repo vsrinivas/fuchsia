@@ -93,10 +93,22 @@ func main() {
 	systemManifests := []string{}
 
 	if _, err := os.Stat(*bootmanifest); err == nil {
-		bootManifests = append(bootManifests, *bootmanifest)
+		if info, err := os.Stat(*bootmanifest); err == nil {
+			if info.Size() > 0 {
+				bootManifests = append(bootManifests, *bootmanifest)
+			}
+		} else {
+			log.Printf("boot manifest %s was missing, ignoring", *bootmanifest)
+		}
 	}
 	if _, err := os.Stat(*sysmanifest); err == nil {
-		systemManifests = append(systemManifests, *sysmanifest)
+		if info, err := os.Stat(*bootmanifest); err == nil {
+			if info.Size() > 0 {
+				systemManifests = append(systemManifests, *sysmanifest)
+			}
+		} else {
+			log.Printf("sys manifest %s was missing, ignoring", *sysmanifest)
+		}
 	}
 
 	if !*efiOnly {
@@ -141,7 +153,7 @@ func main() {
 	cmd := exec.Command("mkbootfs", append(args, bootManifests...)...)
 	b2, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Printf("%s\n", b2)
+		fmt.Printf("%s %v failed:\n%s\n", cmd.Path, cmd.Args, b2)
 		log.Fatal(err)
 	}
 
