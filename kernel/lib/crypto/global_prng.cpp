@@ -10,18 +10,22 @@
 #include <ctype.h>
 #include <err.h>
 #include <explicit-memory/bytes.h>
+#include <fbl/algorithm.h>
 #include <kernel/auto_lock.h>
 #include <kernel/cmdline.h>
 #include <kernel/mutex.h>
 #include <lib/crypto/cryptolib.h>
 #include <lib/crypto/entropy/collector.h>
+#include <lib/crypto/entropy/jitterentropy_collector.h>
 #include <lib/crypto/entropy/hw_rng_collector.h>
 #include <lib/crypto/entropy/quality_test.h>
 #include <lib/crypto/prng.h>
 #include <mxcpp/new.h>
-#include <fbl/algorithm.h>
 #include <lk/init.h>
 #include <string.h>
+#include <trace.h>
+
+#define LOCAL_TRACE 0
 
 namespace crypto {
 
@@ -71,6 +75,8 @@ static bool IntegrateCmdlineEntropy() {
     }
 
     const size_t entropy_added = fbl::max(hex_len / 2, sizeof(digest));
+    LTRACEF("Collected %zu bytes of entropy from the kernel cmdline.\n",
+            entropy_added);
     return (entropy_added >= PRNG::kMinEntropy);
 }
 
@@ -78,10 +84,21 @@ static bool IntegrateCmdlineEntropy() {
 static bool SeedFrom(entropy::Collector* collector) {
     uint8_t buf[PRNG::kMinEntropy] = {0};
     size_t remaining = collector->BytesNeeded(8 * PRNG::kMinEntropy);
+#if LOCAL_TRACE
+    {
+        char name[MX_MAX_NAME_LEN];
+        collector->get_name(name, sizeof(name));
+        LTRACEF("About to collect %zu bytes of entropy from '%s'.\n",
+                remaining, name);
+    }
+#endif
     while (remaining > 0) {
         size_t result = collector->DrawEntropy(
                 buf, fbl::min(sizeof(buf), remaining));
         if (result == 0) {
+            LTRACEF("Collected 0 bytes; aborting. "
+                    "There were %zu bytes remaining to collect.\n",
+                    remaining);
             return false;
         }
         // TODO(MG-1007): don't assume that every byte of entropy that's added
@@ -90,6 +107,7 @@ static bool SeedFrom(entropy::Collector* collector) {
         mandatory_memset(buf, 0, sizeof(buf));
         remaining -= result;
     }
+    LTRACEF("Successfully collected entropy.\n");
     return true;
 }
 
@@ -119,6 +137,10 @@ static void EarlyBootSeed(uint level) {
         SeedFrom(collector)) {
         successful++;
     }
+    if (entropy::JitterentropyCollector::GetInstance(&collector) == MX_OK &&
+        SeedFrom(collector)) {
+        successful++;
+    }
 
     if (IntegrateCmdlineEntropy()) {
         successful++;
@@ -134,6 +156,9 @@ static void EarlyBootSeed(uint level) {
         uint8_t buf[PRNG::kMinEntropy] = {0};
         kGlobalPrng->AddEntropy(buf, sizeof(buf));
         return;
+    } else {
+        LTRACEF("Successfully collected entropy from %u sources.\n",
+                successful);
     }
 }
 

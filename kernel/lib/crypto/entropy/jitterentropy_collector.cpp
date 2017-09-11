@@ -62,15 +62,24 @@ mx_status_t JitterentropyCollector::GetInstance(Collector** ptr) {
     }
 }
 
+// TODO(MG-1024): Test jitterentropy in different environments (especially on
+// different platforms/architectures, and in multi-threaded mode). Ensure
+// entropy estimate is safe enough.
+
+// Testing shows that, with the default parameters below (bs=64, bc=512,
+// ml=32, ll=1, raw=true), each byte of data contributes approximately
+// 0.58 bits of min-entropy on the rpi3 and 0.5 bits on qemu-arm64. A safety
+// factor of 0.9 gives us 0.50 * 0.9 * 1000 == 450 bits of entropy per 1000
+// bytes of random data.
 JitterentropyCollector::JitterentropyCollector(uint8_t* mem, size_t len)
-    : Collector("jitterentropy", /* entropy_per_1000_bytes */ 8000) {
+    : Collector("jitterentropy", /* entropy_per_1000_bytes */ 450) {
     // TODO(MG-1022): optimize default jitterentropy parameters, then update
     // values here and in docs/kernel_cmdline.md.
     uint32_t bs = cmdline_get_uint32("kernel.jitterentropy.bs", 64);
-    uint32_t bc = cmdline_get_uint32("kernel.jitterentropy.bc", 1024);
-    mem_loops_ = cmdline_get_uint32("kernel.jitterentropy.ml", 128);
-    lfsr_loops_ = cmdline_get_uint32("kernel.jitterentropy.ll", 16);
-    use_raw_samples_ = cmdline_get_bool("kernel.jitterentropy.raw", false);
+    uint32_t bc = cmdline_get_uint32("kernel.jitterentropy.bc", 512);
+    mem_loops_ = cmdline_get_uint32("kernel.jitterentropy.ml", 32);
+    lfsr_loops_ = cmdline_get_uint32("kernel.jitterentropy.ll", 1);
+    use_raw_samples_ = cmdline_get_bool("kernel.jitterentropy.raw", true);
 
     jent_entropy_collector_init(&ec_, mem, len, bs, bc, mem_loops_,
                                 /* stir */ true);

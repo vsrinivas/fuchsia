@@ -111,14 +111,14 @@ timing), the memory will be accessed in blocks of this size.
 
 ## kernel.jitterentropy.bc=\<num>
 
-Sets the "memory block count" parameter for jitterentropy (the default is 1024).
+Sets the "memory block count" parameter for jitterentropy (the default is 512).
 When jitterentropy is performing memory operations (to increase variation in CPU
 timing), this controls how many blocks (of size `kernel.jitterentropy.bs`) are
 accessed.
 
 ## kernel.jitterentropy.ml=\<num>
 
-Sets the "memory loops" parameter for jitterentropy (the default is 128). When
+Sets the "memory loops" parameter for jitterentropy (the default is 32). When
 jitterentropy is performing memory operations (to increase variation in CPU
 timing), this controls how many times the memory access routine is repeated.
 This parameter is only used when `kernel.jitterentropy.raw` is true (otherwise,
@@ -126,7 +126,7 @@ jitterentropy chooses the number of loops is a random-ish way).
 
 ## kernel.jitterentropy.ll=\<num>
 
-Sets the "LFSR loops" parameter for jitterentropy (the default is 16). When
+Sets the "LFSR loops" parameter for jitterentropy (the default is 1). When
 jitterentropy is performing CPU-intensive LFSR operations (to increase variation
 in CPU timing), this controls how many times the LFSR routine is repeated.  This
 parameter is only used when `kernel.jitterentropy.raw` is true (otherwise,
@@ -134,9 +134,11 @@ jitterentropy chooses the number of loops is a random-ish way).
 
 ## kernel.jitterentropy.raw=\<bool>
 
-When true, the jitterentropy entropy collector will return raw, unprocessed
-samples. When false (the default), the raw samples will be processed by
-jitterentropy, producing output data that looks closer to uniformly random.
+When true (the default), the jitterentropy entropy collector will return raw,
+unprocessed samples. When false, the raw samples will be processed by
+jitterentropy, producing output data that looks closer to uniformly random. Note
+that even when set to false, the CPRNG will re-process the samples, so the
+processing inside of jitterentropy is somewhat redundant.
 
 ## kernel.memory-limit-mb=\<num>
 
