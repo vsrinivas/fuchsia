@@ -17,7 +17,7 @@ source_set("reporting") {
   ]
 
   public_deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//third_party/gtest",
   ]
 }

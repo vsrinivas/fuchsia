@@ -13,7 +13,7 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//apps/test_runner/services:test_runner_sync",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
@@ -30,6 +30,6 @@ source_set("application_context") {
   ]
 
   deps = [
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
   ]
 }

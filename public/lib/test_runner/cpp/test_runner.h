@@ -6,7 +6,7 @@
 #define APPS_TEST_RUNNER_TEST_RUNNER_H_
 
 #include <memory>
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/test_runner/lib/scope.h"
 #include "apps/test_runner/lib/test_runner_store_impl.h"
 #include "apps/test_runner/services/test_runner.fidl.h"

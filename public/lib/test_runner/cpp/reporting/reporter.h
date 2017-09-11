@@ -5,7 +5,7 @@
 #ifndef APPS_TEST_RUNNER_LIB_REPORTER_H_
 #define APPS_TEST_RUNNER_LIB_REPORTER_H_
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/test_runner/services/test_runner.fidl-sync.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
 

@@ -5,7 +5,7 @@
 #ifndef APPS_TEST_RUNNER_LIB_APPLICATION_CONTEXT_H_
 #define APPS_TEST_RUNNER_LIB_APPLICATION_CONTEXT_H_
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 
 namespace test_runner {
 // Returns an |app::ApplicationContext| singleton.

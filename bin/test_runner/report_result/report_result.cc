@@ -8,7 +8,7 @@
 #include <magenta/syscalls/object.h>
 #include <unistd.h>
 
-#include "application/lib/app/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "apps/test_runner/services/test_runner.fidl.h"
 #include "lib/ftl/time/stopwatch.h"
 #include "lib/mtl/tasks/message_loop.h"
