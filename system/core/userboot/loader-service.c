@@ -66,11 +66,13 @@ static bool handle_loader_rpc(struct loader_state* state,
         uint8_t buffer[1024];
         mx_loader_svc_msg_t msg;
     } msgbuf;
+    mx_handle_t reqhandle;
     const char* const string = (const char*)msgbuf.msg.data;
 
     uint32_t size;
+    uint32_t hcount;
     mx_status_t status = mx_channel_read(
-        channel, 0, &msgbuf, NULL, sizeof(msgbuf), 0, &size, NULL);
+        channel, 0, &msgbuf, &reqhandle, sizeof(msgbuf), 1, &size, &hcount);
 
     // This is the normal error for the other end going away,
     // which happens when the process dies.
@@ -84,6 +86,12 @@ static bool handle_loader_rpc(struct loader_state* state,
 
     if (size < sizeof(msgbuf.msg))
         fail(state->log, "loader-service request message too small");
+
+    // no opcodes which receive a handle are supported, but
+    // we need to receive (and discard) the handle to politely
+    // NAK clone requests
+    if (hcount == 1)
+        mx_handle_close(reqhandle);
 
     // Forcibly null-terminate the message data argument.
     msgbuf.buffer[sizeof(msgbuf) - 1] = 0;
@@ -106,6 +114,10 @@ static bool handle_loader_rpc(struct loader_state* state,
         handle = load_object(state, string);
         break;
 
+    case LOADER_SVC_OP_CLONE:
+        msgbuf.msg.arg = MX_ERR_NOT_SUPPORTED;
+        goto error_reply;
+
     case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
         fail(state->log, "loader-service received LOAD_SCRIPT_INTERP request");
         break;
@@ -116,8 +128,9 @@ static bool handle_loader_rpc(struct loader_state* state,
     }
 
     // txid returned as received from the client.
-    msgbuf.msg.opcode = LOADER_SVC_OP_STATUS;
     msgbuf.msg.arg = MX_OK;
+error_reply:
+    msgbuf.msg.opcode = LOADER_SVC_OP_STATUS;
     msgbuf.msg.reserved0 = 0;
     msgbuf.msg.reserved1 = 0;
     status = mx_channel_write(channel, 0, &msgbuf.msg, sizeof(msgbuf.msg),
