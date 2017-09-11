@@ -99,7 +99,7 @@ class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
     page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
                        [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
-                           FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
+                           FXL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
                                           << " Page.GetSnapshot() " << status;
                            return;
                          }
@@ -115,7 +115,7 @@ class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
         if (status != ledger::Status::KEY_NOT_FOUND) {
           // It's expected that the key is not found when the link is
           // accessed for the first time. Don't log an error then.
-          FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
+          FXL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
                          << " PageSnapshot.Get() " << status;
         }
         return;
@@ -124,7 +124,7 @@ class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
       std::string value_as_string;
       if (value) {
         if (!mtl::StringFromVmo(value, &value_as_string)) {
-          FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
+          FXL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
                          << " Unable to extract data.";
           return;
         }
@@ -139,7 +139,7 @@ class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
   const std::string link_key_;
   fidl::String result_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ReadLinkDataCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ReadLinkDataCall);
 };
 
 class StoryStorageImpl::WriteLinkDataCall : Operation<> {
@@ -165,7 +165,7 @@ class StoryStorageImpl::WriteLinkDataCall : Operation<> {
     page_->Put(to_array(link_key_), to_array(data_),
                [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
-                   FTL_LOG(ERROR)
+                   FXL_LOG(ERROR)
                        << "WriteLinkDataCall() link key =" << link_key_
                        << ", Page.Put() " << status;
                  }
@@ -176,7 +176,7 @@ class StoryStorageImpl::WriteLinkDataCall : Operation<> {
   const std::string link_key_;
   fidl::String data_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(WriteLinkDataCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(WriteLinkDataCall);
 };
 
 class StoryStorageImpl::FlushWatchersCall : Operation<> {
@@ -203,14 +203,14 @@ class StoryStorageImpl::FlushWatchersCall : Operation<> {
 
     page_->StartTransaction([this, flow](ledger::Status status) {
       if (status != ledger::Status::OK) {
-        FTL_LOG(ERROR) << "FlushWatchersCall()"
+        FXL_LOG(ERROR) << "FlushWatchersCall()"
                        << " Page.StartTransaction() " << status;
         return;
       }
 
       page_->Commit([this, flow](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR) << "FlushWatchersCall()"
+          FXL_LOG(ERROR) << "FlushWatchersCall()"
                          << " Page.Commit() " << status;
           return;
         }
@@ -220,7 +220,7 @@ class StoryStorageImpl::FlushWatchersCall : Operation<> {
 
   ledger::Page* const page_;  // not owned
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FlushWatchersCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FlushWatchersCall);
 };
 
 LinkStorage::~LinkStorage() = default;
@@ -384,7 +384,7 @@ void StoryStorageImpl::WatchLink(const LinkPathPtr& link_path,
 void StoryStorageImpl::DropWatcher(LinkImpl* const impl) {
   auto f = std::find_if(watchers_.begin(), watchers_.end(),
                         [impl](auto& entry) { return entry.impl == impl; });
-  FTL_DCHECK(f != watchers_.end());
+  FXL_DCHECK(f != watchers_.end());
   watchers_.erase(f);
 }
 

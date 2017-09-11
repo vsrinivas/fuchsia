@@ -13,10 +13,10 @@
 
 #include "lib/app/cpp/connect.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
 
@@ -32,7 +32,7 @@ const int kMaxDelaySeconds = 5;
 std::string ToString(const mx::vmo& vmo) {
   std::string ret;
   if (!mtl::StringFromVmo(vmo, &ret)) {
-    FTL_DCHECK(false);
+    FXL_DCHECK(false);
   }
   return ret;
 }
@@ -44,13 +44,13 @@ fidl::Array<uint8_t> ToArray(const std::string& val) {
 }
 
 Key MakeKey() {
-  return ToArray(ftl::StringPrintf("%120ld-%u", time(nullptr), rand()));
+  return ToArray(fxl::StringPrintf("%120ld-%u", time(nullptr), rand()));
 }
 
 std::function<void(ledger::Status)> HandleResponse(std::string description) {
   return [description](ledger::Status status) {
     if (status != ledger::Status::OK) {
-      FTL_LOG(ERROR) << description << " failed";
+      FXL_LOG(ERROR) << description << " failed";
       mtl::MessageLoop::GetCurrent()->PostQuitTask();
     }
   };
@@ -63,7 +63,7 @@ void GetEntries(ledger::PageSnapshotPtr snapshot,
                                    std::vector<ledger::EntryPtr>)> callback) {
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   snapshot_ptr->GetEntries(
-      nullptr, std::move(token), ftl::MakeCopyable([
+      nullptr, std::move(token), fxl::MakeCopyable([
         snapshot = std::move(snapshot), entries = std::move(entries),
         callback = std::move(callback)
       ](ledger::Status status, auto new_entries, auto next_token) mutable {
@@ -102,7 +102,7 @@ TodoApp::TodoApp()
       page_watcher_binding_(this) {
   context_->outgoing_services()->AddService<modular::Module>(
       [this](fidl::InterfaceRequest<modular::Module> request) {
-        FTL_DCHECK(!module_binding_.is_bound());
+        FXL_DCHECK(!module_binding_.is_bound());
         module_binding_.Bind(std::move(request));
       });
 }
@@ -148,7 +148,7 @@ void TodoApp::OnChange(ledger::PageChangePtr /*page_change*/,
 void TodoApp::List(ledger::PageSnapshotPtr snapshot) {
   GetEntries(std::move(snapshot), [](ledger::Status status, auto entries) {
     if (status != ledger::Status::OK) {
-      FTL_LOG(ERROR) << "GetEntries failed";
+      FXL_LOG(ERROR) << "GetEntries failed";
       mtl::MessageLoop::GetCurrent()->PostQuitTask();
       return;
     }
@@ -167,7 +167,7 @@ void TodoApp::GetKeys(std::function<void(fidl::Array<Key>)> callback) {
                      HandleResponse("GetSnapshot"));
 
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
-  snapshot_ptr->GetKeys(nullptr, nullptr, ftl::MakeCopyable([
+  snapshot_ptr->GetKeys(nullptr, nullptr, fxl::MakeCopyable([
                           snapshot = std::move(snapshot), callback
                         ](ledger::Status status, auto keys, auto next_token) {
                           callback(std::move(keys));
@@ -179,7 +179,7 @@ void TodoApp::AddNew() {
 }
 
 void TodoApp::DeleteOne(fidl::Array<Key> keys) {
-  FTL_DCHECK(keys.size());
+  FXL_DCHECK(keys.size());
   std::uniform_int_distribution<> distribution(0, keys.size() - 1);
   page_->Delete(std::move(keys[distribution(rng_)]), HandleResponse("Delete"));
 }
@@ -193,7 +193,7 @@ void TodoApp::Act() {
       AddNew();
     }
   });
-  ftl::TimeDelta delay = ftl::TimeDelta::FromSeconds(delay_distribution_(rng_));
+  fxl::TimeDelta delay = fxl::TimeDelta::FromSeconds(delay_distribution_(rng_));
   mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
       [this] { Act(); }, delay);
 }

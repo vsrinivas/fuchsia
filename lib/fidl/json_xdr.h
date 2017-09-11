@@ -15,7 +15,7 @@
 #include "lib/fidl/cpp/bindings/map.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -487,7 +487,7 @@ class XdrContext {
     const size_t old_length_;
     std::function<void()> error_callback_;
 
-    FTL_DISALLOW_COPY_AND_ASSIGN(XdrCallbackOnReadError);
+    FXL_DISALLOW_COPY_AND_ASSIGN(XdrCallbackOnReadError);
   };
 
  public:
@@ -587,7 +587,7 @@ class XdrContext {
   // want to change this once we support asynchronous input/output
   // operations, for example directly to/from a Ledger page rather
   // than just the JSON DOM.
-  FTL_DISALLOW_COPY_AND_ASSIGN(XdrContext);
+  FXL_DISALLOW_COPY_AND_ASSIGN(XdrContext);
 };
 
 // This filter function works for all types that have a Value() method
@@ -610,12 +610,12 @@ bool XdrRead(JsonDoc* const doc, D* const data, XdrFilterType<V> const filter) {
   xdr.Value(data, filter);
 
   if (!error.empty()) {
-    FTL_LOG(ERROR) << "XdrRead: Unable to extract data from JSON: " << std::endl
+    FXL_LOG(ERROR) << "XdrRead: Unable to extract data from JSON: " << std::endl
                    << error << std::endl
                    << JsonValueToPrettyString(*doc) << std::endl;
     // This DCHECK is usually caused by adding a field to an XDR filter function
     // when there's already existing data in the Ledger.
-    FTL_DCHECK(false)
+    FXL_DCHECK(false)
         << "This indicates a structure version mismatch in the "
            "Framework. Please submit a high priority bug in JIRA under FW.";
     return false;
@@ -635,7 +635,7 @@ bool XdrRead(const std::string& json,
   JsonDoc doc;
   doc.Parse(json);
   if (doc.HasParseError()) {
-    FTL_LOG(ERROR) << "Unable to parse data as JSON: " << json;
+    FXL_LOG(ERROR) << "Unable to parse data as JSON: " << json;
     return false;
   }
 
@@ -650,7 +650,7 @@ void XdrWrite(JsonDoc* const doc,
   std::string error;
   XdrContext xdr(XdrOp::TO_JSON, doc, &error);
   xdr.Value(data, filter);
-  FTL_DCHECK(error.empty())
+  FXL_DCHECK(error.empty())
       << "There are no errors possible in XdrOp::TO_JSON: " << std::endl
       << error << std::endl
       << JsonValueToPrettyString(*doc) << std::endl;

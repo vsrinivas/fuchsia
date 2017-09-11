@@ -11,8 +11,8 @@
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
@@ -37,7 +37,7 @@ class App {
         // Check JSON validity.
         rapidjson::Document doc;
         if (doc.Parse(argv[1]).HasParseError()) {
-          FTL_LOG(FATAL) << "Failed to parse JSON facet data: " << argv[1];
+          FXL_LOG(FATAL) << "Failed to parse JSON facet data: " << argv[1];
         }
 
         query[fidl::String(facet_type)] = argv[1];
@@ -50,7 +50,7 @@ class App {
 
     component_index_->FindComponentManifests(
         std::move(query), [this](fidl::Array<ComponentManifestPtr> results) {
-          FTL_LOG(INFO) << "Got " << results.size() << " results...";
+          FXL_LOG(INFO) << "Got " << results.size() << " results...";
           for (auto& result : results) {
             std::cout << "=== " << result->component->url << "\n";
             std::cout << result->raw << "\n";
@@ -67,7 +67,7 @@ class App {
 
   fidl::InterfacePtr<ComponentIndex> component_index_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(App);
+  FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
 }  // namespace component

@@ -10,7 +10,7 @@
 #include "apps/modular/src/story_runner/module_controller_impl.h"
 #include "apps/modular/src/story_runner/story_controller_impl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/strings/join_strings.h"
+#include "lib/fxl/strings/join_strings.h"
 
 namespace modular {
 

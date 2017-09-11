@@ -93,7 +93,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     StartModule(kModuleQueries[query_index_]);
     query_index_ = (query_index_ + 1) % kModuleQueries.size();
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this] { SwapModule(); }, ftl::TimeDelta::FromSeconds(kSwapSeconds));
+        [this] { SwapModule(); }, fxl::TimeDelta::FromSeconds(kSwapSeconds));
   }
 
   void StartModule(const std::string& module_query) {

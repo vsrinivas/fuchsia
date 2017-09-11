@@ -8,7 +8,7 @@
 #include <utility>
 
 #include "gtest/gtest.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace modular {
 namespace {
@@ -30,7 +30,7 @@ class MockTimeOfDay : public TimeOfDay {
 class MockRandomNumber : public RandomNumber {
  public:
   uint64_t RandUint64() override {
-    FTL_CHECK(call_count_ != values_.size());
+    FXL_CHECK(call_count_ != values_.size());
     return values_[call_count_++];
   }
 

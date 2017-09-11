@@ -6,8 +6,8 @@
 
 #include "lib/ui/view_framework/base_view.h"
 #include "lib/ui/views/fidl/view_manager.fidl.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -50,10 +50,10 @@ void ViewHost::OnPropertiesChanged(
 }
 
 void ViewHost::OnChildUnavailable(uint32_t child_key) {
-  FTL_LOG(ERROR) << "View died unexpectedly: child_key=" << child_key;
+  FXL_LOG(ERROR) << "View died unexpectedly: child_key=" << child_key;
 
   auto it = views_.find(child_key);
-  FTL_DCHECK(it != views_.end());
+  FXL_DCHECK(it != views_.end());
 
   it->second->host_node.Detach();
   views_.erase(it);

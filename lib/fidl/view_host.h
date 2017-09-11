@@ -10,7 +10,7 @@
 
 #include "lib/ui/view_framework/base_view.h"
 #include "lib/ui/views/fidl/view_manager.fidl.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -46,7 +46,7 @@ class ViewHost : public mozart::BaseView {
   std::map<uint32_t, std::unique_ptr<ViewData>> views_;
   uint32_t next_child_key_{1u};
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ViewHost);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ViewHost);
 };
 
 }  // namespace modular

@@ -8,7 +8,7 @@
 #include <functional>
 #include <string>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -68,7 +68,7 @@ class AgentRunnerStorage {
                           std::function<void(bool)> done) = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(AgentRunnerStorage);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AgentRunnerStorage);
 };
 
 }  // namespace modular

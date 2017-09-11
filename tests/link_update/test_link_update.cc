@@ -14,11 +14,11 @@
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/tasks/task_runner.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/tasks/task_runner.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
@@ -42,14 +42,14 @@ class LinkWatcherImpl : modular::LinkWatcher {
  private:
   // |LinkWatcher|
   void Notify(const fidl::String& json) override {
-    FTL_LOG(INFO) << "LinkWatcher: " << json;
+    FXL_LOG(INFO) << "LinkWatcher: " << json;
     continue_(json);
   }
 
   std::function<void(const fidl::String&)> continue_;
   fidl::Binding<modular::LinkWatcher> binding_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherImpl);
 };
 
 // Tests how data are updated in a Link.
@@ -199,7 +199,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
   modular::LinkPtr root_peer_;
   modular::StoryInfoPtr story_info_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace

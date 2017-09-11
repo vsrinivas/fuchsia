@@ -18,7 +18,7 @@
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "third_party/rapidjson/rapidjson/schema.h"
 
 namespace modular {
@@ -204,7 +204,7 @@ class LinkImpl {
   class IncrementalWriteCall;
   class IncrementalChangeCall;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
 };
 
 class LinkConnection : Link {
@@ -252,7 +252,7 @@ class LinkConnection : Link {
   // LinkConnection instances.
   const uint32_t id_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LinkConnection);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LinkConnection);
 };
 
 class LinkWatcherConnection {
@@ -273,7 +273,7 @@ class LinkWatcherConnection {
   // The ID of the LinkConnection this LinkWatcher was registered on.
   const uint32_t conn_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherConnection);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherConnection);
 };
 
 }  // namespace modular

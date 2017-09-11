@@ -10,9 +10,9 @@
 #include "apps/modular/src/user_runner/user_runner_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {
@@ -32,13 +32,13 @@ class UserRunnerApp {
  private:
   std::shared_ptr<app::ApplicationContext> application_context_;
   UserRunnerImpl user_runner_impl_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(UserRunnerApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(UserRunnerApp);
 };
 
 }  // namespace modular
 
 int main(int argc, const char** argv) {
-  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   const bool test = command_line.HasOption("test");
   mtl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());

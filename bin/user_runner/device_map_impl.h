@@ -50,7 +50,7 @@ class DeviceMapImpl : DeviceMap, PageClient {
 
   OperationQueue operation_queue_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DeviceMapImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DeviceMapImpl);
 };
 
 }  // namespace modular

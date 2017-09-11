@@ -4,7 +4,7 @@
 
 #include "apps/modular/lib/testing/test_with_message_loop.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace modular {
 namespace testing {
@@ -15,7 +15,7 @@ mtl::MessageLoop* TestWithMessageLoop::message_loop_{};
 namespace {
 
 bool RunGivenLoopWithTimeout(mtl::MessageLoop* message_loop,
-                             ftl::TimeDelta timeout) {
+                             fxl::TimeDelta timeout) {
   // This cannot be a local variable because the delayed task below can execute
   // after this function returns.
   auto canceled = std::make_shared<bool>(false);
@@ -45,18 +45,18 @@ bool RunGivenLoopWithTimeout(mtl::MessageLoop* message_loop,
 
 bool RunGivenLoopUntil(mtl::MessageLoop* message_loop,
                        std::function<bool()> condition,
-                       ftl::TimeDelta timeout) {
+                       fxl::TimeDelta timeout) {
   if (condition()) {
-    FTL_LOG(ERROR) << "|condition| is already true prior to running the loop.";
+    FXL_LOG(ERROR) << "|condition| is already true prior to running the loop.";
     return false;
   }
 
-  const ftl::TimePoint deadline = ftl::TimePoint::Now() + timeout;
-  while (ftl::TimePoint::Now() < deadline) {
+  const fxl::TimePoint deadline = fxl::TimePoint::Now() + timeout;
+  while (fxl::TimePoint::Now() < deadline) {
     if (condition()) {
       return true;
     }
-    RunGivenLoopWithTimeout(message_loop, ftl::TimeDelta::FromMilliseconds(10));
+    RunGivenLoopWithTimeout(message_loop, fxl::TimeDelta::FromMilliseconds(10));
   }
   return condition();
 }
@@ -67,18 +67,18 @@ TestWithMessageLoop::TestWithMessageLoop() {
   if (message_loop_ == nullptr) {
     message_loop_ = new mtl::MessageLoop;
   } else {
-    FTL_CHECK(message_loop_ == mtl::MessageLoop::GetCurrent());
+    FXL_CHECK(message_loop_ == mtl::MessageLoop::GetCurrent());
   }
 }
 
 TestWithMessageLoop::~TestWithMessageLoop() = default;
 
-bool TestWithMessageLoop::RunLoopWithTimeout(ftl::TimeDelta timeout) {
+bool TestWithMessageLoop::RunLoopWithTimeout(fxl::TimeDelta timeout) {
   return RunGivenLoopWithTimeout(message_loop_, timeout);
 }
 
 bool TestWithMessageLoop::RunLoopUntil(std::function<bool()> condition,
-                                       ftl::TimeDelta timeout) {
+                                       fxl::TimeDelta timeout) {
   return RunGivenLoopUntil(message_loop_, std::move(condition), timeout);
 }
 

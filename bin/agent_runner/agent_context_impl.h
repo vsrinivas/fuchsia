@@ -23,8 +23,8 @@
 #include "apps/modular/src/component/component_context_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/tasks/one_shot_timer.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/tasks/one_shot_timer.h"
 
 namespace modular {
 
@@ -118,7 +118,7 @@ class AgentContextImpl : AgentContext, AgentController {
   class InitializeCall;
   class StopCall;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AgentContextImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AgentContextImpl);
 };
 
 }  // namespace modular

@@ -8,8 +8,8 @@
 #include <string>
 #include <vector>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/random/rand.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/random/rand.h"
 
 namespace {
 
@@ -29,7 +29,7 @@ uint64_t WallClockTimeOfDay::GetTimeOfDayMs() {
 }
 
 uint64_t FuchsiaRandomNumber::RandUint64() {
-  return ftl::RandUint64();
+  return fxl::RandUint64();
 }
 
 KeyGenerator::KeyGenerator() = default;
@@ -55,7 +55,7 @@ std::string KeyGenerator::Create() {
     id[i] = kEncodingDictionary[static_cast<size_t>(milliseconds % 64)];
     milliseconds /= 64;
   }
-  FTL_DCHECK(milliseconds == 0);
+  FXL_DCHECK(milliseconds == 0);
 
   auto last_random = last_random_;
 

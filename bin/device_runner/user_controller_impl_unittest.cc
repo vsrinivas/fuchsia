@@ -28,7 +28,7 @@ class TestApplicationLauncher : app::ApplicationLauncher {
 
   fidl::Binding<app::ApplicationLauncher> binding_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestApplicationLauncher);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApplicationLauncher);
 };
 
 class UserControllerImplTest : public testing::TestWithMessageLoop {};

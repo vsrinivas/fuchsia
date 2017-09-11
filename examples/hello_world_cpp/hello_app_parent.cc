@@ -10,8 +10,8 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "apps/modular/examples/hello_world_cpp/hello.fidl.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 using examples::HelloPtr;
@@ -20,7 +20,7 @@ namespace {
 
 class HelloAppParent {
  public:
-  explicit HelloAppParent(ftl::CommandLine& command_line)
+  explicit HelloAppParent(fxl::CommandLine& command_line)
       : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     auto launch_info = app::ApplicationLaunchInfo::New();
     const std::vector<std::string>& args = command_line.positional_args();
@@ -55,13 +55,13 @@ class HelloAppParent {
   app::ServiceProviderPtr child_services_;
   HelloPtr hello_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(HelloAppParent);
+  FXL_DISALLOW_COPY_AND_ASSIGN(HelloAppParent);
 };
 
 }  // namespace
 
 int main(int argc, const char** argv) {
-  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   mtl::MessageLoop loop;
   HelloAppParent app(command_line);

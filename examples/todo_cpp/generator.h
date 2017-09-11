@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace todo {
 
@@ -28,7 +28,7 @@ class Generator {
   std::vector<std::string> objects_;
   std::string tag_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Generator);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Generator);
 };
 
 }  // namespace todo

@@ -21,12 +21,12 @@
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "apps/test_runner/services/test_runner.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/tasks/task_runner.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/tasks/task_runner.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
@@ -58,7 +58,7 @@ class StoryWatcherImpl : modular::StoryWatcher {
  private:
   // |StoryWatcher|
   void OnStateChange(modular::StoryState state) override {
-    FTL_VLOG(4) << "OnStateChange() " << state;
+    FXL_VLOG(4) << "OnStateChange() " << state;
     if (state != modular::StoryState::RUNNING) {
       return;
     }
@@ -71,7 +71,7 @@ class StoryWatcherImpl : modular::StoryWatcher {
 
   fidl::Binding<modular::StoryWatcher> binding_;
   std::function<void()> continue_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
 };
 
 // A simple focus watcher implementation that invokes a "continue" callback when
@@ -95,13 +95,13 @@ class FocusWatcherImpl : modular::FocusWatcher {
  private:
   // |FocusWatcher|
   void OnFocusChange(modular::FocusInfoPtr info) override {
-    FTL_VLOG(4) << "OnFocusChange() " << info->focused_story_id;
+    FXL_VLOG(4) << "OnFocusChange() " << info->focused_story_id;
     continue_();
   }
 
   fidl::Binding<modular::FocusWatcher> binding_;
   std::function<void()> continue_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(FocusWatcherImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FocusWatcherImpl);
 };
 
 // A context reader watcher implementation.
@@ -125,7 +125,7 @@ class ContextListenerImpl : maxwell::ContextListener {
 
     context_reader->Subscribe(std::move(query), binding_.NewBinding());
     binding_.set_connection_error_handler(
-        [] { FTL_LOG(ERROR) << "Lost connection to ContextReader."; });
+        [] { FXL_LOG(ERROR) << "Lost connection to ContextReader."; });
   }
 
   using Handler = std::function<void(fidl::String, fidl::String)>;
@@ -138,10 +138,10 @@ class ContextListenerImpl : maxwell::ContextListener {
  private:
   // |ContextListener|
   void OnContextUpdate(maxwell::ContextUpdatePtr update) override {
-    FTL_VLOG(4) << "ContextListenerImpl::OnUpdate()";
+    FXL_VLOG(4) << "ContextListenerImpl::OnUpdate()";
     const auto& values = update->values["all"];
     for (const auto& value : values) {
-      FTL_VLOG(4) << "ContextListenerImpl::OnUpdate() " << value;
+      FXL_VLOG(4) << "ContextListenerImpl::OnUpdate() " << value;
       if (value->meta && value->meta->entity) {
         handler_(value->meta->entity->topic, value->content);
       }
@@ -150,7 +150,7 @@ class ContextListenerImpl : maxwell::ContextListener {
 
   fidl::Binding<maxwell::ContextListener> binding_;
   Handler handler_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(ContextListenerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ContextListenerImpl);
 };
 
 // Tests the story importance machinery. We set context to home, start one
@@ -209,7 +209,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
   TestPoint get_context_home_{"GetContextHome()"};
 
   void GetContextHome(const fidl::String& topic, const fidl::String& value) {
-    FTL_VLOG(4) << "Context " << topic << " " << value;
+    FXL_VLOG(4) << "Context " << topic << " " << value;
     if (topic == kTopic && value == "\"home\"" && !story1_context_) {
       story1_context_ = true;
       get_context_home_.Pass();
@@ -302,13 +302,13 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
           if (importance.find(story1_id_) == importance.end()) {
             modular::testing::Fail("No importance for story1");
           } else {
-            FTL_VLOG(4) << "Story1 importance " << importance[story1_id_];
+            FXL_VLOG(4) << "Story1 importance " << importance[story1_id_];
           }
 
           if (importance.find(story2_id_) == importance.end()) {
             modular::testing::Fail("No importance for story2");
           } else {
-            FTL_VLOG(4) << "Story2 importance " << importance[story2_id_];
+            FXL_VLOG(4) << "Story2 importance " << importance[story2_id_];
           }
 
           if (importance[story1_id_] > 0.1f) {
@@ -348,7 +348,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
           if (importance.find(story1_id_) == importance.end()) {
             modular::testing::Fail("No importance for story1");
           } else {
-            FTL_VLOG(4) << "Story1 importance " << importance[story1_id_];
+            FXL_VLOG(4) << "Story1 importance " << importance[story1_id_];
           }
 
           if (importance[story1_id_] < 0.4f) {
@@ -391,13 +391,13 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
   maxwell::ContextReaderPtr context_reader_;
   ContextListenerImpl context_listener_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace
 
 int main(int argc, const char** argv) {
-  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   mtl::MessageLoop loop;
   TestApp::New();

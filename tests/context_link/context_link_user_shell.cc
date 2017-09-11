@@ -23,12 +23,12 @@
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "apps/test_runner/services/test_runner.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/tasks/task_runner.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/tasks/task_runner.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
@@ -59,7 +59,7 @@ class ContextListenerImpl : maxwell::ContextListener {
 
     context_reader->Subscribe(std::move(query), binding_.NewBinding());
     binding_.set_connection_error_handler(
-        [] { FTL_LOG(ERROR) << "Lost ContextListener connection to ContextReader."; });
+        [] { FXL_LOG(ERROR) << "Lost ContextListener connection to ContextReader."; });
   }
 
   using Handler = std::function<void(const maxwell::ContextValuePtr&)>;
@@ -72,17 +72,17 @@ class ContextListenerImpl : maxwell::ContextListener {
  private:
   // |ContextListener|
   void OnContextUpdate(maxwell::ContextUpdatePtr update) override {
-    FTL_VLOG(4) << "ContextListenerImpl::OnUpdate()";
+    FXL_VLOG(4) << "ContextListenerImpl::OnUpdate()";
     const auto& values = update->values["all"];
     for (const auto& value : values) {
-      FTL_VLOG(4) << "ContextListenerImpl::OnUpdate() " << value;
+      FXL_VLOG(4) << "ContextListenerImpl::OnUpdate() " << value;
       handler_(value);
     }
   }
 
   fidl::Binding<maxwell::ContextListener> binding_;
   Handler handler_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(ContextListenerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ContextListenerImpl);
 };
 
 // Tests the context links machinery. We start a module that writes a context
@@ -163,53 +163,53 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
     // The context link value has metadata that is derived from the story id in
     // which it was published.
     if (!value->meta || !value->meta->story || !value->meta->entity) {
-      FTL_LOG(ERROR) << "ContextValue missing story or entity metadata: " << value;
+      FXL_LOG(ERROR) << "ContextValue missing story or entity metadata: " << value;
       return;
     }
 
     if (value->meta->story->id != story_id_ ||
         value->meta->entity->topic != kTopic) {
-      FTL_LOG(ERROR) << "ContextValue metadata is incorrect: " << value;
+      FXL_LOG(ERROR) << "ContextValue metadata is incorrect: " << value;
       return;
     }
 
-    FTL_LOG(INFO) << "Context value for topic " << kTopic << " is: " << value;
+    FXL_LOG(INFO) << "Context value for topic " << kTopic << " is: " << value;
 
     modular::JsonDoc doc;
     doc.Parse(value->content);
 
     if (doc.HasParseError()) {
-      FTL_LOG(ERROR) << "JSON Parse Error";
+      FXL_LOG(ERROR) << "JSON Parse Error";
       Logout();
       return;
     }
 
     if (!doc.IsObject()) {
-      FTL_LOG(ERROR) << "JSON not an Object";
+      FXL_LOG(ERROR) << "JSON not an Object";
       Logout();
       return;
     }
 
     if (!doc.HasMember("@source")) {
-      FTL_LOG(ERROR) << "JSON missing @source";
+      FXL_LOG(ERROR) << "JSON missing @source";
       Logout();
       return;
     }
 
     if (!doc["@source"].IsObject()) {
-      FTL_LOG(ERROR) << "JSON @source not an Object";
+      FXL_LOG(ERROR) << "JSON @source not an Object";
       Logout();
       return;
     }
 
     if (!doc["@source"].HasMember("link_name")) {
-      FTL_LOG(ERROR) << "JSON @source missing link_name";
+      FXL_LOG(ERROR) << "JSON @source missing link_name";
       Logout();
       return;
     }
 
     if (!doc["@source"]["link_name"].IsString()) {
-      FTL_LOG(ERROR) << "JSON @source link_name not a string";
+      FXL_LOG(ERROR) << "JSON @source link_name not a string";
       Logout();
       return;
     }
@@ -217,26 +217,26 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
     // HACK(mesch): Comparing GetString() to kLink always fails.
     const std::string link_name{doc["@source"]["link_name"].GetString()};
     if (link_name != std::string{kLink}) {
-      FTL_LOG(ERROR) << "JSON @source wrong link_name " << link_name;
+      FXL_LOG(ERROR) << "JSON @source wrong link_name " << link_name;
       Logout();
       return;
     }
 
     if (!doc.HasMember("link_value")) {
-      FTL_LOG(ERROR) << "JSON missing property link_value (set by module)";
+      FXL_LOG(ERROR) << "JSON missing property link_value (set by module)";
       Logout();
       return;
     }
 
     if (!doc["link_value"].IsString()) {
-      FTL_LOG(ERROR) << "JSON link_value (set by module) not a String";
+      FXL_LOG(ERROR) << "JSON link_value (set by module) not a String";
       Logout();
       return;
     }
 
     const std::string link_value{doc["link_value"].GetString()};
     if (link_value != std::string{"1"} && link_value != std::string{"2"}) {
-      FTL_LOG(ERROR) << "JSON link_value (set by module) wrong: " << link_value;
+      FXL_LOG(ERROR) << "JSON link_value (set by module) wrong: " << link_value;
       Logout();
       return;
     }
@@ -277,7 +277,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
   maxwell::ContextReaderPtr context_reader_;
   ContextListenerImpl context_listener_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace

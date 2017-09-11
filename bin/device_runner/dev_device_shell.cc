@@ -14,16 +14,16 @@
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/device/device_shell.fidl.h"
 #include "apps/modular/services/device/user_provider.fidl.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
 
 class Settings {
  public:
-  explicit Settings(const ftl::CommandLine& command_line) {
+  explicit Settings(const fxl::CommandLine& command_line) {
     // device_name will be set to the device's hostname if it is empty or null
     device_name = command_line.GetOptionValueWithDefault("device_name", "");
 
@@ -84,13 +84,13 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
       const fidl::String& /*username*/,
       fidl::InterfaceRequest<modular::AuthenticationContext> /*request*/)
       override {
-    FTL_LOG(INFO)
+    FXL_LOG(INFO)
         << "DeviceShell::GetAuthenticationContext() is unimplemented.";
   }
 
   // |UserWatcher|
   void OnLogout() override {
-    FTL_LOG(INFO) << "UserWatcher::OnLogout()";
+    FXL_LOG(INFO) << "UserWatcher::OnLogout()";
     device_shell_context_->Shutdown();
   }
 
@@ -113,7 +113,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
 
       user_provider_->PreviousUsers(
           [this](fidl::Array<modular::auth::AccountPtr> accounts) {
-            FTL_LOG(INFO) << "Found " << accounts.size()
+            FXL_LOG(INFO) << "Found " << accounts.size()
                           << " users in the user "
                           << "database";
 
@@ -121,7 +121,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
             // added.
             std::string account_id;
             for (const auto& account : accounts) {
-              FTL_LOG(INFO) << "Found user " << account->display_name;
+              FXL_LOG(INFO) << "Found user " << account->display_name;
               if (account->display_name.size() >= settings_.user.size() &&
                   account->display_name.get().substr(settings_.user.size()) ==
                       settings_.user) {
@@ -147,13 +147,13 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
   modular::DeviceShellContextPtr device_shell_context_;
   modular::UserControllerPtr user_controller_;
   modular::UserProviderPtr user_provider_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(DevDeviceShellApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DevDeviceShellApp);
 };
 
 }  // namespace
 
 int main(int argc, const char** argv) {
-  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   Settings settings(command_line);
 
   mtl::MessageLoop loop;

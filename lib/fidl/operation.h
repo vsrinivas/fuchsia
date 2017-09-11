@@ -13,9 +13,9 @@
 
 #include <trace/event.h>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace modular {
 class OperationBase;
@@ -44,7 +44,7 @@ class OperationContainer {
   // OperationBase calls the methods below.
   friend class OperationBase;
 
-  virtual ftl::WeakPtr<OperationContainer> GetWeakPtr() = 0;
+  virtual fxl::WeakPtr<OperationContainer> GetWeakPtr() = 0;
   virtual void Hold(OperationBase* o) = 0;
   virtual void Drop(OperationBase* o) = 0;
   virtual void Cont() = 0;
@@ -60,7 +60,7 @@ class OperationCollection : public OperationContainer {
   bool Empty() override;
 
  private:
-  ftl::WeakPtr<OperationContainer> GetWeakPtr() override;
+  fxl::WeakPtr<OperationContainer> GetWeakPtr() override;
   void Hold(OperationBase* o) override;
   void Drop(OperationBase* o) override;
   void Cont() override;
@@ -73,9 +73,9 @@ class OperationCollection : public OperationContainer {
   // OperationBase sees the container weak pointer to be null. That's also why
   // we need the virtual GetWeakPtr() in the base class, rather than to put the
   // weak ptr factory in the base class.
-  ftl::WeakPtrFactory<OperationContainer> weak_ptr_factory_;
+  fxl::WeakPtrFactory<OperationContainer> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(OperationCollection);
+  FXL_DISALLOW_COPY_AND_ASSIGN(OperationCollection);
 };
 
 // An implementation of |OperationContainer| which runs incoming Operations
@@ -89,7 +89,7 @@ class OperationQueue : public OperationContainer {
   bool Empty() override;
 
  private:
-  ftl::WeakPtr<OperationContainer> GetWeakPtr() override;
+  fxl::WeakPtr<OperationContainer> GetWeakPtr() override;
   void Hold(OperationBase* o) override;
   void Drop(OperationBase* o) override;
   void Cont() override;
@@ -108,9 +108,9 @@ class OperationQueue : public OperationContainer {
   // OperationBase sees the container weak pointer to be null. That's also why
   // we need the virtual GetWeakPtr() in the base class, rather than to put the
   // weak ptr factory in the base class.
-  ftl::WeakPtrFactory<OperationContainer> weak_ptr_factory_;
+  fxl::WeakPtrFactory<OperationContainer> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(OperationQueue);
+  FXL_DISALLOW_COPY_AND_ASSIGN(OperationQueue);
 };
 
 // Something that can be put in an OperationContainer until it calls Done() on
@@ -206,12 +206,12 @@ class OperationBase {
     }
   }
 
-  ftl::WeakPtr<OperationContainer> const container_;
+  fxl::WeakPtr<OperationContainer> const container_;
 
   // Used by FlowTokenBase to suppress Done() calls after the Operation instance
   // is deleted. Our OperationContainer will invalidate us before we are
   // destroyed.
-  ftl::WeakPtrFactory<OperationBase> weak_ptr_factory_;
+  fxl::WeakPtrFactory<OperationBase> weak_ptr_factory_;
 
   // Name used to label traces for this operation
   const char* const trace_name_;
@@ -220,7 +220,7 @@ class OperationBase {
   // Additional information added to trace events for this operation
   const std::string trace_info_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(OperationBase);
+  FXL_DISALLOW_COPY_AND_ASSIGN(OperationBase);
 };
 
 template <typename... Args>
@@ -253,7 +253,7 @@ class Operation : public OperationBase {
  private:
   ResultCall result_call_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Operation);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Operation);
 };
 
 // The instance of FlowToken at which the refcount reaches zero in the
@@ -294,7 +294,7 @@ class OperationBase::FlowTokenBase {
 
  private:
   int* const refcount_;  // shared between copies of FlowToken.
-  ftl::WeakPtr<OperationBase> weak_op_;
+  fxl::WeakPtr<OperationBase> weak_op_;
 };
 
 template <typename... Args>
@@ -405,7 +405,7 @@ class SyncCall : public Operation<> {
   void Run() override { Done(); }
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(SyncCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SyncCall);
 };
 
 }  // namespace modular

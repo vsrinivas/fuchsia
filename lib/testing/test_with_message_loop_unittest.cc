@@ -13,18 +13,18 @@ class TestWithMessageLoopTest : public TestWithMessageLoop {};
 TEST_F(TestWithMessageLoopTest, Timeout) {
   bool called = false;
   message_loop_->task_runner()->PostDelayedTask([&called] { called = true; },
-                                               ftl::TimeDelta::FromSeconds(1));
-  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(10)));
+                                               fxl::TimeDelta::FromSeconds(1));
+  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(10)));
 }
 
 TEST_F(TestWithMessageLoopTest, NoTimeout) {
   message_loop_->PostQuitTask();
 
   // Check that the first run loop doesn't hit the timeout.
-  EXPECT_FALSE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(10)));
+  EXPECT_FALSE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(10)));
 
   // But the second does.
-  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(20)));
+  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(20)));
 }
 
 }  // namespace

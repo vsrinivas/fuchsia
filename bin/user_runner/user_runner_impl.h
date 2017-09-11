@@ -29,7 +29,7 @@
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -146,7 +146,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   std::unique_ptr<LinkStorage> link_storage_;
   std::unique_ptr<LinkImpl> user_shell_link_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(UserRunnerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(UserRunnerImpl);
 };
 
 }  // namespace modular

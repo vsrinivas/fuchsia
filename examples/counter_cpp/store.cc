@@ -24,24 +24,24 @@ Counter::Counter(const rapidjson::Value& /*name*/,
   // Updates may be incremental, so don't assume that all fields are present.
   auto itr = value.FindMember(kSenderKey);
   if (itr != value.MemberEnd()) {
-    FTL_CHECK(itr->value.IsString());
+    FXL_CHECK(itr->value.IsString());
     sender = itr->value.GetString();
   }
 
   itr = value.FindMember(kCounterKey);
   if (itr != value.MemberEnd()) {
-    FTL_CHECK(itr->value.IsInt());
+    FXL_CHECK(itr->value.IsInt());
     counter = itr->value.GetInt();
   }
 
   // For the last iteration, test that Module2 removes the sender.
   if (counter <= 10) {
-    FTL_CHECK(!sender.empty());
+    FXL_CHECK(!sender.empty());
   } else {
-    FTL_CHECK(sender.empty());
+    FXL_CHECK(sender.empty());
   }
 
-  FTL_CHECK(is_valid());
+  FXL_CHECK(is_valid());
 }
 
 rapidjson::Document Counter::ToDocument(const std::string& module_name) {
@@ -86,7 +86,7 @@ void Store::Stop() {
 }
 
 void Store::Notify(const fidl::String& json) {
-  FTL_LOG(INFO) << "Store::Notify() " << module_name_;
+  FXL_LOG(INFO) << "Store::Notify() " << module_name_;
   if (!terminating_) {
     ApplyLinkData(json.get());
   }
@@ -97,7 +97,7 @@ modular_example::Counter Store::ParseCounterJson(
     const std::string& /*module_name*/) {
   rapidjson::Document doc;
   doc.Parse(json);
-  FTL_CHECK(!doc.HasParseError());
+  FXL_CHECK(!doc.HasParseError());
   if (doc.IsNull()) {
     // This circumstance is expected to happen, so
     // constructing a Counter() like this will cause
@@ -112,7 +112,7 @@ modular_example::Counter Store::ParseCounterJson(
   }
 
   auto itr = value->GetObject().MemberBegin();
-  FTL_CHECK(itr != value->GetObject().MemberEnd());
+  FXL_CHECK(itr != value->GetObject().MemberEnd());
 
   return modular_example::Counter(itr->name, itr->value);
 }
@@ -146,7 +146,7 @@ void Store::ApplyLinkData(const std::string& json) {
 
 void Store::ModelChanged() {
   // If this triggers, the calling function needs to check store.terminating().
-  FTL_CHECK(!terminating_);
+  FXL_CHECK(!terminating_);
   for (auto& c : callbacks_) {
     c();
   }
@@ -157,8 +157,8 @@ void Store::SendIfDirty() {
   if (link_ && dirty_) {
     rapidjson::Document doc = counter.ToDocument(module_name_);
 
-    FTL_CHECK(link_);
-    FTL_CHECK(doc.IsObject());
+    FXL_CHECK(link_);
+    FXL_CHECK(doc.IsObject());
 
     std::vector<std::string> segments{modular_example::kJsonSegment,
                                       modular_example::kDocId};

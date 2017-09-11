@@ -23,7 +23,7 @@ executable("suggest_shell_controller") {
     "//apps/modular/lib/rapidjson",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }

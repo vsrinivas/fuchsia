@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -58,7 +58,7 @@ class KeyGenerator {
   TimeOfDay* const time_of_day_ = &wallclock_time_of_day_;       // Not owned
   RandomNumber* const random_number_ = &fuchsia_random_number_;  // Not owned
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(KeyGenerator);
+  FXL_DISALLOW_COPY_AND_ASSIGN(KeyGenerator);
 };
 
 }  // namespace modular

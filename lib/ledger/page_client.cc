@@ -10,7 +10,7 @@
 
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/ledger/ledger_client.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace modular {
@@ -29,7 +29,7 @@ PageClient::PageClient(std::string context,
       NewRequest(), to_array(prefix_),
       binding_.NewBinding(), [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR) << context_ << " Page.GetSnapshot() " << status;
+          FXL_LOG(ERROR) << context_ << " Page.GetSnapshot() " << status;
         }
       });
 }
@@ -43,7 +43,7 @@ fidl::InterfaceRequest<ledger::PageSnapshot> PageClient::NewRequest() {
   page_snapshot_ = std::make_shared<ledger::PageSnapshotPtr>();
   auto ret = (*page_snapshot_).NewRequest();
   (*page_snapshot_).set_connection_error_handler([this] {
-    FTL_LOG(ERROR) << context_ << ": "
+    FXL_LOG(ERROR) << context_ << ": "
                    << "PageSnapshot connection unexpectedly closed.";
   });
   return ret;
@@ -68,13 +68,13 @@ void PageClient::OnChange(ledger::PageChangePtr page,
                           const OnChangeCallback& callback) {
   // According to their fidl spec, neither page nor page->changes
   // should be null.
-  FTL_DCHECK(page && page->changes);
+  FXL_DCHECK(page && page->changes);
   for (auto& entry : page->changes) {
     // Remove prefix maybe?
     const std::string key = to_string(entry->key);
     std::string value;
     if (!mtl::StringFromVmo(entry->value, &value)) {
-      FTL_LOG(ERROR) << "PageClient::OnChange() " << context_ << ": "
+      FXL_LOG(ERROR) << "PageClient::OnChange() " << context_ << ": "
                      << "Unable to extract data.";
       continue;
     }
@@ -102,7 +102,7 @@ void PageClient::OnPageChange(const std::string& /*key*/,
 void PageClient::OnPageDelete(const std::string& /*key*/) {}
 
 void PageClient::OnPageConflict(Conflict* const conflict) {
-  FTL_LOG(INFO) << "PageClient::OnPageConflict() " << context_
+  FXL_LOG(INFO) << "PageClient::OnPageConflict() " << context_
                 << " " << conflict->key
                 << " " << conflict->left
                 << " " << conflict->right;
@@ -116,7 +116,7 @@ void GetEntriesRecursive(ledger::PageSnapshot* const snapshot,
                          std::function<void(ledger::Status)> callback) {
   snapshot->GetEntries(
       nullptr /* key_start */, std::move(next_token),
-      ftl::MakeCopyable([ snapshot, entries, callback = std::move(callback) ](
+      fxl::MakeCopyable([ snapshot, entries, callback = std::move(callback) ](
           ledger::Status status, auto new_entries, auto next_token) mutable {
         if (status != ledger::Status::OK &&
             status != ledger::Status::PARTIAL_RESULT) {

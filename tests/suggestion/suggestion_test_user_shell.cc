@@ -11,9 +11,9 @@
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 using modular::testing::TestPoint;
@@ -64,7 +64,7 @@ class SuggestionTestUserShellApp
   void StartStoryById(const fidl::String& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
     story_controller_.set_connection_error_handler([this, story_id] {
-      FTL_LOG(ERROR) << "Story controller for story " << story_id
+      FXL_LOG(ERROR) << "Story controller for story " << story_id
                      << " died. Does this story exist?";
     });
 
@@ -123,7 +123,7 @@ class SuggestionTestUserShellApp
   TestPoint initialized_{"SuggestionTestUserShell initialized"};
   TestPoint received_suggestion_{"SuggestionTestUserShell received suggestion"};
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SuggestionTestUserShellApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SuggestionTestUserShellApp);
 };
 
 }  // namespace

@@ -11,7 +11,7 @@
 #include "apps/modular/lib/testing/test_with_message_loop.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/strings/string_view.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {

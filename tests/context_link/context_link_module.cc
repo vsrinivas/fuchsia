@@ -8,8 +8,8 @@
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
-#include "lib/ftl/tasks/task_runner.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/tasks/task_runner.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 using modular::testing::TestPoint;
@@ -53,7 +53,7 @@ class TestApp : modular::testing::ComponentBase<modular::Module> {
     // syncing old values back from the ledger. FW-208.
     link_->Sync([this] {
       mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-          [this] { Set2(); }, ftl::TimeDelta::FromSeconds(5));
+          [this] { Set2(); }, fxl::TimeDelta::FromSeconds(5));
     });
   }
 

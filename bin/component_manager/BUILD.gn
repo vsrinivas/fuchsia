@@ -21,7 +21,7 @@ executable("component_manager_main") {
     "//garnet/public/lib/app/cpp",
     "//apps/modular/services/component",
     "//apps/network/services",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/url",
     "//garnet/public/lib/mtl",
     "//third_party/rapidjson",

@@ -9,7 +9,7 @@
 #include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/tests/queue_persistence/queue_persistence_test_agent_interface.fidl.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
@@ -58,7 +58,7 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
     // passed.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         Protect([this] { module_context_->Done(); }),
-        ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
+        fxl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
   }
 
   void AgentConnected() {

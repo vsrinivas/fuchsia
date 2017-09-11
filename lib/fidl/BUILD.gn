@@ -18,7 +18,7 @@ source_set("app_client") {
     "//apps/modular/services/config",
     "//apps/modular/services/lifecycle",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }
@@ -64,7 +64,7 @@ source_set("operation") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//magenta/system/ulib/trace",
   ]
 }
@@ -77,7 +77,7 @@ source_set("proxy") {
 
   deps = [
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }
 
@@ -93,7 +93,7 @@ source_set("scope") {
 
   deps = [
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }
 
@@ -108,7 +108,7 @@ source_set("single_service_app") {
     "//apps/modular/services/lifecycle",
     "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }
 
@@ -125,7 +125,7 @@ source_set("view_host") {
   deps = [
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }
@@ -171,7 +171,7 @@ source_set("app_client_unittest") {
     ":unittest_fidl",
     "//garnet/public/lib/app/cpp",
     "//apps/modular/lib/testing:test_with_message_loop",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]

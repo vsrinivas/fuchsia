@@ -24,7 +24,7 @@ class ModuleView : public mozart::BaseView {
 
   scenic_lib::ShapeNode background_node_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ModuleView);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ModuleView);
 };
 
 class ModuleApp : public modular::SingleServiceApp<modular::Module> {
@@ -53,7 +53,7 @@ class ModuleApp : public modular::SingleServiceApp<modular::Module> {
   CreateViewCallback create_;
   std::unique_ptr<mozart::BaseView> view_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ModuleApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ModuleApp);
 };
 
 }  // namespace modular_example

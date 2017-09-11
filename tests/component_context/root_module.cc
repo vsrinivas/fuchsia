@@ -13,7 +13,7 @@
 #include "apps/modular/services/component/message_queue.fidl.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/tests/component_context/test_agent1_interface.fidl.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 using modular::testing::TestPoint;
@@ -22,7 +22,7 @@ namespace {
 
 // This is how long we wait for the test to finish before we timeout and tear
 // down our test.
-constexpr ftl::TimeDelta kTimeout = ftl::TimeDelta::FromSeconds(15);
+constexpr fxl::TimeDelta kTimeout = fxl::TimeDelta::FromSeconds(15);
 
 constexpr char kTest1Agent[] =
     "file:///system/apps/modular_tests/component_context_test_agent1";
@@ -42,7 +42,7 @@ class CounterTrigger {
     if (!finished_) {
       // If this CHECK triggers, then you've called Step() more times than
       // you passed for |count| into the constructor.
-      FTL_CHECK(count_ > 0);
+      FXL_CHECK(count_ > 0);
       if (count_ && --count_ == 0) {
         Finished();
       }
@@ -65,7 +65,7 @@ class CounterTrigger {
   const std::function<void()> trigger_;
   bool finished_{};
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CounterTrigger);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CounterTrigger);
 };
 
 class ParentApp : modular::testing::ComponentBase<modular::Module> {
@@ -170,7 +170,7 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
           unstoppable_agent_controller_.reset();
           done_cb();
         }),
-        ftl::TimeDelta::FromMilliseconds(500));
+        fxl::TimeDelta::FromMilliseconds(500));
   }
 
   // |Lifecycle|

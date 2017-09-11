@@ -16,11 +16,11 @@
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/tasks/task_runner.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/tasks/task_runner.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
@@ -48,7 +48,7 @@ bool IsRunning(const modular::StoryState state) {
 
 class Settings {
  public:
-  explicit Settings(const ftl::CommandLine& command_line) {
+  explicit Settings(const fxl::CommandLine& command_line) {
     first_module = command_line.GetOptionValueWithDefault(
         "first_module", "file:///system/apps/example_recipe");
   }
@@ -95,7 +95,7 @@ class LinkChangeCountWatcherImpl : modular::LinkWatcher {
   std::function<void()> continue_;
   fidl::Binding<modular::LinkWatcher> binding_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LinkChangeCountWatcherImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LinkChangeCountWatcherImpl);
 };
 
 // A simple story watcher implementation that invokes a "continue" callback when
@@ -131,7 +131,7 @@ class StoryStateWatcherImpl : modular::StoryWatcher {
     auto state_index = static_cast<unsigned int>(state);
     // TODO(jimbe) Need to investigate why we are getting two notifications for
     // each state transition.
-    FTL_LOG(INFO) << "OnStateChange: " << state_index;
+    FXL_LOG(INFO) << "OnStateChange: " << state_index;
     if (continue_.size() > state_index && continue_[state_index]) {
       continue_[state_index]();
     }
@@ -139,7 +139,7 @@ class StoryStateWatcherImpl : modular::StoryWatcher {
 
   // |StoryWatcher|
   void OnModuleAdded(modular::ModuleDataPtr module_data) override {
-    FTL_LOG(INFO) << "OnModuleAdded: " << module_data->module_url;
+    FXL_LOG(INFO) << "OnModuleAdded: " << module_data->module_url;
     if (!on_module_added_called_) {
       on_module_added_.Pass();
       on_module_added_called_ = true;
@@ -151,7 +151,7 @@ class StoryStateWatcherImpl : modular::StoryWatcher {
   modular::testing::TestPoint on_module_added_{"OnModuleAdded"};
   bool on_module_added_called_{};
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryStateWatcherImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StoryStateWatcherImpl);
 };
 
 // Tests the machinery that allows modules to coordinate through shared link
@@ -285,7 +285,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
       story_state_watcher_.Continue(modular::StoryState::STOPPED, nullptr);
       story_provider_->GetStoryInfo(
           story_info_->id, [this, round](modular::StoryInfoPtr story_info) {
-            FTL_CHECK(story_info);
+            FXL_CHECK(story_info);
 
             // Can't use the StoryController here because we closed it
             // in TeardownStoryController().
@@ -293,7 +293,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
                 [this, round](fidl::Array<fidl::String> story_ids) {
                   auto n = count(story_ids.begin(), story_ids.end(),
                                  story_info_->id);
-                  FTL_CHECK(n == 0);
+                  FXL_CHECK(n == 0);
                   TestStory1_Run(round + 1);
                 });
           });
@@ -301,8 +301,8 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
 
     story_controller_->GetInfo([this, round](modular::StoryInfoPtr story_info,
                                              modular::StoryState state) {
-      FTL_CHECK(!story_info.is_null());
-      FTL_CHECK(IsRunning(state));
+      FXL_CHECK(!story_info.is_null());
+      FXL_CHECK(IsRunning(state));
 
       story_controller_->Stop([this, round] { TeardownStoryController(); });
     });
@@ -334,13 +334,13 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
   modular::LinkPtr root_link_;
   modular::StoryInfoPtr story_info_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace
 
 int main(int argc, const char** argv) {
-  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   Settings settings(command_line);
 
   mtl::MessageLoop loop;

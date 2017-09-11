@@ -10,7 +10,7 @@ executable("components_query") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//apps/modular/services/component",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//third_party/rapidjson",
   ]

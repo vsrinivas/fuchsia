@@ -17,9 +17,9 @@
 #include "apps/modular/services/user/device_map.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
 
@@ -106,7 +106,7 @@ class LinkForwarder : modular::LinkWatcher {
   modular::Link* const dst_;
   bool initial_update_ = true;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LinkForwarder);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LinkForwarder);
 };
 
 class ModuleMonitor : modular::ModuleWatcher {
@@ -119,7 +119,7 @@ class ModuleMonitor : modular::ModuleWatcher {
 
   void OnStateChange(modular::ModuleState new_state) override {
     if (new_state == modular::ModuleState::DONE) {
-      FTL_LOG(INFO) << "RecipeImpl DONE";
+      FXL_LOG(INFO) << "RecipeImpl DONE";
       module_context_->Done();
     }
   }
@@ -127,7 +127,7 @@ class ModuleMonitor : modular::ModuleWatcher {
  private:
   fidl::Binding<modular::ModuleWatcher> binding_;
   modular::ModuleContext* const module_context_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(ModuleMonitor);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ModuleMonitor);
 };
 
 class AdderImpl : public modular::examples::Adder {
@@ -140,7 +140,7 @@ class AdderImpl : public modular::examples::Adder {
     result(a + b);
   }
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AdderImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AdderImpl);
 };
 
 // Module implementation that acts as a recipe. There is one instance
@@ -167,9 +167,9 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
       rapidjson::Document doc;
       doc.Parse(json);
       if (doc.HasParseError()) {
-        FTL_LOG(ERROR) << "Recipe Module Link has invalid JSON: " << json;
+        FXL_LOG(ERROR) << "Recipe Module Link has invalid JSON: " << json;
       } else {
-        FTL_LOG(INFO) << "Recipe Module Link: "
+        FXL_LOG(INFO) << "Recipe Module Link: "
                       << modular::JsonValueToPrettyString(doc);
       }
     });
@@ -200,15 +200,15 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
         app::ConnectToService<modular::examples::Multiplier>(
             services_from_module1.get());
     multiplier_service.set_connection_error_handler([] {
-      FTL_CHECK(false)
+      FXL_CHECK(false)
           << "Uh oh, Connection to Multiplier closed by the module 1.";
     });
     multiplier_service->Multiply(
         4, 4,
-        ftl::MakeCopyable([multiplier_service =
+        fxl::MakeCopyable([multiplier_service =
                                std::move(multiplier_service)](int32_t result) {
-          FTL_CHECK(result == 16);
-          FTL_LOG(INFO) << "Incoming Multiplier service: 4 * 4 is 16.";
+          FXL_CHECK(result == 16);
+          FXL_LOG(INFO) << "Incoming Multiplier service: 4 * 4 is 16.";
         }));
 
     module_context_->StartModuleInShell(
@@ -255,16 +255,16 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
     module_context_->GetComponentContext(component_context_.NewRequest());
     component_context_->GetLedger(
         module_ledger_.NewRequest(), [this](ledger::Status status) {
-          FTL_CHECK(status == ledger::Status::OK);
+          FXL_CHECK(status == ledger::Status::OK);
           // 2. Get the root page of the ledger.
           module_ledger_->GetRootPage(
               module_root_page_.NewRequest(), [this](ledger::Status status) {
-                FTL_CHECK(status == ledger::Status::OK);
+                FXL_CHECK(status == ledger::Status::OK);
                 // 3. Get a snapshot of the root page.
                 module_root_page_->GetSnapshot(
                     page_snapshot_.NewRequest(), nullptr, nullptr,
                     [this](ledger::Status status) {
-                      FTL_CHECK(status == ledger::Status::OK);
+                      FXL_CHECK(status == ledger::Status::OK);
                       // 4. Read the counter from the root page.
                       page_snapshot_->Get(
                           to_array(kLedgerCounterKey),
@@ -272,22 +272,22 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
                             // 5. If counter doesn't exist, initialize.
                             // Otherwise, increment.
                             if (status == ledger::Status::KEY_NOT_FOUND) {
-                              FTL_LOG(INFO) << "No counter in root page. "
+                              FXL_LOG(INFO) << "No counter in root page. "
                                                "Initializing to 1.";
                               fidl::Array<uint8_t> data;
                               data.push_back(1);
                               module_root_page_->Put(
                                   to_array(kLedgerCounterKey), std::move(data),
                                   [](ledger::Status status) {
-                                    FTL_CHECK(status == ledger::Status::OK);
+                                    FXL_CHECK(status == ledger::Status::OK);
                                   });
                             } else {
-                              FTL_CHECK(status == ledger::Status::OK);
+                              FXL_CHECK(status == ledger::Status::OK);
                               std::string counter_data;
                               bool conversion =
                                   mtl::StringFromVmo(value, &counter_data);
-                              FTL_DCHECK(conversion);
-                              FTL_LOG(INFO)
+                              FXL_DCHECK(conversion);
+                              FXL_LOG(INFO)
                                   << "Retrieved counter from root page: "
                                   << static_cast<uint32_t>(counter_data[0])
                                   << ". Incrementing.";
@@ -296,7 +296,7 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
                                   to_array(kLedgerCounterKey),
                                   to_array(counter_data),
                                   [](ledger::Status status) {
-                                    FTL_CHECK(status == ledger::Status::OK);
+                                    FXL_CHECK(status == ledger::Status::OK);
                                   });
                             }
                           });
@@ -308,9 +308,9 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
                       ->ConnectToEnvironmentService<modular::DeviceMap>();
 
     device_map_->Query([](fidl::Array<modular::DeviceMapEntryPtr> devices) {
-      FTL_LOG(INFO) << "Known devices:";
+      FXL_LOG(INFO) << "Known devices:";
       for (modular::DeviceMapEntryPtr& device : devices) {
-        FTL_LOG(INFO) << " - " << device->name;
+        FXL_LOG(INFO) << " - " << device->name;
       }
     });
   }
@@ -353,7 +353,7 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
 
   modular::DeviceMapPtr device_map_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(RecipeApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(RecipeApp);
 };
 
 }  // namespace

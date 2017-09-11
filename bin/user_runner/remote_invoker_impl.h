@@ -36,7 +36,7 @@ class RemoteInvokerImpl : RemoteInvoker {
   // Operations implemented here.
   class StartOnDeviceCall;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(RemoteInvokerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(RemoteInvokerImpl);
 };
 
 }  // namespace modular

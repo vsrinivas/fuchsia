@@ -13,7 +13,7 @@
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/fidl/cpp/bindings/array.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/time/time_point.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace modular {
@@ -32,7 +32,7 @@ std::string LoadHostname() {
   int result = gethostname(host_name_buffer, sizeof(host_name_buffer));
 
   if (result < 0) {
-    FTL_LOG(ERROR) << "unable to get hostname. errno " << errno;
+    FXL_LOG(ERROR) << "unable to get hostname. errno " << errno;
     return "fuchsia";
   }
 
@@ -74,11 +74,11 @@ void DeviceMapImpl::GetCurrentDevice(const GetCurrentDeviceCallback& callback) {
 
 void DeviceMapImpl::OnPageChange(const std::string& key,
                                  const std::string& /*value*/) {
-  FTL_LOG(INFO) << "New Device: " << key;
+  FXL_LOG(INFO) << "New Device: " << key;
 }
 
 void DeviceMapImpl::OnPageDelete(const std::string& key) {
-  FTL_LOG(INFO) << "Deleted Device: " << key;
+  FXL_LOG(INFO) << "Deleted Device: " << key;
 }
 
 }  // namespace modular

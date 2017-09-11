@@ -8,8 +8,8 @@
 #include "lib/app/cpp/connect.h"
 #include "apps/modular/services/component/component.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
@@ -25,7 +25,7 @@ class RequestComponentApp {
         [this](component::ComponentManifestPtr manifest,
                fidl::InterfaceHandle<component::ComponentResources> resources,
                network::NetworkErrorPtr error) {
-          FTL_LOG(INFO) << "GetComponent returned.";
+          FXL_LOG(INFO) << "GetComponent returned.";
         });
   }
 
@@ -33,14 +33,14 @@ class RequestComponentApp {
   std::unique_ptr<app::ApplicationContext> context_;
   fidl::InterfacePtr<component::ComponentIndex> component_index_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(RequestComponentApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(RequestComponentApp);
 };
 
 }  // namespace
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  FTL_CHECK(argc == 2);
+  FXL_CHECK(argc == 2);
   RequestComponentApp app(argv[1]);
   loop.Run();
   return 0;

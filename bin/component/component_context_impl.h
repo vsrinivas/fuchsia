@@ -12,7 +12,7 @@
 #include "apps/modular/src/component/message_queue_manager.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -80,7 +80,7 @@ class ComponentContextImpl : public ComponentContext {
   const std::string component_instance_id_;
   const std::string component_url_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ComponentContextImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ComponentContextImpl);
 };
 
 }  // namespace modular

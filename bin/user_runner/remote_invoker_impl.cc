@@ -54,7 +54,7 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<fidl::String> {
     ledger_->GetPage(to_array(device_id_), device_page_.NewRequest(),
                      [this, flow](ledger::Status status) {
                        if (status != ledger::Status::OK) {
-                         FTL_LOG(ERROR) << "Ledger.GetPage() status=" << status;
+                         FXL_LOG(ERROR) << "Ledger.GetPage() status=" << status;
                          return;
                        }
 
@@ -65,7 +65,7 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<fidl::String> {
   void Cont1(FlowToken flow) {
     device_page_->StartTransaction([this, flow](ledger::Status status) {
       if (status != ledger::Status::OK) {
-        FTL_LOG(ERROR) << "Page.StartTransaction() status=" << status;
+        FXL_LOG(ERROR) << "Page.StartTransaction() status=" << status;
         return;
       }
 
@@ -85,7 +85,7 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<fidl::String> {
         to_array(timestamp_), to_array(json), ledger::Priority::EAGER,
         [this, flow](ledger::Status status) {
           if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "Page.PutWithPriority() status=" << status;
+            FXL_LOG(ERROR) << "Page.PutWithPriority() status=" << status;
             return;
           }
 
@@ -96,7 +96,7 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<fidl::String> {
   void Cont3(FlowToken flow) {
     device_page_->Commit([this, flow](ledger::Status status) {
       if (status != ledger::Status::OK) {
-        FTL_LOG(ERROR) << "Page.Commit() status=" << status;
+        FXL_LOG(ERROR) << "Page.Commit() status=" << status;
         return;
       }
 
@@ -106,7 +106,7 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<fidl::String> {
 
   void Cont4(FlowToken flow) {
     device_page_->GetId([this, flow](fidl::Array<uint8_t> page_id) {
-      FTL_LOG(INFO) << "Retrieved page " << to_string(page_id);
+      FXL_LOG(INFO) << "Retrieved page " << to_string(page_id);
       page_id_ = to_string(page_id);
     });
   }
@@ -118,7 +118,7 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<fidl::String> {
   ledger::PagePtr device_page_;
   fidl::String page_id_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StartOnDeviceCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StartOnDeviceCall);
 };
 
 RemoteInvokerImpl::RemoteInvokerImpl(ledger::Ledger* const ledger)
@@ -128,7 +128,7 @@ RemoteInvokerImpl::RemoteInvokerImpl(ledger::Ledger* const ledger)
 void RemoteInvokerImpl::StartOnDevice(const fidl::String& device_id,
                                       const fidl::String& story_id,
                                       const StartOnDeviceCallback& callback) {
-  FTL_LOG(INFO) << "Starting rehydrate call for story " << story_id
+  FXL_LOG(INFO) << "Starting rehydrate call for story " << story_id
                 << " on device " << device_id;
   new StartOnDeviceCall(&operation_queue_, ledger_, device_id, story_id,
                         callback);

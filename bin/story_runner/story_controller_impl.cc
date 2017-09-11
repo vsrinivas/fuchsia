@@ -26,9 +26,9 @@
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/join_strings.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/join_strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {
@@ -38,7 +38,7 @@ constexpr char kStoryScopeLabelPrefix[] = "story-";
 namespace {
 
 fidl::String PathString(const fidl::Array<fidl::String>& module_path) {
-  return ftl::JoinStrings(module_path, ":");
+  return fxl::JoinStrings(module_path, ":");
 }
 
 }  // namespace
@@ -54,7 +54,7 @@ class StoryControllerImpl::StoryMarkerImpl : StoryMarker {
 
  private:
   fidl::BindingSet<StoryMarker> bindings_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryMarkerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StoryMarkerImpl);
 };
 
 class StoryControllerImpl::ModuleWatcherImpl : ModuleWatcher {
@@ -84,7 +84,7 @@ class StoryControllerImpl::ModuleWatcherImpl : ModuleWatcher {
   StoryControllerImpl* const story_controller_impl_;  // not owned
   const fidl::Array<fidl::String> module_path_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ModuleWatcherImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ModuleWatcherImpl);
 };
 
 class StoryControllerImpl::AddModuleCall : Operation<> {
@@ -139,7 +139,7 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
   const fidl::String link_name_;
   SurfaceRelationPtr surface_relation_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AddModuleCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AddModuleCall);
 };
 
 // TODO(mesch): Merge the StoryStorageImpl operations into the
@@ -168,7 +168,7 @@ class StoryControllerImpl::GetModulesCall
 
   StoryControllerImpl* const story_controller_impl_;
   fidl::Array<ModuleDataPtr> result_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(GetModulesCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(GetModulesCall);
 };
 
 class StoryControllerImpl::AddForCreateCall : Operation<> {
@@ -231,7 +231,7 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
 
   OperationCollection operation_collection_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AddForCreateCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AddForCreateCall);
 };
 
 class StoryControllerImpl::StartCall : Operation<> {
@@ -251,7 +251,7 @@ class StoryControllerImpl::StartCall : Operation<> {
 
     // If the story is running, we do nothing and close the view owner request.
     if (story_controller_impl_->IsRunning()) {
-      FTL_LOG(INFO)
+      FXL_LOG(INFO)
           << "StoryControllerImpl::StartCall() while already running: ignored.";
       return;
     }
@@ -285,7 +285,7 @@ class StoryControllerImpl::StartCall : Operation<> {
   StoryControllerImpl* const story_controller_impl_;  // not owned
   fidl::InterfaceRequest<mozart::ViewOwner> request_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StartCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StartCall);
 };
 
 class StoryControllerImpl::StopCall : Operation<> {
@@ -409,7 +409,7 @@ class StoryControllerImpl::StopCall : Operation<> {
   int connections_count_{};
   int links_count_{};
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StopCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StopCall);
 };
 
 class StoryControllerImpl::StopModuleCall : Operation<> {
@@ -485,7 +485,7 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
         });
 
     if (ii == story_controller_impl_->connections_.end()) {
-      FTL_LOG(INFO) << "No ModuleController for Module"
+      FXL_LOG(INFO) << "No ModuleController for Module"
                     << " " << PathString(module_path_) << ". "
                     << "Was ModuleContext.Stop() called twice?";
       return;
@@ -505,7 +505,7 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
   const fidl::Array<fidl::String> module_path_;
   ModuleDataPtr module_data_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StopModuleCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StopModuleCall);
 };
 
 class StoryControllerImpl::DeleteCall : Operation<> {
@@ -536,7 +536,7 @@ class StoryControllerImpl::DeleteCall : Operation<> {
 
   OperationQueue operation_queue_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DeleteCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DeleteCall);
 };
 
 class StoryControllerImpl::StartModuleCall : Operation<> {
@@ -569,7 +569,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
         incoming_services_(std::move(incoming_services)),
         module_controller_request_(std::move(module_controller_request)),
         view_owner_request_(std::move(view_owner_request)) {
-    FTL_DCHECK(!parent_module_path_.is_null());
+    FXL_DCHECK(!parent_module_path_.is_null());
 
     Ready();
   }
@@ -597,7 +597,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
       // parent module. We need to retrieve which one it is from story storage.
       story_controller_impl_->story_storage_impl_->ReadModuleData(
           parent_module_path_, [this, flow](ModuleDataPtr module_data) {
-            FTL_DCHECK(module_data);
+            FXL_DCHECK(module_data);
             link_path_ = module_data->link_path.Clone();
             story_controller_impl_->story_storage_impl_->WriteModuleData(
                 module_path_, module_url_, link_path_, module_source_,
@@ -644,7 +644,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   }
 
   void Launch(FlowToken /*flow*/) {
-    FTL_LOG(INFO) << "StoryControllerImpl::StartModule() " << module_url_;
+    FXL_LOG(INFO) << "StoryControllerImpl::StartModule() " << module_url_;
     auto module_config = AppConfig::New();
     module_config->url = module_url_;
 
@@ -715,7 +715,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   LinkPathPtr link_path_;
   ModuleDataPtr module_data_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StartModuleCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StartModuleCall);
 };
 
 class StoryControllerImpl::GetImportanceCall : Operation<float> {
@@ -787,7 +787,7 @@ class StoryControllerImpl::GetImportanceCall : Operation<float> {
 
   float result_{0.0};
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(GetImportanceCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(GetImportanceCall);
 };
 
 StoryControllerImpl::StoryControllerImpl(
@@ -913,7 +913,7 @@ void StoryControllerImpl::ReleaseModule(
                           return c.module_controller_impl.get() ==
                                  module_controller_impl;
                         });
-  FTL_DCHECK(f != connections_.end());
+  FXL_DCHECK(f != connections_.end());
   f->module_controller_impl.release();
   connections_.erase(f);
 }
@@ -987,7 +987,7 @@ void StoryControllerImpl::StartModuleInShell(
   mozart::ViewOwnerPtr view_owner;
 
   if (module_source == ModuleSource::EXTERNAL) {
-    FTL_DCHECK(!module_controller_request.is_pending());
+    FXL_DCHECK(!module_controller_request.is_pending());
     module_controller_request = module_controller.NewRequest();
   }
 
@@ -1104,7 +1104,7 @@ void StoryControllerImpl::GetActiveModules(
   // We execute this in a SyncCall so that we are sure we don't fall in a crack
   // between a module being created and inserted in the connections collection
   // during some Operation.
-  new SyncCall(&operation_queue_, ftl::MakeCopyable([
+  new SyncCall(&operation_queue_, fxl::MakeCopyable([
     this, watcher = std::move(watcher), callback
   ]() mutable {
     if (watcher) {
@@ -1149,7 +1149,7 @@ void StoryControllerImpl::GetActiveLinks(
   // between a link being created and inserted in the links collection during
   // some Operation. (Right now Links are not created in an Operation, but we
   // don't want to rely on it.)
-  new SyncCall(&operation_queue_, ftl::MakeCopyable([
+  new SyncCall(&operation_queue_, fxl::MakeCopyable([
     this, watcher = std::move(watcher), callback
   ]() mutable {
     if (watcher) {
@@ -1223,7 +1223,7 @@ void StoryControllerImpl::DisposeLink(LinkImpl* const link) {
   auto f = std::find_if(
       links_.begin(), links_.end(),
       [link](const std::unique_ptr<LinkImpl>& l) { return l.get() == link; });
-  FTL_DCHECK(f != links_.end());
+  FXL_DCHECK(f != links_.end());
   links_.erase(f);
 }
 

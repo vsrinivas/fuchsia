@@ -13,7 +13,7 @@
 #include "apps/modular/src/story_runner/incremental_link.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "apps/modular/lib/util/debug.h"
 
 namespace modular {
@@ -44,7 +44,7 @@ class LinkImpl::ReadCall : Operation<> {
 
   LinkImpl* const impl_;  // not owned
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ReadCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ReadCall);
 };
 
 class LinkImpl::WriteCall : Operation<> {
@@ -79,7 +79,7 @@ class LinkImpl::WriteCall : Operation<> {
   LinkImpl* const impl_;  // not owned
   const uint32_t src_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(WriteCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(WriteCall);
 };
 
 class LinkImpl::SetSchemaCall : Operation<> {
@@ -100,7 +100,7 @@ class LinkImpl::SetSchemaCall : Operation<> {
     rapidjson::Document doc;
     doc.Parse(json_schema_.get());
     if (doc.HasParseError()) {
-      FTL_LOG(ERROR) << "LinkImpl::SetSchema() "
+      FXL_LOG(ERROR) << "LinkImpl::SetSchema() "
                      << EncodeLinkPath(impl_->link_path_)
                      << " JSON parse failed error #" << doc.GetParseError()
                      << std::endl
@@ -114,7 +114,7 @@ class LinkImpl::SetSchemaCall : Operation<> {
   LinkImpl* const impl_;  // not owned
   const fidl::String json_schema_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SetSchemaCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SetSchemaCall);
 };
 
 class LinkImpl::GetCall : Operation<fidl::String> {
@@ -144,7 +144,7 @@ class LinkImpl::GetCall : Operation<fidl::String> {
   const fidl::Array<fidl::String> path_;
   fidl::String result_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(GetCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(GetCall);
 };
 
 class LinkImpl::SetCall : Operation<> {
@@ -173,7 +173,7 @@ class LinkImpl::SetCall : Operation<> {
       new WriteCall(&operation_queue_, impl_, src_, [flow] {});
       impl_->NotifyWatchers(src_);
     } else {
-      FTL_LOG(WARNING) << "LinkImpl::SetCall failed " << json_;
+      FXL_LOG(WARNING) << "LinkImpl::SetCall failed " << json_;
     }
   }
 
@@ -185,7 +185,7 @@ class LinkImpl::SetCall : Operation<> {
   // WriteCall is executed here.
   OperationQueue operation_queue_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SetCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SetCall);
 };
 
 class LinkImpl::UpdateObjectCall : Operation<> {
@@ -214,7 +214,7 @@ class LinkImpl::UpdateObjectCall : Operation<> {
       new WriteCall(&operation_queue_, impl_, src_, [flow] {});
       impl_->NotifyWatchers(src_);
     } else {
-      FTL_LOG(WARNING) << "LinkImpl::UpdateObjectCall failed " << json_;
+      FXL_LOG(WARNING) << "LinkImpl::UpdateObjectCall failed " << json_;
     }
   }
 
@@ -226,7 +226,7 @@ class LinkImpl::UpdateObjectCall : Operation<> {
   // WriteCall is executed here.
   OperationQueue operation_queue_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(UpdateObjectCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(UpdateObjectCall);
 };
 
 class LinkImpl::EraseCall : Operation<> {
@@ -253,7 +253,7 @@ class LinkImpl::EraseCall : Operation<> {
       new WriteCall(&operation_queue_, impl_, src_, [flow] {});
       impl_->NotifyWatchers(src_);
     } else {
-      FTL_LOG(WARNING) << "LinkImpl::EraseCall failed ";
+      FXL_LOG(WARNING) << "LinkImpl::EraseCall failed ";
     }
   }
 
@@ -264,7 +264,7 @@ class LinkImpl::EraseCall : Operation<> {
   // WriteCall is executed here.
   OperationQueue operation_queue_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(EraseCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(EraseCall);
 };
 
 class LinkImpl::WatchCall : Operation<> {
@@ -302,7 +302,7 @@ class LinkImpl::WatchCall : Operation<> {
   LinkWatcherPtr watcher_;
   const uint32_t conn_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(WatchCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(WatchCall);
 };
 
 class LinkImpl::ChangeCall : Operation<> {
@@ -342,7 +342,7 @@ class LinkImpl::ChangeCall : Operation<> {
   LinkImpl* const impl_;  // not owned
   const fidl::String json_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ChangeCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ChangeCall);
 };
 
 LinkImpl::LinkImpl(LinkStorage* const link_storage, LinkPathPtr link_path)
@@ -449,7 +449,7 @@ bool LinkImpl::ApplySetOp(const CrtJsonPointer& ptr, const fidl::String& json) {
   CrtJsonDoc new_value;
   new_value.Parse(json);
   if (new_value.HasParseError()) {
-    FTL_LOG(ERROR) << "LinkImpl::ApplySetOp() " << EncodeLinkPath(link_path_)
+    FXL_LOG(ERROR) << "LinkImpl::ApplySetOp() " << EncodeLinkPath(link_path_)
                    << " JSON parse failed error #" << new_value.GetParseError()
                    << std::endl
                    << json;
@@ -465,7 +465,7 @@ bool LinkImpl::ApplyUpdateOp(const CrtJsonPointer& ptr,
   CrtJsonDoc new_value;
   new_value.Parse(json);
   if (new_value.HasParseError()) {
-    FTL_LOG(ERROR) << "LinkImpl::ApplyUpdateOp() " << EncodeLinkPath(link_path_)
+    FXL_LOG(ERROR) << "LinkImpl::ApplyUpdateOp() " << EncodeLinkPath(link_path_)
                    << " JSON parse failed error #" << new_value.GetParseError()
                    << std::endl
                    << json;
@@ -487,7 +487,7 @@ bool LinkImpl::MergeObject(CrtJsonValue& target,
                            CrtJsonValue&& source,
                            CrtJsonValue::AllocatorType& allocator) {
   if (!source.IsObject()) {
-    FTL_LOG(WARNING) << "LinkImpl::MergeObject() - source is not an object "
+    FXL_LOG(WARNING) << "LinkImpl::MergeObject() - source is not an object "
                   << JsonValueToPrettyString(source);
     return false;
   }
@@ -532,7 +532,7 @@ void LinkImpl::ValidateSchema(const char* const entry_point,
       validator.GetInvalidDocumentPointer().StringifyUriFragment(sbdoc);
       rapidjson::StringBuffer sbapipath;
       debug_pointer.StringifyUriFragment(sbapipath);
-      FTL_LOG(ERROR) << "Schema constraint violation in "
+      FXL_LOG(ERROR) << "Schema constraint violation in "
                      << EncodeLinkPath(link_path_) << ":" << std::endl
                      << "  Constraint " << sbpath.GetString() << "/"
                      << validator.GetInvalidSchemaKeyword() << std::endl
@@ -547,7 +547,7 @@ void LinkImpl::ValidateSchema(const char* const entry_point,
 void LinkImpl::OnChange(const fidl::String& json) {
   LinkChangePtr data;
   if (!XdrRead(json, &data, XdrLinkChange)) {
-    FTL_LOG(ERROR) << EncodeLinkPath(link_path_)
+    FXL_LOG(ERROR) << EncodeLinkPath(link_path_)
                    << "LinkImpl::OnChange() - XdrRead failed!";
     return;
   }
@@ -577,7 +577,7 @@ void LinkImpl::RemoveConnection(LinkConnection* const connection) {
                      [connection](const std::unique_ptr<LinkConnection>& p) {
                        return p.get() == connection;
                      });
-  FTL_DCHECK(it != connections_.end());
+  FXL_DCHECK(it != connections_.end());
   connections_.erase(it, connections_.end());
 
   // The link must be fully synced before we can call the orphaned handler
@@ -603,7 +603,7 @@ void LinkImpl::RemoveConnection(LinkWatcherConnection* const connection) {
       [connection](const std::unique_ptr<LinkWatcherConnection>& p) {
         return p.get() == connection;
       });
-  FTL_DCHECK(i != watchers_.end());
+  FXL_DCHECK(i != watchers_.end());
   watchers_.erase(i, watchers_.end());
 }
 

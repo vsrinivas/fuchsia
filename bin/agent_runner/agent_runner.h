@@ -24,7 +24,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -186,7 +186,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   class UpdateCall;
   class DeleteCall;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AgentRunner);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AgentRunner);
 };
 
 }  // namespace modular

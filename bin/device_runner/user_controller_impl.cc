@@ -41,8 +41,8 @@ UserControllerImpl::UserControllerImpl(
     size_t random_size;
     mx_status_t status =
         mx_cprng_draw(&random_number, sizeof random_number, &random_size);
-    FTL_CHECK(status == MX_OK);
-    FTL_CHECK(sizeof random_number == random_size);
+    FXL_CHECK(status == MX_OK);
+    FXL_CHECK(sizeof random_number == random_size);
     data_origin =
         std::string("/tmp/modular/GUEST_USER_") + std::to_string(random_number);
   } else {
@@ -63,7 +63,7 @@ UserControllerImpl::UserControllerImpl(
 
 // |UserController|
 void UserControllerImpl::Logout(const LogoutCallback& done) {
-  FTL_LOG(INFO) << "UserController::Logout()";
+  FXL_LOG(INFO) << "UserController::Logout()";
   logout_response_callbacks_.push_back(done);
   if (logout_response_callbacks_.size() > 1) {
     return;
@@ -83,7 +83,7 @@ void UserControllerImpl::Logout(const LogoutCallback& done) {
     user_watchers_.ForAllPtrs(
         [](UserWatcher* watcher) { watcher->OnLogout(); });
     done_(this);
-  }, ftl::TimeDelta::FromSeconds(kUserRunnerTimeoutSeconds));
+  }, fxl::TimeDelta::FromSeconds(kUserRunnerTimeoutSeconds));
 }
 
 // |UserController|
@@ -94,7 +94,7 @@ void UserControllerImpl::Watch(fidl::InterfaceHandle<UserWatcher> watcher) {
 // |UserContext|
 // TODO(alhaad): Reconcile UserContext.Logout() and UserControllerImpl.Logout().
 void UserControllerImpl::Logout() {
-  FTL_LOG(INFO) << "UserContext::Logout()";
+  FXL_LOG(INFO) << "UserContext::Logout()";
   Logout([] {});
 }
 

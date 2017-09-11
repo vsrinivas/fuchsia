@@ -51,7 +51,7 @@ class ReadDataCall : Operation<DataPtr> {
     page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
                        [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
-                           FTL_LOG(ERROR) << "ReadDataCall() " << key_
+                           FXL_LOG(ERROR) << "ReadDataCall() " << key_
                                           << " Page.GetSnapshot() " << status;
                            return;
                          }
@@ -65,20 +65,20 @@ class ReadDataCall : Operation<DataPtr> {
         to_array(key_), [this, flow](ledger::Status status, mx::vmo value) {
           if (status != ledger::Status::OK) {
             if (status != ledger::Status::KEY_NOT_FOUND || !not_found_is_ok_) {
-              FTL_LOG(ERROR) << "ReadDataCall() " << key_
+              FXL_LOG(ERROR) << "ReadDataCall() " << key_
                              << " PageSnapshot.Get() " << status;
             }
             return;
           }
 
           if (!value) {
-            FTL_LOG(ERROR) << "ReadDataCall() " << key_
+            FXL_LOG(ERROR) << "ReadDataCall() " << key_
                            << " PageSnapshot.Get() null vmo";
           }
 
           std::string value_as_string;
           if (!mtl::StringFromVmo(value, &value_as_string)) {
-            FTL_LOG(ERROR) << "ReadDataCall() " << key_
+            FXL_LOG(ERROR) << "ReadDataCall() " << key_
                            << " Unable to extract data.";
             return;
           }
@@ -88,7 +88,7 @@ class ReadDataCall : Operation<DataPtr> {
             return;
           }
 
-          FTL_DCHECK(!result_.is_null());
+          FXL_DCHECK(!result_.is_null());
         });
   }
 
@@ -99,7 +99,7 @@ class ReadDataCall : Operation<DataPtr> {
   ledger::PageSnapshotPtr page_snapshot_;
   DataPtr result_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ReadDataCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ReadDataCall);
 };
 
 template <typename Data,
@@ -134,7 +134,7 @@ class ReadAllDataCall : Operation<DataArray> {
     page_->GetSnapshot(page_snapshot_.NewRequest(), to_array(prefix_), nullptr,
                        [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
-                           FTL_LOG(ERROR) << "ReadAllDataCall() "
+                           FXL_LOG(ERROR) << "ReadAllDataCall() "
                                           << "Page.GetSnapshot() " << status;
                            return;
                          }
@@ -147,7 +147,7 @@ class ReadAllDataCall : Operation<DataArray> {
     GetEntries(page_snapshot_.get(), &entries_,
                [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
-                   FTL_LOG(ERROR) << "ReadAllDataCall() "
+                   FXL_LOG(ERROR) << "ReadAllDataCall() "
                                   << "GetEntries() " << status;
                    return;
                  }
@@ -160,7 +160,7 @@ class ReadAllDataCall : Operation<DataArray> {
     for (auto& entry : entries_) {
       std::string value_as_string;
       if (!mtl::StringFromVmo(entry->value, &value_as_string)) {
-        FTL_LOG(ERROR) << "ReadAllDataCall() "
+        FXL_LOG(ERROR) << "ReadAllDataCall() "
                        << "Unable to extract data.";
         continue;
       }
@@ -170,7 +170,7 @@ class ReadAllDataCall : Operation<DataArray> {
         continue;
       }
 
-      FTL_DCHECK(!data.is_null());
+      FXL_DCHECK(!data.is_null());
 
       data_.push_back(std::move(data));
     }
@@ -183,7 +183,7 @@ class ReadAllDataCall : Operation<DataArray> {
   std::vector<ledger::EntryPtr> entries_;
   DataArray data_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ReadAllDataCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ReadAllDataCall);
 };
 
 template <typename Data,
@@ -215,7 +215,7 @@ class WriteDataCall : Operation<> {
     page_->Put(to_array(key_), to_array(json),
                [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
-                   FTL_LOG(ERROR) << "WriteDataCall() key =" << key_
+                   FXL_LOG(ERROR) << "WriteDataCall() key =" << key_
                                   << ", Page.Put() " << status;
                  }
                });
@@ -226,7 +226,7 @@ class WriteDataCall : Operation<> {
   DataFilter const filter_;
   DataPtr data_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(WriteDataCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(WriteDataCall);
 };
 
 }  // namespace modular

@@ -27,7 +27,7 @@ executable("example_module1") {
     "//apps/modular/services/story",
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }
@@ -46,7 +46,7 @@ executable("example_module2") {
     "//apps/modular/services/story",
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }
@@ -68,7 +68,7 @@ executable("example_recipe") {
     "//apps/modular/services/user",
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }
@@ -104,7 +104,7 @@ source_set("unittests") {
     "//apps/modular/lib/testing:mock_base",
     "//apps/modular/lib/testing:test_with_message_loop",
     "//apps/modular/services/story:story_cpp_sources",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]

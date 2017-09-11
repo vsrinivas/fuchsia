@@ -32,7 +32,7 @@ namespace modular {
 //       ack();  // Acknowledge message receipt. We will continue to have new
 //               // messages delivered to this callback.
 //               // messages to this callback.
-//       FTL_LOG(INFO) << "new message: " << msg;
+//       FXL_LOG(INFO) << "new message: " << msg;
 //     });
 //
 class MessageReceiverClient : modular::MessageReader {

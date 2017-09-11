@@ -56,7 +56,7 @@ class AgentRunnerStorageImpl::InitializeCall : Operation<> {
     GetEntries((*snapshot_).get(), &entries_,
                [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
-                   FTL_LOG(ERROR) << "InitializeCall() "
+                   FXL_LOG(ERROR) << "InitializeCall() "
                                   << "GetEntries() " << status;
                    return;
                  }
@@ -76,7 +76,7 @@ class AgentRunnerStorageImpl::InitializeCall : Operation<> {
                       entry->key.size());
       std::string value;
       if (!mtl::StringFromVmo(entry->value, &value)) {
-        FTL_LOG(ERROR) << "VMO for key " << key << " couldn't be copied.";
+        FXL_LOG(ERROR) << "VMO for key " << key << " couldn't be copied.";
         continue;
       }
 
@@ -91,7 +91,7 @@ class AgentRunnerStorageImpl::InitializeCall : Operation<> {
   NotificationDelegate* const delegate_;
   std::shared_ptr<ledger::PageSnapshotPtr> snapshot_;
   std::vector<ledger::EntryPtr> entries_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
 };
 
 class AgentRunnerStorageImpl::WriteTaskCall : Operation<bool> {
@@ -120,7 +120,7 @@ class AgentRunnerStorageImpl::WriteTaskCall : Operation<bool> {
         to_array(key), to_array(value), ledger::Priority::EAGER,
         [this, flow](ledger::Status status) {
           if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
+            FXL_LOG(ERROR) << "Ledger operation returned status: " << status;
             return;
           }
 
@@ -133,7 +133,7 @@ class AgentRunnerStorageImpl::WriteTaskCall : Operation<bool> {
   const std::string agent_url_;
   TriggerInfo data_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(WriteTaskCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(WriteTaskCall);
 };
 
 class AgentRunnerStorageImpl::DeleteTaskCall : Operation<bool> {
@@ -160,7 +160,7 @@ class AgentRunnerStorageImpl::DeleteTaskCall : Operation<bool> {
       // request to delete a token which does not exist. This is okay.
       if (status != ledger::Status::OK &&
           status != ledger::Status::INVALID_TOKEN) {
-        FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
+        FXL_LOG(ERROR) << "Ledger operation returned status: " << status;
         return;
       }
       success_result_ = true;
@@ -172,7 +172,7 @@ class AgentRunnerStorageImpl::DeleteTaskCall : Operation<bool> {
   const std::string agent_url_;
   const std::string task_id_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DeleteTaskCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DeleteTaskCall);
 };
 
 AgentRunnerStorageImpl::AgentRunnerStorageImpl(
@@ -183,7 +183,7 @@ AgentRunnerStorageImpl::~AgentRunnerStorageImpl() = default;
 
 void AgentRunnerStorageImpl::Initialize(NotificationDelegate* const delegate,
                                         std::function<void()> done) {
-  FTL_DCHECK(!delegate_);
+  FXL_DCHECK(!delegate_);
   delegate_ = delegate;
   new InitializeCall(&operation_queue_, delegate_, page_snapshot(),
                      std::move(done));
@@ -204,7 +204,7 @@ void AgentRunnerStorageImpl::DeleteTask(const std::string& agent_url,
 
 void AgentRunnerStorageImpl::OnPageChange(const std::string& key,
                                           const std::string& value) {
-  FTL_DCHECK(delegate_ != nullptr);
+  FXL_DCHECK(delegate_ != nullptr);
   new SyncCall(&operation_queue_, [this, key, value] {
     TriggerInfo data;
     if (!XdrRead(value, &data, XdrTriggerInfo)) {
@@ -215,7 +215,7 @@ void AgentRunnerStorageImpl::OnPageChange(const std::string& key,
 }
 
 void AgentRunnerStorageImpl::OnPageDelete(const std::string& key) {
-  FTL_DCHECK(delegate_ != nullptr);
+  FXL_DCHECK(delegate_ != nullptr);
   new SyncCall(&operation_queue_, [this, key] { delegate_->DeletedTask(key); });
 }
 

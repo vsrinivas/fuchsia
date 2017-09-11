@@ -22,16 +22,16 @@
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
 
 class Settings {
  public:
-  explicit Settings(const ftl::CommandLine& command_line) {
+  explicit Settings(const fxl::CommandLine& command_line) {
     root_module = command_line.GetOptionValueWithDefault(
         "root_module", "file:///system/apps/example_recipe");
     root_link = command_line.GetOptionValueWithDefault("root_link", "");
@@ -91,7 +91,7 @@ class DevUserShellApp : modular::StoryWatcher,
       return;
     }
 
-    FTL_LOG(INFO) << "DevUserShell START " << settings_.root_module << " "
+    FXL_LOG(INFO) << "DevUserShell START " << settings_.root_module << " "
                   << settings_.root_link;
 
     view_ = std::make_unique<modular::ViewHost>(
@@ -111,13 +111,13 @@ class DevUserShellApp : modular::StoryWatcher,
   void StartStoryById(const fidl::String& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
     story_controller_.set_connection_error_handler([this, story_id] {
-      FTL_LOG(ERROR) << "Story controller for story " << story_id
+      FXL_LOG(ERROR) << "Story controller for story " << story_id
                      << " died. Does this story exist?";
     });
 
     story_controller_->Watch(story_watcher_binding_.NewBinding());
 
-    FTL_LOG(INFO) << "DevUserShell Starting story with id: " << story_id;
+    FXL_LOG(INFO) << "DevUserShell Starting story with id: " << story_id;
     fidl::InterfaceHandle<mozart::ViewOwner> root_module_view;
     story_controller_->Start(root_module_view.NewRequest());
     view_->ConnectView(std::move(root_module_view));
@@ -139,9 +139,9 @@ class DevUserShellApp : modular::StoryWatcher,
       return;
     }
 
-    FTL_LOG(INFO) << "DevUserShell DONE";
+    FXL_LOG(INFO) << "DevUserShell DONE";
     story_controller_->Stop([this] {
-      FTL_LOG(INFO) << "DevUserShell STOP";
+      FXL_LOG(INFO) << "DevUserShell STOP";
       story_watcher_binding_.Close();
       story_controller_.reset();
       user_shell_context_->Logout();
@@ -153,22 +153,22 @@ class DevUserShellApp : modular::StoryWatcher,
 
   // |SuggestionListener|
   void OnAdd(fidl::Array<maxwell::SuggestionPtr> suggestions) override {
-    FTL_VLOG(4) << "DevUserShell/SuggestionListener::OnAdd()";
+    FXL_VLOG(4) << "DevUserShell/SuggestionListener::OnAdd()";
     for (auto& suggestion : suggestions) {
-      FTL_LOG(INFO) << "  " << suggestion->uuid << " "
+      FXL_LOG(INFO) << "  " << suggestion->uuid << " "
                     << suggestion->display->headline;
     }
   }
 
   // |SuggestionListener|
   void OnRemove(const fidl::String& suggestion_id) override {
-    FTL_VLOG(4) << "DevUserShell/SuggestionListener::OnRemove() "
+    FXL_VLOG(4) << "DevUserShell/SuggestionListener::OnRemove() "
                 << suggestion_id;
   }
 
   // |SuggestionListener|
   void OnRemoveAll() override {
-    FTL_VLOG(4) << "DevUserShell/SuggestionListener::OnRemoveAll()";
+    FXL_VLOG(4) << "DevUserShell/SuggestionListener::OnRemoveAll()";
   }
 
   const Settings settings_;
@@ -188,13 +188,13 @@ class DevUserShellApp : modular::StoryWatcher,
   maxwell::NextControllerPtr next_controller_;
   fidl::BindingSet<maxwell::SuggestionListener> suggestion_listener_bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DevUserShellApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DevUserShellApp);
 };
 
 }  // namespace
 
 int main(int argc, const char** argv) {
-  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   Settings settings(command_line);
 
   mtl::MessageLoop loop;

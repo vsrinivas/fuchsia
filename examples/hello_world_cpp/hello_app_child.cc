@@ -8,7 +8,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "apps/modular/examples/hello_world_cpp/hello.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 using examples::Hello;
@@ -35,7 +35,7 @@ class HelloAppChild : public Hello {
   std::unique_ptr<app::ApplicationContext> context_;
   fidl::BindingSet<Hello> hello_binding_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(HelloAppChild);
+  FXL_DISALLOW_COPY_AND_ASSIGN(HelloAppChild);
 };
 
 }  // namespace

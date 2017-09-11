@@ -7,7 +7,7 @@
 
 #include "apps/modular/lib/device_info/device_info.h"
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 #include <string>
 
@@ -26,7 +26,7 @@ class DeviceProfile {
   // HACK(zbowling): TBD: We need a better way deciding a device's idioms.
   bool presentation_server{false};
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DeviceProfile);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DeviceProfile);
 };
 
 }  // namespace modular

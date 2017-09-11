@@ -53,7 +53,7 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
     // time out.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         Protect([this] { DeleteAndQuit([] {}); }),
-        ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
+        fxl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
 
     remote_invoker_ =
         application_context()
@@ -65,9 +65,9 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
     remote_invoker_->StartOnDevice(
         "test1", "test2", [this](fidl::String page_id) {
           if (page_id.get().empty()) {
-            FTL_LOG(INFO) << "Failed to send rehydrate";
+            FXL_LOG(INFO) << "Failed to send rehydrate";
           } else {
-            FTL_LOG(INFO) << "Sent rehydrate to page " << page_id;
+            FXL_LOG(INFO) << "Sent rehydrate to page " << page_id;
             rehydrate_story_called_.Pass();
           }
           module_context_->Done();

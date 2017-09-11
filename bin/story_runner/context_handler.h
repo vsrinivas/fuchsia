@@ -15,7 +15,7 @@
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -51,7 +51,7 @@ class ContextHandler : maxwell::ContextListener {
   fidl::Binding<maxwell::ContextListener> binding_;
   std::vector<std::function<void()>> watchers_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ContextHandler);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ContextHandler);
 };
 
 }  // namespace modular

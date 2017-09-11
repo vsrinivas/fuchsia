@@ -112,7 +112,7 @@ class StoryProviderImpl::MutateStoryDataCall : Operation<> {
 
   OperationQueue operation_queue_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MutateStoryDataCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MutateStoryDataCall);
 };
 
 // 1. Create a page for the new story.
@@ -149,7 +149,7 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
     ledger_->GetPage(
         nullptr, story_page_.NewRequest(), [this, flow](ledger::Status status) {
           if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "CreateStoryCall()"
+            FXL_LOG(ERROR) << "CreateStoryCall()"
                            << " Ledger.GetPage() " << status;
             return;
           }
@@ -218,7 +218,7 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
   // Sub operations run in this queue.
   OperationQueue operation_queue_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CreateStoryCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CreateStoryCall);
 };
 
 class StoryProviderImpl::DeleteStoryCall : Operation<> {
@@ -258,7 +258,7 @@ class StoryProviderImpl::DeleteStoryCall : Operation<> {
                       // Deleting a key that doesn't exist is OK, not
                       // KEY_NOT_FOUND.
                       if (status != ledger::Status::OK) {
-                        FTL_LOG(ERROR) << "DeleteStoryCall() " << story_id_
+                        FXL_LOG(ERROR) << "DeleteStoryCall() " << story_id_
                                        << " Page.Delete() " << status;
                       }
 
@@ -273,7 +273,7 @@ class StoryProviderImpl::DeleteStoryCall : Operation<> {
       return;
     }
 
-    FTL_DCHECK(i->second.impl != nullptr);
+    FXL_DCHECK(i->second.impl != nullptr);
     i->second.impl->StopForDelete([this, flow] { Erase(flow); });
   }
 
@@ -302,7 +302,7 @@ class StoryProviderImpl::DeleteStoryCall : Operation<> {
   MessageQueueManager* const message_queue_manager_;
   const bool already_deleted_;  // True if called from OnChange();
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DeleteStoryCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DeleteStoryCall);
 };
 
 // 1. Ensure that the story data in the root page isn't dirty due to a crash
@@ -369,7 +369,7 @@ class StoryProviderImpl::GetControllerCall : Operation<> {
   // Sub operations run in this queue.
   OperationQueue operation_queue_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(GetControllerCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(GetControllerCall);
 };
 
 class StoryProviderImpl::TeardownCall : Operation<> {
@@ -406,7 +406,7 @@ class StoryProviderImpl::TeardownCall : Operation<> {
 
   StoryProviderImpl* const story_provider_impl_;  // not owned
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TeardownCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TeardownCall);
 };
 
 class StoryProviderImpl::GetImportanceCall : Operation<ImportanceMap> {
@@ -438,7 +438,7 @@ class StoryProviderImpl::GetImportanceCall : Operation<ImportanceMap> {
   StoryProviderImpl* const story_provider_impl_;  // not owned
   ImportanceMap importance_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(GetImportanceCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(GetImportanceCall);
 };
 
 struct StoryProviderImpl::LinkPeer {
@@ -507,7 +507,7 @@ class StoryProviderImpl::GetLinkPeerCall : Operation<> {
   // Sub operations run in this queue.
   OperationQueue operation_queue_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(GetLinkPeerCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(GetLinkPeerCall);
 };
 
 StoryProviderImpl::StoryProviderImpl(
@@ -637,7 +637,7 @@ void StoryProviderImpl::SetStoryInfoExtra(const fidl::String& story_id,
 // |StoryProvider|
 void StoryProviderImpl::CreateStory(const fidl::String& module_url,
                                     const CreateStoryCallback& callback) {
-  FTL_LOG(INFO) << "CreateStory() " << module_url;
+  FXL_LOG(INFO) << "CreateStory() " << module_url;
   new CreateStoryCall(&operation_queue_, ledger_client_->ledger(), page(), this, module_url,
                       FidlStringMap(), fidl::String(), callback);
 }
@@ -648,7 +648,7 @@ void StoryProviderImpl::CreateStoryWithInfo(
     FidlStringMap extra_info,
     const fidl::String& root_json,
     const CreateStoryWithInfoCallback& callback) {
-  FTL_LOG(INFO) << "CreateStoryWithInfo() " << root_json;
+  FXL_LOG(INFO) << "CreateStoryWithInfo() " << root_json;
   new CreateStoryCall(&operation_queue_, ledger_client_->ledger(), page(), this, module_url,
                       std::move(extra_info), root_json, callback);
 }
@@ -674,7 +674,7 @@ void StoryProviderImpl::GetStoryInfo(const fidl::String& story_id,
 
 // Called by StoryControllerImpl on behalf of ModuleContextImpl
 void StoryProviderImpl::RequestStoryFocus(const fidl::String& story_id) {
-  FTL_LOG(INFO) << "RequestStoryFocus() " << story_id;
+  FXL_LOG(INFO) << "RequestStoryFocus() " << story_id;
   focus_provider_->Request(story_id);
 }
 
@@ -797,7 +797,7 @@ void StoryProviderImpl::OnFocusChange(FocusInfoPtr info) {
 
   auto i = story_controller_impls_.find(info->focused_story_id.get());
   if (i == story_controller_impls_.end()) {
-    FTL_LOG(ERROR) << "Story controller not found for focused story "
+    FXL_LOG(ERROR) << "Story controller not found for focused story "
                    << info->focused_story_id;
     return;
   }

@@ -7,7 +7,7 @@
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/agent/agent.fidl.h"
 #include "apps/modular/tests/component_context/test_agent1_interface.fidl.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 using modular::testing::TestPoint;

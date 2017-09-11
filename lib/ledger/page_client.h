@@ -11,7 +11,7 @@
 #include "apps/modular/lib/ledger/types.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -150,7 +150,7 @@ class PageClient : ledger::PageWatcher {
 
   std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageClient);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageClient);
 };
 
 // Retrieves all entries from the given snapshot and calls the given callback

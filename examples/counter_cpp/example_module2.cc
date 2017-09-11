@@ -11,8 +11,8 @@
 #include "lib/ui/view_framework/base_view.h"
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
@@ -84,7 +84,7 @@ class Module2View : public mozart::BaseView {
   scenic_lib::ShapeNode background_node_;
   scenic_lib::ShapeNode square_node_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Module2View);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Module2View);
 };
 
 // Module implementation that acts as a leaf module. It implements Module.
@@ -136,7 +136,7 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
       return;
     }
 
-    ftl::WeakPtr<Module2App> module_ptr = weak_ptr_factory_.GetWeakPtr();
+    fxl::WeakPtr<Module2App> module_ptr = weak_ptr_factory_.GetWeakPtr();
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this, module_ptr] {
           if (!module_ptr.get() || store_.terminating()) {
@@ -146,12 +146,12 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
           store_.counter.sender = kModuleName;
           store_.counter.counter += 1;
 
-          FTL_LOG(INFO) << "Module2Impl COUNT " << store_.counter.counter;
+          FXL_LOG(INFO) << "Module2Impl COUNT " << store_.counter.counter;
 
           store_.MarkDirty();
           store_.ModelChanged();
         },
-        ftl::TimeDelta::FromMilliseconds(kAnimationDelayInMs));
+        fxl::TimeDelta::FromMilliseconds(kAnimationDelayInMs));
   }
 
   std::unique_ptr<Module2View> view_;
@@ -160,9 +160,9 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
 
   // Note: This should remain the last member so it'll be destroyed and
   // invalidate its weak pointers before any other members are destroyed.
-  ftl::WeakPtrFactory<Module2App> weak_ptr_factory_;
+  fxl::WeakPtrFactory<Module2App> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Module2App);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Module2App);
 };
 
 }  // namespace

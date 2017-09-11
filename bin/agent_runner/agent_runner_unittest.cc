@@ -19,7 +19,7 @@
 #include "apps/modular/src/component/message_queue_manager.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {
@@ -32,7 +32,7 @@ class FakeAgentRunnerStorage : public AgentRunnerStorage {
 
   // |AgentRunnerStorage|
   void Initialize(NotificationDelegate* /*delegate*/,
-                  const ftl::Closure done) override {
+                  const fxl::Closure done) override {
     done();
   }
 
@@ -50,7 +50,7 @@ class FakeAgentRunnerStorage : public AgentRunnerStorage {
     done(true);
   }
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FakeAgentRunnerStorage);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakeAgentRunnerStorage);
 };
 
 class AgentRunnerTest : public TestWithMessageLoop {
@@ -114,7 +114,7 @@ class AgentRunnerTest : public TestWithMessageLoop {
   auth::TokenProviderFactoryPtr token_provider_factory_;
   maxwell::UserIntelligenceProviderPtr ui_provider_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AgentRunnerTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AgentRunnerTest);
 };
 
 class MyDummyAgent : Agent,
@@ -169,7 +169,7 @@ class MyDummyAgent : Agent,
   fidl::Binding<app::ApplicationController> app_controller_;
   fidl::Binding<modular::Agent> agent_binding_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MyDummyAgent);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MyDummyAgent);
 };
 
 // Test that connecting to an agent will start it up and calls

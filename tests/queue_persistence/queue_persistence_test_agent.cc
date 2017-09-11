@@ -9,7 +9,7 @@
 #include "apps/modular/services/agent/agent.fidl.h"
 #include "apps/modular/services/component/message_queue.fidl.h"
 #include "apps/modular/tests/queue_persistence/queue_persistence_test_agent_interface.fidl.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {

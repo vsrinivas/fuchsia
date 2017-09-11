@@ -7,8 +7,8 @@
 #include "lib/app/cpp/application_context.h"
 #include "apps/modular/services/device/device_runner_monitor.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {
@@ -33,7 +33,7 @@ class DeviceRunnerMonitorApp : DeviceRunnerMonitor {
   std::unique_ptr<app::ApplicationContext> app_context_;
   fidl::BindingSet<DeviceRunnerMonitor> bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerMonitorApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerMonitorApp);
 };
 
 }  // namespace modular

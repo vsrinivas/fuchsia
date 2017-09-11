@@ -13,7 +13,7 @@
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -31,17 +31,17 @@ class SingleServiceApp : protected Service,
         lifecycle_binding_(this) {
     application_context_->outgoing_services()->AddService<Service>(
         [this](fidl::InterfaceRequest<Service> request) {
-          FTL_DCHECK(!service_binding_->is_bound());
+          FXL_DCHECK(!service_binding_->is_bound());
           service_binding_->Bind(std::move(request));
         });
     application_context_->outgoing_services()->AddService<mozart::ViewProvider>(
         [this](fidl::InterfaceRequest<mozart::ViewProvider> request) {
-          FTL_DCHECK(!view_provider_binding_.is_bound());
+          FXL_DCHECK(!view_provider_binding_.is_bound());
           view_provider_binding_.Bind(std::move(request));
         });
     application_context_->outgoing_services()->AddService<Lifecycle>(
         [this](fidl::InterfaceRequest<Lifecycle> request) {
-          FTL_DCHECK(!lifecycle_binding_.is_bound());
+          FXL_DCHECK(!lifecycle_binding_.is_bound());
           lifecycle_binding_.Bind(std::move(request));
         });
   }
@@ -75,7 +75,7 @@ class SingleServiceApp : protected Service,
   fidl::Binding<mozart::ViewProvider> view_provider_binding_;
   fidl::Binding<Lifecycle> lifecycle_binding_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SingleServiceApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SingleServiceApp);
 };
 
 }  // namespace modular

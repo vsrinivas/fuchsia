@@ -42,7 +42,7 @@ class TestApplicationController : app::ApplicationController {
 
   bool killed_{};
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestApplicationController);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApplicationController);
 };
 
 // TODO(alhaad): Factor out this use into a common fake-application-launcher.
@@ -65,7 +65,7 @@ class TestApplicationLauncher : app::ApplicationLauncher {
 
   fidl::Binding<app::ApplicationLauncher> binding_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestApplicationLauncher);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApplicationLauncher);
 };
 
 class AppClientTest : public testing::TestWithMessageLoop {};
@@ -98,7 +98,7 @@ TEST_F(AppClientTest, BaseTerminate_Success) {
       [&app_terminated_callback_called] {
         app_terminated_callback_called = true;
       },
-      ftl::TimeDelta::Zero());
+      fxl::TimeDelta::Zero());
 
   EXPECT_TRUE(RunLoopUntil(
       [&app_terminated_callback_called, &test_application_launcher] {

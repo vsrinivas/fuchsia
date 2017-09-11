@@ -4,7 +4,7 @@
 
 #include "apps/modular/lib/testing/mock_base.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace modular {
 namespace testing {
@@ -28,7 +28,7 @@ void MockBase::ClearCalls() {
 void MockBase::ExpectNoOtherCalls() {
   EXPECT_TRUE(counts.empty());
   for (const auto& c : counts) {
-    FTL_LOG(INFO) << "    Unexpected call: " << c.first;
+    FXL_LOG(INFO) << "    Unexpected call: " << c.first;
   }
 }
 

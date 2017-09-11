@@ -39,7 +39,7 @@
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -263,7 +263,7 @@ class StoryControllerImpl : StoryController, StoryContext {
   class GetModulesCall;
   class GetImportanceCall;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryControllerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StoryControllerImpl);
 };
 
 }  // namespace modular

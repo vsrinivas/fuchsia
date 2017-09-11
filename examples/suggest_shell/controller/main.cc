@@ -14,8 +14,8 @@
 #include "apps/modular/services/module/module_context.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
@@ -88,8 +88,8 @@ class ControllerApp : public modular::SingleServiceApp<modular::Module>,
   void Notify(const fidl::String& json) override {
     rapidjson::Document doc;
     doc.Parse(json);
-    FTL_CHECK(!doc.HasParseError());
-    FTL_LOG(INFO) << "ControllerApp::Notify() "
+    FXL_CHECK(!doc.HasParseError());
+    FXL_LOG(INFO) << "ControllerApp::Notify() "
                   << modular::JsonValueToPrettyString(doc);
 
     if (doc.IsNull()) {
@@ -142,7 +142,7 @@ class ControllerApp : public modular::SingleServiceApp<modular::Module>,
   fidl::Binding<modular::LinkWatcher> link_watcher_binding_;
   maxwell::ProposalPublisherPtr proposal_publisher_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ControllerApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ControllerApp);
 };
 
 }  // namespace

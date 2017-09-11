@@ -11,7 +11,7 @@
 #include "apps/modular/lib/ledger/page_client.h"
 #include "apps/modular/lib/ledger/types.h"
 #include "apps/modular/src/agent_runner/agent_runner_storage.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -51,7 +51,7 @@ class AgentRunnerStorageImpl : public AgentRunnerStorage, PageClient {
 
   OperationQueue operation_queue_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AgentRunnerStorageImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AgentRunnerStorageImpl);
 };
 
 }  // namespace modular

@@ -8,13 +8,13 @@
 
 #include "lib/app/cpp/connect.h"
 #include "apps/modular/src/agent_runner/agent_runner.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {
 
 namespace {
-constexpr ftl::TimeDelta kKillTimeout = ftl::TimeDelta::FromSeconds(2);
+constexpr fxl::TimeDelta kKillTimeout = fxl::TimeDelta::FromSeconds(2);
 }
 
 class AgentContextImpl::InitializeCall : Operation<> {
@@ -31,7 +31,7 @@ class AgentContextImpl::InitializeCall : Operation<> {
 
  private:
   void Run() override {
-    FTL_CHECK(agent_context_impl_->state_ == State::INITIALIZING);
+    FXL_CHECK(agent_context_impl_->state_ == State::INITIALIZING);
 
     FlowToken flow{this};
 
@@ -68,7 +68,7 @@ class AgentContextImpl::InitializeCall : Operation<> {
 
   AgentContextImpl* const agent_context_impl_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
 };
 
 // If |is_terminating| is set to true, the agent will be torn down irrespective
@@ -121,7 +121,7 @@ class AgentContextImpl::StopCall : Operation<bool> {
   AgentContextImpl* const agent_context_impl_;
   const bool terminating_;  // is the agent runner terminating?
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StopCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StopCall);
 };
 
 AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
@@ -146,12 +146,12 @@ void AgentContextImpl::NewConnection(
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
   // Queue adding the connection
-  new SyncCall(&operation_queue_, ftl::MakeCopyable([
+  new SyncCall(&operation_queue_, fxl::MakeCopyable([
     this, requestor_url,
     incoming_services_request = std::move(incoming_services_request),
     agent_controller_request = std::move(agent_controller_request)
   ]() mutable {
-    FTL_CHECK(state_ == State::RUNNING);
+    FXL_CHECK(state_ == State::RUNNING);
 
     agent_->Connect(requestor_url, std::move(incoming_services_request));
 
@@ -164,7 +164,7 @@ void AgentContextImpl::NewConnection(
 
 void AgentContextImpl::NewTask(const std::string& task_id) {
   new SyncCall(&operation_queue_, [this, task_id] {
-    FTL_CHECK(state_ == State::RUNNING);
+    FXL_CHECK(state_ == State::RUNNING);
     // Increment the counter for number of incomplete tasks. Decrement it when
     // we receive its callback;
     incomplete_task_count_++;
@@ -217,10 +217,10 @@ void AgentContextImpl::MaybeStopAgent() {
 }
 
 void AgentContextImpl::StopForTeardown() {
-  FTL_DLOG(INFO) << "AgentContextImpl::StopForTeardown() " << url_;
+  FXL_DLOG(INFO) << "AgentContextImpl::StopForTeardown() " << url_;
   new StopCall(&operation_queue_, true /* is agent runner terminating? */, this,
                [this](bool stopped) {
-                 FTL_DCHECK(stopped);
+                 FXL_DCHECK(stopped);
                  agent_runner_->RemoveAgent(url_);
                  // |this| is no longer valid at this point.
                });

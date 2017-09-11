@@ -10,7 +10,7 @@ source_set("device_info") {
 
   deps = [
     "//apps/modular/lib/util:filesystem",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }
 
@@ -26,6 +26,6 @@ source_set("device_profile") {
 
   deps = [
     "//apps/modular/lib/rapidjson",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }

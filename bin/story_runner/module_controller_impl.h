@@ -17,7 +17,7 @@
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -87,7 +87,7 @@ class ModuleControllerImpl : ModuleController {
   // Stop() is made.
   std::vector<std::function<void()>> teardown_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ModuleControllerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ModuleControllerImpl);
 };
 
 }  // namespace modular

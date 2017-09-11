@@ -8,7 +8,7 @@
 #include "apps/modular/lib/ledger/page_client.h"
 #include "apps/modular/lib/ledger/status.h"
 #include "apps/modular/lib/ledger/types.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace modular {
@@ -26,7 +26,7 @@ void GetDiffRecursive(ledger::MergeResultProvider* const result,
                       ledger::PageChange* const change_all,
                       LedgerPageKey token,
                       std::function<void(ledger::Status)> callback) {
-  auto cont = ftl::MakeCopyable(
+  auto cont = fxl::MakeCopyable(
       [result, left, change_all, callback = std::move(callback)](
           ledger::Status status, ledger::PageChangePtr change_delta, LedgerPageKey token) {
         if (status != ledger::Status::OK &&
@@ -194,7 +194,7 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
             std::move(merge_changes),
             [this, flow](ledger::Status status) {
               if (status != ledger::Status::OK) {
-                FTL_LOG(ERROR) << "ResultProvider.Merge() " << status;
+                FXL_LOG(ERROR) << "ResultProvider.Merge() " << status;
               }
               MergeDone(flow);
             });
@@ -208,7 +208,7 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
     if (--merge_count_ == 0) {
       result_provider_->Done([this, flow](ledger::Status status) {
           if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "ResultProvider.Done() " << status;
+            FXL_LOG(ERROR) << "ResultProvider.Done() " << status;
           }
           impl_->NotifyWatchers();
         });
@@ -216,22 +216,22 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
   }
 
   void CollectConflicts(ledger::PageChange* const change, const bool left) {
-    FTL_LOG(INFO) << "Diff " << (left ? "left" : "right");
+    FXL_LOG(INFO) << "Diff " << (left ? "left" : "right");
 
     for (auto& entry : change->changes) {
       const std::string key = to_string(entry->key);
 
-      FTL_LOG(INFO) << " " << key;
+      FXL_LOG(INFO) << " " << key;
 
       if (!entry->value.is_valid()) {
-        FTL_LOG(INFO) << " " << key << " no value";
+        FXL_LOG(INFO) << " " << key << " no value";
         // TODO(mesch)
         continue;
       }
 
       std::string value;
       if (!mtl::StringFromVmo(entry->value, &value)) {
-        FTL_LOG(INFO) << " " << key << " error value";
+        FXL_LOG(INFO) << " " << key << " error value";
         continue;
       }
 
@@ -240,7 +240,7 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
         conflicts_[key]->key = key;
       }
 
-      FTL_LOG(INFO) << " " << key << " " << value;
+      FXL_LOG(INFO) << " " << key << " " << value;
 
       if (left) {
         conflicts_[key]->has_left = true;
@@ -253,9 +253,9 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
   }
 
   void LogEntries(const std::string& headline, const std::vector<ledger::EntryPtr>& entries) {
-    FTL_LOG(INFO) << "Entries " << headline;
+    FXL_LOG(INFO) << "Entries " << headline;
     for (const ledger::EntryPtr& entry : entries) {
-      FTL_LOG(INFO) << " - " << to_string(entry->key);
+      FXL_LOG(INFO) << " - " << to_string(entry->key);
     }
   }
 
@@ -280,7 +280,7 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
 
   int merge_count_{1};  // One extra for the call at the end.
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ResolveCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ResolveCall);
 };
 
 LedgerClient::LedgerClient(ledger::LedgerRepository* const ledger_repository,
@@ -290,7 +290,7 @@ LedgerClient::LedgerClient(ledger::LedgerRepository* const ledger_repository,
   ledger_repository->GetLedger(
       to_array(name), ledger_.NewRequest(), [this, error](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR)
+          FXL_LOG(ERROR)
               << "LedgerRepository.GetLedger() failed: "
               << LedgerStatusToString(status);
           error();
@@ -302,7 +302,7 @@ LedgerClient::LedgerClient(ledger::LedgerRepository* const ledger_repository,
   ledger_->SetConflictResolverFactory(
       bindings_.AddBinding(this), [this, error](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR)
+          FXL_LOG(ERROR)
               << "Ledger.SetConflictResolverFactory() failed: "
               << LedgerStatusToString(status);
           error();
@@ -331,7 +331,7 @@ ledger::Page* LedgerClient::GetPage(PageClient* const page_client,
       page_id.Clone(), page.NewRequest(),
       [context](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR) << "Ledger.GetPage() " << context << " " << status;
+          FXL_LOG(ERROR) << "Ledger.GetPage() " << context << " " << status;
         }
       });
 
@@ -344,7 +344,7 @@ ledger::Page* LedgerClient::GetPage(PageClient* const page_client,
       // TODO(mesch): If this happens, larger things are wrong. This should
       // probably be signalled up, or at least must be signalled to the page
       // client.
-      FTL_LOG(ERROR) << context << ": "
+      FXL_LOG(ERROR) << context << ": "
                      << "Page connection unexpectedly closed.";
     });
 
@@ -451,7 +451,7 @@ void LedgerClient::ConflictResolverImpl::GetPageClients(std::vector<PageClient*>
         return item->page_id.Equals(page_id_);
       });
 
-  FTL_CHECK(i != ledger_client_->pages_.end());
+  FXL_CHECK(i != ledger_client_->pages_.end());
   *page_clients = (*i)->clients;
 }
 

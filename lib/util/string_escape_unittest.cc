@@ -5,7 +5,7 @@
 #include "apps/modular/lib/util/string_escape.h"
 #include "gtest/gtest.h"
 
-using ftl::StringView;
+using fxl::StringView;
 
 namespace modular {
 namespace {

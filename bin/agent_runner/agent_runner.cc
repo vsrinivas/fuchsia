@@ -18,7 +18,7 @@
 
 namespace modular {
 
-constexpr ftl::TimeDelta kTeardownTimeout = ftl::TimeDelta::FromSeconds(3);
+constexpr fxl::TimeDelta kTeardownTimeout = fxl::TimeDelta::FromSeconds(3);
 
 AgentRunner::AgentRunner(
     app::ApplicationLauncher* const application_launcher,
@@ -47,7 +47,7 @@ void AgentRunner::Teardown(const std::function<void()>& callback) {
   // No new agents will be scheduled to run.
   *terminating_ = true;
 
-  FTL_LOG(INFO) << "AgentRunner::Teardown() " << running_agents_.size() << " agents";
+  FXL_LOG(INFO) << "AgentRunner::Teardown() " << running_agents_.size() << " agents";
 
   // No agents were running, we are good to go.
   if (running_agents_.empty()) {
@@ -65,7 +65,7 @@ void AgentRunner::Teardown(const std::function<void()>& callback) {
     *called = true;
 
     if (from_timeout) {
-      FTL_LOG(ERROR) << "AgentRunner::Teardown() timed out";
+      FXL_LOG(ERROR) << "AgentRunner::Teardown() timed out";
     }
 
     callback();
@@ -118,7 +118,7 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
   auto agent_config = AppConfig::New();
   agent_config->url = agent_url;
 
-  FTL_CHECK(running_agents_
+  FXL_CHECK(running_agents_
                 .emplace(agent_url,
                          std::make_unique<AgentContextImpl>(info, std::move(agent_config)))
                 .second);
@@ -160,7 +160,7 @@ void AgentRunner::RemoveAgent(const std::string agent_url) {
   running_agents_.erase(agent_url);
 
   if (*terminating_ && running_agents_.empty()) {
-    FTL_DCHECK(termination_callback_);
+    FXL_DCHECK(termination_callback_);
     termination_callback_();
     return;
   }
@@ -204,7 +204,7 @@ void AgentRunner::ScheduleTask(const std::string& agent_url,
         task_info->trigger_condition->get_alarm_in_seconds();
   } else {
     // Not a defined trigger condition.
-    FTL_NOTREACHED();
+    FXL_NOTREACHED();
   }
 
   agent_runner_storage_->WriteTask(agent_url, data, [](bool) {});
@@ -301,7 +301,7 @@ void AgentRunner::ScheduleMessageQueueTask(const std::string& agent_url,
     bool inserted = false;
     std::tie(found_it, inserted) = watched_queues_.emplace(
         agent_url, std::unordered_map<std::string, std::string>());
-    FTL_DCHECK(inserted);
+    FXL_DCHECK(inserted);
   }
 
   found_it->second[task_id] = queue_name;
@@ -337,7 +337,7 @@ void AgentRunner::ScheduleAlarmTask(const std::string& agent_url,
     bool inserted = false;
     std::tie(found_it, inserted) = running_alarms_.emplace(
         agent_url, std::unordered_map<std::string, uint32_t>());
-    FTL_DCHECK(inserted);
+    FXL_DCHECK(inserted);
   }
 
   found_it->second[task_id] = alarm_in_seconds;
@@ -364,7 +364,7 @@ void AgentRunner::ScheduleAlarmTask(const std::string& agent_url,
                             false);
         });
       },
-      ftl::TimeDelta::FromSeconds(alarm_in_seconds));
+      fxl::TimeDelta::FromSeconds(alarm_in_seconds));
 }
 
 void AgentRunner::DeleteTask(const std::string& agent_url,

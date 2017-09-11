@@ -57,7 +57,7 @@ executable("user_runner") {
     "//apps/modular/src/story_runner",
     "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/trace-provider",
   ]
@@ -78,7 +78,7 @@ executable("dev_user_shell") {
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }
@@ -102,7 +102,7 @@ source_set("focus") {
     "//apps/modular/services/user:focus",
     "//apps/modular/services/user:private",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }

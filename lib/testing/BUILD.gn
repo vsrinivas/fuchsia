@@ -27,7 +27,7 @@ source_set("component_base") {
     ":testing",
     "//garnet/public/lib/app/cpp",
     "//apps/modular/lib/fidl:single_service_app",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }
@@ -57,7 +57,7 @@ source_set("test_with_message_loop") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]
@@ -86,7 +86,7 @@ source_set("fake_application_launcher") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }
@@ -108,7 +108,7 @@ source_set("ledger_repository_for_testing") {
     "//apps/modular/lib/ledger:constants",
     "//apps/modular/services/config",
     "//apps/test_runner/lib:application_context",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }
@@ -122,7 +122,7 @@ source_set("mock_base") {
   ]
 
   deps = [
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//third_party/gtest",
   ]
 }

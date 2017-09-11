@@ -8,7 +8,7 @@
 #include <deque>
 #include <string>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace modular {
 
@@ -22,7 +22,7 @@ class PersistentQueue {
   bool IsEmpty() const { return queue_.empty(); }
 
   std::string Peek() const {
-    FTL_DCHECK(!queue_.empty());
+    FXL_DCHECK(!queue_.empty());
     return queue_.front();
   }
 

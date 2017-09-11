@@ -15,8 +15,8 @@
 #include "apps/modular/services/module/module_context.fidl.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/macros.h"
 
 namespace todo {
 
@@ -64,7 +64,7 @@ class TodoApp : public modular::Module, public ledger::PageWatcher,
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
   ledger::PagePtr page_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TodoApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TodoApp);
 };
 
 }  // namespace todo

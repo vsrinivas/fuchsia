@@ -91,7 +91,7 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
     // time out.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         Protect([this] { module_context_->Done(); }),
-        ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
+        fxl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
   }
 
   // |Lifecycle|

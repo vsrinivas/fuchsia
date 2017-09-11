@@ -11,8 +11,8 @@
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/app_client.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace modular {
 namespace testing {
@@ -41,7 +41,7 @@ class LedgerRepositoryForTesting {
   ledger::LedgerRepositoryFactoryPtr ledger_repo_factory_;
   ledger::LedgerRepositoryPtr ledger_repo_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryForTesting);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryForTesting);
 };
 
 }  // namespace testing

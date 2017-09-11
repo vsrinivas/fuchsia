@@ -8,7 +8,7 @@
 
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/fidl/cpp/bindings/string.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -45,8 +45,8 @@ XdrContext::XdrContext(const XdrOp op,
       op_(op),
       doc_(doc),
       value_(doc) {
-  FTL_DCHECK(doc_ != nullptr);
-  FTL_DCHECK(error_ != nullptr);
+  FXL_DCHECK(doc_ != nullptr);
+  FXL_DCHECK(error_ != nullptr);
 }
 
 XdrContext::XdrContext(XdrContext* const parent,
@@ -60,9 +60,9 @@ XdrContext::XdrContext(XdrContext* const parent,
       op_(op),
       doc_(doc),
       value_(value) {
-  FTL_DCHECK(parent_ != nullptr);
-  FTL_DCHECK(doc_ != nullptr);
-  FTL_DCHECK(value_ != nullptr);
+  FXL_DCHECK(parent_ != nullptr);
+  FXL_DCHECK(doc_ != nullptr);
+  FXL_DCHECK(value_ != nullptr);
 }
 
 XdrContext::~XdrContext() = default;
@@ -145,7 +145,7 @@ XdrContext XdrContext::Field(const char field[]) {
       JsonValue name{field, allocator()};
       value_->AddMember(name, JsonValue(), allocator());
       auto i = value_->FindMember(field);
-      FTL_DCHECK(i != value_->MemberEnd());
+      FXL_DCHECK(i != value_->MemberEnd());
       return {this, field, op_, doc_, &i->value};
     }
 

@@ -75,13 +75,13 @@ class ConflictResolverImpl::LogConflictDiffCall : Operation<> {
           fidl::Array<uint8_t> next_token) {
           if (status != ledger::Status::OK &&
               status != ledger::Status::PARTIAL_RESULT) {
-            FTL_LOG(INFO)
+            FXL_LOG(INFO)
                 << "Getting diff from MergeResultProvider failed with status "
                 << status;
             return;
           }
           for (auto& change : change->changes) {
-            FTL_LOG(INFO) << "changed " << left_or_right << " "
+            FXL_LOG(INFO) << "changed " << left_or_right << " "
                           << to_string(change->key);
           }
           if (status == ledger::Status::PARTIAL_RESULT) {
@@ -100,7 +100,7 @@ class ConflictResolverImpl::LogConflictDiffCall : Operation<> {
     }
     result_provider_->Done([this](ledger::Status status) {
       if (status != ledger::Status::OK) {
-        FTL_LOG(INFO) << "MergeResultProvider::Done failed with status "
+        FXL_LOG(INFO) << "MergeResultProvider::Done failed with status "
                       << status;
       }
       Done();
@@ -110,7 +110,7 @@ class ConflictResolverImpl::LogConflictDiffCall : Operation<> {
   ledger::MergeResultProviderPtr result_provider_;
   uint8_t finished_ = 0;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LogConflictDiffCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LogConflictDiffCall);
 };
 
 ConflictResolverImpl::ConflictResolverImpl() = default;
@@ -134,7 +134,7 @@ void ConflictResolverImpl::GetPolicy(fidl::Array<uint8_t> page_id,
 void ConflictResolverImpl::NewConflictResolver(
     fidl::Array<uint8_t> page_id,
     fidl::InterfaceRequest<ConflictResolver> request) {
-  FTL_DCHECK(IsRootPageId(page_id));
+  FXL_DCHECK(IsRootPageId(page_id));
   bindings_.AddBinding(this, std::move(request));
 }
 
@@ -143,7 +143,7 @@ void ConflictResolverImpl::Resolve(
     fidl::InterfaceHandle<ledger::PageSnapshot> /*right_version*/,
     fidl::InterfaceHandle<ledger::PageSnapshot> /*common_version*/,
     fidl::InterfaceHandle<ledger::MergeResultProvider> result_provider) {
-  FTL_LOG(WARNING) << "Conflict in root page. Doing nothing.";
+  FXL_LOG(WARNING) << "Conflict in root page. Doing nothing.";
 
   ledger::MergeResultProviderPtr result_provider_ptr =
       ledger::MergeResultProviderPtr::Create(std::move(result_provider));

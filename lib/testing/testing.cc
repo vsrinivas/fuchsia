@@ -17,18 +17,18 @@ bool g_connected;
 }  // namespace
 
 void Init(app::ApplicationContext* app_context, const std::string& identity) {
-  FTL_CHECK(app_context);
-  FTL_CHECK(!g_test_runner.is_bound());
-  FTL_CHECK(!g_test_runner_store.is_bound());
+  FXL_CHECK(app_context);
+  FXL_CHECK(!g_test_runner.is_bound());
+  FXL_CHECK(!g_test_runner_store.is_bound());
 
   g_test_runner =
       app_context->ConnectToEnvironmentService<test_runner::TestRunner>();
   g_test_runner.set_connection_error_handler([] {
     if (g_connected) {
-      FTL_LOG(ERROR) << "Lost connection to TestRunner. Did the active test "
+      FXL_LOG(ERROR) << "Lost connection to TestRunner. Did the active test "
                         "call Logout() while modules were still running?";
     } else {
-      FTL_LOG(ERROR) << "This application must be run under test_runner.";
+      FXL_LOG(ERROR) << "This application must be run under test_runner.";
     }
     exit(1);
   });
@@ -81,7 +81,7 @@ void WillTerminate(double withinSeconds) {
 }
 
 test_runner::TestRunnerStore* GetStore() {
-  FTL_CHECK(g_test_runner_store.is_bound());
+  FXL_CHECK(g_test_runner_store.is_bound());
   return g_test_runner_store.get();
 }
 
@@ -89,7 +89,7 @@ namespace internal {
 
 void RegisterTestPoint(const std::string& label) {
   // Test points can only be registered before Init is called.
-  FTL_CHECK(!g_test_runner.is_bound())
+  FXL_CHECK(!g_test_runner.is_bound())
       << "Test Runner connection not bound. You must call "
       << "ComponentBase::TestInit() before registering "
       << "\"" << label << "\".";
@@ -97,19 +97,19 @@ void RegisterTestPoint(const std::string& label) {
   auto inserted = g_test_points.insert(label);
 
   // Test points must have unique labels.
-  FTL_CHECK(inserted.second) << "Test points must have unique labels. "
+  FXL_CHECK(inserted.second) << "Test points must have unique labels. "
                              << "\"" << label << "\" is repeated.";
 }
 
 void PassTestPoint(const std::string& label) {
   // Test points can only be passed after initialization.
-  FTL_CHECK(g_test_runner.is_bound())
+  FXL_CHECK(g_test_runner.is_bound())
       << "Test Runner connection not bound. You must call "
       << "ComponentBase::TestInit() before \"" << label << "\".Pass() can be "
       << "called.";
 
   // Test points can only be passed once.
-  FTL_CHECK(g_test_points.erase(label))
+  FXL_CHECK(g_test_points.erase(label))
       << "TEST FAILED: Test point can only be passed once. "
       << "\"" << label << "\".Pass() has been called twice.";
 

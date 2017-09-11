@@ -16,8 +16,8 @@
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "apps/test_runner/services/test_runner.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
@@ -44,7 +44,7 @@ class StoryProviderWatcherImpl
   // |StoryProviderWatcher|
   void OnChange(modular::StoryInfoPtr story_info,
                 modular::StoryState story_state) override {
-    FTL_CHECK(story_info->last_focus_time >= last_focus_time_);
+    FXL_CHECK(story_info->last_focus_time >= last_focus_time_);
     if (story_info->last_focus_time <= last_focus_time_) {
       return;
     }
@@ -63,7 +63,7 @@ class StoryProviderWatcherImpl
        last_focus_time_focused_.Pass();
        break;
      default:
-       FTL_CHECK(change_count_ == 1 || change_count_ == 2);
+       FXL_CHECK(change_count_ == 1 || change_count_ == 2);
        break;
     }
 
@@ -96,7 +96,7 @@ class StoryWatcherImpl : modular::StoryWatcher {
  private:
   // |StoryWatcher|
   void OnStateChange(modular::StoryState state) override {
-    FTL_LOG(INFO) << "OnStateChange() " << state;
+    FXL_LOG(INFO) << "OnStateChange() " << state;
     if (state != modular::StoryState::RUNNING) {
       return;
     }
@@ -109,7 +109,7 @@ class StoryWatcherImpl : modular::StoryWatcher {
 
   fidl::Binding<modular::StoryWatcher> binding_;
   std::function<void()> continue_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
 };
 
 // A simple focus watcher implementation that invokes a "continue" callback when
@@ -130,11 +130,11 @@ class FocusWatcherImpl : modular::FocusWatcher {
  private:
   // |FocusWatcher|
   void OnFocusChange(modular::FocusInfoPtr info) override {
-    FTL_LOG(INFO) << "OnFocusChange() " << info->focused_story_id;
+    FXL_LOG(INFO) << "OnFocusChange() " << info->focused_story_id;
   }
 
   fidl::Binding<modular::FocusWatcher> binding_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(FocusWatcherImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FocusWatcherImpl);
 };
 
 // Tests the last_focus_time entry in StoryInfo.
@@ -236,7 +236,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
   modular::FocusProviderPtr focus_provider_;
   FocusWatcherImpl focus_watcher_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace

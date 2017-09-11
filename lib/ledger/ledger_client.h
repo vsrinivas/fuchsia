@@ -15,8 +15,8 @@
 #include "apps/modular/lib/ledger/types.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -77,7 +77,7 @@ class LedgerClient : ledger::ConflictResolverFactory {
   // Notified whenever a conflict resolution cycle finishes.
   std::vector<std::function<void()>> watchers_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LedgerClient);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerClient);
 };
 
 // A conflict resolver for one page that delegates the diff for a key to the
@@ -111,7 +111,7 @@ class LedgerClient::ConflictResolverImpl : ledger::ConflictResolver {
   OperationQueue operation_queue_;
   class ResolveCall;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ConflictResolverImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ConflictResolverImpl);
 };
 
 }  // namespace modular

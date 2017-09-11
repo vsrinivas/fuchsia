@@ -13,10 +13,10 @@
 #include "lib/ui/view_framework/base_view.h"
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/memory/weak_ptr.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
@@ -88,7 +88,7 @@ class Module1View : public mozart::BaseView {
   scenic_lib::ShapeNode background_node_;
   scenic_lib::ShapeNode square_node_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Module1View);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Module1View);
 };
 
 class MultiplierImpl : public modular::examples::Multiplier {
@@ -101,7 +101,7 @@ class MultiplierImpl : public modular::examples::Multiplier {
     result(a * b);
   }
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MultiplierImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MultiplierImpl);
 };
 
 // Module implementation that acts as a leaf module. It implements Module.
@@ -141,8 +141,8 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
-    FTL_CHECK(incoming_services.is_valid());
-    FTL_CHECK(outgoing_services.is_pending());
+    FXL_CHECK(incoming_services.is_valid());
+    FXL_CHECK(outgoing_services.is_pending());
 
     module_context_.Bind(std::move(module_context));
     modular::LinkPtr link;
@@ -157,20 +157,20 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
         });
 
     // This exercises the incoming services we get from the recipe.
-    FTL_CHECK(incoming_services.is_valid());
+    FXL_CHECK(incoming_services.is_valid());
     auto recipe_services =
         app::ServiceProviderPtr::Create(std::move(incoming_services));
 
     auto adder_service =
         app::ConnectToService<modular::examples::Adder>(recipe_services.get());
     adder_service.set_connection_error_handler([] {
-      FTL_CHECK(false) << "Uh oh, Connection to Adder closed by the recipe.";
+      FXL_CHECK(false) << "Uh oh, Connection to Adder closed by the recipe.";
     });
     adder_service->Add(4, 4,
-                       ftl::MakeCopyable([adder_service = std::move(
+                       fxl::MakeCopyable([adder_service = std::move(
                                               adder_service)](int32_t result) {
-                         FTL_CHECK(result == 8);
-                         FTL_LOG(INFO) << "Incoming Adder service: 4 + 4 is 8.";
+                         FXL_CHECK(result == 8);
+                         FXL_LOG(INFO) << "Incoming Adder service: 4 + 4 is 8.";
                        }));
   }
 
@@ -191,7 +191,7 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
       return;
     }
 
-    ftl::WeakPtr<Module1App> module_ptr = weak_ptr_factory_.GetWeakPtr();
+    fxl::WeakPtr<Module1App> module_ptr = weak_ptr_factory_.GetWeakPtr();
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this, module_ptr] {
           if (!module_ptr.get() || store_.terminating()) {
@@ -201,12 +201,12 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
           store_.counter.sender = kModuleName;
           store_.counter.counter += 1;
 
-          FTL_LOG(INFO) << "Module1Impl COUNT " << store_.counter.counter;
+          FXL_LOG(INFO) << "Module1Impl COUNT " << store_.counter.counter;
 
           store_.MarkDirty();
           store_.ModelChanged();
         },
-        ftl::TimeDelta::FromMilliseconds(kAnimationDelayInMs));
+        fxl::TimeDelta::FromMilliseconds(kAnimationDelayInMs));
   }
 
   // This is a ServiceProvider we expose to our parent (recipe) module, to
@@ -221,9 +221,9 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
 
   // Note: This should remain the last member so it'll be destroyed and
   // invalidate its weak pointers before any other members are destroyed.
-  ftl::WeakPtrFactory<Module1App> weak_ptr_factory_;
+  fxl::WeakPtrFactory<Module1App> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Module1App);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Module1App);
 };
 
 }  // namespace

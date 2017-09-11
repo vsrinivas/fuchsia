@@ -10,7 +10,7 @@
 
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -37,7 +37,7 @@ class ProxySet {
   void Drop(ProxyBase* proxy);
 
   std::vector<std::unique_ptr<ProxyBase>> proxies_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(ProxySet);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ProxySet);
 };
 
 // Used internally by ProxySet, but needs to be here because it supports the
@@ -53,7 +53,7 @@ class ProxyBase {
  private:
   ProxySet* const set_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ProxyBase);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ProxyBase);
 };
 
 // Used internally by ProxySet, but needs to be here because it is a
@@ -70,7 +70,7 @@ class Proxy : public ProxyBase {
   fidl::InterfacePtr<I> ptr_;
   fidl::Binding<I> binding_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Proxy);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Proxy);
 };
 
 template <typename I>

@@ -9,8 +9,8 @@
 #include "apps/modular/lib/fidl/operation.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -47,7 +47,7 @@ class ConflictResolverImpl : ledger::ConflictResolverFactory,
   fidl::BindingSet<ledger::ConflictResolverFactory> factory_bindings_;
   fidl::BindingSet<ledger::ConflictResolver> bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ConflictResolverImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ConflictResolverImpl);
 };
 
 }  // namespace modular

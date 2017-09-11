@@ -39,7 +39,7 @@ class StoryProviderWatcherBase : modular::StoryProviderWatcher {
                 modular::StoryState story_state) override;
 
   fidl::Binding<modular::StoryProviderWatcher> binding_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderWatcherBase);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StoryProviderWatcherBase);
 };
 
 }  // namespace modular

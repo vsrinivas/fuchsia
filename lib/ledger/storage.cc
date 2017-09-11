@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "apps/modular/lib/util/string_escape.h"
-#include "lib/ftl/strings/join_strings.h"
+#include "lib/fxl/strings/join_strings.h"
 
 namespace modular {
 
@@ -87,7 +87,7 @@ std::string EncodeModulePath(const fidl::Array<fidl::String>& module_path) {
     segments.emplace_back(
         StringEscape(module_path_part.get(), kCharsToEscape, kEscaper));
   }
-  return ftl::JoinStrings(segments, kSubSeparator);
+  return fxl::JoinStrings(segments, kSubSeparator);
 }
 
 std::string EncodeLinkPath(const LinkPathPtr& link_path) {

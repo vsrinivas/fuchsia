@@ -20,7 +20,7 @@
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -69,7 +69,7 @@ class UserControllerImpl : UserController, UserContext {
   std::vector<LogoutCallback> logout_response_callbacks_;
   DoneCallback done_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(UserControllerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(UserControllerImpl);
 };
 
 }  // namespace modular

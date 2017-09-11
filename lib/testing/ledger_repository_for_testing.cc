@@ -38,7 +38,7 @@ ledger::LedgerRepository* LedgerRepositoryForTesting::ledger_repository() {
     ledger_repo_factory_->GetRepository(
         repository_path_, nullptr, nullptr, ledger_repo_.NewRequest(),
         [this](ledger::Status status) {
-          FTL_CHECK(status == ledger::Status::OK);
+          FXL_CHECK(status == ledger::Status::OK);
         });
   }
 

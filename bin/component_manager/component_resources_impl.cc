@@ -4,7 +4,7 @@
 
 #include "apps/modular/src/component_manager/component_resources_impl.h"
 
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/vmo/strings.h"
 
@@ -30,7 +30,7 @@ void ComponentResourcesImpl::GetResource(const fidl::String& resource_name,
 
   auto i = resource_urls_.find(resource_name);
   if (i == resource_urls_.end()) {
-    FTL_LOG(ERROR) << "Requested invalid resource " << resource_name;
+    FXL_LOG(ERROR) << "Requested invalid resource " << resource_name;
     auto error = network::NetworkError::New();
     error->code = 404;
     error->description = "Not Found";

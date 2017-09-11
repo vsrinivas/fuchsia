@@ -7,8 +7,8 @@
 #include <utility>
 
 #include "apps/modular/lib/rapidjson/rapidjson.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/logging.h"
 
 namespace modular {
 
@@ -19,13 +19,13 @@ PersistentQueue::PersistentQueue(std::string file_name)
     rapidjson::Document document;
     document.Parse(contents);
     if (!document.IsArray()) {
-      FTL_LOG(ERROR) << "Expected " << file_name_ << " to contain a JSON array";
+      FXL_LOG(ERROR) << "Expected " << file_name_ << " to contain a JSON array";
       return;
     }
     for (rapidjson::Value::ConstValueIterator it = document.Begin();
          it != document.End(); ++it) {
       if (!it->IsString()) {
-        FTL_LOG(ERROR) << "Expected a string but got: " << it;
+        FXL_LOG(ERROR) << "Expected a string but got: " << it;
         continue;
       }
       queue_.emplace_back(it->GetString(), it->GetStringLength());
@@ -43,7 +43,7 @@ void PersistentQueue::Save() {
   }
   std::string contents = JsonValueToString(document);
   if (!files::WriteFile(file_name_, contents.data(), contents.size())) {
-    FTL_LOG(ERROR) << "Failed to write to: " << file_name_;
+    FXL_LOG(ERROR) << "Failed to write to: " << file_name_;
   }
 }
 

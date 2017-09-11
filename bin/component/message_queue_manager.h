@@ -21,7 +21,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -127,7 +127,7 @@ class MessageQueueManager : PageClient {
   class DeleteMessageQueueCall;
   class DeleteNamespaceCall;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MessageQueueManager);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MessageQueueManager);
 };
 
 }  // namespace modular

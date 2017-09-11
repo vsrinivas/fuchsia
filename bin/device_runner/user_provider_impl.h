@@ -64,7 +64,7 @@ class UserProviderImpl : UserProvider {
   std::unordered_map<UserControllerImpl*, std::unique_ptr<UserControllerImpl>>
       user_controllers_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(UserProviderImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(UserProviderImpl);
 };
 
 }  // namespace modular

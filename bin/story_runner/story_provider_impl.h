@@ -33,7 +33,7 @@
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 class Resolver;
@@ -256,7 +256,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   class GetImportanceCall;
   class GetLinkPeerCall;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
 };
 
 }  // namespace modular

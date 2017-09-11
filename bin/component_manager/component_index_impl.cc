@@ -11,9 +11,9 @@
 #include "apps/modular/services/component/component.fidl.h"
 #include "apps/modular/src/component_manager/component_resources_impl.h"
 #include "apps/modular/src/component_manager/make_network_error.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/vmo/strings.h"
 #include "lib/url/gurl.h"
@@ -41,7 +41,7 @@ void CopyJSONFieldToFidl(const rapidjson::Value& object,
                          const char* key,
                          fidl::String* string) {
   if (!object.IsObject()) {
-    FTL_LOG(ERROR) << "Not a JSON object";
+    FXL_LOG(ERROR) << "Not a JSON object";
     return;
   }
   auto iterator = object.FindMember(key);
@@ -49,7 +49,7 @@ void CopyJSONFieldToFidl(const rapidjson::Value& object,
     return;
   }
   if (!iterator->value.IsString()) {
-    FTL_LOG(ERROR) << "Can't copy non-string to string";
+    FXL_LOG(ERROR) << "Can't copy non-string to string";
     return;
   }
   *string = iterator->value.GetString();
@@ -102,7 +102,7 @@ bool FacetInfoMatches(const rapidjson::Value& facet_data,
   if (facet_data.IsArray()) {
     // Every array element in 'filter_data' should match an element
     // in facet_data.
-    FTL_LOG(FATAL) << "Filtering by array not implemented.";
+    FXL_LOG(FATAL) << "Filtering by array not implemented.";
     return false;
   }
   // For primitive values we can use rapidjson's comparison operator.
@@ -177,13 +177,13 @@ std::pair<ComponentManifestPtr, network::NetworkErrorPtr> ParseManifest(
     const std::string& contents) {
   rapidjson::Document doc;
   if (doc.Parse(contents.c_str()).HasParseError()) {
-    FTL_LOG(ERROR) << "Failed to parse component manifest at: " << component_id;
+    FXL_LOG(ERROR) << "Failed to parse component manifest at: " << component_id;
     return std::make_pair(
         nullptr, MakeNetworkError(0, "Failed to parse component manifest."));
   }
 
   if (!doc.IsObject()) {
-    FTL_LOG(ERROR) << "Component manifest " << component_id
+    FXL_LOG(ERROR) << "Component manifest " << component_id
                    << " is not a JSON object";
     return std::make_pair(
         nullptr,
@@ -191,7 +191,7 @@ std::pair<ComponentManifestPtr, network::NetworkErrorPtr> ParseManifest(
   }
 
   if (!doc.HasMember(kComponentFacet)) {
-    FTL_LOG(ERROR) << "Component " << component_id
+    FXL_LOG(ERROR) << "Component " << component_id
                    << " doesn't have a component facet";
     return std::make_pair(
         nullptr,
@@ -222,7 +222,7 @@ ComponentIndexImpl::ComponentIndexImpl(
   // Initialize the local index.
   {
     std::string contents;
-    FTL_CHECK(files::ReadFileToString(kLocalIndexPath, &contents));
+    FXL_CHECK(files::ReadFileToString(kLocalIndexPath, &contents));
     LoadComponentIndex(contents, kLocalIndexPath);
   }
 
@@ -231,13 +231,13 @@ ComponentIndexImpl::ComponentIndexImpl(
     resource_loader_->LoadResource(
         kCloudIndexPath, [this](mx::vmo vmo, network::NetworkErrorPtr error) {
           if (error) {
-            FTL_LOG(WARNING) << "Failed to load cloud component index";
+            FXL_LOG(WARNING) << "Failed to load cloud component index";
             return;
           }
 
           std::string contents;
           if (!mtl::StringFromVmo(vmo, &contents)) {
-            FTL_LOG(WARNING) << "Failed to make string from cloud index vmo";
+            FXL_LOG(WARNING) << "Failed to make string from cloud index vmo";
             return;
           }
 
@@ -250,11 +250,11 @@ void ComponentIndexImpl::LoadComponentIndex(const std::string& contents,
                                             const std::string& path) {
   rapidjson::Document doc;
   if (doc.Parse(contents.c_str()).HasParseError()) {
-    FTL_LOG(FATAL) << "Failed to parse JSON component index at: " << path;
+    FXL_LOG(FATAL) << "Failed to parse JSON component index at: " << path;
   }
 
   if (!doc.IsArray()) {
-    FTL_LOG(FATAL) << "Malformed component index at: " << path;
+    FXL_LOG(FATAL) << "Malformed component index at: " << path;
   }
 
   for (const rapidjson::Value& uri : doc.GetArray()) {
@@ -267,7 +267,7 @@ void ComponentIndexImpl::GetComponent(const ::fidl::String& component_id_,
   const std::string& component_id(component_id_);
   const GetComponentCallback& callback(callback_);
 
-  FTL_VLOG(1) << "ComponentIndexImpl::GetComponent(\"" << component_id << "\")";
+  FXL_VLOG(1) << "ComponentIndexImpl::GetComponent(\"" << component_id << "\")";
 
   resource_loader_->LoadResource(
       component_id, [this, component_id, callback](
@@ -280,7 +280,7 @@ void ComponentIndexImpl::GetComponent(const ::fidl::String& component_id_,
 
         std::string manifest_string;
         if (!mtl::StringFromVmo(vmo, &manifest_string)) {
-          FTL_LOG(ERROR) << "Failed to make string from manifest vmo";
+          FXL_LOG(ERROR) << "Failed to make string from manifest vmo";
           callback(nullptr, nullptr,
                    MakeNetworkError(500, "Failed to make string from vmo"));
           return;
@@ -312,7 +312,7 @@ void ComponentIndexImpl::FindComponentManifests(
     rapidjson::Document filter_doc;
     filter_doc.Parse(i.GetValue().get().c_str());
     if (filter_doc.HasParseError()) {
-      FTL_LOG(ERROR) << "Failed to parse JSON for facet " << i.GetKey() << " : "
+      FXL_LOG(ERROR) << "Failed to parse JSON for facet " << i.GetKey() << " : "
                      << i.GetValue();
       delete filter;
       callback(nullptr);

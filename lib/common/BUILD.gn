@@ -12,7 +12,7 @@ source_set("story_provider_watcher_base") {
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/services/story",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }
 

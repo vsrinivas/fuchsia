@@ -14,9 +14,9 @@
 #include "apps/modular/services/lifecycle/lifecycle.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/tasks/task_runner.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/tasks/task_runner.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {
@@ -58,8 +58,8 @@ class AppClientBase {
   // if it were impossible outright. This could be accomplished with a separate
   // Terminate interface, which would only be exposed to AppClient.
   void AppTerminate(const std::function<void()>& done,
-                    ftl::TimeDelta timeout =
-                        ftl::TimeDelta::FromSeconds(kAppClientTimeoutSeconds));
+                    fxl::TimeDelta timeout =
+                        fxl::TimeDelta::FromSeconds(kAppClientTimeoutSeconds));
 
   // Registers a handler to receive a notification when this application
   // connection encounters an error. This typically happens when this
@@ -75,7 +75,7 @@ class AppClientBase {
   const std::string url_;  // For logging only.
   app::ApplicationControllerPtr app_;
   app::ServiceProviderPtr services_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(AppClientBase);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AppClientBase);
 };
 
 // A generic client that does that the standard termination sequence. For a
@@ -106,7 +106,7 @@ class AppClient : public AppClientBase {
   void ServiceReset() override { service_.reset(); }
 
   fidl::InterfacePtr<Service> service_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(AppClient);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AppClient);
 };
 
 template <>

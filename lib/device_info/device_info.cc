@@ -8,13 +8,13 @@
 #include <unistd.h>
 
 #include "apps/modular/lib/util/filesystem.h"
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/random/uuid.h"
-#include "lib/ftl/strings/string_printf.h"
-#include "lib/ftl/strings/trim.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/random/uuid.h"
+#include "lib/fxl/strings/string_printf.h"
+#include "lib/fxl/strings/trim.h"
 
 namespace modular {
 
@@ -48,16 +48,16 @@ std::string LoadDeviceID(const std::string& user) {
   }
 
   // FIXME(zbowling): this isn't scalable
-  std::string path = ftl::StringPrintf(kDeviceIDFile, user.c_str());
+  std::string path = fxl::StringPrintf(kDeviceIDFile, user.c_str());
 
   if (!files::ReadFileToString(path, &device_id)) {
     // no existing device id. generate a UUID and store it to disk
-    device_id = ftl::GenerateUUID();
+    device_id = fxl::GenerateUUID();
     bool success = files::WriteFile(path, device_id.data(), device_id.length());
-    FTL_DCHECK(success);
+    FXL_DCHECK(success);
   }
 
-  FTL_LOG(INFO) << "device_info: syncing device id for user: " << user
+  FXL_LOG(INFO) << "device_info: syncing device id for user: " << user
                 << "   set to: " << device_id;
 
   return device_id;
@@ -71,12 +71,12 @@ std::string LoadDeviceName(const std::string& user) {
     files::CreateDirectory(kDeviceInfoDirectory);
   }
 
-  std::string path = ftl::StringPrintf(kDeviceNameFile, user.c_str());
+  std::string path = fxl::StringPrintf(kDeviceNameFile, user.c_str());
 
   if (files::ReadFileToString(path, &device_name)) {
     // Remove whitespace because vim and echo like adding a newline.
     constexpr char ws[] = " \t\n\r";
-    device_name = ftl::TrimString(device_name, ws).ToString();
+    device_name = fxl::TrimString(device_name, ws).ToString();
   }
 
   if (device_name.empty()) {
@@ -91,7 +91,7 @@ std::string LoadDeviceName(const std::string& user) {
     int result = gethostname(host_name_buffer, sizeof(host_name_buffer));
 
     if (result < 0) {
-      FTL_LOG(ERROR) << "unable to get hostname. errno " << errno;
+      FXL_LOG(ERROR) << "unable to get hostname. errno " << errno;
       device_name = "fuchsia";
     } else {
       device_name = host_name_buffer;
@@ -104,7 +104,7 @@ std::string LoadDeviceName(const std::string& user) {
     // NET-79 is fixed. (Maybe write an empty file so users can find it.)
     bool success =
         files::WriteFile(path, device_name.data(), device_name.length());
-    FTL_DCHECK(success);
+    FXL_DCHECK(success);
   }
 
   return device_name;

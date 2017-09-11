@@ -81,7 +81,7 @@ class SuggestionApp : modular::testing::ComponentBase<modular::Module> {
     // time out.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         Protect([this] { DeleteAndQuit([] {}); }),
-        ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
+        fxl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
   }
 
   // |Lifecycle|

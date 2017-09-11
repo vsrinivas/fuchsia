@@ -10,7 +10,7 @@
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/fidl/cpp/bindings/array.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/time/time_point.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace modular {
@@ -73,7 +73,7 @@ void FocusHandler::Set(const fidl::String& story_id) {
   data->device_id = device_id_;
   data->focused_story_id = story_id;
   data->last_focus_change_timestamp =
-      ftl::TimePoint::Now().ToEpochDelta().ToSeconds();
+      fxl::TimePoint::Now().ToEpochDelta().ToSeconds();
 
   new WriteDataCall<FocusInfo, fidl::InlinedStructPtr<FocusInfo>>(
       &operation_queue_, page(), MakeFocusKey(device_id_), XdrFocusInfo,

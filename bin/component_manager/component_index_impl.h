@@ -10,7 +10,7 @@
 #include "apps/modular/src/component_manager/resource_loader.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace component {
 
@@ -36,7 +36,7 @@ class ComponentIndexImpl : public ComponentIndex {
   fidl::BindingSet<ComponentResources, std::unique_ptr<ComponentResourcesImpl>>
       resources_bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ComponentIndexImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ComponentIndexImpl);
 };
 
 }  // namespace component

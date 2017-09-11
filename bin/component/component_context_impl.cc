@@ -8,7 +8,7 @@
 
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/src/agent_runner/agent_runner.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace modular {
 
@@ -22,9 +22,9 @@ ComponentContextImpl::ComponentContextImpl(const ComponentContextInfo& info,
       component_namespace_(std::move(component_namespace)),
       component_instance_id_(std::move(component_instance_id)),
       component_url_(std::move(component_url)) {
-  FTL_DCHECK(message_queue_manager_);
-  FTL_DCHECK(agent_runner_);
-  FTL_DCHECK(ledger_repository_);
+  FXL_DCHECK(message_queue_manager_);
+  FXL_DCHECK(agent_runner_);
+  FXL_DCHECK(ledger_repository_);
 }
 
 ComponentContextImpl::~ComponentContextImpl() = default;

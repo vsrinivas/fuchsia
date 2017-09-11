@@ -17,18 +17,18 @@
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/tasks/task_runner.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/tasks/task_runner.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
 
 class Settings {
  public:
-  explicit Settings(const ftl::CommandLine& command_line) {
+  explicit Settings(const fxl::CommandLine& command_line) {
     first_module = command_line.GetOptionValueWithDefault(
         "first_module", "file:///system/apps/modular_tests/null_module");
     second_module = command_line.GetOptionValueWithDefault(
@@ -71,7 +71,7 @@ class StoryDoneWatcherImpl : modular::StoryWatcher {
 
   // |StoryWatcher|
   void OnModuleAdded(modular::ModuleDataPtr module_data) override {
-    FTL_LOG(INFO) << "OnModuleAdded: " << module_data->module_url;
+    FXL_LOG(INFO) << "OnModuleAdded: " << module_data->module_url;
     if (!on_module_added_called_) {
       on_module_added_.Pass();
       on_module_added_called_ = true;
@@ -82,7 +82,7 @@ class StoryDoneWatcherImpl : modular::StoryWatcher {
   std::function<void()> continue_;
   modular::testing::TestPoint on_module_added_{"OnModuleAdded"};
   bool on_module_added_called_ = false;
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryDoneWatcherImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StoryDoneWatcherImpl);
 };
 
 // A simple story modules watcher implementation that just logs the
@@ -98,7 +98,7 @@ class StoryModulesWatcherImpl : modular::StoryModulesWatcher {
     (*story_controller)
         ->GetActiveModules(binding_.NewBinding(),
                            [this](fidl::Array<modular::ModuleDataPtr> data) {
-                             FTL_LOG(INFO)
+                             FXL_LOG(INFO)
                                  << "StoryModulesWatcherImpl GetModules(): "
                                  << data.size() << " modules";
                            });
@@ -110,16 +110,16 @@ class StoryModulesWatcherImpl : modular::StoryModulesWatcher {
  private:
   // |StoryModulesWatcher|
   void OnNewModule(modular::ModuleDataPtr data) override {
-    FTL_LOG(INFO) << "New Module: " << data->module_url;
+    FXL_LOG(INFO) << "New Module: " << data->module_url;
   }
 
   // |StoryModulesWatcher|
   void OnStopModule(modular::ModuleDataPtr data) override {
-    FTL_LOG(INFO) << "Stop Module: " << data->module_url;
+    FXL_LOG(INFO) << "Stop Module: " << data->module_url;
   }
 
   fidl::Binding<modular::StoryModulesWatcher> binding_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryModulesWatcherImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StoryModulesWatcherImpl);
 };
 
 // A simple story links watcher implementation that just logs the notifications
@@ -135,7 +135,7 @@ class StoryLinksWatcherImpl : modular::StoryLinksWatcher {
     (*story_controller)
         ->GetActiveLinks(binding_.NewBinding(),
                          [this](fidl::Array<modular::LinkPathPtr> data) {
-                           FTL_LOG(INFO) << "StoryLinksWatcherImpl GetLinks(): "
+                           FXL_LOG(INFO) << "StoryLinksWatcherImpl GetLinks(): "
                                          << data.size() << " links";
                          });
   }
@@ -146,11 +146,11 @@ class StoryLinksWatcherImpl : modular::StoryLinksWatcher {
  private:
   // |StoryLinksWatcher|
   void OnNewLink(modular::LinkPathPtr data) override {
-    FTL_LOG(INFO) << "New Link: " << data->link_name;
+    FXL_LOG(INFO) << "New Link: " << data->link_name;
   }
 
   fidl::Binding<modular::StoryLinksWatcher> binding_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryLinksWatcherImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StoryLinksWatcherImpl);
 };
 
 // A simple story provider watcher implementation. Just logs observed state
@@ -175,7 +175,7 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
 
   // |StoryProviderWatcher|
   void OnDelete(const fidl::String& story_id) override {
-    FTL_LOG(INFO) << "StoryProviderStateWatcherImpl::OnDelete() " << story_id;
+    FXL_LOG(INFO) << "StoryProviderStateWatcherImpl::OnDelete() " << story_id;
 
     if (++on_delete_called_ == 1) {
       on_delete_called_once_.Pass();
@@ -202,12 +202,12 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
   // |StoryProviderWatcher|
   void OnChange(const modular::StoryInfoPtr story_info,
                 const modular::StoryState story_state) override {
-    FTL_LOG(INFO) << "StoryProviderStateWatcherImpl::OnChange() "
+    FXL_LOG(INFO) << "StoryProviderStateWatcherImpl::OnChange() "
                   << " id " << story_info->id << " state " << story_state
                   << " url " << story_info->url;
 
     if (deleted_stories_.find(story_info->id) != deleted_stories_.end()) {
-      FTL_LOG(ERROR) << "Status change notification for deleted story "
+      FXL_LOG(ERROR) << "Status change notification for deleted story "
                      << story_info->id;
       modular::testing::Fail("Status change notification for deleted story");
     }
@@ -216,7 +216,7 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
     // state notifications at all from the story provider.
     switch (story_state) {
       case modular::StoryState::INITIAL:
-        FTL_CHECK(story_state != modular::StoryState::INITIAL);
+        FXL_CHECK(story_state != modular::StoryState::INITIAL);
         // Doesn't happen in this test, presumably because of the STOPPED
         // StoryState HACK(jimbe) in StoryProviderImpl::OnChange().
         break;
@@ -242,7 +242,7 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
         break;
       case modular::StoryState::ERROR:
         // Doesn't happen in this test.
-        FTL_CHECK(story_state != modular::StoryState::ERROR);
+        FXL_CHECK(story_state != modular::StoryState::ERROR);
         break;
     }
   }
@@ -253,7 +253,7 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
   // change notifications for it.
   std::set<std::string> deleted_stories_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderStateWatcherImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StoryProviderStateWatcherImpl);
 };
 
 // Tests the machinery available to a user shell implementation. This is invoked
@@ -351,10 +351,10 @@ class TestUserShellApp : modular::testing::ComponentBase<modular::UserShell> {
             ++*count;
 
             if (!story_info.is_null()) {
-              FTL_LOG(INFO) << "Previous story " << *count << " of " << max
+              FXL_LOG(INFO) << "Previous story " << *count << " of " << max
                             << " " << story_id << " " << story_info->url;
             } else {
-              FTL_LOG(INFO) << "Previous story " << *count << " of " << max
+              FXL_LOG(INFO) << "Previous story " << *count << " of " << max
                             << " " << story_id << " was deleted";
             }
 
@@ -461,11 +461,11 @@ class TestUserShellApp : modular::testing::ComponentBase<modular::UserShell> {
         [this](fidl::Array<modular::ModuleDataPtr> modules) {
           story2_get_modules_.Pass();
 
-          FTL_LOG(INFO) << "TestUserShell MODULES:";
+          FXL_LOG(INFO) << "TestUserShell MODULES:";
           for (const auto& module_data : modules) {
-            FTL_LOG(INFO) << "TestUserShell MODULE: url="
+            FXL_LOG(INFO) << "TestUserShell MODULE: url="
                           << module_data->module_url;
-            FTL_LOG(INFO) << "TestUserShell         link="
+            FXL_LOG(INFO) << "TestUserShell         link="
                           << module_data->link_path->link_name;
             std::string path;
             for (const auto& path_element : module_data->module_path) {
@@ -473,7 +473,7 @@ class TestUserShellApp : modular::testing::ComponentBase<modular::UserShell> {
               path.append(path_element);
             }
             if (!path.empty()) {
-              FTL_LOG(INFO) << "TestUserShell         path=" << path.substr(1);
+              FXL_LOG(INFO) << "TestUserShell         path=" << path.substr(1);
             }
           }
 
@@ -488,7 +488,7 @@ class TestUserShellApp : modular::testing::ComponentBase<modular::UserShell> {
     story_controller_->GetInfo(
         [this](modular::StoryInfoPtr info, modular::StoryState state) {
           story2_info_before_run_.Pass();
-          FTL_LOG(INFO) << "StoryState before Start(): " << state;
+          FXL_LOG(INFO) << "StoryState before Start(): " << state;
 
           if (state != modular::StoryState::INITIAL &&
               state != modular::StoryState::STOPPED) {
@@ -505,7 +505,7 @@ class TestUserShellApp : modular::testing::ComponentBase<modular::UserShell> {
                                       modular::StoryState state) {
       story2_run_.Pass();
 
-      FTL_LOG(INFO) << "StoryState after Start(): " << state;
+      FXL_LOG(INFO) << "StoryState after Start(): " << state;
 
       if (state != modular::StoryState::STARTING &&
           state != modular::StoryState::RUNNING) {
@@ -514,7 +514,7 @@ class TestUserShellApp : modular::testing::ComponentBase<modular::UserShell> {
       }
 
       mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-          [this] { TestStory2_DeleteStory(); }, ftl::TimeDelta::FromSeconds(5));
+          [this] { TestStory2_DeleteStory(); }, fxl::TimeDelta::FromSeconds(5));
     });
   }
 
@@ -569,13 +569,13 @@ class TestUserShellApp : modular::testing::ComponentBase<modular::UserShell> {
   modular::LinkPtr user_shell_link_;
   modular::StoryInfoPtr story_info_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestUserShellApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestUserShellApp);
 };
 
 }  // namespace
 
 int main(int argc, const char** argv) {
-  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   Settings settings(command_line);
 
   mtl::MessageLoop loop;

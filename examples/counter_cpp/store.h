@@ -95,7 +95,7 @@ class Store : modular::LinkWatcher {
   bool dirty_{};
   bool terminating_{};
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Store);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Store);
 };
 
 }  // namespace modular_example

@@ -29,9 +29,9 @@
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {
@@ -40,7 +40,7 @@ namespace {
 
 class Settings {
  public:
-  explicit Settings(const ftl::CommandLine& command_line) {
+  explicit Settings(const fxl::CommandLine& command_line) {
     device_shell.url = command_line.GetOptionValueWithDefault(
         "device_shell", "file:///system/apps/userpicker_device_shell");
     story_shell.url = command_line.GetOptionValueWithDefault(
@@ -171,7 +171,7 @@ class Settings {
     return result.substr(index + 1);
   }
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Settings);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Settings);
 };
 
 class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
@@ -184,7 +184,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
         account_provider_context_binding_(this) {
     // 0a. Check if environment handle / services have been initialized.
     if (!app_context_->has_environment_services()) {
-      FTL_LOG(ERROR) << "Failed to receive services from the environment.";
+      FXL_LOG(ERROR) << "Failed to receive services from the environment.";
       exit(1);
     }
 
@@ -198,13 +198,13 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
       app_context_->ConnectToEnvironmentService(monitor_.NewRequest());
 
       monitor_.set_connection_error_handler([] {
-        FTL_LOG(ERROR) << "No device runner monitor found.";
+        FXL_LOG(ERROR) << "No device runner monitor found.";
         exit(1);
       });
 
       monitor_->GetConnectionCount([this](uint32_t count) {
         if (count != 1) {
-          FTL_LOG(ERROR) << "Another device runner is running."
+          FXL_LOG(ERROR) << "Another device runner is running."
                          << " Please use that one, or shut it down first.";
           exit(1);
         }
@@ -218,7 +218,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
   void Start() {
     // 0. Print test banner.
     if (settings_.test) {
-      FTL_LOG(INFO)
+      FXL_LOG(INFO)
           << std::endl
           << std::endl
           << "======================== Starting Test [" << settings_.test_name
@@ -262,7 +262,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
         app_context_->launcher().get(), std::move(token_manager_config),
         "/data/modular/ACCOUNT_MANAGER");
     token_manager_->SetAppErrorHandler([] {
-      FTL_CHECK(false) << "Token manager crashed. Stopping device runner.";
+      FXL_CHECK(false) << "Token manager crashed. Stopping device runner.";
     });
     token_manager_->primary_service()->Initialize(
         account_provider_context_binding_.NewBinding());
@@ -285,10 +285,10 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // arbitrary. We terminate device shell last so that in tests
     // testing::Teardown() is invoked at the latest possible time. Right now it
     // just demonstrates that AppTerminate() works as we like it to.
-    FTL_DLOG(INFO) << "DeviceShellContext::Shutdown()";
+    FXL_DLOG(INFO) << "DeviceShellContext::Shutdown()";
 
     if (settings_.test) {
-      FTL_LOG(INFO)
+      FXL_LOG(INFO)
           << std::endl
           << "============================================================"
           << std::endl
@@ -296,12 +296,12 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     }
 
     user_provider_impl_->Teardown([this] {
-      FTL_DLOG(INFO) << "- UserProvider down";
+      FXL_DLOG(INFO) << "- UserProvider down";
       token_manager_->AppTerminate([this] {
-        FTL_DLOG(INFO) << "- AuthProvider down";
+        FXL_DLOG(INFO) << "- AuthProvider down";
         device_shell_->AppTerminate([this] {
-          FTL_DLOG(INFO) << "- DeviceShell down";
-          FTL_LOG(INFO) << "Clean Shutdown";
+          FXL_DLOG(INFO) << "- DeviceShell down";
+          FXL_LOG(INFO) << "Clean Shutdown";
           mtl::MessageLoop::GetCurrent()->QuitNow();
         });
       });
@@ -328,14 +328,14 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
   std::unique_ptr<AppClient<auth::AccountProvider>> token_manager_;
   std::unique_ptr<AppClient<DeviceShell>> device_shell_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerApp);
 };
 
 }  // namespace
 }  // namespace modular
 
 int main(int argc, const char** argv) {
-  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (command_line.HasOption("help")) {
     std::cout << modular::Settings::GetUsage() << std::endl;
     return 0;

@@ -9,7 +9,7 @@
 #include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {
@@ -101,9 +101,9 @@ class ComponentBase : protected SingleServiceApp<Component> {
   // cannot be used to protect code executed in member destructors against
   // accessing this. But it is enough to protect callbacks sent to the runloop
   // against execution after the instance is deleted.
-  ftl::WeakPtrFactory<ComponentBase> weak_factory_;
+  fxl::WeakPtrFactory<ComponentBase> weak_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ComponentBase);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ComponentBase);
 };
 
 }  // namespace testing

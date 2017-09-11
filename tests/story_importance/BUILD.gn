@@ -29,7 +29,7 @@ executable("test_story_importance") {
     "//garnet/public/lib/ui/views/fidl",
     "//apps/test_runner/services:test_runner",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/mtl",
   ]
 }

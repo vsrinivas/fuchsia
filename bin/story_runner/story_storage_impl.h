@@ -144,7 +144,7 @@ class StoryStorageImpl : PageClient, public LinkStorage {
   class WriteIncrementalLinkDataCall;
   class FlushWatchersCall;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryStorageImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StoryStorageImpl);
 };
 
 }  // namespace modular

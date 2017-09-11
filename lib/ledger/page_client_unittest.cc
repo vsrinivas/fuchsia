@@ -8,7 +8,7 @@
 #include "apps/modular/lib/testing/ledger_repository_for_testing.h"
 #include "apps/modular/lib/testing/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 namespace testing {
@@ -27,7 +27,7 @@ class PageClientImpl : PageClient {
 
     values_[key] = value;
 
-    FTL_LOG(INFO) << "OnPageChange \"" << prefix() << "\""
+    FXL_LOG(INFO) << "OnPageChange \"" << prefix() << "\""
                   << " " << change_count_
                   << " " << key << " " << value;
   }
@@ -35,7 +35,7 @@ class PageClientImpl : PageClient {
   void OnPageConflict(Conflict* const conflict) override {
     ++conflict_count_;
 
-    FTL_LOG(INFO) << "OnPageConflict " << prefix()
+    FXL_LOG(INFO) << "OnPageConflict " << prefix()
                   << " " << conflict_count_
                   << " " << conflict->key
                   << " " << conflict->left
@@ -162,7 +162,7 @@ class PageClientTest : public TestWithMessageLoop {
       // Occasionally they take much longer, presumably because of load on
       // shared machines. With the default timeout, we see flakiness. Cf.
       // FW-287.
-      ftl::TimeDelta::FromSeconds(10));
+      fxl::TimeDelta::FromSeconds(10));
   }
 
  private:
@@ -187,7 +187,7 @@ class PageClientTest : public TestWithMessageLoop {
   bool finished_{};
   bool resolved_{};
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageClientTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageClientTest);
 };
 
 TEST_F(PageClientTest, SimpleWrite) {

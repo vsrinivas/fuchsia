@@ -17,7 +17,7 @@
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 
@@ -117,7 +117,7 @@ class ModuleContextImpl : ModuleContext {
   // ModuleContextImpl instance represents.
   fidl::Binding<ModuleContext> binding_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ModuleContextImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ModuleContextImpl);
 };
 
 }  // namespace modular

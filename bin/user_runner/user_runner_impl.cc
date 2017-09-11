@@ -35,10 +35,10 @@
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {
@@ -108,7 +108,7 @@ void UserRunnerImpl::Initialize(
   user_shell_ = std::make_unique<AppClient<UserShell>>(
       user_scope_->GetLauncher(), std::move(user_shell));
   user_shell_->SetAppErrorHandler([this] {
-    FTL_LOG(ERROR) << "User Shell seems to have crashed unexpectedly."
+    FXL_LOG(ERROR) << "User Shell seems to have crashed unexpectedly."
                    << "Logging out.";
     Logout();
   });
@@ -152,7 +152,7 @@ void UserRunnerImpl::Initialize(
   std::string message_queue_path = kMessageQueuePath;
   message_queue_path.append(GetAccountId(account));
   if (!files::CreateDirectory(message_queue_path)) {
-    FTL_LOG(FATAL) << "Failed to create message queue directory: "
+    FXL_LOG(FATAL) << "Failed to create message queue directory: "
                    << message_queue_path;
   }
 
@@ -268,7 +268,7 @@ void UserRunnerImpl::Initialize(
 }
 
 void UserRunnerImpl::Terminate() {
-  FTL_LOG(INFO) << "UserRunner::Terminate()";
+  FXL_LOG(INFO) << "UserRunner::Terminate()";
 
   // We need to Terminate() every member that has life cycle here. In addition,
   // everything that has fidl connections to something that is told to
@@ -296,7 +296,7 @@ void UserRunnerImpl::Terminate() {
   // This list is the reverse from the initialization order executed in
   // Initialize() above.
   user_shell_->AppTerminate([this] {
-      FTL_DLOG(INFO) << "- UserShell down";
+      FXL_DLOG(INFO) << "- UserShell down";
       user_shell_.reset();
 
       visible_stories_handler_.reset();
@@ -307,18 +307,18 @@ void UserRunnerImpl::Terminate() {
       // to go away while they are still running. On the other hand agents are
       // meant to outlive story lifetimes.
       story_provider_impl_->Teardown([this] {
-          FTL_DLOG(INFO) << "- StoryProvider down";
+          FXL_DLOG(INFO) << "- StoryProvider down";
           story_provider_impl_.reset();
 
           user_intelligence_provider_.reset();
           maxwell_->AppTerminate([this] {
-              FTL_DLOG(INFO) << "- Maxwell down";
+              FXL_DLOG(INFO) << "- Maxwell down";
               maxwell_.reset();
               maxwell_component_context_binding_.reset();
               maxwell_component_context_impl_.reset();
 
               agent_runner_->Teardown([this] {
-                  FTL_DLOG(INFO) << "- AgentRunner down";
+                  FXL_DLOG(INFO) << "- AgentRunner down";
                   agent_runner_.reset();
                   agent_runner_storage_.reset();
 
@@ -331,7 +331,7 @@ void UserRunnerImpl::Terminate() {
                   ledger_repository_factory_.reset();
 
                   ledger_app_client_->AppTerminate([this] {
-                      FTL_DLOG(INFO) << "- Ledger down";
+                      FXL_DLOG(INFO) << "- Ledger down";
                       ledger_app_client_.reset();
                       user_shell_.reset();
                       user_scope_.reset();
@@ -339,7 +339,7 @@ void UserRunnerImpl::Terminate() {
                       user_context_.reset();
                       token_provider_factory_.reset();
 
-                      FTL_LOG(INFO) << "UserRunner::Terminate(): done";
+                      FXL_LOG(INFO) << "UserRunner::Terminate(): done";
                       mtl::MessageLoop::GetCurrent()->QuitNow();
                     });
                 });
@@ -431,7 +431,7 @@ void UserRunnerImpl::LogoutAndResetLedgerState() {
       std::move(ledger_token_provider_for_erase),
       [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR) << "EraseRepository failed: " << status
+          FXL_LOG(ERROR) << "EraseRepository failed: " << status
                          << "Logging out.";
         }
         user_context_->Logout();
@@ -448,7 +448,7 @@ void UserRunnerImpl::SetupLedger() {
       std::make_unique<AppClient<ledger::LedgerController>>(
           user_scope_->GetLauncher(), std::move(ledger_config), "/data/LEDGER");
   ledger_app_client_->SetAppErrorHandler([this] {
-    FTL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly." << std::endl
+    FXL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly." << std::endl
                    << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
     Logout();
   });
@@ -472,7 +472,7 @@ void UserRunnerImpl::SetupLedger() {
       "/data", std::move(firebase_config), std::move(ledger_token_provider),
       ledger_repository_.NewRequest(), [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR)
+          FXL_LOG(ERROR)
               << "LedgerRepositoryFactory.GetRepository() failed: "
               << LedgerStatusToString(status) << std::endl
               << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
@@ -487,7 +487,7 @@ void UserRunnerImpl::SetupLedger() {
   ledger_client_.reset(new LedgerClient(
       ledger_repository_.get(), kAppId,
       [this] {
-        FTL_LOG(ERROR) << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
+        FXL_LOG(ERROR) << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
         Logout();
       }));
 }

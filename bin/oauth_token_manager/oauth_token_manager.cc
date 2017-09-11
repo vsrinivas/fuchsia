@@ -27,14 +27,14 @@
 #include "apps/web_runner/services/web_view.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/files/path.h"
-#include "lib/ftl/log_settings_command_line.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/join_strings.h"
-#include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/files/path.h"
+#include "lib/fxl/log_settings_command_line.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/join_strings.h"
+#include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
@@ -126,7 +126,7 @@ const ::auth::CredentialStore* ParseCredsFile() {
 
   std::string serialized_creds;
   if (!files::ReadFileToString(kCredentialsFile, &serialized_creds)) {
-    FTL_LOG(WARNING) << "Unable to read user configuration file at: "
+    FXL_LOG(WARNING) << "Unable to read user configuration file at: "
                      << kCredentialsFile;
     return nullptr;
   }
@@ -135,7 +135,7 @@ const ::auth::CredentialStore* ParseCredsFile() {
       reinterpret_cast<const unsigned char*>(serialized_creds.data()),
       serialized_creds.size());
   if (!::auth::VerifyCredentialStoreBuffer(verifier)) {
-    FTL_LOG(WARNING) << "Unable to verify credentials buffer:"
+    FXL_LOG(WARNING) << "Unable to verify credentials buffer:"
                      << serialized_creds.data();
     return nullptr;
   }
@@ -150,19 +150,19 @@ bool WriteCredsFile(const std::string& serialized_creds) {
       reinterpret_cast<const unsigned char*>(serialized_creds.data()),
       serialized_creds.size());
   if (!::auth::VerifyCredentialStoreBuffer(verifier)) {
-    FTL_LOG(ERROR) << "Unable to verify credentials buffer:"
+    FXL_LOG(ERROR) << "Unable to verify credentials buffer:"
                    << serialized_creds.data();
     return false;
   }
 
   if (!files::CreateDirectory(files::GetDirectoryName(kCredentialsFile))) {
-    FTL_LOG(ERROR) << "Unable to create directory for " << kCredentialsFile;
+    FXL_LOG(ERROR) << "Unable to create directory for " << kCredentialsFile;
     return false;
   }
 
   if (!files::WriteFile(kCredentialsFile, serialized_creds.data(),
                         serialized_creds.size())) {
-    FTL_LOG(ERROR) << "Unable to write file " << kCredentialsFile;
+    FXL_LOG(ERROR) << "Unable to write file " << kCredentialsFile;
     return false;
   }
 
@@ -173,13 +173,13 @@ bool WriteCredsFile(const std::string& serialized_creds) {
 // or account not found, an empty token is returned.
 std::string GetRefreshTokenFromCredsFile(const std::string& account_id) {
   if (account_id.empty()) {
-    FTL_LOG(ERROR) << "Account id is empty.";
+    FXL_LOG(ERROR) << "Account id is empty.";
     return "";
   }
 
   const ::auth::CredentialStore* credentials_storage = ParseCredsFile();
   if (credentials_storage == nullptr) {
-    FTL_LOG(ERROR) << "Failed to parse credentials.";
+    FXL_LOG(ERROR) << "Failed to parse credentials.";
     return "";
   }
 
@@ -190,7 +190,7 @@ std::string GetRefreshTokenFromCredsFile(const std::string& account_id) {
           case ::auth::IdentityProvider_GOOGLE:
             return token->refresh_token()->str();
           default:
-            FTL_LOG(WARNING) << "Unrecognized IdentityProvider"
+            FXL_LOG(WARNING) << "Unrecognized IdentityProvider"
                              << token->identity_provider();
         }
       }
@@ -213,8 +213,8 @@ void Post(const std::string& request_body,
 
   mx::vmo data;
   auto result = mtl::VmoFromString(encoded_request_body, &data);
-  FTL_VLOG(1) << "Post Data:" << encoded_request_body;
-  FTL_DCHECK(result);
+  FXL_VLOG(1) << "Post Data:" << encoded_request_body;
+  FXL_DCHECK(result);
 
   network::URLRequestPtr request(network::URLRequest::New());
   request->url = url;
@@ -225,7 +225,7 @@ void Post(const std::string& request_body,
   network::HttpHeaderPtr content_length_header = network::HttpHeader::New();
   content_length_header->name = "Content-length";
   uint64_t data_size = encoded_request_body.length();
-  content_length_header->value = ftl::NumberToString(data_size);
+  content_length_header->value = fxl::NumberToString(data_size);
   request->headers.push_back(std::move(content_length_header));
 
   // content-type header.
@@ -252,7 +252,7 @@ void Post(const std::string& request_body,
                                          set_token_callback](
                                             network::URLResponsePtr response) {
 
-    FTL_VLOG(1) << "URL Loader response:"
+    FXL_VLOG(1) << "URL Loader response:"
                 << std::to_string(response->status_code);
 
     if (!response->error.is_null()) {
@@ -265,7 +265,7 @@ void Post(const std::string& request_body,
 
     std::string response_body;
     if (!response->body.is_null()) {
-      FTL_DCHECK(response->body->is_stream());
+      FXL_DCHECK(response->body->is_stream());
       // TODO(alhaad/ukode): Use non-blocking variant.
       if (!mtl::BlockingCopyToString(std::move(response->body->get_stream()),
                                      &response_body)) {
@@ -346,7 +346,7 @@ void Get(
 
     std::string response_body;
     if (!response->body.is_null()) {
-      FTL_DCHECK(response->body->is_stream());
+      FXL_DCHECK(response->body->is_stream());
       // TODO(alhaad/ukode): Use non-blocking variant.
       if (!mtl::BlockingCopyToString(std::move(response->body->get_stream()),
                                      &response_body)) {
@@ -479,7 +479,7 @@ class OAuthTokenManagerApp : AccountProvider {
   class GoogleRevokeTokensCall;
   class GoogleProfileAttributesCall;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(OAuthTokenManagerApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(OAuthTokenManagerApp);
 };
 
 class OAuthTokenManagerApp::TokenProviderFactoryImpl : TokenProviderFactory,
@@ -505,13 +505,13 @@ class OAuthTokenManagerApp::TokenProviderFactoryImpl : TokenProviderFactory,
 
   // |TokenProvider|
   void GetAccessToken(const GetAccessTokenCallback& callback) override {
-    FTL_DCHECK(app_);
+    FXL_DCHECK(app_);
     app_->RefreshToken(account_id_, ACCESS_TOKEN, callback);
   }
 
   // |TokenProvider|
   void GetIdToken(const GetIdTokenCallback& callback) override {
-    FTL_DCHECK(app_);
+    FXL_DCHECK(app_);
     app_->RefreshToken(account_id_, ID_TOKEN, callback);
   }
 
@@ -519,13 +519,13 @@ class OAuthTokenManagerApp::TokenProviderFactoryImpl : TokenProviderFactory,
   void GetFirebaseAuthToken(
       const fidl::String& firebase_api_key,
       const GetFirebaseAuthTokenCallback& callback) override {
-    FTL_DCHECK(app_);
+    FXL_DCHECK(app_);
 
     // Oauth id token is used as input to fetch firebase auth token.
     GetIdToken([ this, firebase_api_key = firebase_api_key, callback ](
         const std::string id_token, const modular::auth::AuthErrPtr auth_err) {
       if (auth_err->status != Status::OK) {
-        FTL_LOG(ERROR) << "Error in refreshing Idtoken.";
+        FXL_LOG(ERROR) << "Error in refreshing Idtoken.";
         modular::auth::AuthErrPtr ae = auth::AuthErr::New();
         ae->status = auth_err->status;
         ae->message = auth_err->message;
@@ -549,7 +549,7 @@ class OAuthTokenManagerApp::TokenProviderFactoryImpl : TokenProviderFactory,
 
   OAuthTokenManagerApp* const app_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TokenProviderFactoryImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TokenProviderFactoryImpl);
 };
 
 class OAuthTokenManagerApp::GoogleFirebaseTokensCall
@@ -605,8 +605,8 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
 
   // Fetch fresh firebase auth token by exchanging idToken from Google.
   void FetchFirebaseToken(FlowToken flow) {
-    FTL_DCHECK(!id_token_.empty());
-    FTL_DCHECK(!firebase_api_key_.empty());
+    FXL_DCHECK(!id_token_.empty());
+    FXL_DCHECK(!firebase_api_key_.empty());
 
     // JSON post request body
     const std::string json_request_body =
@@ -629,12 +629,12 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
     Post(json_request_body, url_loader_.get(), url,
          [this, branch] {
            std::unique_ptr<FlowToken> flow = branch.Continue();
-           FTL_CHECK(flow);
+           FXL_CHECK(flow);
            Success(*flow);
          },
          [this, branch](const Status status, const std::string error_message) {
            std::unique_ptr<FlowToken> flow = branch.Continue();
-           FTL_CHECK(flow);
+           FXL_CHECK(flow);
            Failure(*flow, status, error_message);
          },
          [this](rapidjson::Document doc) {
@@ -645,12 +645,12 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
   // Parses firebase jwt auth token from firebase auth endpoint response and
   // saves it to local token in-memory cache.
   bool GetFirebaseToken(rapidjson::Document jwt_token) {
-    FTL_VLOG(1) << "Firebase Token: "
+    FXL_VLOG(1) << "Firebase Token: "
                 << modular::JsonValueToPrettyString(jwt_token);
 
     if (!jwt_token.HasMember("idToken") || !jwt_token.HasMember("localId") ||
         !jwt_token.HasMember("email") || !jwt_token.HasMember("expiresIn")) {
-      FTL_LOG(ERROR)
+      FXL_LOG(ERROR)
           << "Firebase Token returned from server is missing "
           << "either idToken or email or localId fields. Returned token: "
           << modular::JsonValueToPrettyString(jwt_token);
@@ -661,7 +661,7 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
     std::istringstream(jwt_token["expiresIn"].GetString()) >> expiresIn;
 
     app_->oauth_tokens_[account_id_].fb_tokens_[firebase_api_key_] = {
-        static_cast<uint64_t>(ftl::TimePoint::Now().ToEpochDelta().ToSeconds()),
+        static_cast<uint64_t>(fxl::TimePoint::Now().ToEpochDelta().ToSeconds()),
         expiresIn,
         jwt_token["idToken"].GetString(),
         jwt_token["localId"].GetString(),
@@ -673,25 +673,25 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
   // Returns true if the firebase tokens stored in cache are still valid and
   // not expired.
   bool IsCacheValid() {
-    FTL_DCHECK(app_);
-    FTL_DCHECK(!account_id_.empty());
-    FTL_DCHECK(!firebase_api_key_.empty());
+    FXL_DCHECK(app_);
+    FXL_DCHECK(!account_id_.empty());
+    FXL_DCHECK(!firebase_api_key_.empty());
 
     if (app_->oauth_tokens_[account_id_].fb_tokens_.find(firebase_api_key_) ==
         app_->oauth_tokens_[account_id_].fb_tokens_.end()) {
-      FTL_VLOG(1) << "Firebase api key: [" << firebase_api_key_
+      FXL_VLOG(1) << "Firebase api key: [" << firebase_api_key_
                   << "] not found in cache.";
       return false;
     }
 
-    uint64_t current_ts = ftl::TimePoint::Now().ToEpochDelta().ToSeconds();
+    uint64_t current_ts = fxl::TimePoint::Now().ToEpochDelta().ToSeconds();
     auto fb_token =
         app_->oauth_tokens_[account_id_].fb_tokens_[firebase_api_key_];
     uint64_t creation_ts = fb_token.creation_ts;
     uint64_t token_expiry = fb_token.expires_in;
     if ((current_ts - creation_ts) <
         (token_expiry - kPaddingForTokenExpiryInS)) {
-      FTL_VLOG(1) << "Returning firebase token for api key ["
+      FXL_VLOG(1) << "Returning firebase token for api key ["
                   << firebase_api_key_ << "] from cache. ";
       return true;
     }
@@ -723,7 +723,7 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
   void Failure(FlowToken /*flow*/,
                const Status& status,
                const std::string& error_message) {
-    FTL_LOG(ERROR) << "Failed with error status:" << status
+    FXL_LOG(ERROR) << "Failed with error status:" << status
                    << " ,and message:" << error_message;
     auth_err_ = auth::AuthErr::New();
     auth_err_->status = status;
@@ -741,7 +741,7 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
   network::NetworkServicePtr network_service_;
   network::URLLoaderPtr url_loader_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(GoogleFirebaseTokensCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(GoogleFirebaseTokensCall);
 };
 
 class OAuthTokenManagerApp::GoogleOAuthTokensCall
@@ -770,7 +770,7 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall
       return;
     }
 
-    FTL_VLOG(1) << "Fetching access/id tokens for Account_ID:" << account_id_;
+    FXL_VLOG(1) << "Fetching access/id tokens for Account_ID:" << account_id_;
     const std::string refresh_token = GetRefreshTokenFromCredsFile(account_id_);
     if (refresh_token.empty()) {
       // TODO(ukode): Need to differentiate between deleted users, users that
@@ -793,7 +793,7 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall
   // Fetch fresh access and id tokens by exchanging refresh token from Google
   // token endpoint.
   void FetchAccessAndIdToken(const std::string& refresh_token, FlowToken flow) {
-    FTL_CHECK(!refresh_token.empty());
+    FXL_CHECK(!refresh_token.empty());
 
     const std::string request_body = "refresh_token=" + refresh_token +
                                      "&client_id=" + kClientId +
@@ -810,12 +810,12 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall
     Post(request_body, url_loader_.get(), kGoogleOAuthTokenEndpoint,
          [this, branch] {
            std::unique_ptr<FlowToken> flow = branch.Continue();
-           FTL_CHECK(flow);
+           FXL_CHECK(flow);
            Success(*flow);
          },
          [this, branch](const Status status, const std::string error_message) {
            std::unique_ptr<FlowToken> flow = branch.Continue();
-           FTL_CHECK(flow);
+           FXL_CHECK(flow);
            Failure(*flow, status, error_message);
          },
          [this](rapidjson::Document doc) {
@@ -827,21 +827,21 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall
   // cache.
   bool GetShortLivedTokens(rapidjson::Document tokens) {
     if (!tokens.HasMember("access_token")) {
-      FTL_LOG(ERROR) << "Tokens returned from server does not contain "
+      FXL_LOG(ERROR) << "Tokens returned from server does not contain "
                      << "access_token. Returned token: "
                      << modular::JsonValueToPrettyString(tokens);
       return false;
     };
 
     if ((token_type_ == ID_TOKEN) && !tokens.HasMember("id_token")) {
-      FTL_LOG(ERROR) << "Tokens returned from server does not contain "
+      FXL_LOG(ERROR) << "Tokens returned from server does not contain "
                      << "id_token. Returned token: "
                      << modular::JsonValueToPrettyString(tokens);
       return false;
     }
 
     // Add the token generation timestamp to |tokens| for caching.
-    uint64_t creation_ts = ftl::TimePoint::Now().ToEpochDelta().ToSeconds();
+    uint64_t creation_ts = fxl::TimePoint::Now().ToEpochDelta().ToSeconds();
     app_->oauth_tokens_[account_id_] = {
         creation_ts,
         tokens["expires_in"].GetUint64(),
@@ -856,20 +856,20 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall
   // Returns true if the access and idtokens stored in cache are still valid and
   // not expired.
   bool IsCacheValid() {
-    FTL_DCHECK(app_);
-    FTL_DCHECK(!account_id_.empty());
+    FXL_DCHECK(app_);
+    FXL_DCHECK(!account_id_.empty());
 
     if (app_->oauth_tokens_.find(account_id_) == app_->oauth_tokens_.end()) {
-      FTL_VLOG(1) << "Account: [" << account_id_ << "] not found in cache.";
+      FXL_VLOG(1) << "Account: [" << account_id_ << "] not found in cache.";
       return false;
     }
 
-    uint64_t current_ts = ftl::TimePoint::Now().ToEpochDelta().ToSeconds();
+    uint64_t current_ts = fxl::TimePoint::Now().ToEpochDelta().ToSeconds();
     uint64_t creation_ts = app_->oauth_tokens_[account_id_].creation_ts;
     uint64_t token_expiry = app_->oauth_tokens_[account_id_].expires_in;
     if ((current_ts - creation_ts) <
         (token_expiry - kPaddingForTokenExpiryInS)) {
-      FTL_VLOG(1) << "Returning access/id tokens for account [" << account_id_
+      FXL_VLOG(1) << "Returning access/id tokens for account [" << account_id_
                   << "] from cache. ";
       return true;
     }
@@ -903,7 +903,7 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall
   void Failure(FlowToken /*flow*/,
                const Status& status,
                const std::string& error_message) {
-    FTL_LOG(ERROR) << "Failed with error status:" << status
+    FXL_LOG(ERROR) << "Failed with error status:" << status
                    << " ,and message:" << error_message;
     auth_err_ = auth::AuthErr::New();
     auth_err_->status = status;
@@ -921,7 +921,7 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall
   fidl::String result_;
   modular::auth::AuthErrPtr auth_err_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(GoogleOAuthTokensCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(GoogleOAuthTokensCall);
 };
 
 // TODO(alhaad): Use variadic template in |Operation|. That way, parameters to
@@ -961,7 +961,7 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
     web_view_->ClearCookies();
 
     const std::vector<std::string> scopes(kScopes.begin(), kScopes.end());
-    std::string joined_scopes = ftl::JoinStrings(scopes, "+");
+    std::string joined_scopes = fxl::JoinStrings(scopes, "+");
 
     std::string url = kGoogleOAuthAuthEndpoint;
     url += "?scope=" + joined_scopes;
@@ -1036,7 +1036,7 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
   bool ProcessCredentials(rapidjson::Document tokens) {
     if (!tokens.HasMember("refresh_token") ||
         !tokens.HasMember("access_token")) {
-      FTL_LOG(ERROR) << "Tokens returned from server does not contain "
+      FXL_LOG(ERROR) << "Tokens returned from server does not contain "
                      << "refresh_token or access_token. Returned token: "
                      << modular::JsonValueToPrettyString(tokens);
       return false;
@@ -1047,7 +1047,7 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
     }
 
     // Store short lived tokens local in-memory cache.
-    uint64_t creation_ts = ftl::TimePoint::Now().ToEpochDelta().ToSeconds();
+    uint64_t creation_ts = fxl::TimePoint::Now().ToEpochDelta().ToSeconds();
     app_->oauth_tokens_[account_->id] = {
         creation_ts,
         tokens["expires_in"].GetUint64(),
@@ -1115,7 +1115,7 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
   }
 
   void Failure(const Status& status, const std::string& error_message) {
-    FTL_LOG(ERROR) << "Failed with error status:" << status
+    FXL_LOG(ERROR) << "Failed with error status:" << status
                    << " ,and message:" << error_message;
     callback_(nullptr, error_message);
     auth_context_.set_connection_error_handler([] {});
@@ -1131,7 +1131,7 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
     app_->application_context_->launcher()->CreateApplication(
         std::move(web_view_launch_info), web_view_controller_.NewRequest());
     web_view_controller_.set_connection_error_handler([this] {
-      FTL_CHECK(false) << "web_view not found at " << kWebViewUrl << ".";
+      FXL_CHECK(false) << "web_view not found at " << kWebViewUrl << ".";
     });
 
     mozart::ViewOwnerPtr view_owner;
@@ -1160,7 +1160,7 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
 
   fidl::BindingSet<web_view::WebRequestDelegate> web_request_delegate_bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(GoogleUserCredsCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(GoogleUserCredsCall);
 };
 
 class OAuthTokenManagerApp::GoogleRevokeTokensCall
@@ -1205,7 +1205,7 @@ class OAuthTokenManagerApp::GoogleRevokeTokensCall
     const std::string refresh_token =
         GetRefreshTokenFromCredsFile(account_->id);
     if (refresh_token.empty()) {
-      FTL_LOG(ERROR) << "Account: " << account_->id << " not found.";
+      FXL_LOG(ERROR) << "Account: " << account_->id << " not found.";
       Success(flow);  // Maybe a guest account.
       return;
     }
@@ -1250,12 +1250,12 @@ class OAuthTokenManagerApp::GoogleRevokeTokensCall
     Post(request_body, url_loader_.get(), url,
          [this, branch] {
            std::unique_ptr<FlowToken> flow = branch.Continue();
-           FTL_CHECK(flow);
+           FXL_CHECK(flow);
            Success(*flow);
          },
          [this, branch](const Status status, const std::string error_message) {
            std::unique_ptr<FlowToken> flow = branch.Continue();
-           FTL_CHECK(flow);
+           FXL_CHECK(flow);
            Failure(*flow, status, error_message);
          },
          [this](rapidjson::Document doc) {
@@ -1267,7 +1267,7 @@ class OAuthTokenManagerApp::GoogleRevokeTokensCall
   bool DeleteCredentials() {
     const ::auth::CredentialStore* credentials_storage = ParseCredsFile();
     if (credentials_storage == nullptr) {
-      FTL_LOG(ERROR) << "Failed to parse credentials.";
+      FXL_LOG(ERROR) << "Failed to parse credentials.";
       return false;
     }
 
@@ -1312,7 +1312,7 @@ class OAuthTokenManagerApp::GoogleRevokeTokensCall
   // response is 200. For error conditions, a status code 400 is returned along
   // with an error code in the response body.
   bool RevokeAllTokens(rapidjson::Document status) {
-    FTL_VLOG(1) << "Revoke token api response: "
+    FXL_VLOG(1) << "Revoke token api response: "
                 << modular::JsonValueToPrettyString(status);
 
     return true;
@@ -1328,7 +1328,7 @@ class OAuthTokenManagerApp::GoogleRevokeTokensCall
   void Failure(FlowToken /*flow*/,
                const Status& status,
                const std::string& error_message) {
-    FTL_LOG(ERROR) << "Failed with error status:" << status
+    FXL_LOG(ERROR) << "Failed with error status:" << status
                    << " ,and message:" << error_message;
     auth_err_ = auth::AuthErr::New();
     auth_err_->status = status;
@@ -1347,7 +1347,7 @@ class OAuthTokenManagerApp::GoogleRevokeTokensCall
 
   modular::auth::AuthErrPtr auth_err_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(GoogleRevokeTokensCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(GoogleRevokeTokensCall);
 };
 
 class OAuthTokenManagerApp::GoogleProfileAttributesCall : Operation<> {
@@ -1374,7 +1374,7 @@ class OAuthTokenManagerApp::GoogleProfileAttributesCall : Operation<> {
     }
 
     if (app_->oauth_tokens_.find(account_->id) == app_->oauth_tokens_.end()) {
-      FTL_LOG(ERROR) << "Account: " << account_->id << " not found.";
+      FXL_LOG(ERROR) << "Account: " << account_->id << " not found.";
       Success();  // Maybe a guest account.
       return;
     }
@@ -1399,7 +1399,7 @@ class OAuthTokenManagerApp::GoogleProfileAttributesCall : Operation<> {
 
   // Populate profile urls and display name for the account.
   bool SetAccountAttributes(rapidjson::Document attributes) {
-    FTL_VLOG(1) << "People:get api response: "
+    FXL_VLOG(1) << "People:get api response: "
                 << modular::JsonValueToPrettyString(attributes);
 
     if (!account_) {
@@ -1434,7 +1434,7 @@ class OAuthTokenManagerApp::GoogleProfileAttributesCall : Operation<> {
   }
 
   void Failure(const Status& status, const std::string& error_message) {
-    FTL_LOG(ERROR) << "Failed with error status:" << status
+    FXL_LOG(ERROR) << "Failed with error status:" << status
                    << " ,and message:" << error_message;
 
     // Account is missing profile attributes, but still valid.
@@ -1449,7 +1449,7 @@ class OAuthTokenManagerApp::GoogleProfileAttributesCall : Operation<> {
   network::NetworkServicePtr network_service_;
   network::URLLoaderPtr url_loader_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(GoogleProfileAttributesCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(GoogleProfileAttributesCall);
 };
 
 OAuthTokenManagerApp::OAuthTokenManagerApp()
@@ -1463,7 +1463,7 @@ OAuthTokenManagerApp::OAuthTokenManagerApp()
   if (files::IsFile(kCredentialsFile)) {
     creds_ = ParseCredsFile();
     if (creds_ == nullptr) {
-      FTL_LOG(WARNING) << "Error in parsing existing credentials from: "
+      FXL_LOG(WARNING) << "Error in parsing existing credentials from: "
                        << kCredentialsFile;
     }
   }
@@ -1471,12 +1471,12 @@ OAuthTokenManagerApp::OAuthTokenManagerApp()
 
 void OAuthTokenManagerApp::Initialize(
     fidl::InterfaceHandle<AccountProviderContext> provider) {
-  FTL_VLOG(1) << "OAuthTokenManagerApp::Initialize()";
+  FXL_VLOG(1) << "OAuthTokenManagerApp::Initialize()";
   account_provider_context_.Bind(std::move(provider));
 }
 
 void OAuthTokenManagerApp::Terminate() {
-  FTL_LOG(INFO) << "OAuthTokenManagerApp::Terminate()";
+  FXL_LOG(INFO) << "OAuthTokenManagerApp::Terminate()";
   mtl::MessageLoop::GetCurrent()->QuitNow();
 }
 
@@ -1486,14 +1486,14 @@ std::string OAuthTokenManagerApp::GenerateAccountId() {
   size_t random_size;
   mx_status_t status =
       mx_cprng_draw(&random_number, sizeof random_number, &random_size);
-  FTL_CHECK(status == MX_OK);
-  FTL_CHECK(sizeof random_number == random_size);
+  FXL_CHECK(status == MX_OK);
+  FXL_CHECK(sizeof random_number == random_size);
   return std::to_string(random_number);
 }
 
 void OAuthTokenManagerApp::AddAccount(IdentityProvider identity_provider,
                                       const AddAccountCallback& callback) {
-  FTL_VLOG(1) << "OAuthTokenManagerApp::AddAccount()";
+  FXL_VLOG(1) << "OAuthTokenManagerApp::AddAccount()";
   auto account = auth::Account::New();
   account->id = GenerateAccountId();
   account->identity_provider = identity_provider;
@@ -1527,7 +1527,7 @@ void OAuthTokenManagerApp::RemoveAccount(
     AccountPtr account,
     bool revoke_all,
     const RemoveAccountCallback& callback) {
-  FTL_VLOG(1) << "OAuthTokenManagerApp::RemoveAccount()";
+  FXL_VLOG(1) << "OAuthTokenManagerApp::RemoveAccount()";
   new GoogleRevokeTokensCall(&operation_queue_, std::move(account), revoke_all,
                              this, callback);
 }
@@ -1542,7 +1542,7 @@ void OAuthTokenManagerApp::RefreshToken(
     const std::string& account_id,
     const TokenType& token_type,
     const ShortLivedTokenCallback& callback) {
-  FTL_VLOG(1) << "OAuthTokenManagerApp::RefreshToken()";
+  FXL_VLOG(1) << "OAuthTokenManagerApp::RefreshToken()";
   new GoogleOAuthTokensCall(&operation_queue_, account_id, token_type, this,
                             callback);
 }
@@ -1552,7 +1552,7 @@ void OAuthTokenManagerApp::RefreshFirebaseToken(
     const std::string& firebase_api_key,
     const std::string& id_token,
     const FirebaseTokenCallback& callback) {
-  FTL_VLOG(1) << "OAuthTokenManagerApp::RefreshFirebaseToken()";
+  FXL_VLOG(1) << "OAuthTokenManagerApp::RefreshFirebaseToken()";
   new GoogleFirebaseTokensCall(&operation_queue_, account_id, firebase_api_key,
                                id_token, this, callback);
 }
@@ -1561,8 +1561,8 @@ void OAuthTokenManagerApp::RefreshFirebaseToken(
 }  // namespace modular
 
 int main(int argc, const char** argv) {
-  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
-  if (!ftl::SetLogSettingsFromCommandLine(command_line)) {
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
     return 1;
   }
 

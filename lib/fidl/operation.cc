@@ -8,7 +8,7 @@
 
 #include <trace/event.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace modular {
 
@@ -47,7 +47,7 @@ bool OperationCollection::Empty() {
   return operations_.empty();
 }
 
-ftl::WeakPtr<OperationContainer> OperationCollection::GetWeakPtr() {
+fxl::WeakPtr<OperationContainer> OperationCollection::GetWeakPtr() {
   return weak_ptr_factory_.GetWeakPtr();
 }
 
@@ -62,7 +62,7 @@ void OperationCollection::Drop(OperationBase* const o) {
   auto it = std::remove_if(
       operations_.begin(), operations_.end(),
       [o](const std::unique_ptr<OperationBase>& p) { return p.get() == o; });
-  FTL_DCHECK(it != operations_.end());
+  FXL_DCHECK(it != operations_.end());
   operations_.erase(it, operations_.end());
 }
 
@@ -86,14 +86,14 @@ bool OperationQueue::Empty() {
   return operations_.empty();
 }
 
-ftl::WeakPtr<OperationContainer> OperationQueue::GetWeakPtr() {
+fxl::WeakPtr<OperationContainer> OperationQueue::GetWeakPtr() {
   return weak_ptr_factory_.GetWeakPtr();
 }
 
 void OperationQueue::Hold(OperationBase* const o) {
   operations_.emplace(o);
   if (idle_) {
-    FTL_DCHECK(operations_.size() == 1);
+    FXL_DCHECK(operations_.size() == 1);
     idle_ = false;
     TRACE_ASYNC_BEGIN(kModularTraceCategory, GetTraceName(o), GetTraceId(o),
                       kTraceIdKey, GetTraceId(o), kTraceInfoKey,
@@ -103,8 +103,8 @@ void OperationQueue::Hold(OperationBase* const o) {
 }
 
 void OperationQueue::Drop(OperationBase* const o) {
-  FTL_DCHECK(!operations_.empty());
-  FTL_DCHECK(operations_.front().get() == o);
+  FXL_DCHECK(!operations_.empty());
+  FXL_DCHECK(operations_.front().get() == o);
   operations_.pop();
 }
 
@@ -132,7 +132,7 @@ OperationBase::OperationBase(const char* trace_name,
 OperationBase::~OperationBase() = default;
 
 void OperationBase::Ready() {
-  FTL_DCHECK(container_);
+  FXL_DCHECK(container_);
   container_->Hold(this);
 }
 

@@ -7,11 +7,11 @@
 #include <utility>
 
 #include "apps/modular/src/device_runner/users_generated.h"
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/files/path.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/files/path.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace modular {
 
@@ -20,7 +20,7 @@ namespace {
 constexpr char kUsersConfigurationFile[] = "/data/modular/users-v5.db";
 
 auth::AccountPtr Convert(const UserStorage* user) {
-  FTL_DCHECK(user);
+  FXL_DCHECK(user);
   auto account = auth::Account::New();
   account->id = user->id()->str();
   switch (user->identity_provider()) {
@@ -31,7 +31,7 @@ auth::AccountPtr Convert(const UserStorage* user) {
       account->identity_provider = auth::IdentityProvider::GOOGLE;
       break;
     default:
-      FTL_DCHECK(false) << "Unrecognized IdentityProvider"
+      FXL_DCHECK(false) << "Unrecognized IdentityProvider"
                         << user->identity_provider();
   }
   account->display_name = user->display_name()->str();
@@ -48,8 +48,8 @@ std::string GetRandomId() {
   size_t random_size;
   mx_status_t status =
       mx_cprng_draw(&random_number, sizeof random_number, &random_size);
-  FTL_CHECK(status == MX_OK);
-  FTL_CHECK(sizeof random_number == random_size);
+  FXL_CHECK(status == MX_OK);
+  FXL_CHECK(sizeof random_number == random_size);
 
   return std::to_string(random_number);
 }
@@ -74,7 +74,7 @@ UserProviderImpl::UserProviderImpl(
     std::string serialized_users;
     if (!files::ReadFileToString(kUsersConfigurationFile, &serialized_users)) {
       // Unable to read file. Bailing out.
-      FTL_LOG(ERROR) << "Unable to read user configuration file at: "
+      FXL_LOG(ERROR) << "Unable to read user configuration file at: "
                      << kUsersConfigurationFile;
       return;
     }
@@ -116,7 +116,7 @@ void UserProviderImpl::Teardown(const std::function<void()>& callback) {
 void UserProviderImpl::Login(UserLoginParamsPtr params) {
   // If requested, run in incognito mode.
   if (params->account_id.is_null() || params->account_id == "") {
-    FTL_LOG(INFO) << "UserProvider::Login() Incognito mode";
+    FXL_LOG(INFO) << "UserProvider::Login() Incognito mode";
     LoginInternal(nullptr /* account */, std::move(params));
     return;
   }
@@ -135,12 +135,12 @@ void UserProviderImpl::Login(UserLoginParamsPtr params) {
 
   // If an entry is not found, we drop the incoming requests on the floor.
   if (!found_user) {
-    FTL_LOG(INFO) << "The requested user was not found in the users database"
+    FXL_LOG(INFO) << "The requested user was not found in the users database"
                   << "It needs to be added first via UserProvider::AddUser().";
     return;
   }
 
-  FTL_LOG(INFO) << "UserProvider::Login() account: " << params->account_id;
+  FXL_LOG(INFO) << "UserProvider::Login() account: " << params->account_id;
   LoginInternal(Convert(found_user), std::move(params));
 }
 
@@ -192,7 +192,7 @@ void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
                 modular::IdentityProvider::IdentityProvider_GOOGLE;
             break;
           default:
-            FTL_DCHECK(false) << "Unrecongized IDP.";
+            FXL_DCHECK(false) << "Unrecongized IDP.";
         }
         users.push_back(modular::CreateUserStorage(
             builder, builder.CreateString(account->id),
@@ -233,7 +233,7 @@ void UserProviderImpl::RemoveUser(const fidl::String& account_id,
     return;
   }
 
-  FTL_DCHECK(account_provider_);
+  FXL_DCHECK(account_provider_);
   account_provider_->RemoveAccount(
       std::move(account), false /* disable single logout*/,
       [ this, account_id = account_id, callback ](auth::AuthErrPtr auth_err) {
@@ -269,7 +269,7 @@ void UserProviderImpl::RemoveUser(const fidl::String& account_id,
 
         std::string error;
         if (!WriteUsersDb(new_serialized_users, &error)) {
-          FTL_LOG(ERROR) << "Writing to user database failed with: " << error;
+          FXL_LOG(ERROR) << "Writing to user database failed with: " << error;
           callback(error);
           return;
         }
@@ -305,7 +305,7 @@ bool UserProviderImpl::Parse(const std::string& serialized_users) {
       reinterpret_cast<const unsigned char*>(serialized_users.data()),
       serialized_users.size());
   if (!modular::VerifyUsersStorageBuffer(verifier)) {
-    FTL_LOG(ERROR) << "Unable to verify storage buffer.";
+    FXL_LOG(ERROR) << "Unable to verify storage buffer.";
     return false;
   }
   serialized_users_ = serialized_users;

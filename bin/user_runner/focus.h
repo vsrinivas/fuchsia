@@ -60,7 +60,7 @@ class FocusHandler : FocusProvider, FocusController, PageClient {
   // reason this way.
   OperationQueue operation_queue_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FocusHandler);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FocusHandler);
 };
 
 class VisibleStoriesHandler : VisibleStoriesProvider, VisibleStoriesController {
@@ -90,7 +90,7 @@ class VisibleStoriesHandler : VisibleStoriesProvider, VisibleStoriesController {
 
   fidl::Array<fidl::String> visible_stories_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(VisibleStoriesHandler);
+  FXL_DISALLOW_COPY_AND_ASSIGN(VisibleStoriesHandler);
 };
 
 }  // namespace modular

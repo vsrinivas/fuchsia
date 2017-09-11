@@ -11,8 +11,8 @@
 #include <fcntl.h>
 
 #include "lib/app/fidl/flat_namespace.fidl.h"
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/files/unique_fd.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/unique_fd.h"
 
 namespace modular {
 namespace {
@@ -54,7 +54,7 @@ AppClientBase::AppClientBase(app::ApplicationLauncher* const launcher,
 
   if (!data_origin.empty()) {
     if (!files::CreateDirectory(data_origin)) {
-      FTL_LOG(ERROR) << "Unable to create directory at " << data_origin;
+      FXL_LOG(ERROR) << "Unable to create directory at " << data_origin;
       return;
     }
     launch_info->flat_namespace = app::FlatNamespace::New();
@@ -62,16 +62,16 @@ AppClientBase::AppClientBase(app::ApplicationLauncher* const launcher,
     launch_info->flat_namespace->paths[0] = "/data";
     launch_info->flat_namespace->directories.resize(1);
 
-    ftl::UniqueFD dir(open(data_origin.c_str(), O_DIRECTORY | O_RDONLY));
+    fxl::UniqueFD dir(open(data_origin.c_str(), O_DIRECTORY | O_RDONLY));
     if (!dir.is_valid()) {
-      FTL_LOG(ERROR) << "Unable to open directory at " << data_origin
+      FXL_LOG(ERROR) << "Unable to open directory at " << data_origin
                      << ". errno: " << errno;
       return;
     }
 
     launch_info->flat_namespace->directories[0] = CloneChannel(dir.get());
     if (!launch_info->flat_namespace->directories[0]) {
-      FTL_LOG(ERROR) << "Unable create a handle from  " << data_origin;
+      FXL_LOG(ERROR) << "Unable create a handle from  " << data_origin;
       return;
     }
   }
@@ -81,7 +81,7 @@ AppClientBase::AppClientBase(app::ApplicationLauncher* const launcher,
 AppClientBase::~AppClientBase() = default;
 
 void AppClientBase::AppTerminate(const std::function<void()>& done,
-                                 ftl::TimeDelta timeout) {
+                                 fxl::TimeDelta timeout) {
   auto called = std::make_shared<bool>(false);
   auto cont = [this, called, done](const bool from_timeout) {
     if (*called) {
@@ -91,7 +91,7 @@ void AppClientBase::AppTerminate(const std::function<void()>& done,
     *called = true;
 
     if (from_timeout) {
-      FTL_LOG(WARNING) << "AppTerminate() timed out for " << url_;
+      FXL_LOG(WARNING) << "AppTerminate() timed out for " << url_;
     }
 
     app_.reset();

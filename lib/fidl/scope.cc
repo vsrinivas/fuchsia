@@ -14,7 +14,7 @@ Scope::Scope(const app::ApplicationEnvironmentPtr& parent_env,
 
 Scope::Scope(const Scope* const parent_scope, const std::string& label)
     : binding_(this) {
-  FTL_DCHECK(parent_scope != nullptr);
+  FXL_DCHECK(parent_scope != nullptr);
   InitScope(parent_scope->environment(), label);
 }
 
