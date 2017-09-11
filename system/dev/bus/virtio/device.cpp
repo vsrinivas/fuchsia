@@ -267,6 +267,25 @@ template <typename T> void iowrite(uint16_t port, T val);
 template<> void iowrite<uint8_t>(uint16_t port, uint8_t val) { return outp(port, val); }
 template<> void iowrite<uint16_t>(uint16_t port, uint16_t val) { return outpw(port, val); }
 template<> void iowrite<uint32_t>(uint16_t port, uint32_t val) { return outpd(port, val); }
+
+template <typename T>
+void mmiowrite(volatile void* ptr, T val);
+
+template<>
+void mmiowrite<uint32_t>(volatile void* ptr, uint32_t val) {
+    *reinterpret_cast<volatile uint32_t*>(ptr) = val;
+}
+
+template<>
+void mmiowrite<uint64_t>(volatile void* ptr, uint64_t val) {
+    // Virtio 1.0 Section 4.1.3:
+    // 64-bit fields are to be treated as two 32-bit fields, with low 32 bit
+    // part followed by the high 32 bit part.
+    auto words = reinterpret_cast<volatile uint32_t*>(ptr);
+    mmiowrite(&words[0], static_cast<uint32_t>(val & UINT32_MAX));
+    mmiowrite(&words[1], static_cast<uint32_t>(val >> 32));
+}
+
 } // anon namespace
 
 template <typename T>
@@ -363,9 +382,9 @@ void Device::SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_desc, zx_padd
     } else {
         mmio_regs_.common_config->queue_select = index;
         mmio_regs_.common_config->queue_size = count;
-        mmio_regs_.common_config->queue_desc = pa_desc;
-        mmio_regs_.common_config->queue_avail = pa_avail;
-        mmio_regs_.common_config->queue_used = pa_used;
+        mmiowrite(&mmio_regs_.common_config->queue_desc, pa_desc);
+        mmiowrite(&mmio_regs_.common_config->queue_avail, pa_avail);
+        mmiowrite(&mmio_regs_.common_config->queue_used, pa_used);
         mmio_regs_.common_config->queue_enable = 1;
     }
 }
