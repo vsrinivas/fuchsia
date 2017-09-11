@@ -7,6 +7,7 @@
 #include <atomic>
 #include <queue>
 
+#include "garnet/bin/media/framework/models/node.h"
 #include "garnet/bin/media/framework/models/stage.h"
 #include "garnet/bin/media/framework/packet.h"
 #include "garnet/bin/media/framework/payload_allocator.h"
@@ -19,7 +20,7 @@
 namespace media {
 
 // Host for a source, sink or transform.
-class StageImpl {
+class StageImpl : public std::enable_shared_from_this<StageImpl> {
  public:
   using UpstreamCallback = std::function<void(size_t input_index)>;
   using DownstreamCallback = std::function<void(size_t output_index)>;
@@ -27,6 +28,9 @@ class StageImpl {
   StageImpl();
 
   virtual ~StageImpl();
+
+  // Shuts down the stage prior to destruction.
+  virtual void ShutDown();
 
   // Returns the number of input connections.
   virtual size_t input_count() const = 0;
@@ -43,14 +47,14 @@ class StageImpl {
   // Prepares the input for operation. Returns nullptr unless the connected
   // output must use a specific allocator, in which case it returns that
   // allocator.
-  virtual PayloadAllocator* PrepareInput(size_t index) = 0;
+  virtual std::shared_ptr<PayloadAllocator> PrepareInput(size_t index) = 0;
 
   // Prepares the output for operation, passing an allocator that must be used
   // by the output or nullptr if there is no such requirement. The callback is
   // used to indicate what inputs are ready to be prepared as a consequence of
   // preparing the output.
   virtual void PrepareOutput(size_t index,
-                             PayloadAllocator* allocator,
+                             std::shared_ptr<PayloadAllocator> allocator,
                              const UpstreamCallback& callback) = 0;
 
   // Unprepares the input. The default implementation does nothing.
@@ -96,15 +100,27 @@ class StageImpl {
   void PostTask(const fxl::Closure& task);
 
  protected:
-  // Gets the task runner specified by the node, if any.
-  virtual fxl::RefPtr<fxl::TaskRunner> GetNodeTaskRunner() = 0;
+  // Gets the generic node.
+  virtual GenericNode* GetGenericNode() = 0;
+
+  // Releases ownership of the node.
+  virtual void ReleaseNode() = 0;
 
   // Updates packet supply and demand.
   virtual void Update() = 0;
 
+  // Post a task that will run even if the stage has been shut down.
+  void PostShutdownTask(fxl::Closure task);
+
  private:
   // Runs tasks in the task queue. This method is always called from
-  // |task_runner_|.
+  // |task_runner_|. A |StageImpl| funnels all task execution through
+  // |RunTasks|. The lambdas that call |RunTasks| capture a shared pointer to
+  // the stage, so the stage can't be deleted from the time such a lambda is
+  // created until it's done executing |RunTasks|. A stage that's no longer
+  // referenced by the graph will be deleted when all such lambdas have
+  // completed. |ShutDown| prevents |RunTasks| from actually executing any
+  // tasks.
   void RunTasks();
 
   fxl::RefPtr<fxl::TaskRunner> task_runner_;

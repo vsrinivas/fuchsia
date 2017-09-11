@@ -5,6 +5,7 @@
 #include "garnet/bin/media/framework/payload_allocator.h"
 
 #include <cstdlib>
+#include <memory>
 
 #include "lib/fxl/logging.h"
 
@@ -12,9 +13,12 @@ namespace media {
 
 namespace {
 
-class DefaultAllocator : public PayloadAllocator {
+class DefaultAllocator : public PayloadAllocator,
+                         public std::enable_shared_from_this<DefaultAllocator> {
  public:
   constexpr DefaultAllocator() {}
+
+  ~DefaultAllocator() {}
 
   // PayloadAllocator implementation.
   void* AllocatePayloadBuffer(size_t size) override;
@@ -32,13 +36,14 @@ void DefaultAllocator::ReleasePayloadBuffer(void* buffer) {
   std::free(buffer);
 }
 
-static constexpr DefaultAllocator default_allocator;
+static const std::shared_ptr<PayloadAllocator> default_allocator =
+    std::make_shared<DefaultAllocator>();
 
 }  // namespace
 
 // static
-PayloadAllocator* PayloadAllocator::GetDefault() {
-  return const_cast<DefaultAllocator*>(&default_allocator);
+std::shared_ptr<PayloadAllocator> PayloadAllocator::GetDefault() {
+  return default_allocator;
 }
 
 }  // namespace media

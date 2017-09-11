@@ -36,7 +36,7 @@ void Graph::RemoveNode(NodeRef node) {
 
   sources_.remove(stage);
   sinks_.remove(stage);
-  stages_.remove(stage);
+  stages_.remove(stage->shared_from_this());
 
   delete stage;
 }
@@ -172,9 +172,9 @@ void Graph::Reset() {
   sources_.clear();
   sinks_.clear();
   while (!stages_.empty()) {
-    StageImpl* stage = stages_.front();
+    std::shared_ptr<StageImpl> stage = stages_.front();
     stages_.pop_front();
-    delete stage;
+    stage->ShutDown();
   }
 }
 
@@ -240,7 +240,8 @@ void Graph::PostTask(const fxl::Closure& task,
   }
 }
 
-NodeRef Graph::Add(StageImpl* stage, fxl::RefPtr<fxl::TaskRunner> task_runner) {
+NodeRef Graph::Add(std::shared_ptr<StageImpl> stage,
+                   fxl::RefPtr<fxl::TaskRunner> task_runner) {
   FXL_DCHECK(stage);
   FXL_DCHECK(task_runner || default_task_runner_);
 
@@ -248,14 +249,14 @@ NodeRef Graph::Add(StageImpl* stage, fxl::RefPtr<fxl::TaskRunner> task_runner) {
   stages_.push_back(stage);
 
   if (stage->input_count() == 0) {
-    sources_.push_back(stage);
+    sources_.push_back(stage.get());
   }
 
   if (stage->output_count() == 0) {
-    sinks_.push_back(stage);
+    sinks_.push_back(stage.get());
   }
 
-  return NodeRef(stage);
+  return NodeRef(stage.get());
 }
 
 }  // namespace media

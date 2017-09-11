@@ -27,8 +27,9 @@ class FfmpegAudioDecoder : public FfmpegDecoderBase {
                    AVFrame* av_frame,
                    PayloadAllocator* allocator) override;
 
-  PacketPtr CreateOutputPacket(const AVFrame& av_frame,
-                               PayloadAllocator* allocator) override;
+  PacketPtr CreateOutputPacket(
+      const AVFrame& av_frame,
+      const std::shared_ptr<PayloadAllocator>& allocator) override;
 
  private:
   // Align sample buffers on 32-byte boundaries. This is the value that

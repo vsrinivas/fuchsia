@@ -6,13 +6,17 @@
 
 #include <stddef.h>
 
+#include <memory>
+
 namespace media {
 
 // Abstract base class for objects that allocate buffers for packets.
 class PayloadAllocator {
  public:
   // Gets the default allocator, which allocates vanilla memory from the heap.
-  static PayloadAllocator* GetDefault();
+  static std::shared_ptr<PayloadAllocator> GetDefault();
+
+  virtual ~PayloadAllocator(){};
 
   // Allocates and returns a buffer of the indicated size or returns nullptr
   // if the allocation fails.

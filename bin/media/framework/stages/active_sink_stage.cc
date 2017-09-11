@@ -31,19 +31,25 @@ Output& ActiveSinkStageImpl::output(size_t index) {
   abort();
 }
 
-PayloadAllocator* ActiveSinkStageImpl::PrepareInput(size_t index) {
+std::shared_ptr<PayloadAllocator> ActiveSinkStageImpl::PrepareInput(
+    size_t index) {
   FXL_DCHECK(index == 0u);
   return sink_->allocator();
 }
 
-void ActiveSinkStageImpl::PrepareOutput(size_t index,
-                                        PayloadAllocator* allocator,
-                                        const UpstreamCallback& callback) {
+void ActiveSinkStageImpl::PrepareOutput(
+    size_t index,
+    std::shared_ptr<PayloadAllocator> allocator,
+    const UpstreamCallback& callback) {
   FXL_CHECK(false) << "PrepareOutput called on sink";
 }
 
-fxl::RefPtr<fxl::TaskRunner> ActiveSinkStageImpl::GetNodeTaskRunner() {
-  return sink_->GetTaskRunner();
+GenericNode* ActiveSinkStageImpl::GetGenericNode() {
+  return sink_.get();
+}
+
+void ActiveSinkStageImpl::ReleaseNode() {
+  sink_ = nullptr;
 }
 
 void ActiveSinkStageImpl::Update() {

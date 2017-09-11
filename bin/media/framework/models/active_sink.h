@@ -29,7 +29,7 @@ class ActiveSink : public Node<ActiveSinkStage> {
 
   // An allocator that must be used for supplied packets or nullptr if there's
   // no such requirement.
-  virtual PayloadAllocator* allocator() = 0;
+  virtual std::shared_ptr<PayloadAllocator> allocator() = 0;
 
   // Supplies a packet to the sink, returning the new demand for the input.
   virtual Demand SupplyPacket(PacketPtr packet) = 0;

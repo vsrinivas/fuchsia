@@ -42,7 +42,7 @@ class AudioInput : public ActiveSource {
   // ActiveSource implementation
   bool can_accept_allocator() const override;
 
-  void set_allocator(PayloadAllocator* allocator) override;
+  void set_allocator(std::shared_ptr<PayloadAllocator> allocator) override;
 
   void SetDownstreamDemand(Demand demand) override;
 
@@ -73,7 +73,7 @@ class AudioInput : public ActiveSource {
   uint16_t configured_channels_;
   audio_sample_format_t configured_sample_format_;
   uint32_t configured_bytes_per_frame_;
-  PayloadAllocator* allocator_;
+  std::shared_ptr<PayloadAllocator> allocator_;
   TimelineRate pts_rate_;
   // The fields above need to be stable while the worker thread is operating.
 

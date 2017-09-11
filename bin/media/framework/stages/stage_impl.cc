@@ -12,6 +12,27 @@ StageImpl::StageImpl() : update_counter_(0) {}
 
 StageImpl::~StageImpl() {}
 
+void StageImpl::ShutDown() {
+  {
+    fxl::MutexLocker locker(&tasks_mutex_);
+    tasks_suspended_ = true;
+  }
+
+  GenericNode* generic_node = GetGenericNode();
+  FXL_DCHECK(generic_node);
+
+  generic_node->SetGenericStage(nullptr);
+
+  fxl::RefPtr<fxl::TaskRunner> node_task_runner = generic_node->GetTaskRunner();
+  if (node_task_runner) {
+    // Release the node in the node-provided task runner.
+    PostShutdownTask([this]() { ReleaseNode(); });
+  } else {
+    // Release the node on this thread.
+    ReleaseNode();
+  }
+}
+
 void StageImpl::UnprepareInput(size_t index) {}
 
 void StageImpl::UnprepareOutput(size_t index,
@@ -68,12 +89,15 @@ void StageImpl::Release() {
   }
 
   FXL_DCHECK(task_runner_);
-  task_runner_->PostTask([this]() { RunTasks(); });
+  task_runner_->PostTask([shared_this = shared_from_this()]() {
+    shared_this->RunTasks();
+  });
 }
 
 void StageImpl::SetTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner) {
   FXL_DCHECK(task_runner);
-  fxl::RefPtr<fxl::TaskRunner> node_task_runner = GetNodeTaskRunner();
+  fxl::RefPtr<fxl::TaskRunner> node_task_runner =
+      GetGenericNode()->GetTaskRunner();
   task_runner_ = node_task_runner ? node_task_runner : task_runner;
 }
 
@@ -91,7 +115,15 @@ void StageImpl::PostTask(const fxl::Closure& task) {
   }
 
   FXL_DCHECK(task_runner_);
-  task_runner_->PostTask([this]() { RunTasks(); });
+  task_runner_->PostTask([shared_this = shared_from_this()]() {
+    shared_this->RunTasks();
+  });
+}
+
+void StageImpl::PostShutdownTask(fxl::Closure task) {
+  FXL_DCHECK(task_runner_);
+  task_runner_->PostTask(
+      [ shared_this = shared_from_this(), task ]() { task(); });
 }
 
 void StageImpl::RunTasks() {
@@ -101,6 +133,11 @@ void StageImpl::RunTasks() {
     fxl::Closure& task = tasks_.front();
     tasks_mutex_.Unlock();
     task();
+    // The closure may be keeping objects alive. Destroy it here so those
+    // objects are destroyed with the mutex unlocked. It's OK to do this,
+    // because this method is the only consumer of tasks from the queue, and
+    // this method will not be re-entered.
+    task = nullptr;
     tasks_mutex_.Lock();
     tasks_.pop();
   }

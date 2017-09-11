@@ -24,7 +24,7 @@ class LpcmReformatterImpl : public LpcmReformatter {
   // Transform implementation.
   bool TransformPacket(const PacketPtr& input,
                        bool new_input,
-                       PayloadAllocator* allocator,
+                       const std::shared_ptr<PayloadAllocator>& allocator,
                        PacketPtr* output) override;
 
  private:
@@ -249,7 +249,7 @@ template <typename TIn, typename TOut>
 bool LpcmReformatterImpl<TIn, TOut>::TransformPacket(
     const PacketPtr& input,
     bool new_input,
-    PayloadAllocator* allocator,
+    const std::shared_ptr<PayloadAllocator>& allocator,
     PacketPtr* output) {
   FXL_DCHECK(input);
   FXL_DCHECK(allocator);

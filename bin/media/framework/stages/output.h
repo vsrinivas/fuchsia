@@ -42,7 +42,7 @@ class Output {
   // Sets the allocator the output must use to copy the payload of output
   // packets. This is used when the connected input insists that a specific
   // allocator be used, but the stage can't use it.
-  void SetCopyAllocator(PayloadAllocator* copy_allocator);
+  void SetCopyAllocator(std::shared_ptr<PayloadAllocator> copy_allocator);
 
   // Demand signalled from downstream, or kNegative if the downstream input
   // is currently holding a packet.
@@ -56,7 +56,7 @@ class Output {
   StageImpl* stage_;
   size_t index_;
   Input* mate_ = nullptr;
-  PayloadAllocator* copy_allocator_ = nullptr;
+  std::shared_ptr<PayloadAllocator> copy_allocator_ = nullptr;
 };
 
 }  // namespace media

@@ -59,7 +59,7 @@ class PacketImpl : public Packet {
              bool end_of_stream,
              size_t size,
              void* payload,
-             PayloadAllocator* allocator)
+             std::shared_ptr<PayloadAllocator> allocator)
       : Packet(pts, pts_rate, keyframe, end_of_stream, size, payload),
         allocator_(allocator) {}
 
@@ -73,7 +73,7 @@ class PacketImpl : public Packet {
   };
 
  private:
-  PayloadAllocator* allocator_;
+  std::shared_ptr<PayloadAllocator> allocator_;
 };
 
 // static
@@ -83,7 +83,7 @@ PacketPtr Packet::Create(int64_t pts,
                          bool end_of_stream,
                          size_t size,
                          void* payload,
-                         PayloadAllocator* allocator) {
+                         std::shared_ptr<PayloadAllocator> allocator) {
   FXL_DCHECK(payload == nullptr || allocator != nullptr);
   return std::make_shared<PacketImpl>(pts, pts_rate, keyframe, end_of_stream,
                                       size, payload, allocator);

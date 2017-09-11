@@ -37,7 +37,7 @@ class Packet {
                           bool end_of_stream,
                           size_t size,
                           void* payload,
-                          PayloadAllocator* allocator);
+                          std::shared_ptr<PayloadAllocator> allocator);
 
   // Creates a packet. If size is 0, payload must be nullptr and vice-versa.
   // No allocator is provided, and the payload will not be released when the

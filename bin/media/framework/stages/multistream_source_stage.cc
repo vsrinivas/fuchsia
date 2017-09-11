@@ -38,14 +38,15 @@ Output& MultistreamSourceStageImpl::output(size_t index) {
   return outputs_[index];
 }
 
-PayloadAllocator* MultistreamSourceStageImpl::PrepareInput(size_t index) {
+std::shared_ptr<PayloadAllocator> MultistreamSourceStageImpl::PrepareInput(
+    size_t index) {
   FXL_CHECK(false) << "PrepareInput called on source";
   return nullptr;
 }
 
 void MultistreamSourceStageImpl::PrepareOutput(
     size_t index,
-    PayloadAllocator* allocator,
+    std::shared_ptr<PayloadAllocator> allocator,
     const UpstreamCallback& callback) {
   FXL_DCHECK(index < outputs_.size());
 
@@ -64,8 +65,12 @@ void MultistreamSourceStageImpl::UnprepareOutput(
   outputs_[index].SetCopyAllocator(nullptr);
 }
 
-fxl::RefPtr<fxl::TaskRunner> MultistreamSourceStageImpl::GetNodeTaskRunner() {
-  return source_->GetTaskRunner();
+GenericNode* MultistreamSourceStageImpl::GetGenericNode() {
+  return source_.get();
+}
+
+void MultistreamSourceStageImpl::ReleaseNode() {
+  source_ = nullptr;
 }
 
 void MultistreamSourceStageImpl::Update() {

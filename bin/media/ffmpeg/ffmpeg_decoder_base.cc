@@ -30,8 +30,9 @@ FfmpegDecoderBase::FfmpegDecoderBase(AvCodecContextPtr av_codec_context)
 }
 
 FfmpegDecoderBase::~FfmpegDecoderBase() {
-  // Quit the thread we created in the constructor.
-  PostTask([]() { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+  // The destructor is called on the task runner we created in the constructor.
+  // We need to post a quit task so the thread is destroyed.
+  fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 
 std::unique_ptr<StreamType> FfmpegDecoderBase::output_stream_type() {
@@ -48,10 +49,11 @@ void FfmpegDecoderBase::Flush() {
   next_pts_ = Packet::kUnknownPts;
 }
 
-bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input,
-                                        bool new_input,
-                                        PayloadAllocator* allocator,
-                                        PacketPtr* output) {
+bool FfmpegDecoderBase::TransformPacket(
+    const PacketPtr& input,
+    bool new_input,
+    const std::shared_ptr<PayloadAllocator>& allocator,
+    PacketPtr* output) {
   TRACE_DURATION(
       "motown", "DecodePacket", "type",
       (av_codec_context_->codec_type == AVMEDIA_TYPE_VIDEO ? "video"
@@ -167,7 +169,8 @@ int FfmpegDecoderBase::AllocateBufferForAvFrame(
   FXL_DCHECK(self);
   FXL_DCHECK(self->allocator_);
 
-  return self->BuildAVFrame(*av_codec_context, av_frame, self->allocator_);
+  return self->BuildAVFrame(*av_codec_context, av_frame,
+                            self->allocator_.get());
 }
 
 // static

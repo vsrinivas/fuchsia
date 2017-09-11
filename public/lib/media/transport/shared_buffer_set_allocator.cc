@@ -54,6 +54,10 @@ void SharedBufferSetAllocator::ReleaseRegion(void* ptr) {
   fxl::MutexLocker locker(&mutex_);
 
   Locator locator = LocatorFromPtr(ptr);
+  if (!locator) {
+    return;
+  }
+
   FXL_DCHECK(locator.buffer_id() < buffers_.size());
 
   if (buffers_[locator.buffer_id()].whole()) {

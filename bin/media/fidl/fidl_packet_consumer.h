@@ -48,7 +48,7 @@ class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
   // ActiveSource implementation.
   bool can_accept_allocator() const override;
 
-  void set_allocator(PayloadAllocator* allocator) override;
+  void set_allocator(std::shared_ptr<PayloadAllocator> allocator) override;
 
   void SetDownstreamDemand(Demand demand) override;
 

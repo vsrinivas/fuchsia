@@ -33,7 +33,7 @@ class FfmpegDecoderBase : public Decoder {
 
   bool TransformPacket(const PacketPtr& input,
                        bool new_input,
-                       PayloadAllocator* allocator,
+                       const std::shared_ptr<PayloadAllocator>& allocator,
                        PacketPtr* output) override;
 
  protected:
@@ -83,8 +83,9 @@ class FfmpegDecoderBase : public Decoder {
                            PayloadAllocator* allocator) = 0;
 
   // Creates a Packet from av_frame.
-  virtual PacketPtr CreateOutputPacket(const AVFrame& av_frame,
-                                       PayloadAllocator* allocator) = 0;
+  virtual PacketPtr CreateOutputPacket(
+      const AVFrame& av_frame,
+      const std::shared_ptr<PayloadAllocator>& allocator) = 0;
 
   // The ffmpeg codec context.
   const AvCodecContextPtr& context() { return av_codec_context_; }
@@ -134,7 +135,7 @@ class FfmpegDecoderBase : public Decoder {
   // The allocator used by avcodec_send_packet and avcodec_receive_frame to
   // provide context for AllocateBufferForAvFrame. This is set only during
   // those calls.
-  PayloadAllocator* allocator_ = nullptr;
+  std::shared_ptr<PayloadAllocator> allocator_;
 };
 
 }  // namespace media

@@ -32,14 +32,16 @@ Output& ActiveSourceStageImpl::output(size_t index) {
   return output_;
 }
 
-PayloadAllocator* ActiveSourceStageImpl::PrepareInput(size_t index) {
+std::shared_ptr<PayloadAllocator> ActiveSourceStageImpl::PrepareInput(
+    size_t index) {
   FXL_CHECK(false) << "PrepareInput called on source";
   return nullptr;
 }
 
-void ActiveSourceStageImpl::PrepareOutput(size_t index,
-                                          PayloadAllocator* allocator,
-                                          const UpstreamCallback& callback) {
+void ActiveSourceStageImpl::PrepareOutput(
+    size_t index,
+    std::shared_ptr<PayloadAllocator> allocator,
+    const UpstreamCallback& callback) {
   FXL_DCHECK(index == 0u);
   FXL_DCHECK(source_);
 
@@ -66,8 +68,12 @@ void ActiveSourceStageImpl::UnprepareOutput(size_t index,
   output_.SetCopyAllocator(nullptr);
 }
 
-fxl::RefPtr<fxl::TaskRunner> ActiveSourceStageImpl::GetNodeTaskRunner() {
-  return source_->GetTaskRunner();
+GenericNode* ActiveSourceStageImpl::GetGenericNode() {
+  return source_.get();
+}
+
+void ActiveSourceStageImpl::ReleaseNode() {
+  source_ = nullptr;
 }
 
 void ActiveSourceStageImpl::Update() {

@@ -27,10 +27,11 @@ class Transform : public Node<TransformStage> {
   // packet should be processed again. new_input indicates whether the input
   // packet is new (true) or is being processed again (false). An output packet
   // may or may not be generated for any given invocation of this method.
-  virtual bool TransformPacket(const PacketPtr& input,
-                               bool new_input,
-                               PayloadAllocator* allocator,
-                               PacketPtr* output) = 0;
+  virtual bool TransformPacket(
+      const PacketPtr& input,
+      bool new_input,
+      const std::shared_ptr<PayloadAllocator>& allocator,
+      PacketPtr* output) = 0;
 };
 
 }  // namespace media

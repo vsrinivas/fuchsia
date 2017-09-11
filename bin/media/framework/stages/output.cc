@@ -19,7 +19,8 @@ void Output::Connect(Input* input) {
   mate_ = input;
 }
 
-void Output::SetCopyAllocator(PayloadAllocator* copy_allocator) {
+void Output::SetCopyAllocator(
+    std::shared_ptr<PayloadAllocator> copy_allocator) {
   FXL_DCHECK(connected());
   copy_allocator_ = copy_allocator;
 }

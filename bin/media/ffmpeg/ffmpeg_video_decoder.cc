@@ -134,8 +134,9 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
   return 0;
 }
 
-PacketPtr FfmpegVideoDecoder::CreateOutputPacket(const AVFrame& av_frame,
-                                                 PayloadAllocator* allocator) {
+PacketPtr FfmpegVideoDecoder::CreateOutputPacket(
+    const AVFrame& av_frame,
+    const std::shared_ptr<PayloadAllocator>& allocator) {
   FXL_DCHECK(allocator);
 
   // Recover the pts deposited in Decode.

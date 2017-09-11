@@ -17,7 +17,8 @@ void Engine::PrepareInput(Input* input) {
     FXL_DCHECK(input);
     FXL_DCHECK(output);
     FXL_DCHECK(!input->prepared());
-    PayloadAllocator* allocator = input->stage()->PrepareInput(input->index());
+    std::shared_ptr<PayloadAllocator> allocator =
+        input->stage()->PrepareInput(input->index());
     input->set_prepared(true);
     output->stage()->PrepareOutput(output->index(), allocator, callback);
   });

@@ -51,9 +51,9 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
   // Use the provided allocator unless we intend to interleave later, in which
   // case use the default allocator. We'll interleave into a buffer from the
   // provided allocator in CreateOutputPacket.
-  if (lpcm_util_ != nullptr) {
-    allocator = PayloadAllocator::GetDefault();
-  }
+  PayloadAllocator* allocator_to_use =
+      (lpcm_util_ == nullptr) ? allocator
+                              : PayloadAllocator::GetDefault().get();
 
   AVSampleFormat av_sample_format =
       static_cast<AVSampleFormat>(av_frame->format);
@@ -66,8 +66,8 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
     return buffer_size;
   }
 
-  uint8_t* buffer =
-      static_cast<uint8_t*>(allocator->AllocatePayloadBuffer(buffer_size));
+  uint8_t* buffer = static_cast<uint8_t*>(
+      allocator_to_use->AllocatePayloadBuffer(buffer_size));
 
   if (!av_sample_fmt_is_planar(av_sample_format)) {
     // Samples are interleaved. There's just one buffer.
@@ -109,14 +109,15 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
     }
   }
 
-  av_frame->buf[0] =
-      CreateAVBuffer(buffer, static_cast<size_t>(buffer_size), allocator);
+  av_frame->buf[0] = CreateAVBuffer(buffer, static_cast<size_t>(buffer_size),
+                                    allocator_to_use);
 
   return 0;
 }
 
-PacketPtr FfmpegAudioDecoder::CreateOutputPacket(const AVFrame& av_frame,
-                                                 PayloadAllocator* allocator) {
+PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
+    const AVFrame& av_frame,
+    const std::shared_ptr<PayloadAllocator>& allocator) {
   FXL_DCHECK(allocator);
 
   // We infer the PTS for a packet based on the assumption that the decoder

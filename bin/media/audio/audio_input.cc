@@ -167,7 +167,7 @@ bool AudioInput::can_accept_allocator() const {
   return true;
 }
 
-void AudioInput::set_allocator(PayloadAllocator* allocator) {
+void AudioInput::set_allocator(std::shared_ptr<PayloadAllocator> allocator) {
   allocator_ = allocator;
 }
 
@@ -305,9 +305,12 @@ void AudioInput::Worker() {
         }
         FXL_DCHECK(modulo_rd_ptr_bytes < audio_input_->ring_buffer_bytes());
 
-        stage().SupplyPacket(Packet::Create(frames_rxed, pts_rate_, false,
-                                            false, cached_packet_size, buf,
-                                            allocator_));
+        ActiveSourceStage* stage_ptr = stage();
+        if (stage_ptr) {
+          stage_ptr->SupplyPacket(Packet::Create(frames_rxed, pts_rate_, false,
+                                                 false, cached_packet_size, buf,
+                                                 allocator_));
+        }
 
         // Update our bookkeeping.
         pending_packets--;

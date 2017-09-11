@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <atomic>
+
+#include "garnet/bin/media/framework/models/stage.h"
 #include "garnet/bin/media/framework/packet.h"
 #include "garnet/bin/media/framework/payload_allocator.h"
 #include "lib/fxl/functional/closure.h"
@@ -11,17 +14,9 @@
 
 namespace media {
 
-// Base class for all nodes.
-template <typename TStage>
-class Node {
+class GenericNode {
  public:
-  virtual ~Node() {}
-
-  // Sets |stage_|. This method is called only by the graph.
-  void SetStage(TStage* stage) {
-    FXL_DCHECK(stage_ == nullptr);
-    stage_ = stage;
-  }
+  virtual ~GenericNode() {}
 
   // Returns the task runner to use for this node. The default implementation
   // returns nullptr, indicating that this node can use whatever task runner
@@ -29,24 +24,35 @@ class Node {
   // |Graph::Add| methods.
   virtual fxl::RefPtr<fxl::TaskRunner> GetTaskRunner() { return nullptr; }
 
- protected:
-  // Returns a reference to the stage for this node.
-  TStage& stage() {
-    FXL_DCHECK(stage_);
-    return *stage_;
-  }
+  void SetGenericStage(Stage* generic_stage) { generic_stage_ = generic_stage; }
 
+  Stage* generic_stage() { return generic_stage_; }
+
+ protected:
   // Posts a task to run as soon as possible. A task posted with this method is
   // run exclusive of any other such tasks.
   void PostTask(const fxl::Closure& task) {
-    FXL_DCHECK(stage_);
-    stage_->PostTask(task);
+    Stage* generic_stage = generic_stage_;
+    if (generic_stage) {
+      generic_stage->PostTask(task);
+    }
   }
 
  private:
-  TStage* stage_ = nullptr;
+  std::atomic<Stage*> generic_stage_;
+};
 
-  friend class Graph;
+// Base class for all nodes.
+template <typename TStage>
+class Node : public GenericNode {
+ public:
+  // Sets |stage_|. This method is called only by the graph and the stage.
+  void SetStage(TStage* stage) { SetGenericStage(stage); }
+
+ protected:
+  // Returns a pointer to the stage for this node. Returns nullptr if the stage
+  // has been destroyed.
+  TStage* stage() { return reinterpret_cast<TStage*>(generic_stage()); }
 };
 
 }  // namespace media

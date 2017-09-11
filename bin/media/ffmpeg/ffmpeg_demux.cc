@@ -298,9 +298,13 @@ void FfmpegDemuxImpl::Worker() {
       FXL_DCHECK(packet);
 
       // TODO(dalesat): Resolve the race that makes this necessary.
-      task_runner_->PostTask(fxl::MakeCopyable([
-        this, stream_index, packet = std::move(packet)
-      ]() mutable { stage().SupplyPacket(stream_index, std::move(packet)); }));
+      task_runner_->PostTask(fxl::MakeCopyable(
+          [ this, stream_index, packet = std::move(packet) ]() mutable {
+            ActiveMultistreamSourceStage* stage_ptr = stage();
+            if (stage_ptr) {
+              stage_ptr->SupplyPacket(stream_index, std::move(packet));
+            }
+          }));
     }
   }
 }

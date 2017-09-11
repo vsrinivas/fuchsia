@@ -17,6 +17,8 @@ class TransformStageImpl : public TransformStage, public StageImpl {
   ~TransformStageImpl() override;
 
   // StageImpl implementation.
+  void ShutDown() override;
+
   size_t input_count() const override;
 
   Input& input(size_t index) override;
@@ -25,10 +27,10 @@ class TransformStageImpl : public TransformStage, public StageImpl {
 
   Output& output(size_t index) override;
 
-  PayloadAllocator* PrepareInput(size_t index) override;
+  std::shared_ptr<PayloadAllocator> PrepareInput(size_t index) override;
 
   void PrepareOutput(size_t index,
-                     PayloadAllocator* allocator,
+                     std::shared_ptr<PayloadAllocator> allocator,
                      const UpstreamCallback& callback) override;
 
   void UnprepareOutput(size_t index, const UpstreamCallback& callback) override;
@@ -41,7 +43,9 @@ class TransformStageImpl : public TransformStage, public StageImpl {
 
  protected:
   // StageImpl implementation.
-  fxl::RefPtr<fxl::TaskRunner> GetNodeTaskRunner() override;
+  GenericNode* GetGenericNode() override;
+
+  void ReleaseNode() override;
 
   void Update() override;
 
@@ -54,7 +58,7 @@ class TransformStageImpl : public TransformStage, public StageImpl {
   Input input_;
   Output output_;
   std::shared_ptr<Transform> transform_;
-  PayloadAllocator* allocator_;
+  std::shared_ptr<PayloadAllocator> allocator_;
   bool input_packet_is_new_;
 };
 

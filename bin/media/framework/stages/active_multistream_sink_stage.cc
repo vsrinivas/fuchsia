@@ -38,20 +38,24 @@ Output& ActiveMultistreamSinkStageImpl::output(size_t index) {
   abort();
 }
 
-PayloadAllocator* ActiveMultistreamSinkStageImpl::PrepareInput(size_t index) {
+std::shared_ptr<PayloadAllocator> ActiveMultistreamSinkStageImpl::PrepareInput(
+    size_t index) {
   return nullptr;
 }
 
 void ActiveMultistreamSinkStageImpl::PrepareOutput(
     size_t index,
-    PayloadAllocator* allocator,
+    std::shared_ptr<PayloadAllocator> allocator,
     const UpstreamCallback& callback) {
   FXL_CHECK(false) << "PrepareOutput called on sink";
 }
 
-fxl::RefPtr<fxl::TaskRunner>
-ActiveMultistreamSinkStageImpl::GetNodeTaskRunner() {
-  return sink_->GetTaskRunner();
+GenericNode* ActiveMultistreamSinkStageImpl::GetGenericNode() {
+  return sink_.get();
+}
+
+void ActiveMultistreamSinkStageImpl::ReleaseNode() {
+  sink_ = nullptr;
 }
 
 void ActiveMultistreamSinkStageImpl::Update() {

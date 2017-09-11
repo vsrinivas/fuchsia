@@ -30,7 +30,7 @@ class ActiveSource : public Node<ActiveSourceStage> {
   virtual bool can_accept_allocator() const = 0;
 
   // Sets the allocator for the source.
-  virtual void set_allocator(PayloadAllocator* allocator) = 0;
+  virtual void set_allocator(std::shared_ptr<PayloadAllocator> allocator) = 0;
 
   // Sets the demand signalled from downstream.
   virtual void SetDownstreamDemand(Demand demand) = 0;

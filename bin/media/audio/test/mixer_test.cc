@@ -14,7 +14,7 @@ namespace test {
 
 // Mixer test bench.
 template <typename TInSample, typename TOutSample, typename TLevel>
-class Bench : public PayloadAllocator {
+class Bench {
  public:
   Bench(uint32_t out_channel_count)
       : out_channel_count_(out_channel_count), under_test_(out_channel_count) {}
@@ -51,7 +51,7 @@ class Bench : public PayloadAllocator {
     size_t size = frame_count * input.in_channel_count() * sizeof(TInSample);
     PacketPtr packet =
         Packet::Create(pts, TimelineRate(48000, 1), false, end_of_stream, size,
-                       AllocatePayloadBuffer(size), this);
+                       allocator_->AllocatePayloadBuffer(size), allocator_);
     FillBuffer(static_cast<TInSample*>(packet->payload()),
                input.in_channel_count(), frame_count, pts, sample_func);
     input.SupplyPacket(std::move(packet));
@@ -74,17 +74,11 @@ class Bench : public PayloadAllocator {
   }
 
  private:
-  // PayloadAllocator implementation.
-  void* AllocatePayloadBuffer(size_t size) override {
-    return std::malloc(size);
-  }
-
-  void ReleasePayloadBuffer(void* buffer) override { std::free(buffer); }
-
   uint32_t out_channel_count_;
   Mixer<TOutSample> under_test_;
   std::vector<std::shared_ptr<MixerInputImpl<TInSample, TOutSample, TLevel>>>
       inputs_;
+  std::shared_ptr<PayloadAllocator> allocator_ = PayloadAllocator::GetDefault();
 };
 
 // Tests that the mixer leaves the output buffer unchanged if there are no

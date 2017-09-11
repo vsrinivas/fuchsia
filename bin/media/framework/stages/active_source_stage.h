@@ -29,10 +29,10 @@ class ActiveSourceStageImpl : public StageImpl, public ActiveSourceStage {
 
   Output& output(size_t index) override;
 
-  PayloadAllocator* PrepareInput(size_t index) override;
+  std::shared_ptr<PayloadAllocator> PrepareInput(size_t index) override;
 
   void PrepareOutput(size_t index,
-                     PayloadAllocator* allocator,
+                     std::shared_ptr<PayloadAllocator> allocator,
                      const UpstreamCallback& callback) override;
 
   void UnprepareOutput(size_t index, const UpstreamCallback& callback) override;
@@ -45,7 +45,9 @@ class ActiveSourceStageImpl : public StageImpl, public ActiveSourceStage {
 
  protected:
   // StageImpl implementation.
-  fxl::RefPtr<fxl::TaskRunner> GetNodeTaskRunner() override;
+  GenericNode* GetGenericNode() override;
+
+  void ReleaseNode() override;
 
   void Update() override;
 

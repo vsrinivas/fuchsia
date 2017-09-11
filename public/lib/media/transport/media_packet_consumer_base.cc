@@ -336,8 +336,6 @@ MediaPacketConsumerBase::SuppliedPacketCounter::SuppliedPacketCounter(
   FXL_DCHECK(task_runner_);
 }
 
-MediaPacketConsumerBase::SuppliedPacketCounter::~SuppliedPacketCounter() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-}
+MediaPacketConsumerBase::SuppliedPacketCounter::~SuppliedPacketCounter() {}
 
 }  // namespace media

@@ -42,7 +42,7 @@ class FidlPacketProducer
                        const FlushConnectionCallback& callback);
 
   // ActiveSink implementation.
-  PayloadAllocator* allocator() override;
+  std::shared_ptr<PayloadAllocator> allocator() override;
 
   Demand SupplyPacket(PacketPtr packet) override;
 

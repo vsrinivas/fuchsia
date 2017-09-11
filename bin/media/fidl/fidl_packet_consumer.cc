@@ -30,7 +30,10 @@ void FidlPacketConsumer::SetFlushRequestedCallback(
 void FidlPacketConsumer::OnPacketSupplied(
     std::unique_ptr<SuppliedPacket> supplied_packet) {
   FXL_DCHECK(supplied_packet);
-  stage().SupplyPacket(PacketImpl::Create(std::move(supplied_packet)));
+  ActiveSourceStage* stage_ptr = stage();
+  if (stage_ptr) {
+    stage_ptr->SupplyPacket(PacketImpl::Create(std::move(supplied_packet)));
+  }
 }
 
 void FidlPacketConsumer::OnPacketReturning() {
@@ -64,7 +67,8 @@ bool FidlPacketConsumer::can_accept_allocator() const {
   return false;
 }
 
-void FidlPacketConsumer::set_allocator(PayloadAllocator* allocator) {
+void FidlPacketConsumer::set_allocator(
+    std::shared_ptr<PayloadAllocator> allocator) {
   FXL_DLOG(ERROR) << "set_allocator called on FidlPacketConsumer";
 }
 

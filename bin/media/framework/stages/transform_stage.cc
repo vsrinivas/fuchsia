@@ -17,6 +17,11 @@ TransformStageImpl::TransformStageImpl(std::shared_ptr<Transform> transform)
 
 TransformStageImpl::~TransformStageImpl() {}
 
+void TransformStageImpl::ShutDown() {
+  StageImpl::ShutDown();
+  allocator_ = nullptr;
+}
+
 size_t TransformStageImpl::input_count() const {
   return 1;
 };
@@ -35,14 +40,16 @@ Output& TransformStageImpl::output(size_t index) {
   return output_;
 }
 
-PayloadAllocator* TransformStageImpl::PrepareInput(size_t index) {
+std::shared_ptr<PayloadAllocator> TransformStageImpl::PrepareInput(
+    size_t index) {
   FXL_DCHECK(index == 0u);
   return nullptr;
 }
 
-void TransformStageImpl::PrepareOutput(size_t index,
-                                       PayloadAllocator* allocator,
-                                       const UpstreamCallback& callback) {
+void TransformStageImpl::PrepareOutput(
+    size_t index,
+    std::shared_ptr<PayloadAllocator> allocator,
+    const UpstreamCallback& callback) {
   FXL_DCHECK(index == 0u);
 
   allocator_ =
@@ -57,8 +64,12 @@ void TransformStageImpl::UnprepareOutput(size_t index,
   callback(0);
 }
 
-fxl::RefPtr<fxl::TaskRunner> TransformStageImpl::GetNodeTaskRunner() {
-  return transform_->GetTaskRunner();
+GenericNode* TransformStageImpl::GetGenericNode() {
+  return transform_.get();
+}
+
+void TransformStageImpl::ReleaseNode() {
+  transform_ = nullptr;
 }
 
 void TransformStageImpl::Update() {

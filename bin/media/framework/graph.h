@@ -33,9 +33,11 @@ class StageCreator;
   class StageCreator<                                                        \
       T, typename std::enable_if<std::is_base_of<TModel, T>::value>::type> { \
    public:                                                                   \
-    static inline StageImpl* Create(std::shared_ptr<T> t_ptr) {              \
-      TStage* stage = new TStage(std::shared_ptr<TModel>(t_ptr));            \
-      t_ptr->SetStage(stage);                                                \
+    static inline std::shared_ptr<StageImpl> Create(                         \
+        std::shared_ptr<T> t_ptr) {                                          \
+      std::shared_ptr<TStage> stage =                                        \
+          std::make_shared<TStage>(std::shared_ptr<TModel>(t_ptr));          \
+      t_ptr->SetStage(stage.get());                                          \
       return stage;                                                          \
     }                                                                        \
   };
@@ -206,11 +208,12 @@ class Graph {
 
  private:
   // Adds a stage to the graph.
-  NodeRef Add(StageImpl* stage, fxl::RefPtr<fxl::TaskRunner> task_runner);
+  NodeRef Add(std::shared_ptr<StageImpl> stage,
+              fxl::RefPtr<fxl::TaskRunner> task_runner);
 
   fxl::RefPtr<fxl::TaskRunner> default_task_runner_;
 
-  std::list<StageImpl*> stages_;
+  std::list<std::shared_ptr<StageImpl>> stages_;
   std::list<StageImpl*> sources_;
   std::list<StageImpl*> sinks_;
 

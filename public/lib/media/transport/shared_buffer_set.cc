@@ -112,7 +112,9 @@ SharedBufferSet::Locator SharedBufferSet::LocatorFromPtr(void* ptr) const {
   FXL_DCHECK(iter != buffer_ids_by_base_address_.begin());
 
   uint32_t buffer_id = (--iter)->second;
-  FXL_DCHECK(buffers_[buffer_id]);
+  if (!buffers_[buffer_id]) {
+    return Locator::Null();
+  }
 
   return Locator(buffer_id, buffers_[buffer_id]->OffsetFromPtr(byte_ptr));
 }
