@@ -29,12 +29,12 @@ wlan_go_dependencies = [
     source = "//garnet/go/src/netstack/watcher"
   },
   {
-    package = "application/lib/app"
-    source = "//application/lib/app/go/src/app"
+    package = "app"
+    source = "//garnet/public/lib/app/go/src/app"
   },
   {
-    package = "application/lib/svc"
-    source = "//application/lib/svc/go/src/svc"
+    package = "svc"
+    source = "//garnet/public/lib/svc/go/src/svc"
   },
 ]
 
@@ -60,12 +60,12 @@ go_binary("wlantool_bin") {
       source = "wlantool"
     },
     {
-      package = "application/lib/app"
-      source = "//application/lib/app/go/src/app"
+      package = "app"
+      source = "//garnet/public/lib/app/go/src/app"
     },
     {
-      package = "application/lib/svc"
-      source = "//application/lib/svc/go/src/svc"
+      package = "svc"
+      source = "//garnet/public/lib/svc/go/src/svc"
     },
     {
       package = "fidl"

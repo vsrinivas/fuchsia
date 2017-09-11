@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 
-	"application/lib/app/context"
+	"app/context"
 	"fidl/bindings"
 
 	"apps/wlan/services/wlan_service"
