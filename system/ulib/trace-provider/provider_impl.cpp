@@ -4,6 +4,7 @@
 
 #include "provider_impl.h"
 
+#include <inttypes.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
@@ -38,8 +39,20 @@ struct message {
 struct start : message {
     uint32_t buffer; // handle<vmo>
     uint32_t fence; // handle<eventpair>
-    // categories here... (not parsed)
+    uint64_t category_array_header_length; // always 8
+    uint32_t category_offsets_array_length; // in bytes
+    uint32_t num_categories;
+    uint64_t category_offsets[]; // offset to string from this location
 };
+
+constexpr unsigned kExpectedCategoryArrayHeaderLength = 8;
+
+struct string_entry {
+    uint32_t entry_length; // not including any padding
+    uint32_t string_length; // Note: there is no trailing NUL
+    char text[];
+};
+
 struct start_reply : message {
     uint8_t success; // bool, least significant bit
     uint8_t padding[7];
@@ -63,12 +76,14 @@ TraceProviderImpl::TraceProviderImpl(async_t* async, zx::channel channel)
 
 TraceProviderImpl::~TraceProviderImpl() = default;
 
-bool TraceProviderImpl::Start(zx::vmo buffer, zx::eventpair fence) {
+bool TraceProviderImpl::Start(zx::vmo buffer, zx::eventpair fence,
+                              fbl::Vector<fbl::String> enabled_categories) {
     if (running_)
         return false;
 
     zx_status_t status = TraceHandlerImpl::StartEngine(
-        async_, fbl::move(buffer), fbl::move(fence));
+        async_, fbl::move(buffer), fbl::move(fence),
+        fbl::move(enabled_categories));
     if (status != ZX_OK)
         return false;
 
@@ -176,9 +191,41 @@ bool TraceProviderImpl::Connection::ReadMessage() {
         if (s->buffer != 0u || s->fence != 1u)
             return false;
 
+        fbl::Vector<fbl::String> enabled_categories;
+        if (s->category_array_header_length != kExpectedCategoryArrayHeaderLength) {
+            printf("%s: unexpected value for category_array_header_length field of fidl start message: %" PRIu64 "\n",
+                   __func__, s->category_array_header_length);
+            return false;
+        }
+        if (s->category_offsets_array_length - 2 * sizeof(uint32_t) != s->num_categories * sizeof(uint64_t)) {
+            printf("%s: category offsets array error: length %u for %u categories\n",
+                   __func__, s->category_offsets_array_length, s->num_categories);
+            return false;
+        }
+        auto message_end = reinterpret_cast<const char*>(s) + num_bytes;
+        for (uint32_t i = 0; i < s->num_categories; ++i) {
+            auto str_ptr = reinterpret_cast<const char*>(&s->category_offsets[i]) + s->category_offsets[i];
+            if (s->category_offsets[i] >= num_bytes ||
+                str_ptr + 2 * sizeof(uint32_t) >= message_end) {
+                printf("%s: category offset error, too large for message: %" PRIu64 "\n",
+                       __func__, s->category_offsets[i]);
+                return false;
+            }
+            auto str = reinterpret_cast<const string_entry*>(str_ptr);
+            auto str_end = str_ptr + str->entry_length;
+            if (str_end > message_end ||
+                str->string_length >= str->entry_length) {
+                printf("%s: string length error: entry_length %u, string_length %u\n",
+                       __func__, str->entry_length, str->string_length);
+                return false;
+            }
+            enabled_categories.push_back(fbl::String(str->text, str->string_length));
+        }
+
         bool success = impl_->Start(
             zx::vmo(fbl::move(handles[s->buffer])),
-            zx::eventpair(fbl::move(handles[s->fence])));
+            zx::eventpair(fbl::move(handles[s->fence])),
+            fbl::move(enabled_categories));
 
         // Send reply.
         struct {

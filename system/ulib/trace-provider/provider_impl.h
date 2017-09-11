@@ -9,6 +9,8 @@
 #include <zx/eventpair.h>
 #include <zx/vmo.h>
 #include <fbl/macros.h>
+#include <fbl/string.h>
+#include <fbl/vector.h>
 #include <trace-provider/provider.h>
 
 // Provide a definition for the opaque type declared in provider.h.
@@ -41,7 +43,8 @@ private:
         async::Wait wait_;
     };
 
-    bool Start(zx::vmo buffer, zx::eventpair fence);
+    bool Start(zx::vmo buffer, zx::eventpair fence,
+               fbl::Vector<fbl::String> enabled_categories);
     void Stop();
 
     async_t* const async_;

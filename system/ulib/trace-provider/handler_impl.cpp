@@ -14,8 +14,18 @@ namespace trace {
 namespace internal {
 
 TraceHandlerImpl::TraceHandlerImpl(void* buffer, size_t buffer_num_bytes,
-                                   zx::eventpair fence)
-    : buffer_(buffer), buffer_num_bytes_(buffer_num_bytes), fence_(fbl::move(fence)) {}
+                                   zx::eventpair fence,
+                                   fbl::Vector<fbl::String> enabled_categories)
+    : buffer_(buffer),
+      buffer_num_bytes_(buffer_num_bytes),
+      fence_(fbl::move(fence)),
+      enabled_categories_(fbl::move(enabled_categories)) {
+    // Build a quick lookup table for IsCategoryEnabled().
+    for (const auto& cat : enabled_categories_) {
+        auto entry = fbl::make_unique<StringSetEntry>(cat.c_str());
+        enabled_category_set_.insert_or_find(fbl::move(entry));
+    }
+}
 
 TraceHandlerImpl::~TraceHandlerImpl() {
     zx_status_t status = zx::vmar::root_self().unmap(
@@ -24,7 +34,8 @@ TraceHandlerImpl::~TraceHandlerImpl() {
 }
 
 zx_status_t TraceHandlerImpl::StartEngine(async_t* async,
-                                          zx::vmo buffer, zx::eventpair fence) {
+                                          zx::vmo buffer, zx::eventpair fence,
+                                          fbl::Vector<fbl::String> enabled_categories) {
     ZX_DEBUG_ASSERT(buffer);
     ZX_DEBUG_ASSERT(fence);
 
@@ -41,7 +52,8 @@ zx_status_t TraceHandlerImpl::StartEngine(async_t* async,
         return status;
 
     auto handler = new TraceHandlerImpl(reinterpret_cast<void*>(buffer_ptr),
-                                        buffer_num_bytes, fbl::move(fence));
+                                        buffer_num_bytes, fbl::move(fence),
+                                        fbl::move(enabled_categories));
     status = trace_start_engine(async, handler,
                                 handler->buffer_, handler->buffer_num_bytes_);
     if (status != ZX_OK) {
@@ -58,8 +70,7 @@ zx_status_t TraceHandlerImpl::StopEngine() {
 }
 
 bool TraceHandlerImpl::IsCategoryEnabled(const char* category) {
-    // TODO: Implement category filters.
-    return true;
+    return enabled_category_set_.find(category) != enabled_category_set_.end();
 }
 
 void TraceHandlerImpl::TraceStopped(async_t* async, zx_status_t disposition,
