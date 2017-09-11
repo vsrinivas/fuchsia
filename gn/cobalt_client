@@ -4,7 +4,7 @@
     ],
     "imports": [
         "boringssl_libssl",
-        "ftl",
+        "fxl",
         "magentix",
         "mtl",
         "netconnector",

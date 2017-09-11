@@ -3,7 +3,7 @@
         "cpp"
     ],
     "imports": [
-        "ftl",
+        "fxl",
         "mtl"
     ],
     "labels": [

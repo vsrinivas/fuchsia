@@ -1,0 +1,13 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "labels": [
+        "//garnet/public/lib/fxl:fxl_unittests(//build/toolchain:host_x64)"
+    ],
+    "packages": {
+        "fxl": "//garnet/public/lib/fxl:package",
+        "fxl_logging": "//garnet/public/lib/fxl:logging_package",
+        "fxl_unittests": "//garnet/public/lib/fxl:unittests_package"
+    }
+}

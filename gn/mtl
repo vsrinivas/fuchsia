@@ -3,7 +3,7 @@
         "cpp"
     ],
     "imports": [
-        "ftl"
+        "fxl"
     ],
     "packages": {
         "mtl": "//garnet/public/lib/mtl:package"

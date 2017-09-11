@@ -1,6 +1,6 @@
 {
     "imports": [
-        "ftl",
+        "fxl",
         "mtl",
         "netstack",
         "runtime_config",

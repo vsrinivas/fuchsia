@@ -4,7 +4,7 @@
     ],
     "imports": [
         "dart",
-        "ftl",
+        "fxl",
         "magma",
         "mtl",
         "tracing",

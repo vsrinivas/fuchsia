@@ -1,7 +1,7 @@
 {
     "imports": [
         "magma",
-        "ftl",
+        "fxl",
         "mtl",
         "runtime_config"
     ],
