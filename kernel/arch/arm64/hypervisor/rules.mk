@@ -9,6 +9,8 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS := \
+	$(LOCAL_DIR)/el2.S \
+	$(LOCAL_DIR)/el2_cpu_state.cpp \
 	$(LOCAL_DIR)/guest.cpp \
 	$(LOCAL_DIR)/vcpu.cpp \
 

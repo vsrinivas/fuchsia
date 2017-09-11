@@ -65,7 +65,6 @@ FUNCTION(arm64_elX_to_el1)
     orr x9, x9, #SCR_EL3_RW
     msr scr_el3, x9
 
-
     adr x9, .Ltarget
     msr elr_el3, x9
 
@@ -74,6 +73,10 @@ FUNCTION(arm64_elX_to_el1)
     b   .confEL1
 
 .inEL2:
+    /* Set the vector base for EL2 */
+    adr_global x9, arm64_el2_exception_base
+    msr vbar_el2, x9
+
     /* Ensure EL1 timers are properly configured, disable EL2 trapping of
         EL1 access to timer control registers.  Also clear virtual offset.
     */
@@ -136,5 +139,4 @@ FUNCTION(arm64_get_secondary_sp)
     ldr     x0, [x11, #8]
     add     x1, x11, #32
     ret
-
 END_FUNCTION(arm64_get_secondary_sp)

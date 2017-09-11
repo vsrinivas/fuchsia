@@ -20,14 +20,16 @@ typedef struct mx_port_packet mx_port_packet_t;
 class Guest {
 public:
     static status_t Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* out);
-    ~Guest() = default;
+    ~Guest();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Guest);
 
     GuestPhysicalAddressSpace* AddressSpace() const { return nullptr; }
     const PacketMux* Mux() const { return nullptr; }
 
 private:
-    Guest() = default;
+    const uint8_t vmid_;
+
+    explicit Guest(uint8_t vmid);
 };
 
 class Vcpu {};
