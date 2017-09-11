@@ -83,8 +83,79 @@ bool test_context_switch_of_gs_base() {
     END_TEST;
 }
 
+#define DEFINE_REGISTER_ACCESSOR(REG)                           \
+    static inline void set_##REG(uint16_t value) {              \
+        __asm__ volatile("mov %0, %%" #REG : : "r"(value));     \
+    }                                                           \
+    static inline uint16_t get_##REG(void) {                    \
+        uint16_t value;                                         \
+        __asm__ volatile("mov %%" #REG ", %0" : "=r"(value));   \
+        return value;                                           \
+    }
+
+DEFINE_REGISTER_ACCESSOR(ds)
+DEFINE_REGISTER_ACCESSOR(es)
+DEFINE_REGISTER_ACCESSOR(fs)
+DEFINE_REGISTER_ACCESSOR(gs)
+
+#undef DEFINE_REGISTER_ACCESSOR
+
+// This test demonstrates that if the segment selector registers are set to
+// 1, they will eventually be reset to 0 when an interrupt occurs.  This is
+// mostly a property of the x86 architecture rather than the kernel: The
+// IRET instruction has the side effect of resetting these registers when
+// returning from the kernel to userland (but not when returning to kernel
+// code).
+bool test_segment_selectors_zeroed_on_interrupt() {
+    BEGIN_TEST;
+
+    // We skip setting %fs because that breaks libc's TLS.
+    set_ds(1);
+    set_es(1);
+    set_gs(1);
+
+    // This could be interrupted by an interrupt that causes a context
+    // switch, but on an unloaded machine it is more likely to be
+    // interrupted by an interrupt where the handler returns without doing
+    // a context switch.
+    while (get_gs() == 1)
+        __asm__ volatile("pause");
+
+    EXPECT_EQ(get_ds(), 0);
+    EXPECT_EQ(get_es(), 0);
+    EXPECT_EQ(get_gs(), 0);
+
+    END_TEST;
+}
+
+// Test that the kernel also resets the segment selector registers on a
+// context switch, to avoid leaking their values and to match what happens
+// on an interrupt.
+bool test_segment_selectors_zeroed_on_context_switch() {
+    BEGIN_TEST;
+
+    set_ds(1);
+    set_es(1);
+    set_gs(1);
+
+    // Sleeping should cause a context switch away from this thread (to the
+    // kernel's idle thread) and another context switch back.
+    //
+    // It is possible that this thread is interrupted by an interrupt, but
+    // not very likely, because this thread does not execute very long.
+    EXPECT_EQ(mx_nanosleep(mx_deadline_after(MX_MSEC(1))), MX_OK);
+
+    EXPECT_EQ(get_ds(), 0);
+    EXPECT_EQ(get_es(), 0);
+    EXPECT_EQ(get_gs(), 0);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(register_state_tests)
 RUN_TEST(test_context_switch_of_gs_base)
+RUN_TEST(test_segment_selectors_zeroed_on_interrupt)
+RUN_TEST(test_segment_selectors_zeroed_on_context_switch)
 END_TEST_CASE(register_state_tests)
 
 #endif
