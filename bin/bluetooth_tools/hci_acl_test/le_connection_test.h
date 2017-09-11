@@ -11,9 +11,9 @@
 #include "apps/bluetooth/lib/hci/command_channel.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/transport.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace hci_acl_test {
@@ -29,7 +29,7 @@ namespace hci_acl_test {
 class LEConnectionTest final {
  public:
   LEConnectionTest();
-  bool Run(ftl::UniqueFD hci_dev_fd, const bluetooth::common::DeviceAddress& dst_addr,
+  bool Run(fxl::UniqueFD hci_dev_fd, const bluetooth::common::DeviceAddress& dst_addr,
            bool cancel_right_away = false);
 
  private:
@@ -59,13 +59,13 @@ class LEConnectionTest final {
                       bluetooth::hci::CommandChannel::TransactionId id,
                       bluetooth::hci::Status status);
 
-  ftl::RefPtr<bluetooth::hci::Transport> hci_;
+  fxl::RefPtr<bluetooth::hci::Transport> hci_;
   mtl::MessageLoop message_loop_;
   bluetooth::common::DeviceAddress dst_addr_;
   bluetooth::hci::CommandChannel::EventHandlerId le_conn_complete_handler_id_;
   bluetooth::hci::CommandChannel::EventHandlerId disconn_handler_id_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LEConnectionTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LEConnectionTest);
 };
 
 }  // namespace hci_acl_test

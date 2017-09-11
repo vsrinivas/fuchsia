@@ -13,7 +13,7 @@
 #include <magenta/status.h>
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace btsnoop {
 
@@ -25,7 +25,7 @@ Sniffer::~Sniffer() {
 }
 
 bool Sniffer::Start() {
-  ftl::UniqueFD hci_dev(open(hci_dev_path_.c_str(), O_RDWR));
+  fxl::UniqueFD hci_dev(open(hci_dev_path_.c_str(), O_RDWR));
   if (!hci_dev.is_valid()) {
     std::perror("Failed to open HCI device");
     return false;
@@ -39,7 +39,7 @@ bool Sniffer::Start() {
     return false;
   }
 
-  FTL_DCHECK(handle != MX_HANDLE_INVALID);
+  FXL_DCHECK(handle != MX_HANDLE_INVALID);
 
   if (!logger_.Initialize(log_file_path_)) {
     std::cout << "failed to initialize BTSnoop logger";
@@ -57,8 +57,8 @@ bool Sniffer::Start() {
 }
 
 void Sniffer::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) {
-  FTL_DCHECK(handle == snoop_channel_.get());
-  FTL_DCHECK(pending & (MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED));
+  FXL_DCHECK(handle == snoop_channel_.get());
+  FXL_DCHECK(pending & (MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED));
 
   uint32_t read_size;
   mx_status_t status =
@@ -75,7 +75,7 @@ void Sniffer::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t c
 }
 
 void Sniffer::OnHandleError(mx_handle_t handle, mx_status_t error) {
-  FTL_DCHECK(handle == snoop_channel_.get());
+  FXL_DCHECK(handle == snoop_channel_.get());
   std::cout << "Error on snoop channel: " << mx_status_get_string(error) << std::endl;
   message_loop_.QuitNow();
 }

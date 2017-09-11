@@ -8,23 +8,23 @@
 #include "apps/bluetooth/lib/gap/remote_device_cache.h"
 #include "apps/bluetooth/lib/hci/legacy_low_energy_scanner.h"
 #include "apps/bluetooth/lib/hci/transport.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 
 namespace bluetooth {
 namespace gap {
 
 LowEnergyDiscoverySession::LowEnergyDiscoverySession(
-    ftl::WeakPtr<LowEnergyDiscoveryManager> manager)
+    fxl::WeakPtr<LowEnergyDiscoveryManager> manager)
     : active_(true), manager_(manager) {
-  FTL_DCHECK(manager_);
+  FXL_DCHECK(manager_);
 
   // Configured by default for the GAP General Discovery procedure.
   SetGeneralDiscoverableFlags();
 }
 
 LowEnergyDiscoverySession::~LowEnergyDiscoverySession() {
-  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   if (active_) Stop();
 }
 
@@ -33,14 +33,14 @@ void LowEnergyDiscoverySession::SetResultCallback(const DeviceFoundCallback& cal
   if (!manager_) return;
   for (const auto& cached_device_id : manager_->cached_scan_results()) {
     auto device = manager_->device_cache()->FindDeviceById(cached_device_id);
-    FTL_DCHECK(device);
+    FXL_DCHECK(device);
     NotifyDiscoveryResult(*device);
   }
 }
 
 void LowEnergyDiscoverySession::Stop() {
-  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FTL_DCHECK(active_);
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(active_);
   if (manager_) manager_->RemoveSession(this);
   active_ = false;
 }
@@ -59,18 +59,18 @@ void LowEnergyDiscoverySession::NotifyDiscoveryResult(const RemoteDevice& device
   }
 }
 
-LowEnergyDiscoveryManager::LowEnergyDiscoveryManager(Mode mode, ftl::RefPtr<hci::Transport> hci,
+LowEnergyDiscoveryManager::LowEnergyDiscoveryManager(Mode mode, fxl::RefPtr<hci::Transport> hci,
                                                      RemoteDeviceCache* device_cache)
     : task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
       device_cache_(device_cache),
       weak_ptr_factory_(this) {
-  FTL_DCHECK(hci);
-  FTL_DCHECK(task_runner_);
-  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
-  FTL_DCHECK(device_cache_);
+  FXL_DCHECK(hci);
+  FXL_DCHECK(task_runner_);
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(device_cache_);
 
   // We currently do not support the Extended Advertising feature.
-  FTL_DCHECK(mode == Mode::kLegacy);
+  FXL_DCHECK(mode == Mode::kLegacy);
 
   scanner_ = std::make_unique<hci::LegacyLowEnergyScanner>(this, hci, task_runner_);
 }
@@ -80,15 +80,15 @@ LowEnergyDiscoveryManager::~LowEnergyDiscoveryManager() {
 }
 
 void LowEnergyDiscoveryManager::StartDiscovery(const SessionCallback& callback) {
-  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
-  FTL_DCHECK(callback);
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(callback);
 
   // If a request to start or stop is currently pending then this one will become pending until the
   // HCI request completes (this does NOT include the state in which we are stopping and restarting
   // scan in between scan periods).
   if (!pending_.empty() ||
       (scanner_->state() == hci::LowEnergyScanner::State::kStopping && sessions_.empty())) {
-    FTL_DCHECK(!scanner_->IsScanning());
+    FXL_DCHECK(!scanner_->IsScanning());
     pending_.push(callback);
     return;
   }
@@ -96,16 +96,16 @@ void LowEnergyDiscoveryManager::StartDiscovery(const SessionCallback& callback) 
   // If a device scan is already in progress, then the request succeeds (this includes the state in
   // which we are stopping and restarting scan in between scan periods).
   if (!sessions_.empty()) {
-    FTL_DCHECK(scanner_->IsScanning());
+    FXL_DCHECK(scanner_->IsScanning());
 
     // Invoke |callback| asynchronously.
     auto session = AddSession();
-    task_runner_->PostTask(ftl::MakeCopyable(
+    task_runner_->PostTask(fxl::MakeCopyable(
         [ callback, session = std::move(session) ]() mutable { callback(std::move(session)); }));
     return;
   }
 
-  FTL_DCHECK(scanner_->state() == hci::LowEnergyScanner::State::kIdle);
+  FXL_DCHECK(scanner_->state() == hci::LowEnergyScanner::State::kIdle);
 
   pending_.push(callback);
   StartScan();
@@ -115,20 +115,20 @@ std::unique_ptr<LowEnergyDiscoverySession> LowEnergyDiscoveryManager::AddSession
   // Cannot use make_unique here since LowEnergyDiscoverySession has a private constructor.
   std::unique_ptr<LowEnergyDiscoverySession> session(
       new LowEnergyDiscoverySession(weak_ptr_factory_.GetWeakPtr()));
-  FTL_DCHECK(sessions_.find(session.get()) == sessions_.end());
+  FXL_DCHECK(sessions_.find(session.get()) == sessions_.end());
   sessions_.insert(session.get());
   return session;
 }
 
 void LowEnergyDiscoveryManager::RemoveSession(LowEnergyDiscoverySession* session) {
-  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
-  FTL_DCHECK(session);
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(session);
 
   // Only active sessions are allowed to call this method. If there is at least one active session
   // object out there, then we MUST be scanning.
-  FTL_DCHECK(session->active());
+  FXL_DCHECK(session->active());
 
-  FTL_DCHECK(sessions_.find(session) != sessions_.end());
+  FXL_DCHECK(sessions_.find(session) != sessions_.end());
   sessions_.erase(session);
 
   // Stop scanning if the session count has dropped to zero.
@@ -137,10 +137,10 @@ void LowEnergyDiscoveryManager::RemoveSession(LowEnergyDiscoverySession* session
 
 void LowEnergyDiscoveryManager::OnDeviceFound(const hci::LowEnergyScanResult& result,
                                               const common::ByteBuffer& data) {
-  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
 
   auto device = device_cache_->StoreLowEnergyScanResult(result, data);
-  FTL_DCHECK(device);
+  FXL_DCHECK(device);
 
   cached_scan_results_.insert(device->identifier());
 
@@ -152,8 +152,8 @@ void LowEnergyDiscoveryManager::OnDeviceFound(const hci::LowEnergyScanResult& re
 void LowEnergyDiscoveryManager::OnScanStatus(hci::LowEnergyScanner::Status status) {
   switch (status) {
     case hci::LowEnergyScanner::Status::kFailed:
-      FTL_LOG(ERROR) << "gap: LowEnergyDiscoveryManager: Failed to start discovery!";
-      FTL_DCHECK(sessions_.empty());
+      FXL_LOG(ERROR) << "gap: LowEnergyDiscoveryManager: Failed to start discovery!";
+      FXL_DCHECK(sessions_.empty());
 
       // Report failure on all currently pending requests. If any of the callbacks issue a retry
       // the new requests will get re-queued and notified of failure in the same loop here.
@@ -165,7 +165,7 @@ void LowEnergyDiscoveryManager::OnScanStatus(hci::LowEnergyScanner::Status statu
       }
       break;
     case hci::LowEnergyScanner::Status::kStarted:
-      FTL_LOG(INFO) << "gap: LowEnergyDiscoveryManager: Started scanning";
+      FXL_LOG(INFO) << "gap: LowEnergyDiscoveryManager: Started scanning";
 
       // Create and register all sessions before notifying the clients. We do this so that the
       // reference count is incremented for all new sessions before the callbacks execute, to
@@ -182,12 +182,12 @@ void LowEnergyDiscoveryManager::OnScanStatus(hci::LowEnergyScanner::Status statu
           pending_.pop();
         }
       }
-      FTL_DCHECK(pending_.empty());
+      FXL_DCHECK(pending_.empty());
       break;
     case hci::LowEnergyScanner::Status::kStopped:
       // TODO(armansito): Revise this logic when we support pausing a scan even with active
       // sessions.
-      FTL_LOG(INFO) << "gap: LowEnergyDiscoveryManager: Stopped scanning";
+      FXL_LOG(INFO) << "gap: LowEnergyDiscoveryManager: Stopped scanning";
 
       cached_scan_results_.clear();
 
@@ -196,9 +196,9 @@ void LowEnergyDiscoveryManager::OnScanStatus(hci::LowEnergyScanner::Status statu
       if (!pending_.empty()) StartScan();
       break;
     case hci::LowEnergyScanner::Status::kComplete:
-      FTL_LOG(INFO) << "gap: LowEnergyDiscoveryManager: Continuing periodic scan";
-      FTL_DCHECK(!sessions_.empty());
-      FTL_DCHECK(pending_.empty());
+      FXL_LOG(INFO) << "gap: LowEnergyDiscoveryManager: Continuing periodic scan";
+      FXL_DCHECK(!sessions_.empty());
+      FXL_DCHECK(pending_.empty());
 
       cached_scan_results_.clear();
 

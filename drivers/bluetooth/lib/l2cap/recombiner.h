@@ -12,7 +12,7 @@
 #include "apps/bluetooth/lib/hci/acl_data_packet.h"
 #include "apps/bluetooth/lib/l2cap/l2cap.h"
 #include "apps/bluetooth/lib/l2cap/pdu.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 namespace l2cap {
@@ -67,7 +67,7 @@ class Recombiner final {
   // The PDU currently being constructed, if any.
   common::Optional<PDU> pdu_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Recombiner);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Recombiner);
 };
 
 }  // namespace l2cap

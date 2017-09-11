@@ -12,7 +12,7 @@
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
 #include "apps/bluetooth/lib/hci/packet.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 // This file defines a fbl::SlabAllocator trait template that can be used to slab-allocate
 // instances of hci::Packet. It's signature is as follows:
@@ -95,7 +95,7 @@ class FixedSizePacket : public Packet<HeaderType> {
  private:
   common::StaticByteBuffer<BufferSize> buffer_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FixedSizePacket);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FixedSizePacket);
 };
 
 template <typename HeaderType, size_t BufferSize, size_t NumBuffers>
@@ -119,7 +119,7 @@ class SlabPacket : public FixedSizePacket<HeaderType, BufferSize>,
       : FixedSizePacket<HeaderType, BufferSize>(payload_size) {}
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(SlabPacket);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SlabPacket);
 };
 
 }  // namespace internal

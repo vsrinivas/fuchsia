@@ -10,7 +10,7 @@
 #include "apps/bluetooth/lib/common/packet_view.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/packet.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 namespace hci {

@@ -27,7 +27,7 @@ static_library("gap") {
     "//apps/bluetooth/lib/common",
     "//apps/bluetooth/lib/hci",
     "//apps/bluetooth/service/interfaces:interfaces_data_only",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }
 

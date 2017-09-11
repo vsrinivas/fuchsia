@@ -14,7 +14,7 @@
 #include "apps/bluetooth/lib/testing/fake_controller.h"
 #include "apps/bluetooth/lib/testing/fake_device.h"
 #include "apps/bluetooth/lib/testing/test_base.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 namespace gap {
@@ -153,13 +153,13 @@ class LowEnergyDiscoveryManagerTest : public TestingBase {
   std::unique_ptr<LowEnergyDiscoverySession> StartDiscoverySession() {
     std::unique_ptr<LowEnergyDiscoverySession> session;
     discovery_manager()->StartDiscovery([&](auto cb_session) {
-      FTL_DCHECK(cb_session);
+      FXL_DCHECK(cb_session);
       session = std::move(cb_session);
       message_loop()->QuitNow();
     });
 
     RunMessageLoop();
-    FTL_DCHECK(session);
+    FXL_DCHECK(session);
     return session;
   }
 
@@ -170,7 +170,7 @@ class LowEnergyDiscoveryManagerTest : public TestingBase {
   bool scan_enabled_;
   bool quit_message_loop_on_scan_state_change_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LowEnergyDiscoveryManagerTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LowEnergyDiscoveryManagerTest);
 };
 
 TEST_F(LowEnergyDiscoveryManagerTest, StartDiscoveryAndStop) {

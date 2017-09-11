@@ -4,8 +4,8 @@
 
 #include "low_energy_central_fidl_impl.h"
 
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 
 #include "app.h"
 #include "fidl_helpers.h"
@@ -24,8 +24,8 @@ LowEnergyCentralFidlImpl::LowEnergyCentralFidlImpl(
       requesting_scan_(false),
       binding_(this, std::move(request)),
       weak_ptr_factory_(this) {
-  FTL_DCHECK(adapter_manager_);
-  FTL_DCHECK(connection_error_handler);
+  FXL_DCHECK(adapter_manager_);
+  FXL_DCHECK(connection_error_handler);
   adapter_manager_->AddObserver(this);
   binding_.set_connection_error_handler(
       [this, connection_error_handler] { connection_error_handler(this); });
@@ -38,13 +38,13 @@ LowEnergyCentralFidlImpl::~LowEnergyCentralFidlImpl() {
 void LowEnergyCentralFidlImpl::SetDelegate(
     ::fidl::InterfaceHandle<::btfidl::low_energy::CentralDelegate> delegate) {
   if (!delegate) {
-    FTL_LOG(ERROR) << "Cannot set a null delegate";
+    FXL_LOG(ERROR) << "Cannot set a null delegate";
     return;
   }
 
   delegate_ = ::btfidl::low_energy::CentralDelegatePtr::Create(std::move(delegate));
   delegate_.set_connection_error_handler([this] {
-    FTL_LOG(INFO) << "LowEnergyCentral delegate disconnected";
+    FXL_LOG(INFO) << "LowEnergyCentral delegate disconnected";
     delegate_ = nullptr;
   });
 }
@@ -52,35 +52,35 @@ void LowEnergyCentralFidlImpl::SetDelegate(
 void LowEnergyCentralFidlImpl::GetPeripherals(::fidl::Array<::fidl::String> service_uuids,
                                               const GetPeripheralsCallback& callback) {
   // TODO:
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void LowEnergyCentralFidlImpl::GetPeripheral(const ::fidl::String& identifier,
                                              const GetPeripheralCallback& callback) {
   // TODO:
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void LowEnergyCentralFidlImpl::StartScan(::btfidl::low_energy::ScanFilterPtr filter,
                                          const StartScanCallback& callback) {
-  FTL_LOG(INFO) << "Low Energy Central StartScan()";
+  FXL_LOG(INFO) << "Low Energy Central StartScan()";
 
   if (!adapter_manager_->GetActiveAdapter()) {
-    FTL_LOG(ERROR) << "Adapter not available";
+    FXL_LOG(ERROR) << "Adapter not available";
     callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::BLUETOOTH_NOT_AVAILABLE,
                                           "Bluetooth not available on the current system"));
     return;
   }
 
   if (requesting_scan_) {
-    FTL_LOG(ERROR) << "Scan request already in progress";
+    FXL_LOG(ERROR) << "Scan request already in progress";
     callback(
         fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::IN_PROGRESS, "Scan request in progress"));
     return;
   }
 
   if (filter && !fidl_helpers::IsScanFilterValid(*filter)) {
-    FTL_LOG(ERROR) << "Invalid scan filter given";
+    FXL_LOG(ERROR) << "Invalid scan filter given";
     callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::INVALID_ARGUMENTS,
                                           "ScanFilter contains an invalid UUID"));
     return;
@@ -95,7 +95,7 @@ void LowEnergyCentralFidlImpl::StartScan(::btfidl::low_energy::ScanFilterPtr fil
   }
 
   requesting_scan_ = true;
-  adapter_manager_->GetActiveAdapter()->le_discovery_manager()->StartDiscovery(ftl::MakeCopyable([
+  adapter_manager_->GetActiveAdapter()->le_discovery_manager()->StartDiscovery(fxl::MakeCopyable([
     self = weak_ptr_factory_.GetWeakPtr(), filter = std::move(filter), callback
   ](auto session) {
     if (!self) return;
@@ -103,7 +103,7 @@ void LowEnergyCentralFidlImpl::StartScan(::btfidl::low_energy::ScanFilterPtr fil
     self->requesting_scan_ = false;
 
     if (!session) {
-      FTL_LOG(ERROR) << "Failed to start discovery session";
+      FXL_LOG(ERROR) << "Failed to start discovery session";
       callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::FAILED,
                                             "Failed to start discovery session"));
       return;
@@ -123,10 +123,10 @@ void LowEnergyCentralFidlImpl::StartScan(::btfidl::low_energy::ScanFilterPtr fil
 }
 
 void LowEnergyCentralFidlImpl::StopScan() {
-  FTL_LOG(INFO) << "Low Energy Central StopScan()";
+  FXL_LOG(INFO) << "Low Energy Central StopScan()";
 
   if (!scan_session_) {
-    FTL_LOG(WARNING) << "No active discovery session; nothing to do";
+    FXL_LOG(WARNING) << "No active discovery session; nothing to do";
     return;
   }
 
@@ -135,7 +135,7 @@ void LowEnergyCentralFidlImpl::StopScan() {
 }
 
 void LowEnergyCentralFidlImpl::OnActiveAdapterChanged(bluetooth::gap::Adapter* adapter) {
-  FTL_LOG(INFO) << "The active adapter has changed; terminating all running LE Central procedures";
+  FXL_LOG(INFO) << "The active adapter has changed; terminating all running LE Central procedures";
 
   if (scan_session_) StopScan();
 }
@@ -145,7 +145,7 @@ void LowEnergyCentralFidlImpl::OnScanResult(const ::bluetooth::gap::RemoteDevice
 
   auto fidl_device = fidl_helpers::NewLERemoteDevice(remote_device);
   if (!fidl_device) {
-    FTL_LOG(WARNING) << "Ignoring malformed scan result";
+    FXL_LOG(WARNING) << "Ignoring malformed scan result";
     return;
   }
 

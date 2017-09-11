@@ -10,12 +10,12 @@
 
 #include "apps/bluetooth/lib/hci/acl_data_channel.h"
 #include "apps/bluetooth/lib/hci/command_channel.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_counted.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/memory/weak_ptr.h"
-#include "lib/ftl/synchronization/thread_checker.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fxl/synchronization/thread_checker.h"
+#include "lib/fxl/tasks/task_runner.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
@@ -33,12 +33,12 @@ class DeviceWrapper;
 //
 // TODO(armansito): This class is ref-counted to prevent potential use-after-free errors though
 // vending weak ptrs would have been more suitable since this class is intended to be uniquely owned
-// by its creator. ftl::WeakPtr is not thread-safe which is why we use ftl::RefCountedThreadSafe.
-// Consider making ftl::WeakPtr thread-safe.
+// by its creator. fxl::WeakPtr is not thread-safe which is why we use fxl::RefCountedThreadSafe.
+// Consider making fxl::WeakPtr thread-safe.
 class Transport final : public ::mtl::MessageLoopHandler,
-                        public ftl::RefCountedThreadSafe<Transport> {
+                        public fxl::RefCountedThreadSafe<Transport> {
  public:
-  static ftl::RefPtr<Transport> Create(std::unique_ptr<DeviceWrapper> hci_device);
+  static fxl::RefPtr<Transport> Create(std::unique_ptr<DeviceWrapper> hci_device);
 
   // Initializes the HCI command channel, starts the I/O event loop, and kicks off a new I/O thread
   // for transactions with the HCI driver. The ACLDataChannel will be left uninitialized. The
@@ -75,7 +75,7 @@ class Transport final : public ::mtl::MessageLoopHandler,
 
   // Returns the I/O thread task runner. If this is called when this Transport instance is not
   // initialized, the return value will be nullptr.
-  ftl::RefPtr<ftl::TaskRunner> io_task_runner() const { return io_task_runner_; }
+  fxl::RefPtr<fxl::TaskRunner> io_task_runner() const { return io_task_runner_; }
 
   // Set a callback that should be invoked when any one of the underlying channels gets closed
   // for any reason (e.g. the HCI device has disappeared) and the task runner on which the
@@ -84,8 +84,8 @@ class Transport final : public ::mtl::MessageLoopHandler,
   // When this callback is called the channels will be in an invalid state and packet processing
   // is no longer guaranteed to work. It is the responsibility of the callback implementation to
   // clean up this Transport instance by calling ShutDown() and/or deleting it.
-  void SetTransportClosedCallback(const ftl::Closure& callback,
-                                  ftl::RefPtr<ftl::TaskRunner> task_runner);
+  void SetTransportClosedCallback(const fxl::Closure& callback,
+                                  fxl::RefPtr<fxl::TaskRunner> task_runner);
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(Transport);
@@ -101,7 +101,7 @@ class Transport final : public ::mtl::MessageLoopHandler,
   void NotifyClosedCallback();
 
   // Used to assert that certain public functions are only called on the creation thread.
-  ftl::ThreadChecker thread_checker_;
+  fxl::ThreadChecker thread_checker_;
 
   // The Bluetooth HCI device file descriptor.
   std::unique_ptr<DeviceWrapper> hci_device_;
@@ -117,7 +117,7 @@ class Transport final : public ::mtl::MessageLoopHandler,
   mtl::MessageLoop::HandlerKey acl_channel_handler_key_;
 
   // The task runner used for posting tasks on the HCI transport I/O thread.
-  ftl::RefPtr<ftl::TaskRunner> io_task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> io_task_runner_;
 
   // The ACL data flow control handler.
   std::unique_ptr<ACLDataChannel> acl_data_channel_;
@@ -126,10 +126,10 @@ class Transport final : public ::mtl::MessageLoopHandler,
   std::unique_ptr<CommandChannel> command_channel_;
 
   // Callback invoked when the transport is closed (due to a channel error) and its task runner.
-  ftl::Closure closed_cb_;
-  ftl::RefPtr<ftl::TaskRunner> closed_cb_task_runner_;
+  fxl::Closure closed_cb_;
+  fxl::RefPtr<fxl::TaskRunner> closed_cb_task_runner_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Transport);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Transport);
 };
 
 }  // namespace hci

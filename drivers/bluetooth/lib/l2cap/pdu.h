@@ -9,8 +9,8 @@
 
 #include "apps/bluetooth/lib/hci/acl_data_packet.h"
 #include "apps/bluetooth/lib/l2cap/l2cap.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 namespace l2cap {
@@ -43,7 +43,7 @@ class PDU final {
 
   // An unpopulated PDU is considered invalid, which is the default-constructed state.
   bool is_valid() const {
-    FTL_DCHECK(fragments_.is_empty() && !fragment_count_ ||
+    FXL_DCHECK(fragments_.is_empty() && !fragment_count_ ||
                !fragments_.is_empty() && fragment_count_);
     return !fragments_.is_empty();
   }
@@ -60,7 +60,7 @@ class PDU final {
 
   // The connection handle that identifies the logical link this PDU is intended for.
   hci::ConnectionHandle connection_handle() const {
-    FTL_DCHECK(is_valid());
+    FXL_DCHECK(is_valid());
     return fragments_.begin()->connection_handle();
   }
 
@@ -107,7 +107,7 @@ class PDU final {
   // (i.e. length() + sizeof(BasicHeader)).
   FragmentList fragments_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(PDU);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PDU);
 };
 
 }  // namespace l2cap

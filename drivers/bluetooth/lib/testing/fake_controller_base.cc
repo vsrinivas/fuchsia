@@ -9,7 +9,7 @@
 #include "apps/bluetooth/lib/common/run_task_sync.h"
 #include "apps/bluetooth/lib/hci/acl_data_packet.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/mtl/threading/create_thread.h"
 
 namespace bluetooth {
@@ -23,13 +23,13 @@ FakeControllerBase::~FakeControllerBase() {
   // called before reaching this point this can cause runtime errors when our MessageLoop handlers
   // attempt to invoke the pure virtual methods of this class. So we require that the FakeController
   // be stopped by now.
-  FTL_DCHECK(!IsStarted());
+  FXL_DCHECK(!IsStarted());
 }
 
 void FakeControllerBase::Start() {
-  FTL_DCHECK(!IsStarted());
-  FTL_DCHECK(cmd_channel_.is_valid());
-  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(!IsStarted());
+  FXL_DCHECK(cmd_channel_.is_valid());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   thread_ = mtl::CreateThread(&task_runner_, "bluetooth-hci-test-controller");
 
@@ -46,8 +46,8 @@ void FakeControllerBase::Start() {
 }
 
 void FakeControllerBase::Stop() {
-  FTL_DCHECK(IsStarted());
-  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(IsStarted());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   task_runner_->PostTask([this] {
     CloseCommandChannelInternal();
@@ -60,24 +60,24 @@ void FakeControllerBase::Stop() {
 }
 
 void FakeControllerBase::SendCommandChannelPacket(const common::ByteBuffer& packet) {
-  FTL_DCHECK(IsStarted());
+  FXL_DCHECK(IsStarted());
   mx_status_t status = cmd_channel_.write(0, packet.data(), packet.size(), nullptr, 0);
-  FTL_DCHECK(MX_OK == status);
+  FXL_DCHECK(MX_OK == status);
 }
 
 void FakeControllerBase::SendACLDataChannelPacket(const common::ByteBuffer& packet) {
-  FTL_DCHECK(IsStarted());
+  FXL_DCHECK(IsStarted());
   mx_status_t status = acl_channel_.write(0, packet.data(), packet.size(), nullptr, 0);
-  FTL_DCHECK(MX_OK == status);
+  FXL_DCHECK(MX_OK == status);
 }
 
 void FakeControllerBase::CloseCommandChannel() {
-  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   common::RunTaskSync([this] { CloseCommandChannelInternal(); }, task_runner_);
 }
 
 void FakeControllerBase::CloseACLDataChannel() {
-  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   common::RunTaskSync([this] { CloseACLDataChannelInternal(); }, task_runner_);
 }
 
@@ -95,19 +95,19 @@ void FakeControllerBase::HandleCommandPacket() {
   mx_status_t status =
       cmd_channel_.read(0u, buffer.mutable_data(), hci::kMaxCommandPacketPayloadSize, &read_size,
                         nullptr, 0, nullptr);
-  FTL_DCHECK(status == MX_OK || status == MX_ERR_PEER_CLOSED);
+  FXL_DCHECK(status == MX_OK || status == MX_ERR_PEER_CLOSED);
   if (status < 0) {
     if (status == MX_ERR_PEER_CLOSED)
-      FTL_LOG(INFO) << "Command channel was closed";
+      FXL_LOG(INFO) << "Command channel was closed";
     else
-      FTL_LOG(ERROR) << "Failed to read on cmd channel: " << mx_status_get_string(status);
+      FXL_LOG(ERROR) << "Failed to read on cmd channel: " << mx_status_get_string(status);
 
     CloseCommandChannelInternal();
     return;
   }
 
   if (read_size < sizeof(hci::CommandHeader)) {
-    FTL_LOG(ERROR) << "Malformed command packet received";
+    FXL_LOG(ERROR) << "Malformed command packet received";
     return;
   }
 
@@ -121,12 +121,12 @@ void FakeControllerBase::HandleACLPacket() {
   uint32_t read_size;
   mx_status_t status =
       acl_channel_.read(0u, buffer.mutable_data(), buffer.size(), &read_size, nullptr, 0, nullptr);
-  FTL_DCHECK(status == MX_OK || status == MX_ERR_PEER_CLOSED);
+  FXL_DCHECK(status == MX_OK || status == MX_ERR_PEER_CLOSED);
   if (status < 0) {
     if (status == MX_ERR_PEER_CLOSED)
-      FTL_LOG(INFO) << "ACL channel was closed";
+      FXL_LOG(INFO) << "ACL channel was closed";
     else
-      FTL_LOG(ERROR) << "Failed to read on ACL channel: " << mx_status_get_string(status);
+      FXL_LOG(ERROR) << "Failed to read on ACL channel: " << mx_status_get_string(status);
 
     CloseACLDataChannelInternal();
     return;
@@ -137,7 +137,7 @@ void FakeControllerBase::HandleACLPacket() {
 }
 
 void FakeControllerBase::CloseCommandChannelInternal() {
-  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
   if (!cmd_handler_key_) return;
 
   mtl::MessageLoop::GetCurrent()->RemoveHandler(cmd_handler_key_);
@@ -146,7 +146,7 @@ void FakeControllerBase::CloseCommandChannelInternal() {
 }
 
 void FakeControllerBase::CloseACLDataChannelInternal() {
-  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
   if (!acl_handler_key_) return;
 
   mtl::MessageLoop::GetCurrent()->RemoveHandler(acl_handler_key_);

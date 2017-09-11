@@ -14,11 +14,11 @@
 
 #include "apps/bluetooth/lib/common/cancelable_callback.h"
 #include "apps/bluetooth/lib/l2cap/sdu.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/synchronization/thread_checker.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/synchronization/thread_checker.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace bluetooth {
 namespace l2cap {
@@ -64,7 +64,7 @@ class Channel {
   // configured channel or when the underlying logical link is terminated through other means.
   //
   // This callback is always run on this Channel's creation thread.
-  using ClosedCallback = ftl::Closure;
+  using ClosedCallback = fxl::Closure;
   void set_channel_closed_callback(const ClosedCallback& callback) { closed_cb_ = callback; }
 
   // Callback invoked when a new SDU is received on this channel. Any previously buffered SDUs will
@@ -81,7 +81,7 @@ class Channel {
   // See additional notes on thread safety above.
   using RxCallback = std::function<void(const SDU& sdu)>;
   virtual void SetRxHandler(const RxCallback& rx_cb,
-                            ftl::RefPtr<ftl::TaskRunner> rx_task_runner) = 0;
+                            fxl::RefPtr<fxl::TaskRunner> rx_task_runner) = 0;
 
  protected:
   explicit Channel(ChannelId id);
@@ -94,9 +94,9 @@ class Channel {
   ChannelId id_;
   ClosedCallback closed_cb_;
 
-  ftl::ThreadChecker thread_checker_;
+  fxl::ThreadChecker thread_checker_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Channel);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Channel);
 };
 
 namespace internal {
@@ -110,7 +110,7 @@ class ChannelImpl : public Channel {
 
   // Channel overrides:
   bool Send(std::unique_ptr<const common::ByteBuffer> sdu) override;
-  void SetRxHandler(const RxCallback& rx_cb, ftl::RefPtr<ftl::TaskRunner> rx_task_runner) override;
+  void SetRxHandler(const RxCallback& rx_cb, fxl::RefPtr<fxl::TaskRunner> rx_task_runner) override;
 
  private:
   friend class internal::LogicalLink;
@@ -135,7 +135,7 @@ class ChannelImpl : public Channel {
   std::mutex mtx_;
 
   RxCallback rx_cb_ __TA_GUARDED(mtx_);
-  ftl::RefPtr<ftl::TaskRunner> rx_task_runner_ __TA_GUARDED(mtx_);
+  fxl::RefPtr<fxl::TaskRunner> rx_task_runner_ __TA_GUARDED(mtx_);
 
   // The LogicalLink that this channel is associated with. A channel is always created by a
   // LogicalLink.
@@ -156,7 +156,7 @@ class ChannelImpl : public Channel {
   // use a different mutex for it.
   common::CancelableCallbackFactory<void()> send_sdu_task_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ChannelImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ChannelImpl);
 };
 
 }  // namespace internal

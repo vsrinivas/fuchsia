@@ -32,15 +32,15 @@ constexpr uint8_t kNumHCICommandPackets = 1;
 
 // A reference counted object used to verify that HCI command completion and status callbacks are
 // properly cleaned up after the end of a transaction.
-class TestCallbackObject : public ftl::RefCountedThreadSafe<TestCallbackObject> {
+class TestCallbackObject : public fxl::RefCountedThreadSafe<TestCallbackObject> {
  public:
-  explicit TestCallbackObject(const ftl::Closure& deletion_callback)
+  explicit TestCallbackObject(const fxl::Closure& deletion_callback)
       : deletion_cb_(deletion_callback) {}
 
   virtual ~TestCallbackObject() { deletion_cb_(); }
 
  private:
-  ftl::Closure deletion_cb_;
+  fxl::Closure deletion_cb_;
 };
 
 class CommandChannelTest : public TestingBase {
@@ -105,7 +105,7 @@ TEST_F(CommandChannelTest, SingleRequestResponse) {
   // verify that it gets cleaned up as expected.
   bool test_obj_deleted = false;
   auto test_obj =
-      ftl::MakeRefCounted<TestCallbackObject>([&test_obj_deleted] { test_obj_deleted = true; });
+      fxl::MakeRefCounted<TestCallbackObject>([&test_obj_deleted] { test_obj_deleted = true; });
 
   auto reset = CommandPacket::New(kReset);
   CommandChannel::TransactionId id = cmd_channel()->SendCommand(

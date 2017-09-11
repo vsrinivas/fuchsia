@@ -12,11 +12,11 @@
 #include "apps/bluetooth/lib/hci/connection.h"
 #include "apps/bluetooth/lib/hci/control_packets.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
-#include "lib/ftl/functional/cancelable_callback.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/memory/weak_ptr.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/functional/cancelable_callback.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace bluetooth {
 namespace hci {
@@ -45,7 +45,7 @@ class LowEnergyConnector {
   //     an incoming request (remote initiated), or autonomously created using the controller white
   //     list (local controller initiated).
   using ConnectionDelegate = std::function<void(std::unique_ptr<Connection> connection)>;
-  LowEnergyConnector(ftl::RefPtr<Transport> hci, ftl::RefPtr<ftl::TaskRunner> task_runner,
+  LowEnergyConnector(fxl::RefPtr<Transport> hci, fxl::RefPtr<fxl::TaskRunner> task_runner,
                      const ConnectionDelegate& delegate);
   ~LowEnergyConnector();
 
@@ -102,10 +102,10 @@ class LowEnergyConnector {
   void OnCreateConnectionComplete(Result result, Status hci_status);
 
   // Task runner for all asynchronous tasks.
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
 
   // The HCI transport.
-  ftl::RefPtr<Transport> hci_;
+  fxl::RefPtr<Transport> hci_;
 
   // The delegate that gets notified when a new link layer connection gets created.
   ConnectionDelegate delegate_;
@@ -116,16 +116,16 @@ class LowEnergyConnector {
   // Callback that is invoked when a request to create connection times out. We do not rely on
   // CommandChannel's timer since the request completes when we receive the HCI Command Status
   // event.
-  ftl::CancelableClosure request_timeout_cb_;
+  fxl::CancelableClosure request_timeout_cb_;
 
   // Our event handle ID for the LE Connection Complete event.
   CommandChannel::EventHandlerId event_handler_id_;
 
   // Keep this as the last member to make sure that all weak pointers are invalidated before other
   // members get destroyed.
-  ftl::WeakPtrFactory<LowEnergyConnector> weak_ptr_factory_;
+  fxl::WeakPtrFactory<LowEnergyConnector> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LowEnergyConnector);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LowEnergyConnector);
 };
 
 }  // namespace hci

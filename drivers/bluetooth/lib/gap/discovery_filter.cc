@@ -17,7 +17,7 @@ namespace {
 bool MatchUuids(const std::vector<common::UUID>& uuids, const common::BufferView& data,
                 size_t uuid_size) {
   if (data.size() % uuid_size) {
-    FTL_LOG(WARNING) << "gap: DiscoveryFilter: Malformed service UUIDs list";
+    FXL_LOG(WARNING) << "gap: DiscoveryFilter: Malformed service UUIDs list";
     return false;
   }
 
@@ -66,7 +66,7 @@ bool DiscoveryFilter::MatchLowEnergyResult(const common::ByteBuffer& advertising
         // The Flags field may be zero or more octets long for potential future extension. We only
         // care about the first octet.
         if (data.size() < kFlagsSizeMin) {
-          FTL_LOG(WARNING) << "gap: DiscoveryFilter: Malformed Flags field received";
+          FXL_LOG(WARNING) << "gap: DiscoveryFilter: Malformed Flags field received";
           break;
         }
 
@@ -80,7 +80,7 @@ bool DiscoveryFilter::MatchLowEnergyResult(const common::ByteBuffer& advertising
         if (pathloss_ok) break;
 
         if (data.size() != kTxPowerLevelSize) {
-          FTL_LOG(WARNING) << "gap: DiscoveryFilter: Malformed Tx Power Level received";
+          FXL_LOG(WARNING) << "gap: DiscoveryFilter: Malformed Tx Power Level received";
           break;
         }
 
@@ -91,7 +91,7 @@ bool DiscoveryFilter::MatchLowEnergyResult(const common::ByteBuffer& advertising
 
         int8_t tx_power_lvl = static_cast<int8_t>(*data.data());
         if (tx_power_lvl < rssi) {
-          FTL_LOG(WARNING) << "gap: DiscoveryFilter: Reported Tx Power Level is less than the RSSI";
+          FXL_LOG(WARNING) << "gap: DiscoveryFilter: Reported Tx Power Level is less than the RSSI";
           break;
         }
 
@@ -104,7 +104,7 @@ bool DiscoveryFilter::MatchLowEnergyResult(const common::ByteBuffer& advertising
         if (name_ok) break;
 
         auto name = data.AsString();
-        name_ok = (name.find(name_substring_) != ftl::StringView::npos);
+        name_ok = (name.find(name_substring_) != fxl::StringView::npos);
         break;
       }
       case DataType::kManufacturerSpecificData:
@@ -113,7 +113,7 @@ bool DiscoveryFilter::MatchLowEnergyResult(const common::ByteBuffer& advertising
         // The first two octets of the manufacturer specific data field contains the Company
         // Identifier Code.
         if (data.size() < kManufacturerSpecificDataSizeMin) {
-          FTL_LOG(WARNING) << "gap: DiscoveryFilter: Malformed manufacturer-specific data received";
+          FXL_LOG(WARNING) << "gap: DiscoveryFilter: Malformed manufacturer-specific data received";
           break;
         }
 

@@ -8,9 +8,9 @@
 #include <magenta/status.h>
 
 #include "apps/bluetooth/lib/common/run_task_sync.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "slab_allocators.h"
 #include "transport.h"
@@ -36,7 +36,7 @@ ACLDataChannel::ACLDataChannel(Transport* transport, mx::channel hci_acl_channel
       io_handler_key_(0u),
       num_sent_packets_(0u),
       le_num_sent_packets_(0u) {
-  FTL_DCHECK(transport_), FTL_DCHECK(channel_.is_valid());
+  FXL_DCHECK(transport_), FXL_DCHECK(channel_.is_valid());
 }
 
 ACLDataChannel::~ACLDataChannel() {
@@ -45,9 +45,9 @@ ACLDataChannel::~ACLDataChannel() {
 
 void ACLDataChannel::Initialize(const DataBufferInfo& bredr_buffer_info,
                                 const DataBufferInfo& le_buffer_info) {
-  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FTL_DCHECK(!is_initialized_);
-  FTL_DCHECK(bredr_buffer_info.IsAvailable() || le_buffer_info.IsAvailable());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(!is_initialized_);
+  FXL_DCHECK(bredr_buffer_info.IsAvailable() || le_buffer_info.IsAvailable());
 
   bredr_buffer_info_ = bredr_buffer_info;
   le_buffer_info_ = le_buffer_info;
@@ -56,7 +56,7 @@ void ACLDataChannel::Initialize(const DataBufferInfo& bredr_buffer_info,
     // TODO(armansito): We'll need to pay attention to MX_CHANNEL_WRITABLE as well.
     io_handler_key_ =
         mtl::MessageLoop::GetCurrent()->AddHandler(this, channel_.get(), MX_CHANNEL_READABLE);
-    FTL_LOG(INFO) << "hci: ACLDataChannel: I/O handler registered";
+    FXL_LOG(INFO) << "hci: ACLDataChannel: I/O handler registered";
   };
 
   io_task_runner_ = transport_->io_task_runner();
@@ -66,22 +66,22 @@ void ACLDataChannel::Initialize(const DataBufferInfo& bredr_buffer_info,
       kNumberOfCompletedPacketsEventCode,
       std::bind(&ACLDataChannel::NumberOfCompletedPacketsCallback, this, std::placeholders::_1),
       io_task_runner_);
-  FTL_DCHECK(event_handler_id_);
+  FXL_DCHECK(event_handler_id_);
 
   is_initialized_ = true;
 
-  FTL_LOG(INFO) << "hci: ACLDataChannel: initialized";
+  FXL_LOG(INFO) << "hci: ACLDataChannel: initialized";
 }
 
 void ACLDataChannel::ShutDown() {
-  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   if (!is_initialized_) return;
 
-  FTL_LOG(INFO) << "hci: ACLDataChannel: shutting down";
+  FXL_LOG(INFO) << "hci: ACLDataChannel: shutting down";
 
   auto handler_cleanup_task = [handler_key = io_handler_key_] {
-    FTL_DCHECK(mtl::MessageLoop::GetCurrent());
-    FTL_LOG(INFO) << "hci: ACLDataChannel Removing I/O handler";
+    FXL_DCHECK(mtl::MessageLoop::GetCurrent());
+    FXL_LOG(INFO) << "hci: ACLDataChannel Removing I/O handler";
     mtl::MessageLoop::GetCurrent()->RemoveHandler(handler_key);
   };
 
@@ -109,14 +109,14 @@ void ACLDataChannel::SetDataRxHandler(const DataReceivedCallback& rx_callback) {
 
 bool ACLDataChannel::SendPacket(ACLDataPacketPtr data_packet, Connection::LinkType ll_type) {
   if (!is_initialized_) {
-    FTL_VLOG(1) << "hci: ACLDataChannel: Cannot send packets while uninitialized";
+    FXL_VLOG(1) << "hci: ACLDataChannel: Cannot send packets while uninitialized";
     return false;
   }
 
-  FTL_DCHECK(data_packet);
+  FXL_DCHECK(data_packet);
 
   if (data_packet->view().payload_size() > GetBufferMTU(ll_type)) {
-    FTL_LOG(ERROR) << "ACL data packet too large!";
+    FXL_LOG(ERROR) << "ACL data packet too large!";
     return false;
   }
 
@@ -132,19 +132,19 @@ bool ACLDataChannel::SendPacket(ACLDataPacketPtr data_packet, Connection::LinkTy
 bool ACLDataChannel::SendPackets(fbl::DoublyLinkedList<ACLDataPacketPtr> packets,
                                  Connection::LinkType ll_type) {
   if (!is_initialized_) {
-    FTL_VLOG(1) << "hci: ACLDataChannel: Cannot send packets while uninitialized";
+    FXL_VLOG(1) << "hci: ACLDataChannel: Cannot send packets while uninitialized";
     return false;
   }
 
   if (packets.is_empty()) {
-    FTL_VLOG(1) << "hci: ACLDataChannel: No packets to send!";
+    FXL_VLOG(1) << "hci: ACLDataChannel: No packets to send!";
     return false;
   }
 
   // Make sure that all packets are within the MTU.
   for (const auto& packet : packets) {
     if (packet.view().payload_size() > GetBufferMTU(ll_type)) {
-      FTL_LOG(ERROR) << "ACL data packet too large!";
+      FXL_LOG(ERROR) << "ACL data packet too large!";
       return false;
     }
   }
@@ -174,8 +174,8 @@ size_t ACLDataChannel::GetBufferMTU(Connection::LinkType ll_type) const {
 }
 
 void ACLDataChannel::NumberOfCompletedPacketsCallback(const EventPacket& event) {
-  FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
-  FTL_DCHECK(event.event_code() == kNumberOfCompletedPacketsEventCode);
+  FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(event.event_code() == kNumberOfCompletedPacketsEventCode);
 
   const auto& payload = event.view().payload<NumberOfCompletedPacketsEventParams>();
   size_t total_comp_packets = 0;
@@ -188,22 +188,22 @@ void ACLDataChannel::NumberOfCompletedPacketsCallback(const EventPacket& event) 
 
     auto iter = pending_links_.find(le16toh(data->connection_handle));
     if (iter == pending_links_.end()) {
-      FTL_LOG(WARNING) << "Controller reported sent packets on unknown connection handle!";
+      FXL_LOG(WARNING) << "Controller reported sent packets on unknown connection handle!";
       continue;
     }
 
     uint16_t comp_packets = le16toh(data->hc_num_of_completed_packets);
 
-    FTL_DCHECK(iter->second.count);
+    FXL_DCHECK(iter->second.count);
     if (iter->second.count < comp_packets) {
-      FTL_LOG(WARNING) << ftl::StringPrintf(
+      FXL_LOG(WARNING) << fxl::StringPrintf(
           "Packet tx count mismatch! (handle: 0x%04x, expected: %zu, actual : %u)",
           le16toh(data->connection_handle), iter->second.count, comp_packets);
       iter->second.count = 0u;
 
       // On debug builds it's better to assert and crash so that we can catch controller bugs. On
       // release builds we log the warning message above and continue.
-      FTL_NOTREACHED() << "Controller reported incorrect packet count!";
+      FXL_NOTREACHED() << "Controller reported incorrect packet count!";
     } else {
       iter->second.count -= comp_packets;
     }
@@ -261,7 +261,7 @@ void ACLDataChannel::TrySendNextQueuedPacketsLocked() {
     auto packet_bytes = packet.packet->view().data();
     mx_status_t status = channel_.write(0, packet_bytes.data(), packet_bytes.size(), nullptr, 0);
     if (status < 0) {
-      FTL_LOG(ERROR) << "hci: ACLDataChannel: Failed to send data packet to HCI driver ("
+      FXL_LOG(ERROR) << "hci: ACLDataChannel: Failed to send data packet to HCI driver ("
                      << mx_status_get_string(status) << ") - dropping packet";
       to_send.pop_front();
       continue;
@@ -288,19 +288,19 @@ void ACLDataChannel::TrySendNextQueuedPacketsLocked() {
 }
 
 size_t ACLDataChannel::GetNumFreeBREDRPacketsLocked() const {
-  FTL_DCHECK(bredr_buffer_info_.max_num_packets() >= num_sent_packets_);
+  FXL_DCHECK(bredr_buffer_info_.max_num_packets() >= num_sent_packets_);
   return bredr_buffer_info_.max_num_packets() - num_sent_packets_;
 }
 
 size_t ACLDataChannel::GetNumFreeLEPacketsLocked() const {
   if (!le_buffer_info_.IsAvailable()) return GetNumFreeBREDRPacketsLocked();
 
-  FTL_DCHECK(le_buffer_info_.max_num_packets() >= le_num_sent_packets_);
+  FXL_DCHECK(le_buffer_info_.max_num_packets() >= le_num_sent_packets_);
   return le_buffer_info_.max_num_packets() - le_num_sent_packets_;
 }
 
 void ACLDataChannel::DecrementTotalNumPacketsLocked(size_t count) {
-  FTL_DCHECK(num_sent_packets_ >= count);
+  FXL_DCHECK(num_sent_packets_ >= count);
   num_sent_packets_ -= count;
 }
 
@@ -310,12 +310,12 @@ void ACLDataChannel::DecrementLETotalNumPacketsLocked(size_t count) {
     return;
   }
 
-  FTL_DCHECK(le_num_sent_packets_ >= count);
+  FXL_DCHECK(le_num_sent_packets_ >= count);
   le_num_sent_packets_ -= count;
 }
 
 void ACLDataChannel::IncrementTotalNumPacketsLocked(size_t count) {
-  FTL_DCHECK(num_sent_packets_ + count <= bredr_buffer_info_.max_num_packets());
+  FXL_DCHECK(num_sent_packets_ + count <= bredr_buffer_info_.max_num_packets());
   num_sent_packets_ += count;
 }
 
@@ -325,16 +325,16 @@ void ACLDataChannel::IncrementLETotalNumPacketsLocked(size_t count) {
     return;
   }
 
-  FTL_DCHECK(le_num_sent_packets_ + count <= le_buffer_info_.max_num_packets());
+  FXL_DCHECK(le_num_sent_packets_ + count <= le_buffer_info_.max_num_packets());
   le_num_sent_packets_ += count;
 }
 
 void ACLDataChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) {
   if (!is_initialized_) return;
 
-  FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
-  FTL_DCHECK(handle == channel_.get());
-  FTL_DCHECK(pending & MX_CHANNEL_READABLE);
+  FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(handle == channel_.get());
+  FXL_DCHECK(pending & MX_CHANNEL_READABLE);
 
   std::lock_guard<std::mutex> lock(rx_mutex_);
   if (!rx_callback_) return;
@@ -343,7 +343,7 @@ void ACLDataChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uin
   // largest possible buffer.
   auto packet = ACLDataPacket::New(slab_allocators::kLargeACLDataPayloadSize);
   if (!packet) {
-    FTL_LOG(ERROR) << "Failed to allocate buffer received ACL data packet!";
+    FXL_LOG(ERROR) << "Failed to allocate buffer received ACL data packet!";
     return;
   }
 
@@ -352,14 +352,14 @@ void ACLDataChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uin
   mx_status_t status = channel_.read(0u, packet_bytes.mutable_data(), packet_bytes.size(),
                                      &read_size, nullptr, 0, nullptr);
   if (status < 0) {
-    FTL_VLOG(1) << "hci: ACLDataChannel: Failed to read RX bytes: " << mx_status_get_string(status);
+    FXL_VLOG(1) << "hci: ACLDataChannel: Failed to read RX bytes: " << mx_status_get_string(status);
     // Clear the handler so that we stop receiving events from it.
     mtl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
     return;
   }
 
   if (read_size < sizeof(ACLDataHeader)) {
-    FTL_LOG(ERROR) << "hci: ACLDataChannel: Malformed data packet - "
+    FXL_LOG(ERROR) << "hci: ACLDataChannel: Malformed data packet - "
                    << "expected at least " << sizeof(ACLDataHeader) << " bytes, "
                    << "got " << read_size;
     return;
@@ -368,7 +368,7 @@ void ACLDataChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uin
   const size_t rx_payload_size = read_size - sizeof(ACLDataHeader);
   const size_t size_from_header = le16toh(packet->view().header().data_total_length);
   if (size_from_header != rx_payload_size) {
-    FTL_LOG(ERROR) << "hci: ACLDataChannel: Malformed packet - "
+    FXL_LOG(ERROR) << "hci: ACLDataChannel: Malformed packet - "
                    << "payload size from header (" << size_from_header << ")"
                    << " does not match received payload size: " << rx_payload_size;
     return;
@@ -380,10 +380,10 @@ void ACLDataChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uin
 }
 
 void ACLDataChannel::OnHandleError(mx_handle_t handle, mx_status_t error) {
-  FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
-  FTL_DCHECK(handle == channel_.get());
+  FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(handle == channel_.get());
 
-  FTL_LOG(ERROR) << "hci: ACLDataChannel: channel error: " << mx_status_get_string(error);
+  FXL_LOG(ERROR) << "hci: ACLDataChannel: channel error: " << mx_status_get_string(error);
 
   // Clear the handler so that we stop receiving events from it.
   mtl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);

@@ -6,7 +6,7 @@
 
 #include "apps/bluetooth/lib/hci/control_packets.h"
 #include "apps/bluetooth/lib/hci/hci.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 namespace hci {
@@ -52,7 +52,7 @@ class AdvertisingReportParser final {
   // Pointer to the beginning of the next advertising report segment.
   const uint8_t* ptr_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AdvertisingReportParser);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AdvertisingReportParser);
 };
 
 }  // namespace hci

@@ -8,7 +8,7 @@
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "lib/fidl/cpp/bindings/type_converter.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 // A |TypeConverter| that will create a |fidl::Array<unsigned char>| containing a copy of
 // of the contents of an |ByteBuffer|, copying the memory directly. If the input array is empty,
@@ -30,10 +30,10 @@ namespace {
 using UuidFunction = std::function<void(const common::UUID&)>;
 
 bool ParseUuids(const ::bluetooth::common::BufferView& data, size_t uuid_size, UuidFunction func) {
-  FTL_DCHECK(func);
+  FXL_DCHECK(func);
 
   if (data.size() % uuid_size) {
-    FTL_LOG(WARNING) << "Malformed service UUIDs list";
+    FXL_LOG(WARNING) << "Malformed service UUIDs list";
     return false;
   }
 
@@ -131,7 +131,7 @@ inline size_t BufferWrite(common::MutableByteBuffer* buffer, size_t pos, const T
 AdvertisingData::AdvertisingData() {}
 
 bool AdvertisingData::FromBytes(const common::ByteBuffer& data, AdvertisingData* out_ad) {
-  FTL_DCHECK(out_ad);
+  FXL_DCHECK(out_ad);
   AdvertisingDataReader reader(data);
   if (!reader.is_valid()) return false;
 
@@ -141,7 +141,7 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data, AdvertisingData*
     switch (type) {
       case ::bluetooth::gap::DataType::kTxPowerLevel: {
         if (field.size() != ::bluetooth::gap::kTxPowerLevelSize) {
-          FTL_LOG(WARNING) << "Received malformed Tx Power Level";
+          FXL_LOG(WARNING) << "Received malformed Tx Power Level";
           return false;
         }
 
@@ -170,7 +170,7 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data, AdvertisingData*
       }
       case ::bluetooth::gap::DataType::kManufacturerSpecificData: {
         if (field.size() < ::bluetooth::gap::kManufacturerSpecificDataSizeMin) {
-          FTL_LOG(WARNING) << "Manufacturer specific data too small";
+          FXL_LOG(WARNING) << "Manufacturer specific data too small";
           return false;
         }
 
@@ -186,7 +186,7 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data, AdvertisingData*
         // device appearance, as it can be obtained either from advertising data
         // or via GATT.
         if (field.size() != ::bluetooth::gap::kAppearanceSize) {
-          FTL_LOG(WARNING) << "Received malformed Appearance";
+          FXL_LOG(WARNING) << "Received malformed Appearance";
           return false;
         }
 
@@ -203,7 +203,7 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data, AdvertisingData*
 
 ::btfidl::low_energy::AdvertisingDataPtr AdvertisingData::AsLEAdvertisingData() const {
   auto fidl_data = ::btfidl::low_energy::AdvertisingData::New();
-  FTL_DCHECK(fidl_data);
+  FXL_DCHECK(fidl_data);
 
   if (tx_power_) {
     fidl_data->tx_power_level = ::btfidl::Int8::New();
@@ -238,8 +238,8 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data, AdvertisingData*
 
 void AdvertisingData::FromFidl(::btfidl::low_energy::AdvertisingDataPtr& fidl_ad,
                                AdvertisingData* out_ad) {
-  FTL_DCHECK(fidl_ad);
-  FTL_DCHECK(out_ad);
+  FXL_DCHECK(fidl_ad);
+  FXL_DCHECK(out_ad);
   common::UUID uuid;
   for (const auto& uuid_str : fidl_ad->service_uuids) {
     if (common::StringToUuid(uuid_str, &uuid)) {
@@ -385,7 +385,7 @@ size_t AdvertisingData::block_size() const {
         break;
       }
       default: {
-        FTL_LOG(WARNING) << "Unknown UUID size";
+        FXL_LOG(WARNING) << "Unknown UUID size";
         break;
       }
     }
@@ -508,14 +508,14 @@ AdvertisingDataReader::AdvertisingDataReader(const common::ByteBuffer& data)
 }
 
 bool AdvertisingDataReader::GetNextField(DataType* out_type, common::BufferView* out_data) {
-  FTL_DCHECK(out_type);
-  FTL_DCHECK(out_data);
+  FXL_DCHECK(out_type);
+  FXL_DCHECK(out_data);
 
   if (!HasMoreData()) return false;
 
   size_t tlv_len = remaining_[0];
   size_t cur_struct_size = tlv_len + 1;
-  FTL_DCHECK(cur_struct_size <= remaining_.size());
+  FXL_DCHECK(cur_struct_size <= remaining_.size());
 
   *out_type = static_cast<DataType>(remaining_[1]);
   *out_data = remaining_.view(2, tlv_len - 1);
@@ -535,7 +535,7 @@ bool AdvertisingDataReader::HasMoreData() const {
 
 AdvertisingDataWriter::AdvertisingDataWriter(common::MutableByteBuffer* buffer)
     : buffer_(buffer), bytes_written_(0u) {
-  FTL_DCHECK(buffer_);
+  FXL_DCHECK(buffer_);
 }
 
 bool AdvertisingDataWriter::WriteField(DataType type, const common::ByteBuffer& data) {
@@ -550,7 +550,7 @@ bool AdvertisingDataWriter::WriteField(DataType type, const common::ByteBuffer& 
 
   // Copy the data into the view.
   size_t written = data.Copy(&target);
-  FTL_DCHECK(written == data.size());
+  FXL_DCHECK(written == data.size());
 
   bytes_written_ += written;
 

@@ -11,8 +11,8 @@
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/common/intrusive_pointer_traits.h"
 #include "apps/bluetooth/lib/common/packet_view.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 namespace hci {
@@ -100,15 +100,15 @@ class PacketBase : public fbl::DoublyLinkedListable<std::unique_ptr<T>> {
 
   // Called by derived classes to initialize |view_| after initializing the corresponding buffer.
   void init_view(const common::MutablePacketView<HeaderType>& view) {
-    FTL_DCHECK(!view_.is_valid());
-    FTL_DCHECK(view.is_valid());
+    FXL_DCHECK(!view_.is_valid());
+    FXL_DCHECK(view.is_valid());
     view_ = view;
   }
 
  private:
   common::MutablePacketView<HeaderType> view_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(PacketBase);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PacketBase);
 };
 
 // The basic Packet template. See control_packets.h and acl_data_packet.h for specializations that

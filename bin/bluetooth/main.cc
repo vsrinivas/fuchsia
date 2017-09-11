@@ -5,9 +5,9 @@
 #include <iostream>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/log_settings.h"
-#include "lib/ftl/log_settings_command_line.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/log_settings.h"
+#include "lib/fxl/log_settings_command_line.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 #include "app.h"
@@ -26,8 +26,8 @@ const char kUsageString[] =
 }  // namespace
 
 int main(int argc, const char* argv[]) {
-  auto cl = ftl::CommandLineFromArgcArgv(argc, argv);
-  if (!ftl::SetLogSettingsFromCommandLine(cl)) {
+  auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
+  if (!fxl::SetLogSettingsFromCommandLine(cl)) {
     std::cout << kUsageString << std::endl;
     return EXIT_FAILURE;
   }

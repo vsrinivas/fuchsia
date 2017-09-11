@@ -4,7 +4,7 @@
 
 #include "advertising_report_parser.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 #include "control_packets.h"
 
@@ -13,9 +13,9 @@ namespace hci {
 
 AdvertisingReportParser::AdvertisingReportParser(const EventPacket& event)
     : encountered_error_(false) {
-  FTL_DCHECK(event.event_code() == kLEMetaEventCode);
+  FXL_DCHECK(event.event_code() == kLEMetaEventCode);
   const auto& params = event.view().payload<LEMetaEventParams>();
-  FTL_DCHECK(params.subevent_code == kLEAdvertisingReportSubeventCode);
+  FXL_DCHECK(params.subevent_code == kLEAdvertisingReportSubeventCode);
 
   auto subevent_params = event.le_event_params<LEAdvertisingReportSubeventParams>();
 
@@ -27,8 +27,8 @@ AdvertisingReportParser::AdvertisingReportParser(const EventPacket& event)
 
 bool AdvertisingReportParser::GetNextReport(const LEAdvertisingReportData** out_data,
                                             int8_t* out_rssi) {
-  FTL_DCHECK(out_data);
-  FTL_DCHECK(out_rssi);
+  FXL_DCHECK(out_data);
+  FXL_DCHECK(out_rssi);
 
   if (encountered_error_ || !HasMoreReports()) return false;
 

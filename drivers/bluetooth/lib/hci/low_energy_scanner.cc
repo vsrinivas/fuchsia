@@ -6,7 +6,7 @@
 
 #include "apps/bluetooth/lib/hci/sequential_command_runner.h"
 #include "apps/bluetooth/lib/hci/transport.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace bluetooth {
 namespace hci {
@@ -22,12 +22,12 @@ LowEnergyScanResult::LowEnergyScanResult(const common::DeviceAddress& address, b
                                          int8_t rssi)
     : address(address), connectable(connectable), rssi(rssi) {}
 
-LowEnergyScanner::LowEnergyScanner(Delegate* delegate, ftl::RefPtr<Transport> hci,
-                                   ftl::RefPtr<ftl::TaskRunner> task_runner)
+LowEnergyScanner::LowEnergyScanner(Delegate* delegate, fxl::RefPtr<Transport> hci,
+                                   fxl::RefPtr<fxl::TaskRunner> task_runner)
     : state_(State::kIdle), delegate_(delegate), task_runner_(task_runner), transport_(hci) {
-  FTL_DCHECK(delegate_);
-  FTL_DCHECK(transport_);
-  FTL_DCHECK(task_runner_);
+  FXL_DCHECK(delegate_);
+  FXL_DCHECK(transport_);
+  FXL_DCHECK(task_runner_);
 
   hci_cmd_runner_ = std::make_unique<SequentialCommandRunner>(task_runner_, transport_);
 }

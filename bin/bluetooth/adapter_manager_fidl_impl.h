@@ -11,7 +11,7 @@
 #include "apps/bluetooth/service/src/adapter_fidl_impl.h"
 #include "apps/bluetooth/service/src/adapter_manager.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth_service {
 
@@ -49,7 +49,7 @@ class AdapterManagerFidlImpl : public ::bluetooth::control::AdapterManager,
   void OnAdapterFidlImplDisconnected(AdapterFidlImpl* adapter_fidl_impl);
 
   // Creates an AdapterFidlImpl for |adapter| and binds it to |request|.
-  void CreateAdapterFidlImpl(ftl::WeakPtr<bluetooth::gap::Adapter> adapter,
+  void CreateAdapterFidlImpl(fxl::WeakPtr<bluetooth::gap::Adapter> adapter,
                              ::fidl::InterfaceRequest<::bluetooth::control::Adapter> request);
 
   // The App instance that owns us. We keep a raw pointer as we expect |app_| to outlive us.
@@ -64,7 +64,7 @@ class AdapterManagerFidlImpl : public ::bluetooth::control::AdapterManager,
   // The delegate that is set via SetDelegate().
   ::bluetooth::control::AdapterManagerDelegatePtr delegate_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AdapterManagerFidlImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AdapterManagerFidlImpl);
 };
 
 }  // namespace bluetooth_service

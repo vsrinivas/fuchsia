@@ -6,8 +6,8 @@
 
 #include <string>
 
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 namespace common {
@@ -49,9 +49,9 @@ class BTSnoopLogger final {
 
  private:
   // FD to the log file.
-  ftl::UniqueFD fd_;
+  fxl::UniqueFD fd_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(BTSnoopLogger);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BTSnoopLogger);
 };
 
 }  // namespace common

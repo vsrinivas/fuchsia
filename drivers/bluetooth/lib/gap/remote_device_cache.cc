@@ -5,7 +5,7 @@
 #include "remote_device_cache.h"
 
 #include "apps/bluetooth/lib/hci/low_energy_scanner.h"
-#include "lib/ftl/random/uuid.h"
+#include "lib/fxl/random/uuid.h"
 
 #include "remote_device.h"
 
@@ -21,8 +21,8 @@ RemoteDevice* RemoteDeviceCache::StoreLowEnergyScanResult(
     return device;
   }
 
-  device = new RemoteDevice(ftl::GenerateUUID(), scan_result.address);
-  FTL_DCHECK(device->technology() == TechnologyType::kLowEnergy);
+  device = new RemoteDevice(fxl::GenerateUUID(), scan_result.address);
+  FXL_DCHECK(device->technology() == TechnologyType::kLowEnergy);
   device->SetLowEnergyData(scan_result.connectable, scan_result.rssi, advertising_data);
 
   if (!device->connectable()) {

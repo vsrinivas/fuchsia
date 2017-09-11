@@ -5,8 +5,8 @@
 #include "logical_link.h"
 
 #include "apps/bluetooth/lib/hci/transport.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "channel.h"
 
@@ -42,17 +42,17 @@ constexpr bool IsValidBREDRFixedChannel(ChannelId id) {
 }  // namespace
 
 LogicalLink::LogicalLink(hci::ConnectionHandle handle, hci::Connection::LinkType type,
-                         hci::Connection::Role role, ftl::RefPtr<hci::Transport> hci)
+                         hci::Connection::Role role, fxl::RefPtr<hci::Transport> hci)
     : hci_(hci), handle_(handle), type_(type), role_(role), fragmenter_(handle) {
-  FTL_DCHECK(hci_);
-  FTL_DCHECK(type_ == hci::Connection::LinkType::kLE || type_ == hci::Connection::LinkType::kACL);
+  FXL_DCHECK(hci_);
+  FXL_DCHECK(type_ == hci::Connection::LinkType::kLE || type_ == hci::Connection::LinkType::kACL);
 
   if (type_ == hci::Connection::LinkType::kLE) {
-    FTL_DCHECK(hci_->acl_data_channel()->GetLEBufferInfo().IsAvailable());
+    FXL_DCHECK(hci_->acl_data_channel()->GetLEBufferInfo().IsAvailable());
     fragmenter_.set_max_acl_payload_size(
         hci_->acl_data_channel()->GetLEBufferInfo().max_data_length());
   } else {
-    FTL_DCHECK(hci_->acl_data_channel()->GetBufferInfo().IsAvailable());
+    FXL_DCHECK(hci_->acl_data_channel()->GetBufferInfo().IsAvailable());
     fragmenter_.set_max_acl_payload_size(
         hci_->acl_data_channel()->GetBufferInfo().max_data_length());
   }
@@ -64,11 +64,11 @@ LogicalLink::~LogicalLink() {
 }
 
 std::unique_ptr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
-  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   // We currently only support the pre-defined fixed-channels.
   if (!AllowsFixedChannel(id)) {
-    FTL_LOG(ERROR) << ftl::StringPrintf("l2cap: Cannot open fixed channel with id 0x%04x", id);
+    FXL_LOG(ERROR) << fxl::StringPrintf("l2cap: Cannot open fixed channel with id 0x%04x", id);
     return nullptr;
   }
 
@@ -77,7 +77,7 @@ std::unique_ptr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
   auto iter = channels_.find(id);
 
   if (iter != channels_.end()) {
-    FTL_LOG(ERROR) << ftl::StringPrintf(
+    FXL_LOG(ERROR) << fxl::StringPrintf(
         "l2cap: Channel is already open! (id: 0x%04x, handle: 0x%04x)", id, handle_);
     return nullptr;
   }
@@ -100,7 +100,7 @@ std::unique_ptr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
       if (iter == channels_.end()) return;
 
       auto pp_iter = pending_pdus_.find(id);
-      FTL_DCHECK(pp_iter != pending_pdus_.end());
+      FXL_DCHECK(pp_iter != pending_pdus_.end());
 
       auto chan = iter->second;
       auto& pdus = pp_iter->second;
@@ -117,13 +117,13 @@ std::unique_ptr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
 
 void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
   // The creation thread of this object is expected to be different from the HCI I/O thread.
-  FTL_DCHECK(!thread_checker_.IsCreationThreadCurrent());
-  FTL_DCHECK(io_task_runner()->RunsTasksOnCurrentThread());
-  FTL_DCHECK(!recombiner_.ready());
-  FTL_DCHECK(packet);
+  FXL_DCHECK(!thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(io_task_runner()->RunsTasksOnCurrentThread());
+  FXL_DCHECK(!recombiner_.ready());
+  FXL_DCHECK(packet);
 
   if (!recombiner_.AddFragment(std::move(packet))) {
-    FTL_VLOG(1) << ftl::StringPrintf("l2cap: ACL data packet rejected (handle: 0x%04x)", handle_);
+    FXL_VLOG(1) << fxl::StringPrintf("l2cap: ACL data packet rejected (handle: 0x%04x)", handle_);
 
     // TODO(armansito): This indicates that this connection is not reliable. This needs to notify
     // the channels of this state.
@@ -131,8 +131,8 @@ void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
   }
 
   // |recombiner_| should have taken ownership of |packet|.
-  FTL_DCHECK(!packet);
-  FTL_DCHECK(!recombiner_.empty());
+  FXL_DCHECK(!packet);
+  FXL_DCHECK(!recombiner_.empty());
 
   // Wait for continuation fragments if a partial fragment was received.
   if (!recombiner_.ready()) return;
@@ -140,7 +140,7 @@ void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
   PDU pdu;
   recombiner_.Release(&pdu);
 
-  FTL_DCHECK(pdu.is_valid());
+  FXL_DCHECK(pdu.is_valid());
 
   std::lock_guard<std::mutex> lock(mtx_);
 
@@ -166,7 +166,7 @@ void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
   if (pp_iter != pending_pdus_.end()) {
     pp_iter->second.emplace_back(std::move(pdu));
 
-    FTL_VLOG(1) << ftl::StringPrintf("l2cap: PDU buffered (channel: 0x%04x, ll: 0x%04x", channel_id,
+    FXL_VLOG(1) << fxl::StringPrintf("l2cap: PDU buffered (channel: 0x%04x, ll: 0x%04x", channel_id,
                                      handle_);
     return;
   }
@@ -176,14 +176,14 @@ void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
 }
 
 void LogicalLink::SendBasicFrame(ChannelId id, const common::ByteBuffer& payload) {
-  FTL_DCHECK(io_task_runner()->RunsTasksOnCurrentThread());
+  FXL_DCHECK(io_task_runner()->RunsTasksOnCurrentThread());
 
   // TODO(armansito): The following makes a copy of |payload| when constructing |pdu|. Think about
   // how this could be optimized, especially when |payload| fits inside a single ACL data fragment.
   PDU pdu = fragmenter_.BuildBasicFrame(id, payload);
   auto fragments = pdu.ReleaseFragments();
 
-  FTL_DCHECK(!fragments.is_empty());
+  FXL_DCHECK(!fragments.is_empty());
   hci_->acl_data_channel()->SendPackets(std::move(fragments), type_);
 }
 
@@ -193,23 +193,23 @@ bool LogicalLink::AllowsFixedChannel(ChannelId id) {
 }
 
 void LogicalLink::RemoveChannel(ChannelImpl* channel) {
-  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FTL_DCHECK(channel);
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(channel);
 
   std::lock_guard<std::mutex> lock(mtx_);
 
   auto iter = channels_.find(channel->id());
-  FTL_DCHECK(iter != channels_.end()) << ftl::StringPrintf(
+  FXL_DCHECK(iter != channels_.end()) << fxl::StringPrintf(
       "l2cap: Attempted to remove unknown channel (id: 0x%04x, handle: 0x%04x)", channel->id(),
       handle_);
-  FTL_DCHECK(iter->first == channel->id());
+  FXL_DCHECK(iter->first == channel->id());
 
   channels_.erase(iter);
   pending_pdus_.erase(channel->id());
 }
 
 void LogicalLink::Close() {
-  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   ChannelMap channels;
 
   // Clear |channels_| before notifying each entry to avoid holding our |mtx_| while Channel's own

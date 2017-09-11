@@ -9,7 +9,7 @@
 #include "apps/bluetooth/lib/testing/fake_controller.h"
 #include "apps/bluetooth/lib/testing/fake_device.h"
 #include "apps/bluetooth/lib/testing/test_base.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 namespace hci {
@@ -115,7 +115,7 @@ class LegacyLowEnergyScannerTest : public TestingBase, public LowEnergyScanner::
   DeviceFoundCallback device_found_cb_;
   std::unique_ptr<LegacyLowEnergyScanner> scanner_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LegacyLowEnergyScannerTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LegacyLowEnergyScannerTest);
 };
 
 TEST_F(LegacyLowEnergyScannerTest, StartScanHCIErrors) {

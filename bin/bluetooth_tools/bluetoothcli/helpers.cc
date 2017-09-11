@@ -132,7 +132,7 @@ std::string TechnologyTypeToString(bluetooth::control::TechnologyType type) {
       return "Dual-Mode (BR/EDR/LE)";
   }
 
-  FTL_NOTREACHED();
+  FXL_NOTREACHED();
   return "(unknown)";
 }
 

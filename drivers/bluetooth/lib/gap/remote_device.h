@@ -9,7 +9,7 @@
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/common/device_address.h"
 #include "apps/bluetooth/lib/gap/gap.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 namespace gap {
@@ -68,7 +68,7 @@ class RemoteDevice final {
   size_t advertising_data_length_;
   common::DynamicByteBuffer advertising_data_buffer_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(RemoteDevice);
+  FXL_DISALLOW_COPY_AND_ASSIGN(RemoteDevice);
 };
 
 }  // namespace gap

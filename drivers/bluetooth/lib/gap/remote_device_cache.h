@@ -7,7 +7,7 @@
 #include <unordered_map>
 
 #include "apps/bluetooth/lib/common/device_address.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 
@@ -61,7 +61,7 @@ class RemoteDeviceCache final {
   // handle bonded LE devices that use privacy.
   std::unordered_map<common::DeviceAddress, std::string> address_map_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(RemoteDeviceCache);
+  FXL_DISALLOW_COPY_AND_ASSIGN(RemoteDeviceCache);
 };
 
 }  // namespace gap

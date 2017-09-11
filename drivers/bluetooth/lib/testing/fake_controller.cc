@@ -10,7 +10,7 @@
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/util.h"
 #include "apps/bluetooth/lib/testing/fake_device.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace bluetooth {
 namespace testing {
@@ -106,7 +106,7 @@ FakeController::~FakeController() {
 }
 
 void FakeController::SetDefaultResponseStatus(hci::OpCode opcode, hci::Status status) {
-  FTL_DCHECK(status != hci::Status::kSuccess);
+  FXL_DCHECK(status != hci::Status::kSuccess);
   default_status_map_[opcode] = status;
 }
 
@@ -119,9 +119,9 @@ void FakeController::AddLEDevice(std::unique_ptr<FakeDevice> le_device) {
 }
 
 void FakeController::SetScanStateCallback(const ScanStateCallback& callback,
-                                          ftl::RefPtr<ftl::TaskRunner> task_runner) {
-  FTL_DCHECK(callback);
-  FTL_DCHECK(task_runner);
+                                          fxl::RefPtr<fxl::TaskRunner> task_runner) {
+  FXL_DCHECK(callback);
+  FXL_DCHECK(task_runner);
 
   scan_state_cb_ = callback;
   scan_state_cb_task_runner_ = task_runner;
@@ -130,7 +130,7 @@ void FakeController::SetScanStateCallback(const ScanStateCallback& callback,
 void FakeController::RespondWithCommandComplete(hci::OpCode opcode, const void* return_params,
                                                 uint8_t return_params_size) {
   // Either both are zero or neither is.
-  FTL_DCHECK(!!return_params == !!return_params_size);
+  FXL_DCHECK(!!return_params == !!return_params_size);
 
   common::DynamicByteBuffer buffer(sizeof(hci::EventHeader) +
                                    sizeof(hci::CommandCompleteEventParams) + return_params_size);
@@ -164,7 +164,7 @@ void FakeController::RespondWithCommandStatus(hci::OpCode opcode, hci::Status st
 
 void FakeController::SendLEMetaEvent(hci::EventCode subevent_code, const void* params,
                                      uint8_t params_size) {
-  FTL_DCHECK(!!params == !!params_size);
+  FXL_DCHECK(!!params == !!params_size);
 
   common::DynamicByteBuffer buffer(sizeof(hci::EventHeader) + sizeof(hci::LEMetaEventParams) +
                                    params_size);
@@ -185,7 +185,7 @@ bool FakeController::MaybeRespondWithDefaultStatus(hci::OpCode opcode) {
   auto iter = default_status_map_.find(opcode);
   if (iter == default_status_map_.end()) return false;
 
-  FTL_LOG(INFO) << ftl::StringPrintf(
+  FXL_LOG(INFO) << fxl::StringPrintf(
       "hci: FakeController: Responding with error (command: 0x%04x, status: 0x%02x", opcode,
       iter->second);
 
@@ -221,7 +221,7 @@ void FakeController::SendAdvertisingReports() {
 void FakeController::OnLECreateConnectionCommandReceived(
     const hci::LECreateConnectionCommandParams& params) {
   common::DeviceAddress::Type addr_type = hci::AddressTypeFromHCI(params.peer_address_type);
-  FTL_DCHECK(addr_type != common::DeviceAddress::Type::kBREDR);
+  FXL_DCHECK(addr_type != common::DeviceAddress::Type::kBREDR);
 
   const common::DeviceAddress peer_address(addr_type, params.peer_address);
 
@@ -252,7 +252,7 @@ void FakeController::OnLECreateConnectionCommandReceived(
   // The procedure was initiated successfully but the device cannot be connected because it either
   // doesn't exist or isn't connectable.
   if (!device || !device->connectable()) {
-    FTL_LOG(INFO) << "Requested fake device cannot be connected; request will time out";
+    FXL_LOG(INFO) << "Requested fake device cannot be connected; request will time out";
     return;
   }
 
@@ -298,7 +298,7 @@ void FakeController::OnLECreateConnectionCommandReceived(
   // Allow enough time for the request to be canceled.
   // TODO(armansito): Make the period configurable?
   task_runner()->PostDelayedTask(pending_le_connect_rsp_.callback(),
-                                 ftl::TimeDelta::FromMilliseconds(100));
+                                 fxl::TimeDelta::FromMilliseconds(100));
 }
 
 void FakeController::OnCommandPacketReceived(
@@ -469,7 +469,7 @@ void FakeController::OnCommandPacketReceived(
       // guarantees that single-threaded unit tests receive the scan state update BEFORE the HCI
       // command sequence terminates.
       if (scan_state_cb_) {
-        FTL_DCHECK(scan_state_cb_task_runner_);
+        FXL_DCHECK(scan_state_cb_task_runner_);
         scan_state_cb_task_runner_->PostTask(
             [ cb = scan_state_cb_, enabled = le_scan_state_.enabled ] { cb(enabled); });
       }

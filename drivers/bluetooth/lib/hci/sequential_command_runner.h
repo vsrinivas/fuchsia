@@ -8,10 +8,10 @@
 
 #include "apps/bluetooth/lib/hci/command_channel.h"
 #include "apps/bluetooth/lib/hci/control_packets.h"
-#include "lib/ftl/functional/cancelable_callback.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/functional/cancelable_callback.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace bluetooth {
 namespace hci {
@@ -30,8 +30,8 @@ class Transport;
 // bound to the thread on which the instance of SequentialCommandRunner is being constructed.
 class SequentialCommandRunner final {
  public:
-  SequentialCommandRunner(ftl::RefPtr<ftl::TaskRunner> task_runner,
-                          ftl::RefPtr<Transport> transport);
+  SequentialCommandRunner(fxl::RefPtr<fxl::TaskRunner> task_runner,
+                          fxl::RefPtr<Transport> transport);
   ~SequentialCommandRunner();
 
   // Adds a HCI command packet and an optional callback to invoke with the completion event to the
@@ -74,8 +74,8 @@ class SequentialCommandRunner final {
   void Reset();
   void NotifyResultAndReset(bool result);
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
-  ftl::RefPtr<Transport> transport_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  fxl::RefPtr<Transport> transport_;
 
   using CommandQueue =
       std::queue<std::pair<std::unique_ptr<CommandPacket>, CommandCompleteCallback>>;
@@ -93,11 +93,11 @@ class SequentialCommandRunner final {
 
   // The callbacks we pass to the HCI CommandChannel for command execution. These can be cancelled
   // and erased at any time.
-  ftl::CancelableCallback<void(CommandChannel::TransactionId, Status)> status_callback_;
-  ftl::CancelableCallback<void(CommandChannel::TransactionId, const EventPacket&)>
+  fxl::CancelableCallback<void(CommandChannel::TransactionId, Status)> status_callback_;
+  fxl::CancelableCallback<void(CommandChannel::TransactionId, const EventPacket&)>
       complete_callback_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SequentialCommandRunner);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SequentialCommandRunner);
 };
 
 }  // namespace hci

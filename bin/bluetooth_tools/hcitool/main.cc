@@ -13,11 +13,11 @@
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/transport.h"
 #include "apps/bluetooth/tools/lib/command_dispatcher.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/log_settings.h"
-#include "lib/ftl/log_settings_command_line.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/log_settings.h"
+#include "lib/fxl/log_settings_command_line.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 #include "commands.h"
@@ -35,7 +35,7 @@ const char kDefaultHCIDev[] = "/dev/class/bt-hci/000";
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  auto cl = ftl::CommandLineFromArgcArgv(argc, argv);
+  auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
 
   if (cl.HasOption("help", nullptr)) {
     std::cout << kUsageString << std::endl;
@@ -43,14 +43,14 @@ int main(int argc, char* argv[]) {
   }
 
   // By default suppress all log messages below the LOG_ERROR level.
-  ftl::LogSettings log_settings;
-  log_settings.min_log_level = ftl::LOG_ERROR;
-  if (!ftl::ParseLogSettings(cl, &log_settings)) {
+  fxl::LogSettings log_settings;
+  log_settings.min_log_level = fxl::LOG_ERROR;
+  if (!fxl::ParseLogSettings(cl, &log_settings)) {
     std::cout << kUsageString << std::endl;
     return EXIT_FAILURE;
   }
 
-  ftl::SetLogSettings(log_settings);
+  fxl::SetLogSettings(log_settings);
 
   std::string hci_dev_path = kDefaultHCIDev;
   if (cl.GetOptionValue("dev", &hci_dev_path) && hci_dev_path.empty()) {
@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  ftl::UniqueFD hci_dev_fd(open(hci_dev_path.c_str(), O_RDWR));
+  fxl::UniqueFD hci_dev_fd(open(hci_dev_path.c_str(), O_RDWR));
   if (!hci_dev_fd.is_valid()) {
     std::perror("Failed to open HCI device");
     return EXIT_FAILURE;

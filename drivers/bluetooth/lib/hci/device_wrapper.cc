@@ -8,23 +8,23 @@
 #include <magenta/status.h>
 #include <magenta/types.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace bluetooth {
 namespace hci {
 
-MagentaDeviceWrapper::MagentaDeviceWrapper(ftl::UniqueFD device_fd)
+MagentaDeviceWrapper::MagentaDeviceWrapper(fxl::UniqueFD device_fd)
     : device_fd_(std::move(device_fd)) {
-  FTL_DCHECK(device_fd_.is_valid());
+  FXL_DCHECK(device_fd_.is_valid());
 }
 
 mx::channel MagentaDeviceWrapper::GetCommandChannel() {
   mx::channel channel;
   ssize_t status = ioctl_bt_hci_get_command_channel(device_fd_.get(), channel.reset_and_get_address());
   if (status < 0) {
-    FTL_LOG(ERROR) << "hci: Failed to obtain command channel handle: "
+    FXL_LOG(ERROR) << "hci: Failed to obtain command channel handle: "
                    << mx_status_get_string(status);
-    FTL_DCHECK(!channel.is_valid());
+    FXL_DCHECK(!channel.is_valid());
   }
 
   return channel;
@@ -34,9 +34,9 @@ mx::channel MagentaDeviceWrapper::GetACLDataChannel() {
   mx::channel channel;
   ssize_t status = ioctl_bt_hci_get_acl_data_channel(device_fd_.get(), channel.reset_and_get_address());
   if (status < 0) {
-    FTL_LOG(ERROR) << "hci: Failed to obtain ACL data channel handle: "
+    FXL_LOG(ERROR) << "hci: Failed to obtain ACL data channel handle: "
                    << mx_status_get_string(status);
-    FTL_DCHECK(!channel.is_valid());
+    FXL_DCHECK(!channel.is_valid());
   }
 
   return channel;

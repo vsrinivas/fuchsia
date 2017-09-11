@@ -10,8 +10,8 @@
 
 #include <magenta/compiler.h>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 namespace common {
@@ -63,7 +63,7 @@ namespace common {
 //
 //     CancelableCallbackFactory<void()> task_factory_;
 //
-//     FTL_DISALLOW_COPY_AND_ASSIGN(Foo);
+//     FXL_DISALLOW_COPY_AND_ASSIGN(Foo);
 //   };
 //
 // THREAD-SAFETY:
@@ -118,8 +118,8 @@ class CancelableCallback<void(Args...)> final {
   CancelableCallback(const std::function<void(Args...)>& callback,
                      std::shared_ptr<internal::CancelationState> state)
       : callback_(callback), state_(state) {
-    FTL_DCHECK(state_);
-    FTL_DCHECK(callback_);
+    FXL_DCHECK(state_);
+    FXL_DCHECK(callback_);
   }
 
   std::function<void(Args...)> callback_;
@@ -130,19 +130,19 @@ template <typename... Args>
 class CancelableCallbackFactory<void(Args...)> final {
  public:
   CancelableCallbackFactory() : state_(std::make_shared<internal::CancelationState>()) {
-    FTL_DCHECK(state_);
+    FXL_DCHECK(state_);
   }
 
   ~CancelableCallbackFactory() { CancelAll(); }
 
   CancelableCallback<void(Args...)> MakeTask(const std::function<void(Args...)>& f) const {
-    FTL_DCHECK(state_);
-    FTL_DCHECK(!canceled());
+    FXL_DCHECK(state_);
+    FXL_DCHECK(!canceled());
     return CancelableCallback<void(Args...)>(f, state_);
   }
 
   void CancelAll() const {
-    FTL_DCHECK(state_);
+    FXL_DCHECK(state_);
     state_->Cancel();
   }
 
@@ -151,7 +151,7 @@ class CancelableCallbackFactory<void(Args...)> final {
  private:
   std::shared_ptr<internal::CancelationState> state_;
 
-  FTL_DISALLOW_COPY_ASSIGN_AND_MOVE(CancelableCallbackFactory);
+  FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(CancelableCallbackFactory);
 };
 
 }  // namespace common

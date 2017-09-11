@@ -10,7 +10,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "apps/bluetooth/service/interfaces/control.fidl.h"
 #include "apps/bluetooth/tools/lib//command_dispatcher.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetoothcli {
 
@@ -58,7 +58,7 @@ class App final : public bluetooth::control::AdapterManagerDelegate,
 
   DeviceMap discovered_devices_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(App);
+  FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
 }  // namespace bluetoothcli

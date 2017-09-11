@@ -12,7 +12,7 @@
 #include "apps/bluetooth/lib/hci/connection.h"
 #include "apps/bluetooth/lib/testing/test_base.h"
 #include "apps/bluetooth/lib/testing/test_controller.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/threading/create_thread.h"
 
 namespace bluetooth {
@@ -75,7 +75,7 @@ class L2CAP_ChannelManagerTest : public TestingBase {
  private:
   std::unique_ptr<ChannelManager> chanmgr_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(L2CAP_ChannelManagerTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(L2CAP_ChannelManagerTest);
 };
 
 TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelErrorNoConn) {
@@ -272,12 +272,12 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeRegisteringLink) {
                             hci::Connection::Role::kMaster);
 
         att_chan = OpenFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
-        FTL_DCHECK(att_chan);
+        FXL_DCHECK(att_chan);
 
         smp_chan = OpenFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
-        FTL_DCHECK(smp_chan);
+        FXL_DCHECK(smp_chan);
       },
-      ftl::TimeDelta::FromMilliseconds(100));
+      fxl::TimeDelta::FromMilliseconds(100));
 
   RunMessageLoop();
 
@@ -329,12 +329,12 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeCreatingChannel) {
   message_loop()->task_runner()->PostDelayedTask(
       [&att_chan, &smp_chan, att_rx_cb, smp_rx_cb, this] {
         att_chan = OpenFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
-        FTL_DCHECK(att_chan);
+        FXL_DCHECK(att_chan);
 
         smp_chan = OpenFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
-        FTL_DCHECK(smp_chan);
+        FXL_DCHECK(smp_chan);
       },
-      ftl::TimeDelta::FromMilliseconds(100));
+      fxl::TimeDelta::FromMilliseconds(100));
 
   RunMessageLoop();
 
@@ -349,10 +349,10 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeSettingRxHandler) {
 
   chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE, hci::Connection::Role::kMaster);
   auto att_chan = OpenFixedChannel(kATTChannelId, kTestHandle1);
-  FTL_DCHECK(att_chan);
+  FXL_DCHECK(att_chan);
 
   auto smp_chan = OpenFixedChannel(kSMPChannelId, kTestHandle1);
-  FTL_DCHECK(smp_chan);
+  FXL_DCHECK(smp_chan);
 
   common::StaticByteBuffer<255> buffer;
 
@@ -392,7 +392,7 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeSettingRxHandler) {
         att_chan->SetRxHandler(att_rx_cb, message_loop()->task_runner());
         smp_chan->SetRxHandler(smp_rx_cb, message_loop()->task_runner());
       },
-      ftl::TimeDelta::FromMilliseconds(100));
+      fxl::TimeDelta::FromMilliseconds(100));
 
   RunMessageLoop();
 
@@ -403,7 +403,7 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeSettingRxHandler) {
 TEST_F(L2CAP_ChannelManagerTest, SendOnClosedLink) {
   chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE, hci::Connection::Role::kMaster);
   auto att_chan = OpenFixedChannel(kATTChannelId, kTestHandle1);
-  FTL_DCHECK(att_chan);
+  FXL_DCHECK(att_chan);
 
   chanmgr()->Unregister(kTestHandle1);
 
@@ -413,7 +413,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendOnClosedLink) {
 TEST_F(L2CAP_ChannelManagerTest, SendBasicSdu) {
   chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE, hci::Connection::Role::kMaster);
   auto att_chan = OpenFixedChannel(kATTChannelId, kTestHandle1);
-  FTL_DCHECK(att_chan);
+  FXL_DCHECK(att_chan);
 
   std::unique_ptr<common::ByteBuffer> received;
   auto data_cb = [&received](const common::ByteBuffer& bytes) {
@@ -449,7 +449,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdus) {
 
   std::vector<std::unique_ptr<common::ByteBuffer>> le_fragments, acl_fragments;
   auto data_cb = [&le_fragments, &acl_fragments](const common::ByteBuffer& bytes) {
-    FTL_DCHECK(bytes.size() >= sizeof(hci::ACLDataHeader));
+    FXL_DCHECK(bytes.size() >= sizeof(hci::ACLDataHeader));
 
     common::PacketView<hci::ACLDataHeader> packet(&bytes,
                                                   bytes.size() - sizeof(hci::ACLDataHeader));
@@ -542,7 +542,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdusDifferentBuffers) {
 
   std::vector<std::unique_ptr<common::ByteBuffer>> le_fragments, acl_fragments;
   auto data_cb = [&le_fragments, &acl_fragments](const common::ByteBuffer& bytes) {
-    FTL_DCHECK(bytes.size() >= sizeof(hci::ACLDataHeader));
+    FXL_DCHECK(bytes.size() >= sizeof(hci::ACLDataHeader));
 
     common::PacketView<hci::ACLDataHeader> packet(&bytes,
                                                   bytes.size() - sizeof(hci::ACLDataHeader));

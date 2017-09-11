@@ -5,15 +5,15 @@
 #include "remote_device.h"
 
 #include "apps/bluetooth/lib/hci/low_energy_scanner.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace bluetooth {
 namespace gap {
 
 RemoteDevice::RemoteDevice(const std::string& identifier, const common::DeviceAddress& address)
     : identifier_(identifier), address_(address) {
-  FTL_DCHECK(!identifier_.empty());
+  FXL_DCHECK(!identifier_.empty());
 
   technology_ = (address_.type() == common::DeviceAddress::Type::kBREDR)
                     ? TechnologyType::kClassic
@@ -22,8 +22,8 @@ RemoteDevice::RemoteDevice(const std::string& identifier, const common::DeviceAd
 
 void RemoteDevice::SetLowEnergyData(bool connectable, int8_t rssi,
                                     const common::ByteBuffer& advertising_data) {
-  FTL_DCHECK(technology() == TechnologyType::kLowEnergy);
-  FTL_DCHECK(address_.type() != common::DeviceAddress::Type::kBREDR);
+  FXL_DCHECK(technology() == TechnologyType::kLowEnergy);
+  FXL_DCHECK(address_.type() != common::DeviceAddress::Type::kBREDR);
 
   connectable_ = connectable;
   rssi_ = rssi;
@@ -38,7 +38,7 @@ void RemoteDevice::SetLowEnergyData(bool connectable, int8_t rssi,
 }
 
 std::string RemoteDevice::ToString() const {
-  return ftl::StringPrintf("{remote-device id: %s, address: %s}", identifier_.c_str(),
+  return fxl::StringPrintf("{remote-device id: %s, address: %s}", identifier_.c_str(),
                            address_.ToString().c_str());
 }
 

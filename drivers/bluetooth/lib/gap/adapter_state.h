@@ -10,7 +10,7 @@
 #include "apps/bluetooth/lib/gap/low_energy_state.h"
 #include "apps/bluetooth/lib/hci/acl_data_channel.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace bluetooth {
 namespace gap {
@@ -33,7 +33,7 @@ class AdapterState final {
 
   // Returns true if |feature_bit| is set as supported in the local LMP features list.
   inline bool HasLMPFeatureBit(size_t page, hci::LMPFeature feature_bit) const {
-    FTL_DCHECK(page < 3);
+    FXL_DCHECK(page < 3);
     return lmp_features_[page] & static_cast<uint64_t>(feature_bit);
   }
 
@@ -49,7 +49,7 @@ class AdapterState final {
 
   // Returns true if |command_bit| in the given |octet| is set in the supported command list.
   inline bool IsCommandSupported(size_t octet, hci::SupportedCommand command_bit) const {
-    FTL_DCHECK(octet < sizeof(supported_commands_));
+    FXL_DCHECK(octet < sizeof(supported_commands_));
     return supported_commands_[octet] & static_cast<uint8_t>(command_bit);
   }
 

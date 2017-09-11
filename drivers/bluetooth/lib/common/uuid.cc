@@ -8,9 +8,9 @@
 #include <cinttypes>
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_number_conversions.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace bluetooth {
 namespace common {
@@ -58,7 +58,7 @@ constexpr size_t k128BitSize = 16;
 // TODO(armansito): After having used UUID in camel-case words all over the place, I've decided that
 // it sucks. I'm explicitly naming this using the "Uuid" style as a reminder to fix style elsewhere.
 bool ParseUuidString(const std::string& uuid_string, UInt128* out_bytes) {
-  FTL_DCHECK(out_bytes);
+  FXL_DCHECK(out_bytes);
 
   // This is a 36 character string, including 4 "-" characters and two characters for each of the
   // 16-octets that form the 128-bit UUID.
@@ -154,7 +154,7 @@ bool UUID::CompareBytes(const common::ByteBuffer& bytes) const {
 }
 
 std::string UUID::ToString() const {
-  return ftl::StringPrintf("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+  return fxl::StringPrintf("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
                            value_[15], value_[14], value_[13], value_[12], value_[11], value_[10],
                            value_[9], value_[8], value_[7], value_[6], value_[5], value_[4],
                            value_[3], value_[2], value_[1], value_[0]);
@@ -181,7 +181,7 @@ size_t UUID::ToBytes(common::MutableByteBuffer* bytes) const {
 }
 
 std::size_t UUID::Hash() const {
-  FTL_DCHECK(sizeof(value_) % sizeof(size_t) == 0);
+  FXL_DCHECK(sizeof(value_) % sizeof(size_t) == 0);
   size_t hash = 0;
   for (size_t i = 0; i < (sizeof(value_) / sizeof(size_t)); i++) {
     hash ^= *reinterpret_cast<const size_t *>(value_.data() + (i * sizeof(size_t)));
@@ -190,13 +190,13 @@ std::size_t UUID::Hash() const {
 }
 
 uint16_t UUID::ValueAs16Bit() const {
-  FTL_DCHECK(type_ == Type::k16Bit);
+  FXL_DCHECK(type_ == Type::k16Bit);
 
   return le16toh(*reinterpret_cast<const uint16_t*>(value_.data() + kBaseOffset));
 }
 
 uint32_t UUID::ValueAs32Bit() const {
-  FTL_DCHECK(type_ != Type::k128Bit);
+  FXL_DCHECK(type_ != Type::k128Bit);
 
   return le32toh(*reinterpret_cast<const uint32_t*>(value_.data() + kBaseOffset));
 }
@@ -207,7 +207,7 @@ bool IsStringValidUuid(const std::string& uuid_string) {
 }
 
 bool StringToUuid(const std::string& uuid_string, UUID* out_uuid) {
-  FTL_DCHECK(out_uuid);
+  FXL_DCHECK(out_uuid);
 
   UInt128 bytes;
   if (!ParseUuidString(uuid_string, &bytes)) return false;

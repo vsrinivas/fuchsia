@@ -18,7 +18,7 @@ namespace {
 template <typename... T>
 hci::ACLDataPacketPtr PacketFromBytes(T... data) {
   auto bytes = common::CreateStaticByteBuffer(std::forward<T>(data)...);
-  FTL_DCHECK(bytes.size() >= sizeof(hci::ACLDataHeader));
+  FXL_DCHECK(bytes.size() >= sizeof(hci::ACLDataHeader));
 
   auto packet = hci::ACLDataPacket::New(bytes.size() - sizeof(hci::ACLDataHeader));
   packet->mutable_view()->mutable_data().Write(bytes);

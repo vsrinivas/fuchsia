@@ -7,7 +7,7 @@
 #include <magenta/status.h>
 #include <mx/channel.h>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 #include "lib/mtl/threading/create_thread.h"
 
 #include "device_wrapper.h"
@@ -16,7 +16,7 @@ namespace bluetooth {
 namespace hci {
 
 // static
-ftl::RefPtr<Transport> Transport::Create(std::unique_ptr<DeviceWrapper> hci_device) {
+fxl::RefPtr<Transport> Transport::Create(std::unique_ptr<DeviceWrapper> hci_device) {
   return AdoptRef(new Transport(std::move(hci_device)));
 }
 
@@ -25,7 +25,7 @@ Transport::Transport(std::unique_ptr<DeviceWrapper> hci_device)
       is_initialized_(false),
       cmd_channel_handler_key_(0u),
       acl_channel_handler_key_(0u) {
-  FTL_DCHECK(hci_device_);
+  FXL_DCHECK(hci_device_);
 }
 
 Transport::~Transport() {
@@ -33,16 +33,16 @@ Transport::~Transport() {
 }
 
 bool Transport::Initialize() {
-  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FTL_DCHECK(hci_device_);
-  FTL_DCHECK(!command_channel_);
-  FTL_DCHECK(!acl_data_channel_);
-  FTL_DCHECK(!IsInitialized());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(hci_device_);
+  FXL_DCHECK(!command_channel_);
+  FXL_DCHECK(!acl_data_channel_);
+  FXL_DCHECK(!IsInitialized());
 
   // Obtain command channel handle.
   mx::channel channel = hci_device_->GetCommandChannel();
   if (!channel.is_valid()) {
-    FTL_LOG(ERROR) << "hci: Transport: Failed to obtain command channel handle";
+    FXL_LOG(ERROR) << "hci: Transport: Failed to obtain command channel handle";
     return false;
   }
 
@@ -64,13 +64,13 @@ bool Transport::Initialize() {
 
 bool Transport::InitializeACLDataChannel(const DataBufferInfo& bredr_buffer_info,
                                          const DataBufferInfo& le_buffer_info) {
-  FTL_DCHECK(hci_device_);
-  FTL_DCHECK(IsInitialized());
+  FXL_DCHECK(hci_device_);
+  FXL_DCHECK(IsInitialized());
 
   // Obtain ACL data channel handle.
   mx::channel channel = hci_device_->GetACLDataChannel();
   if (!channel.is_valid()) {
-    FTL_LOG(ERROR) << "hci: Transport: Failed to obtain ACL data channel handle";
+    FXL_LOG(ERROR) << "hci: Transport: Failed to obtain ACL data channel handle";
     return false;
   }
 
@@ -86,29 +86,29 @@ bool Transport::InitializeACLDataChannel(const DataBufferInfo& bredr_buffer_info
   return true;
 }
 
-void Transport::SetTransportClosedCallback(const ftl::Closure& callback,
-                                           ftl::RefPtr<ftl::TaskRunner> task_runner) {
-  FTL_DCHECK(callback);
-  FTL_DCHECK(task_runner);
-  FTL_DCHECK(!closed_cb_);
-  FTL_DCHECK(!closed_cb_task_runner_);
+void Transport::SetTransportClosedCallback(const fxl::Closure& callback,
+                                           fxl::RefPtr<fxl::TaskRunner> task_runner) {
+  FXL_DCHECK(callback);
+  FXL_DCHECK(task_runner);
+  FXL_DCHECK(!closed_cb_);
+  FXL_DCHECK(!closed_cb_task_runner_);
 
   closed_cb_ = callback;
   closed_cb_task_runner_ = task_runner;
 }
 
 void Transport::ShutDown() {
-  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FTL_DCHECK(IsInitialized());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(IsInitialized());
 
-  FTL_LOG(INFO) << "hci: Transport: shutting down";
+  FXL_LOG(INFO) << "hci: Transport: shutting down";
 
   if (acl_data_channel_) acl_data_channel_->ShutDown();
   if (command_channel_) command_channel_->ShutDown();
 
   io_task_runner_->PostTask(
       [ cmd_key = cmd_channel_handler_key_, acl_key = acl_channel_handler_key_ ] {
-        FTL_DCHECK(mtl::MessageLoop::GetCurrent());
+        FXL_DCHECK(mtl::MessageLoop::GetCurrent());
         mtl::MessageLoop::GetCurrent()->RemoveHandler(cmd_key);
         mtl::MessageLoop::GetCurrent()->RemoveHandler(acl_key);
         mtl::MessageLoop::GetCurrent()->QuitNow();
@@ -126,7 +126,7 @@ void Transport::ShutDown() {
 
   is_initialized_ = false;
 
-  FTL_LOG(INFO) << "hci: Transport I/O loop exited";
+  FXL_LOG(INFO) << "hci: Transport I/O loop exited";
 }
 
 bool Transport::IsInitialized() const {
@@ -134,23 +134,23 @@ bool Transport::IsInitialized() const {
 }
 
 void Transport::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) {
-  FTL_DCHECK(pending & MX_CHANNEL_PEER_CLOSED);
+  FXL_DCHECK(pending & MX_CHANNEL_PEER_CLOSED);
   NotifyClosedCallback();
 }
 
 void Transport::OnHandleError(mx_handle_t handle, mx_status_t error) {
-  FTL_LOG(ERROR) << "hci: Transport: channel error: " << mx_status_get_string(error);
+  FXL_LOG(ERROR) << "hci: Transport: channel error: " << mx_status_get_string(error);
   NotifyClosedCallback();
 }
 
 void Transport::NotifyClosedCallback() {
-  FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
 
   // Clear the handlers so that we stop receiving events.
   mtl::MessageLoop::GetCurrent()->RemoveHandler(cmd_channel_handler_key_);
   mtl::MessageLoop::GetCurrent()->RemoveHandler(acl_channel_handler_key_);
 
-  FTL_LOG(INFO) << "hci: Transport: HCI channel(s) were closed";
+  FXL_LOG(INFO) << "hci: Transport: HCI channel(s) were closed";
   if (closed_cb_) closed_cb_task_runner_->PostTask(closed_cb_);
 }
 

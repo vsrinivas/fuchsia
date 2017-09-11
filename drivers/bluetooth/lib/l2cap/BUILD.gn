@@ -22,7 +22,7 @@ static_library("l2cap") {
 
   deps = [
     "//apps/bluetooth/lib/hci",
-    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/fxl",
   ]
 }
 

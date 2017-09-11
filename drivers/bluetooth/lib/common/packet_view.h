@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 
@@ -67,8 +67,8 @@ class PacketView {
   // |payload_size| value of 0 indicates that the packet contains no payload.
   explicit PacketView(const ByteBuffer* buffer, size_t payload_size = 0u)
       : buffer_(buffer), size_(sizeof(HeaderType) + payload_size) {
-    FTL_DCHECK(buffer_);
-    FTL_DCHECK(buffer_->size() >= size_);
+    FXL_DCHECK(buffer_);
+    FXL_DCHECK(buffer_->size() >= size_);
   }
 
   const BufferView data() const { return buffer_->view(0, size_); }
@@ -87,7 +87,7 @@ class PacketView {
 
   template <typename PayloadType>
   const PayloadType& payload() const {
-    FTL_DCHECK(sizeof(PayloadType) <= payload_size());
+    FXL_DCHECK(sizeof(PayloadType) <= payload_size());
     return *reinterpret_cast<const PayloadType*>(payload_bytes());
   }
 
@@ -96,9 +96,9 @@ class PacketView {
 
  protected:
   void set_size(size_t size) {
-    FTL_DCHECK(buffer_);
-    FTL_DCHECK(buffer_->size() >= size);
-    FTL_DCHECK(size >= sizeof(HeaderType));
+    FXL_DCHECK(buffer_);
+    FXL_DCHECK(buffer_->size() >= size);
+    FXL_DCHECK(size >= sizeof(HeaderType));
     size_ = size;
   }
 
@@ -133,7 +133,7 @@ class MutablePacketView : public PacketView<HeaderType> {
 
   template <typename PayloadType>
   PayloadType* mutable_payload() {
-    FTL_DCHECK(sizeof(PayloadType) <= this->payload_size());
+    FXL_DCHECK(sizeof(PayloadType) <= this->payload_size());
     return reinterpret_cast<PayloadType*>(mutable_payload_bytes());
   }
 

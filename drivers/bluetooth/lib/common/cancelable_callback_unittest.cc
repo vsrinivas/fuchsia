@@ -9,8 +9,8 @@
 
 #include "gtest/gtest.h"
 
-#include "lib/ftl/synchronization/sleep.h"
-#include "lib/ftl/time/stopwatch.h"
+#include "lib/fxl/synchronization/sleep.h"
+#include "lib/fxl/time/stopwatch.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
 
@@ -41,7 +41,7 @@ TEST(CancelableCallbackTest, CancelAndRunOnDifferentThreads) {
   CancelableCallbackFactory<void()> factory;
   EXPECT_FALSE(factory.canceled());
 
-  ftl::RefPtr<ftl::TaskRunner> thrd_runner;
+  fxl::RefPtr<fxl::TaskRunner> thrd_runner;
   auto thrd = mtl::CreateThread(&thrd_runner, "CancelableCallbackTest thread");
 
   bool called = false;
@@ -79,10 +79,10 @@ TEST(CancelableCallbackTest, CancelAllBlocksDuringCallback) {
       }
       cv.notify_one();
 
-      ftl::SleepFor(ftl::TimeDelta::FromMilliseconds(kBlockTimeMs));
+      fxl::SleepFor(fxl::TimeDelta::FromMilliseconds(kBlockTimeMs));
     };
 
-    ftl::Stopwatch sw;
+    fxl::Stopwatch sw;
     sw.Start();
 
     std::thread thrd(factory.MakeTask(callback));

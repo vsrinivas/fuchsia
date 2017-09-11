@@ -36,7 +36,7 @@ class ACLDataChannelTest : public TestingBase {
   }
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(ACLDataChannelTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ACLDataChannelTest);
 };
 
 TEST_F(ACLDataChannelTest, VerifyMTUs) {
@@ -79,7 +79,7 @@ TEST_F(ACLDataChannelTest, SendPacketBREDRBuffer) {
 
   // Callback invoked by TestDevice when it receive a data packet from us.
   auto data_callback = [&](const common::ByteBuffer& bytes) {
-    FTL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+    FXL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
 
     common::PacketView<hci::ACLDataHeader> packet(&bytes, bytes.size() - sizeof(ACLDataHeader));
     ConnectionHandle connection_handle = le16toh(packet.header().handle_and_flags) & 0xFFF;
@@ -150,7 +150,7 @@ TEST_F(ACLDataChannelTest, SendPacketLEBuffer) {
   size_t handle0_packet_count = 0;
   size_t handle1_packet_count = 0;
   auto data_callback = [&](const common::ByteBuffer& bytes) {
-    FTL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+    FXL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
 
     common::PacketView<hci::ACLDataHeader> packet(&bytes, bytes.size() - sizeof(ACLDataHeader));
     ConnectionHandle connection_handle = le16toh(packet.header().handle_and_flags) & 0xFFF;
@@ -226,7 +226,7 @@ TEST_F(ACLDataChannelTest, SendLEPacketBothBuffers) {
   int handle0_packet_count = 0;
   int handle1_packet_count = 0;
   auto data_callback = [&](const common::ByteBuffer& bytes) {
-    FTL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+    FXL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
 
     common::PacketView<hci::ACLDataHeader> packet(&bytes, bytes.size() - sizeof(ACLDataHeader));
     ConnectionHandle connection_handle = le16toh(packet.header().handle_and_flags) & 0xFFF;
@@ -297,7 +297,7 @@ TEST_F(ACLDataChannelTest, SendBREDRPacketBothBuffers) {
   int handle0_packet_count = 0;
   int handle1_packet_count = 0;
   auto data_callback = [&](const common::ByteBuffer& bytes) {
-    FTL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+    FXL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
 
     common::PacketView<hci::ACLDataHeader> packet(&bytes, bytes.size() - sizeof(ACLDataHeader));
     ConnectionHandle connection_handle = le16toh(packet.header().handle_and_flags) & 0xFFF;
@@ -368,7 +368,7 @@ TEST_F(ACLDataChannelTest, SendPacketFromMultipleThreads) {
   int handle2_processed_count = 0;
   int total_packet_count = 0;
   auto data_cb = [&](const common::ByteBuffer& bytes) {
-    FTL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+    FXL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
 
     common::PacketView<hci::ACLDataHeader> packet(&bytes, bytes.size() - sizeof(ACLDataHeader));
     ConnectionHandle connection_handle = le16toh(packet.header().handle_and_flags) & 0xFFF;
@@ -463,7 +463,7 @@ TEST_F(ACLDataChannelTest, SendPackets) {
   bool pass = true;
   int seq_no = 0;
   auto data_cb = [&pass, &seq_no](const common::ByteBuffer& bytes) {
-    FTL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+    FXL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
     common::PacketView<hci::ACLDataHeader> packet(&bytes, bytes.size() - sizeof(ACLDataHeader));
     EXPECT_EQ(1u, packet.payload_size());
 
@@ -509,7 +509,7 @@ TEST_F(ACLDataChannelTest, SendPacketsAtomically) {
 
   std::vector<std::unique_ptr<common::ByteBuffer>> received;
   auto data_cb = [&received](const common::ByteBuffer& bytes) {
-    FTL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+    FXL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
     received.push_back(std::make_unique<common::DynamicByteBuffer>(bytes));
     if (received.size() == kExpectedPacketCount) mtl::MessageLoop::GetCurrent()->QuitNow();
   };
@@ -578,7 +578,7 @@ TEST_F(ACLDataChannelTest, ReceiveData) {
     else if (num_rx_packets == 2)
       packet1_handle = packet->connection_handle();
     else
-      FTL_NOTREACHED();
+      FXL_NOTREACHED();
   };
   set_data_received_callback(data_rx_cb);
 

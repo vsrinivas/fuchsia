@@ -14,10 +14,10 @@
 #include "apps/bluetooth/lib/hci/advertising_report_parser.h"
 #include "apps/bluetooth/lib/hci/command_channel.h"
 #include "apps/bluetooth/lib/hci/control_packets.h"
-#include "lib/ftl/strings/join_strings.h"
-#include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/ftl/strings/string_printf.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/strings/join_strings.h"
+#include "lib/fxl/strings/string_number_conversions.h"
+#include "lib/fxl/strings/string_printf.h"
+#include "lib/fxl/time/time_delta.h"
 
 #include "bt_intel.h"
 
@@ -29,28 +29,28 @@ using std::placeholders::_2;
 namespace bt_intel {
 namespace {
 
-void StatusCallback(ftl::Closure complete_cb, bluetooth::hci::CommandChannel::TransactionId id,
+void StatusCallback(fxl::Closure complete_cb, bluetooth::hci::CommandChannel::TransactionId id,
                     bluetooth::hci::Status status) {
-  std::cout << "  Command Status: " << ftl::StringPrintf("0x%02x", status) << " (id=" << id << ")"
+  std::cout << "  Command Status: " << fxl::StringPrintf("0x%02x", status) << " (id=" << id << ")"
             << std::endl;
   if (status != bluetooth::hci::Status::kSuccess) complete_cb();
 }
 
 hci::CommandChannel::TransactionId SendCommand(
     const CommandData* cmd_data, std::unique_ptr<hci::CommandPacket> packet,
-    const hci::CommandChannel::CommandCompleteCallback& cb, const ftl::Closure& complete_cb) {
+    const hci::CommandChannel::CommandCompleteCallback& cb, const fxl::Closure& complete_cb) {
   return cmd_data->cmd_channel()->SendCommand(std::move(packet), cmd_data->task_runner(), cb,
                                               std::bind(&StatusCallback, complete_cb, _1, _2));
 }
 
 void LogCommandComplete(hci::Status status, hci::CommandChannel::TransactionId id) {
-  std::cout << "  Command Complete - status: " << ftl::StringPrintf("0x%02x", status)
+  std::cout << "  Command Complete - status: " << fxl::StringPrintf("0x%02x", status)
             << " (id=" << id << ")" << std::endl;
 }
 
 // Prints a byte in decimal and hex forms
 std::string PrintByte(uint8_t byte) {
-  return ftl::StringPrintf("%u (0x%02x)", byte, byte);
+  return fxl::StringPrintf("%u (0x%02x)", byte, byte);
 }
 
 std::string EnableParamToString(hci::GenericEnableParam param) {
@@ -69,8 +69,8 @@ std::string FirmwareVariantToString(uint8_t fw_variant) {
   return "UNKNOWN";
 }
 
-bool HandleReadVersion(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
-                       const ftl::Closure& complete_cb) {
+bool HandleReadVersion(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+                       const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: read-version [--verbose]" << std::endl;
     return false;
@@ -81,7 +81,7 @@ bool HandleReadVersion(const CommandData* cmd_data, const ftl::CommandLine& cmd_
     auto params = event.return_params<IntelVersionReturnParams>();
     LogCommandComplete(params->status, id);
 
-    std::cout << ftl::StringPrintf(
+    std::cout << fxl::StringPrintf(
         "  Firmware Summary: variant=%s - revision %u.%u build no: %u (week %u, year %u)",
         FirmwareVariantToString(params->fw_variant).c_str(), params->fw_revision >> 4,
         params->fw_revision & 0x0F, params->fw_build_num, params->fw_build_week,
@@ -111,8 +111,8 @@ bool HandleReadVersion(const CommandData* cmd_data, const ftl::CommandLine& cmd_
   return true;
 }
 
-bool HandleReadBootParams(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
-                          const ftl::Closure& complete_cb) {
+bool HandleReadBootParams(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+                          const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: read-boot-params" << std::endl;
     return false;
@@ -132,7 +132,7 @@ bool HandleReadBootParams(const CommandData* cmd_data, const ftl::CommandLine& c
     std::cout << "    Limited CCE:      " << EnableParamToString(params->limited_cce) << std::endl;
     std::cout << "    OTP BD_ADDR:      " << params->otp_bdaddr.ToString() << std::endl;
     std::cout << "    Minimum Firmware Build: "
-              << ftl::StringPrintf("build no: %u (week %u, year %u)", params->min_fw_build_num,
+              << fxl::StringPrintf("build no: %u (week %u, year %u)", params->min_fw_build_num,
                                    params->min_fw_build_week, 2000 + params->min_fw_build_year)
               << std::endl;
 
@@ -146,8 +146,8 @@ bool HandleReadBootParams(const CommandData* cmd_data, const ftl::CommandLine& c
   return true;
 }
 
-bool HandleReset(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
-                 const ftl::Closure& complete_cb) {
+bool HandleReset(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+                 const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: reset" << std::endl;
     return false;
@@ -174,7 +174,7 @@ bool HandleReset(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
   // TODO(armansito): This needs to be implemented properly in the driver as part of the controller
   // boot sequence. We cannot reboot the controller from userland since the hardware disappears so
   // we'll never receive the vendor-specific HCI event.
-  cmd_data->task_runner()->PostDelayedTask(complete_cb, ftl::TimeDelta::FromMilliseconds(250));
+  cmd_data->task_runner()->PostDelayedTask(complete_cb, fxl::TimeDelta::FromMilliseconds(250));
 
   return true;
 }

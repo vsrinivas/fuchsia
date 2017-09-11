@@ -12,8 +12,8 @@
 #include "apps/bluetooth/service/src/adapter_manager.h"
 #include "apps/bluetooth/service/src/adapter_manager_fidl_impl.h"
 #include "apps/bluetooth/service/src/low_energy_central_fidl_impl.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace bluetooth_service {
 
@@ -62,9 +62,9 @@ class App final : public AdapterManager::Observer {
 
   // Note: This should remain the last member so it'll be destroyed and
   // invalidate its weak pointers before any other members are destroyed.
-  ftl::WeakPtrFactory<App> weak_ptr_factory_;
+  fxl::WeakPtrFactory<App> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(App);
+  FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
 }  // namespace bluetooth_service

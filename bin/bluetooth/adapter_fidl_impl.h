@@ -9,8 +9,8 @@
 #include "apps/bluetooth/lib/gap/low_energy_discovery_manager.h"
 #include "apps/bluetooth/service/interfaces/control.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace bluetooth {
 namespace gap {
@@ -27,7 +27,7 @@ namespace bluetooth_service {
 class AdapterFidlImpl : public ::bluetooth::control::Adapter {
  public:
   using ConnectionErrorHandler = std::function<void(AdapterFidlImpl*)>;
-  AdapterFidlImpl(const ftl::WeakPtr<::bluetooth::gap::Adapter>& adapter,
+  AdapterFidlImpl(const fxl::WeakPtr<::bluetooth::gap::Adapter>& adapter,
                   ::fidl::InterfaceRequest<::bluetooth::control::Adapter> request,
                   const ConnectionErrorHandler& connection_error_handler);
   ~AdapterFidlImpl() override = default;
@@ -50,7 +50,7 @@ class AdapterFidlImpl : public ::bluetooth::control::Adapter {
   void NotifyDiscoveringChanged();
 
   // The underlying Adapter object.
-  ftl::WeakPtr<::bluetooth::gap::Adapter> adapter_;
+  fxl::WeakPtr<::bluetooth::gap::Adapter> adapter_;
 
   // The currently active LE discovery session. This is initialized when a client requests to
   // perform discovery.
@@ -65,9 +65,9 @@ class AdapterFidlImpl : public ::bluetooth::control::Adapter {
 
   // Keep this as the last member to make sure that all weak pointers are invalidated before other
   // members get destroyed.
-  ftl::WeakPtrFactory<AdapterFidlImpl> weak_ptr_factory_;
+  fxl::WeakPtrFactory<AdapterFidlImpl> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AdapterFidlImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AdapterFidlImpl);
 };
 
 }  // namespace bluetooth_service

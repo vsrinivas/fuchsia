@@ -8,9 +8,9 @@
 
 #include <linenoise.h>
 
-#include "lib/ftl/functional/auto_call.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/split_string.h"
+#include "lib/fxl/functional/auto_call.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/split_string.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 #include "commands.h"
@@ -23,10 +23,10 @@ App::App()
     : context_(app::ApplicationContext::CreateFromStartupInfo()),
       manager_delegate_(this),
       adapter_delegate_(this) {
-  FTL_DCHECK(context_);
+  FXL_DCHECK(context_);
 
   adapter_manager_ = context_->ConnectToEnvironmentService<bluetooth::control::AdapterManager>();
-  FTL_DCHECK(adapter_manager_);
+  FXL_DCHECK(adapter_manager_);
 
   adapter_manager_.set_connection_error_handler([] {
     CLI_LOG() << "AdapterManager disconnected";
@@ -66,13 +66,13 @@ void App::ReadNextInput() {
     return;
   }
 
-  auto ac = ftl::MakeAutoCall([&call_complete_cb, line, complete_cb] {
+  auto ac = fxl::MakeAutoCall([&call_complete_cb, line, complete_cb] {
     if (call_complete_cb) complete_cb();
     free(line);
   });
 
-  auto split = ftl::SplitStringCopy(ftl::StringView(line, std::strlen(line)), " ",
-                                    ftl::kTrimWhitespace, ftl::kSplitWantNonEmpty);
+  auto split = fxl::SplitStringCopy(fxl::StringView(line, std::strlen(line)), " ",
+                                    fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
   if (split.empty() || split[0] == "help") {
     linenoiseHistoryAdd(line);
     command_dispatcher_.DescribeAllCommands();

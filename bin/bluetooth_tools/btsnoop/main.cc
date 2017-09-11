@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include "lib/ftl/command_line.h"
+#include "lib/fxl/command_line.h"
 
 #include "sniffer.h"
 
@@ -22,7 +22,7 @@ const char kDefaultHCIDev[] = "/dev/class/bt-hci/000";
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  auto cl = ftl::CommandLineFromArgcArgv(argc, argv);
+  auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
 
   if (cl.HasOption("help")) {
     std::cout << kUsageString << std::endl;

@@ -9,9 +9,9 @@
 #include <memory>
 #include <string>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace bluetooth {
 namespace common {
@@ -67,12 +67,12 @@ class ByteBuffer {
 
   // Read-only random access operator.
   inline const uint8_t& operator[](size_t pos) const {
-    FTL_DCHECK(pos < size()) << "Invalid offset (pos = " << pos << ")!";
+    FXL_DCHECK(pos < size()) << "Invalid offset (pos = " << pos << ")!";
     return data()[pos];
   }
 
   // Returns the contents of this buffer as a C++ string-like object without copying its contents.
-  ftl::StringView AsString() const;
+  fxl::StringView AsString() const;
 
   // Returns the contents of this buffer as a C++ string after copying its contents.
   std::string ToString() const;
@@ -90,7 +90,7 @@ class MutableByteBuffer : public ByteBuffer {
 
   // Random access operator that allows mutations.
   inline uint8_t& operator[](size_t pos) {
-    FTL_DCHECK(pos < size()) << "Invalid offset (pos = " << pos << ")!";
+    FXL_DCHECK(pos < size()) << "Invalid offset (pos = " << pos << ")!";
     return mutable_data()[pos];
   }
 
@@ -201,7 +201,7 @@ class DynamicByteBuffer : public MutableByteBuffer {
   size_t buffer_size_;
   std::unique_ptr<uint8_t[]> buffer_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DynamicByteBuffer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DynamicByteBuffer);
 };
 
 // A ByteBuffer that does not own the memory that it points to but rather
@@ -213,7 +213,7 @@ class BufferView final : public ByteBuffer {
 
   explicit BufferView(const ByteBuffer& buffer,
                       size_t size = std::numeric_limits<std::size_t>::max());
-  explicit BufferView(const ftl::StringView& string);
+  explicit BufferView(const fxl::StringView& string);
 
   // The default constructor initializes this to an empty buffer.
   BufferView();

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FTL_OBSERVER_LIST_H_
-#define LIB_FTL_OBSERVER_LIST_H_
+#ifndef LIB_FXL_OBSERVER_LIST_H_
+#define LIB_FXL_OBSERVER_LIST_H_
 
 // Derived from chromium/src/base/observer_list.h
 
@@ -13,9 +13,9 @@
 #include <limits>
 #include <vector>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -65,7 +65,7 @@
 //     }
 //
 //    private:
-//     ftl::ObserverList<Observer> observer_list_;
+//     fxl::ObserverList<Observer> observer_list_;
 //   };
 //
 //
@@ -104,7 +104,7 @@ class ObserverListBase {
 
     // Methods for accessing the underlying container and current element. DO
     // NOT call these methods directly: these are public for testing only.
-    const ftl::WeakPtr<ObserverListBase<ObserverType>>& GetContainer() { return list_; }
+    const fxl::WeakPtr<ObserverListBase<ObserverType>>& GetContainer() { return list_; }
     ObserverType* GetCurrent() const;
 
    private:
@@ -114,7 +114,7 @@ class ObserverListBase {
 
     bool is_end() const { return !list_ || index_ == clamped_max_index(); }
 
-    ftl::WeakPtr<ObserverListBase<ObserverType>> list_;
+    fxl::WeakPtr<ObserverListBase<ObserverType>> list_;
 
     // When initially constructed and each time the iterator is incremented,
     // |index_| is guaranteed to point to a non-null index if the iterator
@@ -159,7 +159,7 @@ class ObserverListBase {
  private:
   using ListType = std::vector<ObserverType*>;
 
-  ftl::WeakPtr<ObserverListBase> AsWeakPtr() { return weak_ptr_factory_.GetWeakPtr(); }
+  fxl::WeakPtr<ObserverListBase> AsWeakPtr() { return weak_ptr_factory_.GetWeakPtr(); }
 
   ListType observers_;
   int notify_depth_;
@@ -168,9 +168,9 @@ class ObserverListBase {
   template <class ContainerType>
   friend class Iter;
 
-  ftl::WeakPtrFactory<ObserverListBase> weak_ptr_factory_;
+  fxl::WeakPtrFactory<ObserverListBase> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ObserverListBase);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ObserverListBase);
 };
 
 template <class ObserverType>
@@ -185,7 +185,7 @@ ObserverListBase<ObserverType>::Iter<ContainerType>::Iter(ContainerType* list)
       max_index_(list->type_ == NOTIFY_ALL ? std::numeric_limits<size_t>::max()
                                            : list->observers_.size()) {
   EnsureValidIndex();
-  FTL_DCHECK(list_);
+  FXL_DCHECK(list_);
   ++list_->notify_depth_;
 }
 
@@ -223,7 +223,7 @@ template <class ObserverType>
 template <class ContainerType>
 ObserverType* ObserverListBase<ObserverType>::Iter<ContainerType>::operator->() const {
   ObserverType* current = GetCurrent();
-  FTL_DCHECK(current);
+  FXL_DCHECK(current);
   return current;
 }
 
@@ -231,7 +231,7 @@ template <class ObserverType>
 template <class ContainerType>
 ObserverType& ObserverListBase<ObserverType>::Iter<ContainerType>::operator*() const {
   ObserverType* current = GetCurrent();
-  FTL_DCHECK(current);
+  FXL_DCHECK(current);
   return *current;
 }
 
@@ -253,9 +253,9 @@ void ObserverListBase<ObserverType>::Iter<ContainerType>::EnsureValidIndex() {
 
 template <class ObserverType>
 void ObserverListBase<ObserverType>::AddObserver(ObserverType* obs) {
-  FTL_DCHECK(obs);
+  FXL_DCHECK(obs);
   if (std::find(observers_.begin(), observers_.end(), obs) != observers_.end()) {
-    FTL_NOTREACHED() << "Observers can only be added once!";
+    FXL_NOTREACHED() << "Observers can only be added once!";
     return;
   }
   observers_.push_back(obs);
@@ -263,7 +263,7 @@ void ObserverListBase<ObserverType>::AddObserver(ObserverType* obs) {
 
 template <class ObserverType>
 void ObserverListBase<ObserverType>::RemoveObserver(ObserverType* obs) {
-  FTL_DCHECK(obs);
+  FXL_DCHECK(obs);
   typename ListType::iterator it = std::find(observers_.begin(), observers_.end(), obs);
   if (it != observers_.end()) {
     if (notify_depth_) {
@@ -310,7 +310,7 @@ class ObserverList : public ObserverListBase<ObserverType> {
     // When check_empty is true, assert that the list is empty on destruction.
     if (check_empty) {
       ObserverListBase<ObserverType>::Compact();
-      FTL_DCHECK(!might_have_observers());
+      FXL_DCHECK(!might_have_observers());
     }
   }
 
@@ -320,4 +320,4 @@ class ObserverList : public ObserverListBase<ObserverType> {
 }  // namespace common
 }  // namespace bluetooth
 
-#endif  // LIB_FTL_OBSERVER_LIST_H_
+#endif  // LIB_FXL_OBSERVER_LIST_H_

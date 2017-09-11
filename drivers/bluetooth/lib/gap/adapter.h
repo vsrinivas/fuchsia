@@ -9,11 +9,11 @@
 
 #include "apps/bluetooth/lib/gap/adapter_state.h"
 #include "apps/bluetooth/lib/gap/remote_device_cache.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace bluetooth {
 
@@ -57,7 +57,7 @@ class Adapter final {
   // this adapter by calling ShutDown().
   using InitializeCallback = std::function<void(bool success)>;
   bool Initialize(const InitializeCallback& callback,
-                  const ftl::Closure& transport_closed_callback);
+                  const fxl::Closure& transport_closed_callback);
 
   // Shuts down this Adapter. Invokes |callback| when shut down has completed.
   // TODO(armansito): This needs to do several things to potentially preserve the state of various
@@ -75,14 +75,14 @@ class Adapter final {
   const AdapterState& state() const { return state_; }
 
   // Returns a weak pointer to this adapter.
-  ftl::WeakPtr<Adapter> AsWeakPtr() { return weak_ptr_factory_.GetWeakPtr(); }
+  fxl::WeakPtr<Adapter> AsWeakPtr() { return weak_ptr_factory_.GetWeakPtr(); }
 
   // Returns this Adapter's remote device cache.
   const RemoteDeviceCache& device_cache() const { return device_cache_; }
 
   // Returns this Adapter's LE discovery manager.
   LowEnergyDiscoveryManager* le_discovery_manager() const {
-    FTL_DCHECK(le_discovery_manager_);
+    FXL_DCHECK(le_discovery_manager_);
     return le_discovery_manager_.get();
   }
 
@@ -117,11 +117,11 @@ class Adapter final {
   // Uniquely identifies this adapter on the current system.
   std::string identifier_;
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
-  ftl::RefPtr<hci::Transport> hci_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  fxl::RefPtr<hci::Transport> hci_;
 
   // Callback invoked to notify clients when the underlying transport is closed.
-  ftl::Closure transport_closed_cb_;
+  fxl::Closure transport_closed_cb_;
 
   // Parameters relevant to the initialization sequence.
   // TODO(armansito): The Initialize()/ShutDown() pattern has become common enough in this project
@@ -146,9 +146,9 @@ class Adapter final {
 
   // This must remain the last member to make sure that all weak pointers are invalidating before
   // other members are destroyed.
-  ftl::WeakPtrFactory<Adapter> weak_ptr_factory_;
+  fxl::WeakPtrFactory<Adapter> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Adapter);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Adapter);
 };
 
 }  // namespace gap

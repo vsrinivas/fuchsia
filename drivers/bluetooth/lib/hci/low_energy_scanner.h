@@ -10,9 +10,9 @@
 #include "apps/bluetooth/lib/common/device_address.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
 #include "apps/bluetooth/lib/hci/sequential_command_runner.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace bluetooth {
 namespace hci {
@@ -74,8 +74,8 @@ class LowEnergyScanner {
     // TODO(armansito): Add function for directed advertising reports.
   };
 
-  LowEnergyScanner(Delegate* delegate, ftl::RefPtr<Transport> hci,
-                   ftl::RefPtr<ftl::TaskRunner> task_runner);
+  LowEnergyScanner(Delegate* delegate, fxl::RefPtr<Transport> hci,
+                   fxl::RefPtr<fxl::TaskRunner> task_runner);
   virtual ~LowEnergyScanner() = default;
 
   // Returns the current Scan state.
@@ -135,7 +135,7 @@ class LowEnergyScanner {
   virtual bool StopScan() = 0;
 
  protected:
-  ftl::RefPtr<ftl::TaskRunner> task_runner() const { return task_runner_; }
+  fxl::RefPtr<fxl::TaskRunner> task_runner() const { return task_runner_; }
   Transport* transport() const { return transport_.get(); }
   SequentialCommandRunner* hci_cmd_runner() const { return hci_cmd_runner_.get(); }
   Delegate* delegate() const { return delegate_; }
@@ -148,15 +148,15 @@ class LowEnergyScanner {
   Delegate* delegate_;  // weak
 
   // Task runner for all asynchronous tasks.
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
 
   // The HCI transport.
-  ftl::RefPtr<Transport> transport_;
+  fxl::RefPtr<Transport> transport_;
 
   // Command runner for all HCI commands sent out by implementations.
   std::unique_ptr<SequentialCommandRunner> hci_cmd_runner_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LowEnergyScanner);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LowEnergyScanner);
 };
 
 }  // namespace hci

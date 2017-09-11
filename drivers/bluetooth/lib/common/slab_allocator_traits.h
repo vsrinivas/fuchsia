@@ -8,8 +8,8 @@
 
 #include <fbl/slab_allocator.h>
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 namespace common {

@@ -11,7 +11,7 @@
 #include "apps/bluetooth/lib/hci/sequential_command_runner.h"
 #include "apps/bluetooth/lib/hci/transport.h"
 #include "apps/bluetooth/lib/hci/util.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace bluetooth {
 namespace hci {
@@ -31,7 +31,7 @@ std::string ScanStateToString(LowEnergyScanner::State state) {
       break;
   }
 
-  FTL_NOTREACHED();
+  FXL_NOTREACHED();
   return "(unknown)";
 }
 
@@ -41,8 +41,8 @@ LegacyLowEnergyScanner::PendingScanResult::PendingScanResult(const common::Devic
   result.address = address;
 }
 
-LegacyLowEnergyScanner::LegacyLowEnergyScanner(Delegate* delegate, ftl::RefPtr<Transport> hci,
-                                               ftl::RefPtr<ftl::TaskRunner> task_runner)
+LegacyLowEnergyScanner::LegacyLowEnergyScanner(Delegate* delegate, fxl::RefPtr<Transport> hci,
+                                               fxl::RefPtr<fxl::TaskRunner> task_runner)
     : LowEnergyScanner(delegate, hci, task_runner), active_scanning_(false) {
   event_handler_id_ = transport()->command_channel()->AddLEMetaEventHandler(
       kLEAdvertisingReportSubeventCode,
@@ -57,23 +57,23 @@ LegacyLowEnergyScanner::~LegacyLowEnergyScanner() {
 bool LegacyLowEnergyScanner::StartScan(bool active, uint16_t scan_interval, uint16_t scan_window,
                                        bool filter_duplicates, LEScanFilterPolicy filter_policy,
                                        int64_t period_ms, const StatusCallback& callback) {
-  FTL_DCHECK(task_runner()->RunsTasksOnCurrentThread());
-  FTL_DCHECK(callback);
-  FTL_DCHECK(period_ms == kPeriodInfinite || period_ms > 0);
-  FTL_DCHECK(scan_interval <= kLEScanIntervalMax && scan_interval >= kLEScanIntervalMin);
-  FTL_DCHECK(scan_window <= kLEScanIntervalMax && scan_window >= kLEScanIntervalMin);
-  FTL_DCHECK(scan_window < scan_interval);
+  FXL_DCHECK(task_runner()->RunsTasksOnCurrentThread());
+  FXL_DCHECK(callback);
+  FXL_DCHECK(period_ms == kPeriodInfinite || period_ms > 0);
+  FXL_DCHECK(scan_interval <= kLEScanIntervalMax && scan_interval >= kLEScanIntervalMin);
+  FXL_DCHECK(scan_window <= kLEScanIntervalMax && scan_window >= kLEScanIntervalMin);
+  FXL_DCHECK(scan_window < scan_interval);
 
   if (state() != State::kIdle) {
-    FTL_LOG(ERROR) << "gap: LegacyLowEnergyScanner: cannot start scan while in state: "
+    FXL_LOG(ERROR) << "gap: LegacyLowEnergyScanner: cannot start scan while in state: "
                    << ScanStateToString(state());
     return false;
   }
 
-  FTL_DCHECK(!scan_cb_);
-  FTL_DCHECK(scan_timeout_cb_.IsCanceled());
-  FTL_DCHECK(hci_cmd_runner()->IsReady());
-  FTL_DCHECK(pending_results_.empty());
+  FXL_DCHECK(!scan_cb_);
+  FXL_DCHECK(scan_timeout_cb_.IsCanceled());
+  FXL_DCHECK(hci_cmd_runner()->IsReady());
+  FXL_DCHECK(pending_results_.empty());
 
   set_state(State::kInitiating);
   active_scanning_ = active;
@@ -101,8 +101,8 @@ bool LegacyLowEnergyScanner::StartScan(bool active, uint16_t scan_interval, uint
 
   hci_cmd_runner()->QueueCommand(std::move(command));
   hci_cmd_runner()->RunCommands([this, period_ms](bool success) {
-    FTL_DCHECK(scan_cb_);
-    FTL_DCHECK(state() == State::kInitiating);
+    FXL_DCHECK(scan_cb_);
+    FXL_DCHECK(state() == State::kInitiating);
 
     if (!success) {
       auto cb = scan_cb_;
@@ -110,7 +110,7 @@ bool LegacyLowEnergyScanner::StartScan(bool active, uint16_t scan_interval, uint
       scan_cb_ = nullptr;
       set_state(State::kIdle);
 
-      FTL_LOG(ERROR) << "gap: LegacyLowEnergyScanner: failed to start scan";
+      FXL_LOG(ERROR) << "gap: LegacyLowEnergyScanner: failed to start scan";
       cb(Status::kFailed);
       return;
     }
@@ -121,7 +121,7 @@ bool LegacyLowEnergyScanner::StartScan(bool active, uint16_t scan_interval, uint
         if (IsScanning()) StopScanInternal(false);
       });
       task_runner()->PostDelayedTask(scan_timeout_cb_.callback(),
-                                     ftl::TimeDelta::FromMilliseconds(period_ms));
+                                     fxl::TimeDelta::FromMilliseconds(period_ms));
     }
 
     set_state(State::kScanning);
@@ -133,10 +133,10 @@ bool LegacyLowEnergyScanner::StartScan(bool active, uint16_t scan_interval, uint
 }
 
 bool LegacyLowEnergyScanner::StopScan() {
-  FTL_DCHECK(task_runner()->RunsTasksOnCurrentThread());
+  FXL_DCHECK(task_runner()->RunsTasksOnCurrentThread());
 
   if (state() == State::kStopping || state() == State::kIdle) {
-    FTL_LOG(ERROR) << "gap: LegacyLowEnergyScanner: cannot stop scan while in state: "
+    FXL_LOG(ERROR) << "gap: LegacyLowEnergyScanner: cannot stop scan while in state: "
                    << ScanStateToString(state());
     return false;
   }
@@ -153,7 +153,7 @@ bool LegacyLowEnergyScanner::StopScan() {
 }
 
 void LegacyLowEnergyScanner::StopScanInternal(bool stopped) {
-  FTL_DCHECK(scan_cb_);
+  FXL_DCHECK(scan_cb_);
 
   scan_timeout_cb_.Cancel();
   set_state(State::kStopping);
@@ -169,7 +169,7 @@ void LegacyLowEnergyScanner::StopScanInternal(bool stopped) {
   // Either way clear all results from the previous scan period.
   pending_results_.clear();
 
-  FTL_DCHECK(hci_cmd_runner()->IsReady());
+  FXL_DCHECK(hci_cmd_runner()->IsReady());
 
   // Tell the controller to stop scanning.
   auto command = CommandPacket::New(kLESetScanEnable, sizeof(LESetScanEnableCommandParams));
@@ -179,11 +179,11 @@ void LegacyLowEnergyScanner::StopScanInternal(bool stopped) {
 
   hci_cmd_runner()->QueueCommand(std::move(command));
   hci_cmd_runner()->RunCommands([this, stopped](bool success) {
-    FTL_DCHECK(scan_cb_);
-    FTL_DCHECK(state() == State::kStopping);
+    FXL_DCHECK(scan_cb_);
+    FXL_DCHECK(state() == State::kStopping);
 
     if (!success) {
-      FTL_LOG(WARNING) << "gap: LegacyLowEnergyScanner: Failed to stop scan";
+      FXL_LOG(WARNING) << "gap: LegacyLowEnergyScanner: Failed to stop scan";
       // Something went wrong but there isn't really a meaningful way to recover, so we just fall
       // through and notify the caller with Status::kFailed instead.
     }
@@ -211,7 +211,7 @@ void LegacyLowEnergyScanner::OnAdvertisingReportEvent(const EventPacket& event) 
       case LEAdvertisingEventType::kAdvDirectInd:
         // TODO(armansito): Forward this to a subroutine that can be shared with the LE Directed
         // Advertising eport event handler.
-        FTL_LOG(WARNING) << "gap: LegacyLowEnergyScanner: ignoring ADV_DIRECT_IND";
+        FXL_LOG(WARNING) << "gap: LegacyLowEnergyScanner: ignoring ADV_DIRECT_IND";
         continue;
       case LEAdvertisingEventType::kAdvInd:
         connectable = true;
@@ -226,7 +226,7 @@ void LegacyLowEnergyScanner::OnAdvertisingReportEvent(const EventPacket& event) 
     }
 
     if (report->length_data > kMaxLEAdvertisingDataLength) {
-      FTL_LOG(WARNING) << "gap: LegacyLowEnergyScanner: advertising data too long! Ignoring";
+      FXL_LOG(WARNING) << "gap: LegacyLowEnergyScanner: advertising data too long! Ignoring";
       continue;
     }
 
@@ -245,7 +245,7 @@ void LegacyLowEnergyScanner::OnAdvertisingReportEvent(const EventPacket& event) 
 
     // We overwrite the pending result entry with the most recent report, even if one from this
     // device was already pending.
-    FTL_DCHECK(address == pending.result.address);
+    FXL_DCHECK(address == pending.result.address);
     pending.result.connectable = connectable;
     pending.result.rssi = rssi;
     pending.adv_data_len = report->length_data;
@@ -260,16 +260,16 @@ void LegacyLowEnergyScanner::HandleScanResponse(const LEAdvertisingReportData& r
 
   auto iter = pending_results_.find(address);
   if (iter == pending_results_.end()) {
-    FTL_VLOG(1) << "gap: LegacyLowEnergyScanner: Dropping unmatched scan response";
+    FXL_VLOG(1) << "gap: LegacyLowEnergyScanner: Dropping unmatched scan response";
     return;
   }
 
   if (report.length_data > kMaxLEAdvertisingDataLength) {
-    FTL_LOG(WARNING) << "gap: LegacyLowEnergyScanner: scan response too long! Ignoring";
+    FXL_LOG(WARNING) << "gap: LegacyLowEnergyScanner: scan response too long! Ignoring";
     return;
   }
   auto& pending = iter->second;
-  FTL_DCHECK(address == pending.result.address);
+  FXL_DCHECK(address == pending.result.address);
 
   // Use the newer RSSI.
   pending.result.rssi = rssi;

@@ -19,11 +19,11 @@
 #include "apps/bluetooth/lib/hci/control_packets.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
-#include "lib/ftl/functional/cancelable_callback.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/synchronization/thread_checker.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/functional/cancelable_callback.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/synchronization/thread_checker.h"
+#include "lib/fxl/tasks/task_runner.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
@@ -101,7 +101,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // Control" for more information about the HCI command flow control.
   using EventMatcher = std::function<bool(const EventPacket& event)>;
   TransactionId SendCommand(std::unique_ptr<CommandPacket> command_packet,
-                            ftl::RefPtr<ftl::TaskRunner> task_runner,
+                            fxl::RefPtr<fxl::TaskRunner> task_runner,
                             const CommandCompleteCallback& complete_callback,
                             const CommandStatusCallback& status_callback = {},
                             const EventCode complete_event_code = kCommandCompleteEventCode,
@@ -143,7 +143,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   //    - HCI_Command_Status event code
   //    - HCI_LE_Meta event code (use AddLEMetaEventHandler instead).
   EventHandlerId AddEventHandler(EventCode event_code, const EventCallback& event_callback,
-                                 ftl::RefPtr<ftl::TaskRunner> task_runner);
+                                 fxl::RefPtr<fxl::TaskRunner> task_runner);
 
   // Works just like AddEventHandler but the passed in event code is only valid within the LE Meta
   // Event sub-event code namespace. |event_callback| will get invoked whenever the controller sends
@@ -151,7 +151,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   //
   // |subevent_code| cannot be 0.
   EventHandlerId AddLEMetaEventHandler(EventCode subevent_code, const EventCallback& event_callback,
-                                       ftl::RefPtr<ftl::TaskRunner> task_runner);
+                                       fxl::RefPtr<fxl::TaskRunner> task_runner);
 
   // Removes a previously registered event handler. Does nothing if an event
   // handler with the given |id| could not be found.
@@ -169,7 +169,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
     EventMatcher complete_event_matcher;
     CommandStatusCallback status_callback;
     CommandCompleteCallback complete_callback;
-    ftl::RefPtr<ftl::TaskRunner> task_runner;
+    fxl::RefPtr<fxl::TaskRunner> task_runner;
   };
 
   // Represents a queued command packet.
@@ -177,7 +177,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
     QueuedCommand(TransactionId id, std::unique_ptr<CommandPacket> command_packet,
                   const CommandStatusCallback& status_callback,
                   const CommandCompleteCallback& complete_callback,
-                  ftl::RefPtr<ftl::TaskRunner> task_runner, EventCode complete_event_code,
+                  fxl::RefPtr<fxl::TaskRunner> task_runner, EventCode complete_event_code,
                   const EventMatcher& complete_event_matcher);
     QueuedCommand() = default;
 
@@ -194,7 +194,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
     EventCode event_code;
     EventCallback event_callback;
     bool is_le_meta_subevent;
-    ftl::RefPtr<ftl::TaskRunner> task_runner;
+    fxl::RefPtr<fxl::TaskRunner> task_runner;
   };
 
   // Tries to send the next queued command if there are any queued commands and
@@ -234,7 +234,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   std::atomic_size_t next_event_handler_id_ __TA_GUARDED(event_handler_mutex_);
 
   // Used to assert that certain public functions are only called on the creation thread.
-  ftl::ThreadChecker thread_checker_;
+  fxl::ThreadChecker thread_checker_;
 
   // The Transport object that owns this CommandChannel.
   Transport* transport_;  // weak
@@ -249,7 +249,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   mtl::MessageLoop::HandlerKey io_handler_key_;
 
   // The task runner used for posting tasks on the HCI transport I/O thread.
-  ftl::RefPtr<ftl::TaskRunner> io_task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> io_task_runner_;
 
   // Guards |send_queue_|. |send_queue_| can get accessed by threads that call
   // SendCommand() as well as from |io_thread_|.
@@ -268,7 +268,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   common::Optional<PendingTransactionData> pending_command_;
 
   // The command timeout callback assigned to the current pending command.
-  ftl::CancelableClosure pending_cmd_timeout_;
+  fxl::CancelableClosure pending_cmd_timeout_;
 
   // Guards |event_handler_id_map_| and |event_code_handlers_| which can be
   // accessed by both the public EventHandler methods and |io_thread_|.
@@ -288,7 +288,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   std::unordered_map<EventCode, EventHandlerId> subevent_code_handlers_
       __TA_GUARDED(event_handler_mutex_);
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CommandChannel);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CommandChannel);
 };
 
 }  // namespace hci

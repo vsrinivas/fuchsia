@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <iostream>
 
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace bluetooth {
 namespace common {
@@ -20,11 +20,11 @@ bool ContainersEqual(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 
   if (std::equal(first1, last1, first2, last2)) return true;
   std::cout << "Expected: { ";
   for (InputIt1 iter = first1; iter != last1; ++iter) {
-    std::cout << ftl::StringPrintf("0x%02x ", *iter);
+    std::cout << fxl::StringPrintf("0x%02x ", *iter);
   }
   std::cout << "}\n   Found: { ";
   for (InputIt2 iter = first2; iter != last2; ++iter) {
-    std::cout << ftl::StringPrintf("0x%02x ", *iter);
+    std::cout << fxl::StringPrintf("0x%02x ", *iter);
   }
   std::cout << "}" << std::endl;
   return false;

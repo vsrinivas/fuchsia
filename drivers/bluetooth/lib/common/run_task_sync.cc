@@ -7,15 +7,15 @@
 #include <condition_variable>
 #include <mutex>
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace bluetooth {
 namespace common {
 
-void RunTaskSync(const ftl::Closure& callback, ftl::RefPtr<ftl::TaskRunner> task_runner) {
-  FTL_DCHECK(callback);
-  FTL_DCHECK(task_runner);
-  FTL_DCHECK(!task_runner->RunsTasksOnCurrentThread());
+void RunTaskSync(const fxl::Closure& callback, fxl::RefPtr<fxl::TaskRunner> task_runner) {
+  FXL_DCHECK(callback);
+  FXL_DCHECK(task_runner);
+  FXL_DCHECK(!task_runner->RunsTasksOnCurrentThread());
 
   std::mutex mtx;
   std::condition_variable cv;

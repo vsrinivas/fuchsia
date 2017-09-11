@@ -11,8 +11,8 @@
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/common/packet_view.h"
 #include "apps/bluetooth/lib/hci/hci.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/synchronization/thread_checker.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/synchronization/thread_checker.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
@@ -50,7 +50,7 @@ class FakeControllerBase : ::mtl::MessageLoopHandler {
   bool IsStarted() const { return static_cast<bool>(task_runner_); }
 
  protected:
-  ftl::RefPtr<ftl::TaskRunner> task_runner() const { return task_runner_; }
+  fxl::RefPtr<fxl::TaskRunner> task_runner() const { return task_runner_; }
 
   // Getters for our channel endpoints.
   const mx::channel& command_channel() const { return cmd_channel_; }
@@ -76,16 +76,16 @@ class FakeControllerBase : ::mtl::MessageLoopHandler {
   void CloseACLDataChannelInternal();
 
   // Used to assert that certain public functions are only called on the creation thread.
-  ftl::ThreadChecker thread_checker_;
+  fxl::ThreadChecker thread_checker_;
 
   mx::channel cmd_channel_;
   mx::channel acl_channel_;
   std::thread thread_;
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   mtl::MessageLoop::HandlerKey cmd_handler_key_;
   mtl::MessageLoop::HandlerKey acl_handler_key_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FakeControllerBase);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakeControllerBase);
 };
 
 }  // namespace testing

@@ -7,7 +7,7 @@
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/l2cap/pdu.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 namespace l2cap {
@@ -53,7 +53,7 @@ class Fragmenter final {
   hci::ConnectionHandle connection_handle_;
   uint16_t max_acl_payload_size_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Fragmenter);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Fragmenter);
 };
 
 }  // namespace l2cap

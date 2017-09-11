@@ -8,11 +8,11 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/log_settings.h"
-#include "lib/ftl/log_settings_command_line.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/log_settings.h"
+#include "lib/fxl/log_settings_command_line.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "le_connection_test.h"
 
@@ -28,13 +28,13 @@ const char kUsageString[] =
 const char kDefaultHCIDev[] = "/dev/class/bt-hci/000";
 
 void PrintUsage() {
-  std::cout << ftl::StringPrintf(kUsageString, kDefaultHCIDev) << std::endl;
+  std::cout << fxl::StringPrintf(kUsageString, kDefaultHCIDev) << std::endl;
 }
 
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  auto cl = ftl::CommandLineFromArgcArgv(argc, argv);
+  auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
 
   if (cl.HasOption("help", nullptr)) {
     PrintUsage();
@@ -47,14 +47,14 @@ int main(int argc, char* argv[]) {
   }
 
   // By default suppress all log messages below the LOG_ERROR level.
-  ftl::LogSettings log_settings;
-  log_settings.min_log_level = ftl::LOG_INFO;
-  if (!ftl::ParseLogSettings(cl, &log_settings)) {
+  fxl::LogSettings log_settings;
+  log_settings.min_log_level = fxl::LOG_INFO;
+  if (!fxl::ParseLogSettings(cl, &log_settings)) {
     PrintUsage();
     return EXIT_FAILURE;
   }
 
-  ftl::SetLogSettings(log_settings);
+  fxl::SetLogSettings(log_settings);
 
   bluetooth::common::DeviceAddress::Type addr_type;
   std::string addr_type_str = cl.positional_args()[0];
@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
   std::string hci_dev_path = kDefaultHCIDev;
   cl.GetOptionValue("dev", &hci_dev_path);
 
-  ftl::UniqueFD hci_dev(open(hci_dev_path.c_str(), O_RDWR));
+  fxl::UniqueFD hci_dev(open(hci_dev_path.c_str(), O_RDWR));
   if (!hci_dev.is_valid()) {
     std::perror("Failed to open HCI device");
     return EXIT_FAILURE;

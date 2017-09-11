@@ -10,9 +10,9 @@
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/common/test_helpers.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 namespace common {
@@ -29,11 +29,11 @@ class BTSnoopLoggerTest : public ::testing::Test {
   // ::testing::Test overrides:
   void TearDown() override {
     if (std::remove(kTestLogFilePath) != 0)
-      FTL_LOG(WARNING) << "Failed to remove temporary test file";
+      FXL_LOG(WARNING) << "Failed to remove temporary test file";
   }
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(BTSnoopLoggerTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BTSnoopLoggerTest);
 };
 
 TEST_F(BTSnoopLoggerTest, SimpleInitialize) {

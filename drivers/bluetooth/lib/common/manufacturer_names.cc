@@ -6,7 +6,7 @@
 
 #include <map>
 
-#include "lib/ftl/arraysize.h"
+#include "lib/fxl/arraysize.h"
 
 namespace bluetooth {
 namespace common {

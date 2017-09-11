@@ -9,7 +9,7 @@
 #include "gtest/gtest.h"
 
 #include "apps/bluetooth/lib/common/test_helpers.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace bluetooth {
 namespace testing {
@@ -27,7 +27,7 @@ bool CommandTransaction::HasMoreResponses() const {
 }
 
 common::DynamicByteBuffer CommandTransaction::PopNextReply() {
-  FTL_DCHECK(HasMoreResponses());
+  FXL_DCHECK(HasMoreResponses());
   auto reply = std::move(replies_.front());
   replies_.pop();
   return reply;
@@ -45,11 +45,11 @@ void TestController::QueueCommandTransaction(CommandTransaction transaction) {
 }
 
 void TestController::SetDataCallback(const DataCallback& callback,
-                                     ftl::RefPtr<ftl::TaskRunner> task_runner) {
-  FTL_DCHECK(callback);
-  FTL_DCHECK(task_runner);
-  FTL_DCHECK(!data_callback_);
-  FTL_DCHECK(!data_task_runner_);
+                                     fxl::RefPtr<fxl::TaskRunner> task_runner) {
+  FXL_DCHECK(callback);
+  FXL_DCHECK(task_runner);
+  FXL_DCHECK(!data_callback_);
+  FXL_DCHECK(!data_task_runner_);
 
   data_callback_ = callback;
   data_task_runner_ = task_runner;
@@ -77,7 +77,7 @@ void TestController::OnACLDataPacketReceived(const common::ByteBuffer& acl_data_
 
   common::DynamicByteBuffer packet_copy(acl_data_packet);
   data_task_runner_->PostTask(
-      ftl::MakeCopyable([ packet_copy = std::move(packet_copy), cb = data_callback_ ]() mutable {
+      fxl::MakeCopyable([ packet_copy = std::move(packet_copy), cb = data_callback_ ]() mutable {
         cb(packet_copy);
       }));
 }

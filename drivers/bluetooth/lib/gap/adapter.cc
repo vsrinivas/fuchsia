@@ -12,7 +12,7 @@
 #include "apps/bluetooth/lib/hci/sequential_command_runner.h"
 #include "apps/bluetooth/lib/hci/transport.h"
 #include "apps/bluetooth/lib/hci/util.h"
-#include "lib/ftl/random/uuid.h"
+#include "lib/fxl/random/uuid.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 #include "low_energy_discovery_manager.h"
@@ -21,13 +21,13 @@ namespace bluetooth {
 namespace gap {
 
 Adapter::Adapter(std::unique_ptr<hci::DeviceWrapper> hci_device)
-    : identifier_(ftl::GenerateUUID()),
+    : identifier_(fxl::GenerateUUID()),
       init_state_(State::kNotInitialized),
       weak_ptr_factory_(this) {
-  FTL_DCHECK(hci_device);
+  FXL_DCHECK(hci_device);
 
   auto message_loop = mtl::MessageLoop::GetCurrent();
-  FTL_DCHECK(message_loop) << "gap: Adapter: Must be created on a valid MessageLoop";
+  FXL_DCHECK(message_loop) << "gap: Adapter: Must be created on a valid MessageLoop";
 
   task_runner_ = message_loop->task_runner();
   hci_ = hci::Transport::Create(std::move(hci_device));
@@ -46,27 +46,27 @@ Adapter::~Adapter() {
 }
 
 bool Adapter::Initialize(const InitializeCallback& callback,
-                         const ftl::Closure& transport_closed_cb) {
-  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
-  FTL_DCHECK(callback);
-  FTL_DCHECK(transport_closed_cb);
+                         const fxl::Closure& transport_closed_cb) {
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(callback);
+  FXL_DCHECK(transport_closed_cb);
 
   if (IsInitialized()) {
-    FTL_LOG(WARNING) << "gap: Adapter: Already initialized";
+    FXL_LOG(WARNING) << "gap: Adapter: Already initialized";
     return false;
   }
 
-  FTL_DCHECK(!IsInitializing());
+  FXL_DCHECK(!IsInitializing());
 
   if (!hci_->Initialize()) {
-    FTL_LOG(ERROR) << "gap: Adapter: Failed to initialize HCI transport";
+    FXL_LOG(ERROR) << "gap: Adapter: Failed to initialize HCI transport";
     return false;
   }
 
   init_state_ = State::kInitializing;
 
-  FTL_DCHECK(init_seq_runner_->IsReady());
-  FTL_DCHECK(!init_seq_runner_->HasQueuedCommands());
+  FXL_DCHECK(init_seq_runner_->IsReady());
+  FXL_DCHECK(!init_seq_runner_->HasQueuedCommands());
 
   transport_closed_cb_ = transport_closed_cb;
 
@@ -114,7 +114,7 @@ bool Adapter::Initialize(const InitializeCallback& callback,
 
   init_seq_runner_->RunCommands([callback, this](bool success) {
     if (!success) {
-      FTL_LOG(ERROR) << "gap: Adapter: Failed to obtain initial controller information";
+      FXL_LOG(ERROR) << "gap: Adapter: Failed to obtain initial controller information";
       CleanUp();
       callback(false);
       return;
@@ -127,8 +127,8 @@ bool Adapter::Initialize(const InitializeCallback& callback,
 }
 
 void Adapter::ShutDown() {
-  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
-  FTL_DCHECK(IsInitialized());
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(IsInitialized());
 
   CleanUp();
 
@@ -136,12 +136,12 @@ void Adapter::ShutDown() {
 }
 
 void Adapter::InitializeStep2(const InitializeCallback& callback) {
-  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
-  FTL_DCHECK(IsInitializing());
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(IsInitializing());
 
   // Low Energy MUST be supported. We don't support BR/EDR-only controllers.
   if (!state_.IsLowEnergySupported()) {
-    FTL_LOG(ERROR) << "gap: Adapter: Bluetooth Low Energy not supported by controller";
+    FXL_LOG(ERROR) << "gap: Adapter: Bluetooth Low Energy not supported by controller";
     CleanUp();
     callback(false);
     return;
@@ -150,11 +150,11 @@ void Adapter::InitializeStep2(const InitializeCallback& callback) {
   // Check the HCI version. We officially only support 4.2+ only but for now we just log a warning
   // message if the version is legacy.
   if (state_.hci_version() < hci::HCIVersion::k4_2) {
-    FTL_LOG(WARNING) << "gap: Adapter: controller is using legacy HCI version: "
+    FXL_LOG(WARNING) << "gap: Adapter: controller is using legacy HCI version: "
                      << hci::HCIVersionToString(state_.hci_version());
   }
 
-  FTL_DCHECK(init_seq_runner_->IsReady());
+  FXL_DCHECK(init_seq_runner_->IsReady());
 
   // If the controller supports the Read Buffer Size command then send it. Otherwise we'll default
   // to 0 when initializing the ACLDataChannel.
@@ -224,7 +224,7 @@ void Adapter::InitializeStep2(const InitializeCallback& callback) {
 
   init_seq_runner_->RunCommands([callback, this](bool success) {
     if (!success) {
-      FTL_LOG(ERROR) << "gap: Adapter: Failed to obtain initial controller information (step 2)";
+      FXL_LOG(ERROR) << "gap: Adapter: Failed to obtain initial controller information (step 2)";
       CleanUp();
       callback(false);
       return;
@@ -235,12 +235,12 @@ void Adapter::InitializeStep2(const InitializeCallback& callback) {
 }
 
 void Adapter::InitializeStep3(const InitializeCallback& callback) {
-  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
-  FTL_DCHECK(IsInitializing());
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(IsInitializing());
 
   if (!state_.bredr_data_buffer_info().IsAvailable() &&
       !state_.low_energy_state().data_buffer_info().IsAvailable()) {
-    FTL_LOG(ERROR) << "gap: Adapter: Both BR/EDR and LE buffers are unavailable";
+    FXL_LOG(ERROR) << "gap: Adapter: Both BR/EDR and LE buffers are unavailable";
     CleanUp();
     callback(false);
     return;
@@ -250,14 +250,14 @@ void Adapter::InitializeStep3(const InitializeCallback& callback) {
   // ACLDataChannel.
   if (!hci_->InitializeACLDataChannel(state_.bredr_data_buffer_info(),
                                       state_.low_energy_state().data_buffer_info())) {
-    FTL_LOG(ERROR) << "gap: Adapter: Failed to initialize ACLDataChannel (step 3)";
+    FXL_LOG(ERROR) << "gap: Adapter: Failed to initialize ACLDataChannel (step 3)";
     CleanUp();
     callback(false);
     return;
   }
 
-  FTL_DCHECK(init_seq_runner_->IsReady());
-  FTL_DCHECK(!init_seq_runner_->HasQueuedCommands());
+  FXL_DCHECK(init_seq_runner_->IsReady());
+  FXL_DCHECK(!init_seq_runner_->HasQueuedCommands());
 
   // HCI_Set_Event_Mask
   {
@@ -313,7 +313,7 @@ void Adapter::InitializeStep3(const InitializeCallback& callback) {
 
   init_seq_runner_->RunCommands([callback, this](bool success) {
     if (!success) {
-      FTL_LOG(ERROR) << "gap: Adapter: Failed to obtain initial controller information (step 3)";
+      FXL_LOG(ERROR) << "gap: Adapter: Failed to obtain initial controller information (step 3)";
       CleanUp();
       callback(false);
       return;
@@ -327,17 +327,17 @@ void Adapter::InitializeStep4(const InitializeCallback& callback) {
   // Initialize the scan manager based on current feature support.
   if (state_.low_energy_state().IsFeatureSupported(
           hci::LESupportedFeature::kLEExtendedAdvertising)) {
-    FTL_LOG(INFO) << "gap: Adapter: Using extended LE scan procedures";
+    FXL_LOG(INFO) << "gap: Adapter: Using extended LE scan procedures";
     le_discovery_manager_ = std::make_unique<LowEnergyDiscoveryManager>(
         LowEnergyDiscoveryManager::Mode::kExtended, hci_, &device_cache_);
   } else if (state_.IsCommandSupported(26, hci::SupportedCommand::kLESetScanParameters) &&
              state_.IsCommandSupported(26, hci::SupportedCommand::kLESetScanEnable)) {
-    FTL_LOG(INFO) << "gap: Adapter: Using legacy LE scan procedures";
+    FXL_LOG(INFO) << "gap: Adapter: Using legacy LE scan procedures";
     le_discovery_manager_ = std::make_unique<LowEnergyDiscoveryManager>(
         LowEnergyDiscoveryManager::Mode::kLegacy, hci_, &device_cache_);
   }
 
-  if (!le_discovery_manager_) FTL_LOG(INFO) << "gap: Adapter: LE scan procedures not supported";
+  if (!le_discovery_manager_) FXL_LOG(INFO) << "gap: Adapter: LE scan procedures not supported";
 
   // This completes the initialization sequence.
   init_state_ = State::kInitialized;
@@ -365,7 +365,7 @@ uint64_t Adapter::BuildLEEventMask() {
 }
 
 void Adapter::CleanUp() {
-  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
 
   init_state_ = State::kNotInitialized;
   state_ = AdapterState();
@@ -378,7 +378,7 @@ void Adapter::CleanUp() {
 }
 
 void Adapter::OnTransportClosed() {
-  FTL_LOG(INFO) << "gap: Adapter: HCI transport was closed";
+  FXL_LOG(INFO) << "gap: Adapter: HCI transport was closed";
   if (transport_closed_cb_) transport_closed_cb_();
 }
 

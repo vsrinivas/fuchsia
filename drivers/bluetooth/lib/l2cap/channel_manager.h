@@ -16,10 +16,10 @@
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/l2cap/channel.h"
 
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/synchronization/thread_checker.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/synchronization/thread_checker.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace bluetooth {
 
@@ -46,7 +46,7 @@ class LogicalLink;
 // There is a single instance of ChannelManager for each HCI transport.
 class ChannelManager final {
  public:
-  ChannelManager(ftl::RefPtr<hci::Transport> hci, ftl::RefPtr<ftl::TaskRunner> task_runner);
+  ChannelManager(fxl::RefPtr<hci::Transport> hci, fxl::RefPtr<fxl::TaskRunner> task_runner);
   ~ChannelManager();
 
   // Registers the given connection with the L2CAP layer. L2CAP channels can be opened on the
@@ -79,8 +79,8 @@ class ChannelManager final {
   // routing the packet to the corresponding LogicalLink.
   void OnACLDataReceived(hci::ACLDataPacketPtr data_packet);
 
-  ftl::RefPtr<hci::Transport> hci_;
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<hci::Transport> hci_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
 
   std::mutex mtx_;
   std::unordered_map<hci::ConnectionHandle, std::unique_ptr<internal::LogicalLink>> ll_map_
@@ -92,9 +92,9 @@ class ChannelManager final {
   PendingPacketMap pending_packets_ __TA_GUARDED(mtx_);
 
   common::CancelableCallbackFactory<void()> cancelable_callback_factory_;
-  ftl::ThreadChecker thread_checker_;
+  fxl::ThreadChecker thread_checker_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ChannelManager);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ChannelManager);
 };
 
 }  // namespace l2cap

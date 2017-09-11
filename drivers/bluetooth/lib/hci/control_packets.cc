@@ -4,7 +4,7 @@
 
 #include "control_packets.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 #include "slab_allocators.h"
 
@@ -33,7 +33,7 @@ using EventAllocator = fbl::SlabAllocator<EventTraits>;
 namespace {
 
 std::unique_ptr<CommandPacket> NewCommandPacket(size_t payload_size) {
-  FTL_DCHECK(payload_size <= slab_allocators::kLargeControlPayloadSize);
+  FXL_DCHECK(payload_size <= slab_allocators::kLargeControlPayloadSize);
 
   if (payload_size <= slab_allocators::kSmallControlPayloadSize) {
     auto buffer = slab_allocators::SmallCommandAllocator::New(payload_size);

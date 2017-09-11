@@ -5,8 +5,8 @@
 #include "fake_device.h"
 
 #include "apps/bluetooth/lib/common/packet_view.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/random/rand.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/random/rand.h"
 
 namespace bluetooth {
 namespace testing {
@@ -17,7 +17,7 @@ void WriteRandomRSSI(int8_t* out_mem) {
   constexpr int8_t kRSSIMax = 20;
 
   int8_t rssi;
-  ftl::RandBytes(reinterpret_cast<unsigned char*>(&rssi), sizeof(rssi));
+  fxl::RandBytes(reinterpret_cast<unsigned char*>(&rssi), sizeof(rssi));
   rssi = (rssi % (kRSSIMax - kRSSIMin)) + kRSSIMin;
 
   *out_mem = rssi;
@@ -35,13 +35,13 @@ FakeDevice::FakeDevice(const common::DeviceAddress& address, bool connectable, b
       should_batch_reports_(false) {}
 
 void FakeDevice::SetAdvertisingData(const common::ByteBuffer& data) {
-  FTL_DCHECK(data.size() <= hci::kMaxLEAdvertisingDataLength);
+  FXL_DCHECK(data.size() <= hci::kMaxLEAdvertisingDataLength);
   adv_data_ = common::DynamicByteBuffer(data);
 }
 
 void FakeDevice::SetScanResponse(bool should_batch_reports, const common::ByteBuffer& data) {
-  FTL_DCHECK(scannable_);
-  FTL_DCHECK(data.size() <= hci::kMaxLEAdvertisingDataLength);
+  FXL_DCHECK(scannable_);
+  FXL_DCHECK(data.size() <= hci::kMaxLEAdvertisingDataLength);
   scan_rsp_ = common::DynamicByteBuffer(data);
   should_batch_reports_ = should_batch_reports;
 }
@@ -51,7 +51,7 @@ common::DynamicByteBuffer FakeDevice::CreateAdvertisingReportEvent(bool include_
                       sizeof(hci::LEAdvertisingReportSubeventParams) +
                       sizeof(hci::LEAdvertisingReportData) + adv_data_.size() + sizeof(int8_t);
   if (include_scan_rsp) {
-    FTL_DCHECK(scannable_);
+    FXL_DCHECK(scannable_);
     event_size += sizeof(hci::LEAdvertisingReportData) + scan_rsp_.size() + sizeof(int8_t);
   }
 
@@ -95,7 +95,7 @@ common::DynamicByteBuffer FakeDevice::CreateAdvertisingReportEvent(bool include_
 }
 
 common::DynamicByteBuffer FakeDevice::CreateScanResponseReportEvent() const {
-  FTL_DCHECK(scannable_);
+  FXL_DCHECK(scannable_);
   size_t event_size = sizeof(hci::EventHeader) + sizeof(hci::LEMetaEventParams) +
                       sizeof(hci::LEAdvertisingReportSubeventParams) +
                       sizeof(hci::LEAdvertisingReportData) + scan_rsp_.size() + sizeof(int8_t);
@@ -119,7 +119,7 @@ common::DynamicByteBuffer FakeDevice::CreateScanResponseReportEvent() const {
 }
 
 void FakeDevice::WriteScanResponseReport(hci::LEAdvertisingReportData* report) const {
-  FTL_DCHECK(scannable_);
+  FXL_DCHECK(scannable_);
   report->event_type = hci::LEAdvertisingEventType::kScanRsp;
   report->address_type = (address_.type() == common::DeviceAddress::Type::kLERandom)
                              ? hci::LEAddressType::kRandom

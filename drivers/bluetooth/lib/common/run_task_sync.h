@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace bluetooth {
 namespace common {
@@ -17,7 +17,7 @@ namespace common {
 //
 // NOTE: This should generally be avoided. This is primarily intended for synchronous setup/shutdown
 // sequences and unit tests.
-void RunTaskSync(const ftl::Closure& callback, ftl::RefPtr<ftl::TaskRunner> task_runner);
+void RunTaskSync(const fxl::Closure& callback, fxl::RefPtr<fxl::TaskRunner> task_runner);
 
 }  // namespace common
 }  // namespace bluetooth

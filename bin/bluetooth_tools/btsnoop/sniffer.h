@@ -9,8 +9,8 @@
 #include "apps/bluetooth/lib/common/bt_snoop_logger.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
@@ -33,7 +33,7 @@ class Sniffer final : public ::mtl::MessageLoopHandler {
   std::string hci_dev_path_;
   std::string log_file_path_;
 
-  ftl::UniqueFD hci_dev_;
+  fxl::UniqueFD hci_dev_;
   mx::channel snoop_channel_;
   bluetooth::common::BTSnoopLogger logger_;
 
@@ -46,7 +46,7 @@ class Sniffer final : public ::mtl::MessageLoopHandler {
                   bluetooth::hci::kMaxCommandPacketPayloadSize +
                   1];
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Sniffer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Sniffer);
 };
 
 }  // namespace btsnoop

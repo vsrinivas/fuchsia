@@ -4,39 +4,39 @@
 
 #include "channel_manager.h"
 
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "logical_link.h"
 
 namespace bluetooth {
 namespace l2cap {
 
-ChannelManager::ChannelManager(ftl::RefPtr<hci::Transport> hci,
-                               ftl::RefPtr<ftl::TaskRunner> task_runner)
+ChannelManager::ChannelManager(fxl::RefPtr<hci::Transport> hci,
+                               fxl::RefPtr<fxl::TaskRunner> task_runner)
     : hci_(hci), task_runner_(task_runner) {
-  FTL_DCHECK(hci_);
-  FTL_DCHECK(task_runner_);
+  FXL_DCHECK(hci_);
+  FXL_DCHECK(task_runner_);
 
   hci_->acl_data_channel()->SetDataRxHandler(
       std::bind(&ChannelManager::OnACLDataReceived, this, std::placeholders::_1));
 }
 
 ChannelManager::~ChannelManager() {
-  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   cancelable_callback_factory_.CancelAll();
   hci_->acl_data_channel()->SetDataRxHandler({});
 }
 
 void ChannelManager::Register(hci::ConnectionHandle handle, hci::Connection::LinkType ll_type,
                               hci::Connection::Role role) {
-  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   std::lock_guard<std::mutex> lock(mtx_);
 
   auto iter = ll_map_.find(handle);
-  FTL_DCHECK(iter == ll_map_.end())
-      << ftl::StringPrintf("l2cap: Connection registered more than once! (handle=0x%04x)", handle);
+  FXL_DCHECK(iter == ll_map_.end())
+      << fxl::StringPrintf("l2cap: Connection registered more than once! (handle=0x%04x)", handle);
 
   ll_map_[handle] = std::make_unique<internal::LogicalLink>(handle, ll_type, role, hci_);
 
@@ -52,7 +52,7 @@ void ChannelManager::Register(hci::ConnectionHandle handle, hci::Connection::Lin
     if (iter == ll_map_.end()) return;
 
     auto pp_iter = pending_packets_.find(handle);
-    FTL_DCHECK(pp_iter != pending_packets_.end());
+    FXL_DCHECK(pp_iter != pending_packets_.end());
 
     auto& ll = iter->second;
     auto& packets = pp_iter->second;
@@ -64,26 +64,26 @@ void ChannelManager::Register(hci::ConnectionHandle handle, hci::Connection::Lin
 }
 
 void ChannelManager::Unregister(hci::ConnectionHandle handle) {
-  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   std::lock_guard<std::mutex> lock(mtx_);
 
   auto iter = ll_map_.find(handle);
-  FTL_DCHECK(iter != ll_map_.end())
-      << ftl::StringPrintf("l2cap: Attempted to remove unknown connection handle: 0x%04x", handle);
+  FXL_DCHECK(iter != ll_map_.end())
+      << fxl::StringPrintf("l2cap: Attempted to remove unknown connection handle: 0x%04x", handle);
   ll_map_.erase(iter);
   pending_packets_.erase(handle);
 }
 
 std::unique_ptr<Channel> ChannelManager::OpenFixedChannel(hci::ConnectionHandle connection_handle,
                                                           ChannelId channel_id) {
-  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   std::lock_guard<std::mutex> lock(mtx_);
 
   auto iter = ll_map_.find(connection_handle);
   if (iter == ll_map_.end()) {
-    FTL_LOG(ERROR) << ftl::StringPrintf(
+    FXL_LOG(ERROR) << fxl::StringPrintf(
         "l2cap: Cannot open fixed channel on unknown connection handle: 0x%04x", connection_handle);
     return nullptr;
   }
@@ -93,7 +93,7 @@ std::unique_ptr<Channel> ChannelManager::OpenFixedChannel(hci::ConnectionHandle 
 
 void ChannelManager::OnACLDataReceived(hci::ACLDataPacketPtr packet) {
   // The creation thread of this object is expected to be different from the HCI I/O thread.
-  FTL_DCHECK(hci_->io_task_runner()->RunsTasksOnCurrentThread());
+  FXL_DCHECK(hci_->io_task_runner()->RunsTasksOnCurrentThread());
 
   // TODO(armansito): Route packets based on channel priority, prioritizing Guaranteed channels over
   // Best Effort. Right now all channels are Best Effort.
@@ -119,7 +119,7 @@ void ChannelManager::OnACLDataReceived(hci::ACLDataPacketPtr packet) {
   if (pp_iter != pending_packets_.end()) {
     pp_iter->second.push_back(std::move(packet));
 
-    FTL_VLOG(1) << ftl::StringPrintf("l2cap: Queued rx packet on handle: 0x%04x", handle);
+    FXL_VLOG(1) << fxl::StringPrintf("l2cap: Queued rx packet on handle: 0x%04x", handle);
     return;
   }
 

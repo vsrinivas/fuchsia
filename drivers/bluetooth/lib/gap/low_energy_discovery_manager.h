@@ -13,11 +13,11 @@
 #include "apps/bluetooth/lib/gap/discovery_filter.h"
 #include "apps/bluetooth/lib/gap/gap.h"
 #include "apps/bluetooth/lib/hci/low_energy_scanner.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/memory/weak_ptr.h"
-#include "lib/ftl/synchronization/thread_checker.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fxl/synchronization/thread_checker.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace bluetooth {
 
@@ -129,7 +129,7 @@ class LowEnergyDiscoverySession final {
   friend class LowEnergyDiscoveryManager;
 
   // Called by LowEnergyDiscoveryManager.
-  explicit LowEnergyDiscoverySession(ftl::WeakPtr<LowEnergyDiscoveryManager> manager);
+  explicit LowEnergyDiscoverySession(fxl::WeakPtr<LowEnergyDiscoveryManager> manager);
 
   // Called by LowEnergyDiscoveryManager on newly discovered scan results.
   void NotifyDiscoveryResult(const RemoteDevice& device) const;
@@ -140,12 +140,12 @@ class LowEnergyDiscoverySession final {
   }
 
   bool active_;
-  ftl::WeakPtr<LowEnergyDiscoveryManager> manager_;
+  fxl::WeakPtr<LowEnergyDiscoveryManager> manager_;
   DeviceFoundCallback device_found_callback_;
   DiscoveryFilter filter_;
-  ftl::ThreadChecker thread_checker_;
+  fxl::ThreadChecker thread_checker_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LowEnergyDiscoverySession);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LowEnergyDiscoverySession);
 };
 
 // See comments above.
@@ -161,7 +161,7 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
   };
 
   // |device_cache| MUST out-live this LowEnergyDiscoveryManager.
-  LowEnergyDiscoveryManager(Mode mode, ftl::RefPtr<hci::Transport> hci,
+  LowEnergyDiscoveryManager(Mode mode, fxl::RefPtr<hci::Transport> hci,
                             RemoteDeviceCache* device_cache);
   virtual ~LowEnergyDiscoveryManager();
 
@@ -203,7 +203,7 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
   void StartScan();
 
   // The task runner that we use for invoking callbacks asynchronously.
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
 
   // The device cache that we use for storing and looking up scan results. We hold a raw pointer as
   // we expect this to out-live us.
@@ -236,9 +236,9 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
 
   // Keep this as the last member to make sure that all weak pointers are invalidated before other
   // members get destroyed.
-  ftl::WeakPtrFactory<LowEnergyDiscoveryManager> weak_ptr_factory_;
+  fxl::WeakPtrFactory<LowEnergyDiscoveryManager> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LowEnergyDiscoveryManager);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LowEnergyDiscoveryManager);
 };
 
 }  // namespace gap

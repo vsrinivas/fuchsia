@@ -7,7 +7,7 @@
 #include "apps/bluetooth/lib/gap/adapter.h"
 #include "apps/bluetooth/lib/gap/gap.h"
 #include "apps/bluetooth/lib/gap/low_energy_discovery_manager.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 #include "fidl_helpers.h"
 
@@ -17,15 +17,15 @@ namespace btfidl = ::bluetooth;
 
 namespace bluetooth_service {
 
-AdapterFidlImpl::AdapterFidlImpl(const ftl::WeakPtr<::bluetooth::gap::Adapter>& adapter,
+AdapterFidlImpl::AdapterFidlImpl(const fxl::WeakPtr<::bluetooth::gap::Adapter>& adapter,
                                  ::fidl::InterfaceRequest<::btfidl::control::Adapter> request,
                                  const ConnectionErrorHandler& connection_error_handler)
     : adapter_(adapter),
       requesting_discovery_(false),
       binding_(this, std::move(request)),
       weak_ptr_factory_(this) {
-  FTL_DCHECK(adapter_);
-  FTL_DCHECK(connection_error_handler);
+  FXL_DCHECK(adapter_);
+  FXL_DCHECK(connection_error_handler);
   binding_.set_connection_error_handler(
       [this, connection_error_handler] { connection_error_handler(this); });
 }
@@ -43,7 +43,7 @@ void AdapterFidlImpl::SetDelegate(
   }
   if (delegate_) {
     delegate_.set_connection_error_handler([this] {
-      FTL_LOG(INFO) << "Adapter delegate disconnected";
+      FXL_LOG(INFO) << "Adapter delegate disconnected";
       delegate_ = nullptr;
 
       // TODO(armansito): Define a function for terminating all procedures that rely on a delegate.
@@ -66,24 +66,24 @@ void AdapterFidlImpl::SetDelegate(
 void AdapterFidlImpl::SetLocalName(const ::fidl::String& local_name,
                                    const ::fidl::String& shortened_local_name,
                                    const SetLocalNameCallback& callback) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void AdapterFidlImpl::SetPowered(bool powered, const SetPoweredCallback& callback) {
-  FTL_NOTIMPLEMENTED();
+  FXL_NOTIMPLEMENTED();
 }
 
 void AdapterFidlImpl::StartDiscovery(const StartDiscoveryCallback& callback) {
-  FTL_LOG(INFO) << "Adapter StartDiscovery()";
+  FXL_LOG(INFO) << "Adapter StartDiscovery()";
 
   if (!adapter_) {
-    FTL_LOG(WARNING) << "Adapter not available";
+    FXL_LOG(WARNING) << "Adapter not available";
     callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::NOT_FOUND, "Adapter not available"));
     return;
   }
 
   if (le_discovery_session_ || requesting_discovery_) {
-    FTL_LOG(WARNING) << "Discovery already in progress";
+    FXL_LOG(WARNING) << "Discovery already in progress";
     callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::IN_PROGRESS,
                                           "Discovery already in progress"));
     return;
@@ -99,7 +99,7 @@ void AdapterFidlImpl::StartDiscovery(const StartDiscoveryCallback& callback) {
     self->requesting_discovery_ = false;
 
     if (!session) {
-      FTL_LOG(ERROR) << "Failed to start discovery session";
+      FXL_LOG(ERROR) << "Failed to start discovery session";
       callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::FAILED,
                                             "Failed to start discovery session"));
       return;
@@ -118,9 +118,9 @@ void AdapterFidlImpl::StartDiscovery(const StartDiscoveryCallback& callback) {
 }
 
 void AdapterFidlImpl::StopDiscovery(const StopDiscoveryCallback& callback) {
-  FTL_LOG(INFO) << "Adapter StopDiscovery()";
+  FXL_LOG(INFO) << "Adapter StopDiscovery()";
   if (!le_discovery_session_) {
-    FTL_LOG(ERROR) << "No active discovery session";
+    FXL_LOG(ERROR) << "No active discovery session";
     callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::BAD_STATE,
                                           "No discovery session in progress"));
     return;
@@ -136,7 +136,7 @@ void AdapterFidlImpl::OnDiscoveryResult(const ::bluetooth::gap::RemoteDevice& re
 
   auto fidl_device = fidl_helpers::NewRemoteDevice(remote_device);
   if (!fidl_device) {
-    FTL_LOG(WARNING) << "Ignoring malformed discovery result";
+    FXL_LOG(WARNING) << "Ignoring malformed discovery result";
     return;
   }
 

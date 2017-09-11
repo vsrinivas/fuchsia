@@ -11,32 +11,32 @@
 namespace bluetooth {
 namespace hci {
 
-SequentialCommandRunner::SequentialCommandRunner(ftl::RefPtr<ftl::TaskRunner> task_runner,
-                                                 ftl::RefPtr<Transport> transport)
+SequentialCommandRunner::SequentialCommandRunner(fxl::RefPtr<fxl::TaskRunner> task_runner,
+                                                 fxl::RefPtr<Transport> transport)
     : task_runner_(task_runner), transport_(transport), sequence_number_(0u) {
-  FTL_DCHECK(task_runner_);
-  FTL_DCHECK(transport_);
-  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(task_runner_);
+  FXL_DCHECK(transport_);
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
 }
 
 SequentialCommandRunner::~SequentialCommandRunner() {
-  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
 }
 
 void SequentialCommandRunner::QueueCommand(std::unique_ptr<CommandPacket> command_packet,
                                            const CommandCompleteCallback& callback) {
-  FTL_DCHECK(!result_callback_);
-  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
-  FTL_DCHECK(sizeof(CommandHeader) <= command_packet->view().size());
+  FXL_DCHECK(!result_callback_);
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(sizeof(CommandHeader) <= command_packet->view().size());
 
   command_queue_.push(std::make_pair(std::move(command_packet), callback));
 }
 
 void SequentialCommandRunner::RunCommands(const ResultCallback& result_callback) {
-  FTL_DCHECK(!result_callback_);
-  FTL_DCHECK(result_callback);
-  FTL_DCHECK(!command_queue_.empty());
-  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(!result_callback_);
+  FXL_DCHECK(result_callback);
+  FXL_DCHECK(!command_queue_.empty());
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
 
   result_callback_ = result_callback;
   sequence_number_++;
@@ -45,25 +45,25 @@ void SequentialCommandRunner::RunCommands(const ResultCallback& result_callback)
 }
 
 bool SequentialCommandRunner::IsReady() const {
-  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
   return !result_callback_;
 }
 
 void SequentialCommandRunner::Cancel() {
-  FTL_DCHECK(result_callback_);
-  FTL_DCHECK(!status_callback_.IsCanceled());
-  FTL_DCHECK(!complete_callback_.IsCanceled());
+  FXL_DCHECK(result_callback_);
+  FXL_DCHECK(!status_callback_.IsCanceled());
+  FXL_DCHECK(!complete_callback_.IsCanceled());
 
   Reset();
 }
 
 bool SequentialCommandRunner::HasQueuedCommands() const {
-  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
   return !command_queue_.empty();
 }
 
 void SequentialCommandRunner::RunNextQueuedCommand() {
-  FTL_DCHECK(result_callback_);
+  FXL_DCHECK(result_callback_);
 
   if (command_queue_.empty()) {
     NotifyResultAndReset(true);
@@ -119,7 +119,7 @@ void SequentialCommandRunner::Reset() {
 }
 
 void SequentialCommandRunner::NotifyResultAndReset(bool result) {
-  FTL_DCHECK(result_callback_);
+  FXL_DCHECK(result_callback_);
   auto result_cb = result_callback_;
   Reset();
   result_cb(result);

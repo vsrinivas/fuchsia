@@ -10,7 +10,7 @@
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/testing/fake_controller_base.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 namespace testing {
@@ -36,7 +36,7 @@ class CommandTransaction final {
   common::DynamicByteBuffer expected_;
   std::queue<common::DynamicByteBuffer> replies_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CommandTransaction);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CommandTransaction);
 };
 
 // TestController allows unit tests to set up an expected sequence of HCI commands and any events
@@ -55,7 +55,7 @@ class TestController : public FakeControllerBase {
 
   // Callback to invoke when a packet is received over the data channel.
   using DataCallback = std::function<void(const common::ByteBuffer& packet)>;
-  void SetDataCallback(const DataCallback& callback, ftl::RefPtr<ftl::TaskRunner> task_runner);
+  void SetDataCallback(const DataCallback& callback, fxl::RefPtr<fxl::TaskRunner> task_runner);
 
  private:
   // FakeControllerBase overrides:
@@ -65,9 +65,9 @@ class TestController : public FakeControllerBase {
 
   std::queue<CommandTransaction> cmd_transactions_;
   DataCallback data_callback_;
-  ftl::RefPtr<ftl::TaskRunner> data_task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> data_task_runner_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestController);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestController);
 };
 
 }  // namespace testing

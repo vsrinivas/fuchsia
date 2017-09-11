@@ -12,7 +12,7 @@
 #include "apps/bluetooth/lib/testing/fake_controller.h"
 #include "apps/bluetooth/lib/testing/fake_device.h"
 #include "apps/bluetooth/lib/testing/test_base.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 namespace hci {
@@ -68,7 +68,7 @@ class LowEnergyConnectorTest : public TestingBase {
   std::unique_ptr<LowEnergyConnector> connector_;
   std::vector<std::unique_ptr<Connection>> connections_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LowEnergyConnectorTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LowEnergyConnectorTest);
 };
 
 TEST_F(LowEnergyConnectorTest, CreateConnection) {

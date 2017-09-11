@@ -13,8 +13,8 @@
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
 #include "apps/bluetooth/lib/testing/fake_controller_base.h"
-#include "lib/ftl/functional/cancelable_callback.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/functional/cancelable_callback.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 namespace testing {
@@ -98,7 +98,7 @@ class FakeController : public FakeControllerBase {
   // Sets a callback to invoked when the scan state changes.
   using ScanStateCallback = std::function<void(bool enabled)>;
   void SetScanStateCallback(const ScanStateCallback& callback,
-                            ftl::RefPtr<ftl::TaskRunner> task_runner);
+                            fxl::RefPtr<fxl::TaskRunner> task_runner);
 
   // Sends a LE Meta event with the given parameters.
   void SendLEMetaEvent(hci::EventCode subevent_code, const void* params, uint8_t params_size);
@@ -133,16 +133,16 @@ class FakeController : public FakeControllerBase {
 
   // Variables used for HCI_LE_Create_Connection/HCI_LE_Create_Connection_Cancel.
   uint16_t next_conn_handle_;
-  ftl::CancelableClosure pending_le_connect_rsp_;
+  fxl::CancelableClosure pending_le_connect_rsp_;
   common::DeviceAddress pending_le_connect_addr_;
 
   std::unordered_map<hci::OpCode, hci::Status> default_status_map_;
   std::vector<std::unique_ptr<FakeDevice>> le_devices_;
 
   ScanStateCallback scan_state_cb_;
-  ftl::RefPtr<ftl::TaskRunner> scan_state_cb_task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> scan_state_cb_task_runner_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FakeController);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakeController);
 };
 
 }  // namespace testing

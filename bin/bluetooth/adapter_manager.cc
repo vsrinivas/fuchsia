@@ -8,9 +8,9 @@
 
 #include "apps/bluetooth/lib/gap/adapter.h"
 #include "apps/bluetooth/lib/hci/device_wrapper.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace bluetooth_service {
 namespace {
@@ -36,10 +36,10 @@ AdapterManager::~AdapterManager() {
   adapters_.clear();
 }
 
-ftl::WeakPtr<bluetooth::gap::Adapter> AdapterManager::GetAdapter(
+fxl::WeakPtr<bluetooth::gap::Adapter> AdapterManager::GetAdapter(
     const std::string& identifier) const {
   auto iter = adapters_.find(identifier);
-  if (iter == adapters_.end()) return ftl::WeakPtr<bluetooth::gap::Adapter>();
+  if (iter == adapters_.end()) return fxl::WeakPtr<bluetooth::gap::Adapter>();
   return iter->second->AsWeakPtr();
 }
 
@@ -61,9 +61,9 @@ void AdapterManager::RemoveObserver(Observer* observer) {
   observers_.RemoveObserver(observer);
 }
 
-ftl::WeakPtr<bluetooth::gap::Adapter> AdapterManager::GetActiveAdapter() {
+fxl::WeakPtr<bluetooth::gap::Adapter> AdapterManager::GetActiveAdapter() {
   if (active_adapter_) return active_adapter_->AsWeakPtr();
-  return ftl::WeakPtr<bluetooth::gap::Adapter>();
+  return fxl::WeakPtr<bluetooth::gap::Adapter>();
 }
 
 bool AdapterManager::SetActiveAdapter(const std::string& identifier) {
@@ -86,12 +86,12 @@ bool AdapterManager::SetActiveAdapterInternal(bluetooth::gap::Adapter* adapter) 
 }
 
 void AdapterManager::OnDeviceFound(int dir_fd, std::string filename) {
-  FTL_VLOG(1) << "bluetooth_service: AdapterManager: device found at "
-              << ftl::StringPrintf("%s/%s", kBluetoothDeviceDir, filename.c_str());
+  FXL_VLOG(1) << "bluetooth_service: AdapterManager: device found at "
+              << fxl::StringPrintf("%s/%s", kBluetoothDeviceDir, filename.c_str());
 
-  ftl::UniqueFD hci_dev_fd(openat(dir_fd, filename.c_str(), O_RDWR));
+  fxl::UniqueFD hci_dev_fd(openat(dir_fd, filename.c_str(), O_RDWR));
   if (!hci_dev_fd.is_valid()) {
-    FTL_LOG(ERROR) << "bluetooth_service: AdapterManager: failed to open HCI device file: "
+    FXL_LOG(ERROR) << "bluetooth_service: AdapterManager: failed to open HCI device file: "
                    << strerror(errno);
     return;
   }
@@ -107,9 +107,9 @@ void AdapterManager::OnDeviceFound(int dir_fd, std::string filename) {
   auto adapter_ptr = adapter.get();
 
   // Called when Adapter initialization has completed.
-  auto init_cb = ftl::MakeCopyable([ adapter = std::move(adapter), self ](bool success) mutable {
+  auto init_cb = fxl::MakeCopyable([ adapter = std::move(adapter), self ](bool success) mutable {
     if (!success) {
-      FTL_VLOG(1) << "bluetooth_service: AdapterManager: failed to initialize adapter";
+      FXL_VLOG(1) << "bluetooth_service: AdapterManager: failed to initialize adapter";
       return;
     }
 
@@ -131,7 +131,7 @@ void AdapterManager::OnDeviceFound(int dir_fd, std::string filename) {
 }
 
 void AdapterManager::RegisterAdapter(std::unique_ptr<bluetooth::gap::Adapter> adapter) {
-  FTL_DCHECK(adapters_.find(adapter->identifier()) == adapters_.end());
+  FXL_DCHECK(adapters_.find(adapter->identifier()) == adapters_.end());
 
   auto ptr = adapter.get();
   adapters_[adapter->identifier()] = std::move(adapter);
@@ -147,9 +147,9 @@ void AdapterManager::RegisterAdapter(std::unique_ptr<bluetooth::gap::Adapter> ad
 
 void AdapterManager::OnAdapterTransportClosed(std::string adapter_identifier) {
   auto iter = adapters_.find(adapter_identifier);
-  FTL_DCHECK(iter != adapters_.end());
+  FXL_DCHECK(iter != adapters_.end());
 
-  FTL_VLOG(1) << "bluetooth_service: AdapterManager: Adapter transport closed: "
+  FXL_VLOG(1) << "bluetooth_service: AdapterManager: Adapter transport closed: "
               << adapter_identifier;
 
   // Remove the adapter from the list so that it's no longer accessible to service clients. We

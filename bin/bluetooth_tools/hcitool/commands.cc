@@ -14,10 +14,10 @@
 #include "apps/bluetooth/lib/hci/advertising_report_parser.h"
 #include "apps/bluetooth/lib/hci/control_packets.h"
 #include "apps/bluetooth/lib/hci/util.h"
-#include "lib/ftl/strings/join_strings.h"
-#include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/ftl/strings/string_printf.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/strings/join_strings.h"
+#include "lib/fxl/strings/string_number_conversions.h"
+#include "lib/fxl/strings/string_printf.h"
+#include "lib/fxl/time/time_delta.h"
 
 using namespace bluetooth;
 
@@ -27,28 +27,28 @@ using std::placeholders::_2;
 namespace hcitool {
 namespace {
 
-void StatusCallback(ftl::Closure complete_cb, bluetooth::hci::CommandChannel::TransactionId id,
+void StatusCallback(fxl::Closure complete_cb, bluetooth::hci::CommandChannel::TransactionId id,
                     bluetooth::hci::Status status) {
-  std::cout << "  Command Status: " << ftl::StringPrintf("0x%02x", status) << " (id=" << id << ")"
+  std::cout << "  Command Status: " << fxl::StringPrintf("0x%02x", status) << " (id=" << id << ")"
             << std::endl;
   if (status != bluetooth::hci::Status::kSuccess) complete_cb();
 }
 
 hci::CommandChannel::TransactionId SendCommand(
     const CommandData* cmd_data, std::unique_ptr<hci::CommandPacket> packet,
-    const hci::CommandChannel::CommandCompleteCallback& cb, const ftl::Closure& complete_cb) {
+    const hci::CommandChannel::CommandCompleteCallback& cb, const fxl::Closure& complete_cb) {
   return cmd_data->cmd_channel()->SendCommand(std::move(packet), cmd_data->task_runner(), cb,
                                               std::bind(&StatusCallback, complete_cb, _1, _2));
 }
 
 void LogCommandComplete(hci::Status status, hci::CommandChannel::TransactionId id) {
-  std::cout << "  Command Complete - status: " << ftl::StringPrintf("0x%02x", status)
+  std::cout << "  Command Complete - status: " << fxl::StringPrintf("0x%02x", status)
             << " (id=" << id << ")" << std::endl;
 }
 
 hci::CommandChannel::TransactionId SendCompleteCommand(const CommandData* cmd_data,
                                                        std::unique_ptr<hci::CommandPacket> packet,
-                                                       const ftl::Closure& complete_cb) {
+                                                       const fxl::Closure& complete_cb) {
   auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
     auto return_params = event.return_params<hci::SimpleReturnParams>();
     LogCommandComplete(return_params->status, id);
@@ -116,7 +116,7 @@ void DisplayAdvertisingReport(const hci::LEAdvertisingReportData& data, int8_t r
 
   // The AD fields that we'll parse out.
   uint8_t flags = 0;
-  ftl::StringView short_name, complete_name;
+  fxl::StringView short_name, complete_name;
   int8_t tx_power_lvl;
   bool tx_power_present = false;
 
@@ -150,7 +150,7 @@ void DisplayAdvertisingReport(const hci::LEAdvertisingReportData& data, int8_t r
 
   // Apply the address type filter.
   if (!addr_type_filter.empty()) {
-    FTL_DCHECK(addr_type_filter == "public" || addr_type_filter == "random");
+    FXL_DCHECK(addr_type_filter == "public" || addr_type_filter == "random");
     if (addr_type_filter == "public" && data.address_type != hci::LEAddressType::kPublic &&
         data.address_type != hci::LEAddressType::kPublicIdentity)
       return;
@@ -160,26 +160,26 @@ void DisplayAdvertisingReport(const hci::LEAdvertisingReportData& data, int8_t r
   }
 
   std::cout << "  LE Advertising Report:" << std::endl;
-  std::cout << "    RSSI: " << ftl::NumberToString(rssi) << std::endl;
+  std::cout << "    RSSI: " << fxl::NumberToString(rssi) << std::endl;
   std::cout << "    type: " << AdvEventTypeToString(data.event_type) << std::endl;
   std::cout << "    address type: " << BdAddrTypeToString(data.address_type) << std::endl;
   std::cout << "    BD_ADDR: " << data.address.ToString() << std::endl;
-  std::cout << "    Data Length: " << ftl::NumberToString(data.length_data) << " bytes"
+  std::cout << "    Data Length: " << fxl::NumberToString(data.length_data) << " bytes"
             << std::endl;
   if (flags) {
-    std::cout << "    Flags: [" << ftl::JoinStrings(AdvFlagsToStrings(flags), ", ") << "]"
+    std::cout << "    Flags: [" << fxl::JoinStrings(AdvFlagsToStrings(flags), ", ") << "]"
               << std::endl;
   }
   if (!short_name.empty()) std::cout << "    Shortened Local Name: " << short_name << std::endl;
   if (!complete_name.empty())
     std::cout << "    Complete Local Name: " << complete_name << std::endl;
   if (tx_power_present) {
-    std::cout << "    Tx Power Level: " << ftl::NumberToString(tx_power_lvl) << std::endl;
+    std::cout << "    Tx Power Level: " << fxl::NumberToString(tx_power_lvl) << std::endl;
   }
 }
 
-bool HandleVersionInfo(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
-                       const ftl::Closure& complete_cb) {
+bool HandleVersionInfo(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+                       const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: version-info" << std::endl;
     return false;
@@ -209,8 +209,8 @@ bool HandleVersionInfo(const CommandData* cmd_data, const ftl::CommandLine& cmd_
   return true;
 }
 
-bool HandleReset(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
-                 const ftl::Closure& complete_cb) {
+bool HandleReset(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+                 const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: reset" << std::endl;
     return false;
@@ -224,8 +224,8 @@ bool HandleReset(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
   return true;
 }
 
-bool HandleReadBDADDR(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
-                      const ftl::Closure& complete_cb) {
+bool HandleReadBDADDR(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+                      const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: read-bdaddr" << std::endl;
     return false;
@@ -251,8 +251,8 @@ bool HandleReadBDADDR(const CommandData* cmd_data, const ftl::CommandLine& cmd_l
   return true;
 }
 
-bool HandleReadLocalName(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
-                         const ftl::Closure& complete_cb) {
+bool HandleReadLocalName(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+                         const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: read-local-name" << std::endl;
     return false;
@@ -278,8 +278,8 @@ bool HandleReadLocalName(const CommandData* cmd_data, const ftl::CommandLine& cm
   return true;
 }
 
-bool HandleWriteLocalName(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
-                          const ftl::Closure& complete_cb) {
+bool HandleWriteLocalName(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+                          const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() != 1 || cmd_line.options().size()) {
     std::cout << "  Usage: write-local-name <name>" << std::endl;
     return false;
@@ -298,8 +298,8 @@ bool HandleWriteLocalName(const CommandData* cmd_data, const ftl::CommandLine& c
   return true;
 }
 
-bool HandleSetEventMask(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
-                        const ftl::Closure& complete_cb) {
+bool HandleSetEventMask(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+                        const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() != 1 || cmd_line.options().size()) {
     std::cout << "  Usage: set-event-mask [hex]" << std::endl;
     return false;
@@ -309,7 +309,7 @@ bool HandleSetEventMask(const CommandData* cmd_data, const ftl::CommandLine& cmd
   if (hex.size() >= 2 && hex[0] == '0' && hex[1] == 'x') hex = hex.substr(2);
 
   uint64_t mask;
-  if (!ftl::StringToNumberWithError<uint64_t>(hex, &mask, ftl::Base::k16)) {
+  if (!fxl::StringToNumberWithError<uint64_t>(hex, &mask, fxl::Base::k16)) {
     std::cout << "  Unrecognized hex number: " << cmd_line.positional_args()[0] << std::endl;
     std::cout << "  Usage: set-event-mask [hex]" << std::endl;
     return false;
@@ -322,13 +322,13 @@ bool HandleSetEventMask(const CommandData* cmd_data, const ftl::CommandLine& cmd
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
 
-  std::cout << "  Sent HCI_Set_Event_Mask(" << ftl::NumberToString(mask, ftl::Base::k16)
+  std::cout << "  Sent HCI_Set_Event_Mask(" << fxl::NumberToString(mask, fxl::Base::k16)
             << ") (id=" << id << ")" << std::endl;
   return true;
 }
 
-bool HandleSetAdvEnable(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
-                        const ftl::Closure& complete_cb) {
+bool HandleSetAdvEnable(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+                        const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() != 1 || cmd_line.options().size()) {
     std::cout << "  Usage: set-adv-enable [enable|disable]" << std::endl;
     return false;
@@ -359,8 +359,8 @@ bool HandleSetAdvEnable(const CommandData* cmd_data, const ftl::CommandLine& cmd
   return true;
 }
 
-bool HandleSetAdvParams(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
-                        const ftl::Closure& complete_cb) {
+bool HandleSetAdvParams(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+                        const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-adv-params [--help|--type]" << std::endl;
     return false;
@@ -418,8 +418,8 @@ bool HandleSetAdvParams(const CommandData* cmd_data, const ftl::CommandLine& cmd
   return true;
 }
 
-bool HandleSetAdvData(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
-                      const ftl::Closure& complete_cb) {
+bool HandleSetAdvData(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+                      const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-adv-data [--help|--name]" << std::endl;
     return false;
@@ -465,8 +465,8 @@ bool HandleSetAdvData(const CommandData* cmd_data, const ftl::CommandLine& cmd_l
   return true;
 }
 
-bool HandleSetScanParams(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
-                         const ftl::Closure& complete_cb) {
+bool HandleSetScanParams(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+                         const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-scan-params [--help|--type]" << std::endl;
     return false;
@@ -512,8 +512,8 @@ bool HandleSetScanParams(const CommandData* cmd_data, const ftl::CommandLine& cm
   return true;
 }
 
-bool HandleSetScanEnable(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
-                         const ftl::Closure& complete_cb) {
+bool HandleSetScanEnable(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+                         const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-scan-params "
                  "[--help|--timeout=<t>|--no-dedup|--name-filter]"
@@ -535,16 +535,16 @@ bool HandleSetScanEnable(const CommandData* cmd_data, const ftl::CommandLine& cm
     return false;
   }
 
-  auto timeout = ftl::TimeDelta::FromSeconds(10);  // Default to 10 seconds.
+  auto timeout = fxl::TimeDelta::FromSeconds(10);  // Default to 10 seconds.
   std::string timeout_str;
   if (cmd_line.GetOptionValue("timeout", &timeout_str)) {
     uint32_t time_seconds;
-    if (!ftl::StringToNumberWithError(timeout_str, &time_seconds)) {
+    if (!fxl::StringToNumberWithError(timeout_str, &time_seconds)) {
       std::cout << "  Malformed timeout value: " << timeout_str << std::endl;
       return false;
     }
 
-    timeout = ftl::TimeDelta::FromSeconds(time_seconds);
+    timeout = fxl::TimeDelta::FromSeconds(time_seconds);
   }
 
   std::string name_filter;
@@ -571,8 +571,8 @@ bool HandleSetScanEnable(const CommandData* cmd_data, const ftl::CommandLine& cm
 
   // Event handler to log when we receive advertising reports
   auto le_adv_report_cb = [name_filter, addr_type_filter](const hci::EventPacket& event) {
-    FTL_DCHECK(event.event_code() == hci::kLEMetaEventCode);
-    FTL_DCHECK(event.view().payload<hci::LEMetaEventParams>().subevent_code ==
+    FXL_DCHECK(event.event_code() == hci::kLEMetaEventCode);
+    FXL_DCHECK(event.view().payload<hci::LEMetaEventParams>().subevent_code ==
                hci::kLEAdvertisingReportSubeventCode);
 
     hci::AdvertisingReportParser parser(event);
@@ -632,7 +632,7 @@ bool HandleSetScanEnable(const CommandData* cmd_data, const ftl::CommandLine& cm
 
 void RegisterCommands(const CommandData* cmd_data,
                       bluetooth::tools::CommandDispatcher* dispatcher) {
-  FTL_DCHECK(dispatcher);
+  FXL_DCHECK(dispatcher);
 
 #define BIND(handler) std::bind(&handler, cmd_data, std::placeholders::_1, std::placeholders::_2)
 

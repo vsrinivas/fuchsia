@@ -20,11 +20,11 @@
 #include "apps/bluetooth/lib/l2cap/fragmenter.h"
 #include "apps/bluetooth/lib/l2cap/l2cap.h"
 #include "apps/bluetooth/lib/l2cap/recombiner.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/synchronization/thread_checker.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/synchronization/thread_checker.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace bluetooth {
 
@@ -42,7 +42,7 @@ class ChannelImpl;
 class LogicalLink final {
  public:
   LogicalLink(hci::ConnectionHandle handle, hci::Connection::LinkType type,
-              hci::Connection::Role role, ftl::RefPtr<hci::Transport> hci);
+              hci::Connection::Role role, fxl::RefPtr<hci::Transport> hci);
 
   // When a logical link is destroyed it notifies all of its channels to close themselves. Data
   // packets will no longer be routed to the associated channels.
@@ -63,7 +63,7 @@ class LogicalLink final {
   void SendBasicFrame(ChannelId id, const common::ByteBuffer& payload);
 
   // Returns the HCI I/O thread task runner.
-  ftl::RefPtr<ftl::TaskRunner> io_task_runner() const { return hci_->io_task_runner(); }
+  fxl::RefPtr<fxl::TaskRunner> io_task_runner() const { return hci_->io_task_runner(); }
 
   hci::Connection::LinkType type() const { return type_; }
 
@@ -82,7 +82,7 @@ class LogicalLink final {
   // Notifies and closes all open channels on this link. Called by the destructor.
   void Close();
 
-  ftl::RefPtr<hci::Transport> hci_;
+  fxl::RefPtr<hci::Transport> hci_;
 
   // Information about the underlying controller logical link.
   hci::ConnectionHandle handle_;
@@ -108,9 +108,9 @@ class LogicalLink final {
   PendingPduMap pending_pdus_ __TA_GUARDED(mtx_);
 
   common::CancelableCallbackFactory<void()> cancelable_callback_factory_;
-  ftl::ThreadChecker thread_checker_;
+  fxl::ThreadChecker thread_checker_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LogicalLink);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LogicalLink);
 };
 
 }  // namespace internal

@@ -11,10 +11,10 @@
 #include "apps/bluetooth/lib/hci/command_channel.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/low_energy_scanner.h"
-#include "lib/ftl/functional/cancelable_callback.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_counted.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/functional/cancelable_callback.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_counted.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace bluetooth {
 namespace hci {
@@ -27,8 +27,8 @@ namespace hci {
 //     - HCI_LE_Advertising_Report event
 class LegacyLowEnergyScanner : public LowEnergyScanner {
  public:
-  LegacyLowEnergyScanner(Delegate* delegate, ftl::RefPtr<Transport> hci,
-                         ftl::RefPtr<ftl::TaskRunner> task_runner);
+  LegacyLowEnergyScanner(Delegate* delegate, fxl::RefPtr<Transport> hci,
+                         fxl::RefPtr<fxl::TaskRunner> task_runner);
   ~LegacyLowEnergyScanner() override;
 
   // LowEnergyScanner overrides:
@@ -67,7 +67,7 @@ class LegacyLowEnergyScanner : public LowEnergyScanner {
   StatusCallback scan_cb_;
 
   // The scan period timeout handler for the currently active scan session.
-  ftl::CancelableClosure scan_timeout_cb_;
+  fxl::CancelableClosure scan_timeout_cb_;
 
   // Our event handler ID for the LE Advertising Report event.
   CommandChannel::EventHandlerId event_handler_id_;
@@ -76,7 +76,7 @@ class LegacyLowEnergyScanner : public LowEnergyScanner {
   // accumulated during a discovery procedure and always cleared at the end of the scan period.
   std::unordered_map<common::DeviceAddress, PendingScanResult> pending_results_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LegacyLowEnergyScanner);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LegacyLowEnergyScanner);
 };
 
 }  // namespace hci

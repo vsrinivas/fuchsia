@@ -8,8 +8,8 @@
 
 #include "apps/bluetooth/lib/common/observer_list.h"
 
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/mtl/io/device_watcher.h"
 
 namespace bluetooth {
@@ -51,7 +51,7 @@ class AdapterManager final {
 
   // Returns the adapter with the given |identifier|. Returns nullptr if |identifier| is not
   // recognized.
-  ftl::WeakPtr<bluetooth::gap::Adapter> GetAdapter(const std::string& identifier) const;
+  fxl::WeakPtr<bluetooth::gap::Adapter> GetAdapter(const std::string& identifier) const;
 
   // Calls the given iterator function over all currently known adapters.
   using ForEachAdapterFunc = std::function<void(bluetooth::gap::Adapter*)>;
@@ -66,7 +66,7 @@ class AdapterManager final {
   void RemoveObserver(Observer* observer);
 
   // Returns the current active adapter. Returns nullptr if no active adapter was set.
-  ftl::WeakPtr<bluetooth::gap::Adapter> GetActiveAdapter();
+  fxl::WeakPtr<bluetooth::gap::Adapter> GetActiveAdapter();
 
   // Assigns the current active adapter. Returns false if |identifier| is not recognized.
   // Otherwise notifies all observers and returns true.
@@ -103,9 +103,9 @@ class AdapterManager final {
 
   // Note: This should remain the last member so it'll be destroyed and
   // invalidate its weak pointers before any other members are destroyed.
-  ftl::WeakPtrFactory<AdapterManager> weak_ptr_factory_;
+  fxl::WeakPtrFactory<AdapterManager> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AdapterManager);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AdapterManager);
 };
 
 }  // namespace bluetooth_service

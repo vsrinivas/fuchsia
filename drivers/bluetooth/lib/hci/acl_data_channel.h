@@ -19,9 +19,9 @@
 #include "apps/bluetooth/lib/hci/connection.h"
 #include "apps/bluetooth/lib/hci/control_packets.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/synchronization/thread_checker.h"
-#include "lib/ftl/tasks/task_runner.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/synchronization/thread_checker.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace bluetooth {
 namespace hci {
@@ -171,7 +171,7 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
   void OnHandleError(mx_handle_t handle, mx_status_t error) override;
 
   // Used to assert that certain public functions are only called on the creation thread.
-  ftl::ThreadChecker thread_checker_;
+  fxl::ThreadChecker thread_checker_;
 
   // The Transport object that owns this instance.
   Transport* transport_;  // weak;
@@ -189,7 +189,7 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
   mtl::MessageLoop::HandlerKey io_handler_key_;
 
   // The task runner used for posting tasks on the HCI transport I/O thread.
-  ftl::RefPtr<ftl::TaskRunner> io_task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> io_task_runner_;
 
   // The current handler for incoming data and the task runner on which to run it.
   std::mutex rx_mutex_;
@@ -231,7 +231,7 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
   };
   std::unordered_map<ConnectionHandle, PendingPacketData> pending_links_ __TA_GUARDED(send_mutex_);
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ACLDataChannel);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ACLDataChannel);
 };
 
 }  // namespace hci

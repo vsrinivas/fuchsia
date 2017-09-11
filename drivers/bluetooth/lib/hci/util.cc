@@ -4,7 +4,7 @@
 
 #include "util.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace bluetooth {
 namespace hci {
@@ -39,7 +39,7 @@ std::string HCIVersionToString(hci::HCIVersion version) {
 
 bool DeviceAddressFromAdvReport(const hci::LEAdvertisingReportData& report,
                                 common::DeviceAddress* out_address) {
-  FTL_DCHECK(out_address);
+  FXL_DCHECK(out_address);
 
   common::DeviceAddress::Type type;
   switch (report.address_type) {
@@ -52,7 +52,7 @@ bool DeviceAddressFromAdvReport(const hci::LEAdvertisingReportData& report,
       type = common::DeviceAddress::Type::kLERandom;
       break;
     default:
-      FTL_LOG(WARNING)
+      FXL_LOG(WARNING)
           << "gap: LegacyLowEnergyScanManager: Invalid address type in advertising report: "
           << static_cast<int>(report.address_type);
       return false;

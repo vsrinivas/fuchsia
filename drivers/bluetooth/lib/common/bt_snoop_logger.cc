@@ -10,10 +10,10 @@
 #include <fcntl.h>
 #include <magenta/compiler.h>
 
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/files/file_descriptor.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/time/time_point.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/files/file_descriptor.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/time/time_point.h"
 
 #include "byte_buffer.h"
 
@@ -46,15 +46,15 @@ struct RecordHeader {
 } __PACKED;
 
 // TODO(armansito): Casting data to "const char*" is weird. Should
-// ftl::WriteFileDescriptor be changed to accept "const void*" instead? It's
+// fxl::WriteFileDescriptor be changed to accept "const void*" instead? It's
 // also weird that it expect "ssize_t" for its argument. When would anyone pass
 // a negative number to it? Also does our code even need to worry about EINTR?
-inline bool WriteToFile(const ftl::UniqueFD& fd, const void* data, size_t size) {
-  return ftl::WriteFileDescriptor(fd.get(), static_cast<const char*>(data), size);
+inline bool WriteToFile(const fxl::UniqueFD& fd, const void* data, size_t size) {
+  return fxl::WriteFileDescriptor(fd.get(), static_cast<const char*>(data), size);
 }
 
-bool WriteHeader(const ftl::UniqueFD& fd) {
-  FTL_DCHECK(fd.is_valid());
+bool WriteHeader(const fxl::UniqueFD& fd) {
+  FXL_DCHECK(fd.is_valid());
 
   Header header;
   std::memcpy(header.id_pattern, kIdPattern, sizeof(kIdPattern));
@@ -64,7 +64,7 @@ bool WriteHeader(const ftl::UniqueFD& fd) {
   return WriteToFile(fd, &header, sizeof(header));
 }
 
-bool WriteRecordHeader(const ftl::UniqueFD& fd, size_t packet_size, bool is_received,
+bool WriteRecordHeader(const fxl::UniqueFD& fd, size_t packet_size, bool is_received,
                        bool is_data) {
   RecordHeader header;
   memset(&header, 0, sizeof(header));
@@ -76,7 +76,7 @@ bool WriteRecordHeader(const ftl::UniqueFD& fd, size_t packet_size, bool is_rece
   if (!is_data) header.packet_flags |= 0x02;
   header.packet_flags = htobe32(header.packet_flags);
 
-  auto time_delta = ftl::TimePoint::Now().ToEpochDelta();
+  auto time_delta = fxl::TimePoint::Now().ToEpochDelta();
   header.timestamp_ms = time_delta.ToMicroseconds();
   header.timestamp_ms += kEpochDelta;
   header.timestamp_ms = htobe64(header.timestamp_ms);
@@ -88,28 +88,28 @@ bool WriteRecordHeader(const ftl::UniqueFD& fd, size_t packet_size, bool is_rece
 
 bool BTSnoopLogger::Initialize(const std::string& path, bool truncate) {
   if (fd_.is_valid()) {
-    FTL_VLOG(1) << "BTSnoop logger already initialized";
+    FXL_VLOG(1) << "BTSnoop logger already initialized";
     return false;
   }
 
   int oflags = O_SYNC | O_CREAT | O_WRONLY;
   if (truncate) oflags |= O_TRUNC;
 
-  ftl::UniqueFD fd(open(path.c_str(), oflags));
+  fxl::UniqueFD fd(open(path.c_str(), oflags));
   if (!fd.is_valid()) {
-    FTL_LOG(ERROR) << "Failed to initialize BTSnoop log file";
+    FXL_LOG(ERROR) << "Failed to initialize BTSnoop log file";
     return false;
   }
 
   size_t file_size = 0;
   if (!files::GetFileSize(path, &file_size)) {
-    FTL_LOG(ERROR) << "Failed to determine file size";
+    FXL_LOG(ERROR) << "Failed to determine file size";
     return false;
   }
 
   // Write the header only if the file is empty.
   if (!file_size && !WriteHeader(fd)) {
-    FTL_LOG(ERROR) << "Failed to write BTSnoop header";
+    FXL_LOG(ERROR) << "Failed to write BTSnoop header";
     return false;
   }
 
@@ -120,17 +120,17 @@ bool BTSnoopLogger::Initialize(const std::string& path, bool truncate) {
 
 bool BTSnoopLogger::WritePacket(const ByteBuffer& packet_data, bool is_received, bool is_data) {
   if (!fd_.is_valid()) {
-    FTL_LOG(ERROR) << "BTSnoop logger not initialized";
+    FXL_LOG(ERROR) << "BTSnoop logger not initialized";
     return false;
   }
 
   if (!WriteRecordHeader(fd_, packet_data.size(), is_received, is_data)) {
-    FTL_LOG(ERROR) << "Failed to write BTSnoop record header";
+    FXL_LOG(ERROR) << "Failed to write BTSnoop record header";
     return false;
   }
 
   if (!WriteToFile(fd_, packet_data.data(), packet_data.size())) {
-    FTL_LOG(ERROR) << "Failed to write BTSnoop record packet data";
+    FXL_LOG(ERROR) << "Failed to write BTSnoop record packet data";
     // TODO(armansito): The file contents are now malformed. Seek back to the
     // beginning of the record header?
     return false;

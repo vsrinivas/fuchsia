@@ -6,7 +6,7 @@
 
 #include "gtest/gtest.h"
 
-#include "lib/ftl/synchronization/sleep.h"
+#include "lib/fxl/synchronization/sleep.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
 
@@ -18,13 +18,13 @@ TEST(RunTaskSyncTest, RunTaskSync) {
   constexpr int64_t kSleepTimeMs = 10;
   constexpr int kLoopCount = 50;
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner;
+  fxl::RefPtr<fxl::TaskRunner> task_runner;
   std::thread thrd = mtl::CreateThread(&task_runner, "RunTaskSyncTest thread");
 
   for (int i = 0; i < kLoopCount; ++i) {
     bool callback_run = false;
     auto cb = [&callback_run] {
-      ftl::SleepFor(ftl::TimeDelta::FromMilliseconds(kSleepTimeMs));
+      fxl::SleepFor(fxl::TimeDelta::FromMilliseconds(kSleepTimeMs));
       callback_run = true;
     };
 

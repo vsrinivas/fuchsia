@@ -6,8 +6,8 @@
 
 #include <mx/channel.h>
 
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 namespace hci {
@@ -28,7 +28,7 @@ class DeviceWrapper {
 class MagentaDeviceWrapper : public DeviceWrapper {
  public:
   // |device_fd| must be a valid file descriptor to a Bluetooth HCI device.
-  explicit MagentaDeviceWrapper(ftl::UniqueFD device_fd);
+  explicit MagentaDeviceWrapper(fxl::UniqueFD device_fd);
   ~MagentaDeviceWrapper() override = default;
 
   // DeviceWrapper overrides. These methods directly return the handle obtained via the
@@ -37,9 +37,9 @@ class MagentaDeviceWrapper : public DeviceWrapper {
   mx::channel GetACLDataChannel() override;
 
  private:
-  ftl::UniqueFD device_fd_;
+  fxl::UniqueFD device_fd_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MagentaDeviceWrapper);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MagentaDeviceWrapper);
 };
 
 // A pass-through DeviceWrapper that returns the channel endpoints that it is initialized with. This
@@ -61,7 +61,7 @@ class DummyDeviceWrapper : public DeviceWrapper {
   mx::channel cmd_channel_;
   mx::channel acl_data_channel_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DummyDeviceWrapper);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DummyDeviceWrapper);
 };
 
 }  // namespace hci

@@ -19,7 +19,7 @@ configures a minimal build that includes Bluetooth unit tests and command-line t
 quick iteration times when developing unit tests on QEMU):
 
 ```
-./packages/gn/gen.py --modules ftl,mtl,bluetooth
+./packages/gn/gen.py --modules fxl,mtl,bluetooth
 ```
 
 *NOTE: You may see warnings related to skia which are safe to ignore. The warnings can be muted by

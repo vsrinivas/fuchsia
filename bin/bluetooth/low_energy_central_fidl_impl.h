@@ -10,7 +10,7 @@
 #include "apps/bluetooth/service/interfaces/low_energy.fidl.h"
 #include "apps/bluetooth/service/src/adapter_manager.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth_service {
 
@@ -63,9 +63,9 @@ class LowEnergyCentralFidlImpl : public ::bluetooth::low_energy::Central,
 
   // Keep this as the last member to make sure that all weak pointers are invalidated before other
   // members get destroyed.
-  ftl::WeakPtrFactory<LowEnergyCentralFidlImpl> weak_ptr_factory_;
+  fxl::WeakPtrFactory<LowEnergyCentralFidlImpl> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LowEnergyCentralFidlImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LowEnergyCentralFidlImpl);
 };
 
 }  // namespace bluetooth_service

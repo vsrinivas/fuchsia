@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetoothcli {
 
@@ -15,7 +15,7 @@ namespace bluetoothcli {
 //   - provide stream-line syntax around logging without requiring std::endl, which is input into
 //     the stream automatically.
 //
-// Also see lib/ftl/logging.h for a similar but more involved implementation.
+// Also see lib/fxl/logging.h for a similar but more involved implementation.
 class LogMessage {
  public:
   explicit LogMessage(size_t indent_count);
@@ -24,7 +24,7 @@ class LogMessage {
   std::ostream& stream() { return std::cout; }
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(LogMessage);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LogMessage);
 };
 
 }  // namespace bluetoothcli

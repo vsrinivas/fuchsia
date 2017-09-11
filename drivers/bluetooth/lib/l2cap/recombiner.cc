@@ -4,14 +4,14 @@
 
 #include "recombiner.h"
 
-#include "lib/ftl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace bluetooth {
 namespace l2cap {
 namespace {
 
 const BasicHeader& GetBasicHeader(const hci::ACLDataPacket& fragment) {
-  FTL_DCHECK(fragment.packet_boundary_flag() != hci::ACLPacketBoundaryFlag::kContinuingFragment);
+  FXL_DCHECK(fragment.packet_boundary_flag() != hci::ACLPacketBoundaryFlag::kContinuingFragment);
   return fragment.view().payload<BasicHeader>();
 }
 
@@ -20,21 +20,21 @@ const BasicHeader& GetBasicHeader(const hci::ACLDataPacket& fragment) {
 Recombiner::Recombiner() : ready_(false), frame_length_(0u), cur_length_(0u) {}
 
 bool Recombiner::AddFragment(hci::ACLDataPacketPtr&& fragment) {
-  FTL_DCHECK(fragment);
+  FXL_DCHECK(fragment);
 
   if (ready()) return false;
 
   if (empty()) {
     if (!ProcessFirstFragment(*fragment)) return false;
-    FTL_DCHECK(!empty());
+    FXL_DCHECK(!empty());
   } else {
     if (fragment->packet_boundary_flag() != hci::ACLPacketBoundaryFlag::kContinuingFragment) {
-      FTL_VLOG(2) << "Expected continuing fragment!";
+      FXL_VLOG(2) << "Expected continuing fragment!";
       return false;
     }
 
     if (cur_length_ + fragment->view().payload_size() > frame_length_) {
-      FTL_VLOG(2) << "Continuing fragment too long!";
+      FXL_VLOG(2) << "Continuing fragment too long!";
       return false;
     }
   }
@@ -52,7 +52,7 @@ bool Recombiner::AddFragment(hci::ACLDataPacketPtr&& fragment) {
 bool Recombiner::Release(PDU* out_pdu) {
   if (empty() || !ready()) return false;
 
-  FTL_DCHECK(out_pdu);
+  FXL_DCHECK(out_pdu);
 
   *out_pdu = std::move(*pdu_);
   Drop();
@@ -68,22 +68,22 @@ void Recombiner::Drop() {
 }
 
 bool Recombiner::ProcessFirstFragment(const hci::ACLDataPacket& fragment) {
-  FTL_DCHECK(!ready());
-  FTL_DCHECK(!frame_length_);
-  FTL_DCHECK(!cur_length_);
+  FXL_DCHECK(!ready());
+  FXL_DCHECK(!frame_length_);
+  FXL_DCHECK(!cur_length_);
 
   // The first fragment needs to at least contain the Basic L2CAP header and should not be a
   // continuation fragment.
   if (fragment.packet_boundary_flag() == hci::ACLPacketBoundaryFlag::kContinuingFragment ||
       fragment.view().payload_size() < sizeof(BasicHeader)) {
-    FTL_VLOG(2) << "Bad first fragment";
+    FXL_VLOG(2) << "Bad first fragment";
     return false;
   }
 
   uint16_t frame_length = le16toh(GetBasicHeader(fragment).length) + sizeof(BasicHeader);
 
   if (fragment.view().payload_size() > frame_length) {
-    FTL_VLOG(2) << "Fragment too long!";
+    FXL_VLOG(2) << "Fragment too long!";
     return false;
   }
 

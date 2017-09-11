@@ -30,7 +30,7 @@ namespace {
     case ::bluetooth::gap::TechnologyType::kDualMode:
       return ::btfidl::control::TechnologyType::DUAL_MODE;
     default:
-      FTL_NOTREACHED();
+      FXL_NOTREACHED();
       break;
   }
 
@@ -142,14 +142,14 @@ bool IsScanFilterValid(const ::btfidl::low_energy::ScanFilter& fidl_filter) {
 
 bool PopulateDiscoveryFilter(const ::btfidl::low_energy::ScanFilter& fidl_filter,
                              ::bluetooth::gap::DiscoveryFilter* out_filter) {
-  FTL_DCHECK(out_filter);
+  FXL_DCHECK(out_filter);
 
   if (fidl_filter.service_uuids) {
     std::vector<::bluetooth::common::UUID> uuids;
     for (const auto& uuid_str : fidl_filter.service_uuids) {
       ::bluetooth::common::UUID uuid;
       if (!::bluetooth::common::StringToUuid(uuid_str, &uuid)) {
-        FTL_LOG(WARNING) << "Invalid parameters given to scan filter";
+        FXL_LOG(WARNING) << "Invalid parameters given to scan filter";
         return false;
       }
       uuids.push_back(uuid);

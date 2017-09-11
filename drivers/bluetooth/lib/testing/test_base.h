@@ -11,9 +11,9 @@
 #include "apps/bluetooth/lib/hci/device_wrapper.h"
 #include "apps/bluetooth/lib/hci/transport.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 // This file provides a basic set of GTest unit test harnesses that performs common set-up/tear-down
@@ -46,10 +46,10 @@ class TestBase : public ::testing::Test {
     mx::channel acl0, acl1;
 
     mx_status_t status = mx::channel::create(0, &cmd0, &cmd1);
-    FTL_DCHECK(MX_OK == status);
+    FXL_DCHECK(MX_OK == status);
 
     status = mx::channel::create(0, &acl0, &acl1);
-    FTL_DCHECK(MX_OK == status);
+    FXL_DCHECK(MX_OK == status);
 
     auto hci_dev = std::make_unique<hci::DummyDeviceWrapper>(std::move(cmd0), std::move(acl0));
     test_device_ = std::make_unique<FakeControllerType>(std::move(cmd1), std::move(acl1));
@@ -60,7 +60,7 @@ class TestBase : public ::testing::Test {
   // Posts a delayed task to quit the message loop after |seconds| have elapsed.
   void PostDelayedQuitTask(int64_t seconds) {
     message_loop_.task_runner()->PostDelayedTask([this] { message_loop_.QuitNow(); },
-                                                 ftl::TimeDelta::FromSeconds(seconds));
+                                                 fxl::TimeDelta::FromSeconds(seconds));
   }
 
   // Runs the message loop for the specified amount of time. This is useful for callback-driven test
@@ -81,7 +81,7 @@ class TestBase : public ::testing::Test {
   std::unique_ptr<FakeControllerType> test_device_;
   mtl::MessageLoop message_loop_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestBase);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestBase);
   static_assert(std::is_base_of<FakeControllerBase, FakeControllerType>::value,
                 "TestBase must be used with a derivative of FakeControllerBase");
 };
@@ -124,7 +124,7 @@ class TransportTest : public TestBase<FakeControllerType> {
     data_received_callback_ = callback;
   }
 
-  ftl::RefPtr<hci::Transport> transport() const { return transport_; }
+  fxl::RefPtr<hci::Transport> transport() const { return transport_; }
   hci::CommandChannel* cmd_channel() const { return transport_->command_channel(); }
   hci::ACLDataChannel* acl_data_channel() const { return transport_->acl_data_channel(); }
 
@@ -135,15 +135,15 @@ class TransportTest : public TestBase<FakeControllerType> {
     if (!data_received_callback_) return;
 
     TestBase<FakeControllerType>::message_loop()->task_runner()->PostTask(
-        ftl::MakeCopyable([ this, packet = std::move(data_packet) ]() mutable {
+        fxl::MakeCopyable([ this, packet = std::move(data_packet) ]() mutable {
           data_received_callback_(std::move(packet));
         }));
   }
 
   hci::ACLDataChannel::DataReceivedCallback data_received_callback_;
-  ftl::RefPtr<hci::Transport> transport_;
+  fxl::RefPtr<hci::Transport> transport_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(TransportTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TransportTest);
 };
 
 }  // namespace testing

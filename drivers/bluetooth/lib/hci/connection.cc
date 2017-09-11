@@ -9,8 +9,8 @@
 #include "apps/bluetooth/lib/hci/control_packets.h"
 #include "apps/bluetooth/lib/hci/defaults.h"
 #include "apps/bluetooth/lib/hci/transport.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace bluetooth {
 namespace hci {
@@ -28,7 +28,7 @@ std::string LinkTypeToString(Connection::LinkType type) {
       return "LE";
   }
 
-  FTL_NOTREACHED();
+  FXL_NOTREACHED();
   return "(invalid)";
 }
 
@@ -42,7 +42,7 @@ Connection::LowEnergyParameters::LowEnergyParameters(uint16_t interval_min, uint
       interval_(interval),
       latency_(latency),
       supervision_timeout_(supervision_timeout) {
-  FTL_DCHECK(interval_min_ <= interval_max_);
+  FXL_DCHECK(interval_min_ <= interval_max_);
 }
 
 Connection::LowEnergyParameters::LowEnergyParameters()
@@ -60,7 +60,7 @@ bool Connection::LowEnergyParameters::operator==(const LowEnergyParameters& othe
 
 Connection::Connection(ConnectionHandle handle, Role role,
                        const common::DeviceAddress& peer_address, const LowEnergyParameters& params,
-                       ftl::RefPtr<Transport> hci)
+                       fxl::RefPtr<Transport> hci)
     : ll_type_(LinkType::kLE),
       handle_(handle),
       role_(role),
@@ -69,9 +69,9 @@ Connection::Connection(ConnectionHandle handle, Role role,
       le_params_(params),
       hci_(hci),
       weak_ptr_factory_(this) {
-  FTL_DCHECK(handle);
-  FTL_DCHECK(le_params_.interval());
-  FTL_DCHECK(hci_);
+  FXL_DCHECK(handle);
+  FXL_DCHECK(le_params_.interval());
+  FXL_DCHECK(hci_);
 }
 
 Connection::~Connection() {
@@ -79,13 +79,13 @@ Connection::~Connection() {
 }
 
 void Connection::MarkClosed() {
-  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FTL_DCHECK(is_open_);
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(is_open_);
   is_open_ = false;
 }
 
-void Connection::Close(Status reason, const ftl::Closure& callback) {
-  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+void Connection::Close(Status reason, const fxl::Closure& callback) {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   if (!is_open()) return;
 
   // The connection is immediately marked as closed as there is no reasonable way for a Disconnect
@@ -97,7 +97,7 @@ void Connection::Close(Status reason, const ftl::Closure& callback) {
   // Retry in that case?
   is_open_ = false;
 
-  FTL_DCHECK(!close_cb_);
+  FXL_DCHECK(!close_cb_);
   close_cb_ = callback;
 
   // Here we send a HCI_Disconnect command. We use a matcher so that this command completes when we
@@ -105,7 +105,7 @@ void Connection::Close(Status reason, const ftl::Closure& callback) {
   // connection.
 
   auto matcher = [handle = handle_](const EventPacket& event)->bool {
-    FTL_DCHECK(event.event_code() == kDisconnectionCompleteEventCode);
+    FXL_DCHECK(event.event_code() == kDisconnectionCompleteEventCode);
     return handle ==
            le16toh(event.view().payload<DisconnectionCompleteEventParams>().connection_handle);
   };
@@ -119,17 +119,17 @@ void Connection::Close(Status reason, const ftl::Closure& callback) {
         return;
       }
 
-      FTL_LOG(WARNING) << "Ignoring failed disconnect command status: 0x" << std::hex << status;
+      FXL_LOG(WARNING) << "Ignoring failed disconnect command status: 0x" << std::hex << status;
     }
   };
 
   auto complete_cb = [ handle = handle_, self ](auto id, const EventPacket& event) {
-    FTL_DCHECK(event.event_code() == kDisconnectionCompleteEventCode);
+    FXL_DCHECK(event.event_code() == kDisconnectionCompleteEventCode);
     const auto& params = event.view().payload<DisconnectionCompleteEventParams>();
-    FTL_DCHECK(handle == le16toh(params.connection_handle));
+    FXL_DCHECK(handle == le16toh(params.connection_handle));
 
     if (params.status != Status::kSuccess) {
-      FTL_LOG(WARNING) << "Ignoring failed disconnection status: 0x" << std::hex << params.status;
+      FXL_LOG(WARNING) << "Ignoring failed disconnection status: 0x" << std::hex << params.status;
     }
 
     if (self) self->NotifyClosed();
@@ -146,7 +146,7 @@ void Connection::Close(Status reason, const ftl::Closure& callback) {
 }
 
 std::string Connection::ToString() const {
-  return ftl::StringPrintf(
+  return fxl::StringPrintf(
       "(%s link - handle: 0x%04x, role: %s, address: %s, "
       "interval: %.2f ms, latency: %.2f ms, timeout: %u ms)",
       LinkTypeToString(ll_type_).c_str(), handle_, role_ == Role::kMaster ? "master" : "slave",

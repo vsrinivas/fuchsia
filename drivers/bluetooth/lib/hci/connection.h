@@ -6,12 +6,12 @@
 
 #include "apps/bluetooth/lib/common/device_address.h"
 #include "apps/bluetooth/lib/hci/hci.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/memory/weak_ptr.h"
-#include "lib/ftl/synchronization/thread_checker.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fxl/synchronization/thread_checker.h"
 
 namespace bluetooth {
 namespace hci {
@@ -83,7 +83,7 @@ class Connection final {
 
   // Initializes this as a LE ACL connection.
   Connection(ConnectionHandle handle, Role role, const common::DeviceAddress& peer_address,
-             const LowEnergyParameters& params, ftl::RefPtr<Transport> hci);
+             const LowEnergyParameters& params, fxl::RefPtr<Transport> hci);
 
   // The destructor closes this connection.
   ~Connection();
@@ -101,7 +101,7 @@ class Connection final {
   // The LE connection parameters of this connection. Must only be called on a Connection with a
   // link type LinkType::kLE.
   const LowEnergyParameters& low_energy_parameters() const {
-    FTL_DCHECK(ll_type_ == LinkType::kLE);
+    FXL_DCHECK(ll_type_ == LinkType::kLE);
     return le_params_;
   }
 
@@ -123,7 +123,7 @@ class Connection final {
   // connection has been marked as closed, this method does nothing. If a |callback| is provided, it
   // will be invoked when the procedure has been completed.
   void Close(Status reason = Status::kRemoteUserTerminatedConnection,
-             const ftl::Closure& callback = nullptr);
+             const fxl::Closure& callback = nullptr);
 
   std::string ToString() const;
 
@@ -142,7 +142,7 @@ class Connection final {
   Role role_;
   bool is_open_;
 
-  ftl::ThreadChecker thread_checker_;
+  fxl::ThreadChecker thread_checker_;
 
   // The address of the peer device.
   common::DeviceAddress peer_address_;
@@ -151,19 +151,19 @@ class Connection final {
   LowEnergyParameters le_params_;
 
   // Callback used during Close().
-  ftl::Closure close_cb_;
+  fxl::Closure close_cb_;
 
   // The underlying HCI transport. We use this to terminate the connection by sending the
   // HCI_Disconnect command.
-  ftl::RefPtr<Transport> hci_;
+  fxl::RefPtr<Transport> hci_;
 
   // TODO(armansito): Add a BREDRParameters struct.
 
   // Keep this as the last member to make sure that all weak pointers are invalidated before other
   // members get destroyed.
-  ftl::WeakPtrFactory<Connection> weak_ptr_factory_;
+  fxl::WeakPtrFactory<Connection> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Connection);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Connection);
 };
 
 }  // namespace hci

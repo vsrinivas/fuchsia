@@ -10,8 +10,8 @@
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/transport.h"
 #include "apps/bluetooth/lib/hci/util.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/time/time_delta.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/time/time_delta.h"
 
 namespace bluetooth {
 namespace hci {
@@ -25,13 +25,13 @@ LowEnergyConnector::PendingRequest::PendingRequest(const common::DeviceAddress& 
       interval_max(interval_max),
       result_callback(result_callback) {}
 
-LowEnergyConnector::LowEnergyConnector(ftl::RefPtr<Transport> hci,
-                                       ftl::RefPtr<ftl::TaskRunner> task_runner,
+LowEnergyConnector::LowEnergyConnector(fxl::RefPtr<Transport> hci,
+                                       fxl::RefPtr<fxl::TaskRunner> task_runner,
                                        const ConnectionDelegate& delegate)
     : task_runner_(task_runner), hci_(hci), delegate_(delegate), weak_ptr_factory_(this) {
-  FTL_DCHECK(task_runner_);
-  FTL_DCHECK(hci_);
-  FTL_DCHECK(delegate_);
+  FXL_DCHECK(task_runner_);
+  FXL_DCHECK(hci_);
+  FXL_DCHECK(delegate_);
 
   event_handler_id_ = hci_->command_channel()->AddLEMetaEventHandler(
       kLEConnectionCompleteSubeventCode,
@@ -50,14 +50,14 @@ bool LowEnergyConnector::CreateConnection(hci::LEOwnAddressType own_address_type
                                           const Connection::LowEnergyParameters& initial_parameters,
                                           const ResultCallback& result_callback,
                                           int64_t timeout_ms) {
-  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
-  FTL_DCHECK(result_callback);
-  FTL_DCHECK(peer_address.type() != common::DeviceAddress::Type::kBREDR);
-  FTL_DCHECK(timeout_ms > 0);
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(result_callback);
+  FXL_DCHECK(peer_address.type() != common::DeviceAddress::Type::kBREDR);
+  FXL_DCHECK(timeout_ms > 0);
 
   if (request_pending()) return false;
 
-  FTL_DCHECK(request_timeout_cb_.IsCanceled());
+  FXL_DCHECK(request_timeout_cb_.IsCanceled());
   pending_request_ = PendingRequest(peer_address, initial_parameters.interval_min(),
                                     initial_parameters.interval_max(), result_callback);
 
@@ -84,7 +84,7 @@ bool LowEnergyConnector::CreateConnection(hci::LEOwnAddressType own_address_type
   // HCI Command Status Event will be sent as our completion callback.
   auto self = weak_ptr_factory_.GetWeakPtr();
   auto complete_cb = [self, timeout_ms](auto id, const EventPacket& event) {
-    FTL_DCHECK(event.event_code() == kCommandStatusEventCode);
+    FXL_DCHECK(event.event_code() == kCommandStatusEventCode);
 
     if (!self) return;
 
@@ -100,7 +100,7 @@ bool LowEnergyConnector::CreateConnection(hci::LEOwnAddressType own_address_type
     self->request_timeout_cb_.Reset(
         [self] { self->OnCreateConnectionComplete(Result::kFailed, Status::kCommandTimeout); });
     self->task_runner_->PostDelayedTask(self->request_timeout_cb_.callback(),
-                                        ftl::TimeDelta::FromMilliseconds(timeout_ms));
+                                        fxl::TimeDelta::FromMilliseconds(timeout_ms));
   };
 
   hci_->command_channel()->SendCommand(std::move(request), task_runner_, complete_cb, nullptr,
@@ -110,10 +110,10 @@ bool LowEnergyConnector::CreateConnection(hci::LEOwnAddressType own_address_type
 }
 
 void LowEnergyConnector::Cancel() {
-  FTL_DCHECK(request_pending());
+  FXL_DCHECK(request_pending());
 
   if (pending_request_->canceled) {
-    FTL_LOG(WARNING) << "Connection attempt already canceled!";
+    FXL_LOG(WARNING) << "Connection attempt already canceled!";
     return;
   }
 
@@ -126,7 +126,7 @@ void LowEnergyConnector::Cancel() {
   auto complete_cb = [](auto id, const EventPacket& event) {
     Status status = event.return_params<SimpleReturnParams>()->status;
     if (status != Status::kSuccess) {
-      FTL_LOG(WARNING) << "Failed to cancel connection request - status: " << std::hex << status;
+      FXL_LOG(WARNING) << "Failed to cancel connection request - status: " << std::hex << status;
       return;
     }
   };
@@ -136,8 +136,8 @@ void LowEnergyConnector::Cancel() {
 }
 
 void LowEnergyConnector::OnConnectionCompleteEvent(const EventPacket& event) {
-  FTL_DCHECK(event.event_code() == kLEMetaEventCode);
-  FTL_DCHECK(event.view().payload<LEMetaEventParams>().subevent_code ==
+  FXL_DCHECK(event.event_code() == kLEMetaEventCode);
+  FXL_DCHECK(event.view().payload<LEMetaEventParams>().subevent_code ==
              kLEConnectionCompleteSubeventCode);
 
   auto params = event.le_event_params<LEConnectionCompleteSubeventParams>();
@@ -156,7 +156,7 @@ void LowEnergyConnector::OnConnectionCompleteEvent(const EventPacket& event) {
           params->status == Status::kUnknownConnectionId ? Result::kCanceled : Result::kFailed,
           params->status);
     } else {
-      FTL_LOG(WARNING) << "Unexpected LE Connection Complete event with error received: 0x"
+      FXL_LOG(WARNING) << "Unexpected LE Connection Complete event with error received: 0x"
                        << std::hex << params->status;
     }
     return;
@@ -198,7 +198,7 @@ void LowEnergyConnector::OnConnectionCompleteEvent(const EventPacket& event) {
 }
 
 void LowEnergyConnector::OnCreateConnectionComplete(Result result, Status hci_status) {
-  FTL_DCHECK(pending_request_);
+  FXL_DCHECK(pending_request_);
 
   if (!request_timeout_cb_.IsCanceled()) request_timeout_cb_.Cancel();
 

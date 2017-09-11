@@ -9,8 +9,8 @@
 #include "apps/bluetooth/lib/hci/control_packets.h"
 #include "apps/bluetooth/lib/hci/defaults.h"
 #include "apps/bluetooth/lib/hci/device_wrapper.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -21,14 +21,14 @@ namespace hci_acl_test {
 
 LEConnectionTest::LEConnectionTest() : le_conn_complete_handler_id_(0u), disconn_handler_id_(0u) {}
 
-bool LEConnectionTest::Run(ftl::UniqueFD hci_dev_fd, const common::DeviceAddress& dst_addr,
+bool LEConnectionTest::Run(fxl::UniqueFD hci_dev_fd, const common::DeviceAddress& dst_addr,
                            bool cancel_right_away) {
-  FTL_DCHECK(hci_dev_fd.is_valid());
+  FXL_DCHECK(hci_dev_fd.is_valid());
 
   auto hci_dev = std::make_unique<hci::MagentaDeviceWrapper>(std::move(hci_dev_fd));
   hci_ = hci::Transport::Create(std::move(hci_dev));
   if (!hci_->Initialize()) {
-    FTL_LOG(ERROR) << "Failed to initialize HCI transport";
+    FXL_LOG(ERROR) << "Failed to initialize HCI transport";
     return false;
   }
 
@@ -82,7 +82,7 @@ void LEConnectionTest::InitializeDataChannelAndCreateConnection(
     const bluetooth::hci::DataBufferInfo& bredr_buffer_info,
     const bluetooth::hci::DataBufferInfo& le_buffer_info, bool cancel_right_away) {
   if (!hci_->InitializeACLDataChannel(bredr_buffer_info, le_buffer_info)) {
-    FTL_LOG(ERROR) << "Failed to initialize ACL data channel";
+    FXL_LOG(ERROR) << "Failed to initialize ACL data channel";
     message_loop_.QuitNow();
     return;
   }
@@ -117,10 +117,10 @@ void LEConnectionTest::InitializeDataChannelAndCreateConnection(
   // Since this is a background task, we use HCI_Command_Status as the completion callback.
   auto le_conn_status_cb = [this](hci::CommandChannel::TransactionId id,
                                   const hci::EventPacket& event) {
-    FTL_DCHECK(event.event_code() == hci::kCommandStatusEventCode);
+    FXL_DCHECK(event.event_code() == hci::kCommandStatusEventCode);
 
     const auto& payload = event.view().payload<hci::CommandStatusEventParams>();
-    FTL_DCHECK(le16toh(payload.command_opcode) == hci::kLECreateConnection);
+    FXL_DCHECK(le16toh(payload.command_opcode) == hci::kLECreateConnection);
 
     if (payload.status != hci::Status::kSuccess) {
       LogErrorStatusAndQuit("LE Create Connection Status (failed)", payload.status);
@@ -129,8 +129,8 @@ void LEConnectionTest::InitializeDataChannelAndCreateConnection(
 
   // This is the event that signals the completion of a connection.
   auto le_conn_complete_cb = [this](const hci::EventPacket& event) {
-    FTL_DCHECK(event.event_code() == hci::kLEMetaEventCode);
-    FTL_DCHECK(event.view().payload<hci::LEMetaEventParams>().subevent_code ==
+    FXL_DCHECK(event.event_code() == hci::kLEMetaEventCode);
+    FXL_DCHECK(event.view().payload<hci::LEMetaEventParams>().subevent_code ==
                hci::kLEConnectionCompleteSubeventCode);
 
     auto params = event.le_event_params<hci::LEConnectionCompleteSubeventParams>();
@@ -139,8 +139,8 @@ void LEConnectionTest::InitializeDataChannelAndCreateConnection(
       return;
     }
 
-    FTL_LOG(INFO) << "LE Connection Complete - handle: "
-                  << ftl::StringPrintf("0x%04x", le16toh(params->connection_handle))
+    FXL_LOG(INFO) << "LE Connection Complete - handle: "
+                  << fxl::StringPrintf("0x%04x", le16toh(params->connection_handle))
                   << ", BD_ADDR: " << dst_addr_.value().ToString();
 
     // We're done with this event. Unregister the handler.
@@ -149,11 +149,11 @@ void LEConnectionTest::InitializeDataChannelAndCreateConnection(
 
     // Register a disconnect handler.
     auto disconn_cb = [this](const hci::EventPacket& event) {
-      FTL_DCHECK(event.event_code() == hci::kDisconnectionCompleteEventCode);
+      FXL_DCHECK(event.event_code() == hci::kDisconnectionCompleteEventCode);
 
       const auto& params = event.view().payload<hci::DisconnectionCompleteEventParams>();
 
-      FTL_LOG(INFO) << ftl::StringPrintf("Disconnected - handle: 0x%02x, reason: 0x%02x",
+      FXL_LOG(INFO) << fxl::StringPrintf("Disconnected - handle: 0x%02x, reason: 0x%02x",
                                          le16toh(params.connection_handle), params.reason);
       hci_->command_channel()->RemoveEventHandler(disconn_handler_id_);
       message_loop_.QuitNow();
@@ -168,7 +168,7 @@ void LEConnectionTest::InitializeDataChannelAndCreateConnection(
   le_conn_complete_handler_id_ = hci_->command_channel()->AddLEMetaEventHandler(
       hci::kLEConnectionCompleteSubeventCode, le_conn_complete_cb, message_loop_.task_runner());
 
-  FTL_LOG(INFO) << "Sending LE connection request";
+  FXL_LOG(INFO) << "Sending LE connection request";
 
   // The status callback will never get called but we pass one in anyway.
   hci_->command_channel()->SendCommand(std::move(cmd), message_loop_.task_runner(),
@@ -223,8 +223,8 @@ void LEConnectionTest::SendNotifications(hci::ConnectionHandle connection_handle
 }
 
 void LEConnectionTest::ACLDataRxCallback(std::unique_ptr<hci::ACLDataPacket> packet) {
-  FTL_LOG(INFO) << "Received ACL packet on handle: "
-                << ftl::StringPrintf("0x%04x", packet->connection_handle());
+  FXL_LOG(INFO) << "Received ACL packet on handle: "
+                << fxl::StringPrintf("0x%04x", packet->connection_handle());
 
   // Since this is an LE connection using a LE-U logical link the payload should contain a L2CAP
   // packet. Look at the channel ID, if this is a ATT protocol request then send back an error
@@ -238,7 +238,7 @@ void LEConnectionTest::ACLDataRxCallback(std::unique_ptr<hci::ACLDataPacket> pac
   uint16_t l2cap_channel_id = le16toh(*reinterpret_cast<const uint16_t*>(payload.data() + 2));
   if (l2cap_channel_id != 4) return;
 
-  FTL_LOG(INFO) << "Got L2CAP frame on ATT protocol channel!";
+  FXL_LOG(INFO) << "Got L2CAP frame on ATT protocol channel!";
 
   // Just send back an error response:
   //    - 4-octet L2CAP header.
@@ -274,7 +274,7 @@ void LEConnectionTest::ACLDataRxCallback(std::unique_ptr<hci::ACLDataPacket> pac
 }
 
 void LEConnectionTest::LogErrorStatusAndQuit(const std::string& msg, hci::Status status) {
-  FTL_LOG(ERROR) << ftl::StringPrintf("%s: 0x%02x", msg.c_str(), status);
+  FXL_LOG(ERROR) << fxl::StringPrintf("%s: 0x%02x", msg.c_str(), status);
   message_loop_.QuitNow();
 }
 

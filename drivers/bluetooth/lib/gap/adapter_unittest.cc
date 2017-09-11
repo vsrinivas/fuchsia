@@ -12,7 +12,7 @@
 
 #include "apps/bluetooth/lib/testing/fake_controller.h"
 #include "apps/bluetooth/lib/testing/test_base.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 namespace gap {
@@ -55,7 +55,7 @@ class AdapterTest : public TestingBase {
   bool transport_closed_called_;
   std::unique_ptr<Adapter> adapter_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(AdapterTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AdapterTest);
 };
 
 TEST_F(AdapterTest, InitializeFailureNoFeaturesSupported) {

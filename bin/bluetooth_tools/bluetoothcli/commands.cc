@@ -6,8 +6,8 @@
 
 #include <iostream>
 
-#include "lib/ftl/functional/auto_call.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/fxl/functional/auto_call.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 #include "app.h"
@@ -18,20 +18,20 @@ namespace bluetoothcli {
 namespace commands {
 namespace {
 
-bool HandleAvailable(const App* app, const ftl::CommandLine& cmd_line,
-                     const ftl::Closure& complete_cb) {
+bool HandleAvailable(const App* app, const fxl::CommandLine& cmd_line,
+                     const fxl::Closure& complete_cb) {
   app->adapter_manager()->IsBluetoothAvailable([complete_cb](bool available) {
-    CLI_LOG() << ftl::StringPrintf("Bluetooth is %savailable", available ? "" : "not ");
+    CLI_LOG() << fxl::StringPrintf("Bluetooth is %savailable", available ? "" : "not ");
     complete_cb();
   });
   return true;
 }
 
-bool HandleListAdapters(const App* app, const ftl::CommandLine& cmd_line,
-                        const ftl::Closure& complete_cb) {
+bool HandleListAdapters(const App* app, const fxl::CommandLine& cmd_line,
+                        const fxl::Closure& complete_cb) {
   app->adapter_manager()->GetAdapters(
       [complete_cb](fidl::Array<bluetooth::control::AdapterInfoPtr> adapters) {
-        auto ac = ftl::MakeAutoCall(complete_cb);
+        auto ac = fxl::MakeAutoCall(complete_cb);
 
         if (!adapters || adapters.size() == 0) {
           CLI_LOG() << "No adapters";
@@ -47,8 +47,8 @@ bool HandleListAdapters(const App* app, const ftl::CommandLine& cmd_line,
   return true;
 }
 
-bool HandleActiveAdapter(const App* app, const ftl::CommandLine& cmd_line,
-                         const ftl::Closure& complete_cb) {
+bool HandleActiveAdapter(const App* app, const fxl::CommandLine& cmd_line,
+                         const fxl::Closure& complete_cb) {
   if (!app->active_adapter()) {
     CLI_LOG() << "No active adapter";
     return false;
@@ -62,13 +62,13 @@ bool HandleActiveAdapter(const App* app, const ftl::CommandLine& cmd_line,
   return true;
 }
 
-bool HandleExit(const App* app, const ftl::CommandLine& cmd_line, const ftl::Closure& complete_cb) {
+bool HandleExit(const App* app, const fxl::CommandLine& cmd_line, const fxl::Closure& complete_cb) {
   mtl::MessageLoop::GetCurrent()->QuitNow();
   return true;
 }
 
-bool HandleStartDiscovery(const App* app, const ftl::CommandLine& cmd_line,
-                          const ftl::Closure& complete_cb) {
+bool HandleStartDiscovery(const App* app, const fxl::CommandLine& cmd_line,
+                          const fxl::Closure& complete_cb) {
   if (!app->active_adapter()) {
     CLI_LOG() << "No default adapter";
     return false;
@@ -86,8 +86,8 @@ bool HandleStartDiscovery(const App* app, const ftl::CommandLine& cmd_line,
   return true;
 }
 
-bool HandleStopDiscovery(const App* app, const ftl::CommandLine& cmd_line,
-                         const ftl::Closure& complete_cb) {
+bool HandleStopDiscovery(const App* app, const fxl::CommandLine& cmd_line,
+                         const fxl::Closure& complete_cb) {
   if (!app->active_adapter()) {
     CLI_LOG() << "No default adapter";
     return false;
@@ -105,8 +105,8 @@ bool HandleStopDiscovery(const App* app, const ftl::CommandLine& cmd_line,
   return true;
 }
 
-bool HandleListDevices(const App* app, const ftl::CommandLine& cmd_line,
-                       const ftl::Closure& complete_cb) {
+bool HandleListDevices(const App* app, const fxl::CommandLine& cmd_line,
+                       const fxl::Closure& complete_cb) {
   if (app->discovered_devices().empty()) {
     CLI_LOG() << "No devices discovered";
     return true;
@@ -124,7 +124,7 @@ bool HandleListDevices(const App* app, const ftl::CommandLine& cmd_line,
 }  // namespace
 
 void RegisterCommands(App* app, bluetooth::tools::CommandDispatcher* dispatcher) {
-  FTL_DCHECK(dispatcher);
+  FXL_DCHECK(dispatcher);
 
 #define BIND(handler) std::bind(&handler, app, std::placeholders::_1, std::placeholders::_2)
 

@@ -8,7 +8,7 @@
 #include "apps/bluetooth/lib/common/device_address.h"
 #include "apps/bluetooth/lib/hci/connection.h"
 #include "apps/bluetooth/lib/hci/hci.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 namespace testing {
@@ -87,7 +87,7 @@ class FakeDevice {
   common::DynamicByteBuffer adv_data_;
   common::DynamicByteBuffer scan_rsp_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FakeDevice);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakeDevice);
 };
 
 }  // namespace testing
