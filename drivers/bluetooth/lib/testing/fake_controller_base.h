@@ -6,15 +6,15 @@
 
 #include <thread>
 
+#include <async/wait.h>
 #include <zx/channel.h>
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/common/packet_view.h"
 #include "apps/bluetooth/lib/hci/hci.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_checker.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/tasks/message_loop_handler.h"
 
 namespace bluetooth {
 namespace testing {
@@ -22,10 +22,10 @@ namespace testing {
 // Abstract base for implementing a fake HCI controller endpoint. This can directly send
 // ACL data and event packets on request and forward outgoing ACL data packets to subclass
 // implementations.
-class FakeControllerBase : ::fsl::MessageLoopHandler {
+class FakeControllerBase {
  public:
   FakeControllerBase(zx::channel cmd_channel, zx::channel acl_data_channel);
-  ~FakeControllerBase() override;
+  virtual ~FakeControllerBase();
 
   // Kicks off the FakeController thread and message loop and starts processing transactions.
   // |debug_name| will be assigned as the name of the thread.
@@ -64,12 +64,11 @@ class FakeControllerBase : ::fsl::MessageLoopHandler {
   virtual void OnACLDataPacketReceived(const common::ByteBuffer& acl_data_packet) = 0;
 
  private:
-  // ::fsl::MessageLoopHandler overrides
-  void OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) override;
-
   // Read and handle packets received over the channels.
-  void HandleCommandPacket();
-  void HandleACLPacket();
+  async_wait_result_t HandleCommandPacket(async_t* async, zx_status_t wait_status,
+                                          const zx_packet_signal_t* signal);
+  async_wait_result_t HandleACLPacket(async_t* async, zx_status_t wait_status,
+                                      const zx_packet_signal_t* signal);
 
   // Cleans up the channel handles. This must be run on |task_runner_|'s thread.
   void CloseCommandChannelInternal();
@@ -82,8 +81,8 @@ class FakeControllerBase : ::fsl::MessageLoopHandler {
   zx::channel acl_channel_;
   std::thread thread_;
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
-  fsl::MessageLoop::HandlerKey cmd_handler_key_;
-  fsl::MessageLoop::HandlerKey acl_handler_key_;
+  async::Wait cmd_channel_wait_;
+  async::Wait acl_channel_wait_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeControllerBase);
 };

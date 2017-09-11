@@ -11,6 +11,7 @@
 #include <queue>
 #include <unordered_map>
 
+#include <async/wait.h>
 #include <zircon/compiler.h>
 #include <zx/channel.h>
 
@@ -19,13 +20,12 @@
 #include "apps/bluetooth/lib/hci/control_packets.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/cancelable_callback.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/synchronization/thread_checker.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/tasks/message_loop_handler.h"
 
 namespace bluetooth {
 namespace hci {
@@ -37,7 +37,7 @@ class Transport;
 //
 // TODO(armansito): I don't imagine many cases in which we will want to queue up HCI commands from
 // the data thread. Consider making this class fully single threaded and removing the locks.
-class CommandChannel final : public ::fsl::MessageLoopHandler {
+class CommandChannel final {
  public:
   // |hci_command_channel| is a Zircon channel construct that can receive
   // Bluetooth HCI command and event packets, in which the remote end is
@@ -45,7 +45,7 @@ class CommandChannel final : public ::fsl::MessageLoopHandler {
   //
   // |transport| is the Transport instance that owns this CommandChannel.
   CommandChannel(Transport* transport, zx::channel hci_command_channel);
-  ~CommandChannel() override;
+  ~CommandChannel();
 
   // Starts listening on the HCI command channel and starts handling commands and events.
   void Initialize();
@@ -229,9 +229,9 @@ class CommandChannel final : public ::fsl::MessageLoopHandler {
   // Notifies a matching event handler for the given event.
   void NotifyEventHandler(std::unique_ptr<EventPacket> event);
 
-  // ::fsl::MessageLoopHandler overrides:
-  void OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) override;
-  void OnHandleError(zx_handle_t handle, zx_status_t error) override;
+  // Read ready handler for |channel_|
+  async_wait_result_t OnChannelReady(async_t* async, zx_status_t status,
+                                     const zx_packet_signal_t* signal);
 
   // TransactionId counter.
   std::atomic_size_t next_transaction_id_ __TA_GUARDED(send_queue_mutex_);
@@ -248,11 +248,11 @@ class CommandChannel final : public ::fsl::MessageLoopHandler {
   // The channel we use to send/receive HCI commands/events.
   zx::channel channel_;
 
+  // Wait object for |channel_|
+  async::Wait channel_wait_;
+
   // True if this CommandChannel has been initialized through a call to Initialize().
   std::atomic_bool is_initialized_;
-
-  // The HandlerKey returned from fsl::MessageLoop::AddHandler
-  fsl::MessageLoop::HandlerKey io_handler_key_;
 
   // The task runner used for posting tasks on the HCI transport I/O thread.
   fxl::RefPtr<fxl::TaskRunner> io_task_runner_;

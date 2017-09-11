@@ -7,8 +7,8 @@
 #include <zircon/status.h>
 #include <zx/channel.h>
 
-#include "lib/fxl/logging.h"
 #include "lib/fsl/threading/create_thread.h"
+#include "lib/fxl/logging.h"
 
 #include "device_wrapper.h"
 
@@ -21,10 +21,7 @@ fxl::RefPtr<Transport> Transport::Create(std::unique_ptr<DeviceWrapper> hci_devi
 }
 
 Transport::Transport(std::unique_ptr<DeviceWrapper> hci_device)
-    : hci_device_(std::move(hci_device)),
-      is_initialized_(false),
-      cmd_channel_handler_key_(0u),
-      acl_channel_handler_key_(0u) {
+    : hci_device_(std::move(hci_device)), is_initialized_(false) {
   FXL_DCHECK(hci_device_);
 }
 
@@ -49,10 +46,7 @@ bool Transport::Initialize() {
   io_thread_ = fsl::CreateThread(&io_task_runner_, "hci-transport-io");
 
   // We watch for handle errors and closures to perform the necessary clean up.
-  io_task_runner_->PostTask([ handle = channel.get(), this ] {
-    cmd_channel_handler_key_ =
-        fsl::MessageLoop::GetCurrent()->AddHandler(this, handle, ZX_CHANNEL_PEER_CLOSED);
-  });
+  WatchChannelClosed(channel, cmd_channel_wait_);
 
   command_channel_ = std::make_unique<CommandChannel>(this, std::move(channel));
   command_channel_->Initialize();
@@ -75,10 +69,7 @@ bool Transport::InitializeACLDataChannel(const DataBufferInfo& bredr_buffer_info
   }
 
   // We watch for handle errors and closures to perform the necessary clean up.
-  io_task_runner_->PostTask([ handle = channel.get(), this ] {
-    acl_channel_handler_key_ =
-        fsl::MessageLoop::GetCurrent()->AddHandler(this, handle, ZX_CHANNEL_PEER_CLOSED);
-  });
+  WatchChannelClosed(channel, acl_channel_wait_);
 
   acl_data_channel_ = std::make_unique<ACLDataChannel>(this, std::move(channel));
   acl_data_channel_->Initialize(bredr_buffer_info, le_buffer_info);
@@ -106,13 +97,13 @@ void Transport::ShutDown() {
   if (acl_data_channel_) acl_data_channel_->ShutDown();
   if (command_channel_) command_channel_->ShutDown();
 
-  io_task_runner_->PostTask(
-      [ cmd_key = cmd_channel_handler_key_, acl_key = acl_channel_handler_key_ ] {
-        FXL_DCHECK(fsl::MessageLoop::GetCurrent());
-        fsl::MessageLoop::GetCurrent()->RemoveHandler(cmd_key);
-        fsl::MessageLoop::GetCurrent()->RemoveHandler(acl_key);
-        fsl::MessageLoop::GetCurrent()->QuitNow();
-      });
+  io_task_runner_->PostTask([this] {
+    FXL_DCHECK(fsl::MessageLoop::GetCurrent());
+    const auto async = fsl::MessageLoop::GetCurrent()->async();
+    cmd_channel_wait_.Cancel(async);
+    acl_channel_wait_.Cancel(async);
+    fsl::MessageLoop::GetCurrent()->QuitNow();
+  });
 
   if (io_thread_.joinable()) io_thread_.join();
 
@@ -133,22 +124,39 @@ bool Transport::IsInitialized() const {
   return is_initialized_;
 }
 
-void Transport::OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) {
-  FXL_DCHECK(pending & ZX_CHANNEL_PEER_CLOSED);
-  NotifyClosedCallback();
+void Transport::WatchChannelClosed(const zx::channel& channel, async::Wait& wait) {
+  io_task_runner_->PostTask([ handle = channel.get(), &wait, this ] {
+    wait.set_object(handle);
+    wait.set_trigger(ZX_CHANNEL_PEER_CLOSED);
+    wait.set_handler(fbl::BindMember(this, &Transport::OnChannelClosed));
+    zx_status_t status = wait.Begin(fsl::MessageLoop::GetCurrent()->async());
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "hci: Transport: failed channel setup: " << zx_status_get_string(status);
+      wait.set_object(ZX_HANDLE_INVALID);
+    }
+  });
 }
 
-void Transport::OnHandleError(zx_handle_t handle, zx_status_t error) {
-  FXL_LOG(ERROR) << "hci: Transport: channel error: " << zx_status_get_string(error);
+async_wait_result_t Transport::OnChannelClosed(async_t* async, zx_status_t status,
+                                               const zx_packet_signal_t* signal) {
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "hci: Transport: channel error: " << zx_status_get_string(status);
+  } else {
+    FXL_DCHECK(signal->observed & ZX_CHANNEL_PEER_CLOSED);
+  }
+
   NotifyClosedCallback();
+  return ASYNC_WAIT_FINISHED;
 }
 
 void Transport::NotifyClosedCallback() {
   FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
 
   // Clear the handlers so that we stop receiving events.
-  fsl::MessageLoop::GetCurrent()->RemoveHandler(cmd_channel_handler_key_);
-  fsl::MessageLoop::GetCurrent()->RemoveHandler(acl_channel_handler_key_);
+  const auto async = fsl::MessageLoop::GetCurrent()->async();
+
+  cmd_channel_wait_.Cancel(async);
+  acl_channel_wait_.Cancel(async);
 
   FXL_LOG(INFO) << "hci: Transport: HCI channel(s) were closed";
   if (closed_cb_) closed_cb_task_runner_->PostTask(closed_cb_);

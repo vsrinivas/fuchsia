@@ -8,16 +8,17 @@
 #include <memory>
 #include <thread>
 
+#include <async/auto_wait.h>
+
 #include "apps/bluetooth/lib/hci/acl_data_channel.h"
 #include "apps/bluetooth/lib/hci/command_channel.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/synchronization/thread_checker.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/tasks/message_loop_handler.h"
 
 namespace bluetooth {
 namespace hci {
@@ -35,8 +36,7 @@ class DeviceWrapper;
 // vending weak ptrs would have been more suitable since this class is intended to be uniquely owned
 // by its creator. fxl::WeakPtr is not thread-safe which is why we use fxl::RefCountedThreadSafe.
 // Consider making fxl::WeakPtr thread-safe.
-class Transport final : public ::fsl::MessageLoopHandler,
-                        public fxl::RefCountedThreadSafe<Transport> {
+class Transport final : public fxl::RefCountedThreadSafe<Transport> {
  public:
   static fxl::RefPtr<Transport> Create(std::unique_ptr<DeviceWrapper> hci_device);
 
@@ -91,11 +91,14 @@ class Transport final : public ::fsl::MessageLoopHandler,
   FRIEND_REF_COUNTED_THREAD_SAFE(Transport);
 
   explicit Transport(std::unique_ptr<DeviceWrapper> hci_device);
-  ~Transport() override;
+  ~Transport();
 
-  // ::fsl::MessageLoopHandler overrides:
-  void OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) override;
-  void OnHandleError(zx_handle_t handle, zx_status_t error) override;
+  // Sets up a wait to watch for |channel| to close and calls OnChannelClosed
+  void WatchChannelClosed(const zx::channel& channel, async::Wait& wait);
+
+  // Channel closed callback.
+  async_wait_result_t OnChannelClosed(async_t* async, zx_status_t status,
+                                      const zx_packet_signal_t* signal);
 
   // Notifies the closed callback.
   void NotifyClosedCallback();
@@ -112,9 +115,9 @@ class Transport final : public ::fsl::MessageLoopHandler,
   // The thread that performs all HCI I/O operations.
   std::thread io_thread_;
 
-  // The HandlerKey returned from fsl::MessageLoop::AddHandler
-  fsl::MessageLoop::HandlerKey cmd_channel_handler_key_;
-  fsl::MessageLoop::HandlerKey acl_channel_handler_key_;
+  // async::Waits for the command and ACL channels
+  async::Wait cmd_channel_wait_;
+  async::Wait acl_channel_wait_;
 
   // The task runner used for posting tasks on the HCI transport I/O thread.
   fxl::RefPtr<fxl::TaskRunner> io_task_runner_;

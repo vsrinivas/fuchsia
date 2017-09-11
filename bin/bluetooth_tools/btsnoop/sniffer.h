@@ -4,19 +4,19 @@
 
 #pragma once
 
+#include <async/auto_wait.h>
 #include <zx/channel.h>
 
 #include "apps/bluetooth/lib/common/bt_snoop_logger.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/tasks/message_loop_handler.h"
 
 namespace btsnoop {
 
-class Sniffer final : public ::fsl::MessageLoopHandler {
+class Sniffer final {
  public:
   Sniffer(const std::string& hci_dev_path, const std::string& log_file_path);
   ~Sniffer();
@@ -26,9 +26,9 @@ class Sniffer final : public ::fsl::MessageLoopHandler {
   bool Start();
 
  private:
-  // ::fsl::MessageLoopHandler overrides:
-  void OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) override;
-  void OnHandleError(zx_handle_t handle, zx_status_t error) override;
+  // async::AutoWait handler
+  async_wait_result_t OnHandleReady(async_t* async, zx_status_t status,
+                                    const zx_packet_signal_t* signal);
 
   std::string hci_dev_path_;
   std::string log_file_path_;
@@ -37,14 +37,13 @@ class Sniffer final : public ::fsl::MessageLoopHandler {
   zx::channel snoop_channel_;
   bluetooth::common::BTSnoopLogger logger_;
 
-  fsl::MessageLoop::HandlerKey handler_key_;
+  std::unique_ptr<async::AutoWait> wait_;
   fsl::MessageLoop message_loop_;
 
   // For now we only sniff command and event packets so make the buffer large
   // enough to fit the largest command packet plus 1-byte for the snoop flags.
   uint8_t buffer_[sizeof(bluetooth::hci::CommandHeader) +
-                  bluetooth::hci::kMaxCommandPacketPayloadSize +
-                  1];
+                  bluetooth::hci::kMaxCommandPacketPayloadSize + 1];
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Sniffer);
 };

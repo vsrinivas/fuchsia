@@ -19,8 +19,7 @@ namespace bluetooth {
 namespace hci {
 
 DataBufferInfo::DataBufferInfo(size_t max_data_length, size_t max_num_packets)
-    : max_data_length_(max_data_length), max_num_packets_(max_num_packets) {
-}
+    : max_data_length_(max_data_length), max_num_packets_(max_num_packets) {}
 
 DataBufferInfo::DataBufferInfo() : max_data_length_(0u), max_num_packets_(0u) {}
 
@@ -31,12 +30,14 @@ bool DataBufferInfo::operator==(const DataBufferInfo& other) const {
 ACLDataChannel::ACLDataChannel(Transport* transport, zx::channel hci_acl_channel)
     : transport_(transport),
       channel_(std::move(hci_acl_channel)),
+      channel_wait_(channel_.get(), ZX_CHANNEL_READABLE),
       is_initialized_(false),
       event_handler_id_(0u),
-      io_handler_key_(0u),
       num_sent_packets_(0u),
       le_num_sent_packets_(0u) {
-  FXL_DCHECK(transport_), FXL_DCHECK(channel_.is_valid());
+  // TODO(armansito): We'll need to pay attention to ZX_CHANNEL_WRITABLE as well.
+  FXL_DCHECK(transport_);
+  FXL_DCHECK(channel_.is_valid());
 }
 
 ACLDataChannel::~ACLDataChannel() {
@@ -53,14 +54,22 @@ void ACLDataChannel::Initialize(const DataBufferInfo& bredr_buffer_info,
   le_buffer_info_ = le_buffer_info;
 
   auto setup_handler_task = [this] {
-    // TODO(armansito): We'll need to pay attention to ZX_CHANNEL_WRITABLE as well.
-    io_handler_key_ =
-        fsl::MessageLoop::GetCurrent()->AddHandler(this, channel_.get(), ZX_CHANNEL_READABLE);
-    FXL_LOG(INFO) << "hci: ACLDataChannel: I/O handler registered";
+    channel_wait_.set_handler(fbl::BindMember(this, &ACLDataChannel::OnChannelReady));
+    zx_status_t status = channel_wait_.Begin(fsl::MessageLoop::GetCurrent()->async());
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "hci: ACLDataChannel: failed channel setup: "
+                     << zx_status_get_string(status);
+      channel_wait_.set_object(ZX_HANDLE_INVALID);
+      return;
+    }
+    FXL_LOG(INFO) << "hci: ACLDataChannel: started I/O handler";
   };
 
   io_task_runner_ = transport_->io_task_runner();
   common::RunTaskSync(setup_handler_task, io_task_runner_);
+
+  // TODO(jamuraa): return whether we successfully initialized?
+  if (channel_wait_.object() == ZX_HANDLE_INVALID) return;
 
   event_handler_id_ = transport_->command_channel()->AddEventHandler(
       kNumberOfCompletedPacketsEventCode,
@@ -79,10 +88,13 @@ void ACLDataChannel::ShutDown() {
 
   FXL_LOG(INFO) << "hci: ACLDataChannel: shutting down";
 
-  auto handler_cleanup_task = [handler_key = io_handler_key_] {
+  auto handler_cleanup_task = [this] {
     FXL_DCHECK(fsl::MessageLoop::GetCurrent());
-    FXL_LOG(INFO) << "hci: ACLDataChannel Removing I/O handler";
-    fsl::MessageLoop::GetCurrent()->RemoveHandler(handler_key);
+    FXL_LOG(INFO) << "hci: ACLDataChannel: canceling I/O handler";
+    zx_status_t status = channel_wait_.Cancel(fsl::MessageLoop::GetCurrent()->async());
+    if (status != ZX_OK) {
+      FXL_LOG(WARNING) << "Couldn't cancel wait on channel: " << zx_status_get_string(status);
+    }
   };
 
   common::RunTaskSync(handler_cleanup_task, io_task_runner_);
@@ -97,7 +109,6 @@ void ACLDataChannel::ShutDown() {
   }
 
   io_task_runner_ = nullptr;
-  io_handler_key_ = 0u;
   event_handler_id_ = 0u;
   SetDataRxHandler(nullptr);
 }
@@ -329,64 +340,66 @@ void ACLDataChannel::IncrementLETotalNumPacketsLocked(size_t count) {
   le_num_sent_packets_ += count;
 }
 
-void ACLDataChannel::OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) {
-  if (!is_initialized_) return;
+async_wait_result_t ACLDataChannel::OnChannelReady(async_t* async, zx_status_t status,
+                                                   const zx_packet_signal_t* signal) {
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "hci: ACLDataChannel: channel error: " << zx_status_get_string(status);
+    return ASYNC_WAIT_FINISHED;
+  }
+
+  if (!is_initialized_) return ASYNC_WAIT_AGAIN;
 
   FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
-  FXL_DCHECK(handle == channel_.get());
-  FXL_DCHECK(pending & ZX_CHANNEL_READABLE);
+  FXL_DCHECK(signal->observed & ZX_CHANNEL_READABLE);
 
   std::lock_guard<std::mutex> lock(rx_mutex_);
-  if (!rx_callback_) return;
-
-  // Allocate a buffer for the event. Since we don't know the size beforehand we allocate the
-  // largest possible buffer.
-  auto packet = ACLDataPacket::New(slab_allocators::kLargeACLDataPayloadSize);
-  if (!packet) {
-    FXL_LOG(ERROR) << "Failed to allocate buffer received ACL data packet!";
-    return;
+  if (!rx_callback_) {
+    return ASYNC_WAIT_FINISHED;
   }
 
-  uint32_t read_size;
-  auto packet_bytes = packet->mutable_view()->mutable_data();
-  zx_status_t status = channel_.read(0u, packet_bytes.mutable_data(), packet_bytes.size(),
-                                     &read_size, nullptr, 0, nullptr);
-  if (status < 0) {
-    FXL_VLOG(1) << "hci: ACLDataChannel: Failed to read RX bytes: " << zx_status_get_string(status);
-    // Clear the handler so that we stop receiving events from it.
-    fsl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
-    return;
+  for (size_t count = 0; count < signal->count; count++) {
+    // Allocate a buffer for the event. Since we don't know the size beforehand we allocate the
+    // largest possible buffer.
+    auto packet = ACLDataPacket::New(slab_allocators::kLargeACLDataPayloadSize);
+    if (!packet) {
+      FXL_LOG(ERROR) << "Failed to allocate buffer received ACL data packet!";
+      return ASYNC_WAIT_FINISHED;
+    }
+    uint32_t read_size;
+    auto packet_bytes = packet->mutable_view()->mutable_data();
+    zx_status_t read_status = channel_.read(0u, packet_bytes.mutable_data(), packet_bytes.size(),
+                                            &read_size, nullptr, 0, nullptr);
+    if (read_status < 0) {
+      FXL_VLOG(1) << "hci: ACLDataChannel: Failed to read RX bytes: "
+                  << zx_status_get_string(status);
+      // Clear the handler so that we stop receiving events from it.
+      // TODO(jamuraa): signal failure to the consumer so it can do something.
+      return ASYNC_WAIT_FINISHED;
+    }
+
+    if (read_size < sizeof(ACLDataHeader)) {
+      FXL_LOG(ERROR) << "hci: ACLDataChannel: Malformed data packet - "
+                     << "expected at least " << sizeof(ACLDataHeader) << " bytes, "
+                     << "got " << read_size;
+      // TODO(jamuraa): signal stream error somehow
+      continue;
+    }
+
+    const size_t rx_payload_size = read_size - sizeof(ACLDataHeader);
+    const size_t size_from_header = le16toh(packet->view().header().data_total_length);
+    if (size_from_header != rx_payload_size) {
+      FXL_LOG(ERROR) << "hci: ACLDataChannel: Malformed packet - "
+                     << "payload size from header (" << size_from_header << ")"
+                     << " does not match received payload size: " << rx_payload_size;
+      // TODO(jamuraa): signal stream error somehow
+      continue;
+    }
+
+    packet->InitializeFromBuffer();
+
+    rx_callback_(std::move(packet));
   }
-
-  if (read_size < sizeof(ACLDataHeader)) {
-    FXL_LOG(ERROR) << "hci: ACLDataChannel: Malformed data packet - "
-                   << "expected at least " << sizeof(ACLDataHeader) << " bytes, "
-                   << "got " << read_size;
-    return;
-  }
-
-  const size_t rx_payload_size = read_size - sizeof(ACLDataHeader);
-  const size_t size_from_header = le16toh(packet->view().header().data_total_length);
-  if (size_from_header != rx_payload_size) {
-    FXL_LOG(ERROR) << "hci: ACLDataChannel: Malformed packet - "
-                   << "payload size from header (" << size_from_header << ")"
-                   << " does not match received payload size: " << rx_payload_size;
-    return;
-  }
-
-  packet->InitializeFromBuffer();
-
-  rx_callback_(std::move(packet));
-}
-
-void ACLDataChannel::OnHandleError(zx_handle_t handle, zx_status_t error) {
-  FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
-  FXL_DCHECK(handle == channel_.get());
-
-  FXL_LOG(ERROR) << "hci: ACLDataChannel: channel error: " << zx_status_get_string(error);
-
-  // Clear the handler so that we stop receiving events from it.
-  fsl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
+  return ASYNC_WAIT_AGAIN;
 }
 
 }  // namespace hci

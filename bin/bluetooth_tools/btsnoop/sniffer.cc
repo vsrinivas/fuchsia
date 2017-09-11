@@ -18,10 +18,10 @@
 namespace btsnoop {
 
 Sniffer::Sniffer(const std::string& hci_dev_path, const std::string& log_file_path)
-    : hci_dev_path_(hci_dev_path), log_file_path_(log_file_path), handler_key_(0) {}
+    : hci_dev_path_(hci_dev_path), log_file_path_(log_file_path) {}
 
 Sniffer::~Sniffer() {
-  message_loop_.RemoveHandler(handler_key_);
+  if (wait_) wait_->Cancel();
 }
 
 bool Sniffer::Start() {
@@ -46,8 +46,15 @@ bool Sniffer::Start() {
     return false;
   }
 
-  handler_key_ =
-      message_loop_.AddHandler(this, handle, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+  wait_ = std::make_unique<async::AutoWait>(message_loop_.async(), handle,
+                                            ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+  wait_->set_handler(fbl::BindMember(this, &Sniffer::OnHandleReady));
+  zx_status_t status = wait_->Begin();
+  if (status != ZX_OK) {
+    std::cout << "Error on snoop channel: " << zx_status_get_string(status) << std::endl;
+    wait_.reset(nullptr);
+    message_loop_.QuitNow();
+  }
   snoop_channel_ = zx::channel(handle);
   hci_dev_ = std::move(hci_dev);
 
@@ -56,9 +63,15 @@ bool Sniffer::Start() {
   return true;
 }
 
-void Sniffer::OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) {
-  FXL_DCHECK(handle == snoop_channel_.get());
-  FXL_DCHECK(pending & (ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED));
+async_wait_result_t Sniffer::OnHandleReady(async_t* async, zx_status_t wait_status,
+                                           const zx_packet_signal_t* signal) {
+  FXL_DCHECK(signal->observed & (ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED));
+
+  if (wait_status != ZX_OK) {
+    std::cout << "Error on snoop channel: " << zx_status_get_string(wait_status) << std::endl;
+    message_loop_.QuitNow();
+    return ASYNC_WAIT_FINISHED;
+  }
 
   uint32_t read_size;
   zx_status_t status =
@@ -66,18 +79,13 @@ void Sniffer::OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t c
   if (status < 0) {
     std::cout << "Failed to read snoop event bytes: " << zx_status_get_string(status) << std::endl;
     message_loop_.QuitNow();
-    return;
+    return ASYNC_WAIT_FINISHED;
   }
 
   uint8_t flags = buffer_[0];
   logger_.WritePacket(bluetooth::common::BufferView(buffer_ + 1, read_size - 1),
                       flags & BT_HCI_SNOOP_FLAG_RECEIVED, flags & BT_HCI_SNOOP_FLAG_DATA);
-}
-
-void Sniffer::OnHandleError(zx_handle_t handle, zx_status_t error) {
-  FXL_DCHECK(handle == snoop_channel_.get());
-  std::cout << "Error on snoop channel: " << zx_status_get_string(error) << std::endl;
-  message_loop_.QuitNow();
+  return ASYNC_WAIT_AGAIN;
 }
 
 }  // namespace btsnoop

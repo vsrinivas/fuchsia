@@ -44,8 +44,8 @@ CommandChannel::CommandChannel(Transport* transport, zx::channel hci_command_cha
       next_event_handler_id_(1u),
       transport_(transport),
       channel_(std::move(hci_command_channel)),
-      is_initialized_(false),
-      io_handler_key_(0u) {
+      channel_wait_(channel_.get(), ZX_CHANNEL_READABLE),
+      is_initialized_(false) {
   FXL_DCHECK(transport_);
   FXL_DCHECK(channel_.is_valid());
 }
@@ -59,13 +59,21 @@ void CommandChannel::Initialize() {
   FXL_DCHECK(!is_initialized_);
 
   auto setup_handler_task = [this] {
-    io_handler_key_ =
-        fsl::MessageLoop::GetCurrent()->AddHandler(this, channel_.get(), ZX_CHANNEL_READABLE);
-    FXL_LOG(INFO) << "hci: CommandChannel: I/O handler registered";
+    channel_wait_.set_handler(fbl::BindMember(this, &CommandChannel::OnChannelReady));
+    zx_status_t status = channel_wait_.Begin(fsl::MessageLoop::GetCurrent()->async());
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "hci: CommandChannel: failed channel setup: "
+                     << zx_status_get_string(status);
+      channel_wait_.set_object(ZX_HANDLE_INVALID);
+      return;
+    }
+    FXL_LOG(INFO) << "hci: CommandChannel: started I/O handler";
   };
 
   io_task_runner_ = transport_->io_task_runner();
   common::RunTaskSync(setup_handler_task, io_task_runner_);
+
+  if (channel_wait_.object() == ZX_HANDLE_INVALID) return;
 
   is_initialized_ = true;
 
@@ -82,7 +90,10 @@ void CommandChannel::ShutDown() {
     FXL_DCHECK(fsl::MessageLoop::GetCurrent());
     FXL_LOG(INFO) << "hci: CommandChannel: Removing I/O handler";
     SetPendingCommand(nullptr);
-    fsl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
+    zx_status_t status = channel_wait_.Cancel(fsl::MessageLoop::GetCurrent()->async());
+    if (status != ZX_OK) {
+      FXL_LOG(WARNING) << "Couldn't cancel wait on channel: " << zx_status_get_string(status);
+    }
   };
 
   common::RunTaskSync(handler_cleanup_task, io_task_runner_);
@@ -100,7 +111,6 @@ void CommandChannel::ShutDown() {
     subevent_code_handlers_.clear();
   }
   io_task_runner_ = nullptr;
-  io_handler_key_ = 0u;
 }
 
 CommandChannel::TransactionId CommandChannel::SendCommand(
@@ -421,10 +431,15 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
   ]() mutable { event_callback(*event); }));
 }
 
-void CommandChannel::OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) {
+async_wait_result_t CommandChannel::OnChannelReady(async_t* async, zx_status_t status,
+                                                   const zx_packet_signal_t* signal) {
   FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
-  FXL_DCHECK(handle == channel_.get());
-  FXL_DCHECK(pending & ZX_CHANNEL_READABLE);
+  FXL_DCHECK(signal->observed & ZX_CHANNEL_READABLE);
+
+  if (status != ZX_OK) {
+    FXL_VLOG(1) << "hci: CommandChannel: channel error: " << zx_status_get_string(status);
+    return ASYNC_WAIT_FINISHED;
+  }
 
   // Allocate a buffer for the event. Since we don't know the size beforehand we allocate the
   // largest possible buffer.
@@ -432,73 +447,65 @@ void CommandChannel::OnHandleReady(zx_handle_t handle, zx_signals_t pending, uin
   // returns ZX_ERR_BUFFER_TOO_SMALL. Not sure if the second syscall would be worth it but
   // investigate.
 
-  auto packet = EventPacket::New(slab_allocators::kLargeControlPayloadSize);
-  if (!packet) {
-    FXL_LOG(ERROR) << "Failed to allocate event packet!";
-    return;
-  }
-
-  uint32_t read_size;
-  auto packet_bytes = packet->mutable_view()->mutable_data();
-  zx_status_t status = channel_.read(0u, packet_bytes.mutable_data(), packet_bytes.size(),
-                                     &read_size, nullptr, 0, nullptr);
-  if (status < 0) {
-    FXL_VLOG(1) << "hci: CommandChannel: Failed to read event bytes: "
-                << zx_status_get_string(status);
-    // Clear the handler so that we stop receiving events from it.
-    fsl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
-    return;
-  }
-
-  if (read_size < sizeof(EventHeader)) {
-    FXL_LOG(ERROR) << "hci: CommandChannel: Malformed event packet - "
-                   << "expected at least " << sizeof(EventHeader) << " bytes, "
-                   << "got " << read_size;
-    // TODO(armansito): Should this be fatal? Ignore for now.
-    return;
-  }
-
-  // Compare the received payload size to what is in the header.
-  const size_t rx_payload_size = read_size - sizeof(EventHeader);
-  const size_t size_from_header = packet->view().header().parameter_total_size;
-  if (size_from_header != rx_payload_size) {
-    FXL_LOG(ERROR) << "hci: CommandChannel: Malformed event packet - "
-                   << "payload size from header (" << size_from_header << ")"
-                   << " does not match received payload size: " << rx_payload_size;
-    return;
-  }
-
-  packet->InitializeFromBuffer();
-
-  // Check to see if this event is in response to the currently pending command.
-  PendingTransactionData* pending_command = GetPendingCommand();
-  if (pending_command) {
-    if (pending_command->complete_event_code == packet->event_code()) {
-      if (HandlePendingCommandComplete(std::move(packet))) return;
-
-      // |packet| should not have been moved in this case. It will be accessed below.
-      FXL_DCHECK(packet);
-    } else if (packet->event_code() == kCommandStatusEventCode) {
-      HandlePendingCommandStatus(*packet);
-      return;
+  for (size_t count = 0; count < signal->count; count++) {
+    uint32_t read_size;
+    auto packet = EventPacket::New(slab_allocators::kLargeControlPayloadSize);
+    if (!packet) {
+      FXL_LOG(ERROR) << "Failed to allocate event packet!";
+      return ASYNC_WAIT_FINISHED;
+    }
+    auto packet_bytes = packet->mutable_view()->mutable_data();
+    zx_status_t read_status = channel_.read(0u, packet_bytes.mutable_data(), packet_bytes.size(),
+                                            &read_size, nullptr, 0, nullptr);
+    if (read_status < 0) {
+      FXL_VLOG(1) << "hci: CommandChannel: Failed to read event bytes: "
+                  << zx_status_get_string(read_status);
+      // Clear the handler so that we stop receiving events from it.
+      // TODO(jamuraa): signal upper layers that we can't read the channel.
+      return ASYNC_WAIT_FINISHED;
     }
 
-    // Fall through if the event did not match the currently pending command.
+    if (read_size < sizeof(EventHeader)) {
+      FXL_LOG(ERROR) << "hci: CommandChannel: Malformed event packet - "
+                     << "expected at least " << sizeof(EventHeader) << " bytes, "
+                     << "got " << read_size;
+      // TODO(armansito): Should this be fatal? Ignore for now.
+      continue;
+    }
+
+    // Compare the received payload size to what is in the header.
+    const size_t rx_payload_size = read_size - sizeof(EventHeader);
+    const size_t size_from_header = packet->view().header().parameter_total_size;
+    if (size_from_header != rx_payload_size) {
+      FXL_LOG(ERROR) << "hci: CommandChannel: Malformed event packet - "
+                     << "payload size from header (" << size_from_header << ")"
+                     << " does not match received payload size: " << rx_payload_size;
+      continue;
+    }
+
+    packet->InitializeFromBuffer();
+
+    // Check to see if this event is in response to the currently pending command.
+    PendingTransactionData* pending_command = GetPendingCommand();
+    if (pending_command) {
+      if (pending_command->complete_event_code == packet->event_code()) {
+        if (HandlePendingCommandComplete(std::move(packet))) continue;
+
+        // |packet| should not have been moved in this case. It will be accessed below.
+        FXL_DCHECK(packet);
+      } else if (packet->event_code() == kCommandStatusEventCode) {
+        HandlePendingCommandStatus(*packet);
+        continue;
+      }
+
+      // Fall through if the event did not match the currently pending command.
+    }
+
+    // The event did not match a pending command OR no command is currently
+    // pending. Notify the upper layers.
+    NotifyEventHandler(std::move(packet));
   }
-
-  // The event did not match a pending command OR no command is currently
-  // pending. Notify the upper layers.
-  NotifyEventHandler(std::move(packet));
-}
-
-void CommandChannel::OnHandleError(zx_handle_t handle, zx_status_t error) {
-  FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
-  FXL_DCHECK(handle == channel_.get());
-
-  FXL_VLOG(1) << "hci: CommandChannel: channel error: " << zx_status_get_string(error);
-
-  // Clear the handler so that we stop receiving events from it.
-  fsl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
+  return ASYNC_WAIT_AGAIN;
 }
 
 }  // namespace hci

@@ -9,8 +9,8 @@
 #include "apps/bluetooth/lib/common/run_task_sync.h"
 #include "apps/bluetooth/lib/hci/acl_data_packet.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fsl/threading/create_thread.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace bluetooth {
 namespace testing {
@@ -34,11 +34,17 @@ void FakeControllerBase::Start() {
   thread_ = fsl::CreateThread(&task_runner_, "bluetooth-hci-test-controller");
 
   auto setup_task = [this] {
-    cmd_handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
-        this, cmd_channel_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+    cmd_channel_wait_.set_object(cmd_channel_.get());
+    cmd_channel_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+    cmd_channel_wait_.set_handler(fbl::BindMember(this, &FakeControllerBase::HandleCommandPacket));
+    zx_status_t status = cmd_channel_wait_.Begin(fsl::MessageLoop::GetCurrent()->async());
+    FXL_DCHECK(status == ZX_OK);
     if (acl_channel_.is_valid()) {
-      acl_handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
-          this, acl_channel_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+      acl_channel_wait_.set_object(acl_channel_.get());
+      acl_channel_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+      acl_channel_wait_.set_handler(fbl::BindMember(this, &FakeControllerBase::HandleACLPacket));
+      zx_status_t status = acl_channel_wait_.Begin(fsl::MessageLoop::GetCurrent()->async());
+      FXL_DCHECK(status == ZX_OK);
     }
   };
 
@@ -97,15 +103,8 @@ void FakeControllerBase::CloseACLDataChannel() {
   common::RunTaskSync([this] { CloseACLDataChannelInternal(); }, task_runner_);
 }
 
-void FakeControllerBase::OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) {
-  if (handle == cmd_channel_.get()) {
-    HandleCommandPacket();
-  } else if (handle == acl_channel_.get()) {
-    HandleACLPacket();
-  }
-}
-
-void FakeControllerBase::HandleCommandPacket() {
+async_wait_result_t FakeControllerBase::HandleCommandPacket(async_t *async, zx_status_t wait_status,
+                                                            const zx_packet_signal_t *signal) {
   common::StaticByteBuffer<hci::kMaxCommandPacketPayloadSize> buffer;
   uint32_t read_size;
   zx_status_t status =
@@ -119,20 +118,22 @@ void FakeControllerBase::HandleCommandPacket() {
       FXL_LOG(ERROR) << "Failed to read on cmd channel: " << zx_status_get_string(status);
 
     CloseCommandChannelInternal();
-    return;
+    return ASYNC_WAIT_FINISHED;
   }
 
   if (read_size < sizeof(hci::CommandHeader)) {
     FXL_LOG(ERROR) << "Malformed command packet received";
-    return;
+    return ASYNC_WAIT_AGAIN;
   }
 
   common::MutableBufferView view(buffer.mutable_data(), read_size);
   common::PacketView<hci::CommandHeader> packet(&view, read_size - sizeof(hci::CommandHeader));
   OnCommandPacketReceived(packet);
+  return ASYNC_WAIT_AGAIN;
 }
 
-void FakeControllerBase::HandleACLPacket() {
+async_wait_result_t FakeControllerBase::HandleACLPacket(async_t *async, zx_status_t wait_status,
+                                                        const zx_packet_signal_t *signal) {
   common::StaticByteBuffer<hci::kMaxACLPayloadSize + sizeof(hci::ACLDataHeader)> buffer;
   uint32_t read_size;
   zx_status_t status =
@@ -145,28 +146,25 @@ void FakeControllerBase::HandleACLPacket() {
       FXL_LOG(ERROR) << "Failed to read on ACL channel: " << zx_status_get_string(status);
 
     CloseACLDataChannelInternal();
-    return;
+    return ASYNC_WAIT_FINISHED;
   }
 
   common::BufferView view(buffer.data(), read_size);
   OnACLDataPacketReceived(view);
+  return ASYNC_WAIT_AGAIN;
 }
 
 void FakeControllerBase::CloseCommandChannelInternal() {
   FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
-  if (!cmd_handler_key_) return;
-
-  fsl::MessageLoop::GetCurrent()->RemoveHandler(cmd_handler_key_);
-  cmd_handler_key_ = 0u;
+  cmd_channel_wait_.Cancel(fsl::MessageLoop::GetCurrent()->async());
+  cmd_channel_wait_.set_object(ZX_HANDLE_INVALID);
   cmd_channel_.reset();
 }
 
 void FakeControllerBase::CloseACLDataChannelInternal() {
   FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
-  if (!acl_handler_key_) return;
-
-  fsl::MessageLoop::GetCurrent()->RemoveHandler(acl_handler_key_);
-  acl_handler_key_ = 0u;
+  acl_channel_wait_.Cancel(fsl::MessageLoop::GetCurrent()->async());
+  acl_channel_wait_.set_object(ZX_HANDLE_INVALID);
   acl_channel_.reset();
 }
 

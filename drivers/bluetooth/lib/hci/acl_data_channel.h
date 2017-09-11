@@ -10,6 +10,7 @@
 #include <queue>
 #include <unordered_map>
 
+#include <async/wait.h>
 #include <zircon/compiler.h>
 #include <zx/channel.h>
 
@@ -63,10 +64,10 @@ class DataBufferInfo {
 //
 // This currently only supports the Packet-based Data Flow Control as defined in Core Spec v5.0, Vol
 // 2, Part E, Section 4.1.1.
-class ACLDataChannel final : public ::fsl::MessageLoopHandler {
+class ACLDataChannel final {
  public:
   ACLDataChannel(Transport* transport, zx::channel hci_acl_channel);
-  ~ACLDataChannel() override;
+  ~ACLDataChannel();
 
   // Starts listening on the HCI ACL data channel and starts handling data flow control.
   // |bredr_buffer_info| represents the controller's data buffering capacity for the
@@ -166,9 +167,9 @@ class ACLDataChannel final : public ::fsl::MessageLoopHandler {
   // locked context.
   void IncrementLETotalNumPacketsLocked(size_t count) __TA_REQUIRES(send_mutex_);
 
-  // ::fsl::MessageLoopHandler overrides:
-  void OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) override;
-  void OnHandleError(zx_handle_t handle, zx_status_t error) override;
+  // Read Ready Handler for |channel_|
+  async_wait_result_t OnChannelReady(async_t* async, zx_status_t status,
+                                     const zx_packet_signal_t* signal);
 
   // Used to assert that certain public functions are only called on the creation thread.
   fxl::ThreadChecker thread_checker_;
@@ -179,14 +180,14 @@ class ACLDataChannel final : public ::fsl::MessageLoopHandler {
   // The channel that we use to send/receive HCI ACL data packets.
   zx::channel channel_;
 
+  // Wait object for |channel_| on |io_task_runner_|
+  async::Wait channel_wait_;
+
   // True if this instance has been initialized through a call to Initialize().
   std::atomic_bool is_initialized_;
 
   // The event handler ID for the Number Of Completed Packets event.
   CommandChannel::EventHandlerId event_handler_id_;
-
-  // The HandlerKey returned from fsl::MessageLoop::AddHandler
-  fsl::MessageLoop::HandlerKey io_handler_key_;
 
   // The task runner used for posting tasks on the HCI transport I/O thread.
   fxl::RefPtr<fxl::TaskRunner> io_task_runner_;
