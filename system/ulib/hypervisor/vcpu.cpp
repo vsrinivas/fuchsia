@@ -165,6 +165,9 @@ static zx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t
     zx_vcpu_io_t mmio;
     if (inst->type == INST_MOV_WRITE) {
         switch (inst->mem) {
+        case 1:
+            status = inst_write8(inst, &mmio.u8);
+            break;
         case 2:
             status = inst_write16(inst, &mmio.u16);
             break;

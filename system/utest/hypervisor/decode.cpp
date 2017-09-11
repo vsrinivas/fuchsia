@@ -95,6 +95,37 @@ static bool decode_mov_89(void) {
     END_TEST;
 }
 
+/* 8-bit tests to compliment decode_mov_89. */
+static bool decode_mov_88(void) {
+    BEGIN_TEST;
+    zx_vcpu_state_t vcpu_state;
+    instruction_t inst;
+
+    // movb %ah, (%rsi)
+    uint8_t mov_ah[] = {0x88, 0x26};
+    EXPECT_EQ(inst_decode(mov_ah, 2, &vcpu_state, &inst), ZX_ERR_NOT_SUPPORTED);
+    // movb %bh, (%rsi)
+    uint8_t mov_bh[] = {0x88, 0x3e};
+    EXPECT_EQ(inst_decode(mov_bh, 2, &vcpu_state, &inst), ZX_ERR_NOT_SUPPORTED);
+    // movb %ch, (%rsi)
+    uint8_t mov_ch[] = {0x88, 0x2e};
+    EXPECT_EQ(inst_decode(mov_ch, 2, &vcpu_state, &inst), ZX_ERR_NOT_SUPPORTED);
+    // movb %dh, (%rsi)
+    uint8_t mov_dh[] = {0x88, 0x36};
+    EXPECT_EQ(inst_decode(mov_dh, 2, &vcpu_state, &inst), ZX_ERR_NOT_SUPPORTED);
+
+    // movb %dil,(%rsi)
+    uint8_t rex_mov[] = {0x40, 0x88, 0x3e};
+    EXPECT_EQ(inst_decode(rex_mov, 3, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_WRITE);
+    EXPECT_EQ(inst.mem, 1u);
+    EXPECT_EQ(inst.imm, 0u);
+    EXPECT_EQ(inst.reg, &vcpu_state.rdi);
+    EXPECT_NULL(inst.flags);
+
+    END_TEST;
+}
+
 static bool decode_mov_8b(void) {
     BEGIN_TEST;
 
@@ -166,6 +197,36 @@ static bool decode_mov_8b(void) {
     END_TEST;
 }
 
+/* 8-bit tests to compliment decode_mov_8b. */
+static bool decode_mov_8a(void) {
+    BEGIN_TEST;
+    zx_vcpu_state_t vcpu_state;
+    instruction_t inst;
+
+    // movb (%rsi), %ah
+    uint8_t mov_ah[] = {0x8a, 0x26};
+    EXPECT_EQ(inst_decode(mov_ah, 2, &vcpu_state, &inst), ZX_ERR_NOT_SUPPORTED);
+    // movb (%rsi), %bh
+    uint8_t mov_bh[] = {0x8a, 0x3e};
+    EXPECT_EQ(inst_decode(mov_bh, 2, &vcpu_state, &inst), ZX_ERR_NOT_SUPPORTED);
+    // movb (%rsi), %ch
+    uint8_t mov_ch[] = {0x8a, 0x2e};
+    EXPECT_EQ(inst_decode(mov_ch, 2, &vcpu_state, &inst), ZX_ERR_NOT_SUPPORTED);
+    // movb (%rsi), %dh
+    uint8_t mov_dh[] = {0x8a, 0x36};
+    EXPECT_EQ(inst_decode(mov_dh, 2, &vcpu_state, &inst), ZX_ERR_NOT_SUPPORTED);
+
+    // movb (%rsi)
+    uint8_t rex_mov[] = {0x40, 0x8a, 0x3e};
+    EXPECT_EQ(inst_decode(rex_mov, 3, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_READ);
+    EXPECT_EQ(inst.mem, 1u);
+    EXPECT_EQ(inst.imm, 0u);
+    EXPECT_EQ(inst.reg, &vcpu_state.rdi);
+    EXPECT_NULL(inst.flags);
+    END_TEST;
+}
+
 static bool decode_mov_c7(void) {
     BEGIN_TEST;
 
@@ -227,6 +288,23 @@ static bool decode_mov_c7(void) {
     EXPECT_NULL(inst.reg);
     EXPECT_NULL(inst.flags);
 
+    END_TEST;
+}
+
+/* 8-bit tests to compliment decode_mov_c7. */
+static bool decode_mov_c6(void) {
+    BEGIN_TEST;
+    zx_vcpu_state_t vcpu_state;
+    instruction_t inst;
+
+    // movb 0x1, (%rax)
+    uint8_t mov[] = {0xc6, 0, 0x1};
+    EXPECT_EQ(inst_decode(mov, 3, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_WRITE);
+    EXPECT_EQ(inst.mem, 1u);
+    EXPECT_EQ(inst.imm, 0x1u);
+    EXPECT_NULL(inst.reg);
+    EXPECT_NULL(inst.flags);
     END_TEST;
 }
 
@@ -415,8 +493,11 @@ static bool test_computing_flags(void) {
 
 BEGIN_TEST_CASE(decode)
 RUN_TEST(decode_failure)
+RUN_TEST(decode_mov_88)
 RUN_TEST(decode_mov_89)
+RUN_TEST(decode_mov_8a)
 RUN_TEST(decode_mov_8b)
+RUN_TEST(decode_mov_c6)
 RUN_TEST(decode_mov_c7)
 RUN_TEST(decode_movz_0f_b6)
 RUN_TEST(decode_movz_0f_b7)

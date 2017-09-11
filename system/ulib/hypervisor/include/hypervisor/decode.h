@@ -67,6 +67,7 @@ DEFINE_INST_READ(8);
     }
 DEFINE_INST_WRITE(32);
 DEFINE_INST_WRITE(16);
+DEFINE_INST_WRITE(8);
 #undef DEFINE_INST_WRITE
 
 #define DEFINE_INST_RW(size)                                                                    \

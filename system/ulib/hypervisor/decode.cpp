@@ -11,6 +11,8 @@
 static const uint8_t kRexRMask = 1u << 2;
 static const uint8_t kRexWMask = 1u << 3;
 static const uint8_t kModRMRegMask = 0b00111000;
+// The Operand Size (w) Bit.
+static const uint8_t kWMask = 1u;
 
 static bool is_h66_prefix(uint8_t prefix) {
     return prefix == 0x66;
@@ -35,9 +37,21 @@ static uint8_t displacement_size(uint8_t mod_rm) {
     }
 }
 
-static uint8_t mem_size(bool h66, bool rex_w) {
-    if (rex_w) {
+static uint8_t mem_size(bool h66, bool rex_w, bool w) {
+    if (!w) {
+        return 1;
+    } else if (rex_w) {
         return 8;
+    } else if (!h66) {
+        return 4;
+    } else {
+        return 2;
+    }
+}
+
+static uint8_t immediate_size(bool h66, bool w) {
+    if (!w) {
+        return 1;
     } else if (!h66) {
         return 4;
     } else {
@@ -49,7 +63,17 @@ static uint8_t register_id(uint8_t mod_rm, bool rex_r) {
     return static_cast<uint8_t>(((mod_rm >> 3) & 0b111) + (rex_r ? 0b1000 : 0));
 }
 
-static uint64_t* select_register(zx_vcpu_state_t* vcpu_state, uint8_t register_id) {
+// From Intel Volume 2, Appendix B.1.4.1
+//
+// Registers 4-7 (typically referring to SP,BP,SI,DI) instead refer to the
+// high byte registers (AH,CH,DH,BH) when using 1 byte registers and no rex
+// prefix is provided.
+static inline bool is_high_byte(uint8_t size, bool rex) {
+    return size == 1 && !rex;
+}
+
+static uint64_t* select_register(zx_vcpu_state_t* vcpu_state, uint8_t register_id, uint8_t size,
+                                 bool rex) {
     // From Intel Volume 2, Section 2.1.
     switch (register_id) {
     // From Intel Volume 2, Section 2.1.5.
@@ -62,12 +86,20 @@ static uint64_t* select_register(zx_vcpu_state_t* vcpu_state, uint8_t register_i
     case 3:
         return &vcpu_state->rbx;
     case 4:
+        if (is_high_byte(size, rex))
+            return nullptr;
         return &vcpu_state->rsp;
     case 5:
+        if (is_high_byte(size, rex))
+            return nullptr;
         return &vcpu_state->rbp;
     case 6:
+        if (is_high_byte(size, rex))
+            return nullptr;
         return &vcpu_state->rsi;
     case 7:
+        if (is_high_byte(size, rex))
+            return nullptr;
         return &vcpu_state->rdi;
     case 8:
         return &vcpu_state->r8;
@@ -131,9 +163,11 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, zx_vcpu_stat
     // From Intel Volume 2, Appendix 2.2.1: Only one REX prefix is allowed per
     // instruction. If used, the REX prefix byte must immediately precede the
     // opcode byte or the escape opcode byte (0FH).
+    bool rex = false;
     bool rex_r = false;
     bool rex_w = false;
     if (is_rex_prefix(inst_buf[0])) {
+        rex = true;
         rex_r = inst_buf[0] & kRexRMask;
         rex_w = inst_buf[0] & kRexWMask;
         inst_buf++;
@@ -154,34 +188,45 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, zx_vcpu_stat
     const uint8_t disp_size = displacement_size(mod_rm);
     switch (opcode) {
     // Move r to r/m.
-    case 0x89:
+    // 1000 100w : mod reg r/m
+    case 0x88:
+    case 0x89: {
         if (inst_len != disp_size + 2u)
             return ZX_ERR_OUT_OF_RANGE;
+        const bool w = opcode & kWMask;
         inst->type = INST_MOV_WRITE;
-        inst->mem = mem_size(h66, rex_w);
+        inst->mem = mem_size(h66, rex_w, w);
         inst->imm = 0;
-        inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r));
+        inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r), inst->mem, rex);
         inst->flags = NULL;
         return inst->reg == NULL ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
+    }
     // Move r/m to r.
-    case 0x8b:
+    // 1000 101w : mod reg r/m
+    case 0x8a:
+    case 0x8b: {
         if (inst_len != disp_size + 2u)
             return ZX_ERR_OUT_OF_RANGE;
+        const bool w = opcode & kWMask;
         inst->type = INST_MOV_READ;
-        inst->mem = mem_size(h66, rex_w);
+        inst->mem = mem_size(h66, rex_w, w);
         inst->imm = 0;
-        inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r));
+        inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r), inst->mem, rex);
         inst->flags = NULL;
         return inst->reg == NULL ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
+    }
     // Move imm to r/m.
+    // 1100 011w : mod 000 r/m : immediate data
+    case 0xc6:
     case 0xc7: {
-        const uint8_t imm_size = h66 ? 2 : 4;
+        const bool w = opcode & kWMask;
+        const uint8_t imm_size = immediate_size(h66, w);
         if (inst_len != disp_size + imm_size + 2u)
             return ZX_ERR_OUT_OF_RANGE;
         if ((mod_rm & kModRMRegMask) != 0)
             return ZX_ERR_INVALID_ARGS;
         inst->type = INST_MOV_WRITE;
-        inst->mem = mem_size(h66, rex_w);
+        inst->mem = mem_size(h66, rex_w, w);
         inst->imm = 0;
         inst->reg = NULL;
         inst->flags = NULL;
@@ -197,7 +242,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, zx_vcpu_stat
         inst->type = INST_MOV_READ;
         inst->mem = 1;
         inst->imm = 0;
-        inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r));
+        inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r), inst->mem, rex);
         inst->flags = NULL;
         return inst->reg == NULL ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
     // Move (16-bit) with zero-extend r/m to r.
@@ -209,7 +254,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, zx_vcpu_stat
         inst->type = INST_MOV_READ;
         inst->mem = 2;
         inst->imm = 0;
-        inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r));
+        inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r), inst->mem, rex);
         inst->flags = NULL;
         return inst->reg == NULL ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
     // Logical compare (8-bit) imm with r/m.
