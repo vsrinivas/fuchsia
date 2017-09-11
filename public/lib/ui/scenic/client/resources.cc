@@ -4,8 +4,8 @@
 
 #include "lib/ui/scenic/client/resources.h"
 
-#include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/fxl/logging.h"
+#include "lib/ui/scenic/fidl_helpers.h"
 
 namespace scenic_lib {
 
@@ -348,6 +348,10 @@ Renderer::~Renderer() = default;
 
 void Renderer::SetCamera(uint32_t camera_id) {
   session()->Enqueue(NewSetCameraOp(id(), camera_id));
+}
+
+void Renderer::SetDisableClipping(bool disable_clipping) {
+  session()->Enqueue(NewSetDisableClippingOp(id(), disable_clipping));
 }
 
 Layer::Layer(Session* session) : Resource(session) {

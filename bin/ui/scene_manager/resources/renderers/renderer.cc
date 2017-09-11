@@ -46,7 +46,7 @@ std::vector<escher::Object> Renderer::CreateDisplayList(
   TRACE_DURATION("gfx", "Renderer::CreateDisplayList");
 
   // Construct a display list from the tree.
-  Visitor v(default_material_);
+  Visitor v(default_material_, disable_clipping_);
   scene->Accept(&v);
   return v.TakeDisplayList();
 }
@@ -55,8 +55,14 @@ void Renderer::SetCamera(CameraPtr camera) {
   camera_ = std::move(camera);
 }
 
-Renderer::Visitor::Visitor(const escher::MaterialPtr& default_material)
-    : default_material_(default_material) {}
+void Renderer::DisableClipping(bool disable_clipping) {
+  disable_clipping_ = disable_clipping;
+}
+
+Renderer::Visitor::Visitor(const escher::MaterialPtr& default_material,
+                           bool disable_clipping)
+    : default_material_(default_material),
+      disable_clipping_(disable_clipping) {}
 
 std::vector<escher::Object> Renderer::Visitor::TakeDisplayList() {
   return std::move(display_list_);
@@ -88,7 +94,7 @@ void Renderer::Visitor::Visit(EntityNode* r) {
 
 void Renderer::Visitor::VisitNode(Node* r) {
   // If not clipping, recursively visit all descendants in the normal fashion.
-  if (!r->clip_to_self()) {
+  if (!r->clip_to_self() || disable_clipping_) {
     ForEachDirectDescendantFrontToBack(
         *r, [this](Node* node) { node->Accept(this); });
     return;
@@ -96,7 +102,7 @@ void Renderer::Visitor::VisitNode(Node* r) {
 
   // We might need to apply a clip.
   // Gather the escher::Objects corresponding to the children and imports.
-  Renderer::Visitor clippee_visitor(default_material_);
+  Renderer::Visitor clippee_visitor(default_material_, disable_clipping_);
   ForEachChildAndImportFrontToBack(
       *r, [&clippee_visitor](Node* node) { node->Accept(&clippee_visitor); });
 
@@ -112,7 +118,7 @@ void Renderer::Visitor::VisitNode(Node* r) {
   // Shapes/ShapeNodes amongst the node's parts.  First gather the
   // escher::Objects corresponding to these ShapeNodes.
   const escher::MaterialPtr kNoMaterial;
-  Renderer::Visitor clipper_visitor(kNoMaterial);
+  Renderer::Visitor clipper_visitor(kNoMaterial, disable_clipping_);
   ForEachPartFrontToBack(*r, [&clipper_visitor](Node* node) {
     if (node->IsKindOf<ShapeNode>()) {
       node->Accept(&clipper_visitor);

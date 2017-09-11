@@ -38,6 +38,9 @@ class Renderer : public Resource {
   // points at a scene.
   void SetCamera(CameraPtr camera);
 
+  // Set whether clipping is disabled; false by default.
+  void DisableClipping(bool disable_clipping);
+
   Camera* camera() const { return camera_.get(); }
 
  private:
@@ -69,16 +72,18 @@ class Renderer : public Resource {
    protected:
    private:
     friend class Renderer;
-    Visitor(const escher::MaterialPtr& default_material);
+    Visitor(const escher::MaterialPtr& default_material, bool disable_clipping);
 
     void VisitNode(Node* r);
 
     std::vector<escher::Object> display_list_;
     const escher::MaterialPtr& default_material_;
+    const bool disable_clipping_;
   };
 
   CameraPtr camera_;
   escher::MaterialPtr default_material_;
+  bool disable_clipping_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Renderer);
 };

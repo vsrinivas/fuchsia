@@ -71,6 +71,8 @@ std::ostream& operator<<(std::ostream& stream, const scenic::OpPtr& op) {
       return stream << "SET_EVENT_MASK";
     case Op::Tag::SET_LABEL:
       return stream << "SET_LABEL";
+    case Op::Tag::SET_DISABLE_CLIPPING:
+      return stream << "SET_DISABLE_CLIPPING";
     case Op::Tag::__UNKNOWN__:
       return stream << "__UNKNOWN__";
   }

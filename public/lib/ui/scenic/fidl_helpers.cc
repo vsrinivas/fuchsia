@@ -765,6 +765,18 @@ scenic::OpPtr NewSetLabelOp(uint32_t resource_id, const std::string& label) {
   return op;
 }
 
+scenic::OpPtr NewSetDisableClippingOp(uint32_t renderer_id,
+                                      bool disable_clipping) {
+  auto set_disable_clipping_op = scenic::SetDisableClippingOp::New();
+  set_disable_clipping_op->renderer_id = renderer_id;
+  set_disable_clipping_op->disable_clipping = disable_clipping;
+
+  auto op = scenic::Op::New();
+  op->set_set_disable_clipping(std::move(set_disable_clipping_op));
+
+  return op;
+}
+
 scenic::FloatValuePtr NewFloatValue(float value) {
   auto val = scenic::FloatValue::New();
   val->variable_id = 0;

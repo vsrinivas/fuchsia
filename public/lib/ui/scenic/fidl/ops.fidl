@@ -58,6 +58,9 @@ union Op {
 
   // Diagnostic operations.
   SetLabelOp set_label;
+
+  // Debugging operations.
+  SetDisableClippingOp set_disable_clipping;
 };
 
 // Instructs the compositor to create the specified |Resource|, and to register
@@ -487,4 +490,18 @@ struct SetRendererOp {
 struct SetEventMaskOp {
   uint32 id;
   uint32 event_mask;
+};
+
+// Set whether clipping should be disabled for the specified renderer.  For a
+// newly-created renderer, clipping will NOT be disabled (i.e. it will be
+// enabled).
+//
+// NOTE: this disables visual clipping only; objects are still clipped for the
+// purposes of hit-testing.
+//
+// |renderer_id| refs the target renderer.
+// |disable_clipping| specifies whether the clipping should be disabled.
+struct SetDisableClippingOp {
+  uint32 renderer_id;
+  bool disable_clipping;
 };

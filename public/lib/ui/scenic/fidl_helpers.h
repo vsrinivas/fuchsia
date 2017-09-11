@@ -171,6 +171,10 @@ scenic::OpPtr NewSetEventMaskOp(uint32_t resource_id, uint32_t event_mask);
 // Diagnostic operations.
 scenic::OpPtr NewSetLabelOp(uint32_t resource_id, const std::string& label);
 
+// Debugging operations.
+scenic::OpPtr NewSetDisableClippingOp(uint32_t resource_id,
+                                      bool disable_clipping);
+
 // Basic types.
 
 scenic::FloatValuePtr NewFloatValue(float value);

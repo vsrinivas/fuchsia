@@ -129,6 +129,8 @@ bool Session::ApplyOp(const scenic::OpPtr& op) {
       return ApplySetEventMaskOp(op->get_set_event_mask());
     case scenic::Op::Tag::SET_LABEL:
       return ApplySetLabelOp(op->get_set_label());
+    case scenic::Op::Tag::SET_DISABLE_CLIPPING:
+      return ApplySetDisableClippingOp(op->get_set_disable_clipping());
     case scenic::Op::Tag::__UNKNOWN__:
       // FIDL validation should make this impossible.
       FXL_CHECK(false);
@@ -515,6 +517,15 @@ bool Session::ApplySetLightIntensityOp(
 bool Session::ApplySetLabelOp(const scenic::SetLabelOpPtr& op) {
   if (auto r = resources_.FindResource<Resource>(op->id)) {
     return r->SetLabel(op->label.get());
+  }
+  return false;
+}
+
+bool Session::ApplySetDisableClippingOp(
+    const scenic::SetDisableClippingOpPtr& op) {
+  if (auto r = resources_.FindResource<Renderer>(op->renderer_id)) {
+    r->DisableClipping(op->disable_clipping);
+    return true;
   }
   return false;
 }

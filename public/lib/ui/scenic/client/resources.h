@@ -400,6 +400,11 @@ class Renderer final : public Resource {
   void SetCamera(const Camera& camera) { SetCamera(camera.id()); }
   void SetCamera(uint32_t camera_id);
 
+  // Set whether clipping is disabled for this renderer.
+  // NOTE: disabling clipping only has a visual effect; hit-testing is not
+  // affected.
+  void SetDisableClipping(bool disable_clipping);
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Renderer);
 };
