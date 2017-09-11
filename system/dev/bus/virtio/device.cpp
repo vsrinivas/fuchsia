@@ -304,7 +304,11 @@ void Device::WriteConfigBar(uint16_t offset, T val) {
 
 zx_status_t Device::CopyDeviceConfig(void* _buf, size_t len) {
     if (mmio_regs_.device_config) {
-        memcpy(_buf, (void *)mmio_regs_.device_config, len);
+        auto buf = static_cast<uint8_t*>(_buf);
+        auto config = static_cast<volatile uint8_t*>(mmio_regs_.device_config);
+        for (size_t i = 0; i < len; i++) {
+            buf[i] = config[i];
+        }
     } else {
         // XXX handle MSI vs noMSI
         size_t offset = VIRTIO_PCI_CONFIG_OFFSET_NOMSI;
