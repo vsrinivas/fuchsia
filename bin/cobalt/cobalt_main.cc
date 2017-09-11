@@ -14,10 +14,10 @@
 #include "apps/cobalt_client/src/config.h"
 #include "grpc++/grpc++.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/log_settings_command_line.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/log_settings_command_line.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/cobalt/config/metric_config.h"
 #include "third_party/cobalt/config/report_config.h"
@@ -47,11 +47,11 @@ using cobalt::encoder::send_retryer::SendRetryer;
 // Command-line flags
 
 // Used to override kScheduleIntervalDefault;
-constexpr ftl::StringView kScheduleIntervalSecondsFlagName =
+constexpr fxl::StringView kScheduleIntervalSecondsFlagName =
     "schedule_interval_seconds";
 
 // Used to override kMinIntervalDefault;
-constexpr ftl::StringView kMinIntervalSecondsFlagName = "min_interval_seconds";
+constexpr fxl::StringView kMinIntervalSecondsFlagName = "min_interval_seconds";
 
 // TODO(azani): Change to DNS-looked-up address.
 const char kCloudShufflerUri[] = "130.211.218.95:5001";
@@ -123,7 +123,7 @@ class CobaltEncoderImpl : public CobaltEncoder {
   Encoder encoder_;
   ShippingManager* shipping_manager_;  // not owned
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CobaltEncoderImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CobaltEncoderImpl);
 };
 
 CobaltEncoderImpl::CobaltEncoderImpl(
@@ -148,7 +148,7 @@ void CobaltEncoderImpl::AddStringObservation(
     case Encoder::kInvalidConfig:
     case Encoder::kEncodingFailed:
       callback(Status::INTERNAL_ERROR);
-      FTL_LOG(WARNING) << "Cobalt internal error: " << result.status;
+      FXL_LOG(WARNING) << "Cobalt internal error: " << result.status;
       return;
   }
 
@@ -172,7 +172,7 @@ void CobaltEncoderImpl::AddIndexObservation(
     case Encoder::kInvalidConfig:
     case Encoder::kEncodingFailed:
       callback(Status::INTERNAL_ERROR);
-      FTL_LOG(WARNING) << "Cobalt internal error: " << result.status;
+      FXL_LOG(WARNING) << "Cobalt internal error: " << result.status;
       return;
   }
 
@@ -192,7 +192,7 @@ void CobaltEncoderImpl::SendObservations(
 class CobaltControllerImpl : public CobaltController {
  public:
   // Does not take ownerhsip of |shipping_manager|.
-  CobaltControllerImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
+  CobaltControllerImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
                        ShippingManager* shipping_manager);
 
  private:
@@ -205,14 +205,14 @@ class CobaltControllerImpl : public CobaltController {
 
   void FailedSendAttempts(const FailedSendAttemptsCallback& callback);
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   ShippingManager* shipping_manager_;  // not owned
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CobaltControllerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CobaltControllerImpl);
 };
 
 CobaltControllerImpl::CobaltControllerImpl(
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
     ShippingManager* shipping_manager)
     : task_runner_(std::move(task_runner)),
       shipping_manager_(shipping_manager) {}
@@ -266,7 +266,7 @@ class CobaltEncoderFactoryImpl : public CobaltEncoderFactory {
       cobalt_encoder_bindings_;
   ShippingManager* shipping_manager_;  // not owned
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CobaltEncoderFactoryImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CobaltEncoderFactoryImpl);
 };
 
 CobaltEncoderFactoryImpl::CobaltEncoderFactoryImpl(
@@ -297,7 +297,7 @@ void CobaltEncoderFactoryImpl::GetEncoder(
 
 class CobaltApp {
  public:
-  CobaltApp(ftl::RefPtr<ftl::TaskRunner> task_runner,
+  CobaltApp(fxl::RefPtr<fxl::TaskRunner> task_runner,
             std::chrono::seconds schedule_interval,
             std::chrono::seconds min_interval);
 
@@ -319,10 +319,10 @@ class CobaltApp {
   std::unique_ptr<CobaltEncoderFactory> factory_impl_;
   fidl::BindingSet<CobaltEncoderFactory> factory_bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CobaltApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CobaltApp);
 };
 
-CobaltApp::CobaltApp(ftl::RefPtr<ftl::TaskRunner> task_runner,
+CobaltApp::CobaltApp(fxl::RefPtr<fxl::TaskRunner> task_runner,
                      std::chrono::seconds schedule_interval,
                      std::chrono::seconds min_interval)
     : context_(app::ApplicationContext::CreateFromStartupInfo()),
@@ -351,13 +351,13 @@ CobaltApp::CobaltApp(ftl::RefPtr<ftl::TaskRunner> task_runner,
   auto metric_parse_result =
       MetricRegistry::FromString(cobalt::kMetricConfigText, nullptr);
   // TODO(rudominer) Checkfailing is probably not the right thing to do.
-  FTL_CHECK(cobalt::config::kOK == metric_parse_result.second);
+  FXL_CHECK(cobalt::config::kOK == metric_parse_result.second);
   metric_registry_.reset(metric_parse_result.first.release());
 
   // Parse the encoding config string
   auto encoding_parse_result =
       EncodingRegistry::FromString(cobalt::kEncodingConfigText, nullptr);
-  FTL_CHECK(cobalt::config::kOK == encoding_parse_result.second);
+  FXL_CHECK(cobalt::config::kOK == encoding_parse_result.second);
   encoding_registry_.reset(encoding_parse_result.first.release());
 
   factory_impl_.reset(
@@ -386,8 +386,8 @@ ClientSecret CobaltApp::getClientSecret() {
 
 int main(int argc, const char** argv) {
   // Parse the flags.
-  const auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
-  ftl::SetLogSettingsFromCommandLine(command_line);
+  const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  fxl::SetLogSettingsFromCommandLine(command_line);
 
   // Parse the schedule_interval_seconds flag.
   std::chrono::seconds schedule_interval = kScheduleIntervalDefault;
@@ -411,7 +411,7 @@ int main(int argc, const char** argv) {
     }
   }
 
-  FTL_LOG(INFO) << "Cobalt client schedule params: schedule_interval="
+  FXL_LOG(INFO) << "Cobalt client schedule params: schedule_interval="
                 << schedule_interval.count()
                 << " seconds, min_interval=" << min_interval.count()
                 << " seconds.";

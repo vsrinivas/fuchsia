@@ -21,27 +21,27 @@
 #include "apps/cobalt_client/services/cobalt_controller.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/log_settings_command_line.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/log_settings_command_line.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 // Command-line flags
 
 // Don't use the network. Default=false (i.e. do use the network.)
-constexpr ftl::StringView kNoNetworkForTesting = "no_network_for_testing";
+constexpr fxl::StringView kNoNetworkForTesting = "no_network_for_testing";
 
 // Number of observations in each batch. Default=7.
-constexpr ftl::StringView kNumObservationsPerBatch =
+constexpr fxl::StringView kNumObservationsPerBatch =
     "num_observations_per_batch";
 
 // Skip running the tests that use the service from the environment.
 // We do this on the CQ and CI bots because they run with a special
 // test environment instead of the standard Fuchsia application
 // environment.
-constexpr ftl::StringView kSkipEnvironmentTest = "skip_environment_test";
+constexpr fxl::StringView kSkipEnvironmentTest = "skip_environment_test";
 
 namespace {
 
@@ -189,7 +189,7 @@ class CobaltTestApp {
   fidl::SynchronousInterfacePtr<cobalt::CobaltEncoder> encoder_;
   fidl::SynchronousInterfacePtr<cobalt::CobaltController> cobalt_controller_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CobaltTestApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CobaltTestApp);
 };
 
 bool CobaltTestApp::RunAllTestingStrategies() {
@@ -202,7 +202,7 @@ bool CobaltTestApp::RunAllTestingStrategies() {
   if (do_environment_test_) {
     return RunTestsUsingServiceFromEnvironment();
   } else {
-    FTL_LOG(INFO) << "Skipping RunTestsUsingServiceFromEnvironment because "
+    FXL_LOG(INFO) << "Skipping RunTestsUsingServiceFromEnvironment because "
                      "--skip_environment_test was passed.";
   }
   return true;
@@ -229,13 +229,13 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
 
   {
     std::ostringstream stream;
-    stream << "--verbose=" << ftl::GetVlogVerbosity();
+    stream << "--verbose=" << fxl::GetVlogVerbosity();
     launch_info->arguments.push_back(stream.str());
   }
   context_->launcher()->CreateApplication(std::move(launch_info),
                                           app_controller_.NewRequest());
   app_controller_.set_connection_error_handler([] {
-    FTL_LOG(ERROR) << "Connection error from CobaltTestApp to CobaltClient.";
+    FXL_LOG(ERROR) << "Connection error from CobaltTestApp to CobaltClient.";
   });
 
   fidl::SynchronousInterfacePtr<cobalt::CobaltEncoderFactory> factory;
@@ -256,7 +256,7 @@ bool CobaltTestApp::RunTestsWithRequestSendSoon() {
   // Invoke RequestSendSoonTests() three times and return true if it
   // succeeds all three times.
   for (int i = 0; i < 3; i++) {
-    FTL_LOG(INFO) << "\nRunTestsWithRequestSendSoon iteration " << i << ".";
+    FXL_LOG(INFO) << "\nRunTestsWithRequestSendSoon iteration " << i << ".";
     if (!RequestSendSoonTests()) {
       return false;
     }
@@ -271,7 +271,7 @@ bool CobaltTestApp::RunTestsWithBlockUntilEmpty() {
   // Invoke TestRareEventWithStringsUsingBlockUntilEmpty() three times and
   // return true if it succeeds all three times.
   for (int i = 0; i < 3; i++) {
-    FTL_LOG(INFO) << "\nRunTestsWithBlockUntilEmpty iteration " << i << ".";
+    FXL_LOG(INFO) << "\nRunTestsWithBlockUntilEmpty iteration " << i << ".";
     if (!TestRareEventWithStringsUsingBlockUntilEmpty()) {
       return false;
     }
@@ -290,7 +290,7 @@ bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
   // Invoke TestRareEventWithIndicesUsingServiceFromEnvironment() three times
   // and return true if it succeeds all three times.
   for (int i = 0; i < 3; i++) {
-    FTL_LOG(INFO) << "\nRunTestsUsingServiceFromEnvironment iteration " << i
+    FXL_LOG(INFO) << "\nRunTestsUsingServiceFromEnvironment iteration " << i
                   << ".";
     if (!TestRareEventWithIndicesUsingServiceFromEnvironment()) {
       return false;
@@ -314,57 +314,57 @@ bool CobaltTestApp::RequestSendSoonTests() {
 }
 
 bool CobaltTestApp::TestRareEventWithStrings() {
-  FTL_LOG(INFO) << "========================";
-  FTL_LOG(INFO) << "TestRareEventWithStrings";
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestRareEventWithStrings";
   bool use_request_send_soon = true;
   bool success =
       EncodeStringAndSend(kRareEventStringMetricId, kRareEventStringEncodingId,
                           kRareEvent1, use_request_send_soon);
-  FTL_LOG(INFO) << "TestRareEventWithStrings : " << (success ? "PASS" : "FAIL");
+  FXL_LOG(INFO) << "TestRareEventWithStrings : " << (success ? "PASS" : "FAIL");
   return success;
 }
 
 bool CobaltTestApp::TestRareEventWithIndices() {
-  FTL_LOG(INFO) << "========================";
-  FTL_LOG(INFO) << "TestRareEventWithIndices";
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestRareEventWithIndices";
   bool use_request_send_soon = true;
   for (uint32_t index : kRareEventIndicesToUse) {
     if (!EncodeIndexAndSend(kRareEventIndexMetricId, kRareEventIndexEncodingId,
                             index, use_request_send_soon)) {
-      FTL_LOG(INFO) << "TestRareEventWithIndices: FAIL";
+      FXL_LOG(INFO) << "TestRareEventWithIndices: FAIL";
       return false;
     }
   }
-  FTL_LOG(INFO) << "TestRareEventWithIndices: PASS";
+  FXL_LOG(INFO) << "TestRareEventWithIndices: PASS";
   return true;
 }
 
 bool CobaltTestApp::TestModuleUris() {
-  FTL_LOG(INFO) << "========================";
-  FTL_LOG(INFO) << "TestModuleUris";
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestModuleUris";
   bool use_request_send_soon = true;
   bool success =
       EncodeStringAndSend(kModuleViewsMetricId, kModuleViewsEncodingId,
                           kAModuleUri, use_request_send_soon);
-  FTL_LOG(INFO) << "TestModuleUris : " << (success ? "PASS" : "FAIL");
+  FXL_LOG(INFO) << "TestModuleUris : " << (success ? "PASS" : "FAIL");
   return success;
 }
 
 bool CobaltTestApp::TestRareEventWithStringsUsingBlockUntilEmpty() {
-  FTL_LOG(INFO) << "========================";
-  FTL_LOG(INFO) << "TestRareEventWithStringsUsingBlockUntilEmpty";
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestRareEventWithStringsUsingBlockUntilEmpty";
   bool use_request_send_soon = false;
   bool success =
       EncodeStringAndSend(kRareEventStringMetricId, kRareEventStringEncodingId,
                           kRareEvent1, use_request_send_soon);
-  FTL_LOG(INFO) << "TestRareEventWithStringsUsingBlockUntilEmpty : "
+  FXL_LOG(INFO) << "TestRareEventWithStringsUsingBlockUntilEmpty : "
                 << (success ? "PASS" : "FAIL");
   return success;
 }
 
 bool CobaltTestApp::TestRareEventWithIndicesUsingServiceFromEnvironment() {
-  FTL_LOG(INFO) << "========================";
-  FTL_LOG(INFO) << "TestRareEventWithIndicesUsingServiceFromEnvironment";
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestRareEventWithIndicesUsingServiceFromEnvironment";
   // We don't actually use the network in this test strategy because we
   // haven't constructed the Cobalt service ourselves and so we haven't had
   // the opportunity to configure the scheduling parameters.
@@ -373,12 +373,12 @@ bool CobaltTestApp::TestRareEventWithIndicesUsingServiceFromEnvironment() {
   for (uint32_t index : kRareEventIndicesToUse) {
     if (!EncodeIndexAndSend(kRareEventIndexMetricId, kRareEventIndexEncodingId,
                             index, false)) {
-      FTL_LOG(INFO)
+      FXL_LOG(INFO)
           << "TestRareEventWithIndicesUsingServiceFromEnvironment: FAIL";
       return false;
     }
   }
-  FTL_LOG(INFO) << "TestRareEventWithIndicesUsingServiceFromEnvironment: PASS";
+  FXL_LOG(INFO) << "TestRareEventWithIndicesUsingServiceFromEnvironment: PASS";
   use_network_ = save_use_network_value;
   return true;
 }
@@ -411,20 +411,20 @@ bool CobaltTestApp::EncodeAndSend(uint32_t metric_id,
     if (use_index) {
       encoder_->AddIndexObservation(metric_id, encoding_config_id, index,
                                     &status);
-      FTL_VLOG(1) << "AddIndex(" << index << ") => " << StatusToString(status);
+      FXL_VLOG(1) << "AddIndex(" << index << ") => " << StatusToString(status);
     } else {
       encoder_->AddStringObservation(metric_id, encoding_config_id, val,
                                      &status);
-      FTL_VLOG(1) << "AddString(" << val << ") => " << StatusToString(status);
+      FXL_VLOG(1) << "AddString(" << val << ") => " << StatusToString(status);
     }
     if (status != cobalt::Status::OK) {
-      FTL_LOG(ERROR) << "Add*Observation() => " << StatusToString(status);
+      FXL_LOG(ERROR) << "Add*Observation() => " << StatusToString(status);
       return false;
     }
   }
 
   if (!use_network_) {
-    FTL_LOG(INFO) << "Not using the network because --no_network_for_testing "
+    FXL_LOG(INFO) << "Not using the network because --no_network_for_testing "
                      "was passed.";
     return true;
   }
@@ -434,32 +434,32 @@ bool CobaltTestApp::EncodeAndSend(uint32_t metric_id,
   if (use_request_send_soon) {
     // Use the request-send-soon strategy to check the result of the send.
     bool send_success = false;
-    FTL_VLOG(1) << "Invoking RequestSendSoon() now...";
+    FXL_VLOG(1) << "Invoking RequestSendSoon() now...";
     cobalt_controller_->RequestSendSoon(&send_success);
-    FTL_VLOG(1) << "RequestSendSoon => " << send_success;
+    FXL_VLOG(1) << "RequestSendSoon => " << send_success;
     return send_success;
   }
 
   // Use the block-until-empty strategy to check the result of the send.
-  FTL_VLOG(1) << "Invoking BlockUntilEmpty(10)...";
+  FXL_VLOG(1) << "Invoking BlockUntilEmpty(10)...";
   cobalt_controller_->BlockUntilEmpty(10);
-  FTL_VLOG(1) << "BlockUntilEmpty() returned.";
+  FXL_VLOG(1) << "BlockUntilEmpty() returned.";
 
   uint32_t num_send_attempts;
   cobalt_controller_->NumSendAttempts(&num_send_attempts);
   uint32_t failed_send_attempts;
   cobalt_controller_->FailedSendAttempts(&failed_send_attempts);
-  FTL_VLOG(1) << "num_send_attempts=" << num_send_attempts;
-  FTL_VLOG(1) << "failed_send_attempts=" << failed_send_attempts;
+  FXL_VLOG(1) << "num_send_attempts=" << num_send_attempts;
+  FXL_VLOG(1) << "failed_send_attempts=" << failed_send_attempts;
   uint32_t expected_lower_bound = previous_value_of_num_send_attempts_ + 1;
   previous_value_of_num_send_attempts_ = num_send_attempts;
   if (num_send_attempts < expected_lower_bound) {
-    FTL_LOG(ERROR) << "num_send_attempts=" << num_send_attempts
+    FXL_LOG(ERROR) << "num_send_attempts=" << num_send_attempts
                    << " expected_lower_bound=" << expected_lower_bound;
     return false;
   }
   if (failed_send_attempts != 0) {
-    FTL_LOG(ERROR) << "failed_send_attempts=" << failed_send_attempts;
+    FXL_LOG(ERROR) << "failed_send_attempts=" << failed_send_attempts;
     return false;
   }
   return true;
@@ -468,8 +468,8 @@ bool CobaltTestApp::EncodeAndSend(uint32_t metric_id,
 }  // namespace
 
 int main(int argc, const char** argv) {
-  const auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
-  ftl::SetLogSettingsFromCommandLine(command_line);
+  const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  fxl::SetLogSettingsFromCommandLine(command_line);
   bool use_network = !command_line.HasOption(kNoNetworkForTesting);
   bool do_environment_test = !command_line.HasOption(kSkipEnvironmentTest);
   auto num_observations_per_batch = std::stoi(
@@ -479,9 +479,9 @@ int main(int argc, const char** argv) {
   CobaltTestApp app(use_network, do_environment_test,
                     num_observations_per_batch);
   if (!app.RunAllTestingStrategies()) {
-    FTL_LOG(ERROR) << "FAIL";
+    FXL_LOG(ERROR) << "FAIL";
     return 1;
   }
-  FTL_LOG(INFO) << "PASS";
+  FXL_LOG(INFO) << "PASS";
   return 0;
 }
