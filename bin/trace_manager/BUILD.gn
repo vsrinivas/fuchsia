@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/host.gni")
 import("//packages/package.gni")
 
 executable("trace_tests_bin") {
@@ -65,6 +66,7 @@ package("trace_tests") {
   tests = [
     {
       name = "trace_tests"
+
       # Disabled because several tests are crashing on release builds.
       disabled = true
     },
@@ -95,10 +97,19 @@ package("trace") {
   binaries = [ {
         name = "trace"
       } ]
+
+  # If your build includes the target trace tool, your $host_tools_dir
+  # contains the utilities to work with traces copied from the target.
+  data_deps = [
+    ":host_utils",
+  ]
 }
 
-group("host_utils") {
+install_host_tools("host_utils") {
   deps = [
-    "//apps/tracing/src/traceutil($host_toolchain)",
+    "src/traceutil",
+  ]
+  outputs = [
+    "traceutil",
   ]
 }
