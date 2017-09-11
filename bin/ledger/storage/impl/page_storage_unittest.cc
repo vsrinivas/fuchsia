@@ -62,6 +62,8 @@ class PageStorageImplAccessorForTest {
 
 namespace {
 
+using coroutine::CoroutineHandler;
+
 std::vector<PageStorage::CommitIdAndBytes> CommitAndBytesFromCommit(
     const Commit& commit) {
   std::vector<PageStorage::CommitIdAndBytes> result;
@@ -129,7 +131,7 @@ class FakePageDbImpl : public PageDbEmptyImpl {
       : coroutine_service_(coroutine_service), storage_(page_storage) {}
 
   Status Init() override { return Status::OK; }
-  Status CreateJournal(coroutine::CoroutineHandler* /*handler*/,
+  Status CreateJournal(CoroutineHandler* /*handler*/,
                        JournalType journal_type,
                        const CommitId& base,
                        std::unique_ptr<Journal>* journal) override {
@@ -139,7 +141,7 @@ class FakePageDbImpl : public PageDbEmptyImpl {
     return Status::OK;
   }
 
-  Status CreateMergeJournal(coroutine::CoroutineHandler* /*handler*/,
+  Status CreateMergeJournal(CoroutineHandler* /*handler*/,
                             const CommitId& base,
                             const CommitId& other,
                             std::unique_ptr<Journal>* journal) override {
@@ -340,7 +342,7 @@ class PageStorageTest : public StorageTest {
   }
 
   Status WriteObject(
-      coroutine::CoroutineHandler* handler,
+      CoroutineHandler* handler,
       ObjectData* data,
       PageDbObjectStatus object_status = PageDbObjectStatus::TRANSIENT) {
     return PageStorageImplAccessorForTest::GetDb(storage_).WriteObject(
@@ -352,8 +354,7 @@ class PageStorageTest : public StorageTest {
                                                                       object);
   }
 
-  Status DeleteObject(coroutine::CoroutineHandler* handler,
-                      ObjectId object_id) {
+  Status DeleteObject(CoroutineHandler* handler, ObjectId object_id) {
     return PageStorageImplAccessorForTest::GetDb(storage_).DeleteObject(
         handler, object_id);
   }
@@ -463,7 +464,7 @@ TEST_F(PageStorageTest, AddCommitsOutOfOrder) {
 }
 
 TEST_F(PageStorageTest, AddGetSyncedCommits) {
-  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+  EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
     FakeSyncDelegate sync;
     storage_->SetSyncDelegate(&sync);
 
@@ -705,7 +706,7 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
 }
 
 TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
-  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+  EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
     FakePageDbImpl db(&coroutine_service_, storage_.get());
 
     std::unique_ptr<Journal> journal;
@@ -863,7 +864,7 @@ TEST_F(PageStorageTest, AddSyncPiece) {
 }
 
 TEST_F(PageStorageTest, GetObject) {
-  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+  EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
     ObjectData data("Some data");
     ASSERT_EQ(Status::OK, WriteObject(handler, &data));
 
@@ -1164,7 +1165,7 @@ TEST_F(PageStorageTest, SyncMetadata) {
 }
 
 TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
-  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+  EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
     FakeSyncDelegate sync;
     storage_->SetSyncDelegate(&sync);
 

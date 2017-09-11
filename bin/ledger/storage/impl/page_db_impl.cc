@@ -27,6 +27,8 @@
 
 namespace storage {
 
+using coroutine::CoroutineHandler;
+
 namespace {
 
 void ExtractSortedCommitsIds(
@@ -130,7 +132,7 @@ std::unique_ptr<PageDb::Batch> PageDbImpl::StartBatch() {
                                            coroutine_service_, page_storage_);
 }
 
-Status PageDbImpl::GetHeads(coroutine::CoroutineHandler* /*handler*/,
+Status PageDbImpl::GetHeads(CoroutineHandler* /*handler*/,
                             std::vector<CommitId>* heads) {
   std::vector<std::pair<std::string, std::string>> entries;
   RETURN_ON_ERROR(
@@ -139,21 +141,19 @@ Status PageDbImpl::GetHeads(coroutine::CoroutineHandler* /*handler*/,
   return Status::OK;
 }
 
-Status PageDbImpl::GetCommitStorageBytes(
-    coroutine::CoroutineHandler* /*handler*/,
-    CommitIdView commit_id,
-    std::string* storage_bytes) {
+Status PageDbImpl::GetCommitStorageBytes(CoroutineHandler* /*handler*/,
+                                         CommitIdView commit_id,
+                                         std::string* storage_bytes) {
   return db_.Get(CommitRow::GetKeyFor(commit_id), storage_bytes);
 }
 
-Status PageDbImpl::GetImplicitJournalIds(
-    coroutine::CoroutineHandler* /*handler*/,
-    std::vector<JournalId>* journal_ids) {
+Status PageDbImpl::GetImplicitJournalIds(CoroutineHandler* /*handler*/,
+                                         std::vector<JournalId>* journal_ids) {
   return db_.GetByPrefix(convert::ToSlice(ImplicitJournalMetaRow::kPrefix),
                          journal_ids);
 }
 
-Status PageDbImpl::GetImplicitJournal(coroutine::CoroutineHandler* /*handler*/,
+Status PageDbImpl::GetImplicitJournal(CoroutineHandler* /*handler*/,
                                       const JournalId& journal_id,
                                       std::unique_ptr<Journal>* journal) {
   FTL_DCHECK(journal_id.size() == JournalEntryRow::kJournalIdSize);
@@ -224,9 +224,8 @@ Status PageDbImpl::GetObjectStatus(ObjectIdView object_id,
   return Status::OK;
 }
 
-Status PageDbImpl::GetUnsyncedCommitIds(
-    coroutine::CoroutineHandler* /*handler*/,
-    std::vector<CommitId>* commit_ids) {
+Status PageDbImpl::GetUnsyncedCommitIds(CoroutineHandler* /*handler*/,
+                                        std::vector<CommitId>* commit_ids) {
   std::vector<std::pair<std::string, std::string>> entries;
   RETURN_ON_ERROR(db_.GetEntriesByPrefix(
       convert::ToSlice(UnsyncedCommitRow::kPrefix), &entries));
@@ -234,7 +233,7 @@ Status PageDbImpl::GetUnsyncedCommitIds(
   return Status::OK;
 }
 
-Status PageDbImpl::IsCommitSynced(coroutine::CoroutineHandler* /*handler*/,
+Status PageDbImpl::IsCommitSynced(CoroutineHandler* /*handler*/,
                                   const CommitId& commit_id,
                                   bool* is_synced) {
   bool has_key;
@@ -252,7 +251,7 @@ Status PageDbImpl::GetSyncMetadata(ftl::StringView key, std::string* value) {
   return db_.Get(SyncMetadataRow::GetKeyFor(key), value);
 }
 
-Status PageDbImpl::AddHead(coroutine::CoroutineHandler* handler,
+Status PageDbImpl::AddHead(CoroutineHandler* handler,
                            CommitIdView head,
                            int64_t timestamp) {
   auto batch = StartBatch();
@@ -260,14 +259,13 @@ Status PageDbImpl::AddHead(coroutine::CoroutineHandler* handler,
   return batch->Execute();
 }
 
-Status PageDbImpl::RemoveHead(coroutine::CoroutineHandler* handler,
-                              CommitIdView head) {
+Status PageDbImpl::RemoveHead(CoroutineHandler* handler, CommitIdView head) {
   auto batch = StartBatch();
   batch->RemoveHead(handler, head);
   return batch->Execute();
 }
 
-Status PageDbImpl::AddCommitStorageBytes(coroutine::CoroutineHandler* handler,
+Status PageDbImpl::AddCommitStorageBytes(CoroutineHandler* handler,
                                          const CommitId& commit_id,
                                          ftl::StringView storage_bytes) {
   auto batch = StartBatch();
@@ -275,14 +273,14 @@ Status PageDbImpl::AddCommitStorageBytes(coroutine::CoroutineHandler* handler,
   return batch->Execute();
 }
 
-Status PageDbImpl::RemoveCommit(coroutine::CoroutineHandler* handler,
+Status PageDbImpl::RemoveCommit(CoroutineHandler* handler,
                                 const CommitId& commit_id) {
   auto batch = StartBatch();
   batch->RemoveCommit(handler, commit_id);
   return batch->Execute();
 }
 
-Status PageDbImpl::CreateJournal(coroutine::CoroutineHandler* handler,
+Status PageDbImpl::CreateJournal(CoroutineHandler* handler,
                                  JournalType journal_type,
                                  const CommitId& base,
                                  std::unique_ptr<Journal>* journal) {
@@ -291,7 +289,7 @@ Status PageDbImpl::CreateJournal(coroutine::CoroutineHandler* handler,
   return batch->Execute();
 }
 
-Status PageDbImpl::CreateMergeJournal(coroutine::CoroutineHandler* handler,
+Status PageDbImpl::CreateMergeJournal(CoroutineHandler* handler,
                                       const CommitId& base,
                                       const CommitId& other,
                                       std::unique_ptr<Journal>* journal) {
@@ -300,8 +298,7 @@ Status PageDbImpl::CreateMergeJournal(coroutine::CoroutineHandler* handler,
   return batch->Execute();
 }
 
-Status PageDbImpl::RemoveExplicitJournals(
-    coroutine::CoroutineHandler* handler) {
+Status PageDbImpl::RemoveExplicitJournals(CoroutineHandler* handler) {
   auto batch = StartBatch();
   batch->RemoveExplicitJournals(handler);
   return batch->Execute();
@@ -329,7 +326,7 @@ Status PageDbImpl::RemoveJournalEntry(const JournalId& journal_id,
   return batch->Execute();
 }
 
-Status PageDbImpl::WriteObject(coroutine::CoroutineHandler* handler,
+Status PageDbImpl::WriteObject(CoroutineHandler* handler,
                                ObjectIdView object_id,
                                std::unique_ptr<DataSource::DataChunk> content,
                                PageDbObjectStatus object_status) {
@@ -338,14 +335,14 @@ Status PageDbImpl::WriteObject(coroutine::CoroutineHandler* handler,
   return batch->Execute();
 }
 
-Status PageDbImpl::DeleteObject(coroutine::CoroutineHandler* handler,
+Status PageDbImpl::DeleteObject(CoroutineHandler* handler,
                                 ObjectIdView object_id) {
   auto batch = StartBatch();
   batch->DeleteObject(handler, object_id);
   return batch->Execute();
 }
 
-Status PageDbImpl::SetObjectStatus(coroutine::CoroutineHandler* handler,
+Status PageDbImpl::SetObjectStatus(CoroutineHandler* handler,
                                    ObjectIdView object_id,
                                    PageDbObjectStatus object_status) {
   auto batch = StartBatch();
@@ -353,14 +350,14 @@ Status PageDbImpl::SetObjectStatus(coroutine::CoroutineHandler* handler,
   return batch->Execute();
 }
 
-Status PageDbImpl::MarkCommitIdSynced(coroutine::CoroutineHandler* handler,
+Status PageDbImpl::MarkCommitIdSynced(CoroutineHandler* handler,
                                       const CommitId& commit_id) {
   auto batch = StartBatch();
   batch->MarkCommitIdSynced(handler, commit_id);
   return batch->Execute();
 }
 
-Status PageDbImpl::MarkCommitIdUnsynced(coroutine::CoroutineHandler* handler,
+Status PageDbImpl::MarkCommitIdUnsynced(CoroutineHandler* handler,
                                         const CommitId& commit_id,
                                         uint64_t generation) {
   auto batch = StartBatch();
@@ -368,7 +365,7 @@ Status PageDbImpl::MarkCommitIdUnsynced(coroutine::CoroutineHandler* handler,
   return batch->Execute();
 }
 
-Status PageDbImpl::SetSyncMetadata(coroutine::CoroutineHandler* handler,
+Status PageDbImpl::SetSyncMetadata(CoroutineHandler* handler,
                                    ftl::StringView key,
                                    ftl::StringView value) {
   auto batch = StartBatch();

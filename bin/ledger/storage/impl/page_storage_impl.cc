@@ -48,6 +48,8 @@
 
 namespace storage {
 
+using coroutine::CoroutineHandler;
+
 namespace {
 
 using StreamingHash = glue::SHA256StreamingHash;
@@ -97,7 +99,7 @@ PageStorageImpl::~PageStorageImpl() {
 void PageStorageImpl::Init(std::function<void(Status)> callback) {
   coroutine_service_->StartCoroutine([
     this, final_callback = std::move(callback)
-  ](coroutine::CoroutineHandler * handler) mutable {
+  ](CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
@@ -117,7 +119,7 @@ void PageStorageImpl::GetHeadCommitIds(
     std::function<void(Status, std::vector<CommitId>)> callback) {
   coroutine_service_->StartCoroutine([
     this, final_callback = std::move(callback)
-  ](coroutine::CoroutineHandler * handler) {
+  ](CoroutineHandler * handler) {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
@@ -132,7 +134,7 @@ void PageStorageImpl::GetCommit(
     std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
   coroutine_service_->StartCoroutine([
     this, commit_id = commit_id.ToString(), final_callback = std::move(callback)
-  ](coroutine::CoroutineHandler * handler) {
+  ](CoroutineHandler * handler) {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
@@ -149,7 +151,7 @@ void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<const Commit> commit,
   coroutine_service_->StartCoroutine(ftl::MakeCopyable([
     this, commit = std::move(commit), new_objects = std::move(new_objects),
     final_callback = std::move(callback)
-  ](coroutine::CoroutineHandler * handler) mutable {
+  ](CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
@@ -173,7 +175,7 @@ void PageStorageImpl::AddCommitsFromSync(
   coroutine_service_->StartCoroutine(ftl::MakeCopyable([
     this, ids_and_bytes = std::move(ids_and_bytes),
     final_callback = std::move(callback)
-  ](coroutine::CoroutineHandler * handler) mutable {
+  ](CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
@@ -197,7 +199,7 @@ void PageStorageImpl::StartCommit(
     std::function<void(Status, std::unique_ptr<Journal>)> callback) {
   coroutine_service_->StartCoroutine([
     this, commit_id, journal_type, final_callback = std::move(callback)
-  ](coroutine::CoroutineHandler * handler) mutable {
+  ](CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
@@ -214,7 +216,7 @@ void PageStorageImpl::StartMergeCommit(
     std::function<void(Status, std::unique_ptr<Journal>)> callback) {
   coroutine_service_->StartCoroutine([
     this, left, right, final_callback = std::move(callback)
-  ](coroutine::CoroutineHandler * handler) mutable {
+  ](CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
@@ -266,7 +268,7 @@ void PageStorageImpl::GetUnsyncedCommits(
         callback) {
   coroutine_service_->StartCoroutine([
     this, final_callback = std::move(callback)
-  ](coroutine::CoroutineHandler * handler) {
+  ](CoroutineHandler * handler) {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
     std::vector<std::unique_ptr<const Commit>> unsynced_commits;
@@ -279,7 +281,7 @@ void PageStorageImpl::MarkCommitSynced(const CommitId& commit_id,
                                        std::function<void(Status)> callback) {
   coroutine_service_->StartCoroutine([
     this, commit_id, final_callback = std::move(callback)
-  ](coroutine::CoroutineHandler * handler) {
+  ](CoroutineHandler * handler) {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
@@ -298,7 +300,7 @@ void PageStorageImpl::MarkPieceSynced(ObjectIdView object_id,
                                       std::function<void(Status)> callback) {
   coroutine_service_->StartCoroutine([
     this, object_id = object_id.ToString(), final_callback = std::move(callback)
-  ](coroutine::CoroutineHandler * handler) mutable {
+  ](CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
@@ -450,7 +452,7 @@ void PageStorageImpl::SetSyncMetadata(ftl::StringView key,
   coroutine_service_->StartCoroutine([
     this, key = key.ToString(), value = value.ToString(),
     final_callback = std::move(callback)
-  ](coroutine::CoroutineHandler * handler) mutable {
+  ](CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
@@ -526,7 +528,7 @@ void PageStorageImpl::NotifyWatchers() {
   }
 }
 
-Status PageStorageImpl::MarkAllPiecesLocal(coroutine::CoroutineHandler* handler,
+Status PageStorageImpl::MarkAllPiecesLocal(CoroutineHandler* handler,
                                            PageDb::Batch* batch,
                                            std::vector<ObjectId> object_ids) {
   std::unordered_set<ObjectId> seen_ids;
@@ -569,7 +571,7 @@ Status PageStorageImpl::MarkAllPiecesLocal(coroutine::CoroutineHandler* handler,
   return Status::OK;
 }
 
-Status PageStorageImpl::ContainsCommit(coroutine::CoroutineHandler* handler,
+Status PageStorageImpl::ContainsCommit(CoroutineHandler* handler,
                                        CommitIdView id) {
   if (IsFirstCommit(id)) {
     return Status::OK;
@@ -589,7 +591,7 @@ void PageStorageImpl::AddPiece(ObjectId object_id,
   coroutine_service_->StartCoroutine(ftl::MakeCopyable([
     this, object_id = std::move(object_id), data = std::move(data), source,
     final_callback = std::move(callback)
-  ](coroutine::CoroutineHandler * handler) mutable {
+  ](CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
     callback(SynchronousAddPiece(handler, std::move(object_id), std::move(data),
@@ -849,7 +851,7 @@ void PageStorageImpl::ReadDataSource(
       }));
 }
 
-Status PageStorageImpl::SynchronousInit(coroutine::CoroutineHandler* handler) {
+Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
   // Initialize PageDb.
   Status s = db_.Init();
   if (s != Status::OK) {
@@ -916,7 +918,7 @@ Status PageStorageImpl::SynchronousInit(coroutine::CoroutineHandler* handler) {
 }
 
 Status PageStorageImpl::SynchronousGetCommit(
-    coroutine::CoroutineHandler* handler,
+    CoroutineHandler* handler,
     CommitId commit_id,
     std::unique_ptr<const Commit>* commit) {
   if (IsFirstCommit(commit_id)) {
@@ -947,7 +949,7 @@ Status PageStorageImpl::SynchronousGetCommit(
 }
 
 Status PageStorageImpl::SynchronousAddCommitFromLocal(
-    coroutine::CoroutineHandler* handler,
+    CoroutineHandler* handler,
     std::unique_ptr<const Commit> commit,
     std::vector<ObjectId> new_objects,
     bool* notify_watchers) {
@@ -965,7 +967,7 @@ Status PageStorageImpl::SynchronousAddCommitFromLocal(
 }
 
 Status PageStorageImpl::SynchronousAddCommitsFromSync(
-    coroutine::CoroutineHandler* handler,
+    CoroutineHandler* handler,
     std::vector<CommitIdAndBytes> ids_and_bytes,
     bool* notify_watchers) {
   std::vector<std::unique_ptr<const Commit>> commits;
@@ -1028,7 +1030,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
 }
 
 Status PageStorageImpl::SynchronousGetUnsyncedCommits(
-    coroutine::CoroutineHandler* handler,
+    CoroutineHandler* handler,
     std::vector<std::unique_ptr<const Commit>>* unsynced_commits) {
   std::vector<CommitId> commit_ids;
   Status s = db_.GetUnsyncedCommitIds(handler, &commit_ids);
@@ -1059,14 +1061,13 @@ Status PageStorageImpl::SynchronousGetUnsyncedCommits(
   return Status::OK;
 }
 
-Status PageStorageImpl::SynchronousMarkCommitSynced(
-    coroutine::CoroutineHandler* handler,
-    const CommitId& commit_id) {
+Status PageStorageImpl::SynchronousMarkCommitSynced(CoroutineHandler* handler,
+                                                    const CommitId& commit_id) {
   return db_.MarkCommitIdSynced(handler, commit_id);
 }
 
 Status PageStorageImpl::SynchronousAddCommits(
-    coroutine::CoroutineHandler* handler,
+    CoroutineHandler* handler,
     std::vector<std::unique_ptr<const Commit>> commits,
     ChangeSource source,
     std::vector<ObjectId> new_objects,
@@ -1208,7 +1209,7 @@ Status PageStorageImpl::SynchronousAddCommits(
 }
 
 Status PageStorageImpl::SynchronousAddPiece(
-    coroutine::CoroutineHandler* handler,
+    CoroutineHandler* handler,
     ObjectId object_id,
     std::unique_ptr<DataSource::DataChunk> data,
     ChangeSource source) {
