@@ -2252,6 +2252,23 @@ __NO_SAFESTACK static mx_status_t get_library_vmo(const char* name,
                           MX_HANDLE_INVALID, result);
 }
 
+__NO_SAFESTACK mx_status_t dl_clone_loader_sevice(mx_handle_t* out) {
+    if (loader_svc == MX_HANDLE_INVALID) {
+        return MX_ERR_UNAVAILABLE;
+    }
+    mx_handle_t h0, h1;
+    mx_status_t status;
+    if ((status = _mx_channel_create(0, &h0, &h1)) != MX_OK) {
+        return status;
+    }
+    if ((status = loader_svc_rpc(LOADER_SVC_OP_CLONE, NULL, 0, h1, NULL)) != MX_OK) {
+        _mx_handle_close(h0);
+    } else {
+        *out = h0;
+    }
+    return status;
+}
+
 __NO_SAFESTACK static void log_write(const void* buf, size_t len) {
     // The loader service prints "header: %s\n" when we send %s,
     // so strip a trailing newline.
