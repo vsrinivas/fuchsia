@@ -5,7 +5,7 @@
 #include "time_server_config.h"
 
 #include "gtest/gtest.h"
-#include "lib/ftl/functional/auto_call.h"
+#include "lib/fxl/functional/auto_call.h"
 
 #define MULTILINE(...) #__VA_ARGS__
 #define INVALID_CONFIGS 4
@@ -42,7 +42,7 @@ TEST(TimeServerConfigTest, HandlesInvalidInput) {
     char filename[] = "/tmp/ts_test.XXXXXX";
     int fd = mkstemp(filename);
     ASSERT_NE(fd, -1) << "Can't create temp file";
-    auto ac1 = ftl::MakeAutoCall([&]() { unlink(filename); });
+    auto ac1 = fxl::MakeAutoCall([&]() { unlink(filename); });
     write(fd, invalid_configs[i], strlen(invalid_configs[i]));
     close(fd);
 
@@ -63,7 +63,7 @@ TEST(TimeServerConfigTest, HandlesValidInput) {
   char filename[] = "/tmp/ts_test.XXXXXX";
   int fd = mkstemp(filename);
   ASSERT_NE(fd, -1) << "Can't create temp file";
-  auto ac1 = ftl::MakeAutoCall([&]() { unlink(filename); });
+  auto ac1 = fxl::MakeAutoCall([&]() { unlink(filename); });
   write(fd, json, strlen(json));
   close(fd);
 
@@ -86,7 +86,7 @@ TEST(TimeServerConfigTest, HandlesMultipleAddressesInput) {
   char filename[] = "/tmp/ts_test.XXXXXX";
   int fd = mkstemp(filename);
   ASSERT_NE(fd, -1) << "Can't create temp file";
-  auto ac1 = ftl::MakeAutoCall([&]() { unlink(filename); });
+  auto ac1 = fxl::MakeAutoCall([&]() { unlink(filename); });
   write(fd, json, strlen(json));
   close(fd);
 
@@ -116,7 +116,7 @@ TEST(TimeServerConfigTest, HandlesMultipleServerInput) {
   char filename[] = "/tmp/ts_test.XXXXXX";
   int fd = mkstemp(filename);
   ASSERT_NE(fd, -1) << "Can't create temp file";
-  auto ac1 = ftl::MakeAutoCall([&]() { unlink(filename); });
+  auto ac1 = fxl::MakeAutoCall([&]() { unlink(filename); });
   write(fd, json, strlen(json));
   close(fd);
 
@@ -147,7 +147,7 @@ TEST(TimeServerConfigTest, HandlesMultipleServerNAddressesInput) {
   char filename[] = "/tmp/ts_test.XXXXXX";
   int fd = mkstemp(filename);
   ASSERT_NE(fd, -1) << "Can't create temp file";
-  auto ac1 = ftl::MakeAutoCall([&]() { unlink(filename); });
+  auto ac1 = fxl::MakeAutoCall([&]() { unlink(filename); });
   write(fd, json, strlen(json));
   close(fd);
 

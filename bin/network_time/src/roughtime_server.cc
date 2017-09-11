@@ -18,8 +18,8 @@
 #include <client.h>
 #include <openssl/rand.h>
 
-#include "lib/ftl/files/unique_fd.h"
-#include "lib/ftl/functional/auto_call.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/functional/auto_call.h"
 #include "logging.h"
 
 namespace timeservice {
@@ -63,8 +63,8 @@ Status RoughTimeServer::GetTimeFromServer(
                   << gai_strerror(err);
     return NETWORK_ERROR;
   }
-  auto ac1 = ftl::MakeAutoCall([&]() { freeaddrinfo(addrs); });
-  ftl::UniqueFD sock_ufd(
+  auto ac1 = fxl::MakeAutoCall([&]() { freeaddrinfo(addrs); });
+  fxl::UniqueFD sock_ufd(
       socket(addrs->ai_family, addrs->ai_socktype, addrs->ai_protocol));
   if (!sock_ufd.is_valid()) {
     TS_LOG(ERROR) << "Failed to create UDP socket: " << strerror(errno);

@@ -14,7 +14,7 @@
 #include <thread>
 
 #include "gtest/gtest.h"
-#include "lib/ftl/files/unique_fd.h"
+#include "lib/fxl/files/unique_fd.h"
 
 #define PORT 3453
 
@@ -69,7 +69,7 @@ TEST(RoughTimeServerTest, TestServerRequest) {
   struct sockaddr_in serveraddr;
 
   memset(&serveraddr, 0, sizeof(serveraddr));
-  ftl::UniqueFD sock_ufd(socket(AF_INET, SOCK_DGRAM, 0));
+  fxl::UniqueFD sock_ufd(socket(AF_INET, SOCK_DGRAM, 0));
   ASSERT_TRUE(sock_ufd.is_valid())
       << "udp server: socket call" << strerror(errno);
   int sock = sock_ufd.get();

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "lib/ftl/log_settings.h"
-#include "lib/ftl/logging.h"
+#include "lib/fxl/log_settings.h"
+#include "lib/fxl/logging.h"
 
-#define TS_LOG(LEVEL) FTL_LOG(LEVEL) << "time-service: "
+#define TS_LOG(LEVEL) FXL_LOG(LEVEL) << "time-service: "

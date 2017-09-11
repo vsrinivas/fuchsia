@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/log_settings_command_line.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/log_settings_command_line.h"
 
 #include "logging.h"
 #include "time_service.h"
 
 int main(int argc, char** argv) {
-  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
-  if (!ftl::SetLogSettingsFromCommandLine(command_line))
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
   TS_LOG(INFO) << "starting";
   if (argc != 2) {
