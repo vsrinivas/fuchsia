@@ -3,7 +3,8 @@
         "cpp"
     ],
     "packages": {
-        "network": "//apps/network:network_pkg",
-        "network_examples": "//apps/network/examples"
+        "network": "//garnet/bin/network:network_pkg",
+        "postfile": "//garnet/examples/postfile",
+        "wget": "//garnet/examples/wget"
     }
 }
