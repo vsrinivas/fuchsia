@@ -34,8 +34,8 @@
 #endif
 
 #if defined(CUBE_USE_IMAGE_PIPE)
-#include "application/lib/app/application_context.h"
-#include "application/lib/app/connect.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/connect.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/log_settings.h"
 #include "lib/ftl/logging.h"

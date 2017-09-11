@@ -31,7 +31,7 @@ executable("display_pipe_service") {
     "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/magma_util",
     "//garnet/public/lib/images/fidl",
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",
     "//magma/src/display_pipe/services",

@@ -35,7 +35,7 @@ source_set("vkcube_common") {
     "$magma_build_root:vulkan",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:trace",
-    "//application/lib/app",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
     "//magma/src/display_pipe",
