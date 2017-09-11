@@ -19,6 +19,7 @@
 
 #include "block.h"
 #include "device.h"
+#include "rng.h"
 #include "ethernet.h"
 #include "gpu.h"
 #include "trace.h"
@@ -66,6 +67,11 @@ extern "C" mx_status_t virtio_bind(void* ctx, mx_device_t* device, void** cookie
     case 0x1050:
         LTRACEF("found gpu device\n");
         vd.reset(new virtio::GpuDevice(device));
+        break;
+    case 0x1005:
+    case 0x1044:
+        LTRACEF("found entropy device\n");
+        vd.reset(new virtio::RngDevice(device));
         break;
     default:
         printf("unhandled device id, how did this happen?\n");

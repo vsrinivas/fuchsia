@@ -14,6 +14,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/ethernet.cpp \
     $(LOCAL_DIR)/gpu.cpp \
     $(LOCAL_DIR)/ring.cpp \
+    $(LOCAL_DIR)/rng.cpp \
     $(LOCAL_DIR)/utils.cpp \
     $(LOCAL_DIR)/virtio_c.c \
     $(LOCAL_DIR)/virtio_driver.cpp \
