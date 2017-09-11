@@ -569,7 +569,7 @@ mx_status_t Vcpu::Create(mx_vaddr_t ip, mx_vaddr_t cr3, fbl::RefPtr<VmObject> ap
     mx_status_t status = alloc_vpid(&vpid);
     if (status != MX_OK)
         return status;
-    auto auto_call = fbl::MakeAutoCall([=]() { release_vpid(vpid); });
+    auto auto_call = fbl::MakeAutoCall([=]() { free_vpid(vpid); });
 
     // When we create a VCPU, we bind it to the current thread and a CPU based
     // on the VPID. The VCPU must always be run on the current thread and the
@@ -641,7 +641,7 @@ Vcpu::~Vcpu() {
     // pin the current thread to the same CPU as the VCPU.
     AutoPin pin(this);
     vmclear(vmcs_page_.PhysicalAddress());
-    __UNUSED mx_status_t status = release_vpid(vpid_);
+    __UNUSED mx_status_t status = free_vpid(vpid_);
     DEBUG_ASSERT(status == MX_OK);
 }
 

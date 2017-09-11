@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "vmx_cpu_state_priv.h"
+
 #include <assert.h>
 #include <bits.h>
 #include <string.h>
@@ -13,10 +15,6 @@
 #include <vm/pmm.h>
 
 #include <fbl/mutex.h>
-
-#include "vmx_cpu_state_priv.h"
-
-using fbl::AutoLock;
 
 static fbl::Mutex vmx_mutex;
 static size_t vcpus TA_GUARDED(vmx_mutex) = 0;
@@ -81,6 +79,12 @@ EptInfo::EptInfo() {
         BIT_SHIFT(ept_info, 26);
 }
 
+VmxPage::~VmxPage() {
+    vm_page_t* page = paddr_to_vm_page(pa_);
+    if (page != nullptr)
+        pmm_free_page(page);
+}
+
 mx_status_t VmxPage::Alloc(const VmxInfo& vmx_info, uint8_t fill) {
     // From Volume 3, Appendix A.1: Bits 44:32 report the number of bytes that
     // software should allocate for the VMXON region and any VMCS region. It is
@@ -112,55 +116,40 @@ void* VmxPage::VirtualAddress() const {
     return paddr_to_kvaddr(pa_);
 }
 
-VmxPage::~VmxPage() {
-    vm_page_t* page = paddr_to_vm_page(pa_);
-    if (page != nullptr)
-        pmm_free_page(page);
-}
-
-struct vmxon_context {
-    fbl::Array<VmxPage>* vmxon_pages;
-    fbl::atomic<mp_cpu_mask_t> cpu_mask;
-
-    vmxon_context(fbl::Array<VmxPage>* vp)
-        : vmxon_pages(vp), cpu_mask(0) {}
-};
-
-static void vmxon_task(void* arg) {
-    auto ctx = static_cast<vmxon_context*>(arg);
-    uint cpu_num = arch_curr_cpu_num();
-    VmxPage& page = (*ctx->vmxon_pages)[cpu_num];
+static mx_status_t vmxon_task(void* context, uint cpu_num) {
+    auto pages = static_cast<fbl::Array<VmxPage>*>(context);
+    VmxPage& page = (*pages)[cpu_num];
 
     // Check that we have instruction information when we VM exit on IO.
     VmxInfo vmx_info;
     if (!vmx_info.io_exit_info)
-        return;
+        return MX_ERR_NOT_SUPPORTED;
 
     // Check that full VMX controls are supported.
     if (!vmx_info.vmx_controls)
-        return;
+        return MX_ERR_NOT_SUPPORTED;
 
     // Check that a page-walk length of 4 is supported.
     EptInfo ept_info;
     if (!ept_info.page_walk_4)
-        return;
+        return MX_ERR_NOT_SUPPORTED;
 
     // Check use write-back memory for EPT is supported.
     if (!ept_info.write_back)
-        return;
+        return MX_ERR_NOT_SUPPORTED;
 
     // Check that accessed and dirty flags for EPT are supported.
     if (!ept_info.ept_flags)
-        return;
+        return MX_ERR_NOT_SUPPORTED;
 
     // Check that the INVEPT instruction is supported.
     if (!ept_info.invept)
-        return;
+        return MX_ERR_NOT_SUPPORTED;
 
     // Check that wait for startup IPI is a supported activity state.
     MiscInfo misc_info;
     if (!misc_info.wait_for_sipi)
-        return;
+        return MX_ERR_NOT_SUPPORTED;
 
     // Enable VMXON, if required.
     uint64_t feature_control = read_msr(X86_MSR_IA32_FEATURE_CONTROL);
@@ -168,7 +157,7 @@ static void vmxon_task(void* arg) {
         !(feature_control & X86_MSR_IA32_FEATURE_CONTROL_VMXON)) {
         if ((feature_control & X86_MSR_IA32_FEATURE_CONTROL_LOCK) &&
             !(feature_control & X86_MSR_IA32_FEATURE_CONTROL_VMXON)) {
-            return;
+            return MX_ERR_NOT_SUPPORTED;
         }
         feature_control |= X86_MSR_IA32_FEATURE_CONTROL_LOCK;
         feature_control |= X86_MSR_IA32_FEATURE_CONTROL_VMXON;
@@ -178,10 +167,10 @@ static void vmxon_task(void* arg) {
     // Check control registers are in a VMX-friendly state.
     uint64_t cr0 = x86_get_cr0();
     if (cr_is_invalid(cr0, X86_MSR_IA32_VMX_CR0_FIXED0, X86_MSR_IA32_VMX_CR0_FIXED1))
-        return;
+        return MX_ERR_BAD_STATE;
     uint64_t cr4 = x86_get_cr4() | X86_CR4_VMXE;
     if (cr_is_invalid(cr4, X86_MSR_IA32_VMX_CR4_FIXED0, X86_MSR_IA32_VMX_CR4_FIXED1))
-        return;
+        return MX_ERR_BAD_STATE;
 
     // Enable VMX using the VMXE bit.
     x86_set_cr4(cr4);
@@ -194,10 +183,10 @@ static void vmxon_task(void* arg) {
     mx_status_t status = vmxon(page.PhysicalAddress());
     if (status != MX_OK) {
         dprintf(CRITICAL, "Failed to turn on VMX on CPU %u\n", cpu_num);
-        return;
+        return status;
     }
 
-    ctx->cpu_mask.fetch_or(1 << cpu_num);
+    return MX_OK;
 }
 
 static void vmxoff_task(void* arg) {
@@ -214,9 +203,16 @@ static void vmxoff_task(void* arg) {
 
 // static
 mx_status_t VmxCpuState::Create(fbl::unique_ptr<VmxCpuState>* out) {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<VmxCpuState> vmx_cpu_state(new (&ac) VmxCpuState);
+    if (!ac.check())
+        return MX_ERR_NO_MEMORY;
+    mx_status_t status = vmx_cpu_state->Init();
+    if (status != MX_OK)
+        return status;
+
     // Allocate a VMXON page for each CPU.
     size_t num_cpus = arch_max_num_cpus();
-    fbl::AllocChecker ac;
     VmxPage* pages = new (&ac) VmxPage[num_cpus];
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
@@ -229,64 +225,35 @@ mx_status_t VmxCpuState::Create(fbl::unique_ptr<VmxCpuState>* out) {
     }
 
     // Enable VMX for all online CPUs.
-    vmxon_context vmxon_ctx(&vmxon_pages);
-    mp_cpu_mask_t online_mask = mp_get_online_mask();
-    mp_sync_exec(MP_IPI_TARGET_MASK, online_mask, vmxon_task, &vmxon_ctx);
-    mp_cpu_mask_t cpu_mask = vmxon_ctx.cpu_mask.load();
-    if (cpu_mask != online_mask) {
+    mp_cpu_mask_t cpu_mask = percpu_exec(vmxon_task, &vmxon_pages);
+    if (cpu_mask != mp_get_online_mask()) {
         mp_sync_exec(MP_IPI_TARGET_MASK, cpu_mask, vmxoff_task, nullptr);
         return MX_ERR_NOT_SUPPORTED;
     }
 
-    fbl::unique_ptr<VmxCpuState> vmx_cpu_state(new (&ac) VmxCpuState(fbl::move(vmxon_pages)));
-    if (!ac.check())
-        return MX_ERR_NO_MEMORY;
-    mx_status_t status = vmx_cpu_state->vpid_bitmap_.Reset(kNumVpids);
-    if (status != MX_OK)
-        return status;
-
+    vmx_cpu_state->vmxon_pages_ = fbl::move(vmxon_pages);
     *out = fbl::move(vmx_cpu_state);
     return MX_OK;
 }
-
-VmxCpuState::VmxCpuState(fbl::Array<VmxPage> vmxon_pages)
-    : vmxon_pages_(fbl::move(vmxon_pages)) {}
 
 VmxCpuState::~VmxCpuState() {
     mp_sync_exec(MP_IPI_TARGET_ALL, 0, vmxoff_task, nullptr);
 }
 
-mx_status_t VmxCpuState::AllocVpid(uint16_t* vpid) {
-    size_t first_unset;
-    bool all_set = vpid_bitmap_.Get(0, kNumVpids, &first_unset);
-    if (all_set)
-        return MX_ERR_NO_RESOURCES;
-    if (first_unset > UINT16_MAX)
-        return MX_ERR_OUT_OF_RANGE;
-    *vpid = (first_unset + 1) & UINT16_MAX;
-    return vpid_bitmap_.SetOne(first_unset);
-}
-
-mx_status_t VmxCpuState::ReleaseVpid(uint16_t vpid) {
-    if (vpid == 0 || !vpid_bitmap_.GetOne(vpid - 1))
-        return MX_ERR_INVALID_ARGS;
-    return vpid_bitmap_.ClearOne(vpid - 1);
-}
-
 mx_status_t alloc_vpid(uint16_t* vpid) {
-    AutoLock lock(&vmx_mutex);
+    fbl::AutoLock lock(&vmx_mutex);
     if (vcpus == 0) {
         mx_status_t status = VmxCpuState::Create(&vmx_cpu_state);
         if (status != MX_OK)
             return status;
     }
     vcpus++;
-    return vmx_cpu_state->AllocVpid(vpid);
+    return vmx_cpu_state->AllocId(vpid);
 }
 
-mx_status_t release_vpid(uint16_t vpid) {
-    AutoLock lock(&vmx_mutex);
-    mx_status_t status = vmx_cpu_state->ReleaseVpid(vpid);
+mx_status_t free_vpid(uint16_t vpid) {
+    fbl::AutoLock lock(&vmx_mutex);
+    mx_status_t status = vmx_cpu_state->FreeId(vpid);
     if (status != MX_OK)
         return status;
     vcpus--;

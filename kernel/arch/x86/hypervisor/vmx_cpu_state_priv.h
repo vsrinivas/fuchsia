@@ -7,6 +7,7 @@
 #pragma once
 
 #include <arch/hypervisor.h>
+#include <hypervisor/cpu_state.h>
 
 // clang-format off
 
@@ -29,8 +30,6 @@
 #define VMX_ERR_CHECK(var)                  "setna %[" #var "];" // Check CF and ZF for error.
 
 // clang-format on
-
-static const uint16_t kNumVpids = 64;
 
 /* Stores VMX info from the IA32_VMX_BASIC MSR. */
 struct VmxInfo {
@@ -70,22 +69,18 @@ struct VmxRegion {
 };
 
 /* Maintains the VMX state for each CPU. */
-class VmxCpuState {
+class VmxCpuState : public hypervisor::CpuState<uint16_t, 64> {
 public:
     static mx_status_t Create(fbl::unique_ptr<VmxCpuState>* out);
     ~VmxCpuState();
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmxCpuState);
 
-    mx_status_t AllocVpid(uint16_t* vpid);
-    mx_status_t ReleaseVpid(uint16_t vpid);
-
 private:
-    bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumVpids>> vpid_bitmap_;
     fbl::Array<VmxPage> vmxon_pages_;
 
-    explicit VmxCpuState(fbl::Array<VmxPage> vmxon_pages);
+    VmxCpuState() = default;
 };
 
 mx_status_t alloc_vpid(uint16_t* vpid);
-mx_status_t release_vpid(uint16_t vpid);
+mx_status_t free_vpid(uint16_t vpid);
 bool cr_is_invalid(uint64_t cr_value, uint32_t fixed0_msr, uint32_t fixed1_msr);
