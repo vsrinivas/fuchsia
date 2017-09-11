@@ -13,7 +13,7 @@
 #include "apps/maxwell/services/user/scope.fidl.h"
 #include "apps/maxwell/src/acquirers/story_info/initializer.fidl.h"
 #include "apps/maxwell/src/user/intelligence_services_impl.h"
-#include "apps/network/services/network_service.fidl.h"
+#include "lib/network/fidl/network_service.fidl.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/functional/make_copyable.h"
 

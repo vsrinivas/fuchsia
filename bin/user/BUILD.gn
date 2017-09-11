@@ -63,7 +63,7 @@ source_set("user_intelligence_provider") {
     "//apps/maxwell/services/user",
     "//apps/maxwell/services/user:scope",
     "//apps/maxwell/src/acquirers/story_info:initializer",
-    "//apps/network/services",
+    "//garnet/public/lib/network/fidl",
   ]
 
   defines = []
