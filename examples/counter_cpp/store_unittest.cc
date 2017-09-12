@@ -12,7 +12,7 @@
 #include "apps/modular/services/story/link.fidl.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace modular {
 namespace {
@@ -71,7 +71,7 @@ class LinkMock : public LinkMockBase {
   void UpdateObject(fidl::Array<fidl::String> path,
                     const fidl::String& json) override {
     LinkMockBase::UpdateObject(std::move(path), json);
-    mtl::MessageLoop::GetCurrent()->QuitNow();
+    fsl::MessageLoop::GetCurrent()->QuitNow();
   }
 
   fidl::InterfacePtr<modular::LinkWatcher> watcher;

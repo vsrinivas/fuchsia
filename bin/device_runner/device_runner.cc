@@ -32,7 +32,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace modular {
 
@@ -302,7 +302,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
         device_shell_->AppTerminate([this] {
           FXL_DLOG(INFO) << "- DeviceShell down";
           FXL_LOG(INFO) << "Clean Shutdown";
-          mtl::MessageLoop::GetCurrent()->QuitNow();
+          fsl::MessageLoop::GetCurrent()->QuitNow();
         });
       });
     });
@@ -343,7 +343,7 @@ int main(int argc, const char** argv) {
 
   modular::Settings settings(command_line);
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
 
   modular::DeviceRunnerApp app(settings);

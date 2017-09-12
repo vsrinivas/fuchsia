@@ -27,6 +27,6 @@ executable("remote_invoker_test") {
     "//apps/modular/services/remote",
     "//apps/modular/services/story",
     "//apps/modular/services/user",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }

@@ -9,7 +9,7 @@
 #include "apps/modular/lib/ledger/status.h"
 #include "apps/modular/lib/ledger/types.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace modular {
 
@@ -230,7 +230,7 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
       }
 
       std::string value;
-      if (!mtl::StringFromVmo(entry->value, &value)) {
+      if (!fsl::StringFromVmo(entry->value, &value)) {
         FXL_LOG(INFO) << " " << key << " error value";
         continue;
       }

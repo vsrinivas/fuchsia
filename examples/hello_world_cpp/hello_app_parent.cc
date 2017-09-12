@@ -12,7 +12,7 @@
 #include "apps/modular/examples/hello_world_cpp/hello.fidl.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 using examples::HelloPtr;
 
@@ -63,7 +63,7 @@ class HelloAppParent {
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   HelloAppParent app(command_line);
   loop.Run();
   return 0;

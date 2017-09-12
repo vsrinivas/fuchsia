@@ -10,7 +10,7 @@
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace modular {
 namespace testing {
@@ -84,7 +84,7 @@ class ComponentBase : protected SingleServiceApp<Component> {
           Base::PassBinding();  // To invoke done() after delete this.
       delete this;
       done();
-      mtl::MessageLoop::GetCurrent()->QuitNow();
+      fsl::MessageLoop::GetCurrent()->QuitNow();
     });
   }
 
@@ -92,7 +92,7 @@ class ComponentBase : protected SingleServiceApp<Component> {
     Base::PassBinding()->Close();
     modular::testing::Done([this] {
       delete this;
-      mtl::MessageLoop::GetCurrent()->QuitNow();
+      fsl::MessageLoop::GetCurrent()->QuitNow();
     });
   }
 

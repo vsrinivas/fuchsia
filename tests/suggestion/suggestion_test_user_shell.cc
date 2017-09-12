@@ -14,7 +14,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 using modular::testing::TestPoint;
 
@@ -129,7 +129,7 @@ class SuggestionTestUserShellApp
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   SuggestionTestUserShellApp::New();
   loop.Run();
   return 0;

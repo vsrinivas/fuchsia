@@ -14,7 +14,7 @@
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fxl/time/time_point.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace modular {
 

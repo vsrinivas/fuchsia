@@ -31,7 +31,7 @@ executable("oauth_token_manager") {
     "//apps/web_runner/services",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//magenta/system/ulib/trace-provider",
   ]
 }

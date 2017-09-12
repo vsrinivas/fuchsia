@@ -63,7 +63,7 @@ source_set("story_runner") {
     "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -78,7 +78,7 @@ executable("dev_story_shell") {
     "//apps/modular/services/story",
     "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 

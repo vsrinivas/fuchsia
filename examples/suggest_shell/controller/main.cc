@@ -16,7 +16,7 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 
@@ -82,7 +82,7 @@ class ControllerApp : public modular::SingleServiceApp<modular::Module>,
   }
 
   // |Terminate|
-  void Terminate() override { mtl::MessageLoop::GetCurrent()->QuitNow(); }
+  void Terminate() override { fsl::MessageLoop::GetCurrent()->QuitNow(); }
 
   // |LinkWatcher|
   void Notify(const fidl::String& json) override {
@@ -148,7 +148,7 @@ class ControllerApp : public modular::SingleServiceApp<modular::Module>,
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   ControllerApp app;
   loop.Run();
   return 0;

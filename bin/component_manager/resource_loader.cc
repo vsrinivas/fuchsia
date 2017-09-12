@@ -10,9 +10,9 @@
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "lib/mtl/socket/strings.h"
-#include "lib/mtl/vmo/file.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/vmo/file.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace component {
 
@@ -43,7 +43,7 @@ void ResourceLoader::LoadResource(const std::string& url,
   auto local_path = PathForUrl(url);
   if (files::IsFile(local_path)) {
     // Found locally.
-    if (mtl::VmoFromFilename(local_path, &vmo)) {
+    if (fsl::VmoFromFilename(local_path, &vmo)) {
       callback(std::move(vmo), nullptr);
       return;
     }
@@ -85,7 +85,7 @@ void ResourceLoader::LoadResource(const std::string& url,
 
         // If the network service returned a stream, drain it to a string.
         std::string data;
-        if (!mtl::BlockingCopyToString(std::move(response->body->get_stream()),
+        if (!fsl::BlockingCopyToString(std::move(response->body->get_stream()),
                                        &data)) {
           FXL_LOG(ERROR) << "Failed to read URL response stream.";
           callback(mx::vmo(), MakeNetworkError(
@@ -95,7 +95,7 @@ void ResourceLoader::LoadResource(const std::string& url,
 
         // Copy the string into a VMO.
         mx::vmo vmo;
-        if (!mtl::VmoFromString(data, &vmo)) {
+        if (!fsl::VmoFromString(data, &vmo)) {
           FXL_LOG(ERROR) << "Failed to get vmo from string";
           callback(mx::vmo(),
                    MakeNetworkError(500, "Failed to make vmo from string"));

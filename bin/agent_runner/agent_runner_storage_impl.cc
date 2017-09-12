@@ -12,7 +12,7 @@
 #include "apps/modular/lib/fidl/json_xdr.h"
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/lib/ledger/storage.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace modular {
 namespace {
@@ -75,7 +75,7 @@ class AgentRunnerStorageImpl::InitializeCall : Operation<> {
       std::string key(reinterpret_cast<const char*>(entry->key.data()),
                       entry->key.size());
       std::string value;
-      if (!mtl::StringFromVmo(entry->value, &value)) {
+      if (!fsl::StringFromVmo(entry->value, &value)) {
         FXL_LOG(ERROR) << "VMO for key " << key << " couldn't be copied.";
         continue;
       }

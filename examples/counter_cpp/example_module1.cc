@@ -17,7 +17,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 
@@ -177,7 +177,7 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
   // |Lifecycle|
   void Terminate() override {
     store_.Stop();
-    mtl::MessageLoop::GetCurrent()->QuitNow();
+    fsl::MessageLoop::GetCurrent()->QuitNow();
   }
 
   void CheckForDone() {
@@ -192,7 +192,7 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
     }
 
     fxl::WeakPtr<Module1App> module_ptr = weak_ptr_factory_.GetWeakPtr();
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this, module_ptr] {
           if (!module_ptr.get() || store_.terminating()) {
             return;
@@ -229,7 +229,7 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   Module1App app;
   loop.Run();
   return 0;

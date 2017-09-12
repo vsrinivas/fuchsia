@@ -29,7 +29,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 
@@ -283,7 +283,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   TestApp::New();
   loop.Run();
   return 0;

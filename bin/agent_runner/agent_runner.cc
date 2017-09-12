@@ -13,8 +13,8 @@
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/src/agent_runner/agent_context_impl.h"
 #include "apps/modular/src/agent_runner/agent_runner_storage_impl.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace modular {
 
@@ -86,7 +86,7 @@ void AgentRunner::Teardown(const std::function<void()>& callback) {
     cont(true);
   };
 
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
       std::move(cont_timeout), kTeardownTimeout);
 }
 
@@ -342,7 +342,7 @@ void AgentRunner::ScheduleAlarmTask(const std::string& agent_url,
 
   found_it->second[task_id] = alarm_in_seconds;
   auto terminating = terminating_;
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
       [this, agent_url, task_id, terminating] {
         // If agent runner is terminating, do not run any new tasks.
         if (*terminating) {

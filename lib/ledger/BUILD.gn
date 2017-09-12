@@ -29,7 +29,7 @@ source_set("operations") {
     "//apps/modular/lib/fidl:json_xdr",
     "//apps/modular/lib/fidl:operation",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -50,7 +50,7 @@ source_set("page_client") {
     "//apps/modular/lib/fidl:operation",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -114,7 +114,7 @@ source_set("page_client_unittest") {
     "//apps/modular/lib/testing:ledger_repository_for_testing",
     "//apps/modular/lib/testing:test_with_message_loop",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 }
@@ -130,7 +130,7 @@ source_set("storage_unittest") {
   deps = [
     ":storage",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 }

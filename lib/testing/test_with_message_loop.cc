@@ -10,11 +10,11 @@ namespace modular {
 namespace testing {
 
 // Must be a pointer so static initialization is safe.
-mtl::MessageLoop* TestWithMessageLoop::message_loop_{};
+fsl::MessageLoop* TestWithMessageLoop::message_loop_{};
 
 namespace {
 
-bool RunGivenLoopWithTimeout(mtl::MessageLoop* message_loop,
+bool RunGivenLoopWithTimeout(fsl::MessageLoop* message_loop,
                              fxl::TimeDelta timeout) {
   // This cannot be a local variable because the delayed task below can execute
   // after this function returns.
@@ -43,7 +43,7 @@ bool RunGivenLoopWithTimeout(mtl::MessageLoop* message_loop,
   return timed_out;
 }
 
-bool RunGivenLoopUntil(mtl::MessageLoop* message_loop,
+bool RunGivenLoopUntil(fsl::MessageLoop* message_loop,
                        std::function<bool()> condition,
                        fxl::TimeDelta timeout) {
   if (condition()) {
@@ -65,9 +65,9 @@ bool RunGivenLoopUntil(mtl::MessageLoop* message_loop,
 
 TestWithMessageLoop::TestWithMessageLoop() {
   if (message_loop_ == nullptr) {
-    message_loop_ = new mtl::MessageLoop;
+    message_loop_ = new fsl::MessageLoop;
   } else {
-    FXL_CHECK(message_loop_ == mtl::MessageLoop::GetCurrent());
+    FXL_CHECK(message_loop_ == fsl::MessageLoop::GetCurrent());
   }
 }
 

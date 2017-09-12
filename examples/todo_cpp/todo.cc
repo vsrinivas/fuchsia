@@ -17,8 +17,8 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace todo {
 
@@ -31,7 +31,7 @@ const int kMaxDelaySeconds = 5;
 
 std::string ToString(const mx::vmo& vmo) {
   std::string ret;
-  if (!mtl::StringFromVmo(vmo, &ret)) {
+  if (!fsl::StringFromVmo(vmo, &ret)) {
     FXL_DCHECK(false);
   }
   return ret;
@@ -51,7 +51,7 @@ std::function<void(ledger::Status)> HandleResponse(std::string description) {
   return [description](ledger::Status status) {
     if (status != ledger::Status::OK) {
       FXL_LOG(ERROR) << description << " failed";
-      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+      fsl::MessageLoop::GetCurrent()->PostQuitTask();
     }
   };
 }
@@ -123,11 +123,11 @@ void TodoApp::Initialize(
                      HandleResponse("Watch"));
   List(std::move(snapshot));
 
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostTask([this] { Act(); });
+  fsl::MessageLoop::GetCurrent()->task_runner()->PostTask([this] { Act(); });
 }
 
 void TodoApp::Terminate() {
-  mtl::MessageLoop::GetCurrent()->QuitNow();
+  fsl::MessageLoop::GetCurrent()->QuitNow();
 }
 
 void TodoApp::OnChange(ledger::PageChangePtr /*page_change*/,
@@ -149,7 +149,7 @@ void TodoApp::List(ledger::PageSnapshotPtr snapshot) {
   GetEntries(std::move(snapshot), [](ledger::Status status, auto entries) {
     if (status != ledger::Status::OK) {
       FXL_LOG(ERROR) << "GetEntries failed";
-      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+      fsl::MessageLoop::GetCurrent()->PostQuitTask();
       return;
     }
 
@@ -194,14 +194,14 @@ void TodoApp::Act() {
     }
   });
   fxl::TimeDelta delay = fxl::TimeDelta::FromSeconds(delay_distribution_(rng_));
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
       [this] { Act(); }, delay);
 }
 
 }  // namespace todo
 
 int main(int /*argc*/, const char** /*argv*/) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   todo::TodoApp app;
   loop.Run();
   return 0;

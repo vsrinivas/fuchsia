@@ -19,7 +19,7 @@ source_set("app_client") {
     "//apps/modular/services/lifecycle",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -126,7 +126,7 @@ source_set("view_host") {
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -172,7 +172,7 @@ source_set("app_client_unittest") {
     "//garnet/public/lib/app/cpp",
     "//apps/modular/lib/testing:test_with_message_loop",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 }

@@ -35,7 +35,7 @@ source_set("agent_runner") {
     "//apps/modular/src/component",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -62,7 +62,7 @@ source_set("unittests") {
     "//apps/modular/services/auth",
     "//apps/modular/src/component",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//magenta/system/ulib/trace",
     "//third_party/gtest",
   ]

@@ -29,7 +29,7 @@ executable("component_context_test") {
     "//apps/modular/services/component",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -44,7 +44,7 @@ executable("component_context_test_agent1") {
     "//apps/modular/lib/testing",
     "//apps/modular/lib/testing:component_base",
     "//apps/modular/services/agent",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -58,7 +58,7 @@ executable("component_context_test_agent2") {
     "//apps/modular/lib/testing",
     "//apps/modular/lib/testing:component_base",
     "//apps/modular/services/agent",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -72,7 +72,7 @@ executable("component_context_unstoppable_agent") {
     "//apps/modular/lib/testing",
     "//apps/modular/lib/testing:component_base",
     "//apps/modular/services/agent",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 

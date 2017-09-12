@@ -13,7 +13,7 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace modular {
 namespace testing {
@@ -73,7 +73,7 @@ class TestWithMessageLoop : public ::testing::Test {
   // message loop instance. If we do, FIDL connections estabslished on the
   // second instance get closed. It is unclear why, but if we keep a single
   // message loop instance, FIDL connections work.
-  static mtl::MessageLoop* message_loop_;
+  static fsl::MessageLoop* message_loop_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(TestWithMessageLoop);

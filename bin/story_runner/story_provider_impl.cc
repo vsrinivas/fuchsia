@@ -23,8 +23,8 @@
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace modular {
 
@@ -286,7 +286,7 @@ class StoryProviderImpl::DeleteStoryCall : Operation<> {
     // functions that run as methods of other objects owned by |this| or
     // provided to |this|. To avoid such problems, the delete is invoked
     // through the run loop.
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask([this, flow] {
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask([this, flow] {
       story_controller_impls_->erase(story_id_);
       message_queue_manager_->DeleteNamespace(
           EncodeModuleComponentNamespace(story_id_), [flow] {});

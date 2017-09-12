@@ -15,7 +15,7 @@
 #include "apps/modular/lib/fidl/operation.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace modular {
 
@@ -77,7 +77,7 @@ class ReadDataCall : Operation<DataPtr> {
           }
 
           std::string value_as_string;
-          if (!mtl::StringFromVmo(value, &value_as_string)) {
+          if (!fsl::StringFromVmo(value, &value_as_string)) {
             FXL_LOG(ERROR) << "ReadDataCall() " << key_
                            << " Unable to extract data.";
             return;
@@ -159,7 +159,7 @@ class ReadAllDataCall : Operation<DataArray> {
   void Cont2(FlowToken /*flow*/) {
     for (auto& entry : entries_) {
       std::string value_as_string;
-      if (!mtl::StringFromVmo(entry->value, &value_as_string)) {
+      if (!fsl::StringFromVmo(entry->value, &value_as_string)) {
         FXL_LOG(ERROR) << "ReadAllDataCall() "
                        << "Unable to extract data.";
         continue;

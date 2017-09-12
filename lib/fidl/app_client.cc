@@ -110,7 +110,7 @@ void AppClientBase::AppTerminate(const std::function<void()>& done,
     cont(false);
   };
 
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(cont_timeout, timeout);
+  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(cont_timeout, timeout);
   ServiceTerminate(cont_normal);
 }
 

@@ -9,7 +9,7 @@
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace modular {
 
@@ -39,7 +39,7 @@ class DeviceRunnerMonitorApp : DeviceRunnerMonitor {
 }  // namespace modular
 
 int main(int /*argc*/, const char** /*argv*/) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   modular::DeviceRunnerMonitorApp app;
   loop.Run();
   return 0;

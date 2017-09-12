@@ -5,8 +5,8 @@
 #include "apps/modular/src/component_manager/component_resources_impl.h"
 
 #include "lib/fxl/functional/make_copyable.h"
-#include "lib/mtl/socket/strings.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace component {
 

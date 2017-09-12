@@ -25,7 +25,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 
@@ -82,7 +82,7 @@ class DevUserShellApp : modular::StoryWatcher,
   }
 
   // |UserShell|
-  void Terminate() override { mtl::MessageLoop::GetCurrent()->QuitNow(); };
+  void Terminate() override { fsl::MessageLoop::GetCurrent()->QuitNow(); };
 
   void Connect() {
     if (!view_owner_request_ || !story_provider_) {
@@ -197,7 +197,7 @@ int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   Settings settings(command_line);
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   DevUserShellApp app(settings);
   loop.Run();
   return 0;

@@ -11,7 +11,7 @@
 #include "apps/modular/lib/ledger/operations.h"
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/services/story/story_data.fidl.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace modular {
 
@@ -123,7 +123,7 @@ class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
 
       std::string value_as_string;
       if (value) {
-        if (!mtl::StringFromVmo(value, &value_as_string)) {
+        if (!fsl::StringFromVmo(value, &value_as_string)) {
           FXL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
                          << " Unable to extract data.";
           return;

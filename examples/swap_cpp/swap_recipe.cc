@@ -8,7 +8,7 @@
 #include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "lib/ui/view_framework/base_view.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 
@@ -87,12 +87,12 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
   }
 
   // |Lifecycle|
-  void Terminate() override { mtl::MessageLoop::GetCurrent()->QuitNow(); }
+  void Terminate() override { fsl::MessageLoop::GetCurrent()->QuitNow(); }
 
   void SwapModule() {
     StartModule(kModuleQueries[query_index_]);
     query_index_ = (query_index_ + 1) % kModuleQueries.size();
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this] { SwapModule(); }, fxl::TimeDelta::FromSeconds(kSwapSeconds));
   }
 
@@ -131,7 +131,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   RecipeApp app;
   loop.Run();
   return 0;

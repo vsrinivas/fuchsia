@@ -21,7 +21,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 
@@ -256,7 +256,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
         story1_run_.Pass();
 
         // When the story is done, the test is over.
-        mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+        fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
             [this] { user_shell_context_->Logout(); });
       });
     });
@@ -343,7 +343,7 @@ int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   Settings settings(command_line);
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   TestApp::New(settings);
   loop.Run();
   return 0;

@@ -20,8 +20,8 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace {
 
@@ -285,7 +285,7 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
                               FXL_CHECK(status == ledger::Status::OK);
                               std::string counter_data;
                               bool conversion =
-                                  mtl::StringFromVmo(value, &counter_data);
+                                  fsl::StringFromVmo(value, &counter_data);
                               FXL_DCHECK(conversion);
                               FXL_LOG(INFO)
                                   << "Retrieved counter from root page: "
@@ -323,7 +323,7 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
     // state change of the module.
     connections_.clear();
     module_monitors_.clear();
-    mtl::MessageLoop::GetCurrent()->QuitNow();
+    fsl::MessageLoop::GetCurrent()->QuitNow();
   }
 
   modular::LinkPtr link_;
@@ -359,7 +359,7 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   RecipeApp app;
   loop.Run();
   return 0;

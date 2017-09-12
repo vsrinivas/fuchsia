@@ -10,7 +10,7 @@
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 using modular::testing::TestPoint;
 
@@ -52,7 +52,7 @@ class TestApp : modular::testing::ComponentBase<modular::Module> {
     // TODO(mesch): If we set values on a Link too fast, they get swallowed by
     // syncing old values back from the ledger. FW-208.
     link_->Sync([this] {
-      mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+      fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
           [this] { Set2(); }, fxl::TimeDelta::FromSeconds(5));
     });
   }
@@ -78,7 +78,7 @@ class TestApp : modular::testing::ComponentBase<modular::Module> {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   TestApp::New();
   loop.Run();
   return 0;

@@ -9,7 +9,7 @@
 #include "lib/app/cpp/connect.h"
 #include "apps/modular/src/agent_runner/agent_runner.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace modular {
 

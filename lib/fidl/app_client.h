@@ -17,7 +17,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace modular {
 

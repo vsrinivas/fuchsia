@@ -14,7 +14,7 @@
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/tests/component_context/test_agent1_interface.fidl.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 using modular::testing::TestPoint;
 
@@ -111,7 +111,7 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
 
     // Start a timer to quit in case another test component misbehaves and we
     // time out.
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         Protect([this] { steps_.Cancel(); }), kTimeout);
   }
 
@@ -165,7 +165,7 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
     // TODO(jimbe) We don't check if the agent started running in the allotted
     // time, so this test isn't reliable. We need to make a call to the agent
     // and wait for a response.
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         Protect([this, done_cb] {
           unstoppable_agent_controller_.reset();
           done_cb();
@@ -202,7 +202,7 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   ParentApp::New();
   loop.Run();
   return 0;

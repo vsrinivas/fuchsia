@@ -20,7 +20,7 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace modular {
 namespace testing {

@@ -39,7 +39,7 @@ executable("device_runner") {
     "//garnet/public/lib/ui/presentation/fidl",
     "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//magenta/system/ulib/trace-provider",
   ]
 }
@@ -67,7 +67,7 @@ source_set("lib") {
     "//garnet/public/lib/ui/presentation/fidl",
     "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//magenta/system/ulib/trace",
   ]
 }
@@ -82,7 +82,7 @@ executable("device_runner_monitor") {
     "//garnet/public/lib/app/fidl",
     "//apps/modular/services/device",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -97,7 +97,7 @@ executable("dev_device_shell") {
     "//apps/modular/services/device",
     "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -113,7 +113,7 @@ source_set("unittests") {
     "//garnet/public/lib/app/cpp",
     "//apps/modular/lib/testing:test_with_message_loop",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 }

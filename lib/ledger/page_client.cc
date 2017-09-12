@@ -11,7 +11,7 @@
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/ledger/ledger_client.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace modular {
 
@@ -73,7 +73,7 @@ void PageClient::OnChange(ledger::PageChangePtr page,
     // Remove prefix maybe?
     const std::string key = to_string(entry->key);
     std::string value;
-    if (!mtl::StringFromVmo(entry->value, &value)) {
+    if (!fsl::StringFromVmo(entry->value, &value)) {
       FXL_LOG(ERROR) << "PageClient::OnChange() " << context_ << ": "
                      << "Unable to extract data.";
       continue;

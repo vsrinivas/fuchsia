@@ -13,7 +13,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 
@@ -69,7 +69,7 @@ class DevStoryShellApp : modular::SingleServiceApp<modular::StoryShellFactory>,
   // |StoryShell|
   void Terminate() override {
     FXL_LOG(INFO) << "StoryShell::Terminate()";
-    mtl::MessageLoop::GetCurrent()->QuitNow();
+    fsl::MessageLoop::GetCurrent()->QuitNow();
   }
 
   void Connect() {
@@ -99,7 +99,7 @@ class DevStoryShellApp : modular::SingleServiceApp<modular::StoryShellFactory>,
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   DevStoryShellApp app;
   loop.Run();
   return 0;

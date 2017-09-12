@@ -11,7 +11,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace modular {
 
@@ -126,7 +126,7 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
   // doesn't return from Stop().
   if (state_ == ModuleState::UNLINKED) {
     module_service_.set_connection_error_handler(nullptr);
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(cont);
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(cont);
   } else {
     app_client_.AppTerminate(cont, kStoryTeardownTimeout);
   }

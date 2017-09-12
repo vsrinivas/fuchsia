@@ -39,7 +39,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace modular {
 
@@ -340,7 +340,7 @@ void UserRunnerImpl::Terminate() {
                       token_provider_factory_.reset();
 
                       FXL_LOG(INFO) << "UserRunner::Terminate(): done";
-                      mtl::MessageLoop::GetCurrent()->QuitNow();
+                      fsl::MessageLoop::GetCurrent()->QuitNow();
                     });
                 });
             });

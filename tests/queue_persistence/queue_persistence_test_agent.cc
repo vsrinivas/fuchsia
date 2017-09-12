@@ -10,7 +10,7 @@
 #include "apps/modular/services/component/message_queue.fidl.h"
 #include "apps/modular/tests/queue_persistence/queue_persistence_test_agent_interface.fidl.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 
@@ -100,7 +100,7 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   TestAgentApp::New();
   loop.Run();
   return 0;

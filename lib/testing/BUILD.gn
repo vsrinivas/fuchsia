@@ -28,7 +28,7 @@ source_set("component_base") {
     "//garnet/public/lib/app/cpp",
     "//apps/modular/lib/fidl:single_service_app",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -58,7 +58,7 @@ source_set("test_with_message_loop") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 }
@@ -87,7 +87,7 @@ source_set("fake_application_launcher") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -109,7 +109,7 @@ source_set("ledger_repository_for_testing") {
     "//apps/modular/services/config",
     "//apps/test_runner/lib:application_context",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 

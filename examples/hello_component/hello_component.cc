@@ -7,7 +7,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 
@@ -27,7 +27,7 @@ class HelloComponentApp {
 
 int main(int /*argc*/, const char** /*argv*/) {
   FXL_LOG(INFO) << "hello_component main";
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   HelloComponentApp hello_component_app;
   loop.Run();
   return 0;

@@ -13,7 +13,7 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace component {
@@ -90,7 +90,7 @@ int main(int argc, const char** argv) {
     Usage(argv[0]);
   }
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   component::App app;
 
   if (strcmp(argv[1], "query") == 0) {

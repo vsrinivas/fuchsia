@@ -7,7 +7,7 @@
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 using modular::testing::TestPoint;
 
@@ -47,7 +47,7 @@ class ChildApp : modular::testing::ComponentBase<modular::Module> {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   ChildApp::New();
   loop.Run();
   return 0;

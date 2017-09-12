@@ -9,7 +9,7 @@
 #include "apps/modular/examples/hello_world_cpp/hello.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 using examples::Hello;
 
@@ -41,7 +41,7 @@ class HelloAppChild : public Hello {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   HelloAppChild app;
   loop.Run();
   return 0;

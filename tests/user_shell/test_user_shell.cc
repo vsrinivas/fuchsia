@@ -22,7 +22,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 
@@ -406,7 +406,7 @@ class TestUserShellApp : modular::testing::ComponentBase<modular::UserShell> {
         story1_run_.Pass();
 
         // When the story is done, we start the next one.
-        mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+        fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
             [this] { TestStory2(); });
       });
     });
@@ -513,7 +513,7 @@ class TestUserShellApp : modular::testing::ComponentBase<modular::UserShell> {
             "StoryState after Start() must be STARTING or RUNNING.");
       }
 
-      mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+      fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
           [this] { TestStory2_DeleteStory(); }, fxl::TimeDelta::FromSeconds(5));
     });
   }
@@ -578,7 +578,7 @@ int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   Settings settings(command_line);
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   TestUserShellApp::New(settings);
   loop.Run();
   return 0;

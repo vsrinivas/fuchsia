@@ -49,7 +49,7 @@ void ModuleApp::Initialize(
     fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {}
 
 void ModuleApp::Terminate() {
-  mtl::MessageLoop::GetCurrent()->QuitNow();
+  fsl::MessageLoop::GetCurrent()->QuitNow();
 }
 
 }  // namespace modular_example

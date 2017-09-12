@@ -25,6 +25,6 @@ source_set("component") {
     "//apps/modular/services/component",
     "//apps/modular/src/agent_runner:public",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }

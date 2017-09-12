@@ -7,7 +7,7 @@
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/agent/agent.fidl.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 using modular::testing::TestPoint;
 
@@ -51,7 +51,7 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent> {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   TestAgentApp::New();
   loop.Run();
   return 0;

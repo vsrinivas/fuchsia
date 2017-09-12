@@ -26,7 +26,7 @@ executable("queue_persistence_test_module") {
     "//apps/modular/services/component",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -43,7 +43,7 @@ executable("queue_persistence_test_agent") {
     "//apps/modular/lib/testing:component_base",
     "//apps/modular/services/agent",
     "//apps/modular/services/component",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 

@@ -16,7 +16,7 @@
 #include "apps/modular/src/component/persistent_queue.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace modular {
 
@@ -240,7 +240,7 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
             }
 
             std::string queue_token;
-            if (!mtl::StringFromVmo(value, &queue_token)) {
+            if (!fsl::StringFromVmo(value, &queue_token)) {
               FXL_LOG(ERROR)
                   << "VMO for key " << key_ << " couldn't be copied.";
               return;
@@ -307,7 +307,7 @@ class MessageQueueManager::GetMessageSenderCall : Operation<> {
 
             std::string value_as_string;
             if (value) {
-              if (!mtl::StringFromVmo(value, &value_as_string)) {
+              if (!fsl::StringFromVmo(value, &value_as_string)) {
                 FXL_LOG(ERROR) << "Unable to extract data.";
                 return;
               }
@@ -594,7 +594,7 @@ class MessageQueueManager::DeleteNamespaceCall : Operation<> {
                    keys_to_delete_.push_back(entry->key.Clone());
 
                    std::string queue_token;
-                   if (!mtl::StringFromVmo(entry->value, &queue_token)) {
+                   if (!fsl::StringFromVmo(entry->value, &queue_token)) {
                      FXL_LOG(ERROR) << "VMO for key " << to_string(entry->key)
                                     << " couldn't be copied.";
                      continue;

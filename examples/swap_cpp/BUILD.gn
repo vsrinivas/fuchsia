@@ -16,7 +16,7 @@ executable("swap_module1") {
   ]
   deps = [
     ":module",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -26,7 +26,7 @@ executable("swap_module2") {
   ]
   deps = [
     ":module",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -56,6 +56,6 @@ executable("swap_recipe") {
     "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//garnet/public/lib/ui/view_framework",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }

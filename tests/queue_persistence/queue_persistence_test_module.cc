@@ -10,7 +10,7 @@
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/tests/queue_persistence/queue_persistence_test_agent_interface.fidl.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 
@@ -56,7 +56,7 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
     // we time out. If that happens, the module will exit normally through
     // Stop(), but the test will fail because some TestPoints will not have been
     // passed.
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         Protect([this] { module_context_->Done(); }),
         fxl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
   }
@@ -148,7 +148,7 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   ParentApp::New();
   loop.Run();
   return 0;

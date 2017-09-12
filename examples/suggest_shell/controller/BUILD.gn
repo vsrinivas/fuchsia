@@ -24,6 +24,6 @@ executable("suggest_shell_controller") {
     "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }

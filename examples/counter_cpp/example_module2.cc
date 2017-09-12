@@ -13,7 +13,7 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 
@@ -128,7 +128,7 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
   // |Lifecycle|
   void Terminate() override {
     store_.Stop();
-    mtl::MessageLoop::GetCurrent()->QuitNow();
+    fsl::MessageLoop::GetCurrent()->QuitNow();
   }
 
   void IncrementCounterAction() {
@@ -137,7 +137,7 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
     }
 
     fxl::WeakPtr<Module2App> module_ptr = weak_ptr_factory_.GetWeakPtr();
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this, module_ptr] {
           if (!module_ptr.get() || store_.terminating()) {
             return;
@@ -168,7 +168,7 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   Module2App app;
   loop.Run();
   return 0;

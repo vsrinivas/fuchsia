@@ -13,7 +13,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace modular {
 
@@ -40,7 +40,7 @@ class UserRunnerApp {
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   const bool test = command_line.HasOption("test");
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
   modular::UserRunnerApp app(test);
   loop.Run();

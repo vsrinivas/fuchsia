@@ -23,7 +23,7 @@ executable("child_module") {
     "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -39,6 +39,6 @@ executable("parent_module") {
     "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }

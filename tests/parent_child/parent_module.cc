@@ -9,7 +9,7 @@
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 using modular::testing::TestPoint;
 
@@ -47,7 +47,7 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
 
     // Start a timer to quit in case another test component misbehaves and we
     // time out.
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         Protect([this] { DeleteAndQuit([] {}); }),
         fxl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
 
@@ -103,7 +103,7 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   ParentApp::New();
   loop.Run();
   return 0;

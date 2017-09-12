@@ -35,9 +35,9 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/mtl/socket/strings.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 #include "third_party/rapidjson/rapidjson/error/en.h"
 
 namespace modular {
@@ -212,7 +212,7 @@ void Post(const std::string& request_body,
   }
 
   mx::vmo data;
-  auto result = mtl::VmoFromString(encoded_request_body, &data);
+  auto result = fsl::VmoFromString(encoded_request_body, &data);
   FXL_VLOG(1) << "Post Data:" << encoded_request_body;
   FXL_DCHECK(result);
 
@@ -267,7 +267,7 @@ void Post(const std::string& request_body,
     if (!response->body.is_null()) {
       FXL_DCHECK(response->body->is_stream());
       // TODO(alhaad/ukode): Use non-blocking variant.
-      if (!mtl::BlockingCopyToString(std::move(response->body->get_stream()),
+      if (!fsl::BlockingCopyToString(std::move(response->body->get_stream()),
                                      &response_body)) {
         failure_callback(Status::NETWORK_ERROR,
                          "Failed to read response from socket with status:" +
@@ -348,7 +348,7 @@ void Get(
     if (!response->body.is_null()) {
       FXL_DCHECK(response->body->is_stream());
       // TODO(alhaad/ukode): Use non-blocking variant.
-      if (!mtl::BlockingCopyToString(std::move(response->body->get_stream()),
+      if (!fsl::BlockingCopyToString(std::move(response->body->get_stream()),
                                      &response_body)) {
         failure_callback(Status::NETWORK_ERROR,
                          "Failed to read response from socket with status:" +
@@ -1477,7 +1477,7 @@ void OAuthTokenManagerApp::Initialize(
 
 void OAuthTokenManagerApp::Terminate() {
   FXL_LOG(INFO) << "OAuthTokenManagerApp::Terminate()";
-  mtl::MessageLoop::GetCurrent()->QuitNow();
+  fsl::MessageLoop::GetCurrent()->QuitNow();
 }
 
 // TODO(alhaad): Check if account id already exists.
@@ -1566,7 +1566,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
 
   modular::auth::OAuthTokenManagerApp app;

@@ -14,8 +14,8 @@
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/socket/strings.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/vmo/strings.h"
 #include "lib/url/gurl.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
@@ -236,7 +236,7 @@ ComponentIndexImpl::ComponentIndexImpl(
           }
 
           std::string contents;
-          if (!mtl::StringFromVmo(vmo, &contents)) {
+          if (!fsl::StringFromVmo(vmo, &contents)) {
             FXL_LOG(WARNING) << "Failed to make string from cloud index vmo";
             return;
           }
@@ -279,7 +279,7 @@ void ComponentIndexImpl::GetComponent(const ::fidl::String& component_id_,
         }
 
         std::string manifest_string;
-        if (!mtl::StringFromVmo(vmo, &manifest_string)) {
+        if (!fsl::StringFromVmo(vmo, &manifest_string)) {
           FXL_LOG(ERROR) << "Failed to make string from manifest vmo";
           callback(nullptr, nullptr,
                    MakeNetworkError(500, "Failed to make string from vmo"));
