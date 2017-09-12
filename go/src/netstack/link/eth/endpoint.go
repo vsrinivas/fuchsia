@@ -2,14 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package main
+package eth
 
 import (
 	"log"
 	"syscall/mx"
 	"syscall/mx/mxerror"
-
-	"netstack/eth"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
@@ -18,10 +16,11 @@ import (
 )
 
 const headerLength = 14
+const debug2 = false
 
 type linkEndpoint struct {
-	c        *eth.Client
-	linkAddr tcpip.LinkAddress
+	c        *Client
+	LinkAddr tcpip.LinkAddress
 
 	vv    buffer.VectorisedView
 	views [1]buffer.View
@@ -29,7 +28,7 @@ type linkEndpoint struct {
 
 func (ep *linkEndpoint) MTU() uint32                    { return uint32(ep.c.MTU) }
 func (ep *linkEndpoint) MaxHeaderLength() uint16        { return headerLength }
-func (ep *linkEndpoint) LinkAddress() tcpip.LinkAddress { return ep.linkAddr }
+func (ep *linkEndpoint) LinkAddress() tcpip.LinkAddress { return ep.LinkAddr }
 
 func (ep *linkEndpoint) WritePacket(r *stack.Route, hdr *buffer.Prependable, payload buffer.View, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
 	ethHdr := hdr.Prepend(headerLength)
@@ -46,7 +45,7 @@ func (ep *linkEndpoint) WritePacket(r *stack.Route, hdr *buffer.Prependable, pay
 	}
 
 	copy(ethHdr[0:], remoteLinkAddr)
-	copy(ethHdr[6:], ep.linkAddr)
+	copy(ethHdr[6:], ep.LinkAddr)
 	ethHdr[12] = uint8(protocol >> 8)
 	ethHdr[13] = uint8(protocol)
 
@@ -54,7 +53,7 @@ func (ep *linkEndpoint) WritePacket(r *stack.Route, hdr *buffer.Prependable, pay
 	if pktlen < 60 {
 		pktlen = 60
 	}
-	var buf eth.Buffer
+	var buf Buffer
 	for {
 		buf = ep.c.AllocForSend()
 		if buf != nil {
@@ -87,7 +86,7 @@ func (ep *linkEndpoint) Attach(dispatcher stack.NetworkDispatcher) {
 
 func (ep *linkEndpoint) dispatch(d stack.NetworkDispatcher) (err error) {
 	for {
-		var b eth.Buffer
+		var b Buffer
 		for {
 			b, err = ep.c.Recv()
 			if mxerror.Status(err) != mx.ErrShouldWait {
@@ -98,7 +97,7 @@ func (ep *linkEndpoint) dispatch(d stack.NetworkDispatcher) (err error) {
 		if err != nil {
 			return err
 		}
-		// TODO: use the eth.Buffer as a buffer.View
+		// TODO: use the Buffer as a buffer.View
 		v := make(buffer.View, len(b))
 		copy(v, b)
 		ep.views[0] = v
@@ -119,13 +118,13 @@ func (ep *linkEndpoint) dispatch(d stack.NetworkDispatcher) (err error) {
 	return nil
 }
 
-func (ep *linkEndpoint) init() error {
-	ep.linkAddr = tcpip.LinkAddress(ep.c.MAC[:])
-	log.Printf("linkaddr: %v", ep.linkAddr)
+func (ep *linkEndpoint) Init() error {
+	ep.LinkAddr = tcpip.LinkAddress(ep.c.MAC[:])
+	log.Printf("linkaddr: %v", ep.LinkAddr)
 	return nil
 }
 
-func newLinkEndpoint(c *eth.Client) *linkEndpoint {
+func NewLinkEndpoint(c *Client) *linkEndpoint {
 	ep := &linkEndpoint{
 		c: c,
 	}

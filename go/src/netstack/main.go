@@ -10,7 +10,7 @@ import (
 
 	"app/context"
 
-	"netstack/eth"
+	"netstack/link/eth"
 	"netstack/watcher"
 
 	"github.com/google/netstack/tcpip"

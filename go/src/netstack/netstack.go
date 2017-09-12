@@ -13,7 +13,7 @@ import (
 	"sync"
 
 	"netstack/deviceid"
-	"netstack/eth"
+	"netstack/link/eth"
 	"netstack/netiface"
 	"netstack/stats"
 
@@ -217,12 +217,12 @@ func (ns *netstack) addEth(path string) error {
 		return err
 	}
 	ifs.eth = client
-	ep := newLinkEndpoint(client)
-	if err := ep.init(); err != nil {
+	ep := eth.NewLinkEndpoint(client)
+	if err := ep.Init(); err != nil {
 		log.Fatalf("%s: endpoint init failed: %v", path, err)
 	}
 	linkID := stack.RegisterLinkEndpoint(ep)
-	lladdr := ipv6.LinkLocalAddr(tcpip.LinkAddress(ep.linkAddr))
+	lladdr := ipv6.LinkLocalAddr(tcpip.LinkAddress(ep.LinkAddr))
 
 	// LinkEndpoint chains:
 	// Put sniffer as close as the NIC.
@@ -235,7 +235,7 @@ func (ns *netstack) addEth(path string) error {
 
 	ns.mu.Lock()
 	ifs.nic.Ipv6addrs = []tcpip.Address{lladdr}
-	copy(ifs.nic.Mac[:], ep.linkAddr)
+	copy(ifs.nic.Mac[:], ep.LinkAddr)
 
 	var nicid tcpip.NICID
 	for _, ifs := range ns.ifStates {
@@ -273,7 +273,7 @@ func (ns *netstack) addEth(path string) error {
 		return fmt.Errorf("NIC %d: adding solicited-node IPv6 failed: %v", nicid, err)
 	}
 
-	ifs.dhcp = dhcp.NewClient(ns.stack, nicid, ep.linkAddr, ifs.dhcpAcquired)
+	ifs.dhcp = dhcp.NewClient(ns.stack, nicid, ep.LinkAddr, ifs.dhcpAcquired)
 
 	// Add default route. This will get clobbered later when we get a DHCP response.
 	ns.stack.SetRouteTable(ns.flattenRouteTables())
