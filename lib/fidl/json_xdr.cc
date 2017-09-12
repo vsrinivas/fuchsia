@@ -114,7 +114,7 @@ void XdrContext::Value(std::string* const data) {
       if (value_->IsString()) {
         *data = value_->GetString();
       } else {
-        AddError("Value() of fidl::String: string expected");
+        AddError("Value() of std::string: string expected");
       }
       break;
   }
