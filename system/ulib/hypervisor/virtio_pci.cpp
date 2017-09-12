@@ -19,7 +19,7 @@
 #include "virtio_priv.h"
 
 /* Controls what PCI interface we expose. */
-static const VirtioPciMode kVirtioPciMode = VirtioPciMode::LEGACY;
+static const VirtioPciMode kVirtioPciMode = VirtioPciMode::MODERN;
 
 static uint8_t kPciCapTypeVendorSpecific = 0x9;
 
