@@ -80,8 +80,13 @@ func printIfStats(ni netstack.NetInterface, stats netstack.NetInterfaceStats) { 
 	const C = "[#]"                 // Counts
 	const B = "[B]"                 // Bytes
 
-	fmt.Printf(align, "Total", C, stats.RxPktsTotal, stats.TxPktsTotal)
-	fmt.Printf(align, "Total", B, stats.RxBytesTotal, stats.TxBytesTotal)
+	fmt.Printf(align, "Total", B, stats.Rx.BytesTotal, stats.Tx.BytesTotal)
+	fmt.Printf(align, "Total", C, stats.Rx.PktsTotal, stats.Tx.PktsTotal)
+	fmt.Printf(align, "EchoReQ", C, stats.Rx.PktsEchoReq, stats.Tx.PktsEchoReq)
+	fmt.Printf(align, "EchoRep", C, stats.Rx.PktsEchoRep, stats.Tx.PktsEchoRep)
+	fmt.Printf(align, "v6 EchoReQ", C, stats.Rx.PktsEchoReqV6, stats.Tx.PktsEchoReqV6)
+	fmt.Printf(align, "v6 EchoRep", C, stats.Rx.PktsEchoRepV6, stats.Tx.PktsEchoRepV6)
+
 	fmt.Printf("\n")
 }
 
@@ -170,10 +175,10 @@ func (a *netstackClientApp) watchIface(nicName string, sec uint, isForever bool,
 			goto sleep
 		}
 
-		if statsPrev.RxBytesTotal != stats.RxBytesTotal {
+		if statsPrev.Rx.BytesTotal != stats.Rx.BytesTotal {
 			timeRx = now
 		}
-		if statsPrev.TxBytesTotal != stats.TxBytesTotal {
+		if statsPrev.Tx.BytesTotal != stats.Tx.BytesTotal {
 			timeTx = now
 		}
 		statsPrev = stats
@@ -193,7 +198,7 @@ func statsOneliner(nicName string, stats netstack.NetInterfaceStats, timeRx stri
 	// and move the cursor to the beginning of the line.
 	// fmt.Printf("\033[2K\r")  // .. does not work well.
 	fmt.Printf("\r%s: Rx [%5s ago] %10d pkts      Tx [%5s ago] %10d pkts      %s",
-		nicName, timeRx, stats.RxPktsTotal, timeTx, stats.TxPktsTotal, nowStr)
+		nicName, timeRx, stats.Rx.PktsTotal, timeTx, stats.Tx.PktsTotal, nowStr)
 }
 
 func usage() {

@@ -54,10 +54,10 @@ func printIface(iface netstack.NetInterface, stats netstack.NetInterfaceStats) {
 	}
 	fmt.Printf("\t%s\n", flagsToString(iface.Flags))
 
-	fmt.Printf("\tRX packets:%d\n", stats.RxPktsTotal)
-	fmt.Printf("\tTX packets:%d\n", stats.TxPktsTotal)
+	fmt.Printf("\tRX packets:%d\n", stats.Rx.PktsTotal)
+	fmt.Printf("\tTX packets:%d\n", stats.Tx.PktsTotal)
 	fmt.Printf("\tRX bytes:%s  TX bytes:%s\n",
-		bytesToString(stats.RxBytesTotal), bytesToString(stats.TxBytesTotal))
+		bytesToString(stats.Rx.BytesTotal), bytesToString(stats.Tx.BytesTotal))
 	// TODO: more stats. MTU, RX/TX errors
 }
 

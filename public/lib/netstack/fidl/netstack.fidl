@@ -23,19 +23,27 @@ struct NetErr {
   string message;
 };
 
+struct NetTrafficStats {
+  // See network interface stats in Linux for future ideas:
+  // https://chromium.googlesource.com/native_client/linux-headers-for-nacl/+/2dc04f8190a54defc0d59e693fa6cff3e8a916a9/include/linux/if_link.h#7
+
+  uint64 pkts_total;
+  uint64 pkts_echo_req;	    // request
+  uint64 pkts_echo_rep;	    // reply
+  uint64 pkts_echo_req_v6;  // request
+  uint64 pkts_echo_rep_v6;	// reply
+
+  uint64 bytes_total;
+};
+
 struct NetInterfaceStats {
   // Placeholder for all statistics regarding the network interface,
   // including, but not limited to traffic itself.
 
   int64  up_since;  // Unix epoch.
 
-  // See network interface stats in Linux for future ideas:
-  // https://chromium.googlesource.com/native_client/linux-headers-for-nacl/+/2dc04f8190a54defc0d59e693fa6cff3e8a916a9/include/linux/if_link.h#7
-  uint64 rx_pkts_total;
-  uint64 rx_bytes_total;
-
-  uint64 tx_pkts_total;
-  uint64 tx_bytes_total;
+  NetTrafficStats rx;
+  NetTrafficStats tx;
 };
 
 // https://linux.die.net/man/7/netdevice
