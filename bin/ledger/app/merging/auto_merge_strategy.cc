@@ -219,7 +219,7 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
       left_->GetId(), right_->GetId(), fxl::MakeCopyable([
         weak_this = weak_factory_.GetWeakPtr(),
         right_changes = std::move(right_changes)
-      ](storage::Status s, std::unique_ptr<storage::Journal> journal) {
+      ](storage::Status s, std::unique_ptr<storage::Journal> journal) mutable {
         if (!weak_this) {
           return;
         }

@@ -119,7 +119,7 @@ void PageStorageImpl::GetHeadCommitIds(
     std::function<void(Status, std::vector<CommitId>)> callback) {
   coroutine_service_->StartCoroutine([
     this, final_callback = std::move(callback)
-  ](CoroutineHandler * handler) {
+  ](CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
@@ -134,7 +134,7 @@ void PageStorageImpl::GetCommit(
     std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
   coroutine_service_->StartCoroutine([
     this, commit_id = commit_id.ToString(), final_callback = std::move(callback)
-  ](CoroutineHandler * handler) {
+  ](CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
@@ -155,7 +155,7 @@ void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<const Commit> commit,
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
-    bool notify_watchers;
+    bool notify_watchers = false;
     Status status = SynchronousAddCommitFromLocal(
         handler, std::move(commit), std::move(new_objects), &notify_watchers);
 
@@ -179,7 +179,7 @@ void PageStorageImpl::AddCommitsFromSync(
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
-    bool notify_watchers;
+    bool notify_watchers = false;
     Status status = SynchronousAddCommitsFromSync(
         handler, std::move(ids_and_bytes), &notify_watchers);
 
@@ -268,7 +268,7 @@ void PageStorageImpl::GetUnsyncedCommits(
         callback) {
   coroutine_service_->StartCoroutine([
     this, final_callback = std::move(callback)
-  ](CoroutineHandler * handler) {
+  ](CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
     std::vector<std::unique_ptr<const Commit>> unsynced_commits;
@@ -281,7 +281,7 @@ void PageStorageImpl::MarkCommitSynced(const CommitId& commit_id,
                                        std::function<void(Status)> callback) {
   coroutine_service_->StartCoroutine([
     this, commit_id, final_callback = std::move(callback)
-  ](CoroutineHandler * handler) {
+  ](CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 

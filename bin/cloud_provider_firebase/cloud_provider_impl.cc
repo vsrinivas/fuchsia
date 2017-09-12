@@ -4,6 +4,8 @@
 
 #include "apps/ledger/cloud_provider_firebase/cloud_provider_impl.h"
 
+#include <utility>
+
 #include "apps/ledger/src/convert/convert.h"
 #include "garnet/public/lib/fxl/logging.h"
 
@@ -12,11 +14,11 @@ namespace cloud_provider_firebase {
 CloudProviderImpl::CloudProviderImpl(
     fxl::RefPtr<fxl::TaskRunner> main_runner,
     std::string user_id,
-    ConfigPtr config,
+    ConfigPtr /*config*/,
     std::unique_ptr<auth_provider::AuthProvider> auth_provider,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> request)
     : main_runner_(std::move(main_runner)),
-      user_id_(user_id),
+      user_id_(std::move(user_id)),
       auth_provider_(std::move(auth_provider)),
       binding_(this, std::move(request)) {
   // The class shuts down when the client connection is disconnected.

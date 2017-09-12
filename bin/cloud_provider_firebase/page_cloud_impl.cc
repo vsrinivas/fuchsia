@@ -21,34 +21,35 @@ PageCloudImpl::PageCloudImpl(
 
 PageCloudImpl::~PageCloudImpl() {}
 
-void PageCloudImpl::AddCommits(fidl::Array<cloud_provider::CommitPtr> commits,
-                               const AddCommitsCallback& callback) {
+void PageCloudImpl::AddCommits(
+    fidl::Array<cloud_provider::CommitPtr> /*commits*/,
+    const AddCommitsCallback& callback) {
   FXL_NOTIMPLEMENTED();
   callback(cloud_provider::Status::INTERNAL_ERROR);
 }
 
-void PageCloudImpl::GetCommits(fidl::Array<uint8_t> min_position_token,
+void PageCloudImpl::GetCommits(fidl::Array<uint8_t> /*min_position_token*/,
                                const GetCommitsCallback& callback) {
   FXL_NOTIMPLEMENTED();
   callback(cloud_provider::Status::INTERNAL_ERROR, nullptr, nullptr);
 }
 
-void PageCloudImpl::AddObject(fidl::Array<uint8_t> id,
-                              mx::vmo data,
+void PageCloudImpl::AddObject(fidl::Array<uint8_t> /*id*/,
+                              mx::vmo /*data*/,
                               const AddObjectCallback& callback) {
   FXL_NOTIMPLEMENTED();
   callback(cloud_provider::Status::INTERNAL_ERROR);
 }
 
-void PageCloudImpl::GetObject(fidl::Array<uint8_t> id,
+void PageCloudImpl::GetObject(fidl::Array<uint8_t> /*id*/,
                               const GetObjectCallback& callback) {
   FXL_NOTIMPLEMENTED();
   callback(cloud_provider::Status::INTERNAL_ERROR, 0u, mx::socket());
 }
 
 void PageCloudImpl::SetWatcher(
-    fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
-    fidl::Array<uint8_t> min_position_token,
+    fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> /*watcher*/,
+    fidl::Array<uint8_t> /*min_position_token*/,
     const SetWatcherCallback& callback) {
   FXL_NOTIMPLEMENTED();
   callback(cloud_provider::Status::INTERNAL_ERROR);

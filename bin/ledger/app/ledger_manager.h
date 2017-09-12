@@ -34,7 +34,7 @@ class LedgerManager : public LedgerImpl::Delegate {
   LedgerManager(Environment* environment,
                 std::unique_ptr<storage::LedgerStorage> storage,
                 std::unique_ptr<cloud_sync::LedgerSync> sync);
-  virtual ~LedgerManager();
+  ~LedgerManager() override;
 
   // Creates a new proxy for the LedgerImpl managed by this LedgerManager.
   void BindLedger(fidl::InterfaceRequest<Ledger> ledger_request);
