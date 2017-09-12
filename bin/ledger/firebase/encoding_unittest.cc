@@ -26,7 +26,7 @@ bool IsValidKey(const std::string& s) {
   }
 
   for (const char& c : s) {
-    if (0 <= c && c <= 31) {
+    if (static_cast<unsigned char>(c) <= 31) {
       return false;
     }
 
@@ -48,7 +48,7 @@ bool IsValidValue(const std::string s) {
   }
 
   for (const char& c : s) {
-    if (0 <= c && c <= 31) {
+    if (static_cast<unsigned char>(c) <= 31) {
       return false;
     }
 
