@@ -11,8 +11,8 @@
 #include "apps/ledger/src/test/get_ledger.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace {
 
@@ -70,7 +70,7 @@ void PutBenchmark::Run() {
                 << " --value-size=" << value_size_ << (update_ ? "update" : "");
   ledger::LedgerPtr ledger;
   ledger::Status status = test::GetLedger(
-      mtl::MessageLoop::GetCurrent(), application_context_.get(),
+      fsl::MessageLoop::GetCurrent(), application_context_.get(),
       &application_controller_, &token_provider_impl_, "put", tmp_dir_.path(),
       test::SyncState::DISABLED, "", &ledger);
   QuitOnError(status, "GetLedger");
@@ -79,7 +79,7 @@ void PutBenchmark::Run() {
       std::vector<fidl::Array<uint8_t>> keys) mutable {
     fidl::Array<uint8_t> id;
     ledger::Status status = test::GetPageEnsureInitialized(
-        mtl::MessageLoop::GetCurrent(), &ledger, nullptr, &page_, &id);
+        fsl::MessageLoop::GetCurrent(), &ledger, nullptr, &page_, &id);
     QuitOnError(status, "GetPageEnsureInitialized");
     if (transaction_size_ > 1) {
       page_->StartTransaction(fxl::MakeCopyable(
@@ -118,7 +118,7 @@ void PutBenchmark::PutEntry(fidl::Array<uint8_t> key,
     return;
   }
   mx::vmo vmo;
-  FXL_CHECK(mtl::VmoFromString(convert::ToString(value), &vmo));
+  FXL_CHECK(fsl::VmoFromString(convert::ToString(value), &vmo));
   page_->CreateReferenceFromVmo(
       std::move(vmo), fxl::MakeCopyable([
         this, key = std::move(key), put_callback = std::move(put_callback)
@@ -219,7 +219,7 @@ void PutBenchmark::ShutDown() {
   application_controller_->Kill();
   application_controller_.WaitForIncomingResponseWithTimeout(
       fxl::TimeDelta::FromSeconds(5));
-  mtl::MessageLoop::GetCurrent()->PostQuitTask();
+  fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 
 }  // namespace benchmark

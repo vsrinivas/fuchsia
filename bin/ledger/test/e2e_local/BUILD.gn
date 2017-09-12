@@ -22,7 +22,7 @@ executable("e2e_local") {
     "//apps/ledger/src/test:app_test_main",
     "//apps/ledger/src/test:lib",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 

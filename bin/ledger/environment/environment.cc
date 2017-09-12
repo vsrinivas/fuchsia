@@ -5,8 +5,8 @@
 #include "apps/ledger/src/environment/environment.h"
 
 #include "apps/ledger/src/coroutine/coroutine_impl.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/threading/create_thread.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/create_thread.h"
 
 namespace ledger {
 
@@ -22,14 +22,14 @@ Environment::Environment(fxl::RefPtr<fxl::TaskRunner> main_runner,
 
 Environment::~Environment() {
   if (io_thread_.joinable()) {
-    io_runner_->PostTask([] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+    io_runner_->PostTask([] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
     io_thread_.join();
   }
 }
 
 const fxl::RefPtr<fxl::TaskRunner> Environment::GetIORunner() {
   if (!io_runner_) {
-    io_thread_ = mtl::CreateThread(&io_runner_, "io thread");
+    io_thread_ = fsl::CreateThread(&io_runner_, "io thread");
   }
   return io_runner_;
 }

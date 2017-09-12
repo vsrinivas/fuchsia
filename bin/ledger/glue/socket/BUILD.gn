@@ -17,7 +17,7 @@ source_set("socket") {
     "//apps/ledger/src/callback",
     "//garnet/public/lib/fidl/c/waiter",
     "//garnet/public/lib/fidl/cpp/waiter",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//magenta/system/ulib/mx",
   ]
 

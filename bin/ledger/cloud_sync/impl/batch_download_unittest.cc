@@ -12,7 +12,7 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace cloud_sync {
 
@@ -24,7 +24,7 @@ namespace {
 // synced.
 class TestPageStorage : public storage::test::PageStorageEmptyImpl {
  public:
-  explicit TestPageStorage(mtl::MessageLoop* message_loop)
+  explicit TestPageStorage(fsl::MessageLoop* message_loop)
       : message_loop_(message_loop) {}
 
   void AddCommitsFromSync(
@@ -57,7 +57,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   std::unordered_map<std::string, std::string> sync_metadata;
 
  private:
-  mtl::MessageLoop* message_loop_;
+  fsl::MessageLoop* message_loop_;
 };
 
 class BatchDownloadTest : public test::TestWithMessageLoop {

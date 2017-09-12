@@ -17,9 +17,9 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/mtl/socket/strings.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace gcs {
 namespace {
@@ -51,7 +51,7 @@ class CloudStorageImplTest : public test::TestWithMessageLoop {
                    uint32_t status_code) {
     network::URLResponsePtr server_response = network::URLResponse::New();
     server_response->body = network::URLBody::New();
-    server_response->body->set_stream(mtl::WriteStringToSocket(body));
+    server_response->body->set_stream(fsl::WriteStringToSocket(body));
     server_response->status_code = status_code;
 
     network::HttpHeaderPtr content_length_header = network::HttpHeader::New();
@@ -80,7 +80,7 @@ class CloudStorageImplTest : public test::TestWithMessageLoop {
 TEST_F(CloudStorageImplTest, TestUpload) {
   std::string content = "Hello World\n";
   mx::vmo data;
-  ASSERT_TRUE(mtl::VmoFromString(content, &data));
+  ASSERT_TRUE(fsl::VmoFromString(content, &data));
 
   SetResponse("", 0, 200);
   Status status;
@@ -96,7 +96,7 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   EXPECT_EQ("POST", fake_network_service_.GetRequest()->method);
   EXPECT_TRUE(fake_network_service_.GetRequest()->body->is_buffer());
   std::string sent_content;
-  EXPECT_TRUE(mtl::StringFromVmo(
+  EXPECT_TRUE(fsl::StringFromVmo(
       fake_network_service_.GetRequest()->body->get_buffer(), &sent_content));
   EXPECT_EQ(content, sent_content);
 
@@ -112,7 +112,7 @@ TEST_F(CloudStorageImplTest, TestUpload) {
 TEST_F(CloudStorageImplTest, TestUploadAuth) {
   std::string content = "Hello World\n";
   mx::vmo data;
-  ASSERT_TRUE(mtl::VmoFromString(content, &data));
+  ASSERT_TRUE(fsl::VmoFromString(content, &data));
 
   SetResponse("", 0, 200);
   Status status;
@@ -129,7 +129,7 @@ TEST_F(CloudStorageImplTest, TestUploadAuth) {
 TEST_F(CloudStorageImplTest, TestUploadWhenObjectAlreadyExists) {
   std::string content;
   mx::vmo data;
-  ASSERT_TRUE(mtl::VmoFromString(content, &data));
+  ASSERT_TRUE(fsl::VmoFromString(content, &data));
   SetResponse("", 0, 412);
 
   Status status;
@@ -159,7 +159,7 @@ TEST_F(CloudStorageImplTest, TestDownload) {
   EXPECT_EQ("GET", fake_network_service_.GetRequest()->method);
 
   std::string downloaded_content;
-  EXPECT_TRUE(mtl::BlockingCopyToString(std::move(data), &downloaded_content));
+  EXPECT_TRUE(fsl::BlockingCopyToString(std::move(data), &downloaded_content));
   EXPECT_EQ(downloaded_content, content);
   EXPECT_EQ(size, content.size());
 }
@@ -211,7 +211,7 @@ TEST_F(CloudStorageImplTest, TestDownloadWithResponseBodyTooShort) {
   ASSERT_FALSE(RunLoopWithTimeout());
 
   std::string downloaded_content;
-  EXPECT_TRUE(mtl::BlockingCopyToString(std::move(data), &downloaded_content));
+  EXPECT_TRUE(fsl::BlockingCopyToString(std::move(data), &downloaded_content));
 
   // As the result is returned in a socket, we pass the expected size to the
   // client so that they can verify if the response is complete.

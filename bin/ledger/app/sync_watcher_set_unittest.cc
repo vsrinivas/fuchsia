@@ -11,7 +11,7 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace ledger {
 namespace {
@@ -38,7 +38,7 @@ class SyncWatcherImpl : public SyncWatcher {
     download_states.push_back(download_status);
     upload_states.push_back(upload_status);
     callback();
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 
   std::vector<SyncState> download_states;

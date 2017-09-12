@@ -17,7 +17,7 @@
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace tool {
 
@@ -27,7 +27,7 @@ ToolApp::ToolApp(fxl::CommandLine command_line)
   if (Initialize()) {
     Start();
   } else {
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 }
 
@@ -75,7 +75,7 @@ bool ToolApp::Initialize() {
 
 void ToolApp::Start() {
   FXL_DCHECK(command_);
-  command_->Start([] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+  command_->Start([] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
 }
 
 }  // namespace tool
@@ -83,7 +83,7 @@ void ToolApp::Start() {
 int main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
 
   tool::ToolApp app(std::move(command_line));
 

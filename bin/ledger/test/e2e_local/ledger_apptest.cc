@@ -19,8 +19,8 @@
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace test {
 namespace e2e_local {
@@ -183,7 +183,7 @@ TEST_F(LedgerAppTest, PutAndGet) {
   snapshot->Get(TestArray(), &status, &value);
   EXPECT_EQ(ledger::Status::OK, status);
   std::string value_as_string;
-  EXPECT_TRUE(mtl::StringFromVmo(value, &value_as_string));
+  EXPECT_TRUE(fsl::StringFromVmo(value, &value_as_string));
   EXPECT_TRUE(Equals(TestArray(), value_as_string));
 }
 

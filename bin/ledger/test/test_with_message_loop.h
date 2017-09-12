@@ -10,15 +10,15 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace test {
 
 bool RunGivenLoopWithTimeout(
-    mtl::MessageLoop* message_loop,
+    fsl::MessageLoop* message_loop,
     fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(1));
 
-bool RunGivenLoopUntil(mtl::MessageLoop* message_loop,
+bool RunGivenLoopUntil(fsl::MessageLoop* message_loop,
                        std::function<bool()> condition,
                        fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(1));
 
@@ -41,7 +41,7 @@ class TestWithMessageLoop : public ::testing::Test {
   // Creates a closure that quits the test message loop when executed.
   fxl::Closure MakeQuitTask();
 
-  mtl::MessageLoop message_loop_;
+  fsl::MessageLoop message_loop_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(TestWithMessageLoop);

@@ -10,7 +10,7 @@
 #include "apps/ledger/src/storage/public/object.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/types.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace ledger {
 namespace {
@@ -26,7 +26,7 @@ Status ToBuffer(convert::ExtendedStringView value,
   }
   size_t length = max_size < 0 ? value.size() : max_size;
 
-  bool result = mtl::VmoFromString(value.substr(start, length), buffer);
+  bool result = fsl::VmoFromString(value.substr(start, length), buffer);
   return result ? Status::OK : Status::UNKNOWN_ERROR;
 }
 

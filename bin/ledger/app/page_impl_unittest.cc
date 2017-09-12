@@ -25,16 +25,16 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/mtl/socket/strings.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace ledger {
 namespace {
 
 std::string ToString(const mx::vmo& vmo) {
   std::string value;
-  bool status = mtl::StringFromVmo(vmo, &value);
+  bool status = fsl::StringFromVmo(vmo, &value);
   FXL_DCHECK(status);
   return value;
 }
@@ -461,7 +461,7 @@ TEST_F(PageImplTest, CreateReferenceFromSocket) {
   Status status;
   ReferencePtr reference;
   page_ptr_->CreateReferenceFromSocket(
-      value.size(), mtl::WriteStringToSocket(value),
+      value.size(), fsl::WriteStringToSocket(value),
       [this, &status, &reference](Status received_status,
                                   ReferencePtr received_reference) {
         status = received_status;
@@ -479,7 +479,7 @@ TEST_F(PageImplTest, CreateReferenceFromSocket) {
 TEST_F(PageImplTest, CreateReferenceFromVmo) {
   std::string value("a small value");
   mx::vmo vmo;
-  ASSERT_TRUE(mtl::VmoFromString(value, &vmo));
+  ASSERT_TRUE(fsl::VmoFromString(value, &vmo));
 
   Status status;
   ReferencePtr reference;
@@ -1162,7 +1162,7 @@ TEST_F(PageImplTest, SnapshotFetchPartial) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   std::string content;
-  EXPECT_TRUE(mtl::StringFromVmo(buffer, &content));
+  EXPECT_TRUE(fsl::StringFromVmo(buffer, &content));
   EXPECT_EQ("small", content);
 }
 

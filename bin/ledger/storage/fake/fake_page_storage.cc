@@ -15,8 +15,8 @@
 #include "apps/ledger/src/storage/public/constants.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/socket/strings.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace storage {
 namespace fake {
@@ -77,7 +77,7 @@ void FakePageStorage::GetCommit(
     return;
   }
 
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
       [
         this, commit_id = commit_id.ToString(), callback = std::move(callback)
       ] {
@@ -161,7 +161,7 @@ void FakePageStorage::GetPiece(
 
     callback(Status::OK, std::make_unique<FakeObject>(object_id, it->second));
   });
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
       [this] { SendNextObject(); }, fxl::TimeDelta::FromMilliseconds(5));
 }
 

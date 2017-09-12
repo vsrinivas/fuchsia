@@ -17,8 +17,8 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace test {
 namespace integration {
@@ -147,7 +147,7 @@ fidl::Array<ledger::EntryPtr> SnapshotGetEntries(
 
 std::string ToString(const mx::vmo& vmo) {
   std::string value;
-  bool status = mtl::StringFromVmo(vmo, &value);
+  bool status = fsl::StringFromVmo(vmo, &value);
   FXL_DCHECK(status);
   return value;
 }
@@ -164,7 +164,7 @@ std::string SnapshotFetchPartial(ledger::PageSnapshotPtr* snapshot,
   (*snapshot)->FetchPartial(std::move(key), offset, max_size,
                             [&result](ledger::Status status, mx::vmo buffer) {
                               EXPECT_EQ(status, ledger::Status::OK);
-                              EXPECT_TRUE(mtl::StringFromVmo(buffer, &result));
+                              EXPECT_TRUE(fsl::StringFromVmo(buffer, &result));
                             });
   EXPECT_TRUE(snapshot->WaitForIncomingResponseWithTimeout(
       fxl::TimeDelta::FromSeconds(1)));

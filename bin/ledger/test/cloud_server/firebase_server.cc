@@ -24,7 +24,7 @@
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/vmo/strings.h"
 #include "lib/url/gurl.h"
 
 namespace ledger {
@@ -390,7 +390,7 @@ void FirebaseServer::HandlePatch(
     network::URLRequestPtr request,
     const std::function<void(network::URLResponsePtr)> callback) {
   std::string body;
-  if (!mtl::StringFromVmo(request->body->get_buffer(), &body)) {
+  if (!fsl::StringFromVmo(request->body->get_buffer(), &body)) {
     FXL_NOTREACHED();
   }
 
@@ -429,7 +429,7 @@ void FirebaseServer::HandlePut(
     network::URLRequestPtr request,
     const std::function<void(network::URLResponsePtr)> callback) {
   std::string body;
-  if (!mtl::StringFromVmo(request->body->get_buffer(), &body)) {
+  if (!fsl::StringFromVmo(request->body->get_buffer(), &body)) {
     FXL_NOTREACHED();
   }
 

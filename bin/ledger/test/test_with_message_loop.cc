@@ -9,7 +9,7 @@
 
 namespace test {
 
-bool RunGivenLoopWithTimeout(mtl::MessageLoop* message_loop,
+bool RunGivenLoopWithTimeout(fsl::MessageLoop* message_loop,
                              fxl::TimeDelta timeout) {
   auto canceled = std::make_unique<bool>(false);
   bool* canceled_ptr = canceled.get();
@@ -31,7 +31,7 @@ bool RunGivenLoopWithTimeout(mtl::MessageLoop* message_loop,
   return timed_out;
 }
 
-bool RunGivenLoopUntil(mtl::MessageLoop* message_loop,
+bool RunGivenLoopUntil(fsl::MessageLoop* message_loop,
                        std::function<bool()> condition,
                        fxl::TimeDelta timeout) {
   const fxl::TimePoint deadline = fxl::TimePoint::Now() + timeout;

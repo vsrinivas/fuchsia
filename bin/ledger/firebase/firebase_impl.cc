@@ -13,7 +13,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/ascii.h"
 #include "lib/fxl/strings/join_strings.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace firebase {
 
@@ -26,7 +26,7 @@ std::function<network::URLRequestPtr()> MakeRequest(
     bool stream_request = false) {
   mx::vmo body;
   if (!message.empty()) {
-    if (!mtl::VmoFromString(message, &body)) {
+    if (!fsl::VmoFromString(message, &body)) {
       FXL_LOG(ERROR) << "Unable to create VMO from string.";
       return nullptr;
     }

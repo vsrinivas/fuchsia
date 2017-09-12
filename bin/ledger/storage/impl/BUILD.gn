@@ -109,7 +109,7 @@ source_set("test_utils") {
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/test:lib",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -143,7 +143,7 @@ source_set("unittests") {
     "//apps/ledger/src/storage/test",
     "//apps/ledger/src/test:lib",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 

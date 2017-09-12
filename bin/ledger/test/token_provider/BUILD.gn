@@ -22,7 +22,7 @@ source_set("token_provider") {
   deps = [
     "//apps/ledger/src/convert",
     "//apps/ledger/src/glue/crypto",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/boringssl",
     "//third_party/rapidjson",
   ]

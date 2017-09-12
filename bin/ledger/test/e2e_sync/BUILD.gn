@@ -24,7 +24,7 @@ executable("e2e_sync") {
     "//apps/ledger/src/test/integration/sync",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 

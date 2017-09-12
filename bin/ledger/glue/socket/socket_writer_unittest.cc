@@ -10,7 +10,7 @@
 #include "apps/ledger/src/glue/socket/socket_pair.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace glue {
 namespace {
@@ -36,7 +36,7 @@ class StringClient : public SocketWriter::Client {
 };
 
 TEST(SocketWriter, WriteAndRead) {
-  mtl::MessageLoop message_loop;
+  fsl::MessageLoop message_loop;
   glue::SocketPair socket;
   StringClient client("bazinga\n");
   SocketWriter writer(&client);
@@ -56,7 +56,7 @@ TEST(SocketWriter, WriteAndRead) {
 }
 
 TEST(SocketWriter, ClientClosedTheirEnd) {
-  mtl::MessageLoop message_loop;
+  fsl::MessageLoop message_loop;
   glue::SocketPair socket;
   StringClient client("bazinga\n");
   SocketWriter writer(&client);
@@ -66,7 +66,7 @@ TEST(SocketWriter, ClientClosedTheirEnd) {
 }
 
 TEST(SocketWriter, StringSocketWriter) {
-  mtl::MessageLoop message_loop;
+  fsl::MessageLoop message_loop;
   glue::SocketPair socket;
   StringSocketWriter* writer = new StringSocketWriter();
   writer->Start("bazinga\n", std::move(socket.socket1));

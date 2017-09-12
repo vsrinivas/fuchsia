@@ -21,7 +21,7 @@ source_set("test") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

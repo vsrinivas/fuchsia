@@ -13,7 +13,7 @@
 #include "apps/ledger/src/fidl_helpers/boundable.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace test {
 enum SyncState { DISABLED = 0, CLOUD_SYNC_ENABLED };
@@ -25,7 +25,7 @@ enum Erase { KEEP_DATA = 0, ERASE_CLOUD };
 // to it. If |erase_first| is true, an EraseRepository command is issued first
 // before connecting, ensuring a clean state before proceeding.
 ledger::Status GetLedger(
-    mtl::MessageLoop* loop,
+    fsl::MessageLoop* loop,
     app::ApplicationContext* context,
     app::ApplicationControllerPtr* controller,
     ledger::fidl_helpers::SetBoundable<modular::auth::TokenProvider>*
@@ -41,7 +41,7 @@ ledger::Status GetLedger(
 // callback only after executing a GetId() call on the page, ensuring that it is
 // already initialized. If |id| is nullptr, a new page with a unique id is
 // created.
-ledger::Status GetPageEnsureInitialized(mtl::MessageLoop* loop,
+ledger::Status GetPageEnsureInitialized(fsl::MessageLoop* loop,
                                         ledger::LedgerPtr* ledger,
                                         fidl::Array<uint8_t> requested_id,
                                         ledger::PagePtr* page,

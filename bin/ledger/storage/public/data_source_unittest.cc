@@ -7,8 +7,8 @@
 #include "apps/ledger/src/glue/socket/socket_pair.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/mtl/socket/strings.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace storage {
 namespace {
@@ -76,7 +76,7 @@ TEST_F(DataSourceTest, Vmo) {
   std::string value = "Hello World";
 
   mx::vmo vmo;
-  EXPECT_TRUE(mtl::VmoFromString(value, &vmo));
+  EXPECT_TRUE(fsl::VmoFromString(value, &vmo));
 
   EXPECT_TRUE(TestDataSource(value, DataSource::Create(std::move(vmo))));
 }
@@ -86,7 +86,7 @@ TEST_F(DataSourceTest, Socket) {
 
   EXPECT_TRUE(TestDataSource(
       value,
-      DataSource::Create(mtl::WriteStringToSocket(value), value.size())));
+      DataSource::Create(fsl::WriteStringToSocket(value), value.size())));
 }
 
 TEST_F(DataSourceTest, SocketWrongSize) {
@@ -94,10 +94,10 @@ TEST_F(DataSourceTest, SocketWrongSize) {
 
   EXPECT_FALSE(TestDataSource(
       value,
-      DataSource::Create(mtl::WriteStringToSocket(value), value.size() - 1)));
+      DataSource::Create(fsl::WriteStringToSocket(value), value.size() - 1)));
   EXPECT_FALSE(TestDataSource(
       value,
-      DataSource::Create(mtl::WriteStringToSocket(value), value.size() + 1)));
+      DataSource::Create(fsl::WriteStringToSocket(value), value.size() + 1)));
 }
 
 TEST_F(DataSourceTest, SocketMultipleChunk) {

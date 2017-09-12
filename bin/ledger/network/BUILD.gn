@@ -38,7 +38,7 @@ source_set("fake") {
   ]
 
   deps = [
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]
@@ -54,7 +54,7 @@ source_set("unittests") {
   deps = [
     ":network",
     "//apps/ledger/src/test:lib",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/netstack/fidl:net_address",
     "//third_party/gtest",
   ]

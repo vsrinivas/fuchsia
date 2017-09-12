@@ -15,8 +15,8 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace test {
 namespace {
@@ -99,7 +99,7 @@ class ServiceAccountTokenProviderTest : public TestWithMessageLoop {
     response->error = std::move(error);
     response->status_code = status;
     mx::vmo buffer;
-    if (!mtl::VmoFromString(body, &buffer)) {
+    if (!fsl::VmoFromString(body, &buffer)) {
       ADD_FAILURE() << "Unable to convert string to Vmo.";
     }
     response->body = network::URLBody::New();

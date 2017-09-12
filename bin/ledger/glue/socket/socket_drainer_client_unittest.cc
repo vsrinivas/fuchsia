@@ -6,14 +6,14 @@
 
 #include "apps/ledger/src/glue/socket/socket_pair.h"
 #include "gtest/gtest.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace glue {
 namespace {
 
 // Regression test for LE-229.
 TEST(SocketDrainerClient, DoNotCallOnDelete) {
-  mtl::MessageLoop message_loop;
+  fsl::MessageLoop message_loop;
   glue::SocketPair socket;
   socket.socket1.reset();
 

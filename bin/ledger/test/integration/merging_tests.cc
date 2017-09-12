@@ -17,7 +17,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace test {
 namespace integration {
@@ -91,7 +91,7 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
       : binding_(this, std::move(request)) {
     binding_.set_connection_error_handler([this] {
       this->disconnected = true;
-      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+      fsl::MessageLoop::GetCurrent()->PostQuitTask();
     });
   }
   ~ConflictResolverImpl() override {}
@@ -272,7 +272,7 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
     requests.emplace_back(std::move(left_version), std::move(right_version),
                           std::move(common_version),
                           std::move(result_provider));
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 
   fidl::Binding<ConflictResolver> binding_;
@@ -298,7 +298,7 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
   void GetPolicy(fidl::Array<uint8_t> /*page_id*/,
                  const GetPolicyCallback& callback) override {
     get_policy_calls++;
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this, callback] {
           callback(policy_);
           if (callback_) {
@@ -361,7 +361,7 @@ TEST_F(MergingIntegrationTest, Merging) {
 
   ledger::PageWatcherPtr watcher1_ptr;
   Watcher watcher1(GetProxy(&watcher1_ptr),
-                   [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                   [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
   ledger::PageSnapshotPtr snapshot1;
   page1->GetSnapshot(
       snapshot1.NewRequest(), nullptr, std::move(watcher1_ptr),
@@ -370,7 +370,7 @@ TEST_F(MergingIntegrationTest, Merging) {
 
   ledger::PageWatcherPtr watcher2_ptr;
   Watcher watcher2(GetProxy(&watcher2_ptr),
-                   [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                   [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
   ledger::PageSnapshotPtr snapshot2;
   page2->GetSnapshot(
       snapshot2.NewRequest(), nullptr, std::move(watcher2_ptr),
@@ -459,7 +459,7 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
           ledger::MergePolicy::NONE, GetProxy(&resolver_factory_ptr),
-          [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+          [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
   ledger::LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
@@ -471,7 +471,7 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
 
   ledger::PageWatcherPtr watcher1_ptr;
   Watcher watcher1(GetProxy(&watcher1_ptr),
-                   [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                   [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
   ledger::PageSnapshotPtr snapshot1;
   page1->GetSnapshot(
       snapshot1.NewRequest(), nullptr, std::move(watcher1_ptr),
@@ -480,7 +480,7 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
 
   ledger::PageWatcherPtr watcher2_ptr;
   Watcher watcher2(GetProxy(&watcher2_ptr),
-                   [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                   [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
   ledger::PageSnapshotPtr snapshot2;
   page2->GetSnapshot(
       snapshot2.NewRequest(), nullptr, std::move(watcher2_ptr),
@@ -544,7 +544,7 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   resolver_factory_ptr = nullptr;  // Suppress misc-use-after-move.
   resolver_factory = std::make_unique<TestConflictResolverFactory>(
       ledger::MergePolicy::LAST_ONE_WINS, GetProxy(&resolver_factory_ptr),
-      [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+      [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
       [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
@@ -684,7 +684,7 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   // Watch for the change.
   ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(GetProxy(&watcher_ptr),
-                  [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                  [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
   ledger::PageSnapshotPtr snapshot2;
   page1->GetSnapshot(
       snapshot2.NewRequest(), nullptr, std::move(watcher_ptr),
@@ -1129,7 +1129,7 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   // Watch for the change.
   ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(GetProxy(&watcher_ptr),
-                  [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                  [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
   ledger::PageSnapshotPtr snapshot;
   page1->GetSnapshot(
       snapshot.NewRequest(), nullptr, std::move(watcher_ptr),
@@ -1173,7 +1173,7 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
   // Watch for changes.
   ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(GetProxy(&watcher_ptr),
-                  []() { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                  []() { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
   ledger::PageSnapshotPtr snapshot2;
   page1->GetSnapshot(
       snapshot2.NewRequest(), nullptr, std::move(watcher_ptr),
@@ -1330,7 +1330,7 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   // Watch for the change.
   ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(GetProxy(&watcher_ptr),
-                  []() { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                  []() { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
   ledger::PageSnapshotPtr snapshot2;
   page1->GetSnapshot(
       snapshot2.NewRequest(), nullptr, std::move(watcher_ptr),
@@ -1429,7 +1429,7 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   // Watch for the change.
   ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(GetProxy(&watcher_ptr),
-                  []() { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                  []() { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
   ledger::PageSnapshotPtr snapshot;
   page1->GetSnapshot(
       snapshot.NewRequest(), nullptr, std::move(watcher_ptr),

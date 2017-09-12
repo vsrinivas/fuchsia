@@ -10,7 +10,7 @@
 #include "garnet/public/lib/fidl/cpp/bindings/binding_set.h"
 #include "garnet/public/lib/fxl/command_line.h"
 #include "garnet/public/lib/fxl/log_settings_command_line.h"
-#include "garnet/public/lib/mtl/tasks/message_loop.h"
+#include "garnet/public/lib/fsl/tasks/message_loop.h"
 
 namespace cloud_provider_firebase {
 namespace {
@@ -41,7 +41,7 @@ class App : public modular::Lifecycle {
 
  private:
   std::unique_ptr<app::ApplicationContext> application_context_;
-  mtl::MessageLoop loop_;
+  fsl::MessageLoop loop_;
   trace::TraceProvider trace_provider_;
   FactoryImpl factory_impl_;
   fidl::BindingSet<modular::Lifecycle> lifecycle_bindings_;

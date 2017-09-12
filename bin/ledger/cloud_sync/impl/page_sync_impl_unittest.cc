@@ -21,8 +21,8 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/socket/strings.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace cloud_sync {
 namespace {
@@ -59,7 +59,7 @@ class TestCommit : public storage::test::CommitEmptyImpl {
 // Registers the commits marked as synced.
 class TestPageStorage : public storage::test::PageStorageEmptyImpl {
  public:
-  explicit TestPageStorage(mtl::MessageLoop* message_loop)
+  explicit TestPageStorage(fsl::MessageLoop* message_loop)
       : message_loop_(message_loop) {}
 
   std::unique_ptr<TestCommit> NewCommit(std::string id,
@@ -227,7 +227,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   std::unordered_map<std::string, std::string> sync_metadata;
 
  private:
-  mtl::MessageLoop* message_loop_;
+  fsl::MessageLoop* message_loop_;
 };
 
 // Fake implementation of cloud_provider_firebase::CloudProvider. Injects the
@@ -236,7 +236,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
 class TestCloudProvider
     : public cloud_provider_firebase::test::CloudProviderEmptyImpl {
  public:
-  explicit TestCloudProvider(mtl::MessageLoop* message_loop)
+  explicit TestCloudProvider(fsl::MessageLoop* message_loop)
       : message_loop_(message_loop) {}
 
   ~TestCloudProvider() override = default;
@@ -320,7 +320,7 @@ class TestCloudProvider
         [ this, object_id = object_id.ToString(), callback ]() {
           callback(cloud_provider_firebase::Status::OK,
                    objects_to_return[object_id].size(),
-                   mtl::WriteStringToSocket(objects_to_return[object_id]));
+                   fsl::WriteStringToSocket(objects_to_return[object_id]));
         });
   }
 
@@ -344,7 +344,7 @@ class TestCloudProvider
   cloud_provider_firebase::CommitWatcher* watcher_ = nullptr;
 
  private:
-  mtl::MessageLoop* message_loop_;
+  fsl::MessageLoop* message_loop_;
 };
 
 // Dummy implementation of a backoff policy, which always returns zero backoff
@@ -1039,7 +1039,7 @@ TEST_F(PageSyncImplTest, GetObject) {
             cloud_provider_.get_object_auth_tokens);
   EXPECT_EQ(7u, size);
   std::string content;
-  EXPECT_TRUE(mtl::BlockingCopyToString(std::move(data), &content));
+  EXPECT_TRUE(fsl::BlockingCopyToString(std::move(data), &content));
   EXPECT_EQ("content", content);
 }
 
@@ -1092,7 +1092,7 @@ TEST_F(PageSyncImplTest, RetryGetObject) {
   EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(7u, size);
   std::string content;
-  EXPECT_TRUE(mtl::BlockingCopyToString(std::move(data), &content));
+  EXPECT_TRUE(fsl::BlockingCopyToString(std::move(data), &content));
   EXPECT_EQ("content", content);
 }
 

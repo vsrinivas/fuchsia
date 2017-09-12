@@ -21,8 +21,8 @@
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/mtl/socket/files.h"
-#include "lib/mtl/vmo/file.h"
+#include "lib/fsl/socket/files.h"
+#include "lib/fsl/vmo/file.h"
 
 namespace gcs {
 

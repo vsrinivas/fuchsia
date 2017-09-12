@@ -5,26 +5,26 @@
 #include "apps/ledger/src/environment/environment.h"
 
 #include "gtest/gtest.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace ledger {
 namespace {
 
 TEST(Environment, NoIOThread) {
   // Check that the environment without an io_thread can be deleted correctly.
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   Environment env(loop.task_runner(), nullptr);
 }
 
 TEST(Environment, GivenIOThread) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   Environment env(loop.task_runner(), nullptr, loop.task_runner());
 
   EXPECT_EQ(loop.task_runner(), env.GetIORunner());
 }
 
 TEST(Environment, DefaultIOThread) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   int value = 0;
   {
     Environment env(loop.task_runner(), nullptr);

@@ -4,7 +4,7 @@
 
 #include "apps/ledger/src/storage/public/object.h"
 
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace storage {
 
@@ -15,7 +15,7 @@ Status Object::GetVmo(mx::vmo* vmo) const {
     return status;
   }
 
-  if (!mtl::VmoFromString(data, vmo)) {
+  if (!fsl::VmoFromString(data, vmo)) {
     return Status::INTERNAL_IO_ERROR;
   }
 

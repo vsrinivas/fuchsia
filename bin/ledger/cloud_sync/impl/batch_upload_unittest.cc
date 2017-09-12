@@ -21,8 +21,8 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace cloud_sync {
 namespace {
@@ -153,7 +153,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
 class TestCloudProvider
     : public cloud_provider_firebase::test::CloudProviderEmptyImpl {
  public:
-  explicit TestCloudProvider(mtl::MessageLoop* message_loop)
+  explicit TestCloudProvider(fsl::MessageLoop* message_loop)
       : message_loop_(message_loop) {}
 
   ~TestCloudProvider() override = default;
@@ -180,7 +180,7 @@ class TestCloudProvider
     add_object_calls++;
     received_object_tokens.push_back(auth_token);
     std::string received_data;
-    ASSERT_TRUE(mtl::StringFromVmo(data, &received_data));
+    ASSERT_TRUE(fsl::StringFromVmo(data, &received_data));
     received_objects.insert(
         std::make_pair(object_id.ToString(), received_data));
     fxl::Closure report_result =
@@ -220,7 +220,7 @@ class TestCloudProvider
   std::map<cloud_provider_firebase::ObjectId, std::string> received_objects;
 
  private:
-  mtl::MessageLoop* message_loop_;
+  fsl::MessageLoop* message_loop_;
 };
 
 class BatchUploadTest : public ::test::TestWithMessageLoop {

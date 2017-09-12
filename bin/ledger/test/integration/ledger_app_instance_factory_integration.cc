@@ -19,9 +19,9 @@
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "lib/mtl/socket/strings.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/threading/create_thread.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/create_thread.h"
 
 namespace test {
 namespace {
@@ -90,7 +90,7 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
           integration::RandomArray(1),
           std::move(repository_factory_ptr),
           std::move(services_task_runner)) {
-  thread_ = mtl::CreateThread(&task_runner_);
+  thread_ = fsl::CreateThread(&task_runner_);
   task_runner_->PostTask(fxl::MakeCopyable([
     this, request = std::move(repository_factory_request),
     network_factory = std::move(network_factory)
@@ -102,7 +102,7 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
 
 LedgerAppInstanceImpl::~LedgerAppInstanceImpl() {
   task_runner_->PostTask([this]() {
-    mtl::MessageLoop::GetCurrent()->QuitNow();
+    fsl::MessageLoop::GetCurrent()->QuitNow();
     factory_container_.reset();
   });
   thread_.join();
@@ -127,12 +127,12 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
 };
 
 void LedgerAppInstanceFactoryImpl::Init() {
-  services_thread_ = mtl::CreateThread(&services_task_runner_);
+  services_thread_ = fsl::CreateThread(&services_task_runner_);
 }
 
 LedgerAppInstanceFactoryImpl::~LedgerAppInstanceFactoryImpl() {
   services_task_runner_->PostTask(
-      [] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+      [] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
   services_thread_.join();
 }
 

@@ -21,7 +21,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace test {
 
@@ -342,7 +342,7 @@ network::URLRequestPtr ServiceAccountTokenProvider::GetIdentityRequest(
   request->headers.push_back(std::move(accept_header));
 
   mx::vmo data;
-  bool result = mtl::VmoFromString(GetIdentityRequestBody(custom_token), &data);
+  bool result = fsl::VmoFromString(GetIdentityRequestBody(custom_token), &data);
   FXL_DCHECK(result);
 
   request->body = network::URLBody::New();
@@ -380,7 +380,7 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
   std::string response_body;
   if (!response->body.is_null()) {
     FXL_DCHECK(response->body->is_buffer());
-    if (!mtl::StringFromVmo(response->body->get_buffer(), &response_body)) {
+    if (!fsl::StringFromVmo(response->body->get_buffer(), &response_body)) {
       ResolveCallbacks(api_key, nullptr,
                        GetError(modular::auth::Status::INTERNAL_ERROR,
                                 "Unable to read from VMO."));

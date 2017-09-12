@@ -38,9 +38,9 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/mtl/socket/strings.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/threading/create_thread.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/create_thread.h"
 
 namespace storage {
 
@@ -105,7 +105,7 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
     std::string& value = id_to_value_[id];
     object_requests.insert(id);
     on_get_object_([ callback = std::move(callback), value ] {
-      callback(Status::OK, value.size(), mtl::WriteStringToSocket(value));
+      callback(Status::OK, value.size(), fsl::WriteStringToSocket(value));
     });
   }
 
@@ -816,7 +816,7 @@ TEST_F(PageStorageTest, AddObjectFromLocalWrongSize) {
   ObjectData data("Some data");
 
   storage_->AddObjectFromLocal(
-      DataSource::Create(mtl::WriteStringToSocket(data.value), 123),
+      DataSource::Create(fsl::WriteStringToSocket(data.value), 123),
       [this](Status returned_status, ObjectId returned_object_id) {
         EXPECT_EQ(Status::IO_ERROR, returned_status);
         message_loop_.PostQuitTask();
@@ -1257,8 +1257,8 @@ TEST_F(PageStorageTest, Generation) {
 TEST_F(PageStorageTest, DeletionOnIOThread) {
   std::thread io_thread;
   fxl::RefPtr<fxl::TaskRunner> io_runner;
-  io_thread = mtl::CreateThread(&io_runner);
-  io_runner->PostTask([] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+  io_thread = fsl::CreateThread(&io_runner);
+  io_runner->PostTask([] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
   bool called = false;
   EXPECT_FALSE(callback::RunSynchronously(
       io_runner, [&called] { called = true; }, fxl::TimeDelta::FromSeconds(1)));

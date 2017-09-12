@@ -5,7 +5,7 @@
 #include "apps/ledger/src/storage/public/data_source.h"
 
 #include "apps/ledger/src/convert/convert.h"
-#include "lib/mtl/socket/socket_drainer.h"
+#include "lib/fsl/socket/socket_drainer.h"
 #include "mx/vmar.h"
 
 namespace storage {
@@ -120,7 +120,7 @@ class VmoDataSource : public DataSource {
 #endif
 };
 
-class SocketDataSource : public DataSource, public mtl::SocketDrainer::Client {
+class SocketDataSource : public DataSource, public fsl::SocketDrainer::Client {
  public:
   SocketDataSource(mx::socket socket, uint64_t expected_size)
       : socket_(std::move(socket)),
@@ -136,7 +136,7 @@ class SocketDataSource : public DataSource, public mtl::SocketDrainer::Client {
       override {
     FXL_DCHECK(socket_);
     callback_ = std::move(callback);
-    socket_drainer_ = std::make_unique<mtl::SocketDrainer>(this);
+    socket_drainer_ = std::make_unique<fsl::SocketDrainer>(this);
     socket_drainer_->Start(std::move(socket_));
     socket_.reset();
   }
@@ -174,7 +174,7 @@ class SocketDataSource : public DataSource, public mtl::SocketDrainer::Client {
   mx::socket socket_;
   uint64_t expected_size_;
   uint64_t remaining_bytes_;
-  std::unique_ptr<mtl::SocketDrainer> socket_drainer_;
+  std::unique_ptr<fsl::SocketDrainer> socket_drainer_;
   std::function<void(std::unique_ptr<DataChunk>, Status)> callback_;
 };
 

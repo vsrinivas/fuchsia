@@ -17,21 +17,21 @@
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "lib/mtl/socket/strings.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/threading/create_thread.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/create_thread.h"
 
 namespace test {
 namespace integration {
 void IntegrationTest::SetUp() {
   ::testing::Test::SetUp();
-  socket_thread_ = mtl::CreateThread(&socket_task_runner_);
+  socket_thread_ = fsl::CreateThread(&socket_task_runner_);
   app_factory_ = GetLedgerAppInstanceFactory();
 }
 
 void IntegrationTest::TearDown() {
   socket_task_runner_->PostTask(
-      [] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+      [] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
   socket_thread_.join();
 
   ::testing::Test::TearDown();

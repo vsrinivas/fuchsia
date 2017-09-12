@@ -5,7 +5,7 @@
 #include "apps/ledger/src/storage/public/object.h"
 
 #include "gtest/gtest.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace storage {
 namespace {
@@ -33,7 +33,7 @@ TEST(ObjectTest, GetVmo) {
   mx::vmo vmo;
   ASSERT_EQ(Status::OK, object.GetVmo(&vmo));
   std::string vmo_content;
-  ASSERT_TRUE(mtl::StringFromVmo(vmo, &vmo_content));
+  ASSERT_TRUE(fsl::StringFromVmo(vmo, &vmo_content));
   EXPECT_EQ(content, vmo_content);
 }
 

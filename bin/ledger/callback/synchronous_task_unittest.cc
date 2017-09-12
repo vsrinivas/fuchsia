@@ -7,13 +7,13 @@
 #include <algorithm>
 
 #include "gtest/gtest.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/threading/create_thread.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/create_thread.h"
 
 TEST(SynchronousTaskTest, RunSynchronouslyOnOtherThread) {
   constexpr size_t nb_values = 1000;
   fxl::RefPtr<fxl::TaskRunner> task_runner;
-  std::thread thread = mtl::CreateThread(&task_runner);
+  std::thread thread = fsl::CreateThread(&task_runner);
 
   bool values[nb_values];
   std::fill_n(values, nb_values, false);
@@ -29,12 +29,12 @@ TEST(SynchronousTaskTest, RunSynchronouslyOnOtherThread) {
   }
   EXPECT_TRUE(called);
 
-  task_runner->PostTask([] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+  task_runner->PostTask([] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
   thread.join();
 }
 
 TEST(SynchronousTaskTest, RunOnCurrentThreadTimeout) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   bool called = false;
   EXPECT_FALSE(callback::RunSynchronously(
       loop.task_runner(), [&called] { called = true; },
@@ -45,7 +45,7 @@ TEST(SynchronousTaskTest, RunOnCurrentThreadTimeout) {
 TEST(SynchronousTaskTest, RunOnDeletedMessageLoop) {
   fxl::RefPtr<fxl::TaskRunner> task_runner;
   {
-    mtl::MessageLoop loop;
+    fsl::MessageLoop loop;
     task_runner = loop.task_runner();
   }
   bool called = false;

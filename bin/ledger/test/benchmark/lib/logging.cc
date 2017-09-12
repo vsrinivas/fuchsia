@@ -4,7 +4,7 @@
 
 #include "apps/ledger/src/test/benchmark/lib/logging.h"
 
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace test {
 namespace benchmark {
@@ -12,7 +12,7 @@ namespace benchmark {
 bool QuitOnError(ledger::Status status, fxl::StringView description) {
   if (status != ledger::Status::OK) {
     FXL_LOG(ERROR) << description << " failed";
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
     return true;
   }
   return false;

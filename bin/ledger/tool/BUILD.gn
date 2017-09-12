@@ -28,7 +28,7 @@ executable("tool") {
     "//apps/ledger/src/storage/impl:lib",
     "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

@@ -33,7 +33,7 @@ source_set("impl") {
   ]
 
   deps = [
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//magenta/system/ulib/trace",
   ]
 
@@ -63,7 +63,7 @@ source_set("unittests") {
     "//apps/ledger/src/storage/test",
     "//apps/ledger/src/test:lib",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 

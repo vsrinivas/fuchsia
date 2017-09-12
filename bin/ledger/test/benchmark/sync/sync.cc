@@ -17,8 +17,8 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace {
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/sync";
@@ -79,20 +79,20 @@ void SyncBenchmark::Run() {
 
   ledger::LedgerPtr alpha;
   ledger::Status status = test::GetLedger(
-      mtl::MessageLoop::GetCurrent(), application_context_.get(),
+      fsl::MessageLoop::GetCurrent(), application_context_.get(),
       &alpha_controller_, &token_provider_impl_, "sync", alpha_path,
       test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &alpha);
   QuitOnError(status, "alpha ledger");
 
   ledger::LedgerPtr beta;
   status = test::GetLedger(
-      mtl::MessageLoop::GetCurrent(), application_context_.get(),
+      fsl::MessageLoop::GetCurrent(), application_context_.get(),
       &beta_controller_, &token_provider_impl_, "sync", beta_path,
       test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &beta);
   QuitOnError(status, "beta ledger");
 
   fidl::Array<uint8_t> id;
-  status = test::GetPageEnsureInitialized(mtl::MessageLoop::GetCurrent(),
+  status = test::GetPageEnsureInitialized(fsl::MessageLoop::GetCurrent(),
                                           &alpha, nullptr, &alpha_page_, &id);
   QuitOnError(status, "alpha page initialization");
   page_id_ = id.Clone();
@@ -134,8 +134,8 @@ void SyncBenchmark::RunSingle(size_t i) {
       (reference_strategy_ == ReferenceStrategy::ON ||
        value_size_ > kMaxInlineDataSize)) {
     mx::vmo vmo;
-    if (!mtl::VmoFromString(convert::ToStringView(value), &vmo)) {
-      benchmark::QuitOnError(ledger::Status::IO_ERROR, "mtl::VmoFromString");
+    if (!fsl::VmoFromString(convert::ToStringView(value), &vmo)) {
+      benchmark::QuitOnError(ledger::Status::IO_ERROR, "fsl::VmoFromString");
       return;
     }
     alpha_page_->CreateReferenceFromVmo(
@@ -161,7 +161,7 @@ void SyncBenchmark::Backlog() {
   FXL_DCHECK(ret);
 
   ledger::Status status = test::GetLedger(
-      mtl::MessageLoop::GetCurrent(), application_context_.get(),
+      fsl::MessageLoop::GetCurrent(), application_context_.get(),
       &gamma_controller_, &token_provider_impl_, "sync", gamma_path,
       test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &gamma_);
   QuitOnError(status, "backlog");
@@ -207,7 +207,7 @@ void SyncBenchmark::ShutDown() {
   gamma_controller_->Kill();
   gamma_controller_.WaitForIncomingResponseWithTimeout(
       fxl::TimeDelta::FromSeconds(5));
-  mtl::MessageLoop::GetCurrent()->PostQuitTask();
+  fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 }  // namespace benchmark
 }  // namespace test
@@ -251,7 +251,7 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
   test::benchmark::SyncBenchmark app(entry_count, value_size,
                                      reference_strategy, server_id);

@@ -13,8 +13,8 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 #include "mx/vmo.h"
 
 namespace test {
@@ -545,7 +545,7 @@ TEST_F(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
   auto instance = NewLedgerAppInstance();
   const std::string big_data(1'000'000, 'a');
   mx::vmo vmo;
-  ASSERT_TRUE(mtl::VmoFromString(big_data, &vmo));
+  ASSERT_TRUE(fsl::VmoFromString(big_data, &vmo));
 
   ledger::PagePtr page = instance->GetTestPage();
 

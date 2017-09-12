@@ -20,7 +20,7 @@
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace ledger {
 namespace {
@@ -58,7 +58,7 @@ class FakePageSync : public cloud_sync::test::PageSyncEmptyImpl {
 class PageManagerTest : public test::TestWithMessageLoop {
  public:
   PageManagerTest()
-      : environment_(mtl::MessageLoop::GetCurrent()->task_runner(), nullptr) {}
+      : environment_(fsl::MessageLoop::GetCurrent()->task_runner(), nullptr) {}
   ~PageManagerTest() override {}
 
  protected:

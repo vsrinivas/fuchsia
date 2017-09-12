@@ -17,7 +17,7 @@ source_set("environment") {
   ]
 
   deps = [
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]
@@ -33,7 +33,7 @@ source_set("unittests") {
   deps = [
     ":environment",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 

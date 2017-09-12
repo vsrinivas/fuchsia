@@ -12,11 +12,11 @@
 #include "apps/ledger/src/callback/destruction_sentinel.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/socket/socket_drainer.h"
+#include "lib/fsl/socket/socket_drainer.h"
 
 namespace glue {
 
-class SocketDrainerClient : public mtl::SocketDrainer::Client {
+class SocketDrainerClient : public fsl::SocketDrainer::Client {
  public:
   SocketDrainerClient();
 
@@ -36,7 +36,7 @@ class SocketDrainerClient : public mtl::SocketDrainer::Client {
 
   std::function<void(std::string)> callback_;
   std::string data_;
-  mtl::SocketDrainer drainer_;
+  fsl::SocketDrainer drainer_;
   fxl::Closure on_empty_callback_;
   callback::DestructionSentinel destruction_sentinel_;
 

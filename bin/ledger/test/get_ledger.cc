@@ -13,7 +13,7 @@
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace test {
 namespace {
@@ -21,7 +21,7 @@ constexpr fxl::TimeDelta kTimeout = fxl::TimeDelta::FromSeconds(10);
 }  // namespace
 
 ledger::Status GetLedger(
-    mtl::MessageLoop* loop,
+    fsl::MessageLoop* loop,
     app::ApplicationContext* context,
     app::ApplicationControllerPtr* controller,
     ledger::fidl_helpers::SetBoundable<modular::auth::TokenProvider>*
@@ -99,7 +99,7 @@ ledger::Status GetLedger(
   return status;
 }
 
-ledger::Status GetPageEnsureInitialized(mtl::MessageLoop* loop,
+ledger::Status GetPageEnsureInitialized(fsl::MessageLoop* loop,
                                         ledger::LedgerPtr* ledger,
                                         fidl::Array<uint8_t> requested_id,
                                         ledger::PagePtr* page,

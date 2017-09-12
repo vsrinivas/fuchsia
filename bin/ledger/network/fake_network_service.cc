@@ -8,7 +8,7 @@
 
 #include "apps/ledger/src/callback/cancellable_helper.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "lib/mtl/socket/strings.h"
+#include "lib/fsl/socket/strings.h"
 
 namespace ledger {
 
@@ -40,7 +40,7 @@ void FakeNetworkService::SetSocketResponse(mx::socket body,
 
 void FakeNetworkService::SetStringResponse(const std::string& body,
                                            uint32_t status_code) {
-  SetSocketResponse(mtl::WriteStringToSocket(body), status_code);
+  SetSocketResponse(fsl::WriteStringToSocket(body), status_code);
 }
 
 fxl::RefPtr<callback::Cancellable> FakeNetworkService::Request(

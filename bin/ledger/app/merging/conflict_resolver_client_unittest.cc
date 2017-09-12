@@ -21,7 +21,7 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace ledger {
 namespace {
@@ -129,7 +129,7 @@ class ConflictResolverImpl : public ConflictResolver {
     requests.emplace_back(std::move(left_version), std::move(right_version),
                           std::move(common_version),
                           std::move(result_provider));
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 
   fidl::Binding<ConflictResolver> binding_;
@@ -152,7 +152,7 @@ TEST_F(ConflictResolverClientTest, Error) {
   bool custom_strategy_error = false;
   custom_merge_strategy->SetOnError([&custom_strategy_error]() {
     custom_strategy_error = true;
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
   });
 
   merge_resolver_->SetMergeStrategy(std::move(custom_merge_strategy));

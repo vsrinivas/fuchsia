@@ -13,7 +13,7 @@
 #include "apps/ledger/src/firebase/status.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/mtl/socket/socket_drainer.h"
+#include "lib/fsl/socket/socket_drainer.h"
 
 namespace firebase {
 
@@ -25,7 +25,7 @@ using CompletionCallback = void();
 
 // Socket drainer that parses a stream of Server-Sent Events.
 // Data format of the stream is specified in http://www.w3.org/TR/eventsource/.
-class EventStream : public mtl::SocketDrainer::Client {
+class EventStream : public fsl::SocketDrainer::Client {
  public:
   EventStream();
   ~EventStream() override;
@@ -37,7 +37,7 @@ class EventStream : public mtl::SocketDrainer::Client {
  private:
   friend class EventStreamTest;
 
-  // mtl::SocketDrainer::Client:
+  // fsl::SocketDrainer::Client:
   void OnDataAvailable(const void* data, size_t num_bytes) override;
   void OnDataComplete() override;
 
@@ -54,7 +54,7 @@ class EventStream : public mtl::SocketDrainer::Client {
   std::string data_;
   std::string event_type_;
 
-  std::unique_ptr<mtl::SocketDrainer> drainer_;
+  std::unique_ptr<fsl::SocketDrainer> drainer_;
 
   callback::DestructionSentinel destruction_sentinel_;
 

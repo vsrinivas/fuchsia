@@ -20,9 +20,9 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/mtl/socket/strings.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 #include "mx/socket.h"
 #include "mx/vmo.h"
 
@@ -637,7 +637,7 @@ TEST_F(CloudProviderImplTest, GetCommitsWhenThereAreNone) {
 
 TEST_F(CloudProviderImplTest, AddObject) {
   mx::vmo data;
-  ASSERT_TRUE(mtl::VmoFromString("bazinga", &data));
+  ASSERT_TRUE(fsl::VmoFromString("bazinga", &data));
 
   Status status;
   cloud_provider_->AddObject("this-is-a-token", "object_id", std::move(data),
@@ -650,13 +650,13 @@ TEST_F(CloudProviderImplTest, AddObject) {
   EXPECT_EQ(std::vector<std::string>{"object_idV"}, upload_keys_);
 
   std::string uploaded_content;
-  ASSERT_TRUE(mtl::StringFromVmo(upload_data_[0], &uploaded_content));
+  ASSERT_TRUE(fsl::StringFromVmo(upload_data_[0], &uploaded_content));
   EXPECT_EQ("bazinga", uploaded_content);
 }
 
 TEST_F(CloudProviderImplTest, GetObject) {
   std::string content = "bazinga";
-  download_response_ = mtl::WriteStringToSocket(content);
+  download_response_ = fsl::WriteStringToSocket(content);
   download_response_size_ = content.size();
 
   Status status;
@@ -669,7 +669,7 @@ TEST_F(CloudProviderImplTest, GetObject) {
 
   EXPECT_EQ(Status::OK, status);
   std::string data_str;
-  EXPECT_TRUE(mtl::BlockingCopyToString(std::move(data), &data_str));
+  EXPECT_TRUE(fsl::BlockingCopyToString(std::move(data), &data_str));
   EXPECT_EQ("bazinga", data_str);
   EXPECT_EQ(7u, data_str.size());
   EXPECT_EQ(7u, size);
@@ -679,7 +679,7 @@ TEST_F(CloudProviderImplTest, GetObject) {
 }
 
 TEST_F(CloudProviderImplTest, GetObjectNotFound) {
-  download_response_ = mtl::WriteStringToSocket("");
+  download_response_ = fsl::WriteStringToSocket("");
   download_status_ = gcs::Status::NOT_FOUND;
 
   Status status;

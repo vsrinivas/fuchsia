@@ -11,7 +11,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 
@@ -72,7 +72,7 @@ LaunchBenchmark::LaunchBenchmark(std::string app_url,
 
 void LaunchBenchmark::StartNext() {
   if (current_value_ > max_value_) {
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
     return;
   }
 
@@ -165,7 +165,7 @@ int main(int argc, const char** argv) {
                              fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
   }
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   LaunchBenchmark launch_benchmark(std::move(app_url), std::move(test_arg),
                                    min_value, max_value, sequence_type, step,
                                    std::move(append_args));

@@ -41,7 +41,7 @@ executable("integration") {
     "//apps/modular/services/auth",
     "//apps/test_runner/src:gtest_main",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 

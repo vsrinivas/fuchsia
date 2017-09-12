@@ -17,8 +17,8 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/mtl/socket/strings.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace firebase {
 namespace {
@@ -383,7 +383,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
   fake_network_service_.SetSocketResponse(std::move(socket.socket1), 200);
   firebase_.Watch("/", {}, this);
 
-  EXPECT_TRUE(mtl::BlockingCopyFromString(event, socket.socket2));
+  EXPECT_TRUE(fsl::BlockingCopyFromString(event, socket.socket2));
   message_loop_.SetAfterTaskCallback([this] {
     if (put_count_ == 1u) {
       message_loop_.QuitNow();
@@ -398,7 +398,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
   EXPECT_EQ(0u, malformed_event_count_);
   EXPECT_EQ(0u, connection_error_count_);
 
-  EXPECT_TRUE(mtl::BlockingCopyFromString(event, socket.socket2));
+  EXPECT_TRUE(fsl::BlockingCopyFromString(event, socket.socket2));
   message_loop_.SetAfterTaskCallback([this] {
     if (put_count_ == 2u) {
       message_loop_.QuitNow();
@@ -416,7 +416,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
   // Unregister the watch client and make sure that we are *not* notified about
   // the next event.
   firebase_.UnWatch(this);
-  EXPECT_TRUE(mtl::BlockingCopyFromString(event, socket.socket2));
+  EXPECT_TRUE(fsl::BlockingCopyFromString(event, socket.socket2));
 
   // TODO(ppi): how to avoid the wait?
   message_loop_.task_runner()->PostDelayedTask(

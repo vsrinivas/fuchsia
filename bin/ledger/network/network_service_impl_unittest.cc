@@ -16,8 +16,8 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/socket/strings.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/netstack/fidl/net_address.fidl.h"
 
 namespace ledger {
@@ -160,7 +160,7 @@ class NetworkServiceImplTest : public test::TestWithMessageLoop {
   }
 
   void SetStringResponse(const std::string& body, uint32_t status_code) {
-    SetSocketResponse(mtl::WriteStringToSocket(body), status_code);
+    SetSocketResponse(fsl::WriteStringToSocket(body), status_code);
   }
 
   network::URLRequestPtr NewRequest(const std::string& method,

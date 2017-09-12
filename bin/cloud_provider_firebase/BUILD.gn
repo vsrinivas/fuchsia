@@ -15,7 +15,7 @@ executable("cloud_provider_firebase") {
     "//apps/modular/services/lifecycle",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//magenta/system/ulib/trace-provider",
   ]
 }

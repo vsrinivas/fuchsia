@@ -22,7 +22,7 @@ executable("app") {
     "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//magenta/system/ulib/trace-provider",
   ]
 
@@ -101,7 +101,7 @@ source_set("lib") {
     "//apps/modular/services/auth",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//magenta/system/ulib/trace",
   ]
 
@@ -138,7 +138,7 @@ source_set("unittests") {
     "//apps/modular/services/auth",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 

@@ -29,7 +29,7 @@ source_set("impl") {
     "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/public",  # For serialization version constant.
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//magenta/system/ulib/mx",
   ]
 
@@ -51,7 +51,7 @@ source_set("unittests") {
     "//apps/ledger/src/gcs",
     "//apps/ledger/src/test:lib",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 

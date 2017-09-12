@@ -13,7 +13,7 @@
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/storage/public/object.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace ledger {
 namespace diff_utils {

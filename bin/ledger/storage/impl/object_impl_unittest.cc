@@ -8,7 +8,7 @@
 #include "apps/ledger/src/storage/impl/object_id.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/vmo/strings.h"
 #include "third_party/leveldb/include/leveldb/db.h"
 
 namespace storage {
@@ -51,7 +51,7 @@ std::string RandomString(size_t size) {
   }
 
   std::string found_data_in_vmo;
-  if (!mtl::StringFromVmo(vmo, &found_data_in_vmo)) {
+  if (!fsl::StringFromVmo(vmo, &found_data_in_vmo)) {
     return ::testing::AssertionFailure() << "Unable to read from VMO.";
   }
 
@@ -114,7 +114,7 @@ TEST(ObjectImplTest, VmoObject) {
   std::string id = ComputeObjectId(ObjectType::VALUE, data);
 
   mx::vmo vmo;
-  ASSERT_TRUE(mtl::VmoFromString(data, &vmo));
+  ASSERT_TRUE(fsl::VmoFromString(data, &vmo));
 
   VmoObject object(id, std::move(vmo));
   EXPECT_TRUE(CheckObjectValue(object, id, data));

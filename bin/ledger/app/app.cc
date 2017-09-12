@@ -29,7 +29,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace ledger {
 
@@ -166,7 +166,7 @@ class App : public LedgerController,
 
   bool shutdown_in_progress_ = false;
   const AppParams app_params_;
-  mtl::MessageLoop loop_;
+  fsl::MessageLoop loop_;
   trace::TraceProvider trace_provider_;
   std::unique_ptr<app::ApplicationContext> application_context_;
   fxl::AutoCall<fxl::Closure> cobalt_cleaner_;

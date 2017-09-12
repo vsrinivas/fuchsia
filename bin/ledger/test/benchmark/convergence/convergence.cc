@@ -18,7 +18,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/sync";
@@ -70,19 +70,19 @@ void ConvergenceBenchmark::Run() {
   FXL_DCHECK(ret);
 
   ledger::Status status = test::GetLedger(
-      mtl::MessageLoop::GetCurrent(), application_context_.get(),
+      fsl::MessageLoop::GetCurrent(), application_context_.get(),
       &alpha_controller_, &token_provider_impl_, "sync", alpha_path,
       test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &alpha_ledger_);
   QuitOnError(status, "alpha ledger");
   status = test::GetLedger(
-      mtl::MessageLoop::GetCurrent(), application_context_.get(),
+      fsl::MessageLoop::GetCurrent(), application_context_.get(),
       &beta_controller_, &token_provider_impl_, "sync", beta_path,
       test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &beta_ledger_);
   QuitOnError(status, "beta ledger");
 
   ledger::PagePtr page;
   fidl::Array<uint8_t> id;
-  status = test::GetPageEnsureInitialized(mtl::MessageLoop::GetCurrent(),
+  status = test::GetPageEnsureInitialized(fsl::MessageLoop::GetCurrent(),
                                           &alpha_ledger_, nullptr, &page, &id);
   QuitOnError(status, "alpha page initialization");
   page_id_ = id.Clone();
@@ -167,7 +167,7 @@ void ConvergenceBenchmark::ShutDown() {
   beta_controller_->Kill();
   beta_controller_.WaitForIncomingResponseWithTimeout(
       fxl::TimeDelta::FromSeconds(5));
-  mtl::MessageLoop::GetCurrent()->PostQuitTask();
+  fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 }  // namespace benchmark
 }  // namespace test
@@ -193,7 +193,7 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
   test::benchmark::ConvergenceBenchmark app(entry_count, value_size, server_id);
   loop.task_runner()->PostTask([&app] { app.Run(); });

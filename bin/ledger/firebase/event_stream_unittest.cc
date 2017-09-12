@@ -11,8 +11,8 @@
 #include "apps/ledger/src/glue/socket/socket_pair.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/socket/strings.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace firebase {
 
@@ -52,7 +52,7 @@ class EventStreamTest : public ::testing::Test {
 
   void Done() { event_stream_->OnDataComplete(); }
 
-  mtl::MessageLoop message_loop_;
+  fsl::MessageLoop message_loop_;
   mx::socket producer_socket_;
   std::unique_ptr<EventStream> event_stream_;
   std::vector<Status> status_;
@@ -177,7 +177,7 @@ TEST_F(EventStreamTest, MultipleEvents) {
 
 TEST_F(EventStreamTest, DeleteOnEvent) {
   delete_on_event_ = true;
-  mtl::BlockingCopyFromString("event: abc\ndata: bazinga\n\n",
+  fsl::BlockingCopyFromString("event: abc\ndata: bazinga\n\n",
                               producer_socket_);
   message_loop_.task_runner()->PostTask(
       [this]() { message_loop_.PostQuitTask(); });
