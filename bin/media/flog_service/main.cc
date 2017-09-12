@@ -4,10 +4,10 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "garnet/bin/media/flog_service/flog_service_impl.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 int main(int argc, const char** argv) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
 
   flog::FlogServiceImpl impl(app::ApplicationContext::CreateFromStartupInfo());
 

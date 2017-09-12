@@ -9,7 +9,7 @@
 
 #include "lib/icu_data/cpp/constants.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/vmo/file.h"
+#include "lib/fsl/vmo/file.h"
 
 namespace icu_data {
 namespace {
@@ -25,7 +25,7 @@ ICUDataProviderImpl::ICUDataProviderImpl() = default;
 ICUDataProviderImpl::~ICUDataProviderImpl() = default;
 
 bool ICUDataProviderImpl::LoadData() {
-  if (!mtl::VmoFromFilename(kICUDataPath, &icu_data_vmo_)) {
+  if (!fsl::VmoFromFilename(kICUDataPath, &icu_data_vmo_)) {
     FXL_LOG(ERROR)
         << "Loading ICU data failed: Failed to create VMO from file '"
         << kICUDataPath << "'.";

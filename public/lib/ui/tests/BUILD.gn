@@ -12,7 +12,7 @@ source_set("tests") {
   public_deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 }

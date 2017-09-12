@@ -8,8 +8,8 @@
 
 #include "garnet/bin/media/ffmpeg/av_codec_context.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/threading/create_thread.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/create_thread.h"
 
 namespace media {
 
@@ -21,7 +21,7 @@ FfmpegDecoderBase::FfmpegDecoderBase(AvCodecContextPtr av_codec_context)
   // Ffmpeg decoders need to run on a single thread, so we create one here.
   // The task runner for the thread is returned by |GetTaskRunner|, so all
   // |PostTask| calls relating to this node go to this thread.
-  std::thread thread = mtl::CreateThread(&task_runner_, "ffmpeg decoder");
+  std::thread thread = fsl::CreateThread(&task_runner_, "ffmpeg decoder");
   thread.detach();
 
   av_codec_context_->opaque = this;
@@ -31,7 +31,7 @@ FfmpegDecoderBase::FfmpegDecoderBase(AvCodecContextPtr av_codec_context)
 
 FfmpegDecoderBase::~FfmpegDecoderBase() {
   // Quit the thread we created in the constructor.
-  PostTask([]() { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+  PostTask([]() { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
 }
 
 std::unique_ptr<StreamType> FfmpegDecoderBase::output_stream_type() {

@@ -12,14 +12,14 @@
 #include "lib/ui/input/fidl/input_reports.fidl.h"
 #include "garnet/bin/ui/input_reader/input_interpreter.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/io/device_watcher.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/tasks/message_loop_handler.h"
+#include "lib/fsl/io/device_watcher.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop_handler.h"
 
 namespace mozart {
 namespace input {
 
-class InputReader : mtl::MessageLoopHandler {
+class InputReader : fsl::MessageLoopHandler {
  public:
   InputReader(mozart::InputDeviceRegistry* registry,
               bool ignore_console = false);
@@ -30,15 +30,15 @@ class InputReader : mtl::MessageLoopHandler {
   class DeviceInfo {
    public:
     DeviceInfo(std::unique_ptr<InputInterpreter> interpreter,
-               mtl::MessageLoop::HandlerKey key);
+               fsl::MessageLoop::HandlerKey key);
     ~DeviceInfo();
 
     InputInterpreter* interpreter() { return interpreter_.get(); }
-    mtl::MessageLoop::HandlerKey key() { return key_; };
+    fsl::MessageLoop::HandlerKey key() { return key_; };
 
    private:
     std::unique_ptr<InputInterpreter> interpreter_;
-    mtl::MessageLoop::HandlerKey key_;
+    fsl::MessageLoop::HandlerKey key_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(DeviceInfo);
   };
@@ -54,16 +54,16 @@ class InputReader : mtl::MessageLoopHandler {
 
   void OnInternalReport(mx_handle_t handle, InputInterpreter::ReportType type);
 
-  // |mtl::MessageLoopHandler|:
+  // |fsl::MessageLoopHandler|:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count);
 
   mozart::InputDeviceRegistry* registry_;
 
   std::map<mx_handle_t, std::unique_ptr<DeviceInfo>> devices_;
-  std::unique_ptr<mtl::DeviceWatcher> device_watcher_;
-  std::unique_ptr<mtl::DeviceWatcher> console_watcher_;
+  std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
+  std::unique_ptr<fsl::DeviceWatcher> console_watcher_;
   mx_handle_t display_ownership_event_;
-  mtl::MessageLoop::HandlerKey display_ownership_handler_key_;
+  fsl::MessageLoop::HandlerKey display_ownership_handler_key_;
   bool ignore_console_;
   bool display_owned_ = true;
 

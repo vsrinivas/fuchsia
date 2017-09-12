@@ -27,7 +27,7 @@ KeyboardState::KeyboardState(DeviceState* device_state)
     : device_state_(device_state),
       keymap_(qwerty_map),
       weak_ptr_factory_(this),
-      task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()) {
+      task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {
   char* keys = getenv("gfxconsole.keymap");
   if (keys && !strcmp(keys, "dvorak")) {
     keymap_ = dvorak_map;

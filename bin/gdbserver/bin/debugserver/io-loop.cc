@@ -9,7 +9,7 @@
 #include "debugger-utils/util.h"
 
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace debugserver {
 
@@ -18,7 +18,7 @@ RspIOLoop::RspIOLoop(int in_fd, Delegate* delegate)
 }
 
 void RspIOLoop::OnReadTask() {
-  FXL_DCHECK(mtl::MessageLoop::GetCurrent()->task_runner().get() ==
+  FXL_DCHECK(fsl::MessageLoop::GetCurrent()->task_runner().get() ==
              read_task_runner().get());
 
   ssize_t read_size = read(fd(), in_buffer_.data(), kMaxBufferSize);

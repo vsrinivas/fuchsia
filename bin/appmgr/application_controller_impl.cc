@@ -8,7 +8,7 @@
 
 #include "garnet/bin/appmgr/application_environment_impl.h"
 #include "lib/fxl/functional/closure.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace app {
 
@@ -23,7 +23,7 @@ ApplicationControllerImpl::ApplicationControllerImpl(
       fs_(std::move(fs)),
       process_(std::move(process)),
       path_(std::move(path)) {
-  termination_handler_ = mtl::MessageLoop::GetCurrent()->AddHandler(
+  termination_handler_ = fsl::MessageLoop::GetCurrent()->AddHandler(
       this, process_.get(), MX_TASK_TERMINATED);
   if (request.is_pending()) {
     binding_.Bind(std::move(request));
@@ -32,7 +32,7 @@ ApplicationControllerImpl::ApplicationControllerImpl(
 }
 
 ApplicationControllerImpl::~ApplicationControllerImpl() {
-  mtl::MessageLoop::GetCurrent()->RemoveHandler(termination_handler_);
+  fsl::MessageLoop::GetCurrent()->RemoveHandler(termination_handler_);
   // Two ways we end up here:
   // 1) OnHandleReady() destroys this object; in which case, process is dead.
   // 2) Our owner destroys this object; in which case, the process may still be

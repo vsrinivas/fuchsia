@@ -14,7 +14,7 @@ HostMemory::HostMemory(Session* session,
                        mx::vmo vmo,
                        uint64_t vmo_size)
     : Memory(session, id, HostMemory::kTypeInfo),
-      shared_vmo_(fxl::MakeRefCounted<mtl::SharedVmo>(std::move(vmo),
+      shared_vmo_(fxl::MakeRefCounted<fsl::SharedVmo>(std::move(vmo),
                                                       MX_VM_FLAG_PERM_READ)),
       size_(vmo_size) {}
 

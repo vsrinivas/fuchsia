@@ -7,9 +7,9 @@
 #include <unistd.h>
 
 #include "lib/fxl/logging.h"
-#include "lib/mtl/handles/object_info.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/threading/create_thread.h"
+#include "lib/fsl/handles/object_info.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/create_thread.h"
 
 #include "debugger-utils/util.h"
 
@@ -19,9 +19,9 @@ IOLoop::IOLoop(int fd, Delegate* delegate)
     : quit_called_(false), fd_(fd), delegate_(delegate), is_running_(false) {
   FXL_DCHECK(fd_ >= 0);
   FXL_DCHECK(delegate_);
-  FXL_DCHECK(mtl::MessageLoop::GetCurrent());
+  FXL_DCHECK(fsl::MessageLoop::GetCurrent());
 
-  origin_task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
+  origin_task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
 }
 
 IOLoop::~IOLoop() {
@@ -32,8 +32,8 @@ void IOLoop::Run() {
   FXL_DCHECK(!is_running_);
 
   is_running_ = true;
-  read_thread_ = mtl::CreateThread(&read_task_runner_, "i/o loop read task");
-  write_thread_ = mtl::CreateThread(&write_task_runner_, "i/o loop write task");
+  read_thread_ = fsl::CreateThread(&read_task_runner_, "i/o loop read task");
+  write_thread_ = fsl::CreateThread(&write_task_runner_, "i/o loop write task");
 
   StartReadLoop();
 }
@@ -47,8 +47,8 @@ void IOLoop::Quit() {
 
   auto quit_task = [] {
     // Tell the thread-local message loop to quit.
-    FXL_DCHECK(mtl::MessageLoop::GetCurrent());
-    mtl::MessageLoop::GetCurrent()->QuitNow();
+    FXL_DCHECK(fsl::MessageLoop::GetCurrent());
+    fsl::MessageLoop::GetCurrent()->QuitNow();
   };
   read_task_runner_->PostTask(quit_task);
   write_task_runner_->PostTask(quit_task);
@@ -63,7 +63,7 @@ void IOLoop::Quit() {
 
 void IOLoop::StartReadLoop() {
   // Make sure the call is coming from the origin thread.
-  FXL_DCHECK(mtl::MessageLoop::GetCurrent()->task_runner().get() ==
+  FXL_DCHECK(fsl::MessageLoop::GetCurrent()->task_runner().get() ==
              origin_task_runner_.get());
 
   read_task_runner_->PostTask(std::bind(&IOLoop::OnReadTask, this));

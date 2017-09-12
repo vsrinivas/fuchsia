@@ -15,7 +15,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/log_settings.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 constexpr char kDefaultConfigPath[] = "/system/data/appmgr/initial.config";
 
@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
   // printing debugging information, etc.  Having multiple instances of
   // application manager running is not what we want, in general.
 
-  mtl::MessageLoop message_loop;
+  fsl::MessageLoop message_loop;
 
   app::RootEnvironmentHost root(config.TakePath());
 

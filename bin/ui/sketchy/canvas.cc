@@ -5,7 +5,7 @@
 #include "garnet/bin/ui/sketchy/canvas.h"
 #include "garnet/bin/ui/sketchy/resources/import_node.h"
 #include "garnet/bin/ui/sketchy/resources/stroke_group.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace sketchy_service {
 
@@ -30,7 +30,7 @@ void CanvasImpl::Present(uint64_t presentation_time,
                          const PresentCallback& callback) {
   for (auto& op : ops_) {
     if (!ApplyOp(op)) {
-      mtl::MessageLoop::GetCurrent()->QuitNow();
+      fsl::MessageLoop::GetCurrent()->QuitNow();
     }
   }
   ops_.reset();

@@ -10,7 +10,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 #include "garnet/bin/ui/scene_manager/displays/display_manager.h"
 #include "garnet/bin/ui/scene_manager/scene_manager_app.h"
@@ -26,7 +26,7 @@ int main(int argc, const char** argv) {
   if (!params.Setup(command_line))
     return 1;
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
 
   std::unique_ptr<SceneManagerApp> scene_manager_app;
@@ -38,7 +38,7 @@ int main(int argc, const char** argv) {
     Display* display = display_manager.default_display();
     if (!display) {
       FXL_LOG(ERROR) << "No default display, SceneManager exiting";
-      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+      fsl::MessageLoop::GetCurrent()->PostQuitTask();
       return;
     }
 

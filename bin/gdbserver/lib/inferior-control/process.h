@@ -12,8 +12,8 @@
 #include <magenta/types.h>
 
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/tasks/message_loop_handler.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop_handler.h"
 
 #include "debugger-utils/dso-list.h"
 #include "debugger-utils/util.h"

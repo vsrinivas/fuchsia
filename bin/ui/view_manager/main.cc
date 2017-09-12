@@ -10,14 +10,14 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
   view_manager::ViewManagerApp app;
 

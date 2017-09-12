@@ -18,8 +18,8 @@
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
 #include "garnet/bin/ui/scene_manager/resources/resource_map.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/tasks/message_loop_handler.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop_handler.h"
 
 namespace scene_manager {
 

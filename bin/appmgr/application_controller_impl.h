@@ -11,14 +11,14 @@
 #include "lib/app/fidl/application_controller.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/tasks/message_loop_handler.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop_handler.h"
 
 namespace app {
 class ApplicationEnvironmentImpl;
 
 class ApplicationControllerImpl : public ApplicationController,
-                                  public mtl::MessageLoopHandler {
+                                  public fsl::MessageLoopHandler {
  public:
   ApplicationControllerImpl(
       fidl::InterfaceRequest<ApplicationController> request,
@@ -36,7 +36,7 @@ class ApplicationControllerImpl : public ApplicationController,
   void Wait(const WaitCallback& callback) override;
 
  private:
-  // |mtl::MessageLoopHandler| implementation:
+  // |fsl::MessageLoopHandler| implementation:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override;
 
   bool SendReturnCodeIfTerminated();
@@ -48,7 +48,7 @@ class ApplicationControllerImpl : public ApplicationController,
   std::string path_;
   std::vector<WaitCallback> wait_callbacks_;
 
-  mtl::MessageLoop::HandlerKey termination_handler_ = 0u;
+  fsl::MessageLoop::HandlerKey termination_handler_ = 0u;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationControllerImpl);
 };

@@ -9,13 +9,13 @@
 
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace media {
 
 FidlReader::FidlReader(fidl::InterfaceHandle<SeekingReader> seeking_reader)
     : seeking_reader_(SeekingReaderPtr::Create(std::move(seeking_reader))) {
-  task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
+  task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
   FXL_DCHECK(task_runner_);
 
   read_in_progress_ = false;

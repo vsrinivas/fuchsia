@@ -49,7 +49,7 @@ MediaResult AudioPlugDetector::Start(AudioOutputManager* manager) {
   // Record our new manager
   manager_ = manager;
 
-  watcher_ = mtl::DeviceWatcher::Create(AUDIO_OUTPUT_DEVNODES,
+  watcher_ = fsl::DeviceWatcher::Create(AUDIO_OUTPUT_DEVNODES,
       [this](int dir_fd, std::string filename) {
         AddAudioDevice(dir_fd, filename);
       });

@@ -20,6 +20,6 @@ source_set("input") {
     "//garnet/bin/ui/view_manager/internal",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }

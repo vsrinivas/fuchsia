@@ -8,8 +8,8 @@
 #include "garnet/bin/media/audio_server/audio_renderer_to_output_link.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/threading/create_thread.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/create_thread.h"
 
 namespace media {
 namespace audio {
@@ -155,7 +155,7 @@ MediaResult AudioOutput::Init(const AudioOutputPtr& self) {
   }
 
   FXL_DCHECK(worker_thread_.get_id() == std::thread::id());
-  worker_thread_ = mtl::CreateThread(&task_runner_);
+  worker_thread_ = fsl::CreateThread(&task_runner_);
 
   // Schedule an immediate callback to get things running.
   AudioOutputWeakPtr weak_self = weak_self_;
@@ -174,7 +174,7 @@ bool AudioOutput::BeginShutdown() {
   }
 
   // Shut down the thread created for this output.
-  task_runner_->PostTask([]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+  task_runner_->PostTask([]() { fsl::MessageLoop::GetCurrent()->QuitNow(); });
 
   shutting_down_ = true;
   task_runner_ = nullptr;

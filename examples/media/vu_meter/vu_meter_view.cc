@@ -12,7 +12,7 @@
 #include "garnet/examples/media/vu_meter/vu_meter_params.h"
 #include "lib/media/fidl/media_service.fidl.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkPath.h"
 
@@ -40,7 +40,7 @@ VuMeterView::VuMeterView(
   media_capturer_.set_connection_error_handler([this]() {
     FXL_LOG(ERROR) << "Connection error occurred. Quitting.";
     media_capturer_.reset();
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
   });
 
   media_capturer_->GetPacketProducer(packet_producer_.NewRequest());
@@ -86,7 +86,7 @@ bool VuMeterView::OnInputEvent(mozart::InputEventPtr event) {
           handled = true;
           break;
         case HID_USAGE_KEY_Q:
-          mtl::MessageLoop::GetCurrent()->PostQuitTask();
+          fsl::MessageLoop::GetCurrent()->PostQuitTask();
           handled = true;
           break;
         default:

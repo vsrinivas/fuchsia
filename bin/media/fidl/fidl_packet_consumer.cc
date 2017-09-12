@@ -5,7 +5,7 @@
 #include "garnet/bin/media/fidl/fidl_packet_consumer.h"
 
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace media {
 
@@ -17,7 +17,7 @@ void FidlPacketConsumer::Bind(
     fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request,
     const std::function<void()>& unbind_handler) {
   unbind_handler_ = unbind_handler;
-  task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
+  task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
   FXL_DCHECK(task_runner_);
   MediaPacketConsumerBase::Bind(std::move(packet_consumer_request));
 }

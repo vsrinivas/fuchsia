@@ -13,7 +13,7 @@
 #include "lib/media/fidl/media_service.fidl.h"
 #include "lib/media/fidl/net_media_service.fidl.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace examples {
 
@@ -59,7 +59,7 @@ void AudioPlayer::HandleStatusUpdates(uint64_t version,
   if (status) {
     // Process status received from the player.
     if (status->end_of_stream && quit_when_done_) {
-      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+      fsl::MessageLoop::GetCurrent()->PostQuitTask();
       FXL_LOG(INFO) << "Reached end-of-stream. Quitting.";
     }
 
@@ -69,7 +69,7 @@ void AudioPlayer::HandleStatusUpdates(uint64_t version,
                        << status->problem->details;
         problem_shown_ = true;
         if (quit_when_done_) {
-          mtl::MessageLoop::GetCurrent()->PostQuitTask();
+          fsl::MessageLoop::GetCurrent()->PostQuitTask();
           FXL_LOG(INFO) << "Problem detected. Quitting.";
         }
       }

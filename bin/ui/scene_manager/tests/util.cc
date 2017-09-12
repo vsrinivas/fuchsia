@@ -38,7 +38,7 @@ mx::vmo CopyVmo(const mx::vmo& vmo) {
   return vmo_copy;
 }
 
-fxl::RefPtr<mtl::SharedVmo> CreateSharedVmo(size_t size) {
+fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size) {
   mx::vmo vmo;
   mx_status_t status = mx::vmo::create(size, 0u, &vmo);
   if (status != MX_OK) {
@@ -57,7 +57,7 @@ fxl::RefPtr<mtl::SharedVmo> CreateSharedVmo(size_t size) {
   }
 
   uint32_t map_flags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
-  return fxl::MakeRefCounted<mtl::SharedVmo>(std::move(vmo), map_flags);
+  return fxl::MakeRefCounted<fsl::SharedVmo>(std::move(vmo), map_flags);
 }
 
 }  // namespace test

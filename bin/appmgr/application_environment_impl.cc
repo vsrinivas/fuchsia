@@ -24,7 +24,7 @@
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/mtl/handles/object_info.h"
+#include "lib/fsl/handles/object_info.h"
 
 namespace app {
 namespace {
@@ -204,7 +204,7 @@ ApplicationEnvironmentImpl::ApplicationEnvironmentImpl(
   else
     label_ = label.get().substr(0, ApplicationEnvironment::kLabelMaxLength);
 
-  mtl::SetObjectName(job_.get(), label_);
+  fsl::SetObjectName(job_.get(), label_);
 
   app::ServiceProviderPtr services_backend;
   host_->GetApplicationEnvironmentServices(services_backend.NewRequest());

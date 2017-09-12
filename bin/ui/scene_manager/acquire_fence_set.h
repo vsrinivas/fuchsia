@@ -10,8 +10,8 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/tasks/message_loop_handler.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop_handler.h"
 
 #include "garnet/bin/ui/scene_manager/fence.h"
 
@@ -19,7 +19,7 @@ namespace scene_manager {
 
 // Provides access to the consumption fences associated with a call to
 // |Present|.
-class AcquireFenceSet : private mtl::MessageLoopHandler {
+class AcquireFenceSet : private fsl::MessageLoopHandler {
  public:
   // Takes ownership of the fences.
   // |acquire_fences| must be valid handles.
@@ -39,7 +39,7 @@ class AcquireFenceSet : private mtl::MessageLoopHandler {
   bool ready() const { return num_signalled_fences_ == fences_.size(); }
 
  private:
-  // |mtl::MessageLoopHandler|
+  // |fsl::MessageLoopHandler|
   void OnHandleReady(mx_handle_t handle,
                      mx_signals_t pending,
                      uint64_t count) override;
@@ -51,7 +51,7 @@ class AcquireFenceSet : private mtl::MessageLoopHandler {
 
   // HandlerKeys, each corresponding to an |mx::event| with the same index in
   // |fences_|. The size of this array must match that of |fences_|.
-  std::vector<mtl::MessageLoop::HandlerKey> handler_keys_;
+  std::vector<fsl::MessageLoop::HandlerKey> handler_keys_;
 
   fxl::Closure ready_callback_;
 

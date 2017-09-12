@@ -9,7 +9,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -23,7 +23,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   auto application_context_ =
       app::ApplicationContext::CreateFromStartupInfo();
 

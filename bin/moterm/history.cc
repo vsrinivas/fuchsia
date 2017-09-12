@@ -15,8 +15,8 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace moterm {
 
@@ -32,7 +32,7 @@ std::string ToString(fidl::Array<uint8_t>& data) {
 
 std::string ToString(const mx::vmo& value) {
   std::string ret;
-  if (!mtl::StringFromVmo(value, &ret)) {
+  if (!fsl::StringFromVmo(value, &ret)) {
     FXL_DCHECK(false);
   }
   return ret;

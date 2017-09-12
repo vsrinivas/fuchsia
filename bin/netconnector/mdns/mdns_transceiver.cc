@@ -16,7 +16,7 @@
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace netconnector {
 namespace mdns {
@@ -30,7 +30,7 @@ const fxl::TimeDelta MdnsTransceiver::kMaxAddressRecheckDelay =
     fxl::TimeDelta::FromSeconds(5 * 60);
 
 MdnsTransceiver::MdnsTransceiver()
-    : task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
+    : task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
       application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
   netstack_ = application_context_->ConnectToEnvironmentService<netstack::Netstack>();
 }

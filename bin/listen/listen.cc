@@ -26,13 +26,13 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/mtl/tasks/fd_waiter.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/fd_waiter.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 constexpr mx_rights_t kChildJobRights =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
-class Service : private mtl::MessageLoopHandler {
+class Service : private fsl::MessageLoopHandler {
  public:
   Service(int port, int argc, const char** argv)
       : port_(port), argc_(argc), argv_(argv) {
@@ -69,7 +69,7 @@ class Service : private mtl::MessageLoopHandler {
   ~Service() {
     for (auto iter = process_handler_key_.begin(); iter != process_handler_key_.end(); iter++) {
       process_handler_key_.erase(iter);
-      mtl::MessageLoop::GetCurrent()->RemoveHandler(iter->second);
+      fsl::MessageLoop::GetCurrent()->RemoveHandler(iter->second);
       FXL_CHECK(mx_task_kill(iter->first) == MX_OK);
       FXL_CHECK(mx_handle_close(iter->first) == MX_OK);
     }
@@ -141,19 +141,19 @@ class Service : private mtl::MessageLoopHandler {
       return;
     }
 
-    auto handler_key = mtl::MessageLoop::GetCurrent()->AddHandler(
+    auto handler_key = fsl::MessageLoop::GetCurrent()->AddHandler(
         this, proc, MX_PROCESS_TERMINATED);
     FXL_CHECK(handler_key != 0);
     process_handler_key_.insert(std::make_pair(proc, handler_key));
   }
 
-  // mtl::MessageLoopHandler
+  // fsl::MessageLoopHandler
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) {
     FXL_CHECK(pending & MX_PROCESS_TERMINATED);
     auto iter = process_handler_key_.find(handle);
     FXL_CHECK(iter != process_handler_key_.end());
     process_handler_key_.erase(iter);
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(iter->second);
+    fsl::MessageLoop::GetCurrent()->RemoveHandler(iter->second);
     FXL_CHECK(mx_task_kill(handle) == MX_OK);
     FXL_CHECK(mx_handle_close(handle) == MX_OK);
   }
@@ -162,9 +162,9 @@ class Service : private mtl::MessageLoopHandler {
   int argc_;
   const char** argv_;
   int sock_;
-  mtl::FDWaiter waiter_;
+  fsl::FDWaiter waiter_;
   mx::job job_;
-  std::map<mx_handle_t, mtl::MessageLoop::HandlerKey> process_handler_key_;
+  std::map<mx_handle_t, fsl::MessageLoop::HandlerKey> process_handler_key_;
 };
 
 void usage(const char* command) {
@@ -173,7 +173,7 @@ void usage(const char* command) {
 }
 
 int main(int argc, const char** argv) {
-  mtl::MessageLoop message_loop;
+  fsl::MessageLoop message_loop;
 
   if (argc < 2) {
     usage(argv[0]);

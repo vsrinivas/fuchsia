@@ -8,7 +8,7 @@
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace media {
 
@@ -23,7 +23,7 @@ namespace media {
 
 TimelineControlPoint::TimelineControlPoint()
     : control_point_binding_(this), consumer_binding_(this) {
-  task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
+  task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
   FXL_DCHECK(task_runner_);
 
   fxl::MutexLocker locker(&mutex_);

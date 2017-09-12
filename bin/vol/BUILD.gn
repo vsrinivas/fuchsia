@@ -12,6 +12,6 @@ executable("vol") {
     "//garnet/public/lib/media/audio",
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }

@@ -4,13 +4,13 @@
 
 #include "garnet/bin/ui/scene_manager/util/event_timestamper.h"
 
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/threading/create_thread.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/create_thread.h"
 
 namespace scene_manager {
 
 EventTimestamper::EventTimestamper()
-    : main_loop_(mtl::MessageLoop::GetCurrent()), task_(0u) {
+    : main_loop_(fsl::MessageLoop::GetCurrent()), task_(0u) {
   FXL_DCHECK(main_loop_);
   background_loop_.StartThread();
   task_.set_handler([](async_t*, mx_status_t) {

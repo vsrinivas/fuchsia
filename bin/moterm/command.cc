@@ -13,12 +13,12 @@ namespace moterm {
 namespace {
 
 mx_status_t AddRedirectedSocket(
-    std::vector<mtl::StartupHandle>* startup_handles,
+    std::vector<fsl::StartupHandle>* startup_handles,
     int startup_fd,
     mx::socket* out_socket) {
-  mtl::StartupHandle startup_handle;
+  fsl::StartupHandle startup_handle;
   mx_status_t status =
-      mtl::CreateRedirectedSocket(startup_fd, out_socket, &startup_handle);
+      fsl::CreateRedirectedSocket(startup_fd, out_socket, &startup_handle);
   if (status != MX_OK)
     return status;
   startup_handles->push_back(std::move(startup_handle));
@@ -39,15 +39,15 @@ Command::Command() = default;
 
 Command::~Command() {
   if (termination_key_)
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(termination_key_);
+    fsl::MessageLoop::GetCurrent()->RemoveHandler(termination_key_);
   if (out_key_)
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(out_key_);
+    fsl::MessageLoop::GetCurrent()->RemoveHandler(out_key_);
   if (err_key_)
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(err_key_);
+    fsl::MessageLoop::GetCurrent()->RemoveHandler(err_key_);
 }
 
 bool Command::Start(std::vector<std::string> command,
-                    std::vector<mtl::StartupHandle> startup_handles,
+                    std::vector<fsl::StartupHandle> startup_handles,
                     ReceiveCallback receive_callback,
                     fxl::Closure termination_callback) {
   FXL_DCHECK(!command.empty());
@@ -96,12 +96,12 @@ bool Command::Start(std::vector<std::string> command,
   termination_callback_ = std::move(termination_callback);
   receive_callback_ = std::move(receive_callback);
 
-  termination_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
+  termination_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
       this, process_.get(), MX_PROCESS_TERMINATED);
 
-  out_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(this, stdout_.get(),
+  out_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(this, stdout_.get(),
                                                         MX_SOCKET_READABLE);
-  err_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(this, stderr_.get(),
+  err_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(this, stderr_.get(),
                                                         MX_SOCKET_READABLE);
   return true;
 }
@@ -110,7 +110,7 @@ void Command::OnHandleReady(mx_handle_t handle,
                             mx_signals_t pending,
                             uint64_t count) {
   if (handle == process_.get() && (pending & MX_PROCESS_TERMINATED)) {
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(termination_key_);
+    fsl::MessageLoop::GetCurrent()->RemoveHandler(termination_key_);
     termination_key_ = 0;
     termination_callback_();
   } else if (pending & MX_SOCKET_READABLE) {

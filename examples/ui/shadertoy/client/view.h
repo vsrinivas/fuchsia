@@ -27,7 +27,7 @@ class View : public mozart::BaseView {
       scenic::PresentationInfoPtr presentation_info) override;
 
   app::ApplicationContext* const application_context_;
-  mtl::MessageLoop* loop_;
+  fsl::MessageLoop* loop_;
 
   mozart::example::ShadertoyFactoryPtr shadertoy_factory_;
   mozart::example::ShadertoyPtr shadertoy_;

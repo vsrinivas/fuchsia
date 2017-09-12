@@ -47,8 +47,8 @@ std::vector<std::string> ShellController::GetShellCommand() {
   return {std::string(kShell)};
 }
 
-std::vector<mtl::StartupHandle> ShellController::GetStartupHandles() {
-  std::vector<mtl::StartupHandle> ret;
+std::vector<fsl::StartupHandle> ShellController::GetStartupHandles() {
+  std::vector<fsl::StartupHandle> ret;
 
   mx::channel shell_handle;
   mx_status_t status = mx::channel::create(0, &channel_, &shell_handle);
@@ -57,7 +57,7 @@ std::vector<mtl::StartupHandle> ShellController::GetStartupHandles() {
                    << status;
     return {};
   }
-  mtl::StartupHandle startup_handle;
+  fsl::StartupHandle startup_handle;
   startup_handle.id = PA_USER1;
   startup_handle.handle = std::move(shell_handle);
   ret.push_back(std::move(startup_handle));
@@ -95,7 +95,7 @@ bool ShellController::SendBackHistory(std::vector<std::string> entries) {
   const std::string history_str = SerializeHistory(entries);
 
   mx::vmo data;
-  if (!mtl::VmoFromString(history_str, &data)) {
+  if (!fsl::VmoFromString(history_str, &data)) {
     FXL_LOG(ERROR) << "Failed to write terminal history to a vmo.";
     return false;
   }

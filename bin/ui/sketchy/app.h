@@ -17,7 +17,7 @@ class App {
   App(escher::Escher* escher);
 
  private:
-  mtl::MessageLoop* loop_;
+  fsl::MessageLoop* loop_;
   std::unique_ptr<app::ApplicationContext> context_;
   scenic::SceneManagerPtr scene_manager_;
   std::unique_ptr<scenic_lib::Session> session_;

@@ -16,7 +16,7 @@ executable("media_player") {
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/ui/view_framework:skia",
     "//garnet/public/lib/ui/view_framework:view_provider",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/skia",
   ]
 }

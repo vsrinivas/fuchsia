@@ -6,14 +6,14 @@
 
 #include <unordered_map>
 
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 #include "garnet/bin/ui/scene_manager/resources/import.h"
 
 namespace scene_manager {
 
 // Stores a list of imports that have not yet been bound to an export handle.
-class UnresolvedImports : private mtl::MessageLoopHandler {
+class UnresolvedImports : private fsl::MessageLoopHandler {
  public:
   UnresolvedImports(ResourceLinker* resource_linker);
   ~UnresolvedImports();
@@ -46,7 +46,7 @@ class UnresolvedImports : private mtl::MessageLoopHandler {
     Import* import_ptr;
     mx::eventpair import_token;
     mx_koid_t import_koid;
-    mtl::MessageLoop::HandlerKey death_handler_key = 0;
+    fsl::MessageLoop::HandlerKey death_handler_key = 0;
   };
 
   void OnHandleReady(mx_handle_t handle,

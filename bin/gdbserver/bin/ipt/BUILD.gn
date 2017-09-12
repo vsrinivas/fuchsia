@@ -24,7 +24,7 @@ executable("ipt") {
     "../../lib/debugger-utils",
     "../../lib/inferior-control",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 
   include_dirs = [ "../../lib" ]

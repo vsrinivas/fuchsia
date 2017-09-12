@@ -16,7 +16,7 @@
 #include "lib/ui/input/fidl/input_reports.fidl.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace mozart {
 

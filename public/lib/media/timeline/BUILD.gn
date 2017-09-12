@@ -44,6 +44,6 @@ test("tests") {
 
   deps = [
     ":timeline",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }

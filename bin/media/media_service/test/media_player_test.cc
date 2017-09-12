@@ -9,7 +9,7 @@
 #include "garnet/bin/media/media_service/test/fake_renderer.h"
 #include "garnet/bin/media/media_service/test/fake_wav_reader.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace media {
 namespace test {
@@ -77,7 +77,7 @@ class MediaPlayerTester {
         ended_ = true;
         FXL_LOG(INFO) << "MediaPlayerTest "
                       << (fake_renderer_.expected() ? "SUCCEEDED" : "FAILED");
-        mtl::MessageLoop::GetCurrent()->PostQuitTask();
+        fsl::MessageLoop::GetCurrent()->PostQuitTask();
       }
     }
 
@@ -99,7 +99,7 @@ class MediaPlayerTester {
 }  // namespace media
 
 int main(int argc, const char** argv) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
 
   media::test::MediaPlayerTester app;
 

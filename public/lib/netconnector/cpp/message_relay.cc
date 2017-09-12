@@ -5,7 +5,7 @@
 #include "lib/netconnector/cpp/message_relay.h"
 
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace netconnector {
 
@@ -22,7 +22,7 @@ void MessageRelayBase::SetChannel(mx::channel channel) {
 
   // We defer handling channel messages so that the caller doesn't get callbacks
   // during SetChannel.
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostTask([this]() {
+  fsl::MessageLoop::GetCurrent()->task_runner()->PostTask([this]() {
     ReadChannelMessages();
 
     if (!messages_to_write_.empty()) {

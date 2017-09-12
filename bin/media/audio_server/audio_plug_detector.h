@@ -12,7 +12,7 @@
 
 #include "lib/media/fidl/media_result.fidl.h"
 #include "lib/fxl/files/unique_fd.h"
-#include "lib/mtl/io/device_watcher.h"
+#include "lib/fsl/io/device_watcher.h"
 
 namespace media {
 namespace audio {
@@ -29,7 +29,7 @@ class AudioPlugDetector {
 
  private:
   void AddAudioDevice(int dir_fd, const std::string& name);
-  std::unique_ptr<mtl::DeviceWatcher> watcher_;
+  std::unique_ptr<fsl::DeviceWatcher> watcher_;
   AudioOutputManager* manager_ = nullptr;
 };
 

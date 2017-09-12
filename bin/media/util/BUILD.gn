@@ -24,7 +24,7 @@ source_set("util") {
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 

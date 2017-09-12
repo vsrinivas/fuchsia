@@ -24,14 +24,14 @@ void AcquireFenceSet::WaitReadyAsync(fxl::Closure ready_callback) {
   FXL_DCHECK(!ready_callback_);
 
   if (ready()) {
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
         std::move(ready_callback));
     return;
   }
 
   FXL_DCHECK(handler_keys_.empty());
   for (auto& fence : fences_) {
-    handler_keys_.push_back(mtl::MessageLoop::GetCurrent()->AddHandler(
+    handler_keys_.push_back(fsl::MessageLoop::GetCurrent()->AddHandler(
         this, fence.get(), kFenceSignalledOrClosed));
   }
 
@@ -43,7 +43,7 @@ void AcquireFenceSet::ClearHandlers() {
     // It's possible that a handler got removed earlier (during an
     // OnHandleReady) so check that it's not zero.
     if (handler_key != 0) {
-      mtl::MessageLoop::GetCurrent()->RemoveHandler(handler_key);
+      fsl::MessageLoop::GetCurrent()->RemoveHandler(handler_key);
     }
   }
   handler_keys_.clear();
@@ -67,9 +67,9 @@ void AcquireFenceSet::OnHandleReady(mx_handle_t handle,
       break;
     }
   }
-  mtl::MessageLoop::HandlerKey handler_key = handler_keys_[handler_index];
+  fsl::MessageLoop::HandlerKey handler_key = handler_keys_[handler_index];
   FXL_DCHECK(handler_key != 0);
-  mtl::MessageLoop::GetCurrent()->RemoveHandler(handler_key);
+  fsl::MessageLoop::GetCurrent()->RemoveHandler(handler_key);
   // Set the handler key to 0 so we don't try to remove it twice.
   handler_keys_[handler_index] = 0;
   if (ready()) {

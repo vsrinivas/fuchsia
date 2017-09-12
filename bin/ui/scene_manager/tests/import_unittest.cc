@@ -5,8 +5,8 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/synchronization/waitable_event.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/threading/thread.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/thread.h"
 #include "magenta/system/ulib/mx/include/mx/eventpair.h"
 
 #include "lib/ui/scenic/fidl_helpers.h"
@@ -330,7 +330,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
   mx::eventpair source, destination;
   ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
-  mtl::Thread thread;
+  fsl::Thread thread;
   thread.Run();
 
   thread.TaskRunner()->PostTask([&]() {
@@ -392,7 +392,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
   export_expired_latch.Wait();
 
   thread.TaskRunner()->PostTask(
-      []() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+      []() { fsl::MessageLoop::GetCurrent()->QuitNow(); });
 
   thread.Join();
 }
@@ -434,7 +434,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
   mx::eventpair source, destination;
   ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
-  mtl::Thread thread;
+  fsl::Thread thread;
   thread.Run();
 
   thread.TaskRunner()->PostTask([&]() {
@@ -496,7 +496,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
   export_expired_latch.Wait();
 
   thread.TaskRunner()->PostTask(
-      []() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+      []() { fsl::MessageLoop::GetCurrent()->QuitNow(); });
 
   thread.Join();
 }
@@ -543,7 +543,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
   ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination1));
   mx::eventpair destination2 = CopyEventPair(destination1);
 
-  mtl::Thread thread;
+  fsl::Thread thread;
   thread.Run();
 
   thread.TaskRunner()->PostTask([&]() {
@@ -621,7 +621,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
   export_expired_latch.Wait();
 
   thread.TaskRunner()->PostTask(
-      []() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+      []() { fsl::MessageLoop::GetCurrent()->QuitNow(); });
 
   thread.Join();
 }
@@ -671,7 +671,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
   ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination1));
   mx::eventpair destination2 = CopyEventPair(destination1);
 
-  mtl::Thread thread;
+  fsl::Thread thread;
   thread.Run();
 
   thread.TaskRunner()->PostTask([&]() {
@@ -771,7 +771,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
   export_expired_latch.Wait();
 
   thread.TaskRunner()->PostTask(
-      []() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+      []() { fsl::MessageLoop::GetCurrent()->QuitNow(); });
 
   thread.Join();
 }

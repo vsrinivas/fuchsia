@@ -13,7 +13,7 @@
 #include "examples/common/demo_harness.h"
 #include "garnet/lib/escher/examples/common/services/escher_demo.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 class DemoHarnessFuchsia : public DemoHarness,
                            public escher_demo::EscherDemo,
@@ -63,8 +63,8 @@ class DemoHarnessFuchsia : public DemoHarness,
 
   // DemoHarnessFuchsia can work with a pre-existing MessageLoop, and also
   // create its own if necessary.
-  mtl::MessageLoop* loop_;
-  std::unique_ptr<mtl::MessageLoop> owned_loop_;
+  fsl::MessageLoop* loop_;
+  std::unique_ptr<fsl::MessageLoop> owned_loop_;
 
   std::unique_ptr<app::ApplicationContext> application_context_;
   fidl::Binding<modular::Module> module_binding_;

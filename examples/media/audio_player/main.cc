@@ -5,7 +5,7 @@
 #include "garnet/examples/media/audio_player/audio_player.h"
 #include "garnet/examples/media/audio_player/audio_player_params.h"
 #include "lib/fxl/command_line.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -14,7 +14,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
 
   examples::AudioPlayer audio_player(params);
 

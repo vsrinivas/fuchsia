@@ -19,7 +19,7 @@
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace netconnector {
 namespace mdns {
@@ -153,7 +153,7 @@ void MdnsInterfaceTransceiver::InboundReady(mx_status_t status,
   if (result < 0) {
     FXL_LOG(ERROR) << "Failed to recvfrom, errno " << errno;
     // Wait a bit before trying again to avoid spamming the log.
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this]() { WaitForInbound(); }, fxl::TimeDelta::FromSeconds(10));
     return;
   }

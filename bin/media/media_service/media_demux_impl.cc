@@ -9,7 +9,7 @@
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace media {
 
@@ -26,7 +26,7 @@ MediaDemuxImpl::MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,
                                fidl::InterfaceRequest<MediaSource> request,
                                MediaServiceImpl* owner)
     : MediaServiceImpl::Product<MediaSource>(this, std::move(request), owner),
-      task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
+      task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
       graph_(owner->multiproc_task_runner()) {
   FXL_DCHECK(reader);
 

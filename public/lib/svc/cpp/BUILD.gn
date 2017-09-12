@@ -16,13 +16,13 @@ source_set("cpp") {
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//magenta/system/ulib/mx",
     "//magenta/system/ulib/fbl",
     "//magenta/system/ulib/svcfs",
   ]
 
   deps = [
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }

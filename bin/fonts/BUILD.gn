@@ -17,7 +17,7 @@ executable("font_server") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fonts/fidl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/rapidjson",
   ]
 }

@@ -14,8 +14,8 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mtl/io/redirection.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/io/redirection.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "third_party/skia/include/core/SkPaint.h"
 
 namespace moterm {
@@ -37,7 +37,7 @@ MotermView::MotermView(
       context_(context),
       font_loader_(
           context_->ConnectToEnvironmentService<fonts::FontProvider>()),
-      task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
+      task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
       history_(history),
       params_(moterm_params),
       weak_ptr_factory_(this) {
@@ -81,7 +81,7 @@ void MotermView::StartCommand() {
   command_.reset(new Command());
 
   std::vector<std::string> command_to_run = params_.command;
-  std::vector<mtl::StartupHandle> startup_handles;
+  std::vector<fsl::StartupHandle> startup_handles;
 
   if (command_to_run.empty()) {
     shell_controller_ = std::make_unique<ShellController>(history_);
@@ -302,7 +302,7 @@ void MotermView::OnCommandTerminated() {
   if (shell_controller_) {
     shell_controller_->Terminate();
   }
-  mtl::MessageLoop::GetCurrent()->PostQuitTask();
+  fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 
 }  // namespace moterm

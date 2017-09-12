@@ -13,7 +13,7 @@
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/message.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/handles/object_info.h"
+#include "lib/fsl/handles/object_info.h"
 
 namespace flog {
 
@@ -127,7 +127,7 @@ namespace flog {
 // Returns the koid of the local channel associated with a binding. This value
 // is identical to the value returned by FLOG_PTR_ID(pointer) where pointer is
 // the client end of the binding.
-#define FLOG_BINDING_KOID(binding) mtl::GetKoid(binding.handle())
+#define FLOG_BINDING_KOID(binding) fsl::GetKoid(binding.handle())
 
 // Returns the koid of the remote channel associated with a bound InterfacePtr.
 // This value is identical to the value return by FLOG_REQUEST_ID(request)
@@ -137,7 +137,7 @@ namespace flog {
 // Returns the koid of the remote channel associated with a bound
 // InterfaceHandle. This value is identical to the value return by
 // FLOG_REQUEST_ID(request) where request was created from the handle.
-#define FLOG_HANDLE_KOID(h) mtl::GetRelatedKoid(h.handle().get())
+#define FLOG_HANDLE_KOID(h) fsl::GetRelatedKoid(h.handle().get())
 
 // Same as FLOG_CHANNEL_WITH_SUBJECT but supplies the address of |this| as
 // the subject address. This is the preferred form for declaring channels that
@@ -228,7 +228,7 @@ mx_koid_t GetInterfaceRequestKoid(fidl::InterfaceRequest<T>* request) {
   FXL_DCHECK(request != nullptr);
   FXL_DCHECK(*request);
   mx::channel channel = request->PassChannel();
-  mx_koid_t result = mtl::GetKoid(channel.get());
+  mx_koid_t result = fsl::GetKoid(channel.get());
   request->Bind(std::move(channel));
   return result;
 }
@@ -238,7 +238,7 @@ mx_koid_t GetInterfacePtrRelatedKoid(fidl::InterfacePtr<T>* ptr) {
   FXL_DCHECK(ptr != nullptr);
   FXL_DCHECK(*ptr);
   fidl::InterfaceHandle<T> handle = ptr->PassInterfaceHandle();
-  mx_koid_t result = mtl::GetRelatedKoid(handle.handle().get());
+  mx_koid_t result = fsl::GetRelatedKoid(handle.handle().get());
   ptr->Bind(std::move(handle));
   return result;
 }

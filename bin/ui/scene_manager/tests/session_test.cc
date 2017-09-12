@@ -5,7 +5,7 @@
 #include "garnet/bin/ui/scene_manager/tests/session_test.h"
 
 #include "lib/fxl/synchronization/waitable_event.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 #include "garnet/bin/ui/scene_manager/tests/mocks.h"
 
@@ -75,7 +75,7 @@ void SessionThreadedTest::SetUp() {
 void SessionThreadedTest::TearDown() {
   TaskRunner()->PostTask([this]() {
     SessionTest::TearDown();
-    mtl::MessageLoop::GetCurrent()->QuitNow();
+    fsl::MessageLoop::GetCurrent()->QuitNow();
   });
   thread_.Join();
 }

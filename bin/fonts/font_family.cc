@@ -7,7 +7,7 @@
 #include <algorithm>
 
 #include "lib/fxl/logging.h"
-#include "lib/mtl/vmo/file.h"
+#include "lib/fsl/vmo/file.h"
 
 namespace fonts {
 namespace {
@@ -129,7 +129,7 @@ mx::vmo* FontFamily::GetFontData(const FontRequestPtr& request) {
     return nullptr;
   if (it->data.is_valid())
     return &it->data;
-  if (mtl::VmoFromFilename(it->asset, &it->data))
+  if (fsl::VmoFromFilename(it->asset, &it->data))
     return &it->data;
   return nullptr;
 }

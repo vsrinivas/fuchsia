@@ -17,7 +17,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace moterm {
 
@@ -88,7 +88,7 @@ class App : modular::Module, modular::Lifecycle {
 
   // |modular::Lifecycle|
   void Terminate() override {
-    mtl::MessageLoop::GetCurrent()->QuitNow();
+    fsl::MessageLoop::GetCurrent()->QuitNow();
   }
 
  private:
@@ -125,7 +125,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
 
   moterm::App app(std::move(params));

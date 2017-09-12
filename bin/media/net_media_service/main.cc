@@ -4,10 +4,10 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "garnet/bin/media/net_media_service/net_media_service_impl.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 int main(int argc, const char** argv) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
 
   media::NetMediaServiceImpl impl(app::ApplicationContext::CreateFromStartupInfo());
 

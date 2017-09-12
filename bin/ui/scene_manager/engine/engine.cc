@@ -127,7 +127,7 @@ void Engine::TearDownSession(SessionId id) {
 
     // Don't destroy handler immediately, since it may be the one calling
     // TearDownSession().
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
         fxl::MakeCopyable([handler = std::move(handler)]{}));
   }
 }

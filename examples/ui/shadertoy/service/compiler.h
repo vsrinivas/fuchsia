@@ -14,7 +14,7 @@
 #include "escher/escher.h"
 #include "escher/impl/model_data.h"
 
-namespace mtl {
+namespace fsl {
 class MessageLoop;
 }
 
@@ -71,7 +71,7 @@ class Compiler final {
                                 vk::ShaderModule fragment_module,
                                 const escher::MeshSpec& mesh_spec);
 
-  mtl::MessageLoop* const loop_;
+  fsl::MessageLoop* const loop_;
   escher::Escher* const escher_;
   escher::impl::ModelData model_data_;
   vk::RenderPass render_pass_;

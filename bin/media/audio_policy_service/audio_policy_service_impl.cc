@@ -6,7 +6,7 @@
 
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace media {
 namespace {
@@ -94,7 +94,7 @@ void AudioPolicyServiceImpl::InitializeAudioService() {
 
   if (!files::IsFile(kStatusFilePath) &&
       --initialize_attempts_remaining_ != 0) {
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this]() { InitializeAudioService(); }, kInitializeAttemptInterval);
     return;
   }

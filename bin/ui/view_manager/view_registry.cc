@@ -537,7 +537,7 @@ void ViewRegistry::InvalidateViewTree(ViewTreeState* tree_state,
 void ViewRegistry::ScheduleTraversal() {
   if (!traversal_scheduled_) {
     traversal_scheduled_ = true;
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
         [weak = weak_factory_.GetWeakPtr()] {
           if (weak)
             weak->Traverse();
@@ -667,7 +667,7 @@ mozart::ViewPropertiesPtr ViewRegistry::ResolveViewProperties(
 void ViewRegistry::SchedulePresentSession() {
   if (!present_session_scheduled_) {
     present_session_scheduled_ = true;
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
         [weak = weak_factory_.GetWeakPtr()] {
           if (weak)
             weak->PresentSession();

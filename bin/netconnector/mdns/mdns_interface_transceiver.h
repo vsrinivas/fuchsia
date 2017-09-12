@@ -13,7 +13,7 @@
 #include "garnet/go/src/netstack/apps/include/netconfig.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/fd_waiter.h"
+#include "lib/fsl/tasks/fd_waiter.h"
 
 namespace netstack {
 class NetInterface;
@@ -104,7 +104,7 @@ class MdnsInterfaceTransceiver {
   uint32_t index_;
   std::string name_;
   fxl::UniqueFD socket_fd_;
-  mtl::FDWaiter fd_waiter_;
+  fsl::FDWaiter fd_waiter_;
   std::vector<uint8_t> inbound_buffer_;
   std::vector<uint8_t> outbound_buffer_;
   InboundMessageCallback inbound_message_callback_;

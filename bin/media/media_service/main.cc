@@ -5,10 +5,10 @@
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/media/media_service/media_service_impl.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 int main(int argc, const char** argv) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
 
   media::MediaServiceImpl impl(app::ApplicationContext::CreateFromStartupInfo());

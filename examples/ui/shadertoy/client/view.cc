@@ -16,7 +16,7 @@ View::View(app::ApplicationContext* application_context,
                std::move(view_owner_request),
                "Shadertoy Example"),
       application_context_(application_context),
-      loop_(mtl::MessageLoop::GetCurrent()),
+      loop_(fsl::MessageLoop::GetCurrent()),
       // TODO: we don't need to keep this around once we have used it to
       // create a Shadertoy.  What is the best way to achieve this?
       shadertoy_factory_(application_context_->ConnectToEnvironmentService<

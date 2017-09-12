@@ -10,7 +10,7 @@
 #include "garnet/bin/ui/scene_manager/displays/display_manager.h"
 #include "garnet/bin/ui/scene_manager/scene_manager_impl.h"
 #include "garnet/bin/ui/scene_manager/tests/mocks.h"
-#include "lib/mtl/threading/thread.h"
+#include "lib/fsl/threading/thread.h"
 
 #include "gtest/gtest.h"
 
@@ -38,7 +38,7 @@ class SceneManagerTest : public ::testing::Test {
   DisplayManager display_manager_;
   std::unique_ptr<Display> display_;
   std::unique_ptr<fidl::Binding<scenic::SceneManager>> manager_binding_;
-  std::unique_ptr<mtl::Thread> thread_;
+  std::unique_ptr<fsl::Thread> thread_;
 
  private:
   std::unique_ptr<SceneManagerImpl> manager_impl_;

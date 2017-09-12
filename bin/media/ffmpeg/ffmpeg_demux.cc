@@ -21,7 +21,7 @@
 #include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace media {
 
@@ -149,7 +149,7 @@ std::shared_ptr<Demux> FfmpegDemux::Create(std::shared_ptr<Reader> reader) {
 
 FfmpegDemuxImpl::FfmpegDemuxImpl(std::shared_ptr<Reader> reader)
     : reader_(reader) {
-  task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
+  task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
   FXL_DCHECK(task_runner_);
   ffmpeg_thread_ = std::thread([this]() { Worker(); });
 }

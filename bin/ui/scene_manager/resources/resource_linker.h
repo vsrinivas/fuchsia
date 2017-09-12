@@ -7,8 +7,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "lib/mtl/handles/object_info.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/handles/object_info.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 #include "lib/ui/scenic/fidl/ops.fidl-common.h"
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
@@ -35,7 +35,7 @@ namespace scene_manager {
 /// destroyed using |OnExportedResourceDestroyed|, or all the import tokens have
 /// been closed which results in a call to |RemoveExportEntryForExpiredHandle|.
 
-class ResourceLinker : private mtl::MessageLoopHandler {
+class ResourceLinker : private fsl::MessageLoopHandler {
  public:
   ResourceLinker();
 
@@ -84,7 +84,7 @@ class ResourceLinker : private mtl::MessageLoopHandler {
 
   struct ExportEntry {
     mx::eventpair export_token;
-    mtl::MessageLoop::HandlerKey death_handler_key = 0;
+    fsl::MessageLoop::HandlerKey death_handler_key = 0;
     Resource* resource;
   };
 

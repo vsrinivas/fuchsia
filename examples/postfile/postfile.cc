@@ -14,8 +14,8 @@
 #include "lib/fxl/files/file_descriptor.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/unique_fd.h"
-#include "lib/mtl/socket/files.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/socket/files.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace examples {
 
@@ -30,7 +30,7 @@ class ResponsePrinter {
       PrintResponseBody(std::move(response->body->get_stream()));
     }
 
-    mtl::MessageLoop::GetCurrent()->QuitNow();  // All done!
+    fsl::MessageLoop::GetCurrent()->QuitNow();  // All done!
   }
 
   void PrintResponse(const network::URLResponsePtr& response) const {
@@ -116,12 +116,12 @@ class PostFileApp {
     request->body = network::URLBody::New();
     request->body->set_stream(std::move(consumer));
 
-    auto task_runner = mtl::MessageLoop::GetCurrent()->task_runner();
-    mtl::CopyFromFileDescriptor(std::move(fd), std::move(producer), task_runner,
+    auto task_runner = fsl::MessageLoop::GetCurrent()->task_runner();
+    fsl::CopyFromFileDescriptor(std::move(fd), std::move(producer), task_runner,
                                 [](bool result, fxl::UniqueFD fd) {
                                   if (!result) {
                                     printf("file read error\n");
-                                    mtl::MessageLoop::GetCurrent()->QuitNow();
+                                    fsl::MessageLoop::GetCurrent()->QuitNow();
                                   }
                                 });
 
@@ -145,7 +145,7 @@ class PostFileApp {
 
 int main(int argc, const char** argv) {
   std::vector<std::string> args(argv, argv + argc);
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
 
   examples::PostFileApp postfile_app;
   if (postfile_app.Start(args))

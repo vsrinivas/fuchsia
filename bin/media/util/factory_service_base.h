@@ -14,8 +14,8 @@
 #include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/threading/create_thread.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/create_thread.h"
 
 template <typename Factory>
 class FactoryServiceBase {
@@ -25,7 +25,7 @@ class FactoryServiceBase {
    public:
     virtual ~ProductBase() {
       if (quit_on_destruct_) {
-        mtl::MessageLoop::GetCurrent()->PostQuitTask();
+        fsl::MessageLoop::GetCurrent()->PostQuitTask();
       }
     }
 
@@ -100,7 +100,7 @@ class FactoryServiceBase {
 
   FactoryServiceBase(std::unique_ptr<app::ApplicationContext> application_context)
       : application_context_(std::move(application_context)),
-        task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()) {}
+        task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {}
 
   virtual ~FactoryServiceBase() {}
 
@@ -138,7 +138,7 @@ class FactoryServiceBase {
   void CreateProductOnNewThread(
       const std::function<std::shared_ptr<ProductImpl>()>& product_creator) {
     fxl::RefPtr<fxl::TaskRunner> task_runner;
-    std::thread thread = mtl::CreateThread(&task_runner);
+    std::thread thread = fsl::CreateThread(&task_runner);
     task_runner->PostTask([this, product_creator]() {
       std::shared_ptr<ProductImpl> product = product_creator();
       product->QuitOnDestruct();
@@ -164,7 +164,7 @@ class FactoryServiceBase {
 #define RCHECK(condition)                                             \
   if (!(condition)) {                                                 \
     FXL_LOG(ERROR) << "request precondition failed: " #condition "."; \
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(          \
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(          \
         [this]() { UnbindAndReleaseFromOwner(); });                   \
     return;                                                           \
   }

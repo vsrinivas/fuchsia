@@ -11,7 +11,7 @@
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 #include "exception-port.h"
 #include "io-loop.h"
@@ -54,7 +54,7 @@ class Server : public IOLoop::Delegate, public Process::Delegate {
 
   // Returns a mutable reference to the main message loop. The returned instance
   // is owned by this Server instance and should not be deleted.
-  mtl::MessageLoop* message_loop() { return &message_loop_; }
+  fsl::MessageLoop* message_loop() { return &message_loop_; }
 
   // Returns a mutable reference to the exception port. The returned instance is
   // owned by this Server instance and should not be deleted.
@@ -78,7 +78,7 @@ class Server : public IOLoop::Delegate, public Process::Delegate {
   fxl::WeakPtr<Thread> current_thread_;
 
   // The main loop.
-  mtl::MessageLoop message_loop_;
+  fsl::MessageLoop message_loop_;
 
   // The IOLoop used for blocking I/O operations over |client_sock_|.
   // |message_loop_| and |client_sock_| both MUST outlive |io_loop_|. We take

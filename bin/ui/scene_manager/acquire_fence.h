@@ -9,15 +9,15 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/tasks/message_loop_handler.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop_handler.h"
 
 #include "garnet/bin/ui/scene_manager/fence.h"
 
 namespace scene_manager {
 
 // Provides access to the consumption fence associated with a call to |Present|.
-class AcquireFence : private mtl::MessageLoopHandler {
+class AcquireFence : private fsl::MessageLoopHandler {
  public:
   // Takes ownership of the fence.
   // |fence| must be a valid handle.
@@ -41,7 +41,7 @@ class AcquireFence : private mtl::MessageLoopHandler {
   bool ready() const { return ready_; }
 
  private:
-  // |mtl::MessageLoopHandler|
+  // |fsl::MessageLoopHandler|
   void OnHandleReady(mx_handle_t handle,
                      mx_signals_t pending,
                      uint64_t count) override;
@@ -50,7 +50,7 @@ class AcquireFence : private mtl::MessageLoopHandler {
 
   mx::event fence_;
 
-  mtl::MessageLoop::HandlerKey handler_key_ = 0;
+  fsl::MessageLoop::HandlerKey handler_key_ = 0;
   fxl::Closure ready_callback_;
   bool ready_ = false;
 

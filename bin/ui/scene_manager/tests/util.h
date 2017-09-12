@@ -8,7 +8,7 @@
 
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mtl/vmo/shared_vmo.h"
+#include "lib/fsl/vmo/shared_vmo.h"
 #include "magenta/system/ulib/mx/include/mx/event.h"
 #include "magenta/system/ulib/mx/include/mx/eventpair.h"
 
@@ -34,9 +34,9 @@ mx::eventpair CopyEventPair(const mx::eventpair& eventpair);
 mx::vmo CopyVmo(const mx::vmo& vmo);
 
 // Creates a VMO with the specified size, immediately allocate physical memory
-// for it, and wraps in a |mtl::SharedVmo| to make it easy to map it into the
+// for it, and wraps in a |fsl::SharedVmo| to make it easy to map it into the
 // caller's address space.
-fxl::RefPtr<mtl::SharedVmo> CreateSharedVmo(size_t size);
+fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size);
 
 }  // namespace test
 }  // namespace scene_manager

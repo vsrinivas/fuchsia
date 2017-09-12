@@ -9,7 +9,7 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/media/fidl/audio_server.fidl.h"
 #include "lib/fxl/command_line.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 void usage(const char* prog_name) {
   std::cout << "Usage: " << prog_name << " [gain]\n";
@@ -37,7 +37,7 @@ int main(int argc, const char** argv) {
     set_gain = true;
   }
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
 
   auto application_context = app::ApplicationContext::CreateFromStartupInfo();
 
@@ -51,7 +51,7 @@ int main(int argc, const char** argv) {
   audio_server->GetMasterGain([](float db_gain) {
     std::cout << "Master gain is currently " << std::fixed
               << std::setprecision(2) << db_gain << " dB.\n";
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
   });
 
   loop.Run();

@@ -8,12 +8,12 @@
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace media {
 
 FidlPacketProducer::FidlPacketProducer() : binding_(this) {
-  task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
+  task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
   FXL_DCHECK(task_runner_);
 }
 

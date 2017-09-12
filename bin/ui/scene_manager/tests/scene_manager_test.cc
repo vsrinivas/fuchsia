@@ -24,7 +24,7 @@ void SceneManagerTest::SetUp() {
   manager_binding_ = std::make_unique<fidl::Binding<scenic::SceneManager>>(
       manager_impl_.get());
 
-  thread_ = std::make_unique<mtl::Thread>();
+  thread_ = std::make_unique<fsl::Thread>();
   thread_->Run();
 
   auto interface_request = manager_.NewRequest();
@@ -43,7 +43,7 @@ void SceneManagerTest::TearDown() {
   manager_ = nullptr;
   RUN_MESSAGE_LOOP_UNTIL(manager_impl_ == nullptr);
   thread_->TaskRunner()->PostTask(
-      []() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+      []() { fsl::MessageLoop::GetCurrent()->QuitNow(); });
   thread_->Join();
 }
 

@@ -13,7 +13,7 @@ shared_library("c") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 
   output_name = "media_client"

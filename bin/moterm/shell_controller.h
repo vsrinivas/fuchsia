@@ -17,8 +17,8 @@
 #include "lib/fidl/c/waiter/async_waiter.h"
 #include "lib/fidl/cpp/waiter/default.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/io/redirection.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/io/redirection.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace moterm {
 
@@ -36,7 +36,7 @@ class ShellController : public History::Client {
   std::vector<std::string> GetShellCommand();
 
   // Returns the startup handles needed for initializing the default shell.
-  std::vector<mtl::StartupHandle> GetStartupHandles();
+  std::vector<fsl::StartupHandle> GetStartupHandles();
 
   // Starts the communication with shell.
   void Start();

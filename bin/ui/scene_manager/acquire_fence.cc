@@ -46,21 +46,21 @@ void AcquireFence::WaitReadyAsync(fxl::Closure ready_callback) {
   FXL_DCHECK(!ready_callback_);
 
   if (ready_) {
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
         std::move(ready_callback));
     return;
   }
 
   // Returned key will always be non-zero.
   FXL_DCHECK(handler_key_ == 0);
-  handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
+  handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
       this, fence_.get(), kFenceSignalledOrClosed);
   ready_callback_ = std::move(ready_callback);
 }
 
 void AcquireFence::ClearHandler() {
   if (handler_key_) {
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(handler_key_);
+    fsl::MessageLoop::GetCurrent()->RemoveHandler(handler_key_);
     handler_key_ = 0u;
   }
 }

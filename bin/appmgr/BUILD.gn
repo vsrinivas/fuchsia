@@ -36,7 +36,7 @@ source_set("lib") {
     "//garnet/public/lib/svc/cpp",
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//magenta/system/ulib/mx",
     "//third_party/rapidjson",
   ]
@@ -67,6 +67,6 @@ executable("tests") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/mtl/test",
+    "//garnet/public/lib/fsl/test",
   ]
 }

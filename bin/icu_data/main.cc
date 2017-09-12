@@ -8,7 +8,7 @@
 #include "garnet/bin/icu_data/icu_data_provider_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace icu_data {
 
@@ -33,7 +33,7 @@ class App {
 }  // namespace icu_data
 
 int main(int argc, const char** argv) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   icu_data::App app;
   loop.Run();
   return 0;

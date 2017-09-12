@@ -12,7 +12,7 @@ source_set("farfs") {
     "//garnet/lib/far",
     "//garnet/lib/far:far_vmo",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//magenta/system/ulib/mx",
     "//magenta/system/ulib/vmofs",
   ]

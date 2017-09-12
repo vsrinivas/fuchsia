@@ -10,6 +10,6 @@ executable("master_gain") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/media/fidl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }

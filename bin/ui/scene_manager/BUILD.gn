@@ -150,7 +150,7 @@ source_set("common") {
     "//garnet/lib/escher/examples/common",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 
   public_configs = [ ":common_include_dirs" ]

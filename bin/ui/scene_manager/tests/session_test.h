@@ -8,7 +8,7 @@
 #include "garnet/bin/ui/scene_manager/engine/session.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/synchronization/waitable_event.h"
-#include "lib/mtl/threading/thread.h"
+#include "lib/fsl/threading/thread.h"
 
 namespace scene_manager {
 namespace test {
@@ -75,7 +75,7 @@ class SessionThreadedTest : public SessionTest {
   void PostTask(fxl::AutoResetWaitableEvent& latch, fxl::Closure callback);
 
  private:
-  mtl::Thread thread_;
+  fsl::Thread thread_;
 };
 
 }  // namespace test

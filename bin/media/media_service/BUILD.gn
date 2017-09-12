@@ -54,7 +54,7 @@ executable("media_service") {
     "//garnet/bin/network",
     "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//magenta/system/ulib/trace-provider",
   ]
 }
@@ -80,6 +80,6 @@ executable("tests") {
     "//garnet/public/lib/media/fidl",
     "//garnet/bin/media/fidl",
     "//garnet/bin/media/framework_create",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }

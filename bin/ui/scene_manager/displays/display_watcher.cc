@@ -28,7 +28,7 @@ DisplayWatcher::~DisplayWatcher() = default;
 void DisplayWatcher::WaitForDisplay(DisplayReadyCallback callback) {
   FXL_DCHECK(!device_watcher_);
 
-  device_watcher_ = mtl::DeviceWatcher::Create(
+  device_watcher_ = fsl::DeviceWatcher::Create(
       kDisplayDir,
       std::bind(&DisplayWatcher::HandleDevice, this, std::move(callback),
                 std::placeholders::_1, std::placeholders::_2));

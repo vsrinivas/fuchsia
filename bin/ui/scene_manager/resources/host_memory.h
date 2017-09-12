@@ -9,7 +9,7 @@
 #include "garnet/bin/ui/scene_manager/resources/memory.h"
 #include "garnet/bin/ui/scene_manager/util/error_reporter.h"
 #include "escher/vk/gpu_mem.h"
-#include "lib/mtl/vmo/shared_vmo.h"
+#include "lib/fsl/vmo/shared_vmo.h"
 
 namespace scene_manager {
 
@@ -51,7 +51,7 @@ class HostMemory : public Memory {
   uint64_t size() const { return size_; }
 
  private:
-  fxl::RefPtr<mtl::SharedVmo> shared_vmo_;
+  fxl::RefPtr<fsl::SharedVmo> shared_vmo_;
   uint64_t size_;
 };
 

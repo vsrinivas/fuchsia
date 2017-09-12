@@ -5,7 +5,7 @@
 #include "garnet/examples/netconnector/netconnector_example_impl.h"
 #include "garnet/examples/netconnector/netconnector_example_params.h"
 #include "lib/fxl/command_line.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/netconnector/fidl/netconnector.fidl.h"
 
 int main(int argc, const char** argv) {
@@ -15,7 +15,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
 
   examples::NetConnectorExampleImpl impl(&params);
 

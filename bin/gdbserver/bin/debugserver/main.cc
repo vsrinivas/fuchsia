@@ -14,7 +14,7 @@
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/mtl/handles/object_info.h"
+#include "lib/fsl/handles/object_info.h"
 
 #include "server.h"
 
@@ -88,7 +88,7 @@ int main(int argc, char* argv[]) {
   FXL_LOG(INFO) << "Starting server.";
 
   // Give this thread an identifiable name for debugging purposes.
-  mtl::SetCurrentThreadName("server (main)");
+  fsl::SetCurrentThreadName("server (main)");
 
   debugserver::RspServer server(port);
 

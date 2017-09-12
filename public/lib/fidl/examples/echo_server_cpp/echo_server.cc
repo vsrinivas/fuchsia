@@ -6,7 +6,7 @@
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 #include "lib/fidl/examples/services/echo.fidl.h"
 
@@ -50,7 +50,7 @@ class EchoDelegate {
 }  // namespace echo
 
 int main(int argc, const char** argv) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
 
   echo::EchoDelegate delegate;
   loop.Run();

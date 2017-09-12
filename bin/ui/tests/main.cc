@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
   testing::UnitTest::GetInstance()->listeners().Append(&listener);
 
-  mtl::MessageLoop message_loop;
+  fsl::MessageLoop message_loop;
   int status = RUN_ALL_TESTS();
 
   testing::UnitTest::GetInstance()->listeners().Release(&listener);

@@ -14,7 +14,7 @@ source_set("input_reader") {
     "//garnet/public/lib/ui/input",
     "//garnet/public/lib/ui/input/fidl",
     "//garnet/public/lib/ui/input/cpp",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//magenta/system/ulib/mx",
     "//magenta/system/ulib/trace",
   ]

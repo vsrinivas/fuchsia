@@ -12,7 +12,7 @@
 #include "garnet/bin/ui/view_manager/internal/input_owner.h"
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace view_manager {
 namespace {
@@ -162,7 +162,7 @@ void InputDispatcherImpl::DeliverKeyEvent(
 
         if (!handled && propagation_index + 1 < focus_chain->chain.size()) {
           // Avoid re-entrance on DeliverKeyEvent
-          mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+          fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
               fxl::MakeCopyable([
                 weak = weak_factory_.GetWeakPtr(),
                 focus_chain = std::move(focus_chain), propagation_index,
@@ -190,7 +190,7 @@ void InputDispatcherImpl::PopAndScheduleNextEvent() {
         if (weak)
           weak->ProcessNextEvent();
       };
-      mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+      fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
           process_next_event);
     }
   }

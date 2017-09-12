@@ -4,7 +4,7 @@
 
 #include "lib/app/cpp/application_context.h"
 
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/scenic/client/session.h"
@@ -31,7 +31,7 @@ class App {
   void InitCheckerboardMaterial(scenic_lib::Material* uninitialized_material);
 
   std::unique_ptr<app::ApplicationContext> application_context_;
-  mtl::MessageLoop* loop_;
+  fsl::MessageLoop* loop_;
   scenic::SceneManagerPtr scene_manager_;
 
   std::unique_ptr<scenic_lib::Session> session_;

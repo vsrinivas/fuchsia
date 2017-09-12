@@ -17,7 +17,7 @@ namespace input {
 
 InputReader::DeviceInfo::DeviceInfo(
     std::unique_ptr<InputInterpreter> interpreter,
-    mtl::MessageLoop::HandlerKey key)
+    fsl::MessageLoop::HandlerKey key)
     : interpreter_(std::move(interpreter)), key_(key) {}
 
 InputReader::DeviceInfo::~DeviceInfo() {}
@@ -31,7 +31,7 @@ InputReader::~InputReader() {
     DeviceRemoved(devices_.begin()->first);
   }
   if (display_ownership_handler_key_) {
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(
+    fsl::MessageLoop::GetCurrent()->RemoveHandler(
         display_ownership_handler_key_);
   }
 }
@@ -39,7 +39,7 @@ InputReader::~InputReader() {
 void InputReader::Start() {
   FXL_CHECK(registry_);
 
-  device_watcher_ = mtl::DeviceWatcher::Create(
+  device_watcher_ = fsl::DeviceWatcher::Create(
       DEV_INPUT, [this](int dir_fd, std::string filename) {
         std::unique_ptr<InputInterpreter> interpreter =
             InputInterpreter::Open(dir_fd, filename, registry_);
@@ -47,7 +47,7 @@ void InputReader::Start() {
           DeviceAdded(std::move(interpreter));
       });
 
-  console_watcher_ = mtl::DeviceWatcher::Create(
+  console_watcher_ = fsl::DeviceWatcher::Create(
       DEV_CONSOLE, [this](int dir_fd, std::string filename) {
         WatchDisplayOwnershipChanges(dir_fd);
       });
@@ -64,7 +64,7 @@ void InputReader::WatchDisplayOwnershipChanges(int dir_fd) {
       // Add handler to listen for signals on this event
       mx_signals_t signals = MX_USER_SIGNAL_0 | MX_USER_SIGNAL_1;
       display_ownership_handler_key_ =
-          mtl::MessageLoop::GetCurrent()->AddHandler(
+          fsl::MessageLoop::GetCurrent()->AddHandler(
               this, display_ownership_event_, signals);
     } else {
       FXL_DLOG(ERROR)
@@ -80,7 +80,7 @@ void InputReader::WatchDisplayOwnershipChanges(int dir_fd) {
 void InputReader::DeviceRemoved(mx_handle_t handle) {
   FXL_VLOG(1) << "Input device " << devices_.at(handle)->interpreter()->name()
               << " removed";
-  mtl::MessageLoop::GetCurrent()->RemoveHandler(devices_.at(handle)->key());
+  fsl::MessageLoop::GetCurrent()->RemoveHandler(devices_.at(handle)->key());
   devices_.erase(handle);
 }
 
@@ -88,8 +88,8 @@ void InputReader::DeviceAdded(std::unique_ptr<InputInterpreter> interpreter) {
   FXL_VLOG(1) << "Input device " << interpreter->name() << " added ";
   mx_handle_t handle = interpreter->handle();
   mx_signals_t signals = MX_USER_SIGNAL_0;
-  mtl::MessageLoop::HandlerKey key =
-      mtl::MessageLoop::GetCurrent()->AddHandler(this, handle, signals);
+  fsl::MessageLoop::HandlerKey key =
+      fsl::MessageLoop::GetCurrent()->AddHandler(this, handle, signals);
 
   std::unique_ptr<DeviceInfo> info =
       std::make_unique<DeviceInfo>(std::move(interpreter), key);
@@ -109,20 +109,20 @@ void InputReader::OnDeviceHandleReady(mx_handle_t handle,
 
 void InputReader::OnDisplayHandleReady(mx_handle_t handle,
                                        mx_signals_t pending) {
-  mtl::MessageLoop::GetCurrent()->RemoveHandler(display_ownership_handler_key_);
+  fsl::MessageLoop::GetCurrent()->RemoveHandler(display_ownership_handler_key_);
   if (pending & MX_USER_SIGNAL_0) {
     display_owned_ = false;
-    display_ownership_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
+    display_ownership_handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
         this, display_ownership_event_, MX_USER_SIGNAL_1);
   } else if (pending & MX_USER_SIGNAL_1) {
     display_owned_ = true;
-    display_ownership_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
+    display_ownership_handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
         this, display_ownership_event_, MX_USER_SIGNAL_0);
   }
 }
 
-#pragma mark mtl::MessageLoopHandler
-// |mtl::MessageLoopHandler|:
+#pragma mark fsl::MessageLoopHandler
+// |fsl::MessageLoopHandler|:
 
 void InputReader::OnHandleReady(mx_handle_t handle,
                                 mx_signals_t pending,

@@ -34,7 +34,7 @@ static_library("common") {
       "//apps/modular/services/lifecycle",
       "//apps/modular/services/module",
       "//garnet/lib/escher/examples/common/services",
-      "//garnet/public/lib/mtl",
+      "//garnet/public/lib/fsl",
     ]
     sources += [
       "demo_harness_fuchsia.cc",

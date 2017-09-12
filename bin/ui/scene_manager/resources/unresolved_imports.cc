@@ -6,7 +6,7 @@
 
 #include "garnet/bin/ui/scene_manager/resources/resource_linker.h"
 #include "lib/fidl/cpp/waiter/default.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace scene_manager {
 
@@ -25,7 +25,7 @@ UnresolvedImports::UnresolvedImports(ResourceLinker* resource_linker)
     : resource_linker_(resource_linker){};
 
 UnresolvedImports::~UnresolvedImports() {
-  auto message_loop = mtl::MessageLoop::GetCurrent();
+  auto message_loop = fsl::MessageLoop::GetCurrent();
   for (auto& entry_iter : imports_) {
     FXL_DCHECK(entry_iter.second.import_token);
     message_loop->RemoveHandler(entry_iter.second.death_handler_key);
@@ -43,7 +43,7 @@ void UnresolvedImports::AddUnresolvedImport(Import* import,
                                             mx_koid_t import_koid) {
   // Make sure the import koid we've been passed is valid.
   FXL_DCHECK(import_koid != MX_KOID_INVALID);
-  FXL_DCHECK(import_koid == mtl::GetKoid(import_token.get()));
+  FXL_DCHECK(import_koid == fsl::GetKoid(import_token.get()));
 
   // Make sure we're not using the same import twice.
   FXL_DCHECK(imports_.find(import) == imports_.end());
@@ -66,8 +66,8 @@ void UnresolvedImports::ListenForPeerHandleDeath(Import* import) {
   if (import_entry_iter != imports_.end()) {
     // The resource must be removed from being considered for import
     // if its peer is closed.
-    mtl::MessageLoop::HandlerKey death_key =
-        mtl::MessageLoop::GetCurrent()->AddHandler(
+    fsl::MessageLoop::HandlerKey death_key =
+        fsl::MessageLoop::GetCurrent()->AddHandler(
             this,                                          // handler
             import_entry_iter->second.import_token.get(),  // handle
             kEventPairDeathSignals,                        // trigger
@@ -122,7 +122,7 @@ std::vector<Import*> UnresolvedImports::GetAndRemoveUnresolvedImportsForKoid(
     // Unregister the handler
     if (entry_iter->second.death_handler_key != 0) {
       FXL_DCHECK(entry_iter->second.import_token);
-      mtl::MessageLoop::GetCurrent()->RemoveHandler(
+      fsl::MessageLoop::GetCurrent()->RemoveHandler(
           entry_iter->second.death_handler_key);
 #ifndef NDEBUG
       num_handler_keys_--;
@@ -171,7 +171,7 @@ void UnresolvedImports::OnImportDestroyed(Import* import) {
   // Unregister the handler
   if (entry_iter->second.death_handler_key != 0) {
     FXL_DCHECK(entry_iter->second.import_token);
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(
+    fsl::MessageLoop::GetCurrent()->RemoveHandler(
         entry_iter->second.death_handler_key);
 #ifndef NDEBUG
     num_handler_keys_--;

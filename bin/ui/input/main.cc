@@ -16,7 +16,7 @@
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 int64_t InputEventTimestampNow() {
@@ -109,12 +109,12 @@ class InputApp {
         << "\t--height=h specifies the height of the display (default: 1000)."
         << std::endl;
 
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 
   void Error(std::string message) {
     std::cout << message << std::endl;
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 
   mozart::InputDevicePtr RegisterTouchscreen(uint32_t width, uint32_t height) {
@@ -259,7 +259,7 @@ class InputApp {
     input_device->DispatchReport(std::move(report));
 
     fxl::TimeDelta delta = fxl::TimeDelta::FromMilliseconds(duration_ms);
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         fxl::MakeCopyable([device = std::move(input_device)]() mutable {
           // UP
           mozart::TouchscreenReportPtr touchscreen =
@@ -272,7 +272,7 @@ class InputApp {
 
           FXL_VLOG(1) << "SendTap " << *report;
           device->DispatchReport(std::move(report));
-          mtl::MessageLoop::GetCurrent()->PostQuitTask();
+          fsl::MessageLoop::GetCurrent()->PostQuitTask();
         }),
         delta);
   }
@@ -292,7 +292,7 @@ class InputApp {
     input_device->DispatchReport(std::move(report));
 
     fxl::TimeDelta delta = fxl::TimeDelta::FromMilliseconds(duration_ms);
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         fxl::MakeCopyable([device = std::move(input_device)]() mutable {
 
           // RELEASED
@@ -304,7 +304,7 @@ class InputApp {
           report->keyboard = std::move(keyboard);
           FXL_VLOG(1) << "SendKeyPress " << *report;
           device->DispatchReport(std::move(report));
-          mtl::MessageLoop::GetCurrent()->PostQuitTask();
+          fsl::MessageLoop::GetCurrent()->PostQuitTask();
         }),
         delta);
   }
@@ -331,7 +331,7 @@ class InputApp {
     input_device->DispatchReport(std::move(report));
 
     fxl::TimeDelta delta = fxl::TimeDelta::FromMilliseconds(duration_ms);
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         fxl::MakeCopyable(
             [ device = std::move(input_device), x1, y1 ]() mutable {
               // MOVE
@@ -360,7 +360,7 @@ class InputApp {
               FXL_VLOG(1) << "SendSwipe " << *report;
               device->DispatchReport(std::move(report));
 
-              mtl::MessageLoop::GetCurrent()->PostQuitTask();
+              fsl::MessageLoop::GetCurrent()->PostQuitTask();
             }),
         delta);
   }
@@ -375,7 +375,7 @@ int main(int argc, char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   input::InputApp app;
   loop.task_runner()->PostTask([&app, command_line] { app.Run(command_line); });
   loop.Run();

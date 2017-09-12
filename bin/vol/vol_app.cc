@@ -12,8 +12,8 @@
 #include "lib/media/audio/perceived_level.h"
 #include "lib/media/fidl/audio_policy_service.fidl.h"
 #include "lib/fxl/command_line.h"
-#include "lib/mtl/tasks/fd_waiter.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/fd_waiter.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace media {
 namespace {
@@ -136,7 +136,7 @@ class VolApp {
     std::cout << "    enter        quit\n";
     std::cout << "\n";
 
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 
   bool Parse(const std::string& string_value, float* float_out) {
@@ -160,7 +160,7 @@ class VolApp {
         }
       } else {
         std::cout << *status << std::endl;
-        mtl::MessageLoop::GetCurrent()->PostQuitTask();
+        fsl::MessageLoop::GetCurrent()->PostQuitTask();
         return;
       }
     }
@@ -205,7 +205,7 @@ class VolApp {
       case '\n':
       case 'q':
       case 'Q':
-        mtl::MessageLoop::GetCurrent()->PostQuitTask();
+        fsl::MessageLoop::GetCurrent()->PostQuitTask();
         std::cout << kShowCursor << "\n" << std::endl;
         return;
       default:
@@ -221,7 +221,7 @@ class VolApp {
   bool mute_ = false;
   bool unmute_ = false;
   float gain_db_ = kGainUnchanged;
-  mtl::FDWaiter fd_waiter_;
+  fsl::FDWaiter fd_waiter_;
   float system_audio_gain_db_;
   bool system_audio_muted_;
   bool first_status_ = true;
@@ -230,7 +230,7 @@ class VolApp {
 }  // namespace media
 
 int main(int argc, const char** argv) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   media::VolApp app(argc, argv);
   loop.Run();
   return 0;

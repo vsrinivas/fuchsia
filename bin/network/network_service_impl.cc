@@ -13,8 +13,8 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/threading/thread.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/thread.h"
 
 namespace network {
 
@@ -30,7 +30,7 @@ class NetworkServiceImpl::UrlLoaderContainer
                      fidl::InterfaceRequest<URLLoader> request)
       : request_(std::move(request)),
         top_coordinator_(top_coordinator),
-        main_task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
+        main_task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
         weak_ptr_factory_(this) {
     weak_ptr_ = weak_ptr_factory_.GetWeakPtr();
   }
@@ -114,7 +114,7 @@ class NetworkServiceImpl::UrlLoaderContainer
   void StopOnIOThread() {
     binding_.reset();
     url_loader_.reset();
-    mtl::MessageLoop::GetCurrent()->QuitNow();
+    fsl::MessageLoop::GetCurrent()->QuitNow();
     main_task_runner_->PostTask([this] { JoinAndNotify(); });
   }
 
@@ -125,7 +125,7 @@ class NetworkServiceImpl::UrlLoaderContainer
   URLLoaderImpl::Coordinator* top_coordinator_;
   fxl::Closure on_inactive_;
   fxl::Closure on_done_;
-  mtl::Thread thread_;
+  fsl::Thread thread_;
   bool stopped_ = true;
   bool joined_ = false;
 

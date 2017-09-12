@@ -78,7 +78,7 @@ TEST_F(ImagePipeTest, AsyncAcquireFenceSignalling) {
   EXPECT_TRUE(signalled);
 }
 
-fxl::RefPtr<mtl::SharedVmo> CreateVmoWithBuffer(
+fxl::RefPtr<fsl::SharedVmo> CreateVmoWithBuffer(
     size_t buffer_size,
     std::unique_ptr<uint8_t[]> buffer_pixels) {
   auto shared_vmo = CreateSharedVmo(buffer_size);
@@ -87,14 +87,14 @@ fxl::RefPtr<mtl::SharedVmo> CreateVmoWithBuffer(
   return shared_vmo;
 }
 
-fxl::RefPtr<mtl::SharedVmo> CreateVmoWithCheckerboardPixels(size_t w,
+fxl::RefPtr<fsl::SharedVmo> CreateVmoWithCheckerboardPixels(size_t w,
                                                             size_t h) {
   size_t pixels_size;
   auto pixels = escher::image_utils::NewCheckerboardPixels(w, h, &pixels_size);
   return CreateVmoWithBuffer(pixels_size, std::move(pixels));
 }
 
-fxl::RefPtr<mtl::SharedVmo> CreateVmoWithGradientPixels(size_t w, size_t h) {
+fxl::RefPtr<fsl::SharedVmo> CreateVmoWithGradientPixels(size_t w, size_t h) {
   size_t pixels_size;
   auto pixels = escher::image_utils::NewGradientPixels(w, h, &pixels_size);
   return CreateVmoWithBuffer(pixels_size, std::move(pixels));

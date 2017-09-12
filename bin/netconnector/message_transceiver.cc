@@ -11,13 +11,13 @@
 #include <sys/types.h>
 
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace netconnector {
 
 MessageTransceiver::MessageTransceiver(fxl::UniqueFD socket_fd)
     : socket_fd_(std::move(socket_fd)),
-      task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
+      task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
       receive_buffer_(kRecvBufferSize) {
   FXL_DCHECK(socket_fd_.is_valid());
   FXL_DCHECK(task_runner_);

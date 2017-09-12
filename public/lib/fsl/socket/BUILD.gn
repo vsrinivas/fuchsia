@@ -1,0 +1,25 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("socket") {
+  visibility = [ "//garnet/public/lib/fsl/*" ]
+
+  sources = [
+    "blocking_drain.cc",
+    "blocking_drain.h",
+    "files.cc",
+    "files.h",
+    "socket_drainer.cc",
+    "socket_drainer.h",
+    "strings.cc",
+    "strings.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fidl/c/waiter",
+    "//garnet/public/lib/fidl/cpp/waiter",
+    "//garnet/public/lib/fxl",
+    "//magenta/system/ulib/mx",
+  ]
+}

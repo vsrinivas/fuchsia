@@ -7,7 +7,7 @@
 #include "lib/media/flog/flog.h"
 #include "garnet/bin/media/audio_server/audio_output_manager.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace media {
 namespace audio {
@@ -26,14 +26,14 @@ AudioServerImpl::AudioServerImpl(std::unique_ptr<app::ApplicationContext> applic
       });
 
   // Stash a pointer to our task runner.
-  FXL_DCHECK(mtl::MessageLoop::GetCurrent());
-  task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
+  FXL_DCHECK(fsl::MessageLoop::GetCurrent());
+  task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
   FXL_DCHECK(task_runner_);
 
   // TODO(johngro) : See MG-940
   //
   // Eliminate this as soon as we have a more official way of
-  // meeting real-time latency requirements.  The main mtl::MessageLoop is
+  // meeting real-time latency requirements.  The main fsl::MessageLoop is
   // responsible for receiving audio payloads sent by applications, so it has
   // real time requirements (just like the mixing threads do).  In a perfect
   // world, however, we would want to have this task run on a thread which is

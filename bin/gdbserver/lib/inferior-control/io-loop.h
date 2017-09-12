@@ -24,7 +24,7 @@ namespace debugserver {
 //
 // TODO(armansito): This is a temporary solution until there is a
 // mxio_get_handle (or equivalent) interface to get a mx_handle_t from socket
-// fd to use with mtl::MessageLoop::AddHandler. That way we can avoid blocking
+// fd to use with fsl::MessageLoop::AddHandler. That way we can avoid blocking
 // reads and writes while also using a single thread. Then again this works fine
 // too.
 class IOLoop {

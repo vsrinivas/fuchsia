@@ -12,7 +12,7 @@
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
-#include "lib/mtl/vmo/file.h"
+#include "lib/fsl/vmo/file.h"
 
 namespace app {
 
@@ -43,7 +43,7 @@ void RootApplicationLoader::LoadApplication(
       }
     }
     mx::vmo data;
-    if (fd.is_valid() && mtl::VmoFromFd(std::move(fd), &data)) {
+    if (fd.is_valid() && fsl::VmoFromFd(std::move(fd), &data)) {
       ApplicationPackagePtr package = ApplicationPackage::New();
       package->data = std::move(data);
       package->resolved_url = fxl::Concatenate({"file://", path});

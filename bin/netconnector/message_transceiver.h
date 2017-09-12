@@ -14,7 +14,7 @@
 #include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/mtl/tasks/fd_waiter.h"
+#include "lib/fsl/tasks/fd_waiter.h"
 
 namespace netconnector {
 
@@ -177,7 +177,7 @@ class MessageTransceiver {
 
   uint32_t version_ = kNullVersion;
 
-  mtl::FDWaiter fd_recv_waiter_;
+  fsl::FDWaiter fd_recv_waiter_;
   bool fd_recv_waiter_waiting_ = false;
   std::vector<uint8_t> receive_buffer_;
   size_t receive_packet_offset_ = 0;
@@ -187,7 +187,7 @@ class MessageTransceiver {
   // In general, |fd_send_waiter_| is waiting if and only if |send_tasks_| isn't
   // empty. The only exception to this is in the code that actually does the
   // sending (the waiter callback, |SendPacket| and the send tasks).
-  mtl::FDWaiter fd_send_waiter_;
+  fsl::FDWaiter fd_send_waiter_;
   std::queue<std::function<void()>> send_tasks_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MessageTransceiver);

@@ -8,7 +8,7 @@
 
 #include "garnet/examples/netconnector/netconnector_example_params.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/netconnector/fidl/netconnector.fidl.h"
 
 namespace examples {
@@ -37,7 +37,7 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
         FXL_LOG(ERROR) << "Channel closed unexpectedly, quitting";
       }
 
-      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+      fsl::MessageLoop::GetCurrent()->PostQuitTask();
     });
   }
 

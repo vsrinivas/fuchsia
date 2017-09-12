@@ -24,7 +24,7 @@ int main(int argc, const char** argv) {
 
   escher::Escher escher(vulkan_device);
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
 
   sketchy_service::App app(&escher);

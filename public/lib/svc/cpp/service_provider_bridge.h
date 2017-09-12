@@ -17,7 +17,7 @@
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/vfs/vfs_dispatcher.h"
+#include "lib/fsl/vfs/vfs_dispatcher.h"
 
 namespace app {
 
@@ -71,7 +71,7 @@ class ServiceProviderBridge : public svcfs::ServiceProvider,
                         mx::channel channel) override;
 
   fs::Vfs vfs_;
-  mtl::VFSDispatcher dispatcher_;
+  fsl::VFSDispatcher dispatcher_;
   fidl::BindingSet<app::ServiceProvider> bindings_;
   fbl::RefPtr<svcfs::VnodeProviderDir> directory_;
 

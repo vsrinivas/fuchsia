@@ -11,7 +11,7 @@ int main(int argc, const char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   hello_scene_manager::App app;
   loop.task_runner()->PostDelayedTask(
       [&loop] {

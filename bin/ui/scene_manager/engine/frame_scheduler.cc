@@ -10,7 +10,7 @@
 #include "garnet/bin/ui/scene_manager/displays/display.h"
 #include "garnet/bin/ui/scene_manager/engine/frame_timings.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace scene_manager {
 
@@ -19,7 +19,7 @@ namespace scene_manager {
 constexpr uint64_t kPredictedFrameRenderTime = 8'000'000;  // 8ms
 
 FrameScheduler::FrameScheduler(Display* display)
-    : task_runner_(mtl::MessageLoop::GetCurrent()->task_runner().get()),
+    : task_runner_(fsl::MessageLoop::GetCurrent()->task_runner().get()),
       display_(display) {
   outstanding_frames_.reserve(kMaxOutstandingFrames);
 }

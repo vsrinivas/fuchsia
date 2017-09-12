@@ -1029,7 +1029,7 @@ void Session::EnqueueEvent(scenic::EventPtr event) {
   if (is_valid()) {
     FXL_DCHECK(event);
     if (buffered_events_.empty()) {
-      mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+      fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
           [weak = weak_factory_.GetWeakPtr()] {
             if (weak)
               weak->FlushEvents();

@@ -5,7 +5,7 @@
 #include "lib/media/transport/media_packet_consumer_base.h"
 
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace media {
 
@@ -332,7 +332,7 @@ MediaPacketConsumerBase::SuppliedPacketCounter::SuppliedPacketCounter(
       buffer_set_(MX_VM_FLAG_PERM_READ),
       packets_outstanding_(0) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
+  task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
   FXL_DCHECK(task_runner_);
 }
 

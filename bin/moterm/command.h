@@ -15,13 +15,13 @@
 
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/functional/closure.h"
-#include "lib/mtl/io/redirection.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/tasks/message_loop_handler.h"
+#include "lib/fsl/io/redirection.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop_handler.h"
 
 namespace moterm {
 
-class Command : mtl::MessageLoopHandler {
+class Command : fsl::MessageLoopHandler {
  public:
   using ReceiveCallback =
       std::function<void(const void* bytes, size_t num_bytes)>;
@@ -30,14 +30,14 @@ class Command : mtl::MessageLoopHandler {
   ~Command();
 
   bool Start(std::vector<std::string> command,
-             std::vector<mtl::StartupHandle> startup_handles,
+             std::vector<fsl::StartupHandle> startup_handles,
              ReceiveCallback receive_callback,
              fxl::Closure termination_callback);
 
   void SendData(const void* bytes, size_t num_bytes);
 
  private:
-  // |mtl::MessageLoopHandler|:
+  // |fsl::MessageLoopHandler|:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count);
 
   fxl::Closure termination_callback_;
@@ -46,9 +46,9 @@ class Command : mtl::MessageLoopHandler {
   mx::socket stdout_;
   mx::socket stderr_;
 
-  mtl::MessageLoop::HandlerKey termination_key_ = 0;
-  mtl::MessageLoop::HandlerKey out_key_ = 0;
-  mtl::MessageLoop::HandlerKey err_key_ = 0;
+  fsl::MessageLoop::HandlerKey termination_key_ = 0;
+  fsl::MessageLoop::HandlerKey out_key_ = 0;
+  fsl::MessageLoop::HandlerKey err_key_ = 0;
   mx::process process_;
 };
 

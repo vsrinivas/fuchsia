@@ -27,7 +27,7 @@ executable("debugserver") {
     "../../lib/debugger-utils",
     "../../lib/inferior-control",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//magenta/system/ulib/mx",
   ]
 

@@ -23,7 +23,7 @@ class App {
   // Called asynchronously by constructor.
   void Init(scenic::DisplayInfoPtr display_info);
 
-  mtl::MessageLoop* const loop_;
+  fsl::MessageLoop* const loop_;
   const std::unique_ptr<app::ApplicationContext> context_;
   scenic::SceneManagerPtr scene_manager_;
   const std::unique_ptr<scenic_lib::Session> session_;

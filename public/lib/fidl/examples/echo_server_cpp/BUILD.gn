@@ -16,7 +16,7 @@ executable("echo_server_cpp_bin") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fidl/examples/services",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 

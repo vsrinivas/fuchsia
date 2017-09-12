@@ -5,9 +5,9 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/synchronization/waitable_event.h"
-#include "lib/mtl/handles/object_info.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/threading/thread.h"
+#include "lib/fsl/handles/object_info.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/thread.h"
 #include "magenta/system/ulib/mx/include/mx/eventpair.h"
 
 #include "lib/ui/scenic/fidl_helpers.h"
@@ -33,7 +33,7 @@ TEST_F(ResourceLinkerTest, HandleBehavior) {
     source_handle = source.get();
   }
   // Source handle is dead.
-  mx_koid_t import_koid = mtl::GetRelatedKoid(source_handle);
+  mx_koid_t import_koid = fsl::GetRelatedKoid(source_handle);
   ASSERT_EQ(MX_KOID_INVALID, import_koid);
 }
 
@@ -157,7 +157,7 @@ TEST_F(ResourceLinkerTest, CanImportWithDeadSourceHandle) {
     // source dies now.
   }
 
-  mtl::Thread thread;
+  fsl::Thread thread;
   thread.Run();
 
   fxl::AutoResetWaitableEvent latch;
@@ -201,7 +201,7 @@ TEST_F(ResourceLinkerTest, CanImportWithDeadSourceHandle) {
   latch.Wait();
 
   thread.TaskRunner()->PostTask(
-      []() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+      []() { fsl::MessageLoop::GetCurrent()->QuitNow(); });
 
   thread.Join();
 }
@@ -255,7 +255,7 @@ TEST_F(ResourceLinkerTest, CanExportWithDeadDestinationHandle) {
     // destination dies now.
   }
 
-  mtl::Thread thread;
+  fsl::Thread thread;
   thread.Run();
 
   fxl::AutoResetWaitableEvent latch;
@@ -284,7 +284,7 @@ TEST_F(ResourceLinkerTest, CanExportWithDeadDestinationHandle) {
   latch.Wait();
 
   thread.TaskRunner()->PostTask(
-      []() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+      []() { fsl::MessageLoop::GetCurrent()->QuitNow(); });
 
   thread.Join();
 }
@@ -294,7 +294,7 @@ TEST_F(ResourceLinkerTest,
   mx::eventpair source, destination;
   ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
-  mtl::Thread thread;
+  fsl::Thread thread;
   thread.Run();
 
   fxl::AutoResetWaitableEvent latch;
@@ -327,7 +327,7 @@ TEST_F(ResourceLinkerTest,
   latch.Wait();
 
   thread.TaskRunner()->PostTask(
-      []() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+      []() { fsl::MessageLoop::GetCurrent()->QuitNow(); });
 
   thread.Join();
 }
@@ -337,7 +337,7 @@ TEST_F(ResourceLinkerTest,
   mx::eventpair source, destination;
   ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
-  mtl::Thread thread;
+  fsl::Thread thread;
   thread.Run();
 
   fxl::AutoResetWaitableEvent latch;
@@ -381,7 +381,7 @@ TEST_F(ResourceLinkerTest,
   latch.Wait();
 
   thread.TaskRunner()->PostTask(
-      []() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+      []() { fsl::MessageLoop::GetCurrent()->QuitNow(); });
 
   thread.Join();
 }
@@ -390,7 +390,7 @@ TEST_F(ResourceLinkerTest, ResourceDeathAutomaticallyCleansUpResourceExport) {
   mx::eventpair source, destination;
   ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
-  mtl::Thread thread;
+  fsl::Thread thread;
   thread.Run();
 
   fxl::AutoResetWaitableEvent latch;
@@ -421,7 +421,7 @@ TEST_F(ResourceLinkerTest, ResourceDeathAutomaticallyCleansUpResourceExport) {
   latch.Wait();
 
   thread.TaskRunner()->PostTask(
-      []() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+      []() { fsl::MessageLoop::GetCurrent()->QuitNow(); });
 
   thread.Join();
 }

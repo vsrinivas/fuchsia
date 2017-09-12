@@ -13,7 +13,7 @@ Canvas::Canvas(sketchy::CanvasPtr canvas)
     : canvas_(std::move(canvas)), next_resource_id_(1) {
   canvas_.set_connection_error_handler([this] {
     FXL_LOG(INFO) << "sketchy_lib::Canvas: lost connection to sketchy::Canvas.";
-    mtl::MessageLoop::GetCurrent()->QuitNow();
+    fsl::MessageLoop::GetCurrent()->QuitNow();
   });
 }
 

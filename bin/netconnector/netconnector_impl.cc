@@ -12,7 +12,7 @@
 #include "garnet/bin/netconnector/netconnector_params.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace netconnector {
 
@@ -56,10 +56,10 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
               }
             }
 
-            mtl::MessageLoop::GetCurrent()->PostQuitTask();
+            fsl::MessageLoop::GetCurrent()->PostQuitTask();
           }));
     } else {
-      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+      fsl::MessageLoop::GetCurrent()->PostQuitTask();
     }
 
     return;
@@ -173,7 +173,7 @@ void NetConnectorImpl::AddServiceAgent(
 void NetConnectorImpl::StartMdns() {
   // TODO: Remove this check when NET-79 is fixed.
   if (!NetworkIsReady()) {
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this]() { StartMdns(); }, fxl::TimeDelta::FromSeconds(5));
     return;
   }

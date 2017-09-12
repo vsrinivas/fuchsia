@@ -5,7 +5,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 
 #include "lib/fidl/examples/services/echo.fidl.h"
@@ -17,7 +17,7 @@ class ResponsePrinter {
   void Run(const fidl::String& value) const {
     printf("***** Response: %s\n", value.get().c_str());
 
-    mtl::MessageLoop::GetCurrent()->QuitNow();
+    fsl::MessageLoop::GetCurrent()->QuitNow();
   }
 };
 
@@ -67,7 +67,7 @@ int main(int argc, const char** argv) {
       msg = argv[++i];
     }
   }
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
 
   echo::EchoClientApp app;
 if (app.Start(server_url, msg))

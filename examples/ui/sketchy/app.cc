@@ -7,7 +7,7 @@
 namespace sketchy_example {
 
 App::App()
-    : loop_(mtl::MessageLoop::GetCurrent()),
+    : loop_(fsl::MessageLoop::GetCurrent()),
       context_(app::ApplicationContext::CreateFromStartupInfo()),
       scene_manager_(
           context_->ConnectToEnvironmentService<scenic::SceneManager>()),

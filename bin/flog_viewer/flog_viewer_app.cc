@@ -10,7 +10,7 @@
 #include "garnet/bin/flog_viewer/channel_handler.h"
 #include "garnet/bin/flog_viewer/flog_viewer.h"
 #include "lib/fxl/command_line.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace flog {
 
@@ -65,7 +65,7 @@ class FlogViewerApp {
         app::ApplicationContext::CreateFromStartupInfo();
 
     viewer_.Initialize(application_context.get(), []() {
-      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+      fsl::MessageLoop::GetCurrent()->PostQuitTask();
     });
 
     fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -190,7 +190,7 @@ class FlogViewerApp {
         << "If more than one log is to be viewed, channel and stop index must\n"
         << "specify log id, as in <log id>.<channel/index>.\n\n";
 
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 
   FlogViewer viewer_;
@@ -199,7 +199,7 @@ class FlogViewerApp {
 }  // namespace flog
 
 int main(int argc, const char** argv) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
 
   flog::FlogViewerApp app(argc, argv);
 

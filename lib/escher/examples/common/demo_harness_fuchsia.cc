@@ -17,8 +17,8 @@ std::unique_ptr<DemoHarness> DemoHarness::New(
 
 DemoHarnessFuchsia::DemoHarnessFuchsia(WindowParams window_params)
     : DemoHarness(window_params),
-      loop_(mtl::MessageLoop::GetCurrent()),
-      owned_loop_(loop_ ? nullptr : new mtl::MessageLoop()),
+      loop_(fsl::MessageLoop::GetCurrent()),
+      owned_loop_(loop_ ? nullptr : new fsl::MessageLoop()),
       application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       module_binding_(this),
       escher_demo_binding_(this) {
@@ -116,5 +116,5 @@ void DemoHarnessFuchsia::Initialize(
 
 // |Lifecycle|
 void DemoHarnessFuchsia::Terminate() {
-  mtl::MessageLoop::GetCurrent()->QuitNow();
+  fsl::MessageLoop::GetCurrent()->QuitNow();
 }

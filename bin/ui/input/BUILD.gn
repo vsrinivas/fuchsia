@@ -12,7 +12,7 @@ executable("input") {
     "//garnet/public/lib/ui/input/fidl",
     "//garnet/public/lib/ui/input/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 
   libs = [ "hid" ]

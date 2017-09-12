@@ -17,7 +17,7 @@
 #include "garnet/bin/netconnector/mdns/resource_renewer.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace netconnector {
 namespace mdns {
@@ -31,7 +31,7 @@ static const fxl::TimeDelta kMessageAggregationWindowSize =
 
 }  // namespace
 
-Mdns::Mdns() : task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()) {}
+Mdns::Mdns() : task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {}
 
 Mdns::~Mdns() {}
 

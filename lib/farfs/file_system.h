@@ -13,7 +13,7 @@
 
 #include "garnet/lib/far/archive_reader.h"
 #include "lib/fxl/files/unique_fd.h"
-#include "lib/mtl/vfs/vfs_dispatcher.h"
+#include "lib/fsl/vfs/vfs_dispatcher.h"
 
 namespace archive {
 
@@ -48,7 +48,7 @@ class FileSystem {
   /// descriptor.
   mx_handle_t vmo_;
   fs::Vfs vfs_;
-  mtl::VFSDispatcher dispatcher_;
+  fsl::VFSDispatcher dispatcher_;
   std::unique_ptr<ArchiveReader> reader_;
   fbl::RefPtr<vmofs::VnodeDir> directory_;
 };

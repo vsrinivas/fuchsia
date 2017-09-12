@@ -4,7 +4,7 @@
 
 #include "garnet/bin/ui/scene_manager/resources/resource_linker.h"
 #include "lib/fidl/cpp/waiter/default.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 #include "garnet/bin/ui/scene_manager/resources/import.h"
 
@@ -21,7 +21,7 @@ static mx_signals_t kEventPairDeathSignals = MX_EPAIR_PEER_CLOSED;
 ResourceLinker::ResourceLinker() : unresolved_imports_(this){};
 
 ResourceLinker::~ResourceLinker() {
-  auto message_loop = mtl::MessageLoop::GetCurrent();
+  auto message_loop = fsl::MessageLoop::GetCurrent();
   for (const auto& item : export_entries_) {
     // Resource could be null if ExportResource() were called, but the
     // import tokens weren't all released yet.
@@ -38,7 +38,7 @@ bool ResourceLinker::ExportResource(Resource* resource,
   // Basic sanity checks for resource validity.
   FXL_DCHECK(resource);
 
-  mx_koid_t import_koid = mtl::GetRelatedKoid(export_token.get());
+  mx_koid_t import_koid = fsl::GetRelatedKoid(export_token.get());
   if (import_koid == MX_KOID_INVALID) {
     // We were passed a bad export handle.
     return false;
@@ -54,8 +54,8 @@ bool ResourceLinker::ExportResource(Resource* resource,
 
   // The resource must be removed from being considered for import if its
   // peer is closed.
-  mtl::MessageLoop::HandlerKey death_key =
-      mtl::MessageLoop::GetCurrent()->AddHandler(
+  fsl::MessageLoop::HandlerKey death_key =
+      fsl::MessageLoop::GetCurrent()->AddHandler(
           this,                    // handler
           export_token.get(),      // handle
           kEventPairDeathSignals,  // trigger
@@ -144,7 +144,7 @@ bool ResourceLinker::ImportResource(Import* import,
                                     scenic::ImportSpec import_spec,
                                     mx::eventpair import_token) {
   // Make sure the import handle is valid.
-  mx_koid_t import_koid = mtl::GetKoid(import_token.get());
+  mx_koid_t import_koid = fsl::GetKoid(import_token.get());
   if (import_koid == MX_KOID_INVALID) {
     // We were passed a bad import handle.
     return false;
@@ -205,7 +205,7 @@ Resource* ResourceLinker::RemoveExportEntryForExpiredHandle(
   Resource* resource = export_entry_iter->second.resource;
 
   // Unregister handler.
-  mtl::MessageLoop::GetCurrent()->RemoveHandler(
+  fsl::MessageLoop::GetCurrent()->RemoveHandler(
       export_entry_iter->second.death_handler_key);
 
   // Remove from |export_entries_|.
@@ -235,7 +235,7 @@ void ResourceLinker::OnExportedResourceDestroyed(Resource* resource) {
     FXL_DCHECK(export_entry_iter != export_entries_.end());
 
     // Unregister our handler.
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(
+    fsl::MessageLoop::GetCurrent()->RemoveHandler(
         export_entry_iter->second.death_handler_key);
 
     // Remove from |export_handles_to_import_koids_|.

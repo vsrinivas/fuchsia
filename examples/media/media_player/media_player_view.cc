@@ -16,7 +16,7 @@
 #include "lib/media/fidl/media_service.fidl.h"
 #include "lib/media/fidl/net_media_service.fidl.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkPath.h"
 
@@ -163,7 +163,7 @@ bool MediaPlayerView::OnInputEvent(mozart::InputEventPtr event) {
           handled = true;
           break;
         case HID_USAGE_KEY_Q:
-          mtl::MessageLoop::GetCurrent()->PostQuitTask();
+          fsl::MessageLoop::GetCurrent()->PostQuitTask();
           handled = true;
           break;
         default:

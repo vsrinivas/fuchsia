@@ -7,7 +7,7 @@
 #include "lib/network/fidl/network_service.fidl.h"
 #include "lib/network/fidl/url_loader.fidl.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace examples {
 
@@ -23,7 +23,7 @@ class ResponsePrinter {
       PrintResponseBody(std::move(response->body->get_stream()));
     }
 
-    mtl::MessageLoop::GetCurrent()->QuitNow();  // All done!
+    fsl::MessageLoop::GetCurrent()->QuitNow();  // All done!
   }
 
   void PrintResponse(const network::URLResponsePtr& response) const {
@@ -109,7 +109,7 @@ class WGetApp {
 
 int main(int argc, const char** argv) {
   std::vector<std::string> args(argv, argv + argc);
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
 
   examples::WGetApp app;
   if (app.Start(args))

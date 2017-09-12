@@ -11,8 +11,8 @@
 #include <magenta/syscalls/port.h>
 
 #include "lib/fxl/logging.h"
-#include "lib/mtl/handles/object_info.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/handles/object_info.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 #include "debugger-utils/util.h"
 
@@ -49,8 +49,8 @@ std::string IOPortPacketTypeToString(const mx_port_packet_t& pkt) {
 ExceptionPort::Key ExceptionPort::g_key_counter = 0;
 
 ExceptionPort::ExceptionPort() : keep_running_(false) {
-  FXL_DCHECK(mtl::MessageLoop::GetCurrent());
-  origin_task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
+  FXL_DCHECK(fsl::MessageLoop::GetCurrent());
+  origin_task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
 }
 
 ExceptionPort::~ExceptionPort() {
@@ -159,7 +159,7 @@ void ExceptionPort::Worker() {
   FXL_DCHECK(eport_handle_);
 
   // Give this thread an identifiable name for debugging purposes.
-  mtl::SetCurrentThreadName("exception port reader");
+  fsl::SetCurrentThreadName("exception port reader");
 
   FXL_VLOG(1) << "ExceptionPort I/O thread started";
 

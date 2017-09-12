@@ -12,7 +12,7 @@
 #include <mx/event.h>
 
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace scene_manager {
 
@@ -102,7 +102,7 @@ class EventTimestamper {
   // Also see MG-940 and MG-1032.
   void IncreaseBackgroundThreadPriority();
 
-  mtl::MessageLoop* const main_loop_;
+  fsl::MessageLoop* const main_loop_;
   async::Loop background_loop_;
   async::Task task_;
 #ifndef NDEBUG

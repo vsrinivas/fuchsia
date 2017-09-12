@@ -10,7 +10,7 @@
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 
@@ -70,7 +70,7 @@ class RetryingLoader {
   }
 
   void Retry(const network::URLResponsePtr& response) {
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [weak_this = weak_ptr_factory_.GetWeakPtr()] {
           if (weak_this) {
             weak_this->Attempt();
@@ -152,7 +152,7 @@ class NetworkApplicationLoader : public app::ApplicationLoader {
 }  // namespace
 
 int main(int argc, const char** argv) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   NetworkApplicationLoader app;
   loop.Run();
   return 0;
