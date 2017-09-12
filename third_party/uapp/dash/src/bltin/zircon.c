@@ -20,7 +20,7 @@
 
 #include <zircon/device/dmctl.h>
 
-int mxc_dump(int argc, char** argv) {
+int zxc_dump(int argc, char** argv) {
     int fd;
     ssize_t len;
     off_t off;
@@ -51,7 +51,7 @@ int mxc_dump(int argc, char** argv) {
     return len;
 }
 
-int mxc_msleep(int argc, char** argv) {
+int zxc_msleep(int argc, char** argv) {
     if (argc == 2) {
         zx_nanosleep(zx_deadline_after(ZX_MSEC(atoi(argv[1]))));
     }
@@ -73,7 +73,7 @@ static const char* modestr(uint32_t mode) {
     }
 }
 
-int mxc_ls(int argc, char** argv) {
+int zxc_ls(int argc, char** argv) {
     const char* dirn;
     struct stat s;
     char tmp[2048];
@@ -117,7 +117,7 @@ int mxc_ls(int argc, char** argv) {
     return 0;
 }
 
-int mxc_list(int argc, char** argv) {
+int zxc_list(int argc, char** argv) {
     char line[1024];
     FILE* fp;
     int num = 1;
@@ -270,7 +270,7 @@ static int mv_or_cp_to_dir(bool is_mv, const char *src_name,
     }
 }
 
-int mxc_mv_or_cp(int argc, char** argv) {
+int zxc_mv_or_cp(int argc, char** argv) {
     bool is_mv = !strcmp(argv[0], "mv");
     int next_arg = 1;
     bool force = false;
@@ -334,7 +334,7 @@ usage:
     return -1;
 }
 
-int mxc_mkdir(int argc, char** argv) {
+int zxc_mkdir(int argc, char** argv) {
     // skip "mkdir"
     argc--;
     argv++;
@@ -371,7 +371,7 @@ int mxc_mkdir(int argc, char** argv) {
     return 0;
 }
 
-static int mxc_rm_recursive(int atfd, char* path, bool force) {
+static int zxc_rm_recursive(int atfd, char* path, bool force) {
     struct stat st;
     if (fstatat(atfd, path, &st, 0)) {
         return force ? 0 : -1;
@@ -391,7 +391,7 @@ static int mxc_rm_recursive(int atfd, char* path, bool force) {
             if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
                 continue;
             }
-            if (mxc_rm_recursive(dfd, de->d_name, force) < 0) {
+            if (zxc_rm_recursive(dfd, de->d_name, force) < 0) {
                 closedir(dir);
                 return -1;
             }
@@ -405,7 +405,7 @@ static int mxc_rm_recursive(int atfd, char* path, bool force) {
     }
 }
 
-int mxc_rm(int argc, char** argv) {
+int zxc_rm(int argc, char** argv) {
     // skip "rm"
     argc--;
     argv++;
@@ -439,7 +439,7 @@ int mxc_rm(int argc, char** argv) {
 
     while (argc-- > 0) {
         if (recursive) {
-            if (mxc_rm_recursive(AT_FDCWD, argv[0], force)) {
+            if (zxc_rm_recursive(AT_FDCWD, argv[0], force)) {
                 goto err;
             }
         } else {
@@ -525,7 +525,7 @@ static int send_dmctl(const char* command, size_t length) {
     return 0;
 }
 
-int mxc_dm(int argc, char** argv) {
+int zxc_dm(int argc, char** argv) {
     if (argc != 2) {
         printf("usage: dm <command>\n");
         return -1;
@@ -551,7 +551,7 @@ static char* join(char* buffer, size_t buffer_length, int argc, char** argv) {
     return buffer + total_length;
 }
 
-int mxc_k(int argc, char** argv) {
+int zxc_k(int argc, char** argv) {
     if (argc <= 1) {
         printf("usage: k <command>\n");
         return -1;

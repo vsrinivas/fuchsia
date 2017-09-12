@@ -90,14 +90,14 @@ ulimitcmd	ulimit
 testcmd		test [
 
 /* mini-versions of standard unix tools */
-mxc_ls			-w ls
-mxc_mv_or_cp		-w cp mv
-mxc_mkdir		-w mkdir
-mxc_rm			-w rm
+zxc_ls			-w ls
+zxc_mv_or_cp		-w cp mv
+zxc_mkdir		-w mkdir
+zxc_rm			-w rm
 
 /* not-so-standard tools */
-mxc_dump	dump
-mxc_list	list
-mxc_msleep	msleep
-mxc_dm		dm
-mxc_k		k
+zxc_dump	dump
+zxc_list	list
+zxc_msleep	msleep
+zxc_dm		dm
+zxc_k		k

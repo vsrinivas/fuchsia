@@ -35,15 +35,15 @@ int unsetcmd(int, char **);
 int waitcmd(int, char **);
 int aliascmd(int, char **);
 int testcmd(int, char **);
-int mxc_ls(int, char **);
-int mxc_mv_or_cp(int, char **);
-int mxc_mkdir(int, char **);
-int mxc_rm(int, char **);
-int mxc_dump(int, char **);
-int mxc_list(int, char **);
-int mxc_msleep(int, char **);
-int mxc_dm(int, char **);
-int mxc_k(int, char **);
+int zxc_ls(int, char **);
+int zxc_mv_or_cp(int, char **);
+int zxc_mkdir(int, char **);
+int zxc_rm(int, char **);
+int zxc_dump(int, char **);
+int zxc_list(int, char **);
+int zxc_msleep(int, char **);
+int zxc_dm(int, char **);
+int zxc_k(int, char **);
 
 const struct builtincmd builtincmd[] = {
 	{ ".", dotcmd, 3 },
@@ -55,9 +55,9 @@ const struct builtincmd builtincmd[] = {
 	{ "chdir", cdcmd, 0 },
 	{ "command", commandcmd, 2 },
 	{ "continue", breakcmd, 3 },
-	{ "cp", mxc_mv_or_cp, 8 },
-	{ "dm", mxc_dm, 0 },
-	{ "dump", mxc_dump, 0 },
+	{ "cp", zxc_mv_or_cp, 8 },
+	{ "dm", zxc_dm, 0 },
+	{ "dump", zxc_dump, 0 },
 	{ "echo", echocmd, 0 },
 	{ "eval", NULL, 3 },
 	{ "exec", execcmd, 3 },
@@ -67,19 +67,19 @@ const struct builtincmd builtincmd[] = {
 	{ "getopts", getoptscmd, 2 },
 	{ "hash", hashcmd, 0 },
 	{ "jobs", jobscmd, 2 },
-	{ "k", mxc_k, 0 },
-	{ "list", mxc_list, 0 },
+	{ "k", zxc_k, 0 },
+	{ "list", zxc_list, 0 },
 	{ "local", localcmd, 7 },
-	{ "ls", mxc_ls, 8 },
-	{ "mkdir", mxc_mkdir, 8 },
-	{ "msleep", mxc_msleep, 0 },
-	{ "mv", mxc_mv_or_cp, 0 },
+	{ "ls", zxc_ls, 8 },
+	{ "mkdir", zxc_mkdir, 8 },
+	{ "msleep", zxc_msleep, 0 },
+	{ "mv", zxc_mv_or_cp, 0 },
 	{ "printf", printfcmd, 0 },
 	{ "pwd", pwdcmd, 0 },
 	{ "read", readcmd, 2 },
 	{ "readonly", exportcmd, 7 },
 	{ "return", returncmd, 3 },
-	{ "rm", mxc_rm, 8 },
+	{ "rm", zxc_rm, 8 },
 	{ "set", setcmd, 3 },
 	{ "shift", shiftcmd, 3 },
 	{ "test", testcmd, 0 },
