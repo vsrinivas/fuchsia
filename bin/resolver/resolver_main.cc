@@ -12,7 +12,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 
@@ -59,7 +59,7 @@ class ResolverApp {
 }  // namespace
 
 int main(int argc, const char** argv) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   ResolverApp app;
   loop.Run();
   return 0;

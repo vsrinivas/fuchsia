@@ -11,7 +11,7 @@
 #include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 
@@ -380,7 +380,7 @@ void SuggestionEngineImpl::PerformActions(
 }  // namespace maxwell
 
 int main(int argc, const char** argv) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   maxwell::SuggestionEngineImpl app;
   loop.Run();
   return 0;

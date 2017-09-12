@@ -102,7 +102,7 @@ source_set("common") {
   deps = [
     "//apps/maxwell/src:application_environment_host_impl",
     "//apps/maxwell/src/user:agent_launcher",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 
   public_deps = [

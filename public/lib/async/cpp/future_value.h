@@ -10,7 +10,7 @@
 
 #include "garnet/public/lib/fxl/functional/make_copyable.h"
 #include "garnet/public/lib/fxl/macros.h"
-#include "garnet/public/lib/mtl/tasks/message_loop.h"
+#include "garnet/public/lib/fsl/tasks/message_loop.h"
 
 namespace maxwell {
 
@@ -73,7 +73,7 @@ class FutureValue {
 
  private:
   void Dispatch(UseValueFunction fn) {
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
         [ value = value_, fn = std::move(fn) ] { fn(*value); });
   }
 

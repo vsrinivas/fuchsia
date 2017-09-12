@@ -9,6 +9,6 @@ source_set("future_value") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }

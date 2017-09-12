@@ -29,7 +29,7 @@ executable("suggestion_engine") {
     "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//apps/modular/services/user",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -71,7 +71,7 @@ source_set("ranking") {
 
   deps = [
     ":models",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 

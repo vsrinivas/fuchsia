@@ -18,7 +18,7 @@ executable("action_log") {
     "//apps/maxwell/services/user:scope",
     "//apps/modular/services/surface",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/rapidjson",
   ]
 }

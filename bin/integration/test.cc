@@ -5,7 +5,7 @@
 #include "apps/maxwell/src/integration/test.h"
 
 #include "lib/fxl/synchronization/sleep.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 constexpr auto kYieldSleepPeriod = fxl::TimeDelta::FromMilliseconds(1);
 constexpr auto kYieldBatchPeriod = fxl::TimeDelta::FromMilliseconds(0);
@@ -32,10 +32,10 @@ void Yield() {
   //               inline    no msgs    hang (invalid call per docs)
   // SetAfterTaskCallback     hang      hang
   //      PostDelayedTask      ok        ok
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); },
+  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+      [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); },
       kYieldBatchPeriod);
-  mtl::MessageLoop::GetCurrent()->Run();
+  fsl::MessageLoop::GetCurrent()->Run();
 }
 
 Predicate operator&&(const Predicate& a, const Predicate& b) {
@@ -91,7 +91,7 @@ app::ServiceProviderPtr MaxwellTestBase::StartServiceProvider(
 app::ApplicationEnvironment* root_environment;
 
 int main(int argc, char** argv) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   auto app_context = app::ApplicationContext::CreateFromStartupInfo();
   root_environment = app_context->environment().get();
   ::testing::InitGoogleTest(&argc, argv);

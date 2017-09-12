@@ -6,7 +6,7 @@
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 #include "apps/maxwell/services/suggestion/proposal.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_display.fidl.h"

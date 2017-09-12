@@ -28,7 +28,7 @@ executable("maxwell_main") {
     ":user_intelligence_provider",
     "//garnet/public/lib/app/cpp",
     "//apps/maxwell/services/user",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/rapidjson",
   ]
 }

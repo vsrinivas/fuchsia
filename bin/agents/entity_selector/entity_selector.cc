@@ -8,7 +8,7 @@
 #include "apps/maxwell/src/agents/entity_utils/entity_span.h"
 #include "apps/maxwell/src/agents/entity_utils/entity_utils.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
@@ -107,7 +107,7 @@ class SelectedEntityFinder : ContextListener {
 }  // namespace maxwell
 
 int main(int argc, const char** argv) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   maxwell::SelectedEntityFinder app;
   loop.Run();
   return 0;

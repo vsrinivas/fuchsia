@@ -18,6 +18,6 @@ source_set("gps") {
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/user:scope",
     "//apps/maxwell/src/acquirers:gps",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }

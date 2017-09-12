@@ -9,7 +9,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 constexpr char maxwell::agents::IdeasAgent::kIdeaId[];
 
@@ -88,7 +88,7 @@ class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
 }  // namespace maxwell
 
 int main(int argc, const char** argv) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   maxwell::IdeasAgentApp app;
   loop.Run();
   return 0;

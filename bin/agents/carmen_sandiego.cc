@@ -6,7 +6,7 @@
 #include "apps/maxwell/services/context/context_writer.fidl.h"
 #include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/maxwell/src/acquirers/gps.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 constexpr char maxwell::acquirers::GpsAcquirer::kLabel[];
@@ -73,7 +73,7 @@ class CarmenSandiegoApp : public ContextListener {
 }  // namespace maxwell
 
 int main(int argc, const char** argv) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   maxwell::CarmenSandiegoApp app;
   loop.Run();
   return 0;

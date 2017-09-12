@@ -7,7 +7,7 @@
 #include "apps/modular/services/agent/agent.fidl.h"
 #include "apps/modular/services/lifecycle/lifecycle.fidl.h"
 
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace maxwell {
 
@@ -31,7 +31,7 @@ class StoryInfoApp : modular::Lifecycle {
   // |Lifecycle|
   void Terminate() override {
     agent_binding_.Close();
-    mtl::MessageLoop::GetCurrent()->QuitNow();
+    fsl::MessageLoop::GetCurrent()->QuitNow();
   }
 
   StoryInfoAcquirer story_info_acquirer_;
@@ -44,7 +44,7 @@ class StoryInfoApp : modular::Lifecycle {
 }  // namespace maxwell
 
 int main(int argc, const char** argv) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   auto app_context = app::ApplicationContext::CreateFromStartupInfo();
   maxwell::StoryInfoApp app(app_context.get());
   loop.Run();

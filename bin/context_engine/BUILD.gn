@@ -10,7 +10,7 @@ executable("context_engine") {
   deps = [
     ":context_engine_impl",
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -36,7 +36,7 @@ executable("context_index_unittest") {
     ":context_index",
     "//apps/maxwell/lib/context:formatting",
     "//apps/maxwell/services/context",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 }
@@ -84,7 +84,7 @@ executable("context_repository_unittest") {
     ":context_repository",
     "//apps/maxwell/lib/context:formatting",
     "//apps/maxwell/services/context",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 }

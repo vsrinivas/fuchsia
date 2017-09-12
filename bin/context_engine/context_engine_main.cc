@@ -5,7 +5,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "apps/maxwell/src/context_engine/context_engine_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace maxwell {
 namespace {
@@ -27,7 +27,7 @@ class App {
 }  // namespace maxwell
 
 int main(int argc, const char** argv) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   auto app_context = app::ApplicationContext::CreateFromStartupInfo();
   maxwell::App app(app_context.get());
   loop.Run();

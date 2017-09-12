@@ -16,6 +16,6 @@ executable("proposal_maker") {
     "//apps/maxwell/src/agents/entity_utils:entity_span",
     "//apps/maxwell/src/agents/entity_utils:entity_utils",
     "//apps/modular/lib/rapidjson",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }

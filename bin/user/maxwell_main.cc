@@ -10,7 +10,7 @@
 #include "apps/maxwell/src/user/user_intelligence_provider_impl.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/file.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "rapidjson/document.h"
 #include "rapidjson/error/en.h"
 #include "rapidjson/schema.h"
@@ -134,7 +134,7 @@ int main(int argc, const char** argv) {
 
   FXL_LOG(INFO) << "Starting Maxwell with config: \n" << config;
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   auto app_context = app::ApplicationContext::CreateFromStartupInfo();
   maxwell::App app(app_context.get(), config);
   loop.Run();
