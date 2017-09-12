@@ -71,20 +71,14 @@ def main():
         tgt = os.path.join(dstdir, os.path.basename(dst))
         os.symlink(src, tgt)
 
-      gopath = project_path
-    else:
-      # NOTE(raggi): DEPRECATED: this is superseded by a project path if --go-dependency is used.
-      # NOTE(raggi): can be removed once all gopath entries are removed from //packages/gn/*
-      gopath = args.root_out_dir
-
-    gopath = os.path.abspath(gopath)
+    gopath = os.path.abspath(project_path)
 
     env = {}
     if args.current_os == 'fuchsia':
         env['CGO_ENABLED'] = '1'
     env['GOARCH'] = goarch
     env['GOOS'] = goos
-    env['GOPATH'] = gopath + ":" + os.path.abspath(os.path.join(args.root_out_dir, "gen/go"))
+    env['GOPATH'] = gopath
 
     # the gcc wrappers need to know about some Magenta build paths for some cases (e.g. arm & rpi)
     for k in os.environ:
