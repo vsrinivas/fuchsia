@@ -32,6 +32,7 @@ static constexpr int64_t kDefaultLowWaterNsec = ZX_MSEC(20);
 static constexpr int64_t kDefaultHighWaterNsec = ZX_MSEC(30);
 static constexpr int64_t kDefaultBufferOverheadNsec = ZX_MSEC(1);
 static constexpr zx_duration_t kUnderflowCooldown = ZX_SEC(1);
+static constexpr zx_duration_t kDefaultCmdTimeout = ZX_SEC(3);
 
 static fbl::atomic<zx_txid_t> TXID_GEN(1);
 static thread_local zx_txid_t TXID = TXID_GEN.fetch_add(1);
@@ -55,13 +56,19 @@ DriverOutput::DriverOutput(AudioOutputManager* manager,
       initial_stream_channel_(fbl::move(initial_stream_channel)) {
   stream_channel_ = ::audio::dispatcher::Channel::Create();
   rb_channel_ = ::audio::dispatcher::Channel::Create();
+  cmd_timeout_ = ::audio::dispatcher::Timer::Create();
 }
 
 DriverOutput::~DriverOutput() {}
 
 MediaResult DriverOutput::Init() {
   FXL_DCHECK(state_ == State::Uninitialized);
-  FXL_DCHECK(stream_channel_ != nullptr);
+
+  if ((stream_channel_ == nullptr) ||
+      (rb_channel_ == nullptr) ||
+      (cmd_timeout_ == nullptr)) {
+    return MediaResult::INSUFFICIENT_RESOURCES;
+  }
 
   MediaResult init_res = StandardOutputBase::Init();
   if (init_res != MediaResult::OK) {
@@ -71,7 +78,7 @@ MediaResult DriverOutput::Init() {
   // Activate the stream channel.
   ::audio::dispatcher::Channel::ProcessHandler process_handler(
     [ output = fbl::WrapRefPtr(this) ]
-    (::audio::dispatcher::Channel * channel) -> zx_status_t {
+    (::audio::dispatcher::Channel* channel) -> zx_status_t {
       OBTAIN_EXECUTION_DOMAIN_TOKEN(token, output->mix_domain_);
       FXL_DCHECK(output->stream_channel_.get() == channel);
       return output->ProcessStreamChannelMessage();
@@ -93,6 +100,23 @@ MediaResult DriverOutput::Init() {
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to activate stream channel for DriverOutput!  "
                    << "(res " << res << ")";
+    return MediaResult::INTERNAL_ERROR;
+  }
+
+  // Activate the command timeout timer.
+  ::audio::dispatcher::Timer::ProcessHandler cmd_timeout_handler(
+    [ output = fbl::WrapRefPtr(this) ]
+    (::audio::dispatcher::Timer* timer) -> zx_status_t {
+      OBTAIN_EXECUTION_DOMAIN_TOKEN(token, output->mix_domain_);
+      FXL_DCHECK(output->cmd_timeout_.get() == timer);
+      return output->OnCommandTimeout();
+    });
+
+  res = cmd_timeout_->Activate(mix_domain_, fbl::move(cmd_timeout_handler));
+  if (res != ZX_OK) {
+    FXL_LOG(ERROR)
+      << "Failed to activate command timeout timer for DriverOutput!  "
+      << "(res " << res << ")";
     return MediaResult::INTERNAL_ERROR;
   }
 
@@ -148,6 +172,7 @@ void DriverOutput::OnWakeup() {
   }
 
   state_ = State::WaitingForSetFormatResponse;
+  cmd_timeout_->Arm(zx_deadline_after(kDefaultCmdTimeout));
 }
 
 void DriverOutput::Cleanup() {
@@ -574,13 +599,14 @@ zx_status_t DriverOutput::ProcessSetFormatResponse(
 
     res = rb_channel_->Write(&req, sizeof(req));
     if (res != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to requestring buffer fifo depth.";
+      FXL_LOG(ERROR) << "Failed to request ring buffer fifo depth.";
       return res;
     }
   }
 
   // Things went well, proceed to the next step in the state machine.
-  state_ = State::WaitingForRingBufferSize;
+  state_ = State::WaitingForRingBufferFifoDepth;
+  cmd_timeout_->Arm(zx_deadline_after(kDefaultCmdTimeout));
   cleanup.cancel();
   return ZX_OK;
 }
@@ -607,7 +633,7 @@ zx_status_t DriverOutput::ProcessPlugStateChange(bool plugged,
 
 zx_status_t DriverOutput::ProcessGetFifoDepthResponse(
     const audio_rb_cmd_get_fifo_depth_resp_t& resp) {
-  if (state_ != State::WaitingForRingBufferSize) {
+  if (state_ != State::WaitingForRingBufferFifoDepth) {
     FXL_LOG(ERROR) << "Received unexpected fifo depth response while in state "
                    << static_cast<uint32_t>(state_);
     return ZX_ERR_BAD_STATE;
@@ -642,6 +668,7 @@ zx_status_t DriverOutput::ProcessGetFifoDepthResponse(
   req.notifications_per_ring = 0;
 
   state_ = State::WaitingForRingBufferVmo;
+  cmd_timeout_->Arm(zx_deadline_after(kDefaultCmdTimeout));
   return rb_channel_->Write(&req, sizeof(req));
 }
 
@@ -713,6 +740,7 @@ zx_status_t DriverOutput::ProcessGetBufferResponse(
   req.hdr.transaction_id = TXID;
   state_ = State::Starting;
 
+  cmd_timeout_->Arm(zx_deadline_after(kDefaultCmdTimeout));
   return rb_channel_->Write(&req, sizeof(req));
 }
 
@@ -731,8 +759,16 @@ zx_status_t DriverOutput::ProcessStartResponse(
   }
 
   start_ticks_ = resp.start_ticks;
+  cmd_timeout_->Cancel();
   Process();
 
+  return ZX_OK;
+}
+
+zx_status_t DriverOutput::OnCommandTimeout() {
+  FXL_LOG(ERROR) << "Command timeout while in state "
+                 << static_cast<uint32_t>(state_);
+  ShutdownSelf();
   return ZX_OK;
 }
 

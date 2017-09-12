@@ -38,7 +38,7 @@ class DriverOutput : public StandardOutputBase {
     Uninitialized,
     WaitingToSetup,
     WaitingForSetFormatResponse,
-    WaitingForRingBufferSize,
+    WaitingForRingBufferFifoDepth,
     WaitingForRingBufferVmo,
     Starting,
     Started,
@@ -82,9 +82,14 @@ class DriverOutput : public StandardOutputBase {
   zx_status_t ProcessStartResponse(const audio_rb_cmd_start_resp_t& resp)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
+  // State machine timeout handler.
+  zx_status_t OnCommandTimeout()
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+
   State state_ = State::Uninitialized;
   fbl::RefPtr<::audio::dispatcher::Channel> stream_channel_;
   fbl::RefPtr<::audio::dispatcher::Channel> rb_channel_;
+  fbl::RefPtr<::audio::dispatcher::Timer> cmd_timeout_;
   zx::channel initial_stream_channel_;
   zx::vmo rb_vmo_;
   uint64_t rb_size_ = 0;
