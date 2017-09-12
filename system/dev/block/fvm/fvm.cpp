@@ -540,6 +540,42 @@ uint32_t VPartition::SliceGetLocked(size_t vslice) const {
     return extent->get(vslice);
 }
 
+zx_status_t VPartition::CheckSlices(size_t vslice_start, size_t* count, bool* allocated) {
+    fbl::AutoLock lock(&lock_);
+
+    if (vslice_start > mgr_->VSliceMax()) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (IsKilledLocked()) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    *count = 0;
+    *allocated = false;
+
+    auto extent = --slice_map_.upper_bound(vslice_start);
+    if (extent.IsValid()) {
+        ZX_DEBUG_ASSERT(extent->start() <= vslice_start);
+        if (extent->start() + extent->size() > vslice_start) {
+            *count = extent->size() - (vslice_start - extent->start());
+            *allocated = true;
+        }
+    }
+
+    if (!(*allocated)) {
+        auto extent = slice_map_.upper_bound(vslice_start);
+        if (extent.IsValid()) {
+            ZX_DEBUG_ASSERT(extent->start() > vslice_start);
+            *count = extent->start() - vslice_start;
+        } else {
+            *count = mgr_->VSliceMax() - vslice_start;
+        }
+    }
+
+    return ZX_OK;
+}
+
 zx_status_t VPartition::SliceSetLocked(size_t vslice, uint32_t pslice) {
     ZX_DEBUG_ASSERT(vslice < mgr_->VSliceMax());
     auto extent = --slice_map_.upper_bound(vslice);
@@ -579,7 +615,7 @@ zx_status_t VPartition::SliceSetLocked(size_t vslice, uint32_t pslice) {
     return ZX_OK;
 }
 
-bool VPartition::SliceFreeLocked(size_t vslice) TA_REQ(lock_) {
+bool VPartition::SliceFreeLocked(size_t vslice) {
     ZX_DEBUG_ASSERT(vslice < mgr_->VSliceMax());
     ZX_DEBUG_ASSERT(SliceCanFree(vslice));
     auto extent = --slice_map_.upper_bound(vslice);
@@ -646,6 +682,35 @@ zx_status_t VPartition::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
             return ZX_ERR_BAD_STATE;
         memcpy(info, &info_, sizeof(*info));
         *out_actual = sizeof(*info);
+        return ZX_OK;
+    }
+    case IOCTL_BLOCK_FVM_VSLICE_QUERY: {
+        if (cmdlen < sizeof(query_request_t)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+
+        if (max < sizeof(query_response_t)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+
+        const query_request_t* request = static_cast<const query_request_t*>(cmd);
+
+        if (request->count > MAX_FVM_VSLICE_REQUESTS) {
+           return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+
+        query_response_t* response = static_cast<query_response_t*>(reply);
+        response->count = 0;
+        for (size_t i = 0; i < request->count; i++) {
+            zx_status_t status;
+            if ((status = CheckSlices(request->vslice_start[i], &response->vslice_range[i].count,
+                                      &response->vslice_range[i].allocated)) != ZX_OK) {
+                return status;
+            }
+            response->count++;
+        }
+
+        *out_actual = sizeof(query_response_t);
         return ZX_OK;
     }
     case IOCTL_BLOCK_FVM_QUERY: {

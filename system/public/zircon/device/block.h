@@ -54,8 +54,13 @@
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 13)
 #define IOCTL_BLOCK_FVM_DESTROY \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 14)
+// Returns the total number of vslices and slice size for an FVM partition
 #define IOCTL_BLOCK_FVM_QUERY \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 15)
+// Given a number of initial vslices, returns the number of contiguous allocated (or unallocated)
+// vslices starting from each vslice.
+#define IOCTL_BLOCK_FVM_VSLICE_QUERY \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 16)
 
 // Block Core ioctls (specific to each block device):
 
@@ -112,6 +117,7 @@ IOCTL_WRAPPER(ioctl_block_fifo_close, IOCTL_BLOCK_FIFO_CLOSE);
 
 #define GUID_LEN 16
 #define NAME_LEN 24
+#define MAX_FVM_VSLICE_REQUESTS 16
 
 typedef struct {
     size_t slice_count;
@@ -138,12 +144,33 @@ IOCTL_WRAPPER_IN(ioctl_block_fvm_shrink, IOCTL_BLOCK_FVM_SHRINK, extend_request_
 IOCTL_WRAPPER(ioctl_block_fvm_destroy, IOCTL_BLOCK_FVM_DESTROY);
 
 typedef struct {
+    bool allocated; // true if vslices are allocated, false otherwise
+    size_t count; // number of contiguous vslices
+} vslice_range_t;
+
+typedef struct {
+    size_t count; // number of elements in vslice_start
+    size_t vslice_start[MAX_FVM_VSLICE_REQUESTS]; // vslices to query from
+} query_request_t;
+
+typedef struct {
+    size_t count; // number of elements in vslice_range
+    vslice_range_t vslice_range[MAX_FVM_VSLICE_REQUESTS]; // number of contiguous vslices
+                                                          // that are allocated (or unallocated)
+} query_response_t;
+
+typedef struct {
     size_t slice_size;   // Size of a single slice, in bytes
     size_t vslice_count; // Number of addressable slices
 } fvm_info_t;
 
 // ssize_t ioctl_block_fvm_query(int fd, fvm_info_t* info);
 IOCTL_WRAPPER_OUT(ioctl_block_fvm_query, IOCTL_BLOCK_FVM_QUERY, fvm_info_t);
+
+// ssize_t ioctl_block_fvm_query(int fd, query_request_t* request, query_response_t* response);
+IOCTL_WRAPPER_INOUT(ioctl_block_fvm_vslice_query, IOCTL_BLOCK_FVM_VSLICE_QUERY,
+                    query_request_t, query_response_t);
+
 
 // Multiple Block IO operations may be sent at once before a response is actually sent back.
 // Block IO ops may be sent concurrently to different vmoids, and they also may be sent

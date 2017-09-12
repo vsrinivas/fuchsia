@@ -1078,6 +1078,102 @@ static bool TestVPartitionDestroy(void) {
     END_TEST;
 }
 
+static bool TestVPartitionQuery(void) {
+    BEGIN_TEST;
+    char ramdisk_path[PATH_MAX];
+    char fvm_driver[PATH_MAX];
+    size_t slice_count = 64;
+    size_t block_count = 512;
+    size_t block_size = 1 << 20;
+    size_t slice_size = (block_count * block_size) / slice_count;
+    ASSERT_EQ(StartFVMTest(block_count, block_size, slice_size, ramdisk_path, fvm_driver),
+                           0, "error mounting FVM");
+    int fd = open(fvm_driver, O_RDWR);
+    ASSERT_GT(fd, 0);
+
+    // Allocate partition
+    alloc_req_t request;
+    request.slice_count = 10;
+    memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
+    strcpy(request.name, kTestPartName1);
+    memcpy(request.type, kTestPartGUIDData, GUID_LEN);
+    int part_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(part_fd, 0);
+
+    // Create non-contiguous extent
+    extend_request_t extend_request;
+    extend_request.offset = 20;
+    extend_request.length = 10;
+    ASSERT_EQ(ioctl_block_fvm_extend(part_fd, &extend_request), 0);
+
+    fvm_info_t fvm_info;
+    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0);
+
+    // Query various vslice ranges
+    query_request_t query_request;
+    query_request.count = 6;
+    query_request.vslice_start[0] = 0;
+    query_request.vslice_start[1] = 10;
+    query_request.vslice_start[2] = 20;
+    query_request.vslice_start[3] = 50;
+    query_request.vslice_start[4] = 25;
+    query_request.vslice_start[5] = 15;
+
+    // Check response from partition query
+    query_response_t query_response;
+    ASSERT_EQ(ioctl_block_fvm_vslice_query(part_fd, &query_request, &query_response),
+              sizeof(query_response_t));
+    ASSERT_EQ(query_response.count, query_request.count);
+    ASSERT_TRUE(query_response.vslice_range[0].allocated);
+    ASSERT_EQ(query_response.vslice_range[0].count, 10);
+    ASSERT_FALSE(query_response.vslice_range[1].allocated);
+    ASSERT_EQ(query_response.vslice_range[1].count, 10);
+    ASSERT_TRUE(query_response.vslice_range[2].allocated);
+    ASSERT_EQ(query_response.vslice_range[2].count, 10);
+    ASSERT_FALSE(query_response.vslice_range[3].allocated);
+    ASSERT_EQ(query_response.vslice_range[3].count, fvm_info.vslice_count - 50);
+    ASSERT_TRUE(query_response.vslice_range[4].allocated);
+    ASSERT_EQ(query_response.vslice_range[4].count, 5);
+    ASSERT_FALSE(query_response.vslice_range[5].allocated);
+    ASSERT_EQ(query_response.vslice_range[5].count, 5);
+
+    // Merge the extents!
+    extend_request.offset = 10;
+    extend_request.length = 10;
+    ASSERT_EQ(ioctl_block_fvm_extend(part_fd, &extend_request), 0);
+
+    // Check partition query response again after extend
+    ASSERT_EQ(ioctl_block_fvm_vslice_query(part_fd, &query_request, &query_response),
+              sizeof(query_response_t));
+    ASSERT_EQ(query_response.count, query_request.count);
+    ASSERT_TRUE(query_response.vslice_range[0].allocated);
+    ASSERT_EQ(query_response.vslice_range[0].count, 30);
+    ASSERT_TRUE(query_response.vslice_range[1].allocated);
+    ASSERT_EQ(query_response.vslice_range[1].count, 20);
+    ASSERT_TRUE(query_response.vslice_range[2].allocated);
+    ASSERT_EQ(query_response.vslice_range[2].count, 10);
+    ASSERT_FALSE(query_response.vslice_range[3].allocated);
+    ASSERT_EQ(query_response.vslice_range[3].count, fvm_info.vslice_count - 50);
+    ASSERT_TRUE(query_response.vslice_range[4].allocated);
+    ASSERT_EQ(query_response.vslice_range[4].count, 5);
+    ASSERT_TRUE(query_response.vslice_range[5].allocated);
+    ASSERT_EQ(query_response.vslice_range[5].count, 15);
+
+    query_request.vslice_start[0] = fvm_info.vslice_count + 1;
+    ASSERT_EQ(ioctl_block_fvm_vslice_query(part_fd, &query_request, &query_response),
+              ZX_ERR_INVALID_ARGS);
+
+    // Check that request count is valid
+    query_request.count = MAX_FVM_VSLICE_REQUESTS + 1;
+    ASSERT_EQ(ioctl_block_fvm_vslice_query(part_fd, &query_request, &query_response),
+              ZX_ERR_BUFFER_TOO_SMALL);
+
+    ASSERT_EQ(close(part_fd), 0);
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
+    END_TEST;
+}
+
 // Test allocating and accessing slices which are allocated contiguously.
 static bool TestSliceAccessContiguous(void) {
     BEGIN_TEST;
@@ -2103,6 +2199,7 @@ RUN_TEST_MEDIUM(TestVPartitionExtendSparse)
 RUN_TEST_MEDIUM(TestVPartitionShrink)
 RUN_TEST_MEDIUM(TestVPartitionSplit)
 RUN_TEST_MEDIUM(TestVPartitionDestroy)
+RUN_TEST_MEDIUM(TestVPartitionQuery)
 RUN_TEST_MEDIUM(TestSliceAccessContiguous)
 RUN_TEST_MEDIUM(TestSliceAccessMany)
 RUN_TEST_MEDIUM(TestSliceAccessNonContiguousPhysical)

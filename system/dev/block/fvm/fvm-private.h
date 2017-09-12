@@ -207,6 +207,12 @@ public:
         return slice_map_.begin();
     }
     uint32_t SliceGetLocked(size_t vslice) const TA_REQ(lock_);
+
+    // Check slices starting from |vslice_start|.
+    // Sets |*count| to the number of contiguous allocated or unallocated slices found.
+    // Sets |*allocated| to true if the vslice range is allocated, and false otherwise.
+    zx_status_t CheckSlices(size_t vslice_start, size_t* count, bool* allocated) TA_EXCL(lock_);
+
     zx_status_t SliceSetUnsafe(size_t vslice, uint32_t pslice) TA_NO_THREAD_SAFETY_ANALYSIS {
         return SliceSetLocked(vslice, pslice);
     }
