@@ -38,7 +38,7 @@ static_library("hci") {
   public_deps = [
     "//apps/bluetooth/lib/common",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 

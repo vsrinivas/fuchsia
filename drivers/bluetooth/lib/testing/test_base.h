@@ -14,7 +14,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 // This file provides a basic set of GTest unit test harnesses that performs common set-up/tear-down
 // operations, including setting up a message loop, creating a stub HCI controller, etc.
@@ -75,11 +75,11 @@ class TestBase : public ::testing::Test {
 
   // Getters for internal fields frequently used by tests.
   FakeControllerType* test_device() const { return test_device_.get(); }
-  mtl::MessageLoop* message_loop() { return &message_loop_; }
+  fsl::MessageLoop* message_loop() { return &message_loop_; }
 
  private:
   std::unique_ptr<FakeControllerType> test_device_;
-  mtl::MessageLoop message_loop_;
+  fsl::MessageLoop message_loop_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestBase);
   static_assert(std::is_base_of<FakeControllerBase, FakeControllerType>::value,

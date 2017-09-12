@@ -55,7 +55,7 @@ void ACLDataChannel::Initialize(const DataBufferInfo& bredr_buffer_info,
   auto setup_handler_task = [this] {
     // TODO(armansito): We'll need to pay attention to MX_CHANNEL_WRITABLE as well.
     io_handler_key_ =
-        mtl::MessageLoop::GetCurrent()->AddHandler(this, channel_.get(), MX_CHANNEL_READABLE);
+        fsl::MessageLoop::GetCurrent()->AddHandler(this, channel_.get(), MX_CHANNEL_READABLE);
     FXL_LOG(INFO) << "hci: ACLDataChannel: I/O handler registered";
   };
 
@@ -80,9 +80,9 @@ void ACLDataChannel::ShutDown() {
   FXL_LOG(INFO) << "hci: ACLDataChannel: shutting down";
 
   auto handler_cleanup_task = [handler_key = io_handler_key_] {
-    FXL_DCHECK(mtl::MessageLoop::GetCurrent());
+    FXL_DCHECK(fsl::MessageLoop::GetCurrent());
     FXL_LOG(INFO) << "hci: ACLDataChannel Removing I/O handler";
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(handler_key);
+    fsl::MessageLoop::GetCurrent()->RemoveHandler(handler_key);
   };
 
   common::RunTaskSync(handler_cleanup_task, io_task_runner_);
@@ -354,7 +354,7 @@ void ACLDataChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uin
   if (status < 0) {
     FXL_VLOG(1) << "hci: ACLDataChannel: Failed to read RX bytes: " << mx_status_get_string(status);
     // Clear the handler so that we stop receiving events from it.
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
+    fsl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
     return;
   }
 
@@ -386,7 +386,7 @@ void ACLDataChannel::OnHandleError(mx_handle_t handle, mx_status_t error) {
   FXL_LOG(ERROR) << "hci: ACLDataChannel: channel error: " << mx_status_get_string(error);
 
   // Clear the handler so that we stop receiving events from it.
-  mtl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
+  fsl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
 }
 
 }  // namespace hci

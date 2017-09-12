@@ -60,7 +60,7 @@ void CommandChannel::Initialize() {
 
   auto setup_handler_task = [this] {
     io_handler_key_ =
-        mtl::MessageLoop::GetCurrent()->AddHandler(this, channel_.get(), MX_CHANNEL_READABLE);
+        fsl::MessageLoop::GetCurrent()->AddHandler(this, channel_.get(), MX_CHANNEL_READABLE);
     FXL_LOG(INFO) << "hci: CommandChannel: I/O handler registered";
   };
 
@@ -79,10 +79,10 @@ void CommandChannel::ShutDown() {
   FXL_LOG(INFO) << "hci: CommandChannel: shutting down";
 
   auto handler_cleanup_task = [this] {
-    FXL_DCHECK(mtl::MessageLoop::GetCurrent());
+    FXL_DCHECK(fsl::MessageLoop::GetCurrent());
     FXL_LOG(INFO) << "hci: CommandChannel: Removing I/O handler";
     SetPendingCommand(nullptr);
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
+    fsl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
   };
 
   common::RunTaskSync(handler_cleanup_task, io_task_runner_);
@@ -446,7 +446,7 @@ void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uin
     FXL_VLOG(1) << "hci: CommandChannel: Failed to read event bytes: "
                 << mx_status_get_string(status);
     // Clear the handler so that we stop receiving events from it.
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
+    fsl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
     return;
   }
 
@@ -498,7 +498,7 @@ void CommandChannel::OnHandleError(mx_handle_t handle, mx_status_t error) {
   FXL_VLOG(1) << "hci: CommandChannel: channel error: " << mx_status_get_string(error);
 
   // Clear the handler so that we stop receiving events from it.
-  mtl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
+  fsl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
 }
 
 }  // namespace hci

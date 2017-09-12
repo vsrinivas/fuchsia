@@ -13,7 +13,7 @@
 #include "apps/bluetooth/lib/testing/test_base.h"
 #include "apps/bluetooth/lib/testing/test_controller.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/threading/create_thread.h"
+#include "lib/fsl/threading/create_thread.h"
 
 namespace bluetooth {
 namespace l2cap {
@@ -418,7 +418,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendBasicSdu) {
   std::unique_ptr<common::ByteBuffer> received;
   auto data_cb = [&received](const common::ByteBuffer& bytes) {
     received = std::make_unique<common::DynamicByteBuffer>(bytes);
-    mtl::MessageLoop::GetCurrent()->QuitNow();
+    fsl::MessageLoop::GetCurrent()->QuitNow();
   };
   test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
 
@@ -461,7 +461,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdus) {
       acl_fragments.push_back(std::make_unique<common::DynamicByteBuffer>(bytes));
 
     if (le_fragments.size() + acl_fragments.size() == kExpectedNumFragments)
-      mtl::MessageLoop::GetCurrent()->QuitNow();
+      fsl::MessageLoop::GetCurrent()->QuitNow();
   };
   test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
 
@@ -554,7 +554,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdusDifferentBuffers) {
       acl_fragments.push_back(std::make_unique<common::DynamicByteBuffer>(bytes));
 
     if (le_fragments.size() + acl_fragments.size() == kExpectedNumFragments)
-      mtl::MessageLoop::GetCurrent()->QuitNow();
+      fsl::MessageLoop::GetCurrent()->QuitNow();
   };
   test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
 

@@ -11,8 +11,8 @@
 
 #include "lib/fxl/synchronization/sleep.h"
 #include "lib/fxl/time/stopwatch.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/threading/create_thread.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/create_thread.h"
 
 namespace bluetooth {
 namespace common {
@@ -42,7 +42,7 @@ TEST(CancelableCallbackTest, CancelAndRunOnDifferentThreads) {
   EXPECT_FALSE(factory.canceled());
 
   fxl::RefPtr<fxl::TaskRunner> thrd_runner;
-  auto thrd = mtl::CreateThread(&thrd_runner, "CancelableCallbackTest thread");
+  auto thrd = fsl::CreateThread(&thrd_runner, "CancelableCallbackTest thread");
 
   bool called = false;
   auto cb = factory.MakeTask([&called] { called = true; });
@@ -52,7 +52,7 @@ TEST(CancelableCallbackTest, CancelAndRunOnDifferentThreads) {
   EXPECT_TRUE(factory.canceled());
 
   thrd_runner->PostTask(cb);
-  thrd_runner->PostTask([] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+  thrd_runner->PostTask([] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
 
   if (thrd.joinable()) thrd.join();
 

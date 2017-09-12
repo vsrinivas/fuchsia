@@ -24,7 +24,7 @@ void AdapterManager::Observer::OnAdapterCreated(bluetooth::gap::Adapter* adapter
 void AdapterManager::Observer::OnAdapterRemoved(bluetooth::gap::Adapter* adapter) {}
 
 AdapterManager::AdapterManager() : weak_ptr_factory_(this) {
-  device_watcher_ = mtl::DeviceWatcher::Create(
+  device_watcher_ = fsl::DeviceWatcher::Create(
       kBluetoothDeviceDir, std::bind(&AdapterManager::OnDeviceFound, this, std::placeholders::_1,
                                      std::placeholders::_2));
 }

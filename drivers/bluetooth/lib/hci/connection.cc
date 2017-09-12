@@ -141,7 +141,7 @@ void Connection::Close(Status reason, const fxl::Closure& callback) {
   params->reason = reason;
 
   hci_->command_channel()->SendCommand(std::move(disconn),
-                                       mtl::MessageLoop::GetCurrent()->task_runner(), complete_cb,
+                                       fsl::MessageLoop::GetCurrent()->task_runner(), complete_cb,
                                        status_cb, kDisconnectionCompleteEventCode, matcher);
 }
 

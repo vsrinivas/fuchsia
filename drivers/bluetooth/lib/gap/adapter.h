@@ -36,7 +36,7 @@ class LowEnergyDiscoveryManager;
 // NOTE: We currently only support primary controllers. AMP controllers are not supported.
 class Adapter final {
  public:
-  // A mtl::MessageLoop must have been initialized when an Adapter instance is created. The Adapter
+  // A fsl::MessageLoop must have been initialized when an Adapter instance is created. The Adapter
   // instance will use the MessageLoop it is created on for all of its asynchronous tasks.
   //
   // This will take ownership of |hci_device|.

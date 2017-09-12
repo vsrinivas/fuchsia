@@ -14,7 +14,7 @@
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace hci_acl_test {
 
@@ -60,7 +60,7 @@ class LEConnectionTest final {
                       bluetooth::hci::Status status);
 
   fxl::RefPtr<bluetooth::hci::Transport> hci_;
-  mtl::MessageLoop message_loop_;
+  fsl::MessageLoop message_loop_;
   bluetooth::common::DeviceAddress dst_addr_;
   bluetooth::hci::CommandChannel::EventHandlerId le_conn_complete_handler_id_;
   bluetooth::hci::CommandChannel::EventHandlerId disconn_handler_id_;

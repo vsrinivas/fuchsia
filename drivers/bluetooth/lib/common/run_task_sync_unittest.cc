@@ -7,8 +7,8 @@
 #include "gtest/gtest.h"
 
 #include "lib/fxl/synchronization/sleep.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/threading/create_thread.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/create_thread.h"
 
 namespace bluetooth {
 namespace common {
@@ -19,7 +19,7 @@ TEST(RunTaskSyncTest, RunTaskSync) {
   constexpr int kLoopCount = 50;
 
   fxl::RefPtr<fxl::TaskRunner> task_runner;
-  std::thread thrd = mtl::CreateThread(&task_runner, "RunTaskSyncTest thread");
+  std::thread thrd = fsl::CreateThread(&task_runner, "RunTaskSyncTest thread");
 
   for (int i = 0; i < kLoopCount; ++i) {
     bool callback_run = false;
@@ -32,7 +32,7 @@ TEST(RunTaskSyncTest, RunTaskSync) {
     EXPECT_TRUE(callback_run);
   }
 
-  task_runner->PostTask([] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+  task_runner->PostTask([] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
   if (thrd.joinable()) thrd.join();
 }
 

@@ -11,12 +11,12 @@
 #include "apps/bluetooth/lib/hci/hci_constants.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/tasks/message_loop_handler.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop_handler.h"
 
 namespace btsnoop {
 
-class Sniffer final : public ::mtl::MessageLoopHandler {
+class Sniffer final : public ::fsl::MessageLoopHandler {
  public:
   Sniffer(const std::string& hci_dev_path, const std::string& log_file_path);
   ~Sniffer();
@@ -26,7 +26,7 @@ class Sniffer final : public ::mtl::MessageLoopHandler {
   bool Start();
 
  private:
-  // ::mtl::MessageLoopHandler overrides:
+  // ::fsl::MessageLoopHandler overrides:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override;
   void OnHandleError(mx_handle_t handle, mx_status_t error) override;
 
@@ -37,8 +37,8 @@ class Sniffer final : public ::mtl::MessageLoopHandler {
   mx::channel snoop_channel_;
   bluetooth::common::BTSnoopLogger logger_;
 
-  mtl::MessageLoop::HandlerKey handler_key_;
-  mtl::MessageLoop message_loop_;
+  fsl::MessageLoop::HandlerKey handler_key_;
+  fsl::MessageLoop message_loop_;
 
   // For now we only sniff command and event packets so make the buffer large
   // enough to fit the largest command packet plus 1-byte for the snoop flags.

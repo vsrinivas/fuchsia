@@ -8,7 +8,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings.h"
 #include "lib/fxl/log_settings_command_line.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 #include "app.h"
 
@@ -32,7 +32,7 @@ int main(int argc, const char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  mtl::MessageLoop message_loop;
+  fsl::MessageLoop message_loop;
 
   bluetooth_service::App app(app::ApplicationContext::CreateFromStartupInfo());
 

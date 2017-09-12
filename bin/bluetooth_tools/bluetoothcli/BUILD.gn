@@ -22,7 +22,7 @@ executable("bluetoothcli") {
     "//apps/bluetooth/service/interfaces",
     "//apps/bluetooth/tools/lib",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//magenta/third_party/ulib/linenoise",
   ]
 }

@@ -470,14 +470,14 @@ TEST_F(ACLDataChannelTest, SendPackets) {
     int cur_no = packet.payload_bytes()[0];
     if (cur_no != seq_no + 1) {
       pass = false;
-      mtl::MessageLoop::GetCurrent()->QuitNow();
+      fsl::MessageLoop::GetCurrent()->QuitNow();
       return;
     }
 
     seq_no = cur_no;
 
     if (seq_no == kExpectedPacketCount) {
-      mtl::MessageLoop::GetCurrent()->QuitNow();
+      fsl::MessageLoop::GetCurrent()->QuitNow();
       return;
     }
   };
@@ -511,7 +511,7 @@ TEST_F(ACLDataChannelTest, SendPacketsAtomically) {
   auto data_cb = [&received](const common::ByteBuffer& bytes) {
     FXL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
     received.push_back(std::make_unique<common::DynamicByteBuffer>(bytes));
-    if (received.size() == kExpectedPacketCount) mtl::MessageLoop::GetCurrent()->QuitNow();
+    if (received.size() == kExpectedPacketCount) fsl::MessageLoop::GetCurrent()->QuitNow();
   };
   test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
 

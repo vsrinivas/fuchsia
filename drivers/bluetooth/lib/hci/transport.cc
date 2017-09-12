@@ -8,7 +8,7 @@
 #include <mx/channel.h>
 
 #include "lib/fxl/logging.h"
-#include "lib/mtl/threading/create_thread.h"
+#include "lib/fsl/threading/create_thread.h"
 
 #include "device_wrapper.h"
 
@@ -46,12 +46,12 @@ bool Transport::Initialize() {
     return false;
   }
 
-  io_thread_ = mtl::CreateThread(&io_task_runner_, "hci-transport-io");
+  io_thread_ = fsl::CreateThread(&io_task_runner_, "hci-transport-io");
 
   // We watch for handle errors and closures to perform the necessary clean up.
   io_task_runner_->PostTask([ handle = channel.get(), this ] {
     cmd_channel_handler_key_ =
-        mtl::MessageLoop::GetCurrent()->AddHandler(this, handle, MX_CHANNEL_PEER_CLOSED);
+        fsl::MessageLoop::GetCurrent()->AddHandler(this, handle, MX_CHANNEL_PEER_CLOSED);
   });
 
   command_channel_ = std::make_unique<CommandChannel>(this, std::move(channel));
@@ -77,7 +77,7 @@ bool Transport::InitializeACLDataChannel(const DataBufferInfo& bredr_buffer_info
   // We watch for handle errors and closures to perform the necessary clean up.
   io_task_runner_->PostTask([ handle = channel.get(), this ] {
     acl_channel_handler_key_ =
-        mtl::MessageLoop::GetCurrent()->AddHandler(this, handle, MX_CHANNEL_PEER_CLOSED);
+        fsl::MessageLoop::GetCurrent()->AddHandler(this, handle, MX_CHANNEL_PEER_CLOSED);
   });
 
   acl_data_channel_ = std::make_unique<ACLDataChannel>(this, std::move(channel));
@@ -108,10 +108,10 @@ void Transport::ShutDown() {
 
   io_task_runner_->PostTask(
       [ cmd_key = cmd_channel_handler_key_, acl_key = acl_channel_handler_key_ ] {
-        FXL_DCHECK(mtl::MessageLoop::GetCurrent());
-        mtl::MessageLoop::GetCurrent()->RemoveHandler(cmd_key);
-        mtl::MessageLoop::GetCurrent()->RemoveHandler(acl_key);
-        mtl::MessageLoop::GetCurrent()->QuitNow();
+        FXL_DCHECK(fsl::MessageLoop::GetCurrent());
+        fsl::MessageLoop::GetCurrent()->RemoveHandler(cmd_key);
+        fsl::MessageLoop::GetCurrent()->RemoveHandler(acl_key);
+        fsl::MessageLoop::GetCurrent()->QuitNow();
       });
 
   if (io_thread_.joinable()) io_thread_.join();
@@ -147,8 +147,8 @@ void Transport::NotifyClosedCallback() {
   FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
 
   // Clear the handlers so that we stop receiving events.
-  mtl::MessageLoop::GetCurrent()->RemoveHandler(cmd_channel_handler_key_);
-  mtl::MessageLoop::GetCurrent()->RemoveHandler(acl_channel_handler_key_);
+  fsl::MessageLoop::GetCurrent()->RemoveHandler(cmd_channel_handler_key_);
+  fsl::MessageLoop::GetCurrent()->RemoveHandler(acl_channel_handler_key_);
 
   FXL_LOG(INFO) << "hci: Transport: HCI channel(s) were closed";
   if (closed_cb_) closed_cb_task_runner_->PostTask(closed_cb_);

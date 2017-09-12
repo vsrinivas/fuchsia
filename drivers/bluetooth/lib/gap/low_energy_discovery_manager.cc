@@ -61,7 +61,7 @@ void LowEnergyDiscoverySession::NotifyDiscoveryResult(const RemoteDevice& device
 
 LowEnergyDiscoveryManager::LowEnergyDiscoveryManager(Mode mode, fxl::RefPtr<hci::Transport> hci,
                                                      RemoteDeviceCache* device_cache)
-    : task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
+    : task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
       device_cache_(device_cache),
       weak_ptr_factory_(this) {
   FXL_DCHECK(hci);

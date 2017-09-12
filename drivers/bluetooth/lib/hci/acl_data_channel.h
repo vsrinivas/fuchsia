@@ -63,7 +63,7 @@ class DataBufferInfo {
 //
 // This currently only supports the Packet-based Data Flow Control as defined in Core Spec v5.0, Vol
 // 2, Part E, Section 4.1.1.
-class ACLDataChannel final : public ::mtl::MessageLoopHandler {
+class ACLDataChannel final : public ::fsl::MessageLoopHandler {
  public:
   ACLDataChannel(Transport* transport, mx::channel hci_acl_channel);
   ~ACLDataChannel() override;
@@ -166,7 +166,7 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
   // locked context.
   void IncrementLETotalNumPacketsLocked(size_t count) __TA_REQUIRES(send_mutex_);
 
-  // ::mtl::MessageLoopHandler overrides:
+  // ::fsl::MessageLoopHandler overrides:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override;
   void OnHandleError(mx_handle_t handle, mx_status_t error) override;
 
@@ -185,8 +185,8 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
   // The event handler ID for the Number Of Completed Packets event.
   CommandChannel::EventHandlerId event_handler_id_;
 
-  // The HandlerKey returned from mtl::MessageLoop::AddHandler
-  mtl::MessageLoop::HandlerKey io_handler_key_;
+  // The HandlerKey returned from fsl::MessageLoop::AddHandler
+  fsl::MessageLoop::HandlerKey io_handler_key_;
 
   // The task runner used for posting tasks on the HCI transport I/O thread.
   fxl::RefPtr<fxl::TaskRunner> io_task_runner_;

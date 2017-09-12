@@ -10,7 +10,7 @@
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/mtl/io/device_watcher.h"
+#include "lib/fsl/io/device_watcher.h"
 
 namespace bluetooth {
 namespace gap {
@@ -93,7 +93,7 @@ class AdapterManager final {
   ::bluetooth::common::ObserverList<Observer> observers_;
 
   // The device watcher we use to watch for Bluetooth HCI devices in the system.
-  std::unique_ptr<mtl::DeviceWatcher> device_watcher_;
+  std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
 
   // All Adapter instances that we are managing.
   std::unordered_map<std::string, std::unique_ptr<bluetooth::gap::Adapter>> adapters_;

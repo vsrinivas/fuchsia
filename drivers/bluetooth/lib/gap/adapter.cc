@@ -13,7 +13,7 @@
 #include "apps/bluetooth/lib/hci/transport.h"
 #include "apps/bluetooth/lib/hci/util.h"
 #include "lib/fxl/random/uuid.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 #include "low_energy_discovery_manager.h"
 
@@ -26,7 +26,7 @@ Adapter::Adapter(std::unique_ptr<hci::DeviceWrapper> hci_device)
       weak_ptr_factory_(this) {
   FXL_DCHECK(hci_device);
 
-  auto message_loop = mtl::MessageLoop::GetCurrent();
+  auto message_loop = fsl::MessageLoop::GetCurrent();
   FXL_DCHECK(message_loop) << "gap: Adapter: Must be created on a valid MessageLoop";
 
   task_runner_ = message_loop->task_runner();

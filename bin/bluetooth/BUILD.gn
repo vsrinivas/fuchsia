@@ -25,6 +25,6 @@ executable("service") {
     "//garnet/public/lib/app/cpp",
     "//apps/bluetooth/lib",
     "//apps/bluetooth/service/interfaces",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }

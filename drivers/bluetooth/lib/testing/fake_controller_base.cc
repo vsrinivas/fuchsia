@@ -10,7 +10,7 @@
 #include "apps/bluetooth/lib/hci/acl_data_packet.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "lib/mtl/threading/create_thread.h"
+#include "lib/fsl/threading/create_thread.h"
 
 namespace bluetooth {
 namespace testing {
@@ -31,13 +31,13 @@ void FakeControllerBase::Start() {
   FXL_DCHECK(cmd_channel_.is_valid());
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
-  thread_ = mtl::CreateThread(&task_runner_, "bluetooth-hci-test-controller");
+  thread_ = fsl::CreateThread(&task_runner_, "bluetooth-hci-test-controller");
 
   auto setup_task = [this] {
-    cmd_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
+    cmd_handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
         this, cmd_channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
     if (acl_channel_.is_valid()) {
-      acl_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
+      acl_handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
           this, acl_channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
     }
   };
@@ -52,7 +52,7 @@ void FakeControllerBase::Stop() {
   task_runner_->PostTask([this] {
     CloseCommandChannelInternal();
     CloseACLDataChannelInternal();
-    mtl::MessageLoop::GetCurrent()->QuitNow();
+    fsl::MessageLoop::GetCurrent()->QuitNow();
   });
   if (thread_.joinable()) thread_.join();
 
@@ -140,7 +140,7 @@ void FakeControllerBase::CloseCommandChannelInternal() {
   FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
   if (!cmd_handler_key_) return;
 
-  mtl::MessageLoop::GetCurrent()->RemoveHandler(cmd_handler_key_);
+  fsl::MessageLoop::GetCurrent()->RemoveHandler(cmd_handler_key_);
   cmd_handler_key_ = 0u;
   cmd_channel_.reset();
 }
@@ -149,7 +149,7 @@ void FakeControllerBase::CloseACLDataChannelInternal() {
   FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
   if (!acl_handler_key_) return;
 
-  mtl::MessageLoop::GetCurrent()->RemoveHandler(acl_handler_key_);
+  fsl::MessageLoop::GetCurrent()->RemoveHandler(acl_handler_key_);
   acl_handler_key_ = 0u;
   acl_channel_.reset();
 }

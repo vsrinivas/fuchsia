@@ -18,7 +18,7 @@
 #include "lib/fxl/log_settings.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 #include "commands.h"
 
@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
   auto hci_dev = std::make_unique<hci::MagentaDeviceWrapper>(std::move(hci_dev_fd));
   auto hci = hci::Transport::Create(std::move(hci_dev));
   hci->Initialize();
-  mtl::MessageLoop message_loop;
+  fsl::MessageLoop message_loop;
 
   tools::CommandDispatcher dispatcher;
   hcitool::CommandData cmd_data(hci->command_channel(), message_loop.task_runner());

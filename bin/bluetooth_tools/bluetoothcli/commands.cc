@@ -8,7 +8,7 @@
 
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 #include "app.h"
 #include "helpers.h"
@@ -63,7 +63,7 @@ bool HandleActiveAdapter(const App* app, const fxl::CommandLine& cmd_line,
 }
 
 bool HandleExit(const App* app, const fxl::CommandLine& cmd_line, const fxl::Closure& complete_cb) {
-  mtl::MessageLoop::GetCurrent()->QuitNow();
+  fsl::MessageLoop::GetCurrent()->QuitNow();
   return true;
 }
 

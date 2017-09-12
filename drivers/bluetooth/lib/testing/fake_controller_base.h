@@ -13,8 +13,8 @@
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_checker.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/tasks/message_loop_handler.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop_handler.h"
 
 namespace bluetooth {
 namespace testing {
@@ -22,7 +22,7 @@ namespace testing {
 // Abstract base for implementing a fake HCI controller endpoint. This can directly send
 // ACL data and event packets on request and forward outgoing ACL data packets to subclass
 // implementations.
-class FakeControllerBase : ::mtl::MessageLoopHandler {
+class FakeControllerBase : ::fsl::MessageLoopHandler {
  public:
   FakeControllerBase(mx::channel cmd_channel, mx::channel acl_data_channel);
   ~FakeControllerBase() override;
@@ -64,7 +64,7 @@ class FakeControllerBase : ::mtl::MessageLoopHandler {
   virtual void OnACLDataPacketReceived(const common::ByteBuffer& acl_data_packet) = 0;
 
  private:
-  // ::mtl::MessageLoopHandler overrides
+  // ::fsl::MessageLoopHandler overrides
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override;
 
   // Read and handle packets received over the channels.
@@ -82,8 +82,8 @@ class FakeControllerBase : ::mtl::MessageLoopHandler {
   mx::channel acl_channel_;
   std::thread thread_;
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
-  mtl::MessageLoop::HandlerKey cmd_handler_key_;
-  mtl::MessageLoop::HandlerKey acl_handler_key_;
+  fsl::MessageLoop::HandlerKey cmd_handler_key_;
+  fsl::MessageLoop::HandlerKey acl_handler_key_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeControllerBase);
 };

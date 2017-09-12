@@ -16,8 +16,8 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/synchronization/thread_checker.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/tasks/message_loop_handler.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop_handler.h"
 
 namespace bluetooth {
 namespace hci {
@@ -35,7 +35,7 @@ class DeviceWrapper;
 // vending weak ptrs would have been more suitable since this class is intended to be uniquely owned
 // by its creator. fxl::WeakPtr is not thread-safe which is why we use fxl::RefCountedThreadSafe.
 // Consider making fxl::WeakPtr thread-safe.
-class Transport final : public ::mtl::MessageLoopHandler,
+class Transport final : public ::fsl::MessageLoopHandler,
                         public fxl::RefCountedThreadSafe<Transport> {
  public:
   static fxl::RefPtr<Transport> Create(std::unique_ptr<DeviceWrapper> hci_device);
@@ -93,7 +93,7 @@ class Transport final : public ::mtl::MessageLoopHandler,
   explicit Transport(std::unique_ptr<DeviceWrapper> hci_device);
   ~Transport() override;
 
-  // ::mtl::MessageLoopHandler overrides:
+  // ::fsl::MessageLoopHandler overrides:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override;
   void OnHandleError(mx_handle_t handle, mx_status_t error) override;
 
@@ -112,9 +112,9 @@ class Transport final : public ::mtl::MessageLoopHandler,
   // The thread that performs all HCI I/O operations.
   std::thread io_thread_;
 
-  // The HandlerKey returned from mtl::MessageLoop::AddHandler
-  mtl::MessageLoop::HandlerKey cmd_channel_handler_key_;
-  mtl::MessageLoop::HandlerKey acl_channel_handler_key_;
+  // The HandlerKey returned from fsl::MessageLoop::AddHandler
+  fsl::MessageLoop::HandlerKey cmd_channel_handler_key_;
+  fsl::MessageLoop::HandlerKey acl_channel_handler_key_;
 
   // The task runner used for posting tasks on the HCI transport I/O thread.
   fxl::RefPtr<fxl::TaskRunner> io_task_runner_;

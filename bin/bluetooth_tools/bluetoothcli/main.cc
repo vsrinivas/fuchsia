@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 #include <linenoise.h>
 
@@ -22,7 +22,7 @@ void LinenoiseCompletionCallback(const char* buf, linenoiseCompletions* lc) {
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  mtl::MessageLoop message_loop;
+  fsl::MessageLoop message_loop;
 
   bluetoothcli::App app;
   g_app = &app;

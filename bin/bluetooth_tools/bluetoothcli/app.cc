@@ -11,7 +11,7 @@
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 #include "commands.h"
 #include "helpers.h"
@@ -30,7 +30,7 @@ App::App()
 
   adapter_manager_.set_connection_error_handler([] {
     CLI_LOG() << "AdapterManager disconnected";
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
   });
 
   commands::RegisterCommands(this, &command_dispatcher_);
@@ -57,12 +57,12 @@ App::App()
 void App::ReadNextInput() {
   bool call_complete_cb = true;
   auto complete_cb = [this] {
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask([this] { ReadNextInput(); });
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask([this] { ReadNextInput(); });
   };
 
   char* line = linenoise("bluetooth> ");
   if (!line) {
-    mtl::MessageLoop::GetCurrent()->QuitNow();
+    fsl::MessageLoop::GetCurrent()->QuitNow();
     return;
   }
 

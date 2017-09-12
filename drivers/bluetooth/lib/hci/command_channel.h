@@ -24,8 +24,8 @@
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/synchronization/thread_checker.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/tasks/message_loop_handler.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop_handler.h"
 
 namespace bluetooth {
 namespace hci {
@@ -37,7 +37,7 @@ class Transport;
 //
 // TODO(armansito): I don't imagine many cases in which we will want to queue up HCI commands from
 // the data thread. Consider making this class fully single threaded and removing the locks.
-class CommandChannel final : public ::mtl::MessageLoopHandler {
+class CommandChannel final : public ::fsl::MessageLoopHandler {
  public:
   // |hci_command_channel| is a Magenta channel construct that can receive
   // Bluetooth HCI command and event packets, in which the remote end is
@@ -229,7 +229,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // Notifies a matching event handler for the given event.
   void NotifyEventHandler(std::unique_ptr<EventPacket> event);
 
-  // ::mtl::MessageLoopHandler overrides:
+  // ::fsl::MessageLoopHandler overrides:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override;
   void OnHandleError(mx_handle_t handle, mx_status_t error) override;
 
@@ -251,8 +251,8 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // True if this CommandChannel has been initialized through a call to Initialize().
   std::atomic_bool is_initialized_;
 
-  // The HandlerKey returned from mtl::MessageLoop::AddHandler
-  mtl::MessageLoop::HandlerKey io_handler_key_;
+  // The HandlerKey returned from fsl::MessageLoop::AddHandler
+  fsl::MessageLoop::HandlerKey io_handler_key_;
 
   // The task runner used for posting tasks on the HCI transport I/O thread.
   fxl::RefPtr<fxl::TaskRunner> io_task_runner_;
