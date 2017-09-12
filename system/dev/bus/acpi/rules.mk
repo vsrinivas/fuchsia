@@ -14,13 +14,15 @@ MODULE_TYPE := driver
 
 MODULE_NAME := bus-acpi
 
-MODULE_CFLAGS += -fno-strict-aliasing -Ithird_party/lib/acpica/source/include
+MODULE_CFLAGS += -fno-strict-aliasing
+MODULE_COMPILEFLAGS += -Ithird_party/lib/acpica/source/include
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/bus-acpi.c \
     $(LOCAL_DIR)/dev-battery.c \
     $(LOCAL_DIR)/dev-ec.c \
     $(LOCAL_DIR)/dev-pwrsrc.c \
+    $(LOCAL_DIR)/dev-tbmc.cpp \
     $(LOCAL_DIR)/debug.c \
     $(LOCAL_DIR)/init.c \
     $(LOCAL_DIR)/pci.c \
@@ -31,9 +33,11 @@ MODULE_SRCS := \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
+    system/ulib/ddktl \
     system/ulib/acpisvc-client \
     third_party/ulib/acpica \
     system/ulib/zxcpp \
+    system/ulib/fbl \
 
 MODULE_LIBS := \
     system/ulib/driver \

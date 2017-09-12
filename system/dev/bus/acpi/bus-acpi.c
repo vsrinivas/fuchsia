@@ -204,6 +204,8 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
         pwrsrc_init(parent, object);
     } else if (!memcmp(hid, EC_HID_STRING, HID_LENGTH)) {
         ec_init(parent, object);
+    } else if (!memcmp(hid, GOOGLE_TBMC_HID_STRING, HID_LENGTH)) {
+        tbmc_init(parent, object);
     }
 
 out:
