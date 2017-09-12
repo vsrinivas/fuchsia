@@ -31,6 +31,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/uspace_entry.S
 
 MODULE_DEPS += \
+	kernel/dev/iommu/dummy \
 	kernel/object \
 	third_party/lib/fdt \
 

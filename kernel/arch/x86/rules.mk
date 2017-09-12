@@ -73,6 +73,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/uspace_entry.S \
 
 MODULE_DEPS += \
+	kernel/dev/iommu/dummy \
 	kernel/lib/bitmap \
 	kernel/lib/code_patching \
 	kernel/lib/fbl \
