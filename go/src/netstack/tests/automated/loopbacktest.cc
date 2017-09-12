@@ -141,7 +141,7 @@ void StreamAcceptRead(int acptfd, std::string* out, int ntfyfd) {
   NotifySuccess(ntfyfd);
 }
 
-TEST_F(NetStreamTest, NonBlockingConnectWrite) {
+TEST_F(NetStreamTest, DISABLED_NonBlockingConnectWrite) {
   int ret = listen(acptfd_, 10);
   ASSERT_EQ(0, ret) << "listen failed: " << errno;
 
@@ -192,7 +192,7 @@ void StreamAcceptWrite(int acptfd, const char* msg, int ntfyfd) {
   NotifySuccess(ntfyfd);
 }
 
-TEST_F(NetStreamTest, NonBlockingConnectRead) {
+TEST_F(NetStreamTest, DISABLED_NonBlockingConnectRead) {
   int ret = listen(acptfd_, 10);
   ASSERT_EQ(0, ret) << "listen failed: " << errno;
 
