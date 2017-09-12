@@ -4,10 +4,10 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
 #include "zircon/status.h"
 #include "magma/src/display_pipe/client/buffer.h"
 #include "magma/src/display_pipe/services/display_provider.fidl.h"
@@ -72,12 +72,12 @@ static uint32_t hsv_inc(uint32_t index, int16_t inc) {
     return signed_index;
 }
 
-class BufferHandler : public mtl::MessageLoopHandler {
+class BufferHandler : public fsl::MessageLoopHandler {
  public:
   BufferHandler(Buffer *buffer, uint32_t index) :
       buffer_(buffer), index_(index) {
     handler_key_ =
-        mtl::MessageLoop::GetCurrent()->AddHandler(this,
+        fsl::MessageLoop::GetCurrent()->AddHandler(this,
                                                    buffer->release_fence().get(),
                                                    ZX_EVENT_SIGNALED);
   }
@@ -105,14 +105,19 @@ class BufferHandler : public mtl::MessageLoopHandler {
 
   void OnHandleError(zx_handle_t handle, zx_status_t error) override {
       FXL_LOG(ERROR) << "BufferHandler received an error ("
+<<<<<<< HEAD
           << zx_status_get_string(error) << ").  Exiting.";
       mtl::MessageLoop::GetCurrent()->PostQuitTask();
+=======
+          << mx_status_get_string(error) << ").  Exiting.";
+      fsl::MessageLoop::GetCurrent()->PostQuitTask();
+>>>>>>> 5ce6cd9... build fixes for image pipe swapchain
   };
 
  private:
   Buffer *buffer_;
   uint32_t index_;
-  mtl::MessageLoop::HandlerKey handler_key_;
+  fsl::MessageLoop::HandlerKey handler_key_;
 
 };
 
@@ -143,7 +148,7 @@ int main(int argc, char* argv[]) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
 
   auto application_context_ = app::ApplicationContext::CreateFromStartupInfo();
   app::ServiceProviderPtr services;

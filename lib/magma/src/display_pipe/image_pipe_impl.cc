@@ -1,7 +1,7 @@
 #include "image_pipe_impl.h"
 
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
 
 namespace display_pipe {
 ImagePipeImpl::ImagePipeImpl(std::shared_ptr<MagmaConnection> conn) : conn_(conn) {}
@@ -13,7 +13,7 @@ void ImagePipeImpl::AddImage(uint32_t image_id, scenic::ImageInfoPtr image_info,
 {
     if (images_.find(image_id) != images_.end()) {
         FXL_LOG(ERROR) << "Image id " << image_id << " already added.";
-        mtl::MessageLoop::GetCurrent()->PostQuitTask();
+        fsl::MessageLoop::GetCurrent()->PostQuitTask();
         return;
     }
     images_[image_id] = Image::Create(conn_, *image_info, std::move(memory), memory_offset);
@@ -24,7 +24,7 @@ void ImagePipeImpl::RemoveImage(uint32_t image_id)
     auto i = images_.find(image_id);
     if (i == images_.end()) {
         FXL_LOG(ERROR) << "Can't remove unknown image id " << image_id << ".";
-        mtl::MessageLoop::GetCurrent()->PostQuitTask();
+        fsl::MessageLoop::GetCurrent()->PostQuitTask();
         return;
     }
     images_.erase(i);
@@ -37,14 +37,14 @@ void ImagePipeImpl::PresentImage(uint32_t image_id, uint64_t presentation_time,
     auto i = images_.find(image_id);
     if (i == images_.end()) {
         FXL_LOG(ERROR) << "Can't present unknown image id " << image_id << ".";
-        mtl::MessageLoop::GetCurrent()->PostQuitTask();
+        fsl::MessageLoop::GetCurrent()->PostQuitTask();
         return;
     }
 
     magma_semaphore_t buffer_presented_semaphore;
     if (!conn_->CreateSemaphore(&buffer_presented_semaphore)) {
         FXL_LOG(ERROR) << "Can't present unknown image id " << image_id << ".";
-        mtl::MessageLoop::GetCurrent()->PostQuitTask();
+        fsl::MessageLoop::GetCurrent()->PostQuitTask();
         return;
     }
 

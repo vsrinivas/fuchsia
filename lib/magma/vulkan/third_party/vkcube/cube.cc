@@ -2764,7 +2764,7 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv)
         return;
     }
 
-    mtl::MessageLoop loop;
+    fsl::MessageLoop loop;
 
 #ifdef MAGMA_ENABLE_TRACING
     trace::TraceProvider trace_provider(loop.async());

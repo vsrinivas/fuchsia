@@ -11,10 +11,10 @@
 #include <zx/vmo.h>
 
 #include "lib/app/cpp/application_context.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
 #include "magma.h"
 #include "magma_util/macros.h"
 #include "magma_util/platform/zircon/zircon_platform_ioctl.h"
@@ -48,7 +48,7 @@ int main(int argc, const char** argv) {
     return 1;
 
   FXL_DLOG(INFO) << "display_pipe started";
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   display_pipe::App app;
   loop.Run();
   return 0;

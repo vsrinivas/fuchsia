@@ -343,7 +343,8 @@ VkResult ImagePipeSwapchain::Present(uint32_t index)
 
     pending_images_.push_back({std::move(image_release_fence), index});
 
-    image_pipe_->PresentImage(index, std::move(acquire_fence), std::move(release_fence));
+    scenic::PresentationInfoPtr info;
+    image_pipe_->PresentImage(index, 0, std::move(acquire_fence), std::move(release_fence), &info);
 
     return VK_SUCCESS;
 }
