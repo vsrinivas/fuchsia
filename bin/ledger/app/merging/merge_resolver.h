@@ -9,6 +9,7 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/backoff/backoff.h"
+#include "apps/ledger/src/callback/scoped_task_runner.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/fxl/functional/closure.h"
@@ -66,8 +67,8 @@ class MergeResolver : public storage::CommitWatcher {
   fxl::Closure on_empty_callback_;
   fxl::Closure on_destroyed_;
 
-  // WeakPtrFactory must be the last field of the class.
-  fxl::WeakPtrFactory<MergeResolver> weak_ptr_factory_;
+  // ScopedTaskRunner must be the last member of the class.
+  callback::ScopedTaskRunner task_runner_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MergeResolver);
 };

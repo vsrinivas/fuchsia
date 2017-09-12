@@ -15,6 +15,7 @@
 #include "apps/ledger/src/app/merging/merge_strategy.h"
 #include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/app/page_utils.h"
+#include "apps/ledger/src/callback/scoped_callback.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/cobalt/cobalt.h"
 #include "lib/fxl/functional/auto_call.h"
@@ -31,7 +32,7 @@ MergeResolver::MergeResolver(fxl::Closure on_destroyed,
       storage_(storage),
       backoff_(std::move(backoff)),
       on_destroyed_(std::move(on_destroyed)),
-      weak_ptr_factory_(this) {
+      task_runner_(environment->main_runner()) {
   storage_->AddCommitWatcher(this);
   PostCheckConflicts();
 }
@@ -77,13 +78,9 @@ void MergeResolver::OnNewCommits(
 }
 
 void MergeResolver::PostCheckConflicts() {
-  environment_->main_runner()->PostTask([weak_this_ptr =
-                                             weak_ptr_factory_.GetWeakPtr()]() {
-    if (weak_this_ptr) {
-      weak_this_ptr->CheckConflicts(DelayedStatus::INITIAL);
-    }
-  });
+  task_runner_.PostTask([this] { CheckConflicts(DelayedStatus::INITIAL); });
 }
+
 void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
   if (!strategy_ || merge_in_progress_) {
     // No strategy, or a merge already in progress. Let's bail out early.
@@ -107,7 +104,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
   FXL_DCHECK(heads.size() == 2);
 
   merge_in_progress_ = true;
-  auto cleanup = fxl::MakeAutoCall([this] {
+  auto cleanup = fxl::MakeAutoCall(task_runner_.MakeScoped([this] {
     // |merge_in_progress_| must be reset before calling |on_empty_callback_|.
     merge_in_progress_ = false;
 
@@ -121,7 +118,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
     if (on_empty_callback_) {
       on_empty_callback_();
     }
-  });
+  }));
 
   auto waiter = callback::
       Waiter<storage::Status, std::unique_ptr<const storage::Commit>>::Create(
@@ -142,7 +139,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
       if (delayed_status == DelayedStatus::INITIAL) {
         // If trying to merge 2 merge commits, add some delay with exponential
         // backoff.
-        environment_->main_runner()->PostDelayedTask(
+        task_runner_.PostDelayedTask(
             [this] { CheckConflicts(DelayedStatus::DELAYED); },
             backoff_->GetNext());
         return;
@@ -195,7 +192,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
     auto head2 = std::move(commits[1]);
     FindCommonAncestor(
         environment_->main_runner(), storage_, head1->Clone(), head2->Clone(),
-        fxl::MakeCopyable([
+        task_runner_.MakeScoped(fxl::MakeCopyable([
           this, head1 = std::move(head1), head2 = std::move(head2),
           cleanup = std::move(cleanup)
         ](Status status,
@@ -219,7 +216,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                 }
                 ReportEvent(CobaltEvent::COMMITS_MERGED);
               }));
-        }));
+        })));
   }));
 }
 
