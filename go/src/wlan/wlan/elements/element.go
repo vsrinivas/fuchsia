@@ -57,18 +57,18 @@ type AKMSuiteType uint8
 const (
 	// 0 Reserved
 	AkmSuiteType_8021X            AKMSuiteType = 1
-	AkmSuiteType_PSK              AKMSuiteType = 2
-	AkmSuiteType_FT_8021X         AKMSuiteType = 3
-	AkmSuiteType_FT_PSK           AKMSuiteType = 4
-	AkmSuiteType_8021X_SHA256     AKMSuiteType = 5
-	AkmSuiteType_PSK_SHA256       AKMSuiteType = 6
-	AkmSuiteType_TDLS             AKMSuiteType = 7
-	AkmSuiteType_SAE              AKMSuiteType = 8
-	AkmSuiteType_FT_SAE           AKMSuiteType = 9
-	AkmSuiteType_ApPeerKey        AKMSuiteType = 10
-	AkmSuiteType_8021X_EAP_SHA256 AKMSuiteType = 11
-	AkmSuiteType_8021X_SHA384     AKMSuiteType = 12
-	AkmSuiteType_FT_8021X_SHA384  AKMSuiteType = 13
+	AkmSuiteType_PSK                           = 2
+	AkmSuiteType_FT_8021X                      = 3
+	AkmSuiteType_FT_PSK                        = 4
+	AkmSuiteType_8021X_SHA256                  = 5
+	AkmSuiteType_PSK_SHA256                    = 6
+	AkmSuiteType_TDLS                          = 7
+	AkmSuiteType_SAE                           = 8
+	AkmSuiteType_FT_SAE                        = 9
+	AkmSuiteType_ApPeerKey                     = 10
+	AkmSuiteType_8021X_EAP_SHA256              = 11
+	AkmSuiteType_8021X_SHA384                  = 12
+	AkmSuiteType_FT_8021X_SHA384               = 13
 	// 14 - 255 Reserved
 )
 

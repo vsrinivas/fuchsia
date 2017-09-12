@@ -62,9 +62,20 @@ go_test("keywrap_test_bin") {
   output_name = "keywrap_test"
   gopackage = "apps/wlan/keywrap"
 
-  # TODO(hanr): This program has a smaller dependency set in practice, its go_dependencies list
+  # TODO(hahnr): This program has a smaller dependency set in practice, its go_dependencies list
   # should be updated to match the code.
   go_dependencies = wlan_go_dependencies
+}
+
+go_test("elements_test_bin") {
+  output_name = "elements_test"
+  gopackage = "apps/wlan/wlan/elements"
+  go_dependencies = [
+      {
+          package = "apps/wlan/wlan/elements"
+          source = "wlan/elements"
+      },
+  ]
 }
 
 go_binary("wlanstack_bin") {
@@ -155,11 +166,15 @@ package("wlantool") {
 
 package("wlanstack_test") {
   deps = [
+    ":elements_test_bin",
     ":keywrap_test_bin",
     ":wlanstack_test_bin",
   ]
 
   tests = [
+    {
+      name = "elements_test"
+    },
     {
       name = "wlanstack_test"
     },
