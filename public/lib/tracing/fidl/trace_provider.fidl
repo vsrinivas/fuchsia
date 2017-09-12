@@ -26,7 +26,7 @@ interface TraceProvider {
   // receives a request to start tracing while already tracing, it must
   // return false.
   //
-  // TODO(MG-1046): Previously this interface was expected to restart tracing
+  // TODO(ZX-1046): Previously this interface was expected to restart tracing
   // if tracing was already running.  Some trace providers implement this more
   // elaborate behavior.  Once we port them to Magenta we can modify that
   // code to return false instead then delete this TODO.
