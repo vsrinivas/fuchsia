@@ -11,7 +11,7 @@ import (
 	bindings "fidl/bindings"
 	"fmt"
 	"log"
-	"netstack/eth"
+	"netstack/link/eth"
 	"os"
 	"syscall"
 	"syscall/mx"
