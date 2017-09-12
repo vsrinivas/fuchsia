@@ -26,7 +26,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 // Command-line flags
 
@@ -475,7 +475,7 @@ int main(int argc, const char** argv) {
   auto num_observations_per_batch = std::stoi(
       command_line.GetOptionValueWithDefault(kNumObservationsPerBatch, "7"));
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   CobaltTestApp app(use_network, do_environment_test,
                     num_observations_per_batch);
   if (!app.RunAllTestingStrategies()) {

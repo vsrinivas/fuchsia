@@ -18,7 +18,7 @@
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "third_party/cobalt/config/metric_config.h"
 #include "third_party/cobalt/config/report_config.h"
 #include "third_party/cobalt/encoder/client_secret.h"
@@ -416,7 +416,7 @@ int main(int argc, const char** argv) {
                 << " seconds, min_interval=" << min_interval.count()
                 << " seconds.";
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   CobaltApp app(loop.task_runner(), schedule_interval, min_interval);
   loop.Run();
   return 0;

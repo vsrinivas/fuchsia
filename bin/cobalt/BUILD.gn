@@ -42,7 +42,7 @@ executable("cobalt") {
     "//apps/cobalt_client/services:cobalt",
     "//third_party/cobalt/encoder",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/grpc:grpc++",
 
     # TODO(rudominer) Change to protobuf_lite after we have a different way
@@ -60,7 +60,7 @@ executable("cobalt_testapp") {
     "//garnet/public/lib/app/cpp",
     "//apps/cobalt_client/services:cobalt_sync",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 }
 
