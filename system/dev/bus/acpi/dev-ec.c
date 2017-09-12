@@ -40,7 +40,7 @@ typedef struct acpi_ec_device {
 
     // thread for processing System Control Interrupts
     thrd_t sci_thread;
-    zx_handle_t pending_sci_evt;
+    zx_handle_t interrupt_event;
 
     bool gpe_setup : 1;
     bool thread_setup : 1;
@@ -50,71 +50,92 @@ static ACPI_STATUS get_ec_handle(ACPI_HANDLE, UINT32, void*, void**);
 static ACPI_STATUS get_ec_gpe_info(ACPI_HANDLE, ACPI_HANDLE*, UINT32*);
 static ACPI_STATUS get_ec_ports(ACPI_HANDLE, uint16_t*, uint16_t*);
 
+static zx_status_t wait_for_interrupt(acpi_ec_device_t* dev) {
+    uint32_t pending;
+    zx_status_t status = zx_object_wait_one(dev->interrupt_event,
+                                            ZX_EVENT_SIGNALED | EC_THREAD_SHUTDOWN,
+                                            ZX_TIME_INFINITE,
+                                            &pending);
+    if (status != ZX_OK) {
+        printf("acpi-ec: thread wait failed: %d\n", status);
+        zx_object_signal(dev->interrupt_event, 0, EC_THREAD_SHUTDOWN_DONE);
+        return status;
+    }
+
+    if (pending & EC_THREAD_SHUTDOWN) {
+        zx_object_signal(dev->interrupt_event, 0, EC_THREAD_SHUTDOWN_DONE);
+        return ZX_ERR_STOP;
+    }
+
+    /* Clear interrupt */
+    zx_object_signal(dev->interrupt_event, ZX_EVENT_SIGNALED, 0);
+    return ZX_OK;
+}
+
 static int acpi_ec_thread(void* arg) {
     acpi_ec_device_t* dev = arg;
+    UINT32 global_lock;
 
     while (1) {
-        uint32_t pending;
-        zx_status_t zx_status = zx_object_wait_one(dev->pending_sci_evt,
-                                                   ZX_EVENT_SIGNALED | EC_THREAD_SHUTDOWN,
-                                                   ZX_TIME_INFINITE,
-                                                   &pending);
+        zx_status_t zx_status = wait_for_interrupt(dev);
         if (zx_status != ZX_OK) {
-            printf("acpi-ec: thread wait failed: %d\n", zx_status);
-            break;
+            goto exiting_without_lock;
         }
 
-        if (pending & EC_THREAD_SHUTDOWN) {
-            zx_object_signal(dev->pending_sci_evt, 0, EC_THREAD_SHUTDOWN_DONE);
-            break;
-        }
-
-        zx_object_signal(dev->pending_sci_evt, ZX_EVENT_SIGNALED, 0);
-
-        UINT32 global_lock;
         while (AcpiAcquireGlobalLock(0xFFFF, &global_lock) != AE_OK)
             ;
 
         uint8_t status;
-        do {
-            status = inp(dev->cmd_port);
-            /* Read the status out of the command/status port */
-            if (!(status & EC_SC_SCI_EVT)) {
-                break;
-            }
-
+        bool processed_evt = false;
+        while ((status = inp(dev->cmd_port)) & EC_SC_SCI_EVT) {
             /* Query EC command */
             outp(dev->cmd_port, EC_CMD_QUERY);
 
-            /* Wait for EC to read the command */
-            while (!((status = inp(dev->cmd_port)) & EC_SC_IBF))
-                ;
-
             /* Wait for EC to respond */
-            while (!((status = inp(dev->cmd_port)) & EC_SC_OBF))
-                ;
+            while ((inp(dev->cmd_port) & (EC_SC_OBF | EC_SC_IBF)) != EC_SC_OBF) {
+                zx_status_t zx_status = wait_for_interrupt(dev);
+                if (zx_status != ZX_OK) {
+                    goto exiting_with_lock;
+                }
+            }
 
-            while ((status = inp(dev->cmd_port)) & EC_SC_OBF) {
-                /* Read until the output buffer is empty */
-                uint8_t event_code = inp(dev->data_port);
+            uint8_t event_code = inp(dev->data_port);
+            if (event_code != 0) {
                 char method[5] = {0};
                 snprintf(method, sizeof(method), "_Q%02x", event_code);
                 xprintf("acpi-ec: Invoking method %s\n", method);
                 AcpiEvaluateObject(dev->acpi_handle, method, NULL, NULL);
                 xprintf("acpi-ec: Invoked method %s\n", method);
+            } else {
+                xprintf("acpi-ec: Spurious event?\n");
             }
-        } while (status & EC_SC_SCI_EVT);
+
+            processed_evt = true;
+
+            /* Clear interrupt before we check EVT again, to prevent a spurious
+             * interrupt later.  There could be two sources of that spurious
+             * wakeup: Either we handled two events back-to-back, or we didn't
+             * wait for the OBF interrupt above. */
+            zx_object_signal(dev->interrupt_event, ZX_EVENT_SIGNALED, 0);
+        }
+
+        if (!processed_evt) {
+            xprintf("acpi-ec: Spurious wakeup, no evt: %#x\n", status);
+        }
 
         AcpiReleaseGlobalLock(global_lock);
     }
 
+exiting_with_lock:
+    AcpiReleaseGlobalLock(global_lock);
+exiting_without_lock:
     xprintf("acpi-ec: thread terminated\n");
     return 0;
 }
 
 static uint32_t raw_ec_event_gpe_handler(ACPI_HANDLE gpe_dev, uint32_t gpe_num, void* ctx) {
     acpi_ec_device_t* dev = ctx;
-    zx_object_signal(dev->pending_sci_evt, 0, ZX_EVENT_SIGNALED);
+    zx_object_signal(dev->interrupt_event, 0, ZX_EVENT_SIGNALED);
     return ACPI_REENABLE_GPE;
 }
 
@@ -233,15 +254,15 @@ static ACPI_STATUS get_ec_ports(
 static void acpi_ec_release(void* ctx) {
     acpi_ec_device_t* dev = ctx;
 
-    if (dev->pending_sci_evt != ZX_HANDLE_INVALID) {
+    if (dev->interrupt_event != ZX_HANDLE_INVALID) {
         if (dev->thread_setup) {
             /* Shutdown the EC thread */
-            zx_object_signal(dev->pending_sci_evt, 0, EC_THREAD_SHUTDOWN);
-            zx_object_wait_one(dev->pending_sci_evt, EC_THREAD_SHUTDOWN_DONE, ZX_TIME_INFINITE, NULL);
+            zx_object_signal(dev->interrupt_event, 0, EC_THREAD_SHUTDOWN);
+            zx_object_wait_one(dev->interrupt_event, EC_THREAD_SHUTDOWN_DONE, ZX_TIME_INFINITE, NULL);
             thrd_join(dev->sci_thread, NULL);
         }
 
-        zx_handle_close(dev->pending_sci_evt);
+        zx_handle_close(dev->interrupt_event);
     }
 
     if (dev->gpe_setup) {
@@ -266,7 +287,7 @@ zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
     }
     dev->acpi_handle = acpi_handle;
 
-    zx_status_t err = zx_event_create(0, &dev->pending_sci_evt);
+    zx_status_t err = zx_event_create(0, &dev->interrupt_event);
     if (err != ZX_OK) {
         xprintf("acpi-ec: Failed to create event: %d\n", err);
         acpi_ec_release(dev);
@@ -302,6 +323,8 @@ zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
     }
     dev->gpe_setup = true;
 
+    /* TODO(teisenbe): This thread should ideally be at a high priority, since
+       it takes the ACPI global lock which is shared with SMM. */
     int ret = thrd_create_with_name(&dev->sci_thread, acpi_ec_thread, dev, "acpi-ec-sci");
     if (ret != thrd_success) {
         xprintf("acpi-ec: Failed to create thread\n");
