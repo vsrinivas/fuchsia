@@ -11,7 +11,7 @@
 #include <utility>
 
 #include "lib/fxl/logging.h"
-#include "lib/mtl/handles/object_info.h"
+#include "lib/fsl/handles/object_info.h"
 
 namespace tracing {
 namespace internal {
@@ -49,7 +49,7 @@ inline uint64_t MakeRecordHeader(RecordType type, size_t size) {
 
 }  // namespace
 
-TraceEngine::TraceEngine(fxl::RefPtr<mtl::SharedVmo> buffer,
+TraceEngine::TraceEngine(fxl::RefPtr<fsl::SharedVmo> buffer,
                          mx::eventpair fence,
                          std::vector<std::string> enabled_categories)
     : generation_(g_next_generation.fetch_add(1u, std::memory_order_relaxed)),
@@ -59,7 +59,7 @@ TraceEngine::TraceEngine(fxl::RefPtr<mtl::SharedVmo> buffer,
       buffer_current_(buffer_start_),
       fence_(std::move(fence)),
       enabled_categories_(std::move(enabled_categories)),
-      task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
+      task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
       weak_ptr_factory_(this) {
   FXL_DCHECK(task_runner_);
 
@@ -68,7 +68,7 @@ TraceEngine::TraceEngine(fxl::RefPtr<mtl::SharedVmo> buffer,
   }
 
   if (!g_process_koid)
-    g_process_koid = mtl::GetCurrentProcessKoid();
+    g_process_koid = fsl::GetCurrentProcessKoid();
 }
 
 TraceEngine::~TraceEngine() {
@@ -81,9 +81,9 @@ std::unique_ptr<TraceEngine> TraceEngine::Create(
     std::vector<std::string> enabled_categories) {
   FXL_DCHECK(buffer);
   FXL_DCHECK(fence);
-  FXL_DCHECK(mtl::MessageLoop::GetCurrent());
+  FXL_DCHECK(fsl::MessageLoop::GetCurrent());
 
-  auto buffer_shared_vmo = fxl::MakeRefCounted<mtl::SharedVmo>(
+  auto buffer_shared_vmo = fxl::MakeRefCounted<fsl::SharedVmo>(
       std::move(buffer), MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
   if (!buffer_shared_vmo->Map()) {
     FXL_LOG(ERROR) << "Could not map trace buffer.";
@@ -103,9 +103,9 @@ void TraceEngine::StartTracing(TraceFinishedCallback finished_callback) {
   finished_callback_ = std::move(finished_callback);
 
   WriteInitializationRecord(GetTicksPerSecond());
-  WriteProcessDescription(g_process_koid, mtl::GetCurrentProcessName());
+  WriteProcessDescription(g_process_koid, fsl::GetCurrentProcessName());
 
-  fence_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
+  fence_handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
       this, fence_.get(), MX_EPAIR_PEER_CLOSED);
 }
 
@@ -208,11 +208,11 @@ TraceEngine::ThreadRef TraceEngine::RegisterCurrentThread() {
   if (state.thread_generation < generation_) {
     state.thread_generation = generation_;
     if (state.thread_koid == MX_KOID_INVALID) {
-      state.thread_koid = mtl::GetCurrentThreadKoid();
+      state.thread_koid = fsl::GetCurrentThreadKoid();
     }
 
     WriteThreadDescription(g_process_koid, state.thread_koid,
-                           mtl::GetCurrentThreadName());
+                           fsl::GetCurrentThreadName());
     state.thread_ref =
         RegisterThreadInternal(g_process_koid, state.thread_koid);
     return state.thread_ref;
@@ -353,7 +353,7 @@ TraceEngine::Payload TraceEngine::WriteKernelObjectRecordBase(
 
   return WriteKernelObjectRecordBase(
       info.koid, static_cast<mx_obj_type_t>(info.type),
-      StringRef::MakeInlinedOrEmpty(mtl::GetObjectName(handle)), argument_count,
+      StringRef::MakeInlinedOrEmpty(fsl::GetObjectName(handle)), argument_count,
       payload_size);
 }
 
@@ -481,7 +481,7 @@ void TraceEngine::StopTracing(TraceDisposition disposition, bool immediate) {
 void TraceEngine::StopTracingOnMessageLoop(TraceDisposition disposition) {
   FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
 
-  mtl::MessageLoop::GetCurrent()->RemoveHandler(fence_handler_key_);
+  fsl::MessageLoop::GetCurrent()->RemoveHandler(fence_handler_key_);
   fence_handler_key_ = 0u;
 
   switch (disposition) {

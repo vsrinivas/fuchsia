@@ -6,7 +6,7 @@
 
 #include "apps/tracing/src/trace/commands/list_categories.h"
 
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace tracing {
 
@@ -38,7 +38,7 @@ void ListCategories::Run(const fxl::CommandLine& command_line) {
                 << std::endl;
         }
 
-        mtl::MessageLoop::GetCurrent()->QuitNow();
+        fsl::MessageLoop::GetCurrent()->QuitNow();
       });
 }
 

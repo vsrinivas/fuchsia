@@ -11,7 +11,7 @@
 #include "lib/network/fidl/url_loader.fidl.h"
 #include "lib/network/fidl/url_request.fidl.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "lib/mtl/vmo/strings.h"
+#include "lib/fsl/vmo/strings.h"
 
 namespace tracing {
 
@@ -139,7 +139,7 @@ network::URLRequestPtr MakeRequest(const std::string& server_url,
 
   std::string payload = "data=" + data;
   mx::vmo buffer;
-  bool res = mtl::VmoFromString(payload, &buffer);
+  bool res = fsl::VmoFromString(payload, &buffer);
   if (!res) {
     return nullptr;
   }

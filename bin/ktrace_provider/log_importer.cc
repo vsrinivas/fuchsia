@@ -9,7 +9,7 @@
 #include <trace-engine/instrumentation.h>
 
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace ktrace_provider {
 
@@ -36,7 +36,7 @@ void LogImporter::Start() {
 
   wait_.set_object(log_.get());
   wait_.set_trigger(MX_LOG_READABLE);
-  status = wait_.Begin(mtl::MessageLoop::GetCurrent()->async());
+  status = wait_.Begin(fsl::MessageLoop::GetCurrent()->async());
   FXL_CHECK(status == MX_OK) << "status=" << status;
 }
 
@@ -44,7 +44,7 @@ void LogImporter::Stop() {
   if (!log_)
     return;
 
-  mx_status_t status = wait_.Cancel(mtl::MessageLoop::GetCurrent()->async());
+  mx_status_t status = wait_.Cancel(fsl::MessageLoop::GetCurrent()->async());
   FXL_CHECK(status == MX_OK) << "status=" << status;
 
   log_.reset();

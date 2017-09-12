@@ -14,7 +14,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace tracing {
 
@@ -383,9 +383,9 @@ void Record::DoneTrace() {
   out() << "Trace file written to " << options_.output_file_name << std::endl;
 
   if (measure_duration_ || measure_time_between_) {
-    ProcessMeasurements([] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+    ProcessMeasurements([] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
   } else {
-    mtl::MessageLoop::GetCurrent()->QuitNow();
+    fsl::MessageLoop::GetCurrent()->QuitNow();
   }
 }
 
@@ -407,7 +407,7 @@ void Record::LaunchApp() {
 }
 
 void Record::StartTimer() {
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
       [weak = weak_ptr_factory_.GetWeakPtr()] {
         if (weak)
           weak->StopTrace();

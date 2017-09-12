@@ -56,7 +56,7 @@ Tracee::Tracee(TraceProviderBundle* bundle)
 
 Tracee::~Tracee() {
   if (fence_handler_key_) {
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(fence_handler_key_);
+    fsl::MessageLoop::GetCurrent()->RemoveHandler(fence_handler_key_);
   }
 }
 
@@ -115,7 +115,7 @@ bool Tracee::Start(size_t buffer_size,
   fence_ = std::move(fence);
   start_callback_ = std::move(start_callback);
   stop_callback_ = std::move(stop_callback);
-  fence_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
+  fence_handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
       this, fence_.get(), MX_EPAIR_PEER_CLOSED);
   TransitionToState(State::kStartPending);
   return true;
@@ -156,7 +156,7 @@ void Tracee::OnHandleReady(mx_handle_t handle,
              state_ == State::kStartAcknowledged || state_ == State::kStopping);
   FXL_DCHECK(stop_callback_);
 
-  mtl::MessageLoop::GetCurrent()->RemoveHandler(fence_handler_key_);
+  fsl::MessageLoop::GetCurrent()->RemoveHandler(fence_handler_key_);
   fence_handler_key_ = 0u;
 
   fxl::Closure stop_callback = std::move(stop_callback_);

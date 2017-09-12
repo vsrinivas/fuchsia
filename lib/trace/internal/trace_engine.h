@@ -19,9 +19,9 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/tasks/message_loop_handler.h"
-#include "lib/mtl/vmo/shared_vmo.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop_handler.h"
+#include "lib/fsl/vmo/shared_vmo.h"
 
 namespace tracing {
 namespace internal {
@@ -36,7 +36,7 @@ namespace internal {
 // dispatch callbacks.
 //
 // (Unfortuately other parts of the trace system may not be so lucky.)
-class TraceEngine final : private mtl::MessageLoopHandler {
+class TraceEngine final : private fsl::MessageLoopHandler {
  public:
   using Payload = ::tracing::writer::Payload;
   using StringRef = ::tracing::writer::StringRef;
@@ -109,11 +109,11 @@ class TraceEngine final : private mtl::MessageLoopHandler {
                       size_t log_message_length);
 
  private:
-  explicit TraceEngine(fxl::RefPtr<mtl::SharedVmo> buffer,
+  explicit TraceEngine(fxl::RefPtr<fsl::SharedVmo> buffer,
                        mx::eventpair fence,
                        std::vector<std::string> enabled_categories);
 
-  // |mtl::MessageLoopHandler|
+  // |fsl::MessageLoopHandler|
   void OnHandleReady(mx_handle_t handle,
                      mx_signals_t pending,
                      uint64_t count) override;
@@ -128,7 +128,7 @@ class TraceEngine final : private mtl::MessageLoopHandler {
 
   uint32_t const generation_;
 
-  fxl::RefPtr<mtl::SharedVmo> const buffer_;
+  fxl::RefPtr<fsl::SharedVmo> const buffer_;
   uintptr_t const buffer_start_;
   uintptr_t const buffer_end_;
   std::atomic<uintptr_t> buffer_current_;
@@ -140,7 +140,7 @@ class TraceEngine final : private mtl::MessageLoopHandler {
   std::set<fxl::StringView> enabled_category_set_;
 
   fxl::RefPtr<fxl::TaskRunner> const task_runner_;
-  mtl::MessageLoop::HandlerKey fence_handler_key_{};
+  fsl::MessageLoop::HandlerKey fence_handler_key_{};
 
   TraceFinishedCallback finished_callback_;
 

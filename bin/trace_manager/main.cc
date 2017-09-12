@@ -8,7 +8,7 @@
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 using namespace tracing;
 
@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
     exit(1);
   }
 
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   TraceManagerApp trace_manager_app(config);
   loop.Run();
   return 0;

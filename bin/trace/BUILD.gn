@@ -45,7 +45,7 @@ source_set("trace_app") {
     "//apps/tracing/lib/trace_converters:chromium",
     "//apps/tracing/services",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 
   deps = [

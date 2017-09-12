@@ -11,7 +11,7 @@
 #include "apps/tracing/lib/trace/tests/cevent_unittest.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace tracing {
 namespace writer {
@@ -33,7 +33,7 @@ struct CEventTest : public ::testing::Test {
   }
 
  private:
-  mtl::MessageLoop loop_;
+  fsl::MessageLoop loop_;
   mx::eventpair control_;
 };
 

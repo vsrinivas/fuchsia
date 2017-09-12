@@ -9,7 +9,7 @@
 #include "apps/tracing/lib/trace/internal/fields.h"
 #include "apps/tracing/lib/trace/reader.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 using namespace tracing::internal;
 
@@ -54,7 +54,7 @@ void Tracer::Start(TraceOptionsPtr options,
   buffer_.reserve(kReadBufferSize);
   reader_.reset(new reader::TraceReader(record_consumer, error_handler));
 
-  handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
+  handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
       this, socket_.get(), MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED);
 }
 
@@ -119,7 +119,7 @@ void Tracer::DrainSocket() {
 
 void Tracer::CloseSocket() {
   if (socket_) {
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(handler_key_);
+    fsl::MessageLoop::GetCurrent()->RemoveHandler(handler_key_);
     socket_.reset();
   }
 }
@@ -133,7 +133,7 @@ void Tracer::Done() {
   CloseSocket();
 
   if (done_callback_) {
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
         std::move(done_callback_));
   }
 }

@@ -11,7 +11,7 @@ namespace tracing {
 Dump::Dump(mx::socket socket) : socket_(std::move(socket)) {}
 
 Dump::~Dump() {
-  // TODO(jeffbrown): Implement a custom streambuf in libmtl so we don't have
+  // TODO(jeffbrown): Implement a custom streambuf in libfsl so we don't have
   // to copy to a string just to interoperate with iostreams.  Should also
   // write in chunks if the output is too big for the socket's buffer.
   std::string content = out_.str();

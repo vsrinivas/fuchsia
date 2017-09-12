@@ -15,13 +15,13 @@
 #include "apps/tracing/services/trace_controller.fidl.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/tasks/message_loop_handler.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop_handler.h"
 
 namespace tracing {
 
 // Runs traces.
-class Tracer : private mtl::MessageLoopHandler {
+class Tracer : private fsl::MessageLoopHandler {
  public:
   using RecordConsumer = reader::RecordConsumer;
   using ErrorHandler = reader::ErrorHandler;
@@ -60,7 +60,7 @@ class Tracer : private mtl::MessageLoopHandler {
   fxl::Closure start_callback_;
   fxl::Closure done_callback_;
   mx::socket socket_;
-  mtl::MessageLoop::HandlerKey handler_key_;
+  fsl::MessageLoop::HandlerKey handler_key_;
   std::unique_ptr<reader::TraceReader> reader_;
   std::vector<uint8_t> buffer_;
   size_t buffer_end_ = 0u;

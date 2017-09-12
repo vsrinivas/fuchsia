@@ -17,12 +17,12 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/tasks/message_loop_handler.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop_handler.h"
 
 namespace tracing {
 
-class Tracee : private mtl::MessageLoopHandler {
+class Tracee : private fsl::MessageLoopHandler {
  public:
   using ProviderStartedCallback = std::function<void(bool)>;
 
@@ -69,7 +69,7 @@ class Tracee : private mtl::MessageLoopHandler {
  private:
   void TransitionToState(State new_state);
   void OnProviderStarted(bool success);
-  // |mtl::MessageLoopHandler|
+  // |fsl::MessageLoopHandler|
   void OnHandleReady(mx_handle_t handle,
                      mx_signals_t pending,
                      uint64_t count) override;
@@ -84,7 +84,7 @@ class Tracee : private mtl::MessageLoopHandler {
   mx::eventpair fence_;
   ProviderStartedCallback start_callback_;
   fxl::Closure stop_callback_;
-  mtl::MessageLoop::HandlerKey fence_handler_key_{};
+  fsl::MessageLoop::HandlerKey fence_handler_key_{};
 
   fxl::WeakPtrFactory<Tracee> weak_ptr_factory_;
   FXL_DISALLOW_COPY_AND_ASSIGN(Tracee);

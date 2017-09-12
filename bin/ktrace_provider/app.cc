@@ -17,7 +17,7 @@
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace ktrace_provider {
 namespace {
@@ -67,7 +67,7 @@ void IoctlKtraceStart(int fd, uint32_t group_mask) {
 
 App::App(const fxl::CommandLine& command_line)
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
-  trace_observer_.Start(mtl::MessageLoop::GetCurrent()->async(),
+  trace_observer_.Start(fsl::MessageLoop::GetCurrent()->async(),
                         [this] { UpdateState(); });
 }
 

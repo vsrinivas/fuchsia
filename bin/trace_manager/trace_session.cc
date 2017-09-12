@@ -7,7 +7,7 @@
 #include "apps/tracing/lib/trace/internal/fields.h"
 #include "apps/tracing/src/trace_manager/trace_session.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace tracing {
 
@@ -30,7 +30,7 @@ void TraceSession::WaitForProvidersToStart(fxl::Closure callback,
                                            fxl::TimeDelta timeout) {
   start_callback_ = std::move(callback);
   session_start_timeout_.Start(
-      mtl::MessageLoop::GetCurrent()->task_runner().get(),
+      fsl::MessageLoop::GetCurrent()->task_runner().get(),
       [weak = weak_ptr_factory_.GetWeakPtr()]() {
         if (weak) {
           FXL_LOG(WARNING) << "Waiting for start timed out.";
@@ -80,7 +80,7 @@ void TraceSession::Stop(fxl::Closure done_callback,
     tracee->Stop();
 
   session_finalize_timeout_.Start(
-      mtl::MessageLoop::GetCurrent()->task_runner().get(),
+      fsl::MessageLoop::GetCurrent()->task_runner().get(),
       [weak = weak_ptr_factory_.GetWeakPtr()]() {
         if (weak)
           weak->FinishSessionDueToTimeout();

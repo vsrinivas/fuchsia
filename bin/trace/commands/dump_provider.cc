@@ -11,7 +11,7 @@
 
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace tracing {
 namespace {
@@ -79,7 +79,7 @@ void DumpProvider::Run(const fxl::CommandLine& command_line) {
   }
   out() << std::endl;
 
-  mtl::MessageLoop::GetCurrent()->QuitNow();
+  fsl::MessageLoop::GetCurrent()->QuitNow();
 }
 
 }  // namespace tracing

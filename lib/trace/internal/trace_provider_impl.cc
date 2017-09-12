@@ -6,7 +6,7 @@
 
 #include "apps/tracing/lib/trace/writer.h"
 #include "lib/fxl/logging.h"
-#include "lib/mtl/handles/object_info.h"
+#include "lib/fsl/handles/object_info.h"
 
 namespace tracing {
 namespace internal {
@@ -22,7 +22,7 @@ TraceProviderImpl::TraceProviderImpl(TraceRegistryPtr registry,
 
   std::string label = settings.provider_label;
   if (label.empty())
-    label = mtl::GetCurrentProcessName();
+    label = fsl::GetCurrentProcessName();
 
   registry_->RegisterTraceProvider(std::move(provider),
                                    fidl::String::From(std::move(label)));

@@ -6,7 +6,7 @@
 
 #include "apps/tracing/src/trace/commands/list_providers.h"
 
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace tracing {
 
@@ -36,7 +36,7 @@ void ListProviders::Run(const fxl::CommandLine& command_line) {
           out() << "  #" << provider->id << ": '" << provider->label << "'"
                 << std::endl;
         }
-        mtl::MessageLoop::GetCurrent()->QuitNow();
+        fsl::MessageLoop::GetCurrent()->QuitNow();
       });
 }
 

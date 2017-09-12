@@ -69,7 +69,7 @@ source_set("writer") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 
   public_deps = [
@@ -96,7 +96,7 @@ source_set("provider") {
     "//garnet/public/lib/app/cpp",
     "//apps/tracing/services",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
   ]
 
   public_deps = [
@@ -156,7 +156,7 @@ source_set("unittests") {
     ":trace",
     ":types",
     "//apps/tracing/services",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/gtest",
     "//third_party/rapidjson",
   ]
@@ -171,7 +171,7 @@ executable("trace_stub_tests") {
 
   deps = [
     ":trace",
-    "//garnet/public/lib/mtl/test",
+    "//garnet/public/lib/fsl/test",
     "//third_party/gtest",
   ]
 }
@@ -185,7 +185,7 @@ executable("ctrace_stub_tests") {
 
   deps = [
     ":trace",
-    "//garnet/public/lib/mtl/test",
+    "//garnet/public/lib/fsl/test",
     "//third_party/gtest",
   ]
 }

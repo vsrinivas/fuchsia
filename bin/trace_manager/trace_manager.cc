@@ -7,7 +7,7 @@
 
 #include "apps/tracing/lib/trace/internal/fields.h"
 #include "apps/tracing/src/trace_manager/trace_manager.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 using namespace tracing::internal;
 

@@ -10,7 +10,7 @@
 #include "apps/tracing/lib/trace/writer.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace tracing {
 namespace writer {
@@ -32,7 +32,7 @@ struct CWriterTest : public ::testing::Test {
   }
 
  private:
-  mtl::MessageLoop loop_;
+  fsl::MessageLoop loop_;
   mx::eventpair control_;
 };
 
