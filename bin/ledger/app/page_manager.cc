@@ -23,7 +23,7 @@ PageManager::PageManager(
       page_sync_context_(std::move(page_sync_context)),
       merge_resolver_(std::move(merge_resolver)),
       sync_timeout_(sync_timeout),
-      weak_factory_(this) {
+      task_runner_(environment->main_runner()) {
   pages_.set_on_empty([this] { CheckEmpty(); });
   snapshots_.set_on_empty([this] { CheckEmpty(); });
 
@@ -36,13 +36,13 @@ PageManager::PageManager(
     if (state == PageManager::PageStorageState::NEW) {
       // The page storage was created locally. We wait a bit in order to get the
       // initial state from the network before accepting requests.
-      environment_->main_runner()->PostDelayedTask(
-          [weak_this = weak_factory_.GetWeakPtr()]() {
-            if (weak_this && !weak_this->sync_backlog_downloaded_) {
+      task_runner_.PostDelayedTask(
+          [this] {
+            if (!sync_backlog_downloaded_) {
               FXL_LOG(INFO) << "Initial sync will continue in background, "
                             << "in the meantime binding to local page data "
                             << "(might be stale or empty).";
-              weak_this->OnSyncBacklogDownloaded();
+              OnSyncBacklogDownloaded();
             }
           },
           sync_timeout_);

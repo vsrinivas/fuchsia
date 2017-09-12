@@ -10,6 +10,7 @@
 #include "apps/ledger/src/app/fidl/serialization_size.h"
 #include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/app/page_utils.h"
+#include "apps/ledger/src/callback/scoped_callback.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -266,22 +267,19 @@ BranchTracker::~BranchTracker() {
 }
 
 void BranchTracker::Init(std::function<void(Status)> on_done) {
-  storage_->GetHeadCommitIds([
-    weak_this = weak_factory_.GetWeakPtr(), on_done = std::move(on_done)
+  storage_->GetHeadCommitIds(callback::MakeScoped(weak_factory_.GetWeakPtr(), [
+    this, on_done = std::move(on_done)
   ](storage::Status status, std::vector<storage::CommitId> commit_ids) {
-    if (!weak_this) {
-      return;
-    }
     if (status != storage::Status::OK) {
       on_done(PageUtils::ConvertStatus(status));
       return;
     }
 
     FXL_DCHECK(!commit_ids.empty());
-    weak_this->InitCommitAndSetWatcher(std::move(commit_ids[0]));
+    InitCommitAndSetWatcher(std::move(commit_ids[0]));
 
     on_done(Status::OK);
-  });
+  }));
 }
 
 void BranchTracker::set_on_empty(fxl::Closure on_empty_callback) {

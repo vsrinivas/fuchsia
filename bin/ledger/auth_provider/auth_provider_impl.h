@@ -11,8 +11,8 @@
 
 #include "apps/ledger/src/auth_provider/auth_provider.h"
 #include "apps/ledger/src/backoff/backoff.h"
+#include "apps/ledger/src/callback/scoped_task_runner.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
-#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 
 namespace auth_provider {
@@ -50,13 +50,12 @@ class AuthProviderImpl : public AuthProvider {
   void GetToken(std::function<void(auth_provider::AuthStatus,
                                    modular::auth::FirebaseTokenPtr)> callback);
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   const std::string api_key_;
   modular::auth::TokenProviderPtr token_provider_;
   const std::unique_ptr<backoff::Backoff> backoff_;
 
   // Must be the last member field.
-  fxl::WeakPtrFactory<AuthProviderImpl> weak_factory_;
+  callback::ScopedTaskRunner task_runner_;
 };
 
 }  // namespace auth_provider

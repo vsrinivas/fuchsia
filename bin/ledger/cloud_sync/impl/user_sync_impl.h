@@ -12,12 +12,12 @@
 
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/callback/cancellable.h"
+#include "apps/ledger/src/callback/scoped_task_runner.h"
 #include "apps/ledger/src/cloud_sync/impl/aggregator.h"
 #include "apps/ledger/src/cloud_sync/impl/ledger_sync_impl.h"
 #include "apps/ledger/src/device_set/cloud_device_set_impl.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/firebase/firebase.h"
-#include "lib/fxl/memory/weak_ptr.h"
 
 namespace cloud_sync {
 
@@ -80,7 +80,7 @@ class UserSyncImpl : public UserSync {
   Aggregator aggregator_;
 
   // This must be the last member of this class.
-  fxl::WeakPtrFactory<UserSyncImpl> weak_ptr_factory_;
+  callback::ScopedTaskRunner task_runner_;
 };
 
 }  // namespace cloud_sync

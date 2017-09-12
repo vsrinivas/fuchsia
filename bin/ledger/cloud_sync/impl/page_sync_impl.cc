@@ -25,15 +25,14 @@ PageSyncImpl::PageSyncImpl(
     std::unique_ptr<backoff::Backoff> backoff,
     fxl::Closure on_error,
     std::unique_ptr<SyncStateWatcher> ledger_watcher)
-    : task_runner_(std::move(task_runner)),
-      storage_(storage),
+    : storage_(storage),
       cloud_provider_(cloud_provider),
       auth_provider_(auth_provider),
       backoff_(std::move(backoff)),
       on_error_(std::move(on_error)),
       log_prefix_("Page " + convert::ToHex(storage->GetId()) + " sync: "),
       ledger_watcher_(std::move(ledger_watcher)),
-      weak_factory_(this) {
+      task_runner_(std::move(task_runner)) {
   FXL_DCHECK(storage_);
   FXL_DCHECK(cloud_provider_);
   FXL_DCHECK(auth_provider_);
@@ -466,15 +465,12 @@ void PageSyncImpl::BacklogDownloaded() {
 }
 
 void PageSyncImpl::Retry(fxl::Closure callable) {
-  task_runner_->PostDelayedTask(
-      [
-        weak_this = weak_factory_.GetWeakPtr(), callable = std::move(callable)
-      ]() {
-        if (weak_this && !weak_this->errored_) {
-          callable();
-        }
-      },
-      backoff_->GetNext());
+  task_runner_.PostDelayedTask([ this, callable = std::move(callable) ]() {
+    if (!errored_) {
+      callable();
+    }
+  },
+                               backoff_->GetNext());
 }
 
 void PageSyncImpl::NotifyStateWatcher() {

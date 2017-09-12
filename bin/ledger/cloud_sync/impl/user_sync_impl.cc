@@ -32,7 +32,7 @@ UserSyncImpl::UserSyncImpl(ledger::Environment* environment,
       backoff_(std::move(backoff)),
       on_version_mismatch_(std::move(on_version_mismatch)),
       aggregator_(watcher),
-      weak_ptr_factory_(this) {
+      task_runner_(environment_->main_runner()) {
   FXL_DCHECK(on_version_mismatch_);
 }
 
@@ -156,13 +156,8 @@ void UserSyncImpl::HandleCheckCloudResult(
       return;
     case cloud_provider_firebase::CloudDeviceSet::Status::NETWORK_ERROR:
       // Retry after some backoff time.
-      environment_->main_runner()->PostDelayedTask(
-          [weak_this = weak_ptr_factory_.GetWeakPtr()] {
-            if (weak_this) {
-              weak_this->CheckCloudNotErased();
-            }
-          },
-          backoff_->GetNext());
+      task_runner_.PostDelayedTask([this] { CheckCloudNotErased(); },
+                                   backoff_->GetNext());
       return;
     case cloud_provider_firebase::CloudDeviceSet::Status::ERASED:
       // |this| can be deleted within on_version_mismatch_() - don't
@@ -197,13 +192,8 @@ void UserSyncImpl::HandleWatcherResult(
       backoff_->Reset();
       return;
     case cloud_provider_firebase::CloudDeviceSet::Status::NETWORK_ERROR:
-      environment_->main_runner()->PostDelayedTask(
-          [weak_this = weak_ptr_factory_.GetWeakPtr()] {
-            if (weak_this) {
-              weak_this->SetCloudErasedWatcher();
-            }
-          },
-          backoff_->GetNext());
+      task_runner_.PostDelayedTask([this] { SetCloudErasedWatcher(); },
+                                   backoff_->GetNext());
       return;
     case cloud_provider_firebase::CloudDeviceSet::Status::ERASED:
       // |this| can be deleted within on_version_mismatch_() - don't

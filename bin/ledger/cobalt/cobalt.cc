@@ -61,7 +61,13 @@ CobaltContext::~CobaltContext() {
 }
 
 void CobaltContext::ReportEvent(CobaltEvent event) {
-  task_runner_->PostTask([this, event]() { ReportEventOnMainThread(event); });
+  if (task_runner_->RunsTasksOnCurrentThread()) {
+    ReportEventOnMainThread(event);
+    return;
+  }
+
+  // Hop to the main thread, and go back to the global object dispatcher.
+  task_runner_->PostTask([event]() { ::ledger::ReportEvent(event); });
 }
 
 void CobaltContext::ConnectToCobaltApplication() {

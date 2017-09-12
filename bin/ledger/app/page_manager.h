@@ -13,6 +13,7 @@
 #include "apps/ledger/src/app/page_snapshot_impl.h"
 #include "apps/ledger/src/app/sync_watcher_set.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
+#include "apps/ledger/src/callback/scoped_task_runner.h"
 #include "apps/ledger/src/cloud_sync/public/ledger_sync.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/fidl_helpers/bound_interface.h"
@@ -20,7 +21,6 @@
 #include "apps/ledger/src/storage/public/page_sync_delegate.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/functional/closure.h"
-#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/time/time_delta.h"
 
 namespace ledger {
@@ -90,7 +90,7 @@ class PageManager {
   SyncWatcherSet watchers_;
 
   // Must be the last member field.
-  fxl::WeakPtrFactory<PageManager> weak_factory_;
+  callback::ScopedTaskRunner task_runner_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageManager);
 };

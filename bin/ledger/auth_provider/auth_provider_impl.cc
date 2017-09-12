@@ -16,11 +16,10 @@ AuthProviderImpl::AuthProviderImpl(
     std::string api_key,
     modular::auth::TokenProviderPtr token_provider,
     std::unique_ptr<backoff::Backoff> backoff)
-    : task_runner_(std::move(task_runner)),
-      api_key_(std::move(api_key)),
+    : api_key_(std::move(api_key)),
       token_provider_(std::move(token_provider)),
       backoff_(std::move(backoff)),
-      weak_factory_(this) {}
+      task_runner_(std::move(task_runner)) {}
 
 fxl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseToken(
     std::function<void(auth_provider::AuthStatus, std::string)> callback) {
@@ -62,14 +61,9 @@ void AuthProviderImpl::GetToken(
                 << "Error retrieving the Firebase token from token provider: "
                 << error->status << ", '" << error->message << "', retrying.";
           }
-          task_runner_->PostDelayedTask(
-              [
-                weak_this = weak_factory_.GetWeakPtr(),
-                callback = std::move(callback)
-              ]() mutable {
-                if (weak_this) {
-                  weak_this->GetToken(std::move(callback));
-                }
+          task_runner_.PostDelayedTask(
+              [ this, callback = std::move(callback) ]() mutable {
+                GetToken(std::move(callback));
               },
               backoff_->GetNext());
           return;

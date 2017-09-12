@@ -11,6 +11,7 @@
 #include "apps/ledger/src/auth_provider/auth_provider.h"
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/callback/cancellable.h"
+#include "apps/ledger/src/callback/scoped_task_runner.h"
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
 #include "apps/ledger/src/cloud_provider/public/commit_watcher.h"
 #include "apps/ledger/src/cloud_sync/impl/batch_download.h"
@@ -21,7 +22,6 @@
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/page_sync_delegate.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
 
@@ -151,7 +151,6 @@ class PageSyncImpl : public PageSync,
   void GetAuthToken(std::function<void(std::string)> on_token_ready,
                     fxl::Closure on_failed);
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   storage::PageStorage* const storage_;
   cloud_provider_firebase::CloudProvider* const cloud_provider_;
   auth_provider::AuthProvider* const auth_provider_;
@@ -196,8 +195,9 @@ class PageSyncImpl : public PageSync,
 
   // Pending auth token requests to be cancelled when this class goes away.
   callback::CancellableContainer auth_token_requests_;
+
   // Must be the last member field.
-  fxl::WeakPtrFactory<PageSyncImpl> weak_factory_;
+  callback::ScopedTaskRunner task_runner_;
 };
 
 }  // namespace cloud_sync

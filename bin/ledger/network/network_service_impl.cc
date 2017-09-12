@@ -161,9 +161,8 @@ class NetworkServiceImpl::RunningRequest {
 NetworkServiceImpl::NetworkServiceImpl(
     fxl::RefPtr<fxl::TaskRunner> task_runner,
     std::function<network::NetworkServicePtr()> network_service_factory)
-    : task_runner_(std::move(task_runner)),
-      network_service_factory_(std::move(network_service_factory)),
-      weak_factory_(this) {}
+    : network_service_factory_(std::move(network_service_factory)),
+      task_runner_(std::move(task_runner)) {}
 
 NetworkServiceImpl::~NetworkServiceImpl() {}
 
@@ -197,13 +196,8 @@ network::NetworkService* NetworkServiceImpl::GetNetworkService() {
         request.SetNetworkService(nullptr);
       }
       network_service_.reset();
-      task_runner_->PostDelayedTask(
-          [weak_this = weak_factory_.GetWeakPtr()]() {
-            if (weak_this) {
-              weak_this->RetryGetNetworkService();
-            }
-          },
-          backoff_.GetNext());
+      task_runner_.PostDelayedTask([this] { RetryGetNetworkService(); },
+                                   backoff_.GetNext());
     });
   }
 

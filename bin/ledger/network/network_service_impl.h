@@ -7,8 +7,8 @@
 
 #include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
+#include "apps/ledger/src/callback/scoped_task_runner.h"
 #include "apps/ledger/src/network/network_service.h"
-#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/network/fidl/network_service.fidl.h"
 
@@ -32,7 +32,6 @@ class NetworkServiceImpl : public NetworkService {
 
   void RetryGetNetworkService();
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   backoff::ExponentialBackoff backoff_;
   bool in_backoff_ = false;
   std::function<network::NetworkServicePtr()> network_service_factory_;
@@ -40,7 +39,7 @@ class NetworkServiceImpl : public NetworkService {
   callback::AutoCleanableSet<RunningRequest> running_requests_;
 
   // Must be the last member field.
-  fxl::WeakPtrFactory<NetworkServiceImpl> weak_factory_;
+  callback::ScopedTaskRunner task_runner_;
 };
 
 }  // namespace ledger
