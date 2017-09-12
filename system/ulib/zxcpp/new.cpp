@@ -11,6 +11,9 @@
 // overloads, but userspace can have them.
 #if !_KERNEL
 void* operator new(size_t s) {
+    if (s == 0u) {
+        s = 1u;
+    }
     auto mem = ::malloc(s);
     if (!mem) {
         ZX_PANIC("Out of memory (new)\n");
@@ -19,6 +22,9 @@ void* operator new(size_t s) {
 }
 
 void* operator new[](size_t s) {
+    if (s == 0u) {
+        s = 1u;
+    }
     auto mem = ::malloc(s);
     if (!mem) {
         ZX_PANIC("Out of memory (new[])\n");
@@ -28,10 +34,16 @@ void* operator new[](size_t s) {
 #endif // !_KERNEL
 
 void* operator new(size_t s, const std::nothrow_t&) noexcept {
+    if (s == 0u) {
+        s = 1u;
+    }
     return ::malloc(s);
 }
 
 void* operator new[](size_t s, const std::nothrow_t&) noexcept {
+    if (s == 0u) {
+        s = 1u;
+    }
     return ::malloc(s);
 }
 
