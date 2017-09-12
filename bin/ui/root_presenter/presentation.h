@@ -8,17 +8,17 @@
 #include <map>
 #include <memory>
 
-#include "lib/ui/input/device_state.h"
-#include "lib/ui/input/input_device_impl.h"
-#include "lib/ui/scenic/client/resources.h"
-#include "lib/ui/geometry/fidl/geometry.fidl.h"
-#include "lib/ui/input/fidl/input_dispatcher.fidl.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
-#include "lib/ui/views/fidl/views.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
+#include "lib/ui/geometry/fidl/geometry.fidl.h"
+#include "lib/ui/input/device_state.h"
+#include "lib/ui/input/fidl/input_dispatcher.fidl.h"
+#include "lib/ui/input/input_device_impl.h"
+#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/views/fidl/view_manager.fidl.h"
+#include "lib/ui/views/fidl/views.fidl.h"
 
 namespace root_presenter {
 
@@ -80,7 +80,15 @@ class Presentation : private mozart::ViewTreeListener,
   void PresentScene();
   void Shutdown();
 
-  void StartAnimation();
+  // Handle the Alt-PrtSc hotkey.  This cycles through the following modes:
+  // 1) default UI behavior
+  // 2) disable clipping
+  // 3) disable clipping + zoomed out perspective view w/ trackball
+  // ... and then back to 1).
+  //
+  // In mode 3), dragging along the bottom 10% of the screen causes the camera
+  // to pan/rotate around the stage.
+  void HandleAltPrtSc();
   bool UpdateAnimation(uint64_t presentation_time);
 
   mozart::ViewManager* const view_manager_;
@@ -124,9 +132,25 @@ class Presentation : private mozart::ViewTreeListener,
   mozart::ViewContainerPtr root_container_;
   mozart::InputDispatcherPtr input_dispatcher_;
 
-  bool is_animating_ = false;
-  bool use_perspective_ = false;
+  enum AnimationState {
+    kDefault,
+    kNoClipping,
+    kCameraMovingAway,
+    kCameraReturning,
+    kTrackball,
+  };
+  AnimationState animation_state_ = kDefault;
+
+  // Presentation time at which this presentation last entered either
+  // kCameraMovingAway or kCameraReturning state.
   uint64_t animation_start_time_ = 0;
+
+  // State related to managing camera panning in "trackball" mode.
+  bool trackball_pointer_down_ = false;
+  uint32_t trackball_device_id_ = 0;
+  uint32_t trackball_pointer_id_ = 0;
+  float trackball_previous_x_ = 0.f;
+  float camera_pan_ = 0.f;
 
   struct CursorState {
     bool created;

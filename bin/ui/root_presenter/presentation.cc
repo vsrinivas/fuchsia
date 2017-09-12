@@ -20,10 +20,10 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "lib/app/cpp/connect.h"
-#include "lib/ui/input/cpp/formatting.h"
-#include "lib/ui/views/cpp/formatting.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
+#include "lib/ui/input/cpp/formatting.h"
+#include "lib/ui/views/cpp/formatting.h"
 
 namespace root_presenter {
 namespace {
@@ -267,13 +267,51 @@ void Presentation::OnEvent(mozart::InputEventPtr event) {
         }
       }
     }
+
+    if (animation_state_ == kTrackball) {
+      if (pointer->phase == mozart::PointerEvent::Phase::ADD) {
+        // If we're not already panning/rotating the camera, then start, but
+        // only if the touch-down is in the bottom 10% of the screen.
+        if (!trackball_pointer_down_ && pointer->y > 0.9f * logical_height_) {
+          trackball_pointer_down_ = true;
+          trackball_device_id_ = pointer->device_id;
+          trackball_pointer_id_ = pointer->pointer_id;
+          trackball_previous_x_ = pointer->x;
+        }
+      } else if (pointer->phase == mozart::PointerEvent::Phase::MOVE) {
+        // If the moved pointer is the one that is currently panning/rotating
+        // the camera, then update the camera position.
+        if (trackball_pointer_down_ &&
+            trackball_device_id_ == pointer->device_id &&
+            trackball_device_id_ == pointer->device_id) {
+          float pan_rate = -2.5f / logical_width_;
+          float pan_change = pan_rate * (pointer->x - trackball_previous_x_);
+          trackball_previous_x_ = pointer->x;
+
+          camera_pan_ += pan_change;
+          if (camera_pan_ < -1.f) {
+            camera_pan_ = -1.f;
+          } else if (camera_pan_ > 1.f) {
+            camera_pan_ = 1.f;
+          }
+        }
+      } else if (pointer->phase == mozart::PointerEvent::Phase::UP) {
+        // The pointer was released.
+        if (trackball_pointer_down_ &&
+            trackball_device_id_ == pointer->device_id &&
+            trackball_device_id_ == pointer->device_id) {
+          trackball_pointer_down_ = false;
+        }
+      }
+    }
   } else if (event->is_keyboard()) {
     // Alt-PrtSc toggles between perspective and orthographic view of the stage.
     const mozart::KeyboardEventPtr& kbd = event->get_keyboard();
     if ((kbd->modifiers & mozart::kModifierAlt) &&
         kbd->phase == mozart::KeyboardEvent::Phase::PRESSED &&
-        kbd->code_point == 0 && kbd->hid_usage == 70) {
-      StartAnimation();
+        kbd->code_point == 0 && kbd->hid_usage == 70 &&
+        !trackball_pointer_down_) {
+      HandleAltPrtSc();
       invalidate = true;
     }
   }
@@ -286,37 +324,41 @@ void Presentation::OnEvent(mozart::InputEventPtr event) {
     input_dispatcher_->DispatchEvent(std::move(event));
 }
 
-void Presentation::StartAnimation() {
-  if (is_animating_)
-    return;
+void Presentation::HandleAltPrtSc() {
+  switch (animation_state_) {
+    case kDefault:
+      animation_state_ = kNoClipping;
+      renderer_.SetDisableClipping(true);
+      break;
+    case kNoClipping:
+      animation_state_ = kCameraMovingAway;
+      break;
+    case kTrackball:
+      animation_state_ = kCameraReturning;
+      break;
+    case kCameraMovingAway:
+    case kCameraReturning:
+      return;
+  }
 
   animation_start_time_ = mx_time_get(MX_CLOCK_MONOTONIC);
-  is_animating_ = true;
-  use_perspective_ = !use_perspective_;
   UpdateAnimation(animation_start_time_);
 }
 
 bool Presentation::UpdateAnimation(uint64_t presentation_time) {
-  if (!is_animating_) {
+  if (animation_state_ == kDefault || animation_state_ == kNoClipping) {
     return false;
   }
 
   const float half_width = logical_width_ * device_pixel_ratio_ * 0.5f;
   const float half_height = logical_height_ * device_pixel_ratio_ * 0.5f;
-  // TODO: kOrthoEyeDist and the values in |eye_end| below are somewhat
-  // dependent on the screen size, but also the depth of the stage's viewing
-  // volume (currently hardcoded in the SceneManager implementation to 1000, and
-  // not available outside).  Since this is a demo feature, it seems OK for now.
-  constexpr float kOrthoEyeDist = 60000;
-  const float fovy = 2.f * atan(half_height / kOrthoEyeDist);
-  glm::vec3 eye_start(half_width, half_height, kOrthoEyeDist);
-  glm::vec3 eye_mid(half_width, half_height, 1.3f * kOrthoEyeDist);
-  glm::vec3 eye_end(-0.2f * kOrthoEyeDist, 2.f * kOrthoEyeDist,
-                    1.5f * kOrthoEyeDist);
 
   // Always look at the middle of the stage.
   float target[3] = {half_width, half_height, 0};
-  float up[3] = {0, 1, 0};
+
+  glm::vec3 glm_up(0, 0.1, -0.9);
+  glm_up = glm::normalize(glm_up);
+  float up[3] = {glm_up[0], glm_up[1], glm_up[2]};
 
   double secs = static_cast<double>(presentation_time - animation_start_time_) /
                 1'000'000'000;
@@ -324,19 +366,51 @@ bool Presentation::UpdateAnimation(uint64_t presentation_time) {
   float param = secs / kAnimationDuration;
   if (param >= 1.f) {
     param = 1.f;
-    is_animating_ = false;
+    switch (animation_state_) {
+      case kDefault:
+      case kNoClipping:
+        FXL_DCHECK(false);
+        return false;
+      case kCameraMovingAway:
+        animation_state_ = kTrackball;
+        break;
+      case kCameraReturning: {
+        animation_state_ = kDefault;
 
-    if (!use_perspective_) {
-      // Switch back to ortho view.
-      float ortho_eye[3] = {half_width, half_height, 1100.f};
-      camera_.SetProjection(ortho_eye, target, up, 0.f);
-      return true;
+        // Switch back to ortho view, and re-enable clipping.
+        float ortho_eye[3] = {half_width, half_height, 1100.f};
+        camera_.SetProjection(ortho_eye, target, up, 0.f);
+        renderer_.SetDisableClipping(false);
+        return true;
+      }
+      case kTrackball:
+        break;
     }
   }
-  if (!use_perspective_) {
+  if (animation_state_ == kCameraReturning) {
     param = 1.f - param;  // Animating back to regular position.
   }
   param = glm::smoothstep(0.f, 1.f, param);
+
+  // TODO: kOrthoEyeDist and the values in |eye_end| below are somewhat
+  // dependent on the screen size, but also the depth of the stage's viewing
+  // volume (currently hardcoded in the SceneManager implementation to 1000, and
+  // not available outside).  Since this is a demo feature, it seems OK for now.
+  constexpr float kOrthoEyeDist = 60000;
+  const float fovy = 2.f * atan(half_height / kOrthoEyeDist);
+  glm::vec3 eye_start(half_width, half_height, kOrthoEyeDist);
+
+  constexpr float kEyePanRadius = 1.01f * kOrthoEyeDist;
+  constexpr float kMaxPanAngle = 3.14159 / 4;
+  float eye_end_x =
+      sin(camera_pan_ * kMaxPanAngle) * kEyePanRadius + half_width;
+  float eye_end_y =
+      cos(camera_pan_ * kMaxPanAngle) * kEyePanRadius + half_height;
+
+  glm::vec3 eye_end(eye_end_x, eye_end_y, 0.75f * kOrthoEyeDist);
+
+  glm::vec3 eye_mid = glm::mix(eye_start, eye_end, 0.4f);
+  eye_mid.z = 1.5f * kOrthoEyeDist;
 
   // Quadratic bezier.
   glm::vec3 eye = glm::mix(glm::mix(eye_start, eye_mid, param),
