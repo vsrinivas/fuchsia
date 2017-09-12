@@ -93,9 +93,9 @@ void View::OnSceneInvalidated(scenic::PresentationInfoPtr presentation_info) {
     // Each node has a slightly different speed.
     float animation_progress = seconds * (32 + i) / 32.f;
     nodes_[i].SetTranslation(
-        kHalfWidth + sin(animation_progress * 0.8) * kHalfWidth * 0.8,
-        kHalfHeight + sin(animation_progress * 0.6) * kHalfHeight * 0.9,
-        2.0 + i);
+        kHalfWidth + sin(animation_progress * 0.8) * kHalfWidth * 1.1,
+        kHalfHeight + sin(animation_progress * 0.6) * kHalfHeight * 1.2,
+        50.0 + i);
   }
 
   // The rounded-rectangles are constantly animating; invoke InvalidateScene()
