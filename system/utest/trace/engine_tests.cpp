@@ -6,11 +6,11 @@
 
 #include <threads.h>
 
-#include <mx/event.h>
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
+#include <mx/event.h>
 #include <trace-engine/instrumentation.h>
 
 namespace {
@@ -359,6 +359,34 @@ bool test_maximum_record_length() {
     END_TRACE_TEST;
 }
 
+bool test_event_with_inline_everything() {
+    BEGIN_TRACE_TEST;
+
+    fixture_start_tracing();
+
+    trace_string_ref_t cat = trace_make_inline_c_string_ref("cat");
+    trace_string_ref_t name = trace_make_inline_c_string_ref("name");
+    trace_thread_ref_t thread = trace_make_inline_thread_ref(123, 456);
+    trace_arg_t args[] = {
+        trace_make_arg(trace_make_inline_c_string_ref("argname"),
+                       trace_make_string_arg_value(trace_make_inline_c_string_ref("argvalue")))};
+
+    {
+        auto context = trace::TraceContext::Acquire();
+
+        trace_context_write_instant_event_record(context.get(), mx_ticks_get(),
+                                                 &thread, &cat, &name,
+                                                 TRACE_SCOPE_GLOBAL,
+                                                 args, fbl::count_of(args));
+    }
+
+    ASSERT_RECORDS(R"X(Event(ts: <>, pt: <>, category: "cat", name: "name", Instant(scope: global), {argname: string("argvalue")})
+)X",
+                   "");
+
+    END_TRACE_TEST;
+}
+
 // NOTE: The functions for writing trace records are exercised by other trace tests.
 
 } // namespace
@@ -377,4 +405,5 @@ RUN_TEST(test_register_string_literal)
 RUN_TEST(test_register_string_literal_multiple_threads)
 RUN_TEST(test_register_string_literal_table_overflow)
 RUN_TEST(test_maximum_record_length)
+RUN_TEST(test_event_with_inline_everything)
 END_TEST_CASE(engine_tests)

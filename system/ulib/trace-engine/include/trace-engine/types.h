@@ -90,7 +90,7 @@ inline bool trace_is_indexed_string_ref(const trace_string_ref_t* string_ref) {
 // Returns the length of an inline string.
 // Only valid for inline strings.
 inline size_t trace_inline_string_ref_length(const trace_string_ref_t* string_ref) {
-    return string_ref->encoded_value & ~TRACE_ENCODED_STRING_REF_INLINE_FLAG;
+    return string_ref->encoded_value & TRACE_ENCODED_STRING_REF_LENGTH_MASK;
 }
 
 // Makes an empty string ref.

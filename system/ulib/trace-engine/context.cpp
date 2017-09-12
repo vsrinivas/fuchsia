@@ -7,12 +7,12 @@
 #include <magenta/compiler.h>
 #include <magenta/syscalls.h>
 
-#include <mx/process.h>
-#include <mx/thread.h>
 #include <fbl/algorithm.h>
 #include <fbl/atomic.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/unique_ptr.h>
+#include <mx/process.h>
+#include <mx/thread.h>
 #include <trace-engine/fields.h>
 
 namespace trace {
@@ -169,7 +169,7 @@ inline constexpr uint64_t MakeArgumentHeader(ArgumentType type, size_t size,
 
 size_t SizeOfEncodedStringRef(const trace_string_ref_t* string_ref) {
     return trace_is_inline_string_ref(string_ref)
-               ? Pad(string_ref->encoded_value & TRACE_ENCODED_STRING_REF_LENGTH_MASK)
+               ? Pad(trace_inline_string_ref_length(string_ref))
                : 0u;
 }
 
@@ -277,41 +277,41 @@ public:
     Payload& WriteArg(const trace_arg_t* arg) {
         switch (arg->value.type) {
         case TRACE_ARG_NULL:
-            WriteArgumentHeader(ArgumentType::kNull, &arg->name_ref, 0u, 0u);
+            WriteArgumentHeaderAndName(ArgumentType::kNull, &arg->name_ref, 0u, 0u);
             break;
         case TRACE_ARG_INT32:
-            WriteArgumentHeader(ArgumentType::kInt32, &arg->name_ref, 0u,
-                                Int32ArgumentFields::Value::Make(arg->value.int32_value));
+            WriteArgumentHeaderAndName(ArgumentType::kInt32, &arg->name_ref, 0u,
+                                       Int32ArgumentFields::Value::Make(arg->value.int32_value));
             break;
         case TRACE_ARG_UINT32:
-            WriteArgumentHeader(ArgumentType::kUint32, &arg->name_ref, 0u,
-                                Uint32ArgumentFields::Value::Make(arg->value.uint32_value));
+            WriteArgumentHeaderAndName(ArgumentType::kUint32, &arg->name_ref, 0u,
+                                       Uint32ArgumentFields::Value::Make(arg->value.uint32_value));
             break;
         case TRACE_ARG_INT64:
-            WriteArgumentHeader(ArgumentType::kInt64, &arg->name_ref, WordsToBytes(1), 0u);
+            WriteArgumentHeaderAndName(ArgumentType::kInt64, &arg->name_ref, WordsToBytes(1), 0u);
             WriteInt64(arg->value.int64_value);
             break;
         case TRACE_ARG_UINT64:
-            WriteArgumentHeader(ArgumentType::kUint64, &arg->name_ref, WordsToBytes(1), 0u);
+            WriteArgumentHeaderAndName(ArgumentType::kUint64, &arg->name_ref, WordsToBytes(1), 0u);
             WriteUint64(arg->value.uint64_value);
             break;
         case TRACE_ARG_DOUBLE:
-            WriteArgumentHeader(ArgumentType::kDouble, &arg->name_ref, WordsToBytes(1), 0u);
+            WriteArgumentHeaderAndName(ArgumentType::kDouble, &arg->name_ref, WordsToBytes(1), 0u);
             WriteDouble(arg->value.double_value);
             break;
         case TRACE_ARG_STRING:
-            WriteArgumentHeader(ArgumentType::kString, &arg->name_ref,
-                                SizeOfEncodedStringRef(&arg->value.string_value_ref),
-                                StringArgumentFields::Index::Make(
-                                    arg->value.string_value_ref.encoded_value));
+            WriteArgumentHeaderAndName(ArgumentType::kString, &arg->name_ref,
+                                       SizeOfEncodedStringRef(&arg->value.string_value_ref),
+                                       StringArgumentFields::Index::Make(
+                                           arg->value.string_value_ref.encoded_value));
             WriteStringRef(&arg->value.string_value_ref);
             break;
         case TRACE_ARG_POINTER:
-            WriteArgumentHeader(ArgumentType::kPointer, &arg->name_ref, WordsToBytes(1), 0u);
+            WriteArgumentHeaderAndName(ArgumentType::kPointer, &arg->name_ref, WordsToBytes(1), 0u);
             WriteUint64(arg->value.pointer_value);
             break;
         case TRACE_ARG_KOID:
-            WriteArgumentHeader(ArgumentType::kKoid, &arg->name_ref, WordsToBytes(1), 0u);
+            WriteArgumentHeaderAndName(ArgumentType::kKoid, &arg->name_ref, WordsToBytes(1), 0u);
             WriteUint64(arg->value.koid_value);
             break;
         default:
@@ -329,14 +329,15 @@ public:
     }
 
 private:
-    void WriteArgumentHeader(ArgumentType type,
-                             const trace_string_ref_t* name_ref,
-                             size_t content_size,
-                             uint64_t header_bits) {
+    void WriteArgumentHeaderAndName(ArgumentType type,
+                                    const trace_string_ref_t* name_ref,
+                                    size_t content_size,
+                                    uint64_t header_bits) {
         const size_t argument_size = sizeof(ArgumentHeader) +
                                      SizeOfEncodedStringRef(name_ref) +
                                      content_size;
         WriteUint64(MakeArgumentHeader(type, argument_size, name_ref) | header_bits);
+        WriteStringRef(name_ref);
     }
 
     uint64_t* ptr_;
