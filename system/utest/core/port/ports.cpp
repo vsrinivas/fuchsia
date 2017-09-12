@@ -511,7 +511,7 @@ static bool threads_event(uint32_t wait_mode) {
     test_context ctx[3];
     for (size_t ix = 0; ix != fbl::count_of(threads); ++ix) {
         // |count| is one so each thread is going to pick one packet each
-        // and exit. See bug MG-648 for the case this is testing.
+        // and exit. See bug ZX-648 for the case this is testing.
         ctx[ix] = { port, 1u };
 
         EXPECT_EQ(zx_object_wait_async(

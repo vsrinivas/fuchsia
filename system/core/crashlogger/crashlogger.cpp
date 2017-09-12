@@ -228,7 +228,7 @@ void resume_thread_from_exception(zx_handle_t thread,
     }
 
     // For now, we turn policy exceptions into non-fatal warnings, by
-    // resuming the thread when these exceptions occur.  TODO(MG-922):
+    // resuming the thread when these exceptions occur.  TODO(ZX-922):
     // Remove this and make these exceptions fatal after the system has
     // received some amount of testing with ZX_POL_BAD_HANDLE enabled as a
     // warning.
@@ -346,7 +346,7 @@ void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwin
     printf("arch: %s\n", arch);
     backtrace(process, thread, pc, sp, fp, use_libunwind);
 
-    // TODO(MG-588): Print a backtrace of all other threads in the process.
+    // TODO(ZX-588): Print a backtrace of all other threads in the process.
 
 #ifdef __x86_64__
     if (pt_dump_enabled) {
@@ -401,7 +401,7 @@ int self_dump_func(void* arg) {
     // Try to print a dump of it before we shutdown.
 
     // Disable system exception handling ASAP: If we get another exception
-    // we're hosed. This is also a workaround to MG-307.
+    // we're hosed. This is also a workaround to ZX-307.
     auto unbind_status = unbind_system_exception_port();
 
     // Also, before we do anything else, "resume" the original crashing thread.

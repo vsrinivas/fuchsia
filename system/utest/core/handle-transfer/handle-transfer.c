@@ -111,7 +111,7 @@ thread_exit:
 //   A thread is created that sends A0 from B1 to B0.
 //   main() waits on A0.
 //   The thread then reads from B0, which should cancel the wait in main().
-// See [MG-103].
+// See [ZX-103].
 bool handle_transfer_cancel_wait_test(void) {
     BEGIN_TEST;
     zx_handle_t A[4];

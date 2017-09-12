@@ -121,7 +121,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
             return up->IsHandleValid(handle) ?  ZX_OK : ZX_ERR_BAD_HANDLE;
         }
         case ZX_INFO_HANDLE_BASIC: {
-            // TODO(MG-458): Handle forward/backward compatibility issues
+            // TODO(ZX-458): Handle forward/backward compatibility issues
             // with changes to the struct.
 
             fbl::RefPtr<Dispatcher> dispatcher;
@@ -145,7 +145,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
                 _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
         }
         case ZX_INFO_PROCESS: {
-            // TODO(MG-458): Handle forward/backward compatibility issues
+            // TODO(ZX-458): Handle forward/backward compatibility issues
             // with changes to the struct.
 
             // grab a reference to the dispatcher
@@ -221,7 +221,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
             return ZX_OK;
         }
         case ZX_INFO_THREAD: {
-            // TODO(MG-458): Handle forward/backward compatibility issues
+            // TODO(ZX-458): Handle forward/backward compatibility issues
             // with changes to the struct.
 
             // grab a reference to the dispatcher
@@ -241,7 +241,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
                 _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
         }
         case ZX_INFO_THREAD_EXCEPTION_REPORT: {
-            // TODO(MG-458): Handle forward/backward compatibility issues
+            // TODO(ZX-458): Handle forward/backward compatibility issues
             // with changes to the struct.
 
             // grab a reference to the dispatcher
@@ -261,7 +261,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
                 _buffer, buffer_size, _actual, _avail, &report, sizeof(report));
         }
         case ZX_INFO_THREAD_STATS: {
-            // TODO(MG-458): Handle forward/backward compatibility issues
+            // TODO(ZX-458): Handle forward/backward compatibility issues
             // with changes to the struct.
 
             // grab a reference to the dispatcher
@@ -281,7 +281,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
                 _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
         }
         case ZX_INFO_TASK_STATS: {
-            // TODO(MG-458): Handle forward/backward compatibility issues
+            // TODO(ZX-458): Handle forward/backward compatibility issues
             // with changes to the struct.
 
             // Grab a reference to the dispatcher. Only supports processes for

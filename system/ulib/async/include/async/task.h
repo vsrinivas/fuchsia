@@ -73,7 +73,7 @@ struct async_task {
 //
 // See also |zx_deadline_after()|.
 //
-// TODO(MG-976): Strict serial ordering of task dispatch isn't always needed.
+// TODO(ZX-976): Strict serial ordering of task dispatch isn't always needed.
 // We should consider adding support for multiple independent task queues or
 // similar mechanisms.
 inline zx_status_t async_post_task(async_t* async, async_task_t* task) {

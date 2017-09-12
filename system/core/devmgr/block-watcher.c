@@ -59,7 +59,7 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
                 return ZX_ERR_ALREADY_BOUND;
             }
 
-            // TODO(MG-1008): replace getenv with cmdline_bool("zircon.system.writable", false);
+            // TODO(ZX-1008): replace getenv with cmdline_bool("zircon.system.writable", false);
             options->readonly = getenv("zircon.system.writable") == NULL;
             options->wait_until_ready = true;
             options->create_mountpoint = true;

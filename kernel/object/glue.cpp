@@ -437,7 +437,7 @@ static void oom_lowmem(size_t shortfall_bytes) {
                    job_printer.num_processes(), job_printer.num_jobs());
             // TODO(dbort): Join on dying processes/jobs to make sure we've
             // freed memory before returning control to the OOM thread?
-            // TODO(MG-961): 'kill -9' these processes (which will require new
+            // TODO(ZX-961): 'kill -9' these processes (which will require new
             // ProcessDispatcher features) so we can reclaim the memory of
             // processes that are stuck in a debugger or in the crashlogger.
             job->Kill();

@@ -341,7 +341,7 @@ void netifc_poll(void) {
 
     if (eth_buffers_avail < num_eth_buffers) {
         // Only check for completion if we have operations in progress.
-        // Otherwise, the result of GetStatus is unreliable. See MG-759.
+        // Otherwise, the result of GetStatus is unreliable. See ZX-759.
         if ((r = snp->GetStatus(snp, &irq, &txdone))) {
             return;
         }

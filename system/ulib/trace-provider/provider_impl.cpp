@@ -244,7 +244,7 @@ trace_provider_t* trace_provider_create(async_t* async) {
         return nullptr;
 
     // Invoke TraceRegistry::RegisterTraceProvider(TraceProvider provider, string? label)
-    // TODO(MG-1036): We currently set the label to null.  Once tracing fully migrates
+    // TODO(ZX-1036): We currently set the label to null.  Once tracing fully migrates
     // to Zircon and we publish the provider via the hub we will no longer need to
     // specify a label at all since we will be able to identify providers based on their
     // path within the hub's directory structure.

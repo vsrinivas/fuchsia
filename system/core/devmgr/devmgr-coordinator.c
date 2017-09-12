@@ -1423,7 +1423,7 @@ void coordinator(void) {
         log_flags |= LOG_DEVLC;
     }
 
-// TODO(MG-1074): Conditionally initialize ACPI if it is present.
+// TODO(ZX-1074): Conditionally initialize ACPI if it is present.
 #if defined(__x86_64__)
     acpi_init();
 #endif

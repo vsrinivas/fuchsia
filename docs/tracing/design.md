@@ -229,7 +229,7 @@ that trace provider will stop recording events but other trace providers will
 continue to record trace events into their own buffers as usual until the
 trace stops as usual.  This may result in a partially incomplete trace.
 
-TODO(MG-1107): Improve buffering behavior to support continuous tracing.
+TODO(ZX-1107): Improve buffering behavior to support continuous tracing.
 
 When tracing finishes, the trace manager asks all of the active trace providers
 to stop tracing then waits a short time for them to acknowledge that they

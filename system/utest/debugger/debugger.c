@@ -540,7 +540,7 @@ static bool write_text_segment(void)
 
     zx_handle_t self = zx_process_self();
 
-    // Exercise MG-739
+    // Exercise ZX-739
     // Pretend we're writing a s/w breakpoint to the start of this function.
 
     // write_text_segment_helper is suitably aligned, add 1 to ensure the

@@ -44,7 +44,7 @@ zx_status_t JitterentropyCollector::GetInstance(Collector** ptr) {
             instance = nullptr;
         } else {
             // TODO(andrewkrieger): after optimizing jitterentropy parameters
-            // (see MG-1022), replace JITTERENTROPY_MEM_SIZE by the optimal
+            // (see ZX-1022), replace JITTERENTROPY_MEM_SIZE by the optimal
             // size.
             static uint8_t mem[JITTERENTROPY_MEM_SIZE];
             static JitterentropyCollector collector(mem, sizeof(mem));
@@ -62,7 +62,7 @@ zx_status_t JitterentropyCollector::GetInstance(Collector** ptr) {
     }
 }
 
-// TODO(MG-1024): Test jitterentropy in different environments (especially on
+// TODO(ZX-1024): Test jitterentropy in different environments (especially on
 // different platforms/architectures, and in multi-threaded mode). Ensure
 // entropy estimate is safe enough.
 
@@ -73,7 +73,7 @@ zx_status_t JitterentropyCollector::GetInstance(Collector** ptr) {
 // bytes of random data.
 JitterentropyCollector::JitterentropyCollector(uint8_t* mem, size_t len)
     : Collector("jitterentropy", /* entropy_per_1000_bytes */ 450) {
-    // TODO(MG-1022): optimize default jitterentropy parameters, then update
+    // TODO(ZX-1022): optimize default jitterentropy parameters, then update
     // values here and in docs/kernel_cmdline.md.
     uint32_t bs = cmdline_get_uint32("kernel.jitterentropy.bs", 64);
     uint32_t bc = cmdline_get_uint32("kernel.jitterentropy.bc", 512);
@@ -86,7 +86,7 @@ JitterentropyCollector::JitterentropyCollector(uint8_t* mem, size_t len)
 }
 
 size_t JitterentropyCollector::DrawEntropy(uint8_t* buf, size_t len) {
-    // TODO(MG-1024): Test jitterentropy in multi-CPU environment. Disable
+    // TODO(ZX-1024): Test jitterentropy in multi-CPU environment. Disable
     // interrupts, or otherwise ensure that jitterentropy still performs well in
     // multi-threaded systems.
     fbl::AutoLock guard(&lock_);

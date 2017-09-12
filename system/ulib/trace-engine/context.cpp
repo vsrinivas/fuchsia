@@ -174,7 +174,7 @@ size_t SizeOfEncodedStringRef(const trace_string_ref_t* string_ref) {
 }
 
 size_t SizeOfEncodedThreadRef(const trace_thread_ref_t* thread_ref) {
-    // TODO(MG-1030): Unknown thread refs should not be stored inline.
+    // TODO(ZX-1030): Unknown thread refs should not be stored inline.
     return trace_is_inline_thread_ref(thread_ref) || trace_is_unknown_thread_ref(thread_ref)
                ? WordsToBytes(2)
                : 0u;
@@ -266,7 +266,7 @@ public:
     }
 
     Payload& WriteThreadRef(const trace_thread_ref_t* thread_ref) {
-        // TODO(MG-1030): Unknown thread refs should not be stored inline.
+        // TODO(ZX-1030): Unknown thread refs should not be stored inline.
         if (trace_is_inline_thread_ref(thread_ref) || trace_is_unknown_thread_ref(thread_ref)) {
             WriteUint64(thread_ref->inline_process_koid);
             WriteUint64(thread_ref->inline_thread_koid);
@@ -431,7 +431,7 @@ bool RegisterString(trace_context_t* context,
     }
 
     // Slow path.
-    // TODO(MG-1035): Since we can't use the thread-local cache here, cache
+    // TODO(ZX-1035): Since we can't use the thread-local cache here, cache
     // this registered string on the trace context structure, guarded by a mutex.
     // Make sure to assign it a string index if possible instead of inlining.
     if (check_category && !CheckCategory(context, string_literal)) {
@@ -456,7 +456,7 @@ void trace_context_register_string_copy(
     trace_context_t* context,
     const char* string, size_t length,
     trace_string_ref_t* out_ref) {
-    // TODO(MG-1035): Cache the registered strings on the trace context structure,
+    // TODO(ZX-1035): Cache the registered strings on the trace context structure,
     // guarded by a mutex.
     trace_string_index_t index;
     if (likely(context->AllocStringIndex(&index))) {
@@ -525,7 +525,7 @@ void trace_context_register_thread(
     trace_context_t* context,
     zx_koid_t process_koid, zx_koid_t thread_koid,
     trace_thread_ref_t* out_ref) {
-    // TODO(MG-1035): Since we can't use the thread-local cache here, cache
+    // TODO(ZX-1035): Since we can't use the thread-local cache here, cache
     // this registered thread on the trace context structure, guarded by a mutex.
     trace_thread_index_t index;
     if (likely(context->AllocThreadIndex(&index))) {
@@ -577,11 +577,11 @@ void trace_context_write_kernel_object_record_for_handle(
     zx_obj_type_t obj_type = static_cast<zx_obj_type_t>(info.type);
     switch (obj_type) {
     case ZX_OBJ_TYPE_PROCESS:
-        // TODO(MG-1028): Support custom args.
+        // TODO(ZX-1028): Support custom args.
         trace_context_write_process_info_record(context, info.koid, &name_ref);
         break;
     case ZX_OBJ_TYPE_THREAD:
-        // TODO(MG-1028): Support custom args.
+        // TODO(ZX-1028): Support custom args.
         trace_context_write_thread_info_record(context, info.related_koid, info.koid, &name_ref);
         break;
     default:
@@ -604,7 +604,7 @@ void trace_context_write_thread_info_record(
     zx_koid_t process_koid,
     zx_koid_t thread_koid,
     const trace_string_ref_t* thread_name_ref) {
-    // TODO(MG-1028): We should probably store the related koid in the trace
+    // TODO(ZX-1028): We should probably store the related koid in the trace
     // event directly instead of packing it into an argument like this.
     trace_arg_t arg;
     trace_context_register_string_literal(context, "process", &arg.name_ref);

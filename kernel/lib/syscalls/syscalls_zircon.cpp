@@ -71,7 +71,7 @@ uint64_t sys_time_get(uint32_t clock_id) {
 }
 
 zx_status_t sys_clock_adjust(zx_handle_t hrsrc, uint32_t clock_id, int64_t offset) {
-    // TODO(MG-971): finer grained validation
+    // TODO(ZX-971): finer grained validation
     zx_status_t status;
     if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0) {
         return status;

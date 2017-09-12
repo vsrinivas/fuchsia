@@ -155,7 +155,7 @@ static void tlb_invalidate_page_task(void* raw_context) {
  * @param level The page table level that maps this vaddr
  * @param global_page True if we are invalidating a global mapping
  *
- * TODO(MG-979): Optimize this.  This is horribly inefficient.
+ * TODO(ZX-979): Optimize this.  This is horribly inefficient.
  * We should also change this to pool invalidations from a single
  * "transaction" and then only execute a single mp_sync_exec for that
  * transaction, rather than one per page.
@@ -423,7 +423,7 @@ struct ExtendedPageTable : PageTableBase<Level> {
      * @brief Invalidate a single page at a given page table level
      */
     static void tlb_invalidate_page(X86ArchVmAspace* aspace, vaddr_t vaddr, bool global_page) {
-        // TODO(MG-981): Implement this.
+        // TODO(ZX-981): Implement this.
     }
 };
 
@@ -1490,7 +1490,7 @@ void x86_mmu_percpu_init(void) {
 }
 
 X86ArchVmAspace::~X86ArchVmAspace() {
-    // TODO(MG-980): check that we've destroyed the aspace.
+    // TODO(ZX-980): check that we've destroyed the aspace.
 }
 
 vaddr_t X86ArchVmAspace::PickSpot(vaddr_t base, uint prev_region_mmu_flags,

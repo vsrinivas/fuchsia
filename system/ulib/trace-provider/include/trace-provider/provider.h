@@ -28,7 +28,7 @@ typedef struct trace_provider trace_provider_t;
 //
 // Returns the trace provider, or null if creation failed.
 //
-// TODO(MG-1036): Currently this connects to the trace manager service.
+// TODO(ZX-1036): Currently this connects to the trace manager service.
 // Switch to passively exporting the trace provider via the "hub" through
 // the process's exported directory once that stuff is implemented.  We'll
 // probably need to pass some extra parameters to the trace provider then.

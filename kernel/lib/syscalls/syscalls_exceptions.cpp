@@ -23,10 +23,10 @@
 #define LOCAL_TRACE 0
 
 static zx_status_t object_unbind_exception_port(zx_handle_t obj_handle, bool debugger, bool quietly) {
-    // TODO(MG-968): check rights once appropriate right is determined
+    // TODO(ZX-968): check rights once appropriate right is determined
 
     if (obj_handle == ZX_HANDLE_INVALID) {
-        // TODO(MG-987): handle for system exception
+        // TODO(ZX-987): handle for system exception
         if (debugger || quietly)
             return ZX_ERR_INVALID_ARGS;
         return ResetSystemExceptionPort()
@@ -70,7 +70,7 @@ static zx_status_t object_unbind_exception_port(zx_handle_t obj_handle, bool deb
 }
 
 static zx_status_t task_bind_exception_port(zx_handle_t obj_handle, zx_handle_t eport_handle, uint64_t key, bool debugger) {
-    // TODO(MG-968): check rights once appropriate right is determined
+    // TODO(ZX-968): check rights once appropriate right is determined
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<PortDispatcher> port;
@@ -81,7 +81,7 @@ static zx_status_t task_bind_exception_port(zx_handle_t obj_handle, zx_handle_t 
     fbl::RefPtr<ExceptionPort> eport;
 
     if (obj_handle == ZX_HANDLE_INVALID) {
-        // TODO(MG-987): handle for system exception
+        // TODO(ZX-987): handle for system exception
         if (debugger)
             return ZX_ERR_INVALID_ARGS;
         status = ExceptionPort::Create(ExceptionPort::Type::JOB,
@@ -185,7 +185,7 @@ zx_status_t sys_task_resume(zx_handle_t handle, uint32_t options) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    // TODO(MG-968): Rights checking here
+    // TODO(ZX-968): Rights checking here
     fbl::RefPtr<Dispatcher> dispatcher;
     auto status = up->GetDispatcher(handle, &dispatcher);
     if (status != ZX_OK)

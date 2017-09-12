@@ -233,7 +233,7 @@ syscall thread_write_state
 
 # NOTE: thread_set_priority is an experimental syscall.
 # Do not use it.  It is going away very soon.  Just don't do it.  This is not
-# the syscall you are looking for.  See MG-940
+# the syscall you are looking for.  See ZX-940
 syscall thread_set_priority
     (prio: int32_t)
     returns (zx_status_t);

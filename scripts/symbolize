@@ -357,7 +357,7 @@ def main():
             # address.  (To be more exact, this converts to an address that
             # is within the call site instruction.)  This adjustment gives
             # more correct results in the presence of inlining and
-            # 'noreturn' functions.  (See MG-842.)
+            # 'noreturn' functions.  (See ZX-842.)
             call_addr = "0x%x" % (int(addr, 16) - 1)
             a2l_out = run_tool(arch, "addr2line", "-Cpife", zircon_elf_path,
                                call_addr)

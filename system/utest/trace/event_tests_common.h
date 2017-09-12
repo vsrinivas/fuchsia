@@ -497,7 +497,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
     END_TRACE_TEST;
 }
 
-// TODO(MG-1033): Define a boolean argument type in the wire format.
+// TODO(ZX-1033): Define a boolean argument type in the wire format.
 static bool test_bool_arguments(void) {
     BEGIN_TRACE_TEST;
 

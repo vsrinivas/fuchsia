@@ -130,7 +130,7 @@ zx_status_t zxrio_handle_rpc(zx_handle_t h, zxrio_msg_t* msg, zxrio_cb_t cb, voi
         // specific errors are prioritized over the bad
         // message case which we represent as ZX_ERR_INTERNAL
         // to differentiate from ZX_ERR_IO on the near side
-        // TODO(MG-974): consider a better error code
+        // TODO(ZX-974): consider a better error code
         msg->arg = (msg->arg < 0) ? msg->arg : ZX_ERR_INTERNAL;
     }
 

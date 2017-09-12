@@ -61,7 +61,7 @@ read_mem (zx_handle_t h, zx_vaddr_t vaddr, void* ptr, size_t len)
   }
   if (len != actual)
   {
-    // TODO: Use %zd when MG-164 is fixed.
+    // TODO: Use %zd when ZX-164 is fixed.
     Debug (3, "read_mem @0x%" PRIxPTR " FAILED, short read %zd\n", vaddr, actual);
     return ZX_ERR_IO;
   }

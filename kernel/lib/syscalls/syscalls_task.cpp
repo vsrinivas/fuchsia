@@ -57,7 +57,7 @@ constexpr size_t kMaxDebugWriteBlock = 64 * 1024u * 1024u;
 constexpr size_t kPolicyBasicInlineCount = 8;
 
 #if THREAD_SET_PRIORITY_EXPERIMENT
-// See MG-940
+// See ZX-940
 static bool thread_set_priority_allowed = false;
 static void thread_set_priority_experiment_init_hook(uint) {
     thread_set_priority_allowed = cmdline_get_bool("thread.set.priority.allowed", false);
@@ -69,7 +69,7 @@ LK_INIT_HOOK(thread_set_priority_experiment,
              LK_INIT_LEVEL_THREADING - 1);
 #endif
 
-// TODO(MG-1025): copy_user_string may truncate the incoming string,
+// TODO(ZX-1025): copy_user_string may truncate the incoming string,
 // and may copy extra data past the NUL.
 // TODO(dbort): If anyone else needs this, move it into user_ptr.
 static zx_status_t copy_user_string(const user_ptr<const char>& src,
@@ -183,7 +183,7 @@ zx_status_t sys_thread_read_state(zx_handle_t handle, uint32_t state_kind,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    // TODO(MG-968): debug rights
+    // TODO(ZX-968): debug rights
     fbl::RefPtr<ThreadDispatcher> thread;
     zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &thread);
     if (status != ZX_OK)
@@ -222,7 +222,7 @@ zx_status_t sys_thread_write_state(zx_handle_t handle, uint32_t state_kind,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    // TODO(MG-968): debug rights
+    // TODO(ZX-968): debug rights
     fbl::RefPtr<ThreadDispatcher> thread;
     zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &thread);
     if (status != ZX_OK)
@@ -245,7 +245,7 @@ zx_status_t sys_thread_write_state(zx_handle_t handle, uint32_t state_kind,
     return status;
 }
 
-// See MG-940
+// See ZX-940
 zx_status_t sys_thread_set_priority(int32_t prio) {
 #if THREAD_SET_PRIORITY_EXPERIMENT
     // If the experimental zx_thread_set_priority has not been enabled using the
@@ -305,7 +305,7 @@ zx_status_t sys_process_create(zx_handle_t job_handle,
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<JobDispatcher> job;
-    // TODO(MG-968): define process creation job rights.
+    // TODO(ZX-968): define process creation job rights.
     auto status = up->GetDispatcherWithRights(job_handle, ZX_RIGHT_WRITE, &job);
     if (status != ZX_OK)
         return status;
@@ -455,7 +455,7 @@ zx_status_t sys_process_read_memory(zx_handle_t proc, uintptr_t vaddr,
     size_t read = 0;
 
     // Force map the range, even if it crosses multiple mappings.
-    // TODO(MG-730): This is a workaround for this bug.  If we start decommitting
+    // TODO(ZX-730): This is a workaround for this bug.  If we start decommitting
     // things, the bug will come back.  We should fix this more properly.
     {
         uint8_t byte = 0;
@@ -517,7 +517,7 @@ zx_status_t sys_process_write_memory(zx_handle_t proc, uintptr_t vaddr,
         return ZX_ERR_NO_MEMORY;
 
     // Force map the range, even if it crosses multiple mappings.
-    // TODO(MG-730): This is a workaround for this bug.  If we start decommitting
+    // TODO(ZX-730): This is a workaround for this bug.  If we start decommitting
     // things, the bug will come back.  We should fix this more properly.
     {
         uint8_t byte = 0;
@@ -654,7 +654,7 @@ zx_status_t sys_job_set_relative_importance(
             resource_handle, ZX_RIGHT_NONE, &resource);
         if (status != ZX_OK)
             return status;
-        // TODO(MG-971): Check that this is actually the appropriate resource
+        // TODO(ZX-971): Check that this is actually the appropriate resource
     }
 
     // Get the job to modify.

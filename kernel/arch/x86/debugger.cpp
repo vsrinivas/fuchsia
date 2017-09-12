@@ -116,7 +116,7 @@ static status_t arch_get_general_regs(struct thread *thread, void *grp, uint32_t
             return ZX_ERR_NOT_SUPPORTED;
     } else {
         // TODO(dje): Punt if, for example, suspended in channel call.
-        // Can be removed when MG-747 done.
+        // Can be removed when ZX-747 done.
         if (thread->arch.suspended_general_regs.gregs == nullptr)
             return ZX_ERR_NOT_SUPPORTED;
     }
@@ -151,7 +151,7 @@ static status_t arch_set_general_regs(struct thread *thread, const void *grp, ui
             return ZX_ERR_NOT_SUPPORTED;
     } else {
         // TODO(dje): Punt if, for example, suspended in channel call.
-        // Can be removed when MG-747 done.
+        // Can be removed when ZX-747 done.
         if (thread->arch.suspended_general_regs.gregs == nullptr)
             return ZX_ERR_NOT_SUPPORTED;
     }

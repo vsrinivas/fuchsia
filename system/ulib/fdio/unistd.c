@@ -652,7 +652,7 @@ zx_status_t fdio_clone_fd(int fd, int newfd, zx_handle_t* handles, uint32_t* typ
     if ((io = fd_to_io(fd)) == NULL) {
         return ZX_ERR_BAD_HANDLE;
     }
-    // TODO(MG-973): implement/honor close-on-exec flag
+    // TODO(ZX-973): implement/honor close-on-exec flag
     if ((r = io->ops->clone(io, handles, types)) > 0) {
         for (int i = 0; i < r; i++) {
             types[i] |= (newfd << 16);
@@ -752,7 +752,7 @@ zx_status_t fdio_setattr(fdio_t* io, vnattr_t* vn){
 }
 
 
-// TODO(MG-974): determine complete correct mapping
+// TODO(ZX-974): determine complete correct mapping
 int fdio_status_to_errno(zx_status_t status) {
     switch (status) {
     case ZX_ERR_NOT_FOUND: return ENOENT;
@@ -1064,7 +1064,7 @@ int dup3(int oldfd, int newfd, int flags) {
         return ERRNO(EINVAL);
     }
 
-    // TODO(MG-973) Implement O_CLOEXEC.
+    // TODO(ZX-973) Implement O_CLOEXEC.
     return fdio_dup(oldfd, newfd, 0);
 }
 
@@ -1081,7 +1081,7 @@ int fcntl(int fd, int cmd, ...) {
     switch (cmd) {
     case F_DUPFD:
     case F_DUPFD_CLOEXEC: {
-        // TODO(MG-973) Implement CLOEXEC.
+        // TODO(ZX-973) Implement CLOEXEC.
         GET_INT_ARG(starting_fd);
         return fdio_dup(fd, -1, starting_fd);
     }
@@ -1102,7 +1102,7 @@ int fcntl(int fd, int cmd, ...) {
             return ERRNO(EBADF);
         }
         GET_INT_ARG(flags);
-        // TODO(MG-973) Implement CLOEXEC.
+        // TODO(ZX-973) Implement CLOEXEC.
         io->flags &= ~FDIO_FD_FLAGS;
         io->flags |= (int32_t)flags & FDIO_FD_FLAGS;
         fdio_release(io);
@@ -1742,7 +1742,7 @@ int isatty(int fd) {
     }
 
     int ret;
-    // TODO(MG-972)
+    // TODO(ZX-972)
     // For now, stdout etc. needs to be a tty for line buffering to
     // work. So let's pretend those are ttys but nothing else is.
     if (fd == 0 || fd == 1 || fd == 2) {

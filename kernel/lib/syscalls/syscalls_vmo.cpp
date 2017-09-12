@@ -75,7 +75,7 @@ zx_status_t sys_vmo_read(zx_handle_t handle, user_ptr<void> _data,
         return status;
 
     // Force map the range, even if it crosses multiple mappings.
-    // TODO(MG-730): This is a workaround for this bug.  If we start decommitting
+    // TODO(ZX-730): This is a workaround for this bug.  If we start decommitting
     // things, the bug will come back.  We should fix this more properly.
     {
         uint8_t byte = 0;
@@ -117,7 +117,7 @@ zx_status_t sys_vmo_write(zx_handle_t handle, user_ptr<const void> _data,
         return status;
 
     // Force map the range, even if it crosses multiple mappings.
-    // TODO(MG-730): This is a workaround for this bug.  If we start decommitting
+    // TODO(ZX-730): This is a workaround for this bug.  If we start decommitting
     // things, the bug will come back.  We should fix this more properly.
     {
         uint8_t byte = 0;
@@ -193,7 +193,7 @@ zx_status_t sys_vmo_op_range(zx_handle_t handle, uint32_t op, uint64_t offset, u
     auto up = ProcessDispatcher::GetCurrent();
 
     // lookup the dispatcher from handle
-    // TODO(MG-967): test rights on the handle
+    // TODO(ZX-967): test rights on the handle
     fbl::RefPtr<VmObjectDispatcher> vmo;
     zx_status_t status = up->GetDispatcher(handle, &vmo);
     if (status != ZX_OK)

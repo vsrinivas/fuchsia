@@ -101,7 +101,7 @@ static bool SeedFrom(entropy::Collector* collector) {
                     remaining);
             return false;
         }
-        // TODO(MG-1007): don't assume that every byte of entropy that's added
+        // TODO(ZX-1007): don't assume that every byte of entropy that's added
         // has a full 8 bits worth of entropy
         kGlobalPrng->AddEntropy(buf, result);
         mandatory_memset(buf, 0, sizeof(buf));

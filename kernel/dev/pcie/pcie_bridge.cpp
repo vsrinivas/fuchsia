@@ -206,7 +206,7 @@ status_t PcieBridge::AllocateBridgeWindowsLocked() {
     // support re-allocating a bridge's MMIO/PIO windows.
     //
     // TODO(johngro) : support dynamic configuration of bridge windows.  Its
-    // going to be important when we need to support hot-plugging.  See MG-322
+    // going to be important when we need to support hot-plugging.  See ZX-322
     //
     if (io_base_ <= io_limit_) {
         uint64_t size = static_cast<uint64_t>(io_limit_) - io_base_ + 1;
@@ -222,7 +222,7 @@ status_t PcieBridge::AllocateBridgeWindowsLocked() {
     }
 
     // TODO(johngro) : Figure out what we are supposed to do with prefetchable
-    // MMIO windows and allocations behind bridges above 4GB.  See MG-321 for
+    // MMIO windows and allocations behind bridges above 4GB.  See ZX-321 for
     // details.
     //
     if (mem_base_ <= mem_limit_) {

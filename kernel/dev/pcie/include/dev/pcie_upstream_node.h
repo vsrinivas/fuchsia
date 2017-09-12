@@ -61,7 +61,7 @@ protected:
 
 private:
 
-    PcieBusDriver& bus_drv_;         // TODO(johngro) : Eliminate this, see MG-325
+    PcieBusDriver& bus_drv_;         // TODO(johngro) : Eliminate this, see ZX-325
     const Type     type_;
     const uint     managed_bus_id_;  // The ID of the downstream bus which this node manages.
 

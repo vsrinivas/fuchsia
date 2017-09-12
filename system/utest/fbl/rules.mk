@@ -33,7 +33,7 @@ fbl_common_tests := \
 fbl_device_tests := $(fbl_common_tests)
 
 # These tests need fbl::Mutex which currently isn't supported on the host.
-# TODO(MG-1053): Support fbl::Mutex on the host and make these tests work.
+# TODO(ZX-1053): Support fbl::Mutex on the host and make these tests work.
 fbl_device_tests += \
     $(LOCAL_DIR)/ref_counted_tests.cpp \
     $(LOCAL_DIR)/slab_allocator_tests.cpp \

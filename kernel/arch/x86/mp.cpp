@@ -171,7 +171,7 @@ void x86_init_percpu(uint cpu_num)
     // a latency associated with ramping the voltage on wake. Disable this feature here
     // to save time on the irq path from idle. (5-10us on skylake nuc from kernel irq
     // handler to user space handler).
-    // TODO(MG-981): Look for a nicer way to handle this across different processors
+    // TODO(ZX-981): Look for a nicer way to handle this across different processors
     const struct x86_model_info* model = x86_get_model();
     if (!x86_feature_test(X86_FEATURE_HYPERVISOR) &&
             x86_vendor == X86_VENDOR_INTEL && model->display_family == 0x6 && (

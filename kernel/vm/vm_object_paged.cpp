@@ -802,7 +802,7 @@ status_t VmObjectPaged::SetParentOffsetLocked(uint64_t offset) {
     if (!IS_PAGE_ALIGNED(offset))
         return ZX_ERR_INVALID_ARGS;
 
-    // TODO: MG-692 make sure that the accumulated offset of the entire parent chain doesn't wrap 64bit space
+    // TODO: ZX-692 make sure that the accumulated offset of the entire parent chain doesn't wrap 64bit space
 
     // make sure the size + this offset are still valid
     safeint::CheckedNumeric<uint64_t> end = offset;

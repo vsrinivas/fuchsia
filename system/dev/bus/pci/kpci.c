@@ -57,7 +57,7 @@ static zx_status_t kpci_init_child(zx_device_t* parent, uint32_t index, bool sav
     if (save_handle) {
         device->handle = handle;
     } else {
-        // Work around for MG-928.  Leak handle here, since closing it would
+        // Work around for ZX-928.  Leak handle here, since closing it would
         // causes bus mastering on the device to be disabled via the dispatcher
         // dtor.  This causes problems for devices that the BIOS owns and a driver
         // needs to execute a protocol with the BIOS in order to claim ownership.

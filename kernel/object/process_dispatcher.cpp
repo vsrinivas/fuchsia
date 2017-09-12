@@ -184,7 +184,7 @@ void ProcessDispatcher::Exit(int retcode) {
 void ProcessDispatcher::Kill() {
     LTRACE_ENTRY_OBJ;
 
-    // MG-880: Call RemoveChildProcess outside of |state_lock_|.
+    // ZX-880: Call RemoveChildProcess outside of |state_lock_|.
     bool became_dead = false;
 
     {
@@ -257,7 +257,7 @@ zx_status_t ProcessDispatcher::AddThread(ThreadDispatcher* t, bool initial_threa
 void ProcessDispatcher::RemoveThread(ThreadDispatcher* t) {
     LTRACE_ENTRY_OBJ;
 
-    // MG-880: Call RemoveChildProcess outside of |state_lock_|.
+    // ZX-880: Call RemoveChildProcess outside of |state_lock_|.
     bool became_dead = false;
 
     {
@@ -378,7 +378,7 @@ void ProcessDispatcher::SetStateLocked(State s) {
         // consistent, and JobDispatcher::EnumerateChildren's order makes
         // sense. We don't need |state_lock_| when calling RemoveChildProcess
         // here, so we leave that to the caller after it has released
-        // |state_lock_|. MG-880
+        // |state_lock_|. ZX-880
         // The caller should call RemoveChildProcess soon so that the semantics
         // of signaling ZX_JOB_NO_PROCESSES match that of ZX_TASK_TERMINATED.
 

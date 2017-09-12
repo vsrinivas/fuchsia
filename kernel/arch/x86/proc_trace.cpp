@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-// TODO(MG-992): Need to be able to r/w MSRs.
+// TODO(ZX-992): Need to be able to r/w MSRs.
 // The thought is to use resources (as in ResourceDispatcher), at which point
 // this will all get rewritten. Until such time, the goal here is KISS.
 // This file contains the lower part of Intel Processor Trace support that must
@@ -146,7 +146,7 @@ static void x86_ipt_set_mode_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
     // When changing modes make sure all PT MSRs are in the init state.
     // We don't want a value to appear in the xsave buffer and have xrstors
     // #gp because XCOMP_BV has the PT bit set that's not set in XSS.
-    // We still need to do this, even with MG-892, when transitioning
+    // We still need to do this, even with ZX-892, when transitioning
     // from IPT_TRACE_CPUS to IPT_TRACE_THREADS.
     write_msr(IA32_RTIT_CTL, 0);
     write_msr(IA32_RTIT_STATUS, 0);
@@ -178,7 +178,7 @@ status_t x86_ipt_set_mode(ipt_trace_mode_t mode) {
     if (mode == trace_mode)
         return ZX_OK;
 
-    // MG-892: We don't support changing the mode from IPT_TRACE_THREADS to
+    // ZX-892: We don't support changing the mode from IPT_TRACE_THREADS to
     // IPT_TRACE_CPUS: We can't turn off XSS.PT until we're sure all threads
     // have no PT state, and that's too tricky to do right now. Instead,
     // require the developer to reboot (the default is IPT_TRACE_CPUS).

@@ -74,7 +74,7 @@ to verify it is that handler. Anyone with appropriate rights
 can resume a thread from an exception. It is up to exception
 handlers to not trip over each other, as well as all other
 software calling **zx_task_resume**() with **ZX_RESUME_EXCEPTION**.
-(MG-562 documents this issue.)
+(ZX-562 documents this issue.)
 
 ## RETURN VALUE
 

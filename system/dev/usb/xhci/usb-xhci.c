@@ -180,7 +180,7 @@ static int completer_thread(void *arg) {
     completer_t* completer = (completer_t*)arg;
     zx_handle_t irq_handle = completer->xhci->irq_handles[completer->interrupter];
 
-    // TODO(johngro) : See MG-940.  Get rid of this.  For now we need thread
+    // TODO(johngro) : See ZX-940.  Get rid of this.  For now we need thread
     // priorities so that realtime transactions use the completer which ends
     // up getting realtime latency guarantees.
     zx_thread_set_priority(completer->priority);

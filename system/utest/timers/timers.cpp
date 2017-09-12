@@ -122,7 +122,7 @@ static bool signals_asserted_immediately() {
 // either earlier or later than expected. The precise behavior is still
 // tested by the "k timer tests" command.
 //
-// See MG-1087 for the current owner.
+// See ZX-1087 for the current owner.
 
 static bool coalesce_test(uint32_t mode) {
     BEGIN_TEST;

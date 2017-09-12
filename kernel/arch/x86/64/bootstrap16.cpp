@@ -125,7 +125,7 @@ status_t x86_bootstrap16_prep(
     uint64_t phys_bootstrap_pml4 = bootstrap_aspace->arch_aspace().pt_phys();
     uint64_t phys_kernel_pml4 = x86_get_cr3();
     if (phys_bootstrap_pml4 > UINT32_MAX) {
-        // TODO(MG-978): Once the pmm supports it, we should request that this
+        // TODO(ZX-978): Once the pmm supports it, we should request that this
         // VmAspace is backed by a low mem PML4, so we can avoid this issue.
         TRACEF("bootstrap PML4 was not allocated out of low mem\n");
         return ZX_ERR_NO_MEMORY;

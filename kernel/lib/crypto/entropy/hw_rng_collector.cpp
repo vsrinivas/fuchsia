@@ -32,7 +32,7 @@ size_t HwRngCollector::DrawEntropy(uint8_t* buf, size_t len) {
     // Especially on systems that have RdRand but not RdSeed, avoid parallel
     // accesses. Per the Intel documentation, properly using RdRand to seed a
     // CPRNG requires careful access patterns, to avoid multiple RNG draws from
-    // the same physical seed (see MG-983).
+    // the same physical seed (see ZX-983).
     fbl::AutoLock guard(&lock_);
 
     // TODO(andrewkrieger): Remove the dev/hw_rng API and move the relevant code

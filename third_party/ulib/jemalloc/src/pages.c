@@ -66,7 +66,7 @@ static void* fuchsia_pages_map(void* start, size_t len) {
 			abort();
 		offset = addr - pages_base;
 	} else {
-		// TODO(kulakowski) Use MG-942 instead of having to
+		// TODO(kulakowski) Use ZX-942 instead of having to
 		// allocate and destroy under a lock.
 		zx_handle_t subvmar;
 		uintptr_t subvmar_base;

@@ -98,7 +98,7 @@ zx_status_t sys_pci_add_subtract_io_range(zx_handle_t handle, bool mmio, uint64_
 
     LTRACEF("handle %x mmio %d base %#" PRIx64 " len %#" PRIx64 " add %d\n", handle, mmio, base, len, add);
 
-    // TODO(MG-971): finer grained validation
+    // TODO(ZX-971): finer grained validation
     // TODO(security): Add additional access checks
     zx_status_t status;
     if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0) {
@@ -120,7 +120,7 @@ zx_status_t sys_pci_add_subtract_io_range(zx_handle_t handle, bool mmio, uint64_
 }
 
 zx_status_t sys_pci_init(zx_handle_t handle, user_ptr<const zx_pci_init_arg_t> _init_buf, uint32_t len) {
-    // TODO(MG-971): finer grained validation
+    // TODO(ZX-971): finer grained validation
     // TODO(security): Add additional access checks
     zx_status_t status;
     if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0) {
@@ -293,7 +293,7 @@ zx_status_t sys_pci_get_nth_device(zx_handle_t hrsrc,
      */
     LTRACEF("handle %x index %u\n", hrsrc, index);
 
-    // TODO(MG-971): finer grained validation
+    // TODO(ZX-971): finer grained validation
     zx_status_t status;
     if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0) {
         return status;

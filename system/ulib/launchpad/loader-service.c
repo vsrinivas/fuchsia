@@ -297,7 +297,7 @@ static zx_status_t handle_loader_rpc(zx_handle_t h,
     case LOADER_SVC_OP_LOAD_DEBUG_CONFIG:
     case LOADER_SVC_OP_PUBLISH_DATA_SINK:
     case LOADER_SVC_OP_CLONE:
-        // TODO(MG-491): Use a threadpool for loading, and guard against
+        // TODO(ZX-491): Use a threadpool for loading, and guard against
         // other starvation attacks.
         r = (*loader)(loader_arg, msg->opcode,
                       request_handle, (const char*) msg->data, &handle);

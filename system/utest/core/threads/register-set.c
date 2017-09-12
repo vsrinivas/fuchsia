@@ -20,7 +20,7 @@ void regs_fill_test_values(zx_general_regs_t* regs) {
     //
     // Note that setting the direction flag (bit 10) helps test whether the
     // kernel correctly handles taking an interrupt when that flag is set
-    // (see MG-998).
+    // (see ZX-998).
     regs->rflags =
         (1 << 0) | // CF: carry flag
         (1 << 1) | // Reserved, always 1

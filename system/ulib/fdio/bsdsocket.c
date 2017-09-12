@@ -427,7 +427,7 @@ int setsockopt(int fd, int level, int optname, const void* optval,
 
 static ssize_t fdio_recvmsg(fdio_t* io, struct msghdr* msg, int flags) {
     zx_status_t r = io->ops->recvmsg(io, msg, flags);
-    // TODO(MG-974): audit error codes
+    // TODO(ZX-974): audit error codes
     if (r == ZX_ERR_WRONG_TYPE)
         return ERRNO(ENOTSOCK);
     else if (r == ZX_ERR_BAD_STATE)

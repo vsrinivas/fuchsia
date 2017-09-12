@@ -13,7 +13,7 @@
 
 static bool mmu_tests(void* context) {
     BEGIN_TEST;
-    unittest_printf("creating large un-aligned vm region, and unmap it without mapping, make sure no leak (MG-315)\n");
+    unittest_printf("creating large un-aligned vm region, and unmap it without mapping, make sure no leak (ZX-315)\n");
     {
         ArchVmAspace aspace;
         vaddr_t base = 1UL << 20;
@@ -73,7 +73,7 @@ static bool mmu_tests(void* context) {
         EXPECT_EQ(err, ZX_OK, "destroy aspace");
     }
 
-    unittest_printf("creating large un-aligned vm region, and unmap it without mapping (MG-315)\n");
+    unittest_printf("creating large un-aligned vm region, and unmap it without mapping (ZX-315)\n");
     {
         ArchVmAspace aspace;
         vaddr_t base = 1UL << 20;

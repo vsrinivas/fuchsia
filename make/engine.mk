@@ -227,7 +227,7 @@ endif
 # can be done offline with, e.g., scripts/symbolize.
 USER_COMPILEFLAGS += -fasynchronous-unwind-tables
 
-# We want .debug_frame for the kernel. MG-62
+# We want .debug_frame for the kernel. ZX-62
 # And we still want asynchronous unwind tables. Alas there's (currently) no way
 # to achieve this with our GCC. At the moment we compile with
 # -fno-omit-frame-pointer which is good because we link with -gc-sections which
@@ -386,7 +386,7 @@ MDI_INCLUDES := system/public/zircon/mdi/zircon.mdi
 
 # For now always enable frame pointers so kernel backtraces
 # can work and define WITH_PANIC_BACKTRACE to enable them in panics
-# MG-623
+# ZX-623
 KERNEL_DEFINES += WITH_PANIC_BACKTRACE=1 WITH_FRAME_POINTERS=1
 KERNEL_COMPILEFLAGS += $(KEEP_FRAME_POINTER_COMPILEFLAGS)
 

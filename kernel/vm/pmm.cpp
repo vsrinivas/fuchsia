@@ -357,7 +357,7 @@ size_t pmm_count_total_bytes() {
 }
 
 void pmm_count_total_states(size_t state_count[_VM_PAGE_STATE_COUNT]) {
-    // TODO(MG-833): This is extremely expensive, holding a global lock
+    // TODO(ZX-833): This is extremely expensive, holding a global lock
     // and touching every page/arena. We should keep a running count instead.
     AutoLock al(&arena_lock);
     for (auto& a : arena_list) {
