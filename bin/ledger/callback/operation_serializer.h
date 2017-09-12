@@ -14,18 +14,30 @@
 
 namespace callback {
 
+namespace internal {
+
+// Defines the type of the callback function to be used in Serialize method of
+// OperationSerializer. Note that this is necessary for template resolution:
+// Trying to directly define callback as `std::function<void(C...)>` causes a
+// compile error when calling Serialize, as automatic cast of lambdas fails.
+template <class... C>
+struct Signature {
+  using CallbackType = void(C...);
+};
+
+}  // namespace internal
+
 // OperationSerializer can be used to serialize a set of operations. A typical
 // usage example would be:
-//     OperationSerializer<Status> serializer;
+//     OperationSerializer serializer;
 //
 // and then for each operation to be serialized:
 //     std::function<void(Status)> on_done = ...;
-//     serializer.Serialize(std::move(on_done),
-//                          [](std::function<void(Status)> callback) {
-//                            // Code for the operation...
-//                            callback(Status::/* result */);
-//                          });
-template <class... C>
+//     serializer.Serialize<Status>(std::move(on_done),
+//                                  [](std::function<void(Status)> callback) {
+//                                    // Code for the operation...
+//                                    callback(Status::/* result */);
+//                                  });
 class OperationSerializer {
  public:
   OperationSerializer() {}
@@ -35,8 +47,16 @@ class OperationSerializer {
   // only when all previous operations registered through this method have
   // terminated by calling their callbacks. When |operation| terminates,
   // |callback| is called with the result returned by |operation|.
-  void Serialize(std::function<void(C...)> callback,
-                 std::function<void(std::function<void(C...)>)> operation) {
+  //
+  // The resolved type of this method is
+  //   void Serialize(std::function<void(C...)> callback,
+  //                  std::function<void(std::function<void(C...)>)> operation)
+  template <class... C>
+  void Serialize(
+      std::function<typename internal::Signature<C...>::CallbackType> callback,
+      std::function<
+          void(std::function<typename internal::Signature<C...>::CallbackType>)>
+          operation) {
     auto closure = [
       this, callback = std::move(callback), operation = std::move(operation)
     ] {

@@ -76,7 +76,7 @@ class ConflictResolverClient : public MergeResultProvider {
   // operation to finish (the other cases, such as committing the merge).
   bool in_client_request_ = false;
   bool cancelled_ = false;
-  callback::OperationSerializer<Status> operation_serializer_;
+  callback::OperationSerializer operation_serializer_;
 
   fidl::Binding<MergeResultProvider> merge_result_provider_binding_;
 

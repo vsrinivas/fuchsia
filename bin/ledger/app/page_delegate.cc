@@ -33,7 +33,7 @@ PageDelegate::PageDelegate(coroutine::CoroutineService* coroutine_service,
       branch_tracker_(coroutine_service, manager, storage),
       watcher_set_(watchers) {
   interface_.set_on_empty([this] {
-    operation_serializer_.Serialize(
+    operation_serializer_.Serialize<Status>(
         [](Status status) {},
         [this](std::function<void(Status)> callback) {
           branch_tracker_.StopTransaction(nullptr);
@@ -70,7 +70,7 @@ void PageDelegate::GetSnapshot(
     const Page::GetSnapshotCallback& callback) {
   // TODO(qsr): Update this so that only |GetCurrentCommitId| is done in a the
   // operation serializer.
-  operation_serializer_.Serialize(
+  operation_serializer_.Serialize<Status>(
       callback, fxl::MakeCopyable([
         this, snapshot_request = std::move(snapshot_request),
         key_prefix = std::move(key_prefix), watcher = std::move(watcher)
@@ -121,7 +121,7 @@ void PageDelegate::PutWithPriority(
   storage_->AddObjectFromLocal(storage::DataSource::Create(std::move(value)),
                                promise->NewCallback());
 
-  operation_serializer_.Serialize(
+  operation_serializer_.Serialize<Status>(
       callback, fxl::MakeCopyable([
         this, promise = std::move(promise), key = std::move(key), priority
       ](Page::PutWithPriorityCallback callback) mutable {
@@ -154,7 +154,7 @@ void PageDelegate::PutReference(fidl::Array<uint8_t> key,
                       storage::PageStorage::Location::LOCAL,
                       promise->NewCallback());
 
-  operation_serializer_.Serialize(
+  operation_serializer_.Serialize<Status>(
       callback, fxl::MakeCopyable([
         this, promise = std::move(promise), key = std::move(key),
         object_id = std::move(reference->opaque_id), priority
@@ -180,7 +180,7 @@ void PageDelegate::PutReference(fidl::Array<uint8_t> key,
 // Delete(array<uint8> key) => (Status status);
 void PageDelegate::Delete(fidl::Array<uint8_t> key,
                           const Page::DeleteCallback& callback) {
-  operation_serializer_.Serialize(
+  operation_serializer_.Serialize<Status>(
       callback, fxl::MakeCopyable([ this, key = std::move(key) ](
                     Page::DeleteCallback callback) mutable {
 
@@ -214,57 +214,61 @@ void PageDelegate::CreateReference(
 // StartTransaction() => (Status status);
 void PageDelegate::StartTransaction(
     const Page::StartTransactionCallback& callback) {
-  operation_serializer_.Serialize(callback, [this](StatusCallback callback) {
-    if (journal_) {
-      callback(Status::TRANSACTION_ALREADY_IN_PROGRESS);
-      return;
-    }
-    storage::CommitId commit_id = branch_tracker_.GetBranchHeadId();
-    storage_->StartCommit(commit_id, storage::JournalType::EXPLICIT, [
-      this, commit_id, callback = std::move(callback)
-    ](storage::Status status, std::unique_ptr<storage::Journal> journal) {
-      journal_ = std::move(journal);
-      if (status != storage::Status::OK) {
-        callback(PageUtils::ConvertStatus(status));
-        return;
-      }
-      journal_parent_commit_ = commit_id;
+  operation_serializer_.Serialize<Status>(
+      callback, [this](StatusCallback callback) {
+        if (journal_) {
+          callback(Status::TRANSACTION_ALREADY_IN_PROGRESS);
+          return;
+        }
+        storage::CommitId commit_id = branch_tracker_.GetBranchHeadId();
+        storage_->StartCommit(commit_id, storage::JournalType::EXPLICIT, [
+          this, commit_id, callback = std::move(callback)
+        ](storage::Status status, std::unique_ptr<storage::Journal> journal) {
+          journal_ = std::move(journal);
+          if (status != storage::Status::OK) {
+            callback(PageUtils::ConvertStatus(status));
+            return;
+          }
+          journal_parent_commit_ = commit_id;
 
-      branch_tracker_.StartTransaction([callback]() { callback(Status::OK); });
-    });
-  });
+          branch_tracker_.StartTransaction(
+              [callback]() { callback(Status::OK); });
+        });
+      });
 }
 
 // Commit() => (Status status);
 void PageDelegate::Commit(const Page::CommitCallback& callback) {
-  operation_serializer_.Serialize(callback, [this](StatusCallback callback) {
-    if (!journal_) {
-      callback(Status::NO_TRANSACTION_IN_PROGRESS);
-      return;
-    }
-    journal_parent_commit_.clear();
-    CommitJournal(std::move(journal_), [
-      this, callback = std::move(callback)
-    ](Status status, std::unique_ptr<const storage::Commit> commit) {
-      branch_tracker_.StopTransaction(std::move(commit));
-      callback(status);
-    });
-  });
+  operation_serializer_.Serialize<Status>(
+      callback, [this](StatusCallback callback) {
+        if (!journal_) {
+          callback(Status::NO_TRANSACTION_IN_PROGRESS);
+          return;
+        }
+        journal_parent_commit_.clear();
+        CommitJournal(std::move(journal_), [
+          this, callback = std::move(callback)
+        ](Status status, std::unique_ptr<const storage::Commit> commit) {
+          branch_tracker_.StopTransaction(std::move(commit));
+          callback(status);
+        });
+      });
 }
 
 // Rollback() => (Status status);
 void PageDelegate::Rollback(const Page::RollbackCallback& callback) {
-  operation_serializer_.Serialize(callback, [this](StatusCallback callback) {
-    if (!journal_) {
-      callback(Status::NO_TRANSACTION_IN_PROGRESS);
-      return;
-    }
-    storage::Status status = storage_->RollbackJournal(std::move(journal_));
-    journal_.reset();
-    journal_parent_commit_.clear();
-    callback(PageUtils::ConvertStatus(status));
-    branch_tracker_.StopTransaction(nullptr);
-  });
+  operation_serializer_.Serialize<Status>(
+      callback, [this](StatusCallback callback) {
+        if (!journal_) {
+          callback(Status::NO_TRANSACTION_IN_PROGRESS);
+          return;
+        }
+        storage::Status status = storage_->RollbackJournal(std::move(journal_));
+        journal_.reset();
+        journal_parent_commit_.clear();
+        callback(PageUtils::ConvertStatus(status));
+        branch_tracker_.StopTransaction(nullptr);
+      });
 }
 
 void PageDelegate::SetSyncStateWatcher(

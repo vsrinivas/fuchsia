@@ -204,7 +204,7 @@ void ConflictResolverClient::GetDiff(
 // Merge(array<MergedValue>? merge_changes) => (Status status);
 void ConflictResolverClient::Merge(fidl::Array<MergedValuePtr> merged_values,
                                    const MergeCallback& callback) {
-  operation_serializer_.Serialize(
+  operation_serializer_.Serialize<Status>(
       callback, fxl::MakeCopyable([
         weak_this = weak_factory_.GetWeakPtr(),
         merged_values = std::move(merged_values)

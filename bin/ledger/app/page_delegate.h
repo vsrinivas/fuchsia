@@ -120,7 +120,7 @@ class PageDelegate {
 
   storage::CommitId journal_parent_commit_;
   std::unique_ptr<storage::Journal> journal_;
-  callback::OperationSerializer<Status> operation_serializer_;
+  callback::OperationSerializer operation_serializer_;
   SyncWatcherSet* watcher_set_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageDelegate);
