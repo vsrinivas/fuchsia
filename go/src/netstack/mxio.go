@@ -8,10 +8,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"sync"
-	"syscall"
 	"syscall/mx"
 	"syscall/mx/mxerror"
 	"syscall/mx/mxio"
@@ -51,30 +49,6 @@ var (
 	ioctlNetcGetNodename = mxio.IoctlNum(mxio.IoctlKindDefault, mxio.IoctlFamilyNetconfig, 8)
 )
 
-// TODO(abarth): Remove this function once clients access netstack through
-// svcfs.
-func devmgrConnect() (mx.Handle, error) {
-	f, err := os.OpenFile("/dev/socket", O_DIRECTORY|O_RDWR, 0)
-	if err != nil {
-		log.Printf("could not open /dev/socket: %v", err)
-		return 0, err
-	}
-	defer f.Close()
-
-	c0, c1, err := mx.NewChannel(0)
-	if err != nil {
-		log.Printf("could not create socket fs channel: %v", err)
-		return 0, err
-	}
-	err = syscall.IoctlSetHandle(int(f.Fd()), mxio.IoctlVFSMountFS, c1.Handle)
-	if err != nil {
-		c0.Close()
-		c1.Close()
-		return 0, fmt.Errorf("failed to mount /dev/socket: %v", err)
-	}
-	return c0.Handle, nil
-}
-
 type app struct {
 	socket socketServer
 }
@@ -107,24 +81,6 @@ func socketDispatcher(stk tcpip.Stack, ctx *context.Context) (*socketServer, err
 			next:       1,
 		},
 	}
-
-	h1, err := devmgrConnect()
-	if err != nil {
-		return nil, fmt.Errorf("devmgr: %v", err)
-	}
-
-	if err := d.AddHandler(h1, mxio.ServerHandler(a.socket.mxioHandler), 0); err != nil {
-		h1.Close()
-		return nil, err
-	}
-
-	// We're ready to serve
-	// TODO(crawshaw): give this signal a name.
-	if err := h1.SignalPeer(0, mx.SignalUser0); err != nil {
-		h1.Close()
-		return nil, err
-	}
-
 	ctx.OutgoingService.AddService(a)
 
 	go d.Serve()
