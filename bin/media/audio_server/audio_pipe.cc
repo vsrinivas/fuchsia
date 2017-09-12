@@ -65,6 +65,13 @@ void AudioPipe::PrimeRequested(
     return;
   }
 
+  if (supplied_packets_outstanding() >= kDemandMinPacketsOutstanding) {
+    // Demand has already been met.
+    SetDemand(kDemandMinPacketsOutstanding);
+    cbk();
+    return;
+  }
+
   prime_callback_ = cbk;
   SetDemand(kDemandMinPacketsOutstanding);
   // TODO(dalesat): Implement better demand strategy.

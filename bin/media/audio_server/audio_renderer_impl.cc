@@ -7,15 +7,15 @@
 #include <algorithm>
 #include <limits>
 
-#include "lib/media/timeline/timeline.h"
-#include "lib/media/timeline/timeline_function.h"
-#include "lib/media/timeline/timeline_rate.h"
 #include "garnet/bin/media/audio_server/audio_output_manager.h"
 #include "garnet/bin/media/audio_server/audio_renderer_format_info.h"
 #include "garnet/bin/media/audio_server/audio_renderer_to_output_link.h"
 #include "garnet/bin/media/audio_server/audio_server_impl.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
+#include "lib/media/timeline/timeline.h"
+#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/timeline/timeline_rate.h"
 
 namespace media {
 namespace audio {
@@ -351,11 +351,8 @@ void AudioRendererImpl::OnPacketReceived(AudioPipe::AudioPacketRefPtr packet) {
   }
 
   if (packet->supplied_packet()->packet()->end_of_stream) {
-    FXL_DCHECK(packet->supplied_packet()->packet()->pts_rate_ticks ==
-               format_info_->format()->frames_per_second);
-    FXL_DCHECK(packet->supplied_packet()->packet()->pts_rate_seconds == 1);
     timeline_control_point_.SetEndOfStreamPts(
-        (packet->supplied_packet()->packet()->pts + packet->frame_count()) /
+        (packet->end_pts() >> PTS_FRACTIONAL_BITS) /
         format_info_->frames_per_ns());
   }
 }
@@ -370,7 +367,11 @@ bool AudioRendererImpl::OnFlushRequested(
     FXL_DCHECK(output);
     output->FlushPendingQueue();
   }
+
+  timeline_control_point_.ClearEndOfStream();
+
   cbk();
+
   return true;
 }
 

@@ -4,15 +4,15 @@
 
 #pragma once
 
-#include "lib/media/flog/flog.h"
-#include "lib/media/timeline/timeline_function.h"
-#include "lib/media/fidl/logs/media_timeline_control_point_channel.fidl.h"
-#include "lib/media/fidl/timeline_controller.fidl.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"
+#include "lib/media/fidl/logs/media_timeline_control_point_channel.fidl.h"
+#include "lib/media/fidl/timeline_controller.fidl.h"
+#include "lib/media/flog/flog.h"
+#include "lib/media/timeline/timeline_function.h"
 
 namespace media {
 
@@ -106,8 +106,6 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   bool TimelineFunctionPending() FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
     return pending_timeline_function_.reference_time() != kUnspecifiedTime;
   }
-
-  void ClearEndOfStreamInternal() FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Determines whether end-of-stream has been reached.
   bool ReachedEndOfStream() FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);

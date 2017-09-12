@@ -4,11 +4,11 @@
 
 #include "garnet/bin/media/util/timeline_control_point.h"
 
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
 #include "lib/media/timeline/fidl_type_conversions.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
-#include "lib/fxl/logging.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace media {
 
@@ -113,11 +113,6 @@ void TimelineControlPoint::SetEndOfStreamPts(int64_t end_of_stream_pts) {
 
 void TimelineControlPoint::ClearEndOfStream() {
   fxl::MutexLocker locker(&mutex_);
-  ClearEndOfStreamInternal();
-}
-
-void TimelineControlPoint::ClearEndOfStreamInternal() {
-  mutex_.AssertHeld();
   if (end_of_stream_pts_ != kUnspecifiedTime) {
     end_of_stream_pts_ = kUnspecifiedTime;
     end_of_stream_published_ = false;
@@ -178,10 +173,6 @@ void TimelineControlPoint::SetTimelineTransform(
 
   RCHECK(timeline_transform);
   RCHECK(timeline_transform->reference_delta != 0);
-
-  if (timeline_transform->subject_time != kUnspecifiedTime) {
-    ClearEndOfStreamInternal();
-  }
 
   bool was_progressing = ProgressingInternal();
 
