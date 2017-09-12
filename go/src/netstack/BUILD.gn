@@ -70,13 +70,9 @@ go_binary("netstack_bin") {
       source = "//third_party/netstack"
     },
     {
-      package = "garnet/public/lib/netstack/fidl/netstack"
-      source = "$root_gen_dir/go/src/garnet/public/lib/netstack/fidl/netstack"
-    },
-    {
-      package = "garnet/public/lib/netstack/fidl/net_address"
+      package = "garnet/public/lib/netstack/fidl"
       source =
-          "$root_gen_dir/go/src/garnet/public/lib/netstack/fidl/net_address"
+          "$root_gen_dir/go/src/garnet/public/lib/netstack/fidl"
     },
     {
       package = "garnet/public/lib/app/fidl"

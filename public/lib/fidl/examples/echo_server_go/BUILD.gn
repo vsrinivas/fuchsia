@@ -10,6 +10,7 @@ go_binary("echo_server_go_bin") {
   gopackage = "fuchsia.googlesource.com/fidl_examples/echo_server_go"
   deps = [
     "//garnet/public/lib/fidl/examples/services",
+    "//garnet/public/lib/app/fidl",
   ]
   go_dependencies = [
     {
@@ -30,6 +31,10 @@ go_binary("echo_server_go_bin") {
     {
       package = "svc"
       source = "//garnet/public/lib/svc/go/src/svc"
+    },
+    {
+      package = "garnet/public/lib/app/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
     },
   ]
 }

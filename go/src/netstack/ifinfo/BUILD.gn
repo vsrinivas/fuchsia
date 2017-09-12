@@ -28,6 +28,14 @@ go_binary("ifinfo") {
       package = "github.com/google/netstack"
       source = "//third_party/netstack"
     },
+    {
+      package = "garnet/public/lib/app/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
+    },
+    {
+      package = "garnet/public/lib/netstack/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/netstack/fidl"
+    },
   ]
 
   deps = [

@@ -24,6 +24,14 @@ go_binary("getaddrtest") {
       package = "fidl"
       source = "//garnet/public/lib/fidl/go/src/fidl"
     },
+    {
+      package = "garnet/public/lib/app/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
+    },
+    {
+      package = "garnet/public/lib/netstack/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/netstack/fidl"
+    },
   ]
 
   deps = [

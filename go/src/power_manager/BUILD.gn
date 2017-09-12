@@ -27,8 +27,17 @@ go_binary("power_manager_bin") {
       package = "svc"
       source = "//garnet/public/lib/svc/go/src/svc"
     },
+    {
+      package = "garnet/public/lib/app/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
+    },
+    {
+      package = "garnet/public/lib/power/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/power/fidl"
+    },
   ]
   deps = [
+    "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/power/fidl",
   ]
 }
@@ -52,8 +61,17 @@ go_test("power_manager_test") {
       package = "svc"
       source = "//garnet/public/lib/svc/go/src/svc"
     },
+    {
+      package = "garnet/public/lib/app/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
+    },
+    {
+      package = "garnet/public/lib/power/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/power/fidl"
+    },
   ]
   deps = [
+    "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/power/fidl",
   ]
 }
