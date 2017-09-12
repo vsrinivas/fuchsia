@@ -30,7 +30,6 @@ MODULE_DEPS += \
 	kernel/dev/interrupt/arm_gicv3 \
 	kernel/dev/interrupt/bcm28xx \
 	kernel/dev/psci \
-	kernel/dev/qemu \
 	kernel/dev/uart/amlogic_s905 \
 	kernel/dev/uart/bcm28xx \
 	kernel/dev/uart/pl011 \

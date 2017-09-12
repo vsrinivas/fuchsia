@@ -52,11 +52,31 @@ typedef struct zx_pcie_device_info {
     uint8_t  func_id;
 } zx_pcie_device_info_t;
 
+#define ZX_PCI_MAX_BUSSES (256u)
+#define ZX_PCI_MAX_DEVICES_PER_BUS (32u)
+#define ZX_PCI_MAX_FUNCTIONS_PER_DEVICE (8u)
+#define ZX_PCI_MAX_FUNCTIONS_PER_BUS (ZX_PCI_MAX_DEVICES_PER_BUS * ZX_PCI_MAX_FUNCTIONS_PER_DEVICE)
+
+#define ZX_PCI_MAX_LEGACY_IRQ_PINS (4u)
+#define ZX_PCI_MAX_MSI_IRQS        (32u)
+#define ZX_PCI_MAX_MSIX_IRQS       (2048u)
+
+#define ZX_PCI_STANDARD_CONFIG_HDR_SIZE (64u)
+#define ZX_PCI_BASE_CONFIG_SIZE         (256u)
+#define ZX_PCI_EXTENDED_CONFIG_SIZE     (4096u)
+#define ZX_PCI_ECAM_BYTE_PER_BUS (ZX_PCI_EXTENDED_CONFIG_SIZE * ZX_PCI_MAX_FUNCTIONS_PER_BUS)
+
+#define ZX_PCI_BAR_REGS_PER_BRIDGE    (2u)
+#define ZX_PCI_BAR_REGS_PER_DEVICE    (6u)
+#define ZX_PCI_MAX_BAR_REGS           (6u)
+
 #define ZX_PCI_NO_IRQ_MAPPING UINT32_MAX
 
 // Dimensions: device id, function id, legacy pin number
 // ZX_PCI_NO_IRQ_MAPPING if no mapping specified.
-typedef uint32_t zx_pci_irq_swizzle_lut_t[32][8][4];
+typedef uint32_t zx_pci_irq_swizzle_lut_t[ZX_PCI_MAX_DEVICES_PER_BUS]
+                                         [ZX_PCI_MAX_FUNCTIONS_PER_DEVICE]
+                                         [ZX_PCI_MAX_LEGACY_IRQ_PINS];
 
 typedef struct zx_pci_init_arg {
     zx_pci_irq_swizzle_lut_t dev_pin_to_global_irq;

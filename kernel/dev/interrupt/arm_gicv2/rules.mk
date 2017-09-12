@@ -13,6 +13,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/arm_gic.c \
 	$(LOCAL_DIR)/arm_gicv2m.c \
 	$(LOCAL_DIR)/arm_gicv2m_msi.c \
+	$(LOCAL_DIR)/arm_gicv2m_pcie.cpp \
 
 MODULE_DEPS += \
 	kernel/dev/interrupt \

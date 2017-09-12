@@ -75,9 +75,6 @@ list    kernel.arm-pl011-uart             MDI_ARM_PL011_UART                    
 // pl011 driver uses base-virt, base-phys and IRQ
 // TODO:(hollande) See note above re: phys/virt
 
-// qemu drivers
-list    kernel.qemu-pcie                  MDI_QEMU_PCIE                         1060
-
 // ARM gicv2 driver
 list    kernel.arm-gic-v2                 MDI_ARM_GIC_V2                        1070
 // ARM gicv2 also uses base-virt and base-phys
@@ -88,8 +85,11 @@ uint32  kernel.arm-gic-v2.ipi-base        MDI_ARM_GIC_V2_IPI_BASE               
 uint64  kernel.arm-gic-v2.msi-frame-phys  MDI_ARM_GIC_V2_MSI_FRAME_PHYS         1074
 uint64  kernel.arm-gic-v2.msi-frame-virt  MDI_ARM_GIC_V2_MSI_FRAME_VIRT         1075
 
+// ARM gicv2 pcie support
+list    kernel.arm-gic-v2-pcie            MDI_ARM_GIC_V2_PCIE                   1080
+
 // AmLogic S905
-list    kernel.s905-uart                  MDI_S905_UART                         1080
+list    kernel.s905-uart                  MDI_S905_UART                         1090
 
 // VID and PID for generic platform devices (that is, devices that may be used by multiple vendors).
 const PDEV_VID_GENERIC = 0

@@ -29,13 +29,16 @@ kernel = {
     arm-timer = {
         irq-virt = 27
     }
-    qemu-pcie = {}
+    arm-gic-v2-pcie = {}
 }
 
 platform = {
     vid = 0x1234
     pid = 1
 
+    bus = {}
+
+    // bind point for kpci driver
     device = {
         name = "pci"
         vid = PDEV_VID_GENERIC
