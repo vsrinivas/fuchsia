@@ -10,6 +10,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS := \
+    $(LOCAL_DIR)/bus_transaction_initiator_dispatcher.cpp \
     $(LOCAL_DIR)/channel_dispatcher.cpp \
     $(LOCAL_DIR)/diagnostics.cpp \
     $(LOCAL_DIR)/dispatcher.cpp \
@@ -32,6 +33,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/message_packet.cpp \
     $(LOCAL_DIR)/pci_device_dispatcher.cpp \
     $(LOCAL_DIR)/pci_interrupt_dispatcher.cpp \
+    $(LOCAL_DIR)/pinned_memory_object.cpp \
     $(LOCAL_DIR)/policy_manager.cpp \
     $(LOCAL_DIR)/port_dispatcher.cpp \
     $(LOCAL_DIR)/process_dispatcher.cpp \
