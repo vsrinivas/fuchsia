@@ -350,7 +350,7 @@ void MsdIntelDevice::StartDeviceThread()
     DASSERT(!wait_thread_.joinable());
     wait_thread_ = std::thread([this] { this->WaitThreadLoop(); });
 
-    // TODO(MG-594): stop the wait thread like other threads
+    // TODO(ZX-594): stop the wait thread like other threads
     wait_thread_.detach();
 }
 
