@@ -57,10 +57,10 @@ wlan_go_dependencies = [
 go_test("keywrap_test_bin") {
   output_name = "keywrap_test"
   gopackage = "apps/wlan/keywrap"
+
+  # TODO(hanr): This program has a smaller dependency set in practice, its go_dependencies list
+  # should be updated to match the code.
   go_dependencies = wlan_go_dependencies
-  deps = [
-    "//garnet/public/lib/netstack/fidl",
-  ]
 }
 
 go_binary("wlanstack_bin") {
