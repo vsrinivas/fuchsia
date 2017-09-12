@@ -407,14 +407,13 @@ static const pci_device_ops_t kVirtioPciDeviceOps = {
 static void virtio_pci_setup_cap(pci_cap_t* cap, virtio_pci_cap_t* virtio_cap, uint8_t cfg_type,
                                  size_t cap_len, size_t data_length, size_t bar_offset) {
     virtio_cap->cfg_type = cfg_type;
-    virtio_cap->cap_len = static_cast<uint8_t>(cap_len);
     virtio_cap->bar = VirtioPciBar::MODERN;
     virtio_cap->offset = static_cast<uint32_t>(bar_offset);
     virtio_cap->length = static_cast<uint32_t>(data_length);
 
     cap->id = kPciCapTypeVendorSpecific;
     cap->data = reinterpret_cast<uint8_t*>(virtio_cap);
-    cap->len = sizeof(*virtio_cap);
+    cap->len = virtio_cap->cap_len = static_cast<uint8_t>(cap_len);
 }
 
 static void virtio_pci_setup_caps(virtio_device_t* device) {
