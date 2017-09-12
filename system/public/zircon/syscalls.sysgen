@@ -553,6 +553,12 @@ syscall vmo_create_physical
     (rsrc_handle: zx_handle_t, paddr: zx_paddr_t, size: size_t)
     returns (zx_status_t, out: zx_handle_t);
 
+# DDK Syscalls: Device Memory Access
+
+syscall iommu_create
+    (rsrc_handle: zx_handle_t, type: uint32_t, desc: any[desc_len] IN, desc_len: uint32_t)
+    returns (zx_status_t, out: zx_handle_t);
+
 # DDK Syscalls: Misc Info
 
 syscall bootloader_fb_get_info

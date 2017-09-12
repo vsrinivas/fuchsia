@@ -21,14 +21,17 @@
 #include <object/handle.h>
 #include <object/interrupt_dispatcher.h>
 #include <object/interrupt_event_dispatcher.h>
+#include <object/iommu_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/resources.h>
 #include <object/vm_object_dispatcher.h>
+#include <zxcpp/new.h>
 
 #if ARCH_X86
 #include <platform/pc/bootloader.h>
 #endif
 
+#include <zircon/syscalls/iommu.h>
 #include <zircon/syscalls/pci.h>
 
 #include "syscalls_priv.h"
@@ -280,6 +283,50 @@ zx_status_t sys_set_framebuffer_vmo(zx_handle_t hrsrc, zx_handle_t vmo_handle, u
     di.flags = DISPLAY_FLAG_HW_FRAMEBUFFER;
     udisplay_set_display_info(&di);
 
+    return ZX_OK;
+}
+
+zx_status_t sys_iommu_create(zx_handle_t rsrc_handle, uint32_t type, user_in_ptr<const void> desc,
+                             uint32_t desc_len, user_out_ptr<zx_handle_t> out) {
+    // TODO: finer grained validation
+    zx_status_t status;
+    if ((status = validate_resource(rsrc_handle, ZX_RSRC_KIND_ROOT)) < 0) {
+        return status;
+    }
+
+    if (desc_len > ZX_IOMMU_MAX_DESC_LEN) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    fbl::RefPtr<Dispatcher> dispatcher;
+    zx_rights_t rights;
+
+    {
+        // Copy the descriptor into the kernel and try to create the dispatcher
+        // using it.
+        fbl::AllocChecker ac;
+        fbl::unique_ptr<uint8_t[]> copied_desc(new (&ac) uint8_t[desc_len]);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        if ((status = desc.copy_array_from_user(copied_desc.get(), desc_len)) != ZX_OK) {
+            return status;
+        }
+        status = IommuDispatcher::Create(type,
+                                         fbl::unique_ptr<const uint8_t[]>(copied_desc.release()),
+                                         desc_len, &dispatcher, &rights);
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+
+    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
+
+    auto up = ProcessDispatcher::GetCurrent();
+    if (out.copy_to_user(up->MapHandleToValue(handle)) != ZX_OK)
+        return ZX_ERR_INVALID_ARGS;
+
+    up->AddHandle(fbl::move(handle));
     return ZX_OK;
 }
 
