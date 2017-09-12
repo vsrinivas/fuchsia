@@ -10,6 +10,7 @@
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/src/component/message_queue_manager.h"
+#include "apps/modular/src/entity/entity_repository.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fxl/macros.h"
@@ -23,6 +24,7 @@ struct ComponentContextInfo {
   MessageQueueManager* const message_queue_manager;
   AgentRunner* const agent_runner;
   ledger::LedgerRepository* const ledger_repository;
+  EntityRepository* const entity_repository;
 };
 
 // Implements the ComponentContext interface, which is provided to
@@ -72,9 +74,16 @@ class ComponentContextImpl : public ComponentContext {
   void GetMessageSender(const fidl::String& queue_token,
                         fidl::InterfaceRequest<MessageSender> request) override;
 
+  // |ComponentContext|
+  void GetEntityStore(fidl::InterfaceRequest<EntityStore> request) override;
+
+  // |ComponentContext|
+  void GetEntityResolver(fidl::InterfaceRequest<EntityResolver> request) override;
+
   MessageQueueManager* const message_queue_manager_;
   AgentRunner* const agent_runner_;
   ledger::LedgerRepository* const ledger_repository_;
+  EntityRepository* const entity_repository_;
 
   const std::string component_namespace_;
   const std::string component_instance_id_;

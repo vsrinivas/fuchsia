@@ -8,6 +8,8 @@ import "lib/app/fidl/service_provider.fidl";
 import "apps/ledger/services/public/ledger.fidl";
 import "apps/modular/services/agent/agent_controller/agent_controller.fidl";
 import "apps/modular/services/component/message_queue.fidl";
+import "apps/modular/services/entity/entity_resolver.fidl";
+import "apps/modular/services/entity/entity_store.fidl";
 
 // Provided to all components in their respective intialization methods by the
 // framework. For example, a Module gets it in Module::Initialize() and an Agent
@@ -31,4 +33,7 @@ interface ComponentContext {
   // identified by |queue_token|. Token for a MessageQueue is obtained from its
   // GetToken() method and the token is unique within the scope of the user.
   GetMessageSender(string queue_token, MessageSender& sender);
+
+  GetEntityResolver(EntityResolver& request);
+  GetEntityStore(EntityStore& request);
 };

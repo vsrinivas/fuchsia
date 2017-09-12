@@ -11,5 +11,6 @@ group("src") {
     "oauth_token_manager:all",
     "story_runner:all",
     "user_runner:all",
+    "entity",
   ]
 }

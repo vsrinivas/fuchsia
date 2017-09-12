@@ -24,6 +24,7 @@ source_set("component") {
     "//apps/modular/lib/ledger:types",
     "//apps/modular/services/component",
     "//apps/modular/src/agent_runner:public",
+    "//apps/modular/src/entity",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
   ]

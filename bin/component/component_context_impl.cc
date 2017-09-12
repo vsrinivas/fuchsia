@@ -19,12 +19,14 @@ ComponentContextImpl::ComponentContextImpl(const ComponentContextInfo& info,
     : message_queue_manager_(info.message_queue_manager),
       agent_runner_(info.agent_runner),
       ledger_repository_(info.ledger_repository),
+      entity_repository_(info.entity_repository),
       component_namespace_(std::move(component_namespace)),
       component_instance_id_(std::move(component_instance_id)),
       component_url_(std::move(component_url)) {
   FXL_DCHECK(message_queue_manager_);
   FXL_DCHECK(agent_runner_);
   FXL_DCHECK(ledger_repository_);
+  FXL_DCHECK(entity_repository_);
 }
 
 ComponentContextImpl::~ComponentContextImpl() = default;
@@ -61,6 +63,16 @@ void ComponentContextImpl::GetMessageSender(
     const fidl::String& queue_token,
     fidl::InterfaceRequest<MessageSender> request) {
   message_queue_manager_->GetMessageSender(queue_token, std::move(request));
+}
+
+void ComponentContextImpl::GetEntityStore(
+    fidl::InterfaceRequest<EntityStore> request) {
+  entity_repository_->ConnectEntityStore(std::move(request));
+}
+
+void ComponentContextImpl::GetEntityResolver(
+    fidl::InterfaceRequest<EntityResolver> request) {
+  entity_repository_->ConnectEntityResolver(std::move(request));
 }
 
 }  // namespace modular

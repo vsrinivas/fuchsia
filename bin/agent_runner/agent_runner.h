@@ -21,6 +21,7 @@
 #include "apps/modular/services/agent/agent_provider.fidl.h"
 #include "apps/modular/services/auth/account_provider.fidl.h"
 #include "apps/modular/src/agent_runner/agent_runner_storage.h"
+#include "apps/modular/src/entity/entity_repository.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
@@ -45,7 +46,8 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
               ledger::LedgerRepository* ledger_repository,
               AgentRunnerStorage* agent_runner_storage,
               auth::TokenProviderFactory* token_provider_factory,
-              maxwell::UserIntelligenceProvider* user_intelligence_provider);
+              maxwell::UserIntelligenceProvider* user_intelligence_provider,
+              EntityRepository* const entity_repository);
   ~AgentRunner() override;
 
   void Connect(fidl::InterfaceRequest<AgentProvider> request);
@@ -169,6 +171,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   AgentRunnerStorage* const agent_runner_storage_;
   auth::TokenProviderFactory* const token_provider_factory_;
   maxwell::UserIntelligenceProvider* const user_intelligence_provider_;
+  EntityRepository* const entity_repository_;
 
   fidl::BindingSet<AgentProvider> agent_provider_bindings_;
   fidl::InterfacePtrSet<AgentProviderWatcher> agent_provider_watchers_;

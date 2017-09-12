@@ -22,6 +22,7 @@ executable("modular_unittests") {
     "//apps/modular/lib:unittests",
     "//apps/modular/src/agent_runner:unittests",
     "//apps/modular/src/device_runner:unittests",
+    "//apps/modular/src/entity:unittests",
     "//apps/modular/src/story_runner:unittests",
     "//apps/test_runner/src:gtest_main",
   ]

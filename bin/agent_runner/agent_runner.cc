@@ -26,13 +26,15 @@ AgentRunner::AgentRunner(
     ledger::LedgerRepository* const ledger_repository,
     AgentRunnerStorage* const agent_runner_storage,
     auth::TokenProviderFactory* const token_provider_factory,
-    maxwell::UserIntelligenceProvider* const user_intelligence_provider)
+    maxwell::UserIntelligenceProvider* const user_intelligence_provider,
+    EntityRepository* const entity_repository)
     : application_launcher_(application_launcher),
       message_queue_manager_(message_queue_manager),
       ledger_repository_(ledger_repository),
       agent_runner_storage_(agent_runner_storage),
       token_provider_factory_(token_provider_factory),
       user_intelligence_provider_(user_intelligence_provider),
+      entity_repository_(entity_repository),
       terminating_(std::make_shared<bool>(false)) {
   agent_runner_storage_->Initialize(this, [] {});
 }
@@ -111,7 +113,8 @@ void AgentRunner::MaybeRunAgent(const std::string& agent_url,
 void AgentRunner::RunAgent(const std::string& agent_url) {
   // Start the agent and issue all callbacks.
   ComponentContextInfo component_info = {message_queue_manager_, this,
-                                         ledger_repository_};
+                                         ledger_repository_,
+                                         entity_repository_};
   AgentContextInfo info = {component_info, application_launcher_,
                            token_provider_factory_,
                            user_intelligence_provider_};

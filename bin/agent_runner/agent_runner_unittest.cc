@@ -17,6 +17,7 @@
 #include "apps/modular/services/auth/account_provider.fidl.h"
 #include "apps/modular/src/agent_runner/agent_runner.h"
 #include "apps/modular/src/component/message_queue_manager.h"
+#include "apps/modular/src/entity/entity_repository.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
@@ -72,7 +73,7 @@ class AgentRunnerTest : public TestWithMessageLoop {
     agent_runner_.reset(new AgentRunner(
         &launcher_, mqm_.get(), ledger_repo_app_->ledger_repository(),
         &agent_runner_storage_, token_provider_factory_.get(),
-        ui_provider_.get()));
+        ui_provider_.get(), &entity_repository_));
   }
 
   void TearDown() override {
@@ -113,6 +114,7 @@ class AgentRunnerTest : public TestWithMessageLoop {
 
   auth::TokenProviderFactoryPtr token_provider_factory_;
   maxwell::UserIntelligenceProviderPtr ui_provider_;
+  EntityRepository entity_repository_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AgentRunnerTest);
 };

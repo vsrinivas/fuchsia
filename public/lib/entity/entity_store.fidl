@@ -19,7 +19,7 @@ interface EntityStore {
   //
   // TODO(thatguy): |contents| should be a VMO or a File, once FIDL2 is
   // launched, and a simpler way of creating VMOs in Dart is available.
-  CreateEntity(array<string> types, array<array<uint8>?> contents, Entity& entity);
+  CreateEntity(array<string> types, array<array<uint8>?> contents, Entity& request);
 
   // TODO(thatguy): Do we want to have a way to permanently delete an Entity here?
 };

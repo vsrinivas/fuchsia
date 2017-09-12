@@ -61,6 +61,7 @@ source_set("unittests") {
     "//apps/modular/services/agent",
     "//apps/modular/services/auth",
     "//apps/modular/src/component",
+    "//apps/modular/src/entity",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
     "//magenta/system/ulib/trace",
@@ -85,6 +86,7 @@ source_set("public") {
     "//apps/modular/services/agent",
     "//apps/modular/services/agent/agent_controller",
     "//apps/modular/services/auth",
+    "//apps/modular/src/entity",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
   ]

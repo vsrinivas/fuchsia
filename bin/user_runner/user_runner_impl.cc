@@ -192,6 +192,8 @@ void UserRunnerImpl::Initialize(
   fidl::InterfaceHandle<VisibleStoriesProvider> visible_stories_provider;
   auto visible_stories_provider_request = visible_stories_provider.NewRequest();
 
+  entity_repository_ = std::make_unique<EntityRepository>();
+
   agent_runner_storage_ =
       std::make_unique<AgentRunnerStorageImpl>(
           ledger_client_.get(), to_array(kAgentRunnerPageId));
@@ -199,11 +201,13 @@ void UserRunnerImpl::Initialize(
   agent_runner_ = std::make_unique<AgentRunner>(
       user_scope_->GetLauncher(), message_queue_manager_.get(),
       ledger_repository_.get(), agent_runner_storage_.get(),
-      token_provider_factory_.get(), user_intelligence_provider_.get());
+      token_provider_factory_.get(), user_intelligence_provider_.get(),
+      entity_repository_.get());
 
   ComponentContextInfo component_context_info{message_queue_manager_.get(),
                                               agent_runner_.get(),
-                                              ledger_repository_.get()};
+                                              ledger_repository_.get(),
+                                              entity_repository_.get()};
 
   maxwell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
       component_context_info, kMaxwellComponentNamespace, kMaxwellUrl,
@@ -247,7 +251,8 @@ void UserRunnerImpl::Initialize(
       focus_provider_story_provider.NewRequest();
 
   story_provider_impl_ = std::make_unique<StoryProviderImpl>(
-      user_scope_.get(), device_id, ledger_client_.get(), fidl::Array<uint8_t>::New(16),
+      user_scope_.get(), device_id, ledger_client_.get(),
+      fidl::Array<uint8_t>::New(16),
       std::move(story_shell), component_context_info,
       std::move(focus_provider_story_provider), intelligence_services_.get(),
       user_intelligence_provider_.get());
@@ -322,6 +327,7 @@ void UserRunnerImpl::Terminate() {
                   agent_runner_.reset();
                   agent_runner_storage_.reset();
 
+                  entity_repository_.reset();
                   message_queue_manager_.reset();
                   remote_invoker_impl_.reset();
                   device_map_impl_.reset();

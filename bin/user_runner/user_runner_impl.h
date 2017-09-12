@@ -26,6 +26,7 @@
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/modular/src/agent_runner/agent_runner_storage_impl.h"
+#include "apps/modular/src/entity/entity_repository.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -114,6 +115,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   std::unique_ptr<AppClient<maxwell::UserIntelligenceProviderFactory>> maxwell_;
   std::unique_ptr<AppClient<UserShell>> user_shell_;
 
+  std::unique_ptr<EntityRepository> entity_repository_;
   std::unique_ptr<StoryProviderImpl> story_provider_impl_;
   std::unique_ptr<MessageQueueManager> message_queue_manager_;
   std::unique_ptr<AgentRunnerStorage> agent_runner_storage_;
