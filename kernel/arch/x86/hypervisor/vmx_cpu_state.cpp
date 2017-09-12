@@ -17,7 +17,7 @@
 #include <fbl/mutex.h>
 
 static fbl::Mutex vmx_mutex;
-static size_t vcpus TA_GUARDED(vmx_mutex) = 0;
+static size_t num_vcpus TA_GUARDED(vmx_mutex) = 0;
 static fbl::unique_ptr<VmxCpuState> vmx_cpu_state TA_GUARDED(vmx_mutex);
 
 static mx_status_t vmxon(paddr_t pa) {
@@ -242,12 +242,12 @@ VmxCpuState::~VmxCpuState() {
 
 mx_status_t alloc_vpid(uint16_t* vpid) {
     fbl::AutoLock lock(&vmx_mutex);
-    if (vcpus == 0) {
+    if (num_vcpus == 0) {
         mx_status_t status = VmxCpuState::Create(&vmx_cpu_state);
         if (status != MX_OK)
             return status;
     }
-    vcpus++;
+    num_vcpus++;
     return vmx_cpu_state->AllocId(vpid);
 }
 
@@ -256,8 +256,8 @@ mx_status_t free_vpid(uint16_t vpid) {
     mx_status_t status = vmx_cpu_state->FreeId(vpid);
     if (status != MX_OK)
         return status;
-    vcpus--;
-    if (vcpus == 0)
+    num_vcpus--;
+    if (num_vcpus == 0)
         vmx_cpu_state.reset();
     return MX_OK;
 }
