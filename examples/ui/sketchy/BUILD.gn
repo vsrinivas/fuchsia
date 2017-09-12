@@ -19,4 +19,8 @@ executable("sketchy") {
     "//garnet/public/lib/ui/sketchy",
     "//garnet/public/lib/fidl/cpp/bindings",
   ]
+
+  include_dirs = [
+    "//third_party/glm",
+  ]
 }

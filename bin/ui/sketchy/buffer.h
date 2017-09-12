@@ -15,9 +15,12 @@ namespace sketchy_service {
 // create the Scenic buffer.
 class Buffer {
  public:
-  Buffer(scenic_lib::Session* session,
-         escher::BufferFactory* factory,
-         vk::DeviceSize size);
+  static std::unique_ptr<Buffer> NewVertexBuffer(scenic_lib::Session* session,
+                                                 escher::BufferFactory* factory,
+                                                 vk::DeviceSize size);
+  static std::unique_ptr<Buffer> NewIndexBuffer(scenic_lib::Session* session,
+                                                escher::BufferFactory* factory,
+                                                vk::DeviceSize size);
 
   Buffer(scenic_lib::Session* session, escher::BufferPtr buffer);
 

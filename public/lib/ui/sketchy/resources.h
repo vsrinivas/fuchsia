@@ -7,6 +7,7 @@
 #include "lib/ui/scenic/client/session.h"
 #include "lib/ui/fun/sketchy/fidl/ops.fidl.h"
 #include "lib/ui/fun/sketchy/fidl/resources.fidl.h"
+#include "lib/ui/sketchy/types.h"
 
 namespace sketchy_lib {
 
@@ -63,6 +64,7 @@ class Resource {
 class Stroke final : public Resource {
  public:
   Stroke(Canvas* canvas);
+  void SetPath(StrokePath& path);
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Stroke);

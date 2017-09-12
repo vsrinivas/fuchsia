@@ -15,6 +15,7 @@ enum class ResourceType {
   kResource = 1 << 0,
   kImportNode = 1 << 1,
   kStrokeGroup = 1 << 2,
+  kStroke = 1 << 3,
 };
 
 typedef escher::TypeInfo<ResourceType> ResourceTypeInfo;

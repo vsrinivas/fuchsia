@@ -2,11 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sketchy/stroke_segment.h"
-
 #include "escher/shape/mesh_builder.h"
-#include "sketchy/debug_print.h"
-#include "sketchy/page.h"
+#include "sketchy/stroke_segment.h"
 
 namespace sketchy {
 

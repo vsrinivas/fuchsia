@@ -56,6 +56,7 @@ fxl::RefPtr<ResourceT> ResourceMap::FindResource(ResourceId id) {
   template fxl::RefPtr<type> ResourceMap::FindResource<type>(ResourceId id)
 
 FIND_RESOURCE_FOR(ImportNode);
+FIND_RESOURCE_FOR(Stroke);
 FIND_RESOURCE_FOR(StrokeGroup);
 
 }  // namespace sketchy_service

@@ -8,11 +8,17 @@ source_set("sketchy") {
     "canvas.h",
     "resources.cc",
     "resources.h",
+    "types.cc",
+    "types.h",
   ]
 
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/ui/scenic:client",
     "//garnet/public/lib/ui/fun/sketchy/fidl",
+  ]
+
+  include_dirs = [
+    "//third_party/glm",
   ]
 }

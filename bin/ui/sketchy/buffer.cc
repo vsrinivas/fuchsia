@@ -7,7 +7,7 @@
 
 namespace sketchy_service {
 
-static scenic_lib::Buffer NewScenicBufferFromEscherBuffer(
+scenic_lib::Buffer NewScenicBufferFromEscherBuffer(
     const escher::BufferPtr& buffer,
     scenic_lib::Session* session) {
   auto result = buffer->device().exportMemoryMAGMA(buffer->mem()->base());
@@ -19,15 +19,28 @@ static scenic_lib::Buffer NewScenicBufferFromEscherBuffer(
   return scenic_lib::Buffer(memory, 0, buffer->size());
 }
 
-Buffer::Buffer(scenic_lib::Session* session,
-               escher::BufferFactory* factory,
-               vk::DeviceSize size)
-    : Buffer(session,
-             factory->NewBuffer(size,
-                                vk::BufferUsageFlagBits::eVertexBuffer |
-                                    vk::BufferUsageFlagBits::eStorageBuffer |
-                                    vk::BufferUsageFlagBits::eTransferDst,
-                                vk::MemoryPropertyFlagBits::eDeviceLocal)) {}
+std::unique_ptr<Buffer> Buffer::NewVertexBuffer(scenic_lib::Session* session,
+                                                escher::BufferFactory* factory,
+                                                vk::DeviceSize size) {
+  return std::make_unique<Buffer>(
+      session,
+      factory->NewBuffer(size,
+                         vk::BufferUsageFlagBits::eVertexBuffer |
+                             vk::BufferUsageFlagBits::eStorageBuffer |
+                             vk::BufferUsageFlagBits::eTransferDst,
+                         vk::MemoryPropertyFlagBits::eDeviceLocal));
+}
+
+std::unique_ptr<Buffer> Buffer::NewIndexBuffer(scenic_lib::Session* session,
+                                               escher::BufferFactory* factory,
+                                               vk::DeviceSize size) {
+  return std::make_unique<Buffer>(
+      session,
+      factory->NewBuffer(size,
+                         vk::BufferUsageFlagBits::eIndexBuffer |
+                             vk::BufferUsageFlagBits::eTransferDst,
+                         vk::MemoryPropertyFlagBits::eDeviceLocal));
+}
 
 Buffer::Buffer(scenic_lib::Session* session, escher::BufferPtr buffer)
     : escher_buffer_(std::move(buffer)),

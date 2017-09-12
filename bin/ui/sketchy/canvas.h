@@ -34,6 +34,7 @@ class CanvasImpl final : public sketchy::Canvas {
   bool CreateStrokeGroup(ResourceId id,
                          const sketchy::StrokeGroupPtr& stroke_group);
 
+  bool ApplySetPathOp(const sketchy::SetStrokePathOpPtr& op);
   bool ApplyAddStrokeOp(const sketchy::AddStrokeOpPtr& op);
   bool ApplyRemoveStrokeOp(const sketchy::RemoveStrokeOpPtr& op);
 
@@ -52,6 +53,8 @@ class CanvasImpl final : public sketchy::Canvas {
   bool ApplyScenicAddChildOp(const scenic::AddChildOpPtr& add_child);
 
   scenic_lib::Session* const session_;
+  escher::Escher* const escher_;
+
   // TODO: use more sophisticated factory that suballocates from larger GPU
   // memory allocations, and recycles buffers when they are no longer used.
   escher::BufferFactory buffer_factory_;

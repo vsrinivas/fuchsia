@@ -50,6 +50,15 @@ Stroke::Stroke(Canvas* canvas) : Resource(canvas) {
   EnqueueCreateResourceOp(id(), std::move(resource_args));
 }
 
+void Stroke::SetPath(StrokePath& path) {
+  auto set_stroke_path = sketchy::SetStrokePathOp::New();
+  set_stroke_path->stroke_id = id();
+  set_stroke_path->path = path.NewSketchyStrokePath();
+  auto op = sketchy::Op::New();
+  op->set_set_path(std::move(set_stroke_path));
+  EnqueueOp(std::move(op));
+}
+
 StrokeGroup::StrokeGroup(Canvas* canvas) : Resource(canvas) {
   sketchy::StrokeGroupPtr stroke_group = sketchy::StrokeGroup::New();
   auto resource_args = sketchy::ResourceArgs::New();

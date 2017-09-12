@@ -19,9 +19,15 @@ executable("sketchy") {
     "resources/resource.h",
     "resources/resource_map.cc",
     "resources/resource_map.h",
+    "resources/stroke.cc",
+    "resources/stroke.h",
     "resources/stroke_group.cc",
     "resources/stroke_group.h",
     "resources/types.h",
+    "//garnet/examples/escher/sketchy/sketchy/cubic_bezier.cc",
+    "//garnet/examples/escher/sketchy/sketchy/cubic_bezier.h",
+    "//garnet/examples/escher/sketchy/sketchy/stroke_segment.cc",
+    "//garnet/examples/escher/sketchy/sketchy/stroke_segment.h",
   ]
 
   deps = [
@@ -30,5 +36,10 @@ executable("sketchy") {
     "//garnet/public/lib/ui/fun/sketchy/fidl",
     "//garnet/lib/escher/escher",
     "//zircon/system/ulib/trace-provider",
+  ]
+
+  include_dirs = [
+    "//garnet/examples/escher/sketchy",
+    "//third_party/glm",
   ]
 }

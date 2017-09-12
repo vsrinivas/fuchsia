@@ -8,6 +8,7 @@
 #include "lib/ui/scenic/client/session.h"
 #include "garnet/bin/ui/sketchy/buffer.h"
 #include "garnet/bin/ui/sketchy/resources/resource.h"
+#include "garnet/bin/ui/sketchy/resources/stroke.h"
 
 namespace sketchy_service {
 
@@ -22,20 +23,23 @@ class StrokeGroup final : public Resource {
   StrokeGroup(scenic_lib::Session* session,
               escher::BufferFactory* buffer_factory);
 
-  // TODO(MZ-269): No Stroke class exists.
-  // bool AddStroke(StrokePtr stroke);
+  bool AddStroke(StrokePtr stroke);
+  // TODO(MZ-269): Implement.
   // bool RemoveStroke(StrokePtr stroke);
 
   const scenic_lib::ShapeNode& shape_node() const { return shape_node_; }
 
  private:
+  scenic_lib::Session* const session_;
   scenic_lib::ShapeNode shape_node_;
-  scenic_lib::Material material_;
   scenic_lib::Mesh mesh_;
+  scenic_lib::Material material_;
 
   // TODO: more sophisticated buffer management.
   std::unique_ptr<Buffer> vertex_buffer_;
   std::unique_ptr<Buffer> index_buffer_;
+  size_t vertex_buffer_offset_;
+  size_t index_buffer_offset_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StrokeGroup);
 };
