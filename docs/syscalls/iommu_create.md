@@ -58,4 +58,6 @@ supported on this system.
 
 ## SEE ALSO
 
-None yet.
+[bti_create](bti_create.md),
+[bti_pin](bti_unpin.md),
+[bti_unpin](bti_unpin.md).

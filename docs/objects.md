@@ -35,6 +35,7 @@ Zircon actively manages the following resources:
 ### Memory and address space
 + [Virtual Memory Object](objects/vm_object.md)
 + [Virtual Memory Address Region](objects/vm_address_region.md)
++ [bus_transaction_initiator](objects/bus_transaction_initiator.md)
 
 ### Waiting
 + [Port](objects/port.md)

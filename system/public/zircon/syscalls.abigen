@@ -575,6 +575,19 @@ syscall iommu_create
     (rsrc_handle: zx_handle_t, type: uint32_t, desc: any[desc_len] IN, desc_len: uint32_t)
     returns (zx_status_t, out: zx_handle_t);
 
+syscall bti_create
+    (iommu: zx_handle_t, options: uint32_t, bti_id: uint64_t)
+    returns (zx_status_t, out: zx_handle_t);
+
+syscall bti_pin
+    (bti: zx_handle_t, vmo: zx_handle_t, offset: uint64_t, size: uint64_t,
+        perms: uint32_t, addrs: zx_paddr_t[addrs_len] OUT, addrs_len: size_t)
+    returns (zx_status_t, actual: size_t);
+
+syscall bti_unpin
+    (bti: zx_handle_t, base_addr: zx_paddr_t)
+    returns (zx_status_t);
+
 # DDK Syscalls: Misc Info
 
 syscall bootloader_fb_get_info
