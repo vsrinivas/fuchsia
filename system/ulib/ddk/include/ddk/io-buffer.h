@@ -9,6 +9,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -75,8 +76,17 @@ zx_status_t io_buffer_cache_flush_invalidate(io_buffer_t* buffer, zx_off_t offse
 // The 'phys_list' and 'phys_count' fields are set if this function succeeds.
 zx_status_t io_buffer_physmap(io_buffer_t* buffer);
 
+zx_status_t io_buffer_physmap_range(io_buffer_t* buffer, zx_off_t offset,
+                                    size_t length, size_t phys_count,
+                                    zx_paddr_t* physmap);
+
 // Releases an io_buffer
 void io_buffer_release(io_buffer_t* buffer);
+
+// Set the BTI used by io_buffers for getting physical addresses.
+// |bti| is borrowed but not owned by the library.  The borrow can be released
+// by calling this again with ZX_HANDLE_INVALID
+void io_buffer_set_default_bti(zx_handle_t bti);
 
 static inline bool io_buffer_is_valid(io_buffer_t* buffer) {
     return (buffer->vmo_handle != ZX_HANDLE_INVALID);
@@ -89,13 +99,6 @@ static inline void* io_buffer_virt(io_buffer_t* buffer) {
 static inline zx_paddr_t io_buffer_phys(io_buffer_t* buffer) {
     ZX_DEBUG_ASSERT(buffer->phys != IO_BUFFER_INVALID_PHYS);
     return buffer->phys + buffer->offset;
-}
-
-static inline zx_status_t io_buffer_physmap_range(io_buffer_t* buffer, zx_off_t offset,
-                                                  size_t length, size_t phys_count,
-                                                  zx_paddr_t* physmap) {
-    return zx_vmo_op_range(buffer->vmo_handle, ZX_VMO_OP_LOOKUP, offset, length,
-                           physmap, phys_count * sizeof(*physmap));
 }
 
 // Returns the buffer size available after the given offset, relative to the
