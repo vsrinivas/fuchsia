@@ -18,9 +18,11 @@ bool RunGivenLoopWithTimeout(
     fsl::MessageLoop* message_loop,
     fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(1));
 
-bool RunGivenLoopUntil(fsl::MessageLoop* message_loop,
-                       std::function<bool()> condition,
-                       fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(1));
+bool RunGivenLoopUntil(
+    fsl::MessageLoop* message_loop,
+    std::function<bool()> condition,
+    fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(1),
+    fxl::TimeDelta step = fxl::TimeDelta::FromMilliseconds(10));
 
 class TestWithMessageLoop : public ::testing::Test {
  public:
@@ -34,9 +36,10 @@ class TestWithMessageLoop : public ::testing::Test {
 
   // Runs the loop until the condition returns true or the timeout is reached.
   // Returns |true| if the condition was met, and |false| if the timeout was
-  // reached.
+  // reached. The condition is checked at most every |step|.
   bool RunLoopUntil(std::function<bool()> condition,
-                    fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(1));
+                    fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(1),
+                    fxl::TimeDelta step = fxl::TimeDelta::FromMilliseconds(10));
 
   // Creates a closure that quits the test message loop when executed.
   fxl::Closure MakeQuitTask();

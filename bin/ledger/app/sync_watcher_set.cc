@@ -8,28 +8,36 @@ namespace ledger {
 namespace {
 SyncState ConvertToSyncState(cloud_sync::DownloadSyncState download) {
   switch (download) {
+    case cloud_sync::DOWNLOAD_STOPPED:
+      return SyncState::IDLE;
+    case cloud_sync::DOWNLOAD_BACKLOG:
+      return SyncState::IN_PROGRESS;
+    case cloud_sync::DOWNLOAD_TEMPORARY_ERROR:
+      return SyncState::PENDING;
+    case cloud_sync::DOWNLOAD_SETTING_REMOTE_WATCHER:
+      return SyncState::IN_PROGRESS;
     case cloud_sync::DOWNLOAD_IDLE:
       return SyncState::IDLE;
-    case cloud_sync::CATCH_UP_DOWNLOAD:
+    case cloud_sync::DOWNLOAD_IN_PROGRESS:
       return SyncState::IN_PROGRESS;
-    case cloud_sync::REMOTE_COMMIT_DOWNLOAD:
-      return SyncState::IN_PROGRESS;
-    case cloud_sync::DOWNLOAD_ERROR:
+    case cloud_sync::DOWNLOAD_PERMANENT_ERROR:
       return SyncState::ERROR;
   }
 }
 
 SyncState ConvertToSyncState(cloud_sync::UploadSyncState upload) {
   switch (upload) {
+    case cloud_sync::UPLOAD_STOPPED:
+      return SyncState::IDLE;
+    case cloud_sync::UPLOAD_SETUP:
+      return SyncState::IDLE;
     case cloud_sync::UPLOAD_IDLE:
       return SyncState::IDLE;
     case cloud_sync::UPLOAD_PENDING:
       return SyncState::PENDING;
-    case cloud_sync::WAIT_TOO_MANY_LOCAL_HEADS:
+    case cloud_sync::UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS:
       return SyncState::PENDING;
-    case cloud_sync::WAIT_CATCH_UP_DOWNLOAD:
-      return SyncState::PENDING;
-    case cloud_sync::WAIT_REMOTE_DOWNLOAD:
+    case cloud_sync::UPLOAD_WAIT_REMOTE_DOWNLOAD:
       return SyncState::PENDING;
     case cloud_sync::UPLOAD_IN_PROGRESS:
       return SyncState::IN_PROGRESS;

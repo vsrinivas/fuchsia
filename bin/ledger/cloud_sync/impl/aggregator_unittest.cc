@@ -35,11 +35,11 @@ TEST_F(AggregatorTest, SendFirstNotification) {
   Aggregator aggregator(base_watcher.get());
 
   std::unique_ptr<SyncStateWatcher> watcher1 = aggregator.GetNewStateWatcher();
-  watcher1->Notify(REMOTE_COMMIT_DOWNLOAD, WAIT_CATCH_UP_DOWNLOAD);
+  watcher1->Notify(DOWNLOAD_IN_PROGRESS, UPLOAD_WAIT_REMOTE_DOWNLOAD);
 
   ASSERT_EQ(2u, base_watcher->states.size());
-  EXPECT_EQ(REMOTE_COMMIT_DOWNLOAD, base_watcher->states[1].download);
-  EXPECT_EQ(WAIT_CATCH_UP_DOWNLOAD, base_watcher->states[1].upload);
+  EXPECT_EQ(DOWNLOAD_IN_PROGRESS, base_watcher->states[1].download);
+  EXPECT_EQ(UPLOAD_WAIT_REMOTE_DOWNLOAD, base_watcher->states[1].upload);
 }
 
 TEST_F(AggregatorTest, AggregateTwo) {
@@ -54,14 +54,14 @@ TEST_F(AggregatorTest, AggregateTwo) {
   EXPECT_EQ(DOWNLOAD_IDLE, base_watcher->states.rbegin()->download);
   EXPECT_EQ(UPLOAD_IDLE, base_watcher->states.rbegin()->upload);
 
-  watcher1->Notify(REMOTE_COMMIT_DOWNLOAD, WAIT_CATCH_UP_DOWNLOAD);
+  watcher1->Notify(DOWNLOAD_IN_PROGRESS, UPLOAD_WAIT_REMOTE_DOWNLOAD);
 
-  EXPECT_EQ(REMOTE_COMMIT_DOWNLOAD, base_watcher->states.rbegin()->download);
-  EXPECT_EQ(WAIT_CATCH_UP_DOWNLOAD, base_watcher->states.rbegin()->upload);
+  EXPECT_EQ(DOWNLOAD_IN_PROGRESS, base_watcher->states.rbegin()->download);
+  EXPECT_EQ(UPLOAD_WAIT_REMOTE_DOWNLOAD, base_watcher->states.rbegin()->upload);
 
   watcher2->Notify(DOWNLOAD_IDLE, UPLOAD_IDLE);
-  EXPECT_EQ(REMOTE_COMMIT_DOWNLOAD, base_watcher->states.rbegin()->download);
-  EXPECT_EQ(WAIT_CATCH_UP_DOWNLOAD, base_watcher->states.rbegin()->upload);
+  EXPECT_EQ(DOWNLOAD_IN_PROGRESS, base_watcher->states.rbegin()->download);
+  EXPECT_EQ(UPLOAD_WAIT_REMOTE_DOWNLOAD, base_watcher->states.rbegin()->upload);
 
   watcher1->Notify(DOWNLOAD_IDLE, UPLOAD_IN_PROGRESS);
   EXPECT_EQ(DOWNLOAD_IDLE, base_watcher->states.rbegin()->download);

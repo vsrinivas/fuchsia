@@ -16,11 +16,12 @@
 #include "apps/ledger/src/cloud_provider/public/page_cloud_handler.h"
 #include "apps/ledger/src/cloud_sync/impl/batch_download.h"
 #include "apps/ledger/src/cloud_sync/impl/batch_upload.h"
+#include "apps/ledger/src/cloud_sync/impl/page_download.h"
+#include "apps/ledger/src/cloud_sync/impl/page_upload.h"
 #include "apps/ledger/src/cloud_sync/public/page_sync.h"
 #include "apps/ledger/src/cloud_sync/public/sync_state_watcher.h"
 #include "apps/ledger/src/storage/public/commit_watcher.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
-#include "apps/ledger/src/storage/public/page_sync_delegate.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
@@ -53,9 +54,8 @@ namespace cloud_sync {
 // the page sync to stop, in which case the client is notified using the given
 // error callback.
 class PageSyncImpl : public PageSync,
-                     public storage::CommitWatcher,
-                     public storage::PageSyncDelegate,
-                     public cloud_provider_firebase::CommitWatcher {
+                     public PageDownload::Delegate,
+                     public PageUpload::Delegate {
  public:
   PageSyncImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
                storage::PageStorage* storage,
@@ -86,70 +86,28 @@ class PageSyncImpl : public PageSync,
 
   void SetSyncWatcher(SyncStateWatcher* watcher) override;
 
-  // storage::CommitWatcher:
-  void OnNewCommits(
-      const std::vector<std::unique_ptr<const storage::Commit>>& commits,
-      storage::ChangeSource source) override;
-
-  // storage::PageSyncDelegate:
-  void GetObject(storage::ObjectIdView object_id,
-                 std::function<void(storage::Status status,
-                                    uint64_t size,
-                                    zx::socket data)> callback) override;
-
-  // cloud_provider_firebase::CommitWatcher:
-  void OnRemoteCommits(
-      std::vector<cloud_provider_firebase::Record> records) override;
-
-  void OnConnectionError() override;
-
-  void OnTokenExpired() override;
-
-  void OnMalformedNotification() override;
-
  private:
-  // Downloads the initial backlog of remote commits, and sets up the remote
-  // watcher upon success.
-  void StartDownload();
-
-  // Uploads the initial backlog of local unsynced commits, and sets up the
-  // storage watcher upon success.
-  void StartUpload();
-
-  // Downloads the given batch of commits.
-  void DownloadBatch(std::vector<cloud_provider_firebase::Record> records,
-                     fxl::Closure on_done);
-
-  void SetRemoteWatcher(bool is_retry);
-
-  void UploadUnsyncedCommits();
-  void VerifyUnsyncedCommits(
-      std::vector<std::unique_ptr<const storage::Commit>> commits);
-  void HandleUnsyncedCommits(
-      std::vector<std::unique_ptr<const storage::Commit>> commits);
-
-  void UploadStagedCommits();
-
-  void HandleError(const char error_description[]);
+  void HandleError();
 
   void CheckIdle();
 
-  void BacklogDownloaded();
-
-  // Schedules the given closure to execute after the delay determined by
-  // |backoff_|, but only if |this| still is valid and |errored_| is not set.
-  void Retry(fxl::Closure callable);
-
-  // Notify the state watcher of a change of synchronization state.
-  void NotifyStateWatcher();
-  void SetDownloadState(DownloadSyncState sync_state);
-  void SetUploadState(UploadSyncState sync_state);
-  void SetState(DownloadSyncState download_state, UploadSyncState upload_state);
-
+  // PageDownload::Delegate and PageUpload::Delegate:
   // Retrieves the auth token from token provider and executes the given
   // callback. Fails hard and stops the sync if the token can't be retrieved.
   void GetAuthToken(std::function<void(std::string)> on_token_ready,
-                    fxl::Closure on_failed);
+                    fxl::Closure on_failed) override;
+
+  // Schedules the given closure to execute after the delay determined by
+  // |backoff_|, but only if |this| still is valid and |errored_| is not set.
+  void Retry(fxl::Closure callable) override;
+  void Success() override;
+
+  // Notify the state watcher of a change of synchronization state.
+  void SetDownloadState(DownloadSyncState next_download_state) override;
+  void SetUploadState(UploadSyncState next_upload_state) override;
+  bool IsDownloadIdle() override;
+
+  void NotifyStateWatcher();
 
   storage::PageStorage* const storage_;
   cloud_provider_firebase::PageCloudHandler* const cloud_provider_;
@@ -158,40 +116,27 @@ class PageSyncImpl : public PageSync,
   const fxl::Closure on_error_;
   const std::string log_prefix_;
 
+  std::unique_ptr<PageDownload> page_download_;
+  std::unique_ptr<PageUpload> page_upload_;
+
   fxl::Closure on_idle_;
   fxl::Closure on_backlog_downloaded_;
   // Ensures that each instance is started only once.
   bool started_ = false;
-  // Track which watchers are set, so that we know which to unset on hard error.
-  bool local_watch_set_ = false;
-  bool remote_watch_set_ = false;
   // Set to true on unrecoverable error. This indicates that PageSyncImpl is in
   // broken state.
   bool errored_ = false;
-  // Set to true when the backlog of commits to retrieve is downloaded. This
-  // ensures that sync is not reported as idle until the commits to be
-  // downloaded are retrieved.
-  bool download_list_retrieved_ = false;
-  // Set to true when upload is enabled.
-  bool upload_enabled_ = false;
+  // Blocks the start of the upload process until we get an explicit signal.
+  bool enable_upload_ = false;
 
-  // Current batch of local commits being uploaded.
-  std::unique_ptr<BatchUpload> batch_upload_;
-  // Set to true when there are new commits to upload
-  bool commits_to_upload_ = false;
-  // The current batch of remote commits being downloaded.
-  std::unique_ptr<BatchDownload> batch_download_;
-  // Pending remote commits to download.
-  std::vector<cloud_provider_firebase::Record> commits_to_download_;
   // Called on destruction.
   std::function<void()> on_delete_;
 
   // Watcher of the synchronization state that reports to the LedgerSync object.
   std::unique_ptr<SyncStateWatcher> ledger_watcher_;
   SyncStateWatcher* page_watcher_ = nullptr;
-  // Download & upload states.
-  DownloadSyncState download_state_ = DOWNLOAD_IDLE;
-  UploadSyncState upload_state_ = UPLOAD_IDLE;
+  DownloadSyncState download_state_ = DOWNLOAD_STOPPED;
+  UploadSyncState upload_state_ = UPLOAD_STOPPED;
 
   // Pending auth token requests to be cancelled when this class goes away.
   callback::CancellableContainer auth_token_requests_;

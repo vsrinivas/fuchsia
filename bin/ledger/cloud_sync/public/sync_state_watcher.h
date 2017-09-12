@@ -8,20 +8,66 @@
 namespace cloud_sync {
 // Detail of the download part of the synchronization state.
 enum DownloadSyncState {
+  // Download has not started.
+  // Possible successor states: DOWNLOAD_BACKLOG.
+  DOWNLOAD_STOPPED = 0,
+  // Download is downloading the commit backlog.
+  // Possible successor states: DOWNLOAD_TEMPORARY_ERROR,
+  // DOWNLOAD_SETTING_REMOTE_WATCHER.
+  DOWNLOAD_BACKLOG,
+  // Download experienced a temporary error and will attempt to recover
+  // automatically.
+  // Possible successor states: DOWNLOAD_BACKLOG,
+  // DOWNLOAD_SETTING_REMOTE_WATCHER.
+  DOWNLOAD_TEMPORARY_ERROR,
+  // Download prepares the remote watcher to be notified of new remote commits.
+  // Possible successor states: DOWNLOAD_IDLE.
+  DOWNLOAD_SETTING_REMOTE_WATCHER,
+  // Download is idle and waits for new remote commits to download.
+  // Possible successor states: DOWNLOAD_TEMPORARY_ERROR, DOWNLOAD_IN_PROGRESS,
+  // DOWNLOAD_PERMANENT_ERROR.
   DOWNLOAD_IDLE,
-  CATCH_UP_DOWNLOAD,
-  REMOTE_COMMIT_DOWNLOAD,
-  DOWNLOAD_ERROR,
+  // Download is in progress.
+  // Possible successor states: DOWNLOAD_TEMPORARY_ERROR, DOWNLOAD_IDLE,
+  // DOWNLOAD_PERMANENT_ERROR.
+  DOWNLOAD_IN_PROGRESS,
+  // Download experienced a permanent, unrecoverable error.
+  // Possible successor states: None.
+  DOWNLOAD_PERMANENT_ERROR,
 };
 
 // Detail of the upload part of the synchronization state.
 enum UploadSyncState {
+  // Upload has not started.
+  // Possible successor states: UPLOAD_SETUP.
+  UPLOAD_STOPPED = 0,
+  // Upload is started and being prepared.
+  // Possible successor states: UPLOAD_IDLE, UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS,
+  // UPLOAD_WAIT_REMOTE_DOWNLOAD, UPLOAD_ERROR.
+  UPLOAD_SETUP,
+  // Upload is ready, but currently idle.
+  // Possible successor states: UPLOAD_PENDING,
+  // UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS,
+  // UPLOAD_WAIT_REMOTE_DOWNLOAD, UPLOAD_ERROR.
   UPLOAD_IDLE,
+  // Upload has some contents to upload, but has to wait before proceeding.
+  // Possible successor states: UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS,
+  // UPLOAD_WAIT_REMOTE_DOWNLOAD, UPLOAD_ERROR.
   UPLOAD_PENDING,
-  WAIT_CATCH_UP_DOWNLOAD,
-  WAIT_TOO_MANY_LOCAL_HEADS,
-  WAIT_REMOTE_DOWNLOAD,
+  // Upload cannot proceed as there are more than one local head commit.
+  // Possible successor states: UPLOAD_IDLE, UPLOAD_IN_PROGRESS,
+  // UPLOAD_WAIT_REMOTE_DOWNLOAD, UPLOAD_ERROR.
+  UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS,
+  // Upload is waiting for a remote download to finish.
+  // Possible successor states: UPLOAD_IDLE, UPLOAD_IN_PROGRESS,
+  // UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS, UPLOAD_ERROR.
+  UPLOAD_WAIT_REMOTE_DOWNLOAD,
+  // Upload is uploading a local commit and its contents.
+  // Possible successor states: UPLOAD_IDLE, UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS,
+  // UPLOAD_WAIT_REMOTE_DOWNLOAD, UPLOAD_ERROR.
   UPLOAD_IN_PROGRESS,
+  // Upload has experienced an unrecoverable error and cannot continue.
+  // Possible successor states: None.
   UPLOAD_ERROR,
 };
 

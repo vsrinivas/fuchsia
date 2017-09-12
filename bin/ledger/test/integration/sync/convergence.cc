@@ -98,6 +98,7 @@ class SyncWatcherImpl : public ledger::SyncWatcher {
 
   auto NewBinding() { return binding_.NewBinding(); }
 
+  bool new_state = false;
   ledger::SyncState download;
   ledger::SyncState upload;
 
@@ -108,6 +109,7 @@ class SyncWatcherImpl : public ledger::SyncWatcher {
                         const SyncStateChangedCallback& callback) override {
     this->download = download;
     this->upload = upload;
+    new_state = true;
     callback();
   }
 
@@ -381,28 +383,41 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
     }
 
     // All synchronization must be idle.
+    bool idle = true;
     for (int i = 0; i < num_ledgers_; i++) {
       if (sync_watchers[i]->download != ledger::SyncState::IDLE ||
-          sync_watchers[i]->upload != ledger::SyncState::IDLE) {
-        return false;
+          sync_watchers[i]->upload != ledger::SyncState::IDLE ||
+          sync_watchers[i]->new_state) {
+        idle = false;
       }
+      // It turns out that merges are not instantaneous (who knew?), so we may
+      // be idle on the synchronization, but merging behind the scenes, which
+      // will trigger a new upload. So here we don't stop as soon as we have an
+      // idle state, but wait a bit to be *really* sure nothing is happening.
+      // Once LE-313 is done we may want to do something cleaner.
+      sync_watchers[i]->new_state = false;
     }
 
-    return AreValuesIdentical(watchers, "value");
+    return idle && AreValuesIdentical(watchers, "value");
   };
 
   // If |RunLoopUntil| returns true, the condition is met, thus the ledgers have
   // converged. There is no need for additional tests.
-  EXPECT_TRUE(RunLoopUntil(until, fxl::TimeDelta::FromSeconds(60)));
+  EXPECT_TRUE(RunLoopUntil(until, fxl::TimeDelta::FromSeconds(60),
+                           // Checking every 10 milliseconds (the default at
+                           // this time) is too short to catch merges.
+                           fxl::TimeDelta::FromMilliseconds(100)));
   int num_changes = 0;
   for (int i = 0; i < num_ledgers_; i++) {
     num_changes += watchers[i]->changes;
   }
   EXPECT_GE(num_changes, 2 * num_ledgers_ - 1);
 
-  // Don't check whether all upload/download states are IDLE: maybe they were in
-  // some intermediate state of sync and they are not any more. This should not
-  // cause the test to fail. See also LE-262.
+  // All synchronization must be idle.
+  for (int i = 0; i < num_ledgers_; i++) {
+    EXPECT_EQ(ledger::SyncState::IDLE, sync_watchers[i]->download);
+    EXPECT_EQ(ledger::SyncState::IDLE, sync_watchers[i]->upload);
+  }
 
   EXPECT_TRUE(AreValuesIdentical(watchers, "value"));
 }

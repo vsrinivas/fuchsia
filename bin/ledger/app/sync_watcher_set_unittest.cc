@@ -56,8 +56,8 @@ TEST_F(SyncWatcherSetTest, OneWatcher) {
 
   SyncWatcherImpl impl(watcher_ptr.NewRequest());
 
-  watcher_set.Notify(cloud_sync::CATCH_UP_DOWNLOAD,
-                     cloud_sync::WAIT_CATCH_UP_DOWNLOAD);
+  watcher_set.Notify(cloud_sync::DOWNLOAD_BACKLOG,
+                     cloud_sync::UPLOAD_WAIT_REMOTE_DOWNLOAD);
 
   watcher_set.AddSyncWatcher(std::move(watcher_ptr));
 
@@ -68,7 +68,8 @@ TEST_F(SyncWatcherSetTest, OneWatcher) {
   ASSERT_EQ(1u, impl.upload_states.size());
   EXPECT_EQ(SyncState::PENDING, *impl.upload_states.rbegin());
 
-  watcher_set.Notify(cloud_sync::DOWNLOAD_ERROR, cloud_sync::UPLOAD_IDLE);
+  watcher_set.Notify(cloud_sync::DOWNLOAD_PERMANENT_ERROR,
+                     cloud_sync::UPLOAD_IDLE);
 
   EXPECT_FALSE(RunLoopWithTimeout());
 
@@ -101,8 +102,8 @@ TEST_F(SyncWatcherSetTest, TwoWatchers) {
   EXPECT_EQ(1u, impl2.upload_states.size());
   EXPECT_EQ(SyncState::IDLE, *impl2.upload_states.rbegin());
 
-  watcher_set.Notify(cloud_sync::REMOTE_COMMIT_DOWNLOAD,
-                     cloud_sync::WAIT_REMOTE_DOWNLOAD);
+  watcher_set.Notify(cloud_sync::DOWNLOAD_IN_PROGRESS,
+                     cloud_sync::UPLOAD_WAIT_REMOTE_DOWNLOAD);
 
   // The two watchers are notified.
   EXPECT_FALSE(RunLoopWithTimeout());
