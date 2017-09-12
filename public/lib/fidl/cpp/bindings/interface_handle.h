@@ -12,6 +12,7 @@
 
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/macros.h"
+#include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
 namespace fidl {
