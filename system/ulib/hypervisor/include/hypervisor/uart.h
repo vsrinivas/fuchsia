@@ -40,8 +40,6 @@ typedef struct mx_vcpu_io mx_vcpu_io_t;
 /* Stores the state of a UART. */
 typedef struct uart {
     mtx_t mutex;
-    // Notify input thread that guest is ready for input.
-    cnd_t ready_cnd;
 
     // IO APIC for use with interrupt redirects.
     const io_apic_t* io_apic;
@@ -49,9 +47,13 @@ typedef struct uart {
     // Transmit holding register (THR).
     uint8_t tx_buffer[UART_BUFFER_SIZE];
     uint16_t tx_offset;
+    // Notify output thread that guest has output buffered.
+    cnd_t tx_cnd;
 
     // Receive buffer register (RBR).
     uint8_t rx_buffer;
+    // Notify input thread that guest is ready for input.
+    cnd_t rx_cnd;
 
     // Interrupt enable register (IER).
     uint8_t interrupt_enable;
@@ -70,9 +72,7 @@ void uart_init(uart_t* uart, const io_apic_t* io_apic);
 mx_status_t uart_read(uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io);
 mx_status_t uart_write(uart_t* uart, const mx_packet_guest_io_t* io);
 
-/* Start asynchronous handling of writes to the UART. */
-mx_status_t uart_output_async(uart_t* uart, mx_handle_t guest);
-/* Start asynchronous handling of input to the UART. */
-mx_status_t uart_input_async(uart_t* uart);
+/* Start asynchronous handling of UART. */
+mx_status_t uart_async(uart_t* uart, mx_handle_t guest);
 
 __END_CDECLS

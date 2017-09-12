@@ -218,14 +218,18 @@ int main(int argc, char** argv) {
 
     uintptr_t guest_ip;
     uintptr_t bootdata_off = 0;
+
+    char guest_cmdline[PATH_MAX];
+    const char* magenta_fmt_string = "TERM=uart %s";
+    snprintf(guest_cmdline, PATH_MAX, magenta_fmt_string, cmdline ? cmdline : "");
     status = setup_magenta(addr, kVmoSize, first_page, pt_end_off, fd, ramdisk_path,
-                           cmdline, &guest_ip, &bootdata_off);
+                           guest_cmdline, &guest_ip, &bootdata_off);
+
     if (status == MX_ERR_NOT_SUPPORTED) {
-        char linux_cmdline[PATH_MAX];
-        const char* fmt_string = "earlyprintk=serial,ttyS,115200 console=ttyS0,115200 "
-                                 "io_delay=none acpi_rsdp=%#lx %s";
-        snprintf(linux_cmdline, PATH_MAX, fmt_string, pt_end_off, cmdline ? cmdline : "");
-        status = setup_linux(addr, kVmoSize, first_page, fd, ramdisk_path, linux_cmdline, &guest_ip,
+        const char* linux_fmt_string = "earlyprintk=serial,ttyS,115200 console=ttyS0,115200 "
+                                       "io_delay=none acpi_rsdp=%#lx %s";
+        snprintf(guest_cmdline, PATH_MAX, linux_fmt_string, pt_end_off, cmdline ? cmdline : "");
+        status = setup_linux(addr, kVmoSize, first_page, fd, ramdisk_path, guest_cmdline, &guest_ip,
                              &bootdata_off);
     }
     if (status == MX_ERR_NOT_SUPPORTED) {
@@ -283,10 +287,7 @@ int main(int argc, char** argv) {
     uart_t uart;
     guest_ctx.uart = &uart;
     uart_init(&uart, &io_apic);
-    status = uart_output_async(&uart, guest);
-    if (status != MX_OK)
-        return status;
-    status = uart_input_async(&uart);
+    status = uart_async(&uart, guest);
     if (status != MX_OK)
         return status;
 

@@ -20,7 +20,8 @@ static const uint8_t kUartInterruptIdNoFifoMask = bit_mask<uint8_t>(4);
 
 void uart_init(uart_t* uart, const io_apic_t* io_apic) {
     memset(uart, 0, sizeof(*uart));
-    cnd_init(&uart->ready_cnd);
+    cnd_init(&uart->rx_cnd);
+    cnd_init(&uart->tx_cnd);
     uart->io_apic = io_apic;
     uart->line_status = UART_LINE_STATUS_THR_EMPTY;
     uart->interrupt_id = UART_INTERRUPT_ID_NONE;
@@ -58,7 +59,6 @@ static bool can_raise_interrupt(uart_t* uart) {
 // Determines whether an interrupt needs to be raised and does so if necessary.
 // Will not raise an interrupt if the interrupt_enable bit is not set.
 static mx_status_t raise_next_interrupt(uart_t* uart) {
-    cnd_signal(&uart->ready_cnd);
     if (uart->interrupt_id != UART_INTERRUPT_ID_NONE)
         // Don't wipe out a pending interrupt, just wait.
         return MX_OK;
@@ -90,6 +90,7 @@ mx_status_t uart_read(uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io) {
         if (uart->interrupt_id & UART_INTERRUPT_ID_RDA)
             uart->interrupt_id = UART_INTERRUPT_ID_NONE;
 
+        cnd_signal(&uart->rx_cnd);
         return raise_next_interrupt(uart);
     }
     case UART_INTERRUPT_ENABLE_PORT: {
@@ -127,14 +128,9 @@ mx_status_t uart_read(uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io) {
     return MX_OK;
 }
 
-static void flush_tx_buffer(uart_t* uart) {
-    fprintf(stderr, "%.*s", uart->tx_offset, uart->tx_buffer);
-    uart->tx_offset = 0;
-}
-
 mx_status_t uart_write(uart_t* uart, const mx_packet_guest_io_t* io) {
     switch (io->port) {
-    case UART_RECEIVE_PORT: {
+    case UART_TRANSMIT_PORT: {
         fbl::AutoLock lock(&uart->mutex);
         if (uart->line_control & UART_LINE_CONTROL_DIV_LATCH)
             // Ignore writes when divisor latch is enabled.
@@ -142,17 +138,15 @@ mx_status_t uart_write(uart_t* uart, const mx_packet_guest_io_t* io) {
 
         for (int i = 0; i < io->access_size; i++) {
             uart->tx_buffer[uart->tx_offset++] = io->data[i];
-            if (uart->tx_offset == UART_BUFFER_SIZE || io->data[i] == '\r')
-                flush_tx_buffer(uart);
         }
+
         uart->line_status |= UART_LINE_STATUS_THR_EMPTY;
 
         // Reset THR empty interrupt on THR write.
         if (uart->interrupt_id & UART_INTERRUPT_ID_THR_EMPTY)
             uart->interrupt_id = UART_INTERRUPT_ID_NONE;
 
-        // TODO(andymutton): Raise interrupts asynchronously so that we don't overrun Linux's
-        // interrupt flood check. Note: Implementing FIFOs will heavily mitigate this.
+        cnd_signal(&uart->tx_cnd);
         return raise_next_interrupt(uart);
     }
     case UART_INTERRUPT_ENABLE_PORT: {
@@ -164,9 +158,6 @@ mx_status_t uart_write(uart_t* uart, const mx_packet_guest_io_t* io) {
             return MX_OK;
 
         uart->interrupt_enable = io->u8;
-        // Flush output whenever RDA interrupt is enabled.
-        if (uart->interrupt_enable & UART_INTERRUPT_ENABLE_RDA)
-            flush_tx_buffer(uart);
         return raise_next_interrupt(uart);
     }
     case UART_LINE_CONTROL_PORT: {
@@ -189,17 +180,30 @@ static mx_status_t uart_handler(mx_port_packet_t* packet, void* ctx) {
     return uart_write(uart, &packet->guest_io);
 }
 
-mx_status_t uart_output_async(uart_t* uart, mx_handle_t guest) {
-    const trap_args_t trap = {
-        .kind = MX_GUEST_TRAP_IO,
-        .addr = UART_RECEIVE_PORT,
-        .len = 1,
-        .key = 0,
-    };
-    return device_async(guest, &trap, 1, uart_handler, uart);
+static int uart_empty_tx(void* arg) {
+    uart_t* uart = reinterpret_cast<uart_t*>(arg);
+
+    while (true) {
+        {
+            fbl::AutoLock lock(&uart->mutex);
+            cnd_wait(&uart->tx_cnd, &uart->mutex);
+
+            if (!uart->tx_offset)
+                continue;
+
+            printf("%.*s", uart->tx_offset, uart->tx_buffer);
+            uart->tx_offset = 0;
+        }
+
+        if (fflush(stdout) == EOF) {
+            fprintf(stderr, "Stopped processing UART output\n");
+            break;
+        }
+    }
+    return MX_ERR_INTERNAL;
 }
 
-static int uart_input_loop(void* arg) {
+static int uart_fill_rx(void* arg) {
     uart_t* uart = reinterpret_cast<uart_t*>(arg);
 
     mx_status_t status;
@@ -208,7 +212,7 @@ static int uart_input_loop(void* arg) {
         // Wait for a signal that the line is clear.
         // The locking here is okay, because we yield when we wait.
         while (!can_raise_interrupt(uart) && uart->line_status & UART_LINE_STATUS_DATA_READY)
-            cnd_wait(&uart->ready_cnd, &uart->mutex);
+            cnd_wait(&uart->rx_cnd, &uart->mutex);
         mtx_unlock(&uart->mutex);
 
         int pending_char = getchar();
@@ -231,9 +235,9 @@ static int uart_input_loop(void* arg) {
     return status;
 }
 
-mx_status_t uart_input_async(uart_t* uart) {
+mx_status_t uart_async(uart_t* uart, mx_handle_t guest) {
     thrd_t uart_input_thread;
-    int ret = thrd_create(&uart_input_thread, uart_input_loop, uart);
+    int ret = thrd_create(&uart_input_thread, uart_fill_rx, uart);
     if (ret != thrd_success) {
         fprintf(stderr, "Failed to create UART input thread %d\n", ret);
         return MX_ERR_INTERNAL;
@@ -243,5 +247,24 @@ mx_status_t uart_input_async(uart_t* uart) {
         fprintf(stderr, "Failed to detach UART input thread %d\n", ret);
         return MX_ERR_INTERNAL;
     }
-    return MX_OK;
+
+    thrd_t uart_output_thread;
+    ret = thrd_create(&uart_output_thread, uart_empty_tx, uart);
+    if (ret != thrd_success) {
+        fprintf(stderr, "Failed to create UART output thread %d\n", ret);
+        return MX_ERR_INTERNAL;
+    }
+    ret = thrd_detach(uart_output_thread);
+    if (ret != thrd_success) {
+        fprintf(stderr, "Failed to detach UART output thread %d\n", ret);
+        return MX_ERR_INTERNAL;
+    }
+
+    const trap_args_t trap = {
+        .kind = MX_GUEST_TRAP_IO,
+        .addr = UART_RECEIVE_PORT,
+        .len = 1,
+        .key = 0,
+    };
+    return device_async(guest, &trap, 1, uart_handler, uart);
 }
