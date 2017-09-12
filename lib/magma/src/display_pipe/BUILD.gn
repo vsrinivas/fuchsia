@@ -32,7 +32,7 @@ executable("display_pipe_service") {
     "$magma_build_root/src/magma_util",
     "//garnet/public/lib/images/fidl",
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//magenta/system/ulib/mx",
     "//magma/src/display_pipe/services",
   ]

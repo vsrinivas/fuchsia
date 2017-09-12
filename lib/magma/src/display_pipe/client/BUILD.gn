@@ -15,7 +15,7 @@ executable("display_pipe_client") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//magma/src/display_pipe/services",
   ]
 }

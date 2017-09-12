@@ -175,7 +175,7 @@ source_set("trace") {
 
   if (magma_enable_tracing) {
     public_deps = [
-      "//garnet/public/lib/mtl",
+      "//garnet/public/lib/fsl",
       "$magenta_build_root/system/ulib/async:loop",
       "$magenta_build_root/system/ulib/trace",
       "$magenta_build_root/system/ulib/trace-provider",
