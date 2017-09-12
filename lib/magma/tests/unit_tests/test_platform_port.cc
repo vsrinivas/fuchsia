@@ -66,7 +66,7 @@ public:
         sem->Reset();
         thread->join();
 
-        // TODO(MG-594) - enable: Verify WaitAsync/Wait then kill the handle
+        // TODO(ZX-594) - enable: Verify WaitAsync/Wait then kill the handle
         if (false) {
             sem->WaitAsync(port.get());
             thread.reset(new std::thread([port] {
@@ -82,7 +82,7 @@ public:
         }
 
         // Verify close
-        // TODO(MG-594): test Close after Wait also
+        // TODO(ZX-594): test Close after Wait also
         port->Close();
         thread.reset(new std::thread([port, sem] {
             DLOG("Waiting for semaphore");

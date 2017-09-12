@@ -46,7 +46,7 @@ public:
 
     void Close()
     {
-        // TODO(MG-594): replace quit semaphore with port_.reset()
+        // TODO(ZX-594): replace quit semaphore with port_.reset()
         quit_semaphore_->Signal();
     }
 

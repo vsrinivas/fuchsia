@@ -71,7 +71,7 @@ void Buffer::Fill(uint8_t r, uint8_t g, uint8_t b) {
     }
 
     // The magenta kernel has a bug where it does a full cache flush for every
-    // page.  MG-806.
+    // page.  ZX-806.
     // TODO(MA-277): Replace the hard coded 4096 with size_ once the above bug
     // is fixed.
     vmo_.op_range(MX_VMO_OP_CACHE_CLEAN, 0, 4096, nullptr, 0);
