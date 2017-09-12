@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include <zircon/types.h>
 #include <stdint.h>
+#include <zircon/types.h>
 
 #define MEDIA_CLIENT_EXPORT __attribute__((__visibility__("default")))
 
@@ -42,7 +42,7 @@ typedef struct _fuchsia_audio_output_stream fuchsia_audio_output_stream;
 
 MEDIA_CLIENT_EXPORT fuchsia_audio_manager* fuchsia_audio_manager_create();
 
-MEDIA_CLIENT_EXPORT int fuchsia_audio_manager_free(
+MEDIA_CLIENT_EXPORT void fuchsia_audio_manager_free(
     fuchsia_audio_manager* audio_manager);
 
 MEDIA_CLIENT_EXPORT int fuchsia_audio_manager_get_output_devices(

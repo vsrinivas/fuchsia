@@ -62,7 +62,6 @@ int fuchsia_audio_manager_free(
 obtained from the system via a *fuchsia_audio_manager_create()* call.
 
 ##### Returns
-- **ZX_ERR_BAD_HANDLE**: audio_manager is unknown or already freed.
 - **ZX_OK**: call succeeded; audio_manager has been deregistered and freed.
 
 ##### Notes
@@ -87,17 +86,13 @@ the system should copy device descriptions.
 the system to copy to the supplied *device_desc_buffer* location.
 
 ##### Returns
-- **ZX_ERR_BAD_HANDLE**: audio_manager is unknown or already freed.
-- **ZX_ERR_INVALID_ARGS**: only one of buffer and num_device_descriptions is
-non-zero. Both should be zero-NULL, or both should be non-zero.
-- **ZX_ERR_OUT_OF_RANGE**: num_device_descriptions is negative.
-- **Positive value**: call succeeded; return value is either
+- **Positive or zero value**: call succeeded; return value is either
   1. total number of devices in the system (usage 1), or
   2. number of device descriptions copied into the provided buffer (usage 2:
 see notes).
 
-Additionally, in usage case 2), **device_desc_buffer** is an out parameter. If
-the call succeeds, the system copies into device_desc_buffer one or more
+In usage case 2), **device_desc_buffer** is an out parameter. If the return
+value is positive, the system copies into device_desc_buffer one or more
 *fuchsia_audio_device_description* structs.
 
 ##### Notes
@@ -148,11 +143,8 @@ should copy default parameters for the specified device, via a
 *fuchsia_audio_parameters* struct.
 
 ##### Returns
-- **ZX_ERR_BAD_HANDLE**: audio_manager is unknown or already freed.
-- **ZX_ERR_INVALID_ARGS**: device_id is NULL, or params_out pointer is NULL,
-or device_id is empty string.
-- **ZX_ERR_NOT_FOUND**: device_id does not match to any device found in the
-system.
+- **ZX_ERR_NOT_FOUND**: device_id does not match to any device currently found
+in the system.
 - **ZX_OK**: call succeeded.
 
 Additionally, **params_out** is an out parameter. if the call succeeds, the
@@ -188,11 +180,8 @@ successful, this is where the system will copy a pointer to an
 *fuchsia_audio_output_stream* that it has allocated and populated.
 
 ##### Returns
-- **ZX_ERR_BAD_HANDLE**: audio_manager is unknown or already freed.
-- **ZX_ERR_INVALID_ARGS**: stream_params pointer is NULL, or stream pointer
-is NULL.
-- **ZX_ERR_NOT_FOUND**: device_id does not match to any device found in the
-system.
+- **ZX_ERR_NOT_FOUND**: device_id does not match to any device currently found
+in the system.
 - **ZX_OK**: call succeeded; the output stream has been created.
 
 Additionally, **stream_out** is an out parameter, populated with a pointer to a
@@ -223,7 +212,6 @@ int fuchsia_audio_output_stream_free(
 system.
 
 ##### Returns
-- **ZX_ERR_BAD_HANDLE**: output_stream is unknown or already freed.
 - **ZX_OK**: call succeeded; stream has been stopped and freed.
 
 ##### Notes
@@ -246,8 +234,6 @@ is where the system will copy the minimum delay (in nanoseconds) of this
 output stream.
 
 ##### Returns
-- **ZX_ERR_BAD_HANDLE**: output_stream is unknown or already freed.
-- **ZX_ERR_INVALID_ARGS**: delay_nsec_out pointer is NULL.
 - **ZX_OK**: call succeeded.
 
 ##### Notes
@@ -286,19 +272,13 @@ following the previous one, and that the system can calculate the appropriate
 pres_time.
 
 ##### Returns
-- **ZX_ERR_BAD_HANDLE**: output_stream is unknown or already freed.
 - **ZX_ERR_BAD_STATE**: the client specified FUCHSIA_AUDIO_NO_TIMESTAMP in
 the first buffer sent to this stream (or the first buffer after a gap in
 playback). As a result, the buffer has not been submitted, and the API must
 be called again with a true presentation timestamp.
-- **ZX_ERR_INVALID_ARGS**: sample_buffer is NULL, or num_samples is zero or
-negative, or num_samples is not a multiple of num_channels, or pres_time is
-zero or negative.
 - **ZX_ERR_IO_MISSED_DEADLINE**: the client specified a pres_time that was
-too soon. The buffer has not been submitted, and the API must be called
-again with an updated presentation timestamp.
-- **ZX_ERR_OUT_OF_RANGE**: pres_time is greater than the value of
-FUCHSIA_AUDIO_NO_TIMESTAMP, and hence an inappropriate value for this API.
+too soon (for example, 0). The buffer has not been submitted, and the API must
+be called again with an updated presentation timestamp.
 - **ZX_OK**: call succeeded; audio data has been queued to the output stream
 to be played.
 

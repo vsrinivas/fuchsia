@@ -9,8 +9,8 @@ fuchsia_audio_manager* audio_manager_create() {
   return fuchsia_audio_manager_create();
 }
 
-int audio_manager_free(fuchsia_audio_manager* manager) {
-  return fuchsia_audio_manager_free(manager);
+void audio_manager_free(fuchsia_audio_manager* manager) {
+  fuchsia_audio_manager_free(manager);
 }
 
 int audio_manager_get_output_devices(fuchsia_audio_manager* manager,

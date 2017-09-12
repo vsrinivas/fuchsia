@@ -30,18 +30,7 @@ constexpr zx_duration_t kStubDeviceMinDelaysNSec[kStubNumDevices] = {20000000,
 }  // namespace
 // End of stub-related placeholder values
 
-namespace {
-// Guard against already-freed (or just plain bad) structs: store a 4-char tag
-// in the first few bytes, and check for this before using the struct. This goes
-// for both audio_manager and audio_output_stream structs.
-constexpr size_t kTagSize = 4;
-constexpr char kFuchsiaAudioManagerTag[] = "FAM ";
-constexpr char kFuchsiaAudioOutputStreamTag[] = "FAOS";
-constexpr char kFuchsiaAudioBlankTag[] = "    ";
-}  // namespace
-
 struct _fuchsia_audio_output_stream {
-  char tag[kTagSize];
   fuchsia_audio_parameters stream_params;
   zx_time_t delay_nsec;
   bool received_first_pres_time;
@@ -51,7 +40,6 @@ struct _fuchsia_audio_output_stream {
 // At creation time, audio_manager constructs a vector to hold its associated
 // streams. During audio_manager shutdown, it frees any leftover streams.
 struct _fuchsia_audio_manager {
-  char tag[kTagSize];
   std::vector<fuchsia_audio_output_stream*>* streams;
 };
 
@@ -61,15 +49,6 @@ constexpr int kMinSampleRate = 8000;
 constexpr int kMaxSampleRate = 96000;
 constexpr int kMinNumChannels = 1;
 constexpr int kMaxNumChannels = 2;
-
-// (Private) utility functions
-bool is_valid_manager(fuchsia_audio_manager* manager) {
-  return !strncmp(manager->tag, kFuchsiaAudioManagerTag, kTagSize);
-}
-
-bool is_valid_stream(fuchsia_audio_output_stream* stream) {
-  return !strncmp(stream->tag, kFuchsiaAudioOutputStreamTag, kTagSize);
-}
 }  // namespace
 
 // Public API functions
@@ -77,25 +56,18 @@ fuchsia_audio_manager* fuchsia_audio_manager_create() {
   fuchsia_audio_manager* manager = new fuchsia_audio_manager();
 
   manager->streams = new std::vector<fuchsia_audio_output_stream*>();
-  strncpy(manager->tag, kFuchsiaAudioManagerTag, 4);
 
   return manager;
 }
 
-int fuchsia_audio_manager_free(fuchsia_audio_manager* manager) {
+void fuchsia_audio_manager_free(fuchsia_audio_manager* manager) {
   FXL_DCHECK(manager);
-  if (!is_valid_manager(manager)) {
-    return ZX_ERR_BAD_HANDLE;
-  }
 
-  strncpy(manager->tag, kFuchsiaAudioBlankTag, 4);
   while (!manager->streams->empty()) {
     fuchsia_audio_output_stream_free(manager->streams->back());
   }
-
   delete manager->streams;
   delete manager;
-  return ZX_OK;
 }
 
 int fuchsia_audio_manager_get_output_devices(
@@ -103,30 +75,25 @@ int fuchsia_audio_manager_get_output_devices(
     fuchsia_audio_device_description* buffer,
     int num_device_descriptions) {
   FXL_DCHECK(manager);
-  if (!is_valid_manager(manager)) {
-    return ZX_ERR_BAD_HANDLE;
-  }
+  FXL_DCHECK((buffer == nullptr) == (num_device_descriptions == 0));
+  FXL_DCHECK(num_device_descriptions >= 0);
 
-  if (!buffer != !num_device_descriptions) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (num_device_descriptions < 0) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
+  // TODO(mpuryear): if a callback (FIDL or other) returned an error since the
+  // previous API call from this client, then return ZX_ERR_CONNECTION_ABORTED
 
   if (!buffer) {
     return kStubNumDevices;
   }
 
-  int num_to_copy = std::min(num_device_descriptions, kStubNumDevices);
+  int dev_num, num_to_copy = std::min(num_device_descriptions, kStubNumDevices);
 
-  for (int dev_num = 0; dev_num < num_to_copy; ++dev_num) {
+  for (dev_num = 0; dev_num < num_to_copy; ++dev_num) {
     strncpy(buffer[dev_num].name, kStubDeviceNames[dev_num],
             sizeof(buffer[dev_num].name));
     strncpy(buffer[dev_num].id, kStubDeviceIds[dev_num],
             sizeof(buffer[dev_num].id));
   }
-  return num_to_copy;
+  return dev_num;
 }
 
 int fuchsia_audio_manager_get_output_device_default_parameters(
@@ -134,17 +101,12 @@ int fuchsia_audio_manager_get_output_device_default_parameters(
     char* device_id,
     fuchsia_audio_parameters* stream_params) {
   FXL_DCHECK(manager);
-  if (!is_valid_manager(manager)) {
-    return ZX_ERR_BAD_HANDLE;
-  }
+  FXL_DCHECK(device_id);
+  FXL_DCHECK(strlen(device_id));
+  FXL_DCHECK(stream_params);
 
-  if (!device_id || !strlen(device_id)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  if (!stream_params) {
-    return ZX_ERR_INVALID_ARGS;
-  }
+  // TODO(mpuryear): if a callback (FIDL or other) returned an error since the
+  // previous API call from this client, then return ZX_ERR_CONNECTION_ABORTED
 
   for (int dev_num = 0; dev_num < kStubNumDevices; ++dev_num) {
     if (strcmp(kStubDeviceIds[dev_num], device_id) == 0) {
@@ -154,7 +116,8 @@ int fuchsia_audio_manager_get_output_device_default_parameters(
       return ZX_OK;
     }
   }
-  return ZX_ERR_NOT_FOUND;
+  return ZX_ERR_NOT_FOUND;  // Device was removed after a previous call to
+                            // fuchsia_audio_manager_get_output_devices
 }
 
 int fuchsia_audio_manager_create_output_stream(
@@ -163,9 +126,15 @@ int fuchsia_audio_manager_create_output_stream(
     fuchsia_audio_parameters* stream_params,
     fuchsia_audio_output_stream** stream_out) {
   FXL_DCHECK(manager);
-  if (!is_valid_manager(manager)) {
-    return ZX_ERR_BAD_HANDLE;
-  }
+  FXL_DCHECK(stream_params);
+  FXL_DCHECK(stream_out);
+  FXL_DCHECK(stream_params->num_channels >= kMinNumChannels);
+  FXL_DCHECK(stream_params->num_channels <= kMaxNumChannels);
+  FXL_DCHECK(stream_params->sample_rate >= kMinSampleRate);
+  FXL_DCHECK(stream_params->sample_rate <= kMaxSampleRate);
+
+  // TODO(mpuryear): if a callback (FIDL or other) returned an error since the
+  // previous API call from this client, then return ZX_ERR_CONNECTION_ABORTED
 
   int dev_num = 0;
   // Use |device_id| if present, else use the default device (0)
@@ -177,21 +146,8 @@ int fuchsia_audio_manager_create_output_stream(
     }
   }
   if (dev_num == kStubNumDevices) {
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  if (!stream_params) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (stream_params->num_channels < kMinNumChannels ||
-      stream_params->num_channels > kMaxNumChannels ||
-      stream_params->sample_rate < kMinSampleRate ||
-      stream_params->sample_rate > kMaxSampleRate) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  if (!stream_out) {
-    return ZX_ERR_INVALID_ARGS;
+    return ZX_ERR_NOT_FOUND;  // Device was removed after a previous call to
+                              // fuchsia_audio_manager_get_output_devices
   }
 
   *stream_out = new fuchsia_audio_output_stream{
@@ -202,18 +158,20 @@ int fuchsia_audio_manager_create_output_stream(
   };
 
   manager->streams->push_back(*stream_out);
-  strncpy((*stream_out)->tag, kFuchsiaAudioOutputStreamTag, 4);
 
   return ZX_OK;
 }
 
 int fuchsia_audio_output_stream_free(fuchsia_audio_output_stream* stream) {
   FXL_DCHECK(stream);
-  if (!is_valid_stream(stream)) {
-    return ZX_ERR_BAD_HANDLE;
-  }
 
-  strncpy(stream->tag, kFuchsiaAudioBlankTag, 4);
+  // TODO(mpuryear): if a callback (FIDL or other) returned an error since the
+  // previous API call from this client, then return ZX_ERR_CONNECTION_ABORTED
+
+  // TODO(mpuryear): What to do with already-submitted audio for this stream?
+  // Letting it drain is not feasible: per contract, this API is synchronous.
+  // Note: fuchsia_audio_manager_free() calls this, for any remaining streams.
+
   std::vector<fuchsia_audio_output_stream*>* streams = stream->manager->streams;
 
   for (auto str_iter = streams->begin(); str_iter != streams->end();
@@ -232,13 +190,10 @@ int fuchsia_audio_output_stream_get_min_delay(
     fuchsia_audio_output_stream* stream,
     zx_duration_t* delay_nsec_out) {
   FXL_DCHECK(stream);
-  if (!is_valid_stream(stream)) {
-    return ZX_ERR_BAD_HANDLE;
-  }
+  FXL_DCHECK(delay_nsec_out);
 
-  if (!delay_nsec_out) {
-    return ZX_ERR_INVALID_ARGS;
-  }
+  // TODO(mpuryear): if a callback (FIDL or other) returned an error since the
+  // previous API call from this client, then return ZX_ERR_CONNECTION_ABORTED
 
   *delay_nsec_out = stream->delay_nsec;
   return ZX_OK;
@@ -249,23 +204,14 @@ int fuchsia_audio_output_stream_write(fuchsia_audio_output_stream* stream,
                                       int num_samples,
                                       zx_time_t pres_time) {
   FXL_DCHECK(stream);
-  if (!is_valid_stream(stream)) {
-    return ZX_ERR_BAD_HANDLE;
-  }
+  FXL_DCHECK(sample_buffer);
+  FXL_DCHECK(num_samples > 0);
+  FXL_DCHECK(num_samples % stream->stream_params.num_channels == 0);
+  FXL_DCHECK(pres_time <= FUCHSIA_AUDIO_NO_TIMESTAMP);
 
-  if (!sample_buffer || num_samples <= 0) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (num_samples % stream->stream_params.num_channels) {
-    return ZX_ERR_INVALID_ARGS;
-  }
+  // TODO(mpuryear): if a callback (FIDL or other) returned an error since the
+  // previous API call from this client, then return ZX_ERR_CONNECTION_ABORTED
 
-  if (!pres_time) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (pres_time > FUCHSIA_AUDIO_NO_TIMESTAMP) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
   if (pres_time == FUCHSIA_AUDIO_NO_TIMESTAMP &&
       !stream->received_first_pres_time) {
     return ZX_ERR_BAD_STATE;
