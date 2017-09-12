@@ -67,6 +67,7 @@ typedef struct pci_protocol_ops {
     uint8_t     (*get_next_capability)(void* ctx, uint8_t type, uint8_t offset);
     zx_status_t (*get_auxdata)(void* ctx, const char* args,
                                void* data, uint32_t bytes, uint32_t* actual);
+    zx_status_t (*get_bti)(void* ctx, uint32_t index, zx_handle_t* out_handle);
 } pci_protocol_ops_t;
 typedef struct pci_protocol {
     pci_protocol_ops_t* ops;
@@ -86,6 +87,10 @@ static inline zx_status_t pci_map_bar(pci_protocol_t* pci, uint32_t bar_id,
 
 static inline zx_status_t pci_enable_bus_master(pci_protocol_t* pci, bool enable) {
     return pci->ops->enable_bus_master(pci->ctx, enable);
+}
+
+static inline zx_status_t pci_get_bti(pci_protocol_t* pci, uint32_t index, zx_handle_t* bti) {
+    return pci->ops->get_bti(pci->ctx, index, bti);
 }
 
 static inline zx_status_t pci_reset_device(pci_protocol_t* pci) {

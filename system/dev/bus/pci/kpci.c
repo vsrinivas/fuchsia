@@ -142,6 +142,22 @@ static zx_status_t kpci_get_device_info(pci_msg_t* req, kpci_device_t* device, z
     return pci_rpc_reply(ch, ZX_OK, NULL, req, &resp);
 }
 
+static zx_status_t kpci_get_bti(pci_msg_t* req, kpci_device_t* device, zx_handle_t ch) {
+    // TODO(cja): Bring convenience functions/macros into a public header for
+    // stuff like this.
+    uint32_t bdf = ((uint32_t)device->info.bus_id << 8) |
+                   ((uint32_t)device->info.dev_id << 3) |
+                   device->info.func_id;
+    zx_handle_t bti;
+    zx_status_t status = pciroot_get_bti(&device->pciroot, bdf, req->bti_index, &bti);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    pci_msg_t resp = {};
+    return pci_rpc_reply(ch, ZX_OK, &bti, req, &resp);
+}
+
 // All callbacks corresponding to protocol operations match this signature.
 // Rather than passing the outgoing message back to kpci_rxrpc, the callback
 // itself is expected to write to the channel directly. This greatly simplifies
@@ -161,6 +177,7 @@ const rxrpc_cbk_t rxrpc_cbk_tbl[] = {
     [PCI_OP_MAP_INTERRUPT] = kpci_map_interrupt,
     [PCI_OP_GET_DEVICE_INFO] = kpci_get_device_info,
     [PCI_OP_GET_AUXDATA] = kpci_get_auxdata,
+    [PCI_OP_GET_BTI] = kpci_get_bti,
     [PCI_OP_MAX] = NULL,
 };
 
@@ -177,6 +194,7 @@ const char* const rxrpc_string_tbl[] = {
     LABEL(PCI_OP_MAP_INTERRUPT),
     LABEL(PCI_OP_GET_DEVICE_INFO),
     LABEL(PCI_OP_GET_AUXDATA),
+    LABEL(PCI_OP_GET_BTI),
 };
 #undef LABEL
 static_assert(countof(rxrpc_string_tbl) == PCI_OP_MAX, "rpc string table is not contiguous!");

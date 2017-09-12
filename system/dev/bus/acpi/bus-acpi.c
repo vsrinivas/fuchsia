@@ -250,7 +250,13 @@ static zx_status_t pciroot_op_get_auxdata(void* context, const char* args,
     return ZX_OK;
 }
 
-static zx_status_t pciroot_op_get_bti(void* context, uint32_t bdf, zx_handle_t* bti) {
+static zx_status_t pciroot_op_get_bti(void* context, uint32_t bdf, uint32_t index,
+                                      zx_handle_t* bti) {
+    // The x86 IOMMU world uses PCI BDFs as the hardware identifiers, so there
+    // will only be one BTI per device.
+    if (index != 0) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
     // For dummy IOMMUs, the bti_id just needs to be unique.  For Intel IOMMUs,
     // the bti_ids correspond to PCI BDFs.
     return zx_bti_create(dummy_iommu_handle, 0, bdf, bti);
