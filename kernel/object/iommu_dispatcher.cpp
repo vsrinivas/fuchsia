@@ -8,12 +8,17 @@
 
 #include <dev/iommu.h>
 #include <zircon/rights.h>
+#include <zircon/syscalls/iommu.h>
 #include <zxcpp/new.h>
 
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
 #include <trace.h>
+
+#if WITH_DEV_IOMMU_DUMMY
+#include <dev/iommu/dummy.h>
+#endif
 
 #define LOCAL_TRACE 0
 
@@ -22,9 +27,18 @@ zx_status_t IommuDispatcher::Create(uint32_t type, fbl::unique_ptr<const uint8_t
                                     zx_rights_t* rights) {
 
     fbl::RefPtr<Iommu> iommu;
+    zx_status_t status;
     switch (type) {
+#if WITH_DEV_IOMMU_DUMMY
+        case ZX_IOMMU_TYPE_DUMMY:
+            status = DummyIommu::Create(fbl::move(desc), desc_len, &iommu);
+            break;
+#endif
         default:
             return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (status != ZX_OK) {
+        return status;
     }
 
     fbl::AllocChecker ac;
