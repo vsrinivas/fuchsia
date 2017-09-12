@@ -8,7 +8,7 @@
 #include <string.h>
 
 #include <fs/vfs.h>
-#include <mxio/vfs.h>
+#include <fdio/vfs.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -62,26 +62,26 @@ public:
     bool HasChildren() const { return !children_.is_empty(); }
 
     // Look up the child dnode (within a parent directory) by name.
-    // Returns MX_OK if the child is found.
+    // Returns ZX_OK if the child is found.
     //
     // If the looked up child is the current node, "out" is nullptr, and
-    // MX_OK is still returned.
+    // ZX_OK is still returned.
     // If "out" is provided as "nullptr", the returned status appears the
     // same, but the "out" argument is not touched.
-    mx_status_t Lookup(const char* name, size_t len, fbl::RefPtr<Dnode>* out) const;
+    zx_status_t Lookup(const char* name, size_t len, fbl::RefPtr<Dnode>* out) const;
 
     // Acquire a pointer to the vnode underneath this dnode.
     // Acquires a reference to the underlying vnode.
     fbl::RefPtr<VnodeMemfs> AcquireVnode() const;
 
-    // Returns MX_OK if the dnode may be unlinked
-    mx_status_t CanUnlink() const;
+    // Returns ZX_OK if the dnode may be unlinked
+    zx_status_t CanUnlink() const;
 
     // Read dirents (up to len bytes worth) into data.
     // ReaddirStart reads the canned "." and ".." entries that should appear
     // at the beginning of a directory.
     // On success, return the number of bytes read.
-    static mx_status_t ReaddirStart(fs::DirentFiller* df, void* cookie);
+    static zx_status_t ReaddirStart(fs::DirentFiller* df, void* cookie);
     void Readdir(fs::DirentFiller* df, void* cookie) const;
 
     // Answers the question: "Is dn a subdirectory of this?"

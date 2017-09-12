@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <gpt/gpt.h>
-#include <magenta/types.h>
-#include <mxio/io.h>
+#include <zircon/types.h>
+#include <fdio/io.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <inttypes.h>
@@ -14,8 +14,8 @@
 #include <unistd.h>
 #include <limits.h>
 
-#include <magenta/device/block.h>
-#include <magenta/device/device.h>
+#include <zircon/device/block.h>
+#include <zircon/device/device.h>
 #include <pretty/hexdump.h>
 
 #define DEV_BLOCK "/dev/class/block"

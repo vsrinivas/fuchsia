@@ -23,7 +23,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/devmgr-coordinator.c \
     $(LOCAL_DIR)/devmgr-devfs.c \
     $(LOCAL_DIR)/devmgr-drivers.c \
-    $(LOCAL_DIR)/devmgr-mxio.c \
+    $(LOCAL_DIR)/devmgr-fdio.c \
     $(LOCAL_DIR)/vfs-boot.cpp \
     $(LOCAL_DIR)/vfs-memory.cpp \
     $(LOCAL_DIR)/vfs-rpc.cpp \
@@ -41,10 +41,10 @@ MODULE_STATIC_LIBS := \
     system/ulib/async \
     system/ulib/async.loop \
     system/ulib/gpt \
-    system/ulib/mx \
+    system/ulib/zx \
     system/ulib/bootdata \
     third_party/ulib/lz4 \
-    system/ulib/mxcpp \
+    system/ulib/zxcpp \
     system/ulib/fbl \
     system/ulib/port \
     system/ulib/acpisvc-client \
@@ -54,8 +54,8 @@ MODULE_LIBS := \
     system/ulib/async.default \
     system/ulib/fs-management \
     system/ulib/launchpad \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/c
 
 include make/module.mk
@@ -77,7 +77,7 @@ MODULE_GROUP := core
 MODULE_SRCS := \
 	$(LOCAL_DIR)/devhost-main.c
 
-MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/c
+MODULE_LIBS := system/ulib/driver system/ulib/fdio system/ulib/c
 
 include make/module.mk
 
@@ -96,6 +96,6 @@ MODULE_SRCS := \
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/port
 
-MODULE_LIBS := system/ulib/driver system/ulib/launchpad system/ulib/mxio system/ulib/magenta system/ulib/c
+MODULE_LIBS := system/ulib/driver system/ulib/launchpad system/ulib/fdio system/ulib/zircon system/ulib/c
 
 include make/module.mk

@@ -22,22 +22,22 @@ class AutoTask final : private async_task_t {
 public:
     // Handles execution of a posted task.
     //
-    // Reports the |status| of the task.  If the status is |MX_OK| then the
+    // Reports the |status| of the task.  If the status is |ZX_OK| then the
     // task ran, otherwise the task did not run.
     //
     // The result indicates whether the task should be repeated; it may
     // modify the task's properties (such as the deadline) before returning.
     //
-    // The result must be |ASYNC_TASK_FINISHED| if |status| was not |MX_OK|.
+    // The result must be |ASYNC_TASK_FINISHED| if |status| was not |ZX_OK|.
     //
     // It is safe for the handler to destroy itself when returning |ASYNC_TASK_FINISHED|.
     using Handler = fbl::Function<async_task_result_t(async_t* async,
-                                                      mx_status_t status)>;
+                                                      zx_status_t status)>;
 
     // Initializes the properties of the task and binds it to an asynchronous
     // dispatcher.
     explicit AutoTask(async_t* async,
-                      mx_time_t deadline = MX_TIME_INFINITE,
+                      zx_time_t deadline = ZX_TIME_INFINITE,
                       uint32_t flags = 0u);
 
     // Destroys the task.
@@ -58,8 +58,8 @@ public:
     void set_handler(Handler handler) { handler_ = fbl::move(handler); }
 
     // The time when the task should run.
-    mx_time_t deadline() const { return async_task_t::deadline; }
-    void set_deadline(mx_time_t deadline) { async_task_t::deadline = deadline; }
+    zx_time_t deadline() const { return async_task_t::deadline; }
+    void set_deadline(zx_time_t deadline) { async_task_t::deadline = deadline; }
 
     // Valid flags: |ASYNC_FLAG_HANDLE_SHUTDOWN|.
     uint32_t flags() const { return async_task_t::flags; }
@@ -69,7 +69,7 @@ public:
     // tasks with lesser or equal deadlines.
     //
     // See |async_post_task()| for details.
-    mx_status_t Post();
+    zx_status_t Post();
 
     // Cancels the task.
     //
@@ -80,7 +80,7 @@ public:
 
 private:
     static async_task_result_t CallHandler(async_t* async, async_task_t* task,
-                                           mx_status_t status);
+                                           zx_status_t status);
 
     async_t* const async_;
     Handler handler_;

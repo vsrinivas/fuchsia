@@ -17,7 +17,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/block.h>
 
-#include <magenta/threads.h>
+#include <zircon/threads.h>
 #include <sync/completion.h>
 
 #include <gpt/gpt.h>
@@ -39,7 +39,7 @@
 #endif
 
 // ATTN: MBR supports 8 bit partition types instead of GUIDs. Here we define
-// mappings between partition type and GUIDs that magenta understands. When
+// mappings between partition type and GUIDs that zircon understands. When
 // the MBR driver receives a request for the type GUID, we lie and return the
 // a mapping from partition type to type GUID.
 static const uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
@@ -64,8 +64,8 @@ typedef struct __PACKED mbr {
 } mbr_t;
 
 typedef struct mbrpart_device {
-    mx_device_t* mxdev;
-    mx_device_t* parent;
+    zx_device_t* mxdev;
+    zx_device_t* parent;
     mbr_partition_entry_t partition;
     block_info_t info;
     block_callbacks_t* callbacks;
@@ -87,7 +87,7 @@ static uint64_t getsize(mbrpart_device_t* dev) {
     return dev->partition.sector_partition_length * ((uint64_t) dev->info.block_size);
 }
 
-static mx_status_t mbr_ioctl(void* ctx, uint32_t op, const void* cmd,
+static zx_status_t mbr_ioctl(void* ctx, uint32_t op, const void* cmd,
                              size_t cmdlen, void* reply, size_t max,
                              size_t* out_actual) {
     mbrpart_device_t* device = ctx;
@@ -95,47 +95,47 @@ static mx_status_t mbr_ioctl(void* ctx, uint32_t op, const void* cmd,
     case IOCTL_BLOCK_GET_INFO: {
         block_info_t* info = reply;
         if (max < sizeof(*info))
-            return MX_ERR_BUFFER_TOO_SMALL;
+            return ZX_ERR_BUFFER_TOO_SMALL;
         memcpy(info, &device->info, sizeof(*info));
         *out_actual = sizeof(*info);
-        return MX_OK;
+        return ZX_OK;
     }
     case IOCTL_BLOCK_GET_TYPE_GUID: {
         char* guid = reply;
         if (max < GPT_GUID_LEN)
-            return MX_ERR_BUFFER_TOO_SMALL;
+            return ZX_ERR_BUFFER_TOO_SMALL;
         if (device->partition.type == PARTITION_TYPE_DATA) {
             memcpy(guid, data_guid, GPT_GUID_LEN);
             *out_actual = GPT_GUID_LEN;
-            return MX_OK;
+            return ZX_OK;
         } else if (device->partition.type == PARTITION_TYPE_SYS) {
             memcpy(guid, sys_guid, GPT_GUID_LEN);
             *out_actual = GPT_GUID_LEN;
-            return MX_OK;
+            return ZX_OK;
         } else {
-            return MX_ERR_NOT_FOUND;
+            return ZX_ERR_NOT_FOUND;
         }
     }
     case IOCTL_BLOCK_GET_PARTITION_GUID: {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
     case IOCTL_BLOCK_GET_NAME: {
         char* name = reply;
         memset(name, 0, max);
         strncpy(name, device_get_name(device->mxdev), max);
         *out_actual = strnlen(name, max);
-        return MX_OK;
+        return ZX_OK;
     }
     case IOCTL_DEVICE_SYNC: {
         // Propagate sync to parent device
         return device_ioctl(device->parent, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0, NULL);
     }
     default:
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
-static mx_off_t to_parent_offset(mbrpart_device_t* dev, mx_off_t offset) {
+static zx_off_t to_parent_offset(mbrpart_device_t* dev, zx_off_t offset) {
     return offset + (uint64_t)(dev->partition.start_sector_lba) *
            (uint64_t)dev->info.block_size;
 }
@@ -143,11 +143,11 @@ static mx_off_t to_parent_offset(mbrpart_device_t* dev, mx_off_t offset) {
 static void mbr_iotxn_queue(void* ctx, iotxn_t* txn) {
     mbrpart_device_t* dev = ctx;
     if (txn->offset % dev->info.block_size) {
-        iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
         return;
     }
     if (txn->offset > getsize(dev)) {
-        iotxn_complete(txn, MX_ERR_OUT_OF_RANGE, 0);
+        iotxn_complete(txn, ZX_ERR_OUT_OF_RANGE, 0);
         return;
     }
     // transactions from read()/write() may be truncated
@@ -155,13 +155,13 @@ static void mbr_iotxn_queue(void* ctx, iotxn_t* txn) {
     txn->length = MIN(txn->length, getsize(dev) - txn->offset);
     txn->offset = to_parent_offset(dev, txn->offset);
     if (txn->length == 0) {
-        iotxn_complete(txn, MX_OK, 0);
+        iotxn_complete(txn, ZX_OK, 0);
     } else {
         iotxn_queue(dev->parent, txn);
     }
 }
 
-static mx_off_t mbr_getsize(void* ctx) {
+static zx_off_t mbr_getsize(void* ctx) {
     return getsize(ctx);
 }
 
@@ -175,26 +175,26 @@ static void mbr_release(void* ctx) {
     free(device);
 }
 
-static mx_status_t mbr_open(void* ctx, mx_device_t** dev_out,
+static zx_status_t mbr_open(void* ctx, zx_device_t** dev_out,
                             uint32_t flags) {
     mbrpart_device_t* device = ctx;
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
     if (is_writer(flags) && (atomic_exchange(&device->writercount, 1) == 1)) {
         xprintf("Partition cannot be opened as writable (open elsewhere)\n");
-        status = MX_ERR_ALREADY_BOUND;
+        status = ZX_ERR_ALREADY_BOUND;
     }
     return status;
 }
 
-static mx_status_t mbr_close(void* ctx, uint32_t flags) {
+static zx_status_t mbr_close(void* ctx, uint32_t flags) {
     mbrpart_device_t* device = ctx;
     if (is_writer(flags)) {
         atomic_fetch_sub(&device->writercount, 1);
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_protocol_device_t mbr_proto = {
+static zx_protocol_device_t mbr_proto = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = mbr_ioctl,
     .iotxn_queue = mbr_iotxn_queue,
@@ -222,21 +222,21 @@ static void mbr_block_complete(iotxn_t* txn, void* cookie) {
     iotxn_release(txn);
 }
 
-static void block_do_txn(mbrpart_device_t* dev, uint32_t opcode, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+static void block_do_txn(mbrpart_device_t* dev, uint32_t opcode, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     block_info_t* info = &dev->info;
     if ((dev_offset % info->block_size) || (length % info->block_size)) {
-        dev->callbacks->complete(cookie, MX_ERR_INVALID_ARGS);
+        dev->callbacks->complete(cookie, ZX_ERR_INVALID_ARGS);
         return;
     }
     uint64_t size = getsize(dev);
     if ((dev_offset >= size) || (length >= (size - dev_offset))) {
-        dev->callbacks->complete(cookie, MX_ERR_OUT_OF_RANGE);
+        dev->callbacks->complete(cookie, ZX_ERR_OUT_OF_RANGE);
         return;
     }
 
-    mx_status_t status;
+    zx_status_t status;
     iotxn_t* txn;
-    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != MX_OK) {
+    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != ZX_OK) {
         dev->callbacks->complete(cookie, status);
         return;
     }
@@ -249,11 +249,11 @@ static void block_do_txn(mbrpart_device_t* dev, uint32_t opcode, mx_handle_t vmo
     iotxn_queue(dev->parent, txn);
 }
 
-static void mbr_block_read(void* ctx, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+static void mbr_block_read(void* ctx, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     block_do_txn(ctx, IOTXN_OP_READ, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
-static void mbr_block_write(void* ctx, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+static void mbr_block_write(void* ctx, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     block_do_txn(ctx, IOTXN_OP_WRITE, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
@@ -265,7 +265,7 @@ static block_protocol_ops_t mbr_block_ops = {
 };
 
 static int mbr_bind_thread(void* arg) {
-    mx_device_t* dev = arg;
+    zx_device_t* dev = arg;
 
     // Classic MBR supports 4 partitions.
     uint8_t partition_count = 0;
@@ -291,8 +291,8 @@ static int mbr_bind_thread(void* arg) {
         iotxn_size = DIV_ROUND_UP(MBR_SIZE, block_info.block_size) * block_info.block_size;
     }
 
-    mx_status_t st = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, iotxn_size);
-    if (st != MX_OK) {
+    zx_status_t st = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, iotxn_size);
+    if (st != ZX_OK) {
         xprintf("mbr: failed to allocate iotxn, retcode = %d\n", st);
         goto unbind;
     }
@@ -305,9 +305,9 @@ static int mbr_bind_thread(void* arg) {
     txn->cookie = &cplt;
 
     iotxn_queue(dev, txn);
-    completion_wait(&cplt, MX_TIME_INFINITE);
+    completion_wait(&cplt, ZX_TIME_INFINITE);
 
-    if (txn->status != MX_OK) {
+    if (txn->status != ZX_OK) {
         xprintf("mbr: could not read mbr from device, retcode = %d\n",
                 txn->status);
         goto unbind;
@@ -363,11 +363,11 @@ static int mbr_bind_thread(void* arg) {
             .name = name,
             .ctx = pdev,
             .ops = &mbr_proto,
-            .proto_id = MX_PROTOCOL_BLOCK_CORE,
+            .proto_id = ZX_PROTOCOL_BLOCK_CORE,
             .proto_ops = &mbr_block_ops,
         };
 
-        if ((st = device_add(dev, &args, &pdev->mxdev)) != MX_OK) {
+        if ((st = device_add(dev, &args, &pdev->mxdev)) != ZX_OK) {
             xprintf("mbr: device_add failed, retcode = %d\n", st);
             free(pdev);
             continue;
@@ -390,7 +390,7 @@ unbind:
     return -1;
 }
 
-static mx_status_t mbr_bind(void* ctx, mx_device_t* dev, void** cookie) {
+static zx_status_t mbr_bind(void* ctx, zx_device_t* dev, void** cookie) {
     // Make sure the MBR structs are the right size.
     static_assert(sizeof(mbr_t) == MBR_SIZE, "mbr_t is the wrong size");
     static_assert(sizeof(mbr_partition_entry_t) == MBR_PARTITION_ENTRY_SIZE,
@@ -400,19 +400,19 @@ static mx_status_t mbr_bind(void* ctx, mx_device_t* dev, void** cookie) {
     thrd_t t;
     int thrd_rc = thrd_create_with_name(&t, mbr_bind_thread, dev, "mbr-init");
     if (thrd_rc != thrd_success) {
-        return thrd_status_to_mx_status(thrd_rc);
+        return thrd_status_to_zx_status(thrd_rc);
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_driver_ops_t mbr_driver_ops = {
+static zx_driver_ops_t mbr_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = mbr_bind,
 };
 
 // clang-format off
-MAGENTA_DRIVER_BEGIN(mbr, mbr_driver_ops, "magenta", "0.1", 2)
+ZIRCON_DRIVER_BEGIN(mbr, mbr_driver_ops, "zircon", "0.1", 2)
     BI_ABORT_IF_AUTOBIND,
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_BLOCK),
-MAGENTA_DRIVER_END(mbr)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BLOCK),
+ZIRCON_DRIVER_END(mbr)
 // clang-format on

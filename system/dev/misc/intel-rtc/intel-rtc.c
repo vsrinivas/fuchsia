@@ -5,11 +5,11 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <magenta/device/rtc.h>
+#include <zircon/device/rtc.h>
 #include <hw/inout.h>
 
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -77,11 +77,11 @@ static void set_utc_offset(rtc_t* rtc) {
     uint64_t rtc_seconds = seconds_to_new_year + seconds_this_year;
     uint64_t rtc_nanoseconds = rtc_seconds * 1000000000;
 
-    uint64_t monotonic_nanoseconds = mx_time_get(MX_CLOCK_MONOTONIC);
+    uint64_t monotonic_nanoseconds = zx_time_get(ZX_CLOCK_MONOTONIC);
     int64_t offset = rtc_nanoseconds - monotonic_nanoseconds;
 
-    mx_status_t status = mx_clock_adjust(get_root_resource(), MX_CLOCK_UTC, offset);
-    if (status != MX_OK) {
+    zx_status_t status = zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, offset);
+    if (status != ZX_OK) {
         fprintf(stderr, "The RTC driver was unable to set the UTC clock!\n");
     }
 }
@@ -250,7 +250,7 @@ static void write_time(const rtc_t* rtc) {
 
 static ssize_t intel_rtc_get(void* buf, size_t count) {
     if (count < sizeof(rtc_t)) {
-        return MX_ERR_BUFFER_TOO_SMALL;
+        return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
     // Ensure we have a consistent time.
@@ -277,14 +277,14 @@ static bool rtc_is_invalid(const rtc_t* rtc) {
 
 static ssize_t intel_rtc_set(const void* buf, size_t count) {
     if (count < sizeof(rtc_t)) {
-        return MX_ERR_BUFFER_TOO_SMALL;
+        return ZX_ERR_BUFFER_TOO_SMALL;
     }
     rtc_t rtc;
     memcpy(&rtc, buf, sizeof(rtc_t));
 
     // An invalid time was supplied.
     if (rtc_is_invalid(&rtc)) {
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
     write_time(&rtc);
@@ -311,7 +311,7 @@ static void sanitize_rtc(rtc_t* rtc) {
 }
 
 // Implement ioctl protocol.
-static mx_status_t intel_rtc_ioctl(void* ctx, uint32_t op,
+static zx_status_t intel_rtc_ioctl(void* ctx, uint32_t op,
                                    const void* in_buf, size_t in_len,
                                    void* out_buf, size_t out_len, size_t* out_actual) {
     switch (op) {
@@ -321,27 +321,27 @@ static mx_status_t intel_rtc_ioctl(void* ctx, uint32_t op,
             return ret;
         }
         *out_actual = ret;
-        return MX_OK;
+        return ZX_OK;
     }
     case IOCTL_RTC_SET:
         return intel_rtc_set(in_buf, in_len);
     }
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-static mx_protocol_device_t intel_rtc_device_proto __UNUSED = {
+static zx_protocol_device_t intel_rtc_device_proto __UNUSED = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = intel_rtc_ioctl,
 };
 
 //TODO: bind against hw, not misc
-static mx_status_t intel_rtc_bind(void* ctx, mx_device_t* parent, void** cookie) {
+static zx_status_t intel_rtc_bind(void* ctx, zx_device_t* parent, void** cookie) {
 #if defined(__x86_64__) || defined(__i386__)
     // TODO(teisenbe): This should be probed via the ACPI pseudo bus whenever it
     // exists.
 
-    mx_status_t status = mx_mmap_device_io(get_root_resource(), RTC_IO_BASE, RTC_NUM_IO_REGISTERS);
-    if (status != MX_OK) {
+    zx_status_t status = zx_mmap_device_io(get_root_resource(), RTC_IO_BASE, RTC_NUM_IO_REGISTERS);
+    if (status != ZX_OK) {
         return status;
     }
 
@@ -351,9 +351,9 @@ static mx_status_t intel_rtc_bind(void* ctx, mx_device_t* parent, void** cookie)
         .ops = &intel_rtc_device_proto,
     };
 
-    mx_device_t* dev;
+    zx_device_t* dev;
     status = device_add(parent, &args, &dev);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
 
@@ -361,17 +361,17 @@ static mx_status_t intel_rtc_bind(void* ctx, mx_device_t* parent, void** cookie)
     sanitize_rtc(&rtc);
     set_utc_offset(&rtc);
 
-    return MX_OK;
+    return ZX_OK;
 #else
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 #endif
 }
 
-static mx_driver_ops_t intel_rtc_driver_ops = {
+static zx_driver_ops_t intel_rtc_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = intel_rtc_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(intel_rtc, intel_rtc_driver_ops, "magenta", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT),
-MAGENTA_DRIVER_END(intel_rtc)
+ZIRCON_DRIVER_BEGIN(intel_rtc, intel_rtc_driver_ops, "zircon", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
+ZIRCON_DRIVER_END(intel_rtc)

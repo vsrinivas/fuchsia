@@ -11,8 +11,8 @@
 #include <dev/pcie_device.h>
 #include <kernel/spinlock.h>
 #include <vm/vm_aspace.h>
-#include <magenta/syscalls/pci.h>
-#include <magenta/types.h>
+#include <zircon/syscalls/pci.h>
+#include <zircon/types.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/mutex.h>
@@ -25,36 +25,36 @@ class PciInterruptDispatcher;
 
 class PciDeviceDispatcher final : public Dispatcher {
 public:
-    static mx_status_t Create(uint32_t index,
-                              mx_pcie_device_info_t*    out_info,
+    static zx_status_t Create(uint32_t index,
+                              zx_pcie_device_info_t*    out_info,
                               fbl::RefPtr<Dispatcher>* out_dispatcher,
-                              mx_rights_t* out_rights);
+                              zx_rights_t* out_rights);
 
     ~PciDeviceDispatcher() final;
-    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_PCI_DEVICE; }
+    zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_PCI_DEVICE; }
     const fbl::RefPtr<PcieDevice>& device() { return device_; }
 
     void ReleaseDevice();
 
     // TODO(cja): revisit Enable____ methods to be automatic when vmos are handed
     // out so there is less of a dispatcher surface to worry about.
-    mx_status_t EnableBusMaster(bool enable);
-    mx_status_t EnableMmio(bool enable);
-    mx_status_t EnablePio(bool enable);
+    zx_status_t EnableBusMaster(bool enable);
+    zx_status_t EnableMmio(bool enable);
+    zx_status_t EnablePio(bool enable);
     const pcie_bar_info_t* GetBar(uint32_t bar_num);
-    mx_status_t GetConfig(pci_config_info_t* out);
-    mx_status_t ResetDevice();
-    mx_status_t MapInterrupt(int32_t which_irq,
+    zx_status_t GetConfig(pci_config_info_t* out);
+    zx_status_t ResetDevice();
+    zx_status_t MapInterrupt(int32_t which_irq,
                              fbl::RefPtr<Dispatcher>* interrupt_dispatcher,
-                             mx_rights_t* rights);
-    mx_status_t QueryIrqModeCaps(mx_pci_irq_mode_t mode, uint32_t* out_max_irqs);
-    mx_status_t SetIrqMode(mx_pci_irq_mode_t mode, uint32_t requested_irq_count);
+                             zx_rights_t* rights);
+    zx_status_t QueryIrqModeCaps(zx_pci_irq_mode_t mode, uint32_t* out_max_irqs);
+    zx_status_t SetIrqMode(zx_pci_irq_mode_t mode, uint32_t requested_irq_count);
 
     bool irqs_maskable() const TA_REQ(lock_) { return irqs_maskable_; }
 
 private:
     PciDeviceDispatcher(fbl::RefPtr<PcieDevice> device,
-                        mx_pcie_device_info_t* out_info);
+                        zx_pcie_device_info_t* out_info);
 
     PciDeviceDispatcher(const PciDeviceDispatcher &) = delete;
     PciDeviceDispatcher& operator=(const PciDeviceDispatcher &) = delete;

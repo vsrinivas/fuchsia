@@ -46,7 +46,7 @@ size_t MBufChain::Read(user_ptr<void> dst, size_t len, bool datagram) {
         MBuf& cur = tail_.front();
         char* src = cur.data_ + cur.off_;
         size_t copy_len = MIN(cur.len_, len - pos);
-        if (dst.byte_offset(pos).copy_array_to_user(src, copy_len) != MX_OK)
+        if (dst.byte_offset(pos).copy_array_to_user(src, copy_len) != ZX_OK)
             return pos;
         pos += copy_len;
         cur.off_ += static_cast<uint32_t>(copy_len);
@@ -72,10 +72,10 @@ size_t MBufChain::Read(user_ptr<void> dst, size_t len, bool datagram) {
     return pos;
 }
 
-mx_status_t MBufChain::WriteDatagram(user_ptr<const void> src,
+zx_status_t MBufChain::WriteDatagram(user_ptr<const void> src,
                                      size_t len, size_t* written) {
     if (len + size_ > kSizeMax)
-        return MX_ERR_SHOULD_WAIT;
+        return ZX_ERR_SHOULD_WAIT;
 
     fbl::SinglyLinkedList<MBuf*> bufs;
     for (size_t need = 1 + ((len - 1) / MBuf::kPayloadSize); need != 0; need--) {
@@ -83,7 +83,7 @@ mx_status_t MBufChain::WriteDatagram(user_ptr<const void> src,
         if (buf == nullptr) {
             while (!bufs.is_empty())
                 FreeMBuf(bufs.pop_front());
-            return MX_ERR_SHOULD_WAIT;
+            return ZX_ERR_SHOULD_WAIT;
         }
         bufs.push_front(buf);
     }
@@ -91,10 +91,10 @@ mx_status_t MBufChain::WriteDatagram(user_ptr<const void> src,
     size_t pos = 0;
     for (auto& buf : bufs) {
         size_t copy_len = fbl::min(MBuf::kPayloadSize, len - pos);
-        if (src.byte_offset(pos).copy_array_from_user(buf.data_, copy_len) != MX_OK) {
+        if (src.byte_offset(pos).copy_array_from_user(buf.data_, copy_len) != ZX_OK) {
             while (!bufs.is_empty())
                 FreeMBuf(bufs.pop_front());
-            return MX_ERR_INVALID_ARGS; // Bad user buffer.
+            return ZX_ERR_INVALID_ARGS; // Bad user buffer.
         }
         pos += copy_len;
         buf.len_ += static_cast<uint32_t>(copy_len);
@@ -115,15 +115,15 @@ mx_status_t MBufChain::WriteDatagram(user_ptr<const void> src,
 
     *written = len;
     size_ += len;
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t MBufChain::WriteStream(user_ptr<const void> src,
+zx_status_t MBufChain::WriteStream(user_ptr<const void> src,
                                    size_t len, size_t* written) {
     if (head_ == nullptr) {
         head_ = AllocMBuf();
         if (head_ == nullptr)
-            return MX_ERR_SHOULD_WAIT;
+            return ZX_ERR_SHOULD_WAIT;
         tail_.push_front(head_);
     }
 
@@ -143,7 +143,7 @@ mx_status_t MBufChain::WriteStream(user_ptr<const void> src,
             if (copy_len == 0)
                 break;
         }
-        if (src.byte_offset(pos).copy_array_from_user(dst, copy_len) != MX_OK)
+        if (src.byte_offset(pos).copy_array_from_user(dst, copy_len) != ZX_OK)
             break;
         pos += copy_len;
         head_->len_ += static_cast<uint32_t>(copy_len);
@@ -151,10 +151,10 @@ mx_status_t MBufChain::WriteStream(user_ptr<const void> src,
     }
 
     if (pos == 0)
-        return MX_ERR_SHOULD_WAIT;
+        return ZX_ERR_SHOULD_WAIT;
 
     *written = pos;
-    return MX_OK;
+    return ZX_OK;
 }
 
 MBufChain::MBuf* MBufChain::AllocMBuf() {

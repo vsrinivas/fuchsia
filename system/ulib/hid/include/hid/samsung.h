@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -38,7 +38,7 @@ typedef struct samsung_touch {
 } __attribute__((packed)) samsung_touch_t;
 
 extern bool is_samsung_touch_report_desc(const uint8_t* data, size_t len);
-extern mx_status_t setup_samsung_touch(int fd);
+extern zx_status_t setup_samsung_touch(int fd);
 
 __END_CDECLS
 

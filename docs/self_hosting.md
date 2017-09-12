@@ -54,21 +54,21 @@ basename
 sed
 ```
 
-## Build Magenta
-Follow standard Magenta/Fuchsia source configuration instructions. Note that
-you will want a minimum of `magenta` and `sbase`.
+## Build Zircon
+Follow standard Zircon/Fuchsia source configuration instructions. Note that
+you will want a minimum of `zircon` and `sbase`.
 
 In order for gcc-built executables to run in Fuchsia, we will need the gcc
 runtime libraries, built for Fuchsia. They were built as part of the Fuchsia
 native build, but we need them to be installed into one of the standard runtime
 library locations on the target. One way to do this is to add the libraries to
-the manifest lines in `magenta/kernel/engine.mk`:
+the manifest lines in `zircon/kernel/engine.mk`:
 ```code
 USER_MANIFEST_LINES += lib/libgcc_s.so.1=<path-to-gcc>/x86_64-fuchsia-6.3.0-native/lib/libgcc_s.so.1
 USER_MANIFEST_LINES += lib/libgcc_s.so=<path-to-gcc>/x86_64-fuchsia-6.3.0-native/lib/libgcc_s.so
 USER_MANIFEST_LINES += lib/libstdc++.so=<path-to-gcc>/x86_64-fuchsia-6.3.0-native/lib/libstdc++.so
 ```
-Follow the standard Magenta/Fuchsia build instructions, and run the resulting
+Follow the standard Zircon/Fuchsia build instructions, and run the resulting
 image on the desired target.
 
 ## Copy Files Onto Target
@@ -76,10 +76,10 @@ Create a new empty directory in the target environment (for this example, we'll
 use /data). For your own sanity, this should be persistent storage of some
 sort. For this example, we'll use the following /data subdirectories:
 ```text
-bin             Directory for miscellaneous tools not provided in Fuchsia or Magenta
+bin             Directory for miscellaneous tools not provided in Fuchsia or Zircon
 gcc             Native gcc installation
 gcc-bare-metal  Fuchsia-hosted bare-metal tools
-magenta         The Magenta source files
+zircon         The Zircon source files
 sysroot         The sysroot of the installed Fuchsia
 ```
 * Netcp all native gcc files into `/data/gcc`
@@ -104,26 +104,26 @@ done
 ```bash
 netcp <make-build-dir>/make :/data/bin
 ```
-* Copy the magenta source code onto the target, either using netcp or a mounted
+* Copy the zircon source code onto the target, either using netcp or a mounted
 image, or git. Note that if you are using the same source tree as was used to
 build the target image, you'll want to remove any modifications to
 kernel/engine.mk that were made for previous steps (or update them to reflect
 the target location of these files), otherwise the build will fail when trying
 to generate the bootfs image.
 ```bash
-cd <path-to-magenta>
+cd <path-to-zircon>
 for filename in `find . -name .git -prune \
                         -o -path "./build-*" -prune \
                         -o -path "./prebuilt*" \
                         -o -type f -print`
 do
   echo "Copying $filename" 
-  netcp $filename :/data/magenta/$filename
+  netcp $filename :/data/zircon/$filename
 done
 ```
-* Copy the Magenta sysroot onto the target device in `/data/sysroot`
+* Copy the Zircon sysroot onto the target device in `/data/sysroot`
 ```bash
-cd <magenta-sysroot>
+cd <zircon-sysroot>
 for filename in `find . -type f`
 do
   echo "Copying $filename"
@@ -140,14 +140,14 @@ do
 done
 ```
 
-## Build Magenta
+## Build Zircon
 On the Fuchsia target, add `/data/bin`, `/data/gcc/bin`, and `data/gcc-bare-metal/bin` to your `PATH`
 ```bash
 export PATH="$PATH:/data/bin:/data/gcc/bin:/data/gcc-bare-metal/bin"
 ```
-* Finally, start the build in the magenta directory:
+* Finally, start the build in the zircon directory:
 ```bash
-cd magenta
+cd zircon
 make \
     HOST_SYSROOT=/data/sysroot \
     ARCH_x86_64_TOOLCHAIN_PREFIX="x86_64-elf-" \

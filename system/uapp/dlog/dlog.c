@@ -8,12 +8,12 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/log.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/log.h>
 
 void usage(void) {
     fprintf(stderr,
-        "usage: dlog        dump the magenta debug log\n"
+        "usage: dlog        dump the zircon debug log\n"
         "\n"
         "options: -f        don't exit, keep waiting for new messages\n"
         "         -p <pid>  only show messages from specified pid\n"
@@ -26,8 +26,8 @@ int main(int argc, char** argv) {
     bool tail = false;
     bool filter_pid = false;
     bool plain = false;
-    mx_koid_t pid;
-    mx_handle_t h;
+    zx_koid_t pid;
+    zx_handle_t h;
 
     while (argc > 1) {
         if (!strcmp(argv[1], "-h")) {
@@ -59,18 +59,18 @@ int main(int argc, char** argv) {
         argv++;
     }
 
-    if (mx_log_create(MX_LOG_FLAG_READABLE, &h) < 0) {
+    if (zx_log_create(ZX_LOG_FLAG_READABLE, &h) < 0) {
         fprintf(stderr, "dlog: cannot open debug log\n");
         return -1;
     }
 
-    char buf[MX_LOG_RECORD_MAX];
-    mx_log_record_t* rec = (mx_log_record_t*)buf;
+    char buf[ZX_LOG_RECORD_MAX];
+    zx_log_record_t* rec = (zx_log_record_t*)buf;
     for (;;) {
-        mx_status_t status;
-        if ((status = mx_log_read(h, MX_LOG_RECORD_MAX, rec, 0)) < 0) {
-            if ((status == MX_ERR_SHOULD_WAIT) && tail) {
-                mx_object_wait_one(h, MX_LOG_READABLE, MX_TIME_INFINITE, NULL);
+        zx_status_t status;
+        if ((status = zx_log_read(h, ZX_LOG_RECORD_MAX, rec, 0)) < 0) {
+            if ((status == ZX_ERR_SHOULD_WAIT) && tail) {
+                zx_object_wait_one(h, ZX_LOG_READABLE, ZX_TIME_INFINITE, NULL);
                 continue;
             }
             break;

@@ -9,9 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <magenta/status.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/object.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
 #include <pretty/sizes.h>
 #include <task-utils/get.h>
 
@@ -22,20 +22,20 @@ static constexpr size_t kRightsStrLen = sizeof("rwxmdt");
 static const char* handle_rights_to_string(uint32_t rights,
                                            char str[kRightsStrLen]) {
     char* c = str;
-    *c++ = (rights & MX_RIGHT_READ) ? 'r' : '-';
-    *c++ = (rights & MX_RIGHT_WRITE) ? 'w' : '-';
-    *c++ = (rights & MX_RIGHT_EXECUTE) ? 'x' : '-';
-    *c++ = (rights & MX_RIGHT_MAP) ? 'm' : '-';
-    *c++ = (rights & MX_RIGHT_DUPLICATE) ? 'd' : '-';
-    *c++ = (rights & MX_RIGHT_TRANSFER) ? 't' : '-';
+    *c++ = (rights & ZX_RIGHT_READ) ? 'r' : '-';
+    *c++ = (rights & ZX_RIGHT_WRITE) ? 'w' : '-';
+    *c++ = (rights & ZX_RIGHT_EXECUTE) ? 'x' : '-';
+    *c++ = (rights & ZX_RIGHT_MAP) ? 'm' : '-';
+    *c++ = (rights & ZX_RIGHT_DUPLICATE) ? 'd' : '-';
+    *c++ = (rights & ZX_RIGHT_TRANSFER) ? 't' : '-';
     *c = '\0';
     return str;
 }
 
-static void print_vmo(const mx_info_vmo_t* vmo) {
+static void print_vmo(const zx_info_vmo_t* vmo) {
 
     char rights_str[kRightsStrLen];
-    if (vmo->flags & MX_INFO_VMO_VIA_HANDLE) {
+    if (vmo->flags & ZX_INFO_VMO_VIA_HANDLE) {
         handle_rights_to_string(vmo->handle_rights, rights_str);
     } else {
         rights_str[0] = '-';
@@ -46,11 +46,11 @@ static void print_vmo(const mx_info_vmo_t* vmo) {
     format_size(size_str, sizeof(size_str), vmo->size_bytes);
 
     char alloc_str[MAX_FORMAT_SIZE_LEN];
-    switch (MX_INFO_VMO_TYPE(vmo->flags)) {
-    case MX_INFO_VMO_TYPE_PAGED:
+    switch (ZX_INFO_VMO_TYPE(vmo->flags)) {
+    case ZX_INFO_VMO_TYPE_PAGED:
         format_size(alloc_str, sizeof(alloc_str), vmo->committed_bytes);
         break;
-    case MX_INFO_VMO_TYPE_PHYSICAL:
+    case ZX_INFO_VMO_TYPE_PHYSICAL:
         strlcpy(alloc_str, "phys", sizeof(alloc_str));
         break;
     default:
@@ -60,14 +60,14 @@ static void print_vmo(const mx_info_vmo_t* vmo) {
     }
 
     char clone_str[21];
-    if (vmo->flags & MX_INFO_VMO_IS_COW_CLONE) {
+    if (vmo->flags & ZX_INFO_VMO_IS_COW_CLONE) {
         snprintf(clone_str, sizeof(clone_str), "%" PRIu64, vmo->parent_koid);
     } else {
         clone_str[0] = '-';
         clone_str[1] = '\0';
     }
 
-    char name[MX_MAX_NAME_LEN];
+    char name[ZX_MAX_NAME_LEN];
     strlcpy(name, vmo->name, sizeof(name));
     if (name[0] == '\0') {
         name[0] = '-';
@@ -99,7 +99,7 @@ static void print_header() {
 }
 
 // Pretty-prints the contents of |vmos| to stdout.
-void print_vmos(const mx_info_vmo_t* vmos, size_t count, size_t avail) {
+void print_vmos(const zx_info_vmo_t* vmos, size_t count, size_t avail) {
     print_header();
     for (size_t i = 0; i < count; i++) {
         print_vmo(vmos + i);
@@ -131,12 +131,12 @@ void try_help(char** argv) {
     printf("Columns:\n");
     printf("  rights: If the process points to the VMO via a handle, this column\n");
     printf("      shows the rights that the handle has, zero or more of:\n");
-    printf("          r: MX_RIGHT_READ\n");
-    printf("          w: MX_RIGHT_WRITE\n");
-    printf("          x: MX_RIGHT_EXECUTE\n");
-    printf("          m: MX_RIGHT_MAP\n");
-    printf("          d: MX_RIGHT_DUPLICATE\n");
-    printf("          t: MX_RIGHT_TRANSFER\n");
+    printf("          r: ZX_RIGHT_READ\n");
+    printf("          w: ZX_RIGHT_WRITE\n");
+    printf("          x: ZX_RIGHT_EXECUTE\n");
+    printf("          m: ZX_RIGHT_MAP\n");
+    printf("          d: ZX_RIGHT_DUPLICATE\n");
+    printf("          t: ZX_RIGHT_TRANSFER\n");
     printf("      NOTE: Non-handle entries will have a single '-' in this column.\n");
     printf("  koid: The koid of the VMO, if it has one. Zero otherwise. A VMO without a\n");
     printf("      koid was created by the kernel, and has never had a userspace handle.\n");
@@ -164,36 +164,36 @@ int main(int argc, char** argv) {
     }
     try_help(argv);
     char* end;
-    mx_koid_t koid = strtoull(argv[1], &end, 0);
+    zx_koid_t koid = strtoull(argv[1], &end, 0);
     if (argv[1][0] == '\0' || *end != '\0') {
         fprintf(stderr, "ERROR: \"%s\" is not a number\n", argv[1]);
         usage(argv[0]);
     }
 
-    mx_handle_t process;
-    mx_obj_type_t type;
-    mx_status_t s = get_task_by_koid(koid, &type, &process);
-    if (s == MX_OK && type != MX_OBJ_TYPE_PROCESS) {
-        mx_handle_close(process);
-        s = MX_ERR_WRONG_TYPE;
+    zx_handle_t process;
+    zx_obj_type_t type;
+    zx_status_t s = get_task_by_koid(koid, &type, &process);
+    if (s == ZX_OK && type != ZX_OBJ_TYPE_PROCESS) {
+        zx_handle_close(process);
+        s = ZX_ERR_WRONG_TYPE;
     }
-    if (s != MX_OK) {
+    if (s != ZX_OK) {
         fprintf(stderr,
                 "ERROR: couldn't find process with koid %" PRIu64 ": %s (%d)\n",
-                koid, mx_status_get_string(s), s);
+                koid, zx_status_get_string(s), s);
         usage(argv[0]);
     }
 
-    mx_info_vmo_t* vmos;
+    zx_info_vmo_t* vmos;
     size_t count;
     size_t avail;
     s = get_vmos(process, &vmos, &count, &avail);
-    mx_handle_close(process);
-    if (s != MX_OK) {
+    zx_handle_close(process);
+    if (s != ZX_OK) {
         fprintf(stderr,
                 "ERROR: couldn't get vmos for process with koid %" PRIu64
                 ": %s (%d)\n",
-                koid, mx_status_get_string(s), s);
+                koid, zx_status_get_string(s), s);
         return 1;
     }
     print_vmos(vmos, count, avail);

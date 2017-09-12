@@ -11,7 +11,7 @@
 
 #include <assert.h>
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #include <trace-engine/instrumentation.h>
 #include <trace/pairs_internal.h>
@@ -286,7 +286,7 @@ void trace_internal_write_flow_end_event_record_and_release_context(
 
 void trace_internal_write_kernel_object_record_for_handle_and_release_context(
     trace_context_t* context,
-    mx_handle_t handle,
+    zx_handle_t handle,
     const trace_arg_t* args, size_t num_args);
 
 #ifndef NTRACE

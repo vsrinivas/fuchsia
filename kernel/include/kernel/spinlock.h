@@ -8,8 +8,8 @@
 #pragma once
 
 #include <arch/spinlock.h>
-#include <magenta/compiler.h>
-#include <magenta/thread_annotations.h>
+#include <zircon/compiler.h>
+#include <zircon/thread_annotations.h>
 
 __BEGIN_CDECLS
 

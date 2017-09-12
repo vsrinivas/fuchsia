@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/device/ethernet.h>
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
+#include <zircon/device/ethernet.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
 #include <pretty/hexdump.h>
 
 #include <fcntl.h>
@@ -15,15 +15,15 @@
 
 #define BUFSIZE 2048
 
-void handle_rx(mx_handle_t rx_fifo, char* iobuf, unsigned count) {
+void handle_rx(zx_handle_t rx_fifo, char* iobuf, unsigned count) {
     eth_fifo_entry_t entries[count];
 
     for (;;) {
         uint32_t n;
-        mx_status_t status;
-        if ((status = mx_fifo_read(rx_fifo, entries, sizeof(entries), &n)) < 0) {
-            if (status == MX_ERR_SHOULD_WAIT) {
-                mx_object_wait_one(rx_fifo, MX_FIFO_READABLE | MX_FIFO_PEER_CLOSED, MX_TIME_INFINITE, NULL);
+        zx_status_t status;
+        if ((status = zx_fifo_read(rx_fifo, entries, sizeof(entries), &n)) < 0) {
+            if (status == ZX_ERR_SHOULD_WAIT) {
+                zx_object_wait_one(rx_fifo, ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
                 continue;
             }
             fprintf(stderr, "netdump: failed to read rx packets: %d\n", status);
@@ -39,7 +39,7 @@ void handle_rx(mx_handle_t rx_fifo, char* iobuf, unsigned count) {
             e->length = BUFSIZE;
             e->flags = 0;
             uint32_t actual;
-            if ((status = mx_fifo_write(rx_fifo, e, sizeof(*e), &actual)) < 0) {
+            if ((status = zx_fifo_write(rx_fifo, e, sizeof(*e), &actual)) < 0) {
                 fprintf(stderr, "netdump: failed to queue rx packet: %d\n", status);
                 break;
             }
@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
     }
 
     eth_fifos_t fifos;
-    mx_status_t status;
+    zx_status_t status;
 
     ssize_t r;
     if ((r = ioctl_ethernet_get_fifos(fd, &fifos)) < 0) {
@@ -69,15 +69,15 @@ int main(int argc, char** argv) {
     }
 
     unsigned count = fifos.rx_depth / 2;
-    mx_handle_t iovmo;
+    zx_handle_t iovmo;
     // allocate shareable ethernet buffer data heap
-    if ((status = mx_vmo_create(count * BUFSIZE, 0, &iovmo)) < 0) {
+    if ((status = zx_vmo_create(count * BUFSIZE, 0, &iovmo)) < 0) {
         return -1;
     }
 
     char* iobuf;
-    if ((status = mx_vmar_map(mx_vmar_root_self(), 0, iovmo, 0, count * BUFSIZE,
-                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+    if ((status = zx_vmar_map(zx_vmar_root_self(), 0, iovmo, 0, count * BUFSIZE,
+                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                               (uintptr_t*)&iobuf)) < 0) {
         return -1;
     }
@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
             .cookie = NULL,
         };
         uint32_t actual;
-        if ((status = mx_fifo_write(fifos.rx_fifo, &entry, sizeof(entry), &actual)) < 0) {
+        if ((status = zx_fifo_write(fifos.rx_fifo, &entry, sizeof(entry), &actual)) < 0) {
             fprintf(stderr, "netdump: failed to queue rx packet: %d\n", status);
             return -1;
         }

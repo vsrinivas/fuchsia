@@ -21,7 +21,7 @@
 #include <lz4frame.h>
 #include <lib/cksum.h>
 
-#include <magenta/boot/bootdata.h>
+#include <zircon/boot/bootdata.h>
 
 #define MAXBUFFER (1024*1024)
 

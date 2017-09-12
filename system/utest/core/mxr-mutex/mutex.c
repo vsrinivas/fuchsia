@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <runtime/mutex.h>
 #include <unittest/unittest.h>
 #include <inttypes.h>
@@ -12,10 +12,10 @@
 #include <string.h>
 #include <threads.h>
 
-static mxr_mutex_t mutex = MXR_MUTEX_INIT;
+static zxr_mutex_t mutex = ZXR_MUTEX_INIT;
 
 static void xlog(const char* str) {
-    uint64_t now = mx_time_get(MX_CLOCK_MONOTONIC);
+    uint64_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
     unittest_printf("[%08" PRIu64 ".%08" PRIu64 "]: %s",
                     now / 1000000000, now % 1000000000, str);
 }
@@ -24,9 +24,9 @@ static int mutex_thread_1(void* arg) {
     xlog("thread 1 started\n");
 
     for (int times = 0; times < 300; times++) {
-        mxr_mutex_lock(&mutex);
-        mx_nanosleep(mx_deadline_after(MX_USEC(1)));
-        mxr_mutex_unlock(&mutex);
+        zxr_mutex_lock(&mutex);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
+        zxr_mutex_unlock(&mutex);
     }
 
     xlog("thread 1 done\n");
@@ -37,9 +37,9 @@ static int mutex_thread_2(void* arg) {
     xlog("thread 2 started\n");
 
     for (int times = 0; times < 150; times++) {
-        mxr_mutex_lock(&mutex);
-        mx_nanosleep(mx_deadline_after(MX_USEC(2)));
-        mxr_mutex_unlock(&mutex);
+        zxr_mutex_lock(&mutex);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(2)));
+        zxr_mutex_unlock(&mutex);
     }
 
     xlog("thread 2 done\n");
@@ -50,9 +50,9 @@ static int mutex_thread_3(void* arg) {
     xlog("thread 3 started\n");
 
     for (int times = 0; times < 100; times++) {
-        mxr_mutex_lock(&mutex);
-        mx_nanosleep(mx_deadline_after(MX_USEC(3)));
-        mxr_mutex_unlock(&mutex);
+        zxr_mutex_lock(&mutex);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(3)));
+        zxr_mutex_unlock(&mutex);
     }
 
     xlog("thread 3 done\n");
@@ -67,11 +67,11 @@ static int mutex_try_thread_1(void* arg) {
     xlog("thread 1 started\n");
 
     for (int times = 0; times < 300 || !got_lock_1; times++) {
-        mx_status_t status = mxr_mutex_trylock(&mutex);
-        mx_nanosleep(mx_deadline_after(MX_USEC(1)));
-        if (status == MX_OK) {
+        zx_status_t status = zxr_mutex_trylock(&mutex);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
+        if (status == ZX_OK) {
             got_lock_1 = true;
-            mxr_mutex_unlock(&mutex);
+            zxr_mutex_unlock(&mutex);
         }
     }
 
@@ -83,11 +83,11 @@ static int mutex_try_thread_2(void* arg) {
     xlog("thread 2 started\n");
 
     for (int times = 0; times < 150 || !got_lock_2; times++) {
-        mx_status_t status = mxr_mutex_trylock(&mutex);
-        mx_nanosleep(mx_deadline_after(MX_USEC(2)));
-        if (status == MX_OK) {
+        zx_status_t status = zxr_mutex_trylock(&mutex);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(2)));
+        if (status == ZX_OK) {
             got_lock_2 = true;
-            mxr_mutex_unlock(&mutex);
+            zxr_mutex_unlock(&mutex);
         }
     }
 
@@ -99,11 +99,11 @@ static int mutex_try_thread_3(void* arg) {
     xlog("thread 3 started\n");
 
     for (int times = 0; times < 100 || !got_lock_3; times++) {
-        mx_status_t status = mxr_mutex_trylock(&mutex);
-        mx_nanosleep(mx_deadline_after(MX_USEC(3)));
-        if (status == MX_OK) {
+        zx_status_t status = zxr_mutex_trylock(&mutex);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(3)));
+        if (status == ZX_OK) {
             got_lock_3 = true;
-            mxr_mutex_unlock(&mutex);
+            zxr_mutex_unlock(&mutex);
         }
     }
 
@@ -114,10 +114,10 @@ static int mutex_try_thread_3(void* arg) {
 static bool test_initializer(void) {
     BEGIN_TEST;
     // Let's not accidentally break .bss'd mutexes
-    static mxr_mutex_t static_mutex;
-    mxr_mutex_t mutex = MXR_MUTEX_INIT;
-    int status = memcmp(&static_mutex, &mutex, sizeof(mxr_mutex_t));
-    EXPECT_EQ(status, 0, "mxr_mutex's initializer is not all zeroes");
+    static zxr_mutex_t static_mutex;
+    zxr_mutex_t mutex = ZXR_MUTEX_INIT;
+    int status = memcmp(&static_mutex, &mutex, sizeof(zxr_mutex_t));
+    EXPECT_EQ(status, 0, "zxr_mutex's initializer is not all zeroes");
     END_TEST;
 }
 
@@ -156,11 +156,11 @@ static bool test_try_mutexes(void) {
 }
 
 
-BEGIN_TEST_CASE(mxr_mutex_tests)
+BEGIN_TEST_CASE(zxr_mutex_tests)
 RUN_TEST(test_initializer)
 RUN_TEST(test_mutexes)
 RUN_TEST(test_try_mutexes)
-END_TEST_CASE(mxr_mutex_tests)
+END_TEST_CASE(zxr_mutex_tests)
 
 #ifndef BUILD_COMBINED_TESTS
 int main(int argc, char** argv) {

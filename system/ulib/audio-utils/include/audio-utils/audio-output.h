@@ -5,7 +5,7 @@
 #pragma once
 
 #include <audio-utils/audio-device-stream.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 namespace audio {
 namespace utils {
@@ -16,7 +16,7 @@ class AudioOutput : public AudioDeviceStream {
 public:
     static fbl::unique_ptr<AudioOutput> Create(uint32_t dev_id);
     static fbl::unique_ptr<AudioOutput> Create(const char* dev_path);
-    mx_status_t Play(AudioSource& source);
+    zx_status_t Play(AudioSource& source);
 
 private:
     friend class fbl::unique_ptr<AudioOutput>;

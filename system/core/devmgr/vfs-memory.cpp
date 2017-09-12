@@ -19,10 +19,10 @@
 #include <fbl/unique_ptr.h>
 #include <fs/async-dispatcher.h>
 #include <fs/vfs.h>
-#include <magenta/device/vfs.h>
-#include <magenta/thread_annotations.h>
-#include <mxio/debug.h>
-#include <mxio/vfs.h>
+#include <zircon/device/vfs.h>
+#include <zircon/thread_annotations.h>
+#include <fdio/debug.h>
+#include <fdio/vfs.h>
 
 #include "devmgr.h"
 #include "dnode.h"
@@ -47,11 +47,11 @@ static fbl::RefPtr<VnodeDir> devfs_root = nullptr;
 static fbl::RefPtr<VnodeDir> bootfs_root = nullptr;
 static fbl::RefPtr<VnodeDir> systemfs_root = nullptr;
 
-static bool WindowMatchesVMO(mx_handle_t vmo, mx_off_t offset, mx_off_t length) {
+static bool WindowMatchesVMO(zx_handle_t vmo, zx_off_t offset, zx_off_t length) {
     if (offset != 0)
         return false;
     uint64_t size;
-    if (mx_vmo_get_size(vmo, &size) < 0)
+    if (zx_vmo_get_size(vmo, &size) < 0)
         return false;
     return size == length;
 }
@@ -60,17 +60,17 @@ fbl::atomic<uint64_t> VnodeMemfs::ino_ctr_(0);
 
 VnodeMemfs::VnodeMemfs() : dnode_(nullptr), link_count_(0),
     ino_(ino_ctr_.fetch_add(1, fbl::memory_order_relaxed)) {
-    create_time_ = modify_time_ = mx_time_get(MX_CLOCK_UTC);
+    create_time_ = modify_time_ = zx_time_get(ZX_CLOCK_UTC);
 }
 VnodeMemfs::~VnodeMemfs() {
 }
 
-VnodeFile::VnodeFile() : vmo_(MX_HANDLE_INVALID), length_(0) {}
-VnodeFile::VnodeFile(mx_handle_t vmo, mx_off_t length) : vmo_(vmo), length_(length) {}
+VnodeFile::VnodeFile() : vmo_(ZX_HANDLE_INVALID), length_(0) {}
+VnodeFile::VnodeFile(zx_handle_t vmo, zx_off_t length) : vmo_(vmo), length_(length) {}
 
 VnodeFile::~VnodeFile() {
-    if (vmo_ != MX_HANDLE_INVALID) {
-        mx_handle_close(vmo_);
+    if (vmo_ != ZX_HANDLE_INVALID) {
+        zx_handle_close(vmo_);
     }
 }
 
@@ -79,63 +79,63 @@ VnodeDir::VnodeDir() {
 }
 VnodeDir::~VnodeDir() {}
 
-VnodeVmo::VnodeVmo(mx_handle_t vmo, mx_off_t offset, mx_off_t length) :
+VnodeVmo::VnodeVmo(zx_handle_t vmo, zx_off_t offset, zx_off_t length) :
     vmo_(vmo), offset_(offset), length_(length), have_local_clone_(false) {}
 VnodeVmo::~VnodeVmo() {
     if (have_local_clone_) {
-        mx_handle_close(vmo_);
+        zx_handle_close(vmo_);
     }
 }
 
-mx_status_t VnodeDir::Open(uint32_t flags) {
+zx_status_t VnodeDir::Open(uint32_t flags) {
     switch (flags & O_ACCMODE) {
     case O_WRONLY:
     case O_RDWR:
-        return MX_ERR_NOT_FILE;
+        return ZX_ERR_NOT_FILE;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t VnodeFile::Open(uint32_t flags) {
+zx_status_t VnodeFile::Open(uint32_t flags) {
     if (flags & O_DIRECTORY) {
-        return MX_ERR_NOT_DIR;
+        return ZX_ERR_NOT_DIR;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t VnodeVmo::Open(uint32_t flags) {
+zx_status_t VnodeVmo::Open(uint32_t flags) {
     if (flags & O_DIRECTORY) {
-        return MX_ERR_NOT_DIR;
+        return ZX_ERR_NOT_DIR;
     }
     switch (flags & O_ACCMODE) {
     case O_WRONLY:
     case O_RDWR:
-        return MX_ERR_ACCESS_DENIED;
+        return ZX_ERR_ACCESS_DENIED;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t VnodeVmo::Serve(fs::Vfs* vfs, mx::channel channel, uint32_t flags) {
-    return MX_OK;
+zx_status_t VnodeVmo::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
+    return ZX_OK;
 }
 
-mx_status_t VnodeVmo::GetHandles(uint32_t flags, mx_handle_t* hnds,
+zx_status_t VnodeVmo::GetHandles(uint32_t flags, zx_handle_t* hnds,
                                  uint32_t* type, void* extra, uint32_t* esize) {
-    mx_off_t* off = static_cast<mx_off_t*>(extra);
-    mx_off_t* len = off + 1;
-    mx_handle_t vmo;
-    mx_status_t status;
+    zx_off_t* off = static_cast<zx_off_t*>(extra);
+    zx_off_t* len = off + 1;
+    zx_handle_t vmo;
+    zx_status_t status;
     if (!have_local_clone_ && !WindowMatchesVMO(vmo_, offset_, length_)) {
-        status = mx_vmo_clone(vmo_, MX_VMO_CLONE_COPY_ON_WRITE, offset_, length_, &vmo_);
+        status = zx_vmo_clone(vmo_, ZX_VMO_CLONE_COPY_ON_WRITE, offset_, length_, &vmo_);
         if (status < 0)
             return status;
         offset_ = 0;
         have_local_clone_ = true;
     }
-    status = mx_handle_duplicate(
+    status = zx_handle_duplicate(
         vmo_,
-        MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP |
-        MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_GET_PROPERTY,
+        ZX_RIGHT_READ | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP |
+        ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_GET_PROPERTY,
         &vmo);
     if (status < 0)
         return status;
@@ -144,21 +144,21 @@ mx_status_t VnodeVmo::GetHandles(uint32_t flags, mx_handle_t* hnds,
     *off = offset_;
     *len = length_;
     hnds[0] = vmo;
-    *type = MXIO_PROTOCOL_VMOFILE;
-    *esize = sizeof(mx_off_t) * 2;
+    *type = FDIO_PROTOCOL_VMOFILE;
+    *esize = sizeof(zx_off_t) * 2;
     return 1;
 }
 
 ssize_t VnodeFile::Read(void* data, size_t len, size_t off) {
-    if ((off >= length_) || (vmo_ == MX_HANDLE_INVALID)) {
+    if ((off >= length_) || (vmo_ == ZX_HANDLE_INVALID)) {
         return 0;
     } else if (len > length_ - off) {
         len = length_ - off;
     }
 
     size_t actual;
-    mx_status_t status;
-    if ((status = mx_vmo_read(vmo_, data, off, len, &actual)) != MX_OK) {
+    zx_status_t status;
+    if ((status = zx_vmo_read(vmo_, data, off, len, &actual)) != ZX_OK) {
         return status;
     }
     return actual;
@@ -170,7 +170,7 @@ ssize_t VnodeVmo::Read(void* data, size_t len, size_t off) {
     size_t rlen = length_ - off;
     if (len > rlen)
         len = rlen;
-    mx_status_t r = mx_vmo_read(vmo_, data, offset_ + off, len, &len);
+    zx_status_t r = zx_vmo_read(vmo_, data, offset_ + off, len, &len);
     if (r < 0) {
         return r;
     }
@@ -178,25 +178,25 @@ ssize_t VnodeVmo::Read(void* data, size_t len, size_t off) {
 }
 
 ssize_t VnodeFile::Write(const void* data, size_t len, size_t off) {
-    mx_status_t status;
+    zx_status_t status;
     size_t newlen = off + len;
     newlen = newlen > kMemfsMaxFileSize ? kMemfsMaxFileSize : newlen;
     size_t alignedLen = fbl::roundup(newlen, static_cast<size_t>(PAGE_SIZE));
 
-    if (vmo_ == MX_HANDLE_INVALID) {
+    if (vmo_ == ZX_HANDLE_INVALID) {
         // First access to the file? Allocate it.
-        if ((status = mx_vmo_create(alignedLen, 0, &vmo_)) != MX_OK) {
+        if ((status = zx_vmo_create(alignedLen, 0, &vmo_)) != ZX_OK) {
             return status;
         }
     } else if (newlen > fbl::roundup(length_, static_cast<size_t>(PAGE_SIZE))) {
         // Accessing beyond the end of the file? Extend it.
-        if ((status = mx_vmo_set_size(vmo_, alignedLen)) != MX_OK) {
+        if ((status = zx_vmo_set_size(vmo_, alignedLen)) != ZX_OK) {
             return status;
         }
     }
 
     size_t actual;
-    if ((status = mx_vmo_write(vmo_, data, off, len, &actual)) != MX_OK) {
+    if ((status = zx_vmo_write(vmo_, data, off, len, &actual)) != ZX_OK) {
         return status;
     }
 
@@ -205,51 +205,51 @@ ssize_t VnodeFile::Write(const void* data, size_t len, size_t off) {
     }
     if (actual == 0 && off >= kMemfsMaxFileSize) {
         // short write because we're beyond the end of the permissible length
-        return MX_ERR_FILE_BIG;
+        return ZX_ERR_FILE_BIG;
     }
     UpdateModified();
     return actual;
 }
 
 
-mx_status_t VnodeFile::Mmap(int flags, size_t len, size_t* off, mx_handle_t* out) {
-    if (vmo_ == MX_HANDLE_INVALID) {
+zx_status_t VnodeFile::Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) {
+    if (vmo_ == ZX_HANDLE_INVALID) {
         // First access to the file? Allocate it.
-        mx_status_t status;
-        if ((status = mx_vmo_create(0, 0, &vmo_)) != MX_OK) {
+        zx_status_t status;
+        if ((status = zx_vmo_create(0, 0, &vmo_)) != ZX_OK) {
             return status;
         }
     }
 
-    mx_rights_t rights = MX_RIGHT_TRANSFER | MX_RIGHT_MAP;
-    rights |= (flags & MXIO_MMAP_FLAG_READ) ? MX_RIGHT_READ : 0;
-    rights |= (flags & MXIO_MMAP_FLAG_WRITE) ? MX_RIGHT_WRITE : 0;
-    rights |= (flags & MXIO_MMAP_FLAG_EXEC) ? MX_RIGHT_EXECUTE : 0;
-    if (flags & MXIO_MMAP_FLAG_PRIVATE) {
-        return mx_vmo_clone(vmo_, MX_VMO_CLONE_COPY_ON_WRITE, 0, length_, out);
+    zx_rights_t rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_MAP;
+    rights |= (flags & FDIO_MMAP_FLAG_READ) ? ZX_RIGHT_READ : 0;
+    rights |= (flags & FDIO_MMAP_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
+    rights |= (flags & FDIO_MMAP_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
+    if (flags & FDIO_MMAP_FLAG_PRIVATE) {
+        return zx_vmo_clone(vmo_, ZX_VMO_CLONE_COPY_ON_WRITE, 0, length_, out);
     }
 
-    return mx_handle_duplicate(vmo_, rights, out);
+    return zx_handle_duplicate(vmo_, rights, out);
 }
 
-mx_status_t VnodeDir::Mmap(int flags, size_t len, size_t* off, mx_handle_t* out) {
-    return MX_ERR_ACCESS_DENIED;
+zx_status_t VnodeDir::Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) {
+    return ZX_ERR_ACCESS_DENIED;
 }
 
 bool VnodeDir::IsRemote() const { return remoter_.IsRemote(); }
-mx::channel VnodeDir::DetachRemote() { return remoter_.DetachRemote(flags_); }
-mx_handle_t VnodeDir::WaitForRemote() { return remoter_.WaitForRemote(flags_); }
-mx_handle_t VnodeDir::GetRemote() const { return remoter_.GetRemote(); }
-void VnodeDir::SetRemote(mx::channel remote) { return remoter_.SetRemote(fbl::move(remote)); }
+zx::channel VnodeDir::DetachRemote() { return remoter_.DetachRemote(flags_); }
+zx_handle_t VnodeDir::WaitForRemote() { return remoter_.WaitForRemote(flags_); }
+zx_handle_t VnodeDir::GetRemote() const { return remoter_.GetRemote(); }
+void VnodeDir::SetRemote(zx::channel remote) { return remoter_.SetRemote(fbl::move(remote)); }
 
-mx_status_t VnodeDir::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
+zx_status_t VnodeDir::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
     if (!IsDirectory()) {
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
     }
     fbl::RefPtr<Dnode> dn;
-    mx_status_t r = dnode_->Lookup(name, len, &dn);
-    MX_DEBUG_ASSERT(r <= 0);
-    if (r == MX_OK) {
+    zx_status_t r = dnode_->Lookup(name, len, &dn);
+    ZX_DEBUG_ASSERT(r <= 0);
+    if (r == ZX_OK) {
         if (dn == nullptr) {
             // Looking up our own vnode
             *out = fbl::RefPtr<VnodeDir>(this);
@@ -263,7 +263,7 @@ mx_status_t VnodeDir::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size
 
 constexpr uint64_t kMemfsBlksize = PAGE_SIZE;
 
-mx_status_t VnodeFile::Getattr(vnattr_t* attr) {
+zx_status_t VnodeFile::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
     attr->inode = ino_;
     attr->mode = V_TYPE_FILE | V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH;
@@ -273,10 +273,10 @@ mx_status_t VnodeFile::Getattr(vnattr_t* attr) {
     attr->nlink = link_count_;
     attr->create_time = create_time_;
     attr->modify_time = modify_time_;
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t VnodeDir::Getattr(vnattr_t* attr) {
+zx_status_t VnodeDir::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
     attr->inode = ino_;
     attr->mode = V_TYPE_DIR | V_IRUSR;
@@ -286,10 +286,10 @@ mx_status_t VnodeDir::Getattr(vnattr_t* attr) {
     attr->nlink = link_count_;
     attr->create_time = create_time_;
     attr->modify_time = modify_time_;
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t VnodeVmo::Getattr(vnattr_t* attr) {
+zx_status_t VnodeVmo::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
     attr->inode = ino_;
     attr->mode = V_TYPE_FILE | V_IRUSR;
@@ -299,21 +299,21 @@ mx_status_t VnodeVmo::Getattr(vnattr_t* attr) {
     attr->nlink = link_count_;
     attr->create_time = create_time_;
     attr->modify_time = modify_time_;
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t VnodeMemfs::Setattr(vnattr_t* attr) {
+zx_status_t VnodeMemfs::Setattr(vnattr_t* attr) {
     if ((attr->valid & ~(ATTR_MTIME)) != 0) {
         // only attr currently supported
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     if (attr->valid & ATTR_MTIME) {
         modify_time_ = attr->modify_time;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
+zx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
     fs::DirentFiller df(data, len);
     if (!IsDirectory()) {
         // This WAS a directory, but it has been deleted.
@@ -325,9 +325,9 @@ mx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
 }
 
 // postcondition: reference taken on vn returned through "out"
-mx_status_t VnodeDir::Create(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) {
-    mx_status_t status;
-    if ((status = CanCreate(name, len)) != MX_OK) {
+zx_status_t VnodeDir::Create(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) {
+    zx_status_t status;
+    if ((status = CanCreate(name, len)) != ZX_OK) {
         return status;
     }
 
@@ -340,51 +340,51 @@ mx_status_t VnodeDir::Create(fbl::RefPtr<fs::Vnode>* out, const char* name, size
     }
 
     if (!ac.check()) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
-    if ((status = AttachVnode(vn, name, len, S_ISDIR(mode))) != MX_OK) {
+    if ((status = AttachVnode(vn, name, len, S_ISDIR(mode))) != ZX_OK) {
         return status;
     }
     *out = fbl::move(vn);
     return status;
 }
 
-mx_status_t VnodeDir::Unlink(const char* name, size_t len, bool must_be_dir) {
+zx_status_t VnodeDir::Unlink(const char* name, size_t len, bool must_be_dir) {
     xprintf("memfs_unlink(%p,'%.*s')\n", this, (int)len, name);
     if (!IsDirectory()) {
         // Calling unlink from unlinked, empty directory
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     fbl::RefPtr<Dnode> dn;
-    mx_status_t r;
-    if ((r = dnode_->Lookup(name, len, &dn)) != MX_OK) {
+    zx_status_t r;
+    if ((r = dnode_->Lookup(name, len, &dn)) != ZX_OK) {
         return r;
     } else if (dn == nullptr) {
         // Cannot unlink directory 'foo' using the argument 'foo/.'
-        return MX_ERR_UNAVAILABLE;
+        return ZX_ERR_UNAVAILABLE;
     } else if (!dn->IsDirectory() && must_be_dir) {
         // Path ending in "/" was requested, implying that the dnode must be a directory
-        return MX_ERR_NOT_DIR;
-    } else if ((r = dn->CanUnlink()) != MX_OK) {
+        return ZX_ERR_NOT_DIR;
+    } else if ((r = dn->CanUnlink()) != ZX_OK) {
         return r;
     }
 
     dn->Detach();
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t VnodeFile::Truncate(size_t len) {
-    mx_status_t status;
+zx_status_t VnodeFile::Truncate(size_t len) {
+    zx_status_t status;
     if (len > kMemfsMaxFileSize) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     size_t alignedLen = fbl::roundup(len, static_cast<size_t>(PAGE_SIZE));
 
-    if (vmo_ == MX_HANDLE_INVALID) {
+    if (vmo_ == ZX_HANDLE_INVALID) {
         // First access to the file? Allocate it.
-        if ((status = mx_vmo_create(alignedLen, 0, &vmo_)) != MX_OK) {
+        if ((status = zx_vmo_create(alignedLen, 0, &vmo_)) != ZX_OK) {
             return status;
         }
     } else if ((len < length_) && (len % PAGE_SIZE != 0)) {
@@ -397,65 +397,65 @@ mx_status_t VnodeFile::Truncate(size_t len) {
         ppage_size = len + ppage_size < length_ ? ppage_size : length_ - len;
         memset(buf, 0, ppage_size);
         size_t actual;
-        status = mx_vmo_write(vmo_, buf, len, ppage_size, &actual);
-        if ((status != MX_OK) || (actual != ppage_size)) {
-            return status != MX_OK ? MX_ERR_IO : status;
-        } else if ((status = mx_vmo_set_size(vmo_, alignedLen)) != MX_OK) {
+        status = zx_vmo_write(vmo_, buf, len, ppage_size, &actual);
+        if ((status != ZX_OK) || (actual != ppage_size)) {
+            return status != ZX_OK ? ZX_ERR_IO : status;
+        } else if ((status = zx_vmo_set_size(vmo_, alignedLen)) != ZX_OK) {
             return status;
         }
-    } else if ((status = mx_vmo_set_size(vmo_, alignedLen)) != MX_OK) {
+    } else if ((status = zx_vmo_set_size(vmo_, alignedLen)) != ZX_OK) {
         return status;
     }
 
     length_ = len;
-    modify_time_ = mx_time_get(MX_CLOCK_UTC);
-    return MX_OK;
+    modify_time_ = zx_time_get(ZX_CLOCK_UTC);
+    return ZX_OK;
 }
 
-mx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, const char* oldname, size_t oldlen,
+zx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, const char* oldname, size_t oldlen,
                              const char* newname, size_t newlen, bool src_must_be_dir,
                              bool dst_must_be_dir) {
     auto newdir = fbl::RefPtr<VnodeMemfs>::Downcast(fbl::move(_newdir));
 
     if (!IsDirectory() || !newdir->IsDirectory())
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
     fbl::RefPtr<Dnode> olddn;
-    mx_status_t r;
+    zx_status_t r;
     // The source must exist
-    if ((r = dnode_->Lookup(oldname, oldlen, &olddn)) != MX_OK) {
+    if ((r = dnode_->Lookup(oldname, oldlen, &olddn)) != ZX_OK) {
         return r;
     }
-    MX_DEBUG_ASSERT(olddn != nullptr);
+    ZX_DEBUG_ASSERT(olddn != nullptr);
 
     if (!olddn->IsDirectory() && (src_must_be_dir || dst_must_be_dir)) {
-        return MX_ERR_NOT_DIR;
+        return ZX_ERR_NOT_DIR;
     }
 
     // Verify that the destination is not a subdirectory of the source (if
     // both are directories).
     if (olddn->IsSubdirectory(newdir->dnode_)) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     // The destination may or may not exist
     fbl::RefPtr<Dnode> targetdn;
     r = newdir->dnode_->Lookup(newname, newlen, &targetdn);
-    bool target_exists = (r == MX_OK);
+    bool target_exists = (r == ZX_OK);
     if (target_exists) {
-        MX_DEBUG_ASSERT(targetdn != nullptr);
+        ZX_DEBUG_ASSERT(targetdn != nullptr);
         // The target exists. Validate and unlink it.
         if (olddn == targetdn) {
             // Cannot rename node to itself
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
         if (olddn->IsDirectory() != targetdn->IsDirectory()) {
             // Cannot rename files to directories (and vice versa)
-            return MX_ERR_INVALID_ARGS;
-        } else if ((r = targetdn->CanUnlink()) != MX_OK) {
+            return ZX_ERR_INVALID_ARGS;
+        } else if ((r = targetdn->CanUnlink()) != ZX_OK) {
             return r;
         }
-    } else if (r != MX_ERR_NOT_FOUND) {
+    } else if (r != ZX_ERR_NOT_FOUND) {
         return r;
     }
 
@@ -470,7 +470,7 @@ mx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, const char* oldname
         fbl::AllocChecker ac;
         namebuffer.reset(new (&ac) char[newlen + 1]);
         if (!ac.check()) {
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
         }
         memcpy(namebuffer.get(), newname, newlen);
         namebuffer[newlen] = '\0';
@@ -484,43 +484,43 @@ mx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, const char* oldname
     olddn->RemoveFromParent();
     olddn->PutName(fbl::move(namebuffer), newlen);
     Dnode::AddChild(newdir->dnode_, fbl::move(olddn));
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t VnodeDir::Link(const char* name, size_t len, fbl::RefPtr<fs::Vnode> target) {
+zx_status_t VnodeDir::Link(const char* name, size_t len, fbl::RefPtr<fs::Vnode> target) {
     auto vn = fbl::RefPtr<VnodeMemfs>::Downcast(fbl::move(target));
 
     if (!IsDirectory()) {
         // Empty, unlinked parent
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     if (vn->IsDirectory()) {
         // The target must not be a directory
-        return MX_ERR_NOT_FILE;
+        return ZX_ERR_NOT_FILE;
     }
 
-    if (dnode_->Lookup(name, len, nullptr) == MX_OK) {
+    if (dnode_->Lookup(name, len, nullptr) == ZX_OK) {
         // The destination should not exist
-        return MX_ERR_ALREADY_EXISTS;
+        return ZX_ERR_ALREADY_EXISTS;
     }
 
     // Make a new dnode for the new name, attach the target vnode to it
     fbl::RefPtr<Dnode> targetdn;
     if ((targetdn = Dnode::Create(name, len, vn)) == nullptr) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     // Attach the new dnode to its parent
     Dnode::AddChild(dnode_, fbl::move(targetdn));
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t VnodeMemfs::Sync() {
+zx_status_t VnodeMemfs::Sync() {
     // Since this filesystem is in-memory, all data is already up-to-date in
     // the underlying storage
-    return MX_OK;
+    return ZX_OK;
 }
 
 constexpr const char kFsName[] = "memfs";
@@ -529,15 +529,15 @@ ssize_t VnodeMemfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
                           void* out_buf, size_t out_len) {
     switch (op) {
     case IOCTL_VFS_MOUNT_BOOTFS_VMO: {
-        if (in_len < sizeof(mx_handle_t)) {
-            return MX_ERR_INVALID_ARGS;
+        if (in_len < sizeof(zx_handle_t)) {
+            return ZX_ERR_INVALID_ARGS;
         }
-        const mx_handle_t* vmo = static_cast<const mx_handle_t*>(in_buf);
+        const zx_handle_t* vmo = static_cast<const zx_handle_t*>(in_buf);
         return devmgr_add_systemfs_vmo(*vmo);
     }
     case IOCTL_VFS_QUERY_FS: {
         if (out_len < sizeof(vfs_query_info_t) + strlen(kFsName)) {
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
 
         vfs_query_info_t* info = static_cast<vfs_query_info_t*>(out_buf);
@@ -550,7 +550,7 @@ ssize_t VnodeMemfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
         return sizeof(vfs_query_info_t) + strlen(kFsName);
     }
     default:
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -563,22 +563,22 @@ ssize_t VnodeDir::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
         const char* name = config->name;
         if (in_len <= sizeof(vmo_create_config_t) || (namelen > NAME_MAX) ||
             (name[namelen] != 0)) {
-            mx_handle_close(config->vmo);
-            return MX_ERR_INVALID_ARGS;
+            zx_handle_close(config->vmo);
+            return ZX_ERR_INVALID_ARGS;
         }
 
         // Ensure this is the last handle to this VMO; otherwise, the size
         // may change from underneath us.
-        mx_signals_t observed;
-        mx_status_t status = mx_object_wait_one(config->vmo, MX_SIGNAL_LAST_HANDLE, 0u, &observed);
-        if ((status != MX_OK) || (observed != MX_SIGNAL_LAST_HANDLE)) {
-            mx_handle_close(config->vmo);
-            return MX_ERR_INVALID_ARGS;
+        zx_signals_t observed;
+        zx_status_t status = zx_object_wait_one(config->vmo, ZX_SIGNAL_LAST_HANDLE, 0u, &observed);
+        if ((status != ZX_OK) || (observed != ZX_SIGNAL_LAST_HANDLE)) {
+            zx_handle_close(config->vmo);
+            return ZX_ERR_INVALID_ARGS;
         }
 
         uint64_t size;
-        if ((status = mx_vmo_get_size(config->vmo, &size)) != MX_OK) {
-            mx_handle_close(config->vmo);
+        if ((status = zx_vmo_get_size(config->vmo, &size)) != ZX_OK) {
+            zx_handle_close(config->vmo);
             return status;
         }
 
@@ -590,42 +590,42 @@ ssize_t VnodeDir::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
     }
 }
 
-mx_status_t VnodeMemfs::AttachRemote(fs::MountChannel h) {
+zx_status_t VnodeMemfs::AttachRemote(fs::MountChannel h) {
     if (!IsDirectory()) {
-        return MX_ERR_NOT_DIR;
+        return ZX_ERR_NOT_DIR;
     } else if (IsRemote()) {
-        return MX_ERR_ALREADY_BOUND;
+        return ZX_ERR_ALREADY_BOUND;
     }
     SetRemote(fbl::move(h.TakeChannel()));
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t memfs_create_fs(const char* name, fbl::RefPtr<VnodeDir>* out) {
+static zx_status_t memfs_create_fs(const char* name, fbl::RefPtr<VnodeDir>* out) {
     fbl::AllocChecker ac;
     fbl::RefPtr<VnodeDir> fs = fbl::AdoptRef(new (&ac) VnodeDir());
     if (!ac.check()) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     fbl::RefPtr<Dnode> dn = Dnode::Create(name, strlen(name), fs);
     if (dn == nullptr) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     fs->dnode_ = dn; // FS root is directory
     *out = fs;
-    return MX_OK;
+    return ZX_OK;
 }
 
 static void memfs_mount_locked(fbl::RefPtr<VnodeDir> parent, fbl::RefPtr<VnodeDir> subtree) {
     Dnode::AddChild(parent->dnode_, subtree->dnode_);
 }
 
-mx_status_t VnodeDir::CreateFromVmo(bool vmofile, const char* name, size_t namelen,
-                                    mx_handle_t vmo, mx_off_t off, mx_off_t len) {
+zx_status_t VnodeDir::CreateFromVmo(bool vmofile, const char* name, size_t namelen,
+                                    zx_handle_t vmo, zx_off_t off, zx_off_t len) {
     fbl::AutoLock lock(&memfs::vfs.vfs_lock_);
-    mx_status_t status;
-    if ((status = CanCreate(name, namelen)) != MX_OK) {
+    zx_status_t status;
+    if ((status = CanCreate(name, namelen)) != ZX_OK) {
         return status;
     }
 
@@ -637,34 +637,34 @@ mx_status_t VnodeDir::CreateFromVmo(bool vmofile, const char* name, size_t namel
         vn = fbl::AdoptRef(new (&ac) VnodeFile(vmo, len));
     }
     if (!ac.check()) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
-    if ((status = AttachVnode(fbl::move(vn), name, namelen, false)) != MX_OK) {
+    if ((status = AttachVnode(fbl::move(vn), name, namelen, false)) != ZX_OK) {
         return status;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t VnodeDir::CanCreate(const char* name, size_t namelen) const {
+zx_status_t VnodeDir::CanCreate(const char* name, size_t namelen) const {
     if (!IsDirectory()) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
-    mx_status_t status;
-    if ((status = dnode_->Lookup(name, namelen, nullptr)) == MX_ERR_NOT_FOUND) {
-        return MX_OK;
-    } else if (status == MX_OK) {
-        return MX_ERR_ALREADY_EXISTS;
+    zx_status_t status;
+    if ((status = dnode_->Lookup(name, namelen, nullptr)) == ZX_ERR_NOT_FOUND) {
+        return ZX_OK;
+    } else if (status == ZX_OK) {
+        return ZX_ERR_ALREADY_EXISTS;
     }
     return status;
 }
 
-mx_status_t VnodeDir::AttachVnode(fbl::RefPtr<VnodeMemfs> vn, const char* name, size_t namelen,
+zx_status_t VnodeDir::AttachVnode(fbl::RefPtr<VnodeMemfs> vn, const char* name, size_t namelen,
                                   bool isdir) {
     // dnode takes a reference to the vnode
     fbl::RefPtr<Dnode> dn;
     if ((dn = Dnode::Create(name, namelen, vn)) == nullptr) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     // Identify that the vnode is a directory (vn->dnode_ != nullptr) so that
@@ -676,7 +676,7 @@ mx_status_t VnodeDir::AttachVnode(fbl::RefPtr<VnodeMemfs> vn, const char* name, 
 
     // parent takes first reference
     Dnode::AddChild(dnode_, fbl::move(dn));
-    return MX_OK;
+    return ZX_OK;
 }
 
 } // namespace memfs
@@ -688,8 +688,8 @@ mx_status_t VnodeDir::AttachVnode(fbl::RefPtr<VnodeMemfs> vn, const char* name, 
 // Should be called exclusively during initialization stages of filesystem,
 // when it cannot be externally manipulated.
 // postcondition: new vnode linked into namespace
-static mx_status_t memfs_create_directory_unsafe(const char* path, uint32_t flags) __TA_NO_THREAD_SAFETY_ANALYSIS {
-    mx_status_t r;
+static zx_status_t memfs_create_directory_unsafe(const char* path, uint32_t flags) __TA_NO_THREAD_SAFETY_ANALYSIS {
+    zx_status_t r;
     const char* pathout;
     fbl::RefPtr<fs::Vnode> parent_vn;
     if ((r = memfs::vfs.Walk(memfs::vfs_root, &parent_vn, path, &pathout)) < 0) {
@@ -699,7 +699,7 @@ static mx_status_t memfs_create_directory_unsafe(const char* path, uint32_t flag
             fbl::RefPtr<memfs::VnodeDir>::Downcast(fbl::move(parent_vn));
 
     if (strcmp(pathout, "") == 0) {
-        return MX_ERR_ALREADY_EXISTS;
+        return ZX_ERR_ALREADY_EXISTS;
     }
 
     fbl::RefPtr<fs::Vnode> out;
@@ -712,7 +712,7 @@ static mx_status_t memfs_create_directory_unsafe(const char* path, uint32_t flag
 
 fbl::RefPtr<memfs::VnodeDir> SystemfsRoot() {
     if (memfs::systemfs_root == nullptr) {
-        mx_status_t r = memfs_create_fs("system", &memfs::systemfs_root);
+        zx_status_t r = memfs_create_fs("system", &memfs::systemfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'system' file system\n", r);
             panic();
@@ -723,7 +723,7 @@ fbl::RefPtr<memfs::VnodeDir> SystemfsRoot() {
 
 fbl::RefPtr<memfs::VnodeDir> MemfsRoot() {
     if (memfs::memfs_root == nullptr) {
-        mx_status_t r = memfs_create_fs("tmp", &memfs::memfs_root);
+        zx_status_t r = memfs_create_fs("tmp", &memfs::memfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'tmp' file system\n", r);
             panic();
@@ -734,7 +734,7 @@ fbl::RefPtr<memfs::VnodeDir> MemfsRoot() {
 
 fbl::RefPtr<memfs::VnodeDir> DevfsRoot() {
     if (memfs::devfs_root == nullptr) {
-        mx_status_t r = memfs_create_fs("dev", &memfs::devfs_root);
+        zx_status_t r = memfs_create_fs("dev", &memfs::devfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'device' file system\n", r);
             panic();
@@ -745,7 +745,7 @@ fbl::RefPtr<memfs::VnodeDir> DevfsRoot() {
 
 fbl::RefPtr<memfs::VnodeDir> BootfsRoot() {
     if (memfs::bootfs_root == nullptr) {
-        mx_status_t r = memfs_create_fs("boot", &memfs::bootfs_root);
+        zx_status_t r = memfs_create_fs("boot", &memfs::bootfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'boot' file system\n", r);
             panic();
@@ -754,7 +754,7 @@ fbl::RefPtr<memfs::VnodeDir> BootfsRoot() {
     return memfs::bootfs_root;
 }
 
-mx_status_t devfs_mount(mx_handle_t h) {
+zx_status_t devfs_mount(zx_handle_t h) {
     return DevfsRoot()->AttachRemote(fs::MountChannel(h));
 }
 
@@ -765,7 +765,7 @@ VnodeDir* systemfs_get_root() {
 // Hardcoded initialization function to create/access global root directory
 VnodeDir* vfs_create_global_root() {
     if (memfs::vfs_root == nullptr) {
-        mx_status_t r = memfs_create_fs("<root>", &memfs::vfs_root);
+        zx_status_t r = memfs_create_fs("<root>", &memfs::vfs_root);
         if (r < 0) {
             printf("fatal error %d allocating root file system\n", r);
             panic();
@@ -788,7 +788,7 @@ VnodeDir* vfs_create_global_root() {
 }
 
 void devmgr_vfs_exit() {
-    memfs::vfs.UninstallAll(mx_deadline_after(MX_SEC(5)));
+    memfs::vfs.UninstallAll(zx_deadline_after(ZX_SEC(5)));
 }
 
 void memfs_mount(memfs::VnodeDir* parent, memfs::VnodeDir* subtree) {
@@ -797,20 +797,20 @@ void memfs_mount(memfs::VnodeDir* parent, memfs::VnodeDir* subtree) {
 }
 
 // Acquire the root vnode and return a handle to it through the VFS dispatcher
-mx_handle_t vfs_create_root_handle(VnodeMemfs* vn) {
-    mx_status_t r;
-    mx::channel h1, h2;
-    if ((r = mx::channel::create(0, &h1, &h2)) != MX_OK) {
+zx_handle_t vfs_create_root_handle(VnodeMemfs* vn) {
+    zx_status_t r;
+    zx::channel h1, h2;
+    if ((r = zx::channel::create(0, &h1, &h2)) != ZX_OK) {
         return r;
     }
     if ((r = memfs::vfs.ServeDirectory(fbl::RefPtr<fs::Vnode>(vn),
-                                       fbl::move(h1))) != MX_OK) {
+                                       fbl::move(h1))) != ZX_OK) {
         return r;
     }
     return h2.release();
 }
 
-mx_status_t vfs_connect_root_handle(VnodeMemfs* vn, mx_handle_t h) {
-    mx::channel ch(h);
+zx_status_t vfs_connect_root_handle(VnodeMemfs* vn, zx_handle_t h) {
+    zx::channel ch(h);
     return memfs::vfs.ServeDirectory(fbl::RefPtr<fs::Vnode>(vn), fbl::move(ch));
 }

@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <magenta/mdi.h>
+#include <zircon/compiler.h>
+#include <zircon/mdi.h>
 #include <mdi/mdi.h>
 
 __BEGIN_CDECLS

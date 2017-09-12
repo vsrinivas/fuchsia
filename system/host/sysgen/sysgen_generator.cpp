@@ -36,8 +36,8 @@ static BlockingRetryWrapper blocking_wrapper;
 static vector<CallWrapper*> wrappers = {&test_wrapper, &blocking_wrapper};
 
 static VdsoWrapperGenerator vdso_wrapper_generator(
-    "_mx_",        // wrapper function name
-    "SYSCALL_mx_", // syscall implementation name
+    "_zx_",        // wrapper function name
+    "SYSCALL_zx_", // syscall implementation name
     wrappers);
 
 static KernelBranchGenerator kernel_branch;
@@ -51,7 +51,7 @@ static KernelInvocationGenerator kernel_code(
 static KernelWrapperGenerator kernel_wrappers(
     "sys_",     // function prefix
     "wrapper_", // wrapper prefix
-    "MX_SYS_"); // syscall numbers constant prefix
+    "ZX_SYS_"); // syscall numbers constant prefix
 
 static bool skip_nothing(const Syscall&) {
     return false;
@@ -68,8 +68,8 @@ static bool skip_vdso(const Syscall& sc) {
 static HeaderGenerator user_header(
     "extern ",                       // function prefix
     {
-        {"mx_", skip_internal},
-        {"_mx_", skip_internal},
+        {"zx_", skip_internal},
+        {"_zx_", skip_internal},
     },
     "void",                          // no-args special type
     false,                           // wrap pointers
@@ -78,8 +78,8 @@ static HeaderGenerator user_header(
 static HeaderGenerator vdso_header(
     "__LOCAL extern ", // function prefix
     {
-        {"VDSO_mx_", skip_nothing},
-        {"SYSCALL_mx_", skip_vdso},
+        {"VDSO_zx_", skip_nothing},
+        {"SYSCALL_zx_", skip_vdso},
     },
     "void",                                            // no-args special type
     false,
@@ -96,10 +96,10 @@ static HeaderGenerator kernel_header(
 
 static VDsoAsmGenerator vdso_asm_generator(
     "m_syscall", // syscall macro name
-    "mx_",       // syscall name prefix
+    "zx_",       // syscall name prefix
     wrappers);
 
-static SyscallNumbersGenerator syscall_num_generator("#define MX_SYS_");
+static SyscallNumbersGenerator syscall_num_generator("#define ZX_SYS_");
 
 static RustBindingGenerator rust_binding_generator;
 static TraceInfoGenerator trace_generator;
@@ -130,7 +130,7 @@ const map<string, Generator&> type_to_generator = {
     //  The assembly include file for ARM64.
     {"arm-asm", vdso_asm_generator},
 
-    // A C header defining MX_SYS_* syscall number macros.
+    // A C header defining ZX_SYS_* syscall number macros.
     {"numbers", syscall_num_generator},
 
     // The trace subsystem data, to be interpreted as an array of structs.

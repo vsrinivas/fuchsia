@@ -13,6 +13,6 @@ MODULE_SRCS += \
 
 MODULE_NAME := cleanup-test
 
-MODULE_LIBS := system/ulib/mxio system/ulib/unittest system/ulib/magenta system/ulib/c
+MODULE_LIBS := system/ulib/fdio system/ulib/unittest system/ulib/zircon system/ulib/c
 
 include make/module.mk

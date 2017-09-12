@@ -71,7 +71,7 @@ struct VmxRegion {
 /* Maintains the VMX state for each CPU. */
 class VmxCpuState : public hypervisor::CpuState<uint16_t, 64> {
 public:
-    static mx_status_t Create(fbl::unique_ptr<VmxCpuState>* out);
+    static zx_status_t Create(fbl::unique_ptr<VmxCpuState>* out);
     ~VmxCpuState();
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmxCpuState);
 
@@ -81,6 +81,6 @@ private:
     VmxCpuState() = default;
 };
 
-mx_status_t alloc_vpid(uint16_t* vpid);
-mx_status_t free_vpid(uint16_t vpid);
+zx_status_t alloc_vpid(uint16_t* vpid);
+zx_status_t free_vpid(uint16_t vpid);
 bool cr_is_invalid(uint64_t cr_value, uint32_t fixed0_msr, uint32_t fixed1_msr);

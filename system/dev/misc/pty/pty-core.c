@@ -10,9 +10,9 @@
 #include "pty-core.h"
 #include "pty-fifo.h"
 
-#include <magenta/errors.h>
-#include <magenta/device/pty.h>
-#include <magenta/device/console.h>
+#include <zircon/errors.h>
+#include <zircon/device/pty.h>
+#include <zircon/device/console.h>
 
 #if 0
 #define xprintf(fmt...) printf(fmt)
@@ -33,7 +33,7 @@
 #define PTY_CLI_PEER_CLOSED (0x00040000u)
 
 struct pty_client {
-    mx_device_t* mxdev;
+    zx_device_t* mxdev;
     pty_server_t* srv;
     uint32_t id;
     uint32_t flags;
@@ -41,13 +41,13 @@ struct pty_client {
     list_node_t node;
 };
 
-static mx_status_t pty_openat(pty_server_t* ps, mx_device_t** out, uint32_t id, uint32_t flags);
+static zx_status_t pty_openat(pty_server_t* ps, zx_device_t** out, uint32_t id, uint32_t flags);
 
 
 
 // pty client device operations
 
-static mx_status_t pty_client_read(void* ctx, void* buf, size_t count, mx_off_t off,
+static zx_status_t pty_client_read(void* ctx, void* buf, size_t count, zx_off_t off,
                                    size_t* actual) {
     pty_client_t* pc = ctx;
     pty_server_t* ps = pc->srv;
@@ -65,13 +65,13 @@ static mx_status_t pty_client_read(void* ctx, void* buf, size_t count, mx_off_t 
 
     if (length > 0) {
         *actual =length;
-        return MX_OK;
+        return ZX_OK;
     } else {
-        return (pc->flags & PTY_CLI_PEER_CLOSED) ? MX_ERR_PEER_CLOSED : MX_ERR_SHOULD_WAIT;
+        return (pc->flags & PTY_CLI_PEER_CLOSED) ? ZX_ERR_PEER_CLOSED : ZX_ERR_SHOULD_WAIT;
     }
 }
 
-static mx_status_t pty_client_write(void* ctx, const void* buf, size_t count, mx_off_t off,
+static zx_status_t pty_client_write(void* ctx, const void* buf, size_t count, zx_off_t off,
                                     size_t* actual) {
     pty_client_t* pc = ctx;
     pty_server_t* ps = pc->srv;
@@ -82,13 +82,13 @@ static mx_status_t pty_client_write(void* ctx, const void* buf, size_t count, mx
     if (pc->flags & PTY_CLI_ACTIVE) {
         size_t length;
         r = ps->recv(ps, buf, count, &length);
-        if (r == MX_OK) {
+        if (r == ZX_OK) {
             *actual = length;
-        } else if (r == MX_ERR_SHOULD_WAIT) {
+        } else if (r == ZX_ERR_SHOULD_WAIT) {
             device_state_clr(pc->mxdev, DEV_STATE_WRITABLE);
         }
     } else {
-        r = (pc->flags & PTY_CLI_PEER_CLOSED) ? MX_ERR_PEER_CLOSED : MX_ERR_SHOULD_WAIT;
+        r = (pc->flags & PTY_CLI_PEER_CLOSED) ? ZX_ERR_PEER_CLOSED : ZX_ERR_SHOULD_WAIT;
     }
     mtx_unlock(&ps->lock);
 
@@ -133,7 +133,7 @@ static void pty_adjust_signals_locked(pty_client_t* pc) {
 }
 
 
-static mx_status_t pty_client_ioctl(void* ctx, uint32_t op,
+static zx_status_t pty_client_ioctl(void* ctx, uint32_t op,
                                 const void* in_buf, size_t in_len,
                                 void* out_buf, size_t out_len, size_t* out_actual) {
     pty_client_t* pc = ctx;
@@ -145,43 +145,43 @@ static mx_status_t pty_client_ioctl(void* ctx, uint32_t op,
         if ((in_len != sizeof(pty_clr_set_t)) ||
             (cs->clr & PTY_FEATURE_BAD) ||
             (cs->set & PTY_FEATURE_BAD)) {
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
         mtx_lock(&ps->lock);
         pc->flags = (pc->flags & (~cs->clr)) | cs->set;
         mtx_unlock(&ps->lock);
-        return MX_OK;
+        return ZX_OK;
     }
     case IOCTL_CONSOLE_GET_DIMENSIONS: {
         ioctl_console_dimensions_t* dims = out_buf;
         if (out_len != sizeof(ioctl_console_dimensions_t)) {
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
         mtx_lock(&ps->lock);
         dims->width = ps->width;
         dims->height = ps->height;
         mtx_unlock(&ps->lock);
         *out_actual = sizeof(pty_window_size_t);
-        return MX_OK;
+        return ZX_OK;
     }
     case IOCTL_PTY_GET_WINDOW_SIZE: {
         pty_window_size_t* wsz = out_buf;
         if (out_len != sizeof(pty_window_size_t)) {
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
         mtx_lock(&ps->lock);
         wsz->width = ps->width;
         wsz->height = ps->height;
         mtx_unlock(&ps->lock);
         *out_actual = sizeof(pty_window_size_t);
-        return MX_OK;
+        return ZX_OK;
     }
     case IOCTL_PTY_MAKE_ACTIVE: {
         if (in_len != sizeof(uint32_t)) {
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
         if (!(pc->flags & PTY_CLI_CONTROL)) {
-            return MX_ERR_ACCESS_DENIED;
+            return ZX_ERR_ACCESS_DENIED;
         }
         uint32_t id = *((uint32_t*)in_buf);
         mtx_lock(&ps->lock);
@@ -190,18 +190,18 @@ static mx_status_t pty_client_ioctl(void* ctx, uint32_t op,
             if (c->id == id) {
                 pty_make_active_locked(ps, c);
                 mtx_unlock(&ps->lock);
-                return MX_OK;
+                return ZX_OK;
             }
         }
         mtx_unlock(&ps->lock);
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
     }
     case IOCTL_PTY_READ_EVENTS: {
         if (!(pc->flags & PTY_CLI_CONTROL)) {
-            return MX_ERR_ACCESS_DENIED;
+            return ZX_ERR_ACCESS_DENIED;
         }
         if (out_len != sizeof(uint32_t)) {
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
         mtx_lock(&ps->lock);
         uint32_t events = ps->events;
@@ -213,13 +213,13 @@ static mx_status_t pty_client_ioctl(void* ctx, uint32_t op,
         device_state_clr(pc->mxdev, PTY_SIGNAL_EVENT);
         mtx_unlock(&ps->lock);
         *out_actual = sizeof(uint32_t);
-        return MX_OK;
+        return ZX_OK;
     }
     default:
         if (ps->ioctl != NULL) {
             return ps->ioctl(ps, op, in_buf, in_len, out_buf, out_len, out_actual);
         } else {
-            return MX_ERR_NOT_SUPPORTED;
+            return ZX_ERR_NOT_SUPPORTED;
         }
     }
 }
@@ -264,22 +264,22 @@ static void pty_client_release(void* ctx) {
     free(pc);
 }
 
-mx_status_t pty_client_openat(void* ctx, mx_device_t** out, const char* path, uint32_t flags) {
+zx_status_t pty_client_openat(void* ctx, zx_device_t** out, const char* path, uint32_t flags) {
     pty_client_t* pc = ctx;
     pty_server_t* ps = pc->srv;
     uint32_t id = strtoul(path, NULL, 0);
     // only controlling clients may create additional clients
     if (!(pc->flags & PTY_CLI_CONTROL)) {
-        return MX_ERR_ACCESS_DENIED;
+        return ZX_ERR_ACCESS_DENIED;
     }
     // clients may not create controlling clients
     if (id == 0) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     return pty_openat(ps, out, id, flags);
 }
 
-mx_protocol_device_t pc_ops = {
+zx_protocol_device_t pc_ops = {
     .version = DEVICE_OPS_VERSION,
     // .open = default, allow cloning
     .open_at = pty_client_openat,
@@ -291,17 +291,17 @@ mx_protocol_device_t pc_ops = {
 
 // used by both client and server ptys to create new client ptys
 
-static mx_status_t pty_openat(pty_server_t* ps, mx_device_t** out, uint32_t id, uint32_t flags) {
+static zx_status_t pty_openat(pty_server_t* ps, zx_device_t** out, uint32_t id, uint32_t flags) {
     pty_client_t* pc;
     if ((pc = calloc(1, sizeof(pty_client_t))) == NULL) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     pc->id = id;
     pc->flags = 0;
     pc->fifo.head = 0;
     pc->fifo.tail = 0;
-    mx_status_t status;
+    zx_status_t status;
 
     unsigned num_clients = 0;
     mtx_lock(&ps->lock);
@@ -311,7 +311,7 @@ static mx_status_t pty_openat(pty_server_t* ps, mx_device_t** out, uint32_t id, 
         if (c->id == id) {
             mtx_unlock(&ps->lock);
             free(pc);
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
         num_clients++;
     }
@@ -356,7 +356,7 @@ static mx_status_t pty_openat(pty_server_t* ps, mx_device_t** out, uint32_t id, 
     mtx_unlock(&ps->lock);
 
     *out = pc->mxdev;
-    return MX_OK;
+    return ZX_OK;
 }
 
 
@@ -368,9 +368,9 @@ void pty_server_resume_locked(pty_server_t* ps) {
     }
 }
 
-mx_status_t pty_server_send(pty_server_t* ps, const void* data, size_t len, bool atomic, size_t* actual) {
+zx_status_t pty_server_send(pty_server_t* ps, const void* data, size_t len, bool atomic, size_t* actual) {
     //TODO: rw signals
-    mx_status_t status;
+    zx_status_t status;
     mtx_lock(&ps->lock);
     if (ps->active) {
         pty_client_t* pc = ps->active;
@@ -409,10 +409,10 @@ mx_status_t pty_server_send(pty_server_t* ps, const void* data, size_t len, bool
         if (pty_fifo_is_full(&pc->fifo)) {
             device_state_clr(ps->mxdev, DEV_STATE_WRITABLE);
         }
-        status = MX_OK;
+        status = ZX_OK;
     } else {
         *actual = 0;
-        status = MX_ERR_PEER_CLOSED;
+        status = ZX_ERR_PEER_CLOSED;
     }
     mtx_unlock(&ps->lock);
     return status;
@@ -426,7 +426,7 @@ void pty_server_set_window_size(pty_server_t* ps, uint32_t w, uint32_t h) {
     mtx_unlock(&ps->lock);
 }
 
-mx_status_t pty_server_openat(void* ctx, mx_device_t** out, const char* path, uint32_t flags) {
+zx_status_t pty_server_openat(void* ctx, zx_device_t** out, const char* path, uint32_t flags) {
     pty_server_t* ps = ctx;
     uint32_t id = strtoul(path, NULL, 0);
     return pty_openat(ps, out, id, flags);

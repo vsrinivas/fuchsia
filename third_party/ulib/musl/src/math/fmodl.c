@@ -33,30 +33,30 @@ long double fmodl(long double x, long double y) {
 
 /* x mod y */
 #if LDBL_MANT_DIG == 64
-    uint64_t i, mx, my;
-    mx = ux.i.m;
+    uint64_t i, zx, my;
+    zx = ux.i.m;
     my = uy.i.m;
     for (; ex > ey; ex--) {
-        i = mx - my;
-        if (mx >= my) {
+        i = zx - my;
+        if (zx >= my) {
             if (i == 0)
                 return 0 * x;
-            mx = 2 * i;
-        } else if (2 * mx < mx) {
-            mx = 2 * mx - my;
+            zx = 2 * i;
+        } else if (2 * zx < zx) {
+            zx = 2 * zx - my;
         } else {
-            mx = 2 * mx;
+            zx = 2 * zx;
         }
     }
-    i = mx - my;
-    if (mx >= my) {
+    i = zx - my;
+    if (zx >= my) {
         if (i == 0)
             return 0 * x;
-        mx = i;
+        zx = i;
     }
-    for (; mx >> 63 == 0; mx *= 2, ex--)
+    for (; zx >> 63 == 0; zx *= 2, ex--)
         ;
-    ux.i.m = mx;
+    ux.i.m = zx;
 #elif LDBL_MANT_DIG == 113
     uint64_t hi, lo, xhi, xlo, yhi, ylo;
     xhi = (ux.i2.hi & -1ULL >> 16) | 1ULL << 48;

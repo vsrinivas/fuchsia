@@ -6,7 +6,7 @@
 
 #include <string.h>
 
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/atomic.h>
@@ -211,7 +211,7 @@ void String::AcquireRef(char* data) {
 
 void String::ReleaseRef(char* data) {
     unsigned int prior_count = ref_count_field_of(data)->fetch_sub(1u, memory_order_release);
-    MX_DEBUG_ASSERT(prior_count != 0u);
+    ZX_DEBUG_ASSERT(prior_count != 0u);
     if (prior_count == 1u) {
         atomic_thread_fence(memory_order_acquire);
         operator delete(data - kDataFieldOffset);

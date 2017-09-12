@@ -1,0 +1,101 @@
+// MDI definitions for Zircon
+
+// Top level nodes
+list    kernel                            MDI_KERNEL                            1
+list    cpu-map                           MDI_CPU_MAP                           2
+list    platform                          MDI_PLATFORM                          3
+
+// Common definitions
+string  name                              MDI_NAME                              10
+uint64  base-virt                         MDI_BASE_VIRT                         11  // virtual base address
+uint64  base-phys                         MDI_BASE_PHYS                         12  // physical base address
+uint64  length                            MDI_LENGTH                            13
+uint32  irq                               MDI_IRQ                               14  // IRQ number
+
+// CPU topology
+//string  cpu-map.clusters.name
+list    cpu-map.clusters                  MDI_CPU_CLUSTERS                      100
+uint8   cpu-map.clusters.cpu-count        MDI_CPU_COUNT                         101
+
+// platform-bus nodes
+uint32  platform.vid                      MDI_PLATFORM_VID                      200
+uint32  platform.pid                      MDI_PLATFORM_PID                      201
+list    platform.device                   MDI_PLATFORM_DEVICE                   202
+uint32  platform.device.vid               MDI_PLATFORM_DEVICE_VID               203
+uint32  platform.device.pid               MDI_PLATFORM_DEVICE_PID               204
+uint32  platform.device.did               MDI_PLATFORM_DEVICE_DID               205
+
+list    platform.bus                      MDI_PLATFORM_BUS                      210
+
+list    platform.bus.gpios                MDI_PLATFORM_BUS_GPIOS                211
+uint32  platform.bus.gpios.start          MDI_PLATFORM_BUS_GPIOS_START          212
+uint32  platform.bus.gpios.count          MDI_PLATFORM_BUS_GPIOS_COUNT          213
+uint32  platform.bus.gpios.mmio_index     MDI_PLATFORM_BUS_GPIOS_MMIO_INDEX     214
+
+// platform.*.mmios elements have base-phys and length
+list mmios                                MDI_PLATFORM_MMIOS                    220
+
+// list of IRQs for a platform device or bus
+array[uint32] irqs                        MDI_PLATFORM_IRQS                     221
+
+// Kernel Drivers
+
+// ARM PSCI driver
+list    kernel.arm-psci                   MDI_ARM_PSCI                          1000
+boolean kernel.arm-psci.use-smc           MDI_ARM_PSCI_USE_SMC                  1001
+boolean kernel.arm-psci.use-hvc           MDI_ARM_PSCI_USE_HVC                  1002
+
+// ARM gic v3 driver
+list    kernel.arm-gic-v3                 MDI_ARM_GIC_V3                        1010
+// TODO:(hollande) We use virt since peripherals
+//       should be accessed via a device memory mapping and presently
+//       we do not have mechanisms in kernel for converting phys address
+//       to peripheral address.  For now this requires keeping the base-virt
+//       definition consistent with the PERIPH_BASE_VIRT definition in
+//       the targets rules.mk
+// GIC V3 uses base-virt
+uint64  kernel.arm-gic-v3.gicd-offset     MDI_ARM_GIC_V3_GICD_OFFSET            1011
+uint64  kernel.arm-gic-v3.gicr-offset     MDI_ARM_GIC_V3_GICR_OFFSET            1012
+uint64  kernel.arm-gic-v3.gicr-stride     MDI_ARM_GIC_V3_GICR_STRIDE            1013
+uint32  kernel.arm-gic-v3.ipi-base        MDI_ARM_GIC_V3_IPI_BASE               1014
+
+// ARM generic timer driver
+list    kernel.arm-timer                  MDI_ARM_TIMER                         1030
+uint32  kernel.arm-timer.irq-phys         MDI_ARM_TIMER_IRQ_PHYS                1031 // for using physical timer
+uint32  kernel.arm-timer.irq-virt         MDI_ARM_TIMER_IRQ_VIRT                1032 // for using virtual timer
+uint32  kernel.arm-timer.irq-sphys        MDI_ARM_TIMER_IRQ_SPHYS               1033 // for using secure physical timer
+uint32  kernel.arm-timer.freq-override    MDI_ARM_TIMER_FREQ_OVERRIDE           1034 // optional
+
+// bcm28xx drivers
+list    kernel.bcm28xx-interrupt          MDI_BCM28XX_INTERRUPT                 1040
+list    kernel.bcm28xx-uart               MDI_BCM28XX_UART                      1041
+
+// ARM pl011 uart
+list    kernel.arm-pl011-uart             MDI_ARM_PL011_UART                    1050
+// pl011 driver uses base-virt, base-phys and IRQ
+// TODO:(hollande) See note above re: phys/virt
+
+// qemu drivers
+list    kernel.qemu-pcie                  MDI_QEMU_PCIE                         1060
+
+// ARM gicv2 driver
+list    kernel.arm-gic-v2                 MDI_ARM_GIC_V2                        1070
+// ARM gicv2 also uses base-virt and base-phys
+// TODO:(hollande) See note above re: phys/virt
+uint64  kernel.arm-gic-v2.gicd-offset     MDI_ARM_GIC_V2_GICD_OFFSET            1071
+uint64  kernel.arm-gic-v2.gicc-offset     MDI_ARM_GIC_V2_GICC_OFFSET            1072
+uint32  kernel.arm-gic-v2.ipi-base        MDI_ARM_GIC_V2_IPI_BASE               1073
+uint64  kernel.arm-gic-v2.msi-frame-phys  MDI_ARM_GIC_V2_MSI_FRAME_PHYS         1074
+uint64  kernel.arm-gic-v2.msi-frame-virt  MDI_ARM_GIC_V2_MSI_FRAME_VIRT         1075
+
+// AmLogic S905
+list    kernel.s905-uart                  MDI_S905_UART                         1080
+
+// VID and PID for generic platform devices (that is, devices that may be used by multiple vendors).
+const PDEV_VID_GENERIC = 0
+const PDEV_PID_GENERIC = 0
+
+// Platform device IDs for generic devices
+const PDEV_DID_USB_DWC3 = 1
+const PDEV_DID_USB_XHCI = 2
+const PDEV_DID_KPCI = 3

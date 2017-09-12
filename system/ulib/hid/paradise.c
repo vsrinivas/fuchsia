@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <hid/paradise.h>
-#include <magenta/errors.h>
+#include <zircon/errors.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -510,9 +510,9 @@ bool is_paradise_touch_report_desc(const uint8_t* data, size_t len) {
     return (memcmp(data, paradise_touch_report_desc, len) == 0);
 }
 
-mx_status_t setup_paradise_touch(int fd) {
+zx_status_t setup_paradise_touch(int fd) {
     if (fd < 0)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
-    return MX_OK;
+    return ZX_OK;
 }

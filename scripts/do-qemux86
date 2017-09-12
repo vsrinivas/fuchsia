@@ -64,7 +64,7 @@ AUDIO_ARGS=" -soundhw hda"
 BLOCK_ARGS=" -drive if=virtio,file=blk.bin,id=blk,format=raw"
 NET_ARGS=" -netdev type=user,hostname=qemu,id=net0 -device virtio-net-pci,netdev=net0"
 
-ARGS=" -m $MEMSIZE -smp $SMP -machine q35 -kernel build-${PROJECT}/magenta.bin"
+ARGS=" -m $MEMSIZE -smp $SMP -machine q35 -kernel build-${PROJECT}/zircon.bin"
 
 if [ $DO_AUDIO == 1 ]; then
     ARGS+=$AUDIO_ARGS

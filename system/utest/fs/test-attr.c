@@ -12,41 +12,41 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 
-#include <magenta/syscalls.h>
-#include <mxio/vfs.h>
+#include <zircon/syscalls.h>
+#include <fdio/vfs.h>
 
 #include "filesystems.h"
 
 #define ROUND_DOWN(t, granularity) ((t) - ((t) % (granularity)))
 
-mx_time_t nstimespec(struct timespec ts) {
+zx_time_t nstimespec(struct timespec ts) {
     // assumes very small number of seconds in deltas
-    return ts.tv_sec * MX_SEC(1) + ts.tv_nsec;
+    return ts.tv_sec * ZX_SEC(1) + ts.tv_nsec;
 }
 
 bool test_attr(void) {
     BEGIN_TEST;
-    mx_time_t now = mx_time_get(MX_CLOCK_UTC);
-    ASSERT_NE(now, 0u, "mx_time_get only returns zero on error");
+    zx_time_t now = zx_time_get(ZX_CLOCK_UTC);
+    ASSERT_NE(now, 0u, "zx_time_get only returns zero on error");
 
     int fd1 = open("::file.txt", O_CREAT | O_RDWR, 0644);
     ASSERT_GT(fd1, 0, "");
 
     struct timespec ts[2];
     ts[0].tv_nsec = UTIME_OMIT;
-    ts[1].tv_sec = (long)(now / MX_SEC(1));
-    ts[1].tv_nsec = (long)(now % MX_SEC(1));
+    ts[1].tv_sec = (long)(now / ZX_SEC(1));
+    ts[1].tv_nsec = (long)(now % ZX_SEC(1));
 
     // make sure we get back "now" from stat()
     ASSERT_EQ(futimens(fd1, ts), 0, "");
     struct stat statb1;
     ASSERT_EQ(fstat(fd1, &statb1), 0, "");
     now = ROUND_DOWN(now, test_info->nsec_granularity);
-    ASSERT_EQ(statb1.st_mtim.tv_sec, (long)(now / MX_SEC(1)), "");
-    ASSERT_EQ(statb1.st_mtim.tv_nsec, (long)(now % MX_SEC(1)), "");
+    ASSERT_EQ(statb1.st_mtim.tv_sec, (long)(now / ZX_SEC(1)), "");
+    ASSERT_EQ(statb1.st_mtim.tv_nsec, (long)(now % ZX_SEC(1)), "");
     ASSERT_EQ(close(fd1), 0, "");
 
-    mx_nanosleep(mx_deadline_after(test_info->nsec_granularity));
+    zx_nanosleep(zx_deadline_after(test_info->nsec_granularity));
 
     ASSERT_EQ(utimes("::file.txt", NULL), 0, "");
     struct stat statb2;
@@ -97,11 +97,11 @@ bool test_parent_directory_time(void) {
         return true;
     }
 
-    mx_time_t now = mx_time_get(MX_CLOCK_UTC);
-    ASSERT_NE(now, 0u, "mx_time_get only returns zero on error");
+    zx_time_t now = zx_time_get(ZX_CLOCK_UTC);
+    ASSERT_NE(now, 0u, "zx_time_get only returns zero on error");
 
     // Create a parent directory to contain new contents
-    mx_nanosleep(mx_deadline_after(test_info->nsec_granularity));
+    zx_nanosleep(zx_deadline_after(test_info->nsec_granularity));
     ASSERT_EQ(mkdir("::parent", 0666), 0, "");
     ASSERT_EQ(mkdir("::parent2", 0666), 0, "");
 
@@ -114,7 +114,7 @@ bool test_parent_directory_time(void) {
     now = nstimespec(statb.st_ctim);
 
     // Create a file in the parent directory
-    mx_nanosleep(mx_deadline_after(test_info->nsec_granularity));
+    zx_nanosleep(zx_deadline_after(test_info->nsec_granularity));
     int fd = open("::parent/child", O_CREAT | O_RDWR);
     ASSERT_GT(fd, 0, "");
     ASSERT_EQ(close(fd), 0, "");
@@ -128,7 +128,7 @@ bool test_parent_directory_time(void) {
     now = nstimespec(statb.st_mtim);
 
     // Link the child into a second directory
-    mx_nanosleep(mx_deadline_after(test_info->nsec_granularity));
+    zx_nanosleep(zx_deadline_after(test_info->nsec_granularity));
     ASSERT_EQ(link("::parent/child", "::parent2/child"), 0, "");
     // Source directory is not impacted
     ASSERT_EQ(stat("::parent", &statb), 0, "");
@@ -140,7 +140,7 @@ bool test_parent_directory_time(void) {
 
     // Unlink the child, and the parent's time should
     // move forward again
-    mx_nanosleep(mx_deadline_after(test_info->nsec_granularity));
+    zx_nanosleep(zx_deadline_after(test_info->nsec_granularity));
     ASSERT_EQ(unlink("::parent2/child"), 0, "");
     ASSERT_EQ(stat("::parent2", &statb), 0, "");
     ASSERT_GT(nstimespec(statb.st_mtim), now, "");
@@ -148,7 +148,7 @@ bool test_parent_directory_time(void) {
 
     // Rename the child, and both the source and dest
     // directories should be updated
-    mx_nanosleep(mx_deadline_after(test_info->nsec_granularity));
+    zx_nanosleep(zx_deadline_after(test_info->nsec_granularity));
     ASSERT_EQ(rename("::parent/child", "::parent2/child"), 0, "");
     ASSERT_EQ(stat("::parent", &statb), 0, "");
     ASSERT_GT(nstimespec(statb.st_mtim), now, "");

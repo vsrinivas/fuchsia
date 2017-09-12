@@ -15,9 +15,9 @@
 #include <ddk/binding.h>
 #include <ddk/protocol/gpio.h>
 
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
-#include <magenta/assert.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/assert.h>
 
 #include "pl061.h"
 #include "hi3660-bus.h"
@@ -42,56 +42,56 @@ static pl061_gpios_t* find_gpio(hi3660_bus_t* bus, unsigned pin) {
     return NULL;
 }
 
-static mx_status_t hi3660_gpio_config(void* ctx, unsigned pin, gpio_config_flags_t flags) {
+static zx_status_t hi3660_gpio_config(void* ctx, unsigned pin, gpio_config_flags_t flags) {
     hi3660_bus_t* bus = ctx;
     pl061_gpios_t* gpios = find_gpio(bus, pin);
     if (!gpios) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     return pl061_proto_ops.config(gpios, pin, flags);
 }
 
-static mx_status_t hi3660_gpio_read(void* ctx, unsigned pin, unsigned* out_value) {
+static zx_status_t hi3660_gpio_read(void* ctx, unsigned pin, unsigned* out_value) {
     hi3660_bus_t* bus = ctx;
     pl061_gpios_t* gpios = find_gpio(bus, pin);
     if (!gpios) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     return pl061_proto_ops.read(gpios, pin, out_value);
 }
 
-static mx_status_t hi3660_gpio_write(void* ctx, unsigned pin, unsigned value) {
+static zx_status_t hi3660_gpio_write(void* ctx, unsigned pin, unsigned value) {
     hi3660_bus_t* bus = ctx;
     pl061_gpios_t* gpios = find_gpio(bus, pin);
     if (!gpios) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     return pl061_proto_ops.write(gpios, pin, value);
 }
 
-static mx_status_t hi3660_gpio_int_enable(void* ctx, unsigned pin, bool enable) {
+static zx_status_t hi3660_gpio_int_enable(void* ctx, unsigned pin, bool enable) {
     hi3660_bus_t* bus = ctx;
     pl061_gpios_t* gpios = find_gpio(bus, pin);
     if (!gpios) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     return pl061_proto_ops.int_enable(gpios, pin, enable);
 }
 
-static mx_status_t hi3660_gpio_get_int_status(void* ctx, unsigned pin, bool* out_status) {
+static zx_status_t hi3660_gpio_get_int_status(void* ctx, unsigned pin, bool* out_status) {
     hi3660_bus_t* bus = ctx;
     pl061_gpios_t* gpios = find_gpio(bus, pin);
     if (!gpios) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     return pl061_proto_ops.get_int_status(gpios, pin, out_status);
 }
 
-static mx_status_t hi3660_gpio_int_clear(void* ctx, unsigned pin) {
+static zx_status_t hi3660_gpio_int_clear(void* ctx, unsigned pin) {
     hi3660_bus_t* bus = ctx;
     pl061_gpios_t* gpios = find_gpio(bus, pin);
     if (!gpios) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     return pl061_proto_ops.int_clear(gpios, pin);
 }
@@ -105,28 +105,28 @@ static gpio_protocol_ops_t gpio_ops = {
     .int_clear = hi3660_gpio_int_clear,
 };
 
-static mx_status_t hi3660_get_protocol(void* ctx, uint32_t proto_id, void* out) {
-    if (proto_id == MX_PROTOCOL_GPIO) {
+static zx_status_t hi3660_get_protocol(void* ctx, uint32_t proto_id, void* out) {
+    if (proto_id == ZX_PROTOCOL_GPIO) {
         gpio_protocol_t* proto = out;
         proto->ctx = ctx;
         proto->ops = &gpio_ops;
-        return MX_OK;
+        return ZX_OK;
     }
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t hi3660_add_gpios(void* ctx, uint32_t start, uint32_t count, uint32_t mmio_index,
+static zx_status_t hi3660_add_gpios(void* ctx, uint32_t start, uint32_t count, uint32_t mmio_index,
                                     const uint32_t* irqs, uint32_t irq_count) {
     hi3660_bus_t* bus = ctx;
 
     pl061_gpios_t* gpios = calloc(1, sizeof(pl061_gpios_t));
     if (!gpios) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
-    mx_status_t status = pdev_map_mmio_buffer(&bus->pdev, mmio_index,
-                                              MX_CACHE_POLICY_UNCACHED_DEVICE, &gpios->buffer);
-    if (status != MX_OK) {
+    zx_status_t status = pdev_map_mmio_buffer(&bus->pdev, mmio_index,
+                                              ZX_CACHE_POLICY_UNCACHED_DEVICE, &gpios->buffer);
+    if (status != ZX_OK) {
         free(gpios);
         return status;
     }
@@ -138,7 +138,7 @@ static mx_status_t hi3660_add_gpios(void* ctx, uint32_t start, uint32_t count, u
     gpios->irq_count = irq_count;
     list_add_tail(&bus->gpios, &gpios->node);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static pbus_interface_ops_t hi3660_bus_ops = {
@@ -162,25 +162,25 @@ static void hi3660_release(void* ctx) {
     free(bus);
 }
 
-static mx_protocol_device_t hi3660_device_protocol = {
+static zx_protocol_device_t hi3660_device_protocol = {
     .version = DEVICE_OPS_VERSION,
     .release = hi3660_release,
 };
 
 // test thread that cycles the 4 LEDs on the hikey 960 board
 static int led_test_thread(void *arg) {
-    mx_device_t* parent = arg;
+    zx_device_t* parent = arg;
 
     platform_device_protocol_t pdev;
-    if (device_get_protocol(parent, MX_PROTOCOL_PLATFORM_DEV, &pdev) != MX_OK) {
+    if (device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev) != ZX_OK) {
         printf("led_test_thread: could not get pdev protocol!\n");
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
 
     gpio_protocol_t gpio;
-    if (pdev_get_protocol(&pdev, MX_PROTOCOL_GPIO, &gpio) != MX_OK) {
+    if (pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, &gpio) != ZX_OK) {
         printf("led_test_thread: could not get GPIO protocol!\n");
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
 
     uint32_t led_gpios[] = { 150, 151, 190, 189 };
@@ -200,27 +200,27 @@ static int led_test_thread(void *arg) {
     return 0;
 }
 
-static mx_status_t hi3660_bind(void* ctx, mx_device_t* parent, void** cookie) {
+static zx_status_t hi3660_bind(void* ctx, zx_device_t* parent, void** cookie) {
     platform_device_protocol_t pdev;
-    if (device_get_protocol(parent, MX_PROTOCOL_PLATFORM_DEV, &pdev) != MX_OK) {
-        return MX_ERR_NOT_SUPPORTED;
+    if (device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev) != ZX_OK) {
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     hi3660_bus_t* bus = calloc(1, sizeof(hi3660_bus_t));
     if (!bus) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     list_initialize(&bus->gpios);
     memcpy(&bus->pdev, &pdev, sizeof(bus->pdev));
 
-    mx_status_t status;
-    if ((status = pdev_map_mmio_buffer(&pdev, MMIO_USB3OTG_BC, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                       &bus->usb3otg_bc)) != MX_OK ||
-         (status = pdev_map_mmio_buffer(&pdev, MMIO_PERI_CRG, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                       &bus->peri_crg)) != MX_OK ||
-         (status = pdev_map_mmio_buffer(&pdev, MMIO_PCTRL, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                       &bus->pctrl)) != MX_OK) {
+    zx_status_t status;
+    if ((status = pdev_map_mmio_buffer(&pdev, MMIO_USB3OTG_BC, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                       &bus->usb3otg_bc)) != ZX_OK ||
+         (status = pdev_map_mmio_buffer(&pdev, MMIO_PERI_CRG, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                       &bus->peri_crg)) != ZX_OK ||
+         (status = pdev_map_mmio_buffer(&pdev, MMIO_PCTRL, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                       &bus->pctrl)) != ZX_OK) {
         goto fail;
     }
 
@@ -234,7 +234,7 @@ static mx_status_t hi3660_bind(void* ctx, mx_device_t* parent, void** cookie) {
     };
 
     status = device_add(parent, &args, NULL);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         goto fail;
     }
 
@@ -249,11 +249,11 @@ static mx_status_t hi3660_bind(void* ctx, mx_device_t* parent, void** cookie) {
 #endif
 
     // must be after pdev_set_interface
-    if ((status = hi3360_usb_init(bus)) != MX_OK) {
+    if ((status = hi3360_usb_init(bus)) != ZX_OK) {
         printf("hi3660_bind: hi3360_usb_init failed!\n");;
     }
 
-    return MX_OK;
+    return ZX_OK;
 
 fail:
     printf("hi3660_bind failed %d\n", status);
@@ -261,14 +261,14 @@ fail:
     return status;
 }
 
-static mx_driver_ops_t hi3660_driver_ops = {
+static zx_driver_ops_t hi3660_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = hi3660_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(hi3660, hi3660_driver_ops, "magenta", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PLATFORM_DEV),
+ZIRCON_DRIVER_BEGIN(hi3660, hi3660_driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, 0x12D1),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, 0x0960),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_BUS_IMPLEMENTOR_DID),
-MAGENTA_DRIVER_END(hi3660)
+ZIRCON_DRIVER_END(hi3660)

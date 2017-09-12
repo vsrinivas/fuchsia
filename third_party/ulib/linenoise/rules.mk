@@ -20,7 +20,7 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS = $(LOCAL_DIR)/linenoise.c
 
-MODULE_LIBS := system/ulib/mxio
+MODULE_LIBS := system/ulib/fdio
 
 MODULE_CFLAGS := -I$(LOCAL_DIR)/include/linenoise
 

@@ -17,7 +17,7 @@ static bool read_config_register(void) {
 
     // Access Vendor/Device ID as a single 32bit read.
     uint32_t value = 0;
-    EXPECT_EQ(pci_device_read(device, PCI_CONFIG_VENDOR_ID, 4, &value), MX_OK,
+    EXPECT_EQ(pci_device_read(device, PCI_CONFIG_VENDOR_ID, 4, &value), ZX_OK,
               "Failed to read PCI_CONFIG_VENDOR_ID");
     EXPECT_EQ(value, PCI_VENDOR_ID_INTEL | (PCI_DEVICE_ID_INTEL_Q35 << 16),
               "Unexpected value of PCI_CONFIG_VENDOR_ID");
@@ -37,7 +37,7 @@ static bool read_config_register_bytewise(void) {
     for (int i = 0; i < 4; ++i) {
         uint16_t reg = static_cast<uint16_t>(PCI_CONFIG_VENDOR_ID + i);
         uint32_t value = 0;
-        EXPECT_EQ(pci_device_read(device, reg, 1, &value), MX_OK,
+        EXPECT_EQ(pci_device_read(device, reg, 1, &value), ZX_OK,
                   "Failed to read PCI_CONFIG_VENDOR_ID");
         EXPECT_EQ(value, bits_shift(expected_device_vendor, i * 8 + 7, i * 8),
                   "Unexpected value of PCI_CONFIG_VENDOR_ID");
@@ -63,12 +63,12 @@ static bool read_bar_size(void) {
 
     // Set all bits in the BAR register. The device will ignore writes to the
     // LSBs which we can read out to determine the size.
-    EXPECT_EQ(pci_device_write(device, PCI_CONFIG_BASE_ADDRESSES, 4, UINT32_MAX), MX_OK,
+    EXPECT_EQ(pci_device_write(device, PCI_CONFIG_BASE_ADDRESSES, 4, UINT32_MAX), ZX_OK,
               "Failed to write BAR0 to PCI config space");
 
     // Read out BAR and compute size.
     uint32_t value = 0;
-    EXPECT_EQ(pci_device_read(device, PCI_CONFIG_BASE_ADDRESSES, 4, &value), MX_OK,
+    EXPECT_EQ(pci_device_read(device, PCI_CONFIG_BASE_ADDRESSES, 4, &value), ZX_OK,
               "Failed to read BAR0 from PCI config space");
     EXPECT_EQ(value & PCI_BAR_IO_TYPE_MASK, PCI_BAR_IO_TYPE_PIO,
               "Expected PIO bit to be set in BAR");
@@ -107,7 +107,7 @@ static bool read_cap_basic(void) {
     // a pointer in Configuration Space to a linked list of new capabilities.
     // Refer to Section 6.7 for details on New Capabilities.
     uint32_t status = 0;
-    EXPECT_EQ(pci_device_read(device, PCI_CONFIG_STATUS, 2, &status), MX_OK,
+    EXPECT_EQ(pci_device_read(device, PCI_CONFIG_STATUS, 2, &status), ZX_OK,
               "Failed to read status register from PCI config space.\n");
     EXPECT_TRUE(status & PCI_STATUS_NEW_CAPS,
                 "CAP bit not set in status register with a cap list present.\n");
@@ -115,14 +115,14 @@ static bool read_cap_basic(void) {
     // Read the cap pointer from config space. Here just verify it points to
     // some location beyond the pre-defined header.
     uint32_t cap_ptr = 0;
-    EXPECT_EQ(pci_device_read(device, PCI_CONFIG_CAPABILITIES, 1, &cap_ptr), MX_OK,
+    EXPECT_EQ(pci_device_read(device, PCI_CONFIG_CAPABILITIES, 1, &cap_ptr), ZX_OK,
               "Failed to read CAP pointer from PCI config space.\n");
     EXPECT_LT(0x40u, cap_ptr, "CAP pointer does not lie beyond the reserved region.\n");
 
     // Read the capability. This will be the Cap ID, next pointer (0), followed
     // by data bytes (starting at index 2).
     uint32_t cap_value = 0;
-    EXPECT_EQ(pci_device_read(device, static_cast<uint16_t>(cap_ptr), 4, &cap_value), MX_OK,
+    EXPECT_EQ(pci_device_read(device, static_cast<uint16_t>(cap_ptr), 4, &cap_value), ZX_OK,
               "Failed to read CAP value from PCI config space.\n");
     EXPECT_EQ(0x0a0f0009u, cap_value,
               "Incorrect CAP value read from PCI config space.\n");
@@ -153,11 +153,11 @@ static bool read_cap_chained(void) {
 
     uint32_t cap_ptr = 0;
     uint32_t cap_header;
-    EXPECT_EQ(pci_device_read(device, PCI_CONFIG_CAPABILITIES, 1, &cap_ptr), MX_OK,
+    EXPECT_EQ(pci_device_read(device, PCI_CONFIG_CAPABILITIES, 1, &cap_ptr), ZX_OK,
               "Failed to read CAP pointer from PCI config space.\n");
     for (uint8_t i = 0; i < num_caps; ++i) {
         // Read the current capability.
-        EXPECT_EQ(pci_device_read(device, static_cast<uint16_t>(cap_ptr), 4, &cap_header), MX_OK,
+        EXPECT_EQ(pci_device_read(device, static_cast<uint16_t>(cap_ptr), 4, &cap_header), ZX_OK,
                   "Failed to read CAP from PCI config space.\n");
         // ID is the first byte.
         EXPECT_EQ(i, cap_header & UINT8_MAX, "Incorrect CAP ID read.\n");

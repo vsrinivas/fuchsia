@@ -13,7 +13,7 @@
  * Ideally this could be accomplished without an explicit linker
  * script.  The linker would need an option to make the .dynamic
  * section (aka PT_DYNAMIC segment) read-only rather than read-write;
- * in fact that could be the default for Magenta/Fuchsia or for
+ * in fact that could be the default for Zircon/Fuchsia or for
  * anything using a dynamic linker like musl's that doesn't try to
  * write into the .dynamic section at runtime (for -shared that is;
  * for -pie and dynamically-linked executables there is the DT_DEBUG

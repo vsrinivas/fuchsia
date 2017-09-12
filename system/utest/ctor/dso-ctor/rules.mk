@@ -12,7 +12,7 @@ MODULE_GROUP := test
 MODULE_SRCS += \
     $(LOCAL_DIR)/dso-ctor.cpp
 
-MODULE_STATIC_LIBS := system/ulib/mxcpp
+MODULE_STATIC_LIBS := system/ulib/zxcpp
 MODULE_LIBS := system/ulib/unittest system/ulib/c
 
 MODULE_SO_NAME := dso-ctor

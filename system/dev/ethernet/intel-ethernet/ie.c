@@ -4,7 +4,7 @@
 
 #include <inttypes.h>
 #include <stdint.h>
-#include <magenta/listnode.h>
+#include <zircon/listnode.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,11 +15,11 @@
 //TODO: proper includes/defines kernel driver
 #else
 // includes and defines for userspace driver
-#include <magenta/types.h>
-#include <magenta/syscalls.h>
+#include <zircon/types.h>
+#include <zircon/syscalls.h>
 #include <ddk/driver.h>
 typedef int status_t;
-#define __nanosleep(x) mx_nanosleep(mx_deadline_after(x));
+#define __nanosleep(x) zx_nanosleep(zx_deadline_after(x));
 #define REG32(addr) ((volatile uint32_t *)(uintptr_t)(addr))
 #define writel(v, a) (*REG32(eth->iobase + (a)) = (v))
 #define readl(a) (*REG32(eth->iobase + (a)))
@@ -54,16 +54,16 @@ status_t eth_rx(ethdev_t* eth, void** data, size_t* len) {
     uint64_t info = eth->rxd[n].info;
 
     if (!(info & IE_RXD_DONE)) {
-        return MX_ERR_SHOULD_WAIT;
+        return ZX_ERR_SHOULD_WAIT;
     }
 
     // copy out packet
-    mx_status_t r = IE_RXD_LEN(info);
+    zx_status_t r = IE_RXD_LEN(info);
 
     *data = eth->rxb + ETH_RXBUF_SIZE * n;
     *len = r;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 void eth_rx_ack(ethdev_t* eth) {
@@ -78,10 +78,10 @@ void eth_rx_ack(ethdev_t* eth) {
 
 status_t eth_tx(ethdev_t* eth, const void* data, size_t len) {
     if ((len < 60) || (len > ETH_TXBUF_DSIZE)) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
 
     mtx_lock(&eth->send_lock);
 
@@ -106,7 +106,7 @@ status_t eth_tx(ethdev_t* eth, const void* data, size_t len) {
     // obtain buffer, copy into it, setup descriptor
     framebuf_t *frame = list_remove_head_type(&eth->free_frames, framebuf_t, node);
     if (frame == NULL) {
-        status = MX_ERR_NO_MEMORY;
+        status = ZX_ERR_NO_MEMORY;
         goto out;
     }
 
@@ -143,11 +143,11 @@ status_t eth_reset_hw(ethdev_t* eth) {
 
     if (readl(IE_CTRL) & IE_CTRL_RST) {
         printf("eth: reset failed\n");
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     writel(IE_CTRL_ASDE | IE_CTRL_SLU, IE_CTRL);
-    return MX_OK;
+    return ZX_OK;
 }
 
 void eth_init_hw(ethdev_t* eth) {
@@ -182,7 +182,7 @@ void eth_init_hw(ethdev_t* eth) {
     writel(IE_INT_LSC, IE_IMS);
 }
 
-void eth_setup_buffers(ethdev_t* eth, void* iomem, mx_paddr_t iophys) {
+void eth_setup_buffers(ethdev_t* eth, void* iomem, zx_paddr_t iophys) {
     printf("eth: iomem @%p (phys %" PRIxPTR ")\n", iomem, iophys);
 
     list_initialize(&eth->free_frames);

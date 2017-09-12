@@ -15,14 +15,14 @@ resources in the uncontested case.
 
 ## DESCRIPTION
 
-The magenta futex implementation currently supports three operations:
+The zircon futex implementation currently supports three operations:
 
 ```C
-    mx_status_t mx_futex_wait(mx_futex_t* value_ptr, int current_value,
-                              mx_time_t timeout);
-    mx_status_t mx_futex_wake(mx_futex_t* value_ptr, uint32_t wake_count);
-    mx_status_t mx_futex_requeue(mx_futex_t* value_ptr, uint32_t wake_count,
-                                 int current_value, mx_futex_t* requeue_ptr,
+    zx_status_t zx_futex_wait(zx_futex_t* value_ptr, int current_value,
+                              zx_time_t timeout);
+    zx_status_t zx_futex_wake(zx_futex_t* value_ptr, uint32_t wake_count);
+    zx_status_t zx_futex_requeue(zx_futex_t* value_ptr, uint32_t wake_count,
+                                 int current_value, zx_futex_t* requeue_ptr,
                                  uint32_t requeue_count);
 ```
 
@@ -40,7 +40,7 @@ See the [futex_wait](../syscalls/futex_wait.md),
 
 ### Differences from Linux futexes
 
-Note that all of the magenta futex operations key off of the virtual
+Note that all of the zircon futex operations key off of the virtual
 address of an userspace pointer. This differs from the Linux
 implementation, which distinguishes private futex operations (which
 correspond to our in-process-only ones) from ones shared across

@@ -15,6 +15,6 @@ MODULE_SRCS += \
 MODULE_NAME := runtests
 
 MODULE_LIBS := \
-    system/ulib/mxio system/ulib/launchpad system/ulib/magenta system/ulib/c system/ulib/unittest
+    system/ulib/fdio system/ulib/launchpad system/ulib/zircon system/ulib/c system/ulib/unittest
 
 include make/module.mk

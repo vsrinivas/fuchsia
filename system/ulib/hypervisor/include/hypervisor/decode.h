@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 // clang-format off
 
@@ -23,7 +23,7 @@
 
 __BEGIN_CDECLS
 
-typedef struct mx_vcpu_state mx_vcpu_state_t;
+typedef struct zx_vcpu_state zx_vcpu_state_t;
 
 /* Stores info from a decoded instruction. */
 typedef struct instruction {
@@ -34,7 +34,7 @@ typedef struct instruction {
     uint32_t* flags;
 } instruction_t;
 
-mx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, mx_vcpu_state_t* vcpu_state,
+zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, zx_vcpu_state_t* vcpu_state,
                         instruction_t* inst);
 
 #define DEFINE_INST_VAL(size)                                                \
@@ -47,11 +47,11 @@ DEFINE_INST_VAL(8);
 #undef DEFINE_INST_VAL
 
 #define DEFINE_INST_READ(size)                                                                   \
-    static inline mx_status_t inst_read##size(const instruction_t* inst, uint##size##_t value) { \
+    static inline zx_status_t inst_read##size(const instruction_t* inst, uint##size##_t value) { \
         if (inst->type != INST_MOV_READ || inst->mem != (size / 8))                              \
-            return MX_ERR_NOT_SUPPORTED;                                                         \
+            return ZX_ERR_NOT_SUPPORTED;                                                         \
         *inst->reg = value;                                                                      \
-        return MX_OK;                                                                            \
+        return ZX_OK;                                                                            \
     }
 DEFINE_INST_READ(32);
 DEFINE_INST_READ(16);
@@ -59,24 +59,24 @@ DEFINE_INST_READ(8);
 #undef DEFINE_INST_READ
 
 #define DEFINE_INST_WRITE(size)                                                                    \
-    static inline mx_status_t inst_write##size(const instruction_t* inst, uint##size##_t* value) { \
+    static inline zx_status_t inst_write##size(const instruction_t* inst, uint##size##_t* value) { \
         if (inst->type != INST_MOV_WRITE || inst->mem != (size / 8))                               \
-            return MX_ERR_NOT_SUPPORTED;                                                           \
+            return ZX_ERR_NOT_SUPPORTED;                                                           \
         *value = inst_val##size(inst);                                                             \
-        return MX_OK;                                                                              \
+        return ZX_OK;                                                                              \
     }
 DEFINE_INST_WRITE(32);
 DEFINE_INST_WRITE(16);
 #undef DEFINE_INST_WRITE
 
 #define DEFINE_INST_RW(size)                                                                    \
-    static inline mx_status_t inst_rw##size(const instruction_t* inst, uint##size##_t* value) { \
+    static inline zx_status_t inst_rw##size(const instruction_t* inst, uint##size##_t* value) { \
         if (inst->type == INST_MOV_READ) {                                                      \
             return inst_read##size(inst, *value);                                               \
         } else if (inst->type == INST_MOV_WRITE) {                                              \
             return inst_write##size(inst, value);                                               \
         } else {                                                                                \
-            return MX_ERR_NOT_SUPPORTED;                                                        \
+            return ZX_ERR_NOT_SUPPORTED;                                                        \
         }                                                                                       \
     }
 DEFINE_INST_RW(32);
@@ -100,15 +100,15 @@ static inline uint16_t x86_flags_for_test8(uint8_t value1, uint8_t value2) {
 }
 #endif
 
-static inline mx_status_t inst_test8(const instruction_t* inst, uint8_t inst_val, uint8_t value) {
+static inline zx_status_t inst_test8(const instruction_t* inst, uint8_t inst_val, uint8_t value) {
     if (inst->type != INST_TEST || inst->mem != 1u || inst_val8(inst) != inst_val)
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 #if __x86_64__
     *inst->flags &= ~X86_FLAGS_STATUS;
     *inst->flags |= x86_flags_for_test8(inst_val, value);
-    return MX_OK;
+    return ZX_OK;
 #else // __x86_64__
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__
 }
 

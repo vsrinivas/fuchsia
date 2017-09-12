@@ -11,6 +11,6 @@ MODULE_GROUP := misc
 
 MODULE_SRCS += $(LOCAL_DIR)/lspwr.c
 
-MODULE_LIBS := system/ulib/magenta system/ulib/c system/ulib/mxio
+MODULE_LIBS := system/ulib/zircon system/ulib/c system/ulib/fdio
 
 include make/module.mk

@@ -28,7 +28,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #include <trace-engine/context.h>
 
@@ -139,30 +139,30 @@ void trace_release_context(trace_context_t* context);
 //
 // The protocol works like this:
 //
-// 1. The trace observer creates an event object (using |mx_event_create()| or
+// 1. The trace observer creates an event object (using |zx_event_create()| or
 //    equivalent) then calls |trace_register_observer()| to register itself.
 // 2. The trace observer queries the current trace state and set of enabled categories.
 // 3. If tracing is enabled, the trace observer configures itself to collect data
 //    and write trace records relevant to the set of enabled categories.
 // 4. When the trace state and/or set of enabled categories changes, the trace engine
-//    sets the |MX_EVENT_SIGNALED| signal bit of each |event| associated with
+//    sets the |ZX_EVENT_SIGNALED| signal bit of each |event| associated with
 //    currently registered observers.
-// 5. In response to observing the |MX_EVENT_SIGNALED| signal, the trace observer
-//    first clears the |MX_EVENT_SIGNALED| bit (using |mx_object_signal()| or equivalent)
+// 5. In response to observing the |ZX_EVENT_SIGNALED| signal, the trace observer
+//    first clears the |ZX_EVENT_SIGNALED| bit (using |zx_object_signal()| or equivalent)
 //    then adjusts its behavior as in step 2 and 3 above.
 // 6. When no longer interested in receiving events, the trace observer calls
 //    |trace_unregister_observer()| to unregister itself then closes the event handle.
 //
-// Returns |MX_OK| if successful.
-// Returns |MX_ERR_INVALID_ARGS| if the event was already registered.
-mx_status_t trace_register_observer(mx_handle_t event);
+// Returns |ZX_OK| if successful.
+// Returns |ZX_ERR_INVALID_ARGS| if the event was already registered.
+zx_status_t trace_register_observer(zx_handle_t event);
 
 // Unregisters the observer event handle previously registered with
 // |trace_register_observer|.
 //
-// Returns |MX_OK| if successful.
-// Returns |MX_ERR_NOT_FOUND| if the event was not previously registered.
-mx_status_t trace_unregister_observer(mx_handle_t event);
+// Returns |ZX_OK| if successful.
+// Returns |ZX_ERR_NOT_FOUND| if the event was not previously registered.
+zx_status_t trace_unregister_observer(zx_handle_t event);
 
 __END_CDECLS
 

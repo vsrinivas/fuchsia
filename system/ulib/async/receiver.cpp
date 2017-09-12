@@ -11,12 +11,12 @@ Receiver::Receiver(uint32_t flags)
 
 Receiver::~Receiver() = default;
 
-mx_status_t Receiver::Queue(async_t* async, const mx_packet_user_t* data) {
+zx_status_t Receiver::Queue(async_t* async, const zx_packet_user_t* data) {
     return async_queue_packet(async, this, data);
 }
 
 void Receiver::CallHandler(async_t* async, async_receiver_t* receiver,
-                           mx_status_t status, const mx_packet_user_t* data) {
+                           zx_status_t status, const zx_packet_user_t* data) {
     static_cast<Receiver*>(receiver)->handler_(async, status, data);
 }
 

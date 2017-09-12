@@ -1,4 +1,4 @@
-# mx_vmo_create
+# zx_vmo_create
 
 ## NAME
 
@@ -7,9 +7,9 @@ vmo_create - create a VM object
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-mx_status_t mx_vmo_create(uint64_t size, uint32_t options, mx_handle_t* out);
+zx_status_t zx_vmo_create(uint64_t size, uint32_t options, zx_handle_t* out);
 
 ```
 
@@ -24,37 +24,37 @@ size.
 
 The following rights will be set on the handle by default:
 
-**MX_RIGHT_DUPLICATE** - The handle may be duplicated.
+**ZX_RIGHT_DUPLICATE** - The handle may be duplicated.
 
-**MX_RIGHT_TRANSFER** - The handle may be transferred to another process.
+**ZX_RIGHT_TRANSFER** - The handle may be transferred to another process.
 
-**MX_RIGHT_READ** - May be read from or mapped with read permissions.
+**ZX_RIGHT_READ** - May be read from or mapped with read permissions.
 
-**MX_RIGHT_WRITE** - May be written to or mapped with write permissions.
+**ZX_RIGHT_WRITE** - May be written to or mapped with write permissions.
 
-**MX_RIGHT_EXECUTE** - May be mapped with execute permissions.
+**ZX_RIGHT_EXECUTE** - May be mapped with execute permissions.
 
-**MX_RIGHT_MAP** - May be mapped.
+**ZX_RIGHT_MAP** - May be mapped.
 
-**MX_RIGHT_GET_PROPERTY** - May get its properties using
+**ZX_RIGHT_GET_PROPERTY** - May get its properties using
 [object_get_property](object_get_property).
 
-**MX_RIGHT_SET_PROPERTY** - May set its properties using
+**ZX_RIGHT_SET_PROPERTY** - May set its properties using
 [object_set_property](object_set_property).
 
 The *options* field is currently unused and must be set to 0.
 
 ## RETURN VALUE
 
-**vmo_create**() returns **MX_OK** on success. In the event
+**vmo_create**() returns **ZX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS
 
-**MX_ERR_INVALID_ARGS**  *out* is an invalid pointer or NULL or *options* is
+**ZX_ERR_INVALID_ARGS**  *out* is an invalid pointer or NULL or *options* is
 any value other than 0.
 
-**MX_ERR_NO_MEMORY**  Failure due to lack of memory.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
 
 ## SEE ALSO
 

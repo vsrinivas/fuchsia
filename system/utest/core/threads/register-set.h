@@ -4,17 +4,17 @@
 
 #pragma once
 
-#include <magenta/syscalls/debug.h>
+#include <zircon/syscalls/debug.h>
 
 // This provides some utilities for testing that sets of register values
 // are reported correctly.
 
 #if defined(__x86_64__)
-typedef mx_x86_64_general_regs_t mx_general_regs_t;
+typedef zx_x86_64_general_regs_t zx_general_regs_t;
 #define REG_PC rip
 #define REG_STACK_PTR rsp
 #elif defined(__aarch64__)
-typedef mx_arm64_general_regs_t mx_general_regs_t;
+typedef zx_arm64_general_regs_t zx_general_regs_t;
 #define REG_PC pc
 #define REG_STACK_PTR sp
 #else
@@ -22,17 +22,17 @@ typedef mx_arm64_general_regs_t mx_general_regs_t;
 #endif
 
 // This initializes the register set with arbitrary test data.
-void regs_fill_test_values(mx_general_regs_t* regs);
+void regs_fill_test_values(zx_general_regs_t* regs);
 
 // This returns whether the two register sets' values are equal.
-bool regs_expect_eq(mx_general_regs_t* regs1, mx_general_regs_t* regs2);
+bool regs_expect_eq(zx_general_regs_t* regs1, zx_general_regs_t* regs2);
 
 // This function sets the registers to the state specified by |regs| and
 // then spins, executing a single-instruction infinite loop whose address
 // is |spin_address|.
-void spin_with_regs(mx_general_regs_t* regs);
+void spin_with_regs(zx_general_regs_t* regs);
 void spin_with_regs_spin_address(void);
 
-// This assembly code routine saves the registers into an mx_general_regs_t
-// pointed to by the stack pointer, and then calls mx_thread_exit().
+// This assembly code routine saves the registers into an zx_general_regs_t
+// pointed to by the stack pointer, and then calls zx_thread_exit().
 void save_regs_and_exit_thread(void);

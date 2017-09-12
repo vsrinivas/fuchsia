@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/listnode.h>
-#include <magenta/status.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/exception.h>
-#include <magenta/syscalls/object.h>
+#include <zircon/listnode.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/object.h>
 #include <pretty/sizes.h>
 #include <task-utils/walker.h>
 
@@ -29,19 +29,19 @@ typedef struct {
 
     // has it been seen this pass?
     bool scanned;
-    mx_time_t delta_time;
+    zx_time_t delta_time;
 
     // information about the thread
-    mx_koid_t proc_koid;
-    mx_koid_t koid;
-    mx_info_thread_t info;
-    mx_info_thread_stats_t stats;
-    char name[MX_MAX_NAME_LEN];
-    char proc_name[MX_MAX_NAME_LEN];
+    zx_koid_t proc_koid;
+    zx_koid_t koid;
+    zx_info_thread_t info;
+    zx_info_thread_stats_t stats;
+    char name[ZX_MAX_NAME_LEN];
+    char proc_name[ZX_MAX_NAME_LEN];
 } thread_info_t;
 
 // arguments
-static mx_time_t delay = MX_SEC(1);
+static zx_time_t delay = ZX_SEC(1);
 static int count = -1;
 static bool print_all = false;
 static bool raw_time = false;
@@ -49,26 +49,26 @@ static enum sort_order sort_order = SORT_TIME_DELTA;
 
 // active locals
 static struct list_node thread_list = LIST_INITIAL_VALUE(thread_list);
-static char last_process_name[MX_MAX_NAME_LEN];
-static mx_koid_t last_process_scanned;
+static char last_process_name[ZX_MAX_NAME_LEN];
+static zx_koid_t last_process_scanned;
 
 // Return text representation of thread state.
-static const char* state_string(const mx_info_thread_t* info) {
-    if (info->wait_exception_port_type != MX_EXCEPTION_PORT_TYPE_NONE) {
+static const char* state_string(const zx_info_thread_t* info) {
+    if (info->wait_exception_port_type != ZX_EXCEPTION_PORT_TYPE_NONE) {
         return "excp";
     } else {
         switch (info->state) {
-        case MX_THREAD_STATE_NEW:
+        case ZX_THREAD_STATE_NEW:
             return "new";
-        case MX_THREAD_STATE_RUNNING:
+        case ZX_THREAD_STATE_RUNNING:
             return "run";
-        case MX_THREAD_STATE_SUSPENDED:
+        case ZX_THREAD_STATE_SUSPENDED:
             return "susp";
-        case MX_THREAD_STATE_BLOCKED:
+        case ZX_THREAD_STATE_BLOCKED:
             return "block";
-        case MX_THREAD_STATE_DYING:
+        case ZX_THREAD_STATE_DYING:
             return "dying";
-        case MX_THREAD_STATE_DEAD:
+        case ZX_THREAD_STATE_DEAD:
             return "dead";
         default:
             return "???";
@@ -76,20 +76,20 @@ static const char* state_string(const mx_info_thread_t* info) {
     }
 }
 
-static mx_status_t process_callback(void* unused_ctx, int depth,
-                                    mx_handle_t proc,
-                                    mx_koid_t koid, mx_koid_t parent_koid) {
+static zx_status_t process_callback(void* unused_ctx, int depth,
+                                    zx_handle_t proc,
+                                    zx_koid_t koid, zx_koid_t parent_koid) {
     last_process_scanned = koid;
 
-    mx_status_t status = mx_object_get_property(
-        proc, MX_PROP_NAME, &last_process_name, sizeof(last_process_name));
+    zx_status_t status = zx_object_get_property(
+        proc, ZX_PROP_NAME, &last_process_name, sizeof(last_process_name));
     return status;
 }
 
 // Adds a thread's information to the thread_list
-static mx_status_t thread_callback(void* unused_ctx, int depth,
-                                   mx_handle_t thread,
-                                   mx_koid_t koid, mx_koid_t parent_koid) {
+static zx_status_t thread_callback(void* unused_ctx, int depth,
+                                   zx_handle_t thread,
+                                   zx_koid_t koid, zx_koid_t parent_koid) {
     thread_info_t e = {};
 
     e.koid = koid;
@@ -98,19 +98,19 @@ static mx_status_t thread_callback(void* unused_ctx, int depth,
     e.proc_koid = last_process_scanned;
     strlcpy(e.proc_name, last_process_name, sizeof(e.proc_name));
 
-    mx_status_t status =
-        mx_object_get_property(thread, MX_PROP_NAME, e.name, sizeof(e.name));
-    if (status != MX_OK) {
+    zx_status_t status =
+        zx_object_get_property(thread, ZX_PROP_NAME, e.name, sizeof(e.name));
+    if (status != ZX_OK) {
         return status;
     }
-    status = mx_object_get_info(
-        thread, MX_INFO_THREAD, &e.info, sizeof(e.info), NULL, NULL);
-    if (status != MX_OK) {
+    status = zx_object_get_info(
+        thread, ZX_INFO_THREAD, &e.info, sizeof(e.info), NULL, NULL);
+    if (status != ZX_OK) {
         return status;
     }
-    status = mx_object_get_info(
-        thread, MX_INFO_THREAD_STATS, &e.stats, sizeof(e.stats), NULL, NULL);
-    if (status != MX_OK) {
+    status = zx_object_get_info(
+        thread, ZX_INFO_THREAD_STATS, &e.stats, sizeof(e.stats), NULL, NULL);
+    if (status != ZX_OK) {
         return status;
     }
 
@@ -125,7 +125,7 @@ static mx_status_t thread_callback(void* unused_ctx, int depth,
                 e.stats.total_runtime - temp->stats.total_runtime;
             temp->info = e.info;
             temp->stats = e.stats;
-            return MX_OK;
+            return ZX_OK;
         }
     }
 
@@ -135,7 +135,7 @@ static mx_status_t thread_callback(void* unused_ctx, int depth,
 
     list_add_tail(&thread_list, &new_entry->node);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static void sort_threads(enum sort_order order) {
@@ -226,7 +226,7 @@ int main(int argc, char** argv) {
         } else if (!strcmp(arg, "-d")) {
             delay = 0;
             if (i + 1 < argc) {
-                delay = MX_SEC(atoi(argv[i + 1]));
+                delay = ZX_SEC(atoi(argv[i + 1]));
             }
             if (delay == 0) {
                 fprintf(stderr, "Bad -d value '%s'\n", argv[i + 1]);
@@ -285,7 +285,7 @@ int main(int argc, char** argv) {
 
     int ret = 0;
     for (;;) {
-        mx_time_t next_deadline = mx_deadline_after(delay);
+        zx_time_t next_deadline = zx_deadline_after(delay);
 
         // mark all active threads as not scanned
         thread_info_t* e;
@@ -294,11 +294,11 @@ int main(int argc, char** argv) {
         }
 
         // iterate the entire job tree
-        mx_status_t status =
+        zx_status_t status =
             walk_root_job_tree(NULL, process_callback, thread_callback, NULL);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             fprintf(stderr, "WARNING: walk_root_job_tree failed: %s (%d)\n",
-                    mx_status_get_string(status), status);
+                    zx_status_get_string(status), status);
             ret = 1;
         }
 
@@ -331,7 +331,7 @@ int main(int argc, char** argv) {
             }
         }
 
-        mx_nanosleep(next_deadline);
+        zx_nanosleep(next_deadline);
     }
 
     return ret;

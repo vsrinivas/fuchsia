@@ -6,8 +6,8 @@
 
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-device.h>
-#include <magenta/listnode.h>
-#include <magenta/types.h>
+#include <zircon/listnode.h>
+#include <zircon/types.h>
 #include <threads.h>
 
 typedef struct {

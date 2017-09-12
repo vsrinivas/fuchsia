@@ -7,7 +7,7 @@ config("trace_config") {
 }
 
 source_set("trace") {
-  # Don't forget to update rules.mk as well for the Magenta build.
+  # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "event.cpp",
     "handler.cpp",
@@ -20,14 +20,14 @@ source_set("trace") {
   ]
 
   libs = [
-    "magenta",
+    "zircon",
     "trace-engine",
   ]
 
   public_deps = [
-    "//magenta/system/ulib/async",
-    "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/fbl",
+    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 
   public_configs = [ ":trace_config" ]

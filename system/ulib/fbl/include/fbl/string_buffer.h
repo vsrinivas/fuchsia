@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <magenta/assert.h>
-#include <magenta/compiler.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
 
@@ -69,7 +69,7 @@ public:
     // If the current length is greater than |count|, the string is truncated.
     // |length| must be less than or equal to |N|.
     void Resize(size_t count, char ch = '\0') {
-        MX_DEBUG_ASSERT(count <= N);
+        ZX_DEBUG_ASSERT(count <= N);
         if (length_ < count)
             memset(data_ + length_, ch, count - length_);
         length_ = count;

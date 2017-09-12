@@ -1,6 +1,6 @@
-# Notes for hacking on Magenta
+# Notes for hacking on Zircon
 
-This file contains a random collection of notes for hacking on Magenta.
+This file contains a random collection of notes for hacking on Zircon.
 
 [TOC]
 
@@ -12,13 +12,13 @@ and debug mode. This can all be executed with the `buildall` script:
 
 ```./scripts/buildall -q -c -r```
 
-From the magenta shell run `k ut all` to execute all kernel tests, and
+From the zircon shell run `k ut all` to execute all kernel tests, and
 `runtests` to execute all userspace tests.
 
 ## Syscall generation
 
 Syscall support is generated from
-system/public/magenta/syscalls.sysgen.  A host tool called
+system/public/zircon/syscalls.sysgen.  A host tool called
 [sysgen](../system/host/sysgen) consumes that file and produces output
 for both the kernel and userspace in a variety of languages. This
 output includes C or C++ headers for both the kernel and userspace,
@@ -43,7 +43,7 @@ the system will reboot by default if the kernel crashes or panics.
 If the kernel crashes and the system reboots, the log from the kernel panic will
 appear at `/boot/log/last-panic.txt`, suitable for viewing, downloading, etc.
 
-> Please attach your `last-panic.txt` and `magenta.elf` files to any kernel
+> Please attach your `last-panic.txt` and `zircon.elf` files to any kernel
 > panic bugs you file.
 
 If there's a `last-panic.txt`, that indicates that this is the first successful
@@ -70,7 +70,7 @@ name>.disable``.
 On a skylake system, all these options together would look something like:
 
 ```
-$ tools/build-magenta-x86_64/bootserver build-magenta-x86_64/magenta.bin -- gfxconsole.early driver.intel-i915-display.disable
+$ tools/build-zircon-x86_64/bootserver build-zircon-x86_64/zircon.bin -- gfxconsole.early driver.intel-i915-display.disable
 ```
 
 To directly output to the console rather than buffering it (useful in the event
@@ -100,7 +100,7 @@ request. It requires modifying your source, but in the absence of a
 debugger, or as a general builtin debug mechanism, this can be useful.
 
 ```
-#include <magenta/crashlogger.h>
+#include <zircon/crashlogger.h>
 
 void my_function() {
   crashlogger_request_backtrace();
@@ -144,6 +144,6 @@ cast to that type.  The ensuing warning/error will include the name
 of the deprecated typedef.
 
 ```
-typedef int MX_RESUME_NOT_HANDLED_DEPRECATION __attribute__((deprecated));
-#define MX_RESUME_NOT_HANDLED ((MX_RESUME_NOT_HANDLED_DEPRECATION)(2))
+typedef int ZX_RESUME_NOT_HANDLED_DEPRECATION __attribute__((deprecated));
+#define ZX_RESUME_NOT_HANDLED ((ZX_RESUME_NOT_HANDLED_DEPRECATION)(2))
 ```

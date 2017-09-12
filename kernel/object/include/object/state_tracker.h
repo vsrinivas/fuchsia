@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 #include <kernel/spinlock.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
@@ -19,14 +19,14 @@ class Handle;
 
 class CookieJar {
 public:
-    CookieJar() : scope_(MX_KOID_INVALID), cookie_(0) {}
-    mx_koid_t scope_;
+    CookieJar() : scope_(ZX_KOID_INVALID), cookie_(0) {}
+    zx_koid_t scope_;
     uint64_t cookie_;
 };
 
 class StateTracker {
 public:
-    StateTracker(mx_signals_t signals = 0u) : signals_(signals | MX_SIGNAL_LAST_HANDLE) { }
+    StateTracker(zx_signals_t signals = 0u) : signals_(signals | ZX_SIGNAL_LAST_HANDLE) { }
 
     StateTracker(const StateTracker& o) = delete;
     StateTracker& operator=(const StateTracker& o) = delete;
@@ -42,18 +42,18 @@ public:
     // destroyed or transferred. Returns true if at least one observer was found.
     bool Cancel(Handle* handle);
 
-    // Like Cancel() but issued via via mx_port_cancel().
+    // Like Cancel() but issued via via zx_port_cancel().
     bool CancelByKey(Handle* handle, const void* port, uint64_t key);
 
     // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
     // setting satisfiable signals should not wake anyone.)
-    void UpdateState(mx_signals_t clear_mask, mx_signals_t set_mask);
+    void UpdateState(zx_signals_t clear_mask, zx_signals_t set_mask);
 
-    // Nofity others with MX_SIGNAL_LAST_HANDLE if the value pointed by |count| is 1. This
+    // Nofity others with ZX_SIGNAL_LAST_HANDLE if the value pointed by |count| is 1. This
     // value is allowed to mutate by other threads while this call is executing.
     void UpdateLastHandleSignal(uint32_t* count);
 
-    mx_signals_t GetSignalsState() { return signals_; }
+    zx_signals_t GetSignalsState() { return signals_; }
 
     using ObserverList = fbl::DoublyLinkedList<StateObserver*, StateObserverListTraits>;
 
@@ -61,17 +61,17 @@ public:
     // These live with the state tracker so they can make use of the state tracker's
     // lock (since not all objects have their own locks, but all Dispatchers that are
     // cookie-capable have state trackers)
-    mx_status_t SetCookie(CookieJar* cookiejar, mx_koid_t scope, uint64_t cookie);
-    mx_status_t GetCookie(CookieJar* cookiejar, mx_koid_t scope, uint64_t* cookie);
-    mx_status_t InvalidateCookie(CookieJar *cookiejar);
+    zx_status_t SetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_t cookie);
+    zx_status_t GetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_t* cookie);
+    zx_status_t InvalidateCookie(CookieJar *cookiejar);
 
 private:
     // Returns flag kHandled if one of the observers have been signaled.
-    StateObserver::Flags UpdateInternalLocked(ObserverList* obs_to_remove, mx_signals_t signals) TA_REQ(lock_);
+    StateObserver::Flags UpdateInternalLocked(ObserverList* obs_to_remove, zx_signals_t signals) TA_REQ(lock_);
 
     fbl::Canary<fbl::magic("STRK")> canary_;
 
-    mx_signals_t signals_;
+    zx_signals_t signals_;
     fbl::Mutex lock_;
 
     // Active observers are elements in |observers_|.

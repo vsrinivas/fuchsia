@@ -7,22 +7,22 @@
 #include <unistd.h>
 #include <sys/uio.h>
 
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/log.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/log.h>
 
 #include <unittest/unittest.h>
 
 // output via debuglog syscalls
 
-static mx_handle_t log_handle;
+static zx_handle_t log_handle;
 
-#define LOGBUF_MAX (MX_LOG_RECORD_MAX - sizeof(mx_log_record_t))
+#define LOGBUF_MAX (ZX_LOG_RECORD_MAX - sizeof(zx_log_record_t))
 
 static void log_write(const void* data, size_t len) {
     while (len > 0) {
         size_t xfer = (len > LOGBUF_MAX) ? LOGBUF_MAX : len;
-        mx_log_write(log_handle, xfer, data, 0);
+        zx_log_write(log_handle, xfer, data, 0);
         data += xfer;
         len -= xfer;
     }
@@ -31,11 +31,11 @@ static void log_write(const void* data, size_t len) {
 
 // libc init and io stubs
 // The reason these are here is that the "core" tests intentionally do not
-// use mxio. See ./README.md.
+// use fdio. See ./README.md.
 
-mx_handle_t root_resource;
+zx_handle_t root_resource;
 
-void __libc_extensions_init(uint32_t count, mx_handle_t handle[], uint32_t info[]) {
+void __libc_extensions_init(uint32_t count, zx_handle_t handle[], uint32_t info[]) {
     for (unsigned n = 0; n < count; n++) {
         if (info[n] == PA_HND(PA_RESOURCE, 0)) {
             root_resource = handle[n];
@@ -46,7 +46,7 @@ void __libc_extensions_init(uint32_t count, mx_handle_t handle[], uint32_t info[
     }
 }
 
-mx_handle_t get_root_resource(void) {
+zx_handle_t get_root_resource(void) {
     return root_resource;
 }
 
@@ -92,9 +92,9 @@ int isatty(int fd) {
 }
 
 int main(int argc, char** argv) {
-    if (mx_log_create(0, &log_handle) < 0) {
+    if (zx_log_create(0, &log_handle) < 0) {
         return -2;
     }
-    mx_log_write(log_handle, 4, "TEST", 0);
+    zx_log_write(log_handle, 4, "TEST", 0);
     return unittest_run_all_tests(argc, argv) ? 0 : -1;
 }

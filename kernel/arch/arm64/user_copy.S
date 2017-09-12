@@ -24,10 +24,10 @@ FUNCTION(_arm64_copy_from_user)
     cbnz x2, .Lcopy_byte_from_user
 0:
 
-    mov x0, #MX_OK
+    mov x0, #ZX_OK
     b .Lcleanup_from_user
 .Lfault_from_user:
-    mov x0, #MX_ERR_INVALID_ARGS
+    mov x0, #ZX_ERR_INVALID_ARGS
 .Lcleanup_from_user:
     # Reset data fault return
     str xzr, [x3]
@@ -51,10 +51,10 @@ FUNCTION(_arm64_copy_to_user)
     cbnz x2, .Lcopy_byte_to_user
 0:
 
-    mov x0, #MX_OK
+    mov x0, #ZX_OK
     b .Lcleanup_to_user
 .Lfault_to_user:
-    mov x0, #MX_ERR_INVALID_ARGS
+    mov x0, #ZX_ERR_INVALID_ARGS
 .Lcleanup_to_user:
     # Reset data fault return
     str xzr, [x3]

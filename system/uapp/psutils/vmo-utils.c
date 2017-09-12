@@ -10,27 +10,27 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <magenta/status.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/object.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
 
-// Reads the mx_info_vmo_t entries for the process.
+// Reads the zx_info_vmo_t entries for the process.
 // Caller is responsible for the |out_vmos| pointer.
-mx_status_t get_vmos(mx_handle_t process,
-                     mx_info_vmo_t** out_vmos, size_t* out_count,
+zx_status_t get_vmos(zx_handle_t process,
+                     zx_info_vmo_t** out_vmos, size_t* out_count,
                      size_t* out_avail) {
     size_t count = 4096; // Should be more than enough.
-    mx_info_vmo_t* vmos = NULL;
+    zx_info_vmo_t* vmos = NULL;
     int pass = 3;
     while (true) {
-        vmos = (mx_info_vmo_t*)realloc(vmos, count * sizeof(mx_info_vmo_t));
+        vmos = (zx_info_vmo_t*)realloc(vmos, count * sizeof(zx_info_vmo_t));
 
         size_t actual;
         size_t avail;
-        mx_status_t s = mx_object_get_info(process, MX_INFO_PROCESS_VMOS,
-                                           vmos, count * sizeof(mx_info_vmo_t),
+        zx_status_t s = zx_object_get_info(process, ZX_INFO_PROCESS_VMOS,
+                                           vmos, count * sizeof(zx_info_vmo_t),
                                            &actual, &avail);
-        if (s != MX_OK) {
+        if (s != ZX_OK) {
             free(vmos);
             return s;
         }
@@ -41,6 +41,6 @@ mx_status_t get_vmos(mx_handle_t process,
         *out_vmos = vmos;
         *out_count = actual;
         *out_avail = avail;
-        return MX_OK;
+        return ZX_OK;
     }
 }

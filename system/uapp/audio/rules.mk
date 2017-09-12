@@ -17,13 +17,13 @@ MODULE_SRCS += \
 MODULE_STATIC_LIBS := \
     system/ulib/audio-utils \
     system/ulib/audio-proto-utils \
-    system/ulib/mx \
-    system/ulib/mxcpp \
+    system/ulib/zx \
+    system/ulib/zxcpp \
     system/ulib/fbl
 
 MODULE_LIBS := \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/c
 
 include make/module.mk

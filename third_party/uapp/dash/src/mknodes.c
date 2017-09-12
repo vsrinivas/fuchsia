@@ -225,7 +225,7 @@ output(char *file)
 	if ((cfile = fopen("nodes.c", "w")) == NULL)
 		error("Can't create nodes.c");
 	fputs(writer, hfile);
-	fputs("#include <magenta/types.h>\n\n", hfile);
+	fputs("#include <zircon/types.h>\n\n", hfile);
 	for (i = 0 ; i < ntypes ; i++)
 		fprintf(hfile, "#define %s %d\n", nodename[i], i);
 	fputs("\n\n\n", hfile);
@@ -252,7 +252,7 @@ output(char *file)
 	fputs("};\n\n\n", hfile);
 	fputs("struct funcnode *copyfunc(union node *);\n", hfile);
 	fputs("void freefunc(struct funcnode *);\n", hfile);
-	fputs("mx_status_t codec_encode(struct nodelist *nlist, mx_handle_t *vmo);\n", hfile);
+	fputs("zx_status_t codec_encode(struct nodelist *nlist, zx_handle_t *vmo);\n", hfile);
 	fputs("struct nodelist* codec_decode(char *buffer, size_t length);\n", hfile);
 
 	fputs(writer, cfile);

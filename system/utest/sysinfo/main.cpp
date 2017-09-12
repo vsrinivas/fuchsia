@@ -5,9 +5,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include <magenta/device/sysinfo.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/object.h>
+#include <zircon/device/sysinfo.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
 #include <unittest/unittest.h>
 
 bool get_root_resource_succeeds() {
@@ -17,21 +17,21 @@ bool get_root_resource_succeeds() {
     int fd = open("/dev/misc/sysinfo", O_RDWR);
     ASSERT_GE(fd, 0, "Can't open sysinfo");
 
-    mx_handle_t root_resource;
+    zx_handle_t root_resource;
     ssize_t n = ioctl_sysinfo_get_root_resource(fd, &root_resource);
     close(fd);
     ASSERT_EQ(n, sizeof(root_resource), "ioctl failed");
 
     // Make sure it's a resource with the expected rights.
-    mx_info_handle_basic_t info;
-    ASSERT_EQ(mx_object_get_info(root_resource, MX_INFO_HANDLE_BASIC, &info,
+    zx_info_handle_basic_t info;
+    ASSERT_EQ(zx_object_get_info(root_resource, ZX_INFO_HANDLE_BASIC, &info,
                                  sizeof(info), nullptr, nullptr),
-              MX_OK, "Can't get handle info");
-    EXPECT_EQ(info.type, MX_OBJ_TYPE_RESOURCE, "Unexpected type");
-    EXPECT_EQ(info.rights, MX_RIGHT_TRANSFER, "Unexpected rights");
+              ZX_OK, "Can't get handle info");
+    EXPECT_EQ(info.type, ZX_OBJ_TYPE_RESOURCE, "Unexpected type");
+    EXPECT_EQ(info.rights, ZX_RIGHT_TRANSFER, "Unexpected rights");
 
     // Clean up.
-    EXPECT_EQ(mx_handle_close(root_resource), MX_OK);
+    EXPECT_EQ(zx_handle_close(root_resource), ZX_OK);
 
     END_TEST;
 }

@@ -193,8 +193,8 @@ bool Syscall::validate() const {
     }
 
     if (is_blocking() &&
-        (ret_spec.size() == 0 || ret_spec[0].type != "mx_status_t")) {
-        print_error("blocking must have first return be of type mx_status_t");
+        (ret_spec.size() == 0 || ret_spec[0].type != "zx_status_t")) {
+        print_error("blocking must have first return be of type zx_status_t");
         return false;
     }
 

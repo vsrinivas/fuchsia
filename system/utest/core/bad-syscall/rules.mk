@@ -15,6 +15,6 @@ MODULE_SRCS += $(LOCAL_DIR)/bad-syscall.c \
 
 MODULE_NAME := bad-syscall-test
 
-MODULE_LIBS := system/ulib/unittest system/ulib/mxio system/ulib/magenta system/ulib/c
+MODULE_LIBS := system/ulib/unittest system/ulib/fdio system/ulib/zircon system/ulib/c
 
 include make/module.mk

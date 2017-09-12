@@ -15,8 +15,8 @@ MODULE_SRCS += \
 MODULE_NAME := ps
 
 MODULE_LIBS := \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/c
 
 MODULE_STATIC_LIBS := \
@@ -36,8 +36,8 @@ MODULE_SRCS += $(LOCAL_DIR)/top.c
 MODULE_NAME := top
 
 MODULE_LIBS := \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/c
 
 MODULE_STATIC_LIBS := \
@@ -57,8 +57,8 @@ MODULE_SRCS += $(LOCAL_DIR)/kill.c
 MODULE_NAME := kill
 
 MODULE_LIBS := \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/c
 
 MODULE_STATIC_LIBS := \
@@ -77,8 +77,8 @@ MODULE_SRCS += $(LOCAL_DIR)/killall.c
 MODULE_NAME := killall
 
 MODULE_LIBS := \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/c
 
 MODULE_STATIC_LIBS := \
@@ -97,8 +97,8 @@ MODULE_SRCS += $(LOCAL_DIR)/vmaps.c
 MODULE_NAME := vmaps
 
 MODULE_LIBS := \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/c
 
 MODULE_STATIC_LIBS := \
@@ -120,8 +120,8 @@ MODULE_SRCS += \
 MODULE_NAME := vmos
 
 MODULE_LIBS := \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/c
 
 MODULE_STATIC_LIBS := \
@@ -144,12 +144,12 @@ MODULE_SRCS += \
 MODULE_NAME := memgraph
 
 MODULE_LIBS := \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/c
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mxcpp \
+    system/ulib/zxcpp \
     system/ulib/task-utils
 
 # Generate an include file that contains the schema json
@@ -193,8 +193,8 @@ MODULE_NAME := kstats
 MODULE_GROUP := core
 
 MODULE_LIBS := \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/c
 
 MODULE_STATIC_LIBS := \

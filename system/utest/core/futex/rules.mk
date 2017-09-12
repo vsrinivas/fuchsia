@@ -16,6 +16,6 @@ MODULE_SRCS += \
 MODULE_NAME := futex-test
 
 MODULE_LIBS := \
-    system/ulib/mxio system/ulib/magenta system/ulib/unittest system/ulib/c
+    system/ulib/fdio system/ulib/zircon system/ulib/unittest system/ulib/c
 
 include make/module.mk

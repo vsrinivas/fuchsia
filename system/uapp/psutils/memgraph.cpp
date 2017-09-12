@@ -11,12 +11,12 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include <magenta/process.h>
-#include <magenta/status.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/exception.h>
-#include <magenta/syscalls/object.h>
-#include <mxcpp/new.h>
+#include <zircon/process.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/object.h>
+#include <zxcpp/new.h>
 #include <task-utils/walker.h>
 
 #include "resources.h"
@@ -30,7 +30,7 @@ namespace {
 // Prints info about VMOs and their relationship to a process.
 // Assumes we're in the middle of dumping a process.
 // TODO(dbort): Insert some special entry if count < avail?
-void print_vmos(const mx_info_vmo_t* vmos, size_t count) {
+void print_vmos(const zx_info_vmo_t* vmos, size_t count) {
     if (count == 0) {
         // Should never happen, but don't print anything in this case.
         return;
@@ -41,7 +41,7 @@ void print_vmos(const mx_info_vmo_t* vmos, size_t count) {
     // is used or referred to.
     printf(",\n   \"vmos\": [\n");
     for (size_t i = 0; i < count; i++) {
-        const mx_info_vmo_t* vmo = vmos + i;
+        const zx_info_vmo_t* vmo = vmos + i;
         char delim = i < (count - 1) ? ',' : ' ';
         printf("      {"
                "\"koid\": %" PRIu64 ", "
@@ -69,30 +69,30 @@ void print_vmos(const mx_info_vmo_t* vmos, size_t count) {
     // information specific to this particular use of a given VMO.
     printf("   \"vmo_refs\": [\n");
     for (size_t i = 0; i < count; i++) {
-        const mx_info_vmo_t* vmo = vmos + i;
+        const zx_info_vmo_t* vmo = vmos + i;
         char delim = i < (count - 1) ? ',' : ' ';
         printf("      {"
                "\"vmo_koid\": %" PRIu64 ", "
                "\"via\": [",
                vmo->koid);
         bool need_comma = false;
-        if (vmo->flags & MX_INFO_VMO_VIA_HANDLE) {
+        if (vmo->flags & ZX_INFO_VMO_VIA_HANDLE) {
             printf("\"HANDLE\"");
             need_comma = true;
         }
-        if (vmo->flags & MX_INFO_VMO_VIA_MAPPING) {
+        if (vmo->flags & ZX_INFO_VMO_VIA_MAPPING) {
             printf("%s\"MAPPING\"", need_comma ? ", " : "");
-            // Future improvement: Could use MX_INFO_PROCESS_MAPS to include
+            // Future improvement: Could use ZX_INFO_PROCESS_MAPS to include
             // specifics of how this VMO is mapped.
         }
         printf("]");
-        if (vmo->flags & MX_INFO_VMO_VIA_HANDLE) {
+        if (vmo->flags & ZX_INFO_VMO_VIA_HANDLE) {
             need_comma = false;
             printf(", \"handle_rights\": [");
 
 #define PRINT_RIGHT(r)                                      \
     do {                                                    \
-        if (vmo->handle_rights & MX_RIGHT_##r) {            \
+        if (vmo->handle_rights & ZX_RIGHT_##r) {            \
             printf("%s\"" #r "\"", need_comma ? ", " : ""); \
             need_comma = true;                              \
         }                                                   \
@@ -118,35 +118,35 @@ class JsonTaskEnumerator final : public TaskEnumerator {
 public:
     // |self_koid| is the koid of this memgraph process, so we can
     // avoid trying to read our own VMOs (which is illegal).
-    JsonTaskEnumerator(mx_koid_t self_koid, bool show_threads, bool show_vmos)
+    JsonTaskEnumerator(zx_koid_t self_koid, bool show_threads, bool show_vmos)
         : self_koid_(self_koid),
           show_threads_(show_threads), show_vmos_(show_vmos) {}
 
-    mx_status_t partial_failure() const { return partial_failure_; }
+    zx_status_t partial_failure() const { return partial_failure_; }
 
 private:
-    static void GetTaskName(mx_handle_t task, mx_koid_t koid,
-                            char out_name[MX_MAX_NAME_LEN]) {
-        mx_status_t s = mx_object_get_property(
-            task, MX_PROP_NAME, out_name, MX_MAX_NAME_LEN);
-        if (s != MX_OK) {
+    static void GetTaskName(zx_handle_t task, zx_koid_t koid,
+                            char out_name[ZX_MAX_NAME_LEN]) {
+        zx_status_t s = zx_object_get_property(
+            task, ZX_PROP_NAME, out_name, ZX_MAX_NAME_LEN);
+        if (s != ZX_OK) {
             fprintf(stderr,
                     "WARNING: failed to get name of task %" PRIu64
                     ": %s (%d)\n",
-                    koid, mx_status_get_string(s), s);
-            snprintf(out_name, MX_MAX_NAME_LEN, "<UNKNOWN>");
+                    koid, zx_status_get_string(s), s);
+            snprintf(out_name, ZX_MAX_NAME_LEN, "<UNKNOWN>");
             // This is unfortunate, but not worth a partial failure
             // since the overall structure of the output is still intact.
         }
         // TODO(dbort): Escape quotes in name
     }
 
-    mx_status_t OnJob(int depth, mx_handle_t job,
-                      mx_koid_t koid, mx_koid_t parent_koid) override {
-        char name[MX_MAX_NAME_LEN];
+    zx_status_t OnJob(int depth, zx_handle_t job,
+                      zx_koid_t koid, zx_koid_t parent_koid) override {
+        char name[ZX_MAX_NAME_LEN];
         GetTaskName(job, koid, name);
 
-        char parent_id[MX_MAX_NAME_LEN + 16];
+        char parent_id[ZX_MAX_NAME_LEN + 16];
         if (parent_koid == 0) {
             // This is the root job, which we treat as a child of the
             // system VMO arena node.
@@ -167,12 +167,12 @@ private:
                parent_id,
                name);
 
-        return MX_OK;
+        return ZX_OK;
     }
 
-    mx_status_t OnProcess(int depth, mx_handle_t process,
-                          mx_koid_t koid, mx_koid_t parent_koid) override {
-        char name[MX_MAX_NAME_LEN];
+    zx_status_t OnProcess(int depth, zx_handle_t process,
+                          zx_koid_t koid, zx_koid_t parent_koid) override {
+        char name[ZX_MAX_NAME_LEN];
         GetTaskName(process, koid, name);
 
         // Print basic info.
@@ -188,20 +188,20 @@ private:
                name);
 
         // Print memory usage summaries.
-        mx_info_task_stats_t info;
-        mx_status_t s = mx_object_get_info(
-            process, MX_INFO_TASK_STATS, &info, sizeof(info), nullptr, nullptr);
-        if (s == MX_ERR_BAD_STATE) {
+        zx_info_task_stats_t info;
+        zx_status_t s = zx_object_get_info(
+            process, ZX_INFO_TASK_STATS, &info, sizeof(info), nullptr, nullptr);
+        if (s == ZX_ERR_BAD_STATE) {
             // Process has exited, but has not been destroyed.
             // Default to zero for all sizes.
             info = {};
-            s = MX_OK;
+            s = ZX_OK;
         }
-        if (s != MX_OK) {
+        if (s != ZX_OK) {
             fprintf(stderr,
                     "WARNING: failed to get mem stats for process %" PRIu64
                     ": %s (%d)\n",
-                    koid, mx_status_get_string(s), s);
+                    koid, zx_status_get_string(s), s);
             set_partial_failure(s);
         } else {
             printf(", "
@@ -217,15 +217,15 @@ private:
         // times in this list; it's up to the consumer of this output
         // to de-duplicate.
         if (show_vmos_ && koid != self_koid_) {
-            mx_info_vmo_t* vmos;
+            zx_info_vmo_t* vmos;
             size_t count = 0;
             size_t avail = 0;
             s = get_vmos(process, &vmos, &count, &avail);
-            if (s != MX_OK) {
+            if (s != ZX_OK) {
                 fprintf(stderr,
                         "WARNING: failed to read VMOs for process %" PRIu64
                         ": %s (%d)\n",
-                        koid, mx_status_get_string(s), s);
+                        koid, zx_status_get_string(s), s);
                 set_partial_failure(s);
             } else {
                 if (count < avail) {
@@ -233,7 +233,7 @@ private:
                             "WARNING: failed to read all VMOs for process "
                             "%" PRIu64 ": count %zu < avail %zu\n",
                             koid, count, avail);
-                    set_partial_failure(MX_ERR_BUFFER_TOO_SMALL);
+                    set_partial_failure(ZX_ERR_BUFFER_TOO_SMALL);
                     // Keep going with the truncated list.
                 }
                 print_vmos(vmos, count);
@@ -242,12 +242,12 @@ private:
         }
         printf("},\n");
 
-        return MX_OK;
+        return ZX_OK;
     }
 
-    mx_status_t OnThread(int depth, mx_handle_t thread,
-                         mx_koid_t koid, mx_koid_t parent_koid) override {
-        char name[MX_MAX_NAME_LEN];
+    zx_status_t OnThread(int depth, zx_handle_t thread,
+                         zx_koid_t koid, zx_koid_t parent_koid) override {
+        char name[ZX_MAX_NAME_LEN];
         GetTaskName(thread, koid, name);
 
         // Print basic info.
@@ -263,37 +263,37 @@ private:
                name);
 
         // Print state.
-        mx_info_thread_t info;
-        mx_status_t s = mx_object_get_info(
-            thread, MX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
-        if (s != MX_OK) {
+        zx_info_thread_t info;
+        zx_status_t s = zx_object_get_info(
+            thread, ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
+        if (s != ZX_OK) {
             fprintf(stderr,
                     "WARNING: failed to get info for thread %" PRIu64
                     ": %s (%d)\n",
-                    koid, mx_status_get_string(s), s);
+                    koid, zx_status_get_string(s), s);
             set_partial_failure(s);
         } else {
             const char* state = "<UNKNOWN>";
-            if (info.wait_exception_port_type != MX_EXCEPTION_PORT_TYPE_NONE) {
+            if (info.wait_exception_port_type != ZX_EXCEPTION_PORT_TYPE_NONE) {
                 state = "EXCEPTION";
             } else {
                 switch (info.state) {
-                case MX_THREAD_STATE_NEW:
+                case ZX_THREAD_STATE_NEW:
                     state = "NEW";
                     break;
-                case MX_THREAD_STATE_RUNNING:
+                case ZX_THREAD_STATE_RUNNING:
                     state = "RUNNING";
                     break;
-                case MX_THREAD_STATE_SUSPENDED:
+                case ZX_THREAD_STATE_SUSPENDED:
                     state = "SUSPENDED";
                     break;
-                case MX_THREAD_STATE_BLOCKED:
+                case ZX_THREAD_STATE_BLOCKED:
                     state = "BLOCKED";
                     break;
-                case MX_THREAD_STATE_DYING:
+                case ZX_THREAD_STATE_DYING:
                     state = "DYING";
                     break;
-                case MX_THREAD_STATE_DEAD:
+                case ZX_THREAD_STATE_DEAD:
                     state = "DEAD";
                     break;
                 }
@@ -301,21 +301,21 @@ private:
             printf(", \"state\": \"%s\"", state);
         }
         printf("},\n");
-        return MX_OK;
+        return ZX_OK;
     }
 
-    const mx_koid_t self_koid_;
+    const zx_koid_t self_koid_;
     const bool show_threads_;
     const bool show_vmos_;
 
     // We try to keep going despite failures, but for scripting
     // purposes it's good to indicate failure at the end.
-    void set_partial_failure(mx_status_t status) {
-        if (partial_failure_ == MX_OK) {
+    void set_partial_failure(zx_status_t status) {
+        if (partial_failure_ == ZX_OK) {
             partial_failure_ = status;
         }
     }
-    mx_status_t partial_failure_ = MX_OK;
+    zx_status_t partial_failure_ = ZX_OK;
 
     bool has_on_job() const final { return true; }
     bool has_on_process() const final { return true; }
@@ -337,19 +337,19 @@ static void print_kernel_json(const char* name, const char* parent,
            size_bytes);
 }
 
-mx_status_t dump_kernel_memory() {
-    mx_handle_t root_resource;
-    mx_status_t s = get_root_resource(&root_resource);
-    if (s != MX_OK) {
+zx_status_t dump_kernel_memory() {
+    zx_handle_t root_resource;
+    zx_status_t s = get_root_resource(&root_resource);
+    if (s != ZX_OK) {
         return s;
     }
-    mx_info_kmem_stats_t stats;
-    s = mx_object_get_info(root_resource, MX_INFO_KMEM_STATS,
+    zx_info_kmem_stats_t stats;
+    s = zx_object_get_info(root_resource, ZX_INFO_KMEM_STATS,
                            &stats, sizeof(stats), nullptr, nullptr);
-    mx_handle_close(root_resource);
-    if (s != MX_OK) {
+    zx_handle_close(root_resource);
+    if (s != ZX_OK) {
         fprintf(stderr, "WARNING: failed to get kernel memory stats: %s (%d)\n",
-                mx_status_get_string(s), s);
+                zx_status_get_string(s), s);
         return s;
     }
 
@@ -364,7 +364,7 @@ mx_status_t dump_kernel_memory() {
     print_kernel_json("mmu", "kernel/physmem", stats.mmu_overhead_bytes);
     print_kernel_json("other", "kernel/physmem", stats.other_bytes);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 void print_help(FILE* f) {
@@ -422,14 +422,14 @@ int main(int argc, char** argv) {
     }
 
     // Get our own koid so we can avoid (illegally) reading this process's VMOs.
-    mx_info_handle_basic_t info;
-    mx_status_t s = mx_object_get_info(mx_process_self(), MX_INFO_HANDLE_BASIC,
+    zx_info_handle_basic_t info;
+    zx_status_t s = zx_object_get_info(zx_process_self(), ZX_INFO_HANDLE_BASIC,
                                        &info, sizeof(info), nullptr, nullptr);
-    if (s != MX_OK) {
+    if (s != ZX_OK) {
         // This will probably result in a partial failure when we try to read
         // our own VMOs, but keep going.
         fprintf(stderr, "WARNING: could not find our own koid: %s (%d)\n",
-                mx_status_get_string(s), s);
+                zx_status_get_string(s), s);
         info = {};
         info.koid = 0;
     }
@@ -440,12 +440,12 @@ int main(int argc, char** argv) {
 
     printf("[\n");
 
-    mx_status_t ks = dump_kernel_memory();
+    zx_status_t ks = dump_kernel_memory();
 
     JsonTaskEnumerator jte(info.koid, show_threads, show_vmos);
     s = jte.WalkRootJobTree();
-    if (s != MX_OK) {
-        fprintf(stderr, "ERROR: %s (%d)\n", mx_status_get_string(s), s);
+    if (s != ZX_OK) {
+        fprintf(stderr, "ERROR: %s (%d)\n", zx_status_get_string(s), s);
         return 1;
     }
 
@@ -464,12 +464,12 @@ int main(int argc, char** argv) {
 
     // Exit with an error status if we hit any partial failures.
     s = jte.partial_failure();
-    if (s == MX_OK) {
+    if (s == ZX_OK) {
         s = ks;
     }
-    if (s != MX_OK) {
+    if (s != ZX_OK) {
         fprintf(stderr, "ERROR: delayed exit after partial failure: %s (%d)\n",
-                mx_status_get_string(s), s);
+                zx_status_get_string(s), s);
         return 1;
     }
     return 0;

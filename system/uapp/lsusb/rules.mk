@@ -14,6 +14,6 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := system/ulib/pretty
 
-MODULE_LIBS := system/ulib/mxio system/ulib/c
+MODULE_LIBS := system/ulib/fdio system/ulib/c
 
 include make/module.mk

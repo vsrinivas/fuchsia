@@ -13,7 +13,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/sizes.c
 
 MODULE_LIBS := \
-    system/ulib/mxio \
+    system/ulib/fdio \
     system/ulib/c
 
 include make/module.mk
@@ -29,7 +29,7 @@ MODULE_NAME := pretty-test
 
 MODULE_LIBS := \
     system/ulib/unittest \
-    system/ulib/mxio \
+    system/ulib/fdio \
     system/ulib/c
 
 MODULE_STATIC_LIBS := \

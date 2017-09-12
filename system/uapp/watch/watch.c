@@ -6,9 +6,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include <mxio/watcher.h>
+#include <fdio/watcher.h>
 
-mx_status_t callback(int dirfd, int event, const char* fn, void* cookie) {
+zx_status_t callback(int dirfd, int event, const char* fn, void* cookie) {
     const char* path = cookie;
 
     switch (event) {
@@ -22,7 +22,7 @@ mx_status_t callback(int dirfd, int event, const char* fn, void* cookie) {
         fprintf(stderr, "watch: waiting...\n");
         break;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 int main(int argc, char** argv) {
@@ -35,9 +35,9 @@ int main(int argc, char** argv) {
         fprintf(stderr, "cannot open directory '%s'\n", argv[1]);
     }
 
-    mx_status_t status;
-    if ((status = mxio_watch_directory(fd, callback, MX_TIME_INFINITE, argv[1])) < 0) {
-        fprintf(stderr, "mxio watch directory failed: %d\n", status);
+    zx_status_t status;
+    if ((status = fdio_watch_directory(fd, callback, ZX_TIME_INFINITE, argv[1])) < 0) {
+        fprintf(stderr, "fdio watch directory failed: %d\n", status);
         return -1;
     }
 

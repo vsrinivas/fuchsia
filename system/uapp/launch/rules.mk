@@ -15,8 +15,8 @@ MODULE_NAME := launch
 
 MODULE_LIBS := \
     system/ulib/launchpad \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/c
 
 include make/module.mk

@@ -9,7 +9,7 @@
 #include <string.h>
 
 
-#include <mxio/io.h>
+#include <fdio/io.h>
 
 // change this number to change how many bytes are being written/read
 #define TEST_LEN 1024

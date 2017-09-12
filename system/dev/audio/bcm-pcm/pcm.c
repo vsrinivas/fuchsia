@@ -15,13 +15,13 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-device.h>
 
-#include <magenta/assert.h>
-#include <magenta/compiler.h>
-#include <magenta/device/audio.h>
-#include <magenta/device/i2c.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/port.h>
-#include <magenta/threads.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
+#include <zircon/device/audio.h>
+#include <zircon/device/i2c.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/threads.h>
 
 #include <bcm/bcm28xx.h>
 #include <bcm/clockman.h>
@@ -69,19 +69,19 @@ typedef union {
 
 typedef struct {
    platform_device_protocol_t pdev;
-    mx_device_t* mxdev;
-    mx_device_t* parent;
+    zx_device_t* mxdev;
+    zx_device_t* parent;
     bcm_pcm_regs_t* control_regs;
     bcm_gpio_ctrl_t* gpio_regs;
     volatile void* clock_regs;
 
     bcm_dma_t dma;
 
-    mx_handle_t stream_ch;
-    mx_handle_t buffer_ch;
-    mx_handle_t pcm_port;
+    zx_handle_t stream_ch;
+    zx_handle_t buffer_ch;
+    zx_handle_t pcm_port;
 
-    mx_handle_t buffer_vmo;
+    zx_handle_t buffer_vmo;
     size_t buffer_size; // size of buffer in bytes
     uint32_t buffer_notifications;
 
@@ -102,8 +102,8 @@ typedef struct {
 
 } bcm_pcm_t;
 
-static mx_status_t pcm_dma_init(bcm_pcm_t* ctx);
-static mx_status_t pcm_deinit_buffer_locked(bcm_pcm_t* ctx);
+static zx_status_t pcm_dma_init(bcm_pcm_t* ctx);
+static zx_status_t pcm_deinit_buffer_locked(bcm_pcm_t* ctx);
 
 static void set_pcm_clock(bcm_pcm_t* pcm_ctx) {
 
@@ -130,10 +130,10 @@ static void set_pcm_clock(bcm_pcm_t* pcm_ctx) {
     hw_wmb();
 }
 
-static void pcm_close_handle(mx_handle_t* handle) {
-    if (*handle != MX_HANDLE_INVALID) {
-        mx_handle_close(*handle);
-        *handle = MX_HANDLE_INVALID;
+static void pcm_close_handle(zx_handle_t* handle) {
+    if (*handle != ZX_HANDLE_INVALID) {
+        zx_handle_close(*handle);
+        *handle = ZX_HANDLE_INVALID;
     }
 }
 
@@ -170,7 +170,7 @@ static int pcm_notify_thread(void* arg) {
     uint32_t offset = 0;
     ctx->notify_running = true;
 
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
 
     double notify_time = (1000000.0 * ctx->buffer_size) /
                          (ctx->sample_rate * ctx->audio_frame_size * ctx->buffer_notifications);
@@ -183,17 +183,17 @@ static int pcm_notify_thread(void* arg) {
     xprintf("notifications = %u\n", ctx->buffer_notifications);
 
     while ((ctx->state & BCM_PCM_STATE_RUNNING) && !(ctx->state & BCM_PCM_STATE_SHUTTING_DOWN)) {
-        mx_nanosleep(mx_deadline_after(MX_USEC(notify_period_us)));
+        zx_nanosleep(zx_deadline_after(ZX_USEC(notify_period_us)));
 
-        mx_paddr_t pos = bcm_dma_get_position(&ctx->dma);
+        zx_paddr_t pos = bcm_dma_get_position(&ctx->dma);
         bcm_dma_paddr_to_offset(&ctx->dma, pos, &offset);
 
         audio_rb_position_notify_t resp;
         resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
         resp.ring_buffer_pos = offset;
 
-        status = mx_channel_write(ctx->buffer_ch, 0, &resp, sizeof(resp), NULL, 0);
-        if (status != MX_OK)
+        status = zx_channel_write(ctx->buffer_ch, 0, &resp, sizeof(resp), NULL, 0);
+        if (status != ZX_OK)
             break;
     }
     xprintf("notification thread shutting down\n");
@@ -201,20 +201,20 @@ static int pcm_notify_thread(void* arg) {
     return 0;
 }
 
-static mx_status_t pcm_get_fifo_depth(bcm_pcm_t* ctx, audio_rb_cmd_get_fifo_depth_req_t req) {
+static zx_status_t pcm_get_fifo_depth(bcm_pcm_t* ctx, audio_rb_cmd_get_fifo_depth_req_t req) {
     audio_rb_cmd_get_fifo_depth_resp_t resp;
     resp.hdr = req.hdr;
-    resp.result = MX_OK;
+    resp.result = ZX_OK;
     resp.fifo_depth = 64;
 
-    return mx_channel_write(ctx->buffer_ch, 0, &resp, sizeof(resp), NULL, 0);
+    return zx_channel_write(ctx->buffer_ch, 0, &resp, sizeof(resp), NULL, 0);
 }
 
-static mx_status_t pcm_stop_locked(bcm_pcm_t* ctx) {
-    mx_status_t res;
+static zx_status_t pcm_stop_locked(bcm_pcm_t* ctx) {
+    zx_status_t res;
 
     if (!(ctx->state & BCM_PCM_STATE_RUNNING)) {
-        res = MX_ERR_BAD_STATE;
+        res = ZX_ERR_BAD_STATE;
     } else {
         ctx->state &= ~BCM_PCM_STATE_RUNNING;
         if (ctx->notify_running) {
@@ -223,15 +223,15 @@ static mx_status_t pcm_stop_locked(bcm_pcm_t* ctx) {
         hifiberry_stop();
         bcm_dma_stop(&ctx->dma);
 
-        res = MX_OK;
+        res = ZX_OK;
     }
     return res;
 }
 
-static mx_status_t pcm_stop_req(bcm_pcm_t* ctx, audio_rb_cmd_stop_req_t req) {
+static zx_status_t pcm_stop_req(bcm_pcm_t* ctx, audio_rb_cmd_stop_req_t req) {
 
     mtx_lock(&ctx->pcm_lock);
-    mx_status_t res;
+    zx_status_t res;
 
     res = pcm_stop_locked(ctx);
 
@@ -239,20 +239,20 @@ static mx_status_t pcm_stop_req(bcm_pcm_t* ctx, audio_rb_cmd_stop_req_t req) {
     resp.result = res;
     resp.hdr = req.hdr;
 
-    res = mx_channel_write(ctx->buffer_ch, 0, &resp, sizeof(resp), NULL, 0);
+    res = zx_channel_write(ctx->buffer_ch, 0, &resp, sizeof(resp), NULL, 0);
     mtx_unlock(&ctx->pcm_lock);
     return res;
 }
 
-static mx_status_t pcm_start(bcm_pcm_t* ctx, audio_rb_cmd_start_req_t req) {
+static zx_status_t pcm_start(bcm_pcm_t* ctx, audio_rb_cmd_start_req_t req) {
 
     audio_rb_cmd_start_resp_t resp;
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
 
     mtx_lock(&ctx->pcm_lock);
 
     if (ctx->state & BCM_PCM_STATE_RUNNING) {
-        status = MX_ERR_BAD_STATE;
+        status = ZX_ERR_BAD_STATE;
         goto pcm_start_out;
     }
     // Enable and clear error flags
@@ -264,7 +264,7 @@ static mx_status_t pcm_start(bcm_pcm_t* ctx, audio_rb_cmd_start_req_t req) {
     ctx->control_regs->cs = BCM_PCM_CS_ENABLE | BCM_PCM_CS_DMAEN | BCM_PCM_CS_TXON;
     hw_wmb();
     //i2s is running at this point
-    resp.start_ticks = mx_ticks_get();
+    resp.start_ticks = zx_ticks_get();
     ctx->state |= BCM_PCM_STATE_RUNNING;
 
     hifiberry_start();
@@ -278,7 +278,7 @@ static mx_status_t pcm_start(bcm_pcm_t* ctx, audio_rb_cmd_start_req_t req) {
             hifiberry_stop();
             bcm_dma_stop(&ctx->dma);
             ctx->state &= BCM_PCM_STATE_RUNNING;
-            status = thrd_status_to_mx_status(thrd_rc);
+            status = thrd_status_to_zx_status(thrd_rc);
         }
     }
 
@@ -286,12 +286,12 @@ pcm_start_out:
     resp.result = status;
     resp.hdr = req.hdr;
 
-    status = mx_channel_write(ctx->buffer_ch, 0, &resp, sizeof(resp), NULL, 0);
+    status = zx_channel_write(ctx->buffer_ch, 0, &resp, sizeof(resp), NULL, 0);
     mtx_unlock(&ctx->pcm_lock);
     return status;
 }
 
-static mx_status_t pcm_deinit_buffer_locked(bcm_pcm_t* ctx) {
+static zx_status_t pcm_deinit_buffer_locked(bcm_pcm_t* ctx) {
 
     ctx->state |= BCM_PCM_STATE_SHUTTING_DOWN;
 
@@ -321,27 +321,27 @@ static mx_status_t pcm_deinit_buffer_locked(bcm_pcm_t* ctx) {
 
     ctx->state &= ~BCM_PCM_STATE_SHUTTING_DOWN;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t pcm_set_stream_fmt(bcm_pcm_t* ctx, audio_stream_cmd_set_format_req_t req) {
-    mx_status_t status;
+static zx_status_t pcm_set_stream_fmt(bcm_pcm_t* ctx, audio_stream_cmd_set_format_req_t req) {
+    zx_status_t status;
     audio_stream_cmd_set_format_resp_t resp;
-    mx_handle_t ret_handle = MX_HANDLE_INVALID;
+    zx_handle_t ret_handle = ZX_HANDLE_INVALID;
 
     mtx_lock(&ctx->pcm_lock);
 
     if (!hifiberry_is_valid_mode(req)) {
-        status = MX_ERR_NOT_SUPPORTED;
+        status = ZX_ERR_NOT_SUPPORTED;
         xprintf("Mode not supported\n");
         goto set_stream_done;
     }
 
-    if (ctx->buffer_ch != MX_HANDLE_INVALID) {
+    if (ctx->buffer_ch != ZX_HANDLE_INVALID) {
         if (ctx->state & BCM_PCM_STATE_RUNNING) {
             // Currently running a previous configuration, client needs to issue a stop
             //  before attempting a new set_strem_fmt.
-            status = MX_ERR_BAD_STATE;
+            status = ZX_ERR_BAD_STATE;
             xprintf("Already running with valid buffer\n");
             goto set_stream_done;
         } else {
@@ -366,26 +366,26 @@ static mx_status_t pcm_set_stream_fmt(bcm_pcm_t* ctx, audio_stream_cmd_set_forma
 
     //Allow pcm state to sync before turning on DMA to prevent frame sync
     // issues.  (only and issue when a frame is > 32-bits, but leaving here for reference)
-    mx_nanosleep(mx_deadline_after(MX_MSEC(10)));
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
 
     status = pcm_dma_init(ctx);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         goto set_stream_fail;
 
     // Might make sense to split the codec init vs codec start
     status = hifiberry_init();
-    if (status != MX_OK)
+    if (status != ZX_OK)
         goto set_stream_fail;
 
-    status = mx_channel_create(0, &ctx->buffer_ch, &ret_handle);
-    if (status != MX_OK)
+    status = zx_channel_create(0, &ctx->buffer_ch, &ret_handle);
+    if (status != ZX_OK)
         goto set_stream_fail;
 
-    status = mx_object_wait_async(ctx->buffer_ch, ctx->pcm_port,
+    status = zx_object_wait_async(ctx->buffer_ch, ctx->pcm_port,
                                   (uint64_t)ctx->buffer_ch,
-                                  MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
-                                  MX_WAIT_ASYNC_REPEATING);
-    if (status == MX_OK)
+                                  ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                  ZX_WAIT_ASYNC_REPEATING);
+    if (status == ZX_OK)
         goto set_stream_done;
 
 set_stream_fail:
@@ -398,7 +398,7 @@ set_stream_done:
     resp.hdr.cmd = AUDIO_STREAM_CMD_SET_FORMAT;
     resp.result = status;
 
-    status = mx_channel_write(ctx->stream_ch, 0, &resp, sizeof(resp), &ret_handle, 1);
+    status = zx_channel_write(ctx->stream_ch, 0, &resp, sizeof(resp), &ret_handle, 1);
     mtx_unlock(&ctx->pcm_lock);
     return status;
 }
@@ -419,45 +419,45 @@ static void pcm_audio_sink_unbind(void* ctx) {
     device_remove(pcm->mxdev);
 }
 
-static mx_status_t pcm_get_buffer(bcm_pcm_t* ctx, audio_rb_cmd_get_buffer_req_t req) {
+static zx_status_t pcm_get_buffer(bcm_pcm_t* ctx, audio_rb_cmd_get_buffer_req_t req) {
 
     mtx_lock(&ctx->pcm_lock);
 
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
 
     audio_rb_cmd_get_buffer_resp_t resp;
     resp.hdr = req.hdr;
 
-    if (ctx->buffer_vmo != MX_HANDLE_INVALID) {
+    if (ctx->buffer_vmo != ZX_HANDLE_INVALID) {
         if (ctx->state & BCM_PCM_STATE_RUNNING) {
-            status = MX_ERR_BAD_STATE;
+            status = ZX_ERR_BAD_STATE;
             goto gb_fail2; // Already running, don't interrupt, but return bad state.
         } else {
             // We already have a buffer configured, need to clean it up.
             pcm_deinit_buffer_locked(ctx);
             status = pcm_dma_init(ctx);
-            if (status != MX_OK)
+            if (status != ZX_OK)
                 goto gb_fail2;
         }
     }
 
     ctx->buffer_size = req.min_ring_buffer_frames * ctx->audio_frame_size;
 
-    status = mx_vmo_create(ctx->buffer_size, 0, &ctx->buffer_vmo);
-    if (status != MX_OK)
+    status = zx_vmo_create(ctx->buffer_size, 0, &ctx->buffer_vmo);
+    if (status != ZX_OK)
         goto gb_fail;
 
-    status = mx_vmo_op_range(ctx->buffer_vmo, MX_VMO_OP_COMMIT, 0, ctx->buffer_size, NULL, 0);
-    if (status != MX_OK)
+    status = zx_vmo_op_range(ctx->buffer_vmo, ZX_VMO_OP_COMMIT, 0, ctx->buffer_size, NULL, 0);
+    if (status != ZX_OK)
         goto gb_fail;
 
-    mx_handle_t ret_handle;
-    status = mx_handle_duplicate(ctx->buffer_vmo, MX_RIGHT_TRANSFER |
-                                                  MX_RIGHT_READ     |
-                                                  MX_RIGHT_WRITE    |
-                                                  MX_RIGHT_MAP,
+    zx_handle_t ret_handle;
+    status = zx_handle_duplicate(ctx->buffer_vmo, ZX_RIGHT_TRANSFER |
+                                                  ZX_RIGHT_READ     |
+                                                  ZX_RIGHT_WRITE    |
+                                                  ZX_RIGHT_MAP,
                                                   &ret_handle);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         goto gb_fail;
 
     xprintf("created %lu byte vmo\n", ctx->buffer_size);
@@ -469,22 +469,22 @@ static mx_status_t pcm_get_buffer(bcm_pcm_t* ctx, audio_rb_cmd_get_buffer_req_t 
                              BCM_DMA_TI_SRC_INC |
                              BCM_DMA_TI_WAIT_RESP;
 
-    mx_paddr_t dest_addr = BCM_PERIPH_BASE_BUS |
+    zx_paddr_t dest_addr = BCM_PERIPH_BASE_BUS |
                           (BCM_PERIPH_ADDR_MASK & (uintptr_t)&((bcm_pcm_regs_t*)I2S_BASE)->fifo);
 
     status = bcm_dma_init_vmo_to_fifo_trans(&ctx->dma, ctx->buffer_vmo, transfer_info, dest_addr,
                                             BCM_DMA_FLAGS_USE_MEM_INDEX |
                                                 BCM_DMA_FLAGS_CIRCULAR);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         xprintf("VMO dma linking failed (%d)\n", status);
-        mx_handle_close(ret_handle);
+        zx_handle_close(ret_handle);
         goto gb_fail;
     }
     resp.result = status;
-    status = mx_channel_write(ctx->buffer_ch, 0, &resp, sizeof(resp), &ret_handle, 1);
+    status = zx_channel_write(ctx->buffer_ch, 0, &resp, sizeof(resp), &ret_handle, 1);
     mtx_unlock(&ctx->pcm_lock);
-    if (status != MX_OK) {
-        mx_handle_close(ret_handle);
+    if (status != ZX_OK) {
+        zx_handle_close(ret_handle);
     }
     return status;
 
@@ -492,7 +492,7 @@ gb_fail:
     pcm_close_handle(&ctx->buffer_vmo);
 gb_fail2:
     resp.result = status;
-    status = mx_channel_write(ctx->buffer_ch, 0, &resp, sizeof(resp), NULL, 0);
+    status = zx_channel_write(ctx->buffer_ch, 0, &resp, sizeof(resp), NULL, 0);
     mtx_unlock(&ctx->pcm_lock);
     return status;
 }
@@ -503,32 +503,32 @@ gb_fail2:
             printf("Bad " #_payload                 \
                    " reqonse length (%u != %zu)\n", \
                    req_size, sizeof(req._payload)); \
-            return MX_ERR_INVALID_ARGS;                \
+            return ZX_ERR_INVALID_ARGS;                \
         }                                           \
         _handler(ctx, req._payload);                \
         break;
 static int pcm_port_thread(void* arg) {
 
     bcm_pcm_t* ctx = arg;
-    mx_status_t status;
+    zx_status_t status;
 
-    mx_port_packet_t port_out;
+    zx_port_packet_t port_out;
 
     buffer_packet_t req;
     xprintf("Port thread running\n");
-    while ((ctx->stream_ch != MX_HANDLE_INVALID) || (ctx->buffer_ch != MX_HANDLE_INVALID)) {
-        status = mx_port_wait(ctx->pcm_port, MX_TIME_INFINITE, &port_out, 0);
-        if (status != MX_OK)
+    while ((ctx->stream_ch != ZX_HANDLE_INVALID) || (ctx->buffer_ch != ZX_HANDLE_INVALID)) {
+        status = zx_port_wait(ctx->pcm_port, ZX_TIME_INFINITE, &port_out, 0);
+        if (status != ZX_OK)
             break;
 
-        mx_handle_t channel = (mx_handle_t)port_out.key;
+        zx_handle_t channel = (zx_handle_t)port_out.key;
 
         uint32_t req_size;
 
-        if (port_out.signal.observed == MX_CHANNEL_READABLE) {
+        if (port_out.signal.observed == ZX_CHANNEL_READABLE) {
 
-            status = mx_channel_read(channel, 0, &req, NULL, sizeof(req), 0, &req_size, NULL);
-            if (status != MX_OK) {
+            status = zx_channel_read(channel, 0, &req, NULL, sizeof(req), 0, &req_size, NULL);
+            if (status != ZX_OK) {
                 if (channel == ctx->buffer_ch) {
                     xprintf("error reading buffer channel...\n");
                     break;
@@ -557,7 +557,7 @@ static int pcm_port_thread(void* arg) {
                     break;
                 }
             }
-        } else if (port_out.signal.observed== MX_CHANNEL_PEER_CLOSED) {
+        } else if (port_out.signal.observed== ZX_CHANNEL_PEER_CLOSED) {
             if (channel == ctx->stream_ch) {
                 xprintf("stream channel closed by peer\n");
                 pcm_close_handle(&ctx->stream_ch);
@@ -578,52 +578,52 @@ static int pcm_port_thread(void* arg) {
 }
 #undef HANDLE_REQ
 
-static mx_status_t pcm_audio_sink_ioctl(void* ctx, uint32_t op,
+static zx_status_t pcm_audio_sink_ioctl(void* ctx, uint32_t op,
                                          const void* in_buf, size_t in_len,
                                          void* out_buf, size_t out_len, size_t* out_actual) {
 
     bcm_pcm_t* pcm = ctx;
     mtx_lock(&pcm->pcm_lock);
 
-    mx_status_t status = MX_OK;
-    mx_handle_t* reply = out_buf;
+    zx_status_t status = ZX_OK;
+    zx_handle_t* reply = out_buf;
 
     if (op != AUDIO_IOCTL_GET_CHANNEL) {
-        status = MX_ERR_INVALID_ARGS;
+        status = ZX_ERR_INVALID_ARGS;
         goto pcm_ioctl_end;
     }
 
     if (pcm->state != BCM_PCM_STATE_SHUTDOWN) {
-        status = MX_ERR_BAD_STATE;
+        status = ZX_ERR_BAD_STATE;
         goto pcm_ioctl_end;
     }
 
-    MX_DEBUG_ASSERT(pcm->stream_ch == MX_HANDLE_INVALID);
-    MX_DEBUG_ASSERT(pcm->pcm_port == MX_HANDLE_INVALID);
+    ZX_DEBUG_ASSERT(pcm->stream_ch == ZX_HANDLE_INVALID);
+    ZX_DEBUG_ASSERT(pcm->pcm_port == ZX_HANDLE_INVALID);
 
-    mx_handle_t ret_handle;
-    status = mx_channel_create(0, &pcm->stream_ch, &ret_handle);
-    if (status != MX_OK) {
-        status = MX_ERR_INTERNAL;
+    zx_handle_t ret_handle;
+    status = zx_channel_create(0, &pcm->stream_ch, &ret_handle);
+    if (status != ZX_OK) {
+        status = ZX_ERR_INTERNAL;
         goto pcm_ioctl_end;
     }
     *reply = ret_handle;
 
-    status = mx_port_create(0, &pcm->pcm_port);
-    if (status != MX_OK) {
+    status = zx_port_create(0, &pcm->pcm_port);
+    if (status != ZX_OK) {
         xprintf("error creating port\n");
-        mx_handle_close(pcm->stream_ch);
+        zx_handle_close(pcm->stream_ch);
         goto pcm_ioctl_end;
     }
 
-    status = mx_object_wait_async(pcm->stream_ch, pcm->pcm_port,
+    status = zx_object_wait_async(pcm->stream_ch, pcm->pcm_port,
                                   (uint64_t)pcm->stream_ch,
-                                  MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
-                                  MX_WAIT_ASYNC_REPEATING);
-    if (status != MX_OK) {
+                                  ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                  ZX_WAIT_ASYNC_REPEATING);
+    if (status != ZX_OK) {
         xprintf("error binding port to stream_ch\n");
-        mx_handle_close(pcm->stream_ch);
-        mx_handle_close(pcm->pcm_port);
+        zx_handle_close(pcm->stream_ch);
+        zx_handle_close(pcm->pcm_port);
         goto pcm_ioctl_end;
     }
 
@@ -631,16 +631,16 @@ static mx_status_t pcm_audio_sink_ioctl(void* ctx, uint32_t op,
                                         pcm_port_thread, pcm,
                                         "pcm_port_thread");
     if (thrd_rc != thrd_success) {
-        mx_handle_close(pcm->stream_ch);
-        mx_handle_close(pcm->pcm_port);
-        status = thrd_status_to_mx_status(thrd_rc);
+        zx_handle_close(pcm->stream_ch);
+        zx_handle_close(pcm->pcm_port);
+        status = thrd_status_to_zx_status(thrd_rc);
         goto pcm_ioctl_end;
     }
     pcm->state |= BCM_PCM_STATE_CLIENT_ACTIVE;
     xprintf("Client request successful...\n");
 pcm_ioctl_end:
     mtx_unlock(&pcm->pcm_lock);
-    if (status == MX_OK) {
+    if (status == ZX_OK) {
         *out_actual = sizeof(ret_handle);
     } else {
         xprintf("Problem with client request: status=%d\n", status);
@@ -648,16 +648,16 @@ pcm_ioctl_end:
     return status;
 }
 
-static mx_status_t pcm_dma_init(bcm_pcm_t* ctx) {
+static zx_status_t pcm_dma_init(bcm_pcm_t* ctx) {
 
-    mx_status_t status = bcm_dma_init(&ctx->dma, DMA_CHAN);
-    if (status != MX_OK)
+    zx_status_t status = bcm_dma_init(&ctx->dma, DMA_CHAN);
+    if (status != ZX_OK)
         return status;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_protocol_device_t pcm_audio_ctx_device_proto = {
+static zx_protocol_device_t pcm_audio_ctx_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .unbind = pcm_audio_sink_unbind,
     .release = pcm_audio_sink_release,
@@ -673,18 +673,18 @@ static int pcm_bootstrap_thread(void* arg) {
     // Carve out some address space for the clock control registers
     void* mmio_base;
     size_t mmio_size;
-    mx_handle_t mmio_handle;
-    mx_status_t status = pdev_map_mmio(&pcm_ctx->pdev, CLOCK_MMIO, MX_CACHE_POLICY_UNCACHED_DEVICE,
+    zx_handle_t mmio_handle;
+    zx_status_t status = pdev_map_mmio(&pcm_ctx->pdev, CLOCK_MMIO, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                        &mmio_base, &mmio_size, &mmio_handle);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         goto pcm_err;
     }
     pcm_ctx->clock_regs = mmio_base;
 
     // Carve out some address space for the device -- it's memory mapped.
-    status = pdev_map_mmio(&pcm_ctx->pdev, GPIO_MMIO, MX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio(&pcm_ctx->pdev, GPIO_MMIO, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                            &mmio_base, &mmio_size, &mmio_handle);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         goto pcm_err;
     }
     pcm_ctx->gpio_regs = mmio_base;
@@ -695,9 +695,9 @@ static int pcm_bootstrap_thread(void* arg) {
     set_gpio_function(pcm_ctx->gpio_regs, BCM_PCM_DIN_ALT0_PIN, FSEL_ALT0);
     set_gpio_function(pcm_ctx->gpio_regs, BCM_PCM_DOUT_ALT0_PIN, FSEL_ALT0);
 
-     status = pdev_map_mmio(&pcm_ctx->pdev, 2, MX_CACHE_POLICY_UNCACHED_DEVICE,
+     status = pdev_map_mmio(&pcm_ctx->pdev, 2, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                            &mmio_base, &mmio_size, &mmio_handle);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         goto pcm_err;
     }
     pcm_ctx->control_regs = mmio_base;
@@ -707,11 +707,11 @@ static int pcm_bootstrap_thread(void* arg) {
         .name = "pcm0",
         .ctx = pcm_ctx,
         .ops = &pcm_audio_ctx_device_proto,
-        .proto_id = MX_PROTOCOL_AUDIO_OUTPUT,
+        .proto_id = ZX_PROTOCOL_AUDIO_OUTPUT,
     };
 
     status = device_add(pcm_ctx->parent, &args, &pcm_ctx->mxdev);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         goto pcm_err;
 
     return 0;
@@ -724,14 +724,14 @@ pcm_err:
     return -1;
 }
 
-static mx_status_t bcm_pcm_bind(void* ctx, mx_device_t* parent, void** cookie) {
+static zx_status_t bcm_pcm_bind(void* ctx, zx_device_t* parent, void** cookie) {
     bcm_pcm_t* pcm_ctx = calloc(1, sizeof(*pcm_ctx));
     if (!pcm_ctx)
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     pcm_ctx->parent = parent;
-    mx_status_t status = device_get_protocol(parent, MX_PROTOCOL_PLATFORM_DEV, &pcm_ctx->pdev);
-    if (status !=  MX_OK) {
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pcm_ctx->pdev);
+    if (status !=  ZX_OK) {
         free(pcm_ctx);
         return status;
     }
@@ -742,21 +742,21 @@ static mx_status_t bcm_pcm_bind(void* ctx, mx_device_t* parent, void** cookie) {
                                         "pcm_bootstrap_thread");
     if (thrd_rc != thrd_success) {
         free(pcm_ctx);
-        return thrd_status_to_mx_status(thrd_rc);
+        return thrd_status_to_zx_status(thrd_rc);
     }
 
     thrd_detach(bootstrap_thrd);
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_driver_ops_t bcm_pcm_driver_ops = {
+static zx_driver_ops_t bcm_pcm_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = bcm_pcm_bind,
 };
 
 // clang-format off
-MAGENTA_DRIVER_BEGIN(bcm_pcm, bcm_pcm_driver_ops, "magenta", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PLATFORM_DEV),
+ZIRCON_DRIVER_BEGIN(bcm_pcm, bcm_pcm_driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_BROADCOMM),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_BROADCOMM_PCM),
-MAGENTA_DRIVER_END(bcm_pcm)
+ZIRCON_DRIVER_END(bcm_pcm)

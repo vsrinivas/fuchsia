@@ -6,8 +6,8 @@
 #include <regex.h>
 #include <unistd.h>
 
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
 #include <launchpad/launchpad.h>
@@ -86,18 +86,18 @@ bool test_crash(const char* crash_arg) {
 
     // Make sure we bind an exception port to the process before we start
     // it running.
-    mx_handle_t crasher_proc = launchpad_get_process_handle(crasher_lp);
-    mx_handle_t exception_port;
-    ASSERT_EQ(mx_port_create(0, &exception_port), MX_OK);
-    ASSERT_EQ(mx_task_bind_exception_port(crasher_proc, exception_port,
-                                          kSysExceptionKey, 0), MX_OK);
+    zx_handle_t crasher_proc = launchpad_get_process_handle(crasher_lp);
+    zx_handle_t exception_port;
+    ASSERT_EQ(zx_port_create(0, &exception_port), ZX_OK);
+    ASSERT_EQ(zx_task_bind_exception_port(crasher_proc, exception_port,
+                                          kSysExceptionKey, 0), ZX_OK);
 
     // Launch the crasher process.
     launchpad_load_from_file(crasher_lp, argv[0]);
     launchpad_clone(crasher_lp, LP_CLONE_ALL);
     launchpad_set_args(crasher_lp, fbl::count_of(argv), argv);
     const char* errmsg;
-    ASSERT_EQ(launchpad_go(crasher_lp, &crasher_proc, &errmsg), MX_OK);
+    ASSERT_EQ(launchpad_go(crasher_lp, &crasher_proc, &errmsg), ZX_OK);
 
     // Launch a test instance of crashlogger.
     const char* crashlogger_argv[] = { "/boot/bin/crashlogger" };
@@ -107,14 +107,14 @@ bool test_crash(const char* crash_arg) {
     launchpad_clone(crasher_lp, LP_CLONE_ALL);
     launchpad_set_args(crashlogger_lp, fbl::count_of(crashlogger_argv),
                        crashlogger_argv);
-    mx_handle_t handles[] = { exception_port };
+    zx_handle_t handles[] = { exception_port };
     uint32_t handle_types[] = { PA_HND(PA_USER0, 0) };
     launchpad_add_handles(crashlogger_lp, fbl::count_of(handles), handles,
                           handle_types);
     int pipe_fd;
     launchpad_add_pipe(crashlogger_lp, &pipe_fd, STDOUT_FILENO);
-    mx_handle_t crashlogger_proc;
-    ASSERT_EQ(launchpad_go(crashlogger_lp, &crashlogger_proc, &errmsg), MX_OK);
+    zx_handle_t crashlogger_proc;
+    ASSERT_EQ(launchpad_go(crashlogger_lp, &crashlogger_proc, &errmsg), ZX_OK);
 
     // Read crashlogger's output into a buffer.  Stop reading when we get
     // an end-of-backtrace line which matches the following regular
@@ -144,13 +144,13 @@ bool test_crash(const char* crash_arg) {
     ASSERT_TRUE(overall_regex.Matches(output.get()));
 
     // Clean up.
-    ASSERT_EQ(mx_object_wait_one(crasher_proc, MX_PROCESS_TERMINATED,
-                                 MX_TIME_INFINITE, NULL), MX_OK);
-    ASSERT_EQ(mx_handle_close(crasher_proc), MX_OK);
-    ASSERT_EQ(mx_task_kill(crashlogger_proc), MX_OK);
-    ASSERT_EQ(mx_object_wait_one(crashlogger_proc, MX_PROCESS_TERMINATED,
-                                 MX_TIME_INFINITE, NULL), MX_OK);
-    ASSERT_EQ(mx_handle_close(crashlogger_proc), MX_OK);
+    ASSERT_EQ(zx_object_wait_one(crasher_proc, ZX_PROCESS_TERMINATED,
+                                 ZX_TIME_INFINITE, NULL), ZX_OK);
+    ASSERT_EQ(zx_handle_close(crasher_proc), ZX_OK);
+    ASSERT_EQ(zx_task_kill(crashlogger_proc), ZX_OK);
+    ASSERT_EQ(zx_object_wait_one(crashlogger_proc, ZX_PROCESS_TERMINATED,
+                                 ZX_TIME_INFINITE, NULL), ZX_OK);
+    ASSERT_EQ(zx_handle_close(crashlogger_proc), ZX_OK);
     return true;
 }
 

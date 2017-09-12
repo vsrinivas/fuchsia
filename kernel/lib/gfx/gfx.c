@@ -28,8 +28,8 @@
 #include <lib/gfx.h>
 #include <dev/display.h>
 
-#include <magenta/font/font-9x16.h>
-#include <magenta/font/font-18x32.h>
+#include <zircon/font/font-9x16.h>
+#include <zircon/font/font-18x32.h>
 
 const struct gfx_font font_9x16 = {
     .data = FONT9X16,
@@ -694,14 +694,14 @@ int gfx_init_surface(gfx_surface *surface, void *ptr, uint width, uint height, u
             break;
         default:
             dprintf(INFO, "invalid graphics format\n");
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
     }
 
     if (ptr == NULL) {
         // allocate a buffer
         ptr = malloc(surface->len);
         if (ptr == NULL) {
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
         }
         DEBUG_ASSERT(ptr);
         surface->flags |= GFX_FLAG_FREE_ON_DESTROY;
@@ -753,7 +753,7 @@ int gfx_init_surface_from_display(gfx_surface *surface, struct display_info *inf
             break;
         default:
             dprintf(CRITICAL, "invalid graphics format %d", info->format);
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
     }
 
     uint32_t flags = (info->flags & DISPLAY_FLAG_NEEDS_CACHE_FLUSH) ? GFX_FLAG_FLUSH_CPU_CACHE : 0;

@@ -5,8 +5,8 @@
 #pragma once
 
 #include <hypervisor/pci.h>
-#include <magenta/syscalls/hypervisor.h>
-#include <magenta/types.h>
+#include <zircon/syscalls/hypervisor.h>
+#include <zircon/types.h>
 #include <virtio/virtio.h>
 
 // clang-format off
@@ -24,21 +24,21 @@ struct vring_avail;
 struct vring_used;
 
 typedef struct io_apic io_apic_t;
-typedef struct mx_vcpu_io mx_vcpu_io_t;
+typedef struct zx_vcpu_io zx_vcpu_io_t;
 typedef struct virtio_device virtio_device_t;
 typedef struct virtio_queue virtio_queue_t;
 
 /* Device-specific operations. */
 typedef struct virtio_device_ops {
     // Read a device configuration field.
-    mx_status_t (*read)(const virtio_device_t* device, uint16_t port, uint8_t access_size,
-                        mx_vcpu_io_t* vcpu_io);
+    zx_status_t (*read)(const virtio_device_t* device, uint16_t port, uint8_t access_size,
+                        zx_vcpu_io_t* vcpu_io);
 
     // Write a device configuration field.
-    mx_status_t (*write)(virtio_device_t* device, uint16_t port, const mx_vcpu_io_t* io);
+    zx_status_t (*write)(virtio_device_t* device, uint16_t port, const zx_vcpu_io_t* io);
 
     // Handle notify events for one of this devices queues.
-    mx_status_t (*queue_notify)(virtio_device_t* device, uint16_t queue_sel);
+    zx_status_t (*queue_notify)(virtio_device_t* device, uint16_t queue_sel);
 } virtio_device_ops_t;
 
 static const size_t kVirtioPciNumCapabilities = 4;
@@ -105,10 +105,10 @@ typedef struct virtio_device {
 void virtio_pci_init(virtio_device_t* device);
 
 /* Send an interrupt back to the guest for a device. */
-mx_status_t virtio_device_notify(virtio_device_t* device);
+zx_status_t virtio_device_notify(virtio_device_t* device);
 
 /* Handle kicks from the guest to process a queue. */
-mx_status_t virtio_device_kick(virtio_device_t* device, uint16_t queue_sel);
+zx_status_t virtio_device_kick(virtio_device_t* device, uint16_t queue_sel);
 
 /* Stores the Virtio queue based on the ring provided by the guest.
  *
@@ -159,25 +159,25 @@ typedef struct virtio_queue {
  * used     - To be incremented by the number of bytes used from addr.
  * ctx      - The same pointer passed to virtio_queue_handler.
  */
-typedef mx_status_t (*virtio_queue_fn_t)(void* addr, uint32_t len, uint16_t flags, uint32_t* used,
+typedef zx_status_t (*virtio_queue_fn_t)(void* addr, uint32_t len, uint16_t flags, uint32_t* used,
                                          void* ctx);
 
 /* Handles the next available descriptor in a Virtio queue, calling handler to
  * process individual payload buffers.
  *
- * On success the function either returns MX_OK if there are no more descriptors
- * available, or MX_ERR_NEXT if there are more available descriptors to process.
+ * On success the function either returns ZX_OK if there are no more descriptors
+ * available, or ZX_ERR_NEXT if there are more available descriptors to process.
  */
-mx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handler, void* ctx);
+zx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handler, void* ctx);
 
 /* Get the index of the next descriptor in the available ring.
  *
  * If a buffer is a available, the descriptor index is written to |index|, the
- * queue index pointer is incremented, and MX_OK is returned.
+ * queue index pointer is incremented, and ZX_OK is returned.
  *
- * If no buffers are available MX_ERR_NOT_FOUND is returned.
+ * If no buffers are available ZX_ERR_NOT_FOUND is returned.
  */
-mx_status_t virtio_queue_next_avail(virtio_queue_t* queue, uint16_t* index);
+zx_status_t virtio_queue_next_avail(virtio_queue_t* queue, uint16_t* index);
 
 /* Blocking variant of virtio_queue_next_avail. */
 void virtio_queue_wait(virtio_queue_t* queue, uint16_t* index);
@@ -202,20 +202,20 @@ void virtio_queue_set_used_addr(virtio_queue_t* queue, uint64_t used_addr);
  * used     - To be incremented by the number of bytes used from addr.
  * ctx      - The same pointer passed to virtio_queue_poll.
  *
- * The queue will continue to be polled as long as this method returns MX_OK.
- * The error MX_ERR_STOP will be treated as a special value to indicate queue
+ * The queue will continue to be polled as long as this method returns ZX_OK.
+ * The error ZX_ERR_STOP will be treated as a special value to indicate queue
  * polling should stop gracefully and terminate the thread.
  *
  * Any other error values will be treated as unexpected errors that will cause
  * the polling thread to be terminated with a non-zero exit value.
  */
-typedef mx_status_t (*virtio_queue_poll_fn_t)(virtio_queue_t* queue, uint16_t head,
+typedef zx_status_t (*virtio_queue_poll_fn_t)(virtio_queue_t* queue, uint16_t head,
                                               uint32_t* used, void* ctx);
 
 /* Spawn a thread to wait for descriptors to be available and invoke the
  * provided handler on each available buffer asyncronously.
  */
-mx_status_t virtio_queue_poll(virtio_queue_t* queue, virtio_queue_poll_fn_t handler, void* ctx);
+zx_status_t virtio_queue_poll(virtio_queue_t* queue, virtio_queue_poll_fn_t handler, void* ctx);
 
 /* A higher-level API for vring_desc. */
 typedef struct virtio_desc {
@@ -238,7 +238,7 @@ typedef struct virtio_desc {
  * virtio_queue_next_avail (including any chained decriptors) and before
  * they've been released with virtio_queue_return.
  */
-mx_status_t virtio_queue_read_desc(virtio_queue_t* queue, uint16_t index, virtio_desc_t* desc);
+zx_status_t virtio_queue_read_desc(virtio_queue_t* queue, uint16_t index, virtio_desc_t* desc);
 
 /* Return a descriptor to the used ring.
  *

@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS;
 
 #include <inttypes.h>
 
-void backtrace(mx_handle_t process, mx_handle_t thread,
+void backtrace(zx_handle_t process, zx_handle_t thread,
                uintptr_t pc, uintptr_t sp, uintptr_t fp,
                bool use_libunwind);
 

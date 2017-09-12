@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/device/audio.h>
-#include <magenta/device/i2c.h>
+#include <zircon/device/audio.h>
+#include <zircon/device/i2c.h>
 
 #pragma once
 // clang-format off

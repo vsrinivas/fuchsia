@@ -24,8 +24,8 @@
 #include <platform/pc/memory.h>
 #include <platform/console.h>
 #include <platform/keyboard.h>
-#include <magenta/boot/bootdata.h>
-#include <magenta/boot/multiboot.h>
+#include <zircon/boot/bootdata.h>
+#include <zircon/boot/multiboot.h>
 #include <arch/mmu.h>
 #include <arch/mp.h>
 #include <arch/x86.h>
@@ -357,7 +357,7 @@ static void platform_ensure_display_memtype(uint level)
             0 /* vmm flags */,
             ARCH_MMU_FLAG_WRITE_COMBINING | ARCH_MMU_FLAG_PERM_READ |
                 ARCH_MMU_FLAG_PERM_WRITE);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         TRACEF("Failed to map boot_fb: %d\n", status);
         return;
     }
@@ -367,8 +367,8 @@ static void platform_ensure_display_memtype(uint level)
 }
 LK_INIT_HOOK(display_memtype, &platform_ensure_display_memtype, LK_INIT_LEVEL_VM + 1);
 
-static efi_guid magenta_guid = MAGENTA_VENDOR_GUID;
-static char16_t crashlog_name[] = MAGENTA_CRASHLOG_EFIVAR;
+static efi_guid zircon_guid = ZIRCON_VENDOR_GUID;
+static char16_t crashlog_name[] = ZIRCON_CRASHLOG_EFIVAR;
 
 static fbl::RefPtr<VmAspace> efi_aspace;
 
@@ -457,14 +457,14 @@ void platform_init_crashlog(void) {
         //      the platforms we're working on right now, but is probably
         //      not entirely correct.
         void* ptr = (void*) 0;
-        mx_status_t r = efi_aspace->AllocPhysical("1:1", 16*1024*1024*1024UL, &ptr,
+        zx_status_t r = efi_aspace->AllocPhysical("1:1", 16*1024*1024*1024UL, &ptr,
                                                   PAGE_SIZE_SHIFT, 0,
                                                   VmAspace::VMM_FLAG_VALLOC_SPECIFIC,
                                                   ARCH_MMU_FLAG_PERM_READ |
                                                   ARCH_MMU_FLAG_PERM_WRITE |
                                                   ARCH_MMU_FLAG_PERM_EXECUTE);
 
-        if (r != MX_OK) {
+        if (r != ZX_OK) {
             efi_aspace.reset();
         }
     }
@@ -489,7 +489,7 @@ static size_t efi_stow_crashlog(void* log, size_t len) {
 
     efi_system_table* sys = static_cast<efi_system_table*>(bootloader.efi_system_table);
     efi_runtime_services* rs = sys->RuntimeServices;
-    if (rs->SetVariable(crashlog_name, &magenta_guid, MAGENTA_CRASHLOG_EFIATTR, len, log) == 0) {
+    if (rs->SetVariable(crashlog_name, &zircon_guid, ZIRCON_CRASHLOG_EFIATTR, len, log) == 0) {
         return len;
     } else {
         return 0;
@@ -516,7 +516,7 @@ size_t platform_recover_crashlog(size_t len, void* cookie,
 typedef struct e820_walk_ctx {
     uint8_t* buf;
     size_t len;
-    mx_status_t ret;
+    zx_status_t ret;
 } e820_walk_ctx_t;
 
 static void e820_entry_walk(uint64_t base, uint64_t size, bool is_mem, void* void_ctx) {
@@ -524,12 +524,12 @@ static void e820_entry_walk(uint64_t base, uint64_t size, bool is_mem, void* voi
 
     // Something went wrong in one of the previous calls, don't attempt to
     // continue.
-    if (ctx->ret != MX_OK)
+    if (ctx->ret != ZX_OK)
         return;
 
     // Make sure we have enough space in the buffer.
     if (ctx->len < sizeof(e820entry_t)) {
-        ctx->ret = MX_ERR_BUFFER_TOO_SMALL;
+        ctx->ret = ZX_ERR_BUFFER_TOO_SMALL;
         return;
     }
 
@@ -544,25 +544,25 @@ static void e820_entry_walk(uint64_t base, uint64_t size, bool is_mem, void* voi
 
     ctx->buf += sizeof(*entry);
     ctx->len -= sizeof(*entry);
-    ctx->ret = MX_OK;
+    ctx->ret = ZX_OK;
 }
 
 // Give the platform an opportunity to append any platform specific bootdata
 // sections.
-mx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len) {
+zx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len) {
     uint8_t e820buf[sizeof(e820entry_t) * 32];
 
     e820_walk_ctx ctx;
     ctx.buf = e820buf;
     ctx.len = sizeof(e820buf);
-    ctx.ret = MX_OK;
+    ctx.ret = ZX_OK;
 
-    mx_status_t ret = enumerate_e820(e820_entry_walk, &ctx);
+    zx_status_t ret = enumerate_e820(e820_entry_walk, &ctx);
 
-    if (ret != MX_OK)
+    if (ret != ZX_OK)
         return ret;
 
-    if (ctx.ret != MX_OK)
+    if (ctx.ret != ZX_OK)
         return ctx.ret;
 
     uint32_t section_length = (uint32_t)(sizeof(e820buf) - ctx.len);
@@ -570,14 +570,14 @@ mx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len) {
     ret = bootdata_append_section(bootdata, len, e820buf, section_length,
                                   BOOTDATA_E820_TABLE, 0, 0);
 
-    if (ret != MX_OK)
+    if (ret != ZX_OK)
         return ret;
 
     // Append information about the framebuffer to the bootdata
     if (bootloader.fb.base) {
         ret = bootdata_append_section(bootdata, len, (uint8_t*)&bootloader.fb,
                                       sizeof(bootloader.fb), BOOTDATA_FRAMEBUFFER, 0, 0);
-        if (ret != MX_OK)
+        if (ret != ZX_OK)
             return ret;
     }
 
@@ -585,18 +585,18 @@ mx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len) {
         ret = bootdata_append_section(bootdata, len, (uint8_t*)&bootloader.efi_system_table,
                                       sizeof(bootloader.efi_system_table),
                                       BOOTDATA_EFI_SYSTEM_TABLE, 0, 0);
-        if (ret != MX_OK)
+        if (ret != ZX_OK)
             return ret;
     }
 
     if (bootloader.acpi_rsdp) {
         ret = bootdata_append_section(bootdata, len, (uint8_t*)&bootloader.acpi_rsdp,
                                       sizeof(bootloader.acpi_rsdp), BOOTDATA_ACPI_RSDP, 0, 0);
-        if (ret != MX_OK)
+        if (ret != ZX_OK)
             return ret;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 // Number of pages required to identity map 4GiB of memory.
@@ -658,11 +658,11 @@ void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
                                 ARCH_MMU_FLAG_PERM_EXECUTE;
     void* identity_address = 0x0;
     paddr_t pa = 0;
-    mx_status_t result = identity_aspace->AllocPhysical("1:1 mapping", kBytesToIdentityMap,
+    zx_status_t result = identity_aspace->AllocPhysical("1:1 mapping", kBytesToIdentityMap,
                                             &identity_address, 0, pa,
                                             VmAspace::VMM_FLAG_VALLOC_SPECIFIC,
                                             perm_flags_rwx);
-    if (result != MX_OK) {
+    if (result != ZX_OK) {
         panic("failed to identity map low memory");
     }
 
@@ -740,7 +740,7 @@ static void platform_init_smp(void)
     uint32_t num_cpus = 0;
 
     status_t status = platform_enumerate_cpus(NULL, 0, &num_cpus);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         TRACEF("failed to enumerate CPUs, disabling SMP\n");
         return;
     }
@@ -758,7 +758,7 @@ static void platform_init_smp(void)
     // find the list of all cpu apic ids into a temporary list
     uint32_t real_num_cpus;
     status = platform_enumerate_cpus(apic_ids_temp, num_cpus, &real_num_cpus);
-    if (status != MX_OK || num_cpus != real_num_cpus) {
+    if (status != ZX_OK || num_cpus != real_num_cpus) {
         TRACEF("failed to enumerate CPUs, disabling SMP\n");
         free(apic_ids);
         return;

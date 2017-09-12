@@ -179,7 +179,7 @@ static void timer_far_deadline(void) {
 
     timer_set(&timer, UINT64_MAX - 5, TIMER_SLACK_CENTER, 0, timer_cb, &event);
     status_t st = event_wait_deadline(&event, current_time() + LK_MSEC(100), false);
-    if (st != MX_ERR_TIMED_OUT) {
+    if (st != ZX_ERR_TIMED_OUT) {
         printf("error: unexpected timer fired!\n");
     } else {
         timer_cancel(&timer);

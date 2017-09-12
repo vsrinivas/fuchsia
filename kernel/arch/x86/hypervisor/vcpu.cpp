@@ -13,7 +13,7 @@
 #include <vm/fault.h>
 #include <vm/pmm.h>
 #include <vm/vm_object.h>
-#include <magenta/syscalls/hypervisor.h>
+#include <zircon/syscalls/hypervisor.h>
 #include <fbl/auto_call.h>
 
 #include "vcpu_priv.h"
@@ -28,7 +28,7 @@ static const uint32_t kInterruptInfoValid = 1u << 31;
 static const uint32_t kInterruptInfoDeliverErrorCode = 1u << 11;
 static const uint32_t kInterruptTypeHardwareException = 3u << 8;
 
-static mx_status_t vmptrld(paddr_t pa) {
+static zx_status_t vmptrld(paddr_t pa) {
     uint8_t err;
 
     __asm__ volatile(
@@ -37,10 +37,10 @@ static mx_status_t vmptrld(paddr_t pa) {
         : [pa] "m"(pa)
         : "cc", "memory");
 
-    return err ? MX_ERR_INTERNAL : MX_OK;
+    return err ? ZX_ERR_INTERNAL : ZX_OK;
 }
 
-static mx_status_t vmclear(paddr_t pa) {
+static zx_status_t vmclear(paddr_t pa) {
     uint8_t err;
 
     __asm__ volatile(
@@ -49,7 +49,7 @@ static mx_status_t vmclear(paddr_t pa) {
         : [pa] "m"(pa)
         : "cc", "memory");
 
-    return err ? MX_ERR_INTERNAL : MX_OK;
+    return err ? ZX_ERR_INTERNAL : ZX_OK;
 }
 
 static uint64_t vmread(uint64_t field) {
@@ -62,7 +62,7 @@ static uint64_t vmread(uint64_t field) {
         : [field] "r"(field)
         : "cc");
 
-    DEBUG_ASSERT(err == MX_OK);
+    DEBUG_ASSERT(err == ZX_OK);
     return val;
 }
 
@@ -75,15 +75,15 @@ static void vmwrite(uint64_t field, uint64_t val) {
         : [val] "r"(val), [field] "r"(field)
         : "cc");
 
-    DEBUG_ASSERT(err == MX_OK);
+    DEBUG_ASSERT(err == ZX_OK);
 }
 
 AutoVmcs::AutoVmcs(const paddr_t vmcs_address)
     : vmcs_address_(vmcs_address) {
     DEBUG_ASSERT(!arch_ints_disabled());
     arch_disable_ints();
-    __UNUSED mx_status_t status = vmptrld(vmcs_address_);
-    DEBUG_ASSERT(status == MX_OK);
+    __UNUSED zx_status_t status = vmptrld(vmcs_address_);
+    DEBUG_ASSERT(status == ZX_OK);
 }
 
 AutoVmcs::~AutoVmcs() {
@@ -93,8 +93,8 @@ AutoVmcs::~AutoVmcs() {
 
 void AutoVmcs::Reload() {
     DEBUG_ASSERT(arch_ints_disabled());
-    __UNUSED mx_status_t status = vmptrld(vmcs_address_);
-    DEBUG_ASSERT(status == MX_OK);
+    __UNUSED zx_status_t status = vmptrld(vmcs_address_);
+    DEBUG_ASSERT(status == ZX_OK);
 }
 
 void AutoVmcs::InterruptibleReload() {
@@ -175,22 +175,22 @@ void AutoVmcs::Write(VmcsFieldXX field, uint64_t val) {
     vmwrite(static_cast<uint64_t>(field), val);
 }
 
-mx_status_t AutoVmcs::SetControl(VmcsField32 controls, uint64_t true_msr, uint64_t old_msr,
+zx_status_t AutoVmcs::SetControl(VmcsField32 controls, uint64_t true_msr, uint64_t old_msr,
                                  uint32_t set, uint32_t clear) {
     uint32_t allowed_0 = static_cast<uint32_t>(BITS(true_msr, 31, 0));
     uint32_t allowed_1 = static_cast<uint32_t>(BITS_SHIFT(true_msr, 63, 32));
     if ((allowed_1 & set) != set) {
         dprintf(SPEW, "can not set vmcs controls %#x\n", static_cast<uint>(controls));
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
     if ((~allowed_0 & clear) != clear) {
         dprintf(SPEW, "can not clear vmcs controls %#x\n", static_cast<uint>(controls));
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
     if ((set & clear) != 0) {
         dprintf(SPEW, "can not set and clear the same vmcs controls %#x\n",
                 static_cast<uint>(controls));
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     // Reference Volume 3, Section 31.5.1, Algorithm 3, Part C. If the control
@@ -200,7 +200,7 @@ mx_status_t AutoVmcs::SetControl(VmcsField32 controls, uint64_t true_msr, uint64
     uint32_t unknown = flexible & ~(set | clear);
     uint32_t defaults = unknown & BITS(old_msr, 31, 0);
     Write(controls, allowed_0 | defaults | set);
-    return MX_OK;
+    return ZX_OK;
 }
 
 static uint cpu_of(uint16_t vpid) {
@@ -267,12 +267,12 @@ static void edit_msr_list(VmxPage* msr_list_page, size_t index, uint32_t msr, ui
     entry->value = value;
 }
 
-mx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr_t cr3,
+zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr_t cr3,
                       paddr_t virtual_apic_address, paddr_t apic_access_address,
                       paddr_t msr_bitmaps_address, paddr_t pml4_address, VmxState* vmx_state,
                       VmxPage* host_msr_page, VmxPage* guest_msr_page) {
-    mx_status_t status = vmclear(vmcs_address);
-    if (status != MX_OK)
+    zx_status_t status = vmclear(vmcs_address);
+    if (status != ZX_OK)
         return status;
 
     AutoVmcs vmcs(vmcs_address);
@@ -292,7 +292,7 @@ mx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
                                  // Enable use of INVPCID instruction.
                                  PROCBASED_CTLS2_INVPCID,
                              0);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     // Setup pin-based VMCS controls.
@@ -304,7 +304,7 @@ mx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
                                  // Non-maskable interrupts cause a VM exit.
                                  PINBASED_CTLS_NMI_EXITING,
                              0);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     // Setup primary processor-based VMCS controls.
@@ -331,7 +331,7 @@ mx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
                                  PROCBASED_CTLS_CR8_LOAD_EXITING |
                                  // Disable VM exit on CR8 store.
                                  PROCBASED_CTLS_CR8_STORE_EXITING);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     // We only enable interrupt-window exiting above to ensure that the
@@ -355,7 +355,7 @@ mx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
                                  // Load the host IA32_EFER MSR on exit.
                                  EXIT_CTLS_LOAD_IA32_EFER,
                              0);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     // Setup VM-entry VMCS controls.
@@ -370,7 +370,7 @@ mx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
                                  // Load the guest IA32_EFER MSR on entry.
                                  ENTRY_CTLS_LOAD_IA32_EFER,
                              0);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     // From Volume 3, Section 24.6.3: The exception bitmap is a 32-bit field
@@ -483,14 +483,14 @@ mx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
                    X86_CR0_PG | // Enable paging
                    X86_CR0_NE; // Enable internal x87 exception handling
     if (cr_is_invalid(cr0, X86_MSR_IA32_VMX_CR0_FIXED0, X86_MSR_IA32_VMX_CR0_FIXED1)) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     vmcs.Write(VmcsFieldXX::GUEST_CR0, cr0);
 
     uint64_t cr4 = X86_CR4_PAE | // Enable PAE paging
                    X86_CR4_VMXE; // Enable VMX
     if (cr_is_invalid(cr4, X86_MSR_IA32_VMX_CR4_FIXED0, X86_MSR_IA32_VMX_CR4_FIXED1)) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     vmcs.Write(VmcsFieldXX::GUEST_CR4, cr4);
 
@@ -557,17 +557,17 @@ mx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
         vmx_state->guest_state.xcr0 = X86_XSAVE_STATE_X87;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 // static
-mx_status_t Vcpu::Create(mx_vaddr_t ip, mx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
+zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
                          paddr_t apic_access_address, paddr_t msr_bitmaps_address,
                          GuestPhysicalAddressSpace* gpas, PacketMux& mux,
                          fbl::unique_ptr<Vcpu>* out) {
     uint16_t vpid;
-    mx_status_t status = alloc_vpid(&vpid);
-    if (status != MX_OK)
+    zx_status_t status = alloc_vpid(&vpid);
+    if (status != ZX_OK)
         return status;
     auto auto_call = fbl::MakeAutoCall([=]() { free_vpid(vpid); });
 
@@ -587,32 +587,32 @@ mx_status_t Vcpu::Create(mx_vaddr_t ip, mx_vaddr_t cr3, fbl::RefPtr<VmObject> ap
     fbl::AllocChecker ac;
     fbl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(thread, vpid, apic_vmo, gpas, mux));
     if (!ac.check())
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     timer_init(&vcpu->local_apic_state_.timer);
     event_init(&vcpu->local_apic_state_.event, false, EVENT_FLAG_AUTOUNSIGNAL);
     status = vcpu->local_apic_state_.interrupt_bitmap.Reset(kNumInterrupts);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     paddr_t virtual_apic_address;
     status = vcpu->apic_vmo_->Lookup(0, PAGE_SIZE, kPfFlags, guest_lookup_page,
                                      &virtual_apic_address);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
     vcpu->local_apic_state_.apic_addr = paddr_to_kvaddr(virtual_apic_address);
 
     VmxInfo vmx_info;
     status = vcpu->host_msr_page_.Alloc(vmx_info, 0);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     status = vcpu->guest_msr_page_.Alloc(vmx_info, 0);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     status = vcpu->vmcs_page_.Alloc(vmx_info, 0);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     VmxRegion* region = vcpu->vmcs_page_.VirtualAddress<VmxRegion>();
@@ -620,12 +620,12 @@ mx_status_t Vcpu::Create(mx_vaddr_t ip, mx_vaddr_t cr3, fbl::RefPtr<VmObject> ap
     status = vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), vpid, ip, cr3, virtual_apic_address,
                        apic_access_address, msr_bitmaps_address, gpas->Pml4Address(),
                        &vcpu->vmx_state_, &vcpu->host_msr_page_, &vcpu->guest_msr_page_);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     auto_call.cancel();
     *out = fbl::move(vcpu);
-    return MX_OK;
+    return ZX_OK;
 }
 
 Vcpu::Vcpu(const thread_t* thread, uint16_t vpid, fbl::RefPtr<VmObject> apic_vmo,
@@ -641,14 +641,14 @@ Vcpu::~Vcpu() {
     // pin the current thread to the same CPU as the VCPU.
     AutoPin pin(this);
     vmclear(vmcs_page_.PhysicalAddress());
-    __UNUSED mx_status_t status = free_vpid(vpid_);
-    DEBUG_ASSERT(status == MX_OK);
+    __UNUSED zx_status_t status = free_vpid(vpid_);
+    DEBUG_ASSERT(status == ZX_OK);
 }
 
-mx_status_t Vcpu::Resume(mx_port_packet_t* packet) {
+zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     if (!check_pinned_cpu_invariant(thread_, vpid_))
-        return MX_ERR_BAD_STATE;
-    mx_status_t status;
+        return ZX_ERR_BAD_STATE;
+    zx_status_t status;
     do {
         AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
         if (x86_feature_test(X86_FEATURE_XSAVE)) {
@@ -662,7 +662,7 @@ mx_status_t Vcpu::Resume(mx_port_packet_t* packet) {
             vmx_state_.guest_state.xcr0 = x86_xgetbv(0);
             x86_xsetbv(0, vmx_state_.host_state.xcr0);
         }
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             uint64_t error = vmcs.Read(VmcsField32::INSTRUCTION_ERROR);
             dprintf(SPEW, "vmlaunch failed: %#" PRIx64 "\n", error);
         } else {
@@ -670,8 +670,8 @@ mx_status_t Vcpu::Resume(mx_port_packet_t* packet) {
             GuestState* guest_state = &vmx_state_.guest_state;
             status = vmexit_handler(&vmcs, guest_state, &local_apic_state_, gpas_, mux_, packet);
         }
-    } while (status == MX_OK);
-    return status == MX_ERR_NEXT ? MX_OK : status;
+    } while (status == ZX_OK);
+    return status == ZX_ERR_NEXT ? ZX_OK : status;
 }
 
 void vmx_exit(VmxState* vmx_state) {
@@ -688,15 +688,15 @@ void vmx_exit(VmxState* vmx_state) {
     idt_load(idt_get_readonly());
 }
 
-mx_status_t Vcpu::Interrupt(uint32_t vector) {
+zx_status_t Vcpu::Interrupt(uint32_t vector) {
     if (vector > X86_MAX_INT)
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
     if (!local_apic_signal_interrupt(&local_apic_state_, vector, true)) {
         // If we did not signal the VCPU, it means it is currently running,
         // therefore we should issue an IPI to force a VM exit.
         mp_reschedule(MP_IPI_TARGET_MASK, 1u << cpu_of(vpid_), 0);
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 template <typename Out, typename In>
@@ -718,32 +718,32 @@ static void register_copy(Out* out, const In& in) {
     out->r15 = in.r15;
 }
 
-mx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
+zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
     if (!check_pinned_cpu_invariant(thread_, vpid_))
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     switch (kind) {
-    case MX_VCPU_STATE: {
-        if (len != sizeof(mx_vcpu_state_t))
+    case ZX_VCPU_STATE: {
+        if (len != sizeof(zx_vcpu_state_t))
             break;
-        auto state = static_cast<mx_vcpu_state_t*>(buffer);
+        auto state = static_cast<zx_vcpu_state_t*>(buffer);
         register_copy(state, vmx_state_.guest_state);
         AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
         state->rsp = vmcs.Read(VmcsFieldXX::GUEST_RSP);
         state->flags = vmcs.Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_USER;
-        return MX_OK;
+        return ZX_OK;
     }
     }
-    return MX_ERR_INVALID_ARGS;
+    return ZX_ERR_INVALID_ARGS;
 }
 
-mx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
+zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
     if (!check_pinned_cpu_invariant(thread_, vpid_))
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     switch (kind) {
-    case MX_VCPU_STATE: {
-        if (len != sizeof(mx_vcpu_state_t))
+    case ZX_VCPU_STATE: {
+        if (len != sizeof(zx_vcpu_state_t))
             break;
-        auto state = static_cast<const mx_vcpu_state_t*>(buffer);
+        auto state = static_cast<const zx_vcpu_state_t*>(buffer);
         register_copy(&vmx_state_.guest_state, *state);
         AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
         vmcs.Write(VmcsFieldXX::GUEST_RSP, state->rsp);
@@ -753,20 +753,20 @@ mx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
                                         (state->flags & X86_FLAGS_USER);
             vmcs.Write(VmcsFieldXX::GUEST_RFLAGS, user_flags);
         }
-        return MX_OK;
+        return ZX_OK;
     }
-    case MX_VCPU_IO: {
-        if (len != sizeof(mx_vcpu_io_t))
+    case ZX_VCPU_IO: {
+        if (len != sizeof(zx_vcpu_io_t))
             break;
-        auto io = static_cast<const mx_vcpu_io_t*>(buffer);
+        auto io = static_cast<const zx_vcpu_io_t*>(buffer);
         memcpy(&vmx_state_.guest_state.rax, io->data, io->access_size);
-        return MX_OK;
+        return ZX_OK;
     }
     }
-    return MX_ERR_INVALID_ARGS;
+    return ZX_ERR_INVALID_ARGS;
 }
 
-mx_status_t x86_vcpu_create(mx_vaddr_t ip, mx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
+zx_status_t x86_vcpu_create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
                             paddr_t apic_access_address, paddr_t msr_bitmaps_address,
                             GuestPhysicalAddressSpace* gpas, PacketMux& mux,
                             fbl::unique_ptr<Vcpu>* out) {
@@ -774,18 +774,18 @@ mx_status_t x86_vcpu_create(mx_vaddr_t ip, mx_vaddr_t cr3, fbl::RefPtr<VmObject>
                         out);
 }
 
-mx_status_t arch_vcpu_resume(Vcpu* vcpu, mx_port_packet_t* packet) {
+zx_status_t arch_vcpu_resume(Vcpu* vcpu, zx_port_packet_t* packet) {
     return vcpu->Resume(packet);
 }
 
-mx_status_t arch_vcpu_interrupt(Vcpu* vcpu, uint32_t vector) {
+zx_status_t arch_vcpu_interrupt(Vcpu* vcpu, uint32_t vector) {
     return vcpu->Interrupt(vector);
 }
 
-mx_status_t arch_vcpu_read_state(const Vcpu* vcpu, uint32_t kind, void* buffer, uint32_t len) {
+zx_status_t arch_vcpu_read_state(const Vcpu* vcpu, uint32_t kind, void* buffer, uint32_t len) {
     return vcpu->ReadState(kind, buffer, len);
 }
 
-mx_status_t arch_vcpu_write_state(Vcpu* vcpu, uint32_t kind, const void* buffer, uint32_t len) {
+zx_status_t arch_vcpu_write_state(Vcpu* vcpu, uint32_t kind, const void* buffer, uint32_t len) {
     return vcpu->WriteState(kind, buffer, len);
 }

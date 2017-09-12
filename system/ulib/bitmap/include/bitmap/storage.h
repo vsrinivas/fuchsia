@@ -8,16 +8,16 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <magenta/process.h>
-#include <magenta/types.h>
+#include <zircon/process.h>
+#include <zircon/types.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/macros.h>
 
 #if !defined _KERNEL && defined __Fuchsia__
-#include <mx/vmo.h>
-#include <magenta/syscalls.h>
+#include <zx/vmo.h>
+#include <zircon/syscalls.h>
 #endif
 
 namespace bitmap {
@@ -27,14 +27,14 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(DefaultStorage);
     DefaultStorage() = default;
 
-    mx_status_t Allocate(size_t size) {
+    zx_status_t Allocate(size_t size) {
         fbl::AllocChecker ac;
         auto arr = new (&ac) uint8_t[size];
         if (!ac.check()) {
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
         }
         storage_.reset(arr, size);
-        return MX_OK;
+        return ZX_OK;
     }
     void* GetData() { return storage_.get(); }
     const void* GetData() const { return storage_.get(); }
@@ -48,9 +48,9 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(FixedStorage);
     FixedStorage() = default;
 
-    mx_status_t Allocate(size_t size) {
-        MX_ASSERT(size <= N);
-        return MX_OK;
+    zx_status_t Allocate(size_t size) {
+        ZX_ASSERT(size <= N);
+        return ZX_OK;
     }
     void* GetData() { return storage_; }
     const void* GetData() const { return storage_; }
@@ -63,7 +63,7 @@ class VmoStorage {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmoStorage);
     VmoStorage() :
-        vmo_(MX_HANDLE_INVALID),
+        vmo_(ZX_HANDLE_INVALID),
         mapped_addr_(0),
         size_(0) {}
 
@@ -71,73 +71,73 @@ public:
         Release();
     }
 
-    mx_status_t Allocate(size_t size) {
+    zx_status_t Allocate(size_t size) {
         Release();
         size_ = fbl::roundup(size, static_cast<size_t>(PAGE_SIZE));
-        mx_status_t status;
-        if ((status = mx::vmo::create(size_, 0, &vmo_)) != MX_OK) {
+        zx_status_t status;
+        if ((status = zx::vmo::create(size_, 0, &vmo_)) != ZX_OK) {
             return status;
-        } else if ((status = mx_vmar_map(mx_vmar_root_self(), 0, vmo_.get(), 0,
-                                         size_, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
-                                         &mapped_addr_)) != MX_OK) {
+        } else if ((status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_.get(), 0,
+                                         size_, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+                                         &mapped_addr_)) != ZX_OK) {
             vmo_.reset();
             return status;
         }
-        return MX_OK;
+        return ZX_OK;
     }
 
-    mx_status_t Grow(size_t size) {
+    zx_status_t Grow(size_t size) {
         if (size <= size_) {
-            return MX_OK;
+            return ZX_OK;
         }
 
         size = fbl::roundup(size, static_cast<size_t>(PAGE_SIZE));
-        mx_status_t status;
-        if ((status = vmo_.set_size(size)) != MX_OK) {
+        zx_status_t status;
+        if ((status = vmo_.set_size(size)) != ZX_OK) {
             return status;
         }
 
 
-        mx_info_vmar_t vmar_info;
-        if ((status = mx_object_get_info(mx_vmar_root_self(), MX_INFO_VMAR,
+        zx_info_vmar_t vmar_info;
+        if ((status = zx_object_get_info(zx_vmar_root_self(), ZX_INFO_VMAR,
                                          &vmar_info, sizeof(vmar_info), NULL,
-                                         NULL)) != MX_OK) {
+                                         NULL)) != ZX_OK) {
             return status;
         }
 
         // Try to extend mapping
         uintptr_t addr;
-        if ((status = mx_vmar_map(mx_vmar_root_self(), mapped_addr_ + size_ -
+        if ((status = zx_vmar_map(zx_vmar_root_self(), mapped_addr_ + size_ -
                                   vmar_info.base, vmo_.get(), size_, size - size_,
-                                  MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
-                                  MX_VM_FLAG_SPECIFIC, &addr)) != MX_OK) {
+                                  ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
+                                  ZX_VM_FLAG_SPECIFIC, &addr)) != ZX_OK) {
             // If extension fails, create entirely new mapping and unmap the old one
-            if ((status = mx_vmar_map(mx_vmar_root_self(), 0, vmo_.get(), 0, size,
-                                      MX_VM_FLAG_PERM_READ |
-                                      MX_VM_FLAG_PERM_WRITE, &addr)) != MX_OK) {
+            if ((status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_.get(), 0, size,
+                                      ZX_VM_FLAG_PERM_READ |
+                                      ZX_VM_FLAG_PERM_WRITE, &addr)) != ZX_OK) {
                 return status;
             }
 
-            if ((status = mx_vmar_unmap(mx_vmar_root_self(), mapped_addr_, size_)) != MX_OK) {
+            if ((status = zx_vmar_unmap(zx_vmar_root_self(), mapped_addr_, size_)) != ZX_OK) {
                 return status;
             }
 
             mapped_addr_ = addr;
         }
 
-        return MX_OK;
+        return ZX_OK;
     }
 
-    void* GetData() { MX_DEBUG_ASSERT(mapped_addr_ != 0); return (void*) mapped_addr_; }
-    const void* GetData() const { MX_DEBUG_ASSERT(mapped_addr_ != 0); return (void*) mapped_addr_; }
-    mx_handle_t GetVmo() const { MX_DEBUG_ASSERT(mapped_addr_ != 0); return vmo_.get(); }
+    void* GetData() { ZX_DEBUG_ASSERT(mapped_addr_ != 0); return (void*) mapped_addr_; }
+    const void* GetData() const { ZX_DEBUG_ASSERT(mapped_addr_ != 0); return (void*) mapped_addr_; }
+    zx_handle_t GetVmo() const { ZX_DEBUG_ASSERT(mapped_addr_ != 0); return vmo_.get(); }
 private:
     void Release() {
         if (mapped_addr_ != 0) {
-            mx_vmar_unmap(mx_vmar_root_self(), mapped_addr_, size_);
+            zx_vmar_unmap(zx_vmar_root_self(), mapped_addr_, size_);
         }
     }
-    mx::vmo vmo_;
+    zx::vmo vmo_;
     uintptr_t mapped_addr_;
     size_t size_;
 };

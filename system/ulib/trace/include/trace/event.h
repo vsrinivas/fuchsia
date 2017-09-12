@@ -53,7 +53,7 @@
 //     size_t length = ...;
 //     const char* c_string = ...;
 //     void* ptr = ...;
-//     mx_koid_t koid = ...;
+//     zx_koid_t koid = ...;
 //
 //     TRACE_DURATION("category", "name", "arg", TA_NULL());
 //     TRACE_DURATION("category", "name", "arg", TA_INT32(-10));
@@ -75,7 +75,7 @@
 //     fbl::String fbl_string = ...;
 //     std::string std_string = ...;
 //     void* ptr = ...;
-//     mx_koid_t koid = ...;
+//     zx_koid_t koid = ...;
 //
 //     TRACE_DURATION("category", "name", "arg", nullptr);
 //     TRACE_DURATION("category", "name", "arg", -10);
@@ -435,7 +435,7 @@
 //
 // Usage:
 //
-//     mx_handle_t handle = ...;
+//     zx_handle_t handle = ...;
 //     TRACE_KERNEL_OBJECT(handle, "description", TA_STRING("some object"));
 //
 #define TRACE_KERNEL_OBJECT(handle, args...) \

@@ -10,7 +10,7 @@
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <limits.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <stdbool.h>
 #include <stdint.h>
 

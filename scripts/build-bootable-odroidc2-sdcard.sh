@@ -20,14 +20,14 @@ if [[ $OSTYPE != "linux-gnu" ]]; then
 fi
 
 SCRIPT_DIR=$( cd $( dirname "${BASH_SOURCE[0]}" ) && pwd)
-MAGENTA_DIR="$SCRIPT_DIR/.."
+ZIRCON_DIR="$SCRIPT_DIR/.."
 
-echo $MAGENTA_DIR
+echo $ZIRCON_DIR
 
 
-# Ensure Magenta has been built prior to formatting USB
-pushd "$MAGENTA_DIR" > /dev/null
-./scripts/make-parallel magenta-odroidc2-arm64
+# Ensure Zircon has been built prior to formatting USB
+pushd "$ZIRCON_DIR" > /dev/null
+./scripts/make-parallel zircon-odroidc2-arm64
 popd > /dev/null
 
 lsblk
@@ -147,14 +147,14 @@ sudo mount "$DATA_PTN_PATH" "$MOUNT_PATH"
 trap "umount_retry \"${MOUNT_PATH}\" && rm -rf \"${MOUNT_PATH}\" && echo \"Unmounted succesfully\"" INT TERM EXIT
 
 # Copy the kernel to the boot partition.
-sudo cp "$MAGENTA_DIR/build-magenta-odroidc2-arm64/magenta.bin" \
+sudo cp "$ZIRCON_DIR/build-zircon-odroidc2-arm64/zircon.bin" \
         "${MOUNT_PATH}/"
 
 # Copy the ramdisk
-sudo cp "$MAGENTA_DIR/build-magenta-odroidc2-arm64/bootdata.bin" \
+sudo cp "$ZIRCON_DIR/build-zircon-odroidc2-arm64/bootdata.bin" \
         "${MOUNT_PATH}/"
 
-sudo cp "$MAGENTA_DIR/kernel/target/odroidc2/boot.ini" \
+sudo cp "$ZIRCON_DIR/kernel/target/odroidc2/boot.ini" \
         "${MOUNT_PATH}/"
 
 

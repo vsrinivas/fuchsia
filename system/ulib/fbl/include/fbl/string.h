@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/atomic.h>
 #include <fbl/initializer_list.h>

@@ -3,7 +3,7 @@
 #include <sched.h>
 
 int sched_getcpu(void) {
-    // TODO(kulakowski) implement this on magenta
+    // TODO(kulakowski) implement this on zircon
     errno = ENOSYS;
     return -1;
 }

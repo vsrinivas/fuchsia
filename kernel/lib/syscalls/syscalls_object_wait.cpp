@@ -35,15 +35,15 @@ constexpr uint32_t kMaxWaitHandleCount = 1024u;
 // Note: This is used for quite a few InlineArrays (simultaneously) in sys_handle_wait_many.
 constexpr size_t kWaitManyInlineCount = 8u;
 
-mx_status_t sys_object_wait_one(mx_handle_t handle_value,
-                                mx_signals_t signals,
-                                mx_time_t deadline,
-                                user_ptr<mx_signals_t> _observed) {
+zx_status_t sys_object_wait_one(zx_handle_t handle_value,
+                                zx_signals_t signals,
+                                zx_time_t deadline,
+                                user_ptr<zx_signals_t> _observed) {
     LTRACEF("handle %x\n", handle_value);
 
     Event event;
 
-    mx_status_t result;
+    zx_status_t result;
     WaitStateObserver wait_state_observer;
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -52,12 +52,12 @@ mx_status_t sys_object_wait_one(mx_handle_t handle_value,
 
         Handle* handle = up->GetHandleLocked(handle_value);
         if (!handle)
-            return MX_ERR_BAD_HANDLE;
-        if (!handle->HasRights(MX_RIGHT_READ))
-            return MX_ERR_ACCESS_DENIED;
+            return ZX_ERR_BAD_HANDLE;
+        if (!handle->HasRights(ZX_RIGHT_READ))
+            return ZX_ERR_ACCESS_DENIED;
 
         result = wait_state_observer.Begin(&event, handle, signals);
-        if (result != MX_OK)
+        if (result != ZX_OK)
             return result;
     }
 
@@ -66,8 +66,8 @@ mx_status_t sys_object_wait_one(mx_handle_t handle_value,
     ktrace(TAG_WAIT_ONE, koid, signals, (uint32_t)deadline, (uint32_t)(deadline >> 32));
 #endif
 
-    // event_wait() will return MX_OK if already signaled,
-    // even if the deadline has passed.  It will return MX_ERR_TIMED_OUT
+    // event_wait() will return ZX_OK if already signaled,
+    // even if the deadline has passed.  It will return ZX_ERR_TIMED_OUT
     // after the deadline passes if the event has not been
     // signaled.
     result = event.Wait(deadline);
@@ -80,46 +80,46 @@ mx_status_t sys_object_wait_one(mx_handle_t handle_value,
 #endif
 
     if (_observed) {
-        if (_observed.copy_to_user(signals_state) != MX_OK)
-            return MX_ERR_INVALID_ARGS;
+        if (_observed.copy_to_user(signals_state) != ZX_OK)
+            return ZX_ERR_INVALID_ARGS;
     }
 
-    if (signals_state & MX_SIGNAL_HANDLE_CLOSED)
-        return MX_ERR_CANCELED;
+    if (signals_state & ZX_SIGNAL_HANDLE_CLOSED)
+        return ZX_ERR_CANCELED;
 
     return result;
 }
 
-mx_status_t sys_object_wait_many(user_ptr<mx_wait_item_t> _items, uint32_t count, mx_time_t deadline) {
+zx_status_t sys_object_wait_many(user_ptr<zx_wait_item_t> _items, uint32_t count, zx_time_t deadline) {
     LTRACEF("count %u\n", count);
 
     if (!count) {
-        mx_status_t result = thread_sleep_etc(deadline, /*interruptable=*/true);
-        if (result != MX_OK)
+        zx_status_t result = thread_sleep_etc(deadline, /*interruptable=*/true);
+        if (result != ZX_OK)
             return result;
-        return MX_ERR_TIMED_OUT;
+        return ZX_ERR_TIMED_OUT;
     }
 
     if (!_items)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     if (count > kMaxWaitHandleCount)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     fbl::AllocChecker ac;
-    fbl::InlineArray<mx_wait_item_t, kWaitManyInlineCount> items(&ac, count);
+    fbl::InlineArray<zx_wait_item_t, kWaitManyInlineCount> items(&ac, count);
     if (!ac.check())
-        return MX_ERR_NO_MEMORY;
-    if (_items.copy_array_from_user(items.get(), count) != MX_OK)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_NO_MEMORY;
+    if (_items.copy_array_from_user(items.get(), count) != ZX_OK)
+        return ZX_ERR_INVALID_ARGS;
 
     fbl::InlineArray<WaitStateObserver, kWaitManyInlineCount> wait_state_observers(&ac, count);
     if (!ac.check())
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     Event event;
 
     // We may need to unwind (which can be done outside the lock).
-    mx_status_t result = MX_OK;
+    zx_status_t result = ZX_OK;
     size_t num_added = 0;
     {
         auto up = ProcessDispatcher::GetCurrent();
@@ -128,64 +128,64 @@ mx_status_t sys_object_wait_many(user_ptr<mx_wait_item_t> _items, uint32_t count
         for (; num_added != count; ++num_added) {
             Handle* handle = up->GetHandleLocked(items[num_added].handle);
             if (!handle) {
-                result = MX_ERR_BAD_HANDLE;
+                result = ZX_ERR_BAD_HANDLE;
                 break;
             }
-            if (!handle->HasRights(MX_RIGHT_READ)) {
-                result = MX_ERR_ACCESS_DENIED;
+            if (!handle->HasRights(ZX_RIGHT_READ)) {
+                result = ZX_ERR_ACCESS_DENIED;
                 break;
             }
 
             result = wait_state_observers[num_added].Begin(&event, handle, items[num_added].waitfor);
-            if (result != MX_OK)
+            if (result != ZX_OK)
                 break;
         }
     }
-    if (result != MX_OK) {
+    if (result != ZX_OK) {
         for (size_t ix = 0; ix < num_added; ++ix)
             wait_state_observers[ix].End();
         return result;
     }
 
-    // event_wait() will return MX_OK if already signaled,
-    // even if deadline has passed.  It will return MX_ERR_TIMED_OUT
+    // event_wait() will return ZX_OK if already signaled,
+    // even if deadline has passed.  It will return ZX_ERR_TIMED_OUT
     // after the deadline passes if the event has not been
     // signaled.
     result = event.Wait(deadline);
 
     // Regardless of wait outcome, we must call End().
-    mx_signals_t combined = 0;
+    zx_signals_t combined = 0;
     for (size_t ix = 0; ix != count; ++ix) {
         combined |= (items[ix].pending = wait_state_observers[ix].End());
     }
 
-    if (_items.copy_array_to_user(items.get(), count) != MX_OK)
-        return MX_ERR_INVALID_ARGS;
+    if (_items.copy_array_to_user(items.get(), count) != ZX_OK)
+        return ZX_ERR_INVALID_ARGS;
 
-    if (combined & MX_SIGNAL_HANDLE_CLOSED)
-        return MX_ERR_CANCELED;
+    if (combined & ZX_SIGNAL_HANDLE_CLOSED)
+        return ZX_ERR_CANCELED;
 
     return result;
 }
 
-mx_status_t sys_object_wait_async(mx_handle_t handle_value, mx_handle_t port_handle,
-                                  uint64_t key, mx_signals_t signals, uint32_t options) {
+zx_status_t sys_object_wait_async(zx_handle_t handle_value, zx_handle_t port_handle,
+                                  uint64_t key, zx_signals_t signals, uint32_t options) {
     LTRACEF("handle %x\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<PortDispatcher> port;
-    auto status = up->GetDispatcherWithRights(port_handle, MX_RIGHT_WRITE, &port);
-    if (status != MX_OK)
+    auto status = up->GetDispatcherWithRights(port_handle, ZX_RIGHT_WRITE, &port);
+    if (status != ZX_OK)
         return status;
 
     {
         AutoLock lock(up->handle_table_lock());
         Handle* handle = up->GetHandleLocked(handle_value);
         if (!handle)
-            return MX_ERR_BAD_HANDLE;
-        if (!handle->HasRights(MX_RIGHT_READ))
-            return MX_ERR_ACCESS_DENIED;
+            return ZX_ERR_BAD_HANDLE;
+        if (!handle->HasRights(ZX_RIGHT_READ))
+            return ZX_ERR_ACCESS_DENIED;
 
         return port->MakeObserver(options, handle, key, signals);
     }

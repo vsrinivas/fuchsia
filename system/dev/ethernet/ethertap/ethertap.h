@@ -9,10 +9,10 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/ethernet.h>
 #include <ddktl/protocol/test.h>
-#include <magenta/compiler.h>
-#include <magenta/types.h>
-#include <magenta/device/ethertap.h>
-#include <mx/socket.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+#include <zircon/device/ethertap.h>
+#include <zx/socket.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <threads.h>
@@ -21,31 +21,31 @@ namespace eth {
 
 class TapCtl : public ddk::Device<TapCtl, ddk::Ioctlable> {
   public:
-    TapCtl(mx_device_t* device);
+    TapCtl(zx_device_t* device);
 
     void DdkRelease();
-    mx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                          size_t out_len, size_t* out_actual);
 };
 
 class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
                   public ddk::EthmacProtocol<TapDevice> {
   public:
-    TapDevice(mx_device_t* device, const ethertap_ioctl_config* config, mx::socket data);
+    TapDevice(zx_device_t* device, const ethertap_ioctl_config* config, zx::socket data);
 
     void DdkRelease();
     void DdkUnbind();
 
-    mx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);
+    zx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);
     void EthmacStop();
-    mx_status_t EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy);
+    zx_status_t EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy);
     void EthmacSend(uint32_t options, void* data, size_t length);
 
     int Thread();
 
   private:
-    mx_status_t UpdateLinkStatus(mx_signals_t observed);
-    mx_status_t Recv(uint8_t* buffer, uint32_t capacity);
+    zx_status_t UpdateLinkStatus(zx_signals_t observed);
+    zx_status_t Recv(uint8_t* buffer, uint32_t capacity);
 
     // ethertap options
     uint32_t options_ = 0;
@@ -60,7 +60,7 @@ class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
 
     // Only accessed from Thread, so not locked.
     bool online_ = false;
-    mx::socket data_;
+    zx::socket data_;
 
     thrd_t thread_;
 };

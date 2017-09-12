@@ -156,11 +156,11 @@ static void gic_init(void)
 static status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
 {
     if (flags != ARM_GIC_SGI_FLAG_NS) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     if (irq >= 16) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     smp_mb();
@@ -186,27 +186,27 @@ static status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
         cluster += 1;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static status_t gic_mask_interrupt(unsigned int vector)
 {
     if (vector >= gic_max_int)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     gic_set_enable(vector, false);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static status_t gic_unmask_interrupt(unsigned int vector)
 {
     if (vector >= gic_max_int)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     gic_set_enable(vector, true);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static status_t gic_configure_interrupt(unsigned int vector,
@@ -214,12 +214,12 @@ static status_t gic_configure_interrupt(unsigned int vector,
                              enum interrupt_polarity pol)
 {
     if (vector <= 15 || vector >= gic_max_int) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     if (pol != IRQ_POLARITY_ACTIVE_HIGH) {
         // TODO: polarity should actually be configure through a GPIO controller
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     uint reg = vector / 16;
@@ -232,7 +232,7 @@ static status_t gic_configure_interrupt(unsigned int vector,
     }
     GICREG(0, GICD_ICFGR(reg)) = val;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static status_t gic_get_interrupt_config(unsigned int vector,
@@ -240,12 +240,12 @@ static status_t gic_get_interrupt_config(unsigned int vector,
                               enum interrupt_polarity* pol)
 {
     if (vector >= gic_max_int)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     if (tm)  *tm  = IRQ_TRIGGER_MODE_EDGE;
     if (pol) *pol = IRQ_POLARITY_ACTIVE_HIGH;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static unsigned int gic_remap_interrupt(unsigned int vector) {
@@ -304,7 +304,7 @@ static status_t gic_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi) {
         arm_gic_sgi(gic_ipi_num, ARM_GIC_SGI_FLAG_NS, target);
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static enum handler_return arm_ipi_generic_handler(void *arg) {

@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -72,6 +72,6 @@ typedef struct paradise_stylus {
 } __attribute__((packed)) paradise_stylus_t;
 
 extern bool is_paradise_touch_report_desc(const uint8_t* data, size_t len);
-extern mx_status_t setup_paradise_touch(int fd);
+extern zx_status_t setup_paradise_touch(int fd);
 
 __END_CDECLS

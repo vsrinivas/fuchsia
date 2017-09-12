@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <stdint.h>
-#include <magenta/listnode.h>
+#include <zircon/listnode.h>
 #include <threads.h>
 
 typedef struct __attribute__((packed)) intel_serialio_i2c_regs {
@@ -124,18 +124,18 @@ enum {
 };
 
 typedef struct intel_serialio_i2c_device {
-    mx_device_t* mxdev;
-    mx_device_t* pcidev;
+    zx_device_t* mxdev;
+    zx_device_t* pcidev;
 
     intel_serialio_i2c_regs* regs;
     volatile uint32_t* soft_reset;
 
     uint64_t regs_size;
-    mx_handle_t regs_handle;
+    zx_handle_t regs_handle;
 
     thrd_t irq_thread;
-    mx_handle_t irq_handle;
-    mx_handle_t event_handle;
+    zx_handle_t irq_handle;
+    zx_handle_t event_handle;
 
     uint32_t controller_freq;
     uint32_t bus_freq;
@@ -146,43 +146,43 @@ typedef struct intel_serialio_i2c_device {
     mtx_t irq_mask_mutex;
 } intel_serialio_i2c_device_t;
 
-mx_status_t intel_serialio_i2c_reset_controller(
+zx_status_t intel_serialio_i2c_reset_controller(
     intel_serialio_i2c_device_t* controller);
 
-mx_status_t intel_serialio_i2c_wait_for_rx_full(
+zx_status_t intel_serialio_i2c_wait_for_rx_full(
     intel_serialio_i2c_device_t* controller,
-    mx_time_t deadline);
-mx_status_t intel_serialio_i2c_wait_for_tx_empty(
+    zx_time_t deadline);
+zx_status_t intel_serialio_i2c_wait_for_tx_empty(
     intel_serialio_i2c_device_t* controller,
-    mx_time_t deadline);
-mx_status_t intel_serialio_i2c_wait_for_stop_detect(
+    zx_time_t deadline);
+zx_status_t intel_serialio_i2c_wait_for_stop_detect(
     intel_serialio_i2c_device_t* controller,
-    mx_time_t deadline);
+    zx_time_t deadline);
 
 // Acts on the DATA_CMD register, and clear
 // interrupt masks as appropriate
-mx_status_t intel_serialio_i2c_issue_rx(
+zx_status_t intel_serialio_i2c_issue_rx(
     intel_serialio_i2c_device_t* controller,
     uint32_t data_cmd);
-mx_status_t intel_serialio_i2c_read_rx(
+zx_status_t intel_serialio_i2c_read_rx(
     intel_serialio_i2c_device_t* controller,
     uint8_t* data);
-mx_status_t intel_serialio_i2c_issue_tx(
+zx_status_t intel_serialio_i2c_issue_tx(
     intel_serialio_i2c_device_t* controller,
     uint32_t data_cmd);
-mx_status_t intel_serialio_i2c_clear_stop_detect(
+zx_status_t intel_serialio_i2c_clear_stop_detect(
     intel_serialio_i2c_device_t* controller);
 
 void intel_serialio_i2c_get_rx_fifo_threshold(
     intel_serialio_i2c_device_t* controller,
     uint32_t* threshold);
-mx_status_t intel_serialio_i2c_set_rx_fifo_threshold(
+zx_status_t intel_serialio_i2c_set_rx_fifo_threshold(
     intel_serialio_i2c_device_t* controller,
     uint32_t threshold);
 
 void intel_serialio_i2c_get_tx_fifo_threshold(
     intel_serialio_i2c_device_t* controller,
     uint32_t* threshold);
-mx_status_t intel_serialio_i2c_set_tx_fifo_threshold(
+zx_status_t intel_serialio_i2c_set_tx_fifo_threshold(
     intel_serialio_i2c_device_t* controller,
     uint32_t threshold);

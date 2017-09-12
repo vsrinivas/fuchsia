@@ -18,9 +18,9 @@
 static bool test_physmap_simple(void) {
     BEGIN_TEST;
     iotxn_t* txn;
-    ASSERT_EQ(iotxn_alloc(&txn, 0, PAGE_SIZE * 3), MX_OK, "");
+    ASSERT_EQ(iotxn_alloc(&txn, 0, PAGE_SIZE * 3), ZX_OK, "");
     ASSERT_NONNULL(txn, "");
-    ASSERT_EQ(iotxn_physmap(txn), MX_OK, "");
+    ASSERT_EQ(iotxn_physmap(txn), ZX_OK, "");
     ASSERT_NONNULL(txn->phys, "expected phys to be set");
     ASSERT_EQ(txn->phys_count, 3u, "unexpected phys_count");
     iotxn_release(txn);
@@ -30,9 +30,9 @@ static bool test_physmap_simple(void) {
 static bool test_physmap_contiguous(void) {
     BEGIN_TEST;
     iotxn_t* txn;
-    ASSERT_EQ(iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, PAGE_SIZE * 3), MX_OK, "");
+    ASSERT_EQ(iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, PAGE_SIZE * 3), ZX_OK, "");
     ASSERT_NONNULL(txn, "");
-    ASSERT_EQ(iotxn_physmap(txn), MX_OK, "");
+    ASSERT_EQ(iotxn_physmap(txn), ZX_OK, "");
     ASSERT_EQ(txn->phys, &txn->phys_inline[0], "expected phys to point to inline_phys");
     ASSERT_EQ(txn->phys_count, 1u, "unexpected phys_length");
     iotxn_release(txn);
@@ -42,14 +42,14 @@ static bool test_physmap_contiguous(void) {
 static bool test_physmap_clone(void) {
     BEGIN_TEST;
     iotxn_t* txn;
-    ASSERT_EQ(iotxn_alloc(&txn, 0, PAGE_SIZE * 3), MX_OK, "");
+    ASSERT_EQ(iotxn_alloc(&txn, 0, PAGE_SIZE * 3), ZX_OK, "");
     ASSERT_NONNULL(txn, "");
-    ASSERT_EQ(iotxn_physmap(txn), MX_OK, "");
+    ASSERT_EQ(iotxn_physmap(txn), ZX_OK, "");
     ASSERT_NONNULL(txn->phys, "expected phys to be set");
     ASSERT_EQ(txn->phys_count, 3u, "unexpected phys_count");
 
     iotxn_t* clone = NULL;
-    ASSERT_EQ(iotxn_clone(txn, &clone), MX_OK, "");
+    ASSERT_EQ(iotxn_clone(txn, &clone), ZX_OK, "");
     ASSERT_EQ(txn->phys, clone->phys, "expected clone to point to the same phys");
     ASSERT_EQ(txn->phys_count, clone->phys_count, "unexpected clone phys_count");
     iotxn_release(txn);
@@ -60,11 +60,11 @@ static bool test_physmap_clone(void) {
 static bool test_physmap_aligned_offset(void) {
     BEGIN_TEST;
     iotxn_t* txn;
-    ASSERT_EQ(iotxn_alloc(&txn, 0, PAGE_SIZE * 3), MX_OK, "");
+    ASSERT_EQ(iotxn_alloc(&txn, 0, PAGE_SIZE * 3), ZX_OK, "");
     ASSERT_NONNULL(txn, "");
     txn->vmo_offset = PAGE_SIZE;
     txn->vmo_length = PAGE_SIZE * 2;
-    ASSERT_EQ(iotxn_physmap(txn), MX_OK, "");
+    ASSERT_EQ(iotxn_physmap(txn), ZX_OK, "");
     ASSERT_NONNULL(txn->phys, "expected phys to be set");
     ASSERT_EQ(txn->phys_count, 2u, "unexpected phys_count");
     iotxn_release(txn);
@@ -74,11 +74,11 @@ static bool test_physmap_aligned_offset(void) {
 static bool test_physmap_unaligned_offset(void) {
     BEGIN_TEST;
     iotxn_t* txn;
-    ASSERT_EQ(iotxn_alloc(&txn, 0, PAGE_SIZE * 3), MX_OK, "");
+    ASSERT_EQ(iotxn_alloc(&txn, 0, PAGE_SIZE * 3), ZX_OK, "");
     ASSERT_NONNULL(txn, "");
     txn->vmo_offset = PAGE_SIZE / 2;
     txn->vmo_length = PAGE_SIZE * 2;
-    ASSERT_EQ(iotxn_physmap(txn), MX_OK, "");
+    ASSERT_EQ(iotxn_physmap(txn), ZX_OK, "");
     ASSERT_EQ(txn->phys, &txn->phys_inline[0], "expected phys to point to inline_phys");
     ASSERT_EQ(txn->phys_count, 3u, "unexpected phys_count");
     iotxn_release(txn);
@@ -88,11 +88,11 @@ static bool test_physmap_unaligned_offset(void) {
 static bool test_physmap_unaligned_offset2(void) {
     BEGIN_TEST;
     iotxn_t* txn;
-    ASSERT_EQ(iotxn_alloc(&txn, 0, PAGE_SIZE * 4), MX_OK, "");
+    ASSERT_EQ(iotxn_alloc(&txn, 0, PAGE_SIZE * 4), ZX_OK, "");
     ASSERT_NONNULL(txn, "");
     txn->vmo_offset = PAGE_SIZE - (PAGE_SIZE / 4);
     txn->vmo_length = (PAGE_SIZE * 2) + (PAGE_SIZE / 2);
-    ASSERT_EQ(iotxn_physmap(txn), MX_OK, "");
+    ASSERT_EQ(iotxn_physmap(txn), ZX_OK, "");
     ASSERT_NONNULL(txn->phys, "expected phys to be set");
     ASSERT_NE(txn->phys, &txn->phys_inline[0], "expected phys not to point to inline_phys");
     ASSERT_EQ(txn->phys_count, 4u, "unexpected phys_count");
@@ -104,14 +104,14 @@ static bool test_phys_iter(void) {
     BEGIN_TEST;
     iotxn_phys_iter_t iter;
     iotxn_t* txn;
-    mx_paddr_t paddr;
+    zx_paddr_t paddr;
     size_t length;
     size_t max_length;
 
     // create 4 page contiguous iotxn
-    ASSERT_EQ(iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, PAGE_SIZE * 4), MX_OK, "");
+    ASSERT_EQ(iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, PAGE_SIZE * 4), ZX_OK, "");
     txn->length = PAGE_SIZE * 4;
-    ASSERT_EQ(iotxn_physmap(txn), MX_OK, "");
+    ASSERT_EQ(iotxn_physmap(txn), ZX_OK, "");
     ASSERT_EQ(txn->phys_count, 1u, "");
 
     // simple contiguous case
@@ -145,9 +145,9 @@ static bool test_phys_iter(void) {
     iotxn_release(txn);
 
     // create discontiguous iotxn
-    ASSERT_EQ(iotxn_alloc(&txn, 0, PAGE_SIZE * 4), MX_OK, "");
+    ASSERT_EQ(iotxn_alloc(&txn, 0, PAGE_SIZE * 4), ZX_OK, "");
     txn->length = PAGE_SIZE * 4;
-    ASSERT_EQ(iotxn_physmap(txn), MX_OK, "");
+    ASSERT_EQ(iotxn_physmap(txn), ZX_OK, "");
     ASSERT_EQ(txn->phys_count, 4u, "");
     // pretend that first two pages are contiguous and second two are not
     txn->phys[1] = txn->phys[0] + PAGE_SIZE;
@@ -209,7 +209,7 @@ static bool test_phys_iter_merge(void) {
 
     iotxn_t iotxn;
     const size_t buf_size = 9 * PAGE_SIZE;
-    iotxn_init(&iotxn, MX_HANDLE_INVALID, PAGE_SIZE, buf_size);
+    iotxn_init(&iotxn, ZX_HANDLE_INVALID, PAGE_SIZE, buf_size);
     iotxn.phys = malloc(sizeof(iotxn.phys[0]) * 9);
     ASSERT_NONNULL(iotxn.phys, "");
     iotxn.phys_count = 9;
@@ -230,7 +230,7 @@ static bool test_phys_iter_merge(void) {
 
     // Try iterating 3 pages at a time
     iotxn_phys_iter_init(&iter, &iotxn, 3 * PAGE_SIZE);
-    mx_paddr_t paddr;
+    zx_paddr_t paddr;
     size_t size = iotxn_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 3u * PAGE_SIZE, "");
     ASSERT_EQ(paddr, iotxn.phys[0], "");
@@ -286,7 +286,7 @@ static bool test_phys_iter_unaligned_contig(void) {
 
     iotxn_t iotxn;
     const size_t buf_size = 4 * PAGE_SIZE;
-    iotxn_init(&iotxn, MX_HANDLE_INVALID, 128, buf_size);
+    iotxn_init(&iotxn, ZX_HANDLE_INVALID, 128, buf_size);
     iotxn.phys = malloc(sizeof(iotxn.phys[0]) * 5);
     ASSERT_NONNULL(iotxn.phys, "");
     iotxn.phys_count = 5;
@@ -300,7 +300,7 @@ static bool test_phys_iter_unaligned_contig(void) {
 
     // Try iterating 3 pages at a time
     iotxn_phys_iter_init(&iter, &iotxn, 3 * PAGE_SIZE);
-    mx_paddr_t paddr;
+    zx_paddr_t paddr;
     size_t size = iotxn_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 3u * PAGE_SIZE - 128, "");
     ASSERT_EQ(paddr, iotxn.phys[0] + 128, "");
@@ -332,7 +332,7 @@ static bool test_phys_iter_unaligned_noncontig(void) {
 
     iotxn_t iotxn;
     const size_t buf_size = 2 * PAGE_SIZE;
-    iotxn_init(&iotxn, MX_HANDLE_INVALID, 128, buf_size);
+    iotxn_init(&iotxn, ZX_HANDLE_INVALID, 128, buf_size);
     iotxn.phys = malloc(sizeof(iotxn.phys[0]) * 3);
     ASSERT_NONNULL(iotxn.phys, "");
     iotxn.phys_count = 3;
@@ -343,7 +343,7 @@ static bool test_phys_iter_unaligned_noncontig(void) {
     iotxn_phys_iter_t iter;
 
     iotxn_phys_iter_init(&iter, &iotxn, 0);
-    mx_paddr_t paddr;
+    zx_paddr_t paddr;
 
     size_t size = iotxn_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, PAGE_SIZE - 128u, "");
@@ -371,7 +371,7 @@ static bool test_phys_iter_tiny_aligned(void) {
 
     iotxn_t iotxn;
     const size_t buf_size = 128;
-    iotxn_init(&iotxn, MX_HANDLE_INVALID, 0, buf_size);
+    iotxn_init(&iotxn, ZX_HANDLE_INVALID, 0, buf_size);
     iotxn.phys = malloc(sizeof(iotxn.phys[0]) * 1);
     ASSERT_NONNULL(iotxn.phys, "");
     iotxn.phys_count = 1;
@@ -380,7 +380,7 @@ static bool test_phys_iter_tiny_aligned(void) {
     iotxn_phys_iter_t iter;
 
     iotxn_phys_iter_init(&iter, &iotxn, 0);
-    mx_paddr_t paddr;
+    zx_paddr_t paddr;
     size_t size = iotxn_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 128u, "");
     ASSERT_EQ(paddr, iotxn.phys[0], "");
@@ -399,7 +399,7 @@ static bool test_phys_iter_tiny_unaligned(void) {
 
     iotxn_t iotxn;
     const size_t buf_size = 128;
-    iotxn_init(&iotxn, MX_HANDLE_INVALID, 128, buf_size);
+    iotxn_init(&iotxn, ZX_HANDLE_INVALID, 128, buf_size);
     iotxn.phys = malloc(sizeof(iotxn.phys[0]) * 1);
     ASSERT_NONNULL(iotxn.phys, "");
     iotxn.phys_count = 1;
@@ -408,7 +408,7 @@ static bool test_phys_iter_tiny_unaligned(void) {
     iotxn_phys_iter_t iter;
 
     iotxn_phys_iter_init(&iter, &iotxn, 0);
-    mx_paddr_t paddr;
+    zx_paddr_t paddr;
     size_t size = iotxn_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 128u, "");
     ASSERT_EQ(paddr, iotxn.phys[0] + 128, "");
@@ -437,22 +437,22 @@ RUN_TEST(test_phys_iter_tiny_unaligned)
 END_TEST_CASE(iotxn_tests)
 
 static void iotxn_test_output_func(const char* line, int len, void* arg) {
-    mx_handle_t h = *(mx_handle_t*)arg;
+    zx_handle_t h = *(zx_handle_t*)arg;
     // len is not actually the number of bytes to output
-    mx_socket_write(h, 0u, line, strlen(line), NULL);
+    zx_socket_write(h, 0u, line, strlen(line), NULL);
 }
 
-static mx_status_t iotxn_test_func(void* cookie, test_report_t* report, const void* arg, size_t arglen) {
-    mx_device_t* dev = (mx_device_t*)cookie;
+static zx_status_t iotxn_test_func(void* cookie, test_report_t* report, const void* arg, size_t arglen) {
+    zx_device_t* dev = (zx_device_t*)cookie;
 
     test_protocol_t proto;
-    mx_status_t status = device_get_protocol(dev, MX_PROTOCOL_TEST, &proto);
-    if (status != MX_OK) {
+    zx_status_t status = device_get_protocol(dev, ZX_PROTOCOL_TEST, &proto);
+    if (status != ZX_OK) {
         return status;
     }
 
-    mx_handle_t output = proto.ops->get_output_socket(proto.ctx);
-    if (output != MX_HANDLE_INVALID) {
+    zx_handle_t output = proto.ops->get_output_socket(proto.ctx);
+    if (output != ZX_HANDLE_INVALID) {
         unittest_set_output_function(iotxn_test_output_func, &output);
     }
 
@@ -460,26 +460,26 @@ static mx_status_t iotxn_test_func(void* cookie, test_report_t* report, const vo
     report->n_tests = 1;
     report->n_success = success ? 1 : 0;
     report->n_failed = success ? 0 : 1;
-    return success ? MX_OK : MX_ERR_INTERNAL;
+    return success ? ZX_OK : ZX_ERR_INTERNAL;
 }
 
-static mx_status_t iotxn_test_bind(void* ctx, mx_device_t* dev, void** cookie) {
+static zx_status_t iotxn_test_bind(void* ctx, zx_device_t* dev, void** cookie) {
     test_protocol_t proto;
-    mx_status_t status = device_get_protocol(dev, MX_PROTOCOL_TEST, &proto);
-    if (status != MX_OK) {
+    zx_status_t status = device_get_protocol(dev, ZX_PROTOCOL_TEST, &proto);
+    if (status != ZX_OK) {
         return status;
     }
 
     proto.ops->set_test_func(proto.ctx, iotxn_test_func, dev);
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_driver_ops_t iotxn_test_driver_ops = {
+static zx_driver_ops_t iotxn_test_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = iotxn_test_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(iotxn_test, iotxn_test_driver_ops, "magenta", "0.1", 2)
+ZIRCON_DRIVER_BEGIN(iotxn_test, iotxn_test_driver_ops, "zircon", "0.1", 2)
     BI_ABORT_IF_AUTOBIND,
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_TEST),
-MAGENTA_DRIVER_END(iotxn_test)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST),
+ZIRCON_DRIVER_END(iotxn_test)

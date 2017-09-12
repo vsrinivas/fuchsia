@@ -105,7 +105,7 @@
 
 #ifndef ASSEMBLY
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <sys/types.h>
 
 __BEGIN_CDECLS

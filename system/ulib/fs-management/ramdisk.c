@@ -14,25 +14,25 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <magenta/device/block.h>
-#include <magenta/device/ramdisk.h>
-#include <magenta/device/vfs.h>
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
-#include <mxio/watcher.h>
+#include <zircon/device/block.h>
+#include <zircon/device/ramdisk.h>
+#include <zircon/device/vfs.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
+#include <fdio/watcher.h>
 
 #include <fs-management/ramdisk.h>
 
 #define RAMCTL_PATH "/dev/misc/ramctl"
 #define BLOCK_EXTENSION "block"
 
-static mx_status_t driver_watcher_cb(int dirfd, int event, const char* fn, void* cookie) {
+static zx_status_t driver_watcher_cb(int dirfd, int event, const char* fn, void* cookie) {
     const char* wanted = *(const char**)cookie;
     if (event == WATCH_EVENT_ADD_FILE && strcmp(fn, wanted) == 0) {
-        return MX_ERR_STOP;
+        return ZX_ERR_STOP;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 int wait_for_driver_bind(const char* parent, const char* driver) {
@@ -44,8 +44,8 @@ int wait_for_driver_bind(const char* parent, const char* driver) {
         return -1;
     }
 
-    mx_time_t deadline = mx_deadline_after(MX_SEC(3));
-    if (mxio_watch_directory(dirfd(dir), driver_watcher_cb, deadline, &driver) != MX_ERR_STOP) {
+    zx_time_t deadline = zx_deadline_after(ZX_SEC(3));
+    if (fdio_watch_directory(dirfd(dir), driver_watcher_cb, deadline, &driver) != ZX_ERR_STOP) {
         closedir(dir);
         return -1;
     }
@@ -95,7 +95,7 @@ int destroy_ramdisk(const char* ramdisk_path) {
         return -1;
     }
     ssize_t r = ioctl_ramdisk_unlink(fd);
-    if (r != MX_OK) {
+    if (r != ZX_OK) {
         fprintf(stderr, "Could not shut off ramdisk\n");
         return -1;
     }

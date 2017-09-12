@@ -23,12 +23,12 @@ void xhci_sync_command_init(xhci_sync_command_t* command) {
 
 // returns condition code
 int xhci_sync_command_wait(xhci_sync_command_t* command) {
-    completion_wait(&command->completion, MX_TIME_INFINITE);
+    completion_wait(&command->completion, ZX_TIME_INFINITE);
 
     return (command->status & XHCI_MASK(EVT_TRB_CC_START, EVT_TRB_CC_BITS)) >> EVT_TRB_CC_START;
 }
 
-mx_status_t xhci_send_command(xhci_t* xhci, uint32_t cmd, uint64_t ptr, uint32_t control_bits) {
+zx_status_t xhci_send_command(xhci_t* xhci, uint32_t cmd, uint64_t ptr, uint32_t control_bits) {
     xhci_sync_command_t command;
     int cc;
 
@@ -37,15 +37,15 @@ mx_status_t xhci_send_command(xhci_t* xhci, uint32_t cmd, uint64_t ptr, uint32_t
 
     // Wait for one second (arbitrarily chosen timeout)
     // TODO(voydanoff) consider making the timeout a parameter to this function
-    mx_status_t status = completion_wait(&command.completion, MX_SEC(1));
-    if (status == MX_OK) {
+    zx_status_t status = completion_wait(&command.completion, ZX_SEC(1));
+    if (status == ZX_OK) {
         cc = (command.status & XHCI_MASK(EVT_TRB_CC_START, EVT_TRB_CC_BITS)) >> EVT_TRB_CC_START;
          if (cc == TRB_CC_SUCCESS) {
-            return MX_OK;
+            return ZX_OK;
         }
         dprintf(ERROR, "xhci_send_command %u failed, cc: %d\n", cmd, cc);
-        return MX_ERR_INTERNAL;
-    } else if (status == MX_ERR_TIMED_OUT) {
+        return ZX_ERR_INTERNAL;
+    } else if (status == ZX_ERR_TIMED_OUT) {
         completion_reset(&command.completion);
 
         // abort the command
@@ -53,11 +53,11 @@ mx_status_t xhci_send_command(xhci_t* xhci, uint32_t cmd, uint64_t ptr, uint32_t
         XHCI_WRITE64(crcr_ptr, CRCR_CA);
 
         // wait for TRB_CC_COMMAND_ABORTED
-        completion_wait(&command.completion, MX_TIME_INFINITE);
+        completion_wait(&command.completion, ZX_TIME_INFINITE);
         cc = (command.status & XHCI_MASK(EVT_TRB_CC_START, EVT_TRB_CC_BITS)) >> EVT_TRB_CC_START;
         if (cc == TRB_CC_SUCCESS) {
             // command must have completed while we were trying to abort it
-            status = MX_OK;
+            status = ZX_OK;
         }
 
         // ring doorbell to restart command ring

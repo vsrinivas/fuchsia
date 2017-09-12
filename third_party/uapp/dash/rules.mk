@@ -12,7 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/alias.c \
     $(LOCAL_DIR)/src/arith_yacc.c \
     $(LOCAL_DIR)/src/arith_yylex.c \
-    $(LOCAL_DIR)/src/bltin/magenta.c \
+    $(LOCAL_DIR)/src/bltin/zircon.c \
     $(LOCAL_DIR)/src/bltin/printf.c \
     $(LOCAL_DIR)/src/bltin/test.c \
     $(LOCAL_DIR)/src/bltin/times.c \
@@ -48,8 +48,8 @@ MODULE_SRCS += \
 MODULE_NAME := sh
 
 MODULE_STATIC_LIBS := system/ulib/pretty third_party/ulib/linenoise
-MODULE_LIBS := system/ulib/magenta system/ulib/launchpad system/ulib/c
-MODULE_LIBS += system/ulib/mxio  # Needed by ulib/linenoise
+MODULE_LIBS := system/ulib/zircon system/ulib/launchpad system/ulib/c
+MODULE_LIBS += system/ulib/fdio  # Needed by ulib/linenoise
 
 MODULE_CFLAGS := -D_GNU_SOURCE -DBSD -DIFS_BROKEN -DJOBS=0 -DSHELL \
                  -DUSE_LINENOISE

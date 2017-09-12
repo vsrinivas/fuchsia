@@ -1,4 +1,4 @@
-# mx_vmar_unmap
+# zx_vmar_unmap
 
 ## NAME
 
@@ -7,9 +7,9 @@ vmar_unmap - unmap virtual memory pages
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-mx_status_t mx_vmar_unmap(mx_handle_t vmar_handle,
+zx_status_t zx_vmar_unmap(zx_handle_t vmar_handle,
                           uintptr_t addr, size_t len);
 ```
 
@@ -26,20 +26,20 @@ If *len* is not page-aligned, it will be rounded up the next page boundary.
 
 ## RETURN VALUE
 
-**vmar_unmap**() returns **MX_OK** on success.
+**vmar_unmap**() returns **ZX_OK** on success.
 
 ## ERRORS
 
-**MX_ERR_BAD_HANDLE**  *vmar_handle* is not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *vmar_handle* is not a valid handle.
 
-**MX_ERR_WRONG_TYPE**  *vmar_handle* is not a VMAR handle.
+**ZX_ERR_WRONG_TYPE**  *vmar_handle* is not a VMAR handle.
 
-**MX_ERR_INVALID_ARGS**  *addr* is not page-aligned, *len* is 0, or the
+**ZX_ERR_INVALID_ARGS**  *addr* is not page-aligned, *len* is 0, or the
 requested range partially overlaps a sub-region.
 
-**MX_ERR_BAD_STATE**  *vmar_handle* refers to a destroyed handle.
+**ZX_ERR_BAD_STATE**  *vmar_handle* refers to a destroyed handle.
 
-**MX_ERR_NOT_FOUND**  Could not find the requested mapping.
+**ZX_ERR_NOT_FOUND**  Could not find the requested mapping.
 
 ## NOTES
 

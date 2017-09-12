@@ -9,28 +9,28 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <task-utils/walker.h>
 
 const char* kill_name;
 int killed = 0;
 
-mx_status_t process_callback(void* unused_ctx, int depth, mx_handle_t process,
-                             mx_koid_t koid, mx_koid_t parent_koid) {
-    char name[MX_MAX_NAME_LEN];
-    mx_status_t status =
-        mx_object_get_property(process, MX_PROP_NAME, name, sizeof(name));
-    if (status != MX_OK) {
+zx_status_t process_callback(void* unused_ctx, int depth, zx_handle_t process,
+                             zx_koid_t koid, zx_koid_t parent_koid) {
+    char name[ZX_MAX_NAME_LEN];
+    zx_status_t status =
+        zx_object_get_property(process, ZX_PROP_NAME, name, sizeof(name));
+    if (status != ZX_OK) {
         return status;
     }
     if (!strcmp(name, kill_name) ||
         !fnmatch(kill_name, name, 0) ||
         !strcmp(basename(name), kill_name)) {
-        mx_task_kill(process);
+        zx_task_kill(process);
         printf("Killed %" PRIu64 " %s\n", koid, name);
         killed++;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 int main(int argc, char** argv) {

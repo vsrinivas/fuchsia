@@ -6,19 +6,19 @@
 // Provides fbl::initializer_list<T>.
 // Unfortunately the C++ compiler hardcodes a dependency on std::initializer_list<T>.
 // We use the C++ standard library definition when available, otherwise we
-// use the one offered by the Magenta toolchain.
+// use the one offered by the Zircon toolchain.
 //
 
 #pragma once
 
-#ifdef MAGENTA_TOOLCHAIN
-// Use the implementation supplied by the Magenta toolchain when we are
+#ifdef ZIRCON_TOOLCHAIN
+// Use the implementation supplied by the Zircon toolchain when we are
 // compiling without the C++ standard library.
-#include <magenta/initializer_list.h>
+#include <zircon/initializer_list.h>
 #else
 // Use the implementation supplied by the C++ standard library.
 #include <initializer_list>
-#endif // MAGENTA_TOOLCHAIN
+#endif // ZIRCON_TOOLCHAIN
 
 // Expose std::initializer_list<T> as fbl::initializer_list<T>.
 namespace fbl {

@@ -19,8 +19,8 @@ MODULE_EXPORT := so
 MODULE_SO_NAME := hid
 
 MODULE_LIBS := \
-    system/ulib/magenta \
-    system/ulib/mxio \
+    system/ulib/zircon \
+    system/ulib/fdio \
     system/ulib/c
 
 include make/module.mk

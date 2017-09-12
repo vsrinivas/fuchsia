@@ -18,7 +18,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <magenta/boot/netboot.h>
+#include <zircon/boot/netboot.h>
 #include <tftp/tftp.h>
 
 #include "bootserver.h"

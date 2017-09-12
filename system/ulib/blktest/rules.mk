@@ -17,13 +17,13 @@ MODULE_STATIC_LIBS := \
     system/ulib/block-client \
     system/ulib/sync \
     system/ulib/pretty \
-    system/ulib/mxcpp \
+    system/ulib/zxcpp \
     system/ulib/fbl \
 
 MODULE_LIBS := \
     system/ulib/c \
-    system/ulib/magenta \
-    system/ulib/mxio \
+    system/ulib/zircon \
+    system/ulib/fdio \
     system/ulib/unittest \
 
 include make/module.mk

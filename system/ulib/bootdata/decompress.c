@@ -7,9 +7,9 @@
 #include <limits.h>
 #include <string.h>
 
-#include <magenta/boot/bootdata.h>
-#include <magenta/compiler.h>
-#include <magenta/syscalls.h>
+#include <zircon/boot/bootdata.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls.h>
 
 #include <lz4/lz4.h>
 
@@ -23,8 +23,8 @@
 //  - Max block size is 64kB
 //
 //  See https://github.com/lz4/lz4/blob/dev/lz4_Frame_format.md for details.
-#define MX_LZ4_MAGIC 0x184D2204
-#define MX_LZ4_VERSION (1 << 6)
+#define ZX_LZ4_MAGIC 0x184D2204
+#define ZX_LZ4_VERSION (1 << 6)
 
 typedef struct {
     uint8_t flag;
@@ -33,64 +33,64 @@ typedef struct {
     uint8_t header_cksum;
 } __PACKED lz4_frame_desc;
 
-#define MX_LZ4_FLAG_VERSION       (1 << 6)
-#define MX_LZ4_FLAG_BLOCK_DEP     (1 << 5)
-#define MX_LZ4_FLAG_BLOCK_CKSUM   (1 << 4)
-#define MX_LZ4_FLAG_CONTENT_SZ    (1 << 3)
-#define MX_LZ4_FLAG_CONTENT_CKSUM (1 << 2)
-#define MX_LZ4_FLAG_RESERVED      0x03
+#define ZX_LZ4_FLAG_VERSION       (1 << 6)
+#define ZX_LZ4_FLAG_BLOCK_DEP     (1 << 5)
+#define ZX_LZ4_FLAG_BLOCK_CKSUM   (1 << 4)
+#define ZX_LZ4_FLAG_CONTENT_SZ    (1 << 3)
+#define ZX_LZ4_FLAG_CONTENT_CKSUM (1 << 2)
+#define ZX_LZ4_FLAG_RESERVED      0x03
 
-#define MX_LZ4_BLOCK_MAX_MASK     (7 << 4)
-#define MX_LZ4_BLOCK_64KB         (4 << 4)
-#define MX_LZ4_BLOCK_256KB        (5 << 4)
-#define MX_LZ4_BLOCK_1MB          (6 << 4)
-#define MX_LZ4_BLOCK_4MB          (7 << 4)
+#define ZX_LZ4_BLOCK_MAX_MASK     (7 << 4)
+#define ZX_LZ4_BLOCK_64KB         (4 << 4)
+#define ZX_LZ4_BLOCK_256KB        (5 << 4)
+#define ZX_LZ4_BLOCK_1MB          (6 << 4)
+#define ZX_LZ4_BLOCK_4MB          (7 << 4)
 
-static mx_status_t check_lz4_frame(const lz4_frame_desc* fd,
+static zx_status_t check_lz4_frame(const lz4_frame_desc* fd,
                                    size_t expected, const char** err) {
-    if ((fd->flag & MX_LZ4_FLAG_VERSION) != MX_LZ4_VERSION) {
+    if ((fd->flag & ZX_LZ4_FLAG_VERSION) != ZX_LZ4_VERSION) {
         *err = "bad lz4 version for bootfs";
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
-    if ((fd->flag & MX_LZ4_FLAG_BLOCK_DEP) == 0) {
+    if ((fd->flag & ZX_LZ4_FLAG_BLOCK_DEP) == 0) {
         *err = "bad lz4 flag (blocks must be independent)";
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
-    if (fd->flag & MX_LZ4_FLAG_BLOCK_CKSUM) {
+    if (fd->flag & ZX_LZ4_FLAG_BLOCK_CKSUM) {
         *err = "bad lz4 flag (block checksum must be disabled)";
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
-    if ((fd->flag & MX_LZ4_FLAG_CONTENT_SZ) == 0) {
+    if ((fd->flag & ZX_LZ4_FLAG_CONTENT_SZ) == 0) {
         *err = "bad lz4 flag (content size must be included)";
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
-    if (fd->flag & MX_LZ4_FLAG_RESERVED) {
+    if (fd->flag & ZX_LZ4_FLAG_RESERVED) {
         *err = "bad lz4 flag (reserved bits in flg must be zero)";
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
-    if ((fd->block_desc & MX_LZ4_BLOCK_MAX_MASK) != MX_LZ4_BLOCK_64KB) {
+    if ((fd->block_desc & ZX_LZ4_BLOCK_MAX_MASK) != ZX_LZ4_BLOCK_64KB) {
         *err = "bad lz4 flag (max block size must be 64k)";
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
-    if (fd->block_desc & ~MX_LZ4_BLOCK_MAX_MASK) {
+    if (fd->block_desc & ~ZX_LZ4_BLOCK_MAX_MASK) {
         *err = "bad lz4 flag (reserved bits in bd must be zero)";
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     if (fd->content_size != expected) {
         *err = "lz4 content size does not match bootdata outsize";
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     // TODO: header checksum
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t decompress_bootfs_vmo(mx_handle_t vmar, const uint8_t* data,
-                                         size_t _outsize, mx_handle_t* out,
+static zx_status_t decompress_bootfs_vmo(zx_handle_t vmar, const uint8_t* data,
+                                         size_t _outsize, zx_handle_t* out,
                                          const char** err) {
-    if (*(const uint32_t*)data != MX_LZ4_MAGIC) {
+    if (*(const uint32_t*)data != ZX_LZ4_MAGIC) {
         *err = "bad magic number for compressed bootfs";
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     data += sizeof(uint32_t);
 
@@ -101,21 +101,21 @@ static mx_status_t decompress_bootfs_vmo(mx_handle_t vmar, const uint8_t* data,
     if (outsize < _outsize) {
         // newsize wrapped, which means the outsize was too large
         *err = "lz4 output size too large";
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
-    mx_handle_t dst_vmo;
-    mx_status_t status = mx_vmo_create((uint64_t)outsize, 0, &dst_vmo);
+    zx_handle_t dst_vmo;
+    zx_status_t status = zx_vmo_create((uint64_t)outsize, 0, &dst_vmo);
     if (status < 0) {
-        *err = "mx_vmo_create failed for decompressing bootfs";
+        *err = "zx_vmo_create failed for decompressing bootfs";
         return status;
     }
-    mx_object_set_property(dst_vmo, MX_PROP_NAME, "bootfs", 6);
+    zx_object_set_property(dst_vmo, ZX_PROP_NAME, "bootfs", 6);
 
     uintptr_t dst_addr = 0;
-    status = mx_vmar_map(vmar, 0, dst_vmo, 0, outsize,
-            MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &dst_addr);
+    status = zx_vmar_map(vmar, 0, dst_vmo, 0, outsize,
+            ZX_VM_FLAG_PERM_READ|ZX_VM_FLAG_PERM_WRITE, &dst_addr);
     if (status < 0) {
-        *err = "mx_vmar_map failed on bootfs vmo during decompression";
+        *err = "zx_vmar_map failed on bootfs vmo during decompression";
         return status;
     }
 
@@ -135,21 +135,21 @@ static mx_status_t decompress_bootfs_vmo(mx_handle_t vmar, const uint8_t* data,
             if (remaining - actual > remaining) {
                 // Remaining wrapped around (would be negative if signed)
                 *err = "bootdata outsize too small for lz4 decompression";
-                return MX_ERR_INVALID_ARGS;
+                return ZX_ERR_INVALID_ARGS;
             }
             remaining -= actual;
         } else {
             int dcmp = LZ4_decompress_safe((const char*)data, (char*)dst, blocksize, remaining);
             if (dcmp < 0) {
                 *err = "lz4 decompression failed";
-                return MX_ERR_BAD_STATE;
+                return ZX_ERR_BAD_STATE;
             }
             dst += dcmp;
             data += blocksize;
             if (remaining - dcmp > remaining) {
                 // Remaining wrapped around (would be negative if signed)
                 *err = "bootdata outsize too small for lz4 decompression";
-                return MX_ERR_INVALID_ARGS;
+                return ZX_ERR_INVALID_ARGS;
             }
             remaining -= dcmp;
         }
@@ -163,35 +163,35 @@ static mx_status_t decompress_bootfs_vmo(mx_handle_t vmar, const uint8_t* data,
     // we rounded up to the next full page.
     if (remaining > 4095) {
         *err = "bootdata size error; outsize does not match decompressed size";
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    status = mx_vmar_unmap(vmar, dst_addr, outsize);
+    status = zx_vmar_unmap(vmar, dst_addr, outsize);
     if (status < 0) {
-        *err = "mx_vmar_unmap after decompress failed";
+        *err = "zx_vmar_unmap after decompress failed";
         return status;
     }
     *out = dst_vmo;
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t decompress_bootdata(mx_handle_t vmar, mx_handle_t vmo,
+zx_status_t decompress_bootdata(zx_handle_t vmar, zx_handle_t vmo,
                                 size_t offset, size_t length,
-                                mx_handle_t* out, const char** err) {
+                                zx_handle_t* out, const char** err) {
     *err = "none";
 
     if (length > SIZE_MAX) {
         *err = "bootfs VMO too large to map";
-        return MX_ERR_BUFFER_TOO_SMALL;
+        return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
     uintptr_t addr = 0;
     size_t aligned_offset = offset & ~(PAGE_SIZE - 1);
     size_t align_shift = offset - aligned_offset;
     length += align_shift;
-    mx_status_t status = mx_vmar_map(vmar, 0, vmo, aligned_offset, length, MX_VM_FLAG_PERM_READ, &addr);
+    zx_status_t status = zx_vmar_map(vmar, 0, vmo, aligned_offset, length, ZX_VM_FLAG_PERM_READ, &addr);
     if (status < 0) {
-        *err = "mx_vmar_map failed on bootfs vmo";
+        *err = "zx_vmar_map failed on bootfs vmo";
         return status;
     }
     uintptr_t bootdata_addr = addr + align_shift;
@@ -210,13 +210,13 @@ mx_status_t decompress_bootdata(mx_handle_t vmar, mx_handle_t vmo,
         break;
     default:
         *err = "unknown bootdata type, not attempting decompression\n";
-        status = MX_ERR_NOT_SUPPORTED;
+        status = ZX_ERR_NOT_SUPPORTED;
         break;
     }
 
-    mx_status_t s = mx_vmar_unmap(vmar, addr, length);
+    zx_status_t s = zx_vmar_unmap(vmar, addr, length);
     if (s < 0) {
-        *err = "mx_vmar_unmap failed on bootfs vmo";
+        *err = "zx_vmar_unmap failed on bootfs vmo";
         return s;
     }
 

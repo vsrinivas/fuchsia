@@ -15,10 +15,10 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/sync \
-    system/ulib/mx \
-    system/ulib/mxcpp \
+    system/ulib/zx \
+    system/ulib/zxcpp \
     system/ulib/fbl \
 
-MODULE_LIBS := system/ulib/c system/ulib/driver system/ulib/magenta
+MODULE_LIBS := system/ulib/c system/ulib/driver system/ulib/zircon
 
 include make/module.mk

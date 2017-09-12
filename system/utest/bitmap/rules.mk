@@ -16,14 +16,14 @@ MODULE_SRCS += \
 MODULE_NAME := bitmap-test
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mx \
-    system/ulib/mxcpp \
+    system/ulib/zx \
+    system/ulib/zxcpp \
     system/ulib/fbl \
 
 MODULE_LIBS := \
-    system/ulib/magenta \
+    system/ulib/zircon \
     system/ulib/c \
-    system/ulib/mxio \
+    system/ulib/fdio \
     system/ulib/bitmap \
     system/ulib/unittest \
 

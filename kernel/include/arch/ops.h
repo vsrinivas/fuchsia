@@ -16,7 +16,7 @@
 
 #include <arch/defines.h>
 #include <kernel/atomic.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>

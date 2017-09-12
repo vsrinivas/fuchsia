@@ -1,6 +1,6 @@
-# Magenta Kernel Commandline Options
+# Zircon Kernel Commandline Options
 
-The Magenta kernel receives a textual commandline from the bootloader,
+The Zircon kernel receives a textual commandline from the bootloader,
 which can be used to alter some behaviours of the system.  Kernel commandline
 parameters are in the form of *option* or *option=value*, separated by
 spaces, and may not contain spaces.
@@ -48,8 +48,8 @@ This option is only supported on Intel x86 platforms.
 ## driver.\<name>.disable
 
 Disables the driver with the given name. The driver name comes from the
-magenta\_driver\_info, and can be found as the second argument to the
-MAGENTA\_DRIVER\_BEGIN macro.
+zircon\_driver\_info, and can be found as the second argument to the
+ZIRCON\_DRIVER\_BEGIN macro.
 
 Example: `driver.usb-audio.disable`
 
@@ -197,7 +197,7 @@ The default is 32MB.
 ## ktrace.grpmask
 
 This option specifies what ktrace records are emitted.
-The value is a bitmask of KTRACE\_GRP\_\* values from magenta/ktrace.h.
+The value is a bitmask of KTRACE\_GRP\_\* values from zircon/ktrace.h.
 Hex values may be specified as 0xNNN.
 
 ## ldso.trace
@@ -206,30 +206,30 @@ This option (disabled by default) turns on dynamic linker trace output.
 The output is in a form that is consumable by clients like Intel
 Processor Trace support.
 
-## magenta.autorun.boot=\<path>\
+## zircon.autorun.boot=\<path>\
 
 This option requests that the executable at *path* be launched at boot,
 after devmgr starts up.
 
-## magenta.autorun.system=\<path>\
+## zircon.autorun.system=\<path>\
 
 This option requests that the executable at *path* be launched once the
 system partition is mounted and *init* is launched.  If there is no system
 bootfs or system partition, it will never be launched.
 
-## magenta.system.writable=\<bool>
+## zircon.system.writable=\<bool>
 
 This option requests that if a minfs partition with the system type GUID is
 found, it is to be mounted read-write rather than read-only.
 
 ## netsvc.netboot=\<bool>
 
-If true, magenta will attempt to netboot into another instance of magenta upon
+If true, zircon will attempt to netboot into another instance of zircon upon
 booting.
 
-More specifically, magenta will fetch a new magenta system from a bootserver on
+More specifically, zircon will fetch a new zircon system from a bootserver on
 the local link and attempt to kexec into the new image, thereby replacing the
-currently running instance of magenta.
+currently running instance of zircon.
 
 ## userboot=\<path>
 
@@ -255,8 +255,8 @@ when the process it launches exits.
 
 ## vdso.soft_ticks=\<bool>
 
-If this option is set, the `mx_ticks_get` and `mx_ticks_per_second` system
-calls will use `mx_time_get(MX_CLOCK_MONOTONIC)` in nanoseconds rather than
+If this option is set, the `zx_ticks_get` and `zx_ticks_per_second` system
+calls will use `zx_time_get(ZX_CLOCK_MONOTONIC)` in nanoseconds rather than
 hardware cycle counters in a hardware-based time unit.  Defaults to false.
 
 ## virtcon.disable
@@ -289,22 +289,22 @@ available resolutions for the device.
 Example: `bootloader.fbres=640x480`
 
 ## bootloader.default=\<network|local>
-This option sets the default boot device to netboot or local magenta.bin.
+This option sets the default boot device to netboot or local zircon.bin.
 
 # How to pass the commandline to the kernel
 
-## in Qemu, using scripts/run-magenta*
+## in Qemu, using scripts/run-zircon*
 
 Pass each option using -c, for example:
 ```
-./scripts/run-magenta-x86-64 -c gfxconsole.font=18x32 -c gfxconsole.early=false
+./scripts/run-zircon-x86-64 -c gfxconsole.font=18x32 -c gfxconsole.early=false
 ```
 
 ## in GigaBoot20x6, when netbooting
 
 Pass the kernel commandline at the end, after a -- separator, for example:
 ```
-bootserver magenta.bin bootfs.bin -- gfxconsole.font=18x32 gfxconsole.early=false
+bootserver zircon.bin bootfs.bin -- gfxconsole.font=18x32 gfxconsole.early=false
 ```
 
 ## in GigaBoot20x6, when booting from USB flash

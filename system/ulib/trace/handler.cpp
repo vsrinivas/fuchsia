@@ -20,7 +20,7 @@ bool TraceHandler::CallIsCategoryEnabled(trace_handler_t* handler, const char* c
 }
 
 void TraceHandler::CallTraceStopped(trace_handler_t* handler, async_t* async,
-                                    mx_status_t disposition, size_t buffer_bytes_written) {
+                                    zx_status_t disposition, size_t buffer_bytes_written) {
     static_cast<TraceHandler*>(handler)->TraceStopped(async,
                                                       disposition, buffer_bytes_written);
 }

@@ -4,7 +4,7 @@
 
 #include <gpt/gpt.h>
 #include <lib/cksum.h>
-#include <magenta/syscalls.h> // for mx_cprng_draw
+#include <zircon/syscalls.h> // for zx_cprng_draw
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
@@ -321,7 +321,7 @@ int gpt_device_sync(gpt_device_t* dev) {
         header.backup = priv->blocks - 1;
         // generate a guid
         size_t sz;
-        if (mx_cprng_draw(header.guid, GPT_GUID_LEN, &sz) != MX_OK ||
+        if (zx_cprng_draw(header.guid, GPT_GUID_LEN, &sz) != ZX_OK ||
             sz != GPT_GUID_LEN) {
             return -1;
         }

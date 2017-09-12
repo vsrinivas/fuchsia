@@ -1,6 +1,6 @@
-# Magenta program loading and dynamic linking
+# Zircon program loading and dynamic linking
 
-In Magenta, the kernel is not directly involved in normal program loading.
+In Zircon, the kernel is not directly involved in normal program loading.
 (The one necessary exception is bootstrapping the userspace environment at
 system startup; see [`userboot`](userboot.md).)  Instead, the kernel merely
 provides the building blocks
@@ -12,16 +12,16 @@ which userspace program loading is built.
 
 ## ELF and the system ABI
 
-The standard Magenta userspace environment uses
+The standard Zircon userspace environment uses
 the [ELF](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format)
 format for machine-code executable files, and provides a dynamic linker and
-C/C++ execution environment that are based on ELF.  Magenta processes can
+C/C++ execution environment that are based on ELF.  Zircon processes can
 use [system calls](syscalls.md) only via the [vDSO](vdso.md), which is
 provided by the kernel in ELF format and uses the C/C++ calling conventions
 common to ELF-based systems for the machine.  Userspace code (given the
 appropriate capabilities) can use the [system call](syscalls.md) building
 blocks directly to create processes and load programs into them without
-using ELF.  But Magenta's standard ABI for machine code uses ELF as
+using ELF.  But Zircon's standard ABI for machine code uses ELF as
 described here.
 
 ## Background: traditional ELF program loading
@@ -68,11 +68,11 @@ most follow a pattern close to this:
        When dynamic linking startup is complete, the dynamic linker jumps to
        the main executable's entry point address.
 
-Magenta program loading is inspired by this tradition, but does it somewhat
+Zircon program loading is inspired by this tradition, but does it somewhat
 differently.  A key reason for the traditional pattern of loading the
 executable before loading the dynamic linker is that the dynamic linker's
 randomly-chosen base address must not intersect with the fixed addresses
-used by an `ET_EXEC` executable file.  Magenta does not support
+used by an `ET_EXEC` executable file.  Zircon does not support
 fixed-address program loading (ELF `ET_EXEC` files) at all, only
 position-independent executables or *PIE*s, which are ELF `ET_DYN` files.
 
@@ -83,21 +83,21 @@ the [`launchpad` library](../system/ulib/launchpad/).  It has a C API
 in
 [`<launchpad/launchpad.h>`](../system/ulib/launchpad/include/launchpad/launchpad.h) but
 is not formally documented.  The `launchpad` API is not described here.  Its
-treatment of executable files and process startup forms the Magenta system
+treatment of executable files and process startup forms the Zircon system
 ABI for program loading.
 The [lowest userspace layers of the system](userboot.md) implement the same
 protocols.  It's anticipated that in the future most process launching in
 the system will be done by a system service that uses `launchpad` in its
 implementation, rather than by direct use of the library.
 
-Filesystems are not part of the lower layers of Magenta API.  Instead,
+Filesystems are not part of the lower layers of Zircon API.  Instead,
 program loading is based on [VMOs](objects/vm_object.md) and on IPC
 protocols used via [channels](objects/channel.md).
 
 A program loading request starts with:
 
- * a handle to a VMO containing the executable file (`MX_RIGHT_READ` and
-   `MX_RIGHT_EXECUTE` rights are required)
+ * a handle to a VMO containing the executable file (`ZX_RIGHT_READ` and
+   `ZX_RIGHT_EXECUTE` rights are required)
  * a list of argument strings (to become `argv[]` in a C/C++ program)
  * a list of environment strings (to become `environ[]` in a C/C++ program)
  * a list of initial [handles](handles.md), each with
@@ -173,7 +173,7 @@ Three types of file are handled:
 
      Thus, the program entry point can be written as a C function:
      ```c
-     noreturn void _start(mx_handle_t bootstrap_channel, uintptr_t vdso_base);
+     noreturn void _start(zx_handle_t bootstrap_channel, uintptr_t vdso_base);
      ```
 
 {#PT_INTERP}
@@ -236,7 +236,7 @@ get fully random placement to maximize the benefits of ASLR.
 
 ## The **processargs** protocol
 
-[`<magenta/processargs.h>`](../system/public/magenta/processargs.h) defines
+[`<zircon/processargs.h>`](../system/public/zircon/processargs.h) defines
 the protocol for the *bootstrap message* sent on the *bootstrap channel* by
 the program loader.  When a process starts up, it has a handle to this
 bootstrap channel and it has access to [system calls](syscalls.md) via
@@ -253,7 +253,7 @@ code that receives and decodes messages in this format must run in a very
 constrained environment.  Heap allocation is impossible and nontrivial
 library facilities may not be available.
 
-See the [header file](../system/public/magenta/processargs.h) for full
+See the [header file](../system/public/zircon/processargs.h) for full
 details of the message format.  It's anticipated that this ad hoc protocol
 will be replaced with a formal IDL-based protocol eventually, but the
 format will be kept simple enough to be decoded by simple hand-written
@@ -292,7 +292,7 @@ dynamic linker is loaded as an [*ELF interperter*](#PT_INTERP) and is
 responsible getting access to all these additional files to complete
 dynamic linking before the main program's entry point gets control.
 
-All of Magenta's standard userspace uses dynamic linking, down to the very
+All of Zircon's standard userspace uses dynamic linking, down to the very
 first process loaded by [`userboot`](userboot.md).  Device drivers and
 filesystems are implemented by userspace programs loaded this way.  So
 program loading cannot be defined in terms of higher-layer abstractions
@@ -306,7 +306,7 @@ This *loader service* protocol is how a dynamic linker acquires VMOs
 representing the additional files it needs to load as shared libraries.
 
 This is a simple RPC protocol, defined in
-[`<magenta/processargs.h>`](../system/public/magenta/processargs.h).
+[`<zircon/processargs.h>`](../system/public/zircon/processargs.h).
 As with [the `processargs` protocol](#the-processargs-protocol),
 it's anticipated that this ad hoc protocol will be replaced with a formal
 IDL-based protocol eventually, but the format will be kept simple enough to
@@ -318,7 +318,7 @@ An ELF interpreter receives a channel handle for its loader service in its
 `processargs` bootstrap message, identified by the *handle info entry*
 `PA_HND(PA_SVC_LOADER, 0)`.  All requests are synchronous RPCs made
 with [**channel_call**()](syscalls/channel_call.md).  Both requests and
-replies start with the `mx_loader_svc_msg_t` header; some contain
+replies start with the `zx_loader_svc_msg_t` header; some contain
 additional data; some contain a VMO handle.  Request opcodes are:
 
  * `LOADER_SVC_OP_LOAD_SCRIPT_INTERP`: *string* -> *VMO handle*
@@ -372,7 +372,7 @@ additional data; some contain a VMO handle.  Request opcodes are:
    VMO mapped in and continue to write data to it.  Code instrumentation
    runtimes use this to deliver large binary trace results.
 
-## Magenta's standard ELF dynamic linker
+## Zircon's standard ELF dynamic linker
 
 The ELF conventions described above and
 the [`processargs`](#the-processargs-protocol)
@@ -382,11 +382,11 @@ machine code executable that meets the basic ELF format conventions.  The
 implementation can use the the [vDSO](vdso.md) [system call](syscalls.md)
 ABI, the `processargs` data, and the loader service facilities as it sees
 fit.  The exact details of what handles and data they will receive via
-these protocols depend on the higher-layer program environment.  Magenta's
+these protocols depend on the higher-layer program environment.  Zircon's
 system processes use an ELF interpreter that implements basic ELF dynamic
 linking, and a simple implementation of the loader service.
 
-Magenta's standard C library and dynamic linker have
+Zircon's standard C library and dynamic linker have
 a [unified implementation](../third_party/ulib/musl/) originally derived
 from [`musl`](http://www.musl-libc.org/).  It's identified by the
 `PT_INTERP` string `ld.so.1`.  It uses the `DT_NEEDED` strings naming

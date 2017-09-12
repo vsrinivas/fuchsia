@@ -6,7 +6,7 @@
 
 #include <threads.h>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 // clang-format off
 
@@ -34,8 +34,8 @@
 __BEGIN_CDECLS
 
 typedef struct io_apic io_apic_t;
-typedef struct mx_packet_guest_io mx_packet_guest_io_t;
-typedef struct mx_vcpu_io mx_vcpu_io_t;
+typedef struct zx_packet_guest_io zx_packet_guest_io_t;
+typedef struct zx_vcpu_io zx_vcpu_io_t;
 
 /* Stores the state of a UART. */
 typedef struct uart {
@@ -65,14 +65,14 @@ typedef struct uart {
     uint8_t line_status;
 
     // Raise an interrupt.
-    mx_status_t (*raise_interrupt)(mx_handle_t vcpu, uint32_t vector);
+    zx_status_t (*raise_interrupt)(zx_handle_t vcpu, uint32_t vector);
 } uart_t;
 
 void uart_init(uart_t* uart, const io_apic_t* io_apic);
-mx_status_t uart_read(uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io);
-mx_status_t uart_write(uart_t* uart, const mx_packet_guest_io_t* io);
+zx_status_t uart_read(uart_t* uart, uint16_t port, zx_vcpu_io_t* vcpu_io);
+zx_status_t uart_write(uart_t* uart, const zx_packet_guest_io_t* io);
 
 /* Start asynchronous handling of UART. */
-mx_status_t uart_async(uart_t* uart, mx_handle_t guest);
+zx_status_t uart_async(uart_t* uart, zx_handle_t guest);
 
 __END_CDECLS

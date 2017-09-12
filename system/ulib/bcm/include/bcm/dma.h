@@ -66,7 +66,7 @@ typedef volatile struct {
 } __PACKED bcm_dma_ctrl_regs_t;
 
 typedef struct {
-    mx_paddr_t paddr;
+    zx_paddr_t paddr;
     uint32_t offset;
     uint32_t len;
 } bcm_dma_vmo_index_t;
@@ -82,14 +82,14 @@ typedef struct bcm_dma {
     bcm_dma_vmo_index_t* mem_idx;
     uint32_t mem_idx_len;
     dma_cb_t callback;
-    mx_handle_t irq_handle;
+    zx_handle_t irq_handle;
     thrd_t irq_thrd;
     volatile bool irq_thrd_stop;
 } bcm_dma_t;
 
-mx_status_t bcm_dma_start(bcm_dma_t* dma);
-mx_status_t bcm_dma_stop(bcm_dma_t* dma);
-mx_status_t bcm_dma_init(bcm_dma_t* dma, uint32_t ch);
+zx_status_t bcm_dma_start(bcm_dma_t* dma);
+zx_status_t bcm_dma_stop(bcm_dma_t* dma);
+zx_status_t bcm_dma_init(bcm_dma_t* dma, uint32_t ch);
 
 /* Initialize a vmo->fifo transaction.  This assumes that the destination address
     is a non-incrementing physical address.
@@ -99,9 +99,9 @@ mx_status_t bcm_dma_init(bcm_dma_t* dma, uint32_t ch);
         dest - physical address of destination.  This is most likely a peripheral fifo
             and if this is the case then t_info should be configured appropriately.
 */
-mx_status_t bcm_dma_init_vmo_to_fifo_trans(bcm_dma_t* dma, mx_handle_t vmo, uint32_t t_info,
-                                           mx_paddr_t dest, uint32_t flags);
+zx_status_t bcm_dma_init_vmo_to_fifo_trans(bcm_dma_t* dma, zx_handle_t vmo, uint32_t t_info,
+                                           zx_paddr_t dest, uint32_t flags);
 void bcm_dma_deinit(bcm_dma_t* dma);
 
-mx_status_t bcm_dma_paddr_to_offset(bcm_dma_t* dma, mx_paddr_t paddr, uint32_t* offset);
-mx_paddr_t bcm_dma_get_position(bcm_dma_t* dma);
+zx_status_t bcm_dma_paddr_to_offset(bcm_dma_t* dma, zx_paddr_t paddr, uint32_t* offset);
+zx_paddr_t bcm_dma_get_position(bcm_dma_t* dma);

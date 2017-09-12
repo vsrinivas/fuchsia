@@ -19,30 +19,30 @@
 #include <unistd.h>
 
 typedef struct pci_sdhci_device {
-    mx_device_t* mxdev;
+    zx_device_t* mxdev;
     pci_protocol_t pci;
 
     volatile sdhci_regs_t* regs;
     uint64_t regs_size;
-    mx_handle_t regs_handle;
+    zx_handle_t regs_handle;
 } pci_sdhci_device_t;
 
-static mx_handle_t pci_sdhci_get_interrupt(void* ctx) {
+static zx_handle_t pci_sdhci_get_interrupt(void* ctx) {
     pci_sdhci_device_t* dev = ctx;
     // select irq mode
-    mx_status_t status = dev->pci.ops->set_irq_mode(dev->pci.ctx, MX_PCIE_IRQ_MODE_MSI, 1);
+    zx_status_t status = dev->pci.ops->set_irq_mode(dev->pci.ctx, ZX_PCIE_IRQ_MODE_MSI, 1);
     if (status < 0) {
-        status = dev->pci.ops->set_irq_mode(dev->pci.ctx, MX_PCIE_IRQ_MODE_LEGACY, 1);
+        status = dev->pci.ops->set_irq_mode(dev->pci.ctx, ZX_PCIE_IRQ_MODE_LEGACY, 1);
         if (status < 0) {
             printf("pci-sdhci: error %d setting irq mode\n", status);
             return status;
         }
         printf("pci-sdhci: selected legacy irq mode\n");
     }
-    mx_handle_t irq_handle = MX_HANDLE_INVALID;
+    zx_handle_t irq_handle = ZX_HANDLE_INVALID;
     // get irq handle
     status = dev->pci.ops->map_interrupt(dev->pci.ctx, 0, &irq_handle);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         printf("pci-sdhci: error %d getting irq handle\n", status);
         return status;
     } else {
@@ -50,26 +50,26 @@ static mx_handle_t pci_sdhci_get_interrupt(void* ctx) {
     }
 }
 
-static mx_status_t pci_sdhci_get_mmio(void* ctx, volatile sdhci_regs_t** out) {
+static zx_status_t pci_sdhci_get_mmio(void* ctx, volatile sdhci_regs_t** out) {
     pci_sdhci_device_t* dev = ctx;
     if (dev->regs == NULL) {
-        mx_status_t status = dev->pci.ops->map_resource(dev->pci.ctx, PCI_RESOURCE_BAR_0,
-                MX_CACHE_POLICY_UNCACHED_DEVICE, (void**)&dev->regs,
+        zx_status_t status = dev->pci.ops->map_resource(dev->pci.ctx, PCI_RESOURCE_BAR_0,
+                ZX_CACHE_POLICY_UNCACHED_DEVICE, (void**)&dev->regs,
                 &dev->regs_size, &dev->regs_handle);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             printf("pci-sdhci: error %d mapping register window\n", status);
             return status;
         }
     }
     *out = dev->regs;
-    return MX_OK;
+    return ZX_OK;
 }
 
 static uint32_t pci_sdhci_get_base_clock(void* ctx) {
     return 0;
 }
 
-static mx_paddr_t pci_sdhci_get_dma_offset(void* ctx) {
+static zx_paddr_t pci_sdhci_get_dma_offset(void* ctx) {
     return 0;
 }
 
@@ -86,11 +86,11 @@ static void pci_sdhci_hw_reset(void* ctx) {
     val |= SDHCI_EMMC_HW_RESET;
     dev->regs->ctrl0 = val;
     // minimum is 1us but wait 9us for good measure
-    mx_nanosleep(mx_deadline_after(MX_USEC(9)));
+    zx_nanosleep(zx_deadline_after(ZX_USEC(9)));
     val &= ~SDHCI_EMMC_HW_RESET;
     dev->regs->ctrl0 = val;
     // minimum is 200us but wait 300us for good measure
-    mx_nanosleep(mx_deadline_after(MX_USEC(300)));
+    zx_nanosleep(zx_deadline_after(ZX_USEC(300)));
 }
 
 static sdhci_protocol_ops_t pci_sdhci_sdhci_proto = {
@@ -110,28 +110,28 @@ static void pci_sdhci_unbind(void* ctx) {
 static void pci_sdhci_release(void* ctx) {
     pci_sdhci_device_t* dev = ctx;
     if (dev->regs != NULL) {
-        mx_handle_close(dev->regs_handle);
+        zx_handle_close(dev->regs_handle);
     }
     free(dev);
 }
 
-static mx_protocol_device_t pci_sdhci_device_proto = {
+static zx_protocol_device_t pci_sdhci_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .unbind = pci_sdhci_unbind,
     .release = pci_sdhci_release,
 };
 
-static mx_status_t pci_sdhci_bind(void* ctx, mx_device_t* parent, void** cookie) {
+static zx_status_t pci_sdhci_bind(void* ctx, zx_device_t* parent, void** cookie) {
     printf("pci-sdhci: bind\n");
     pci_sdhci_device_t* dev = calloc(1, sizeof(pci_sdhci_device_t));
     if (!dev) {
         printf("pci-sdhci: out of memory\n");
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
-    mx_status_t status = MX_OK;
-    if (device_get_protocol(parent, MX_PROTOCOL_PCI, (void*)&dev->pci)) {
-        status = MX_ERR_NOT_SUPPORTED;
+    zx_status_t status = ZX_OK;
+    if (device_get_protocol(parent, ZX_PROTOCOL_PCI, (void*)&dev->pci)) {
+        status = ZX_ERR_NOT_SUPPORTED;
         goto fail;
     }
 
@@ -146,30 +146,30 @@ static mx_status_t pci_sdhci_bind(void* ctx, mx_device_t* parent, void** cookie)
         .name = "pci-sdhci",
         .ctx = dev,
         .ops = &pci_sdhci_device_proto,
-        .proto_id = MX_PROTOCOL_SDHCI,
+        .proto_id = ZX_PROTOCOL_SDHCI,
         .proto_ops = &pci_sdhci_sdhci_proto,
     };
 
     status = device_add(parent, &args, &dev->mxdev);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         goto fail;
     }
 
-    return MX_OK;
+    return ZX_OK;
 fail:
     free(dev);
     return status;
 }
 
-static mx_driver_ops_t pci_sdhci_driver_ops = {
+static zx_driver_ops_t pci_sdhci_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = pci_sdhci_bind,
 };
 
 // clang-format off
-MAGENTA_DRIVER_BEGIN(pci_sdhci, pci_sdhci_driver_ops, "magenta", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
+ZIRCON_DRIVER_BEGIN(pci_sdhci, pci_sdhci_driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_CLASS, 0x08),
     BI_ABORT_IF(NE, BIND_PCI_SUBCLASS, 0x05),
     BI_MATCH_IF(EQ, BIND_PCI_INTERFACE, 0x01),
-MAGENTA_DRIVER_END(pci_sdhci)
+ZIRCON_DRIVER_END(pci_sdhci)

@@ -30,7 +30,7 @@ MODULE_STATIC_LIBS += system/utest/core/threads/test-threads
 MODULE_LIBS := \
     system/ulib/unittest \
     system/ulib/mini-process \
-    system/ulib/magenta \
+    system/ulib/zircon \
     system/ulib/c
 
 MODULE_DEFINES := BUILD_COMBINED_TESTS=1

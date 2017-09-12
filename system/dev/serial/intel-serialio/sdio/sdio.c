@@ -5,11 +5,11 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 #include <intel-serialio/serialio.h>
 
-mx_status_t intel_serialio_bind_sdio(mx_device_t* dev) {
+zx_status_t intel_serialio_bind_sdio(zx_device_t* dev) {
     // Not implemented yet.
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }

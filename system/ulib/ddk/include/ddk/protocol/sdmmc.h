@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/iotxn.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS;
 

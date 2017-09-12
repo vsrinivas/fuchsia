@@ -15,6 +15,6 @@ MODULE_SRCS += \
 MODULE_NAME := thread-injection-injector
 
 MODULE_LIBS := \
-    system/ulib/launchpad system/ulib/magenta system/ulib/c
+    system/ulib/launchpad system/ulib/zircon system/ulib/c
 
 include make/module.mk

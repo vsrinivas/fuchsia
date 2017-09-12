@@ -4,7 +4,7 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 #include <pthread.h>
 #include <stdio.h>

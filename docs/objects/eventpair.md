@@ -7,8 +7,8 @@ eventpair - Mutually signalable pair of events for concurrent programming
 ## SYNOPSIS
 
 Event Pairs are linked pairs of user-signalable objects. The 8 signal
-bits reserved for userspace (*MX_USER_SIGNAL_0* through
-*MX_USER_SIGNAL_7*) may be set or cleared on the local or opposing
+bits reserved for userspace (*ZX_USER_SIGNAL_0* through
+*ZX_USER_SIGNAL_7*) may be set or cleared on the local or opposing
 endpoint of an Event Pair.
 
 ## DESCRIPTION

@@ -5,7 +5,7 @@
 #pragma once
 
 #include <audio-utils/audio-stream.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 #include "wav-common.h"
 
@@ -14,14 +14,14 @@ class WAVSink : public WAVCommon,
 public:
     WAVSink() { }
     ~WAVSink() { Finalize(); }
-    mx_status_t Initialize(const char* filename) {
+    zx_status_t Initialize(const char* filename) {
         return WAVCommon::Initialize(filename, InitMode::SINK);
     }
 
     // AudioSink interface
-    mx_status_t SetFormat(const AudioStream::Format& format) final;
-    mx_status_t PutFrames(const void* buffer, uint32_t amt) final;
-    mx_status_t Finalize() final;
+    zx_status_t SetFormat(const AudioStream::Format& format) final;
+    zx_status_t PutFrames(const void* buffer, uint32_t amt) final;
+    zx_status_t Finalize() final;
 
 private:
     bool format_set_ = false;

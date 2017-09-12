@@ -11,7 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 
@@ -159,7 +159,7 @@ bool test_truncate_large(void) {
     fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[BufSize]);
     ASSERT_TRUE(ac.check());
 
-    unsigned seed = static_cast<unsigned>(mx_ticks_get());
+    unsigned seed = static_cast<unsigned>(zx_ticks_get());
     unittest_printf("Truncate test using seed: %u\n", seed);
     srand(seed);
     for (unsigned n = 0; n < BufSize; n++) {

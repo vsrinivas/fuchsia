@@ -5,7 +5,7 @@
 #include "pci.h"
 
 #include <assert.h>
-#include <mxio/debug.h>
+#include <fdio/debug.h>
 #include <stdio.h>
 
 #include <acpica/acpi.h>
@@ -33,7 +33,7 @@
  */
 static ACPI_STATUS handle_prt(
     ACPI_HANDLE object,
-    mx_pci_init_arg_t* arg,
+    zx_pci_init_arg_t* arg,
     uint8_t port_dev_id,
     uint8_t port_func_id) {
     assert((port_dev_id == UINT8_MAX && port_func_id == UINT8_MAX) ||
@@ -76,7 +76,7 @@ static ACPI_STATUS handle_prt(
             continue;
         }
 
-        uint32_t global_irq = MX_PCI_NO_IRQ_MAPPING;
+        uint32_t global_irq = ZX_PCI_NO_IRQ_MAPPING;
         bool level_triggered = true;
         bool active_high = false;
         if (entry->Source[0]) {
@@ -97,7 +97,7 @@ static ACPI_STATUS handle_prt(
             while (res->Type != ACPI_RESOURCE_TYPE_END_TAG) {
                 if (res->Type == ACPI_RESOURCE_TYPE_EXTENDED_IRQ) {
                     ACPI_RESOURCE_EXTENDED_IRQ* irq = &res->Data.ExtendedIrq;
-                    if (global_irq != MX_PCI_NO_IRQ_MAPPING) {
+                    if (global_irq != ZX_PCI_NO_IRQ_MAPPING) {
                         // TODO: Handle finding two allocated IRQs.  Shouldn't
                         // happen?
                         PANIC_UNIMPLEMENTED;
@@ -119,7 +119,7 @@ static ACPI_STATUS handle_prt(
                 crs_entry_addr += res->Length;
                 res = (ACPI_RESOURCE*)crs_entry_addr;
             }
-            if (global_irq == MX_PCI_NO_IRQ_MAPPING) {
+            if (global_irq == ZX_PCI_NO_IRQ_MAPPING) {
                 // TODO: Invoke PRS to find what is allocatable and allocate it with SRS
                 PANIC_UNIMPLEMENTED;
             }
@@ -180,14 +180,14 @@ cleanup:
  *
  * @param arg The structure to populate
  *
- * @return MX_OK on success.
+ * @return ZX_OK on success.
  */
-static mx_status_t find_pcie_config(mx_pci_init_arg_t* arg) {
+static zx_status_t find_pcie_config(zx_pci_init_arg_t* arg) {
     ACPI_TABLE_HEADER* raw_table = NULL;
     ACPI_STATUS status = AcpiGetTable((char*)ACPI_SIG_MCFG, 1, &raw_table);
     if (status != AE_OK) {
         xprintf("could not find MCFG\n");
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
     }
     ACPI_TABLE_MCFG* mcfg = (ACPI_TABLE_MCFG*)raw_table;
     ACPI_MCFG_ALLOCATION* table_start = ((void*)mcfg) + sizeof(*mcfg);
@@ -195,12 +195,12 @@ static mx_status_t find_pcie_config(mx_pci_init_arg_t* arg) {
     uintptr_t table_bytes = (uintptr_t)table_end - (uintptr_t)table_start;
     if (table_bytes % sizeof(*table_start) != 0) {
         xprintf("MCFG has unexpected size\n");
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
     int num_entries = table_end - table_start;
     if (num_entries == 0) {
         xprintf("MCFG has no entries\n");
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
     }
     if (num_entries > 1) {
         xprintf("MCFG has more than one entry, just taking the first\n");
@@ -212,7 +212,7 @@ static mx_status_t find_pcie_config(mx_pci_init_arg_t* arg) {
 
     if (table_start->PciSegment != 0) {
         xprintf("Non-zero segment found\n");
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     arg->addr_windows[0].is_mmio = true;
@@ -233,7 +233,7 @@ static mx_status_t find_pcie_config(mx_pci_init_arg_t* arg) {
     // big enough for all of the buses in this config.
     arg->addr_windows[0].size = size_per_bus * num_buses;
     arg->addr_window_count = 1;
-    return MX_OK;
+    return ZX_OK;
 }
 
 
@@ -243,7 +243,7 @@ static ACPI_STATUS get_pcie_devices_irq(
     UINT32 nesting_level,
     void* context,
     void** ret) {
-    mx_pci_init_arg_t* arg = context;
+    zx_pci_init_arg_t* arg = context;
     ACPI_STATUS status = handle_prt(
         object,
         arg,
@@ -293,13 +293,13 @@ static ACPI_STATUS get_pcie_devices_irq(
  *
  * @param arg The structure to populate
  *
- * @return MX_OK on success
+ * @return ZX_OK on success
  */
-static mx_status_t find_pci_legacy_irq_mapping(mx_pci_init_arg_t* arg) {
+static zx_status_t find_pci_legacy_irq_mapping(zx_pci_init_arg_t* arg) {
     unsigned int map_len = sizeof(arg->dev_pin_to_global_irq) / sizeof(uint32_t);
     for (unsigned int i = 0; i < map_len; ++i) {
         uint32_t* flat_map = (uint32_t*)&arg->dev_pin_to_global_irq;
-        flat_map[i] = MX_PCI_NO_IRQ_MAPPING;
+        flat_map[i] = ZX_PCI_NO_IRQ_MAPPING;
     }
     arg->num_irqs = 0;
 
@@ -309,9 +309,9 @@ static mx_status_t find_pci_legacy_irq_mapping(mx_pci_init_arg_t* arg) {
         arg,
         NULL);
     if (status != AE_OK) {
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 static ACPI_STATUS find_pci_configs_cb(
@@ -320,7 +320,7 @@ static ACPI_STATUS find_pci_configs_cb(
 
     size_t size_per_bus = PCI_CONFIG_SIZE *
                           PCIE_MAX_DEVICES_PER_BUS * PCIE_MAX_FUNCTIONS_PER_DEVICE;
-    mx_pci_init_arg_t* arg = (mx_pci_init_arg_t*)_ctx;
+    zx_pci_init_arg_t* arg = (zx_pci_init_arg_t*)_ctx;
 
     // TODO(cja): This is essentially a hacky solution to deal with
     // legacy PCI on Virtualbox and GCE. When the ACPI bus driver
@@ -345,9 +345,9 @@ static ACPI_STATUS find_pci_configs_cb(
  *
  * @param arg The structure to populate
  *
- * @return MX_OK on success.
+ * @return ZX_OK on success.
  */
-static mx_status_t find_pci_config(mx_pci_init_arg_t* arg) {
+static zx_status_t find_pci_config(zx_pci_init_arg_t* arg) {
     // TODO: Although this will find every PCI legacy root, we're presently
     // hardcoding to just use the first at bus 0 dev 0 func 0 segment 0.
     return AcpiGetDevices(PCI_HID, find_pci_configs_cb, arg, NULL);
@@ -359,44 +359,44 @@ static mx_status_t find_pci_config(mx_pci_init_arg_t* arg) {
  *
  * @param arg Pointer to store the initialization information into
  *
- * @return MX_OK on success
+ * @return ZX_OK on success
  */
-mx_status_t get_pci_init_arg(mx_pci_init_arg_t** arg, uint32_t* size) {
-    mx_pci_init_arg_t* res = NULL;
+zx_status_t get_pci_init_arg(zx_pci_init_arg_t** arg, uint32_t* size) {
+    zx_pci_init_arg_t* res = NULL;
 
     // TODO(teisenbe): We assume only one ECAM window right now...
     size_t obj_size = sizeof(*res) + sizeof(res->addr_windows[0]) * 1;
     res = calloc(1, obj_size);
     if (!res) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     // First look for a PCIe root complex. If none is found, try legacy PCI.
     // This presently only cares about the first root found, multiple roots
     // will be handled when the PCI bus driver binds to roots via ACPI.
-    mx_status_t status = find_pcie_config(res);
-    if (status != MX_OK) {
+    zx_status_t status = find_pcie_config(res);
+    if (status != ZX_OK) {
         status = find_pci_config(res);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             goto fail;
         }
     }
 
     status = find_pci_legacy_irq_mapping(res);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         goto fail;
     }
 
     *arg = res;
     *size = sizeof(*res) + sizeof(res->addr_windows[0]) * res->addr_window_count;
-    return MX_OK;
+    return ZX_OK;
 fail:
     free(res);
     return status;
 }
 
 struct report_current_resources_ctx {
-    mx_handle_t pci_handle;
+    zx_handle_t pci_handle;
     bool device_is_root_bridge;
     bool add_pass;
 };
@@ -411,8 +411,8 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
 
     if (resource_is_memory(res)) {
         resource_memory_t mem;
-        mx_status_t status = resource_parse_memory(res, &mem);
-        if (status != MX_OK || mem.minimum != mem.maximum) {
+        zx_status_t status = resource_parse_memory(res, &mem);
+        if (status != ZX_OK || mem.minimum != mem.maximum) {
             return AE_ERROR;
         }
 
@@ -421,8 +421,8 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
         len = mem.address_length;
     } else if (resource_is_address(res)) {
         resource_address_t addr;
-        mx_status_t status = resource_parse_address(res, &addr);
-        if (status != MX_OK) {
+        zx_status_t status = resource_parse_address(res, &addr);
+        if (status != ZX_OK) {
             return AE_ERROR;
         }
 
@@ -452,8 +452,8 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
         }
     } else if (resource_is_io(res)) {
         resource_io_t io;
-        mx_status_t status = resource_parse_io(res, &io);
-        if (status != MX_OK) {
+        zx_status_t status = resource_parse_io(res, &io);
+        if (status != ZX_OK) {
             return AE_ERROR;
         }
 
@@ -485,9 +485,9 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
     xprintf("ACPI range modification: %sing %s %016lx %016lx\n",
             add_range ? "add" : "subtract", is_mmio ? "MMIO" : "PIO", base, len);
 
-    mx_status_t status = mx_pci_add_subtract_io_range(
+    zx_status_t status = zx_pci_add_subtract_io_range(
             ctx->pci_handle, is_mmio, base, len, add_range);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         if (add_range) {
             xprintf("Failed to add range: %d\n", status);
         } else {
@@ -527,9 +527,9 @@ static ACPI_STATUS report_current_resources_device_cb(
  * @param root_resource_handle The handle to pass to the kernel when talking
  * to the PCI driver.
  *
- * @return MX_OK on success
+ * @return ZX_OK on success
  */
-mx_status_t pci_report_current_resources(mx_handle_t root_resource_handle) {
+zx_status_t pci_report_current_resources(zx_handle_t root_resource_handle) {
     // First we search for resources to add, then we subtract out things that
     // are being consumed elsewhere.  This forces an ordering on the
     // operations so that it should be consistent, and should protect against
@@ -544,7 +544,7 @@ mx_status_t pci_report_current_resources(mx_handle_t root_resource_handle) {
     };
     ACPI_STATUS status = AcpiGetDevices(NULL, report_current_resources_device_cb, &ctx, NULL);
     if (status != AE_OK) {
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
 
     // Removes resources we believe are in use by other parts of the platform
@@ -555,9 +555,9 @@ mx_status_t pci_report_current_resources(mx_handle_t root_resource_handle) {
     };
     status = AcpiGetDevices(NULL, report_current_resources_device_cb, &ctx, NULL);
     if (status != AE_OK) {
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
 
 
-    return MX_OK;
+    return ZX_OK;
 }

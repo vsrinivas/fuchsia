@@ -11,6 +11,6 @@
 #define EC_HID_STRING      "PNP0C09"
 #define PWRSRC_HID_STRING  "ACPI0003"
 
-mx_status_t battery_init(mx_device_t* parent, ACPI_HANDLE acpi_handle);
-mx_status_t ec_init(mx_device_t* parent, ACPI_HANDLE acpi_handle);
-mx_status_t pwrsrc_init(mx_device_t* parent, ACPI_HANDLE acpi_handle);
+zx_status_t battery_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
+zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
+zx_status_t pwrsrc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);

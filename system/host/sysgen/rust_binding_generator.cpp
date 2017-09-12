@@ -8,7 +8,7 @@ bool RustBindingGenerator::header(std::ofstream& os) {
     if (!Generator::header(os)) {
         return false;
     }
-    os << "#[link(name = \"magenta\")]\n";
+    os << "#[link(name = \"zircon\")]\n";
     os << "extern {\n";
     return os.good();
 }
@@ -22,7 +22,7 @@ bool RustBindingGenerator::footer(std::ofstream& os) {
 }
 
 bool RustBindingGenerator::syscall(std::ofstream& os, const Syscall& sc) {
-    os << "    pub fn mx_" << sc.name << "(";
+    os << "    pub fn zx_" << sc.name << "(";
 
     // Writes all arguments.
     sc.for_each_kernel_arg([&](const TypeSpec& arg) {

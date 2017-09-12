@@ -6,7 +6,7 @@
 
 #include <ddk/protocol/wlan.h>
 #include <ddktl/protocol/wlan-internal.h>
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 
@@ -25,27 +25,27 @@
 //
 // :: Examples ::
 //
-// // A driver that communicates with a MX_PROTOCOL_WLANMAC device as a wlanmac_ifc_t
+// // A driver that communicates with a ZX_PROTOCOL_WLANMAC device as a wlanmac_ifc_t
 // class WlanDevice;
 // using WlanDeviceType = ddk::Device<WlanDevice, /* ddk mixins */>;
 //
 // class WlanDevice : public WlanDeviceType,
 //                    public ddk::WlanmacIfc<WlanDevice> {
 //   public:
-//     WlanDevice(mx_device_t* parent)
+//     WlanDevice(zx_device_t* parent)
 //       : WlanDeviceType(driver, "my-wlan-device"),
 //         parent_(parent) {}
 //
-//     mx_status_t Bind() {
+//     zx_status_t Bind() {
 //         wlanmac_protocol_t* ops;
-//         auto status = get_device_protocol(parent_, MX_PROTOCOL_WLANMAC,
+//         auto status = get_device_protocol(parent_, ZX_PROTOCOL_WLANMAC,
 //                                           reinterpret_cast<void**>(&ops));
-//         if (status != MX_OK) {
+//         if (status != ZX_OK) {
 //             return status;
 //         }
 //        proxy_.reset(new ddk::WlanmacProtocolProxy(ops, parent_));
 //        status = proxy_->Start(this);
-//        if (status != MX_OK) {
+//        if (status != ZX_OK) {
 //            return status;
 //        }
 //        return device_add(ddk_device(), parent_);
@@ -65,23 +65,23 @@
 //     }
 //
 //   private:
-//     mx_device_t* parent_;
+//     zx_device_t* parent_;
 //     fbl::unique_ptr<ddk::WlanmacProtocolProxy> proxy_;
 // };
 //
 //
-// // A driver that implements a MX_PROTOCOL_WLANMAC device
+// // A driver that implements a ZX_PROTOCOL_WLANMAC device
 // class WlanmacDevice;
 // using WlanmacDeviceType = ddk::Device<WlanmacDevice, /* ddk mixins */>;
 //
 // class WlanmacDevice : public WlanmacDeviceType,
 //                       public ddk::WlanmacProtocol<WlanmacDevice> {
 //   public:
-//     WlanmacDevice(mx_device_t* parent)
+//     WlanmacDevice(zx_device_t* parent)
 //       : WlanmacDeviceType(driver, "my-wlanmac-device"),
 //         parent_(parent) {}
 //
-//     mx_status_t Bind() {
+//     zx_status_t Bind() {
 //         return device_add(ddk_device(), parent_);
 //     }
 //
@@ -89,32 +89,32 @@
 //         // Clean up
 //     }
 //
-//     mx_status_t WlanmacQuery(uint32_t options, ethmac_info_t* info) {
+//     zx_status_t WlanmacQuery(uint32_t options, ethmac_info_t* info) {
 //         // Fill out the ethmac info
-//         return MX_OK;
+//         return ZX_OK;
 //     }
 //
 //     void WlanmacStop() {
 //         // Device should stop
 //     }
 //
-//     mx_status_t WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
+//     zx_status_t WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
 //         // Start wlanmac operation
 //         proxy_.swap(proxy);
-//         return MX_OK;
+//         return ZX_OK;
 //     }
 //
 //     void WlanmacTx(uint32_t options, void* data, size_t length) {
 //         // Send the data
 //     }
 //
-//     mx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
+//     zx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
 //         // Set the radio channel
-//         return MX_OK;
+//         return ZX_OK;
 //     }
 //
 //   private:
-//     mx_device_t* parent_;
+//     zx_device_t* parent_;
 //     fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy_;
 // };
 
@@ -174,13 +174,13 @@ class WlanmacProtocol : public internal::base_protocol {
         ops_.set_channel = SetChannel;
 
         // Can only inherit from one base_protocol implemenation
-        MX_ASSERT(this->ddk_proto_ops_ == nullptr);
-        ddk_proto_id_ = MX_PROTOCOL_WLANMAC;
+        ZX_ASSERT(this->ddk_proto_ops_ == nullptr);
+        ddk_proto_id_ = ZX_PROTOCOL_WLANMAC;
         ddk_proto_ops_ = &ops_;
     }
 
   private:
-    static mx_status_t Query(void* ctx, uint32_t options, ethmac_info_t* info) {
+    static zx_status_t Query(void* ctx, uint32_t options, ethmac_info_t* info) {
         return static_cast<D*>(ctx)->WlanmacQuery(options, info);
     }
 
@@ -188,7 +188,7 @@ class WlanmacProtocol : public internal::base_protocol {
         static_cast<D*>(ctx)->WlanmacStop();
     }
 
-    static mx_status_t Start(void* ctx, wlanmac_ifc_t* ifc, void* cookie) {
+    static zx_status_t Start(void* ctx, wlanmac_ifc_t* ifc, void* cookie) {
         auto ifc_proxy = fbl::unique_ptr<WlanmacIfcProxy>(new WlanmacIfcProxy(ifc, cookie));
         return static_cast<D*>(ctx)->WlanmacStart(fbl::move(ifc_proxy));
     }
@@ -197,7 +197,7 @@ class WlanmacProtocol : public internal::base_protocol {
         static_cast<D*>(ctx)->WlanmacTx(options, data, length);
     }
 
-    static mx_status_t SetChannel(void* ctx, uint32_t options, wlan_channel_t* chan) {
+    static zx_status_t SetChannel(void* ctx, uint32_t options, wlan_channel_t* chan) {
         return static_cast<D*>(ctx)->WlanmacSetChannel(options, chan);
     }
 
@@ -209,12 +209,12 @@ class WlanmacProtocolProxy {
     WlanmacProtocolProxy(wlanmac_protocol_t* proto)
       : ops_(proto->ops), ctx_(proto->ctx) {}
 
-    mx_status_t Query(uint32_t options, ethmac_info_t* info) {
+    zx_status_t Query(uint32_t options, ethmac_info_t* info) {
         return ops_->query(ctx_, options, info);
     }
 
     template <typename D>
-    mx_status_t Start(D* ifc) {
+    zx_status_t Start(D* ifc) {
         static_assert(fbl::is_base_of<WlanmacIfc<D>, D>::value,
                       "Start must be called with a subclass of WlanmacIfc");
         return ops_->start(ctx_, ifc->wlanmac_ifc(), ifc);
@@ -228,7 +228,7 @@ class WlanmacProtocolProxy {
         ops_->tx(ctx_, options, data, length);
     }
 
-    mx_status_t SetChannel(uint32_t options, wlan_channel_t* chan) {
+    zx_status_t SetChannel(uint32_t options, wlan_channel_t* chan) {
         return ops_->set_channel(ctx_, options, chan);
     }
 

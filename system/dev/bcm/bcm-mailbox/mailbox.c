@@ -15,9 +15,9 @@
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/platform-device.h>
 
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
-#include <magenta/assert.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/assert.h>
 
 #include <bcm/bcm28xx.h>
 #include <bcm/ioctl.h>
@@ -117,32 +117,32 @@ static volatile uint32_t* mailbox_regs;
 // All devices are initially turned off.
 static uint32_t power_state = 0x0;
 
-static mx_status_t mailbox_write(const enum mailbox_channel ch, uint32_t value) {
+static zx_status_t mailbox_write(const enum mailbox_channel ch, uint32_t value) {
     value = value | ch;
 
     // Wait for there to be space in the FIFO.
-    mx_time_t deadline = mx_time_get(MX_CLOCK_MONOTONIC) + MX_MSEC(MAILBOX_IO_DEADLINE_MS);
+    zx_time_t deadline = zx_time_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(MAILBOX_IO_DEADLINE_MS);
     while (mailbox_regs[MAILBOX_STATUS] & MAILBOX_FULL) {
-        if (mx_time_get(MX_CLOCK_MONOTONIC) > deadline)
-            return MX_ERR_TIMED_OUT;
+        if (zx_time_get(ZX_CLOCK_MONOTONIC) > deadline)
+            return ZX_ERR_TIMED_OUT;
     }
 
     // Write the value to the mailbox.
     mailbox_regs[MAILBOX_WRITE] = value;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t mailbox_read(enum mailbox_channel ch, uint32_t* result) {
+static zx_status_t mailbox_read(enum mailbox_channel ch, uint32_t* result) {
     assert(result);
     uint32_t local_result = 0;
     uint32_t attempts = 0;
 
     do {
-        mx_time_t deadline = mx_time_get(MX_CLOCK_MONOTONIC) + MX_MSEC(MAILBOX_IO_DEADLINE_MS);
+        zx_time_t deadline = zx_time_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(MAILBOX_IO_DEADLINE_MS);
         while (mailbox_regs[MAILBOX_STATUS] & MAILBOX_EMPTY) {
-            if (mx_time_get(MX_CLOCK_MONOTONIC) > deadline)
-                return MX_ERR_TIMED_OUT;
+            if (zx_time_get(ZX_CLOCK_MONOTONIC) > deadline)
+                return ZX_ERR_TIMED_OUT;
         }
 
         local_result = mailbox_regs[MAILBOX_READ];
@@ -155,42 +155,42 @@ static mx_status_t mailbox_read(enum mailbox_channel ch, uint32_t* result) {
     // result into the ret parameter.
     *result = (local_result >> 4);
 
-    return attempts < MAX_MAILBOX_READ_ATTEMPTS ? MX_OK : MX_ERR_IO;
+    return attempts < MAX_MAILBOX_READ_ATTEMPTS ? ZX_OK : ZX_ERR_IO;
 }
 
 // Use the Videocore to power on/off devices.
-static mx_status_t bcm_vc_poweron(enum bcm_device dev) {
+static zx_status_t bcm_vc_poweron(enum bcm_device dev) {
     const uint32_t bit = 1 << dev;
-    mx_status_t ret = MX_OK;
+    zx_status_t ret = ZX_OK;
     uint32_t new_power_state = power_state | bit;
 
     if (new_power_state == power_state) {
         // The VideoCore won't return an ACK if we try to enable a device that's
         // already enabled, so we should terminate the control flow here.
-        return MX_OK;
+        return ZX_OK;
     }
 
     ret = mailbox_write(ch_power, new_power_state << 4);
-    if (ret != MX_OK)
+    if (ret != ZX_OK)
         return ret;
 
     // The Videocore must acknowledge a successful power on.
     uint32_t ack = 0x0;
     ret = mailbox_read(ch_power, &ack);
-    if (ret != MX_OK)
+    if (ret != ZX_OK)
         return ret;
 
     // Preserve the power state of the peripherals.
     power_state = ack;
 
     if (ack != new_power_state)
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t bcm_get_property_tag(uint8_t* buf, const size_t len) {
-    mx_status_t ret = MX_OK;
+static zx_status_t bcm_get_property_tag(uint8_t* buf, const size_t len) {
+    zx_status_t ret = ZX_OK;
     iotxn_t* txn;
 
     property_tag_header_t header;
@@ -204,8 +204,8 @@ static mx_status_t bcm_get_property_tag(uint8_t* buf, const size_t len) {
         return ret;
 
     iotxn_physmap(txn);
-    MX_DEBUG_ASSERT(txn->phys_count == 1);
-    mx_paddr_t phys = iotxn_phys(txn);
+    ZX_DEBUG_ASSERT(txn->phys_count == 1);
+    zx_paddr_t phys = iotxn_phys(txn);
 
     uint32_t offset = 0;
 
@@ -219,13 +219,13 @@ static mx_status_t bcm_get_property_tag(uint8_t* buf, const size_t len) {
     iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, 0, header.buff_size);
 
     ret = mailbox_write(ch_propertytags_tovc, (phys + BCM_SDRAM_BUS_ADDR_BASE));
-    if (ret != MX_OK) {
+    if (ret != ZX_OK) {
         goto cleanup_and_exit;
     }
 
     uint32_t ack = 0x0;
     ret = mailbox_read(ch_propertytags_tovc, &ack);
-    if (ret != MX_OK) {
+    if (ret != ZX_OK) {
         goto cleanup_and_exit;
     }
 
@@ -237,28 +237,28 @@ cleanup_and_exit:
     return ret;
 }
 
-static mx_status_t bcm_get_macid(void* ctx, uint8_t* mac) {
-    if (!mac) return MX_ERR_INVALID_ARGS;
+static zx_status_t bcm_get_macid(void* ctx, uint8_t* mac) {
+    if (!mac) return ZX_ERR_INVALID_ARGS;
     property_tag_get_macid_t tag = BCM_MAILBOX_TAG_GET_MACID;
 
-    mx_status_t ret = bcm_get_property_tag((uint8_t*)&tag, sizeof(tag));
+    zx_status_t ret = bcm_get_property_tag((uint8_t*)&tag, sizeof(tag));
 
     memcpy(mac, tag.macid, 6);
 
     return ret;
 }
 
-static mx_status_t bcm_get_clock_rate(void* ctx, const uint32_t clockid, uint32_t* res) {
-    if (!res) return MX_ERR_INVALID_ARGS;
+static zx_status_t bcm_get_clock_rate(void* ctx, const uint32_t clockid, uint32_t* res) {
+    if (!res) return ZX_ERR_INVALID_ARGS;
     property_tag_get_clock_rate_t tag = BCM_MAILBOX_TAG_GET_CLOCKRATE;
 
     tag.clockid = clockid;
 
-    mx_status_t ret = bcm_get_property_tag((uint8_t*)&tag, sizeof(tag));
+    zx_status_t ret = bcm_get_property_tag((uint8_t*)&tag, sizeof(tag));
 
     // Make sure that we're getting data back for the clock that we requested.
     if (tag.clockid != clockid) {
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
 
     // Fill in the return parameter;
@@ -267,25 +267,25 @@ static mx_status_t bcm_get_clock_rate(void* ctx, const uint32_t clockid, uint32_
     return ret;
 }
 
-static mx_status_t mailbox_device_ioctl(void* ctx, uint32_t op,
+static zx_status_t mailbox_device_ioctl(void* ctx, uint32_t op,
                                         const void* in_buf, size_t in_len,
                                         void* out_buf, size_t out_len, size_t* out_actual) {
     switch (op) {
     case IOCTL_BCM_POWER_ON_USB:
         return bcm_vc_poweron(bcm_dev_usb);
     default:
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
-static mx_protocol_device_t mailbox_device_protocol = {
+static zx_protocol_device_t mailbox_device_protocol = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = mailbox_device_ioctl,
 };
 
-static mx_status_t bcm_set_framebuffer(void* ctx, mx_paddr_t addr) {
-    mx_status_t ret = mailbox_write(ch_framebuffer, addr + BCM_SDRAM_BUS_ADDR_BASE);
-    if (ret != MX_OK)
+static zx_status_t bcm_set_framebuffer(void* ctx, zx_paddr_t addr) {
+    zx_status_t ret = mailbox_write(ch_framebuffer, addr + BCM_SDRAM_BUS_ADDR_BASE);
+    if (ret != ZX_OK)
         return ret;
 
     uint32_t ack = 0x0;
@@ -298,20 +298,20 @@ static bcm_bus_protocol_ops_t bus_protocol_ops = {
     .set_framebuffer = bcm_set_framebuffer,
 };
 
-static mx_status_t mailbox_get_protocol(void* ctx, uint32_t proto_id, void* out) {
-    if (proto_id == MX_PROTOCOL_BCM_BUS) {
+static zx_status_t mailbox_get_protocol(void* ctx, uint32_t proto_id, void* out) {
+    if (proto_id == ZX_PROTOCOL_BCM_BUS) {
         bcm_bus_protocol_t* proto = out;
         proto->ops = &bus_protocol_ops;
         proto->ctx = ctx;
-        return MX_OK;
+        return ZX_OK;
     } else {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
-static mx_status_t mailbox_add_gpios(void* ctx, uint32_t start, uint32_t count, uint32_t mmio_index,
+static zx_status_t mailbox_add_gpios(void* ctx, uint32_t start, uint32_t count, uint32_t mmio_index,
                                      const uint32_t* irqs, uint32_t irq_count) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 }
 
 static pbus_interface_ops_t mailbox_bus_ops = {
@@ -319,19 +319,19 @@ static pbus_interface_ops_t mailbox_bus_ops = {
     .add_gpios = mailbox_add_gpios,
 };
 
-static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
+static zx_status_t mailbox_bind(void* ctx, zx_device_t* parent, void** cookie) {
     platform_device_protocol_t pdev;
-    if (device_get_protocol(parent, MX_PROTOCOL_PLATFORM_DEV, &pdev) != MX_OK) {
-        return MX_ERR_NOT_SUPPORTED;
+    if (device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev) != ZX_OK) {
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Carve out some address space for the device -- it's memory mapped.
     uintptr_t mmio_base;
     size_t mmio_size;
-    mx_handle_t mmio_handle;
-    mx_status_t status = pdev_map_mmio(&pdev, MAILBOX_MMIO, MX_CACHE_POLICY_UNCACHED_DEVICE,
+    zx_handle_t mmio_handle;
+    zx_status_t status = pdev_map_mmio(&pdev, MAILBOX_MMIO, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                        (void **)&mmio_base, &mmio_size, &mmio_handle);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         printf("mailbox_bind pdev_map_mmio failed %d\n", status);
         return status;
     }
@@ -349,9 +349,9 @@ static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
     };
 
     status = device_add(parent, &vc_rpc_args, NULL);
-    if (status != MX_OK) {
-        mx_vmar_unmap(mx_vmar_root_self(), mmio_base, mmio_size);
-        mx_handle_close(mmio_handle);
+    if (status != ZX_OK) {
+        zx_vmar_unmap(zx_vmar_root_self(), mmio_base, mmio_size);
+        zx_handle_close(mmio_handle);
         return status;
     }
 
@@ -364,17 +364,17 @@ static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
     intf.ctx = NULL;    // TODO(voydanoff) - add mailbox ctx struct
     pdev_set_interface(&pdev, &intf);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_driver_ops_t bcm_mailbox_driver_ops = {
+static zx_driver_ops_t bcm_mailbox_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = mailbox_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(bcm_mailbox, bcm_mailbox_driver_ops, "magenta", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PLATFORM_DEV),
+ZIRCON_DRIVER_BEGIN(bcm_mailbox, bcm_mailbox_driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_BROADCOMM),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_BROADCOMM_RPI3),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_BUS_IMPLEMENTOR_DID),
-MAGENTA_DRIVER_END(bcm_mailbox)
+ZIRCON_DRIVER_END(bcm_mailbox)

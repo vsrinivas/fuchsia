@@ -8,9 +8,9 @@
 
 #include <gfx/gfx.h>
 #include <hid/hid.h>
-#include <mxio/vfs.h>
-#include <magenta/listnode.h>
-#include <magenta/thread_annotations.h>
+#include <fdio/vfs.h>
+#include <zircon/listnode.h>
+#include <zircon/thread_annotations.h>
 #include <port/port.h>
 #include <stdbool.h>
 #include <threads.h>
@@ -20,15 +20,15 @@
 #define MAX_COLOR 0xf
 
 #if BUILD_FOR_TEST
-mx_status_t vc_init_gfx(gfx_surface* gfx);
+zx_status_t vc_init_gfx(gfx_surface* gfx);
 #else
-mx_status_t vc_init_gfx(int fd);
+zx_status_t vc_init_gfx(int fd);
 void vc_free_gfx();
 #endif
 
 typedef void (*keypress_handler_t)(uint8_t keycode, int modifiers);
 
-mx_status_t new_input_device(int fd, keypress_handler_t handler);
+zx_status_t new_input_device(int fd, keypress_handler_t handler);
 
 // constraints on status bar tabs
 #define MIN_TAB_WIDTH 16
@@ -45,7 +45,7 @@ typedef struct vc {
     bool active;
     unsigned flags;
 
-    mx_handle_t gfx_vmo;
+    zx_handle_t gfx_vmo;
 
     int fd;
 
@@ -93,7 +93,7 @@ typedef struct vc {
 
 #if !BUILD_FOR_TEST
     port_fd_handler fh;
-    mx_handle_t proc;
+    zx_handle_t proc;
     bool is_shell;
 #endif
 } vc_t;
@@ -105,7 +105,7 @@ typedef struct vc {
 #define VC_FLAG_FULLSCREEN  (1 << 1)
 
 const gfx_font* vc_get_font();
-mx_status_t vc_alloc(vc_t** out, bool special);
+zx_status_t vc_alloc(vc_t** out, bool special);
 void vc_free(vc_t* vc);
 
 // called to re-draw the status bar after
@@ -126,7 +126,7 @@ void vc_scroll_viewport_bottom(vc_t* vc);
 void vc_set_fullscreen(vc_t* vc, bool fullscreen);
 
 ssize_t vc_write(vc_t* vc, const void* buf, size_t count,
-                        mx_off_t off);
+                        zx_off_t off);
 
 static inline int vc_rows(vc_t* vc) {
     return vc->flags & VC_FLAG_FULLSCREEN ? vc->rows : vc->rows - 1;
@@ -157,7 +157,7 @@ extern int g_status_width;
 void handle_key_press(uint8_t keycode, int modifiers);
 void vc_toggle_framebuffer();
 
-mx_status_t vc_create(vc_t** out, bool special);
+zx_status_t vc_create(vc_t** out, bool special);
 void vc_destroy(vc_t* vc);
-ssize_t vc_write(vc_t* vc, const void* buf, size_t count, mx_off_t off);
-mx_status_t vc_set_active(int num, vc_t* vc);
+ssize_t vc_write(vc_t* vc, const void* buf, size_t count, zx_off_t off);
+zx_status_t vc_set_active(int num, vc_t* vc);

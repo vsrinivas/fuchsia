@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 
 #include "dwc3.h"
 #include "dwc3-regs.h"
@@ -14,7 +14,7 @@
 
 #define EP_FIFO_SIZE    PAGE_SIZE
 
-static mx_paddr_t dwc3_ep_trb_phys(dwc3_endpoint_t* ep, dwc3_trb_t* trb) {
+static zx_paddr_t dwc3_ep_trb_phys(dwc3_endpoint_t* ep, dwc3_trb_t* trb) {
     return io_buffer_phys(&ep->fifo.buffer) + ((void *)trb - (void *)ep->fifo.first);
 }
 
@@ -36,13 +36,13 @@ static void dwc3_enable_ep(dwc3_t* dwc, unsigned ep_num, bool enable) {
     mtx_unlock(&dwc->lock);
 }
 
-mx_status_t dwc3_ep_fifo_init(dwc3_t* dwc, unsigned ep_num) {
-    MX_DEBUG_ASSERT(ep_num < countof(dwc->eps));
+zx_status_t dwc3_ep_fifo_init(dwc3_t* dwc, unsigned ep_num) {
+    ZX_DEBUG_ASSERT(ep_num < countof(dwc->eps));
     dwc3_endpoint_t* ep = &dwc->eps[ep_num];
     dwc3_fifo_t* fifo = &ep->fifo;
 
-    mx_status_t status = io_buffer_init(&fifo->buffer, EP_FIFO_SIZE, IO_BUFFER_RW);
-    if (status != MX_OK) {
+    zx_status_t status = io_buffer_init(&fifo->buffer, EP_FIFO_SIZE, IO_BUFFER_RW);
+    if (status != ZX_OK) {
         return status;
     }
 
@@ -53,25 +53,25 @@ mx_status_t dwc3_ep_fifo_init(dwc3_t* dwc, unsigned ep_num) {
 
     // set up link TRB pointing back to the start of the fifo
     dwc3_trb_t* trb = fifo->last;
-    mx_paddr_t trb_phys = io_buffer_phys(&fifo->buffer);
+    zx_paddr_t trb_phys = io_buffer_phys(&fifo->buffer);
     trb->ptr_low = (uint32_t)trb_phys;
     trb->ptr_high = (uint32_t)(trb_phys >> 32);
     trb->status = 0;
     trb->control = TRB_TRBCTL_LINK | TRB_HWO;
-    io_buffer_cache_op(&ep->fifo.buffer, MX_VMO_OP_CACHE_CLEAN,
+    io_buffer_cache_op(&ep->fifo.buffer, ZX_VMO_OP_CACHE_CLEAN,
                            (trb - ep->fifo.first) * sizeof(*trb), sizeof(*trb));
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 void dwc3_ep_fifo_release(dwc3_t* dwc, unsigned ep_num) {
-    MX_DEBUG_ASSERT(ep_num < countof(dwc->eps));
+    ZX_DEBUG_ASSERT(ep_num < countof(dwc->eps));
     dwc3_endpoint_t* ep = &dwc->eps[ep_num];
 
     io_buffer_release(&ep->fifo.buffer);
 }
 
-void dwc3_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, unsigned type, mx_paddr_t buffer,
+void dwc3_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, unsigned type, zx_paddr_t buffer,
                             size_t length) {
     dprintf(LTRACE, "dwc3_ep_start_transfer ep %u type %u length %zu\n", ep_num, type, length);
 
@@ -90,7 +90,7 @@ void dwc3_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, unsigned type, mx_padd
     trb->ptr_high = (uint32_t)(buffer >> 32);
     trb->status = TRB_BUFSIZ(length);
     trb->control = type | TRB_LST | TRB_IOC | TRB_HWO;
-    io_buffer_cache_op(&ep->fifo.buffer, MX_VMO_OP_CACHE_CLEAN,
+    io_buffer_cache_op(&ep->fifo.buffer, ZX_VMO_OP_CACHE_CLEAN,
                            (trb - ep->fifo.first) * sizeof(*trb), sizeof(*trb));
 
     dwc3_cmd_ep_start_transfer(dwc, ep_num, dwc3_ep_trb_phys(ep, trb));
@@ -109,32 +109,32 @@ static void dwc3_ep_queue_next_locked(dwc3_t* dwc, dwc3_endpoint_t* ep) {
 
         // TODO(voydanoff) scatter/gather support
         iotxn_physmap(txn);
-        mx_paddr_t phys = iotxn_phys(txn);
+        zx_paddr_t phys = iotxn_phys(txn);
         dwc3_ep_start_transfer(dwc, ep->ep_num, TRB_TRBCTL_NORMAL, phys, txn->length);
     }
 }
 
-mx_status_t dwc3_ep_config(dwc3_t* dwc, usb_endpoint_descriptor_t* ep_desc,
+zx_status_t dwc3_ep_config(dwc3_t* dwc, usb_endpoint_descriptor_t* ep_desc,
                                   usb_ss_ep_comp_descriptor_t* ss_comp_desc) {
     // convert address to index in range 0 - 31
     // low bit is IN/OUT
     unsigned ep_num = dwc3_ep_num(ep_desc->bEndpointAddress);
     if (ep_num < 2) {
         // index 0 and 1 are for endpoint zero
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     unsigned ep_type = usb_ep_type(ep_desc);
     if (ep_type == USB_ENDPOINT_ISOCHRONOUS) {
         dprintf(ERROR, "dwc3_ep_config: isochronous endpoints are not supported\n");
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     dwc3_endpoint_t* ep = &dwc->eps[ep_num];
 
     mtx_lock(&ep->lock);
-    mx_status_t status = dwc3_ep_fifo_init(dwc, ep_num);
-    if (status != MX_OK) {
+    zx_status_t status = dwc3_ep_fifo_init(dwc, ep_num);
+    if (status != ZX_OK) {
         dprintf(ERROR, "dwc3_config_ep: dwc3_ep_fifo_init failed %d\n", status);
         mtx_unlock(&ep->lock);
         return status;
@@ -152,16 +152,16 @@ mx_status_t dwc3_ep_config(dwc3_t* dwc, usb_endpoint_descriptor_t* ep_desc,
 
     mtx_unlock(&ep->lock);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t dwc3_ep_disable(dwc3_t* dwc, uint8_t ep_addr) {
+zx_status_t dwc3_ep_disable(dwc3_t* dwc, uint8_t ep_addr) {
     // convert address to index in range 0 - 31
     // low bit is IN/OUT
     unsigned ep_num = dwc3_ep_num(ep_addr);
     if (ep_num < 2) {
         // index 0 and 1 are for endpoint zero
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     dwc3_endpoint_t* ep = &dwc->eps[ep_num];
@@ -170,7 +170,7 @@ mx_status_t dwc3_ep_disable(dwc3_t* dwc, uint8_t ep_addr) {
     ep->enabled = false;
     mtx_unlock(&ep->lock);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 void dwc3_ep_queue(dwc3_t* dwc, unsigned ep_num, iotxn_t* txn) {
@@ -180,7 +180,7 @@ void dwc3_ep_queue(dwc3_t* dwc, unsigned ep_num, iotxn_t* txn) {
     if (EP_OUT(ep_num)) {
         if (txn->length == 0 || txn->length % ep->max_packet_size != 0) {
             dprintf(ERROR, "dwc3_ep_queue: OUT transfers must be multiple of max packet size\n");
-            iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
+            iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
             return;
         }
     }
@@ -189,7 +189,7 @@ void dwc3_ep_queue(dwc3_t* dwc, unsigned ep_num, iotxn_t* txn) {
 
     if (!ep->enabled) {
         mtx_unlock(&ep->lock);
-        iotxn_complete(txn, MX_ERR_BAD_STATE, 0);
+        iotxn_complete(txn, ZX_ERR_BAD_STATE, 0);
         return;
     }
 
@@ -237,7 +237,7 @@ void dwc3_start_eps(dwc3_t* dwc) {
 
 static void dwc_ep_read_trb(dwc3_endpoint_t* ep, dwc3_trb_t* trb, dwc3_trb_t* out_trb) {
     if (trb >= ep->fifo.first && trb < ep->fifo.last) {
-        io_buffer_cache_op(&ep->fifo.buffer, MX_VMO_OP_CACHE_INVALIDATE,
+        io_buffer_cache_op(&ep->fifo.buffer, ZX_VMO_OP_CACHE_INVALIDATE,
                            (trb - ep->fifo.first) * sizeof(*trb), sizeof(*trb));
         memcpy((void *)out_trb, (void *)trb, sizeof(*trb));
     } else {
@@ -292,15 +292,15 @@ void dwc3_ep_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
                 dprintf(ERROR, "TRB_HWO still set in dwc3_ep_xfer_complete\n");
             }
 
-            mx_off_t actual = txn->length - TRB_BUFSIZ(trb.status);
+            zx_off_t actual = txn->length - TRB_BUFSIZ(trb.status);
 //            dwc3_ep_queue_next_locked(dwc, ep);
 
             mtx_unlock(&ep->lock);
 
             if (EP_OUT(ep_num)) {
-                iotxn_cacheop(txn, MX_VMO_OP_CACHE_INVALIDATE, 0, actual);
+                iotxn_cacheop(txn, ZX_VMO_OP_CACHE_INVALIDATE, 0, actual);
             }
-            iotxn_complete(txn, MX_OK, actual);
+            iotxn_complete(txn, ZX_OK, actual);
         } else {
             mtx_unlock(&ep->lock);
             dprintf(ERROR, "dwc3_ep_xfer_complete: no iotxn found to complete!\n");
@@ -308,9 +308,9 @@ void dwc3_ep_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
     }
 }
 
-mx_status_t dwc3_ep_set_stall(dwc3_t* dwc, unsigned ep_num, bool stall) {
+zx_status_t dwc3_ep_set_stall(dwc3_t* dwc, unsigned ep_num, bool stall) {
     if (ep_num >= countof(dwc->eps)) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     dwc3_endpoint_t* ep = &dwc->eps[ep_num];
@@ -318,7 +318,7 @@ mx_status_t dwc3_ep_set_stall(dwc3_t* dwc, unsigned ep_num, bool stall) {
 
     if (!ep->enabled) {
         mtx_unlock(&ep->lock);
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     if (stall && !ep->stalled) {
         dwc3_cmd_ep_set_stall(dwc, ep_num);
@@ -328,10 +328,10 @@ mx_status_t dwc3_ep_set_stall(dwc3_t* dwc, unsigned ep_num, bool stall) {
     ep->stalled = stall;
     mtx_unlock(&ep->lock);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-void dwc3_ep_end_transfers(dwc3_t* dwc, unsigned ep_num, mx_status_t reason) {
+void dwc3_ep_end_transfers(dwc3_t* dwc, unsigned ep_num, zx_status_t reason) {
     dwc3_endpoint_t* ep = &dwc->eps[ep_num];
     mtx_lock(&ep->lock);
 

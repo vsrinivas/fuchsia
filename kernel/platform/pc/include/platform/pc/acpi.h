@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 #include <acpica/acpi.h>
 #include <arch/x86/apic.h>
 

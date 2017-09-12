@@ -1,4 +1,4 @@
-# mx_system_get_physmem
+# zx_system_get_physmem
 
 ## NAME
 
@@ -7,9 +7,9 @@ system_get_physmem - get amount of physical memory on the system
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-size_t mx_system_get_physmem(void);
+size_t zx_system_get_physmem(void);
 ```
 
 ## DESCRIPTION

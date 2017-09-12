@@ -22,8 +22,8 @@ MODULE_STATIC_LIBS := \
 MODULE_LIBS := \
     system/ulib/unittest \
     system/ulib/launchpad \
-    system/ulib/mxio \
+    system/ulib/fdio \
     system/ulib/c \
-    system/ulib/magenta
+    system/ulib/zircon
 
 include make/module.mk

@@ -9,7 +9,7 @@
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 void kernel_init(void);
 

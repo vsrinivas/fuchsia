@@ -11,8 +11,8 @@
 #include <inet6/inet6.h>
 #include <tftp/tftp.h>
 
-#include <magenta/boot/netboot.h>
-#include <magenta/syscalls.h>
+#include <zircon/boot/netboot.h>
+#include <zircon/syscalls.h>
 
 #include "netsvc.h"
 
@@ -38,7 +38,7 @@ static tftp_session *session = NULL;
 static file_info_t file_info;
 static transport_info_t transport_info;
 
-mx_time_t tftp_next_timeout = MX_TIME_INFINITE;
+zx_time_t tftp_next_timeout = ZX_TIME_INFINITE;
 
 void file_init(file_info_t *file_info) {
     file_info->is_write = true;
@@ -119,7 +119,7 @@ static int transport_send(void* data, size_t len, void* transport_cookie) {
     // The timeout is relative to sending instead of receiving a packet, since there are some
     // received packets we want to ignore (duplicate ACKs).
     if (transport_info->timeout_ms != 0) {
-        tftp_next_timeout = mx_deadline_after(MX_MSEC(transport_info->timeout_ms));
+        tftp_next_timeout = zx_deadline_after(ZX_MSEC(transport_info->timeout_ms));
     }
     return bytes_sent;
 }
@@ -155,7 +155,7 @@ static void initialize_connection(const ip6_addr_t* saddr, uint16_t sport) {
 
 static void end_connection(void) {
     session = NULL;
-    tftp_next_timeout = MX_TIME_INFINITE;
+    tftp_next_timeout = ZX_TIME_INFINITE;
 }
 
 void tftp_timeout_expired(void) {

@@ -9,7 +9,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <platform/debug.h>
 
 #if !defined(LK_DEBUGLEVEL)

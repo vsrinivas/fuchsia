@@ -7,7 +7,7 @@ config("vmofs_config") {
 }
 
 static_library("vmofs") {
-  # Don't forget to update rules.mk as well for the Magenta build.
+  # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "vmofs.cpp",
   ]
@@ -15,9 +15,9 @@ static_library("vmofs") {
   public_configs = [ ":vmofs_config" ]
 
   public_deps = [
-    "//magenta/system/ulib/fs",
-    "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/mxcpp",
-    "//magenta/system/ulib/fbl",
+    "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxcpp",
+    "//zircon/system/ulib/fbl",
   ]
 }

@@ -14,11 +14,11 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include <magenta/compiler.h>
-#include <magenta/process.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
-#include <mxio/debug.h>
+#include <zircon/compiler.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
+#include <fdio/debug.h>
 
 #include "init.h"
 #include "dev.h"
@@ -34,20 +34,20 @@
 #define HID_LENGTH 8
 
 typedef struct acpi_device {
-    mx_device_t* mxdev;
+    zx_device_t* mxdev;
 
     // handle to the corresponding ACPI node
     ACPI_HANDLE ns_node;
 } acpi_device_t;
 
-mx_handle_t root_resource_handle;
-mx_handle_t rpc_handle;
+zx_handle_t root_resource_handle;
+zx_handle_t rpc_handle;
 
 static int acpi_rpc_thread(void* arg) {
     xprintf("bus-acpi: rpc thread starting\n");
-    mx_status_t status = begin_processing(rpc_handle);
+    zx_status_t status = begin_processing(rpc_handle);
     xprintf("bus-acpi: rpc thread returned %d\n", status);
-    return (status == MX_OK) ? 0 : -1;
+    return (status == ZX_OK) ? 0 : -1;
 }
 
 static void acpi_device_release(void* ctx) {
@@ -55,7 +55,7 @@ static void acpi_device_release(void* ctx) {
     free(dev);
 }
 
-static mx_protocol_device_t acpi_device_proto = {
+static zx_protocol_device_t acpi_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .release = acpi_device_release,
 };
@@ -73,7 +73,7 @@ static const char* hid_from_acpi_devinfo(ACPI_DEVICE_INFO* info) {
     return hid;
 }
 
-static mx_device_t* publish_device(mx_device_t* parent,
+static zx_device_t* publish_device(zx_device_t* parent,
                                    ACPI_HANDLE handle,
                                    ACPI_DEVICE_INFO* info,
                                    uint32_t protocol_id,
@@ -88,7 +88,7 @@ static mx_device_t* publish_device(mx_device_t* parent,
     char name[5] = { 0 };
     memcpy(name, &info->Name, sizeof(name) - 1);
 
-    mx_device_prop_t props[4];
+    zx_device_prop_t props[4];
     int propcount = 0;
 
     // Publish HID in device props
@@ -157,8 +157,8 @@ static mx_device_t* publish_device(mx_device_t* parent,
         .prop_count = propcount,
     };
 
-    mx_status_t status;
-    if ((status = device_add(parent, &args, &dev->mxdev)) != MX_OK) {
+    zx_status_t status;
+    if ((status = device_add(parent, &args, &dev->mxdev)) != ZX_OK) {
         xprintf("acpi-bus: error %d in device_add, parent=%s(%p)\n", status, device_get_name(parent), parent);
         free(dev);
         return NULL;
@@ -190,14 +190,14 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
     xprintf("acpi-bus: handle %p nesting level %d\n", (void*)object, nesting_level);
 
     // Only publish PCIE/PCI roots
-    mx_device_t* parent = (mx_device_t*)context;
+    zx_device_t* parent = (zx_device_t*)context;
     const char* hid = hid_from_acpi_devinfo(info);
     if (hid == 0) {
         goto out;
     }
     if (!memcmp(hid, PCI_EXPRESS_ROOT_HID_STRING, HID_LENGTH) ||
                 !memcmp(hid, PCI_ROOT_HID_STRING, HID_LENGTH)) {
-        publish_device(parent, object, info, MX_PROTOCOL_PCIROOT, &pciroot_proto);
+        publish_device(parent, object, info, ZX_PROTOCOL_PCIROOT, &pciroot_proto);
     } else if (!memcmp(hid, BATTERY_HID_STRING, HID_LENGTH)) {
         battery_init(parent, object);
     } else if (!memcmp(hid, PWRSRC_HID_STRING, HID_LENGTH)) {
@@ -212,7 +212,7 @@ out:
     return AE_OK;
 }
 
-static mx_status_t publish_pci_roots(mx_device_t* parent) {
+static zx_status_t publish_pci_roots(zx_device_t* parent) {
     // Walk the ACPI namespace for devices and publish them
     ACPI_STATUS acpi_status = AcpiWalkNamespace(ACPI_TYPE_DEVICE,
                                                 ACPI_ROOT_OBJECT,
@@ -220,55 +220,55 @@ static mx_status_t publish_pci_roots(mx_device_t* parent) {
                                                 acpi_ns_walk_callback,
                                                 NULL, parent, NULL);
     if (acpi_status != AE_OK) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     } else {
-        return MX_OK;
+        return ZX_OK;
     }
 }
 
-static mx_status_t acpi_drv_bind(void* ctx, mx_device_t* parent, void** cookie) {
+static zx_status_t acpi_drv_bind(void* ctx, zx_device_t* parent, void** cookie) {
     // ACPI is the root driver for its devhost so run init in the bind thread.
     xprintf("bus-acpi: bind to %s %p\n", device_get_name(parent), parent);
     root_resource_handle = get_root_resource();
 
     // Get RPC channel
-    rpc_handle = mx_get_startup_handle(PA_HND(PA_USER0, 10));
-    if (rpc_handle == MX_HANDLE_INVALID) {
+    rpc_handle = zx_get_startup_handle(PA_HND(PA_USER0, 10));
+    if (rpc_handle == ZX_HANDLE_INVALID) {
         xprintf("bus-acpi: no acpi rpc handle\n");
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    if (init() != MX_OK) {
+    if (init() != ZX_OK) {
         xprintf("bus_acpi: failed to initialize ACPI\n");
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
 
     printf("acpi-bus: initialized\n");
 
-    mx_status_t status = install_powerbtn_handlers();
-    if (status != MX_OK) {
+    zx_status_t status = install_powerbtn_handlers();
+    if (status != ZX_OK) {
         xprintf("acpi-bus: error %d in install_powerbtn_handlers\n", status);
         return status;
     }
 
     // Report current resources to kernel PCI driver
     status = pci_report_current_resources(get_root_resource());
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         xprintf("acpi-bus: WARNING: ACPI failed to report all current resources!\n");
     }
 
     // Initialize kernel PCI driver
-    mx_pci_init_arg_t* arg;
+    zx_pci_init_arg_t* arg;
     uint32_t arg_size;
     status = get_pci_init_arg(&arg, &arg_size);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         xprintf("acpi-bus: erorr %d in get_pci_init_arg\n", status);
         return status;
     }
 
-    status = mx_pci_init(get_root_resource(), arg, arg_size);
-    if (status != MX_OK) {
-        xprintf("acpi-bus: error %d in mx_pci_init\n", status);
+    status = zx_pci_init(get_root_resource(), arg, arg_size);
+    if (status != ZX_OK) {
+        xprintf("acpi-bus: error %d in zx_pci_init\n", status);
         return status;
     }
 
@@ -280,20 +280,20 @@ static mx_status_t acpi_drv_bind(void* ctx, mx_device_t* parent, void** cookie) 
     int rc = thrd_create_with_name(&rpc_thrd, acpi_rpc_thread, NULL, "acpi-rpc");
     if (rc != thrd_success) {
         xprintf("acpi-bus: error %d in rpc thrd_create\n", rc);
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
 
     // only publish the pci root. ACPI devices are managed by this driver.
     publish_pci_roots(parent);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_driver_ops_t acpi_driver_ops = {
+static zx_driver_ops_t acpi_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = acpi_drv_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(acpi, acpi_driver_ops, "magenta", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_ACPI_BUS),
-MAGENTA_DRIVER_END(acpi)
+ZIRCON_DRIVER_BEGIN(acpi, acpi_driver_ops, "zircon", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_ACPI_BUS),
+ZIRCON_DRIVER_END(acpi)

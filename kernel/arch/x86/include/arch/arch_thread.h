@@ -9,7 +9,7 @@
 #pragma once
 
 #include <assert.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <arch/x86/registers.h>
 #include <sys/types.h>
 

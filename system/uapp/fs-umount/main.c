@@ -14,7 +14,7 @@
 #include <unistd.h>
 
 #include <fs-management/mount.h>
-#include <magenta/device/vfs.h>
+#include <zircon/device/vfs.h>
 
 bool verbose = false;
 

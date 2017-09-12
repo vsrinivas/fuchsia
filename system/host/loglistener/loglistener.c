@@ -22,7 +22,7 @@
 #include <errno.h>
 #include <stdint.h>
 
-#include <magenta/boot/netboot.h>
+#include <zircon/boot/netboot.h>
 
 #ifdef _DARWIN_C_SOURCE
 #define REUSEPORT SO_REUSEPORT
@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
     if ((argc > 1) && (argv[1][0])) {
         nodename = argv[1];
     } else {
-        char* envname = getenv("MAGENTA_NODENAME");
+        char* envname = getenv("ZIRCON_NODENAME");
         if (envname) {
             nodename = envname;
         }

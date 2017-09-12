@@ -35,7 +35,7 @@
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/sdhci.h>
 
-#include <magenta/process.h>
+#include <zircon/process.h>
 
 // BCM28xx Specific Includes
 #include <bcm/bcm28xx.h>
@@ -60,47 +60,47 @@
 
 
 typedef struct emmc {
-    mx_device_t* mxdev;
-    mx_device_t* parent;
+    zx_device_t* mxdev;
+    zx_device_t* parent;
    platform_device_protocol_t pdev;
    void* mmio_base;
    size_t mmio_size;
-   mx_handle_t mmio_handle;
+   zx_handle_t mmio_handle;
 } emmc_t;
 
-static mx_handle_t emmc_sdhci_get_interrupt(void* ctx) {
+static zx_handle_t emmc_sdhci_get_interrupt(void* ctx) {
     emmc_t* emmc = ctx;
 
-    mx_handle_t handle;
-    if (pdev_map_interrupt(&emmc->pdev, IRQ_INDEX, &handle) == MX_OK) {
+    zx_handle_t handle;
+    if (pdev_map_interrupt(&emmc->pdev, IRQ_INDEX, &handle) == ZX_OK) {
         return handle;
     } else {
-        return MX_HANDLE_INVALID;
+        return ZX_HANDLE_INVALID;
     }
 }
 
-static mx_status_t emmc_sdhci_get_mmio(void* ctx, volatile sdhci_regs_t** out) {
+static zx_status_t emmc_sdhci_get_mmio(void* ctx, volatile sdhci_regs_t** out) {
     emmc_t* emmc = ctx;
 
     if (!emmc->mmio_base) {
-        mx_status_t status = pdev_map_mmio(&emmc->pdev, MMIO_INDEX, MX_CACHE_POLICY_UNCACHED_DEVICE,
+        zx_status_t status = pdev_map_mmio(&emmc->pdev, MMIO_INDEX, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                            &emmc->mmio_base, &emmc->mmio_size, &emmc->mmio_handle);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             return status;
         }
     }
 
     *out = emmc->mmio_base;
-    return MX_OK;
+    return ZX_OK;
 }
 
 static uint32_t emmc_sdhci_get_base_clock(void* ctx) {
     uint32_t base_clock = 0;
     emmc_t* emmc = ctx;
     bcm_bus_protocol_t bus_proto;
-    mx_status_t st = pdev_get_protocol(&emmc->pdev, MX_PROTOCOL_BCM_BUS, (void*)&bus_proto);
-    if (st != MX_OK) {
-        xprintf("emmc: could not find MX_PROTOCOL_BCM_BUS\n");
+    zx_status_t st = pdev_get_protocol(&emmc->pdev, ZX_PROTOCOL_BCM_BUS, (void*)&bus_proto);
+    if (st != ZX_OK) {
+        xprintf("emmc: could not find ZX_PROTOCOL_BCM_BUS\n");
         goto out;
     }
     const uint32_t bcm28xX_core_clock_id = 1;
@@ -112,7 +112,7 @@ out:
      return base_clock;
 }
 
-static mx_paddr_t emmc_sdhci_get_dma_offset(void* ctx) {
+static zx_paddr_t emmc_sdhci_get_dma_offset(void* ctx) {
     return BCM_SDRAM_BUS_ADDR_BASE;
 }
 
@@ -137,25 +137,25 @@ static void emmc_release(void* ctx) {
     emmc_t* emmc = ctx;
 
     if (emmc->mmio_base) {
-        mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)emmc->mmio_base, emmc->mmio_size);
-        mx_handle_close(emmc->mmio_handle);
+        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)emmc->mmio_base, emmc->mmio_size);
+        zx_handle_close(emmc->mmio_handle);
     }
     free(emmc);
 }
 
-static mx_protocol_device_t emmc_device_proto = {
+static zx_protocol_device_t emmc_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .unbind = emmc_unbind,
     .release = emmc_release,
 };
 
-static mx_status_t emmc_bind(void* drv_ctx, mx_device_t* dev, void** cookie) {
+static zx_status_t emmc_bind(void* drv_ctx, zx_device_t* dev, void** cookie) {
     emmc_t* emmc = calloc(1, sizeof(emmc_t));
     if (!emmc) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
-    mx_status_t st = device_get_protocol(dev, MX_PROTOCOL_PLATFORM_DEV, &emmc->pdev);
-    if (st !=  MX_OK) {
+    zx_status_t st = device_get_protocol(dev, ZX_PROTOCOL_PLATFORM_DEV, &emmc->pdev);
+    if (st !=  ZX_OK) {
         free(emmc);
         return st;
     }
@@ -167,29 +167,29 @@ static mx_status_t emmc_bind(void* drv_ctx, mx_device_t* dev, void** cookie) {
         .name = "bcm-emmc",
         .ctx = emmc,
         .ops = &emmc_device_proto,
-        .proto_id = MX_PROTOCOL_SDHCI,
+        .proto_id = ZX_PROTOCOL_SDHCI,
         .proto_ops = &emmc_sdhci_proto,
     };
     st = device_add(emmc->parent, &args, &emmc->mxdev);
-    if (st != MX_OK) {
+    if (st != ZX_OK) {
         goto fail;
     }
-    return MX_OK;
+    return ZX_OK;
 fail:
     free(emmc);
     return st;
 }
 
-static mx_driver_ops_t emmc_dwc_driver_ops = {
+static zx_driver_ops_t emmc_dwc_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = emmc_bind,
 };
 
 // The formatter does not play nice with these macros.
 // clang-format off
-MAGENTA_DRIVER_BEGIN(bcm_emmc, emmc_dwc_driver_ops, "magenta", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PLATFORM_DEV),
+ZIRCON_DRIVER_BEGIN(bcm_emmc, emmc_dwc_driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_BROADCOMM),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_BROADCOMM_EMMC),
-MAGENTA_DRIVER_END(bcm_emmc)
+ZIRCON_DRIVER_END(bcm_emmc)
 // clang-format on

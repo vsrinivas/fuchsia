@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/status.h>
-#include <magenta/syscalls.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,9 +12,9 @@
 // How many times to try a given window size.
 #define NUM_PASSES_PER_WINDOW 100
 
-// qsort comparison function for mx_handle_t.
+// qsort comparison function for zx_handle_t.
 static int handle_cmp(const void* left, const void* right) {
-    return *(const mx_handle_t*)left - *(const mx_handle_t*)right;
+    return *(const zx_handle_t*)left - *(const zx_handle_t*)right;
 }
 
 // Prints a message and exits the process with a non-zero status.
@@ -29,37 +29,37 @@ static int handle_cmp(const void* left, const void* right) {
 // Creates/closes |window_size| handles as quickly as possible and looks
 // for aliases. Returns true if any aliases were found.
 static bool find_handle_value_aliases(const size_t window_size) {
-    mx_handle_t event;
-    mx_status_t s = mx_event_create(0, &event);
-    if (s != MX_OK) {
-        FATALF("Can't create event: %s\n", mx_status_get_string(s));
+    zx_handle_t event;
+    zx_status_t s = zx_event_create(0, &event);
+    if (s != ZX_OK) {
+        FATALF("Can't create event: %s\n", zx_status_get_string(s));
     }
-    mx_handle_t* handle_log =
-        (mx_handle_t*)malloc(window_size * sizeof(mx_handle_t));
+    zx_handle_t* handle_log =
+        (zx_handle_t*)malloc(window_size * sizeof(zx_handle_t));
 
     bool saw_aliases = false;
     int pass = 0;
     while (pass++ < NUM_PASSES_PER_WINDOW && !saw_aliases) {
         // Create and close a bunch of handles as quickly as possible.
-        memset(handle_log, 0, window_size * sizeof(mx_handle_t));
+        memset(handle_log, 0, window_size * sizeof(zx_handle_t));
         for (size_t i = 0; i < window_size; i++) {
-            s = mx_handle_duplicate(event, MX_RIGHT_SAME_RIGHTS, &handle_log[i]);
-            if (s != MX_OK) {
+            s = zx_handle_duplicate(event, ZX_RIGHT_SAME_RIGHTS, &handle_log[i]);
+            if (s != ZX_OK) {
                 FATALF("[i == %zd] Can't duplicate event: %s\n",
-                       i, mx_status_get_string(s));
+                       i, zx_status_get_string(s));
             }
             if (handle_log[i] <= 0) {
                 FATALF("[i == %zd] Got bad handle %d\n", i, handle_log[i]);
             }
-            s = mx_handle_close(handle_log[i]);
-            if (s != MX_OK) {
+            s = zx_handle_close(handle_log[i]);
+            if (s != ZX_OK) {
                 FATALF("[i == %zd] Can't close handle %d: %s\n",
-                       i, handle_log[i], mx_status_get_string(s));
+                       i, handle_log[i], zx_status_get_string(s));
             }
         }
 
         // Look for any aliases.
-        qsort(handle_log, window_size, sizeof(mx_handle_t), handle_cmp);
+        qsort(handle_log, window_size, sizeof(zx_handle_t), handle_cmp);
         for (size_t i = 1; i < window_size; i++) {
             if (handle_log[i] == handle_log[i - 1]) {
                 saw_aliases = true;
@@ -69,7 +69,7 @@ static bool find_handle_value_aliases(const size_t window_size) {
     }
 
     free(handle_log);
-    mx_handle_close(event);
+    zx_handle_close(event);
     return saw_aliases;
 }
 

@@ -1,6 +1,6 @@
 # MinFS
 
-MinFS is a simple, unix-like filesystem built for Magenta.
+MinFS is a simple, unix-like filesystem built for Zircon.
 
 It currently supports files up to 512MB in size.
 
@@ -15,12 +15,12 @@ $ truncate --size=16G blk.bin
 (Mac)
 $ mkfile -n 16g blk.bin
 ```
- * Execute the run magenta script on your platform with the '--' to pass
+ * Execute the run zircon script on your platform with the '--' to pass
    arguments directly to QEMU and then use '-hda' to point to the file. If you
    wish to attach additional devices, you can supply them with '-hdb', '-hdc,
    and so on.
 ```shell
-$ ./scripts/run-magenta-x86-64 -- -hda blk.bin
+$ ./scripts/run-zircon-x86-64 -- -hda blk.bin
 ```
 
 ### Target Device (QEMU and Real Hardware)
@@ -31,9 +31,9 @@ devices (USBs, SSDs, etc).
 **BE CAREFUL NOT TO FORMAT THE WRONG DEVICE.** If in doubt, only run the
 following commands through QEMU.
 The `lsblk` command can be used to see more information about the devices
-accessible from Magenta.
+accessible from Zircon.
 
- * Within magenta, 'lsblk' can be used to list the block devices currently on
+ * Within zircon, 'lsblk' can be used to list the block devices currently on
    the system. On this example system below, "/dev/class/block/000" is a raw
    block device.
 ```
@@ -65,7 +65,7 @@ Total: 0 partitions
 ```
 > gpt add 34 20000000 minfs /dev/class/block/002
 ```
- * Within Magenta, format the partition as MinFS. Using 'lsblk' you should see
+ * Within Zircon, format the partition as MinFS. Using 'lsblk' you should see
    a block device which is the whole disk and a slightly smaller device which
    is the partition. In the above output, the partition is device 003, and would
    have the path '/dev/class/block/003'

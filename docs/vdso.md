@@ -1,7 +1,7 @@
-# Magenta vDSO
+# Zircon vDSO
 
-The Magenta vDSO is the sole means of access to [system calls](syscalls.md)
-in Magenta.  vDSO stands for *virtual Dynamic Shared Object*.  (*Dynamic
+The Zircon vDSO is the sole means of access to [system calls](syscalls.md)
+in Zircon.  vDSO stands for *virtual Dynamic Shared Object*.  (*Dynamic
 Shared Object* is a term used for a shared library in the ELF format.)
 It's *virtual* because it's not loaded from an ELF file that sits in a
 filesystem.  Instead, the vDSO image is provided directly by the kernel.
@@ -91,8 +91,8 @@ starts running.  Hence, each process that will launch other processes
 capable of making system calls must have access to the vDSO VMO.
 
 By convention, a VMO handle for the vDSO is passed from process to process
-in the `mx_proc_args_t` bootstrap message sent to each new process
-(see [`<magenta/processargs.h>`](../system/public/magenta/processargs.h)).
+in the `zx_proc_args_t` bootstrap message sent to each new process
+(see [`<zircon/processargs.h>`](../system/public/zircon/processargs.h)).
 The VMO handle's entry in the handle table is identified by the *handle
 info entry* `PA_HND(PA_VMO_VDSO, 0)`.
 
@@ -105,7 +105,7 @@ declarations that form the public [system call](syscalls.md) API, and some
 C++ and assembly code used in the implementation of the vDSO.  Both the
 public API and the private interface between the kernel and the vDSO code
 are specified by
-[`<magenta/syscalls.sysgen>`](../system/public/magenta/syscalls.sysgen),
+[`<zircon/syscalls.sysgen>`](../system/public/zircon/syscalls.sysgen),
 which is the input to `sysgen`.
 
 The `syscall` entries in `syscalls.sysgen` fall into the following groups,
@@ -115,19 +115,19 @@ distinguished by the presence of attributes after the system call name:
    (which are the majority of the system calls) where the public API and
    the private API are exactly the same.  These are implemented entirely
    by generated code.  The public API functions have names prefixed by
-   `_mx_` and `mx_` (aliases).
+   `_zx_` and `zx_` (aliases).
 
 * `vdsocall` entries are simply declarations for the public API.
   These functions are implemented by normal, hand-written C++ code found
-  in [`system/ulib/magenta/`](../system/ulib/magenta/).  Those source
+  in [`system/ulib/zircon/`](../system/ulib/zircon/).  Those source
   files `#include "private.h"` and then define the C++ function for the
-  system call with its name prefixed by `_mx_`.  Finally, they use the
+  system call with its name prefixed by `_zx_`.  Finally, they use the
   `VDSO_INTERFACE_FUNCTION` macro on the system call's name prefixed by
-  `mx_` (no leading underscore).  This implementation code can call the
+  `zx_` (no leading underscore).  This implementation code can call the
   C++ function for any other system call entry (whether a public
   generated call, a public hand-written `vdsocall`, or an `internal`
   generated call), but must use its private entry point alias, which has
-  the `VDSO_mx`_ prefix.  Otherwise the code is normal (minimal) C++,
+  the `VDSO_zx`_ prefix.  Otherwise the code is normal (minimal) C++,
   but must be stateless and reentrant (use only its stack and registers).
 
  * `internal` entries are declarations of a private API used only by the
@@ -135,8 +135,8 @@ distinguished by the presence of attributes after the system call name:
    implementing `vdsocall` system calls).  These produce functions in the
    vDSO implementation with the same C signature that would be declared in
    the public API given the signature of the system call entry.  However,
-   instead of being named with the `_mx_` and `mx_` prefixes, these are
-   available only via `#include "private.h"` with `VDSO_mx_` prefixes.
+   instead of being named with the `_zx_` and `zx_` prefixes, these are
+   available only via `#include "private.h"` with `VDSO_zx_` prefixes.
 
 ### Read-Only Dynamic Shared Object Layout
 
@@ -225,14 +225,14 @@ The kernel enforces correct use of the vDSO in two ways:
  1. It constrains how the vDSO VMO can be mapped into a process.
 
     When a [**vmar_map**()](syscalls/vmar_map.md) call is made using the
-    vDSO VMO and requesting `MX_VM_FLAG_PERM_EXECUTE`, the kernel
+    vDSO VMO and requesting `ZX_VM_FLAG_PERM_EXECUTE`, the kernel
     requires that the offset and size of the mapping exactly match the
     vDSO's executable segment.  It also allows only one such mapping.
     Once the valid vDSO mapping has been established in a process, it
     cannot be removed.  Attempts to map the vDSO a second time into the
     same process, to unmap the vDSO code from a process, or to make an
     executable mapping of the vDSO that don't use the correct offset and
-    size, fail with `MX_ERR_ACCESS_DENIED`.
+    size, fail with `ZX_ERR_ACCESS_DENIED`.
 
     At compile time, the offset and size of the vDSO's code segment are
     extracted from the vDSO ELF file and used as constants in the

@@ -7,7 +7,7 @@ config("async_config") {
 }
 
 source_set("async") {
-  # Don't forget to update rules.mk as well for the Magenta build.
+  # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "include/async/auto_task.h",
     "include/async/auto_wait.h",
@@ -23,17 +23,17 @@ source_set("async") {
     "wait_with_timeout.cpp",
   ]
 
-  libs = [ "magenta" ]
+  libs = [ "zircon" ]
 
   public_deps = [
-    "//magenta/system/ulib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   public_configs = [ ":async_config" ]
 }
 
 source_set("default") {
-  # Don't forget to update rules.mk as well for the Magenta build.
+  # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "include/async/default.h",
   ]
@@ -46,7 +46,7 @@ source_set("default") {
 }
 
 source_set("loop") {
-  # Don't forget to update rules.mk as well for the Magenta build.
+  # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "include/async/loop.h",
     "loop.c",

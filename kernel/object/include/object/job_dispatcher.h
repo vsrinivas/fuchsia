@@ -14,7 +14,7 @@
 #include <object/process_dispatcher.h>
 #include <object/state_tracker.h>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/canary.h>
@@ -57,32 +57,32 @@ public:
     };
 
     static fbl::RefPtr<JobDispatcher> CreateRootJob();
-    static mx_status_t Create(uint32_t flags,
+    static zx_status_t Create(uint32_t flags,
                               fbl::RefPtr<JobDispatcher> parent,
                               fbl::RefPtr<Dispatcher>* dispatcher,
-                              mx_rights_t* rights);
+                              zx_rights_t* rights);
 
     ~JobDispatcher() final;
 
     // Dispatcher implementation.
-    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_JOB; }
+    zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_JOB; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     void on_zero_handles() final;
-    mx_koid_t get_related_koid() const final;
+    zx_koid_t get_related_koid() const final;
     fbl::RefPtr<JobDispatcher> parent() { return fbl::RefPtr<JobDispatcher>(parent_); }
 
     // Job methods.
-    void get_name(char out_name[MX_MAX_NAME_LEN]) const final;
-    mx_status_t set_name(const char* name, size_t len) final;
+    void get_name(char out_name[ZX_MAX_NAME_LEN]) const final;
+    zx_status_t set_name(const char* name, size_t len) final;
     uint32_t max_height() const { return max_height_; }
 
     // "Importance" is a userspace-settable hint that is used to rank jobs for
-    // OOM killing. See MX_PROP_JOB_IMPORTANCE.
-    // Note: if the importance is set to MX_JOB_IMPORTANCE_INHERITED (which is
+    // OOM killing. See ZX_PROP_JOB_IMPORTANCE.
+    // Note: if the importance is set to ZX_JOB_IMPORTANCE_INHERITED (which is
     // the default for all jobs except the root job), get_importance() will
     // return the inherited value.
-    mx_status_t get_importance(mx_job_importance_t* out) const;
-    mx_status_t set_importance(mx_job_importance_t importance);
+    zx_status_t get_importance(zx_job_importance_t* out) const;
+    zx_status_t set_importance(zx_job_importance_t importance);
 
     // TODO(dbort): Consider adding a get_capped_importance() so that userspace
     // doesn't need to check all ancestor jobs to find the value (which is the
@@ -94,29 +94,29 @@ public:
     void RemoveChildProcess(ProcessDispatcher* process);
     void Kill();
 
-    // Set policy. |mode| is is either MX_JOB_POL_RELATIVE or MX_JOB_POL_ABSOLUTE and
+    // Set policy. |mode| is is either ZX_JOB_POL_RELATIVE or ZX_JOB_POL_ABSOLUTE and
     // in_policy is an array of |count| elements.
-    mx_status_t SetPolicy(uint32_t mode, const mx_policy_basic* in_policy, size_t policy_count);
+    zx_status_t SetPolicy(uint32_t mode, const zx_policy_basic* in_policy, size_t policy_count);
     pol_cookie_t GetPolicy();
 
     // Updates a partial ordering between jobs so that this job will be killed
     // after |other| in low-resource situations. If |other| is null, then this
     // job becomes the least-important job in the system.
-    mx_status_t MakeMoreImportantThan(fbl::RefPtr<JobDispatcher> other);
+    zx_status_t MakeMoreImportantThan(fbl::RefPtr<JobDispatcher> other);
 
-    // Calls the provided |mx_status_t func(JobDispatcher*)| on every
+    // Calls the provided |zx_status_t func(JobDispatcher*)| on every
     // JobDispatcher in the system, from least important to most important,
     // using the order determined by MakeMoreImportantThan(). Stops if |func|
     // returns an error, returning the error value.
     template <typename T>
-    static mx_status_t ForEachJobByImportance(T func) {
+    static zx_status_t ForEachJobByImportance(T func) {
         fbl::AutoLock lock(&importance_lock_);
         for (auto &job : importance_list_) {
-            mx_status_t s = func(&job);
-            if (s != MX_OK)
+            zx_status_t s = func(&job);
+            if (s != ZX_OK)
                 return s;
         }
-        return MX_OK;
+        return ZX_OK;
     }
 
     // Walks the job/process tree and invokes |je| methods on each node. If
@@ -124,11 +124,11 @@ public:
     // false if any methods of |je| return false; returns true otherwise.
     bool EnumerateChildren(JobEnumerator* je, bool recurse);
 
-    fbl::RefPtr<ProcessDispatcher> LookupProcessById(mx_koid_t koid);
-    fbl::RefPtr<JobDispatcher> LookupJobById(mx_koid_t koid);
+    fbl::RefPtr<ProcessDispatcher> LookupProcessById(zx_koid_t koid);
+    fbl::RefPtr<JobDispatcher> LookupJobById(zx_koid_t koid);
 
     // exception handling support
-    mx_status_t SetExceptionPort(fbl::RefPtr<ExceptionPort> eport);
+    zx_status_t SetExceptionPort(fbl::RefPtr<ExceptionPort> eport);
     // Returns true if a port had been set.
     bool ResetExceptionPort(bool quietly);
     fbl::RefPtr<ExceptionPort> exception_port();
@@ -142,8 +142,8 @@ private:
     JobDispatcher(uint32_t flags, fbl::RefPtr<JobDispatcher> parent, pol_cookie_t policy);
 
     // Like get_importance(), but does not resolve inheritance; i.e., this
-    // method may return MX_JOB_IMPORTANCE_INHERITED.
-    mx_job_importance_t GetRawImportance() const;
+    // method may return ZX_JOB_IMPORTANCE_INHERITED.
+    zx_job_importance_t GetRawImportance() const;
 
     bool AddChildJob(JobDispatcher* job);
     void RemoveChildJob(JobDispatcher* job);
@@ -161,14 +161,14 @@ private:
 
     // The user-friendly job name. For debug purposes only. That
     // is, there is no mechanism to mint a handle to a job via this name.
-    fbl::Name<MX_MAX_NAME_LEN> name_;
+    fbl::Name<ZX_MAX_NAME_LEN> name_;
 
     // The |lock_| protects all members below.
     mutable fbl::Mutex lock_;
     State state_ TA_GUARDED(lock_);
     uint32_t process_count_ TA_GUARDED(lock_);
     uint32_t job_count_ TA_GUARDED(lock_);
-    mx_job_importance_t importance_ TA_GUARDED(lock_);
+    zx_job_importance_t importance_ TA_GUARDED(lock_);
     StateTracker state_tracker_;
 
     using RawJobList =

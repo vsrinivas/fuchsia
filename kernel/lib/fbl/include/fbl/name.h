@@ -11,8 +11,8 @@
 #include <kernel/auto_lock.h>
 #include <kernel/spinlock.h>
 
-#include <magenta/types.h>
-#include <magenta/thread_annotations.h>
+#include <zircon/types.h>
+#include <zircon/thread_annotations.h>
 
 #include <fbl/algorithm.h>
 
@@ -51,14 +51,14 @@ public:
 
     // Reset the Name to the given data. This will be guaranteed to
     // be nul terminated, so the given data may be truncated.
-    mx_status_t set(const char* name, size_t len) {
+    zx_status_t set(const char* name, size_t len) {
         if (len >= Size)
             len = Size - 1;
 
         AutoSpinLock lock(&lock_);
         memcpy(name_, name, len);
         memset(name_ + len, 0, Size - len);
-        return MX_OK;
+        return ZX_OK;
     }
 
     Name& operator=(const Name<Size>& other) {

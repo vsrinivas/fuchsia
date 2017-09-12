@@ -43,17 +43,17 @@ public:
 
         const size_t size = offset_in_page + sizeof(T);
         const uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
-        mx_status_t status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
+        zx_status_t status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
                 0 /* ignored */, size, 0 /* align pow2 */, 0 /* vmar flags */,
                 fbl::move(vmo), page_offset, arch_mmu_flags, name, &mapping_);
-        ASSERT(status == MX_OK);
+        ASSERT(status == ZX_OK);
         data_ = reinterpret_cast<T*>(mapping_->base() + offset_in_page);
     }
 
     ~KernelVmoWindow() {
         if (mapping_) {
-            mx_status_t status = mapping_->Destroy();
-            ASSERT(status == MX_OK);
+            zx_status_t status = mapping_->Destroy();
+            ASSERT(status == ZX_OK);
         }
     }
 
@@ -165,7 +165,7 @@ private:
         dynsym_window.set_symbol(_ ## symbol, target);          \
     } while (0)
 
-// Blacklist the named mx_* function.  The symbol table entry will
+// Blacklist the named zx_* function.  The symbol table entry will
 // become invisible to runtime symbol resolution, and the code of
 // the function will be clobbered with trapping instructions.
 #define BLACKLIST_SYSCALL(dynsym_window, code_window, symbol)           \
@@ -190,10 +190,10 @@ private:
 void blacklist_##category##_syscalls(VDsoDynSymWindow& dynsym_window, \
                                      VDsoCodeWindow& code_window) {
 #define SYSCALL_IN_CATEGORY(syscall) \
-    BLACKLIST_SYSCALL(dynsym_window, code_window, mx_##syscall);
+    BLACKLIST_SYSCALL(dynsym_window, code_window, zx_##syscall);
 #define SYSCALL_CATEGORY_END(category) \
 }
-#include <magenta/syscall-category.inc>
+#include <zircon/syscall-category.inc>
 #undef SYSCALL_CATEGORY_BEGIN
 #undef SYSCALL_IN_CATEGORY_END
 #undef SYSCALL_CATEGORY_END
@@ -236,12 +236,12 @@ const VDso* VDso::Create() {
     // If ticks_per_second has not been calibrated, it will return 0. In this
     // case, use soft_ticks instead.
     if (per_second == 0 || cmdline_get_bool("vdso.soft_ticks", false)) {
-        // Make mx_ticks_per_second return nanoseconds per second.
-        constants_window.data()->ticks_per_second = MX_SEC(1);
+        // Make zx_ticks_per_second return nanoseconds per second.
+        constants_window.data()->ticks_per_second = ZX_SEC(1);
 
-        // Adjust the mx_ticks_get entry point to be soft_ticks_get.
+        // Adjust the zx_ticks_get entry point to be soft_ticks_get.
         VDsoDynSymWindow dynsym_window(vdso->vmo()->vmo());
-        REDIRECT_SYSCALL(dynsym_window, mx_ticks_get, soft_ticks_get);
+        REDIRECT_SYSCALL(dynsym_window, zx_ticks_get, soft_ticks_get);
     }
 
     for (size_t v = static_cast<size_t>(Variant::FULL) + 1;
@@ -263,7 +263,7 @@ HandleOwner VDso::vmo_handle(Variant variant) const {
     if (variant == Variant::FULL)
         return RoDso::vmo_handle();
 
-    DEBUG_ASSERT(!(vmo_rights() & MX_RIGHT_WRITE));
+    DEBUG_ASSERT(!(vmo_rights() & ZX_RIGHT_WRITE));
     return HandleOwner(MakeHandle(variant_vmo_[variant_index(variant)],
                                   vmo_rights()));
 }
@@ -285,9 +285,9 @@ void VDso::CreateVariant(Variant variant) {
     DEBUG_ASSERT(!variant_vmo_[variant_index(variant)]);
 
     fbl::RefPtr<VmObject> new_vmo;
-    mx_status_t status = vmo()->Clone(MX_VMO_CLONE_COPY_ON_WRITE, 0, size(),
+    zx_status_t status = vmo()->Clone(ZX_VMO_CLONE_COPY_ON_WRITE, 0, size(),
                                       false, &new_vmo);
-    ASSERT(status == MX_OK);
+    ASSERT(status == ZX_OK);
 
     VDsoDynSymWindow dynsym_window(new_vmo);
     VDsoCodeWindow code_window(new_vmo);
@@ -311,13 +311,13 @@ void VDso::CreateVariant(Variant variant) {
     }
 
     fbl::RefPtr<Dispatcher> dispatcher;
-    mx_rights_t rights;
+    zx_rights_t rights;
     status = VmObjectDispatcher::Create(fbl::move(new_vmo),
                                         &dispatcher, &rights);
-    ASSERT(status == MX_OK);
+    ASSERT(status == ZX_OK);
 
     status = dispatcher->set_name(name, strlen(name));
-    ASSERT(status == MX_OK);
+    ASSERT(status == ZX_OK);
 
     variant_vmo_[variant_index(variant)] =
         DownCastDispatcher<VmObjectDispatcher>(&dispatcher);

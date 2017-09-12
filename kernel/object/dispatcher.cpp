@@ -13,9 +13,9 @@
 
 namespace {
 // The first 1K koids are reserved.
-fbl::atomic<mx_koid_t> global_koid(1024ULL);
+fbl::atomic<zx_koid_t> global_koid(1024ULL);
 
-mx_koid_t GenerateKernelObjectId() {
+zx_koid_t GenerateKernelObjectId() {
     return global_koid.fetch_add(1ULL);
 }
 
@@ -32,27 +32,27 @@ Dispatcher::~Dispatcher() {
 #endif
 }
 
-mx_status_t Dispatcher::add_observer(StateObserver* observer) {
+zx_status_t Dispatcher::add_observer(StateObserver* observer) {
     auto state_tracker = get_state_tracker();
     if (!state_tracker)
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     state_tracker->AddObserver(observer, nullptr);
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Dispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
+zx_status_t Dispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
     if (peer)
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 
     auto state_tracker = get_state_tracker();
     if (!state_tracker)
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 
     // Generic objects can set all USER_SIGNALs. Particular object
     // types (events and eventpairs) may be able to set more.
-    if ((set_mask & ~MX_USER_SIGNAL_ALL) || (clear_mask & ~MX_USER_SIGNAL_ALL))
-        return MX_ERR_INVALID_ARGS;
+    if ((set_mask & ~ZX_USER_SIGNAL_ALL) || (clear_mask & ~ZX_USER_SIGNAL_ALL))
+        return ZX_ERR_INVALID_ARGS;
 
     state_tracker->UpdateState(clear_mask, set_mask);
-    return MX_OK;
+    return ZX_OK;
 }

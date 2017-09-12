@@ -6,7 +6,7 @@
 
 #include <ddk/protocol/block.h>
 #include <ddktl/protocol/block-internal.h>
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 
@@ -20,17 +20,17 @@
 //
 // :: Examples ::
 //
-// // A driver that implements a MX_PROTOCOL_BLOCK_CORE device
+// // A driver that implements a ZX_PROTOCOL_BLOCK_CORE device
 // class BlockDevice;
 // using BlockDeviceType = ddk::Device<BlockDevice, /* ddk mixins */>;
 //
 // class BlockDevice : public BlockDeviceType,
 //                      public ddk::BlockProtocol<BlockDevice> {
 //   public:
-//     BlockDevice(mx_device_t* parent)
+//     BlockDevice(zx_device_t* parent)
 //       : BlockDeviceType("my-block-device", parent) {}
 //
-//     mx_status_t Bind() {
+//     zx_status_t Bind() {
 //         DdkAdd();
 //     }
 //
@@ -60,8 +60,8 @@ class BlockProtocol : public internal::base_protocol {
         ops_.write = Write;
 
         // Can only inherit from one base_protocol implemenation
-        MX_ASSERT(ddk_proto_ops_ == nullptr);
-        ddk_proto_id_ = MX_PROTOCOL_BLOCK_CORE;
+        ZX_ASSERT(ddk_proto_ops_ == nullptr);
+        ddk_proto_id_ = ZX_PROTOCOL_BLOCK_CORE;
         ddk_proto_ops_ = &ops_;
     }
 
@@ -74,12 +74,12 @@ class BlockProtocol : public internal::base_protocol {
         static_cast<D*>(ctx)->BlockGetInfo(info);
     }
 
-    static void Read(void* ctx, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
+    static void Read(void* ctx, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
                      uint64_t dev_offset, void* cookie) {
         static_cast<D*>(ctx)->BlockRead(vmo, length, vmo_offset, dev_offset, cookie);
     }
 
-    static void Write(void* ctx, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
+    static void Write(void* ctx, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
                       uint64_t dev_offset, void* cookie) {
         static_cast<D*>(ctx)->BlockWrite(vmo, length, vmo_offset, dev_offset, cookie);
     }

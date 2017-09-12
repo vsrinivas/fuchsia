@@ -15,12 +15,12 @@ MODULE_SRCS += \
 MODULE_SO_NAME := bitmap
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mx \
-    system/ulib/mxcpp \
+    system/ulib/zx \
+    system/ulib/zxcpp \
     system/ulib/fbl \
 
 MODULE_LIBS := \
-    system/ulib/magenta \
+    system/ulib/zircon \
     system/ulib/c \
 
 include make/module.mk

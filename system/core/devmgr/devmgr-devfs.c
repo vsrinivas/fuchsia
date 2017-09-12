@@ -6,13 +6,13 @@
 #include "devmgr.h"
 #include "memfs-private.h"
 
-#include <magenta/listnode.h>
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
+#include <zircon/listnode.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
-#include <magenta/device/vfs.h>
+#include <zircon/device/vfs.h>
 
-#include <mxio/remoteio.h>
+#include <fdio/remoteio.h>
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -28,7 +28,7 @@ struct dc_watcher {
     watcher_t* next;
     devnode_t* devnode;
     uint32_t mask;
-    mx_handle_t handle;
+    zx_handle_t handle;
 };
 
 struct dc_devnode {
@@ -80,7 +80,7 @@ static devnode_t root_devnode = {
 
 static devnode_t* class_devnode;
 
-static mx_status_t dc_rio_handler(port_handler_t* ph, mx_signals_t signals, uint32_t evt);
+static zx_status_t dc_rio_handler(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
 static devnode_t* devfs_mkdir(devnode_t* parent, const char* name);
 
 #define PNMAX 16
@@ -125,19 +125,19 @@ static void prepopulate_protocol_dirs(void) {
     }
 }
 
-static mx_status_t iostate_create(devnode_t* dn, mx_handle_t h) {
+static zx_status_t iostate_create(devnode_t* dn, zx_handle_t h) {
     iostate_t* ios = calloc(1, sizeof(iostate_t));
     if (ios == NULL) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     ios->ph.handle = h;
-    ios->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
+    ios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     ios->ph.func = dc_rio_handler;
     ios->devnode = dn;
     list_add_tail(&dn->iostate, &ios->node);
 
-    mx_status_t r;
+    zx_status_t r;
     if ((r = port_wait(&dc_port, &ios->ph)) < 0) {
         list_delete(&ios->node);
         free(ios);
@@ -150,8 +150,8 @@ static void iostate_destroy(iostate_t* ios) {
         list_delete(&ios->node);
         ios->devnode = NULL;
     }
-    mx_handle_close(ios->ph.handle);
-    ios->ph.handle = MX_HANDLE_INVALID;
+    zx_handle_close(ios->ph.handle);
+    ios->ph.handle = ZX_HANDLE_INVALID;
     free(ios);
 }
 
@@ -160,7 +160,7 @@ static void iostate_destroy(iostate_t* ios) {
 // its device has no rpc handle
 static bool devnode_is_dir(devnode_t* dn) {
     if (list_is_empty(&dn->children)) {
-        return (dn->device == NULL) || (dn->device->hrpc == MX_HANDLE_INVALID);
+        return (dn->device == NULL) || (dn->device->hrpc == ZX_HANDLE_INVALID);
     }
     return true;
 }
@@ -171,7 +171,7 @@ static bool devnode_is_local(devnode_t* dn) {
     if (dn->device == NULL) {
         return true;
     }
-    if (dn->device->hrpc == MX_HANDLE_INVALID) {
+    if (dn->device->hrpc == ZX_HANDLE_INVALID) {
         return true;
     }
     if (dn->device->flags & DEV_CTX_BUSDEV) {
@@ -206,9 +206,9 @@ static void devfs_notify(devnode_t* dn, const char* name, unsigned op) {
         if (!(w->mask & op)) {
             continue;
         }
-        if (mx_channel_write(w->handle, 0, msg, len + 2, NULL, 0) < 0) {
+        if (zx_channel_write(w->handle, 0, msg, len + 2, NULL, 0) < 0) {
             *wp = next;
-            mx_handle_close(w->handle);
+            zx_handle_close(w->handle);
             free(w);
         } else {
             wp = &w->next;
@@ -216,10 +216,10 @@ static void devfs_notify(devnode_t* dn, const char* name, unsigned op) {
     }
 }
 
-static mx_status_t devfs_watch(devnode_t* dn, mx_handle_t h, uint32_t mask) {
+static zx_status_t devfs_watch(devnode_t* dn, zx_handle_t h, uint32_t mask) {
     watcher_t* watcher = calloc(1, sizeof(watcher_t));
     if (watcher == NULL) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     watcher->devnode = dn;
@@ -241,7 +241,7 @@ static mx_status_t devfs_watch(devnode_t* dn, mx_handle_t h, uint32_t mask) {
     // Don't send EXISTING or IDLE events from now on...
     watcher->mask &= ~(VFS_WATCH_MASK_EXISTING | VFS_WATCH_MASK_IDLE);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 // If namelen is nonzero, it is the null-terminator-inclusive length
@@ -285,18 +285,18 @@ static devnode_t* devfs_lookup(devnode_t* parent, const char* name) {
     return NULL;
 }
 
-mx_status_t devfs_publish(device_t* parent, device_t* dev) {
+zx_status_t devfs_publish(device_t* parent, device_t* dev) {
     if ((parent->self == NULL) || (dev->self != NULL) || (dev->link != NULL)) {
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
 
     devnode_t* dnself = devfs_mknode(dev, dev->name, 0);
     if (dnself == NULL) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
-    if ((dev->protocol_id == MX_PROTOCOL_MISC_PARENT) ||
-        (dev->protocol_id == MX_PROTOCOL_MISC)) {
+    if ((dev->protocol_id == ZX_PROTOCOL_MISC_PARENT) ||
+        (dev->protocol_id == ZX_PROTOCOL_MISC)) {
         // misc devices are singletons, not a class
         // in the sense of other device classes.
         // They do not get aliases in /dev/class/misc/...
@@ -312,8 +312,8 @@ mx_status_t devfs_publish(device_t* parent, device_t* dev) {
         const char* name = dev->name;
         size_t namelen = 0;
 
-        if ((dev->protocol_id != MX_PROTOCOL_MISC) &&
-            (dev->protocol_id != MX_PROTOCOL_CONSOLE)) {
+        if ((dev->protocol_id != ZX_PROTOCOL_MISC) &&
+            (dev->protocol_id != ZX_PROTOCOL_CONSOLE)) {
 
             for (unsigned n = 0; n < 1000; n++) {
                 snprintf(tmp, sizeof(tmp), "%03u", (dir->seqcount++) % 1000);
@@ -324,7 +324,7 @@ mx_status_t devfs_publish(device_t* parent, device_t* dev) {
                 }
             }
             free(dnself);
-            return MX_ERR_ALREADY_EXISTS;
+            return ZX_ERR_ALREADY_EXISTS;
 got_name:
             ;
         }
@@ -332,7 +332,7 @@ got_name:
         devnode_t* dnlink = devfs_mknode(dev, name, namelen);
         if (dnlink == NULL) {
             free(dnself);
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
         }
 
         // add link node to class directory
@@ -346,7 +346,7 @@ done:
     list_add_tail(&parent->self->children, &dnself->node);
     dev->self = dnself;
     devfs_notify(parent->self, dnself->name, VFS_WATCH_EVT_ADDED);
-    return MX_OK;
+    return ZX_OK;
 }
 
 static void _devfs_remove(devnode_t* dn) {
@@ -369,8 +369,8 @@ static void _devfs_remove(devnode_t* dn) {
     iostate_t* ios;
     list_for_every_entry(&dn->iostate, ios, iostate_t, node) {
         ios->devnode = NULL;
-        mx_handle_close(ios->ph.handle);
-        ios->ph.handle = MX_HANDLE_INVALID;
+        zx_handle_close(ios->ph.handle);
+        ios->ph.handle = ZX_HANDLE_INVALID;
     }
 
     devfs_notify(dn, "", VFS_WATCH_EVT_DELETED);
@@ -380,7 +380,7 @@ static void _devfs_remove(devnode_t* dn) {
     watcher_t* next;
     for (watcher = dn->watchers; watcher != NULL; watcher = next) {
         next = watcher->next;
-        mx_handle_close(watcher->handle);
+        zx_handle_close(watcher->handle);
         free(watcher);
     }
     dn->watchers = NULL;
@@ -403,13 +403,13 @@ void devfs_unpublish(device_t* dev) {
     }
 }
 
-static mx_status_t devfs_walk(devnode_t** _dn, char* path, char** pathout) {
+static zx_status_t devfs_walk(devnode_t** _dn, char* path, char** pathout) {
     devnode_t* dn = *_dn;
 
 again:
     if ((path == NULL) || (path[0] == 0)) {
         *_dn = dn;
-        return MX_OK;
+        return ZX_OK;
     }
     char* name = path;
     char* undo = NULL;
@@ -418,7 +418,7 @@ again:
         *path++ = 0;
     }
     if (name[0] == 0) {
-        return MX_ERR_BAD_PATH;
+        return ZX_ERR_BAD_PATH;
     }
     devnode_t* child;
     list_for_every_entry(&dn->children, child, devnode_t, node) {
@@ -428,36 +428,36 @@ again:
         }
     }
     if (dn == *_dn) {
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
     }
     if (undo) {
         *undo = '/';
     }
     *_dn = dn;
     *pathout = name;
-    return MX_ERR_NEXT;
+    return ZX_ERR_NEXT;
 }
 
-static void devfs_open(devnode_t* dirdn, mx_handle_t h, char* path, uint32_t flags) {
+static void devfs_open(devnode_t* dirdn, zx_handle_t h, char* path, uint32_t flags) {
     if (!strcmp(path, ".")) {
         path = NULL;
     }
 
     devnode_t* dn = dirdn;
-    mx_status_t r = devfs_walk(&dn, path, &path);
+    zx_status_t r = devfs_walk(&dn, path, &path);
 
     bool pipeline = flags & O_PIPELINE;
 
-    if (r == MX_ERR_NEXT) {
+    if (r == ZX_ERR_NEXT) {
         // we only partially matched -- there's more path to walk
-        if ((dn->device == NULL) || (dn->device->hrpc == MX_HANDLE_INVALID)) {
+        if ((dn->device == NULL) || (dn->device->hrpc == ZX_HANDLE_INVALID)) {
             // no remote to pass this on to
-            r = MX_ERR_NOT_FOUND;
+            r = ZX_ERR_NOT_FOUND;
         } else if (flags & (O_NOREMOTE | O_DIRECTORY)) {
             // local requested, but this is remote only
-            r = MX_ERR_NOT_SUPPORTED;
+            r = ZX_ERR_NOT_SUPPORTED;
         } else {
-            r = MX_OK;
+            r = ZX_OK;
         }
     } else {
         path = (char*) ".";
@@ -472,12 +472,12 @@ static void devfs_open(devnode_t* dirdn, mx_handle_t h, char* path, uint32_t fla
     if (r < 0) {
 fail:
         if (!pipeline) {
-            mxrio_object_t obj;
+            zxrio_object_t obj;
             obj.status = r;
             obj.type = 0;
-            mx_channel_write(h, 0, &obj, MXRIO_OBJECT_MINSIZE, NULL, 0);
+            zx_channel_write(h, 0, &obj, ZXRIO_OBJECT_MINSIZE, NULL, 0);
         }
-        mx_handle_close(h);
+        zx_handle_close(h);
         return;
     }
 
@@ -488,31 +488,31 @@ fail:
             goto fail;
         }
         if (!pipeline) {
-            mxrio_object_t obj;
-            obj.status = MX_OK;
-            obj.type = MXIO_PROTOCOL_REMOTE;
-            mx_channel_write(h, 0, &obj, MXRIO_OBJECT_MINSIZE, NULL, 0);
+            zxrio_object_t obj;
+            obj.status = ZX_OK;
+            obj.type = FDIO_PROTOCOL_REMOTE;
+            zx_channel_write(h, 0, &obj, ZXRIO_OBJECT_MINSIZE, NULL, 0);
         }
         return;
     }
 
     // Otherwise we will pass the request on to the remote
-    mxrio_msg_t msg;
-    memset(&msg, 0, MXRIO_HDR_SZ);
-    msg.op = MXRIO_OPEN;
+    zxrio_msg_t msg;
+    memset(&msg, 0, ZXRIO_HDR_SZ);
+    msg.op = ZXRIO_OPEN;
     msg.datalen = strlen(path);
     msg.arg = flags;
     msg.hcount = 1;
     msg.handle[0] = h;
     memcpy(msg.data, path, msg.datalen);
 
-    if ((r = mx_channel_write(dn->device->hrpc, 0, &msg, MXRIO_HDR_SZ + msg.datalen,
+    if ((r = zx_channel_write(dn->device->hrpc, 0, &msg, ZXRIO_HDR_SZ + msg.datalen,
                               msg.handle, 1)) < 0) {
         goto fail;
     }
 }
 
-static mx_status_t fill_dirent(vdirent_t* de, size_t delen,
+static zx_status_t fill_dirent(vdirent_t* de, size_t delen,
                                const char* name, size_t len, uint32_t type) {
     size_t sz = sizeof(vdirent_t) + len + 1;
 
@@ -520,7 +520,7 @@ static mx_status_t fill_dirent(vdirent_t* de, size_t delen,
     if (sz & 3)
         sz = (sz + 3) & (~3);
     if (sz > delen)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     de->size = sz;
     de->type = type;
     memcpy(de->name, name, len);
@@ -528,7 +528,7 @@ static mx_status_t fill_dirent(vdirent_t* de, size_t delen,
     return sz;
 }
 
-static mx_status_t devfs_readdir(devnode_t* dn, uint64_t* _ino, void* data, size_t len) {
+static zx_status_t devfs_readdir(devnode_t* dn, uint64_t* _ino, void* data, size_t len) {
     void* ptr = data;
     uint64_t ino = *_ino;
 
@@ -544,7 +544,7 @@ static mx_status_t devfs_readdir(devnode_t* dn, uint64_t* _ino, void* data, size
             continue;
         }
         ino = child->ino;
-        mx_status_t r = fill_dirent(ptr, len, child->name, strlen(child->name),
+        zx_status_t r = fill_dirent(ptr, len, child->name, strlen(child->name),
                                     VTYPE_TO_DTYPE(V_TYPE_DIR));
         if (r < 0) {
             break;
@@ -557,16 +557,16 @@ static mx_status_t devfs_readdir(devnode_t* dn, uint64_t* _ino, void* data, size
     return ptr - data;
 }
 
-static mx_status_t devfs_rio_handler(mxrio_msg_t* msg, void* cookie) {
+static zx_status_t devfs_rio_handler(zxrio_msg_t* msg, void* cookie) {
     iostate_t* ios = cookie;
     devnode_t* dn = ios->devnode;
     if (dn == NULL) {
-        return MX_ERR_PEER_CLOSED;
+        return ZX_ERR_PEER_CLOSED;
     }
 
     // ensure handle count specified by opcode matches reality
-    if (msg->hcount != MXRIO_HC(msg->op)) {
-        return MX_ERR_IO;
+    if (msg->hcount != ZXRIO_HC(msg->op)) {
+        return ZX_ERR_IO;
     }
     msg->hcount = 0;
 
@@ -574,20 +574,20 @@ static mx_status_t devfs_rio_handler(mxrio_msg_t* msg, void* cookie) {
     int32_t arg = msg->arg;
     msg->datalen = 0;
 
-    switch (MXRIO_OP(msg->op)) {
-    case MXRIO_CLONE:
+    switch (ZXRIO_OP(msg->op)) {
+    case ZXRIO_CLONE:
         msg->data[0] = 0;
         devfs_open(dn, msg->handle[0], (char*) msg->data, arg | O_NOREMOTE);
         return ERR_DISPATCHER_INDIRECT;
-    case MXRIO_OPEN:
+    case ZXRIO_OPEN:
         if ((len < 1) || (len > 1024)) {
-            mx_handle_close(msg->handle[0]);
+            zx_handle_close(msg->handle[0]);
         } else {
             msg->data[len] = 0;
             devfs_open(dn, msg->handle[0], (char*) msg->data, arg);
         }
         return ERR_DISPATCHER_INDIRECT;
-    case MXRIO_STAT:
+    case ZXRIO_STAT:
         msg->datalen = sizeof(vnattr_t);
         vnattr_t* attr = (void*)msg->data;
         memset(attr, 0, sizeof(vnattr_t));
@@ -599,35 +599,35 @@ static mx_status_t devfs_rio_handler(mxrio_msg_t* msg, void* cookie) {
         attr->size = 0;
         attr->nlink = 1;
         return msg->datalen;
-    case MXRIO_READDIR:
-        if (arg > MXIO_CHUNK_SIZE) {
-            return MX_ERR_INVALID_ARGS;
+    case ZXRIO_READDIR:
+        if (arg > FDIO_CHUNK_SIZE) {
+            return ZX_ERR_INVALID_ARGS;
         }
         if (msg->arg2.off == READDIR_CMD_RESET) {
             ios->readdir_ino = 0;
         }
-        mx_status_t r = devfs_readdir(dn, &ios->readdir_ino, msg->data, arg);
+        zx_status_t r = devfs_readdir(dn, &ios->readdir_ino, msg->data, arg);
         if (r >= 0) {
             msg->datalen = r;
         }
         return r;
-    case MXRIO_IOCTL_1H:
+    case ZXRIO_IOCTL_1H:
         switch (msg->arg2.op) {
         case IOCTL_VFS_MOUNT_FS: {
-            mx_status_t r;
-            if (len != sizeof(mx_handle_t)) {
-                r = MX_ERR_INVALID_ARGS;
+            zx_status_t r;
+            if (len != sizeof(zx_handle_t)) {
+                r = ZX_ERR_INVALID_ARGS;
             } else if (dn->device != &socket_device) {
-                r = MX_ERR_NOT_SUPPORTED;
+                r = ZX_ERR_NOT_SUPPORTED;
             } else {
-                if (socket_device.hrpc != MX_HANDLE_INVALID) {
-                    mx_handle_close(socket_device.hrpc);
+                if (socket_device.hrpc != ZX_HANDLE_INVALID) {
+                    zx_handle_close(socket_device.hrpc);
                 }
                 socket_device.hrpc = msg->handle[0];
-                r = MX_OK;
+                r = ZX_OK;
             }
-            if (r != MX_OK) {
-                mx_handle_close(msg->handle[0]);
+            if (r != ZX_OK) {
+                zx_handle_close(msg->handle[0]);
             }
             return r;
         }
@@ -636,23 +636,23 @@ static mx_status_t devfs_rio_handler(mxrio_msg_t* msg, void* cookie) {
             if ((len != sizeof(vfs_watch_dir_t)) ||
                 (wd->options != 0) ||
                 (wd->mask & (~VFS_WATCH_MASK_ALL))) {
-                r = MX_ERR_INVALID_ARGS;
+                r = ZX_ERR_INVALID_ARGS;
             } else {
                 r = devfs_watch(dn, msg->handle[0], wd->mask);
             }
-            if (r != MX_OK) {
-                mx_handle_close(msg->handle[0]);
+            if (r != ZX_OK) {
+                zx_handle_close(msg->handle[0]);
             }
             return r;
         }
         }
         break;
-    case MXRIO_IOCTL:
+    case ZXRIO_IOCTL:
         switch (msg->arg2.op) {
         case IOCTL_VFS_QUERY_FS: {
             const char* devfs_name = "devfs";
             if (arg < (int32_t) (sizeof(vfs_query_info_t) + strlen(devfs_name))) {
-                return MX_ERR_INVALID_ARGS;
+                return ZX_ERR_INVALID_ARGS;
             }
             vfs_query_info_t* info = (vfs_query_info_t*) msg->data;
             memset(info, 0, sizeof(*info));
@@ -665,24 +665,24 @@ static mx_status_t devfs_rio_handler(mxrio_msg_t* msg, void* cookie) {
     }
 
     // close inbound handles so they do not leak
-    for (unsigned i = 0; i < MXRIO_HC(msg->op); i++) {
-        mx_handle_close(msg->handle[i]);
+    for (unsigned i = 0; i < ZXRIO_HC(msg->op); i++) {
+        zx_handle_close(msg->handle[i]);
     }
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t dc_rio_handler(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
+static zx_status_t dc_rio_handler(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
     iostate_t* ios = containerof(ph, iostate_t, ph);
 
-    mx_status_t r;
-    mxrio_msg_t msg;
-    if (signals & MX_CHANNEL_READABLE) {
-        if ((r = mxrio_handle_rpc(ph->handle, &msg, devfs_rio_handler, ios)) == MX_OK) {
-            return MX_OK;
+    zx_status_t r;
+    zxrio_msg_t msg;
+    if (signals & ZX_CHANNEL_READABLE) {
+        if ((r = zxrio_handle_rpc(ph->handle, &msg, devfs_rio_handler, ios)) == ZX_OK) {
+            return ZX_OK;
         }
-    } else if (signals & MX_CHANNEL_PEER_CLOSED) {
-        mxrio_handle_close(devfs_rio_handler, ios);
-        r = MX_ERR_STOP;
+    } else if (signals & ZX_CHANNEL_PEER_CLOSED) {
+        zxrio_handle_close(devfs_rio_handler, ios);
+        r = ZX_ERR_STOP;
     } else {
         printf("dc_rio_handler: invalid signals %x\n", signals);
         exit(0);
@@ -692,7 +692,7 @@ static mx_status_t dc_rio_handler(port_handler_t* ph, mx_signals_t signals, uint
     return r;
 }
 
-void devmgr_init(mx_handle_t root_job) {
+void devmgr_init(zx_handle_t root_job) {
     printf("devmgr: init\n");
 
     prepopulate_protocol_dirs();
@@ -700,16 +700,16 @@ void devmgr_init(mx_handle_t root_job) {
     root_devnode.device = coordinator_init(root_job);
     root_devnode.device->self = &root_devnode;
 
-    mx_handle_t h0, h1;
-    if (mx_channel_create(0, &h0, &h1) != MX_OK) {
+    zx_handle_t h0, h1;
+    if (zx_channel_create(0, &h0, &h1) != ZX_OK) {
         return;
-    } else if (iostate_create(&root_devnode, h0) != MX_OK) {
-        mx_handle_close(h0);
-        mx_handle_close(h1);
+    } else if (iostate_create(&root_devnode, h0) != ZX_OK) {
+        zx_handle_close(h0);
+        zx_handle_close(h1);
         return;
     }
     // set the "fs ready" signal
-    mx_object_signal(h1, 0, MX_USER_SIGNAL_0);
+    zx_object_signal(h1, 0, ZX_USER_SIGNAL_0);
     devfs_mount(h1);
 }
 

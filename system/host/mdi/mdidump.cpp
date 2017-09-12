@@ -10,8 +10,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <magenta/boot/bootdata.h>
-#include <magenta/mdi.h>
+#include <zircon/boot/bootdata.h>
+#include <zircon/mdi.h>
 
 static void dump_node(int fd, int level);
 

@@ -17,8 +17,8 @@ MODULE_STATIC_LIBS := \
 
 MODULE_LIBS := \
     system/ulib/c \
-    system/ulib/magenta \
-    system/ulib/mxio \
+    system/ulib/zircon \
+    system/ulib/fdio \
 
 MODULE_HEADER_DEPS := system/ulib/ddk
 

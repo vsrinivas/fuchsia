@@ -13,6 +13,6 @@ MODULE_SRCS += \
 
 MODULE_NAME := sysconf-test
 
-MODULE_LIBS := system/ulib/unittest system/ulib/mxio system/ulib/c
+MODULE_LIBS := system/ulib/unittest system/ulib/fdio system/ulib/c
 
 include make/module.mk

@@ -8,26 +8,26 @@
 
 #include <arch/hypervisor.h>
 #include <vm/vm_object.h>
-#include <magenta/rights.h>
+#include <zircon/rights.h>
 #include <fbl/alloc_checker.h>
 
 // static
-mx_status_t GuestDispatcher::Create(fbl::RefPtr<VmObject> physmem,
+zx_status_t GuestDispatcher::Create(fbl::RefPtr<VmObject> physmem,
                                     fbl::RefPtr<Dispatcher>* dispatcher,
-                                    mx_rights_t* rights) {
+                                    zx_rights_t* rights) {
     fbl::unique_ptr<Guest> guest;
-    mx_status_t status = arch_guest_create(physmem, &guest);
-    if (status != MX_OK)
+    zx_status_t status = arch_guest_create(physmem, &guest);
+    if (status != ZX_OK)
         return status;
 
     fbl::AllocChecker ac;
     auto disp = new (&ac) GuestDispatcher(fbl::move(guest));
     if (!ac.check())
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
-    *rights = MX_DEFAULT_GUEST_RIGHTS;
+    *rights = ZX_DEFAULT_GUEST_RIGHTS;
     *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
-    return MX_OK;
+    return ZX_OK;
 }
 
 GuestDispatcher::GuestDispatcher(fbl::unique_ptr<Guest> guest)
@@ -35,7 +35,7 @@ GuestDispatcher::GuestDispatcher(fbl::unique_ptr<Guest> guest)
 
 GuestDispatcher::~GuestDispatcher() {}
 
-mx_status_t GuestDispatcher::SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
+zx_status_t GuestDispatcher::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
                                      fbl::RefPtr<PortDispatcher> port, uint64_t key) {
     canary_.Assert();
 

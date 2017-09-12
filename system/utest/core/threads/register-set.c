@@ -7,7 +7,7 @@
 
 #include "register-set.h"
 
-void regs_fill_test_values(mx_general_regs_t* regs) {
+void regs_fill_test_values(zx_general_regs_t* regs) {
     for (uint32_t index = 0; index < sizeof(*regs); ++index) {
         ((uint8_t*)regs)[index] = index + 1;
     }
@@ -41,7 +41,7 @@ void regs_fill_test_values(mx_general_regs_t* regs) {
 #endif
 }
 
-bool regs_expect_eq(mx_general_regs_t* regs1, mx_general_regs_t* regs2) {
+bool regs_expect_eq(zx_general_regs_t* regs1, zx_general_regs_t* regs2) {
     BEGIN_HELPER;
 #define CHECK_REG(FIELD) EXPECT_EQ(regs1->FIELD, regs2->FIELD, "Reg " #FIELD)
 #if defined(__x86_64__)
@@ -82,25 +82,25 @@ bool regs_expect_eq(mx_general_regs_t* regs1, mx_general_regs_t* regs2) {
 
 // spin_with_regs() function.
 #if defined(__x86_64__)
-static_assert(offsetof(mx_general_regs_t, rax) == 8*0, "");
-static_assert(offsetof(mx_general_regs_t, rbx) == 8*1, "");
-static_assert(offsetof(mx_general_regs_t, rcx) == 8*2, "");
-static_assert(offsetof(mx_general_regs_t, rdx) == 8*3, "");
-static_assert(offsetof(mx_general_regs_t, rsi) == 8*4, "");
-static_assert(offsetof(mx_general_regs_t, rdi) == 8*5, "");
-static_assert(offsetof(mx_general_regs_t, rbp) == 8*6, "");
-static_assert(offsetof(mx_general_regs_t, rsp) == 8*7, "");
-static_assert(offsetof(mx_general_regs_t, r8) == 8*8, "");
-static_assert(offsetof(mx_general_regs_t, r9) == 8*9, "");
-static_assert(offsetof(mx_general_regs_t, r10) == 8*10, "");
-static_assert(offsetof(mx_general_regs_t, r11) == 8*11, "");
-static_assert(offsetof(mx_general_regs_t, r12) == 8*12, "");
-static_assert(offsetof(mx_general_regs_t, r13) == 8*13, "");
-static_assert(offsetof(mx_general_regs_t, r14) == 8*14, "");
-static_assert(offsetof(mx_general_regs_t, r15) == 8*15, "");
-static_assert(offsetof(mx_general_regs_t, rip) == 8*16, "");
-static_assert(offsetof(mx_general_regs_t, rflags) == 8*17, "");
-static_assert(sizeof(mx_general_regs_t) == 8*18, "");
+static_assert(offsetof(zx_general_regs_t, rax) == 8*0, "");
+static_assert(offsetof(zx_general_regs_t, rbx) == 8*1, "");
+static_assert(offsetof(zx_general_regs_t, rcx) == 8*2, "");
+static_assert(offsetof(zx_general_regs_t, rdx) == 8*3, "");
+static_assert(offsetof(zx_general_regs_t, rsi) == 8*4, "");
+static_assert(offsetof(zx_general_regs_t, rdi) == 8*5, "");
+static_assert(offsetof(zx_general_regs_t, rbp) == 8*6, "");
+static_assert(offsetof(zx_general_regs_t, rsp) == 8*7, "");
+static_assert(offsetof(zx_general_regs_t, r8) == 8*8, "");
+static_assert(offsetof(zx_general_regs_t, r9) == 8*9, "");
+static_assert(offsetof(zx_general_regs_t, r10) == 8*10, "");
+static_assert(offsetof(zx_general_regs_t, r11) == 8*11, "");
+static_assert(offsetof(zx_general_regs_t, r12) == 8*12, "");
+static_assert(offsetof(zx_general_regs_t, r13) == 8*13, "");
+static_assert(offsetof(zx_general_regs_t, r14) == 8*14, "");
+static_assert(offsetof(zx_general_regs_t, r15) == 8*15, "");
+static_assert(offsetof(zx_general_regs_t, rip) == 8*16, "");
+static_assert(offsetof(zx_general_regs_t, rflags) == 8*17, "");
+static_assert(sizeof(zx_general_regs_t) == 8*18, "");
 __asm__(".pushsection .text, \"ax\", @progbits\n"
         ".global spin_with_regs\n"
         "spin_with_regs:\n"
@@ -131,13 +131,13 @@ __asm__(".pushsection .text, \"ax\", @progbits\n"
         "jmp spin_with_regs_spin_address\n"
         ".popsection\n");
 #elif defined(__aarch64__)
-static_assert(offsetof(mx_general_regs_t, r[0]) == 8*0, "");
-static_assert(offsetof(mx_general_regs_t, r[1]) == 8*1, "");
-static_assert(offsetof(mx_general_regs_t, lr) == 8*30, "");
-static_assert(offsetof(mx_general_regs_t, sp) == 8*31, "");
-static_assert(offsetof(mx_general_regs_t, pc) == 8*32, "");
-static_assert(offsetof(mx_general_regs_t, cpsr) == 8*33, "");
-static_assert(sizeof(mx_general_regs_t) == 8*34, "");
+static_assert(offsetof(zx_general_regs_t, r[0]) == 8*0, "");
+static_assert(offsetof(zx_general_regs_t, r[1]) == 8*1, "");
+static_assert(offsetof(zx_general_regs_t, lr) == 8*30, "");
+static_assert(offsetof(zx_general_regs_t, sp) == 8*31, "");
+static_assert(offsetof(zx_general_regs_t, pc) == 8*32, "");
+static_assert(offsetof(zx_general_regs_t, cpsr) == 8*33, "");
+static_assert(sizeof(zx_general_regs_t) == 8*34, "");
 __asm__(".pushsection .text, \"ax\", %progbits\n"
         ".global spin_with_regs\n"
         "spin_with_regs:\n"
@@ -201,7 +201,7 @@ __asm__(".pushsection .text,\"ax\", @progbits\n"
         // Fill out the rip field with known value.
         "leaq save_regs_and_exit_thread(%rip), %rax\n"
         "movq %rax, 8*16(%rsp)\n"
-        "call mx_thread_exit@PLT\n"
+        "call zx_thread_exit@PLT\n"
         "ud2\n"
         ".popsection\n");
 #elif defined(__aarch64__)
@@ -233,7 +233,7 @@ __asm__(".pushsection .text, \"ax\", %progbits\n"
         // Save NZCV flags, a subset of the PSTATE/CPSR register.
         "mrs x0, nzcv\n"
         "str x0, [sp, #8*33]\n"
-        "bl mx_thread_exit\n"
+        "bl zx_thread_exit\n"
         "brk 0\n"
         ".popsection\n");
 #else

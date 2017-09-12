@@ -13,7 +13,7 @@
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fs/block-txn.h>
-#include <mxio/debug.h>
+#include <fdio/debug.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/limits.h>
 
@@ -34,25 +34,25 @@ uint64_t MerkleTreeBlocks(const blobstore_inode_t& blobNode) {
 
 // Sanity check the metadata for the blobstore, given a maximum number of
 // available blocks.
-mx_status_t blobstore_check_info(const blobstore_info_t* info, uint64_t max) {
+zx_status_t blobstore_check_info(const blobstore_info_t* info, uint64_t max) {
     if ((info->magic0 != kBlobstoreMagic0) ||
         (info->magic1 != kBlobstoreMagic1)) {
         fprintf(stderr, "blobstore: bad magic\n");
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     if (info->version != kBlobstoreVersion) {
         fprintf(stderr, "blobstore: FS Version: %08x. Driver version: %08x\n", info->version,
                 kBlobstoreVersion);
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     if (info->block_size != kBlobstoreBlockSize) {
         fprintf(stderr, "blobstore: bsz %u unsupported\n", info->block_size);
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     if ((info->flags & kBlobstoreFlagFVM) == 0) {
         if (info->block_count + DataStartBlock(*info) > max) {
             fprintf(stderr, "blobstore: too large for device\n");
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
     } else {
         const size_t blocks_per_slice = info->slice_size / info->block_size;
@@ -61,82 +61,82 @@ mx_status_t blobstore_check_info(const blobstore_info_t* info, uint64_t max) {
         size_t abm_blocks_allocated = info->abm_slices * blocks_per_slice;
         if (abm_blocks_needed > abm_blocks_allocated) {
             FS_TRACE_ERROR("blobstore: Not enough slices for block bitmap\n");
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         } else if (abm_blocks_allocated + BlockMapStartBlock(*info) >= NodeMapStartBlock(*info)) {
             FS_TRACE_ERROR("blobstore: Block bitmap collides into node map\n");
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
 
         size_t ino_blocks_needed = NodeMapBlocks(*info);
         size_t ino_blocks_allocated = info->ino_slices * blocks_per_slice;
         if (ino_blocks_needed > ino_blocks_allocated) {
             FS_TRACE_ERROR("blobstore: Not enough slices for node map\n");
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         } else if (ino_blocks_allocated + NodeMapStartBlock(*info) >= DataStartBlock(*info)) {
             FS_TRACE_ERROR("blobstore: Node bitmap collides into data blocks\n");
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
 
         size_t dat_blocks_needed = DataBlocks(*info);
         size_t dat_blocks_allocated = info->dat_slices * blocks_per_slice;
         if (dat_blocks_needed > dat_blocks_allocated) {
             FS_TRACE_ERROR("blobstore: Not enough slices for data blocks\n");
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         } else if (dat_blocks_allocated + DataStartBlock(*info) >
                    fbl::numeric_limits<uint32_t>::max()) {
             FS_TRACE_ERROR("blobstore: Data blocks overflow uint32\n");
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
     }
     if (info->blob_header_next != 0) {
         fprintf(stderr, "blobstore: linked blob headers not yet supported\n");
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t blobstore_get_blockcount(int fd, uint64_t* out) {
+zx_status_t blobstore_get_blockcount(int fd, uint64_t* out) {
 #ifdef __Fuchsia__
     block_info_t info;
     ssize_t r;
     if ((r = ioctl_block_get_info(fd, &info)) < 0) {
-        return static_cast<mx_status_t>(r);
+        return static_cast<zx_status_t>(r);
     }
     *out = (info.block_size * info.block_count) / kBlobstoreBlockSize;
 #else
     struct stat s;
     if (fstat(fd, &s) < 0) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     *out = s.st_size / kBlobstoreBlockSize;
 #endif
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t readblk(int fd, uint64_t bno, void* data) {
+zx_status_t readblk(int fd, uint64_t bno, void* data) {
     off_t off = bno * kBlobstoreBlockSize;
     if (lseek(fd, off, SEEK_SET) < 0) {
         fprintf(stderr, "blobstore: cannot seek to block %" PRIu64 "\n", bno);
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
     if (read(fd, data, kBlobstoreBlockSize) != kBlobstoreBlockSize) {
         fprintf(stderr, "blobstore: cannot read block %" PRIu64 "\n", bno);
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t writeblk(int fd, uint64_t bno, const void* data) {
+zx_status_t writeblk(int fd, uint64_t bno, const void* data) {
     off_t off = bno * kBlobstoreBlockSize;
     if (lseek(fd, off, SEEK_SET) < 0) {
         fprintf(stderr, "blobstore: cannot seek to block %" PRIu64 "\n", bno);
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
     if (write(fd, data, kBlobstoreBlockSize) != kBlobstoreBlockSize) {
         fprintf(stderr, "blobstore: cannot write block %" PRIu64 "\n", bno);
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 int blobstore_mkfs(int fd, uint64_t block_count) {
@@ -233,12 +233,12 @@ int blobstore_mkfs(int fd, uint64_t block_count) {
 
     // All in-memory structures have been created successfully. Dump everything to disk.
     char block[kBlobstoreBlockSize];
-    mx_status_t status;
+    zx_status_t status;
 
     // write the root block to disk
     memset(block, 0, sizeof(block));
     memcpy(block, &info, sizeof(info));
-    if ((status = writeblk(fd, 0, block)) != MX_OK) {
+    if ((status = writeblk(fd, 0, block)) != ZX_OK) {
         fprintf(stderr, "Failed to write root block\n");
         return status;
     }
@@ -257,7 +257,7 @@ int blobstore_mkfs(int fd, uint64_t block_count) {
         memset(block, 0, sizeof(block));
         if (writeblk(fd, NodeMapStartBlock(info) + n, block)) {
             fprintf(stderr, "blobstore: failed writing inode map\n");
-            return MX_ERR_IO;
+            return ZX_ERR_IO;
         }
     }
 
@@ -268,9 +268,9 @@ int blobstore_mkfs(int fd, uint64_t block_count) {
 } // namespace blobstore
 
 #ifndef __Fuchsia__
-// This is used by the ioctl wrappers in magenta/device/device.h. It's not
+// This is used by the ioctl wrappers in zircon/device/device.h. It's not
 // called by host tools, so just satisfy the linker with a stub.
-ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
+ssize_t fdio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
     return -1;
 }
 #endif

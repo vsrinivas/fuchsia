@@ -14,7 +14,7 @@ MODULE_SRCS += \
 MODULE_NAME := thread-injection-test
 
 MODULE_LIBS := \
-    system/ulib/unittest system/ulib/launchpad system/ulib/magenta system/ulib/c
+    system/ulib/unittest system/ulib/launchpad system/ulib/zircon system/ulib/c
 
 MODULES += $(LOCAL_DIR)/injector $(LOCAL_DIR)/injected
 

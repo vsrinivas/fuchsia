@@ -11,9 +11,9 @@
 
 #include <elf.h>
 #include <elfload/elfload.h>
-#include <magenta/compiler.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
+#include <zircon/compiler.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
 #include <stdbool.h>
 #include <string.h>
 
@@ -21,13 +21,13 @@
 
 #define INTERP_PREFIX "lib/"
 
-static mx_vaddr_t load(mx_handle_t log, mx_handle_t vmar, mx_handle_t vmo,
+static zx_vaddr_t load(zx_handle_t log, zx_handle_t vmar, zx_handle_t vmo,
                        uintptr_t* interp_off, size_t* interp_len,
-                       mx_handle_t* segments_vmar, size_t* stack_size,
+                       zx_handle_t* segments_vmar, size_t* stack_size,
                        bool close_vmo, bool return_entry) {
     elf_load_header_t header;
     uintptr_t phoff;
-    mx_status_t status = elf_load_prepare(vmo, NULL, 0, &header, &phoff);
+    zx_status_t status = elf_load_prepare(vmo, NULL, 0, &header, &phoff);
     check(log, status, "elf_load_prepare failed");
 
     elf_phdr_t phdrs[header.e_phnum];
@@ -45,7 +45,7 @@ static mx_vaddr_t load(mx_handle_t log, mx_handle_t vmar, mx_handle_t vmo,
         }
     }
 
-    mx_vaddr_t addr;
+    zx_vaddr_t addr;
     status = elf_load_map_segments(vmar, &header, phdrs, vmo,
                                    segments_vmar,
                                    return_entry ? NULL : &addr,
@@ -53,12 +53,12 @@ static mx_vaddr_t load(mx_handle_t log, mx_handle_t vmar, mx_handle_t vmo,
     check(log, status, "elf_load_map_segments failed");
 
     if (close_vmo)
-        mx_handle_close(vmo);
+        zx_handle_close(vmo);
 
     return addr;
 }
 
-mx_vaddr_t elf_load_vmo(mx_handle_t log, mx_handle_t vmar, mx_handle_t vmo) {
+zx_vaddr_t elf_load_vmo(zx_handle_t log, zx_handle_t vmar, zx_handle_t vmo) {
     return load(log, vmar, vmo, NULL, NULL, NULL, NULL, false, false);
 }
 
@@ -77,22 +77,22 @@ enum loader_bootstrap_handle_index {
 #define LOADER_BOOTSTRAP_ENVIRON_NUM 1
 
 struct loader_bootstrap_message {
-    mx_proc_args_t header;
+    zx_proc_args_t header;
     uint32_t handle_info[BOOTSTRAP_HANDLES];
     char env[sizeof(LOADER_BOOTSTRAP_ENVIRON)];
 };
 
-static void stuff_loader_bootstrap(mx_handle_t log,
-                                   mx_handle_t proc, mx_handle_t root_vmar,
-                                   mx_handle_t thread,
-                                   mx_handle_t to_child,
-                                   mx_handle_t segments_vmar,
-                                   mx_handle_t vmo,
-                                   mx_handle_t* loader_svc) {
+static void stuff_loader_bootstrap(zx_handle_t log,
+                                   zx_handle_t proc, zx_handle_t root_vmar,
+                                   zx_handle_t thread,
+                                   zx_handle_t to_child,
+                                   zx_handle_t segments_vmar,
+                                   zx_handle_t vmo,
+                                   zx_handle_t* loader_svc) {
     struct loader_bootstrap_message msg = {
         .header = {
-            .protocol = MX_PROCARGS_PROTOCOL,
-            .version = MX_PROCARGS_VERSION,
+            .protocol = ZX_PROCARGS_PROTOCOL,
+            .version = ZX_PROCARGS_VERSION,
             .handle_info_off = offsetof(struct loader_bootstrap_message,
                                         handle_info),
             .environ_num = LOADER_BOOTSTRAP_ENVIRON_NUM,
@@ -100,7 +100,7 @@ static void stuff_loader_bootstrap(mx_handle_t log,
         },
         .handle_info = {
             [BOOTSTRAP_EXEC_VMO] = PA_HND(PA_VMO_EXECUTABLE, 0),
-            [BOOTSTRAP_LOGGER] = PA_HND(PA_MXIO_LOGGER, 0),
+            [BOOTSTRAP_LOGGER] = PA_HND(PA_FDIO_LOGGER, 0),
             [BOOTSTRAP_PROC] = PA_HND(PA_PROC_SELF, 0),
             [BOOTSTRAP_ROOT_VMAR] = PA_HND(PA_VMAR_ROOT, 0),
             [BOOTSTRAP_SEGMENTS_VMAR] = PA_HND(PA_VMAR_LOADED, 0),
@@ -109,65 +109,65 @@ static void stuff_loader_bootstrap(mx_handle_t log,
         },
         .env = LOADER_BOOTSTRAP_ENVIRON,
     };
-    mx_handle_t handles[] = {
+    zx_handle_t handles[] = {
         [BOOTSTRAP_EXEC_VMO] = vmo,
-        [BOOTSTRAP_LOGGER] = MX_HANDLE_INVALID,
-        [BOOTSTRAP_PROC] = MX_HANDLE_INVALID,
-        [BOOTSTRAP_ROOT_VMAR] = MX_HANDLE_INVALID,
+        [BOOTSTRAP_LOGGER] = ZX_HANDLE_INVALID,
+        [BOOTSTRAP_PROC] = ZX_HANDLE_INVALID,
+        [BOOTSTRAP_ROOT_VMAR] = ZX_HANDLE_INVALID,
         [BOOTSTRAP_SEGMENTS_VMAR] = segments_vmar,
-        [BOOTSTRAP_THREAD] = MX_HANDLE_INVALID,
-        [BOOTSTRAP_LOADER_SVC] = MX_HANDLE_INVALID,
+        [BOOTSTRAP_THREAD] = ZX_HANDLE_INVALID,
+        [BOOTSTRAP_LOADER_SVC] = ZX_HANDLE_INVALID,
     };
-    check(log, mx_handle_duplicate(log, MX_RIGHT_SAME_RIGHTS,
+    check(log, zx_handle_duplicate(log, ZX_RIGHT_SAME_RIGHTS,
                                    &handles[BOOTSTRAP_LOGGER]),
-          "mx_handle_duplicate failed");
-    check(log, mx_handle_duplicate(proc, MX_RIGHT_SAME_RIGHTS,
+          "zx_handle_duplicate failed");
+    check(log, zx_handle_duplicate(proc, ZX_RIGHT_SAME_RIGHTS,
                                    &handles[BOOTSTRAP_PROC]),
-          "mx_handle_duplicate failed");
-    check(log, mx_handle_duplicate(root_vmar, MX_RIGHT_SAME_RIGHTS,
+          "zx_handle_duplicate failed");
+    check(log, zx_handle_duplicate(root_vmar, ZX_RIGHT_SAME_RIGHTS,
                                    &handles[BOOTSTRAP_ROOT_VMAR]),
-          "mx_handle_duplicate failed");
-    check(log, mx_handle_duplicate(thread, MX_RIGHT_SAME_RIGHTS,
+          "zx_handle_duplicate failed");
+    check(log, zx_handle_duplicate(thread, ZX_RIGHT_SAME_RIGHTS,
                                    &handles[BOOTSTRAP_THREAD]),
-          "mx_handle_duplicate failed");
-    check(log, mx_channel_create(0, loader_svc,
+          "zx_handle_duplicate failed");
+    check(log, zx_channel_create(0, loader_svc,
                                  &handles[BOOTSTRAP_LOADER_SVC]),
-          "mx_channel_create failed");
+          "zx_channel_create failed");
 
-    mx_status_t status = mx_channel_write(
+    zx_status_t status = zx_channel_write(
         to_child, 0, &msg, sizeof(msg), handles, countof(handles));
     check(log, status,
-          "mx_channel_write of loader bootstrap message failed");
+          "zx_channel_write of loader bootstrap message failed");
 }
 
-mx_vaddr_t elf_load_bootfs(mx_handle_t log, struct bootfs *fs, mx_handle_t proc,
-                           mx_handle_t vmar, mx_handle_t thread,
-                           const char* filename, mx_handle_t to_child,
-                           size_t* stack_size, mx_handle_t* loader_svc) {
-    mx_handle_t vmo = bootfs_open(log, "program", fs, filename);
+zx_vaddr_t elf_load_bootfs(zx_handle_t log, struct bootfs *fs, zx_handle_t proc,
+                           zx_handle_t vmar, zx_handle_t thread,
+                           const char* filename, zx_handle_t to_child,
+                           size_t* stack_size, zx_handle_t* loader_svc) {
+    zx_handle_t vmo = bootfs_open(log, "program", fs, filename);
 
     uintptr_t interp_off = 0;
     size_t interp_len = 0;
-    mx_vaddr_t entry = load(log, vmar, vmo, &interp_off, &interp_len,
+    zx_vaddr_t entry = load(log, vmar, vmo, &interp_off, &interp_len,
                             NULL, stack_size, true, true);
     if (interp_len > 0) {
         char interp[sizeof(INTERP_PREFIX) + interp_len];
         memcpy(interp, INTERP_PREFIX, sizeof(INTERP_PREFIX) - 1);
         size_t n;
-        mx_status_t status = mx_vmo_read(
+        zx_status_t status = zx_vmo_read(
             vmo, &interp[sizeof(INTERP_PREFIX) - 1],
             interp_off, interp_len, &n);
         if (status < 0)
-            fail(log, "mx_vmo_read failed: %d", status);
+            fail(log, "zx_vmo_read failed: %d", status);
         if (n != interp_len)
-            fail(log, "mx_vmo_read short read");
+            fail(log, "zx_vmo_read short read");
         interp[sizeof(INTERP_PREFIX) - 1 + interp_len] = '\0';
 
         printl(log, "'%s' has PT_INTERP \"%s\"", filename, interp);
 
-        mx_handle_t interp_vmo =
+        zx_handle_t interp_vmo =
             bootfs_open(log, "dynamic linker", fs, interp);
-        mx_handle_t interp_vmar;
+        zx_handle_t interp_vmar;
         entry = load(log, vmar, interp_vmo,
                      NULL, NULL, &interp_vmar, NULL, true, true);
 

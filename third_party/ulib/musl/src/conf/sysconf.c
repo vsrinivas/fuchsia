@@ -5,7 +5,7 @@
 #include <sys/resource.h>
 #include <unistd.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #define JT(x) (-256 | (x))
 #define VER JT(1)
@@ -189,11 +189,11 @@ long sysconf(int name) {
         return SEM_VALUE_MAX;
     case JT_NPROCESSORS_CONF & 255:
     case JT_NPROCESSORS_ONLN & 255:
-        return _mx_system_get_num_cpus();
+        return _zx_system_get_num_cpus();
     case JT_PHYS_PAGES & 255:
-        return _mx_system_get_physmem() / PAGE_SIZE;
+        return _zx_system_get_physmem() / PAGE_SIZE;
     case JT_AVPHYS_PAGES & 255:
-        // TODO(kulakowski) Ask magenta for physical memory allocation
+        // TODO(kulakowski) Ask zircon for physical memory allocation
 
         // Note that on Linux the calculation looks like this
         // depending on whether _SC_PHYS_PAGES was asked for or not:

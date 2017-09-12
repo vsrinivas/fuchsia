@@ -34,7 +34,7 @@ struct vdso_constants {
     // Number of bytes in an instruction cache line.
     uint32_t icache_line_size;
 
-    // Conversion factor for mx_ticks_get return values to seconds.
+    // Conversion factor for zx_ticks_get return values to seconds.
     uint64_t ticks_per_second;
 
     // Total amount of physical memory in the system, in bytes.

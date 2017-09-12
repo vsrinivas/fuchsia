@@ -51,14 +51,14 @@ MODULE_NAME := fbl-test
 MODULE_SRCS := $(fbl_device_tests)
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mxcpp \
+    system/ulib/zxcpp \
     system/ulib/fbl \
 
 MODULE_LIBS := \
     system/ulib/c \
-    system/ulib/mxio \
+    system/ulib/fdio \
     system/ulib/unittest \
-    system/ulib/magenta \
+    system/ulib/zircon \
 
 include make/module.mk
 

@@ -4,14 +4,14 @@
 
 #include <runtime/message.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <stddef.h>
 
-mx_status_t mxr_message_size(mx_handle_t msg_pipe,
+zx_status_t zxr_message_size(zx_handle_t msg_pipe,
                              uint32_t* nbytes, uint32_t* nhandles) {
-    mx_status_t status = _mx_channel_read(
+    zx_status_t status = _zx_channel_read(
         msg_pipe, 0, NULL, NULL, 0, 0, nbytes, nhandles);
-    if (status == MX_ERR_BUFFER_TOO_SMALL)
-        status = MX_OK;
+    if (status == ZX_ERR_BUFFER_TOO_SMALL)
+        status = ZX_OK;
     return status;
 }

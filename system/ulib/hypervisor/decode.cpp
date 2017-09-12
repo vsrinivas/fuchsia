@@ -5,8 +5,8 @@
 #include <string.h>
 
 #include <hypervisor/decode.h>
-#include <magenta/syscalls/hypervisor.h>
-#include <magenta/syscalls/port.h>
+#include <zircon/syscalls/hypervisor.h>
+#include <zircon/syscalls/port.h>
 
 static const uint8_t kRexRMask = 1u << 2;
 static const uint8_t kRexWMask = 1u << 3;
@@ -49,7 +49,7 @@ static uint8_t register_id(uint8_t mod_rm, bool rex_r) {
     return static_cast<uint8_t>(((mod_rm >> 3) & 0b111) + (rex_r ? 0b1000 : 0));
 }
 
-static uint64_t* select_register(mx_vcpu_state_t* vcpu_state, uint8_t register_id) {
+static uint64_t* select_register(zx_vcpu_state_t* vcpu_state, uint8_t register_id) {
     // From Intel Volume 2, Section 2.1.
     switch (register_id) {
     // From Intel Volume 2, Section 2.1.5.
@@ -90,39 +90,39 @@ static uint64_t* select_register(mx_vcpu_state_t* vcpu_state, uint8_t register_i
     }
 }
 
-mx_status_t deconstruct_instruction(const uint8_t* inst_buf, uint32_t inst_len,
+zx_status_t deconstruct_instruction(const uint8_t* inst_buf, uint32_t inst_len,
                                     uint16_t* opcode, uint8_t* mod_rm) {
     if (inst_len == 0)
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     switch (inst_buf[0]) {
     case 0x0f:
         if (inst_len < 3)
-            return MX_ERR_NOT_SUPPORTED;
+            return ZX_ERR_NOT_SUPPORTED;
         *opcode = *(uint16_t*)inst_buf;
         *mod_rm = inst_buf[2];
         break;
     default:
         if (inst_len < 2)
-            return MX_ERR_OUT_OF_RANGE;
+            return ZX_ERR_OUT_OF_RANGE;
         *opcode = inst_buf[0];
         *mod_rm = inst_buf[1];
         break;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, mx_vcpu_state_t* vcpu_state,
+zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, zx_vcpu_state_t* vcpu_state,
                         instruction_t* inst) {
     if (inst_len == 0)
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     if (inst_len > X86_MAX_INST_LEN)
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
 
     // Parse 66H prefix.
     bool h66 = is_h66_prefix(inst_buf[0]);
     if (h66) {
         if (inst_len == 1)
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
         inst_buf++;
         inst_len--;
     }
@@ -141,93 +141,93 @@ mx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, mx_vcpu_stat
     }
     // Technically this is valid, but no sane compiler should emit it.
     if (h66 && rex_w)
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 
     uint16_t opcode;
     uint8_t mod_rm;
-    mx_status_t status = deconstruct_instruction(inst_buf, inst_len, &opcode, &mod_rm);
-    if (status != MX_OK)
+    zx_status_t status = deconstruct_instruction(inst_buf, inst_len, &opcode, &mod_rm);
+    if (status != ZX_OK)
         return status;
     if (has_sib_byte(mod_rm))
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 
     const uint8_t disp_size = displacement_size(mod_rm);
     switch (opcode) {
     // Move r to r/m.
     case 0x89:
         if (inst_len != disp_size + 2u)
-            return MX_ERR_OUT_OF_RANGE;
+            return ZX_ERR_OUT_OF_RANGE;
         inst->type = INST_MOV_WRITE;
         inst->mem = mem_size(h66, rex_w);
         inst->imm = 0;
         inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r));
         inst->flags = NULL;
-        return inst->reg == NULL ? MX_ERR_NOT_SUPPORTED : MX_OK;
+        return inst->reg == NULL ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
     // Move r/m to r.
     case 0x8b:
         if (inst_len != disp_size + 2u)
-            return MX_ERR_OUT_OF_RANGE;
+            return ZX_ERR_OUT_OF_RANGE;
         inst->type = INST_MOV_READ;
         inst->mem = mem_size(h66, rex_w);
         inst->imm = 0;
         inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r));
         inst->flags = NULL;
-        return inst->reg == NULL ? MX_ERR_NOT_SUPPORTED : MX_OK;
+        return inst->reg == NULL ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
     // Move imm to r/m.
     case 0xc7: {
         const uint8_t imm_size = h66 ? 2 : 4;
         if (inst_len != disp_size + imm_size + 2u)
-            return MX_ERR_OUT_OF_RANGE;
+            return ZX_ERR_OUT_OF_RANGE;
         if ((mod_rm & kModRMRegMask) != 0)
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         inst->type = INST_MOV_WRITE;
         inst->mem = mem_size(h66, rex_w);
         inst->imm = 0;
         inst->reg = NULL;
         inst->flags = NULL;
         memcpy(&inst->imm, inst_buf + disp_size + 2, imm_size);
-        return MX_OK;
+        return ZX_OK;
     }
     // Move (8-bit) with zero-extend r/m to r.
     case 0xb60f:
         if (h66)
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
         if (inst_len != disp_size + 3u)
-            return MX_ERR_OUT_OF_RANGE;
+            return ZX_ERR_OUT_OF_RANGE;
         inst->type = INST_MOV_READ;
         inst->mem = 1;
         inst->imm = 0;
         inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r));
         inst->flags = NULL;
-        return inst->reg == NULL ? MX_ERR_NOT_SUPPORTED : MX_OK;
+        return inst->reg == NULL ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
     // Move (16-bit) with zero-extend r/m to r.
     case 0xb70f:
         if (h66)
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
         if (inst_len != disp_size + 3u)
-            return MX_ERR_OUT_OF_RANGE;
+            return ZX_ERR_OUT_OF_RANGE;
         inst->type = INST_MOV_READ;
         inst->mem = 2;
         inst->imm = 0;
         inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r));
         inst->flags = NULL;
-        return inst->reg == NULL ? MX_ERR_NOT_SUPPORTED : MX_OK;
+        return inst->reg == NULL ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
     // Logical compare (8-bit) imm with r/m.
     case 0xf6:
         if (h66)
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
         if (inst_len != disp_size + 3u)
-            return MX_ERR_OUT_OF_RANGE;
+            return ZX_ERR_OUT_OF_RANGE;
         if ((mod_rm & kModRMRegMask) != 0)
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         inst->type = INST_TEST;
         inst->mem = 1;
         inst->imm = 0;
         inst->reg = NULL;
         inst->flags = &vcpu_state->flags;
         memcpy(&inst->imm, inst_buf + disp_size + 2, 1);
-        return MX_OK;
+        return ZX_OK;
     default:
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }

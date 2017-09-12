@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 #include <lib/user_copy/user_ptr.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/intrusive_single_list.h>
 
 class MBufChain {
@@ -17,8 +17,8 @@ public:
     MBufChain() = default;
     ~MBufChain();
 
-    mx_status_t WriteStream(user_ptr<const void> src, size_t len, size_t* written);
-    mx_status_t WriteDatagram(user_ptr<const void> src, size_t len, size_t* written);
+    zx_status_t WriteStream(user_ptr<const void> src, size_t len, size_t* written);
+    zx_status_t WriteDatagram(user_ptr<const void> src, size_t len, size_t* written);
     size_t Read(user_ptr<void> dst, size_t len, bool datagram);
     bool is_full() const;
     bool is_empty() const;
@@ -38,10 +38,10 @@ private:
         uint32_t off_ = 0u;
         uint32_t len_ = 0u;
         // pkt_len_ is set to the total number of bytes in a packet
-        // when a socket is in MX_SOCKET_DATAGRAM mode. A pkt_len_ of
+        // when a socket is in ZX_SOCKET_DATAGRAM mode. A pkt_len_ of
         // 0 means this mbuf is part of the body of a packet.
         //
-        // Always 0 in MX_SOCKET_STREAM mode.
+        // Always 0 in ZX_SOCKET_STREAM mode.
         uint32_t pkt_len_ = 0u;
         uint32_t unused_;
         char data_[kPayloadSize] = {0};

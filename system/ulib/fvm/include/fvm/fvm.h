@@ -6,7 +6,7 @@
 
 #include <digest/digest.h>
 #include <gpt/gpt.h>
-#include <magenta/device/block.h>
+#include <zircon/device/block.h>
 #include <stdlib.h>
 
 #define FVM_MAGIC (0x54524150204d5646ull) // 'FVM PART'
@@ -122,11 +122,11 @@ void fvm_update_hash(void* metadata, size_t metadata_size);
 //
 // "out" is an optional output parameter which is equal to a
 // valid copy of either metadata or backup on success.
-mx_status_t fvm_validate_header(const void* metadata, const void* backup,
+zx_status_t fvm_validate_header(const void* metadata, const void* backup,
                                 size_t metadata_size, const void** out);
 
 // Format a block device to be an empty FVM.
-mx_status_t fvm_init(int fd, size_t slice_size);
+zx_status_t fvm_init(int fd, size_t slice_size);
 
 // Allocates a new vpartition in the fvm, and waits for it to become
 // accessible (by watching for a corresponding block device).

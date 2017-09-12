@@ -1,4 +1,4 @@
-# mx_futex_requeue
+# zx_futex_requeue
 
 ## NAME
 
@@ -8,10 +8,10 @@ move more waiters to another wait queue.
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-mx_status_t mx_futex_requeue(mx_futex_t* value_ptr, uint32_t wake_count,
-                             int current_value, mx_futex_t* requeue_ptr,
+zx_status_t zx_futex_requeue(zx_futex_t* value_ptr, uint32_t wake_count,
+                             int current_value, zx_futex_t* requeue_ptr,
                              uint32_t requeue_count);
 ```
 
@@ -19,7 +19,7 @@ mx_status_t mx_futex_requeue(mx_futex_t* value_ptr, uint32_t wake_count,
 
 Requeuing is a generalization of waking. First, the kernel verifies
 that the value in wake_count matches the value of the futex at
-`value_ptr`, and if not reports *MX_ERR_ALREADY_BOUND*. After waking `wake_count`
+`value_ptr`, and if not reports *ZX_ERR_ALREADY_BOUND*. After waking `wake_count`
 threads, `requeue_count` threads are moved from the original futex's
 wait queue to the wait queue corresponding to `requeue_ptr`, another
 futex.
@@ -28,16 +28,16 @@ This requeueing behavior may be used to avoid thundering herds on wake.
 
 ## RETURN VALUE
 
-**futex_requeue**() returns **MX_OK** on success.
+**futex_requeue**() returns **ZX_OK** on success.
 
 ## ERRORS
 
-**MX_ERR_INVALID_ARGS**  *value_ptr* isn't a valid userspace pointer, or
+**ZX_ERR_INVALID_ARGS**  *value_ptr* isn't a valid userspace pointer, or
 *value_ptr* is the same futex as *requeue_ptr*, or
 *value_ptr* or *requeue_ptr* is not aligned, or
 *requeue_ptr* is NULL but *requeue_count* is positive.
 
-**MX_ERR_BAD_STATE**  *current_value* does not match the value at *value_ptr*.
+**ZX_ERR_BAD_STATE**  *current_value* does not match the value at *value_ptr*.
 
 ## SEE ALSO
 

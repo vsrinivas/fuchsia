@@ -11,7 +11,7 @@
 #pragma once
 
 #include <elf.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -29,32 +29,32 @@ typedef Elf32_Phdr elf_phdr_t;
 #endif
 
 typedef struct {
-    mx_vaddr_t e_entry;
+    zx_vaddr_t e_entry;
     uint_fast16_t e_phnum;
 } elf_load_header_t;
 
 // These routines use this error code to indicate an invalid file format,
 // including wrong machine, wrong endian, etc. as well as a truncated file.
-#define ERR_ELF_BAD_FORMAT MX_ERR_NOT_FOUND
+#define ERR_ELF_BAD_FORMAT ZX_ERR_NOT_FOUND
 
 __BEGIN_CDECLS
 
 // Validate the ELF headers and fill in basic header information. 'hdr_buf'
 // represents bytes already read from the start of the file.
-mx_status_t elf_load_prepare(mx_handle_t vmo, const void* hdr_buf, size_t buf_sz,
+zx_status_t elf_load_prepare(zx_handle_t vmo, const void* hdr_buf, size_t buf_sz,
                              elf_load_header_t* header, uintptr_t* phoff);
 
 // Read the ELF program headers in.
-mx_status_t elf_load_read_phdrs(mx_handle_t vmo, elf_phdr_t* phdrs,
+zx_status_t elf_load_read_phdrs(zx_handle_t vmo, elf_phdr_t* phdrs,
                                 uintptr_t phoff, size_t phnum);
 
 // Load the image into the process.
-mx_status_t elf_load_map_segments(mx_handle_t vmar,
+zx_status_t elf_load_map_segments(zx_handle_t vmar,
                                   const elf_load_header_t* header,
                                   const elf_phdr_t* phdrs,
-                                  mx_handle_t vmo,
-                                  mx_handle_t* segments_vmar,
-                                  mx_vaddr_t* bias, mx_vaddr_t* entry);
+                                  zx_handle_t vmo,
+                                  zx_handle_t* segments_vmar,
+                                  zx_vaddr_t* bias, zx_vaddr_t* entry);
 
 // Locate the PT_INTERP program header and extract its bounds in the file.
 // Returns false if there was no PT_INTERP.

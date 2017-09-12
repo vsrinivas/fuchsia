@@ -7,8 +7,8 @@
 #pragma once
 
 #include <err.h>
-#include <magenta/compiler.h>
-#include <magenta/ktrace.h>
+#include <zircon/compiler.h>
+#include <zircon/ktrace.h>
 
 __BEGIN_CDECLS
 
@@ -58,11 +58,11 @@ static inline ssize_t ktrace_read_user(void* ptr, uint32_t off, uint32_t len) {
     if ((len == 0) && (off == 0)) {
         return 0;
     } else {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 }
 static inline status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 #endif
 

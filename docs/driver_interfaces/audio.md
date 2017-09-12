@@ -1,14 +1,14 @@
 # Audio Driver Streaming Interface
 
 This document describes the audio streaming interface exposed by audio drivers
-in Magenta.  It is meant to serve as a reference for both users and
+in Zircon.  It is meant to serve as a reference for both users and
 driver-authors, and to unambiguously define the interface contract which drivers
 must implement and users must follow.
 
 ## Overview
 
 Audio streams are device nodes published by driver services intended to be used
-by applications in order to capture and/or render audio in a Magenta device.
+by applications in order to capture and/or render audio in a Zircon device.
 Each stream in the system (input or output) represents a stream of digital audio
 information which may be either received or transmitted by device.  Streams are
 dynamic and may created or destroyed by the system at any time.  Which streams
@@ -26,7 +26,7 @@ _not_ a service provided by the audio stream interface.
 Term | Definition
 -----|-----------
 Sample | A representation of the sound rendered by a single speaker, or captured by a single microphone, at a single instant in time.
-LPCM | Linear pulse code modulation.  The specific representation of audio samples present in all Magenta uncompressed audio streams.  LPCM audio samples are representations of the amplitude of the audio signal at an instant in time where the numeric values of the encoded audio are linearly distributed across the amplitude levels of the rendering or capture device.  This is in contrast to A-law and &mu;-law encodings which have non-linear mappings from numeric value to amplitude level.
+LPCM | Linear pulse code modulation.  The specific representation of audio samples present in all Zircon uncompressed audio streams.  LPCM audio samples are representations of the amplitude of the audio signal at an instant in time where the numeric values of the encoded audio are linearly distributed across the amplitude levels of the rendering or capture device.  This is in contrast to A-law and &mu;-law encodings which have non-linear mappings from numeric value to amplitude level.
 Channel | Within an audio stream, the subset of information which will be rendered by a single speaker, or which was captured by a single microphone in a stream.
 Frame | A set of audio samples for every channel of a audio stream captured/rendered at a single instant in time.
 Frame Rate | a.k.a. "Sample Rate".  The rate (in Hz) at which audio frames are produced or consumed.  Common sample rates include 44.1 KHz, 48 KHz, 96 KHz, and so on.
@@ -72,14 +72,14 @@ Generally, the operations conducted over the ring buffer channel include...
    bus transaction failure, etc...
  * Receiving clock recovery information in the case that the audio output clock
    is based on a different oscillator than the oscillator which backs
-   [mx_ticks_get()](../syscalls/ticks_get.md)
+   [zx_ticks_get()](../syscalls/ticks_get.md)
 
 ## Operational Details
 
 ### Protocol definition
 
 In order to use the C API definitions of the
-[audio](../../system/public/magenta/device/audio.h) protocol, applications and
+[audio](../../system/public/zircon/device/audio.h) protocol, applications and
 drivers simply say
 ```C
 #include <device/audio.h>
@@ -95,8 +95,8 @@ by the drivers.
 
 Stream Type | Protocol | Location
 ------------|----------|---------
-Input | `MX_PROTOCOL_AUDIO_INPUT` | /dev/class/audio-input
-Output | `MX_PROTOCOL_AUDIO_OUTPUT` | /dev/class/audio-output
+Input | `ZX_PROTOCOL_AUDIO_INPUT` | /dev/class/audio-input
+Output | `ZX_PROTOCOL_AUDIO_OUTPUT` | /dev/class/audio-output
 
 ### Establishing the stream channel
 
@@ -104,8 +104,8 @@ After opening the device node, client applications may obtain a stream channel
 for subsequent communication using the `AUDIO_IOCTL_GET_CHANNEL` ioctl.  For
 example...
 ```C
-mx_handle_t OpenStream(const char* dev_node_path) {
-    mx_handle_t ret = MX_HANDLE_INVALID;
+zx_handle_t OpenStream(const char* dev_node_path) {
+    zx_handle_t ret = ZX_HANDLE_INVALID;
     int fd = open(dev_node_path, O_RDONLY);
 
     if (fd < 0) {
@@ -113,12 +113,12 @@ mx_handle_t OpenStream(const char* dev_node_path) {
         return ret;
     }
 
-    ssize_t res = mxio_ioctl(fd, AUDIO_IOCTL_GET_CHANNEL,
+    ssize_t res = fdio_ioctl(fd, AUDIO_IOCTL_GET_CHANNEL,
                              nullptr, 0,
                              &ret, sizeof(ret));
     close(fd);
 
-    if (res != MX_OK)
+    if (res != ZX_OK)
         printf("Failed to obtain channel (res %zd)\n", res);
 
     return ret;
@@ -128,7 +128,7 @@ mx_handle_t OpenStream(const char* dev_node_path) {
 ### Client side termination of the stream channel
 
 Clients **may** terminate the connection to the stream at any time simply by
-calling [mx_handle_close(...)](../syscalls/handle_close.md) on the stream
+calling [zx_handle_close(...)](../syscalls/handle_close.md) on the stream
 channel.  Drivers **must** close any active ring-buffer channels established
 using this stream channel and **must** make every attempt to gracefully quiesce
 any on-going streaming operations in the process.
@@ -137,15 +137,15 @@ any on-going streaming operations in the process.
 
 All of the messages and message payloads which may be sent or received over
 stream and ring buffer channels are defined in the
-[audio](../../system/public/magenta/device/audio.h) protocol header.  Messages
+[audio](../../system/public/zircon/device/audio.h) protocol header.  Messages
 may be sent to the driver using the
-[mx_channel_write(...)](../syscalls/channel_write.md) syscall.  If a response is
+[zx_channel_write(...)](../syscalls/channel_write.md) syscall.  If a response is
 expected, it may be read using the
-[mx_channel_read(...)](../syscalls/channel_read.md) syscall.  Best practice,
+[zx_channel_read(...)](../syscalls/channel_read.md) syscall.  Best practice,
 however, is to bind your [channel(s)](../objects/channel.md) to a
 [port](../objects/port.md) using the
-[mx_port_bind(...)](../syscalls/port_bind.md) syscall, and use the
-[mx_port_wait(...)](../syscalls/port_wait.md) syscall to determine when your set
+[zx_port_bind(...)](../syscalls/port_bind.md) syscall, and use the
+[zx_port_wait(...)](../syscalls/port_wait.md) syscall to determine when your set
 of channels have messages (either expected responses or asynchronous
 notifications) to be read.
 
@@ -165,7 +165,7 @@ asynchronous notification to the application, the driver **must** use
 `AUDIO_INVALID_TRANSACTION_ID` as the transaction ID for the message.
 Transaction IDs may be used by clients for whatever purpose they desire, however
 if the IDs are kept unique across all transactions in-flight, the
-[mx_channel_call(...)](../syscalls/channel_call.md) may be used to implement a
+[zx_channel_call(...)](../syscalls/channel_call.md) may be used to implement a
 simple synchronous calling interface.
 
 ### Validation requirements
@@ -189,7 +189,7 @@ Sample formats are described using the `audio_sample_format_t` type.  It is a
 bitfield style enumeration which describes either the numeric encoding of the
 uncompressed LPCM audio samples as they reside in memory, or indicating that the
 audio stream consists of a compressed bitstream instead of uncompressed LPCM
-samples.  Refer to the [audio](../../system/public/magenta/device/audio.h)
+samples.  Refer to the [audio](../../system/public/zircon/device/audio.h)
 protocol header for exact symbol definitions.
 
 Notes
@@ -377,7 +377,7 @@ Success or failure, drivers **must** respond to a request to set format using a
 `audio_stream_cmd_set_format_resp_t`.
 
 In the case of success, drivers **must** set the `result` field of the response
-to `MX_OK` and **must** return a new ring buffer channel over which streaming
+to `ZX_OK` and **must** return a new ring buffer channel over which streaming
 operations will be conducted.  If a previous ring buffer channel had been
 established and was still active, the driver **must** close this channel and
 make every attempt to gracefully quiesce any on-going streaming operations in
@@ -438,7 +438,7 @@ Three valid flags are currently defined.
  * `AUDIO_SGF_MUTE`.  Indicates the application's desired mute/un-mute state
    for the stream.  Significant only if `AUDIO_SGF_MUTE_VALID` is also set.
 
-Drivers **must** fail the request with an `MX_ERR_INVALID_ARGS` result if the
+Drivers **must** fail the request with an `ZX_ERR_INVALID_ARGS` result if the
 application's request is incompatible with the stream's capabilities.
 Incompatible requests include.
  * The requested gain is less than the minimum support gain for the stream.
@@ -484,7 +484,7 @@ In order to determine a stream's plug detection capabilities, current plug
 state, and to enable or disable for asynchronous plug detection notifications,
 applications send a `AUDIO_STREAM_CMD_PLUG_DETECT` command over the stream
 channel.  Drivers respond with a set of `audio_pd_notify_flags_t`, along with a
-timestamp referenced from MX_CLOCK_MONOTONIC indicating the last time the plug
+timestamp referenced from ZX_CLOCK_MONOTONIC indicating the last time the plug
 state changed.
 
 Three valid flags are currently defined.
@@ -639,7 +639,7 @@ buffer is now gone.
 
 Upon succeeding, the driver **must** return a handle to a
 [VMO](../objects/vm_object.md) with permissions which allow applications to map
-the VMO into their address space using [mx_vmar_map](../syscalls/vmar_map.md),
+the VMO into their address space using [zx_vmar_map](../syscalls/vmar_map.md),
 and to read/write data in the buffer in the case of readback, or simply read the
 data in the buffer in the case of capture.
 
@@ -656,18 +656,18 @@ been established using the `GET_BUFFER` operation.
 Upon successfully starting a stream, drivers **must** provide their best
 estimate of the time at which their hardware began to transmit or capture the
 stream in the `start_ticks` field of the response.  This time stamp **must** be
-taken from the clock exposed via the [mx_ticks_get()](../syscalls/ticks_get.md)
+taken from the clock exposed via the [zx_ticks_get()](../syscalls/ticks_get.md)
 syscall.  Along with with the FIFO depth property of the ring buffer, this
 timestamp allows applications to send or receive stream data without the need
 for periodic position updates from the driver.  Along with the outboard latency
 estimate provided by the stream channel, this timestamp allows applications to
 synchronize presentation of audio information across multiple streams, or even
 multiple devices (provided that an external time synchronization protocol is
-used to synchronize the [mx_ticks_get()](../syscalls/ticks_get.md) timelines
+used to synchronize the [zx_ticks_get()](../syscalls/ticks_get.md) timelines
 across the cohort of synchronized devices).
 
 > TODO: Redefine `start_time` to allow it to be an arbitrary 'audio stream
-> clock' instead of the mx_ticks_get() clock.  If the stream clock is made to
+> clock' instead of the zx_ticks_get() clock.  If the stream clock is made to
 > count in audio frames since start, then this start_ticks can be replaced with
 > the terms for a segment of a piecewise linear transformation which can be
 > subsequently updated via notifications sent by the driver in the case that the
@@ -705,7 +705,7 @@ notification sent by the driver.
 
 Driver playback/capture positions *always* begin at byte 0 in the ring buffer
 immediately following a successful start command.  When they reach the size of
-the VMO (as determined by [mx_vmo_get_size(...)](../syscalls/vmo_get_size.md))
+the VMO (as determined by [zx_vmo_get_size(...)](../syscalls/vmo_get_size.md))
 they wrap back to zero.  Drivers are not required to consume or produce data in
 integral numbers of audio frames.  Client whose notion of stream position
 depends on position notifications should take care to request that a sufficient
@@ -728,7 +728,7 @@ quickly enough that aliasing does not occur.
 
 > TODO: define a way that clock recovery information can be sent to clients in
 > the case that the audio output oscillator is not derived from the
-> mx_ticks_get() oscillator.  In addition, if the oscillator is slew-able in
+> zx_ticks_get() oscillator.  In addition, if the oscillator is slew-able in
 > hardware, provide the ability to discover this capability and control the slew
 > rate.  Given the fact that this oscillator is likely to be shared by multiple
 > streams, it might be best to return some form of system wide clock identifier

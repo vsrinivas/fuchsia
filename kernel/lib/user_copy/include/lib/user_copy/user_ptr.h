@@ -7,7 +7,7 @@
 #include <arch/user_copy.h>
 #include <kernel/vm.h>
 #include <lib/user_copy/internal.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/type_support.h>
 
 // user_ptr<> wraps a pointer to user memory, to differentiate it from kernel
@@ -41,7 +41,7 @@ public:
     // Copies a single T to user memory. (Using this will fail to compile if T is |void|.)
     // Note: The templatization is simply to allow the class to compile if T is |void|.
     template <typename S = T>
-    mx_status_t copy_to_user(const S& src) const {
+    zx_status_t copy_to_user(const S& src) const {
         static_assert(fbl::is_same<S, T>::value, "Do not use the template parameter.");
         return arch_copy_to_user(ptr_, &src, sizeof(S));
     }
@@ -49,19 +49,19 @@ public:
     // Copies an array of T to user memory. Note: This takes a count not a size, unless T is |void|.
     // WARNING: This does not check that |count| is reasonable (i.e., that multiplication won't
     // overflow).
-    mx_status_t copy_array_to_user(const T* src, size_t count) const {
+    zx_status_t copy_array_to_user(const T* src, size_t count) const {
         return arch_copy_to_user(ptr_, src, count * internal::type_size<T>());
     }
 
     // Copies an array of T to user memory. Note: This takes a count not a size, unless T is |void|.
     // WARNING: This does not check that |count| is reasonable (i.e., that multiplication won't
     // overflow).
-    mx_status_t copy_array_to_user(const T* src, size_t count, size_t offset) const {
+    zx_status_t copy_array_to_user(const T* src, size_t count, size_t offset) const {
         return arch_copy_to_user(ptr_ + offset, src, count * internal::type_size<T>());
     }
 
     // Copies a single T from user memory. (Using this will fail to compile if T is |void|.)
-    mx_status_t copy_from_user(typename fbl::remove_const<T>::type* dst) const {
+    zx_status_t copy_from_user(typename fbl::remove_const<T>::type* dst) const {
         // Intentionally use sizeof(T) here, so *using* this method won't compile if T is |void|.
         return arch_copy_from_user(dst, ptr_, sizeof(T));
     }
@@ -70,7 +70,7 @@ public:
     // |void|.
     // WARNING: This does not check that |count| is reasonable (i.e., that multiplication won't
     // overflow).
-    mx_status_t copy_array_from_user(typename fbl::remove_const<T>::type* dst, size_t count) const {
+    zx_status_t copy_array_from_user(typename fbl::remove_const<T>::type* dst, size_t count) const {
         return arch_copy_from_user(dst, ptr_, count * internal::type_size<T>());
     }
 
@@ -78,7 +78,7 @@ public:
     // |void|.
     // WARNING: This does not check that |count| is reasonable (i.e., that multiplication won't
     // overflow).
-    mx_status_t copy_array_from_user(typename fbl::remove_const<T>::type* dst, size_t count, size_t offset) const {
+    zx_status_t copy_array_from_user(typename fbl::remove_const<T>::type* dst, size_t count, size_t offset) const {
         return arch_copy_from_user(dst, ptr_ + offset, count * internal::type_size<T>());
     }
 

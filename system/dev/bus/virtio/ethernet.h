@@ -13,10 +13,10 @@
 
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/ethernet.h>
-#include <magenta/compiler.h>
-#include <magenta/device/ethernet.h>
-#include <magenta/thread_annotations.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/device/ethernet.h>
+#include <zircon/thread_annotations.h>
+#include <zircon/types.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 #include <virtio/net.h>
@@ -25,10 +25,10 @@ namespace virtio {
 
 class EthernetDevice : public Device {
 public:
-    explicit EthernetDevice(mx_device_t* device);
+    explicit EthernetDevice(zx_device_t* device);
     virtual ~EthernetDevice();
 
-    mx_status_t Init() override TA_EXCL(state_lock_);
+    zx_status_t Init() override TA_EXCL(state_lock_);
     void Release() override TA_EXCL(state_lock_);
 
     // VirtIO callbacks
@@ -36,9 +36,9 @@ public:
     void IrqConfigChange() override TA_EXCL(state_lock_);
 
     // DDK protocol hooks; see ddk/protocol/ethernet.h
-    mx_status_t Query(uint32_t options, ethmac_info_t* info) TA_EXCL(state_lock_);
+    zx_status_t Query(uint32_t options, ethmac_info_t* info) TA_EXCL(state_lock_);
     void Stop() TA_EXCL(state_lock_);
-    mx_status_t Start(ethmac_ifc_t* ifc, void* cookie) TA_EXCL(state_lock_);
+    zx_status_t Start(ethmac_ifc_t* ifc, void* cookie) TA_EXCL(state_lock_);
     void Send(uint32_t options, void* data, size_t length) TA_EXCL(state_lock_);
 
 private:

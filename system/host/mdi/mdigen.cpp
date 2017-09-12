@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-#include <magenta/boot/bootdata.h>
+#include <zircon/boot/bootdata.h>
 
 #include "node.h"
 #include "parser.h"

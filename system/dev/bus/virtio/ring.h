@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 #pragma once
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <virtio/virtio_ring.h>
 
 #include "trace.h"
@@ -17,7 +17,7 @@ public:
     Ring(Device* device);
     ~Ring();
 
-    mx_status_t Init(uint16_t index, uint16_t count);
+    zx_status_t Init(uint16_t index, uint16_t count);
 
     void FreeDesc(uint16_t desc_index);
     struct vring_desc* AllocDescChain(uint16_t count, uint16_t* start_index);
@@ -34,7 +34,7 @@ public:
 private:
     Device* device_ = nullptr;
 
-    mx_paddr_t ring_pa_ = 0;
+    zx_paddr_t ring_pa_ = 0;
     uintptr_t ring_va_ = 0;
     size_t ring_va_len_ = 0;
 

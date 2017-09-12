@@ -13,14 +13,14 @@
 
 #include <launchpad/launchpad.h>
 #include <launchpad/loader-service.h>
-#include <magenta/dlfcn.h>
-#include <magenta/process.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/object.h>
-#include <magenta/status.h>
+#include <zircon/dlfcn.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/status.h>
 
-#include <mxio/util.h>
+#include <fdio/util.h>
 
 #include "devmgr.h"
 #include "memfs-private.h"
@@ -31,13 +31,13 @@
 #define VMO_SUBDIR_LEN (sizeof(VMO_SUBDIR) - 1)
 
 // The handle used to transmit messages to appmgr.
-static mx_handle_t svc_root_handle;
+static zx_handle_t svc_root_handle;
 // The handle used by appmgr to serve incoming requests.
 // If appmgr cannot be launched within a timeout, this handle is closed.
-static mx_handle_t svc_request_handle;
+static zx_handle_t svc_request_handle;
 
-mx_handle_t get_service_root(void) {
-    return mxio_service_clone(svc_root_handle);
+zx_handle_t get_service_root(void) {
+    return fdio_service_clone(svc_root_handle);
 }
 
 bool getenv_bool(const char* key, bool _default) {
@@ -53,22 +53,22 @@ bool getenv_bool(const char* key, bool _default) {
     return true;
 }
 
-static mx_handle_t root_resource_handle;
-static mx_handle_t root_job_handle;
-static mx_handle_t svcs_job_handle;
-static mx_handle_t fuchsia_job_handle;
+static zx_handle_t root_resource_handle;
+static zx_handle_t root_job_handle;
+static zx_handle_t svcs_job_handle;
+static zx_handle_t fuchsia_job_handle;
 
-mx_handle_t virtcon_open;
+zx_handle_t virtcon_open;
 
-mx_handle_t get_root_resource(void) {
+zx_handle_t get_root_resource(void) {
     return root_resource_handle;
 }
 
-mx_handle_t get_sysinfo_job_root(void) {
-    mx_handle_t h;
+zx_handle_t get_sysinfo_job_root(void) {
+    zx_handle_t h;
     //TODO: limit to enumerate rights
-    if (mx_handle_duplicate(root_job_handle, MX_RIGHT_SAME_RIGHTS, &h) < 0) {
-        return MX_HANDLE_INVALID;
+    if (zx_handle_duplicate(root_job_handle, ZX_RIGHT_SAME_RIGHTS, &h) < 0) {
+        return ZX_HANDLE_INVALID;
     } else {
         return h;
     }
@@ -103,14 +103,14 @@ int devmgr_start_appmgr(void* arg) {
     struct stat s;
     if (!appmgr_started && stat(argv_appmgr[0], &s) == 0) {
         unsigned int appmgr_hnd_count = 0;
-        mx_handle_t appmgr_hnds[2] = {};
+        zx_handle_t appmgr_hnds[2] = {};
         uint32_t appmgr_ids[2] = {};
         if (svc_request_handle) {
             assert(appmgr_hnd_count < countof(appmgr_hnds));
             appmgr_hnds[appmgr_hnd_count] = svc_request_handle;
             appmgr_ids[appmgr_hnd_count] = PA_SERVICE_REQUEST;
             appmgr_hnd_count++;
-            svc_request_handle = MX_HANDLE_INVALID;
+            svc_request_handle = ZX_HANDLE_INVALID;
         }
         devmgr_launch(fuchsia_job_handle, "appmgr", countof(argv_appmgr),
                       argv_appmgr, NULL, -1, appmgr_hnds, appmgr_ids,
@@ -118,7 +118,7 @@ int devmgr_start_appmgr(void* arg) {
         appmgr_started = true;
     }
     if (!autorun_started) {
-        do_autorun("autorun:system", "magenta.autorun.system");
+        do_autorun("autorun:system", "zircon.autorun.system");
         autorun_started = true;
     }
     mtx_unlock(&appmgr_lock);
@@ -126,11 +126,11 @@ int devmgr_start_appmgr(void* arg) {
 }
 
 int service_timeout(void* arg) {
-    mx_nanosleep(mx_deadline_after(MX_SEC(10)));
+    zx_nanosleep(zx_deadline_after(ZX_SEC(10)));
     mtx_lock(&appmgr_lock);
-    if (svc_request_handle != MX_HANDLE_INVALID) {
+    if (svc_request_handle != ZX_HANDLE_INVALID) {
         printf("devmgr: appmgr not found, closing service handle\n");
-        mx_handle_close(svc_request_handle);
+        zx_handle_close(svc_request_handle);
     }
     mtx_unlock(&appmgr_lock);
     return 0;
@@ -154,21 +154,21 @@ int service_starter(void* arg) {
             vruncmd = true;
         }
 
-        const char* nodename = getenv("magenta.nodename");
+        const char* nodename = getenv("zircon.nodename");
         if (nodename) {
             args[argc++] = nodename;
         }
 
-        mx_handle_t proc;
+        zx_handle_t proc;
         if (devmgr_launch(svcs_job_handle, "netsvc", argc, args,
-                          NULL, -1, NULL, NULL, 0, &proc) == MX_OK) {
+                          NULL, -1, NULL, NULL, 0, &proc) == ZX_OK) {
             if (vruncmd) {
-                mx_info_handle_basic_t info = {
+                zx_info_handle_basic_t info = {
                     .koid = 0,
                 };
-                mx_object_get_info(proc, MX_INFO_HANDLE_BASIC,
+                zx_object_get_info(proc, ZX_INFO_HANDLE_BASIC,
                                    &info, sizeof(info), NULL, NULL);
-                mx_handle_close(proc);
+                zx_handle_close(proc);
                 snprintf(vcmd, sizeof(vcmd), "dlog -f -t -p %zu", info.koid);
             }
         } else {
@@ -190,16 +190,16 @@ int service_starter(void* arg) {
         envp[envc] = NULL;
 
         uint32_t type = PA_HND(PA_USER0, 0);
-        mx_handle_t h = MX_HANDLE_INVALID;
-        mx_channel_create(0, &h, &virtcon_open);
+        zx_handle_t h = ZX_HANDLE_INVALID;
+        zx_channel_create(0, &h, &virtcon_open);
         const char* args[] = { "/boot/bin/virtual-console", "--run", vcmd };
         devmgr_launch(svcs_job_handle, "virtual-console",
                       vruncmd ? 3 : 1, args, envp, -1,
-                      &h, &type, (h == MX_HANDLE_INVALID) ? 0 : 1, NULL);
+                      &h, &type, (h == ZX_HANDLE_INVALID) ? 0 : 1, NULL);
     }
 
 
-    do_autorun("autorun:boot", "magenta.autorun.boot");
+    do_autorun("autorun:boot", "zircon.autorun.boot");
     struct stat s;
     if (stat(argv_autorun0[1], &s) == 0) {
         printf("devmgr: starting /boot/autorun ...\n");
@@ -214,7 +214,7 @@ int service_starter(void* arg) {
     return 0;
 }
 
-#if !_MX_KERNEL_HAS_SHELL
+#if !_ZX_KERNEL_HAS_SHELL
 static int console_starter(void* arg) {
     // if no kernel shell on serial uart, start a sh there
     printf("devmgr: shell startup\n");
@@ -233,7 +233,7 @@ static int console_starter(void* arg) {
                           countof(argv_sh), argv_sh, envp, fd, NULL, NULL, 0, NULL);
             break;
         }
-        mx_nanosleep(mx_deadline_after(MX_MSEC(100)));
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
     }
     return 0;
 }
@@ -252,8 +252,8 @@ static void start_console_shell(void) {}
 // the filesystem under the path /boot/VMO_SUBDIR_LEN/<vmo-name>.
 static void fetch_vmos(uint_fast8_t type, const char* debug_type_name) {
     for (uint_fast16_t i = 0; true; ++i) {
-        mx_handle_t vmo = mx_get_startup_handle(PA_HND(type, i));
-        if (vmo == MX_HANDLE_INVALID)
+        zx_handle_t vmo = zx_get_startup_handle(PA_HND(type, i));
+        if (vmo == ZX_HANDLE_INVALID)
             break;
 
         if (type == PA_VMO_VDSO && i == 0) {
@@ -265,24 +265,24 @@ static void fetch_vmos(uint_fast8_t type, const char* debug_type_name) {
 
         // The vDSO VMOs have names like "vdso/default", so those
         // become VMO files at "/boot/kernel/vdso/default".
-        char name[VMO_SUBDIR_LEN + MX_MAX_NAME_LEN] = VMO_SUBDIR;
+        char name[VMO_SUBDIR_LEN + ZX_MAX_NAME_LEN] = VMO_SUBDIR;
         size_t size;
-        mx_status_t status = mx_object_get_property(vmo, MX_PROP_NAME,
+        zx_status_t status = zx_object_get_property(vmo, ZX_PROP_NAME,
                 name + VMO_SUBDIR_LEN, sizeof(name) - VMO_SUBDIR_LEN);
-        if (status != MX_OK) {
-            printf("devmgr: mx_object_get_property on %s %u: %s\n",
-                   debug_type_name, i, mx_status_get_string(status));
+        if (status != ZX_OK) {
+            printf("devmgr: zx_object_get_property on %s %u: %s\n",
+                   debug_type_name, i, zx_status_get_string(status));
             continue;
         }
-        status = mx_vmo_get_size(vmo, &size);
-        if (status != MX_OK) {
-            printf("devmgr: mx_vmo_get_size on %s %u: %s\n",
-                   debug_type_name, i, mx_status_get_string(status));
+        status = zx_vmo_get_size(vmo, &size);
+        if (status != ZX_OK) {
+            printf("devmgr: zx_vmo_get_size on %s %u: %s\n",
+                   debug_type_name, i, zx_status_get_string(status));
             continue;
         }
         if (size == 0) {
             // empty vmos do not get installed
-            mx_handle_close(vmo);
+            zx_handle_close(vmo);
             continue;
         }
         if (!strcmp(name + VMO_SUBDIR_LEN, "crashlog")) {
@@ -290,9 +290,9 @@ static void fetch_vmos(uint_fast8_t type, const char* debug_type_name) {
             strcpy(name, "log/last-panic.txt");
         }
         status = bootfs_add_file(name, vmo, 0, size);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             printf("devmgr: failed to add %s %u to filesystem: %s\n",
-                   debug_type_name, i, mx_status_get_string(status));
+                   debug_type_name, i, zx_status_get_string(status));
         }
     }
 }
@@ -366,8 +366,8 @@ static void load_cmdline_from_bootfs(void) {
 int main(int argc, char** argv) {
     // Close the loader-service channel so the service can go away.
     // We won't use it any more (no dlopen calls in this process).
-    mx_handle_t loader_svc = dl_set_loader_service(MX_HANDLE_INVALID);
-    mx_handle_close(loader_svc);
+    zx_handle_t loader_svc = dl_set_loader_service(ZX_HANDLE_INVALID);
+    zx_handle_close(loader_svc);
 
     // Ensure that devmgr doesn't try to connect to the global
     // loader sevice (as this leads to deadlocks in devhost v2)
@@ -375,8 +375,8 @@ int main(int argc, char** argv) {
 
     devmgr_io_init();
 
-    root_resource_handle = mx_get_startup_handle(PA_HND(PA_RESOURCE, 0));
-    root_job_handle = mx_job_default();
+    root_resource_handle = zx_get_startup_handle(PA_HND(PA_RESOURCE, 0));
+    root_job_handle = zx_job_default();
 
     printf("devmgr: main()\n");
 
@@ -390,27 +390,27 @@ int main(int argc, char** argv) {
         printf("cmdline: %s\n", *e++);
     }
 
-    mx_object_set_property(root_job_handle, MX_PROP_NAME, "root", 4);
+    zx_object_set_property(root_job_handle, ZX_PROP_NAME, "root", 4);
 
     fetch_vmos(PA_VMO_VDSO, "PA_VMO_VDSO");
     fetch_vmos(PA_VMO_KERNEL_FILE, "PA_VMO_KERNEL_FILE");
 
 
-    mx_status_t status = mx_job_create(root_job_handle, 0u, &svcs_job_handle);
+    zx_status_t status = zx_job_create(root_job_handle, 0u, &svcs_job_handle);
     if (status < 0) {
         printf("unable to create service job\n");
     }
-    mx_object_set_property(svcs_job_handle, MX_PROP_NAME, "magenta-services", 16);
+    zx_object_set_property(svcs_job_handle, ZX_PROP_NAME, "zircon-services", 16);
 
-    status = mx_job_create(root_job_handle, 0u, &fuchsia_job_handle);
+    status = zx_job_create(root_job_handle, 0u, &fuchsia_job_handle);
     if (status < 0) {
         printf("unable to create service job\n");
     }
-    mx_object_set_property(fuchsia_job_handle, MX_PROP_NAME, "fuchsia", 7);
+    zx_object_set_property(fuchsia_job_handle, ZX_PROP_NAME, "fuchsia", 7);
 
     // Features like Intel Processor Trace need a dump of ld.so activity.
     // The output has a specific format, and will eventually be recorded
-    // via a specific mechanism (magenta tracing support), so we use a specific
+    // via a specific mechanism (zircon tracing support), so we use a specific
     // env var (and don't, for example, piggyback on LD_DEBUG).
     // We enable this pretty early so that we get a trace of as many processes
     // as possible.
@@ -439,13 +439,13 @@ int main(int argc, char** argv) {
         // Bind the exception port now, to avoid missing any crashes that
         // might occur early on before the crashlogger process has finished
         // initializing.
-        mx_handle_t exception_port;
+        zx_handle_t exception_port;
         // This should match the value used by crashlogger.
         const uint64_t kSysExceptionKey = 1166444u;
-        if (mx_port_create(0, &exception_port) == MX_OK &&
-            mx_task_bind_exception_port(MX_HANDLE_INVALID, exception_port,
-                                        kSysExceptionKey, 0) == MX_OK) {
-            mx_handle_t handles[] = { exception_port };
+        if (zx_port_create(0, &exception_port) == ZX_OK &&
+            zx_task_bind_exception_port(ZX_HANDLE_INVALID, exception_port,
+                                        kSysExceptionKey, 0) == ZX_OK) {
+            zx_handle_t handles[] = { exception_port };
             uint32_t handle_types[] = { PA_HND(PA_USER0, 0) };
 
             devmgr_launch(svcs_job_handle, "crashlogger",
@@ -455,7 +455,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    mx_channel_create(0, &svc_root_handle, &svc_request_handle);
+    zx_channel_create(0, &svc_root_handle, &svc_request_handle);
 
     start_console_shell();
 

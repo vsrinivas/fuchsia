@@ -4,10 +4,10 @@
 
 #include "provider_impl.h"
 
-#include <magenta/assert.h>
-#include <magenta/syscalls.h>
+#include <zircon/assert.h>
+#include <zircon/syscalls.h>
 
-#include <mxio/util.h>
+#include <fdio/util.h>
 #include <fbl/algorithm.h>
 #include <fbl/type_support.h>
 
@@ -57,19 +57,19 @@ struct register_trace_provider : message {
 namespace trace {
 namespace internal {
 
-TraceProviderImpl::TraceProviderImpl(async_t* async, mx::channel channel)
+TraceProviderImpl::TraceProviderImpl(async_t* async, zx::channel channel)
     : async_(async), connection_(this, fbl::move(channel)) {
 }
 
 TraceProviderImpl::~TraceProviderImpl() = default;
 
-bool TraceProviderImpl::Start(mx::vmo buffer, mx::eventpair fence) {
+bool TraceProviderImpl::Start(zx::vmo buffer, zx::eventpair fence) {
     if (running_)
         return false;
 
-    mx_status_t status = TraceHandlerImpl::StartEngine(
+    zx_status_t status = TraceHandlerImpl::StartEngine(
         async_, fbl::move(buffer), fbl::move(fence));
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return false;
 
     running_ = true;
@@ -85,14 +85,14 @@ void TraceProviderImpl::Stop() {
 }
 
 TraceProviderImpl::Connection::Connection(TraceProviderImpl* impl,
-                                          mx::channel channel)
+                                          zx::channel channel)
     : impl_(impl), channel_(fbl::move(channel)),
       wait_(channel_.get(),
-            MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED) {
+            ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED) {
     wait_.set_handler(fbl::BindMember(this, &Connection::Handle));
 
-    mx_status_t status = wait_.Begin(impl_->async_);
-    MX_DEBUG_ASSERT(status == MX_OK || status == MX_ERR_BAD_STATE);
+    zx_status_t status = wait_.Begin(impl_->async_);
+    ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_BAD_STATE);
 }
 
 TraceProviderImpl::Connection::~Connection() {
@@ -100,18 +100,18 @@ TraceProviderImpl::Connection::~Connection() {
 }
 
 async_wait_result_t TraceProviderImpl::Connection::Handle(
-    async_t* async, mx_status_t status, const mx_packet_signal_t* signal) {
-    if (status != MX_OK) {
+    async_t* async, zx_status_t status, const zx_packet_signal_t* signal) {
+    if (status != ZX_OK) {
         printf("TraceProvider wait failed: status=%d\n", status);
         return ASYNC_WAIT_FINISHED;
     }
 
-    if (signal->observed & MX_CHANNEL_READABLE) {
+    if (signal->observed & ZX_CHANNEL_READABLE) {
         if (ReadMessage())
             return ASYNC_WAIT_AGAIN;
         printf("TraceProvider received invalid FIDL message or failed to send reply.\n");
     } else {
-        MX_DEBUG_ASSERT(signal->observed & MX_CHANNEL_PEER_CLOSED);
+        ZX_DEBUG_ASSERT(signal->observed & ZX_CHANNEL_PEER_CLOSED);
     }
 
     Close();
@@ -122,16 +122,16 @@ bool TraceProviderImpl::Connection::ReadMessage() {
     // Using handrolled FIDL.
 
     uint8_t buffer[16 * 1024];
-    mx_handle_t unowned_handles[2];
+    zx_handle_t unowned_handles[2];
     uint32_t num_bytes = 0u;
     uint32_t num_handles = 0u;
-    mx_status_t status = channel_.read(
+    zx_status_t status = channel_.read(
         0u, buffer, sizeof(buffer), &num_bytes,
         unowned_handles, fbl::count_of(unowned_handles), &num_handles);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return false;
 
-    mx::handle handles[2];
+    zx::handle handles[2];
     for (size_t i = 0; i < num_handles; i++) {
         handles[i].reset(unowned_handles[i]); // take ownership
     }
@@ -177,8 +177,8 @@ bool TraceProviderImpl::Connection::ReadMessage() {
             return false;
 
         bool success = impl_->Start(
-            mx::vmo(fbl::move(handles[s->buffer])),
-            mx::eventpair(fbl::move(handles[s->fence])));
+            zx::vmo(fbl::move(handles[s->buffer])),
+            zx::eventpair(fbl::move(handles[s->fence])));
 
         // Send reply.
         struct {
@@ -194,7 +194,7 @@ bool TraceProviderImpl::Connection::ReadMessage() {
         reply.m.version = 0;
         reply.m.success = success ? 1 : 0;
         status = channel_.write(0u, &reply, sizeof(reply), nullptr, 0u);
-        if (status != MX_OK)
+        if (status != ZX_OK)
             return false;
         return true;
     }
@@ -222,30 +222,30 @@ void TraceProviderImpl::Connection::Close() {
 } // namespace trace
 
 trace_provider_t* trace_provider_create(async_t* async) {
-    MX_DEBUG_ASSERT(async);
+    ZX_DEBUG_ASSERT(async);
 
     // Connect to the trace registry.
-    mx::channel registry_client;
-    mx::channel registry_service;
-    mx_status_t status = mx::channel::create(0u, &registry_client, &registry_service);
-    if (status != MX_OK)
+    zx::channel registry_client;
+    zx::channel registry_service;
+    zx_status_t status = zx::channel::create(0u, &registry_client, &registry_service);
+    if (status != ZX_OK)
         return nullptr;
 
-    status = mxio_service_connect("/svc/tracing::TraceRegistry",
+    status = fdio_service_connect("/svc/tracing::TraceRegistry",
                                   registry_service.release()); // takes ownership
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return nullptr;
 
     // Create the channel to which we will bind the trace provider.
-    mx::channel provider_client;
-    mx::channel provider_service;
-    status = mx::channel::create(0u, &provider_client, &provider_service);
-    if (status != MX_OK)
+    zx::channel provider_client;
+    zx::channel provider_service;
+    status = zx::channel::create(0u, &provider_client, &provider_service);
+    if (status != ZX_OK)
         return nullptr;
 
     // Invoke TraceRegistry::RegisterTraceProvider(TraceProvider provider, string? label)
     // TODO(MG-1036): We currently set the label to null.  Once tracing fully migrates
-    // to Magenta and we publish the provider via the hub we will no longer need to
+    // to Zircon and we publish the provider via the hub we will no longer need to
     // specify a label at all since we will be able to identify providers based on their
     // path within the hub's directory structure.
     struct {
@@ -260,10 +260,10 @@ trace_provider_t* trace_provider_create(async_t* async) {
     call.m.version = 0;
     call.m.provider = 0;
     call.m.label = 0;
-    mx_handle_t handles[] = {provider_client.release()};
+    zx_handle_t handles[] = {provider_client.release()};
     status = registry_client.write(0u, &call, sizeof(call),
                                    handles, fbl::count_of(handles));
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         provider_client.reset(handles[0]); // take back ownership after failure
         return nullptr;
     }
@@ -272,6 +272,6 @@ trace_provider_t* trace_provider_create(async_t* async) {
 }
 
 void trace_provider_destroy(trace_provider_t* provider) {
-    MX_DEBUG_ASSERT(provider);
+    ZX_DEBUG_ASSERT(provider);
     delete static_cast<trace::internal::TraceProviderImpl*>(provider);
 }

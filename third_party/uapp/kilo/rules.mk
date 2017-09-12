@@ -22,7 +22,7 @@ MODULE_SRCS += $(LOCAL_DIR)/kilo.c
 
 MODULE_NAME := kilo
 
-MODULE_LIBS := system/ulib/mxio system/ulib/c
+MODULE_LIBS := system/ulib/fdio system/ulib/c
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),false)
 MODULE_CFLAGS += -Wno-discarded-qualifiers
@@ -33,7 +33,7 @@ endif
 # NOTE(raggi): kilo.c inclusion is disabled for now, as it is the only
 # non-BUILDDIR-relative entry in bootfs.manifest. Having the relative entry
 # means that rebuilding bootdata from the manifest must be run from inside the
-# magenta source tree. We do not expose a source directory, and we don't want to
+# zircon source tree. We do not expose a source directory, and we don't want to
 # use absolute paths in the build here. We could install the file to the build
 # dir instead.
 # USER_MANIFEST_LINES += src/kilo.c=$(LOCAL_DIR)/kilo.c

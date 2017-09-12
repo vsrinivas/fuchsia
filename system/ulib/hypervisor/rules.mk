@@ -34,14 +34,14 @@ endif
 
 MODULE_LIBS := \
     system/ulib/c \
-    system/ulib/magenta \
-    system/ulib/mxio \
+    system/ulib/zircon \
+    system/ulib/fdio \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/virtio \
     third_party/ulib/acpica \
-    system/ulib/mxcpp \
+    system/ulib/zxcpp \
     system/ulib/fbl \
 
 include make/module.mk

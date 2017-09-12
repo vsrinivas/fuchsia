@@ -5,7 +5,7 @@
 #pragma once
 
 #include <stddef.h>
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
 
@@ -20,9 +20,9 @@ namespace fbl {
 // |max_inline_count| or heap-allocated otherwise. This is typically used like:
 //
 //   fbl::AllocChecker ac;
-//   fbl::InlineArray<mx_handle_t, 4u> handle_values(&ac, num_handles);
+//   fbl::InlineArray<zx_handle_t, 4u> handle_values(&ac, num_handles);
 //   if (!ac.check())
-//       return MX_ERR_NO_MEMORY;
+//       return ZX_ERR_NO_MEMORY;
 //
 // Note: Currently, |max_inline_count| must be at least 1.
 template <typename T, size_t max_inline_count>
@@ -60,7 +60,7 @@ public:
     T* get() const { return ptr_; }
 
     T& operator[](size_t i) const {
-        MX_DEBUG_ASSERT(i < count_);
+        ZX_DEBUG_ASSERT(i < count_);
         return ptr_[i];
     }
 

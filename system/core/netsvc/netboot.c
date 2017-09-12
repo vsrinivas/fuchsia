@@ -17,11 +17,11 @@
 #include <inet6/netifc.h>
 
 #include <launchpad/launchpad.h>
-#include <magenta/process.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
 
-#include <magenta/boot/netboot.h>
+#include <zircon/boot/netboot.h>
 
 static uint32_t last_cookie = 0;
 static uint32_t last_cmd = 0;
@@ -36,7 +36,7 @@ static bool xfer_active = false;
 
 typedef struct nbfilecontainer {
     nbfile file;
-    mx_handle_t data;   // handle to vmo that backs netbootfile.
+    zx_handle_t data;   // handle to vmo that backs netbootfile.
 } nbfilecontainer_t;
 
 static nbfilecontainer_t nbkernel;
@@ -46,8 +46,8 @@ static nbfilecontainer_t nbcmdline;
 // Pointer to the currently active transfer.
 static nbfile* active;
 
-mx_status_t nbfilecontainer_init(size_t size, nbfilecontainer_t* target) {
-    mx_status_t st = MX_OK;
+zx_status_t nbfilecontainer_init(size_t size, nbfilecontainer_t* target) {
+    zx_status_t st = ZX_OK;
 
     assert(target);
 
@@ -60,32 +60,32 @@ mx_status_t nbfilecontainer_init(size_t size, nbfilecontainer_t* target) {
         printf("netbootloader: warning, reusing a previously initialized container\n");
 
         // Unmap the vmo from the address space.
-        st = mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)target->file.data, target->file.size);
-        if (st != MX_OK) {
+        st = zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)target->file.data, target->file.size);
+        if (st != ZX_OK) {
             printf("netbootloader: failed to unmap existing vmo, st = %d\n", st);
             return st;
         }
 
-        mx_handle_close(target->data);
+        zx_handle_close(target->data);
 
         target->file.offset = 0;
         target->file.size = 0;
         target->file.data = 0;
     }
 
-    st = mx_vmo_create(size, 0, &target->data);
-    if (st != MX_OK) {
+    st = zx_vmo_create(size, 0, &target->data);
+    if (st != ZX_OK) {
         printf("netbootloader: Could not create a netboot vmo of size = %lu "
                "retcode = %d\n", size, st);
         return st;
     }
 
     uintptr_t buffer;
-    st = mx_vmar_map(mx_vmar_root_self(), 0, target->data, 0, size,
-                     MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &buffer);
-    if (st != MX_OK) {
+    st = zx_vmar_map(zx_vmar_root_self(), 0, target->data, 0, size,
+                     ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &buffer);
+    if (st != ZX_OK) {
         printf("netbootloader: failed to map data vmo for buffer, st = %d\n", st);
-        mx_handle_close(target->data);
+        zx_handle_close(target->data);
         return st;
     }
 
@@ -93,11 +93,11 @@ mx_status_t nbfilecontainer_init(size_t size, nbfilecontainer_t* target) {
     target->file.size = size;
     target->file.data = (uint8_t*)buffer;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 nbfile* netboot_get_buffer(const char* name, size_t size) {
-    mx_status_t st = MX_OK;
+    zx_status_t st = ZX_OK;
     nbfilecontainer_t* result;
 
     if (!strcmp(name, NB_KERNEL_FILENAME)) {
@@ -111,7 +111,7 @@ nbfile* netboot_get_buffer(const char* name, size_t size) {
     }
 
     st = nbfilecontainer_init(size, result);
-    if (st != MX_OK) {
+    if (st != ZX_OK) {
         printf("netbootloader: failed to initialize file container for "
                "file = '%s', retcode = %d\n", name, st);
         return NULL;
@@ -320,7 +320,7 @@ transmit:
     }
 
     if (do_boot) {
-        mx_system_mexec(nbkernel.data, nbbootdata.data, (char*)nbcmdline.file.data,
+        zx_system_mexec(nbkernel.data, nbbootdata.data, (char*)nbcmdline.file.data,
                         nbcmdline.file.size);
     }
 }

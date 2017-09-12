@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <unittest/unittest.h>
 
 __BEGIN_CDECLS
@@ -19,7 +19,7 @@ void fixture_tear_down(void);
 void fixture_start_tracing(void);
 void fixture_stop_tracing(void);
 void fixture_stop_tracing_hard(void);
-mx_status_t fixture_get_disposition(void);
+zx_status_t fixture_get_disposition(void);
 bool fixture_compare_records(const char* expected);
 
 inline void fixture_scope_cleanup(bool* scope) {

@@ -30,7 +30,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/syscalls_futex.cpp \
     $(LOCAL_DIR)/syscalls_handle_ops.cpp \
     $(LOCAL_DIR)/syscalls_hypervisor.cpp \
-    $(LOCAL_DIR)/syscalls_magenta.cpp \
+    $(LOCAL_DIR)/syscalls_zircon.cpp \
     $(LOCAL_DIR)/syscalls_object.cpp \
     $(LOCAL_DIR)/syscalls_object_wait.cpp \
     $(LOCAL_DIR)/syscalls_port.cpp \

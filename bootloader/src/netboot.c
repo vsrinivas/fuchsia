@@ -10,7 +10,7 @@
 #include <netifc.h>
 #include <xefi.h>
 
-#include <magenta/boot/netboot.h>
+#include <zircon/boot/netboot.h>
 #include <tftp/tftp.h>
 
 #define TFTP_BUF_SZ 2048
@@ -43,7 +43,7 @@ static int nb_boot_now = 0;
 static int nb_active = 0;
 
 static char advertise_nodename[64] = "";
-static char advertise_data[256] = "nodename=magenta";
+static char advertise_data[256] = "nodename=zircon";
 
 static void send_query_ack(const ip6_addr* addr, uint16_t port,
                            uint32_t cookie) {

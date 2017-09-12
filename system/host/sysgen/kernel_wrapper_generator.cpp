@@ -84,7 +84,7 @@ bool KernelWrapperGenerator::syscall(ofstream& os, const Syscall& sc) {
     if (sc.is_noreturn()) {
         os << "; // __noreturn__\n";
         os << inin << "/* NOTREACHED */\n";
-        os << inin << "return MX_ERR_BAD_STATE;\n";
+        os << inin << "return ZX_ERR_BAD_STATE;\n";
     } else {
         os << ";\n";
     }

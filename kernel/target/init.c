@@ -8,7 +8,7 @@
 #include <err.h>
 #include <debug.h>
 #include <target.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 /*
  * default implementations of these routines, if the target code

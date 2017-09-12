@@ -10,8 +10,8 @@
 #include <hw/pci.h>
 
 #include <assert.h>
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,13 +33,13 @@
 typedef struct bochs_vbe_device {
     void* regs;
     uint64_t regs_size;
-    mx_handle_t regs_handle;
+    zx_handle_t regs_handle;
 
     void* framebuffer;
     uint64_t framebuffer_size;
-    mx_handle_t framebuffer_handle;
+    zx_handle_t framebuffer_handle;
 
-    mx_display_info_t info;
+    zx_display_info_t info;
 } bochs_vbe_device_t;
 
 #define bochs_vbe_dispi_read(base, reg) pcie_read16(base + (0x500 + (reg << 1)))
@@ -57,28 +57,28 @@ typedef struct bochs_vbe_device {
 #define BOCHS_VBE_DISPI_Y_OFFSET 0x9
 #define BOCHS_VBE_DISPI_VIDEO_MEMORY_64K 0xa
 
-static int mx_display_format_to_bpp(unsigned format) {
+static int zx_display_format_to_bpp(unsigned format) {
     unsigned bpp;
     switch (format) {
-    case MX_PIXEL_FORMAT_RGB_565:
+    case ZX_PIXEL_FORMAT_RGB_565:
         bpp = 16;
         break;
-    case MX_PIXEL_FORMAT_RGB_332:
+    case ZX_PIXEL_FORMAT_RGB_332:
         bpp = 8;
         break;
-    case MX_PIXEL_FORMAT_RGB_2220:
+    case ZX_PIXEL_FORMAT_RGB_2220:
         bpp = 6;
         break;
-    case MX_PIXEL_FORMAT_ARGB_8888:
+    case ZX_PIXEL_FORMAT_ARGB_8888:
         bpp = 32;
         break;
-    case MX_PIXEL_FORMAT_RGB_x888:
+    case ZX_PIXEL_FORMAT_RGB_x888:
         bpp = 24;
         break;
-    case MX_PIXEL_FORMAT_MONO_1:
+    case ZX_PIXEL_FORMAT_MONO_1:
         bpp = 1;
         break;
-    case MX_PIXEL_FORMAT_MONO_8:
+    case ZX_PIXEL_FORMAT_MONO_8:
         bpp = 8;
         break;
     default:
@@ -92,7 +92,7 @@ static int mx_display_format_to_bpp(unsigned format) {
 static void set_hw_mode(bochs_vbe_device_t* dev) {
     xprintf("id: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_ID));
 
-    int bpp = mx_display_format_to_bpp(dev->info.format);
+    int bpp = zx_display_format_to_bpp(dev->info.format);
     assert(bpp >= 0);
 
     bochs_vbe_dispi_write(dev->regs, BOCHS_VBE_DISPI_ENABLE, 0);
@@ -106,7 +106,7 @@ static void set_hw_mode(bochs_vbe_device_t* dev) {
     bochs_vbe_dispi_write(dev->regs, BOCHS_VBE_DISPI_Y_OFFSET, 0);
     bochs_vbe_dispi_write(dev->regs, BOCHS_VBE_DISPI_ENABLE, 0x41);
 
-    mx_set_framebuffer(get_root_resource(), dev->framebuffer,
+    zx_set_framebuffer(get_root_resource(), dev->framebuffer,
                        dev->framebuffer_size, dev->info.format,
                        dev->info.width, dev->info.height, dev->info.stride);
 
@@ -128,26 +128,26 @@ static void set_hw_mode(bochs_vbe_device_t* dev) {
 
 // implement display protocol
 
-static mx_status_t bochs_vbe_set_mode(void* ctx, mx_display_info_t* info) {
+static zx_status_t bochs_vbe_set_mode(void* ctx, zx_display_info_t* info) {
     assert(info);
     bochs_vbe_device_t* vdev = ctx;
-    memcpy(&vdev->info, info, sizeof(mx_display_info_t));
+    memcpy(&vdev->info, info, sizeof(zx_display_info_t));
     set_hw_mode(vdev);
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t bochs_vbe_get_mode(void* ctx, mx_display_info_t* info) {
+static zx_status_t bochs_vbe_get_mode(void* ctx, zx_display_info_t* info) {
     assert(info);
     bochs_vbe_device_t* vdev = ctx;
-    memcpy(info, &vdev->info, sizeof(mx_display_info_t));
-    return MX_OK;
+    memcpy(info, &vdev->info, sizeof(zx_display_info_t));
+    return ZX_OK;
 }
 
-static mx_status_t bochs_vbe_get_framebuffer(void* ctx, void** framebuffer) {
+static zx_status_t bochs_vbe_get_framebuffer(void* ctx, void** framebuffer) {
     assert(framebuffer);
     bochs_vbe_device_t* vdev = ctx;
     (*framebuffer) = vdev->framebuffer;
-    return MX_OK;
+    return ZX_OK;
 }
 
 static display_protocol_ops_t bochs_vbe_display_proto = {
@@ -162,57 +162,57 @@ static void bochs_vbe_release(void* ctx) {
     bochs_vbe_device_t* vdev = ctx;
 
     if (vdev->regs) {
-        mx_handle_close(vdev->regs_handle);
+        zx_handle_close(vdev->regs_handle);
         vdev->regs_handle = -1;
     }
 
     if (vdev->framebuffer) {
-        mx_handle_close(vdev->framebuffer_handle);
+        zx_handle_close(vdev->framebuffer_handle);
         vdev->framebuffer_handle = -1;
     }
 
     free(vdev);
 }
 
-static mx_protocol_device_t bochs_vbe_device_proto = {
+static zx_protocol_device_t bochs_vbe_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .release = bochs_vbe_release,
 };
 
 // implement driver object:
 
-static mx_status_t bochs_vbe_bind(void* ctx, mx_device_t* dev, void** cookie) {
+static zx_status_t bochs_vbe_bind(void* ctx, zx_device_t* dev, void** cookie) {
     pci_protocol_t pci;
-    mx_status_t status;
+    zx_status_t status;
 
-    if (device_get_protocol(dev, MX_PROTOCOL_PCI, &pci))
-        return MX_ERR_NOT_SUPPORTED;
+    if (device_get_protocol(dev, ZX_PROTOCOL_PCI, &pci))
+        return ZX_ERR_NOT_SUPPORTED;
 
     // map resources and initialize the device
     bochs_vbe_device_t* device = calloc(1, sizeof(bochs_vbe_device_t));
     if (!device)
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     // map register window
-    status = pci_map_resource(&pci, PCI_RESOURCE_BAR_2, MX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pci_map_resource(&pci, PCI_RESOURCE_BAR_2, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                               &device->regs, &device->regs_size,
                               &device->regs_handle);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         printf("bochs-vbe: failed to map pci config: %d\n", status);
         goto fail;
     }
 
     // map framebuffer window
-    status = pci_map_resource(&pci, PCI_RESOURCE_BAR_0,  MX_CACHE_POLICY_WRITE_COMBINING,
+    status = pci_map_resource(&pci, PCI_RESOURCE_BAR_0,  ZX_CACHE_POLICY_WRITE_COMBINING,
                               &device->framebuffer,
                               &device->framebuffer_size,
                               &device->framebuffer_handle);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         printf("bochs-vbe: failed to map pci config: %d\n", status);
         goto fail;
     }
 
-    device->info.format = MX_PIXEL_FORMAT_RGB_565;
+    device->info.format = ZX_PIXEL_FORMAT_RGB_565;
     device->info.width = 1024;
     device->info.height = 768;
     device->info.stride = 1024;
@@ -224,33 +224,33 @@ static mx_status_t bochs_vbe_bind(void* ctx, mx_device_t* dev, void** cookie) {
         .name = "bochs_vbe",
         .ctx = device,
         .ops = &bochs_vbe_device_proto,
-        .proto_id = MX_PROTOCOL_DISPLAY,
+        .proto_id = ZX_PROTOCOL_DISPLAY,
         .proto_ops = &bochs_vbe_display_proto,
     };
 
     status = device_add(dev, &args, NULL);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         goto fail;
     }
 
     xprintf("initialized bochs_vbe display driver, reg=0x%x regsize=0x%x fb=0x%x fbsize=0x%x\n",
             device->regs, device->regs_size, device->framebuffer, device->framebuffer_size);
 
-    return MX_OK;
+    return ZX_OK;
 
 fail:
     free(device);
     return status;
 }
 
-static mx_driver_ops_t bochs_vbe_driver_ops = {
+static zx_driver_ops_t bochs_vbe_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = bochs_vbe_bind,
 };
 
 // clang-format off
-MAGENTA_DRIVER_BEGIN(bochs_vbe, bochs_vbe_driver_ops, "magenta", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
+ZIRCON_DRIVER_BEGIN(bochs_vbe, bochs_vbe_driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, QEMU_VGA_VID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, QEMU_VGA_DID),
-MAGENTA_DRIVER_END(bochs_vbe)
+ZIRCON_DRIVER_END(bochs_vbe)

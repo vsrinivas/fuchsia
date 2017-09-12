@@ -5,7 +5,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include "vc.h"
 
 #define MOD_LSHIFT (1 << 0)
@@ -22,6 +22,6 @@
 
 typedef struct vc_input vc_input_t;
 
-mx_status_t vc_input_create(vc_input_t** out, keypress_handler_t handler, int fd);
+zx_status_t vc_input_create(vc_input_t** out, keypress_handler_t handler, int fd);
 
 bool vc_input_process(vc_input_t* vi, uint8_t report[8]);

@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/canary.h>
 #include <object/dispatcher.h>
 
@@ -18,27 +18,27 @@ class VmObject;
 
 class VmAddressRegionDispatcher final : public Dispatcher {
 public:
-    static mx_status_t Create(fbl::RefPtr<VmAddressRegion> vmar,
+    static zx_status_t Create(fbl::RefPtr<VmAddressRegion> vmar,
                               fbl::RefPtr<Dispatcher>* dispatcher,
-                              mx_rights_t* rights);
+                              zx_rights_t* rights);
 
     ~VmAddressRegionDispatcher() final;
-    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_VMAR; }
+    zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_VMAR; }
 
     // TODO(teisenbe): Make this the planned batch interface
-    mx_status_t Allocate(size_t offset, size_t size, uint32_t flags,
+    zx_status_t Allocate(size_t offset, size_t size, uint32_t flags,
                          fbl::RefPtr<VmAddressRegionDispatcher>* dispatcher,
-                         mx_rights_t* rights);
+                         zx_rights_t* rights);
 
-    mx_status_t Destroy();
+    zx_status_t Destroy();
 
-    mx_status_t Map(size_t vmar_offset,
+    zx_status_t Map(size_t vmar_offset,
                     fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset, size_t len,
                     uint32_t flags, fbl::RefPtr<VmMapping>* out);
 
-    mx_status_t Protect(vaddr_t base, size_t len, uint32_t flags);
+    zx_status_t Protect(vaddr_t base, size_t len, uint32_t flags);
 
-    mx_status_t Unmap(vaddr_t base, size_t len);
+    zx_status_t Unmap(vaddr_t base, size_t len);
 
     fbl::RefPtr<VmAddressRegion> vmar() const { return vmar_; }
 

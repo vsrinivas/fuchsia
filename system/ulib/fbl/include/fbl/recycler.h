@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 #include <fbl/type_support.h>
 
 // fbl::Recyclable<T>
@@ -103,7 +103,7 @@ using has_fbl_recycle = is_base_of<::fbl::Recyclable<typename remove_cv<T>::type
 // to undergo name lookup or template expansion.
 template <typename T, typename = void>
 struct recycler {
-    static inline void recycle(T* ptr) { MX_ASSERT(false); }
+    static inline void recycle(T* ptr) { ZX_ASSERT(false); }
 };
 
 template <typename T>

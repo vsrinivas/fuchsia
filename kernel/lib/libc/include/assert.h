@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <debug.h>
 
 #define PANIC(args...) panic(args)

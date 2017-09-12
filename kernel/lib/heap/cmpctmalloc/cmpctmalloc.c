@@ -1152,7 +1152,7 @@ static ssize_t heap_grow(size_t size, free_t** bucket) {
     if (ptr == NULL) {
         ptr = heap_page_alloc(size >> PAGE_SIZE_SHIFT);
         if (ptr == NULL) {
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
         }
         LTRACEF("Growing heap by 0x%zx bytes, new ptr %p (%s)\n",
                 size, ptr, bucket ? "large" : "small");

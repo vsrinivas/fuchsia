@@ -19,28 +19,28 @@ struct TestObj {
 static bool init_null_name_succeeds(void* context) {
     BEGIN_TEST;
     Arena arena;
-    EXPECT_EQ(MX_OK, arena.Init(nullptr, sizeof(TestObj), 16), "");
+    EXPECT_EQ(ZX_OK, arena.Init(nullptr, sizeof(TestObj), 16), "");
     END_TEST;
 }
 
 static bool init_zero_ob_size_fails(void* context) {
     BEGIN_TEST;
     Arena arena;
-    EXPECT_EQ(MX_ERR_INVALID_ARGS, arena.Init("name", 0, 16), "");
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, arena.Init("name", 0, 16), "");
     END_TEST;
 }
 
 static bool init_large_ob_size_fails(void* context) {
     BEGIN_TEST;
     Arena arena;
-    EXPECT_EQ(MX_ERR_INVALID_ARGS, arena.Init("name", PAGE_SIZE + 1, 16), "");
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, arena.Init("name", PAGE_SIZE + 1, 16), "");
     END_TEST;
 }
 
 static bool init_zero_count_fails(void* context) {
     BEGIN_TEST;
     Arena arena;
-    EXPECT_EQ(MX_ERR_INVALID_ARGS, arena.Init("name", sizeof(TestObj), 0), "");
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, arena.Init("name", sizeof(TestObj), 0), "");
     END_TEST;
 }
 
@@ -50,7 +50,7 @@ static bool start_and_end_look_good(void* context) {
     static const size_t expected_size = num_slots * sizeof(TestObj);
 
     Arena arena;
-    EXPECT_EQ(MX_OK, arena.Init("name", sizeof(TestObj), num_slots), "");
+    EXPECT_EQ(ZX_OK, arena.Init("name", sizeof(TestObj), num_slots), "");
 
     EXPECT_NONNULL(arena.start(), "");
     EXPECT_NONNULL(arena.end(), "");
@@ -66,7 +66,7 @@ static bool in_range_tests(void* context) {
     static const size_t num_slots = (2 * PAGE_SIZE) / sizeof(TestObj);
 
     Arena arena;
-    EXPECT_EQ(MX_OK, arena.Init("name", sizeof(TestObj), num_slots), "");
+    EXPECT_EQ(ZX_OK, arena.Init("name", sizeof(TestObj), num_slots), "");
 
     auto start = reinterpret_cast<char*>(arena.start());
 
@@ -119,7 +119,7 @@ static bool out_of_memory(void* context) {
     static const size_t num_slots = (2 * PAGE_SIZE) / sizeof(TestObj);
 
     Arena arena;
-    EXPECT_EQ(MX_OK, arena.Init("name", sizeof(TestObj), num_slots), "");
+    EXPECT_EQ(ZX_OK, arena.Init("name", sizeof(TestObj), num_slots), "");
 
     // Allocate all of the data objects.
     void** objs = reinterpret_cast<void**>(malloc(sizeof(void*) * num_slots));
@@ -192,7 +192,7 @@ static bool committing_tests(void* context) {
     static const size_t num_slots = (64 * PAGE_SIZE) / sizeof(TestObj);
 
     Arena arena;
-    EXPECT_EQ(MX_OK, arena.Init("name", sizeof(TestObj), num_slots), "");
+    EXPECT_EQ(ZX_OK, arena.Init("name", sizeof(TestObj), num_slots), "");
 
     auto start = reinterpret_cast<vaddr_t>(arena.start());
     auto end = reinterpret_cast<vaddr_t>(arena.end());
@@ -285,7 +285,7 @@ static bool uncommitting_tests(void* context) {
 
     Arena arena;
     // Use a small data slot size (1) to keep our memory usage down.
-    EXPECT_EQ(MX_OK, arena.Init("name", 1, num_slots), "");
+    EXPECT_EQ(ZX_OK, arena.Init("name", 1, num_slots), "");
 
     // Get the extent of the control pool.
     vaddr_t start;
@@ -418,7 +418,7 @@ static bool memory_cleanup(void* context) {
     fbl::AllocChecker ac;
     Arena* arena = new (&ac) Arena();
     EXPECT_TRUE(ac.check(), "");
-    EXPECT_EQ(MX_OK, arena->Init("name", sizeof(TestObj), num_slots), "");
+    EXPECT_EQ(ZX_OK, arena->Init("name", sizeof(TestObj), num_slots), "");
 
     auto start = reinterpret_cast<vaddr_t>(arena->start());
     auto end = reinterpret_cast<vaddr_t>(arena->end());
@@ -455,8 +455,8 @@ static bool memory_cleanup(void* context) {
 static bool content_preservation(void* context) {
     BEGIN_TEST;
     Arena arena;
-    mx_status_t s = arena.Init("arena_tests", sizeof(TestObj), 1000);
-    REQUIRE_EQ(MX_OK, s, "arena.Init()");
+    zx_status_t s = arena.Init("arena_tests", sizeof(TestObj), 1000);
+    REQUIRE_EQ(ZX_OK, s, "arena.Init()");
 
     const int count = 30;
 

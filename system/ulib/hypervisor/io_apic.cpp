@@ -8,9 +8,9 @@
 #include <hypervisor/bits.h>
 #include <hypervisor/io_apic.h>
 #include <hypervisor/vcpu.h>
-#include <magenta/assert.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/hypervisor.h>
+#include <zircon/assert.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/hypervisor.h>
 
 // clang-format off
 
@@ -40,22 +40,22 @@ void io_apic_init(io_apic_t* io_apic) {
     memset(io_apic, 0, sizeof(*io_apic));
 }
 
-mx_status_t io_apic_register_local_apic(io_apic_t* io_apic, uint8_t local_apic_id,
+zx_status_t io_apic_register_local_apic(io_apic_t* io_apic, uint8_t local_apic_id,
                                         local_apic_t* local_apic) {
     if (local_apic_id >= IO_APIC_MAX_LOCAL_APICS)
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
     if (io_apic->local_apic[local_apic_id] != NULL)
-        return MX_ERR_ALREADY_EXISTS;
+        return ZX_ERR_ALREADY_EXISTS;
 
     local_apic->regs->id.u32 = local_apic_id;
     io_apic->local_apic[local_apic_id] = local_apic;
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t io_apic_redirect(const io_apic_t* io_apic, uint32_t global_irq, uint8_t* out_vector,
-                             mx_handle_t* out_vcpu) {
+zx_status_t io_apic_redirect(const io_apic_t* io_apic, uint32_t global_irq, uint8_t* out_vector,
+                             zx_handle_t* out_vcpu) {
     if (global_irq >= IO_APIC_REDIRECTS)
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
 
     mtx_lock((mtx_t*)&io_apic->mutex);
     uint32_t lower = io_apic->redirect[global_irq * 2];
@@ -81,10 +81,10 @@ mx_status_t io_apic_redirect(const io_apic_t* io_apic, uint32_t global_irq, uint
         uint32_t dest = bits_shift(upper, 27, 24);
         local_apic_t* apic = dest < IO_APIC_MAX_LOCAL_APICS ? io_apic->local_apic[dest] : NULL;
         if (apic == NULL)
-            return MX_ERR_NOT_FOUND;
+            return ZX_ERR_NOT_FOUND;
         *out_vector = static_cast<uint8_t>(vector);
         *out_vcpu = apic->vcpu;
-        return MX_OK;
+        return ZX_OK;
     }
 
     // Logical DESTMOD.
@@ -104,7 +104,7 @@ mx_status_t io_apic_redirect(const io_apic_t* io_apic, uint32_t global_irq, uint
         uint32_t model = bits_shift(local_apic->regs->dfr.u32, 31, 28);
         if (model != LOCAL_APIC_DFR_FLAT_MODEL) {
             fprintf(stderr, "APIC only supports the flat model.\n");
-            return MX_ERR_NOT_SUPPORTED;
+            return ZX_ERR_NOT_SUPPORTED;
         }
 
         // Note we're not currently respecting the DELMODE field and
@@ -112,21 +112,21 @@ mx_status_t io_apic_redirect(const io_apic_t* io_apic, uint32_t global_irq, uint
         // targeted.
         *out_vector = static_cast<uint8_t>(vector);
         *out_vcpu = local_apic->vcpu;
-        return MX_OK;
+        return ZX_OK;
     }
-    return MX_ERR_NOT_FOUND;
+    return ZX_ERR_NOT_FOUND;
 }
 
-mx_status_t io_apic_interrupt(const io_apic_t* io_apic, uint32_t global_irq) {
+zx_status_t io_apic_interrupt(const io_apic_t* io_apic, uint32_t global_irq) {
     uint8_t vector;
-    mx_handle_t vcpu;
-    mx_status_t status = io_apic_redirect(io_apic, global_irq, &vector, &vcpu);
-    if (status != MX_OK)
+    zx_handle_t vcpu;
+    zx_status_t status = io_apic_redirect(io_apic, global_irq, &vector, &vcpu);
+    if (status != ZX_OK)
         return status;
-    return mx_vcpu_interrupt(vcpu, vector);
+    return zx_vcpu_interrupt(vcpu, vector);
 }
 
-static mx_status_t io_apic_register_handler(io_apic_t* io_apic, const instruction_t* inst) {
+static zx_status_t io_apic_register_handler(io_apic_t* io_apic, const instruction_t* inst) {
     switch (io_apic->select) {
     case IO_APIC_REGISTER_ID:
         return inst_rw32(inst, &io_apic->id);
@@ -146,34 +146,34 @@ static mx_status_t io_apic_register_handler(io_apic_t* io_apic, const instructio
     }
     default:
         fprintf(stderr, "Unhandled IO APIC register %#x\n", io_apic->select);
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
-mx_status_t io_apic_handler(io_apic_t* io_apic, const mx_packet_guest_mem_t* mem,
+zx_status_t io_apic_handler(io_apic_t* io_apic, const zx_packet_guest_mem_t* mem,
                             const instruction_t* inst) {
-    MX_ASSERT(mem->addr >= IO_APIC_PHYS_BASE);
-    mx_vaddr_t offset = mem->addr - IO_APIC_PHYS_BASE;
+    ZX_ASSERT(mem->addr >= IO_APIC_PHYS_BASE);
+    zx_vaddr_t offset = mem->addr - IO_APIC_PHYS_BASE;
 
     switch (offset) {
     case IO_APIC_IOREGSEL: {
         uint32_t select;
-        mx_status_t status = inst_write32(inst, &select);
-        if (status != MX_OK)
+        zx_status_t status = inst_write32(inst, &select);
+        if (status != ZX_OK)
             return status;
         mtx_lock((mtx_t*)&io_apic->mutex);
         io_apic->select = select;
         mtx_unlock((mtx_t*)&io_apic->mutex);
-        return select > UINT8_MAX ? MX_ERR_INVALID_ARGS : MX_OK;
+        return select > UINT8_MAX ? ZX_ERR_INVALID_ARGS : ZX_OK;
     }
     case IO_APIC_IOWIN: {
         mtx_lock((mtx_t*)&io_apic->mutex);
-        mx_status_t status = io_apic_register_handler(io_apic, inst);
+        zx_status_t status = io_apic_register_handler(io_apic, inst);
         mtx_unlock((mtx_t*)&io_apic->mutex);
         return status;
     }
     default:
         fprintf(stderr, "Unhandled IO APIC address %#lx\n", offset);
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }

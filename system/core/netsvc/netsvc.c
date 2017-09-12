@@ -14,13 +14,13 @@
 #include <inet6/netifc.h>
 
 #include <launchpad/launchpad.h>
-#include <magenta/process.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/log.h>
-#include <mxio/io.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/log.h>
+#include <fdio/io.h>
 
-#include <magenta/boot/netboot.h>
+#include <zircon/boot/netboot.h>
 
 #include "device_id.h"
 
@@ -28,20 +28,20 @@
 
 bool netbootloader = false;
 
-static void run_program(const char *progname, int argc, const char** argv, mx_handle_t h) {
+static void run_program(const char *progname, int argc, const char** argv, zx_handle_t h) {
 
     launchpad_t* lp;
     launchpad_create(0, progname, &lp);
-    launchpad_clone(lp, LP_CLONE_ALL & (~LP_CLONE_MXIO_STDIO));
+    launchpad_clone(lp, LP_CLONE_ALL & (~LP_CLONE_FDIO_STDIO));
     launchpad_load_from_file(lp, argv[0]);
     launchpad_set_args(lp, argc, argv);
-    mx_handle_t handle = MX_HANDLE_INVALID;
-    mx_log_create(0, &handle);
-    launchpad_add_handle(lp, handle, PA_HND(PA_MXIO_LOGGER, 0 | MXIO_FLAG_USE_FOR_STDIO));
-    if (h != MX_HANDLE_INVALID) {
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    zx_log_create(0, &handle);
+    launchpad_add_handle(lp, handle, PA_HND(PA_FDIO_LOGGER, 0 | FDIO_FLAG_USE_FOR_STDIO));
+    if (h != ZX_HANDLE_INVALID) {
         launchpad_add_handle(lp, h, PA_HND(PA_USER0, 0));
     }
-    mx_status_t status;
+    zx_status_t status;
     const char* errmsg;
     if ((status = launchpad_go(lp, NULL, &errmsg)) < 0) {
         printf("netsvc: cannot launch %s: %d: %s\n", argv[0], status, errmsg);
@@ -56,11 +56,11 @@ void netboot_run_cmd(const char* cmd) {
     run_program("net:sh", 3, args, 0);
 }
 
-static void run_server(const char* progname, const char* bin, mx_handle_t h) {
+static void run_server(const char* progname, const char* bin, zx_handle_t h) {
     run_program(progname, 1, &bin, h);
 }
 
-const char* nodename = "magenta";
+const char* nodename = "zircon";
 
 void udp6_recv(void* data, size_t len,
                const ip6_addr_t* daddr, uint16_t dport,
@@ -140,16 +140,16 @@ int main(int argc, char** argv) {
             if (netbootloader)
                 netboot_advertise(nodename);
 
-            mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
-            mx_time_t next_timeout = (debuglog_next_timeout < tftp_next_timeout) ?
+            zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
+            zx_time_t next_timeout = (debuglog_next_timeout < tftp_next_timeout) ?
                                      debuglog_next_timeout : tftp_next_timeout;
-            if (next_timeout != MX_TIME_INFINITE) {
+            if (next_timeout != ZX_TIME_INFINITE) {
                 netifc_set_timer((next_timeout < now) ? 0 :
-                                 ((next_timeout - now)/MX_MSEC(1)));
+                                 ((next_timeout - now)/ZX_MSEC(1)));
             }
             if (netifc_poll())
                 break;
-            now = mx_time_get(MX_CLOCK_MONOTONIC);
+            now = zx_time_get(ZX_CLOCK_MONOTONIC);
             if (now > debuglog_next_timeout) {
                 debuglog_timeout_expired();
             }

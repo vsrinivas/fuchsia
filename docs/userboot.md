@@ -1,11 +1,11 @@
-# Magenta kernel to userspace bootstrapping (`userboot`)
+# Zircon kernel to userspace bootstrapping (`userboot`)
 
-Magenta has a microkernel style of design.  A complexity for microkernel
+Zircon has a microkernel style of design.  A complexity for microkernel
 designs is how to bootstrap the initial userspace processes.  Often this
 is accomplished by having the kernel implement minimal versions of
 filesystem reading and program loading just for the purpose of
 bootstrapping, even when those kernel facilities are never used after boot
-time.  Magenta takes a different approach.
+time.  Zircon takes a different approach.
 
 [TOC]
 
@@ -13,9 +13,9 @@ time.  Magenta takes a different approach.
 
 A boot loader loads the kernel into memory and transfers control to the
 kernel's startup code.  The details of the boot loader protocols are not
-described here.  The boot loaders used with Magenta load both the kernel
+described here.  The boot loaders used with Zircon load both the kernel
 image and a data blob in `BOOTDATA` format.
-The [`BOOTDATA` format](../system/public/magenta/boot/bootdata.h) is a
+The [`BOOTDATA` format](../system/public/zircon/boot/bootdata.h) is a
 simple container format that embeds items passed by the boot loader,
 including hardware-specific information,
 the [kernel "command line"](kernel_cmdline.md) giving boot options, and RAM
@@ -172,7 +172,7 @@ then `userboot` waits for the process it started to exit, and then shuts
 down the system (as if by the `dm shutdown` command).  This can be useful
 to run a single test program and then shut down the machine (or emulator).
 For example, the command line `userboot=bin/core-tests userboot.shutdown`
-runs the Magenta core tests and then shuts down.
+runs the Zircon core tests and then shuts down.
 
 Otherwise, `userboot` does not wait for the process to exit.  `userboot`
 exits immediately, leaving the first "real" user process in charge of

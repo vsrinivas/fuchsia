@@ -1,4 +1,4 @@
-# mx_vcpu_write_state
+# zx_vcpu_write_state
 
 ## NAME
 
@@ -7,10 +7,10 @@ vcpu_write_state - write the state of a VCPU
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/hypervisor.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/hypervisor.h>
 
-mx_status_t mx_vcpu_write_state(mx_handle_t vcpu, const mx_vcpu_state_t* state);
+zx_status_t zx_vcpu_write_state(zx_handle_t vcpu, const zx_vcpu_state_t* state);
 ```
 
 ## DESCRIPTION
@@ -21,21 +21,21 @@ paused.
 
 ## RETURN VALUE
 
-**vcpu_write_state**() returns MX_OK on success. On failure, an error value is
+**vcpu_write_state**() returns ZX_OK on success. On failure, an error value is
 returned.
 
 ## ERRORS
 
-**MX_ERR_ACCESS_DENIED** *vcpu* does not have the *MX_RIGHT_WRITE* right.
+**ZX_ERR_ACCESS_DENIED** *vcpu* does not have the *ZX_RIGHT_WRITE* right.
 
-**MX_ERR_BAD_HANDLE** *vcpu* is an invalid handle.
+**ZX_ERR_BAD_HANDLE** *vcpu* is an invalid handle.
 
-**MX_ERR_BAD_STATE** *vcpu* is in a bad state, and state can not be written.
+**ZX_ERR_BAD_STATE** *vcpu* is in a bad state, and state can not be written.
 
-**MX_ERR_INVALID_ARGS** *kind* does not name a known VCPU state, *buffer* is an
+**ZX_ERR_INVALID_ARGS** *kind* does not name a known VCPU state, *buffer* is an
 invalid pointer, or *len* does not match the expected size of *kind*.
 
-**MX_ERR_WRONG_TYPE** *vcpu* is not a handle to a VCPU.
+**ZX_ERR_WRONG_TYPE** *vcpu* is not a handle to a VCPU.
 
 ## SEE ALSO
 

@@ -6,7 +6,7 @@
 
 #include <string.h>
 
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
 #include <fbl/new.h>
@@ -28,7 +28,7 @@ struct DefaultAllocatorTraits {
     // pointer on success. This same pointer may later be passed
     // to deallocate when resizing.
     static void* Allocate(size_t size) {
-        MX_DEBUG_ASSERT(size > 0);
+        ZX_DEBUG_ASSERT(size > 0);
         AllocChecker ac;
         void* object = new (&ac) char[size];
         return ac.check() ? object : nullptr;
@@ -160,7 +160,7 @@ public:
     //
     // Index must be less than the size of the vector.
     T erase(size_t index) {
-        MX_DEBUG_ASSERT(index < size_);
+        ZX_DEBUG_ASSERT(index < size_);
         auto val = fbl::move(ptr_[index]);
         shift_forward(index);
         consider_shrinking();
@@ -168,7 +168,7 @@ public:
     }
 
     void pop_back() {
-        MX_DEBUG_ASSERT(size_ > 0);
+        ZX_DEBUG_ASSERT(size_ > 0);
         ptr_[--size_].~T();
         consider_shrinking();
     }
@@ -182,7 +182,7 @@ public:
     }
 
     T& operator[](size_t i) const {
-        MX_DEBUG_ASSERT(i < size_);
+        ZX_DEBUG_ASSERT(i < size_);
         return ptr_[i];
     }
 
@@ -222,7 +222,7 @@ private:
     template <typename U,
               typename = typename enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
     void insert_internal(size_t index, U&& value, AllocChecker* ac) {
-        MX_DEBUG_ASSERT(index <= size_);
+        ZX_DEBUG_ASSERT(index <= size_);
         if (!grow_for_new_element(ac)) {
             return;
         }
@@ -232,7 +232,7 @@ private:
     template <typename U,
               typename = typename enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
     void insert_internal(size_t index, U&& value) {
-        MX_DEBUG_ASSERT(index <= size_);
+        ZX_DEBUG_ASSERT(index <= size_);
         grow_for_new_element();
         insert_complete(index, fbl::forward<U>(value));
     }
@@ -261,8 +261,8 @@ private:
     template <typename U = T>
     typename enable_if<is_pod<U>::value, void>::type
     shift_back(size_t index) {
-        MX_DEBUG_ASSERT(size_ < capacity_);
-        MX_DEBUG_ASSERT(size_ > 0);
+        ZX_DEBUG_ASSERT(size_ < capacity_);
+        ZX_DEBUG_ASSERT(size_ > 0);
         size_++;
         memmove(&ptr_[index + 1], &ptr_[index], sizeof(T) * (size_ - (index + 1)));
     }
@@ -270,8 +270,8 @@ private:
     template <typename U = T>
     typename enable_if<!is_pod<U>::value, void>::type
     shift_back(size_t index) {
-        MX_DEBUG_ASSERT(size_ < capacity_);
-        MX_DEBUG_ASSERT(size_ > 0);
+        ZX_DEBUG_ASSERT(size_ < capacity_);
+        ZX_DEBUG_ASSERT(size_ > 0);
         size_++;
         new (&ptr_[size_ - 1]) T(fbl::move(ptr_[size_ - 2]));
         for (size_t i = size_ - 2; i > index; i--) {
@@ -284,7 +284,7 @@ private:
     template <typename U = T>
     typename enable_if<is_pod<U>::value, void>::type
     shift_forward(size_t index) {
-        MX_DEBUG_ASSERT(size_ > 0);
+        ZX_DEBUG_ASSERT(size_ > 0);
         memmove(&ptr_[index], &ptr_[index + 1], sizeof(T) * (size_ - (index + 1)));
         size_--;
     }
@@ -292,7 +292,7 @@ private:
     template <typename U = T>
     typename enable_if<!is_pod<U>::value, void>::type
     shift_forward(size_t index) {
-        MX_DEBUG_ASSERT(size_ > 0);
+        ZX_DEBUG_ASSERT(size_ > 0);
         for (size_t i = index; (i + 1) < size_; i++) {
             ptr_[i] = fbl::move(ptr_[i + 1]);
         }
@@ -317,7 +317,7 @@ private:
     // Grows the vector's capacity to accommodate one more element.
     // Returns true on success, false on failure.
     bool grow_for_new_element(AllocChecker* ac) {
-        MX_DEBUG_ASSERT(size_ <= capacity_);
+        ZX_DEBUG_ASSERT(size_ <= capacity_);
         if (size_ == capacity_) {
             size_t newCapacity = capacity_ < kCapacityMinimum ? kCapacityMinimum :
                     capacity_ * kCapacityGrowthFactor;
@@ -331,7 +331,7 @@ private:
     }
 
     void grow_for_new_element() {
-        MX_DEBUG_ASSERT(size_ <= capacity_);
+        ZX_DEBUG_ASSERT(size_ <= capacity_);
         if (size_ == capacity_) {
             size_t newCapacity = capacity_ < kCapacityMinimum ? kCapacityMinimum :
                     capacity_ * kCapacityGrowthFactor;
@@ -356,8 +356,8 @@ private:
     // Returns true on success, false on failure.
     // If reallocate fails, the old "ptr_" array is unmodified.
     bool reallocate(size_t newCapacity, AllocChecker* ac) {
-        MX_DEBUG_ASSERT(newCapacity > 0);
-        MX_DEBUG_ASSERT(newCapacity >= size_);
+        ZX_DEBUG_ASSERT(newCapacity > 0);
+        ZX_DEBUG_ASSERT(newCapacity >= size_);
         auto newPtr = reinterpret_cast<T*>(AllocatorTraits::Allocate(newCapacity * sizeof(T)));
         if (newPtr == nullptr) {
             ac->arm(1u, false);
@@ -372,8 +372,8 @@ private:
     }
 
     void reallocate(size_t newCapacity) {
-        MX_DEBUG_ASSERT(newCapacity > 0);
-        MX_DEBUG_ASSERT(newCapacity >= size_);
+        ZX_DEBUG_ASSERT(newCapacity > 0);
+        ZX_DEBUG_ASSERT(newCapacity >= size_);
         auto newPtr = reinterpret_cast<T*>(AllocatorTraits::Allocate(newCapacity * sizeof(T)));
         transfer_to(newPtr, size_);
         AllocatorTraits::Deallocate(ptr_);
@@ -393,7 +393,7 @@ private:
     }
 
     void reset(T* t, size_t size, size_t capacity) {
-        MX_DEBUG_ASSERT(size <= capacity);
+        ZX_DEBUG_ASSERT(size <= capacity);
         while (size_ > 0) {
             ptr_[--size_].~T();
         }

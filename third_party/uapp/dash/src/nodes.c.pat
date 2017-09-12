@@ -34,7 +34,7 @@
  *	@(#)nodes.c.pat	8.2 (Berkeley) 5/4/95
  */
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <stdlib.h>
 
 /*
@@ -329,8 +329,8 @@ restore_symtab(char *buffer, size_t num_syms)
 // * A sequence of null-terminated strings, in the order the strings are
 //   encountered in a pre-order traversal of the node tree.
 
-mx_status_t
-codec_encode(struct nodelist *nlist, mx_handle_t *vmo)
+zx_status_t
+codec_encode(struct nodelist *nlist, zx_handle_t *vmo)
 {
 	funcblocksize = 0;
 	funcstringsize = 0;
@@ -367,11 +367,11 @@ codec_encode(struct nodelist *nlist, mx_handle_t *vmo)
 	encodenodelist(nlist);
 
 	// And VMO-ify the whole thing
-	mx_status_t status = mx_vmo_create(total_size, 0, vmo);
-	if (status != MX_OK)
+	zx_status_t status = zx_vmo_create(total_size, 0, vmo);
+	if (status != ZX_OK)
 		return status;
 	size_t actual;
-	return mx_vmo_write(*vmo, buffer, 0, total_size, &actual);
+	return zx_vmo_write(*vmo, buffer, 0, total_size, &actual);
 }
 
 struct nodelist *codec_decode(char *buffer, size_t length)

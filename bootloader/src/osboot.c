@@ -20,7 +20,7 @@
 
 #include "osboot.h"
 
-#include <magenta/boot/netboot.h>
+#include <zircon/boot/netboot.h>
 
 #define DEFAULT_TIMEOUT 3
 
@@ -341,7 +341,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     }
 
     int32_t prev_attr = gConOut->Mode->Attribute;
-    gConOut->SetAttribute(gConOut, EFI_LIGHTMAGENTA | EFI_BACKGROUND_BLACK);
+    gConOut->SetAttribute(gConOut, EFI_LIGHTZIRCON | EFI_BACKGROUND_BLACK);
     draw_version(BOOTLOADER_VERSION);
     gConOut->SetAttribute(gConOut, prev_attr);
 
@@ -352,7 +352,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
     // Default boot defaults to network
     const char* defboot = cmdline_get("bootloader.default", "network");
-    const char* nodename = cmdline_get("magenta.nodename", "");
+    const char* nodename = cmdline_get("zircon.nodename", "");
 
     // See if there's a network interface
     bool have_network = netboot_init(nodename) == 0;
@@ -367,14 +367,14 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
         // return the generated value in which case it needs to be added to
         // the command line arguments.
         if (nodename[0] == 0) {
-            cmdline_set("magenta.nodename", netboot_nodename());
+            cmdline_set("zircon.nodename", netboot_nodename());
         }
     }
 
     printf("\n\n");
     print_cmdline();
 
-    // First look for a self-contained magentaboot image
+    // First look for a self-contained zirconboot image
     size_t ksz = 0;
     void* kernel = xefi_load_file(L"mxboot.bin", &ksz, 0);
 
@@ -384,7 +384,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
     // Look for a kernel image on disk
     ksz = 0;
-    kernel = xefi_load_file(L"magenta.bin", &ksz, 0);
+    kernel = xefi_load_file(L"zircon.bin", &ksz, 0);
     if (!have_network && kernel == NULL) {
         goto fail;
     }
@@ -430,7 +430,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
         }
         if (kernel) {
             printf(", ");
-            printf("or (m) to boot the magenta.bin on the device");
+            printf("or (m) to boot the zircon.bin on the device");
         }
         printf(" ...");
 

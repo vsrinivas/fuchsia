@@ -7,8 +7,8 @@
 #pragma GCC visibility push(hidden)
 
 #include <assert.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/log.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/log.h>
 #include <stdarg.h>
 #include <string.h>
 
@@ -59,8 +59,8 @@ static char* i64string(char* s, size_t len, int64_t n) {
     return u64string(s, len, n);
 }
 
-void vprintl(mx_handle_t log, const char* fmt, va_list ap) {
-    char buffer[MX_LOG_RECORD_MAX - sizeof(mx_log_record_t)];
+void vprintl(zx_handle_t log, const char* fmt, va_list ap) {
+    char buffer[ZX_LOG_RECORD_MAX - sizeof(zx_log_record_t)];
     static_assert(sizeof(LOG_PREFIX) < sizeof(buffer), "buffer too small");
 
     memcpy(buffer, LOG_PREFIX, sizeof(LOG_PREFIX) - 1);
@@ -121,32 +121,32 @@ x64print:
         default:
 bad_format:
             printl(log, "printl: invalid fmt char 0x%x", *fmt);
-            mx_process_exit(-1);
+            zx_process_exit(-1);
         }
         fmt++;
     }
 
 done:
-    if ((log == MX_HANDLE_INVALID) ||
-        (mx_log_write(log, p - buffer, buffer, 0) != MX_OK)) {
-        mx_debug_write(buffer, p - buffer);
-        mx_debug_write("\n", 1);
+    if ((log == ZX_HANDLE_INVALID) ||
+        (zx_log_write(log, p - buffer, buffer, 0) != ZX_OK)) {
+        zx_debug_write(buffer, p - buffer);
+        zx_debug_write("\n", 1);
     }
 }
 
-void printl(mx_handle_t log, const char* fmt, ...) {
+void printl(zx_handle_t log, const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
     vprintl(log, fmt, ap);
     va_end(ap);
 }
 
-void fail(mx_handle_t log, const char* fmt, ...) {
+void fail(zx_handle_t log, const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
     vprintl(log, fmt, ap);
     va_end(ap);
-    mx_process_exit(-1);
+    zx_process_exit(-1);
 }
 
 

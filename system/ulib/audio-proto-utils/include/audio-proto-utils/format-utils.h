@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <magenta/assert.h>
-#include <magenta/device/audio.h>
-#include <magenta/types.h>
+#include <zircon/assert.h>
+#include <zircon/device/audio.h>
+#include <zircon/types.h>
 #include <string.h>
 
 namespace audio {
@@ -53,7 +53,7 @@ public:
 
         uint32_t operator*() {
             // No one should be dereferencing us if we are currently invalid.
-            MX_DEBUG_ASSERT(enumerator_ != nullptr);
+            ZX_DEBUG_ASSERT(enumerator_ != nullptr);
             return cur_rate_;
         }
 

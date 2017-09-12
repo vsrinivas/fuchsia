@@ -55,8 +55,8 @@ static ssize_t get_entropy_from_cpu(void* buf, size_t len, bool block) {
      * tests against this code */
 
     if (len >= SSIZE_MAX) {
-        static_assert(MX_ERR_INVALID_ARGS < 0, "");
-        return MX_ERR_INVALID_ARGS;
+        static_assert(ZX_ERR_INVALID_ARGS < 0, "");
+        return ZX_ERR_INVALID_ARGS;
     }
 
     if (x86_feature_test(X86_FEATURE_RDSEED)) {
@@ -66,8 +66,8 @@ static ssize_t get_entropy_from_cpu(void* buf, size_t len, bool block) {
     }
 
     /* We don't have an entropy source */
-    static_assert(MX_ERR_NOT_SUPPORTED < 0, "");
-    return MX_ERR_NOT_SUPPORTED;
+    static_assert(ZX_ERR_NOT_SUPPORTED < 0, "");
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 __attribute__((target("rdrnd,rdseed")))

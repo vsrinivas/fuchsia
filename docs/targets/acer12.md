@@ -11,7 +11,7 @@ If you boot into Windows 10 or something hangs or crashes and you need to power 
 ## Entering the BIOS
 With the machine off, Press and hold Volume Up, then continue to hold while pressing and holding the Power button.  Let go of the Power button when the display backlight turns on.  Alternatively, hold F2 on an attached keyboard while powering the machine on.
 
-## Enabling Magenta Boot
+## Enabling Zircon Boot
 1. Boot the machine and enter the BIOS
 2. Select “Security” from the tabs at the left
 3. Tap the “[clean]” gray bar under “Supervisor Password Is”
@@ -57,18 +57,18 @@ It’s possible to end up in a situation where the machine *really* wants to hel
 1. Build everything
   * `(cd $FUCHSIA_ROOT; fbuild)`
 2. Format your USB Flash Drive with a FAT32 partition as the first partition
-3. Copy `$FUCHSIA_ROOT/out/build-magenta/build-magenta-pc-x86-64/bootloader/bootx64.efi` to `EFI/BOOT/BOOTX64.EFI` on the USB Flash Drive.
+3. Copy `$FUCHSIA_ROOT/out/build-zircon/build-zircon-pc-x86-64/bootloader/bootx64.efi` to `EFI/BOOT/BOOTX64.EFI` on the USB Flash Drive.
 If you plan to netboot, you're done.
-4. Copy `$FUCHSIA_ROOT/out/build-magenta/build-magenta-pc-x86-64/magenta.bin` to the root of the USB Flash Drive
+4. Copy `$FUCHSIA_ROOT/out/build-zircon/build-zircon-pc-x86-64/zircon.bin` to the root of the USB Flash Drive
 5. Optionally copy an additional bootfs image to `ramdisk.bin` on the root of the USB Flash Drive (for a Fuchsia build, a bootfs image can be found at `$FUCHSIA_ROOT/out/debug-x86-64/user.bootfs`)
 
-If you need to boot magenta over the network, skip step 4 and/or delete
-magenta.bin from the root of the USB Flash Drive.
+If you need to boot zircon over the network, skip step 4 and/or delete
+zircon.bin from the root of the USB Flash Drive.
 
 ## Quirks
 It has been observed that USB initialization is racy on a cold boot.  So if you're starting from a cold boot and trying to boot to USB, you may find that you boot to disk instead.
 
 Mitigations:
-- It's useful to use a `cmdline` file to set `magenta.nodename=foo` to know during the boot screen whether you're booting from USB or disk.
+- It's useful to use a `cmdline` file to set `zircon.nodename=foo` to know during the boot screen whether you're booting from USB or disk.
 - If the Acer is booting from disk and you want to boot from USB, remove and reinsert the USB drive, then reboot with `ctrl-alt-del` (not the power button.)
 - You can tell from the bios whether USB has been initialized because it will name the USB device.

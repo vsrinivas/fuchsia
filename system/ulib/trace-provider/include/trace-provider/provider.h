@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #include <async/dispatcher.h>
 
@@ -56,7 +56,7 @@ public:
     }
 
     // Returns true if the trace provider was created successfully.
-    mx_status_t is_valid() const {
+    zx_status_t is_valid() const {
         return provider_ != nullptr;
     }
 

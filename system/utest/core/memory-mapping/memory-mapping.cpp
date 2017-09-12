@@ -5,9 +5,9 @@
 #include <errno.h>
 #include <unistd.h>
 
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/object.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
 #include <unittest/unittest.h>
 #include <sys/mman.h>
 
@@ -33,8 +33,8 @@ bool address_space_limits_test() {
 
 #if defined(__x86_64__)
     size_t page_size = getpagesize();
-    mx_handle_t vmo;
-    EXPECT_EQ(mx_vmo_create(page_size, 0, &vmo), MX_OK);
+    zx_handle_t vmo;
+    EXPECT_EQ(zx_vmo_create(page_size, 0, &vmo), ZX_OK);
     EXPECT_LT(0, vmo, "vm_object_create");
 
     // This is the lowest non-canonical address on x86-64.  We want to
@@ -44,45 +44,45 @@ bool address_space_limits_test() {
     uintptr_t noncanon_addr =
         ((uintptr_t) 1) << (x86_linear_address_width() - 1);
 
-    mx_info_vmar_t vmar_info;
-    mx_status_t status = mx_object_get_info(mx_vmar_root_self(), MX_INFO_VMAR,
+    zx_info_vmar_t vmar_info;
+    zx_status_t status = zx_object_get_info(zx_vmar_root_self(), ZX_INFO_VMAR,
                                             &vmar_info, sizeof(vmar_info),
                                             NULL, NULL);
-    EXPECT_EQ(MX_OK, status, "get_info");
+    EXPECT_EQ(ZX_OK, status, "get_info");
 
     // Check that we cannot map a page ending at |noncanon_addr|.
     size_t offset = noncanon_addr - page_size - vmar_info.base;
     uintptr_t addr;
-    status = mx_vmar_map(
-        mx_vmar_root_self(), offset, vmo, 0, page_size,
-        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+    status = zx_vmar_map(
+        zx_vmar_root_self(), offset, vmo, 0, page_size,
+        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
         &addr);
-    EXPECT_EQ(MX_ERR_INVALID_ARGS, status, "vm_map");
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, status, "vm_map");
 
     // Check that we can map at the next address down.  This helps to
     // verify that the previous check didn't fail for some unexpected
     // reason.
     offset = noncanon_addr - page_size * 2 - vmar_info.base;
-    status = mx_vmar_map(
-        mx_vmar_root_self(), offset, vmo, 0, page_size,
-        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+    status = zx_vmar_map(
+        zx_vmar_root_self(), offset, vmo, 0, page_size,
+        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
         &addr);
-    EXPECT_EQ(MX_OK, status, "vm_map");
+    EXPECT_EQ(ZX_OK, status, "vm_map");
 
-    // Check that MX_VM_FLAG_SPECIFIC fails on already-mapped locations.
+    // Check that ZX_VM_FLAG_SPECIFIC fails on already-mapped locations.
     // Otherwise, the previous mapping could have overwritten
     // something that was in use, which could cause problems later.
-    status = mx_vmar_map(
-        mx_vmar_root_self(), offset, vmo, 0, page_size,
-        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+    status = zx_vmar_map(
+        zx_vmar_root_self(), offset, vmo, 0, page_size,
+        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
         &addr);
-    EXPECT_EQ(MX_ERR_NO_MEMORY, status, "vm_map");
+    EXPECT_EQ(ZX_ERR_NO_MEMORY, status, "vm_map");
 
     // Clean up.
-    status = mx_vmar_unmap(mx_vmar_root_self(), addr, page_size);
-    EXPECT_EQ(MX_OK, status, "vm_unmap");
-    status = mx_handle_close(vmo);
-    EXPECT_EQ(MX_OK, status, "handle_close");
+    status = zx_vmar_unmap(zx_vmar_root_self(), addr, page_size);
+    EXPECT_EQ(ZX_OK, status, "vm_unmap");
+    status = zx_handle_close(vmo);
+    EXPECT_EQ(ZX_OK, status, "handle_close");
 #endif
 
     END_TEST;

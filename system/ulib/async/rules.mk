@@ -26,7 +26,7 @@ MODULE_STATIC_LIBS := \
 
 MODULE_LIBS := \
     system/ulib/c \
-    system/ulib/magenta
+    system/ulib/zircon
 
 include make/module.mk
 
@@ -50,7 +50,7 @@ MODULE_STATIC_LIBS := \
 MODULE_LIBS := \
     system/ulib/async.default \
     system/ulib/c \
-    system/ulib/magenta
+    system/ulib/zircon
 
 include make/module.mk
 

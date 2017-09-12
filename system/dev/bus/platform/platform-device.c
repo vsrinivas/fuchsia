@@ -12,27 +12,27 @@
 
 #include "platform-bus.h"
 
-mx_status_t platform_dev_set_interface(void* ctx, pbus_interface_t* interface) {
-    return MX_ERR_NOT_SUPPORTED;
+zx_status_t platform_dev_set_interface(void* ctx, pbus_interface_t* interface) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t platform_dev_get_protocol(void* ctx, uint32_t proto_id, void* out) {
+static zx_status_t platform_dev_get_protocol(void* ctx, uint32_t proto_id, void* out) {
     platform_dev_t* pdev = ctx;
     platform_bus_t* bus = pdev->bus;
 
     if (bus->interface.ops == NULL) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
     return pbus_interface_get_protocol(&bus->interface, proto_id, out);
 }
 
-static mx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cache_policy,
-                                         void** vaddr, size_t* size, mx_handle_t* out_handle) {
+static zx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cache_policy,
+                                         void** vaddr, size_t* size, zx_handle_t* out_handle) {
     platform_dev_t* pdev = ctx;
     return platform_map_mmio(&pdev->resources, index, cache_policy, vaddr, size, out_handle);
 }
 
-static mx_status_t platform_dev_map_interrupt(void* ctx, uint32_t index, mx_handle_t* out_handle) {
+static zx_status_t platform_dev_map_interrupt(void* ctx, uint32_t index, zx_handle_t* out_handle) {
     platform_dev_t* pdev = ctx;
     return platform_map_interrupt(&pdev->resources, index, out_handle);
 }
@@ -51,12 +51,12 @@ static void platform_dev_release(void* ctx) {
     free(dev);
 }
 
-static mx_protocol_device_t platform_dev_proto = {
+static zx_protocol_device_t platform_dev_proto = {
     .version = DEVICE_OPS_VERSION,
     .release = platform_dev_release,
 };
 
-mx_status_t platform_bus_publish_device(platform_bus_t* bus, mdi_node_ref_t* device_node) {
+zx_status_t platform_bus_publish_device(platform_bus_t* bus, mdi_node_ref_t* device_node) {
     uint32_t vid = bus->vid;
     uint32_t pid = bus->pid;
     uint32_t did = 0;
@@ -91,30 +91,30 @@ mx_status_t platform_bus_publish_device(platform_bus_t* bus, mdi_node_ref_t* dev
 
     if (!name || !did) {
         printf("platform_bus_publish_device: missing name or did\n");
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     if (did == PDEV_BUS_IMPLEMENTOR_DID) {
         printf("platform_bus_publish_device: PDEV_BUS_IMPLEMENTOR_DID not allowed\n");
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     platform_dev_t* dev = calloc(1, sizeof(platform_dev_t) + mmio_count * sizeof(platform_mmio_t)
                                  + irq_count * sizeof(platform_irq_t));
     if (!dev) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     dev->bus = bus;
 
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
     platform_init_resources(&dev->resources, mmio_count, irq_count);
     if (mmio_count || irq_count) {
         status = platform_add_resources(bus, &dev->resources, device_node);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             goto fail;
         }
     }
 
-    mx_device_prop_t props[] = {
+    zx_device_prop_t props[] = {
         {BIND_PLATFORM_DEV_VID, 0, vid},
         {BIND_PLATFORM_DEV_PID, 0, pid},
         {BIND_PLATFORM_DEV_DID, 0, did},
@@ -125,7 +125,7 @@ mx_status_t platform_bus_publish_device(platform_bus_t* bus, mdi_node_ref_t* dev
         .name = name,
         .ctx = dev,
         .ops = &platform_dev_proto,
-        .proto_id = MX_PROTOCOL_PLATFORM_DEV,
+        .proto_id = ZX_PROTOCOL_PLATFORM_DEV,
         .proto_ops = &platform_dev_proto_ops,
         .props = props,
         .prop_count = countof(props),
@@ -134,7 +134,7 @@ mx_status_t platform_bus_publish_device(platform_bus_t* bus, mdi_node_ref_t* dev
     status = device_add(bus->mxdev, &args, &dev->mxdev);
 
 fail:
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         platform_dev_release(dev);
     }
 

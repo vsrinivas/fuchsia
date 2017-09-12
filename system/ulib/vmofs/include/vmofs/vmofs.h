@@ -6,7 +6,7 @@
 
 #include <fs/dispatcher.h>
 #include <fs/vfs.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/array.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_piece.h>
@@ -15,7 +15,7 @@ namespace vmofs {
 
 class Vnode : public fs::Vnode {
 public:
-    mx_status_t Close() final;
+    zx_status_t Close() final;
 
     Vnode();
     ~Vnode() override;
@@ -26,24 +26,24 @@ public:
 class VnodeFile : public Vnode {
 public:
     // The creator retains ownership of |vmo|.
-    VnodeFile(mx_handle_t vmo,
-              mx_off_t offset,
-              mx_off_t length);
+    VnodeFile(zx_handle_t vmo,
+              zx_off_t offset,
+              zx_off_t length);
     ~VnodeFile() override;
 
-    mx_status_t Open(uint32_t flags) final;
-    mx_status_t Serve(fs::Vfs* vfs, mx::channel channel, uint32_t flags) final;
+    zx_status_t Open(uint32_t flags) final;
+    zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) final;
     ssize_t Read(void* data, size_t len, size_t off) final;
-    mx_status_t Getattr(vnattr_t* a) final;
-    mx_status_t GetHandles(uint32_t flags, mx_handle_t* hnds,
+    zx_status_t Getattr(vnattr_t* a) final;
+    zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnds,
                            uint32_t* type, void* extra, uint32_t* esize) final;
 
     uint32_t GetVType() final;
 
 private:
-    mx_handle_t vmo_;
-    mx_off_t offset_;
-    mx_off_t length_;
+    zx_handle_t vmo_;
+    zx_off_t offset_;
+    zx_off_t length_;
     bool have_local_clone_;
 };
 
@@ -55,10 +55,10 @@ public:
              fbl::Array<fbl::RefPtr<Vnode>> children);
     ~VnodeDir() override;
 
-    mx_status_t Open(uint32_t flags) final;
-    mx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
-    mx_status_t Getattr(vnattr_t* a) final;
-    mx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
+    zx_status_t Open(uint32_t flags) final;
+    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
+    zx_status_t Getattr(vnattr_t* a) final;
+    zx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
 
     uint32_t GetVType() final;
 

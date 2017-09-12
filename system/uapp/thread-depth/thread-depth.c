@@ -8,7 +8,7 @@
 #include <threads.h>
 #include <time.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <stdatomic.h>
 
 static atomic_uint_fast64_t count = ATOMIC_VAR_INIT(0);
@@ -18,7 +18,7 @@ static int thread_func(void* arg) {
     val++;
     if (val % 1000 == 0) {
         printf("Created %" PRId64 " threads, time %" PRId64 " us\n", val,
-               mx_time_get(MX_CLOCK_MONOTONIC) / 1000000);
+               zx_time_get(ZX_CLOCK_MONOTONIC) / 1000000);
     }
 
     thrd_t thread;
@@ -33,7 +33,7 @@ static int thread_func(void* arg) {
         val--;
         if (val % 1000 == 0)
             printf("Joined %" PRId64 " threads, time %" PRId64 " us\n", val,
-                   mx_time_get(MX_CLOCK_MONOTONIC) / 1000000);
+                   zx_time_get(ZX_CLOCK_MONOTONIC) / 1000000);
     }
 
     return 0;

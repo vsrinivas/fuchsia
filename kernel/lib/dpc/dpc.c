@@ -19,13 +19,13 @@ static spin_lock_t dpc_lock = SPIN_LOCK_INITIAL_VALUE;
 static struct list_node dpc_list = LIST_INITIAL_VALUE(dpc_list);
 static event_t dpc_event = EVENT_INITIAL_VALUE(dpc_event, false, 0);
 
-mx_status_t dpc_queue(dpc_t *dpc, bool reschedule)
+zx_status_t dpc_queue(dpc_t *dpc, bool reschedule)
 {
     DEBUG_ASSERT(dpc);
     DEBUG_ASSERT(dpc->func);
 
     if (list_in_list(&dpc->node))
-        return MX_OK;
+        return ZX_OK;
 
     spin_lock_saved_state_t state;
     spin_lock_irqsave(&dpc_lock, state);
@@ -40,16 +40,16 @@ mx_status_t dpc_queue(dpc_t *dpc, bool reschedule)
     if (reschedule)
         thread_reschedule();
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t dpc_queue_thread_locked(dpc_t *dpc)
+zx_status_t dpc_queue_thread_locked(dpc_t *dpc)
 {
     DEBUG_ASSERT(dpc);
     DEBUG_ASSERT(dpc->func);
 
     if (list_in_list(&dpc->node))
-        return MX_OK;
+        return ZX_OK;
 
     spin_lock_saved_state_t state;
     spin_lock_irqsave(&dpc_lock, state);
@@ -60,7 +60,7 @@ mx_status_t dpc_queue_thread_locked(dpc_t *dpc)
 
     spin_unlock_irqrestore(&dpc_lock, state);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 bool dpc_cancel(dpc_t *dpc)
@@ -85,8 +85,8 @@ static int dpc_thread(void *arg)
 {
     for (;;) {
         // wait for a dpc to fire
-        __UNUSED mx_status_t err = event_wait(&dpc_event);
-        DEBUG_ASSERT(err == MX_OK);
+        __UNUSED zx_status_t err = event_wait(&dpc_event);
+        DEBUG_ASSERT(err == ZX_OK);
 
         spin_lock_saved_state_t state;
         spin_lock_irqsave(&dpc_lock, state);

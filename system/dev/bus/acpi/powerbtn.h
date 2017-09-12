@@ -4,6 +4,6 @@
 
 #pragma once
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
-mx_status_t install_powerbtn_handlers(void);
+zx_status_t install_powerbtn_handlers(void);

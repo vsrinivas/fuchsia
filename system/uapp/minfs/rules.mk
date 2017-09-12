@@ -28,18 +28,18 @@ MODULE_STATIC_LIBS := \
     system/ulib/async \
     system/ulib/async.loop \
     system/ulib/block-client \
-    system/ulib/mx \
-    system/ulib/mxcpp \
+    system/ulib/zx \
+    system/ulib/zxcpp \
     system/ulib/fbl \
     system/ulib/sync \
 
 MODULE_LIBS := \
     system/ulib/async.default \
     system/ulib/bitmap \
-    system/ulib/magenta \
-    system/ulib/mxio \
+    system/ulib/zircon \
+    system/ulib/fdio \
     system/ulib/c \
-    system/ulib/mxio \
+    system/ulib/fdio \
 
 include make/module.mk
 
@@ -66,8 +66,8 @@ MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
     -Wstrict-prototypes -Wwrite-strings \
     -Isystem/ulib/bitmap/include \
-    -Isystem/ulib/mxcpp/include \
-    -Isystem/ulib/mxio/include \
+    -Isystem/ulib/zxcpp/include \
+    -Isystem/ulib/fdio/include \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/fs/include \
 

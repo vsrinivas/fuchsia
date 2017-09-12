@@ -7,8 +7,8 @@
 #include <fs/dispatcher.h>
 #include <fs/vfs.h>
 #include <fs/watcher.h>
-#include <magenta/types.h>
-#include <mx/channel.h>
+#include <zircon/types.h>
+#include <zx/channel.h>
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
@@ -17,7 +17,7 @@ namespace svcfs {
 
 class ServiceProvider {
 public:
-    virtual void Connect(const char* name, size_t len, mx::channel channel) = 0;
+    virtual void Connect(const char* name, size_t len, zx::channel channel) = 0;
 
 protected:
     virtual ~ServiceProvider();
@@ -41,8 +41,8 @@ public:
              ServiceProvider* provider);
     ~VnodeSvc() override;
 
-    mx_status_t Open(uint32_t flags) final;
-    mx_status_t Serve(fs::Vfs* vfs, mx::channel channel, uint32_t flags) final;
+    zx_status_t Open(uint32_t flags) final;
+    zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) final;
 
     uint64_t node_id() const { return node_id_; }
     const fbl::Array<char>& name() const { return name_; }
@@ -67,15 +67,15 @@ public:
     explicit VnodeDir();
     ~VnodeDir() override;
 
-    mx_status_t Open(uint32_t flags) final;
-    mx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
-    mx_status_t Getattr(vnattr_t* a) final;
+    zx_status_t Open(uint32_t flags) final;
+    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
+    zx_status_t Getattr(vnattr_t* a) final;
 
     void Notify(const char* name, size_t len, unsigned event) final;
-    mx_status_t WatchDir(mx::channel* out) final;
-    mx_status_t WatchDirV2(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) final;
+    zx_status_t WatchDir(zx::channel* out) final;
+    zx_status_t WatchDirV2(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) final;
 
-    mx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
+    zx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
 
     bool AddService(const char* name, size_t len, ServiceProvider* provider);
     bool RemoveService(const char* name, size_t len);
@@ -97,9 +97,9 @@ public:
     explicit VnodeProviderDir();
     ~VnodeProviderDir() override;
 
-    mx_status_t Open(uint32_t flags) final;
-    mx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
-    mx_status_t Getattr(vnattr_t* a) final;
+    zx_status_t Open(uint32_t flags) final;
+    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
+    zx_status_t Getattr(vnattr_t* a) final;
 
     // Set the service provider to null to prevent further requests.
     void SetServiceProvider(ServiceProvider* provider);

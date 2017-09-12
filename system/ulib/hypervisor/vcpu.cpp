@@ -15,8 +15,8 @@
 #include <hypervisor/pci.h>
 #include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
-#include <magenta/assert.h>
-#include <magenta/syscalls.h>
+#include <zircon/assert.h>
+#include <zircon/syscalls.h>
 #include <fbl/unique_ptr.h>
 
 #include "acpi_priv.h"
@@ -51,10 +51,10 @@
 
 // clang-format on
 
-static mx_status_t handle_local_apic(local_apic_t* local_apic, const mx_packet_guest_mem_t* mem,
+static zx_status_t handle_local_apic(local_apic_t* local_apic, const zx_packet_guest_mem_t* mem,
                                      instruction_t* inst) {
-    MX_ASSERT(mem->addr >= LOCAL_APIC_PHYS_BASE);
-    mx_vaddr_t offset = mem->addr - LOCAL_APIC_PHYS_BASE;
+    ZX_ASSERT(mem->addr >= LOCAL_APIC_PHYS_BASE);
+    zx_vaddr_t offset = mem->addr - LOCAL_APIC_PHYS_BASE;
     // From Intel Volume 3, Section 10.4.1.: All 32-bit registers should be
     // accessed using 128-bit aligned 32-bit loads or stores. Some processors
     // may support loads and stores of less than 32 bits to some of the APIC
@@ -77,7 +77,7 @@ static mx_status_t handle_local_apic(local_apic_t* local_apic, const mx_packet_g
         //
         // Therefore, we ignore writes to the ESR.
         if (inst->type == INST_MOV_WRITE)
-            return MX_OK;
+            return ZX_OK;
     case LOCAL_APIC_REGISTER_ISR_31_0 ... LOCAL_APIC_REGISTER_ISR_255_224:
     case LOCAL_APIC_REGISTER_TMR_31_0 ... LOCAL_APIC_REGISTER_TMR_255_224:
     case LOCAL_APIC_REGISTER_IRR_31_0 ... LOCAL_APIC_REGISTER_IRR_255_224:
@@ -86,7 +86,7 @@ static mx_status_t handle_local_apic(local_apic_t* local_apic, const mx_packet_g
         // The IO APIC implementation currently assumes these won't change.
         if (inst->type == INST_MOV_WRITE && inst_val32(inst) != local_apic->regs->id.u32) {
             fprintf(stderr, "Changing APIC IDs is not supported.\n");
-            return MX_ERR_NOT_SUPPORTED;
+            return ZX_ERR_NOT_SUPPORTED;
         }
         uintptr_t addr = reinterpret_cast<uintptr_t>(local_apic->apic_addr) + offset;
         return inst_rw32(inst, reinterpret_cast<uint32_t*>(addr));
@@ -106,46 +106,46 @@ static mx_status_t handle_local_apic(local_apic_t* local_apic, const mx_packet_g
     }
     case LOCAL_APIC_REGISTER_INITIAL_COUNT: {
         uint32_t initial_count;
-        mx_status_t status = inst_write32(inst, &initial_count);
-        if (status != MX_OK)
+        zx_status_t status = inst_write32(inst, &initial_count);
+        if (status != ZX_OK)
             return status;
-        return initial_count > 0 ? MX_ERR_NOT_SUPPORTED : MX_OK;
+        return initial_count > 0 ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
     }
     }
 
     fprintf(stderr, "Unhandled local APIC address %#lx\n", offset);
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t unhandled_mem(const mx_packet_guest_mem_t* mem, const instruction_t* inst) {
+static zx_status_t unhandled_mem(const zx_packet_guest_mem_t* mem, const instruction_t* inst) {
     fprintf(stderr, "Unhandled address %#lx\n", mem->addr);
     if (inst->type == INST_MOV_READ)
         *inst->reg = UINT64_MAX;
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t handle_mmio_read(vcpu_ctx_t* vcpu_ctx, mx_vaddr_t addr, uint8_t access_size,
-                                    mx_vcpu_io_t* io) {
+static zx_status_t handle_mmio_read(vcpu_ctx_t* vcpu_ctx, zx_vaddr_t addr, uint8_t access_size,
+                                    zx_vcpu_io_t* io) {
     switch (addr) {
     case PCI_ECAM_PHYS_BASE ... PCI_ECAM_PHYS_TOP:
         return pci_ecam_read(vcpu_ctx->guest_ctx->bus, addr, access_size, io);
     default:
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
     }
 }
 
-static mx_status_t handle_mmio_write(vcpu_ctx_t* vcpu_ctx, mx_vaddr_t addr, mx_vcpu_io_t* io) {
+static zx_status_t handle_mmio_write(vcpu_ctx_t* vcpu_ctx, zx_vaddr_t addr, zx_vcpu_io_t* io) {
     switch (addr) {
     case PCI_ECAM_PHYS_BASE ... PCI_ECAM_PHYS_TOP:
         return pci_ecam_write(vcpu_ctx->guest_ctx->bus, addr, io);
     default:
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
     }
 }
 
-static mx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_mem_t* mem, const instruction_t* inst) {
-    mx_status_t status;
-    mx_vcpu_io_t mmio;
+static zx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t* mem, const instruction_t* inst) {
+    zx_status_t status;
+    zx_vcpu_io_t mmio;
     if (inst->type == INST_MOV_WRITE) {
         switch (inst->mem) {
         case 2:
@@ -155,9 +155,9 @@ static mx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_mem_t
             status = inst_write32(inst, &mmio.u32);
             break;
         default:
-            return MX_ERR_NOT_SUPPORTED;
+            return ZX_ERR_NOT_SUPPORTED;
         }
-        if (status != MX_OK)
+        if (status != ZX_OK)
             return status;
         mmio.access_size = inst->mem;
         return handle_mmio_write(vcpu_ctx, mem->addr, &mmio);
@@ -165,7 +165,7 @@ static mx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_mem_t
 
     if (inst->type == INST_MOV_READ) {
         status = handle_mmio_read(vcpu_ctx, mem->addr, inst->mem, &mmio);
-        if (status != MX_OK)
+        if (status != ZX_OK)
             return status;
         switch (inst->mem) {
         case 1:
@@ -175,42 +175,42 @@ static mx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_mem_t
         case 4:
             return inst_read32(inst, mmio.u32);
         default:
-            return MX_ERR_NOT_SUPPORTED;
+            return ZX_ERR_NOT_SUPPORTED;
         }
     }
 
     if (inst->type == INST_TEST) {
         status = handle_mmio_read(vcpu_ctx, mem->addr, inst->mem, &mmio);
-        if (status != MX_OK)
+        if (status != ZX_OK)
             return status;
         switch (inst->mem) {
         case 1:
             return inst_test8(inst, static_cast<uint8_t>(inst->imm), mmio.u8);
         default:
-            return MX_ERR_NOT_SUPPORTED;
+            return ZX_ERR_NOT_SUPPORTED;
         }
     }
 
-    return MX_ERR_INVALID_ARGS;
+    return ZX_ERR_INVALID_ARGS;
 }
 
-static mx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_mem_t* mem) {
-    mx_vcpu_state_t vcpu_state;
-    mx_status_t status = vcpu_ctx->read_state(vcpu_ctx, MX_VCPU_STATE, &vcpu_state,
+static zx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t* mem) {
+    zx_vcpu_state_t vcpu_state;
+    zx_status_t status = vcpu_ctx->read_state(vcpu_ctx, ZX_VCPU_STATE, &vcpu_state,
                                               sizeof(vcpu_state));
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     instruction_t inst;
 #if __aarch64__
-    status = MX_ERR_NOT_SUPPORTED;
+    status = ZX_ERR_NOT_SUPPORTED;
 #elif __x86_64__
     status = inst_decode(mem->inst_buf, mem->inst_len, &vcpu_state, &inst);
 #else
 #error Unsupported architecture
 #endif
 
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         fprintf(stderr, "Unsupported instruction:");
 #if __x86_64__
         for (uint8_t i = 0; i < mem->inst_len; i++)
@@ -228,27 +228,27 @@ static mx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_mem_t*
             break;
         default: {
             status = handle_mmio(vcpu_ctx, mem, &inst);
-            if (status == MX_ERR_NOT_FOUND)
+            if (status == ZX_ERR_NOT_FOUND)
                 status = unhandled_mem(mem, &inst);
             break;
         }
     }
     }
 
-    if (status != MX_OK) {
-        return mx_vcpu_interrupt(vcpu_ctx->vcpu, X86_INT_GP_FAULT);
+    if (status != ZX_OK) {
+        return zx_vcpu_interrupt(vcpu_ctx->vcpu, X86_INT_GP_FAULT);
     } else if (inst.type == INST_MOV_READ || inst.type == INST_TEST) {
         // If there was an attempt to read or test memory, update the GPRs.
-        return vcpu_ctx->write_state(vcpu_ctx, MX_VCPU_STATE, &vcpu_state,
+        return vcpu_ctx->write_state(vcpu_ctx, ZX_VCPU_STATE, &vcpu_state,
                                      sizeof(vcpu_state));
     }
     return status;
 }
 
-static mx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_io_t* io) {
+static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io) {
 #if __x86_64__
-    mx_status_t status = MX_OK;
-    mx_vcpu_io_t vcpu_io;
+    zx_status_t status = ZX_OK;
+    zx_vcpu_io_t vcpu_io;
     memset(&vcpu_io, 0, sizeof(vcpu_io));
     switch (io->port) {
     case I8042_COMMAND_PORT:
@@ -277,25 +277,25 @@ static mx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_io_t
                                                &vcpu_io);
             break;
         }
-        status = MX_ERR_NOT_SUPPORTED;
+        status = ZX_ERR_NOT_SUPPORTED;
     }
     }
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         fprintf(stderr, "Unhandled port in %#x: %d\n", io->port, status);
         return status;
     }
     if (vcpu_io.access_size != io->access_size) {
         fprintf(stderr, "Unexpected size (%u != %u) for port in %#x\n", vcpu_io.access_size,
                 io->access_size, io->port);
-        return MX_ERR_IO_DATA_INTEGRITY;
+        return ZX_ERR_IO_DATA_INTEGRITY;
     }
-    return vcpu_ctx->write_state(vcpu_ctx, MX_VCPU_IO, &vcpu_io, sizeof(vcpu_io));
+    return vcpu_ctx->write_state(vcpu_ctx, ZX_VCPU_IO, &vcpu_io, sizeof(vcpu_io));
 #else // __x86_64__
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__
 }
 
-static mx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_io_t* io) {
+static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io) {
 #if __x86_64__
     switch (io->port) {
     case I8042_COMMAND_PORT:
@@ -315,24 +315,24 @@ static mx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_io_
         return uart_write(vcpu_ctx->guest_ctx->uart, io);
     }
     fprintf(stderr, "Unhandled port out %#x\n", io->port);
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 #else // __x86_64__
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__
 }
 
-static mx_status_t handle_io(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_io_t* io) {
+static zx_status_t handle_io(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io) {
     return io->input ? handle_input(vcpu_ctx, io) : handle_output(vcpu_ctx, io);
 }
 
-static mx_status_t vcpu_state_read(vcpu_ctx_t* vcpu_ctx, uint32_t kind, void* buffer,
+static zx_status_t vcpu_state_read(vcpu_ctx_t* vcpu_ctx, uint32_t kind, void* buffer,
                                    uint32_t len) {
-    return mx_vcpu_read_state(vcpu_ctx->vcpu, kind, buffer, len);
+    return zx_vcpu_read_state(vcpu_ctx->vcpu, kind, buffer, len);
 }
 
-static mx_status_t vcpu_state_write(vcpu_ctx_t* vcpu_ctx, uint32_t kind, const void* buffer,
+static zx_status_t vcpu_state_write(vcpu_ctx_t* vcpu_ctx, uint32_t kind, const void* buffer,
                                     uint32_t len) {
-    return mx_vcpu_write_state(vcpu_ctx->vcpu, kind, buffer, len);
+    return zx_vcpu_write_state(vcpu_ctx->vcpu, kind, buffer, len);
 }
 
 void vcpu_init(vcpu_ctx_t* vcpu_ctx) {
@@ -341,36 +341,36 @@ void vcpu_init(vcpu_ctx_t* vcpu_ctx) {
     vcpu_ctx->write_state = vcpu_state_write;
 }
 
-mx_status_t vcpu_loop(vcpu_ctx_t* vcpu_ctx) {
+zx_status_t vcpu_loop(vcpu_ctx_t* vcpu_ctx) {
     while (true) {
-        mx_port_packet_t packet;
-        mx_status_t status = mx_vcpu_resume(vcpu_ctx->vcpu, &packet);
-        if (status != MX_OK) {
+        zx_port_packet_t packet;
+        zx_status_t status = zx_vcpu_resume(vcpu_ctx->vcpu, &packet);
+        if (status != ZX_OK) {
             fprintf(stderr, "Failed to resume VCPU %d\n", status);
             return status;
         }
         status = vcpu_packet_handler(vcpu_ctx, &packet);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             fprintf(stderr, "Failed to handle guest packet %d: %d\n", packet.type, status);
             return status;
         }
     }
 }
 
-mx_status_t vcpu_packet_handler(vcpu_ctx_t* vcpu_ctx, mx_port_packet_t* packet) {
+zx_status_t vcpu_packet_handler(vcpu_ctx_t* vcpu_ctx, zx_port_packet_t* packet) {
     switch (packet->type) {
-    case MX_PKT_TYPE_GUEST_MEM:
+    case ZX_PKT_TYPE_GUEST_MEM:
         return handle_mem(vcpu_ctx, &packet->guest_mem);
-    case MX_PKT_TYPE_GUEST_IO:
+    case ZX_PKT_TYPE_GUEST_IO:
         return handle_io(vcpu_ctx, &packet->guest_io);
     default:
         fprintf(stderr, "Unhandled guest packet %d\n", packet->type);
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
 typedef struct device {
-    mx_handle_t port;
+    zx_handle_t port;
     device_handler_fn_t handler;
     void* ctx;
 } device_t;
@@ -379,34 +379,34 @@ static int device_loop(void* ctx) {
     fbl::unique_ptr<device_t> device(static_cast<device_t*>(ctx));
 
     while (true) {
-        mx_port_packet_t packet;
-        mx_status_t status = mx_port_wait(device->port, MX_TIME_INFINITE, &packet, 0);
-        if (status != MX_OK) {
+        zx_port_packet_t packet;
+        zx_status_t status = zx_port_wait(device->port, ZX_TIME_INFINITE, &packet, 0);
+        if (status != ZX_OK) {
             fprintf(stderr, "Failed to wait for device port %d\n", status);
             break;
         }
 
         status = device->handler(&packet, device->ctx);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             fprintf(stderr, "Unable to handle packet for device %d\n", status);
             break;
         }
     }
 
-    mx_handle_close(device->port);
-    return MX_ERR_INTERNAL;
+    zx_handle_close(device->port);
+    return ZX_ERR_INTERNAL;
 }
 
-mx_status_t device_async(mx_handle_t guest, const trap_args_t* traps, size_t num_traps,
+zx_status_t device_async(zx_handle_t guest, const trap_args_t* traps, size_t num_traps,
                          device_handler_fn_t handler, void* ctx) {
     if (num_traps == 0)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     int ret;
-    auto device = new device_t{MX_HANDLE_INVALID, handler, ctx};
+    auto device = new device_t{ZX_HANDLE_INVALID, handler, ctx};
 
-    mx_status_t status = mx_port_create(0, &device->port);
-    if (status != MX_OK) {
+    zx_status_t status = zx_port_create(0, &device->port);
+    if (status != ZX_OK) {
         fprintf(stderr, "Failed to create device port %d\n", status);
         goto mem_cleanup;
     }
@@ -414,9 +414,9 @@ mx_status_t device_async(mx_handle_t guest, const trap_args_t* traps, size_t num
     for (size_t i = 0; i < num_traps; ++i) {
         const trap_args_t* trap = &traps[i];
 
-        status = mx_guest_set_trap(guest, trap->kind, trap->addr, trap->len, device->port,
+        status = zx_guest_set_trap(guest, trap->kind, trap->addr, trap->len, device->port,
                                    trap->key);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             fprintf(stderr, "Failed to set trap for device port %d\n", status);
             goto cleanup;
         }
@@ -432,13 +432,13 @@ mx_status_t device_async(mx_handle_t guest, const trap_args_t* traps, size_t num
     ret = thrd_detach(thread);
     if (ret != thrd_success) {
         fprintf(stderr, "Failed to detach device thread %d\n", ret);
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
 
-    return MX_OK;
+    return ZX_OK;
 cleanup:
-    mx_handle_close(device->port);
+    zx_handle_close(device->port);
 mem_cleanup:
     delete device;
-    return MX_ERR_INTERNAL;
+    return ZX_ERR_INTERNAL;
 }

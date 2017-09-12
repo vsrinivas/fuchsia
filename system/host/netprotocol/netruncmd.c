@@ -13,7 +13,7 @@
 #include <errno.h>
 #include <stdint.h>
 
-#include <magenta/boot/netboot.h>
+#include <zircon/boot/netboot.h>
 
 static const char* appname;
 
@@ -65,8 +65,8 @@ int main(int argc, char** argv) {
         if (errno == ETIMEDOUT) {
             fprintf(stderr, "%s: lookup timed out\n", appname);
             // TODO(jimbe): Remove this transitional code after May 1, 2017.
-            if (!strcmp(hostname, "magenta")) {
-                fprintf(stderr, "WARNING: The \"magenta\" hostname is obsolete. "
+            if (!strcmp(hostname, "zircon")) {
+                fprintf(stderr, "WARNING: The \"zircon\" hostname is obsolete. "
                     "Use \":\" or see loglistener.\n");
             }
         }

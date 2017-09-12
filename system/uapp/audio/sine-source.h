@@ -5,33 +5,33 @@
 #pragma once
 
 #include <audio-utils/audio-stream.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 class SineSource : public audio::utils::AudioSource {
 public:
     SineSource() { }
 
-    mx_status_t Init(float freq,
+    zx_status_t Init(float freq,
                      float amp,
                      float duration_secs,
                      uint32_t frame_rate,
                      uint32_t channels,
                      audio_sample_format_t sample_format);
 
-    mx_status_t GetFormat(Format* out_format) final;
-    mx_status_t GetFrames(void* buffer, uint32_t buf_space, uint32_t* out_packed);
+    zx_status_t GetFormat(Format* out_format) final;
+    zx_status_t GetFrames(void* buffer, uint32_t buf_space, uint32_t* out_packed);
     bool finished() const final { return (frames_produced_ >= frames_to_produce_); }
 
 private:
-    using GetFramesThunk = mx_status_t (SineSource::*)(void* buffer,
+    using GetFramesThunk = zx_status_t (SineSource::*)(void* buffer,
                                                        uint32_t buf_space,
                                                        uint32_t* out_packed);
 
     template <audio_sample_format_t SAMPLE_FORMAT>
-    mx_status_t InitInternal();
+    zx_status_t InitInternal();
 
     template <audio_sample_format_t SAMPLE_FORMAT>
-    mx_status_t GetFramesInternal(void* buffer, uint32_t buf_space, uint32_t* out_packed);
+    zx_status_t GetFramesInternal(void* buffer, uint32_t buf_space, uint32_t* out_packed);
 
     uint64_t frames_to_produce_;
     uint64_t frames_produced_;

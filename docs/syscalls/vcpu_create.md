@@ -1,4 +1,4 @@
-# mx_vcpu_create
+# zx_vcpu_create
 
 ## NAME
 
@@ -7,11 +7,11 @@ vcpu_create - create a VCPU
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/hypervisor.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/hypervisor.h>
 
-mx_status_t mx_vcpu_create(mx_handle_t guest, uint32_t options,
-                           const mx_vcpu_create_args_t* args, mx_handle_t* out);
+zx_status_t zx_vcpu_create(zx_handle_t guest, uint32_t options,
+                           const zx_vcpu_create_args_t* args, zx_handle_t* out);
 ```
 
 ## DESCRIPTION
@@ -33,36 +33,36 @@ N.B. VCPU is an abbreviation of virtual CPU.
 
 The following rights will be set on the handle *out* by default:
 
-**MX_RIGHT_DUPLICATE** — *out* may be duplicated.
+**ZX_RIGHT_DUPLICATE** — *out* may be duplicated.
 
-**MX_RIGHT_TRANSFER** — *out* may be transferred over a channel.
+**ZX_RIGHT_TRANSFER** — *out* may be transferred over a channel.
 
-**MX_RIGHT_EXECUTE** — *out* may have its execution resumed (or begun)
+**ZX_RIGHT_EXECUTE** — *out* may have its execution resumed (or begun)
 
-**MX_RIGHT_SIGNAL** — *out* may be interrupted
+**ZX_RIGHT_SIGNAL** — *out* may be interrupted
 
-**MX_RIGHT_READ** — *out* may have its state read
+**ZX_RIGHT_READ** — *out* may have its state read
 
-**MX_RIGHT_WRITE** — *out* may have its state written
+**ZX_RIGHT_WRITE** — *out* may have its state written
 
 ## RETURN VALUE
 
-**vcpu_create**() returns MX_OK on success. On failure, an error value is
+**vcpu_create**() returns ZX_OK on success. On failure, an error value is
 returned.
 
 ## ERRORS
 
-**MX_ERR_ACCESS_DENIED** *guest* does not have the *MX_RIGHT_WRITE* right, or
-*apic_vmo* does not have the *MX_RIGHT_READ* and *MX_RIGHT_WRITE* rights.
+**ZX_ERR_ACCESS_DENIED** *guest* does not have the *ZX_RIGHT_WRITE* right, or
+*apic_vmo* does not have the *ZX_RIGHT_READ* and *ZX_RIGHT_WRITE* rights.
 
-**MX_ERR_BAD_HANDLE** *guest* is an invalid handle.
+**ZX_ERR_BAD_HANDLE** *guest* is an invalid handle.
 
-**MX_ERR_INVALID_ARGS** *args* contains an invalid argument, or *out* is an
+**ZX_ERR_INVALID_ARGS** *args* contains an invalid argument, or *out* is an
 invalid pointer, or *options* is nonzero.
 
-**MX_ERR_NO_MEMORY** Temporary failure due to lack of memory.
+**ZX_ERR_NO_MEMORY** Temporary failure due to lack of memory.
 
-**MX_ERR_WRONG_TYPE** *guest* is not a handle to a guest.
+**ZX_ERR_WRONG_TYPE** *guest* is not a handle to a guest.
 
 ## SEE ALSO
 

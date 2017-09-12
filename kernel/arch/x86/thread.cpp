@@ -117,8 +117,8 @@ void arch_context_switch(thread_t *oldthread, thread_t *newthread)
     write_msr(X86_MSR_IA32_KERNEL_GS_BASE, newthread->arch.gs_base);
 
 #if __has_feature(safe_stack)
-    oldthread->arch.unsafe_sp = x86_read_gs_offset64(MX_TLS_UNSAFE_SP_OFFSET);
-    x86_write_gs_offset64(MX_TLS_UNSAFE_SP_OFFSET, newthread->arch.unsafe_sp);
+    oldthread->arch.unsafe_sp = x86_read_gs_offset64(ZX_TLS_UNSAFE_SP_OFFSET);
+    x86_write_gs_offset64(ZX_TLS_UNSAFE_SP_OFFSET, newthread->arch.unsafe_sp);
 #endif
 
     x86_64_context_switch(&oldthread->arch.sp, newthread->arch.sp);

@@ -97,8 +97,8 @@ bool StateTracker::CancelByKey(Handle* handle, const void* port, uint64_t key) {
     return flags & StateObserver::kHandled;
 }
 
-void StateTracker::UpdateState(mx_signals_t clear_mask,
-                               mx_signals_t set_mask) {
+void StateTracker::UpdateState(zx_signals_t clear_mask,
+                               zx_signals_t set_mask) {
     canary_.Assert();
 
     StateObserver::Flags flags;
@@ -141,7 +141,7 @@ void StateTracker::UpdateLastHandleSignal(uint32_t* count) {
         // We assume here that the value pointed by |count| can mutate by
         // other threads.
         signals_ = (*count == 1u) ?
-            signals_ | MX_SIGNAL_LAST_HANDLE : signals_ & ~MX_SIGNAL_LAST_HANDLE;
+            signals_ | ZX_SIGNAL_LAST_HANDLE : signals_ & ~ZX_SIGNAL_LAST_HANDLE;
 
         if (previous_signals == signals_)
             return;
@@ -157,51 +157,51 @@ void StateTracker::UpdateLastHandleSignal(uint32_t* count) {
         thread_reschedule();
 }
 
-mx_status_t StateTracker::SetCookie(CookieJar* cookiejar, mx_koid_t scope, uint64_t cookie) {
+zx_status_t StateTracker::SetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_t cookie) {
     if (cookiejar == nullptr)
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 
     AutoLock lock(&lock_);
 
-    if (cookiejar->scope_ == MX_KOID_INVALID) {
+    if (cookiejar->scope_ == ZX_KOID_INVALID) {
         cookiejar->scope_ = scope;
         cookiejar->cookie_ = cookie;
-        return MX_OK;
+        return ZX_OK;
     }
 
     if (cookiejar->scope_ == scope) {
         cookiejar->cookie_ = cookie;
-        return MX_OK;
+        return ZX_OK;
     }
 
-    return MX_ERR_ACCESS_DENIED;
+    return ZX_ERR_ACCESS_DENIED;
 }
 
-mx_status_t StateTracker::GetCookie(CookieJar* cookiejar, mx_koid_t scope, uint64_t* cookie) {
+zx_status_t StateTracker::GetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_t* cookie) {
     if (cookiejar == nullptr)
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 
     AutoLock lock(&lock_);
 
     if (cookiejar->scope_ == scope) {
         *cookie = cookiejar->cookie_;
-        return MX_OK;
+        return ZX_OK;
     }
 
-    return MX_ERR_ACCESS_DENIED;
+    return ZX_ERR_ACCESS_DENIED;
 }
 
-mx_status_t StateTracker::InvalidateCookie(CookieJar* cookiejar) {
+zx_status_t StateTracker::InvalidateCookie(CookieJar* cookiejar) {
     if (cookiejar == nullptr)
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 
     AutoLock lock(&lock_);
 
-    cookiejar->scope_ = MX_KOID_KERNEL;
-    return MX_OK;
+    cookiejar->scope_ = ZX_KOID_KERNEL;
+    return ZX_OK;
 }
 
-StateObserver::Flags StateTracker::UpdateInternalLocked(ObserverList* obs_to_remove, mx_signals_t signals) {
+StateObserver::Flags StateTracker::UpdateInternalLocked(ObserverList* obs_to_remove, zx_signals_t signals) {
     StateObserver::Flags flags = 0;
 
     for (auto it = observers_.begin(); it != observers_.end();) {

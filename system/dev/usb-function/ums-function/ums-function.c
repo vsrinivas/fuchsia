@@ -14,10 +14,10 @@
 #include <ddk/driver.h>
 #include <ddk/iotxn.h>
 #include <ddk/protocol/usb-function.h>
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
-#include <magenta/device/usb-device.h>
-#include <magenta/hw/usb-mass-storage.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/device/usb-device.h>
+#include <zircon/hw/usb-mass-storage.h>
 
 #define BLOCK_SIZE      512
 #define STORAGE_SIZE    (10 * 1024 * 1024)
@@ -66,14 +66,14 @@ typedef enum {
 };
 
 typedef struct {
-    mx_device_t* mxdev;
+    zx_device_t* mxdev;
     usb_function_protocol_t function;
     iotxn_t* cbw_iotxn;
     iotxn_t* data_iotxn;
     iotxn_t* csw_iotxn;
 
     // vmo for backing storage
-    mx_handle_t storage_handle;
+    zx_handle_t storage_handle;
     void* storage;
 
     // command we are currently handling
@@ -84,7 +84,7 @@ typedef struct {
     // state for data transfers
     ums_data_state_t    data_state;
     // state for reads and writes
-    mx_off_t data_offset;
+    zx_off_t data_offset;
     size_t data_remaining;
 
     uint8_t bulk_out_addr;
@@ -136,7 +136,7 @@ static void ums_continue_transfer(usb_ums_t* ums) {
 
 static void ums_start_transfer(usb_ums_t* ums, ums_data_state_t state, uint64_t lba,
                                uint32_t blocks) {
-    mx_off_t offset = lba * BLOCK_SIZE;
+    zx_off_t offset = lba * BLOCK_SIZE;
     size_t length = blocks * BLOCK_SIZE;
 
     if (offset + length > STORAGE_SIZE) {
@@ -372,7 +372,7 @@ static void ums_cbw_complete(iotxn_t* txn, void* cookie) {
 
     dprintf(TRACE, "ums_cbw_complete %d %ld\n", txn->status, txn->actual);
 
-    if (txn->status == MX_OK && txn->actual == sizeof(ums_cbw_t)) {
+    if (txn->status == ZX_OK && txn->actual == sizeof(ums_cbw_t)) {
         ums_cbw_t* cbw = &ums->current_cbw;
         iotxn_copyfrom(txn, cbw, sizeof(*cbw), 0);
         ums_handle_cbw(ums, cbw);
@@ -414,46 +414,46 @@ static const usb_descriptor_header_t* ums_get_descriptors(void* ctx, size_t* out
     return (const usb_descriptor_header_t *)&descriptors;
 }
 
-static mx_status_t ums_control(void* ctx, const usb_setup_t* setup, void* buffer,
+static zx_status_t ums_control(void* ctx, const usb_setup_t* setup, void* buffer,
                                          size_t length, size_t* out_actual) {
     if (setup->bmRequestType == (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) &&
         setup->bRequest == USB_REQ_GET_MAX_LUN && setup->wValue == 0 && setup->wIndex == 0 &&
         setup->wLength >= sizeof(uint8_t)) {
         *((uint8_t *)buffer) = 0;
         *out_actual = sizeof(uint8_t);
-        return MX_OK;
+        return ZX_OK;
     }
 
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t ums_set_configured(void* ctx, bool configured, usb_speed_t speed) {
+static zx_status_t ums_set_configured(void* ctx, bool configured, usb_speed_t speed) {
     dprintf(TRACE, "ums_set_configured %d %d\n", configured, speed);
     usb_ums_t* ums = ctx;
-    mx_status_t status;
+    zx_status_t status;
 
     // TODO(voydanoff) fullspeed and superspeed support
     if (configured) {
-        if ((status = usb_function_config_ep(&ums->function, &descriptors.out_ep, NULL)) != MX_OK ||
-            (status = usb_function_config_ep(&ums->function, &descriptors.in_ep, NULL)) != MX_OK) {
+        if ((status = usb_function_config_ep(&ums->function, &descriptors.out_ep, NULL)) != ZX_OK ||
+            (status = usb_function_config_ep(&ums->function, &descriptors.in_ep, NULL)) != ZX_OK) {
             dprintf(ERROR, "ums_set_configured: usb_function_config_ep failed\n");
         }
     } else {
-        if ((status = usb_function_disable_ep(&ums->function, ums->bulk_out_addr)) != MX_OK ||
-            (status = usb_function_disable_ep(&ums->function, ums->bulk_in_addr)) != MX_OK) {
+        if ((status = usb_function_disable_ep(&ums->function, ums->bulk_out_addr)) != ZX_OK ||
+            (status = usb_function_disable_ep(&ums->function, ums->bulk_in_addr)) != ZX_OK) {
             dprintf(ERROR, "ums_set_configured: usb_function_disable_ep failed\n");
         }
     }
 
-    if (configured && status == MX_OK) {
+    if (configured && status == ZX_OK) {
         // queue first read on OUT endpoint
         usb_function_queue(&ums->function, ums->cbw_iotxn, ums->bulk_out_addr);
     }
     return status;
 }
 
-static mx_status_t ums_set_interface(void* ctx, unsigned interface, unsigned alt_setting) {
-    return MX_ERR_NOT_SUPPORTED;
+static zx_status_t ums_set_interface(void* ctx, unsigned interface, unsigned alt_setting) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 usb_function_interface_ops_t ums_device_ops = {
@@ -474,9 +474,9 @@ static void usb_ums_release(void* ctx) {
     usb_ums_t* ums = ctx;
 
     if (ums->storage) {
-        mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)ums->storage, STORAGE_SIZE);
+        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)ums->storage, STORAGE_SIZE);
     }
-    mx_handle_close(ums->storage_handle);
+    zx_handle_close(ums->storage_handle);
 
     if (ums->cbw_iotxn) {
         iotxn_release(ums->cbw_iotxn);
@@ -490,47 +490,47 @@ static void usb_ums_release(void* ctx) {
     free(ums);
 }
 
-static mx_protocol_device_t usb_ums_proto = {
+static zx_protocol_device_t usb_ums_proto = {
     .version = DEVICE_OPS_VERSION,
     .unbind = usb_ums_unbind,
     .release = usb_ums_release,
 };
 
-mx_status_t usb_ums_bind(void* ctx, mx_device_t* parent, void** cookie) {
+zx_status_t usb_ums_bind(void* ctx, zx_device_t* parent, void** cookie) {
     dprintf(INFO, "usb_ums_bind\n");
 
     usb_ums_t* ums = calloc(1, sizeof(usb_ums_t));
     if (!ums) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     ums->data_state = DATA_STATE_NONE;
 
-    mx_status_t status = device_get_protocol(parent, MX_PROTOCOL_USB_FUNCTION, &ums->function);
-    if (status != MX_OK) {
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_USB_FUNCTION, &ums->function);
+    if (status != ZX_OK) {
         goto fail;
     }
 
     status = iotxn_alloc(&ums->cbw_iotxn, 0, BULK_MAX_PACKET);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         goto fail;
     }
     status = iotxn_alloc(&ums->data_iotxn, 0, DATA_TXN_SIZE);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         goto fail;
     }
     status = iotxn_alloc(&ums->csw_iotxn, 0, BULK_MAX_PACKET);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         goto fail;
     }
 
     // create and map a VMO
-    status = mx_vmo_create(STORAGE_SIZE, 0, &ums->storage_handle);
-    if (status != MX_OK) {
+    status = zx_vmo_create(STORAGE_SIZE, 0, &ums->storage_handle);
+    if (status != ZX_OK) {
         goto fail;
     }
-    status = mx_vmar_map(mx_vmar_root_self(), 0, ums->storage_handle, 0, STORAGE_SIZE,
-                         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, (mx_vaddr_t *)&ums->storage);
-    if (status != MX_OK) {
+    status = zx_vmar_map(zx_vmar_root_self(), 0, ums->storage_handle, 0, STORAGE_SIZE,
+                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, (zx_vaddr_t *)&ums->storage);
+    if (status != ZX_OK) {
         goto fail;
     }
 
@@ -544,17 +544,17 @@ mx_status_t usb_ums_bind(void* ctx, mx_device_t* parent, void** cookie) {
     ums->csw_iotxn->cookie = ums;
 
     status = usb_function_alloc_interface(&ums->function, &descriptors.intf.bInterfaceNumber);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         dprintf(ERROR, "usb_ums_bind: usb_function_alloc_interface failed\n");
         goto fail;
     }
     status = usb_function_alloc_ep(&ums->function, USB_DIR_OUT, &ums->bulk_out_addr);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         dprintf(ERROR, "usb_ums_bind: usb_function_alloc_ep failed\n");
         goto fail;
     }
     status = usb_function_alloc_ep(&ums->function, USB_DIR_IN, &ums->bulk_in_addr);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         dprintf(ERROR, "usb_ums_bind: usb_function_alloc_ep failed\n");
         goto fail;
     }
@@ -570,7 +570,7 @@ mx_status_t usb_ums_bind(void* ctx, mx_device_t* parent, void** cookie) {
     };
 
     status = device_add(parent, &args, &ums->mxdev);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         dprintf(ERROR, "usb_device_bind add_device failed %d\n", status);
         goto fail;
     }
@@ -581,22 +581,22 @@ mx_status_t usb_ums_bind(void* ctx, mx_device_t* parent, void** cookie) {
     };
     usb_function_register(&ums->function, &intf);
 
-    return MX_OK;
+    return ZX_OK;
 
 fail:
     usb_ums_release(ums);
     return status;
 }
 
-static mx_driver_ops_t usb_ums_ops = {
+static zx_driver_ops_t usb_ums_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = usb_ums_bind,
 };
 
 // clang-format off
-MAGENTA_DRIVER_BEGIN(usb_ums, usb_ums_ops, "magenta", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB_FUNCTION),
+ZIRCON_DRIVER_BEGIN(usb_ums, usb_ums_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_FUNCTION),
     BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_MSC),
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_MSC_SCSI),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_MSC_BULK_ONLY),
-MAGENTA_DRIVER_END(usb_ums)
+ZIRCON_DRIVER_END(usb_ums)

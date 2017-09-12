@@ -8,7 +8,7 @@
 // integers are restricted to 32 bits. Otherwise, full 64-bit integers are used.
 // The version of the DSDT sets the global integer width for all integers,
 // including integers in SSDTs.
-DefinitionBlock ("dsdt.aml", "DSDT", 2, "MX", "MX DSDT", 0x0)
+DefinitionBlock ("dsdt.aml", "DSDT", 2, "ZX", "ZX DSDT", 0x0)
 {
     Name (PICM, Zero)
     Method (_PIC, 1, NotSerialized)                                 // _PIC: Interrupt Model

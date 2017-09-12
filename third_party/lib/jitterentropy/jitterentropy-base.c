@@ -53,7 +53,7 @@
  *
  * - Add #include lines for stdlib.h, string.h, and
  *   lib/jitterentropy/internal.h.
- * - Change #include line for Magenta file conventions.
+ * - Change #include line for Zircon file conventions.
  * - Remove CONFIG_CRYPTO_CPU_JITTERENTROPY_STAT flag.
  * - Add jent_entropy_collector_init definition.
  * - Remove '#pragma GCC optimize ("O0")' (not recognized by clang)
@@ -798,7 +798,7 @@ uint64_t jent_lfsr_var_stat(struct rand_data *ec,
 }
 
 /***************************************************************************
- * Magenta interface
+ * Zircon interface
  ***************************************************************************/
 
 void jent_entropy_collector_init(
@@ -807,13 +807,13 @@ void jent_entropy_collector_init(
         unsigned int mem_loops, bool stir) {
     DEBUG_ASSERT(((size_t)mem_block_size) * mem_block_count <= mem_size);
     memset(ec, 0, sizeof(*ec));
-    /* Oversample rate. The jitterentropy man page (not included with Magenta)
+    /* Oversample rate. The jitterentropy man page (not included with Zircon)
      * suggests a value of 1. Higher values cause jitterentropy to discount its
      * entropy estimates by a factor of osr, so that more random bytes are
      * collected than would be with osr == 1. */
     ec->osr = 1;
     /* For now, we don't enable the FIPS 140-2 test mode built into
-     * jitterentropy. Magenta should handle entropy source health tests itself,
+     * jitterentropy. Zircon should handle entropy source health tests itself,
      * to ensure uniform testing of all entropy sources. */
     ec->fips_enabled = 0;
     ec->stir = stir;

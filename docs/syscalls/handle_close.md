@@ -1,4 +1,4 @@
-# mx_handle_close
+# zx_handle_close
 
 ## NAME
 
@@ -7,9 +7,9 @@ handle_close - close a handle
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-mx_status_t mx_handle_close(mx_handle_t handle);
+zx_status_t zx_handle_close(zx_handle_t handle);
 ```
 
 ## DESCRIPTION
@@ -21,18 +21,18 @@ If the *handle* was used in a pending [object_wait_one](syscalls/object_wait_one
 [object_wait_many](syscalls/object_wait_many.md) call, the wait will be aborted.
 
 If the *handle* was the next to last handle to the object. The last handle to the
-object will assert the **MX_SIGNAL_LAST_HANDLE** signal.
+object will assert the **ZX_SIGNAL_LAST_HANDLE** signal.
 
-It is not an error to close the special "never a valid handle" **MX_HANDLE_INVALID**,
+It is not an error to close the special "never a valid handle" **ZX_HANDLE_INVALID**,
 similar to free(NULL) being a valid call.
 
 ## RETURN VALUE
 
-**handle_close**() returns **MX_OK** on success.
+**handle_close**() returns **ZX_OK** on success.
 
 ## ERRORS
 
-**MX_ERR_BAD_HANDLE**  *handle* isn't a valid handle.
+**ZX_ERR_BAD_HANDLE**  *handle* isn't a valid handle.
 
 ## SEE ALSO
 

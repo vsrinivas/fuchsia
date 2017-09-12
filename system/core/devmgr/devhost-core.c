@@ -18,12 +18,12 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
-#include <magenta/assert.h>
-#include <magenta/listnode.h>
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
+#include <zircon/assert.h>
+#include <zircon/listnode.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
-#include <mxio/remoteio.h>
+#include <fdio/remoteio.h>
 
 #define TRACE 0
 
@@ -43,28 +43,28 @@
 bool __dm_locked = false;
 mtx_t __devhost_api_lock = MTX_INIT;
 
-static mx_device_t* dev_create_parent;
-static mx_device_t* dev_create_device;
+static zx_device_t* dev_create_parent;
+static zx_device_t* dev_create_device;
 
-mx_device_t* device_create_setup(mx_device_t* parent) {
+zx_device_t* device_create_setup(zx_device_t* parent) {
     DM_LOCK();
-    mx_device_t* dev = dev_create_device;
+    zx_device_t* dev = dev_create_device;
     dev_create_parent = parent;
     dev_create_device = NULL;
     DM_UNLOCK();
     return dev;
 }
 
-static mx_status_t default_open(void* ctx, mx_device_t** out, uint32_t flags) {
-    return MX_OK;
+static zx_status_t default_open(void* ctx, zx_device_t** out, uint32_t flags) {
+    return ZX_OK;
 }
 
-static mx_status_t default_open_at(void* ctx, mx_device_t** out, const char* path, uint32_t flags) {
-    return MX_ERR_NOT_SUPPORTED;
+static zx_status_t default_open_at(void* ctx, zx_device_t** out, const char* path, uint32_t flags) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t default_close(void* ctx, uint32_t flags) {
-    return MX_OK;
+static zx_status_t default_close(void* ctx, uint32_t flags) {
+    return ZX_OK;
 }
 
 static void default_unbind(void* ctx) {
@@ -73,33 +73,33 @@ static void default_unbind(void* ctx) {
 static void default_release(void* ctx) {
 }
 
-static mx_status_t default_read(void* ctx, void* buf, size_t count, mx_off_t off, size_t* actual) {
-    return MX_ERR_NOT_SUPPORTED;
+static zx_status_t default_read(void* ctx, void* buf, size_t count, zx_off_t off, size_t* actual) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t default_write(void* ctx, const void* buf, size_t count, mx_off_t off, size_t* actual) {
-    return MX_ERR_NOT_SUPPORTED;
+static zx_status_t default_write(void* ctx, const void* buf, size_t count, zx_off_t off, size_t* actual) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-static mx_off_t default_get_size(void* ctx) {
+static zx_off_t default_get_size(void* ctx) {
     return 0;
 }
 
-static mx_status_t default_ioctl(void* ctx, uint32_t op,
+static zx_status_t default_ioctl(void* ctx, uint32_t op,
                              const void* in_buf, size_t in_len,
                              void* out_buf, size_t out_len, size_t* out_actual) {
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t default_suspend(void* ctx, uint32_t flags) {
-    return MX_ERR_NOT_SUPPORTED;
+static zx_status_t default_suspend(void* ctx, uint32_t flags) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t default_resume(void* ctx, uint32_t flags) {
-    return MX_ERR_NOT_SUPPORTED;
+static zx_status_t default_resume(void* ctx, uint32_t flags) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-mx_protocol_device_t device_default_ops = {
+zx_protocol_device_t device_default_ops = {
     .open = default_open,
     .open_at = default_open_at,
     .close = default_close,
@@ -116,11 +116,11 @@ mx_protocol_device_t device_default_ops = {
 static struct list_node unmatched_device_list = LIST_INITIAL_VALUE(unmatched_device_list);
 static struct list_node driver_list = LIST_INITIAL_VALUE(driver_list);
 
-static inline bool device_is_bound(mx_device_t* dev) {
+static inline bool device_is_bound(zx_device_t* dev) {
     return dev->owner != NULL;
 }
 
-void dev_ref_release(mx_device_t* dev) {
+void dev_ref_release(zx_device_t* dev) {
     if (dev->refcount < 1) {
         printf("device: %p: REFCOUNT GOING NEGATIVE\n", dev);
         //TODO: probably should assert, but to start with let's
@@ -150,9 +150,9 @@ void dev_ref_release(mx_device_t* dev) {
             printf("device: %p(%s): still has children! not good.\n", dev, dev->name);
         }
 
-        mx_handle_close(dev->event);
-        mx_handle_close(dev->local_event);
-        mx_handle_close(dev->resource);
+        zx_handle_close(dev->event);
+        zx_handle_close(dev->local_event);
+        zx_handle_close(dev->resource);
         DM_UNLOCK();
         dev_op_release(dev);
         DM_LOCK();
@@ -164,21 +164,21 @@ void dev_ref_release(mx_device_t* dev) {
     }
 }
 
-mx_status_t devhost_device_create(mx_driver_t* drv, mx_device_t* parent,
+zx_status_t devhost_device_create(zx_driver_t* drv, zx_device_t* parent,
                                   const char* name, void* ctx,
-                                  mx_protocol_device_t* ops, mx_device_t** out) {
+                                  zx_protocol_device_t* ops, zx_device_t** out) {
 
     if (!drv) {
         printf("devhost: _device_add could not find driver!\n");
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    mx_device_t* dev = malloc(sizeof(mx_device_t));
+    zx_device_t* dev = malloc(sizeof(zx_device_t));
     if (dev == NULL) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
-    memset(dev, 0, sizeof(mx_device_t));
+    memset(dev, 0, sizeof(zx_device_t));
     dev->magic = DEV_MAGIC;
     dev->ops = ops;
     dev->driver = drv;
@@ -192,9 +192,9 @@ mx_status_t devhost_device_create(mx_driver_t* drv, mx_device_t* parent,
     }
 
     size_t len = strlen(name);
-    if (len >= MX_DEVICE_NAME_MAX) {
+    if (len >= ZX_DEVICE_NAME_MAX) {
         printf("devhost: dev=%p name too large '%s'\n", dev, name);
-        len = MX_DEVICE_NAME_MAX - 1;
+        len = ZX_DEVICE_NAME_MAX - 1;
         dev->magic = 0;
     }
 
@@ -202,7 +202,7 @@ mx_status_t devhost_device_create(mx_driver_t* drv, mx_device_t* parent,
     dev->name[len] = 0;
     dev->ctx = ctx ? ctx : dev;
     *out = dev;
-    return MX_OK;
+    return ZX_OK;
 }
 
 #define DEFAULT_IF_NULL(ops,method) \
@@ -210,36 +210,36 @@ mx_status_t devhost_device_create(mx_driver_t* drv, mx_device_t* parent,
         ops->method = default_##method; \
     }
 
-static mx_status_t device_validate(mx_device_t* dev) {
+static zx_status_t device_validate(zx_device_t* dev) {
     if (dev == NULL) {
         printf("INVAL: NULL!\n");
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     if (dev->flags & DEV_FLAG_ADDED) {
         printf("device already added: %p(%s)\n", dev, dev->name);
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     if (dev->magic != DEV_MAGIC) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     if (dev->ops == NULL) {
         printf("device add: %p(%s): NULL ops\n", dev, dev->name);
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
-    if ((dev->protocol_id == MX_PROTOCOL_MISC_PARENT) ||
-        (dev->protocol_id == MX_PROTOCOL_ROOT)) {
+    if ((dev->protocol_id == ZX_PROTOCOL_MISC_PARENT) ||
+        (dev->protocol_id == ZX_PROTOCOL_ROOT)) {
         // These protocols is only allowed for the special
         // singleton misc or root parent devices.
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     // devices which do not declare a primary protocol
     // are implied to be misc devices
     if (dev->protocol_id == 0) {
-        dev->protocol_id = MX_PROTOCOL_MISC;
+        dev->protocol_id = ZX_PROTOCOL_MISC;
     }
 
     // install default methods if needed
-    mx_protocol_device_t* ops = dev->ops;
+    zx_protocol_device_t* ops = dev->ops;
     DEFAULT_IF_NULL(ops, open);
     DEFAULT_IF_NULL(ops, open_at);
     DEFAULT_IF_NULL(ops, close);
@@ -252,18 +252,18 @@ static mx_status_t device_validate(mx_device_t* dev) {
     DEFAULT_IF_NULL(ops, suspend);
     DEFAULT_IF_NULL(ops, resume);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t devhost_device_install(mx_device_t* dev) {
-    mx_status_t status;
+zx_status_t devhost_device_install(zx_device_t* dev) {
+    zx_status_t status;
     if ((status = device_validate(dev)) < 0) {
         dev->flags |= DEV_FLAG_DEAD | DEV_FLAG_VERY_DEAD;
         return status;
     }
     // Don't create an event handle if we alredy have one
-    if ((dev->event == MX_HANDLE_INVALID) &&
-        ((status = mx_eventpair_create(0, &dev->event, &dev->local_event)) < 0)) {
+    if ((dev->event == ZX_HANDLE_INVALID) &&
+        ((status = zx_eventpair_create(0, &dev->event, &dev->local_event)) < 0)) {
         printf("device add: %p(%s): cannot create event: %d\n",
                dev, dev->name, status);
         dev->flags |= DEV_FLAG_DEAD | DEV_FLAG_VERY_DEAD;
@@ -271,13 +271,13 @@ mx_status_t devhost_device_install(mx_device_t* dev) {
     }
     dev_ref_acquire(dev);
     dev->flags |= DEV_FLAG_ADDED;
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
-                               const mx_device_prop_t* props, uint32_t prop_count,
-                               const char* businfo, mx_handle_t resource) {
-    mx_status_t status;
+zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
+                               const zx_device_prop_t* props, uint32_t prop_count,
+                               const char* businfo, zx_handle_t resource) {
+    zx_status_t status;
     if ((status = device_validate(dev)) < 0) {
         goto fail;
     }
@@ -287,17 +287,17 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
         // we don't add more than one shadow device
         // per create() op...
         if (dev_create_device != NULL) {
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
         }
     } else {
         if (parent == NULL) {
             printf("device_add: cannot add %p(%s) to NULL parent\n", dev, dev->name);
-            status = MX_ERR_NOT_SUPPORTED;
+            status = ZX_ERR_NOT_SUPPORTED;
             goto fail;
         }
         if (parent->flags & DEV_FLAG_DEAD) {
             printf("device add: %p: is dead, cannot add child %p\n", parent, dev);
-            status = MX_ERR_BAD_STATE;
+            status = ZX_ERR_BAD_STATE;
             goto fail;
         }
     }
@@ -307,8 +307,8 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
 #endif
 
     // Don't create an event handle if we alredy have one
-    if ((dev->event == MX_HANDLE_INVALID) &&
-        ((status = mx_eventpair_create(0, &dev->event, &dev->local_event)) < 0)) {
+    if ((dev->event == ZX_HANDLE_INVALID) &&
+        ((status = zx_eventpair_create(0, &dev->event, &dev->local_event)) < 0)) {
         printf("device add: %p(%s): cannot create event: %d\n",
                dev, dev->name, status);
         goto fail;
@@ -325,7 +325,7 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
         dev_create_device = dev;
         dev->flags |= DEV_FLAG_ADDED;
         dev->flags &= (~DEV_FLAG_BUSY);
-        return MX_OK;
+        return ZX_OK;
     }
 
     dev_ref_acquire(parent);
@@ -336,8 +336,8 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
 
         // instanced devices are not remoted and resources
         // attached to them are discarded
-        if (resource != MX_HANDLE_INVALID) {
-            mx_handle_close(resource);
+        if (resource != ZX_HANDLE_INVALID) {
+            zx_handle_close(resource);
         }
     } else {
         // add to the device tree
@@ -358,11 +358,11 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
     }
     dev->flags |= DEV_FLAG_ADDED;
     dev->flags &= (~DEV_FLAG_BUSY);
-    return MX_OK;
+    return ZX_OK;
 
 fail:
-    if (resource != MX_HANDLE_INVALID) {
-        mx_handle_close(resource);
+    if (resource != ZX_HANDLE_INVALID) {
+        zx_handle_close(resource);
     }
     dev->flags |= DEV_FLAG_DEAD | DEV_FLAG_VERY_DEAD;
     return status;
@@ -388,7 +388,7 @@ static const char* removal_problem(uint32_t flags) {
     return "?";
 }
 
-static void devhost_unbind_child(mx_device_t* child) {
+static void devhost_unbind_child(zx_device_t* child) {
     // call child's unbind op
     if (child->ops->unbind) {
 #if TRACE_ADD_REMOVE
@@ -403,25 +403,25 @@ static void devhost_unbind_child(mx_device_t* child) {
     }
 }
 
-static void devhost_unbind_children(mx_device_t* dev) {
-    mx_device_t* child = NULL;
-    mx_device_t* temp = NULL;
+static void devhost_unbind_children(zx_device_t* dev) {
+    zx_device_t* child = NULL;
+    zx_device_t* temp = NULL;
 #if TRACE_ADD_REMOVE
     printf("devhost_unbind_children: %p(%s)\n", dev, dev->name);
 #endif
-    list_for_every_entry_safe(&dev->children, child, temp, mx_device_t, node) {
+    list_for_every_entry_safe(&dev->children, child, temp, zx_device_t, node) {
         devhost_unbind_child(child);
     }
-    list_for_every_entry_safe(&dev->instances, child, temp, mx_device_t, node) {
+    list_for_every_entry_safe(&dev->instances, child, temp, zx_device_t, node) {
         devhost_unbind_child(child);
     }
 }
 
-mx_status_t devhost_device_remove(mx_device_t* dev) {
+zx_status_t devhost_device_remove(zx_device_t* dev) {
     if (dev->flags & REMOVAL_BAD_FLAGS) {
         printf("device: %p(%s): cannot be removed (%s)\n",
                dev, dev->name, removal_problem(dev->flags));
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 #if TRACE_ADD_REMOVE
     printf("device: %p(%s): is being removed\n", dev, dev->name);
@@ -455,16 +455,16 @@ mx_status_t devhost_device_remove(mx_device_t* dev) {
     // this must be last, since it may result in the device structure being destroyed
     dev_ref_release(dev);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t devhost_device_rebind(mx_device_t* dev) {
+zx_status_t devhost_device_rebind(zx_device_t* dev) {
     dev->flags |= DEV_FLAG_BUSY;
 
     // remove children
-    mx_device_t* child;
-    mx_device_t* temp;
-    list_for_every_entry_safe(&dev->children, child, temp, mx_device_t, node) {
+    zx_device_t* child;
+    zx_device_t* temp;
+    list_for_every_entry_safe(&dev->children, child, temp, zx_device_t, node) {
         devhost_device_remove(child);
     }
 
@@ -484,16 +484,16 @@ mx_status_t devhost_device_rebind(mx_device_t* dev) {
 
     // ask devcoord to find us a driver if it can
     devhost_device_bind(dev, "");
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t devhost_device_open_at(mx_device_t* dev, mx_device_t** out, const char* path, uint32_t flags) {
+zx_status_t devhost_device_open_at(zx_device_t* dev, zx_device_t** out, const char* path, uint32_t flags) {
     if (dev->flags & DEV_FLAG_DEAD) {
         printf("device open: %p(%s) is dead!\n", dev, dev->name);
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     dev_ref_acquire(dev);
-    mx_status_t r;
+    zx_status_t r;
     DM_UNLOCK();
     *out = dev;
     if (path) {
@@ -517,8 +517,8 @@ mx_status_t devhost_device_open_at(mx_device_t* dev, mx_device_t** out, const ch
     return r;
 }
 
-mx_status_t devhost_device_close(mx_device_t* dev, uint32_t flags) {
-    mx_status_t r;
+zx_status_t devhost_device_close(zx_device_t* dev, uint32_t flags) {
+    zx_status_t r;
     DM_UNLOCK();
     r = dev_op_close(dev, flags);
     DM_LOCK();
@@ -526,19 +526,19 @@ mx_status_t devhost_device_close(mx_device_t* dev, uint32_t flags) {
     return r;
 }
 
-mx_status_t devhost_device_unbind(mx_device_t* dev) {
+zx_status_t devhost_device_unbind(zx_device_t* dev) {
     if (!dev->owner) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     dev->owner = NULL;
     dev_ref_release(dev);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-void devhost_device_destroy(mx_device_t* dev) {
+void devhost_device_destroy(zx_device_t* dev) {
     // Only destroy devices immediately after device_create() or after they're dead.
-    MX_DEBUG_ASSERT(dev->flags == 0 || dev->flags & DEV_FLAG_VERY_DEAD);
+    ZX_DEBUG_ASSERT(dev->flags == 0 || dev->flags & DEV_FLAG_VERY_DEAD);
     dev->magic = 0xdeaddead;
     dev->ops = NULL;
     free(dev);
@@ -585,17 +585,17 @@ static int devhost_open_firmware(const char* fwpath) {
     return -1;
 }
 
-mx_status_t devhost_load_firmware(mx_device_t* dev, const char* path, mx_handle_t* fw,
+zx_status_t devhost_load_firmware(zx_device_t* dev, const char* path, zx_handle_t* fw,
                                   size_t* size) {
     xprintf("devhost: dev=%p path=%s fw=%p\n", dev, path, fw);
 
     int fwfd = devhost_open_firmware(path);
     if (fwfd < 0) {
         switch (errno) {
-        case ENOENT: return MX_ERR_NOT_FOUND;
-        case EACCES: return MX_ERR_ACCESS_DENIED;
-        case ENOMEM: return MX_ERR_NO_MEMORY;
-        default: return MX_ERR_INTERNAL;
+        case ENOENT: return ZX_ERR_NOT_FOUND;
+        case EACCES: return ZX_ERR_ACCESS_DENIED;
+        case ENOMEM: return ZX_ERR_NO_MEMORY;
+        default: return ZX_ERR_INTERNAL;
         }
     }
 
@@ -605,22 +605,22 @@ mx_status_t devhost_load_firmware(mx_device_t* dev, const char* path, mx_handle_
         int e = errno;
         close(fwfd);
         switch (e) {
-        case EACCES: return MX_ERR_ACCESS_DENIED;
+        case EACCES: return ZX_ERR_ACCESS_DENIED;
         case EBADF:
-        case EFAULT: return MX_ERR_BAD_STATE;
-        default: return MX_ERR_INTERNAL;
+        case EFAULT: return ZX_ERR_BAD_STATE;
+        default: return ZX_ERR_INTERNAL;
         }
     }
 
     if (fwstat.st_size == 0) {
         close(fwfd);
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     uint64_t vmo_size = (fwstat.st_size + 4095) & ~4095;
-    mx_handle_t vmo;
-    mx_status_t status = mx_vmo_create(vmo_size, 0, &vmo);
-    if (status != MX_OK) {
+    zx_handle_t vmo;
+    zx_status_t status = zx_vmo_create(vmo_size, 0, &vmo);
+    if (status != ZX_OK) {
         close(fwfd);
         return status;
     }
@@ -632,18 +632,18 @@ mx_status_t devhost_load_firmware(mx_device_t* dev, const char* path, mx_handle_
         ssize_t r = read(fwfd, buffer, sizeof(buffer));
         if (r < 0) {
             close(fwfd);
-            mx_handle_close(vmo);
+            zx_handle_close(vmo);
             // Distinguish other errors?
-            return MX_ERR_IO;
+            return ZX_ERR_IO;
         }
         if (r == 0) break;
         size_t actual = 0;
-        status = mx_vmo_write(vmo, (const void*)buffer, off, (size_t)r, &actual);
+        status = zx_vmo_write(vmo, (const void*)buffer, off, (size_t)r, &actual);
         if (actual < (size_t)r) {
             printf("devhost: BUG: wrote %zu < %zu firmware vmo bytes!\n", actual, r);
             close(fwfd);
-            mx_handle_close(vmo);
-            return MX_ERR_BAD_STATE;
+            zx_handle_close(vmo);
+            return ZX_ERR_BAD_STATE;
         }
         off += actual;
         remaining -= actual;
@@ -656,5 +656,5 @@ mx_status_t devhost_load_firmware(mx_device_t* dev, const char* path, mx_handle_
     *size = fwstat.st_size;
     close(fwfd);
 
-    return MX_OK;
+    return ZX_OK;
 }

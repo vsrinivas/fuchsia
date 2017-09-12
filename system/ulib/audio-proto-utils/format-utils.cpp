@@ -138,7 +138,7 @@ FrameRateEnumerator::iterator::iterator(const FrameRateEnumerator* enumerator)
 
 void FrameRateEnumerator::iterator::Advance() {
     if (enumerator_ == nullptr) {
-        MX_DEBUG_ASSERT(!cur_rate_ && !cur_flag_ && !fmt_ndx_);
+        ZX_DEBUG_ASSERT(!cur_rate_ && !cur_flag_ && !fmt_ndx_);
         return;
     }
 
@@ -152,7 +152,7 @@ void FrameRateEnumerator::iterator::Advance() {
             rates = RATES_48000_FAMILY;
             rates_count = sizeof(RATES_48000_FAMILY);
         } else {
-            MX_DEBUG_ASSERT(cur_flag_ == ASF_RANGE_FLAG_FPS_44100_FAMILY);
+            ZX_DEBUG_ASSERT(cur_flag_ == ASF_RANGE_FLAG_FPS_44100_FAMILY);
             rates = RATES_44100_FAMILY;
             rates_count = sizeof(RATES_44100_FAMILY);
         }

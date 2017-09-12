@@ -9,8 +9,8 @@
 
 #include <driver-info/driver-info.h>
 
-static void callback(magenta_driver_note_payload_t* dn,
-                     const mx_bind_inst_t* binding,
+static void callback(zircon_driver_note_payload_t* dn,
+                     const zx_bind_inst_t* binding,
                      void* cookie) {
     printf("name:    %s\n", dn->name);
     printf("vendor:  %s\n", dn->vendor);

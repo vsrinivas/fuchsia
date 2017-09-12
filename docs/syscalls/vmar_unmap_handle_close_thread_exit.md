@@ -1,4 +1,4 @@
-# mx_vmar_unmap_handle_close_thread_exit
+# zx_vmar_unmap_handle_close_thread_exit
 
 ## NAME
 
@@ -7,23 +7,23 @@ vmar_unmap_handle_close_thread_exit - unmap memory, close handle, exit
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-mx_status_t mx_vmar_unmap_handle_close_thread_exit(mx_handle_t vmar_handle,
+zx_status_t zx_vmar_unmap_handle_close_thread_exit(zx_handle_t vmar_handle,
                                                    uintptr_t addr, size_t len,
-                                                   mx_handle_t close_handle);
+                                                   zx_handle_t close_handle);
 ```
 
 ## DESCRIPTION
 
 **vmar_unmap_handle_close_thread_exit**() does a sequence of three operations:
-1. `mx_vmar_unmap(vmar_handle, addr, len);`
-2. `mx_handle_close(close_handle);`
-3. `mx_thread_exit();`
+1. `zx_vmar_unmap(vmar_handle, addr, len);`
+2. `zx_handle_close(close_handle);`
+3. `zx_thread_exit();`
 
 The expectation is that the first operation unmaps a region including the
 calling thread's own stack.  (It's not required, but it's permitted.)  This
-is valid for this call, though it would be invalid for *mx_vmar_unmap*() or
+is valid for this call, though it would be invalid for *zx_vmar_unmap*() or
 any other call.
 
 If the *vmar_unmap* operation is successful, then this call never returns.
@@ -36,7 +36,7 @@ fails, then the thread takes a trap (as if by `__builtin_trap();`).
 
 ## ERRORS
 
-Same as [*mx_vmar_unmap*()](vmar_unmap.md).
+Same as [*zx_vmar_unmap*()](vmar_unmap.md).
 
 ## NOTES
 

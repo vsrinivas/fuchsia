@@ -42,7 +42,7 @@
 #ifndef ASSEMBLY
 
 #include <arch/aspace.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <reg.h>
 #include <sys/types.h>
 

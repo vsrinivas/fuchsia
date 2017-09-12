@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <fbl/macros.h>
 #include <stddef.h>
 

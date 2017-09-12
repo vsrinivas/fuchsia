@@ -8,7 +8,7 @@
 #pragma once
 
 #include <sys/types.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <stddef.h>
 
 /* lib/heap provides malloc/free definitions */

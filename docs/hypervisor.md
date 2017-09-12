@@ -1,6 +1,6 @@
 # Hypervisor
 
-The Magenta hypervisor can be used to run a guest operating system. It is a work
+The Zircon hypervisor can be used to run a guest operating system. It is a work
 in progress.
 
 ## Running a guest
@@ -8,38 +8,38 @@ in progress.
 To run a guest using the hypervisor, you must create a bootfs image containing
 the guest and use the `guest` app to launch it.
 
-Note: `guest` only supports the Magenta and Linux kernels.
+Note: `guest` only supports the Zircon and Linux kernels.
 
-On your host device, from the Magenta directory, run:
+On your host device, from the Zircon directory, run:
 ```
-scripts/build-magenta-x86-64
+scripts/build-zircon-x86-64
 
 # Optional: Build Linux, an initial RAM disk, and an EXT2 file-system.
 system/uapp/guest/scripts/mklinux.sh
 system/uapp/guest/scripts/mktoybox.sh -ri
 
-# Optional: Build a GPT disk image for Magenta guests.
+# Optional: Build a GPT disk image for Zircon guests.
 system/uapp/guest/scripts/mkgpt.sh
 
 system/uapp/guest/scripts/mkbootfs.sh
-build-magenta-pc-x86-64/tools/bootserver \
-    build-magenta-pc-x86-64/magenta.bin \
-    build-magenta-pc-x86-64/bootdata-with-guest.bin
+build-zircon-pc-x86-64/tools/bootserver \
+    build-zircon-pc-x86-64/zircon.bin \
+    build-zircon-pc-x86-64/bootdata-with-guest.bin
 ```
 
-### Magenta guest
+### Zircon guest
 
-After netbooting the target device, to run Magenta:
+After netbooting the target device, to run Zircon:
 ```
-/boot/bin/guest -r /boot/data/bootdata.bin /boot/data/magenta.bin
+/boot/bin/guest -r /boot/data/bootdata.bin /boot/data/zircon.bin
 ```
 
-To run Magenta using a GPT disk image:
+To run Zircon using a GPT disk image:
 ```
 /boot/bin/guest \
-    -b /boot/data/magenta.gpt \
+    -b /boot/data/zircon.gpt \
     -r /boot/data/bootdata.bin \
-    /boot/data/magenta.bin
+    /boot/data/zircon.bin
 ```
 
 ### Linux guest

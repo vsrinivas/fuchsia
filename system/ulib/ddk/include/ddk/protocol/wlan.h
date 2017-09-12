@@ -5,8 +5,8 @@
 #pragma once
 
 #include <ddk/protocol/ethernet.h>
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS;
 
@@ -84,11 +84,11 @@ typedef struct wlanmac_protocol_ops {
     // Safe to call at any time.
     // TODO: create wlanmac_info_t for wlan-specific info and copy the relevant
     // ethernet fields into ethmac_info_t before passing up the stack
-    mx_status_t (*query)(void* ctx, uint32_t options, ethmac_info_t* info);
+    zx_status_t (*query)(void* ctx, uint32_t options, ethmac_info_t* info);
 
     // Start wlanmac running with ifc_virt
     // Callbacks on ifc may be invoked from now until stop() is called
-    mx_status_t (*start)(void* ctx, wlanmac_ifc_t* ifc, void* cookie);
+    zx_status_t (*start)(void* ctx, wlanmac_ifc_t* ifc, void* cookie);
 
     // Shut down a running wlanmac
     // Safe to call if the wlanmac is already stopped.
@@ -98,7 +98,7 @@ typedef struct wlanmac_protocol_ops {
     void (*tx)(void* ctx, uint32_t options, const void* data, size_t length);
 
     // Set the radio channel
-    mx_status_t (*set_channel)(void* ctx, uint32_t options, wlan_channel_t* chan);
+    zx_status_t (*set_channel)(void* ctx, uint32_t options, wlan_channel_t* chan);
 } wlanmac_protocol_ops_t;
 
 typedef struct wlanmac_protocol {

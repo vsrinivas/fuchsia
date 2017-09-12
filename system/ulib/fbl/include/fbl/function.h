@@ -6,7 +6,7 @@
 
 #include <stddef.h>
 
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
@@ -43,7 +43,7 @@ public:
     bool is_null() const final { return true; }
 
     Result operator()(Args... args) const final {
-        MX_PANIC("Attempted to invoke fbl::Function with a null target.");
+        ZX_PANIC("Attempted to invoke fbl::Function with a null target.");
     }
 
     void MoveInitializeTo(void* ptr) final {

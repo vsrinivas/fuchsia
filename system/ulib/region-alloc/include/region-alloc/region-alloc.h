@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <stdbool.h>
@@ -118,10 +118,10 @@
 //  auto r8 = alloc.GetRegion(80000, 4 << 10);
 //
 //  /* Print some stuff about some of the allocations */
-//  MX_DEBUG_ASSERT(r3 != nullptr);
+//  ZX_DEBUG_ASSERT(r3 != nullptr);
 //  printf("R3 base %llx size %llx\n", r3->base, r3->size)
 //
-//  MX_DEBUG_ASSERT(r8 != nullptr);
+//  ZX_DEBUG_ASSERT(r8 != nullptr);
 //  printf("R8 base %llx size %llx\n", r8->base, r8->size)
 //
 //  /* No need to clean up.  Regions will automatically be returned to the
@@ -158,7 +158,7 @@ typedef struct ralloc_region {
 // ++ Release (release the C reference to the object.
 //
 #define REGION_POOL_SLAB_SIZE (4u << 10)
-mx_status_t ralloc_create_pool(size_t max_memory, ralloc_pool_t** out_pool);
+zx_status_t ralloc_create_pool(size_t max_memory, ralloc_pool_t** out_pool);
 void        ralloc_release_pool(ralloc_pool_t* pool);
 
 // RegionAllocator interface.  Valid operations are...
@@ -172,24 +172,24 @@ void        ralloc_release_pool(ralloc_pool_t* pool);
 // ++ GetBySize (allocates a region based on size/alignment requirements)
 // ++ GetSpecific (allocates a region based on specific base/size requirements)
 //
-mx_status_t ralloc_create_allocator(ralloc_allocator_t** out_allocator);
-mx_status_t ralloc_set_region_pool(ralloc_allocator_t* allocator, ralloc_pool_t* pool);
+zx_status_t ralloc_create_allocator(ralloc_allocator_t** out_allocator);
+zx_status_t ralloc_set_region_pool(ralloc_allocator_t* allocator, ralloc_pool_t* pool);
 void ralloc_reset_allocator(ralloc_allocator_t* allocator);
 void ralloc_destroy_allocator(ralloc_allocator_t* allocator);
-mx_status_t ralloc_add_region(ralloc_allocator_t* allocator,
+zx_status_t ralloc_add_region(ralloc_allocator_t* allocator,
                               const ralloc_region_t* region,
                               bool allow_overlap);
-mx_status_t ralloc_sub_region(ralloc_allocator_t* allocator,
+zx_status_t ralloc_sub_region(ralloc_allocator_t* allocator,
                               const ralloc_region_t* region,
                               bool allow_incomplete);
 
-mx_status_t ralloc_get_sized_region_ex(
+zx_status_t ralloc_get_sized_region_ex(
         ralloc_allocator_t* allocator,
         uint64_t size,
         uint64_t alignment,
         const ralloc_region_t** out_region);
 
-mx_status_t ralloc_get_specific_region_ex(
+zx_status_t ralloc_get_specific_region_ex(
         ralloc_allocator_t* allocator,
         const ralloc_region_t* requested_region,
         const ralloc_region_t** out_region);
@@ -307,7 +307,7 @@ public:
         // with another available region, or when the allocator finally shuts
         // down.
         void fbl_recycle() {
-            MX_DEBUG_ASSERT(owner_ != nullptr);
+            ZX_DEBUG_ASSERT(owner_ != nullptr);
             owner_->ReleaseRegion(this);
         }
 
@@ -355,10 +355,10 @@ public:
     // Set the RegionPool this RegionAllocator will obtain bookkeeping structures from.
     //
     // Possible return values
-    // ++ MX_ERR_BAD_STATE : The RegionAllocator currently has a RegionPool
+    // ++ ZX_ERR_BAD_STATE : The RegionAllocator currently has a RegionPool
     // assigned and currently has allocations from this pool.
-    mx_status_t SetRegionPool(const RegionPool::RefPtr& region_pool);
-    mx_status_t SetRegionPool(RegionPool::RefPtr&& region_pool) {
+    zx_status_t SetRegionPool(const RegionPool::RefPtr& region_pool);
+    zx_status_t SetRegionPool(RegionPool::RefPtr&& region_pool) {
         RegionPool::RefPtr ref(fbl::move(region_pool));
         return SetRegionPool(ref);
     }
@@ -376,16 +376,16 @@ public:
     // region.
     //
     // Possible return values
-    // ++ MX_ERR_BAD_STATE : Allocator has no RegionPool assigned.
-    // ++ MX_ERR_NO_MEMORY : not enough bookkeeping memory available in our
+    // ++ ZX_ERR_BAD_STATE : Allocator has no RegionPool assigned.
+    // ++ ZX_ERR_NO_MEMORY : not enough bookkeeping memory available in our
     // assigned region pool to add the region.
-    // ++ MX_ERR_INVALID_ARGS : One of the following conditions applies.
+    // ++ ZX_ERR_INVALID_ARGS : One of the following conditions applies.
     // ++++ The region is invalid (wraps the space, or size is zero)
     // ++++ The region being added intersects one or more currently
     //      allocated regions.
     // ++++ The region being added intersects one ore more of the currently
     //      available regions, and allow_overlap is false.
-    mx_status_t AddRegion(const ralloc_region_t& region, bool allow_overlap = false);
+    zx_status_t AddRegion(const ralloc_region_t& region, bool allow_overlap = false);
 
     // Subtract a region from the set of allocatable regions.
     //
@@ -399,46 +399,46 @@ public:
     // region.
     //
     // Possible return values
-    // ++ MX_ERR_BAD_STATE : Allocator has no RegionPool assigned.
-    // ++ MX_ERR_NO_MEMORY : not enough bookkeeping memory available in our
+    // ++ ZX_ERR_BAD_STATE : Allocator has no RegionPool assigned.
+    // ++ ZX_ERR_NO_MEMORY : not enough bookkeeping memory available in our
     // assigned region pool to subtract the region.
-    // ++ MX_ERR_INVALID_ARGS : One of the following conditions applies.
+    // ++ ZX_ERR_INVALID_ARGS : One of the following conditions applies.
     // ++++ The region is invalid (wraps the space, or size is zero)
     // ++++ The region being subtracted intersects one or more currently
     //      allocated regions.
     // ++++ The region being subtracted intersects portions of the space which
     //      are absent from both the allocated and available sets, and
     //      allow_incomplete is false.
-    mx_status_t SubtractRegion(const ralloc_region_t& region, bool allow_incomplete = false);
+    zx_status_t SubtractRegion(const ralloc_region_t& region, bool allow_incomplete = false);
 
     // Get a region out of the set of currently available regions which has a
     // specified size and alignment.  Note; the alignment must be a power of
     // two.  Pass 1 if alignment does not matter.
     //
     // Possible return values
-    // ++ MX_ERR_BAD_STATE : Allocator has no RegionPool assigned.
-    // ++ MX_ERR_NO_MEMORY : not enough bookkeeping memory available in our
+    // ++ ZX_ERR_BAD_STATE : Allocator has no RegionPool assigned.
+    // ++ ZX_ERR_NO_MEMORY : not enough bookkeeping memory available in our
     // assigned region pool to perform the allocation.
-    // ++ MX_ERR_INVALID_ARGS : size is zero, or alignment is not a power of two.
-    // ++ MX_ERR_NOT_FOUND : No suitable region could be found in the set of
+    // ++ ZX_ERR_INVALID_ARGS : size is zero, or alignment is not a power of two.
+    // ++ ZX_ERR_NOT_FOUND : No suitable region could be found in the set of
     // currently available regions which can satisfy the request.
-    mx_status_t GetRegion(uint64_t size, uint64_t alignment, Region::UPtr& out_region);
+    zx_status_t GetRegion(uint64_t size, uint64_t alignment, Region::UPtr& out_region);
 
     // Get a region with a specific location and size out of the set of
     // currently available regions.
     //
     // Possible return values
-    // ++ MX_ERR_BAD_STATE : Allocator has no RegionPool assigned.
-    // ++ MX_ERR_NO_MEMORY : not enough bookkeeping memory available in our
+    // ++ ZX_ERR_BAD_STATE : Allocator has no RegionPool assigned.
+    // ++ ZX_ERR_NO_MEMORY : not enough bookkeeping memory available in our
     // assigned region pool to perform the allocation.
-    // ++ MX_ERR_INVALID_ARGS : The size of the requested region is zero.
-    // ++ MX_ERR_NOT_FOUND : No suitable region could be found in the set of
+    // ++ ZX_ERR_INVALID_ARGS : The size of the requested region is zero.
+    // ++ ZX_ERR_NOT_FOUND : No suitable region could be found in the set of
     // currently available regions which can satisfy the request.
-    mx_status_t GetRegion(const ralloc_region_t& requested_region, Region::UPtr& out_region);
+    zx_status_t GetRegion(const ralloc_region_t& requested_region, Region::UPtr& out_region);
 
     // Helper which defaults the alignment of a size/alignment based allocation
     // to pointer-aligned.
-    mx_status_t GetRegion(uint64_t size, Region::UPtr& out_region) {
+    zx_status_t GetRegion(uint64_t size, Region::UPtr& out_region) {
         return GetRegion(size, sizeof(void*), out_region);
     }
 
@@ -474,11 +474,11 @@ public:
     }
 
 private:
-    mx_status_t AddSubtractSanityCheckLocked(const ralloc_region_t& region);
+    zx_status_t AddSubtractSanityCheckLocked(const ralloc_region_t& region);
     void ReleaseRegion(Region* region);
     void AddRegionToAvailLocked(Region* region, bool allow_overlap = false);
 
-    mx_status_t AllocFromAvailLocked(Region::WAVLTreeSortBySize::iterator source,
+    zx_status_t AllocFromAvailLocked(Region::WAVLTreeSortBySize::iterator source,
                                      Region::UPtr& out_region,
                                      uint64_t base,
                                      uint64_t size);

@@ -17,9 +17,9 @@ MODULE_NAME := fs-management-test
 
 MODULE_LIBS := \
     system/ulib/fs-management \
-    system/ulib/magenta \
+    system/ulib/zircon \
     system/ulib/c \
-    system/ulib/mxio \
+    system/ulib/fdio \
     system/ulib/unittest \
 
 include make/module.mk

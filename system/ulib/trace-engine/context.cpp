@@ -4,15 +4,15 @@
 
 #include "context_impl.h"
 
-#include <magenta/compiler.h>
-#include <magenta/syscalls.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/atomic.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/unique_ptr.h>
-#include <mx/process.h>
-#include <mx/thread.h>
+#include <zx/process.h>
+#include <zx/thread.h>
 #include <trace-engine/fields.h>
 
 namespace trace {
@@ -20,41 +20,41 @@ namespace {
 
 // The cached koid of this process.
 // Initialized on first use.
-fbl::atomic<uint64_t> g_process_koid{MX_KOID_INVALID};
+fbl::atomic<uint64_t> g_process_koid{ZX_KOID_INVALID};
 
 // This thread's koid.
 // Initialized on first use.
-thread_local mx_koid_t tls_thread_koid{MX_KOID_INVALID};
+thread_local zx_koid_t tls_thread_koid{ZX_KOID_INVALID};
 
-mx_koid_t GetKoid(mx_handle_t handle) {
-    mx_info_handle_basic_t info;
-    mx_status_t status = mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, &info,
+zx_koid_t GetKoid(zx_handle_t handle) {
+    zx_info_handle_basic_t info;
+    zx_status_t status = zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info,
                                             sizeof(info), nullptr, nullptr);
-    return status == MX_OK ? info.koid : MX_KOID_INVALID;
+    return status == ZX_OK ? info.koid : ZX_KOID_INVALID;
 }
 
-mx_koid_t GetCurrentProcessKoid() {
-    mx_koid_t koid = g_process_koid.load(fbl::memory_order_relaxed);
-    if (unlikely(koid == MX_KOID_INVALID)) {
-        koid = GetKoid(mx::process::self().get());
+zx_koid_t GetCurrentProcessKoid() {
+    zx_koid_t koid = g_process_koid.load(fbl::memory_order_relaxed);
+    if (unlikely(koid == ZX_KOID_INVALID)) {
+        koid = GetKoid(zx::process::self().get());
         g_process_koid.store(koid, fbl::memory_order_relaxed); // idempotent
     }
     return koid;
 }
 
-mx_koid_t GetCurrentThreadKoid() {
-    if (unlikely(tls_thread_koid == MX_KOID_INVALID)) {
-        tls_thread_koid = GetKoid(mx::thread::self().get());
+zx_koid_t GetCurrentThreadKoid() {
+    if (unlikely(tls_thread_koid == ZX_KOID_INVALID)) {
+        tls_thread_koid = GetKoid(zx::thread::self().get());
     }
     return tls_thread_koid;
 }
 
-void GetObjectName(mx_handle_t handle, char* name_buf, size_t name_buf_size,
+void GetObjectName(zx_handle_t handle, char* name_buf, size_t name_buf_size,
                    trace_string_ref* out_name_ref) {
-    mx_status_t status = mx_object_get_property(handle, MX_PROP_NAME,
+    zx_status_t status = zx_object_get_property(handle, ZX_PROP_NAME,
                                                 name_buf, name_buf_size);
     name_buf[name_buf_size - 1] = 0;
-    if (status == MX_OK) {
+    if (status == ZX_OK) {
         *out_name_ref = trace_make_inline_c_string_ref(name_buf);
     } else {
         *out_name_ref = trace_make_empty_string_ref();
@@ -202,7 +202,7 @@ size_t SizeOfEncodedArgValue(const trace_arg_value_t* arg_value) {
         return WordsToBytes(1);
     default:
         // skip unrecognized argument type
-        MX_DEBUG_ASSERT(false);
+        ZX_DEBUG_ASSERT(false);
         return 0u;
     }
 }
@@ -316,7 +316,7 @@ public:
             break;
         default:
             // skip unrecognized argument type
-            MX_DEBUG_ASSERT(false);
+            ZX_DEBUG_ASSERT(false);
             break;
         }
         return *this;
@@ -472,7 +472,7 @@ void trace_context_register_string_literal(
     const char* string_literal,
     trace_string_ref_t* out_ref) {
     bool result = trace::RegisterString(context, string_literal, false, out_ref);
-    MX_DEBUG_ASSERT(result);
+    ZX_DEBUG_ASSERT(result);
 }
 
 bool trace_context_register_category_literal(
@@ -493,10 +493,10 @@ void trace_context_register_current_thread(
     }
 
     trace_string_ref name_ref;
-    char name_buf[MX_MAX_NAME_LEN];
-    trace::GetObjectName(mx::thread::self().get(), name_buf, sizeof(name_buf), &name_ref);
-    mx_koid_t process_koid = trace::GetCurrentProcessKoid();
-    mx_koid_t thread_koid = trace::GetCurrentThreadKoid();
+    char name_buf[ZX_MAX_NAME_LEN];
+    trace::GetObjectName(zx::thread::self().get(), name_buf, sizeof(name_buf), &name_ref);
+    zx_koid_t process_koid = trace::GetCurrentProcessKoid();
+    zx_koid_t thread_koid = trace::GetCurrentThreadKoid();
     trace_context_write_thread_info_record(context, process_koid, thread_koid,
                                            &name_ref);
 
@@ -523,7 +523,7 @@ void trace_context_register_current_thread(
 
 void trace_context_register_thread(
     trace_context_t* context,
-    mx_koid_t process_koid, mx_koid_t thread_koid,
+    zx_koid_t process_koid, zx_koid_t thread_koid,
     trace_thread_ref_t* out_ref) {
     // TODO(MG-1035): Since we can't use the thread-local cache here, cache
     // this registered thread on the trace context structure, guarded by a mutex.
@@ -538,7 +538,7 @@ void trace_context_register_thread(
 
 void trace_context_write_kernel_object_record(
     trace_context_t* context,
-    mx_koid_t koid, mx_obj_type_t type,
+    zx_koid_t koid, zx_obj_type_t type,
     const trace_string_ref_t* name_ref,
     const trace_arg_t* args, size_t num_args) {
     const size_t record_size = sizeof(trace::RecordHeader) +
@@ -562,25 +562,25 @@ void trace_context_write_kernel_object_record(
 
 void trace_context_write_kernel_object_record_for_handle(
     trace_context_t* context,
-    mx_handle_t handle,
+    zx_handle_t handle,
     const trace_arg_t* args, size_t num_args) {
-    mx_info_handle_basic_t info;
-    mx_status_t status = mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, &info,
+    zx_info_handle_basic_t info;
+    zx_status_t status = zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info,
                                             sizeof(info), nullptr, nullptr);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return;
 
     trace_string_ref name_ref;
-    char name_buf[MX_MAX_NAME_LEN];
+    char name_buf[ZX_MAX_NAME_LEN];
     trace::GetObjectName(handle, name_buf, sizeof(name_buf), &name_ref);
 
-    mx_obj_type_t obj_type = static_cast<mx_obj_type_t>(info.type);
+    zx_obj_type_t obj_type = static_cast<zx_obj_type_t>(info.type);
     switch (obj_type) {
-    case MX_OBJ_TYPE_PROCESS:
+    case ZX_OBJ_TYPE_PROCESS:
         // TODO(MG-1028): Support custom args.
         trace_context_write_process_info_record(context, info.koid, &name_ref);
         break;
-    case MX_OBJ_TYPE_THREAD:
+    case ZX_OBJ_TYPE_THREAD:
         // TODO(MG-1028): Support custom args.
         trace_context_write_thread_info_record(context, info.related_koid, info.koid, &name_ref);
         break;
@@ -593,16 +593,16 @@ void trace_context_write_kernel_object_record_for_handle(
 
 void trace_context_write_process_info_record(
     trace_context_t* context,
-    mx_koid_t process_koid,
+    zx_koid_t process_koid,
     const trace_string_ref_t* process_name_ref) {
-    trace_context_write_kernel_object_record(context, process_koid, MX_OBJ_TYPE_PROCESS,
+    trace_context_write_kernel_object_record(context, process_koid, ZX_OBJ_TYPE_PROCESS,
                                              process_name_ref, nullptr, 0u);
 }
 
 void trace_context_write_thread_info_record(
     trace_context_t* context,
-    mx_koid_t process_koid,
-    mx_koid_t thread_koid,
+    zx_koid_t process_koid,
+    zx_koid_t thread_koid,
     const trace_string_ref_t* thread_name_ref) {
     // TODO(MG-1028): We should probably store the related koid in the trace
     // event directly instead of packing it into an argument like this.
@@ -610,7 +610,7 @@ void trace_context_write_thread_info_record(
     trace_context_register_string_literal(context, "process", &arg.name_ref);
     arg.value.type = TRACE_ARG_KOID;
     arg.value.koid_value = process_koid;
-    trace_context_write_kernel_object_record(context, process_koid, MX_OBJ_TYPE_THREAD,
+    trace_context_write_kernel_object_record(context, process_koid, ZX_OBJ_TYPE_THREAD,
                                              thread_name_ref, &arg, 1u);
 }
 
@@ -873,8 +873,8 @@ void trace_context_write_initialization_record(
 void trace_context_write_string_record(
     trace_context_t* context,
     trace_string_index_t index, const char* string, size_t length) {
-    MX_DEBUG_ASSERT(index != TRACE_ENCODED_STRING_REF_EMPTY);
-    MX_DEBUG_ASSERT(index <= TRACE_ENCODED_STRING_REF_MAX_INDEX);
+    ZX_DEBUG_ASSERT(index != TRACE_ENCODED_STRING_REF_EMPTY);
+    ZX_DEBUG_ASSERT(index <= TRACE_ENCODED_STRING_REF_MAX_INDEX);
 
     if (length > TRACE_ENCODED_STRING_REF_MAX_LENGTH)
         length = TRACE_ENCODED_STRING_REF_MAX_LENGTH;
@@ -894,10 +894,10 @@ void trace_context_write_string_record(
 void trace_context_write_thread_record(
     trace_context_t* context,
     trace_thread_index_t index,
-    mx_koid_t process_koid,
-    mx_koid_t thread_koid) {
-    MX_DEBUG_ASSERT(index != TRACE_ENCODED_THREAD_REF_INLINE);
-    MX_DEBUG_ASSERT(index <= TRACE_ENCODED_THREAD_REF_MAX_INDEX);
+    zx_koid_t process_koid,
+    zx_koid_t thread_koid) {
+    ZX_DEBUG_ASSERT(index != TRACE_ENCODED_THREAD_REF_INLINE);
+    ZX_DEBUG_ASSERT(index <= TRACE_ENCODED_THREAD_REF_MAX_INDEX);
 
     const size_t record_size = sizeof(trace::RecordHeader) +
                                trace::WordsToBytes(2);
@@ -925,13 +925,13 @@ trace_context::trace_context(void* buffer, size_t buffer_num_bytes,
       buffer_current_(reinterpret_cast<uintptr_t>(buffer_start_)),
       buffer_full_mark_(0u),
       handler_(handler) {
-    MX_DEBUG_ASSERT(generation_ != 0u);
+    ZX_DEBUG_ASSERT(generation_ != 0u);
 }
 
 trace_context::~trace_context() = default;
 
 uint64_t* trace_context::AllocRecord(size_t num_bytes) {
-    MX_DEBUG_ASSERT((num_bytes & 7) == 0);
+    ZX_DEBUG_ASSERT((num_bytes & 7) == 0);
     if (unlikely(num_bytes > TRACE_ENCODED_RECORD_MAX_LENGTH))
         return nullptr;
 
@@ -939,7 +939,7 @@ uint64_t* trace_context::AllocRecord(size_t num_bytes) {
         buffer_current_.fetch_add(num_bytes,
                                   fbl::memory_order_relaxed));
     if (likely(ptr + num_bytes <= buffer_end_)) {
-        MX_DEBUG_ASSERT(ptr + num_bytes >= buffer_start_);
+        ZX_DEBUG_ASSERT(ptr + num_bytes >= buffer_start_);
         return reinterpret_cast<uint64_t*>(ptr); // success!
     }
 

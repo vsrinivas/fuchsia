@@ -19,8 +19,8 @@
 
 #include <stdbool.h>
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include <async/dispatcher.h>
 #include <trace-engine/instrumentation.h>
@@ -52,18 +52,18 @@ struct trace_handler_ops {
 
     // Called by the trace engine when tracing has stopped.
     //
-    // The trace collection status is |MX_OK| if trace collection was successful.
+    // The trace collection status is |ZX_OK| if trace collection was successful.
     // An error indicates that the trace data may be inaccurate or incomplete.
     //
     // |handler| is the trace handler object itself.
     // |async| is the trace engine's asynchronous dispatcher.
-    // |disposition| is |MX_OK| if tracing stopped normally, otherwise indicates
+    // |disposition| is |ZX_OK| if tracing stopped normally, otherwise indicates
     // that tracing was aborted due to an error.
     // |buffer_bytes_written| is number of bytes which were written to the trace buffer.
     //
     // Called on an asynchronous dispatch thread.
     void (*trace_stopped)(trace_handler_t* handler, async_t* async,
-                          mx_status_t disposition, size_t buffer_bytes_written);
+                          zx_status_t disposition, size_t buffer_bytes_written);
 };
 
 // Asynchronously starts the trace engine.
@@ -73,9 +73,9 @@ struct trace_handler_ops {
 // |buffer| is the trace buffer into which the trace engine will write trace events.
 // |buffer_num_bytes| is the size of the trace buffer in bytes.
 //
-// Returns |MX_OK| if tracing is ready to go.
-// Returns |MX_ERR_BAD_STATE| if tracing is already in progress.
-// Returns |MX_ERR_NO_MEMORY| if allocation failed.
+// Returns |ZX_OK| if tracing is ready to go.
+// Returns |ZX_ERR_BAD_STATE| if tracing is already in progress.
+// Returns |ZX_ERR_NO_MEMORY| if allocation failed.
 //
 // This function is thread-safe.
 //
@@ -87,7 +87,7 @@ struct trace_handler_ops {
 // the trace engine may fail to come to a complete stop if there remain outstanding
 // references to the trace context during dispatcher shutdown.  When this happens,
 // the trace handler will not be notified of trace completion and subsequent calls
-// to |trace_start_engine()| will return |MX_ERR_BAD_STATE|.
+// to |trace_start_engine()| will return |ZX_ERR_BAD_STATE|.
 //
 // For this reason, it is a good idea to call |trace_stop_engine()| and wait
 // for the handler to receive the |trace_handler_ops.trace_stopped()| callback
@@ -95,7 +95,7 @@ struct trace_handler_ops {
 //
 // Better yet, don't shut down the trace engine's asynchronous dispatcher unless
 // the process is already about to exit.
-mx_status_t trace_start_engine(async_t* async,
+zx_status_t trace_start_engine(async_t* async,
                                trace_handler_t* handler,
                                void* buffer,
                                size_t buffer_num_bytes);
@@ -105,13 +105,13 @@ mx_status_t trace_start_engine(async_t* async,
 // The trace handler's |trace_stopped()| method will be invoked asynchronously
 // when the trace engine transitions to the |TRACE_STOPPED| states.
 //
-// |disposition| is |MX_OK| if tracing is being stopped normally, otherwise indicates
+// |disposition| is |ZX_OK| if tracing is being stopped normally, otherwise indicates
 // that tracing is being aborted due to an error.
 //
-// Returns |MX_OK| if the current state is |TRACE_STARTED| or |TRACE_STOPPING|.
-// Returns |MX_ERR_BAD_STATE| if current state is |TRACE_STOPPED|.
+// Returns |ZX_OK| if the current state is |TRACE_STARTED| or |TRACE_STOPPING|.
+// Returns |ZX_ERR_BAD_STATE| if current state is |TRACE_STOPPED|.
 //
 // This function is thread-safe.
-mx_status_t trace_stop_engine(mx_status_t disposition);
+zx_status_t trace_stop_engine(zx_status_t disposition);
 
 __END_CDECLS

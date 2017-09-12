@@ -8,8 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -75,17 +75,17 @@ static const fsck_options_t default_fsck_options = {
     .force = false,
 };
 
-typedef mx_status_t (*LaunchCallback)(int argc, const char** argv,
-                                      mx_handle_t* hnd, uint32_t* ids, size_t len);
+typedef zx_status_t (*LaunchCallback)(int argc, const char** argv,
+                                      zx_handle_t* hnd, uint32_t* ids, size_t len);
 
 // Creates kernel logs, does not wait for process to terminate
-mx_status_t launch_logs_async(int argc, const char** argv, mx_handle_t* handles,
+zx_status_t launch_logs_async(int argc, const char** argv, zx_handle_t* handles,
                               uint32_t* types, size_t len);
 // Creates stdio logs, waits for process to terminate
-mx_status_t launch_stdio_sync(int argc, const char** argv, mx_handle_t* handles,
+zx_status_t launch_stdio_sync(int argc, const char** argv, zx_handle_t* handles,
                               uint32_t* types, size_t len);
 // Creates stdio logs, does not wait for process to terminate
-mx_status_t launch_stdio_async(int argc, const char** argv, mx_handle_t* handles,
+zx_status_t launch_stdio_async(int argc, const char** argv, zx_handle_t* handles,
                                uint32_t* types, size_t len);
 
 // Given the following:
@@ -100,29 +100,29 @@ mx_status_t launch_stdio_async(int argc, const char** argv, mx_handle_t* handles
 //
 // devicefd is always consumed. If the callback is reached, then the 'devicefd'
 // is transferred via handles to the callback arguments.
-mx_status_t mount(int devicefd, const char* mountpath, disk_format_t df,
+zx_status_t mount(int devicefd, const char* mountpath, disk_format_t df,
                   const mount_options_t* options, LaunchCallback cb);
 // 'mountfd' is used in lieu of the mountpath. It is not consumed (i.e.,
 // it will still be open after this function completes, regardless of
 // success or failure).
-mx_status_t fmount(int devicefd, int mountfd, disk_format_t df,
+zx_status_t fmount(int devicefd, int mountfd, disk_format_t df,
                    const mount_options_t* options, LaunchCallback cb);
 
 // Format the provided device with a requested disk format.
-mx_status_t mkfs(const char* devicepath, disk_format_t df, LaunchCallback cb,
+zx_status_t mkfs(const char* devicepath, disk_format_t df, LaunchCallback cb,
                  const mkfs_options_t* options);
 
 // Check and repair a device with a requested disk format.
-mx_status_t fsck(const char* devicepath, disk_format_t df,
+zx_status_t fsck(const char* devicepath, disk_format_t df,
                  const fsck_options_t* options, LaunchCallback cb);
 
 // Umount the filesystem process.
 //
-// Returns MX_ERR_BAD_STATE if mountpath could not be opened.
-// Returns MX_ERR_NOT_FOUND if there is no mounted filesystem on mountpath.
+// Returns ZX_ERR_BAD_STATE if mountpath could not be opened.
+// Returns ZX_ERR_NOT_FOUND if there is no mounted filesystem on mountpath.
 // Other errors may also be returned if problems occur while unmounting.
-mx_status_t umount(const char* mountpath);
+zx_status_t umount(const char* mountpath);
 // 'mountfd' is used in lieu of the mountpath. It is not consumed.
-mx_status_t fumount(int mountfd);
+zx_status_t fumount(int mountfd);
 
 __END_CDECLS

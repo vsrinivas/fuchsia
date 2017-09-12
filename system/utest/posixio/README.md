@@ -1,7 +1,7 @@
 # POSIX IO Tests
 
 This directory contains API coverage tests of POSIX IO. This is
-loosely defined as the set of functions that mxio implements. The goal
+loosely defined as the set of functions that fdio implements. The goal
 is to test the error cases of each of these functions. It is not a
 test of the underlying RIO transport or backing filesystems.
 

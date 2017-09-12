@@ -19,7 +19,7 @@ VMOs are created with [vmo_create](../syscalls/vmo_create.md) and basic I/O can 
 performed on them with [vmo_read](../syscalls/vmo_read.md) and [vmo_write](../syscalls/vmo_write.md). A VMO's size may be set using [vmo_set_size](../syscalls/vmo_set_size.md). Conversely, [vmo_get_size](../syscalls/vmo_get_size.md) will retrieve a VMO's current size.
 
 Pages are committed (allocated) for VMOs on demand through [vmo_read](../syscalls/vmo_read.md), [vmo_write](../syscalls/vmo_write.md), or by writing to a mapping of the VMO created using [vmar_map](../syscalls/vmar_map.md). Pages can be commited and decommited from a VMO manually by calling
-[vmo_op_range](../syscalls/vmo_op_range.md) with the *MX_VMO_OP_COMMIT* and *MX_VMO_OP_DECOMMIT*
+[vmo_op_range](../syscalls/vmo_op_range.md) with the *ZX_VMO_OP_COMMIT* and *ZX_VMO_OP_DECOMMIT*
 operations, but this should be considered a low level operation. [vmo_op_range](../syscalls/vmo_op_range.md) can also be used for cache and locking operations against pages a VMO holds.
 
 Processes with special purpose use cases involving cache policy can use

@@ -6,9 +6,9 @@
 
 #pragma once
 
-#include <magenta/types.h>
-#include <magenta/syscalls/types.h>
+#include <zircon/types.h>
+#include <zircon/syscalls/types.h>
 #include <lib/user_copy/user_ptr.h>
 
-#define MX_SYSCALL_PARAM_ATTR(x)
-#include <magenta/syscall-definitions.h>
+#define ZX_SYSCALL_PARAM_ATTR(x)
+#include <zircon/syscall-definitions.h>

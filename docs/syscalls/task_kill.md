@@ -1,4 +1,4 @@
-# mx_task_kill
+# zx_task_kill
 
 ## NAME
 
@@ -7,9 +7,9 @@ task_kill - Kill the provided task.
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-mx_status_t mx_task_kill(mx_handle_t handle);
+zx_status_t zx_task_kill(zx_handle_t handle);
 
 ```
 
@@ -24,6 +24,6 @@ not return.
 
 ## ERRORS
 
-**MX_ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_DESTROY**.
+**ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_DESTROY**.
 
 ## SEE ALSO

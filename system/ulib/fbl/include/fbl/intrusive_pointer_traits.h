@@ -5,7 +5,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/type_support.h>
@@ -78,7 +78,7 @@ struct ContainerPtrTraits<T*> {
     }
 
     static inline void DetachSentinel(PtrType& ptr) {
-        MX_DEBUG_ASSERT((ptr == nullptr) || IsSentinel(ptr));
+        ZX_DEBUG_ASSERT((ptr == nullptr) || IsSentinel(ptr));
         ptr = nullptr;
     }
 
@@ -115,7 +115,7 @@ struct ContainerPtrTraits<::fbl::unique_ptr<T>> {
 
     static inline void DetachSentinel(PtrType& ptr) {
         __UNUSED RawPtrType detached = ptr.release();
-        MX_DEBUG_ASSERT((detached == nullptr) || IsSentinel(detached));
+        ZX_DEBUG_ASSERT((detached == nullptr) || IsSentinel(detached));
     }
 
     static constexpr bool IsSentinel(const PtrType& ptr) { return IsSentinel(ptr.get()); }
@@ -154,7 +154,7 @@ struct ContainerPtrTraits<::fbl::RefPtr<T>> {
 
     static inline void DetachSentinel(PtrType& ptr) {
         __UNUSED RawPtrType detached = ptr.leak_ref();
-        MX_DEBUG_ASSERT((detached == nullptr) || IsSentinel(detached));
+        ZX_DEBUG_ASSERT((detached == nullptr) || IsSentinel(detached));
     }
 
     static constexpr bool IsSentinel(const PtrType& ptr) { return IsSentinel(ptr.get()); }

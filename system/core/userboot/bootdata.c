@@ -8,21 +8,21 @@
 #pragma GCC visibility push(hidden)
 
 #include <bootdata/decompress.h>
-#include <magenta/boot/bootdata.h>
-#include <magenta/syscalls.h>
+#include <zircon/boot/bootdata.h>
+#include <zircon/syscalls.h>
 #include <string.h>
 
 #pragma GCC visibility pop
 
-mx_handle_t bootdata_get_bootfs(mx_handle_t log, mx_handle_t vmar_self,
-                                mx_handle_t bootdata_vmo) {
+zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self,
+                                zx_handle_t bootdata_vmo) {
     size_t off = 0;
     for (;;) {
         bootdata_t bootdata;
         size_t actual;
-        mx_status_t status = mx_vmo_read(bootdata_vmo, &bootdata,
+        zx_status_t status = zx_vmo_read(bootdata_vmo, &bootdata,
                                          off, sizeof(bootdata), &actual);
-        check(log, status, "mx_vmo_read failed on bootdata VMO");
+        check(log, status, "zx_vmo_read failed on bootdata VMO");
         if (actual != sizeof(bootdata))
             fail(log, "short read on bootdata VMO");
 
@@ -43,7 +43,7 @@ mx_handle_t bootdata_get_bootfs(mx_handle_t log, mx_handle_t vmar_self,
 
         case BOOTDATA_BOOTFS_BOOT:;
             const char* errmsg;
-            mx_handle_t bootfs_vmo;
+            zx_handle_t bootfs_vmo;
             status = decompress_bootdata(vmar_self, bootdata_vmo, off,
                                          bootdata.length + hdrsz,
                                          &bootfs_vmo, &errmsg);
@@ -51,10 +51,10 @@ mx_handle_t bootdata_get_bootfs(mx_handle_t log, mx_handle_t vmar_self,
 
             // Signal that we've already processed this one.
             bootdata.type = BOOTDATA_BOOTFS_DISCARD;
-            check(log, mx_vmo_write(bootdata_vmo, &bootdata.type,
+            check(log, zx_vmo_write(bootdata_vmo, &bootdata.type,
                                     off + offsetof(bootdata_t, type),
                                     sizeof(bootdata.type), &actual),
-                  "mx_vmo_write failed on bootdata VMO\n");
+                  "zx_vmo_write failed on bootdata VMO\n");
 
             return bootfs_vmo;
         }

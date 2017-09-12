@@ -29,8 +29,8 @@ to replace `<` with `&lt;` and the like.
 
 ## Scope and assumptions ##
 
-This specification defines a format standard for Magenta and Fuchsia.
-But there is nothing specific to Magenta or Fuchsia about the markup
+This specification defines a format standard for Zircon and Fuchsia.
+But there is nothing specific to Zircon or Fuchsia about the markup
 format.  A symbolizing filter implementation will be independent both of
 the _target_ operating system and machine architecture where the logs
 are generated and of the _host_ operating system and machine
@@ -53,7 +53,7 @@ logging stream interleaves log lines from more than one process, these
 must be collated into separate per-process log streams and each stream
 processed by a separate instance of the symbolizing filter.  Because the
 kernel and user processes use disjoint address regions in most operating
-systems (including Magenta), a single user process address space plus
+systems (including Zircon), a single user process address space plus
 the kernel address space can be treated as a single address space for
 symbolization purposes if desired.
 
@@ -117,7 +117,7 @@ The accepted SGR control sequences all have the form `"\033[%um"`
 | `32` | Green foreground   | |
 | `33` | Yellow foreground  | |
 | `34` | Blue foreground    | |
-| `35` | Magenta foreground | |
+| `35` | Zircon foreground | |
 | `36` | Cyan foreground    | |
 | `37` | White foreground   | |
 
@@ -297,10 +297,10 @@ in human-readable symbolic form.
   filter triggers other processing, it may need to feed some distilled
   form of the contextual information to those processes.
 
-  On Magenta and Fuchsia in particular, "publish" means to call the
-  `__sanitizer_publish_data` function from `<magenta/sanitizer.h>`
+  On Zircon and Fuchsia in particular, "publish" means to call the
+  `__sanitizer_publish_data` function from `<zircon/sanitizer.h>`
   with the "type" identifier as the "sink name" string.  The "dump
-  identifier" is the name attached to the Magenta VMO whose handle
+  identifier" is the name attached to the Zircon VMO whose handle
   was passed in the call to `__sanitizer_publish_data`.
   **TODO(mcgrathr): Link to docs about `__sanitizer_publish_data` and
   getting data dumps off the device.**
@@ -345,7 +345,7 @@ raw logging stream, accumulating context and massaging text as it goes.
   for casual information.  The Build ID string is the sole way to
   identify the binary from which this module was loaded.  A "module" is
   a single linked binary, such as a loaded ELF file.  Usually each
-  module occupies a contiguous range of memory (always does on Magenta).
+  module occupies a contiguous range of memory (always does on Zircon).
 
   The `...` is a sequence of fields (separated by `:`) that each
   describe a range of memory, called a _segment_.  The field for each

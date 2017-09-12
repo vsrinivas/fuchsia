@@ -1,6 +1,6 @@
 #include "dynlink.h"
 #include "libc.h"
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <stdatomic.h>
 #include <stddef.h>
 

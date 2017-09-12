@@ -6,29 +6,29 @@
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
 
-#include <magenta/listnode.h>
+#include <zircon/listnode.h>
 
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <stdio.h>
 
 #include <intel-serialio/serialio.h>
 
-static mx_status_t intel_serialio_bind(void* ctx, mx_device_t* dev, void** cookie) {
+static zx_status_t intel_serialio_bind(void* ctx, zx_device_t* dev, void** cookie) {
     pci_protocol_t pci;
-    mx_status_t res;
+    zx_status_t res;
 
-    if (device_get_protocol(dev, MX_PROTOCOL_PCI, &pci))
-        return MX_ERR_NOT_SUPPORTED;
+    if (device_get_protocol(dev, ZX_PROTOCOL_PCI, &pci))
+        return ZX_ERR_NOT_SUPPORTED;
 
     const pci_config_t* pci_config;
     size_t config_size;
-    mx_handle_t config_handle = MX_HANDLE_INVALID;
-    res = pci_map_resource(&pci, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
+    zx_handle_t config_handle = ZX_HANDLE_INVALID;
+    res = pci_map_resource(&pci, PCI_RESOURCE_CONFIG, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                            (void**)&pci_config, &config_size, &config_handle);
 
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
         xprintf("serialio: failed to map pci config: %d\n", res);
         return res;
     }
@@ -61,22 +61,22 @@ static mx_status_t intel_serialio_bind(void* ctx, mx_device_t* dev, void** cooki
         res = intel_serialio_bind_uart(dev);
         break;
     default:
-        res = MX_ERR_NOT_SUPPORTED;
+        res = ZX_ERR_NOT_SUPPORTED;
         break;
     }
 
-    mx_handle_close(config_handle);
+    zx_handle_close(config_handle);
     return res;
 }
 
-static mx_driver_ops_t intel_serialio_driver_ops = {
+static zx_driver_ops_t intel_serialio_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = intel_serialio_bind,
 };
 
 // clang-format off
-MAGENTA_DRIVER_BEGIN(intel_serialio, intel_serialio_driver_ops, "magenta", "0.1", 14)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
+ZIRCON_DRIVER_BEGIN(intel_serialio, intel_serialio_driver_ops, "zircon", "0.1", 14)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_VID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_DMA_DID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_I2C0_DID),
@@ -90,4 +90,4 @@ MAGENTA_DRIVER_BEGIN(intel_serialio, intel_serialio_driver_ops, "magenta", "0.1"
     BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C1_DID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C3_DID),
-MAGENTA_DRIVER_END(intel_serialio)
+ZIRCON_DRIVER_END(intel_serialio)

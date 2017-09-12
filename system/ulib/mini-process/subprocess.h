@@ -4,25 +4,25 @@
 
 #pragma once
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 // This struct defines the first message that the child process gets.
 typedef struct {
-    __typeof(mx_handle_close)*      handle_close;
-    __typeof(mx_object_wait_one)*   object_wait_one;
-    __typeof(mx_object_signal)*     object_signal;
-    __typeof(mx_event_create)*      event_create;
-    __typeof(mx_channel_create)*    channel_create;
-    __typeof(mx_channel_read)*      channel_read;
-    __typeof(mx_channel_write)*     channel_write;
-    __typeof(mx_process_exit)*      process_exit;
+    __typeof(zx_handle_close)*      handle_close;
+    __typeof(zx_object_wait_one)*   object_wait_one;
+    __typeof(zx_object_signal)*     object_signal;
+    __typeof(zx_event_create)*      event_create;
+    __typeof(zx_channel_create)*    channel_create;
+    __typeof(zx_channel_read)*      channel_read;
+    __typeof(zx_channel_write)*     channel_write;
+    __typeof(zx_process_exit)*      process_exit;
 } minip_ctx_t;
 
 // Subsequent messages and replies are of this format. The |what| parameter is
-// transaction friendly so the client can use mx_channel_call().
+// transaction friendly so the client can use zx_channel_call().
 typedef struct {
-    mx_txid_t what;
-    mx_status_t status;
+    zx_txid_t what;
+    zx_status_t status;
 } minip_cmd_t;
 
-void minipr_thread_loop(mx_handle_t channel, uintptr_t fnptr);
+void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr);

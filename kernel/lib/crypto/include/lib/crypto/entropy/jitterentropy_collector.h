@@ -8,7 +8,7 @@
 
 #include <lib/crypto/entropy/collector.h>
 #include <lib/jitterentropy/jitterentropy.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/mutex.h>
 
 namespace crypto {
@@ -19,12 +19,12 @@ namespace entropy {
 // its entropy source. Ultimately, the entropy is derived from variations in
 // CPU timing, when various code blocks are exercised.
 //
-// TODO(andrewkrieger): Document jitterentropy better for Magenta, then link to
+// TODO(andrewkrieger): Document jitterentropy better for Zircon, then link to
 // that documentation here.
 class JitterentropyCollector : public Collector {
 public:
     // Gets the global JitterentropyCollector instance. Returns
-    // MX_ERR_NOT_SUPPORTED if jitterentropy is not supported (usually because
+    // ZX_ERR_NOT_SUPPORTED if jitterentropy is not supported (usually because
     // the system clock is not available or not suitable).
     //
     // This function must be called once in a single-threaded context to
@@ -34,7 +34,7 @@ public:
     // threads. The JitterentropyCollector::DrawEntropy method is internally
     // guarded by a mutex, so it's safe to call from multiple threads but it may
     // block.
-    static mx_status_t GetInstance(Collector** ptr);
+    static zx_status_t GetInstance(Collector** ptr);
 
     // Inherited from Collector; see comments there.
     //

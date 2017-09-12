@@ -1,4 +1,4 @@
-The Magenta Kernel (kernel/...) and the Magenta Scripts (scripts/...)
+The Zircon Kernel (kernel/...) and the Zircon Scripts (scripts/...)
 are under an MIT-style license, copies of which may be found in
 kernel/LICENSE and scripts/LICENSE.
 
@@ -6,7 +6,7 @@ The Third Party Components (third_party/...) are under various
 licenses (of the BSD, MIT, or Zlib style), which may be found in the
 root directory of each component, respectively.
 
-All other components and materials, including the Magenta System
+All other components and materials, including the Zircon System
 (system/...) and Bootloader (bootloader/...), are under a BSD-style
 license, copies of which may be found in system/LICENSE and
 bootloader/LICENSE.

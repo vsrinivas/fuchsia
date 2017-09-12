@@ -12,9 +12,9 @@ three categories:
 <ul>
 <li>Code which should be disabled when in used in kernel has
 <code>#ifdef _KERNEL</code> guards added.</li>
-<li>Code which is added for Magenta is guarded by
+<li>Code which is added for Zircon is guarded by
 <code>#ifdef \__Fuchsia\__</code>.</li>
-<li>New source files are named with a *'-magenta.cpp'* suffix.</li>
+<li>New source files are named with a *'-zircon.cpp'* suffix.</li>
 </ul>
 
 All other code is unchanged from BoringSSL.
@@ -31,7 +31,7 @@ excessive dependencies should be added.
 
 This subset does not include tests from BoringSSL.  When updating from
 [BoringSSL][boringssl], maintainers should first ensure the unit tests in that
-package pass on Fuchsia before updating the subset for Magenta.
+package pass on Fuchsia before updating the subset for Zircon.
 
 Finally, maintainers should update this file with the new [revision][revision]
 of BoringSSL to provide an easy way to confirm boring-crypto was checked.
@@ -42,7 +42,7 @@ All code under this directory is covered by the same [license][license] as
 BoringSSL.
 
 [boringssl]: https://fuchsia.googlesource.com/third_party/boringssl/+/master/README.md "BoringSSL"
-[script]: https://fuchsia.googlesource.com/magenta/+/master/third_party/boring-crypto/scripts/check-boringssl.go "check-boringssl.go"
+[script]: https://fuchsia.googlesource.com/zircon/+/master/third_party/boring-crypto/scripts/check-boringssl.go "check-boringssl.go"
 [license]: https://fuchsia.googlesource.com/third_party/boringssl/+/master/LICENSE "BoringSSL license"
 
 [//]: # (UPDATE THE DIGEST WHEN ROLLING BORINGSSL)

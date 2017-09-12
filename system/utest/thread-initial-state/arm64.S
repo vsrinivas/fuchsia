@@ -89,6 +89,6 @@ FUNCTION(thread_entry)
     check_simd d29, v29.D[1]
     check_simd d30, v30.D[1]
     check_simd d31, v31.D[1]
-    b mx_thread_exit
+    b zx_thread_exit
 .Lfail:
     b print_fail

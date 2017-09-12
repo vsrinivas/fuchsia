@@ -9,9 +9,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
-#include <magenta/pixelformat.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+#include <zircon/pixelformat.h>
 
 __BEGIN_CDECLS
 
@@ -99,7 +99,7 @@ static inline void gfx_clear(gfx_surface* surface, unsigned color) {
 
 // surface setup
 gfx_surface* gfx_create_surface(void* ptr, unsigned width, unsigned height, unsigned stride, unsigned format, uint32_t flags);
-mx_status_t gfx_init_surface(gfx_surface* surface, void* ptr, unsigned width, unsigned height, unsigned stride, unsigned format, uint32_t flags);
+zx_status_t gfx_init_surface(gfx_surface* surface, void* ptr, unsigned width, unsigned height, unsigned stride, unsigned format, uint32_t flags);
 
 // free the surface
 // optionally frees the buffer if the free bit is set

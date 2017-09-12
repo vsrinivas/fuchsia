@@ -21,7 +21,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-#include <magenta/boot/netboot.h>
+#include <zircon/boot/netboot.h>
 
 #include "bootserver.h"
 
@@ -293,7 +293,7 @@ int main(int argc, char** argv) {
         usage();
     }
     if (!nodename) {
-        nodename = getenv("MAGENTA_NODENAME");
+        nodename = getenv("ZIRCON_NODENAME");
     }
     if (nodename) {
         fprintf(stderr, "%s: Will only boot nodename '%s'\n", appname, nodename);

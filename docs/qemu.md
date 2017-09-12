@@ -1,6 +1,6 @@
 # QEMU
 
-Magenta can [run under emulation](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Boot-from-QEMU) using QEMU. QEMU can either be installed via
+Zircon can [run under emulation](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Boot-from-QEMU) using QEMU. QEMU can either be installed via
 prebuilt binaries, or built locally. (Note that a full [Fuchsia checkout](https://fuchsia.googlesource.com/docs/+/master/getting_source.md#Creating-a-new-checkout) already
 includes prebuilts.)
 
@@ -14,7 +14,7 @@ cd buildtools
 
 This will download QEMU to the buildtools/qemu directory. You can either add
 buildtools/qemu/bin to your PATH, or specify buildtools/qemu/bin using the
--q flag to the run-magenta scripts (see below).
+-q flag to the run-zircon scripts (see below).
 
 ## Build QEMU
 
@@ -43,16 +43,16 @@ sudo make install
 If you don't want to install in /usr/local (the default), which will require you
 to be root, add --prefix=/path/to/install (perhaps $HOME/qemu). Then you'll
 either need to add /path/to/install/bin to your PATH or use -q /path/to/install
-when invoking run-magenta-{arch}.
+when invoking run-zircon-{arch}.
 
-## Run Magenta under QEMU
+## Run Zircon under QEMU
 
 ```
 # for aarch64
-./scripts/run-magenta-arm64
+./scripts/run-zircon-arm64
 
 # for x86-64
-./scripts/run-magenta-x86-64
+./scripts/run-zircon-x86-64
 ```
 
 If QEMU is not on your path, use -q <directory> to specify its location.
@@ -64,7 +64,7 @@ To exit qemu, enter Ctrl-a x. Use Ctrl-a h to see other commands.
 
 ## Enabling Networking under QEMU (x86-64 only)
 
-The run-magenta-x86-64 script, when given the -N argument will attempt to create
+The run-zircon-x86-64 script, when given the -N argument will attempt to create
 a network interface using the Linux tun/tap network device named "qemu".  QEMU
 does not need to be run with any special privileges for this, but you need to
 create a persistent tun/tap device ahead of time (which does require you be root):
@@ -85,13 +85,13 @@ macOS does not support tun/tap devices out of the box; however, there is a widel
 used set of kernel extensions called tuntaposx which can be downloaded
 [here](http://tuntaposx.sourceforge.net/download.xhtml). Once the installer
 completes, the extensions will create up to 16 tun/tap devices. The
-run-magenta-x86-64 script uses /dev/tap0.
+run-zircon-x86-64 script uses /dev/tap0.
 
 ```
 sudo chown $USER /dev/tap0
 
-# Run magenta in QEMU, which will open /dev/tap0
-./scripts/run-magenta-x86-64 -N
+# Run zircon in QEMU, which will open /dev/tap0
+./scripts/run-zircon-x86-64 -N
 
 # (In a different window) bring up tap0 with a link local IPv6 address
 sudo ifconfig tap0 inet6 fc00::/7 up
@@ -105,7 +105,7 @@ example startup script containing the above command is located in
 scripts/qemu-ifup-macos, so QEMU can be started with:
 
 ```
-./scripts/run-magenta-x86-64 -Nu ./scripts/qemu-ifup-macos
+./scripts/run-zircon-x86-64 -Nu ./scripts/qemu-ifup-macos
 ```
 
 ## Using Emulated Disk under QEMU
@@ -113,9 +113,9 @@ scripts/qemu-ifup-macos, so QEMU can be started with:
 Please follow the minfs instructions on how to create a disk image
 [here][minfs-create-image].
 
-After creating the image, you can run magenta in QEMU with the disk image:
+After creating the image, you can run zircon in QEMU with the disk image:
 ```
-./scripts/run-magenta-x86-64 -d [-D <disk_image_path (default: "blk.bin")>]
+./scripts/run-zircon-x86-64 -d [-D <disk_image_path (default: "blk.bin")>]
 ```
 
 
@@ -128,7 +128,7 @@ Here is a sample session to get you started.
 In the shell you're running QEMU in:
 
 ```
-shell1$ ./scripts/run-magenta-x86-64 -- -s -S
+shell1$ ./scripts/run-zircon-x86-64 -- -s -S
 [... some QEMU start up text ...]
 ```
 
@@ -138,7 +138,7 @@ If you want to run QEMU without GDB, but be able to attach with GDB later
 then start QEMU without "-S" in the above example:
 
 ```
-shell1$ ./scripts/run-magenta-x86-64 -- -s
+shell1$ ./scripts/run-zircon-x86-64 -- -s
 [... some QEMU start up text ...]
 ```
 
@@ -146,7 +146,7 @@ And then in the shell you're running GDB in:
 [Commands here are fully spelled out, but remember most can be abbreviated.]
 
 ```
-shell2$ gdb build-magenta-pc-x86-64/magenta.elf
+shell2$ gdb build-zircon-pc-x86-64/zircon.elf
 (gdb) target extended-remote :1234
 Remote debugging using :1234
 0x000000000000fff0 in ?? ()
@@ -164,7 +164,7 @@ Breakpoint 1, lk_main (arg0=1, arg1=18446744071568293116, arg2=0, arg3=0)
 (gdb) continue
 ```
 
-At this point Magenta boots and back in shell1 you'll be at the Magenta
+At this point Zircon boots and back in shell1 you'll be at the Zircon
 prompt.
 
 ```
@@ -189,23 +189,23 @@ arch_idle () at kernel/arch/x86/64/ops.S:32
 
 QEMU reports one thread to GDB for each CPU.
 
-### The magenta.elf-gdb.py script
+### The zircon.elf-gdb.py script
 
-The scripts/magenta.elf-gdb.py script is automagically loaded by gdb.
+The scripts/zircon.elf-gdb.py script is automagically loaded by gdb.
 It provides several things:
 
-- Pretty-printers for magenta objects (alas none at the moment).
+- Pretty-printers for zircon objects (alas none at the moment).
 
-- Several magenta specific commands, all with a "magenta" prefix. To see them:
+- Several zircon specific commands, all with a "zircon" prefix. To see them:
 ```
-(gdb) help info magenta
-(gdb) help set magenta
-(gdb) help show magenta
+(gdb) help info zircon
+(gdb) help set zircon
+(gdb) help show zircon
 ```
 
 - Enhanced unwinder support for automagic unwinding through kernel faults.
 
-Heads up: This script isn't always updated as magenta changes.
+Heads up: This script isn't always updated as zircon changes.
 
 ### Terminating the session
 
@@ -269,4 +269,4 @@ directory and anyone should be able to restore your state and start to poke
 at stuff from the QEMU console.
 
 
-[minfs-create-image]: https://fuchsia.googlesource.com/magenta/+/master/docs/minfs.md#Host-Device-QEMU-Only
+[minfs-create-image]: https://fuchsia.googlesource.com/zircon/+/master/docs/minfs.md#Host-Device-QEMU-Only

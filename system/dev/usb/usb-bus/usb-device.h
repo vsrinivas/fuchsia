@@ -7,7 +7,7 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/protocol/usb-hci.h>
-#include <magenta/hw/usb.h>
+#include <zircon/hw/usb.h>
 
 #include <threads.h>
 
@@ -22,8 +22,8 @@ typedef enum {
 
 // Represents a USB top-level device
 typedef struct usb_device {
-    mx_device_t* mxdev;
-    mx_device_t* hci_mxdev;
+    zx_device_t* mxdev;
+    zx_device_t* hci_mxdev;
     usb_hci_protocol_t hci;
 
     // ID assigned by host controller
@@ -46,17 +46,17 @@ typedef struct usb_device {
     list_node_t node;
 } usb_device_t;
 
-mx_status_t usb_device_add(mx_device_t* hci_device, usb_hci_protocol_t* hci_protocol,
-                           mx_device_t* parent,  uint32_t device_id, uint32_t hub_id,
+zx_status_t usb_device_add(zx_device_t* hci_device, usb_hci_protocol_t* hci_protocol,
+                           zx_device_t* parent,  uint32_t device_id, uint32_t hub_id,
                            usb_speed_t speed, usb_device_t** out_device);
 
 void usb_device_remove(usb_device_t* dev);
 
-mx_status_t usb_device_set_interface(usb_device_t* device, uint8_t interface_id,
+zx_status_t usb_device_set_interface(usb_device_t* device, uint8_t interface_id,
                                      uint8_t alt_setting);
 
 // Marks the interface as claimed, removing the device if it exists.
 // Returns an error if the interface was already claimed by another interface.
-mx_status_t usb_device_claim_interface(usb_device_t* dev, uint8_t interface_id);
+zx_status_t usb_device_claim_interface(usb_device_t* dev, uint8_t interface_id);
 
-mx_status_t usb_device_set_configuration(usb_device_t* dev, int config);
+zx_status_t usb_device_set_configuration(usb_device_t* dev, int config);

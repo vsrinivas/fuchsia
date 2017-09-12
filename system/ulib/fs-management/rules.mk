@@ -20,9 +20,9 @@ MODULE_STATIC_LIBS := \
 
 MODULE_LIBS := \
     system/ulib/launchpad \
-    system/ulib/magenta \
+    system/ulib/zircon \
     system/ulib/c \
-    system/ulib/mxio \
+    system/ulib/fdio \
 
 MODULE_EXPORT := so
 MODULE_SO_NAME := fs-management

@@ -15,6 +15,6 @@ MODULE_SRCS += \
 MODULE_NAME := vmo-test
 
 MODULE_STATIC_LIBS := system/ulib/pretty system/ulib/fbl
-MODULE_LIBS := system/ulib/unittest system/ulib/mxio system/ulib/magenta system/ulib/c
+MODULE_LIBS := system/ulib/unittest system/ulib/fdio system/ulib/zircon system/ulib/c
 
 include make/module.mk

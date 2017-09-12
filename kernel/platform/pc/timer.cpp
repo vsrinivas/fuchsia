@@ -318,7 +318,7 @@ outer:
                         UINT32_MAX,
                         apic_divisor,
                         true);
-                ASSERT(status == MX_OK);
+                ASSERT(status == ZX_OK);
 
                 switch (calibration_clock) {
                     case CLOCK_HPET:
@@ -530,14 +530,14 @@ status_t platform_set_oneshot_timer(lk_time_t deadline)
 
     if (use_tsc_deadline) {
         if (UINT64_MAX / deadline < (tsc_ticks_per_ms / LK_MSEC(1))) {
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
 
         // We rounded up to the tick after above.
         const uint64_t tsc_deadline = u64_mul_u64_fp32_64(deadline, tsc_per_ns);
         LTRACEF("Scheduling oneshot timer: %" PRIu64 " deadline\n", tsc_deadline);
         apic_timer_set_tsc_deadline(tsc_deadline, false /* unmasked */);
-        return MX_OK;
+        return ZX_OK;
     }
 
     const lk_time_t now = current_time();
@@ -597,7 +597,7 @@ status_t platform_configure_watchdog(uint32_t frequency) {
         case CLOCK_TSC: {
             /* Use the PIT IRQ number since the PIT isn't running */
             uint32_t irq = apic_io_isa_to_global(ISA_IRQ_PIT);
-            if (hpet_timer_configure_irq(0, irq) == MX_OK) {
+            if (hpet_timer_configure_irq(0, irq) == ZX_OK) {
                 apic_io_configure_isa_irq(
                         ISA_IRQ_PIT,
                         DELIVERY_MODE_NMI,
@@ -609,12 +609,12 @@ status_t platform_configure_watchdog(uint32_t frequency) {
                 uint64_t hpet_rate_ms = hpet_ticks_per_ms();
                 hpet_disable();
                 __UNUSED status_t status = hpet_set_value(0);
-                DEBUG_ASSERT(status == MX_OK);
+                DEBUG_ASSERT(status == ZX_OK);
                 status = hpet_timer_set_periodic(0, hpet_rate_ms * frequency / 1000);
-                DEBUG_ASSERT(status == MX_OK);
+                DEBUG_ASSERT(status == ZX_OK);
                 hpet_enable();
 
-                return MX_OK;
+                return ZX_OK;
             }
             /* Fallthrough and use the PIT instead */
         }
@@ -632,8 +632,8 @@ status_t platform_configure_watchdog(uint32_t frequency) {
                     0,
                     0);
             printf("CONFIGURED WATCHDOG\n");
-            return MX_OK;
+            return ZX_OK;
         }
-        default: return MX_ERR_NOT_SUPPORTED;
+        default: return ZX_ERR_NOT_SUPPORTED;
     }
 }

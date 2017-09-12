@@ -83,7 +83,7 @@ struct UniquePtrTraits {
     static ItemType Create(ValueType val) {
         AllocChecker ac;
         ItemType ptr(new (&ac) TestObject(val));
-        MX_ASSERT(ac.check());
+        ZX_ASSERT(ac.check());
         return ptr;
     }
     static ValueType GetValue(const ItemType& c) { return c->value(); }
@@ -104,7 +104,7 @@ struct RefPtrTraits {
     static ItemType Create(ValueType val) {
         AllocChecker ac;
         auto ptr = AdoptRef(new (&ac) RefCountedItem<TestObject>(TestObject(val)));
-        MX_ASSERT(ac.check());
+        ZX_ASSERT(ac.check());
         return ptr;
     }
     static ValueType GetValue(const ItemType& c) { return c->val.value(); }

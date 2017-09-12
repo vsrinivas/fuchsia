@@ -13,7 +13,7 @@ namespace crypto {
 namespace entropy {
 
 Collector::Collector(const char* name, size_t entropy_per_1000_bytes)
-    : name_(name, strnlen(name, MX_MAX_NAME_LEN)),
+    : name_(name, strnlen(name, ZX_MAX_NAME_LEN)),
       entropy_per_1000_bytes_(entropy_per_1000_bytes) {
     DEBUG_ASSERT(entropy_per_1000_bytes_ > 0);
     DEBUG_ASSERT(entropy_per_1000_bytes_ <= 8000);

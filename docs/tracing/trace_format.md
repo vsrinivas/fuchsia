@@ -170,7 +170,7 @@ with objects which appear later in the trace.
 ### Kernel Object Information
 
 Traces can include annotations about kernel objects (anything that can be
-referenced using a Magenta koid such as a process, channel, or event)
+referenced using a Zircon koid such as a process, channel, or event)
 form of **Kernel Object Records**.  Trace providers typically generate such
 records when the object is created.
 
@@ -402,7 +402,7 @@ _event-type specific data_
 
 #### Instant Event (event type = 0)
 
-Marks a moment in time on this thread.  These are equivalent to Magenta
+Marks a moment in time on this thread.  These are equivalent to Zircon
 kernel probes.
 
 ##### Format
@@ -588,7 +588,7 @@ to find a description of the referent.
 _header word_
 - `[0 .. 3]`: record type (7)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
-- `[16 .. 23]`: kernel object type (one of the MX_OBJ_TYPE_XXX constants from <magenta/syscalls/object.h>)
+- `[16 .. 23]`: kernel object type (one of the ZX_OBJ_TYPE_XXX constants from <zircon/syscalls/object.h>)
 - `[24 .. 39]`: name (string ref)
 - `[40 .. 43]`: number of arguments
 - `[44 .. 63]`: reserved (must be zero)
@@ -610,7 +610,7 @@ helps trace consumers correlate relationships among kernel objects.
 
 _This information may not always be available._
 
-- `“process”`: for `MX_OBJ_TYPE_THREAD` objects, specifies the koid of the
+- `“process”`: for `ZX_OBJ_TYPE_THREAD` objects, specifies the koid of the
   process which contains the thread
 
 ### Context Switch Record (record type = 8)
@@ -658,7 +658,7 @@ The following thread states are defined:
 - `4`: dying
 - `5`: dead
 
-These values align with the `MX_THREAD_STATE_XXX` constants from <magenta/syscalls/object.h>.
+These values align with the `ZX_THREAD_STATE_XXX` constants from <zircon/syscalls/object.h>.
 
 ### Log Record (record type = 9)
 

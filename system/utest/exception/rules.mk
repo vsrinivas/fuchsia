@@ -16,7 +16,7 @@ MODULE_LIBS := \
     system/ulib/unittest \
     system/ulib/test-utils \
     system/ulib/launchpad \
-    system/ulib/magenta \
+    system/ulib/zircon \
     system/ulib/c
 
 include make/module.mk

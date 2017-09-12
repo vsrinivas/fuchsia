@@ -26,7 +26,7 @@
 #include <errno.h>
 #include <stdint.h>
 
-#include <magenta/boot/netboot.h>
+#include <zircon/boot/netboot.h>
 #include <tftp/tftp.h>
 
 #define TFTP_BUF_SZ 2048

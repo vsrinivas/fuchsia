@@ -14,9 +14,9 @@
 #include <kernel/vm.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
-#include <magenta/boot/bootdata.h>
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/boot/bootdata.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 #include <mexec.h>
 #include <object/process_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
@@ -37,14 +37,14 @@ __END_CDECLS
 
 /* Allocates a page of memory that has the same physical and virtual addressresses.
  */
-static mx_status_t identity_page_allocate(void** result_addr) {
-    mx_status_t result;
+static zx_status_t identity_page_allocate(void** result_addr) {
+    zx_status_t result;
 
     // Start by obtaining an unused physical page. This address will eventually
     // be the physical/virtual address of our identity mapped page.
     paddr_t pa;
     if (pmm_alloc_page(0, &pa) == nullptr) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     // The kernel address space may be in high memory which cannot be identity
@@ -54,7 +54,7 @@ static mx_status_t identity_page_allocate(void** result_addr) {
     fbl::RefPtr<VmAspace> identity_aspace =
             VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "mexec identity");
     if (!identity_aspace)
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
 
     // Create a new allocation in the new address space that identity maps the
     // target page.
@@ -66,14 +66,14 @@ static mx_status_t identity_page_allocate(void** result_addr) {
                                             &identity_address, 0, pa,
                                             VmAspace::VMM_FLAG_VALLOC_SPECIFIC,
                                             perm_flags_rwx);
-    if (result != MX_OK)
+    if (result != ZX_OK)
         return result;
 
     vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(identity_aspace.get()));
 
     *result_addr = identity_address;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 /* Takes all the pages in a VMO and creates a copy of them where all the pages
@@ -81,19 +81,19 @@ static mx_status_t identity_page_allocate(void** result_addr) {
  * TODO(gkalsi): Don't coalesce pages into a physically contiguous region and
  *               just pass a vectored I/O list to the mexec assembly.
  */
-static mx_status_t vmo_coalesce_pages(mx_handle_t vmo_hdl, const size_t extra_bytes,
+static zx_status_t vmo_coalesce_pages(zx_handle_t vmo_hdl, const size_t extra_bytes,
                                       paddr_t* addr, uint8_t** vaddr, size_t* size) {
     DEBUG_ASSERT(addr);
-    if (!addr) return MX_ERR_INVALID_ARGS;
+    if (!addr) return ZX_ERR_INVALID_ARGS;
 
     DEBUG_ASSERT(size);
-    if (!size) return MX_ERR_INVALID_ARGS;
+    if (!size) return ZX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
     fbl::RefPtr<VmObjectDispatcher> vmo_dispatcher;
-    mx_status_t st =
-        up->GetDispatcherWithRights(vmo_hdl, MX_RIGHT_READ, &vmo_dispatcher);
-    if (st != MX_OK)
+    zx_status_t st =
+        up->GetDispatcherWithRights(vmo_hdl, ZX_RIGHT_READ, &vmo_dispatcher);
+    if (st != ZX_OK)
         return st;
 
     fbl::RefPtr<VmObject> vmo = vmo_dispatcher->vmo();
@@ -120,7 +120,7 @@ static mx_status_t vmo_coalesce_pages(mx_handle_t vmo_hdl, const size_t extra_by
 
         st = vmo->Read(dst_addr + offset, offset, bytes_remaining, &bytes_read);
 
-        if (st != MX_OK || bytes_read == 0) {
+        if (st != ZX_OK || bytes_read == 0) {
             // TODO(gkalsi): Free pages allocated by pmm_alloc_contiguous pages
             //               and return an error.
             panic("Failed to read to contiguous vmo");
@@ -137,7 +137,7 @@ static mx_status_t vmo_coalesce_pages(mx_handle_t vmo_hdl, const size_t extra_by
     if (vaddr)
         *vaddr = dst_addr;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static inline bool intervals_intersect(const void* start1, const size_t len1,
@@ -159,7 +159,7 @@ static inline bool intervals_intersect(const void* start1, const size_t len1,
 
 
 /* Takes a buffer to a bootimage and appends a section to the end of it */
-mx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
+zx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
                                     const uint8_t* section, const uint32_t section_length,
                                     const uint32_t type, const uint32_t extra,
                                     const uint32_t flags) {
@@ -169,7 +169,7 @@ mx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
         (hdr->extra != BOOTDATA_MAGIC) ||
         (hdr->flags != 0)) {
         // This buffer does not point to a bootimage.
-        return MX_ERR_WRONG_TYPE;
+        return ZX_ERR_WRONG_TYPE;
     }
 
     size_t total_len = hdr->length + sizeof(*hdr);
@@ -178,7 +178,7 @@ mx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
     // Make sure there's enough buffer space after the bootdata container to
     // append the new section.
     if ((total_len + new_section_length) > buflen) {
-        return MX_ERR_BUFFER_TOO_SMALL;
+        return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
     // Seek to the end of the bootimage.
@@ -196,10 +196,10 @@ mx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
 
     hdr->length += (uint32_t)new_section_length;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t bootdata_append_cmdline(user_ptr<const char> _cmdlinebuf,
+static zx_status_t bootdata_append_cmdline(user_ptr<const char> _cmdlinebuf,
                                            const size_t cmdlinebuf_size,
                                            uint8_t* bootimage_buffer,
                                            const size_t bootimage_buflen) {
@@ -210,12 +210,12 @@ static mx_status_t bootdata_append_cmdline(user_ptr<const char> _cmdlinebuf,
     // If the user passes us a command line that's longer than our limit, we
     // fail immediately.
     if (cmdlinebuf_size > CMDLINE_MAX) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     // No command line provided, nothing to be done.
     if (cmdlinebuf_size == 0) {
-        return MX_OK;
+        return ZX_OK;
     }
 
     // Allocate a buffer large enough to accomodate the whole command line.
@@ -224,7 +224,7 @@ static mx_status_t bootdata_append_cmdline(user_ptr<const char> _cmdlinebuf,
     auto deleter = fbl::unique_ptr<char[]>(new (&ac) char[CMDLINE_MAX]{});
     char* buffer = deleter.get();
     if (!ac.check()) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     // Copy contents from the user buffer to the local kernel buffer.
@@ -236,7 +236,7 @@ static mx_status_t bootdata_append_cmdline(user_ptr<const char> _cmdlinebuf,
     // terminator.
     const size_t cmdline_len = strnlen(buffer, cmdlinebuf_size) + 1;
     if (cmdline_len > CMDLINE_MAX) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     return bootdata_append_section(bootimage_buffer, bootimage_buflen,
@@ -245,15 +245,15 @@ static mx_status_t bootdata_append_cmdline(user_ptr<const char> _cmdlinebuf,
                                    BOOTDATA_CMDLINE, 0, 0);
 }
 
-mx_status_t sys_system_mexec(mx_handle_t kernel_vmo, mx_handle_t bootimage_vmo,
+zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo,
                              user_ptr<const char> _cmdline, uint32_t cmdline_len) {
-    mx_status_t result;
+    zx_status_t result;
 
     paddr_t new_kernel_addr;
     size_t new_kernel_len;
     result = vmo_coalesce_pages(kernel_vmo, 0, &new_kernel_addr, nullptr,
                                 &new_kernel_len);
-    if (result != MX_OK) {
+    if (result != ZX_OK) {
         return result;
     }
 
@@ -263,12 +263,12 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo, mx_handle_t bootimage_vmo,
     result = vmo_coalesce_pages(bootimage_vmo, kBootdataPlatformExtraBytes + cmdline_len,
                                 &new_bootimage_addr, &bootimage_buffer,
                                 &new_bootimage_len);
-    if (result != MX_OK) {
+    if (result != ZX_OK) {
         return result;
     }
 
     result = bootdata_append_cmdline(_cmdline, cmdline_len, bootimage_buffer, new_bootimage_len);
-    if (result != MX_OK) {
+    if (result != ZX_OK) {
         return result;
     }
 
@@ -282,17 +282,17 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo, mx_handle_t bootimage_vmo,
     // Allow the platform to patch the bootdata with any platform specific
     // sections before mexecing.
     result = platform_mexec_patch_bootdata(bootimage_buffer, new_bootimage_len);
-    if (result != MX_OK) {
+    if (result != ZX_OK) {
         panic("Error while patching platform bootdata.");
     }
 
     void* id_page_addr = 0x0;
     result = identity_page_allocate(&id_page_addr);
-    if (result != MX_OK) {
+    if (result != ZX_OK) {
         panic("Unable to allocate identity page");
     }
 
-    LTRACEF("mx_system_mexec allocated identity mapped page at %p\n",
+    LTRACEF("zx_system_mexec allocated identity mapped page at %p\n",
             id_page_addr);
 
     // We assume that when the system starts, only one CPU is running. We denote
@@ -352,5 +352,5 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo, mx_handle_t bootimage_vmo,
     platform_mexec(mexec_assembly, ops, new_bootimage_addr, new_bootimage_len);
 
     panic("Execution should never reach here\n");
-    return MX_OK;
+    return ZX_OK;
 }

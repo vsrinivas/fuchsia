@@ -4,20 +4,20 @@
 #include "libc.h"
 #include <errno.h>
 
-#define MX_PPID ((pid_t)2)
-#define MX_PID ((pid_t)3)
-#define MX_PGID ((pid_t)17)
-#define MX_SID ((pid_t)19)
-#define MX_UID ((uid_t)23)
-#define MX_GID ((gid_t)42)
+#define ZX_PPID ((pid_t)2)
+#define ZX_PID ((pid_t)3)
+#define ZX_PGID ((pid_t)17)
+#define ZX_SID ((pid_t)19)
+#define ZX_UID ((uid_t)23)
+#define ZX_GID ((gid_t)42)
 
 static gid_t stub_getegid(void) {
-    return MX_GID;
+    return ZX_GID;
 }
 weak_alias(stub_getegid, getegid);
 
 static gid_t stub_getgid(void) {
-    return MX_GID;
+    return ZX_GID;
 }
 weak_alias(stub_getgid, getgid);
 
@@ -31,7 +31,7 @@ weak_alias(stub_getgroups, getgroups);
 static int stub_getresgid(gid_t* rgid, gid_t* egid, gid_t* sgid) {
     if (!rgid || !egid || !sgid)
         return EFAULT;
-    *rgid = *egid = *sgid = MX_GID;
+    *rgid = *egid = *sgid = ZX_GID;
     return 0;
 }
 weak_alias(stub_getresgid, getresgid);
@@ -39,53 +39,53 @@ weak_alias(stub_getresgid, getresgid);
 static int stub_getresuid(uid_t* ruid, uid_t* euid, uid_t* suid) {
     if (!ruid || !euid || !suid)
         return EFAULT;
-    *ruid = *euid = *suid = MX_UID;
+    *ruid = *euid = *suid = ZX_UID;
     return 0;
 }
 weak_alias(stub_getresuid, getresuid);
 
 static pid_t stub_getpgid(pid_t pid) {
-    return MX_PGID;
+    return ZX_PGID;
 }
 weak_alias(stub_getpgid, getpgid);
 
 static pid_t stub_getpgrp(void) {
-    return MX_PGID;
+    return ZX_PGID;
 }
 weak_alias(stub_getpgrp, getpgrp);
 
 static pid_t stub_getpid(void) {
-    return MX_PID;
+    return ZX_PID;
 }
 weak_alias(stub_getpid, getpid);
 
 static pid_t stub_getppid(void) {
-    return MX_PPID;
+    return ZX_PPID;
 }
 weak_alias(stub_getppid, getppid);
 
 static pid_t stub_getsid(pid_t pid) {
-    return MX_SID;
+    return ZX_SID;
 }
 weak_alias(stub_getsid, getsid);
 
 static uid_t stub_geteuid(void) {
-    return MX_UID;
+    return ZX_UID;
 }
 weak_alias(stub_geteuid, geteuid);
 
 static uid_t stub_getuid(void) {
-    return MX_UID;
+    return ZX_UID;
 }
 weak_alias(stub_getuid, getuid);
 
 static pid_t stub_setsid(void) {
-    return MX_SID;
+    return ZX_SID;
 }
 weak_alias(stub_setsid, setsid);
 
 static int stub_setegid(gid_t egid) {
-    return MX_GID;
+    return ZX_GID;
 }
 weak_alias(stub_setegid, setegid);
 

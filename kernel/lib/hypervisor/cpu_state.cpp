@@ -19,8 +19,8 @@ struct percpu_state {
 static void percpu_task(void* arg) {
     auto state = static_cast<percpu_state*>(arg);
     uint cpu_num = arch_curr_cpu_num();
-    mx_status_t status = state->task(state->context, cpu_num);
-    if (status == MX_OK)
+    zx_status_t status = state->task(state->context, cpu_num);
+    if (status == ZX_OK)
         state->cpu_mask.fetch_or(1 << cpu_num);
 }
 

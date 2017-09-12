@@ -11,7 +11,7 @@
 #include <string.h>
 #include <sys/types.h>
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 // Filesystem test utilities
 

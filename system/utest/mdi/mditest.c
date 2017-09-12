@@ -11,9 +11,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include <magenta/boot/bootdata.h>
-#include <magenta/compiler.h>
-#include <magenta/syscalls.h>
+#include <zircon/boot/bootdata.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls.h>
 #include <mdi/mdi.h>
 #include <unittest/unittest.h>
 

@@ -7,7 +7,7 @@ config("svcfs_config") {
 }
 
 static_library("svcfs") {
-  # Don't forget to update rules.mk as well for the Magenta build.
+  # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "include/svcfs/svcfs.h",
     "svcfs.cpp",
@@ -16,8 +16,8 @@ static_library("svcfs") {
   public_configs = [ ":svcfs_config" ]
 
   public_deps = [
-    "//magenta/system/ulib/fs",
-    "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/fbl",
+    "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 }

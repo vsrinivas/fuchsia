@@ -10,7 +10,7 @@
  * Main entry point to the OS. Initializes modules in order and creates
  * the default thread.
  */
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <debug.h>
 #include <string.h>
 #include <app.h>

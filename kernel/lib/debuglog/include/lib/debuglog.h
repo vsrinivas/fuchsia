@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 #include <kernel/event.h>
 #include <kernel/mutex.h>
 #include <list.h>
@@ -75,8 +75,8 @@ static_assert(sizeof(dlog_record_t) == DLOG_MAX_RECORD, "");
 
 void dlog_reader_init(dlog_reader_t* rdr, void (*notify)(void*), void* cookie);
 void dlog_reader_destroy(dlog_reader_t* rdr);
-mx_status_t dlog_write(uint32_t flags, const void* ptr, size_t len);
-mx_status_t dlog_read(dlog_reader_t* rdr, uint32_t flags, void* ptr, size_t len, size_t* actual);
+zx_status_t dlog_write(uint32_t flags, const void* ptr, size_t len);
+zx_status_t dlog_read(dlog_reader_t* rdr, uint32_t flags, void* ptr, size_t len, size_t* actual);
 
 // bluescreen_init should be called at the "start" of a fatal fault or
 // panic to ensure that the fault output (via kernel printf/dprintf)

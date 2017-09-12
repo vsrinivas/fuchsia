@@ -27,6 +27,6 @@ MODULE_SRCS := \
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync system/ulib/port
 
-MODULE_LIBS := system/ulib/mxio system/ulib/magenta system/ulib/c
+MODULE_LIBS := system/ulib/fdio system/ulib/zircon system/ulib/c
 
 include make/module.mk

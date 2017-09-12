@@ -27,10 +27,10 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <magenta/assert.h>
-#include <magenta/compiler.h>
-#include <magenta/syscalls/object.h>
-#include <magenta/types.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/types.h>
 
 #include <trace-engine/types.h>
 
@@ -166,14 +166,14 @@ void trace_context_register_current_thread(
 // This function is thread-safe.
 void trace_context_register_thread(
     trace_context_t* context,
-    mx_koid_t process_koid, mx_koid_t thread_koid,
+    zx_koid_t process_koid, zx_koid_t thread_koid,
     trace_thread_ref_t* out_ref);
 
 // Registers a thread and returns its thread ref.
 // Helper for |trace_context_register_thread()|.
 inline trace_thread_ref_t trace_context_make_registered_thread(
     trace_context_t* context,
-    mx_koid_t process_koid, mx_koid_t thread_koid) {
+    zx_koid_t process_koid, zx_koid_t thread_koid) {
     trace_thread_ref_t ref;
     trace_context_register_thread(context, process_koid, thread_koid, &ref);
     return ref;
@@ -191,7 +191,7 @@ inline trace_thread_ref_t trace_context_make_registered_thread(
 // This function is thread-safe.
 void trace_context_write_kernel_object_record(
     trace_context_t* context,
-    mx_koid_t koid, mx_obj_type_t type,
+    zx_koid_t koid, zx_obj_type_t type,
     const trace_string_ref_t* name_ref,
     const trace_arg_t* args, size_t num_args);
 
@@ -206,7 +206,7 @@ void trace_context_write_kernel_object_record(
 // This function is thread-safe.
 void trace_context_write_kernel_object_record_for_handle(
     trace_context_t* context,
-    mx_handle_t handle,
+    zx_handle_t handle,
     const trace_arg_t* args, size_t num_args);
 
 // Writes a kernel object record for the specified process into the trace buffer.
@@ -219,7 +219,7 @@ void trace_context_write_kernel_object_record_for_handle(
 // This function is thread-safe.
 void trace_context_write_process_info_record(
     trace_context_t* context,
-    mx_koid_t process_koid,
+    zx_koid_t process_koid,
     const trace_string_ref_t* process_name_ref);
 
 // Writes a kernel object record for the specified thread into the trace buffer.
@@ -233,7 +233,7 @@ void trace_context_write_process_info_record(
 // This function is thread-safe.
 void trace_context_write_thread_info_record(
     trace_context_t* context,
-    mx_koid_t process_koid, mx_koid_t thread_koid,
+    zx_koid_t process_koid, zx_koid_t thread_koid,
     const trace_string_ref_t* thread_name_ref);
 
 // Writes a context switch record into the trace buffer.
@@ -545,8 +545,8 @@ void trace_context_write_string_record(
 void trace_context_write_thread_record(
     trace_context_t* context,
     trace_thread_index_t index,
-    mx_koid_t process_koid,
-    mx_koid_t thread_koid);
+    zx_koid_t process_koid,
+    zx_koid_t thread_koid);
 
 // Allocates space for a record in the trace buffer.
 //

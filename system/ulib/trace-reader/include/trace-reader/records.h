@@ -6,10 +6,10 @@
 
 #include <stdint.h>
 
-#include <magenta/assert.h>
-#include <magenta/compiler.h>
-#include <magenta/syscalls/object.h>
-#include <magenta/types.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/types.h>
 
 #include <fbl/macros.h>
 #include <fbl/new.h>
@@ -25,8 +25,8 @@ namespace trace {
 class ProcessThread final {
 public:
     constexpr ProcessThread()
-        : process_koid_(MX_KOID_INVALID), thread_koid_(MX_KOID_INVALID) {}
-    constexpr explicit ProcessThread(mx_koid_t process_koid, mx_koid_t thread_koid)
+        : process_koid_(ZX_KOID_INVALID), thread_koid_(ZX_KOID_INVALID) {}
+    constexpr explicit ProcessThread(zx_koid_t process_koid, zx_koid_t thread_koid)
         : process_koid_(process_koid), thread_koid_(thread_koid) {}
     constexpr ProcessThread(const ProcessThread& other)
         : process_koid_(other.process_koid_), thread_koid_(other.thread_koid_) {}
@@ -51,8 +51,8 @@ public:
         return thread_koid_ < other.thread_koid_;
     }
 
-    constexpr mx_koid_t process_koid() const { return process_koid_; }
-    constexpr mx_koid_t thread_koid() const { return thread_koid_; }
+    constexpr zx_koid_t process_koid() const { return process_koid_; }
+    constexpr zx_koid_t thread_koid() const { return thread_koid_; }
 
     ProcessThread& operator=(const ProcessThread& other) {
         process_koid_ = other.process_koid_;
@@ -63,8 +63,8 @@ public:
     fbl::String ToString() const;
 
 private:
-    mx_koid_t process_koid_;
-    mx_koid_t thread_koid_;
+    zx_koid_t process_koid_;
+    zx_koid_t thread_koid_;
 };
 
 // A typed argument value.
@@ -94,7 +94,7 @@ public:
         return ArgumentValue(PointerTag(), value);
     }
 
-    static ArgumentValue MakeKoid(mx_koid_t value) {
+    static ArgumentValue MakeKoid(zx_koid_t value) {
         return ArgumentValue(KoidTag(), value);
     }
 
@@ -111,42 +111,42 @@ public:
     ArgumentType type() const { return type_; }
 
     int32_t GetInt32() const {
-        MX_DEBUG_ASSERT(type_ == ArgumentType::kInt32);
+        ZX_DEBUG_ASSERT(type_ == ArgumentType::kInt32);
         return int32_;
     }
 
     uint32_t GetUint32() const {
-        MX_DEBUG_ASSERT(type_ == ArgumentType::kUint32);
+        ZX_DEBUG_ASSERT(type_ == ArgumentType::kUint32);
         return uint32_;
     }
 
     int64_t GetInt64() const {
-        MX_DEBUG_ASSERT(type_ == ArgumentType::kInt64);
+        ZX_DEBUG_ASSERT(type_ == ArgumentType::kInt64);
         return int64_;
     }
 
     uint64_t GetUint64() const {
-        MX_DEBUG_ASSERT(type_ == ArgumentType::kUint64);
+        ZX_DEBUG_ASSERT(type_ == ArgumentType::kUint64);
         return uint64_;
     }
 
     double GetDouble() const {
-        MX_DEBUG_ASSERT(type_ == ArgumentType::kDouble);
+        ZX_DEBUG_ASSERT(type_ == ArgumentType::kDouble);
         return double_;
     }
 
     const fbl::String& GetString() const {
-        MX_DEBUG_ASSERT(type_ == ArgumentType::kString);
+        ZX_DEBUG_ASSERT(type_ == ArgumentType::kString);
         return string_;
     }
 
     uint64_t GetPointer() const {
-        MX_DEBUG_ASSERT(type_ == ArgumentType::kPointer);
+        ZX_DEBUG_ASSERT(type_ == ArgumentType::kPointer);
         return pointer_;
     }
 
-    mx_koid_t GetKoid() const {
-        MX_DEBUG_ASSERT(type_ == ArgumentType::kKoid);
+    zx_koid_t GetKoid() const {
+        ZX_DEBUG_ASSERT(type_ == ArgumentType::kKoid);
         return koid_;
     }
 
@@ -182,7 +182,7 @@ private:
     explicit ArgumentValue(PointerTag, uint64_t pointer)
         : type_(ArgumentType::kPointer), pointer_(pointer) {}
 
-    explicit ArgumentValue(KoidTag, mx_koid_t koid)
+    explicit ArgumentValue(KoidTag, zx_koid_t koid)
         : type_(ArgumentType::kKoid), koid_(koid) {}
 
     void Destroy();
@@ -197,7 +197,7 @@ private:
         double double_;
         fbl::String string_;
         uint64_t pointer_;
-        mx_koid_t koid_;
+        zx_koid_t koid_;
     };
 
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ArgumentValue);
@@ -252,12 +252,12 @@ public:
           provider_section_(fbl::move(provider_section)) {}
 
     const ProviderInfo& GetProviderInfo() const {
-        MX_DEBUG_ASSERT(type_ == MetadataType::kProviderInfo);
+        ZX_DEBUG_ASSERT(type_ == MetadataType::kProviderInfo);
         return provider_info_;
     };
 
     const ProviderSection& GetProviderSection() const {
-        MX_DEBUG_ASSERT(type_ == MetadataType::kProviderSection);
+        ZX_DEBUG_ASSERT(type_ == MetadataType::kProviderSection);
         return provider_section_;
     }
 
@@ -377,52 +377,52 @@ public:
     }
 
     const Instant& GetInstant() const {
-        MX_DEBUG_ASSERT(type_ == EventType::kInstant);
+        ZX_DEBUG_ASSERT(type_ == EventType::kInstant);
         return instant_;
     }
 
     const Counter& GetCounter() const {
-        MX_DEBUG_ASSERT(type_ == EventType::kCounter);
+        ZX_DEBUG_ASSERT(type_ == EventType::kCounter);
         return counter_;
     }
 
     const DurationBegin& GetDurationBegin() const {
-        MX_DEBUG_ASSERT(type_ == EventType::kDurationBegin);
+        ZX_DEBUG_ASSERT(type_ == EventType::kDurationBegin);
         return duration_begin_;
     }
 
     const DurationEnd& GetDurationEnd() const {
-        MX_DEBUG_ASSERT(type_ == EventType::kDurationEnd);
+        ZX_DEBUG_ASSERT(type_ == EventType::kDurationEnd);
         return duration_end_;
     }
 
     const AsyncBegin& GetAsyncBegin() const {
-        MX_DEBUG_ASSERT(type_ == EventType::kAsyncBegin);
+        ZX_DEBUG_ASSERT(type_ == EventType::kAsyncBegin);
         return async_begin_;
     };
 
     const AsyncInstant& GetAsyncInstant() const {
-        MX_DEBUG_ASSERT(type_ == EventType::kAsyncInstant);
+        ZX_DEBUG_ASSERT(type_ == EventType::kAsyncInstant);
         return async_instant_;
     }
 
     const AsyncEnd& GetAsyncEnd() const {
-        MX_DEBUG_ASSERT(type_ == EventType::kAsyncEnd);
+        ZX_DEBUG_ASSERT(type_ == EventType::kAsyncEnd);
         return async_end_;
     }
 
     const FlowBegin& GetFlowBegin() const {
-        MX_DEBUG_ASSERT(type_ == EventType::kFlowBegin);
+        ZX_DEBUG_ASSERT(type_ == EventType::kFlowBegin);
         return flow_begin_;
     }
 
     const FlowStep& GetFlowStep() const {
-        MX_DEBUG_ASSERT(type_ == EventType::kFlowStep);
+        ZX_DEBUG_ASSERT(type_ == EventType::kFlowStep);
         return flow_step_;
     }
 
     const FlowEnd& GetFlowEnd() const {
-        MX_DEBUG_ASSERT(type_ == EventType::kFlowEnd);
+        ZX_DEBUG_ASSERT(type_ == EventType::kFlowEnd);
         return flow_end_;
     }
 
@@ -490,8 +490,8 @@ public:
 
     // Kernel Object record data.
     struct KernelObject {
-        mx_koid_t koid;
-        mx_obj_type_t object_type;
+        zx_koid_t koid;
+        zx_obj_type_t object_type;
         fbl::String name;
         fbl::Vector<Argument> arguments;
     };
@@ -559,42 +559,42 @@ public:
     }
 
     const Metadata& GetMetadata() const {
-        MX_DEBUG_ASSERT(type_ == RecordType::kMetadata);
+        ZX_DEBUG_ASSERT(type_ == RecordType::kMetadata);
         return metadata_;
     }
 
     const Initialization& GetInitialization() const {
-        MX_DEBUG_ASSERT(type_ == RecordType::kInitialization);
+        ZX_DEBUG_ASSERT(type_ == RecordType::kInitialization);
         return initialization_;
     }
 
     const String& GetString() const {
-        MX_DEBUG_ASSERT(type_ == RecordType::kString);
+        ZX_DEBUG_ASSERT(type_ == RecordType::kString);
         return string_;
     }
 
     const Thread& GetThread() const {
-        MX_DEBUG_ASSERT(type_ == RecordType::kThread);
+        ZX_DEBUG_ASSERT(type_ == RecordType::kThread);
         return thread_;
     };
 
     const Event& GetEvent() const {
-        MX_DEBUG_ASSERT(type_ == RecordType::kEvent);
+        ZX_DEBUG_ASSERT(type_ == RecordType::kEvent);
         return event_;
     }
 
     const KernelObject& GetKernelObject() const {
-        MX_DEBUG_ASSERT(type_ == RecordType::kKernelObject);
+        ZX_DEBUG_ASSERT(type_ == RecordType::kKernelObject);
         return kernel_object_;
     }
 
     const ContextSwitch& GetContextSwitch() const {
-        MX_DEBUG_ASSERT(type_ == RecordType::kContextSwitch);
+        ZX_DEBUG_ASSERT(type_ == RecordType::kContextSwitch);
         return context_switch_;
     }
 
     const Log& GetLog() const {
-        MX_DEBUG_ASSERT(type_ == RecordType::kLog);
+        ZX_DEBUG_ASSERT(type_ == RecordType::kLog);
         return log_;
     }
 

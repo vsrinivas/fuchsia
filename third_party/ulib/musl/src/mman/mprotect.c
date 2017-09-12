@@ -1,26 +1,26 @@
 #include "libc.h"
-#include "magenta_impl.h"
+#include "zircon_impl.h"
 #include <errno.h>
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 #include <sys/mman.h>
 
 int __mprotect(void* addr, size_t len, int prot) {
     uintptr_t ptr = (uintptr_t)addr;
-    uint32_t mx_prot = 0;
-    mx_prot |= (prot & PROT_READ) ? MX_VM_FLAG_PERM_READ : 0;
-    mx_prot |= (prot & PROT_WRITE) ? MX_VM_FLAG_PERM_WRITE : 0;
-    mx_prot |= (prot & PROT_EXEC) ? MX_VM_FLAG_PERM_EXECUTE : 0;
-    mx_status_t status = _mx_vmar_protect(_mx_vmar_root_self(), ptr, len, mx_prot);
+    uint32_t zx_prot = 0;
+    zx_prot |= (prot & PROT_READ) ? ZX_VM_FLAG_PERM_READ : 0;
+    zx_prot |= (prot & PROT_WRITE) ? ZX_VM_FLAG_PERM_WRITE : 0;
+    zx_prot |= (prot & PROT_EXEC) ? ZX_VM_FLAG_PERM_EXECUTE : 0;
+    zx_status_t status = _zx_vmar_protect(_zx_vmar_root_self(), ptr, len, zx_prot);
     if (!status)
         return 0;
 
     switch (status) {
-    case MX_ERR_ACCESS_DENIED:
+    case ZX_ERR_ACCESS_DENIED:
         errno = EACCES;
         break;
-    case MX_ERR_INVALID_ARGS:
+    case ZX_ERR_INVALID_ARGS:
         errno = ENOTSUP;
         break;
     default:

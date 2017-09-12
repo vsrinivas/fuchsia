@@ -12,7 +12,7 @@
 
 class GuestPhysicalAddressSpace {
 public:
-    static mx_status_t Create(fbl::RefPtr<VmObject> guest_phys_mem,
+    static zx_status_t Create(fbl::RefPtr<VmObject> guest_phys_mem,
                               fbl::unique_ptr<GuestPhysicalAddressSpace>* gpas);
 
     ~GuestPhysicalAddressSpace();
@@ -22,10 +22,10 @@ public:
 
 #if ARCH_X86_64
     paddr_t Pml4Address() { return paspace_->arch_aspace().pt_phys(); }
-    mx_status_t MapApicPage(vaddr_t guest_paddr, paddr_t host_paddr);
+    zx_status_t MapApicPage(vaddr_t guest_paddr, paddr_t host_paddr);
 #endif
-    mx_status_t UnmapRange(vaddr_t guest_paddr, size_t size);
-    mx_status_t GetPage(vaddr_t guest_paddr, paddr_t* host_paddr);
+    zx_status_t UnmapRange(vaddr_t guest_paddr, size_t size);
+    zx_status_t GetPage(vaddr_t guest_paddr, paddr_t* host_paddr);
 
 private:
     fbl::RefPtr<VmAspace> paspace_;
@@ -34,8 +34,8 @@ private:
     explicit GuestPhysicalAddressSpace(fbl::RefPtr<VmObject> guest_phys_mem);
 };
 
-static inline mx_status_t guest_lookup_page(void* context, size_t offset, size_t index,
+static inline zx_status_t guest_lookup_page(void* context, size_t offset, size_t index,
                                             paddr_t pa) {
     *static_cast<paddr_t*>(context) = pa;
-    return MX_OK;
+    return ZX_OK;
 }

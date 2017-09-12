@@ -9,16 +9,16 @@
 #include <object/pci_interrupt_dispatcher.h>
 
 #include <kernel/auto_lock.h>
-#include <magenta/rights.h>
+#include <zircon/rights.h>
 #include <fbl/alloc_checker.h>
 #include <object/pci_device_dispatcher.h>
 
 PciInterruptDispatcher::~PciInterruptDispatcher() {
     if (device_) {
         // Unregister our handler.
-        __UNUSED mx_status_t ret;
+        __UNUSED zx_status_t ret;
         ret = device_->RegisterIrqHandler(irq_id_, nullptr, nullptr);
-        DEBUG_ASSERT(ret == MX_OK);  // This should never fail.
+        DEBUG_ASSERT(ret == ZX_OK);  // This should never fail.
 
         // Release our reference to our device.
         device_ = nullptr;
@@ -40,15 +40,15 @@ pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(const PcieDevice& dev
     }
 }
 
-mx_status_t PciInterruptDispatcher::Create(
+zx_status_t PciInterruptDispatcher::Create(
         const fbl::RefPtr<PcieDevice>& device,
         uint32_t irq_id,
         bool maskable,
-        mx_rights_t* out_rights,
+        zx_rights_t* out_rights,
         fbl::RefPtr<Dispatcher>* out_interrupt) {
     // Sanity check our args
     if (!device || !out_rights || !out_interrupt) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     fbl::AllocChecker ac;
@@ -56,16 +56,16 @@ mx_status_t PciInterruptDispatcher::Create(
     auto interrupt_dispatcher = new (&ac) PciInterruptDispatcher(irq_id, maskable);
     fbl::RefPtr<Dispatcher> dispatcher = fbl::AdoptRef<Dispatcher>(interrupt_dispatcher);
     if (!ac.check())
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     // Stash reference to the underlying device in the dispatcher we just
     // created, then attempt to register our dispatcher with the bus driver.
     DEBUG_ASSERT(device);
     interrupt_dispatcher->device_ = device;
-    mx_status_t result = device->RegisterIrqHandler(irq_id,
+    zx_status_t result = device->RegisterIrqHandler(irq_id,
                                                            IrqThunk,
                                                            interrupt_dispatcher);
-    if (result != MX_OK) {
+    if (result != ZX_OK) {
         interrupt_dispatcher->device_ = nullptr;
         return result;
     }
@@ -77,21 +77,21 @@ mx_status_t PciInterruptDispatcher::Create(
         device->UnmaskIrq(irq_id);
     }
     *out_interrupt = fbl::move(dispatcher);
-    *out_rights    = MX_DEFAULT_PCI_INTERRUPT_RIGHTS;
-    return MX_OK;
+    *out_rights    = ZX_DEFAULT_PCI_INTERRUPT_RIGHTS;
+    return ZX_OK;
 }
 
-mx_status_t PciInterruptDispatcher::InterruptComplete() {
+zx_status_t PciInterruptDispatcher::InterruptComplete() {
     DEBUG_ASSERT(device_ != nullptr);
     unsignal();
 
     if (maskable_)
         device_->UnmaskIrq(irq_id_);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t PciInterruptDispatcher::UserSignal() {
+zx_status_t PciInterruptDispatcher::UserSignal() {
     DEBUG_ASSERT(device_ != nullptr);
 
     if (maskable_)
@@ -99,7 +99,7 @@ mx_status_t PciInterruptDispatcher::UserSignal() {
 
     signal(true);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 #endif  // if WITH_DEV_PCIE

@@ -7,7 +7,7 @@ config("audio-utils-config") {
 }
 
 source_set("audio-utils") {
-  # Don't forget to update rules.mk as well for the Magenta build.
+  # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "audio-device-stream.cpp",
     "audio-input.cpp",
@@ -19,9 +19,9 @@ source_set("audio-utils") {
   ]
 
   public_deps = [
-    "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/mxcpp",
-    "//magenta/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxcpp",
+    "//zircon/system/ulib/fbl",
   ]
 
   public_configs = [ ":audio-utils-config" ]

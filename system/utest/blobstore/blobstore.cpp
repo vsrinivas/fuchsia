@@ -24,10 +24,10 @@
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
 #include <fvm/fvm.h>
-#include <magenta/device/device.h>
-#include <magenta/device/ramdisk.h>
-#include <magenta/device/vfs.h>
-#include <magenta/syscalls.h>
+#include <zircon/device/device.h>
+#include <zircon/device/ramdisk.h>
+#include <zircon/device/vfs.h>
+#include <zircon/syscalls.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
@@ -35,7 +35,7 @@
 #include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
-#define MOUNT_PATH "/tmp/magenta-blobstore-test"
+#define MOUNT_PATH "/tmp/zircon-blobstore-test"
 
 using digest::Digest;
 using digest::MerkleTree;
@@ -90,16 +90,16 @@ static bool CheckBlobstoreInfo(const char* mount_path) {
 // Unmounts a blobstore and removes the backing ramdisk device.
 template <fs_test_type_t TestType>
 static int EndBlobstoreTest(const char* ramdisk_path, const char* fvm_path) {
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
 
     ASSERT_TRUE(CheckBlobstoreInfo(MOUNT_PATH));
 
-    if ((status = umount(MOUNT_PATH)) != MX_OK) {
+    if ((status = umount(MOUNT_PATH)) != ZX_OK) {
         fprintf(stderr, "Failed to unmount filesystem: %d\n", status);
         return -1;
     }
 
-    if ((status = fsck(ramdisk_path, DISK_FORMAT_BLOBFS, &test_fsck_options, launch_stdio_sync)) != MX_OK) {
+    if ((status = fsck(ramdisk_path, DISK_FORMAT_BLOBFS, &test_fsck_options, launch_stdio_sync)) != ZX_OK) {
         fprintf(stderr, "Filesystem fsck failed: %d\n", status);
         return -1;
     }
@@ -120,9 +120,9 @@ static int MountBlobstore(const char* ramdisk_path) {
 
     // fd consumed by mount. By default, mount waits until the filesystem is
     // ready to accept commands.
-    mx_status_t status;
+    zx_status_t status;
     if ((status = mount(fd, MOUNT_PATH, DISK_FORMAT_BLOBFS, &default_mount_options,
-                        launch_stdio_async)) != MX_OK) {
+                        launch_stdio_async)) != ZX_OK) {
         fprintf(stderr, "Could not mount blobstore: %d\n", status);
         destroy_ramdisk(ramdisk_path);
         return -1;
@@ -155,7 +155,7 @@ static int StartBlobstoreTest(uint64_t blk_size, uint64_t blk_count, char* ramdi
         if (fd < 0) {
             fprintf(stderr, "[FAILED]: Could not open test disk\n");
             return -1;
-        } else if (fvm_init(fd, slice_size) != MX_OK) {
+        } else if (fvm_init(fd, slice_size) != ZX_OK) {
             fprintf(stderr, "[FAILED]: Could not format disk with FVM\n");
             return -1;
         } else if (ioctl_device_bind(fd, FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)) < 0) {
@@ -200,9 +200,9 @@ static int StartBlobstoreTest(uint64_t blk_size, uint64_t blk_count, char* ramdi
         close(fd);
     }
 
-    mx_status_t status;
+    zx_status_t status;
     if ((status = mkfs(ramdisk_path_out, DISK_FORMAT_BLOBFS, launch_stdio_sync,
-                       &default_mkfs_options)) != MX_OK) {
+                       &default_mkfs_options)) != ZX_OK) {
         fprintf(stderr, "Could not mkfs blobstore: %d", status);
         destroy_ramdisk(ramdisk_path_out);
         return -1;
@@ -308,7 +308,7 @@ static bool GenerateBlob(size_t size_data, fbl::unique_ptr<blob_info_t>* out) {
     EXPECT_EQ(ac.check(), true);
     info->data.reset(new (&ac) char[size_data]);
     EXPECT_EQ(ac.check(), true);
-    static unsigned int seed = static_cast<unsigned int>(mx_ticks_get());
+    static unsigned int seed = static_cast<unsigned int>(zx_ticks_get());
 
     for (size_t i = 0; i < size_data; i++) {
         info->data[i] = (char)rand_r(&seed);
@@ -326,7 +326,7 @@ static bool GenerateBlob(size_t size_data, fbl::unique_ptr<blob_info_t>* out) {
     Digest digest;
     ASSERT_EQ(MerkleTree::Create(&info->data[0], info->size_data, &info->merkle[0],
                                  info->size_merkle, &digest),
-              MX_OK, "Couldn't create Merkle Tree");
+              ZX_OK, "Couldn't create Merkle Tree");
     strcpy(info->path, MOUNT_PATH "/");
     size_t prefix_len = strlen(info->path);
     digest.ToString(info->path + prefix_len, sizeof(info->path) - prefix_len);
@@ -334,7 +334,7 @@ static bool GenerateBlob(size_t size_data, fbl::unique_ptr<blob_info_t>* out) {
     // Sanity-check the merkle tree
     ASSERT_EQ(MerkleTree::Verify(&info->data[0], info->size_data, &info->merkle[0],
                                  info->size_merkle, 0, info->size_data, digest),
-              MX_OK, "Failed to validate Merkle Tree");
+              ZX_OK, "Failed to validate Merkle Tree");
 
     *out = fbl::move(info);
     return true;
@@ -733,7 +733,7 @@ static bool CreateUmountRemountSmall(void) {
                              info->data.get(), info->size_data, &fd));
         // Close fd, unmount filesystem
         ASSERT_EQ(close(fd), 0);
-        ASSERT_EQ(umount(MOUNT_PATH), MX_OK, "Could not unmount blobstore");
+        ASSERT_EQ(umount(MOUNT_PATH), ZX_OK, "Could not unmount blobstore");
         ASSERT_EQ(MountBlobstore(ramdisk_path), 0, "Could not re-mount blobstore");
 
         fd = open(info->path, O_RDONLY);
@@ -876,7 +876,7 @@ static bool CreateUmountRemountLarge(void) {
     // TODO(smklein): Here, and elsewhere in this file, remove this source
     // of randomness to make the unit test deterministic -- fuzzing should
     // be the tool responsible for introducing randomness into the system.
-    unsigned int seed = static_cast<unsigned int>(mx_ticks_get());
+    unsigned int seed = static_cast<unsigned int>(zx_ticks_get());
     unittest_printf("unmount_remount test using seed: %u\n", seed);
 
     // Do some operations...
@@ -907,7 +907,7 @@ static bool CreateUmountRemountLarge(void) {
     }
 
     // Unmount, remount
-    ASSERT_EQ(umount(MOUNT_PATH), MX_OK, "Could not unmount blobstore");
+    ASSERT_EQ(umount(MOUNT_PATH), ZX_OK, "Could not unmount blobstore");
     ASSERT_EQ(MountBlobstore(ramdisk_path), 0, "Could not re-mount blobstore");
 
     for (auto& state : bl.list) {
@@ -931,7 +931,7 @@ static bool CreateUmountRemountLarge(void) {
 
 int unmount_remount_thread(void* arg) {
     blob_list_t* bl = static_cast<blob_list_t*>(arg);
-    unsigned int seed = static_cast<unsigned int>(mx_ticks_get());
+    unsigned int seed = static_cast<unsigned int>(zx_ticks_get());
     unittest_printf("unmount_remount thread using seed: %u\n", seed);
 
     // Do some operations...
@@ -992,7 +992,7 @@ static bool CreateUmountRemountLargeMultithreaded(void) {
     }
 
     // Unmount, remount
-    ASSERT_EQ(umount(MOUNT_PATH), MX_OK, "Could not unmount blobstore");
+    ASSERT_EQ(umount(MOUNT_PATH), ZX_OK, "Could not unmount blobstore");
     ASSERT_EQ(MountBlobstore(ramdisk_path), 0, "Could not re-mount blobstore");
 
     for (auto& state : bl.list) {
@@ -1409,7 +1409,7 @@ static bool ResizePartition(void) {
     }
 
     // Remount partition
-    ASSERT_EQ(umount(MOUNT_PATH), MX_OK, "Could not unmount blobstore");
+    ASSERT_EQ(umount(MOUNT_PATH), ZX_OK, "Could not unmount blobstore");
     ASSERT_EQ(MountBlobstore(ramdisk_path), 0, "Could not re-mount blobstore");
 
     DIR* dir = opendir(MOUNT_PATH);

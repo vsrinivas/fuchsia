@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <magenta/device/ioctl.h>
-#include <magenta/device/ioctl-wrapper.h>
-#include <magenta/compiler.h>
+#include <zircon/device/ioctl.h>
+#include <zircon/device/ioctl-wrapper.h>
+#include <zircon/compiler.h>
 #include <stddef.h>
 
 __BEGIN_CDECLS;

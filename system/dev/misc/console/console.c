@@ -6,8 +6,8 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,7 +18,7 @@
 #define FIFOMASK (FIFOSIZE - 1)
 
 typedef struct console_ctx {
-    mx_device_t* mxdev;
+    zx_device_t* mxdev;
 } console_device_t;
 
 static struct {
@@ -30,13 +30,13 @@ static struct {
     .lock = MTX_INIT,
 };
 
-static mx_status_t fifo_read(uint8_t* out) {
+static zx_status_t fifo_read(uint8_t* out) {
     if (fifo.head == fifo.tail) {
         return -1;
     }
     *out = fifo.data[fifo.tail];
     fifo.tail = (fifo.tail + 1) & FIFOMASK;
-    return MX_OK;
+    return ZX_OK;
 }
 
 static void fifo_write(uint8_t x) {
@@ -48,10 +48,10 @@ static void fifo_write(uint8_t x) {
 }
 
 static int debug_reader(void* arg) {
-    mx_device_t* dev = arg;
+    zx_device_t* dev = arg;
     uint8_t ch;
     for (;;) {
-        if (mx_debug_read(get_root_resource(), (void*)&ch, 1) == 1) {
+        if (zx_debug_read(get_root_resource(), (void*)&ch, 1) == 1) {
             mtx_lock(&fifo.lock);
             if (fifo.head == fifo.tail) {
                 device_state_set(dev, DEV_STATE_READABLE);
@@ -63,7 +63,7 @@ static int debug_reader(void* arg) {
     return 0;
 }
 
-static mx_status_t console_read(void* ctx, void* buf, size_t count, mx_off_t off, size_t* actual) {
+static zx_status_t console_read(void* ctx, void* buf, size_t count, zx_off_t off, size_t* actual) {
     console_device_t* console = ctx;
 
     uint8_t* data = buf;
@@ -79,21 +79,21 @@ static mx_status_t console_read(void* ctx, void* buf, size_t count, mx_off_t off
     mtx_unlock(&fifo.lock);
     ssize_t length = data - (uint8_t*)buf;
     if (length == 0) {
-        return MX_ERR_SHOULD_WAIT;
+        return ZX_ERR_SHOULD_WAIT;
     }
     *actual = length;
-    return MX_OK;
+    return ZX_OK;
 }
 
 #define MAX_WRITE_SIZE 256
 
-static mx_status_t console_write(void* ctx, const void* buf, size_t count, mx_off_t off, size_t* actual) {
+static zx_status_t console_write(void* ctx, const void* buf, size_t count, zx_off_t off, size_t* actual) {
     const void* ptr = buf;
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
     size_t total = 0;
     while (count > 0) {
         size_t xfer = (count > MAX_WRITE_SIZE) ? MAX_WRITE_SIZE : count;
-        if ((status = mx_debug_write(ptr, xfer)) < 0) {
+        if ((status = zx_debug_write(ptr, xfer)) < 0) {
             break;
         }
         ptr += xfer;
@@ -102,7 +102,7 @@ static mx_status_t console_write(void* ctx, const void* buf, size_t count, mx_of
     }
     if (total > 0) {
         *actual = total;
-        status = MX_OK;
+        status = ZX_OK;
      }
      return status;
 }
@@ -112,17 +112,17 @@ static void console_release(void* ctx) {
     free(console);
 }
 
-static mx_protocol_device_t console_device_proto = {
+static zx_protocol_device_t console_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .read = console_read,
     .write = console_write,
     .release = console_release,
 };
 
-static mx_status_t console_bind(void* ctx, mx_device_t* parent, void** cookie) {
+static zx_status_t console_bind(void* ctx, zx_device_t* parent, void** cookie) {
     console_device_t* console = calloc(1, sizeof(console_device_t));
     if (!console) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
@@ -131,8 +131,8 @@ static mx_status_t console_bind(void* ctx, mx_device_t* parent, void** cookie) {
         .ops = &console_device_proto,
     };
 
-    mx_status_t status = device_add(parent, &args, &console->mxdev);
-    if (status != MX_OK) {
+    zx_status_t status = device_add(parent, &args, &console->mxdev);
+    if (status != ZX_OK) {
         printf("console: device_add() failed\n");
         free(console);
         return status;
@@ -141,14 +141,14 @@ static mx_status_t console_bind(void* ctx, mx_device_t* parent, void** cookie) {
     thrd_t t;
     thrd_create_with_name(&t, debug_reader, console->mxdev, "debug-reader");
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_driver_ops_t console_driver_ops = {
+static zx_driver_ops_t console_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = console_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(console, console_driver_ops, "magenta", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT),
-MAGENTA_DRIVER_END(console)
+ZIRCON_DRIVER_BEGIN(console, console_driver_ops, "zircon", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
+ZIRCON_DRIVER_END(console)

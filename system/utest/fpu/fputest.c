@@ -9,8 +9,8 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include <magenta/compiler.h>
-#include <magenta/syscalls.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 
 #define THREAD_COUNT 8
@@ -63,7 +63,7 @@ bool fpu_test(void) {
     /* test lazy fpu load on separate thread */
     thrd_t t[THREAD_COUNT];
     double val[countof(t)];
-    char name[MX_MAX_NAME_LEN];
+    char name[ZX_MAX_NAME_LEN];
 
     unittest_printf("creating %zu floating point threads\n", countof(t));
     for (unsigned int i = 0; i < countof(t); i++) {

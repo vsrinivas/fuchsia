@@ -9,7 +9,7 @@
 
 #include <arch/x86.h>
 #include <kernel/atomic.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <stdbool.h>
 
 __BEGIN_CDECLS

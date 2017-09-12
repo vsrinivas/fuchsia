@@ -14,8 +14,8 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include "block.h"
 #include "device.h"
@@ -28,23 +28,23 @@
 
 // implement driver object:
 
-extern "C" mx_status_t virtio_bind(void* ctx, mx_device_t* device, void** cookie) {
+extern "C" zx_status_t virtio_bind(void* ctx, zx_device_t* device, void** cookie) {
     LTRACEF("device %p\n", device);
-    mx_status_t status;
+    zx_status_t status;
     pci_protocol_t pci;
 
     /* grab the pci device and configuration */
-    if (device_get_protocol(device, MX_PROTOCOL_PCI, &pci)) {
+    if (device_get_protocol(device, ZX_PROTOCOL_PCI, &pci)) {
         TRACEF("no pci protocol\n");
         return -1;
     }
 
     const pci_config_t* config;
     size_t config_size;
-    mx_handle_t config_handle = MX_HANDLE_INVALID;
-    status = pci_map_resource(&pci, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
+    zx_handle_t config_handle = ZX_HANDLE_INVALID;
+    status = pci_map_resource(&pci, PCI_RESOURCE_CONFIG, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                    (void**)&config, &config_size, &config_handle);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         TRACEF("failed to grab config handle\n");
         return status;
     }
@@ -80,11 +80,11 @@ extern "C" mx_status_t virtio_bind(void* ctx, mx_device_t* device, void** cookie
 
     LTRACEF("calling Bind on driver\n");
     status = vd->Bind(&pci, config_handle, config);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     status = vd->Init();
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     // if we're here, we're successful so drop the unique ptr ref to the object and let it live on
@@ -92,5 +92,5 @@ extern "C" mx_status_t virtio_bind(void* ctx, mx_device_t* device, void** cookie
 
     LTRACE_EXIT;
 
-    return MX_OK;
+    return ZX_OK;
 }

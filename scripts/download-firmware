@@ -19,11 +19,11 @@ set -e
 readonly GS_BUCKET="https://fuchsia-build.storage.googleapis.com"
 
 # We assume the following directory structure:
-# ./magenta/scripts
-# ./magenta/prebuilt
+# ./zircon/scripts
+# ./zircon/prebuilt
 readonly SCRIPT_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
-readonly MAGENTA_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-readonly PREBUILTS_DIR="$(cd "${MAGENTA_ROOT}/prebuilt" && pwd)"
+readonly ZIRCON_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+readonly PREBUILTS_DIR="$(cd "${ZIRCON_ROOT}/prebuilt" && pwd)"
 
 # Install prebuilts into a .gitignore'd directory to keep things clean
 mkdir -p "${PREBUILTS_DIR}/downloads/firmware"

@@ -1,4 +1,4 @@
-/* magenta version of backtrace-supported.h */
+/* zircon version of backtrace-supported.h */
 /* backtrace-supported.h.in -- Whether stack backtrace is supported.
    Copyright (C) 2012-2016 Free Software Foundation, Inc.
    Written by Ian Lance Taylor, Google.

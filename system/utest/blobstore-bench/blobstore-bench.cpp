@@ -12,9 +12,9 @@
 #include <unistd.h>
 
 #include <digest/merkle-tree.h>
-#include <magenta/device/vfs.h>
-#include <magenta/device/rtc.h>
-#include <magenta/syscalls.h>
+#include <zircon/device/vfs.h>
+#include <zircon/device/rtc.h>
+#include <zircon/syscalls.h>
 #include <fbl/new.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
@@ -72,7 +72,7 @@ static bool GenerateBlob(fbl::unique_ptr<blob_info_t>* out, size_t blob_size) {
     EXPECT_EQ(ac.check(), true);
     info->data.reset(new (&ac) char[blob_size]);
     EXPECT_EQ(ac.check(), true);
-    unsigned int seed = static_cast<unsigned int>(mx_ticks_get());
+    unsigned int seed = static_cast<unsigned int>(zx_ticks_get());
     for (size_t i = 0; i < blob_size; i++) {
         info->data[i] = (char)rand_r(&seed);
     }
@@ -89,7 +89,7 @@ static bool GenerateBlob(fbl::unique_ptr<blob_info_t>* out, size_t blob_size) {
     Digest digest;
     ASSERT_EQ(MerkleTree::Create(&info->data[0], info->size_data, &info->merkle[0],
                                  info->size_merkle, &digest),
-              MX_OK, "Couldn't create Merkle Tree");
+              ZX_OK, "Couldn't create Merkle Tree");
     strcpy(info->path, MOUNT_PATH "/");
     size_t prefix_len = strlen(info->path);
     digest.ToString(info->path + prefix_len, sizeof(info->path) - prefix_len);
@@ -97,7 +97,7 @@ static bool GenerateBlob(fbl::unique_ptr<blob_info_t>* out, size_t blob_size) {
     // Sanity-check the merkle tree
     ASSERT_EQ(MerkleTree::Verify(&info->data[0], info->size_data, &info->merkle[0],
                                  info->size_merkle, 0, info->size_data, digest),
-              MX_OK, "Failed to validate Merkle Tree");
+              ZX_OK, "Failed to validate Merkle Tree");
 
     *out = fbl::move(info);
     return true;
@@ -121,11 +121,11 @@ static inline int StreamAll(T func, int fd, U* buf, size_t max) {
 
 TestData::TestData(size_t blob_size, size_t blob_count, traversal_order_t order) : blob_size(blob_size), blob_count(blob_count), order(order) {
     indices = new size_t[blob_count];
-    samples = new mx_time_t*[NAME_COUNT];
+    samples = new zx_time_t*[NAME_COUNT];
     paths = new char*[blob_count];
 
     for (int i = 0; i < NAME_COUNT; i++) {
-        samples[i] = new mx_time_t[get_max_count()];
+        samples[i] = new zx_time_t[get_max_count()];
     }
 
     for(size_t i = 0; i < blob_count; i++) {
@@ -161,7 +161,7 @@ void TestData::generate_order() {
 
     if (order == RANDOM) {
         memset(indices, 0, sizeof(size_t) * blob_count);
-        srand(static_cast<unsigned>(mx_ticks_get()));
+        srand(static_cast<unsigned>(zx_ticks_get()));
     }
 
     while (true) {
@@ -268,19 +268,19 @@ void TestData::print_order() {
     }
 }
 
-inline void TestData::sample_end(mx_time_t start, test_name_t name, size_t index) {
-    mx_time_t now = mx_ticks_get();
+inline void TestData::sample_end(zx_time_t start, test_name_t name, size_t index) {
+    zx_time_t now = zx_ticks_get();
     samples[name][index] = now - start;
 }
 
 bool TestData::report_test(test_name_t name) {
-    mx_time_t ticks_per_msec =  mx_ticks_per_second() / 1000;
+    zx_time_t ticks_per_msec =  zx_ticks_per_second() / 1000;
 
     double min = DBL_MAX;
     double max = 0;
     double avg = 0;
     double stddev = 0;
-    mx_time_t total = 0;
+    zx_time_t total = 0;
 
     size_t sample_count = get_max_count();
 
@@ -351,19 +351,19 @@ bool TestData::create_blobs() {
         strcpy(paths[i], info->path);
 
         // create
-        mx_time_t start = mx_ticks_get();
+        zx_time_t start = zx_ticks_get();
         int fd = open(info->path, O_CREAT | O_RDWR);
         if (record) { sample_end(start, CREATE, sample_index); }
 
         ASSERT_GT(fd, 0, "Failed to create blob");
 
         // truncate
-        start = mx_ticks_get();
+        start = zx_ticks_get();
         ASSERT_EQ(ftruncate(fd, blob_size), 0, "Failed to truncate blob");
         if (record) { sample_end(start, TRUNCATE, sample_index); }
 
         // write
-        start = mx_ticks_get();
+        start = zx_ticks_get();
         ASSERT_EQ(StreamAll(write, fd, info->data.get(), blob_size), 0, "Failed to write Data");
         if (record) { sample_end(start, WRITE, sample_index); }
 
@@ -387,7 +387,7 @@ bool TestData::read_blobs() {
         const char* path = paths[index];
 
         // open
-        mx_time_t start = mx_ticks_get();
+        zx_time_t start = zx_ticks_get();
         int fd = open(path, O_RDONLY);
         sample_end(start, OPEN, i);
         ASSERT_GT(fd, 0, "Failed to open blob");
@@ -398,12 +398,12 @@ bool TestData::read_blobs() {
         ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
 
         // read
-        start = mx_ticks_get();
+        start = zx_ticks_get();
         bool success = StreamAll(read, fd, &buf[0], blob_size);
         sample_end(start, READ, i);
 
         // close
-        start = mx_ticks_get();
+        start = zx_ticks_get();
         ASSERT_EQ(close(fd), 0,  "Failed to close blob");
         sample_end(start, CLOSE, i);
 
@@ -422,7 +422,7 @@ bool TestData::unlink_blobs() {
         const char* path = paths[index];
 
         // unlink
-        mx_time_t start = mx_ticks_get();
+        zx_time_t start = zx_ticks_get();
         ASSERT_EQ(unlink(path), 0, "Failed to unlink");
         sample_end(start, UNLINK, i);
     }

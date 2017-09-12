@@ -232,7 +232,7 @@ int tftp_send_file_wrapper(tftp_session* session,
     options.err_msg_sz = sizeof(err_msg);
     tftp_status send_result =
         tftp_push_file(session, connection, &file_cookie, filename,
-                       "magenta.bin", &options);
+                       "zircon.bin", &options);
     if (send_result == TFTP_NO_ERROR) {
         return 0;
     }

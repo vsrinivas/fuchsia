@@ -30,8 +30,8 @@ MODULE_NAME := hypervisor-test
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/hypervisor \
-    system/ulib/magenta \
-    system/ulib/mxio \
+    system/ulib/zircon \
+    system/ulib/fdio \
     system/ulib/unittest \
 
 MODULE_STATIC_LIBS += \

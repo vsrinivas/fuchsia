@@ -6,7 +6,7 @@
 
 // N.B. This is ideally temporary. It is used by Intel PT support, and is a
 // stopgap until "resources" can be used to read/write x86 MSRs.
-// "mtrace" == "magenta trace": the idea being to be a generalization of
+// "mtrace" == "zircon trace": the idea being to be a generalization of
 // ktrace. It's all temporary, but there may be other uses before the stopgap
 // is no longer necessary.
 
@@ -14,7 +14,7 @@
 
 #include <err.h>
 #include <lib/user_copy/user_ptr.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <stdint.h>
 
 status_t mtrace_control(uint32_t kind, uint32_t action, uint32_t options,

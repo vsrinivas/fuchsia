@@ -40,7 +40,7 @@ fbl::RefPtr<Dnode> Dnode::Create(const char* name, size_t len, fbl::RefPtr<Vnode
 }
 
 void Dnode::RemoveFromParent() {
-    MX_DEBUG_ASSERT(vnode_ != nullptr);
+    ZX_DEBUG_ASSERT(vnode_ != nullptr);
 
     // Detach from parent
     if (parent_) {
@@ -64,7 +64,7 @@ void Dnode::RemoveFromParent() {
 }
 
 void Dnode::Detach() {
-    MX_DEBUG_ASSERT(children_.is_empty());
+    ZX_DEBUG_ASSERT(children_.is_empty());
     if (vnode_ == nullptr) { // Dnode already detached.
         return;
     }
@@ -76,11 +76,11 @@ void Dnode::Detach() {
 }
 
 void Dnode::AddChild(fbl::RefPtr<Dnode> parent, fbl::RefPtr<Dnode> child) {
-    MX_DEBUG_ASSERT(parent != nullptr);
-    MX_DEBUG_ASSERT(child != nullptr);
-    MX_DEBUG_ASSERT(child->parent_ == nullptr); // Child shouldn't have a parent
-    MX_DEBUG_ASSERT(child != parent);
-    MX_DEBUG_ASSERT(parent->IsDirectory());
+    ZX_DEBUG_ASSERT(parent != nullptr);
+    ZX_DEBUG_ASSERT(child != nullptr);
+    ZX_DEBUG_ASSERT(child->parent_ == nullptr); // Child shouldn't have a parent
+    ZX_DEBUG_ASSERT(child != parent);
+    ZX_DEBUG_ASSERT(parent->IsDirectory());
 
     child->parent_ = parent;
     child->vnode_->link_count_++;
@@ -98,33 +98,33 @@ void Dnode::AddChild(fbl::RefPtr<Dnode> parent, fbl::RefPtr<Dnode> child) {
     parent->vnode_->UpdateModified();
 }
 
-mx_status_t Dnode::Lookup(const char* name, size_t len, fbl::RefPtr<Dnode>* out) const {
+zx_status_t Dnode::Lookup(const char* name, size_t len, fbl::RefPtr<Dnode>* out) const {
     auto dn = children_.find_if([&name, &len](const Dnode& elem) -> bool {
         return elem.NameMatch(name, len);
     });
     if (dn == children_.end()) {
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
     }
 
     if (out != nullptr) {
         *out = dn.CopyPointer();
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 fbl::RefPtr<VnodeMemfs> Dnode::AcquireVnode() const {
     return vnode_;
 }
 
-mx_status_t Dnode::CanUnlink() const {
+zx_status_t Dnode::CanUnlink() const {
     if (!children_.is_empty()) {
         // Cannot unlink non-empty directory
-        return MX_ERR_NOT_EMPTY;
+        return ZX_ERR_NOT_EMPTY;
     } else if (vnode_->IsRemote()) {
         // Cannot unlink mount points
-        return MX_ERR_UNAVAILABLE;
+        return ZX_ERR_UNAVAILABLE;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 struct dircookie_t {
@@ -136,25 +136,25 @@ static_assert(sizeof(dircookie_t) <= sizeof(vdircookie_t),
 
 // Read the canned "." and ".." entries that should
 // appear at the beginning of a directory.
-mx_status_t Dnode::ReaddirStart(fs::DirentFiller* df, void* cookie) {
+zx_status_t Dnode::ReaddirStart(fs::DirentFiller* df, void* cookie) {
     dircookie_t* c = static_cast<dircookie_t*>(cookie);
-    mx_status_t r;
+    zx_status_t r;
 
     if (c->order == 0) {
-        if ((r = df->Next(".", 1, VTYPE_TO_DTYPE(V_TYPE_DIR))) != MX_OK) {
+        if ((r = df->Next(".", 1, VTYPE_TO_DTYPE(V_TYPE_DIR))) != ZX_OK) {
             return r;
         }
         c->order++;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 void Dnode::Readdir(fs::DirentFiller* df, void* cookie) const {
     dircookie_t* c = static_cast<dircookie_t*>(cookie);
-    mx_status_t r = 0;
+    zx_status_t r = 0;
 
     if (c->order < 1) {
-        if ((r = Dnode::ReaddirStart(df, cookie)) != MX_OK) {
+        if ((r = Dnode::ReaddirStart(df, cookie)) != ZX_OK) {
             return;
         }
     }
@@ -164,7 +164,7 @@ void Dnode::Readdir(fs::DirentFiller* df, void* cookie) const {
             continue;
         }
         uint32_t vtype = dn.IsDirectory() ? V_TYPE_DIR : V_TYPE_FILE;
-        if ((r = df->Next(dn.name_.get(), dn.NameLen(), VTYPE_TO_DTYPE(vtype))) != MX_OK) {
+        if ((r = df->Next(dn.name_.get(), dn.NameLen(), VTYPE_TO_DTYPE(vtype))) != ZX_OK) {
             return;
         }
         c->order = dn.ordering_token_ + 1;

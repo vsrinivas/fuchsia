@@ -218,7 +218,7 @@ retry:
 status_t PmmArena::FreePage(vm_page_t* page) {
     LTRACEF("page %p\n", page);
     if (!page_belongs_to_arena(page))
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
 
     DEBUG_ASSERT(page->state != VM_PAGE_STATE_OBJECT || page->object.pin_count == 0);
 
@@ -230,7 +230,7 @@ status_t PmmArena::FreePage(vm_page_t* page) {
 
     list_add_head(&free_list_, &page->free.node);
     free_count_++;
-    return MX_OK;
+    return ZX_OK;
 }
 
 void PmmArena::CountStates(size_t state_count[_VM_PAGE_STATE_COUNT]) const {

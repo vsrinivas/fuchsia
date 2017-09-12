@@ -10,9 +10,9 @@
 
 #include <fs-management/mount.h>
 #include <gpt/gpt.h>
-#include <magenta/device/block.h>
-#include <magenta/device/device.h>
-#include <magenta/device/vfs.h>
+#include <zircon/device/block.h>
+#include <zircon/device/device.h>
+#include <zircon/device/vfs.h>
 
 typedef union {
     vfs_query_info_t info;
@@ -38,7 +38,7 @@ void check_and_remount(const char* device_path, const char* mount_path, disk_for
         if (strcmp(wrapper.name, "memfs")) {
             return;
         }
-    } else if (mountfd != MX_ERR_INTERNAL) {
+    } else if (mountfd != ZX_ERR_INTERNAL) {
         printf("fixfs: couldn't open: %s %d\n", mount_path, mountfd);
         return;
     }
@@ -65,8 +65,8 @@ void check_and_remount(const char* device_path, const char* mount_path, disk_for
         return;
     }
 
-    mx_status_t status = mount(devfd, mount_path, disk_format, mount_options, launch_logs_async);
-    if (status != MX_OK) {
+    zx_status_t status = mount(devfd, mount_path, disk_format, mount_options, launch_logs_async);
+    if (status != ZX_OK) {
         fprintf(stderr, "fixfs: Error while mounting %s at %s: %d\n", device_path, mount_path, status);
     } else {
         printf("fixfs: Successfully mounted device %s at %s\n", device_path, mount_path);
@@ -156,7 +156,7 @@ void check_and_remount_fat(const char* device_path, const char* topo_path, mount
         return;
     }
 
-    mx_status_t r;
+    zx_status_t r;
 
     fsck_options_t fsck_options = default_fsck_options;
     fsck_options.always_modify = true;
@@ -172,8 +172,8 @@ void check_and_remount_fat(const char* device_path, const char* topo_path, mount
         return;
     }
 
-    mx_status_t status = mount(devfd, mount_path, DISK_FORMAT_FAT, mount_options, launch_logs_async);
-    if (status != MX_OK) {
+    zx_status_t status = mount(devfd, mount_path, DISK_FORMAT_FAT, mount_options, launch_logs_async);
+    if (status != ZX_OK) {
         fprintf(stderr, "fixfs: Error while mounting %s at %s: %d\n", device_path, mount_path, status);
     } else {
         printf("fixfs: Successfully mounted device %s at %s\n", device_path, mount_path);
@@ -182,7 +182,7 @@ void check_and_remount_fat(const char* device_path, const char* topo_path, mount
     close(devfd);
 }
 
-mx_status_t process_block_device(const char* device_name) {
+zx_status_t process_block_device(const char* device_name) {
     char device_path[PATH_MAX];
     disk_format_t disk_format;
     mount_options_t mount_options;
@@ -193,7 +193,7 @@ mx_status_t process_block_device(const char* device_name) {
 
     if (devfd < 0) {
         printf("fixfs: Error opening block device %s\n", device_path);
-        return MX_ERR_ACCESS_DENIED;
+        return ZX_ERR_ACCESS_DENIED;
     }
 
     disk_format = detect_disk_format(devfd);
@@ -242,7 +242,7 @@ mx_status_t process_block_device(const char* device_name) {
     }
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 // This will only reformat the first matching device found for a particular mount path
@@ -260,7 +260,7 @@ int main(int argc, char** argv) {
             continue;
         }
 
-        if (process_block_device(de->d_name) != MX_OK) {
+        if (process_block_device(de->d_name) != ZX_OK) {
             return -1;
         }
     }

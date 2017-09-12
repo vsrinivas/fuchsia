@@ -2,7 +2,7 @@
 #include "dynlink.h"
 #include "libc.h"
 #include "asan_impl.h"
-#include "magenta_impl.h"
+#include "zircon_impl.h"
 #include "pthread_impl.h"
 #include "stdio_impl.h"
 #include <ctype.h>
@@ -12,9 +12,9 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <link.h>
-#include <magenta/dlfcn.h>
-#include <magenta/process.h>
-#include <magenta/status.h>
+#include <zircon/dlfcn.h>
+#include <zircon/process.h>
+#include <zircon/status.h>
 #include <pthread.h>
 #include <setjmp.h>
 #include <stdalign.h>
@@ -40,7 +40,7 @@ static void early_init(void);
 static void error(const char*, ...);
 static void debugmsg(const char*, ...);
 static void log_write(const void* buf, size_t len);
-static mx_status_t get_library_vmo(const char* name, mx_handle_t* vmo);
+static zx_status_t get_library_vmo(const char* name, zx_handle_t* vmo);
 static void loader_svc_config(const char* config);
 
 #define MAXP2(a, b) (-(-(a) & -(b)))
@@ -80,7 +80,7 @@ struct dso {
     int phnum;
     size_t phentsize;
     int refcnt;
-    mx_handle_t vmar; // Closed after relocation.
+    zx_handle_t vmar; // Closed after relocation.
     Sym* syms;
     uint32_t* hashtab;
     uint32_t* ghashtab;
@@ -147,12 +147,12 @@ static pthread_mutex_t init_fini_lock = {._m_type = PTHREAD_MUTEX_RECURSIVE};
 static bool log_libs = false;
 static atomic_uintptr_t unlogged_tail;
 
-static mx_handle_t loader_svc = MX_HANDLE_INVALID;
-static mx_handle_t logger = MX_HANDLE_INVALID;
+static zx_handle_t loader_svc = ZX_HANDLE_INVALID;
+static zx_handle_t logger = ZX_HANDLE_INVALID;
 
 // Various tools use this value to bootstrap their knowledge of the process.
 // E.g., the list of loaded shared libraries is obtained from here.
-// The value is stored in the process's MX_PROPERTY_PROCESS_DEBUG_ADDR so that
+// The value is stored in the process's ZX_PROPERTY_PROCESS_DEBUG_ADDR so that
 // tools can obtain the value when aslr is enabled.
 struct debug* _dl_debug_addr = &debug;
 
@@ -202,18 +202,18 @@ static void* dl_alloc(size_t size) {
     // is wasted unless the system happens to give us the adjacent page.
     if (alloc_limit - alloc_ptr < size) {
         size_t chunk_size = (size + PAGE_SIZE - 1) & -PAGE_SIZE;
-        mx_handle_t vmo;
-        mx_status_t status = _mx_vmo_create(chunk_size, 0, &vmo);
-        if (status != MX_OK)
+        zx_handle_t vmo;
+        zx_status_t status = _zx_vmo_create(chunk_size, 0, &vmo);
+        if (status != ZX_OK)
             return NULL;
-        _mx_object_set_property(vmo, MX_PROP_NAME,
+        _zx_object_set_property(vmo, ZX_PROP_NAME,
                                 VMO_NAME_DL_ALLOC, sizeof(VMO_NAME_DL_ALLOC));
         uintptr_t chunk;
-        status = _mx_vmar_map(_mx_vmar_root_self(), 0, vmo, 0, chunk_size,
-                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+        status = _zx_vmar_map(_zx_vmar_root_self(), 0, vmo, 0, chunk_size,
+                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                               &chunk);
-        _mx_handle_close(vmo);
-        if (status != MX_OK)
+        _zx_handle_close(vmo);
+        if (status != ZX_OK)
             return NULL;
         if (chunk != alloc_limit)
             alloc_ptr = alloc_base = chunk;
@@ -550,10 +550,10 @@ __NO_SAFESTACK static void unmap_library(struct dso* dso) {
     if (dso->map && dso->map_len) {
         munmap(dso->map, dso->map_len);
     }
-    if (dso->vmar != MX_HANDLE_INVALID) {
-        _mx_vmar_destroy(dso->vmar);
-        _mx_handle_close(dso->vmar);
-        dso->vmar = MX_HANDLE_INVALID;
+    if (dso->vmar != ZX_HANDLE_INVALID) {
+        _zx_vmar_destroy(dso->vmar);
+        _zx_handle_close(dso->vmar);
+        dso->vmar = ZX_HANDLE_INVALID;
     }
 }
 
@@ -664,7 +664,7 @@ __NO_SAFESTACK void _dl_log_unlogged(void) {
     }
 }
 
-__NO_SAFESTACK NO_ASAN static mx_status_t map_library(mx_handle_t vmo,
+__NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo,
                                                       struct dso* dso) {
     struct {
         Ehdr ehdr;
@@ -685,8 +685,8 @@ __NO_SAFESTACK NO_ASAN static mx_status_t map_library(mx_handle_t vmo,
     size_t i;
 
     size_t l;
-    mx_status_t status = _mx_vmo_read(vmo, &buf, 0, sizeof(buf), &l);
-    if (status != MX_OK)
+    zx_status_t status = _zx_vmo_read(vmo, &buf, 0, sizeof(buf), &l);
+    if (status != ZX_OK)
         return status;
     // We cannot support ET_EXEC in the general case, because its fixed
     // addresses might conflict with where the dynamic linker has already
@@ -699,8 +699,8 @@ __NO_SAFESTACK NO_ASAN static mx_status_t map_library(mx_handle_t vmo,
     if (phsize > sizeof(buf.phdrs))
         goto noexec;
     if (eh->e_phoff + phsize > l) {
-        status = _mx_vmo_read(vmo, buf.phdrs, eh->e_phoff, phsize, &l);
-        if (status != MX_OK)
+        status = _zx_vmo_read(vmo, buf.phdrs, eh->e_phoff, phsize, &l);
+        if (status != ZX_OK)
             goto error;
         if (l != phsize)
             goto noexec;
@@ -752,21 +752,21 @@ __NO_SAFESTACK NO_ASAN static mx_status_t map_library(mx_handle_t vmo,
     // the new VMAR's handle until relocation has finished, because
     // we need it to adjust page protections for RELRO.
     uintptr_t vmar_base;
-    status = _mx_vmar_allocate(__magenta_vmar_root_self, 0, map_len,
-                               MX_VM_FLAG_CAN_MAP_READ |
-                                   MX_VM_FLAG_CAN_MAP_WRITE |
-                                   MX_VM_FLAG_CAN_MAP_EXECUTE |
-                                   MX_VM_FLAG_CAN_MAP_SPECIFIC,
+    status = _zx_vmar_allocate(__zircon_vmar_root_self, 0, map_len,
+                               ZX_VM_FLAG_CAN_MAP_READ |
+                                   ZX_VM_FLAG_CAN_MAP_WRITE |
+                                   ZX_VM_FLAG_CAN_MAP_EXECUTE |
+                                   ZX_VM_FLAG_CAN_MAP_SPECIFIC,
                                &dso->vmar, &vmar_base);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         error("failed to reserve %zu bytes of address space: %d\n",
               map_len, status);
         goto error;
     }
 
-    char vmo_name[MX_MAX_NAME_LEN];
-    if (_mx_object_get_property(vmo, MX_PROP_NAME,
-                                vmo_name, sizeof(vmo_name)) != MX_OK ||
+    char vmo_name[ZX_MAX_NAME_LEN];
+    if (_zx_object_get_property(vmo, ZX_PROP_NAME,
+                                vmo_name, sizeof(vmo_name)) != ZX_OK ||
         vmo_name[0] == '\0')
         memcpy(vmo_name, VMO_NAME_UNKNOWN, sizeof(VMO_NAME_UNKNOWN));
 
@@ -789,12 +789,12 @@ __NO_SAFESTACK NO_ASAN static mx_status_t map_library(mx_handle_t vmo,
         this_min = ph->p_vaddr & -PAGE_SIZE;
         this_max = (ph->p_vaddr + ph->p_memsz + PAGE_SIZE - 1) & -PAGE_SIZE;
         size_t off_start = ph->p_offset & -PAGE_SIZE;
-        uint32_t mx_flags = MX_VM_FLAG_SPECIFIC;
-        mx_flags |= (ph->p_flags & PF_R) ? MX_VM_FLAG_PERM_READ : 0;
-        mx_flags |= (ph->p_flags & PF_W) ? MX_VM_FLAG_PERM_WRITE : 0;
-        mx_flags |= (ph->p_flags & PF_X) ? MX_VM_FLAG_PERM_EXECUTE : 0;
+        uint32_t zx_flags = ZX_VM_FLAG_SPECIFIC;
+        zx_flags |= (ph->p_flags & PF_R) ? ZX_VM_FLAG_PERM_READ : 0;
+        zx_flags |= (ph->p_flags & PF_W) ? ZX_VM_FLAG_PERM_WRITE : 0;
+        zx_flags |= (ph->p_flags & PF_X) ? ZX_VM_FLAG_PERM_EXECUTE : 0;
         uintptr_t mapaddr = (uintptr_t)base + this_min;
-        mx_handle_t map_vmo = vmo;
+        zx_handle_t map_vmo = vmo;
         size_t map_size = this_max - this_min;
         if (map_size == 0)
             continue;
@@ -808,37 +808,37 @@ __NO_SAFESTACK NO_ASAN static mx_status_t map_library(mx_handle_t vmo,
                 this_min;
             if (data_size == 0) {
                 // This segment is purely zero-fill.
-                status = _mx_vmo_create(map_size, 0, &map_vmo);
-                if (status == MX_OK) {
-                    char name[MX_MAX_NAME_LEN] = VMO_NAME_PREFIX_BSS;
+                status = _zx_vmo_create(map_size, 0, &map_vmo);
+                if (status == ZX_OK) {
+                    char name[ZX_MAX_NAME_LEN] = VMO_NAME_PREFIX_BSS;
                     memcpy(&name[sizeof(VMO_NAME_PREFIX_BSS) - 1], vmo_name,
-                           MX_MAX_NAME_LEN - sizeof(VMO_NAME_PREFIX_BSS));
-                    _mx_object_set_property(map_vmo, MX_PROP_NAME,
+                           ZX_MAX_NAME_LEN - sizeof(VMO_NAME_PREFIX_BSS));
+                    _zx_object_set_property(map_vmo, ZX_PROP_NAME,
                                             name, strlen(name));
                 }
             } else {
                 // Get a writable (lazy) copy of the portion of the file VMO.
-                status = _mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE,
+                status = _zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE,
                                        off_start, data_size, &map_vmo);
-                if (status == MX_OK && map_size > data_size) {
+                if (status == ZX_OK && map_size > data_size) {
                     // Extend the writable VMO to cover the .bss pages too.
                     // These pages will be zero-filled, not copied from the
                     // file VMO.
-                    status = _mx_vmo_set_size(map_vmo, map_size);
-                    if (status != MX_OK) {
-                        _mx_handle_close(map_vmo);
+                    status = _zx_vmo_set_size(map_vmo, map_size);
+                    if (status != ZX_OK) {
+                        _zx_handle_close(map_vmo);
                         goto error;
                     }
                 }
-                if (status == MX_OK) {
-                    char name[MX_MAX_NAME_LEN] = VMO_NAME_PREFIX_DATA;
+                if (status == ZX_OK) {
+                    char name[ZX_MAX_NAME_LEN] = VMO_NAME_PREFIX_DATA;
                     memcpy(&name[sizeof(VMO_NAME_PREFIX_DATA) - 1], vmo_name,
-                           MX_MAX_NAME_LEN - sizeof(VMO_NAME_PREFIX_DATA));
-                    _mx_object_set_property(map_vmo, MX_PROP_NAME,
+                           ZX_MAX_NAME_LEN - sizeof(VMO_NAME_PREFIX_DATA));
+                    _zx_object_set_property(map_vmo, ZX_PROP_NAME,
                                             name, strlen(name));
                 }
             }
-            if (status != MX_OK)
+            if (status != ZX_OK)
                 goto error;
             off_start = 0;
         } else if (ph->p_memsz > ph->p_filesz) {
@@ -846,11 +846,11 @@ __NO_SAFESTACK NO_ASAN static mx_status_t map_library(mx_handle_t vmo,
             goto noexec;
         }
 
-        status = _mx_vmar_map(dso->vmar, mapaddr - vmar_base, map_vmo,
-                              off_start, map_size, mx_flags, &mapaddr);
+        status = _zx_vmar_map(dso->vmar, mapaddr - vmar_base, map_vmo,
+                              off_start, map_size, zx_flags, &mapaddr);
         if (map_vmo != vmo)
-            _mx_handle_close(map_vmo);
-        if (status != MX_OK)
+            _zx_handle_close(map_vmo);
+        if (status != ZX_OK)
             goto error;
 
         if (ph->p_memsz > ph->p_filesz) {
@@ -874,15 +874,15 @@ __NO_SAFESTACK NO_ASAN static mx_status_t map_library(mx_handle_t vmo,
             break;
     }
 
-    return MX_OK;
+    return ZX_OK;
 noexec:
     // We overload this to translate into ENOEXEC later.
-    status = MX_ERR_WRONG_TYPE;
+    status = ZX_ERR_WRONG_TYPE;
 error:
     if (map != MAP_FAILED)
         unmap_library(dso);
-    if (dso->vmar != MX_HANDLE_INVALID)
-        _mx_handle_close(dso->vmar);
+    if (dso->vmar != ZX_HANDLE_INVALID)
+        _zx_handle_close(dso->vmar);
     return status;
 }
 
@@ -1037,16 +1037,16 @@ __NO_SAFESTACK static void read_buildid(struct dso* p,
 }
 
 __NO_SAFESTACK static void trace_load(struct dso* p) {
-    static mx_koid_t pid = MX_KOID_INVALID;
-    if (pid == MX_KOID_INVALID) {
-        mx_info_handle_basic_t process_info;
-        if (_mx_object_get_info(__magenta_process_self,
-                                MX_INFO_HANDLE_BASIC,
+    static zx_koid_t pid = ZX_KOID_INVALID;
+    if (pid == ZX_KOID_INVALID) {
+        zx_info_handle_basic_t process_info;
+        if (_zx_object_get_info(__zircon_process_self,
+                                ZX_INFO_HANDLE_BASIC,
                                 &process_info, sizeof(process_info),
-                                NULL, NULL) == MX_OK) {
+                                NULL, NULL) == ZX_OK) {
             pid = process_info.koid;
         } else {
-            // No point in continually calling mx_object_get_info.
+            // No point in continually calling zx_object_get_info.
             // The first 100 are reserved.
             pid = 1;
         }
@@ -1105,7 +1105,7 @@ __NO_SAFESTACK static void do_tls_layout(struct dso* p,
     tls_tail = &p->tls;
 }
 
-__NO_SAFESTACK static mx_status_t load_library_vmo(mx_handle_t vmo,
+__NO_SAFESTACK static zx_status_t load_library_vmo(zx_handle_t vmo,
                                                    const char* name,
                                                    int rtld_mode,
                                                    struct dso* needed_by,
@@ -1116,11 +1116,11 @@ __NO_SAFESTACK static mx_status_t load_library_vmo(mx_handle_t vmo,
 
     if (rtld_mode & RTLD_NOLOAD) {
         *loaded = NULL;
-        return MX_OK;
+        return ZX_OK;
     }
 
-    mx_status_t status = map_library(vmo, &temp_dso);
-    if (status != MX_OK)
+    zx_status_t status = map_library(vmo, &temp_dso);
+    if (status != ZX_OK)
         return status;
 
     decode_dyn(&temp_dso);
@@ -1131,7 +1131,7 @@ __NO_SAFESTACK static mx_status_t load_library_vmo(mx_handle_t vmo,
         if (p != NULL) {
             unmap_library(&temp_dso);
             *loaded = p;
-            return MX_OK;
+            return ZX_OK;
         }
     }
 
@@ -1141,7 +1141,7 @@ __NO_SAFESTACK static mx_status_t load_library_vmo(mx_handle_t vmo,
         name = temp_dso.soname;
         if (name == NULL) {
             unmap_library(&temp_dso);
-            return MX_ERR_WRONG_TYPE;
+            return ZX_ERR_WRONG_TYPE;
         }
     }
 
@@ -1172,7 +1172,7 @@ __NO_SAFESTACK static mx_status_t load_library_vmo(mx_handle_t vmo,
     p = dl_alloc(alloc_size);
     if (!p) {
         unmap_library(&temp_dso);
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     *p = temp_dso;
     p->refcnt = 1;
@@ -1188,24 +1188,24 @@ __NO_SAFESTACK static mx_status_t load_library_vmo(mx_handle_t vmo,
     tail = p;
 
     *loaded = p;
-    return MX_OK;
+    return ZX_OK;
 }
 
-__NO_SAFESTACK static mx_status_t load_library(const char* name, int rtld_mode,
+__NO_SAFESTACK static zx_status_t load_library(const char* name, int rtld_mode,
                                                struct dso* needed_by,
                                                struct dso** loaded) {
     if (!*name)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     *loaded = find_library(name);
     if (*loaded != NULL)
-        return MX_OK;
+        return ZX_OK;
 
-    mx_handle_t vmo;
-    mx_status_t status = get_library_vmo(name, &vmo);
-    if (status == MX_OK) {
+    zx_handle_t vmo;
+    zx_status_t status = get_library_vmo(name, &vmo);
+    if (status == ZX_OK) {
         status = load_library_vmo(vmo, name, rtld_mode, needed_by, loaded);
-        _mx_handle_close(vmo);
+        _zx_handle_close(vmo);
     }
 
     return status;
@@ -1222,10 +1222,10 @@ __NO_SAFESTACK static void load_deps(struct dso* p) {
                 continue;
             const char* name = p->strings + p->dynv[i].d_un.d_val;
             struct dso* dep;
-            mx_status_t status = load_library(name, 0, p, &dep);
-            if (status != MX_OK) {
+            zx_status_t status = load_library(name, 0, p, &dep);
+            if (status != ZX_OK) {
                 error("Error loading shared library %s: %s (needed by %s)",
-                      name, _mx_status_get_string(status), p->name);
+                      name, _zx_status_get_string(status), p->name);
                 if (runtime)
                     longjmp(*rtld_fail, 1);
             } else if (deps != NULL) {
@@ -1262,22 +1262,22 @@ __NO_SAFESTACK NO_ASAN static void reloc_all(struct dso* p) {
         do_relocs(p, laddr(p, dyn[DT_RELA]), dyn[DT_RELASZ], 3);
 
         if (head != &ldso && p->relro_start != p->relro_end) {
-            mx_status_t status =
-                _mx_vmar_protect(p->vmar,
+            zx_status_t status =
+                _zx_vmar_protect(p->vmar,
                                  (uintptr_t)laddr(p, p->relro_start),
                                  p->relro_end - p->relro_start,
-                                 MX_VM_FLAG_PERM_READ);
-            if (status == MX_ERR_BAD_HANDLE &&
-                p == &ldso && p->vmar == MX_HANDLE_INVALID) {
+                                 ZX_VM_FLAG_PERM_READ);
+            if (status == ZX_ERR_BAD_HANDLE &&
+                p == &ldso && p->vmar == ZX_HANDLE_INVALID) {
                 debugmsg("No VMAR_LOADED handle received;"
                          " cannot protect RELRO for %s\n",
                          p->name);
-            } else if (status != MX_OK) {
+            } else if (status != ZX_OK) {
                 error("Error relocating %s: RELRO protection"
                       " %p+%#zx failed: %s",
                       p->name,
                       laddr(p, p->relro_start), p->relro_end - p->relro_start,
-                      _mx_status_get_string(status));
+                      _zx_status_get_string(status));
                 if (runtime)
                     longjmp(*rtld_fail, 1);
             }
@@ -1286,9 +1286,9 @@ __NO_SAFESTACK NO_ASAN static void reloc_all(struct dso* p) {
         // Hold the VMAR handle only long enough to apply RELRO.
         // Now it's no longer needed and the mappings cannot be
         // changed any more (only unmapped).
-        if (p->vmar != MX_HANDLE_INVALID) {
-            _mx_handle_close(p->vmar);
-            p->vmar = MX_HANDLE_INVALID;
+        if (p->vmar != ZX_HANDLE_INVALID) {
+            _zx_handle_close(p->vmar);
+            p->vmar = ZX_HANDLE_INVALID;
         }
 
         p->relocated = 1;
@@ -1420,13 +1420,13 @@ __attribute__((__visibility__("hidden"))) void* __tls_get_new(size_t* v) {
     return mem + v[1] + DTP_OFFSET;
 }
 
-__NO_SAFESTACK struct pthread* __init_main_thread(mx_handle_t thread_self) {
+__NO_SAFESTACK struct pthread* __init_main_thread(zx_handle_t thread_self) {
     pthread_attr_t attr = DEFAULT_PTHREAD_ATTR;
     attr._a_stacksize = libc.stack_size;
 
-    char thread_self_name[MX_MAX_NAME_LEN];
-    if (_mx_object_get_property(thread_self, MX_PROP_NAME, thread_self_name,
-                                sizeof(thread_self_name)) != MX_OK)
+    char thread_self_name[ZX_MAX_NAME_LEN];
+    if (_zx_object_get_property(thread_self, ZX_PROP_NAME, thread_self_name,
+                                sizeof(thread_self_name)) != ZX_OK)
         strcpy(thread_self_name, "(initial-thread)");
     pthread_t td = __allocate_thread(&attr, thread_self_name, NULL);
     if (td == NULL) {
@@ -1435,11 +1435,11 @@ __NO_SAFESTACK struct pthread* __init_main_thread(mx_handle_t thread_self) {
         _exit(127);
     }
 
-    mx_status_t status = mxr_thread_adopt(thread_self, &td->mxr_thread);
-    if (status != MX_OK)
+    zx_status_t status = zxr_thread_adopt(thread_self, &td->zxr_thread);
+    if (status != ZX_OK)
         __builtin_trap();
 
-    mxr_tp_set(thread_self, pthread_to_tp(td));
+    zxr_tp_set(thread_self, pthread_to_tp(td));
     return td;
 }
 
@@ -1536,7 +1536,7 @@ dl_start_return_t __dls2(
  * process dependencies and relocations for the main application and
  * transfer control to its entry point. */
 
-__NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
+__NO_SAFESTACK static void* dls3(zx_handle_t exec_vmo, int argc, char** argv) {
     // First load our own dependencies.  Usually this will be just the
     // vDSO, which is already loaded, so there will be nothing to do.
     // In a sanitized build, we'll depend on the sanitizer runtime DSO
@@ -1575,11 +1575,11 @@ __NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
             trace_maps = true;
     }
 
-    mx_status_t status = map_library(exec_vmo, &app);
-    _mx_handle_close(exec_vmo);
-    if (status != MX_OK) {
+    zx_status_t status = map_library(exec_vmo, &app);
+    _zx_handle_close(exec_vmo);
+    if (status != ZX_OK) {
         debugmsg("%s: %s: Not a valid dynamic program (%s)\n",
-                 ldso.name, argv[0], _mx_status_get_string(status));
+                 ldso.name, argv[0], _zx_status_get_string(status));
         _exit(1);
     }
 
@@ -1664,10 +1664,10 @@ __NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
     debug.base = ldso.base;
     debug.state = 0;
 
-    status = _mx_object_set_property(__magenta_process_self,
-                                     MX_PROP_PROCESS_DEBUG_ADDR,
+    status = _zx_object_set_property(__zircon_process_self,
+                                     ZX_PROP_PROCESS_DEBUG_ADDR,
                                      &_dl_debug_addr, sizeof(_dl_debug_addr));
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         // Bummer. Crashlogger backtraces, debugger sessions, etc. will be
         // problematic, but this isn't fatal.
         // TODO(dje): Is there a way to detect we're here because of being
@@ -1706,89 +1706,89 @@ __NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
 }
 
 __NO_SAFESTACK NO_ASAN static dl_start_return_t __dls3(void* start_arg) {
-    mx_handle_t bootstrap = (uintptr_t)start_arg;
+    zx_handle_t bootstrap = (uintptr_t)start_arg;
 
     uint32_t nbytes, nhandles;
-    mx_status_t status = mxr_message_size(bootstrap, &nbytes, &nhandles);
-    if (status != MX_OK) {
-        error("mxr_message_size bootstrap handle %#x failed: %d (%s)",
-              bootstrap, status, _mx_status_get_string(status));
+    zx_status_t status = zxr_message_size(bootstrap, &nbytes, &nhandles);
+    if (status != ZX_OK) {
+        error("zxr_message_size bootstrap handle %#x failed: %d (%s)",
+              bootstrap, status, _zx_status_get_string(status));
         nbytes = nhandles = 0;
     }
 
-    MXR_PROCESSARGS_BUFFER(buffer, nbytes);
-    mx_handle_t handles[nhandles];
-    mx_proc_args_t* procargs;
+    ZXR_PROCESSARGS_BUFFER(buffer, nbytes);
+    zx_handle_t handles[nhandles];
+    zx_proc_args_t* procargs;
     uint32_t* handle_info;
-    if (status == MX_OK)
-        status = mxr_processargs_read(bootstrap, buffer, nbytes,
+    if (status == ZX_OK)
+        status = zxr_processargs_read(bootstrap, buffer, nbytes,
                                       handles, nhandles,
                                       &procargs, &handle_info);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         error("bad message of %u bytes, %u handles"
               " from bootstrap handle %#x: %d (%s)",
               nbytes, nhandles, bootstrap, status,
-              _mx_status_get_string(status));
+              _zx_status_get_string(status));
         nbytes = nhandles = 0;
     }
 
-    mx_handle_t exec_vmo = MX_HANDLE_INVALID;
+    zx_handle_t exec_vmo = ZX_HANDLE_INVALID;
     for (int i = 0; i < nhandles; ++i) {
         switch (PA_HND_TYPE(handle_info[i])) {
         case PA_SVC_LOADER:
-            if (loader_svc != MX_HANDLE_INVALID ||
-                handles[i] == MX_HANDLE_INVALID) {
+            if (loader_svc != ZX_HANDLE_INVALID ||
+                handles[i] == ZX_HANDLE_INVALID) {
                 error("bootstrap message bad LOADER_SVC %#x vs %#x",
                       handles[i], loader_svc);
             }
             loader_svc = handles[i];
             break;
         case PA_VMO_EXECUTABLE:
-            if (exec_vmo != MX_HANDLE_INVALID ||
-                handles[i] == MX_HANDLE_INVALID) {
+            if (exec_vmo != ZX_HANDLE_INVALID ||
+                handles[i] == ZX_HANDLE_INVALID) {
                 error("bootstrap message bad EXEC_VMO %#x vs %#x",
                       handles[i], exec_vmo);
             }
             exec_vmo = handles[i];
             break;
-        case PA_MXIO_LOGGER:
-            if (logger != MX_HANDLE_INVALID ||
-                handles[i] == MX_HANDLE_INVALID) {
-                error("bootstrap message bad MXIO_LOGGER %#x vs %#x",
+        case PA_FDIO_LOGGER:
+            if (logger != ZX_HANDLE_INVALID ||
+                handles[i] == ZX_HANDLE_INVALID) {
+                error("bootstrap message bad FDIO_LOGGER %#x vs %#x",
                       handles[i], logger);
             }
             logger = handles[i];
             break;
         case PA_VMAR_LOADED:
-            if (ldso.vmar != MX_HANDLE_INVALID ||
-                handles[i] == MX_HANDLE_INVALID) {
+            if (ldso.vmar != ZX_HANDLE_INVALID ||
+                handles[i] == ZX_HANDLE_INVALID) {
                 error("bootstrap message bad VMAR_LOADED %#x vs %#x",
                       handles[i], ldso.vmar);
             }
             ldso.vmar = handles[i];
             break;
         case PA_PROC_SELF:
-            __magenta_process_self = handles[i];
+            __zircon_process_self = handles[i];
             break;
         case PA_VMAR_ROOT:
-            __magenta_vmar_root_self = handles[i];
+            __zircon_vmar_root_self = handles[i];
             break;
         default:
-            _mx_handle_close(handles[i]);
+            _zx_handle_close(handles[i]);
             break;
         }
     }
 
-    if (__magenta_process_self == MX_HANDLE_INVALID)
+    if (__zircon_process_self == ZX_HANDLE_INVALID)
         error("bootstrap message bad no proc self");
-    if (__magenta_vmar_root_self == MX_HANDLE_INVALID)
+    if (__zircon_vmar_root_self == ZX_HANDLE_INVALID)
         error("bootstrap message bad no root vmar");
 
     // Unpack the environment strings so dls3 can use getenv.
     char* argv[procargs->args_num + 1];
     char* envp[procargs->environ_num + 1];
-    status = mxr_processargs_strings(buffer, nbytes, argv, envp, NULL);
-    if (status == MX_OK)
+    status = zxr_processargs_strings(buffer, nbytes, argv, envp, NULL);
+    if (status == ZX_OK)
         __environ = envp;
 
     // At this point we can make system calls and have our essential
@@ -1848,20 +1848,20 @@ static void set_global(struct dso* p, int global) {
     }
 }
 
-static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
+static void* dlopen_internal(zx_handle_t vmo, const char* file, int mode) {
     pthread_rwlock_wrlock(&lock);
     __thread_allocation_inhibit();
 
     struct dso* orig_tail = tail;
 
     struct dso* p;
-    mx_status_t status = (vmo != MX_HANDLE_INVALID ?
+    zx_status_t status = (vmo != ZX_HANDLE_INVALID ?
                           load_library_vmo(vmo, file, mode, head, &p) :
                           load_library(file, mode, head, &p));
 
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         error("Error loading shared library %s: %s",
-              file, _mx_status_get_string(status));
+              file, _zx_status_get_string(status));
     fail:
         __thread_allocation_release();
         pthread_rwlock_unlock(&lock);
@@ -1951,19 +1951,19 @@ static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
 void* dlopen(const char* file, int mode) {
     if (!file)
         return head;
-    return dlopen_internal(MX_HANDLE_INVALID, file, mode);
+    return dlopen_internal(ZX_HANDLE_INVALID, file, mode);
 }
 
-void* dlopen_vmo(mx_handle_t vmo, int mode) {
-    if (vmo == MX_HANDLE_INVALID) {
+void* dlopen_vmo(zx_handle_t vmo, int mode) {
+    if (vmo == ZX_HANDLE_INVALID) {
         errno = EINVAL;
         return NULL;
     }
     return dlopen_internal(vmo, NULL, mode);
 }
 
-mx_handle_t dl_set_loader_service(mx_handle_t new_svc) {
-    mx_handle_t old_svc;
+zx_handle_t dl_set_loader_service(zx_handle_t new_svc) {
+    zx_handle_t old_svc;
     pthread_rwlock_wrlock(&lock);
     old_svc = loader_svc;
     loader_svc = new_svc;
@@ -2135,28 +2135,28 @@ __attribute__((__visibility__("hidden"))) void __dl_vseterr(const char*, va_list
 
 // This detects recursion via the error function.
 static bool loader_svc_rpc_in_progress;
-static mx_txid_t loader_svc_txid;
+static zx_txid_t loader_svc_txid;
 
-__NO_SAFESTACK static mx_status_t loader_svc_rpc(uint32_t opcode,
+__NO_SAFESTACK static zx_status_t loader_svc_rpc(uint32_t opcode,
                                                  const void* data, size_t len,
-                                                 mx_handle_t request_handle,
-                                                 mx_handle_t* result) {
+                                                 zx_handle_t request_handle,
+                                                 zx_handle_t* result) {
     // Use a static buffer rather than one on the stack to avoid growing
     // the stack size too much.  Calls to this function are always
     // serialized anyway, so there is no danger of collision.
     static struct {
-        mx_loader_svc_msg_t header;
-        uint8_t data[LOADER_SVC_MSG_MAX - sizeof(mx_loader_svc_msg_t)];
+        zx_loader_svc_msg_t header;
+        uint8_t data[LOADER_SVC_MSG_MAX - sizeof(zx_loader_svc_msg_t)];
     } msg;
 
     loader_svc_rpc_in_progress = true;
 
-    mx_status_t status;
+    zx_status_t status;
     if (len >= sizeof msg.data) {
-        _mx_handle_close(request_handle);
+        _zx_handle_close(request_handle);
         error("message of %zu bytes too large for loader service protocol",
               len);
-        status = MX_ERR_OUT_OF_RANGE;
+        status = ZX_ERR_OUT_OF_RANGE;
         goto out;
     }
 
@@ -2168,14 +2168,14 @@ __NO_SAFESTACK static mx_status_t loader_svc_rpc(uint32_t opcode,
     if (result != NULL) {
       // Don't return an uninitialized value if the channel call
       // succeeds but doesn't provide any handles.
-      *result = MX_HANDLE_INVALID;
+      *result = ZX_HANDLE_INVALID;
     }
 
-    mx_channel_call_args_t call = {
+    zx_channel_call_args_t call = {
         .wr_bytes = &msg,
         .wr_num_bytes = sizeof(msg.header) + len + 1,
         .wr_handles = &request_handle,
-        .wr_num_handles = request_handle == MX_HANDLE_INVALID ? 0 : 1,
+        .wr_num_handles = request_handle == ZX_HANDLE_INVALID ? 0 : 1,
         .rd_bytes = &msg,
         .rd_num_bytes = sizeof(msg),
         .rd_handles = result,
@@ -2184,18 +2184,18 @@ __NO_SAFESTACK static mx_status_t loader_svc_rpc(uint32_t opcode,
 
     uint32_t reply_size;
     uint32_t handle_count;
-    mx_status_t read_status = MX_OK;
-    status = _mx_channel_call(loader_svc, 0, MX_TIME_INFINITE,
+    zx_status_t read_status = ZX_OK;
+    status = _zx_channel_call(loader_svc, 0, ZX_TIME_INFINITE,
                               &call, &reply_size, &handle_count,
                               &read_status);
-    if (status != MX_OK) {
-        error("_mx_channel_call of %u bytes to loader service: "
+    if (status != ZX_OK) {
+        error("_zx_channel_call of %u bytes to loader service: "
               "%d (%s), read %d (%s)",
-              call.wr_num_bytes, status, _mx_status_get_string(status),
-              read_status, _mx_status_get_string(read_status));
-        if (status != MX_ERR_CALL_FAILED)
-            _mx_handle_close(request_handle);
-        else if (read_status != MX_OK)
+              call.wr_num_bytes, status, _zx_status_get_string(status),
+              read_status, _zx_status_get_string(read_status));
+        if (status != ZX_ERR_CALL_FAILED)
+            _zx_handle_close(request_handle);
+        else if (read_status != ZX_OK)
             status = read_status;
         goto out;
     }
@@ -2203,26 +2203,26 @@ __NO_SAFESTACK static mx_status_t loader_svc_rpc(uint32_t opcode,
     if (reply_size != sizeof(msg.header)) {
         error("loader service reply %u bytes != %u",
               reply_size, sizeof(msg.header));
-        status = MX_ERR_INVALID_ARGS;
+        status = ZX_ERR_INVALID_ARGS;
         goto out;
     }
     if (msg.header.opcode != LOADER_SVC_OP_STATUS) {
         if (handle_count > 0) {
-            _mx_handle_close(*result);
-            *result = MX_HANDLE_INVALID;
+            _zx_handle_close(*result);
+            *result = ZX_HANDLE_INVALID;
         }
         error("loader service reply opcode %u != %u",
               msg.header.opcode, LOADER_SVC_OP_STATUS);
-        status = MX_ERR_INVALID_ARGS;
+        status = ZX_ERR_INVALID_ARGS;
         goto out;
     }
-    if (msg.header.arg != MX_OK) {
+    if (msg.header.arg != ZX_OK) {
         // |result| is non-null if |handle_count| > 0, because
         // |handle_count| <= |rd_num_handles|.
-        if (handle_count > 0 && *result != MX_HANDLE_INVALID) {
+        if (handle_count > 0 && *result != ZX_HANDLE_INVALID) {
             error("loader service error %d reply contains handle %#x",
                   msg.header.arg, *result);
-            status = MX_ERR_INVALID_ARGS;
+            status = ZX_ERR_INVALID_ARGS;
             goto out;
         }
         status = msg.header.arg;
@@ -2234,35 +2234,35 @@ out:
 }
 
 __NO_SAFESTACK static void loader_svc_config(const char* config) {
-    mx_status_t status = loader_svc_rpc(LOADER_SVC_OP_CONFIG,
+    zx_status_t status = loader_svc_rpc(LOADER_SVC_OP_CONFIG,
                                         config, strlen(config),
-                                        MX_HANDLE_INVALID, NULL);
-    if (status != MX_OK)
+                                        ZX_HANDLE_INVALID, NULL);
+    if (status != ZX_OK)
         debugmsg("LOADER_SVC_OP_CONFIG(%s): %s\n",
-                 config, _mx_status_get_string(status));
+                 config, _zx_status_get_string(status));
 }
 
-__NO_SAFESTACK static mx_status_t get_library_vmo(const char* name,
-                                                  mx_handle_t* result) {
-    if (loader_svc == MX_HANDLE_INVALID) {
+__NO_SAFESTACK static zx_status_t get_library_vmo(const char* name,
+                                                  zx_handle_t* result) {
+    if (loader_svc == ZX_HANDLE_INVALID) {
         error("cannot look up \"%s\" with no loader service", name);
-        return MX_ERR_UNAVAILABLE;
+        return ZX_ERR_UNAVAILABLE;
     }
     return loader_svc_rpc(LOADER_SVC_OP_LOAD_OBJECT, name, strlen(name),
-                          MX_HANDLE_INVALID, result);
+                          ZX_HANDLE_INVALID, result);
 }
 
-__NO_SAFESTACK mx_status_t dl_clone_loader_sevice(mx_handle_t* out) {
-    if (loader_svc == MX_HANDLE_INVALID) {
-        return MX_ERR_UNAVAILABLE;
+__NO_SAFESTACK zx_status_t dl_clone_loader_sevice(zx_handle_t* out) {
+    if (loader_svc == ZX_HANDLE_INVALID) {
+        return ZX_ERR_UNAVAILABLE;
     }
-    mx_handle_t h0, h1;
-    mx_status_t status;
-    if ((status = _mx_channel_create(0, &h0, &h1)) != MX_OK) {
+    zx_handle_t h0, h1;
+    zx_status_t status;
+    if ((status = _zx_channel_create(0, &h0, &h1)) != ZX_OK) {
         return status;
     }
-    if ((status = loader_svc_rpc(LOADER_SVC_OP_CLONE, NULL, 0, h1, NULL)) != MX_OK) {
-        _mx_handle_close(h0);
+    if ((status = loader_svc_rpc(LOADER_SVC_OP_CLONE, NULL, 0, h1, NULL)) != ZX_OK) {
+        _zx_handle_close(h0);
     } else {
         *out = h0;
     }
@@ -2275,17 +2275,17 @@ __NO_SAFESTACK static void log_write(const void* buf, size_t len) {
     if (((const char*)buf)[len - 1] == '\n')
         --len;
 
-    mx_status_t status;
-    if (logger != MX_HANDLE_INVALID)
-        status = _mx_log_write(logger, len, buf, 0);
-    else if (!loader_svc_rpc_in_progress && loader_svc != MX_HANDLE_INVALID)
+    zx_status_t status;
+    if (logger != ZX_HANDLE_INVALID)
+        status = _zx_log_write(logger, len, buf, 0);
+    else if (!loader_svc_rpc_in_progress && loader_svc != ZX_HANDLE_INVALID)
         status = loader_svc_rpc(LOADER_SVC_OP_DEBUG_PRINT, buf, len,
-                                MX_HANDLE_INVALID, NULL);
+                                ZX_HANDLE_INVALID, NULL);
     else {
-        int n = _mx_debug_write(buf, len);
-        status = n < 0 ? n : MX_OK;
+        int n = _zx_debug_write(buf, len);
+        status = n < 0 ? n : ZX_OK;
     }
-    if (status != MX_OK)
+    if (status != ZX_OK)
         __builtin_trap();
 }
 
@@ -2338,30 +2338,30 @@ __NO_SAFESTACK static void error(const char* fmt, ...) {
 }
 
 // We piggy-back on the loader service to publish data from sanitizers.
-void __sanitizer_publish_data(const char* sink_name, mx_handle_t vmo) {
+void __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo) {
     pthread_rwlock_rdlock(&lock);
-    mx_status_t status = loader_svc_rpc(LOADER_SVC_OP_PUBLISH_DATA_SINK,
+    zx_status_t status = loader_svc_rpc(LOADER_SVC_OP_PUBLISH_DATA_SINK,
                                         sink_name, strlen(sink_name),
                                         vmo, NULL);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         // TODO(mcgrathr): Send this whereever sanitizer logging goes.
         debugmsg("Failed to publish data sink \"%s\" (%s): %s\n",
-                 sink_name, _mx_status_get_string(status), dlerror());
+                 sink_name, _zx_status_get_string(status), dlerror());
     }
     pthread_rwlock_unlock(&lock);
 }
 
 // ... and to get configuration files for them.
-mx_status_t __sanitizer_get_configuration(const char* name,
-                                          mx_handle_t *out_vmo) {
+zx_status_t __sanitizer_get_configuration(const char* name,
+                                          zx_handle_t *out_vmo) {
     pthread_rwlock_rdlock(&lock);
-    mx_status_t status = loader_svc_rpc(LOADER_SVC_OP_LOAD_DEBUG_CONFIG,
+    zx_status_t status = loader_svc_rpc(LOADER_SVC_OP_LOAD_DEBUG_CONFIG,
                                         name, strlen(name),
-                                        MX_HANDLE_INVALID, out_vmo);
-    if (status != MX_OK) {
+                                        ZX_HANDLE_INVALID, out_vmo);
+    if (status != ZX_OK) {
         // TODO(mcgrathr): Send this whereever sanitizer logging goes.
         debugmsg("Failed to get configuration file \"%s\" (%s): %s\n",
-                 name, _mx_status_get_string(status), dlerror());
+                 name, _zx_status_get_string(status), dlerror());
     }
     pthread_rwlock_unlock(&lock);
     return status;

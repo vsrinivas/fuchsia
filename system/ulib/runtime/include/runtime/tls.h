@@ -4,21 +4,21 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/object.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
 
 __BEGIN_CDECLS
 
 #pragma GCC visibility push(hidden)
 
 // Get and set the thread pointer.
-static inline void* mxr_tp_get(void);
-static inline void mxr_tp_set(mx_handle_t self, void* tp);
+static inline void* zxr_tp_get(void);
+static inline void zxr_tp_set(zx_handle_t self, void* tp);
 
 #if defined(__aarch64__)
 
-__NO_SAFESTACK static inline void* mxr_tp_get(void) {
+__NO_SAFESTACK static inline void* zxr_tp_get(void) {
     // This just emits "mrs %[reg], tpidr_el0", but the compiler
     // knows what exactly it's doing (unlike an asm).  So it can
     // e.g. CSE it with another implicit thread-pointer fetch it
@@ -26,7 +26,7 @@ __NO_SAFESTACK static inline void* mxr_tp_get(void) {
     return __builtin_thread_pointer();
 }
 
-__NO_SAFESTACK static inline void mxr_tp_set(mx_handle_t self, void* tp) {
+__NO_SAFESTACK static inline void zxr_tp_set(zx_handle_t self, void* tp) {
     __asm__ volatile("msr tpidr_el0, %0"
                      :
                      : "r"(tp));
@@ -34,11 +34,11 @@ __NO_SAFESTACK static inline void mxr_tp_set(mx_handle_t self, void* tp) {
 
 #elif defined(__x86_64__)
 
-__NO_SAFESTACK static inline void* mxr_tp_get(void) {
+__NO_SAFESTACK static inline void* zxr_tp_get(void) {
     // This fetches %fs:0, but the compiler knows what it's doing.
     // LLVM knows that in the Fuchsia ABI %fs:0 always stores the
     // %fs.base address, and its optimizer will see through this
-    // to integrate *(mxr_tp_get() + N) as a direct "mov %fs:N, ...".
+    // to integrate *(zxr_tp_get() + N) as a direct "mov %fs:N, ...".
     // Note that these special pointer types can be used to access
     // memory, but they cannot be cast to a normal pointer type
     // (which in the abstract should add in the base address,
@@ -62,10 +62,10 @@ __NO_SAFESTACK static inline void* mxr_tp_get(void) {
 # endif
 }
 
-__NO_SAFESTACK static inline void mxr_tp_set(mx_handle_t self, void* tp) {
-    mx_status_t status = _mx_object_set_property(
-        self, MX_PROP_REGISTER_FS, (uintptr_t*)&tp, sizeof(uintptr_t));
-    if (status != MX_OK)
+__NO_SAFESTACK static inline void zxr_tp_set(zx_handle_t self, void* tp) {
+    zx_status_t status = _zx_object_set_property(
+        self, ZX_PROP_REGISTER_FS, (uintptr_t*)&tp, sizeof(uintptr_t));
+    if (status != ZX_OK)
         __builtin_trap();
 }
 

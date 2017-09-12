@@ -1,14 +1,14 @@
 # Errors
 
-This describes the set of userspace-exposed errors used in Magenta. The first section provides the
+This describes the set of userspace-exposed errors used in Zircon. The first section provides the
 canonical names and description of each error code. The second section provides the concrete values.
 
 Within the kernel, errors are typically resulted as variables of type `status_t` and errors are
-defined by macros of the form `MX_ERR_CANONICAL_NAME` e.g. `MX_ERR_INTERNAL`. All error cases are negative
+defined by macros of the form `ZX_ERR_CANONICAL_NAME` e.g. `ZX_ERR_INTERNAL`. All error cases are negative
 values and success is represented by a non-negative value.
 
-In userspace the syscall dispatch layer (libmagenta) exposes the result values as variables of type
-`mx_status_t` that currently use the same spelling and values as the kernel for errors, but which
+In userspace the syscall dispatch layer (libzircon) exposes the result values as variables of type
+`zx_status_t` that currently use the same spelling and values as the kernel for errors, but which
 will transition to using 0 for success and positive values for errors.
 
 See [Kernel internal errors](kernel_internal_errors.md) for a list of kernel-internal values.
@@ -29,7 +29,7 @@ unambiguously identify a resource used in the operation.
 ## Categories
 
 ### Success
-**MX\_OK**
+**ZX\_OK**
  Operation succeeded.
 
 ### General errors
@@ -139,4 +139,4 @@ not satisfied or the system is unable to complete the operation in its current s
 
 ## Values
 
-[//]: # "TODO: Document values in various contexts (status_t vs mx_status_t)"
+[//]: # "TODO: Document values in various contexts (status_t vs zx_status_t)"

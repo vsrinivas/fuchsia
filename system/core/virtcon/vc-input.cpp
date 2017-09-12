@@ -109,13 +109,13 @@ static bool vc_handle_device_control_keys(uint8_t keycode, int modifiers){
     return false;
 }
 
-mx_status_t vc_set_active(int num, vc_t* to_vc) {
+zx_status_t vc_set_active(int num, vc_t* to_vc) {
     vc_t* vc = NULL;
     int i = 0;
     list_for_every_entry (&g_vc_list, vc, vc_t, node) {
         if ((num == i) || (to_vc == vc)) {
             if (vc == g_active_vc) {
-                return MX_OK;
+                return ZX_OK;
             }
             if (g_active_vc) {
                 g_active_vc->active = false;
@@ -127,11 +127,11 @@ mx_status_t vc_set_active(int num, vc_t* to_vc) {
             g_active_vc_index = i;
             vc_full_repaint(vc);
             vc_render(vc);
-            return MX_OK;
+            return ZX_OK;
         }
         i++;
     }
-    return MX_ERR_NOT_FOUND;
+    return ZX_ERR_NOT_FOUND;
 }
 
 void vc_status_update() {
@@ -195,7 +195,7 @@ void handle_key_press(uint8_t keycode, int modifiers) {
     }
 }
 
-ssize_t vc_write(vc_t* vc, const void* buf, size_t count, mx_off_t off) {
+ssize_t vc_write(vc_t* vc, const void* buf, size_t count, zx_off_t off) {
     vc->invy0 = vc_rows(vc) + 1;
     vc->invy1 = -1;
     const uint8_t* str = (const uint8_t*)buf;
@@ -220,8 +220,8 @@ ssize_t vc_write(vc_t* vc, const void* buf, size_t count, mx_off_t off) {
 }
 
 // Create a new vc_t and add it to the console list.
-mx_status_t vc_create(vc_t** vc_out, bool special) {
-    mx_status_t status;
+zx_status_t vc_create(vc_t** vc_out, bool special) {
+    zx_status_t status;
     vc_t* vc;
     if ((status = vc_alloc(&vc, special)) < 0) {
         return status;
@@ -239,7 +239,7 @@ mx_status_t vc_create(vc_t** vc_out, bool special) {
     }
 
     *vc_out = vc;
-    return MX_OK;
+    return ZX_OK;
 }
 
 void vc_destroy(vc_t* vc) {

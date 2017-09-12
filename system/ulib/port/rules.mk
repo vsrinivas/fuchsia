@@ -10,7 +10,7 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += $(LOCAL_DIR)/port.c
 
-MODULE_LIBS := system/ulib/mxio system/ulib/c
+MODULE_LIBS := system/ulib/fdio system/ulib/c
 
 include make/module.mk
 

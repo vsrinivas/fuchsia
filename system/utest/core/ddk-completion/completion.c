@@ -4,7 +4,7 @@
 
 #include <sync/completion.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -18,8 +18,8 @@ static completion_t completion = COMPLETION_INIT;
 
 static int completion_thread_wait(void* arg) {
     for (int iteration = 0u; iteration < ITERATIONS; iteration++) {
-        mx_status_t status = completion_wait(&completion, MX_TIME_INFINITE);
-        ASSERT_EQ(status, MX_OK, "completion wait failed!");
+        zx_status_t status = completion_wait(&completion, ZX_TIME_INFINITE);
+        ASSERT_EQ(status, ZX_OK, "completion wait failed!");
     }
 
     return 0;
@@ -28,7 +28,7 @@ static int completion_thread_wait(void* arg) {
 static int completion_thread_signal(void* arg) {
     for (int iteration = 0u; iteration < ITERATIONS; iteration++) {
         completion_reset(&completion);
-        mx_nanosleep(mx_deadline_after(MX_USEC(10)));
+        zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
         completion_signal(&completion);
     }
 
@@ -65,12 +65,12 @@ static bool test_completions(void) {
 
 static bool test_timeout(void) {
     BEGIN_TEST;
-    mx_time_t timeout = 0u;
+    zx_time_t timeout = 0u;
     completion_t completion = COMPLETION_INIT;
     for (int iteration = 0; iteration < 1000; iteration++) {
         timeout += 2000u;
-        mx_status_t status = completion_wait(&completion, timeout);
-        ASSERT_EQ(status, MX_ERR_TIMED_OUT, "wait returned spuriously!");
+        zx_status_t status = completion_wait(&completion, timeout);
+        ASSERT_EQ(status, ZX_ERR_TIMED_OUT, "wait returned spuriously!");
     }
     END_TEST;
 }

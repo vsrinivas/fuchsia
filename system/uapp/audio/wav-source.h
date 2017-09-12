@@ -5,7 +5,7 @@
 #pragma once
 
 #include <audio-utils/audio-stream.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 #include "wav-common.h"
 
@@ -13,11 +13,11 @@ class WAVSource : public WAVCommon,
                   public audio::utils::AudioSource {
 public:
     WAVSource() { }
-    mx_status_t Initialize(const char* filename);
+    zx_status_t Initialize(const char* filename);
 
     // AudioSource interface
-    mx_status_t GetFormat(AudioStream::Format* out_format) final;
-    mx_status_t GetFrames(void* buffer, uint32_t buf_space, uint32_t* out_packed) final;
+    zx_status_t GetFormat(AudioStream::Format* out_format) final;
+    zx_status_t GetFrames(void* buffer, uint32_t buf_space, uint32_t* out_packed) final;
     bool finished() const final { return payload_played_ >= payload_len_; }
 
 private:

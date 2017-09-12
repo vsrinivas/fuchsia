@@ -65,15 +65,15 @@ static dlog_t DLOG = {
 
 #define ALIGN4(n) (((n) + 3) & (~3))
 
-mx_status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
+zx_status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
     dlog_t* log = &DLOG;
 
     if (len > DLOG_MAX_DATA) {
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
     if (log->panic) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     // Our size "on the wire" must be a multiple of 4, so we know
@@ -139,19 +139,19 @@ mx_status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
 
     spin_unlock_irqrestore(&log->lock, state);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 // TODO: support reading multiple messages at a time
 // TODO: filter with flags
-mx_status_t dlog_read(dlog_reader_t* rdr, uint32_t flags, void* ptr, size_t len, size_t* _actual) {
+zx_status_t dlog_read(dlog_reader_t* rdr, uint32_t flags, void* ptr, size_t len, size_t* _actual) {
     // must be room for worst-case read
     if (len < DLOG_MAX_RECORD) {
-        return MX_ERR_BUFFER_TOO_SMALL;
+        return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
     dlog_t* log = rdr->log;
-    mx_status_t status = MX_ERR_SHOULD_WAIT;
+    zx_status_t status = ZX_ERR_SHOULD_WAIT;
 
     spin_lock_saved_state_t state;
     spin_lock_irqsave(&log->lock, state);
@@ -181,7 +181,7 @@ mx_status_t dlog_read(dlog_reader_t* rdr, uint32_t flags, void* ptr, size_t len,
         }
 
         *_actual = actual;
-        status = MX_OK;
+        status = ZX_OK;
 
         rtail += DLOG_HDR_GET_FIFOLEN(header);
     }
@@ -248,7 +248,7 @@ static int debuglog_notifier(void* arg) {
         }
         mutex_release(&log->readers_lock);
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 
@@ -279,7 +279,7 @@ static int debuglog_dumper(void *arg) {
 
         // dump records to kernel console
         size_t actual;
-        while (dlog_read(&reader, 0, &rec, DLOG_MAX_RECORD, &actual) == MX_OK) {
+        while (dlog_read(&reader, 0, &rec, DLOG_MAX_RECORD, &actual) == ZX_OK) {
             if (rec.hdr.datalen && (rec.data[rec.hdr.datalen - 1] == '\n')) {
                 rec.data[rec.hdr.datalen - 1] = 0;
             } else {
@@ -311,14 +311,14 @@ void dlog_bluescreen_init(void) {
 
     // replay debug log?
 
-    dprintf(INFO, "\nMAGENTA KERNEL PANIC\n\nUPTIME: %" PRIu64 "ms\n",
+    dprintf(INFO, "\nZIRCON KERNEL PANIC\n\nUPTIME: %" PRIu64 "ms\n",
             current_time() / LK_MSEC(1));
     dprintf(INFO, "BUILDID %s\n\n", version.buildid);
 
     // Log the ELF build ID in the format the symbolizer scripts understand.
     if (version.elf_build_id[0] != '\0') {
         vaddr_t base = KERNEL_BASE + KERNEL_LOAD_OFFSET;
-        dprintf(INFO, "dso: id=%s base=%#lx name=magenta.elf\n",
+        dprintf(INFO, "dso: id=%s base=%#lx name=zircon.elf\n",
                 version.elf_build_id, base);
     }
 }

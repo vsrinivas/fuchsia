@@ -12,19 +12,19 @@
 
 #include <launchpad/launchpad.h>
 
-#include <magenta/device/pty.h>
-#include <magenta/device/vfs.h>
-#include <magenta/device/display.h>
-#include <magenta/listnode.h>
-#include <magenta/process.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/log.h>
-#include <magenta/syscalls/object.h>
+#include <zircon/device/pty.h>
+#include <zircon/device/vfs.h>
+#include <zircon/device/display.h>
+#include <zircon/listnode.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/log.h>
+#include <zircon/syscalls/object.h>
 
-#include <mxio/io.h>
-#include <mxio/util.h>
-#include <mxio/watcher.h>
+#include <fdio/io.h>
+#include <fdio/util.h>
+#include <fdio/watcher.h>
 
 #include <port/port.h>
 
@@ -39,7 +39,7 @@ static port_handler_t input_ph;
 static int input_dir_fd;
 
 static vc_t* log_vc;
-static mx_koid_t proc_koid;
+static zx_koid_t proc_koid;
 
 static int g_fb_fd = -1;
 
@@ -51,14 +51,14 @@ void vc_toggle_framebuffer() {
     ioctl_display_set_owner(g_fb_fd, &n);
 }
 
-static mx_status_t log_reader_cb(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
-    char buf[MX_LOG_RECORD_MAX];
-    mx_log_record_t* rec = (mx_log_record_t*)buf;
-    mx_status_t status;
+static zx_status_t log_reader_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+    char buf[ZX_LOG_RECORD_MAX];
+    zx_log_record_t* rec = (zx_log_record_t*)buf;
+    zx_status_t status;
     for (;;) {
-        if ((status = mx_log_read(ph->handle, MX_LOG_RECORD_MAX, rec, 0)) < 0) {
-            if (status == MX_ERR_SHOULD_WAIT) {
-                return MX_OK;
+        if ((status = zx_log_read(ph->handle, ZX_LOG_RECORD_MAX, rec, 0)) < 0) {
+            if (status == ZX_ERR_SHOULD_WAIT) {
+                return ZX_OK;
             }
             break;
         }
@@ -85,18 +85,18 @@ static mx_status_t log_reader_cb(port_handler_t* ph, mx_signals_t signals, uint3
     return status;
 }
 
-static mx_status_t launch_shell(vc_t* vc, int fd, const char* cmd) {
+static zx_status_t launch_shell(vc_t* vc, int fd, const char* cmd) {
     const char* args[] = { "/boot/bin/sh", "-c", cmd };
 
     launchpad_t* lp;
-    launchpad_create(mx_job_default(), "vc:sh", &lp);
+    launchpad_create(zx_job_default(), "vc:sh", &lp);
     launchpad_load_from_file(lp, args[0]);
     launchpad_set_args(lp, cmd ? 3 : 1, args);
-    launchpad_transfer_fd(lp, fd, MXIO_FLAG_USE_FOR_STDIO | 0);
-    launchpad_clone(lp, LP_CLONE_MXIO_NAMESPACE | LP_CLONE_ENVIRON | LP_CLONE_DEFAULT_JOB);
+    launchpad_transfer_fd(lp, fd, FDIO_FLAG_USE_FOR_STDIO | 0);
+    launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE | LP_CLONE_ENVIRON | LP_CLONE_DEFAULT_JOB);
 
     const char* errmsg;
-    mx_status_t r;
+    zx_status_t r;
     if ((r = launchpad_go(lp, &vc->proc, &errmsg)) < 0) {
         printf("vc: cannot spawn shell: %s: %d\n", errmsg, r);
     }
@@ -108,13 +108,13 @@ static void session_destroy(vc_t* vc) {
         port_fd_handler_done(&vc->fh);
         // vc_destroy() closes the fd
     }
-    if (vc->proc != MX_HANDLE_INVALID) {
-        mx_task_kill(vc->proc);
+    if (vc->proc != ZX_HANDLE_INVALID) {
+        zx_task_kill(vc->proc);
     }
     vc_destroy(vc);
 }
 
-static mx_status_t session_io_cb(port_fd_handler_t* fh, unsigned pollevt, uint32_t evt) {
+static zx_status_t session_io_cb(port_fd_handler_t* fh, unsigned pollevt, uint32_t evt) {
     vc_t* vc = containerof(fh, vc_t, fh);
 
     if (pollevt & POLLIN) {
@@ -122,15 +122,15 @@ static mx_status_t session_io_cb(port_fd_handler_t* fh, unsigned pollevt, uint32
         ssize_t r = read(vc->fd, data, sizeof(data));
         if (r > 0) {
             vc_write(vc, data, r, 0);
-            return MX_OK;
+            return ZX_OK;
         }
     }
 
     if (pollevt & (POLLRDHUP | POLLHUP)) {
         // shell sessions get restarted on exit
         if (vc->is_shell) {
-            mx_task_kill(vc->proc);
-            vc->proc = MX_HANDLE_INVALID;
+            zx_task_kill(vc->proc);
+            vc->proc = ZX_HANDLE_INVALID;
 
             int fd = openat(vc->fd, "0", O_RDWR);
             if (fd < 0) {
@@ -140,23 +140,23 @@ static mx_status_t session_io_cb(port_fd_handler_t* fh, unsigned pollevt, uint32
             if(launch_shell(vc, fd, NULL) < 0) {
                 goto fail;
             }
-            return MX_OK;
+            return ZX_OK;
         }
     }
 
 fail:
     session_destroy(vc);
-    return MX_ERR_STOP;
+    return ZX_ERR_STOP;
 }
 
-static mx_status_t session_create(vc_t** out, int* out_fd, bool make_active, bool special) {
+static zx_status_t session_create(vc_t** out, int* out_fd, bool make_active, bool special) {
     int fd;
 
     // The ptmx device can start later than these threads
     int retry = 30;
     while ((fd = open("/dev/misc/ptmx", O_RDWR | O_NONBLOCK)) < 0) {
         if (--retry == 0) {
-            return MX_ERR_IO;
+            return ZX_ERR_IO;
         }
         usleep(100000);
     }
@@ -164,16 +164,16 @@ static mx_status_t session_create(vc_t** out, int* out_fd, bool make_active, boo
     int client_fd = openat(fd, "0", O_RDWR);
     if (client_fd < 0) {
         close(fd);
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
 
     vc_t* vc;
     if (vc_create(&vc, special)) {
         close(fd);
         close(client_fd);
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
-    mx_status_t r;
+    zx_status_t r;
     if ((r = port_fd_handler_init(&vc->fh, fd, POLLIN | POLLRDHUP | POLLHUP)) < 0) {
         vc_destroy(vc);
         close(fd);
@@ -196,7 +196,7 @@ static mx_status_t session_create(vc_t** out, int* out_fd, bool make_active, boo
 
     *out = vc;
     *out_fd = client_fd;
-    return MX_OK;
+    return ZX_OK;
 }
 
 static void start_shell(bool make_active, const char* cmd) {
@@ -216,37 +216,37 @@ static void start_shell(bool make_active, const char* cmd) {
     }
 }
 
-static mx_status_t new_vc_cb(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
-    mx_handle_t h;
+static zx_status_t new_vc_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+    zx_handle_t h;
     uint32_t dcount, hcount;
-    if (mx_channel_read(ph->handle, 0, NULL, &h, 0, 1, &dcount, &hcount) < 0) {
-        return MX_OK;
+    if (zx_channel_read(ph->handle, 0, NULL, &h, 0, 1, &dcount, &hcount) < 0) {
+        return ZX_OK;
     }
     if (hcount != 1) {
-        return MX_OK;
+        return ZX_OK;
     }
 
     vc_t* vc;
     int fd;
     if (session_create(&vc, &fd, true, false) < 0) {
-        mx_handle_close(h);
-        return MX_OK;
+        zx_handle_close(h);
+        return ZX_OK;
     }
 
-    mx_handle_t handles[MXIO_MAX_HANDLES];
-    uint32_t types[MXIO_MAX_HANDLES];
-    mx_status_t r = mxio_transfer_fd(fd, MXIO_FLAG_USE_FOR_STDIO | 0, handles, types);
-    if ((r != 2) || (mx_channel_write(h, 0, types, 2 * sizeof(uint32_t), handles, 2) < 0)) {
+    zx_handle_t handles[FDIO_MAX_HANDLES];
+    uint32_t types[FDIO_MAX_HANDLES];
+    zx_status_t r = fdio_transfer_fd(fd, FDIO_FLAG_USE_FOR_STDIO | 0, handles, types);
+    if ((r != 2) || (zx_channel_write(h, 0, types, 2 * sizeof(uint32_t), handles, 2) < 0)) {
         for (int n = 0; n < r; n++) {
-            mx_handle_close(handles[n]);
+            zx_handle_close(handles[n]);
         }
         session_destroy(vc);
     } else {
         port_wait(&port, &vc->fh.ph);
     }
 
-    mx_handle_close(h);
-    return MX_OK;
+    zx_handle_close(h);
+    return ZX_OK;
 }
 
 static void input_dir_event(unsigned evt, const char* name) {
@@ -264,18 +264,18 @@ static void input_dir_event(unsigned evt, const char* name) {
     new_input_device(fd, handle_key_press);
 }
 
-static mx_status_t input_cb(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
-    if (!(signals & MX_CHANNEL_READABLE)) {
-        return MX_ERR_STOP;
+static zx_status_t input_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+    if (!(signals & ZX_CHANNEL_READABLE)) {
+        return ZX_ERR_STOP;
     }
 
     // Buffer contains events { Opcode, Len, Name[Len] }
-    // See magenta/device/vfs.h for more detail
+    // See zircon/device/vfs.h for more detail
     // extra byte is for temporary NUL
     uint8_t buf[VFS_WATCH_MSG_MAX + 1];
     uint32_t len;
-    if (mx_channel_read(ph->handle, 0, buf, NULL, sizeof(buf) - 1, 0, &len, NULL) < 0) {
-        return MX_ERR_STOP;
+    if (zx_channel_read(ph->handle, 0, buf, NULL, sizeof(buf) - 1, 0, &len, NULL) < 0) {
+        return ZX_ERR_STOP;
     }
 
     uint8_t* msg = buf;
@@ -293,25 +293,25 @@ static mx_status_t input_cb(port_handler_t* ph, mx_signals_t signals, uint32_t e
         msg += namelen;
         len -= (namelen + 2u);
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ownership_ph_cb(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
+static zx_status_t ownership_ph_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
     // If we owned it, we've been notified of losing it, or the other way 'round
     g_vc_owns_display = !g_vc_owns_display;
 
     // If we've gained it, repaint
     // In both cases adjust waitfor to wait for the opposite
     if (g_vc_owns_display) {
-        ph->waitfor = MX_USER_SIGNAL_1;
+        ph->waitfor = ZX_USER_SIGNAL_1;
         if (g_active_vc) {
             vc_gfx_invalidate_all(g_active_vc);
         }
     } else {
-        ph->waitfor = MX_USER_SIGNAL_0;
+        ph->waitfor = ZX_USER_SIGNAL_0;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 int main(int argc, char** argv) {
@@ -360,7 +360,7 @@ int main(int argc, char** argv) {
     g_fb_fd = fd;
 
     // create initial console for debug log
-    if (vc_create(&log_vc, false) != MX_OK) {
+    if (vc_create(&log_vc, false) != ZX_OK) {
         return -1;
     }
     g_status_width = log_vc->columns;
@@ -368,25 +368,25 @@ int main(int argc, char** argv) {
 
     // Get our process koid so the log reader can
     // filter out our own debug messages from the log
-    mx_info_handle_basic_t info;
-    if (mx_object_get_info(mx_process_self(), MX_INFO_HANDLE_BASIC, &info,
-                           sizeof(info), NULL, NULL) == MX_OK) {
+    zx_info_handle_basic_t info;
+    if (zx_object_get_info(zx_process_self(), ZX_INFO_HANDLE_BASIC, &info,
+                           sizeof(info), NULL, NULL) == ZX_OK) {
         proc_koid = info.koid;
     }
 
     // TODO: receive from launching process
-    if (mx_log_create(MX_LOG_FLAG_READABLE, &log_ph.handle) < 0) {
+    if (zx_log_create(ZX_LOG_FLAG_READABLE, &log_ph.handle) < 0) {
         printf("vc log listener: cannot open log\n");
         return -1;
     }
 
     log_ph.func = log_reader_cb;
-    log_ph.waitfor = MX_LOG_READABLE;
+    log_ph.waitfor = ZX_LOG_READABLE;
     port_wait(&port, &log_ph);
 
-    if ((new_vc_ph.handle = mx_get_startup_handle(PA_HND(PA_USER0, 0))) != MX_HANDLE_INVALID) {
+    if ((new_vc_ph.handle = zx_get_startup_handle(PA_HND(PA_USER0, 0))) != ZX_HANDLE_INVALID) {
         new_vc_ph.func = new_vc_cb;
-        new_vc_ph.waitfor = MX_CHANNEL_READABLE;
+        new_vc_ph.waitfor = ZX_CHANNEL_READABLE;
         port_wait(&port, &new_vc_ph);
     }
 
@@ -394,14 +394,14 @@ int main(int argc, char** argv) {
         vfs_watch_dir_t wd;
         wd.mask = VFS_WATCH_MASK_ALL;
         wd.options = 0;
-        if (mx_channel_create(0, &wd.channel, &input_ph.handle) == MX_OK) {
-            if ((ioctl_vfs_watch_dir(input_dir_fd, &wd)) == MX_OK) {
-                input_ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
+        if (zx_channel_create(0, &wd.channel, &input_ph.handle) == ZX_OK) {
+            if ((ioctl_vfs_watch_dir(input_dir_fd, &wd)) == ZX_OK) {
+                input_ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
                 input_ph.func = input_cb;
                 port_wait(&port, &input_ph);
             } else {
-                mx_handle_close(wd.channel);
-                mx_handle_close(input_ph.handle);
+                zx_handle_close(wd.channel);
+                zx_handle_close(input_ph.handle);
                 close(input_dir_fd);
             }
         } else {
@@ -415,17 +415,17 @@ int main(int argc, char** argv) {
     start_shell(false, NULL);
     start_shell(false, NULL);
 
-    mx_handle_t e = MX_HANDLE_INVALID;
+    zx_handle_t e = ZX_HANDLE_INVALID;
     ioctl_display_get_ownership_change_event(fd, &e);
 
-    if (e != MX_HANDLE_INVALID) {
+    if (e != ZX_HANDLE_INVALID) {
         ownership_ph.func = ownership_ph_cb;
         ownership_ph.handle = e;
-        ownership_ph.waitfor = MX_USER_SIGNAL_1;
+        ownership_ph.waitfor = ZX_USER_SIGNAL_1;
         port_wait(&port, &ownership_ph);
     }
 
-    mx_status_t r = port_dispatch(&port, MX_TIME_INFINITE, false);
+    zx_status_t r = port_dispatch(&port, ZX_TIME_INFINITE, false);
     printf("vc: port failure: %d\n", r);
     return -1;
 }

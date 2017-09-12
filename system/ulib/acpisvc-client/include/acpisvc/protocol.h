@@ -5,9 +5,9 @@
 #pragma once
 
 #include <assert.h>
-#include <magenta/compiler.h>
-#include <magenta/syscalls/pci.h>
-#include <magenta/syscalls/port.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls/pci.h>
+#include <zircon/syscalls/port.h>
 
 #define ACPI_MAX_REQUEST_SIZE 2048
 #define ACPI_MAX_RESPONSE_SIZE 2048
@@ -33,7 +33,7 @@ typedef struct {
 } __PACKED acpi_cmd_hdr_t;
 
 typedef struct {
-    mx_status_t status;
+    zx_status_t status;
     uint32_t len;
     uint32_t request_id; // ID value that was sent in cmd
 } __PACKED acpi_rsp_hdr_t;
@@ -53,7 +53,7 @@ typedef struct {
     uint32_t reserved1[6];
 } __PACKED acpi_event_packet_t;
 
-static_assert(sizeof(mx_port_packet_t) == sizeof(acpi_event_packet_t), "");
+static_assert(sizeof(zx_port_packet_t) == sizeof(acpi_event_packet_t), "");
 
 // List all children of the node associated with the handle used to issue the
 // request.
@@ -94,7 +94,7 @@ typedef struct {
 typedef struct {
     acpi_rsp_hdr_t hdr;
 
-    mx_pci_init_arg_t arg;
+    zx_pci_init_arg_t arg;
 } __PACKED acpi_rsp_get_pci_init_arg_t;
 
 // Perform an S-state transition (S5: poweroff, S3: suspend-to-RAM).

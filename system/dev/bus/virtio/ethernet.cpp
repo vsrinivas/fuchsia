@@ -10,9 +10,9 @@
 
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/ethernet.h>
-#include <magenta/assert.h>
-#include <magenta/status.h>
-#include <magenta/types.h>
+#include <zircon/assert.h>
+#include <zircon/status.h>
+#include <zircon/types.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
@@ -64,7 +64,7 @@ void virtio_net_release(void* ctx) {
     eth->Release();
 }
 
-mx_protocol_device_t kDeviceOps = {
+zx_protocol_device_t kDeviceOps = {
     DEVICE_OPS_VERSION,
     nullptr, // get_protocol
     nullptr, // open
@@ -82,7 +82,7 @@ mx_protocol_device_t kDeviceOps = {
 };
 
 // Protocol bridge helpers
-mx_status_t virtio_net_query(void* ctx, uint32_t options, ethmac_info_t* info) {
+zx_status_t virtio_net_query(void* ctx, uint32_t options, ethmac_info_t* info) {
     virtio::EthernetDevice* eth = static_cast<virtio::EthernetDevice*>(ctx);
     return eth->Query(options, info);
 }
@@ -92,7 +92,7 @@ void virtio_net_stop(void* ctx) {
     eth->Stop();
 }
 
-mx_status_t virtio_net_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
+zx_status_t virtio_net_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     virtio::EthernetDevice* eth = static_cast<virtio::EthernetDevice*>(ctx);
     return eth->Start(ifc, cookie);
 }
@@ -109,24 +109,24 @@ ethmac_protocol_ops_t kProtoOps = {
 };
 
 // I/O buffer helpers
-mx_status_t InitBuffers(fbl::unique_ptr<io_buffer_t[]>* out) {
-    mx_status_t rc;
+zx_status_t InitBuffers(fbl::unique_ptr<io_buffer_t[]>* out) {
+    zx_status_t rc;
     fbl::AllocChecker ac;
     fbl::unique_ptr<io_buffer_t[]> bufs(new (&ac) io_buffer_t[kNumIoBufs]);
     if (!ac.check()) {
         VIRTIO_ERROR("out of memory!\n");
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     memset(bufs.get(), 0, sizeof(io_buffer_t) * kNumIoBufs);
     size_t buf_size = kFrameSize * kFramesInBuf;
     for (uint16_t id = 0; id < kNumIoBufs; ++id) {
-        if ((rc = io_buffer_init(&bufs[id], buf_size, IO_BUFFER_RW)) != MX_OK) {
-            VIRTIO_ERROR("failed to allocate I/O buffers: %s\n", mx_status_get_string(rc));
+        if ((rc = io_buffer_init(&bufs[id], buf_size, IO_BUFFER_RW)) != ZX_OK) {
+            VIRTIO_ERROR("failed to allocate I/O buffers: %s\n", zx_status_get_string(rc));
             return rc;
         }
     }
     *out = fbl::move(bufs);
-    return MX_OK;
+    return ZX_OK;
 }
 
 void ReleaseBuffers(fbl::unique_ptr<io_buffer_t[]> bufs) {
@@ -141,20 +141,20 @@ void ReleaseBuffers(fbl::unique_ptr<io_buffer_t[]> bufs) {
 }
 
 // Frame access helpers
-mx_off_t GetFrame(io_buffer_t** bufs, uint16_t ring_id, uint16_t desc_id) {
+zx_off_t GetFrame(io_buffer_t** bufs, uint16_t ring_id, uint16_t desc_id) {
     uint16_t i = static_cast<uint16_t>(desc_id + ring_id * kBacklog);
     *bufs = &((*bufs)[i / kFramesInBuf]);
     return (i % kFramesInBuf) * kFrameSize;
 }
 
 void* GetFrameVirt(io_buffer_t* bufs, uint16_t ring_id, uint16_t desc_id) {
-    mx_off_t offset = GetFrame(&bufs, ring_id, desc_id);
+    zx_off_t offset = GetFrame(&bufs, ring_id, desc_id);
     uintptr_t vaddr = reinterpret_cast<uintptr_t>(io_buffer_virt(bufs));
     return reinterpret_cast<void*>(vaddr + offset);
 }
 
-mx_paddr_t GetFramePhys(io_buffer_t* bufs, uint16_t ring_id, uint16_t desc_id) {
-    mx_off_t offset = GetFrame(&bufs, ring_id, desc_id);
+zx_paddr_t GetFramePhys(io_buffer_t* bufs, uint16_t ring_id, uint16_t desc_id) {
+    zx_off_t offset = GetFrame(&bufs, ring_id, desc_id);
     return io_buffer_phys(bufs) + offset;
 }
 
@@ -169,7 +169,7 @@ uint8_t* GetFrameData(io_buffer_t* bufs, uint16_t ring_id, uint16_t desc_id) {
 
 } // namespace
 
-EthernetDevice::EthernetDevice(mx_device_t* bus_device)
+EthernetDevice::EthernetDevice(zx_device_t* bus_device)
     : Device(bus_device), rx_(this), tx_(this), bufs_(nullptr), unkicked_(0), ifc_(nullptr),
       cookie_(nullptr) {
     LTRACE_ENTRY;
@@ -181,12 +181,12 @@ EthernetDevice::~EthernetDevice() {
     LTRACE_ENTRY;
 }
 
-mx_status_t EthernetDevice::Init() {
+zx_status_t EthernetDevice::Init() {
     LTRACE_ENTRY;
-    mx_status_t rc;
+    zx_status_t rc;
     if (mtx_init(&state_lock_, mtx_plain) != thrd_success ||
         mtx_init(&tx_lock_, mtx_plain) != thrd_success) {
-        return MX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_RESOURCES;
     }
     fbl::AutoLock lock(&state_lock_);
 
@@ -208,9 +208,9 @@ mx_status_t EthernetDevice::Init() {
 
     // Allocate I/O buffers and virtqueues.
     uint16_t num_descs = static_cast<uint16_t>(kBacklog & 0xffff);
-    if ((rc = InitBuffers(&bufs_)) != MX_OK || (rc = rx_.Init(kRxId, num_descs)) != MX_OK ||
-        (rc = tx_.Init(kTxId, num_descs)) != MX_OK) {
-        VIRTIO_ERROR("failed to allocate virtqueue: %s\n", mx_status_get_string(rc));
+    if ((rc = InitBuffers(&bufs_)) != ZX_OK || (rc = rx_.Init(kRxId, num_descs)) != ZX_OK ||
+        (rc = tx_.Init(kTxId, num_descs)) != ZX_OK) {
+        VIRTIO_ERROR("failed to allocate virtqueue: %s\n", zx_status_get_string(rc));
         return rc;
     }
 
@@ -241,17 +241,17 @@ mx_status_t EthernetDevice::Init() {
     // Start the interrupt thread and set the driver OK status
     StartIrqThread();
 
-    // Initialize the mx_device and publish us
+    // Initialize the zx_device and publish us
     device_add_args_t args;
     memset(&args, 0, sizeof(args));
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = "virtio-net";
     args.ctx = this;
     args.ops = &kDeviceOps;
-    args.proto_id = MX_PROTOCOL_ETHERMAC;
+    args.proto_id = ZX_PROTOCOL_ETHERMAC;
     args.proto_ops = &kProtoOps;
-    if ((rc = device_add(bus_device_, &args, &device_)) != MX_OK) {
-        VIRTIO_ERROR("failed to add device: %s\n", mx_status_get_string(rc));
+    if ((rc = device_add(bus_device_, &args, &device_)) != ZX_OK) {
+        VIRTIO_ERROR("failed to add device: %s\n", zx_status_get_string(rc));
         return rc;
     }
     // Give the rx buffers to the host
@@ -260,7 +260,7 @@ mx_status_t EthernetDevice::Init() {
     // Woohoo! Driver should be ready.
     cleanup.cancel();
     StatusDriverOK();
-    return MX_OK;
+    return ZX_OK;
 }
 
 void EthernetDevice::Release() {
@@ -335,10 +335,10 @@ void EthernetDevice::IrqConfigChange() {
     ifc_->status(cookie_, (config_.status & VIRTIO_NET_S_LINK_UP) ? ETH_STATUS_ONLINE : 0);
 }
 
-mx_status_t EthernetDevice::Query(uint32_t options, ethmac_info_t* info) {
+zx_status_t EthernetDevice::Query(uint32_t options, ethmac_info_t* info) {
     LTRACE_ENTRY;
     if (options) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     fbl::AutoLock lock(&state_lock_);
     if (info) {
@@ -346,7 +346,7 @@ mx_status_t EthernetDevice::Query(uint32_t options, ethmac_info_t* info) {
         info->mtu = kVirtioMtu;
         memcpy(info->mac, config_.mac, sizeof(info->mac));
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 void EthernetDevice::Stop() {
@@ -355,19 +355,19 @@ void EthernetDevice::Stop() {
     ifc_ = nullptr;
 }
 
-mx_status_t EthernetDevice::Start(ethmac_ifc_t* ifc, void* cookie) {
+zx_status_t EthernetDevice::Start(ethmac_ifc_t* ifc, void* cookie) {
     LTRACE_ENTRY;
     if (!ifc) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     fbl::AutoLock lock(&state_lock_);
     if (!bufs_ || ifc_) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     ifc_ = ifc;
     cookie_ = cookie;
     ifc_->status(cookie_, (config_.status & VIRTIO_NET_S_LINK_UP) ? ETH_STATUS_ONLINE : 0);
-    return MX_OK;
+    return ZX_OK;
 }
 
 void EthernetDevice::Send(uint32_t options, void* data, size_t length) {

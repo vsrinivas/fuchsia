@@ -9,12 +9,12 @@
 
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
-#include <magenta/compiler.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/debug.h>
-#include <magenta/syscalls/object.h>
-#include <magenta/syscalls/port.h>
+#include <zircon/compiler.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/debug.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/syscalls/port.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
@@ -44,16 +44,16 @@ void set_uint64(char* buf, uint64_t value)
     memcpy(buf, &value, sizeof (value));
 }
 
-uint32_t get_uint32_property(mx_handle_t handle, uint32_t prop)
+uint32_t get_uint32_property(zx_handle_t handle, uint32_t prop)
 {
     uint32_t value;
-    mx_status_t status = mx_object_get_property(handle, prop, &value, sizeof(value));
-    if (status != MX_OK)
-        tu_fatal("mx_object_get_property failed", status);
+    zx_status_t status = zx_object_get_property(handle, prop, &value, sizeof(value));
+    if (status != ZX_OK)
+        tu_fatal("zx_object_get_property failed", status);
     return value;
 }
 
-void send_msg(mx_handle_t handle, enum message msg)
+void send_msg(zx_handle_t handle, enum message msg)
 {
     uint64_t data = msg;
     unittest_printf("sending message %d on handle %u\n", msg, handle);
@@ -62,7 +62,7 @@ void send_msg(mx_handle_t handle, enum message msg)
 
 // This returns "bool" because it uses ASSERT_*.
 
-bool recv_msg(mx_handle_t handle, enum message* msg)
+bool recv_msg(zx_handle_t handle, enum message* msg)
 {
     BEGIN_HELPER;
 
@@ -91,7 +91,7 @@ typedef struct {
 
 #ifdef __x86_64__
 
-#define R(reg) { #reg, offsetof(mx_x86_64_general_regs_t, reg), 1, 64 }
+#define R(reg) { #reg, offsetof(zx_x86_64_general_regs_t, reg), 1, 64 }
 
 static const regspec_t general_regs[] =
 {
@@ -121,11 +121,11 @@ static const regspec_t general_regs[] =
 
 #ifdef __aarch64__
 
-#define R(reg) { #reg, offsetof(mx_arm64_general_regs_t, reg), 1, 64 }
+#define R(reg) { #reg, offsetof(zx_arm64_general_regs_t, reg), 1, 64 }
 
 static const regspec_t general_regs[] =
 {
-    { "r", offsetof(mx_arm64_general_regs_t, r), 30, 64 },
+    { "r", offsetof(zx_arm64_general_regs_t, r), 30, 64 },
     R(lr),
     R(sp),
     R(pc),
@@ -136,7 +136,7 @@ static const regspec_t general_regs[] =
 
 #endif
 
-void dump_gregs(mx_handle_t thread_handle, void* buf)
+void dump_gregs(zx_handle_t thread_handle, void* buf)
 {
 #if defined(__x86_64__) || defined(__aarch64__)
     unittest_printf("Registers for thread %d\n", thread_handle);
@@ -164,7 +164,7 @@ void dump_gregs(mx_handle_t thread_handle, void* buf)
 #endif
 }
 
-void dump_arch_regs (mx_handle_t thread_handle, int regset, void* buf)
+void dump_arch_regs (zx_handle_t thread_handle, int regset, void* buf)
 {
     switch (regset)
     {
@@ -176,33 +176,33 @@ void dump_arch_regs (mx_handle_t thread_handle, int regset, void* buf)
     }
 }
 
-bool dump_inferior_regs(mx_handle_t thread)
+bool dump_inferior_regs(zx_handle_t thread)
 {
     BEGIN_HELPER;
 
-    mx_status_t status;
-    uint32_t num_regsets = get_uint32_property(thread, MX_PROP_NUM_STATE_KINDS);
+    zx_status_t status;
+    uint32_t num_regsets = get_uint32_property(thread, ZX_PROP_NUM_STATE_KINDS);
     for (unsigned i = 0; i < num_regsets; ++i) {
         uint32_t regset_size = 0;
-        status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0 + i, NULL, regset_size, &regset_size);
-        ASSERT_EQ(status, MX_ERR_BUFFER_TOO_SMALL, "getting regset size failed");
+        status = zx_thread_read_state(thread, ZX_THREAD_STATE_REGSET0 + i, NULL, regset_size, &regset_size);
+        ASSERT_EQ(status, ZX_ERR_BUFFER_TOO_SMALL, "getting regset size failed");
         void* buf = tu_malloc(regset_size);
-        status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0 + i, buf, regset_size, &regset_size);
+        status = zx_thread_read_state(thread, ZX_THREAD_STATE_REGSET0 + i, buf, regset_size, &regset_size);
         // Regset reads can fail for legitimate reasons:
-        // MX_ERR_NOT_SUPPORTED - the regset is not supported on this chip
-        // MX_ERR_UNAVAILABLE - the regset may be currently unavailable
+        // ZX_ERR_NOT_SUPPORTED - the regset is not supported on this chip
+        // ZX_ERR_UNAVAILABLE - the regset may be currently unavailable
         switch (status) {
-        case MX_OK:
+        case ZX_OK:
             dump_arch_regs(thread, i, buf);
             break;
-        case MX_ERR_NOT_SUPPORTED:
+        case ZX_ERR_NOT_SUPPORTED:
             unittest_printf("Regset %u not supported\n", i);
             break;
-        case MX_ERR_UNAVAILABLE:
+        case ZX_ERR_UNAVAILABLE:
             unittest_printf("Regset %u unavailable\n", i);
             break;
         default:
-            ASSERT_EQ(status, MX_OK, "getting regset failed");
+            ASSERT_EQ(status, ZX_OK, "getting regset failed");
         }
         free(buf);
     }
@@ -210,40 +210,40 @@ bool dump_inferior_regs(mx_handle_t thread)
     END_HELPER;
 }
 
-uint32_t get_inferior_greg_buf_size(mx_handle_t thread)
+uint32_t get_inferior_greg_buf_size(zx_handle_t thread)
 {
     // The general regs are defined to be in regset zero.
     uint32_t regset_size = 0;
-    mx_status_t status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0, NULL, regset_size, &regset_size);
+    zx_status_t status = zx_thread_read_state(thread, ZX_THREAD_STATE_REGSET0, NULL, regset_size, &regset_size);
     // It's easier to just terminate if this fails.
-    if (status != MX_ERR_BUFFER_TOO_SMALL)
-        tu_fatal("get_inferior_greg_buf_size: mx_thread_read_state", status);
+    if (status != ZX_ERR_BUFFER_TOO_SMALL)
+        tu_fatal("get_inferior_greg_buf_size: zx_thread_read_state", status);
     return regset_size;
 }
 
 // N.B. It is assumed |buf_size| is large enough.
 
-void read_inferior_gregs(mx_handle_t thread, void* buf, unsigned buf_size)
+void read_inferior_gregs(zx_handle_t thread, void* buf, unsigned buf_size)
 {
     // By convention the general regs are in regset 0.
-    mx_status_t status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0, buf, buf_size, &buf_size);
+    zx_status_t status = zx_thread_read_state(thread, ZX_THREAD_STATE_REGSET0, buf, buf_size, &buf_size);
     // It's easier to just terminate if this fails.
-    if (status != MX_OK)
-        tu_fatal("read_inferior_gregs: mx_thread_read_state", status);
+    if (status != ZX_OK)
+        tu_fatal("read_inferior_gregs: zx_thread_read_state", status);
 }
 
-void write_inferior_gregs(mx_handle_t thread, const void* buf, unsigned buf_size)
+void write_inferior_gregs(zx_handle_t thread, const void* buf, unsigned buf_size)
 {
     // By convention the general regs are in regset 0.
-    mx_status_t status = mx_thread_write_state(thread, MX_THREAD_STATE_REGSET0, buf, buf_size);
+    zx_status_t status = zx_thread_write_state(thread, ZX_THREAD_STATE_REGSET0, buf, buf_size);
     // It's easier to just terminate if this fails.
-    if (status != MX_OK)
-        tu_fatal("write_inferior_gregs: mx_thread_write_state", status);
+    if (status != ZX_OK)
+        tu_fatal("write_inferior_gregs: zx_thread_write_state", status);
 }
 
 // This assumes |regno| is in an array of uint64_t values.
 
-uint64_t get_uint64_register(mx_handle_t thread, size_t offset) {
+uint64_t get_uint64_register(zx_handle_t thread, size_t offset) {
     unsigned greg_buf_size = get_inferior_greg_buf_size(thread);
     char* buf = tu_malloc(greg_buf_size);
     read_inferior_gregs(thread, buf, greg_buf_size);
@@ -254,7 +254,7 @@ uint64_t get_uint64_register(mx_handle_t thread, size_t offset) {
 
 // This assumes |regno| is in an array of uint64_t values.
 
-void set_uint64_register(mx_handle_t thread, size_t offset, uint64_t value) {
+void set_uint64_register(zx_handle_t thread, size_t offset, uint64_t value) {
     unsigned greg_buf_size = get_inferior_greg_buf_size(thread);
     char* buf = tu_malloc(greg_buf_size);
     read_inferior_gregs(thread, buf, greg_buf_size);
@@ -263,32 +263,32 @@ void set_uint64_register(mx_handle_t thread, size_t offset, uint64_t value) {
     free(buf);
 }
 
-size_t read_inferior_memory(mx_handle_t proc, uintptr_t vaddr, void* buf, size_t len)
+size_t read_inferior_memory(zx_handle_t proc, uintptr_t vaddr, void* buf, size_t len)
 {
-    mx_status_t status = mx_process_read_memory(proc, vaddr, buf, len, &len);
+    zx_status_t status = zx_process_read_memory(proc, vaddr, buf, len, &len);
     if (status < 0)
         tu_fatal("read_inferior_memory", status);
     return len;
 }
 
-size_t write_inferior_memory(mx_handle_t proc, uintptr_t vaddr, const void* buf, size_t len)
+size_t write_inferior_memory(zx_handle_t proc, uintptr_t vaddr, const void* buf, size_t len)
 {
-    mx_status_t status = mx_process_write_memory(proc, vaddr, buf, len, &len);
+    zx_status_t status = zx_process_write_memory(proc, vaddr, buf, len, &len);
     if (status < 0)
         tu_fatal("write_inferior_memory", status);
     return len;
 }
 
-// This does everything that launchpad_launch_mxio_etc does except
+// This does everything that launchpad_launch_fdio_etc does except
 // start the inferior. We want to attach to it first.
 // TODO(dje): Are there other uses of such a wrapper? Move to launchpad?
 // Plus there's a fair bit of code here. IWBN to not have to update it as
-// launchpad_launch_mxio_etc changes.
+// launchpad_launch_fdio_etc changes.
 
-mx_status_t create_inferior(const char* name,
+zx_status_t create_inferior(const char* name,
                             int argc, const char* const* argv,
                             const char* const* envp,
-                            size_t hnds_count, mx_handle_t* handles,
+                            size_t hnds_count, zx_handle_t* handles,
                             uint32_t* ids, launchpad_t** out_launchpad)
 {
     launchpad_t* lp = NULL;
@@ -297,12 +297,12 @@ mx_status_t create_inferior(const char* name,
     if (name == NULL)
         name = filename;
 
-    mx_status_t status;
+    zx_status_t status;
     launchpad_create(0u, name, &lp);
     launchpad_load_from_file(lp, filename);
     launchpad_set_args(lp, argc, argv);
     launchpad_set_environ(lp, envp);
-    launchpad_clone(lp, LP_CLONE_MXIO_ALL);
+    launchpad_clone(lp, LP_CLONE_FDIO_ALL);
     status = launchpad_add_handles(lp, hnds_count, handles, ids);
 
     if (status < 0) {
@@ -313,31 +313,31 @@ mx_status_t create_inferior(const char* name,
     return status;
 }
 
-bool setup_inferior(const char* name, launchpad_t** out_lp, mx_handle_t* out_inferior, mx_handle_t* out_channel)
+bool setup_inferior(const char* name, launchpad_t** out_lp, zx_handle_t* out_inferior, zx_handle_t* out_channel)
 {
     BEGIN_HELPER;
 
-    mx_status_t status;
-    mx_handle_t channel1, channel2;
+    zx_status_t status;
+    zx_handle_t channel1, channel2;
     tu_channel_create(&channel1, &channel2);
 
     const char verbosity_string[] = { 'v', '=', utest_verbosity_level + '0', '\0' };
     const char* test_child_path = program_path;
     const char* const argv[] = { test_child_path, name, verbosity_string };
-    mx_handle_t handles[1] = { channel2 };
+    zx_handle_t handles[1] = { channel2 };
     uint32_t handle_ids[1] = { PA_USER0 };
 
     launchpad_t* lp;
     unittest_printf("Creating process \"%s\"\n", name);
     status = create_inferior(name, countof(argv), argv, NULL,
                              countof(handles), handles, handle_ids, &lp);
-    ASSERT_EQ(status, MX_OK, "failed to create inferior");
+    ASSERT_EQ(status, ZX_OK, "failed to create inferior");
 
     // Note: |inferior| is a borrowed handle here.
-    mx_handle_t inferior = launchpad_get_process_handle(lp);
-    ASSERT_NE(inferior, MX_HANDLE_INVALID, "can't get launchpad process handle");
+    zx_handle_t inferior = launchpad_get_process_handle(lp);
+    ASSERT_NE(inferior, ZX_HANDLE_INVALID, "can't get launchpad process handle");
 
-    mx_info_handle_basic_t process_info;
+    zx_info_handle_basic_t process_info;
     tu_handle_get_basic_info(inferior, &process_info);
     unittest_printf("Inferior pid = %llu\n", (long long) process_info.koid);
 
@@ -346,8 +346,8 @@ bool setup_inferior(const char* name, launchpad_t** out_lp, mx_handle_t* out_inf
     // it before we call launchpad_start in order to attach to the debugging
     // exception port. We could leave this to our caller to do, but since every
     // caller needs this for convenience sake we do this here.
-    status = mx_handle_duplicate(inferior, MX_RIGHT_SAME_RIGHTS, &inferior);
-    ASSERT_EQ(status, MX_OK, "mx_handle_duplicate failed");
+    status = zx_handle_duplicate(inferior, ZX_RIGHT_SAME_RIGHTS, &inferior);
+    ASSERT_EQ(status, ZX_OK, "zx_handle_duplicate failed");
 
     *out_lp = lp;
     *out_inferior = inferior;
@@ -360,17 +360,17 @@ bool setup_inferior(const char* name, launchpad_t** out_lp, mx_handle_t* out_inf
 // inferior's handle, we later want to test attaching to an already running
 // inferior.
 
-mx_handle_t attach_inferior(mx_handle_t inferior)
+zx_handle_t attach_inferior(zx_handle_t inferior)
 {
-    mx_handle_t eport = tu_io_port_create();
-    tu_set_exception_port(inferior, eport, exception_port_key, MX_EXCEPTION_PORT_DEBUGGER);
+    zx_handle_t eport = tu_io_port_create();
+    tu_set_exception_port(inferior, eport, exception_port_key, ZX_EXCEPTION_PORT_DEBUGGER);
     unittest_printf("Attached to inferior\n");
     return eport;
 }
 
 bool start_inferior(launchpad_t* lp)
 {
-    mx_handle_t dup_inferior = tu_launch_mxio_fini(lp);
+    zx_handle_t dup_inferior = tu_launch_fdio_fini(lp);
     unittest_printf("Inferior started\n");
     // launchpad_start returns a dup of |inferior|. The original inferior
     // handle is given to the child. However we don't need it, we already
@@ -379,7 +379,7 @@ bool start_inferior(launchpad_t* lp)
     return true;
 }
 
-bool verify_inferior_running(mx_handle_t channel)
+bool verify_inferior_running(zx_handle_t channel)
 {
     BEGIN_HELPER;
 
@@ -392,35 +392,35 @@ bool verify_inferior_running(mx_handle_t channel)
     END_HELPER;
 }
 
-bool resume_inferior(mx_handle_t inferior, mx_koid_t tid)
+bool resume_inferior(zx_handle_t inferior, zx_koid_t tid)
 {
     BEGIN_HELPER;
 
-    mx_handle_t thread;
-    mx_status_t status = mx_object_get_child(inferior, tid, MX_RIGHT_SAME_RIGHTS, &thread);
-    if (status == MX_ERR_NOT_FOUND) {
+    zx_handle_t thread;
+    zx_status_t status = zx_object_get_child(inferior, tid, ZX_RIGHT_SAME_RIGHTS, &thread);
+    if (status == ZX_ERR_NOT_FOUND) {
         // If the process has exited then the kernel may have reaped the
         // thread already. Check.
         if (tu_process_has_exited(inferior))
             return true;
     }
-    ASSERT_EQ(status, MX_OK, "mx_object_get_child failed");
+    ASSERT_EQ(status, ZX_OK, "zx_object_get_child failed");
 
     unittest_printf("Resuming inferior ...\n");
-    status = mx_task_resume(thread, MX_RESUME_EXCEPTION);
+    status = zx_task_resume(thread, ZX_RESUME_EXCEPTION);
     tu_handle_close(thread);
-    if (status == MX_ERR_BAD_STATE) {
+    if (status == ZX_ERR_BAD_STATE) {
         // If the process has exited then the thread may have exited
         // ExceptionHandlerExchange already. Check.
         if (tu_process_has_exited(inferior))
             return true;
     }
-    ASSERT_EQ(status, MX_OK, "mx_task_resume failed");
+    ASSERT_EQ(status, ZX_OK, "zx_task_resume failed");
 
     END_HELPER;
 }
 
-bool shutdown_inferior(mx_handle_t channel, mx_handle_t inferior)
+bool shutdown_inferior(zx_handle_t channel, zx_handle_t inferior)
 {
     BEGIN_HELPER;
 
@@ -437,13 +437,13 @@ bool shutdown_inferior(mx_handle_t channel, mx_handle_t inferior)
 
 // Wait for and receive an exception on |eport|.
 
-bool read_exception(mx_handle_t eport, mx_handle_t inferior,
-                    mx_port_packet_t* packet)
+bool read_exception(zx_handle_t eport, zx_handle_t inferior,
+                    zx_port_packet_t* packet)
 {
     BEGIN_HELPER;
 
     unittest_printf("Waiting for exception on eport %d\n", eport);
-    ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, packet, 0), MX_OK, "mx_port_wait failed");
+    ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, packet, 0), ZX_OK, "zx_port_wait failed");
     ASSERT_EQ(packet->key, exception_port_key, "bad report key");
 
     unittest_printf("read_exception: got exception %d\n", packet->type);

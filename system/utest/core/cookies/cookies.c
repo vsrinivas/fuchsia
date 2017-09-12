@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/process.h>
-#include <magenta/types.h>
-#include <magenta/syscalls.h>
+#include <zircon/process.h>
+#include <zircon/types.h>
+#include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 #include <stdio.h>
 
@@ -16,46 +16,46 @@ static bool test_cookie_actions(void) {
     static const uint64_t magic2 = 0x1122334455667788;
 
     // create some objects
-    mx_handle_t scope1, scope2, token;
-    ASSERT_EQ(mx_event_create(0, &scope1), MX_OK, "");
-    ASSERT_EQ(mx_event_create(0, &scope2), MX_OK, "");
-    ASSERT_EQ(mx_event_create(0, &token), MX_OK, "");
+    zx_handle_t scope1, scope2, token;
+    ASSERT_EQ(zx_event_create(0, &scope1), ZX_OK, "");
+    ASSERT_EQ(zx_event_create(0, &scope2), ZX_OK, "");
+    ASSERT_EQ(zx_event_create(0, &token), ZX_OK, "");
 
     // cookies are not readable before being set
     uint64_t cookie;
-    ASSERT_EQ(mx_object_get_cookie(token, scope1, &cookie), MX_ERR_ACCESS_DENIED, "");
+    ASSERT_EQ(zx_object_get_cookie(token, scope1, &cookie), ZX_ERR_ACCESS_DENIED, "");
 
     // cookies may be read back using the scope they were set with
-    ASSERT_EQ(mx_object_set_cookie(token, scope1, magic1), MX_OK, "");
-    ASSERT_EQ(mx_object_get_cookie(token, scope1, &cookie), MX_OK, "");
+    ASSERT_EQ(zx_object_set_cookie(token, scope1, magic1), ZX_OK, "");
+    ASSERT_EQ(zx_object_get_cookie(token, scope1, &cookie), ZX_OK, "");
     ASSERT_EQ(cookie, magic1, "");
 
     // cookies are only settable on objects that support them
-    ASSERT_EQ(mx_object_set_cookie(mx_process_self(), scope1, magic1), MX_ERR_NOT_SUPPORTED, "");
+    ASSERT_EQ(zx_object_set_cookie(zx_process_self(), scope1, magic1), ZX_ERR_NOT_SUPPORTED, "");
 
     // cookies are only gettable on objects that support them
-    ASSERT_EQ(mx_object_get_cookie(mx_process_self(), scope1, &cookie), MX_ERR_NOT_SUPPORTED, "");
+    ASSERT_EQ(zx_object_get_cookie(zx_process_self(), scope1, &cookie), ZX_ERR_NOT_SUPPORTED, "");
 
     // cookies are not readable with a different scope
-    ASSERT_EQ(mx_object_get_cookie(token, scope2, &cookie), MX_ERR_ACCESS_DENIED, "");
+    ASSERT_EQ(zx_object_get_cookie(token, scope2, &cookie), ZX_ERR_ACCESS_DENIED, "");
 
     // cookies are not writeable with a different scope
-    ASSERT_EQ(mx_object_set_cookie(token, scope2, magic1), MX_ERR_ACCESS_DENIED, "");
+    ASSERT_EQ(zx_object_set_cookie(token, scope2, magic1), ZX_ERR_ACCESS_DENIED, "");
 
     // cookies are modifyable with the original scope
-    ASSERT_EQ(mx_object_set_cookie(token, scope1, magic2), MX_OK, "");
-    ASSERT_EQ(mx_object_get_cookie(token, scope1, &cookie), MX_OK, "");
+    ASSERT_EQ(zx_object_set_cookie(token, scope1, magic2), ZX_OK, "");
+    ASSERT_EQ(zx_object_get_cookie(token, scope1, &cookie), ZX_OK, "");
     ASSERT_EQ(cookie, magic2, "");
 
     // bogus handles
-    ASSERT_EQ(mx_object_get_cookie(token, MX_HANDLE_INVALID, &cookie), MX_ERR_BAD_HANDLE, "");
-    ASSERT_EQ(mx_object_get_cookie(MX_HANDLE_INVALID, scope1, &cookie), MX_ERR_BAD_HANDLE, "");
-    ASSERT_EQ(mx_object_set_cookie(token, MX_HANDLE_INVALID, magic1), MX_ERR_BAD_HANDLE, "");
-    ASSERT_EQ(mx_object_set_cookie(MX_HANDLE_INVALID, scope1, magic1), MX_ERR_BAD_HANDLE, "");
+    ASSERT_EQ(zx_object_get_cookie(token, ZX_HANDLE_INVALID, &cookie), ZX_ERR_BAD_HANDLE, "");
+    ASSERT_EQ(zx_object_get_cookie(ZX_HANDLE_INVALID, scope1, &cookie), ZX_ERR_BAD_HANDLE, "");
+    ASSERT_EQ(zx_object_set_cookie(token, ZX_HANDLE_INVALID, magic1), ZX_ERR_BAD_HANDLE, "");
+    ASSERT_EQ(zx_object_set_cookie(ZX_HANDLE_INVALID, scope1, magic1), ZX_ERR_BAD_HANDLE, "");
 
-    ASSERT_EQ(mx_handle_close(token), MX_OK, "");
-    ASSERT_EQ(mx_handle_close(scope1), MX_OK, "");
-    ASSERT_EQ(mx_handle_close(scope2), MX_OK, "");
+    ASSERT_EQ(zx_handle_close(token), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(scope1), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(scope2), ZX_OK, "");
 
     END_TEST;
 }
@@ -68,29 +68,29 @@ static bool test_cookie_eventpair(void) {
     static const uint64_t magic2 = 0x1122334455667788;
 
     // create some objects
-    mx_handle_t scope1, side1, side2;
+    zx_handle_t scope1, side1, side2;
 
-    ASSERT_EQ(mx_event_create(0, &scope1), MX_OK, "");
-    ASSERT_EQ(mx_eventpair_create(0, &side1, &side2), MX_OK, "");
+    ASSERT_EQ(zx_event_create(0, &scope1), ZX_OK, "");
+    ASSERT_EQ(zx_eventpair_create(0, &side1, &side2), ZX_OK, "");
 
     uint64_t cookie;
-    ASSERT_EQ(mx_object_set_cookie(side1, scope1, magic1), MX_OK, "");
-    ASSERT_EQ(mx_object_get_cookie(side1, scope1, &cookie), MX_OK, "");
+    ASSERT_EQ(zx_object_set_cookie(side1, scope1, magic1), ZX_OK, "");
+    ASSERT_EQ(zx_object_get_cookie(side1, scope1, &cookie), ZX_OK, "");
     ASSERT_EQ(cookie, magic1, "");
 
-    mx_handle_close(side2);
-    ASSERT_EQ(mx_object_get_cookie(side1, scope1, &cookie), MX_ERR_ACCESS_DENIED, "");
-    mx_handle_close(side1);
+    zx_handle_close(side2);
+    ASSERT_EQ(zx_object_get_cookie(side1, scope1, &cookie), ZX_ERR_ACCESS_DENIED, "");
+    zx_handle_close(side1);
 
     // Make sure it works from both sides.
-    ASSERT_EQ(mx_eventpair_create(0, &side1, &side2), MX_OK, "");
-    ASSERT_EQ(mx_object_set_cookie(side2, scope1, magic2), MX_OK, "");
-    ASSERT_EQ(mx_object_get_cookie(side2, scope1, &cookie), MX_OK, "");
+    ASSERT_EQ(zx_eventpair_create(0, &side1, &side2), ZX_OK, "");
+    ASSERT_EQ(zx_object_set_cookie(side2, scope1, magic2), ZX_OK, "");
+    ASSERT_EQ(zx_object_get_cookie(side2, scope1, &cookie), ZX_OK, "");
     ASSERT_EQ(cookie, magic2, "");
 
-    mx_handle_close(side1);
-    ASSERT_EQ(mx_object_get_cookie(side2, scope1, &cookie), MX_ERR_ACCESS_DENIED, "");
-    mx_handle_close(side2);
+    zx_handle_close(side1);
+    ASSERT_EQ(zx_object_get_cookie(side2, scope1, &cookie), ZX_ERR_ACCESS_DENIED, "");
+    zx_handle_close(side2);
 
     END_TEST;
 }

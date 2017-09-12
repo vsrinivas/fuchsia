@@ -8,7 +8,7 @@
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb-dci.h>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,7 +17,7 @@
 #include "usb-virtual-bus.h"
 
 typedef struct usb_virtual_device {
-    mx_device_t* mxdev;
+    zx_device_t* mxdev;
     usb_virtual_bus_t* bus;
     usb_dci_interface_t dci_intf;
 } usb_virtual_device_t;
@@ -25,7 +25,7 @@ typedef struct usb_virtual_device {
 void usb_virtual_device_control(usb_virtual_device_t* device, iotxn_t* txn) {
     usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
     usb_setup_t* setup = &data->setup;
-    mx_status_t status;
+    zx_status_t status;
     size_t length = le16toh(setup->wLength);
     size_t actual = 0;
 
@@ -42,38 +42,38 @@ void usb_virtual_device_control(usb_virtual_device_t* device, iotxn_t* txn) {
 
         status = usb_dci_control(&device->dci_intf, setup, buffer, length, &actual);
     } else {
-        status = MX_ERR_UNAVAILABLE;
+        status = ZX_ERR_UNAVAILABLE;
     }
 
     iotxn_complete(txn, status, actual);
 }
 
-static mx_status_t device_set_interface(void* ctx, usb_dci_interface_t* dci_intf) {
+static zx_status_t device_set_interface(void* ctx, usb_dci_interface_t* dci_intf) {
     usb_virtual_device_t* device = ctx;
     memcpy(&device->dci_intf, dci_intf, sizeof(device->dci_intf));
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t device_config_ep(void* ctx, usb_endpoint_descriptor_t* ep_desc,
+static zx_status_t device_config_ep(void* ctx, usb_endpoint_descriptor_t* ep_desc,
                                     usb_ss_ep_comp_descriptor_t* ss_comp_desc) {
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t device_disable_ep(void* ctx, uint8_t ep_addr) {
-    return MX_OK;
+static zx_status_t device_disable_ep(void* ctx, uint8_t ep_addr) {
+    return ZX_OK;
 }
 
-static mx_status_t device_set_enabled(void* ctx, bool enabled) {
+static zx_status_t device_set_enabled(void* ctx, bool enabled) {
     usb_virtual_device_t* device = ctx;
     return usb_virtual_bus_set_device_enabled(device->bus, enabled);
 }
 
-static mx_status_t device_ep_set_stall(void* ctx, uint8_t ep_address) {
+static zx_status_t device_ep_set_stall(void* ctx, uint8_t ep_address) {
     usb_virtual_device_t* device = ctx;
     return usb_virtual_bus_set_stall(device->bus, ep_address, true);
 }
 
-static mx_status_t device_ep_clear_stall(void* ctx, uint8_t ep_address) {
+static zx_status_t device_ep_clear_stall(void* ctx, uint8_t ep_address) {
     usb_virtual_device_t* device = ctx;
     return usb_virtual_bus_set_stall(device->bus, ep_address, false);
 }
@@ -87,9 +87,9 @@ usb_dci_protocol_ops_t virtual_device_protocol = {
     .ep_clear_stall = device_ep_clear_stall,
 };
 
-static mx_status_t virt_device_open(void* ctx, mx_device_t** dev_out, uint32_t flags) {
+static zx_status_t virt_device_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
 printf("device_open\n");
-    return MX_OK;
+    return ZX_OK;
 }
 
 static void virt_device_iotxn_queue(void* ctx, iotxn_t* txn) {
@@ -108,7 +108,7 @@ static void virt_device_release(void* ctx) {
     free(device);
 }
 
-static mx_protocol_device_t usb_virtual_device_device_proto = {
+static zx_protocol_device_t usb_virtual_device_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .open = virt_device_open,
     .iotxn_queue = virt_device_iotxn_queue,
@@ -116,10 +116,10 @@ static mx_protocol_device_t usb_virtual_device_device_proto = {
     .release = virt_device_release,
 };
 
-mx_status_t usb_virtual_device_add(usb_virtual_bus_t* bus, usb_virtual_device_t** out_device) {
+zx_status_t usb_virtual_device_add(usb_virtual_bus_t* bus, usb_virtual_device_t** out_device) {
     usb_virtual_device_t* device = calloc(1, sizeof(usb_virtual_device_t));
     if (!device) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     device->bus = bus;
 
@@ -128,19 +128,19 @@ mx_status_t usb_virtual_device_add(usb_virtual_bus_t* bus, usb_virtual_device_t*
         .name = "usb-virtual-device",
         .ctx = device,
         .ops = &usb_virtual_device_device_proto,
-        .proto_id = MX_PROTOCOL_USB_DCI,
+        .proto_id = ZX_PROTOCOL_USB_DCI,
         .proto_ops = &virtual_device_protocol,
     };
 
-    mx_status_t status = device_add(device->bus->mxdev, &args, &device->mxdev);
+    zx_status_t status = device_add(device->bus->mxdev, &args, &device->mxdev);
 
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         free(device);
         return status;
     }
 
     *out_device = device;
-    return MX_OK;
+    return ZX_OK;
 }
 
 void usb_virtual_device_release(usb_virtual_device_t* device) {

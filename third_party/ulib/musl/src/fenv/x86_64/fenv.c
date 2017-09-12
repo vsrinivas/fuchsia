@@ -4,7 +4,7 @@
 
 #include <fenv.h>
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <stdint.h>
 #include <x86intrin.h>
 

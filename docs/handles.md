@@ -1,4 +1,4 @@
-# Magenta Handles
+# Zircon Handles
 
 [TOC]
 
@@ -37,9 +37,9 @@ handles to the same kernel object with different rights.
 ## Using Handles
 There are many syscalls that create a new kernel object
 and which return a handle to it. To name a few:
-+ `mx_event_create`
-+ `mx_process_create`
-+ `mx_thread_create`
++ `zx_event_create`
++ `zx_process_create`
++ `zx_thread_create`
 
 These calls create both the kernel object and the first
 handle pointing to it. The handle is bound to the process that
@@ -49,33 +49,33 @@ that type of kernel object.
 There is only one syscall that can make a copy of a handle,
 which points to the same kernel object and is bound to the same
 process that issued the syscall:
-+ `mx_handle_duplicate`
++ `zx_handle_duplicate`
 
 There is one syscall that creates an equivalent handle (possibly
 with fewer rights), invalidating the original handle:
-+ `mx_handle_replace`
++ `zx_handle_replace`
 
 There is one syscall that just destroys a handle:
-+ `mx_handle_close`
++ `zx_handle_close`
 
 There is only one syscall that takes a handle bound to calling
 process and binds it into kernel (puts the handle in-transit):
-+ `mx_channel_write`
++ `zx_channel_write`
 
 There is only one syscall that takes an in-transit handle and
 binds it to the calling process:
-+ `mx_channel_read`
++ `zx_channel_read`
 
 The pair of channel syscalls above are used to transfer a handle
 from one process to another. The gist is that it is possible
 to connect two processes with a channel. To transfer a handle
-the source process calls `mx_channel_write` and then the
-destination process calls `mx_channel_read` on the same channel.
+the source process calls `zx_channel_write` and then the
+destination process calls `zx_channel_read` on the same channel.
 
 Finally, there is a single syscall that gives a new process its
 bootstrapping handle, that is, the handle that it can use to
 request other handles:
-+ `mx_process_start`
++ `zx_process_start`
 
 It is natural that the bootstrapping handle points to one end of a
 channel.

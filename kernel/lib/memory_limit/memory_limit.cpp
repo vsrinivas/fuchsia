@@ -20,9 +20,9 @@
 
 #define LOCAL_TRACE 0
 
-mx_status_t mem_limit_init(mem_limit_ctx_t* ctx) {
+zx_status_t mem_limit_init(mem_limit_ctx_t* ctx) {
     if (!ctx) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     uint64_t limit = cmdline_get_uint64("kernel.memory-limit-mb", 0u);
@@ -31,13 +31,13 @@ mx_status_t mem_limit_init(mem_limit_ctx_t* ctx) {
         ctx->memory_limit = limit * MB;
         ctx->found_kernel = 0;
         ctx->found_ramdisk = 0;
-        return MX_OK;
+        return ZX_OK;
     }
 
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-mx_status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_t range_size,
+zx_status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_t range_size,
                                iovec_t iovs[], size_t* used_cnt) {
     DEBUG_ASSERT(ctx);
     DEBUG_ASSERT(iovs);
@@ -46,7 +46,7 @@ mx_status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_
     if (range_size == 0 || ctx->memory_limit == 0) {
         /* If our limit has been reached this range can be skipped */
         *used_cnt = 0;
-        return MX_OK;
+        return ZX_OK;
     }
 
     LTRACEF("scanning range %" PRIxPTR " of size %zu, (kernel start %#" PRIxPTR " limit %zu\n",
@@ -203,16 +203,16 @@ mx_status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_
     *used_cnt = !!(iovs[0].iov_len) + !!(iovs[1].iov_len);
 
     LTRACEF("used %zu iov%s remaining memory %zu bytes\n", *used_cnt, (*used_cnt == 1) ? "," : "s,", ctx->memory_limit);
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t mem_limit_add_arenas_from_range(mem_limit_ctx_t* ctx, uintptr_t range_base,
+zx_status_t mem_limit_add_arenas_from_range(mem_limit_ctx_t* ctx, uintptr_t range_base,
                                             size_t range_size, pmm_arena_info_t arena_template) {
     size_t used;
     iovec_t vecs[2];
-    mx_status_t status = mem_limit_get_iovs(ctx, range_base, range_size, vecs, &used);
+    zx_status_t status = mem_limit_get_iovs(ctx, range_base, range_size, vecs, &used);
 
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
 
@@ -226,7 +226,7 @@ mx_status_t mem_limit_add_arenas_from_range(mem_limit_ctx_t* ctx, uintptr_t rang
 
         // If either vector failed then abort the rest of the operation. There is no
         // valid situation where only the second vector is used.
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             break;
         }
     }

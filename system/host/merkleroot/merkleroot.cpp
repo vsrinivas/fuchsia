@@ -68,19 +68,19 @@ int main(int argc, char** argv) {
             fprintf(stderr, "[-] Failed to mmap '%s.\n", arg);
             return 1;
         }
-        mx_status_t rc =
+        zx_status_t rc =
             MerkleTree::Create(data, info.st_size, tree.get(), len, &digest);
         if (info.st_size != 0 && munmap(data, info.st_size) != 0) {
             perror("munmap");
             fprintf(stderr, "[-] Failed to munmap '%s.\n", arg);
             return 1;
         }
-        if (rc != MX_OK) {
+        if (rc != ZX_OK) {
             fprintf(stderr, "[-] Merkle tree creation failed: %d\n", rc);
             return 1;
         }
         rc = digest.ToString(strbuf, sizeof(strbuf));
-        if (rc != MX_OK) {
+        if (rc != ZX_OK) {
             fprintf(stderr, "[-] Unable to print Merkle tree root: %d\n", rc);
             return 1;
         }

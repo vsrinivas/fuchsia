@@ -15,7 +15,7 @@
 #include <vm/vm_aspace.h>
 #include <lib/ktrace.h>
 #include <lk/init.h>
-#include <magenta/thread_annotations.h>
+#include <zircon/thread_annotations.h>
 #include <object/thread_dispatcher.h>
 
 #if __x86_64__
@@ -34,7 +34,7 @@ static struct ktrace_syscall_info {
     uint32_t nargs;
     const char* name;
 } kt_syscall_info [] = {
-    #include <magenta/syscall-ktrace-info.inc>
+    #include <zircon/syscall-ktrace-info.inc>
     {0, 0, nullptr}
 };
 
@@ -131,13 +131,13 @@ int ktrace_read_user(void* ptr, uint32_t off, uint32_t len) {
         len = max - off;
     }
 
-    if (arch_copy_to_user(ptr, ks->buffer + off, len) != MX_OK) {
-        return MX_ERR_INVALID_ARGS;
+    if (arch_copy_to_user(ptr, ks->buffer + off, len) != ZX_OK) {
+        return ZX_ERR_INVALID_ARGS;
     }
     return len;
 }
 
-mx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
+zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
     ktrace_state_t* ks = &KTRACE_STATE;
     switch (action) {
     case KTRACE_ACTION_START:
@@ -170,21 +170,21 @@ mx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
             mutex_release(&probe_list_lock);
             return probe->num;
         }
-        probe = (ktrace_probe_info_t*) calloc(sizeof(*probe) + MX_MAX_NAME_LEN, 1);
+        probe = (ktrace_probe_info_t*) calloc(sizeof(*probe) + ZX_MAX_NAME_LEN, 1);
         if (probe == nullptr) {
             mutex_release(&probe_list_lock);
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
         }
         probe->name = (const char*) (probe + 1);
-        memcpy(probe + 1, ptr, MX_MAX_NAME_LEN);
+        memcpy(probe + 1, ptr, ZX_MAX_NAME_LEN);
         ktrace_add_probe(probe);
         mutex_release(&probe_list_lock);
         return probe->num;
     }
     default:
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 int trace_not_ready = 0;
@@ -202,7 +202,7 @@ void ktrace_init(unsigned level) {
 
     mb *= (1024*1024);
 
-    mx_status_t status;
+    zx_status_t status;
     VmAspace* aspace = VmAspace::kernel_aspace();
     if ((status = aspace->Alloc("ktrace", mb, (void**)&ks->buffer, 0, VmAspace::VMM_FLAG_COMMIT,
                                 ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE)) < 0) {

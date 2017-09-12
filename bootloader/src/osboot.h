@@ -28,7 +28,7 @@ int boot_kernel(efi_handle img, efi_system_table* sys,
 
 uint64_t find_acpi_root(efi_handle img, efi_system_table* sys);
 
-uint32_t get_mx_pixel_format(efi_graphics_output_protocol* gop);
+uint32_t get_zx_pixel_format(efi_graphics_output_protocol* gop);
 
 int boot_deprecated(efi_handle img, efi_system_table* sys,
                     void* image, size_t sz,

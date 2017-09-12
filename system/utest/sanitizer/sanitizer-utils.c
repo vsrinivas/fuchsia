@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <launchpad/loader-service.h>
-#include <magenta/dlfcn.h>
-#include <magenta/processargs.h>
-#include <magenta/sanitizer.h>
-#include <magenta/syscalls.h>
+#include <zircon/dlfcn.h>
+#include <zircon/processargs.h>
+#include <zircon/sanitizer.h>
+#include <zircon/syscalls.h>
 
 #include <unittest/unittest.h>
 
@@ -17,9 +17,9 @@
 static atomic_bool my_loader_service_ok;
 static atomic_int my_loader_service_calls;
 
-static mx_status_t sink_test_loader_service(void* arg, uint32_t load_op,
-                                            mx_handle_t request_handle,
-                                            const char* name, mx_handle_t* out) {
+static zx_status_t sink_test_loader_service(void* arg, uint32_t load_op,
+                                            zx_handle_t request_handle,
+                                            const char* name, zx_handle_t* out) {
     ++my_loader_service_calls;
 
     EXPECT_EQ(load_op, (uint32_t)LOADER_SVC_OP_PUBLISH_DATA_SINK,
@@ -28,20 +28,20 @@ static mx_status_t sink_test_loader_service(void* arg, uint32_t load_op,
     EXPECT_STR_EQ(TEST_SINK_NAME, name, sizeof(TEST_SINK_NAME) - 1,
                   "called with unexpected name");
 
-    EXPECT_NE(request_handle, MX_HANDLE_INVALID,
+    EXPECT_NE(request_handle, ZX_HANDLE_INVALID,
              "called with invalid handle");
 
-    char vmo_name[MX_MAX_NAME_LEN];
-    EXPECT_EQ(mx_object_get_property(request_handle, MX_PROP_NAME,
+    char vmo_name[ZX_MAX_NAME_LEN];
+    EXPECT_EQ(zx_object_get_property(request_handle, ZX_PROP_NAME,
                                      vmo_name, sizeof(vmo_name)),
-              MX_OK, "get MX_PROP_NAME");
+              ZX_OK, "get ZX_PROP_NAME");
     EXPECT_STR_EQ(TEST_SINK_NAME, vmo_name, sizeof(vmo_name),
                   "not called with expected VMO handle");
 
-    EXPECT_EQ(mx_handle_close(request_handle), MX_OK, "");
+    EXPECT_EQ(zx_handle_close(request_handle), ZX_OK, "");
 
     my_loader_service_ok = current_test_info->all_ok;
-    return MX_OK;
+    return ZX_OK;
 }
 
 bool publish_data_test(void) {
@@ -50,20 +50,20 @@ bool publish_data_test(void) {
     my_loader_service_calls = 0;
 
     // Spin up our test service.
-    mx_handle_t my_service;
-    mx_status_t status = loader_service_simple(&sink_test_loader_service, NULL, &my_service);
-    ASSERT_EQ(status, MX_OK, "mxio_loader_service");
+    zx_handle_t my_service;
+    zx_status_t status = loader_service_simple(&sink_test_loader_service, NULL, &my_service);
+    ASSERT_EQ(status, ZX_OK, "fdio_loader_service");
 
     // Install the service.
-    mx_handle_t old = dl_set_loader_service(my_service);
-    EXPECT_NE(old, MX_HANDLE_INVALID, "dl_set_loader_service");
+    zx_handle_t old = dl_set_loader_service(my_service);
+    EXPECT_NE(old, ZX_HANDLE_INVALID, "dl_set_loader_service");
 
     // Make up a VMO to publish.
-    mx_handle_t vmo;
-    ASSERT_EQ(mx_vmo_create(0, 0, &vmo), MX_OK, "");
-    EXPECT_EQ(mx_object_set_property(vmo, MX_PROP_NAME,
+    zx_handle_t vmo;
+    ASSERT_EQ(zx_vmo_create(0, 0, &vmo), ZX_OK, "");
+    EXPECT_EQ(zx_object_set_property(vmo, ZX_PROP_NAME,
                                      TEST_SINK_NAME, sizeof(TEST_SINK_NAME)),
-              MX_OK, "");
+              ZX_OK, "");
 
     // Publish the VMO to our data sink.
     __sanitizer_publish_data(TEST_SINK_NAME, vmo);
@@ -74,36 +74,36 @@ bool publish_data_test(void) {
     EXPECT_TRUE(my_loader_service_ok, "loader service thread not happy");
 
     // Put things back to how they were.
-    mx_handle_t old2 = dl_set_loader_service(old);
+    zx_handle_t old2 = dl_set_loader_service(old);
     EXPECT_EQ(old2, my_service, "unexpected previous service handle");
-    mx_handle_close(old2);
+    zx_handle_close(old2);
 
     END_TEST;
 }
 
-static mx_handle_t test_config_vmo = MX_HANDLE_INVALID;
+static zx_handle_t test_config_vmo = ZX_HANDLE_INVALID;
 
-static mx_status_t config_test_loader_service(void* arg, uint32_t load_op,
-                                              mx_handle_t request_handle,
+static zx_status_t config_test_loader_service(void* arg, uint32_t load_op,
+                                              zx_handle_t request_handle,
                                               const char* name,
-                                              mx_handle_t* out) {
+                                              zx_handle_t* out) {
     ++my_loader_service_calls;
 
     EXPECT_EQ(load_op, (uint32_t)LOADER_SVC_OP_LOAD_DEBUG_CONFIG,
               "called with unexpected load op");
 
-    EXPECT_EQ(request_handle, MX_HANDLE_INVALID, "called with a handle");
+    EXPECT_EQ(request_handle, ZX_HANDLE_INVALID, "called with a handle");
 
-    mx_handle_t result = MX_HANDLE_INVALID;
+    zx_handle_t result = ZX_HANDLE_INVALID;
     if (!strcmp(TEST_CONFIG_GOOD_NAME, name)) {
-        EXPECT_NE(test_config_vmo, MX_HANDLE_INVALID, "");
+        EXPECT_NE(test_config_vmo, ZX_HANDLE_INVALID, "");
         *out = test_config_vmo;
-        result = MX_OK;
+        result = ZX_OK;
     } else {
         EXPECT_STR_EQ(TEST_CONFIG_BAD_NAME,
                       name, sizeof(TEST_CONFIG_BAD_NAME) - 1,
                       "called with unexpected name");
-        result = MX_ERR_NOT_FOUND;
+        result = ZX_ERR_NOT_FOUND;
     }
 
     my_loader_service_ok = current_test_info->all_ok;
@@ -116,37 +116,37 @@ bool debug_config_test(void) {
     my_loader_service_calls = 0;
 
     // Spin up our test service.
-    mx_handle_t my_service;
-    mx_status_t status =
+    zx_handle_t my_service;
+    zx_status_t status =
         loader_service_simple(&config_test_loader_service, NULL, &my_service);
-    ASSERT_EQ(status, MX_OK, "mxio_loader_service");
+    ASSERT_EQ(status, ZX_OK, "fdio_loader_service");
 
     // Install the service.
-    mx_handle_t old = dl_set_loader_service(my_service);
-    EXPECT_NE(old, MX_HANDLE_INVALID, "dl_set_loader_service");
+    zx_handle_t old = dl_set_loader_service(my_service);
+    EXPECT_NE(old, ZX_HANDLE_INVALID, "dl_set_loader_service");
 
     // Make up a VMO that we'll get back from the service.
-    ASSERT_EQ(mx_vmo_create(0, 0, &test_config_vmo), MX_OK, "");
+    ASSERT_EQ(zx_vmo_create(0, 0, &test_config_vmo), ZX_OK, "");
 
     // Test the success case.
-    mx_handle_t vmo = MX_HANDLE_INVALID;
+    zx_handle_t vmo = ZX_HANDLE_INVALID;
     EXPECT_EQ(__sanitizer_get_configuration(TEST_CONFIG_GOOD_NAME, &vmo),
-              MX_OK, "__sanitizer_get_configuration on valid name");
+              ZX_OK, "__sanitizer_get_configuration on valid name");
     EXPECT_EQ(vmo, test_config_vmo, "not the expected VMO handle");
 
     EXPECT_EQ(my_loader_service_calls, 1,
               "loader-service not called exactly once");
     EXPECT_TRUE(my_loader_service_ok, "loader service thread not happy");
 
-    EXPECT_EQ(mx_handle_close(test_config_vmo), MX_OK, "");
-    test_config_vmo = MX_HANDLE_INVALID;
+    EXPECT_EQ(zx_handle_close(test_config_vmo), ZX_OK, "");
+    test_config_vmo = ZX_HANDLE_INVALID;
 
     my_loader_service_ok = false;
     my_loader_service_calls = 0;
 
     // Test the failure case.
     EXPECT_EQ(__sanitizer_get_configuration(TEST_CONFIG_BAD_NAME, &vmo),
-              MX_ERR_NOT_FOUND,
+              ZX_ERR_NOT_FOUND,
               "__sanitizer_get_configuration on invalid name");
 
     EXPECT_EQ(my_loader_service_calls, 1,
@@ -154,9 +154,9 @@ bool debug_config_test(void) {
     EXPECT_TRUE(my_loader_service_ok, "loader service thread not happy");
 
     // Put things back to how they were.
-    mx_handle_t old2 = dl_set_loader_service(old);
+    zx_handle_t old2 = dl_set_loader_service(old);
     EXPECT_EQ(old2, my_service, "unexpected previous service handle");
-    mx_handle_close(old2);
+    zx_handle_close(old2);
 
     END_TEST;
 }

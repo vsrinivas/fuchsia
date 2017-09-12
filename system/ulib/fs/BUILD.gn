@@ -7,7 +7,7 @@ config("fs_config") {
 }
 
 static_library("fs") {
-  # Don't forget to update rules.mk as well for the Magenta build.
+  # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "include/fs/async-dispatcher.h",
     "include/fs/block-txn.h",
@@ -34,19 +34,19 @@ static_library("fs") {
     "_ALL_SOURCE=1",
   ]
 
-  include_dirs = [ "//magenta/system/private" ]
+  include_dirs = [ "//zircon/system/private" ]
 
   deps = [
-    "//magenta/system/ulib/async",
-    "//magenta/system/ulib/async:default",
-    "//magenta/system/ulib/async:loop",
-    "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/mxcpp",
-    "//magenta/system/ulib/fbl",
+    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/async:default",
+    "//zircon/system/ulib/async:loop",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxcpp",
+    "//zircon/system/ulib/fbl",
   ]
 
   libs = [
-    "magenta",
-    "mxio",
+    "zircon",
+    "fdio",
   ]
 }

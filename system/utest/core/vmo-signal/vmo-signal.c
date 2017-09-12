@@ -5,8 +5,8 @@
 #include <assert.h>
 #include <stdbool.h>
 
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/object.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
 
 #include <unittest/unittest.h>
 
@@ -14,22 +14,22 @@
 bool vmo_signal_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t vmo = MX_HANDLE_INVALID;
-    ASSERT_EQ(mx_vmo_create(4096, 0, &vmo), MX_OK, "");
-    ASSERT_NE(vmo, MX_HANDLE_INVALID, "mx_vmo_create() failed");
+    zx_handle_t vmo = ZX_HANDLE_INVALID;
+    ASSERT_EQ(zx_vmo_create(4096, 0, &vmo), ZX_OK, "");
+    ASSERT_NE(vmo, ZX_HANDLE_INVALID, "zx_vmo_create() failed");
 
-    mx_signals_t out_signals = 0;
-    ASSERT_EQ(mx_object_wait_one(vmo, MX_USER_SIGNAL_0, mx_deadline_after(1), &out_signals),
-              MX_ERR_TIMED_OUT, "");
-    ASSERT_EQ(out_signals, MX_SIGNAL_LAST_HANDLE, "out_signals not zero after wait timed out");
-    ASSERT_EQ(mx_object_signal(vmo, 0, MX_USER_SIGNAL_0), MX_OK, "");
+    zx_signals_t out_signals = 0;
+    ASSERT_EQ(zx_object_wait_one(vmo, ZX_USER_SIGNAL_0, zx_deadline_after(1), &out_signals),
+              ZX_ERR_TIMED_OUT, "");
+    ASSERT_EQ(out_signals, ZX_SIGNAL_LAST_HANDLE, "out_signals not zero after wait timed out");
+    ASSERT_EQ(zx_object_signal(vmo, 0, ZX_USER_SIGNAL_0), ZX_OK, "");
     ASSERT_EQ(
-        mx_object_wait_one(vmo, MX_USER_SIGNAL_0, MX_TIME_INFINITE, &out_signals), MX_OK, "");
+        zx_object_wait_one(vmo, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, &out_signals), ZX_OK, "");
     ASSERT_EQ(
-        out_signals, MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE,
-        "MX_USER_SIGNAL_0 not set after successful wait");
+        out_signals, ZX_USER_SIGNAL_0 | ZX_SIGNAL_LAST_HANDLE,
+        "ZX_USER_SIGNAL_0 not set after successful wait");
 
-    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
+    EXPECT_EQ(zx_handle_close(vmo), ZX_OK, "");
 
     END_TEST;
 }

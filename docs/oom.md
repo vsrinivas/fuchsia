@@ -106,7 +106,7 @@ wakes up, potentially killing a job.
 
 TODO(dbort): Implement and document. This will be a driver that picks which job
 should be killed if the system hits a low-memory condition. It combines
-[MX_PROP_JOB_IMPORTANCE](syscalls/object_get_property.md#MX_PROP_JOB_IMPORTANCE)
+[ZX_PROP_JOB_IMPORTANCE](syscalls/object_get_property.md#ZX_PROP_JOB_IMPORTANCE)
 hints with other heuristics to generate a total ordering of all jobs in the
 system, and feeds that order to the kernel using
-[mx_job_set_relative_importance](syscalls/job_set_relative_importance.md).
+[zx_job_set_relative_importance](syscalls/job_set_relative_importance.md).

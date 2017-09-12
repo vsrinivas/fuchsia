@@ -8,8 +8,8 @@
 
 #include <err.h>
 
-#include <magenta/rights.h>
-#include <magenta/syscalls/policy.h>
+#include <zircon/rights.h>
+#include <zircon/syscalls/policy.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
@@ -31,28 +31,28 @@ fbl::RefPtr<JobDispatcher> JobDispatcher::CreateRootJob() {
     return job;
 }
 
-mx_status_t JobDispatcher::Create(uint32_t flags,
+zx_status_t JobDispatcher::Create(uint32_t flags,
                                   fbl::RefPtr<JobDispatcher> parent,
                                   fbl::RefPtr<Dispatcher>* dispatcher,
-                                  mx_rights_t* rights) {
+                                  zx_rights_t* rights) {
     if (parent != nullptr && parent->max_height() == 0) {
         // The parent job cannot have children.
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
     fbl::AllocChecker ac;
     fbl::RefPtr<JobDispatcher> job =
         fbl::AdoptRef(new (&ac) JobDispatcher(flags, parent, parent->GetPolicy()));
     if (!ac.check())
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     if (!parent->AddChildJob(job.get())) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
-    *rights = MX_DEFAULT_JOB_RIGHTS;
+    *rights = ZX_DEFAULT_JOB_RIGHTS;
     *dispatcher = fbl::move(job);
-    return MX_OK;
+    return ZX_OK;
 }
 
 JobDispatcher::JobDispatcher(uint32_t /*flags*/,
@@ -64,9 +64,9 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/,
       process_count_(0u),
       job_count_(0u),
       importance_(parent != nullptr
-                      ? MX_JOB_IMPORTANCE_INHERITED
-                      : MX_JOB_IMPORTANCE_MAX),
-      state_tracker_(MX_JOB_NO_PROCESSES | MX_JOB_NO_JOBS),
+                      ? ZX_JOB_IMPORTANCE_INHERITED
+                      : ZX_JOB_IMPORTANCE_MAX),
+      state_tracker_(ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS),
       policy_(policy) {
 
     // Set the initial relative importance.
@@ -119,7 +119,7 @@ void JobDispatcher::on_zero_handles() {
     canary_.Assert();
 }
 
-mx_koid_t JobDispatcher::get_related_koid() const {
+zx_koid_t JobDispatcher::get_related_koid() const {
     return parent_ ? parent_->get_koid() : 0u;
 }
 
@@ -177,14 +177,14 @@ void JobDispatcher::UpdateSignalsDecrementLocked() {
 
     DEBUG_ASSERT(lock_.IsHeld());
     // removing jobs or processes.
-    mx_signals_t set = 0u;
+    zx_signals_t set = 0u;
     if (process_count_ == 0u) {
         DEBUG_ASSERT(procs_.is_empty());
-        set |= MX_JOB_NO_PROCESSES;
+        set |= ZX_JOB_NO_PROCESSES;
     }
     if (job_count_ == 0u) {
         DEBUG_ASSERT(jobs_.is_empty());
-        set |= MX_JOB_NO_JOBS;
+        set |= ZX_JOB_NO_JOBS;
     }
 
     if ((job_count_ == 0) && (process_count_ == 0)) {
@@ -202,14 +202,14 @@ void JobDispatcher::UpdateSignalsIncrementLocked() {
 
     DEBUG_ASSERT(lock_.IsHeld());
     // Adding jobs or processes.
-    mx_signals_t clear = 0u;
+    zx_signals_t clear = 0u;
     if (process_count_ == 1u) {
         DEBUG_ASSERT(!procs_.is_empty());
-        clear |= MX_JOB_NO_PROCESSES;
+        clear |= ZX_JOB_NO_PROCESSES;
     }
     if (job_count_ == 1u) {
         DEBUG_ASSERT(!jobs_.is_empty());
-        clear |= MX_JOB_NO_JOBS;
+        clear |= ZX_JOB_NO_JOBS;
     }
     state_tracker_.UpdateState(clear, 0u);
 }
@@ -273,13 +273,13 @@ void JobDispatcher::Kill() {
     }
 }
 
-mx_status_t JobDispatcher::SetPolicy(
-    uint32_t mode, const mx_policy_basic* in_policy, size_t policy_count) {
+zx_status_t JobDispatcher::SetPolicy(
+    uint32_t mode, const zx_policy_basic* in_policy, size_t policy_count) {
     // Can't set policy when there are active processes or jobs.
     AutoLock lock(&lock_);
 
     if (!procs_.is_empty() || !jobs_.is_empty())
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
     pol_cookie_t new_policy;
     auto status = GetSystemPolicyManager()->AddPolicy(
@@ -289,7 +289,7 @@ mx_status_t JobDispatcher::SetPolicy(
         return status;
 
     policy_ = new_policy;
-    return MX_OK;
+    return ZX_OK;
 }
 
 bool JobDispatcher::EnumerateChildren(JobEnumerator* je, bool recurse) {
@@ -317,7 +317,7 @@ bool JobDispatcher::EnumerateChildren(JobEnumerator* je, bool recurse) {
     return true;
 }
 
-fbl::RefPtr<ProcessDispatcher> JobDispatcher::LookupProcessById(mx_koid_t koid) {
+fbl::RefPtr<ProcessDispatcher> JobDispatcher::LookupProcessById(zx_koid_t koid) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
@@ -328,7 +328,7 @@ fbl::RefPtr<ProcessDispatcher> JobDispatcher::LookupProcessById(mx_koid_t koid) 
     return nullptr;
 }
 
-fbl::RefPtr<JobDispatcher> JobDispatcher::LookupJobById(mx_koid_t koid) {
+fbl::RefPtr<JobDispatcher> JobDispatcher::LookupJobById(zx_koid_t koid) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
@@ -340,29 +340,29 @@ fbl::RefPtr<JobDispatcher> JobDispatcher::LookupJobById(mx_koid_t koid) {
     return nullptr;
 }
 
-void JobDispatcher::get_name(char out_name[MX_MAX_NAME_LEN]) const {
+void JobDispatcher::get_name(char out_name[ZX_MAX_NAME_LEN]) const {
     canary_.Assert();
 
-    name_.get(MX_MAX_NAME_LEN, out_name);
+    name_.get(ZX_MAX_NAME_LEN, out_name);
 }
 
-mx_status_t JobDispatcher::set_name(const char* name, size_t len) {
+zx_status_t JobDispatcher::set_name(const char* name, size_t len) {
     canary_.Assert();
 
     return name_.set(name, len);
 }
 
-mx_status_t JobDispatcher::get_importance(mx_job_importance_t* out) const {
+zx_status_t JobDispatcher::get_importance(zx_job_importance_t* out) const {
     canary_.Assert();
     DEBUG_ASSERT(out != nullptr);
 
     // Find the importance value that we inherit.
     const JobDispatcher* job = this;
     do {
-        mx_job_importance_t imp = job->GetRawImportance();
-        if (imp != MX_JOB_IMPORTANCE_INHERITED) {
+        zx_job_importance_t imp = job->GetRawImportance();
+        if (imp != ZX_JOB_IMPORTANCE_INHERITED) {
             *out = imp;
-            return MX_OK;
+            return ZX_OK;
         }
         // Don't need to use RefPtrs or grab locks: our caller has a reference
         // to |this|, and there's a const RefPtr chain from |this| to all
@@ -375,20 +375,20 @@ mx_status_t JobDispatcher::get_importance(mx_job_importance_t* out) const {
           get_koid());
 }
 
-// Does not resolve MX_JOB_IMPORTANCE_INHERITED.
-mx_job_importance_t JobDispatcher::GetRawImportance() const {
+// Does not resolve ZX_JOB_IMPORTANCE_INHERITED.
+zx_job_importance_t JobDispatcher::GetRawImportance() const {
     canary_.Assert();
     AutoLock lock(&lock_);
     return importance_;
 }
 
-mx_status_t JobDispatcher::set_importance(mx_job_importance_t importance) {
+zx_status_t JobDispatcher::set_importance(zx_job_importance_t importance) {
     canary_.Assert();
 
-    if ((importance < MX_JOB_IMPORTANCE_MIN ||
-         importance > MX_JOB_IMPORTANCE_MAX) &&
-        importance != MX_JOB_IMPORTANCE_INHERITED) {
-        return MX_ERR_OUT_OF_RANGE;
+    if ((importance < ZX_JOB_IMPORTANCE_MIN ||
+         importance > ZX_JOB_IMPORTANCE_MAX) &&
+        importance != ZX_JOB_IMPORTANCE_INHERITED) {
+        return ZX_ERR_OUT_OF_RANGE;
     }
     AutoLock lock(&lock_);
     // No-one is allowed to change the importance of the root job.  Note that
@@ -396,19 +396,19 @@ mx_status_t JobDispatcher::set_importance(mx_job_importance_t importance) {
     // no userspace program should see this error.  The job that userspace calls
     // "root" is actually a child of the real (super) root job.
     if (parent_ == nullptr) {
-        return MX_ERR_ACCESS_DENIED;
+        return ZX_ERR_ACCESS_DENIED;
     }
     importance_ = importance;
-    return MX_OK;
+    return ZX_OK;
 }
 
 // Global importance ranking. Note that this is independent of
-// mx_task_importance_t-style importance as far as JobDispatcher is concerned;
+// zx_task_importance_t-style importance as far as JobDispatcher is concerned;
 // some other entity will choose how to order importance_list_.
 fbl::Mutex JobDispatcher::importance_lock_;
 JobDispatcher::JobImportanceList JobDispatcher::importance_list_;
 
-mx_status_t JobDispatcher::MakeMoreImportantThan(
+zx_status_t JobDispatcher::MakeMoreImportantThan(
     fbl::RefPtr<JobDispatcher> other) {
 
     canary_.Assert();
@@ -432,20 +432,20 @@ mx_status_t JobDispatcher::MakeMoreImportantThan(
     }
     DEBUG_ASSERT(dll_importance_.InContainer());
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t JobDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
+zx_status_t JobDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
     canary_.Assert();
 
     DEBUG_ASSERT(eport->type() == ExceptionPort::Type::JOB);
 
     AutoLock lock(&lock_);
     if (exception_port_)
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     exception_port_ = fbl::move(eport);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 class OnExceptionPortRemovalEnumerator final : public JobEnumerator {

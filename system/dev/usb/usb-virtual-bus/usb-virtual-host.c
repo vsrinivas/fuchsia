@@ -8,8 +8,8 @@
 #include <ddk/protocol/usb-hci.h>
 #include <ddk/protocol/usb.h>
 
-#include <magenta/listnode.h>
-#include <magenta/types.h>
+#include <zircon/listnode.h>
+#include <zircon/types.h>
 #include <sync/completion.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,7 +23,7 @@
 #define CLIENT_SPEED    USB_SPEED_HIGH
 
 typedef struct usb_virtual_host {
-    mx_device_t* mxdev;
+    zx_device_t* mxdev;
     usb_virtual_bus_t* bus;
     usb_bus_interface_t bus_intf;
 
@@ -54,32 +54,32 @@ static size_t virt_host_get_max_device_count(void* ctx) {
     return 1;
 }
 
-static mx_status_t virt_host_enable_ep(void* ctx, uint32_t device_id,
+static zx_status_t virt_host_enable_ep(void* ctx, uint32_t device_id,
                                        usb_endpoint_descriptor_t* ep_desc,
                                        usb_ss_ep_comp_descriptor_t* ss_comp_desc, bool enable) {
-    return MX_OK;
+    return ZX_OK;
 }
 
 static uint64_t virt_host_get_frame(void* ctx) {
     return 0;
 }
 
-mx_status_t virt_host_config_hub(void* ctx, uint32_t device_id, usb_speed_t speed,
+zx_status_t virt_host_config_hub(void* ctx, uint32_t device_id, usb_speed_t speed,
                                  usb_hub_descriptor_t* descriptor) {
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t virt_host_hub_device_added(void* ctx, uint32_t hub_address, int port,
+zx_status_t virt_host_hub_device_added(void* ctx, uint32_t hub_address, int port,
                                        usb_speed_t speed) {
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t virt_host_hub_device_removed(void* ctx, uint32_t hub_address, int port) {
-    return MX_OK;
+zx_status_t virt_host_hub_device_removed(void* ctx, uint32_t hub_address, int port) {
+    return ZX_OK;
 }
 
-mx_status_t virt_host_reset_endpoint(void* ctx, uint32_t device_id, uint8_t ep_address) {
-    return MX_ERR_NOT_SUPPORTED;
+zx_status_t virt_host_reset_endpoint(void* ctx, uint32_t device_id, uint8_t ep_address) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 size_t virt_host_get_max_transfer_size(void* ctx, uint32_t device_id, uint8_t ep_address) {
@@ -117,17 +117,17 @@ static void virt_host_release(void* ctx) {
     free(host);
 }
 
-static mx_protocol_device_t virt_host_device_proto = {
+static zx_protocol_device_t virt_host_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .iotxn_queue = virt_host_iotxn_queue,
     .unbind = virt_host_unbind,
     .release = virt_host_release,
 };
 
-mx_status_t usb_virtual_host_add(usb_virtual_bus_t* bus, usb_virtual_host_t** out_host) {
+zx_status_t usb_virtual_host_add(usb_virtual_bus_t* bus, usb_virtual_host_t** out_host) {
     usb_virtual_host_t* host = calloc(1, sizeof(usb_virtual_host_t));
     if (!host) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     mtx_init(&host->lock, mtx_plain);
@@ -139,18 +139,18 @@ mx_status_t usb_virtual_host_add(usb_virtual_bus_t* bus, usb_virtual_host_t** ou
         .name = "usb-virtual-host",
         .ctx = host,
         .ops = &virt_host_device_proto,
-        .proto_id = MX_PROTOCOL_USB_HCI,
+        .proto_id = ZX_PROTOCOL_USB_HCI,
         .proto_ops = &virtual_host_protocol,
     };
 
-    mx_status_t status = device_add(host->bus->mxdev, &args, &host->mxdev);
-    if (status != MX_OK) {
+    zx_status_t status = device_add(host->bus->mxdev, &args, &host->mxdev);
+    if (status != ZX_OK) {
         free(host);
         return status;
     }
 
     *out_host = host;
-    return MX_OK;
+    return ZX_OK;
 }
 
 void usb_virtual_host_release(usb_virtual_host_t* host) {

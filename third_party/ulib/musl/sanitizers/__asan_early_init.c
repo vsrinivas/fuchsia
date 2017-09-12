@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include "asan_impl.h"
-#include "magenta_impl.h"
+#include "zircon_impl.h"
 #include "libc.h"
 
 #include <limits.h>
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
 
 #define ASAN_SHADOW_SHIFT 3
 
@@ -19,11 +19,11 @@
 static sanitizer_shadow_bounds_t shadow_bounds ATTR_RELRO;
 
 __NO_SAFESTACK NO_ASAN void __asan_early_init(void) {
-    mx_info_vmar_t info;
-    mx_status_t status = _mx_object_get_info(__magenta_vmar_root_self,
-                                             MX_INFO_VMAR, &info, sizeof(info),
+    zx_info_vmar_t info;
+    zx_status_t status = _zx_object_get_info(__zircon_vmar_root_self,
+                                             ZX_INFO_VMAR, &info, sizeof(info),
                                              NULL, NULL);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         __builtin_trap();
 
     // Find the top of the accessible address space.
@@ -45,14 +45,14 @@ __NO_SAFESTACK NO_ASAN void __asan_early_init(void) {
     // The VMAR reserved for the shadow covers the region from the
     // lowest permitted mapping address (info.base) up to the notional
     // top of the shadow (shadow_virtual_size).
-    mx_handle_t shadow_vmar;
+    zx_handle_t shadow_vmar;
     uintptr_t shadow_addr;
-    status = _mx_vmar_allocate(
-        __magenta_vmar_root_self, 0, shadow_virtual_size - info.base,
-        MX_VM_FLAG_SPECIFIC | MX_VM_FLAG_CAN_MAP_SPECIFIC |
-        MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
+    status = _zx_vmar_allocate(
+        __zircon_vmar_root_self, 0, shadow_virtual_size - info.base,
+        ZX_VM_FLAG_SPECIFIC | ZX_VM_FLAG_CAN_MAP_SPECIFIC |
+        ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
         &shadow_vmar, &shadow_addr);
-    if (status != MX_OK || shadow_addr != info.base)
+    if (status != ZX_OK || shadow_addr != info.base)
         __builtin_trap();
 
     // The actual shadow that needs to be mapped starts at the top of
@@ -64,28 +64,28 @@ __NO_SAFESTACK NO_ASAN void __asan_early_init(void) {
         shadow_shadow_size;
 
     // Now we're ready to allocate and map the actual shadow.
-    mx_handle_t vmo;
-    status = _mx_vmo_create(shadow_used_size, 0, &vmo);
-    if (status != MX_OK)
+    zx_handle_t vmo;
+    status = _zx_vmo_create(shadow_used_size, 0, &vmo);
+    if (status != ZX_OK)
         __builtin_trap();
-    _mx_object_set_property(vmo, MX_PROP_NAME,
+    _zx_object_set_property(vmo, ZX_PROP_NAME,
                             SHADOW_VMO_NAME, sizeof(SHADOW_VMO_NAME) - 1);
 
-    status = _mx_vmar_map(
+    status = _zx_vmar_map(
         shadow_vmar, shadow_shadow_size - info.base, vmo, 0, shadow_used_size,
-        MX_VM_FLAG_SPECIFIC | MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+        ZX_VM_FLAG_SPECIFIC | ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
         &shadow_addr);
-    if (status != MX_OK || shadow_addr != shadow_shadow_size)
+    if (status != ZX_OK || shadow_addr != shadow_shadow_size)
         __builtin_trap();
 
-    status = _mx_handle_close(vmo);
-    if (status != MX_OK)
+    status = _zx_handle_close(vmo);
+    if (status != ZX_OK)
         __builtin_trap();
 
     // Drop the VMAR handle.
     // The mappings in the shadow region can never be changed.
-    status = _mx_handle_close(shadow_vmar);
-    if (status != MX_OK)
+    status = _zx_handle_close(shadow_vmar);
+    if (status != ZX_OK)
         __builtin_trap();
 
     // Store the values to be exported to the sanitizer runtime library.

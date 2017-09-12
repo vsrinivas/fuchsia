@@ -64,7 +64,7 @@ static uint64_t min_ticks_ahead;
 static void hpet_init(uint level)
 {
     status_t status = platform_find_hpet(&hpet_desc);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return;
     }
 
@@ -81,7 +81,7 @@ static void hpet_init(uint level)
             0, /* vmm flags */
             ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ |
                 ARCH_MMU_FLAG_PERM_WRITE);
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
         return;
     }
 
@@ -118,13 +118,13 @@ LK_INIT_HOOK(hpet, hpet_init, LK_INIT_LEVEL_VM + 2);
 status_t hpet_timer_disable(uint n)
 {
     if (unlikely(n >= num_timers)) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     AutoSpinLock guard(&lock);
     hpet_regs->timers[n].conf_caps &= ~TIMER_CONF_INT_EN;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 uint64_t hpet_get_value(void)
@@ -145,24 +145,24 @@ status_t hpet_set_value(uint64_t v)
     AutoSpinLock guard(&lock);
 
     if (hpet_regs->general_config & GEN_CONF_EN) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     hpet_regs->main_counter_value = v;
-    return MX_OK;
+    return ZX_OK;
 }
 
 status_t hpet_timer_configure_irq(uint n, uint irq)
 {
     if (unlikely(n >= num_timers)) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     AutoSpinLock guard(&lock);
 
     uint32_t irq_bitmap = TIMER_CAP_IRQS(hpet_regs->timers[n].conf_caps);
     if (irq >= 32 || !BIT_SET(irq_bitmap, irq)) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     uint64_t conf = hpet_regs->timers[n].conf_caps;
@@ -170,13 +170,13 @@ status_t hpet_timer_configure_irq(uint n, uint irq)
     conf |= TIMER_CONF_IRQ(irq);
     hpet_regs->timers[n].conf_caps = conf;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 status_t hpet_timer_set_oneshot(uint n, uint64_t deadline)
 {
     if (unlikely(n >= num_timers)) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     AutoSpinLock guard(&lock);
@@ -184,10 +184,10 @@ status_t hpet_timer_set_oneshot(uint n, uint64_t deadline)
     uint64_t difference = deadline - hpet_get_value();
     if (unlikely(difference > (1ULL>>63))) {
         /* Either this is a very long timer, or we wrapped around */
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     if (unlikely(difference < min_ticks_ahead)) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     hpet_regs->timers[n].conf_caps &= ~(TIMER_CONF_PERIODIC |
@@ -195,26 +195,26 @@ status_t hpet_timer_set_oneshot(uint n, uint64_t deadline)
     hpet_regs->timers[n].comparator_value = deadline;
     hpet_regs->timers[n].conf_caps |= TIMER_CONF_INT_EN;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 status_t hpet_timer_set_periodic(uint n, uint64_t period)
 {
     if (unlikely(n >= num_timers)) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     AutoSpinLock guard(&lock);
 
     if (!TIMER_CAP_PERIODIC(hpet_regs->timers[n].conf_caps)) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     /* It's unsafe to set a periodic timer while the hpet is running or the
      * main counter value is not 0. */
     if ((hpet_regs->general_config & GEN_CONF_EN) ||
         hpet_regs->main_counter_value != 0ULL) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     hpet_regs->timers[n].conf_caps |= TIMER_CONF_PERIODIC |
@@ -222,7 +222,7 @@ status_t hpet_timer_set_periodic(uint n, uint64_t period)
     hpet_regs->timers[n].comparator_value = period;
     hpet_regs->timers[n].conf_caps |= TIMER_CONF_INT_EN;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 bool hpet_is_present(void)

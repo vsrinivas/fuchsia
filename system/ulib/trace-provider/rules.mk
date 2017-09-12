@@ -15,13 +15,13 @@ MODULE_SRCS = \
 MODULE_STATIC_LIBS := \
     system/ulib/trace \
     system/ulib/async \
-    system/ulib/mx \
+    system/ulib/zx \
     system/ulib/fbl \
 
 MODULE_LIBS := \
     system/ulib/c \
-    system/ulib/magenta \
-    system/ulib/mxio \
+    system/ulib/zircon \
+    system/ulib/fdio \
     system/ulib/trace-engine
 
 include make/module.mk

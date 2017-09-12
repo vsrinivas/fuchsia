@@ -14,6 +14,6 @@ MODULE_NAME := int-types-test
 
 MODULE_STATIC_LIBS := system/ulib/fbl
 
-MODULE_LIBS := system/ulib/unittest system/ulib/mxio system/ulib/c
+MODULE_LIBS := system/ulib/unittest system/ulib/fdio system/ulib/c
 
 include make/module.mk

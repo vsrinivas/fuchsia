@@ -1,7 +1,7 @@
 #include <string.h>
 
 #include <limits.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <stdint.h>
 
 #define ALIGN (sizeof(size_t) - 1)

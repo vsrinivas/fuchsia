@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 
-#include <magenta/boot/bootdata.h>
+#include <zircon/boot/bootdata.h>
 
 // Data passed in by the bootloader
 // Used by various bits of pc platform init

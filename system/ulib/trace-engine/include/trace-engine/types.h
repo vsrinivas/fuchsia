@@ -12,14 +12,14 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <magenta/assert.h>
-#include <magenta/compiler.h>
-#include <magenta/syscalls/object.h>
-#include <magenta/types.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
-// Timebase recorded into trace files, as returned by mx_ticks_get().
+// Timebase recorded into trace files, as returned by zx_ticks_get().
 typedef uint64_t trace_ticks_t;
 
 // The ids used to correlate related counters, asynchronous operations, and flows.
@@ -38,7 +38,7 @@ typedef enum {
 } trace_scope_t;
 
 // Thread states used to describe context switches.
-// Use the |MX_THREAD_STATE_XXX| values defined in <magenta/syscalls/object.h>.
+// Use the |ZX_THREAD_STATE_XXX| values defined in <zircon/syscalls/object.h>.
 typedef uint32_t trace_thread_state_t;
 
 // Identifies a particular CPU in a context switch trace record.
@@ -110,7 +110,7 @@ inline trace_string_ref_t trace_make_inline_string_ref(
     if (!length)
         return trace_make_empty_string_ref();
 
-    MX_DEBUG_ASSERT(string != NULL);
+    ZX_DEBUG_ASSERT(string != NULL);
     if (length > TRACE_ENCODED_STRING_REF_MAX_LENGTH)
         length = TRACE_ENCODED_STRING_REF_MAX_LENGTH;
     trace_string_ref_t ref = {
@@ -131,7 +131,7 @@ inline trace_string_ref_t trace_make_inline_c_string_ref(const char* string) {
 // The |index| must be >= |TRACE_ENCODED_STRING_REF_MIN_INDEX|
 // and <= |TRACE_ENCODED_STRING_REF_MAX_INDEX|.
 inline trace_string_ref_t trace_make_indexed_string_ref(trace_string_index_t index) {
-    MX_DEBUG_ASSERT(index >= TRACE_ENCODED_STRING_REF_MIN_INDEX &&
+    ZX_DEBUG_ASSERT(index >= TRACE_ENCODED_STRING_REF_MIN_INDEX &&
                     index <= TRACE_ENCODED_STRING_REF_MAX_INDEX);
     trace_string_ref_t ref = {
         .encoded_value = index,
@@ -142,15 +142,15 @@ inline trace_string_ref_t trace_make_indexed_string_ref(trace_string_index_t ind
 // A thread reference which is either encoded inline or indirectly by thread table index.
 typedef struct trace_thread_ref {
     trace_encoded_thread_ref_t encoded_value;
-    mx_koid_t inline_process_koid;
-    mx_koid_t inline_thread_koid;
+    zx_koid_t inline_process_koid;
+    zx_koid_t inline_thread_koid;
 } trace_thread_ref_t;
 
 // Returns true if the thread ref's value is unknown.
 inline bool trace_is_unknown_thread_ref(const trace_thread_ref_t* thread_ref) {
     return thread_ref->encoded_value == TRACE_ENCODED_THREAD_REF_INLINE &&
-           thread_ref->inline_process_koid == MX_KOID_INVALID &&
-           thread_ref->inline_thread_koid == MX_KOID_INVALID;
+           thread_ref->inline_process_koid == ZX_KOID_INVALID &&
+           thread_ref->inline_thread_koid == ZX_KOID_INVALID;
 }
 
 // Returns true if the thread ref's content is stored as an index into the thread table.
@@ -162,8 +162,8 @@ inline bool trace_is_indexed_thread_ref(const trace_thread_ref_t* thread_ref) {
 // Returns true if the thread ref's value is stored inline (rather than unknown or indexed).
 inline bool trace_is_inline_thread_ref(const trace_thread_ref_t* thread_ref) {
     return thread_ref->encoded_value == TRACE_ENCODED_THREAD_REF_INLINE &&
-           (thread_ref->inline_process_koid != MX_KOID_INVALID ||
-            thread_ref->inline_thread_koid != MX_KOID_INVALID);
+           (thread_ref->inline_process_koid != ZX_KOID_INVALID ||
+            thread_ref->inline_thread_koid != ZX_KOID_INVALID);
 }
 
 // Makes a thread ref representing an unknown thread.
@@ -172,17 +172,17 @@ inline bool trace_is_inline_thread_ref(const trace_thread_ref_t* thread_ref) {
 inline trace_thread_ref_t trace_make_unknown_thread_ref(void) {
     trace_thread_ref_t ref = {
         .encoded_value = TRACE_ENCODED_THREAD_REF_INLINE,
-        .inline_process_koid = MX_KOID_INVALID,
-        .inline_thread_koid = MX_KOID_INVALID};
+        .inline_process_koid = ZX_KOID_INVALID,
+        .inline_thread_koid = ZX_KOID_INVALID};
     return ref;
 }
 
 // Makes a thread ref with an inline value.
 // The process and thread koids must not both be invalid.
-inline trace_thread_ref_t trace_make_inline_thread_ref(mx_koid_t process_koid,
-                                                       mx_koid_t thread_koid) {
-    MX_DEBUG_ASSERT(process_koid != MX_KOID_INVALID ||
-                    thread_koid != MX_KOID_INVALID);
+inline trace_thread_ref_t trace_make_inline_thread_ref(zx_koid_t process_koid,
+                                                       zx_koid_t thread_koid) {
+    ZX_DEBUG_ASSERT(process_koid != ZX_KOID_INVALID ||
+                    thread_koid != ZX_KOID_INVALID);
     trace_thread_ref_t ref = {
         .encoded_value = TRACE_ENCODED_THREAD_REF_INLINE,
         .inline_process_koid = process_koid,
@@ -194,12 +194,12 @@ inline trace_thread_ref_t trace_make_inline_thread_ref(mx_koid_t process_koid,
 // The index must be >= |TRACE_ENCODED_THREAD_REF_MIN_INDEX|
 // and <= |TRACE_ENCODED_THREAD_REF_MAX_INDEX|.
 inline trace_thread_ref_t trace_make_indexed_thread_ref(trace_thread_index_t index) {
-    MX_DEBUG_ASSERT(index >= TRACE_ENCODED_THREAD_REF_MIN_INDEX &&
+    ZX_DEBUG_ASSERT(index >= TRACE_ENCODED_THREAD_REF_MIN_INDEX &&
                     index <= TRACE_ENCODED_THREAD_REF_MAX_INDEX);
     trace_thread_ref_t ref = {
         .encoded_value = (trace_encoded_thread_ref_t)index,
-        .inline_process_koid = MX_KOID_INVALID,
-        .inline_thread_koid = MX_KOID_INVALID};
+        .inline_process_koid = ZX_KOID_INVALID,
+        .inline_thread_koid = ZX_KOID_INVALID};
     return ref;
 }
 
@@ -232,7 +232,7 @@ typedef struct {
         double double_value;
         trace_string_ref_t string_value_ref;
         uintptr_t pointer_value;
-        mx_koid_t koid_value;
+        zx_koid_t koid_value;
         uintptr_t reserved_for_future_expansion[2];
     };
 } trace_arg_value_t;
@@ -293,7 +293,7 @@ inline trace_arg_value_t trace_make_pointer_arg_value(uintptr_t value) {
 }
 
 // Makes a koid argument value.
-inline trace_arg_value_t trace_make_koid_arg_value(mx_koid_t value) {
+inline trace_arg_value_t trace_make_koid_arg_value(zx_koid_t value) {
     trace_arg_value_t arg_value = {.type = TRACE_ARG_KOID,
                                    {.koid_value = value}};
     return arg_value;
@@ -379,12 +379,12 @@ using ProviderId = uint32_t;
 
 // Thread states used to describe context switches.
 enum class ThreadState {
-    kNew = MX_THREAD_STATE_NEW,
-    kRunning = MX_THREAD_STATE_RUNNING,
-    kSuspended = MX_THREAD_STATE_SUSPENDED,
-    kBlocked = MX_THREAD_STATE_BLOCKED,
-    kDying = MX_THREAD_STATE_DYING,
-    kDead = MX_THREAD_STATE_DEAD,
+    kNew = ZX_THREAD_STATE_NEW,
+    kRunning = ZX_THREAD_STATE_RUNNING,
+    kSuspended = ZX_THREAD_STATE_SUSPENDED,
+    kBlocked = ZX_THREAD_STATE_BLOCKED,
+    kDying = ZX_THREAD_STATE_DYING,
+    kDead = ZX_THREAD_STATE_DEAD,
 };
 
 using ArgumentHeader = uint64_t;

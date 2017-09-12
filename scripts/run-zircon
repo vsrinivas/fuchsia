@@ -1,0 +1,362 @@
+#!/usr/bin/env bash
+
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+function HELP {
+    echo "help:"
+    echo "-a <arch>            : arm64, or x86-64"
+    echo "-b                   : build first"
+    echo "-c <text>            : add item to kernel commandline"
+    echo "-C                   : use Clang build"
+    echo "-A                   : use ASan build"
+    echo "-L                   : use LTO build"
+    echo "-l                   : use ThinLTO build"
+    echo "-d                   : run with emulated disk"
+    echo "-D <disk file|device>: specify disk file or device path on host, default is blk.bin"
+    echo "--disktype[=<type>]  : should be one of (ahci, virtio, nvme), default is ahci"
+    echo "-g                   : use graphical console"
+    echo "-I <interface name>  : network interface name, default is qemu."
+    echo "-k                   : use KVM"
+    echo "-m <memory in MB>    : memory size, default is ${MEMSIZE_DEFAULT}MB"
+    echo "-n                   : run with emulated nic"
+    echo "-N                   : run with emulated nic via tun/tap"
+    echo "-o <dir>             : build directory"
+    echo "-q <directory>       : location of qemu, defaults to looking in ../buildtools/qemu/bin, then \$PATH"
+    echo "-r                   : run release build"
+    echo "-s <number of cpus>  : number of cpus, 1 for uniprocessor, default is 4"
+    echo "-u <path>            : execute qemu startUp script, default is no script"
+    echo "-V                   : try to use virtio devices"
+    echo "-x <bootdata>        : use specified bootdata"
+    echo "--audio[=<host_drv>] : use Intel HD Audio"
+    echo "                     : <host_drv> should be one of (alsa, pa, wav, none)"
+    echo "--vnc=<display>      : use vnc based display"
+    echo "--wavfile=<file>     : When audio host_drv == wav, output to the specified WAV file"
+    echo "-h for help"
+    echo "all arguments after -- are passed to qemu directly"
+    exit 1
+}
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+ARCH=
+ASAN=0
+AUDIO=
+AUDIO_WAVFILE="/tmp/qemu.wav"
+BUILD=0
+CLANG=0
+DISK=0
+DISKFILE="blk.bin"
+DISKTYPE=
+BUILDDIR=
+GRAPHICS=0
+DO_KVM=0
+LTO=0
+THINLTO=0
+MEMSIZE_DEFAULT=2048
+MEMSIZE=$MEMSIZE_DEFAULT
+NET=0
+QEMUDIR=
+RELEASE=0
+UPSCRIPT=no
+VNC=
+VIRTIO=0
+SMP=4
+INITRD=
+CMDLINE=""
+
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  IFNAME="tap0"
+else
+  IFNAME="qemu"
+fi
+
+while getopts "Aa:bc:CdD:gI:kLlm:nNo:q:rs:u:Vx:h-:" FLAG; do
+    case $FLAG in
+        A) ASAN=1;;
+        a) ARCH=$OPTARG;;
+        b) BUILD=1;;
+        c) CMDLINE+="$OPTARG ";;
+        C) CLANG=1;;
+        d) DISK=1;;
+        D) DISKFILE=$OPTARG;;
+        g) GRAPHICS=1;;
+        I) IFNAME=$OPTARG;;
+        k) DO_KVM=1;;
+        L) LTO=1;;
+        l) THINLTO=1;;
+        m) MEMSIZE=$OPTARG;;
+        n) NET=1;;
+        N) NET=2;;
+        o) BUILDDIR=$OPTARG;;
+        q) QEMUDIR=${OPTARG}/;;
+        r) RELEASE=1;;
+        s) SMP=$OPTARG;;
+        u) UPSCRIPT=$OPTARG;;
+        V) VIRTIO=1;;
+        x) INITRD=$OPTARG;;
+        h) HELP;;
+        \?)
+            echo unrecognized option
+            HELP
+            ;;
+        -)
+            case $OPTARG in
+            audio) AUDIO=none;;
+            audio=*) AUDIO=${OPTARG#*=};;
+            wavfile=*) AUDIO_WAVFILE=${OPTARG#*=};;
+            disktype=*) DISKTYPE=${OPTARG#*=};;
+            vnc=*) VNC=${OPTARG#*=};;
+            *)
+                echo unrecognized long option
+                HELP
+                ;;
+            esac
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+# arch argument is non optional
+if [[ -z $ARCH ]]; then
+    echo must specify arch
+    HELP
+fi
+
+if [[ "$ARCH" == "x86-64" ]]; then
+    PROJECT=zircon-pc-x86-64
+else
+    PROJECT=zircon-qemu-$ARCH
+fi
+
+BUILDDIR_SUFFIX=
+BUILD_ARGS=
+
+if (( $ASAN )); then
+    BUILDDIR_SUFFIX+=-asan
+    BUILD_ARGS+=' USE_ASAN=true'
+elif (( $LTO )); then
+    BUILDDIR_SUFFIX+=-lto
+    BUILD_ARGS+=' USE_LTO=true'
+elif (( $THINLTO )); then
+    BUILDDIR_SUFFIX+=-thinlto
+    BUILD_ARGS+=' USE_THINLTO=true'
+elif (( $CLANG )); then
+    BUILDDIR_SUFFIX+=-clang
+    BUILD_ARGS+=' USE_CLANG=true'
+fi
+
+if (( $RELEASE )); then
+    BUILDDIR_SUFFIX+=-release
+    BUILD_ARGS+=' DEBUG=0'
+fi
+
+# build the project if asked for
+if (( $BUILD )); then
+    $DIR/make-parallel $PROJECT $BUILD_ARGS || exit 1
+fi
+
+# by default use the qemu binary located in the fuchsia buildtools
+# repo if we can find it, but allow -q to override it for people
+# who want to use their own.
+case "$(uname -s)" in
+  Darwin)
+    readonly HOST_PLATFORM="mac-x64"
+    ;;
+  Linux)
+    readonly HOST_PLATFORM="linux-x64"
+    ;;
+esac
+
+if [[ -z $QEMUDIR && -d "$DIR/../../buildtools/${HOST_PLATFORM}/qemu/bin" ]]; then
+    QEMUDIR="$DIR/../../buildtools/${HOST_PLATFORM}/qemu/bin/"
+fi
+
+if [[ -z $BUILDDIR ]]; then
+  BUILDDIR="$(dirname "$DIR")/build-$PROJECT$BUILDDIR_SUFFIX"
+fi
+
+# construct the args for qemu
+ARGS=" -m $MEMSIZE"
+if [[ -n $VNC ]]; then
+    ARGS+=" -vnc $VNC"
+fi
+
+if (( !$GRAPHICS  )); then
+    ARGS+=" -nographic"
+else
+    ARGS+=" -serial stdio"
+    if [[ "$ARCH" == "x86-64" && $VIRTIO == 0 ]]; then
+        # Enable Bochs VBE device, which Zircon has a device for
+        ARGS+=" -vga std"
+    else
+        # use the virtio gpu for display
+        ARGS+=" -vga none"
+        ARGS+=" -device virtio-gpu-pci"
+    fi
+fi
+
+if (( $DISK )); then
+    # if disktype wasn't set on the command line, default to ahci unless VIRTIO is set
+    if [[ -z $DISKTYPE ]]; then
+        if (( $VIRTIO )); then
+            DISKTYPE="virtio"
+        else
+            DISKTYPE="ahci"
+        fi
+    fi
+
+    ARGS+=" -drive file=${DISKFILE},format=raw,if=none,id=mydisk"
+    if [[ "$DISKTYPE" == "virtio" ]]; then
+        ARGS+=" -device virtio-blk-pci,drive=mydisk"
+    elif [[ "$DISKTYPE" == "ahci" ]]; then
+        ARGS+=" -device ich9-ahci,id=ahci -device ide-drive,drive=mydisk,bus=ahci.0"
+    elif [[ "$DISKTYPE" == "nvme" ]]; then
+        ARGS+=" -device nvme,drive=mydisk,serial=zircon"
+    else
+        echo unrecognized disk type \"$DISKTYPE\"
+        exit
+    fi
+fi
+
+if (( !$NET )); then
+  ARGS+=" -net none"
+fi
+
+if [[ $NET == 1 ]]; then
+    ARGS+=" -netdev type=user,hostname=$IFNAME,id=net0"
+fi
+
+if [[ $NET == 2 ]]; then
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+        if [[ ! -c "/dev/$IFNAME" ]]; then
+          echo "To use qemu with networking on macOS, install the tun/tap driver:"
+          echo "http://tuntaposx.sourceforge.net/download.xhtml"
+          exit 1
+        fi
+        if [[ ! -w "/dev/$IFNAME" ]]; then
+          echo "For networking /dev/$IFNAME must be owned by $USER. Please run:"
+          echo "  sudo chown $USER /dev/$IFNAME"
+          exit 1
+        fi
+        ARGS+=" -netdev type=tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no,id=net0"
+    else
+        CHECK=$(tunctl -b -u $USER -t $IFNAME 2>/dev/null)
+        if [[ "$CHECK" != "$IFNAME" ]]; then
+          echo "To use qemu with networking on Linux, configure tun/tap:"
+          if [[ ! -x "/usr/sbin/tunctl" ]]; then
+            echo "sudo apt-get install uml-utilities"
+          fi
+          echo "sudo tunctl -u $USER -t $IFNAME"
+          echo "sudo ifconfig $IFNAME up"
+          exit 1
+        fi
+        ARGS+=" -netdev type=tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no,id=net0"
+    fi
+fi
+
+if (( $NET )); then
+    MAC=""
+    if [[ $NET == 2 ]]; then
+        HASH=$(echo $IFNAME | shasum)
+        SUFFIX=$(for i in {0..2}; do echo -n :${HASH:$(( 2 * $i )):2}; done)
+        MAC=",mac=52:54:00$SUFFIX"
+    fi
+    if [[ "$ARCH" == "x86-64" ]] && [[ $VIRTIO == 0 ]]; then
+        ARGS+=" -device e1000,netdev=net0${MAC}"
+    else
+        ARGS+=" -device virtio-net-pci,netdev=net0${MAC}"
+    fi
+fi
+
+if [[ -n $AUDIO ]]; then
+    ARGS+=" -soundhw hda"
+    export QEMU_AUDIO_DRV=$AUDIO
+    export QEMU_AUDIO_DAC_FIXED_FREQ=48000
+    export QEMU_AUDIO_TIMER_PERIOD=20
+
+    case $AUDIO in
+        none) ;;
+        alsa) ;;
+        pa) ;;
+        wav)
+            export QEMU_WAV_FREQUENCY=48000
+            export QEMU_WAV_PATH=${AUDIO_WAVFILE}
+            ;;
+        *)
+            echo unrecognized QEMU host audio driver \"$AUDIO\"
+            exit
+            ;;
+    esac
+fi
+
+if [[ $SMP != 1 ]]; then
+    ARGS+=" -smp $SMP"
+    if [[ "$ARCH" == "x86-64" ]]; then
+        ARGS+=",threads=2"
+    fi
+fi
+
+# start a few extra harmless virtio devices that can be ignored
+if (( $VIRTIO )); then
+    ARGS+=" -device virtio-serial-pci"
+    ARGS+=" -device virtio-rng-pci"
+    ARGS+=" -device virtio-mouse-pci"
+    ARGS+=" -device virtio-keyboard-pci"
+fi
+
+case $ARCH in
+    arm64)
+        QEMU=${QEMUDIR}qemu-system-aarch64
+        ARGS+=" -machine virt -kernel $BUILDDIR/zircon.elf"
+        if (( $DO_KVM )); then
+          ARGS+=" -enable-kvm -cpu host"
+        else
+          ARGS+=" -cpu cortex-a53"
+        fi
+        ;;
+    x86-64)
+        QEMU=${QEMUDIR}qemu-system-x86_64
+        ARGS+=" -machine q35 -kernel $BUILDDIR/zircon.bin"
+        if (( $DO_KVM )); then
+          ARGS+=" -enable-kvm -cpu host,migratable=no"
+        else
+          ARGS+=" -cpu Haswell,+smap,-check"
+        fi
+        ;;
+    *)
+        echo unsupported arch
+        HELP
+        ;;
+esac
+
+# ramdisk image
+if [[ -n $INITRD ]]; then
+    ARGS+=" -initrd $INITRD"
+elif [[ -f "$BUILDDIR/bootdata.bin" ]]; then
+    ARGS+=" -initrd $BUILDDIR/bootdata.bin"
+fi
+
+# Propagate our TERM environment variable as a kernel command line
+# argument.  This is last so that an explicit -c TERM=foo argument
+# goes into CMDLINE first.  Kernel command line words become environment
+# variables, and the first variable in the list wins for getenv calls.
+if [[ -n $TERM ]]; then
+    CMDLINE+="TERM=$TERM "
+fi
+
+# Add entropy to the kernel
+CMDLINE+="kernel.entropy-mixin=$(head -c 32 /dev/urandom | shasum -a 256 | awk '{ print $1 }') "
+
+# Don't 'reboot' the emulator if the kernel crashes
+CMDLINE+="kernel.halt-on-panic=true "
+
+CMDLINE="`echo "$CMDLINE" | sed 's/,/,,/g'`"
+
+# run qemu
+set -x
+echo CMDLINE: $CMDLINE
+exec $QEMU $ARGS -append "$CMDLINE" "$@"

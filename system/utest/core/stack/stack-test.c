@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <limits.h>
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <pthread.h>
 #include <runtime/tls.h>
 #include <stdint.h>
@@ -24,13 +24,13 @@ static bool do_stack_tests(bool one_page_stack) {
     // The compiler sees this pointer escape, so it should know
     // that this belongs on the unsafe stack.
     char unsafe_stack[64];
-    (void)mx_system_get_version(unsafe_stack, sizeof(unsafe_stack));
+    (void)zx_system_get_version(unsafe_stack, sizeof(unsafe_stack));
 
     // Likewise, the tls_buf is used.
     static thread_local char tls_buf[64];
-    (void)mx_system_get_version(tls_buf, sizeof(tls_buf));
+    (void)zx_system_get_version(tls_buf, sizeof(tls_buf));
 
-    const void* tp = mxr_tp_get();
+    const void* tp = zxr_tp_get();
 
     EXPECT_NONNULL(environ, "environ unset");
     EXPECT_NONNULL(safe_stack, "CFA is null");

@@ -54,7 +54,7 @@
 #include <fcntl.h>
 
 #ifdef __Fuchsia__
-#include <magenta/device/console.h>
+#include <zircon/device/console.h>
 
 static time_t time(void* arg) {
     return 0;
@@ -545,7 +545,7 @@ int editorSyntaxToColor(int hl) {
     case HL_MLCOMMENT: return 36;     /* cyan */
     case HL_KEYWORD1: return 33;    /* yellow */
     case HL_KEYWORD2: return 32;    /* green */
-    case HL_STRING: return 35;      /* magenta */
+    case HL_STRING: return 35;      /* zircon */
     case HL_NUMBER: return 31;      /* red */
     case HL_MATCH: return 34;      /* blu */
     default: return 37;             /* white */

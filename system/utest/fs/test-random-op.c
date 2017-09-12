@@ -19,9 +19,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include <magenta/compiler.h>
-#include <magenta/listnode.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/listnode.h>
+#include <zircon/types.h>
 
 #include "filesystems.h"
 

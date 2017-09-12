@@ -10,13 +10,13 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <magenta/compiler.h>
-#include <magenta/device/vfs.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
-#include <mxio/limits.h>
-#include <mxio/util.h>
-#include <mxio/vfs.h>
+#include <zircon/compiler.h>
+#include <zircon/device/vfs.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
+#include <fdio/limits.h>
+#include <fdio/util.h>
+#include <fdio/vfs.h>
 
 #define HEADER_SIZE 4096
 
@@ -69,11 +69,11 @@ disk_format_t detect_disk_format(int fd) {
 
 // Initializes 'hnd' and 'ids' with the root handle and block device handle.
 // Consumes devicefd.
-static mx_status_t mount_prepare_handles(int devicefd, mx_handle_t* mount_handle_out,
-                                         mx_handle_t* hnd, uint32_t* ids, size_t* n) {
-    mx_status_t status;
-    mx_handle_t mountee_handle;
-    if ((status = mx_channel_create(0, &mountee_handle, mount_handle_out)) != MX_OK) {
+static zx_status_t mount_prepare_handles(int devicefd, zx_handle_t* mount_handle_out,
+                                         zx_handle_t* hnd, uint32_t* ids, size_t* n) {
+    zx_status_t status;
+    zx_handle_t mountee_handle;
+    if ((status = zx_channel_create(0, &mountee_handle, mount_handle_out)) != ZX_OK) {
         close(devicefd);
         return status;
     }
@@ -81,15 +81,15 @@ static mx_status_t mount_prepare_handles(int devicefd, mx_handle_t* mount_handle
     ids[*n] = PA_USER0;
     *n = *n + 1;
 
-    if ((status = mxio_transfer_fd(devicefd, FS_FD_BLOCKDEVICE, hnd + *n, ids + *n)) <= 0) {
+    if ((status = fdio_transfer_fd(devicefd, FS_FD_BLOCKDEVICE, hnd + *n, ids + *n)) <= 0) {
         fprintf(stderr, "Failed to access device handle\n");
-        mx_handle_close(mountee_handle);
-        mx_handle_close(*mount_handle_out);
+        zx_handle_close(mountee_handle);
+        zx_handle_close(*mount_handle_out);
         close(devicefd);
-        return status != 0 ? status : MX_ERR_BAD_STATE;
+        return status != 0 ? status : ZX_ERR_BAD_STATE;
     }
     *n = *n + status;
-    return MX_OK;
+    return ZX_OK;
 }
 
 // Describes the mountpoint of the to-be-mounted root,
@@ -103,21 +103,21 @@ typedef struct mountpoint {
 } mountpoint_t;
 
 // Calls the 'launch callback' and mounts the remote handle to the target vnode, if successful.
-static mx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* options,
-                                    const char** argv, int argc, mx_handle_t* hnd,
-                                    uint32_t* ids, size_t n, mountpoint_t* mp, mx_handle_t root) {
-    mx_status_t status;
-    if ((status = cb(argc, argv, hnd, ids, n)) != MX_OK) {
+static zx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* options,
+                                    const char** argv, int argc, zx_handle_t* hnd,
+                                    uint32_t* ids, size_t n, mountpoint_t* mp, zx_handle_t root) {
+    zx_status_t status;
+    if ((status = cb(argc, argv, hnd, ids, n)) != ZX_OK) {
         goto fail;
     }
 
     if (options->wait_until_ready) {
         // Wait until the filesystem is ready to take incoming requests
-        mx_signals_t observed;
-        status = mx_object_wait_one(root, MX_USER_SIGNAL_0 | MX_CHANNEL_PEER_CLOSED,
-                                    MX_TIME_INFINITE, &observed);
-        if ((status != MX_OK) || (observed & MX_CHANNEL_PEER_CLOSED)) {
-            status = (status != MX_OK) ? status : MX_ERR_BAD_STATE;
+        zx_signals_t observed;
+        status = zx_object_wait_one(root, ZX_USER_SIGNAL_0 | ZX_CHANNEL_PEER_CLOSED,
+                                    ZX_TIME_INFINITE, &observed);
+        if ((status != ZX_OK) || (observed & ZX_CHANNEL_PEER_CLOSED)) {
+            status = (status != ZX_OK) ? status : ZX_ERR_BAD_STATE;
             goto fail;
         }
     }
@@ -154,18 +154,18 @@ fail:
     //
     // The unmount process is a little atypical, since we're just sending a signal over a handle,
     // rather than detaching the mounted filesytem from the "parent" filesystem.
-    vfs_unmount_handle(root, options->wait_until_ready ? MX_TIME_INFINITE : 0);
+    vfs_unmount_handle(root, options->wait_until_ready ? ZX_TIME_INFINITE : 0);
     return status;
 }
 
-static mx_status_t mount_mxfs(const char* binary, int devicefd, mountpoint_t* mp,
+static zx_status_t mount_mxfs(const char* binary, int devicefd, mountpoint_t* mp,
                               const mount_options_t* options, LaunchCallback cb) {
-    mx_handle_t hnd[MXIO_MAX_HANDLES * 2];
-    uint32_t ids[MXIO_MAX_HANDLES * 2];
+    zx_handle_t hnd[FDIO_MAX_HANDLES * 2];
+    uint32_t ids[FDIO_MAX_HANDLES * 2];
     size_t n = 0;
-    mx_handle_t root;
-    mx_status_t status;
-    if ((status = mount_prepare_handles(devicefd, &root, hnd, ids, &n)) != MX_OK) {
+    zx_handle_t root;
+    zx_status_t status;
+    if ((status = mount_prepare_handles(devicefd, &root, hnd, ids, &n)) != ZX_OK) {
         return status;
     }
 
@@ -176,14 +176,14 @@ static mx_status_t mount_mxfs(const char* binary, int devicefd, mountpoint_t* mp
     return launch_and_mount(cb, options, argv, countof(argv), hnd, ids, n, mp, root);
 }
 
-static mx_status_t mount_fat(int devicefd, mountpoint_t* mp, const mount_options_t* options,
+static zx_status_t mount_fat(int devicefd, mountpoint_t* mp, const mount_options_t* options,
                              LaunchCallback cb) {
-    mx_handle_t hnd[MXIO_MAX_HANDLES * 2];
-    uint32_t ids[MXIO_MAX_HANDLES * 2];
+    zx_handle_t hnd[FDIO_MAX_HANDLES * 2];
+    uint32_t ids[FDIO_MAX_HANDLES * 2];
     size_t n = 0;
-    mx_handle_t root;
-    mx_status_t status;
-    if ((status = mount_prepare_handles(devicefd, &root, hnd, ids, &n)) != MX_OK) {
+    zx_handle_t root;
+    zx_status_t status;
+    if ((status = mount_prepare_handles(devicefd, &root, hnd, ids, &n)) != ZX_OK) {
         return status;
     }
 
@@ -205,7 +205,7 @@ static mx_status_t mount_fat(int devicefd, mountpoint_t* mp, const mount_options
     return launch_and_mount(cb, options, argv, countof(argv), hnd, ids, n, mp, root);
 }
 
-mx_status_t fmount_common(int devicefd, mountpoint_t* mp, disk_format_t df,
+zx_status_t fmount_common(int devicefd, mountpoint_t* mp, disk_format_t df,
                           const mount_options_t* options, LaunchCallback cb) {
     switch (df) {
     case DISK_FORMAT_MINFS:
@@ -216,11 +216,11 @@ mx_status_t fmount_common(int devicefd, mountpoint_t* mp, disk_format_t df,
         return mount_fat(devicefd, mp, options, cb);
     default:
         close(devicefd);
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
-mx_status_t fmount(int devicefd, int mountfd, disk_format_t df,
+zx_status_t fmount(int devicefd, int mountfd, disk_format_t df,
                    const mount_options_t* options, LaunchCallback cb) {
     mountpoint_t mp;
     mp.fd = mountfd;
@@ -229,7 +229,7 @@ mx_status_t fmount(int devicefd, int mountfd, disk_format_t df,
     return fmount_common(devicefd, &mp, df, options, cb);
 }
 
-mx_status_t mount(int devicefd, const char* mountpath, disk_format_t df,
+zx_status_t mount(int devicefd, const char* mountpath, disk_format_t df,
                   const mount_options_t* options, LaunchCallback cb) {
     mountpoint_t mp;
     mp.flags = 0;
@@ -240,35 +240,35 @@ mx_status_t mount(int devicefd, const char* mountpath, disk_format_t df,
     } else {
         // Open mountpoint; use it directly
         if ((mp.fd = open(mountpath, O_RDONLY | O_DIRECTORY | O_ADMIN)) < 0) {
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
         }
     }
 
-    mx_status_t status = fmount_common(devicefd, &mp, df, options, cb);
+    zx_status_t status = fmount_common(devicefd, &mp, df, options, cb);
     if (!options->create_mountpoint) {
         close(mp.fd);
     }
     return status;
 }
 
-mx_status_t fumount(int mountfd) {
-    mx_handle_t h;
-    mx_status_t status = ioctl_vfs_unmount_node(mountfd, &h);
+zx_status_t fumount(int mountfd) {
+    zx_handle_t h;
+    zx_status_t status = ioctl_vfs_unmount_node(mountfd, &h);
     if (status < 0) {
         fprintf(stderr, "Could not unmount filesystem: %d\n", status);
     } else {
-        status = vfs_unmount_handle(h, MX_TIME_INFINITE);
+        status = vfs_unmount_handle(h, ZX_TIME_INFINITE);
     }
     return status;
 }
 
-mx_status_t umount(const char* mountpath) {
+zx_status_t umount(const char* mountpath) {
     int fd = open(mountpath, O_DIRECTORY | O_NOREMOTE | O_ADMIN);
     if (fd < 0) {
         fprintf(stderr, "Could not open directory: %s\n", strerror(errno));
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
-    mx_status_t status = fumount(fd);
+    zx_status_t status = fumount(fd);
     close(fd);
     return status;
 }

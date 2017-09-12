@@ -10,8 +10,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <magenta/compiler.h>
-#include <magenta/syscalls.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
 
@@ -22,9 +22,9 @@ void argument_error(const char* argv0, const char* message) {
     exit(EXIT_FAILURE);
 }
 
-void duplicate_handles(uint32_t n, mx_handle_t src, mx_handle_t* dest) {
+void duplicate_handles(uint32_t n, zx_handle_t src, zx_handle_t* dest) {
     for (uint32_t i = 0; i < n; i++) {
-        assert(mx_handle_duplicate(src, MX_RIGHT_SAME_RIGHTS, &dest[i]) == 0);
+        assert(zx_handle_duplicate(src, ZX_RIGHT_SAME_RIGHTS, &dest[i]) == 0);
     }
 }
 
@@ -35,18 +35,18 @@ struct TestArgs {
 };
 
 void do_test(uint32_t duration, const TestArgs& test_args) {
-    __UNUSED mx_status_t status;
+    __UNUSED zx_status_t status;
 
     uint64_t duration_ns = duration * 1000000000ull;
 
     // We'll write to mp[0] (and read from mp[1]).
-    mx_handle_t mp[2] = {MX_HANDLE_INVALID, MX_HANDLE_INVALID};
-    status = mx_channel_create(0u, &mp[0], &mp[1]);
-    assert(status == MX_OK);
+    zx_handle_t mp[2] = {ZX_HANDLE_INVALID, ZX_HANDLE_INVALID};
+    status = zx_channel_create(0u, &mp[0], &mp[1]);
+    assert(status == ZX_OK);
 
     // We'll send/receive duplicates of this handle.
-    mx_handle_t event;
-    assert(mx_event_create(0u, &event) == MX_OK);
+    zx_handle_t event;
+    assert(zx_event_create(0u, &event) == ZX_OK);
 
     // Storage space for our messages' stuff.
     fbl::unique_ptr<uint8_t[]> data;
@@ -55,55 +55,55 @@ void do_test(uint32_t duration, const TestArgs& test_args) {
         for (uint32_t i = 0; i < test_args.size; i++)
             data[i] = static_cast<uint8_t>(i);
     }
-    fbl::unique_ptr<mx_handle_t[]> handles;
+    fbl::unique_ptr<zx_handle_t[]> handles;
     if (test_args.handles)
-        handles.reset(new mx_handle_t[test_args.handles]);
+        handles.reset(new zx_handle_t[test_args.handles]);
 
     // Pre-queue |test_args.queue| messages (there'll always be this many messages in the queue).
     for (uint32_t i = 0; i < test_args.queue; i++) {
         duplicate_handles(test_args.handles, event, handles.get());
-        status = mx_channel_write(mp[0], 0u, data.get(), test_args.size,
+        status = zx_channel_write(mp[0], 0u, data.get(), test_args.size,
                                   handles.get(), test_args.handles);
-        assert(status == MX_OK);
+        assert(status == ZX_OK);
     }
 
     duplicate_handles(test_args.handles, event, handles.get());
 
     static constexpr uint32_t big_it_size = 10000;
     uint64_t big_its = 0;
-    uint64_t start_ns = mx_time_get(MX_CLOCK_MONOTONIC);
+    uint64_t start_ns = zx_time_get(ZX_CLOCK_MONOTONIC);
     uint64_t end_ns;
     for (;;) {
         big_its++;
         for (uint32_t i = 0; i < big_it_size; i++) {
-            status = mx_channel_write(mp[0], 0, data.get(), test_args.size,
+            status = zx_channel_write(mp[0], 0, data.get(), test_args.size,
                                       handles.get(), test_args.handles);
-            assert(status == MX_OK);
+            assert(status == ZX_OK);
 
             uint32_t r_size = test_args.size;
             uint32_t r_handles = test_args.handles;
-            status = mx_channel_read(mp[1], 0u, data.get(), handles.get(), r_size,
+            status = zx_channel_read(mp[1], 0u, data.get(), handles.get(), r_size,
                                      r_handles, &r_size, &r_handles);
-            assert(status == MX_OK);
+            assert(status == ZX_OK);
             assert(r_size == test_args.size);
             assert(r_handles == test_args.handles);
         }
 
-        end_ns = mx_time_get(MX_CLOCK_MONOTONIC);
+        end_ns = zx_time_get(ZX_CLOCK_MONOTONIC);
         if ((end_ns - start_ns) >= duration_ns)
             break;
     }
 
     for (uint32_t i = 0; i < test_args.handles; i++) {
-        status = mx_handle_close(handles[i]);
-        assert(status == MX_OK);
+        status = zx_handle_close(handles[i]);
+        assert(status == ZX_OK);
     }
-    status = mx_handle_close(event);
-    assert(status == MX_OK);
-    status = mx_handle_close(mp[0]);
-    assert(status == MX_OK);
-    status = mx_handle_close(mp[1]);
-    assert(status == MX_OK);
+    status = zx_handle_close(event);
+    assert(status == ZX_OK);
+    status = zx_handle_close(mp[0]);
+    assert(status == ZX_OK);
+    status = zx_handle_close(mp[1]);
+    assert(status == ZX_OK);
 
     double real_duration = static_cast<double>(end_ns - start_ns) / 1000000000.0;
     double its_per_second = static_cast<double>(big_its) * big_it_size / real_duration;

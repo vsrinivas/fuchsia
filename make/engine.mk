@@ -38,7 +38,7 @@ else
 USE_GOLD ?= true
 endif
 THINLTO_CACHE_DIR ?= $(BUILDDIR)/thinlto-cache
-LKNAME ?= magenta
+LKNAME ?= zircon
 CLANG_TARGET_FUCHSIA ?= false
 USE_LINKER_GC ?= true
 
@@ -126,7 +126,7 @@ GLOBAL_DEBUGFLAGS ?= -g
 # the compiler will record the absolute path of the current directory and
 # make everything relative to that.  Instead, we tell the compiler to map
 # the current directory to $(DEBUG_BUILDROOT), which is the "relative"
-# location of the magenta source tree (i.e. usually . in a standalone build).
+# location of the zircon source tree (i.e. usually . in a standalone build).
 DEBUG_BUILDROOT ?= $(BUILDROOT)
 GLOBAL_COMPILEFLAGS := $(GLOBAL_DEBUGFLAGS)
 GLOBAL_COMPILEFLAGS += -fdebug-prefix-map=$(shell pwd)=$(DEBUG_BUILDROOT)
@@ -273,13 +273,13 @@ ifeq ($(call TOBOOL,$(USE_GOLD)),false)
 # BFD ld stupidly insists on resolving dependency DSO's symbols when
 # doing a -shared -z defs link.  To do this it needs to find
 # dependencies' dependencies, which requires -rpath-link.  Gold does
-# not have this misfeature.  Since ulib/musl needs ulib/magenta and
+# not have this misfeature.  Since ulib/musl needs ulib/zircon and
 # everything needs ulib/musl, this covers the actual needs in the
 # build today without resorting to resolving inter-module dependencies
 # to generate -rpath-link in a general fashion.  Eventually we should
 # always use gold or lld for all the user-mode links, and then we'll
 # never need this.
-USERAPP_LDFLAGS += -rpath-link $(BUILDDIR)/ulib/magenta
+USERAPP_LDFLAGS += -rpath-link $(BUILDDIR)/ulib/zircon
 endif
 
 # Architecture specific compile flags
@@ -313,10 +313,10 @@ GENERATED :=
 GLOBAL_DEFINES :=
 
 # anything added to KERNEL_DEFINES will be put into $(BUILDDIR)/config-kernel.h
-KERNEL_DEFINES := LK=1 _KERNEL=1 MAGENTA_TOOLCHAIN=1
+KERNEL_DEFINES := LK=1 _KERNEL=1 ZIRCON_TOOLCHAIN=1
 
 # anything added to USER_DEFINES will be put into $(BUILDDIR)/config-user.h
-USER_DEFINES := MAGENTA_TOOLCHAIN=1
+USER_DEFINES := ZIRCON_TOOLCHAIN=1
 
 # anything added to HOST_DEFINES will be put into $(BUILDDIR)/config-host.h
 HOST_DEFINES :=
@@ -382,7 +382,7 @@ SYSROOT_DEPS :=
 MDI_SRCS :=
 
 # MDI source files used to generate the mdi-defs.h header file
-MDI_INCLUDES := system/public/magenta/mdi/magenta.mdi
+MDI_INCLUDES := system/public/zircon/mdi/zircon.mdi
 
 # For now always enable frame pointers so kernel backtraces
 # can work and define WITH_PANIC_BACKTRACE to enable them in panics
@@ -625,11 +625,11 @@ KERNEL_DEFINES += \
 	ARCH=\"$(ARCH)\" \
 
 # debug build?
-# TODO(johngro) : Make LK and MX debug levels independently controlable.
+# TODO(johngro) : Make LK and ZX debug levels independently controlable.
 ifneq ($(DEBUG),)
 GLOBAL_DEFINES += \
 	LK_DEBUGLEVEL=$(DEBUG) \
-	MX_DEBUGLEVEL=$(DEBUG)
+	ZX_DEBUGLEVEL=$(DEBUG)
 endif
 
 # allow additional defines from outside the build system

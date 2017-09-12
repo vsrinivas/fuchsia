@@ -15,7 +15,7 @@
 #include <lk/init.h>
 
 #include <assert.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <debug.h>
 #include <trace.h>
 

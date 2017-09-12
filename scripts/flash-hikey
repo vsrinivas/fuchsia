@@ -6,9 +6,9 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-BUILD_DIR=build-magenta-hikey960-arm64
+BUILD_DIR=build-zircon-hikey960-arm64
 
-KERNEL=$BUILD_DIR/zmagenta.bin
+KERNEL=$BUILD_DIR/zzircon.bin
 RAMDISK=$BUILD_DIR/bootdata.bin
 
 OUT_IMAGE=$BUILD_DIR/boot.img

@@ -10,7 +10,7 @@ etc.
 ## Example usage
 
 ```
-./scripts/run-magenta-x86-64 -c userboot=bin/core-tests
+./scripts/run-zircon-x86-64 -c userboot=bin/core-tests
 ```
 
 ## Notes
@@ -18,8 +18,8 @@ etc.
 The tests here are for "core" functionality (channels, etc.), but
 not all "core" functionality can go here.  For example, you can't
 start a process in your test with launchpad because core tests are for
-when that functionality isn't working.  Core tests can't use mxio and
-launchpad uses mxio.
+when that functionality isn't working.  Core tests can't use fdio and
+launchpad uses fdio.
 
-Since these tests can't use mxio core/main.c stubs out the needed
-functions from mxio.
+Since these tests can't use fdio core/main.c stubs out the needed
+functions from fdio.

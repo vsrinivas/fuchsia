@@ -24,16 +24,16 @@ void BlobstoreChecker::TraverseBlockBitmap() {
     }
 }
 
-mx_status_t BlobstoreChecker::CheckAllocatedCounts() const {
-    mx_status_t status = MX_OK;
+zx_status_t BlobstoreChecker::CheckAllocatedCounts() const {
+    zx_status_t status = ZX_OK;
     if (alloc_blocks_ != blobstore_->info_.alloc_block_count) {
         FS_TRACE_ERROR("check: incorrect allocated block count %lu (should be %u)\n", blobstore_->info_.alloc_block_count, alloc_blocks_);
-        status = MX_ERR_BAD_STATE;
+        status = ZX_ERR_BAD_STATE;
     }
 
     if (alloc_inodes_ != blobstore_->info_.alloc_inode_count) {
         FS_TRACE_ERROR("check: incorrect allocated inode count %lu (should be %u)\n", blobstore_->info_.alloc_inode_count, alloc_inodes_);
-        status = MX_ERR_BAD_STATE;
+        status = ZX_ERR_BAD_STATE;
     }
 
     return status;
@@ -46,13 +46,13 @@ void BlobstoreChecker::Init(fbl::RefPtr<Blobstore> blob) {
     blobstore_.reset(blob.get());
 }
 
-mx_status_t blobstore_check(fbl::RefPtr<Blobstore> blob) {
-    mx_status_t status = MX_OK;
+zx_status_t blobstore_check(fbl::RefPtr<Blobstore> blob) {
+    zx_status_t status = ZX_OK;
     BlobstoreChecker chk;
     chk.Init(fbl::move(blob));
     chk.TraverseInodeBitmap();
     chk.TraverseBlockBitmap();
-    status |= (status != MX_OK) ? 0 : chk.CheckAllocatedCounts();
+    status |= (status != ZX_OK) ? 0 : chk.CheckAllocatedCounts();
     return status;
 }
 

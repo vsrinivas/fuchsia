@@ -27,21 +27,21 @@ class Test##name : public ddk::Device<Test##name, ddk::name> { \
 #define END_SUCCESS_CASE };
 
 BEGIN_SUCCESS_CASE(GetProtocolable)
-    mx_status_t DdkGetProtocol(uint32_t proto_id, void* protocol) { return MX_OK; }
+    zx_status_t DdkGetProtocol(uint32_t proto_id, void* protocol) { return ZX_OK; }
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Openable)
-    mx_status_t DdkOpen(mx_device_t** dev_out, uint32_t flags) { return MX_OK; }
+    zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags) { return ZX_OK; }
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(OpenAtable)
-    mx_status_t DdkOpenAt(mx_device_t** dev_out, const char* path, uint32_t flags) {
-        return MX_OK;
+    zx_status_t DdkOpenAt(zx_device_t** dev_out, const char* path, uint32_t flags) {
+        return ZX_OK;
     }
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Closable)
-    mx_status_t DdkClose(uint32_t flags) { return MX_OK; }
+    zx_status_t DdkClose(uint32_t flags) { return ZX_OK; }
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Unbindable)
@@ -49,12 +49,12 @@ BEGIN_SUCCESS_CASE(Unbindable)
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Readable)
-    mx_status_t DdkRead(void* buf, size_t count, mx_off_t off, size_t* actual) { return MX_OK; }
+    zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual) { return ZX_OK; }
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Writable)
-    mx_status_t DdkWrite(const void* buf, size_t count, mx_off_t off, size_t* actual) {
-        return MX_OK;
+    zx_status_t DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual) {
+        return ZX_OK;
     }
 END_SUCCESS_CASE
 
@@ -63,22 +63,22 @@ BEGIN_SUCCESS_CASE(IotxnQueueable)
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(GetSizable)
-    mx_off_t DdkGetSize() { return 0; }
+    zx_off_t DdkGetSize() { return 0; }
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Ioctlable)
-    mx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                          size_t out_len, size_t* out_actual) {
-        return MX_OK;
+        return ZX_OK;
     }
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Suspendable)
-    mx_status_t DdkSuspend(uint32_t flags) { return MX_OK; }
+    zx_status_t DdkSuspend(uint32_t flags) { return ZX_OK; }
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Resumable)
-    mx_status_t DdkResume(uint32_t flags) { return MX_OK; }
+    zx_status_t DdkResume(uint32_t flags) { return ZX_OK; }
 END_SUCCESS_CASE
 
 
@@ -97,28 +97,28 @@ struct TestDispatch : public ddk::FullDevice<TestDispatch> {
     TestDispatch() : ddk::FullDevice<TestDispatch>(nullptr) {}
 
     // Give access to the device ops for testing
-    mx_protocol_device_t* GetDeviceOps() {
+    zx_protocol_device_t* GetDeviceOps() {
         return &ddk_device_proto_;
     }
 
-    mx_status_t DdkGetProtocol(uint32_t proto_id, void* protcool) {
+    zx_status_t DdkGetProtocol(uint32_t proto_id, void* protcool) {
         get_protocol_called = true;
-        return MX_OK;
+        return ZX_OK;
     }
 
-    mx_status_t DdkOpen(mx_device_t** dev_out, uint32_t flags) {
+    zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags) {
         open_called = true;
-        return MX_OK;
+        return ZX_OK;
     }
 
-    mx_status_t DdkOpenAt(mx_device_t** dev_out, const char* path, uint32_t flags) {
+    zx_status_t DdkOpenAt(zx_device_t** dev_out, const char* path, uint32_t flags) {
         open_at_called = true;
-        return MX_OK;
+        return ZX_OK;
     }
 
-    mx_status_t DdkClose(uint32_t flags) {
+    zx_status_t DdkClose(uint32_t flags) {
         close_called = true;
-        return MX_OK;
+        return ZX_OK;
     }
 
     void DdkUnbind() {
@@ -129,39 +129,39 @@ struct TestDispatch : public ddk::FullDevice<TestDispatch> {
         release_called = true;
     }
 
-    mx_status_t DdkRead(void* buf, size_t count, mx_off_t off, size_t* actual) {
+    zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual) {
         read_called = true;
-        return MX_OK;
+        return ZX_OK;
     }
 
-    mx_status_t DdkWrite(const void* buf, size_t count, mx_off_t off, size_t* actual) {
+    zx_status_t DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual) {
         write_called = true;
-        return MX_OK;
+        return ZX_OK;
     }
 
     void DdkIotxnQueue(iotxn_t* t) {
         iotxn_queue_called = true;
     }
 
-    mx_off_t DdkGetSize() {
+    zx_off_t DdkGetSize() {
         get_size_called = true;
         return 0;
     }
 
-    mx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                          size_t out_len, size_t* out_actual) {
         ioctl_called = true;
-        return MX_OK;
+        return ZX_OK;
     }
 
-    mx_status_t DdkSuspend(uint32_t flags) {
+    zx_status_t DdkSuspend(uint32_t flags) {
         suspend_called = true;
-        return MX_OK;
+        return ZX_OK;
     }
 
-    mx_status_t DdkResume(uint32_t flags) {
+    zx_status_t DdkResume(uint32_t flags) {
         resume_called = true;
-        return MX_OK;
+        return ZX_OK;
     }
 
     bool get_protocol_called = false;
@@ -186,23 +186,23 @@ static bool test_dispatch() {
     auto dev = fbl::unique_ptr<TestDispatch>(new (&ac) TestDispatch);
     ASSERT_TRUE(ac.check(), "");
 
-    // Since we're not adding the device to devmgr, we don't have a valid mx_device_t.
+    // Since we're not adding the device to devmgr, we don't have a valid zx_device_t.
     // TODO: use a devmgr API to add a test device, and use that instead
     auto ctx = dev.get();
     auto ops = dev->GetDeviceOps();
-    EXPECT_EQ(MX_OK, ops->get_protocol(ctx, 0, nullptr), "");
-    EXPECT_EQ(MX_OK, ops->open(ctx, nullptr, 0), "");
-    EXPECT_EQ(MX_OK, ops->open_at(ctx, nullptr, "", 0), "");
-    EXPECT_EQ(MX_OK, ops->close(ctx, 0), "");
+    EXPECT_EQ(ZX_OK, ops->get_protocol(ctx, 0, nullptr), "");
+    EXPECT_EQ(ZX_OK, ops->open(ctx, nullptr, 0), "");
+    EXPECT_EQ(ZX_OK, ops->open_at(ctx, nullptr, "", 0), "");
+    EXPECT_EQ(ZX_OK, ops->close(ctx, 0), "");
     ops->unbind(ctx);
     ops->release(ctx);
-    EXPECT_EQ(MX_OK, ops->read(ctx, nullptr, 0, 0, nullptr), "");
-    EXPECT_EQ(MX_OK, ops->write(ctx, nullptr, 0, 0, nullptr), "");
+    EXPECT_EQ(ZX_OK, ops->read(ctx, nullptr, 0, 0, nullptr), "");
+    EXPECT_EQ(ZX_OK, ops->write(ctx, nullptr, 0, 0, nullptr), "");
     ops->iotxn_queue(ctx, nullptr);
     EXPECT_EQ(0, ops->get_size(ctx), "");
-    EXPECT_EQ(MX_OK, ops->ioctl(ctx, 0, nullptr, 0, nullptr, 0, nullptr), "");
-    EXPECT_EQ(MX_OK, ops->suspend(ctx, 0), "");
-    EXPECT_EQ(MX_OK, ops->resume(ctx, 0), "");
+    EXPECT_EQ(ZX_OK, ops->ioctl(ctx, 0, nullptr, 0, nullptr, 0, nullptr), "");
+    EXPECT_EQ(ZX_OK, ops->suspend(ctx, 0), "");
+    EXPECT_EQ(ZX_OK, ops->resume(ctx, 0), "");
 
     EXPECT_TRUE(dev->get_protocol_called, "");
     EXPECT_TRUE(dev->open_called, "");
@@ -263,7 +263,7 @@ class TestHiddenOverride : public ddk::Device<TestHiddenOverride, ddk::Closable>
     void DdkRelease() {}
 
   private:
-    mx_status_t DdkClose(uint32_t flags) { return MX_OK; }
+    zx_status_t DdkClose(uint32_t flags) { return ZX_OK; }
 };
 
 class TestStaticOverride : public ddk::Device<TestStaticOverride, ddk::Closable> {
@@ -272,12 +272,12 @@ class TestStaticOverride : public ddk::Device<TestStaticOverride, ddk::Closable>
       : ddk::Device<TestStaticOverride, ddk::Closable>(nullptr) {}
     void DdkRelease() {}
 
-    static mx_status_t DdkClose(uint32_t flags) { return MX_OK; }
+    static zx_status_t DdkClose(uint32_t flags) { return ZX_OK; }
 };
 
 template <typename D>
 struct A {
-    explicit A(mx_protocol_device_t* proto) {}
+    explicit A(zx_protocol_device_t* proto) {}
 };
 
 class TestNotAMixin : public ddk::Device<TestNotAMixin, A> {
@@ -295,8 +295,8 @@ class TestNotAllMixins : public TestNotAllMixinsType {
   public:
     TestNotAllMixins() : TestNotAllMixinsType(nullptr) {}
     void DdkRelease() {}
-    mx_status_t DdkOpen(mx_device_t** dev_out, uint32_t flags) { return MX_OK; }
-    mx_status_t DdkClose(uint32_t flags) { return MX_OK; }
+    zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags) { return ZX_OK; }
+    zx_status_t DdkClose(uint32_t flags) { return ZX_OK; }
 };
 #endif
 

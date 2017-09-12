@@ -14,10 +14,10 @@ MODULE_SRCS += \
 MODULE_NAME := last-handle-test
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mx \
+    system/ulib/zx \
     system/ulib/fbl \
 
 MODULE_LIBS := \
-    system/ulib/mxio system/ulib/magenta system/ulib/unittest system/ulib/c
+    system/ulib/fdio system/ulib/zircon system/ulib/unittest system/ulib/c
 
 include make/module.mk

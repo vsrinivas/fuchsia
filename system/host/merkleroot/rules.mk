@@ -15,7 +15,7 @@ MODULE_TYPE := hostapp
 
 MODULE_COMPILEFLAGS += \
 	-Isystem/ulib/digest/include \
-	-Isystem/ulib/mxcpp/include \
+	-Isystem/ulib/zxcpp/include \
 	-Isystem/ulib/fbl/include
 
 MODULE_SRCS += \

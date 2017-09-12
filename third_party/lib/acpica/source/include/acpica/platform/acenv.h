@@ -219,7 +219,7 @@
 #include "achaiku.h"
 
 #elif defined(LK)
-#include "acmagenta.h"
+#include "aczircon.h"
 
 #elif defined(__Fuchsia__)
 #include "acfuchsia.h"

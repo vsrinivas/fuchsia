@@ -36,9 +36,9 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 
 MODULE_LIBS := \
     system/ulib/unittest \
-    system/ulib/mxio \
+    system/ulib/fdio \
     system/ulib/driver \
-    system/ulib/magenta \
+    system/ulib/zircon \
     system/ulib/c
 
 include make/module.mk

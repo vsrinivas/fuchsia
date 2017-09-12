@@ -5,7 +5,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #define E820_RAM 1
 #define E820_RESERVED 2

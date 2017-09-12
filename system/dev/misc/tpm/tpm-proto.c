@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include "tpm.h"
 
 #define TPM_LOCALITY_BASE(locality) ((uintptr_t)(tpm_base) + ((uintptr_t)(locality) << 12))
@@ -70,9 +70,9 @@
 #define TIMEOUT_C 200000  //  200 ms
 #define TIMEOUT_D 30000   //   30 ms
 
-mx_status_t tpm_set_irq(enum locality loc, uint8_t vector) {
+zx_status_t tpm_set_irq(enum locality loc, uint8_t vector) {
     if (vector < 1 || vector > 15) {
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
     }
     *TPM_INT_VECTOR(loc) = vector;
     // Enable TPM interrupts (top-level mask bit)
@@ -81,161 +81,161 @@ mx_status_t tpm_set_irq(enum locality loc, uint8_t vector) {
     // This is not doable yet, since our interrupt syscalls do not allow
     // configuring signaling modes yet.
     *TPM_INT_ENABLE(loc) |= TPM_INT_ENABLE_RISING_EDGE;
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t tpm_is_supported(enum locality loc) {
+zx_status_t tpm_is_supported(enum locality loc) {
     const uint32_t iface_id = *TPM_INTERFACE_ID(loc);
     switch (iface_id & TPM_INTERFACE_ID_TYPE_MASK) {
         case TPM_INTERFACE_ID_TYPE_FIFO_1_3: {
             const uint32_t iface_ver = *TPM_INTF_CAP(loc) & TPM_INTF_CAP_IFACE_VER_MASK;
             if (iface_ver == TPM_INTF_CAP_IFACE_VER_1_2) {
-                return MX_OK;
+                return ZX_OK;
             }
-            return MX_ERR_NOT_SUPPORTED;
+            return ZX_ERR_NOT_SUPPORTED;
         }
         case TPM_INTERFACE_ID_TYPE_FIFO_2_0:
         case TPM_INTERFACE_ID_TYPE_CRB:
         default:
-            return MX_ERR_NOT_SUPPORTED;
+            return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
-mx_status_t tpm_request_use(enum locality loc) {
+zx_status_t tpm_request_use(enum locality loc) {
     uint8_t val;
     if (!((val = *TPM_ACCESS(loc)) & TPM_ACCESS_REG_VALID)) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     if (val & TPM_ACCESS_REQUEST_USE) {
-        return MX_ERR_UNAVAILABLE;
+        return ZX_ERR_UNAVAILABLE;
     }
 
     if (val & TPM_ACCESS_ACTIVE_LOCALITY) {
         // We're already the active locality
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
-    mx_status_t status = tpm_enable_irq_type(loc, IRQ_LOCALITY_CHANGE);
-    if (status != MX_OK) {
+    zx_status_t status = tpm_enable_irq_type(loc, IRQ_LOCALITY_CHANGE);
+    if (status != ZX_OK) {
         return status;
     }
     *TPM_ACCESS(loc) = TPM_ACCESS_REQUEST_USE;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t tpm_wait_for_locality(enum locality loc) {
+zx_status_t tpm_wait_for_locality(enum locality loc) {
     uint8_t val;
     if (!((val = *TPM_ACCESS(loc)) & TPM_ACCESS_REG_VALID)) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     if (val & TPM_ACCESS_ACTIVE_LOCALITY) {
-        return MX_OK;
+        return ZX_OK;
     }
     if (!(val & TPM_ACCESS_REQUEST_USE)) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     // We assume we're the only one using the TPM, so we need to wait at most
     // TIMEOUT_A
-    mx_nanosleep(mx_deadline_after(TIMEOUT_A));
+    zx_nanosleep(zx_deadline_after(TIMEOUT_A));
 
     if (!((val = *TPM_ACCESS(loc)) & TPM_ACCESS_REG_VALID)) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     if (val & TPM_ACCESS_ACTIVE_LOCALITY) {
-        return MX_OK;
+        return ZX_OK;
     }
     if (val & TPM_ACCESS_REQUEST_USE) {
-        return MX_ERR_TIMED_OUT;
+        return ZX_ERR_TIMED_OUT;
     }
-    return MX_ERR_BAD_STATE;
+    return ZX_ERR_BAD_STATE;
 }
 
-mx_status_t tpm_enable_irq_type(enum locality loc, enum irq_type type) {
+zx_status_t tpm_enable_irq_type(enum locality loc, enum irq_type type) {
     if (!(*TPM_INTF_CAP(loc) & type)) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
     *TPM_INT_ENABLE(loc) |= (uint32_t)type;
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t tpm_disable_irq_type(enum locality loc, enum irq_type type) {
+zx_status_t tpm_disable_irq_type(enum locality loc, enum irq_type type) {
     if (!(*TPM_INTF_CAP(loc) & type)) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
     *TPM_INT_ENABLE(loc) &= ~(uint32_t)type;
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t get_status_field(enum locality loc, uint32_t *val) {
+static zx_status_t get_status_field(enum locality loc, uint32_t *val) {
     for (int attempt = 0; attempt < 2; ++attempt) {
         if (attempt) {
-            mx_nanosleep(mx_deadline_after(TIMEOUT_A));
+            zx_nanosleep(zx_deadline_after(TIMEOUT_A));
         }
 
         uint32_t status = *TPM_STS(loc);
         if (status & TPM_STS_VALID) {
             *val = status;
-            return MX_OK;
+            return ZX_OK;
         }
     }
 
-    return MX_ERR_TIMED_OUT;
+    return ZX_ERR_TIMED_OUT;
 }
 
-static mx_status_t get_burst_count(enum locality loc, uint16_t *val) {
+static zx_status_t get_burst_count(enum locality loc, uint16_t *val) {
     for (int attempt = 0; attempt < 2; ++attempt) {
         if (attempt) {
-            mx_nanosleep(mx_deadline_after(TIMEOUT_A));
+            zx_nanosleep(zx_deadline_after(TIMEOUT_A));
         }
 
         uint32_t status = *TPM_STS(loc);
         uint16_t burst = TPM_STS_EXTRACT_BURST_COUNT(status);
         if (burst > 0) {
             *val = burst;
-            return MX_OK;
+            return ZX_OK;
         }
     }
 
-    return MX_ERR_TIMED_OUT;
+    return ZX_ERR_TIMED_OUT;
 }
 
 // Returns the true/false value of the the STS.EXPECT bit, or < 0 on error
-static mx_status_t get_status_expect(enum locality loc, bool* expect) {
+static zx_status_t get_status_expect(enum locality loc, bool* expect) {
     uint32_t status_field;
-    mx_status_t status = get_status_field(loc, &status_field);
-    if (status != MX_OK) {
+    zx_status_t status = get_status_field(loc, &status_field);
+    if (status != ZX_OK) {
         return status;
     }
     *expect = !!(status_field & TPM_STS_EXPECT);
-    return MX_OK;
+    return ZX_OK;
 }
 
 // Returns the true/false value of the the STS.DATA_AVAIL bit, or < 0 on error
-static mx_status_t get_status_data_avail(enum locality loc, bool* data_avail) {
+static zx_status_t get_status_data_avail(enum locality loc, bool* data_avail) {
     uint32_t status_field;
-    mx_status_t status = get_status_field(loc, &status_field);
-    if (status != MX_OK) {
+    zx_status_t status = get_status_field(loc, &status_field);
+    if (status != ZX_OK) {
         return status;
     }
     *data_avail = !!(status_field & TPM_STS_DATA_AVAIL);
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t wait_for_data_avail(enum locality loc) {
+static zx_status_t wait_for_data_avail(enum locality loc) {
     // TODO(teisenbe): Add a timeout to this?
     while (1) {
         bool data_avail = false;
-        mx_status_t st = get_status_data_avail(loc, &data_avail);
+        zx_status_t st = get_status_data_avail(loc, &data_avail);
         if (st < 0) {
             return st;
         }
         if (data_avail) {
-            return MX_OK;
+            return ZX_OK;
         }
 
-        st = mx_interrupt_wait(irq_handle);
+        st = zx_interrupt_wait(irq_handle);
         if (st < 0) {
             return st;
         }
@@ -247,10 +247,10 @@ static mx_status_t wait_for_data_avail(enum locality loc) {
             *TPM_INT_STATUS(loc) = IRQ_LOCALITY_CHANGE;
             // If locality changed, whatever operation we're in the middle of
             // is no longer valid..
-            mx_interrupt_complete(irq_handle);
-            return MX_ERR_INTERNAL;
+            zx_interrupt_complete(irq_handle);
+            return ZX_ERR_INTERNAL;
         }
-        mx_interrupt_complete(irq_handle);
+        zx_interrupt_complete(irq_handle);
     }
 }
 
@@ -259,36 +259,36 @@ static void abort_command(enum locality loc) {
 }
 
 // Returns the true/false value of the the ACCESS.ACTIVE bit, or < 0 on error
-static mx_status_t get_active_locality(enum locality loc, bool* active) {
+static zx_status_t get_active_locality(enum locality loc, bool* active) {
     uint8_t val;
     if (!((val = *TPM_ACCESS(loc)) & TPM_ACCESS_REG_VALID)) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     *active = !!(val & TPM_ACCESS_ACTIVE_LOCALITY);
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t check_expected_state(
-        mx_status_t status, bool actual, bool expected) {
+static zx_status_t check_expected_state(
+        zx_status_t status, bool actual, bool expected) {
     if (status < 0) {
         return status;
     }
     if (actual != expected) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t tpm_send_cmd(enum locality loc, uint8_t* cmd, size_t len) {
+zx_status_t tpm_send_cmd(enum locality loc, uint8_t* cmd, size_t len) {
     bool active = false;
-    mx_status_t st = get_active_locality(loc, &active);
+    zx_status_t st = get_active_locality(loc, &active);
     st = check_expected_state(st, active, true);
     if (st < 0) {
         return st;
     }
 
     if (!(*TPM_STS(loc) & TPM_STS_CMD_RDY)) {
-        return MX_ERR_UNAVAILABLE;
+        return ZX_ERR_UNAVAILABLE;
     }
 
     // This procedure is described in section 5.5.2.2.1 of the TCG PC Client
@@ -301,7 +301,7 @@ mx_status_t tpm_send_cmd(enum locality loc, uint8_t* cmd, size_t len) {
     while (bytes_sent < len) {
         uint16_t burst_count;
         st = get_burst_count(loc, &burst_count);
-        if (st != MX_OK) {
+        if (st != ZX_OK) {
             abort_command(loc);
             return st;
         }
@@ -339,12 +339,12 @@ mx_status_t tpm_send_cmd(enum locality loc, uint8_t* cmd, size_t len) {
 
     // Run the command
     *TPM_STS(loc) = TPM_STS_TPM_GO;
-    return MX_OK;
+    return ZX_OK;
 }
 
 ssize_t tpm_recv_resp(enum locality loc, uint8_t* resp, size_t max_len) {
     bool active = false;
-    mx_status_t st = get_active_locality(loc, &active);
+    zx_status_t st = get_active_locality(loc, &active);
     st = check_expected_state(st, active, true);
     if (st < 0) {
         abort_command(loc);
@@ -356,7 +356,7 @@ ssize_t tpm_recv_resp(enum locality loc, uint8_t* resp, size_t max_len) {
 
     // Wait for data to be available
     st = wait_for_data_avail(loc);
-    if (st != MX_OK) {
+    if (st != ZX_OK) {
         abort_command(loc);
         return st;
     }
@@ -366,7 +366,7 @@ ssize_t tpm_recv_resp(enum locality loc, uint8_t* resp, size_t max_len) {
     while (more_data) {
         uint16_t burst_count;
         st = get_burst_count(loc, &burst_count);
-        if (st != MX_OK) {
+        if (st != ZX_OK) {
             abort_command(loc);
             return st;
         }

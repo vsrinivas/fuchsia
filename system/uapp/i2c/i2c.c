@@ -4,10 +4,10 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
-#include <magenta/device/i2c.h>
-#include <mxio/util.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
+#include <zircon/device/i2c.h>
+#include <fdio/util.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -204,7 +204,7 @@ cmd_write_finish:
 
 int cmd_transfer(int fd, int argc, const char** argv) {
     const size_t base_size = sizeof(i2c_slave_ioctl_segment_t);
-    int ret = MX_OK;
+    int ret = ZX_OK;
 
     // Figure out how big our buffers need to be.
     // Start the counters with enough space for the I2C_SEGMENT_TYPE_END

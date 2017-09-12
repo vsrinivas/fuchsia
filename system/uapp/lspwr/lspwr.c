@@ -7,13 +7,13 @@
 #include <fcntl.h>
 #include <dirent.h>
 #include <string.h>
-#include <magenta/syscalls.h>
-#include <magenta/device/power.h>
+#include <zircon/syscalls.h>
+#include <zircon/device/power.h>
 
 typedef struct {
     int type;
     int fd;
-    mx_handle_t h;
+    zx_handle_t h;
 } pwrdev_t;
 
 static const char* type_to_string[] = { "AC", "battery" };
@@ -80,10 +80,10 @@ int main(int argc, char** argv) {
             }
         }
 
-        mx_handle_t h = MX_HANDLE_INVALID;
+        zx_handle_t h = ZX_HANDLE_INVALID;
         if (idx < (int)countof(dev)) {
             rc = ioctl_power_get_state_change_event(fd, &h);
-            if (rc != sizeof(mx_handle_t)) {
+            if (rc != sizeof(zx_handle_t)) {
                 printf("ioctl() returned %zd\n", rc);
                 return -1;
             }
@@ -100,20 +100,20 @@ int main(int argc, char** argv) {
     printf("waiting for events...\n\n");
 
     for (;;) {
-        mx_wait_item_t items[2];
+        zx_wait_item_t items[2];
         for (int i = 0; i < idx; i++) {
             items[i].handle = dev[i].h;
-            items[i].waitfor = MX_USER_SIGNAL_0;
+            items[i].waitfor = ZX_USER_SIGNAL_0;
             items[i].pending = 0;
         }
-        mx_status_t status = mx_object_wait_many(items, idx, MX_TIME_INFINITE);
-        if (status != MX_OK) {
-            printf("mx_object_wait_many() returned %d\n", status);
+        zx_status_t status = zx_object_wait_many(items, idx, ZX_TIME_INFINITE);
+        if (status != ZX_OK) {
+            printf("zx_object_wait_many() returned %d\n", status);
             return -1;
         }
 
         for (int i = 0; i < idx; i++) {
-            if (items[i].pending & MX_USER_SIGNAL_0) {
+            if (items[i].pending & ZX_USER_SIGNAL_0) {
                 power_info_t info;
                 ssize_t rc = ioctl_power_get_info(dev[i].fd, &info);
                 if (rc != sizeof(info)) {

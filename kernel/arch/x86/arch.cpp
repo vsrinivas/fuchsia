@@ -9,7 +9,7 @@
 
 
 #include <assert.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <debug.h>
 #include <err.h>
 #include <trace.h>
@@ -183,7 +183,7 @@ void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread)
 #if __has_feature(safe_stack)
     // Set up the initial unsafe stack pointer.
     x86_write_gs_offset64(
-        MX_TLS_UNSAFE_SP_OFFSET,
+        ZX_TLS_UNSAFE_SP_OFFSET,
         ROUNDDOWN((uintptr_t)thread->unsafe_stack + thread->stack_size, 16));
 #endif
 
@@ -203,7 +203,7 @@ usage:
         printf("%s features\n", argv[0].str);
         printf("%s unplug <cpu_id>\n", argv[0].str);
         printf("%s hotplug <cpu_id>\n", argv[0].str);
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
 
     if (!strcmp(argv[1].str, "features")) {
@@ -227,7 +227,7 @@ usage:
         goto usage;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 STATIC_COMMAND_START

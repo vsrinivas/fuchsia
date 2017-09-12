@@ -8,8 +8,8 @@
 #include <string.h>
 
 #include <digest/digest.h>
-#include <magenta/assert.h>
-#include <magenta/errors.h>
+#include <zircon/assert.h>
+#include <zircon/errors.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
@@ -39,8 +39,8 @@ namespace {
 // Wrapper for Digest::Init.  This primes the working |digest| initializing it
 // and hashing the |locality| and |length|.
 void DigestInit(Digest* digest, uint64_t locality, size_t length) {
-    MX_DEBUG_ASSERT(digest);
-    MX_DEBUG_ASSERT(length < UINT32_MAX);
+    ZX_DEBUG_ASSERT(digest);
+    ZX_DEBUG_ASSERT(length < UINT32_MAX);
     digest->Init();
     digest->Update(&locality, sizeof(locality));
     uint32_t len32 =
@@ -53,7 +53,7 @@ void DigestInit(Digest* digest, uint64_t locality, size_t length) {
 // the number of bytes hashed.
 size_t DigestUpdate(Digest* digest, const uint8_t* in, size_t offset,
                     size_t length) {
-    MX_DEBUG_ASSERT(digest);
+    ZX_DEBUG_ASSERT(digest);
     // Check if length crosses a node boundary
     length = fbl::min(length, MerkleTree::kNodeSize -
                                    (offset % MerkleTree::kNodeSize));
@@ -103,16 +103,16 @@ size_t MerkleTree::GetTreeLength(size_t data_len) {
     return (next_len == 0 ? 0 : next_len + GetTreeLength(next_len));
 }
 
-mx_status_t MerkleTree::Create(const void* data, size_t data_len, void* tree,
+zx_status_t MerkleTree::Create(const void* data, size_t data_len, void* tree,
                                size_t tree_len, Digest* digest) {
-    mx_status_t rc;
+    zx_status_t rc;
     MerkleTree mt;
-    if ((rc = mt.CreateInit(data_len, tree_len)) != MX_OK ||
-        (rc = mt.CreateUpdate(data, data_len, tree)) != MX_OK ||
-        (rc = mt.CreateFinal(tree, digest)) != MX_OK) {
+    if ((rc = mt.CreateInit(data_len, tree_len)) != ZX_OK ||
+        (rc = mt.CreateUpdate(data, data_len, tree)) != ZX_OK ||
+        (rc = mt.CreateFinal(tree, digest)) != ZX_OK) {
         return rc;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 MerkleTree::MerkleTree()
@@ -120,48 +120,48 @@ MerkleTree::MerkleTree()
 
 MerkleTree::~MerkleTree() {}
 
-mx_status_t MerkleTree::CreateInit(size_t data_len, size_t tree_len) {
+zx_status_t MerkleTree::CreateInit(size_t data_len, size_t tree_len) {
     initialized_ = true;
     offset_ = 0;
     length_ = data_len;
     // Data fits in a single node, making this the top level of the tree.
     if (data_len <= kNodeSize) {
-        return MX_OK;
+        return ZX_OK;
     }
     fbl::AllocChecker ac;
     next_.reset(new (&ac) MerkleTree());
     if (!ac.check()) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     next_->level_ = level_ + 1;
     // Ascend the tree.
     data_len = NextAligned(data_len);
     if (tree_len < data_len) {
-        return MX_ERR_BUFFER_TOO_SMALL;
+        return ZX_ERR_BUFFER_TOO_SMALL;
     }
     tree_len -= data_len;
     return next_->CreateInit(data_len, tree_len);
 }
 
-mx_status_t MerkleTree::CreateUpdate(const void* data, size_t length,
+zx_status_t MerkleTree::CreateUpdate(const void* data, size_t length,
                                      void* tree) {
-    MX_DEBUG_ASSERT(offset_ + length >= offset_);
+    ZX_DEBUG_ASSERT(offset_ + length >= offset_);
     // Must call CreateInit first.
     if (!initialized_) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     // Early exit if no work to do.
     if (length == 0) {
-        return MX_OK;
+        return ZX_OK;
     }
     // Must not overrun expected length.
     if (offset_ + length > length_) {
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
     }
     // Must have data to read and a tree to fill if expecting more than one
     // digest.
     if (!data || (!tree && length_ > kNodeSize)) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     // Save pointers to the data, digest, and the next level tree.
     const uint8_t* in = static_cast<const uint8_t*>(data);
@@ -169,8 +169,8 @@ mx_status_t MerkleTree::CreateUpdate(const void* data, size_t length,
     uint8_t* out = static_cast<uint8_t*>(tree) + tree_off;
     void* next = static_cast<uint8_t*>(tree) + NextAligned(length_);
     // Consume the data.
-    mx_status_t rc = MX_OK;
-    while (length > 0 && rc == MX_OK) {
+    zx_status_t rc = ZX_OK;
+    while (length > 0 && rc == ZX_OK) {
         // Check if this is the start of a node.
         if (offset_ % kNodeSize == 0) {
             DigestInit(&digest_, offset_ | level_, length_ - offset_);
@@ -202,20 +202,20 @@ mx_status_t MerkleTree::CreateUpdate(const void* data, size_t length,
     return rc;
 }
 
-mx_status_t MerkleTree::CreateFinal(void* tree, Digest* root) {
+zx_status_t MerkleTree::CreateFinal(void* tree, Digest* root) {
     return CreateFinalInternal(nullptr, tree, root);
 }
 
-mx_status_t MerkleTree::CreateFinalInternal(const void* data, void* tree,
+zx_status_t MerkleTree::CreateFinalInternal(const void* data, void* tree,
                                             Digest* root) {
     // Must call CreateInit first.  Must call CreateUpdate with all data first.
     if (!initialized_ || (level_ == 0 && offset_ != length_)) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     // Must have root to write and a tree to fill if expecting more than one
     // digest.
     if (!root || (!tree && length_ > kNodeSize)) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     // Special case: the level is empty.
     if (length_ == 0) {
@@ -224,15 +224,15 @@ mx_status_t MerkleTree::CreateFinalInternal(const void* data, void* tree,
     }
     // Consume padding if needed.
     const uint8_t* tail = static_cast<const uint8_t*>(data) + offset_;
-    mx_status_t rc;
-    if ((rc = CreateUpdate(tail, length_ - offset_, tree)) != MX_OK) {
+    zx_status_t rc;
+    if ((rc = CreateUpdate(tail, length_ - offset_, tree)) != ZX_OK) {
         return rc;
     }
     initialized_ = false;
     // If the top, save the digest as the Merkle tree root and return.
     if (length_ <= kNodeSize) {
         *root = digest_;
-        return MX_OK;
+        return ZX_OK;
     }
     // Finalize the next level up.
     uint8_t* next = static_cast<uint8_t*>(tree) + NextAligned(length_);
@@ -242,16 +242,16 @@ mx_status_t MerkleTree::CreateFinalInternal(const void* data, void* tree,
 ////////
 // Verification methods
 
-mx_status_t MerkleTree::Verify(const void* data, size_t data_len,
+zx_status_t MerkleTree::Verify(const void* data, size_t data_len,
                                const void* tree, size_t tree_len, size_t offset,
                                size_t length, const Digest& root) {
     uint64_t level = 0;
     size_t root_len = data_len;
     while (data_len > kNodeSize) {
-        mx_status_t rc;
+        zx_status_t rc;
         // Verify the data in this level.
         if ((rc = VerifyLevel(data, data_len, tree, offset, length, level)) !=
-            MX_OK) {
+            ZX_OK) {
             return rc;
         }
         // Ascend to the next level up.
@@ -260,7 +260,7 @@ mx_status_t MerkleTree::Verify(const void* data, size_t data_len,
         data_len = NextAligned(data_len);
         tree = static_cast<const uint8_t*>(tree) + data_len;
         if (tree_len < data_len) {
-            return MX_ERR_BUFFER_TOO_SMALL;
+            return ZX_ERR_BUFFER_TOO_SMALL;
         }
         tree_len -= data_len;
         offset /= kDigestsPerNode;
@@ -270,11 +270,11 @@ mx_status_t MerkleTree::Verify(const void* data, size_t data_len,
     return VerifyRoot(data, root_len, level, root);
 }
 
-mx_status_t MerkleTree::VerifyRoot(const void* data, size_t root_len,
+zx_status_t MerkleTree::VerifyRoot(const void* data, size_t root_len,
                                    uint64_t level, const Digest& expected) {
     // Must have data if length isn't 0.  Must have either zero or one node.
     if ((!data && root_len != 0) || root_len > kNodeSize) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     const uint8_t* in = static_cast<const uint8_t*>(data);
     Digest actual;
@@ -282,20 +282,20 @@ mx_status_t MerkleTree::VerifyRoot(const void* data, size_t root_len,
     DigestInit(&actual, level, (level == 0 ? root_len : kNodeSize));
     DigestUpdate(&actual, in, 0, root_len);
     DigestFinal(&actual, root_len);
-    return (actual == expected ? MX_OK : MX_ERR_IO_DATA_INTEGRITY);
+    return (actual == expected ? ZX_OK : ZX_ERR_IO_DATA_INTEGRITY);
 }
 
-mx_status_t MerkleTree::VerifyLevel(const void* data, size_t data_len,
+zx_status_t MerkleTree::VerifyLevel(const void* data, size_t data_len,
                                     const void* tree, size_t offset,
                                     size_t length, uint64_t level) {
-    MX_DEBUG_ASSERT(offset + length >= offset);
+    ZX_DEBUG_ASSERT(offset + length >= offset);
     // Must have more than one node of data and digests to check against.
     if (!data || data_len <= kNodeSize || !tree) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     // Must not overrun expected length.
     if (offset + length > data_len) {
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
     }
     // Align parameters to node boundaries, but don't exceed data_len
     offset -= offset % kNodeSize;
@@ -315,11 +315,11 @@ mx_status_t MerkleTree::VerifyLevel(const void* data, size_t data_len,
         length -= chunk;
         DigestFinal(&actual, offset);
         if (actual != expected) {
-            return MX_ERR_IO_DATA_INTEGRITY;
+            return ZX_ERR_IO_DATA_INTEGRITY;
         }
         expected += Digest::kLength;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 } // namespace digest
@@ -338,78 +338,78 @@ size_t merkle_tree_get_tree_length(size_t data_len) {
     return MerkleTree::GetTreeLength(data_len);
 }
 
-mx_status_t merkle_tree_create_init(size_t data_len, size_t tree_len,
+zx_status_t merkle_tree_create_init(size_t data_len, size_t tree_len,
                                     merkle_tree_t** out) {
-    mx_status_t rc;
+    zx_status_t rc;
     // Must have some where to store the wrapper.
     if (!out) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     // Allocate the wrapper object using a unique_ptr.  That way, if we hit an
     // error we'll clean up automatically.
     fbl::AllocChecker ac;
     fbl::unique_ptr<merkle_tree_t> mt_uniq(new (&ac) merkle_tree_t());
     if (!ac.check()) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     // Call the C++ function.
-    if ((rc = mt_uniq->obj.CreateInit(data_len, tree_len)) != MX_OK) {
+    if ((rc = mt_uniq->obj.CreateInit(data_len, tree_len)) != ZX_OK) {
         return rc;
     }
     // Release the wrapper object.
     *out = mt_uniq.release();
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t merkle_tree_create_update(merkle_tree_t* mt, const void* data,
+zx_status_t merkle_tree_create_update(merkle_tree_t* mt, const void* data,
                                       size_t length, void* tree) {
     // Must have a wrapper object.
     if (!mt) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     // Call the C++ function.
-    mx_status_t rc;
-    if ((rc = mt->obj.CreateUpdate(data, length, tree)) != MX_OK) {
+    zx_status_t rc;
+    if ((rc = mt->obj.CreateUpdate(data, length, tree)) != ZX_OK) {
         return rc;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t merkle_tree_create_final(merkle_tree_t* mt, void* tree, void* out,
+zx_status_t merkle_tree_create_final(merkle_tree_t* mt, void* tree, void* out,
                                      size_t out_len) {
     // Must have a wrapper object.
     if (!mt) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     // Take possession of the wrapper object. That way, we'll clean up
     // automatically.
     fbl::unique_ptr<merkle_tree_t> mt_uniq(mt);
     // Call the C++ function.
-    mx_status_t rc;
+    zx_status_t rc;
     Digest digest;
-    if ((rc = mt_uniq->obj.CreateFinal(tree, &digest)) != MX_OK) {
+    if ((rc = mt_uniq->obj.CreateFinal(tree, &digest)) != ZX_OK) {
         return rc;
     }
     return digest.CopyTo(static_cast<uint8_t*>(out), out_len);
 }
 
-mx_status_t merkle_tree_create(const void* data, size_t data_len, void* tree,
+zx_status_t merkle_tree_create(const void* data, size_t data_len, void* tree,
                                size_t tree_len, void* out, size_t out_len) {
-    mx_status_t rc;
+    zx_status_t rc;
     Digest digest;
     if ((rc = MerkleTree::Create(data, data_len, tree, tree_len, &digest)) !=
-        MX_OK) {
+        ZX_OK) {
         return rc;
     }
     return digest.CopyTo(static_cast<uint8_t*>(out), out_len);
 }
 
-mx_status_t merkle_tree_verify(const void* data, size_t data_len, void* tree,
+zx_status_t merkle_tree_verify(const void* data, size_t data_len, void* tree,
                                size_t tree_len, size_t offset, size_t length,
                                const void* root, size_t root_len) {
     // Must have a complete root digest.
     if (root_len < Digest::kLength) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     Digest digest(static_cast<const uint8_t*>(root));
     return MerkleTree::Verify(data, data_len, tree, tree_len, offset,

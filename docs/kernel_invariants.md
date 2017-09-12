@@ -1,11 +1,11 @@
-# Magenta Kernel Invariants
+# Zircon Kernel Invariants
 
-On x86, Magenta needs to maintain the following invariants for code running
+On x86, Zircon needs to maintain the following invariants for code running
 in ring 0 (kernel mode).
 
 These invariants are documented here because they are not necessarily easy
 to test -- breaking an invariant will not necessarily be caught by
-Magenta's test suite.
+Zircon's test suite.
 
 * Flags register:
 

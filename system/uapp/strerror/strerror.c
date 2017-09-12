@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <errno.h>
-#include <magenta/status.h>
+#include <zircon/status.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,13 +25,13 @@ int main(int argc, char** argv) {
         errno = 0;
         long error_long = strtol(argv[idx], NULL, 10);
         if (errno)
-            exit(MX_ERR_INVALID_ARGS);
+            exit(ZX_ERR_INVALID_ARGS);
         int error = (int)error_long;
-        const char* mx_error = mx_status_get_string((mx_status_t)error);
+        const char* zx_error = zx_status_get_string((zx_status_t)error);
         char* posix_error = strerror(error);
         const char* thrd_error = thrd_error_string(error);
         printf("Int value: %d\n", error);
-        printf("\tMagenta error: %s\n", mx_error);
+        printf("\tZircon error: %s\n", zx_error);
         printf("\tPosix error: %s\n", posix_error);
         printf("\tC11 thread error: %s\n", thrd_error);
     }

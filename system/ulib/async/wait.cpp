@@ -6,21 +6,21 @@
 
 namespace async {
 
-Wait::Wait(mx_handle_t object, mx_signals_t trigger, uint32_t flags)
+Wait::Wait(zx_handle_t object, zx_signals_t trigger, uint32_t flags)
     : async_wait_t{{ASYNC_STATE_INIT}, &Wait::CallHandler, object, trigger, flags, {}} {}
 
 Wait::~Wait() = default;
 
-mx_status_t Wait::Begin(async_t* async) {
+zx_status_t Wait::Begin(async_t* async) {
     return async_begin_wait(async, this);
 }
 
-mx_status_t Wait::Cancel(async_t* async) {
+zx_status_t Wait::Cancel(async_t* async) {
     return async_cancel_wait(async, this);
 }
 
 async_wait_result_t Wait::CallHandler(async_t* async, async_wait_t* wait,
-                                      mx_status_t status, const mx_packet_signal_t* signal) {
+                                      zx_status_t status, const zx_packet_signal_t* signal) {
     return static_cast<Wait*>(wait)->handler_(async, status, signal);
 }
 

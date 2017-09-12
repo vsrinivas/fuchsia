@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
-#include <magenta/device/ethernet.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+#include <zircon/device/ethernet.h>
 
 __BEGIN_CDECLS;
 
@@ -63,7 +63,7 @@ typedef struct ethmac_ifc_virt {
 typedef struct ethmac_protocol_ops {
     // Obtain information about the ethermac device and supported features
     // Safe to call at any time.
-    mx_status_t (*query)(void* ctx, uint32_t options, ethmac_info_t* info);
+    zx_status_t (*query)(void* ctx, uint32_t options, ethmac_info_t* info);
 
     // Shut down a running ethermac
     // Safe to call if the ethermac is already stopped.
@@ -71,7 +71,7 @@ typedef struct ethmac_protocol_ops {
 
     // Start ethermac running with ifc_virt
     // Callbacks on ifc may be invoked from now until stop() is called
-    mx_status_t (*start)(void* ctx, ethmac_ifc_t* ifc, void* cookie);
+    zx_status_t (*start)(void* ctx, ethmac_ifc_t* ifc, void* cookie);
 
     // send() is valid if FEATURE_TX_QUEUE is not present, otherwise it is no-op
     // This may be called at any time, and can be called from multiple

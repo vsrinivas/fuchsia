@@ -6,10 +6,10 @@
 #include <inttypes.h>
 #include <launchpad/vmo.h>
 #include <launchpad/loader-service.h>
-#include <magenta/device/dmctl.h>
-#include <magenta/dlfcn.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
+#include <zircon/device/dmctl.h>
+#include <zircon/dlfcn.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
 
 #include <stdatomic.h>
 #include <stdio.h>
@@ -27,15 +27,15 @@
 bool dlopen_vmo_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t vmo = MX_HANDLE_INVALID;
-    mx_status_t status = launchpad_vmo_from_file(LIBPREFIX "liblaunchpad.so", &vmo);
-    EXPECT_EQ(status, MX_OK, "");
-    EXPECT_NE(vmo, MX_HANDLE_INVALID, "launchpad_vmo_from_file");
+    zx_handle_t vmo = ZX_HANDLE_INVALID;
+    zx_status_t status = launchpad_vmo_from_file(LIBPREFIX "liblaunchpad.so", &vmo);
+    EXPECT_EQ(status, ZX_OK, "");
+    EXPECT_NE(vmo, ZX_HANDLE_INVALID, "launchpad_vmo_from_file");
 
     void* obj = dlopen_vmo(vmo, RTLD_LOCAL);
     EXPECT_NONNULL(obj, "dlopen_vmo");
 
-    mx_handle_close(vmo);
+    zx_handle_close(vmo);
 
     void* sym = dlsym(obj, "launchpad_create");
     EXPECT_NONNULL(sym, "dlsym");
@@ -47,47 +47,47 @@ bool dlopen_vmo_test(void) {
 }
 
 // This should be some library that this program links against.
-#define TEST_SONAME "libmxio.so"
+#define TEST_SONAME "libfdio.so"
 #define TEST_NAME "foobar"
 #define TEST_ACTUAL_NAME LIBPREFIX TEST_SONAME
 
 static atomic_bool my_loader_service_ok = false;
 static atomic_int my_loader_service_calls = 0;
 
-static mx_status_t my_loader_service(void* arg, uint32_t load_op,
-                                     mx_handle_t request_handle,
+static zx_status_t my_loader_service(void* arg, uint32_t load_op,
+                                     zx_handle_t request_handle,
                                      const char* name,
-                                     mx_handle_t* out) {
+                                     zx_handle_t* out) {
     ++my_loader_service_calls;
 
-    EXPECT_EQ(request_handle, MX_HANDLE_INVALID,
+    EXPECT_EQ(request_handle, ZX_HANDLE_INVALID,
               "called with a request handle");
 
     int cmp = strcmp(name, TEST_NAME);
     EXPECT_EQ(cmp, 0, "called with unexpected name");
     if (cmp != 0) {
         unittest_printf("        saw \"%s\", expected \"%s\"", name, TEST_NAME);
-        return MX_HANDLE_INVALID;
+        return ZX_HANDLE_INVALID;
     }
     EXPECT_EQ(load_op, (uint32_t) LOADER_SVC_OP_LOAD_OBJECT,
               "called with unexpected load op");
     if (load_op != (uint32_t) LOADER_SVC_OP_LOAD_OBJECT) {
         unittest_printf("        saw %" PRIu32 ", expected %" PRIu32, load_op,
                         LOADER_SVC_OP_LOAD_OBJECT);
-        return MX_HANDLE_INVALID;
+        return ZX_HANDLE_INVALID;
     }
 
-    mx_handle_t vmo = MX_HANDLE_INVALID;
-    mx_status_t status = launchpad_vmo_from_file(arg, &vmo);
-    EXPECT_EQ(status, MX_OK, "");
-    EXPECT_NE(vmo, MX_HANDLE_INVALID, "launchpad_vmo_from_file");
+    zx_handle_t vmo = ZX_HANDLE_INVALID;
+    zx_status_t status = launchpad_vmo_from_file(arg, &vmo);
+    EXPECT_EQ(status, ZX_OK, "");
+    EXPECT_NE(vmo, ZX_HANDLE_INVALID, "launchpad_vmo_from_file");
     if (status < 0) {
         return status;
     }
 
     my_loader_service_ok = true;
     *out = vmo;
-    return MX_OK;
+    return ZX_OK;
 }
 
 static void show_dlerror(void) {
@@ -104,13 +104,13 @@ bool loader_service_test(void) {
         show_dlerror();
 
     // Spin up our test service.
-    mx_handle_t my_service;
-    mx_status_t status = loader_service_simple(&my_loader_service, (void*)TEST_ACTUAL_NAME, &my_service);
-    EXPECT_EQ(status, MX_OK, "mxio_loader_service");
+    zx_handle_t my_service;
+    zx_status_t status = loader_service_simple(&my_loader_service, (void*)TEST_ACTUAL_NAME, &my_service);
+    EXPECT_EQ(status, ZX_OK, "fdio_loader_service");
 
     // Install the service.
-    mx_handle_t old = dl_set_loader_service(my_service);
-    EXPECT_NE(old, MX_HANDLE_INVALID, "dl_set_loader_service");
+    zx_handle_t old = dl_set_loader_service(my_service);
+    EXPECT_NE(old, ZX_HANDLE_INVALID, "dl_set_loader_service");
 
     // Now to a lookup that should go through our service.  It
     // should load up the new copy of the file, find that its
@@ -141,9 +141,9 @@ bool loader_service_test(void) {
         show_dlerror();
 
     // Put things back to how they were.
-    mx_handle_t old2 = dl_set_loader_service(old);
+    zx_handle_t old2 = dl_set_loader_service(old);
     EXPECT_EQ(old2, my_service, "unexpected previous service handle");
-    mx_handle_close(old2);
+    zx_handle_close(old2);
 
     END_TEST;
 }
@@ -156,15 +156,15 @@ bool ioctl_test(void) {
     int fd = open(DMCTL_PATH, O_RDONLY);
     ASSERT_GE(fd, 0, "can't open " DMCTL_PATH);
 
-    mx_handle_t h = MX_HANDLE_INVALID;
+    zx_handle_t h = ZX_HANDLE_INVALID;
     ssize_t s = ioctl_dmctl_get_loader_service_channel(fd, &h);
     close(fd);
 
-    EXPECT_EQ(s, (ssize_t)sizeof(mx_handle_t),
+    EXPECT_EQ(s, (ssize_t)sizeof(zx_handle_t),
               "unexpected return value from ioctl");
-    EXPECT_NE(h, MX_HANDLE_INVALID, "invalid handle from ioctl");
+    EXPECT_NE(h, ZX_HANDLE_INVALID, "invalid handle from ioctl");
 
-    mx_handle_close(h);
+    zx_handle_close(h);
 
     END_TEST;
 }

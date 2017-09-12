@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -26,15 +26,15 @@ typedef struct {
     uint32_t tail;
     bool empty;
     mtx_t lock;
-} mx_hid_fifo_t;
+} zx_hid_fifo_t;
 
-mx_status_t mx_hid_fifo_create(mx_hid_fifo_t** fifo);
-void mx_hid_fifo_init(mx_hid_fifo_t* fifo);
-size_t mx_hid_fifo_size(mx_hid_fifo_t* fifo);
-ssize_t mx_hid_fifo_peek(mx_hid_fifo_t* fifo, void* out);
-ssize_t mx_hid_fifo_read(mx_hid_fifo_t* fifo, void* buf, size_t len);
-ssize_t mx_hid_fifo_write(mx_hid_fifo_t* fifo, const void* buf, size_t len);
+zx_status_t zx_hid_fifo_create(zx_hid_fifo_t** fifo);
+void zx_hid_fifo_init(zx_hid_fifo_t* fifo);
+size_t zx_hid_fifo_size(zx_hid_fifo_t* fifo);
+ssize_t zx_hid_fifo_peek(zx_hid_fifo_t* fifo, void* out);
+ssize_t zx_hid_fifo_read(zx_hid_fifo_t* fifo, void* buf, size_t len);
+ssize_t zx_hid_fifo_write(zx_hid_fifo_t* fifo, const void* buf, size_t len);
 
-void mx_hid_fifo_dump(mx_hid_fifo_t* fifo);
+void zx_hid_fifo_dump(zx_hid_fifo_t* fifo);
 
 __END_CDECLS;

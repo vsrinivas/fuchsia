@@ -90,6 +90,6 @@ struct ApicAccessInfo {
 
 bool local_apic_signal_interrupt(LocalApicState* local_apic_state, uint32_t vector,
                                  bool reschedule);
-mx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
+zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
                            LocalApicState* local_apic_state, GuestPhysicalAddressSpace* gpas,
-                           PacketMux& mux, mx_port_packet_t* packet);
+                           PacketMux& mux, zx_port_packet_t* packet);

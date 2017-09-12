@@ -10,7 +10,7 @@
 
 #include <vm/vm_address_region.h>
 
-#include <mxcpp/new.h>
+#include <zxcpp/new.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/type_support.h>
@@ -31,7 +31,7 @@ public:
     Arena() = default;
     ~Arena();
 
-    mx_status_t Init(const char* name, size_t ob_size, size_t max_count);
+    zx_status_t Init(const char* name, size_t ob_size, size_t max_count);
     void* Alloc();
     void Free(void* addr);
     bool in_range(void* addr) const {
@@ -42,7 +42,7 @@ public:
     void* end() const { return data_.end(); }
 
     // Dumps information about the Arena using printf().
-    // TIP: Use "k mx htinfo" to dump the handle table at runtime.
+    // TIP: Use "k zx htinfo" to dump the handle table at runtime.
     void Dump() const;
 
     // Returns the number of outstanding allocations from this arena.

@@ -12,8 +12,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <magenta/compiler.h>
-#include <magenta/syscalls.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 
 #include "filesystems.h"

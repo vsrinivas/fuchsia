@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 // defined in cpp_specific.cpp.
 int cpp_out_of_mem(void);
@@ -102,7 +102,7 @@ int mem(volatile unsigned int* arg) {
         memset((void*)mem_alloc, 0xa5, 1024*1024);
         count++;
         if ((count % 128) == 0) {
-            mx_nanosleep(mx_deadline_after(MX_MSEC(250)));
+            zx_nanosleep(zx_deadline_after(ZX_MSEC(250)));
             write(1, ".", 1);
         }
     }

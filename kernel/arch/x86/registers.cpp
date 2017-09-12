@@ -26,7 +26,7 @@
 #include <arch/x86/proc_trace.h>
 #include <arch/x86/registers.h>
 #include <inttypes.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
 #include <fbl/auto_call.h>

@@ -10,7 +10,7 @@
 #include <stdint.h>
 
 #include <ddk/driver.h>
-#include <mx/vmar.h>
+#include <zx/vmar.h>
 
 #include "device.h"
 #include "trace.h"
@@ -32,10 +32,10 @@ Ring::Ring(Device* device)
     : device_(device) {}
 
 Ring::~Ring() {
-    mx::vmar::root_self().unmap(ring_va_, ring_va_len_);
+    zx::vmar::root_self().unmap(ring_va_, ring_va_len_);
 }
 
-mx_status_t Ring::Init(uint16_t index, uint16_t count) {
+zx_status_t Ring::Init(uint16_t index, uint16_t count) {
     LTRACEF("index %u, count %u\n", index, count);
 
     // XXX check that count is a power of 2
@@ -46,14 +46,14 @@ mx_status_t Ring::Init(uint16_t index, uint16_t count) {
     uint16_t max_ring_size = device_->GetRingSize(index);
     if (count > max_ring_size) {
         VIRTIO_ERROR("ring init count too big for hardware %u > %u\n", count, max_ring_size);
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
     // allocate a ring
     size_t size = vring_size(count, PAGE_SIZE);
     LTRACEF("need %zu bytes\n", size);
 
-    mx_status_t r = map_contiguous_memory(size, &ring_va_, &ring_pa_);
+    zx_status_t r = map_contiguous_memory(size, &ring_va_, &ring_pa_);
     if (r) {
         VIRTIO_ERROR("map_contiguous_memory failed %d\n", r);
         return r;
@@ -73,12 +73,12 @@ mx_status_t Ring::Init(uint16_t index, uint16_t count) {
     }
 
     /* register the ring with the device */
-    mx_paddr_t pa_desc = ring_pa_;
-    mx_paddr_t pa_avail = ring_pa_ + ((uintptr_t)ring_.avail - (uintptr_t)ring_.desc);
-    mx_paddr_t pa_used = ring_pa_ + ((uintptr_t)ring_.used - (uintptr_t)ring_.desc);
+    zx_paddr_t pa_desc = ring_pa_;
+    zx_paddr_t pa_avail = ring_pa_ + ((uintptr_t)ring_.avail - (uintptr_t)ring_.desc);
+    zx_paddr_t pa_used = ring_pa_ + ((uintptr_t)ring_.used - (uintptr_t)ring_.desc);
     device_->SetRing(index_, count, pa_desc, pa_avail, pa_used);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 void Ring::FreeDesc(uint16_t desc_index) {

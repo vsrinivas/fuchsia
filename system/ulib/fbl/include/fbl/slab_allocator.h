@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/deleter.h>
@@ -330,7 +330,7 @@ template <typename SATraits, typename = void>
 struct SlabOriginSetter {
     static inline void SetOrigin(typename SATraits::ObjType* ptr,
                                  internal::SlabAllocator<SATraits>* origin) {
-        MX_DEBUG_ASSERT((ptr != nullptr) && (origin != nullptr));
+        ZX_DEBUG_ASSERT((ptr != nullptr) && (origin != nullptr));
         ptr->slab_origin_ = origin;
     }
 };
@@ -404,7 +404,7 @@ public:
     }
 
     ~SlabAllocatorBase() {
-#if MX_DEBUG_ASSERT_IMPLEMENTED
+#if ZX_DEBUG_ASSERT_IMPLEMENTED
         size_t allocated_count = 0;
         size_t free_list_size = this->free_list_.size_slow();
 #endif
@@ -416,10 +416,10 @@ public:
 
         while (!slab_list_.is_empty()) {
             Slab* free_me = slab_list_.pop_front();
-#if MX_DEBUG_ASSERT_IMPLEMENTED
+#if ZX_DEBUG_ASSERT_IMPLEMENTED
             size_t bytes_used = free_me->bytes_used_ - initial_slab_used_;
-            MX_DEBUG_ASSERT(free_me->bytes_used_ >= initial_slab_used_);
-            MX_DEBUG_ASSERT((bytes_used % alloc_size_) == 0);
+            ZX_DEBUG_ASSERT(free_me->bytes_used_ >= initial_slab_used_);
+            ZX_DEBUG_ASSERT((bytes_used % alloc_size_) == 0);
             allocated_count += (bytes_used / alloc_size_);
 #endif
             SlabMalloc::Free(reinterpret_cast<void*>(free_me));
@@ -427,7 +427,7 @@ public:
 
         // Make sure that everything which was ever allocated had been returned
         // to the free list before we were destroyed.
-        MX_DEBUG_ASSERT_COND(free_list_size == allocated_count);
+        ZX_DEBUG_ASSERT_COND(free_list_size == allocated_count);
     }
 
     size_t max_slabs() const { return max_slabs_; }
@@ -696,8 +696,8 @@ public:
         // be able to modify slab_origin_ because it is private.
         ObjType* obj_ptr = reinterpret_cast<ObjType*>(ptr);
 
-        MX_DEBUG_ASSERT(obj_ptr != nullptr);
-        MX_DEBUG_ASSERT(obj_ptr->slab_origin_ != nullptr);
+        ZX_DEBUG_ASSERT(obj_ptr != nullptr);
+        ZX_DEBUG_ASSERT(obj_ptr->slab_origin_ != nullptr);
         obj_ptr->slab_origin_->ReturnToFreeList(obj_ptr);
     }
 
@@ -730,7 +730,7 @@ protected:
     // Note: it would be nice to either = delete this operator, or at least make
     // it private, but we cannot.  To do so would prevent the implemementer of
     // the slab allocated object from defining a destructor.
-    void operator delete(void*) { MX_DEBUG_ASSERT(false); }
+    void operator delete(void*) { ZX_DEBUG_ASSERT(false); }
 };
 
 // Shorthand for declaring the properties of an instanced allocator (somewhat
@@ -817,7 +817,7 @@ public:
     using ObjType       = typename SATraits::ObjType;
 
     void operator delete(void* ptr) {
-        MX_DEBUG_ASSERT(ptr != nullptr);
+        ZX_DEBUG_ASSERT(ptr != nullptr);
         AllocatorType::ReturnToFreeList(reinterpret_cast<ObjType*>(ptr));
     }
 };

@@ -7,7 +7,7 @@
 #include <unistd.h>
 
 #include <hypervisor/guest.h>
-#include <magenta/device/sysinfo.h>
+#include <zircon/device/sysinfo.h>
 
 static const char kResourcePath[] = "/dev/misc/sysinfo";
 
@@ -74,11 +74,11 @@ static uintptr_t page_table(uintptr_t addr, size_t size, size_t l1_page_size, ui
 }
 #endif // __x86_64__
 
-mx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* end_off) {
+zx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* end_off) {
     if (size % PAGE_SIZE != 0)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     if (size > kMaxSize || size < kMinSize)
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
 
 #if __x86_64__
     uint64_t aspace_off = 0;
@@ -87,9 +87,9 @@ mx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* end_
     *end_off = page_table(addr, size - aspace_off, kPdpPageSize, *end_off, &aspace_off, true, X86_PTE_PS);
     *end_off = page_table(addr, size - aspace_off, kPdPageSize, *end_off, &aspace_off, true, X86_PTE_PS);
     *end_off = page_table(addr, size - aspace_off, kPtPageSize, *end_off, &aspace_off, true, 0);
-    return MX_OK;
+    return ZX_OK;
 #else // __x86_64__
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__
 }
 
@@ -97,9 +97,9 @@ size_t guest_e820_size(size_t size) {
     return (size > kAddr4000mb ? 6 : 5) * sizeof(e820entry_t);
 }
 
-mx_status_t guest_create_e820(uintptr_t addr, size_t size, uintptr_t e820_off) {
+zx_status_t guest_create_e820(uintptr_t addr, size_t size, uintptr_t e820_off) {
     if (e820_off + guest_e820_size(size) > size)
-        return MX_ERR_BUFFER_TOO_SMALL;
+        return ZX_ERR_BUFFER_TOO_SMALL;
 
     e820entry_t* entry = (e820entry_t*)(addr + e820_off);
     // 0 to 32kb is reserved.
@@ -129,14 +129,14 @@ mx_status_t guest_create_e820(uintptr_t addr, size_t size, uintptr_t e820_off) {
         entry[5].type = kE820Ram;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t guest_get_resource(mx_handle_t* resource) {
+zx_status_t guest_get_resource(zx_handle_t* resource) {
     int fd = open(kResourcePath, O_RDWR);
     if (fd < 0)
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     ssize_t n = ioctl_sysinfo_get_hypervisor_resource(fd, resource);
     close(fd);
-    return n < 0 ? MX_ERR_IO : MX_OK;
+    return n < 0 ? ZX_ERR_IO : ZX_OK;
 }

@@ -153,33 +153,33 @@ static status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
         (irq & 0xf);
 
     if (irq >= 16)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     LTRACEF("GICD_SGIR: %x\n", val);
 
     GICREG(0, GICD_SGIR) = val;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static status_t gic_mask_interrupt(unsigned int vector)
 {
     if (vector >= max_irqs)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     gic_set_enable(vector, false);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static status_t gic_unmask_interrupt(unsigned int vector)
 {
     if (vector >= max_irqs)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     gic_set_enable(vector, true);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static status_t gic_configure_interrupt(unsigned int vector,
@@ -188,11 +188,11 @@ static status_t gic_configure_interrupt(unsigned int vector,
 {
     //Only configurable for SPI interrupts
     if ((vector >= max_irqs) || (vector < GIC_BASE_SPI))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     if (pol != IRQ_POLARITY_ACTIVE_HIGH) {
         // TODO: polarity should actually be configure through a GPIO controller
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // type is encoded with two bits, MSB of the two determine type
@@ -205,7 +205,7 @@ static status_t gic_configure_interrupt(unsigned int vector,
     reg_val |= (type << bit_shift);
     GICREG(0, GICD_ICFGR(reg_ndx)) = reg_val;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static status_t gic_get_interrupt_config(unsigned int vector,
@@ -213,12 +213,12 @@ static status_t gic_get_interrupt_config(unsigned int vector,
                                          enum interrupt_polarity* pol)
 {
     if (vector >= max_irqs)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     if (tm)  *tm  = IRQ_TRIGGER_MODE_EDGE;
     if (pol) *pol = IRQ_POLARITY_ACTIVE_HIGH;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static unsigned int gic_remap_interrupt(unsigned int vector)
@@ -282,7 +282,7 @@ static status_t gic_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi) {
         arm_gic_sgi(gic_ipi_num, ARM_GIC_SGI_FLAG_NS, target);
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static enum handler_return arm_ipi_generic_handler(void *arg) {

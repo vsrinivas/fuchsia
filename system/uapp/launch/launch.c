@@ -6,13 +6,13 @@
 #include <launchpad/launchpad.h>
 #include <launchpad/loader-service.h>
 #include <launchpad/vmo.h>
-#include <magenta/process.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/object.h>
-#include <magenta/syscalls/policy.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/syscalls/policy.h>
 
-#include <mxio/io.h>
+#include <fdio/io.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,9 +36,9 @@ static _Noreturn void usage(const char* progname, bool error) {
                  "enable exception-on-bad-handle job policy (implies -j)");
     option_usage(out, "-j", "start process in a new job");
     option_usage(out, "-l",
-                 "pass mxio_loader_service handle in main bootstrap message");
+                 "pass fdio_loader_service handle in main bootstrap message");
     option_usage(out, "-L", "force initial loader bootstrap message");
-    option_usage(out, "-r", "send mxio filesystem root");
+    option_usage(out, "-r", "send fdio filesystem root");
     option_usage(out, "-s", "shorthand for -r -d 0 -d 1 -d 2");
     option_usage(out, "-S BYTES", "set the initial stack size to BYTES");
     option_usage(out, "-v FILE", "send VMO of FILE as EXEC_VMO handle");
@@ -46,12 +46,12 @@ static _Noreturn void usage(const char* progname, bool error) {
     exit(error ? 1 : 0);
 }
 
-static _Noreturn void fail(const char* call, mx_status_t status) {
+static _Noreturn void fail(const char* call, zx_status_t status) {
     fprintf(stderr, "%s failed: %d\n", call, status);
     exit(1);
 }
 
-static void check(const char* call, mx_status_t status) {
+static void check(const char* call, zx_status_t status) {
     if (status < 0)
         fail(call, status);
 }
@@ -157,10 +157,10 @@ int main(int argc, char** argv) {
     if (optind >= argc)
         usage(argv[0], true);
 
-    mx_handle_t vmo;
+    zx_handle_t vmo;
     if (program_fd != -1) {
-        mx_status_t status = mxio_get_vmo(program_fd, &vmo);
-        if (status == MX_ERR_IO) {
+        zx_status_t status = fdio_get_vmo(program_fd, &vmo);
+        if (status == ZX_ERR_IO) {
             perror("launchpad_vmo_from_fd");
             return 2;
         }
@@ -168,39 +168,39 @@ int main(int argc, char** argv) {
     } else {
         if (program == NULL)
             program = argv[optind];
-        mx_status_t status = launchpad_vmo_from_file(program, &vmo);
-        if (status == MX_ERR_IO) {
+        zx_status_t status = launchpad_vmo_from_file(program, &vmo);
+        if (status == ZX_ERR_IO) {
             perror(program);
             return 2;
         }
         check("launchpad_vmo_from_file", status);
     }
 
-    mx_handle_t job = mx_job_default();
+    zx_handle_t job = zx_job_default();
     if (new_job) {
-        if (job == MX_HANDLE_INVALID) {
-            fprintf(stderr, "no mxio job handle found\n");
+        if (job == ZX_HANDLE_INVALID) {
+            fprintf(stderr, "no fdio job handle found\n");
             return 2;
         }
         check("launchpad job", job);
-        mx_handle_t child_job;
-        mx_status_t status = mx_job_create(job, 0u, &child_job);
+        zx_handle_t child_job;
+        zx_status_t status = zx_job_create(job, 0u, &child_job);
         check("launchpad child job", status);
-        mx_handle_close(job);
+        zx_handle_close(job);
         job = child_job;
     }
     if (enable_bad_handle_policy) {
-        mx_policy_basic_t policy[] = {
-            { MX_POL_BAD_HANDLE, MX_POL_ACTION_EXCEPTION },
+        zx_policy_basic_t policy[] = {
+            { ZX_POL_BAD_HANDLE, ZX_POL_ACTION_EXCEPTION },
         };
-        mx_status_t status = mx_job_set_policy(
-            job, MX_JOB_POL_RELATIVE, MX_JOB_POL_BASIC,
+        zx_status_t status = zx_job_set_policy(
+            job, ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC,
             &policy, countof(policy));
-        check("mx_job_set_policy", status);
+        check("zx_job_set_policy", status);
     }
 
     launchpad_t* lp;
-    mx_status_t status = launchpad_create(job, program, &lp);
+    zx_status_t status = launchpad_create(job, program, &lp);
     check("launchpad_create", status);
 
     status = launchpad_set_args(lp, argc - optind,
@@ -211,8 +211,8 @@ int main(int argc, char** argv) {
     check("launchpad_environ", status);
 
     if (send_root) {
-        status = launchpad_clone(lp, LP_CLONE_MXIO_NAMESPACE);
-        check("launchpad_clone(LP_CLONE_MXIO_NAMESPACE)", status);
+        status = launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE);
+        check("launchpad_clone(LP_CLONE_FDIO_NAMESPACE)", status);
     }
 
     for (size_t i = 0; i < nfds; ++i) {
@@ -226,12 +226,12 @@ int main(int argc, char** argv) {
     if (send_loader_message) {
         bool already_sending = launchpad_send_loader_message(lp, true);
         if (!already_sending) {
-            mx_handle_t loader_svc;
+            zx_handle_t loader_svc;
             status = loader_service_get_default(&loader_svc);
-            check("mxio_loader_service", status);
-            mx_handle_t old = launchpad_use_loader_service(lp, loader_svc);
+            check("fdio_loader_service", status);
+            zx_handle_t old = launchpad_use_loader_service(lp, loader_svc);
             check("launchpad_use_loader_service", old);
-            if (old != MX_HANDLE_INVALID) {
+            if (old != ZX_HANDLE_INVALID) {
                 fprintf(stderr, "launchpad_use_loader_service returned %#x\n",
                         old);
                 return 2;
@@ -240,9 +240,9 @@ int main(int argc, char** argv) {
     }
 
     if (pass_loader_handle) {
-        mx_handle_t loader_svc;
+        zx_handle_t loader_svc;
         status = loader_service_get_default(&loader_svc);
-        check("mxio_loader_service", status);
+        check("fdio_loader_service", status);
         status = launchpad_add_handle(lp, loader_svc, PA_SVC_LOADER);
         check("launchpad_add_handle", status);
     }
@@ -252,9 +252,9 @@ int main(int argc, char** argv) {
     // unlikely to be useful.  But this program is mainly to test the
     // library, so it makes all the library calls the user asks for.
     if (exec_vmo_file != NULL) {
-        mx_handle_t exec_vmo;
+        zx_handle_t exec_vmo;
         status = launchpad_vmo_from_file(exec_vmo_file, &exec_vmo);
-        if (status == MX_ERR_IO) {
+        if (status == ZX_ERR_IO) {
             perror(exec_vmo_file);
             return 2;
         }
@@ -263,9 +263,9 @@ int main(int argc, char** argv) {
     }
 
     if (exec_vmo_fd != -1) {
-        mx_handle_t exec_vmo;
-        status = mxio_get_vmo(exec_vmo_fd, &exec_vmo);
-        if (status == MX_ERR_IO) {
+        zx_handle_t exec_vmo;
+        status = fdio_get_vmo(exec_vmo_fd, &exec_vmo);
+        if (status == ZX_ERR_IO) {
             perror("launchpad_vmo_from_fd");
             return 2;
         }
@@ -281,7 +281,7 @@ int main(int argc, char** argv) {
 
     // This doesn't get ownership of the process handle.
     // We're just testing the invariant that it returns a valid handle.
-    mx_handle_t proc = launchpad_get_process_handle(lp);
+    zx_handle_t proc = launchpad_get_process_handle(lp);
     check("launchpad_get_process_handle", proc);
 
     // This gives us ownership of the process handle.
@@ -291,15 +291,15 @@ int main(int argc, char** argv) {
     // The launchpad is done.  Clean it up.
     launchpad_destroy(lp);
 
-    status = mx_object_wait_one(proc, MX_PROCESS_TERMINATED, MX_TIME_INFINITE, NULL);
-    check("mx_object_wait_one", status);
+    status = zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL);
+    check("zx_object_wait_one", status);
 
-    mx_info_process_t info;
-    status = mx_object_get_info(proc, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL);
-    check("mx_object_get_info", status);
+    zx_info_process_t info;
+    status = zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL);
+    check("zx_object_get_info", status);
 
     if (job)
-        mx_handle_close(job);
+        zx_handle_close(job);
 
     printf("Process finished with return code %d\n", info.return_code);
     return info.return_code;

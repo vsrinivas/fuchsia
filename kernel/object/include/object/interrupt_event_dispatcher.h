@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
@@ -15,17 +15,17 @@
 
 class InterruptEventDispatcher final : public InterruptDispatcher {
 public:
-    static mx_status_t Create(uint32_t vector,
+    static zx_status_t Create(uint32_t vector,
                               uint32_t flags,
                               fbl::RefPtr<Dispatcher>* dispatcher,
-                              mx_rights_t* rights);
+                              zx_rights_t* rights);
 
     InterruptEventDispatcher(const InterruptDispatcher &) = delete;
     InterruptEventDispatcher& operator=(const InterruptDispatcher &) = delete;
 
     ~InterruptEventDispatcher() final;
-    mx_status_t InterruptComplete() final;
-    mx_status_t UserSignal() final;
+    zx_status_t InterruptComplete() final;
+    zx_status_t UserSignal() final;
 
     // requred to exist in our collection of allocated vectors.
     uint32_t GetKey() const { return vector_; }

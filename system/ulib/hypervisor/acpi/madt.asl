@@ -8,8 +8,8 @@
 [004h 0004   4]                 Table Length : 0
 [008h 0008   1]                     Revision : 4
 [009h 0009   1]                     Checksum : 0
-[00Ah 0010   6]                       Oem ID : "MX"
-[010h 0016   8]                 Oem Table ID : "MX MADT"
+[00Ah 0010   6]                       Oem ID : "ZX"
+[010h 0016   8]                 Oem Table ID : "ZX MADT"
 [018h 0024   4]                 Oem Revision : 0
 [01Ch 0028   4]              Asl Compiler ID : ""
 [020h 0032   4]        Asl Compiler Revision : 0

@@ -7,7 +7,7 @@ config("trace_config") {
 }
 
 source_set("trace-provider") {
-  # Don't forget to update rules.mk as well for the Magenta build.
+  # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "include/trace-reader/reader.h",
     "include/trace-reader/records.h",
@@ -16,7 +16,7 @@ source_set("trace-provider") {
   ]
 
   public_deps = [
-    "//magenta/system/ulib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   public_configs = [ ":trace_config" ]

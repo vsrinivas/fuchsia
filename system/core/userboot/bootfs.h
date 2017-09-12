@@ -6,20 +6,20 @@
 
 #pragma GCC visibility push(hidden)
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <stddef.h>
 #include <stdint.h>
 
 struct bootfs {
-    mx_handle_t vmo;
+    zx_handle_t vmo;
     const void* contents;
     size_t len;
 };
 
-void bootfs_mount(mx_handle_t vmar, mx_handle_t log, mx_handle_t vmo, struct bootfs *fs);
-void bootfs_unmount(mx_handle_t vmar, mx_handle_t log, struct bootfs *fs);
+void bootfs_mount(zx_handle_t vmar, zx_handle_t log, zx_handle_t vmo, struct bootfs *fs);
+void bootfs_unmount(zx_handle_t vmar, zx_handle_t log, struct bootfs *fs);
 
-mx_handle_t bootfs_open(mx_handle_t log, const char* purpose,
+zx_handle_t bootfs_open(zx_handle_t log, const char* purpose,
                         struct bootfs *fs, const char* filename);
 
 #pragma GCC visibility pop

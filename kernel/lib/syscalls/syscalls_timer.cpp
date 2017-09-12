@@ -20,55 +20,55 @@
 
 #include "syscalls_priv.h"
 
-mx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_ptr<mx_handle_t> _out) {
-    if (clock_id != MX_CLOCK_MONOTONIC)
-        return MX_ERR_INVALID_ARGS;
+zx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_ptr<zx_handle_t> _out) {
+    if (clock_id != ZX_CLOCK_MONOTONIC)
+        return ZX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
-    mx_status_t result = up->QueryPolicy(MX_POL_NEW_TIMER);
-    if (result != MX_OK)
+    zx_status_t result = up->QueryPolicy(ZX_POL_NEW_TIMER);
+    if (result != ZX_OK)
         return result;
 
     fbl::RefPtr<Dispatcher> dispatcher;
-    mx_rights_t rights;
+    zx_rights_t rights;
 
     result = TimerDispatcher::Create(options, &dispatcher, &rights);
 
-    if (result != MX_OK)
+    if (result != ZX_OK)
         return result;
 
     HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
     if (!handle)
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
-    mx_handle_t hv = up->MapHandleToValue(handle);
+    zx_handle_t hv = up->MapHandleToValue(handle);
 
-    if (_out.copy_to_user(hv) != MX_OK)
-        return MX_ERR_INVALID_ARGS;
+    if (_out.copy_to_user(hv) != ZX_OK)
+        return ZX_ERR_INVALID_ARGS;
 
     up->AddHandle(fbl::move(handle));
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t sys_timer_set(
-    mx_handle_t handle, mx_time_t deadline, mx_duration_t slack) {
+zx_status_t sys_timer_set(
+    zx_handle_t handle, zx_time_t deadline, zx_duration_t slack) {
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<TimerDispatcher> timer;
-    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &timer);
-    if (status != MX_OK)
+    zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &timer);
+    if (status != ZX_OK)
         return status;
 
     return timer->Set(deadline, slack);
 }
 
 
-mx_status_t sys_timer_cancel(mx_handle_t handle) {
+zx_status_t sys_timer_cancel(zx_handle_t handle) {
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<TimerDispatcher> timer;
-    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &timer);
-    if (status != MX_OK)
+    zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &timer);
+    if (status != ZX_OK)
         return status;
 
     return timer->Cancel();

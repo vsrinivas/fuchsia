@@ -15,13 +15,13 @@ MODULE_STATIC_LIBS := \
     system/ulib/fs \
     system/ulib/gpt \
     system/ulib/digest \
-    system/ulib/mxcpp \
+    system/ulib/zxcpp \
     system/ulib/fbl \
     third_party/ulib/cryptolib \
 
 MODULE_LIBS := \
     system/ulib/c \
-    system/ulib/magenta \
-    system/ulib/mxio \
+    system/ulib/zircon \
+    system/ulib/fdio \
 
 include make/module.mk

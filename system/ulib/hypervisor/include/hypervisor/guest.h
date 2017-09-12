@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -21,7 +21,7 @@ typedef struct e820entry {
  * @param size The size of guest physical memory.
  * @param end_off The offset to the end of the page table.
  */
-mx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* end_off);
+zx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* end_off);
 
 /**
  * Return the size in bytes of e820 memory map.
@@ -37,11 +37,11 @@ size_t guest_e820_size(size_t size);
  * @param size The size of guest physical memory.
  * @param e820_off The offset to the e820 memory map.
  */
-mx_status_t guest_create_e820(uintptr_t addr, size_t size, uintptr_t e820_off);
+zx_status_t guest_create_e820(uintptr_t addr, size_t size, uintptr_t e820_off);
 
 /**
  * Get a hypervisor resource to create a guest.
  */
-mx_status_t guest_get_resource(mx_handle_t* resource);
+zx_status_t guest_get_resource(zx_handle_t* resource);
 
 __END_CDECLS

@@ -192,7 +192,7 @@ public:
     void Write(VmcsField64 field, uint64_t val);
     void Write(VmcsFieldXX field, uint64_t val);
 
-    mx_status_t SetControl(VmcsField32 controls, uint64_t true_msr, uint64_t old_msr, uint32_t set,
+    zx_status_t SetControl(VmcsField32 controls, uint64_t true_msr, uint64_t old_msr, uint32_t set,
                            uint32_t clear);
 
 private:

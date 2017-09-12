@@ -1,4 +1,4 @@
-# mx_task_suspend
+# zx_task_suspend
 
 ## NAME
 
@@ -7,9 +7,9 @@ task_suspend - suspend the given task
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-void mx_task_suspend(mx_handle_t task);
+void zx_task_suspend(zx_handle_t task);
 
 ```
 
@@ -28,16 +28,16 @@ the task.
 
 ## RETURN VALUE
 
-**task_suspend**() returns **MX_OK** on success.
+**task_suspend**() returns **ZX_OK** on success.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS
 
-**MX_ERR_BAD_HANDLE** *handle* is not a valid handle.
+**ZX_ERR_BAD_HANDLE** *handle* is not a valid handle.
 
-**MX_ERR_WRONG_TYPE** *handle* is not a thread handle.
+**ZX_ERR_WRONG_TYPE** *handle* is not a thread handle.
 
-**MX_ERR_BAD_STATE**  The task is not in a state where suspending is possible.
+**ZX_ERR_BAD_STATE**  The task is not in a state where suspending is possible.
 
 ## LIMITATIONS
 

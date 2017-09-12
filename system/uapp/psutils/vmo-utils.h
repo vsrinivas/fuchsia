@@ -6,16 +6,16 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <magenta/syscalls/object.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
-// Reads the mx_info_vmo_t entries for the process.
+// Reads the zx_info_vmo_t entries for the process.
 // Caller is responsible for the |out_vmos| pointer.
-mx_status_t get_vmos(mx_handle_t process,
-                     mx_info_vmo_t** out_vmos, size_t* out_count,
+zx_status_t get_vmos(zx_handle_t process,
+                     zx_info_vmo_t** out_vmos, size_t* out_count,
                      size_t* out_avail);
 
 __END_CDECLS

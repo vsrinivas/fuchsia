@@ -5,7 +5,7 @@
 #pragma once
 
 #ifdef __cplusplus
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 // Notes about class NullLock
 //

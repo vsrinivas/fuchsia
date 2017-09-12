@@ -5,8 +5,8 @@
 #pragma once
 
 #include <endian.h>
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 namespace internal {
 static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b,
@@ -59,7 +59,7 @@ protected:
     };
 
     enum class InitMode { SOURCE, SINK };
-    mx_status_t Initialize(const char* filename, InitMode mode);
+    zx_status_t Initialize(const char* filename, InitMode mode);
 
     static constexpr uint32_t RIFF_FOUR_CC = internal::make_fourcc('R', 'I', 'F', 'F');
     static constexpr uint32_t WAVE_FOUR_CC = internal::make_fourcc('W', 'A', 'V', 'E');
@@ -76,9 +76,9 @@ protected:
     static constexpr uint16_t FORMAT_MSFT_MULAW = 0x0007;
 
     void Close();
-    mx_status_t Read(void* buf, size_t len);
-    mx_status_t Write(const void* buf, size_t len);
-    mx_status_t Seek(off_t abs_pos);
+    zx_status_t Read(void* buf, size_t len);
+    zx_status_t Write(const void* buf, size_t len);
+    zx_status_t Seek(off_t abs_pos);
 
     int fd_ = -1;
 };

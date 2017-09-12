@@ -11,18 +11,18 @@
 #include "devcoordinator.h"
 
 typedef struct {
-    const mx_device_prop_t* props;
-    const mx_device_prop_t* end;
+    const zx_device_prop_t* props;
+    const zx_device_prop_t* end;
     uint32_t protocol_id;
     uint32_t binding_size;
-    const mx_bind_inst_t* binding;
+    const zx_bind_inst_t* binding;
     const char* name;
     uint32_t autobind;
 } bpctx_t;
 
 static uint32_t dev_get_prop(bpctx_t* ctx, uint32_t id) {
-    const mx_device_prop_t* props = ctx->props;
-    const mx_device_prop_t* end = ctx->end;
+    const zx_device_prop_t* props = ctx->props;
+    const zx_device_prop_t* end = ctx->end;
 
     while (props < end) {
         if (props->id == id) {
@@ -44,8 +44,8 @@ static uint32_t dev_get_prop(bpctx_t* ctx, uint32_t id) {
 }
 
 static bool is_bindable(bpctx_t* ctx) {
-    const mx_bind_inst_t* ip = ctx->binding;
-    const mx_bind_inst_t* end = ip + (ctx->binding_size / sizeof(mx_bind_inst_t));
+    const zx_bind_inst_t* ip = ctx->binding;
+    const zx_bind_inst_t* end = ip + (ctx->binding_size / sizeof(zx_bind_inst_t));
     uint32_t flags = 0;
 
     while (ip < end) {
@@ -139,7 +139,7 @@ next_instruction:
 }
 
 bool dc_is_bindable(driver_t* drv, uint32_t protocol_id,
-                    mx_device_prop_t* props, size_t prop_count,
+                    zx_device_prop_t* props, size_t prop_count,
                     bool autobind) {
     if (drv->binding_size == 0) {
         return false;

@@ -18,11 +18,11 @@
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/usb-function.h>
 #include <inet6/inet6.h>
-#include <magenta/listnode.h>
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
-#include <magenta/device/usb-device.h>
-#include <magenta/hw/usb-cdc.h>
+#include <zircon/listnode.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/device/usb-device.h>
+#include <zircon/hw/usb-cdc.h>
 
 #define BULK_TXN_SIZE   2048
 #define BULK_TX_COUNT   16
@@ -34,7 +34,7 @@
 #define CDC_BITRATE         1000000000  // say we are gigabit
 
 typedef struct {
-    mx_device_t* mxdev;
+    zx_device_t* mxdev;
     usb_function_protocol_t function;
 
     list_node_t bulk_out_txns;
@@ -150,11 +150,11 @@ typedef struct {
     },
 };
 
-static mx_status_t cdc_generate_mac_address(usb_cdc_t* cdc) {
+static zx_status_t cdc_generate_mac_address(usb_cdc_t* cdc) {
     size_t actual;
-    mx_status_t status = mx_cprng_draw(cdc->mac_addr, sizeof(cdc->mac_addr), &actual);
-    if (status != MX_OK) {
-        dprintf(ERROR, "%s: cdc_generate_mac_address: mx_cprng_draw failed\n", __FUNCTION__);
+    zx_status_t status = zx_cprng_draw(cdc->mac_addr, sizeof(cdc->mac_addr), &actual);
+    if (status != ZX_OK) {
+        dprintf(ERROR, "%s: cdc_generate_mac_address: zx_cprng_draw failed\n", __FUNCTION__);
         return status;
     }
 
@@ -169,7 +169,7 @@ static mx_status_t cdc_generate_mac_address(usb_cdc_t* cdc) {
     return usb_function_alloc_string_desc(&cdc->function, buffer, &descriptors.cdc_eth.iMACAddress);
 }
 
-static mx_status_t cdc_ethmac_query(void* ctx, uint32_t options, ethmac_info_t* info) {
+static zx_status_t cdc_ethmac_query(void* ctx, uint32_t options, ethmac_info_t* info) {
     dprintf(TRACE, "%s:\n", __FUNCTION__);
     usb_cdc_t* cdc = ctx;
 
@@ -177,14 +177,14 @@ static mx_status_t cdc_ethmac_query(void* ctx, uint32_t options, ethmac_info_t* 
     if (options) {
         dprintf(ERROR, "%s: unexpected options (0x%"PRIx32") to ethmac_query\n", __FUNCTION__,
                 options);
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     memset(info, 0, sizeof(*info));
     info->mtu = ETH_MTU;
     memcpy(info->mac, cdc->mac_addr, sizeof(cdc->mac_addr));
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static void cdc_ethmac_stop(void* cookie) {
@@ -195,14 +195,14 @@ static void cdc_ethmac_stop(void* cookie) {
     mtx_unlock(&cdc->ethmac_mutex);
 }
 
-static mx_status_t cdc_ethmac_start(void* ctx_cookie, ethmac_ifc_t* ifc, void* ethmac_cookie) {
+static zx_status_t cdc_ethmac_start(void* ctx_cookie, ethmac_ifc_t* ifc, void* ethmac_cookie) {
     dprintf(TRACE, "%s:\n", __FUNCTION__);
     usb_cdc_t* cdc = ctx_cookie;
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
 
     mtx_lock(&cdc->ethmac_mutex);
     if (cdc->ethmac_ifc) {
-        status = MX_ERR_ALREADY_BOUND;
+        status = ZX_ERR_ALREADY_BOUND;
     } else {
         cdc->ethmac_ifc = ifc;
         cdc->ethmac_cookie = ethmac_cookie;
@@ -283,25 +283,25 @@ static void cdc_intr_complete(iotxn_t* txn, void* cookie) {
     iotxn_release(txn);
 }
 
-static mx_status_t cdc_alloc_interrupt_txn(usb_cdc_t* cdc, iotxn_t** out_txn) {
+static zx_status_t cdc_alloc_interrupt_txn(usb_cdc_t* cdc, iotxn_t** out_txn) {
     iotxn_t* txn;
-    mx_status_t status = iotxn_alloc(&txn, 0, INTR_MAX_PACKET);
-    if (status != MX_OK) {
+    zx_status_t status = iotxn_alloc(&txn, 0, INTR_MAX_PACKET);
+    if (status != ZX_OK) {
         dprintf(ERROR, "%s: iotxn_alloc failed %d\n", __FUNCTION__, status);
         return status;
     }
     txn->complete_cb = cdc_intr_complete;
     txn->cookie = cdc;
     *out_txn = txn;
-    return MX_OK;
+    return ZX_OK;
 }
 
 // sends network connection and speed change notifications on the interrupt endpoint
 // we only do this once per USB connect, so instead of pooling iotxns we just allocate
 // them here and release them when they complete.
-static mx_status_t cdc_send_notifications(usb_cdc_t* cdc) {
+static zx_status_t cdc_send_notifications(usb_cdc_t* cdc) {
     iotxn_t* txn;
-    mx_status_t status;
+    zx_status_t status;
 
     usb_cdc_notification_t network_notification = {
         .bmRequestType = USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
@@ -324,18 +324,18 @@ static mx_status_t cdc_send_notifications(usb_cdc_t* cdc) {
     };
 
     status = cdc_alloc_interrupt_txn(cdc, &txn);
-    if (status != MX_OK) return status;
+    if (status != ZX_OK) return status;
     iotxn_copyto(txn, &network_notification, sizeof(network_notification), 0);
     txn->length = sizeof(network_notification);
     usb_function_queue(&cdc->function, txn, cdc->intr_addr);
 
     status = cdc_alloc_interrupt_txn(cdc, &txn);
-    if (status != MX_OK) return status;
+    if (status != ZX_OK) return status;
     iotxn_copyto(txn, &speed_notification, sizeof(speed_notification), 0);
     txn->length = sizeof(speed_notification);
     usb_function_queue(&cdc->function, txn, cdc->intr_addr);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static void cdc_rx_complete(iotxn_t* txn, void* cookie) {
@@ -343,17 +343,17 @@ static void cdc_rx_complete(iotxn_t* txn, void* cookie) {
 
     dprintf(LTRACE, "%s %d %ld\n", __FUNCTION__, txn->status, txn->actual);
 
-    if (txn->status == MX_ERR_IO_NOT_PRESENT) {
+    if (txn->status == ZX_ERR_IO_NOT_PRESENT) {
         mtx_lock(&cdc->rx_mutex);
         list_add_head(&cdc->bulk_out_txns, &txn->node);
         mtx_unlock(&cdc->rx_mutex);
         return;
     }
-    if (txn->status != MX_OK) {
+    if (txn->status != ZX_OK) {
         dprintf(ERROR, "%s: usb_read_complete called with status %d\n", __FUNCTION__, txn->status);
     }
 
-    if (txn->status == MX_OK) {
+    if (txn->status == ZX_OK) {
         mtx_lock(&cdc->ethmac_mutex);
         if (cdc->ethmac_ifc) {
             uint8_t* data = NULL;
@@ -381,7 +381,7 @@ static const usb_descriptor_header_t* cdc_get_descriptors(void* ctx, size_t* out
     return (const usb_descriptor_header_t *)&descriptors;
 }
 
-static mx_status_t cdc_control(void* ctx, const usb_setup_t* setup, void* buffer,
+static zx_status_t cdc_control(void* ctx, const usb_setup_t* setup, void* buffer,
                                size_t length, size_t* out_actual) {
     *out_actual = 0;
 
@@ -392,16 +392,16 @@ static mx_status_t cdc_control(void* ctx, const usb_setup_t* setup, void* buffer
         setup->bRequest == USB_CDC_SET_ETHERNET_PACKET_FILTER) {
         dprintf(TRACE, "%s: USB_CDC_SET_ETHERNET_PACKET_FILTER\n", __FUNCTION__);
         // TODO(voydanoff) implement the requested packet filtering
-        return MX_OK;
+        return ZX_OK;
     }
 
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t cdc_set_configured(void* ctx, bool configured, usb_speed_t speed) {
+static zx_status_t cdc_set_configured(void* ctx, bool configured, usb_speed_t speed) {
     dprintf(TRACE, "%s: %d %d\n", __FUNCTION__, configured, speed);
     usb_cdc_t* cdc = ctx;
-    mx_status_t status;
+    zx_status_t status;
 
     mtx_lock(&cdc->ethmac_mutex);
     cdc->online = false;
@@ -411,7 +411,7 @@ static mx_status_t cdc_set_configured(void* ctx, bool configured, usb_speed_t sp
     mtx_unlock(&cdc->ethmac_mutex);
 
     if (configured) {
-        if ((status = usb_function_config_ep(&cdc->function, &descriptors.intr_ep, NULL)) != MX_OK) {
+        if ((status = usb_function_config_ep(&cdc->function, &descriptors.intr_ep, NULL)) != ZX_OK) {
             dprintf(ERROR, "%s: usb_function_config_ep failed\n", __FUNCTION__);
             return status;
         }
@@ -421,35 +421,35 @@ static mx_status_t cdc_set_configured(void* ctx, bool configured, usb_speed_t sp
         usb_function_disable_ep(&cdc->function, cdc->intr_addr);
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t cdc_set_interface(void* ctx, unsigned interface, unsigned alt_setting) {
+static zx_status_t cdc_set_interface(void* ctx, unsigned interface, unsigned alt_setting) {
     dprintf(TRACE, "%s: %d %d\n", __FUNCTION__, interface, alt_setting);
     usb_cdc_t* cdc = ctx;
-    mx_status_t status;
+    zx_status_t status;
 
     if (interface != descriptors.cdc_intf_0.bInterfaceNumber || alt_setting > 1) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     // TODO(voydanoff) fullspeed and superspeed support
     if (alt_setting) {
         if ((status = usb_function_config_ep(&cdc->function, &descriptors.bulk_out_ep, NULL))
-                != MX_OK ||
+                != ZX_OK ||
             (status = usb_function_config_ep(&cdc->function, &descriptors.bulk_in_ep, NULL))
-                != MX_OK) {
+                != ZX_OK) {
             dprintf(ERROR, "%s: usb_function_config_ep failed\n", __FUNCTION__);
         }
     } else {
-        if ((status = usb_function_disable_ep(&cdc->function, cdc->bulk_out_addr)) != MX_OK ||
-            (status = usb_function_disable_ep(&cdc->function, cdc->bulk_in_addr)) != MX_OK) {
+        if ((status = usb_function_disable_ep(&cdc->function, cdc->bulk_out_addr)) != ZX_OK ||
+            (status = usb_function_disable_ep(&cdc->function, cdc->bulk_in_addr)) != ZX_OK) {
             dprintf(ERROR, "%s: usb_function_disable_ep failed\n", __FUNCTION__);
         }
     }
 
     bool online = false;
-    if (alt_setting && status == MX_OK) {
+    if (alt_setting && status == ZX_OK) {
         online = true;
 
         // queue our OUT txns
@@ -504,22 +504,22 @@ static void usb_cdc_release(void* ctx) {
     free(cdc);
 }
 
-static mx_protocol_device_t usb_cdc_proto = {
+static zx_protocol_device_t usb_cdc_proto = {
     .version = DEVICE_OPS_VERSION,
     .unbind = usb_cdc_unbind,
     .release = usb_cdc_release,
 };
 
-mx_status_t usb_cdc_bind(void* ctx, mx_device_t* parent, void** cookie) {
+zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent, void** cookie) {
     dprintf(INFO, "%s\n", __FUNCTION__);
 
     usb_cdc_t* cdc = calloc(1, sizeof(usb_cdc_t));
     if (!cdc) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
-    mx_status_t status = device_get_protocol(parent, MX_PROTOCOL_USB_FUNCTION, &cdc->function);
-    if (status != MX_OK) {
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_USB_FUNCTION, &cdc->function);
+    if (status != ZX_OK) {
         free(cdc);
         return status;
     }
@@ -533,12 +533,12 @@ mx_status_t usb_cdc_bind(void* ctx, mx_device_t* parent, void** cookie) {
     cdc->bulk_max_packet = BULK_MAX_PACKET; // FIXME(voydanoff) USB 3.0 support
 
     status = usb_function_alloc_interface(&cdc->function, &descriptors.comm_intf.bInterfaceNumber);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         dprintf(ERROR, "%s: usb_function_alloc_interface failed\n", __FUNCTION__);
         goto fail;
     }
     status = usb_function_alloc_interface(&cdc->function, &descriptors.cdc_intf_0.bInterfaceNumber);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         dprintf(ERROR, "%s: usb_function_alloc_interface failed\n", __FUNCTION__);
         goto fail;
     }
@@ -547,17 +547,17 @@ mx_status_t usb_cdc_bind(void* ctx, mx_device_t* parent, void** cookie) {
     descriptors.cdc_union.bSubordinateInterface = descriptors.cdc_intf_0.bInterfaceNumber;
 
     status = usb_function_alloc_ep(&cdc->function, USB_DIR_OUT, &cdc->bulk_out_addr);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         dprintf(ERROR, "%s: usb_function_alloc_ep failed\n", __FUNCTION__);
         goto fail;
     }
     status = usb_function_alloc_ep(&cdc->function, USB_DIR_IN, &cdc->bulk_in_addr);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         dprintf(ERROR, "%s: usb_function_alloc_ep failed\n", __FUNCTION__);
         goto fail;
     }
     status = usb_function_alloc_ep(&cdc->function, USB_DIR_IN, &cdc->intr_addr);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         dprintf(ERROR, "%s: usb_function_alloc_ep failed\n", __FUNCTION__);
         goto fail;
     }
@@ -567,7 +567,7 @@ mx_status_t usb_cdc_bind(void* ctx, mx_device_t* parent, void** cookie) {
     descriptors.intr_ep.bEndpointAddress = cdc->intr_addr;
 
     status = cdc_generate_mac_address(cdc);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         goto fail;
     }
 
@@ -575,7 +575,7 @@ mx_status_t usb_cdc_bind(void* ctx, mx_device_t* parent, void** cookie) {
     iotxn_t* txn;
     for (int i = 0; i < BULK_TX_COUNT; i++) {
         status = iotxn_alloc(&txn, 0, BULK_TXN_SIZE);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             goto fail;
         }
         txn->length = BULK_TXN_SIZE;
@@ -586,7 +586,7 @@ mx_status_t usb_cdc_bind(void* ctx, mx_device_t* parent, void** cookie) {
     // allocate bulk in iotxns
     for (int i = 0; i < BULK_RX_COUNT; i++) {
         status = iotxn_alloc(&txn, 0, BULK_TXN_SIZE);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             goto fail;
         }
         txn->complete_cb = cdc_tx_complete;
@@ -599,12 +599,12 @@ mx_status_t usb_cdc_bind(void* ctx, mx_device_t* parent, void** cookie) {
         .name = "cdc-eth-function",
         .ctx = cdc,
         .ops = &usb_cdc_proto,
-        .proto_id = MX_PROTOCOL_ETHERMAC,
+        .proto_id = ZX_PROTOCOL_ETHERMAC,
         .proto_ops = &ethmac_ops,
     };
 
     status = device_add(parent, &args, &cdc->mxdev);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         dprintf(ERROR, "%s: add_device failed %d\n", __FUNCTION__, status);
         goto fail;
     }
@@ -615,22 +615,22 @@ mx_status_t usb_cdc_bind(void* ctx, mx_device_t* parent, void** cookie) {
     };
     usb_function_register(&cdc->function, &intf);
 
-    return MX_OK;
+    return ZX_OK;
 
 fail:
     usb_cdc_release(cdc);
     return status;
 }
 
-static mx_driver_ops_t usb_cdc_ops = {
+static zx_driver_ops_t usb_cdc_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = usb_cdc_bind,
 };
 
 // clang-format off
-MAGENTA_DRIVER_BEGIN(usb_cdc, usb_cdc_ops, "magenta", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB_FUNCTION),
+ZIRCON_DRIVER_BEGIN(usb_cdc, usb_cdc_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_FUNCTION),
     BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_COMM),
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_CDC_SUBCLASS_ETHERNET),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 0),
-MAGENTA_DRIVER_END(usb_cdc)
+ZIRCON_DRIVER_END(usb_cdc)

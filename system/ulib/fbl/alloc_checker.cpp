@@ -4,7 +4,7 @@
 
 #include <fbl/alloc_checker.h>
 
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 #include <fbl/new.h>
 
 namespace std {
@@ -22,7 +22,7 @@ enum : unsigned {
 void panic_if_armed(unsigned state) {
 #if LK_DEBUGLEVEL > 1
     if (state & alloc_armed)
-        MX_PANIC("AllocChecker::check() needs to be called\n");
+        ZX_PANIC("AllocChecker::check() needs to be called\n");
 #endif
 }
 
@@ -61,7 +61,7 @@ bool AllocChecker::check() {
 // via delete[], and only allocations done via the C malloc family
 // functions are freed via the C free function.  The non-throwing
 // operator new and operator new[] we call might be trivial ones like
-// mxcpp's that actually just call malloc, or they might be ones that
+// zxcpp's that actually just call malloc, or they might be ones that
 // enforce this invariant (such as the ASan allocator).
 
 } // namespace fbl

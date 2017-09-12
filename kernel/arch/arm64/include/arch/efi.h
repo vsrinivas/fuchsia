@@ -20,7 +20,7 @@
 #define EFI_NOT_FOUND           (14 | EFI_ERROR)
 #define EFI_SECURITY_VIOLATION  (26 | EFI_ERROR)
 
-#define EFI_MAGENTA_MAGIC  (0x4d4147454e544121)
+#define EFI_ZIRCON_MAGIC  (0x4d4147454e544121)
 #define EFI_BOOT_SIGNATURE (0x5453595320494249)
 
 #ifndef ASSEMBLY
@@ -41,7 +41,7 @@ typedef struct {
     uint64_t ramdisk_size;
     uint32_t cmd_line_len;
     char     cmd_line[];
-} efi_magenta_hdr_t;
+} efi_zircon_hdr_t;
 
 typedef struct {
     uint8_t b[16];

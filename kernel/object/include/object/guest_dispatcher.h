@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include <magenta/syscalls/hypervisor.h>
-#include <magenta/types.h>
+#include <zircon/syscalls/hypervisor.h>
+#include <zircon/types.h>
 #include <object/port_dispatcher.h>
 
 class Guest;
@@ -15,15 +15,15 @@ class VmObject;
 
 class GuestDispatcher final : public Dispatcher {
 public:
-    static mx_status_t Create(fbl::RefPtr<VmObject> physmem,
+    static zx_status_t Create(fbl::RefPtr<VmObject> physmem,
                               fbl::RefPtr<Dispatcher>* dispatcher,
-                              mx_rights_t* rights);
+                              zx_rights_t* rights);
     ~GuestDispatcher();
 
-    mx_obj_type_t get_type() const { return MX_OBJ_TYPE_GUEST; }
+    zx_obj_type_t get_type() const { return ZX_OBJ_TYPE_GUEST; }
     Guest* guest() const { return guest_.get(); }
 
-    mx_status_t SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
+    zx_status_t SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
                         fbl::RefPtr<PortDispatcher> port, uint64_t key);
 
 private:

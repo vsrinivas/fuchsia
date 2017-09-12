@@ -49,7 +49,7 @@
  * a quit signal will generate a core dump.
  */
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <sys/param.h>
 
 #ifndef JOBS

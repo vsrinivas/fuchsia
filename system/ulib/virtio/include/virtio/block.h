@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 // clang-format off
 #define VIRTIO_BLK_F_BARRIER    (1u << 0)

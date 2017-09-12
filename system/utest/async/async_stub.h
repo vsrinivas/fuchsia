@@ -11,10 +11,10 @@ public:
     AsyncStub();
     virtual ~AsyncStub();
 
-    virtual mx_status_t BeginWait(async_wait_t* wait);
-    virtual mx_status_t CancelWait(async_wait_t* wait);
-    virtual mx_status_t PostTask(async_task_t* task);
-    virtual mx_status_t CancelTask(async_task_t* task);
-    virtual mx_status_t QueuePacket(async_receiver_t* receiver,
-                                    const mx_packet_user_t* data);
+    virtual zx_status_t BeginWait(async_wait_t* wait);
+    virtual zx_status_t CancelWait(async_wait_t* wait);
+    virtual zx_status_t PostTask(async_task_t* task);
+    virtual zx_status_t CancelTask(async_task_t* task);
+    virtual zx_status_t QueuePacket(async_receiver_t* receiver,
+                                    const zx_packet_user_t* data);
 };

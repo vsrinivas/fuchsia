@@ -26,8 +26,8 @@ using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
-static PortPacket* MakePacket(uint64_t key, uint32_t type, mx_koid_t pid, mx_koid_t tid) {
-    if (!MX_PKT_IS_EXCEPTION(type))
+static PortPacket* MakePacket(uint64_t key, uint32_t type, zx_koid_t pid, zx_koid_t tid) {
+    if (!ZX_PKT_IS_EXCEPTION(type))
         return nullptr;
 
     auto port_packet = PortDispatcher::DefaultPortAllocator()->Alloc();
@@ -45,17 +45,17 @@ static PortPacket* MakePacket(uint64_t key, uint32_t type, mx_koid_t pid, mx_koi
 }
 
 // static
-mx_status_t ExceptionPort::Create(Type type, fbl::RefPtr<PortDispatcher> port, uint64_t port_key,
+zx_status_t ExceptionPort::Create(Type type, fbl::RefPtr<PortDispatcher> port, uint64_t port_key,
                                   fbl::RefPtr<ExceptionPort>* out_eport) {
     fbl::AllocChecker ac;
     auto eport = new (&ac) ExceptionPort(type, fbl::move(port), port_key);
     if (!ac.check())
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     // ExceptionPort's ctor causes the first ref to be adopted,
     // so we should only wrap.
     *out_eport = fbl::WrapRefPtr<ExceptionPort>(eport);
-    return MX_OK;
+    return ZX_OK;
 }
 
 ExceptionPort::ExceptionPort(Type type, fbl::RefPtr<PortDispatcher> port, uint64_t port_key)
@@ -124,7 +124,7 @@ void ExceptionPort::OnPortZeroHandles() {
     if (port_ == nullptr) {
         // Already unbound. This can happen when
         // PortDispatcher::on_zero_handles and a manual unbind (via
-        // mx_task_bind_exception_port) race with each other.
+        // zx_task_bind_exception_port) race with each other.
         LTRACEF("already unbound\n");
         DEBUG_ASSERT(!IsBoundLocked());
         return;
@@ -198,7 +198,7 @@ void ExceptionPort::OnTargetUnbind() {
             // Already unbound.
             // This could happen if ::OnPortZeroHandles releases the
             // lock and another thread immediately does a manual unbind
-            // via mx_task_bind_exception_port.
+            // via zx_task_bind_exception_port.
             DEBUG_ASSERT(!IsBoundLocked());
             return;
         }
@@ -221,7 +221,7 @@ void ExceptionPort::OnTargetUnbind() {
     LTRACE_EXIT_OBJ;
 }
 
-mx_status_t ExceptionPort::SendPacketWorker(uint32_t type, mx_koid_t pid, mx_koid_t tid) {
+zx_status_t ExceptionPort::SendPacketWorker(uint32_t type, zx_koid_t pid, zx_koid_t tid) {
     AutoLock lock(&lock_);
     LTRACEF("%s, type %u, pid %" PRIu64 ", tid %" PRIu64 "\n",
             port_ == nullptr ? "Not sending exception report on unbound port"
@@ -229,35 +229,35 @@ mx_status_t ExceptionPort::SendPacketWorker(uint32_t type, mx_koid_t pid, mx_koi
             type, pid, tid);
     if (port_ == nullptr) {
         // The port has been unbound.
-        return MX_ERR_PEER_CLOSED;
+        return ZX_ERR_PEER_CLOSED;
     }
 
     auto iopk = MakePacket(port_key_, type, pid, tid);
     if (!iopk)
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
-    mx_status_t status = port_->Queue(iopk, 0, 0);
-    if (status != MX_OK) {
+    zx_status_t status = port_->Queue(iopk, 0, 0);
+    if (status != ZX_OK) {
         iopk->Free();
     }
     return status;
 }
 
-mx_status_t ExceptionPort::SendPacket(ThreadDispatcher* thread, uint32_t type) {
+zx_status_t ExceptionPort::SendPacket(ThreadDispatcher* thread, uint32_t type) {
     canary_.Assert();
 
-    mx_koid_t pid = thread->process()->get_koid();
-    mx_koid_t tid = thread->get_koid();
+    zx_koid_t pid = thread->process()->get_koid();
+    zx_koid_t tid = thread->get_koid();
     return SendPacketWorker(type, pid, tid);
 }
 
-void ExceptionPort::BuildReport(mx_exception_report_t* report, uint32_t type) {
+void ExceptionPort::BuildReport(zx_exception_report_t* report, uint32_t type) {
     memset(report, 0, sizeof(*report));
     report->header.size = sizeof(*report);
     report->header.type = type;
 }
 
-void ExceptionPort::BuildArchReport(mx_exception_report_t* report, uint32_t type,
+void ExceptionPort::BuildArchReport(zx_exception_report_t* report, uint32_t type,
                                     const arch_exception_context_t* arch_context) {
     BuildReport(report, type);
     arch_fill_in_exception_context(arch_context, report);
@@ -266,22 +266,22 @@ void ExceptionPort::BuildArchReport(mx_exception_report_t* report, uint32_t type
 void ExceptionPort::OnThreadStart(ThreadDispatcher* thread) {
     canary_.Assert();
 
-    mx_koid_t pid = thread->process()->get_koid();
-    mx_koid_t tid = thread->get_koid();
+    zx_koid_t pid = thread->process()->get_koid();
+    zx_koid_t tid = thread->get_koid();
     LTRACEF("thread %" PRIu64 ".%" PRIu64 " started\n", pid, tid);
 
-    mx_exception_report_t report;
-    BuildReport(&report, MX_EXCP_THREAD_STARTING);
+    zx_exception_report_t report;
+    BuildReport(&report, ZX_EXCP_THREAD_STARTING);
     arch_exception_context_t context;
     // There is no iframe at the moment. We'll need one (or equivalent) if/when
     // we want to make $pc, $sp available.
     memset(&context, 0, sizeof(context));
     ThreadDispatcher::ExceptionStatus estatus;
     auto status = thread->ExceptionHandlerExchange(fbl::RefPtr<ExceptionPort>(this), &report, &context, &estatus);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         // Ignore any errors. There's nothing we can do here, and
         // we still want the thread to run. It's possible the thread was
-        // killed (status == MX_ERR_INTERNAL_INTR_KILLED), the kernel will kill the
+        // killed (status == ZX_ERR_INTERNAL_INTR_KILLED), the kernel will kill the
         // thread shortly.
     }
 }
@@ -289,8 +289,8 @@ void ExceptionPort::OnThreadStart(ThreadDispatcher* thread) {
 void ExceptionPort::OnThreadSuspending(ThreadDispatcher* thread) {
     canary_.Assert();
 
-    mx_koid_t pid = thread->process()->get_koid();
-    mx_koid_t tid = thread->get_koid();
+    zx_koid_t pid = thread->process()->get_koid();
+    zx_koid_t tid = thread->get_koid();
     LTRACEF("thread %" PRIu64 ".%" PRIu64 " suspending\n", pid, tid);
 
     // A note on the tense of the words used here: suspending vs suspended.
@@ -300,21 +300,21 @@ void ExceptionPort::OnThreadSuspending(ThreadDispatcher* thread) {
     // report it can assume the thread is, for its purposes, suspended.
 
     // The result is ignored, not much else we can do.
-    SendPacket(thread, MX_EXCP_THREAD_SUSPENDED);
+    SendPacket(thread, ZX_EXCP_THREAD_SUSPENDED);
 }
 
 void ExceptionPort::OnThreadResuming(ThreadDispatcher* thread) {
     canary_.Assert();
 
-    mx_koid_t pid = thread->process()->get_koid();
-    mx_koid_t tid = thread->get_koid();
+    zx_koid_t pid = thread->process()->get_koid();
+    zx_koid_t tid = thread->get_koid();
     LTRACEF("thread %" PRIu64 ".%" PRIu64 " resuming\n", pid, tid);
 
     // See OnThreadSuspending for a note on the tense of the words uses here:
     // suspending vs suspended.
 
     // The result is ignored, not much else we can do.
-    SendPacket(thread, MX_EXCP_THREAD_RESUMED);
+    SendPacket(thread, ZX_EXCP_THREAD_RESUMED);
 }
 
 // This isn't called for every process's destruction, only for processes that
@@ -323,11 +323,11 @@ void ExceptionPort::OnThreadResuming(ThreadDispatcher* thread) {
 void ExceptionPort::OnProcessExit(ProcessDispatcher* process) {
     canary_.Assert();
 
-    mx_koid_t pid = process->get_koid();
+    zx_koid_t pid = process->get_koid();
     LTRACEF("process %" PRIu64 " gone\n", pid);
 
     // The result is ignored, not much else we can do.
-    SendPacketWorker(MX_EXCP_GONE, pid, MX_KOID_INVALID);
+    SendPacketWorker(ZX_EXCP_GONE, pid, ZX_KOID_INVALID);
 }
 
 // This isn't called for every thread's destruction, only for threads that
@@ -336,12 +336,12 @@ void ExceptionPort::OnProcessExit(ProcessDispatcher* process) {
 void ExceptionPort::OnThreadExit(ThreadDispatcher* thread) {
     canary_.Assert();
 
-    mx_koid_t pid = thread->process()->get_koid();
-    mx_koid_t tid = thread->get_koid();
+    zx_koid_t pid = thread->process()->get_koid();
+    zx_koid_t tid = thread->get_koid();
     LTRACEF("thread %" PRIu64 ".%" PRIu64 " gone\n", pid, tid);
 
     // The result is ignored, not much else we can do.
-    SendPacket(thread, MX_EXCP_GONE);
+    SendPacket(thread, ZX_EXCP_GONE);
 }
 
 // This isn't called for every thread's destruction, only when a debugger
@@ -350,12 +350,12 @@ void ExceptionPort::OnThreadExit(ThreadDispatcher* thread) {
 void ExceptionPort::OnThreadExitForDebugger(ThreadDispatcher* thread) {
     canary_.Assert();
 
-    mx_koid_t pid = thread->process()->get_koid();
-    mx_koid_t tid = thread->get_koid();
+    zx_koid_t pid = thread->process()->get_koid();
+    zx_koid_t tid = thread->get_koid();
     LTRACEF("thread %" PRIu64 ".%" PRIu64 " exited\n", pid, tid);
 
-    mx_exception_report_t report;
-    BuildReport(&report, MX_EXCP_THREAD_EXITING);
+    zx_exception_report_t report;
+    BuildReport(&report, ZX_EXCP_THREAD_EXITING);
     arch_exception_context_t context;
     // There is no iframe at the moment. We'll need one (or equivalent) if/when
     // we want to make $pc, $sp available.
@@ -363,9 +363,9 @@ void ExceptionPort::OnThreadExitForDebugger(ThreadDispatcher* thread) {
     ThreadDispatcher::ExceptionStatus estatus;
     // N.B. If the process is exiting it will have killed all threads. That
     // means all threads get marked with THREAD_SIGNAL_KILL which means this
-    // exchange will return immediately with MX_ERR_INTERNAL_INTR_KILLED.
+    // exchange will return immediately with ZX_ERR_INTERNAL_INTR_KILLED.
     auto status = thread->ExceptionHandlerExchange(fbl::RefPtr<ExceptionPort>(this), &report, &context, &estatus);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         // Ignore any errors, we still want the thread to continue exiting.
     }
 }

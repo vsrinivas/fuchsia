@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <err.h>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/alloc_checker.h>
 
 namespace {
@@ -15,9 +15,9 @@ namespace {
 // The encoding of the basic policy is done 4 bits per each item.
 //
 // - When the top bit is 1, the lower 3 bits track the action:
-//    0 : MX_POL_ACTION_ALLOW or not (MX_POL_ACTION_DENY)
-//    1 : MX_POL_ACTION_EXCEPTION or not
-//    2 : MX_POL_ACTION_KILL or not
+//    0 : ZX_POL_ACTION_ALLOW or not (ZX_POL_ACTION_DENY)
+//    1 : ZX_POL_ACTION_EXCEPTION or not
+//    2 : ZX_POL_ACTION_KILL or not
 //
 // - When the top bit is 0 then its the default policy and other bits
 //   should be zero so that kPolicyEmpty == 0 meets the requirement of
@@ -54,7 +54,7 @@ union Encoding {
 }  // namespace
 
 constexpr uint32_t kPolicyActionValidBits =
-    MX_POL_ACTION_ALLOW | MX_POL_ACTION_DENY | MX_POL_ACTION_EXCEPTION | MX_POL_ACTION_KILL;
+    ZX_POL_ACTION_ALLOW | ZX_POL_ACTION_DENY | ZX_POL_ACTION_EXCEPTION | ZX_POL_ACTION_KILL;
 
 // The packing of bits on a bitset (above) is defined by the standard as
 // implementation dependent so we must check that it is using the storage
@@ -62,7 +62,7 @@ constexpr uint32_t kPolicyActionValidBits =
 static_assert(sizeof(Encoding) == sizeof(pol_cookie_t), "bitfield issue");
 
 // Make sure that adding new policies forces updating this file.
-static_assert(MX_POL_MAX == 12u, "please update PolicyManager AddPolicy and QueryBasicPolicy");
+static_assert(ZX_POL_MAX == 12u, "please update PolicyManager AddPolicy and QueryBasicPolicy");
 
 PolicyManager* PolicyManager::Create(uint32_t default_action) {
     fbl::AllocChecker ac;
@@ -74,16 +74,16 @@ PolicyManager::PolicyManager(uint32_t default_action)
     : default_action_(default_action) {
 }
 
-mx_status_t PolicyManager::AddPolicy(
+zx_status_t PolicyManager::AddPolicy(
     uint32_t mode, pol_cookie_t existing_policy,
-    const mx_policy_basic* policy_input, size_t policy_count,
+    const zx_policy_basic* policy_input, size_t policy_count,
     pol_cookie_t* new_policy) {
 
     // Don't allow overlong policies.
-    if (policy_count > MX_POL_MAX)
-        return MX_ERR_OUT_OF_RANGE;
+    if (policy_count > ZX_POL_MAX)
+        return ZX_ERR_OUT_OF_RANGE;
 
-    uint64_t partials[MX_POL_MAX] = {0};
+    uint64_t partials[ZX_POL_MAX] = {0};
 
     // The policy computation algorithm is as follows:
     //
@@ -93,26 +93,26 @@ mx_status_t PolicyManager::AddPolicy(
     //        else if mode is absolute exit with failure
     //        else continue
     //
-    // A special case is MX_POL_NEW_ANY which applies the algorithm with
-    // the same input over all MX_NEW_ actions so that the following can
+    // A special case is ZX_POL_NEW_ANY which applies the algorithm with
+    // the same input over all ZX_NEW_ actions so that the following can
     // be expressed:
     //
-    //   [0] MX_POL_NEW_ANY     --> MX_POL_ACTION_DENY
-    //   [1] MX_POL_NEW_CHANNEL --> MX_POL_ACTION_ALLOW
+    //   [0] ZX_POL_NEW_ANY     --> ZX_POL_ACTION_DENY
+    //   [1] ZX_POL_NEW_CHANNEL --> ZX_POL_ACTION_ALLOW
     //
     // Which means "deny all object creation except for channel".
 
-    mx_status_t res = MX_OK;
+    zx_status_t res = ZX_OK;
 
     for (size_t ix = 0; ix != policy_count; ++ix) {
         const auto& in = policy_input[ix];
 
-        if (in.condition >= MX_POL_MAX)
-            return MX_ERR_INVALID_ARGS;
+        if (in.condition >= ZX_POL_MAX)
+            return ZX_ERR_INVALID_ARGS;
 
-        if (in.condition == MX_POL_NEW_ANY) {
-            // loop over all MX_POL_NEW_xxxx conditions.
-            for (uint32_t it = MX_POL_NEW_VMO; it <= MX_POL_NEW_TIMER; ++it) {
+        if (in.condition == ZX_POL_NEW_ANY) {
+            // loop over all ZX_POL_NEW_xxxx conditions.
+            for (uint32_t it = ZX_POL_NEW_VMO; it <= ZX_POL_NEW_TIMER; ++it) {
                 if ((res = AddPartial(mode, existing_policy, it, in.policy, &partials[it])) < 0)
                     return res;
             }
@@ -130,7 +130,7 @@ mx_status_t PolicyManager::AddPolicy(
     }
 
     *new_policy = existing_policy;
-    return MX_OK;
+    return ZX_OK;
 }
 
 uint32_t PolicyManager::QueryBasicPolicy(pol_cookie_t policy, uint32_t condition) {
@@ -141,18 +141,18 @@ uint32_t PolicyManager::QueryBasicPolicy(pol_cookie_t policy, uint32_t condition
     DEBUG_ASSERT(existing.cookie_mode == Encoding::kPolicyInCookie);
 
     switch (condition) {
-    case MX_POL_BAD_HANDLE: return GetEffectiveAction(existing.bad_handle);
-    case MX_POL_WRONG_OBJECT: return GetEffectiveAction(existing.wrong_obj);
-    case MX_POL_NEW_VMO: return GetEffectiveAction(existing.new_vmo);
-    case MX_POL_NEW_CHANNEL: return GetEffectiveAction(existing.new_channel);
-    case MX_POL_NEW_EVENT: return GetEffectiveAction(existing.new_event);
-    case MX_POL_NEW_EVPAIR: return GetEffectiveAction(existing.new_evpair);
-    case MX_POL_NEW_PORT: return GetEffectiveAction(existing.new_port);
-    case MX_POL_NEW_SOCKET: return GetEffectiveAction(existing.new_socket);
-    case MX_POL_NEW_FIFO: return GetEffectiveAction(existing.new_fifo);
-    case MX_POL_NEW_TIMER: return GetEffectiveAction(existing.new_fifo);
-    case MX_POL_VMAR_WX: return GetEffectiveAction(existing.vmar_wx);
-    default: return MX_POL_ACTION_DENY;
+    case ZX_POL_BAD_HANDLE: return GetEffectiveAction(existing.bad_handle);
+    case ZX_POL_WRONG_OBJECT: return GetEffectiveAction(existing.wrong_obj);
+    case ZX_POL_NEW_VMO: return GetEffectiveAction(existing.new_vmo);
+    case ZX_POL_NEW_CHANNEL: return GetEffectiveAction(existing.new_channel);
+    case ZX_POL_NEW_EVENT: return GetEffectiveAction(existing.new_event);
+    case ZX_POL_NEW_EVPAIR: return GetEffectiveAction(existing.new_evpair);
+    case ZX_POL_NEW_PORT: return GetEffectiveAction(existing.new_port);
+    case ZX_POL_NEW_SOCKET: return GetEffectiveAction(existing.new_socket);
+    case ZX_POL_NEW_FIFO: return GetEffectiveAction(existing.new_fifo);
+    case ZX_POL_NEW_TIMER: return GetEffectiveAction(existing.new_fifo);
+    case ZX_POL_VMAR_WX: return GetEffectiveAction(existing.vmar_wx);
+    default: return ZX_POL_ACTION_DENY;
     }
 }
 
@@ -172,59 +172,59 @@ bool PolicyManager::CanSetEntry(uint64_t existing, uint32_t new_action) {
         if (CanSetEntry(existing, in_pol)) {                            \
             resultant = in_pol & Encoding::kActionBits;                 \
             resultant |= Encoding::kExplicitBit;                        \
-        } else if (mode == MX_JOB_POL_ABSOLUTE) {                       \
-            return MX_ERR_ALREADY_EXISTS;                               \
+        } else if (mode == ZX_JOB_POL_ABSOLUTE) {                       \
+            return ZX_ERR_ALREADY_EXISTS;                               \
         }                                                               \
     } while (0)
 
-mx_status_t PolicyManager::AddPartial(uint32_t mode, pol_cookie_t existing_policy,
+zx_status_t PolicyManager::AddPartial(uint32_t mode, pol_cookie_t existing_policy,
                                       uint32_t condition, uint32_t policy, uint64_t* partial) {
     Encoding existing = { existing_policy };
     Encoding result = {0};
 
     if (policy & ~kPolicyActionValidBits)
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 
     switch (condition) {
-    case MX_POL_BAD_HANDLE:
+    case ZX_POL_BAD_HANDLE:
         POLMAN_SET_ENTRY(mode, existing.bad_handle, policy, result.bad_handle);
         break;
-    case MX_POL_WRONG_OBJECT:
+    case ZX_POL_WRONG_OBJECT:
         POLMAN_SET_ENTRY(mode, existing.wrong_obj, policy, result.wrong_obj);
         break;
-    case MX_POL_VMAR_WX:
+    case ZX_POL_VMAR_WX:
         POLMAN_SET_ENTRY(mode, existing.vmar_wx, policy, result.vmar_wx);
         break;
-    case MX_POL_NEW_VMO:
+    case ZX_POL_NEW_VMO:
         POLMAN_SET_ENTRY(mode, existing.new_vmo, policy, result.new_vmo);
         break;
-    case MX_POL_NEW_CHANNEL:
+    case ZX_POL_NEW_CHANNEL:
         POLMAN_SET_ENTRY(mode, existing.new_channel, policy, result.new_channel);
         break;
-    case MX_POL_NEW_EVENT:
+    case ZX_POL_NEW_EVENT:
         POLMAN_SET_ENTRY(mode, existing.new_event, policy, result.new_event);
         break;
-    case MX_POL_NEW_EVPAIR:
+    case ZX_POL_NEW_EVPAIR:
         POLMAN_SET_ENTRY(mode, existing.new_evpair, policy, result.new_evpair);
         break;
-    case MX_POL_NEW_PORT:
+    case ZX_POL_NEW_PORT:
         POLMAN_SET_ENTRY(mode, existing.new_port, policy, result.new_port);
         break;
-    case MX_POL_NEW_SOCKET:
+    case ZX_POL_NEW_SOCKET:
         POLMAN_SET_ENTRY(mode, existing.new_socket, policy, result.new_socket);
         break;
-    case MX_POL_NEW_FIFO:
+    case ZX_POL_NEW_FIFO:
         POLMAN_SET_ENTRY(mode, existing.new_fifo, policy, result.new_fifo);
         break;
-    case MX_POL_NEW_TIMER:
+    case ZX_POL_NEW_TIMER:
         POLMAN_SET_ENTRY(mode, existing.new_timer, policy, result.new_timer);
         break;
     default:
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     *partial = result.encoded;
-    return MX_OK;
+    return ZX_OK;
 }
 
 #undef POLMAN_SET_ENTRY

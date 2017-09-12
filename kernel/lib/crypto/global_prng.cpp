@@ -20,7 +20,7 @@
 #include <lib/crypto/entropy/hw_rng_collector.h>
 #include <lib/crypto/entropy/quality_test.h>
 #include <lib/crypto/prng.h>
-#include <mxcpp/new.h>
+#include <zxcpp/new.h>
 #include <lk/init.h>
 #include <string.h>
 #include <trace.h>
@@ -86,7 +86,7 @@ static bool SeedFrom(entropy::Collector* collector) {
     size_t remaining = collector->BytesNeeded(8 * PRNG::kMinEntropy);
 #if LOCAL_TRACE
     {
-        char name[MX_MAX_NAME_LEN];
+        char name[ZX_MAX_NAME_LEN];
         collector->get_name(name, sizeof(name));
         LTRACEF("About to collect %zu bytes of entropy from '%s'.\n",
                 remaining, name);
@@ -133,11 +133,11 @@ static void EarlyBootSeed(uint level) {
 
     unsigned int successful = 0; // number of successful entropy sources
     entropy::Collector* collector;
-    if (entropy::HwRngCollector::GetInstance(&collector) == MX_OK &&
+    if (entropy::HwRngCollector::GetInstance(&collector) == ZX_OK &&
         SeedFrom(collector)) {
         successful++;
     }
-    if (entropy::JitterentropyCollector::GetInstance(&collector) == MX_OK &&
+    if (entropy::JitterentropyCollector::GetInstance(&collector) == ZX_OK &&
         SeedFrom(collector)) {
         successful++;
     }

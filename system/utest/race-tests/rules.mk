@@ -18,8 +18,8 @@ MODULE_NAME := race-test
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/launchpad \
-    system/ulib/magenta \
-    system/ulib/mxio \
+    system/ulib/zircon \
+    system/ulib/fdio \
     system/ulib/unittest \
 
 MODULE_STATIC_LIBS := system/ulib/fbl

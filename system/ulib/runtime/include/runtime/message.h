@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -13,7 +13,7 @@ __BEGIN_CDECLS
 
 // Examine the next message to be read from the pipe, and yield
 // the data size and number of handles in that message.
-mx_status_t mxr_message_size(mx_handle_t msg_pipe,
+zx_status_t zxr_message_size(zx_handle_t msg_pipe,
                              uint32_t* nbytes, uint32_t* nhandles);
 
 #pragma GCC visibility pop

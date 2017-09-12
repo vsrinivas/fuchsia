@@ -1,4 +1,4 @@
-# mx_vmo_read
+# zx_vmo_read
 
 ## NAME
 
@@ -7,9 +7,9 @@ vmo_read - read bytes from the VMO
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-mx_status_t mx_vmo_read(mx_handle_t handle, void* data, uint64_t offset, size_t len,
+zx_status_t zx_vmo_read(zx_handle_t handle, void* data, uint64_t offset, size_t len,
                         size_t* actual);
 
 ```
@@ -26,24 +26,24 @@ many bytes.
 
 *actual* returns the actual number of bytes read, which may be anywhere from 0 to *len*. If
 a read extends beyond the size of the VMO, the actual bytes read will be trimmed. If the
-read starts at or beyond the size of the VMO, **MX_ERR_OUT_OF_RANGE** will be returned.
+read starts at or beyond the size of the VMO, **ZX_ERR_OUT_OF_RANGE** will be returned.
 
 ## RETURN VALUE
 
-**mx_vmo_read**() returns **MX_OK** on success. In the event of failure, a negative error
+**zx_vmo_read**() returns **ZX_OK** on success. In the event of failure, a negative error
 value is returned.
 
 ## ERRORS
 
-**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**MX_ERR_WRONG_TYPE**  *handle* is not a VMO handle.
+**ZX_ERR_WRONG_TYPE**  *handle* is not a VMO handle.
 
-**MX_ERR_ACCESS_DENIED**  *handle* does not have the **MX_RIGHT_READ** right.
+**ZX_ERR_ACCESS_DENIED**  *handle* does not have the **ZX_RIGHT_READ** right.
 
-**MX_ERR_INVALID_ARGS**  *actual* or *data* is an invalid pointer or NULL.
+**ZX_ERR_INVALID_ARGS**  *actual* or *data* is an invalid pointer or NULL.
 
-**MX_ERR_OUT_OF_RANGE**  *offset* starts at or beyond the end of the VMO.
+**ZX_ERR_OUT_OF_RANGE**  *offset* starts at or beyond the end of the VMO.
 
 ## SEE ALSO
 

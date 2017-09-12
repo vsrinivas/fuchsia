@@ -11,7 +11,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 

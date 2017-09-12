@@ -1,6 +1,6 @@
-# Magenta Makefile Options
+# Zircon Makefile Options
 
-The following options can be passed to **make** when building Magenta:
+The following options can be passed to **make** when building Zircon:
 
 * **BOOTFS_DEBUG_MODULES**: See [debugging tips](debugging/tips.md).
 

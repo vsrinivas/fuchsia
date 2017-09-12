@@ -22,14 +22,14 @@ MODULE_NAME := trace-reader-test
 MODULE_STATIC_LIBS := \
     system/ulib/trace-reader \
     system/ulib/trace-engine \
-    system/ulib/mx \
-    system/ulib/mxcpp \
+    system/ulib/zx \
+    system/ulib/zxcpp \
     system/ulib/fbl
 
 MODULE_LIBS := \
     system/ulib/c \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/unittest
 
 include make/module.mk

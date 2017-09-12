@@ -5,18 +5,18 @@
 #pragma once
 
 #include <hw/sdhci.h>
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS;
 
 typedef struct sdhci_protocol_ops {
     // TODO: should be replaced with a generic busdev mechanism
-    mx_handle_t (*get_interrupt)(void* ctx);
-    mx_status_t (*get_mmio)(void* ctx, volatile sdhci_regs_t** out);
+    zx_handle_t (*get_interrupt)(void* ctx);
+    zx_status_t (*get_mmio)(void* ctx, volatile sdhci_regs_t** out);
     uint32_t (*get_base_clock)(void* ctx);
     // TODO: replace this function with iotxn_phys(txn, ctx)
-    mx_paddr_t (*get_dma_offset)(void* ctx);
+    zx_paddr_t (*get_dma_offset)(void* ctx);
 
     // returns device quirks
     uint64_t (*get_quirks)(void* ctx);

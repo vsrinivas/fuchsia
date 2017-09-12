@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #define VS_RESUME   0
 

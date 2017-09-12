@@ -7,7 +7,7 @@
 #pragma once
 
 #include <kernel/event.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/canary.h>
 #include <object/dispatcher.h>
 #include <sys/types.h>
@@ -27,22 +27,22 @@ class InterruptDispatcher : public Dispatcher {
 public:
     InterruptDispatcher& operator=(const InterruptDispatcher &) = delete;
 
-    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_INTERRUPT; }
+    zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_INTERRUPT; }
 
     // Notify the system that the caller has finished processing the interrupt.
     // Required before the handle can be waited upon again.
-    virtual mx_status_t InterruptComplete() = 0;
+    virtual zx_status_t InterruptComplete() = 0;
 
     // Signal the IRQ from non-IRQ state in response to a user-land request.
-    virtual mx_status_t UserSignal() = 0;
+    virtual zx_status_t UserSignal() = 0;
 
-    mx_status_t WaitForInterrupt() {
+    zx_status_t WaitForInterrupt() {
         return event_wait_deadline(&event_, INFINITE_TIME, true);
     }
 
     virtual void on_zero_handles() final {
         // Ensure any waiters stop waiting
-        event_signal_etc(&event_, false, MX_ERR_CANCELED);
+        event_signal_etc(&event_, false, ZX_ERR_CANCELED);
     }
 
 protected:

@@ -9,68 +9,68 @@
 #include <string.h>
 #include <threads.h>
 
-#include <magenta/compiler.h>
-#include <magenta/process.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/object.h>
-#include <magenta/threads.h>
-#include <mxio/util.h>
+#include <zircon/compiler.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/threads.h>
+#include <fdio/util.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
-static bool get_rights(mx_handle_t handle, mx_rights_t* rights) {
-    mx_info_handle_basic_t info;
-    ASSERT_EQ(mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL), MX_OK, "");
+static bool get_rights(zx_handle_t handle, zx_rights_t* rights) {
+    zx_info_handle_basic_t info;
+    ASSERT_EQ(zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL), ZX_OK, "");
     *rights = info.rights;
     return true;
 }
 
-static bool get_new_rights(mx_handle_t handle, mx_rights_t new_rights, mx_handle_t* new_handle) {
-    ASSERT_EQ(mx_handle_duplicate(handle, new_rights, new_handle), MX_OK, "");
+static bool get_new_rights(zx_handle_t handle, zx_rights_t new_rights, zx_handle_t* new_handle) {
+    ASSERT_EQ(zx_handle_duplicate(handle, new_rights, new_handle), ZX_OK, "");
     return true;
 }
 
-// |object| must have MX_RIGHT_{GET,SET}_PROPERTY.
+// |object| must have ZX_RIGHT_{GET,SET}_PROPERTY.
 
-static bool test_name_property(mx_handle_t object) {
-    char set_name[MX_MAX_NAME_LEN];
-    char get_name[MX_MAX_NAME_LEN];
+static bool test_name_property(zx_handle_t object) {
+    char set_name[ZX_MAX_NAME_LEN];
+    char get_name[ZX_MAX_NAME_LEN];
 
     // empty name
     strcpy(set_name, "");
-    EXPECT_EQ(mx_object_set_property(object, MX_PROP_NAME,
+    EXPECT_EQ(zx_object_set_property(object, ZX_PROP_NAME,
                                      set_name, strlen(set_name)),
-              MX_OK, "");
-    EXPECT_EQ(mx_object_get_property(object, MX_PROP_NAME,
+              ZX_OK, "");
+    EXPECT_EQ(zx_object_get_property(object, ZX_PROP_NAME,
                                      get_name, sizeof(get_name)),
-              MX_OK, "");
+              ZX_OK, "");
     EXPECT_EQ(strcmp(get_name, set_name), 0, "");
 
     // largest possible name
     memset(set_name, 'x', sizeof(set_name) - 1);
     set_name[sizeof(set_name) - 1] = '\0';
-    EXPECT_EQ(mx_object_set_property(object, MX_PROP_NAME,
+    EXPECT_EQ(zx_object_set_property(object, ZX_PROP_NAME,
                                      set_name, strlen(set_name)),
-              MX_OK, "");
-    EXPECT_EQ(mx_object_get_property(object, MX_PROP_NAME,
+              ZX_OK, "");
+    EXPECT_EQ(zx_object_get_property(object, ZX_PROP_NAME,
                                      get_name, sizeof(get_name)),
-              MX_OK, "");
+              ZX_OK, "");
     EXPECT_EQ(strcmp(get_name, set_name), 0, "");
 
     // too large a name by 1
     memset(set_name, 'x', sizeof(set_name));
-    EXPECT_EQ(mx_object_set_property(object, MX_PROP_NAME,
+    EXPECT_EQ(zx_object_set_property(object, ZX_PROP_NAME,
                                      set_name, sizeof(set_name)),
-              MX_OK, "");
+              ZX_OK, "");
 
-    mx_rights_t current_rights;
+    zx_rights_t current_rights;
     if (get_rights(object, &current_rights)) {
-        mx_rights_t cant_set_rights = current_rights &= ~MX_RIGHT_SET_PROPERTY;
-        mx_handle_t cant_set;
+        zx_rights_t cant_set_rights = current_rights &= ~ZX_RIGHT_SET_PROPERTY;
+        zx_handle_t cant_set;
         if (get_new_rights(object, cant_set_rights, &cant_set)) {
-            EXPECT_EQ(mx_object_set_property(cant_set, MX_PROP_NAME, "", 0), MX_ERR_ACCESS_DENIED, "");
-            mx_handle_close(cant_set);
+            EXPECT_EQ(zx_object_set_property(cant_set, ZX_PROP_NAME, "", 0), ZX_ERR_ACCESS_DENIED, "");
+            zx_handle_close(cant_set);
         }
     }
 
@@ -80,7 +80,7 @@ static bool test_name_property(mx_handle_t object) {
 static bool process_name_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t self = mx_process_self();
+    zx_handle_t self = zx_process_self();
     bool success = test_name_property(self);
     if (!success)
         return false;
@@ -91,7 +91,7 @@ static bool process_name_test(void) {
 static bool thread_name_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t main_thread = thrd_get_mx_handle(thrd_current());
+    zx_handle_t main_thread = thrd_get_zx_handle(thrd_current());
     unittest_printf("thread handle %d\n", main_thread);
     bool success = test_name_property(main_thread);
     if (!success)
@@ -103,14 +103,14 @@ static bool thread_name_test(void) {
 static bool vmo_name_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t vmo;
-    ASSERT_EQ(mx_vmo_create(16, 0u, &vmo), MX_OK, "");
+    zx_handle_t vmo;
+    ASSERT_EQ(zx_vmo_create(16, 0u, &vmo), ZX_OK, "");
     unittest_printf("VMO handle %d\n", vmo);
 
     // Name should start out empty.
-    char name[MX_MAX_NAME_LEN] = {'x', '\0'};
-    EXPECT_EQ(mx_object_get_property(vmo, MX_PROP_NAME, name, sizeof(name)),
-              MX_OK, "");
+    char name[ZX_MAX_NAME_LEN] = {'x', '\0'};
+    EXPECT_EQ(zx_object_get_property(vmo, ZX_PROP_NAME, name, sizeof(name)),
+              ZX_OK, "");
     EXPECT_EQ(strcmp("", name), 0, "");
 
     // Check the rest.
@@ -123,31 +123,31 @@ static bool vmo_name_test(void) {
 
 // Returns a job, its child job, and its grandchild job.
 #define NUM_TEST_JOBS 3
-static mx_status_t get_test_jobs(mx_handle_t jobs_out[NUM_TEST_JOBS]) {
-    static mx_handle_t test_jobs[NUM_TEST_JOBS] = {MX_HANDLE_INVALID};
+static zx_status_t get_test_jobs(zx_handle_t jobs_out[NUM_TEST_JOBS]) {
+    static zx_handle_t test_jobs[NUM_TEST_JOBS] = {ZX_HANDLE_INVALID};
 
-    if (test_jobs[0] == MX_HANDLE_INVALID) {
-        mx_handle_t root;
-        mx_status_t s = mx_job_create(mx_job_default(), 0, &root);
-        if (s != MX_OK) {
-            EXPECT_EQ(s, MX_OK, "root job"); // Poison the test
+    if (test_jobs[0] == ZX_HANDLE_INVALID) {
+        zx_handle_t root;
+        zx_status_t s = zx_job_create(zx_job_default(), 0, &root);
+        if (s != ZX_OK) {
+            EXPECT_EQ(s, ZX_OK, "root job"); // Poison the test
             return s;
         }
-        mx_handle_t child;
-        s = mx_job_create(root, 0, &child);
-        if (s != MX_OK) {
-            EXPECT_EQ(s, MX_OK, "child job");
-            mx_task_kill(root);
-            mx_handle_close(root);
+        zx_handle_t child;
+        s = zx_job_create(root, 0, &child);
+        if (s != ZX_OK) {
+            EXPECT_EQ(s, ZX_OK, "child job");
+            zx_task_kill(root);
+            zx_handle_close(root);
             return s;
         }
-        mx_handle_t gchild;
-        s = mx_job_create(child, 0, &gchild);
-        if (s != MX_OK) {
-            EXPECT_EQ(s, MX_OK, "grandchild job");
-            mx_task_kill(root); // Kills child, too
-            mx_handle_close(child);
-            mx_handle_close(root);
+        zx_handle_t gchild;
+        s = zx_job_create(child, 0, &gchild);
+        if (s != ZX_OK) {
+            EXPECT_EQ(s, ZX_OK, "grandchild job");
+            zx_task_kill(root); // Kills child, too
+            zx_handle_close(child);
+            zx_handle_close(root);
             return s;
         }
         test_jobs[0] = root;
@@ -155,32 +155,32 @@ static mx_status_t get_test_jobs(mx_handle_t jobs_out[NUM_TEST_JOBS]) {
         test_jobs[2] = gchild;
     }
     memcpy(jobs_out, test_jobs, sizeof(test_jobs));
-    return MX_OK;
+    return ZX_OK;
 }
 
 static bool assert_test_jobs_importance(
-    mx_job_importance_t root_imp, mx_job_importance_t child_imp,
-    mx_job_importance_t gchild_imp) {
+    zx_job_importance_t root_imp, zx_job_importance_t child_imp,
+    zx_job_importance_t gchild_imp) {
 
-    mx_handle_t jobs[NUM_TEST_JOBS];
-    ASSERT_EQ(get_test_jobs(jobs), MX_OK, "");
+    zx_handle_t jobs[NUM_TEST_JOBS];
+    ASSERT_EQ(get_test_jobs(jobs), ZX_OK, "");
 
-    mx_job_importance_t importance = 0xffff;
-    EXPECT_EQ(mx_object_get_property(jobs[0], MX_PROP_JOB_IMPORTANCE,
-                                     &importance, sizeof(mx_job_importance_t)),
-              MX_OK, "");
+    zx_job_importance_t importance = 0xffff;
+    EXPECT_EQ(zx_object_get_property(jobs[0], ZX_PROP_JOB_IMPORTANCE,
+                                     &importance, sizeof(zx_job_importance_t)),
+              ZX_OK, "");
     EXPECT_EQ(root_imp, importance, "");
 
     importance = 0xffff;
-    EXPECT_EQ(mx_object_get_property(jobs[1], MX_PROP_JOB_IMPORTANCE,
-                                     &importance, sizeof(mx_job_importance_t)),
-              MX_OK, "");
+    EXPECT_EQ(zx_object_get_property(jobs[1], ZX_PROP_JOB_IMPORTANCE,
+                                     &importance, sizeof(zx_job_importance_t)),
+              ZX_OK, "");
     EXPECT_EQ(child_imp, importance, "");
 
     importance = 0xffff;
-    EXPECT_EQ(mx_object_get_property(jobs[2], MX_PROP_JOB_IMPORTANCE,
-                                     &importance, sizeof(mx_job_importance_t)),
-              MX_OK, "");
+    EXPECT_EQ(zx_object_get_property(jobs[2], ZX_PROP_JOB_IMPORTANCE,
+                                     &importance, sizeof(zx_job_importance_t)),
+              ZX_OK, "");
     EXPECT_EQ(gchild_imp, importance, "");
 
     return true;
@@ -189,62 +189,62 @@ static bool assert_test_jobs_importance(
 static bool importance_smoke_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t jobs[NUM_TEST_JOBS];
-    ASSERT_EQ(get_test_jobs(jobs), MX_OK, "");
+    zx_handle_t jobs[NUM_TEST_JOBS];
+    ASSERT_EQ(get_test_jobs(jobs), ZX_OK, "");
 
-    static const mx_job_importance_t kImpInherited =
-        MX_JOB_IMPORTANCE_INHERITED;
-    static const mx_job_importance_t kImpMin = MX_JOB_IMPORTANCE_MIN;
-    static const mx_job_importance_t kImpHalf =
-        (MX_JOB_IMPORTANCE_MAX - MX_JOB_IMPORTANCE_MIN) / 2 +
-        MX_JOB_IMPORTANCE_MIN;
-    static const mx_job_importance_t kImpMax = MX_JOB_IMPORTANCE_MAX;
+    static const zx_job_importance_t kImpInherited =
+        ZX_JOB_IMPORTANCE_INHERITED;
+    static const zx_job_importance_t kImpMin = ZX_JOB_IMPORTANCE_MIN;
+    static const zx_job_importance_t kImpHalf =
+        (ZX_JOB_IMPORTANCE_MAX - ZX_JOB_IMPORTANCE_MIN) / 2 +
+        ZX_JOB_IMPORTANCE_MIN;
+    static const zx_job_importance_t kImpMax = ZX_JOB_IMPORTANCE_MAX;
 
     // Set all to the same importance.
     for (int i = 0; i < NUM_TEST_JOBS; i++) {
         char msg[32];
         snprintf(msg, sizeof(msg), "[%d] handle %d", i, jobs[i]);
-        EXPECT_EQ(mx_object_set_property(jobs[i], MX_PROP_JOB_IMPORTANCE,
+        EXPECT_EQ(zx_object_set_property(jobs[i], ZX_PROP_JOB_IMPORTANCE,
                                          &kImpMax,
-                                         sizeof(mx_job_importance_t)),
-                  MX_OK, msg);
+                                         sizeof(zx_job_importance_t)),
+                  ZX_OK, msg);
     }
     EXPECT_TRUE(assert_test_jobs_importance(
                     kImpMax, kImpMax, kImpMax),
                 "");
 
     // Tweak the child.
-    EXPECT_EQ(mx_object_set_property(jobs[1], MX_PROP_JOB_IMPORTANCE,
-                                     &kImpHalf, sizeof(mx_job_importance_t)),
-              MX_OK, "");
+    EXPECT_EQ(zx_object_set_property(jobs[1], ZX_PROP_JOB_IMPORTANCE,
+                                     &kImpHalf, sizeof(zx_job_importance_t)),
+              ZX_OK, "");
     EXPECT_TRUE(assert_test_jobs_importance(
                     kImpMax, kImpHalf, kImpMax),
                 "");
 
     // Tweak the grandchild.
-    EXPECT_EQ(mx_object_set_property(jobs[2], MX_PROP_JOB_IMPORTANCE,
-                                     &kImpMin, sizeof(mx_job_importance_t)),
-              MX_OK, "");
+    EXPECT_EQ(zx_object_set_property(jobs[2], ZX_PROP_JOB_IMPORTANCE,
+                                     &kImpMin, sizeof(zx_job_importance_t)),
+              ZX_OK, "");
     EXPECT_TRUE(assert_test_jobs_importance(
                     kImpMax, kImpHalf, kImpMin),
                 "");
 
     // Setting the grandchild to "inherited" should make it look like it
     // has the child's importance.
-    EXPECT_EQ(mx_object_set_property(jobs[2], MX_PROP_JOB_IMPORTANCE,
+    EXPECT_EQ(zx_object_set_property(jobs[2], ZX_PROP_JOB_IMPORTANCE,
                                      &kImpInherited,
-                                     sizeof(mx_job_importance_t)),
-              MX_OK, "");
+                                     sizeof(zx_job_importance_t)),
+              ZX_OK, "");
     EXPECT_TRUE(assert_test_jobs_importance(
                     kImpMax, kImpHalf, kImpHalf),
                 "");
 
     // Setting the child to "inherited" should cause both child and grandchild
     // to pick up the root importance.
-    EXPECT_EQ(mx_object_set_property(jobs[1], MX_PROP_JOB_IMPORTANCE,
+    EXPECT_EQ(zx_object_set_property(jobs[1], ZX_PROP_JOB_IMPORTANCE,
                                      &kImpInherited,
-                                     sizeof(mx_job_importance_t)),
-              MX_OK, "");
+                                     sizeof(zx_job_importance_t)),
+              ZX_OK, "");
     EXPECT_TRUE(assert_test_jobs_importance(
                     kImpMax, kImpMax, kImpMax),
                 "");
@@ -255,15 +255,15 @@ static bool importance_smoke_test(void) {
 static bool bad_importance_value_fails(void) {
     BEGIN_TEST;
 
-    mx_handle_t job;
+    zx_handle_t job;
     {
-        mx_handle_t jobs[NUM_TEST_JOBS];
-        ASSERT_EQ(get_test_jobs(jobs), MX_OK, "");
+        zx_handle_t jobs[NUM_TEST_JOBS];
+        ASSERT_EQ(get_test_jobs(jobs), ZX_OK, "");
         // Only need one job.
         job = jobs[0];
     }
 
-    mx_job_importance_t bad_values[] = {
+    zx_job_importance_t bad_values[] = {
         -3,
         -2,
         256,
@@ -271,13 +271,13 @@ static bool bad_importance_value_fails(void) {
     };
 
     for (size_t i = 0; i < countof(bad_values); i++) {
-        mx_job_importance_t bad_value = bad_values[i];
+        zx_job_importance_t bad_value = bad_values[i];
         char msg[32];
         snprintf(msg, sizeof(msg), "bad value %" PRId32, bad_value);
-        EXPECT_EQ(mx_object_set_property(job, MX_PROP_JOB_IMPORTANCE,
+        EXPECT_EQ(zx_object_set_property(job, ZX_PROP_JOB_IMPORTANCE,
                                          &bad_value,
-                                         sizeof(mx_job_importance_t)),
-                  MX_ERR_OUT_OF_RANGE, msg);
+                                         sizeof(zx_job_importance_t)),
+                  ZX_ERR_OUT_OF_RANGE, msg);
     }
 
     END_TEST;

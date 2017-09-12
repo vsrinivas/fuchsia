@@ -1,4 +1,4 @@
-# mx_vcpu_resume
+# zx_vcpu_resume
 
 ## NAME
 
@@ -7,10 +7,10 @@ vcpu_resume - resume execution of a VCPU
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/port.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/port.h>
 
-mx_status_t mx_vcpu_resume(mx_handle_t vcpu, mx_port_packet_t* packet);
+zx_status_t zx_vcpu_resume(zx_handle_t vcpu, zx_port_packet_t* packet);
 ```
 
 ## DESCRIPTION
@@ -24,27 +24,27 @@ N.B. Execution of a *vcpu* must be resumed on the same thread it was created on.
 
 ## RETURN VALUE
 
-**vcpu_resume**() returns MX_OK on success. On failure, an error value is
+**vcpu_resume**() returns ZX_OK on success. On failure, an error value is
 returned.
 
 ## ERRORS
 
-**MX_ERR_ACCESS_DENIED** *vcpu* does not have the *MX_RIGHT_EXECUTE* right.
+**ZX_ERR_ACCESS_DENIED** *vcpu* does not have the *ZX_RIGHT_EXECUTE* right.
 
-**MX_ERR_BAD_HANDLE** *vcpu* is an invalid handle.
+**ZX_ERR_BAD_HANDLE** *vcpu* is an invalid handle.
 
-**MX_ERR_BAD_STATE** *vcpu* is in a bad state, and can not be executed.
+**ZX_ERR_BAD_STATE** *vcpu* is in a bad state, and can not be executed.
 
-**MX_ERR_CANCELED** *vcpu* execution was canceled while waiting on an event.
+**ZX_ERR_CANCELED** *vcpu* execution was canceled while waiting on an event.
 
-**MX_ERR_INTERNAL** There was an error executing *vcpu*.
+**ZX_ERR_INTERNAL** There was an error executing *vcpu*.
 
-**MX_ERR_INVALID_ARGS** *packet* is an invalid pointer.
+**ZX_ERR_INVALID_ARGS** *packet* is an invalid pointer.
 
-**MX_ERR_NOT_SUPPORTED** An unsupported operation was encountered while
+**ZX_ERR_NOT_SUPPORTED** An unsupported operation was encountered while
 executing *vcpu*.
 
-**MX_ERR_WRONG_TYPE** *vcpu* is not a handle to a VCPU.
+**ZX_ERR_WRONG_TYPE** *vcpu* is not a handle to a VCPU.
 
 ## SEE ALSO
 

@@ -9,7 +9,7 @@
 #include <fstream>
 #include <string>
 
-#include <magenta/mdi.h>
+#include <zircon/mdi.h>
 
 enum TokenType {
     TOKEN_INVALID = 0,

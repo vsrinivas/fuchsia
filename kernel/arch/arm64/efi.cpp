@@ -95,7 +95,7 @@ uint64_t efi_boot(void* handle, efi_system_table_t *systable, paddr_t image_addr
 
     sys_table = systable;
 
-    efi_printf("Booting Magenta from EFI loader...\n");
+    efi_printf("Booting Zircon from EFI loader...\n");
 
     status = systable->boottime->handle_protocol(handle,
                     &loaded_image_proto, (void **)&image);
@@ -121,25 +121,25 @@ uint64_t efi_boot(void* handle, efi_system_table_t *systable, paddr_t image_addr
     memcpy((void*)target_addr,(void*)image_addr,kern_pages*EFI_PAGE_SIZE);
 
 
-    efi_magenta_hdr_t *mag_hdr;
+    efi_zircon_hdr_t *mag_hdr;
 
     uint32_t cmd_line_len = efi_utf16_ascii_len((const uint16_t*)image->load_options,image->load_options_size/2) + 1;
 
     status = systable->boottime->allocate_pool(EFI_LOADER_DATA, sizeof(*mag_hdr) + cmd_line_len,
                                                                 (void **)&mag_hdr);
     if (status != EFI_SUCCESS) {
-        efi_printf("Failed to allocate space for magenta boot args\n");
+        efi_printf("Failed to allocate space for zircon boot args\n");
         return 0;
     }
 
-    efi_printf("Magenta boot args address= %p\n",(void*)mag_hdr);
+    efi_printf("Zircon boot args address= %p\n",(void*)mag_hdr);
 
-    mag_hdr->magic = EFI_MAGENTA_MAGIC;
+    mag_hdr->magic = EFI_ZIRCON_MAGIC;
     mag_hdr->cmd_line_len = cmd_line_len;
     efi_utf16_to_ascii(mag_hdr->cmd_line, (const uint16_t*)image->load_options, image->load_options_size/2);
     mag_hdr->cmd_line[cmd_line_len-1]=0;
 
-    efi_printf("Magenta cmdline args = %s\n",mag_hdr->cmd_line);
+    efi_printf("Zircon cmdline args = %s\n",mag_hdr->cmd_line);
     const char token[] = "initrd=";
     char* pos;
     uint64_t initrd_start_phys=0;

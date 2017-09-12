@@ -4,16 +4,16 @@
 
 #include <task-utils/walker.h>
 
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/object.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
 #include <unittest/unittest.h>
 
 namespace {
 
-bool is_valid_handle(mx_handle_t handle) {
-    return mx_object_get_info(
-               handle, MX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr) ==
-           MX_OK;
+bool is_valid_handle(zx_handle_t handle) {
+    return zx_object_get_info(
+               handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr) ==
+           ZX_OK;
 }
 
 // TestTaskEnumerator ctor flags.
@@ -51,8 +51,8 @@ public:
     }
 
 protected:
-    virtual mx_status_t OnJob(int depth, mx_handle_t job, mx_koid_t koid,
-                              mx_koid_t parent_koid) override {
+    virtual zx_status_t OnJob(int depth, zx_handle_t job, zx_koid_t koid,
+                              zx_koid_t parent_koid) override {
         EXPECT_TRUE(has_on_job());
         EXPECT_GE(depth, 0);
         EXPECT_TRUE(is_valid_handle(job));
@@ -63,29 +63,29 @@ protected:
             EXPECT_NE(parent_koid, 0, "non-root job");
         }
         jobs_seen_++;
-        return MX_OK;
+        return ZX_OK;
     }
-    virtual mx_status_t OnProcess(int depth, mx_handle_t process,
-                                  mx_koid_t koid,
-                                  mx_koid_t parent_koid) override {
+    virtual zx_status_t OnProcess(int depth, zx_handle_t process,
+                                  zx_koid_t koid,
+                                  zx_koid_t parent_koid) override {
         EXPECT_TRUE(has_on_process());
         EXPECT_GT(depth, 0, "process depth should always be > 0");
         EXPECT_TRUE(is_valid_handle(process));
         EXPECT_NE(koid, 0);
         EXPECT_NE(parent_koid, 0);
         processes_seen_++;
-        return MX_OK;
+        return ZX_OK;
     }
-    virtual mx_status_t OnThread(int depth, mx_handle_t thread,
-                                 mx_koid_t koid,
-                                 mx_koid_t parent_koid) override {
+    virtual zx_status_t OnThread(int depth, zx_handle_t thread,
+                                 zx_koid_t koid,
+                                 zx_koid_t parent_koid) override {
         EXPECT_TRUE(has_on_thread());
         EXPECT_GT(depth, 1, "thread depth should always be > 1");
         EXPECT_TRUE(is_valid_handle(thread));
         EXPECT_NE(koid, 0);
         EXPECT_NE(parent_koid, 0);
         threads_seen_++;
-        return MX_OK;
+        return ZX_OK;
     }
 
 private:
@@ -108,12 +108,12 @@ bool basic_cpp_walk() {
     // same for other tests in this file. utest/core/object-info and
     // utest/policy (and maybe more) already do their own test job-tree
     // building; create a common helper lib.
-    EXPECT_EQ(tte.WalkRootJobTree(), MX_OK);
+    EXPECT_EQ(tte.WalkRootJobTree(), ZX_OK);
     tte.Validate();
     END_TEST;
 }
 
-// A subclass of TestTaskEnumerator that will return a non-MX_OK status
+// A subclass of TestTaskEnumerator that will return a non-ZX_OK status
 // at some point, demonstrating that the walk stops and the status value
 // is passed to the caller.
 class FailingTaskEnumerator : public TestTaskEnumerator {
@@ -122,7 +122,7 @@ public:
         : TestTaskEnumerator(flags), poison_depth_(poison_depth) {}
 
     // An unusual error code not used by the base class.
-    static constexpr mx_status_t FailingStatus = MX_ERR_STOP;
+    static constexpr zx_status_t FailingStatus = ZX_ERR_STOP;
 
 private:
     // Not worth calling since the walk will stop before completing.
@@ -130,30 +130,30 @@ private:
         EXPECT_TRUE(false);
     }
 
-    mx_status_t OnJob(int depth, mx_handle_t job,
-                      mx_koid_t koid, mx_koid_t parent_koid) override {
+    zx_status_t OnJob(int depth, zx_handle_t job,
+                      zx_koid_t koid, zx_koid_t parent_koid) override {
         EXPECT_FALSE(poisoned_);
         return MaybePoison(
             depth,
             TestTaskEnumerator::OnJob(depth, job, koid, parent_koid));
     }
-    mx_status_t OnProcess(int depth, mx_handle_t process,
-                          mx_koid_t koid, mx_koid_t parent_koid) override {
+    zx_status_t OnProcess(int depth, zx_handle_t process,
+                          zx_koid_t koid, zx_koid_t parent_koid) override {
         EXPECT_FALSE(poisoned_);
         return MaybePoison(
             depth,
             TestTaskEnumerator::OnProcess(depth, process, koid, parent_koid));
     }
-    mx_status_t OnThread(int depth, mx_handle_t thread,
-                         mx_koid_t koid, mx_koid_t parent_koid) override {
+    zx_status_t OnThread(int depth, zx_handle_t thread,
+                         zx_koid_t koid, zx_koid_t parent_koid) override {
         EXPECT_FALSE(poisoned_);
         return MaybePoison(
             depth,
             TestTaskEnumerator::OnThread(depth, thread, koid, parent_koid));
     }
 
-    mx_status_t MaybePoison(int depth, mx_status_t s) {
-        if (s == MX_OK && depth >= poison_depth_) {
+    zx_status_t MaybePoison(int depth, zx_status_t s) {
+        if (s == ZX_OK && depth >= poison_depth_) {
             poisoned_ = true;
             return FailingStatus;
         }

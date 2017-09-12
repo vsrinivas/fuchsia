@@ -45,7 +45,7 @@
  *      EXPECT_EQ(1, foo_value, "foo_func failed");
  *      ... there are EXPECT_* macros for many conditions...
  *      EXPECT_TRUE(foo_condition(), "condition should be true");
- *      EXPECT_NE(MX_ERR_TIMED_OUT, foo_event(), "event timed out");
+ *      EXPECT_NE(ZX_ERR_TIMED_OUT, foo_event(), "event timed out");
  *
  *      END_TEST;
  * }
@@ -56,14 +56,14 @@
  *
  * The init function might look something like...
  *
- * static mx_status_t init_foo_test_env(void** context)
+ * static zx_status_t init_foo_test_env(void** context)
  * {
  *      *context = new FooTestEnvironment(...);
  *
  *      if (!(*context))
- *          return MX_ERR_NO_MEMORY;
+ *          return ZX_ERR_NO_MEMORY;
  *
- *      return MX_OK;
+ *      return ZX_OK;
  * }
  *
  * While the cleanup function might look like...
@@ -85,8 +85,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 #include <trace.h>
 
 __BEGIN_CDECLS
@@ -316,7 +316,7 @@ bool unittest_expect_bytes(const uint8_t* expected,
                            bool expect_eq);
 
 typedef bool        (*unitest_fn_t)(void* context);
-typedef mx_status_t (*unitest_testcase_init_fn_t)(void** context);
+typedef zx_status_t (*unitest_testcase_init_fn_t)(void** context);
 typedef void        (*unitest_testcase_cleanup_fn_t)(void* context);
 
 typedef struct unitest_registration {

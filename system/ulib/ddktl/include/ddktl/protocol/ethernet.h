@@ -6,7 +6,7 @@
 
 #include <ddk/protocol/ethernet.h>
 #include <ddktl/protocol/ethernet-internal.h>
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 
@@ -25,27 +25,27 @@
 //
 // :: Examples ::
 //
-// // A driver that communicates with a MX_PROTOCOL_ETHERMAC device as a ethmac_ifc_t
+// // A driver that communicates with a ZX_PROTOCOL_ETHERMAC device as a ethmac_ifc_t
 // class EthDevice;
 // using EthDeviceType = ddk::Device<EthDevice, /* ddk mixins */>;
 //
 // class EthDevice : public EthDeviceType,
 //                   public ddk::EthmacIfc<EthDevice> {
 //   public:
-//     EthDevice(mx_device_t* parent)
+//     EthDevice(zx_device_t* parent)
 //       : EthDeviceType("my-eth-device"),
 //         parent_(parent) {}
 //
-//     mx_status_t Bind() {
+//     zx_status_t Bind() {
 //         ethmac_protocol_t* ops;
-//         auto status = get_device_protocol(parent_, MX_PROTOCOL_ETHERMAC,
+//         auto status = get_device_protocol(parent_, ZX_PROTOCOL_ETHERMAC,
 //                                           reinterpret_cast<void**>(&ops));
-//         if (status != MX_OK) {
+//         if (status != ZX_OK) {
 //             return status;
 //         }
 //        proxy_.reset(new ddk::EthmacProtocolProxy(ops, parent_));
 //        status = proxy_->Start(this);
-//        if (status != MX_OK) {
+//        if (status != ZX_OK) {
 //            return status;
 //        }
 //        return device_add(ddk_device(), parent_);
@@ -64,23 +64,23 @@
 //     }
 //
 //   private:
-//     mx_device_t* parent_;
+//     zx_device_t* parent_;
 //     fbl::unique_ptr<ddk::EthmacProtocolProxy> proxy_;
 // };
 //
 //
-// // A driver that implements a MX_PROTOCOL_ETHERMAC device
+// // A driver that implements a ZX_PROTOCOL_ETHERMAC device
 // class EthmacDevice;
 // using EthmacDeviceType = ddk::Device<EthmacDevice, /* ddk mixins */>;
 //
 // class EthmacDevice : public EthmacDeviceType,
 //                      public ddk::EthmacProtocol<EthmacDevice> {
 //   public:
-//     EthmacDevice(mx_device_t* parent)
+//     EthmacDevice(zx_device_t* parent)
 //       : EthmacDeviceType("my-ethmac-device"),
 //         parent_(parent) {}
 //
-//     mx_status_t Bind() {
+//     zx_status_t Bind() {
 //         return device_add(ddk_device(), parent_);
 //     }
 //
@@ -88,19 +88,19 @@
 //         // Clean up
 //     }
 //
-//     mx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info) {
+//     zx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info) {
 //         // Fill out the ethmac info
-//         return MX_OK;
+//         return ZX_OK;
 //     }
 //
 //     void EthmacStop() {
 //         // Device should stop
 //     }
 //
-//     mx_status_t EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
+//     zx_status_t EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
 //         // Start ethmac operation
 //         proxy_.swap(proxy);
-//         return MX_OK;
+//         return ZX_OK;
 //     }
 //
 //     void EthmacSend(uint32_t options, void* data, size_t length) {
@@ -108,7 +108,7 @@
 //     }
 //
 //   private:
-//     mx_device_t* parent_;
+//     zx_device_t* parent_;
 //     fbl::unique_ptr<ddk::EthmacIfcProxy> proxy_;
 // };
 
@@ -166,13 +166,13 @@ class EthmacProtocol : public internal::base_protocol {
         ops_.send = Send;
 
         // Can only inherit from one base_protocol implemenation
-        MX_ASSERT(ddk_proto_ops_ == nullptr);
-        ddk_proto_id_ = MX_PROTOCOL_ETHERMAC;
+        ZX_ASSERT(ddk_proto_ops_ == nullptr);
+        ddk_proto_id_ = ZX_PROTOCOL_ETHERMAC;
         ddk_proto_ops_ = &ops_;
     }
 
   private:
-    static mx_status_t Query(void* ctx, uint32_t options, ethmac_info_t* info) {
+    static zx_status_t Query(void* ctx, uint32_t options, ethmac_info_t* info) {
         return static_cast<D*>(ctx)->EthmacQuery(options, info);
     }
 
@@ -180,7 +180,7 @@ class EthmacProtocol : public internal::base_protocol {
         static_cast<D*>(ctx)->EthmacStop();
     }
 
-    static mx_status_t Start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
+    static zx_status_t Start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
         auto ifc_proxy = fbl::unique_ptr<EthmacIfcProxy>(new EthmacIfcProxy(ifc, cookie));
         return static_cast<D*>(ctx)->EthmacStart(fbl::move(ifc_proxy));
     }
@@ -197,12 +197,12 @@ class EthmacProtocolProxy {
     EthmacProtocolProxy(ethmac_protocol_t* proto)
       : ops_(proto->ops), ctx_(proto->ctx) {}
 
-    mx_status_t Query(uint32_t options, ethmac_info_t* info) {
+    zx_status_t Query(uint32_t options, ethmac_info_t* info) {
         return ops_->query(ctx_, options, info);
     }
 
     template <typename D>
-    mx_status_t Start(D* ifc) {
+    zx_status_t Start(D* ifc) {
         static_assert(fbl::is_base_of<EthmacIfc<D>, D>::value,
                       "Start must be called with a subclass of EthmacIfc");
         return ops_->start(ctx_, ifc->ethmac_ifc(), ifc);

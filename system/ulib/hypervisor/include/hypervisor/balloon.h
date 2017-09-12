@@ -7,8 +7,8 @@
 #include <threads.h>
 
 #include <hypervisor/virtio.h>
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 #include <virtio/balloon.h>
 
 #define VIRTIO_BALLOON_Q_INFLATEQ 0
@@ -27,7 +27,7 @@ __BEGIN_CDECLS
 typedef struct balloon {
     mtx_t mutex;
     // Handle to the guest phsycial memory VMO for memory management.
-    mx_handle_t vmo;
+    zx_handle_t vmo;
     // With on-demand deflation we won't commit memory up-front for balloon
     // deflate requests.
     bool deflate_on_demand;
@@ -53,7 +53,7 @@ typedef struct balloon {
 } balloon_t;
 
 void balloon_init(balloon_t* balloon, uintptr_t guest_physmem_addr, size_t guest_physmem_size,
-                  mx_handle_t guest_physmem_vmo);
+                  zx_handle_t guest_physmem_vmo);
 
 /* Callback for balloon_request_stats. */
 typedef void (*balloon_stats_fn_t)(const virtio_balloon_stat_t* stats, size_t len, void* ctx);
@@ -64,9 +64,9 @@ typedef void (*balloon_stats_fn_t)(const virtio_balloon_stat_t* stats, size_t le
  * been received from the guest. Pointers to stats must not be held after the
  * callback returns.
  */
-mx_status_t balloon_request_stats(balloon_t* balloon, balloon_stats_fn_t handler, void* ctx);
+zx_status_t balloon_request_stats(balloon_t* balloon, balloon_stats_fn_t handler, void* ctx);
 
 /* Update the 'num_pages' configuration field in the balloon. */
-mx_status_t balloon_update_num_pages(balloon_t* balloon, uint32_t num_pages);
+zx_status_t balloon_update_num_pages(balloon_t* balloon, uint32_t num_pages);
 
 __END_CDECLS

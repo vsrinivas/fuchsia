@@ -4,13 +4,13 @@
 
 #include <async/loop.h>
 
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 
 namespace async {
 
 Loop::Loop(const async_loop_config_t* config) {
-    mx_status_t status = async_loop_create(config, &async_);
-    MX_ASSERT_MSG(status == MX_OK, "status=%d", status);
+    zx_status_t status = async_loop_create(config, &async_);
+    ZX_ASSERT_MSG(status == ZX_OK, "status=%d", status);
 }
 
 Loop::~Loop() {
@@ -21,7 +21,7 @@ void Loop::Shutdown() {
     async_loop_shutdown(async_);
 }
 
-mx_status_t Loop::Run(mx_time_t deadline, bool once) {
+zx_status_t Loop::Run(zx_time_t deadline, bool once) {
     return async_loop_run(async_, deadline, once);
 }
 
@@ -29,7 +29,7 @@ void Loop::Quit() {
     async_loop_quit(async_);
 }
 
-mx_status_t Loop::ResetQuit() {
+zx_status_t Loop::ResetQuit() {
     return async_loop_reset_quit(async_);
 }
 
@@ -41,7 +41,7 @@ bool Loop::IsCurrentThreadDefault() const {
     return async_ == async_get_default();
 }
 
-mx_status_t Loop::StartThread(const char* name, thrd_t* out_thread) {
+zx_status_t Loop::StartThread(const char* name, thrd_t* out_thread) {
     return async_loop_start_thread(async_, name, out_thread);
 }
 

@@ -8,8 +8,8 @@
 #include <stdlib.h>
 #include <threads.h>
 
-#include <magenta/syscalls.h>
-#include <magenta/threads.h>
+#include <zircon/syscalls.h>
+#include <zircon/threads.h>
 #include <unittest/unittest.h>
 
 volatile int threads_done[7];
@@ -18,7 +18,7 @@ static int thread_entry(void* arg) {
     int thread_number = (int)(intptr_t)arg;
     errno = thread_number;
     unittest_printf("thread %d sleeping for .1 seconds\n", thread_number);
-    mx_nanosleep(mx_deadline_after(MX_MSEC(100)));
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
     EXPECT_EQ(errno, thread_number, "errno changed by someone!");
     threads_done[thread_number] = 1;
     return thread_number;
@@ -46,16 +46,16 @@ bool c11_thread_test(void) {
     unittest_printf("Attempting to create thread with a null name. This should succeed\n");
     int ret = thrd_create_with_name(&thread, thread_entry, (void*)(intptr_t)4, NULL);
     ASSERT_EQ(ret, thrd_success, "Error returned from thread creation");
-    mx_handle_t handle = thrd_get_mx_handle(thread);
-    ASSERT_NE(handle, MX_HANDLE_INVALID, "got invalid thread handle");
+    zx_handle_t handle = thrd_get_zx_handle(thread);
+    ASSERT_NE(handle, ZX_HANDLE_INVALID, "got invalid thread handle");
     // Prove this is a valid handle by duplicating it.
-    mx_handle_t dup_handle;
-    mx_status_t status = mx_handle_duplicate(handle, MX_RIGHT_SAME_RIGHTS, &dup_handle);
+    zx_handle_t dup_handle;
+    zx_status_t status = zx_handle_duplicate(handle, ZX_RIGHT_SAME_RIGHTS, &dup_handle);
     ASSERT_EQ(status, 0, "failed to duplicate thread handle");
 
     ret = thrd_join(thread, &return_value);
     ASSERT_EQ(ret, thrd_success, "Error while thread join");
-    ASSERT_EQ(mx_handle_close(dup_handle), MX_OK, "failed to close duplicate handle");
+    ASSERT_EQ(zx_handle_close(dup_handle), ZX_OK, "failed to close duplicate handle");
     ASSERT_EQ(return_value, 4, "Incorrect return from thread");
 
     ret = thrd_create_with_name(&thread, thread_entry, (void*)(intptr_t)5, NULL);
@@ -64,7 +64,7 @@ bool c11_thread_test(void) {
     ASSERT_EQ(ret, thrd_success, "Error while thread detach");
 
     while (!threads_done[5])
-        mx_nanosleep(mx_deadline_after(MX_MSEC(100)));
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
 
     thread_entry((void*)(intptr_t)6);
     ASSERT_TRUE(threads_done[6], "All threads should have completed");
@@ -79,7 +79,7 @@ bool long_name_succeeds(void) {
     static const char long_name[] =
         "0123456789012345678901234567890123456789"
         "0123456789012345678901234567890123456789";
-    ASSERT_GT(strlen(long_name), (size_t)MX_MAX_NAME_LEN-1,
+    ASSERT_GT(strlen(long_name), (size_t)ZX_MAX_NAME_LEN-1,
               "too short to truncate");
 
     thrd_t thread;

@@ -4,7 +4,7 @@
 
 #include "asm.h"
 #include "setjmp_impl.h"
-#include <magenta/tls.h>
+#include <zircon/tls.h>
 
 #define DW_CFA_expression       0x10
 #define DW_CFA_val_expression   0x16
@@ -88,7 +88,7 @@ ENTRY(longjmp)
     // Restore the demangled values.
     mov %rdx, %rbp
     .cfi_same_value %rbp
-    mov %rsi, %fs:MX_TLS_UNSAFE_SP_OFFSET
+    mov %rsi, %fs:ZX_TLS_UNSAFE_SP_OFFSET
     //.cfi_same_value %unsafe_sp  -- No DWARF register number for it!
     mov %rax, (%rcx)
     .cfi_escape DW_CFA_expression, 16, 3, DW_OP_breg2, 0, DW_OP_deref

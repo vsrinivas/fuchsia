@@ -1,7 +1,7 @@
 # Entropy quality tests
 
 This document describes how we test the quality of the entropy sources used to
-seed the Magenta CPRNG.
+seed the Zircon CPRNG.
 
 [TOC]
 
@@ -56,7 +56,7 @@ intended, but this demonstrates the risk of estimating entropy content from
 processed data: together, /dev/zero and "password" provide ~0 bits of entropy,
 but our tests are way more optimistic about the resulting data!
 
-For a more concrete Magenta-related example, consider jitterentropy (the RNG
+For a more concrete Zircon-related example, consider jitterentropy (the RNG
 discussed here: <http://www.chronox.de/jent/doc/CPU-Jitter-NPTRNG.html>).
 Jitterentropy draws entropy from variations in CPU timing. The unprocessed data
 are how long it took to run a certain block of CPU- and memory-intensive code
@@ -76,7 +76,7 @@ jitterentropy's built-in processing can be turned on and off via the
 ## Quality test implementation
 
 As mentioned above, the NIST test suite takes a file full of random bytes as
-input. We collect those bytes on a Magenta system (possibly with a thin Fuchsia
+input. We collect those bytes on a Zircon system (possibly with a thin Fuchsia
 layer on top), then usually export them to a more capable workstation to run the
 test suite.
 
@@ -141,11 +141,11 @@ userspace HWRNG driver. Can test the VMO-rewriting mechanism first.*
 
 ## Test data export
 
-Test data is saved in `/boot/kernel/debug/entropy.bin` in the Magenta system
+Test data is saved in `/boot/kernel/debug/entropy.bin` in the Zircon system
 under test. So far I've usually exported the data file manually via `netcp`.
 Other options include `scp` if you build with the correct Fuchsia packages, or
 saving to persistent storage (probably using the Fuchsia `thinfs` FAT
-filesystem, so you can read the files on a non-Magenta computer).
+filesystem, so you can read the files on a non-Zircon computer).
 
 ## Running the NIST test suite
 

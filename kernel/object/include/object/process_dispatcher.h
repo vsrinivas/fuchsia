@@ -16,8 +16,8 @@
 #include <object/state_tracker.h>
 #include <object/thread_dispatcher.h>
 
-#include <magenta/syscalls/object.h>
-#include <magenta/types.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/types.h>
 #include <fbl/array.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
@@ -31,11 +31,11 @@ class JobDispatcher;
 
 class ProcessDispatcher final : public Dispatcher {
 public:
-    static mx_status_t Create(
+    static zx_status_t Create(
         fbl::RefPtr<JobDispatcher> job, fbl::StringPiece name, uint32_t flags,
-        fbl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights,
+        fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights,
         fbl::RefPtr<VmAddressRegionDispatcher>* root_vmar_disp,
-        mx_rights_t* root_vmar_rights);
+        zx_rights_t* root_vmar_rights);
 
     // Traits to belong in the parent job's raw list.
     struct JobListTraitsRaw {
@@ -60,10 +60,10 @@ public:
     }
 
     // Dispatcher implementation
-    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_PROCESS; }
+    zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_PROCESS; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     void on_zero_handles() final;
-    mx_koid_t get_related_koid() const final;
+    zx_koid_t get_related_koid() const final;
 
     ~ProcessDispatcher() final;
 
@@ -77,16 +77,16 @@ public:
 
     // Performs initialization on a newly constructed ProcessDispatcher
     // If this fails, then the object is invalid and should be deleted
-    mx_status_t Initialize();
+    zx_status_t Initialize();
 
     // Maps a |handle| to an integer which can be given to usermode as a
     // handle value. Uses Handle->base_value() plus additional mixing.
-    mx_handle_t MapHandleToValue(const Handle* handle) const;
-    mx_handle_t MapHandleToValue(const HandleOwner& handle) const;
+    zx_handle_t MapHandleToValue(const Handle* handle) const;
+    zx_handle_t MapHandleToValue(const HandleOwner& handle) const;
 
     // Maps a handle value into a Handle as long we can verify that
     // it belongs to this process.
-    Handle* GetHandleLocked(mx_handle_t handle_value) TA_REQ(handle_table_lock_);
+    Handle* GetHandleLocked(zx_handle_t handle_value) TA_REQ(handle_table_lock_);
 
     // Adds |handle| to this process handle list. The handle->process_id() is
     // set to this process id().
@@ -95,87 +95,87 @@ public:
 
     // Removes the Handle corresponding to |handle_value| from this process
     // handle list.
-    HandleOwner RemoveHandle(mx_handle_t handle_value);
-    HandleOwner RemoveHandleLocked(mx_handle_t handle_value) TA_REQ(handle_table_lock_);
+    HandleOwner RemoveHandle(zx_handle_t handle_value);
+    HandleOwner RemoveHandleLocked(zx_handle_t handle_value) TA_REQ(handle_table_lock_);
 
     // Puts back the |handle_value| which has not yet been given to another process
     // back into this process.
-    void UndoRemoveHandleLocked(mx_handle_t handle_value) TA_REQ(handle_table_lock_);
+    void UndoRemoveHandleLocked(zx_handle_t handle_value) TA_REQ(handle_table_lock_);
 
     // Get the dispatcher corresponding to this handle value.
     template <typename T>
-    mx_status_t GetDispatcher(mx_handle_t handle_value,
+    zx_status_t GetDispatcher(zx_handle_t handle_value,
                               fbl::RefPtr<T>* dispatcher) {
         return GetDispatcherAndRights(handle_value, dispatcher, nullptr);
     }
 
     // Get the dispatcher and the rights corresponding to this handle value.
     template <typename T>
-    mx_status_t GetDispatcherAndRights(mx_handle_t handle_value,
+    zx_status_t GetDispatcherAndRights(zx_handle_t handle_value,
                                        fbl::RefPtr<T>* dispatcher,
-                                       mx_rights_t* out_rights) {
+                                       zx_rights_t* out_rights) {
         fbl::RefPtr<Dispatcher> generic_dispatcher;
         auto status = GetDispatcherInternal(handle_value, &generic_dispatcher, out_rights);
-        if (status != MX_OK)
+        if (status != ZX_OK)
             return status;
         *dispatcher = DownCastDispatcher<T>(&generic_dispatcher);
         if (!*dispatcher)
-            return MX_ERR_WRONG_TYPE;
-        return MX_OK;
+            return ZX_ERR_WRONG_TYPE;
+        return ZX_OK;
     }
 
     // Get the dispatcher corresponding to this handle value, after
     // checking that this handle has the desired rights.
     // Returns the rights the handle currently has.
     template <typename T>
-    mx_status_t GetDispatcherWithRights(mx_handle_t handle_value,
-                                        mx_rights_t desired_rights,
+    zx_status_t GetDispatcherWithRights(zx_handle_t handle_value,
+                                        zx_rights_t desired_rights,
                                         fbl::RefPtr<T>* dispatcher,
-                                        mx_rights_t* out_rights) {
+                                        zx_rights_t* out_rights) {
         fbl::RefPtr<Dispatcher> generic_dispatcher;
         auto status = GetDispatcherWithRightsInternal(handle_value,
                                                       desired_rights,
                                                       &generic_dispatcher,
                                                       out_rights);
-        if (status != MX_OK)
+        if (status != ZX_OK)
             return status;
         *dispatcher = DownCastDispatcher<T>(&generic_dispatcher);
         if (!*dispatcher)
-            return MX_ERR_WRONG_TYPE;
-        return MX_OK;
+            return ZX_ERR_WRONG_TYPE;
+        return ZX_OK;
     }
 
     // Get the dispatcher corresponding to this handle value, after
     // checking that this handle has the desired rights.
     template <typename T>
-    mx_status_t GetDispatcherWithRights(mx_handle_t handle_value,
-                                        mx_rights_t desired_rights,
+    zx_status_t GetDispatcherWithRights(zx_handle_t handle_value,
+                                        zx_rights_t desired_rights,
                                         fbl::RefPtr<T>* dispatcher) {
         return GetDispatcherWithRights(handle_value, desired_rights, dispatcher, nullptr);
     }
 
-    mx_koid_t GetKoidForHandle(mx_handle_t handle_value);
+    zx_koid_t GetKoidForHandle(zx_handle_t handle_value);
 
-    bool IsHandleValid(mx_handle_t handle_value);
+    bool IsHandleValid(zx_handle_t handle_value);
 
     // Calls the provided
-    // |mx_status_t func(mx_handle_t, mx_rights_t, fbl::RefPtr<Dispatcher>)|
+    // |zx_status_t func(zx_handle_t, zx_rights_t, fbl::RefPtr<Dispatcher>)|
     // on every handle owned by the process. Stops if |func| returns an error,
     // returning the error value.
     template <typename T>
-    mx_status_t ForEachHandle(T func) const {
+    zx_status_t ForEachHandle(T func) const {
         fbl::AutoLock lock(&handle_table_lock_);
         for (const auto& handle : handles_) {
             // It would be nice to only pass a const Dispatcher* to the
             // callback, but many callers will use DownCastDispatcher()
             // which requires a (necessarily non-const) RefPtr<Dispatcher>.
-            mx_status_t s = func(MapHandleToValue(&handle), handle.rights(),
+            zx_status_t s = func(MapHandleToValue(&handle), handle.rights(),
                                  fbl::move(handle.dispatcher()));
-            if (s != MX_OK) {
+            if (s != ZX_OK) {
                 return s;
             }
         }
-        return MX_OK;
+        return ZX_OK;
     }
 
     // accessors
@@ -185,26 +185,26 @@ public:
     fbl::RefPtr<VmAspace> aspace() { return aspace_; }
     fbl::RefPtr<JobDispatcher> job();
 
-    void get_name(char out_name[MX_MAX_NAME_LEN]) const final;
-    mx_status_t set_name(const char* name, size_t len) final;
+    void get_name(char out_name[ZX_MAX_NAME_LEN]) const final;
+    zx_status_t set_name(const char* name, size_t len) final;
 
     void Exit(int retcode) __NO_RETURN;
     void Kill();
 
     // Syscall helpers
-    mx_status_t GetInfo(mx_info_process_t* info);
-    mx_status_t GetStats(mx_info_task_stats_t* stats);
+    zx_status_t GetInfo(zx_info_process_t* info);
+    zx_status_t GetStats(zx_info_task_stats_t* stats);
     // NOTE: Code outside of the syscall layer should not typically know about
     // user_ptrs; do not use this pattern as an example.
-    mx_status_t GetAspaceMaps(user_ptr<mx_info_maps_t> maps, size_t max,
+    zx_status_t GetAspaceMaps(user_ptr<zx_info_maps_t> maps, size_t max,
                            size_t* actual, size_t* available);
-    mx_status_t GetVmos(user_ptr<mx_info_vmo_t> vmos, size_t max,
+    zx_status_t GetVmos(user_ptr<zx_info_vmo_t> vmos, size_t max,
                      size_t* actual, size_t* available);
 
-    mx_status_t GetThreads(fbl::Array<mx_koid_t>* threads);
+    zx_status_t GetThreads(fbl::Array<zx_koid_t>* threads);
 
     // exception handling support
-    mx_status_t SetExceptionPort(fbl::RefPtr<ExceptionPort> eport);
+    zx_status_t SetExceptionPort(fbl::RefPtr<ExceptionPort> eport);
     // Returns true if a port had been set.
     bool ResetExceptionPort(bool debugger, bool quietly);
     fbl::RefPtr<ExceptionPort> exception_port();
@@ -219,33 +219,33 @@ public:
 
     // Look up a process given its koid.
     // Returns nullptr if not found.
-    static fbl::RefPtr<ProcessDispatcher> LookupProcessById(mx_koid_t koid);
+    static fbl::RefPtr<ProcessDispatcher> LookupProcessById(zx_koid_t koid);
 
     // Look up a thread in this process given its koid.
     // Returns nullptr if not found.
-    fbl::RefPtr<ThreadDispatcher> LookupThreadById(mx_koid_t koid);
+    fbl::RefPtr<ThreadDispatcher> LookupThreadById(zx_koid_t koid);
 
     uintptr_t get_debug_addr() const;
-    mx_status_t set_debug_addr(uintptr_t addr);
+    zx_status_t set_debug_addr(uintptr_t addr);
 
     // Checks the |condition| against the parent job's policy.
     //
     // Must be called by syscalls before performing an action represented by an
-    // MX_POL_xxxxx condition. If the return value is MX_OK the action can
+    // ZX_POL_xxxxx condition. If the return value is ZX_OK the action can
     // proceed; otherwise, the process is not allowed to perform the action,
     // and the status value should be returned to the usermode caller.
     //
     // E.g., in sys_channel_create:
     //
     //     auto up = ProcessDispatcher::GetCurrent();
-    //     mx_status_t res = up->QueryPolicy(MX_POL_NEW_CHANNEL);
-    //     if (res != MX_OK) {
+    //     zx_status_t res = up->QueryPolicy(ZX_POL_NEW_CHANNEL);
+    //     if (res != ZX_OK) {
     //         // Channel creation denied by the calling process's
     //         // parent job's policy.
     //         return res;
     //     }
     //     // Ok to create a channel.
-    mx_status_t QueryPolicy(uint32_t condition) const;
+    zx_status_t QueryPolicy(uint32_t condition) const;
 
     // return a cached copy of the vdso code address or compute a new one
     uintptr_t vdso_code_address() {
@@ -261,7 +261,7 @@ private:
 
     // The diagnostic code is allow to know about the internals of this code.
     friend void DumpProcessList();
-    friend void KillProcess(mx_koid_t id);
+    friend void KillProcess(zx_koid_t id);
     friend void DumpProcessMemoryUsage(const char* prefix, size_t min_pages);
 
     ProcessDispatcher(fbl::RefPtr<JobDispatcher> job, fbl::StringPiece name, uint32_t flags);
@@ -270,16 +270,16 @@ private:
     ProcessDispatcher& operator=(const ProcessDispatcher&) = delete;
 
 
-    mx_status_t GetDispatcherInternal(mx_handle_t handle_value, fbl::RefPtr<Dispatcher>* dispatcher,
-                                      mx_rights_t* rights);
+    zx_status_t GetDispatcherInternal(zx_handle_t handle_value, fbl::RefPtr<Dispatcher>* dispatcher,
+                                      zx_rights_t* rights);
 
-    mx_status_t GetDispatcherWithRightsInternal(mx_handle_t handle_value, mx_rights_t desired_rights,
+    zx_status_t GetDispatcherWithRightsInternal(zx_handle_t handle_value, zx_rights_t desired_rights,
                                                 fbl::RefPtr<Dispatcher>* dispatcher_out,
-                                                mx_rights_t* out_rights);
+                                                zx_rights_t* out_rights);
 
     // Thread lifecycle support
     friend class ThreadDispatcher;
-    mx_status_t AddThread(ThreadDispatcher* t, bool initial_thread);
+    zx_status_t AddThread(ThreadDispatcher* t, bool initial_thread);
     void RemoveThread(ThreadDispatcher* t);
 
     void SetStateLocked(State) TA_REQ(state_lock_);
@@ -299,7 +299,7 @@ private:
     fbl::DoublyLinkedListNodeState<ProcessDispatcher*> dll_job_raw_;
     fbl::SinglyLinkedListNodeState<fbl::RefPtr<ProcessDispatcher>> dll_job_;
 
-    mx_handle_t handle_rand_ = 0;
+    zx_handle_t handle_rand_ = 0;
 
     // list of threads in this process
     using ThreadList = fbl::DoublyLinkedList<ThreadDispatcher*, ThreadDispatcher::ThreadListTraits>;
@@ -337,7 +337,7 @@ private:
 
     // The user-friendly process name. For debug purposes only. That
     // is, there is no mechanism to mint a handle to a process via this name.
-    fbl::Name<MX_MAX_NAME_LEN> name_;
+    fbl::Name<ZX_MAX_NAME_LEN> name_;
 };
 
 const char* StateToString(ProcessDispatcher::State state);

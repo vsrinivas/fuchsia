@@ -5,6 +5,6 @@
 #pragma once
 
 #include <stddef.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 void try_dump_pt_data();

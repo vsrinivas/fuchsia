@@ -1,10 +1,10 @@
-# Editor integration for Magenta
+# Editor integration for Zircon
 
 ## YouCompleteMe for Vim/Atom
 
 [YouCompleteMe](https://valloric.github.io/YouCompleteMe/) is a semantic
 code-completion engine for Vim and Atom. You can use
-[Bear](https://github.com/rizsotto/Bear) to build its database from the Magenta
+[Bear](https://github.com/rizsotto/Bear) to build its database from the Zircon
 makefiles.
 
 ### Install YouCompleteMe in your editor
@@ -20,7 +20,7 @@ that look like C/C++ compiler invocations.
 
 You can try using your system's package manager (apt-get, brew) to install Bear,
 but you will need version 2.2.1 or later to match the compiler names that
-Magenta uses.
+Zircon uses.
 
 Example installation:
 
@@ -43,7 +43,7 @@ make all
 make install  # Or 'sudo make install' to install to /usr/local
 ```
 
-### Invoke Bear on the Magenta build system
+### Invoke Bear on the Zircon build system
 
 You'll need to do this whenever the sources or makefiles change in a way that
 affects includes or types, or when you add/delete/move files, though it doesn't
@@ -52,7 +52,7 @@ hurt to use a stale database.
 As easy as:
 
 ``` bash
-cd "${MAGENTA_DIR}"
+cd "${ZIRCON_DIR}"
 make clean
 bear make -j20
 ```
@@ -66,7 +66,7 @@ symbol definitions/declarations. See your editor's YouCompleteMe docs for
 details.
 
 It should pick up the `json` file automatically. If you want to move it out of
-the `magenta` tree, you can move the file to its parent directory.
+the `zircon` tree, you can move the file to its parent directory.
 
 ## See also
 

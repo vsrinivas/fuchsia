@@ -40,7 +40,7 @@
  *      EXPECT_EQ(1, foo_value, "foo_func failed");
  *      ... there are EXPECT_* macros for many conditions...
  *      EXPECT_TRUE(foo_condition(), "condition should be true");
- *      EXPECT_NE(MX_ERR_TIMED_OUT, foo_event(), "event timed out");
+ *      EXPECT_NE(ZX_ERR_TIMED_OUT, foo_event(), "event timed out");
  *
  *      END_TEST;
  * }
@@ -53,10 +53,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #ifdef __Fuchsia__
-#include <magenta/types.h>
+#include <zircon/types.h>
 #define UNITTEST_CRASH_HANDLER_SUPPORTED
 #endif // __Fuchsia__
 
@@ -79,15 +79,15 @@ static inline const char* unittest_get_message() {
 
 // A workaround to help static analyzer identify assertion failures
 #if defined(__clang__)
-#define MX_ANALYZER_CREATE_SINK     __attribute__((annotate("mx_create_sink")))
+#define ZX_ANALYZER_CREATE_SINK     __attribute__((annotate("zx_create_sink")))
 #else
-#define MX_ANALYZER_CREATE_SINK     //no-op
+#define ZX_ANALYZER_CREATE_SINK     //no-op
 #endif
 // This function will help terminate the static analyzer when it reaches
 // an assertion failure site which returns from test case function. The bugs
 // discovered by the static analyzer will be suppressed as they are expected
 // by the test cases.
-static inline void unittest_returns_early(void) MX_ANALYZER_CREATE_SINK {}
+static inline void unittest_returns_early(void) ZX_ANALYZER_CREATE_SINK {}
 
 __BEGIN_CDECLS
 
@@ -249,11 +249,11 @@ int unittest_set_verbosity_level(int new_level);
  *      BEGIN_TEST;
  *
  *      ...create a process...
- *      mx_handle_t process;
- *      mx_handle_t vmar;
- *      ASSERT_EQ(mx_process_create(mx_job_default(), fooName, sizeof(fooName),
+ *      zx_handle_t process;
+ *      zx_handle_t vmar;
+ *      ASSERT_EQ(zx_process_create(zx_job_default(), fooName, sizeof(fooName),
  *                                  0, &process, &vmar),
- *                MX_OK, ""));
+ *                ZX_OK, ""));
  *      ...register the process as expected to crash...
  *      REGISTER_CRASH(process);
  *      ...trigger the crash...
@@ -586,7 +586,7 @@ void unittest_run_named_test(const char* name, bool (*test)(void),
                              bool* all_success, bool enable_crash_handler);
 
 #ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
-void unittest_register_crash(struct test_info* current_test_info, mx_handle_t handle);
+void unittest_register_crash(struct test_info* current_test_info, zx_handle_t handle);
 bool unittest_run_death_fn(void (*fn_to_run)(void*), void* arg);
 #endif // UNITTEST_CRASH_HANDLER_SUPPORTED
 

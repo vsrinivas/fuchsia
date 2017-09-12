@@ -1,6 +1,6 @@
 # Memory and resource usage
 
-This file contains information about memory and resource management in Magenta,
+This file contains information about memory and resource management in Zircon,
 and talks about ways to examine process and system memory usage.
 
 *** note
@@ -24,14 +24,14 @@ $ ps
 TASK           PSS PRIVATE  SHARED NAME
 j:1028       32.9M   32.8M         root
   p:1043   1386.3k   1384k     28k bin/devmgr
-  j:1082     30.0M   30.0M         magenta-drivers
+  j:1082     30.0M   30.0M         zircon-drivers
     p:1209  774.3k    772k     28k /boot/bin/acpisvc
     p:1565  250.3k    248k     28k devhost:root
     p:1619  654.3k    652k     28k devhost:misc
     p:1688  258.3k    256k     28k devhost:platform
     p:1867 3878.3k   3876k     28k devhost:pci#1:1234:1111
     p:1916   24.4M   24.4M     28k devhost:pci#3:8086:2922
-  j:1103   1475.7k   1464k         magenta-services
+  j:1103   1475.7k   1464k         zircon-services
     p:1104  298.3k    296k     28k crashlogger
     p:1290  242.3k    240k     28k netsvc
     p:2115  362.3k    360k     28k sh:console
@@ -112,9 +112,9 @@ $ vmaps 2470
 # This 'R' region is a dynamic library. The r-x section is .text, the r--
 # section is .rodata, and the rw- section is .data + .bss.
 R  00000187bc867000-00000187bc881000      104k:sz                    'useralloc'
- M 00000187bc867000-00000187bc87d000 r-x   88k:sz   0B:res  2535:vmo 'libmxio.so'
- M 00000187bc87e000-00000187bc87f000 r--    4k:sz   4k:res  2537:vmo 'libmxio.so'
- M 00000187bc87f000-00000187bc881000 rw-    8k:sz   8k:res  2537:vmo 'libmxio.so'
+ M 00000187bc867000-00000187bc87d000 r-x   88k:sz   0B:res  2535:vmo 'libfdio.so'
+ M 00000187bc87e000-00000187bc87f000 r--    4k:sz   4k:res  2537:vmo 'libfdio.so'
+ M 00000187bc87f000-00000187bc881000 rw-    8k:sz   8k:res  2537:vmo 'libfdio.so'
 ...
 # This 2MB anonymous mapping is probably part of the heap.
 M  0000246812b91000-0000246812d91000 rw-    2M:sz  76k:res  2542:vmo 'mmap-anonymous'
@@ -172,12 +172,12 @@ Columns:
 
 -   `rights`: If the process points to the VMO via a handle, this column shows
     the rights that the handle has, zero or more of:
-    -   `r`: `MX_RIGHT_READ`
-    -   `w`: `MX_RIGHT_WRITE`
-    -   `x`: `MX_RIGHT_EXECUTE`
-    -   `m`: `MX_RIGHT_MAP`
-    -   `d`: `MX_RIGHT_DUPLICATE`
-    -   `t`: `MX_RIGHT_TRANSFER`
+    -   `r`: `ZX_RIGHT_READ`
+    -   `w`: `ZX_RIGHT_WRITE`
+    -   `x`: `ZX_RIGHT_EXECUTE`
+    -   `m`: `ZX_RIGHT_MAP`
+    -   `d`: `ZX_RIGHT_DUPLICATE`
+    -   `t`: `ZX_RIGHT_TRANSFER`
     -   **NOTE**: Non-handle entries will have a single '-' in this colum.
 -   `koid`: The koid of the VMO, if it has one. Zero otherwise. A VMO without a
     koid was created by the kernel, and has never had a userspace handle.
@@ -206,7 +206,7 @@ PSS     =  PRIVATE + (SHARED / #shr)
 > NOTE: This is a kernel command, and will print to the kernel console.
 
 ```
-k mx vmos hidden
+k zx vmos hidden
 ```
 
 Similar to `vmos <pid>`, but dumps all VMOs in the system that are not mapped
@@ -219,9 +219,9 @@ A `koid` value of zero means that only the kernel has a reference to that VMO.
 
 A `#map` value of zero means that the VMO is not mapped into any address space.
 
-**See also**: `k mx vmos all`, which dumps all VMOs in the system. **NOTE**:
+**See also**: `k zx vmos all`, which dumps all VMOs in the system. **NOTE**:
 It's very common for this output to be truncated because of kernel console
-buffer limitations, so it's often better to combine the `k mx vmos hidden`
+buffer limitations, so it's often better to combine the `k zx vmos hidden`
 output with a `vmaps` dump of each user process.
 
 ### Limitations
@@ -243,8 +243,8 @@ None of the process-dumping tools account for:
     E.g., a process could have a million handles open, and those handles consume
     kernel memory.
 
-    You can look at process handle consumption with the `k mx ps` command; run
-    `k mx ps help` for a description of its columns.
+    You can look at process handle consumption with the `k zx ps` command; run
+    `k zx ps help` for a description of its columns.
 
 ## Kernel memory
 
@@ -286,14 +286,14 @@ Fields:
 > NOTE: This is a kernel command, and will print to the kernel console.
 
 ```
-k mx asd kernel
+k zx asd kernel
 ```
 
 Dumps the kernel's VMAR/mapping/VMO hierarchy, similar to the `vmaps` tool for
 user processes.
 
 ```
-$ k mx asd kernel
+$ k zx asd kernel
 as 0xffffffff80252b20 [0xffffff8000000000 0xffffffffffffffff] sz 0x8000000000 fl 0x1 ref 71 'kernel'
   vmar 0xffffffff802529a0 [0xffffff8000000000 0xffffffffffffffff] sz 0x8000000000 ref 1 'root'
     map 0xffffff80015f89a0 [0xffffff8000000000 0xffffff8fffffffff] sz 0x1000000000 mmufl 0x18 vmo 0xffffff80015f8890/k0 off 0 p ages 0 ref 1 ''

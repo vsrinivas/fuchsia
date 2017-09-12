@@ -70,7 +70,7 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
      *     pthread_cond_timedwait() in another thread).
      *  3) After a timeout.
      *  4) On Linux, interrupted by an asynchronous signal.  This does
-     *     not apply on Magenta. */
+     *     not apply on Zircon. */
     do
         e = __timedwait(fut, seq, clock, ts);
     while (*fut == seq && !e);

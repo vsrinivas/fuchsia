@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddktl/device-internal.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 
@@ -50,9 +50,9 @@ constexpr void CheckWlanmacProtocolSubclass() {
     static_assert(internal::has_wlanmac_query<D>::value,
                   "WlanmacProtocol subclasses must implement WlanmacQuery");
     static_assert(fbl::is_same<decltype(&D::WlanmacQuery),
-                                mx_status_t (D::*)(uint32_t, ethmac_info_t*)>::value,
+                                zx_status_t (D::*)(uint32_t, ethmac_info_t*)>::value,
                   "WlanmacQuery must be a non-static member function with signature "
-                  "'mx_status_t WlanmacQuery(uint32_t, ethmac_info_t*)', and be visible to "
+                  "'zx_status_t WlanmacQuery(uint32_t, ethmac_info_t*)', and be visible to "
                   "ddk::WlanmacProtocol<D> (either because they are public, or because of "
                   "friendship).");
     static_assert(internal::has_wlanmac_stop<D>::value,
@@ -65,9 +65,9 @@ constexpr void CheckWlanmacProtocolSubclass() {
     static_assert(internal::has_wlanmac_start<D>::value,
                   "WlanmacProtocol subclasses must implement WlanmacStart");
     static_assert(fbl::is_same<decltype(&D::WlanmacStart),
-                                mx_status_t (D::*)(fbl::unique_ptr<WlanmacIfcProxy>)>::value,
+                                zx_status_t (D::*)(fbl::unique_ptr<WlanmacIfcProxy>)>::value,
                   "WlanmacStart must be a non-static member function with signature "
-                  "'mx_status_t WlanmacStart(fbl::unique_ptr<WlanmacIfcProxy>)', and be visible "
+                  "'zx_status_t WlanmacStart(fbl::unique_ptr<WlanmacIfcProxy>)', and be visible "
                   "to ddk::WlanmacProtocol<D> (either because they are public, or because of "
                   "friendship).");
     static_assert(internal::has_wlanmac_send<D>::value,
@@ -75,15 +75,15 @@ constexpr void CheckWlanmacProtocolSubclass() {
     static_assert(fbl::is_same<decltype(&D::WlanmacTx),
                                 void (D::*)(uint32_t, const void*, size_t)>::value,
                   "WlanmacTx must be a non-static member function with signature "
-                  "'mx_status_t WlanmacTx(uint32_t, const void*, size_t)', and be visible to "
+                  "'zx_status_t WlanmacTx(uint32_t, const void*, size_t)', and be visible to "
                   "ddk::WlanmacProtocol<D> (either because they are public, or because of "
                   "friendship).");
     static_assert(internal::has_wlanmac_set_channel<D>::value,
                   "WlanmacProtocol subclasses must implement WlanmacSetChannel");
     static_assert(fbl::is_same<decltype(&D::WlanmacSetChannel),
-                                mx_status_t (D::*)(uint32_t, wlan_channel_t*)>::value,
+                                zx_status_t (D::*)(uint32_t, wlan_channel_t*)>::value,
                   "WlanmacSetChannel must be a non-static member function with signature "
-                  "'mx_status_t WlanmacSetChannel(uint32_t, wlan_channel_t*)', and be visible to "
+                  "'zx_status_t WlanmacSetChannel(uint32_t, wlan_channel_t*)', and be visible to "
                   "ddk::WlanmacProtocol<D> (either because they are public, or because of "
                   "friendship).");
 }

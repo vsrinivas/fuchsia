@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// mx_status_t bad_syscall(uint64_t num)
+// zx_status_t bad_syscall(uint64_t num)
 .global bad_syscall
 .type bad_syscall, STT_FUNC
 bad_syscall:

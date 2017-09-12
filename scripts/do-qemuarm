@@ -71,7 +71,7 @@ else
     PROJECT="qemu-virt-a15-test"
 fi
 
-ARGS=" -m $MEMSIZE -smp $SMP -kernel build-${PROJECT}/magenta.elf"
+ARGS=" -m $MEMSIZE -smp $SMP -kernel build-${PROJECT}/zircon.elf"
 
 AUDIO_ARGS=" -soundhw hda"
 BLOCK_ARGS=" -drive if=none,file=blk.bin,id=blk,format=raw -device virtio-blk-device,drive=blk"

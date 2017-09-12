@@ -8,9 +8,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/object.h>
-#include <magenta/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/status.h>
 
 #include "utils.h"
 
@@ -54,45 +54,45 @@ void do_print_error(const char* file, int line, const char* fmt, ...) {
     va_end(args);
 }
 
-void do_print_mx_error(const char* file, int line, const char* what, mx_status_t status) {
+void do_print_zx_error(const char* file, int line, const char* what, zx_status_t status) {
     do_print_error(file, line, "%s: %d (%s)",
-                   what, status, mx_status_get_string(status));
+                   what, status, zx_status_get_string(status));
 }
 
 // While this should never fail given a valid handle,
-// returns MX_KOID_INVALID on failure.
+// returns ZX_KOID_INVALID on failure.
 
-mx_koid_t get_koid(mx_handle_t handle) {
-    mx_info_handle_basic_t info;
-    if (mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL) < 0) {
+zx_koid_t get_koid(zx_handle_t handle) {
+    zx_info_handle_basic_t info;
+    if (zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL) < 0) {
         // This shouldn't ever happen, so don't just ignore it.
-        fprintf(stderr, "Eh? MX_INFO_HANDLE_BASIC failed\n");
+        fprintf(stderr, "Eh? ZX_INFO_HANDLE_BASIC failed\n");
         // OTOH we can't just fail, we have to be robust about reporting back
         // to the kernel that we handled the exception.
         // TODO: Provide ability to safely terminate at any point (e.g., for assert
         // failures and such).
-        return MX_KOID_INVALID;
+        return ZX_KOID_INVALID;
     }
     return info.koid;
 }
 
-mx_status_t read_mem(mx_handle_t h, mx_vaddr_t vaddr, void* ptr, size_t len) {
+zx_status_t read_mem(zx_handle_t h, zx_vaddr_t vaddr, void* ptr, size_t len) {
     size_t actual;
-    mx_status_t status = mx_process_read_memory(h, vaddr, ptr, len, &actual);
+    zx_status_t status = zx_process_read_memory(h, vaddr, ptr, len, &actual);
     if (status < 0) {
         printf("read_mem @%p FAILED %zd\n", (void*) vaddr, len);
         return status;
     }
     if (len != actual) {
         printf("read_mem @%p FAILED, short read %zd\n", (void*) vaddr, len);
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t fetch_string(mx_handle_t h, mx_vaddr_t vaddr, char* ptr, size_t max) {
+zx_status_t fetch_string(zx_handle_t h, zx_vaddr_t vaddr, char* ptr, size_t max) {
     while (max > 1) {
-        mx_status_t status;
+        zx_status_t status;
         if ((status = read_mem(h, vaddr, ptr, 1)) < 0) {
             *ptr = 0;
             return status;
@@ -102,7 +102,7 @@ mx_status_t fetch_string(mx_handle_t h, mx_vaddr_t vaddr, char* ptr, size_t max)
         max--;
     }
     *ptr = 0;
-    return MX_OK;
+    return ZX_OK;
 }
 
 #if UINT_MAX == ULONG_MAX
@@ -138,34 +138,34 @@ typedef Elf64_Phdr elf_phdr_t;
 
 #endif
 
-mx_status_t fetch_build_id(mx_handle_t h, mx_vaddr_t base, char* buf, size_t buf_size) {
-    mx_vaddr_t vaddr = base;
+zx_status_t fetch_build_id(zx_handle_t h, zx_vaddr_t base, char* buf, size_t buf_size) {
+    zx_vaddr_t vaddr = base;
     uint8_t tmp[4];
-    mx_status_t status;
+    zx_status_t status;
 
     if (buf_size < MAX_BUILDID_SIZE * 2 + 1)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     status = read_mem(h, vaddr, tmp, 4);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
     if (memcmp(tmp, ELFMAG, SELFMAG))
-        return MX_ERR_WRONG_TYPE;
+        return ZX_ERR_WRONG_TYPE;
 
     elf_off_t phoff;
     elf_half_t num;
     status = read_mem(h, vaddr + ehdr_off_phoff, &phoff, sizeof(phoff));
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
     status = read_mem(h, vaddr + ehdr_off_phnum, &num, sizeof(num));
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     for (unsigned n = 0; n < num; n++) {
-        mx_vaddr_t phaddr = vaddr + phoff + (n * sizeof(elf_phdr_t));
+        zx_vaddr_t phaddr = vaddr + phoff + (n * sizeof(elf_phdr_t));
         elf_word_t type;
         status = read_mem(h, phaddr + phdr_off_type, &type, sizeof(type));
-        if (status != MX_OK)
+        if (status != ZX_OK)
             return status;
         if (type != PT_NOTE)
             continue;
@@ -173,10 +173,10 @@ mx_status_t fetch_build_id(mx_handle_t h, mx_vaddr_t base, char* buf, size_t buf
         elf_off_t off;
         elf_native_word_t size;
         status = read_mem(h, phaddr + phdr_off_offset, &off, sizeof(off));
-        if (status != MX_OK)
+        if (status != ZX_OK)
             return status;
         status = read_mem(h, phaddr + phdr_off_filesz, &size, sizeof(size));
-        if (status != MX_OK)
+        if (status != ZX_OK)
             return status;
 
         struct {
@@ -185,14 +185,14 @@ mx_status_t fetch_build_id(mx_handle_t h, mx_vaddr_t base, char* buf, size_t buf
         } hdr;
         while (size > sizeof(hdr)) {
             status = read_mem(h, vaddr + off, &hdr, sizeof(hdr));
-            if (status != MX_OK)
+            if (status != ZX_OK)
                 return status;
             size_t header_size =
                 sizeof(Elf32_Nhdr) + ((hdr.hdr.n_namesz + 3) & -4);
             size_t payload_size = (hdr.hdr.n_descsz + 3) & -4;
             off += header_size;
             size -= header_size;
-            mx_vaddr_t payload_vaddr = vaddr + off;
+            zx_vaddr_t payload_vaddr = vaddr + off;
             off += payload_size;
             size -= payload_size;
             if (hdr.hdr.n_type != NT_GNU_BUILD_ID ||
@@ -206,15 +206,15 @@ mx_status_t fetch_build_id(mx_handle_t h, mx_vaddr_t base, char* buf, size_t buf
             } else {
                 uint8_t buildid[MAX_BUILDID_SIZE];
                 status = read_mem(h, payload_vaddr, buildid, hdr.hdr.n_descsz);
-                if (status != MX_OK)
+                if (status != ZX_OK)
                     return status;
                 for (uint32_t i = 0; i < hdr.hdr.n_descsz; ++i) {
                     snprintf(&buf[i * 2], 3, "%02x", buildid[i]);
                 }
             }
-            return MX_OK;
+            return ZX_OK;
         }
     }
 
-    return MX_ERR_NOT_FOUND;
+    return ZX_ERR_NOT_FOUND;
 }

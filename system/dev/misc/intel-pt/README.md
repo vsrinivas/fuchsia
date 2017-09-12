@@ -86,7 +86,7 @@ Returns *sizeof(\*out_data)* on success or a negative error code.
 ```
 ssize_t ioctl_ipt_get_buffer_handle(int fd,
                                     const ioctl_ipt_buffer_handle_req_t* req,
-                                    mx_handle_t* out_handle);
+                                    zx_handle_t* out_handle);
 ```
 
 Return the handle of the requested VMO with buffer data.

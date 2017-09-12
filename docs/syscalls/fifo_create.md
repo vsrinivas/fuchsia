@@ -1,4 +1,4 @@
-# mx_fifo_create
+# zx_fifo_create
 
 ## NAME
 
@@ -7,11 +7,11 @@ fifo_create - create a fifo
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-mx_status_t mx_fifo_create(uint32_t elem_count, uint32_t elem_size,
+zx_status_t zx_fifo_create(uint32_t elem_count, uint32_t elem_size,
                            uint32_t options,
-                           mx_handle_t* out0, mx_handle_t* out1);
+                           zx_handle_t* out0, zx_handle_t* out1);
 
 ```
 
@@ -34,18 +34,18 @@ The *options* argument must be 0.
 
 ## RETURN VALUE
 
-**fifo_create**() returns **MX_OK** on success. In the event of
+**fifo_create**() returns **ZX_OK** on success. In the event of
 failure, one of the following values is returned.
 
 ## ERRORS
 
-**MX_ERR_INVALID_ARGS**  *out0* or *out1* is an invalid pointer or NULL or
+**ZX_ERR_INVALID_ARGS**  *out0* or *out1* is an invalid pointer or NULL or
 *options* is any value other than 0.
 
-**MX_ERR_OUT_OF_RANGE**  *elem_count* or *elem_size* is zero, or *elem_count*
+**ZX_ERR_OUT_OF_RANGE**  *elem_count* or *elem_size* is zero, or *elem_count*
 is not a power of two, or *elem_count* * *elem_size* is greater than 4096.
 
-**MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**ZX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
 
 ## SEE ALSO

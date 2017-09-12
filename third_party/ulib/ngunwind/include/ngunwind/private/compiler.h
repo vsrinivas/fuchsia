@@ -34,7 +34,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 /* Not ready to give up on linux support in this library just yet.
    It may be useful when trying to debug something.
    That is why this code is the way it is.  */
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #undef likely
 #undef unlikely
 #endif

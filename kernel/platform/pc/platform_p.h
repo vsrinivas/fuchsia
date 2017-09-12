@@ -10,7 +10,7 @@
 #include <sys/types.h>
 #include <dev/pcie_platform.h>
 #include <lib/cbuf.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 extern cbuf_t console_input_buf;
 

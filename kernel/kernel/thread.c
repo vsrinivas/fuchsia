@@ -125,7 +125,7 @@ thread_t* thread_create_etc(
     t->state = THREAD_INITIAL;
     t->signals = 0;
     t->blocking_wait_queue = NULL;
-    t->blocked_status = MX_OK;
+    t->blocked_status = ZX_OK;
     t->interruptable = false;
     thread_set_last_cpu(t, 0);
 
@@ -220,11 +220,11 @@ static void free_thread_resources(thread_t* t) {
  *
  * @param t Thread to flag
  *
- * @return MX_OK on success
+ * @return ZX_OK on success
  */
 status_t thread_set_real_time(thread_t* t) {
     if (!t)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
 
@@ -236,7 +236,7 @@ status_t thread_set_real_time(thread_t* t) {
     t->flags |= THREAD_FLAG_REAL_TIME;
     THREAD_UNLOCK(state);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 /**
@@ -248,7 +248,7 @@ status_t thread_set_real_time(thread_t* t) {
  *
  * @param t  Thread to resume
  *
- * @return MX_OK on success.
+ * @return ZX_OK on success.
  */
 status_t thread_resume(thread_t* t) {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
@@ -263,7 +263,7 @@ status_t thread_resume(thread_t* t) {
     if (t->state == THREAD_DEATH) {
         THREAD_UNLOCK(state);
         // The thread is dead, resuming it is a no-op.
-        return MX_OK;
+        return ZX_OK;
     }
 
     /* Clear the suspend signal in case there is a pending suspend */
@@ -277,7 +277,7 @@ status_t thread_resume(thread_t* t) {
 
     THREAD_UNLOCK(state);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 status_t thread_detach_and_resume(thread_t* t) {
@@ -293,7 +293,7 @@ status_t thread_detach_and_resume(thread_t* t) {
  *
  * @param t  Thread to suspend
  *
- * @return MX_OK on success.
+ * @return ZX_OK on success.
  */
 status_t thread_suspend(thread_t* t) {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
@@ -305,7 +305,7 @@ status_t thread_suspend(thread_t* t) {
     case THREAD_INITIAL:
     case THREAD_DEATH:
         THREAD_UNLOCK(state);
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     case THREAD_READY:
         /* thread is ready to run and not blocked or suspended.
              * will wake up and deal with the signal soon. */
@@ -323,12 +323,12 @@ status_t thread_suspend(thread_t* t) {
     case THREAD_BLOCKED:
         /* thread is blocked on something and marked interruptable */
         if (t->interruptable)
-            thread_unblock_from_wait_queue(t, MX_ERR_INTERNAL_INTR_RETRY);
+            thread_unblock_from_wait_queue(t, ZX_ERR_INTERNAL_INTR_RETRY);
         break;
     case THREAD_SLEEPING:
         /* thread is sleeping */
         if (t->interruptable) {
-            t->blocked_status = MX_ERR_INTERNAL_INTR_RETRY;
+            t->blocked_status = ZX_ERR_INTERNAL_INTR_RETRY;
 
             sched_unblock(t);
         }
@@ -339,7 +339,7 @@ status_t thread_suspend(thread_t* t) {
 
     THREAD_UNLOCK(state);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 /* Signal an exception on the current thread, to be handled when the
@@ -363,7 +363,7 @@ status_t thread_join(thread_t* t, int* retcode, lk_time_t deadline) {
     if (t->flags & THREAD_FLAG_DETACHED) {
         /* the thread is detached, go ahead and exit */
         THREAD_UNLOCK(state);
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     /* wait for the thread to die */
@@ -394,7 +394,7 @@ status_t thread_join(thread_t* t, int* retcode, lk_time_t deadline) {
 
     free_thread_resources(t);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 status_t thread_detach(thread_t* t) {
@@ -404,7 +404,7 @@ status_t thread_detach(thread_t* t) {
 
     /* if another thread is blocked inside thread_join() on this thread,
      * wake them up with a specific return code */
-    wait_queue_wake_all(&t->retcode_wait_queue, false, MX_ERR_BAD_STATE);
+    wait_queue_wake_all(&t->retcode_wait_queue, false, ZX_ERR_BAD_STATE);
 
     /* if it's already dead, then just do what join would have and exit */
     if (t->state == THREAD_DEATH) {
@@ -414,7 +414,7 @@ status_t thread_detach(thread_t* t) {
     } else {
         t->flags |= THREAD_FLAG_DETACHED;
         THREAD_UNLOCK(state);
-        return MX_OK;
+        return ZX_OK;
     }
 }
 
@@ -567,12 +567,12 @@ void thread_kill(thread_t* t, bool block) {
     case THREAD_BLOCKED:
         /* thread is blocked on something and marked interruptable */
         if (t->interruptable)
-            thread_unblock_from_wait_queue(t, MX_ERR_INTERNAL_INTR_KILLED);
+            thread_unblock_from_wait_queue(t, ZX_ERR_INTERNAL_INTR_KILLED);
         break;
     case THREAD_SLEEPING:
         /* thread is sleeping */
         if (t->interruptable) {
-            t->blocked_status = MX_ERR_INTERNAL_INTR_KILLED;
+            t->blocked_status = ZX_ERR_INTERNAL_INTR_KILLED;
 
             sched_unblock(t);
         }
@@ -630,7 +630,7 @@ static void thread_do_suspend(void) {
         // Note: After calling this callback, we must not return without
         // calling the callback with THREAD_USER_STATE_RESUME.  That is
         // because those callbacks act as barriers which control when it is
-        // safe for the mx_thread_read_state()/mx_thread_write_state()
+        // safe for the zx_thread_read_state()/zx_thread_write_state()
         // syscalls to access the userland register state kept by thread_t.
         current_thread->user_callback(THREAD_USER_STATE_SUSPEND, current_thread->user_thread);
     }
@@ -678,8 +678,8 @@ void thread_process_pending_signals(void) {
     if (current_thread->signals & THREAD_SIGNAL_POLICY_EXCEPTION) {
         current_thread->signals &= ~THREAD_SIGNAL_POLICY_EXCEPTION;
         THREAD_UNLOCK(state);
-        mx_status_t status = arch_dispatch_user_policy_exception();
-        if (status != MX_OK) {
+        zx_status_t status = arch_dispatch_user_policy_exception();
+        if (status != ZX_OK) {
             panic("arch_dispatch_user_policy_exception() failed: status=%d\n",
                   status);
         }
@@ -790,7 +790,7 @@ static enum handler_return thread_sleep_handler(timer_t* timer, lk_time_t now, v
         return INT_NO_RESCHEDULE;
     }
 
-    t->blocked_status = MX_OK;
+    t->blocked_status = ZX_OK;
 
     sched_unblock(t);
 
@@ -842,9 +842,9 @@ status_t thread_sleep_etc(lk_time_t deadline, bool interruptable) {
     /* if we've been killed and going in interruptable, abort here */
     if (interruptable && unlikely((current_thread->signals))) {
         if (current_thread->signals & THREAD_SIGNAL_KILL) {
-            blocked_status = MX_ERR_INTERNAL_INTR_KILLED;
+            blocked_status = ZX_ERR_INTERNAL_INTR_KILLED;
         } else {
-            blocked_status = MX_ERR_INTERNAL_INTR_RETRY;
+            blocked_status = ZX_ERR_INTERNAL_INTR_RETRY;
         }
         goto out;
     }
@@ -854,7 +854,7 @@ status_t thread_sleep_etc(lk_time_t deadline, bool interruptable) {
     timer_set(&timer, deadline, TIMER_SLACK_LATE, slack, thread_sleep_handler, current_thread);
 
     current_thread->state = THREAD_SLEEPING;
-    current_thread->blocked_status = MX_OK;
+    current_thread->blocked_status = ZX_OK;
 
     current_thread->interruptable = interruptable;
     sched_block();
@@ -1210,7 +1210,7 @@ static enum handler_return wait_queue_timeout_handler(timer_t* timer, lk_time_t 
         return INT_NO_RESCHEDULE;
 
     enum handler_return ret = INT_NO_RESCHEDULE;
-    if (thread_unblock_from_wait_queue(thread, MX_ERR_TIMED_OUT) >= MX_OK) {
+    if (thread_unblock_from_wait_queue(thread, ZX_ERR_TIMED_OUT) >= ZX_OK) {
         ret = INT_RESCHEDULE;
     }
 
@@ -1230,11 +1230,11 @@ static enum handler_return wait_queue_timeout_handler(timer_t* timer, lk_time_t 
  * @param  deadline The time at which to abort the wait
  *
  * If the deadline is zero, this function returns immediately with
- * MX_ERR_TIMED_OUT.  If the deadline is INFINITE_TIME, this function
+ * ZX_ERR_TIMED_OUT.  If the deadline is INFINITE_TIME, this function
  * waits indefinitely.  Otherwise, this function returns with
- * MX_ERR_TIMED_OUT when the deadline occurs.
+ * ZX_ERR_TIMED_OUT when the deadline occurs.
  *
- * @return MX_ERR_TIMED_OUT on timeout, else returns the return
+ * @return ZX_ERR_TIMED_OUT on timeout, else returns the return
  * value specified when the queue was woken by wait_queue_wake_one().
  */
 status_t wait_queue_block(wait_queue_t* wait, lk_time_t deadline) {
@@ -1248,13 +1248,13 @@ status_t wait_queue_block(wait_queue_t* wait, lk_time_t deadline) {
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     if (deadline <= current_time())
-        return MX_ERR_TIMED_OUT;
+        return ZX_ERR_TIMED_OUT;
 
     if (current_thread->interruptable && unlikely(current_thread->signals)) {
         if (current_thread->signals & THREAD_SIGNAL_KILL) {
-            return MX_ERR_INTERNAL_INTR_KILLED;
+            return ZX_ERR_INTERNAL_INTR_KILLED;
         } else if (current_thread->signals & THREAD_SIGNAL_SUSPEND) {
-            return MX_ERR_INTERNAL_INTR_RETRY;
+            return ZX_ERR_INTERNAL_INTR_RETRY;
         }
     }
 
@@ -1262,7 +1262,7 @@ status_t wait_queue_block(wait_queue_t* wait, lk_time_t deadline) {
     wait->count++;
     current_thread->state = THREAD_BLOCKED;
     current_thread->blocking_wait_queue = wait;
-    current_thread->blocked_status = MX_OK;
+    current_thread->blocked_status = ZX_OK;
 
     /* if the deadline is nonzero or noninfinite, set a callback to yank us out of the queue */
     if (deadline != INFINITE_TIME) {
@@ -1424,7 +1424,7 @@ void wait_queue_destroy(wait_queue_t* wait) {
  * @param wait_queue_error  The return value which the new thread will receive
  *   from wait_queue_block().
  *
- * @return MX_ERR_BAD_STATE if thread was not in any wait queue.
+ * @return ZX_ERR_BAD_STATE if thread was not in any wait queue.
  */
 status_t thread_unblock_from_wait_queue(thread_t* t, status_t wait_queue_error) {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
@@ -1432,7 +1432,7 @@ status_t thread_unblock_from_wait_queue(thread_t* t, status_t wait_queue_error) 
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     if (t->state != THREAD_BLOCKED)
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
     DEBUG_ASSERT(t->blocking_wait_queue != NULL);
     DEBUG_ASSERT(t->blocking_wait_queue->magic == WAIT_QUEUE_MAGIC);
@@ -1445,7 +1445,7 @@ status_t thread_unblock_from_wait_queue(thread_t* t, status_t wait_queue_error) 
 
     sched_unblock(t);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 #if WITH_PANIC_BACKTRACE
@@ -1453,10 +1453,10 @@ static status_t thread_read_stack(thread_t* t, void* ptr, void* out, size_t sz) 
     if (!is_kernel_address((uintptr_t)ptr) ||
         (ptr < t->stack) ||
         (ptr > (t->stack + t->stack_size - sizeof(void*)))) {
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
     }
     memcpy(out, ptr, sz);
-    return MX_OK;
+    return ZX_OK;
 }
 
 int thread_get_backtrace(thread_t* t, void* fp, thread_backtrace_t* tb) {

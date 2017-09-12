@@ -4,7 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-SYSCALLS_SRC := system/public/magenta/syscalls.sysgen
+SYSCALLS_SRC := system/public/zircon/syscalls.sysgen
 
 GEN_DIR := $(BUILDDIR)/gen
 
@@ -12,28 +12,28 @@ STAMPY := $(GEN_DIR)/sysgen-stamp
 # This gets STAMPY built (and generation complete) early in the build.
 TARGET_MODDEPS += $(STAMPY)
 
-SG_MAGENTA := $(GENERATED_INCLUDES)/magenta
+SG_ZIRCON := $(GENERATED_INCLUDES)/zircon
 
-SG_KERNEL_CODE := $(SG_MAGENTA)/syscall-invocation-cases.inc
-SG_KERNEL_HEADER := $(SG_MAGENTA)/syscall-definitions.h
-SG_KERNEL_TRACE := $(SG_MAGENTA)/syscall-ktrace-info.inc
-SG_KERNEL_CATEGORY := $(SG_MAGENTA)/syscall-category.inc
-SG_KERNEL_WRAPPERS := $(SG_MAGENTA)/syscall-kernel-wrappers.inc
-SG_KERNEL_BRANCHES := $(SG_MAGENTA)/syscall-kernel-branches.S
+SG_KERNEL_CODE := $(SG_ZIRCON)/syscall-invocation-cases.inc
+SG_KERNEL_HEADER := $(SG_ZIRCON)/syscall-definitions.h
+SG_KERNEL_TRACE := $(SG_ZIRCON)/syscall-ktrace-info.inc
+SG_KERNEL_CATEGORY := $(SG_ZIRCON)/syscall-category.inc
+SG_KERNEL_WRAPPERS := $(SG_ZIRCON)/syscall-kernel-wrappers.inc
+SG_KERNEL_BRANCHES := $(SG_ZIRCON)/syscall-kernel-branches.S
 
-SG_ULIB_VDSO_HEADER := $(SG_MAGENTA)/syscall-vdso-definitions.h
-SG_ULIB_VDSO_WRAPPERS := $(SG_MAGENTA)/syscall-vdso-wrappers.inc
-SG_ULIB_SYSCALL_NUMBER := $(SG_MAGENTA)/mx-syscall-numbers.h
-SG_ULIB_ARM := $(SG_MAGENTA)/syscalls-arm64.S
-SG_ULIB_X86 := $(SG_MAGENTA)/syscalls-x86-64.S
+SG_ULIB_VDSO_HEADER := $(SG_ZIRCON)/syscall-vdso-definitions.h
+SG_ULIB_VDSO_WRAPPERS := $(SG_ZIRCON)/syscall-vdso-wrappers.inc
+SG_ULIB_SYSCALL_NUMBER := $(SG_ZIRCON)/zx-syscall-numbers.h
+SG_ULIB_ARM := $(SG_ZIRCON)/syscalls-arm64.S
+SG_ULIB_X86 := $(SG_ZIRCON)/syscalls-x86-64.S
 
-SG_SYSCALLS := $(SG_MAGENTA)/syscalls
+SG_SYSCALLS := $(SG_ZIRCON)/syscalls
 SG_PUBLIC_HEADER := $(SG_SYSCALLS)/definitions.h
 SG_PUBLIC_RUST := $(SG_SYSCALLS)/definitions.rs
 
-SG_SYSROOT_MAGENTA := $(BUILDSYSROOT)/include/magenta
-SG_SYSROOT_HEADER := $(SG_SYSROOT_MAGENTA)/syscalls/definitions.h
-SG_SYSROOT_RUST := $(SG_SYSROOT_MAGENTA)/syscalls/definitions.rs
+SG_SYSROOT_ZIRCON := $(BUILDSYSROOT)/include/zircon
+SG_SYSROOT_HEADER := $(SG_SYSROOT_ZIRCON)/syscalls/definitions.h
+SG_SYSROOT_RUST := $(SG_SYSROOT_ZIRCON)/syscalls/definitions.rs
 
 # STAMPY ultimately generates most of the files and paths here.
 $(STAMPY): $(SYSGEN) $(SYSCALLS_SRC)

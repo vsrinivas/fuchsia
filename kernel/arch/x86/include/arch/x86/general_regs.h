@@ -17,7 +17,7 @@
 #ifndef ASSEMBLY
 
 #include <assert.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <stdint.h>
 
 __BEGIN_CDECLS

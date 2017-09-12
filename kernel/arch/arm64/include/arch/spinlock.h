@@ -9,7 +9,7 @@
 
 #include <stdbool.h>
 #include <sys/types.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <arch/arm64/interrupt.h>
 
 __BEGIN_CDECLS

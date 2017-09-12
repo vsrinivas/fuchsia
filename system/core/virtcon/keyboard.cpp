@@ -11,8 +11,8 @@
 #include <hid/hid.h>
 #include <hid/usages.h>
 
-#include <magenta/device/input.h>
-#include <magenta/syscalls.h>
+#include <zircon/device/input.h>
+#include <zircon/syscalls.h>
 
 #include <port/port.h>
 
@@ -42,7 +42,7 @@ static int modifiers_from_keycode(uint8_t keycode) {
 static void set_caps_lock_led(int keyboard_fd, bool caps_lock) {
     // The following bit to set is specified in "Device Class Definition
     // for Human Interface Devices (HID)", Version 1.11,
-    // http://www.usb.org/developers/hidpage/HID1_11.pdf.  Magenta leaves
+    // http://www.usb.org/developers/hidpage/HID1_11.pdf.  Zircon leaves
     // USB keyboards in boot mode, so the relevant section is Appendix B,
     // "Boot Interface Descriptors", "B.1 Protocol 1 (Keyboard)".
     const int kUsbCapsLockBit = 1 << 1;
@@ -64,7 +64,7 @@ static void set_caps_lock_led(int keyboard_fd, bool caps_lock) {
 struct vc_input {
     port_fd_handler_t fh;
     port_handler_t th;
-    mx_handle_t timer;
+    zx_handle_t timer;
 
     keypress_handler_t handler;
     int fd;
@@ -120,15 +120,15 @@ static void vc_input_destroy(vc_input_t* vi) {
         port_fd_handler_done(&vi->fh);
         close(vi->fd);
     }
-    mx_handle_close(vi->timer);
+    zx_handle_close(vi->timer);
     free(vi);
 }
 
-static mx_status_t vc_timer_cb(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
+static zx_status_t vc_timer_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
     vc_input_t* vi = containerof(ph, vc_input_t, th);
 
     // if interval is infinite, repeat was canceled
-    if (vi->repeat_interval != MX_TIME_INFINITE) {
+    if (vi->repeat_interval != ZX_TIME_INFINITE) {
         vc_input_process(vi, vi->previous_report_buf);
         vc_input_process(vi, vi->report_buf);
 
@@ -137,48 +137,48 @@ static mx_status_t vc_timer_cb(port_handler_t* ph, mx_signals_t signals, uint32_
             vi->repeat_interval = HIGH_REPEAT_KEY_FREQ;
         }
 
-        mx_timer_set(vi->timer, mx_deadline_after(vi->repeat_interval), 0);
+        zx_timer_set(vi->timer, zx_deadline_after(vi->repeat_interval), 0);
     }
 
     // We've set this up as repeating so we always
     // return an error to avoid the auto-re-arm behaviour
     // of the port library
-    return MX_ERR_STOP;
+    return ZX_ERR_STOP;
 }
 
-static mx_status_t vc_input_cb(port_fd_handler_t* fh, unsigned pollevt, uint32_t evt) {
+static zx_status_t vc_input_cb(port_fd_handler_t* fh, unsigned pollevt, uint32_t evt) {
     vc_input_t* vi = containerof(fh, vc_input_t, fh);
     ssize_t r;
 
     if (!(pollevt & POLLIN)) {
-        r = MX_ERR_PEER_CLOSED;
+        r = ZX_ERR_PEER_CLOSED;
     } else {
         memcpy(vi->previous_report_buf, vi->report_buf, sizeof(vi->report_buf));
         r = read(vi->fd, vi->report_buf, sizeof(vi->report_buf));
     }
     if (r <= 0) {
         vc_input_destroy(vi);
-        return MX_ERR_STOP;
+        return ZX_ERR_STOP;
     }
     if ((size_t)(r) != sizeof(vi->report_buf)) {
-        vi->repeat_interval = MX_TIME_INFINITE;
-        return MX_OK;
+        vi->repeat_interval = ZX_TIME_INFINITE;
+        return ZX_OK;
     }
 
     if (vc_input_process(vi, vi->report_buf) && vi->repeat_enabled) {
         vi->repeat_interval = LOW_REPEAT_KEY_FREQ;
-        mx_timer_set(vi->timer, mx_deadline_after(vi->repeat_interval), 0);
+        zx_timer_set(vi->timer, zx_deadline_after(vi->repeat_interval), 0);
     } else {
-        vi->repeat_interval = MX_TIME_INFINITE;
+        vi->repeat_interval = ZX_TIME_INFINITE;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 #endif
 
-mx_status_t vc_input_create(vc_input_t** out, keypress_handler_t handler, int fd) {
+zx_status_t vc_input_create(vc_input_t** out, keypress_handler_t handler, int fd) {
     vc_input_t* vi = reinterpret_cast<vc_input_t*>(calloc(1, sizeof(vc_input_t)));
     if (vi == NULL) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     vi->fd = fd;
@@ -187,7 +187,7 @@ mx_status_t vc_input_create(vc_input_t** out, keypress_handler_t handler, int fd
     vi->cur_idx = 0;
     vi->prev_idx = 1;
     vi->modifiers = 0;
-    vi->repeat_interval = MX_TIME_INFINITE;
+    vi->repeat_interval = ZX_TIME_INFINITE;
     vi->repeat_enabled = true;
 
     char* flag = getenv("virtcon.keyrepeat");
@@ -197,48 +197,48 @@ mx_status_t vc_input_create(vc_input_t** out, keypress_handler_t handler, int fd
     }
 
 #if !BUILD_FOR_TEST
-    mx_status_t r;
-    if ((r = mx_timer_create(0, MX_CLOCK_MONOTONIC, &vi->timer)) < 0) {
+    zx_status_t r;
+    if ((r = zx_timer_create(0, ZX_CLOCK_MONOTONIC, &vi->timer)) < 0) {
         free(vi);
         return r;
     }
 
     vi->fh.func = vc_input_cb;
     if ((r = port_fd_handler_init(&vi->fh, fd, POLLIN | POLLHUP | POLLRDHUP)) < 0) {
-        mx_handle_close(vi->timer);
+        zx_handle_close(vi->timer);
         free(vi);
         return r;
     }
 
     if ((r = port_wait(&port, &vi->fh.ph)) < 0) {
         port_fd_handler_done(&vi->fh);
-        mx_handle_close(vi->timer);
+        zx_handle_close(vi->timer);
         free(vi);
         return r;
     }
 
     vi->th.handle = vi->timer;
-    vi->th.waitfor = MX_TIMER_SIGNALED;
+    vi->th.waitfor = ZX_TIMER_SIGNALED;
     vi->th.func = vc_timer_cb;
     port_wait_repeating(&port, &vi->th);
 #endif
 
     *out = vi;
-    return MX_OK;
+    return ZX_OK;
 }
 
 #if !BUILD_FOR_TEST
-mx_status_t new_input_device(int fd, keypress_handler_t handler) {
+zx_status_t new_input_device(int fd, keypress_handler_t handler) {
     // test to see if this is a device we can read
     int proto = INPUT_PROTO_NONE;
     ssize_t rc = ioctl_input_get_protocol(fd, &proto);
     if ((rc < 0) || (proto != INPUT_PROTO_KBD)) {
         // skip devices that aren't keyboards
         close(fd);
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
-    mx_status_t r;
+    zx_status_t r;
     vc_input_t* vi;
     if ((r = vc_input_create(&vi, handler, fd)) < 0) {
         close(fd);

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -15,6 +15,6 @@ __BEGIN_CDECLS
  * @param size The size of guest physical memory.
  * @param acpi_off The offset to write the ACPI table.
  */
-mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_off);
+zx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_off);
 
 __END_CDECLS

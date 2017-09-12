@@ -16,13 +16,13 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := \
     system/ulib/digest \
     third_party/ulib/cryptolib \
-    system/ulib/mxcpp \
+    system/ulib/zxcpp \
     system/ulib/fbl \
 
 MODULE_LIBS := \
     system/ulib/c \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/unittest \
 
 include make/module.mk

@@ -6,14 +6,14 @@
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 #include <limits.h>
-#include <magenta/process.h>
-#include <magenta/processargs.h>
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/object.h>
-#include <magenta/types.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/types.h>
 #include <math.h>
-#include <mxio/io.h>
+#include <fdio/io.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
@@ -42,8 +42,8 @@ unsigned int AnalyzeField(const fbl::Array<ReportInfo>& reports,
                           uintptr_t ReportInfo::*field);
 double ApproxBinomialCdf(double p, double N, double n);
 int TestRunMain(int argc, char** argv);
-mx_status_t LaunchTestRun(const char* bin, mx_handle_t h, mx_handle_t* out);
-int JoinProcess(mx_handle_t proc);
+zx_status_t LaunchTestRun(const char* bin, zx_handle_t h, zx_handle_t* out);
+int JoinProcess(zx_handle_t proc);
 } // namespace
 
 int main(int argc, char** argv) {
@@ -155,25 +155,25 @@ unsigned int AnalyzeField(const fbl::Array<ReportInfo>& reports,
 int GatherReports(const char* test_bin, fbl::Array<ReportInfo>* reports) {
     const size_t count = reports->size();
     for (unsigned int run = 0; run < count; ++run) {
-        mx_handle_t handles[2];
-        mx_status_t status = mx_channel_create(0, &handles[0], &handles[1]);
-        if (status != MX_OK) {
+        zx_handle_t handles[2];
+        zx_status_t status = zx_channel_create(0, &handles[0], &handles[1]);
+        if (status != ZX_OK) {
             printf("Failed to create channel for test run\n");
             return -1;
         }
 
-        mx_handle_t proc;
-        if ((status = LaunchTestRun(test_bin, handles[1], &proc)) != MX_OK) {
-            mx_handle_close(handles[0]);
+        zx_handle_t proc;
+        if ((status = LaunchTestRun(test_bin, handles[1], &proc)) != ZX_OK) {
+            zx_handle_close(handles[0]);
             printf("Failed to launch testrun: %d\n", status);
             return -1;
         }
 
         int ret = JoinProcess(proc);
-        mx_handle_close(proc);
+        zx_handle_close(proc);
 
         if (ret != 0) {
-            mx_handle_close(handles[0]);
+            zx_handle_close(handles[0]);
             printf("Failed to join testrun: %d\n", ret);
             return -1;
         }
@@ -181,21 +181,21 @@ int GatherReports(const char* test_bin, fbl::Array<ReportInfo>* reports) {
         ReportInfo* report = &(*reports)[run];
 
         uint32_t len = sizeof(*report);
-        status = mx_channel_read(handles[0], 0, report, NULL, len, 0, &len, NULL);
+        status = zx_channel_read(handles[0], 0, report, NULL, len, 0, &len, NULL);
         if (status != 0 || len != sizeof(*report)) {
             printf("Failed to read report: status %d, len %u\n", status, len);
-            mx_handle_close(handles[0]);
+            zx_handle_close(handles[0]);
             return -1;
         }
 
-        mx_handle_close(handles[0]);
+        zx_handle_close(handles[0]);
     }
     return 0;
 }
 
 int TestRunMain(int argc, char** argv) {
-    mx_handle_t report_pipe =
-        mx_get_startup_handle(PA_HND(PA_USER1, 0));
+    zx_handle_t report_pipe =
+        zx_get_startup_handle(PA_HND(PA_USER1, 0));
 
     ReportInfo report;
 
@@ -205,11 +205,11 @@ int TestRunMain(int argc, char** argv) {
     report.first_stack = (uintptr_t)&report_pipe;
     report.first_heap_alloc = (uintptr_t)malloc(1);
     report.libc = (uintptr_t)&memcpy;
-    report.vdso = (uintptr_t)&mx_channel_write;
+    report.vdso = (uintptr_t)&zx_channel_write;
 
-    mx_status_t status =
-        mx_channel_write(report_pipe, 0, &report, sizeof(report), NULL, 0);
-    if (status != MX_OK) {
+    zx_status_t status =
+        zx_channel_write(report_pipe, 0, &report, sizeof(report), NULL, 0);
+    if (status != ZX_OK) {
         return status;
     }
 
@@ -217,17 +217,17 @@ int TestRunMain(int argc, char** argv) {
 }
 
 // This function unconditionally consumes the handle h.
-mx_status_t LaunchTestRun(const char* bin, mx_handle_t h, mx_handle_t* out) {
+zx_status_t LaunchTestRun(const char* bin, zx_handle_t h, zx_handle_t* out) {
     launchpad_t* lp;
-    mx_handle_t proc;
-    mx_handle_t hnd[1];
-    mx_handle_t job;
+    zx_handle_t proc;
+    zx_handle_t hnd[1];
+    zx_handle_t job;
     uint32_t ids[1];
     const char* args[] = {bin, "testrun"};
     const char* errmsg;
 
-    mx_status_t status = mx_handle_duplicate(mx_job_default(), MX_RIGHT_SAME_RIGHTS, &job);
-    if (status != MX_OK) {
+    zx_status_t status = zx_handle_duplicate(zx_job_default(), ZX_RIGHT_SAME_RIGHTS, &job);
+    if (status != ZX_OK) {
         return status;
     }
 
@@ -239,26 +239,26 @@ mx_status_t LaunchTestRun(const char* bin, mx_handle_t h, mx_handle_t* out) {
     launchpad_add_handles(lp, fbl::count_of(hnd), hnd, ids);
 
     status = launchpad_go(lp, &proc, &errmsg);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         printf("launch failed (%d): %s\n", status, errmsg);
         return status;
     }
 
     *out = proc;
-    return MX_OK;
+    return ZX_OK;
 }
 
-int JoinProcess(mx_handle_t proc) {
-    mx_status_t status =
-        mx_object_wait_one(proc, MX_PROCESS_TERMINATED, MX_TIME_INFINITE, NULL);
-    if (status != MX_OK) {
+int JoinProcess(zx_handle_t proc) {
+    zx_status_t status =
+        zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL);
+    if (status != ZX_OK) {
         printf("join failed? %d\n", status);
         return -1;
     }
 
     // read the return code
-    mx_info_process_t proc_info;
-    if ((status = mx_object_get_info(proc, MX_INFO_PROCESS, &proc_info,
+    zx_info_process_t proc_info;
+    if ((status = zx_object_get_info(proc, ZX_INFO_PROCESS, &proc_info,
                                      sizeof(proc_info), NULL, NULL)) < 0) {
         printf("handle_get_info failed? %d\n", status);
         return -1;

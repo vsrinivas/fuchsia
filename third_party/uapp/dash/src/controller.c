@@ -5,13 +5,13 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <magenta/process.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
 
 #include <linenoise/linenoise.h>
 
-static mx_handle_t ctrl_channel = MX_HANDLE_INVALID;
+static zx_handle_t ctrl_channel = ZX_HANDLE_INVALID;
 
 // Maximum length of a history entry, including the ending '\n'.
 static const size_t kMaxHistoryEntrySize = 1024;
@@ -23,44 +23,44 @@ static const char kAddRemoteEntryCommand[] = "add_remote_entry:";
 static const size_t kAddRemoteEntryCommandLen = sizeof(kAddRemoteEntryCommand) - 1;
 
 void controller_init() {
-  ctrl_channel = mx_get_startup_handle(PA_HND(PA_USER1, 0));
+  ctrl_channel = zx_get_startup_handle(PA_HND(PA_USER1, 0));
 
-  if (ctrl_channel == MX_HANDLE_INVALID) {
+  if (ctrl_channel == ZX_HANDLE_INVALID) {
     // Running without a shell controller.
     return;
   }
 
   // Initialize the shell history.
-  mx_status_t status = mx_channel_write(ctrl_channel, 0, kGetHistoryCommand,
+  zx_status_t status = zx_channel_write(ctrl_channel, 0, kGetHistoryCommand,
                                         kGetHistoryCommandLen, NULL, 0);
-  if (status != MX_OK) {
+  if (status != ZX_OK) {
     fprintf(stderr,
             "Failed to write the get_history command to the ctrl channel.\n");
     return;
   }
 
-  status = mx_object_wait_one(ctrl_channel,
-                              MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
-                              mx_deadline_after(MX_SEC(5)), NULL);
-  if (status != MX_OK) {
+  status = zx_object_wait_one(ctrl_channel,
+                              ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                              zx_deadline_after(ZX_SEC(5)), NULL);
+  if (status != ZX_OK) {
     fprintf(stderr, "Failed to wait on the ctrl channel.\n");
     return;
   }
 
-  mx_handle_t history_vmo;
+  zx_handle_t history_vmo;
   uint32_t read_bytes = 0;
   uint32_t read_handles = 0;
-  status = mx_channel_read(ctrl_channel, 0, NULL, &history_vmo, 0,
+  status = zx_channel_read(ctrl_channel, 0, NULL, &history_vmo, 0,
                            1, &read_bytes, &read_handles);
-  if (status != MX_OK) {
+  if (status != ZX_OK) {
     fprintf(stderr,
             "Failed to read the ctrl response to the get_history command.\n");
     return;
   }
 
   uint64_t history_vmo_size = 0;
-  status = mx_vmo_get_size(history_vmo, &history_vmo_size);
-  if (status != MX_OK) {
+  status = zx_vmo_get_size(history_vmo, &history_vmo_size);
+  if (status != ZX_OK) {
     fprintf(stderr, "Failed to get the size of the history vmo.\n");
     return;
   }
@@ -69,9 +69,9 @@ void controller_init() {
   while (history_vmo_offset < history_vmo_size) {
     char buffer[kMaxHistoryEntrySize];
     size_t actually_read = 0;
-    status = mx_vmo_read(history_vmo, &buffer, history_vmo_offset,
+    status = zx_vmo_read(history_vmo, &buffer, history_vmo_offset,
                          sizeof(buffer), &actually_read);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
       fprintf(stderr, "Failed to read from the history vmo.\n");
       return;
     }
@@ -100,26 +100,26 @@ void controller_init() {
 }
 
 void controller_add_local_entry(const char* entry, size_t length) {
-  if (ctrl_channel == MX_HANDLE_INVALID || length > kMaxHistoryEntrySize) {
+  if (ctrl_channel == ZX_HANDLE_INVALID || length > kMaxHistoryEntrySize) {
     return;
   }
   char buffer[kAddLocalEntryCommandLen + kMaxHistoryEntrySize];
   memcpy(buffer, kAddLocalEntryCommand, kAddLocalEntryCommandLen);
   memcpy(buffer + kAddLocalEntryCommandLen, entry, length);
-  mx_status_t status = mx_channel_write(ctrl_channel, 0,
+  zx_status_t status = zx_channel_write(ctrl_channel, 0,
                                         buffer, kAddLocalEntryCommandLen + length,
                                         NULL, 0);
-  if (status != MX_OK) {
+  if (status != ZX_OK) {
     fprintf(stderr,
             "Failed to write the add_to_history command to the ctrl channel\n");
-    mx_handle_close(ctrl_channel);
-    ctrl_channel = MX_HANDLE_INVALID;
+    zx_handle_close(ctrl_channel);
+    ctrl_channel = ZX_HANDLE_INVALID;
     return;
   }
 }
 
 void controller_pull_remote_entries() {
-  if (ctrl_channel == MX_HANDLE_INVALID) {
+  if (ctrl_channel == ZX_HANDLE_INVALID) {
     return;
   }
 
@@ -129,9 +129,9 @@ void controller_pull_remote_entries() {
 
   while(true) {
     uint32_t read_bytes = 0;
-    mx_status_t status = mx_channel_read(ctrl_channel, 0, buffer, NULL,
+    zx_status_t status = zx_channel_read(ctrl_channel, 0, buffer, NULL,
                                          sizeof(buffer) - 1, 0, &read_bytes, NULL);
-    if (status == MX_OK) {
+    if (status == ZX_OK) {
       if (strncmp(buffer, kAddRemoteEntryCommand, kAddRemoteEntryCommandLen) != 0) {
         fprintf(stderr, "Unrecognized shell controller command.\n");
         continue;
@@ -139,7 +139,7 @@ void controller_pull_remote_entries() {
       buffer[read_bytes] = '\0';
       const char* start = buffer + kAddRemoteEntryCommandLen;
       linenoiseHistoryAdd(start);
-    } else if (status == MX_ERR_SHOULD_WAIT) {
+    } else if (status == ZX_ERR_SHOULD_WAIT) {
       return;
     } else {
       fprintf(stderr, "Failed to read the command from the ctrl channel, status: %u.\n", status);

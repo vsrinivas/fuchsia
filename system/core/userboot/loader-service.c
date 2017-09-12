@@ -7,8 +7,8 @@
 
 #pragma GCC visibility push(hidden)
 
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
 #include <string.h>
 
 #pragma GCC visibility pop
@@ -17,7 +17,7 @@
 #define LOAD_OBJECT_FILE_PREFIX "lib/"
 
 struct loader_state {
-    mx_handle_t log;
+    zx_handle_t log;
     struct bootfs* bootfs;
     char prefix[32];
     size_t prefix_len;
@@ -39,9 +39,9 @@ static void loader_config(struct loader_state* state, const char* string) {
     state->prefix_len = len;
 }
 
-static mx_handle_t try_load_object(struct loader_state* state,
+static zx_handle_t try_load_object(struct loader_state* state,
                                    const char* name, size_t prefix_len) {
-    char file[LOADER_SVC_MSG_MAX - offsetof(mx_loader_svc_msg_t, data) +
+    char file[LOADER_SVC_MSG_MAX - offsetof(zx_loader_svc_msg_t, data) +
               sizeof(LOAD_OBJECT_FILE_PREFIX) + prefix_len];
     memcpy(file, LOAD_OBJECT_FILE_PREFIX, sizeof(LOAD_OBJECT_FILE_PREFIX) - 1);
     memcpy(&file[sizeof(LOAD_OBJECT_FILE_PREFIX) - 1],
@@ -51,38 +51,38 @@ static mx_handle_t try_load_object(struct loader_state* state,
     return bootfs_open(state->log, "shared library", state->bootfs, file);
 }
 
-static mx_handle_t load_object(struct loader_state* state, const char* name) {
-    mx_handle_t vmo = try_load_object(state, name, state->prefix_len);
-    if (vmo == MX_HANDLE_INVALID && state->prefix_len > 0 && !state->exclusive)
+static zx_handle_t load_object(struct loader_state* state, const char* name) {
+    zx_handle_t vmo = try_load_object(state, name, state->prefix_len);
+    if (vmo == ZX_HANDLE_INVALID && state->prefix_len > 0 && !state->exclusive)
         vmo = try_load_object(state, name, 0);
-    if (vmo == MX_HANDLE_INVALID)
+    if (vmo == ZX_HANDLE_INVALID)
         fail(state->log, "cannot find shared library '%s'", name);
     return vmo;
 }
 
 static bool handle_loader_rpc(struct loader_state* state,
-                              mx_handle_t channel) {
+                              zx_handle_t channel) {
     union {
         uint8_t buffer[1024];
-        mx_loader_svc_msg_t msg;
+        zx_loader_svc_msg_t msg;
     } msgbuf;
-    mx_handle_t reqhandle;
+    zx_handle_t reqhandle;
     const char* const string = (const char*)msgbuf.msg.data;
 
     uint32_t size;
     uint32_t hcount;
-    mx_status_t status = mx_channel_read(
+    zx_status_t status = zx_channel_read(
         channel, 0, &msgbuf, &reqhandle, sizeof(msgbuf), 1, &size, &hcount);
 
     // This is the normal error for the other end going away,
     // which happens when the process dies.
-    if (status == MX_ERR_PEER_CLOSED) {
+    if (status == ZX_ERR_PEER_CLOSED) {
         printl(state->log, "loader-service channel peer closed on read");
         return false;
     }
 
     check(state->log, status,
-          "mx_channel_read on loader-service channel failed");
+          "zx_channel_read on loader-service channel failed");
 
     if (size < sizeof(msgbuf.msg))
         fail(state->log, "loader-service request message too small");
@@ -91,12 +91,12 @@ static bool handle_loader_rpc(struct loader_state* state,
     // we need to receive (and discard) the handle to politely
     // NAK clone requests
     if (hcount == 1)
-        mx_handle_close(reqhandle);
+        zx_handle_close(reqhandle);
 
     // Forcibly null-terminate the message data argument.
     msgbuf.buffer[sizeof(msgbuf) - 1] = 0;
 
-    mx_handle_t handle = MX_HANDLE_INVALID;
+    zx_handle_t handle = ZX_HANDLE_INVALID;
     switch (msgbuf.msg.opcode) {
     case LOADER_SVC_OP_DONE:
         printl(state->log, "loader-service received DONE request");
@@ -115,7 +115,7 @@ static bool handle_loader_rpc(struct loader_state* state,
         break;
 
     case LOADER_SVC_OP_CLONE:
-        msgbuf.msg.arg = MX_ERR_NOT_SUPPORTED;
+        msgbuf.msg.arg = ZX_ERR_NOT_SUPPORTED;
         goto error_reply;
 
     case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
@@ -128,21 +128,21 @@ static bool handle_loader_rpc(struct loader_state* state,
     }
 
     // txid returned as received from the client.
-    msgbuf.msg.arg = MX_OK;
+    msgbuf.msg.arg = ZX_OK;
 error_reply:
     msgbuf.msg.opcode = LOADER_SVC_OP_STATUS;
     msgbuf.msg.reserved0 = 0;
     msgbuf.msg.reserved1 = 0;
-    status = mx_channel_write(channel, 0, &msgbuf.msg, sizeof(msgbuf.msg),
-                              &handle, handle == MX_HANDLE_INVALID ? 0 : 1);
+    status = zx_channel_write(channel, 0, &msgbuf.msg, sizeof(msgbuf.msg),
+                              &handle, handle == ZX_HANDLE_INVALID ? 0 : 1);
     check(state->log, status,
-          "mx_channel_write on loader-service channel failed");
+          "zx_channel_write on loader-service channel failed");
 
     return true;
 }
 
-void loader_service(mx_handle_t log, struct bootfs* bootfs,
-                    mx_handle_t channel) {
+void loader_service(zx_handle_t log, struct bootfs* bootfs,
+                    zx_handle_t channel) {
     printl(log, "waiting for loader-service requests...");
 
     struct loader_state state = {
@@ -151,26 +151,26 @@ void loader_service(mx_handle_t log, struct bootfs* bootfs,
     };
 
     do {
-        mx_signals_t signals;
-        mx_status_t status = mx_object_wait_one(
-            channel, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
-            MX_TIME_INFINITE, &signals);
-        if (status == MX_ERR_BAD_STATE) {
+        zx_signals_t signals;
+        zx_status_t status = zx_object_wait_one(
+            channel, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+            ZX_TIME_INFINITE, &signals);
+        if (status == ZX_ERR_BAD_STATE) {
             // This is the normal error for the other end going away,
             // which happens when the process dies.
             break;
         }
         check(log, status,
-              "mx_object_wait_one failed on loader-service channel");
-        if (signals & MX_CHANNEL_PEER_CLOSED) {
+              "zx_object_wait_one failed on loader-service channel");
+        if (signals & ZX_CHANNEL_PEER_CLOSED) {
             printl(log, "loader-service channel peer closed");
             break;
         }
-        if (!(signals & MX_CHANNEL_READABLE)) {
+        if (!(signals & ZX_CHANNEL_READABLE)) {
             fail(log, "unexpected signal state on loader-service channel");
         }
     } while (handle_loader_rpc(&state, channel));
 
-    check(log, mx_handle_close(channel),
-          "mx_handle_close failed on loader-service channel");
+    check(log, zx_handle_close(channel),
+          "zx_handle_close failed on loader-service channel");
 }

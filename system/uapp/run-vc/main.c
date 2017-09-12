@@ -6,14 +6,14 @@
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 #include <limits.h>
-#include <magenta/device/dmctl.h>
-#include <magenta/process.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
-#include <mxio/io.h>
-#include <mxio/util.h>
-#include <mxio/watcher.h>
+#include <zircon/device/dmctl.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
+#include <fdio/io.h>
+#include <fdio/util.h>
+#include <fdio/watcher.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,8 +31,8 @@ int main(int argc, char** argv) {
         }
     }
 
-    mx_handle_t h0, h1;
-    if (mx_channel_create(0, &h0, &h1) < 0) {
+    zx_handle_t h0, h1;
+    if (zx_channel_create(0, &h0, &h1) < 0) {
         return -1;
     }
     if (ioctl_dmctl_open_virtcon(fd, &h1) < 0) {
@@ -40,19 +40,19 @@ int main(int argc, char** argv) {
     }
     close(fd);
 
-    mx_object_wait_one(h0, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
-                       MX_TIME_INFINITE, NULL);
+    zx_object_wait_one(h0, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                       ZX_TIME_INFINITE, NULL);
 
     uint32_t types[2];
-    mx_handle_t handles[2];
+    zx_handle_t handles[2];
     uint32_t dcount, hcount;
-    if (mx_channel_read(h0, 0, types, handles, sizeof(types), 2, &dcount, &hcount) < 0) {
+    if (zx_channel_read(h0, 0, types, handles, sizeof(types), 2, &dcount, &hcount) < 0) {
         return -1;
     }
     if ((dcount != sizeof(types)) || (hcount != 2)) {
         return -1;
     }
-    mx_handle_close(h0);
+    zx_handle_close(h0);
 
     // start shell if no arguments
     if (argc == 1) {
@@ -71,12 +71,12 @@ int main(int argc, char** argv) {
 
     launchpad_t* lp;
     launchpad_create(0, pname, &lp);
-    launchpad_clone(lp, LP_CLONE_MXIO_NAMESPACE | LP_CLONE_ENVIRON);
+    launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE | LP_CLONE_ENVIRON);
     launchpad_add_handles(lp, 2, handles, types);
     launchpad_set_args(lp, argc, (const char* const*) argv);
     launchpad_load_from_file(lp, argv[0]);
 
-    mx_status_t status;
+    zx_status_t status;
     const char* errmsg;
     if ((status = launchpad_go(lp, NULL, &errmsg)) < 0) {
         fprintf(stderr, "error %d launching: %s\n", status, errmsg);

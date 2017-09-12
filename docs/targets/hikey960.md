@@ -1,4 +1,4 @@
-#  Magenta on 96boards.org HiKey960
+#  Zircon on 96boards.org HiKey960
 
 ## Requirements
 
@@ -26,11 +26,11 @@
 + [AOSP HiKey960 Information](https://source.android.com/source/devices#hikey960)
 
 ## Building
-To build magenta, invoke the following command from the top level Magenta
+To build zircon, invoke the following command from the top level Zircon
 directory (ensure that you have checked out the ARM64 toolchains). For more
 information, see `docs/getting_started.md`:
 
-      make magenta-hikey960-arm64
+      make zircon-hikey960-arm64
 
 ## Setup
 Periodically check this file as the setup workflow will change/improve.
@@ -59,7 +59,7 @@ If using a FTDI style serial adapter:
 
 In order to flash the board, it will need to be connected to your workstation via the USB-C OTG connection on the HiKey960.
 
-To install Magenta, the HiKey960 will need to be placed in fastboot mode.  This can be done in one of two ways:
+To install Zircon, the HiKey960 will need to be placed in fastboot mode.  This can be done in one of two ways:
 
 1. Using the DIP switches on the back of the board.  To place in fastboot mode the switches should be in the following positions:
 
@@ -87,7 +87,7 @@ To install Magenta, the HiKey960 will need to be placed in fastboot mode.  This 
         usbloader: usb: online (highspeed)
         usb: [USBFINFO]usb enum done
 
-Once the board is in fastboot, the following script can be run from the magenta root director to flash the necessary files onto the board:
+Once the board is in fastboot, the following script can be run from the zircon root director to flash the necessary files onto the board:
 
         ./scripts/flash-hikey
 

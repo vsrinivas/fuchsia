@@ -32,9 +32,9 @@
  * SUCH DAMAGE.
  */
 
-#include <magenta/process.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -76,7 +76,7 @@ extern int etext();
 
 STATIC void read_profile(const char *);
 STATIC char *find_dot_file(char *);
-STATIC void evalifsubshell(mx_handle_t);
+STATIC void evalifsubshell(zx_handle_t);
 static int cmdloop(int);
 int main(int, char **);
 
@@ -147,9 +147,9 @@ main(int argc, char **argv)
 	init();
 	setstackmark(&smark);
 
-	mx_handle_t ast_vmo = mx_get_startup_handle(PA_HND(PA_USER0, 0));
+	zx_handle_t ast_vmo = zx_get_startup_handle(PA_HND(PA_USER0, 0));
 
-	login = procargs(argc, argv, ast_vmo != MX_HANDLE_INVALID);
+	login = procargs(argc, argv, ast_vmo != ZX_HANDLE_INVALID);
 
         // Fuchsia: recognize if we have been invoked for the purpose of evaluating
 	// an expression (i.e., node) and exiting immediately.
@@ -199,20 +199,20 @@ state4:	/* XXX ??? - why isn't this before the "if" statement */
 }
 
 STATIC void
-evalifsubshell(mx_handle_t ast_vmo)
+evalifsubshell(zx_handle_t ast_vmo)
 {
-	if (ast_vmo == MX_HANDLE_INVALID)
+	if (ast_vmo == ZX_HANDLE_INVALID)
 		return;
 
 	uint64_t size;
-	mx_status_t status = mx_vmo_get_size(ast_vmo, &size);
-	if (status != MX_OK)
+	zx_status_t status = zx_vmo_get_size(ast_vmo, &size);
+	if (status != ZX_OK)
 		exit(status);
 
 	char buffer[size];
 
 	size_t num_read;
-	status = mx_vmo_read(ast_vmo, buffer, 0, size, &num_read);
+	status = zx_vmo_read(ast_vmo, buffer, 0, size, &num_read);
 	if (status < 0 || (size_t)num_read != size)
 		exit(status);
 

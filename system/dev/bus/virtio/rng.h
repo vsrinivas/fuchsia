@@ -7,7 +7,7 @@
 #include "ring.h"
 
 #include <ddk/io-buffer.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <stdlib.h>
 
 namespace virtio {
@@ -16,10 +16,10 @@ class Ring;
 
 class RngDevice : public Device {
 public:
-    RngDevice(mx_device_t* device);
+    RngDevice(zx_device_t* device);
     virtual ~RngDevice();
 
-    virtual mx_status_t Init();
+    virtual zx_status_t Init();
 
     virtual void IrqRingUpdate();
     virtual void IrqConfigChange();
@@ -34,7 +34,7 @@ private:
     static int SeedThreadEntry(void* arg);
 
     // the method called by SeedThreadEntry() to actually launch a request
-    mx_status_t Request();
+    zx_status_t Request();
 
     // the thread that seeds the system CPRNG periodically
     thrd_t seed_thread_;
@@ -45,7 +45,7 @@ private:
     Ring vring_ = {this};
 
     // the buffer used to receive entropy
-    static constexpr size_t kBufferSize = MX_CPRNG_ADD_ENTROPY_MAX_LEN;
+    static constexpr size_t kBufferSize = ZX_CPRNG_ADD_ENTROPY_MAX_LEN;
     io_buffer_t buf_;
 
 };

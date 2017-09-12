@@ -12,7 +12,7 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <platform.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -141,8 +141,8 @@ static bool run_unittest(const unittest_testcase_registration_t* testcase) {
                     testcase->test_cnt == 1 ? "" : "s");
 
     void* context = NULL;
-    mx_status_t init_res = testcase->init ? testcase->init(&context) : MX_OK;
-    if (init_res != MX_OK) {
+    zx_status_t init_res = testcase->init ? testcase->init(&context) : ZX_OK;
+    if (init_res != ZX_OK) {
         printf("%s : FAILED to initialize testcase! (status %d)", testcase->name, init_res);
         return false;
     }

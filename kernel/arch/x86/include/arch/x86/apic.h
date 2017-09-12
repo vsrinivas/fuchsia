@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <dev/interrupt.h>
 
 __BEGIN_CDECLS

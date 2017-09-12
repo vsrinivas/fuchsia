@@ -4,5 +4,5 @@
 
 #pragma once
 
-#include <magenta/driver/binding.h>
+#include <zircon/driver/binding.h>
 

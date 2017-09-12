@@ -14,6 +14,6 @@ MODULE_SRCS += \
 
 MODULE_NAME := thread-injection-injected
 
-MODULE_LIBS := system/ulib/magenta system/ulib/c
+MODULE_LIBS := system/ulib/zircon system/ulib/c
 
 include make/module.mk

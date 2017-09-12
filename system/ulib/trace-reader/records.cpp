@@ -42,45 +42,45 @@ const char* ThreadStateToString(ThreadState state) {
     return "???";
 }
 
-const char* ObjectTypeToString(mx_obj_type_t type) {
-    static_assert(MX_OBJ_TYPE_LAST == 23, "need to update switch below");
+const char* ObjectTypeToString(zx_obj_type_t type) {
+    static_assert(ZX_OBJ_TYPE_LAST == 23, "need to update switch below");
 
     switch (type) {
-    case MX_OBJ_TYPE_PROCESS:
+    case ZX_OBJ_TYPE_PROCESS:
         return "process";
-    case MX_OBJ_TYPE_THREAD:
+    case ZX_OBJ_TYPE_THREAD:
         return "thread";
-    case MX_OBJ_TYPE_VMO:
+    case ZX_OBJ_TYPE_VMO:
         return "vmo";
-    case MX_OBJ_TYPE_CHANNEL:
+    case ZX_OBJ_TYPE_CHANNEL:
         return "channel";
-    case MX_OBJ_TYPE_EVENT:
+    case ZX_OBJ_TYPE_EVENT:
         return "event";
-    case MX_OBJ_TYPE_PORT:
+    case ZX_OBJ_TYPE_PORT:
         return "port";
-    case MX_OBJ_TYPE_INTERRUPT:
+    case ZX_OBJ_TYPE_INTERRUPT:
         return "interrupt";
-    case MX_OBJ_TYPE_PCI_DEVICE:
+    case ZX_OBJ_TYPE_PCI_DEVICE:
         return "pci-device";
-    case MX_OBJ_TYPE_LOG:
+    case ZX_OBJ_TYPE_LOG:
         return "log";
-    case MX_OBJ_TYPE_SOCKET:
+    case ZX_OBJ_TYPE_SOCKET:
         return "socket";
-    case MX_OBJ_TYPE_RESOURCE:
+    case ZX_OBJ_TYPE_RESOURCE:
         return "resource";
-    case MX_OBJ_TYPE_EVENT_PAIR:
+    case ZX_OBJ_TYPE_EVENT_PAIR:
         return "event-pair";
-    case MX_OBJ_TYPE_JOB:
+    case ZX_OBJ_TYPE_JOB:
         return "job";
-    case MX_OBJ_TYPE_VMAR:
+    case ZX_OBJ_TYPE_VMAR:
         return "vmar";
-    case MX_OBJ_TYPE_FIFO:
+    case ZX_OBJ_TYPE_FIFO:
         return "fifo";
-    case MX_OBJ_TYPE_GUEST:
+    case ZX_OBJ_TYPE_GUEST:
         return "guest";
-    case MX_OBJ_TYPE_VCPU:
+    case ZX_OBJ_TYPE_VCPU:
         return "vcpu";
-    case MX_OBJ_TYPE_TIMER:
+    case ZX_OBJ_TYPE_TIMER:
         return "timer";
     default:
         return "???";
@@ -179,7 +179,7 @@ fbl::String ArgumentValue::ToString() const {
     case ArgumentType::kKoid:
         return fbl::StringPrintf("koid(%" PRIu64 ")", koid_);
     }
-    MX_ASSERT(false);
+    ZX_ASSERT(false);
 }
 
 fbl::String Argument::ToString() const {
@@ -218,7 +218,7 @@ fbl::String MetadataContent::ToString() const {
         return fbl::StringPrintf("ProviderSection(id: %" PRId32 ")",
                                   provider_section_.id);
     }
-    MX_ASSERT(false);
+    ZX_ASSERT(false);
 }
 
 void EventData::Destroy() {
@@ -323,7 +323,7 @@ fbl::String EventData::ToString() const {
         return fbl::StringPrintf("FlowEnd(id: %" PRIu64 ")",
                                   flow_end_.id);
     }
-    MX_ASSERT(false);
+    ZX_ASSERT(false);
 }
 
 void Record::Destroy() {
@@ -426,7 +426,7 @@ fbl::String Record::ToString() const {
                                   log_.timestamp, log_.process_thread.ToString().c_str(),
                                   log_.message.c_str());
     }
-    MX_ASSERT(false);
+    ZX_ASSERT(false);
 }
 
 } // namespace trace

@@ -10,26 +10,26 @@
 
 #include <fs/vfs.h>
 
-#include <mxio/io.h>
-#include <mxio/remoteio.h>
-#include <mxio/util.h>
-#include <mxio/vfs.h>
+#include <fdio/io.h>
+#include <fdio/remoteio.h>
+#include <fdio/util.h>
+#include <fdio/vfs.h>
 
-#include <magenta/device/vfs.h>
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
+#include <zircon/device/vfs.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include "blobstore-private.h"
 
 namespace blobstore {
 
-mx_status_t VnodeBlob::GetHandles(uint32_t flags, mx_handle_t* hnds,
+zx_status_t VnodeBlob::GetHandles(uint32_t flags, zx_handle_t* hnds,
                                   uint32_t* type, void* extra, uint32_t* esize) {
-    *type = MXIO_PROTOCOL_REMOTE;
+    *type = FDIO_PROTOCOL_REMOTE;
     if (IsDirectory()) {
         return 0;
     }
-    mx_status_t r = GetReadableEvent(&hnds[0]);
+    zx_status_t r = GetReadableEvent(&hnds[0]);
     if (r < 0) {
         return r;
     }

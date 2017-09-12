@@ -11,7 +11,7 @@
 #include <stdint.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 #define WATCHDOG_MAGIC 'wdog'
 
@@ -33,7 +33,7 @@ typedef struct watchdog {
  */
 void watchdog_handler(watchdog_t *dog) __NO_RETURN;
 
-mx_status_t watchdog_init(watchdog_t *dog, lk_time_t timeout, const char *name);
+zx_status_t watchdog_init(watchdog_t *dog, lk_time_t timeout, const char *name);
 void        watchdog_set_enabled(watchdog_t *dog, bool enabled);
 void        watchdog_pet(watchdog_t *dog);
 
@@ -58,10 +58,10 @@ void        watchdog_pet(watchdog_t *dog);
  * something managed to break timers on LK.
  */
 
-extern mx_status_t platform_watchdog_init(lk_time_t  target_timeout,
+extern zx_status_t platform_watchdog_init(lk_time_t  target_timeout,
                                           lk_time_t *recommended_pet_period);
 extern void platform_watchdog_set_enabled(bool enabled);
 extern void platform_watchdog_pet(void);
 
-mx_status_t watchdog_hw_init(lk_time_t timeout);
+zx_status_t watchdog_hw_init(lk_time_t timeout);
 void watchdog_hw_set_enabled(bool enabled);

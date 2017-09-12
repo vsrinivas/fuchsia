@@ -20,10 +20,10 @@ syntax. Remove that line in [parser.h](../system/host/fidl/parser.h) - its in th
 Clear any existing build and then build with the afl-fuzz compiler wrappers.
 
 ```
-cd $MAGENTA_DIR
-rm -fr build-magenta-pc-x86-64
+cd $ZIRCON_DIR
+rm -fr build-zircon-pc-x86-64
 PATH=$PWD/prebuilt/downloads/clang+llvm-x86_64-linux/bin/:$PATH:$AFL_PATH make \
-  build-magenta-pc-x86-64/tools/fidl HOST_TOOLCHAIN_PREFIX=afl-
+  build-zircon-pc-x86-64/tools/fidl HOST_TOOLCHAIN_PREFIX=afl-
 ```
 adjusting if you're not building on x86-64 Linux, etc.
 
@@ -33,7 +33,7 @@ The parser includes some examples to use as inputs. As fidl2 becomes adopted we 
 the different interfaces declared across our tree, but for now we use what's in `system/host/fidl/examples`.
 
 ```
-$AFL_PATH/afl-fuzz -i system/host/fidl/examples -o fidl-fuzz-out build-magenta-pc-x86-64/tools/fidl dump '@@'
+$AFL_PATH/afl-fuzz -i system/host/fidl/examples -o fidl-fuzz-out build-zircon-pc-x86-64/tools/fidl dump '@@'
 ```
 
 ## Results

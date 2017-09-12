@@ -97,11 +97,11 @@ void MarkPagesInUse(vaddr_t va, size_t len) {
 status_t ProtectRegion(VmAspace* aspace, vaddr_t va, uint arch_mmu_flags) {
     auto r = aspace->FindRegion(va);
     if (!r)
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
 
     auto vm_mapping = r->as_vm_mapping();
     if (!vm_mapping)
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
 
     return vm_mapping->Protect(vm_mapping->base(), vm_mapping->size(), arch_mmu_flags);
 }
@@ -199,9 +199,9 @@ void vm_init_postheap(uint level) {
                 region->base, region->base + region->size, region->arch_mmu_flags, region->name);
 
         status_t status = aspace->ReserveSpace(region->name, region->size, region->base);
-        ASSERT(status == MX_OK);
+        ASSERT(status == ZX_OK);
         status = ProtectRegion(aspace, region->base, region->arch_mmu_flags);
-        ASSERT(status == MX_OK);
+        ASSERT(status == ZX_OK);
     }
 
     // mmu_initial_mappings should reflect where we are now, use it to construct the actual
@@ -235,17 +235,17 @@ void vm_init_postheap(uint level) {
             // a mapping between it and the next closest one.
             if (next_kernel_region != vaddr) {
                 status_t status = aspace->ReserveSpace(map->name, next_kernel_region - vaddr, vaddr);
-                ASSERT(status == MX_OK);
+                ASSERT(status == ZX_OK);
 
                 if (map->flags & MMU_INITIAL_MAPPING_TEMPORARY) {
                     // If the region is part of a temporary mapping, immediately unmap it
                     dprintf(INFO, "VM: freeing region [%016" PRIxPTR ", %016" PRIxPTR ")\n", vaddr, next_kernel_region);
                     status = aspace->FreeRegion(vaddr);
-                    ASSERT(status == MX_OK);
+                    ASSERT(status == ZX_OK);
                 } else {
                     // Otherwise, mark it no-exec since it's not explicitly code
                     status = ProtectRegion(aspace, vaddr, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
-                    ASSERT(status == MX_OK);
+                    ASSERT(status == ZX_OK);
                 }
             }
             vaddr = next_kernel_region_end;
@@ -263,7 +263,7 @@ void vm_init_postheap(uint level) {
     vaddr_t end_first_mapping = first_mapping->virt + first_mapping->size;
 
     status_t status = aspace->ReserveSpace("random_padding", random_size, end_first_mapping);
-    ASSERT(status == MX_OK);
+    ASSERT(status == ZX_OK);
     LTRACEF("VM: aspace random padding size: %#" PRIxPTR "\n", random_size);
 }
 
@@ -303,7 +303,7 @@ static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
         printf("%s virt2phys <address>\n", argv[0].str);
         printf("%s map <phys> <virt> <count> <flags>\n", argv[0].str);
         printf("%s unmap <virt> <count>\n", argv[0].str);
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
 
     if (!strcmp(argv[1].str, "phys2virt")) {
@@ -361,7 +361,7 @@ static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
         goto usage;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 STATIC_COMMAND_START

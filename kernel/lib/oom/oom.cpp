@@ -9,7 +9,7 @@
 #include <kernel/thread.h>
 #include <vm/pmm.h>
 #include <lib/console.h>
-#include <magenta/errors.h>
+#include <zircon/errors.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <platform.h>
@@ -177,8 +177,8 @@ static int cmd_oom(int argc, const cmd_args* argv, uint32_t flags) {
             lk_time_t deadline = current_time() + 4 * oom_sleep_duration_ns;
 
             lock.release();
-            mx_status_t s = thread_join(t, nullptr, deadline);
-            if (s == MX_OK) {
+            zx_status_t s = thread_join(t, nullptr, deadline);
+            if (s == ZX_OK) {
                 printf("OOM thread stopped.\n");
             } else {
                 printf("Error stopping OOM thread: %d\n", s);

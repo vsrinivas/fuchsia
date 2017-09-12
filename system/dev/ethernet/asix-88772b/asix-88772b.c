@@ -7,8 +7,8 @@
 #include <ddk/binding.h>
 #include <ddk/protocol/ethernet.h>
 #include <driver/usb.h>
-#include <magenta/device/ethernet.h>
-#include <magenta/listnode.h>
+#include <zircon/device/ethernet.h>
+#include <zircon/listnode.h>
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -27,8 +27,8 @@
 #define ETH_HEADER_SIZE 4
 
 typedef struct {
-    mx_device_t* device;
-    mx_device_t* usb_device;
+    zx_device_t* device;
+    zx_device_t* usb_device;
     usb_protocol_t usb;
 
     uint8_t phy_id;
@@ -49,21 +49,21 @@ typedef struct {
     mtx_t mutex;
 } ax88772b_t;
 
-static mx_status_t ax88772b_set_value(ax88772b_t* eth, uint8_t request, uint16_t value) {
+static zx_status_t ax88772b_set_value(ax88772b_t* eth, uint8_t request, uint16_t value) {
     return usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                       request, value, 0, NULL, 0, MX_TIME_INFINITE);
+                       request, value, 0, NULL, 0, ZX_TIME_INFINITE);
 }
 
-static mx_status_t ax88772b_mdio_read(ax88772b_t* eth, uint8_t offset, uint16_t* value) {
+static zx_status_t ax88772b_mdio_read(ax88772b_t* eth, uint8_t offset, uint16_t* value) {
 
-    mx_status_t status = ax88772b_set_value(eth, ASIX_REQ_SW_SERIAL_MGMT_CTRL, 0);
+    zx_status_t status = ax88772b_set_value(eth, ASIX_REQ_SW_SERIAL_MGMT_CTRL, 0);
     if (status < 0) {
         printf("ASIX_REQ_SW_SERIAL_MGMT_CTRL failed\n");
         return status;
     }
     status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
                          ASIX_REQ_PHY_READ, eth->phy_id, offset,
-                         value, sizeof(*value), MX_TIME_INFINITE);
+                         value, sizeof(*value), ZX_TIME_INFINITE);
     if (status < 0) {
         printf("ASIX_REQ_PHY_READ failed\n");
         return status;
@@ -74,19 +74,19 @@ static mx_status_t ax88772b_mdio_read(ax88772b_t* eth, uint8_t offset, uint16_t*
         return status;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ax88772b_mdio_write(ax88772b_t* eth, uint8_t offset, uint16_t value) {
+static zx_status_t ax88772b_mdio_write(ax88772b_t* eth, uint8_t offset, uint16_t value) {
 
-    mx_status_t status = ax88772b_set_value(eth, ASIX_REQ_SW_SERIAL_MGMT_CTRL, 0);
+    zx_status_t status = ax88772b_set_value(eth, ASIX_REQ_SW_SERIAL_MGMT_CTRL, 0);
     if (status < 0) {
         printf("ASIX_REQ_SW_SERIAL_MGMT_CTRL failed\n");
         return status;
     }
     status = usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
                          ASIX_REQ_PHY_WRITE, eth->phy_id, offset,
-                         &value, sizeof(value), MX_TIME_INFINITE);
+                         &value, sizeof(value), ZX_TIME_INFINITE);
     if (status < 0) {
         printf("ASIX_REQ_PHY_READ failed\n");
         return status;
@@ -97,25 +97,25 @@ static mx_status_t ax88772b_mdio_write(ax88772b_t* eth, uint8_t offset, uint16_t
         return status;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ax88772b_wait_for_phy(ax88772b_t* eth) {
+static zx_status_t ax88772b_wait_for_phy(ax88772b_t* eth) {
 
     for (int i = 0; i < 100; i++) {
         uint16_t bmsr;
-        mx_status_t status = ax88772b_mdio_read(eth, ASIX_PHY_BMSR, &bmsr);
+        zx_status_t status = ax88772b_mdio_read(eth, ASIX_PHY_BMSR, &bmsr);
         if (status < 0) {
             printf("ax88772b_mdio_read failed\n");
             return status;
         }
         if (bmsr)
-            return MX_OK;
+            return ZX_OK;
         usleep(50);
     }
 
     printf("ax88772b_wait_for_phy timeout\n");
-    return MX_ERR_TIMED_OUT;
+    return ZX_ERR_TIMED_OUT;
 }
 
 static void queue_interrupt_requests_locked(ax88772b_t* eth) {
@@ -164,13 +164,13 @@ static void ax88772b_recv(ax88772b_t* eth, iotxn_t* request) {
 static void ax88772b_read_complete(iotxn_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
-    if (request->status == MX_ERR_IO_NOT_PRESENT) {
+    if (request->status == ZX_ERR_IO_NOT_PRESENT) {
         iotxn_release(request);
         return;
     }
 
     mtx_lock(&eth->mutex);
-    if ((request->status == MX_OK) && eth->ifc) {
+    if ((request->status == ZX_OK) && eth->ifc) {
         ax88772b_recv(eth, request);
     }
 
@@ -185,7 +185,7 @@ static void ax88772b_read_complete(iotxn_t* request, void* cookie) {
 static void ax88772b_write_complete(iotxn_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
-    if (request->status == MX_ERR_IO_NOT_PRESENT) {
+    if (request->status == ZX_ERR_IO_NOT_PRESENT) {
         iotxn_release(request);
         return;
     }
@@ -198,13 +198,13 @@ static void ax88772b_write_complete(iotxn_t* request, void* cookie) {
 static void ax88772b_interrupt_complete(iotxn_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
-    if (request->status == MX_ERR_IO_NOT_PRESENT) {
+    if (request->status == ZX_ERR_IO_NOT_PRESENT) {
         iotxn_release(request);
         return;
     }
 
     mtx_lock(&eth->mutex);
-    if (request->status == MX_OK && request->actual == sizeof(eth->status)) {
+    if (request->status == ZX_OK && request->actual == sizeof(eth->status)) {
         uint8_t status[INTR_REQ_SIZE];
 
         iotxn_copyfrom(request, status, sizeof(status), 0);
@@ -245,27 +245,27 @@ static void ax88772b_interrupt_complete(iotxn_t* request, void* cookie) {
     mtx_unlock(&eth->mutex);
 }
 
-static mx_status_t _ax88772b_send(void* ctx, const void* buffer, size_t length) {
+static zx_status_t _ax88772b_send(void* ctx, const void* buffer, size_t length) {
     ax88772b_t* eth = ctx;
 
     if (eth->dead) {
-        return MX_ERR_PEER_CLOSED;
+        return ZX_ERR_PEER_CLOSED;
     }
 
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
 
     mtx_lock(&eth->mutex);
 
     list_node_t* node = list_remove_head(&eth->free_write_reqs);
     if (!node) {
         //TODO: block
-        status = MX_ERR_BUFFER_TOO_SMALL;
+        status = ZX_ERR_BUFFER_TOO_SMALL;
         goto out;
     }
     iotxn_t* request = containerof(node, iotxn_t, node);
 
     if (length + ETH_HEADER_SIZE > USB_BUF_SIZE) {
-        status = MX_ERR_INVALID_ARGS;
+        status = ZX_ERR_INVALID_ARGS;
         goto out;
     }
 
@@ -318,24 +318,24 @@ static void ax88772b_release(void* ctx) {
     ax88772b_free(eth);
 }
 
-static mx_protocol_device_t ax88772b_device_proto = {
+static zx_protocol_device_t ax88772b_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .unbind = ax88772b_unbind,
     .release = ax88772b_release,
 };
 
-static mx_status_t ax88772b_query(void* ctx, uint32_t options, ethmac_info_t* info) {
+static zx_status_t ax88772b_query(void* ctx, uint32_t options, ethmac_info_t* info) {
     ax88772b_t* eth = ctx;
 
     if (options) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     memset(info, 0, sizeof(*info));
     info->mtu = USB_BUF_SIZE - ETH_HEADER_SIZE;
     memcpy(info->mac, eth->mac_addr, sizeof(eth->mac_addr));
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static void ax88772b_stop(void* ctx) {
@@ -345,13 +345,13 @@ static void ax88772b_stop(void* ctx) {
     mtx_unlock(&eth->mutex);
 }
 
-static mx_status_t ax88772b_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
+static zx_status_t ax88772b_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     ax88772b_t* eth = ctx;
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
 
     mtx_lock(&eth->mutex);
     if (eth->ifc) {
-        status = MX_ERR_BAD_STATE;
+        status = ZX_ERR_BAD_STATE;
     } else {
         eth->ifc = ifc;
         eth->cookie = cookie;
@@ -377,7 +377,7 @@ static int ax88772b_start_thread(void* arg) {
     ax88772b_t* eth = (ax88772b_t*)arg;
 
     // set some GPIOs
-    mx_status_t status = ax88772b_set_value(eth, ASIX_REQ_GPIOS,
+    zx_status_t status = ax88772b_set_value(eth, ASIX_REQ_GPIOS,
                                                 ASIX_GPIO_GPO2EN | ASIX_GPIO_GPO_2 | ASIX_GPIO_RSE);
     if (status < 0) {
         printf("ASIX_REQ_WRITE_GPIOS failed\n");
@@ -387,7 +387,7 @@ static int ax88772b_start_thread(void* arg) {
     // select the PHY
     uint8_t phy_addr[2];
     status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                         ASIX_REQ_PHY_ADDR, 0, 0, &phy_addr, sizeof(phy_addr), MX_TIME_INFINITE);
+                         ASIX_REQ_PHY_ADDR, 0, 0, &phy_addr, sizeof(phy_addr), ZX_TIME_INFINITE);
     if (status < 0) {
         printf("ASIX_REQ_READ_PHY_ADDR failed\n");
         goto fail;
@@ -437,7 +437,7 @@ static int ax88772b_start_thread(void* arg) {
 
     status = usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
                          ASIX_REQ_IPG_WRITE, ASIX_IPG_DEFAULT | (ASIX_IPG1_DEFAULT << 8),
-                         ASIX_IPG2_DEFAULT, NULL, 0, MX_TIME_INFINITE);
+                         ASIX_IPG2_DEFAULT, NULL, 0, ZX_TIME_INFINITE);
     if (status < 0) {
         printf("ASIX_REQ_IPG_WRITE failed\n");
         goto fail;
@@ -451,7 +451,7 @@ static int ax88772b_start_thread(void* arg) {
 
     status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
                          ASIX_REQ_NODE_ID_READ, 0, 0, eth->mac_addr, sizeof(eth->mac_addr),
-                         MX_TIME_INFINITE);
+                         ZX_TIME_INFINITE);
     if (status < 0) {
         printf("ASIX_REQ_NODE_ID_READ failed\n");
         goto fail;
@@ -465,7 +465,7 @@ static int ax88772b_start_thread(void* arg) {
         .name = "ax88772b",
         .ctx = eth,
         .ops = &ax88772b_device_proto,
-        .proto_id = MX_PROTOCOL_ETHERMAC,
+        .proto_id = ZX_PROTOCOL_ETHERMAC,
         .proto_ops = &ethmac_ops,
     };
 
@@ -478,17 +478,17 @@ static int ax88772b_start_thread(void* arg) {
     mtx_lock(&eth->mutex);
     queue_interrupt_requests_locked(eth);
     mtx_unlock(&eth->mutex);
-    return MX_OK;
+    return ZX_OK;
 
 fail:
     ax88772b_free(eth);
     return status;
 }
 
-static mx_status_t ax88772b_bind(void* ctx, mx_device_t* device, void** cookie) {
+static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device, void** cookie) {
     usb_protocol_t usb;
-    mx_status_t result = device_get_protocol(device, MX_PROTOCOL_USB, &usb);
-    if (result != MX_OK) {
+    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
+    if (result != ZX_OK) {
         return result;
     }
 
@@ -500,7 +500,7 @@ static mx_status_t ax88772b_bind(void* ctx, mx_device_t* device, void** cookie) 
     usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
     if (!intf || intf->bNumEndpoints != 3) {
         usb_desc_iter_release(&iter);
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     uint8_t bulk_in_addr = 0;
@@ -526,13 +526,13 @@ static mx_status_t ax88772b_bind(void* ctx, mx_device_t* device, void** cookie) 
 
     if (!bulk_in_addr || !bulk_out_addr || !intr_addr) {
         printf("ax88772b_bind could not find endpoints\n");
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     ax88772b_t* eth = calloc(1, sizeof(ax88772b_t));
     if (!eth) {
         printf("Not enough memory for ax88772b_t\n");
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     list_initialize(&eth->free_read_reqs);
@@ -542,11 +542,11 @@ static mx_status_t ax88772b_bind(void* ctx, mx_device_t* device, void** cookie) 
     eth->usb_device = device;
     memcpy(&eth->usb, &usb, sizeof(eth->usb));
 
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         iotxn_t* req = usb_alloc_iotxn(bulk_in_addr, USB_BUF_SIZE);
         if (!req) {
-            status = MX_ERR_NO_MEMORY;
+            status = ZX_ERR_NO_MEMORY;
             goto fail;
         }
         req->length = USB_BUF_SIZE;
@@ -557,7 +557,7 @@ static mx_status_t ax88772b_bind(void* ctx, mx_device_t* device, void** cookie) 
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         iotxn_t* req = usb_alloc_iotxn(bulk_out_addr, USB_BUF_SIZE);
         if (!req) {
-            status = MX_ERR_NO_MEMORY;
+            status = ZX_ERR_NO_MEMORY;
             goto fail;
         }
         req->length = USB_BUF_SIZE;
@@ -568,7 +568,7 @@ static mx_status_t ax88772b_bind(void* ctx, mx_device_t* device, void** cookie) 
     for (int i = 0; i < INTR_REQ_COUNT; i++) {
         iotxn_t* req = usb_alloc_iotxn(intr_addr, INTR_REQ_SIZE);
         if (!req) {
-            status = MX_ERR_NO_MEMORY;
+            status = ZX_ERR_NO_MEMORY;
             goto fail;
         }
         req->length = INTR_REQ_SIZE;
@@ -581,7 +581,7 @@ static mx_status_t ax88772b_bind(void* ctx, mx_device_t* device, void** cookie) 
     thrd_create_with_name(&thread, ax88772b_start_thread, eth, "ax88772b_start_thread");
     thrd_detach(thread);
 
-    return MX_OK;
+    return ZX_OK;
 
 fail:
     printf("ax88772b_bind failed: %d\n", status);
@@ -589,13 +589,13 @@ fail:
     return status;
 }
 
-static mx_driver_ops_t ax88772b_driver_ops = {
+static zx_driver_ops_t ax88772b_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = ax88772b_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(ethernet_ax88772b, ax88772b_driver_ops, "magenta", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB),
+ZIRCON_DRIVER_BEGIN(ethernet_ax88772b, ax88772b_driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_VID, ASIX_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, ASIX_PID),
-MAGENTA_DRIVER_END(ethernet_ax88772b)
+ZIRCON_DRIVER_END(ethernet_ax88772b)

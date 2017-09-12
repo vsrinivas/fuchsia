@@ -75,12 +75,12 @@ PcieBusDriver::~PcieBusDriver() {
 
 status_t PcieBusDriver::AddRoot(fbl::RefPtr<PcieRoot>&& root) {
     if (root == nullptr)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     // Make sure that we are not already started.
     if (!IsNotStarted()) {
         TRACEF("Cannot add more PCIe roots once the bus driver has been started!\n");
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     // Attempt to add it to the collection of roots.
@@ -89,17 +89,17 @@ status_t PcieBusDriver::AddRoot(fbl::RefPtr<PcieRoot>&& root) {
         if (!roots_.insert_or_find(fbl::move(root))) {
             TRACEF("Failed to add PCIe root for bus %u, root already exists!\n",
                     root->managed_bus_id());
-            return MX_ERR_ALREADY_EXISTS;
+            return ZX_ERR_ALREADY_EXISTS;
         }
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 status_t PcieBusDriver::RescanDevices() {
     if (!IsOperational()) {
         TRACEF("Cannot rescan devices until the bus driver is operational!\n");
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     AutoLock lock(&bus_rescan_lock_);
@@ -116,7 +116,7 @@ status_t PcieBusDriver::RescanDevices() {
                      return true;
                    }, nullptr);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 bool PcieBusDriver::IsNotStarted(bool allow_quirks_phase) const {
@@ -147,7 +147,7 @@ bool PcieBusDriver::AdvanceState(State expected, State next) {
 
 status_t PcieBusDriver::StartBusDriver() {
     if (!AdvanceState(State::NOT_STARTED, State::STARTING_SCANNING))
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
     {
         AutoLock lock(&bus_rescan_lock_);
@@ -159,7 +159,7 @@ status_t PcieBusDriver::StartBusDriver() {
                        }, nullptr);
 
         if (!AdvanceState(State::STARTING_SCANNING, State::STARTING_RUNNING_QUIRKS))
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
 
         // Run registered quirk handlers for any newly discovered devices.
         ForeachDevice([](const fbl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
@@ -172,7 +172,7 @@ status_t PcieBusDriver::StartBusDriver() {
         PcieBusDriver::RunQuirks(nullptr);
 
         if (!AdvanceState(State::STARTING_RUNNING_QUIRKS, State::STARTING_RESOURCE_ALLOCATION))
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
 
         // Attempt to allocate any unallocated BARs
         ForeachRoot([](const fbl::RefPtr<PcieRoot>& root, void* ctx) -> bool {
@@ -182,9 +182,9 @@ status_t PcieBusDriver::StartBusDriver() {
     }
 
     if (!AdvanceState(State::STARTING_RESOURCE_ALLOCATION, State::OPERATIONAL))
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 fbl::RefPtr<PcieDevice> PcieBusDriver::GetNthDevice(uint32_t index) {
@@ -352,14 +352,14 @@ status_t PcieBusDriver::AllocBookkeeping() {
     region_bookkeeping_ = RegionAllocator::RegionPool::Create(REGION_BOOKKEEPING_MAX_MEM);
     if (region_bookkeeping_ == nullptr) {
         TRACEF("Failed to create pool allocator for Region bookkeeping!\n");
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     mmio_lo_regions_.SetRegionPool(region_bookkeeping_);
     mmio_hi_regions_.SetRegionPool(region_bookkeeping_);
     pio_regions_.SetRegionPool(region_bookkeeping_);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 bool PcieBusDriver::ForeachDownstreamDevice(const fbl::RefPtr<PcieUpstreamNode>& upstream,
@@ -402,11 +402,11 @@ status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base,
                                              bool add_op) {
     if (!IsNotStarted(true)) {
         TRACEF("Cannot add/subtract bus regions once the bus driver has been started!\n");
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     if (!size)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     uint64_t end = base + size - 1;
     auto OpPtr = add_op ? &RegionAllocator::AddRegion : &RegionAllocator::SubtractRegion;
@@ -431,7 +431,7 @@ status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base,
             status_t res;
 
             res = (mmio_lo.*OpPtr)({ .base = lo_base, .size = lo_size }, true);
-            if (res != MX_OK)
+            if (res != ZX_OK)
                 return res;
 
             return (mmio_hi.*OpPtr)({ .base = hi_base, .size = hi_size }, true);
@@ -440,7 +440,7 @@ status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base,
         DEBUG_ASSERT(aspace == PciAddrSpace::PIO);
 
         if ((base | end) & ~PCIE_PIO_ADDR_SPACE_MASK)
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
 
         return (pio_regions_.*OpPtr)({ .base = base, .size = size }, true);
     }
@@ -451,18 +451,18 @@ status_t PcieBusDriver::InitializeDriver(PciePlatformInterface& platform) {
 
     if (driver_ != nullptr) {
         TRACEF("Failed to initialize PCIe bus driver; driver already initialized\n");
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     fbl::AllocChecker ac;
     driver_ = fbl::AdoptRef(new (&ac) PcieBusDriver(platform));
     if (!ac.check()) {
         TRACEF("Failed to allocate PCIe bus driver\n");
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     status_t ret = driver_->AllocBookkeeping();
-    if (ret != MX_OK)
+    if (ret != ZX_OK)
         driver_.reset();
 
     return ret;
@@ -550,16 +550,16 @@ const PciConfig* PcieBusDriver::GetConfig(uint bus_id,
 status_t PcieBusDriver::AddEcamRegion(const EcamRegion& ecam) {
     if (!IsNotStarted()) {
         TRACEF("Cannot add/subtract ECAM regions once the bus driver has been started!\n");
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     // Sanity check the region first.
     if (ecam.bus_start > ecam.bus_end)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     size_t bus_count = static_cast<size_t>(ecam.bus_end) - ecam.bus_start + 1u;
     if (ecam.size != (PCIE_ECAM_BYTE_PER_BUS * bus_count))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     // Grab the ECAM lock and make certain that the region we have been asked to
     // add does not overlap with any already defined regions.
@@ -575,7 +575,7 @@ status_t PcieBusDriver::AddEcamRegion(const EcamRegion& ecam) {
         uint8_t iter_end   = iter->ecam().bus_end;
         if (((iter_start >= ecam.bus_start) && (iter_start <= ecam.bus_end)) ||
             ((ecam.bus_start >= iter_start) && (ecam.bus_start <= iter_end)))
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
     }
 
     // Looks good.  Attempt to allocate and map this ECAM region.
@@ -584,11 +584,11 @@ status_t PcieBusDriver::AddEcamRegion(const EcamRegion& ecam) {
     if (!ac.check()) {
         TRACEF("Failed to allocate ECAM region for bus range [0x%02x, 0x%02x]\n",
                ecam.bus_start, ecam.bus_end);
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     status_t res = region->MapEcam();
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
         TRACEF("Failed to map ECAM region for bus range [0x%02x, 0x%02x]\n",
                ecam.bus_start, ecam.bus_end);
         return res;
@@ -596,7 +596,7 @@ status_t PcieBusDriver::AddEcamRegion(const EcamRegion& ecam) {
 
     // Everything checks out.  Add the new region to our set of regions and we are done.
     ecam_regions_.insert(fbl::move(region));
-    return MX_OK;
+    return ZX_OK;
 }
 
 PcieBusDriver::MappedEcamRegion::~MappedEcamRegion() {
@@ -612,7 +612,7 @@ status_t PcieBusDriver::MappedEcamRegion::MapEcam() {
                  (static_cast<size_t>(ecam_.bus_end) - ecam_.bus_start + 1u));
 
     if (vaddr_ != nullptr)
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
     char name_buf[32];
     snprintf(name_buf, sizeof(name_buf), "pcie_cfg_%02x_%02x", ecam_.bus_start, ecam_.bus_end);

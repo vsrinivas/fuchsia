@@ -30,10 +30,10 @@ typedef enum {
  *
  * If an unexpected crash occurs, the test will be terminated immediately.
  *
- * Returns MX_OK if setup succeeded, otherwise a negative error value is
- * returned. If the return value is MX_OK, test_result will also be populated.
+ * Returns ZX_OK if setup succeeded, otherwise a negative error value is
+ * returned. If the return value is ZX_OK, test_result will also be populated.
  */
-mx_status_t run_test_with_crash_handler(crash_list_t crash_list,
+zx_status_t run_test_with_crash_handler(crash_list_t crash_list,
                                         bool (*test_to_run)(void),
                                         test_result_t* test_result);
 
@@ -41,10 +41,10 @@ mx_status_t run_test_with_crash_handler(crash_list_t crash_list,
  * Runs the function in a separate thread, passing in the given argument.
  * This will block until the function either crashes or returns.
  *
- * Returns MX_OK if setup succeeded, otherwise a negative error value is
- * returned. If the return value is MX_OK, test_result will also be populated.
+ * Returns ZX_OK if setup succeeded, otherwise a negative error value is
+ * returned. If the return value is ZX_OK, test_result will also be populated.
  */
-mx_status_t run_fn_with_crash_handler(void (*fn_to_run)(void*), void* arg,
+zx_status_t run_fn_with_crash_handler(void (*fn_to_run)(void*), void* arg,
                                       test_result_t* test_result);
 
 __END_CDECLS

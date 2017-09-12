@@ -14,6 +14,6 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \
-    system/ulib/mxcpp
+    system/ulib/zxcpp
 
 include make/module.mk

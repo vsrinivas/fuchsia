@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <arch/ops.h>
 
 __BEGIN_CDECLS

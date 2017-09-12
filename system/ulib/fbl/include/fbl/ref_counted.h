@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted_internal.h>
 
@@ -30,7 +30,7 @@ namespace fbl {
 // protected.
 //
 template <typename T,
-          bool EnableAdoptionValidator = MX_DEBUG_ASSERT_IMPLEMENTED>
+          bool EnableAdoptionValidator = ZX_DEBUG_ASSERT_IMPLEMENTED>
 class RefCounted : public internal::RefCountedBase<EnableAdoptionValidator> {
 public:
     RefCounted() {}

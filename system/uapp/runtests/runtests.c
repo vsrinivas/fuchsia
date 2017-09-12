@@ -6,9 +6,9 @@
 #include <inttypes.h>
 #include <launchpad/launchpad.h>
 #include <limits.h>
-#include <magenta/listnode.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/object.h>
+#include <zircon/listnode.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -93,8 +93,8 @@ static bool run_tests(const char* dirn, const char* test_name) {
         launchpad_clone(lp, LP_CLONE_ALL);
         launchpad_set_args(lp, argc, argv);
         const char* errmsg;
-        mx_handle_t handle;
-        mx_status_t status = launchpad_go(lp, &handle, &errmsg);
+        zx_handle_t handle;
+        zx_status_t status = launchpad_go(lp, &handle, &errmsg);
         if (status < 0) {
             printf("FAILURE: Failed to launch %s: %d: %s\n", de->d_name, status, errmsg);
             fail_test(&failures, de->d_name, FAILED_TO_LAUNCH, 0);
@@ -102,9 +102,9 @@ static bool run_tests(const char* dirn, const char* test_name) {
             continue;
         }
 
-        status = mx_object_wait_one(handle, MX_PROCESS_TERMINATED,
-                                    MX_TIME_INFINITE, NULL);
-        if (status != MX_OK) {
+        status = zx_object_wait_one(handle, ZX_PROCESS_TERMINATED,
+                                    ZX_TIME_INFINITE, NULL);
+        if (status != ZX_OK) {
             printf("FAILURE: Failed to wait for process exiting %s: %d\n", de->d_name, status);
             fail_test(&failures, de->d_name, FAILED_TO_WAIT, 0);
             failed_count++;
@@ -112,9 +112,9 @@ static bool run_tests(const char* dirn, const char* test_name) {
         }
 
         // read the return code
-        mx_info_process_t proc_info;
-        status = mx_object_get_info(handle, MX_INFO_PROCESS, &proc_info, sizeof(proc_info), NULL, NULL);
-        mx_handle_close(handle);
+        zx_info_process_t proc_info;
+        status = zx_object_get_info(handle, ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), NULL, NULL);
+        zx_handle_close(handle);
 
         if (status < 0) {
             printf("FAILURE: Failed to get process return code %s: %d\n", de->d_name, status);

@@ -4,7 +4,7 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -13,7 +13,7 @@ static void* do_test(void* arg) {
     int thread_no = *(int*)arg;
     unittest_printf("do_test for thread: %d\n", thread_no);
     errno = -thread_no;
-    mx_nanosleep(mx_deadline_after(MX_MSEC(300)));
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(300)));
     unittest_printf("comparing result for: %d\n", thread_no);
     EXPECT_EQ(errno, -thread_no, "Incorrect errno for this thread");
     return NULL;

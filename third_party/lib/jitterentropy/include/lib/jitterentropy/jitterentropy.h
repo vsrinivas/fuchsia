@@ -52,7 +52,7 @@
 #ifndef _JITTERENTROPY_H
 #define _JITTERENTROPY_H
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/types.h>
@@ -162,7 +162,7 @@ uint64_t jent_lfsr_var_stat(struct rand_data *ec,
 
 /* -- END of statistical test function -- */
 
-/* -- BEGIN Magenta interface -- */
+/* -- BEGIN Zircon interface -- */
 
 /* Initialize an entropy collector using already allocated memory. This function
  * is to jent_entropy_collector_alloc as placement new is to regular new in C++.
@@ -185,7 +185,7 @@ void jent_entropy_collector_init(
         unsigned int mem_block_size, unsigned int mem_block_count,
         unsigned int mem_loops, bool stir);
 
-/* -- END of Magenta interface -- */
+/* -- END of Zircon interface -- */
 
 __END_CDECLS;
 

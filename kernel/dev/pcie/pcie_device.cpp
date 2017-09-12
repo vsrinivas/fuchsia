@@ -7,7 +7,7 @@
 
 #include <arch/mmu.h>
 #include <assert.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <debug.h>
 #include <dev/pcie_bridge.h>
 #include <dev/pcie_bus_driver.h>
@@ -64,7 +64,7 @@ fbl::RefPtr<PcieDevice> PcieDeviceImpl::Create(PcieUpstreamNode& upstream,
 
     auto dev = fbl::AdoptRef(static_cast<PcieDevice*>(raw_dev));
     status_t res = raw_dev->Init(upstream);
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
         TRACEF("Failed to initialize PCIe device %02x:%02x.%01x. (res %d)\n",
                 upstream.managed_bus_id(), dev_id, func_id, res);
         return nullptr;
@@ -106,7 +106,7 @@ status_t PcieDevice::Init(PcieUpstreamNode& upstream) {
     AutoLock dev_lock(&dev_lock_);
 
     status_t res = InitLocked(upstream);
-    if (res == MX_OK) {
+    if (res == ZX_OK) {
         // Things went well, flag the device as plugged in and link ourselves up to
         // the graph.
         plugged_in_ = true;
@@ -124,7 +124,7 @@ status_t PcieDevice::InitLocked(PcieUpstreamNode& upstream) {
     cfg_ = bus_drv_.GetConfig(bus_id_, dev_id_, func_id_, &cfg_phys_);
     if (cfg_ == nullptr) {
         TRACEF("Failed to fetch config for device %02x:%02x.%01x.\n", bus_id_, dev_id_, func_id_);
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     // Cache basic device info
@@ -138,22 +138,22 @@ status_t PcieDevice::InitLocked(PcieUpstreamNode& upstream) {
     // Determine the details of each of the BARs, but do not actually allocate
     // space on the bus for them yet.
     res = ProbeBarsLocked();
-    if (res != MX_OK)
+    if (res != ZX_OK)
         return res;
 
     // Parse and sanity check the capabilities and extended capabilities lists
     // if they exist
     res = ProbeCapabilitiesLocked();
-    if (res != MX_OK)
+    if (res != ZX_OK)
         return res;
 
     // Now that we know what our capabilities are, initialize our internal IRQ
     // bookkeeping
     res = InitLegacyIrqStateLocked(upstream);
-    if (res != MX_OK)
+    if (res != ZX_OK)
         return res;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 fbl::RefPtr<PcieUpstreamNode> PcieDevice::GetUpstream() {
@@ -195,7 +195,7 @@ status_t PcieDevice::DoFunctionLevelReset() {
     // a long time (more than a second).  We should not hold the device lock for
     // the entire duration of the operation.  This should be re-done so that the
     // device can be placed into a "resetting" state (and other API calls can
-    // fail with MX_ERR_BAD_STATE, or some-such) and the lock can be released while the
+    // fail with ZX_ERR_BAD_STATE, or some-such) and the lock can be released while the
     // reset timeouts run.  This way, a spontaneous unplug event can occur and
     // not block the whole world because the device unplugged was in the process
     // of a FLR.
@@ -203,7 +203,7 @@ status_t PcieDevice::DoFunctionLevelReset() {
 
     // Make certain to check to see if the device is still plugged in.
     if (!plugged_in_)
-        return MX_ERR_UNAVAILABLE;
+        return ZX_ERR_UNAVAILABLE;
 
     // Disallow reset if we currently have an active IRQ mode.
     //
@@ -212,10 +212,10 @@ status_t PcieDevice::DoFunctionLevelReset() {
     // assert that the call should succeed.
     pcie_irq_mode_info_t irq_mode_info;
     ret = GetIrqModeLocked(&irq_mode_info);
-    DEBUG_ASSERT(MX_OK == ret);
+    DEBUG_ASSERT(ZX_OK == ret);
 
     if (irq_mode_info.mode != PCIE_IRQ_MODE_DISABLED)
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
     DEBUG_ASSERT(!irq_mode_info.registered_handlers);
     DEBUG_ASSERT(!irq_mode_info.max_handlers);
@@ -223,7 +223,7 @@ status_t PcieDevice::DoFunctionLevelReset() {
     // If cannot reset via the PCIe capability, or the PCI advanced capability,
     // then this device simply does not support function level reset.
     if (!(pcie_ && pcie_->has_flr()) && !(pci_af_ && pci_af_->has_flr()))
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 
     // Pick the functions we need for testing whether or not transactions are
     // pending for this device, and for initiating the FLR
@@ -274,16 +274,16 @@ status_t PcieDevice::DoFunctionLevelReset() {
     // 3) Poll the transaction pending bit until it clears.  This may take
     //    "several seconds"
     lk_time_t start = current_time();
-    ret = MX_ERR_TIMED_OUT;
+    ret = ZX_ERR_TIMED_OUT;
     do {
         if (!check_trans_pending(this)) {
-            ret = MX_OK;
+            ret = ZX_OK;
             break;
         }
         thread_sleep_relative(LK_MSEC(1));
     } while ((current_time() - start) < LK_SEC(5));
 
-    if (ret != MX_OK) {
+    if (ret != ZX_OK) {
         TRACEF("Timeout waiting for pending transactions to clear the bus "
                "for %02x:%02x.%01x\n",
                bus_id_, dev_id_, func_id_);
@@ -308,16 +308,16 @@ status_t PcieDevice::DoFunctionLevelReset() {
     // Poll the Vendor ID field until the device finally completes it's
     // reset.
     start = current_time();
-    ret   = MX_ERR_TIMED_OUT;
+    ret   = ZX_ERR_TIMED_OUT;
     do {
         if (cfg_->Read(PciConfig::kVendorId) != PCIE_INVALID_VENDOR_ID) {
-            ret = MX_OK;
+            ret = ZX_OK;
             break;
         }
         thread_sleep_relative(LK_MSEC(1));
     } while ((current_time() - start) < LK_SEC(5));
 
-    if (ret == MX_OK) {
+    if (ret == ZX_OK) {
         // 6) Software reconfigures the function and enables it for normal operation
         AutoSpinLockIrqSave cmd_reg_lock(&cmd_reg_lock_);
 
@@ -349,10 +349,10 @@ status_t PcieDevice::ModifyCmd(uint16_t clr_bits, uint16_t set_bits) {
 
     if (plugged_in_) {
         ModifyCmdLocked(clr_bits, set_bits);
-        return MX_OK;
+        return ZX_OK;
     }
 
-    return MX_ERR_UNAVAILABLE;
+    return ZX_ERR_UNAVAILABLE;
 }
 
 void PcieDevice::ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits) {
@@ -385,7 +385,7 @@ status_t PcieDevice::ProbeBarsLocked() {
         DEBUG_ASSERT(bars_[i].allocation == nullptr);
 
         status_t probe_res = ProbeBarLocked(i);
-        if (probe_res != MX_OK)
+        if (probe_res != ZX_OK)
             return probe_res;
 
         if (bars_[i].size > 0) {
@@ -397,13 +397,13 @@ status_t PcieDevice::ProbeBarsLocked() {
                 if (i >= bar_count_) {
                     TRACEF("Device %02x:%02x:%01x claims to have 64-bit BAR in position %u/%u!\n",
                            bus_id_, dev_id_, func_id_, i, bar_count_);
-                    return MX_ERR_BAD_STATE;
+                    return ZX_ERR_BAD_STATE;
                 }
             }
         }
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 status_t PcieDevice::ProbeBarLocked(uint bar_id) {
@@ -425,14 +425,14 @@ status_t PcieDevice::ProbeBarLocked(uint bar_id) {
             TRACEF("Illegal 64-bit MMIO BAR position (%u/%u) while fetching BAR info "
                    "for device config @%p\n",
                    bar_id, bar_count_, cfg_);
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
         }
     } else {
         if (bar_info.is_mmio && ((bar_val & PCI_BAR_MMIO_TYPE_MASK) != PCI_BAR_MMIO_TYPE_32BIT)) {
             TRACEF("Unrecognized MMIO BAR type (BAR[%u] == 0x%08x) while fetching BAR info "
                    "for device config @%p\n",
                    bar_id, bar_val, cfg_);
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
         }
     }
 
@@ -490,7 +490,7 @@ status_t PcieDevice::ProbeBarLocked(uint bar_id) {
     cfg_->Write(PciConfig::kCommand, backup);
 
     /* Success */
-    return MX_OK;
+    return ZX_OK;
 }
 
 
@@ -505,19 +505,19 @@ status_t PcieDevice::AllocateBarsLocked() {
 
     // Have we become unplugged?
     if (!plugged_in_)
-        return MX_ERR_UNAVAILABLE;
+        return ZX_ERR_UNAVAILABLE;
 
     /* Allocate BARs for the device */
     DEBUG_ASSERT(bar_count_ <= fbl::count_of(bars_));
     for (size_t i = 0; i < bar_count_; ++i) {
         if (bars_[i].size) {
             status_t ret = AllocateBarLocked(bars_[i]);
-            if (ret != MX_OK)
+            if (ret != ZX_OK)
                 return ret;
         }
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 status_t PcieDevice::AllocateBarLocked(pcie_bar_info_t& info) {
@@ -527,14 +527,14 @@ status_t PcieDevice::AllocateBarLocked(pcie_bar_info_t& info) {
     // Do not attempt to remap if we are rescanning the bus and this BAR is
     // already allocated, or if it does not exist (size is zero)
     if ((info.size == 0) || (info.allocation != nullptr))
-        return MX_OK;
+        return ZX_OK;
 
     // Hold a reference to our upstream node while we do this.  If we cannot
     // obtain a reference, then our upstream node has become unplugged and we
     // should just fail out now.
     auto upstream = GetUpstream();
     if (upstream == nullptr)
-        return MX_ERR_UNAVAILABLE;
+        return ZX_ERR_UNAVAILABLE;
 
     /* Does this BAR already have an assigned address?  If so, try to preserve
      * it, if possible. */
@@ -555,13 +555,13 @@ status_t PcieDevice::AllocateBarLocked(pcie_bar_info_t& info) {
             alloc = &upstream->pio_regions();
         }
 
-        status_t res = MX_ERR_NOT_FOUND;
+        status_t res = ZX_ERR_NOT_FOUND;
         if (alloc != nullptr) {
             res = alloc->GetRegion({ .base = info.bus_addr, .size = info.size }, info.allocation);
         }
 
-        if (res == MX_OK)
-            return MX_OK;
+        if (res == ZX_OK)
+            return ZX_OK;
 
         TRACEF("Failed to preserve device %02x:%02x.%01x's %s window "
                "[%#" PRIx64 ", %#" PRIx64 "] Attempting to re-allocate.\n",
@@ -601,8 +601,8 @@ status_t PcieDevice::AllocateBarLocked(pcie_bar_info_t& info) {
                              : PAGE_SIZE;
         status_t res = alloc->GetRegion(align_size, align_size, info.allocation);
 
-        if (res != MX_OK) {
-            if ((res == MX_ERR_NOT_FOUND) && (alloc == &upstream->mmio_hi_regions())) {
+        if (res != ZX_OK) {
+            if ((res == ZX_ERR_NOT_FOUND) && (alloc == &upstream->mmio_hi_regions())) {
                 LTRACEF("Insufficient space to map 64-bit MMIO BAR in high region while "
                         "configuring BARs for device at %02x:%02x.%01x (cfg vaddr = %p).  "
                         "Falling back on low memory region.\n",
@@ -635,7 +635,7 @@ status_t PcieDevice::AllocateBarLocked(pcie_bar_info_t& info) {
     if (info.is_64bit)
         cfg_->Write(PciConfig::kBAR(bar_reg + 1), static_cast<uint32_t>(info.bus_addr >> 32));
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 void PcieDevice::Disable() {

@@ -10,10 +10,10 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <magenta/device/display.h>
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
+#include <zircon/device/display.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <gfx/gfx.h>
 
@@ -31,8 +31,8 @@ int main(int argc, char* argv[]) {
 
     size_t size = fb.info.stride * fb.info.pixelsize * fb.info.height;
     uintptr_t fbo;
-    mx_status_t status = mx_vmar_map(mx_vmar_root_self(), 0, fb.vmo, 0, size,
-                                     MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &fbo);
+    zx_status_t status = zx_vmar_map(zx_vmar_root_self(), 0, fb.vmo, 0, size,
+                                     ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &fbo);
     if (status < 0) {
         printf("failed to map fb (%d)\n", status);
         return -1;
@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
         }
     }
     ioctl_display_flush_fb(vfd);
-    mx_nanosleep(mx_deadline_after(MX_SEC(10)));
+    zx_nanosleep(zx_deadline_after(ZX_SEC(10)));
 
     gfx_surface_destroy(gfx);
     close(vfd);

@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/protocol/platform-device.h>
-#include <magenta/listnode.h>
+#include <zircon/listnode.h>
 
 typedef struct {
     list_node_t gpios;
@@ -15,4 +15,4 @@ typedef struct {
     pdev_mmio_buffer_t pctrl;
 } hi3660_bus_t;
 
-mx_status_t hi3360_usb_init(hi3660_bus_t* bus);
+zx_status_t hi3360_usb_init(hi3660_bus_t* bus);

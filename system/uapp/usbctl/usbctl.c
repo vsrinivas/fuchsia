@@ -8,11 +8,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <magenta/device/usb-device.h>
-#include <magenta/device/usb-virt-bus.h>
-#include <magenta/hw/usb-cdc.h>
+#include <zircon/device/usb-device.h>
+#include <zircon/device/usb-virt-bus.h>
+#include <zircon/hw/usb-cdc.h>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 #define DEV_VIRTUAL_USB "/dev/misc/usb-virtual-bus"
 #define DEV_USB_DEVICE_DIR  "/dev/class/usb-device"
@@ -21,7 +21,7 @@
 #define GOOGLE_CDC_PID  0xA020
 #define GOOGLE_UMS_PID  0xA021
 
-#define MANUFACTURER_STRING "Magenta"
+#define MANUFACTURER_STRING "Zircon"
 #define CDC_PRODUCT_STRING  "CDC Ethernet"
 #define UMS_PRODUCT_STRING  "USB Mass Storage"
 #define SERIAL_STRING       "12345678"
@@ -99,12 +99,12 @@ static int open_usb_device(void) {
     return -1;
 }
 
-static mx_status_t device_init(int fd, const usb_function_t* function) {
+static zx_status_t device_init(int fd, const usb_function_t* function) {
     device_desc.idVendor = htole16(function->vid);
     device_desc.idProduct = htole16(function->pid);
 
     // allocate string descriptors
-    mx_status_t status = ioctl_usb_device_alloc_string_desc(fd, MANUFACTURER_STRING,
+    zx_status_t status = ioctl_usb_device_alloc_string_desc(fd, MANUFACTURER_STRING,
                                                             strlen(MANUFACTURER_STRING) + 1,
                                                             &device_desc.iManufacturer);
     if (status < 0) {
@@ -158,7 +158,7 @@ static int device_command(int argc, const char** argv) {
         goto usage;
     }
 
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
     const char* command = argv[1];
     if (!strcmp(command, "reset")) {
         status = ioctl_usb_device_clear_functions(fd);
@@ -171,7 +171,7 @@ static int device_command(int argc, const char** argv) {
     }
 
     close(fd);
-    return status == MX_OK ? 0 : -1;
+    return status == ZX_OK ? 0 : -1;
 
 usage:
     close(fd);
@@ -190,7 +190,7 @@ static int virtual_command(int argc, const char** argv) {
         goto usage;
     }
 
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
     const char* command = argv[1];
     if (!strcmp(command, "enable")) {
         int enabled = 1;
@@ -209,7 +209,7 @@ static int virtual_command(int argc, const char** argv) {
     }
 
     close(fd);
-    return status == MX_OK ? 0 : -1;
+    return status == ZX_OK ? 0 : -1;
 
 usage:
     close(fd);

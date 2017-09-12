@@ -18,9 +18,9 @@ WaitStateObserver::~WaitStateObserver() {
     DEBUG_ASSERT(!dispatcher_);
 }
 
-mx_status_t WaitStateObserver::Begin(Event* event,
+zx_status_t WaitStateObserver::Begin(Event* event,
                                      Handle* handle,
-                                     mx_signals_t watched_signals) {
+                                     zx_signals_t watched_signals) {
     canary_.Assert();
     DEBUG_ASSERT(!dispatcher_);
 
@@ -31,14 +31,14 @@ mx_status_t WaitStateObserver::Begin(Event* event,
     wakeup_reasons_ = 0u;
 
     auto status = dispatcher_->add_observer(this);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         dispatcher_.reset();
         return status;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_signals_t WaitStateObserver::End() {
+zx_signals_t WaitStateObserver::End() {
     canary_.Assert();
     DEBUG_ASSERT(dispatcher_);
 
@@ -53,7 +53,7 @@ mx_signals_t WaitStateObserver::End() {
     return wakeup_reasons_;
 }
 
-StateObserver::Flags WaitStateObserver::OnInitialize(mx_signals_t initial_state,
+StateObserver::Flags WaitStateObserver::OnInitialize(zx_signals_t initial_state,
                                                      const StateObserver::CountInfo* cinfo) {
     canary_.Assert();
 
@@ -71,7 +71,7 @@ StateObserver::Flags WaitStateObserver::OnInitialize(mx_signals_t initial_state,
     return 0;
 }
 
-StateObserver::Flags WaitStateObserver::OnStateChange(mx_signals_t new_state) {
+StateObserver::Flags WaitStateObserver::OnStateChange(zx_signals_t new_state) {
     canary_.Assert();
 
     // If we are still on our StateTracker's list of observers, and the
@@ -93,8 +93,8 @@ StateObserver::Flags WaitStateObserver::OnCancel(Handle* handle) {
     canary_.Assert();
 
     if (handle == handle_) {
-        wakeup_reasons_ |= MX_SIGNAL_HANDLE_CLOSED;
-        if (event_->Signal(MX_ERR_CANCELED) > 0) {
+        wakeup_reasons_ |= ZX_SIGNAL_HANDLE_CLOSED;
+        if (event_->Signal(ZX_ERR_CANCELED) > 0) {
             return kHandled | kWokeThreads;
         } else {
             return kHandled;

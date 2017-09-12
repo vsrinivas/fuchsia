@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <stdatomic.h>
 #include <stdlib.h>
 
@@ -25,11 +25,11 @@ int main(int argc, char** argv) {
     // process) is waiting on this futex.  Wake it up with a value it's
     // looking for.  When it sees this value arrive, the test succeeds.
     atomic_store(my_futex, MAGIC);
-    mx_status_t status = mx_futex_wake(my_futex, -1);
-    if (status != MX_OK)
+    zx_status_t status = zx_futex_wake(my_futex, -1);
+    if (status != ZX_OK)
         abort();
 
     // If we return, that will call exit and kill the whole process.
     // Just exit this thread instead.
-    mx_thread_exit();
+    zx_thread_exit();
 }

@@ -9,28 +9,28 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <magenta/compiler.h>
-#include <magenta/device/vfs.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
-#include <mxio/limits.h>
-#include <mxio/util.h>
-#include <mxio/vfs.h>
+#include <zircon/compiler.h>
+#include <zircon/device/vfs.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
+#include <fdio/limits.h>
+#include <fdio/util.h>
+#include <fdio/vfs.h>
 
-static mx_status_t fsck_mxfs(const char* devicepath, const fsck_options_t* options,
+static zx_status_t fsck_mxfs(const char* devicepath, const fsck_options_t* options,
                               LaunchCallback cb, const char* cmdpath) {
-    mx_handle_t hnd[MXIO_MAX_HANDLES * 2];
-    uint32_t ids[MXIO_MAX_HANDLES * 2];
+    zx_handle_t hnd[FDIO_MAX_HANDLES * 2];
+    uint32_t ids[FDIO_MAX_HANDLES * 2];
     size_t n = 0;
     int device_fd;
     if ((device_fd = open(devicepath, O_RDWR)) < 0) {
         fprintf(stderr, "Failed to open device\n");
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
-    mx_status_t status;
-    if ((status = mxio_transfer_fd(device_fd, FS_FD_BLOCKDEVICE, hnd + n, ids + n)) <= 0) {
+    zx_status_t status;
+    if ((status = fdio_transfer_fd(device_fd, FS_FD_BLOCKDEVICE, hnd + n, ids + n)) <= 0) {
         fprintf(stderr, "Failed to access device handle\n");
-        return status != 0 ? status : MX_ERR_BAD_STATE;
+        return status != 0 ? status : ZX_ERR_BAD_STATE;
     }
     n += status;
 
@@ -48,7 +48,7 @@ static mx_status_t fsck_mxfs(const char* devicepath, const fsck_options_t* optio
     return status;
 }
 
-static mx_status_t fsck_fat(const char* devicepath, const fsck_options_t* options,
+static zx_status_t fsck_fat(const char* devicepath, const fsck_options_t* options,
                             LaunchCallback cb) {
     const char** argv = calloc(sizeof(char*), (2 + NUM_FSCK_OPTIONS));
     size_t argc = 0;
@@ -62,12 +62,12 @@ static mx_status_t fsck_fat(const char* devicepath, const fsck_options_t* option
         argv[argc++] = "-f";
     }
     argv[argc++] = devicepath;
-    mx_status_t status = cb(argc, argv, NULL, NULL, 0);
+    zx_status_t status = cb(argc, argv, NULL, NULL, 0);
     free(argv);
     return status;
 }
 
-mx_status_t fsck(const char* devicepath, disk_format_t df,
+zx_status_t fsck(const char* devicepath, disk_format_t df,
                  const fsck_options_t* options, LaunchCallback cb) {
     switch (df) {
     case DISK_FORMAT_MINFS:
@@ -77,6 +77,6 @@ mx_status_t fsck(const char* devicepath, disk_format_t df,
     case DISK_FORMAT_BLOBFS:
         return fsck_mxfs(devicepath, options, cb, "/boot/bin/blobstore");
     default:
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }

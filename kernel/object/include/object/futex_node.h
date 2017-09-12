@@ -9,7 +9,7 @@
 #include <kernel/thread.h>
 #include <kernel/wait.h>
 #include <list.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/mutex.h>
 
@@ -42,7 +42,7 @@ public:
                                      uintptr_t new_hash_key);
 
     // This must be called with |mutex| held and returns without |mutex| held.
-    mx_status_t BlockThread(fbl::Mutex* mutex, mx_time_t deadline) TA_REL(mutex);
+    zx_status_t BlockThread(fbl::Mutex* mutex, zx_time_t deadline) TA_REL(mutex);
 
     void set_hash_key(uintptr_t key) {
         hash_key_ = key;

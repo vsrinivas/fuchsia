@@ -10,7 +10,7 @@
 #include <arch.h>
 #include <assert.h>
 #include <list.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/types.h>

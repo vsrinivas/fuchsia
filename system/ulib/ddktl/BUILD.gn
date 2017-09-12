@@ -7,7 +7,7 @@ config("ddktl_config") {
 }
 
 source_set("ddktl") {
-  # Don't forget to update rules.mk as well for the Magenta build.
+  # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "include/ddktl/device-internal.h",
     "include/ddktl/device.h",

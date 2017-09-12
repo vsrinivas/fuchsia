@@ -10,8 +10,8 @@
 
 #include <dev/interrupt.h>
 #include <dev/pci_common.h>
-#include <magenta/compiler.h>
-#include <magenta/errors.h>
+#include <zircon/compiler.h>
+#include <zircon/errors.h>
 #include <sys/types.h>
 
 __BEGIN_CDECLS
@@ -94,7 +94,7 @@ public:
         // Bus driver code should not be calling this if the platform does not
         // indicate support for MSI.
         DEBUG_ASSERT(false);
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     /**

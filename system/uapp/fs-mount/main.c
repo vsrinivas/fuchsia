@@ -13,9 +13,9 @@
 #include <unistd.h>
 
 #include <fs-management/mount.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
-#include <mxio/util.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
+#include <fdio/util.h>
 
 
 int usage(void) {
@@ -65,8 +65,8 @@ int main(int argc, char** argv) {
         return -1;
     }
     disk_format_t df = detect_disk_format(fd);
-    mx_status_t status = mount(fd, mountpath, df, &options, launch_logs_async);
-    if (status != MX_OK) {
+    zx_status_t status = mount(fd, mountpath, df, &options, launch_logs_async);
+    if (status != ZX_OK) {
         fprintf(stderr, "fs_mount: Error while mounting: %d\n", status);
     }
     return status;

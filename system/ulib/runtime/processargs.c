@@ -4,36 +4,36 @@
 
 #include <runtime/processargs.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <string.h>
 
 // TODO(mcgrathr): Is there a better error code to use for marshalling
 // protocol violations?
-#define MALFORMED MX_ERR_INVALID_ARGS
+#define MALFORMED ZX_ERR_INVALID_ARGS
 
-mx_status_t mxr_processargs_read(mx_handle_t bootstrap,
+zx_status_t zxr_processargs_read(zx_handle_t bootstrap,
                                  void* buffer, uint32_t nbytes,
-                                 mx_handle_t handles[], uint32_t nhandles,
-                                 mx_proc_args_t** pargs,
+                                 zx_handle_t handles[], uint32_t nhandles,
+                                 zx_proc_args_t** pargs,
                                  uint32_t** handle_info) {
-    if (nbytes < sizeof(mx_proc_args_t))
-        return MX_ERR_INVALID_ARGS;
-    if ((uintptr_t)buffer % alignof(mx_proc_args_t) != 0)
-        return MX_ERR_INVALID_ARGS;
+    if (nbytes < sizeof(zx_proc_args_t))
+        return ZX_ERR_INVALID_ARGS;
+    if ((uintptr_t)buffer % alignof(zx_proc_args_t) != 0)
+        return ZX_ERR_INVALID_ARGS;
 
     uint32_t got_bytes = 0;
     uint32_t got_handles = 0;
-    mx_status_t status = _mx_channel_read(bootstrap, 0, buffer, handles, nbytes,
+    zx_status_t status = _zx_channel_read(bootstrap, 0, buffer, handles, nbytes,
                                           nhandles, &got_bytes, &got_handles);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
     if (got_bytes != nbytes || got_handles != nhandles)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
-    mx_proc_args_t* const pa = buffer;
+    zx_proc_args_t* const pa = buffer;
 
-    if (pa->protocol != MX_PROCARGS_PROTOCOL ||
-        pa->version != MX_PROCARGS_VERSION)
+    if (pa->protocol != ZX_PROCARGS_PROTOCOL ||
+        pa->version != ZX_PROCARGS_VERSION)
         return MALFORMED;
 
     if (pa->handle_info_off < sizeof(*pa) ||
@@ -54,10 +54,10 @@ mx_status_t mxr_processargs_read(mx_handle_t bootstrap,
 
     *pargs = pa;
     *handle_info = (void*)&((uint8_t*)buffer)[pa->handle_info_off];
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t unpack_strings(char* buffer, uint32_t bytes, char* result[],
+static zx_status_t unpack_strings(char* buffer, uint32_t bytes, char* result[],
                                   uint32_t off, uint32_t num) {
     char* p = &buffer[off];
     for (uint32_t i = 0; i < num; ++i) {
@@ -68,21 +68,21 @@ static mx_status_t unpack_strings(char* buffer, uint32_t bytes, char* result[],
         } while (*p++ != '\0');
     }
     result[num] = NULL;
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t mxr_processargs_strings(void* msg, uint32_t bytes,
+zx_status_t zxr_processargs_strings(void* msg, uint32_t bytes,
                                     char* argv[], char* envp[], char* names[]) {
-    mx_proc_args_t* const pa = msg;
-    mx_status_t status = MX_OK;
+    zx_proc_args_t* const pa = msg;
+    zx_status_t status = ZX_OK;
     if (argv != NULL) {
         status = unpack_strings(msg, bytes, argv, pa->args_off, pa->args_num);
     }
-    if (envp != NULL && status == MX_OK) {
+    if (envp != NULL && status == ZX_OK) {
         status = unpack_strings(msg, bytes, envp,
                                 pa->environ_off, pa->environ_num);
     }
-    if (names != NULL && status == MX_OK) {
+    if (names != NULL && status == ZX_OK) {
         status = unpack_strings(msg, bytes, names, pa->names_off, pa->names_num);
     }
     return status;

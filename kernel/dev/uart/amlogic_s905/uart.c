@@ -212,11 +212,11 @@ static void s905_uart_init_early(mdi_node_ref_t* node, uint level)
     mdi_each_child(node, &child) {
         switch (mdi_id(&child)) {
             case MDI_BASE_VIRT:
-                if(mdi_node_uint64(&child, &s905_uart_base) != MX_OK)
+                if(mdi_node_uint64(&child, &s905_uart_base) != ZX_OK)
                     return;
                 break;
             case MDI_IRQ:
-                if(mdi_node_uint32(&child, &s905_uart_irq) != MX_OK)
+                if(mdi_node_uint32(&child, &s905_uart_irq) != ZX_OK)
                     return;
                 break;
 

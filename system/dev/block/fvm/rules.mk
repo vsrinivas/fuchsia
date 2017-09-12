@@ -19,7 +19,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fvm \
     system/ulib/gpt \
     system/ulib/digest \
-    system/ulib/mxcpp \
+    system/ulib/zxcpp \
     system/ulib/fbl \
     system/ulib/sync \
     third_party/ulib/cryptolib \
@@ -27,7 +27,7 @@ MODULE_STATIC_LIBS := \
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/driver \
-    system/ulib/magenta \
-    system/ulib/mxio \
+    system/ulib/zircon \
+    system/ulib/fdio \
 
 include make/module.mk

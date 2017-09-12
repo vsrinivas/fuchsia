@@ -16,8 +16,8 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/main.c \
 
 MODULE_LIBS := \
-    system/ulib/magenta \
-    system/ulib/mxio \
+    system/ulib/zircon \
+    system/ulib/fdio \
     system/ulib/c
 
 include make/module.mk

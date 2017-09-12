@@ -8,8 +8,8 @@
 #include <string.h>
 
 #include <launchpad/launchpad.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/object.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
 
 extern char** environ;
 
@@ -94,8 +94,8 @@ int main(int argc, char* const argv[]) {
 
     // Execute utility
     launchpad_t* lp;
-    launchpad_create(MX_HANDLE_INVALID, argv[next_arg], &lp);
-    mx_status_t status = launchpad_load_from_file(lp, argv[next_arg]);
+    launchpad_create(ZX_HANDLE_INVALID, argv[next_arg], &lp);
+    zx_status_t status = launchpad_load_from_file(lp, argv[next_arg]);
     if (status < 0) {
         fprintf(stderr, "%s: Failed to load from '%s'\n", argv[0],
                 argv[next_arg]);
@@ -106,9 +106,9 @@ int main(int argc, char* const argv[]) {
     int num_args = (argc - next_arg);
     launchpad_set_args(lp, num_args, (const char* const*) &argv[next_arg]);
     launchpad_set_environ(lp, envp);
-    launchpad_clone(lp, LP_CLONE_MXIO_NAMESPACE | LP_CLONE_MXIO_CWD |
-                        LP_CLONE_MXIO_STDIO);
-    mx_handle_t proc;
+    launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE | LP_CLONE_FDIO_CWD |
+                        LP_CLONE_FDIO_STDIO);
+    zx_handle_t proc;
     const char* errmsg;
     status = launchpad_go(lp, &proc, &errmsg);
     free(envp);
@@ -118,15 +118,15 @@ int main(int argc, char* const argv[]) {
     }
 
     // Wait for utility to complete and return status
-    status = mx_object_wait_one (proc, MX_TASK_TERMINATED,
-                                 MX_TIME_INFINITE, NULL);
-    if (status != MX_OK) {
+    status = zx_object_wait_one (proc, ZX_TASK_TERMINATED,
+                                 ZX_TIME_INFINITE, NULL);
+    if (status != ZX_OK) {
         fprintf(stderr, "%s: Failed during object_wait_one\n", argv[0]);
         return 123;
     }
-    mx_info_process_t proc_info;
-    if (mx_object_get_info(proc, MX_INFO_PROCESS, &proc_info,
-                           sizeof(proc_info), NULL, NULL) != MX_OK) {
+    zx_info_process_t proc_info;
+    if (zx_object_get_info(proc, ZX_INFO_PROCESS, &proc_info,
+                           sizeof(proc_info), NULL, NULL) != ZX_OK) {
         fprintf(stderr, "%s: Failed during object_get_info\n", argv[0]);
         return 122;
     }

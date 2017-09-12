@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 
 #include <fbl/atomic.h>
 

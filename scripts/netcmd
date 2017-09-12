@@ -8,6 +8,6 @@
 
 for netruncmd in ./build-*/tools/netruncmd ;
 do
-	$netruncmd magenta $*
+	$netruncmd zircon $*
 	break
 done

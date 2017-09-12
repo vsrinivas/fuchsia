@@ -5,8 +5,8 @@
 #include <getopt.h>
 #include <gpt/cros.h>
 #include <gpt/gpt.h>
-#include <magenta/device/block.h>
-#include <magenta/syscalls.h> // for mx_cprng_draw
+#include <zircon/device/block.h>
+#include <zircon/syscalls.h> // for zx_cprng_draw
 #include <ctype.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -213,7 +213,7 @@ done:
     close(fd);
 }
 
-static mx_status_t commit(gpt_device_t* gpt, int fd, const char* dev) {
+static zx_status_t commit(gpt_device_t* gpt, int fd, const char* dev) {
     if (confirm_writes) {
         dump(gpt, NULL);
         printf("\n");
@@ -229,7 +229,7 @@ static mx_status_t commit(gpt_device_t* gpt, int fd, const char* dev) {
             case 'N':
             case 27:
                 close(fd);
-                return MX_OK;
+                return ZX_OK;
             }
         }
     }
@@ -238,12 +238,12 @@ make_it_so:;
     int rc = gpt_device_sync(gpt);
     if (rc) {
         printf("Error: GPT device sync failed.\n");
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
     rc = ioctl_block_rr_part(fd);
     if (rc) {
         printf("Error: GPT updated but device could not be rebound. Please reboot.\n");
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
     printf("GPT changes complete.\n");
     return 0;
@@ -264,7 +264,7 @@ static void init_gpt(const char* dev) {
 static void add_partition(const char* dev, uint64_t start, uint64_t end, const char* name) {
     uint8_t guid[GPT_GUID_LEN];
     size_t sz;
-    if (mx_cprng_draw(guid, GPT_GUID_LEN, &sz) != MX_OK)
+    if (zx_cprng_draw(guid, GPT_GUID_LEN, &sz) != ZX_OK)
         return;
 
     int fd;
@@ -405,35 +405,35 @@ static bool parse_guid(char* guid, uint8_t* bytes_out) {
 /*
  * Give a path to a block device and a partition index into a GPT, load the GPT
  * information into memory and find the requested partition. This does all the
- * bounds and other error checking. If MX_OK is returned, the out parameters
- * will be set to valid values. If MX_OK is returned, the caller should close
+ * bounds and other error checking. If ZX_OK is returned, the out parameters
+ * will be set to valid values. If ZX_OK is returned, the caller should close
  * fd_out after it is done using the GPT information.
  */
-static mx_status_t get_gpt_and_part(char* path_device, long idx_part,
+static zx_status_t get_gpt_and_part(char* path_device, long idx_part,
                                     int* fd_out,
                                     gpt_device_t** gpt_out,
                                     gpt_partition_t** part_out) {
     if (idx_part < 0 || idx_part >= PARTITIONS_COUNT) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     int fd = -1;
     gpt_device_t* gpt = init(path_device, &fd);
     if (gpt == NULL) {
         tear_down_gpt(fd, gpt);
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
 
     gpt_partition_t* part = gpt->partitions[idx_part];
     if (part == NULL) {
         tear_down_gpt(fd, gpt);
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
 
     *gpt_out = gpt;
     *part_out = part;
     *fd_out = fd;
-    return MX_OK;
+    return ZX_OK;
 }
 
 /*
@@ -476,7 +476,7 @@ static bool expand_special(char* in, uint8_t* out) {
     return false;
 }
 
-static mx_status_t adjust_partition(char* dev, int idx_part,
+static zx_status_t adjust_partition(char* dev, int idx_part,
                                     uint64_t start, uint64_t end) {
     gpt_device_t* gpt = NULL;
     gpt_partition_t* part = NULL;
@@ -486,8 +486,8 @@ static mx_status_t adjust_partition(char* dev, int idx_part,
         fprintf(stderr, "partition #%d would end before it started\n", idx_part);
     }
 
-    mx_status_t rc = get_gpt_and_part(dev, idx_part, &fd, &gpt, &part);
-    if (rc != MX_OK) {
+    zx_status_t rc = get_gpt_and_part(dev, idx_part, &fd, &gpt, &part);
+    if (rc != ZX_OK) {
         return rc;
     }
 
@@ -534,7 +534,7 @@ done:
  * string/human-readable form of the GUID and should be 36 characters plus a
  * null terminator.
  */
-static mx_status_t edit_partition(char* dev, long idx_part,
+static zx_status_t edit_partition(char* dev, long idx_part,
                                   char* type_or_id, char* guid) {
     gpt_device_t* gpt = NULL;
     gpt_partition_t* part = NULL;
@@ -548,17 +548,17 @@ static mx_status_t edit_partition(char* dev, long idx_part,
     } else if (!strcmp(type_or_id, "id")) {
         set_type = false;
     } else {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     uint8_t guid_bytes[GPT_GUID_LEN];
     if (!expand_special(guid, guid_bytes) && !parse_guid(guid, guid_bytes)) {
         printf("GUID could not be parsed.\n");
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    mx_status_t rc = get_gpt_and_part(dev, idx_part, &fd, &gpt, &part);
-    if (rc != MX_OK) {
+    zx_status_t rc = get_gpt_and_part(dev, idx_part, &fd, &gpt, &part);
+    if (rc != ZX_OK) {
         return rc;
     }
 
@@ -578,7 +578,7 @@ static mx_status_t edit_partition(char* dev, long idx_part,
  *
  * argv/argc should correspond only to the arguments after the command.
  */
-static mx_status_t edit_cros_partition(char* const * argv, int argc) {
+static zx_status_t edit_cros_partition(char* const * argv, int argc) {
     gpt_device_t* gpt = NULL;
     gpt_partition_t* part = NULL;
     int fd = -1;
@@ -587,7 +587,7 @@ static mx_status_t edit_cros_partition(char* const * argv, int argc) {
     long idx_part = strtol(argv[0], &end, 10);
     if (*end != 0 || argv[0][0] == 0) {
         print_usage();
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     // Use -1 as a sentinel for "not changing"
@@ -646,28 +646,28 @@ static mx_status_t edit_cros_partition(char* const * argv, int argc) {
 
     char* dev = argv[optind];
 
-    mx_status_t rc = get_gpt_and_part(dev, idx_part, &fd, &gpt, &part);
-    if (rc != MX_OK) {
+    zx_status_t rc = get_gpt_and_part(dev, idx_part, &fd, &gpt, &part);
+    if (rc != ZX_OK) {
         return rc;
     }
 
     if (!gpt_cros_is_kernel_guid(part->type, GPT_GUID_LEN)) {
         printf("Partition is not a CrOS kernel partition\n");
-        rc = MX_ERR_INVALID_ARGS;
+        rc = ZX_ERR_INVALID_ARGS;
         goto cleanup;
     }
 
     if (tries >= 0) {
         if (gpt_cros_attr_set_tries(&part->flags, tries) < 0) {
             printf("Failed to set tries\n");
-            rc = MX_ERR_INVALID_ARGS;
+            rc = ZX_ERR_INVALID_ARGS;
             goto cleanup;
         }
     }
     if (priority >= 0) {
         if (gpt_cros_attr_set_priority(&part->flags, priority) < 0) {
             printf("Failed to set priority\n");
-            rc = MX_ERR_INVALID_ARGS;
+            rc = ZX_ERR_INVALID_ARGS;
             goto cleanup;
         }
     }
@@ -681,7 +681,7 @@ cleanup:
     return rc;
 usage:
     print_usage();
-    return MX_ERR_INVALID_ARGS;
+    return ZX_ERR_INVALID_ARGS;
 }
 
 /*
@@ -689,13 +689,13 @@ usage:
  * partition is set as hidden, the firmware will not attempt to boot from the
  * partition.
  */
-static mx_status_t set_visibility(char* dev, long idx_part, bool visible) {
+static zx_status_t set_visibility(char* dev, long idx_part, bool visible) {
     gpt_device_t* gpt = NULL;
     gpt_partition_t* part = NULL;
     int fd = -1;
 
-    mx_status_t rc = get_gpt_and_part(dev, idx_part, &fd, &gpt, &part);
-    if (rc != MX_OK) {
+    zx_status_t rc = get_gpt_and_part(dev, idx_part, &fd, &gpt, &part);
+    if (rc != ZX_OK) {
         return rc;
     }
 
@@ -838,7 +838,7 @@ static int repartition(int argc, char** argv) {
 
       uint8_t guid[GPT_GUID_LEN];
       size_t sz;
-      if (mx_cprng_draw(guid, GPT_GUID_LEN, &sz) != MX_OK) {
+      if (zx_cprng_draw(guid, GPT_GUID_LEN, &sz) != ZX_OK) {
         printf("rand read error\n");
         rc = 255;
         goto repartition_end;

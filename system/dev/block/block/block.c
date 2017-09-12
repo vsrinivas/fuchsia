@@ -7,8 +7,8 @@
 #include <ddk/binding.h>
 #include <ddk/protocol/block.h>
 
-#include <magenta/process.h>
-#include <magenta/types.h>
+#include <zircon/process.h>
+#include <zircon/types.h>
 #include <sys/param.h>
 #include <assert.h>
 #include <inttypes.h>
@@ -21,8 +21,8 @@
 #include "server.h"
 
 typedef struct blkdev {
-    mx_device_t* mxdev;
-    mx_device_t* parent;
+    zx_device_t* mxdev;
+    zx_device_t* parent;
     block_protocol_t proto;
 
     mtx_t lock;
@@ -58,19 +58,19 @@ static int blockserver_thread(void* arg) {
     return 0;
 }
 
-static mx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_len) {
-    if (out_len < sizeof(mx_handle_t)) {
-        return MX_ERR_INVALID_ARGS;
+static zx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_len) {
+    if (out_len < sizeof(zx_handle_t)) {
+        return ZX_ERR_INVALID_ARGS;
     }
-    mx_status_t status;
+    zx_status_t status;
     mtx_lock(&bdev->lock);
     if (bdev->bs != NULL) {
-        status = MX_ERR_ALREADY_BOUND;
+        status = ZX_ERR_ALREADY_BOUND;
         goto done;
     }
 
     BlockServer* bs;
-    if ((status = blockserver_create(out_buf, &bs)) != MX_OK) {
+    if ((status = blockserver_create(out_buf, &bs)) != ZX_OK) {
         goto done;
     }
 
@@ -81,34 +81,34 @@ static mx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_le
     if (thrd_create(&thread, blockserver_thread, bdev) != thrd_success) {
         blockserver_free(bs);
         bdev->bs = NULL;
-        status = MX_ERR_NO_MEMORY;
+        status = ZX_ERR_NO_MEMORY;
         goto done;
     }
     thrd_detach(thread);
 
     // On success, the blockserver thread holds the lock.
-    return sizeof(mx_handle_t);
+    return sizeof(zx_handle_t);
 done:
     mtx_unlock(&bdev->lock);
     return status;
 }
 
-static mx_status_t blkdev_attach_vmo(blkdev_t* bdev,
+static zx_status_t blkdev_attach_vmo(blkdev_t* bdev,
                                  const void* in_buf, size_t in_len,
                                  void* out_buf, size_t out_len, size_t* out_actual) {
-    if ((in_len < sizeof(mx_handle_t)) || (out_len < sizeof(vmoid_t))) {
-        return MX_ERR_INVALID_ARGS;
+    if ((in_len < sizeof(zx_handle_t)) || (out_len < sizeof(vmoid_t))) {
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    mx_status_t status;
+    zx_status_t status;
     mtx_lock(&bdev->lock);
     if (bdev->bs == NULL) {
-        status = MX_ERR_BAD_STATE;
+        status = ZX_ERR_BAD_STATE;
         goto done;
     }
 
-    mx_handle_t h = *(mx_handle_t*)in_buf;
-    if ((status = blockserver_attach_vmo(bdev->bs, h, out_buf)) != MX_OK) {
+    zx_handle_t h = *(zx_handle_t*)in_buf;
+    if ((status = blockserver_attach_vmo(bdev->bs, h, out_buf)) != ZX_OK) {
         goto done;
     }
     *out_actual = sizeof(vmoid_t);
@@ -118,21 +118,21 @@ done:
     return status;
 }
 
-static mx_status_t blkdev_alloc_txn(blkdev_t* bdev,
+static zx_status_t blkdev_alloc_txn(blkdev_t* bdev,
                                 const void* in_buf, size_t in_len,
                                 void* out_buf, size_t out_len, size_t* out_actual) {
     if ((in_len != 0) || (out_len < sizeof(txnid_t))) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    mx_status_t status;
+    zx_status_t status;
     mtx_lock(&bdev->lock);
     if (bdev->bs == NULL) {
-        status = MX_ERR_BAD_STATE;
+        status = ZX_ERR_BAD_STATE;
         goto done;
     }
 
-    if ((status = blockserver_allocate_txn(bdev->bs, out_buf)) != MX_OK) {
+    if ((status = blockserver_allocate_txn(bdev->bs, out_buf)) != ZX_OK) {
         goto done;
     }
     *out_actual = sizeof(vmoid_t);
@@ -142,40 +142,40 @@ done:
     return status;
 }
 
-static mx_status_t blkdev_free_txn(blkdev_t* bdev, const void* in_buf,
+static zx_status_t blkdev_free_txn(blkdev_t* bdev, const void* in_buf,
                                    size_t in_len) {
     if (in_len != sizeof(txnid_t)) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    mx_status_t status;
+    zx_status_t status;
     mtx_lock(&bdev->lock);
     if (bdev->bs == NULL) {
-        status = MX_ERR_BAD_STATE;
+        status = ZX_ERR_BAD_STATE;
         goto done;
     }
 
     txnid_t txnid = *(txnid_t*)in_buf;
     blockserver_free_txn(bdev->bs, txnid);
-    status = MX_OK;
+    status = ZX_OK;
 done:
     mtx_unlock(&bdev->lock);
     return status;
 }
 
-static mx_status_t blkdev_fifo_close_locked(blkdev_t* bdev) {
+static zx_status_t blkdev_fifo_close_locked(blkdev_t* bdev) {
     if (bdev->bs != NULL) {
         blockserver_shutdown(bdev->bs);
         // Ensure that the next thread to call "get_fifos" will
         // not see the previous block server.
         bdev->bs = NULL;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 // implement device protocol:
 
-static mx_status_t blkdev_ioctl(void* ctx, uint32_t op, const void* cmd,
+static zx_status_t blkdev_ioctl(void* ctx, uint32_t op, const void* cmd,
                             size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
     blkdev_t* blkdev = ctx;
     switch (op) {
@@ -189,7 +189,7 @@ static mx_status_t blkdev_ioctl(void* ctx, uint32_t op, const void* cmd,
         return blkdev_free_txn(blkdev, cmd, cmdlen);
     case IOCTL_BLOCK_FIFO_CLOSE: {
         mtx_lock(&blkdev->lock);
-        mx_status_t status = blkdev_fifo_close_locked(blkdev);
+        zx_status_t status = blkdev_fifo_close_locked(blkdev);
         mtx_unlock(&blkdev->lock);
         return status;
     }
@@ -203,7 +203,7 @@ static void blkdev_iotxn_queue(void* ctx, iotxn_t* txn) {
     iotxn_queue(blkdev->parent, txn);
 }
 
-static mx_off_t blkdev_get_size(void* ctx) {
+static zx_off_t blkdev_get_size(void* ctx) {
     blkdev_t* blkdev = ctx;
     return device_get_size(blkdev->parent);
 }
@@ -230,7 +230,7 @@ static void blkdev_release(void* ctx) {
     }
 }
 
-static mx_protocol_device_t blkdev_ops = {
+static zx_protocol_device_t blkdev_ops = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = blkdev_ioctl,
     .iotxn_queue = blkdev_iotxn_queue,
@@ -239,18 +239,18 @@ static mx_protocol_device_t blkdev_ops = {
     .release = blkdev_release,
 };
 
-static mx_status_t block_driver_bind(void* ctx, mx_device_t* dev, void** cookie) {
+static zx_status_t block_driver_bind(void* ctx, zx_device_t* dev, void** cookie) {
     blkdev_t* bdev;
     if ((bdev = calloc(1, sizeof(blkdev_t))) == NULL) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     bdev->threadcount = 0;
     mtx_init(&bdev->lock, mtx_plain);
     bdev->parent = dev;
 
-    mx_status_t status;
-    if (device_get_protocol(dev, MX_PROTOCOL_BLOCK_CORE, &bdev->proto)) {
-        status = MX_ERR_INTERNAL;
+    zx_status_t status;
+    if (device_get_protocol(dev, ZX_PROTOCOL_BLOCK_CORE, &bdev->proto)) {
+        status = ZX_ERR_INTERNAL;
         goto fail;
     }
 
@@ -259,26 +259,26 @@ static mx_status_t block_driver_bind(void* ctx, mx_device_t* dev, void** cookie)
         .name = "block",
         .ctx = bdev,
         .ops = &blkdev_ops,
-        .proto_id = MX_PROTOCOL_BLOCK,
+        .proto_id = ZX_PROTOCOL_BLOCK,
     };
 
     status = device_add(dev, &args, &bdev->mxdev);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         goto fail;
     }
 
-    return MX_OK;
+    return ZX_OK;
 
 fail:
     free(bdev);
     return status;
 }
 
-static mx_driver_ops_t block_driver_ops = {
+static zx_driver_ops_t block_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = block_driver_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(block, block_driver_ops, "magenta", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_BLOCK_CORE),
-MAGENTA_DRIVER_END(block)
+ZIRCON_DRIVER_BEGIN(block, block_driver_ops, "zircon", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BLOCK_CORE),
+ZIRCON_DRIVER_END(block)

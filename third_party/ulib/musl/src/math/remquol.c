@@ -35,35 +35,35 @@ long double remquol(long double x, long double y, int* quo) {
     if (ex >= ey) {
 /* x mod y */
 #if LDBL_MANT_DIG == 64
-        uint64_t i, mx, my;
-        mx = ux.i.m;
+        uint64_t i, zx, my;
+        zx = ux.i.m;
         my = uy.i.m;
         for (; ex > ey; ex--) {
-            i = mx - my;
-            if (mx >= my) {
-                mx = 2 * i;
+            i = zx - my;
+            if (zx >= my) {
+                zx = 2 * i;
                 q++;
                 q <<= 1;
-            } else if (2 * mx < mx) {
-                mx = 2 * mx - my;
+            } else if (2 * zx < zx) {
+                zx = 2 * zx - my;
                 q <<= 1;
                 q++;
             } else {
-                mx = 2 * mx;
+                zx = 2 * zx;
                 q <<= 1;
             }
         }
-        i = mx - my;
-        if (mx >= my) {
-            mx = i;
+        i = zx - my;
+        if (zx >= my) {
+            zx = i;
             q++;
         }
-        if (mx == 0)
+        if (zx == 0)
             ex = -120;
         else
-            for (; mx >> 63 == 0; mx *= 2, ex--)
+            for (; zx >> 63 == 0; zx *= 2, ex--)
                 ;
-        ux.i.m = mx;
+        ux.i.m = zx;
 #elif LDBL_MANT_DIG == 113
         uint64_t hi, lo, xhi, xlo, yhi, ylo;
         xhi = (ux.i2.hi & -1ULL >> 16) | 1ULL << 48;

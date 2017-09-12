@@ -13,11 +13,11 @@ void RunNoTraceBenchmarks() {
     puts("Running benchmarks with NTRACE...\n");
 
     Run("TRACE_ENABLED with NTRACE", [] {
-        MX_DEBUG_ASSERT(!TRACE_ENABLED());
+        ZX_DEBUG_ASSERT(!TRACE_ENABLED());
     });
 
     Run("TRACE_CATEGORY_ENABLED with NTRACE", [] {
-        MX_DEBUG_ASSERT(!TRACE_CATEGORY_ENABLED("+enabled"));
+        ZX_DEBUG_ASSERT(!TRACE_CATEGORY_ENABLED("+enabled"));
     });
 
     Run("TRACE_DURATION_BEGIN macro with 0 arguments with NTRACE", [] {

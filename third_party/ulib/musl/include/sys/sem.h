@@ -43,7 +43,7 @@ struct seminfo {
     int semopm;
     int semume;
     int semusz;
-    int semvmx;
+    int semvzx;
     int semaem;
 };
 

@@ -14,12 +14,12 @@ MODULE_SRCS += \
 MODULE_NAME := task-utils-test
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mxcpp \
+    system/ulib/zxcpp \
     system/ulib/task-utils
 
 MODULE_LIBS := \
-    system/ulib/magenta \
-    system/ulib/mxio \
+    system/ulib/zircon \
+    system/ulib/fdio \
     system/ulib/c \
     system/ulib/unittest
 

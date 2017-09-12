@@ -10,9 +10,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
-#include <mxio/util.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
+#include <fdio/util.h>
 #include <bcm/ioctl.h>
 
 const char* prog_name;

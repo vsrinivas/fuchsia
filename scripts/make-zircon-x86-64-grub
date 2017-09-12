@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+set -e -u
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+PROJECT="zircon-pc-x86-64"
+PROJECT_DIR="$DIR/../build-$PROJECT"
+BOOTDATA="${1:-$PROJECT_DIR/bootdata.bin}"
+
+(cd "$DIR/.."; ENABLE_NEW_BOOT=true $DIR/make-parallel $PROJECT) || exit
+
+if ! which xorriso grub-mkrescue &> /dev/null; then
+  echo "ERROR: You must install xorriso and grub-mkrescue"
+  exit
+fi
+
+TEMP="$(mktemp -d)"
+mkdir -p "$TEMP/boot/grub"
+cp "$PROJECT_DIR/zircon.bin" "$TEMP/boot/zircon.bin"
+cp "$BOOTDATA" "$TEMP/boot/ramdisk.bin"
+cat > "$TEMP/boot/grub/grub.cfg" << EOF
+set timeout=0
+menuentry "Zircon" {
+  multiboot /boot/zircon.bin
+  module /boot/ramdisk.bin
+}
+EOF
+grub-mkrescue -o "$PROJECT_DIR/zircon.iso" "$TEMP"
+rm -rf "$TEMP"

@@ -7,8 +7,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <magenta/device/block.h>
-#include <magenta/types.h>
+#include <zircon/device/block.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -16,7 +16,7 @@ typedef struct fifo_client fifo_client_t;
 
 // Allocates a block fifo client. The client is thread-safe, as long
 // as each thread accessing the client uses a distinct txnid.
-mx_status_t block_fifo_create_client(mx_handle_t fifo, fifo_client_t** out);
+zx_status_t block_fifo_create_client(zx_handle_t fifo, fifo_client_t** out);
 
 // Frees a block fifo client
 void block_fifo_release_client(fifo_client_t* client);
@@ -35,6 +35,6 @@ void block_fifo_release_client(fifo_client_t* client);
 // length                                   read, write
 // vmo_offset                               read, write
 // dev_offset                               read, write
-mx_status_t block_fifo_txn(fifo_client_t* client, block_fifo_request_t* requests, size_t count);
+zx_status_t block_fifo_txn(fifo_client_t* client, block_fifo_request_t* requests, size_t count);
 
 __END_CDECLS

@@ -6,7 +6,7 @@
 
 #ifdef __cplusplus
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <fbl/macros.h>
 
 // Notes about class Mutex
@@ -56,7 +56,7 @@ public:
 
 #else   // if _KERNEL
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <threads.h>
 
 namespace fbl {

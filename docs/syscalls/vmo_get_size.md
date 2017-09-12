@@ -1,4 +1,4 @@
-# mx_vmo_get_size
+# zx_vmo_get_size
 
 ## NAME
 
@@ -7,9 +7,9 @@ vmo_get_size - read the current size of a VMO object
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-mx_status_t mx_vmo_get_size(mx_handle_t handle, uint64_t* size);
+zx_status_t zx_vmo_get_size(zx_handle_t handle, uint64_t* size);
 
 ```
 
@@ -19,16 +19,16 @@ mx_status_t mx_vmo_get_size(mx_handle_t handle, uint64_t* size);
 
 ## RETURN VALUE
 
-**vmo_get_size**() returns **MX_OK** on success. In the event
+**vmo_get_size**() returns **ZX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS
 
-**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**MX_ERR_WRONG_TYPE**  *handle* is not a VMO handle.
+**ZX_ERR_WRONG_TYPE**  *handle* is not a VMO handle.
 
-**MX_ERR_INVALID_ARGS**  *size* is an invalid pointer or NULL.
+**ZX_ERR_INVALID_ARGS**  *size* is an invalid pointer or NULL.
 
 ## SEE ALSO
 

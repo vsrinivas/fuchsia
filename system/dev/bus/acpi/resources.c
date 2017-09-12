@@ -4,7 +4,7 @@
 
 #include "resources.h"
 
-mx_status_t resource_parse_memory(ACPI_RESOURCE* res, resource_memory_t* out) {
+zx_status_t resource_parse_memory(ACPI_RESOURCE* res, resource_memory_t* out) {
     switch (res->Type) {
         case ACPI_RESOURCE_TYPE_MEMORY24: {
             ACPI_RESOURCE_MEMORY24* m24 = &res->Data.Memory24;
@@ -33,10 +33,10 @@ mx_status_t resource_parse_memory(ACPI_RESOURCE* res, resource_memory_t* out) {
             out->address_length = m32->AddressLength;
             break;
         }
-        default: return MX_ERR_INVALID_ARGS;
+        default: return ZX_ERR_INVALID_ARGS;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 #define EXTRACT_ADDRESS_FIELDS(src, out) do { \
@@ -51,7 +51,7 @@ mx_status_t resource_parse_memory(ACPI_RESOURCE* res, resource_memory_t* out) {
             (out)->max_address_fixed = (src)->MaxAddressFixed; \
 } while (0)
 
-mx_status_t resource_parse_address(ACPI_RESOURCE* res, resource_address_t* out) {
+zx_status_t resource_parse_address(ACPI_RESOURCE* res, resource_address_t* out) {
     uint8_t resource_type;
     switch (res->Type) {
         case ACPI_RESOURCE_TYPE_ADDRESS16: {
@@ -78,7 +78,7 @@ mx_status_t resource_parse_address(ACPI_RESOURCE* res, resource_address_t* out) 
             resource_type = a64->ResourceType;
             break;
         }
-        default: return MX_ERR_INVALID_ARGS;
+        default: return ZX_ERR_INVALID_ARGS;
     }
 
     switch (resource_type) {
@@ -88,10 +88,10 @@ mx_status_t resource_parse_address(ACPI_RESOURCE* res, resource_address_t* out) 
         default: out->resource_type = RESOURCE_ADDRESS_UNKNOWN;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t resource_parse_io(ACPI_RESOURCE* res, resource_io_t* out) {
+zx_status_t resource_parse_io(ACPI_RESOURCE* res, resource_io_t* out) {
     switch (res->Type) {
         case ACPI_RESOURCE_TYPE_IO: {
             ACPI_RESOURCE_IO* io = &res->Data.Io;
@@ -111,8 +111,8 @@ mx_status_t resource_parse_io(ACPI_RESOURCE* res, resource_io_t* out) {
             out->maximum = io->Address;
             break;
         }
-        default: return MX_ERR_INVALID_ARGS;
+        default: return ZX_ERR_INVALID_ARGS;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }

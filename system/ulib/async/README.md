@@ -53,13 +53,13 @@ See [async/wait.h](include/async/wait.h) for details.
 #include <async/wait.h>
 
 async_wait_result_t handler(async_t* async, async_wait_t* wait,
-                            mx_status_t status, const mx_packet_signal_t* signal) {
+                            zx_status_t status, const zx_packet_signal_t* signal) {
     printf("signal received: status=%d, observed=%d", status, signal ? signal->observed : 0);
     free(wait);
     return ASYNC_WAIT_FINISHED;
 }
 
-mx_status_t await(mx_handle_t object, mx_signals_t trigger, void* data) {
+zx_status_t await(zx_handle_t object, zx_signals_t trigger, void* data) {
     async_wait_t* wait = calloc(1, sizeof(async_wait_t));
     wait->handler = handler;
     wait->object = object;
@@ -92,17 +92,17 @@ typedef struct {
     void* data;
 } task_data_t;
 
-async_task_result_t handler(async_t* async, async_task_t* task, mx_status_t status) {
+async_task_result_t handler(async_t* async, async_task_t* task, zx_status_t status) {
     task_data_t* task_data = (task_data_t*)task;
     printf("task deadline elapsed: status=%d, data=%p", status, task_data->data);
     free(task_data);
     return ASYNC_TASK_FINISHED;
 }
 
-mx_status_t schedule_work(void* data) {
+zx_status_t schedule_work(void* data) {
     task_data_t* task_data = calloc(1, sizeof(task_data_t));
     task_data->task.handler = handler;
-    task_data->task.deadline = mx_deadline_after(MX_SEC(2));
+    task_data->task.deadline = zx_deadline_after(ZX_SEC(2));
     task_data->task.flags = ASYNC_FLAG_HANDLE_SHUTDOWN;
     task_data->data = data;
     return async_post_task(async_get_default(), &task_data->task);
@@ -113,7 +113,7 @@ mx_status_t schedule_work(void* data) {
 
 Occasionally it may be useful to register a receiver which will be the
 recipient of multiple data packets instead of allocating a separate task
-structure for each one.  The Magenta port takes care of storing the queued
+structure for each one.  The Zircon port takes care of storing the queued
 packet data contents until it is delivered.
 
 The client can queue packets from any thread but dispatch will occur
@@ -127,8 +127,8 @@ See [async/receiver.h](include/async/receiver.h) for details.
 ```c
 #include <async/receiver.h>
 
-void handler(async_t* async, async_receiver_t* receiver, mx_status_t status,
-             const mx_packet_user_t* data) {
+void handler(async_t* async, async_receiver_t* receiver, zx_status_t status,
+             const zx_packet_user_t* data) {
     printf("packet received: status=%d, data.u32[0]=%d", status, data ? data.u32[0] : 0);
 }
 
@@ -136,7 +136,7 @@ const async_receiver_t receiver = {
     .handler = handler;
 }
 
-mx_status_t send(const mx_packet_user_t* data) {
+zx_status_t send(const zx_packet_user_t* data) {
     return async_queue_packet(async_get_default(), &receiver, data);
 }
 ```
@@ -159,13 +159,13 @@ int main(int argc, char** argv) {
 
     do_stuff();
 
-    async_loop_run(async, MX_TIME_INFINITE, false);
+    async_loop_run(async, ZX_TIME_INFINITE, false);
     async_loop_destroy(async);
     async_set_default(NULL);  // optional since we're exiting right away
     return 0;
 }
 
-async_task_result_t handler(async_t* async, async_task_t* task, mx_status_t status) {
+async_task_result_t handler(async_t* async, async_task_t* task, zx_status_t status) {
     printf("task deadline elapsed: status=%d", status);
     free(task);
 
@@ -174,10 +174,10 @@ async_task_result_t handler(async_t* async, async_task_t* task, mx_status_t stat
     return ASYNC_TASK_FINISHED;
 }
 
-mx_status_t do_stuff() {
+zx_status_t do_stuff() {
     async_task_t* task = calloc(1, sizeof(async_task_t));
     task->handler = handler;
-    task->deadline = mx_deadline_after(MX_SEC(2));
+    task->deadline = zx_deadline_after(ZX_SEC(2));
     return async_post_task(async_get_default(), task);
 }
 ```

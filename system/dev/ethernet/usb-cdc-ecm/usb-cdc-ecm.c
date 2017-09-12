@@ -7,7 +7,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
 #include <driver/usb.h>
-#include <magenta/hw/usb-cdc.h>
+#include <zircon/hw/usb-cdc.h>
 #include <sync/completion.h>
 
 #include <inttypes.h>
@@ -37,8 +37,8 @@ typedef struct {
 } ecm_endpoint_t;
 
 typedef struct {
-    mx_device_t* mxdev;
-    mx_device_t* usb_device;
+    zx_device_t* mxdev;
+    zx_device_t* usb_device;
     usb_protocol_t usb;
 
     mtx_t ethmac_mutex;
@@ -96,7 +96,7 @@ static void ecm_release(void* ctx) {
     ecm_free(eth);
 }
 
-static mx_protocol_device_t ecm_device_proto = {
+static zx_protocol_device_t ecm_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .unbind = ecm_unbind,
     .release = ecm_release,
@@ -128,7 +128,7 @@ done:
     mtx_unlock(&ctx->ethmac_mutex);
 }
 
-static mx_status_t ethmac_query(void* ctx, uint32_t options, ethmac_info_t* info) {
+static zx_status_t ethmac_query(void* ctx, uint32_t options, ethmac_info_t* info) {
     ecm_ctx_t* eth = ctx;
 
     xprintf("%s: ethmac_query called\n", module_name);
@@ -136,14 +136,14 @@ static mx_status_t ethmac_query(void* ctx, uint32_t options, ethmac_info_t* info
     // No options are supported
     if (options) {
         printf("%s: unexpected options (0x%"PRIx32") to ethmac_query\n", module_name, options);
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     memset(info, 0, sizeof(*info));
     info->mtu = eth->mtu;
     memcpy(info->mac, eth->mac_addr, sizeof(eth->mac_addr));
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static void ethmac_stop(void* cookie) {
@@ -154,14 +154,14 @@ static void ethmac_stop(void* cookie) {
     mtx_unlock(&ctx->ethmac_mutex);
 }
 
-static mx_status_t ethmac_start(void* ctx_cookie, ethmac_ifc_t* ifc, void* ethmac_cookie) {
+static zx_status_t ethmac_start(void* ctx_cookie, ethmac_ifc_t* ifc, void* ethmac_cookie) {
     xprintf("%s: ethmac_start called\n", module_name);
     ecm_ctx_t* ctx = ctx_cookie;
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
 
     mtx_lock(&ctx->ethmac_mutex);
     if (ctx->ethmac_ifc) {
-        status = MX_ERR_ALREADY_BOUND;
+        status = ZX_ERR_ALREADY_BOUND;
     } else {
         ctx->ethmac_ifc = ifc;
         ctx->ethmac_cookie = ethmac_cookie;
@@ -175,7 +175,7 @@ static mx_status_t ethmac_start(void* ctx_cookie, ethmac_ifc_t* ifc, void* ethma
 static void usb_write_complete(iotxn_t* request, void* cookie) {
     ecm_ctx_t* ctx = cookie;
 
-    if (request->status == MX_ERR_IO_NOT_PRESENT) {
+    if (request->status == ZX_ERR_IO_NOT_PRESENT) {
         iotxn_release(request);
         return;
     }
@@ -185,7 +185,7 @@ static void usb_write_complete(iotxn_t* request, void* cookie) {
     // Return transmission buffer to pool
     list_add_tail(&ctx->tx_txn_bufs, &request->node);
 
-    if (request->status == MX_ERR_IO_REFUSED) {
+    if (request->status == ZX_ERR_IO_REFUSED) {
         xprintf("%s: resetting transmit endpoint\n", module_name);
         usb_reset_endpoint(&ctx->usb, ctx->tx_endpoint.addr);
     }
@@ -193,7 +193,7 @@ static void usb_write_complete(iotxn_t* request, void* cookie) {
     mtx_unlock(&ctx->tx_mutex);
 
     // When the interface is offline, the transaction will complete with status set to
-    // MX_ERR_IO_NOT_PRESENT. There's not much we can do except ignore it.
+    // ZX_ERR_IO_NOT_PRESENT. There's not much we can do except ignore it.
 }
 
 // Note: the assumption made here is that no rx transmissions will be processed in parallel,
@@ -214,20 +214,20 @@ static void usb_recv(ecm_ctx_t* ctx, iotxn_t* request) {
 static void usb_read_complete(iotxn_t* request, void* cookie) {
     ecm_ctx_t* ctx = cookie;
 
-    if (request->status != MX_OK) {
+    if (request->status != ZX_OK) {
         xprintf("%s: usb_read_complete called with status %d\n",
                 module_name, (int)request->status);
     }
 
-    if (request->status == MX_ERR_IO_NOT_PRESENT) {
+    if (request->status == ZX_ERR_IO_NOT_PRESENT) {
         iotxn_release(request);
         return;
     }
 
-    if (request->status == MX_ERR_IO_REFUSED) {
+    if (request->status == ZX_ERR_IO_REFUSED) {
         xprintf("%s: resetting receive endpoint\n", module_name);
         usb_reset_endpoint(&ctx->usb, ctx->rx_endpoint.addr);
-    } else if (request->status == MX_OK) {
+    } else if (request->status == ZX_OK) {
         usb_recv(ctx, request);
     }
 
@@ -359,13 +359,13 @@ static int ecm_int_handler_thread(void* cookie) {
     while (true) {
         completion_reset(&ctx->completion);
         iotxn_queue(ctx->usb_device, txn);
-        completion_wait(&ctx->completion, MX_TIME_INFINITE);
-        if (txn->status == MX_OK) {
+        completion_wait(&ctx->completion, ZX_TIME_INFINITE);
+        if (txn->status == ZX_OK) {
             ecm_handle_interrupt(ctx, txn);
-        } else if (txn->status == MX_ERR_PEER_CLOSED || txn->status == MX_ERR_IO_NOT_PRESENT) {
+        } else if (txn->status == ZX_ERR_PEER_CLOSED || txn->status == ZX_ERR_IO_NOT_PRESENT) {
             xprintf("%s: terminating interrupt handling thread\n", module_name);
             return txn->status;
-        } else if (txn->status == MX_ERR_IO_REFUSED) {
+        } else if (txn->status == ZX_ERR_IO_REFUSED) {
             xprintf("%s: resetting interrupt endpoint\n", module_name);
             usb_reset_endpoint(&ctx->usb, ctx->int_endpoint.addr);
         } else {
@@ -391,8 +391,8 @@ static bool parse_cdc_ethernet_descriptor(ecm_ctx_t* ctx,
     char str_desc_buf[expected_str_size];
 
     // Read string descriptor for MAC address (string index is in iMACAddress field)
-    mx_status_t result = usb_get_descriptor(&ctx->usb, 0, USB_DT_STRING, desc->iMACAddress,
-                                            str_desc_buf, sizeof(str_desc_buf), MX_TIME_INFINITE);
+    zx_status_t result = usb_get_descriptor(&ctx->usb, 0, USB_DT_STRING, desc->iMACAddress,
+                                            str_desc_buf, sizeof(str_desc_buf), ZX_TIME_INFINITE);
     if (result < 0) {
         printf("%s: error reading MAC address\n", module_name);
         return false;
@@ -446,12 +446,12 @@ static bool want_interface(usb_interface_descriptor_t* intf, void* arg) {
     return intf->bInterfaceClass == USB_CLASS_CDC;
 }
 
-static mx_status_t ecm_bind(void* ctx, mx_device_t* device, void** cookie) {
+static zx_status_t ecm_bind(void* ctx, zx_device_t* device, void** cookie) {
     xprintf("%s: starting ecm_bind\n", module_name);
 
     usb_protocol_t usb;
-    mx_status_t result = device_get_protocol(device, MX_PROTOCOL_USB, &usb);
-    if (result != MX_OK) {
+    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
+    if (result != ZX_OK) {
         return result;
     }
 
@@ -459,11 +459,11 @@ static mx_status_t ecm_bind(void* ctx, mx_device_t* device, void** cookie) {
     ecm_ctx_t* ecm_ctx = calloc(1, sizeof(ecm_ctx_t));
     if (!ecm_ctx) {
         printf("%s: failed to allocate memory for USB CDC ECM driver\n", module_name);
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     result = usb_claim_additional_interfaces(&usb, want_interface, NULL);
-    if (result != MX_OK) {
+    if (result != ZX_OK) {
         goto fail;
     }
     // Initialize context
@@ -475,10 +475,10 @@ static mx_status_t ecm_bind(void* ctx, mx_device_t* device, void** cookie) {
 
     usb_desc_iter_t iter;
     result = usb_desc_iter_init(&usb, &iter);
-    if (result != MX_OK) {
+    if (result != ZX_OK) {
         goto fail;
     }
-    result = MX_ERR_NOT_SUPPORTED;
+    result = ZX_ERR_NOT_SUPPORTED;
 
     // Find the CDC descriptors and endpoints
     usb_descriptor_header_t* desc = usb_desc_iter_next(&iter);
@@ -592,7 +592,7 @@ static mx_status_t ecm_bind(void* ctx, mx_device_t* device, void** cookie) {
     iotxn_t* int_buf = usb_alloc_iotxn(ecm_ctx->int_endpoint.addr,
                                        ecm_ctx->int_endpoint.max_packet_size);
     if (!int_buf) {
-        result = MX_ERR_NO_MEMORY;
+        result = ZX_ERR_NO_MEMORY;
         goto fail;
     }
     int_buf->length = ecm_ctx->int_endpoint.max_packet_size;
@@ -610,7 +610,7 @@ static mx_status_t ecm_bind(void* ctx, mx_device_t* device, void** cookie) {
     while (tx_buf_remain >= tx_buf_sz) {
         iotxn_t* tx_buf = usb_alloc_iotxn(ecm_ctx->tx_endpoint.addr, tx_buf_sz);
         if (!tx_buf) {
-            result = MX_ERR_NO_MEMORY;
+            result = ZX_ERR_NO_MEMORY;
             goto fail;
         }
         tx_buf->complete_cb = usb_write_complete;
@@ -629,7 +629,7 @@ static mx_status_t ecm_bind(void* ctx, mx_device_t* device, void** cookie) {
     while (rx_buf_remain >= rx_buf_sz) {
         iotxn_t* rx_buf = usb_alloc_iotxn(ecm_ctx->rx_endpoint.addr, rx_buf_sz);
         if (!rx_buf) {
-            result = MX_ERR_NO_MEMORY;
+            result = ZX_ERR_NO_MEMORY;
             goto fail;
         }
         rx_buf->complete_cb = usb_read_complete;
@@ -653,7 +653,7 @@ static mx_status_t ecm_bind(void* ctx, mx_device_t* device, void** cookie) {
         .name = "usb-cdc-ecm",
         .ctx = ecm_ctx,
         .ops = &ecm_device_proto,
-        .proto_id = MX_PROTOCOL_ETHERMAC,
+        .proto_id = ZX_PROTOCOL_ETHERMAC,
         .proto_ops = &ethmac_ops,
     };
     result = device_add(ecm_ctx->usb_device, &args, &ecm_ctx->mxdev);
@@ -663,7 +663,7 @@ static mx_status_t ecm_bind(void* ctx, mx_device_t* device, void** cookie) {
     }
 
     usb_desc_iter_release(&iter);
-    return MX_OK;
+    return ZX_OK;
 
 fail:
     usb_desc_iter_release(&iter);
@@ -672,14 +672,14 @@ fail:
     return result;
 }
 
-static mx_driver_ops_t ecm_driver_ops = {
+static zx_driver_ops_t ecm_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = ecm_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(ethernet_usb_cdc_ecm, ecm_driver_ops, "magenta", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB),
+ZIRCON_DRIVER_BEGIN(ethernet_usb_cdc_ecm, ecm_driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_COMM),
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_CDC_SUBCLASS_ETHERNET),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 0),
-MAGENTA_DRIVER_END(ethernet_usb_cdc_ecm)
+ZIRCON_DRIVER_END(ethernet_usb_cdc_ecm)

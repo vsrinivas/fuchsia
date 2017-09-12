@@ -11,7 +11,7 @@
 #include <string.h>
 
 #include <hw/inout.h>
-#include <magenta/status.h>
+#include <zircon/status.h>
 #include <fbl/auto_lock.h>
 #include <pretty/hexdump.h>
 
@@ -21,7 +21,7 @@
 
 namespace virtio {
 
-Device::Device(mx_device_t* bus_device)
+Device::Device(zx_device_t* bus_device)
     : bus_device_(bus_device) {
     LTRACE_ENTRY;
     device_ops_.version = DEVICE_OPS_VERSION;
@@ -31,31 +31,31 @@ Device::~Device() {
     LTRACE_ENTRY;
 }
 
-mx_status_t Device::MapBar(uint8_t i) {
-    if (bar_[i].mmio_handle != MX_HANDLE_INVALID)
-        return MX_OK;
+zx_status_t Device::MapBar(uint8_t i) {
+    if (bar_[i].mmio_handle != ZX_HANDLE_INVALID)
+        return ZX_OK;
 
     uint64_t sz;
-    mx_handle_t tmp_handle;
+    zx_handle_t tmp_handle;
 
-    mx_status_t r = pci_map_resource(&pci_, PCI_RESOURCE_BAR_0 + i, MX_CACHE_POLICY_UNCACHED_DEVICE,
+    zx_status_t r = pci_map_resource(&pci_, PCI_RESOURCE_BAR_0 + i, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                      (void**)&bar_[i].mmio_base, &sz, &tmp_handle);
-    if (r != MX_OK) {
+    if (r != ZX_OK) {
         VIRTIO_ERROR("cannot map io %d\n", bar_[i].mmio_handle.get());
         return r;
     }
     bar_[i].mmio_handle.reset(tmp_handle);
     LTRACEF("bar %hhu mmio_base %p, sz %#" PRIx64 "\n", i, bar_[i].mmio_base, sz);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Device::Bind(pci_protocol_t* pci,
-                         mx_handle_t pci_config_handle, const pci_config_t* pci_config) {
+zx_status_t Device::Bind(pci_protocol_t* pci,
+                         zx_handle_t pci_config_handle, const pci_config_t* pci_config) {
     LTRACE_ENTRY;
 
     fbl::AutoLock lock(&lock_);
-    mx_handle_t tmp_handle;
+    zx_handle_t tmp_handle;
 
     // save off handles to things
     memcpy(&pci_, pci, sizeof(pci_protocol_t));
@@ -63,15 +63,15 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
     pci_config_ = pci_config;
 
     // enable bus mastering
-    mx_status_t r;
-    if ((r = pci_enable_bus_master(&pci_, true)) != MX_OK) {
+    zx_status_t r;
+    if ((r = pci_enable_bus_master(&pci_, true)) != ZX_OK) {
         VIRTIO_ERROR("cannot enable bus master %d\n", r);
         return r;
     }
 
     // try to set up our IRQ mode
-    if (pci_set_irq_mode(&pci_, MX_PCIE_IRQ_MODE_MSI, 1)) {
-        if (pci_set_irq_mode(&pci_, MX_PCIE_IRQ_MODE_LEGACY, 1)) {
+    if (pci_set_irq_mode(&pci_, ZX_PCIE_IRQ_MODE_MSI, 1)) {
+        if (pci_set_irq_mode(&pci_, ZX_PCIE_IRQ_MODE_LEGACY, 1)) {
             VIRTIO_ERROR("failed to set irq mode\n");
             return -1;
         } else {
@@ -80,7 +80,7 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
     }
 
     r = pci_map_interrupt(&pci_, 0, &tmp_handle);
-    if (r != MX_OK) {
+    if (r != ZX_OK) {
         VIRTIO_ERROR("failed to map irq %d\n", r);
         return r;
     }
@@ -98,7 +98,7 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
 
             if (off > PAGE_SIZE) {
                 VIRTIO_ERROR("capability pointer is out of whack %zu\n", off);
-                return MX_ERR_INVALID_ARGS;
+                return ZX_ERR_INVALID_ARGS;
             }
 
             cap = (virtio_pci_cap *)(((uintptr_t)pci_config_) + off);
@@ -164,7 +164,7 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
                 bar0_pio_base_ = 0;
 
                 r = MapBar(0);
-                if (r != MX_OK) {
+                if (r != ZX_OK) {
                     VIRTIO_ERROR("cannot mmap io %d\n", r);
                     return r;
                 }
@@ -172,8 +172,8 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
                 LTRACEF("bar_[0].mmio_base %p\n", bar_[0].mmio_base);
             } else {
                 // this is probably PIO
-                r = mx_mmap_device_io(get_root_resource(), bar0_pio_base_, bar0_size_);
-                if (r != MX_OK) {
+                r = zx_mmap_device_io(get_root_resource(), bar0_pio_base_, bar0_size_);
+                if (r != ZX_OK) {
                     VIRTIO_ERROR("failed to access PIO range %#x, length %#xw\n", bar0_pio_base_, bar0_size_);
                     return r;
                 }
@@ -189,7 +189,7 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
 
     LTRACE_EXIT;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 void Device::Unbind() {
@@ -202,13 +202,13 @@ void Device::Release() {
 
 void Device::IrqWorker() {
     LTRACEF("started\n");
-    mx_status_t rc;
+    zx_status_t rc;
     assert(irq_handle_);
 
     while (irq_handle_) {
-        if ((rc = mx_interrupt_wait(irq_handle_.get())) < 0) {
+        if ((rc = zx_interrupt_wait(irq_handle_.get())) < 0) {
             printf("virtio: error while waiting for interrupt: %s\n",
-                mx_status_get_string(rc));
+                zx_status_get_string(rc));
             continue;
         }
 
@@ -221,9 +221,9 @@ void Device::IrqWorker() {
 
         LTRACEF_LEVEL(2, "irq_status %#x\n", irq_status);
 
-        if ((rc = mx_interrupt_complete(irq_handle_.get())) < 0) {
+        if ((rc = zx_interrupt_complete(irq_handle_.get())) < 0) {
             printf("virtio: error while completing interrupt: %s\n",
-                mx_status_get_string(rc));
+                zx_status_get_string(rc));
             continue;
         }
 
@@ -302,7 +302,7 @@ void Device::WriteConfigBar(uint16_t offset, T val) {
     }
 }
 
-mx_status_t Device::CopyDeviceConfig(void* _buf, size_t len) {
+zx_status_t Device::CopyDeviceConfig(void* _buf, size_t len) {
     if (mmio_regs_.device_config) {
         memcpy(_buf, (void *)mmio_regs_.device_config, len);
     } else {
@@ -315,7 +315,7 @@ mx_status_t Device::CopyDeviceConfig(void* _buf, size_t len) {
         }
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 uint16_t Device::GetRingSize(uint16_t index) {
@@ -336,7 +336,7 @@ uint16_t Device::GetRingSize(uint16_t index) {
     }
 }
 
-void Device::SetRing(uint16_t index, uint16_t count, mx_paddr_t pa_desc, mx_paddr_t pa_avail, mx_paddr_t pa_used) {
+void Device::SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_desc, zx_paddr_t pa_avail, zx_paddr_t pa_used) {
     LTRACEF("index %u, count %u, pa_desc %#" PRIxPTR ", pa_avail %#" PRIxPTR ", pa_used %#" PRIxPTR "\n",
             index, count, pa_desc, pa_avail, pa_used);
 

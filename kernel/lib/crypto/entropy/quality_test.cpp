@@ -13,7 +13,7 @@
 #include <lib/crypto/entropy/hw_rng_collector.h>
 #include <lib/crypto/entropy/jitterentropy_collector.h>
 #include <lk/init.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <string.h>
 
 namespace crypto {
@@ -33,14 +33,14 @@ bool entropy_was_lost = false;
 
 static void SetupEntropyVmo(uint level) {
     if (VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, sizeof(entropy_buf),
-                              &entropy_vmo) != MX_OK) {
+                              &entropy_vmo) != ZX_OK) {
         printf("entropy-record: Failed to create entropy_vmo (data lost)\n");
         entropy_was_lost = true;
         return;
     }
     size_t actual;
     if (entropy_vmo->Write(entropy_buf, 0, sizeof(entropy_buf), &actual)
-            != MX_OK) {
+            != ZX_OK) {
         printf("entropy-record: Failed to write to entropy_vmo (data lost)\n");
         entropy_was_lost = true;
         return;
@@ -51,7 +51,7 @@ static void SetupEntropyVmo(uint level) {
         return;
     }
     constexpr const char *name = "debug/entropy.bin";
-    if (entropy_vmo->set_name(name, strlen(name)) != MX_OK) {
+    if (entropy_vmo->set_name(name, strlen(name)) != ZX_OK) {
         // The name is needed because devmgr uses it to add the VMO as a file in
         // the /boot filesystem.
         printf("entropy-record: could not name entropy_vmo (data lost)\n");
@@ -69,19 +69,19 @@ void EarlyBootTest() {
 
     entropy::Collector* collector = nullptr;
     entropy::Collector* candidate;
-    char candidate_name[MX_MAX_NAME_LEN];
+    char candidate_name[ZX_MAX_NAME_LEN];
 
     // TODO(andrewkrieger): find a nicer way to enumerate all entropy collectors
-    if (HwRngCollector::GetInstance(&candidate) == MX_OK) {
+    if (HwRngCollector::GetInstance(&candidate) == ZX_OK) {
         candidate->get_name(candidate_name, sizeof(candidate_name));
-        if (strncmp(candidate_name, src_name, MX_MAX_NAME_LEN) == 0) {
+        if (strncmp(candidate_name, src_name, ZX_MAX_NAME_LEN) == 0) {
             collector = candidate;
         }
     }
     if (!collector &&
-        JitterentropyCollector::GetInstance(&candidate) == MX_OK) {
+        JitterentropyCollector::GetInstance(&candidate) == ZX_OK) {
         candidate->get_name(candidate_name, sizeof(candidate_name));
-        if (strncmp(candidate_name, src_name, MX_MAX_NAME_LEN) == 0) {
+        if (strncmp(candidate_name, src_name, ZX_MAX_NAME_LEN) == 0) {
             collector = candidate;
         }
     }

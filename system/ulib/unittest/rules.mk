@@ -17,8 +17,8 @@ MODULE_SRCS += \
 
 MODULE_SO_NAME := unittest
 
-# N.B. mxio, and thus launchpad, cannot appear here. See ./README.md.
-MODULE_LIBS := system/ulib/c system/ulib/magenta
+# N.B. fdio, and thus launchpad, cannot appear here. See ./README.md.
+MODULE_LIBS := system/ulib/c system/ulib/zircon
 
 MODULE_STATIC_LIBS := system/ulib/pretty
 

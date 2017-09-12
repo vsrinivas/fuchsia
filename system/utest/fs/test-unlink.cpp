@@ -13,7 +13,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <fbl/algorithm.h>
 
 #include "filesystems.h"

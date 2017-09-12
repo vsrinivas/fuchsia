@@ -7,9 +7,9 @@
 #include <ddk/binding.h>
 #include <ddk/protocol/block.h>
 
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
-#include <magenta/listnode.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
+#include <zircon/listnode.h>
 #include <sys/param.h>
 #include <sync/completion.h>
 #include <lib/cksum.h>
@@ -38,8 +38,8 @@
 #define TXN_SIZE 0x4000 // 128 partition entries
 
 typedef struct gptpart_device {
-    mx_device_t* mxdev;
-    mx_device_t* parent;
+    zx_device_t* mxdev;
+    zx_device_t* parent;
 
     gpt_entry_t gpt_entry;
 
@@ -75,7 +75,7 @@ static uint64_t getsize(gptpart_device_t* dev) {
     return lbacount * dev->info.block_size;
 }
 
-static mx_off_t to_parent_offset(gptpart_device_t* dev, mx_off_t offset) {
+static zx_off_t to_parent_offset(gptpart_device_t* dev, zx_off_t offset) {
     return offset + dev->gpt_entry.first_lba * dev->info.block_size;
 }
 
@@ -105,32 +105,32 @@ static bool validate_header(const gpt_t* header, const block_info_t* info) {
 
 // implement device protocol:
 
-static mx_status_t gpt_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen,
+static zx_status_t gpt_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen,
                          void* reply, size_t max, size_t* out_actual) {
     gptpart_device_t* device = ctx;
     switch (op) {
     case IOCTL_BLOCK_GET_INFO: {
         block_info_t* info = reply;
         if (max < sizeof(*info))
-            return MX_ERR_BUFFER_TOO_SMALL;
+            return ZX_ERR_BUFFER_TOO_SMALL;
         memcpy(info, &device->info, sizeof(*info));
         *out_actual = sizeof(*info);
-        return MX_OK;
+        return ZX_OK;
     }
     case IOCTL_BLOCK_GET_TYPE_GUID: {
         char* guid = reply;
-        if (max < GPT_GUID_LEN) return MX_ERR_BUFFER_TOO_SMALL;
+        if (max < GPT_GUID_LEN) return ZX_ERR_BUFFER_TOO_SMALL;
         memcpy(guid, device->gpt_entry.type, GPT_GUID_LEN);
         return GPT_GUID_LEN;
         *out_actual = GPT_GUID_LEN;
-        return MX_OK;
+        return ZX_OK;
     }
     case IOCTL_BLOCK_GET_PARTITION_GUID: {
         char* guid = reply;
-        if (max < GPT_GUID_LEN) return MX_ERR_BUFFER_TOO_SMALL;
+        if (max < GPT_GUID_LEN) return ZX_ERR_BUFFER_TOO_SMALL;
         memcpy(guid, device->gpt_entry.guid, GPT_GUID_LEN);
         *out_actual = GPT_GUID_LEN;
-        return MX_OK;
+        return ZX_OK;
     }
     case IOCTL_BLOCK_GET_NAME: {
         char* name = reply;
@@ -138,25 +138,25 @@ static mx_status_t gpt_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmd
         // save room for the null terminator
         utf16_to_cstring(name, device->gpt_entry.name, MIN((max - 1) * 2, GPT_NAME_LEN));
         *out_actual = strnlen(name, GPT_NAME_LEN / 2);
-        return MX_OK;
+        return ZX_OK;
     }
     case IOCTL_DEVICE_SYNC: {
         // Propagate sync to parent device
         return device_ioctl(device->parent, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0, NULL);
     }
     default:
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
 static void gpt_iotxn_queue(void* ctx, iotxn_t* txn) {
     gptpart_device_t* device = ctx;
     if (txn->offset % device->info.block_size) {
-        iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
         return;
     }
     if (txn->offset > getsize(device)) {
-        iotxn_complete(txn, MX_ERR_OUT_OF_RANGE, 0);
+        iotxn_complete(txn, ZX_ERR_OUT_OF_RANGE, 0);
         return;
     }
     // transactions from read()/write() may be truncated
@@ -164,13 +164,13 @@ static void gpt_iotxn_queue(void* ctx, iotxn_t* txn) {
     txn->length = MIN(txn->length, getsize(device) - txn->offset);
     txn->offset = to_parent_offset(device, txn->offset);
     if (txn->length == 0) {
-        iotxn_complete(txn, MX_OK, 0);
+        iotxn_complete(txn, ZX_OK, 0);
     } else {
         iotxn_queue(device->parent, txn);
     }
 }
 
-static mx_off_t gpt_getsize(void* ctx) {
+static zx_off_t gpt_getsize(void* ctx) {
     gptpart_device_t* device = ctx;
     return getsize(device);
 }
@@ -189,25 +189,25 @@ static inline bool is_writer(uint32_t flags) {
     return (flags & O_RDWR || flags & O_WRONLY);
 }
 
-static mx_status_t gpt_open(void* ctx, mx_device_t** dev_out, uint32_t flags) {
+static zx_status_t gpt_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
     gptpart_device_t* device = ctx;
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
     if (is_writer(flags) && (atomic_exchange(&device->writercount, 1) == 1)) {
         printf("Partition cannot be opened as writable (open elsewhere)\n");
-        status = MX_ERR_ALREADY_BOUND;
+        status = ZX_ERR_ALREADY_BOUND;
     }
     return status;
 }
 
-static mx_status_t gpt_close(void* ctx, uint32_t flags) {
+static zx_status_t gpt_close(void* ctx, uint32_t flags) {
     gptpart_device_t* device = ctx;
     if (is_writer(flags)) {
         atomic_fetch_sub(&device->writercount, 1);
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_protocol_device_t gpt_proto = {
+static zx_protocol_device_t gpt_proto = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = gpt_ioctl,
     .iotxn_queue = gpt_iotxn_queue,
@@ -235,21 +235,21 @@ static void gpt_block_complete(iotxn_t* txn, void* cookie) {
     iotxn_release(txn);
 }
 
-static void block_do_txn(gptpart_device_t* dev, uint32_t opcode, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+static void block_do_txn(gptpart_device_t* dev, uint32_t opcode, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     block_info_t* info = &dev->info;
     if ((dev_offset % info->block_size) || (length % info->block_size)) {
-        dev->callbacks->complete(cookie, MX_ERR_INVALID_ARGS);
+        dev->callbacks->complete(cookie, ZX_ERR_INVALID_ARGS);
         return;
     }
     uint64_t size = getsize(dev);
     if ((dev_offset >= size) || (length >= (size - dev_offset))) {
-        dev->callbacks->complete(cookie, MX_ERR_OUT_OF_RANGE);
+        dev->callbacks->complete(cookie, ZX_ERR_OUT_OF_RANGE);
         return;
     }
 
-    mx_status_t status;
+    zx_status_t status;
     iotxn_t* txn;
-    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != MX_OK) {
+    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != ZX_OK) {
         dev->callbacks->complete(cookie, status);
         return;
     }
@@ -262,11 +262,11 @@ static void block_do_txn(gptpart_device_t* dev, uint32_t opcode, mx_handle_t vmo
     iotxn_queue(dev->parent, txn);
 }
 
-static void gpt_block_read(void* ctx, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+static void gpt_block_read(void* ctx, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     block_do_txn(ctx, IOTXN_OP_READ, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
-static void gpt_block_write(void* ctx, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+static void gpt_block_write(void* ctx, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     block_do_txn(ctx, IOTXN_OP_WRITE, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
@@ -282,12 +282,12 @@ static void gpt_read_sync_complete(iotxn_t* txn, void* cookie) {
 }
 
 typedef struct gpt_bind_info {
-    mx_device_t* dev;
+    zx_device_t* dev;
 } gpt_bind_info_t;
 
 static int gpt_bind_thread(void* arg) {
     gpt_bind_info_t* info = (gpt_bind_info_t*)arg;
-    mx_device_t* dev = info->dev;
+    zx_device_t* dev = info->dev;
     free(info);
 
     iotxn_t* txn = NULL;
@@ -308,8 +308,8 @@ static int gpt_bind_thread(void* arg) {
     }
 
     // allocate an iotxn to read the partition table
-    mx_status_t status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, TXN_SIZE);
-    if (status != MX_OK) {
+    zx_status_t status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, TXN_SIZE);
+    if (status != ZX_OK) {
         xprintf("gpt: error %d allocating iotxn\n", status);
         goto unbind;
     }
@@ -324,9 +324,9 @@ static int gpt_bind_thread(void* arg) {
     txn->cookie = &completion;
 
     iotxn_queue(dev, txn);
-    completion_wait(&completion, MX_TIME_INFINITE);
+    completion_wait(&completion, ZX_TIME_INFINITE);
 
-    if (txn->status != MX_OK) {
+    if (txn->status != ZX_OK) {
         xprintf("gpt: error %d reading partition header\n", txn->status);
         goto unbind;
     }
@@ -361,7 +361,7 @@ static int gpt_bind_thread(void* arg) {
 
     completion_reset(&completion);
     iotxn_queue(dev, txn);
-    completion_wait(&completion, MX_TIME_INFINITE);
+    completion_wait(&completion, ZX_TIME_INFINITE);
 
     uint8_t entries[TXN_SIZE];
     iotxn_copyfrom(txn, entries, txn->actual, 0);
@@ -420,11 +420,11 @@ static int gpt_bind_thread(void* arg) {
             .name = name,
             .ctx = device,
             .ops = &gpt_proto,
-            .proto_id = MX_PROTOCOL_BLOCK_CORE,
+            .proto_id = ZX_PROTOCOL_BLOCK_CORE,
             .proto_ops = &gpt_block_ops,
         };
 
-        if (device_add(dev, &args, &device->mxdev) != MX_OK) {
+        if (device_add(dev, &args, &device->mxdev) != ZX_OK) {
             printf("gpt device_add failed\n");
             free(device);
             continue;
@@ -433,7 +433,7 @@ static int gpt_bind_thread(void* arg) {
 
     iotxn_release(txn);
 
-    return MX_OK;
+    return ZX_OK;
 unbind:
     if (txn != NULL) {
         iotxn_release(txn);
@@ -441,29 +441,29 @@ unbind:
     if (partitions == 0) {
         device_unbind(dev);
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t gpt_bind(void* ctx, mx_device_t* dev, void** cookie) {
+static zx_status_t gpt_bind(void* ctx, zx_device_t* dev, void** cookie) {
     gpt_bind_info_t* info = malloc(sizeof(gpt_bind_info_t));
     info->dev = dev;
 
     // read partition table asynchronously
     thrd_t t;
-    mx_status_t status = thrd_create_with_name(&t, gpt_bind_thread, info, "gpt-init");
+    zx_status_t status = thrd_create_with_name(&t, gpt_bind_thread, info, "gpt-init");
     if (status < 0) {
         free(info);
         return status;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_driver_ops_t gpt_driver_ops = {
+static zx_driver_ops_t gpt_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = gpt_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(gpt, gpt_driver_ops, "magenta", "0.1", 2)
+ZIRCON_DRIVER_BEGIN(gpt, gpt_driver_ops, "zircon", "0.1", 2)
     BI_ABORT_IF_AUTOBIND,
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_BLOCK),
-MAGENTA_DRIVER_END(gpt)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BLOCK),
+ZIRCON_DRIVER_END(gpt)

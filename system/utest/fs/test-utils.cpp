@@ -4,7 +4,7 @@
 
 #include <fs/mapped-vmo.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #include <unittest/unittest.h>
 
@@ -19,7 +19,7 @@ bool test_mapped_vmo() {
     fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[max_size]);
     ASSERT_TRUE(ac.check());
 
-    unsigned seed = static_cast<unsigned>(mx_ticks_get());
+    unsigned seed = static_cast<unsigned>(zx_ticks_get());
     srand(seed);
     for (unsigned n = 0; n < max_size; n++) {
         buf[n] = static_cast<uint8_t>(rand_r(&seed));
@@ -27,7 +27,7 @@ bool test_mapped_vmo() {
 
     // Create MappedVmo
     fbl::unique_ptr<MappedVmo> mvmo;
-    ASSERT_EQ(MappedVmo::Create(init_size, "test-vmo", &mvmo), MX_OK);
+    ASSERT_EQ(MappedVmo::Create(init_size, "test-vmo", &mvmo), ZX_OK);
 
     // Verify size & data
     ASSERT_EQ(mvmo->GetSize(), init_size);
@@ -35,16 +35,16 @@ bool test_mapped_vmo() {
     ASSERT_EQ(memcmp(buf.get(), mvmo->GetData(), init_size), 0);
 
     // Grow vmo with size not divisable by page size, check size
-    ASSERT_EQ(mvmo->Grow(init_size + 1), MX_OK);
+    ASSERT_EQ(mvmo->Grow(init_size + 1), ZX_OK);
     ASSERT_EQ(mvmo->GetSize(), init_size + PAGE_SIZE);
 
     // Shrink vmo, verify size & data
-    ASSERT_EQ(mvmo->Shrink(0, min_size), MX_OK);
+    ASSERT_EQ(mvmo->Shrink(0, min_size), ZX_OK);
     ASSERT_EQ(mvmo->GetSize(), min_size);
     ASSERT_EQ(memcmp(buf.get(), mvmo->GetData(), min_size), 0);
 
     // Grow vmo, verify size & data
-    ASSERT_EQ(mvmo->Grow(max_size), MX_OK);
+    ASSERT_EQ(mvmo->Grow(max_size), ZX_OK);
     ASSERT_EQ(mvmo->GetSize(), max_size);
     ASSERT_EQ(memcmp(buf.get(), mvmo->GetData(), min_size), 0);
     uintptr_t addr = reinterpret_cast<uintptr_t>(mvmo->GetData());

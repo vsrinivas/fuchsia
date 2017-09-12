@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/types.h>
-#include <mxio/io.h>
+#include <zircon/types.h>
+#include <fdio/io.h>
 #include <dirent.h>
 #include <endian.h>
 #include <fcntl.h>
@@ -14,9 +14,9 @@
 #include <unistd.h>
 #include <limits.h>
 
-#include <magenta/hw/usb.h>
-#include <magenta/hw/usb-hid.h>
-#include <magenta/device/usb.h>
+#include <zircon/hw/usb.h>
+#include <zircon/hw/usb-hid.h>
+#include <zircon/device/usb.h>
 #include <pretty/hexdump.h>
 
 #define DEV_USB "/dev/class/usb"

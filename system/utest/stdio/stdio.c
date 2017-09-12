@@ -15,12 +15,12 @@
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 
-#include <magenta/process.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/object.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
 
-#include <mxio/util.h>
+#include <fdio/util.h>
 
 #include <unittest/unittest.h>
 
@@ -58,30 +58,30 @@ static bool stdio_launchpad_pipe_test(void)
     const char* file = "/boot/bin/lsusb";
     launchpad_t* lp = NULL;
 
-    mx_handle_t mxio_job = mx_job_default();
-    ASSERT_NE(mxio_job, MX_HANDLE_INVALID, "no mxio job object");
+    zx_handle_t fdio_job = zx_job_default();
+    ASSERT_NE(fdio_job, ZX_HANDLE_INVALID, "no fdio job object");
 
-    mx_handle_t job_copy = MX_HANDLE_INVALID;
-    ASSERT_EQ(mx_handle_duplicate(mxio_job, MX_RIGHT_SAME_RIGHTS, &job_copy),
-              MX_OK, "mx_handle_duplicate failed");
+    zx_handle_t job_copy = ZX_HANDLE_INVALID;
+    ASSERT_EQ(zx_handle_duplicate(fdio_job, ZX_RIGHT_SAME_RIGHTS, &job_copy),
+              ZX_OK, "zx_handle_duplicate failed");
 
     ASSERT_EQ(launchpad_create(job_copy,
                                "launchpad_pipe_stdio_test", &lp),
-              MX_OK, "launchpad_create failed");
+              ZX_OK, "launchpad_create failed");
     ASSERT_EQ(launchpad_set_args(lp, 1, &file),
-              MX_OK, "launchpad_arguments failed");
-    ASSERT_EQ(launchpad_add_vdso_vmo(lp), MX_OK,
+              ZX_OK, "launchpad_arguments failed");
+    ASSERT_EQ(launchpad_add_vdso_vmo(lp), ZX_OK,
               "launchpad_add_vdso_vmo failed");
-    ASSERT_EQ(launchpad_clone(lp, LP_CLONE_MXIO_NAMESPACE | LP_CLONE_MXIO_CWD),
-              MX_OK, "launchpad_clone failed");
+    ASSERT_EQ(launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE | LP_CLONE_FDIO_CWD),
+              ZX_OK, "launchpad_clone failed");
 
-    mx_handle_t vmo;
-    ASSERT_EQ(launchpad_vmo_from_file(file, &vmo), MX_OK, "");
+    zx_handle_t vmo;
+    ASSERT_EQ(launchpad_vmo_from_file(file, &vmo), ZX_OK, "");
     ASSERT_EQ(launchpad_elf_load(lp, vmo),
-              MX_OK, "launchpad_elf_load failed");
+              ZX_OK, "launchpad_elf_load failed");
 
-    ASSERT_EQ(launchpad_load_vdso(lp, MX_HANDLE_INVALID),
-              MX_OK, "launchpad_load_vdso failed");
+    ASSERT_EQ(launchpad_load_vdso(lp, ZX_HANDLE_INVALID),
+              ZX_OK, "launchpad_load_vdso failed");
 
     // stdio pipe fds [ours, theirs]
     int stdin_fds[2];
@@ -93,18 +93,18 @@ static bool stdio_launchpad_pipe_test(void)
     ASSERT_EQ(stdio_pipe(stderr_fds, false), 0, "stderr pipe creation failed");
 
     // Transfer the child's stdio pipes
-    ASSERT_EQ(launchpad_transfer_fd(lp, stdin_fds[1], 0), MX_OK,
+    ASSERT_EQ(launchpad_transfer_fd(lp, stdin_fds[1], 0), ZX_OK,
               "failed to transfer stdin pipe to child process");
-    ASSERT_EQ(launchpad_transfer_fd(lp, stdout_fds[1], 1), MX_OK,
+    ASSERT_EQ(launchpad_transfer_fd(lp, stdout_fds[1], 1), ZX_OK,
               "failed to transfer stdout pipe to child process");
-    ASSERT_EQ(launchpad_transfer_fd(lp, stderr_fds[1], 2), MX_OK,
+    ASSERT_EQ(launchpad_transfer_fd(lp, stderr_fds[1], 2), ZX_OK,
               "failed to transfer stderr pipe to child process");
 
     // Start the process
-    mx_handle_t p = MX_HANDLE_INVALID;
-    mx_status_t status = launchpad_go(lp, &p, NULL);
-    ASSERT_EQ(status, MX_OK, "");
-    ASSERT_NE(p, MX_HANDLE_INVALID, "process handle != 0");
+    zx_handle_t p = ZX_HANDLE_INVALID;
+    zx_status_t status = launchpad_go(lp, &p, NULL);
+    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_NE(p, ZX_HANDLE_INVALID, "process handle != 0");
 
     // Read the stdio
     uint8_t* out = NULL;
@@ -126,21 +126,21 @@ static bool stdio_launchpad_pipe_test(void)
     close(stderr_fds[0]);
 
     // Wait for the process to finish
-    mx_status_t r;
+    zx_status_t r;
 
-    r = mx_object_wait_one(p, MX_PROCESS_TERMINATED,
-                           MX_TIME_INFINITE, NULL);
-    ASSERT_EQ(r, MX_OK, "mx_object_wait_one failed");
+    r = zx_object_wait_one(p, ZX_PROCESS_TERMINATED,
+                           ZX_TIME_INFINITE, NULL);
+    ASSERT_EQ(r, ZX_OK, "zx_object_wait_one failed");
 
     // read the return code
-    mx_info_process_t proc_info;
+    zx_info_process_t proc_info;
     size_t actual = 0;
-    mx_object_get_info(p, MX_INFO_PROCESS, &proc_info,
+    zx_object_get_info(p, ZX_INFO_PROCESS, &proc_info,
                        sizeof(proc_info), &actual, NULL);
     ASSERT_EQ(actual, (size_t)1, "Must get one and only one process info");
     ASSERT_EQ(proc_info.return_code, 0, "lsusb must return 0");
 
-    mx_handle_close(p);
+    zx_handle_close(p);
 
     END_TEST;
 }

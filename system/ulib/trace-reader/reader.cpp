@@ -26,7 +26,7 @@ bool TraceReader::ReadRecords(Chunk& chunk) {
             ReportError("Unexpected record of size 0");
             return false; // fatal error
         }
-        MX_DEBUG_ASSERT(size <= RecordFields::kMaxRecordSizeWords);
+        ZX_DEBUG_ASSERT(size <= RecordFields::kMaxRecordSizeWords);
 
         Chunk record;
         if (!chunk.ReadChunk(size - 1, &record))
@@ -166,7 +166,7 @@ bool TraceReader::ReadThreadRecord(Chunk& record, RecordHeader header) {
         return false;
     }
 
-    mx_koid_t process_koid, thread_koid;
+    zx_koid_t process_koid, thread_koid;
     if (!record.ReadUint64(&process_koid) ||
         !record.ReadUint64(&thread_koid))
         return false;
@@ -296,13 +296,13 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
 
 bool TraceReader::ReadKernelObjectRecord(Chunk& record, RecordHeader header) {
     auto object_type =
-        KernelObjectRecordFields::ObjectType::Get<mx_obj_type_t>(header);
+        KernelObjectRecordFields::ObjectType::Get<zx_obj_type_t>(header);
     auto name_ref =
         KernelObjectRecordFields::NameStringRef::Get<trace_encoded_string_ref_t>(header);
     auto argument_count =
         KernelObjectRecordFields::ArgumentCount::Get<size_t>(header);
 
-    mx_koid_t koid;
+    zx_koid_t koid;
     fbl::String name;
     fbl::Vector<Argument> arguments;
     if (!record.ReadUint64(&koid) ||
@@ -459,7 +459,7 @@ bool TraceReader::ReadArguments(Chunk& record,
             break;
         }
         case ArgumentType::kKoid: {
-            mx_koid_t value;
+            zx_koid_t value;
             if (!arg.ReadUint64(&value)) {
                 ReportError("Failed to read koid argument value");
                 return false;
@@ -506,7 +506,7 @@ void TraceReader::RegisterProvider(ProviderId id, fbl::String name) {
 }
 
 void TraceReader::RegisterString(trace_string_index_t index, fbl::String string) {
-    MX_DEBUG_ASSERT(index >= TRACE_ENCODED_STRING_REF_MIN_INDEX &&
+    ZX_DEBUG_ASSERT(index >= TRACE_ENCODED_STRING_REF_MIN_INDEX &&
                     index <= TRACE_ENCODED_STRING_REF_MAX_INDEX);
 
     auto entry = fbl::make_unique<StringTableEntry>(index, string);
@@ -515,7 +515,7 @@ void TraceReader::RegisterString(trace_string_index_t index, fbl::String string)
 
 void TraceReader::RegisterThread(trace_thread_index_t index,
                                  const ProcessThread& process_thread) {
-    MX_DEBUG_ASSERT(index >= TRACE_ENCODED_THREAD_REF_MIN_INDEX &&
+    ZX_DEBUG_ASSERT(index >= TRACE_ENCODED_THREAD_REF_MIN_INDEX &&
                     index <= TRACE_ENCODED_THREAD_REF_MAX_INDEX);
 
     auto entry = fbl::make_unique<ThreadTableEntry>(index, process_thread);
@@ -555,7 +555,7 @@ bool TraceReader::DecodeThreadRef(Chunk& chunk,
                                   trace_encoded_thread_ref_t thread_ref,
                                   ProcessThread* out_process_thread) const {
     if (thread_ref == TRACE_ENCODED_THREAD_REF_INLINE) {
-        mx_koid_t process_koid, thread_koid;
+        zx_koid_t process_koid, thread_koid;
         if (!chunk.ReadUint64(&process_koid) ||
             !chunk.ReadUint64(&thread_koid)) {
             ReportError("Could not read inline process and thread");

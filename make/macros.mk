@@ -95,7 +95,7 @@ endef
 copy-dst-src = $(eval $(call generate-copy-dst-src,$(strip $1),$(strip $2)))
 
 HOST_PLATFORM := $(shell uname -s | tr '[:upper:]' '[:lower:]')
-ifeq ($(HOST_PLATFORM), magenta)
+ifeq ($(HOST_PLATFORM), zircon)
 SHELLEXEC = /boot/bin/sh
 else
 SHELLEXEC =

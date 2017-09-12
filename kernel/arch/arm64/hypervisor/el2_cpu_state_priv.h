@@ -17,17 +17,17 @@ public:
     ~El2Stack();
     DISALLOW_COPY_ASSIGN_AND_MOVE(El2Stack);
 
-    mx_status_t Alloc();
-    mx_paddr_t Top() const;
+    zx_status_t Alloc();
+    zx_paddr_t Top() const;
 
 private:
-    mx_paddr_t stack_paddr_ = 0;
+    zx_paddr_t stack_paddr_ = 0;
 };
 
 /* Maintains the EL2 state for each CPU. */
 class El2CpuState : public hypervisor::CpuState<uint8_t, 64> {
 public:
-    static mx_status_t Create(fbl::unique_ptr<El2CpuState>* out);
+    static zx_status_t Create(fbl::unique_ptr<El2CpuState>* out);
     ~El2CpuState();
 
 private:
@@ -36,5 +36,5 @@ private:
     El2CpuState() = default;
 };
 
-mx_status_t alloc_vmid(uint8_t* vmid);
-mx_status_t free_vmid(uint8_t vmid);
+zx_status_t alloc_vmid(uint8_t* vmid);
+zx_status_t free_vmid(uint8_t vmid);

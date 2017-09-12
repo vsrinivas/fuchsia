@@ -8,7 +8,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 #include <fbl/unique_ptr.h>
 
 namespace fbl {
@@ -54,7 +54,7 @@ String StringVPrintf(const char* format, va_list ap) {
     size_t heap_buf_size = output_size + 1u;
     fbl::unique_ptr<char[]> heap_buf(new char[heap_buf_size]);
     result = vsnprintf(heap_buf.get(), heap_buf_size, format, ap);
-    MX_ASSERT(result >= 0 && static_cast<size_t>(result) == output_size);
+    ZX_ASSERT(result >= 0 && static_cast<size_t>(result) == output_size);
     return String(heap_buf.get(), static_cast<size_t>(result));
 }
 

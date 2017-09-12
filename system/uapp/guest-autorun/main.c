@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 const char path[] = "/dev/class/block/000";
 uint8_t buf[PAGE_SIZE];
@@ -16,8 +16,8 @@ uint8_t buf[PAGE_SIZE];
 int main(int argc, char** argv) {
     int fd;
     while ((fd = open(path, O_RDWR)) < 0) {
-        mx_status_t status = mx_nanosleep(mx_deadline_after(MX_MSEC(100)));
-        if (status != MX_OK) {
+        zx_status_t status = zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+        if (status != ZX_OK) {
             fprintf(stderr, "Failed to sleep %d\n", status);
             return status;
         }
@@ -26,15 +26,15 @@ int main(int argc, char** argv) {
     int ret = read(fd, buf, PAGE_SIZE);
     if (ret != PAGE_SIZE) {
         fprintf(stderr, "Failed to read a page from \"%s\"\n", path);
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
 
     ret = write(fd, buf, PAGE_SIZE);
     if (ret != PAGE_SIZE) {
         fprintf(stderr, "Failed to write a page to \"%s\"\n", path);
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
 
     fprintf(stderr, "Completed transactions on \"%s\"\n", path);
-    return MX_OK;
+    return ZX_OK;
 }

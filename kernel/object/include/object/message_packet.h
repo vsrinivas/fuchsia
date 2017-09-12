@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 #include <lib/user_copy/user_ptr.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/unique_ptr.h>
 
@@ -17,8 +17,8 @@ constexpr uint32_t kMaxMessageSize = 65536u;
 constexpr uint32_t kMaxMessageHandles = 64u;
 
 // ensure public constants are aligned
-static_assert(MX_CHANNEL_MAX_MSG_BYTES == kMaxMessageSize, "");
-static_assert(MX_CHANNEL_MAX_MSG_HANDLES == kMaxMessageHandles, "");
+static_assert(ZX_CHANNEL_MAX_MSG_BYTES == kMaxMessageSize, "");
+static_assert(ZX_CHANNEL_MAX_MSG_HANDLES == kMaxMessageHandles, "");
 
 class Handle;
 
@@ -27,10 +27,10 @@ public:
     // Creates a message packet containing the provided data and space for
     // |num_handles| handles. The handles array is uninitialized and must
     // be completely overwritten by clients.
-    static mx_status_t Create(user_ptr<const void> data, uint32_t data_size,
+    static zx_status_t Create(user_ptr<const void> data, uint32_t data_size,
                               uint32_t num_handles,
                               fbl::unique_ptr<MessagePacket>* msg);
-    static mx_status_t Create(const void* data, uint32_t data_size,
+    static zx_status_t Create(const void* data, uint32_t data_size,
                               uint32_t num_handles,
                               fbl::unique_ptr<MessagePacket>* msg);
 
@@ -38,7 +38,7 @@ public:
 
     // Copies the packet's |data_size()| bytes to |buf|.
     // Returns an error if |buf| points to a bad user address.
-    mx_status_t CopyDataTo(user_ptr<void> buf) const {
+    zx_status_t CopyDataTo(user_ptr<void> buf) const {
         return buf.copy_array_to_user(data(), data_size_);
     }
 
@@ -48,13 +48,13 @@ public:
 
     void set_owns_handles(bool own_handles) { owns_handles_ = own_handles; }
 
-    // mx_channel_call treats the leading bytes of the payload as
-    // a transaction id of type mx_txid_t.
-    mx_txid_t get_txid() const {
-        if (data_size_ < sizeof(mx_txid_t)) {
+    // zx_channel_call treats the leading bytes of the payload as
+    // a transaction id of type zx_txid_t.
+    zx_txid_t get_txid() const {
+        if (data_size_ < sizeof(zx_txid_t)) {
             return 0;
         } else {
-            return *(reinterpret_cast<const mx_txid_t*>(data()));
+            return *(reinterpret_cast<const zx_txid_t*>(data()));
         }
     }
 
@@ -64,7 +64,7 @@ private:
 
     // Allocates a new packet that can hold the specified amount of
     // data/handles.
-    static mx_status_t NewPacket(uint32_t data_size, uint32_t num_handles,
+    static zx_status_t NewPacket(uint32_t data_size, uint32_t num_handles,
                                  fbl::unique_ptr<MessagePacket>* msg);
 
     // Create() uses malloc(), so we must delete using free().

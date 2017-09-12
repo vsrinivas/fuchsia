@@ -10,9 +10,9 @@
 #include <unistd.h>
 
 #include <fs-management/ramdisk.h>
-#include <magenta/syscalls.h>
-#include <magenta/device/ramdisk.h>
-#include <magenta/device/block.h>
+#include <zircon/syscalls.h>
+#include <zircon/device/ramdisk.h>
+#include <zircon/device/block.h>
 #include <block-client/client.h>
 
 uint64_t number(const char* str) {
@@ -73,7 +73,7 @@ int iotime_lread(int argc, char** argv) {
         return -1;
     }
 
-    mx_time_t t0 = mx_time_get(MX_CLOCK_MONOTONIC);
+    zx_time_t t0 = zx_time_get(ZX_CLOCK_MONOTONIC);
     size_t n = total;
     while (n > 0) {
         size_t xfer = (n > bufsz) ? bufsz : n;
@@ -88,7 +88,7 @@ int iotime_lread(int argc, char** argv) {
         }
         n -= xfer;
     }
-    mx_time_t t1 = mx_time_get(MX_CLOCK_MONOTONIC);
+    zx_time_t t1 = zx_time_get(ZX_CLOCK_MONOTONIC);
 
     fprintf(stderr, "read %zu bytes in %zu ns: ", total, t1 - t0);
     bytes_per_second(total, t1 - t0);
@@ -136,7 +136,7 @@ int iotime_bread(int argc, char** argv) {
         }
     }
 
-    mx_time_t t0 = mx_time_get(MX_CLOCK_MONOTONIC);
+    zx_time_t t0 = zx_time_get(ZX_CLOCK_MONOTONIC);
     size_t n = total;
     while (n > 0) {
         size_t xfer = (n > bufsz) ? bufsz : n;
@@ -151,7 +151,7 @@ int iotime_bread(int argc, char** argv) {
         }
         n -= xfer;
     }
-    mx_time_t t1 = mx_time_get(MX_CLOCK_MONOTONIC);
+    zx_time_t t1 = zx_time_get(ZX_CLOCK_MONOTONIC);
 
     fprintf(stderr, "read %zu bytes in %zu ns: ", total, t1 - t0);
     bytes_per_second(total, t1 - t0);
@@ -165,8 +165,8 @@ int iotime_fread(int argc, char** argv) {
     size_t total = number(argv[3]);
     size_t bufsz = number(argv[4]);
 
-    mx_handle_t vmo;
-    if (mx_vmo_create(bufsz, 0, &vmo) != MX_OK) {
+    zx_handle_t vmo;
+    if (zx_vmo_create(bufsz, 0, &vmo) != ZX_OK) {
         fprintf(stderr, "error: out of memory\n");
         return -1;
     }
@@ -177,7 +177,7 @@ int iotime_fread(int argc, char** argv) {
         return -1;
     }
 
-    mx_handle_t fifo;
+    zx_handle_t fifo;
     if (ioctl_block_get_fifos(fd, &fifo) != sizeof(fifo)) {
         fprintf(stderr, "err: cannot get fifo for '%s'\n", argv[2]);
         return -1;
@@ -189,8 +189,8 @@ int iotime_fread(int argc, char** argv) {
         return -1;
     }
 
-    mx_handle_t dup;
-    if (mx_handle_duplicate(vmo, MX_RIGHT_SAME_RIGHTS, &dup) != MX_OK) {
+    zx_handle_t dup;
+    if (zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup) != ZX_OK) {
         fprintf(stderr, "error: cannot duplicate handle\n");
         return -1;
     }
@@ -202,12 +202,12 @@ int iotime_fread(int argc, char** argv) {
     }
 
     fifo_client_t* client;
-    if (block_fifo_create_client(fifo, &client) != MX_OK) {
+    if (block_fifo_create_client(fifo, &client) != ZX_OK) {
         fprintf(stderr, "err: cannot create block client for '%s'\n", argv[2]);
         return -1;
     }
 
-    mx_time_t t0 = mx_time_get(MX_CLOCK_MONOTONIC);
+    zx_time_t t0 = zx_time_get(ZX_CLOCK_MONOTONIC);
     size_t n = total;
     while (n > 0) {
         size_t xfer = (n > bufsz) ? bufsz : n;
@@ -219,13 +219,13 @@ int iotime_fread(int argc, char** argv) {
             .vmo_offset = 0,
             .dev_offset = total - n,
         };
-        if (block_fifo_txn(client, &request, 1) != MX_OK) {
+        if (block_fifo_txn(client, &request, 1) != ZX_OK) {
             fprintf(stderr, "error: block_fifo_txn error\n");
             return -1;
         }
         n -= xfer;
     }
-    mx_time_t t1 = mx_time_get(MX_CLOCK_MONOTONIC);
+    zx_time_t t1 = zx_time_get(ZX_CLOCK_MONOTONIC);
 
     fprintf(stderr, "read %zu bytes in %zu ns: ", total, t1 - t0);
     bytes_per_second(total, t1 - t0);

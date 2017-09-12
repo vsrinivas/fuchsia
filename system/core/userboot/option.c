@@ -52,7 +52,7 @@ static void apply_option(struct options* o, const char* arg) {
     }
 }
 
-void parse_options(mx_handle_t log, struct options *o, char** strings) {
+void parse_options(zx_handle_t log, struct options *o, char** strings) {
     initialize_options(o);
     for (char** sp = strings; *sp != NULL; ++sp) {
         const char* arg = *sp;

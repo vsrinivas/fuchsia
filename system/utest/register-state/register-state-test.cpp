@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <pthread.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 
 #if defined(__x86_64__)
@@ -64,7 +64,7 @@ bool test_context_switch_of_gs_base() {
     // should be at least one CPU that has >1 of our threads scheduled on
     // it, so saving and restoring gs_base between those threads should get
     // exercised.
-    uint32_t thread_count = mx_system_get_num_cpus() * 2;
+    uint32_t thread_count = zx_system_get_num_cpus() * 2;
     ASSERT_GT(thread_count, 0);
 
     pthread_t tids[thread_count];
@@ -143,7 +143,7 @@ bool test_segment_selectors_zeroed_on_context_switch() {
     //
     // It is possible that this thread is interrupted by an interrupt, but
     // not very likely, because this thread does not execute very long.
-    EXPECT_EQ(mx_nanosleep(mx_deadline_after(MX_MSEC(1))), MX_OK);
+    EXPECT_EQ(zx_nanosleep(zx_deadline_after(ZX_MSEC(1))), ZX_OK);
 
     EXPECT_EQ(get_ds(), 0);
     EXPECT_EQ(get_es(), 0);

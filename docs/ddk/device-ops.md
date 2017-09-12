@@ -19,7 +19,7 @@ uint64_t version;
 The open hook is called when a device is opened via the device filesystem,
 or when an existing open connection to a device is cloned (for example,
 when a device fd is shared with another process).  The default open hook,
-if a driver does not implement one, simply returns **MX_OK**.
+if a driver does not implement one, simply returns **ZX_OK**.
 
 Drivers may want to implement open to disallow simultaneous access (by
 failing if the device is already open), or to return a new **device instance**
@@ -32,7 +32,7 @@ A child created for return as an instance **must** be created with the
 **DEVICE_ADD_INSTANCE** flag set in the arguments to **device_add()**.
 
 ```
-mx_status_t (*open)(void* ctx, mx_device_t** dev_out, uint32_t flags);
+zx_status_t (*open)(void* ctx, zx_device_t** dev_out, uint32_t flags);
 ```
 
 ## open_at
@@ -41,10 +41,10 @@ contains segments after the device name itself.  For example, if a device
 exists as `/dev/misc/foo` and an attempt is made to `open("/dev/misc/foo/bar",...)`,
 the open_at hook would be invoked with a *path* of `"bar"`.
 
-The default open_at implementation returns **MX_ERR_NOT_SUPPORTED**
+The default open_at implementation returns **ZX_ERR_NOT_SUPPORTED**
 
 ```
-mx_status_t (*open_at)(void* ctx, mx_device_t** dev_out, const char* path, uint32_t flags);
+zx_status_t (*open_at)(void* ctx, zx_device_t** dev_out, const char* path, uint32_t flags);
 ```
 
 ## close
@@ -54,9 +54,9 @@ calls will balance the calls to open or open_at.
 **Note:** If open or open_at return a **device instance**, the balancing close
 hook that is called is the close hook on the **instance**, not the parent.
 
-The default close implementation returns **MX_OK**.
+The default close implementation returns **ZX_OK**.
 ```
-mx_status_t (*close)(void* ctx, uint32_t flags);
+zx_status_t (*close)(void* ctx, uint32_t flags);
 ```
 
 ## unbind
@@ -81,7 +81,7 @@ and all open client connections have been closed, and all child devices have bee
 removed and released.
 
 At the point release is invoked, the driver will not receive any further calls
-and absolutely must not use the underlying **mx_device_t** once this method
+and absolutely must not use the underlying **zx_device_t** once this method
 returns.
 
 The driver must free all memory and release all resources related to this device
@@ -94,43 +94,43 @@ void (*release)(void* ctx);
 The read hook is an attempt to do a non-blocking read operation.
 
 On success *actual* must be set to the number of bytes read (which may be less
-than the number requested in *count*), and return **MX_OK**.
+than the number requested in *count*), and return **ZX_OK**.
 
 A successful read of 0 bytes is generally treated as an End Of File notification
 by clients.
 
-If no data is available now, **MX_ERR_SHOULD_WAIT** must be returned and when
+If no data is available now, **ZX_ERR_SHOULD_WAIT** must be returned and when
 data becomes available `device_state_set(DEVICE_STATE_READABLE)` may be used to
 signal waiting clients.
 
 This hook **must not block**.  Use `iotxn_queue` to handle IO which
 requires processing and delayed status.
 
-The default read implementation returns **MX_ERR_NOT_SUPPORTED**.
+The default read implementation returns **ZX_ERR_NOT_SUPPORTED**.
 
 ```
-mx_status_t (*read)(void* ctx, void* buf, size_t count,
-                    mx_off_t off, size_t* actual);
+zx_status_t (*read)(void* ctx, void* buf, size_t count,
+                    zx_off_t off, size_t* actual);
 ```
 
 ## write
 The write hook is an attempt to do a non-blocking write operation.
 
 On success *actual* must be set to the number of bytes written (which may be
-less than the number requested in *count*), and **MX_OK** should be returned.
+less than the number requested in *count*), and **ZX_OK** should be returned.
 
-If it is not possible to write data at present **MX_ERR_SHOULD_WAIT** must
+If it is not possible to write data at present **ZX_ERR_SHOULD_WAIT** must
 be returned and when it is again possible to write,
 `device_state_set(DEVICE_STATE_WRITABLE)` may be used to signal waiting clients.
 
 This hook **must not block**.  Use `iotxn_queue` to handle IO which
 requires processing and delayed status.
 
-The default write implementation returns **MX_ERR_NOT_SUPPORTED**.
+The default write implementation returns **ZX_ERR_NOT_SUPPORTED**.
 
 ```
-mx_status_t (*write)(void* ctx, const void* buf, size_t count,
-                     mx_off_t off, size_t* actual);
+zx_status_t (*write)(void* ctx, const void* buf, size_t count,
+                     zx_off_t off, size_t* actual);
 ```
 
 ## iotxn_queue
@@ -160,7 +160,7 @@ This is the offset at which no more reads or writes are possible.
 
 The default implementation returns 0.
 ```
-mx_off_t (*get_size)(void* ctx);
+zx_off_t (*get_size)(void* ctx);
 ```
 
 ## ioctl
@@ -168,12 +168,12 @@ The ioctl hook allows support for device-specific operations.
 
 These, like read, write, and iotxn_queue, must not block.
 
-On success, **MX_OK** must be returned and *out_actual* must be set
+On success, **ZX_OK** must be returned and *out_actual* must be set
 to the number of output bytes provided (0 if none).
 
-The default ioctl implementation returns **MX_ERR_NOT_SUPPORTED**.
+The default ioctl implementation returns **ZX_ERR_NOT_SUPPORTED**.
 ```
-mx_status_t (*ioctl)(void* ctx, uint32_t op,
+zx_status_t (*ioctl)(void* ctx, uint32_t op,
                      const void* in_buf, size_t in_len,
                      void* out_buf, size_t out_len, size_t* out_actual);
 ```
@@ -189,5 +189,5 @@ mx_status_t (*ioctl)(void* ctx, uint32_t op,
 
 #### device_state_set
 ```
-void device_state_set(mx_device_t* dev, mx_signals_t stateflag);
+void device_state_set(zx_device_t* dev, zx_signals_t stateflag);
 ```

@@ -16,7 +16,7 @@ MODULE_SO_NAME := mini-process
 
 MODULE_STATIC_LIBS := system/ulib/elfload
 
-MODULE_LIBS := system/ulib/magenta system/ulib/c
+MODULE_LIBS := system/ulib/zircon system/ulib/c
 
 MODULE_COMPILEFLAGS += $(NO_SANCOV)
 

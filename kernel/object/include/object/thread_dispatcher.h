@@ -19,8 +19,8 @@
 #include <object/futex_node.h>
 #include <object/state_tracker.h>
 
-#include <magenta/syscalls/exception.h>
-#include <magenta/types.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/types.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
@@ -63,7 +63,7 @@ public:
         // As an analogy, this would be like typing "c" in gdb after a
         // segfault. In linux the signal would be delivered to the thread,
         // which would either terminate the process or run a signal handler if
-        // defined. In magenta this gives the next signal handler in the list
+        // defined. In zircon this gives the next signal handler in the list
         // a crack at the exception.
         TRY_NEXT,
 
@@ -79,10 +79,10 @@ public:
         RESUME,
     };
 
-    static mx_status_t Create(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags,
+    static zx_status_t Create(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags,
                               fbl::StringPiece name,
                               fbl::RefPtr<Dispatcher>* out_dispatcher,
-                              mx_rights_t* out_rights);
+                              zx_rights_t* out_rights);
     ~ThreadDispatcher();
 
     static ThreadDispatcher* GetCurrent() {
@@ -90,31 +90,31 @@ public:
     }
 
     // Dispatcher implementation.
-    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_THREAD; }
+    zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_THREAD; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     void on_zero_handles() final;
-    mx_koid_t get_related_koid() const final;
+    zx_koid_t get_related_koid() const final;
 
     // Performs initialization on a newly constructed ThreadDispatcher
     // If this fails, then the object is invalid and should be deleted
-    mx_status_t Initialize(const char* name, size_t len);
-    mx_status_t Start(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg2,
+    zx_status_t Initialize(const char* name, size_t len);
+    zx_status_t Start(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg2,
                       bool initial_thread);
     void Exit() __NO_RETURN;
     void Kill();
 
-    mx_status_t Suspend();
-    mx_status_t Resume();
+    zx_status_t Suspend();
+    zx_status_t Resume();
 
     // accessors
     ProcessDispatcher* process() const { return process_.get(); }
 
     FutexNode* futex_node() { return &futex_node_; }
-    mx_status_t set_name(const char* name, size_t len) final;
-    void get_name(char out_name[MX_MAX_NAME_LEN]) const final;
+    zx_status_t set_name(const char* name, size_t len) final;
+    void get_name(char out_name[ZX_MAX_NAME_LEN]) const final;
     uint64_t runtime_ns() const { return thread_runtime(&thread_); }
 
-    mx_status_t SetExceptionPort(fbl::RefPtr<ExceptionPort> eport);
+    zx_status_t SetExceptionPort(fbl::RefPtr<ExceptionPort> eport);
     // Returns true if a port had been set.
     bool ResetExceptionPort(bool quietly);
     fbl::RefPtr<ExceptionPort> exception_port();
@@ -125,15 +125,15 @@ public:
     // debugger, thread, process, and system. The kind of the exception port is
     // specified by |eport->type()|.
     // Returns:
-    // MX_OK: the exception was handled in some way, and |*out_estatus|
+    // ZX_OK: the exception was handled in some way, and |*out_estatus|
     // specifies how.
-    // MX_ERR_INTERNAL_INTR_KILLED: the thread was killed (probably via mx_task_kill)
-    mx_status_t ExceptionHandlerExchange(fbl::RefPtr<ExceptionPort> eport,
-                                         const mx_exception_report_t* report,
+    // ZX_ERR_INTERNAL_INTR_KILLED: the thread was killed (probably via zx_task_kill)
+    zx_status_t ExceptionHandlerExchange(fbl::RefPtr<ExceptionPort> eport,
+                                         const zx_exception_report_t* report,
                                          const arch_exception_context_t* arch_context,
                                          ExceptionStatus* out_estatus);
     // Called when an exception handler is finished processing the exception.
-    mx_status_t MarkExceptionHandled(ExceptionStatus estatus);
+    zx_status_t MarkExceptionHandled(ExceptionStatus estatus);
     // Called when exception port |eport| is removed.
     // If the thread is waiting for the associated exception handler, continue
     // exception processing as if the exception port had not been installed.
@@ -143,21 +143,21 @@ public:
     bool InExceptionLocked() TA_REQ(state_lock_);
     // Assuming the thread is stopped waiting for an exception response,
     // fill in |*report| with the exception report.
-    // Returns MX_ERR_BAD_STATE if not in an exception.
-    mx_status_t GetExceptionReport(mx_exception_report_t* report);
+    // Returns ZX_ERR_BAD_STATE if not in an exception.
+    zx_status_t GetExceptionReport(zx_exception_report_t* report);
 
     // Fetch the state of the thread for userspace tools.
-    mx_status_t GetInfoForUserspace(mx_info_thread_t* info);
+    zx_status_t GetInfoForUserspace(zx_info_thread_t* info);
 
     // Fetch per thread stats for userspace.
-    mx_status_t GetStatsForUserspace(mx_info_thread_stats_t* info);
+    zx_status_t GetStatsForUserspace(zx_info_thread_stats_t* info);
 
     // For debugger usage.
     // TODO(dje): The term "state" here conflicts with "state tracker".
     uint32_t get_num_state_kinds() const;
     // TODO(dje): Consider passing an Array<uint8_t> here and in WriteState.
-    mx_status_t ReadState(uint32_t state_kind, void* buffer, uint32_t* buffer_len);
-    mx_status_t WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len);
+    zx_status_t ReadState(uint32_t state_kind, void* buffer, uint32_t* buffer_len);
+    zx_status_t WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len);
 
     // For ChannelDispatcher use.
     ChannelDispatcher::MessageWaiter* GetMessageWaiter() { return &channel_waiter_; }
@@ -216,7 +216,7 @@ private:
         = ExceptionStatus::IDLE;
     // The exception port of the handler the thread is waiting for a response from.
     fbl::RefPtr<ExceptionPort> exception_wait_port_ TA_GUARDED(state_lock_);
-    const mx_exception_report_t* exception_report_ TA_GUARDED(state_lock_);
+    const zx_exception_report_t* exception_report_ TA_GUARDED(state_lock_);
     event_t exception_event_ =
         EVENT_INITIAL_VALUE(exception_event_, false, EVENT_FLAG_AUTOUNSIGNAL);
 

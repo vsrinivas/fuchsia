@@ -20,13 +20,13 @@
 //
 // :: Example ::
 //
-// // A driver that communicates with a MX_PROTOCOL_PCI device
+// // A driver that communicates with a ZX_PROTOCOL_PCI device
 // class MyDevice;
 // using MyDeviceType = ddk::Device<MyDevice, /* ddk mixins */>;
 //
 // class MyDevice : public MyDeviceType {
 //   public:
-//     MyDevice(mx_device_t* parent)
+//     MyDevice(zx_device_t* parent)
 //       : MyDeviceType(parent) {}
 //
 //     void DdkRelease() {
@@ -34,18 +34,18 @@
 //         delete this;
 //     }
 //
-//     mx_status_t Bind() {
+//     zx_status_t Bind() {
 //         pci_protocol_t* ops;
-//         auto status = get_device_protocol(parent_, MX_PROTOCOL_PCI,
+//         auto status = get_device_protocol(parent_, ZX_PROTOCOL_PCI,
 //                                           reinterpret_cast<void**>(&ops));
-//         if (status != MX_OK) {
+//         if (status != ZX_OK) {
 //             return status;
 //         }
 //         pci_.reset(new ddk::PciProtocolProxy(ops));
 //
 //         // Query interrupt capabilities, etc.
 //         uint32_t irq_count = 0;
-//         if (pci_.QueryIrqModeCaps(MX_PCIE_IRQ_MODE_MSI, &irq_count) == MX_OK) {
+//         if (pci_.QueryIrqModeCaps(ZX_PCIE_IRQ_MODE_MSI, &irq_count) == ZX_OK) {
 //             // etc
 //         }
 
@@ -63,36 +63,36 @@ class PciProtocolProxy {
     PciProtocolProxy(pci_protocol_t* proto)
       : ops_(proto->ops), ctx_(proto->ctx) {}
 
-    mx_status_t MapResource(uint32_t res_id, uint32_t cache_policy, void** vaddr, size_t* size,
-                            mx_handle_t* out_handle) {
+    zx_status_t MapResource(uint32_t res_id, uint32_t cache_policy, void** vaddr, size_t* size,
+                            zx_handle_t* out_handle) {
         return ops_->map_resource(ctx_, res_id, cache_policy, vaddr, size, out_handle);
     }
 
-    mx_status_t EnableBusMaster(bool enable) {
+    zx_status_t EnableBusMaster(bool enable) {
         return ops_->enable_bus_master(ctx_, enable);
     }
 
-    mx_status_t EnablePio(bool enable) {
+    zx_status_t EnablePio(bool enable) {
         return ops_->enable_pio(ctx_, enable);
     }
 
-    mx_status_t ResetDevice() {
+    zx_status_t ResetDevice() {
         return ops_->reset_device(ctx_);
     }
 
-    mx_status_t MapInterrupt(int which_irq, mx_handle_t* out_handle) {
+    zx_status_t MapInterrupt(int which_irq, zx_handle_t* out_handle) {
         return ops_->map_interrupt(ctx_, which_irq, out_handle);
     }
 
-    mx_status_t QueryIrqModeCaps(mx_pci_irq_mode_t mode, uint32_t* out_max_irqs) {
+    zx_status_t QueryIrqModeCaps(zx_pci_irq_mode_t mode, uint32_t* out_max_irqs) {
         return ops_->query_irq_mode_caps(ctx_, mode, out_max_irqs);
     }
 
-    mx_status_t SetIrqMode(mx_pci_irq_mode_t mode, uint32_t requested_irq_count) {
+    zx_status_t SetIrqMode(zx_pci_irq_mode_t mode, uint32_t requested_irq_count) {
         return ops_->set_irq_mode(ctx_, mode, requested_irq_count);
     }
 
-    mx_status_t GetDeviceInfo(mx_pcie_device_info_t* out_info) {
+    zx_status_t GetDeviceInfo(zx_pcie_device_info_t* out_info) {
         return ops_->get_device_info(ctx_, out_info);
     }
 

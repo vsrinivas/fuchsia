@@ -79,33 +79,33 @@ private:
 
 uint8_t PciPioConfig::Read(const PciReg8 addr) const {
     uint32_t val;
-    mx_status_t status = Pci::PioCfgRead(static_cast<uint32_t>(base_ + addr.offset()), &val, 8u);
-    DEBUG_ASSERT(status == MX_OK);
+    zx_status_t status = Pci::PioCfgRead(static_cast<uint32_t>(base_ + addr.offset()), &val, 8u);
+    DEBUG_ASSERT(status == ZX_OK);
     return static_cast<uint8_t>(val & 0xFF);
 }
 uint16_t PciPioConfig::Read(const PciReg16 addr) const {
     uint32_t val;
-    mx_status_t status = Pci::PioCfgRead(static_cast<uint32_t>(base_ + addr.offset()), &val, 16u);
-    DEBUG_ASSERT(status == MX_OK);
+    zx_status_t status = Pci::PioCfgRead(static_cast<uint32_t>(base_ + addr.offset()), &val, 16u);
+    DEBUG_ASSERT(status == ZX_OK);
     return static_cast<uint16_t>(val & 0xFFFF);
 }
 uint32_t PciPioConfig::Read(const PciReg32 addr) const {
     uint32_t val;
-    mx_status_t status = Pci::PioCfgRead(static_cast<uint32_t>(base_ + addr.offset()), &val, 32u);
-    DEBUG_ASSERT(status == MX_OK);
+    zx_status_t status = Pci::PioCfgRead(static_cast<uint32_t>(base_ + addr.offset()), &val, 32u);
+    DEBUG_ASSERT(status == ZX_OK);
     return val;
 }
 void PciPioConfig::Write(const PciReg8 addr, uint8_t val) const {
-    mx_status_t status = Pci::PioCfgWrite(static_cast<uint32_t>(base_ + addr.offset()), val, 8u);
-    DEBUG_ASSERT(status == MX_OK);
+    zx_status_t status = Pci::PioCfgWrite(static_cast<uint32_t>(base_ + addr.offset()), val, 8u);
+    DEBUG_ASSERT(status == ZX_OK);
 }
 void PciPioConfig::Write(const PciReg16 addr, uint16_t val) const {
-    mx_status_t status = Pci::PioCfgWrite(static_cast<uint32_t>(base_ + addr.offset()), val, 16u);
-    DEBUG_ASSERT(status == MX_OK);
+    zx_status_t status = Pci::PioCfgWrite(static_cast<uint32_t>(base_ + addr.offset()), val, 16u);
+    DEBUG_ASSERT(status == ZX_OK);
 }
 void PciPioConfig::Write(const PciReg32 addr, uint32_t val) const {
-    mx_status_t status = Pci::PioCfgWrite(static_cast<uint32_t>(base_ + addr.offset()), val, 32u);
-    DEBUG_ASSERT(status == MX_OK);
+    zx_status_t status = Pci::PioCfgWrite(static_cast<uint32_t>(base_ + addr.offset()), val, 32u);
+    DEBUG_ASSERT(status == ZX_OK);
 }
 
 class PciMmioConfig : public PciConfig {

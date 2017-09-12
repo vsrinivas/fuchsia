@@ -6,12 +6,12 @@
 
 #include <ddk/device.h>
 #include <ddk/binding.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 typedef struct kpci_device {
-    mx_device_t* mxdev;
-    mx_handle_t handle;
+    zx_device_t* mxdev;
+    zx_handle_t handle;
     uint32_t index;
-    mx_pcie_device_info_t info;
-    mx_device_prop_t props[8];
+    zx_pcie_device_info_t info;
+    zx_device_prop_t props[8];
 } kpci_device_t;

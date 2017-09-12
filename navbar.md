@@ -1,4 +1,4 @@
-* [Magenta](/README.md)
+* [Zircon](/README.md)
 * [Concepts](/docs/concepts.md)
 * [Objects](/docs/objects.md)
 * [Syscalls](/docs/syscalls.md)

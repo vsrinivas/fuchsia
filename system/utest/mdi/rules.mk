@@ -13,7 +13,7 @@ MODULE_SRCS += \
 
 MODULE_NAME := mdi-test
 
-MODULE_LIBS := system/ulib/unittest system/ulib/mdi system/ulib/mxio system/ulib/c
+MODULE_LIBS := system/ulib/unittest system/ulib/mdi system/ulib/fdio system/ulib/c
 
 # for including MDI_HEADER
 MODULE_COMPILEFLAGS := -I$(BUILDDIR)/utest/mdi

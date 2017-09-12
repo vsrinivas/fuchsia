@@ -6,7 +6,7 @@
 #include <stdlib.h>
 
 #include <launchpad/launchpad.h>
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <fbl/algorithm.h>
 #include <unittest/unittest.h>
 
@@ -19,41 +19,41 @@
 static const char* g_executable_filename;
 
 static void* ThreadFunc(void* thread_arg) {
-    mx_process_exit(200);
+    zx_process_exit(200);
 }
 
 static void Subprocess() {
     pthread_t thread;
     pthread_create(&thread, NULL, ThreadFunc, NULL);
-    mx_process_exit(100);
+    zx_process_exit(100);
 }
 
 // This is a regression test for an issue where the exit status for a
-// process -- as reported by mx_object_get_info()'s return_code field --
+// process -- as reported by zx_object_get_info()'s return_code field --
 // could change.  That could happen if multiple threads called
-// mx_process_exit() concurrently.
+// zx_process_exit() concurrently.
 static bool test_process_exit_status_race() {
     BEGIN_TEST;
 
     // Launch a subprocess.
     launchpad_t* lp;
-    ASSERT_EQ(launchpad_create(MX_HANDLE_INVALID, "test_process", &lp),
-              MX_OK);
-    ASSERT_EQ(launchpad_load_from_file(lp, g_executable_filename), MX_OK);
+    ASSERT_EQ(launchpad_create(ZX_HANDLE_INVALID, "test_process", &lp),
+              ZX_OK);
+    ASSERT_EQ(launchpad_load_from_file(lp, g_executable_filename), ZX_OK);
     const char* args[] = { g_executable_filename, "--subprocess" };
-    ASSERT_EQ(launchpad_set_args(lp, fbl::count_of(args), args), MX_OK);
-    ASSERT_EQ(launchpad_clone(lp, LP_CLONE_ALL), MX_OK);
-    mx_handle_t proc;
+    ASSERT_EQ(launchpad_set_args(lp, fbl::count_of(args), args), ZX_OK);
+    ASSERT_EQ(launchpad_clone(lp, LP_CLONE_ALL), ZX_OK);
+    zx_handle_t proc;
     const char* errmsg;
-    ASSERT_EQ(launchpad_go(lp, &proc, &errmsg), MX_OK);
+    ASSERT_EQ(launchpad_go(lp, &proc, &errmsg), ZX_OK);
 
     for (;;) {
         // Query the process state.
-        mx_info_process_t info1;
+        zx_info_process_t info1;
         size_t records_read;
-        ASSERT_EQ(mx_object_get_info(
-                      proc, MX_INFO_PROCESS, &info1, sizeof(info1),
-                      &records_read, NULL), MX_OK);
+        ASSERT_EQ(zx_object_get_info(
+                      proc, ZX_INFO_PROCESS, &info1, sizeof(info1),
+                      &records_read, NULL), ZX_OK);
         ASSERT_EQ(records_read, 1u);
 
         // If the process was reported as exited, query its state again.
@@ -61,10 +61,10 @@ static bool test_process_exit_status_race() {
             EXPECT_TRUE(info1.return_code == 100 ||
                         info1.return_code == 200);
 
-            mx_info_process_t info2;
-            ASSERT_EQ(mx_object_get_info(
-                          proc, MX_INFO_PROCESS, &info2, sizeof(info2),
-                          &records_read, NULL), MX_OK);
+            zx_info_process_t info2;
+            ASSERT_EQ(zx_object_get_info(
+                          proc, ZX_INFO_PROCESS, &info2, sizeof(info2),
+                          &records_read, NULL), ZX_OK);
             ASSERT_EQ(records_read, 1u);
             // Do the results match what we got before?
             EXPECT_TRUE(info2.exited);
@@ -75,7 +75,7 @@ static bool test_process_exit_status_race() {
     }
 
     // Clean up.
-    ASSERT_EQ(mx_handle_close(proc), MX_OK);
+    ASSERT_EQ(zx_handle_close(proc), ZX_OK);
 
     END_TEST;
 }

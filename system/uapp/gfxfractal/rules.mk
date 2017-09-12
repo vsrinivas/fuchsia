@@ -14,6 +14,6 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := system/ulib/gfx
 
-MODULE_LIBS := system/ulib/magenta system/ulib/mxio system/ulib/c
+MODULE_LIBS := system/ulib/zircon system/ulib/fdio system/ulib/c
 
 include make/module.mk

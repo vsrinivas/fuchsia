@@ -4,7 +4,7 @@
 
 #include <fenv.h>
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <stdint.h>
 
 #define ROUND_MASK (FE_DOWNWARD | FE_UPWARD | FE_TOWARDZERO)

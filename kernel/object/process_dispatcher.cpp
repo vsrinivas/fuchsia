@@ -23,7 +23,7 @@
 #include <lib/crypto/global_prng.h>
 #include <lib/ktrace.h>
 
-#include <magenta/rights.h>
+#include <zircon/rights.h>
 
 #include <object/diagnostics.h>
 #include <object/futex_context.h>
@@ -42,7 +42,7 @@ using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
-static mx_handle_t map_handle_to_value(const Handle* handle, mx_handle_t mixer) {
+static zx_handle_t map_handle_to_value(const Handle* handle, zx_handle_t mixer) {
     // Ensure that the last bit of the result is not zero, and make sure
     // we don't lose any base_value bits or make the result negative
     // when shifting.
@@ -53,26 +53,26 @@ static mx_handle_t map_handle_to_value(const Handle* handle, mx_handle_t mixer) 
     return mixer ^ handle_id;
 }
 
-static Handle* map_value_to_handle(mx_handle_t value, mx_handle_t mixer) {
+static Handle* map_value_to_handle(zx_handle_t value, zx_handle_t mixer) {
     auto handle_id = (value ^ mixer) >> 1;
     return MapU32ToHandle(handle_id);
 }
 
-mx_status_t ProcessDispatcher::Create(
+zx_status_t ProcessDispatcher::Create(
     fbl::RefPtr<JobDispatcher> job, fbl::StringPiece name, uint32_t flags,
-    fbl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights,
+    fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights,
     fbl::RefPtr<VmAddressRegionDispatcher>* root_vmar_disp,
-    mx_rights_t* root_vmar_rights) {
+    zx_rights_t* root_vmar_rights) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<ProcessDispatcher> process(new (&ac) ProcessDispatcher(job, name, flags));
     if (!ac.check())
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     if (!job->AddChildProcess(process.get()))
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
-    mx_status_t result = process->Initialize();
-    if (result != MX_OK)
+    zx_status_t result = process->Initialize();
+    if (result != ZX_OK)
         return result;
 
     fbl::RefPtr<VmAddressRegion> vmar(process->aspace()->RootVmar());
@@ -80,17 +80,17 @@ mx_status_t ProcessDispatcher::Create(
     // Create a dispatcher for the root VMAR.
     fbl::RefPtr<Dispatcher> new_vmar_dispatcher;
     result = VmAddressRegionDispatcher::Create(vmar, &new_vmar_dispatcher, root_vmar_rights);
-    if (result != MX_OK) {
+    if (result != ZX_OK) {
         process->aspace_->Destroy();
         return result;
     }
 
-    *rights = MX_DEFAULT_PROCESS_RIGHTS;
+    *rights = ZX_DEFAULT_PROCESS_RIGHTS;
     *dispatcher = fbl::AdoptRef<Dispatcher>(process.release());
     *root_vmar_disp = DownCastDispatcher<VmAddressRegionDispatcher>(
             &new_vmar_dispatcher);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 ProcessDispatcher::ProcessDispatcher(fbl::RefPtr<JobDispatcher> job,
@@ -126,15 +126,15 @@ ProcessDispatcher::~ProcessDispatcher() {
     LTRACE_EXIT_OBJ;
 }
 
-void ProcessDispatcher::get_name(char out_name[MX_MAX_NAME_LEN]) const {
-    name_.get(MX_MAX_NAME_LEN, out_name);
+void ProcessDispatcher::get_name(char out_name[ZX_MAX_NAME_LEN]) const {
+    name_.get(ZX_MAX_NAME_LEN, out_name);
 }
 
-mx_status_t ProcessDispatcher::set_name(const char* name, size_t len) {
+zx_status_t ProcessDispatcher::set_name(const char* name, size_t len) {
     return name_.set(name, len);
 }
 
-mx_status_t ProcessDispatcher::Initialize() {
+zx_status_t ProcessDispatcher::Initialize() {
     LTRACE_ENTRY_OBJ;
 
     AutoLock lock(&state_lock_);
@@ -142,15 +142,15 @@ mx_status_t ProcessDispatcher::Initialize() {
     DEBUG_ASSERT(state_ == State::INITIAL);
 
     // create an address space for this process, named after the process's koid.
-    char aspace_name[MX_MAX_NAME_LEN];
+    char aspace_name[ZX_MAX_NAME_LEN];
     snprintf(aspace_name, sizeof(aspace_name), "proc:%" PRIu64, get_koid());
     aspace_ = VmAspace::Create(VmAspace::TYPE_USER, aspace_name);
     if (!aspace_) {
         TRACEF("error creating address space\n");
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 void ProcessDispatcher::Exit(int retcode) {
@@ -225,19 +225,19 @@ void ProcessDispatcher::KillAllThreadsLocked() {
     }
 }
 
-mx_status_t ProcessDispatcher::AddThread(ThreadDispatcher* t, bool initial_thread) {
+zx_status_t ProcessDispatcher::AddThread(ThreadDispatcher* t, bool initial_thread) {
     LTRACE_ENTRY_OBJ;
 
     AutoLock state_lock(&state_lock_);
 
     if (initial_thread) {
         if (state_ != State::INITIAL)
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
     } else {
         // We must not add a thread when in the DYING or DEAD states.
         // Also, we want to ensure that this is not the first thread.
         if (state_ != State::RUNNING)
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
     }
 
     // add the thread to our list
@@ -249,7 +249,7 @@ mx_status_t ProcessDispatcher::AddThread(ThreadDispatcher* t, bool initial_threa
     if (initial_thread)
         SetStateLocked(State::RUNNING);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 // This is called within thread T's context when it is exiting.
@@ -287,7 +287,7 @@ void ProcessDispatcher::on_zero_handles() {
     Kill();
 }
 
-mx_koid_t ProcessDispatcher::get_related_koid() const {
+zx_koid_t ProcessDispatcher::get_related_koid() const {
     return job_->get_koid();
 }
 
@@ -337,7 +337,7 @@ void ProcessDispatcher::SetStateLocked(State s) {
         // tear down the address space
         aspace_->Destroy();
 
-        // Send out exception reports before signalling MX_TASK_TERMINATED,
+        // Send out exception reports before signalling ZX_TASK_TERMINATED,
         // the theory being that marking the process as terminated is the
         // last thing that is done.
         //
@@ -369,7 +369,7 @@ void ProcessDispatcher::SetStateLocked(State s) {
 
         // signal waiter
         LTRACEF_LEVEL(2, "signaling waiters\n");
-        state_tracker_.UpdateState(0u, MX_TASK_TERMINATED);
+        state_tracker_.UpdateState(0u, ZX_TASK_TERMINATED);
 
         // IWBN to call job_->RemoveChildProcess(this) here, but that risks
         // a deadlock as we have |state_lock_| and RemoveChildProcess grabs the
@@ -380,7 +380,7 @@ void ProcessDispatcher::SetStateLocked(State s) {
         // here, so we leave that to the caller after it has released
         // |state_lock_|. MG-880
         // The caller should call RemoveChildProcess soon so that the semantics
-        // of signaling MX_JOB_NO_PROCESSES match that of MX_TASK_TERMINATED.
+        // of signaling ZX_JOB_NO_PROCESSES match that of ZX_TASK_TERMINATED.
 
         // The PROC_CREATE record currently emits a uint32_t.
         uint32_t koid = static_cast<uint32_t>(get_koid());
@@ -389,24 +389,24 @@ void ProcessDispatcher::SetStateLocked(State s) {
 }
 
 // process handle manipulation routines
-mx_handle_t ProcessDispatcher::MapHandleToValue(const Handle* handle) const {
+zx_handle_t ProcessDispatcher::MapHandleToValue(const Handle* handle) const {
     return map_handle_to_value(handle, handle_rand_);
 }
 
-mx_handle_t ProcessDispatcher::MapHandleToValue(const HandleOwner& handle) const {
+zx_handle_t ProcessDispatcher::MapHandleToValue(const HandleOwner& handle) const {
     return map_handle_to_value(handle.get(), handle_rand_);
 }
 
-Handle* ProcessDispatcher::GetHandleLocked(mx_handle_t handle_value) {
+Handle* ProcessDispatcher::GetHandleLocked(zx_handle_t handle_value) {
     auto handle = map_value_to_handle(handle_value, handle_rand_);
     if (handle && handle->process_id() == get_koid())
         return handle;
 
     // Handle lookup failed.  We potentially generate an exception,
     // depending on the job policy.  Note that we don't use the return
-    // value from QueryPolicy() here: MX_POL_ACTION_ALLOW and
-    // MX_POL_ACTION_DENY are equivalent for MX_POL_BAD_HANDLE.
-    QueryPolicy(MX_POL_BAD_HANDLE);
+    // value from QueryPolicy() here: ZX_POL_ACTION_ALLOW and
+    // ZX_POL_ACTION_DENY are equivalent for ZX_POL_BAD_HANDLE.
+    QueryPolicy(ZX_POL_BAD_HANDLE);
     return nullptr;
 }
 
@@ -420,12 +420,12 @@ void ProcessDispatcher::AddHandleLocked(HandleOwner handle) {
     handles_.push_front(handle.release());
 }
 
-HandleOwner ProcessDispatcher::RemoveHandle(mx_handle_t handle_value) {
+HandleOwner ProcessDispatcher::RemoveHandle(zx_handle_t handle_value) {
     AutoLock lock(&handle_table_lock_);
     return RemoveHandleLocked(handle_value);
 }
 
-HandleOwner ProcessDispatcher::RemoveHandleLocked(mx_handle_t handle_value) {
+HandleOwner ProcessDispatcher::RemoveHandleLocked(zx_handle_t handle_value) {
     auto handle = GetHandleLocked(handle_value);
     if (!handle)
         return nullptr;
@@ -436,52 +436,52 @@ HandleOwner ProcessDispatcher::RemoveHandleLocked(mx_handle_t handle_value) {
     return HandleOwner(handle);
 }
 
-void ProcessDispatcher::UndoRemoveHandleLocked(mx_handle_t handle_value) {
+void ProcessDispatcher::UndoRemoveHandleLocked(zx_handle_t handle_value) {
     auto handle = map_value_to_handle(handle_value, handle_rand_);
     AddHandleLocked(HandleOwner(handle));
 }
 
-mx_koid_t ProcessDispatcher::GetKoidForHandle(mx_handle_t handle_value) {
+zx_koid_t ProcessDispatcher::GetKoidForHandle(zx_handle_t handle_value) {
     AutoLock lock(&handle_table_lock_);
     Handle* handle = GetHandleLocked(handle_value);
     if (!handle)
-        return MX_KOID_INVALID;
+        return ZX_KOID_INVALID;
     return handle->dispatcher()->get_koid();
 }
 
-mx_status_t ProcessDispatcher::GetDispatcherInternal(mx_handle_t handle_value,
+zx_status_t ProcessDispatcher::GetDispatcherInternal(zx_handle_t handle_value,
                                                      fbl::RefPtr<Dispatcher>* dispatcher,
-                                                     mx_rights_t* rights) {
+                                                     zx_rights_t* rights) {
     AutoLock lock(&handle_table_lock_);
     Handle* handle = GetHandleLocked(handle_value);
     if (!handle)
-        return MX_ERR_BAD_HANDLE;
+        return ZX_ERR_BAD_HANDLE;
 
     *dispatcher = handle->dispatcher();
     if (rights)
         *rights = handle->rights();
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t ProcessDispatcher::GetDispatcherWithRightsInternal(mx_handle_t handle_value,
-                                                               mx_rights_t desired_rights,
+zx_status_t ProcessDispatcher::GetDispatcherWithRightsInternal(zx_handle_t handle_value,
+                                                               zx_rights_t desired_rights,
                                                                fbl::RefPtr<Dispatcher>* dispatcher_out,
-                                                               mx_rights_t* out_rights) {
+                                                               zx_rights_t* out_rights) {
     AutoLock lock(&handle_table_lock_);
     Handle* handle = GetHandleLocked(handle_value);
     if (!handle)
-        return MX_ERR_BAD_HANDLE;
+        return ZX_ERR_BAD_HANDLE;
 
     if (!handle->HasRights(desired_rights))
-        return MX_ERR_ACCESS_DENIED;
+        return ZX_ERR_ACCESS_DENIED;
 
     *dispatcher_out = handle->dispatcher();
     if (out_rights)
         *out_rights = handle->rights();
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t ProcessDispatcher::GetInfo(mx_info_process_t* info) {
+zx_status_t ProcessDispatcher::GetInfo(zx_info_process_t* info) {
     // retcode_ depends on the state: make sure they're consistent.
     state_lock_.Acquire();
     int retcode = retcode_;
@@ -508,48 +508,48 @@ mx_status_t ProcessDispatcher::GetInfo(mx_info_process_t* info) {
             info->debugger_attached = true;
         }
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t ProcessDispatcher::GetStats(mx_info_task_stats_t* stats) {
+zx_status_t ProcessDispatcher::GetStats(zx_info_task_stats_t* stats) {
     DEBUG_ASSERT(stats != nullptr);
     AutoLock lock(&state_lock_);
     if (state_ != State::RUNNING) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     VmAspace::vm_usage_t usage;
-    mx_status_t s = aspace_->GetMemoryUsage(&usage);
-    if (s != MX_OK) {
+    zx_status_t s = aspace_->GetMemoryUsage(&usage);
+    if (s != ZX_OK) {
         return s;
     }
     stats->mem_mapped_bytes = usage.mapped_pages * PAGE_SIZE;
     stats->mem_private_bytes = usage.private_pages * PAGE_SIZE;
     stats->mem_shared_bytes = usage.shared_pages * PAGE_SIZE;
     stats->mem_scaled_shared_bytes = usage.scaled_shared_bytes;
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t ProcessDispatcher::GetAspaceMaps(
-    user_ptr<mx_info_maps_t> maps, size_t max,
+zx_status_t ProcessDispatcher::GetAspaceMaps(
+    user_ptr<zx_info_maps_t> maps, size_t max,
     size_t* actual, size_t* available) {
     AutoLock lock(&state_lock_);
     if (state_ != State::RUNNING) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     return GetVmAspaceMaps(aspace_, maps, max, actual, available);
 }
 
-mx_status_t ProcessDispatcher::GetVmos(
-    user_ptr<mx_info_vmo_t> vmos, size_t max,
+zx_status_t ProcessDispatcher::GetVmos(
+    user_ptr<zx_info_vmo_t> vmos, size_t max,
     size_t* actual_out, size_t* available_out) {
     AutoLock lock(&state_lock_);
     if (state_ != State::RUNNING) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     size_t actual = 0;
     size_t available = 0;
-    mx_status_t s = GetProcessVmosViaHandles(this, vmos, max, &actual, &available);
-    if (s != MX_OK) {
+    zx_status_t s = GetProcessVmosViaHandles(this, vmos, max, &actual, &available);
+    if (s != ZX_OK) {
         return s;
     }
     size_t actual2 = 0;
@@ -557,22 +557,22 @@ mx_status_t ProcessDispatcher::GetVmos(
     DEBUG_ASSERT(max >= actual);
     s = GetVmAspaceVmos(aspace_, vmos.element_offset(actual), max - actual,
                         &actual2, &available2);
-    if (s != MX_OK) {
+    if (s != ZX_OK) {
         return s;
     }
     *actual_out = actual + actual2;
     *available_out = available + available2;
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t ProcessDispatcher::GetThreads(fbl::Array<mx_koid_t>* out_threads) {
+zx_status_t ProcessDispatcher::GetThreads(fbl::Array<zx_koid_t>* out_threads) {
     AutoLock lock(&state_lock_);
     size_t n = thread_list_.size_slow();
-    fbl::Array<mx_koid_t> threads;
+    fbl::Array<zx_koid_t> threads;
     fbl::AllocChecker ac;
-    threads.reset(new (&ac) mx_koid_t[n], n);
+    threads.reset(new (&ac) zx_koid_t[n], n);
     if (!ac.check())
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     size_t i = 0;
     for (auto& thread : thread_list_) {
         threads[i] = thread.get_koid();
@@ -580,10 +580,10 @@ mx_status_t ProcessDispatcher::GetThreads(fbl::Array<mx_koid_t>* out_threads) {
     }
     DEBUG_ASSERT(i == n);
     *out_threads = fbl::move(threads);
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t ProcessDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
+zx_status_t ProcessDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
     LTRACE_ENTRY_OBJ;
     bool debugger = false;
     switch (eport->type()) {
@@ -603,18 +603,18 @@ mx_status_t ProcessDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport
     AutoLock state_lock(&state_lock_);
     AutoLock excp_lock(&exception_lock_);
     if (state_ == State::DEAD)
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
     if (debugger) {
         if (debugger_exception_port_)
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
         debugger_exception_port_ = eport;
     } else {
         if (exception_port_)
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
         exception_port_ = eport;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 bool ProcessDispatcher::ResetExceptionPort(bool debugger, bool quietly) {
@@ -682,7 +682,7 @@ void ProcessDispatcher::OnExceptionPortRemoval(
 
 class FindProcessByKoid final : public JobEnumerator {
 public:
-    FindProcessByKoid(mx_koid_t koid) : koid_(koid) {}
+    FindProcessByKoid(zx_koid_t koid) : koid_(koid) {}
     FindProcessByKoid(const FindProcessByKoid&) = delete;
 
     // To be called after enumeration.
@@ -699,18 +699,18 @@ private:
         return true;
     }
 
-    const mx_koid_t koid_;
+    const zx_koid_t koid_;
     fbl::RefPtr<ProcessDispatcher> pd_ = nullptr;
 };
 
 // static
-fbl::RefPtr<ProcessDispatcher> ProcessDispatcher::LookupProcessById(mx_koid_t koid) {
+fbl::RefPtr<ProcessDispatcher> ProcessDispatcher::LookupProcessById(zx_koid_t koid) {
     FindProcessByKoid finder(koid);
     GetRootJobDispatcher()->EnumerateChildren(&finder, /* recurse */ true);
     return finder.get_pd();
 }
 
-fbl::RefPtr<ThreadDispatcher> ProcessDispatcher::LookupThreadById(mx_koid_t koid) {
+fbl::RefPtr<ThreadDispatcher> ProcessDispatcher::LookupThreadById(zx_koid_t koid) {
     LTRACE_ENTRY_OBJ;
     AutoLock lock(&state_lock_);
 
@@ -723,25 +723,25 @@ uintptr_t ProcessDispatcher::get_debug_addr() const {
     return debug_addr_;
 }
 
-mx_status_t ProcessDispatcher::set_debug_addr(uintptr_t addr) {
+zx_status_t ProcessDispatcher::set_debug_addr(uintptr_t addr) {
     if (addr == 0u)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     AutoLock lock(&state_lock_);
     // Only allow the value to be set once: Once ld.so has set it that's it.
     if (debug_addr_ != 0u)
-        return MX_ERR_ACCESS_DENIED;
+        return ZX_ERR_ACCESS_DENIED;
     debug_addr_ = addr;
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t ProcessDispatcher::QueryPolicy(uint32_t condition) const {
+zx_status_t ProcessDispatcher::QueryPolicy(uint32_t condition) const {
     auto action = GetSystemPolicyManager()->QueryBasicPolicy(policy_, condition);
-    if (action & MX_POL_ACTION_EXCEPTION) {
+    if (action & ZX_POL_ACTION_EXCEPTION) {
         thread_signal_policy_exception();
     }
-    // TODO(cpu): check for the MX_POL_KILL bit and return an error code
+    // TODO(cpu): check for the ZX_POL_KILL bit and return an error code
     // that sysgen understands as termination.
-    return (action & MX_POL_ACTION_DENY) ? MX_ERR_ACCESS_DENIED : MX_OK;
+    return (action & ZX_POL_ACTION_DENY) ? ZX_ERR_ACCESS_DENIED : ZX_OK;
 }
 
 uintptr_t ProcessDispatcher::cache_vdso_code_address() {
@@ -764,7 +764,7 @@ const char* StateToString(ProcessDispatcher::State state) {
     return "unknown";
 }
 
-bool ProcessDispatcher::IsHandleValid(mx_handle_t handle_value) {
+bool ProcessDispatcher::IsHandleValid(zx_handle_t handle_value) {
     AutoLock lock(&handle_table_lock_);
     return (GetHandleLocked(handle_value) != nullptr);
 }

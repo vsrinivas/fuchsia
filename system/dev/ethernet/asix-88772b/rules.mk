@@ -8,7 +8,7 @@ MODULE_TYPE := driver
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/pretty system/ulib/sync
 
-MODULE_LIBS := system/ulib/driver system/ulib/magenta system/ulib/c
+MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
 MODULE := $(LOCAL_DIR)
 

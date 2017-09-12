@@ -4,7 +4,7 @@
 
 //
 // Provides an implementation of a simple thread-safe asynchronous
-// dispatcher based on a Magenta completion port.  The implementation
+// dispatcher based on a Zircon completion port.  The implementation
 // is designed to avoid most dynamic memory allocation except for that
 // which is required to create the loop in the first place or to manage
 // the list of running threads.
@@ -18,7 +18,7 @@
 #include <stddef.h>
 #include <threads.h>
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #include <async/default.h>
 #include <async/dispatcher.h>
@@ -56,10 +56,10 @@ typedef struct async_loop_config {
 // |config| provides configuration for the message loop, may be NULL for
 // default behavior.
 //
-// Returns |MX_OK| on success.
-// Returns |MX_ERR_NO_MEMORY| if allocation failed.
+// Returns |ZX_OK| on success.
+// Returns |ZX_ERR_NO_MEMORY| if allocation failed.
 // May return other errors if the necessary internal handles could not be created.
-mx_status_t async_loop_create(const async_loop_config_t* config,
+zx_status_t async_loop_create(const async_loop_config_t* config,
                               async_t** out_async);
 
 // Shuts down the message loop, notifies handlers which asked to handle shutdown.
@@ -79,15 +79,15 @@ void async_loop_destroy(async_t* async);
 // dispatcher.
 //
 // Dispatches events until the |deadline| expires or the loop is quitted.
-// Use |MX_TIME_INFINITE| to dispatch events indefinitely.
+// Use |ZX_TIME_INFINITE| to dispatch events indefinitely.
 //
 // If |once| is true, performs a single unit of work then returns.
 //
-// Returns |MX_OK| if the dispatcher returns after one cycle.
-// Returns |MX_ERR_TIMED_OUT| if the deadline expired.
-// Returns |MX_ERR_CANCELED| if the loop quitted.
-// Returns |MX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.
-mx_status_t async_loop_run(async_t* async, mx_time_t deadline, bool once);
+// Returns |ZX_OK| if the dispatcher returns after one cycle.
+// Returns |ZX_ERR_TIMED_OUT| if the deadline expired.
+// Returns |ZX_ERR_CANCELED| if the loop quitted.
+// Returns |ZX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.
+zx_status_t async_loop_run(async_t* async, zx_time_t deadline, bool once);
 
 // Quits the message loop.
 // Active invocations of |async_loop_run()| and threads started using
@@ -106,10 +106,10 @@ void async_loop_quit(async_t* async);
 // threads started using |async_loop_start_thread()| have terminated before
 // resetting the quit state.
 //
-// Returns |MX_OK| if the loop's state was |ASYNC_LOOP_RUNNABLE| or |ASYNC_LOOP_QUIT|.
-// Returns |MX_ERR_BAD_STATE| if the loop's state was |ASYNC_LOOP_SHUTDOWN| or if
+// Returns |ZX_OK| if the loop's state was |ASYNC_LOOP_RUNNABLE| or |ASYNC_LOOP_QUIT|.
+// Returns |ZX_ERR_BAD_STATE| if the loop's state was |ASYNC_LOOP_SHUTDOWN| or if
 // the message loop is currently active on one or more threads.
-mx_status_t async_loop_reset_quit(async_t* async);
+zx_status_t async_loop_reset_quit(async_t* async);
 
 // Returns the current state of the message loop.
 typedef enum {
@@ -125,10 +125,10 @@ async_loop_state_t async_loop_get_state(async_t* async);
 // |name| is the desired name for the new thread, may be NULL.
 // If |out_thread| is not NULL, it is set to the new thread identifier.
 //
-// Returns |MX_OK| on success.
-// Returns |MX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.
-// Returns |MX_ERR_NO_MEMORY| if allocation or thread creation failed.
-mx_status_t async_loop_start_thread(async_t* async, const char* name,
+// Returns |ZX_OK| on success.
+// Returns |ZX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.
+// Returns |ZX_ERR_NO_MEMORY| if allocation or thread creation failed.
+zx_status_t async_loop_start_thread(async_t* async, const char* name,
                                     thrd_t* out_thread);
 
 // Blocks until all dispatch threads started with |async_loop_start_thread()|
@@ -174,15 +174,15 @@ public:
     // dispatcher.
     //
     // Dispatches events until the |deadline| expires or the loop is quitted.
-    // Use |MX_TIME_INFINITE| to dispatch events indefinitely.
+    // Use |ZX_TIME_INFINITE| to dispatch events indefinitely.
     //
     // If |once| is true, performs a single unit of work then returns.
     //
-    // Returns |MX_OK| if the dispatcher returns after one cycle.
-    // Returns |MX_ERR_TIMED_OUT| if the deadline expired.
-    // Returns |MX_ERR_CANCELED| if the loop quitted.
-    // Returns |MX_ERR_BAD_STATE| if the loop was shut down with |Shutdown()|.
-    mx_status_t Run(mx_time_t deadline = MX_TIME_INFINITE, bool once = false);
+    // Returns |ZX_OK| if the dispatcher returns after one cycle.
+    // Returns |ZX_ERR_TIMED_OUT| if the deadline expired.
+    // Returns |ZX_ERR_CANCELED| if the loop quitted.
+    // Returns |ZX_ERR_BAD_STATE| if the loop was shut down with |Shutdown()|.
+    zx_status_t Run(zx_time_t deadline = ZX_TIME_INFINITE, bool once = false);
 
     // Quits the message loop.
     // Active invocations of |Run()| and threads started using |StartThread()|
@@ -199,10 +199,10 @@ public:
     // The caller must ensure all active invocations of |Run()| and threads
     // started using |StartThread()| have terminated before resetting the quit state.
     //
-    // Returns |MX_OK| if the loop's state was |ASYNC_LOOP_RUNNABLE| or |ASYNC_LOOP_QUIT|.
-    // Returns |MX_ERR_BAD_STATE| if the loop's state was |ASYNC_LOOP_SHUTDOWN| or if
+    // Returns |ZX_OK| if the loop's state was |ASYNC_LOOP_RUNNABLE| or |ASYNC_LOOP_QUIT|.
+    // Returns |ZX_ERR_BAD_STATE| if the loop's state was |ASYNC_LOOP_SHUTDOWN| or if
     // the message loop is currently active on one or more threads.
-    mx_status_t ResetQuit();
+    zx_status_t ResetQuit();
 
     // Returns the current state of the message loop.
     async_loop_state_t GetState() const;
@@ -216,10 +216,10 @@ public:
     // |name| is the desired name for the new thread, may be NULL.
     // If |out_thread| is not NULL, it is set to the new thread identifier.
     //
-    // Returns |MX_OK| on success.
-    // Returns |MX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.
-    // Returns |MX_ERR_NO_MEMORY| if allocation or thread creation failed.
-    mx_status_t StartThread(const char* name = nullptr, thrd_t* out_thread = nullptr);
+    // Returns |ZX_OK| on success.
+    // Returns |ZX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.
+    // Returns |ZX_ERR_NO_MEMORY| if allocation or thread creation failed.
+    zx_status_t StartThread(const char* name = nullptr, thrd_t* out_thread = nullptr);
 
     // Blocks until all dispatch threads started with |StartThread()|
     // have terminated.

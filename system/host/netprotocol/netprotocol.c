@@ -8,7 +8,7 @@
 
 #include "netprotocol.h"
 
-#include <magenta/boot/netboot.h>
+#include <zircon/boot/netboot.h>
 
 #include <arpa/inet.h>
 #include <ifaddrs.h>
@@ -306,7 +306,7 @@ static bool netboot_open_callback(device_info_t* device, void* data) {
 int netboot_open(const char* hostname, const char* ifname,
                  struct sockaddr_in6* addr, bool make_connection) {
     if ((hostname == NULL) || (hostname[0] == 0)) {
-        char* envname = getenv("MAGENTA_NODENAME");
+        char* envname = getenv("ZIRCON_NODENAME");
         hostname = envname && envname[0] != 0 ? envname : "*";
     }
     size_t hostname_len = strlen(hostname) + 1;

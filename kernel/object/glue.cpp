@@ -69,7 +69,7 @@ static fbl::RefPtr<JobDispatcher> root_job;
 static PolicyManager* policy_manager;
 
 // Masks for building a Handle's base_value, which ProcessDispatcher
-// uses to create mx_handle_t values.
+// uses to create zx_handle_t values.
 //
 // base_value bit fields:
 //   [31..30]: Must be zero
@@ -149,7 +149,7 @@ static void high_handle_count(size_t count) {
     printf("WARNING: High handle count: %zu handles\n", count);
 }
 
-Handle* MakeHandle(fbl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights) {
+Handle* MakeHandle(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights) {
     uint32_t* handle_count = nullptr;
     void* addr;
     uint32_t base_value;
@@ -182,7 +182,7 @@ Handle* MakeHandle(fbl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights) {
     return new (addr) Handle(fbl::move(dispatcher), rights, base_value);
 }
 
-Handle* DupHandle(Handle* source, mx_rights_t rights, bool is_replace) {
+Handle* DupHandle(Handle* source, zx_rights_t rights, bool is_replace) {
     fbl::RefPtr<Dispatcher> dispatcher(source->dispatcher());
     uint32_t* handle_count;
     void* addr;
@@ -275,7 +275,7 @@ void internal::DumpHandleTableInfo() {
     handle_arena.Dump();
 }
 
-mx_status_t SetSystemExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
+zx_status_t SetSystemExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
     DEBUG_ASSERT(eport->type() == ExceptionPort::Type::JOB);
     return root_job->SetExceptionPort(fbl::move(eport));
 }
@@ -292,41 +292,41 @@ PolicyManager* GetSystemPolicyManager() {
     return policy_manager;
 }
 
-mx_status_t validate_resource(mx_handle_t handle, uint32_t kind) {
+zx_status_t validate_resource(zx_handle_t handle, uint32_t kind) {
     auto up = ProcessDispatcher::GetCurrent();
     fbl::RefPtr<ResourceDispatcher> resource;
     auto status = up->GetDispatcher(handle, &resource);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
     uint32_t rkind = resource->get_kind();
-    if ((rkind == MX_RSRC_KIND_ROOT) || (rkind == kind)) {
-        return MX_OK;
+    if ((rkind == ZX_RSRC_KIND_ROOT) || (rkind == kind)) {
+        return ZX_OK;
     }
-    return MX_ERR_ACCESS_DENIED;
+    return ZX_ERR_ACCESS_DENIED;
 }
 
-mx_status_t validate_ranged_resource(mx_handle_t handle, uint32_t kind, uint64_t low,
+zx_status_t validate_ranged_resource(zx_handle_t handle, uint32_t kind, uint64_t low,
                                      uint64_t high) {
     auto up = ProcessDispatcher::GetCurrent();
     fbl::RefPtr<ResourceDispatcher> resource;
     auto status = up->GetDispatcher(handle, &resource);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
     uint32_t rsrc_kind = resource->get_kind();
-    if (rsrc_kind == MX_RSRC_KIND_ROOT) {
+    if (rsrc_kind == ZX_RSRC_KIND_ROOT) {
         // root resource is valid for everything
-        return MX_OK;
+        return ZX_OK;
     } else if (rsrc_kind == kind) {
         uint64_t rsrc_low, rsrc_high;
         resource->get_range(&rsrc_low, &rsrc_high);
         if (low >= rsrc_low && high <= rsrc_high) {
-            return MX_OK;
+            return ZX_OK;
         }
     }
 
-    return MX_ERR_ACCESS_DENIED;
+    return ZX_ERR_ACCESS_DENIED;
 }
 
 // Counts and optionally prints all job/process descendants of a job.
@@ -348,7 +348,7 @@ public:
 private:
     bool OnJob(JobDispatcher* job) final {
         if (prefix_ != nullptr) {
-            char name[MX_MAX_NAME_LEN];
+            char name[ZX_MAX_NAME_LEN];
             job->get_name(name);
             printf("%sjob %6" PRIu64 " '%s'\n", prefix_, job->get_koid(), name);
         }
@@ -360,7 +360,7 @@ private:
         // count running processes that aren't attached to a debugger.
         // It's a race, but will stop us from re-killing a job that only has
         // blocked-by-debugger processes.
-        mx_info_process_t info = {};
+        zx_info_process_t info = {};
         process->GetInfo(&info);
         if (info.started && !info.exited && !info.debugger_attached) {
             num_running_processes_++;
@@ -376,7 +376,7 @@ private:
             if (info.debugger_attached) {
                 tag = "dbg";
             }
-            char name[MX_MAX_NAME_LEN];
+            char name[ZX_MAX_NAME_LEN];
             process->get_name(name);
             printf("%sproc %5" PRIu64 " %4s '%s'\n",
                    prefix_, process->get_koid(), tag, name);
@@ -425,7 +425,7 @@ static void oom_lowmem(size_t shortfall_bytes) {
         } else {
             tag = "(next)";
         }
-        char name[MX_MAX_NAME_LEN];
+        char name[ZX_MAX_NAME_LEN];
         job->get_name(name);
         printf("OOM:   %s job %6" PRIu64 " '%s'\n", tag, job->get_koid(), name);
         if (kill) {
@@ -444,10 +444,10 @@ static void oom_lowmem(size_t shortfall_bytes) {
             killed = true;
         } else if (killed) {
             if (--next == 0) {
-                return MX_ERR_STOP;
+                return ZX_ERR_STOP;
             }
         }
-        return MX_OK;
+        return ZX_OK;
     });
 }
 

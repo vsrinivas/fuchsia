@@ -10,7 +10,7 @@ __BEGIN_CDECLS
 
 // Receives packets containing user supplied data.
 //
-// Reports the |status| of the receiver.  If the status is |MX_OK| then |data|
+// Reports the |status| of the receiver.  If the status is |ZX_OK| then |data|
 // describes the contents of the packet which was received, otherwise |data|
 // is null.
 //
@@ -19,8 +19,8 @@ __BEGIN_CDECLS
 typedef struct async_receiver async_receiver_t;
 typedef void(async_receiver_handler_t)(async_t* async,
                                        async_receiver_t* receiver,
-                                       mx_status_t status,
-                                       const mx_packet_user_t* data);
+                                       zx_status_t status,
+                                       const zx_packet_user_t* data);
 
 // Context for packet receiver.
 // The same instance may be used to receive arbitrarily many queued packets.
@@ -51,13 +51,13 @@ struct async_receiver {
 // When the dispatcher is shutting down (being destroyed), attempting to
 // queue new packets will fail.
 //
-// Returns |MX_OK| if the packet was successfully enqueued.
-// Returns |MX_ERR_BAD_STATE| if the dispatcher shut down.
-// Returns |MX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
+// Returns |ZX_OK| if the packet was successfully enqueued.
+// Returns |ZX_ERR_BAD_STATE| if the dispatcher shut down.
+// Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
 //
-// See |mx_port_queue()|.
-inline mx_status_t async_queue_packet(async_t* async, async_receiver_t* receiver,
-                                      const mx_packet_user_t* data) {
+// See |zx_port_queue()|.
+inline zx_status_t async_queue_packet(async_t* async, async_receiver_t* receiver,
+                                      const zx_packet_user_t* data) {
     return async->ops->queue_packet(async, receiver, data);
 }
 
@@ -78,15 +78,15 @@ class Receiver final : private async_receiver_t {
 public:
     // Receives packets containing user supplied data.
     //
-    // Reports the |status| of the receiver.  If the status is |MX_OK| then |data|
+    // Reports the |status| of the receiver.  If the status is |ZX_OK| then |data|
     // describes the contents of the packet which was received, otherwise |data|
     // is null.
     //
     // It is safe for the handler to destroy itself when there are no remaining
     // packets pending delivery to it.
     using Handler = fbl::Function<void(async_t* async,
-                                       mx_status_t status,
-                                       const mx_packet_user_t* data)>;
+                                       zx_status_t status,
+                                       const zx_packet_user_t* data)>;
 
     // Initializes the properties of the receiver.
     explicit Receiver(uint32_t flags = 0u);
@@ -110,11 +110,11 @@ public:
     // Enqueues a packet of data for delivery to the receiver.
     //
     // See |async_queue_packet()| for details.
-    mx_status_t Queue(async_t* async, const mx_packet_user_t* data = nullptr);
+    zx_status_t Queue(async_t* async, const zx_packet_user_t* data = nullptr);
 
 private:
     static void CallHandler(async_t* async, async_receiver_t* receiver,
-                            mx_status_t status, const mx_packet_user_t* data);
+                            zx_status_t status, const zx_packet_user_t* data);
 
     Handler handler_;
 

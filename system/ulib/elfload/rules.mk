@@ -10,9 +10,9 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS := $(LOCAL_DIR)/elf-load.c
 
-# This library refers to Magenta system calls and so needs libmagenta
+# This library refers to Zircon system calls and so needs libzircon
 # headers.  But the library itself has no dependencies, so users must
-# ensure that the libmagenta entry points are available.
-MODULE_LIBS := system/ulib/magenta
+# ensure that the libzircon entry points are available.
+MODULE_LIBS := system/ulib/zircon
 
 include make/module.mk

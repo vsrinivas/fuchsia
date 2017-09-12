@@ -6,7 +6,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
@@ -45,7 +45,7 @@ void PcieUpstreamNode::AllocateDownstreamBars() {
         auto device = GetDownstream(i);
         if (device != nullptr) {
             status_t res = device->AllocateBars();
-            if (res != MX_OK)
+            if (res != ZX_OK)
                 device->Disable();
         }
     }

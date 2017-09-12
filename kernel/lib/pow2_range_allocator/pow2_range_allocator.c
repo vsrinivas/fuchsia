@@ -124,13 +124,13 @@ static void p2ra_return_free_block(p2ra_state_t* state,
 }
 
 
-mx_status_t p2ra_init(p2ra_state_t* state, uint max_alloc_size) {
+zx_status_t p2ra_init(p2ra_state_t* state, uint max_alloc_size) {
     if (!state)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     if (!max_alloc_size || !ispow2(max_alloc_size)) {
         TRACEF("max_alloc_size (%u) is not an integer power of two!\n", max_alloc_size);
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     /* Allocate the storage for our free buckets */
@@ -138,7 +138,7 @@ mx_status_t p2ra_init(p2ra_state_t* state, uint max_alloc_size) {
     state->free_block_buckets = malloc(state->bucket_count * sizeof(state->free_block_buckets[0]));
     if (!state->free_block_buckets) {
         TRACEF("Failed to allocate storage for %u free bucket lists!\n", state->bucket_count);
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     /* Initialize the rest of our bookeeping */
@@ -149,7 +149,7 @@ mx_status_t p2ra_init(p2ra_state_t* state, uint max_alloc_size) {
     for (uint i = 0; i < state->bucket_count; ++i)
         list_initialize(&state->free_block_buckets[i]);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 void p2ra_free(p2ra_state_t* state) {
@@ -168,15 +168,15 @@ void p2ra_free(p2ra_state_t* state) {
     memset(state, 0, sizeof(*state));
 }
 
-mx_status_t p2ra_add_range(p2ra_state_t* state, uint range_start, uint range_len) {
+zx_status_t p2ra_add_range(p2ra_state_t* state, uint range_start, uint range_len) {
     LTRACEF("Adding range [%u, %u]\n", range_start, range_start + range_len - 1);
 
     if (!state      ||
         !range_len  ||
         ((range_start + range_len) < range_start))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
-    mx_status_t      ret       = MX_OK;
+    zx_status_t      ret       = ZX_OK;
     p2ra_range_t*    new_range = NULL;
     struct list_node new_blocks;
     list_initialize(&new_blocks);
@@ -191,7 +191,7 @@ mx_status_t p2ra_add_range(p2ra_state_t* state, uint range_start, uint range_len
             TRACEF("Range [%u, %u] overlaps with existing range [%u, %u].\n",
                     range_start,  range_start  + range_len  - 1,
                     range->start, range->start + range->len - 1);
-            ret = MX_ERR_ALREADY_EXISTS;
+            ret = ZX_ERR_ALREADY_EXISTS;
             goto finished;
         }
     }
@@ -199,7 +199,7 @@ mx_status_t p2ra_add_range(p2ra_state_t* state, uint range_start, uint range_len
     /* Allocate our range state */
     new_range = calloc(1, sizeof(*new_range));
     if (!new_range) {
-        ret = MX_ERR_NO_MEMORY;
+        ret = ZX_ERR_NO_MEMORY;
         goto finished;
     }
     new_range->start = range_start;
@@ -247,7 +247,7 @@ mx_status_t p2ra_add_range(p2ra_state_t* state, uint range_start, uint range_len
             TRACEF("WARNING! Failed to allocate block bookkeeping with sub-range "
                    "[%u, %u] still left to track.\n",
                    range_start, range_start + range_len - 1);
-            ret = MX_ERR_NO_MEMORY;
+            ret = ZX_ERR_NO_MEMORY;
             goto finished;
         }
 
@@ -271,7 +271,7 @@ mx_status_t p2ra_add_range(p2ra_state_t* state, uint range_start, uint range_len
 finished:
     mutex_release(&state->lock);
 
-    if (ret != MX_OK) {
+    if (ret != ZX_OK) {
         if (new_range) {
             DEBUG_ASSERT(!list_in_list(&new_range->node));
             free(new_range);
@@ -283,13 +283,13 @@ finished:
     return ret;
 }
 
-mx_status_t p2ra_allocate_range(p2ra_state_t* state, uint size, uint* out_range_start) {
+zx_status_t p2ra_allocate_range(p2ra_state_t* state, uint size, uint* out_range_start) {
     if (!state || !out_range_start)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     if (!size || !ispow2(size)) {
         TRACEF("Size (%u) is not an integer power of 2.\n", size);
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     uint orig_bucket = log2_uint_floor(size);
@@ -297,12 +297,12 @@ mx_status_t p2ra_allocate_range(p2ra_state_t* state, uint size, uint* out_range_
     if (bucket >= state->bucket_count) {
         TRACEF("Invalid size (%u).  Valid sizes are integer powers of 2 from [1, %u]\n",
                 size, 1u << (state->bucket_count - 1));
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     /* Lock state during allocation */
     p2ra_block_t* block = NULL;
-    mx_status_t   ret   = MX_OK;
+    zx_status_t   ret   = ZX_OK;
     mutex_acquire(&state->lock);
 
     /* Find the smallest sized chunk which can hold the allocation and is
@@ -316,7 +316,7 @@ mx_status_t p2ra_allocate_range(p2ra_state_t* state, uint size, uint* out_range_
 
     /* Nothing found, unlock and get out */
     if (!block) {
-        ret = MX_ERR_NO_RESOURCES;
+        ret = ZX_ERR_NO_RESOURCES;
         goto finished;
     }
 
@@ -335,7 +335,7 @@ mx_status_t p2ra_allocate_range(p2ra_state_t* state, uint size, uint* out_range_
             TRACEF("Failed to allocated free bookkeeping block when attempting to "
                    "split for allocation\n");
             p2ra_return_free_block(state, block, true);
-            ret = MX_ERR_NO_MEMORY;
+            ret = ZX_ERR_NO_MEMORY;
             goto finished;
         }
 

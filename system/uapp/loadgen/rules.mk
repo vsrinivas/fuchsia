@@ -11,12 +11,12 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/loadgen.cpp
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mxcpp \
+    system/ulib/zxcpp \
     system/ulib/fbl
 
 MODULE_LIBS := \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/c
 
 include make/module.mk

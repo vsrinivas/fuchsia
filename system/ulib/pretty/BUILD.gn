@@ -16,7 +16,7 @@ static_library("pretty") {
     "include/pretty/sizes.h",
   ]
   deps = [
-    "//magenta/system/public",
+    "//zircon/system/public",
   ]
   public_configs = [ ":pretty_config" ]
 }

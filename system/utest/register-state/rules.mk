@@ -15,8 +15,8 @@ MODULE_NAME := register-state-test
 
 MODULE_LIBS := \
     system/ulib/c \
-    system/ulib/magenta \
-    system/ulib/mxio \
+    system/ulib/zircon \
+    system/ulib/fdio \
     system/ulib/unittest \
 
 include make/module.mk

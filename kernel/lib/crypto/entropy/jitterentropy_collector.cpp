@@ -7,7 +7,7 @@
 #include <lib/crypto/entropy/jitterentropy_collector.h>
 
 #include <kernel/cmdline.h>
-#include <magenta/errors.h>
+#include <zircon/errors.h>
 #include <fbl/atomic.h>
 
 #ifndef JITTERENTROPY_MEM_SIZE
@@ -21,7 +21,7 @@ namespace crypto {
 
 namespace entropy {
 
-mx_status_t JitterentropyCollector::GetInstance(Collector** ptr) {
+zx_status_t JitterentropyCollector::GetInstance(Collector** ptr) {
     static JitterentropyCollector* instance = nullptr;
     // Note: this would be fbl::atomic<bool>, except that fbl doesn't support
     // that specialization.
@@ -55,10 +55,10 @@ mx_status_t JitterentropyCollector::GetInstance(Collector** ptr) {
 
     if (instance) {
         *ptr = instance;
-        return MX_OK;
+        return ZX_OK;
     } else {
         *ptr = nullptr;
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }
 

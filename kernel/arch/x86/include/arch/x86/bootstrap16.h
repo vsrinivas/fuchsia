@@ -23,7 +23,7 @@
 
 #ifndef ASSEMBLY
 #include <assert.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <vm/vm_aspace.h>
 
 __BEGIN_CDECLS

@@ -9,7 +9,7 @@
 
 #include <err.h>
 #include <kernel/thread.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/types.h>
@@ -55,7 +55,7 @@ void event_init(event_t*, bool initial, uint flags);
 void event_destroy(event_t*);
 
 /* Wait until deadline
- * Interruptable arg allows it to return early with MX_ERR_INTERNAL_INTR_KILLED if thread
+ * Interruptable arg allows it to return early with ZX_ERR_INTERNAL_INTR_KILLED if thread
  * is signaled for kill.
  */
 status_t event_wait_deadline(event_t*, lk_time_t, bool interruptable);
@@ -97,9 +97,9 @@ public:
     Event& operator=(const Event&) = delete;
 
     // Returns:
-    // MX_OK - signaled
-    // MX_ERR_TIMED_OUT - time out expired
-    // MX_ERR_INTERNAL_INTR_KILLED - thread killed
+    // ZX_OK - signaled
+    // ZX_ERR_TIMED_OUT - time out expired
+    // ZX_ERR_INTERNAL_INTR_KILLED - thread killed
     // Or the |status| which the caller specified in Event::Signal(status)
     status_t Wait(lk_time_t deadline) {
         return event_wait_deadline(&event_, deadline, true);
@@ -107,7 +107,7 @@ public:
 
     // Returns number of ready threads. If it is bigger than 0
     // the caller must call thread_reschedule().
-    __WARN_UNUSED_RESULT int Signal(status_t status = MX_OK) {
+    __WARN_UNUSED_RESULT int Signal(status_t status = ZX_OK) {
         return event_signal_etc(&event_, false, status);
     }
 

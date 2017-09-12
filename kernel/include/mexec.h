@@ -12,8 +12,8 @@
 
 #ifndef ASSEMBLY
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -33,7 +33,7 @@ typedef void (*mexec_asm_func)(uint64_t arg0, uint64_t arg1, uint64_t arg2,
                                void* new_kernel_addr);
 
 // Appends a section to the end of a given bootdata image.
-mx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
+zx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
                                     const uint8_t* section, const uint32_t section_length,
                                     const uint32_t type, const uint32_t extra,
                                     const uint32_t flags);
@@ -41,7 +41,7 @@ mx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
 /* Allow the platform to patch the bootdata structure with any platform specific
  * data that might be necessary for the kernel that mexec is chain-loading.
  */
-mx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len);
+zx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len);
 
 /* Ask the platform to mexec into the next kernel.
  */

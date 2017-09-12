@@ -25,18 +25,18 @@ RoDso::RoDso(const char* name, const void* image, size_t size,
     fbl::RefPtr<Dispatcher> dispatcher;
 
     fbl::RefPtr<VmObject> vmo;
-    mx_status_t status = VmObjectPaged::CreateFromROData(image, size, &vmo);
-    ASSERT(status == MX_OK);
+    zx_status_t status = VmObjectPaged::CreateFromROData(image, size, &vmo);
+    ASSERT(status == ZX_OK);
 
     status = VmObjectDispatcher::Create(
         fbl::move(vmo),
         &dispatcher, &vmo_rights_);
-    ASSERT(status == MX_OK);
+    ASSERT(status == ZX_OK);
 
     status = dispatcher->set_name(name, strlen(name));
-    ASSERT(status == MX_OK);
+    ASSERT(status == ZX_OK);
     vmo_ = DownCastDispatcher<VmObjectDispatcher>(&dispatcher);
-    vmo_rights_ &= ~MX_RIGHT_WRITE;
+    vmo_rights_ &= ~ZX_RIGHT_WRITE;
 }
 
 HandleOwner RoDso::vmo_handle() const {
@@ -44,24 +44,24 @@ HandleOwner RoDso::vmo_handle() const {
 }
 
 // Map one segment from our VM object.
-mx_status_t RoDso::MapSegment(fbl::RefPtr<VmAddressRegionDispatcher> vmar,
+zx_status_t RoDso::MapSegment(fbl::RefPtr<VmAddressRegionDispatcher> vmar,
                               bool code,
                               size_t vmar_offset,
                               size_t start_offset,
                               size_t end_offset) const {
 
-    uint32_t flags = MX_VM_FLAG_SPECIFIC | MX_VM_FLAG_PERM_READ;
+    uint32_t flags = ZX_VM_FLAG_SPECIFIC | ZX_VM_FLAG_PERM_READ;
     if (code)
-        flags |= MX_VM_FLAG_PERM_EXECUTE;
+        flags |= ZX_VM_FLAG_PERM_EXECUTE;
 
     size_t len = end_offset - start_offset;
 
     fbl::RefPtr<VmMapping> mapping;
-    mx_status_t status = vmar->Map(vmar_offset, vmo_->vmo(),
+    zx_status_t status = vmar->Map(vmar_offset, vmo_->vmo(),
                                    start_offset, len, flags, &mapping);
 
     const char* segment_name = code ? "code" : "rodata";
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         dprintf(CRITICAL,
                 "userboot: %s %s mapping %#zx @ %#" PRIxPTR
                 " size %#zx failed %d\n",
@@ -77,10 +77,10 @@ mx_status_t RoDso::MapSegment(fbl::RefPtr<VmAddressRegionDispatcher> vmar,
     return status;
 }
 
-mx_status_t RoDso::Map(fbl::RefPtr<VmAddressRegionDispatcher> vmar,
+zx_status_t RoDso::Map(fbl::RefPtr<VmAddressRegionDispatcher> vmar,
                        size_t offset) const {
-    mx_status_t status = MapSegment(vmar, false, offset, 0, code_start_);
-    if (status == MX_OK)
+    zx_status_t status = MapSegment(vmar, false, offset, 0, code_start_);
+    if (status == ZX_OK)
         status = MapSegment(fbl::move(vmar), true,
                             offset + code_start_, code_start_, size_);
     return status;

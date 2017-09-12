@@ -14,14 +14,14 @@ MODULE_SRCS += \
 MODULE_NAME := crashlogger-test
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mxcpp \
+    system/ulib/zxcpp \
     system/ulib/fbl \
 
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/launchpad \
-    system/ulib/magenta \
-    system/ulib/mxio \
+    system/ulib/zircon \
+    system/ulib/fdio \
     system/ulib/unittest \
 
 include make/module.mk

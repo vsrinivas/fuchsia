@@ -7,7 +7,7 @@
 
 #include <asm.h>
 #include <arch/x86/mp.h>
-#include <magenta/mx-syscall-numbers.h>
+#include <zircon/zx-syscall-numbers.h>
 
 #define DW_REG_rsp        0x7
 #define DW_REG_rip        0x10
@@ -301,7 +301,7 @@ FUNCTION_LABEL(x86_syscall)
     // pre_push and post_pop macros above to maintain alignment.
 #if WITH_LIB_SYSCALLS
     // Verify the syscall is in range and jump to it.
-    cmp     $MX_SYS_COUNT, %rax
+    cmp     $ZX_SYS_COUNT, %rax
     jae     .Lunknown_syscall
     jmp     *.Lcall_wrapper_table(, %rax, 8)
 #endif
@@ -403,5 +403,5 @@ FUNCTION_LABEL(x86_syscall)
 END_FUNCTION(x86_syscall)
 
 #if WITH_LIB_SYSCALLS
-#include <magenta/syscall-kernel-branches.S>
+#include <zircon/syscall-kernel-branches.S>
 #endif

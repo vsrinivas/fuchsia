@@ -1,4 +1,4 @@
-# mx_futex_wake_handle_close_thread_exit
+# zx_futex_wake_handle_close_thread_exit
 
 ## NAME
 
@@ -7,25 +7,25 @@ futex_wake_handle_close_thread_exit - write to futex, wake futex, close handle, 
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-_Noreturn void mx_futex_wake_handle_close_thread_exit(
-    mx_futex_t* value_ptr, uint32_t wake_count,
-    int new_value, mx_handle_t close_handle);
+_Noreturn void zx_futex_wake_handle_close_thread_exit(
+    zx_futex_t* value_ptr, uint32_t wake_count,
+    int new_value, zx_handle_t close_handle);
 ```
 
 ## DESCRIPTION
 
 **futex_wake_handle_close_thread_exit**() does a sequence of four operations:
 1. `atomic_store_explicit(value_ptr, new_value, memory_order_release);`
-2. `mx_futex_wake(value_ptr, wake_count);`
-3. `mx_handle_close(close_handle);`
-4. `mx_thread_exit();`
+2. `zx_futex_wake(value_ptr, wake_count);`
+3. `zx_handle_close(close_handle);`
+4. `zx_thread_exit();`
 
 The expectation is that as soon as the first operation completes,
 other threads may unmap or reuse the memory containing the calling
 thread's own stack.  This is valid for this call, though it would be
-invalid for plain *mx_futex_wake*() or any other call.
+invalid for plain *zx_futex_wake*() or any other call.
 
 If any of the operations fail, then the thread takes a trap (as if by `__builtin_trap();`).
 

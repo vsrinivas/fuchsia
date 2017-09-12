@@ -22,7 +22,7 @@
 #include <vm/fault.h>
 
 #include <fbl/auto_call.h>
-#include <magenta/syscalls/exception.h>
+#include <zircon/syscalls/exception.h>
 
 #include <lib/ktrace.h>
 
@@ -62,7 +62,7 @@ __NO_RETURN static void exception_die(x86_iframe_t *frame, const char *msg)
     // try to dump the user stack
     if (is_user_address(frame->user_sp)) {
         uint8_t buf[256];
-        if (arch_copy_from_user(buf, (void *)frame->user_sp, sizeof(buf)) == MX_OK) {
+        if (arch_copy_from_user(buf, (void *)frame->user_sp, sizeof(buf)) == ZX_OK) {
             printf("bottom of user stack at 0x%lx:\n", (vaddr_t)frame->user_sp);
             hexdump_ex(buf, sizeof(buf), frame->user_sp);
         }
@@ -92,7 +92,7 @@ static bool try_dispatch_user_exception(x86_iframe_t *frame, uint kind)
         status_t erc = call_dispatch_user_exception(kind, &context, frame);
         arch_disable_ints();
         arch_set_in_int_handler(true);
-        if (erc == MX_OK)
+        if (erc == ZX_OK)
             return true;
     }
 
@@ -101,7 +101,7 @@ static bool try_dispatch_user_exception(x86_iframe_t *frame, uint kind)
 
 static void x86_debug_handler(x86_iframe_t *frame)
 {
-    if (try_dispatch_user_exception(frame, MX_EXCP_HW_BREAKPOINT))
+    if (try_dispatch_user_exception(frame, ZX_EXCP_HW_BREAKPOINT))
         return;
 
     exception_die(frame, "unhandled hw breakpoint, halting\n");
@@ -113,7 +113,7 @@ static void x86_nmi_handler(x86_iframe_t *frame)
 
 static void x86_breakpoint_handler(x86_iframe_t *frame)
 {
-    if (try_dispatch_user_exception(frame, MX_EXCP_SW_BREAKPOINT))
+    if (try_dispatch_user_exception(frame, ZX_EXCP_SW_BREAKPOINT))
         return;
 
     exception_die(frame, "unhandled sw breakpoint, halting\n");
@@ -134,7 +134,7 @@ static void x86_gpf_handler(x86_iframe_t *frame)
         return;
     }
 
-    if (try_dispatch_user_exception(frame, MX_EXCP_GENERAL))
+    if (try_dispatch_user_exception(frame, ZX_EXCP_GENERAL))
         return;
 
     exception_die(frame, "unhandled gpf, halting\n");
@@ -142,7 +142,7 @@ static void x86_gpf_handler(x86_iframe_t *frame)
 
 static void x86_invop_handler(x86_iframe_t *frame)
 {
-    if (try_dispatch_user_exception(frame, MX_EXCP_UNDEFINED_INSTRUCTION))
+    if (try_dispatch_user_exception(frame, ZX_EXCP_UNDEFINED_INSTRUCTION))
         return;
 
     exception_die(frame, "invalid opcode, halting\n");
@@ -158,7 +158,7 @@ static void x86_df_handler(x86_iframe_t *frame)
 
 static void x86_unhandled_exception(x86_iframe_t *frame)
 {
-    if (try_dispatch_user_exception(frame, MX_EXCP_GENERAL))
+    if (try_dispatch_user_exception(frame, ZX_EXCP_GENERAL))
         return;
 
     exception_die(frame, "unhandled exception, halting\n");
@@ -246,7 +246,7 @@ static status_t x86_pfe_handler(x86_iframe_t *frame)
     /* check for flags we're not prepared to handle */
     if (unlikely(error_code & ~(PFEX_I | PFEX_U | PFEX_W | PFEX_P))) {
         printf("x86_pfe_handler: unhandled error code bits set, error code %#" PRIx64 "\n", error_code);
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     /* check for a potential SMAP failure */
@@ -258,7 +258,7 @@ static status_t x86_pfe_handler(x86_iframe_t *frame)
          is_user_address(va))) {
         /* supervisor mode page-present access failure with the AC bit clear (SMAP enabled) */
         printf("x86_pfe_handler: potential SMAP failure, supervisor access at address %#" PRIxPTR "\n", va);
-        return MX_ERR_ACCESS_DENIED;
+        return ZX_ERR_ACCESS_DENIED;
     }
 
     /* convert the PF error codes to page fault flags */
@@ -270,8 +270,8 @@ static status_t x86_pfe_handler(x86_iframe_t *frame)
 
     /* call the high level page fault handler */
     status_t pf_err = vmm_page_fault_handler(va, flags);
-    if (likely(pf_err == MX_OK))
-        return MX_OK;
+    if (likely(pf_err == ZX_OK))
+        return ZX_OK;
 
     /* if the high level page fault handler can't deal with it,
      * resort to trying to recover first, before bailing */
@@ -280,7 +280,7 @@ static status_t x86_pfe_handler(x86_iframe_t *frame)
     thread_t *current_thread = get_current_thread();
     if (unlikely(current_thread->arch.page_fault_resume)) {
         frame->ip = (uintptr_t)current_thread->arch.page_fault_resume;
-        return MX_OK;
+        return ZX_OK;
     }
 
     /* let high level code deal with this */
@@ -288,12 +288,12 @@ static status_t x86_pfe_handler(x86_iframe_t *frame)
     if (from_user) {
         CPU_STATS_INC(exceptions);
         struct arch_exception_context context = { true, frame, va };
-        return call_dispatch_user_exception(MX_EXCP_FATAL_PAGE_FAULT,
+        return call_dispatch_user_exception(ZX_EXCP_FATAL_PAGE_FAULT,
                                             &context, frame);
     }
 
     /* fall through to fatal path */
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 static void x86_iframe_process_pending_signals(x86_iframe_t *frame)
@@ -374,7 +374,7 @@ void x86_exception_handler(x86_iframe_t *frame)
 
         case X86_INT_PAGE_FAULT:
             CPU_STATS_INC(page_faults);
-            if (x86_pfe_handler(frame) != MX_OK)
+            if (x86_pfe_handler(frame) != ZX_OK)
                 x86_fatal_pfe_handler(frame, x86_get_cr2());
             break;
 
@@ -462,20 +462,20 @@ void arch_dump_exception_context(const arch_exception_context_t *context)
     // try to dump the user stack
     if (context->frame->cs != CODE_64_SELECTOR && is_user_address(context->frame->user_sp)) {
         uint8_t buf[256];
-        if (arch_copy_from_user(buf, (void *)context->frame->user_sp, sizeof(buf)) == MX_OK) {
+        if (arch_copy_from_user(buf, (void *)context->frame->user_sp, sizeof(buf)) == ZX_OK) {
             printf("bottom of user stack at 0x%lx:\n", (vaddr_t)context->frame->user_sp);
             hexdump_ex(buf, sizeof(buf), context->frame->user_sp);
         }
     }
 }
 
-void arch_fill_in_exception_context(const arch_exception_context_t *arch_context, mx_exception_report_t *report)
+void arch_fill_in_exception_context(const arch_exception_context_t *arch_context, zx_exception_report_t *report)
 {
-    mx_exception_context_t *mx_context = &report->context;
+    zx_exception_context_t *zx_context = &report->context;
 
-    mx_context->arch.u.x86_64.vector = arch_context->frame->vector;
-    mx_context->arch.u.x86_64.err_code = arch_context->frame->err_code;
-    mx_context->arch.u.x86_64.cr2 = arch_context->cr2;
+    zx_context->arch.u.x86_64.vector = arch_context->frame->vector;
+    zx_context->arch.u.x86_64.err_code = arch_context->frame->err_code;
+    zx_context->arch.u.x86_64.cr2 = arch_context->cr2;
 }
 
 status_t arch_dispatch_user_policy_exception(void)
@@ -483,5 +483,5 @@ status_t arch_dispatch_user_policy_exception(void)
     x86_iframe_t frame = {};
     arch_exception_context_t context = {};
     context.frame = &frame;
-    return dispatch_user_exception(MX_EXCP_POLICY_ERROR, &context);
+    return dispatch_user_exception(ZX_EXCP_POLICY_ERROR, &context);
 }

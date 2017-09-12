@@ -7,14 +7,14 @@ config("audio-proto-utils-config") {
 }
 
 source_set("audio-proto-utils") {
-  # Don't forget to update rules.mk as well for the Magenta build.
+  # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "format-utils.cpp",
     "include/audio-proto-utils/format-utils.h",
   ]
 
   public_deps = [
-    "//magenta/system/ulib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   public_configs = [ ":audio-proto-utils-config" ]

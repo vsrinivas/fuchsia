@@ -5,9 +5,9 @@
 #include "dev.h"
 
 #include <hw/inout.h>
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
-#include <mxio/debug.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
+#include <fdio/debug.h>
 
 #include "errors.h"
 
@@ -22,11 +22,11 @@
 #define EC_SC_OBF (1 << 0)
 
 /* Thread shutdown signals */
-#define EC_THREAD_SHUTDOWN MX_USER_SIGNAL_0
-#define EC_THREAD_SHUTDOWN_DONE MX_USER_SIGNAL_1
+#define EC_THREAD_SHUTDOWN ZX_USER_SIGNAL_0
+#define EC_THREAD_SHUTDOWN_DONE ZX_USER_SIGNAL_1
 
 typedef struct acpi_ec_device {
-    mx_device_t* mxdev;
+    zx_device_t* mxdev;
 
     ACPI_HANDLE acpi_handle;
 
@@ -40,7 +40,7 @@ typedef struct acpi_ec_device {
 
     // thread for processing System Control Interrupts
     thrd_t sci_thread;
-    mx_handle_t pending_sci_evt;
+    zx_handle_t pending_sci_evt;
 
     bool gpe_setup : 1;
     bool thread_setup : 1;
@@ -55,21 +55,21 @@ static int acpi_ec_thread(void* arg) {
 
     while (1) {
         uint32_t pending;
-        mx_status_t mx_status = mx_object_wait_one(dev->pending_sci_evt,
-                                                   MX_EVENT_SIGNALED | EC_THREAD_SHUTDOWN,
-                                                   MX_TIME_INFINITE,
+        zx_status_t zx_status = zx_object_wait_one(dev->pending_sci_evt,
+                                                   ZX_EVENT_SIGNALED | EC_THREAD_SHUTDOWN,
+                                                   ZX_TIME_INFINITE,
                                                    &pending);
-        if (mx_status != MX_OK) {
-            printf("acpi-ec: thread wait failed: %d\n", mx_status);
+        if (zx_status != ZX_OK) {
+            printf("acpi-ec: thread wait failed: %d\n", zx_status);
             break;
         }
 
         if (pending & EC_THREAD_SHUTDOWN) {
-            mx_object_signal(dev->pending_sci_evt, 0, EC_THREAD_SHUTDOWN_DONE);
+            zx_object_signal(dev->pending_sci_evt, 0, EC_THREAD_SHUTDOWN_DONE);
             break;
         }
 
-        mx_object_signal(dev->pending_sci_evt, MX_EVENT_SIGNALED, 0);
+        zx_object_signal(dev->pending_sci_evt, ZX_EVENT_SIGNALED, 0);
 
         UINT32 global_lock;
         while (AcpiAcquireGlobalLock(0xFFFF, &global_lock) != AE_OK)
@@ -114,7 +114,7 @@ static int acpi_ec_thread(void* arg) {
 
 static uint32_t raw_ec_event_gpe_handler(ACPI_HANDLE gpe_dev, uint32_t gpe_num, void* ctx) {
     acpi_ec_device_t* dev = ctx;
-    mx_object_signal(dev->pending_sci_evt, 0, MX_EVENT_SIGNALED);
+    zx_object_signal(dev->pending_sci_evt, 0, ZX_EVENT_SIGNALED);
     return ACPI_REENABLE_GPE;
 }
 
@@ -233,15 +233,15 @@ static ACPI_STATUS get_ec_ports(
 static void acpi_ec_release(void* ctx) {
     acpi_ec_device_t* dev = ctx;
 
-    if (dev->pending_sci_evt != MX_HANDLE_INVALID) {
+    if (dev->pending_sci_evt != ZX_HANDLE_INVALID) {
         if (dev->thread_setup) {
             /* Shutdown the EC thread */
-            mx_object_signal(dev->pending_sci_evt, 0, EC_THREAD_SHUTDOWN);
-            mx_object_wait_one(dev->pending_sci_evt, EC_THREAD_SHUTDOWN_DONE, MX_TIME_INFINITE, NULL);
+            zx_object_signal(dev->pending_sci_evt, 0, EC_THREAD_SHUTDOWN);
+            zx_object_wait_one(dev->pending_sci_evt, EC_THREAD_SHUTDOWN_DONE, ZX_TIME_INFINITE, NULL);
             thrd_join(dev->sci_thread, NULL);
         }
 
-        mx_handle_close(dev->pending_sci_evt);
+        zx_handle_close(dev->pending_sci_evt);
     }
 
     if (dev->gpe_setup) {
@@ -252,22 +252,22 @@ static void acpi_ec_release(void* ctx) {
     free(dev);
 }
 
-static mx_protocol_device_t acpi_ec_device_proto = {
+static zx_protocol_device_t acpi_ec_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .release = acpi_ec_release,
 };
 
-mx_status_t ec_init(mx_device_t* parent, ACPI_HANDLE acpi_handle) {
+zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
     xprintf("acpi-ec: init\n");
 
     acpi_ec_device_t* dev = calloc(1, sizeof(acpi_ec_device_t));
     if (!dev) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     dev->acpi_handle = acpi_handle;
 
-    mx_status_t err = mx_event_create(0, &dev->pending_sci_evt);
-    if (err != MX_OK) {
+    zx_status_t err = zx_event_create(0, &dev->pending_sci_evt);
+    if (err != ZX_OK) {
         xprintf("acpi-ec: Failed to create event: %d\n", err);
         acpi_ec_release(dev);
         return err;
@@ -306,7 +306,7 @@ mx_status_t ec_init(mx_device_t* parent, ACPI_HANDLE acpi_handle) {
     if (ret != thrd_success) {
         xprintf("acpi-ec: Failed to create thread\n");
         acpi_ec_release(dev);
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
     dev->thread_setup = true;
 
@@ -315,20 +315,20 @@ mx_status_t ec_init(mx_device_t* parent, ACPI_HANDLE acpi_handle) {
         .name = "acpi-ec",
         .ctx = dev,
         .ops = &acpi_ec_device_proto,
-        .proto_id = MX_PROTOCOL_MISC,
+        .proto_id = ZX_PROTOCOL_MISC,
     };
 
     status = device_add(parent, &args, &dev->mxdev);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         xprintf("acpi-ec: could not add device! err=%d\n", status);
         acpi_ec_release(dev);
         return status;
     }
 
     printf("acpi-ec: initialized\n");
-    return MX_OK;
+    return ZX_OK;
 
 acpi_error:
     acpi_ec_release(dev);
-    return acpi_to_mx_status(status);
+    return acpi_to_zx_status(status);
 }

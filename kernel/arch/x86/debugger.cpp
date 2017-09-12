@@ -11,7 +11,7 @@
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
 #include <arch/debugger.h>
-#include <magenta/syscalls/debug.h>
+#include <zircon/syscalls/debug.h>
 
 uint arch_num_regsets(void)
 {
@@ -20,7 +20,7 @@ uint arch_num_regsets(void)
 }
 
 #define SYSCALL_OFFSETS_EQUAL(reg) \
-  (__offsetof(mx_x86_64_general_regs_t, reg) == \
+  (__offsetof(zx_x86_64_general_regs_t, reg) == \
    __offsetof(x86_syscall_general_regs_t, reg))
 
 static_assert(SYSCALL_OFFSETS_EQUAL(rax), "");
@@ -39,16 +39,16 @@ static_assert(SYSCALL_OFFSETS_EQUAL(r12), "");
 static_assert(SYSCALL_OFFSETS_EQUAL(r13), "");
 static_assert(SYSCALL_OFFSETS_EQUAL(r14), "");
 static_assert(SYSCALL_OFFSETS_EQUAL(r15), "");
-static_assert(sizeof(mx_x86_64_general_regs_t) == sizeof(x86_syscall_general_regs_t), "");
+static_assert(sizeof(zx_x86_64_general_regs_t) == sizeof(x86_syscall_general_regs_t), "");
 
-static void x86_fill_in_gregs_from_syscall(mx_x86_64_general_regs_t *out,
+static void x86_fill_in_gregs_from_syscall(zx_x86_64_general_regs_t *out,
                                            const x86_syscall_general_regs_t *in)
 {
     memcpy(out, in, sizeof(*in));
 }
 
 static void x86_fill_in_syscall_from_gregs(x86_syscall_general_regs_t *out,
-                                           const mx_x86_64_general_regs_t *in)
+                                           const zx_x86_64_general_regs_t *in)
 {
     // Don't allow overriding privileged fields of rflags, and ignore writes
     // to reserved fields.
@@ -78,7 +78,7 @@ static void x86_fill_in_syscall_from_gregs(x86_syscall_general_regs_t *out,
     COPY_REG(out, in, r15); \
   } while (0)
 
-static void x86_fill_in_gregs_from_iframe(mx_x86_64_general_regs_t *out,
+static void x86_fill_in_gregs_from_iframe(zx_x86_64_general_regs_t *out,
                                           const x86_iframe_t *in)
 {
     COPY_COMMON_IFRAME_REGS(out, in);
@@ -88,7 +88,7 @@ static void x86_fill_in_gregs_from_iframe(mx_x86_64_general_regs_t *out,
 }
 
 static void x86_fill_in_iframe_from_gregs(x86_iframe_t *out,
-                                          const mx_x86_64_general_regs_t *in)
+                                          const zx_x86_64_general_regs_t *in)
 {
     COPY_COMMON_IFRAME_REGS(out, in);
     out->user_sp = in->rsp;
@@ -101,24 +101,24 @@ static void x86_fill_in_iframe_from_gregs(x86_iframe_t *out,
 
 static status_t arch_get_general_regs(struct thread *thread, void *grp, uint32_t *buf_size)
 {
-    mx_x86_64_general_regs_t *out = (mx_x86_64_general_regs_t *)grp;
+    zx_x86_64_general_regs_t *out = (zx_x86_64_general_regs_t *)grp;
 
     uint32_t provided_buf_size = *buf_size;
     *buf_size = sizeof(*out);
 
     if (provided_buf_size < sizeof(*out))
-        return MX_ERR_BUFFER_TOO_SMALL;
+        return ZX_ERR_BUFFER_TOO_SMALL;
 
     if (thread_stopped_in_exception(thread)) {
         // TODO(dje): We could get called while processing a synthetic
         // exception where there is no frame.
         if (thread->exception_context->frame == nullptr)
-            return MX_ERR_NOT_SUPPORTED;
+            return ZX_ERR_NOT_SUPPORTED;
     } else {
         // TODO(dje): Punt if, for example, suspended in channel call.
         // Can be removed when MG-747 done.
         if (thread->arch.suspended_general_regs.gregs == nullptr)
-            return MX_ERR_NOT_SUPPORTED;
+            return ZX_ERR_NOT_SUPPORTED;
     }
 
     DEBUG_ASSERT(thread->arch.suspended_general_regs.gregs);
@@ -131,29 +131,29 @@ static status_t arch_get_general_regs(struct thread *thread, void *grp, uint32_t
             break;
         default:
             DEBUG_ASSERT(false);
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static status_t arch_set_general_regs(struct thread *thread, const void *grp, uint32_t buf_size)
 {
-    const mx_x86_64_general_regs_t *in = (const mx_x86_64_general_regs_t *)grp;
+    const zx_x86_64_general_regs_t *in = (const zx_x86_64_general_regs_t *)grp;
 
     if (buf_size != sizeof(*in))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     if (thread_stopped_in_exception(thread)) {
         // TODO(dje): We could get called while processing a synthetic
         // exception where there is no frame.
         if (thread->exception_context->frame == nullptr)
-            return MX_ERR_NOT_SUPPORTED;
+            return ZX_ERR_NOT_SUPPORTED;
     } else {
         // TODO(dje): Punt if, for example, suspended in channel call.
         // Can be removed when MG-747 done.
         if (thread->arch.suspended_general_regs.gregs == nullptr)
-            return MX_ERR_NOT_SUPPORTED;
+            return ZX_ERR_NOT_SUPPORTED;
     }
 
     DEBUG_ASSERT(thread->arch.suspended_general_regs.gregs);
@@ -167,7 +167,7 @@ static status_t arch_set_general_regs(struct thread *thread, const void *grp, ui
             uint8_t addr_width = x86_linear_address_width();
             uint64_t noncanonical_addr = ((uint64_t) 1) << (addr_width - 1);
             if (in->rip >= noncanonical_addr)
-                return MX_ERR_INVALID_ARGS;
+                return ZX_ERR_INVALID_ARGS;
             x86_fill_in_syscall_from_gregs(thread->arch.suspended_general_regs.syscall, in);
             break;
         }
@@ -176,10 +176,10 @@ static status_t arch_set_general_regs(struct thread *thread, const void *grp, ui
             break;
         default:
             DEBUG_ASSERT(false);
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 // The caller is responsible for making sure the thread is in an exception
@@ -191,7 +191,7 @@ status_t arch_get_regset(struct thread *thread, uint regset, void *regs, uint32_
     case 0:
         return arch_get_general_regs(thread, regs, buf_size);
     default:
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 }
 
@@ -204,6 +204,6 @@ status_t arch_set_regset(struct thread *thread, uint regset, const void *regs, u
     case 0:
         return arch_set_general_regs(thread, regs, buf_size);
     default:
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 }

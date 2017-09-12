@@ -14,8 +14,8 @@ MODULE_SRCS += $(LOCAL_DIR)/namespace-test.c
 
 MODULE_LIBS := \
     system/ulib/launchpad \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/c \
     system/ulib/unittest \
 

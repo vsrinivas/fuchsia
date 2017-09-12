@@ -26,7 +26,7 @@
 // this file can be included from assembly to get to the defines above
 #ifndef ASSEMBLY
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <sys/types.h>
 
 struct mmu_initial_mapping {

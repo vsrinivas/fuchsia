@@ -12,7 +12,7 @@ MODULE_GROUP := misc
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.cpp \
 
-MODULE_LIBS := system/ulib/magenta system/ulib/mxio system/ulib/c
-MODULE_STATIC_LIBS := system/ulib/mxcpp system/ulib/fbl
+MODULE_LIBS := system/ulib/zircon system/ulib/fdio system/ulib/c
+MODULE_STATIC_LIBS := system/ulib/zxcpp system/ulib/fbl
 
 include make/module.mk

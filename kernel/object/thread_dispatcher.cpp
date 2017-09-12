@@ -24,8 +24,8 @@
 #include <vm/vm_address_region.h>
 #include <vm/vm_object_paged.h>
 
-#include <magenta/rights.h>
-#include <magenta/syscalls/debug.h>
+#include <zircon/rights.h>
+#include <zircon/syscalls/debug.h>
 
 #include <object/c_user_thread.h>
 #include <object/excp_port.h>
@@ -42,22 +42,22 @@ using fbl::AutoLock;
 #define LOCAL_TRACE 0
 
 // static
-mx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags,
+zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags,
                                      fbl::StringPiece name,
                                      fbl::RefPtr<Dispatcher>* out_dispatcher,
-                                     mx_rights_t* out_rights) {
+                                     zx_rights_t* out_rights) {
     fbl::AllocChecker ac;
     auto disp = fbl::AdoptRef(new (&ac) ThreadDispatcher(fbl::move(process), flags));
     if (!ac.check())
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     auto result = disp->Initialize(name.data(), name.length());
-    if (result != MX_OK)
+    if (result != ZX_OK)
         return result;
 
-    *out_rights = MX_DEFAULT_THREAD_RIGHTS;
+    *out_rights = ZX_DEFAULT_THREAD_RIGHTS;
     *out_dispatcher = fbl::move(disp);
-    return MX_OK;
+    return ZX_OK;
 }
 
 ThreadDispatcher::ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process,
@@ -79,7 +79,7 @@ ThreadDispatcher::~ThreadDispatcher() {
         LTRACEF("joining LK thread to clean up state\n");
         __UNUSED auto ret = thread_join(&thread_, nullptr, INFINITE_TIME);
         LTRACEF("done joining LK thread\n");
-        DEBUG_ASSERT_MSG(ret == MX_OK, "thread_join returned something other than MX_OK\n");
+        DEBUG_ASSERT_MSG(ret == ZX_OK, "thread_join returned something other than ZX_OK\n");
         break;
     }
     case State::INITIAL:
@@ -114,15 +114,15 @@ void ThreadDispatcher::on_zero_handles() {
 
 namespace {
 
-mx_status_t allocate_stack(const fbl::RefPtr<VmAddressRegion>& vmar, bool unsafe,
+zx_status_t allocate_stack(const fbl::RefPtr<VmAddressRegion>& vmar, bool unsafe,
                            fbl::RefPtr<VmMapping>* out_kstack_mapping,
                            fbl::RefPtr<VmAddressRegion>* out_kstack_vmar) {
     LTRACEF("allocating %s stack\n", unsafe ? "unsafe" : "safe");
 
     // Create a VMO for our stack
     fbl::RefPtr<VmObject> stack_vmo;
-    mx_status_t status = VmObjectPaged::Create(0, DEFAULT_STACK_SIZE, &stack_vmo);
-    if (status != MX_OK) {
+    zx_status_t status = VmObjectPaged::Create(0, DEFAULT_STACK_SIZE, &stack_vmo);
+    if (status != ZX_OK) {
         TRACEF("error allocating %s stack for thread\n",
                unsafe ? "unsafe" : "safe");
         return status;
@@ -139,7 +139,7 @@ mx_status_t allocate_stack(const fbl::RefPtr<VmAddressRegion>& vmar, bool unsafe
         VMAR_FLAG_CAN_MAP_WRITE,
         unsafe ? "unsafe_kstack_vmar" : "kstack_vmar",
         &kstack_vmar);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     // destroy the vmar if we early abort
@@ -160,7 +160,7 @@ mx_status_t allocate_stack(const fbl::RefPtr<VmAddressRegion>& vmar, bool unsafe
                                           ARCH_MMU_FLAG_PERM_WRITE,
                                           unsafe ? "unsafe_kstack" : "kstack",
                                           &kstack_mapping);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     LTRACEF("%s stack mapping at %#" PRIxPTR "\n",
@@ -168,7 +168,7 @@ mx_status_t allocate_stack(const fbl::RefPtr<VmAddressRegion>& vmar, bool unsafe
 
     // fault in all the pages so we dont demand fault in the stack
     status = kstack_mapping->MapRange(0, DEFAULT_STACK_SIZE, true);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     // Cancel the cleanup handler on the vmar since we're about to save a
@@ -176,13 +176,13 @@ mx_status_t allocate_stack(const fbl::RefPtr<VmAddressRegion>& vmar, bool unsafe
     vmar_cleanup.cancel();
     *out_kstack_mapping = fbl::move(kstack_mapping);
     *out_kstack_vmar = fbl::move(kstack_vmar);
-    return MX_OK;
+    return ZX_OK;
 }
 
 } // namespace
 
 // complete initialization of the thread object outside of the constructor
-mx_status_t ThreadDispatcher::Initialize(const char* name, size_t len) {
+zx_status_t ThreadDispatcher::Initialize(const char* name, size_t len) {
     LTRACE_ENTRY_OBJ;
 
     AutoLock lock(&state_lock_);
@@ -190,25 +190,25 @@ mx_status_t ThreadDispatcher::Initialize(const char* name, size_t len) {
     DEBUG_ASSERT(state_ == State::INITIAL);
 
     // Make sure LK's max name length agrees with ours.
-    static_assert(THREAD_NAME_LENGTH == MX_MAX_NAME_LEN, "name length issue");
-    if (len >= MX_MAX_NAME_LEN)
-        len = MX_MAX_NAME_LEN - 1;
+    static_assert(THREAD_NAME_LENGTH == ZX_MAX_NAME_LEN, "name length issue");
+    if (len >= ZX_MAX_NAME_LEN)
+        len = ZX_MAX_NAME_LEN - 1;
 
     char thread_name[THREAD_NAME_LENGTH];
     memcpy(thread_name, name, len);
-    memset(thread_name + len, 0, MX_MAX_NAME_LEN - len);
+    memset(thread_name + len, 0, ZX_MAX_NAME_LEN - len);
 
     // Map the kernel stack somewhere
     auto vmar = VmAspace::kernel_aspace()->RootVmar()->as_vm_address_region();
     DEBUG_ASSERT(!!vmar);
 
     auto status = allocate_stack(vmar, false, &kstack_mapping_, &kstack_vmar_);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 #if __has_feature(safe_stack)
     status = allocate_stack(vmar, true,
                             &unsafe_kstack_mapping_, &unsafe_kstack_vmar_);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 #endif
 
@@ -225,7 +225,7 @@ mx_status_t ThreadDispatcher::Initialize(const char* name, size_t len) {
 
     if (!lkthread) {
         TRACEF("error creating thread\n");
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     DEBUG_ASSERT(lkthread == &thread_);
 
@@ -244,30 +244,30 @@ mx_status_t ThreadDispatcher::Initialize(const char* name, size_t len) {
     // we've entered the initialized state
     SetStateLocked(State::INITIALIZED);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t ThreadDispatcher::set_name(const char* name, size_t len) {
+zx_status_t ThreadDispatcher::set_name(const char* name, size_t len) {
     canary_.Assert();
 
-    if (len >= MX_MAX_NAME_LEN)
-        len = MX_MAX_NAME_LEN - 1;
+    if (len >= ZX_MAX_NAME_LEN)
+        len = ZX_MAX_NAME_LEN - 1;
 
     AutoSpinLock lock(&name_lock_);
     memcpy(thread_.name, name, len);
-    memset(thread_.name + len, 0, MX_MAX_NAME_LEN - len);
-    return MX_OK;
+    memset(thread_.name + len, 0, ZX_MAX_NAME_LEN - len);
+    return ZX_OK;
 }
 
-void ThreadDispatcher::get_name(char out_name[MX_MAX_NAME_LEN]) const {
+void ThreadDispatcher::get_name(char out_name[ZX_MAX_NAME_LEN]) const {
     canary_.Assert();
 
     AutoSpinLock lock(&name_lock_);
-    memcpy(out_name, thread_.name, MX_MAX_NAME_LEN);
+    memcpy(out_name, thread_.name, ZX_MAX_NAME_LEN);
 }
 
 // start a thread
-mx_status_t ThreadDispatcher::Start(uintptr_t entry, uintptr_t sp,
+zx_status_t ThreadDispatcher::Start(uintptr_t entry, uintptr_t sp,
                                     uintptr_t arg1, uintptr_t arg2,
                                     bool initial_thread) {
     canary_.Assert();
@@ -277,7 +277,7 @@ mx_status_t ThreadDispatcher::Start(uintptr_t entry, uintptr_t sp,
     AutoLock lock(&state_lock_);
 
     if (state_ != State::INITIALIZED)
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
     // save the user space entry state
     user_entry_ = entry;
@@ -297,7 +297,7 @@ mx_status_t ThreadDispatcher::Start(uintptr_t entry, uintptr_t sp,
     thread_.user_pid = process_->get_koid();
     thread_resume(&thread_);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 // called in the context of our thread
@@ -361,7 +361,7 @@ void ThreadDispatcher::Kill() {
     }
 }
 
-mx_status_t ThreadDispatcher::Suspend() {
+zx_status_t ThreadDispatcher::Suspend() {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -371,12 +371,12 @@ mx_status_t ThreadDispatcher::Suspend() {
     LTRACEF("%p: state %s\n", this, StateToString(state_));
 
     if (state_ != State::RUNNING && state_ != State::SUSPENDED)
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
     return thread_suspend(&thread_);
 }
 
-mx_status_t ThreadDispatcher::Resume() {
+zx_status_t ThreadDispatcher::Resume() {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -386,7 +386,7 @@ mx_status_t ThreadDispatcher::Resume() {
     LTRACEF("%p: state %s\n", this, StateToString(state_));
 
     if (state_ != State::RUNNING && state_ != State::SUSPENDED)
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
     return thread_resume(&thread_);
 }
@@ -406,7 +406,7 @@ void ThreadDispatcher::Exiting() {
     LTRACE_ENTRY_OBJ;
 
     // signal any waiters
-    state_tracker_.UpdateState(0u, MX_TASK_TERMINATED);
+    state_tracker_.UpdateState(0u, ZX_TASK_TERMINATED);
 
     {
         AutoLock lock(&exception_lock_);
@@ -574,7 +574,7 @@ void ThreadDispatcher::SetStateLocked(State state) {
     state_ = state;
 }
 
-mx_status_t ThreadDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
+zx_status_t ThreadDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
     canary_.Assert();
 
     DEBUG_ASSERT(eport->type() == ExceptionPort::Type::THREAD);
@@ -584,12 +584,12 @@ mx_status_t ThreadDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport)
     AutoLock state_lock(&state_lock_);
     AutoLock excp_lock(&exception_lock_);
     if (state_ == State::DEAD)
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
     if (exception_port_)
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     exception_port_ = eport;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 bool ThreadDispatcher::ResetExceptionPort(bool quietly) {
@@ -640,9 +640,9 @@ fbl::RefPtr<ExceptionPort> ThreadDispatcher::exception_port() {
     return exception_port_;
 }
 
-mx_status_t ThreadDispatcher::ExceptionHandlerExchange(
+zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
         fbl::RefPtr<ExceptionPort> eport,
-        const mx_exception_report_t* report,
+        const zx_exception_report_t* report,
         const arch_exception_context_t* arch_context,
         ExceptionStatus *out_estatus) {
     canary_.Assert();
@@ -659,12 +659,12 @@ mx_status_t ThreadDispatcher::ExceptionHandlerExchange(
         // locking state_lock_ in places where the handler can see/modify
         // thread state.
 
-        mx_status_t status = eport->SendPacket(this, report->header.type);
-        if (status != MX_OK) {
+        zx_status_t status = eport->SendPacket(this, report->header.type);
+        if (status != ZX_OK) {
             LTRACEF("SendPacket returned %d\n", status);
             // Treat the exception as unhandled.
             *out_estatus = ExceptionStatus::TRY_NEXT;
-            return MX_OK;
+            return ZX_OK;
         }
 
         // Mark that we're in an exception.
@@ -685,17 +685,17 @@ mx_status_t ThreadDispatcher::ExceptionHandlerExchange(
     // exception response is received (requiring a second resume).
     // Exceptions and suspensions are essentially treated orthogonally.
 
-    mx_status_t status;
+    zx_status_t status;
     do {
         status = event_wait_deadline(&exception_event_, INFINITE_TIME, true);
-    } while (status == MX_ERR_INTERNAL_INTR_RETRY);
+    } while (status == ZX_ERR_INTERNAL_INTR_RETRY);
 
     AutoLock lock(&state_lock_);
 
-    // Note: If |status| != MX_OK, then |exception_status_| is still
+    // Note: If |status| != ZX_OK, then |exception_status_| is still
     // ExceptionStatus::UNPROCESSED.
     switch (status) {
-    case MX_OK:
+    case ZX_OK:
         // It's critical that at this point the event no longer be armed.
         // Otherwise the next time we get an exception we'll fall right through
         // without waiting for an exception response.
@@ -705,7 +705,7 @@ mx_status_t ThreadDispatcher::ExceptionHandlerExchange(
         DEBUG_ASSERT(exception_status_ != ExceptionStatus::IDLE &&
                      exception_status_ != ExceptionStatus::UNPROCESSED);
         break;
-    case MX_ERR_INTERNAL_INTR_KILLED:
+    case ZX_ERR_INTERNAL_INTR_KILLED:
         // Thread was killed.
         break;
     default:
@@ -725,7 +725,7 @@ mx_status_t ThreadDispatcher::ExceptionHandlerExchange(
     return status;
 }
 
-mx_status_t ThreadDispatcher::MarkExceptionHandled(ExceptionStatus estatus) {
+zx_status_t ThreadDispatcher::MarkExceptionHandled(ExceptionStatus estatus) {
     canary_.Assert();
 
     LTRACEF("obj %p, estatus %d\n", this, static_cast<int>(estatus));
@@ -734,7 +734,7 @@ mx_status_t ThreadDispatcher::MarkExceptionHandled(ExceptionStatus estatus) {
 
     AutoLock lock(&state_lock_);
     if (!InExceptionLocked())
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
     // The thread can be in several states at this point. Alas this is a bit
     // complicated because there is a window in the middle of
@@ -746,11 +746,11 @@ mx_status_t ThreadDispatcher::MarkExceptionHandled(ExceptionStatus estatus) {
     // To keep things simple we take a first-one-wins approach.
     DEBUG_ASSERT(exception_status_ != ExceptionStatus::IDLE);
     if (exception_status_ != ExceptionStatus::UNPROCESSED)
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
     exception_status_ = estatus;
     event_signal(&exception_event_, true);
-    return MX_OK;
+    return ZX_OK;
 }
 
 void ThreadDispatcher::OnExceptionPortRemoval(const fbl::RefPtr<ExceptionPort>& eport) {
@@ -778,7 +778,7 @@ bool ThreadDispatcher::InExceptionLocked() {
     return thread_stopped_in_exception(&thread_);
 }
 
-mx_status_t ThreadDispatcher::GetInfoForUserspace(mx_info_thread_t* info) {
+zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -815,35 +815,35 @@ mx_status_t ThreadDispatcher::GetInfoForUserspace(mx_info_thread_t* info) {
     switch (state) {
     case ThreadDispatcher::State::INITIAL:
     case ThreadDispatcher::State::INITIALIZED:
-        info->state = MX_THREAD_STATE_NEW;
+        info->state = ZX_THREAD_STATE_NEW;
         break;
     case ThreadDispatcher::State::RUNNING:
         // The thread may be "running" but be blocked in a syscall or
         // exception handler.
         switch (lk_state) {
         case THREAD_BLOCKED:
-            info->state = MX_THREAD_STATE_BLOCKED;
+            info->state = ZX_THREAD_STATE_BLOCKED;
             break;
         default:
             // If we're in the window where we've released |state_lock_| but
             // haven't gone to sleep yet (to wait for an exception response)
             // then we're still "blocked" as far as userspace is concerned.
             if (excp_port_type != ExceptionPort::Type::NONE) {
-                info->state = MX_THREAD_STATE_BLOCKED;
+                info->state = ZX_THREAD_STATE_BLOCKED;
             } else {
-                info->state = MX_THREAD_STATE_RUNNING;
+                info->state = ZX_THREAD_STATE_RUNNING;
             }
             break;
         }
         break;
     case ThreadDispatcher::State::SUSPENDED:
-        info->state = MX_THREAD_STATE_SUSPENDED;
+        info->state = ZX_THREAD_STATE_SUSPENDED;
         break;
     case ThreadDispatcher::State::DYING:
-        info->state = MX_THREAD_STATE_DYING;
+        info->state = ZX_THREAD_STATE_DYING;
         break;
     case ThreadDispatcher::State::DEAD:
-        info->state = MX_THREAD_STATE_DEAD;
+        info->state = ZX_THREAD_STATE_DEAD;
         break;
     default:
         DEBUG_ASSERT_MSG(false, "unexpected run state: %d",
@@ -853,19 +853,19 @@ mx_status_t ThreadDispatcher::GetInfoForUserspace(mx_info_thread_t* info) {
 
     switch (excp_port_type) {
     case ExceptionPort::Type::NONE:
-        info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_NONE;
+        info->wait_exception_port_type = ZX_EXCEPTION_PORT_TYPE_NONE;
         break;
     case ExceptionPort::Type::DEBUGGER:
-        info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_DEBUGGER;
+        info->wait_exception_port_type = ZX_EXCEPTION_PORT_TYPE_DEBUGGER;
         break;
     case ExceptionPort::Type::THREAD:
-        info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_THREAD;
+        info->wait_exception_port_type = ZX_EXCEPTION_PORT_TYPE_THREAD;
         break;
     case ExceptionPort::Type::PROCESS:
-        info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_PROCESS;
+        info->wait_exception_port_type = ZX_EXCEPTION_PORT_TYPE_PROCESS;
         break;
     case ExceptionPort::Type::JOB:
-        info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_JOB;
+        info->wait_exception_port_type = ZX_EXCEPTION_PORT_TYPE_JOB;
         break;
     default:
         DEBUG_ASSERT_MSG(false, "unexpected exception port type: %d",
@@ -873,10 +873,10 @@ mx_status_t ThreadDispatcher::GetInfoForUserspace(mx_info_thread_t* info) {
         break;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t ThreadDispatcher::GetStatsForUserspace(mx_info_thread_stats_t* info) {
+zx_status_t ThreadDispatcher::GetStatsForUserspace(zx_info_thread_stats_t* info) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -884,19 +884,19 @@ mx_status_t ThreadDispatcher::GetStatsForUserspace(mx_info_thread_stats_t* info)
     *info = {};
 
     info->total_runtime = runtime_ns();
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t ThreadDispatcher::GetExceptionReport(mx_exception_report_t* report) {
+zx_status_t ThreadDispatcher::GetExceptionReport(zx_exception_report_t* report) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
     AutoLock lock(&state_lock_);
     if (!InExceptionLocked())
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     DEBUG_ASSERT(exception_report_ != nullptr);
     *report = *exception_report_;
-    return MX_OK;
+    return ZX_OK;
 }
 
 uint32_t ThreadDispatcher::get_num_state_kinds() const {
@@ -905,7 +905,7 @@ uint32_t ThreadDispatcher::get_num_state_kinds() const {
 
 // Note: buffer must be sufficiently aligned
 
-mx_status_t ThreadDispatcher::ReadState(uint32_t state_kind, void* buffer, uint32_t* buffer_len) {
+zx_status_t ThreadDispatcher::ReadState(uint32_t state_kind, void* buffer, uint32_t* buffer_len) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -915,20 +915,20 @@ mx_status_t ThreadDispatcher::ReadState(uint32_t state_kind, void* buffer, uint3
     AutoLock state_lock(&state_lock_);
 
     if (state_ != State::SUSPENDED && !InExceptionLocked())
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
     switch (state_kind)
     {
-    case MX_THREAD_STATE_REGSET0 ... MX_THREAD_STATE_REGSET9:
-        return arch_get_regset(&thread_, state_kind - MX_THREAD_STATE_REGSET0, buffer, buffer_len);
+    case ZX_THREAD_STATE_REGSET0 ... ZX_THREAD_STATE_REGSET9:
+        return arch_get_regset(&thread_, state_kind - ZX_THREAD_STATE_REGSET0, buffer, buffer_len);
     default:
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 }
 
 // Note: buffer must be sufficiently aligned
 
-mx_status_t ThreadDispatcher::WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len) {
+zx_status_t ThreadDispatcher::WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -938,19 +938,19 @@ mx_status_t ThreadDispatcher::WriteState(uint32_t state_kind, const void* buffer
     AutoLock state_lock(&state_lock_);
 
     if (state_ != State::SUSPENDED && !InExceptionLocked())
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
     switch (state_kind)
     {
-    case MX_THREAD_STATE_REGSET0 ... MX_THREAD_STATE_REGSET9:
-        return arch_set_regset(&thread_, state_kind - MX_THREAD_STATE_REGSET0, buffer, buffer_len);
+    case ZX_THREAD_STATE_REGSET0 ... ZX_THREAD_STATE_REGSET9:
+        return arch_set_regset(&thread_, state_kind - ZX_THREAD_STATE_REGSET0, buffer, buffer_len);
     default:
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 }
 
 void get_user_thread_process_name(const void* user_thread,
-                                  char out_name[MX_MAX_NAME_LEN]) {
+                                  char out_name[ZX_MAX_NAME_LEN]) {
     const ThreadDispatcher* ut =
         reinterpret_cast<const ThreadDispatcher*>(user_thread);
     ut->process()->get_name(out_name);
@@ -974,7 +974,7 @@ const char* StateToString(ThreadDispatcher::State state) {
     return "unknown";
 }
 
-mx_koid_t ThreadDispatcher::get_related_koid() const {
+zx_koid_t ThreadDispatcher::get_related_koid() const {
     canary_.Assert();
 
     return process_->get_koid();

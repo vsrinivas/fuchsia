@@ -35,6 +35,6 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/source/components/utilities/utstate.c \
 	$(LOCAL_DIR)/source/components/utilities/utstring.c \
 	$(LOCAL_DIR)/source/components/utilities/utxferror.c \
-	$(LOCAL_DIR)/source/os_specific/service_layers/osmagenta.cpp
+	$(LOCAL_DIR)/source/os_specific/service_layers/oszircon.cpp
 
 include make/module.mk

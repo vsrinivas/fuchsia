@@ -9,7 +9,7 @@
 
 struct helper_data {
     atomic_int* futex_addr;
-    mx_handle_t bootstrap;
+    zx_handle_t bootstrap;
 };
 
 #define MAGIC 0xb00bee

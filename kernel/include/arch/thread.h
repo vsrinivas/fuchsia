@@ -9,7 +9,7 @@
 
 // give the arch code a chance to declare the arch_thread struct
 #include <arch/arch_thread.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 

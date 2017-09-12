@@ -8,7 +8,7 @@
 #include <limits.h>
 #include <stddef.h>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 
@@ -61,12 +61,12 @@ size_t CountZeros(size_t idx, size_t value) {
 
 namespace bitmap {
 
-mx_status_t RawBitmapBase::Shrink(size_t size) {
+zx_status_t RawBitmapBase::Shrink(size_t size) {
     if (size > size_) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     size_ = size;
-    return MX_OK;
+    return ZX_OK;
 }
 
 size_t RawBitmapBase::Scan(size_t bitoff, size_t bitmax, bool is_set) const {
@@ -96,22 +96,22 @@ size_t RawBitmapBase::Scan(size_t bitoff, size_t bitmax, bool is_set) const {
     return fbl::min(bitmax, CountZeros(i, value));
 }
 
-mx_status_t RawBitmapBase::Find(bool is_set, size_t bitoff, size_t bitmax,
+zx_status_t RawBitmapBase::Find(bool is_set, size_t bitoff, size_t bitmax,
                                                 size_t run_len, size_t* out) const {
     if (!out || bitmax <= bitoff) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     size_t start = bitoff;
     while (bitoff - start < run_len && bitoff < bitmax) {
         start = Scan(bitoff, bitmax, !is_set);
         if (bitmax - start < run_len) {
             *out = bitmax;
-            return MX_ERR_NO_RESOURCES;
+            return ZX_ERR_NO_RESOURCES;
         }
         bitoff = Scan(start, start + run_len, is_set);
     }
     *out = start;
-    return MX_OK;
+    return ZX_OK;
 }
 
 bool RawBitmapBase::Get(size_t bitoff, size_t bitmax, size_t* first) const {
@@ -123,12 +123,12 @@ bool RawBitmapBase::Get(size_t bitoff, size_t bitmax, size_t* first) const {
     return result == bitmax;
 }
 
-mx_status_t RawBitmapBase::Set(size_t bitoff, size_t bitmax) {
+zx_status_t RawBitmapBase::Set(size_t bitoff, size_t bitmax) {
     if (bitoff > bitmax || bitmax > size_) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     if (bitoff == bitmax) {
-        return MX_OK;
+        return ZX_OK;
     }
     size_t first_idx = FirstIdx(bitoff);
     size_t last_idx = LastIdx(bitmax);
@@ -136,15 +136,15 @@ mx_status_t RawBitmapBase::Set(size_t bitoff, size_t bitmax) {
         data_[i] |=
                 GetMask(i == first_idx, i == last_idx, bitoff, bitmax);
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t RawBitmapBase::Clear(size_t bitoff, size_t bitmax) {
+zx_status_t RawBitmapBase::Clear(size_t bitoff, size_t bitmax) {
     if (bitoff > bitmax || bitmax > size_) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     if (bitoff == bitmax) {
-        return MX_OK;
+        return ZX_OK;
     }
     size_t first_idx = FirstIdx(bitoff);
     size_t last_idx = LastIdx(bitmax);
@@ -152,7 +152,7 @@ mx_status_t RawBitmapBase::Clear(size_t bitoff, size_t bitmax) {
         data_[i] &=
                 ~(GetMask(i == first_idx, i == last_idx, bitoff, bitmax));
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 void RawBitmapBase::ClearAll() {

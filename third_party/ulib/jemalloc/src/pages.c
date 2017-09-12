@@ -21,9 +21,9 @@ static bool	os_overcommits;
 
 #include <threads.h>
 
-#include <magenta/process.h>
-#include <magenta/status.h>
-#include <magenta/syscalls.h>
+#include <zircon/process.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
 
 // Reserve a terabyte of address space for heap allocations.
 #define VMAR_SIZE (1ull << 40)
@@ -34,8 +34,8 @@ static bool	os_overcommits;
 // chunks of address space. To maintain claims to address space we
 // must use our own vmar.
 static uintptr_t pages_base;
-static mx_handle_t pages_vmar;
-static mx_handle_t pages_vmo;
+static zx_handle_t pages_vmar;
+static zx_handle_t pages_vmo;
 
 // Protect reservations to the pages_vmar.
 static mtx_t vmar_lock;
@@ -68,24 +68,24 @@ static void* fuchsia_pages_map(void* start, size_t len) {
 	} else {
 		// TODO(kulakowski) Use MG-942 instead of having to
 		// allocate and destroy under a lock.
-		mx_handle_t subvmar;
+		zx_handle_t subvmar;
 		uintptr_t subvmar_base;
-		mx_status_t status = _mx_vmar_allocate(pages_vmar, 0u, len,
-		    MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
+		zx_status_t status = _zx_vmar_allocate(pages_vmar, 0u, len,
+		    ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
 		    &subvmar, &subvmar_base);
-		if (status != MX_OK)
+		if (status != ZX_OK)
 			abort();
-		_mx_vmar_destroy(subvmar);
-		_mx_handle_close(subvmar);
+		_zx_vmar_destroy(subvmar);
+		_zx_handle_close(subvmar);
 		offset = subvmar_base - pages_base;
 	}
 
 	uintptr_t ptr = 0;
-	uint32_t mx_flags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
-	    MX_VM_FLAG_SPECIFIC;
-	mx_status_t status = _mx_vmar_map(pages_vmar, offset, pages_vmo,
-	    offset, len, mx_flags, &ptr);
-	if (status != MX_OK) {
+	uint32_t zx_flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
+	    ZX_VM_FLAG_SPECIFIC;
+	zx_status_t status = _zx_vmar_map(pages_vmar, offset, pages_vmo,
+	    offset, len, zx_flags, &ptr);
+	if (status != ZX_OK) {
 		ptr = 0u;
 	}
 
@@ -93,9 +93,9 @@ static void* fuchsia_pages_map(void* start, size_t len) {
 	return (void*)ptr;
 }
 
-static mx_status_t fuchsia_pages_free(void* addr, size_t size) {
+static zx_status_t fuchsia_pages_free(void* addr, size_t size) {
 	uintptr_t ptr = (uintptr_t)addr;
-	return _mx_vmar_unmap(pages_vmar, ptr, size);
+	return _zx_vmar_unmap(pages_vmar, ptr, size);
 }
 
 static void* fuchsia_pages_trim(void* ret, void* addr, size_t size,
@@ -163,14 +163,14 @@ pages_unmap(void *addr, size_t size)
 #ifdef _WIN32
 	if (VirtualFree(addr, 0, MEM_RELEASE) == 0)
 #elif __Fuchsia__
-	mx_status_t status = fuchsia_pages_free(addr, size);
-	if (status != MX_OK)
+	zx_status_t status = fuchsia_pages_free(addr, size);
+	if (status != ZX_OK)
 #else
 	if (munmap(addr, size) == -1)
 #endif
 	{
 #if __Fuchsia__
-		const char* buf = _mx_status_get_string(status);
+		const char* buf = _zx_status_get_string(status);
 #else
 		char buf[BUFERROR_BUF];
 		buferror(get_errno(), buf, sizeof(buf));
@@ -390,18 +390,18 @@ pages_boot(void)
 #endif
 
 #if defined(__Fuchsia__)
-	uint32_t vmar_flags = MX_VM_FLAG_CAN_MAP_SPECIFIC | MX_VM_FLAG_CAN_MAP_READ |
-	    MX_VM_FLAG_CAN_MAP_WRITE;
-	mx_status_t status = _mx_vmar_allocate(_mx_vmar_root_self(), 0, VMAR_SIZE,
+	uint32_t vmar_flags = ZX_VM_FLAG_CAN_MAP_SPECIFIC | ZX_VM_FLAG_CAN_MAP_READ |
+	    ZX_VM_FLAG_CAN_MAP_WRITE;
+	zx_status_t status = _zx_vmar_allocate(_zx_vmar_root_self(), 0, VMAR_SIZE,
 					       vmar_flags, &pages_vmar, &pages_base);
-	if (status != MX_OK)
+	if (status != ZX_OK)
 		abort();
-	status = _mx_vmo_create(VMAR_SIZE, 0, &pages_vmo);
-	if (status != MX_OK)
+	status = _zx_vmo_create(VMAR_SIZE, 0, &pages_vmo);
+	if (status != ZX_OK)
 		abort();
-	status = _mx_object_set_property(pages_vmo, MX_PROP_NAME, MMAP_VMO_NAME,
+	status = _zx_object_set_property(pages_vmo, ZX_PROP_NAME, MMAP_VMO_NAME,
 	    strlen(MMAP_VMO_NAME));
-	if (status != MX_OK)
+	if (status != ZX_OK)
 		abort();
 #endif
 

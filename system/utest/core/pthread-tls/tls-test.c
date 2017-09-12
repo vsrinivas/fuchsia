@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 #include <pthread.h>
 #include <stdatomic.h>
@@ -25,7 +25,7 @@ static void test_tls(int thread_no) {
               "Error while setting tls value");
     EXPECT_EQ(pthread_setspecific(tsd_key_dtor, &value2), 0,
               "Error while setting tls value");
-    mx_nanosleep(mx_deadline_after(MX_MSEC(100)));
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
     int* v = pthread_getspecific(tsd_key);
     EXPECT_EQ(*v, value1, "wrong TLS value for key");
     v = pthread_getspecific(tsd_key_dtor);

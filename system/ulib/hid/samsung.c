@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <hid/samsung.h>
-#include <magenta/device/input.h>
-#include <magenta/errors.h>
+#include <zircon/device/input.h>
+#include <zircon/errors.h>
 #include <string.h>
 
 static const uint8_t samsung_touch_report_desc[] = {
@@ -432,9 +432,9 @@ bool is_samsung_touch_report_desc(const uint8_t* data, size_t len) {
     return (memcmp(data, samsung_touch_report_desc, len) == 0);
 }
 
-mx_status_t setup_samsung_touch(int fd) {
+zx_status_t setup_samsung_touch(int fd) {
     if (fd < 0)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     uint8_t buf[sizeof(input_set_report_t) + 3];
     input_set_report_t* enable_multitouch = (input_set_report_t*)buf;
@@ -446,6 +446,6 @@ mx_status_t setup_samsung_touch(int fd) {
     enable_multitouch->data[2] = 0;
 
     ssize_t res = ioctl_input_set_report(fd, enable_multitouch, sizeof(buf));
-    return (res >= 0) ? MX_OK : (mx_status_t)res;
+    return (res >= 0) ? ZX_OK : (zx_status_t)res;
 }
 

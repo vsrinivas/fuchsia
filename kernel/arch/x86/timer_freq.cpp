@@ -8,7 +8,7 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/timer_freq.h>
 #include <bits.h>
-#include <magenta/errors.h>
+#include <zircon/errors.h>
 
 #define MSR_PLATFORM_INFO 0xCE
 
@@ -60,7 +60,7 @@ uint64_t x86_lookup_core_crystal_freq() {
         case X86_MICROARCH_INTEL_HASWELL:
         case X86_MICROARCH_INTEL_BROADWELL: {
             uint64_t platform_info;
-            if (read_msr_safe(MSR_PLATFORM_INFO, &platform_info) == MX_OK) {
+            if (read_msr_safe(MSR_PLATFORM_INFO, &platform_info) == ZX_OK) {
                 uint64_t bus_freq_mult = (platform_info >> 8) & 0xf;
                 return bus_freq_mult * 100 * 1000 * 1000;
             }
@@ -98,7 +98,7 @@ uint64_t x86_lookup_tsc_freq() {
                 // According to the Family 17h PPR, the first P-state MSR is indeed
                 // P0 state and appears to be experimentally so
                 uint64_t p0_state;
-                if (read_msr_safe(p0_state_msr, &p0_state) != MX_OK)
+                if (read_msr_safe(p0_state_msr, &p0_state) != ZX_OK)
                     break;
 
                 return compute_p_state_clock(p0_state);

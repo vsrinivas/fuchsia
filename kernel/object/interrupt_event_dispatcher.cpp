@@ -8,7 +8,7 @@
 
 #include <kernel/auto_lock.h>
 #include <dev/interrupt.h>
-#include <magenta/rights.h>
+#include <zircon/rights.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
@@ -20,23 +20,23 @@ fbl::Mutex InterruptEventDispatcher::vectors_lock_;
 InterruptEventDispatcher::VectorCollection InterruptEventDispatcher::vectors_;
 
 // static
-mx_status_t InterruptEventDispatcher::Create(uint32_t vector,
+zx_status_t InterruptEventDispatcher::Create(uint32_t vector,
                                              uint32_t flags,
                                              fbl::RefPtr<Dispatcher>* dispatcher,
-                                             mx_rights_t* rights) {
+                                             zx_rights_t* rights) {
     // Remap the vector if we have been asked to do so.
-    if (flags & MX_FLAG_REMAP_IRQ)
+    if (flags & ZX_FLAG_REMAP_IRQ)
         vector = remap_interrupt(vector);
 
     // If this is not a valid interrupt vector, fail.
     if (!is_valid_interrupt(vector, 0))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     // Attempt to construct the dispatcher.
     fbl::AllocChecker ac;
     InterruptEventDispatcher* disp = new (&ac) InterruptEventDispatcher(vector);
     if (!ac.check())
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     // Hold a ref while we check to see if someone else owns this vector or not.
     // If things go wrong, this ref will be released and the IED will get
@@ -47,7 +47,7 @@ mx_status_t InterruptEventDispatcher::Create(uint32_t vector,
     {
         fbl::AutoLock lock(&vectors_lock_);
         if (!vectors_.insert_or_find(disp))
-            return MX_ERR_ALREADY_EXISTS;
+            return ZX_ERR_ALREADY_EXISTS;
     }
 
     // Looks like things went well.  Register our callback and unmask our
@@ -56,10 +56,10 @@ mx_status_t InterruptEventDispatcher::Create(uint32_t vector,
     unmask_interrupt(vector);
 
     // Transfer control of the new dispatcher to the creator and we are done.
-    *rights     = MX_DEFAULT_INTERRUPT_RIGHTS;
+    *rights     = ZX_DEFAULT_INTERRUPT_RIGHTS;
     *dispatcher = fbl::move(disp_ref);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 InterruptEventDispatcher::~InterruptEventDispatcher() {
@@ -77,20 +77,20 @@ InterruptEventDispatcher::~InterruptEventDispatcher() {
     }
 }
 
-mx_status_t InterruptEventDispatcher::InterruptComplete() {
+zx_status_t InterruptEventDispatcher::InterruptComplete() {
     canary_.Assert();
 
     unsignal();
     unmask_interrupt(vector_);
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t InterruptEventDispatcher::UserSignal() {
+zx_status_t InterruptEventDispatcher::UserSignal() {
     canary_.Assert();
 
     mask_interrupt(vector_);
     signal(true);
-    return MX_OK;
+    return ZX_OK;
 }
 
 enum handler_return InterruptEventDispatcher::IrqHandler(void* ctx) {

@@ -15,8 +15,8 @@ MODULE_SRCS += \
 MODULE_STATIC_LIBS := third_party/ulib/lz4
 
 MODULE_LIBS := \
-    system/ulib/magenta \
-    system/ulib/mxio \
+    system/ulib/zircon \
+    system/ulib/fdio \
     system/ulib/c
 
 include make/module.mk

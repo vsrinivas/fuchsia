@@ -12,7 +12,7 @@ MODULE_SRCS += $(LOCAL_DIR)/decompress.c
 
 MODULE_LIBS := \
     third_party/ulib/lz4 \
-    system/ulib/magenta \
+    system/ulib/zircon \
     system/ulib/c
 
 include make/module.mk

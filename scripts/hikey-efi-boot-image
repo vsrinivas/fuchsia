@@ -9,7 +9,7 @@
 # Uploads boot image (kernel+ramdisk) into RAM of a hikey960 which is in fastboot
 #  mode, and then executes image. Requires that the hikey be equiped with UEFI 
 #  bootloader.
-#  Assumes this is run from the magenta source directory.
+#  Assumes this is run from the zircon source directory.
 
 if [ "$#" -ne 1 ]; then
 	echo "Usage: hikey-efi-boot-image <uefi repo path>"
@@ -19,15 +19,15 @@ fi
 
 #where the hikey repos live
 HIKEY_DIR=$1
-MAGENTA_DIR=.
-MAGENTA_BUILD=${MAGENTA_DIR}/build-magenta-hikey960-arm64
+ZIRCON_DIR=.
+ZIRCON_BUILD=${ZIRCON_DIR}/build-zircon-hikey960-arm64
 
-KERNEL=${MAGENTA_BUILD}/magenta.bin-dtb
-RAMDISK=${MAGENTA_BUILD}/bootdata.bin
+KERNEL=${ZIRCON_BUILD}/zircon.bin-dtb
+RAMDISK=${ZIRCON_BUILD}/bootdata.bin
 
-OUT_IMAGE=${MAGENTA_BUILD}/boot.img
-DTB_FILE=${MAGENTA_DIR}/kernel/target/hikey960/device-tree.dtb
-DT_IMAGE=${MAGENTA_BUILD}/dt.img
+OUT_IMAGE=${ZIRCON_BUILD}/boot.img
+DTB_FILE=${ZIRCON_DIR}/kernel/target/hikey960/device-tree.dtb
+DT_IMAGE=${ZIRCON_BUILD}/dt.img
 
 MEMBASE=0x00000000
 KERNEL_OFFSET=0x00080000

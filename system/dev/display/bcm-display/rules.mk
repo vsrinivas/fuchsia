@@ -13,6 +13,6 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync system/ulib/bcm
 
-MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/magenta system/ulib/mxio
+MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon system/ulib/fdio
 
 include make/module.mk

@@ -11,7 +11,7 @@
 #include <hypervisor/bits.h>
 #include <hypervisor/vcpu.h>
 #include <hypervisor/virtio.h>
-#include <magenta/syscalls/port.h>
+#include <zircon/syscalls/port.h>
 #include <virtio/virtio.h>
 #include <virtio/virtio_ring.h>
 
@@ -34,7 +34,7 @@ static virtio_queue_t* selected_queue(const virtio_device_t* device) {
 // When using the legacy interface, the queue layout follows 2.4.2 Legacy
 // Interfaces: A Note on Virtqueue Layout with an alignment of 4096. Driver
 // writes the physical address, divided by 4096 to the Queue Address field 2.
-static mx_status_t virtio_queue_set_pfn(virtio_queue_t* queue, uint32_t pfn) {
+static zx_status_t virtio_queue_set_pfn(virtio_queue_t* queue, uint32_t pfn) {
     uintptr_t desc_paddr = pfn * PAGE_SIZE;
     uintptr_t desc_size = queue->size * sizeof(queue->desc[0]);
     virtio_queue_set_desc_addr(queue, desc_paddr);
@@ -48,14 +48,14 @@ static mx_status_t virtio_queue_set_pfn(virtio_queue_t* queue, uint32_t pfn) {
     uintptr_t used_paddr = align(avail_paddr + avail_size, 4096);
     virtio_queue_set_used_addr(queue, used_paddr);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 
-mx_status_t virtio_pci_legacy_read(const pci_device_t* pci_device, uint8_t bar, uint16_t port,
-                                   uint8_t access_size, mx_vcpu_io_t* vcpu_io) {
+zx_status_t virtio_pci_legacy_read(const pci_device_t* pci_device, uint8_t bar, uint16_t port,
+                                   uint8_t access_size, zx_vcpu_io_t* vcpu_io) {
     if (bar != 0)
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 
     virtio_device_t* device = pci_device_to_virtio(pci_device);
     const virtio_queue_t* queue = selected_queue(device);
@@ -63,23 +63,23 @@ mx_status_t virtio_pci_legacy_read(const pci_device_t* pci_device, uint8_t bar, 
     case VIRTIO_PCI_DEVICE_FEATURES:
         vcpu_io->access_size = 4;
         vcpu_io->u32 = device->features;
-        return MX_OK;
+        return ZX_OK;
     case VIRTIO_PCI_QUEUE_PFN:
         if (!queue)
-            return MX_ERR_NOT_SUPPORTED;
+            return ZX_ERR_NOT_SUPPORTED;
         vcpu_io->access_size = 4;
         vcpu_io->u32 = static_cast<uint32_t>(queue->addr.desc / PAGE_SIZE);
-        return MX_OK;
+        return ZX_OK;
     case VIRTIO_PCI_QUEUE_SIZE:
         if (!queue)
-            return MX_ERR_NOT_SUPPORTED;
+            return ZX_ERR_NOT_SUPPORTED;
         vcpu_io->access_size = 2;
         vcpu_io->u16 = queue->size;
-        return MX_OK;
+        return ZX_OK;
     case VIRTIO_PCI_DEVICE_STATUS:
         vcpu_io->access_size = 1;
         vcpu_io->u8 = device->status;
-        return MX_OK;
+        return ZX_OK;
     case VIRTIO_PCI_ISR_STATUS:
         vcpu_io->access_size = 1;
         mtx_lock(&device->mutex);
@@ -91,7 +91,7 @@ mx_status_t virtio_pci_legacy_read(const pci_device_t* pci_device, uint8_t bar, 
         // 0 and causes the device to de-assert the interrupt.
         device->isr_status = 0;
         mtx_unlock(&device->mutex);
-        return MX_OK;
+        return ZX_OK;
     }
 
     // Handle device-specific accesses.
@@ -101,53 +101,53 @@ mx_status_t virtio_pci_legacy_read(const pci_device_t* pci_device, uint8_t bar, 
     }
 
     fprintf(stderr, "Unhandled virtio device read %#x\n", port);
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, uint8_t bar, uint16_t port,
-                                    const mx_vcpu_io_t* io) {
+zx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, uint8_t bar, uint16_t port,
+                                    const zx_vcpu_io_t* io) {
     if (bar != 0)
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 
     virtio_device_t* device = pci_device_to_virtio(pci_device);
     virtio_queue_t* queue = selected_queue(device);
     switch (port) {
     case VIRTIO_PCI_DRIVER_FEATURES:
         if (io->access_size != 4)
-            return MX_ERR_IO_DATA_INTEGRITY;
+            return ZX_ERR_IO_DATA_INTEGRITY;
         // Currently we expect the driver to accept all our features.
         if (io->u32 != device->features)
-            return MX_ERR_INVALID_ARGS;
-        return MX_OK;
+            return ZX_ERR_INVALID_ARGS;
+        return ZX_OK;
     case VIRTIO_PCI_DEVICE_STATUS:
         if (io->access_size != 1)
-            return MX_ERR_IO_DATA_INTEGRITY;
+            return ZX_ERR_IO_DATA_INTEGRITY;
         device->status = io->u8;
-        return MX_OK;
+        return ZX_OK;
     case VIRTIO_PCI_QUEUE_PFN: {
         if (io->access_size != 4)
-            return MX_ERR_IO_DATA_INTEGRITY;
+            return ZX_ERR_IO_DATA_INTEGRITY;
         if (!queue)
-            return MX_ERR_NOT_SUPPORTED;
+            return ZX_ERR_NOT_SUPPORTED;
         return virtio_queue_set_pfn(queue, io->u32);
     }
     case VIRTIO_PCI_QUEUE_SIZE:
         if (io->access_size != 2)
-            return MX_ERR_IO_DATA_INTEGRITY;
+            return ZX_ERR_IO_DATA_INTEGRITY;
         queue->size = io->u16;
-        return MX_OK;
+        return ZX_OK;
     case VIRTIO_PCI_QUEUE_SELECT:
         if (io->access_size != 2)
-            return MX_ERR_IO_DATA_INTEGRITY;
+            return ZX_ERR_IO_DATA_INTEGRITY;
         if (io->u16 >= device->num_queues) {
             fprintf(stderr, "Selected queue does not exist.\n");
-            return MX_ERR_NOT_SUPPORTED;
+            return ZX_ERR_NOT_SUPPORTED;
         }
         device->queue_sel = io->u16;
-        return MX_OK;
+        return ZX_OK;
     case VIRTIO_PCI_QUEUE_NOTIFY: {
         if (io->access_size != 2)
-            return MX_ERR_IO_DATA_INTEGRITY;
+            return ZX_ERR_IO_DATA_INTEGRITY;
         return virtio_device_kick(device, io->u16);
     }
     }
@@ -159,5 +159,5 @@ mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, uint8_t bar, uint1
     }
 
     fprintf(stderr, "Unhandled virtio device write %#x\n", port);
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }

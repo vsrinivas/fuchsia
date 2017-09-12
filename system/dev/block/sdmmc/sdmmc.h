@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #include <ddk/device.h>
 #include <ddk/protocol/block.h>
@@ -13,8 +13,8 @@
 __BEGIN_CDECLS;
 
 typedef struct sdmmc {
-    mx_device_t* mxdev;
-    mx_device_t* host_mxdev;
+    zx_device_t* mxdev;
+    zx_device_t* host_mxdev;
 
     uint8_t type;
 #define SDMMC_TYPE_SD   0
@@ -42,9 +42,9 @@ typedef struct sdmmc {
 } sdmmc_t;
 
 // Issue a command to the host controller
-mx_status_t sdmmc_do_command(mx_device_t* dev, const uint32_t cmd, const uint32_t arg, iotxn_t* txn);
+zx_status_t sdmmc_do_command(zx_device_t* dev, const uint32_t cmd, const uint32_t arg, iotxn_t* txn);
 
-mx_status_t sdmmc_probe_sd(sdmmc_t* sdmmc, iotxn_t* setup_txn);
-mx_status_t sdmmc_probe_mmc(sdmmc_t* sdmmc, iotxn_t* setup_txn);
+zx_status_t sdmmc_probe_sd(sdmmc_t* sdmmc, iotxn_t* setup_txn);
+zx_status_t sdmmc_probe_mmc(sdmmc_t* sdmmc, iotxn_t* setup_txn);
 
 __END_CDECLS;

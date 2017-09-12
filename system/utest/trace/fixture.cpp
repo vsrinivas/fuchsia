@@ -9,10 +9,10 @@
 #include <string.h>
 #include <sys/types.h>
 
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 
 #include <async/loop.h>
-#include <mx/event.h>
+#include <zx/event.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/string.h>
@@ -30,8 +30,8 @@ class Fixture : private trace::TraceHandler {
 public:
     Fixture()
         : buffer_(new uint8_t[kBufferSizeBytes], kBufferSizeBytes) {
-        mx_status_t status = mx::event::create(0u, &trace_stopped_);
-        MX_DEBUG_ASSERT(status == MX_OK);
+        zx_status_t status = zx::event::create(0u, &trace_stopped_);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
 
     ~Fixture() {
@@ -46,9 +46,9 @@ public:
         loop_.StartThread("trace test");
 
         // Asynchronously start the engine.
-        mx_status_t status = trace_start_engine(loop_.async(), this,
+        zx_status_t status = trace_start_engine(loop_.async(), this,
                                                 buffer_.get(), buffer_.size());
-        MX_DEBUG_ASSERT(status == MX_OK);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
 
     void StopTracing(bool hard_shutdown) {
@@ -59,24 +59,24 @@ public:
         // If we're performing a hard shutdown, skip this step and begin immediately
         // tearing down the loop.  The trace engine should stop itself.
         if (!hard_shutdown) {
-            mx_status_t status = trace_stop_engine(MX_OK);
-            MX_DEBUG_ASSERT(status == MX_OK);
+            zx_status_t status = trace_stop_engine(ZX_OK);
+            ZX_DEBUG_ASSERT(status == ZX_OK);
 
-            status = trace_stopped_.wait_one(MX_EVENT_SIGNALED,
-                                             mx_deadline_after(MX_MSEC(1000)), nullptr);
-            MX_DEBUG_ASSERT(status == MX_OK);
+            status = trace_stopped_.wait_one(ZX_EVENT_SIGNALED,
+                                             zx_deadline_after(ZX_MSEC(1000)), nullptr);
+            ZX_DEBUG_ASSERT(status == ZX_OK);
         }
 
         // Shut down the loop (implicily joins the thread we started earlier).
         // When this completes we know the trace engine is really stopped.
         loop_.Shutdown();
 
-        MX_DEBUG_ASSERT(observed_stopped_callback_);
+        ZX_DEBUG_ASSERT(observed_stopped_callback_);
 
         trace_running_ = false;
     }
 
-    mx_status_t disposition() const {
+    zx_status_t disposition() const {
         return disposition_;
     }
 
@@ -103,23 +103,23 @@ private:
     }
 
     void TraceStopped(async_t* async,
-                      mx_status_t disposition,
+                      zx_status_t disposition,
                       size_t buffer_bytes_written) override {
-        MX_DEBUG_ASSERT(!observed_stopped_callback_);
+        ZX_DEBUG_ASSERT(!observed_stopped_callback_);
         observed_stopped_callback_ = true;
-        MX_DEBUG_ASSERT(async = loop_.async());
+        ZX_DEBUG_ASSERT(async = loop_.async());
         disposition_ = disposition;
         buffer_bytes_written_ = buffer_bytes_written;
 
-        trace_stopped_.signal(0u, MX_EVENT_SIGNALED);
+        trace_stopped_.signal(0u, ZX_EVENT_SIGNALED);
     }
 
     async::Loop loop_;
     fbl::Array<uint8_t> buffer_;
     bool trace_running_ = false;
-    mx_status_t disposition_ = MX_ERR_INTERNAL;
+    zx_status_t disposition_ = ZX_ERR_INTERNAL;
     size_t buffer_bytes_written_ = 0u;
-    mx::event trace_stopped_;
+    zx::event trace_stopped_;
     bool observed_stopped_callback_ = false;
 };
 
@@ -128,38 +128,38 @@ Fixture* g_fixture{nullptr};
 } // namespace
 
 void fixture_set_up(void) {
-    MX_DEBUG_ASSERT(!g_fixture);
+    ZX_DEBUG_ASSERT(!g_fixture);
     g_fixture = new Fixture();
 }
 
 void fixture_tear_down(void) {
-    MX_DEBUG_ASSERT(g_fixture);
+    ZX_DEBUG_ASSERT(g_fixture);
     delete g_fixture;
     g_fixture = nullptr;
 }
 
 void fixture_start_tracing() {
-    MX_DEBUG_ASSERT(g_fixture);
+    ZX_DEBUG_ASSERT(g_fixture);
     g_fixture->StartTracing();
 }
 
 void fixture_stop_tracing() {
-    MX_DEBUG_ASSERT(g_fixture);
+    ZX_DEBUG_ASSERT(g_fixture);
     g_fixture->StopTracing(false);
 }
 
 void fixture_stop_tracing_hard() {
-    MX_DEBUG_ASSERT(g_fixture);
+    ZX_DEBUG_ASSERT(g_fixture);
     g_fixture->StopTracing(true);
 }
 
-mx_status_t fixture_get_disposition(void) {
-    MX_DEBUG_ASSERT(g_fixture);
+zx_status_t fixture_get_disposition(void) {
+    ZX_DEBUG_ASSERT(g_fixture);
     return g_fixture->disposition();
 }
 
 bool fixture_compare_records(const char* expected) {
-    MX_DEBUG_ASSERT(g_fixture);
+    ZX_DEBUG_ASSERT(g_fixture);
     BEGIN_HELPER;
 
     g_fixture->StopTracing(false);
@@ -175,7 +175,7 @@ bool fixture_compare_records(const char* expected) {
     ASSERT_GE(records.size(), 1u, "expected an initialization record");
     ASSERT_EQ(trace::RecordType::kInitialization, records[0].type(),
               "expected initialization record");
-    EXPECT_EQ(mx_ticks_per_second(),
+    EXPECT_EQ(zx_ticks_per_second(),
               records[0].GetInitialization().ticks_per_second);
     records.erase(0);
 

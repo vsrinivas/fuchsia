@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <err.h>
 #include <string.h>
 #include <kernel/mp.h>
@@ -138,7 +138,7 @@ void idt_setup_readonly(void) {
                                          vaddr_to_paddr(&_idt),
                                          0 /* vmm flags */,
                                          ARCH_MMU_FLAG_PERM_READ);
-    ASSERT(status == MX_OK);
+    ASSERT(status == ZX_OK);
     idt_load(_idt_ro);
 }
 

@@ -11,27 +11,27 @@
 
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
-#include <magenta/crashlogger.h>
-#include <magenta/process.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/debug.h>
-#include <magenta/syscalls/exception.h>
-#include <magenta/syscalls/object.h>
-#include <magenta/syscalls/port.h>
+#include <zircon/crashlogger.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/debug.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/syscalls/port.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
 #include "utils.h"
 
-typedef bool (wait_inferior_exception_handler_t)(mx_handle_t inferior,
-                                                 const mx_port_packet_t* packet,
+typedef bool (wait_inferior_exception_handler_t)(zx_handle_t inferior,
+                                                 const zx_port_packet_t* packet,
                                                  void* handler_arg);
 
 // Sleep interval in the watchdog thread. Make this short so we don't need to
 // wait too long when tearing down in the success case.  This is especially
 // helpful when running "while /boot/test/debugger-test; do true; done".
-#define WATCHDOG_DURATION_TICK ((int64_t)MX_MSEC(30))  // 0.03 seconds
+#define WATCHDOG_DURATION_TICK ((int64_t)ZX_MSEC(30))  // 0.03 seconds
 
 // Number of sleep intervals until the watchdog fires.
 #define WATCHDOG_DURATION_TICKS 100  // 3 seconds
@@ -65,16 +65,16 @@ static volatile atomic_bool done_tests;
 
 static atomic_int extra_thread_count = ATOMIC_VAR_INIT(0);
 
-static void test_memory_ops(mx_handle_t inferior, mx_handle_t thread)
+static void test_memory_ops(zx_handle_t inferior, zx_handle_t thread)
 {
     uint64_t test_data_addr = 0;
     uint8_t test_data[TEST_MEMORY_SIZE];
 
 #ifdef __x86_64__
-    test_data_addr = get_uint64_register(thread, offsetof(mx_x86_64_general_regs_t, r9));
+    test_data_addr = get_uint64_register(thread, offsetof(zx_x86_64_general_regs_t, r9));
 #endif
 #ifdef __aarch64__
-    test_data_addr = get_uint64_register(thread, offsetof(mx_arm64_general_regs_t, r[9]));
+    test_data_addr = get_uint64_register(thread, offsetof(zx_arm64_general_regs_t, r[9]));
 #endif
 
     size_t size = read_inferior_memory(inferior, test_data_addr, test_data, sizeof(test_data));
@@ -93,40 +93,40 @@ static void test_memory_ops(mx_handle_t inferior, mx_handle_t thread)
     // Note: Verification of the write is done in the inferior.
 }
 
-static void fix_inferior_segv(mx_handle_t thread)
+static void fix_inferior_segv(zx_handle_t thread)
 {
     unittest_printf("Fixing inferior segv\n");
 
 #ifdef __x86_64__
     // The segv was because r8 == 0, change it to a usable value.
     // See test_prep_and_segv.
-    uint64_t rsp = get_uint64_register(thread, offsetof(mx_x86_64_general_regs_t, rsp));
-    set_uint64_register(thread, offsetof(mx_x86_64_general_regs_t, r8), rsp);
+    uint64_t rsp = get_uint64_register(thread, offsetof(zx_x86_64_general_regs_t, rsp));
+    set_uint64_register(thread, offsetof(zx_x86_64_general_regs_t, r8), rsp);
 #endif
 
 #ifdef __aarch64__
     // The segv was because r8 == 0, change it to a usable value.
     // See test_prep_and_segv.
-    uint64_t sp = get_uint64_register(thread, offsetof(mx_arm64_general_regs_t, sp));
-    set_uint64_register(thread, offsetof(mx_arm64_general_regs_t, r[8]), sp);
+    uint64_t sp = get_uint64_register(thread, offsetof(zx_arm64_general_regs_t, sp));
+    set_uint64_register(thread, offsetof(zx_arm64_general_regs_t, r[8]), sp);
 #endif
 }
 
-static bool test_segv_pc(mx_handle_t thread)
+static bool test_segv_pc(zx_handle_t thread)
 {
 #ifdef __x86_64__
     uint64_t pc = get_uint64_register(
-        thread, offsetof(mx_x86_64_general_regs_t, rip));
+        thread, offsetof(zx_x86_64_general_regs_t, rip));
     uint64_t r10 = get_uint64_register(
-        thread, offsetof(mx_x86_64_general_regs_t, r10));
+        thread, offsetof(zx_x86_64_general_regs_t, r10));
     ASSERT_EQ(pc, r10, "fault PC does not match r10");
 #endif
 
 #ifdef __aarch64__
     uint64_t pc = get_uint64_register(
-        thread, offsetof(mx_arm64_general_regs_t, pc));
+        thread, offsetof(zx_arm64_general_regs_t, pc));
     uint64_t x10 = get_uint64_register(
-        thread, offsetof(mx_arm64_general_regs_t, r[10]));
+        thread, offsetof(zx_arm64_general_regs_t, r[10]));
     ASSERT_EQ(pc, x10, "fault PC does not match x10");
 #endif
 
@@ -138,18 +138,18 @@ static bool test_segv_pc(mx_handle_t thread)
 // Returns false if a test fails.
 // Otherwise waits for the inferior to exit and returns true.
 
-static bool wait_inferior_thread_worker(mx_handle_t inferior,
-                                        mx_handle_t eport,
+static bool wait_inferior_thread_worker(zx_handle_t inferior,
+                                        zx_handle_t eport,
                                         wait_inferior_exception_handler_t* handler,
                                         void* handler_arg)
 {
     while (true) {
-        mx_port_packet_t packet;
+        zx_port_packet_t packet;
         if (!read_exception(eport, inferior, &packet))
             return false;
 
         // Is the inferior gone?
-        if (packet.type == MX_EXCP_GONE && packet.exception.tid == 0) {
+        if (packet.type == ZX_EXCP_GONE && packet.exception.tid == 0) {
             unittest_printf("wait-inf: inferior gone\n");
             return true;
         }
@@ -160,8 +160,8 @@ static bool wait_inferior_thread_worker(mx_handle_t inferior,
 }
 
 typedef struct {
-    mx_handle_t inferior;
-    mx_handle_t eport;
+    zx_handle_t inferior;
+    zx_handle_t eport;
     wait_inferior_exception_handler_t* handler;
     void* handler_arg;
 } wait_inf_args_t;
@@ -169,8 +169,8 @@ typedef struct {
 static int wait_inferior_thread_func(void* arg)
 {
     wait_inf_args_t* args = arg;
-    mx_handle_t inferior = args->inferior;
-    mx_handle_t eport = args->eport;
+    zx_handle_t inferior = args->inferior;
+    zx_handle_t eport = args->eport;
     wait_inferior_exception_handler_t* handler = args->handler;
     void* handler_arg = args->handler_arg;
     free(args);
@@ -182,7 +182,7 @@ static int wait_inferior_thread_func(void* arg)
 static int watchdog_thread_func(void* arg)
 {
     for (int i = 0; i < WATCHDOG_DURATION_TICKS; ++i) {
-        mx_nanosleep(mx_deadline_after(WATCHDOG_DURATION_TICK));
+        zx_nanosleep(zx_deadline_after(WATCHDOG_DURATION_TICK));
         if (atomic_load(&done_tests))
             return 0;
     }
@@ -193,12 +193,12 @@ static int watchdog_thread_func(void* arg)
     exit(5);
 }
 
-static thrd_t start_wait_inf_thread(mx_handle_t inferior,
-                                    mx_handle_t* out_eport,
+static thrd_t start_wait_inf_thread(zx_handle_t inferior,
+                                    zx_handle_t* out_eport,
                                     wait_inferior_exception_handler_t* handler,
                                     void* handler_arg)
 {
-    mx_handle_t eport = attach_inferior(inferior);
+    zx_handle_t eport = attach_inferior(inferior);
     wait_inf_args_t* args = calloc(1, sizeof(*args));
 
     // Both handles are loaned to the thread. The caller of this function
@@ -226,12 +226,12 @@ static void join_wait_inf_thread(thrd_t wait_inf_thread)
 }
 
 static bool expect_debugger_attached_eq(
-        mx_handle_t inferior, bool expected, const char* msg)
+        zx_handle_t inferior, bool expected, const char* msg)
 {
-    mx_info_process_t info;
-    // MX_ASSERT returns false if the check fails.
-    ASSERT_EQ(mx_object_get_info(
-            inferior, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), MX_OK, "");
+    zx_info_process_t info;
+    // ZX_ASSERT returns false if the check fails.
+    ASSERT_EQ(zx_object_get_info(
+            inferior, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), ZX_OK, "");
     ASSERT_EQ(info.debugger_attached, expected, msg);
     return true;
 }
@@ -239,33 +239,33 @@ static bool expect_debugger_attached_eq(
 // This returns a bool as it's a unittest "helper" routine.
 // N.B. This runs on the wait-inferior thread.
 
-static bool handle_thread_exiting(mx_handle_t inferior,
-                                  const mx_port_packet_t* packet)
+static bool handle_thread_exiting(zx_handle_t inferior,
+                                  const zx_port_packet_t* packet)
 {
     BEGIN_HELPER;
 
-    mx_koid_t tid = packet->exception.tid;
-    mx_handle_t thread;
-    mx_status_t status = mx_object_get_child(inferior, tid, MX_RIGHT_SAME_RIGHTS, &thread);
+    zx_koid_t tid = packet->exception.tid;
+    zx_handle_t thread;
+    zx_status_t status = zx_object_get_child(inferior, tid, ZX_RIGHT_SAME_RIGHTS, &thread);
     // If the process has exited then the kernel may have reaped the
     // thread already. Check.
-    if (status != MX_ERR_NOT_FOUND) {
-        mx_info_thread_t info = tu_thread_get_info(thread);
+    if (status != ZX_ERR_NOT_FOUND) {
+        zx_info_thread_t info = tu_thread_get_info(thread);
         // The thread could still transition to DEAD here (if the
         // process exits), so check for either DYING or DEAD.
-        EXPECT_TRUE(info.state == MX_THREAD_STATE_DYING ||
-                    info.state == MX_THREAD_STATE_DEAD, "");
+        EXPECT_TRUE(info.state == ZX_THREAD_STATE_DYING ||
+                    info.state == ZX_THREAD_STATE_DEAD, "");
         // If the state is DYING it would be nice to check that the
         // value of |info.wait_exception_port_type| is DEBUGGER. Alas
         // if the process has exited then the thread will get
         // THREAD_SIGNAL_KILL which will cause
         // UserThread::ExceptionHandlerExchange to exit before we've
-        // told the thread to "resume" from MX_EXCP_THREAD_EXITING.
+        // told the thread to "resume" from ZX_EXCP_THREAD_EXITING.
         // The thread is still in the DYING state but it is no longer
         // in an exception. Thus |info.wait_exception_port_type| can
         // either be DEBUGGER or NONE.
-        EXPECT_TRUE(info.wait_exception_port_type == MX_EXCEPTION_PORT_TYPE_NONE ||
-                    info.wait_exception_port_type == MX_EXCEPTION_PORT_TYPE_DEBUGGER, "");
+        EXPECT_TRUE(info.wait_exception_port_type == ZX_EXCEPTION_PORT_TYPE_NONE ||
+                    info.wait_exception_port_type == ZX_EXCEPTION_PORT_TYPE_DEBUGGER, "");
         tu_handle_close(thread);
     } else {
         EXPECT_TRUE(tu_process_has_exited(inferior), "");
@@ -281,16 +281,16 @@ static bool handle_thread_exiting(mx_handle_t inferior,
 // This returns a bool as it's a unittest "helper" routine.
 // N.B. This runs on the wait-inferior thread.
 
-static bool handle_expected_page_fault(mx_handle_t inferior,
-                                       const mx_port_packet_t* packet,
+static bool handle_expected_page_fault(zx_handle_t inferior,
+                                       const zx_port_packet_t* packet,
                                        atomic_int* segv_count)
 {
     BEGIN_HELPER;
 
     unittest_printf("wait-inf: got page fault exception\n");
 
-    mx_koid_t tid = packet->exception.tid;
-    mx_handle_t thread = tu_get_thread(inferior, tid);
+    zx_koid_t tid = packet->exception.tid;
+    zx_handle_t thread = tu_get_thread(inferior, tid);
 
     dump_inferior_regs(thread);
 
@@ -310,17 +310,17 @@ static bool handle_expected_page_fault(mx_handle_t inferior,
     // before we can increment it.
     atomic_fetch_add(segv_count, 1);
 
-    mx_status_t status = mx_task_resume(thread, MX_RESUME_EXCEPTION);
+    zx_status_t status = zx_task_resume(thread, ZX_RESUME_EXCEPTION);
     tu_handle_close(thread);
-    ASSERT_EQ(status, MX_OK, "");
+    ASSERT_EQ(status, ZX_OK, "");
 
     END_HELPER;
 }
 
 // N.B. This runs on the wait-inferior thread.
 
-static bool debugger_test_exception_handler(mx_handle_t inferior,
-                                            const mx_port_packet_t* packet,
+static bool debugger_test_exception_handler(zx_handle_t inferior,
+                                            const zx_port_packet_t* packet,
                                             void* handler_arg)
 {
     BEGIN_HELPER;
@@ -328,25 +328,25 @@ static bool debugger_test_exception_handler(mx_handle_t inferior,
     // Note: This may be NULL if the test is not expecting a page fault.
     atomic_int* segv_count = handler_arg;
 
-    mx_koid_t tid = packet->exception.tid;
+    zx_koid_t tid = packet->exception.tid;
 
     switch (packet->type) {
-        case MX_EXCP_THREAD_STARTING:
+        case ZX_EXCP_THREAD_STARTING:
             unittest_printf("wait-inf: inferior started\n");
             if (!resume_inferior(inferior, tid))
                 return false;
             break;
 
-        case MX_EXCP_THREAD_EXITING:
+        case ZX_EXCP_THREAD_EXITING:
             EXPECT_TRUE(handle_thread_exiting(inferior, packet), "");
             break;
 
-        case MX_EXCP_GONE:
+        case ZX_EXCP_GONE:
             // A thread is gone, but we only care about the process which is
             // handled by the caller.
             break;
 
-        case MX_EXCP_FATAL_PAGE_FAULT:
+        case ZX_EXCP_FATAL_PAGE_FAULT:
             ASSERT_NONNULL(segv_count, "");
             ASSERT_TRUE(handle_expected_page_fault(inferior, packet, segv_count), "");
             break;
@@ -368,18 +368,18 @@ static bool debugger_test(void)
     BEGIN_TEST;
 
     launchpad_t* lp;
-    mx_handle_t inferior, channel;
+    zx_handle_t inferior, channel;
     if (!setup_inferior(test_inferior_child_name, &lp, &inferior, &channel))
         return false;
 
     atomic_int segv_count;
 
     expect_debugger_attached_eq(inferior, false, "debugger should not appear attached");
-    mx_handle_t eport = MX_HANDLE_INVALID;
+    zx_handle_t eport = ZX_HANDLE_INVALID;
     thrd_t wait_inf_thread =
         start_wait_inf_thread(inferior, &eport,
                               debugger_test_exception_handler, &segv_count);
-    EXPECT_NE(eport, MX_HANDLE_INVALID, "");
+    EXPECT_NE(eport, ZX_HANDLE_INVALID, "");
     expect_debugger_attached_eq(inferior, true, "debugger should appear attached");
 
     if (!start_inferior(lp))
@@ -416,15 +416,15 @@ static bool debugger_thread_list_test(void)
     BEGIN_TEST;
 
     launchpad_t* lp;
-    mx_handle_t inferior, channel;
+    zx_handle_t inferior, channel;
     if (!setup_inferior(test_inferior_child_name, &lp, &inferior, &channel))
         return false;
 
-    mx_handle_t eport = MX_HANDLE_INVALID;
+    zx_handle_t eport = ZX_HANDLE_INVALID;
     thrd_t wait_inf_thread =
         start_wait_inf_thread(inferior, &eport,
                               debugger_test_exception_handler, NULL);
-    EXPECT_NE(eport, MX_HANDLE_INVALID, "");
+    EXPECT_NE(eport, ZX_HANDLE_INVALID, "");
 
     if (!start_inferior(lp))
         return false;
@@ -437,25 +437,25 @@ static bool debugger_thread_list_test(void)
         return false;
     EXPECT_EQ(msg, MSG_EXTRA_THREADS_STARTED, "unexpected response when starting extra threads");
 
-    uint32_t buf_size = 100 * sizeof(mx_koid_t);
+    uint32_t buf_size = 100 * sizeof(zx_koid_t);
     size_t num_threads;
-    mx_koid_t* threads = tu_malloc(buf_size);
-    mx_status_t status = mx_object_get_info(inferior, MX_INFO_PROCESS_THREADS,
+    zx_koid_t* threads = tu_malloc(buf_size);
+    zx_status_t status = zx_object_get_info(inferior, ZX_INFO_PROCESS_THREADS,
                                             threads, buf_size, &num_threads, NULL);
-    ASSERT_EQ(status, MX_OK, "");
+    ASSERT_EQ(status, ZX_OK, "");
 
     // There should be at least 1+NUM_EXTRA_THREADS threads in the result.
-    ASSERT_GE(num_threads, (unsigned)(1 + NUM_EXTRA_THREADS), "mx_object_get_info failed");
+    ASSERT_GE(num_threads, (unsigned)(1 + NUM_EXTRA_THREADS), "zx_object_get_info failed");
 
     // Verify each entry is valid.
     for (uint32_t i = 0; i < num_threads; ++i) {
-        mx_koid_t koid = threads[i];
+        zx_koid_t koid = threads[i];
         unittest_printf("Looking up thread %llu\n", (long long) koid);
-        mx_handle_t thread = tu_get_thread(inferior, koid);
-        mx_info_handle_basic_t info;
-        status = mx_object_get_info(thread, MX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
-        EXPECT_EQ(status, MX_OK, "mx_object_get_info failed");
-        EXPECT_EQ(info.type, (uint32_t) MX_OBJ_TYPE_THREAD, "not a thread");
+        zx_handle_t thread = tu_get_thread(inferior, koid);
+        zx_info_handle_basic_t info;
+        status = zx_object_get_info(thread, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
+        EXPECT_EQ(status, ZX_OK, "zx_object_get_info failed");
+        EXPECT_EQ(info.type, (uint32_t) ZX_OBJ_TYPE_THREAD, "not a thread");
     }
 
     if (!shutdown_inferior(channel, inferior))
@@ -475,19 +475,19 @@ static bool property_process_debug_addr_test(void)
 {
     BEGIN_TEST;
 
-    mx_handle_t self = mx_process_self();
+    zx_handle_t self = zx_process_self();
 
     // We shouldn't be able to set it.
     uintptr_t debug_addr = 42;
-    mx_status_t status = mx_object_set_property(self, MX_PROP_PROCESS_DEBUG_ADDR,
+    zx_status_t status = zx_object_set_property(self, ZX_PROP_PROCESS_DEBUG_ADDR,
                                                 &debug_addr, sizeof(debug_addr));
-    ASSERT_EQ(status, MX_ERR_ACCESS_DENIED, "");
+    ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED, "");
 
     // Some minimal verification that the value is correct.
 
-    status = mx_object_get_property(self, MX_PROP_PROCESS_DEBUG_ADDR,
+    status = zx_object_get_property(self, ZX_PROP_PROCESS_DEBUG_ADDR,
                                     &debug_addr, sizeof(debug_addr));
-    ASSERT_EQ(status, MX_OK, "");
+    ASSERT_EQ(status, ZX_OK, "");
 
     // These are all dsos we link with. See rules.mk.
     const char* launchpad_so = "liblaunchpad.so";
@@ -538,7 +538,7 @@ static bool write_text_segment(void)
 {
     BEGIN_TEST;
 
-    mx_handle_t self = mx_process_self();
+    zx_handle_t self = zx_process_self();
 
     // Exercise MG-739
     // Pretend we're writing a s/w breakpoint to the start of this function.
@@ -632,13 +632,13 @@ static int extra_thread_func(void* arg)
     atomic_fetch_add(&extra_thread_count, 1);
     unittest_printf("Extra thread started.\n");
     while (true)
-        mx_nanosleep(mx_deadline_after(MX_SEC(1)));
+        zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
     return 0;
 }
 
 // This returns a bool as it's a unittest "helper" routine.
 
-static bool msg_loop(mx_handle_t channel)
+static bool msg_loop(zx_handle_t channel)
 {
     BEGIN_HELPER;  // Don't stomp on the main thread's current_test_info.
 
@@ -671,9 +671,9 @@ static bool msg_loop(mx_handle_t channel)
                 tu_thread_create_c11(&thread, extra_thread_func, NULL, "extra-thread");
             }
             // Wait for all threads to be started.
-            // Each will require an MX_EXCP_STARTING exchange with the "debugger".
+            // Each will require an ZX_EXCP_STARTING exchange with the "debugger".
             while (atomic_load(&extra_thread_count) < NUM_EXTRA_THREADS)
-                mx_nanosleep(mx_deadline_after(MX_USEC(1)));
+                zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
             send_msg(channel, MSG_EXTRA_THREADS_STARTED);
             break;
         default:
@@ -687,7 +687,7 @@ static bool msg_loop(mx_handle_t channel)
 
 void test_inferior(void)
 {
-    mx_handle_t channel = mx_get_startup_handle(PA_USER0);
+    zx_handle_t channel = zx_get_startup_handle(PA_USER0);
     unittest_printf("test_inferior: got handle %d\n", channel);
 
     if (!msg_loop(channel))

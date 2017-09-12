@@ -15,6 +15,6 @@ MODULE_NAME := umount
 MODULE_SRCS := \
     $(LOCAL_DIR)/main.c \
 
-MODULE_LIBS := system/ulib/fs-management system/ulib/magenta system/ulib/mxio system/ulib/c
+MODULE_LIBS := system/ulib/fs-management system/ulib/zircon system/ulib/fdio system/ulib/c
 
 include make/module.mk

@@ -1,8 +1,8 @@
-# C++ in Magenta
+# C++ in Zircon
 
-A subset of the C++14 language is used in the Magenta tree. This
+A subset of the C++14 language is used in the Zircon tree. This
 includes both the upper layers of the kernel (above the lk layer), as
-well as some userspace code. In particular, Magenta does not use the
+well as some userspace code. In particular, Zircon does not use the
 C++ standard library, and many language features are not used or
 allowed.
 
@@ -83,21 +83,21 @@ assertion is raised. This lets us enforce that the return value is
 checked without having to reason about optimizations of the standard
 operator new in the presence of -fno-exceptions and so on.
 
-## mx
+## zx
 
-We have built a minimal C++ library around the various Magenta
+We have built a minimal C++ library around the various Zircon
 [objects](objects) and [syscalls](syscalls.md) called
-[`mx`](../system/ulib/mx/README.md). `mx` is a minimal layer on top of
-`mx_handle_t` and the system calls, to provide handles with type
+[`zx`](../system/ulib/zx/README.md). `zx` is a minimal layer on top of
+`zx_handle_t` and the system calls, to provide handles with type
 safety and ownership semantics.
 
-## mxcpp
+## zxcpp
 
 Some of our code runs in an environment which cannot include the
 standard C++ runtime environment. This environment includes symbols
 like __cxa_pure_virtual that are defined by the ABI and that the
-compiler expects to be ambient. [The mxcpp
-library](../system/ulib/mxcpp) provides that dependency. It also
+compiler expects to be ambient. [The zxcpp
+library](../system/ulib/zxcpp) provides that dependency. It also
 includes the placement operator new overloads and, in userspace, the
 standard new and delete operators. Note that it does not include the
 similarly named __cxa_atexit, which in userspace must be provided by

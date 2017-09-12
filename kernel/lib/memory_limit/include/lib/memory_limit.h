@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 #pragma once
 #include <iovec.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <sys/types.h>
 #include <vm/pmm.h>
 
@@ -49,9 +49,9 @@ typedef struct mem_limit_ctx {
 // @iovs[]: array of iovecs to stored returned vectors. Must have two entries.
 // @used_cnt: the number of entries filled in and returned in iovs[].
 //
-// Returns MX_OK on completion, and MX_ERR_INVALID_ARGS if parameters are
+// Returns ZX_OK on completion, and ZX_ERR_INVALID_ARGS if parameters are
 // invalid.
-mx_status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_t range_size,
+zx_status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_t range_size,
                                iovec_t iovs[], size_t* used_cnt);
 
 // This is a higher level helper function for users of the library if they have
@@ -64,16 +64,16 @@ mx_status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_
 // @arena_template: a structure containing the default values for flags,
 // priority, and name used for arenas created by this function.
 //
-// Returns MX_OK on completion, and MX_ERR_INVALID_ARGS if parameters are
+// Returns ZX_OK on completion, and ZX_ERR_INVALID_ARGS if parameters are
 // invalid
-mx_status_t mem_limit_add_arenas_from_range(mem_limit_ctx_t* ctx, uintptr_t range_base,
+zx_status_t mem_limit_add_arenas_from_range(mem_limit_ctx_t* ctx, uintptr_t range_base,
                                             size_t range_size, pmm_arena_info_t arena_template);
 
 // Checks if a memory limit exists and initializes the memory_limit member of ctx
 // if one is found.
 //
-// Returns MX_OK on success, or ERR_UNSUPPORTED if no memory limit was passed
+// Returns ZX_OK on success, or ERR_UNSUPPORTED if no memory limit was passed
 // via kernel.memory-limit-mb
-mx_status_t mem_limit_init(mem_limit_ctx_t* ctx);
+zx_status_t mem_limit_init(mem_limit_ctx_t* ctx);
 
 __END_CDECLS

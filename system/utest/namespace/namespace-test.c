@@ -12,9 +12,9 @@
 #include <unistd.h>
 
 #include <launchpad/launchpad.h>
-#include <mxio/namespace.h>
-#include <magenta/compiler.h>
-#include <magenta/syscalls.h>
+#include <fdio/namespace.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 
 typedef struct {
@@ -38,15 +38,15 @@ static bool namespace_create_test(void) {
     ASSERT_TRUE(mkdir("/tmp/fake-namespace-test-tmp", 066) == 0 || errno == EEXIST, "");
 
     // Create new ns
-    mxio_ns_t* ns;
-    ASSERT_EQ(mxio_ns_create(&ns), MX_OK, "");
+    fdio_ns_t* ns;
+    ASSERT_EQ(fdio_ns_create(&ns), ZX_OK, "");
     for (unsigned n = 0; n < countof(NS); n++) {
         int fd = open(NS[n].remote, O_RDONLY | O_DIRECTORY);
         ASSERT_GT(fd, 0, "");
-        ASSERT_EQ(mxio_ns_bind_fd(ns, NS[n].local, fd), MX_OK, "");
+        ASSERT_EQ(fdio_ns_bind_fd(ns, NS[n].local, fd), ZX_OK, "");
         ASSERT_EQ(close(fd), 0, "");
     }
-    ASSERT_EQ(mxio_ns_chdir(ns), MX_OK, "");
+    ASSERT_EQ(fdio_ns_chdir(ns), ZX_OK, "");
 
     DIR* dir;
     struct dirent* de;

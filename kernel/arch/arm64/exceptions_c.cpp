@@ -21,7 +21,7 @@
 #include <platform.h>
 #include <vm/fault.h>
 
-#include <magenta/syscalls/exception.h>
+#include <zircon/syscalls/exception.h>
 
 #define LOCAL_TRACE 0
 
@@ -50,7 +50,7 @@ __WEAK void arm64_syscall(struct arm64_iframe_long *iframe, bool is_64bit, uint6
 }
 
 static status_t try_dispatch_user_data_fault_exception(
-    mx_excp_type_t type, struct arm64_iframe_long *iframe,
+    zx_excp_type_t type, struct arm64_iframe_long *iframe,
     uint32_t esr, uint64_t far)
 {
     thread_t *thread = get_current_thread();
@@ -70,7 +70,7 @@ static status_t try_dispatch_user_data_fault_exception(
 }
 
 static status_t try_dispatch_user_exception(
-    mx_excp_type_t type, struct arm64_iframe_long *iframe, uint32_t esr)
+    zx_excp_type_t type, struct arm64_iframe_long *iframe, uint32_t esr)
 {
     return try_dispatch_user_data_fault_exception(type, iframe, esr, 0);
 }
@@ -99,7 +99,7 @@ static void arm64_unknown_handler(struct arm64_iframe_long *iframe, uint excepti
         printf("unknown exception in kernel: PC at %#" PRIx64 "\n", iframe->elr);
         exception_die(iframe, esr);
     }
-    try_dispatch_user_exception(MX_EXCP_UNDEFINED_INSTRUCTION, iframe, esr);
+    try_dispatch_user_exception(ZX_EXCP_UNDEFINED_INSTRUCTION, iframe, esr);
 }
 
 static void arm64_brk_handler(struct arm64_iframe_long *iframe, uint exception_flags,
@@ -110,7 +110,7 @@ static void arm64_brk_handler(struct arm64_iframe_long *iframe, uint exception_f
         printf("BRK in kernel: PC at %#" PRIx64 "\n", iframe->elr);
         exception_die(iframe, esr);
     }
-    try_dispatch_user_exception(MX_EXCP_SW_BREAKPOINT, iframe, esr);
+    try_dispatch_user_exception(ZX_EXCP_SW_BREAKPOINT, iframe, esr);
 }
 
 static void arm64_fpu_handler(struct arm64_iframe_long *iframe, uint exception_flags,
@@ -170,7 +170,7 @@ static void arm64_instruction_abort_handler(struct arm64_iframe_long *iframe, ui
     // get a shot at it.
     if (is_user) {
         CPU_STATS_INC(exceptions);
-        if (try_dispatch_user_data_fault_exception(MX_EXCP_FATAL_PAGE_FAULT, iframe, esr, far) == MX_OK)
+        if (try_dispatch_user_data_fault_exception(ZX_EXCP_FATAL_PAGE_FAULT, iframe, esr, far) == ZX_OK)
             return;
     }
 
@@ -223,11 +223,11 @@ static void arm64_data_abort_handler(struct arm64_iframe_long *iframe, uint exce
     // get a shot at it.
     if (is_user) {
         CPU_STATS_INC(exceptions);
-        mx_excp_type_t excp_type = MX_EXCP_FATAL_PAGE_FAULT;
+        zx_excp_type_t excp_type = ZX_EXCP_FATAL_PAGE_FAULT;
         if (unlikely(dfsc == DFSC_ALIGNMENT_FAULT)) {
-            excp_type = MX_EXCP_UNALIGNED_ACCESS;
+            excp_type = ZX_EXCP_UNALIGNED_ACCESS;
         }
-        if (try_dispatch_user_data_fault_exception(excp_type, iframe, esr, far) == MX_OK)
+        if (try_dispatch_user_data_fault_exception(excp_type, iframe, esr, far) == ZX_OK)
             return;
     }
 
@@ -295,7 +295,7 @@ extern "C" void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exce
                 exception_die(iframe, esr);
             }
             /* let the user exception handler get a shot at it */
-            if (try_dispatch_user_exception(MX_EXCP_GENERAL, iframe, esr) == MX_OK)
+            if (try_dispatch_user_exception(ZX_EXCP_GENERAL, iframe, esr) == ZX_OK)
                 break;
             printf("unhandled synchronous exception\n");
             exception_die(iframe, esr);
@@ -425,24 +425,24 @@ void arch_dump_exception_context(const arch_exception_context_t *context)
     // try to dump the user stack
     if (is_user_address(context->frame->usp)) {
         uint8_t buf[256];
-        if (arch_copy_from_user(buf, (void *)context->frame->usp, sizeof(buf)) == MX_OK) {
+        if (arch_copy_from_user(buf, (void *)context->frame->usp, sizeof(buf)) == ZX_OK) {
             printf("bottom of user stack at 0x%lx:\n", (vaddr_t)context->frame->usp);
             hexdump_ex(buf, sizeof(buf), context->frame->usp);
         }
     }
 }
 
-void arch_fill_in_exception_context(const arch_exception_context_t *arch_context, mx_exception_report_t *report)
+void arch_fill_in_exception_context(const arch_exception_context_t *arch_context, zx_exception_report_t *report)
 {
-    mx_exception_context_t* mx_context = &report->context;
+    zx_exception_context_t* zx_context = &report->context;
 
-    mx_context->arch.u.arm_64.esr = arch_context->esr;
+    zx_context->arch.u.arm_64.esr = arch_context->esr;
 
     // If there was a fatal page fault, fill in the address that caused the fault.
-    if (MX_EXCP_FATAL_PAGE_FAULT == report->header.type) {
-        mx_context->arch.u.arm_64.far = arch_context->far;
+    if (ZX_EXCP_FATAL_PAGE_FAULT == report->header.type) {
+        zx_context->arch.u.arm_64.far = arch_context->far;
     } else {
-        mx_context->arch.u.arm_64.far = 0;
+        zx_context->arch.u.arm_64.far = 0;
     }
 }
 
@@ -451,5 +451,5 @@ status_t arch_dispatch_user_policy_exception(void)
     struct arm64_iframe_long frame = {};
     arch_exception_context_t context = {};
     context.frame = &frame;
-    return dispatch_user_exception(MX_EXCP_POLICY_ERROR, &context);
+    return dispatch_user_exception(ZX_EXCP_POLICY_ERROR, &context);
 }

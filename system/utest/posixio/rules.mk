@@ -14,9 +14,9 @@ MODULE_SRCS += \
 MODULE_NAME := posixio-test
 
 MODULE_LIBS := \
-    system/ulib/magenta \
+    system/ulib/zircon \
     system/ulib/c \
-    system/ulib/mxio \
+    system/ulib/fdio \
     system/ulib/unittest \
 
 include make/module.mk

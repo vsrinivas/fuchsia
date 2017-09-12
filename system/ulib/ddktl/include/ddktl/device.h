@@ -6,7 +6,7 @@
 
 #include <ddk/device.h>
 #include <ddktl/device-internal.h>
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 #include <fbl/type_support.h>
 
 // ddk::Device<D, ...>
@@ -14,7 +14,7 @@
 // Notes:
 //
 // ddk::Device<D, ...> is a mixin class that simplifies writing DDK drivers in
-// C++. The DDK's mx_device_t defines a set of function pointer callbacks that
+// C++. The DDK's zx_device_t defines a set of function pointer callbacks that
 // can be implemented to define standard behavior (e.g., open/close/read/write),
 // as well as to implement device lifecycle events (e.g., unbind/release). The
 // mixin classes are used to set up the function pointer table to call methods
@@ -30,40 +30,40 @@
 // +----------------------+----------------------------------------------------+
 // | Mixin class          | Required function implementation                   |
 // +----------------------+----------------------------------------------------+
-// | ddk::GetProtocolable | mx_status_t DdkGetProtocol(uint32_t proto_id,      |
+// | ddk::GetProtocolable | zx_status_t DdkGetProtocol(uint32_t proto_id,      |
 // |                      |                            void* out)              |
 // |                      |                                                    |
-// | ddk::Openable        | mx_status_t DdkOpen(mx_device_t** dev_out,         |
+// | ddk::Openable        | zx_status_t DdkOpen(zx_device_t** dev_out,         |
 // |                      |                     uint32_t flags)                |
 // |                      |                                                    |
-// | ddk::OpenAtable      | mx_status_t DdkOpenAt(mx_device_t** dev_out,       |
+// | ddk::OpenAtable      | zx_status_t DdkOpenAt(zx_device_t** dev_out,       |
 // |                      |                       const char* path,            |
 // |                      |                       uint32_t flags)              |
 // |                      |                                                    |
-// | ddk::Closable        | mx_status_t DdkClose(uint32_t flags)               |
+// | ddk::Closable        | zx_status_t DdkClose(uint32_t flags)               |
 // |                      |                                                    |
 // | ddk::Unbindable      | void DdkUnbind()                                   |
 // |                      |                                                    |
-// | ddk::Readable        | mx_status_t DdkRead(void* buf, size_t count,       |
-// |                      |                     mx_off_t off, size_t* actual)  |
+// | ddk::Readable        | zx_status_t DdkRead(void* buf, size_t count,       |
+// |                      |                     zx_off_t off, size_t* actual)  |
 // |                      |                                                    |
-// | ddk::Writable        | mx_status_t DdkWrite(const void* buf,              |
-// |                      |                      size_t count, mx_off_t off,   |
+// | ddk::Writable        | zx_status_t DdkWrite(const void* buf,              |
+// |                      |                      size_t count, zx_off_t off,   |
 // |                      |                      size_t* actual)               |
 // |                      |                                                    |
 // | ddk::IotxnQueueable  | void DdkIotxnQueue(iotxn_t* txn)                   |
 // |                      |                                                    |
-// | ddk::GetSizable      | mx_off_t DdkGetSize()                              |
+// | ddk::GetSizable      | zx_off_t DdkGetSize()                              |
 // |                      |                                                    |
-// | ddk::Ioctlable       | mx_status_t DdkIoctl(uint32_t op,                  |
+// | ddk::Ioctlable       | zx_status_t DdkIoctl(uint32_t op,                  |
 // |                      |                      const void* in_buf,           |
 // |                      |                      size_t in_len, void* out_buf, |
 // |                      |                      size_t out_len,               |
 // |                      |                      size_t* actual)               |
 // |                      |                                                    |
-// | ddk::Suspendable     | mx_status_t DdkSuspend(uint32_t flags)             |
+// | ddk::Suspendable     | zx_status_t DdkSuspend(uint32_t flags)             |
 // |                      |                                                    |
-// | ddk::Resumable       | mx_status_t DdkResume(uint32_t flags)              |
+// | ddk::Resumable       | zx_status_t DdkResume(uint32_t flags)              |
 // +----------------------+----------------------------------------------------+
 //
 // Note: the ddk::FullDevice type alias may also be used if your device class
@@ -79,28 +79,28 @@
 //
 // class MyDevice : public DeviceType {
 //   public:
-//     MyDevice(mx_device_t* parent)
+//     MyDevice(zx_device_t* parent)
 //       : DeviceType(parent) {}
 //
-//     mx_status_t Bind() {
+//     zx_status_t Bind() {
 //         // Any other setup required by MyDevice. The device_add_args_t will be filled out by the
 //         // base class.
 //         return DdkAdd("my-device-name");
 //     }
 //
 //     // Methods required by the ddk mixins
-//     mx_status_t DdkOpen(mx_device_t** dev_out, uint32_t flags);
-//     mx_status_t DdkClose(uint32_t flags);
-//     mx_status_t DdkRead(void* buf, size_t count, mx_off_t off, size_t* actual);
+//     zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
+//     zx_status_t DdkClose(uint32_t flags);
+//     zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
 //     void DdkUnbind();
 //     void DdkRelease();
 // };
 //
-// extern "C" mx_status_t my_bind(mx_device_t* device,
+// extern "C" zx_status_t my_bind(zx_device_t* device,
 //                                void** cookie) {
 //     auto dev = unique_ptr<MyDevice>(new MyDevice(device));
 //     auto status = dev->Bind();
-//     if (status == MX_OK) {
+//     if (status == ZX_OK) {
 //         // devmgr is now in charge of the memory for dev
 //         dev.release();
 //     }
@@ -121,13 +121,13 @@ struct AnyProtocol {
 template <typename D>
 class GetProtocolable : public internal::base_mixin {
   protected:
-    explicit GetProtocolable(mx_protocol_device_t* proto) {
+    explicit GetProtocolable(zx_protocol_device_t* proto) {
         internal::CheckGetProtocolable<D>();
         proto->get_protocol = GetProtocol;
     }
 
   private:
-    static mx_status_t GetProtocol(void* ctx, uint32_t proto_id, void* out) {
+    static zx_status_t GetProtocol(void* ctx, uint32_t proto_id, void* out) {
         return static_cast<D*>(ctx)->DdkGetProtocol(proto_id, out);
     }
 };
@@ -135,13 +135,13 @@ class GetProtocolable : public internal::base_mixin {
 template <typename D>
 class Openable : public internal::base_mixin {
   protected:
-    explicit Openable(mx_protocol_device_t* proto) {
+    explicit Openable(zx_protocol_device_t* proto) {
         internal::CheckOpenable<D>();
         proto->open = Open;
     }
 
   private:
-    static mx_status_t Open(void* ctx, mx_device_t** dev_out, uint32_t flags) {
+    static zx_status_t Open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
         return static_cast<D*>(ctx)->DdkOpen(dev_out, flags);
     }
 };
@@ -149,13 +149,13 @@ class Openable : public internal::base_mixin {
 template <typename D>
 class OpenAtable : public internal::base_mixin {
   protected:
-    explicit OpenAtable(mx_protocol_device_t* proto) {
+    explicit OpenAtable(zx_protocol_device_t* proto) {
         internal::CheckOpenAtable<D>();
         proto->open_at = OpenAt;
     }
 
   private:
-    static mx_status_t OpenAt(void* ctx, mx_device_t** dev_out, const char* path,
+    static zx_status_t OpenAt(void* ctx, zx_device_t** dev_out, const char* path,
                               uint32_t flags) {
         return static_cast<D*>(ctx)->DdkOpenAt(dev_out, path, flags);
     }
@@ -164,13 +164,13 @@ class OpenAtable : public internal::base_mixin {
 template <typename D>
 class Closable : public internal::base_mixin {
   protected:
-    explicit Closable(mx_protocol_device_t* proto) {
+    explicit Closable(zx_protocol_device_t* proto) {
         internal::CheckClosable<D>();
         proto->close = Close;
     }
 
   private:
-    static mx_status_t Close(void* ctx, uint32_t flags) {
+    static zx_status_t Close(void* ctx, uint32_t flags) {
         return static_cast<D*>(ctx)->DdkClose(flags);
     }
 };
@@ -178,7 +178,7 @@ class Closable : public internal::base_mixin {
 template <typename D>
 class Unbindable : public internal::base_mixin {
   protected:
-    explicit Unbindable(mx_protocol_device_t* proto) {
+    explicit Unbindable(zx_protocol_device_t* proto) {
         internal::CheckUnbindable<D>();
         proto->unbind = Unbind;
     }
@@ -192,13 +192,13 @@ class Unbindable : public internal::base_mixin {
 template <typename D>
 class Readable : public internal::base_mixin {
   protected:
-    explicit Readable(mx_protocol_device_t* proto) {
+    explicit Readable(zx_protocol_device_t* proto) {
         internal::CheckReadable<D>();
         proto->read = Read;
     }
 
   private:
-    static mx_status_t Read(void* ctx, void* buf, size_t count, mx_off_t off, size_t* actual) {
+    static zx_status_t Read(void* ctx, void* buf, size_t count, zx_off_t off, size_t* actual) {
         return static_cast<D*>(ctx)->DdkRead(buf, count, off, actual);
     }
 };
@@ -206,13 +206,13 @@ class Readable : public internal::base_mixin {
 template <typename D>
 class Writable : public internal::base_mixin {
   protected:
-    explicit Writable(mx_protocol_device_t* proto) {
+    explicit Writable(zx_protocol_device_t* proto) {
         internal::CheckWritable<D>();
         proto->write = Write;
     }
 
   private:
-    static mx_status_t Write(void* ctx, const void* buf, size_t count, mx_off_t off,
+    static zx_status_t Write(void* ctx, const void* buf, size_t count, zx_off_t off,
                              size_t* actual) {
         return static_cast<D*>(ctx)->DdkWrite(buf, count, off, actual);
     }
@@ -221,7 +221,7 @@ class Writable : public internal::base_mixin {
 template <typename D>
 class IotxnQueueable : public internal::base_mixin {
   protected:
-    explicit IotxnQueueable(mx_protocol_device_t* proto) {
+    explicit IotxnQueueable(zx_protocol_device_t* proto) {
         internal::CheckIotxnQueueable<D>();
         proto->iotxn_queue = IotxnQueue;
     }
@@ -235,13 +235,13 @@ class IotxnQueueable : public internal::base_mixin {
 template <typename D>
 class GetSizable : public internal::base_mixin {
   protected:
-    explicit GetSizable(mx_protocol_device_t* proto) {
+    explicit GetSizable(zx_protocol_device_t* proto) {
         internal::CheckGetSizable<D>();
         proto->get_size = GetSize;
     }
 
   private:
-    static mx_off_t GetSize(void* ctx) {
+    static zx_off_t GetSize(void* ctx) {
         return static_cast<D*>(ctx)->DdkGetSize();
     }
 };
@@ -249,13 +249,13 @@ class GetSizable : public internal::base_mixin {
 template <typename D>
 class Ioctlable : public internal::base_mixin {
   protected:
-    explicit Ioctlable(mx_protocol_device_t* proto) {
+    explicit Ioctlable(zx_protocol_device_t* proto) {
         internal::CheckIoctlable<D>();
         proto->ioctl = Ioctl;
     }
 
   private:
-    static mx_status_t Ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
+    static zx_status_t Ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
                              void* out_buf, size_t out_len, size_t* out_actual) {
         return static_cast<D*>(ctx)->DdkIoctl(op, in_buf, in_len, out_buf, out_len, out_actual);
     }
@@ -264,13 +264,13 @@ class Ioctlable : public internal::base_mixin {
 template <typename D>
 class Suspendable : public internal::base_mixin {
   protected:
-    explicit Suspendable(mx_protocol_device_t* proto) {
+    explicit Suspendable(zx_protocol_device_t* proto) {
         internal::CheckSuspendable<D>();
         proto->suspend = Suspend;
     }
 
   private:
-    static mx_status_t Suspend(void* ctx, uint32_t flags) {
+    static zx_status_t Suspend(void* ctx, uint32_t flags) {
         return static_cast<D*>(ctx)->DdkSuspend(flags);
     }
 };
@@ -278,13 +278,13 @@ class Suspendable : public internal::base_mixin {
 template <typename D>
 class Resumable : public internal::base_mixin {
   protected:
-    explicit Resumable(mx_protocol_device_t* proto) {
+    explicit Resumable(zx_protocol_device_t* proto) {
         internal::CheckResumable<D>();
         proto->resume = Resume;
     }
 
   private:
-    static mx_status_t Resume(void* ctx, uint32_t flags) {
+    static zx_status_t Resume(void* ctx, uint32_t flags) {
         return static_cast<D*>(ctx)->DdkResume(flags);
     }
 };
@@ -297,9 +297,9 @@ class Resumable : public internal::base_mixin {
 template <class D, template <typename> class... Mixins>
 class Device : public ::ddk::internal::base_device, public Mixins<D>... {
   public:
-    mx_status_t DdkAdd(const char* name) {
+    zx_status_t DdkAdd(const char* name) {
         if (mxdev_ != nullptr) {
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
         }
 
         device_add_args_t args = {};
@@ -314,12 +314,12 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
         return device_add(parent_, &args, &mxdev_);
     }
 
-    mx_status_t DdkRemove() {
+    zx_status_t DdkRemove() {
         if (mxdev_ == nullptr) {
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
         }
 
-        mx_status_t res = device_remove(mxdev_);
+        zx_status_t res = device_remove(mxdev_);
         mxdev_ = nullptr;
         return res;
     }
@@ -327,24 +327,24 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
     const char* name() const { return mxdev() ? device_get_name(mxdev()) : nullptr; }
 
     // The opaque pointer representing this device.
-    mx_device_t* mxdev() const { return mxdev_; }
+    zx_device_t* mxdev() const { return mxdev_; }
     // The opaque pointer representing the device's parent.
-    mx_device_t* parent() const { return parent_; }
+    zx_device_t* parent() const { return parent_; }
 
-    void SetState(mx_signals_t stateflag) {
+    void SetState(zx_signals_t stateflag) {
         device_state_set(mxdev_, stateflag);
     }
 
-    void ClearState(mx_signals_t stateflag) {
+    void ClearState(zx_signals_t stateflag) {
         device_state_clr(mxdev_, stateflag);
     }
 
-    void ClearAndSetState(mx_signals_t clearflag, mx_signals_t setflag) {
+    void ClearAndSetState(zx_signals_t clearflag, zx_signals_t setflag) {
         device_state_clr_set(mxdev_, clearflag, setflag);
     }
 
   protected:
-    Device(mx_device_t* parent)
+    Device(zx_device_t* parent)
       : internal::base_device(parent),
         Mixins<D>(&ddk_device_proto_)... {
         internal::CheckMixins<Mixins<D>...>();
@@ -366,7 +366,7 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
     void AddProtocol(device_add_args_t* args,
                      typename fbl::enable_if<is_protocol<T>::value, T>::type* dummy = 0) {
         auto dev = static_cast<D*>(this);
-        MX_ASSERT(dev->ddk_proto_id_ > 0);
+        ZX_ASSERT(dev->ddk_proto_id_ > 0);
         args->proto_id = dev->ddk_proto_id_;
         args->proto_ops = dev->ddk_proto_ops_;
     }
@@ -378,7 +378,7 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
 };
 
 // Convenience type for implementations that would like to override all
-// mx_protocol_device_t methods.
+// zx_protocol_device_t methods.
 template <class D>
 using FullDevice = Device<D,
                           GetProtocolable,

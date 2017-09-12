@@ -57,39 +57,39 @@ static void DumpProcessListKeyMap() {
     printf("#fi : number of fifos\n");
 }
 
-static const char* ObjectTypeToString(mx_obj_type_t type) {
-    static_assert(MX_OBJ_TYPE_LAST == 23, "need to update switch below");
+static const char* ObjectTypeToString(zx_obj_type_t type) {
+    static_assert(ZX_OBJ_TYPE_LAST == 23, "need to update switch below");
 
     switch (type) {
-        case MX_OBJ_TYPE_PROCESS: return "process";
-        case MX_OBJ_TYPE_THREAD: return "thread";
-        case MX_OBJ_TYPE_VMO: return "vmo";
-        case MX_OBJ_TYPE_CHANNEL: return "channel";
-        case MX_OBJ_TYPE_EVENT: return "event";
-        case MX_OBJ_TYPE_PORT: return "port";
-        case MX_OBJ_TYPE_INTERRUPT: return "interrupt";
-        case MX_OBJ_TYPE_PCI_DEVICE: return "pci-device";
-        case MX_OBJ_TYPE_LOG: return "log";
-        case MX_OBJ_TYPE_SOCKET: return "socket";
-        case MX_OBJ_TYPE_RESOURCE: return "resource";
-        case MX_OBJ_TYPE_EVENT_PAIR: return "event-pair";
-        case MX_OBJ_TYPE_JOB: return "job";
-        case MX_OBJ_TYPE_VMAR: return "vmar";
-        case MX_OBJ_TYPE_FIFO: return "fifo";
-        case MX_OBJ_TYPE_GUEST: return "guest";
-        case MX_OBJ_TYPE_VCPU: return "vcpu";
-        case MX_OBJ_TYPE_TIMER: return "timer";
+        case ZX_OBJ_TYPE_PROCESS: return "process";
+        case ZX_OBJ_TYPE_THREAD: return "thread";
+        case ZX_OBJ_TYPE_VMO: return "vmo";
+        case ZX_OBJ_TYPE_CHANNEL: return "channel";
+        case ZX_OBJ_TYPE_EVENT: return "event";
+        case ZX_OBJ_TYPE_PORT: return "port";
+        case ZX_OBJ_TYPE_INTERRUPT: return "interrupt";
+        case ZX_OBJ_TYPE_PCI_DEVICE: return "pci-device";
+        case ZX_OBJ_TYPE_LOG: return "log";
+        case ZX_OBJ_TYPE_SOCKET: return "socket";
+        case ZX_OBJ_TYPE_RESOURCE: return "resource";
+        case ZX_OBJ_TYPE_EVENT_PAIR: return "event-pair";
+        case ZX_OBJ_TYPE_JOB: return "job";
+        case ZX_OBJ_TYPE_VMAR: return "vmar";
+        case ZX_OBJ_TYPE_FIFO: return "fifo";
+        case ZX_OBJ_TYPE_GUEST: return "guest";
+        case ZX_OBJ_TYPE_VCPU: return "vcpu";
+        case ZX_OBJ_TYPE_TIMER: return "timer";
         default: return "???";
     }
 }
 
 // Returns the count of a process's handles. If |handle_type| is non-NULL,
 // it should point to |size| elements. For each handle, the corresponding
-// mx_obj_type_t-indexed element of |handle_type| is incremented.
+// zx_obj_type_t-indexed element of |handle_type| is incremented.
 static uint32_t BuildHandleStats(const ProcessDispatcher& pd,
                                  uint32_t* handle_type, size_t size) {
     uint32_t total = 0;
-    pd.ForEachHandle([&](mx_handle_t handle, mx_rights_t rights,
+    pd.ForEachHandle([&](zx_handle_t handle, zx_rights_t rights,
                          fbl::RefPtr<const Dispatcher> disp) {
         if (handle_type) {
             uint32_t type = static_cast<uint32_t>(disp->get_type());
@@ -98,7 +98,7 @@ static uint32_t BuildHandleStats(const ProcessDispatcher& pd,
             }
         }
         ++total;
-        return MX_OK;
+        return ZX_OK;
     });
     return total;
 }
@@ -116,22 +116,22 @@ size_t ProcessDispatcher::PageCount() const {
 // buffer as strings.
 static void FormatHandleTypeCount(const ProcessDispatcher& pd,
                                   char *buf, size_t buf_len) {
-    uint32_t types[MX_OBJ_TYPE_LAST] = {0};
+    uint32_t types[ZX_OBJ_TYPE_LAST] = {0};
     uint32_t handle_count = BuildHandleStats(pd, types, sizeof(types));
 
     snprintf(buf, buf_len, "%4u: %3u %3u %3u %3u %3u %3u %3u %3u %3u %3u %3u",
              handle_count,
-             types[MX_OBJ_TYPE_JOB],
-             types[MX_OBJ_TYPE_PROCESS],
-             types[MX_OBJ_TYPE_THREAD],
-             types[MX_OBJ_TYPE_VMO],
-             types[MX_OBJ_TYPE_VMAR],
-             types[MX_OBJ_TYPE_CHANNEL],
-             types[MX_OBJ_TYPE_EVENT] + types[MX_OBJ_TYPE_EVENT_PAIR],
-             types[MX_OBJ_TYPE_PORT],
-             types[MX_OBJ_TYPE_SOCKET],
-             types[MX_OBJ_TYPE_TIMER],
-             types[MX_OBJ_TYPE_FIFO]
+             types[ZX_OBJ_TYPE_JOB],
+             types[ZX_OBJ_TYPE_PROCESS],
+             types[ZX_OBJ_TYPE_THREAD],
+             types[ZX_OBJ_TYPE_VMO],
+             types[ZX_OBJ_TYPE_VMAR],
+             types[ZX_OBJ_TYPE_CHANNEL],
+             types[ZX_OBJ_TYPE_EVENT] + types[ZX_OBJ_TYPE_EVENT_PAIR],
+             types[ZX_OBJ_TYPE_PORT],
+             types[ZX_OBJ_TYPE_SOCKET],
+             types[ZX_OBJ_TYPE_TIMER],
+             types[ZX_OBJ_TYPE_FIFO]
              );
 }
 
@@ -139,10 +139,10 @@ void DumpProcessList() {
     printf("%7s  #h:  #jb #pr #th #vo #vm #ch #ev #po #so #tm #fi [name]\n", "id");
 
     auto walker = MakeProcessWalker([](ProcessDispatcher* process) {
-        char handle_counts[(MX_OBJ_TYPE_LAST * 4) + 1 + /*slop*/ 16];
+        char handle_counts[(ZX_OBJ_TYPE_LAST * 4) + 1 + /*slop*/ 16];
         FormatHandleTypeCount(*process, handle_counts, sizeof(handle_counts));
 
-        char pname[MX_MAX_NAME_LEN];
+        char pname[ZX_MAX_NAME_LEN];
         process->get_name(pname);
         printf("%7" PRIu64 "%s [%s]\n",
                process->get_koid(),
@@ -156,14 +156,14 @@ void DumpJobList() {
     printf("All jobs from least to most important:\n");
     printf("%7s %s\n", "koid", "name");
     JobDispatcher::ForEachJobByImportance([&](JobDispatcher* job) {
-        char name[MX_MAX_NAME_LEN];
+        char name[ZX_MAX_NAME_LEN];
         job->get_name(name);
         printf("%7" PRIu64 " '%s'\n", job->get_koid(), name);
-        return MX_OK;
+        return ZX_OK;
     });
 }
 
-void DumpProcessHandles(mx_koid_t id) {
+void DumpProcessHandles(zx_koid_t id) {
     auto pd = ProcessDispatcher::LookupProcessById(id);
     if (!pd) {
         printf("process %" PRIu64 " not found!\n", id);
@@ -174,19 +174,19 @@ void DumpProcessHandles(mx_koid_t id) {
     printf("handle       koid : type\n");
 
     uint32_t total = 0;
-    pd->ForEachHandle([&](mx_handle_t handle, mx_rights_t rights,
+    pd->ForEachHandle([&](zx_handle_t handle, zx_rights_t rights,
                           fbl::RefPtr<const Dispatcher> disp) {
         printf("%9x %7" PRIu64 " : %s\n",
             handle, disp->get_koid(), ObjectTypeToString(disp->get_type()));
         ++total;
-        return MX_OK;
+        return ZX_OK;
     });
     printf("total: %u handles\n", total);
 }
 
 void ktrace_report_live_processes() {
     auto walker = MakeProcessWalker([](ProcessDispatcher* process) {
-        char name[MX_MAX_NAME_LEN];
+        char name[ZX_MAX_NAME_LEN];
         process->get_name(name);
         ktrace_name(TAG_PROC_NAME, (uint32_t)process->get_koid(), 0, name);
     });
@@ -197,12 +197,12 @@ void ktrace_report_live_processes() {
 static constexpr size_t kRightsStrLen = 8;
 static const char* VmoRightsToString(uint32_t rights, char str[kRightsStrLen]) {
     char* c = str;
-    *c++ = (rights & MX_RIGHT_READ) ? 'r' : '-';
-    *c++ = (rights & MX_RIGHT_WRITE) ? 'w' : '-';
-    *c++ = (rights & MX_RIGHT_EXECUTE) ? 'x' : '-';
-    *c++ = (rights & MX_RIGHT_MAP) ? 'm' : '-';
-    *c++ = (rights & MX_RIGHT_DUPLICATE) ? 'd' : '-';
-    *c++ = (rights & MX_RIGHT_TRANSFER) ? 't' : '-';
+    *c++ = (rights & ZX_RIGHT_READ) ? 'r' : '-';
+    *c++ = (rights & ZX_RIGHT_WRITE) ? 'w' : '-';
+    *c++ = (rights & ZX_RIGHT_EXECUTE) ? 'x' : '-';
+    *c++ = (rights & ZX_RIGHT_MAP) ? 'm' : '-';
+    *c++ = (rights & ZX_RIGHT_DUPLICATE) ? 'd' : '-';
+    *c++ = (rights & ZX_RIGHT_TRANSFER) ? 't' : '-';
     *c = '\0';
     return str;
 }
@@ -217,10 +217,10 @@ static void PrintVmoDumpHeader(bool handles) {
 
 static void DumpVmObject(
     const VmObject& vmo, char format_unit,
-    mx_handle_t handle, uint32_t rights, mx_koid_t koid) {
+    zx_handle_t handle, uint32_t rights, zx_koid_t koid) {
 
     char handle_str[11];
-    if (handle != MX_HANDLE_INVALID) {
+    if (handle != ZX_HANDLE_INVALID) {
         snprintf(handle_str, sizeof(handle_str),
                  "%u", static_cast<uint32_t>(handle));
     } else {
@@ -256,7 +256,7 @@ static void DumpVmObject(
         clone_str[1] = '\0';
     }
 
-    char name[MX_MAX_NAME_LEN];
+    char name[ZX_MAX_NAME_LEN];
     vmo.get_name(name, sizeof(name));
     if (name[0] == '\0') {
         name[0] = '-';
@@ -299,18 +299,18 @@ static void DumpAllVmObjects(bool hidden_only, char format_unit) {
     PrintVmoDumpHeader(/* handles */ false);
     VmObject::ForEach([=](const VmObject& vmo) {
         if (hidden_only && vmo.IsMappedByUser()) {
-            return MX_OK;
+            return ZX_OK;
         }
         DumpVmObject(
             vmo,
             format_unit,
-            MX_HANDLE_INVALID,
+            ZX_HANDLE_INVALID,
             /* rights */ 0u,
             /* koid */ vmo.user_id());
         // TODO(dbort): Dump the VmAspaces (processes) that map the VMO.
         // TODO(dbort): Dump the processes that hold handles to the VMO.
         //     This will be a lot harder to gather.
-        return MX_OK;
+        return ZX_OK;
     });
     PrintVmoDumpHeader(/* handles */ false);
 }
@@ -326,7 +326,7 @@ public:
         DumpVmObject(
             *vmo,
             format_unit_,
-            MX_HANDLE_INVALID,
+            ZX_HANDLE_INVALID,
             /* rights */ 0u,
             /* koid */ vmo->user_id());
         return true;
@@ -337,7 +337,7 @@ private:
 } // namespace
 
 // Dumps all VMOs associated with a process.
-static void DumpProcessVmObjects(mx_koid_t id, char format_unit) {
+static void DumpProcessVmObjects(zx_koid_t id, char format_unit) {
     auto pd = ProcessDispatcher::LookupProcessById(id);
     if (!pd) {
         printf("process not found!\n");
@@ -350,11 +350,11 @@ static void DumpProcessVmObjects(mx_koid_t id, char format_unit) {
     int count = 0;
     uint64_t total_size = 0;
     uint64_t total_alloc = 0;
-    pd->ForEachHandle([&](mx_handle_t handle, mx_rights_t rights,
+    pd->ForEachHandle([&](zx_handle_t handle, zx_rights_t rights,
                           fbl::RefPtr<const Dispatcher> disp) {
         auto vmod = DownCastDispatcher<const VmObjectDispatcher>(&disp);
         if (vmod == nullptr) {
-            return MX_OK;
+            return ZX_OK;
         }
         auto vmo = vmod->vmo();
         DumpVmObject(*vmo, format_unit, handle, rights, vmod->get_koid());
@@ -366,7 +366,7 @@ static void DumpProcessVmObjects(mx_koid_t id, char format_unit) {
         // TODO: Doing this twice (here and in DumpVmObject) is a waste of
         // work, and can get out of sync.
         total_alloc += vmo->AllocatedPages() * PAGE_SIZE;
-        return MX_OK;
+        return ZX_OK;
     });
     char size_str[MAX_FORMAT_SIZE_LEN];
     char alloc_str[MAX_FORMAT_SIZE_LEN];
@@ -385,7 +385,7 @@ static void DumpProcessVmObjects(mx_koid_t id, char format_unit) {
     PrintVmoDumpHeader(/* handles */ false);
 }
 
-void KillProcess(mx_koid_t id) {
+void KillProcess(zx_koid_t id) {
     // search the process list and send a kill if found
     auto pd = ProcessDispatcher::LookupProcessById(id);
     if (!pd) {
@@ -422,14 +422,14 @@ public:
 };
 } // namespace
 
-mx_status_t VmAspace::GetMemoryUsage(vm_usage_t* usage) {
+zx_status_t VmAspace::GetMemoryUsage(vm_usage_t* usage) {
     VmCounter vc;
     if (!EnumerateChildren(&vc)) {
         *usage = {};
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
     *usage = vc.usage;
-    return MX_OK;
+    return ZX_OK;
 }
 
 namespace {
@@ -439,13 +439,13 @@ unsigned int arch_mmu_flags_to_vm_flags(unsigned int arch_mmu_flags) {
     }
     unsigned int ret = 0;
     if (arch_mmu_flags & ARCH_MMU_FLAG_PERM_READ) {
-        ret |= MX_VM_FLAG_PERM_READ;
+        ret |= ZX_VM_FLAG_PERM_READ;
     }
     if (arch_mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) {
-        ret |= MX_VM_FLAG_PERM_WRITE;
+        ret |= ZX_VM_FLAG_PERM_WRITE;
     }
     if (arch_mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
-        ret |= MX_VM_FLAG_PERM_EXECUTE;
+        ret |= ZX_VM_FLAG_PERM_EXECUTE;
     }
     return ret;
 }
@@ -455,19 +455,19 @@ class VmMapBuilder final : public VmEnumerator {
 public:
     // NOTE: Code outside of the syscall layer should not typically know about
     // user_ptrs; do not use this pattern as an example.
-    VmMapBuilder(user_ptr<mx_info_maps_t> maps, size_t max)
+    VmMapBuilder(user_ptr<zx_info_maps_t> maps, size_t max)
         : maps_(maps), max_(max) {}
 
     bool OnVmAddressRegion(const VmAddressRegion* vmar, uint depth) override {
         available_++;
         if (nelem_ < max_) {
-            mx_info_maps_t entry = {};
+            zx_info_maps_t entry = {};
             strlcpy(entry.name, vmar->name(), sizeof(entry.name));
             entry.base = vmar->base();
             entry.size = vmar->size();
             entry.depth = depth + 1; // The root aspace is depth 0.
-            entry.type = MX_INFO_MAPS_TYPE_VMAR;
-            if (maps_.copy_array_to_user(&entry, 1, nelem_) != MX_OK) {
+            entry.type = ZX_INFO_MAPS_TYPE_VMAR;
+            if (maps_.copy_array_to_user(&entry, 1, nelem_) != ZX_OK) {
                 return false;
             }
             nelem_++;
@@ -479,20 +479,20 @@ public:
                      uint depth) override {
         available_++;
         if (nelem_ < max_) {
-            mx_info_maps_t entry = {};
+            zx_info_maps_t entry = {};
             auto vmo = map->vmo();
             vmo->get_name(entry.name, sizeof(entry.name));
             entry.base = map->base();
             entry.size = map->size();
             entry.depth = depth + 1; // The root aspace is depth 0.
-            entry.type = MX_INFO_MAPS_TYPE_MAPPING;
-            mx_info_maps_mapping_t* u = &entry.u.mapping;
+            entry.type = ZX_INFO_MAPS_TYPE_MAPPING;
+            zx_info_maps_mapping_t* u = &entry.u.mapping;
             u->mmu_flags =
                 arch_mmu_flags_to_vm_flags(map->arch_mmu_flags());
             u->vmo_koid = vmo->user_id();
             u->committed_pages = vmo->AllocatedPagesInRange(
                 map->object_offset(), map->size());
-            if (maps_.copy_array_to_user(&entry, 1, nelem_) != MX_OK) {
+            if (maps_.copy_array_to_user(&entry, 1, nelem_) != ZX_OK) {
                 return false;
             }
             nelem_++;
@@ -507,31 +507,31 @@ private:
     // The caller must write an entry for the root VmAspace at index 0.
     size_t nelem_ = 1;
     size_t available_ = 1;
-    user_ptr<mx_info_maps_t> maps_;
+    user_ptr<zx_info_maps_t> maps_;
     size_t max_;
 };
 } // namespace
 
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-mx_status_t GetVmAspaceMaps(fbl::RefPtr<VmAspace> aspace,
-                            user_ptr<mx_info_maps_t> maps, size_t max,
+zx_status_t GetVmAspaceMaps(fbl::RefPtr<VmAspace> aspace,
+                            user_ptr<zx_info_maps_t> maps, size_t max,
                             size_t* actual, size_t* available) {
     DEBUG_ASSERT(aspace != nullptr);
     *actual = 0;
     *available = 0;
     if (aspace->is_destroyed()) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     if (max > 0) {
-        mx_info_maps_t entry = {};
+        zx_info_maps_t entry = {};
         strlcpy(entry.name, aspace->name(), sizeof(entry.name));
         entry.base = aspace->base();
         entry.size = aspace->size();
         entry.depth = 0;
-        entry.type = MX_INFO_MAPS_TYPE_ASPACE;
-        if (maps.copy_array_to_user(&entry, 1, 0) != MX_OK) {
-            return MX_ERR_INVALID_ARGS;
+        entry.type = ZX_INFO_MAPS_TYPE_ASPACE;
+        if (maps.copy_array_to_user(&entry, 1, 0) != ZX_OK) {
+            return ZX_ERR_INVALID_ARGS;
         }
     }
 
@@ -539,17 +539,17 @@ mx_status_t GetVmAspaceMaps(fbl::RefPtr<VmAspace> aspace,
     if (!aspace->EnumerateChildren(&b)) {
         // VmMapBuilder only returns false
         // when it can't copy to the user pointer.
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     *actual = max > 0 ? b.nelem() : 0;
     *available = b.available();
-    return MX_OK;
+    return ZX_OK;
 }
 
 namespace {
-mx_info_vmo_t VmoToInfoEntry(const VmObject* vmo,
-                             bool is_handle, mx_rights_t handle_rights) {
-    mx_info_vmo_t entry = {};
+zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo,
+                             bool is_handle, zx_rights_t handle_rights) {
+    zx_info_vmo_t entry = {};
     entry.koid = vmo->user_id();
     vmo->get_name(entry.name, sizeof(entry.name));
     entry.size_bytes = vmo->size();
@@ -558,14 +558,14 @@ mx_info_vmo_t VmoToInfoEntry(const VmObject* vmo,
     entry.num_mappings = vmo->num_mappings();
     entry.share_count = vmo->share_count();
     entry.flags =
-        (vmo->is_paged() ? MX_INFO_VMO_TYPE_PAGED : MX_INFO_VMO_TYPE_PHYSICAL) |
-        (vmo->is_cow_clone() ? MX_INFO_VMO_IS_COW_CLONE : 0);
+        (vmo->is_paged() ? ZX_INFO_VMO_TYPE_PAGED : ZX_INFO_VMO_TYPE_PHYSICAL) |
+        (vmo->is_cow_clone() ? ZX_INFO_VMO_IS_COW_CLONE : 0);
     entry.committed_bytes = vmo->AllocatedPages() * PAGE_SIZE;
     if (is_handle) {
-        entry.flags |= MX_INFO_VMO_VIA_HANDLE;
+        entry.flags |= ZX_INFO_VMO_VIA_HANDLE;
         entry.handle_rights = handle_rights;
     } else {
-        entry.flags |= MX_INFO_VMO_VIA_MAPPING;
+        entry.flags |= ZX_INFO_VMO_VIA_MAPPING;
     }
     return entry;
 }
@@ -575,7 +575,7 @@ class AspaceVmoEnumerator final : public VmEnumerator {
 public:
     // NOTE: Code outside of the syscall layer should not typically know about
     // user_ptrs; do not use this pattern as an example.
-    AspaceVmoEnumerator(user_ptr<mx_info_vmo_t> vmos, size_t max)
+    AspaceVmoEnumerator(user_ptr<zx_info_vmo_t> vmos, size_t max)
         : vmos_(vmos), max_(max) {}
 
     bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar,
@@ -585,10 +585,10 @@ public:
             // We're likely to see the same VMO a couple times in a given
             // address space (e.g., somelib.so mapped as r--, r-x), but leave it
             // to userspace to do deduping.
-            mx_info_vmo_t entry = VmoToInfoEntry(map->vmo().get(),
+            zx_info_vmo_t entry = VmoToInfoEntry(map->vmo().get(),
                                                  /*is_handle=*/false,
                                                  /*handle_rights=*/0);
-            if (vmos_.copy_array_to_user(&entry, 1, nelem_) != MX_OK) {
+            if (vmos_.copy_array_to_user(&entry, 1, nelem_) != ZX_OK) {
                 return false;
             }
             nelem_++;
@@ -600,7 +600,7 @@ public:
     size_t available() const { return available_; }
 
 private:
-    const user_ptr<mx_info_vmo_t> vmos_;
+    const user_ptr<zx_info_vmo_t> vmos_;
     const size_t max_;
 
     size_t nelem_ = 0;
@@ -610,8 +610,8 @@ private:
 
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-mx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> aspace,
-                            user_ptr<mx_info_vmo_t> vmos, size_t max,
+zx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> aspace,
+                            user_ptr<zx_info_vmo_t> vmos, size_t max,
                             size_t* actual, size_t* available) {
     DEBUG_ASSERT(aspace != nullptr);
     DEBUG_ASSERT(actual != nullptr);
@@ -619,24 +619,24 @@ mx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> aspace,
     *actual = 0;
     *available = 0;
     if (aspace->is_destroyed()) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     AspaceVmoEnumerator ave(vmos, max);
     if (!aspace->EnumerateChildren(&ave)) {
         // AspaceVmoEnumerator only returns false
         // when it can't copy to the user pointer.
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     *actual = ave.nelem();
     *available = ave.available();
-    return MX_OK;
+    return ZX_OK;
 }
 
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-mx_status_t GetProcessVmosViaHandles(ProcessDispatcher* process,
-                                     user_ptr<mx_info_vmo_t> vmos, size_t max,
+zx_status_t GetProcessVmosViaHandles(ProcessDispatcher* process,
+                                     user_ptr<zx_info_vmo_t> vmos, size_t max,
                                      size_t* actual_out, size_t* available_out) {
     DEBUG_ASSERT(process != nullptr);
     DEBUG_ASSERT(actual_out != nullptr);
@@ -645,35 +645,35 @@ mx_status_t GetProcessVmosViaHandles(ProcessDispatcher* process,
     size_t available = 0;
     // We may see multiple handles to the same VMO, but leave it to userspace to
     // do deduping.
-    mx_status_t s = process->ForEachHandle([&](mx_handle_t handle,
-                                               mx_rights_t rights,
+    zx_status_t s = process->ForEachHandle([&](zx_handle_t handle,
+                                               zx_rights_t rights,
                                                fbl::RefPtr<Dispatcher> disp) {
         auto vmod = DownCastDispatcher<VmObjectDispatcher>(&disp);
         if (vmod == nullptr) {
             // This handle isn't a VMO; skip it.
-            return MX_OK;
+            return ZX_OK;
         }
         available++;
         if (actual < max) {
-            mx_info_vmo_t entry = VmoToInfoEntry(vmod->vmo().get(),
+            zx_info_vmo_t entry = VmoToInfoEntry(vmod->vmo().get(),
                                                  /*is_handle=*/true,
                                                  rights);
-            if (vmos.copy_array_to_user(&entry, 1, actual) != MX_OK) {
-                return MX_ERR_INVALID_ARGS;
+            if (vmos.copy_array_to_user(&entry, 1, actual) != ZX_OK) {
+                return ZX_ERR_INVALID_ARGS;
             }
             actual++;
         }
-        return MX_OK;
+        return ZX_OK;
     });
-    if (s != MX_OK) {
+    if (s != ZX_OK) {
         return s;
     }
     *actual_out = actual;
     *available_out = available;
-    return MX_OK;
+    return ZX_OK;
 }
 
-void DumpProcessAddressSpace(mx_koid_t id) {
+void DumpProcessAddressSpace(zx_koid_t id) {
     auto pd = ProcessDispatcher::LookupProcessById(id);
     if (!pd) {
         printf("process %" PRIu64 " not found!\n", id);
@@ -729,7 +729,7 @@ void DumpProcessMemoryUsage(const char* prefix, size_t min_pages) {
     auto walker = MakeProcessWalker([&](ProcessDispatcher* process) {
         size_t pages = process->PageCount();
         if (pages >= min_pages) {
-            char pname[MX_MAX_NAME_LEN];
+            char pname[ZX_MAX_NAME_LEN];
             process->get_name(pname);
             printf("%sproc %5" PRIu64 " %4zuM '%s'\n",
                    prefix, process->get_koid(), pages / 256, pname);
@@ -840,5 +840,5 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
 }
 
 STATIC_COMMAND_START
-STATIC_COMMAND("mx", "kernel object diagnostics", &cmd_diagnostics)
-STATIC_COMMAND_END(mx);
+STATIC_COMMAND("zx", "kernel object diagnostics", &cmd_diagnostics)
+STATIC_COMMAND_END(zx);

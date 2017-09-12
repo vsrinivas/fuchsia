@@ -9,7 +9,7 @@
 #include <ddk/iotxn.h>
 #include <ddk/protocol/block.h>
 #include <ddk/protocol/usb.h>
-#include <magenta/listnode.h>
+#include <zircon/listnode.h>
 #include <sync/completion.h>
 
 #include <threads.h>
@@ -23,7 +23,7 @@ typedef struct {
 
 // struct representing a block device for a logical unit
 typedef struct {
-    mx_device_t* mxdev;         // block device we publish
+    zx_device_t* mxdev;         // block device we publish
     block_callbacks_t* cb;      // callbacks for async block protocol
 
     uint64_t total_blocks;
@@ -36,8 +36,8 @@ typedef struct {
 
 // main struct for the UMS driver
 typedef struct {
-    mx_device_t* mxdev;         // root device we publish
-    mx_device_t* usb_mxdev;     // USB device we are bound to
+    zx_device_t* mxdev;         // root device we publish
+    zx_device_t* usb_mxdev;     // USB device we are bound to
     usb_protocol_t usb;
 
     uint32_t tag_send;          // next tag to send in CBW
@@ -72,4 +72,4 @@ typedef struct {
 } ums_t;
 #define block_to_ums(block) containerof(block - block->lun, ums_t, block_devs)
 
-mx_status_t ums_block_add_device(ums_t* ums, ums_block_t* dev);
+zx_status_t ums_block_add_device(ums_t* ums, ums_block_t* dev);

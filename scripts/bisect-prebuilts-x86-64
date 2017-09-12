@@ -6,7 +6,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# Use this script to bisect a regression using the prebuilt magenta kernel images. The arguments to
+# Use this script to bisect a regression using the prebuilt zircon kernel images. The arguments to
 # this script are passed to 'git bisect start'
 
 set -e

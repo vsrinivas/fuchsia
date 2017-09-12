@@ -14,7 +14,7 @@
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
 #include <kernel/timer.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/array.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
@@ -55,7 +55,7 @@ public:
     ~Guest();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Guest);
 
-    status_t SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
+    status_t SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
                      fbl::RefPtr<PortDispatcher> port, uint64_t key);
 
     GuestPhysicalAddressSpace* AddressSpace() const { return gpas_.get(); }
@@ -89,14 +89,14 @@ struct LocalApicState {
 /* Represents a virtual CPU within a guest. */
 class Vcpu {
 public:
-    static status_t Create(mx_vaddr_t ip, mx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
+    static status_t Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
                            paddr_t apic_access_address, paddr_t msr_bitmaps_address,
                            GuestPhysicalAddressSpace* gpas, PacketMux& mux,
                            fbl::unique_ptr<Vcpu>* out);
     ~Vcpu();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vcpu);
 
-    status_t Resume(mx_port_packet_t* packet);
+    status_t Resume(zx_port_packet_t* packet);
     status_t Interrupt(uint32_t interrupt);
     status_t ReadState(uint32_t kind, void* buffer, uint32_t len) const;
     status_t WriteState(uint32_t kind, const void* buffer, uint32_t len);
@@ -123,17 +123,17 @@ private:
 status_t arch_guest_create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* guest);
 
 /* Set a trap within a guest. */
-status_t arch_guest_set_trap(Guest* guest, uint32_t kind, mx_vaddr_t addr, size_t len,
+status_t arch_guest_set_trap(Guest* guest, uint32_t kind, zx_vaddr_t addr, size_t len,
                              fbl::RefPtr<PortDispatcher> port, uint64_t key);
 
 /* Create a VCPU. */
-status_t x86_vcpu_create(mx_vaddr_t ip, mx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
+status_t x86_vcpu_create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
                          paddr_t apic_access_address, paddr_t msr_bitmaps_address,
                          GuestPhysicalAddressSpace* gpas, PacketMux& mux,
                          fbl::unique_ptr<Vcpu>* out);
 
 /* Resume execution of a VCPU. */
-status_t arch_vcpu_resume(Vcpu* vcpu, mx_port_packet_t* packet);
+status_t arch_vcpu_resume(Vcpu* vcpu, zx_port_packet_t* packet);
 
 /* Issue an interrupt on a VCPU. */
 status_t arch_vcpu_interrupt(Vcpu* vcpu, uint32_t interrupt);

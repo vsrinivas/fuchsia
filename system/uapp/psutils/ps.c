@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/status.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/exception.h>
-#include <magenta/syscalls/object.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/object.h>
 #include <pretty/sizes.h>
 #include <task-utils/walker.h>
 
@@ -24,7 +24,7 @@ typedef struct {
     char koid_str[MAX_KOID_LEN];
     char parent_koid_str[MAX_KOID_LEN];
     int depth;
-    char name[MX_MAX_NAME_LEN];
+    char name[ZX_MAX_NAME_LEN];
     char state_str[MAX_STATE_LEN];
     size_t pss_bytes;
     size_t private_bytes;
@@ -62,12 +62,12 @@ static task_table_t tasks = {};
 static task_entry_t* job_stack[JOB_STACK_SIZE];
 
 // Adds a job's information to |tasks|.
-static mx_status_t job_callback(void* unused_ctx, int depth, mx_handle_t job,
-                                mx_koid_t koid, mx_koid_t parent_koid) {
+static zx_status_t job_callback(void* unused_ctx, int depth, zx_handle_t job,
+                                zx_koid_t koid, zx_koid_t parent_koid) {
     task_entry_t e = {.type = 'j', .depth = depth};
-    mx_status_t status =
-        mx_object_get_property(job, MX_PROP_NAME, e.name, sizeof(e.name));
-    if (status != MX_OK) {
+    zx_status_t status =
+        zx_object_get_property(job, ZX_PROP_NAME, e.name, sizeof(e.name));
+    if (status != ZX_OK) {
         // This will abort walk_job_tree(), so we don't need to worry
         // about job_stack.
         return status;
@@ -78,26 +78,26 @@ static mx_status_t job_callback(void* unused_ctx, int depth, mx_handle_t job,
     // Put our entry pointer on the job stack so our descendants can find us.
     assert(depth < JOB_STACK_SIZE);
     job_stack[depth] = add_entry(&tasks, &e);
-    return MX_OK;
+    return ZX_OK;
 }
 
 // Adds a process's information to |tasks|.
-static mx_status_t process_callback(void* unused_ctx, int depth,
-                                    mx_handle_t process,
-                                    mx_koid_t koid, mx_koid_t parent_koid) {
+static zx_status_t process_callback(void* unused_ctx, int depth,
+                                    zx_handle_t process,
+                                    zx_koid_t koid, zx_koid_t parent_koid) {
     task_entry_t e = {.type = 'p', .depth = depth};
-    mx_status_t status =
-        mx_object_get_property(process, MX_PROP_NAME, e.name, sizeof(e.name));
-    if (status != MX_OK) {
+    zx_status_t status =
+        zx_object_get_property(process, ZX_PROP_NAME, e.name, sizeof(e.name));
+    if (status != ZX_OK) {
         return status;
     }
-    mx_info_task_stats_t info;
-    status = mx_object_get_info(
-        process, MX_INFO_TASK_STATS, &info, sizeof(info), NULL, NULL);
-    if (status == MX_ERR_BAD_STATE) {
+    zx_info_task_stats_t info;
+    status = zx_object_get_info(
+        process, ZX_INFO_TASK_STATS, &info, sizeof(info), NULL, NULL);
+    if (status == ZX_ERR_BAD_STATE) {
         // Process has exited, but has not been destroyed.
         // Default to zero for all sizes.
-    } else if (status != MX_OK) {
+    } else if (status != ZX_OK) {
         return status;
     } else {
         e.private_bytes = info.mem_private_bytes;
@@ -118,26 +118,26 @@ static mx_status_t process_callback(void* unused_ctx, int depth,
     snprintf(e.parent_koid_str, sizeof(e.koid_str), "%" PRIu64, parent_koid);
     add_entry(&tasks, &e);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 // Return text representation of thread state.
-static const char* state_string(const mx_info_thread_t* info) {
-    if (info->wait_exception_port_type != MX_EXCEPTION_PORT_TYPE_NONE) {
+static const char* state_string(const zx_info_thread_t* info) {
+    if (info->wait_exception_port_type != ZX_EXCEPTION_PORT_TYPE_NONE) {
         return "excp";
     } else {
         switch (info->state) {
-        case MX_THREAD_STATE_NEW:
+        case ZX_THREAD_STATE_NEW:
             return "new";
-        case MX_THREAD_STATE_RUNNING:
+        case ZX_THREAD_STATE_RUNNING:
             return "running";
-        case MX_THREAD_STATE_SUSPENDED:
+        case ZX_THREAD_STATE_SUSPENDED:
             return "susp";
-        case MX_THREAD_STATE_BLOCKED:
+        case ZX_THREAD_STATE_BLOCKED:
             return "blocked";
-        case MX_THREAD_STATE_DYING:
+        case ZX_THREAD_STATE_DYING:
             return "dying";
-        case MX_THREAD_STATE_DEAD:
+        case ZX_THREAD_STATE_DEAD:
             return "dead";
         default:
             return "???";
@@ -146,19 +146,19 @@ static const char* state_string(const mx_info_thread_t* info) {
 }
 
 // Adds a thread's information to |tasks|.
-static mx_status_t thread_callback(void* unused_ctx, int depth,
-                                   mx_handle_t thread,
-                                   mx_koid_t koid, mx_koid_t parent_koid) {
+static zx_status_t thread_callback(void* unused_ctx, int depth,
+                                   zx_handle_t thread,
+                                   zx_koid_t koid, zx_koid_t parent_koid) {
     task_entry_t e = {.type = 't', .depth = depth};
-    mx_status_t status =
-        mx_object_get_property(thread, MX_PROP_NAME, e.name, sizeof(e.name));
-    if (status != MX_OK) {
+    zx_status_t status =
+        zx_object_get_property(thread, ZX_PROP_NAME, e.name, sizeof(e.name));
+    if (status != ZX_OK) {
         return status;
     }
-    mx_info_thread_t info;
-    status = mx_object_get_info(thread, MX_INFO_THREAD, &info, sizeof(info),
+    zx_info_thread_t info;
+    status = zx_object_get_info(thread, ZX_INFO_THREAD, &info, sizeof(info),
                                 NULL, NULL);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
     // TODO: Print thread stack size in one of the memory usage fields?
@@ -166,7 +166,7 @@ static mx_status_t thread_callback(void* unused_ctx, int depth,
     snprintf(e.parent_koid_str, sizeof(e.koid_str), "%" PRIu64, parent_koid);
     snprintf(e.state_str, sizeof(e.state_str), "%s", state_string(&info));
     add_entry(&tasks, &e);
-    return MX_OK;
+    return ZX_OK;
 }
 
 static void print_header(int id_w, bool with_threads) {
@@ -274,12 +274,12 @@ int main(int argc, char** argv) {
     }
 
     int ret = 0;
-    mx_status_t status =
+    zx_status_t status =
         walk_root_job_tree(job_callback, process_callback,
                            with_threads ? thread_callback : NULL, NULL);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         fprintf(stderr, "WARNING: walk_root_job_tree failed: %s (%d)\n",
-                mx_status_get_string(status), status);
+                zx_status_get_string(status), status);
         ret = 1;
     }
     print_table(&tasks, with_threads);

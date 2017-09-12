@@ -14,7 +14,7 @@ static_library("gpt") {
     "include/gpt/gpt.h",
   ]
   deps = [
-    "//magenta/third_party/ulib/cksum",
+    "//zircon/third_party/ulib/cksum",
   ]
   public_configs = [ ":gpt_config" ]
 }

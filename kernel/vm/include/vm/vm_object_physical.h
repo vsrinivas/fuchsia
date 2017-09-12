@@ -11,7 +11,7 @@
 #include <kernel/vm.h>
 #include <lib/user_copy/user_ptr.h>
 #include <list.h>
-#include <magenta/thread_annotations.h>
+#include <zircon/thread_annotations.h>
 #include <fbl/array.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>

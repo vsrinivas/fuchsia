@@ -17,7 +17,7 @@
 #ifdef __cplusplus
 
 #include <async/wait.h>
-#include <mx/event.h>
+#include <zx/event.h>
 #include <fbl/function.h>
 
 namespace trace {
@@ -41,12 +41,12 @@ public:
     void Stop();
 
 private:
-    async_wait_result_t Handle(async_t* async, mx_status_t status,
-                               const mx_packet_signal_t* signal);
+    async_wait_result_t Handle(async_t* async, zx_status_t status,
+                               const zx_packet_signal_t* signal);
 
     async_t* async_ = nullptr;
     fbl::Closure callback_;
-    mx::event event_;
+    zx::event event_;
     async::Wait wait_;
 };
 

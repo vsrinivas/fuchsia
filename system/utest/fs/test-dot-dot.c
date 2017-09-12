@@ -11,7 +11,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #include "filesystems.h"
 #include "misc.h"

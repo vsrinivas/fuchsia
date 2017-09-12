@@ -13,7 +13,7 @@ MODULE_SRCS += $(LOCAL_DIR)/tftp.c
 MODULE_EXPORT := a
 
 #MODULE_SO_NAME := tftp
-MODULE_LIBS := system/ulib/magenta system/ulib/c
+MODULE_LIBS := system/ulib/zircon system/ulib/c
 
 MODULE_COMPILEFLAGS := -DTFTP_USERLIB
 
@@ -27,9 +27,9 @@ MODULE_SRCS := $(LOCAL_DIR)/tftp-test.cpp $(LOCAL_DIR)/tftp-file-test.c
 
 MODULE_NAME := tftp-test
 
-MODULE_STATIC_LIBS := system/ulib/tftp system/ulib/fbl system/ulib/mxcpp
+MODULE_STATIC_LIBS := system/ulib/tftp system/ulib/fbl system/ulib/zxcpp
 
-MODULE_LIBS := system/ulib/unittest system/ulib/mxio system/ulib/c
+MODULE_LIBS := system/ulib/unittest system/ulib/fdio system/ulib/c
 
 include make/module.mk
 

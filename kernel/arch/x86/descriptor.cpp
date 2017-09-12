@@ -15,7 +15,7 @@
 #include <arch/arch_ops.h>
 #include <assert.h>
 #include <bits.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <err.h>
 #include <string.h>
 #include <trace.h>

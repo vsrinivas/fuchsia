@@ -1,13 +1,13 @@
 #include "libc.h"
-#include "magenta_impl.h"
+#include "zircon_impl.h"
 #include "pthread_impl.h"
 #include "setjmp_impl.h"
 #include <elf.h>
 #include <stdatomic.h>
 #include <string.h>
 
-#include <magenta/sanitizer.h>
-#include <magenta/syscalls.h>
+#include <zircon/sanitizer.h>
+#include <zircon/syscalls.h>
 #include <runtime/message.h>
 #include <runtime/processargs.h>
 #include <runtime/thread.h>
@@ -15,7 +15,7 @@
 // Hook for extension libraries to init. Extensions must zero out
 // handle[i] and handle_info[i] for any handles they claim.
 void __libc_extensions_init(uint32_t handle_count,
-                            mx_handle_t handle[],
+                            zx_handle_t handle[],
                             uint32_t handle_info[],
                             uint32_t name_count,
                             char** names) __attribute__((weak));
@@ -24,7 +24,7 @@ struct start_params {
     uint32_t argc, nhandles, namec;
     char** argv;
     char** names;
-    mx_handle_t* handles;
+    zx_handle_t* handles;
     uint32_t* handle_info;
     int (*main)(int, char**, char**);
     pthread_t td;
@@ -45,7 +45,7 @@ static void start_main(const struct start_params* p) {
         __libc_extensions_init(p->nhandles, p->handles, p->handle_info,
                                p->namec, p->names);
 
-    // Give any unclaimed handles to mx_get_startup_handle(). This function
+    // Give any unclaimed handles to zx_get_startup_handle(). This function
     // takes ownership of the data, but not the memory: it assumes that the
     // arrays are valid as long as the process is alive.
     __libc_startup_handles_init(p->nhandles, p->handles, p->handle_info);
@@ -69,9 +69,9 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
         uintptr_t stack_guard;
         struct setjmp_manglers setjmp_manglers;
     } randoms;
-    static_assert(sizeof(randoms) <= MX_CPRNG_DRAW_MAX_LEN, "");
-    mx_status_t status = _mx_cprng_draw(&randoms, sizeof(randoms), &actual);
-    if (status != MX_OK || actual != sizeof(randoms))
+    static_assert(sizeof(randoms) <= ZX_CPRNG_DRAW_MAX_LEN, "");
+    zx_status_t status = _zx_cprng_draw(&randoms, sizeof(randoms), &actual);
+    if (status != ZX_OK || actual != sizeof(randoms))
         __builtin_trap();
     __stack_chk_guard = randoms.stack_guard;
     __setjmp_manglers = randoms.setjmp_manglers;
@@ -82,25 +82,25 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
     __asm__("# keepalive %0" :: "m"(randoms));
 
     // extract process startup information from channel in arg
-    mx_handle_t bootstrap = (uintptr_t)arg;
+    zx_handle_t bootstrap = (uintptr_t)arg;
 
     struct start_params p = { .main = main };
     uint32_t nbytes;
-    status = mxr_message_size(bootstrap, &nbytes, &p.nhandles);
-    if (status != MX_OK)
+    status = zxr_message_size(bootstrap, &nbytes, &p.nhandles);
+    if (status != ZX_OK)
         nbytes = p.nhandles = 0;
 
-    MXR_PROCESSARGS_BUFFER(buffer, nbytes);
-    mx_handle_t handles[p.nhandles];
+    ZXR_PROCESSARGS_BUFFER(buffer, nbytes);
+    zx_handle_t handles[p.nhandles];
     p.handles = handles;
-    mx_proc_args_t* procargs = NULL;
-    if (status == MX_OK)
-        status = mxr_processargs_read(bootstrap, buffer, nbytes,
+    zx_proc_args_t* procargs = NULL;
+    if (status == ZX_OK)
+        status = zxr_processargs_read(bootstrap, buffer, nbytes,
                                       handles, p.nhandles,
                                       &procargs, &p.handle_info);
 
     uint32_t envc = 0;
-    if (status == MX_OK) {
+    if (status == ZX_OK) {
         p.argc = procargs->args_num;
         envc = procargs->environ_num;
         p.namec = procargs->names_num;
@@ -122,16 +122,16 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
     char* names[p.namec + 1];
     p.names = names;
 
-    if (status == MX_OK)
-        status = mxr_processargs_strings(buffer, nbytes, p.argv, __environ, p.names);
-    if (status != MX_OK) {
+    if (status == ZX_OK)
+        status = zxr_processargs_strings(buffer, nbytes, p.argv, __environ, p.names);
+    if (status != ZX_OK) {
         p.argc = 0;
         p.argv = __environ = NULL;
         p.namec = 0;
     }
 
     // Find the handles we're interested in among what we were given.
-    mx_handle_t main_thread_handle = MX_HANDLE_INVALID;
+    zx_handle_t main_thread_handle = ZX_HANDLE_INVALID;
     for (uint32_t i = 0; i < p.nhandles; ++i) {
         switch (PA_HND_TYPE(p.handle_info[i])) {
         case PA_PROC_SELF:
@@ -139,10 +139,10 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
             // linker startup, but now we have another one.  They
             // should of course be handles to the same process, but
             // just for cleanliness switch to the "main" one.
-            if (__magenta_process_self != MX_HANDLE_INVALID)
-                _mx_handle_close(__magenta_process_self);
-            __magenta_process_self = handles[i];
-            handles[i] = MX_HANDLE_INVALID;
+            if (__zircon_process_self != ZX_HANDLE_INVALID)
+                _zx_handle_close(__zircon_process_self);
+            __zircon_process_self = handles[i];
+            handles[i] = ZX_HANDLE_INVALID;
             p.handle_info[i] = 0;
             break;
 
@@ -151,25 +151,25 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
             // creation of additional processes.  It may or may not
             // be the job this process is a child of.  It may not
             // be provided at all.
-            if (__magenta_job_default != MX_HANDLE_INVALID)
-                _mx_handle_close(__magenta_job_default);
-            __magenta_job_default = handles[i];
-            handles[i] = MX_HANDLE_INVALID;
+            if (__zircon_job_default != ZX_HANDLE_INVALID)
+                _zx_handle_close(__zircon_job_default);
+            __zircon_job_default = handles[i];
+            handles[i] = ZX_HANDLE_INVALID;
             p.handle_info[i] = 0;
             break;
 
         case PA_VMAR_ROOT:
             // As above for PROC_SELF
-            if (__magenta_vmar_root_self != MX_HANDLE_INVALID)
-                _mx_handle_close(__magenta_vmar_root_self);
-            __magenta_vmar_root_self = handles[i];
-            handles[i] = MX_HANDLE_INVALID;
+            if (__zircon_vmar_root_self != ZX_HANDLE_INVALID)
+                _zx_handle_close(__zircon_vmar_root_self);
+            __zircon_vmar_root_self = handles[i];
+            handles[i] = ZX_HANDLE_INVALID;
             p.handle_info[i] = 0;
             break;
 
         case PA_THREAD_SELF:
             main_thread_handle = handles[i];
-            handles[i] = MX_HANDLE_INVALID;
+            handles[i] = ZX_HANDLE_INVALID;
             p.handle_info[i] = 0;
             break;
         }

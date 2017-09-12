@@ -10,7 +10,7 @@
 #include <string.h>
 
 #include <fs-management/mount.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <unittest/unittest.h>
 
 __BEGIN_CDECLS;
@@ -33,7 +33,7 @@ typedef struct fs_info {
 } fs_info_t;
 
 // Path to mounted filesystem currently being tested
-#define MOUNT_PATH "/tmp/magenta-fs-test"
+#define MOUNT_PATH "/tmp/zircon-fs-test"
 extern const char* test_root_path;
 
 // Path to the mounted filesystem's backing store (if it exists)

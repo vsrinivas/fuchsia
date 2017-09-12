@@ -24,6 +24,6 @@ MODULE_SRCS := $(LOCAL_DIR)/driver-info-app.c
 
 MODULE_STATIC_LIBS := system/ulib/driver-info
 
-MODULE_LIBS := system/ulib/mxio system/ulib/c
+MODULE_LIBS := system/ulib/fdio system/ulib/c
 
 include make/module.mk

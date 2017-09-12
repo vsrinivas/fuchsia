@@ -1,4 +1,4 @@
-# Magenta System Calls
+# Zircon System Calls
 
 ## Handles
 + [handle_close](syscalls/handle_close.md) - close a handle

@@ -7,7 +7,7 @@
 #include <asm.h>
 
 #include <arch/x86/vmx_state.h>
-#include <magenta/errors.h>
+#include <zircon/errors.h>
 
 .text
 
@@ -76,8 +76,8 @@ failure:
     // Set up the return address.
     pushq HS_RIP(%rdi)
 
-    // Return MX_ERR_INTERNAL.
-    mov $MX_ERR_INTERNAL, %eax
+    // Return ZX_ERR_INTERNAL.
+    mov $ZX_ERR_INTERNAL, %eax
     ret
 END_FUNCTION(vmx_enter)
 
@@ -136,7 +136,7 @@ FUNCTION(vmx_exit_entry)
     call vmx_exit
     add $8, %rsp
 
-    // Return MX_OK, using the return address of vmx_enter pushed above.
-    mov $MX_OK, %eax
+    // Return ZX_OK, using the return address of vmx_enter pushed above.
+    mov $ZX_OK, %eax
     ret
 END_FUNCTION(vmx_exit_entry)

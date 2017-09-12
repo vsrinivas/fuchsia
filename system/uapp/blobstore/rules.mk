@@ -27,16 +27,16 @@ MODULE_STATIC_LIBS := \
     system/ulib/block-client \
     system/ulib/digest \
     third_party/ulib/cryptolib \
-    system/ulib/mx \
-    system/ulib/mxcpp \
+    system/ulib/zx \
+    system/ulib/zxcpp \
     system/ulib/fbl \
     system/ulib/sync \
 
 MODULE_LIBS := \
     system/ulib/async.default \
     system/ulib/c \
-    system/ulib/magenta \
-    system/ulib/mxio \
+    system/ulib/zircon \
+    system/ulib/fdio \
     system/ulib/bitmap \
 
 include make/module.mk
@@ -68,8 +68,8 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/bitmap/include \
     -Isystem/ulib/digest/include \
     -Isystem/ulib/digest/include \
-    -Isystem/ulib/mxcpp/include \
-    -Isystem/ulib/mxio/include \
+    -Isystem/ulib/zxcpp/include \
+    -Isystem/ulib/fdio/include \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/fs/include \
 

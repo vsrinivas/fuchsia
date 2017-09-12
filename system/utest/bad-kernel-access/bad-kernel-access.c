@@ -6,21 +6,21 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <magenta/syscalls.h>
-#include <magenta/syscalls-ddk.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls-ddk.h>
 
 static int val = 5;
 
 void bad_kernel_access_read(void) {
     char cmd[50];
     snprintf(cmd, sizeof(cmd), "db %p 1", &val);
-    mx_debug_send_command(cmd, strlen(cmd));
+    zx_debug_send_command(cmd, strlen(cmd));
 }
 
 void bad_kernel_access_write(void) {
     char cmd[50];
     snprintf(cmd, sizeof(cmd), "mb %p 1 1", &val);
-    mx_debug_send_command(cmd, strlen(cmd));
+    zx_debug_send_command(cmd, strlen(cmd));
 }
 
 int main(int argc, char **argv) {

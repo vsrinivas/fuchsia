@@ -7,13 +7,13 @@
 
 LKMAKEROOT := .
 BUILDROOT ?= .
-DEFAULT_PROJECT ?= magenta-pc-x86-64
+DEFAULT_PROJECT ?= zircon-pc-x86-64
 TOOLCHAIN_PREFIX ?=
 
 ENABLE_BUILD_SYSROOT ?= true
 # if true, $BUILDDIR/sysroot/{lib,include,...} will be populated with
 # public libraries, headers, and other "build artifacts" necessary
-# for a toolchain to compile binaries for Magenta.
+# for a toolchain to compile binaries for Zircon.
 
 ENABLE_BUILD_LISTFILES ?= false
 # If true, various verbose listings (*.lst, *.sym, *,dump, etc) will

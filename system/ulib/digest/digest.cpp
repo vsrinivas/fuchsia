@@ -9,8 +9,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <magenta/assert.h>
-#include <magenta/errors.h>
+#include <zircon/assert.h>
+#include <zircon/errors.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 
@@ -27,11 +27,11 @@ Digest::Digest(const uint8_t* other) {
 }
 
 Digest::~Digest() {
-    MX_DEBUG_ASSERT(ref_count_ == 0);
+    ZX_DEBUG_ASSERT(ref_count_ == 0);
 }
 
 Digest& Digest::operator=(const Digest& rhs) {
-    MX_DEBUG_ASSERT(ref_count_ == 0);
+    ZX_DEBUG_ASSERT(ref_count_ == 0);
     if (this != &rhs) {
         memcpy(&ctx_, &rhs.ctx_, sizeof(ctx_));
         memcpy(bytes_, rhs.bytes_, kLength);
@@ -40,13 +40,13 @@ Digest& Digest::operator=(const Digest& rhs) {
 }
 
 Digest& Digest::operator=(const uint8_t* rhs) {
-    MX_DEBUG_ASSERT(ref_count_ == 0);
+    ZX_DEBUG_ASSERT(ref_count_ == 0);
     memcpy(bytes_, rhs, kLength);
     return *this;
 }
 
 void Digest::Init() {
-    MX_DEBUG_ASSERT(ref_count_ == 0);
+    ZX_DEBUG_ASSERT(ref_count_ == 0);
 #ifdef USE_LIBCRYPTO
     SHA256_Init(&ctx_);
 #else
@@ -55,8 +55,8 @@ void Digest::Init() {
 }
 
 void Digest::Update(const void* buf, size_t len) {
-    MX_DEBUG_ASSERT(ref_count_ == 0);
-    MX_DEBUG_ASSERT(len <= INT_MAX);
+    ZX_DEBUG_ASSERT(ref_count_ == 0);
+    ZX_DEBUG_ASSERT(len <= INT_MAX);
 #ifdef USE_LIBCRYPTO
     SHA256_Update(&ctx_, buf, len);
 #else
@@ -65,7 +65,7 @@ void Digest::Update(const void* buf, size_t len) {
 }
 
 const uint8_t* Digest::Final() {
-    MX_DEBUG_ASSERT(ref_count_ == 0);
+    ZX_DEBUG_ASSERT(ref_count_ == 0);
 #ifdef USE_LIBCRYPTO
     SHA256_Final(bytes_, &ctx_);
 #else
@@ -80,17 +80,17 @@ const uint8_t* Digest::Hash(const void* buf, size_t len) {
     return Final();
 }
 
-mx_status_t Digest::Parse(const char* hex, size_t len) {
-    MX_DEBUG_ASSERT(ref_count_ == 0);
+zx_status_t Digest::Parse(const char* hex, size_t len) {
+    ZX_DEBUG_ASSERT(ref_count_ == 0);
     if (len < sizeof(bytes_) * 2) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     uint8_t c = 0;
     size_t i = 0;
     for (size_t j = 0; j < sizeof(bytes_) * 2; ++j) {
         c = static_cast<uint8_t>(toupper(hex[j]) & 0xFF);
         if (!isxdigit(c)) {
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
         c = static_cast<uint8_t>(c < 'A' ? c - '0' : c - '7'); // '7' = 'A' - 10
         if (j % 2 == 0) {
@@ -99,12 +99,12 @@ mx_status_t Digest::Parse(const char* hex, size_t len) {
             bytes_[i++] |= c;
         }
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Digest::ToString(char* out, size_t len) const {
+zx_status_t Digest::ToString(char* out, size_t len) const {
     if (len < sizeof(bytes_) * 2 + 1) {
-        return MX_ERR_BUFFER_TOO_SMALL;
+        return ZX_ERR_BUFFER_TOO_SMALL;
     }
     memset(out, 0, len);
     char* p = out;
@@ -112,26 +112,26 @@ mx_status_t Digest::ToString(char* out, size_t len) const {
         sprintf(p, "%02x", bytes_[i]);
         p += 2;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Digest::CopyTo(uint8_t* out, size_t len) const {
+zx_status_t Digest::CopyTo(uint8_t* out, size_t len) const {
     if (len < sizeof(bytes_)) {
-        return MX_ERR_BUFFER_TOO_SMALL;
+        return ZX_ERR_BUFFER_TOO_SMALL;
     }
     memset(out, 0, len);
     memcpy(out, bytes_, sizeof(bytes_));
-    return MX_OK;
+    return ZX_OK;
 }
 
 const uint8_t* Digest::AcquireBytes() const {
-    MX_DEBUG_ASSERT(ref_count_ < SIZE_MAX);
+    ZX_DEBUG_ASSERT(ref_count_ < SIZE_MAX);
     ++ref_count_;
     return bytes_;
 }
 
 void Digest::ReleaseBytes() const {
-    MX_DEBUG_ASSERT(ref_count_ > 0);
+    ZX_DEBUG_ASSERT(ref_count_ > 0);
     --ref_count_;
 }
 
@@ -160,29 +160,29 @@ struct digest_t {
     Digest obj;
 };
 
-mx_status_t digest_init(digest_t** out) {
+zx_status_t digest_init(digest_t** out) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<digest_t> uptr(new (&ac) digest_t);
     if (!ac.check()) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     uptr->obj.Init();
     *out = uptr.release();
-    return MX_OK;
+    return ZX_OK;
 }
 
 void digest_update(digest_t* digest, const void* buf, size_t len) {
     digest->obj.Update(buf, len);
 }
 
-mx_status_t digest_final(digest_t* digest, void* out,
+zx_status_t digest_final(digest_t* digest, void* out,
                                 size_t out_len) {
     fbl::unique_ptr<digest_t> uptr(digest);
     uptr->obj.Final();
     return uptr->obj.CopyTo(static_cast<uint8_t*>(out), out_len);
 }
 
-mx_status_t digest_hash(const void* buf, size_t len, void* out,
+zx_status_t digest_hash(const void* buf, size_t len, void* out,
                                size_t out_len) {
     Digest digest;
     digest.Hash(buf, len);

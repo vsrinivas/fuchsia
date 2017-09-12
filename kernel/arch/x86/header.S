@@ -17,7 +17,7 @@
 
 
 
-#include <magenta/boot/bootdata.h>
+#include <zircon/boot/bootdata.h>
 
 .section .text.boot0, "ax", @progbits
 

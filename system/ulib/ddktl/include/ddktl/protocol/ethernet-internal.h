@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddktl/device-internal.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 
@@ -49,9 +49,9 @@ constexpr void CheckEthmacProtocolSubclass() {
     static_assert(internal::has_ethmac_query<D>::value,
                   "EthmacProtocol subclasses must implement EthmacQuery");
     static_assert(fbl::is_same<decltype(&D::EthmacQuery),
-                                mx_status_t (D::*)(uint32_t, ethmac_info_t*)>::value,
+                                zx_status_t (D::*)(uint32_t, ethmac_info_t*)>::value,
                   "EthmacQuery must be a non-static member function with signature "
-                  "'mx_status_t EthmacQuery(uint32_t, ethmac_info_t*)', and be visible to "
+                  "'zx_status_t EthmacQuery(uint32_t, ethmac_info_t*)', and be visible to "
                   "ddk::EthmacProtocol<D> (either because they are public, or because of "
                   "friendship).");
     static_assert(internal::has_ethmac_stop<D>::value,
@@ -64,9 +64,9 @@ constexpr void CheckEthmacProtocolSubclass() {
     static_assert(internal::has_ethmac_start<D>::value,
                   "EthmacProtocol subclasses must implement EthmacStart");
     static_assert(fbl::is_same<decltype(&D::EthmacStart),
-                                mx_status_t (D::*)(fbl::unique_ptr<EthmacIfcProxy>)>::value,
+                                zx_status_t (D::*)(fbl::unique_ptr<EthmacIfcProxy>)>::value,
                   "EthmacStart must be a non-static member function with signature "
-                  "'mx_status_t EthmacStart(fbl::unique_ptr<EthmacIfcProxy>)', and be visible "
+                  "'zx_status_t EthmacStart(fbl::unique_ptr<EthmacIfcProxy>)', and be visible "
                   "to ddk::EthmacProtocol<D> (either because they are public, or because of "
                   "friendship).");
     static_assert(internal::has_ethmac_send<D>::value,
@@ -74,7 +74,7 @@ constexpr void CheckEthmacProtocolSubclass() {
     static_assert(fbl::is_same<decltype(&D::EthmacSend),
                                 void (D::*)(uint32_t, void*, size_t)>::value,
                   "EthmacSend must be a non-static member function with signature "
-                  "'mx_status_t EthmacSend(uint32_t, void*, size_t)', and be visible to "
+                  "'zx_status_t EthmacSend(uint32_t, void*, size_t)', and be visible to "
                   "ddk::EthmacProtocol<D> (either because they are public, or because of "
                   "friendship).");
 }

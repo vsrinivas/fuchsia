@@ -19,8 +19,8 @@ MODULE_STATIC_LIBS := \
     system/ulib/fs \
     system/ulib/gpt \
     system/ulib/digest \
-    system/ulib/mx \
-    system/ulib/mxcpp \
+    system/ulib/zx \
+    system/ulib/zxcpp \
     system/ulib/fbl \
     system/ulib/sync \
     third_party/ulib/cryptolib \
@@ -28,8 +28,8 @@ MODULE_STATIC_LIBS := \
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/fs-management \
-    system/ulib/magenta \
-    system/ulib/mxio \
+    system/ulib/zircon \
+    system/ulib/fdio \
     system/ulib/unittest \
 
 include make/module.mk

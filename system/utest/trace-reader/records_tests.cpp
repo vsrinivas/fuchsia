@@ -23,8 +23,8 @@ bool process_thread_test() {
     BEGIN_TEST;
 
     trace::ProcessThread pt;
-    EXPECT_EQ(MX_KOID_INVALID, pt.process_koid());
-    EXPECT_EQ(MX_KOID_INVALID, pt.thread_koid());
+    EXPECT_EQ(ZX_KOID_INVALID, pt.process_koid());
+    EXPECT_EQ(ZX_KOID_INVALID, pt.thread_koid());
     EXPECT_FALSE(!!pt);
 
     pt = trace::ProcessThread(0, 1);
@@ -249,9 +249,9 @@ bool argument_value_test() {
 
     // koid
 
-    av = trace::ArgumentValue::MakeKoid(MX_KOID_INVALID);
+    av = trace::ArgumentValue::MakeKoid(ZX_KOID_INVALID);
     EXPECT_EQ(trace::ArgumentType::kKoid, av.type());
-    EXPECT_EQ(MX_KOID_INVALID, av.GetKoid());
+    EXPECT_EQ(ZX_KOID_INVALID, av.GetKoid());
 
     av = trace::ArgumentValue::MakeKoid(UINT64_MAX);
     EXPECT_EQ(trace::ArgumentType::kKoid, av.type());
@@ -685,10 +685,10 @@ bool record_test() {
         args.push_back(trace::Argument("arg2", trace::ArgumentValue::MakeDouble(-3.14)));
 
         trace::Record r(trace::Record::KernelObject{
-            123, MX_OBJ_TYPE_VMO, "name", fbl::move(args)});
+            123, ZX_OBJ_TYPE_VMO, "name", fbl::move(args)});
         EXPECT_EQ(trace::RecordType::kKernelObject, r.type());
         EXPECT_EQ(123, r.GetKernelObject().koid);
-        EXPECT_EQ(MX_OBJ_TYPE_VMO, r.GetKernelObject().object_type);
+        EXPECT_EQ(ZX_OBJ_TYPE_VMO, r.GetKernelObject().object_type);
         EXPECT_TRUE(r.GetKernelObject().name == "name");
         EXPECT_EQ(2, r.GetKernelObject().arguments.size());
         EXPECT_TRUE(r.GetKernelObject().arguments[0].name() == "arg1");
@@ -699,7 +699,7 @@ bool record_test() {
         trace::Record m(fbl::move(r));
         EXPECT_EQ(trace::RecordType::kKernelObject, m.type());
         EXPECT_EQ(123, m.GetKernelObject().koid);
-        EXPECT_EQ(MX_OBJ_TYPE_VMO, m.GetKernelObject().object_type);
+        EXPECT_EQ(ZX_OBJ_TYPE_VMO, m.GetKernelObject().object_type);
         EXPECT_TRUE(m.GetKernelObject().name == "name");
         EXPECT_EQ(2, m.GetKernelObject().arguments.size());
         EXPECT_TRUE(m.GetKernelObject().arguments[0].name() == "arg1");
@@ -710,7 +710,7 @@ bool record_test() {
         r = fbl::move(m);
         EXPECT_EQ(trace::RecordType::kKernelObject, r.type());
         EXPECT_EQ(123, r.GetKernelObject().koid);
-        EXPECT_EQ(MX_OBJ_TYPE_VMO, r.GetKernelObject().object_type);
+        EXPECT_EQ(ZX_OBJ_TYPE_VMO, r.GetKernelObject().object_type);
         EXPECT_TRUE(r.GetKernelObject().name == "name");
         EXPECT_EQ(2, r.GetKernelObject().arguments.size());
         EXPECT_TRUE(r.GetKernelObject().arguments[0].name() == "arg1");

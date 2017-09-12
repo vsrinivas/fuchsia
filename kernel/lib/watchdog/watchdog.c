@@ -10,7 +10,7 @@
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <platform.h>
 
 #include <kernel/thread.h>
@@ -38,7 +38,7 @@ static enum handler_return watchdog_timer_callback(struct timer *timer, lk_time_
     return INT_NO_RESCHEDULE;
 }
 
-mx_status_t watchdog_init(watchdog_t *dog, lk_time_t timeout, const char *name)
+zx_status_t watchdog_init(watchdog_t *dog, lk_time_t timeout, const char *name)
 {
     DEBUG_ASSERT(NULL != dog);
     DEBUG_ASSERT(INFINITE_TIME != timeout);
@@ -49,7 +49,7 @@ mx_status_t watchdog_init(watchdog_t *dog, lk_time_t timeout, const char *name)
     dog->timeout = timeout;
     timer_init(&dog->expire_timer);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 void watchdog_set_enabled(watchdog_t *dog, bool enabled)
@@ -102,7 +102,7 @@ static enum handler_return hw_watchdog_timer_callback(struct timer *timer, lk_ti
     return INT_NO_RESCHEDULE;
 }
 
-mx_status_t watchdog_hw_init(lk_time_t timeout)
+zx_status_t watchdog_hw_init(lk_time_t timeout)
 {
     DEBUG_ASSERT(INFINITE_TIME != timeout);
     timer_init(&hw_watchdog_timer);

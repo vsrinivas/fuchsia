@@ -16,7 +16,7 @@
 #include <kernel/vm.h>
 #include <lib/ktrace.h>
 #include <list.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <platform.h>
 #include <printf.h>
 #include <string.h>
@@ -351,7 +351,7 @@ static enum handler_return sched_timer_tick(struct timer* t, lk_time_t now, void
 
     /* did this tick complete the time slice? */
     DEBUG_ASSERT(now > current_thread->last_started_running);
-    mx_time_t delta = now - current_thread->last_started_running;
+    zx_time_t delta = now - current_thread->last_started_running;
     if (delta >= current_thread->remaining_time_slice) {
         /* we completed the time slice, do not restart it and let the scheduler run */
         current_thread->remaining_time_slice = 0;
@@ -417,7 +417,7 @@ void sched_resched_internal(void) {
 
     /* account for time used on the old thread */
     DEBUG_ASSERT(now >= oldthread->last_started_running);
-    mx_time_t old_runtime = now - oldthread->last_started_running;
+    zx_time_t old_runtime = now - oldthread->last_started_running;
     oldthread->runtime_ns += old_runtime;
     oldthread->remaining_time_slice -= MIN(old_runtime, oldthread->remaining_time_slice);
 
@@ -470,7 +470,7 @@ void sched_resched_internal(void) {
                              cpu, oldthread, oldthread->name, newthread, newthread->name);
 
         /* make sure the time slice is reasonable */
-        DEBUG_ASSERT(newthread->remaining_time_slice > 0 && newthread->remaining_time_slice < MX_SEC(1));
+        DEBUG_ASSERT(newthread->remaining_time_slice > 0 && newthread->remaining_time_slice < ZX_SEC(1));
 
         /* use a special version of the timer set api that lets it reset an existing timer efficiently, given
          * that we cannot possibly race with our own timer because interrupts are disabled.

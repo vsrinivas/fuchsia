@@ -7,7 +7,7 @@
 #pragma once
 
 #include <kernel/mp.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <stdbool.h>
 #include <sys/types.h>
 

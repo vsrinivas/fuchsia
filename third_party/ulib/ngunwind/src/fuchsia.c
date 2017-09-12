@@ -31,8 +31,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 #include <stdlib.h>
 #include <string.h>
 
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/debug.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/debug.h>
 
 #include "fuchsia.h"
 #include "fuchsia_i.h"
@@ -49,11 +49,11 @@ tdep_get_elf_image (struct elf_image *ei, pid_t pid, unw_word_t ip,
   return rc;
 }
 
-static mx_status_t
-read_mem (mx_handle_t h, mx_vaddr_t vaddr, void* ptr, size_t len)
+static zx_status_t
+read_mem (zx_handle_t h, zx_vaddr_t vaddr, void* ptr, size_t len)
 {
   size_t actual;
-  mx_status_t status = mx_process_read_memory (h, vaddr, ptr, len, &actual);
+  zx_status_t status = zx_process_read_memory (h, vaddr, ptr, len, &actual);
   if (status < 0)
   {
     Debug (3, "read_mem @0x%" PRIxPTR " FAILED %d\n", vaddr, status);
@@ -63,29 +63,29 @@ read_mem (mx_handle_t h, mx_vaddr_t vaddr, void* ptr, size_t len)
   {
     // TODO: Use %zd when MG-164 is fixed.
     Debug (3, "read_mem @0x%" PRIxPTR " FAILED, short read %zd\n", vaddr, actual);
-    return MX_ERR_IO;
+    return ZX_ERR_IO;
   }
-  return MX_OK;
+  return ZX_OK;
 }
 
-static mx_status_t
-get_inferior_greg_buf_size (mx_handle_t thread, uint32_t* regset_size)
+static zx_status_t
+get_inferior_greg_buf_size (zx_handle_t thread, uint32_t* regset_size)
 {
   // The general regs are defined to be in regset zero.
-  mx_status_t status = mx_thread_read_state (thread, MX_THREAD_STATE_REGSET0,
+  zx_status_t status = zx_thread_read_state (thread, ZX_THREAD_STATE_REGSET0,
                                              NULL, 0, regset_size);
-  assert (status != MX_OK);
-  if (status == MX_ERR_BUFFER_TOO_SMALL)
-    status = MX_OK;
+  assert (status != ZX_OK);
+  if (status == ZX_ERR_BUFFER_TOO_SMALL)
+    status = ZX_OK;
   return status;
 }
 
-static mx_status_t
-read_inferior_gregs (mx_handle_t thread, void* buf, size_t regset_size)
+static zx_status_t
+read_inferior_gregs (zx_handle_t thread, void* buf, size_t regset_size)
 {
   uint32_t buf_size = (uint32_t) regset_size;
   // By convention the general regs are in regset 0.
-  mx_status_t status = mx_thread_read_state (thread, MX_THREAD_STATE_REGSET0, buf, buf_size, &buf_size);
+  zx_status_t status = zx_thread_read_state (thread, ZX_THREAD_STATE_REGSET0, buf, buf_size, &buf_size);
   return status;
 }
 
@@ -234,13 +234,13 @@ remote_access_mem (unw_addr_space_t as, unw_word_t addr, unw_word_t *val,
 {
   Debug (3, "called, addr 0x%lx\n", (long) addr);
   unw_fuchsia_info_t* cxt = arg;
-  mx_handle_t process = cxt->process;
+  zx_handle_t process = cxt->process;
   if (write)
   {
     Debug (3, "writing to mem\n");
     return -UNW_EINVAL;
   }
-  mx_status_t status = read_mem (process, addr, val, sizeof(*val));
+  zx_status_t status = read_mem (process, addr, val, sizeof(*val));
   if (status < 0)
       return -UNW_EINVAL;
   char dump[3 * 8 + 1];
@@ -255,13 +255,13 @@ remote_access_raw_mem (unw_addr_space_t as, unw_word_t addr,
 {
   Debug (3, "called, addr 0x%lx, size %lu\n", (long) addr, (long) size);
   unw_fuchsia_info_t* cxt = arg;
-  mx_handle_t process = cxt->process;
+  zx_handle_t process = cxt->process;
   if (write)
   {
     Debug (3, "writing to mem\n");
     return -UNW_EINVAL;
   }
-  mx_status_t status = read_mem (process, addr, buf, size);
+  zx_status_t status = read_mem (process, addr, buf, size);
   if (status < 0)
   {
     Debug (3, "read failed: %d\n", status);
@@ -282,7 +282,7 @@ remote_access_reg (unw_addr_space_t as, unw_regnum_t reg, unw_word_t *val,
 {
   Debug (3, "called, regno %d\n", (int) reg);
   unw_fuchsia_info_t* cxt = arg;
-  mx_handle_t thread = cxt->thread;
+  zx_handle_t thread = cxt->thread;
   if (write)
   {
     Debug (3, "writing to reg\n");
@@ -294,8 +294,8 @@ remote_access_reg (unw_addr_space_t as, unw_regnum_t reg, unw_word_t *val,
     return -UNW_EBADREG;
   }
   uint32_t regset_size;
-  mx_status_t status = get_inferior_greg_buf_size (thread, &regset_size);
-  if (status != MX_OK)
+  zx_status_t status = get_inferior_greg_buf_size (thread, &regset_size);
+  if (status != ZX_OK)
   {
     Debug (3, "unable to get greg buf size: %d\n", status);
     return -UNW_EUNSPEC;
@@ -306,7 +306,7 @@ remote_access_reg (unw_addr_space_t as, unw_regnum_t reg, unw_word_t *val,
     Debug (3, "malloc failed\n");
     return -UNW_ENOMEM;
   }
-  mx_status_t r = read_inferior_gregs (thread, buf, regset_size);
+  zx_status_t r = read_inferior_gregs (thread, buf, regset_size);
   if (r < 0)
   {
     Debug (3, "error reading gregs: %d\n", r);
@@ -361,7 +361,7 @@ const unw_accessors_t _UFuchsia_accessors =
 };
 
 unw_fuchsia_info_t*
-unw_create_fuchsia(mx_handle_t process, mx_handle_t thread,
+unw_create_fuchsia(zx_handle_t process, zx_handle_t thread,
                    struct dsoinfo* dsos, unw_dso_lookup_func_t* lookup_dso)
 {
     unw_fuchsia_info_t* result = malloc (sizeof (*result));

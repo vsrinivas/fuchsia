@@ -7,7 +7,7 @@
 #include <unistd.h>
 
 #include <launchpad/launchpad.h>
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <fbl/algorithm.h>
 
 #include "utils.h"
@@ -38,7 +38,7 @@ constexpr int kMaxIptDumps = 4;
 // Don't wait forever for ipt to run.
 // It may take awhile to dump the data.
 // This seems to be a good number.
-constexpr mx_time_t run_timeout = MX_SEC(10);
+constexpr zx_time_t run_timeout = ZX_SEC(10);
 
 // Return the next sequence number to use or -1 if we've created the maximum
 // number of dumps and can't make any more.
@@ -57,52 +57,52 @@ static int next_free_seq_num() {
     return -1;
 }
 
-static mx_status_t crashlogger_run(const char* name, int argc, const char* const* argv) {
+static zx_status_t crashlogger_run(const char* name, int argc, const char* const* argv) {
     launchpad_t *lp;
     const char* executable = argv[0];
-    launchpad_create(MX_HANDLE_INVALID, name, &lp);
+    launchpad_create(ZX_HANDLE_INVALID, name, &lp);
     launchpad_load_from_file(lp, executable);
     launchpad_set_args(lp, argc, argv);
     launchpad_clone(lp, LP_CLONE_ALL);
 
-    mx_handle_t child;
+    zx_handle_t child;
     const char* errmsg;
-    mx_status_t status = launchpad_go(lp, &child, &errmsg);
-    if (status != MX_OK)
+    zx_status_t status = launchpad_go(lp, &child, &errmsg);
+    if (status != ZX_OK)
         return status;
 
-    mx_signals_t signals;
-    status = mx_object_wait_one(child, MX_TASK_TERMINATED, mx_deadline_after(run_timeout),
+    zx_signals_t signals;
+    status = zx_object_wait_one(child, ZX_TASK_TERMINATED, zx_deadline_after(run_timeout),
                                 &signals);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         // Leave reporting the error to the caller.
     } else {
-        if (signals & MX_TASK_TERMINATED) {
-            mx_info_process_t info;
-            status = mx_object_get_info(child, MX_INFO_PROCESS, &info,
+        if (signals & ZX_TASK_TERMINATED) {
+            zx_info_process_t info;
+            status = zx_object_get_info(child, ZX_INFO_PROCESS, &info,
                                         sizeof(info), nullptr, nullptr);
-            if (status == MX_OK && info.exited) {
+            if (status == ZX_OK && info.exited) {
                 if (info.return_code != 0) {
                     // The child should have already printed its own error
                     // message, we just need to return some error code to the
                     // caller
-                    status = MX_ERR_IO;
+                    status = ZX_ERR_IO;
                 }
             } else {
                 // This shouldn't happen, but we don't want to kill crashlogger
                 // because of it. Return some indicative error code and let the
                 // caller report it.
-                status = MX_ERR_BAD_STATE;
+                status = ZX_ERR_BAD_STATE;
             }
         } else {
             // This shouldn't happen, but we don't want to kill crashlogger
             // because of it. Return some indicative error code and let the
             // caller report it.
-            status = MX_ERR_BAD_STATE;
+            status = ZX_ERR_BAD_STATE;
         }
     }
 
-    mx_handle_close(child);
+    zx_handle_close(child);
     return status;
 }
 
@@ -139,13 +139,13 @@ void try_dump_pt_data() {
         "dump",
         "start",
     };
-    mx_status_t status = crashlogger_run("ipt-dump",
+    zx_status_t status = crashlogger_run("ipt-dump",
                                          fbl::count_of(argv_pt_dump), argv_pt_dump);
-    if (status == MX_OK) {
+    if (status == ZX_OK) {
         printf("PT output written to " PT_PATH_FORMAT ".*\n",
                pt_path_prefix, seq_num);
     } else {
-        print_mx_error("Error dumping IPT data", status);
+        print_zx_error("Error dumping IPT data", status);
     }
 
     // TODO(dje): It may be useful to break up the actions.

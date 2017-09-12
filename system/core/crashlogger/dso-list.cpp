@@ -9,9 +9,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <magenta/assert.h>
-#include <magenta/types.h>
-#include <magenta/syscalls.h>
+#include <zircon/assert.h>
+#include <zircon/types.h>
+#include <zircon/syscalls.h>
 
 #include "dso-list.h"
 #include "utils.h"
@@ -40,7 +40,7 @@ static dsoinfo_t* dsolist_add(dsoinfo_t** list, const char* name, uintptr_t base
     memset(dso->buildid, 'x', sizeof(dso->buildid) - 1);
     dso->base = base;
     dso->debug_file_tried = false;
-    dso->debug_file_status = MX_ERR_BAD_STATE;
+    dso->debug_file_status = ZX_ERR_BAD_STATE;
     while (*list != nullptr) {
         if ((*list)->base < dso->base) {
             dso->next = *list;
@@ -54,12 +54,12 @@ static dsoinfo_t* dsolist_add(dsoinfo_t** list, const char* name, uintptr_t base
     return dso;
 }
 
-dsoinfo_t* dso_fetch_list(mx_handle_t h, const char* name) {
+dsoinfo_t* dso_fetch_list(zx_handle_t h, const char* name) {
     uintptr_t lmap, debug_addr;
-    mx_status_t status = mx_object_get_property(h, MX_PROP_PROCESS_DEBUG_ADDR,
+    zx_status_t status = zx_object_get_property(h, ZX_PROP_PROCESS_DEBUG_ADDR,
                                                 &debug_addr, sizeof(debug_addr));
-    if (status != MX_OK) {
-        print_mx_error("mx_object_get_property(MX_PROP_PROCESS_DEBUG_ADDR), unable to fetch dso list", status);
+    if (status != ZX_OK) {
+        print_zx_error("zx_object_get_property(ZX_PROP_PROCESS_DEBUG_ADDR), unable to fetch dso list", status);
         return nullptr;
     }
     if (read_mem(h, debug_addr + rdebug_off_lmap, &lmap, sizeof(lmap))) {
@@ -73,7 +73,7 @@ dsoinfo_t* dso_fetch_list(mx_handle_t h, const char* name) {
             return nullptr;
         }
         char dsoname[64];
-        mx_vaddr_t base;
+        zx_vaddr_t base;
         uintptr_t next;
         uintptr_t str;
         if (read_mem(h, lmap + lmap_off_addr, &base, sizeof(base))) {
@@ -107,7 +107,7 @@ void dso_free_list(dsoinfo_t* list) {
     }
 }
 
-dsoinfo_t* dso_lookup(dsoinfo_t* dso_list, mx_vaddr_t pc) {
+dsoinfo_t* dso_lookup(dsoinfo_t* dso_list, zx_vaddr_t pc) {
     for (dsoinfo_t* dso = dso_list; dso != NULL; dso = dso->next) {
         if (pc >= dso->base) {
             return dso;
@@ -124,15 +124,15 @@ void dso_print_list(dsoinfo_t* dso_list) {
     }
 }
 
-mx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
+zx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
     // Have we already tried?
     // Yeah, if we OOM it's possible it'll succeed next time, but
     // it's not worth the extra complexity to avoid printing the debugging
     // messages twice.
     if (dso->debug_file_tried) {
         switch (dso->debug_file_status) {
-        case MX_OK:
-            MX_DEBUG_ASSERT(dso->debug_file != nullptr);
+        case ZX_OK:
+            ZX_DEBUG_ASSERT(dso->debug_file != nullptr);
             *out_debug_file = dso->debug_file;
             // fall through
         default:
@@ -147,7 +147,7 @@ mx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
     char* path;
     if (asprintf(&path, "%s/%s%s", kDebugDirectory, dso->buildid, kDebugSuffix) < 0) {
         debugf(1, "OOM building debug file path for dso %s\n", dso->name);
-        dso->debug_file_status = MX_ERR_NO_MEMORY;
+        dso->debug_file_status = ZX_ERR_NO_MEMORY;
         return dso->debug_file_status;
     }
 
@@ -157,13 +157,13 @@ mx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
     if (fd < 0) {
         debugf(1, "debug file for dso %s not found: %s\n", dso->name, path);
         free(path);
-        dso->debug_file_status = MX_ERR_NOT_FOUND;
+        dso->debug_file_status = ZX_ERR_NOT_FOUND;
     } else {
         debugf(1, "found debug file for dso %s: %s\n", dso->name, path);
         close(fd);
         dso->debug_file = path;
         *out_debug_file = path;
-        dso->debug_file_status = MX_OK;
+        dso->debug_file_status = ZX_OK;
     }
 
     return dso->debug_file_status;

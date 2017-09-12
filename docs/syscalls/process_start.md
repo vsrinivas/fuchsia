@@ -1,4 +1,4 @@
-# mx_process_start
+# zx_process_start
 
 ## NAME
 
@@ -7,11 +7,11 @@ process_start - start execution on a process
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-mx_status_t mx_process_start(mx_handle_t process, mx_handle_t thread,
+zx_status_t zx_process_start(zx_handle_t process, zx_handle_t thread,
                             uintptr_t entry, uintptr_t stack,
-                            mx_handle_t arg1, uintptr_t arg2);
+                            zx_handle_t arg1, uintptr_t arg2);
 ```
 
 ## DESCRIPTION
@@ -32,21 +32,21 @@ thread.
 
 ## RETURN VALUE
 
-**process_start**() returns MX_OK on success.
+**process_start**() returns ZX_OK on success.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS
 
-**MX_ERR_BAD_HANDLE**  *process* or *thread* or *arg1* is not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *process* or *thread* or *arg1* is not a valid handle.
 
-**MX_ERR_WRONG_TYPE**  *process* is not a process handle or *thread* is
+**ZX_ERR_WRONG_TYPE**  *process* is not a process handle or *thread* is
 not a thread handle.
 
-**MX_ERR_ACCESS_DENIED**  The handle *thread* lacks *MX_RIGHT_WRITE* or *thread*
-does not belong to *process*, or the handle *process* lacks *MX_RIGHT_WRITE* or
-*arg1* lacks MX_RIGHT_TRANSFER.
+**ZX_ERR_ACCESS_DENIED**  The handle *thread* lacks *ZX_RIGHT_WRITE* or *thread*
+does not belong to *process*, or the handle *process* lacks *ZX_RIGHT_WRITE* or
+*arg1* lacks ZX_RIGHT_TRANSFER.
 
-**MX_ERR_BAD_STATE**  *process* is already running or has exited.
+**ZX_ERR_BAD_STATE**  *process* is already running or has exited.
 
 ## SEE ALSO
 

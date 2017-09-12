@@ -19,10 +19,10 @@ static void dwc3_queue_setup_locked(dwc3_t* dwc) {
     dwc->ep0_state = EP0_STATE_SETUP;
 }
 
-mx_status_t dwc3_ep0_init(dwc3_t* dwc) {
+zx_status_t dwc3_ep0_init(dwc3_t* dwc) {
     // fifo only needed for physical endpoint 0
-    mx_status_t status = dwc3_ep_fifo_init(dwc, EP0_OUT);
-    if (status != MX_OK) {
+    zx_status_t status = dwc3_ep_fifo_init(dwc, EP0_OUT);
+    if (status != ZX_OK) {
         return status;
     }
 
@@ -34,7 +34,7 @@ mx_status_t dwc3_ep0_init(dwc3_t* dwc) {
         ep->interval = 0;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 void dwc3_ep0_reset(dwc3_t* dwc) {
@@ -54,9 +54,9 @@ void dwc3_ep0_start(dwc3_t* dwc) {
     mtx_unlock(EP0_LOCK(dwc));
 }
 
-static mx_status_t dwc3_handle_setup(dwc3_t* dwc, usb_setup_t* setup, void* buffer, size_t length,
+static zx_status_t dwc3_handle_setup(dwc3_t* dwc, usb_setup_t* setup, void* buffer, size_t length,
                                      size_t* out_actual) {
-    mx_status_t status;
+    zx_status_t status;
 
     if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE)) {
         // handle some special setup requests in this driver
@@ -65,13 +65,13 @@ static mx_status_t dwc3_handle_setup(dwc3_t* dwc, usb_setup_t* setup, void* buff
             dprintf(TRACE, "SET_ADDRESS %d\n", setup->wValue);
             dwc3_set_address(dwc, setup->wValue);
             *out_actual = 0;
-            return MX_OK;
+            return ZX_OK;
         case USB_REQ_SET_CONFIGURATION:
             dprintf(TRACE, "SET_CONFIGURATION %d\n", setup->wValue);
             dwc3_reset_configuration(dwc);
             dwc->configured = false;
             status = usb_dci_control(&dwc->dci_intf, setup, buffer, length, out_actual);
-            if (status == MX_OK && setup->wValue) {
+            if (status == ZX_OK && setup->wValue) {
                 dwc->configured = true;
                 dwc3_start_eps(dwc);
             }
@@ -86,7 +86,7 @@ static mx_status_t dwc3_handle_setup(dwc3_t* dwc, usb_setup_t* setup, void* buff
         dwc3_reset_configuration(dwc);
         dwc->configured = false;
         status = usb_dci_control(&dwc->dci_intf, setup, buffer, length, out_actual);
-        if (status == MX_OK) {
+        if (status == ZX_OK) {
             dwc->configured = true;
             dwc3_start_eps(dwc);
         }
@@ -159,7 +159,7 @@ void dwc3_ep0_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
     case EP0_STATE_SETUP: {
         usb_setup_t* setup = &dwc->cur_setup;
 
-        io_buffer_cache_op(&dwc->ep0_buffer, MX_VMO_OP_CACHE_INVALIDATE, 0, sizeof(*setup));
+        io_buffer_cache_op(&dwc->ep0_buffer, ZX_VMO_OP_CACHE_INVALIDATE, 0, sizeof(*setup));
         memcpy(setup, io_buffer_virt(&dwc->ep0_buffer), sizeof(*setup));
 
         dprintf(TRACE, "got setup: type: 0x%02X req: %d value: %d index: %d length: %d\n",
@@ -174,10 +174,10 @@ void dwc3_ep0_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
             dwc->ep0_state = EP0_STATE_DATA_OUT;
         } else {
             size_t actual;
-            mx_status_t status = dwc3_handle_setup(dwc, setup, io_buffer_virt(&dwc->ep0_buffer),
+            zx_status_t status = dwc3_handle_setup(dwc, setup, io_buffer_virt(&dwc->ep0_buffer),
                                                    dwc->ep0_buffer.size, &actual);
             dprintf(TRACE, "dwc3_handle_setup returned %d actual %zu\n", status, actual);
-            if (status != MX_OK) {
+            if (status != ZX_OK) {
                 dwc3_cmd_ep_set_stall(dwc, EP0_OUT);
                 dwc3_queue_setup_locked(dwc);
                 break;
@@ -185,7 +185,7 @@ void dwc3_ep0_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
 
             if (setup->wLength > 0) {
                 // queue a write for the data phase
-                io_buffer_cache_op(&dwc->ep0_buffer, MX_VMO_OP_CACHE_CLEAN, 0, actual);
+                io_buffer_cache_op(&dwc->ep0_buffer, ZX_VMO_OP_CACHE_CLEAN, 0, actual);
                 dwc3_ep_start_transfer(dwc, EP0_IN, TRB_TRBCTL_CONTROL_DATA,
                                        io_buffer_phys(&dwc->ep0_buffer), actual);
                 dwc->ep0_state = EP0_STATE_DATA_IN;

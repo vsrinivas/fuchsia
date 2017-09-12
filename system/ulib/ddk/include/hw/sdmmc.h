@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS;
 

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #include <stdio.h>
 
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 
 #include <async/loop.h>
 #include <async/task.h>
@@ -28,9 +28,9 @@ public:
     }
 
     void Start() {
-        mx_status_t status = trace_start_engine(loop_->async(), this,
+        zx_status_t status = trace_start_engine(loop_->async(), this,
                                                 buffer_.get(), buffer_.size());
-        MX_DEBUG_ASSERT(status == MX_OK);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
 
         puts("\nTrace started\n");
     }
@@ -42,11 +42,11 @@ private:
     }
 
     void TraceStopped(async_t* async,
-                      mx_status_t disposition,
+                      zx_status_t disposition,
                       size_t buffer_bytes_written) override {
         puts("\nTrace stopped");
 
-        MX_DEBUG_ASSERT(disposition == MX_OK);
+        ZX_DEBUG_ASSERT(disposition == ZX_OK);
         loop_->Quit();
     }
 
@@ -64,11 +64,11 @@ int main(int argc, char** argv) {
     handler.Start();
 
     async::Task task(0u);
-    task.set_handler([](async_t* async, mx_status_t status) {
+    task.set_handler([](async_t* async, zx_status_t status) {
         RunTracingEnabledBenchmarks();
         RunNoTraceBenchmarks();
 
-        trace_stop_engine(MX_OK);
+        trace_stop_engine(ZX_OK);
         return ASYNC_TASK_FINISHED;
     });
     task.Post(loop.async());

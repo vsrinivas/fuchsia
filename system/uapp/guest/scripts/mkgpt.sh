@@ -6,20 +6,20 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 #
-# Create a GPT disk image for magenta guests.
+# Create a GPT disk image for zircon guests.
 
 set -eo pipefail
 
 GUEST_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-MAGENTADIR="${MAGENTA_DIR:-${GUEST_SCRIPTS_DIR}/../../../..}"
-BUILDDIR="${MAGENTA_BUILD_DIR:-$MAGENTADIR/build-magenta-pc-x86-64}"
+ZIRCONDIR="${ZIRCON_DIR:-${GUEST_SCRIPTS_DIR}/../../../..}"
+BUILDDIR="${ZIRCON_BUILD_DIR:-$ZIRCONDIR/build-zircon-pc-x86-64}"
 MINFS="${BUILDDIR}/tools/minfs"
 
-# Magenta's block-watcher will auto mount GPT partitions with this GUID as
+# Zircon's block-watcher will auto mount GPT partitions with this GUID as
 # the system partition.
-MAGENTA_SYSTEM_GUID="606B000B-B7C7-4653-A7D5-B737332C899D"
-MAGENTA_GPT_IMAGE="${BUILDDIR}/magenta.gpt"
-MAGENTA_SYSTEM_IMAGE="${BUILDDIR}/system.minfs"
+ZIRCON_SYSTEM_GUID="606B000B-B7C7-4653-A7D5-B737332C899D"
+ZIRCON_GPT_IMAGE="${BUILDDIR}/zircon.gpt"
+ZIRCON_SYSTEM_IMAGE="${BUILDDIR}/system.minfs"
 
 usage() {
     echo "usage: ${0} [-f]"
@@ -75,7 +75,7 @@ generate_gpt_image() {
   dd if=/dev/zero of="${image}" bs=512 count="$((${sys_end_sector} + 2048))"
 
   sgdisk --new 1:${sys_start_sector}:${sys_end_sector} ${image}
-  sgdisk --typecode 1:${MAGENTA_SYSTEM_GUID}  ${image}
+  sgdisk --typecode 1:${ZIRCON_SYSTEM_GUID}  ${image}
   sgdisk --print ${image}
 
    # Copy bytes from the system image into the correct location in the GPT
@@ -102,10 +102,10 @@ readonly "${FORCE}"
 check_sgdisk
 
 # Are the requested targets up-to-date?
-if [ "${FORCE}" != "true" ] && [ -f "${MAGENTA_GPT_IMAGE}" ]; then
+if [ "${FORCE}" != "true" ] && [ -f "${ZIRCON_GPT_IMAGE}" ]; then
   echo "GPT image already exists. Pass -f to force a rebuild."
   exit 0
 fi
 
-generate_system_image "${MAGENTA_SYSTEM_IMAGE}" "20"
-generate_gpt_image "${MAGENTA_GPT_IMAGE}" "${MAGENTA_SYSTEM_IMAGE}"
+generate_system_image "${ZIRCON_SYSTEM_IMAGE}" "20"
+generate_gpt_image "${ZIRCON_GPT_IMAGE}" "${ZIRCON_SYSTEM_IMAGE}"

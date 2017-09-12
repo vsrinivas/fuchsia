@@ -6,7 +6,7 @@ process - Process abstraction
 
 ## SYNOPSIS
 
-A magenta process is an instance of a program in the traditional
+A zircon process is an instance of a program in the traditional
 sense: a set of instructions which will be executed by one or more
 threads, along with a collection of resources.
 

@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <magenta/errors.h>
+#include <zircon/compiler.h>
+#include <zircon/errors.h>
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
 #include <dev/pcie_ref_counted.h>

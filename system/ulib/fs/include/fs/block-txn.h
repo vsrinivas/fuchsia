@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/device/block.h>
+#include <zircon/device/block.h>
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 
@@ -83,7 +83,7 @@ public:
     }
 
     // Activate the transaction
-    mx_status_t Flush();
+    zx_status_t Flush();
 
 private:
     TxnHandler* handler_;
@@ -92,14 +92,14 @@ private:
 };
 
 template <bool Write, size_t BlockSize, typename TxnHandler>
-inline mx_status_t BlockTxn<vmoid_t, Write, BlockSize, TxnHandler>::Flush() {
+inline zx_status_t BlockTxn<vmoid_t, Write, BlockSize, TxnHandler>::Flush() {
     for (size_t i = 0; i < count_; i++) {
         requests_[i].opcode = Write ? BLOCKIO_WRITE : BLOCKIO_READ;
         requests_[i].vmo_offset *= BlockSize;
         requests_[i].dev_offset *= BlockSize;
         requests_[i].length *= BlockSize;
     }
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
     if (count_ != 0) {
         status = handler_->Txn(requests_, count_);
     }
@@ -137,7 +137,7 @@ public:
     }
 
     // Activate the transaction (do nothing)
-    mx_status_t Flush() { return MX_OK; }
+    zx_status_t Flush() { return ZX_OK; }
 
 private:
     TxnHandler* handler_;

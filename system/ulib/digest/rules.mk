@@ -20,7 +20,7 @@ MODULE_LIBS := system/ulib/c
 # BoringSSL's optimized digests.
 MODULE_STATIC_LIBS := \
     third_party/ulib/cryptolib \
-    system/ulib/mxcpp \
+    system/ulib/zxcpp \
     system/ulib/fbl \
 
 include make/module.mk

@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <inet6/inet6.h>
-#include <magenta/device/ethernet.h>
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/port.h>
+#include <zircon/device/ethernet.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/port.h>
 
 #include <fcntl.h>
 #include <limits.h>
@@ -39,7 +39,7 @@ typedef struct {
 
 eth_buf_t* avail_tx_buffers = NULL;
 eth_buf_t* pending_tx = NULL;
-mx_handle_t port = MX_HANDLE_INVALID;
+zx_handle_t port = ZX_HANDLE_INVALID;
 
 void flip_src_dst(void* packet) {
     eth_hdr_t* eth = packet;
@@ -61,13 +61,13 @@ void flip_src_dst(void* packet) {
     udp->checksum = ip6_checksum(ip, HDR_UDP, ntohs(ip->length));
 }
 
-void send_pending_tx(mx_handle_t tx_fifo) {
+void send_pending_tx(zx_handle_t tx_fifo) {
     uint32_t n;
-    mx_status_t status;
+    zx_status_t status;
     while (pending_tx != NULL) {
         eth_fifo_entry_t* e = pending_tx->e;
         e->cookie = pending_tx;
-        if ((status = mx_fifo_write(tx_fifo, e, sizeof(eth_fifo_entry_t), &n)) != MX_OK) {
+        if ((status = zx_fifo_write(tx_fifo, e, sizeof(eth_fifo_entry_t), &n)) != ZX_OK) {
             fprintf(stderr, "netreflector: error reflecting packet %d\n", status);
             return;
         }
@@ -83,14 +83,14 @@ void tx_complete(eth_fifo_entry_t* e) {
     }
 }
 
-mx_status_t acquire_tx_buffer(eth_buf_t** out) {
+zx_status_t acquire_tx_buffer(eth_buf_t** out) {
     if (avail_tx_buffers == NULL) {
         fprintf(stderr, "netreflector: no tx buffers available.\n");
-        return MX_ERR_SHOULD_WAIT;
+        return ZX_ERR_SHOULD_WAIT;
     }
     *out = avail_tx_buffers;
     avail_tx_buffers = avail_tx_buffers->next;
-    return MX_OK;
+    return ZX_OK;
 }
 
 void queue_tx_buffer(eth_buf_t* tx) {
@@ -98,10 +98,10 @@ void queue_tx_buffer(eth_buf_t* tx) {
     pending_tx = tx;
 }
 
-mx_status_t reflect_packet(char* iobuf, eth_fifo_entry_t* e) {
+zx_status_t reflect_packet(char* iobuf, eth_fifo_entry_t* e) {
     eth_buf_t* tx;
-    mx_status_t status;
-    if ((status = acquire_tx_buffer(&tx)) != MX_OK) {
+    zx_status_t status;
+    if ((status = acquire_tx_buffer(&tx)) != ZX_OK) {
         return status;
     }
     tx->e->length = e->length;
@@ -112,10 +112,10 @@ mx_status_t reflect_packet(char* iobuf, eth_fifo_entry_t* e) {
     flip_src_dst(out_pkt);
 
     queue_tx_buffer(tx);
-    return MX_OK;
+    return ZX_OK;
 }
 
-void rx_complete(char* iobuf, mx_handle_t rx_fifo, eth_fifo_entry_t* e) {
+void rx_complete(char* iobuf, zx_handle_t rx_fifo, eth_fifo_entry_t* e) {
     if (!(e->flags & ETH_FIFO_RX_OK)) {
         return;
     }
@@ -135,33 +135,33 @@ queue:
     e->length = BUFSIZE;
     e->flags = 0;
     uint32_t actual;
-    mx_status_t status;
-    if ((status = mx_fifo_write(rx_fifo, e, sizeof(*e), &actual)) != MX_OK) {
+    zx_status_t status;
+    if ((status = zx_fifo_write(rx_fifo, e, sizeof(*e), &actual)) != ZX_OK) {
         fprintf(stderr, "netreflector: failed to queue rx packet: %d\n", status);
     }
 }
 
 void handle(char* iobuf, eth_fifos_t* fifos) {
-    mx_port_packet_t packet;
-    mx_status_t status;
+    zx_port_packet_t packet;
+    zx_status_t status;
     uint32_t n;
     eth_fifo_entry_t entries[BUFS];
     for (;;) {
-        status = mx_port_wait(port, MX_TIME_INFINITE, &packet, 0);
-        if (status != MX_OK) {
+        status = zx_port_wait(port, ZX_TIME_INFINITE, &packet, 0);
+        if (status != ZX_OK) {
             fprintf(stderr, "netreflector: error while waiting on port %d\n", status);
             return;
         }
 
-        if (packet.signal.observed & MX_FIFO_PEER_CLOSED) {
+        if (packet.signal.observed & ZX_FIFO_PEER_CLOSED) {
             fprintf(stderr, "netreflector: fifo closed\n");
             return;
         }
 
-        if (packet.signal.observed & MX_FIFO_READABLE) {
+        if (packet.signal.observed & ZX_FIFO_READABLE) {
             uint8_t fifo_id = (uint8_t)packet.key;
-            mx_handle_t fifo = (fifo_id == RX_FIFO ? fifos->rx_fifo : fifos->tx_fifo);
-            if ((status = mx_fifo_read(fifo, entries, sizeof(entries), &n)) != MX_OK) {
+            zx_handle_t fifo = (fifo_id == RX_FIFO ? fifos->rx_fifo : fifos->tx_fifo);
+            if ((status = zx_fifo_read(fifo, entries, sizeof(entries), &n)) != ZX_OK) {
                 fprintf(stderr, "netreflector: error reading fifo %d\n", status);
                 continue;
             }
@@ -196,7 +196,7 @@ int main(int argc, char** argv) {
     }
 
     eth_fifos_t fifos;
-    mx_status_t status;
+    zx_status_t status;
 
     ssize_t r;
     if ((r = ioctl_ethernet_set_client_name(fd, "netreflector", 13)) < 0) {
@@ -211,13 +211,13 @@ int main(int argc, char** argv) {
     // Allocate shareable ethernet buffer data heap. The first BUFS entries represent rx buffers,
     // followed by BUFS entries representing tx buffers.
     unsigned count = BUFS * 2;
-    mx_handle_t iovmo;
-    if ((status = mx_vmo_create(count * BUFSIZE, 0, &iovmo)) < 0) {
+    zx_handle_t iovmo;
+    if ((status = zx_vmo_create(count * BUFSIZE, 0, &iovmo)) < 0) {
         return -1;
     }
     char* iobuf;
-    if ((status = mx_vmar_map(mx_vmar_root_self(), 0, iovmo, 0, count * BUFSIZE,
-                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+    if ((status = zx_vmar_map(zx_vmar_root_self(), 0, iovmo, 0, count * BUFSIZE,
+                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                               (uintptr_t*)&iobuf)) < 0) {
         return -1;
     }
@@ -234,7 +234,7 @@ int main(int argc, char** argv) {
             .offset = n * BUFSIZE, .length = BUFSIZE, .flags = 0, .cookie = NULL,
         };
         uint32_t actual;
-        if ((status = mx_fifo_write(fifos.rx_fifo, &entry, sizeof(entry), &actual)) < 0) {
+        if ((status = zx_fifo_write(fifos.rx_fifo, &entry, sizeof(entry), &actual)) < 0) {
             fprintf(stderr, "netreflector: failed to queue rx packet: %d\n", status);
             return -1;
         }
@@ -256,20 +256,20 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    if (mx_port_create(0, &port) != MX_OK) {
+    if (zx_port_create(0, &port) != ZX_OK) {
         fprintf(stderr, "netreflector: failed to create port\n");
         return -1;
     }
 
-    u_int32_t signals = MX_FIFO_READABLE | MX_FIFO_PEER_CLOSED;
-    if ((status = mx_object_wait_async(fifos.rx_fifo, port, RX_FIFO, signals,
-                                       MX_WAIT_ASYNC_REPEATING)) != MX_OK) {
+    u_int32_t signals = ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED;
+    if ((status = zx_object_wait_async(fifos.rx_fifo, port, RX_FIFO, signals,
+                                       ZX_WAIT_ASYNC_REPEATING)) != ZX_OK) {
         fprintf(stderr, "netreflector: failed binding port to rx fifo %d\n", status);
         return -1;
     }
 
-    if ((status = mx_object_wait_async(fifos.tx_fifo, port, TX_FIFO, signals,
-                                       MX_WAIT_ASYNC_REPEATING)) != MX_OK) {
+    if ((status = zx_object_wait_async(fifos.tx_fifo, port, TX_FIFO, signals,
+                                       ZX_WAIT_ASYNC_REPEATING)) != ZX_OK) {
         fprintf(stderr, "netreflector: failed binding port to tx fifo %d\n", status);
         return -1;
     }

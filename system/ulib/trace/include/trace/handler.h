@@ -37,22 +37,22 @@ public:
 
     // Called by the trace engine when tracing has stopped.
     //
-    // The trace collection status is |MX_OK| if trace collection was successful.
+    // The trace collection status is |ZX_OK| if trace collection was successful.
     // An error indicates that the trace data may be inaccurate or incomplete.
     //
     // |async| is the trace engine's asynchronous dispatcher.
-    // |disposition| is |MX_OK| if tracing stopped normally, otherwise indicates
+    // |disposition| is |ZX_OK| if tracing stopped normally, otherwise indicates
     // that tracing was aborted due to an error.
     // |buffer_bytes_written| is number of bytes which were written to the trace buffer.
     //
     // Called on an asynchronous dispatch thread.
     virtual void TraceStopped(async_t* async,
-                              mx_status_t disposition, size_t buffer_bytes_written) {}
+                              zx_status_t disposition, size_t buffer_bytes_written) {}
 
 private:
     static bool CallIsCategoryEnabled(trace_handler_t* handler, const char* category);
     static void CallTraceStopped(trace_handler_t* handler, async_t* async,
-                                 mx_status_t disposition, size_t buffer_bytes_written);
+                                 zx_status_t disposition, size_t buffer_bytes_written);
 
     static const trace_handler_ops_t kOps;
 };

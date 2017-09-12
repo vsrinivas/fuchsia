@@ -16,16 +16,16 @@
 
 #include "eth-client.h"
 
-#include <magenta/device/ethernet.h>
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
+#include <zircon/device/ethernet.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <inet6/inet6.h>
 #include <inet6/netifc.h>
 
-#include <mxio/io.h>
-#include <mxio/watcher.h>
+#include <fdio/io.h>
+#include <fdio/watcher.h>
 
 #define ALIGN(n, a) (((n) + ((a) - 1)) & ~((a) - 1))
 // if nonzero, drop 1 in DROP_PACKETS packets at random
@@ -61,7 +61,7 @@ static eth_client_t* eth;
 static uint8_t netmac[6];
 static size_t netmtu;
 
-static mx_handle_t iovmo;
+static zx_handle_t iovmo;
 static void* iobuf;
 
 #define NET_BUFFERS 64
@@ -186,7 +186,7 @@ int eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len) {
     eth_complete_tx(eth, NULL, tx_complete);
 
     ethbuf->state = ETH_BUFFER_TX;
-    mx_status_t status = eth_queue_tx(eth, ethbuf, ethbuf->data + skip, len, 0);
+    zx_status_t status = eth_queue_tx(eth, ethbuf, ethbuf->data + skip, len, 0);
     if (status < 0) {
         printf("eth_fifo_send: queue tx failed: %d\n", status);
         eth_put_buffer_locked(ethbuf, ETH_BUFFER_TX);
@@ -218,14 +218,14 @@ int eth_add_mcast_filter(const mac_addr_t* addr) {
 static volatile uint64_t net_timer = 0;
 
 void netifc_set_timer(uint32_t ms) {
-    net_timer = mx_time_get(MX_CLOCK_MONOTONIC) + MX_MSEC(ms);
+    net_timer = zx_time_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(ms);
 }
 
 int netifc_timer_expired(void) {
     if (net_timer == 0) {
         return 0;
     }
-    if (mx_time_get(MX_CLOCK_MONOTONIC) > net_timer) {
+    if (zx_time_get(ZX_CLOCK_MONOTONIC) > net_timer) {
         return 1;
     }
     return 0;
@@ -236,34 +236,34 @@ void netifc_get_info(uint8_t* addr, uint16_t* mtu) {
     *mtu = netmtu;
 }
 
-static mx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* cookie) {
+static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) {
-        return MX_OK;
+        return ZX_OK;
     }
 
     printf("netifc: ? /dev/class/ethernet/%s\n", fn);
 
     if ((netfd = openat(dirfd, fn, O_RDWR)) < 0) {
-        return MX_OK;
+        return ZX_OK;
     }
 
     eth_info_t info;
     if (ioctl_ethernet_get_info(netfd, &info) < 0) {
         close(netfd);
         netfd = -1;
-        return MX_OK;
+        return ZX_OK;
     }
     if (info.features & (ETH_FEATURE_WLAN | ETH_FEATURE_SYNTH)) {
         // Don't run netsvc for wireless or synthetic network devices
         close(netfd);
         netfd = -1;
-        return MX_OK;
+        return ZX_OK;
     }
     memcpy(netmac, info.mac, sizeof(netmac));
     netmtu = info.mtu;
 
     mtx_lock(&eth_lock);
-    mx_status_t status;
+    zx_status_t status;
 
     // we only do this the very first time
     if (eth_buffer_base == NULL) {
@@ -278,14 +278,14 @@ static mx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
     if (iobuf == NULL) {
         // allocate shareable ethernet buffer data heap
         size_t iosize = 2 * NET_BUFFERS * NET_BUFFERSZ;
-        if ((status = mx_vmo_create(iosize, 0, &iovmo)) < 0) {
+        if ((status = zx_vmo_create(iosize, 0, &iovmo)) < 0) {
             goto fail_close_fd;
         }
-        if ((status = mx_vmar_map(mx_vmar_root_self(), 0, iovmo, 0, iosize,
-                                  MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+        if ((status = zx_vmar_map(zx_vmar_root_self(), 0, iovmo, 0, iosize,
+                                  ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                                   (uintptr_t*)&iobuf)) < 0) {
-            mx_handle_close(iovmo);
-            iovmo = MX_HANDLE_INVALID;
+            zx_handle_close(iovmo);
+            iovmo = ZX_HANDLE_INVALID;
             goto fail_close_fd;
         }
         printf("netifc: create %zu eth buffers\n", eth_buffer_count);
@@ -326,7 +326,7 @@ static mx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
     mtx_unlock(&eth_lock);
 
     // stop polling
-    return MX_ERR_STOP;
+    return ZX_ERR_STOP;
 
 fail_destroy_client:
     eth_destroy(eth);
@@ -335,7 +335,7 @@ fail_close_fd:
     close(netfd);
     netfd = -1;
     mtx_unlock(&eth_lock);
-    return MX_OK;
+    return ZX_OK;
 }
 
 int netifc_open(void) {
@@ -344,12 +344,12 @@ int netifc_open(void) {
         return -1;
     }
 
-    mx_status_t status = mxio_watch_directory(dirfd, netifc_open_cb, MX_TIME_INFINITE, NULL);
+    zx_status_t status = fdio_watch_directory(dirfd, netifc_open_cb, ZX_TIME_INFINITE, NULL);
     close(dirfd);
 
     // callback returns STOP if it finds and successfully
     // opens a network interface
-    return (status == MX_ERR_STOP) ? 0 : -1;
+    return (status == ZX_ERR_STOP) ? 0 : -1;
 }
 
 void netifc_close(void) {
@@ -396,21 +396,21 @@ static void rx_complete(void* ctx, void* cookie, size_t len, uint32_t flags) {
 
 int netifc_poll(void) {
     for (;;) {
-        mx_status_t status;
+        zx_status_t status;
         if ((status = eth_complete_rx(eth, NULL, rx_complete)) < 0) {
             printf("netifc: eth rx failed: %d\n", status);
             return -1;
         }
         if (net_timer) {
-            mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
+            zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
             if (now > net_timer) {
                 return 0;
             }
-            status = eth_wait_rx(eth, net_timer + MX_MSEC(1));
+            status = eth_wait_rx(eth, net_timer + ZX_MSEC(1));
         } else {
-            status = eth_wait_rx(eth, MX_TIME_INFINITE);
+            status = eth_wait_rx(eth, ZX_TIME_INFINITE);
         }
-        if ((status < 0) && (status != MX_ERR_TIMED_OUT)) {
+        if ((status < 0) && (status != ZX_ERR_TIMED_OUT)) {
             printf("netifc: eth rx wait failed: %d\n", status);
             return -1;
         }

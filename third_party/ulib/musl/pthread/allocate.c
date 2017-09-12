@@ -1,9 +1,9 @@
 #include "libc.h"
-#include "magenta_impl.h"
+#include "zircon_impl.h"
 #include "pthread_impl.h"
 
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -66,32 +66,32 @@ __NO_SAFESTACK static pthread_t copy_tls(unsigned char* mem, size_t alloc) {
     return td;
 }
 
-__NO_SAFESTACK static bool map_block(mx_handle_t parent_vmar,
-                                     mx_handle_t vmo, size_t vmo_offset,
+__NO_SAFESTACK static bool map_block(zx_handle_t parent_vmar,
+                                     zx_handle_t vmo, size_t vmo_offset,
                                      size_t size, size_t before, size_t after,
                                      struct iovec* mapping,
                                      struct iovec* region) {
     region->iov_len = before + size + after;
-    mx_handle_t vmar;
+    zx_handle_t vmar;
     uintptr_t addr;
-    mx_status_t status = _mx_vmar_allocate(parent_vmar, 0, region->iov_len,
-                                           MX_VM_FLAG_CAN_MAP_READ |
-                                           MX_VM_FLAG_CAN_MAP_WRITE |
-                                           MX_VM_FLAG_CAN_MAP_SPECIFIC,
+    zx_status_t status = _zx_vmar_allocate(parent_vmar, 0, region->iov_len,
+                                           ZX_VM_FLAG_CAN_MAP_READ |
+                                           ZX_VM_FLAG_CAN_MAP_WRITE |
+                                           ZX_VM_FLAG_CAN_MAP_SPECIFIC,
                                            &vmar, &addr);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return true;
     region->iov_base = (void*)addr;
-    status = _mx_vmar_map(vmar, before, vmo, vmo_offset, size,
-                          MX_VM_FLAG_PERM_READ |
-                          MX_VM_FLAG_PERM_WRITE |
-                          MX_VM_FLAG_SPECIFIC, &addr);
-    if (status != MX_OK)
-        _mx_vmar_destroy(vmar);
-    _mx_handle_close(vmar);
+    status = _zx_vmar_map(vmar, before, vmo, vmo_offset, size,
+                          ZX_VM_FLAG_PERM_READ |
+                          ZX_VM_FLAG_PERM_WRITE |
+                          ZX_VM_FLAG_SPECIFIC, &addr);
+    if (status != ZX_OK)
+        _zx_vmar_destroy(vmar);
+    _zx_handle_close(vmar);
     mapping->iov_base = (void*)addr;
     mapping->iov_len = size;
-    return status != MX_OK;
+    return status != ZX_OK;
 }
 
 // This allocates all the per-thread memory for a new thread about to
@@ -117,7 +117,7 @@ __NO_SAFESTACK static bool map_block(mx_handle_t parent_vmar,
 __NO_SAFESTACK pthread_t __allocate_thread(
     const pthread_attr_t* attr,
     const char* thread_name,
-    char vmo_name[MX_MAX_NAME_LEN]) {
+    char vmo_name[ZX_MAX_NAME_LEN]) {
     thread_allocation_acquire();
 
     const size_t guard_size =
@@ -128,17 +128,17 @@ __NO_SAFESTACK pthread_t __allocate_thread(
     const size_t tcb_size = round_up_to_page(tls_size);
 
     const size_t vmo_size = tcb_size + stack_size * 2;
-    mx_handle_t vmo;
-    mx_status_t status = _mx_vmo_create(vmo_size, 0, &vmo);
-    if (status != MX_OK) {
+    zx_handle_t vmo;
+    zx_status_t status = _zx_vmo_create(vmo_size, 0, &vmo);
+    if (status != ZX_OK) {
         __thread_allocation_release();
         return NULL;
     }
     struct iovec tcb, tcb_region;
-    if (map_block(_mx_vmar_root_self(), vmo, 0, tcb_size, PAGE_SIZE, PAGE_SIZE,
+    if (map_block(_zx_vmar_root_self(), vmo, 0, tcb_size, PAGE_SIZE, PAGE_SIZE,
                   &tcb, &tcb_region)) {
         __thread_allocation_release();
-        _mx_handle_close(vmo);
+        _zx_handle_close(vmo);
         return NULL;
     }
 
@@ -155,37 +155,37 @@ __NO_SAFESTACK pthread_t __allocate_thread(
         // the pthread_t value (and the TLS size if that fits too), but
         // don't use a truncated value since that would be confusing to
         // interpret.
-        if (snprintf(vmo_name, MX_MAX_NAME_LEN, "%s:%p/TLS=%#zx",
-                     thread_name, td, tls_size) < MX_MAX_NAME_LEN ||
-            snprintf(vmo_name, MX_MAX_NAME_LEN, "%s:%p",
-                     thread_name, td) < MX_MAX_NAME_LEN)
+        if (snprintf(vmo_name, ZX_MAX_NAME_LEN, "%s:%p/TLS=%#zx",
+                     thread_name, td, tls_size) < ZX_MAX_NAME_LEN ||
+            snprintf(vmo_name, ZX_MAX_NAME_LEN, "%s:%p",
+                     thread_name, td) < ZX_MAX_NAME_LEN)
             thread_name = vmo_name;
     }
-    _mx_object_set_property(vmo, MX_PROP_NAME,
+    _zx_object_set_property(vmo, ZX_PROP_NAME,
                             thread_name, strlen(thread_name));
 
-    if (map_block(_mx_vmar_root_self(), vmo,
+    if (map_block(_zx_vmar_root_self(), vmo,
                   tcb_size, stack_size, guard_size, 0,
                   &td->safe_stack, &td->safe_stack_region)) {
-        _mx_vmar_unmap(_mx_vmar_root_self(),
+        _zx_vmar_unmap(_zx_vmar_root_self(),
                        (uintptr_t)tcb_region.iov_base, tcb_region.iov_len);
-        _mx_handle_close(vmo);
+        _zx_handle_close(vmo);
         return NULL;
     }
 
-    if (map_block(_mx_vmar_root_self(), vmo,
+    if (map_block(_zx_vmar_root_self(), vmo,
                   tcb_size + stack_size, stack_size, guard_size, 0,
                   &td->unsafe_stack, &td->unsafe_stack_region)) {
-        _mx_vmar_unmap(_mx_vmar_root_self(),
+        _zx_vmar_unmap(_zx_vmar_root_self(),
                        (uintptr_t)td->safe_stack_region.iov_base,
                        td->safe_stack_region.iov_len);
-        _mx_vmar_unmap(_mx_vmar_root_self(),
+        _zx_vmar_unmap(_zx_vmar_root_self(),
                        (uintptr_t)tcb_region.iov_base, tcb_region.iov_len);
-        _mx_handle_close(vmo);
+        _zx_handle_close(vmo);
         return NULL;
     }
 
-    _mx_handle_close(vmo);
+    _zx_handle_close(vmo);
     td->tcb_region = tcb_region;
     td->locale = &libc.global_locale;
     td->head.tp = (uintptr_t)pthread_to_tp(td);

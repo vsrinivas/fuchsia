@@ -4,7 +4,7 @@
 
 #include "asm.h"
 #include "setjmp_impl.h"
-#include <magenta/tls.h>
+#include <zircon/tls.h>
 
 ENTRY(setjmp)
 
@@ -22,7 +22,7 @@ ENTRY(setjmp)
 
     // Get the thread pointer, where the unsafe SP is stored.
     mrs x0, TPIDR_EL0
-    ldr x0, [x0, #MX_TLS_UNSAFE_SP_OFFSET]
+    ldr x0, [x0, #ZX_TLS_UNSAFE_SP_OFFSET]
 
     // Store all the vanilla callee-saves registers.
     stp x19, x20, [x16, #8*JB_X(19)]

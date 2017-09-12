@@ -1,4 +1,4 @@
-# mx_vmo_set_size
+# zx_vmo_set_size
 
 ## NAME
 
@@ -7,9 +7,9 @@ vmo_set_size - resize a VMO object
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-mx_status_t mx_vmo_set_size(mx_handle_t handle, uint64_t size);
+zx_status_t zx_vmo_set_size(zx_handle_t handle, uint64_t size);
 
 ```
 
@@ -19,20 +19,20 @@ mx_status_t mx_vmo_set_size(mx_handle_t handle, uint64_t size);
 
 ## RETURN VALUE
 
-**vmo_set_size**() returns **MX_OK** on success. In the event
+**vmo_set_size**() returns **ZX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS
 
-**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**MX_ERR_WRONG_TYPE**  *handle* is not a VMO handle.
+**ZX_ERR_WRONG_TYPE**  *handle* is not a VMO handle.
 
-**MX_ERR_ACCESS_DENIED**  *handle* does not have the **MX_RIGHT_WRITE** right.
+**ZX_ERR_ACCESS_DENIED**  *handle* does not have the **ZX_RIGHT_WRITE** right.
 
-**MX_ERR_OUT_OF_RANGE**  Requested size is too large.
+**ZX_ERR_OUT_OF_RANGE**  Requested size is too large.
 
-**MX_ERR_NO_MEMORY**  Failure due to lack of system memory.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of system memory.
 
 ## SEE ALSO
 

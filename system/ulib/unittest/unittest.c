@@ -22,7 +22,7 @@ typedef uint64_t nsecs_t;
 
 static nsecs_t now(void) {
 #ifdef __Fuchsia__
-    return mx_time_get(MX_CLOCK_MONOTONIC);
+    return zx_time_get(ZX_CLOCK_MONOTONIC);
 #else
     // clock_gettime(CLOCK_MONOTONIC) would be better but may not exist on the host
     struct timeval tv;
@@ -111,14 +111,14 @@ int unittest_set_verbosity_level(int new_level) {
 }
 
 #ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
-void unittest_register_crash(struct test_info* current_test_info, mx_handle_t handle) {
+void unittest_register_crash(struct test_info* current_test_info, zx_handle_t handle) {
     crash_list_register(current_test_info->crash_list, handle);
 }
 
 bool unittest_run_death_fn(void (*fn_to_run)(void*), void* arg) {
     test_result_t test_result;
-    mx_status_t status = run_fn_with_crash_handler(fn_to_run, arg, &test_result);
-    return status == MX_OK && test_result == TEST_CRASHED;
+    zx_status_t status = run_fn_with_crash_handler(fn_to_run, arg, &test_result);
+    return status == ZX_OK && test_result == TEST_CRASHED;
 }
 #endif // UNITTEST_CRASH_HANDLER_SUPPORTED
 
@@ -138,10 +138,10 @@ void unittest_run_named_test(const char* name, bool (*test)(void),
             test_info.crash_list = crash_list_new();
 
             test_result_t test_result;
-            mx_status_t status = run_test_with_crash_handler(test_info.crash_list,
+            zx_status_t status = run_test_with_crash_handler(test_info.crash_list,
                                                              test,
                                                              &test_result);
-            if (status != MX_OK || test_result == TEST_FAILED) {
+            if (status != ZX_OK || test_result == TEST_FAILED) {
                 test_info.all_ok = false;
             }
 

@@ -20,7 +20,7 @@
 #include <errno.h>
 #include <stdint.h>
 
-#include <magenta/boot/netboot.h>
+#include <zircon/boot/netboot.h>
 
 #include "bootserver.h"
 

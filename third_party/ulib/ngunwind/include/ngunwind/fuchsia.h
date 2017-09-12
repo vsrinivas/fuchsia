@@ -28,7 +28,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 extern "C" {
 #endif
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 #include "libunwind.h"
 
@@ -38,8 +38,8 @@ typedef int (unw_dso_lookup_func_t) (struct dsoinfo* dsos, unw_word_t pc,
 
 typedef struct unw_fuchsia_info unw_fuchsia_info_t;
 
-extern unw_fuchsia_info_t* unw_create_fuchsia(mx_handle_t process,
-                                              mx_handle_t thread,
+extern unw_fuchsia_info_t* unw_create_fuchsia(zx_handle_t process,
+                                              zx_handle_t thread,
                                               struct dsoinfo* dsos,
                                               unw_dso_lookup_func_t* lookup_dso);
 

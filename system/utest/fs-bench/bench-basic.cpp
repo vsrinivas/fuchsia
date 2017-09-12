@@ -13,8 +13,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <magenta/device/vfs.h>
-#include <magenta/syscalls.h>
+#include <zircon/device/vfs.h>
+#include <zircon/syscalls.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/string_piece.h>
 #include <fbl/unique_ptr.h>
@@ -43,8 +43,8 @@ bool benchmark_banned(int fd, const char (&banned_fs)[len]) {
 }
 
 inline void time_end(const char *str, uint64_t start) {
-    uint64_t end = mx_ticks_get();
-    uint64_t ticks_per_msec = mx_ticks_per_second() / 1000;
+    uint64_t end = zx_ticks_get();
+    uint64_t ticks_per_msec = zx_ticks_per_second() / 1000;
     printf("Benchmark %s: [%10lu] msec\n", str, (end - start) / ticks_per_msec);
 }
 
@@ -78,7 +78,7 @@ bool benchmark_write_read(void) {
         char str[100];
         snprintf(str, sizeof(str), "write %d", i);
 
-        start = mx_ticks_get();
+        start = zx_ticks_get();
         count = NumOps;
         while (count--) {
             ASSERT_EQ(write(fd, data.get(), DataSize), DataSize);
@@ -88,7 +88,7 @@ bool benchmark_write_read(void) {
         ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
         snprintf(str, sizeof(str), "read %d", i);
 
-        start = mx_ticks_get();
+        start = zx_ticks_get();
         count = NumOps;
         while (count--) {
             ASSERT_EQ(read(fd, data.get(), DataSize), DataSize);
@@ -176,16 +176,16 @@ bool benchmark_path_walk(void) {
     strcpy(path, MOUNT_POINT);
     uint64_t start;
 
-    start = mx_ticks_get();
+    start = zx_ticks_get();
     ASSERT_TRUE(walk_down_path_components<MaxComponents>(path, mkdir_callback));
     time_end("mkdir", start);
 
     strcpy(path, MOUNT_POINT);
-    start = mx_ticks_get();
+    start = zx_ticks_get();
     ASSERT_TRUE(walk_down_path_components<MaxComponents>(path, stat_callback));
     time_end("stat", start);
 
-    start = mx_ticks_get();
+    start = zx_ticks_get();
     ASSERT_TRUE(walk_up_path_components(path, unlink_callback));
     time_end("unlink", start);
     END_TEST;

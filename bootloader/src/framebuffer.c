@@ -183,8 +183,8 @@ void draw_logo() {
              logo_width, logo_height, 0);
 }
 
-#include <magenta/font/font-9x16.h>
-#include <magenta/font/font-18x32.h>
+#include <zircon/font/font-9x16.h>
+#include <zircon/font/font-18x32.h>
 
 static void putchar(efi_graphics_output_protocol* gop, fb_font* font, unsigned ch, unsigned x, unsigned y, unsigned scale_x, unsigned scale_y, efi_graphics_output_blt_pixel* fg, efi_graphics_output_blt_pixel* bg) {
     const uint16_t* cdata = font->data + ch * font->height;

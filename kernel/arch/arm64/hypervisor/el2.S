@@ -7,7 +7,7 @@
 #include <arch/arm64/mmu.h>
 #include <arch/asm_macros.h>
 #include <asm.h>
-#include <magenta/errors.h>
+#include <zircon/errors.h>
 
 #define ESR_EL2_EC_MASK     0xfc000000
 #define ESR_EL2_ISS_MASK    0x01ffffff
@@ -19,7 +19,7 @@
 // EL2 functions
 LOCAL_FUNCTION(el2_set_stack)
     mov sp, x0
-    mov x0, #MX_OK
+    mov x0, #ZX_OK
     eret
 END_FUNCTION(el2_set_stack)
 
@@ -47,7 +47,7 @@ table:
     b el2_set_stack
 
 out_of_range:
-    mov x0, MX_ERR_OUT_OF_RANGE
+    mov x0, ZX_ERR_OUT_OF_RANGE
     eret
 .endm
 

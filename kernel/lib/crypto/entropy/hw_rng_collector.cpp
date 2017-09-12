@@ -7,20 +7,20 @@
 #include <lib/crypto/entropy/hw_rng_collector.h>
 
 #include <dev/hw_rng.h>
-#include <magenta/errors.h>
+#include <zircon/errors.h>
 
 namespace crypto {
 
 namespace entropy {
 
-mx_status_t HwRngCollector::GetInstance(Collector** ptr) {
+zx_status_t HwRngCollector::GetInstance(Collector** ptr) {
 #if ARCH_X86_64
     static HwRngCollector instance;
     *ptr = &instance;
-    return MX_OK;
+    return ZX_OK;
 #else
     *ptr = nullptr;
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 #endif
 }
 

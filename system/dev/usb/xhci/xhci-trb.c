@@ -4,9 +4,9 @@
 
 #include "xhci.h"
 
-mx_status_t xhci_transfer_ring_init(xhci_transfer_ring_t* ring, int count) {
-    mx_status_t status = io_buffer_init(&ring->buffer, count * sizeof(xhci_trb_t), IO_BUFFER_RW);
-    if (status != MX_OK) return status;
+zx_status_t xhci_transfer_ring_init(xhci_transfer_ring_t* ring, int count) {
+    zx_status_t status = io_buffer_init(&ring->buffer, count * sizeof(xhci_trb_t), IO_BUFFER_RW);
+    if (status != ZX_OK) return status;
 
     ring->start = io_buffer_virt(&ring->buffer);
     ring->current = ring->start;
@@ -17,7 +17,7 @@ mx_status_t xhci_transfer_ring_init(xhci_transfer_ring_t* ring, int count) {
     // set link TRB at end to point back to the beginning
     trb_set_ptr(&ring->start[count - 1], (void *)io_buffer_phys(&ring->buffer));
     trb_set_control(&ring->start[count - 1], TRB_LINK, TRB_TC);
-    return MX_OK;
+    return ZX_OK;
 }
 
 void xhci_transfer_ring_free(xhci_transfer_ring_t* ring) {
@@ -38,11 +38,11 @@ size_t xhci_transfer_ring_free_trbs(xhci_transfer_ring_t* ring) {
     return size - busy_count;
 }
 
-mx_status_t xhci_event_ring_init(xhci_t* xhci, int interrupter, int count) {
+zx_status_t xhci_event_ring_init(xhci_t* xhci, int interrupter, int count) {
     xhci_event_ring_t* ring = &xhci->event_rings[interrupter];
     // allocate buffer for TRBs
-    mx_status_t status = io_buffer_init(&ring->buffer, count * sizeof(xhci_trb_t), IO_BUFFER_RW);
-    if (status != MX_OK) return status;
+    zx_status_t status = io_buffer_init(&ring->buffer, count * sizeof(xhci_trb_t), IO_BUFFER_RW);
+    if (status != ZX_OK) return status;
 
     ring->start = io_buffer_virt(&ring->buffer);
     erst_entry_t* erst_array = xhci->erst_arrays[interrupter];
@@ -52,7 +52,7 @@ mx_status_t xhci_event_ring_init(xhci_t* xhci, int interrupter, int count) {
     ring->current = ring->start;
     ring->end = ring->start + count;
     ring->ccs = TRB_C;
-    return MX_OK;
+    return ZX_OK;
 }
 
 void xhci_event_ring_free(xhci_t* xhci, int interrupter) {

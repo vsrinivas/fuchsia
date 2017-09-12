@@ -12,7 +12,7 @@
 #include <hypervisor/bits.h>
 #include <hypervisor/vcpu.h>
 #include <hypervisor/virtio.h>
-#include <magenta/syscalls/port.h>
+#include <zircon/syscalls/port.h>
 #include <virtio/virtio.h>
 #include <virtio/virtio_ring.h>
 
@@ -107,28 +107,28 @@ static virtio_queue_t* selected_queue(const virtio_device_t* device) {
 /* Handle reads to the common configuration structure as defined in
  * Virtio 1.0 Section 4.1.4.3.
  */
-static mx_status_t virtio_pci_common_cfg_read(const pci_device_t* pci_device, uint16_t port,
-                                              uint8_t access_size, mx_vcpu_io_t* vcpu_io) {
+static zx_status_t virtio_pci_common_cfg_read(const pci_device_t* pci_device, uint16_t port,
+                                              uint8_t access_size, zx_vcpu_io_t* vcpu_io) {
     virtio_device_t* device = pci_device_to_virtio(pci_device);
     switch (port) {
     case VIRTIO_PCI_COMMON_CFG_DRIVER_FEATURES_SEL: {
         fbl::AutoLock lock(&device->mutex);
         vcpu_io->u32 = device->driver_features_sel;
         vcpu_io->access_size = 4;
-        return MX_OK;
+        return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_DEVICE_FEATURES_SEL: {
         fbl::AutoLock lock(&device->mutex);
         vcpu_io->u32 = device->features_sel;
         vcpu_io->access_size = 4;
-        return MX_OK;
+        return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_DRIVER_FEATURES: {
         // We currently only support a single feature word.
         fbl::AutoLock lock(&device->mutex);
         vcpu_io->u32 = device->driver_features_sel > 0 ? 0 : device->driver_features;
         vcpu_io->access_size = 4;
-        return MX_OK;
+        return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_DEVICE_FEATURES: {
         // Virtio 1.0 Section 6:
@@ -145,39 +145,39 @@ static mx_status_t virtio_pci_common_cfg_read(const pci_device_t* pci_device, ui
         vcpu_io->access_size = 4;
         if (device->features_sel == 1) {
             vcpu_io->u32 = 1;
-            return MX_OK;
+            return ZX_OK;
         }
 
         vcpu_io->u32 = device->features_sel > 0 ? 0 : device->features;
-        return MX_OK;
+        return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_NUM_QUEUES: {
         fbl::AutoLock lock(&device->mutex);
         vcpu_io->u16 = device->num_queues;
         vcpu_io->access_size = 2;
-        return MX_OK;
+        return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_DEVICE_STATUS: {
         fbl::AutoLock lock(&device->mutex);
         vcpu_io->u8 = device->status;
         vcpu_io->access_size = 1;
-        return MX_OK;
+        return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_SEL: {
         fbl::AutoLock lock(&device->mutex);
         vcpu_io->u16 = device->queue_sel;
         vcpu_io->access_size = 2;
-        return MX_OK;
+        return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_SIZE: {
         virtio_queue_t* queue = selected_queue(device);
         if (queue == nullptr)
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
 
         fbl::AutoLock lock(&queue->mutex);
         vcpu_io->u16 = queue->size;
         vcpu_io->access_size = 2;
-        return MX_OK;
+        return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_ENABLE:
         // Virtio 1.0 Section 4.1.4.3: The device MUST present a 0 in
@@ -186,17 +186,17 @@ static mx_status_t virtio_pci_common_cfg_read(const pci_device_t* pci_device, ui
         // Note the implementation currently does not respect this value.
         vcpu_io->access_size = 2;
         vcpu_io->u16 = 0;
-        return MX_OK;
+        return ZX_OK;
     case VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW ... VIRTIO_PCI_COMMON_CFG_QUEUE_USED_HIGH: {
         virtio_queue_t* queue = selected_queue(device);
         if (queue == nullptr)
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
 
         size_t word = (port - VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW) / sizeof(uint32_t);
         fbl::AutoLock lock(&queue->mutex);
         vcpu_io->u32 = queue->addr.words[word];
         vcpu_io->access_size = 4;
-        return MX_OK;
+        return ZX_OK;
     }
 
     // Currently not implmeneted.
@@ -206,15 +206,15 @@ static mx_status_t virtio_pci_common_cfg_read(const pci_device_t* pci_device, ui
     case VIRTIO_PCI_COMMON_CFG_MSIX_CONFIG:
         vcpu_io->u32 = 0;
         vcpu_io->access_size = access_size;
-        return MX_OK;
+        return ZX_OK;
     }
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t virtio_pci_read(const pci_device_t* pci_device, uint8_t bar, uint16_t port,
-                                   uint8_t access_size, mx_vcpu_io_t* vcpu_io) {
+static zx_status_t virtio_pci_read(const pci_device_t* pci_device, uint8_t bar, uint16_t port,
+                                   uint8_t access_size, zx_vcpu_io_t* vcpu_io) {
     if (bar != VirtioPciBar::MODERN)
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 
     virtio_device_t* device = pci_device_to_virtio(pci_device);
     switch (port) {
@@ -231,7 +231,7 @@ static mx_status_t virtio_pci_read(const pci_device_t* pci_device, uint8_t bar, 
         // To avoid an extra access, simply reading this register resets it to
         // 0 and causes the device to de-assert the interrupt.
         device->isr_status = 0;
-        return MX_OK;
+        return ZX_OK;
     }
 
     if (port >= kVirtioPciDeviceCfgBase && port < kVirtioPciDeviceCfgBase + device->config_size) {
@@ -239,7 +239,7 @@ static mx_status_t virtio_pci_read(const pci_device_t* pci_device, uint8_t bar, 
         return device->ops->read(device, device_offset, access_size, vcpu_io);
     }
     fprintf(stderr, "Unhandled read %#x\n", port);
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 static void virtio_queue_update_addr(virtio_queue_t* queue) {
@@ -251,100 +251,100 @@ static void virtio_queue_update_addr(virtio_queue_t* queue) {
 /* Handle writes to the common configuration structure as defined in
  * Virtio 1.0 Section 4.1.4.3.
  */
-static mx_status_t virtio_pci_common_cfg_write(pci_device_t* pci_device, uint16_t port,
-                                               const mx_vcpu_io_t* io) {
+static zx_status_t virtio_pci_common_cfg_write(pci_device_t* pci_device, uint16_t port,
+                                               const zx_vcpu_io_t* io) {
     virtio_device_t* device = pci_device_to_virtio(pci_device);
 
     switch (port) {
     case VIRTIO_PCI_COMMON_CFG_DEVICE_FEATURES_SEL: {
         if (io->access_size != 4)
-            return MX_ERR_IO_DATA_INTEGRITY;
+            return ZX_ERR_IO_DATA_INTEGRITY;
 
         fbl::AutoLock lock(&device->mutex);
         device->features_sel = io->u32;
-        return MX_OK;
+        return ZX_OK;
     }
 
     case VIRTIO_PCI_COMMON_CFG_DRIVER_FEATURES_SEL: {
         if (io->access_size != 4)
-            return MX_ERR_IO_DATA_INTEGRITY;
+            return ZX_ERR_IO_DATA_INTEGRITY;
 
         fbl::AutoLock lock(&device->mutex);
         device->driver_features_sel = io->u32;
-        return MX_OK;
+        return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_DRIVER_FEATURES: {
         if (io->access_size != 4)
-            return MX_ERR_IO_DATA_INTEGRITY;
+            return ZX_ERR_IO_DATA_INTEGRITY;
 
         fbl::AutoLock lock(&device->mutex);
         if (device->driver_features_sel == 0)
             device->driver_features = io->u32;
-        return MX_OK;
+        return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_DEVICE_STATUS: {
         if (io->access_size != 1)
-            return MX_ERR_IO_DATA_INTEGRITY;
+            return ZX_ERR_IO_DATA_INTEGRITY;
 
         fbl::AutoLock lock(&device->mutex);
         device->status = io->u8;
-        return MX_OK;
+        return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_SEL: {
         if (io->access_size != 2)
-            return MX_ERR_IO_DATA_INTEGRITY;
+            return ZX_ERR_IO_DATA_INTEGRITY;
         if (io->u16 >= device->num_queues)
-            return MX_ERR_NOT_SUPPORTED;
+            return ZX_ERR_NOT_SUPPORTED;
 
         fbl::AutoLock lock(&device->mutex);
         device->queue_sel = io->u16;
-        return MX_OK;
+        return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_SIZE: {
         if (io->access_size != 2)
-            return MX_ERR_IO_DATA_INTEGRITY;
+            return ZX_ERR_IO_DATA_INTEGRITY;
         virtio_queue_t* queue = selected_queue(device);
         if (queue == nullptr)
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
 
         fbl::AutoLock lock(&queue->mutex);
         queue->size = io->u16;
         virtio_queue_update_addr(queue);
-        return MX_OK;
+        return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW ... VIRTIO_PCI_COMMON_CFG_QUEUE_USED_HIGH: {
         if (io->access_size != 4)
-            return MX_ERR_IO_DATA_INTEGRITY;
+            return ZX_ERR_IO_DATA_INTEGRITY;
         virtio_queue_t* queue = selected_queue(device);
         if (queue == nullptr)
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
 
         size_t word = (port - VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW) / sizeof(uint32_t);
         fbl::AutoLock lock(&queue->mutex);
         queue->addr.words[word] = io->u32;
         virtio_queue_update_addr(queue);
-        return MX_OK;
+        return ZX_OK;
     }
     // Not implemented registers.
     case VIRTIO_PCI_COMMON_CFG_QUEUE_MSIX_VECTOR:
     case VIRTIO_PCI_COMMON_CFG_MSIX_CONFIG:
     case VIRTIO_PCI_COMMON_CFG_QUEUE_ENABLE:
-        return MX_OK;
+        return ZX_OK;
     // Read-only registers.
     case VIRTIO_PCI_COMMON_CFG_QUEUE_NOTIFY_OFF:
     case VIRTIO_PCI_COMMON_CFG_NUM_QUEUES:
     case VIRTIO_PCI_COMMON_CFG_CONFIG_GEN:
     case VIRTIO_PCI_COMMON_CFG_DEVICE_FEATURES:
         fprintf(stderr, "Unsupported write to %x\n", port);
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t virtio_pci_write(pci_device_t* pci_device, uint8_t bar, uint16_t port,
-                                    const mx_vcpu_io_t* io) {
+static zx_status_t virtio_pci_write(pci_device_t* pci_device, uint8_t bar, uint16_t port,
+                                    const zx_vcpu_io_t* io) {
     if (bar != VirtioPciBar::MODERN)
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 
     virtio_device_t* device = pci_device_to_virtio(pci_device);
     switch (port) {
@@ -354,7 +354,7 @@ static mx_status_t virtio_pci_write(pci_device_t* pci_device, uint8_t bar, uint1
     }
     case kVirtioPciNotifyCfgBase ... kVirtioPciNotifyCfgTop:
         if (io->access_size != 2)
-            return MX_ERR_IO_DATA_INTEGRITY;
+            return ZX_ERR_IO_DATA_INTEGRITY;
 
         return virtio_device_kick(device, io->u16);
     }
@@ -364,20 +364,20 @@ static mx_status_t virtio_pci_write(pci_device_t* pci_device, uint8_t bar, uint1
         return device->ops->write(device, device_offset, io);
     }
     fprintf(stderr, "Unhandled write %#x\n", port);
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t virtio_pci_transitional_write(pci_device_t* pci_device, uint8_t bar,
-                                                 uint16_t port, const mx_vcpu_io_t* io) {
+static zx_status_t virtio_pci_transitional_write(pci_device_t* pci_device, uint8_t bar,
+                                                 uint16_t port, const zx_vcpu_io_t* io) {
     if (bar == VirtioPciBar::LEGACY)
         return virtio_pci_legacy_write(pci_device, bar, port, io);
 
     return virtio_pci_write(pci_device, bar, port, io);
 }
 
-static mx_status_t virtio_pci_transitional_read(const pci_device_t* pci_device, uint8_t bar,
+static zx_status_t virtio_pci_transitional_read(const pci_device_t* pci_device, uint8_t bar,
                                                 uint16_t port, uint8_t access_size,
-                                                mx_vcpu_io_t* vcpu_io) {
+                                                zx_vcpu_io_t* vcpu_io) {
     if (bar == VirtioPciBar::LEGACY)
         return virtio_pci_legacy_read(pci_device, bar, port, access_size, vcpu_io);
 
@@ -441,7 +441,7 @@ static void virtio_pci_setup_caps(virtio_device_t* device) {
 
     // Note VIRTIO_PCI_CAP_PCI_CFG is not implmeneted.
     // This one is more complex since it is writable and doesn't seem to be
-    // used by Linux or Magenta.
+    // used by Linux or Zircon.
 
     static_assert(kVirtioPciNumCapabilities == 4, "Incorrect number of capabilities.");
     device->pci_device.capabilities = device->capabilities;

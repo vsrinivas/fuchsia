@@ -8,7 +8,7 @@
 
 #include <arch/arm64.h>
 #include <arch/ops.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <reg.h>
 #include <arch/spinlock.h>
 

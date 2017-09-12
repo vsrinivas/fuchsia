@@ -9,7 +9,7 @@
 
 #include <arch/arm64/mmu.h>
 #include <vm/arch_vm_aspace.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
 

@@ -6,10 +6,10 @@
 
 #include <ddk/device.h>
 
-struct mx_device {
+struct zx_device {
     uintptr_t magic;
 
-    mx_protocol_device_t* ops;
+    zx_protocol_device_t* ops;
 
     // reserved for driver use; will not be touched by devmgr
     void* ctx;
@@ -17,10 +17,10 @@ struct mx_device {
     uint32_t flags;
     uint32_t refcount;
 
-    mx_handle_t event;
-    mx_handle_t local_event;
-    mx_handle_t rpc;
-    mx_handle_t resource;
+    zx_handle_t event;
+    zx_handle_t local_event;
+    zx_handle_t rpc;
+    zx_handle_t resource;
 
     // most devices implement a single
     // protocol beyond the base device protocol
@@ -28,13 +28,13 @@ struct mx_device {
     void* protocol_ops;
 
     // driver that has published this device
-    mx_driver_t* driver;
+    zx_driver_t* driver;
 
     // parent in the device tree
-    mx_device_t* parent;
+    zx_device_t* parent;
 
     // driver that is bound to this device, NULL if unbound
-    mx_driver_t* owner;
+    zx_driver_t* owner;
 
     void* owner_cookie;
 
@@ -50,12 +50,12 @@ struct mx_device {
     // iostate
     void* ios;
 
-    char name[MX_DEVICE_NAME_MAX + 1];
+    char name[ZX_DEVICE_NAME_MAX + 1];
 };
 
-// mx_device_t objects must be created or initialized by the driver manager's
+// zx_device_t objects must be created or initialized by the driver manager's
 // device_create() function.  Drivers MAY NOT touch any
-// fields in the mx_device_t, except for the protocol_id and protocol_ops
+// fields in the zx_device_t, except for the protocol_id and protocol_ops
 // fields which it may fill out after init and before device_add() is called,
 // and the ctx field which may be used to store driver-specific data.
 
@@ -69,54 +69,54 @@ struct mx_device {
 
 #define DEV_MAGIC 'MDEV'
 
-mx_status_t device_bind(mx_device_t* dev, const char* drv_libname);
-mx_status_t device_open_at(mx_device_t* dev, mx_device_t** out, const char* path, uint32_t flags);
-mx_status_t device_close(mx_device_t* dev, uint32_t flags);
+zx_status_t device_bind(zx_device_t* dev, const char* drv_libname);
+zx_status_t device_open_at(zx_device_t* dev, zx_device_t** out, const char* path, uint32_t flags);
+zx_status_t device_close(zx_device_t* dev, uint32_t flags);
 
-static inline mx_status_t dev_op_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
+static inline zx_status_t dev_op_open(zx_device_t* dev, zx_device_t** dev_out, uint32_t flags) {
     return dev->ops->open(dev->ctx, dev_out, flags);
 }
 
-static inline mx_status_t dev_op_open_at(mx_device_t* dev, mx_device_t** dev_out,
+static inline zx_status_t dev_op_open_at(zx_device_t* dev, zx_device_t** dev_out,
                                            const char* path, uint32_t flags) {
     return dev->ops->open_at(dev->ctx, dev_out, path, flags);
 }
 
-static inline mx_status_t dev_op_close(mx_device_t* dev, uint32_t flags) {
+static inline zx_status_t dev_op_close(zx_device_t* dev, uint32_t flags) {
     return dev->ops->close(dev->ctx, flags);
 }
 
-static inline void dev_op_unbind(mx_device_t* dev) {
+static inline void dev_op_unbind(zx_device_t* dev) {
     dev->ops->unbind(dev->ctx);
 }
 
-static inline void dev_op_release(mx_device_t* dev) {
+static inline void dev_op_release(zx_device_t* dev) {
     dev->ops->release(dev->ctx);
 }
 
-static inline mx_status_t dev_op_suspend(mx_device_t* dev, uint32_t flags) {
+static inline zx_status_t dev_op_suspend(zx_device_t* dev, uint32_t flags) {
     return dev->ops->suspend(dev->ctx, flags);
 }
 
-static inline mx_status_t dev_op_resume(mx_device_t* dev, uint32_t flags) {
+static inline zx_status_t dev_op_resume(zx_device_t* dev, uint32_t flags) {
     return dev->ops->resume(dev->ctx, flags);
 }
 
-static inline mx_status_t dev_op_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off,
+static inline zx_status_t dev_op_read(zx_device_t* dev, void* buf, size_t count, zx_off_t off,
                                          size_t* actual) {
     return dev->ops->read(dev->ctx, buf, count, off, actual);
 }
 
-static inline mx_status_t dev_op_write(mx_device_t* dev, const void* buf, size_t count,
-                                          mx_off_t off, size_t* actual) {
+static inline zx_status_t dev_op_write(zx_device_t* dev, const void* buf, size_t count,
+                                          zx_off_t off, size_t* actual) {
     return dev->ops->write(dev->ctx, buf, count, off, actual);
 }
 
-static inline mx_off_t dev_op_get_size(mx_device_t* dev) {
+static inline zx_off_t dev_op_get_size(zx_device_t* dev) {
     return dev->ops->get_size(dev->ctx);
 }
 
-static inline mx_status_t dev_op_ioctl(mx_device_t* dev, uint32_t op,
+static inline zx_status_t dev_op_ioctl(zx_device_t* dev, uint32_t op,
                                       const void* in_buf, size_t in_len,
                                       void* out_buf, size_t out_len, size_t* out_actual) {
     return dev->ops->ioctl(dev->ctx, op, in_buf, in_len, out_buf, out_len, out_actual);

@@ -3,7 +3,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 #include <inttypes.h>
 
@@ -11,12 +11,12 @@
 static bool elapsed_time_using_ticks(void) {
     BEGIN_TEST;
 
-    uint64_t per_second = mx_ticks_per_second();
+    uint64_t per_second = zx_ticks_per_second();
     ASSERT_GT(per_second, 0u, "Invalid ticks per second");
     unittest_printf("Ticks per second: %" PRIu64 "\n", per_second);
 
-    uint64_t x = mx_ticks_get();
-    uint64_t y = mx_ticks_get();
+    uint64_t x = zx_ticks_get();
+    uint64_t y = zx_ticks_get();
     ASSERT_GE(y, x, "Ticks went backwards");
 
     double seconds = (y - x) / (double)per_second;

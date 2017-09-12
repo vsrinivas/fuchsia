@@ -1,4 +1,4 @@
-# mx_event_create
+# zx_event_create
 
 ## NAME
 
@@ -7,30 +7,30 @@ event_create - create an event
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-mx_status_t mx_event_create(uint32_t options, mx_handle_t* out);
+zx_status_t zx_event_create(uint32_t options, zx_handle_t* out);
 ```
 
 ## DESCRIPTION
 
 **event_create**() creates an event, which is an object that is signalable. That
-is, its *MX_USER_SIGNAL_n* (where *n* is 0 through 7) signals can be
+is, its *ZX_USER_SIGNAL_n* (where *n* is 0 through 7) signals can be
 manipulated using **object_signal**().
 
-The newly-created handle will have the *MX_RIGHT_TRANSFER*, *MX_RIGHT_DUPLICATE*,
-*MX_RIGHT_READ*, *MX_RIGHT_WRITE*, and *MX_RIGHT_SIGNAL* rights.
+The newly-created handle will have the *ZX_RIGHT_TRANSFER*, *ZX_RIGHT_DUPLICATE*,
+*ZX_RIGHT_READ*, *ZX_RIGHT_WRITE*, and *ZX_RIGHT_SIGNAL* rights.
 
 ## RETURN VALUE
 
-**event_create**() returns MX_OK and a valid event handle (via *out*) on success.
+**event_create**() returns ZX_OK and a valid event handle (via *out*) on success.
 On failure, an error value is returned.
 
 ## ERRORS
 
-**MX_ERR_INVALID_ARGS**  *out* is an invalid pointer, or *options* is nonzero.
+**ZX_ERR_INVALID_ARGS**  *out* is an invalid pointer, or *options* is nonzero.
 
-**MX_ERR_NO_MEMORY**  Temporary failure due to lack of memory.
+**ZX_ERR_NO_MEMORY**  Temporary failure due to lack of memory.
 
 ## SEE ALSO
 

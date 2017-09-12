@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
@@ -24,7 +24,7 @@ public:
     struct CountInfo {
         struct {
             uint64_t count;
-            mx_signals_t signal;
+            zx_signals_t signal;
         } entry[2];
     };
 
@@ -41,12 +41,12 @@ public:
     // Note that |cinfo| might be null.
     // May return flags: kWokeThreads, kNeedRemoval
     // WARNING: This is called under StateTracker's mutex.
-    virtual Flags OnInitialize(mx_signals_t initial_state, const CountInfo* cinfo) = 0;
+    virtual Flags OnInitialize(zx_signals_t initial_state, const CountInfo* cinfo) = 0;
 
     // Called whenever the state changes, to give it the new state.
     // May return flags: kWokeThreads, kNeedRemoval
     // WARNING: This is called under StateTracker's mutex
-    virtual Flags OnStateChange(mx_signals_t new_state) = 0;
+    virtual Flags OnStateChange(zx_signals_t new_state) = 0;
 
     // Called when |handle| (which refers to a handle to the object that owns the StateTracker) is
     // being destroyed/"closed"/transferred. (The object itself, and thus the StateTracker too, may

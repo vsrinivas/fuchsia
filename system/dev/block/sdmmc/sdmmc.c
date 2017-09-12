@@ -17,8 +17,8 @@
 #include <ddk/iotxn.h>
 #include <ddk/protocol/sdmmc.h>
 
-// Magenta Includes
-#include <magenta/threads.h>
+// Zircon Includes
+#include <zircon/threads.h>
 #include <sync/completion.h>
 #include <pretty/hexdump.h>
 
@@ -47,7 +47,7 @@ static void sdmmc_txn_cplt(iotxn_t* request, void* cookie) {
     completion_signal((completion_t*)cookie);
 };
 
-mx_status_t sdmmc_do_command(mx_device_t* dev, const uint32_t cmd,
+zx_status_t sdmmc_do_command(zx_device_t* dev, const uint32_t cmd,
                                     const uint32_t arg, iotxn_t* txn) {
     sdmmc_protocol_data_t* pdata = iotxn_pdata(txn, sdmmc_protocol_data_t);
     pdata->cmd = cmd;
@@ -59,12 +59,12 @@ mx_status_t sdmmc_do_command(mx_device_t* dev, const uint32_t cmd,
 
     iotxn_queue(dev, txn);
 
-    completion_wait(&cplt, MX_TIME_INFINITE);
+    completion_wait(&cplt, ZX_TIME_INFINITE);
 
     return txn->status;
 }
 
-static mx_off_t sdmmc_get_size(void* ctx) {
+static zx_off_t sdmmc_get_size(void* ctx) {
     sdmmc_t* sdmmc = ctx;
     return sdmmc->capacity;
 }
@@ -77,25 +77,25 @@ static void sdmmc_get_info(block_info_t* info, void* ctx) {
     info->block_count = sdmmc_get_size(ctx) / SDHC_BLOCK_SIZE;
 }
 
-static mx_status_t sdmmc_ioctl(void* ctx, uint32_t op, const void* cmd,
+static zx_status_t sdmmc_ioctl(void* ctx, uint32_t op, const void* cmd,
                                size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
     switch (op) {
     case IOCTL_BLOCK_GET_INFO: {
         block_info_t* info = reply;
         if (max < sizeof(*info))
-            return MX_ERR_BUFFER_TOO_SMALL;
+            return ZX_ERR_BUFFER_TOO_SMALL;
         sdmmc_get_info(info, ctx);
         *out_actual = sizeof(*info);
-        return MX_OK;
+        return ZX_OK;
     }
     case IOCTL_BLOCK_GET_NAME: {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
     case IOCTL_DEVICE_SYNC: {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
     default:
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
     return 0;
 }
@@ -115,7 +115,7 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
         xprintf("sdmmc: iotxn offset not aligned to block boundary, "
                 "offset =%" PRIu64 ", block size = %d\n",
                 txn->offset, SDHC_BLOCK_SIZE);
-        iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
         return;
     }
 
@@ -123,13 +123,13 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
         xprintf("sdmmc: iotxn length not aligned to block boundary, "
                 "offset =%" PRIu64 ", block size = %d\n",
                 txn->length, SDHC_BLOCK_SIZE);
-        iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
         return;
     }
 
     iotxn_t* emmc_txn = NULL;
     sdmmc_t* sdmmc = ctx;
-    mx_device_t* sdmmc_mxdev = sdmmc->host_mxdev;
+    zx_device_t* sdmmc_mxdev = sdmmc->host_mxdev;
     uint32_t cmd = 0;
 
     // Figure out which SD command we need to issue.
@@ -150,29 +150,29 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
             break;
         default:
             // Invalid opcode?
-            iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
+            iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
             return;
     }
 
-    if (iotxn_alloc(&emmc_txn, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, txn->length) != MX_OK) {
+    if (iotxn_alloc(&emmc_txn, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, txn->length) != ZX_OK) {
         xprintf("sdmmc: error allocating emmc iotxn\n");
-        iotxn_complete(txn, MX_ERR_INTERNAL, 0);
+        iotxn_complete(txn, ZX_ERR_INTERNAL, 0);
         return;
     }
     emmc_txn->opcode = txn->opcode;
     emmc_txn->flags = txn->flags;
     emmc_txn->offset = txn->offset;
     emmc_txn->length = txn->length;
-    emmc_txn->protocol = MX_PROTOCOL_SDMMC;
+    emmc_txn->protocol = ZX_PROTOCOL_SDMMC;
     sdmmc_protocol_data_t* pdata = iotxn_pdata(emmc_txn, sdmmc_protocol_data_t);
 
     uint8_t current_state;
     const size_t max_attempts = 10;
     size_t attempt = 0;
     for (; attempt <= max_attempts; attempt++) {
-        mx_status_t rc = sdmmc_do_command(sdmmc_mxdev, SDMMC_SEND_STATUS,
+        zx_status_t rc = sdmmc_do_command(sdmmc_mxdev, SDMMC_SEND_STATUS,
                                           sdmmc->rca << 16, emmc_txn);
-        if (rc != MX_OK) {
+        if (rc != ZX_OK) {
             iotxn_complete(txn, rc, 0);
             goto out;
         }
@@ -186,12 +186,12 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
             break;
         }
 
-        mx_nanosleep(mx_deadline_after(MX_MSEC(10)));
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
     }
 
     if (attempt == max_attempts) {
         // Too many retries, fail.
-        iotxn_complete(txn, MX_ERR_BAD_STATE, 0);
+        iotxn_complete(txn, ZX_ERR_BAD_STATE, 0);
         goto out;
     }
 
@@ -209,8 +209,8 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
         bytes_processed = txn->length;
     }
 
-    mx_status_t rc = sdmmc_do_command(sdmmc_mxdev, cmd, blkid, emmc_txn);
-    if (rc != MX_OK) {
+    zx_status_t rc = sdmmc_do_command(sdmmc_mxdev, cmd, blkid, emmc_txn);
+    if (rc != ZX_OK) {
         iotxn_complete(txn, rc, 0);
     }
 
@@ -220,7 +220,7 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
         iotxn_copyto(txn, buffer, bytes_processed, 0);
     }
 
-    iotxn_complete(txn, MX_OK, bytes_processed);
+    iotxn_complete(txn, ZX_OK, bytes_processed);
 
 out:
     if (emmc_txn)
@@ -228,7 +228,7 @@ out:
 }
 
 // Block device protocol.
-static mx_protocol_device_t sdmmc_device_proto = {
+static zx_protocol_device_t sdmmc_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = sdmmc_ioctl,
     .unbind = sdmmc_unbind,
@@ -254,23 +254,23 @@ static void sdmmc_block_complete(iotxn_t* txn, void* cookie) {
     iotxn_release(txn);
 }
 
-static void block_do_txn(sdmmc_t* dev, uint32_t opcode, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+static void block_do_txn(sdmmc_t* dev, uint32_t opcode, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     block_info_t info;
     sdmmc_get_info(&info, dev);
 
     if ((dev_offset % info.block_size) || (length % info.block_size)) {
-        dev->callbacks->complete(cookie, MX_ERR_INVALID_ARGS);
+        dev->callbacks->complete(cookie, ZX_ERR_INVALID_ARGS);
         return;
     }
     uint64_t size = info.block_size * info.block_count;
     if ((dev_offset >= size) || (length >= (size - dev_offset))) {
-        dev->callbacks->complete(cookie, MX_ERR_OUT_OF_RANGE);
+        dev->callbacks->complete(cookie, ZX_ERR_OUT_OF_RANGE);
         return;
     }
 
-    mx_status_t status;
+    zx_status_t status;
     iotxn_t* txn;
-    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != MX_OK) {
+    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != ZX_OK) {
         dev->callbacks->complete(cookie, status);
         return;
     }
@@ -283,11 +283,11 @@ static void block_do_txn(sdmmc_t* dev, uint32_t opcode, mx_handle_t vmo, uint64_
     iotxn_queue(dev->mxdev, txn);
 }
 
-static void sdmmc_block_read(void* ctx, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+static void sdmmc_block_read(void* ctx, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     block_do_txn(ctx, IOTXN_OP_READ, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
-static void sdmmc_block_write(void* ctx, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+static void sdmmc_block_write(void* ctx, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     block_do_txn(ctx, IOTXN_OP_WRITE, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
@@ -301,9 +301,9 @@ static block_protocol_ops_t sdmmc_block_ops = {
 
 static int sdmmc_bootstrap_thread(void* arg) {
     xprintf("sdmmc: bootstrap\n");
-    mx_device_t* dev = arg;
+    zx_device_t* dev = arg;
 
-    mx_status_t st;
+    zx_status_t st;
     sdmmc_t* sdmmc = NULL;
     iotxn_t* setup_txn = NULL;
 
@@ -316,7 +316,7 @@ static int sdmmc_bootstrap_thread(void* arg) {
     sdmmc->host_mxdev = dev;
 
     // Allocate a single iotxn that we use to bootstrap the card with.
-    if ((st = iotxn_alloc(&setup_txn, IOTXN_ALLOC_CONTIGUOUS, SDHC_BLOCK_SIZE)) != MX_OK) {
+    if ((st = iotxn_alloc(&setup_txn, IOTXN_ALLOC_CONTIGUOUS, SDHC_BLOCK_SIZE)) != ZX_OK) {
         xprintf("sdmmc: failed to allocate iotxn for setup, rc = %d\n", st);
         goto err;
     }
@@ -326,14 +326,14 @@ static int sdmmc_bootstrap_thread(void* arg) {
 
     // No matter what state the card is in, issuing the GO_IDLE_STATE command will
     // put the card into the idle state.
-    if ((st = sdmmc_do_command(dev, SDMMC_GO_IDLE_STATE, 0, setup_txn)) != MX_OK) {
+    if ((st = sdmmc_do_command(dev, SDMMC_GO_IDLE_STATE, 0, setup_txn)) != ZX_OK) {
         xprintf("sdmmc: SDMMC_GO_IDLE_STATE failed, retcode = %d\n", st);
         goto err;
     }
 
     // Probe for SD, then MMC
-    if ((st = sdmmc_probe_sd(sdmmc, setup_txn)) != MX_OK) {
-        if ((st = sdmmc_probe_mmc(sdmmc, setup_txn)) != MX_OK) {
+    if ((st = sdmmc_probe_sd(sdmmc, setup_txn)) != ZX_OK) {
+        if ((st = sdmmc_probe_mmc(sdmmc, setup_txn)) != ZX_OK) {
             xprintf("sdmmc: failed to probe\n");
             goto err;
         }
@@ -344,12 +344,12 @@ static int sdmmc_bootstrap_thread(void* arg) {
         .name = (sdmmc->type == SDMMC_TYPE_SD) ? "sd" : "mmc",
         .ctx = sdmmc,
         .ops = &sdmmc_device_proto,
-        .proto_id = MX_PROTOCOL_BLOCK_CORE,
+        .proto_id = ZX_PROTOCOL_BLOCK_CORE,
         .proto_ops = &sdmmc_block_ops,
     };
 
     st = device_add(dev, &args, &sdmmc->mxdev);
-    if (st != MX_OK) {
+    if (st != ZX_OK) {
          goto err;
     }
 
@@ -367,28 +367,28 @@ err:
     return -1;
 }
 
-static mx_status_t sdmmc_bind(void* ctx, mx_device_t* dev, void** cookie) {
+static zx_status_t sdmmc_bind(void* ctx, zx_device_t* dev, void** cookie) {
     // Create a bootstrap thread.
     thrd_t bootstrap_thrd;
     int thrd_rc = thrd_create_with_name(&bootstrap_thrd,
                                         sdmmc_bootstrap_thread, dev,
                                         "sdmmc_bootstrap_thread");
     if (thrd_rc != thrd_success) {
-        return thrd_status_to_mx_status(thrd_rc);
+        return thrd_status_to_zx_status(thrd_rc);
     }
 
     thrd_detach(bootstrap_thrd);
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_driver_ops_t sdmmc_driver_ops = {
+static zx_driver_ops_t sdmmc_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = sdmmc_bind,
 };
 
 // The formatter does not play nice with these macros.
 // clang-format off
-MAGENTA_DRIVER_BEGIN(sdmmc, sdmmc_driver_ops, "magenta", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_SDMMC),
-MAGENTA_DRIVER_END(sdmmc)
+ZIRCON_DRIVER_BEGIN(sdmmc, sdmmc_driver_ops, "zircon", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SDMMC),
+ZIRCON_DRIVER_END(sdmmc)
 // clang-format on

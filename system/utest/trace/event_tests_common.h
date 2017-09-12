@@ -12,7 +12,7 @@
 
 #include <trace/event.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 
 #ifdef __cplusplus
@@ -445,8 +445,8 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", FlowEnd(id: 1), {k
 static bool test_kernel_object(void) {
     BEGIN_TRACE_TEST;
 
-    mx_handle_t event;
-    mx_event_create(0u, &event);
+    zx_handle_t event;
+    zx_event_create(0u, &event);
 
     fixture_start_tracing();
 
@@ -465,7 +465,7 @@ KernelObject(koid: <>, type: event, name: \"\", {k1: string(\"v1\"), k2: string(
 ",
                    "");
 
-    mx_handle_close(event);
+    zx_handle_close(event);
 
     END_TRACE_TEST;
 }

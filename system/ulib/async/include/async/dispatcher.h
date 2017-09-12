@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <magenta/syscalls/port.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -35,7 +35,7 @@ enum {
     // is being shut down so that the handler can release its resources.
     //
     // The dispatcher will invoke the handler with a status of
-    // |MX_ERR_CANCELED| to indicate that it is being shut down.
+    // |ZX_ERR_CANCELED| to indicate that it is being shut down.
     //
     // This flag only applies to pending waits and tasks; receivers will
     // not be notified of shutdown.
@@ -56,7 +56,7 @@ enum {
 //
 // Implementations of this interface are not required to support all of these methods.
 // Unsupported methods must have valid (non-null) function pointers, must have
-// no side-effects, and must return |MX_ERR_NOT_SUPPORTED| when called.
+// no side-effects, and must return |ZX_ERR_NOT_SUPPORTED| when called.
 // Furthermore, if an implementation supports one method of a group, such as |begin_wait|,
 // it must also support the other methods of the group, such as |cancel_wait|.
 //
@@ -65,12 +65,12 @@ enum {
 // Therefore general-purpose dispatcher implementations are strongly encouraged to
 // support the whole interface to ensure broad compatibility.
 typedef struct async_ops {
-    mx_status_t (*begin_wait)(async_t* async, async_wait_t* wait);
-    mx_status_t (*cancel_wait)(async_t* async, async_wait_t* wait);
-    mx_status_t (*post_task)(async_t* async, async_task_t* task);
-    mx_status_t (*cancel_task)(async_t* async, async_task_t* task);
-    mx_status_t (*queue_packet)(async_t* async, async_receiver_t* receiver,
-                                const mx_packet_user_t* data);
+    zx_status_t (*begin_wait)(async_t* async, async_wait_t* wait);
+    zx_status_t (*cancel_wait)(async_t* async, async_wait_t* wait);
+    zx_status_t (*post_task)(async_t* async, async_task_t* task);
+    zx_status_t (*cancel_task)(async_t* async, async_task_t* task);
+    zx_status_t (*queue_packet)(async_t* async, async_receiver_t* receiver,
+                                const zx_packet_user_t* data);
 } async_ops_t;
 struct async_dispatcher {
     const async_ops_t* ops;

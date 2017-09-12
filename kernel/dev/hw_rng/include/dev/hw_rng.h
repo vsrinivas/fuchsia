@@ -8,7 +8,7 @@
 #pragma once
 
 #include <assert.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <debug.h>
 #include <err.h>
 #include <sys/types.h>

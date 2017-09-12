@@ -114,8 +114,8 @@ double complex ctanh(double complex z) {
      * We use a modified formula to avoid spurious overflow.
      */
     if (ix >= 0x40360000) { /* x >= 22 */
-        double exp_mx = exp(-fabs(x));
-        return CMPLX(copysign(1, x), 4 * sin(y) * cos(y) * exp_mx * exp_mx);
+        double exp_zx = exp(-fabs(x));
+        return CMPLX(copysign(1, x), 4 * sin(y) * cos(y) * exp_zx * exp_zx);
     }
 
     /* Kahan's algorithm */

@@ -8,7 +8,7 @@
 #include <threads.h>
 
 #include <acpica/acpi.h>
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #include "power.h"
 
@@ -19,8 +19,8 @@
  * this event and take action.
  */
 static uint32_t power_button_object_handler(void* ctx) {
-    mx_handle_t event = (mx_handle_t)(uintptr_t)ctx;
-    mx_object_signal(event, 0, MX_EVENT_SIGNALED);
+    zx_handle_t event = (zx_handle_t)(uintptr_t)ctx;
+    zx_object_signal(event, 0, ZX_EVENT_SIGNALED);
     // Note that the spec indicates to return 0. The code in the
     // Intel implementation (AcpiEvFixedEventDetect) reads differently.
     return ACPI_INTERRUPT_HANDLED;
@@ -36,7 +36,7 @@ static void notify_object_handler(ACPI_HANDLE Device, UINT32 Value, void* Contex
         return;
     }
 
-    mx_handle_t event = (mx_handle_t)(uintptr_t)Context;
+    zx_handle_t event = (zx_handle_t)(uintptr_t)Context;
 
     // Handle powerbutton events via the notify interface
     bool power_btn = false;
@@ -53,21 +53,21 @@ static void notify_object_handler(ACPI_HANDLE Device, UINT32 Value, void* Contex
     }
 
     if (power_btn) {
-        mx_object_signal(event, 0, MX_EVENT_SIGNALED);
+        zx_object_signal(event, 0, ZX_EVENT_SIGNALED);
     }
 
     ACPI_FREE(info);
 }
 
 static int power_button_thread(void* arg) {
-    mx_handle_t event = (mx_handle_t)(uintptr_t)arg;
+    zx_handle_t event = (zx_handle_t)(uintptr_t)arg;
 
     for (;;) {
-        mx_status_t status = mx_object_wait_one(event,
-                                                MX_EVENT_SIGNALED,
-                                                MX_TIME_INFINITE,
+        zx_status_t status = zx_object_wait_one(event,
+                                                ZX_EVENT_SIGNALED,
+                                                ZX_TIME_INFINITE,
                                                 NULL);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             break;
         }
 
@@ -78,11 +78,11 @@ static int power_button_thread(void* arg) {
     return 0;
 }
 
-mx_status_t install_powerbtn_handlers(void) {
+zx_status_t install_powerbtn_handlers(void) {
     // Hacks to make the power button power off the machine
 
-    mx_handle_t power_button_event;
-    mx_status_t err = mx_event_create(0, &power_button_event);
+    zx_handle_t power_button_event;
+    zx_status_t err = zx_event_create(0, &power_button_event);
     if (err < 0) {
         return err;
     }
@@ -91,7 +91,7 @@ mx_status_t install_powerbtn_handlers(void) {
                                                       power_button_object_handler,
                                                       (void*)(uintptr_t)power_button_event);
     if (status != AE_OK) {
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
 
     AcpiInstallNotifyHandler(ACPI_ROOT_OBJECT,
@@ -102,8 +102,8 @@ mx_status_t install_powerbtn_handlers(void) {
     thrd_t thread;
     int ret = thrd_create(&thread, power_button_thread, (void*)(uintptr_t)power_button_event);
     if (ret != thrd_success) {
-        return MX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_RESOURCES;
     }
     thrd_detach(thread);
-    return MX_OK;
+    return ZX_OK;
 }

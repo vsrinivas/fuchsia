@@ -7,7 +7,7 @@ config("fbl_config") {
 }
 
 source_set("fbl") {
-  # Don't forget to update rules.mk as well for the Magenta build.
+  # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "alloc_checker.cpp",
     "include/fbl/algorithm.h",

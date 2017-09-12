@@ -6,23 +6,23 @@
 
 #include "trace.h"
 
-#include <mxio/remoteio.h>
+#include <fdio/remoteio.h>
 
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/types.h>
 
-#include <magenta/assert.h>
-#include <magenta/compiler.h>
-#include <magenta/device/vfs.h>
-#include <magenta/types.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
+#include <zircon/device/vfs.h>
+#include <zircon/types.h>
 
-#include <mxio/vfs.h>
+#include <fdio/vfs.h>
 
 #ifdef __Fuchsia__
 #include <threads.h>
-#include <mxio/io.h>
+#include <fdio/io.h>
 #endif
 
 // VFS Helpers (vfs.c)
@@ -38,7 +38,7 @@ __BEGIN_CDECLS
 typedef struct vfs_iostate vfs_iostate_t;
 
 // Send an unmount signal on a handle to a filesystem and await a response.
-mx_status_t vfs_unmount_handle(mx_handle_t h, mx_time_t deadline);
+zx_status_t vfs_unmount_handle(zx_handle_t h, zx_time_t deadline);
 
 __END_CDECLS
 
@@ -46,9 +46,9 @@ __END_CDECLS
 
 #ifdef __Fuchsia__
 #include <fs/dispatcher.h>
-#include <mx/channel.h>
-#include <mx/event.h>
-#include <mx/vmo.h>
+#include <zx/channel.h>
+#include <zx/event.h>
+#include <zx/vmo.h>
 #include <fbl/mutex.h>
 #endif  // __Fuchsia__
 
@@ -75,11 +75,11 @@ class Vfs;
 class MountChannel {
 public:
     constexpr MountChannel() = default;
-    explicit MountChannel(mx_handle_t handle) : channel_(handle) {}
-    explicit MountChannel(mx::channel channel) : channel_(fbl::move(channel)) {}
+    explicit MountChannel(zx_handle_t handle) : channel_(handle) {}
+    explicit MountChannel(zx::channel channel) : channel_(fbl::move(channel)) {}
     MountChannel(MountChannel&& other) : channel_(fbl::move(other.channel_)) {}
 
-    mx::channel TakeChannel() { return fbl::move(channel_); }
+    zx::channel TakeChannel() { return fbl::move(channel_); }
 
     ~MountChannel() {
         if (channel_.is_valid()) {
@@ -88,7 +88,7 @@ public:
     }
 
 private:
-    mx::channel channel_;
+    zx::channel channel_;
 };
 
 #endif // __Fuchsia__
@@ -102,10 +102,10 @@ public:
 
     // Attempts to add the name to the end of the dirent buffer
     // which is returned by readdir.
-    mx_status_t Next(const char* name, size_t len, uint32_t type);
+    zx_status_t Next(const char* name, size_t len, uint32_t type);
 
-    mx_status_t BytesFilled() const {
-        return static_cast<mx_status_t>(pos_);
+    zx_status_t BytesFilled() const {
+        return static_cast<zx_status_t>(pos_);
     }
 
 private:
@@ -137,53 +137,53 @@ public:
 #ifdef __Fuchsia__
     // Allocate iostate and register the transferred handle with a dispatcher.
     // Allows Vnode to act as server.
-    virtual mx_status_t Serve(fs::Vfs* vfs, mx::channel channel, uint32_t flags);
+    virtual zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags);
 
     // Extract handle(s), type, and extra info from a vnode.
     // Returns the number of handles which should be returned on the requesting handle.
-    virtual mx_status_t GetHandles(uint32_t flags, mx_handle_t* hnds,
+    virtual zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnds,
                                    uint32_t* type, void* extra, uint32_t* esize) {
-        *type = MXIO_PROTOCOL_REMOTE;
+        *type = FDIO_PROTOCOL_REMOTE;
         return 0;
     }
 
-    virtual mx_status_t WatchDir(mx::channel* out) { return MX_ERR_NOT_SUPPORTED; }
-    virtual mx_status_t WatchDirV2(Vfs* vfs, const vfs_watch_dir_t* cmd) {
-        return MX_ERR_NOT_SUPPORTED;
+    virtual zx_status_t WatchDir(zx::channel* out) { return ZX_ERR_NOT_SUPPORTED; }
+    virtual zx_status_t WatchDirV2(Vfs* vfs, const vfs_watch_dir_t* cmd) {
+        return ZX_ERR_NOT_SUPPORTED;
     }
 #endif
     virtual void Notify(const char* name, size_t len, unsigned event) {}
 
     // Ensure that it is valid to open vn.
-    virtual mx_status_t Open(uint32_t flags) = 0;
+    virtual zx_status_t Open(uint32_t flags) = 0;
 
-    // Closes vn. Typically, most Vnodes simply return "MX_OK".
-    virtual mx_status_t Close();
+    // Closes vn. Typically, most Vnodes simply return "ZX_OK".
+    virtual zx_status_t Close();
 
     // Read data from vn at offset.
     virtual ssize_t Read(void* data, size_t len, size_t off) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Write data to vn at offset.
     virtual ssize_t Write(const void* data, size_t len, size_t off) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Attempt to find child of vn, child returned on success.
     // Name is len bytes long, and does not include a null terminator.
-    virtual mx_status_t Lookup(fbl::RefPtr<Vnode>* out, const char* name, size_t len) {
-        return MX_ERR_NOT_SUPPORTED;
+    virtual zx_status_t Lookup(fbl::RefPtr<Vnode>* out, const char* name, size_t len) {
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Read attributes of vn.
-    virtual mx_status_t Getattr(vnattr_t* a) {
-        return MX_ERR_NOT_SUPPORTED;
+    virtual zx_status_t Getattr(vnattr_t* a) {
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Set attributes of vn.
-    virtual mx_status_t Setattr(vnattr_t* a) {
-        return MX_ERR_NOT_SUPPORTED;
+    virtual zx_status_t Setattr(vnattr_t* a) {
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Read directory entries of vn, error if not a directory.
@@ -191,47 +191,47 @@ public:
     // Cookie must be zero'd before first call and will be used by.
     // the readdir implementation to maintain state across calls.
     // To "rewind" and start from the beginning, cookie may be zero'd.
-    virtual mx_status_t Readdir(void* cookie, void* dirents, size_t len) {
-        return MX_ERR_NOT_SUPPORTED;
+    virtual zx_status_t Readdir(void* cookie, void* dirents, size_t len) {
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Create a new node under vn.
     // Name is len bytes long, and does not include a null terminator.
     // Mode specifies the type of entity to create.
-    virtual mx_status_t Create(fbl::RefPtr<Vnode>* out, const char* name, size_t len, uint32_t mode) {
-        return MX_ERR_NOT_SUPPORTED;
+    virtual zx_status_t Create(fbl::RefPtr<Vnode>* out, const char* name, size_t len, uint32_t mode) {
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Performs the given ioctl op on vn.
     // On success, returns the number of bytes received.
     virtual ssize_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
                           void* out_buf, size_t out_len) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Removes name from directory vn
-    virtual mx_status_t Unlink(const char* name, size_t len, bool must_be_dir) {
-        return MX_ERR_NOT_SUPPORTED;
+    virtual zx_status_t Unlink(const char* name, size_t len, bool must_be_dir) {
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Change the size of vn
-    virtual mx_status_t Truncate(size_t len) {
-        return MX_ERR_NOT_SUPPORTED;
+    virtual zx_status_t Truncate(size_t len) {
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Renames the path at oldname in olddir to the path at newname in newdir.
     // Called on the "olddir" vnode.
     // Unlinks any prior newname if it already exists.
-    virtual mx_status_t Rename(fbl::RefPtr<Vnode> newdir,
+    virtual zx_status_t Rename(fbl::RefPtr<Vnode> newdir,
                                const char* oldname, size_t oldlen,
                                const char* newname, size_t newlen,
                                bool src_must_be_dir, bool dst_must_be_dir) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Creates a hard link to the 'target' vnode with a provided name in vndir
-    virtual mx_status_t Link(const char* name, size_t len, fbl::RefPtr<Vnode> target) {
-        return MX_ERR_NOT_SUPPORTED;
+    virtual zx_status_t Link(const char* name, size_t len, fbl::RefPtr<Vnode> target) {
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Acquire a vmo from a vnode.
@@ -240,20 +240,20 @@ public:
     // since (without paging) there is no mechanism to update either
     // 1) The file by writing to the mapping, or
     // 2) The mapping by writing to the underlying file.
-    virtual mx_status_t Mmap(int flags, size_t len, size_t* off, mx_handle_t* out) {
-        return MX_ERR_NOT_SUPPORTED;
+    virtual zx_status_t Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) {
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Syncs the vnode with its underlying storage
-    virtual mx_status_t Sync() {
-        return MX_ERR_NOT_SUPPORTED;
+    virtual zx_status_t Sync() {
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     virtual ~Vnode() {};
 
 #ifdef __Fuchsia__
     // Attaches a handle to the vnode, if possible. Otherwise, returns an error.
-    virtual mx_status_t AttachRemote(MountChannel h) { return MX_ERR_NOT_SUPPORTED; }
+    virtual zx_status_t AttachRemote(MountChannel h) { return ZX_ERR_NOT_SUPPORTED; }
 
     // The following methods are required to mount sub-filesystems. The logic
     // (and storage) necessary to implement these functions exists within the
@@ -262,10 +262,10 @@ public:
 
     // The vnode is acting as a mount point for a remote filesystem or device.
     virtual bool IsRemote() const { return false; }
-    virtual mx::channel DetachRemote() { return mx::channel(); }
-    virtual mx_handle_t WaitForRemote() { return MX_HANDLE_INVALID; }
-    virtual mx_handle_t GetRemote() const { return MX_HANDLE_INVALID; }
-    virtual void SetRemote(mx::channel remote) { MX_DEBUG_ASSERT(false); }
+    virtual zx::channel DetachRemote() { return zx::channel(); }
+    virtual zx_handle_t WaitForRemote() { return ZX_HANDLE_INVALID; }
+    virtual zx_handle_t GetRemote() const { return ZX_HANDLE_INVALID; }
+    virtual void SetRemote(zx::channel remote) { ZX_DEBUG_ASSERT(false); }
 
     // The vnode is a device. Devices may opt to reveal themselves as directories
     // or endpoints, depending on context. For the purposes of our VFS layer,
@@ -273,7 +273,7 @@ public:
     // they contain remote handles.
     bool IsDevice() const { return (flags_ & VFS_FLAG_DEVICE) && IsRemote(); }
     void DetachDevice() {
-        MX_DEBUG_ASSERT(flags_ & VFS_FLAG_DEVICE);
+        ZX_DEBUG_ASSERT(flags_ & VFS_FLAG_DEVICE);
         flags_ |= VFS_FLAG_DEVICE_DETACHED;
     }
     bool IsDetachedDevice() const { return (flags_ & VFS_FLAG_DEVICE_DETACHED); }
@@ -291,22 +291,22 @@ class MountNode final : public fbl::DoublyLinkedListable<fbl::unique_ptr<MountNo
 public:
     using ListType = fbl::DoublyLinkedList<fbl::unique_ptr<MountNode>>;
     constexpr MountNode() : vn_(nullptr) {}
-    ~MountNode() { MX_DEBUG_ASSERT(vn_ == nullptr); }
+    ~MountNode() { ZX_DEBUG_ASSERT(vn_ == nullptr); }
 
     void SetNode(fbl::RefPtr<Vnode> vn) {
-        MX_DEBUG_ASSERT(vn_ == nullptr);
+        ZX_DEBUG_ASSERT(vn_ == nullptr);
         vn_ = vn;
     }
 
-    mx::channel ReleaseRemote() {
-        MX_DEBUG_ASSERT(vn_ != nullptr);
-        mx::channel h = vn_->DetachRemote();
+    zx::channel ReleaseRemote() {
+        ZX_DEBUG_ASSERT(vn_ != nullptr);
+        zx::channel h = vn_->DetachRemote();
         vn_ = nullptr;
         return h;
     }
 
     bool VnodeMatch(fbl::RefPtr<Vnode> vn) const {
-        MX_DEBUG_ASSERT(vn_ != nullptr);
+        ZX_DEBUG_ASSERT(vn_ != nullptr);
         return vn == vn_;
     }
 
@@ -325,24 +325,24 @@ public:
     Vfs();
     // Walk from vn --> out until either only one path segment remains or we
     // encounter a remote filesystem.
-    mx_status_t Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
+    zx_status_t Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
                      const char* path, const char** pathout) __TA_REQUIRES(vfs_lock_);
     // Traverse the path to the target vnode, and create / open it using
     // the underlying filesystem functions (lookup, create, open).
-    mx_status_t Open(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
+    zx_status_t Open(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
                      const char* path, const char** pathout,
                      uint32_t flags, uint32_t mode) __TA_EXCLUDES(vfs_lock_);
-    mx_status_t Unlink(fbl::RefPtr<Vnode> vn, const char* path, size_t len) __TA_EXCLUDES(vfs_lock_);
+    zx_status_t Unlink(fbl::RefPtr<Vnode> vn, const char* path, size_t len) __TA_EXCLUDES(vfs_lock_);
     ssize_t Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
                   void* out_buf, size_t out_len) __TA_EXCLUDES(vfs_lock_);
 
 #ifdef __Fuchsia__
-    void TokenDiscard(mx::event* ios_token) __TA_EXCLUDES(vfs_lock_);
-    mx_status_t VnodeToToken(fbl::RefPtr<Vnode> vn, mx::event* ios_token,
-                             mx::event* out) __TA_EXCLUDES(vfs_lock_);
-    mx_status_t Link(mx::event token, fbl::RefPtr<Vnode> oldparent,
+    void TokenDiscard(zx::event* ios_token) __TA_EXCLUDES(vfs_lock_);
+    zx_status_t VnodeToToken(fbl::RefPtr<Vnode> vn, zx::event* ios_token,
+                             zx::event* out) __TA_EXCLUDES(vfs_lock_);
+    zx_status_t Link(zx::event token, fbl::RefPtr<Vnode> oldparent,
                      const char* oldname, const char* newname) __TA_EXCLUDES(vfs_lock_);
-    mx_status_t Rename(mx::event token, fbl::RefPtr<Vnode> oldparent,
+    zx_status_t Rename(zx::event token, fbl::RefPtr<Vnode> oldparent,
                        const char* oldname, const char* newname) __TA_EXCLUDES(vfs_lock_);
 
     Vfs(Dispatcher* dispatcher);
@@ -350,24 +350,24 @@ public:
     void SetDispatcher(Dispatcher* dispatcher) { dispatcher_ = dispatcher; }
 
     // Dispatches to a Vnode over the specified handle (normal case)
-    mx_status_t Serve(mx::channel channel, void* ios);
+    zx_status_t Serve(zx::channel channel, void* ios);
 
     // Serves a Vnode over the specified handle (used for creating new filesystems)
-    mx_status_t ServeDirectory(fbl::RefPtr<fs::Vnode> vn, mx::channel channel);
+    zx_status_t ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel);
 
     // Pins a handle to a remote filesystem onto a vnode, if possible.
-    mx_status_t InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) __TA_EXCLUDES(vfs_lock_);
+    zx_status_t InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) __TA_EXCLUDES(vfs_lock_);
 
     // Create and mount a directory with a provided name
-    mx_status_t MountMkdir(fbl::RefPtr<Vnode> vn,
+    zx_status_t MountMkdir(fbl::RefPtr<Vnode> vn,
                            const mount_mkdir_config_t* config) __TA_EXCLUDES(vfs_lock_);
 
     // Unpin a handle to a remote filesystem from a vnode, if one exists.
-    mx_status_t UninstallRemote(fbl::RefPtr<Vnode> vn, mx::channel* h) __TA_EXCLUDES(vfs_lock_);
+    zx_status_t UninstallRemote(fbl::RefPtr<Vnode> vn, zx::channel* h) __TA_EXCLUDES(vfs_lock_);
 
     // Unpins all remote filesystems in the current filesystem, and waits for the
     // response of each one with the provided deadline.
-    mx_status_t UninstallAll(mx_time_t deadline) __TA_EXCLUDES(vfs_lock_);
+    zx_status_t UninstallAll(zx_time_t deadline) __TA_EXCLUDES(vfs_lock_);
 
     // A lock which should be used to protect lookup and walk operations
     // TODO(smklein): Encapsulate the lock; make it private.
@@ -375,19 +375,19 @@ public:
 #endif
 
 private:
-    mx_status_t OpenLocked(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
+    zx_status_t OpenLocked(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
                            const char* path, const char** pathout,
                            uint32_t flags, uint32_t mode) __TA_REQUIRES(vfs_lock_);
 #ifdef __Fuchsia__
-    mx_status_t TokenToVnode(mx::event token, fbl::RefPtr<Vnode>* out) __TA_REQUIRES(vfs_lock_);
-    mx_status_t InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) __TA_REQUIRES(vfs_lock_);
-    mx_status_t UninstallRemoteLocked(fbl::RefPtr<Vnode> vn,
-                                      mx::channel* h) __TA_REQUIRES(vfs_lock_);
+    zx_status_t TokenToVnode(zx::event token, fbl::RefPtr<Vnode>* out) __TA_REQUIRES(vfs_lock_);
+    zx_status_t InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) __TA_REQUIRES(vfs_lock_);
+    zx_status_t UninstallRemoteLocked(fbl::RefPtr<Vnode> vn,
+                                      zx::channel* h) __TA_REQUIRES(vfs_lock_);
     // Waits for a remote handle on a Vnode to become ready to receive requests.
-    // Returns |MX_ERR_PEER_CLOSED| if the remote will never become available, since it is closed.
-    // Returns |MX_ERR_UNAVAILABLE| if there is no remote handle, or if the remote handle is not yet ready.
+    // Returns |ZX_ERR_PEER_CLOSED| if the remote will never become available, since it is closed.
+    // Returns |ZX_ERR_UNAVAILABLE| if there is no remote handle, or if the remote handle is not yet ready.
     // On success, returns the remote handle.
-    mx_handle_t WaitForRemoteLocked(fbl::RefPtr<Vnode> vn) __TA_REQUIRES(vfs_lock_);
+    zx_handle_t WaitForRemoteLocked(fbl::RefPtr<Vnode> vn) __TA_REQUIRES(vfs_lock_);
     // The mount list is a global static variable, but it only uses
     // constexpr constructors during initialization. As a consequence,
     // the .init_array section of the compiled vfs-mount object file is
@@ -412,7 +412,7 @@ typedef struct vdircookie {
     void* p;
 } vdircookie_t;
 
-// Handle incoming mxrio messages, dispatching them to vnode operations.
-mx_status_t vfs_handler(mxrio_msg_t* msg, void* cookie);
+// Handle incoming zxrio messages, dispatching them to vnode operations.
+zx_status_t vfs_handler(zxrio_msg_t* msg, void* cookie);
 
 __END_CDECLS

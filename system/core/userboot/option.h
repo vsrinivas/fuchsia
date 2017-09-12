@@ -6,7 +6,7 @@
 
 #pragma GCC visibility push(hidden)
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 enum option {
     OPTION_FILENAME,
@@ -22,6 +22,6 @@ struct options {
     const char* value[OPTION_MAX];
 };
 
-void parse_options(mx_handle_t log, struct options *o, char** strings);
+void parse_options(zx_handle_t log, struct options *o, char** strings);
 
 #pragma GCC visibility pop

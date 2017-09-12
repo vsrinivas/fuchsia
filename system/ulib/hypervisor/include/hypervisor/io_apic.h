@@ -7,7 +7,7 @@
 #include <threads.h>
 
 #include <hypervisor/decode.h>
-#include <magenta/syscalls/port.h>
+#include <zircon/syscalls/port.h>
 
 #define IO_APIC_REDIRECTS 48u
 #define IO_APIC_REDIRECT_OFFSETS (IO_APIC_REDIRECTS * 2)
@@ -33,20 +33,20 @@ typedef struct io_apic {
 void io_apic_init(io_apic_t* io_apic);
 
 /* Associate a local APIC with an IO APIC. */
-mx_status_t io_apic_register_local_apic(io_apic_t* io_apic, uint8_t local_apic_id,
+zx_status_t io_apic_register_local_apic(io_apic_t* io_apic, uint8_t local_apic_id,
                                         local_apic_t* local_apic);
 
 /* Handle memory access to the IO APIC. */
-mx_status_t io_apic_handler(io_apic_t* io_apic, const mx_packet_guest_mem_t* mem,
+zx_status_t io_apic_handler(io_apic_t* io_apic, const zx_packet_guest_mem_t* mem,
                             const instruction_t* inst);
 
 /* Returns the redirected interrupt vector and target VCPU for the given
  * global IRQ.
  */
-mx_status_t io_apic_redirect(const io_apic_t* io_apic, uint32_t global_irq, uint8_t* vector,
-                             mx_handle_t* vcpu);
+zx_status_t io_apic_redirect(const io_apic_t* io_apic, uint32_t global_irq, uint8_t* vector,
+                             zx_handle_t* vcpu);
 
 /* Signals the given global IRQ. */
-mx_status_t io_apic_interrupt(const io_apic_t* io_apic, uint32_t global_irq);
+zx_status_t io_apic_interrupt(const io_apic_t* io_apic, uint32_t global_irq);
 
 __END_CDECLS

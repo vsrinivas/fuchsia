@@ -14,6 +14,6 @@ MODULE_SRCS += \
 
 MODULE_NAME := touch
 
-MODULE_LIBS := system/ulib/mxio system/ulib/magenta system/ulib/c
+MODULE_LIBS := system/ulib/fdio system/ulib/zircon system/ulib/c
 
 include make/module.mk

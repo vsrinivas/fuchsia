@@ -11,7 +11,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_LIBS := \
-    system/ulib/magenta \
+    system/ulib/zircon \
     system/ulib/c \
 
 MODULE_SRCS += \

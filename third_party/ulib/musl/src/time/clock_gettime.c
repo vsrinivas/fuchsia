@@ -5,28 +5,28 @@
 
 #include "clock_impl.h"
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 int __clock_gettime(clockid_t clk, struct timespec* ts) {
-    uint32_t mx_clock;
+    uint32_t zx_clock;
     switch (clk) {
     case CLOCK_MONOTONIC:
     case CLOCK_MONOTONIC_RAW:
-        mx_clock = MX_CLOCK_MONOTONIC;
+        zx_clock = ZX_CLOCK_MONOTONIC;
         break;
     case CLOCK_REALTIME:
-        mx_clock = MX_CLOCK_UTC;
+        zx_clock = ZX_CLOCK_UTC;
         break;
     case CLOCK_THREAD_CPUTIME_ID:
-        mx_clock = MX_CLOCK_THREAD;
+        zx_clock = ZX_CLOCK_THREAD;
         break;
     default:
         errno = EINVAL;
         return -1;
     }
-    mx_time_t now = _mx_time_get(mx_clock);
-    ts->tv_sec = now / MX_SEC(1);
-    ts->tv_nsec = now % MX_SEC(1);
+    zx_time_t now = _zx_time_get(zx_clock);
+    ts->tv_sec = now / ZX_SEC(1);
+    ts->tv_nsec = now % ZX_SEC(1);
     return 0;
 }
 

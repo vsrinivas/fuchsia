@@ -12,8 +12,8 @@
 
 #include <kernel/thread.h>
 
-#include <magenta/compiler.h>
-#include <magenta/rights.h>
+#include <zircon/compiler.h>
+#include <zircon/rights.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 
@@ -30,33 +30,33 @@ static void dpc_callback(dpc_t* d) {
     reinterpret_cast<TimerDispatcher*>(d->arg)->OnTimerFired();
 }
 
-mx_status_t TimerDispatcher::Create(uint32_t options,
+zx_status_t TimerDispatcher::Create(uint32_t options,
                                     fbl::RefPtr<Dispatcher>* dispatcher,
-                                    mx_rights_t* rights) {
-    if (options > MX_TIMER_SLACK_LATE)
-        return MX_ERR_INVALID_ARGS;
+                                    zx_rights_t* rights) {
+    if (options > ZX_TIMER_SLACK_LATE)
+        return ZX_ERR_INVALID_ARGS;
 
     slack_mode slack_mode;
 
     switch (options) {
-    case MX_TIMER_SLACK_CENTER: slack_mode = TIMER_SLACK_CENTER;
+    case ZX_TIMER_SLACK_CENTER: slack_mode = TIMER_SLACK_CENTER;
         break;
-    case MX_TIMER_SLACK_EARLY: slack_mode = TIMER_SLACK_EARLY;
+    case ZX_TIMER_SLACK_EARLY: slack_mode = TIMER_SLACK_EARLY;
         break;
-    case MX_TIMER_SLACK_LATE: slack_mode = TIMER_SLACK_LATE;
+    case ZX_TIMER_SLACK_LATE: slack_mode = TIMER_SLACK_LATE;
         break;
     default:
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     };
 
     fbl::AllocChecker ac;
     auto disp = new (&ac) TimerDispatcher(slack_mode);
     if (!ac.check())
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
-    *rights = MX_DEFAULT_TIMERS_RIGHTS;
+    *rights = ZX_DEFAULT_TIMERS_RIGHTS;
     *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
-    return MX_OK;
+    return ZX_OK;
 }
 
 TimerDispatcher::TimerDispatcher(slack_mode slack_mode)
@@ -82,7 +82,7 @@ void TimerDispatcher::on_zero_handles() {
         timer_cancel(&timer_);
 }
 
-mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t slack) {
+zx_status_t TimerDispatcher::Set(zx_time_t deadline, zx_duration_t slack) {
     canary_.Assert();
 
     AutoLock al(&lock_);
@@ -92,8 +92,8 @@ mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t slack) {
     // If the timer is already due, then we can set the signal immediately without
     // starting the timer.
     if ((deadline == 0u) || (deadline <= current_time())) {
-        state_tracker_.UpdateState(0u, MX_TIMER_SIGNALED);
-        return MX_OK;
+        state_tracker_.UpdateState(0u, ZX_TIMER_SIGNALED);
+        return ZX_OK;
     }
 
     deadline_ = deadline;
@@ -103,7 +103,7 @@ mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t slack) {
     // let the callback take care of restarting the timer too so everthing happens in the
     // right sequence.
     if (cancel_pending_)
-        return MX_OK;
+        return ZX_OK;
 
     // We need to ref-up because the timer and the dpc don't understand
     // refcounted objects. The Release() is called either in OnTimerFired()
@@ -115,14 +115,14 @@ mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t slack) {
     // timer again.  So cancel the timer if we haven't already.
     SetTimerLocked(!did_cancel);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t TimerDispatcher::Cancel() {
+zx_status_t TimerDispatcher::Cancel() {
     canary_.Assert();
     AutoLock al(&lock_);
     CancelTimerLocked();
-    return MX_OK;
+    return ZX_OK;
 }
 
 void TimerDispatcher::SetTimerLocked(bool cancel_first) {
@@ -134,7 +134,7 @@ void TimerDispatcher::SetTimerLocked(bool cancel_first) {
 
 bool TimerDispatcher::CancelTimerLocked() {
     // Always clear the signal bit.
-    state_tracker_.UpdateState(MX_TIMER_SIGNALED, 0u);
+    state_tracker_.UpdateState(ZX_TIMER_SIGNALED, 0u);
 
     // If the timer isn't pending then we're done.
     if (!deadline_)
@@ -182,7 +182,7 @@ void TimerDispatcher::OnTimerFired() {
             }
         } else {
             // The timer is firing.
-            state_tracker_.UpdateState(0u, MX_TIMER_SIGNALED);
+            state_tracker_.UpdateState(0u, ZX_TIMER_SIGNALED);
             deadline_ = 0u;
         }
     }

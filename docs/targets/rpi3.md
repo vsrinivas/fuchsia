@@ -1,6 +1,6 @@
-#  Magenta on Raspberry Pi 3
+#  Zircon on Raspberry Pi 3
 
-Magenta is a 64-bit kernel that is capable of running on the Raspberry Pi 3.
+Zircon is a 64-bit kernel that is capable of running on the Raspberry Pi 3.
 
 Presently it supports a number of the Raspberry Pi 3's peripherals including
 the following:
@@ -25,29 +25,29 @@ The following hardware is required:
     - USB Keyboard / HDMI Monitor
 
 ## Building
-To build magenta, invoke the following command from the top level Magenta
+To build zircon, invoke the following command from the top level Zircon
 directory (ensure that you have checked out the ARM64 toolchains). For more
 information, see `docs/getting_started.md`:
 
-    make magenta-rpi3-arm64
+    make zircon-rpi3-arm64
 
 ## Installing
-1. To install Magenta, ensure that your SD is formatted as follows:
+1. To install Zircon, ensure that your SD is formatted as follows:
    + Using an MBR partition table
    + With a FAT32 boot partition
 
-2. Invoking `make magenta-rpi3-arm64` should have created files `magenta.bin`
-   and `bootdata.bin` the following path `./build-magenta-rpi3-arm64/`
+2. Invoking `make zircon-rpi3-arm64` should have created files `zircon.bin`
+   and `bootdata.bin` the following path `./build-zircon-rpi3-arm64/`
 
 
-3. Copy the `magenta.bin` file to the SD card's boot partition as `kernel8.img`
+3. Copy the `zircon.bin` file to the SD card's boot partition as `kernel8.img`
    as follows:
 
-        cp ./build-magenta-rpi3-arm64/magenta.bin <path/to/sdcard/mount>/kernel8.img
+        cp ./build-zircon-rpi3-arm64/zircon.bin <path/to/sdcard/mount>/kernel8.img
 
 4. Copy the `bootdata.bin` file to the SD card's boot partition as follows:
 
-        cp ./build-magenta-rpi3-arm64/bootdata.bin <path/to/sdcard/mount>/bootdata.bin
+        cp ./build-zircon-rpi3-arm64/bootdata.bin <path/to/sdcard/mount>/bootdata.bin
 
 5. You must also copy `bootcode.bin` and `start.elf` to the boot partition. They
    can be obtained from [here](https://github.com/raspberrypi/firmware/raw/7fcb39cb5b5543ca7485cd1ae9e6d908f31e40c6/boot/bootcode.bin) and [here](https://github.com/raspberrypi/firmware/raw/390f53ed0fd79df274bdcc81d99e09fa262f03ab/boot/start.elf) respectively.

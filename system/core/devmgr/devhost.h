@@ -11,9 +11,9 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
-#include <mxio/remoteio.h>
+#include <fdio/remoteio.h>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 #include <threads.h>
 #include <stdint.h>
@@ -28,69 +28,69 @@
 
 // Safe external APIs are in device.h and device_internal.h
 
-typedef struct mx_driver {
+typedef struct zx_driver {
     const char* name;
-    const mx_driver_ops_t* ops;
+    const zx_driver_ops_t* ops;
     void* ctx;
     const char* libname;
     list_node_t node;
-    mx_status_t status;
-} mx_driver_t;
+    zx_status_t status;
+} zx_driver_t;
 
-extern mx_protocol_device_t device_default_ops;
+extern zx_protocol_device_t device_default_ops;
 
-mx_status_t devhost_device_unbind(mx_device_t* dev);
+zx_status_t devhost_device_unbind(zx_device_t* dev);
 
-mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
-                               const mx_device_prop_t* props, uint32_t prop_count,
-                               const char* businfo, mx_handle_t resource);
-mx_status_t devhost_device_install(mx_device_t* dev);
-mx_status_t devhost_device_remove(mx_device_t* dev);
-mx_status_t devhost_device_bind(mx_device_t* dev, const char* drv_libname);
-mx_status_t devhost_device_rebind(mx_device_t* dev);
-mx_status_t devhost_device_create(mx_driver_t* drv, mx_device_t* parent,
+zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
+                               const zx_device_prop_t* props, uint32_t prop_count,
+                               const char* businfo, zx_handle_t resource);
+zx_status_t devhost_device_install(zx_device_t* dev);
+zx_status_t devhost_device_remove(zx_device_t* dev);
+zx_status_t devhost_device_bind(zx_device_t* dev, const char* drv_libname);
+zx_status_t devhost_device_rebind(zx_device_t* dev);
+zx_status_t devhost_device_create(zx_driver_t* drv, zx_device_t* parent,
                                   const char* name, void* ctx,
-                                  mx_protocol_device_t* ops, mx_device_t** out);
-mx_status_t devhost_device_open_at(mx_device_t* dev, mx_device_t** out,
+                                  zx_protocol_device_t* ops, zx_device_t** out);
+zx_status_t devhost_device_open_at(zx_device_t* dev, zx_device_t** out,
                                  const char* path, uint32_t flags);
-mx_status_t devhost_device_close(mx_device_t* dev, uint32_t flags);
-void devhost_device_destroy(mx_device_t* dev);
+zx_status_t devhost_device_close(zx_device_t* dev, uint32_t flags);
+void devhost_device_destroy(zx_device_t* dev);
 
-mx_status_t devhost_load_firmware(mx_device_t* dev, const char* path,
-                                  mx_handle_t* fw, size_t* size);
+zx_status_t devhost_load_firmware(zx_device_t* dev, const char* path,
+                                  zx_handle_t* fw, size_t* size);
 
-mx_status_t devhost_get_topo_path(mx_device_t* dev, char* path, size_t max, size_t* actual);
+zx_status_t devhost_get_topo_path(zx_device_t* dev, char* path, size_t max, size_t* actual);
 
 // shared between devhost.c and rpc-device.c
 typedef struct devhost_iostate {
-    mx_device_t* dev;
+    zx_device_t* dev;
     size_t io_off;
     uint32_t flags;
     bool dead;
     port_handler_t ph;
 } devhost_iostate_t;
 
-devhost_iostate_t* create_devhost_iostate(mx_device_t* dev);
-mx_status_t devhost_rio_handler(mxrio_msg_t* msg, void* cookie);
+devhost_iostate_t* create_devhost_iostate(zx_device_t* dev);
+zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie);
 
-mx_status_t devhost_start_iostate(devhost_iostate_t* ios, mx_handle_t h);
+zx_status_t devhost_start_iostate(devhost_iostate_t* ios, zx_handle_t h);
 
 // routines devhost uses to talk to dev coordinator
-mx_status_t devhost_add(mx_device_t* dev, mx_device_t* child,
-                        const char* businfo, mx_handle_t resource,
-                        const mx_device_prop_t* props, uint32_t prop_count);
-mx_status_t devhost_remove(mx_device_t* dev);
+zx_status_t devhost_add(zx_device_t* dev, zx_device_t* child,
+                        const char* businfo, zx_handle_t resource,
+                        const zx_device_prop_t* props, uint32_t prop_count);
+zx_status_t devhost_remove(zx_device_t* dev);
 
 
 // device refcounts
-void dev_ref_release(mx_device_t* dev);
-static inline void dev_ref_acquire(mx_device_t* dev) {
+void dev_ref_release(zx_device_t* dev);
+static inline void dev_ref_acquire(zx_device_t* dev) {
     dev->refcount++;
 }
 
-mx_handle_t get_root_resource(void);
+zx_handle_t get_root_resource(void);
 
-mx_device_t* device_create_setup(mx_device_t* parent);
+zx_device_t* device_create_setup(zx_device_t* parent);
 
 // locking and lock debugging
 extern mtx_t __devhost_api_lock;

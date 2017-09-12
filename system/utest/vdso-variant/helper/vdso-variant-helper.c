@@ -10,8 +10,8 @@
 #include <unistd.h>
 #include <unittest/unittest.h>
 
-#define GOOD_SYMBOL     "mx_syscall_test_0"
-#define BAD_SYMBOL      "mx_syscall_test_1"
+#define GOOD_SYMBOL     "zx_syscall_test_0"
+#define BAD_SYMBOL      "zx_syscall_test_1"
 
 bool vdso_open_test(void) {
     BEGIN_TEST;
@@ -51,7 +51,7 @@ bool vdso_open_test(void) {
 bool vdso_missing_test_syscall1_test(void) {
     BEGIN_TEST;
 
-    void* dso = dlopen("libmagenta.so", RTLD_LOCAL | RTLD_NOLOAD);
+    void* dso = dlopen("libzircon.so", RTLD_LOCAL | RTLD_NOLOAD);
     ASSERT_NONNULL(dso, dlerror());
 
     EXPECT_NONNULL(dlsym(dso, GOOD_SYMBOL), dlerror());

@@ -212,7 +212,7 @@ Color codes are:
     green = 32
     yellow = 33
     blue = 34
-    magenta = 35
+    zircon = 35
     cyan = 36
     white = 37;
 

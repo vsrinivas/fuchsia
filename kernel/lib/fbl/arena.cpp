@@ -15,7 +15,7 @@
 #include <kernel/vm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_paged.h>
-#include <mxcpp/new.h>
+#include <zxcpp/new.h>
 #include <fbl/auto_call.h>
 
 #define LOCAL_TRACE 0
@@ -33,11 +33,11 @@ Arena::~Arena() {
     }
 }
 
-mx_status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
+zx_status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
     if ((ob_size == 0) || (ob_size > PAGE_SIZE))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     if (!count)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     LTRACEF("Arena '%s': ob_size %zu, count %zu\n", name, ob_size, count);
 
     // Carve out the memory:
@@ -55,8 +55,8 @@ mx_status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
 
     // Create the VMO.
     fbl::RefPtr<VmObject> vmo;
-    mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, vmo_sz, &vmo);
-    if (status != MX_OK) {
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, vmo_sz, &vmo);
+    if (status != ZX_OK) {
         LTRACEF("Arena '%s': can't create %zu-byte VMO\n", name, vmo_sz);
         return status;
     }
@@ -72,17 +72,17 @@ mx_status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
 
     // Create the VMAR.
     fbl::RefPtr<VmAddressRegion> vmar;
-    mx_status_t st = root_vmar->CreateSubVmar(0, // offset (ignored)
+    zx_status_t st = root_vmar->CreateSubVmar(0, // offset (ignored)
                                               vmar_sz,
                                               false, // align_pow2
                                               VMAR_FLAG_CAN_MAP_READ |
                                                   VMAR_FLAG_CAN_MAP_WRITE |
                                                   VMAR_FLAG_CAN_MAP_SPECIFIC,
                                               vname, &vmar);
-    if (st != MX_OK || vmar == nullptr) {
+    if (st != ZX_OK || vmar == nullptr) {
         LTRACEF("Arena '%s': can't create %zu-byte VMAR (%d)\n",
                 name, vmar_sz, st);
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     // The VMAR's parent holds a ref, so it won't be destroyed
     // automatically when we return.
@@ -99,10 +99,10 @@ mx_status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
                                ARCH_MMU_FLAG_PERM_READ |
                                    ARCH_MMU_FLAG_PERM_WRITE,
                                "control", &control_mapping);
-    if (st != MX_OK || control_mapping == nullptr) {
+    if (st != ZX_OK || control_mapping == nullptr) {
         LTRACEF("Arena '%s': can't create %zu-byte control mapping (%d)\n",
                 name, control_mem_sz, st);
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     // Create a mapping for the data pool, leaving an unmapped gap
@@ -117,10 +117,10 @@ mx_status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
                                ARCH_MMU_FLAG_PERM_READ |
                                    ARCH_MMU_FLAG_PERM_WRITE,
                                "data", &data_mapping);
-    if (st != MX_OK || data_mapping == nullptr) {
+    if (st != ZX_OK || data_mapping == nullptr) {
         LTRACEF("Arena '%s': can't create %zu-byte data mapping (%d)\n",
                 name, data_mem_sz, st);
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     // TODO(dbort): Add a VmMapping flag that says "do not demand page",
@@ -137,7 +137,7 @@ mx_status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
     if (LOCAL_TRACE) {
         Dump();
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 void Arena::Pool::Init(const char* name, fbl::RefPtr<VmMapping> mapping,
@@ -177,8 +177,8 @@ void* Arena::Pool::Pop() {
         const size_t offset =
             reinterpret_cast<vaddr_t>(committed_) - mapping_->base();
         const size_t len = nc - committed_;
-        mx_status_t st = mapping_->MapRange(offset, len, /* commit */ true);
-        if (st != MX_OK) {
+        zx_status_t st = mapping_->MapRange(offset, len, /* commit */ true);
+        if (st != ZX_OK) {
             LTRACEF("%s: can't map range 0x%p..0x%p: %d\n",
                     name_, committed_, nc, st);
             // Try to clean up any committed pages, but don't require

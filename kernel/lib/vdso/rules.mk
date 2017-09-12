@@ -16,7 +16,7 @@ MODULE_SRCS := \
 MODULE_DEPS := \
     kernel/lib/fbl \
 
-vdso-filename := $(BUILDDIR)/system/ulib/magenta/libmagenta.so
+vdso-filename := $(BUILDDIR)/system/ulib/zircon/libzircon.so
 
 # vdso-image.S embeds this file, so building depends on it.
 MODULE_SRCDEPS += $(vdso-filename).strip

@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <magenta/sanitizer.h>
+#include <zircon/compiler.h>
+#include <zircon/sanitizer.h>
 
 // NOTE: userboot includes memcpy, memmove, and memset source files
 // directly, so it needs to be able to handle their #include's of this

@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/ref_ptr.h>
 
 class Dispatcher;
@@ -16,14 +16,14 @@ class Handle;
 
 // Creates a handle attached to |dispatcher| and with |rights| from a
 // specific arena which makes their addresses come from a fixed range.
-Handle* MakeHandle(fbl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights);
+Handle* MakeHandle(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights);
 
 // Duplicate a handle created by MakeHandle(). If |is_replace| is true
-// then the logic to triger MX_SIGNAL_LAST_HANDLE is not executed.
-Handle* DupHandle(Handle* source, mx_rights_t rights, bool is_replace);
+// then the logic to triger ZX_SIGNAL_LAST_HANDLE is not executed.
+Handle* DupHandle(Handle* source, zx_rights_t rights, bool is_replace);
 
 // Deletes a handle created by MakeHandle() or DupHandle(). This might
-// trigger MX_SIGNAL_LAST_HANDLE.
+// trigger ZX_SIGNAL_LAST_HANDLE.
 void DeleteHandle(Handle* handle);
 
 // Maps an integer obtained by Handle->base_value() back to a Handle.

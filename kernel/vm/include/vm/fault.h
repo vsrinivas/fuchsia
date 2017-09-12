@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 // page fault flags
 const uint VMM_PF_FLAG_WRITE = (1u << 0);

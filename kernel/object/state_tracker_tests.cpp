@@ -21,11 +21,11 @@ public:
 
 private:
     // No-op overrides of pure virtuals.
-    Flags OnInitialize(mx_signals_t initial_state,
+    Flags OnInitialize(zx_signals_t initial_state,
                        const StateObserver::CountInfo* cinfo) override {
         return 0;
     }
-    Flags OnStateChange(mx_signals_t new_state) override { return 0; }
+    Flags OnStateChange(zx_signals_t new_state) override { return 0; }
     Flags OnCancel(Handle* handle) override { return 0; }
     Flags OnCancelByKey(Handle* handle, const void* port, uint64_t key)
         override { return 0; }
@@ -52,7 +52,7 @@ bool on_initialize(void* context) {
 
     class RmOnInitialize : public RemovableObserver {
     public:
-        Flags OnInitialize(mx_signals_t initial_state,
+        Flags OnInitialize(zx_signals_t initial_state,
                            const StateObserver::CountInfo* cinfo) override {
             return kNeedRemoval;
         }
@@ -77,7 +77,7 @@ bool on_initialize(void* context) {
 
 class RmOnStateChange : public RemovableObserver {
 public:
-    Flags OnStateChange(mx_signals_t new_state) override {
+    Flags OnStateChange(zx_signals_t new_state) override {
         return kNeedRemoval;
     }
 };
@@ -116,7 +116,7 @@ bool on_state_change_via_last_handle(void* context) {
     EXPECT_EQ(0, obs.removals(), ""); // Not removed yet.
 
     // Cause OnStateChange() to be called. Need to transition out of and
-    // back into MX_SIGNAL_LAST_HANDLE, because it's asserted by default.
+    // back into ZX_SIGNAL_LAST_HANDLE, because it's asserted by default.
     uint32_t count = 2;
     st.UpdateLastHandleSignal(&count);
     count = 1;

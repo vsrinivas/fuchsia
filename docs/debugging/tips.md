@@ -23,9 +23,9 @@ Make-style patterns (%) are allowed, e.g., `ulib/%,utest/debugger`.
 
 The default is empty (meaning none).
 
-## Debugging magenta applications with GDB
+## Debugging zircon applications with GDB
 
-To debug magenta applications with GDB use gdbserver:
+To debug zircon applications with GDB use gdbserver:
 https://fuchsia.googlesource.com/gdbserver
 
 ## Adding debug info to boot image
@@ -35,11 +35,11 @@ can require a lot of extra space. Adding debug info is useful when
 using tools like debuggers natively. Note that this does not apply
 to cross debugging where the debugger is running on separate machine.
 Adding debug info to the boot image is for when you are running debugging
-tools on magenta itself.
+tools on zircon itself.
 
 Example:
 ```
-$ make -j10 magenta-pc-x86-64 BOOTFS_DEBUG_MODULES=ulib/%,utest/debugger GLOBAL_DEBUGFLAGS=-g1
+$ make -j10 zircon-pc-x86-64 BOOTFS_DEBUG_MODULES=ulib/%,utest/debugger GLOBAL_DEBUGFLAGS=-g1
 ```
 
 This example will include in the boot image debug info files for all
@@ -50,4 +50,4 @@ is passed.
 ## Debugging the kernel with QEMU+GDB.
 
 See "Debugging the kernel with GDB" in [QEMU](qemu.md) for
-documentation on debugging magenta with QEMU+GDB.
+documentation on debugging zircon with QEMU+GDB.

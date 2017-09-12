@@ -54,16 +54,16 @@ VnodeSvc::VnodeSvc(uint64_t node_id,
 
 VnodeSvc::~VnodeSvc() = default;
 
-mx_status_t VnodeSvc::Open(uint32_t flags) {
+zx_status_t VnodeSvc::Open(uint32_t flags) {
     if (flags & O_DIRECTORY) {
-        return MX_ERR_NOT_DIR;
+        return ZX_ERR_NOT_DIR;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t VnodeSvc::Serve(fs::Vfs* vfs, mx::channel channel, uint32_t flags) {
+zx_status_t VnodeSvc::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
     if (!provider_) {
-        return MX_ERR_UNAVAILABLE;
+        return ZX_ERR_UNAVAILABLE;
     }
 
     provider_->Connect(name_.get(), name_.size(), fbl::move(channel));
@@ -74,7 +74,7 @@ mx_status_t VnodeSvc::Serve(fs::Vfs* vfs, mx::channel channel, uint32_t flags) {
     if (!node_id_)
         provider_ = nullptr;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 bool VnodeSvc::NameMatch(const char* name, size_t len) const {
@@ -92,42 +92,42 @@ VnodeDir::VnodeDir()
 
 VnodeDir::~VnodeDir() = default;
 
-mx_status_t VnodeDir::Open(uint32_t flags) {
-    return MX_OK;
+zx_status_t VnodeDir::Open(uint32_t flags) {
+    return ZX_OK;
 }
 
-mx_status_t VnodeDir::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
+zx_status_t VnodeDir::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
     fbl::RefPtr<VnodeSvc> vn = nullptr;
     for (auto& child : services_) {
         if (child.NameMatch(name, len)) {
             *out = fbl::RefPtr<VnodeSvc>(&child);
-            return MX_OK;
+            return ZX_OK;
         }
     }
 
-    return MX_ERR_NOT_FOUND;
+    return ZX_ERR_NOT_FOUND;
 }
 
-mx_status_t VnodeDir::Getattr(vnattr_t* attr) {
+zx_status_t VnodeDir::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
     attr->mode = V_TYPE_DIR | V_IRUSR;
     attr->nlink = 1;
-    return MX_OK;
+    return ZX_OK;
 }
 
 void VnodeDir::Notify(const char* name, size_t len, unsigned event) { watcher_.Notify(name, len, event); }
-mx_status_t VnodeDir::WatchDir(mx::channel* out) { return watcher_.WatchDir(out); }
-mx_status_t VnodeDir::WatchDirV2(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) {
+zx_status_t VnodeDir::WatchDir(zx::channel* out) { return watcher_.WatchDir(out); }
+zx_status_t VnodeDir::WatchDirV2(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) {
     return watcher_.WatchDirV2(vfs, this, cmd);
 }
 
-mx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
+zx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
     dircookie_t* c = static_cast<dircookie_t*>(cookie);
     fs::DirentFiller df(data, len);
 
-    mx_status_t r = 0;
+    zx_status_t r = 0;
     if (c->last_id < 1) {
-        if ((r = df.Next(".", 1, VTYPE_TO_DTYPE(V_TYPE_DIR))) != MX_OK) {
+        if ((r = df.Next(".", 1, VTYPE_TO_DTYPE(V_TYPE_DIR))) != ZX_OK) {
             return df.BytesFilled();
         }
         c->last_id = 1;
@@ -138,7 +138,7 @@ mx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
             continue;
         }
         if ((r = df.Next(vn.name().get(), vn.name().size(),
-                         VTYPE_TO_DTYPE(V_TYPE_FILE))) != MX_OK) {
+                         VTYPE_TO_DTYPE(V_TYPE_FILE))) != ZX_OK) {
             return df.BytesFilled();
         }
         c->last_id = vn.node_id();
@@ -188,27 +188,27 @@ VnodeProviderDir::VnodeProviderDir()
 
 VnodeProviderDir::~VnodeProviderDir() = default;
 
-mx_status_t VnodeProviderDir::Open(uint32_t flags) {
-    return MX_OK;
+zx_status_t VnodeProviderDir::Open(uint32_t flags) {
+    return ZX_OK;
 }
 
-mx_status_t VnodeProviderDir::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
+zx_status_t VnodeProviderDir::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
     if (!IsValidServiceName(name, len)) {
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
     }
 
     fbl::Array<char> array;
     CopyToArray(name, len, &array);
 
     *out = fbl::AdoptRef(new VnodeSvc(0, fbl::move(array), provider_));
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t VnodeProviderDir::Getattr(vnattr_t* attr) {
+zx_status_t VnodeProviderDir::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
     attr->mode = V_TYPE_DIR | V_IRUSR;
     attr->nlink = 1;
-    return MX_OK;
+    return ZX_OK;
 }
 
 void VnodeProviderDir::SetServiceProvider(ServiceProvider* provider) {

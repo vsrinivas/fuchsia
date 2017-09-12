@@ -10,24 +10,24 @@
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
 
-#include <magenta/device/ethernet.h>
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
+#include <zircon/device/ethernet.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
 
-typedef mx_status_t status_t;
+typedef zx_status_t status_t;
 #include "ie.h"
 
 typedef struct ethernet_device {
     ethdev_t eth;
     mtx_t lock;
-    mx_device_t* mxdev;
+    zx_device_t* mxdev;
     pci_protocol_t pci;
-    mx_handle_t ioh;
-    mx_handle_t irqh;
+    zx_handle_t ioh;
+    zx_handle_t irqh;
     bool edge_triggered_irq;
     thrd_t thread;
     io_buffer_t buffer;
@@ -41,15 +41,15 @@ typedef struct ethernet_device {
 static int irq_thread(void* arg) {
     ethernet_device_t* edev = arg;
     for (;;) {
-        mx_status_t r;
-        if ((r = mx_interrupt_wait(edev->irqh)) < 0) {
+        zx_status_t r;
+        if ((r = zx_interrupt_wait(edev->irqh)) < 0) {
             printf("eth: irq wait failed? %d\n", r);
-            mx_interrupt_complete(edev->irqh);
+            zx_interrupt_complete(edev->irqh);
             break;
         }
 
         if (edev->edge_triggered_irq)
-            mx_interrupt_complete(edev->irqh);
+            zx_interrupt_complete(edev->irqh);
 
         mtx_lock(&edev->lock);
         unsigned irq = eth_handle_irq(&edev->eth);
@@ -57,7 +57,7 @@ static int irq_thread(void* arg) {
             void* data;
             size_t len;
 
-            while (eth_rx(&edev->eth, &data, &len) == MX_OK) {
+            while (eth_rx(&edev->eth, &data, &len) == ZX_OK) {
                 if (edev->ifc) {
                     edev->ifc->recv(edev->cookie, data, len, 0);
                 }
@@ -78,23 +78,23 @@ static int irq_thread(void* arg) {
         mtx_unlock(&edev->lock);
 
         if (!edev->edge_triggered_irq)
-            mx_interrupt_complete(edev->irqh);
+            zx_interrupt_complete(edev->irqh);
     }
     return 0;
 }
 
-static mx_status_t eth_query(void* ctx, uint32_t options, ethmac_info_t* info) {
+static zx_status_t eth_query(void* ctx, uint32_t options, ethmac_info_t* info) {
     ethernet_device_t* edev = ctx;
 
     if (options) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     memset(info, 0, sizeof(*info));
     info->mtu = ETH_RXBUF_SIZE; //TODO: not actually the mtu!
     memcpy(info->mac, edev->eth.mac, sizeof(edev->eth.mac));
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static void eth_stop(void* ctx) {
@@ -104,13 +104,13 @@ static void eth_stop(void* ctx) {
     mtx_unlock(&edev->lock);
 }
 
-static mx_status_t eth_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
+static zx_status_t eth_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     ethernet_device_t* edev = ctx;
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
 
     mtx_lock(&edev->lock);
     if (edev->ifc) {
-        status = MX_ERR_BAD_STATE;
+        status = ZX_ERR_BAD_STATE;
     } else {
         edev->ifc = ifc;
         edev->cookie = cookie;
@@ -137,37 +137,37 @@ static void eth_release(void* ctx) {
     ethernet_device_t* edev = ctx;
     eth_reset_hw(&edev->eth);
     pci_enable_bus_master(&edev->pci, true);
-    mx_handle_close(edev->irqh);
-    mx_handle_close(edev->ioh);
+    zx_handle_close(edev->irqh);
+    zx_handle_close(edev->ioh);
     free(edev);
 }
 
-static mx_protocol_device_t device_ops = {
+static zx_protocol_device_t device_ops = {
     .version = DEVICE_OPS_VERSION,
     .release = eth_release,
 };
 
-static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
+static zx_status_t eth_bind(void* ctx, zx_device_t* dev, void** cookie) {
     ethernet_device_t* edev;
     if ((edev = calloc(1, sizeof(ethernet_device_t))) == NULL) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     mtx_init(&edev->lock, mtx_plain);
     mtx_init(&edev->eth.send_lock, mtx_plain);
 
-    if (device_get_protocol(dev, MX_PROTOCOL_PCI, &edev->pci)) {
+    if (device_get_protocol(dev, ZX_PROTOCOL_PCI, &edev->pci)) {
         printf("no pci protocol\n");
         goto fail;
     }
 
     // Query whether we have MSI or Legacy interrupts.
     uint32_t irq_cnt = 0;
-    if ((pci_query_irq_mode_caps(&edev->pci, MX_PCIE_IRQ_MODE_MSI, &irq_cnt) == MX_OK) &&
-        (pci_set_irq_mode(&edev->pci, MX_PCIE_IRQ_MODE_MSI, 1) == MX_OK)) {
+    if ((pci_query_irq_mode_caps(&edev->pci, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt) == ZX_OK) &&
+        (pci_set_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_MSI, 1) == ZX_OK)) {
         edev->edge_triggered_irq = true;
         printf("eth: using MSI mode\n");
-    } else if ((pci_query_irq_mode_caps(&edev->pci, MX_PCIE_IRQ_MODE_LEGACY, &irq_cnt) == MX_OK) &&
-               (pci_set_irq_mode(&edev->pci, MX_PCIE_IRQ_MODE_LEGACY, 1) == MX_OK)) {
+    } else if ((pci_query_irq_mode_caps(&edev->pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt) == ZX_OK) &&
+               (pci_set_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_LEGACY, 1) == ZX_OK)) {
         edev->edge_triggered_irq = false;
         printf("eth: using legacy irq mode\n");
     } else {
@@ -175,18 +175,18 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
         goto fail;
     }
 
-    mx_status_t r = pci_map_interrupt(&edev->pci, 0, &edev->irqh);
-    if (r != MX_OK) {
+    zx_status_t r = pci_map_interrupt(&edev->pci, 0, &edev->irqh);
+    if (r != ZX_OK) {
         printf("eth: failed to map irq\n");
         goto fail;
     }
 
     // map iomem
     uint64_t sz;
-    mx_handle_t h;
+    zx_handle_t h;
     void* io;
-    r = pci_map_resource(&edev->pci, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_UNCACHED_DEVICE, &io, &sz, &h);
-    if (r != MX_OK) {
+    r = pci_map_resource(&edev->pci, PCI_RESOURCE_BAR_0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &io, &sz, &h);
+    if (r != ZX_OK) {
         printf("eth: cannot map io %d\n", h);
         goto fail;
     }
@@ -216,7 +216,7 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
         .name = "intel-ethernet",
         .ctx = edev,
         .ops = &device_ops,
-        .proto_id = MX_PROTOCOL_ETHERMAC,
+        .proto_id = ZX_PROTOCOL_ETHERMAC,
         .proto_ops = &ethmac_ops,
     };
 
@@ -229,27 +229,27 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
 
     printf("eth: intel-ethernet online\n");
 
-    return MX_OK;
+    return ZX_OK;
 
 fail:
     io_buffer_release(&edev->buffer);
     if (edev->ioh) {
         pci_enable_bus_master(&edev->pci, true);
-        mx_handle_close(edev->irqh);
-        mx_handle_close(edev->ioh);
+        zx_handle_close(edev->irqh);
+        zx_handle_close(edev->ioh);
     }
     free(edev);
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-static mx_driver_ops_t intel_ethernet_driver_ops = {
+static zx_driver_ops_t intel_ethernet_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = eth_bind,
 };
 
 // clang-format off
-MAGENTA_DRIVER_BEGIN(intel_ethernet, intel_ethernet_driver_ops, "magenta", "0.1", 9)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
+ZIRCON_DRIVER_BEGIN(intel_ethernet, intel_ethernet_driver_ops, "zircon", "0.1", 9)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, 0x8086),
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x100E), // Qemu
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15A3), // Broadwell
@@ -258,4 +258,4 @@ MAGENTA_DRIVER_BEGIN(intel_ethernet, intel_ethernet_driver_ops, "magenta", "0.1"
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15b7), // Skull Canyon NUC
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15b8), // I219
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15d8), // Kaby Lake NUC
-MAGENTA_DRIVER_END(intel_ethernet)
+ZIRCON_DRIVER_END(intel_ethernet)

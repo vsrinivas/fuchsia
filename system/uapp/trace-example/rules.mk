@@ -19,15 +19,15 @@ MODULE_STATIC_LIBS := \
     system/ulib/trace \
     system/ulib/async \
     system/ulib/async.loop \
-    system/ulib/mxcpp \
+    system/ulib/zxcpp \
     system/ulib/fbl \
-    system/ulib/mx
+    system/ulib/zx
 
 MODULE_LIBS := \
     system/ulib/async.default \
     system/ulib/c \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/trace-engine
 
 include make/module.mk

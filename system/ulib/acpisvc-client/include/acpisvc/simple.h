@@ -7,8 +7,8 @@
 #include <threads.h>
 
 #include <acpisvc/protocol.h>
-#include <magenta/compiler.h>
-#include <magenta/syscalls.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls.h>
 
 __BEGIN_CDECLS
 
@@ -17,12 +17,12 @@ __BEGIN_CDECLS
 // these simplified functions should not be mixed with other interfaces.
 
 typedef struct {
-    mx_handle_t pipe;
+    zx_handle_t pipe;
     mtx_t lock;
     uint32_t next_req_id;
 } acpi_handle_t;
 
-static void acpi_handle_init(acpi_handle_t* h, mx_handle_t pipe) {
+static void acpi_handle_init(acpi_handle_t* h, zx_handle_t pipe) {
     h->pipe = pipe;
     h->lock = (mtx_t)MTX_INIT;
     h->next_req_id = 0;
@@ -30,27 +30,27 @@ static void acpi_handle_init(acpi_handle_t* h, mx_handle_t pipe) {
 
 static void acpi_handle_close(acpi_handle_t* h) {
     mtx_lock(&h->lock);
-    mx_handle_close(h->pipe);
+    zx_handle_close(h->pipe);
     mtx_unlock(&h->lock);
 }
 
 // Obtain an additional acpi service handle
 //
-mx_handle_t acpi_clone_handle(acpi_handle_t* h);
+zx_handle_t acpi_clone_handle(acpi_handle_t* h);
 
 // List the children of the ACPI node.
 //
 // *rsp* is a pointer to store the response into.  The response can be released
 // with free().
 // *len* is a pointer to store the length of the response into
-mx_status_t acpi_list_children(acpi_handle_t* h,
+zx_status_t acpi_list_children(acpi_handle_t* h,
                                acpi_rsp_list_children_t** rsp, size_t* len);
 
 // Get a handle to the specified child of the ACPI node.
 //
 // *name* is a 4-character name returned from list_children().
 // *child* will become a handle to the child, if the call is successful.
-mx_status_t acpi_get_child_handle(acpi_handle_t* h, const char name[4],
+zx_status_t acpi_get_child_handle(acpi_handle_t* h, const char name[4],
                                   acpi_handle_t* child);
 
 // Get information necessary for PCI bus driver initialization.
@@ -60,7 +60,7 @@ mx_status_t acpi_get_child_handle(acpi_handle_t* h, const char name[4],
 // *len* is a pointer to store the length of the response into
 //
 // This command will only succeed if the ACPI node represents a PCI root bus.
-mx_status_t acpi_get_pci_init_arg(acpi_handle_t* h,
+zx_status_t acpi_get_pci_init_arg(acpi_handle_t* h,
                                   acpi_rsp_get_pci_init_arg_t** response,
                                   size_t* len);
 
@@ -68,23 +68,23 @@ mx_status_t acpi_get_pci_init_arg(acpi_handle_t* h,
 //
 // This command will only succeed if the handle is the ACPI root handle.
 // TODO(teisenbe): Perhaps open this up to a different handle.
-mx_status_t acpi_s_state_transition(acpi_handle_t* h, uint8_t target_state);
+zx_status_t acpi_s_state_transition(acpi_handle_t* h, uint8_t target_state);
 
 // Execute PS0 for an ACPI node.
 //
 // *path* is a full path to an ACPI object.
 // NOTE: this is a temporary interface that will be removed soon.
-mx_status_t acpi_ps0(acpi_handle_t* h, char* path, size_t len);
+zx_status_t acpi_ps0(acpi_handle_t* h, char* path, size_t len);
 
 // Execute BST for an ACPI node
 //
 // NOTE: this is a temporary interface that will be removed soon.
-mx_status_t acpi_bst(acpi_handle_t* h, acpi_rsp_bst_t** response);
+zx_status_t acpi_bst(acpi_handle_t* h, acpi_rsp_bst_t** response);
 
 // Execute BIF for an ACPI node
 //
 // NOTE: this is a temporary interface that will be removed soon.
-mx_status_t acpi_bif(acpi_handle_t* h, acpi_rsp_bif_t** response);
+zx_status_t acpi_bif(acpi_handle_t* h, acpi_rsp_bif_t** response);
 
 // Receive ACPI events on a port.
 //
@@ -92,6 +92,6 @@ mx_status_t acpi_bif(acpi_handle_t* h, acpi_rsp_bif_t** response);
 // consumed.
 // *key* is the key to pass in the event packet.
 // *events* is a bitmap of events.
-mx_status_t acpi_enable_event(acpi_handle_t* h, mx_handle_t port, uint64_t key, uint16_t events);
+zx_status_t acpi_enable_event(acpi_handle_t* h, zx_handle_t port, uint64_t key, uint16_t events);
 
 __END_CDECLS

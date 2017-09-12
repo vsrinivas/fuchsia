@@ -20,25 +20,25 @@ namespace hypervisor {
 template <typename T, T N>
 class CpuState {
 public:
-    mx_status_t AllocId(T* id) {
+    zx_status_t AllocId(T* id) {
         size_t first_unset;
         bool all_set = id_bitmap_.Get(0, N, &first_unset);
         if (all_set)
-            return MX_ERR_NO_RESOURCES;
+            return ZX_ERR_NO_RESOURCES;
         if (first_unset >= N)
-            return MX_ERR_OUT_OF_RANGE;
+            return ZX_ERR_OUT_OF_RANGE;
         *id = static_cast<T>(first_unset + 1);
         return id_bitmap_.SetOne(first_unset);
     }
 
-    mx_status_t FreeId(T id) {
+    zx_status_t FreeId(T id) {
         if (id == 0 || !id_bitmap_.GetOne(id - 1))
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         return id_bitmap_.ClearOne(id - 1);
     }
 
 protected:
-    mx_status_t Init() {
+    zx_status_t Init() {
         return id_bitmap_.Reset(N);
     }
 
@@ -48,7 +48,7 @@ private:
 
 } // namespace hypervisor
 
-typedef mx_status_t (* percpu_task_t)(void* context, uint cpu_num);
+typedef zx_status_t (* percpu_task_t)(void* context, uint cpu_num);
 
 /* Executes a task on each online CPU, and returns a CPU mask containing each
  * CPU the task was successfully run on. */

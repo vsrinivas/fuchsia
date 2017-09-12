@@ -26,7 +26,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
 #pragma once
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 #include <ngunwind/fuchsia.h>
 
@@ -37,8 +37,8 @@ struct unw_fuchsia_info {
     struct _Unwind_Context context; // must be first
     unw_addr_space_t remote_as;
 #endif
-    mx_handle_t process;
-    mx_handle_t thread;
+    zx_handle_t process;
+    zx_handle_t thread;
 
     // List of dsos, and lookup function.
     struct dsoinfo* dsos;

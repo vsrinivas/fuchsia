@@ -241,7 +241,7 @@ static int cmd_vm_object(int argc, const cmd_args* argv, uint32_t flags) {
         printf("usage:\n");
         printf("%s dump <address>\n", argv[0].str);
         printf("%s dump_pages <address>\n", argv[0].str);
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
 
     if (!strcmp(argv[1].str, "dump")) {
@@ -263,7 +263,7 @@ static int cmd_vm_object(int argc, const cmd_args* argv, uint32_t flags) {
         goto usage;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 STATIC_COMMAND_START

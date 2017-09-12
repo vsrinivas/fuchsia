@@ -139,7 +139,7 @@
 #ifndef ASSEMBLY
 
 #include <sys/types.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <inttypes.h>

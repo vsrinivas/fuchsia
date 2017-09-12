@@ -14,7 +14,7 @@
 #include "pty-core.h"
 #include "pty-fifo.h"
 
-#include <magenta/device/pty.h>
+#include <zircon/device/pty.h>
 
 typedef struct pty_server_dev {
     pty_server_t srv;
@@ -23,11 +23,11 @@ typedef struct pty_server_dev {
     pty_fifo_t fifo;
 } pty_server_dev_t;
 
-static mx_device_t* pty_root;
+static zx_device_t* pty_root;
 
 #define psd_from_ps(ps) containerof(ps, pty_server_dev_t, srv)
 
-static mx_status_t psd_recv(pty_server_t* ps, const void* data, size_t len, size_t* actual) {
+static zx_status_t psd_recv(pty_server_t* ps, const void* data, size_t len, size_t* actual) {
     if (len == 0) {
         return 0;
     }
@@ -41,13 +41,13 @@ static mx_status_t psd_recv(pty_server_t* ps, const void* data, size_t len, size
     }
 
     if (*actual == 0) {
-        return MX_ERR_SHOULD_WAIT;
+        return ZX_ERR_SHOULD_WAIT;
     } else {
-        return MX_OK;
+        return ZX_OK;
     }
 }
 
-static mx_status_t psd_read(void* ctx, void* buf, size_t count, mx_off_t off, size_t* actual) {
+static zx_status_t psd_read(void* ctx, void* buf, size_t count, zx_off_t off, size_t* actual) {
     pty_server_dev_t* psd = ctx;
 
     bool eof = false;
@@ -69,30 +69,30 @@ static mx_status_t psd_read(void* ctx, void* buf, size_t count, mx_off_t off, si
 
     if (length > 0) {
         *actual = length;
-        return MX_OK;
+        return ZX_OK;
     } else if (eof) {
         *actual = 0;
-        return MX_OK;
+        return ZX_OK;
     } else {
-        return MX_ERR_SHOULD_WAIT;
+        return ZX_ERR_SHOULD_WAIT;
     }
 }
 
-static mx_status_t psd_write(void* ctx, const void* buf, size_t count, mx_off_t off,
+static zx_status_t psd_write(void* ctx, const void* buf, size_t count, zx_off_t off,
                              size_t* actual) {
     pty_server_dev_t* psd = ctx;
     size_t length;
-    mx_status_t status;
+    zx_status_t status;
 
     if ((status = pty_server_send(&psd->srv, buf, count, false, &length)) < 0) {
         return status;
     } else {
         *actual = length;
-        return MX_OK;
+        return ZX_OK;
     }
 }
 
-static mx_status_t psd_ioctl(void* ctx, uint32_t op,
+static zx_status_t psd_ioctl(void* ctx, uint32_t op,
                   const void* in_buf, size_t in_len,
                   void* out_buf, size_t out_len, size_t* out_actual) {
     pty_server_dev_t* psd = ctx;
@@ -101,20 +101,20 @@ static mx_status_t psd_ioctl(void* ctx, uint32_t op,
     case IOCTL_PTY_SET_WINDOW_SIZE: {
         const pty_window_size_t* wsz = in_buf;
         if (in_len != sizeof(pty_window_size_t)) {
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
         pty_server_set_window_size(&psd->srv, wsz->width, wsz->height);
-        return MX_OK;
+        return ZX_OK;
     }
     default:
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
 // Since we have no special functionality,
 // we just use the implementations from pty-core
 // directly.
-static mx_protocol_device_t psd_ops = {
+static zx_protocol_device_t psd_ops = {
     .version = DEVICE_OPS_VERSION,
     // .open = default, allow cloning
     .open_at = pty_server_openat,
@@ -127,10 +127,10 @@ static mx_protocol_device_t psd_ops = {
 
 // ptmx device - used to obtain the pty server of a new pty instance
 
-static mx_status_t ptmx_open(void* ctx, mx_device_t** out, uint32_t flags) {
+static zx_status_t ptmx_open(void* ctx, zx_device_t** out, uint32_t flags) {
     pty_server_dev_t* psd;
     if ((psd = calloc(1, sizeof(pty_server_dev_t))) == NULL) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     pty_server_init(&psd->srv);
@@ -144,26 +144,26 @@ static mx_status_t ptmx_open(void* ctx, mx_device_t** out, uint32_t flags) {
         .name = "pty",
         .ctx = psd,
         .ops = &psd_ops,
-        .proto_id = MX_PROTOCOL_PTY,
+        .proto_id = ZX_PROTOCOL_PTY,
         .flags = DEVICE_ADD_INSTANCE,
     };
 
-    mx_status_t status;
+    zx_status_t status;
     if ((status = device_add(pty_root, &args, &psd->srv.mxdev)) < 0) {
         free(psd);
         return status;
     }
 
     *out = psd->srv.mxdev;
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_protocol_device_t ptmx_ops = {
+static zx_protocol_device_t ptmx_ops = {
     .version = DEVICE_OPS_VERSION,
     .open = ptmx_open,
 };
 
-static mx_status_t ptmx_bind(void* ctx, mx_device_t* parent, void** cookie) {
+static zx_status_t ptmx_bind(void* ctx, zx_device_t* parent, void** cookie) {
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "ptmx",
@@ -173,11 +173,11 @@ static mx_status_t ptmx_bind(void* ctx, mx_device_t* parent, void** cookie) {
     return device_add(parent, &args, &pty_root);
 }
 
-static mx_driver_ops_t ptmx_driver_ops = {
+static zx_driver_ops_t ptmx_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = ptmx_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(ptmx, ptmx_driver_ops, "magenta", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT),
-MAGENTA_DRIVER_END(ptmx)
+ZIRCON_DRIVER_BEGIN(ptmx, ptmx_driver_ops, "zircon", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
+ZIRCON_DRIVER_END(ptzx)

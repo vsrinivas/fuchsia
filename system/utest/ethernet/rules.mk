@@ -14,13 +14,13 @@ MODULE_SRCS += \
 MODULE_NAME := ethernet-test
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mx \
-    system/ulib/mxcpp \
+    system/ulib/zx \
+    system/ulib/zxcpp \
     system/ulib/fbl \
 
 MODULE_LIBS := \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/unittest \
     system/ulib/c \
 

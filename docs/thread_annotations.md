@@ -1,6 +1,6 @@
-# Magenta thread safety annotations
+# Zircon thread safety annotations
 
-Magenta code takes advantage of clang's thread safety analysis feature to
+Zircon code takes advantage of clang's thread safety analysis feature to
 document and machine-verify some of our synchronization invariants. These
 annotations are checked when building for clang (see
 [getting started](getting_started.md) for instructions on building with
@@ -10,11 +10,11 @@ clang).
 
 [Clang's documentation](https://clang.llvm.org/docs/ThreadSafetyAnalysis.html)
 
-In Magenta, we provide our own set of macros wrapping the annotations and have
+In Zircon, we provide our own set of macros wrapping the annotations and have
 annotated our synchronization primitives. When writing new code involving
 synchronization or annotating existing code, in most cases you should use the
 thread annotation macros provided by
-[system/private/magenta/thread\_annotations.h](../system/private/magenta/thread_annotations.h). These macros all begin with
+[system/private/zircon/thread\_annotations.h](../system/private/zircon/thread_annotations.h). These macros all begin with
 the prefix `"TA_"` for thread analysis. The most commonly used ones are:
 
 * `TA_GUARDED(x)` the annotated variable is guarded by the capability (e.g. lock) `x`
@@ -80,7 +80,7 @@ annotation.  In other words, the following two declarations are equivalent.
 
 Library code exposed through the sysroot must use the more awkwardly named
 macros provided by
-[system/public/magenta/compiler.h](../system/public/magenta/compiler.h) to
+[system/public/zircon/compiler.h](../system/public/zircon/compiler.h) to
 avoid collisions with consumers of the sysroot.
 
 ## Best practices

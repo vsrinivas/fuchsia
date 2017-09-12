@@ -12,16 +12,16 @@ MODULE_GROUP := misc
 MODULE_SRCS += \
     $(LOCAL_DIR)/guest.cpp \
     $(LOCAL_DIR)/linux.cpp \
-    $(LOCAL_DIR)/magenta.cpp \
+    $(LOCAL_DIR)/zircon.cpp \
 
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/hypervisor \
-    system/ulib/magenta \
-    system/ulib/mxio \
+    system/ulib/zircon \
+    system/ulib/fdio \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mxcpp \
+    system/ulib/zxcpp \
     system/ulib/fbl \
     system/ulib/virtio \
 

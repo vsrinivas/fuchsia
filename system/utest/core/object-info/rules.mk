@@ -17,6 +17,6 @@ MODULE_NAME := object-info-test
 
 MODULE_LIBS := \
     system/ulib/mini-process system/ulib/unittest \
-	system/ulib/mxio system/ulib/magenta system/ulib/c
+	system/ulib/fdio system/ulib/zircon system/ulib/c
 
 include make/module.mk

@@ -6,13 +6,13 @@
 
 #include <threads.h>
 
-#include <magenta/syscalls/hypervisor.h>
+#include <zircon/syscalls/hypervisor.h>
 
 __BEGIN_CDECLS
 
 typedef struct io_apic io_apic_t;
 typedef struct io_port io_port_t;
-typedef struct mx_port_packet mx_port_packet_t;
+typedef struct zx_port_packet zx_port_packet_t;
 typedef struct pci_bus pci_bus_t;
 typedef struct uart uart_t;
 
@@ -27,8 +27,8 @@ typedef struct guest_ctx {
 
 /* Typedefs to abstract reading and writing VCPU state. */
 typedef struct vcpu_ctx vcpu_ctx_t;
-typedef mx_status_t (*read_state_fn_t)(vcpu_ctx_t* vcpu, uint32_t kind, void* buffer, uint32_t len);
-typedef mx_status_t (*write_state_fn_t)(vcpu_ctx_t* vcpu, uint32_t kind, const void* buffer, uint32_t len);
+typedef zx_status_t (*read_state_fn_t)(vcpu_ctx_t* vcpu, uint32_t kind, void* buffer, uint32_t len);
+typedef zx_status_t (*write_state_fn_t)(vcpu_ctx_t* vcpu, uint32_t kind, const void* buffer, uint32_t len);
 
 /* Local APIC registers are all 128-bit aligned. */
 typedef union local_apic_reg {
@@ -61,7 +61,7 @@ typedef struct local_apic_regs {
 /* Stores the local APIC state. */
 typedef struct local_apic {
     // VCPU associated with this APIC.
-    mx_handle_t vcpu;
+    zx_handle_t vcpu;
     union {
         // Address of the local APIC.
         void* apic_addr;
@@ -72,7 +72,7 @@ typedef struct local_apic {
 
 /* Stores the state associated with a single VCPU. */
 typedef struct vcpu_ctx {
-    mx_handle_t vcpu;
+    zx_handle_t vcpu;
 
     read_state_fn_t read_state;
     write_state_fn_t write_state;
@@ -85,20 +85,20 @@ typedef struct vcpu_ctx {
 void vcpu_init(vcpu_ctx_t* vcpu_ctx);
 
 /* Controls execution of a VCPU context, providing the main logic. */
-mx_status_t vcpu_loop(vcpu_ctx_t* vcpu_ctx);
+zx_status_t vcpu_loop(vcpu_ctx_t* vcpu_ctx);
 
 /* Processes a single guest packet. */
-mx_status_t vcpu_packet_handler(vcpu_ctx_t* vcpu_ctx, mx_port_packet_t* packet);
+zx_status_t vcpu_packet_handler(vcpu_ctx_t* vcpu_ctx, zx_port_packet_t* packet);
 
-typedef mx_status_t (*device_handler_fn_t)(mx_port_packet_t* packet, void* ctx);
+typedef zx_status_t (*device_handler_fn_t)(zx_port_packet_t* packet, void* ctx);
 
 /* A set of arguments to specify a trap region.
  *
- * See mx_guest_set_trap for more details on trap args.
+ * See zx_guest_set_trap for more details on trap args.
  */
 typedef struct trap_args {
     uint32_t kind;
-    mx_vaddr_t addr;
+    zx_vaddr_t addr;
     size_t len;
     uint32_t key;
 } trap_args_t;
@@ -106,7 +106,7 @@ typedef struct trap_args {
 /* Start asynchronous handling of device operations, based on a set of traps
  * provided. A trap will be created for every trap in |traps|.
  */
-mx_status_t device_async(mx_handle_t guest, const trap_args_t* traps, size_t num_traps,
+zx_status_t device_async(zx_handle_t guest, const trap_args_t* traps, size_t num_traps,
                          device_handler_fn_t handler, void* ctx);
 
 __END_CDECLS

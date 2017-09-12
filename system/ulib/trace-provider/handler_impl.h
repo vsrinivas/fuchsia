@@ -6,8 +6,8 @@
 
 #include <trace/handler.h>
 
-#include <mx/eventpair.h>
-#include <mx/vmo.h>
+#include <zx/eventpair.h>
+#include <zx/vmo.h>
 #include <fbl/macros.h>
 
 namespace trace {
@@ -15,21 +15,21 @@ namespace internal {
 
 class TraceHandlerImpl final : public trace::TraceHandler {
 public:
-    static mx_status_t StartEngine(async_t* async, mx::vmo buffer, mx::eventpair fence);
-    static mx_status_t StopEngine();
+    static zx_status_t StartEngine(async_t* async, zx::vmo buffer, zx::eventpair fence);
+    static zx_status_t StopEngine();
 
 private:
-    TraceHandlerImpl(void* buffer, size_t buffer_num_bytes, mx::eventpair fence);
+    TraceHandlerImpl(void* buffer, size_t buffer_num_bytes, zx::eventpair fence);
     ~TraceHandlerImpl() override;
 
     // |trace::TraceHandler|
     bool IsCategoryEnabled(const char* category) override;
     void TraceStopped(async_t* async,
-                      mx_status_t disposition, size_t buffer_bytes_written) override;
+                      zx_status_t disposition, size_t buffer_bytes_written) override;
 
     void* buffer_;
     size_t buffer_num_bytes_;
-    mx::eventpair fence_;
+    zx::eventpair fence_;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(TraceHandlerImpl);
 };

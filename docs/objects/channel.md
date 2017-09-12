@@ -13,17 +13,17 @@ amount of byte data and some number of handles.
 
 Channels maintain an ordered queue of messages to be delivered in
 either direction. A message consists of some amount of data and some
-number of handles. A call to *mx_channel_write()* enqueues one message,
-and a call to *mx_channel_read()* dequeues one message (if any are
+number of handles. A call to *zx_channel_write()* enqueues one message,
+and a call to *zx_channel_read()* dequeues one message (if any are
 queued). A thread can block until messages are pending via
-*mx_object_wait_one()* or other waiting mechanisms.
+*zx_object_wait_one()* or other waiting mechanisms.
 
-Alternatively, a call to *mx_channel_call()* enqueues a message in one
+Alternatively, a call to *zx_channel_call()* enqueues a message in one
 direction of the channel, waits for a corresponding response, and
 dequeues the response message. In call mode, corresponding responses
 are identified via the first 4 bytes of the message, called the
 transaction ID. Coming up with distinct transaction IDs is up to the
-users of *mx_channel_call()*.
+users of *zx_channel_call()*.
 
 The process of sending a message via a channel has two steps. The
 first is to atomically write the data into the channel and move
@@ -34,7 +34,7 @@ all in the channel. The second operation is similar: after a channel
 read, all the handles in the next message to read are either
 atomically moved into the process's handle table, all remain in the
 channel, or are discarded (only when the
-**MX_CHANNEL_READ_MAY_DISCARD** option is given).
+**ZX_CHANNEL_READ_MAY_DISCARD** option is given).
 
 Unlike many other kernel object types, channels are not
 duplicatable. Thus there is only ever one handle associated to a
@@ -59,5 +59,5 @@ that a channel handle may not be written into itself.
 
 ## SEE ALSO
 
-+ [Magenta concepts](../concepts.md)
++ [Zircon concepts](../concepts.md)
 + [Handles](../handles.md)

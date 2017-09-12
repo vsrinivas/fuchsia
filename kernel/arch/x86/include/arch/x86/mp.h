@@ -12,8 +12,8 @@
 /* offsets into this structure, used by assembly */
 #define PERCPU_DIRECT_OFFSET           0x0
 #define PERCPU_CURRENT_THREAD_OFFSET   0x8
-//      MX_TLS_STACK_GUARD_OFFSET      0x10
-//      MX_TLS_UNSAFE_SP_OFFSET        0x18
+//      ZX_TLS_STACK_GUARD_OFFSET      0x10
+//      ZX_TLS_UNSAFE_SP_OFFSET        0x18
 #define PERCPU_SAVED_USER_SP_OFFSET    0x20
 #define PERCPU_IN_IRQ_OFFSET           0x28
 #define PERCPU_GPF_RETURN_OFFSET       0x30
@@ -30,8 +30,8 @@
 #include <arch/x86.h>
 #include <arch/x86/idt.h>
 #include <assert.h>
-#include <magenta/compiler.h>
-#include <magenta/tls.h>
+#include <zircon/compiler.h>
+#include <zircon/tls.h>
 #include <stdint.h>
 
 __BEGIN_CDECLS
@@ -46,7 +46,7 @@ struct x86_percpu {
     struct thread *current_thread;
 
     // The offsets of these two slots are published in
-    // system/public/magenta/tls.h and known to the compiler.
+    // system/public/zircon/tls.h and known to the compiler.
     uintptr_t stack_guard;
     uintptr_t kernel_unsafe_sp;
 
@@ -74,8 +74,8 @@ struct x86_percpu {
 
 static_assert(__offsetof(struct x86_percpu, direct) == PERCPU_DIRECT_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, current_thread) == PERCPU_CURRENT_THREAD_OFFSET, "");
-static_assert(__offsetof(struct x86_percpu, stack_guard) == MX_TLS_STACK_GUARD_OFFSET, "");
-static_assert(__offsetof(struct x86_percpu, kernel_unsafe_sp) == MX_TLS_UNSAFE_SP_OFFSET, "");
+static_assert(__offsetof(struct x86_percpu, stack_guard) == ZX_TLS_STACK_GUARD_OFFSET, "");
+static_assert(__offsetof(struct x86_percpu, kernel_unsafe_sp) == ZX_TLS_UNSAFE_SP_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, saved_user_sp) == PERCPU_SAVED_USER_SP_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, in_irq) == PERCPU_IN_IRQ_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, gpf_return_target) == PERCPU_GPF_RETURN_OFFSET, "");

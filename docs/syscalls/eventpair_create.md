@@ -1,4 +1,4 @@
-# mx_eventpair_create
+# zx_eventpair_create
 
 ## NAME
 
@@ -7,9 +7,9 @@ eventpair_create - create an event pair
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-mx_status_t mx_eventpair_create(uint32_t options, mx_handle_t* out0, mx_handle_t* out1);
+zx_status_t zx_eventpair_create(uint32_t options, zx_handle_t* out0, zx_handle_t* out1);
 ```
 
 
@@ -18,34 +18,34 @@ mx_status_t mx_eventpair_create(uint32_t options, mx_handle_t* out0, mx_handle_t
 **eventpair_create**() creates an event pair, which is a pair of objects that
 are mutually signalable.
 
-The signals *MX_EPAIR_SIGNALED* and *MX_USER_SIGNAL_n* (where *n* is 0 through 7)
+The signals *ZX_EPAIR_SIGNALED* and *ZX_USER_SIGNAL_n* (where *n* is 0 through 7)
 may be set or cleared using **object_signal**() (modifying the signals on the
 object itself), or **object_signal_peer**() (modifying the signals on its
 counterpart).
 
-When all the handles to one of the objects have been closed, the *MX_EPAIR_PEER_CLOSED*
+When all the handles to one of the objects have been closed, the *ZX_EPAIR_PEER_CLOSED*
 signal will be asserted on the opposing object.
 
-The newly-created handles will have the *MX_RIGHT_TRANSFER*,
-*MX_RIGHT_DUPLICATE*, *MX_RIGHT_READ*, *MX_RIGHT_WRITE*, *MX_RIGHT_SIGNAL*,
-and *MX_RIGHT_SIGNAL_PEER* rights.
+The newly-created handles will have the *ZX_RIGHT_TRANSFER*,
+*ZX_RIGHT_DUPLICATE*, *ZX_RIGHT_READ*, *ZX_RIGHT_WRITE*, *ZX_RIGHT_SIGNAL*,
+and *ZX_RIGHT_SIGNAL_PEER* rights.
 
 Currently, no options are supported, so *options* must be set to 0.
 
 
 ## RETURN VALUE
 
-**eventpair_create**() returns **MX_OK** on success. On failure, a (negative)
+**eventpair_create**() returns **ZX_OK** on success. On failure, a (negative)
 error code is returned.
 
 
 ## ERRORS
 
-**MX_ERR_INVALID_ARGS**  *out0* or *out1* is an invalid pointer or NULL.
+**ZX_ERR_INVALID_ARGS**  *out0* or *out1* is an invalid pointer or NULL.
 
-**MX_ERR_NOT_SUPPORTED**  *options* has an unsupported flag set (i.e., is not 0).
+**ZX_ERR_NOT_SUPPORTED**  *options* has an unsupported flag set (i.e., is not 0).
 
-**MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**ZX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
 
 ## SEE ALSO

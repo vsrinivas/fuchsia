@@ -8,8 +8,8 @@
 #include <debug.h>
 #include <trace.h>
 #include <assert.h>
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 #include <err.h>
 #include <string.h>
 #include <ctype.h>
@@ -557,7 +557,7 @@ static void convert_args(int argc, cmd_args *argv)
 }
 
 
-static mx_status_t command_loop(int (*get_line)(const char **, void *),
+static zx_status_t command_loop(int (*get_line)(const char **, void *),
                                 void *get_line_cookie, bool showprompt,
                                 bool locked) TA_NO_THREAD_SAFETY_ANALYSIS
 {
@@ -659,7 +659,7 @@ static mx_status_t command_loop(int (*get_line)(const char **, void *),
 
     free(outbuf);
     free(args);
-    return MX_OK;
+    return ZX_OK;
 
 no_mem_error:
     if (outbuf)
@@ -669,7 +669,7 @@ no_mem_error:
         free(args);
 
     dprintf(INFO, "%s: not enough memory\n", __func__);
-    return MX_ERR_NO_MEMORY;
+    return ZX_ERR_NO_MEMORY;
 }
 
 void console_abort_script(void)
@@ -684,7 +684,7 @@ void console_start(void)
     dprintf(INFO, "entering main console loop\n");
 
 
-    while (command_loop(&read_debug_line, NULL, true, false) == MX_OK)
+    while (command_loop(&read_debug_line, NULL, true, false) == ZX_OK)
         ;
 
     dprintf(INFO, "exiting main console loop\n");
@@ -801,7 +801,7 @@ static int cmd_echo(int argc, const cmd_args *argv, uint32_t flags)
 {
     if (argc > 1)
         echo = argv[1].b;
-    return MX_OK;
+    return ZX_OK;
 }
 
 static void panic_putc(char c) {

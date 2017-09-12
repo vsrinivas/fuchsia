@@ -10,7 +10,7 @@
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
-#include <mx/event.h>
+#include <zx/event.h>
 #include <trace-engine/instrumentation.h>
 
 namespace {
@@ -25,10 +25,10 @@ void RunThread(fbl::Closure closure) {
     thrd_t thread;
     int result = thrd_create(&thread, RunClosure,
                              new fbl::Closure(fbl::move(closure)));
-    MX_ASSERT(result == thrd_success);
+    ZX_ASSERT(result == thrd_success);
 
     result = thrd_join(thread, nullptr);
-    MX_ASSERT(result == thrd_success);
+    ZX_ASSERT(result == thrd_success);
 }
 
 bool test_normal_shutdown() {
@@ -36,7 +36,7 @@ bool test_normal_shutdown() {
 
     fixture_start_tracing();
     fixture_stop_tracing();
-    EXPECT_EQ(MX_OK, fixture_get_disposition());
+    EXPECT_EQ(ZX_OK, fixture_get_disposition());
 
     END_TRACE_TEST;
 }
@@ -46,7 +46,7 @@ bool test_hard_shutdown() {
 
     fixture_start_tracing();
     fixture_stop_tracing_hard();
-    EXPECT_EQ(MX_ERR_CANCELED, fixture_get_disposition());
+    EXPECT_EQ(ZX_ERR_CANCELED, fixture_get_disposition());
 
     END_TRACE_TEST;
 }
@@ -116,22 +116,22 @@ bool test_generate_nonce() {
 bool test_observer() {
     BEGIN_TRACE_TEST;
 
-    mx::event event;
-    EXPECT_EQ(MX_OK, mx::event::create(0u, &event));
+    zx::event event;
+    EXPECT_EQ(ZX_OK, zx::event::create(0u, &event));
 
-    EXPECT_EQ(MX_OK, trace_register_observer(event.get()));
-    EXPECT_EQ(MX_ERR_TIMED_OUT, event.wait_one(MX_EVENT_SIGNALED, 0u, nullptr));
+    EXPECT_EQ(ZX_OK, trace_register_observer(event.get()));
+    EXPECT_EQ(ZX_ERR_TIMED_OUT, event.wait_one(ZX_EVENT_SIGNALED, 0u, nullptr));
 
     fixture_start_tracing();
-    EXPECT_EQ(MX_OK, event.wait_one(MX_EVENT_SIGNALED, 0u, nullptr));
+    EXPECT_EQ(ZX_OK, event.wait_one(ZX_EVENT_SIGNALED, 0u, nullptr));
 
-    EXPECT_EQ(MX_OK, event.signal(MX_EVENT_SIGNALED, 0u));
-    EXPECT_EQ(MX_ERR_TIMED_OUT, event.wait_one(MX_EVENT_SIGNALED, 0u, nullptr));
+    EXPECT_EQ(ZX_OK, event.signal(ZX_EVENT_SIGNALED, 0u));
+    EXPECT_EQ(ZX_ERR_TIMED_OUT, event.wait_one(ZX_EVENT_SIGNALED, 0u, nullptr));
 
     fixture_stop_tracing();
-    EXPECT_EQ(MX_OK, event.wait_one(MX_EVENT_SIGNALED, 0u, nullptr));
+    EXPECT_EQ(ZX_OK, event.wait_one(ZX_EVENT_SIGNALED, 0u, nullptr));
 
-    EXPECT_EQ(MX_OK, trace_unregister_observer(event.get()));
+    EXPECT_EQ(ZX_OK, trace_unregister_observer(event.get()));
 
     END_TRACE_TEST;
 }
@@ -139,14 +139,14 @@ bool test_observer() {
 bool test_observer_errors() {
     BEGIN_TRACE_TEST;
 
-    mx::event event;
-    EXPECT_EQ(MX_OK, mx::event::create(0u, &event));
+    zx::event event;
+    EXPECT_EQ(ZX_OK, zx::event::create(0u, &event));
 
-    EXPECT_EQ(MX_OK, trace_register_observer(event.get()));
-    EXPECT_EQ(MX_ERR_INVALID_ARGS, trace_register_observer(event.get()));
+    EXPECT_EQ(ZX_OK, trace_register_observer(event.get()));
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, trace_register_observer(event.get()));
 
-    EXPECT_EQ(MX_OK, trace_unregister_observer(event.get()));
-    EXPECT_EQ(MX_ERR_NOT_FOUND, trace_unregister_observer(event.get()));
+    EXPECT_EQ(ZX_OK, trace_unregister_observer(event.get()));
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, trace_unregister_observer(event.get()));
 
     END_TRACE_TEST;
 }
@@ -374,7 +374,7 @@ bool test_event_with_inline_everything() {
     {
         auto context = trace::TraceContext::Acquire();
 
-        trace_context_write_instant_event_record(context.get(), mx_ticks_get(),
+        trace_context_write_instant_event_record(context.get(), zx_ticks_get(),
                                                  &thread, &cat, &name,
                                                  TRACE_SCOPE_GLOBAL,
                                                  args, fbl::count_of(args));

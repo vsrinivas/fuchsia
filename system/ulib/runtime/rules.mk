@@ -15,7 +15,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/thread.c \
 
 MODULE_LIBS += \
-    system/ulib/magenta
+    system/ulib/zircon
 
 # for stdint.h
 MODULE_HEADER_DEPS += \

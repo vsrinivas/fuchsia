@@ -22,7 +22,7 @@ import (
 
 const (
   DefaultBoringSSL = "//third_party/boringssl"
-  DefaultMagenta = "//magenta/third_party/ulib/uboringssl"
+  DefaultZircon = "//zircon/third_party/ulib/uboringssl"
 )
 
 // GetRealPath returns a canonical path, with '//' replaced by $FUCHSIA_DIR
@@ -71,9 +71,9 @@ func CheckReadMe(mxRoot, bsslRoot string) bool {
 
 // IsValidAddedFile returns whether a file found only in boring-crypto and not
 // in boringssl is a valid addition; that is, if it includes a Fuchsia copyright
-// and ends in a -magenta.cpp suffix.
+// and ends in a -zircon.cpp suffix.
 func IsValidAddedFile(path string) bool {
-  if !strings.HasSuffix(path, "-magenta.cpp") {
+  if !strings.HasSuffix(path, "-zircon.cpp") {
     return false
   }
   file, err := os.Open(path)
@@ -184,7 +184,7 @@ func CompareAll(mxRoot, bsslRoot string) []string {
 // Main function
 func main() {
   bsslFlag := flag.String("boringssl", DefaultBoringSSL, "BoringSSL repository")
-  mxFlag := flag.String("boring-crypto", DefaultMagenta, "boring-crypto path")
+  mxFlag := flag.String("boring-crypto", DefaultZircon, "boring-crypto path")
   flag.Parse()
   mxRoot :=  GetRealPath(*mxFlag)
   bsslRoot :=  GetRealPath(*bsslFlag)

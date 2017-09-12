@@ -4,16 +4,16 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
-#include <magenta/driver/binding.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+#include <zircon/driver/binding.h>
 
 __BEGIN_CDECLS;
 
-mx_status_t di_read_driver_info(int fd, void *cookie,
+zx_status_t di_read_driver_info(int fd, void *cookie,
                                 void (*func)(
-                                    magenta_driver_note_payload_t* note,
-                                    const mx_bind_inst_t* binding,
+                                    zircon_driver_note_payload_t* note,
+                                    const zx_bind_inst_t* binding,
                                     void *cookie));
 
 // Lookup the human readable name of a bind program parameter, or return NULL if
@@ -23,6 +23,6 @@ const char* di_bind_param_name(uint32_t param_num);
 
 // Disassemble a bind program instruction and dump it to the buffer provided by
 // the caller.  If the buffer is too small, the disassembly may be truncated.
-void di_dump_bind_inst(const mx_bind_inst_t* b, char* buf, size_t buf_len);
+void di_dump_bind_inst(const zx_bind_inst_t* b, char* buf, size_t buf_len);
 
 __END_CDECLS;

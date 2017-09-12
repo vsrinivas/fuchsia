@@ -8,8 +8,8 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <magenta/types.h>
-#include <magenta/listnode.h>
+#include <zircon/types.h>
+#include <zircon/listnode.h>
 
 #include <port/port.h>
 
@@ -37,9 +37,9 @@ struct dc_pending {
 
 struct dc_devhost {
     port_handler_t ph;
-    mx_handle_t hrpc;
-    mx_handle_t proc;
-    mx_koid_t koid;
+    zx_handle_t hrpc;
+    zx_handle_t proc;
+    zx_koid_t koid;
     int32_t refcount;
     uint32_t flags;
 
@@ -50,8 +50,8 @@ struct dc_devhost {
 #define DEV_HOST_DYING 1
 
 struct dc_device {
-    mx_handle_t hrpc;
-    mx_handle_t hrsrc;
+    zx_handle_t hrpc;
+    zx_handle_t hrsrc;
     port_handler_t ph;
     devhost_t* host;
     const char* name;
@@ -85,7 +85,7 @@ struct dc_device {
     // listnode for this device in the all devices list
     list_node_t anode;
 
-    mx_device_prop_t props[];
+    zx_device_prop_t props[];
 };
 
 // This device is never destroyed
@@ -116,7 +116,7 @@ struct dc_device {
 
 struct dc_driver {
     const char* name;
-    const mx_bind_inst_t* binding;
+    const zx_bind_inst_t* binding;
     uint32_t binding_size;
     uint32_t flags;
     struct list_node node;
@@ -125,10 +125,10 @@ struct dc_driver {
 
 #define DRIVER_NAME_LEN_MAX 64
 
-mx_status_t devfs_publish(device_t* parent, device_t* dev);
+zx_status_t devfs_publish(device_t* parent, device_t* dev);
 void devfs_unpublish(device_t* dev);
 
-device_t* coordinator_init(mx_handle_t root_job);
+device_t* coordinator_init(zx_handle_t root_job);
 void coordinator(void);
 
 void dc_driver_added(driver_t* drv, const char* version);
@@ -137,7 +137,7 @@ void load_driver(const char* path);
 void find_loadable_drivers(const char* path);
 
 bool dc_is_bindable(driver_t* drv, uint32_t protocol_id,
-                    mx_device_prop_t* props, size_t prop_count,
+                    zx_device_prop_t* props, size_t prop_count,
                     bool autobind);
 
 #define DC_MAX_DATA 4096
@@ -147,11 +147,11 @@ bool dc_is_bindable(driver_t* drv, uint32_t protocol_id,
 // dedicated channel for forwarding OPEN operations.
 // Our opcodes set the high bit to avoid overlap.
 typedef struct {
-    mx_txid_t txid;
+    zx_txid_t txid;
     uint32_t op;
 
     union {
-        mx_status_t status;
+        zx_status_t status;
         uint32_t protocol_id;
     };
     uint32_t datalen;
@@ -162,8 +162,8 @@ typedef struct {
 } dc_msg_t;
 
 typedef struct {
-    mx_txid_t txid;
-    mx_status_t status;
+    zx_txid_t txid;
+    zx_status_t status;
 } dc_status_t;
 
 // Coord->Host Ops
@@ -184,13 +184,13 @@ typedef struct {
 #define DC_OP_DM_WATCH           0x80000022
 #define DC_PATH_MAX 1024
 
-mx_status_t dc_msg_pack(dc_msg_t* msg, uint32_t* len_out,
+zx_status_t dc_msg_pack(dc_msg_t* msg, uint32_t* len_out,
                         const void* data, size_t datalen,
                         const char* name, const char* args);
-mx_status_t dc_msg_unpack(dc_msg_t* msg, size_t len, const void** data,
+zx_status_t dc_msg_unpack(dc_msg_t* msg, size_t len, const void** data,
                           const char** name, const char** args);
-mx_status_t dc_msg_rpc(mx_handle_t h, dc_msg_t* msg, size_t msglen,
-                       mx_handle_t* handles, size_t hcount,
+zx_status_t dc_msg_rpc(zx_handle_t h, dc_msg_t* msg, size_t msglen,
+                       zx_handle_t* handles, size_t hcount,
                        dc_status_t* rsp, size_t rsp_len);
 
-void devmgr_set_mdi(mx_handle_t mdi_handle);
+void devmgr_set_mdi(zx_handle_t mdi_handle);

@@ -16,7 +16,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_free_ptr.h>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 #include <assert.h>
 #include <limits.h>

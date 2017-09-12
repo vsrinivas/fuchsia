@@ -11,8 +11,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <magenta/process.h>
-#include <magenta/processargs.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
 #include <fbl/ref_ptr.h>
 
 #include "blobstore-private.h"
@@ -32,8 +32,8 @@ int do_blobstore_mount(int fd, int argc, char** argv) {
     if (blobstore::blobstore_mount(&vn, fd) < 0) {
         return -1;
     }
-    mx_handle_t h = mx_get_startup_handle(PA_HND(PA_USER0, 0));
-    if (h == MX_HANDLE_INVALID) {
+    zx_handle_t h = zx_get_startup_handle(PA_HND(PA_USER0, 0));
+    if (h == ZX_HANDLE_INVALID) {
         FS_TRACE_ERROR("blobstore: Could not access startup handle to mount point\n");
         return h;
     }
@@ -41,8 +41,8 @@ int do_blobstore_mount(int fd, int argc, char** argv) {
     async::Loop loop;
     fs::AsyncDispatcher dispatcher(loop.async());
     fs::Vfs vfs(&dispatcher);
-    mx_status_t status;
-    if ((status = vfs.ServeDirectory(fbl::move(vn), mx::channel(h))) != MX_OK) {
+    zx_status_t status;
+    if ((status = vfs.ServeDirectory(fbl::move(vn), zx::channel(h))) != ZX_OK) {
         return status;
     }
     loop.Run();

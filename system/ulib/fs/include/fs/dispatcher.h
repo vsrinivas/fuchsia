@@ -7,14 +7,14 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include <magenta/types.h>
-#include <mx/channel.h>
+#include <zircon/types.h>
+#include <zx/channel.h>
 #include <fbl/ref_counted.h>
-#include <mxio/remoteio.h>
+#include <fdio/remoteio.h>
 
 namespace fs {
 
-using vfs_dispatcher_cb_t = mxrio_cb_t;
+using vfs_dispatcher_cb_t = zxrio_cb_t;
 
 // Dispatcher describes the interface that the VFS layer uses when
 // interacting with a dispatcher. Filesystems which intend to be
@@ -27,7 +27,7 @@ public:
     // Add a new object to be handled to the dispatcher.
     // The dispatcher will read from 'channel', and pass the
     // message to the dispatcher callback 'cb'.
-    virtual mx_status_t AddVFSHandler(mx::channel channel, vfs_dispatcher_cb_t cb, void* iostate) = 0;
+    virtual zx_status_t AddVFSHandler(zx::channel channel, vfs_dispatcher_cb_t cb, void* iostate) = 0;
 };
 
 } // namespace fs

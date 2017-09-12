@@ -10,42 +10,42 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <magenta/listnode.h>
+#include <zircon/listnode.h>
 
 typedef struct test_device {
-    mx_device_t* mxdev;
-    mx_handle_t output;
-    mx_handle_t control;
+    zx_device_t* mxdev;
+    zx_handle_t output;
+    zx_handle_t control;
     test_func_t test_func;
     void* cookie;
 } test_device_t;
 
 typedef struct test_root {
-    mx_device_t* mxdev;
+    zx_device_t* mxdev;
 } test_root_t;
 
-static void test_device_set_output_socket(void* ctx, mx_handle_t handle) {
+static void test_device_set_output_socket(void* ctx, zx_handle_t handle) {
     test_device_t* device = ctx;
-    if (device->output != MX_HANDLE_INVALID) {
-        mx_handle_close(device->output);
+    if (device->output != ZX_HANDLE_INVALID) {
+        zx_handle_close(device->output);
     }
     device->output = handle;
 }
 
-static mx_handle_t test_device_get_output_socket(void* ctx) {
+static zx_handle_t test_device_get_output_socket(void* ctx) {
     test_device_t* device = ctx;
     return device->output;
 }
 
-static void test_device_set_control_channel(void* ctx, mx_handle_t handle) {
+static void test_device_set_control_channel(void* ctx, zx_handle_t handle) {
     test_device_t* device = ctx;
-    if (device->control != MX_HANDLE_INVALID) {
-        mx_handle_close(device->control);
+    if (device->control != ZX_HANDLE_INVALID) {
+        zx_handle_close(device->control);
     }
     device->control = handle;
 }
 
-static mx_handle_t test_device_get_control_channel(void* ctx) {
+static zx_handle_t test_device_get_control_channel(void* ctx) {
     test_device_t* device = ctx;
     return device->control;
 }
@@ -56,12 +56,12 @@ static void test_device_set_test_func(void* ctx, test_func_t func, void* cookie)
     device->cookie = cookie;
 }
 
-static mx_status_t test_device_run_tests(void *ctx, test_report_t* report, const void* arg, size_t arglen) {
+static zx_status_t test_device_run_tests(void *ctx, test_report_t* report, const void* arg, size_t arglen) {
     test_device_t* device = ctx;
     if (device->test_func != NULL) {
         return device->test_func(device->cookie, report, arg, arglen);
     } else {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -80,29 +80,29 @@ static test_protocol_ops_t test_test_proto = {
     .destroy = test_device_destroy,
 };
 
-static mx_status_t test_device_ioctl(void* ctx, uint32_t op, const void* in, size_t inlen, void* out,
+static zx_status_t test_device_ioctl(void* ctx, uint32_t op, const void* in, size_t inlen, void* out,
                                     size_t outlen, size_t* out_actual) {
     test_device_t* dev = ctx;
     switch (op) {
     case IOCTL_TEST_SET_OUTPUT_SOCKET:
-        if (inlen != sizeof(mx_handle_t)) {
-            return MX_ERR_INVALID_ARGS;
+        if (inlen != sizeof(zx_handle_t)) {
+            return ZX_ERR_INVALID_ARGS;
         }
-        test_device_set_output_socket(dev, *(mx_handle_t*)in);
-        return MX_OK;
+        test_device_set_output_socket(dev, *(zx_handle_t*)in);
+        return ZX_OK;
 
     case IOCTL_TEST_SET_CONTROL_CHANNEL:
-        if (inlen != sizeof(mx_handle_t)) {
-            return MX_ERR_INVALID_ARGS;
+        if (inlen != sizeof(zx_handle_t)) {
+            return ZX_ERR_INVALID_ARGS;
         }
-        test_device_set_control_channel(dev, *(mx_handle_t*)in);
-        return MX_OK;
+        test_device_set_control_channel(dev, *(zx_handle_t*)in);
+        return ZX_OK;
 
     case IOCTL_TEST_RUN_TESTS:
         if (outlen != sizeof(test_report_t)) {
-            return MX_ERR_BUFFER_TOO_SMALL;
+            return ZX_ERR_BUFFER_TOO_SMALL;
         }
-        mx_status_t status = test_device_run_tests(dev, (test_report_t*)out, in, inlen);
+        zx_status_t status = test_device_run_tests(dev, (test_report_t*)out, in, inlen);
         *out_actual = sizeof(test_report_t);
         return status;
 
@@ -111,22 +111,22 @@ static mx_status_t test_device_ioctl(void* ctx, uint32_t op, const void* in, siz
         return 0;
 
     default:
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
 static void test_device_release(void* ctx) {
     test_device_t* device = ctx;
-    if (device->output != MX_HANDLE_INVALID) {
-        mx_handle_close(device->output);
+    if (device->output != ZX_HANDLE_INVALID) {
+        zx_handle_close(device->output);
     }
-    if (device->control != MX_HANDLE_INVALID) {
-        mx_handle_close(device->control);
+    if (device->control != ZX_HANDLE_INVALID) {
+        zx_handle_close(device->control);
     }
     free(device);
 }
 
-static mx_protocol_device_t test_device_proto = {
+static zx_protocol_device_t test_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = test_device_ioctl,
     .release = test_device_release,
@@ -135,15 +135,15 @@ static mx_protocol_device_t test_device_proto = {
 
 #define DEV_TEST "/dev/misc/test"
 
-static mx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inlen,
+static zx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inlen,
                               void* out, size_t outlen, size_t* out_actual) {
     test_root_t* root = ctx;
 
     if (op != IOCTL_TEST_CREATE_DEVICE) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
-    char devname[MX_DEVICE_NAME_MAX + 1];
+    char devname[ZX_DEVICE_NAME_MAX + 1];
     if (inlen > 0) {
         strncpy(devname, in, sizeof(devname));
     } else {
@@ -151,12 +151,12 @@ static mx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inl
     }
 
     if (outlen < strlen(devname) + sizeof(DEV_TEST) + 1) {
-        return MX_ERR_BUFFER_TOO_SMALL;
+        return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
     test_device_t* device = calloc(1, sizeof(test_device_t));
     if (device == NULL) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     device_add_args_t args = {
@@ -164,30 +164,30 @@ static mx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inl
         .name = devname,
         .ctx = device,
         .ops = &test_device_proto,
-        .proto_id = MX_PROTOCOL_TEST,
+        .proto_id = ZX_PROTOCOL_TEST,
         .proto_ops = &test_test_proto,
     };
 
-    mx_status_t status;
-    if ((status = device_add(root->mxdev, &args, &device->mxdev)) != MX_OK) {
+    zx_status_t status;
+    if ((status = device_add(root->mxdev, &args, &device->mxdev)) != ZX_OK) {
         free(device);
         return status;
     }
 
     int length = snprintf(out, outlen,"%s/%s", DEV_TEST, devname) + 1;
     *out_actual = length;
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_protocol_device_t test_root_proto = {
+static zx_protocol_device_t test_root_proto = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = test_ioctl,
 };
 
-static mx_status_t test_bind(void* ctx, mx_device_t* dev, void** cookie) {
+static zx_status_t test_bind(void* ctx, zx_device_t* dev, void** cookie) {
     test_root_t* root = calloc(1, sizeof(test_root_t));
     if (!root) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     device_add_args_t args = {
        .version = DEVICE_ADD_ARGS_VERSION,
@@ -199,11 +199,11 @@ static mx_status_t test_bind(void* ctx, mx_device_t* dev, void** cookie) {
     return device_add(dev, &args, &root->mxdev);
 }
 
-static mx_driver_ops_t test_driver_ops = {
+static zx_driver_ops_t test_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = test_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(test, test_driver_ops, "magenta", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT),
-MAGENTA_DRIVER_END(test)
+ZIRCON_DRIVER_BEGIN(test, test_driver_ops, "zircon", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
+ZIRCON_DRIVER_END(test)

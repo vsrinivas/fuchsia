@@ -8,7 +8,7 @@
 #include "tests.h"
 
 #include <debug.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #if defined(WITH_LIB_CONSOLE)
 #include <lib/console.h>

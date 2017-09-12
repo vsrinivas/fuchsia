@@ -22,7 +22,7 @@ static int callback_thread(void* arg) {
 
     while (!done) {
         // wait for new txns to complete or for signal to exit this thread
-        completion_wait(&intf->callback_thread_completion, MX_TIME_INFINITE);
+        completion_wait(&intf->callback_thread_completion, ZX_TIME_INFINITE);
 
         mtx_lock(&intf->callback_lock);
 
@@ -81,8 +81,8 @@ static void usb_interface_iotxn_queue(void* ctx, iotxn_t* txn) {
 
     // clone the txn and pass it down to the HCI driver
     iotxn_t* clone = NULL;
-    mx_status_t status = iotxn_clone(txn, &clone);
-    if (status != MX_OK) {
+    zx_status_t status = iotxn_clone(txn, &clone);
+    if (status != ZX_OK) {
         iotxn_complete(txn, status, 0);
         return;
     }
@@ -96,7 +96,7 @@ static void usb_interface_iotxn_queue(void* ctx, iotxn_t* txn) {
     iotxn_queue(intf->hci_mxdev, clone);
 }
 
-static mx_status_t usb_interface_ioctl(void* ctx, uint32_t op, const void* in_buf,
+static zx_status_t usb_interface_ioctl(void* ctx, uint32_t op, const void* in_buf,
                                        size_t in_len, void* out_buf, size_t out_len,
                                        size_t* out_actual) {
     usb_interface_t* intf = ctx;
@@ -104,25 +104,25 @@ static mx_status_t usb_interface_ioctl(void* ctx, uint32_t op, const void* in_bu
     switch (op) {
     case IOCTL_USB_GET_DEVICE_TYPE: {
         int* reply = out_buf;
-        if (out_len < sizeof(*reply)) return MX_ERR_BUFFER_TOO_SMALL;
+        if (out_len < sizeof(*reply)) return ZX_ERR_BUFFER_TOO_SMALL;
         *reply = USB_DEVICE_TYPE_INTERFACE;
         *out_actual = sizeof(*reply);
-        return MX_OK;
+        return ZX_OK;
     }
     case IOCTL_USB_GET_DESCRIPTORS_SIZE: {
         int* reply = out_buf;
-        if (out_len < sizeof(*reply)) return MX_ERR_BUFFER_TOO_SMALL;
+        if (out_len < sizeof(*reply)) return ZX_ERR_BUFFER_TOO_SMALL;
         *reply = intf->descriptor_length;
         *out_actual = sizeof(*reply);
-        return MX_OK;
+        return ZX_OK;
     }
     case IOCTL_USB_GET_DESCRIPTORS: {
         void* descriptors = intf->descriptor;
         size_t desc_length = intf->descriptor_length;
-        if (out_len < desc_length) return MX_ERR_BUFFER_TOO_SMALL;
+        if (out_len < desc_length) return ZX_ERR_BUFFER_TOO_SMALL;
         memcpy(out_buf, descriptors, desc_length);
         *out_actual = desc_length;
-        return MX_OK;
+        return ZX_OK;
     }
     default:
         // other ioctls are handled by top level device
@@ -139,7 +139,7 @@ static void usb_interface_release(void* ctx) {
     free(intf);
 }
 
-static mx_protocol_device_t usb_interface_proto = {
+static zx_protocol_device_t usb_interface_proto = {
     .version = DEVICE_OPS_VERSION,
     .iotxn_queue = usb_interface_iotxn_queue,
     .ioctl = usb_interface_ioctl,
@@ -148,23 +148,23 @@ static mx_protocol_device_t usb_interface_proto = {
 
 #define NEXT_DESCRIPTOR(header) ((usb_descriptor_header_t*)((void*)header + header->bLength))
 
-static mx_status_t usb_interface_enable_endpoint(usb_interface_t* intf,
+static zx_status_t usb_interface_enable_endpoint(usb_interface_t* intf,
                                                  usb_endpoint_descriptor_t* ep,
                                                  usb_ss_ep_comp_descriptor_t* ss_comp_desc,
                                                  bool enable) {
-    mx_status_t status = usb_hci_enable_endpoint(&intf->hci, intf->device_id, ep, ss_comp_desc,
+    zx_status_t status = usb_hci_enable_endpoint(&intf->hci, intf->device_id, ep, ss_comp_desc,
                                                  enable);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         dprintf(ERROR, "usb_interface_enable_endpoint failed: %d\n", status);
     }
     return status;
 }
 
-static mx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint8_t interface_id,
+static zx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint8_t interface_id,
                                                      uint8_t alt_setting) {
     usb_endpoint_descriptor_t* new_endpoints[USB_MAX_EPS] = {};
     bool interface_endpoints[USB_MAX_EPS] = {};
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
 
     // iterate through our descriptors to find which endpoints should be active
     usb_descriptor_header_t* header = intf->descriptor;
@@ -196,8 +196,8 @@ static mx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint
             usb_endpoint_descriptor_t* new_ep = new_endpoints[i];
             if (old_ep != new_ep) {
                 if (old_ep) {
-                    mx_status_t ret = usb_interface_enable_endpoint(intf, old_ep, NULL, false);
-                    if (ret != MX_OK) status = ret;
+                    zx_status_t ret = usb_interface_enable_endpoint(intf, old_ep, NULL, false);
+                    if (ret != ZX_OK) status = ret;
                 }
                 if (new_ep) {
                     usb_ss_ep_comp_descriptor_t* ss_comp_desc = NULL;
@@ -207,8 +207,8 @@ static mx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint
                         && next->bDescriptorType == USB_DT_SS_EP_COMPANION) {
                         ss_comp_desc = (usb_ss_ep_comp_descriptor_t *)next;
                     }
-                    mx_status_t ret = usb_interface_enable_endpoint(intf, new_ep, ss_comp_desc, true);
-                    if (ret != MX_OK) status = ret;
+                    zx_status_t ret = usb_interface_enable_endpoint(intf, new_ep, ss_comp_desc, true);
+                    if (ret != ZX_OK) status = ret;
                 }
                 intf->active_endpoints[i] = new_ep;
             }
@@ -221,18 +221,18 @@ static void usb_control_complete(iotxn_t* txn, void* cookie) {
     completion_signal((completion_t*)cookie);
 }
 
-static mx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_t request,
+static zx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_t request,
                                          uint16_t value, uint16_t index, void* data,
-                                         size_t length, mx_time_t timeout) {
+                                         size_t length, zx_time_t timeout) {
     usb_interface_t* intf = ctx;
     iotxn_t* txn;
 
     uint32_t flags = (length == 0 ? IOTXN_ALLOC_POOL : 0);
-    mx_status_t status = iotxn_alloc(&txn, flags, length);
-    if (status != MX_OK) {
+    zx_status_t status = iotxn_alloc(&txn, flags, length);
+    if (status != ZX_OK) {
         return status;
     }
-    txn->protocol = MX_PROTOCOL_USB;
+    txn->protocol = ZX_PROTOCOL_USB;
 
     static_assert(sizeof(usb_protocol_data_t) <= sizeof(iotxn_proto_data_t), "");
     usb_protocol_data_t* proto_data = iotxn_pdata(txn, usb_protocol_data_t);
@@ -260,18 +260,18 @@ static mx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_
     iotxn_queue(intf->mxdev, txn);
     status = completion_wait(&completion, timeout);
 
-    if (status == MX_OK) {
+    if (status == ZX_OK) {
         status = txn->status;
-    } else if (status == MX_ERR_TIMED_OUT) {
+    } else if (status == ZX_ERR_TIMED_OUT) {
         // cancel transactions and wait for txn to be completed
         completion_reset(&completion);
         status = usb_hci_cancel_all(&intf->hci, intf->device_id, 0);
-        if (status == MX_OK) {
-            completion_wait(&completion, MX_TIME_INFINITE);
-            status = MX_ERR_TIMED_OUT;
+        if (status == ZX_OK) {
+            completion_wait(&completion, ZX_TIME_INFINITE);
+            status = ZX_ERR_TIMED_OUT;
         }
     }
-    if (status == MX_OK) {
+    if (status == ZX_OK) {
         status = txn->actual;
 
         if (length > 0 && !out) {
@@ -284,7 +284,7 @@ static mx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_
 
 static void usb_interface_queue(void* ctx, iotxn_t* txn, uint8_t ep_address, uint64_t frame) {
     usb_interface_t* intf = ctx;
-    txn->protocol = MX_PROTOCOL_USB;
+    txn->protocol = ZX_PROTOCOL_USB;
     usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
 
     memset(data, 0, sizeof(*data));
@@ -298,17 +298,17 @@ static usb_speed_t usb_interface_get_speed(void* ctx) {
     return intf->device->speed;
 }
 
-static mx_status_t usb_interface_set_interface(void* ctx, int interface_number, int alt_setting) {
+static zx_status_t usb_interface_set_interface(void* ctx, int interface_number, int alt_setting) {
     usb_interface_t* intf = ctx;
     return usb_device_set_interface(intf->device, interface_number, alt_setting);
 }
 
-static mx_status_t usb_interface_set_configuration(void* ctx, int configuration) {
+static zx_status_t usb_interface_set_configuration(void* ctx, int configuration) {
     usb_interface_t* intf = ctx;
     return usb_device_set_configuration(intf->device, configuration);
 }
 
-static mx_status_t usb_interface_reset_endpoint(void* ctx, uint8_t ep_address) {
+static zx_status_t usb_interface_reset_endpoint(void* ctx, uint8_t ep_address) {
     usb_interface_t* intf = ctx;
     return usb_hci_reset_endpoint(&intf->hci, intf->device_id, ep_address);
 }
@@ -323,22 +323,22 @@ static uint32_t _usb_interface_get_device_id(void* ctx) {
     return intf->device_id;
 }
 
-static mx_status_t usb_interface_get_descriptor_list(void* ctx, void** out_descriptors,
+static zx_status_t usb_interface_get_descriptor_list(void* ctx, void** out_descriptors,
                                                      size_t* out_length) {
     usb_interface_t* intf = ctx;
     void* descriptors = malloc(intf->descriptor_length);
     if (!descriptors) {
         *out_descriptors = NULL;
         *out_length = 0;
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     memcpy(descriptors, intf->descriptor, intf->descriptor_length);
     *out_descriptors = descriptors;
     *out_length = intf->descriptor_length;
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t usb_interface_get_additional_descriptor_list(void* ctx, void** out_descriptors,
+static zx_status_t usb_interface_get_additional_descriptor_list(void* ctx, void** out_descriptors,
                                                                 size_t* out_length) {
     usb_interface_t* intf = ctx;
 
@@ -364,36 +364,36 @@ static mx_status_t usb_interface_get_additional_descriptor_list(void* ctx, void*
     if (!result) {
         *out_descriptors = NULL;
         *out_length = 0;
-        return MX_OK;
+        return ZX_OK;
     }
     size_t length = (void*)end - (void*)result;
     void* descriptors = malloc(length);
     if (!descriptors) {
         *out_descriptors = NULL;
         *out_length = 0;
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     memcpy(descriptors, result, length);
     *out_descriptors = descriptors;
     *out_length = length;
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t usb_interface_claim_device_interface(void* ctx,
+static zx_status_t usb_interface_claim_device_interface(void* ctx,
                                                         usb_interface_descriptor_t* claim_intf,
                                                         size_t claim_length) {
     usb_interface_t* intf = ctx;
 
-    mx_status_t status = usb_device_claim_interface(intf->device,
+    zx_status_t status = usb_device_claim_interface(intf->device,
                                                     claim_intf->bInterfaceNumber);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
     // Copy claimed interface descriptors to end of descriptor array.
     void* descriptors = realloc(intf->descriptor,
                                 intf->descriptor_length + claim_length);
     if (!descriptors) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     memcpy(descriptors + intf->descriptor_length, claim_intf, claim_length);
     intf->descriptor = descriptors;
@@ -402,10 +402,10 @@ static mx_status_t usb_interface_claim_device_interface(void* ctx,
     if (claim_intf->bInterfaceNumber > intf->last_interface_id) {
         intf->last_interface_id = claim_intf->bInterfaceNumber;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t usb_interface_cancel_all(void* ctx, uint8_t ep_address) {
+static zx_status_t usb_interface_cancel_all(void* ctx, uint8_t ep_address) {
     usb_interface_t* intf = ctx;
     return usb_hci_cancel_all(&intf->hci, intf->device_id, ep_address);
 }
@@ -425,13 +425,13 @@ static usb_protocol_ops_t _usb_protocol = {
     .cancel_all = usb_interface_cancel_all,
 };
 
-mx_status_t usb_device_add_interface(usb_device_t* device,
+zx_status_t usb_device_add_interface(usb_device_t* device,
                                      usb_device_descriptor_t* device_desc,
                                      usb_interface_descriptor_t* interface_desc,
                                      size_t interface_desc_length) {
     usb_interface_t* intf = calloc(1, sizeof(usb_interface_t));
     if (!intf)
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     mtx_init(&intf->callback_lock, mtx_plain);
     completion_reset(&intf->callback_thread_completion);
@@ -457,8 +457,8 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
         usb_protocol = interface_desc->bInterfaceProtocol;
    }
 
-    mx_status_t status = usb_interface_configure_endpoints(intf, interface_desc->bInterfaceNumber, 0);
-    if (status != MX_OK) {
+    zx_status_t status = usb_interface_configure_endpoints(intf, interface_desc->bInterfaceNumber, 0);
+    if (status != ZX_OK) {
         free(intf);
         return status;
     }
@@ -475,8 +475,8 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
     char name[20];
     snprintf(name, sizeof(name), "ifc-%03d", interface_desc->bInterfaceNumber);
 
-    mx_device_prop_t props[] = {
-        { BIND_PROTOCOL, 0, MX_PROTOCOL_USB },
+    zx_device_prop_t props[] = {
+        { BIND_PROTOCOL, 0, ZX_PROTOCOL_USB },
         { BIND_USB_VID, 0, device_desc->idVendor },
         { BIND_USB_PID, 0, device_desc->idProduct },
         { BIND_USB_CLASS, 0, usb_class },
@@ -489,14 +489,14 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
         .name = name,
         .ctx = intf,
         .ops = &usb_interface_proto,
-        .proto_id = MX_PROTOCOL_USB,
+        .proto_id = ZX_PROTOCOL_USB,
         .proto_ops = &_usb_protocol,
         .props = props,
         .prop_count = countof(props),
     };
 
     status = device_add(device->mxdev, &args, &intf->mxdev);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         stop_callback_thread(intf);
         list_delete(&intf->node);
         free(interface_desc);
@@ -505,13 +505,13 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
     return status;
 }
 
-mx_status_t usb_device_add_interface_association(usb_device_t* device,
+zx_status_t usb_device_add_interface_association(usb_device_t* device,
                                                  usb_device_descriptor_t* device_desc,
                                                  usb_interface_assoc_descriptor_t* assoc_desc,
                                                  size_t assoc_desc_length) {
     usb_interface_t* intf = calloc(1, sizeof(usb_interface_t));
     if (!intf)
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     mtx_init(&intf->callback_lock, mtx_plain);
     completion_reset(&intf->callback_thread_completion);
@@ -544,8 +544,8 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
         if (header->bDescriptorType == USB_DT_INTERFACE) {
             usb_interface_descriptor_t* intf_desc = (usb_interface_descriptor_t*)header;
             if (intf_desc->bAlternateSetting == 0) {
-                mx_status_t status = usb_interface_configure_endpoints(intf, intf_desc->bInterfaceNumber, 0);
-                if (status != MX_OK) return status;
+                zx_status_t status = usb_interface_configure_endpoints(intf, intf_desc->bInterfaceNumber, 0);
+                if (status != ZX_OK) return status;
             }
         }
         header = NEXT_DESCRIPTOR(header);
@@ -563,8 +563,8 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
     char name[20];
     snprintf(name, sizeof(name), "asc-%03d", assoc_desc->iFunction);
 
-    mx_device_prop_t props[] = {
-        { BIND_PROTOCOL, 0, MX_PROTOCOL_USB },
+    zx_device_prop_t props[] = {
+        { BIND_PROTOCOL, 0, ZX_PROTOCOL_USB },
         { BIND_USB_VID, 0, device_desc->idVendor },
         { BIND_USB_PID, 0, device_desc->idProduct },
         { BIND_USB_CLASS, 0, usb_class },
@@ -577,14 +577,14 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
         .name = name,
         .ctx = intf,
         .ops = &usb_interface_proto,
-        .proto_id = MX_PROTOCOL_USB,
+        .proto_id = ZX_PROTOCOL_USB,
         .proto_ops = &_usb_protocol,
         .props = props,
         .prop_count = countof(props),
     };
 
-    mx_status_t status = device_add(device->mxdev, &args, &intf->mxdev);
-    if (status != MX_OK) {
+    zx_status_t status = device_add(device->mxdev, &args, &intf->mxdev);
+    if (status != ZX_OK) {
         stop_callback_thread(intf);
         list_delete(&intf->node);
         free(assoc_desc);
@@ -619,13 +619,13 @@ bool usb_device_remove_interface_by_id_locked(usb_device_t* device, uint8_t inte
     return false;
 }
 
-mx_status_t usb_interface_get_device_id(mx_device_t* device, uint32_t* out) {
+zx_status_t usb_interface_get_device_id(zx_device_t* device, uint32_t* out) {
     usb_protocol_t usb;
-    if (device_get_protocol(device, MX_PROTOCOL_USB, &usb) != MX_OK) {
-        return MX_ERR_INTERNAL;
+    if (device_get_protocol(device, ZX_PROTOCOL_USB, &usb) != ZX_OK) {
+        return ZX_ERR_INTERNAL;
     }
     *out = usb_get_device_id(&usb);
-    return MX_OK;
+    return ZX_OK;
 }
 
 bool usb_interface_contains_interface(usb_interface_t* intf, uint8_t interface_id) {
@@ -644,10 +644,10 @@ bool usb_interface_contains_interface(usb_interface_t* intf, uint8_t interface_i
     return false;
 }
 
-mx_status_t usb_interface_set_alt_setting(usb_interface_t* intf, uint8_t interface_id,
+zx_status_t usb_interface_set_alt_setting(usb_interface_t* intf, uint8_t interface_id,
                                           uint8_t alt_setting) {
-    mx_status_t status = usb_interface_configure_endpoints(intf, interface_id, alt_setting);
-    if (status != MX_OK) return status;
+    zx_status_t status = usb_interface_configure_endpoints(intf, interface_id, alt_setting);
+    if (status != ZX_OK) return status;
 
     return usb_device_control(intf->hci_mxdev, intf->device_id,
                               USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE,

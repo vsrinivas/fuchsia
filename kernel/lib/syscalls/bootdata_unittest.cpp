@@ -10,8 +10,8 @@
 //                the method that it tests lives inside syscalls_system.cpp
 
 #include <assert.h>
-#include <magenta/boot/bootdata.h>
-#include <magenta/types.h>
+#include <zircon/boot/bootdata.h>
+#include <zircon/types.h>
 #include <mexec.h>
 #include <stddef.h>
 #include <unittest.h>
@@ -55,11 +55,11 @@ static bool bootdata_overflow_test(void* context) {
 
     // Deliberately attempt to overflow the bootdata.
     uint8_t bootdata_section[kBootdataBufferLen + 1];
-    mx_status_t result = bootdata_append_section(bootdata_buffer, kBootdataBufferLen,
+    zx_status_t result = bootdata_append_section(bootdata_buffer, kBootdataBufferLen,
                                                  bootdata_section, sizeof(bootdata_section),
                                                  0x0, 0x0, 0x0);
 
-    EXPECT_EQ(result, MX_ERR_BUFFER_TOO_SMALL, "append boot section");
+    EXPECT_EQ(result, ZX_ERR_BUFFER_TOO_SMALL, "append boot section");
 
     // Make sure that we didn't touch any of the overflow buffer.
     EXPECT_TRUE(sentinel_integrity_okay(bootdata_sentinel, kBootdataSentinelLen),
@@ -87,11 +87,11 @@ static bool bootdata_fill_test(void* context) {
     uint8_t bootdata_section[kSectionSize];
     memset(bootdata_section, kBootdataSectionContentsByte, kSectionSize);
 
-    mx_status_t result = bootdata_append_section(bootdata_buffer, kBootdataBufferLen,
+    zx_status_t result = bootdata_append_section(bootdata_buffer, kBootdataBufferLen,
                                                  bootdata_section, kSectionSize,
                                                  0x0, 0x0, 0x0);
 
-    EXPECT_EQ(MX_OK, result, "fill whole bootdata buffer");
+    EXPECT_EQ(ZX_OK, result, "fill whole bootdata buffer");
 
     EXPECT_TRUE(sentinel_integrity_okay(bootdata_sentinel, kBootdataSentinelLen),
                 "check sentinel integrity");

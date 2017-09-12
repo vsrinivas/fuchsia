@@ -6,12 +6,12 @@
 
 #include <threads.h>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
-typedef struct mx_packet_guest_io mx_packet_guest_io_t;
-typedef struct mx_vcpu_io mx_vcpu_io_t;
+typedef struct zx_packet_guest_io zx_packet_guest_io_t;
+typedef struct zx_vcpu_io zx_vcpu_io_t;
 
 /* Stores the IO port state. */
 typedef struct io_port {
@@ -25,7 +25,7 @@ typedef struct io_port {
 } io_port_t;
 
 void io_port_init(io_port_t* io_port);
-mx_status_t io_port_read(const io_port_t* io_port, uint16_t port, mx_vcpu_io_t* vcpu_io);
-mx_status_t io_port_write(io_port_t* io_port, const mx_packet_guest_io_t* io);
+zx_status_t io_port_read(const io_port_t* io_port, uint16_t port, zx_vcpu_io_t* vcpu_io);
+zx_status_t io_port_write(io_port_t* io_port, const zx_packet_guest_io_t* io);
 
 __END_CDECLS

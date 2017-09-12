@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/device/tpm.h>
+#include <zircon/device/tpm.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
-#include <mxio/util.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
+#include <fdio/util.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>

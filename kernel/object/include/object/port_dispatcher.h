@@ -10,8 +10,8 @@
 #include <object/semaphore.h>
 #include <object/state_observer.h>
 
-#include <magenta/syscalls/port.h>
-#include <magenta/types.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/types.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
@@ -90,7 +90,7 @@ struct PortAllocator {
 };
 
 struct PortPacket final : public fbl::DoublyLinkedListable<PortPacket*> {
-    mx_port_packet_t packet;
+    zx_port_packet_t packet;
     const void* const handle;
     PortObserver* observer;
     PortAllocator* const allocator;
@@ -110,7 +110,7 @@ struct PortPacket final : public fbl::DoublyLinkedListable<PortPacket*> {
 class PortObserver final : public StateObserver {
 public:
     PortObserver(uint32_t type, const Handle* handle, fbl::RefPtr<PortDispatcher> port,
-                 uint64_t key, mx_signals_t signals);
+                 uint64_t key, zx_signals_t signals);
     ~PortObserver() = default;
 
 private:
@@ -118,18 +118,18 @@ private:
     PortObserver& operator=(const PortObserver&) = delete;
 
     // StateObserver overrides.
-    Flags OnInitialize(mx_signals_t initial_state, const StateObserver::CountInfo* cinfo) final;
-    Flags OnStateChange(mx_signals_t new_state) final;
+    Flags OnInitialize(zx_signals_t initial_state, const StateObserver::CountInfo* cinfo) final;
+    Flags OnStateChange(zx_signals_t new_state) final;
     Flags OnCancel(Handle* handle) final;
     Flags OnCancelByKey(Handle* handle, const void* port, uint64_t key) final;
     void OnRemoved() final;
 
     // The following method can only be called from
     // OnInitialize(), OnStateChange() and OnCancel().
-    Flags MaybeQueue(mx_signals_t new_state, uint64_t count);
+    Flags MaybeQueue(zx_signals_t new_state, uint64_t count);
 
     const uint32_t type_;
-    const mx_signals_t trigger_;
+    const zx_signals_t trigger_;
     PortPacket packet_;
 
     fbl::RefPtr<PortDispatcher> const port_;
@@ -139,24 +139,24 @@ class PortDispatcher final : public Dispatcher {
 public:
     static void Init();
     static PortAllocator* DefaultPortAllocator();
-    static mx_status_t Create(uint32_t options, fbl::RefPtr<Dispatcher>* dispatcher,
-                              mx_rights_t* rights);
+    static zx_status_t Create(uint32_t options, fbl::RefPtr<Dispatcher>* dispatcher,
+                              zx_rights_t* rights);
 
     ~PortDispatcher() final;
-    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_PORT; }
+    zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_PORT; }
 
     void on_zero_handles() final;
 
-    mx_status_t Queue(PortPacket* port_packet, mx_signals_t observed, uint64_t count);
-    mx_status_t QueueUser(const mx_port_packet_t& packet);
-    mx_status_t Dequeue(mx_time_t deadline, mx_port_packet_t* packet);
+    zx_status_t Queue(PortPacket* port_packet, zx_signals_t observed, uint64_t count);
+    zx_status_t QueueUser(const zx_port_packet_t& packet);
+    zx_status_t Dequeue(zx_time_t deadline, zx_port_packet_t* packet);
 
     // Decides who is going to destroy the observer. If it returns |true| it
     // is the duty of the caller. If it is false it is the duty of the port.
     bool CanReap(PortObserver* observer, PortPacket* port_packet);
 
     // Called under the handle table lock.
-    mx_status_t MakeObserver(uint32_t options, Handle* handle, uint64_t key, mx_signals_t signals);
+    zx_status_t MakeObserver(uint32_t options, Handle* handle, uint64_t key, zx_signals_t signals);
 
     // Called under the handle table lock. Returns true if at least one packet was
     // removed from the queue.

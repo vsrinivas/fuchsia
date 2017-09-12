@@ -31,7 +31,7 @@ scan() {
     *) continue ;;
     esac
 
-    syscall="${symbol#VDSO_CODE_SYSRET_mx_}"
+    syscall="${symbol#VDSO_CODE_SYSRET_zx_}"
     caller="${syscall#*_VIA_}"
     syscall="${syscall%_VIA_*}"
     if eval "test -z \"\$syscall_callers_${syscall}\""; then
@@ -50,7 +50,7 @@ scan() {
     eval "local callers=\$syscall_callers_$syscall"
     for caller in $callers; do
       echo "\
-        case VDSO_CODE_SYSRET_mx_${syscall}_VIA_${caller} - VDSO_CODE_START:
+        case VDSO_CODE_SYSRET_zx_${syscall}_VIA_${caller} - VDSO_CODE_START:
             return true;\
 "
     done

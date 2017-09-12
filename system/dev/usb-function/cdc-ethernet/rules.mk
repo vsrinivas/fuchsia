@@ -13,7 +13,7 @@ MODULE_SRCS := \
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 
-MODULE_LIBS := system/ulib/driver system/ulib/magenta system/ulib/c
+MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
 MODULE_HEADER_DEPS := system/ulib/inet6
 

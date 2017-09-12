@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/device/sysinfo.h>
-#include <magenta/status.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/exception.h>
-#include <magenta/syscalls/object.h>
+#include <zircon/device/sysinfo.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/object.h>
 #include <pretty/sizes.h>
 
 #include <errno.h>
@@ -26,16 +26,16 @@
 // TODO: dynamically compute this based on what it returns
 #define MAX_CPUS 32
 
-static mx_status_t cpustats(mx_handle_t root_resource, mx_time_t delay) {
-    static mx_time_t last_idle_time[MAX_CPUS];
-    static mx_info_cpu_stats_t old_stats[MAX_CPUS];
-    mx_info_cpu_stats_t stats[MAX_CPUS];
+static zx_status_t cpustats(zx_handle_t root_resource, zx_time_t delay) {
+    static zx_time_t last_idle_time[MAX_CPUS];
+    static zx_info_cpu_stats_t old_stats[MAX_CPUS];
+    zx_info_cpu_stats_t stats[MAX_CPUS];
 
     // retrieve the system stats
     size_t actual, avail;
-    mx_status_t err = mx_object_get_info(root_resource, MX_INFO_CPU_STATS, &stats, sizeof(stats), &actual, &avail);
-    if (err != MX_OK) {
-        fprintf(stderr, "MX_INFO_CPU_STATS returns %d (%s)\n", err, mx_status_get_string(err));
+    zx_status_t err = zx_object_get_info(root_resource, ZX_INFO_CPU_STATS, &stats, sizeof(stats), &actual, &avail);
+    if (err != ZX_OK) {
+        fprintf(stderr, "ZX_INFO_CPU_STATS returns %d (%s)\n", err, zx_status_get_string(err));
         return err;
     }
 
@@ -52,10 +52,10 @@ static mx_status_t cpustats(mx_handle_t root_resource, mx_time_t delay) {
            " ints (hw  tmr tmr_cb)"
            " ipi (rs  gen)\n");
     for (size_t i = 0; i < actual; i++) {
-        mx_time_t idle_time = stats[i].idle_time;
+        zx_time_t idle_time = stats[i].idle_time;
 
-        mx_time_t delta_time = idle_time - last_idle_time[i];
-        mx_time_t busy_time = delay - (delta_time > delay ? delay : delta_time);
+        zx_time_t delta_time = idle_time - last_idle_time[i];
+        zx_time_t busy_time = delay - (delta_time > delay ? delay : delta_time);
         unsigned int busypercent = (busy_time * 10000) / delay;
 
         printf("%3zu"
@@ -86,7 +86,7 @@ static mx_status_t cpustats(mx_handle_t root_resource, mx_time_t delay) {
         last_idle_time[i] = idle_time;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static void print_mem_stat(const char* label, size_t bytes) {
@@ -98,13 +98,13 @@ static void print_mem_stat(const char* label, size_t bytes) {
            bytes);
 }
 
-static mx_status_t memstats(mx_handle_t root_resource) {
-    mx_info_kmem_stats_t stats;
-    mx_status_t err = mx_object_get_info(
-        root_resource, MX_INFO_KMEM_STATS, &stats, sizeof(stats), NULL, NULL);
-    if (err != MX_OK) {
-        fprintf(stderr, "MX_INFO_KMEM_STATS returns %d (%s)\n",
-                err, mx_status_get_string(err));
+static zx_status_t memstats(zx_handle_t root_resource) {
+    zx_info_kmem_stats_t stats;
+    zx_status_t err = zx_object_get_info(
+        root_resource, ZX_INFO_KMEM_STATS, &stats, sizeof(stats), NULL, NULL);
+    if (err != ZX_OK) {
+        fprintf(stderr, "ZX_INFO_KMEM_STATS returns %d (%s)\n",
+                err, zx_status_get_string(err));
         return err;
     }
 
@@ -144,7 +144,7 @@ static mx_status_t memstats(mx_handle_t root_resource) {
         // Maybe have a few buckets like 1s, 10s, 1m.
     }
     printf("%s\n", line);
-    return MX_OK;
+    return ZX_OK;
 }
 
 static void print_help(FILE* f) {
@@ -179,7 +179,7 @@ static void print_help(FILE* f) {
 int main(int argc, char** argv) {
     bool cpu_stats = false;
     bool mem_stats = false;
-    mx_time_t delay = MX_SEC(1);
+    zx_time_t delay = ZX_SEC(1);
     int num_loops = -1;
     bool timestamp = false;
 
@@ -190,7 +190,7 @@ int main(int argc, char** argv) {
                 cpu_stats = true;
                 break;
             case 'd':
-                delay = MX_SEC(atoi(optarg));
+                delay = ZX_SEC(atoi(optarg));
                 if (delay == 0) {
                     fprintf(stderr, "Bad -d value '%s'\n", optarg);
                     print_help(stderr);
@@ -227,9 +227,9 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    mx_handle_t root_resource;
-    mx_status_t ret = get_root_resource(&root_resource);
-    if (ret != MX_OK) {
+    zx_handle_t root_resource;
+    zx_status_t ret = get_root_resource(&root_resource);
+    if (ret != ZX_OK) {
         return ret;
     }
 
@@ -238,7 +238,7 @@ int main(int argc, char** argv) {
     fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
 
     for (;;) {
-        mx_time_t next_deadline = mx_deadline_after(delay);
+        zx_time_t next_deadline = zx_deadline_after(delay);
 
         // Print the current UTC time with milliseconds as
         // an ISO 8601 string.
@@ -259,7 +259,7 @@ int main(int argc, char** argv) {
             ret |= memstats(root_resource);
         }
 
-        if (ret != MX_OK)
+        if (ret != ZX_OK)
             break;
 
         if (num_loops > 0) {
@@ -276,10 +276,10 @@ int main(int argc, char** argv) {
             }
         }
 
-        mx_nanosleep(next_deadline);
+        zx_nanosleep(next_deadline);
     }
 
-    mx_handle_close(root_resource);
+    zx_handle_close(root_resource);
 
     return ret;
 }

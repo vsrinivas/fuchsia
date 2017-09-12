@@ -72,13 +72,13 @@ void event_destroy(event_t* e) {
  * @param deadline Deadline to abort at, in ns
  * @param interruptable  Allowed to interrupt if thread is signaled
  *
- * @return  0 on success, MX_ERR_TIMED_OUT on timeout,
+ * @return  0 on success, ZX_ERR_TIMED_OUT on timeout,
  *          other values depending on wait_result value
  *          when event_signal_etc is used.
  */
 status_t event_wait_deadline(event_t* e, lk_time_t deadline, bool interruptable) {
     thread_t* current_thread = get_current_thread();
-    status_t ret = MX_OK;
+    status_t ret = ZX_OK;
 
     DEBUG_ASSERT(e->magic == EVENT_MAGIC);
     DEBUG_ASSERT(!arch_in_int_handler());
@@ -184,7 +184,7 @@ int event_signal_etc(event_t* e, bool reschedule, status_t wait_result) {
  * @return  Returns the number of threads that have been unblocked.
  */
 int event_signal(event_t* e, bool reschedule) {
-    return event_signal_internal(e, reschedule, MX_OK, false);
+    return event_signal_internal(e, reschedule, ZX_OK, false);
 }
 
 /* same as above, but the thread lock must already be held */
@@ -192,7 +192,7 @@ int event_signal_thread_locked(event_t* e) {
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-    return event_signal_internal(e, false, MX_OK, true);
+    return event_signal_internal(e, false, ZX_OK, true);
 }
 
 /**
@@ -205,12 +205,12 @@ int event_signal_thread_locked(event_t* e) {
  *
  * @param e  Event object
  *
- * @return  Returns MX_OK on success.
+ * @return  Returns ZX_OK on success.
  */
 status_t event_unsignal(event_t* e) {
     DEBUG_ASSERT(e->magic == EVENT_MAGIC);
 
     e->signaled = false;
 
-    return MX_OK;
+    return ZX_OK;
 }

@@ -13,8 +13,8 @@
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
-#include <magenta/device/vfs.h>
-#include <mx/channel.h>
+#include <zircon/device/vfs.h>
+#include <zx/channel.h>
 
 namespace fs {
 
@@ -24,8 +24,8 @@ public:
     WatcherContainer();
     ~WatcherContainer();
 
-    mx_status_t WatchDir(mx::channel* out);
-    mx_status_t WatchDirV2(Vfs* vfs, Vnode* vn, const vfs_watch_dir_t* cmd);
+    zx_status_t WatchDir(zx::channel* out);
+    zx_status_t WatchDirV2(Vfs* vfs, Vnode* vn, const vfs_watch_dir_t* cmd);
 
     // Notifies all VnodeWatchers in the watch list, if their mask
     // indicates they are interested in the incoming event.
@@ -36,10 +36,10 @@ private:
     // A simple structure which holds a channel to a watching client,
     // as well as a mask of signals they are interested in hearing about.
     struct VnodeWatcher : public fbl::DoublyLinkedListable<fbl::unique_ptr<VnodeWatcher>> {
-        VnodeWatcher(mx::channel h, uint32_t mask);
+        VnodeWatcher(zx::channel h, uint32_t mask);
         ~VnodeWatcher();
 
-        mx::channel h;
+        zx::channel h;
         uint32_t mask;
     };
 

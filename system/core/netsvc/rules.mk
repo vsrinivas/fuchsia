@@ -21,6 +21,6 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := system/ulib/inet6 system/ulib/tftp
 
-MODULE_LIBS := system/ulib/mxio system/ulib/launchpad system/ulib/magenta system/ulib/c
+MODULE_LIBS := system/ulib/fdio system/ulib/launchpad system/ulib/zircon system/ulib/c
 
 include make/module.mk

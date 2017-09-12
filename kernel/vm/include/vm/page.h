@@ -8,7 +8,7 @@
 #pragma once
 
 #include <list.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <stdint.h>
 
 // forward declare

@@ -15,8 +15,8 @@ MODULE_NAME := sysinfo-test
 
 MODULE_LIBS := \
     system/ulib/unittest \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/c
 
 include make/module.mk

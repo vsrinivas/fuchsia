@@ -7,9 +7,9 @@
 #pragma once
 
 #include <kernel/mutex.h>
-#include <magenta/syscalls/resource.h>
-#include <magenta/thread_annotations.h>
-#include <magenta/types.h>
+#include <zircon/syscalls/resource.h>
+#include <zircon/thread_annotations.h>
+#include <zircon/types.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/name.h>
@@ -23,12 +23,12 @@ class ResourceRecord;
 class ResourceDispatcher final : public Dispatcher,
     public fbl::DoublyLinkedListable<fbl::RefPtr<ResourceDispatcher>> {
 public:
-    static mx_status_t Create(fbl::RefPtr<ResourceDispatcher>* dispatcher,
-                           mx_rights_t* rights, uint32_t kind,
+    static zx_status_t Create(fbl::RefPtr<ResourceDispatcher>* dispatcher,
+                           zx_rights_t* rights, uint32_t kind,
                            uint64_t low, uint64_t hight);
 
     ~ResourceDispatcher() final;
-    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_RESOURCE; }
+    zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_RESOURCE; }
     StateTracker* get_state_tracker()  final { return &state_tracker_; }
     CookieJar* get_cookie_jar() final { return &cookie_jar_; }
 

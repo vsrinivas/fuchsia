@@ -12,8 +12,8 @@
 #include <sys/uio.h>
 #include <threads.h>
 
-#include <magenta/stack.h>
-#include <magenta/tls.h>
+#include <zircon/stack.h>
+#include <zircon/tls.h>
 #include <runtime/thread.h>
 #include <runtime/tls.h>
 
@@ -44,7 +44,7 @@ struct pthread {
     tp_abi_t abi;
 #endif
 
-    mxr_thread_t mxr_thread;
+    zxr_thread_t zxr_thread;
 
     // The *_region fields describe whole memory regions reserved,
     // including guard pages (for deallocation).  safe_stack and
@@ -97,9 +97,9 @@ static_assert((sizeof(struct pthread) -
 static_assert(TP_OFFSETOF(head.dtv) == 8, "dtv misplaced in struct pthread");
 #endif
 
-static_assert(TP_OFFSETOF(abi.stack_guard) == MX_TLS_STACK_GUARD_OFFSET,
+static_assert(TP_OFFSETOF(abi.stack_guard) == ZX_TLS_STACK_GUARD_OFFSET,
               "stack_guard not at ABI-mandated offset from thread pointer");
-static_assert(TP_OFFSETOF(abi.unsafe_sp) == MX_TLS_UNSAFE_SP_OFFSET,
+static_assert(TP_OFFSETOF(abi.unsafe_sp) == ZX_TLS_UNSAFE_SP_OFFSET,
               "unsafe_sp not at ABI-mandated offset from thread pointer");
 
 static inline void* pthread_to_tp(struct pthread* thread) {
@@ -132,7 +132,7 @@ extern volatile size_t __pthread_tsd_size;
 void* __tls_get_new(size_t*) ATTR_LIBC_VISIBILITY;
 
 static inline pthread_t __pthread_self(void) {
-    return tp_to_pthread(mxr_tp_get());
+    return tp_to_pthread(zxr_tp_get());
 }
 
 static inline thrd_t __thrd_current(void) {
@@ -143,7 +143,7 @@ static inline pid_t __thread_get_tid(void) {
     // We rely on the fact that the high bit is not set. For now,
     // let's incur the cost of this check, until we consider the
     // userspace handle value representation completely baked.
-    pid_t id = __pthread_self()->mxr_thread.handle;
+    pid_t id = __pthread_self()->zxr_thread.handle;
     if (id & PTHREAD_MUTEX_OWNED_LOCK_BIT) {
         __builtin_trap();
     }
@@ -178,16 +178,16 @@ void __pthread_tsd_run_dtors(void) ATTR_LIBC_VISIBILITY;
 
 #define DEFAULT_PTHREAD_ATTR                                                  \
     ((pthread_attr_t){                                                        \
-        ._a_stacksize = MAGENTA_DEFAULT_STACK_SIZE,                           \
+        ._a_stacksize = ZIRCON_DEFAULT_STACK_SIZE,                           \
         ._a_guardsize = PAGE_SIZE,                                            \
     })
 
 pthread_t __allocate_thread(const pthread_attr_t* attr,
                             const char* thread_name,
-                            char default_name[MX_MAX_NAME_LEN])
+                            char default_name[ZX_MAX_NAME_LEN])
     __attribute__((nonnull(1,2))) ATTR_LIBC_VISIBILITY;
 
-pthread_t __init_main_thread(mx_handle_t thread_self) ATTR_LIBC_VISIBILITY;
+pthread_t __init_main_thread(zx_handle_t thread_self) ATTR_LIBC_VISIBILITY;
 
 int __pthread_once(pthread_once_t*, void (*)(void)) ATTR_LIBC_VISIBILITY;
 

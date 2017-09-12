@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/device/device.h>
-#include <magenta/status.h>
-#include <magenta/types.h>
+#include <zircon/device/device.h>
+#include <zircon/status.h>
+#include <zircon/types.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
     ssize_t rc = ioctl_device_get_topo_path(fd, path, 1024);
     if (rc < 0) {
         fprintf(stderr, "could not get topological path for %s: %s\n",
-                argv[1], mx_status_get_string((mx_status_t)rc));
+                argv[1], zx_status_get_string((zx_status_t)rc));
         close(fd);
         return -1;
     }

@@ -10,13 +10,13 @@
 #include <unistd.h>
 
 #include <launchpad/launchpad.h>
-#include <mxio/namespace.h>
-#include <magenta/syscalls.h>
+#include <fdio/namespace.h>
+#include <zircon/syscalls.h>
 
 int run_in_namespace(const char* bin, size_t count, char** mapping) {
-    mxio_ns_t* ns;
-    mx_status_t r;
-    if ((r = mxio_ns_create(&ns)) < 0) {
+    fdio_ns_t* ns;
+    zx_status_t r;
+    if ((r = fdio_ns_create(&ns)) < 0) {
         fprintf(stderr, "failed to create namespace: %d\n", r);
         return -1;
     }
@@ -33,17 +33,17 @@ int run_in_namespace(const char* bin, size_t count, char** mapping) {
             fprintf(stderr, "error: cannot open '%s'\n", src);
             return -1;
         }
-        if ((r = mxio_ns_bind_fd(ns, dst, fd)) < 0) {
+        if ((r = fdio_ns_bind_fd(ns, dst, fd)) < 0) {
             fprintf(stderr, "error: binding fd %d to '%s' failed: %d\n", fd, dst, r);
             close(fd);
             return -1;
         }
         close(fd);
     }
-    mxio_flat_namespace_t* flat;
-    mxio_ns_opendir(ns);
-    r = mxio_ns_export(ns, &flat);
-    mxio_ns_destroy(ns);
+    fdio_flat_namespace_t* flat;
+    fdio_ns_opendir(ns);
+    r = fdio_ns_export(ns, &flat);
+    fdio_ns_destroy(ns);
     if (r < 0) {
         fprintf(stderr, "error: cannot flatten namespace: %d\n", r);
         return -1;
@@ -56,19 +56,19 @@ int run_in_namespace(const char* bin, size_t count, char** mapping) {
 
     launchpad_t* lp;
     launchpad_create(0, bin, &lp);
-    launchpad_clone(lp, LP_CLONE_MXIO_STDIO | LP_CLONE_ENVIRON | LP_CLONE_DEFAULT_JOB);
+    launchpad_clone(lp, LP_CLONE_FDIO_STDIO | LP_CLONE_ENVIRON | LP_CLONE_DEFAULT_JOB);
     launchpad_set_args(lp, 1, &bin);
     launchpad_set_nametable(lp, flat->count, flat->path);
     launchpad_add_handles(lp, flat->count, flat->handle, flat->type);
     launchpad_load_from_file(lp, bin);
     free(flat);
     const char* errmsg;
-    mx_handle_t proc;
+    zx_handle_t proc;
     if ((r = launchpad_go(lp, &proc, &errmsg)) < 0) {
         fprintf(stderr, "error: failed to launch shell: %s\n", errmsg);
         return -1;
     }
-    mx_object_wait_one(proc, MX_PROCESS_TERMINATED, MX_TIME_INFINITE, NULL);
+    zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL);
     fprintf(stderr, "[done]\n");
     return 0;
 }

@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <magenta/assert.h>
-#include <magenta/compiler.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
 #include <fbl/atomic.h>
 #include <fbl/canary.h>
 
@@ -40,7 +40,7 @@ public:
 
 private:
     void AssertMagic(const uint32_t expected) const {
-        MX_DEBUG_ASSERT_MSG(magic_ == expected,
+        ZX_DEBUG_ASSERT_MSG(magic_ == expected,
                             "Invalid magic (expect: 0x%02x, got: 0x%02x)\n",
                             static_cast<unsigned int>(expected),
                             static_cast<unsigned int>(magic_));
@@ -81,7 +81,7 @@ protected:
             // already been destroyed, the magic check in
             // adoption_validator_.ValidateAddRef() should have caught it before
             // this point.
-            MX_DEBUG_ASSERT_MSG(rc >= 1, "count %d < 1\n", rc);
+            ZX_DEBUG_ASSERT_MSG(rc >= 1, "count %d < 1\n", rc);
         }
     }
 
@@ -115,7 +115,7 @@ protected:
         if (EnableAdoptionValidator) {
             // This assertion will fire if someone manually calls Release()
             // on a ref-counted object too many times.
-            MX_DEBUG_ASSERT_MSG(rc >= 1, "count %d < 1\n", rc);
+            ZX_DEBUG_ASSERT_MSG(rc >= 1, "count %d < 1\n", rc);
         }
         if (rc == 1) {
             atomic_thread_fence(memory_order_acquire);

@@ -7,7 +7,7 @@
 #include "ring.h"
 #include "virtio_gpu.h"
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <stdlib.h>
 
 #include <ddk/protocol/display.h>
@@ -18,10 +18,10 @@ class Ring;
 
 class GpuDevice : public Device {
 public:
-    GpuDevice(mx_device_t* device);
+    GpuDevice(zx_device_t* device);
     virtual ~GpuDevice();
 
-    virtual mx_status_t Init();
+    virtual zx_status_t Init();
 
     virtual void IrqRingUpdate();
     virtual void IrqConfigChange();
@@ -33,21 +33,21 @@ public:
 
 private:
     // DDK driver hooks
-    static mx_status_t virtio_gpu_set_mode(void* ctx, mx_display_info_t* info);
-    static mx_status_t virtio_gpu_get_mode(void* ctx, mx_display_info_t* info);
-    static mx_status_t virtio_gpu_get_framebuffer(void* ctx, void** framebuffer);
+    static zx_status_t virtio_gpu_set_mode(void* ctx, zx_display_info_t* info);
+    static zx_status_t virtio_gpu_get_mode(void* ctx, zx_display_info_t* info);
+    static zx_status_t virtio_gpu_get_framebuffer(void* ctx, void** framebuffer);
     static void virtio_gpu_flush(void* ctx);
 
     // internal routines
-    mx_status_t send_command_response(const void* cmd, size_t cmd_len, void** _res, size_t res_len);
-    mx_status_t get_display_info();
-    mx_status_t allocate_2d_resource(uint32_t* resource_id, uint32_t width, uint32_t height);
-    mx_status_t attach_backing(uint32_t resource_id, mx_paddr_t ptr, size_t buf_len);
-    mx_status_t set_scanout(uint32_t scanout_id, uint32_t resource_id, uint32_t width, uint32_t height);
-    mx_status_t flush_resource(uint32_t resource_id, uint32_t width, uint32_t height);
-    mx_status_t transfer_to_host_2d(uint32_t resource_id, uint32_t width, uint32_t height);
+    zx_status_t send_command_response(const void* cmd, size_t cmd_len, void** _res, size_t res_len);
+    zx_status_t get_display_info();
+    zx_status_t allocate_2d_resource(uint32_t* resource_id, uint32_t width, uint32_t height);
+    zx_status_t attach_backing(uint32_t resource_id, zx_paddr_t ptr, size_t buf_len);
+    zx_status_t set_scanout(uint32_t scanout_id, uint32_t resource_id, uint32_t width, uint32_t height);
+    zx_status_t flush_resource(uint32_t resource_id, uint32_t width, uint32_t height);
+    zx_status_t transfer_to_host_2d(uint32_t resource_id, uint32_t width, uint32_t height);
 
-    mx_status_t virtio_gpu_start();
+    zx_status_t virtio_gpu_start();
     static int virtio_gpu_start_entry(void* arg);
     thrd_t start_thread_ = {};
 
@@ -59,7 +59,7 @@ private:
 
     // gpu op
     void* gpu_req_ = nullptr;
-    mx_paddr_t gpu_req_pa_ = 0;
+    zx_paddr_t gpu_req_pa_ = 0;
 
     // a saved copy of the display
     virtio_gpu_resp_display_info::virtio_gpu_display_one pmode_ = {};
@@ -73,7 +73,7 @@ private:
 
     // framebuffer
     void* fb_ = nullptr;
-    mx_paddr_t fb_pa_ = 0;
+    zx_paddr_t fb_pa_ = 0;
 
     // request condition
     fbl::Mutex request_lock_;

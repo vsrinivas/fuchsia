@@ -6,8 +6,8 @@
 
 #include <ddk/device.h>
 #include <ddk/protocol/usb.h>
-#include <magenta/compiler.h>
-#include <magenta/hw/usb.h>
+#include <zircon/compiler.h>
+#include <zircon/hw/usb.h>
 
 __BEGIN_CDECLS;
 
@@ -16,7 +16,7 @@ iotxn_t* usb_alloc_iotxn(uint8_t ep_address, size_t data_size);
 
 // helper function for claiming additional interfaces that satisfy the want_interface predicate,
 // want_interface will be passed the supplied arg
-mx_status_t usb_claim_additional_interfaces(usb_protocol_t *usb,
+zx_status_t usb_claim_additional_interfaces(usb_protocol_t *usb,
                                             bool (*want_interface)(usb_interface_descriptor_t*, void*),
                                             void* arg);
 
@@ -33,7 +33,7 @@ typedef struct {
 } usb_desc_iter_t;
 
 // initializes a usb_desc_iter_t
-mx_status_t usb_desc_iter_init(usb_protocol_t* usb, usb_desc_iter_t* iter);
+zx_status_t usb_desc_iter_init(usb_protocol_t* usb, usb_desc_iter_t* iter);
 
 // releases resources in a usb_desc_iter_t
 void usb_desc_iter_release(usb_desc_iter_t* iter);

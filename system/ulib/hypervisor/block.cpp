@@ -12,8 +12,8 @@
 #include <hypervisor/io_apic.h>
 #include <hypervisor/pci.h>
 #include <hypervisor/vcpu.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/hypervisor.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/hypervisor.h>
 #include <virtio/virtio.h>
 #include <virtio/virtio_ids.h>
 #include <virtio/virtio_ring.h>
@@ -28,21 +28,21 @@ static block_t* virtio_device_to_block(const virtio_device_t* virtio_device) {
     return (block_t*)virtio_device->impl;
 }
 
-static mx_status_t block_read(const virtio_device_t* device, uint16_t port, uint8_t access_size,
-                              mx_vcpu_io_t* vcpu_io) {
+static zx_status_t block_read(const virtio_device_t* device, uint16_t port, uint8_t access_size,
+                              zx_vcpu_io_t* vcpu_io) {
     block_t* block = virtio_device_to_block(device);
     return virtio_device_config_read(device, &block->config, port, access_size, vcpu_io);
 }
 
-static mx_status_t block_write(virtio_device_t* device, uint16_t port,
-                               const mx_vcpu_io_t* io) {
+static zx_status_t block_write(virtio_device_t* device, uint16_t port,
+                               const zx_vcpu_io_t* io) {
     // No device fields are writable.
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t block_queue_notify(virtio_device_t* device, uint16_t queue_sel) {
+static zx_status_t block_queue_notify(virtio_device_t* device, uint16_t queue_sel) {
     if (queue_sel != 0)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     return file_block_device(virtio_device_to_block(device));
 }
 
@@ -52,7 +52,7 @@ static const virtio_device_ops_t kBlockVirtioDeviceOps = {
     .queue_notify = &block_queue_notify,
 };
 
-mx_status_t block_init(block_t* block, const char* path, uintptr_t guest_physmem_addr,
+zx_status_t block_init(block_t* block, const char* path, uintptr_t guest_physmem_addr,
                        size_t guest_physmem_size) {
     memset(block, 0, sizeof(*block));
 
@@ -63,7 +63,7 @@ mx_status_t block_init(block_t* block, const char* path, uintptr_t guest_physmem
         block->fd = open(path, O_RDONLY);
         if (block->fd < 0) {
             fprintf(stderr, "Failed to open block file \"%s\"\n", path);
-            return MX_ERR_IO;
+            return ZX_ERR_IO;
         }
         fprintf(stderr, "Unable to open block file \"%s\" read-write. "
                         "Block device will be read-only.\n",
@@ -74,7 +74,7 @@ mx_status_t block_init(block_t* block, const char* path, uintptr_t guest_physmem
     off_t ret = lseek(block->fd, 0, SEEK_END);
     if (ret < 0) {
         fprintf(stderr, "Failed to read size of block file \"%s\"\n", path);
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
     block->size = ret;
     block->config.capacity = block->size / SECTOR_SIZE;
@@ -90,7 +90,7 @@ mx_status_t block_init(block_t* block, const char* path, uintptr_t guest_physmem
     block->virtio_device.guest_physmem_size = guest_physmem_size;
     // Virtio 1.0: 5.2.5.2: Devices SHOULD always offer VIRTIO_BLK_F_FLUSH
     block->virtio_device.features |= VIRTIO_BLK_F_FLUSH
-                                     // Required by magenta guests.
+                                     // Required by zircon guests.
                                      | VIRTIO_BLK_F_BLK_SIZE;
     block->config.blk_size = SECTOR_SIZE;
 
@@ -101,7 +101,7 @@ mx_status_t block_init(block_t* block, const char* path, uintptr_t guest_physmem
     // PCI Transport.
     virtio_pci_init(&block->virtio_device);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 // Multiple data buffers can be chained in the payload of block read/write
@@ -116,20 +116,20 @@ typedef struct file_state {
     uint8_t status;
 } file_state_t;
 
-static mx_status_t file_req(file_state_t* state, void* addr, uint32_t len) {
+static zx_status_t file_req(file_state_t* state, void* addr, uint32_t len) {
     block_t* block = state->block;
     virtio_blk_req_t* blk_req = state->blk_req;
 
     // From VIRTIO Version 1.0: If the VIRTIO_BLK_F_RO feature is set by
     // the device, any write requests will fail.
     if (blk_req->type == VIRTIO_BLK_T_OUT && (block->virtio_device.features & VIRTIO_BLK_F_RO))
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 
     // From VIRTIO Version 1.0: A driver MUST set sector to 0 for a
     // VIRTIO_BLK_T_FLUSH request. A driver SHOULD NOT include any data in a
     // VIRTIO_BLK_T_FLUSH request.
     if (blk_req->type == VIRTIO_BLK_T_FLUSH && blk_req->sector != 0)
-        return MX_ERR_IO_DATA_INTEGRITY;
+        return ZX_ERR_IO_DATA_INTEGRITY;
 
     mtx_lock(&block->file_mutex);
     off_t ret;
@@ -139,7 +139,7 @@ static mx_status_t file_req(file_state_t* state, void* addr, uint32_t len) {
         ret = lseek(block->fd, off, SEEK_SET);
         if (ret < 0) {
             mtx_unlock(&block->file_mutex);
-            return MX_ERR_IO;
+            return ZX_ERR_IO;
         }
     }
 
@@ -156,65 +156,65 @@ static mx_status_t file_req(file_state_t* state, void* addr, uint32_t len) {
         break;
     default:
         mtx_unlock(&block->file_mutex);
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     mtx_unlock(&block->file_mutex);
-    return ret != len ? MX_ERR_IO : MX_OK;
+    return ret != len ? ZX_ERR_IO : ZX_OK;
 }
 
-/* Map mx_status_t values to their Virtio counterparts. */
-static uint8_t to_virtio_status(mx_status_t status) {
+/* Map zx_status_t values to their Virtio counterparts. */
+static uint8_t to_virtio_status(zx_status_t status) {
     switch (status) {
-    case MX_OK:
+    case ZX_OK:
         return VIRTIO_BLK_S_OK;
-    case MX_ERR_NOT_SUPPORTED:
+    case ZX_ERR_NOT_SUPPORTED:
         return VIRTIO_BLK_S_UNSUPP;
     default:
         return VIRTIO_BLK_S_IOERR;
     }
 }
 
-static mx_status_t block_queue_handler(void* addr, uint32_t len, uint16_t flags, uint32_t* used,
+static zx_status_t block_queue_handler(void* addr, uint32_t len, uint16_t flags, uint32_t* used,
                                        void* context) {
     file_state_t* file_state = (file_state_t*)context;
 
     // Header.
     if (file_state->blk_req == NULL) {
         if (len != sizeof(*file_state->blk_req))
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         file_state->blk_req = static_cast<virtio_blk_req_t*>(addr);
-        return MX_OK;
+        return ZX_OK;
     }
 
     // Payload.
     if (flags & VRING_DESC_F_NEXT) {
         file_state->has_payload = true;
-        mx_status_t status = file_req(file_state, addr, len);
-        if (status != MX_OK) {
+        zx_status_t status = file_req(file_state, addr, len);
+        if (status != ZX_OK) {
             file_state->status = to_virtio_status(status);
         } else {
             *used += len;
         }
-        return MX_OK;
+        return ZX_OK;
     }
 
     // Status.
     if (len != sizeof(uint8_t))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     // If there was no payload, call the handler function once.
     if (!file_state->has_payload) {
-        mx_status_t status = file_req(file_state, addr, len);
-        if (status != MX_OK)
+        zx_status_t status = file_req(file_state, addr, len);
+        if (status != ZX_OK)
             file_state->status = to_virtio_status(status);
     }
     uint8_t* status = static_cast<uint8_t*>(addr);
     *status = file_state->status;
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t file_block_device(block_t* block) {
-    mx_status_t status;
+zx_status_t file_block_device(block_t* block) {
+    zx_status_t status;
     do {
         file_state_t state = {
             .block = block,
@@ -224,6 +224,6 @@ mx_status_t file_block_device(block_t* block) {
             .status = VIRTIO_BLK_S_OK,
         };
         status = virtio_queue_handler(&block->queue, &block_queue_handler, &state);
-    } while (status == MX_ERR_NEXT);
+    } while (status == ZX_ERR_NEXT);
     return status;
 }

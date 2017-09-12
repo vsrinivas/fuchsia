@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <magenta/types.h>
-#include <magenta/compiler.h>
+#include <zircon/types.h>
+#include <zircon/compiler.h>
 
 #include <stdatomic.h>
 
@@ -17,10 +17,10 @@ typedef struct {
 
 #define COMPLETION_INIT ((completion_t){0})
 
-// Returns MX_ERR_TIMED_OUT if timeout elapses, and MX_OK if woken by
+// Returns ZX_ERR_TIMED_OUT if timeout elapses, and ZX_OK if woken by
 // a call to completion_wake or if the completion has already been
 // signaled.
-mx_status_t completion_wait(completion_t* completion, mx_time_t timeout);
+zx_status_t completion_wait(completion_t* completion, zx_time_t timeout);
 
 // Awakens all waiters on the completion, and marks the it as
 // signaled. Waits after this call but before a reset of the

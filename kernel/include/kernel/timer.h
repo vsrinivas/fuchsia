@@ -9,7 +9,7 @@
 
 #include <kernel/spinlock.h>
 #include <list.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <sys/types.h>
 
 __BEGIN_CDECLS
@@ -132,7 +132,7 @@ void timer_thaw_percpu(void);
 
 /* Special helper routine to simultaneously try to acquire a spinlock and check for
  * timer cancel, which is needed in a few special cases.
- * returns MX_OK if spinlock was acquired, MX_ERR_TIMED_OUT if timer was canceled.
+ * returns ZX_OK if spinlock was acquired, ZX_ERR_TIMED_OUT if timer was canceled.
  */
 status_t timer_trylock_or_cancel(timer_t* t, spin_lock_t* lock);
 

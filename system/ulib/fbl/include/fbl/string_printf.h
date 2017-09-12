@@ -6,7 +6,7 @@
 
 #include <stdarg.h>
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <fbl/string.h>
 
 namespace fbl {

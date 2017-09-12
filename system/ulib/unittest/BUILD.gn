@@ -17,8 +17,8 @@ static_library("unittest") {
     "include/unittest/unittest.h",
   ]
   deps = [
-    "//magenta/system/public",
-    "//magenta/system/ulib/pretty",
+    "//zircon/system/public",
+    "//zircon/system/ulib/pretty",
   ]
   public_configs = [ ":unittest_config" ]
 }

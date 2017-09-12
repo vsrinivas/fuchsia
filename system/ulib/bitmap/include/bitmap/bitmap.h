@@ -6,7 +6,7 @@
 
 #include <stddef.h>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 namespace bitmap {
 
@@ -27,22 +27,22 @@ public:
                      size_t* first_unset = nullptr) const = 0;
 
     // Sets the bit at bitoff.  Only fails on allocation error.
-    virtual mx_status_t SetOne(size_t bitoff) {
+    virtual zx_status_t SetOne(size_t bitoff) {
         return Set(bitoff, bitoff + 1);
     }
 
     // Sets all bits in the range [*bitoff*, *bitmax*).  Only fails on
     // allocation error or if bitmax < bitoff.
-    virtual mx_status_t Set(size_t bitoff, size_t bitmax) = 0;
+    virtual zx_status_t Set(size_t bitoff, size_t bitmax) = 0;
 
     // Clears the bit at bitoff.  Only fails on allocation error.
-    virtual mx_status_t ClearOne(size_t bitoff) {
+    virtual zx_status_t ClearOne(size_t bitoff) {
         return Clear(bitoff, bitoff + 1);
     }
 
     // Clears all bits in the range [*bitoff*, *bitmax*).  Only fails on
     // allocation error or if bitmax < bitoff.
-    virtual mx_status_t Clear(size_t bitoff, size_t bitmax) = 0;
+    virtual zx_status_t Clear(size_t bitoff, size_t bitmax) = 0;
 
     // Clear all bits in the bitmap.
     virtual void ClearAll() = 0;

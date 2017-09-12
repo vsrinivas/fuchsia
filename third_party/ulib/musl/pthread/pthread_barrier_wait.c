@@ -38,7 +38,7 @@ int pthread_barrier_wait(pthread_barrier_t* b) {
             a_spin();
         atomic_fetch_add(&inst->finished, 1);
         while (atomic_load(&inst->finished) == 1)
-            _mx_futex_wait(&inst->finished, 1, MX_TIME_INFINITE);
+            _zx_futex_wait(&inst->finished, 1, ZX_TIME_INFINITE);
         return PTHREAD_BARRIER_SERIAL_THREAD;
     }
 

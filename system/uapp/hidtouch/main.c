@@ -16,12 +16,12 @@
 #include <hid/paradise.h>
 #include <hid/usages.h>
 
-#include <magenta/device/console.h>
-#include <magenta/device/display.h>
-#include <magenta/device/input.h>
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
+#include <zircon/device/console.h>
+#include <zircon/device/display.h>
+#include <zircon/device/input.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #define DEV_INPUT       "/dev/class/input"
 #define FRAMEBUFFER     "/dev/class/framebuffer/000"
@@ -258,8 +258,8 @@ int main(int argc, char* argv[]) {
     size_t size = fb.info.stride * fb.info.pixelsize * fb.info.height;
     uintptr_t fbo;
 
-    mx_status_t status = _mx_vmar_map(mx_vmar_root_self(), 0, fb.vmo, 0, size,
-                                      MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &fbo);
+    zx_status_t status = _zx_vmar_map(zx_vmar_root_self(), 0, fb.vmo, 0, size,
+                                      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &fbo);
     if (status < 0) {
         printf("couldn't map fb: %d\n", status);
         return -1;
@@ -388,7 +388,7 @@ next_node:
     free(buf);
     free(rpt_desc);
     close(touchfd);
-    _mx_vmar_unmap(mx_vmar_root_self(), fbo, size);
+    _zx_vmar_unmap(zx_vmar_root_self(), fbo, size);
     close(vcfd);
     return 0;
 }

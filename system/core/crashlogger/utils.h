@@ -5,7 +5,7 @@
 #pragma once
 
 #include <stddef.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 #define MAX_BUILDID_SIZE 64
 
@@ -24,23 +24,23 @@ extern void do_print_debug(const char* file, int line, const char* func, const c
 
 extern void do_print_error(const char* file, int line, const char* fmt, ...);
 
-extern void do_print_mx_error(const char* file, int line, const char* what, mx_status_t status);
+extern void do_print_zx_error(const char* file, int line, const char* what, zx_status_t status);
 
 #define print_error(fmt...) \
   do { \
     do_print_error(__FILE__, __LINE__, fmt); \
   } while (0)
 
-#define print_mx_error(what, status) \
+#define print_zx_error(what, status) \
   do { \
-    do_print_mx_error(__FILE__, __LINE__, \
-                      (what), static_cast<mx_status_t>(status)); \
+    do_print_zx_error(__FILE__, __LINE__, \
+                      (what), static_cast<zx_status_t>(status)); \
   } while (0)
 
-extern mx_koid_t get_koid(mx_handle_t handle);
+extern zx_koid_t get_koid(zx_handle_t handle);
 
-extern mx_status_t read_mem(mx_handle_t h, mx_vaddr_t vaddr, void* ptr, size_t len);
+extern zx_status_t read_mem(zx_handle_t h, zx_vaddr_t vaddr, void* ptr, size_t len);
 
-extern mx_status_t fetch_string(mx_handle_t h, mx_vaddr_t vaddr, char* ptr, size_t max);
+extern zx_status_t fetch_string(zx_handle_t h, zx_vaddr_t vaddr, char* ptr, size_t max);
 
-extern mx_status_t fetch_build_id(mx_handle_t h, mx_vaddr_t base, char* buf, size_t buf_size);
+extern zx_status_t fetch_build_id(zx_handle_t h, zx_vaddr_t base, char* buf, size_t buf_size);

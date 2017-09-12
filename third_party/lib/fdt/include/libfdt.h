@@ -53,7 +53,7 @@
 
 #include <libfdt_env.h>
 #include <fdt.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS;
 

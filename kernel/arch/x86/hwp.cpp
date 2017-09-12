@@ -5,7 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <err.h>
 #include <inttypes.h>
 #include <string.h>
@@ -80,7 +80,7 @@ usage:
         printf("usage:\n");
         printf("%s enable\n", argv[0].str);
         printf("%s hint <0-255>\n", argv[0].str);
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
 
     if (!strcmp(argv[1].str, "enable")) {
@@ -99,7 +99,7 @@ usage:
         goto usage;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 STATIC_COMMAND_START

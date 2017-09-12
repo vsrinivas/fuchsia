@@ -3,29 +3,29 @@
 // found in the LICENSE file.
 
 #include <launchpad/vmo.h>
-#include <magenta/syscalls.h>
-#include <mxio/io.h>
+#include <zircon/syscalls.h>
+#include <fdio/io.h>
 
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
 
-mx_status_t launchpad_vmo_from_file(const char* filename, mx_handle_t* out) {
+zx_status_t launchpad_vmo_from_file(const char* filename, zx_handle_t* out) {
     int fd = open(filename, O_RDONLY);
     if (fd < 0)
-        return MX_ERR_IO;
-    mx_status_t status = mxio_get_vmo(fd, out);
+        return ZX_ERR_IO;
+    zx_status_t status = fdio_get_vmo(fd, out);
     close(fd);
 
-    if (status == MX_OK) {
-        if (strlen(filename) >= MX_MAX_NAME_LEN) {
+    if (status == ZX_OK) {
+        if (strlen(filename) >= ZX_MAX_NAME_LEN) {
             const char* p = strrchr(filename, '/');
             if (p != NULL) {
                 filename = p + 1;
             }
         }
 
-        mx_object_set_property(*out, MX_PROP_NAME, filename, strlen(filename));
+        zx_object_set_property(*out, ZX_PROP_NAME, filename, strlen(filename));
     }
 
     return status;

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/device/rtc.h>
+#include <zircon/device/rtc.h>
 
 #include <fcntl.h>
 #include <getopt.h>

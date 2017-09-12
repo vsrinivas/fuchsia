@@ -6,7 +6,7 @@
 
 #include <hypervisor/packet_mux.h>
 
-#include <magenta/syscalls/hypervisor.h>
+#include <zircon/syscalls/hypervisor.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 
@@ -14,18 +14,18 @@ __UNUSED static const size_t kMaxPacketsPerRange = 256;
 
 BlockingPortAllocator::BlockingPortAllocator() : semaphore_(kMaxPacketsPerRange) {}
 
-mx_status_t BlockingPortAllocator::Init() {
+zx_status_t BlockingPortAllocator::Init() {
     return arena_.Init("hypervisor-packets", kMaxPacketsPerRange);
 }
 
 PortPacket* BlockingPortAllocator::Alloc(StateReloader* reloader) {
     PortPacket* port_packet = Alloc();
-    mx_status_t status = semaphore_.Wait(INFINITE_TIME);
+    zx_status_t status = semaphore_.Wait(INFINITE_TIME);
     // If port_packet is NULL, then Wait would have blocked. So we need to:
     // reload our state, check the status of Wait, and Alloc again.
     if (port_packet == nullptr) {
         reloader->Reload();
-        if (status != MX_OK)
+        if (status != ZX_OK)
             return nullptr;
         port_packet = Alloc();
     }
@@ -42,45 +42,45 @@ void BlockingPortAllocator::Free(PortPacket* port_packet) {
         thread_reschedule();
 }
 
-PortRange::PortRange(mx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port, uint64_t key)
+PortRange::PortRange(zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port, uint64_t key)
     : addr_(addr), len_(len), port_(fbl::move(port)), key_(key) {
     (void) key_;
 }
 
-mx_status_t PortRange::Init() {
+zx_status_t PortRange::Init() {
     return port_allocator_.Init();
 }
 
-mx_status_t PortRange::Queue(const mx_port_packet_t& packet, StateReloader* reloader) {
+zx_status_t PortRange::Queue(const zx_port_packet_t& packet, StateReloader* reloader) {
     PortPacket* port_packet = port_allocator_.Alloc(reloader);
     if (port_packet == nullptr)
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     port_packet->packet = packet;
     port_packet->packet.key = key_;
     port_packet->packet.type |= PKT_FLAG_EPHEMERAL;
-    mx_status_t status = port_->Queue(port_packet, MX_SIGNAL_NONE, 0);
-    if (status != MX_OK)
+    zx_status_t status = port_->Queue(port_packet, ZX_SIGNAL_NONE, 0);
+    if (status != ZX_OK)
         port_allocator_.Free(port_packet);
     return status;
 }
 
-mx_status_t PacketMux::AddPortRange(mx_vaddr_t addr, size_t len,
+zx_status_t PacketMux::AddPortRange(zx_vaddr_t addr, size_t len,
                                     fbl::RefPtr<PortDispatcher> port, uint64_t key) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<PortRange> range(new (&ac) PortRange(addr, len, fbl::move(port), key));
     if (!ac.check())
-        return MX_ERR_NO_MEMORY;
-    mx_status_t status = range->Init();
-    if (status != MX_OK)
+        return ZX_ERR_NO_MEMORY;
+    zx_status_t status = range->Init();
+    if (status != ZX_OK)
         return status;
     {
         fbl::AutoLock lock(&mutex_);
         ports_.insert(fbl::move(range));
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t PacketMux::FindPortRange(mx_vaddr_t addr, PortRange** port_range) {
+zx_status_t PacketMux::FindPortRange(zx_vaddr_t addr, PortRange** port_range) {
     PortTree::iterator iter;
     {
         fbl::AutoLock lock(&mutex_);
@@ -88,16 +88,16 @@ mx_status_t PacketMux::FindPortRange(mx_vaddr_t addr, PortRange** port_range) {
     }
     --iter;
     if (!iter.IsValid() || !iter->InRange(addr))
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
     *port_range = const_cast<PortRange*>(&*iter);
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t PacketMux::Queue(mx_vaddr_t addr, const mx_port_packet_t& packet,
+zx_status_t PacketMux::Queue(zx_vaddr_t addr, const zx_port_packet_t& packet,
                              StateReloader* reloader) {
     PortRange* port_range;
-    mx_status_t status = FindPortRange(addr, &port_range);
-    if (status != MX_OK)
+    zx_status_t status = FindPortRange(addr, &port_range);
+    if (status != ZX_OK)
         return status;
     return port_range->Queue(packet, reloader);
 }

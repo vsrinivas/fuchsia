@@ -145,7 +145,7 @@ status_t VmAspace::Init() {
         (is_high_kernel ? ARCH_ASPACE_FLAG_KERNEL : 0u) |
         (is_guest ? ARCH_ASPACE_FLAG_GUEST_PASPACE : 0u);
     status_t status = arch_aspace_.Init(base_, size_, arch_aspace_flags);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
 
@@ -154,7 +154,7 @@ status_t VmAspace::Init() {
     if (likely(!root_vmar_)) {
         return VmAddressRegion::CreateRoot(*this, VMAR_FLAG_CAN_MAP_SPECIFIC, &root_vmar_);
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 fbl::RefPtr<VmAspace> VmAspace::Create(uint32_t flags, const char* name) {
@@ -253,7 +253,7 @@ status_t VmAspace::Destroy() {
     // tear down and free all of the regions in our address space
     if (root_vmar_) {
         status_t status = root_vmar_->DestroyLocked();
-        if (status != MX_OK && status != MX_ERR_BAD_STATE) {
+        if (status != ZX_OK && status != ZX_ERR_BAD_STATE) {
             return status;
         }
     }
@@ -262,7 +262,7 @@ status_t VmAspace::Destroy() {
     // Break the reference cycle between this aspace and the root VMAR
     root_vmar_.reset(dummy_root_vmar);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 bool VmAspace::is_destroyed() const {
@@ -283,24 +283,24 @@ status_t VmAspace::MapObjectInternal(fbl::RefPtr<VmObject> vmo, const char* name
 
     size = ROUNDUP(size, PAGE_SIZE);
     if (size == 0)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     if (!vmo)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     if (!IS_PAGE_ALIGNED(offset))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     vaddr_t vmar_offset = 0;
     // if they're asking for a specific spot or starting address, copy the address
     if (vmm_flags & VMM_FLAG_VALLOC_SPECIFIC) {
         // can't ask for a specific spot and then not provide one
         if (!ptr) {
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
         vmar_offset = reinterpret_cast<vaddr_t>(*ptr);
 
         // check that it's page aligned
         if (!IS_PAGE_ALIGNED(vmar_offset) || vmar_offset < base_)
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
 
         vmar_offset -= base_;
     }
@@ -320,7 +320,7 @@ status_t VmAspace::MapObjectInternal(fbl::RefPtr<VmObject> vmo, const char* name
     status_t status = RootVmar()->CreateVmMapping(vmar_offset, size, align_pow2,
                                                   vmar_flags,
                                                   vmo, offset, arch_mmu_flags, name, &r);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
 
@@ -335,7 +335,7 @@ status_t VmAspace::MapObjectInternal(fbl::RefPtr<VmObject> vmo, const char* name
     if (ptr)
         *ptr = (void*)r->base();
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
@@ -347,11 +347,11 @@ status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
 
     size = ROUNDUP_PAGE_SIZE(size);
     if (size == 0)
-        return MX_OK;
+        return ZX_OK;
     if (!IS_PAGE_ALIGNED(vaddr))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     if (!is_inside(*this, vaddr))
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
 
     // trim the size
     size = trim_to_aspace(*this, vaddr, size);
@@ -359,8 +359,8 @@ status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
     // allocate a zero length vm object to back it
     // TODO: decide if a null vmo object is worth it
     fbl::RefPtr<VmObject> vmo;
-    mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, &vmo);
-    if (status != MX_OK)
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, &vmo);
+    if (status != ZX_OK)
         return status;
 
     // lookup how it's already mapped
@@ -386,16 +386,16 @@ status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint
     DEBUG_ASSERT(IS_PAGE_ALIGNED(paddr));
 
     if (size == 0)
-        return MX_OK;
+        return ZX_OK;
     if (!IS_PAGE_ALIGNED(paddr))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     size = ROUNDUP_PAGE_SIZE(size);
 
     // create a vm object to back it
     fbl::RefPtr<VmObject> vmo;
     status_t status = VmObjectPhysical::Create(paddr, size, &vmo);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     // force it to be mapped up front
@@ -403,8 +403,8 @@ status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint
     vmm_flags |= VMM_FLAG_COMMIT;
 
     // Apply the cache policy
-    if (vmo->SetMappingCachePolicy(arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK) != MX_OK)
-        return MX_ERR_INVALID_ARGS;
+    if (vmo->SetMappingCachePolicy(arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK) != ZX_OK)
+        return ZX_ERR_INVALID_ARGS;
 
     arch_mmu_flags &= ~ARCH_MMU_FLAG_CACHE_MASK;
     return MapObjectInternal(fbl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
@@ -419,16 +419,16 @@ status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr, ui
 
     size = ROUNDUP(size, PAGE_SIZE);
     if (size == 0)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     // test for invalid flags
     if (!(vmm_flags & VMM_FLAG_COMMIT))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     // create a vm object to back it
     fbl::RefPtr<VmObject> vmo;
-    mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
-    if (status != MX_OK)
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
+    if (status != ZX_OK)
         return status;
 
     // always immediately commit memory to the object
@@ -439,7 +439,7 @@ status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr, ui
     if (static_cast<size_t>(committed) < size) {
         LTRACEF("failed to allocate enough pages (asked for %zu, got %zu)\n", size / PAGE_SIZE,
                 static_cast<size_t>(committed) / PAGE_SIZE);
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     return MapObjectInternal(fbl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
@@ -454,12 +454,12 @@ status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t alig
 
     size = ROUNDUP(size, PAGE_SIZE);
     if (size == 0)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     // allocate a vm object to back it
     fbl::RefPtr<VmObject> vmo;
-    mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
-    if (status != MX_OK)
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
+    if (status != ZX_OK)
         return status;
 
     // commit memory up front if requested
@@ -472,7 +472,7 @@ status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t alig
         if (static_cast<size_t>(committed) < size) {
             LTRACEF("failed to allocate enough pages (asked for %zu, got %zu)\n", size / PAGE_SIZE,
                     static_cast<size_t>(committed) / PAGE_SIZE);
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
         }
     }
 
@@ -486,7 +486,7 @@ status_t VmAspace::FreeRegion(vaddr_t va) {
 
     fbl::RefPtr<VmAddressRegionOrMapping> r = RootVmar()->FindRegion(va);
     if (!r) {
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
     }
 
     return r->Destroy();

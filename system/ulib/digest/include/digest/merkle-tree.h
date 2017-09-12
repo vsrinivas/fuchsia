@@ -6,8 +6,8 @@
 
 #include <stddef.h>
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #ifdef __cplusplus
 
@@ -34,7 +34,7 @@ namespace digest {
 // corresponding to the data. If this digest is trusted (e.g. the creator signs
 // it), other parties can use it to verify any portion of the data, chosen by
 // |offset| and |length| using the following:
-//      mx_status_t rc = digest::MerkleTree::Verify(data,
+//      zx_status_t rc = digest::MerkleTree::Verify(data,
 //          data_len, tree, tree_len, offset, length, digest);
 //
 // If |s| is NO_ERROR, the |data| between |offset| and |offset + length| is the
@@ -55,7 +55,7 @@ public:
 
     // Writes a Merkle tree for the given data and saves its root digest.
     // |tree_len| must be at least as much as returned by GetTreeLength().
-    static mx_status_t Create(const void* data, size_t data_len, void* tree,
+    static zx_status_t Create(const void* data, size_t data_len, void* tree,
                               size_t tree_len, Digest* digest);
 
     // Checks the integrity of a the region of data given by the offset and
@@ -63,7 +63,7 @@ public:
     // digest. |tree_len| must be at least as much as returned by
     // GetTreeLength().  |offset| and |length| must describe a range wholly
     // within |data_len|.
-    static mx_status_t Verify(const void* data, size_t data_len,
+    static zx_status_t Verify(const void* data, size_t data_len,
                               const void* tree, size_t tree_len, size_t offset,
                               size_t length, const Digest& digest);
 
@@ -74,20 +74,20 @@ public:
 
     // Initializes |tree| to hold a the Merkle tree for |data_len| bytes of
     // data.  This must be called before |CreateUpdate|.
-    mx_status_t CreateInit(size_t data_len, size_t tree_len);
+    zx_status_t CreateInit(size_t data_len, size_t tree_len);
 
     // Processes an additional |length| bytes of |data| and writes digests to
     // the Merkle |tree|.  It is an error to process more data in total than was
     // specified by |data_len| in |CreateInit|.  |tree| must have room for at
     // least |GetTreeLength(data_len)| bytes.
-    mx_status_t CreateUpdate(const void* data, size_t length, void* tree);
+    zx_status_t CreateUpdate(const void* data, size_t length, void* tree);
 
     // Completes the Merkle |tree|, from the data leaves up to the |root|, which
     // it writes out if not null.  This must only be called after the total
     // number of bytes processed by |CreateUpdate| equals the |data_len| set by
     // |CreateInit|.  |tree| must have room for at least
     // |GetTreeLength(data_len)| bytes.
-    mx_status_t CreateFinal(void* tree, Digest* digest);
+    zx_status_t CreateFinal(void* tree, Digest* digest);
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(MerkleTree);
@@ -95,7 +95,7 @@ private:
     // Checks the integrity of the top level of a Merkle tree.  It checks
     // integrity using the given root digest. |data_len| must be at no more than
     // |kNodeSize|.
-    static mx_status_t VerifyRoot(const void* data, size_t data_len,
+    static zx_status_t VerifyRoot(const void* data, size_t data_len,
                                   uint64_t level, const Digest& root);
 
     // Checks the integrity of portion of a Merkle tree level given by the
@@ -103,13 +103,13 @@ private:
     // Merkle tree. |tree_len| must be at least as much as returned by
     // |GetTreeLength(data_len)|.  |offset| and |length| must describe a range
     // wholly within |data_len|.
-    static mx_status_t VerifyLevel(const void* data, size_t data_len,
+    static zx_status_t VerifyLevel(const void* data, size_t data_len,
                                    const void* tree, size_t offset,
                                    size_t length, uint64_t level);
 
     // See CreateFinal.  This implements that method, with an extra parameter to
     // allow levels other than the bottommost to be padded.
-    mx_status_t CreateFinalInternal(const void* data, void* tree, Digest* root);
+    zx_status_t CreateFinalInternal(const void* data, void* tree, Digest* root);
 
     // All of the following fields are used to save state when creating the
     // Merkle tree using the Init/Update/Final methods.  These methods use a
@@ -179,27 +179,27 @@ typedef struct merkle_tree_t merkle_tree_t;
 size_t merkle_tree_get_tree_length(size_t data_len);
 
 // C wrapper function for |MerkleTree::Create|.
-mx_status_t merkle_tree_create(const void* data, size_t data_len, void* tree,
+zx_status_t merkle_tree_create(const void* data, size_t data_len, void* tree,
                                size_t tree_len, void* out, size_t out_len);
 
 // C wrapper for |MerkleTree::CreateInit|.  On success, this function
 //  allocates memory for |out|.  The caller must free this memory by calling
 //  |merkle_tree_create_final|, even if an intervening call to
 //  |merkle_tree_create_update| returns an error.
-mx_status_t merkle_tree_create_init(size_t data_len, size_t tree_len,
+zx_status_t merkle_tree_create_init(size_t data_len, size_t tree_len,
                                     merkle_tree_t** out);
 
 // C wrapper function for |MerkleTree::CreateUpdate|.
-mx_status_t merkle_tree_create_update(merkle_tree_t* mt, const void* data,
+zx_status_t merkle_tree_create_update(merkle_tree_t* mt, const void* data,
                                       size_t length, void* tree);
 
 // C wrapper function for |MerkleTree::CreateFinal|.  This function consumes
 // |mt| and frees it.
-mx_status_t merkle_tree_create_final(merkle_tree_t* mt, void* tree, void* out,
+zx_status_t merkle_tree_create_final(merkle_tree_t* mt, void* tree, void* out,
                                      size_t out_len);
 
 // C wrapper function for |MerkleTree::Verify|.
-mx_status_t merkle_tree_verify(const void* data, size_t data_len, void* tree,
+zx_status_t merkle_tree_verify(const void* data, size_t data_len, void* tree,
                                size_t tree_len, size_t offset, size_t length,
                                const void* root, size_t root_len);
 

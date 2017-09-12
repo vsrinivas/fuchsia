@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
-#include <magenta/pixelformat.h>
-#include <magenta/device/display.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+#include <zircon/pixelformat.h>
+#include <zircon/device/display.h>
 
 __BEGIN_CDECLS;
 
@@ -15,17 +15,17 @@ __BEGIN_CDECLS;
  * protocol/display.h - display protocol definitions
  */
 
-typedef void (*mx_display_cb_t)(bool acquired, void* cookie);
+typedef void (*zx_display_cb_t)(bool acquired, void* cookie);
 
 typedef struct display_protocol_ops {
     // sets the display mode
-    mx_status_t (*set_mode)(void* ctx, mx_display_info_t* info);
+    zx_status_t (*set_mode)(void* ctx, zx_display_info_t* info);
 
     // gets the display mode
-    mx_status_t (*get_mode)(void* ctx, mx_display_info_t* info);
+    zx_status_t (*get_mode)(void* ctx, zx_display_info_t* info);
 
     // gets a pointer to the framebuffer
-    mx_status_t (*get_framebuffer)(void* ctx, void** framebuffer);
+    zx_status_t (*get_framebuffer)(void* ctx, void** framebuffer);
 
     // flushes the framebuffer
     void (*flush)(void* ctx);
@@ -43,10 +43,10 @@ typedef struct display_protocol_ops {
     // Registers a callback to be invoked when display ownership changes.
     // The provided callback will be invoked with a value of true if the display
     // has been acquired, false if it has been released.
-    void (*set_ownership_change_callback)(void* ctx, mx_display_cb_t callback, void* cookie);
+    void (*set_ownership_change_callback)(void* ctx, zx_display_cb_t callback, void* cookie);
 } display_protocol_ops_t;
 
-typedef struct mx_display_protocol {
+typedef struct zx_display_protocol {
     display_protocol_ops_t* ops;
     void* ctx;
 } display_protocol_t;

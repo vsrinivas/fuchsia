@@ -42,7 +42,7 @@ FUNCTION(_x86_copy_to_or_from_user)
     movq %rdx, %rcx
     rep movsb  # while (rcx-- > 0) *rdi++ = *rsi++;
 
-    mov $MX_OK, %rax
+    mov $ZX_OK, %rax
 
 .Lcleanup_copy:
     # Reset fault return
@@ -56,6 +56,6 @@ FUNCTION(_x86_copy_to_or_from_user)
     ret
 
 .Lfault_copy:
-    mov $MX_ERR_INVALID_ARGS, %rax
+    mov $ZX_ERR_INVALID_ARGS, %rax
     jmp .Lcleanup_copy
 END_FUNCTION(_x86_copy_to_or_from_user)

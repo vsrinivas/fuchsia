@@ -6,22 +6,22 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 // implemented in virtio_driver.cpp
-extern mx_status_t virtio_bind(void* ctx, mx_device_t* device, void** cookie);
+extern zx_status_t virtio_bind(void* ctx, zx_device_t* device, void** cookie);
 
-static mx_driver_ops_t virtio_driver_ops = {
+static zx_driver_ops_t virtio_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = virtio_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(virtio, virtio_driver_ops, "magenta", "0.1", 9)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
+ZIRCON_DRIVER_BEGIN(virtio, virtio_driver_ops, "zircon", "0.1", 9)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, 0x1af4),
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1000), // Network device (transitional)
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1001), // Block device (transitional)
@@ -30,4 +30,4 @@ MAGENTA_DRIVER_BEGIN(virtio, virtio_driver_ops, "magenta", "0.1", 9)
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1044), // RNG device
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1050), // GPU device
     BI_ABORT(),
-MAGENTA_DRIVER_END(virtio)
+ZIRCON_DRIVER_END(virtio)

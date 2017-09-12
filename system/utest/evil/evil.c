@@ -11,8 +11,8 @@
 
 #include <pthread.h>
 
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #define TICKS 0
 
@@ -43,12 +43,12 @@ static void _unlock(atomic_int* lock) {
 
 static void _ftxlock(atomic_int* lock) {
     while (atomic_exchange(lock, 1) != 0) {
-        mx_futex_wait(lock, 1, MX_TIME_INFINITE);
+        zx_futex_wait(lock, 1, ZX_TIME_INFINITE);
     }
 }
 static void _ftxunlock(atomic_int* lock) {
     atomic_store(lock, 0);
-    mx_futex_wake(lock, 1);
+    zx_futex_wake(lock, 1);
 }
 
 #if USE_PTHREAD_MUTEXES
@@ -182,11 +182,11 @@ int heapblaster(int count, int locking) {
 static uint8_t data[65534];
 
 int writespam(int opt) {
-    mx_handle_t p[2];
-    mx_status_t r;
+    zx_handle_t p[2];
+    zx_status_t r;
     uint64_t count = 0;
 
-    if ((r = mx_channel_create(0, p, p + 1)) < 0) {
+    if ((r = zx_channel_create(0, p, p + 1)) < 0) {
         printf("cleanup-test: channel create 0 failed: %d\n", r);
         return -1;
     }
@@ -194,7 +194,7 @@ int writespam(int opt) {
     printf("evil-tests: about to spam data into a channel\n");
     for (;;) {
         count++;
-        if ((r = mx_channel_write(p[0], 0, data, sizeof(data), NULL, 0)) < 0) {
+        if ((r = zx_channel_write(p[0], 0, data, sizeof(data), NULL, 0)) < 0) {
             printf("evil-tests: SUCCESS, writespammer error %d after only %" PRIu64 " writes\n", r, count);
             return 0;
         }
@@ -204,8 +204,8 @@ int writespam(int opt) {
     }
     if (opt == 0) {
         printf("evil-tests: closing the channel (full of messages)\n");
-        mx_handle_close(p[0]);
-        mx_handle_close(p[1]);
+        zx_handle_close(p[0]);
+        zx_handle_close(p[1]);
     } else {
         printf("evil-tests: leaving the channel open (full of messages)\n");
     }
@@ -213,13 +213,13 @@ int writespam(int opt) {
 }
 
 int handlespam(void) {
-    mx_handle_t p[2];
+    zx_handle_t p[2];
     uint64_t count = 0;
 
     printf("evil-tests: about to create all the handles\n");
     for (;;) {
-        mx_status_t status;
-        if ((status = mx_channel_create(0, p, p + 1)) < 0) {
+        zx_status_t status;
+        if ((status = zx_channel_create(0, p, p + 1)) < 0) {
             printf("evil-tests: SUCCESS, channel create failed %d after %" PRIu64 " created\n", status, count);
             return 0;
         }

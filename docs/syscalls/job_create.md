@@ -1,4 +1,4 @@
-# mx_job_create
+# zx_job_create
 
 ## NAME
 
@@ -7,9 +7,9 @@ job_create - create a new job
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-mx_status_t mx_job_create(mx_handle_t job, uint32_t options, mx_handle_t* out);
+zx_status_t zx_job_create(zx_handle_t job, uint32_t options, zx_handle_t* out);
 
 ```
 
@@ -29,26 +29,26 @@ Job handles may be waited on (TODO(cpu): expand this)
 
 ## RETURN VALUE
 
-**job_create**() returns MX_OK and a handle to the new job
+**job_create**() returns ZX_OK and a handle to the new job
 (via *out*) on success.  In the event of failure, a negative error value
 is returned.
 
 ## ERRORS
 
-**MX_ERR_BAD_HANDLE**  *job* is not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *job* is not a valid handle.
 
-**MX_ERR_WRONG_TYPE**  *job* is not a job handle.
+**ZX_ERR_WRONG_TYPE**  *job* is not a job handle.
 
-**MX_ERR_INVALID_ARGS**  *options* is nonzero, or *out* is an invalid pointer.
+**ZX_ERR_INVALID_ARGS**  *options* is nonzero, or *out* is an invalid pointer.
 
-**MX_ERR_ACCESS_DENIED**  *job* does not have the **MX_RIGHT_WRITE** right.
+**ZX_ERR_ACCESS_DENIED**  *job* does not have the **ZX_RIGHT_WRITE** right.
 
-**MX_ERR_OUT_OF_RANGE**  The height of *job* is too large to create a child job.
+**ZX_ERR_OUT_OF_RANGE**  The height of *job* is too large to create a child job.
 
-**MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**ZX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
-**MX_ERR_BAD_STATE**  (Temporary) Failure due to the job object being in the
-middle of a *mx_task_kill()* operation.
+**ZX_ERR_BAD_STATE**  (Temporary) Failure due to the job object being in the
+middle of a *zx_task_kill()* operation.
 
 ## SEE ALSO
 

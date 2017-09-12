@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 void threads_test_sleep_fn(void* arg);
 void threads_test_wait_fn(void* arg);
@@ -17,7 +17,7 @@ void threads_test_port_fn(void* arg);
 void threads_test_channel_call_fn(void* arg);
 
 struct channel_call_suspend_test_arg {
-    mx_handle_t channel;
-    mx_status_t call_status;
-    mx_status_t read_status;
+    zx_handle_t channel;
+    zx_status_t call_status;
+    zx_status_t read_status;
 };

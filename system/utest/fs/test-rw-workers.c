@@ -13,9 +13,9 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include <magenta/compiler.h>
-#include <magenta/listnode.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/listnode.h>
+#include <zircon/types.h>
 
 #include "filesystems.h"
 #include "misc.h"
@@ -278,7 +278,7 @@ static int do_threaded_work(void* arg) {
             w->status == DONE ? "finished" : "failed");
     EXPECT_EQ(unlink(w->name), 0, "");
 
-    mx_status_t status = w->status;
+    zx_status_t status = w->status;
     free(w);
     return status;
 }

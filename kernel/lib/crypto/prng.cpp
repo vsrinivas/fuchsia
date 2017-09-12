@@ -11,8 +11,8 @@
 
 #include <err.h>
 #include <lib/crypto/cryptolib.h>
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 #include <fbl/auto_lock.h>
 #include <openssl/chacha.h>
 #include <pow2.h>
@@ -69,8 +69,8 @@ void PRNG::Draw(void* out, size_t size) {
         fbl::AutoLock guard(&lock_);
         if (unlikely(total_entropy_added_ < kMinEntropy)) {
             lock_.Release();
-            mx_status_t status = event_wait(&ready_);
-            ASSERT(status == MX_OK);
+            zx_status_t status = event_wait(&ready_);
+            ASSERT(status == ZX_OK);
             lock_.Acquire();
         }
         DrawInternal(out, size);

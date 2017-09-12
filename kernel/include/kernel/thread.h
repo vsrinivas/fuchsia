@@ -14,7 +14,7 @@
 #include <kernel/spinlock.h>
 #include <kernel/wait.h>
 #include <list.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <sys/types.h>
 
 __BEGIN_CDECLS
@@ -66,7 +66,7 @@ typedef void (*thread_user_callback_t)(enum thread_user_state_change new_state,
 #define THREAD_MAGIC (0x74687264) // 'thrd'
 
 // This includes the trailing NUL.
-// N.B. This must match MX_MAX_NAME_LEN.
+// N.B. This must match ZX_MAX_NAME_LEN.
 #define THREAD_NAME_LENGTH 32
 
 #define THREAD_LINEBUFFER_LENGTH 128
@@ -233,7 +233,7 @@ static inline bool thread_stopped_in_exception(const thread_t* thread) {
 }
 
 /* wait until after the specified deadline. interruptable may return early with
- * MX_ERR_INTERNAL_INTR_KILLED if thread is signaled for kill.
+ * ZX_ERR_INTERNAL_INTR_KILLED if thread is signaled for kill.
  */
 status_t thread_sleep_etc(lk_time_t deadline, bool interruptable);
 

@@ -5,32 +5,32 @@
 #include <inttypes.h>
 #include <string.h>
 
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/log.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/log.h>
 
 #include "netsvc.h"
 
-#define MAX_LOG_LINE (MX_LOG_RECORD_MAX + 32)
+#define MAX_LOG_LINE (ZX_LOG_RECORD_MAX + 32)
 
-static mx_handle_t loghandle;
+static zx_handle_t loghandle;
 static logpacket_t pkt;
 static int pkt_len;
 
 static volatile uint32_t seqno = 1;
 static volatile uint32_t pending = 0;
 
-mx_time_t debuglog_next_timeout = MX_TIME_INFINITE;
+zx_time_t debuglog_next_timeout = ZX_TIME_INFINITE;
 
 static int get_log_line(char* out) {
-    char buf[MX_LOG_RECORD_MAX + 1];
-    mx_log_record_t* rec = (mx_log_record_t*)buf;
+    char buf[ZX_LOG_RECORD_MAX + 1];
+    zx_log_record_t* rec = (zx_log_record_t*)buf;
     for (;;) {
-        if (mx_log_read(loghandle, MX_LOG_RECORD_MAX, rec, 0) > 0) {
+        if (zx_log_read(loghandle, ZX_LOG_RECORD_MAX, rec, 0) > 0) {
             if (rec->datalen && (rec->data[rec->datalen - 1] == '\n')) {
                 rec->datalen--;
             }
             // records flagged for local display are ignored
-            if (rec->flags & MX_LOG_LOCAL) {
+            if (rec->flags & ZX_LOG_LOCAL) {
                 continue;
             }
             rec->data[rec->datalen] = 0;
@@ -46,12 +46,12 @@ static int get_log_line(char* out) {
 }
 
 int debuglog_init(void) {
-    if (mx_log_create(MX_LOG_FLAG_READABLE, &loghandle) < 0) {
+    if (zx_log_create(ZX_LOG_FLAG_READABLE, &loghandle) < 0) {
         return -1;
     }
 
     // Set up our timeout to expire immediately, so that we check for pending log messages
-    debuglog_next_timeout = mx_time_get(MX_CLOCK_MONOTONIC);
+    debuglog_next_timeout = zx_time_get(ZX_CLOCK_MONOTONIC);
 
     seqno = 1;
     pending = 0;
@@ -85,7 +85,7 @@ static void debuglog_send(void) {
     }
     udp6_send(&pkt, pkt_len, &ip6_ll_all_nodes, DEBUGLOG_PORT, DEBUGLOG_ACK_PORT);
 done:
-    debuglog_next_timeout = mx_deadline_after(MX_MSEC(100));
+    debuglog_next_timeout = zx_deadline_after(ZX_MSEC(100));
 }
 
 void debuglog_recv(void* data, size_t len, bool is_mcast) {

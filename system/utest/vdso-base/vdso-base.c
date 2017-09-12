@@ -4,11 +4,11 @@
 
 #include <dlfcn.h>
 #include <link.h>
-#include <magenta/dlfcn.h>
-#include <magenta/process.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
-#include <mxio/util.h>
+#include <zircon/dlfcn.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
+#include <fdio/util.h>
 #include <stdio.h>
 #include <sys/param.h>
 #include <string.h>
@@ -20,8 +20,8 @@ bool vdso_base_test(void) {
 
     char msg[128];
 
-    struct link_map* lm = dlopen("libmagenta.so", RTLD_NOLOAD);
-    snprintf(msg, sizeof(msg), "dlopen(\"libmagenta.so\") failed: %s",
+    struct link_map* lm = dlopen("libzircon.so", RTLD_NOLOAD);
+    snprintf(msg, sizeof(msg), "dlopen(\"libzircon.so\") failed: %s",
              dlerror());
     EXPECT_NONNULL(lm, msg);
     uintptr_t rtld_vdso_base = lm->l_addr;
@@ -30,11 +30,11 @@ bool vdso_base_test(void) {
     EXPECT_EQ(ok, 0, msg);
 
     uintptr_t prop_vdso_base;
-    mx_status_t status =
-        mx_object_get_property(mx_process_self(),
-                               MX_PROP_PROCESS_VDSO_BASE_ADDRESS,
+    zx_status_t status =
+        zx_object_get_property(zx_process_self(),
+                               ZX_PROP_PROCESS_VDSO_BASE_ADDRESS,
                                &prop_vdso_base, sizeof(prop_vdso_base));
-    snprintf(msg, sizeof(msg), "mx_object_get_property failed: %d", status);
+    snprintf(msg, sizeof(msg), "zx_object_get_property failed: %d", status);
     EXPECT_EQ(status, 0, msg);
 
     EXPECT_EQ(rtld_vdso_base, prop_vdso_base,
@@ -59,11 +59,11 @@ bool vdso_unmap_test(void) {
     char msg[128];
 
     uintptr_t prop_vdso_base;
-    mx_status_t status =
-        mx_object_get_property(mx_process_self(),
-                               MX_PROP_PROCESS_VDSO_BASE_ADDRESS,
+    zx_status_t status =
+        zx_object_get_property(zx_process_self(),
+                               ZX_PROP_PROCESS_VDSO_BASE_ADDRESS,
                                &prop_vdso_base, sizeof(prop_vdso_base));
-    snprintf(msg, sizeof(msg), "mx_object_get_property failed: %d", status);
+    snprintf(msg, sizeof(msg), "zx_object_get_property failed: %d", status);
     ASSERT_EQ(status, 0, msg);
 
     struct dl_phdr_info info = { .dlpi_addr = prop_vdso_base };
@@ -84,15 +84,15 @@ bool vdso_unmap_test(void) {
     ASSERT_NE(vdso_code_len, 0u, "vDSO has no code segment?");
 
     // Removing the vDSO code mapping is not allowed.
-    status = mx_vmar_unmap(mx_vmar_root_self(),
+    status = zx_vmar_unmap(zx_vmar_root_self(),
                            vdso_code_start, vdso_code_len);
-    EXPECT_EQ(status, MX_ERR_ACCESS_DENIED, "unmap vDSO code");
+    EXPECT_EQ(status, ZX_ERR_ACCESS_DENIED, "unmap vDSO code");
 
     // Nor is removing a whole range overlapping the vDSO code.
-    status = mx_vmar_unmap(mx_vmar_root_self(),
+    status = zx_vmar_unmap(zx_vmar_root_self(),
                            vdso_code_start - PAGE_SIZE,
                            PAGE_SIZE * 2);
-    EXPECT_EQ(status, MX_ERR_ACCESS_DENIED, "unmap range overlapping vDSO code");
+    EXPECT_EQ(status, ZX_ERR_ACCESS_DENIED, "unmap range overlapping vDSO code");
 
     END_TEST;
 }
@@ -100,8 +100,8 @@ bool vdso_unmap_test(void) {
 bool vdso_map_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t vmo = mx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0));
-    ASSERT_NE(vmo, MX_HANDLE_INVALID, "mx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0))");
+    zx_handle_t vmo = zx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0));
+    ASSERT_NE(vmo, ZX_HANDLE_INVALID, "zx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0))");
 
     // Since we already have a vDSO mapping, loading it again should fail.
     void* h = dlopen_vmo(vmo, RTLD_LOCAL);
@@ -111,23 +111,23 @@ bool vdso_map_test(void) {
     // We can't meaningfully test the other constraints on our own
     // process, because the "there can be only one" constraint trumps them.
     const char* name = "vdso_map_test";
-    mx_handle_t proc, vmar;
-    ASSERT_EQ(mx_process_create(mx_job_default(),
+    zx_handle_t proc, vmar;
+    ASSERT_EQ(zx_process_create(zx_job_default(),
                                 name, strlen(name), 0, &proc, &vmar),
-              MX_OK, "mx_process_create failed");
+              ZX_OK, "zx_process_create failed");
 
     // This should fail because it's an executable mapping of
     // the wrong portion of the vDSO image (the first page is
     // rodata including the ELF headers).  Only the actual code
     // segment can be mapped executable.
     uintptr_t addr;
-    mx_status_t status = mx_vmar_map(
+    zx_status_t status = zx_vmar_map(
         vmar, 0, vmo, 0, PAGE_SIZE,
-        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, &addr);
-    EXPECT_EQ(status, MX_ERR_ACCESS_DENIED, "map vDSO data as executable");
+        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_EXECUTE, &addr);
+    EXPECT_EQ(status, ZX_ERR_ACCESS_DENIED, "map vDSO data as executable");
 
-    mx_handle_close(proc);
-    mx_handle_close(vmar);
+    zx_handle_close(proc);
+    zx_handle_close(vmar);
 
     END_TEST;
 }

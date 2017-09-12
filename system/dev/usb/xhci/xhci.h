@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <magenta/hw/usb.h>
-#include <magenta/hw/usb-hub.h>
-#include <magenta/types.h>
-#include <magenta/listnode.h>
+#include <zircon/hw/usb.h>
+#include <zircon/hw/usb-hub.h>
+#include <zircon/types.h>
+#include <zircon/listnode.h>
 #include <sync/completion.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -87,7 +87,7 @@ typedef struct {
 
 struct xhci {
     // the device we implement
-    mx_device_t* mxdev;
+    zx_device_t* mxdev;
 
     // interface for calling back to usb bus driver
     usb_bus_interface_t bus;
@@ -97,13 +97,13 @@ struct xhci {
     // supported by hardware. The actual number of interrupts configured
     // will not exceed this, and is stored in num_interrupts.
 #define INTERRUPTER_COUNT 2
-    mx_handle_t irq_handles[INTERRUPTER_COUNT];
-    mx_handle_t mmio_handle;
-    mx_handle_t cfg_handle;
+    zx_handle_t irq_handles[INTERRUPTER_COUNT];
+    zx_handle_t mmio_handle;
+    zx_handle_t cfg_handle;
     thrd_t irq_thread;
 
     // used by the start thread
-    mx_device_t* parent;
+    zx_device_t* parent;
     pci_protocol_t pci;
 
     // MMIO data structures
@@ -114,7 +114,7 @@ struct xhci {
 
     // DMA data structures
     uint64_t* dcbaa;
-    mx_paddr_t dcbaa_phys;
+    zx_paddr_t dcbaa_phys;
 
     xhci_transfer_ring_t command_ring;
     mtx_t command_ring_lock;
@@ -124,7 +124,7 @@ struct xhci {
     // Only indices up to num_interrupts will be populated.
     xhci_event_ring_t event_rings[INTERRUPTER_COUNT];
     erst_entry_t* erst_arrays[INTERRUPTER_COUNT];
-    mx_paddr_t erst_arrays_phys[INTERRUPTER_COUNT];
+    zx_paddr_t erst_arrays_phys[INTERRUPTER_COUNT];
 
     size_t page_size;
     size_t max_slots;
@@ -163,7 +163,7 @@ struct xhci {
 
     // DMA buffers used by xhci_device_thread in xhci-device-manager.c
     uint8_t* input_context;
-    mx_paddr_t input_context_phys;
+    zx_paddr_t input_context_phys;
     mtx_t input_context_lock;
 
     // for xhci_get_current_frame()
@@ -171,29 +171,29 @@ struct xhci {
     // number of times mfindex has wrapped
     uint64_t mfindex_wrap_count;
    // time of last mfindex wrap
-    mx_time_t last_mfindex_wrap;
+    zx_time_t last_mfindex_wrap;
 
     // VMO buffer for DCBAA and ERST array
-    mx_handle_t dcbaa_erst_handle;
-    mx_vaddr_t dcbaa_erst_virt;
+    zx_handle_t dcbaa_erst_handle;
+    zx_vaddr_t dcbaa_erst_virt;
     // VMO buffer for input context
-    mx_handle_t input_context_handle;
-    mx_vaddr_t input_context_virt;
+    zx_handle_t input_context_handle;
+    zx_vaddr_t input_context_virt;
     // VMO buffer for scratch pad pages
-    mx_handle_t scratch_pad_pages_handle;
-    mx_vaddr_t scratch_pad_pages_virt;
+    zx_handle_t scratch_pad_pages_handle;
+    zx_vaddr_t scratch_pad_pages_virt;
     // VMO buffer for scratch pad index
-    mx_handle_t scratch_pad_index_handle;
-    mx_vaddr_t scratch_pad_index_virt;
+    zx_handle_t scratch_pad_index_handle;
+    zx_vaddr_t scratch_pad_index_virt;
 };
 
 // Initializes num_interrupts field of xhci. The number of interrupts
 // is constrained by the number of interrupters supported by XHCI,
 // number of interrupts supported by MSI, and INTERRUPTER_COUNT.
 void xhci_num_interrupts_init(xhci_t* xhci, void* mmio, uint32_t num_msi_interrupts);
-mx_status_t xhci_init(xhci_t* xhci, void* mmio);
+zx_status_t xhci_init(xhci_t* xhci, void* mmio);
 int xhci_get_ep_ctx_state(xhci_endpoint_t* ep);
-mx_status_t xhci_start(xhci_t* xhci);
+zx_status_t xhci_start(xhci_t* xhci);
 void xhci_handle_interrupt(xhci_t* xhci, bool legacy, uint32_t interrupter);
 void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,
                        xhci_command_context_t* context);
@@ -213,5 +213,5 @@ static inline bool xhci_is_root_hub(xhci_t* xhci, uint32_t device_id) {
 }
 
 // upper layer routines in usb-xhci.c
-mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed);
+zx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed);
 void xhci_remove_device(xhci_t* xhci, int slot_id);

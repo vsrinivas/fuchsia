@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <magenta/types.h>
-#include <magenta/device/audio.h>
+#include <zircon/types.h>
+#include <zircon/device/audio.h>
 
 namespace audio {
 namespace utils {
@@ -21,16 +21,16 @@ public:
 
 class AudioSource : public AudioStream {
 public:
-    virtual mx_status_t GetFormat(Format* out_format) = 0;
-    virtual mx_status_t GetFrames(void* buffer, uint32_t buf_space, uint32_t* out_packed) = 0;
+    virtual zx_status_t GetFormat(Format* out_format) = 0;
+    virtual zx_status_t GetFrames(void* buffer, uint32_t buf_space, uint32_t* out_packed) = 0;
     virtual bool finished() const = 0;
 };
 
 class AudioSink : public AudioStream {
 public:
-    virtual mx_status_t SetFormat(const Format& format) = 0;
-    virtual mx_status_t PutFrames(const void* buffer, uint32_t amt) = 0;
-    virtual mx_status_t Finalize() = 0;
+    virtual zx_status_t SetFormat(const Format& format) = 0;
+    virtual zx_status_t PutFrames(const void* buffer, uint32_t amt) = 0;
+    virtual zx_status_t Finalize() = 0;
 };
 
 }  // namespace utils

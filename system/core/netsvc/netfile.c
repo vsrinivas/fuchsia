@@ -15,11 +15,11 @@
 #include <inet6/inet6.h>
 #include <inet6/netifc.h>
 
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
 #include <launchpad/launchpad.h>
 
-#include <magenta/boot/netboot.h>
+#include <zircon/boot/netboot.h>
 
 #define TMP_SUFFIX ".netsvc.tmp"
 

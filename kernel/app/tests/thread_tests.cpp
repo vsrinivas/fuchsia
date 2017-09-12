@@ -118,7 +118,7 @@ static int event_waiter(void* arg) {
     while (count > 0) {
         printf("thread %p: waiting on event...\n", get_current_thread());
         status_t err = event_wait_deadline(&e, INFINITE_TIME, true);
-        if (err == MX_ERR_INTERNAL_INTR_KILLED) {
+        if (err == ZX_ERR_INTERNAL_INTR_KILLED) {
             printf("thread %p: killed\n");
             return -1;
         } else if (err < 0) {
@@ -599,7 +599,7 @@ int spinner(int argc, const cmd_args* argv) {
 
     thread_t* t = thread_create("spinner", spinner_thread, NULL, (int)argv[1].u, DEFAULT_STACK_SIZE);
     if (!t)
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     if (argc >= 3 && !strcmp(argv[2].str, "rt")) {
         thread_set_real_time(t);

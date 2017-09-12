@@ -1,4 +1,4 @@
-# mx_task_resume
+# zx_task_resume
 
 ## NAME
 
@@ -7,9 +7,9 @@ task_resume - resume the given task
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-mx_status_t mx_task_resume(mx_handle_t task, uint32_t options);
+zx_status_t zx_task_resume(zx_handle_t task, uint32_t options);
 
 ```
 
@@ -20,7 +20,7 @@ an exception or from having been suspended.
 
 ### RESUMING FROM SUSPEND
 
-If **MX_RESUME_EXCEPTION** is not set in *options*, the operation is a
+If **ZX_RESUME_EXCEPTION** is not set in *options*, the operation is a
 resume-from-suspend.
 
 It is an error for *options* to have any options selected in this mode.
@@ -39,7 +39,7 @@ suspended already, **task_resume**() will resume it immediately.  A subsequent
 
 Resuming from exceptions uses the same mechanism as resuming from
 suspensions: **task_resume**(). An option is passed specifying that
-the task is being resumed from an exception: **MX_RESUME_EXCEPTION**.
+the task is being resumed from an exception: **ZX_RESUME_EXCEPTION**.
 
 Note that a thread can be both suspended and in an exception, each
 requiring separate calls to **task_resume**() with appropriate options.
@@ -55,43 +55,43 @@ for a description of exception processing.
 To resume a thread where it left off:
 
 ```
-mx_status_t status = mx_task_resume(thread, MX_RESUME_EXCEPTION);
+zx_status_t status = zx_task_resume(thread, ZX_RESUME_EXCEPTION);
 ```
 
 To pass the exception on to the next handler in the search order,
-pass **MX_RESUME_TRY_NEXT** in addition to
-**MX_RESUME_EXCEPTION**:
+pass **ZX_RESUME_TRY_NEXT** in addition to
+**ZX_RESUME_EXCEPTION**:
 
 ```
-mx_status_t status = mx_task_resume(thread,
-                                    MX_RESUME_EXCEPTION |
-                                    MX_RESUME_TRY_NEXT);
+zx_status_t status = zx_task_resume(thread,
+                                    ZX_RESUME_EXCEPTION |
+                                    ZX_RESUME_TRY_NEXT);
 ```
 
 Note that even though exceptions are sent to handlers in a specific
-order, there is no way for the caller of **mx_task_resume**()
+order, there is no way for the caller of **zx_task_resume**()
 to verify it is that handler. Anyone with appropriate rights
 can resume a thread from an exception. It is up to exception
 handlers to not trip over each other, as well as all other
-software calling **mx_task_resume**() with **MX_RESUME_EXCEPTION**.
+software calling **zx_task_resume**() with **ZX_RESUME_EXCEPTION**.
 (MG-562 documents this issue.)
 
 ## RETURN VALUE
 
-**task_resume**() returns **MX_OK** on success.
+**task_resume**() returns **ZX_OK** on success.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS
 
-**MX_ERR_BAD_HANDLE** *handle* is not a valid handle.
+**ZX_ERR_BAD_HANDLE** *handle* is not a valid handle.
 
-**MX_ERR_WRONG_TYPE** *handle* is not a thread handle.
+**ZX_ERR_WRONG_TYPE** *handle* is not a thread handle.
 
-**MX_ERR_BAD_STATE**  The task is not in a state where resuming is possible (e.g.
-it is dead or **MX_RESUME_EXCEPTION** was passed but the thread is not in an
+**ZX_ERR_BAD_STATE**  The task is not in a state where resuming is possible (e.g.
+it is dead or **ZX_RESUME_EXCEPTION** was passed but the thread is not in an
 exception).
 
-**MX_ERR_INVALID_ARGS** *options* is not a valid combination.
+**ZX_ERR_INVALID_ARGS** *options* is not a valid combination.
 
 ## LIMITATIONS
 

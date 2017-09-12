@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -27,9 +27,9 @@ typedef struct launchpad launchpad_t;
 //   launchpad_set_args(lp, argc, argv);
 //   launchpad_set_environ(lp, env);
 //   << other launchpad_*() calls to setup initial fds, handles, etc >>
-//   mx_handle_t proc;
+//   zx_handle_t proc;
 //   const char* errmsg;
-//   mx_status_t status = launchpad_go(lp, &proc, &errmsg);
+//   zx_status_t status = launchpad_go(lp, &proc, &errmsg);
 //   if (status < 0)
 //       printf("launchpad failed: %s: %d\n", errmsg, status);
 //
@@ -54,13 +54,13 @@ typedef struct launchpad launchpad_t;
 // The job handle is used for creation of the process, but is not
 // taken ownership of or closed.
 //
-// If the job handle is 0 (MX_HANDLE_INVALID), the default job for
-// the running process is used, if it exists (mx_job_default()).
+// If the job handle is 0 (ZX_HANDLE_INVALID), the default job for
+// the running process is used, if it exists (zx_job_default()).
 //
 // Unless the new process is provided with a job handle, at time
 // of launch or later, it will not be able to create any more
 // processes.
-mx_status_t launchpad_create(mx_handle_t job, const char* name,
+zx_status_t launchpad_create(zx_handle_t job, const char* name,
                              launchpad_t** lp);
 
 // Create a new process and a launchpad that will set it up.
@@ -70,16 +70,16 @@ mx_status_t launchpad_create(mx_handle_t job, const char* name,
 // The transferred_job handle is optional.  If non-zero, it is
 // consumed by the launchpad and will be passed to the new process
 // on successful launch or closed on failure.
-mx_status_t launchpad_create_with_jobs(mx_handle_t creation_job,
-                                       mx_handle_t transferred_job,
+zx_status_t launchpad_create_with_jobs(zx_handle_t creation_job,
+                                       zx_handle_t transferred_job,
                                        const char* name,
                                        launchpad_t** result);
 
 // Create a new launchpad for a given existing process handle and a
 // its root VMAR handle.  On success, the launchpad takes ownership
 // of both handles.
-mx_status_t launchpad_create_with_process(mx_handle_t proc,
-                                          mx_handle_t vmar,
+zx_status_t launchpad_create_with_process(zx_handle_t proc,
+                                          zx_handle_t vmar,
                                           launchpad_t** result);
 
 
@@ -97,7 +97,7 @@ mx_status_t launchpad_create_with_process(mx_handle_t proc,
 // The launchpad is destroyed (via launchpad_destroy()) before this returns,
 // all resources are reclaimed, handles are closed, and may not be accessed
 // again.
-mx_status_t launchpad_go(launchpad_t* lp, mx_handle_t* proc, const char** errmsg);
+zx_status_t launchpad_go(launchpad_t* lp, zx_handle_t* proc, const char** errmsg);
 
 // Clean up a launchpad_t, freeing all resources stored therein.
 // TODO(mcgrathr): Currently this closes the process handle but does
@@ -108,14 +108,14 @@ void launchpad_destroy(launchpad_t* lp);
 // any calls to launchpad_go() will fail.
 // If it is not already in an error state, the error state is
 // set to status, and errmsg is set to msg.
-// If status is non-negative, it is interpreted as MX_ERR_INTERNAL.
-void launchpad_abort(launchpad_t* lp, mx_status_t status, const char* msg);
+// If status is non-negative, it is interpreted as ZX_ERR_INTERNAL.
+void launchpad_abort(launchpad_t* lp, zx_status_t status, const char* msg);
 
 // If any launchpad_*() call against this lp has failed, this returns
 // a human-readable detailed message describing the failure that may
 // assist in debugging.
 const char* launchpad_error_message(launchpad_t* lp);
-mx_status_t launchpad_get_status(launchpad_t* lp);
+zx_status_t launchpad_get_status(launchpad_t* lp);
 
 
 // SIMPLIFIED BINARY LOADING
@@ -125,13 +125,13 @@ mx_status_t launchpad_get_status(launchpad_t* lp);
 // -------------------------------------------------------------------
 
 // Load an ELF PIE binary from path
-mx_status_t launchpad_load_from_file(launchpad_t* lp, const char* path);
+zx_status_t launchpad_load_from_file(launchpad_t* lp, const char* path);
 
 // Load an ELF PIE binary from fd
-mx_status_t launchpad_load_from_fd(launchpad_t* lp, int fd);
+zx_status_t launchpad_load_from_fd(launchpad_t* lp, int fd);
 
 // Load an ELF PIE binary from vmo
-mx_status_t launchpad_load_from_vmo(launchpad_t* lp, mx_handle_t vmo);
+zx_status_t launchpad_load_from_vmo(launchpad_t* lp, zx_handle_t vmo);
 
 
 // ADDING ARGUMENTS, ENVIRONMENT, AND HANDLES
@@ -143,10 +143,10 @@ mx_status_t launchpad_load_from_vmo(launchpad_t* lp, mx_handle_t vmo);
 // bootstrap message.  All the strings are copied into the launchpad
 // by this call, with no pointers to these argument strings retained.
 // Successive calls replace the previous values.
-mx_status_t launchpad_set_args(launchpad_t* lp,
+zx_status_t launchpad_set_args(launchpad_t* lp,
                                int argc, const char* const* argv);
-mx_status_t launchpad_set_environ(launchpad_t* lp, const char* const* envp);
-mx_status_t launchpad_set_nametable(launchpad_t* lp,
+zx_status_t launchpad_set_environ(launchpad_t* lp, const char* const* envp);
+zx_status_t launchpad_set_nametable(launchpad_t* lp,
                                     size_t count, const char* const* names);
 
 
@@ -155,14 +155,14 @@ mx_status_t launchpad_set_nametable(launchpad_t* lp,
 // by launchpad_destroy or transferred by launchpad_start.
 // Successive calls append more handles.  The list of handles to
 // send is cleared only by a successful launchpad_start call.
-// It is an error to add a handle of 0 (MX_HANDLE_INVALID)
-mx_status_t launchpad_add_handle(launchpad_t* lp, mx_handle_t h, uint32_t id);
-mx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
-                                  const mx_handle_t h[], const uint32_t id[]);
+// It is an error to add a handle of 0 (ZX_HANDLE_INVALID)
+zx_status_t launchpad_add_handle(launchpad_t* lp, zx_handle_t h, uint32_t id);
+zx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
+                                  const zx_handle_t h[], const uint32_t id[]);
 
-// ADDING MXIO FILE DESCRIPTORS
+// ADDING FDIO FILE DESCRIPTORS
 // These functions configure the initial file descriptors, root directory,
-// and current working directory for processes which use libmxio for the
+// and current working directory for processes which use libfdio for the
 // posix-style io api (open/close/read/write/...)
 // --------------------------------------------------------------------
 
@@ -171,9 +171,9 @@ mx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
 // running process to be shared with the process being launched.
 // The items shared are as of the call to launchpad_clone().
 //
-// CLONE_MXIO_NAMESPACE  shares the filestem namespace
-// CLONE_MXIO_CWD        shares the current working directory
-// CLONE_MXIO_STDIO      shares file descriptors 0, 1, and 2
+// CLONE_FDIO_NAMESPACE  shares the filestem namespace
+// CLONE_FDIO_CWD        shares the current working directory
+// CLONE_FDIO_STDIO      shares file descriptors 0, 1, and 2
 // CLONE_ENVIRON         shares the environment
 // CLONE_JOB             shares the default job (if one exists)
 //
@@ -182,37 +182,37 @@ mx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
 //
 // launchpad_clone_fd() and launchpad_trasnfer_fd() may be used to
 // add additional file descriptors to the launched process.
-#define LP_CLONE_MXIO_NAMESPACE  (0x0001u)
-#define LP_CLONE_MXIO_CWD        (0x0002u)
-#define LP_CLONE_MXIO_STDIO      (0x0004u)
-#define LP_CLONE_MXIO_ALL        (0x00FFu)
+#define LP_CLONE_FDIO_NAMESPACE  (0x0001u)
+#define LP_CLONE_FDIO_CWD        (0x0002u)
+#define LP_CLONE_FDIO_STDIO      (0x0004u)
+#define LP_CLONE_FDIO_ALL        (0x00FFu)
 #define LP_CLONE_ENVIRON         (0x0100u)
 #define LP_CLONE_DEFAULT_JOB     (0x0200u)
 #define LP_CLONE_ALL             (0xFFFFu)
 
-mx_status_t launchpad_clone(launchpad_t* lp, uint32_t what);
+zx_status_t launchpad_clone(launchpad_t* lp, uint32_t what);
 
 
 // Attempt to duplicate local descriptor fd into target_fd in the
-// new process.  Returns MX_ERR_BAD_HANDLE if fd is not a valid fd, or
-// MX_ERR_NOT_SUPPORTED if it's not possible to transfer this fd.
-mx_status_t launchpad_clone_fd(launchpad_t* lp, int fd, int target_fd);
+// new process.  Returns ZX_ERR_BAD_HANDLE if fd is not a valid fd, or
+// ZX_ERR_NOT_SUPPORTED if it's not possible to transfer this fd.
+zx_status_t launchpad_clone_fd(launchpad_t* lp, int fd, int target_fd);
 
 // Attempt to transfer local descriptor fd into target_fd in the
-// new process.  Returns MX_ERR_BAD_HANDLE if fd is not a valid fd,
+// new process.  Returns ZX_ERR_BAD_HANDLE if fd is not a valid fd,
 // ERR_UNAVILABLE if fd has been duplicated or is in use in an
-// io operation, or MX_ERR_NOT_SUPPORTED if it's not possible to transfer
+// io operation, or ZX_ERR_NOT_SUPPORTED if it's not possible to transfer
 // this fd.
 // Upon success, from the point of view of the calling process, the fd
 // will appear to have been closed.  The underlying "file" will continue
 // to exist until launch succeeds (and it is transferred) or fails (and
 // it is destroyed).
-mx_status_t launchpad_transfer_fd(launchpad_t* lp, int fd, int target_fd);
+zx_status_t launchpad_transfer_fd(launchpad_t* lp, int fd, int target_fd);
 
 // Attempt to create a pipe and install one end of that pipe as
 // target_fd in the new process and return the other end (if
 // successful) via the fd_out parameter.
-mx_status_t launchpad_add_pipe(launchpad_t* lp, int* fd_out, int target_fd);
+zx_status_t launchpad_add_pipe(launchpad_t* lp, int* fd_out, int target_fd);
 
 
 // ACCESSORS for internal state
@@ -220,11 +220,11 @@ mx_status_t launchpad_add_pipe(launchpad_t* lp, int* fd_out, int target_fd);
 
 // Fetch the process handle.  The launchpad still owns this handle
 // and callers must not close it or transfer it away.
-mx_handle_t launchpad_get_process_handle(launchpad_t* lp);
+zx_handle_t launchpad_get_process_handle(launchpad_t* lp);
 
 // Fetch the process's root VMAR handle.  The launchpad still owns this handle
 // and callers must not close it or transfer it away.
-mx_handle_t launchpad_get_root_vmar_handle(launchpad_t* lp);
+zx_handle_t launchpad_get_root_vmar_handle(launchpad_t* lp);
 
 
 // ADVANCED BINARY LOADING
@@ -240,7 +240,7 @@ mx_handle_t launchpad_get_root_vmar_handle(launchpad_t* lp);
 // than a handle, that result is just returned immediately; so this
 // can be passed the result of <launchpad/vmo.h> functions without
 // separate error checking.
-mx_status_t launchpad_elf_load_basic(launchpad_t* lp, mx_handle_t vmo);
+zx_status_t launchpad_elf_load_basic(launchpad_t* lp, zx_handle_t vmo);
 
 // Do general loading of the ELF file image found in a VM object.
 // The interface follows the same rules as launchpad_elf_load_basic.
@@ -250,7 +250,7 @@ mx_status_t launchpad_elf_load_basic(launchpad_t* lp, mx_handle_t vmo);
 // resulting VM object is loaded instead of the handle passed here,
 // which is instead transferred to the dynamic linker in the
 // bootstrap message.
-mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo);
+zx_status_t launchpad_elf_load(launchpad_t* lp, zx_handle_t vmo);
 
 // Load an extra ELF file image into the process.  This is similar
 // to launchpad_elf_load_basic, but it does not consume the VM
@@ -260,8 +260,8 @@ mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo);
 // launchpad_start.  Instead, if base is not NULL, it's filled with
 // the address at which the image was loaded; if entry is not NULL,
 // it's filled with the image's entrypoint address.
-mx_status_t launchpad_elf_load_extra(launchpad_t* lp, mx_handle_t vmo,
-                                     mx_vaddr_t* base, mx_vaddr_t* entry);
+zx_status_t launchpad_elf_load_extra(launchpad_t* lp, zx_handle_t vmo,
+                                     zx_vaddr_t* base, zx_vaddr_t* entry);
 
 // Load an executable file into memory. If the file is an ELF file, it
 // will be loaded as per launchpad_elf_load. If it is a script (the
@@ -272,9 +272,9 @@ mx_status_t launchpad_elf_load_extra(launchpad_t* lp, mx_handle_t vmo,
 // as the first argument to the interpreter, followed by all of the
 // original argv arguments (which includes the script name in argv[0]).
 // The length of the first line of an interpreted script may not exceed
-// 127 characters, or MX_ERR_NOT_FOUND will be returned. If an invalid vmo
-// handle is passed, MX_ERR_INVALID_ARGS will be returned.
-mx_status_t launchpad_file_load(launchpad_t* lp, mx_handle_t vmo);
+// 127 characters, or ZX_ERR_NOT_FOUND will be returned. If an invalid vmo
+// handle is passed, ZX_ERR_INVALID_ARGS will be returned.
+zx_status_t launchpad_file_load(launchpad_t* lp, zx_handle_t vmo);
 
 // The maximum length of the first line of a file that specifies an
 // interpreter, using the #! syntax.
@@ -285,13 +285,13 @@ mx_status_t launchpad_file_load(launchpad_t* lp, mx_handle_t vmo);
 
 // Discover the entry-point address after a successful call to
 // launchpad_elf_load or launchpad_elf_load_basic.  This can be used
-// in mx_process_start directly rather than calling launchpad_start,
+// in zx_process_start directly rather than calling launchpad_start,
 // to bypass sending the standard startup message.
-mx_status_t launchpad_get_entry_address(launchpad_t* lp, mx_vaddr_t* entry);
+zx_status_t launchpad_get_entry_address(launchpad_t* lp, zx_vaddr_t* entry);
 
 // Return the base address after a successful call to
 // launchpad_elf_load or launchpad_elf_load_basic.
-mx_status_t launchpad_get_base_address(launchpad_t* lp, mx_vaddr_t* base);
+zx_status_t launchpad_get_base_address(launchpad_t* lp, zx_vaddr_t* base);
 
 // Set the flag saying whether to send an initial bootstrap message
 // for the dynamic linker, and return the old value of the flag.
@@ -307,41 +307,41 @@ bool launchpad_send_loader_message(launchpad_t* lp, bool do_send);
 // linker.  This consumes the handle passed, and returns the old
 // handle (passing ownership of it to the caller).  If no handle has
 // been explicitly specified when launchpad_elf_load encounters a
-// PT_INTERP header, it will launch mxio_loader_service and install
+// PT_INTERP header, it will launch fdio_loader_service and install
 // that handle (after using it to look up the PT_INTERP string).
-mx_handle_t launchpad_use_loader_service(launchpad_t* lp, mx_handle_t svc);
+zx_handle_t launchpad_use_loader_service(launchpad_t* lp, zx_handle_t svc);
 
 // This duplicates the globally-held VM object handle for the system
-// vDSO.  The return value is that of mx_handle_duplicate.  If
+// vDSO.  The return value is that of zx_handle_duplicate.  If
 // launchpad_set_vdso_vmo has been called with a valid handle, this
 // just duplicates the handle passed in the last call.  Otherwise,
 // the first time the system vDSO is needed it's fetched with
-// mx_get_startup_handle.
-mx_status_t launchpad_get_vdso_vmo(mx_handle_t* out);
+// zx_get_startup_handle.
+zx_status_t launchpad_get_vdso_vmo(zx_handle_t* out);
 
 // Replace the globally-held VM object handle for the system vDSO.
 // This takes ownership of the given handle, and returns the old
 // handle, of which the caller takes ownership.  It does not check
-// the handle for validity.  If MX_HANDLE_INVALID is passed here,
+// the handle for validity.  If ZX_HANDLE_INVALID is passed here,
 // then the next time the system vDSO is needed it will be fetched
-// with mx_get_startup_handle as if it were the first time.  If
+// with zx_get_startup_handle as if it were the first time.  If
 // the system vDSO has not been needed before this call, then the
-// return value will be MX_HANDLE_INVALID.
-mx_handle_t launchpad_set_vdso_vmo(mx_handle_t vmo);
+// return value will be ZX_HANDLE_INVALID.
+zx_handle_t launchpad_set_vdso_vmo(zx_handle_t vmo);
 
 // Add the VM object handle for the system vDSO to the launchpad, so
 // the launched process will be able to load it into its own
 // children.  This is just shorthand for launchpad_add_handle with
 // the handle returned by launchpad_get_vdso_vmo.
-mx_status_t launchpad_add_vdso_vmo(launchpad_t* lp);
+zx_status_t launchpad_add_vdso_vmo(launchpad_t* lp);
 
 // Load the system vDSO into the launchpad's nascent process.  The
-// given handle is not consumed.  If given MX_HANDLE_INVALID, this
+// given handle is not consumed.  If given ZX_HANDLE_INVALID, this
 // uses the VM object that launchpad_get_vdso_vmo would return
 // instead.  This just calls launchpad_elf_load_extra to do the
 // loading, and records the vDSO's base address for launchpad_start
 // to pass to the new process's initial thread.
-mx_status_t launchpad_load_vdso(launchpad_t* lp, mx_handle_t vmo);
+zx_status_t launchpad_load_vdso(launchpad_t* lp, zx_handle_t vmo);
 
 // Set the size of the initial thread's stack, and return the old setting.
 // The initial setting after launchpad_create is a system default.
@@ -365,7 +365,7 @@ size_t launchpad_set_stack_size(launchpad_t* lp, size_t new_size);
 // process, so on failure the loader-service handle might or might
 // not have been cleared and the handles to transfer might or might
 // not have been cleared.
-mx_handle_t launchpad_start(launchpad_t* lp);
+zx_handle_t launchpad_start(launchpad_t* lp);
 
 // Start a new thread in the process, assuming this was a launchpad
 // created with launchpad_create_with_process and the process has
@@ -376,8 +376,8 @@ mx_handle_t launchpad_start(launchpad_t* lp);
 // handle.  The other end of this channel must already be
 // present in the target process, with the given handle value in the
 // target process's handle space.
-mx_status_t launchpad_start_injected(launchpad_t* lp, const char* thread_name,
-                                     mx_handle_t to_child,
+zx_status_t launchpad_start_injected(launchpad_t* lp, const char* thread_name,
+                                     zx_handle_t to_child,
                                      uintptr_t bootstrap_handle_in_child);
 
 

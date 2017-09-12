@@ -5,7 +5,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #define TRIALS 10000
 #define BINS 32
@@ -15,9 +15,9 @@ int main(int argc, char** argv) {
     uint64_t values[BINS] = { 0 };
 
     size_t sz = 0;
-    mx_cprng_draw(&buf, sizeof(buf), &sz);
+    zx_cprng_draw(&buf, sizeof(buf), &sz);
     if (sz != sizeof(buf)) {
-        printf("mx_cprng_draw had unexpected return: %zu\n", sz);
+        printf("zx_cprng_draw had unexpected return: %zu\n", sz);
         return 1;
     }
     printf("Drew %zd bytes: ", sizeof(buf));
@@ -29,9 +29,9 @@ int main(int argc, char** argv) {
     for (unsigned int i = 0; i < TRIALS; ++i) {
         uint8_t byte;
         size_t sz = 0;
-        mx_cprng_draw(&byte, 1, &sz);
+        zx_cprng_draw(&byte, 1, &sz);
         if (sz != 1) {
-            printf("mx_cprng_draw returned an error: %zu\n", sz);
+            printf("zx_cprng_draw returned an error: %zu\n", sz);
             return 1;
         }
         values[byte % BINS]++;

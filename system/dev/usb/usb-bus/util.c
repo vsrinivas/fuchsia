@@ -14,15 +14,15 @@ static void usb_device_control_complete(iotxn_t* txn, void* cookie) {
     completion_signal((completion_t*)cookie);
 }
 
-mx_status_t usb_device_control(mx_device_t* hci_device, uint32_t device_id,
+zx_status_t usb_device_control(zx_device_t* hci_device, uint32_t device_id,
                                uint8_t request_type,  uint8_t request, uint16_t value,
                                uint16_t index, void* data, size_t length) {
     iotxn_t* txn;
 
     uint32_t flags = (length == 0 ? IOTXN_ALLOC_POOL : 0);
-    mx_status_t status = iotxn_alloc(&txn, flags, length);
-    if (status != MX_OK) return status;
-    txn->protocol = MX_PROTOCOL_USB;
+    zx_status_t status = iotxn_alloc(&txn, flags, length);
+    if (status != ZX_OK) return status;
+    txn->protocol = ZX_PROTOCOL_USB;
     usb_protocol_data_t* proto_data = iotxn_pdata(txn, usb_protocol_data_t);
     memset(proto_data, 0, sizeof(*proto_data));
 
@@ -47,10 +47,10 @@ mx_status_t usb_device_control(mx_device_t* hci_device, uint32_t device_id,
     txn->complete_cb = usb_device_control_complete;
     txn->cookie = &completion;
     iotxn_queue(hci_device, txn);
-    completion_wait(&completion, MX_TIME_INFINITE);
+    completion_wait(&completion, ZX_TIME_INFINITE);
 
     status = txn->status;
-    if (status == MX_OK) {
+    if (status == ZX_OK) {
         status = txn->actual;
 
         if (length > 0 && !out) {
@@ -61,13 +61,13 @@ mx_status_t usb_device_control(mx_device_t* hci_device, uint32_t device_id,
     return status;
 }
 
-mx_status_t usb_device_get_descriptor(mx_device_t* hci_device, uint32_t device_id, uint16_t type,
+zx_status_t usb_device_get_descriptor(zx_device_t* hci_device, uint32_t device_id, uint16_t type,
                                       uint16_t index, uint16_t language, void* data, size_t length) {
     return usb_device_control(hci_device, device_id, USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
                            USB_REQ_GET_DESCRIPTOR, type << 8 | index, language, data, length);
 }
 
-mx_status_t usb_device_get_string_descriptor(mx_device_t* hci_device, uint32_t device_id, uint8_t id,
+zx_status_t usb_device_get_string_descriptor(zx_device_t* hci_device, uint32_t device_id, uint8_t id,
                                              char* buf, size_t buflen) {
     uint16_t buffer[128];
     uint16_t languages[128];
@@ -77,7 +77,7 @@ mx_status_t usb_device_get_string_descriptor(mx_device_t* hci_device, uint32_t d
     memset(languages, 0, sizeof(languages));
 
     // read list of supported languages
-    mx_status_t result = usb_device_get_descriptor(hci_device, device_id, USB_DT_STRING, 0, 0,
+    zx_status_t result = usb_device_get_descriptor(hci_device, device_id, USB_DT_STRING, 0, 0,
                                                    languages, sizeof(languages));
     if (result < 0) {
         return result;

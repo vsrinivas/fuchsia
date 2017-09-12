@@ -12,7 +12,7 @@ MODULE_GROUP := misc
 MODULE_SRCS += \
 	$(LOCAL_DIR)/bcmctl.c
 
-MODULE_LIBS := system/ulib/magenta system/ulib/mxio system/ulib/c
+MODULE_LIBS := system/ulib/zircon system/ulib/fdio system/ulib/c
 
 MODULE_STATIC_LIBS := system/ulib/bcm
 

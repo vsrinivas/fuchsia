@@ -6,8 +6,8 @@
 
 #include <stddef.h>
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include <stdint.h>
 
@@ -66,16 +66,16 @@ public:
 
     // Converts a |hex| string to binary and stores it in this->data.  The
     // string must contain at least |kLength| * 2 valid hex characters.
-    mx_status_t Parse(const char* hex, size_t len);
+    zx_status_t Parse(const char* hex, size_t len);
 
     // Writes the current digest to |out| as a null-terminated, hex-encoded
     // string.  |out| must have room for (kLength * 2) + 1 characters to
     // succeed.
-    mx_status_t ToString(char* out, size_t len) const;
+    zx_status_t ToString(char* out, size_t len) const;
 
     // Write the current digest to |out|.  |len| must be at least kLength to
     // succeed.
-    mx_status_t CopyTo(uint8_t* out, size_t len) const;
+    zx_status_t CopyTo(uint8_t* out, size_t len) const;
 
     // Returns a pointer to a buffer containing the current digest value.  This
     // will always have |kLength| bytes.  Each call to |AcquireBytes| must have
@@ -136,7 +136,7 @@ typedef struct digest_t digest_t;
 // C wrapper for |Digest::Init|.  On success this function allocates memory and
 // returns it in |out|.  The caller must make a call to |digest_final| to free
 // this memory.
-mx_status_t digest_init(digest_t** out);
+zx_status_t digest_init(digest_t** out);
 
 // C wrapper for |Digest::Update|.
 void digest_update(digest_t* digest, const void* buf, size_t len);
@@ -144,10 +144,10 @@ void digest_update(digest_t* digest, const void* buf, size_t len);
 // C wrapper for |Digest::Final|. |out| must point to a buffer with room for at
 // least |DIGEST_LENGTH| bytes.  This method frees |digest|, which must not be
 // used again after this call.
-mx_status_t digest_final(digest_t* digest, void* out, size_t out_len);
+zx_status_t digest_final(digest_t* digest, void* out, size_t out_len);
 
 // C wrapper for |Digest::Hash|.  |out| must point to a buffer with room for at
 // least |DIGEST_LENGTH| bytes.
-mx_status_t digest_hash(const void* buf, size_t len, void* out, size_t out_len);
+zx_status_t digest_hash(const void* buf, size_t len, void* out, size_t out_len);
 
 __END_CDECLS

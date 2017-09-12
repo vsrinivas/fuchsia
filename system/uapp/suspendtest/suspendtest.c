@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/device/device.h>
+#include <zircon/device/device.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
 
     printf("suspending %s\n", path);
     int ret = ioctl_device_debug_suspend(fd);
-    if (ret != MX_OK) {
+    if (ret != ZX_OK) {
         fprintf(stderr, "suspend failed: %d\n", ret);
         goto out;
     }
@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
 
     printf("resuming %s\n", path);
     ret = ioctl_device_debug_resume(fd);
-    if (ret != MX_OK) {
+    if (ret != ZX_OK) {
         fprintf(stderr, "resume failed: %d\n", ret);
     }
 

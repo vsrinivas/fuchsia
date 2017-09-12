@@ -12,7 +12,7 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <fbl/atomic.h>
 #include <unittest/unittest.h>
 

@@ -14,8 +14,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/audio-output.cpp
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mx \
-    system/ulib/mxio \
+    system/ulib/zx \
+    system/ulib/fdio \
     system/ulib/fbl
 
 include make/module.mk

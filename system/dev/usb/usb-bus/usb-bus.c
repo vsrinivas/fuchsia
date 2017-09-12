@@ -16,8 +16,8 @@
 
 // Represents a USB bus, which manages all devices for a USB host controller
 typedef struct usb_bus {
-    mx_device_t* mxdev;
-    mx_device_t* hci_mxdev;
+    zx_device_t* mxdev;
+    zx_device_t* hci_mxdev;
     usb_hci_protocol_t hci;
 
     // top-level USB devices, indexed by device_id
@@ -25,16 +25,16 @@ typedef struct usb_bus {
     size_t max_device_count;
 } usb_bus_t;
 
-static mx_status_t bus_add_device(void* ctx, uint32_t device_id, uint32_t hub_id,
+static zx_status_t bus_add_device(void* ctx, uint32_t device_id, uint32_t hub_id,
                                       usb_speed_t speed) {
     usb_bus_t* bus = ctx;
 
-    if (device_id >= bus->max_device_count) return MX_ERR_INVALID_ARGS;
+    if (device_id >= bus->max_device_count) return ZX_ERR_INVALID_ARGS;
 
     usb_device_t* usb_device;
-    mx_status_t result = usb_device_add(bus->hci_mxdev, &bus->hci, bus->mxdev, device_id,
+    zx_status_t result = usb_device_add(bus->hci_mxdev, &bus->hci, bus->mxdev, device_id,
                                         hub_id, speed, &usb_device);
-    if (result == MX_OK) {
+    if (result == ZX_OK) {
         bus->devices[device_id] = usb_device;
     }
     return result;
@@ -58,30 +58,30 @@ static usb_bus_interface_ops_t _bus_interface = {
     .remove_device = bus_remove_device,
 };
 
-static mx_status_t bus_configure_hub(void* ctx, mx_device_t* hub_device, usb_speed_t speed,
+static zx_status_t bus_configure_hub(void* ctx, zx_device_t* hub_device, usb_speed_t speed,
                                          usb_hub_descriptor_t* descriptor) {
     usb_bus_t* bus = ctx;
     uint32_t hub_id;
-    if (usb_interface_get_device_id(hub_device, &hub_id) != MX_OK) {
-        return MX_ERR_INTERNAL;
+    if (usb_interface_get_device_id(hub_device, &hub_id) != ZX_OK) {
+        return ZX_ERR_INTERNAL;
     }
     return usb_hci_configure_hub(&bus->hci, hub_id, speed, descriptor);
 }
 
-static mx_status_t bus_device_added(void* ctx, mx_device_t* hub_device, int port, usb_speed_t speed) {
+static zx_status_t bus_device_added(void* ctx, zx_device_t* hub_device, int port, usb_speed_t speed) {
     usb_bus_t* bus = ctx;
     uint32_t hub_id;
-    if (usb_interface_get_device_id(hub_device, &hub_id) != MX_OK) {
-        return MX_ERR_INTERNAL;
+    if (usb_interface_get_device_id(hub_device, &hub_id) != ZX_OK) {
+        return ZX_ERR_INTERNAL;
     }
     return usb_hci_hub_device_added(&bus->hci, hub_id, port, speed);
 }
 
-static mx_status_t bus_device_removed(void* ctx, mx_device_t* hub_device, int port) {
+static zx_status_t bus_device_removed(void* ctx, zx_device_t* hub_device, int port) {
     usb_bus_t* bus = ctx;
     uint32_t hub_id;
-    if (usb_interface_get_device_id(hub_device, &hub_id) != MX_OK) {
-        return MX_ERR_INTERNAL;
+    if (usb_interface_get_device_id(hub_device, &hub_id) != ZX_OK) {
+        return ZX_ERR_INTERNAL;
     }
     return usb_hci_hub_device_removed(&bus->hci, hub_id, port);
 }
@@ -112,22 +112,22 @@ static void usb_bus_release(void* ctx) {
     free(bus);
 }
 
-static mx_protocol_device_t usb_bus_device_proto = {
+static zx_protocol_device_t usb_bus_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .unbind = usb_bus_unbind,
     .release = usb_bus_release,
 };
 
-static mx_status_t usb_bus_bind(void* ctx, mx_device_t* device, void** cookie) {
+static zx_status_t usb_bus_bind(void* ctx, zx_device_t* device, void** cookie) {
     usb_bus_t* bus = calloc(1, sizeof(usb_bus_t));
     if (!bus) {
         dprintf(ERROR, "Not enough memory for usb_bus_t.\n");
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
-    if (device_get_protocol(device, MX_PROTOCOL_USB_HCI, &bus->hci)) {
+    if (device_get_protocol(device, ZX_PROTOCOL_USB_HCI, &bus->hci)) {
         free(bus);
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     bus->hci_mxdev = device;
@@ -137,7 +137,7 @@ static mx_status_t usb_bus_bind(void* ctx, mx_device_t* device, void** cookie) {
         dprintf(ERROR, "Not enough memory for usb_bus_t->devices. max_device_count: %zu\n",
                bus->max_device_count);
         free(bus);
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     device_add_args_t args = {
@@ -145,13 +145,13 @@ static mx_status_t usb_bus_bind(void* ctx, mx_device_t* device, void** cookie) {
         .name = "usb",
         .ctx = bus,
         .ops = &usb_bus_device_proto,
-        .proto_id = MX_PROTOCOL_USB_BUS,
+        .proto_id = ZX_PROTOCOL_USB_BUS,
         .proto_ops = &_bus_protocol,
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    mx_status_t status = device_add(device, &args, &bus->mxdev);
-    if (status == MX_OK) {
+    zx_status_t status = device_add(device, &args, &bus->mxdev);
+    if (status == ZX_OK) {
         static usb_bus_interface_t bus_intf;
         bus_intf.ops = &_bus_interface;
         bus_intf.ctx = bus;
@@ -164,11 +164,11 @@ static mx_status_t usb_bus_bind(void* ctx, mx_device_t* device, void** cookie) {
     return status;
 }
 
-static mx_driver_ops_t usb_bus_driver_ops = {
+static zx_driver_ops_t usb_bus_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = usb_bus_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(usb_bus, usb_bus_driver_ops, "magenta", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_USB_HCI),
-MAGENTA_DRIVER_END(usb_bus)
+ZIRCON_DRIVER_BEGIN(usb_bus, usb_bus_driver_ops, "zircon", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_USB_HCI),
+ZIRCON_DRIVER_END(usb_bus)

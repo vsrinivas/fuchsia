@@ -11,7 +11,7 @@
 #include <arch/defines.h>
 #include <arch/efi.h>
 #include <vm/initial_map.h>
-#include <magenta/tls.h>
+#include <zircon/tls.h>
 
 #ifndef __has_feature
 #define __has_feature(x) 0
@@ -415,7 +415,7 @@ FUNCTION(arm_reset)
 
     // Choose a good (ideally random) stack-guard value as early as possible.
     bl      choose_stack_guard
-    str	    x0, [tmp, #MX_TLS_STACK_GUARD_OFFSET]
+    str	    x0, [tmp, #ZX_TLS_STACK_GUARD_OFFSET]
     // Don't leak the value to other code.
     mov	    x0, xzr
 

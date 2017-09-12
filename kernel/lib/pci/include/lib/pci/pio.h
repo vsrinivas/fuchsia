@@ -5,7 +5,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 namespace Pci {
     constexpr uint32_t PciBdfAddr(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off) {
@@ -15,10 +15,10 @@ namespace Pci {
                 (off & 0xFC));         // bits 7-2 register, bits 1 & 0 must be zero
     }
 
-    mx_status_t PioCfgRead(uint32_t addr, uint32_t* val, size_t width);
-    mx_status_t PioCfgRead(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset,
+    zx_status_t PioCfgRead(uint32_t addr, uint32_t* val, size_t width);
+    zx_status_t PioCfgRead(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset,
             uint32_t* val, size_t width);
-    mx_status_t PioCfgWrite(uint32_t addr, uint32_t val, size_t width);
-    mx_status_t PioCfgWrite(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset,
+    zx_status_t PioCfgWrite(uint32_t addr, uint32_t val, size_t width);
+    zx_status_t PioCfgWrite(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset,
             uint32_t val, size_t width);
 }

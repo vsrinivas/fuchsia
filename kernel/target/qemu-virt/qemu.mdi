@@ -1,4 +1,4 @@
-include "system/public/magenta/mdi/magenta.mdi"
+include "system/public/zircon/mdi/zircon.mdi"
 
 cpu-map = {
     clusters = {

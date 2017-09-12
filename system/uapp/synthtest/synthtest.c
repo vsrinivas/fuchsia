@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/device/midi.h>
+#include <zircon/device/midi.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <math.h>
@@ -13,7 +13,7 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 #include "midi.h"
 
@@ -255,7 +255,7 @@ static int open_sink(uint32_t* out_sample_rate) {
             }
         }
         ret = ioctl_audio_set_sample_rate(fd, &sample_rate);
-        if (ret != MX_OK) {
+        if (ret != ZX_OK) {
             printf("%s ioctl_audio_set_sample_rate failed for %d\n", devname, sample_rate);
             goto next;
         }

@@ -12,15 +12,15 @@
 #include <errno.h>
 #include <threads.h>
 
-#include <magenta/syscalls.h>
-#include <magenta/device/device.h>
-#include <magenta/device/test.h>
+#include <zircon/syscalls.h>
+#include <zircon/device/device.h>
+#include <zircon/device/test.h>
 #include <unittest/unittest.h>
 
 #define DRIVER_TEST_DIR "/boot/driver/test"
 #define DEV_TEST "/dev/misc/test"
 
-static void do_one_test(int tfd, const char* drv_libname, mx_handle_t output, test_ioctl_test_report_t* report) {
+static void do_one_test(int tfd, const char* drv_libname, zx_handle_t output, test_ioctl_test_report_t* report) {
     char devpath[1024];
     ssize_t rc = ioctl_test_create_device(tfd, drv_libname, strlen(drv_libname) + 1, devpath, sizeof(devpath));
     if (rc < 0) {
@@ -60,9 +60,9 @@ static void do_one_test(int tfd, const char* drv_libname, mx_handle_t output, te
         goto end_device_opened;
     }
 
-    mx_handle_t h;
-    mx_status_t status = mx_handle_duplicate(output, MX_RIGHT_SAME_RIGHTS, &h);
-    if (status != MX_OK) {
+    zx_handle_t h;
+    zx_status_t status = zx_handle_duplicate(output, ZX_RIGHT_SAME_RIGHTS, &h);
+    if (status != ZX_OK) {
         printf("driver-tests: error %d duplicating output socket\n", status);
         report->n_tests = 1;
         report->n_failed = 1;
@@ -85,16 +85,16 @@ end_device_opened:
 }
 
 static int output_thread(void* arg) {
-    mx_handle_t h = *(mx_handle_t*)arg;
+    zx_handle_t h = *(zx_handle_t*)arg;
     char buf[1024];
     for (;;) {
-        mx_status_t status = mx_object_wait_one(h, MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED, MX_TIME_INFINITE, NULL);
-        if (status != MX_OK) {
+        zx_status_t status = zx_object_wait_one(h, ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+        if (status != ZX_OK) {
             break;
         }
         size_t bytes = 0;
-        status = mx_socket_read(h, 0u, buf, sizeof(buf), &bytes);
-        if (status != MX_OK) {
+        status = zx_socket_read(h, 0u, buf, sizeof(buf), &bytes);
+        if (status != ZX_OK) {
             break;
         }
         size_t written = 0;
@@ -110,9 +110,9 @@ static int output_thread(void* arg) {
 }
 
 int main(int argc, char** argv) {
-    mx_handle_t socket[2];
-    mx_status_t status = mx_socket_create(0u, socket, socket + 1);
-    if (status != MX_OK) {
+    zx_handle_t socket[2];
+    zx_status_t status = zx_socket_create(0u, socket, socket + 1);
+    if (status != ZX_OK) {
         printf("driver-tests: error creating socket\n");
         return -1;
     }
@@ -128,8 +128,8 @@ int main(int argc, char** argv) {
     if (rc != thrd_success) {
         printf("driver-tests: error %d creating output thread\n", rc);
         close(fd);
-        mx_handle_close(socket[0]);
-        mx_handle_close(socket[1]);
+        zx_handle_close(socket[0]);
+        zx_handle_close(socket[1]);
         return -1;
     }
 
@@ -162,10 +162,10 @@ int main(int argc, char** argv) {
     close(fd);
 
     // close this handle before thrd_join to get PEER_CLOSED in output thread
-    mx_handle_close(socket[1]);
+    zx_handle_close(socket[1]);
 
     thrd_join(t, NULL);
-    mx_handle_close(socket[0]);
+    zx_handle_close(socket[0]);
 
     unittest_printf_critical(
             "\n====================================================\n");

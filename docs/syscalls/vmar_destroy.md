@@ -1,4 +1,4 @@
-# mx_vmar_destroy
+# zx_vmar_destroy
 
 ## NAME
 
@@ -7,9 +7,9 @@ vmar_destroy - destroy a virtual memory address region
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-mx_status_t mx_vmar_destroy(mx_handle_t vmar_handle);
+zx_status_t zx_vmar_destroy(zx_handle_t vmar_handle);
 ```
 
 ## DESCRIPTION
@@ -22,15 +22,15 @@ VMAR will remain valid handles, but all VMAR operations on them will fail.
 
 ## RETURN VALUE
 
-**vmar_destroy**() returns **MX_OK** on success.
+**vmar_destroy**() returns **ZX_OK** on success.
 
 ## ERRORS
 
-**MX_ERR_BAD_HANDLE**  *vmar_handle* is not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *vmar_handle* is not a valid handle.
 
-**MX_ERR_WRONG_TYPE**  *vmar_handle* is not a VMAR handle.
+**ZX_ERR_WRONG_TYPE**  *vmar_handle* is not a VMAR handle.
 
-**MX_ERR_BAD_STATE**  This region is already destroyed.
+**ZX_ERR_BAD_STATE**  This region is already destroyed.
 
 ## NOTES
 

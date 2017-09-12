@@ -15,9 +15,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <magenta/device/vfs.h>
-#include <magenta/compiler.h>
-#include <magenta/syscalls.h>
+#include <zircon/device/vfs.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls.h>
 
 #include "filesystems.h"
 #include "misc.h"
@@ -32,11 +32,11 @@ typedef struct {
 } watch_buffer_t;
 
 // Try to read from the channel when it should be empty.
-bool check_for_empty(watch_buffer_t* wb, mx_handle_t h) {
+bool check_for_empty(watch_buffer_t* wb, zx_handle_t h) {
     char name[NAME_MAX + 1];
     ASSERT_NULL(wb->ptr);
-    ASSERT_EQ(mx_channel_read(h, 0, &name, nullptr, sizeof(name), 0, nullptr, nullptr),
-              MX_ERR_SHOULD_WAIT);
+    ASSERT_EQ(zx_channel_read(h, 0, &name, nullptr, sizeof(name), 0, nullptr, nullptr),
+              ZX_ERR_SHOULD_WAIT);
     return true;
 }
 
@@ -58,19 +58,19 @@ bool check_local_event(watch_buffer_t* wb, const char* expected, uint8_t event) 
 }
 
 // Try to read the 'expected' name off the channel.
-bool check_for_event(watch_buffer_t* wb, mx_handle_t h, const char* expected, uint8_t event) {
+bool check_for_event(watch_buffer_t* wb, zx_handle_t h, const char* expected, uint8_t event) {
     if (wb->ptr != nullptr) {
         return check_local_event(wb, expected, event);
     }
 
-    mx_signals_t observed;
-    ASSERT_EQ(mx_object_wait_one(h, MX_CHANNEL_READABLE,
-                                 mx_deadline_after(MX_SEC(5)), &observed),
-              MX_OK);
-    ASSERT_EQ(observed & MX_CHANNEL_READABLE, MX_CHANNEL_READABLE);
+    zx_signals_t observed;
+    ASSERT_EQ(zx_object_wait_one(h, ZX_CHANNEL_READABLE,
+                                 zx_deadline_after(ZX_SEC(5)), &observed),
+              ZX_OK);
+    ASSERT_EQ(observed & ZX_CHANNEL_READABLE, ZX_CHANNEL_READABLE);
     uint32_t actual;
-    ASSERT_EQ(mx_channel_read(h, 0, wb->buf, nullptr, sizeof(wb->buf), 0,
-                              &actual, nullptr), MX_OK);
+    ASSERT_EQ(zx_channel_read(h, 0, wb->buf, nullptr, sizeof(wb->buf), 0,
+                              &actual, nullptr), ZX_OK);
     wb->size = actual;
     wb->ptr = wb->buf;
     return check_local_event(wb, expected, event);
@@ -86,12 +86,12 @@ bool test_watcher_add(void) {
     ASSERT_EQ(mkdir("::dir", 0666), 0);
     DIR* dir = opendir("::dir");
     ASSERT_NONNULL(dir);
-    mx_handle_t h;
+    zx_handle_t h;
     vfs_watch_dir_t request;
-    ASSERT_EQ(mx_channel_create(0, &h, &request.channel), MX_OK);
+    ASSERT_EQ(zx_channel_create(0, &h, &request.channel), ZX_OK);
     request.mask = VFS_WATCH_MASK_ADDED;
     request.options = 0;
-    ASSERT_EQ(ioctl_vfs_watch_dir(dirfd(dir), &request), MX_OK);
+    ASSERT_EQ(ioctl_vfs_watch_dir(dirfd(dir), &request), ZX_OK);
     watch_buffer_t wb;
     memset(&wb, 0, sizeof(wb));
 
@@ -118,7 +118,7 @@ bool test_watcher_add(void) {
 
     // There shouldn't be anything else sitting around on the channel
     ASSERT_TRUE(check_for_empty(&wb, h));
-    ASSERT_EQ(mx_handle_close(h), 0);
+    ASSERT_EQ(zx_handle_close(h), 0);
 
     ASSERT_EQ(closedir(dir), 0);
     ASSERT_EQ(rmdir("::dir"), 0);
@@ -147,12 +147,12 @@ bool test_watcher_existing(void) {
 
     // These files should be visible to the watcher through the "EXISTING"
     // mechanism.
-    mx_handle_t h;
+    zx_handle_t h;
     vfs_watch_dir_t request;
-    ASSERT_EQ(mx_channel_create(0, &h, &request.channel), MX_OK);
+    ASSERT_EQ(zx_channel_create(0, &h, &request.channel), ZX_OK);
     request.mask = VFS_WATCH_MASK_ADDED | VFS_WATCH_MASK_EXISTING | VFS_WATCH_MASK_IDLE;
     request.options = 0;
-    ASSERT_EQ(ioctl_vfs_watch_dir(dirfd(dir), &request), MX_OK);
+    ASSERT_EQ(ioctl_vfs_watch_dir(dirfd(dir), &request), ZX_OK);
     watch_buffer_t wb;
     memset(&wb, 0, sizeof(wb));
 
@@ -173,9 +173,9 @@ bool test_watcher_existing(void) {
 
     // If we create a secondary watcher with the "EXISTING" request, we'll
     // see all files in the directory, but the first watcher won't see anything.
-    mx_handle_t h2;
-    ASSERT_EQ(mx_channel_create(0, &h2, &request.channel), MX_OK);
-    ASSERT_EQ(ioctl_vfs_watch_dir(dirfd(dir), &request), MX_OK);
+    zx_handle_t h2;
+    ASSERT_EQ(zx_channel_create(0, &h2, &request.channel), ZX_OK);
+    ASSERT_EQ(ioctl_vfs_watch_dir(dirfd(dir), &request), ZX_OK);
     watch_buffer_t wb2;
     memset(&wb2, 0, sizeof(wb2));
     ASSERT_TRUE(check_for_event(&wb2, h2, ".", VFS_WATCH_EVT_EXISTING));
@@ -193,9 +193,9 @@ bool test_watcher_existing(void) {
 
     // There shouldn't be anything else sitting around on either channel
     ASSERT_TRUE(check_for_empty(&wb, h));
-    ASSERT_EQ(mx_handle_close(h), 0);
+    ASSERT_EQ(zx_handle_close(h), 0);
     ASSERT_TRUE(check_for_empty(&wb2, h2));
-    ASSERT_EQ(mx_handle_close(h2), 0);
+    ASSERT_EQ(zx_handle_close(h2), 0);
 
     ASSERT_EQ(closedir(dir), 0);
     ASSERT_EQ(rmdir("::dir"), 0);
@@ -213,16 +213,16 @@ bool test_watcher_removed(void) {
     ASSERT_EQ(mkdir("::dir", 0666), 0);
     DIR* dir = opendir("::dir");
     ASSERT_NONNULL(dir);
-    mx_handle_t h;
+    zx_handle_t h;
     vfs_watch_dir_t request;
 
-    ASSERT_EQ(mx_channel_create(0, &h, &request.channel), MX_OK);
+    ASSERT_EQ(zx_channel_create(0, &h, &request.channel), ZX_OK);
     request.mask = VFS_WATCH_MASK_ADDED | VFS_WATCH_MASK_REMOVED;
     request.options = 0;
 
     watch_buffer_t wb;
     memset(&wb, 0, sizeof(wb));
-    ASSERT_EQ(ioctl_vfs_watch_dir(dirfd(dir), &request), MX_OK);
+    ASSERT_EQ(ioctl_vfs_watch_dir(dirfd(dir), &request), ZX_OK);
 
     ASSERT_TRUE(check_for_empty(&wb, h));
 
@@ -243,7 +243,7 @@ bool test_watcher_removed(void) {
     ASSERT_TRUE(check_for_event(&wb, h, "bar", VFS_WATCH_EVT_REMOVED));
     ASSERT_TRUE(check_for_empty(&wb, h));
 
-    mx_handle_close(h);
+    zx_handle_close(h);
     ASSERT_EQ(closedir(dir), 0);
     ASSERT_EQ(rmdir("::dir"), 0);
 

@@ -36,25 +36,25 @@ VmObjectPhysical::~VmObjectPhysical() {
 
 status_t VmObjectPhysical::Create(paddr_t base, uint64_t size, fbl::RefPtr<VmObject>* obj) {
     if (!IS_PAGE_ALIGNED(base) || !IS_PAGE_ALIGNED(size) || size == 0)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     // check that base + size is a valid range
     safeint::CheckedNumeric<paddr_t> safe_base = base;
     safe_base += size - 1;
     if (!safe_base.IsValid())
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     fbl::AllocChecker ac;
     auto vmo = fbl::AdoptRef<VmObject>(new (&ac) VmObjectPhysical(base, size));
     if (!ac.check())
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     // Physical VMOs should default to uncached access.
     vmo->SetMappingCachePolicy(ARCH_MMU_FLAG_UNCACHED);
 
     *obj = fbl::move(vmo);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 void VmObjectPhysical::Dump(uint depth, bool verbose) {
@@ -76,15 +76,15 @@ status_t VmObjectPhysical::GetPageLocked(uint64_t offset, uint pf_flags, list_no
         *_page = nullptr;
 
     if (offset >= size_)
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
 
     uint64_t pa = base_ + ROUNDDOWN(offset, PAGE_SIZE);
     if (pa > UINTPTR_MAX)
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
 
     *_pa = (paddr_t)pa;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
@@ -92,13 +92,13 @@ status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ptr<pa
     canary_.Assert();
 
     if (unlikely(len == 0))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     AutoLock a(&lock_);
 
     // verify that the range is within the object
     if (unlikely(!InRange(offset, len, size_)))
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
 
     uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
     uint64_t end = offset + len;
@@ -107,14 +107,14 @@ status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ptr<pa
     // compute the size of the table we'll need and make sure it fits in the user buffer
     uint64_t table_size = ((end_page_offset - start_page_offset) / PAGE_SIZE) * sizeof(paddr_t);
     if (unlikely(table_size > buffer_size))
-        return MX_ERR_BUFFER_TOO_SMALL;
+        return ZX_ERR_BUFFER_TOO_SMALL;
 
     size_t index = 0;
     for (uint64_t off = start_page_offset; off != end_page_offset; off += PAGE_SIZE, index++) {
         // find the physical address
         uint64_t tmp = base_ + off;
         if (tmp > UINTPTR_MAX)
-            return MX_ERR_OUT_OF_RANGE;
+            return ZX_ERR_OUT_OF_RANGE;
 
         paddr_t pa = (paddr_t)tmp;
 
@@ -127,18 +127,18 @@ status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ptr<pa
             return status;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 status_t VmObjectPhysical::GetMappingCachePolicy(uint32_t* cache_policy) {
     AutoLock l(&lock_);
 
     if (!cache_policy) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     *cache_policy = mapping_cache_flags_;
-    return MX_OK;
+    return ZX_OK;
 }
 
 status_t VmObjectPhysical::SetMappingCachePolicy(const uint32_t cache_policy) {
@@ -146,7 +146,7 @@ status_t VmObjectPhysical::SetMappingCachePolicy(const uint32_t cache_policy) {
 
     // Is it a valid cache flag?
     if (cache_policy & ~ARCH_MMU_FLAG_CACHE_MASK) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     // If the cache policy is already configured on this VMO and matches
@@ -154,15 +154,15 @@ status_t VmObjectPhysical::SetMappingCachePolicy(const uint32_t cache_policy) {
     // in the serialio and magma drivers, but may change.
     // TODO: revisit this when we shake out more of the future DDK protocol.
     if (cache_policy == mapping_cache_flags_) {
-        return MX_OK;
+        return ZX_OK;
     }
 
     // If this VMO is mapped already it is not safe to allow its caching policy to change
     if (mapping_list_len_ != 0) {
         LTRACEF("Warning: trying to change cache policy while this vmo is mapped!\n");
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     mapping_cache_flags_ = cache_policy;
-    return MX_OK;
+    return ZX_OK;
 }

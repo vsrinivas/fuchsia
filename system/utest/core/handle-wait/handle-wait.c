@@ -11,10 +11,10 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #define ASSERT_NOT_REACHED() \
     assert(0)
@@ -39,36 +39,36 @@ enum wait_result {
 
 typedef struct thread_data {
     int thread_num;
-    mx_handle_t channel;
+    zx_handle_t channel;
 } thread_data_t;
 
 typedef struct wait_data {
-    mx_handle_t handle;
-    mx_handle_t signals;
-    mx_time_t timeout;
-    mx_status_t status;
+    zx_handle_t handle;
+    zx_handle_t signals;
+    zx_time_t timeout;
+    zx_status_t status;
 } wait_data_t;
 
 // [0] is used by main thread
 // [1] is used by worker thread
-static mx_handle_t thread1_channel[2];
-static mx_handle_t thread2_channel[2];
+static zx_handle_t thread1_channel[2];
+static zx_handle_t thread2_channel[2];
 
-static mx_handle_t event_handle;
+static zx_handle_t event_handle;
 
 // Wait until |handle| is readable or peer is closed (or wait is cancelled).
 
-static bool wait_readable(mx_handle_t handle, enum wait_result* result) {
-    mx_signals_t pending;
-    mx_signals_t signals = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
-    mx_time_t deadline = MX_TIME_INFINITE;
-    mx_status_t status = mx_object_wait_one(handle, signals, deadline, &pending);
-    if (status == MX_ERR_CANCELED) {
+static bool wait_readable(zx_handle_t handle, enum wait_result* result) {
+    zx_signals_t pending;
+    zx_signals_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+    zx_time_t deadline = ZX_TIME_INFINITE;
+    zx_status_t status = zx_object_wait_one(handle, signals, deadline, &pending);
+    if (status == ZX_ERR_CANCELED) {
         *result = WAIT_CANCELLED;
         return true;
     }
     ASSERT_GE(status, 0, "handle wait one failed");
-    if ((pending & MX_CHANNEL_READABLE) != 0) {
+    if ((pending & ZX_CHANNEL_READABLE) != 0) {
         *result = WAIT_READABLE;
         return true;
     }
@@ -77,36 +77,36 @@ static bool wait_readable(mx_handle_t handle, enum wait_result* result) {
     return true;
 }
 
-static bool wait_signaled(mx_handle_t handle, enum wait_result* result) {
-    mx_signals_t pending;
-    mx_signals_t signals = MX_EVENT_SIGNALED;
-    mx_time_t deadline = MX_TIME_INFINITE;
-    mx_status_t status = mx_object_wait_one(handle, signals, deadline, &pending);
-    if (status == MX_ERR_CANCELED) {
+static bool wait_signaled(zx_handle_t handle, enum wait_result* result) {
+    zx_signals_t pending;
+    zx_signals_t signals = ZX_EVENT_SIGNALED;
+    zx_time_t deadline = ZX_TIME_INFINITE;
+    zx_status_t status = zx_object_wait_one(handle, signals, deadline, &pending);
+    if (status == ZX_ERR_CANCELED) {
         *result = WAIT_CANCELLED;
         return true;
     }
     ASSERT_GE(status, 0, "handle wait one failed");
-    ASSERT_NE(pending & MX_EVENT_SIGNALED, 0u,
+    ASSERT_NE(pending & ZX_EVENT_SIGNALED, 0u,
               "unexpected return in wait_signaled");
     *result = WAIT_SIGNALED;
     return true;
 }
 
-static mx_status_t channel_create(mx_handle_t* handle0, mx_handle_t* handle1) {
-    return mx_channel_create(0, handle0, handle1);
+static zx_status_t channel_create(zx_handle_t* handle0, zx_handle_t* handle1) {
+    return zx_channel_create(0, handle0, handle1);
 }
 
-static bool send_msg(mx_handle_t handle, enum message msg) {
+static bool send_msg(zx_handle_t handle, enum message msg) {
     uint64_t data = msg;
     unittest_printf("sending message %d on handle %u\n", msg, handle);
-    mx_status_t status =
-        mx_channel_write(handle, 0, &data, sizeof(data), NULL, 0);
+    zx_status_t status =
+        zx_channel_write(handle, 0, &data, sizeof(data), NULL, 0);
     ASSERT_GE(status, 0, "message write failed");
     return true;
 }
 
-static bool recv_msg(mx_handle_t handle, enum message* msg) {
+static bool recv_msg(zx_handle_t handle, enum message* msg) {
     uint64_t data;
 
     unittest_printf("waiting for message on handle %u\n", handle);
@@ -126,18 +126,18 @@ static bool recv_msg(mx_handle_t handle, enum message* msg) {
 
     uint32_t num_bytes = sizeof(data);
 
-    ASSERT_GE(mx_channel_read(handle, 0, &data, NULL, num_bytes, 0, &num_bytes, NULL), 0,
+    ASSERT_GE(zx_channel_read(handle, 0, &data, NULL, num_bytes, 0, &num_bytes, NULL), 0,
               "Error while reading message");
     EXPECT_EQ(num_bytes, sizeof(data), "unexpected message size");
     if (num_bytes != sizeof(data)) {
-        mx_thread_exit();
+        zx_thread_exit();
     }
     *msg = (enum message)data;
     unittest_printf("received message %d\n", *msg);
     return true;
 }
 
-static bool msg_loop(mx_handle_t channel) {
+static bool msg_loop(zx_handle_t channel) {
     bool my_done_tests = false;
     while (!my_done_tests) {
         enum message msg;
@@ -182,8 +182,8 @@ static int worker_thread_func(void* arg) {
 
 static int wait_thread_func(void* arg) {
     wait_data_t* data = arg;
-    mx_signals_t observed;
-    data->status = mx_object_wait_one(data->handle, data->signals, mx_deadline_after(data->timeout),
+    zx_signals_t observed;
+    data->status = zx_object_wait_one(data->handle, data->signals, zx_deadline_after(data->timeout),
                                       &observed);
     return 0;
 }
@@ -205,9 +205,9 @@ bool handle_wait_test(void) {
               "thread creation failed");
     unittest_printf("threads started\n");
 
-    event_handle = MX_HANDLE_INVALID;
-    ASSERT_EQ(mx_event_create(0u, &event_handle), 0, "");
-    ASSERT_NE(event_handle, MX_HANDLE_INVALID, "event creation failed");
+    event_handle = ZX_HANDLE_INVALID;
+    ASSERT_EQ(zx_event_create(0u, &event_handle), 0, "");
+    ASSERT_NE(event_handle, ZX_HANDLE_INVALID, "event creation failed");
 
     enum message msg;
     send_msg(thread1_channel[0], MSG_PING);
@@ -224,13 +224,13 @@ bool handle_wait_test(void) {
     // when there exists a duplicate of the handle.
     // N.B. We're assuming thread 1 is waiting on event_handle at this point.
     // TODO(vtl): This is a flaky assumption, though the following sleep should help.
-    mx_nanosleep(mx_deadline_after(MX_MSEC(20)));
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(20)));
 
-    mx_handle_t event_handle_dup = MX_HANDLE_INVALID;
-    mx_status_t status = mx_handle_duplicate(event_handle, MX_RIGHT_SAME_RIGHTS, &event_handle_dup);
-    ASSERT_EQ(status, MX_OK, "");
-    ASSERT_NE(event_handle_dup, MX_HANDLE_INVALID, "handle duplication failed");
-    ASSERT_EQ(mx_handle_close(event_handle), MX_OK, "handle close failed");
+    zx_handle_t event_handle_dup = ZX_HANDLE_INVALID;
+    zx_status_t status = zx_handle_duplicate(event_handle, ZX_RIGHT_SAME_RIGHTS, &event_handle_dup);
+    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_NE(event_handle_dup, ZX_HANDLE_INVALID, "handle duplication failed");
+    ASSERT_EQ(zx_handle_close(event_handle), ZX_OK, "handle close failed");
 
     ASSERT_TRUE(recv_msg(thread1_channel[0], &msg), "Error while receiving msg");
     ASSERT_EQ(msg, (enum message)MSG_WAIT_EVENT_CANCELLED,
@@ -240,7 +240,7 @@ bool handle_wait_test(void) {
     send_msg(thread2_channel[0], MSG_EXIT);
     EXPECT_EQ(thrd_join(thread1, NULL), thrd_success, "failed to join thread");
     EXPECT_EQ(thrd_join(thread2, NULL), thrd_success, "failed to join thread");
-    EXPECT_EQ(mx_handle_close(event_handle_dup), MX_OK, "handle close failed");
+    EXPECT_EQ(zx_handle_close(event_handle_dup), ZX_OK, "handle close failed");
     END_TEST;
 }
 

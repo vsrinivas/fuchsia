@@ -12,8 +12,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <magenta/compiler.h>
-#include <magenta/syscalls.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
@@ -110,7 +110,7 @@ bool test_persist_with_data(void) {
         "::and-another-file-filled-with-data",
     };
     fbl::unique_ptr<uint8_t[]> buffers[fbl::count_of(files)];
-    unsigned int seed = static_cast<unsigned int>(mx_ticks_get());
+    unsigned int seed = static_cast<unsigned int>(zx_ticks_get());
     unittest_printf("Persistent data test using seed: %u\n", seed);
     fbl::AllocChecker ac;
     for (size_t i = 0; i < fbl::count_of(files); i++) {

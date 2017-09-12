@@ -34,7 +34,7 @@ status_t VmAddressRegionOrMapping::Destroy() {
 
     AutoLock guard(aspace_->lock());
     if (state_ != LifeCycleState::ALIVE) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     return DestroyLocked();

@@ -10,12 +10,12 @@
 #include <threads.h>
 
 #include <fs/vfs.h>
-#include <magenta/process.h>
-#include <mx/event.h>
-#include <mxio/debug.h>
-#include <mxio/io.h>
-#include <mxio/remoteio.h>
-#include <mxio/vfs.h>
+#include <zircon/process.h>
+#include <zx/event.h>
+#include <fdio/debug.h>
+#include <fdio/io.h>
+#include <fdio/remoteio.h>
+#include <fdio/vfs.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 
@@ -26,9 +26,9 @@ typedef struct vfs_iostate {
     // The VFS state & dispatcher associated with this handle.
     fs::Vfs* vfs;
     // Handle to event which allows client to refer to open vnodes in multi-patt
-    // operations (see: link, rename). Defaults to MX_HANDLE_INVALID.
+    // operations (see: link, rename). Defaults to ZX_HANDLE_INVALID.
     // Validated on the server side using cookies.
-    mx::event token;
+    zx::event token;
     vdircookie_t dircookie;
     size_t io_off;
     uint32_t io_flags;
@@ -45,23 +45,23 @@ static bool readable(uint32_t flags) {
 namespace fs {
 namespace {
 
-static void txn_handoff_open(mx_handle_t srv, mx::channel channel,
+static void txn_handoff_open(zx_handle_t srv, zx::channel channel,
                              const char* path, uint32_t flags, uint32_t mode) {
-    mxrio_msg_t msg;
-    memset(&msg, 0, MXRIO_HDR_SZ);
+    zxrio_msg_t msg;
+    memset(&msg, 0, ZXRIO_HDR_SZ);
     size_t len = strlen(path);
-    msg.op = MXRIO_OPEN;
+    msg.op = ZXRIO_OPEN;
     msg.arg = flags;
     msg.arg2.mode = mode;
     msg.datalen = static_cast<uint32_t>(len) + 1;
     memcpy(msg.data, path, len + 1);
-    mxrio_txn_handoff(srv, channel.release(), &msg);
+    zxrio_txn_handoff(srv, channel.release(), &msg);
 }
 
 // Initializes io state for a vnode and attaches it to a dispatcher.
-void vfs_rpc_open(mxrio_msg_t* msg, mx::channel channel, fbl::RefPtr<Vnode> vn,
+void vfs_rpc_open(zxrio_msg_t* msg, zx::channel channel, fbl::RefPtr<Vnode> vn,
                   vfs_iostate_t* ios, const char* path, uint32_t flags, uint32_t mode) {
-    mx_status_t r;
+    zx_status_t r;
 
     // The pipeline directive instructs the VFS layer to open the vnode
     // immediately, rather than describing the VFS object to the caller.
@@ -71,7 +71,7 @@ void vfs_rpc_open(mxrio_msg_t* msg, mx::channel channel, fbl::RefPtr<Vnode> vn,
 
     r = ios->vfs->Open(fbl::move(vn), &vn, path, &path, open_flags, mode);
 
-    mxrio_object_t obj;
+    zxrio_object_t obj;
     memset(&obj, 0, sizeof(obj));
     if (r < 0) {
         xprintf("vfs: open: r=%d\n", r);
@@ -96,7 +96,7 @@ done:
         // If a pipeline open was requested, but extra handles are required, then
         // we cannot complete the open in a pipelined fashion.
         while (r-- > 0) {
-            mx_handle_close(obj.handle[r]);
+            zx_handle_close(obj.handle[r]);
         }
         vn->Close();
         return;
@@ -104,9 +104,9 @@ done:
 
     if (!pipeline) {
         // Describe the VFS object to the caller in the non-pipelined case.
-        obj.status = (r < 0) ? r : MX_OK;
+        obj.status = (r < 0) ? r : ZX_OK;
         obj.hcount = (r > 0) ? r : 0;
-        channel.write(0, &obj, static_cast<uint32_t>(MXRIO_OBJECT_MINSIZE + obj.esize),
+        channel.write(0, &obj, static_cast<uint32_t>(ZXRIO_OBJECT_MINSIZE + obj.esize),
                       obj.handle, obj.hcount);
     }
 
@@ -117,22 +117,22 @@ done:
     vn->Serve(ios->vfs, fbl::move(channel), open_flags);
 }
 
-void mxrio_reply_channel_status(mx::channel channel, mx_status_t status) {
+void zxrio_reply_channel_status(zx::channel channel, zx_status_t status) {
     struct {
-        mx_status_t status;
+        zx_status_t status;
         uint32_t type;
     } reply = {status, 0};
-    channel.write(0, &reply, MXRIO_OBJECT_MINSIZE, nullptr, 0);
+    channel.write(0, &reply, ZXRIO_OBJECT_MINSIZE, nullptr, 0);
 }
 
 } // namespace
 
-mx_status_t Vnode::Serve(fs::Vfs* vfs, mx::channel channel, uint32_t flags) {
-    mx_status_t r;
+zx_status_t Vnode::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
+    zx_status_t r;
     vfs_iostate_t* ios;
 
     if ((ios = static_cast<vfs_iostate_t*>(calloc(1, sizeof(vfs_iostate_t)))) == nullptr) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     ios->vn = fbl::RefPtr<fs::Vnode>(this);
     ios->io_flags = flags;
@@ -142,23 +142,23 @@ mx_status_t Vnode::Serve(fs::Vfs* vfs, mx::channel channel, uint32_t flags) {
         free(ios);
         return r;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Vfs::Serve(mx::channel channel, void* ios) {
+zx_status_t Vfs::Serve(zx::channel channel, void* ios) {
     return dispatcher_->AddVFSHandler(fbl::move(channel), vfs_handler, ios);
 }
 
-mx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn,
-                                mx::channel channel) {
+zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn,
+                                zx::channel channel) {
     // Make sure the Vnode really is a directory.
-    mx_status_t r;
-    if ((r = vn->Open(O_DIRECTORY)) != MX_OK) {
+    zx_status_t r;
+    if ((r = vn->Open(O_DIRECTORY)) != ZX_OK) {
         return r;
     }
 
     // Tell the calling process that we've mounted the directory.
-    if ((r = channel.signal_peer(0, MX_USER_SIGNAL_0)) != MX_OK) {
+    if ((r = channel.signal_peer(0, ZX_USER_SIGNAL_0)) != ZX_OK) {
         return r;
     }
 
@@ -167,28 +167,28 @@ mx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn,
 
 } // namespace fs
 
-static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, vfs_iostate* ios) {
+static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, vfs_iostate* ios) {
     uint32_t len = msg->datalen;
     int32_t arg = msg->arg;
     msg->datalen = 0;
 
     // ensure handle count specified by opcode matches reality
-    if (msg->hcount != MXRIO_HC(msg->op)) {
+    if (msg->hcount != ZXRIO_HC(msg->op)) {
         for (unsigned i = 0; i < msg->hcount; i++) {
-            mx_handle_close(msg->handle[i]);
+            zx_handle_close(msg->handle[i]);
         }
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
     msg->hcount = 0;
 
-    switch (MXRIO_OP(msg->op)) {
-    case MXRIO_OPEN: {
+    switch (ZXRIO_OP(msg->op)) {
+    case ZXRIO_OPEN: {
         char* path = (char*)msg->data;
-        mx::channel channel(msg->handle[0]); // take ownership
+        zx::channel channel(msg->handle[0]); // take ownership
         if ((len < 1) || (len > PATH_MAX)) {
-            fs::mxrio_reply_channel_status(fbl::move(channel), MX_ERR_INVALID_ARGS);
+            fs::zxrio_reply_channel_status(fbl::move(channel), ZX_ERR_INVALID_ARGS);
         } else if ((arg & O_ADMIN) && !(ios->io_flags & O_ADMIN)) {
-            fs::mxrio_reply_channel_status(fbl::move(channel), MX_ERR_ACCESS_DENIED);
+            fs::zxrio_reply_channel_status(fbl::move(channel), ZX_ERR_ACCESS_DENIED);
         } else {
             path[len] = 0;
             xprintf("vfs: open name='%s' flags=%d mode=%u\n", path, arg, msg->arg2.mode);
@@ -196,28 +196,28 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
         }
         return ERR_DISPATCHER_INDIRECT;
     }
-    case MXRIO_CLOSE: {
+    case ZXRIO_CLOSE: {
         ios->vfs->TokenDiscard(&ios->token);
         // this will drop the ref on the vn
-        mx_status_t status = vn->Close();
+        zx_status_t status = vn->Close();
         ios->vn = nullptr;
         free(ios);
         return status;
     }
-    case MXRIO_CLONE: {
-        mx::channel channel(msg->handle[0]); // take ownership
+    case ZXRIO_CLONE: {
+        zx::channel channel(msg->handle[0]); // take ownership
         if (!(arg & O_PIPELINE)) {
-            mxrio_object_t obj;
-            memset(&obj, 0, MXRIO_OBJECT_MINSIZE);
-            obj.type = MXIO_PROTOCOL_REMOTE;
-            channel.write(0, &obj, MXRIO_OBJECT_MINSIZE, 0, 0);
+            zxrio_object_t obj;
+            memset(&obj, 0, ZXRIO_OBJECT_MINSIZE);
+            obj.type = FDIO_PROTOCOL_REMOTE;
+            channel.write(0, &obj, ZXRIO_OBJECT_MINSIZE, 0, 0);
         }
         vn->Serve(ios->vfs, fbl::move(channel), ios->io_flags);
         return ERR_DISPATCHER_INDIRECT;
     }
-    case MXRIO_READ: {
+    case ZXRIO_READ: {
         if (!readable(ios->io_flags)) {
-            return MX_ERR_BAD_HANDLE;
+            return ZX_ERR_BAD_HANDLE;
         }
         ssize_t r = vn->Read(msg->data, arg, ios->io_off);
         if (r >= 0) {
@@ -225,25 +225,25 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
             msg->arg2.off = ios->io_off;
             msg->datalen = static_cast<uint32_t>(r);
         }
-        return static_cast<mx_status_t>(r);
+        return static_cast<zx_status_t>(r);
     }
-    case MXRIO_READ_AT: {
+    case ZXRIO_READ_AT: {
         if (!readable(ios->io_flags)) {
-            return MX_ERR_BAD_HANDLE;
+            return ZX_ERR_BAD_HANDLE;
         }
         ssize_t r = vn->Read(msg->data, arg, msg->arg2.off);
         if (r >= 0) {
             msg->datalen = static_cast<uint32_t>(r);
         }
-        return static_cast<mx_status_t>(r);
+        return static_cast<zx_status_t>(r);
     }
-    case MXRIO_WRITE: {
+    case ZXRIO_WRITE: {
         if (!writable(ios->io_flags)) {
-            return MX_ERR_BAD_HANDLE;
+            return ZX_ERR_BAD_HANDLE;
         }
         if (ios->io_flags & O_APPEND) {
             vnattr_t attr;
-            mx_status_t r;
+            zx_status_t r;
             if ((r = vn->Getattr(&attr)) < 0) {
                 return r;
             }
@@ -254,18 +254,18 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
             ios->io_off += r;
             msg->arg2.off = ios->io_off;
         }
-        return static_cast<mx_status_t>(r);
+        return static_cast<zx_status_t>(r);
     }
-    case MXRIO_WRITE_AT: {
+    case ZXRIO_WRITE_AT: {
         if (!writable(ios->io_flags)) {
-            return MX_ERR_BAD_HANDLE;
+            return ZX_ERR_BAD_HANDLE;
         }
         ssize_t r = vn->Write(msg->data, len, msg->arg2.off);
-        return static_cast<mx_status_t>(r);
+        return static_cast<zx_status_t>(r);
     }
-    case MXRIO_SEEK: {
+    case ZXRIO_SEEK: {
         vnattr_t attr;
-        mx_status_t r;
+        zx_status_t r;
         if ((r = vn->Getattr(&attr)) < 0) {
             return r;
         }
@@ -273,7 +273,7 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
         switch (arg) {
         case SEEK_SET:
             if (msg->arg2.off < 0) {
-                return MX_ERR_INVALID_ARGS;
+                return ZX_ERR_INVALID_ARGS;
             }
             n = msg->arg2.off;
             break;
@@ -283,13 +283,13 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
                 // if negative seek
                 if (n > ios->io_off) {
                     // wrapped around. attempt to seek before start
-                    return MX_ERR_INVALID_ARGS;
+                    return ZX_ERR_INVALID_ARGS;
                 }
             } else {
                 // positive seek
                 if (n < ios->io_off) {
                     // wrapped around. overflow
-                    return MX_ERR_INVALID_ARGS;
+                    return ZX_ERR_INVALID_ARGS;
                 }
             }
             break;
@@ -299,63 +299,63 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
                 // if negative seek
                 if (n > attr.size) {
                     // wrapped around. attempt to seek before start
-                    return MX_ERR_INVALID_ARGS;
+                    return ZX_ERR_INVALID_ARGS;
                 }
             } else {
                 // positive seek
                 if (n < attr.size) {
                     // wrapped around
-                    return MX_ERR_INVALID_ARGS;
+                    return ZX_ERR_INVALID_ARGS;
                 }
             }
             break;
         default:
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
         if (vn->IsDevice()) {
             if (n > attr.size) {
                 // devices may not seek past the end
-                return MX_ERR_INVALID_ARGS;
+                return ZX_ERR_INVALID_ARGS;
             }
         }
         ios->io_off = n;
         msg->arg2.off = ios->io_off;
-        return MX_OK;
+        return ZX_OK;
     }
-    case MXRIO_STAT: {
-        mx_status_t r;
+    case ZXRIO_STAT: {
+        zx_status_t r;
         msg->datalen = sizeof(vnattr_t);
         if ((r = vn->Getattr((vnattr_t*)msg->data)) < 0) {
             return r;
         }
         return msg->datalen;
     }
-    case MXRIO_SETATTR: {
-        mx_status_t r = vn->Setattr((vnattr_t*)msg->data);
+    case ZXRIO_SETATTR: {
+        zx_status_t r = vn->Setattr((vnattr_t*)msg->data);
         return r;
     }
-    case MXRIO_FCNTL: {
+    case ZXRIO_FCNTL: {
         uint32_t cmd = msg->arg;
         constexpr uint32_t kStatusFlags = O_APPEND;
         switch (cmd) {
         case F_GETFL:
             msg->arg2.mode = ios->io_flags & (kStatusFlags | O_ACCMODE);
-            return MX_OK;
+            return ZX_OK;
         case F_SETFL:
             ios->io_flags = (ios->io_flags & ~kStatusFlags) | (msg->arg2.mode & kStatusFlags);
-            return MX_OK;
+            return ZX_OK;
         default:
-            return MX_ERR_NOT_SUPPORTED;
+            return ZX_ERR_NOT_SUPPORTED;
         }
     }
-    case MXRIO_READDIR: {
-        if (arg > MXIO_CHUNK_SIZE) {
-            return MX_ERR_INVALID_ARGS;
+    case ZXRIO_READDIR: {
+        if (arg > FDIO_CHUNK_SIZE) {
+            return ZX_ERR_INVALID_ARGS;
         }
         if (msg->arg2.off == READDIR_CMD_RESET) {
             memset(&ios->dircookie, 0, sizeof(ios->dircookie));
         }
-        mx_status_t r;
+        zx_status_t r;
         {
             fbl::AutoLock lock(&ios->vfs->vfs_lock_);
             r = vn->Readdir(&ios->dircookie, msg->data, arg);
@@ -365,25 +365,25 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
         }
         return r;
     }
-    case MXRIO_IOCTL_1H: {
-        if ((len > MXIO_IOCTL_MAX_INPUT) ||
+    case ZXRIO_IOCTL_1H: {
+        if ((len > FDIO_IOCTL_MAX_INPUT) ||
             (arg > (ssize_t)sizeof(msg->data)) ||
             (IOCTL_KIND(msg->arg2.op) != IOCTL_KIND_SET_HANDLE)) {
-            mx_handle_close(msg->handle[0]);
-            return MX_ERR_INVALID_ARGS;
+            zx_handle_close(msg->handle[0]);
+            return ZX_ERR_INVALID_ARGS;
         }
-        if (len < sizeof(mx_handle_t)) {
-            len = sizeof(mx_handle_t);
+        if (len < sizeof(zx_handle_t)) {
+            len = sizeof(zx_handle_t);
         }
 
-        char in_buf[MXIO_IOCTL_MAX_INPUT];
+        char in_buf[FDIO_IOCTL_MAX_INPUT];
         // The sending side copied the handle into msg->handle[0]
         // so that it would be sent via channel_write().  Here we
         // copy the local version back into the space in the buffer
         // that the original occupied.
-        memcpy(in_buf, msg->handle, sizeof(mx_handle_t));
-        memcpy(in_buf + sizeof(mx_handle_t), msg->data + sizeof(mx_handle_t),
-               len - sizeof(mx_handle_t));
+        memcpy(in_buf, msg->handle, sizeof(zx_handle_t));
+        memcpy(in_buf + sizeof(zx_handle_t), msg->data + sizeof(zx_handle_t),
+               len - sizeof(zx_handle_t));
 
         switch (msg->arg2.op) {
         case IOCTL_VFS_MOUNT_FS:
@@ -391,41 +391,41 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
             // Mounting requires iostate privileges
             if (!(ios->io_flags & O_ADMIN)) {
                 vfs_unmount_handle(msg->handle[0], 0);
-                mx_handle_close(msg->handle[0]);
-                return MX_ERR_ACCESS_DENIED;
+                zx_handle_close(msg->handle[0]);
+                return ZX_ERR_ACCESS_DENIED;
             }
             // If our permissions validate, fall through to the VFS ioctl
         }
         ssize_t r = ios->vfs->Ioctl(fbl::move(vn), msg->arg2.op, in_buf, len,
                                     msg->data, arg);
 
-        if (r == MX_ERR_NOT_SUPPORTED) {
-            mx_handle_close(msg->handle[0]);
+        if (r == ZX_ERR_NOT_SUPPORTED) {
+            zx_handle_close(msg->handle[0]);
         }
 
-        return static_cast<mx_status_t>(r);
+        return static_cast<zx_status_t>(r);
     }
-    case MXRIO_IOCTL: {
-        if (len > MXIO_IOCTL_MAX_INPUT ||
+    case ZXRIO_IOCTL: {
+        if (len > FDIO_IOCTL_MAX_INPUT ||
             (arg > (ssize_t)sizeof(msg->data)) ||
             (IOCTL_KIND(msg->arg2.op) == IOCTL_KIND_SET_HANDLE)) {
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
-        char in_buf[MXIO_IOCTL_MAX_INPUT];
+        char in_buf[FDIO_IOCTL_MAX_INPUT];
         memcpy(in_buf, msg->data, len);
 
         ssize_t r;
         switch (msg->arg2.op) {
         case IOCTL_VFS_GET_TOKEN: {
             // Ioctls which act on iostate
-            if (arg != sizeof(mx_handle_t)) {
-                r = MX_ERR_INVALID_ARGS;
+            if (arg != sizeof(zx_handle_t)) {
+                r = ZX_ERR_INVALID_ARGS;
             } else {
-                mx::event token;
+                zx::event token;
                 r = ios->vfs->VnodeToToken(fbl::move(vn), &ios->token, &token);
-                if (r == MX_OK) {
-                    r = sizeof(mx_handle_t);
-                    mx_handle_t* out = reinterpret_cast<mx_handle_t*>(msg->data);
+                if (r == ZX_OK) {
+                    r = sizeof(zx_handle_t);
+                    zx_handle_t* out = reinterpret_cast<zx_handle_t*>(msg->data);
                     *out = token.release();
                 }
             }
@@ -436,7 +436,7 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
         case IOCTL_VFS_GET_DEVICE_PATH:
             // Unmounting ioctls require iostate privileges
             if (!(ios->io_flags & O_ADMIN)) {
-                r = MX_ERR_ACCESS_DENIED;
+                r = ZX_ERR_ACCESS_DENIED;
                 break;
             }
             // If our permissions validate, fall through to the VFS ioctl
@@ -449,15 +449,15 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
                 break;
             case IOCTL_KIND_GET_HANDLE:
                 msg->hcount = 1;
-                memcpy(msg->handle, msg->data, sizeof(mx_handle_t));
+                memcpy(msg->handle, msg->data, sizeof(zx_handle_t));
                 break;
             case IOCTL_KIND_GET_TWO_HANDLES:
                 msg->hcount = 2;
-                memcpy(msg->handle, msg->data, 2 * sizeof(mx_handle_t));
+                memcpy(msg->handle, msg->data, 2 * sizeof(zx_handle_t));
                 break;
             case IOCTL_KIND_GET_THREE_HANDLES:
                 msg->hcount = 3;
-                memcpy(msg->handle, msg->data, 3 * sizeof(mx_handle_t));
+                memcpy(msg->handle, msg->data, 3 * sizeof(zx_handle_t));
                 break;
             }
             msg->arg2.off = 0;
@@ -465,23 +465,23 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
         }
         return static_cast<uint32_t>(r);
     }
-    case MXRIO_TRUNCATE: {
+    case ZXRIO_TRUNCATE: {
         if (!writable(ios->io_flags)) {
-            return MX_ERR_BAD_HANDLE;
+            return ZX_ERR_BAD_HANDLE;
         }
         if (msg->arg2.off < 0) {
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
         return vn->Truncate(msg->arg2.off);
     }
-    case MXRIO_RENAME:
-    case MXRIO_LINK: {
+    case ZXRIO_RENAME:
+    case ZXRIO_LINK: {
         // Regardless of success or failure, we'll close the client-provided
         // vnode token handle.
-        mx::event token(msg->handle[0]);
+        zx::event token(msg->handle[0]);
 
         if (len < 4) { // At least one byte for src + dst + null terminators
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
 
         char* data_end = (char*)(msg->data + len - 1);
@@ -491,50 +491,50 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
         const char* newname = (const char*)msg->data + (oldlen + 1);
 
         if (data_end <= newname) {
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
 
-        switch (MXRIO_OP(msg->op)) {
-        case MXRIO_RENAME:
+        switch (ZXRIO_OP(msg->op)) {
+        case ZXRIO_RENAME:
             return ios->vfs->Rename(fbl::move(token), fbl::move(vn),
                                     oldname, newname);
-        case MXRIO_LINK:
+        case ZXRIO_LINK:
             return ios->vfs->Link(fbl::move(token), fbl::move(vn),
                                   oldname, newname);
         }
         assert(false);
     }
-    case MXRIO_MMAP: {
-        if (len != sizeof(mxrio_mmap_data_t)) {
-            return MX_ERR_INVALID_ARGS;
+    case ZXRIO_MMAP: {
+        if (len != sizeof(zxrio_mmap_data_t)) {
+            return ZX_ERR_INVALID_ARGS;
         }
-        mxrio_mmap_data_t* data = reinterpret_cast<mxrio_mmap_data_t*>(msg->data);
-        if (ios->io_flags & O_APPEND && data->flags & MXIO_MMAP_FLAG_WRITE) {
-            return MX_ERR_ACCESS_DENIED;
-        } else if (!writable(ios->io_flags) && (data->flags & MXIO_MMAP_FLAG_WRITE)) {
-            return MX_ERR_ACCESS_DENIED;
+        zxrio_mmap_data_t* data = reinterpret_cast<zxrio_mmap_data_t*>(msg->data);
+        if (ios->io_flags & O_APPEND && data->flags & FDIO_MMAP_FLAG_WRITE) {
+            return ZX_ERR_ACCESS_DENIED;
+        } else if (!writable(ios->io_flags) && (data->flags & FDIO_MMAP_FLAG_WRITE)) {
+            return ZX_ERR_ACCESS_DENIED;
         } else if (!readable(ios->io_flags)) {
-            return MX_ERR_ACCESS_DENIED;
+            return ZX_ERR_ACCESS_DENIED;
         }
 
-        mx_status_t status = vn->Mmap(data->flags, data->length, &data->offset,
+        zx_status_t status = vn->Mmap(data->flags, data->length, &data->offset,
                                       &msg->handle[0]);
-        if (status == MX_OK) {
+        if (status == ZX_OK) {
             msg->hcount = 1;
         }
         return status;
     }
-    case MXRIO_SYNC: {
+    case ZXRIO_SYNC: {
         return vn->Sync();
     }
-    case MXRIO_UNLINK:
+    case ZXRIO_UNLINK:
         return ios->vfs->Unlink(fbl::move(vn), (const char*)msg->data, len);
     default:
         // close inbound handles so they do not leak
-        for (unsigned i = 0; i < MXRIO_HC(msg->op); i++) {
-            mx_handle_close(msg->handle[i]);
+        for (unsigned i = 0; i < ZXRIO_HC(msg->op); i++) {
+            zx_handle_close(msg->handle[i]);
         }
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -542,11 +542,11 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
 // make locking more fine grained
 static mtx_t vfs_big_lock = MTX_INIT;
 
-mx_status_t vfs_handler(mxrio_msg_t* msg, void* cookie) {
+zx_status_t vfs_handler(zxrio_msg_t* msg, void* cookie) {
     vfs_iostate_t* ios = static_cast<vfs_iostate_t*>(cookie);
 
     fbl::AutoLock lock(&vfs_big_lock);
     fbl::RefPtr<fs::Vnode> vn = ios->vn;
-    mx_status_t status = vfs_handler_vn(msg, fbl::move(vn), ios);
+    zx_status_t status = vfs_handler_vn(msg, fbl::move(vn), ios);
     return status;
 }

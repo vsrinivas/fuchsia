@@ -11,9 +11,9 @@
 #include <ddk/device.h>
 #include <ddk/protocol/block.h>
 #include <fvm/fvm.h>
-#include <magenta/device/block.h>
-#include <magenta/thread_annotations.h>
-#include <magenta/types.h>
+#include <zircon/device/block.h>
+#include <zircon/thread_annotations.h>
+#include <zircon/types.h>
 
 #ifdef __cplusplus
 
@@ -65,7 +65,7 @@ public:
     bool Merge(const SliceExtent& other);
 
     bool push_back(uint32_t pslice) {
-        MX_DEBUG_ASSERT(pslice != PSLICE_UNALLOCATED);
+        ZX_DEBUG_ASSERT(pslice != PSLICE_UNALLOCATED);
         fbl::AllocChecker ac;
         pslices_.push_back(pslice, &ac);
         return ac.check();
@@ -86,58 +86,58 @@ private:
 
 class VPartitionManager : public ManagerDeviceType {
 public:
-    static mx_status_t Create(mx_device_t* dev, fbl::unique_ptr<VPartitionManager>* out);
+    static zx_status_t Create(zx_device_t* dev, fbl::unique_ptr<VPartitionManager>* out);
 
     // Read the underlying block device, initialize the recorded VPartitions.
-    mx_status_t Load();
+    zx_status_t Load();
 
     // Given a VPartition object, add a corresponding ddk device.
-    mx_status_t AddPartition(fbl::unique_ptr<VPartition> vp) const;
+    zx_status_t AddPartition(fbl::unique_ptr<VPartition> vp) const;
 
     // Update, hash, and write back the current copy of the FVM metadata.
     // Automatically handles alternating writes to primary / backup copy of FVM.
-    mx_status_t WriteFvmLocked() TA_REQ(lock_);
+    zx_status_t WriteFvmLocked() TA_REQ(lock_);
 
     // Acquire access to a VPart Entry which has already been modified (and
     // will, as a consequence, not be de-allocated underneath us).
     vpart_entry_t* GetAllocatedVPartEntry(size_t index) const TA_NO_THREAD_SAFETY_ANALYSIS {
         auto entry = GetVPartEntryLocked(index);
-        MX_DEBUG_ASSERT(entry->slices > 0);
+        ZX_DEBUG_ASSERT(entry->slices > 0);
         return entry;
     }
 
     slice_entry_t* GetSliceEntryLocked(size_t index) const TA_REQ(lock_) {
-        MX_DEBUG_ASSERT(index >= 1);
+        ZX_DEBUG_ASSERT(index >= 1);
         uintptr_t metadata_start = reinterpret_cast<uintptr_t>(GetFvmLocked());
         uintptr_t offset = static_cast<uintptr_t>(kAllocTableOffset +
                                                   index * sizeof(slice_entry_t));
-        MX_DEBUG_ASSERT(kAllocTableOffset <= offset);
-        MX_DEBUG_ASSERT(offset < kAllocTableOffset + AllocTableLength(DiskSize(), SliceSize()));
+        ZX_DEBUG_ASSERT(kAllocTableOffset <= offset);
+        ZX_DEBUG_ASSERT(offset < kAllocTableOffset + AllocTableLength(DiskSize(), SliceSize()));
         return reinterpret_cast<slice_entry_t*>(metadata_start + offset);
     }
 
     // Allocate 'count' slices, write back the FVM.
-    mx_status_t AllocateSlices(VPartition* vp, size_t vslice_start, size_t count) TA_EXCL(lock_);
-    mx_status_t AllocateSlicesLocked(VPartition* vp, size_t vslice_start,
+    zx_status_t AllocateSlices(VPartition* vp, size_t vslice_start, size_t count) TA_EXCL(lock_);
+    zx_status_t AllocateSlicesLocked(VPartition* vp, size_t vslice_start,
                                      size_t count) TA_REQ(lock_);
 
     // Deallocate 'count' slices, write back the FVM.
     // If a request is made to remove vslice_count = 0, deallocates the entire
     // VPartition.
-    mx_status_t FreeSlices(VPartition* vp, size_t vslice_start, size_t count) TA_EXCL(lock_);
-    mx_status_t FreeSlicesLocked(VPartition* vp, size_t vslice_start,
+    zx_status_t FreeSlices(VPartition* vp, size_t vslice_start, size_t count) TA_EXCL(lock_);
+    zx_status_t FreeSlicesLocked(VPartition* vp, size_t vslice_start,
                                  size_t count) TA_REQ(lock_);
 
     size_t DiskSize() const { return info_.block_count * info_.block_size; }
     size_t SliceSize() const { return slice_size_; }
     size_t VSliceMax() const { return VSLICE_MAX; }
 
-    mx_status_t DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
+    zx_status_t DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
                          void* reply, size_t max, size_t* out_actual);
     void DdkUnbind();
     void DdkRelease();
 
-    VPartitionManager(mx_device_t* dev, const block_info_t& info);
+    VPartitionManager(zx_device_t* dev, const block_info_t& info);
     ~VPartitionManager();
     block_info_t info_; // Cached info from parent device
     thrd_t init_;
@@ -145,20 +145,20 @@ public:
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VPartitionManager);
 
-    mx_status_t FindFreeVPartEntryLocked(size_t* out) const TA_REQ(lock_);
-    mx_status_t FindFreeSliceLocked(size_t* out, size_t hint) const TA_REQ(lock_);
+    zx_status_t FindFreeVPartEntryLocked(size_t* out) const TA_REQ(lock_);
+    zx_status_t FindFreeSliceLocked(size_t* out, size_t hint) const TA_REQ(lock_);
 
     fvm_t* GetFvmLocked() const TA_REQ(lock_) {
         return reinterpret_cast<fvm_t*>(metadata_->GetData());
     }
 
     vpart_entry_t* GetVPartEntryLocked(size_t index) const TA_REQ(lock_) {
-        MX_DEBUG_ASSERT(index >= 1);
+        ZX_DEBUG_ASSERT(index >= 1);
         uintptr_t metadata_start = reinterpret_cast<uintptr_t>(GetFvmLocked());
         uintptr_t offset = static_cast<uintptr_t>(kVPartTableOffset +
                                                   index * sizeof(vpart_entry_t));
-        MX_DEBUG_ASSERT(kVPartTableOffset <= offset);
-        MX_DEBUG_ASSERT(offset < kVPartTableOffset + kVPartTableLength);
+        ZX_DEBUG_ASSERT(kVPartTableOffset <= offset);
+        ZX_DEBUG_ASSERT(offset < kVPartTableOffset + kVPartTableLength);
         return reinterpret_cast<vpart_entry_t*>(metadata_start + offset);
     }
 
@@ -183,34 +183,34 @@ private:
 
 class VPartition : public PartitionDeviceType, public ddk::BlockProtocol<VPartition> {
 public:
-    static mx_status_t Create(VPartitionManager* vpm, size_t entry_index,
+    static zx_status_t Create(VPartitionManager* vpm, size_t entry_index,
                               fbl::unique_ptr<VPartition>* out);
     // Device Protocol
-    mx_status_t DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
+    zx_status_t DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
                          void* reply, size_t max, size_t* out_actual);
     void DdkIotxnQueue(iotxn_t* txn);
-    mx_off_t DdkGetSize();
+    zx_off_t DdkGetSize();
     void DdkUnbind();
     void DdkRelease();
 
     // Block Protocol
-    void Txn(uint32_t opcode, mx_handle_t vmo, uint64_t length,
+    void Txn(uint32_t opcode, zx_handle_t vmo, uint64_t length,
              uint64_t vmo_offset, uint64_t dev_offset, void* cookie);
     void BlockSetCallbacks(block_callbacks_t* cb);
     void BlockGetInfo(block_info_t* info);
-    void BlockRead(mx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
+    void BlockRead(zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
                    uint64_t dev_offset, void* cookie);
-    void BlockWrite(mx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
+    void BlockWrite(zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
                     uint64_t dev_offset, void* cookie);
 
     auto ExtentBegin() TA_REQ(lock_) {
         return slice_map_.begin();
     }
     uint32_t SliceGetLocked(size_t vslice) const TA_REQ(lock_);
-    mx_status_t SliceSetUnsafe(size_t vslice, uint32_t pslice) TA_NO_THREAD_SAFETY_ANALYSIS {
+    zx_status_t SliceSetUnsafe(size_t vslice, uint32_t pslice) TA_NO_THREAD_SAFETY_ANALYSIS {
         return SliceSetLocked(vslice, pslice);
     }
-    mx_status_t SliceSetLocked(size_t vslice, uint32_t pslice) TA_REQ(lock_);
+    zx_status_t SliceSetLocked(size_t vslice, uint32_t pslice) TA_REQ(lock_);
 
     bool SliceCanFree(size_t vslice) const TA_REQ(lock_) {
         auto extent = --slice_map_.upper_bound(vslice);
@@ -240,7 +240,7 @@ public:
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VPartition);
 
-    mx_device_t* GetParent() const { return mgr_->parent(); }
+    zx_device_t* GetParent() const { return mgr_->parent(); }
 
     VPartitionManager* mgr_;
     size_t entry_index_;
@@ -268,12 +268,12 @@ __BEGIN_CDECLS
 //
 // Modifies "completion_cb" and "cookie" fields of txn; doesn't free or
 // allocate any memory.
-void iotxn_synchronous_op(mx_device_t* dev, iotxn_t* txn);
+void iotxn_synchronous_op(zx_device_t* dev, iotxn_t* txn);
 
 /////////////////// C-compatibility definitions (Provided to C from C++)
 
 // Binds FVM driver to a device; loads the VPartition devices asynchronously in
 // a background thread.
-mx_status_t fvm_bind(mx_device_t* dev);
+zx_status_t fvm_bind(zx_device_t* dev);
 
 __END_CDECLS

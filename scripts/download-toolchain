@@ -6,29 +6,29 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# This script downloads the Magenta toolchain as prebuilts from Google Storage.
+# This script downloads the Zircon toolchain as prebuilts from Google Storage.
 
 # This script is expected to be executed by Jiri as a runhook, or by individual
 # developers who want to grab the latest prebuilts.  It takes no arguments, will
-# download the latest version of the Magenta toolchain, install it in the
+# download the latest version of the Zircon toolchain, install it in the
 # prebuilt/downloads directory, and update prebuilt/config.mk with the toolchain
 # prefix (so you shouldn't have to set PATH or anything yourself).
 
 set -e
 
 readonly FUCHSIA_GS_BUCKET="https://storage.googleapis.com/fuchsia"
-readonly MAGENTA_GS_BUCKET="https://fuchsia-build.storage.googleapis.com/magenta"
+readonly ZIRCON_GS_BUCKET="https://fuchsia-build.storage.googleapis.com/magenta"
 readonly OS="$(uname)"
 readonly HOSTOS=$(uname | tr '[:upper:]' '[:lower:]')
 readonly HOSTARCH="$(uname -m)"
 readonly GCC_VERSION="6.3.0"
 
 # We assume the following directory structure:
-# ./magenta/scripts
-# ./magenta/prebuilt
+# ./zircon/scripts
+# ./zircon/prebuilt
 readonly SCRIPT_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
-readonly MAGENTA_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-readonly PREBUILTS_DIR="$(cd "${MAGENTA_ROOT}/prebuilt" && pwd)"
+readonly ZIRCON_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+readonly PREBUILTS_DIR="$(cd "${ZIRCON_ROOT}/prebuilt" && pwd)"
 
 # Install prebuilts into a .gitignore'd directory to keep things clean
 mkdir -p "${PREBUILTS_DIR}/downloads"
@@ -49,7 +49,7 @@ function downloadGCCToolchain() {
     exit 1
   fi
   local required_version="$(cat "${version_file}" )"
-  local prebuilt_url="${MAGENTA_GS_BUCKET}/${common_path}/${required_version}"
+  local prebuilt_url="${ZIRCON_GS_BUCKET}/${common_path}/${required_version}"
 
   # These are files and paths we control in this script.
   local tool_name="${target}-${OS}-${HOSTARCH}"
@@ -70,7 +70,7 @@ function downloadGCCToolchain() {
 
   # Record the locations of the various toolchains.
   local toolchain_dir="${target}-${GCC_VERSION}-${OS}-${HOSTARCH}"
-  local relative_install_dir="\$(LKMAKEROOT)${INSTALL_DIR#${MAGENTA_ROOT}}"
+  local relative_install_dir="\$(LKMAKEROOT)${INSTALL_DIR#${ZIRCON_ROOT}}"
   case "${target}" in
     "aarch64-elf")
       TOOLCHAIN_MAKEVARS+=("ARCH_arm64_TOOLCHAIN_PREFIX = ${relative_install_dir}/${toolchain_dir}/bin/${target}-")
@@ -82,8 +82,8 @@ function downloadGCCToolchain() {
 
   # Leave some breadcrumbs in the makefile so `make ...` can check if the toolchain is up-to-date.
   PREBUILT_NAMES+=" ${tool_name}"  # FYI: That's load-bearing leading whitespace.
-  TOOLCHAIN_MAKEVARS+=("PREBUILT_${tool_name}_TOOLCHAIN_STAMP = \$(LKMAKEROOT)${stamp_path#${MAGENTA_ROOT}}")
-  TOOLCHAIN_MAKEVARS+=("PREBUILT_${tool_name}_TOOLCHAIN_SHAFILE = \$(LKMAKEROOT)${version_file#${MAGENTA_ROOT}}")
+  TOOLCHAIN_MAKEVARS+=("PREBUILT_${tool_name}_TOOLCHAIN_STAMP = \$(LKMAKEROOT)${stamp_path#${ZIRCON_ROOT}}")
+  TOOLCHAIN_MAKEVARS+=("PREBUILT_${tool_name}_TOOLCHAIN_SHAFILE = \$(LKMAKEROOT)${version_file#${ZIRCON_ROOT}}")
 }
 
 function downloadClangToolchain() {
@@ -124,13 +124,13 @@ function downloadClangToolchain() {
 
   # Record the locations of the various toolchains.
   local toolchain_dir="clang+llvm-${HOSTARCH}-${HOSTOS}"
-  local relative_install_dir="\$(LKMAKEROOT)${INSTALL_DIR#${MAGENTA_ROOT}}"
+  local relative_install_dir="\$(LKMAKEROOT)${INSTALL_DIR#${ZIRCON_ROOT}}"
   TOOLCHAIN_MAKEVARS+=("CLANG_TOOLCHAIN_PREFIX = ${relative_install_dir}/${toolchain_dir}/bin/")
 
   # Leave some breadcrumbs in the makefile so `make ...` can check if the toolchain is up-to-date.
   PREBUILT_NAMES+=" ${tool_name}"  # FYI: That's load-bearing leading whitespace.
-  TOOLCHAIN_MAKEVARS+=("PREBUILT_${tool_name}_TOOLCHAIN_STAMP = \$(LKMAKEROOT)${stamp_path#${MAGENTA_ROOT}}")
-  TOOLCHAIN_MAKEVARS+=("PREBUILT_${tool_name}_TOOLCHAIN_SHAFILE = \$(LKMAKEROOT)${version_file#${MAGENTA_ROOT}}")
+  TOOLCHAIN_MAKEVARS+=("PREBUILT_${tool_name}_TOOLCHAIN_STAMP = \$(LKMAKEROOT)${stamp_path#${ZIRCON_ROOT}}")
+  TOOLCHAIN_MAKEVARS+=("PREBUILT_${tool_name}_TOOLCHAIN_SHAFILE = \$(LKMAKEROOT)${version_file#${ZIRCON_ROOT}}")
 }
 
 # We want the toolchains for all target types.

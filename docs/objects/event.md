@@ -7,7 +7,7 @@ event - Signalable event for concurrent programming
 ## SYNOPSIS
 
 Events are user-signalable objects. The 8 signal bits reserved for
-userspace (*MX_USER_SIGNAL_0* through *MX_USER_SIGNAL_7*) may be set,
+userspace (*ZX_USER_SIGNAL_0* through *ZX_USER_SIGNAL_7*) may be set,
 cleared, and waited upon.
 
 ## DESCRIPTION

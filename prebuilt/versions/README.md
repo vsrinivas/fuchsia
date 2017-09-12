@@ -1,7 +1,7 @@
-# Magenta Prebuilt Versions
+# Zircon Prebuilt Versions
 
 The `prebuilt/versions` directory mirrors the directory structure found in the
-Magenta prebuilt Google Storage bucket at `gs://fuchsia-build/magenta/`.  The
+Zircon prebuilt Google Storage bucket at `gs://fuchsia-build/zircon/`.  The
 files indicate which versions to download.  The filename to use and where to install
 the prebuilts is left up to the tool that does the downloading.
 
@@ -10,7 +10,7 @@ the prebuilts is left up to the tool that does the downloading.
 On Google Storage, this file exists:
 
 ```
-fuchsia-build/magenta/toolchain/aarch64-elf/Linux-x86_64/d1b546ffcd826482cea63ae67a13d3c98a92bf1e
+fuchsia-build/zircon/toolchain/aarch64-elf/Linux-x86_64/d1b546ffcd826482cea63ae67a13d3c98a92bf1e
 ```
 
 In `prebuilt/versions`, the corresponding file exists:

@@ -7,7 +7,7 @@ from running applications on the Fuchsia operating system.
 
 The purpose of Fuchsia tracing is to provide a means to collect, aggregate,
 and visualize diagnostic tracing information from Fuchsia user space
-processes and from the Magenta kernel.
+processes and from the Zircon kernel.
 
 ## Design Goals
 
@@ -163,8 +163,8 @@ int main(int argc, char** argv) {
 
   // Start a thread for the loop to run on.
   // We could instead use async_loop_run() to run on the current thread.
-  mx_status_t status = loop.StartThread();
-  if (status != MX_OK) exit(1);
+  zx_status_t status = loop.StartThread();
+  if (status != ZX_OK) exit(1);
 
   // Create the trace provider.
   trace::TraceProvider trace_provider(loop.async());
@@ -183,18 +183,18 @@ int main(int argc, char** argv) {
 #include <trace-provider/provider.h>
 
 int main(int argc, char** argv) {
-  mx_status_t status;
+  zx_status_t status;
   async_t* async;
   trace_provider_t* trace_provider;
 
   // Create a message loop.
   status = async_loop_create(NULL, &async);
-  if (status != MX_OK) exit(1);
+  if (status != ZX_OK) exit(1);
 
   // Start a thread for the loop to run on.
   // We could instead use async_loop_run() to run on the current thread.
   status = async_loop_start_thread(async, "loop", NULL);
-  if (status != MX_OK) exit(1);
+  if (status != ZX_OK) exit(1);
 
   // Create the trace provider.
   trace_provider = trace_provider_create(async);

@@ -12,7 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/completion.c \
 
 MODULE_LIBS := \
-    system/ulib/magenta \
+    system/ulib/zircon \
 
 MODULE_EXPORT := a
 

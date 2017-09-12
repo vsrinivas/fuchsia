@@ -69,11 +69,11 @@ public:
         pixels_y += font->height - 1;
         vc_surface = gfx_create_surface(
             nullptr, pixels_x, pixels_y, /* stride= */ pixels_x,
-            MX_PIXEL_FORMAT_RGB_565, 0);
+            ZX_PIXEL_FORMAT_RGB_565, 0);
         EXPECT_TRUE(vc_surface, "");
         // This takes ownership of vc_surface.
-        EXPECT_EQ(vc_init_gfx(vc_surface), MX_OK, "");
-        EXPECT_EQ(vc_alloc(&vc_dev, false), MX_OK, "");
+        EXPECT_EQ(vc_init_gfx(vc_surface), ZX_OK, "");
+        EXPECT_EQ(vc_alloc(&vc_dev, false), ZX_OK, "");
         EXPECT_EQ(vc_dev->columns, size_x, "");
         EXPECT_EQ(vc_rows(vc_dev), static_cast<int>(size_y), "");
         // Mark the console as active so that display updates get

@@ -5,7 +5,7 @@
 #pragma once
 
 #include <acpica/acpi.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 enum resource_address_type {
     RESOURCE_ADDRESS_MEMORY,
@@ -67,6 +67,6 @@ static bool resource_is_io(ACPI_RESOURCE* res) {
             res->Type == ACPI_RESOURCE_TYPE_FIXED_IO;
 }
 
-mx_status_t resource_parse_memory(ACPI_RESOURCE* res, resource_memory_t* out);
-mx_status_t resource_parse_address(ACPI_RESOURCE* res, resource_address_t* out);
-mx_status_t resource_parse_io(ACPI_RESOURCE* res, resource_io_t* out);
+zx_status_t resource_parse_memory(ACPI_RESOURCE* res, resource_memory_t* out);
+zx_status_t resource_parse_address(ACPI_RESOURCE* res, resource_address_t* out);
+zx_status_t resource_parse_io(ACPI_RESOURCE* res, resource_io_t* out);

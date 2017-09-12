@@ -1,4 +1,4 @@
-# mx_system_num_cpus
+# zx_system_num_cpus
 
 ## NAME
 
@@ -7,9 +7,9 @@ system_num_cpus - get number of logical processors on the system
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-uint32_t mx_system_get_num_cpus(void);
+uint32_t zx_system_get_num_cpus(void);
 ```
 
 ## DESCRIPTION

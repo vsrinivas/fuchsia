@@ -32,8 +32,8 @@
  * SUCH DAMAGE.
  */
 
-#include <magenta/status.h>
-#include <magenta/syscalls.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
@@ -477,7 +477,7 @@ evalsubshell(union node *n, int flags)
 	}
 	INTOFF;
 	jp = makejob(n, 1);
-	mx_handle_t process;
+	zx_handle_t process;
 	const char* const* envp = (const char* const*)environment();
 
 	// Run in the foreground (of the subshell running in the background)
@@ -485,18 +485,18 @@ evalsubshell(union node *n, int flags)
 		n->type = NSUBSHELL;
 
 	const char* errmsg = NULL;
-	mx_status_t exec_result = process_subshell(n, envp, &process, NULL, &errmsg);
-        if (exec_result == MX_OK) {
+	zx_status_t exec_result = process_subshell(n, envp, &process, NULL, &errmsg);
+        if (exec_result == ZX_OK) {
 		/* Process-tracking management */
 		forkparent(jp, n, backgnd, process);
         } else {
-		sh_error("Failed to create subshell (%s): %s", mx_status_get_string(exec_result), errmsg);
+		sh_error("Failed to create subshell (%s): %s", zx_status_get_string(exec_result), errmsg);
 		return exec_result;
 	}
 	status = 0;
 	if (! backgnd) {
 		status = process_await_termination(process, true);
-		mx_handle_close(process);
+		zx_handle_close(process);
 	}
 	INTON;
 	return status;
@@ -573,26 +573,26 @@ evalpipe(union node *n, int flags)
 		} else {
 			fds[1] = STDOUT_FILENO;
 		}
-		mx_handle_t process;
+		zx_handle_t process;
 		const char* errmsg = NULL;
 		const char* const* envp = (const char* const*)environment();
-		mx_status_t status = process_subshell (lp->n, envp, &process, fds, &errmsg);
+		zx_status_t status = process_subshell (lp->n, envp, &process, fds, &errmsg);
 		if (fds[0] != STDIN_FILENO)
 			close(fds[0]);
 		if (fds[1] != STDOUT_FILENO)
 			close(fds[1]);
-		if (status == MX_OK) {
+		if (status == ZX_OK) {
 			/* Process-tracking management */
 			forkparent(jp, lp->n, FORK_NOJOB, process);
 		} else {
 			freejob(jp);
-			sh_error("Failed to create shell: %s: %s", mx_status_get_string(status), errmsg);
+			sh_error("Failed to create shell: %s: %s", zx_status_get_string(status), errmsg);
 		}
 	}
 
 	if (n->npipe.backgnd == 0) {
 		status = waitforjob(jp);
-		TRACE(("evalpipe:  job done exit status: %s\n", mx_status_get_string(status)));
+		TRACE(("evalpipe:  job done exit status: %s\n", zx_status_get_string(status)));
 	}
 	INTON;
 
@@ -625,15 +625,15 @@ evalbackcmd(union node *n, struct backcmd *result)
 	if (pipe(pip) < 0)
 		sh_error("Pipe call failed");
 	jp = makejob(n, 1);
-	mx_handle_t process;
+	zx_handle_t process;
 	const char* errmsg = NULL;
 	const char* const* envp = (const char* const*)environment();
 	int fds[3] = { STDIN_FILENO, pip[1], STDERR_FILENO };
-	mx_status_t status = process_subshell(n, envp, &process, &fds[0], &errmsg);
+	zx_status_t status = process_subshell(n, envp, &process, &fds[0], &errmsg);
         close(pip[1]);
-	if (status != MX_OK) {
+	if (status != ZX_OK) {
 		freejob(jp);
-		sh_error("Failed to create subshell: %s: %s", mx_status_get_string(status), errmsg);
+		sh_error("Failed to create subshell: %s: %s", zx_status_get_string(status), errmsg);
 	} else {
                 /* Process-tracking management */
 		forkparent(jp, n, FORK_NOJOB, process);
@@ -848,17 +848,17 @@ bail:
 	/* Execute the command. */
 	switch (cmdentry.cmdtype) {
 	default: {
-		mx_handle_t process = MX_HANDLE_INVALID;
+		zx_handle_t process = ZX_HANDLE_INVALID;
 		const char* errmsg = NULL;
 		status = process_launch(argc, (const char* const*)argv, path,
 		                        cmdentry.u.index, &process, &errmsg);
 		if (status) {
-			sh_error("Cannot create child process: %s: %s", mx_status_get_string(status), errmsg);
+			sh_error("Cannot create child process: %s: %s", zx_status_get_string(status), errmsg);
 			break;
 		}
 		settitle(argv[0]);
 		status = process_await_termination(process, true);
-		mx_handle_close(process);
+		zx_handle_close(process);
 		settitle("sh");
 		break;
 	}

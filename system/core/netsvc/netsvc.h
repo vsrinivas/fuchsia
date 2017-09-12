@@ -9,8 +9,8 @@
 
 #include <inet6/inet6.h>
 
-#include <magenta/types.h>
-#include <magenta/boot/netboot.h>
+#include <zircon/types.h>
+#include <zircon/boot/netboot.h>
 
 // netfile interface
 typedef struct netfile_state_t {
@@ -56,7 +56,7 @@ void netboot_recv(void* data, size_t len, bool is_mcast,
 void netboot_run_cmd(const char* cmd);
 
 // TFTP interface
-extern mx_time_t tftp_next_timeout;
+extern zx_time_t tftp_next_timeout;
 
 void tftp_recv(void *data, size_t len,
                const ip6_addr_t* daddr, uint16_t dport,
@@ -65,7 +65,7 @@ void tftp_recv(void *data, size_t len,
 void tftp_timeout_expired(void);
 
 // debuglog interface
-extern mx_time_t debuglog_next_timeout;
+extern zx_time_t debuglog_next_timeout;
 
 int debuglog_init(void);
 

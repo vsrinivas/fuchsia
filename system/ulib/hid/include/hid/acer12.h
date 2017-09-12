@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -61,6 +61,6 @@ typedef struct acer12_stylus {
 } __attribute__((packed)) acer12_stylus_t;
 
 extern bool is_acer12_touch_report_desc(const uint8_t* data, size_t len);
-extern mx_status_t setup_acer12_touch(int fd);
+extern zx_status_t setup_acer12_touch(int fd);
 
 __END_CDECLS

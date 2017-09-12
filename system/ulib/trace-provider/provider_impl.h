@@ -5,9 +5,9 @@
 #pragma once
 
 #include <async/wait.h>
-#include <mx/channel.h>
-#include <mx/eventpair.h>
-#include <mx/vmo.h>
+#include <zx/channel.h>
+#include <zx/eventpair.h>
+#include <zx/vmo.h>
 #include <fbl/macros.h>
 #include <trace-provider/provider.h>
 
@@ -19,29 +19,29 @@ namespace internal {
 
 class TraceProviderImpl final : public trace_provider_t {
 public:
-    TraceProviderImpl(async_t* async, mx::channel channel);
+    TraceProviderImpl(async_t* async, zx::channel channel);
     ~TraceProviderImpl();
 
 private:
     class Connection final {
     public:
-        Connection(TraceProviderImpl* impl, mx::channel channel);
+        Connection(TraceProviderImpl* impl, zx::channel channel);
         ~Connection();
 
     private:
         async_wait_result_t Handle(async_t* async,
-                                   mx_status_t status,
-                                   const mx_packet_signal_t* signal);
+                                   zx_status_t status,
+                                   const zx_packet_signal_t* signal);
 
         bool ReadMessage();
         void Close();
 
         TraceProviderImpl* const impl_;
-        mx::channel channel_;
+        zx::channel channel_;
         async::Wait wait_;
     };
 
-    bool Start(mx::vmo buffer, mx::eventpair fence);
+    bool Start(zx::vmo buffer, zx::eventpair fence);
     void Stop();
 
     async_t* const async_;

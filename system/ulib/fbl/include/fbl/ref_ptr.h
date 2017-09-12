@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <magenta/assert.h>
-#include <magenta/compiler.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
 #include <fbl/recycler.h>
 #include <fbl/type_support.h>
 
@@ -138,7 +138,7 @@ public:
     template <typename BaseType>
     RefPtr(T* ptr, RefPtr<BaseType>&& base)
         : ptr_(ptr) {
-        MX_ASSERT(static_cast<BaseType*>(ptr_) == base.ptr_);
+        ZX_ASSERT(static_cast<BaseType*>(ptr_) == base.ptr_);
         base.ptr_ = nullptr;
     }
 
@@ -226,7 +226,7 @@ private:
     RefPtr(T* ptr, const Mutex& dtor_lock)
         : ptr_(ptr->AddRefMaybeInDestructor() ? ptr : nullptr) {
 #if _KERNEL
-        MX_DEBUG_ASSERT_MSG(dtor_lock.IsHeld(), "Lock must be held while using this ctor\n");
+        ZX_DEBUG_ASSERT_MSG(dtor_lock.IsHeld(), "Lock must be held while using this ctor\n");
 #endif
     }
 

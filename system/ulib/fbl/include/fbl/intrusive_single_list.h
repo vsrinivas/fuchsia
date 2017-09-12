@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/macros.h>
 
@@ -32,7 +32,7 @@
 //
 // Lists of unmanaged pointer types perform no lifecycle management.  It is up to
 // the user of the list class to make sure that lifecycles are managed properly.
-// As an added safety, a list of unmanaged pointers will MX_ASSERT if it is
+// As an added safety, a list of unmanaged pointers will ZX_ASSERT if it is
 // destroyed with elements still in it.
 //
 // Objects may exist in multiple lists (or other containers) through the use of
@@ -241,7 +241,7 @@ public:
     // an empty list of unmanaged pointers.  Like Rvalue construction, it will
     // result in the move of the source contents to the destination.
     SinglyLinkedList& operator=(SinglyLinkedList&& other_list) {
-        MX_DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
+        ZX_DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
 
         clear();
         swap(other_list);
@@ -253,7 +253,7 @@ public:
         // It is considered an error to allow a list of unmanaged pointers to
         // destruct of there are still elements in it.  Managed pointer lists
         // will automatically release their references to their elements.
-        MX_DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
+        ZX_DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
         clear();
         PtrTraits::DetachSentinel(head_);
     }
@@ -273,14 +273,14 @@ public:
     // is_empty
     //
     // True if the list has at least one element in it, false otherwise.
-    bool is_empty() const { MX_DEBUG_ASSERT(head_ != nullptr); return PtrTraits::IsSentinel(head_); }
+    bool is_empty() const { ZX_DEBUG_ASSERT(head_ != nullptr); return PtrTraits::IsSentinel(head_); }
 
     // front
     //
     // Return a reference to the element at the front of the list without
     // removing it.  It is an error to call front on an empty list.
-    typename PtrTraits::RefType      front()       { MX_DEBUG_ASSERT(!is_empty()); return *head_; }
-    typename PtrTraits::ConstRefType front() const { MX_DEBUG_ASSERT(!is_empty()); return *head_; }
+    typename PtrTraits::RefType      front()       { ZX_DEBUG_ASSERT(!is_empty()); return *head_; }
+    typename PtrTraits::ConstRefType front() const { ZX_DEBUG_ASSERT(!is_empty()); return *head_; }
 
     // push_front
     //
@@ -289,10 +289,10 @@ public:
     // is an error to attempt to push a nullptr instance of PtrType.
     void push_front(const PtrType& ptr) { push_front(PtrType(ptr)); }
     void push_front(PtrType&& ptr) {
-        MX_DEBUG_ASSERT(ptr != nullptr);
+        ZX_DEBUG_ASSERT(ptr != nullptr);
 
         auto& ptr_ns = NodeTraits::node_state(*ptr);
-        MX_DEBUG_ASSERT(!ptr_ns.InContainer());
+        ZX_DEBUG_ASSERT(!ptr_ns.InContainer());
 
         ptr_ns.next_ = fbl::move(head_);
         head_        = fbl::move(ptr);
@@ -307,12 +307,12 @@ public:
         insert_after(iter, PtrType(ptr));
     }
     void insert_after(const iterator& iter, PtrType&& ptr) {
-        MX_DEBUG_ASSERT(iter.IsValid());
-        MX_DEBUG_ASSERT(ptr != nullptr);
+        ZX_DEBUG_ASSERT(iter.IsValid());
+        ZX_DEBUG_ASSERT(ptr != nullptr);
 
         auto& iter_ns = NodeTraits::node_state(*iter.node_);
         auto& ptr_ns  = NodeTraits::node_state(*ptr);
-        MX_DEBUG_ASSERT(!ptr_ns.InContainer());
+        ZX_DEBUG_ASSERT(!ptr_ns.InContainer());
 
         PtrTraits::Swap(iter_ns.next_, ptr_ns.next_);
         iter_ns.next_ = fbl::move(ptr);
@@ -370,7 +370,7 @@ public:
     // instance of PtrType.  It is an error to attempt to
     // erase_next(end())
     PtrType erase_next(const iterator& iter) {
-        MX_DEBUG_ASSERT(iter != end());
+        ZX_DEBUG_ASSERT(iter != end());
         auto& iter_ns = NodeTraits::node_state(*iter);
 
         if (iter_ns.next_ == nullptr)
@@ -455,10 +455,10 @@ public:
     template <typename UnaryFn>
     PtrType replace_if(UnaryFn fn, const PtrType& ptr) {
         using ConstRefType  = typename PtrTraits::ConstRefType;
-        MX_DEBUG_ASSERT(ptr != nullptr);
+        ZX_DEBUG_ASSERT(ptr != nullptr);
 
         auto& ptr_ns = NodeTraits::node_state(*ptr);
-        MX_DEBUG_ASSERT(!ptr_ns.InContainer());
+        ZX_DEBUG_ASSERT(!ptr_ns.InContainer());
 
         auto iter = begin();
         if (iter.IsValid()) {
@@ -489,10 +489,10 @@ public:
     template <typename UnaryFn>
     PtrType replace_if(UnaryFn fn, PtrType&& ptr) {
         using ConstRefType  = typename PtrTraits::ConstRefType;
-        MX_DEBUG_ASSERT(ptr != nullptr);
+        ZX_DEBUG_ASSERT(ptr != nullptr);
 
         auto& ptr_ns = NodeTraits::node_state(*ptr);
-        MX_DEBUG_ASSERT(!ptr_ns.InContainer());
+        ZX_DEBUG_ASSERT(!ptr_ns.InContainer());
 
         auto iter = begin();
         if (iter.IsValid()) {
@@ -566,12 +566,12 @@ private:
         }
 
         typename IterTraits::RefType operator*() const {
-            MX_DEBUG_ASSERT(IsValid());
+            ZX_DEBUG_ASSERT(IsValid());
             return *node_;
         }
 
         typename IterTraits::RawPtrType operator->() const {
-            MX_DEBUG_ASSERT(IsValid());
+            ZX_DEBUG_ASSERT(IsValid());
             return node_;
         }
 

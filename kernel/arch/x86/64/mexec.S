@@ -10,7 +10,7 @@
 #include <arch/x86/mmu.h>
 #include <arch/x86/registers.h>
 #include <asm.h>
-#include <magenta/tls.h>
+#include <zircon/tls.h>
 #include <mexec.h>
 
 #define ENTRY64_ADDR 0x100020

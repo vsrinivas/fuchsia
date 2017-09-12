@@ -261,10 +261,10 @@ inline status_t validate_capability_offset(uint8_t offset) {
     if (offset == 0xFF
         || offset < PCIE_CAP_PTR_MIN_VALID
         || offset > PCIE_CAP_PTR_MAX_VALID) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 /*
@@ -275,7 +275,7 @@ inline status_t validate_capability_offset(uint8_t offset) {
  */
 
 status_t PcieDevice::ParseStdCapabilitiesLocked() {
-    status_t res = MX_OK;
+    status_t res = ZX_OK;
     uint8_t cap_offset = cfg_->Read(PciConfig::kCapabilitiesPtr);
     uint8_t caps_found = 0;
     fbl::AllocChecker ac;
@@ -290,7 +290,7 @@ status_t PcieDevice::ParseStdCapabilitiesLocked() {
     LTRACEF("Scanning for capabilities at %02x:%02x.%01x (%04hx:%04hx)\n",
             bus_id(), dev_id(), func_id(), vendor_id(), device_id());
     while (cap_offset != PCIE_CAP_PTR_NULL && caps_found < PCIE_MAX_CAPABILITIES) {
-        if ((res = validate_capability_offset(cap_offset)) != MX_OK) {
+        if ((res = validate_capability_offset(cap_offset)) != ZX_OK) {
             TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has invalid cptr (%#02x)\n",
                     bus_id(), dev_id(), func_id(),
                     vendor_id(), device_id(), cap_offset);
@@ -327,7 +327,7 @@ status_t PcieDevice::ParseStdCapabilitiesLocked() {
 
         if (!ac.check()) {
             TRACEF("Could not allocate memory fori capability 0x%02x\n", id);
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
         }
 
         caps_.detected.push_front(fbl::unique_ptr<PciStdCapability>(cap));
@@ -343,14 +343,14 @@ status_t PcieDevice::ParseExtCapabilitiesLocked() {
      * TODO(cja): Since ExtCaps are a no-op right now (we had nothing in the table for
      * supported extended capabilities) this is a stub for now.
      */
-    return MX_OK;
+    return ZX_OK;
 }
 
 // Parse PCI Standard Capabilities starting with the pointer in the PCI
 // config structure.
 status_t PcieDevice::ProbeCapabilitiesLocked() {
     status_t ret = ParseStdCapabilitiesLocked();
-    if (ret != MX_OK) {
+    if (ret != ZX_OK) {
         return ret;
     }
 

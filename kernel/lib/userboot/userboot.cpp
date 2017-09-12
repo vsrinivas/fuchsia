@@ -30,14 +30,14 @@
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 
-#include <magenta/processargs.h>
-#include <magenta/stack.h>
+#include <zircon/processargs.h>
+#include <zircon/stack.h>
 
 #if ENABLE_ENTROPY_COLLECTOR_TEST
 #include <lib/crypto/entropy/quality_test.h>
 #endif
 
-static const size_t stack_size = MAGENTA_DEFAULT_STACK_SIZE;
+static const size_t stack_size = ZIRCON_DEFAULT_STACK_SIZE;
 
 #define STACK_VMO_NAME "userboot-initial-stack"
 #define RAMDISK_VMO_NAME "userboot-raw-ramdisk"
@@ -69,23 +69,23 @@ public:
         return RoDso::size() + vdso_->size();
     }
 
-    mx_status_t Map(fbl::RefPtr<VmAddressRegionDispatcher> root_vmar,
+    zx_status_t Map(fbl::RefPtr<VmAddressRegionDispatcher> root_vmar,
                     uintptr_t* vdso_base, uintptr_t* entry) {
         // Create a VMAR (placed anywhere) to hold the combined image.
         fbl::RefPtr<VmAddressRegionDispatcher> vmar;
-        mx_rights_t vmar_rights;
-        mx_status_t status = root_vmar->Allocate(0, size(),
-                                                 MX_VM_FLAG_CAN_MAP_READ |
-                                                 MX_VM_FLAG_CAN_MAP_WRITE |
-                                                 MX_VM_FLAG_CAN_MAP_EXECUTE |
-                                                 MX_VM_FLAG_CAN_MAP_SPECIFIC,
+        zx_rights_t vmar_rights;
+        zx_status_t status = root_vmar->Allocate(0, size(),
+                                                 ZX_VM_FLAG_CAN_MAP_READ |
+                                                 ZX_VM_FLAG_CAN_MAP_WRITE |
+                                                 ZX_VM_FLAG_CAN_MAP_EXECUTE |
+                                                 ZX_VM_FLAG_CAN_MAP_SPECIFIC,
                                                  &vmar, &vmar_rights);
-        if (status != MX_OK)
+        if (status != ZX_OK)
             return status;
 
         // Map userboot proper.
         status = RoDso::Map(vmar, 0);
-        if (status == MX_OK) {
+        if (status == ZX_OK) {
             *entry = vmar->vmar()->base() + USERBOOT_ENTRY;
 
             // Map the vDSO right after it.
@@ -103,74 +103,74 @@ private:
 
 
 // Get a handle to a VM object, with full rights except perhaps for writing.
-static mx_status_t get_vmo_handle(fbl::RefPtr<VmObject> vmo, bool readonly,
+static zx_status_t get_vmo_handle(fbl::RefPtr<VmObject> vmo, bool readonly,
                                   fbl::RefPtr<VmObjectDispatcher>* disp_ptr,
                                   Handle** ptr) {
     if (!vmo)
-        return MX_ERR_NO_MEMORY;
-    mx_rights_t rights;
+        return ZX_ERR_NO_MEMORY;
+    zx_rights_t rights;
     fbl::RefPtr<Dispatcher> dispatcher;
-    mx_status_t result = VmObjectDispatcher::Create(
+    zx_status_t result = VmObjectDispatcher::Create(
         fbl::move(vmo), &dispatcher, &rights);
-    if (result == MX_OK) {
+    if (result == ZX_OK) {
         if (disp_ptr)
             *disp_ptr = fbl::RefPtr<VmObjectDispatcher>::Downcast(dispatcher);
         if (readonly)
-            rights &= ~MX_RIGHT_WRITE;
+            rights &= ~ZX_RIGHT_WRITE;
         if (ptr)
             *ptr = MakeHandle(fbl::move(dispatcher), rights);
     }
     return result;
 }
 
-static mx_status_t get_job_handle(Handle** ptr) {
-    mx_rights_t rights;
+static zx_status_t get_job_handle(Handle** ptr) {
+    zx_rights_t rights;
     fbl::RefPtr<Dispatcher> dispatcher;
-    mx_status_t result = JobDispatcher::Create(
+    zx_status_t result = JobDispatcher::Create(
         0u, GetRootJobDispatcher(), &dispatcher, &rights);
-    if (result == MX_OK)
+    if (result == ZX_OK)
         *ptr = MakeHandle(fbl::move(dispatcher), rights);
     return result;
 }
 
-static mx_status_t get_resource_handle(Handle** ptr) {
-    mx_rights_t rights;
+static zx_status_t get_resource_handle(Handle** ptr) {
+    zx_rights_t rights;
     fbl::RefPtr<ResourceDispatcher> root;
-    mx_status_t result = ResourceDispatcher::Create(&root, &rights, MX_RSRC_KIND_ROOT, 0, 0);
-    if (result == MX_OK)
+    zx_status_t result = ResourceDispatcher::Create(&root, &rights, ZX_RSRC_KIND_ROOT, 0, 0);
+    if (result == ZX_OK)
         *ptr = MakeHandle(fbl::RefPtr<Dispatcher>(root.get()), rights);
     return result;
 }
 
 // Create a channel and write the bootstrap message down one side of
 // it, returning the handle to the other side.
-static mx_status_t make_bootstrap_channel(
+static zx_status_t make_bootstrap_channel(
     fbl::RefPtr<ProcessDispatcher> process,
     fbl::unique_ptr<MessagePacket> msg,
-    mx_handle_t* out) {
+    zx_handle_t* out) {
     HandleOwner user_channel_handle;
     fbl::RefPtr<ChannelDispatcher> kernel_channel;
-    *out = MX_HANDLE_INVALID;
+    *out = ZX_HANDLE_INVALID;
     {
         fbl::RefPtr<Dispatcher> mpd0, mpd1;
-        mx_rights_t rights;
-        mx_status_t status = ChannelDispatcher::Create(&mpd0, &mpd1, &rights);
-        if (status != MX_OK)
+        zx_rights_t rights;
+        zx_status_t status = ChannelDispatcher::Create(&mpd0, &mpd1, &rights);
+        if (status != ZX_OK)
             return status;
         user_channel_handle.reset(MakeHandle(fbl::move(mpd0), rights));
         kernel_channel = DownCastDispatcher<ChannelDispatcher>(&mpd1);
     }
 
     // Here it goes!
-    mx_status_t status = kernel_channel->Write(fbl::move(msg));
-    if (status != MX_OK)
+    zx_status_t status = kernel_channel->Write(fbl::move(msg));
+    if (status != ZX_OK)
         return status;
 
-    mx_handle_t hv = process->MapHandleToValue(user_channel_handle);
+    zx_handle_t hv = process->MapHandleToValue(user_channel_handle);
     process->AddHandle(fbl::move(user_channel_handle));
 
     *out = hv;
-    return MX_OK;
+    return ZX_OK;
 }
 
 enum bootstrap_handle_index {
@@ -191,7 +191,7 @@ enum bootstrap_handle_index {
 };
 
 struct bootstrap_message {
-    mx_proc_args_t header;
+    zx_proc_args_t header;
     uint32_t handle_info[BOOTSTRAP_HANDLES];
     char cmdline[CMDLINE_MAX];
 };
@@ -207,8 +207,8 @@ static fbl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
     }
 
     memset(&msg->header, 0, sizeof(msg->header));
-    msg->header.protocol = MX_PROCARGS_PROTOCOL;
-    msg->header.version = MX_PROCARGS_VERSION;
+    msg->header.protocol = ZX_PROCARGS_PROTOCOL;
+    msg->header.version = ZX_PROCARGS_VERSION;
     msg->header.environ_off = offsetof(struct bootstrap_message, cmdline);
     msg->header.environ_num = __kernel_cmdline_count;
     msg->header.handle_info_off =
@@ -257,10 +257,10 @@ static fbl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
 
     fbl::unique_ptr<MessagePacket> packet;
     uint32_t num_handles = BOOTSTRAP_HANDLES;
-    mx_status_t status =
+    zx_status_t status =
         MessagePacket::Create(msg, data_size, num_handles, &packet);
     free(msg);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return nullptr;
     }
     return packet;
@@ -272,28 +272,28 @@ static void clog_to_vmo(const void* data, size_t off, size_t len, void* cookie) 
     vmo->Write(data, off, len, &actual);
 }
 
-static mx_status_t attempt_userboot() {
+static zx_status_t attempt_userboot() {
     size_t rsize;
     void* rbase = platform_get_ramdisk(&rsize);
     if (rbase)
         dprintf(INFO, "userboot: ramdisk %#15zx @ %p\n", rsize, rbase);
 
     fbl::RefPtr<VmObject> stack_vmo;
-    mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, stack_size, &stack_vmo);
-    if (status != MX_OK)
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, stack_size, &stack_vmo);
+    if (status != ZX_OK)
         return status;
     stack_vmo->set_name(STACK_VMO_NAME, sizeof(STACK_VMO_NAME) - 1);
 
     fbl::RefPtr<VmObject> rootfs_vmo;
     status = VmObjectPaged::CreateFromROData(rbase, rsize, &rootfs_vmo);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
     rootfs_vmo->set_name(RAMDISK_VMO_NAME, sizeof(RAMDISK_VMO_NAME) - 1);
 
     size_t size = platform_recover_crashlog(0, NULL, NULL);
     fbl::RefPtr<VmObject> crashlog_vmo;
     status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &crashlog_vmo);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
     platform_recover_crashlog(size, crashlog_vmo.get(), clog_to_vmo);
     crashlog_vmo->set_name(CRASHLOG_VMO_NAME, sizeof(CRASHLOG_VMO_NAME) - 1);
@@ -303,29 +303,29 @@ static mx_status_t attempt_userboot() {
     // We'll fill in the handles as we create things.
     fbl::unique_ptr<MessagePacket> msg = prepare_bootstrap_message();
     if (!msg)
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     Handle** const handles = msg->mutable_handles();
     DEBUG_ASSERT(msg->num_handles() == BOOTSTRAP_HANDLES);
     status = get_vmo_handle(rootfs_vmo, false, nullptr,
                             &handles[BOOTSTRAP_RAMDISK]);
     fbl::RefPtr<VmObjectDispatcher> stack_vmo_dispatcher;
-    if (status == MX_OK)
+    if (status == ZX_OK)
         status = get_vmo_handle(stack_vmo, false, &stack_vmo_dispatcher,
                                 &handles[BOOTSTRAP_STACK]);
-    if (status == MX_OK)
+    if (status == ZX_OK)
         status = get_vmo_handle(crashlog_vmo, false, nullptr,
                                 &handles[BOOTSTRAP_CRASHLOG]);
-    if (status == MX_OK)
+    if (status == ZX_OK)
         status = get_resource_handle(&handles[BOOTSTRAP_RESOURCE_ROOT]);
 
-    if (status == MX_OK)
+    if (status == ZX_OK)
         status = get_job_handle(&handles[BOOTSTRAP_JOB]);
 
 #if ENABLE_ENTROPY_COLLECTOR_TEST
-    if (status == MX_OK) {
+    if (status == ZX_OK) {
         if (crypto::entropy::entropy_was_lost) {
-            status = MX_ERR_INTERNAL;
+            status = ZX_ERR_INTERNAL;
         } else {
             status = get_vmo_handle(
                     crypto::entropy::entropy_vmo,
@@ -334,12 +334,12 @@ static mx_status_t attempt_userboot() {
         }
     }
 #endif
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     fbl::RefPtr<Dispatcher> proc_disp;
     fbl::RefPtr<VmAddressRegionDispatcher> vmar;
-    mx_rights_t rights, vmar_rights;
+    zx_rights_t rights, vmar_rights;
     status = ProcessDispatcher::Create(GetRootJobDispatcher(), "userboot", 0,
                                        &proc_disp, &rights,
                                        &vmar, &vmar_rights);
@@ -364,16 +364,16 @@ static mx_status_t attempt_userboot() {
     uintptr_t vdso_base = 0;
     uintptr_t entry = 0;
     status = userboot.Map(vmar, &vdso_base, &entry);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     // Map the stack anywhere.
     fbl::RefPtr<VmMapping> stack_mapping;
     status = vmar->Map(0,
                        fbl::move(stack_vmo), 0, stack_size,
-                       MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                       ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                        &stack_mapping);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     uintptr_t stack_base = stack_mapping->base();
@@ -394,9 +394,9 @@ static mx_status_t attempt_userboot() {
     DEBUG_ASSERT(thread);
 
     // All the handles are in place, so we can send the bootstrap message.
-    mx_handle_t hv;
+    zx_handle_t hv;
     status = make_bootstrap_channel(proc, fbl::move(msg), &hv);
-    if (status != MX_OK)
+    if (status != ZX_OK)
         return status;
 
     dprintf(SPEW, "userboot: %-23s @ %#" PRIxPTR "\n", "entry point", entry);
@@ -404,12 +404,12 @@ static mx_status_t attempt_userboot() {
     // Start the process's initial thread.
     status = thread->Start(entry, sp, hv, vdso_base,
                            /* initial_thread= */ true);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         printf("userboot: failed to start initial thread: %d\n", status);
         return status;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 void userboot_init(uint level) {

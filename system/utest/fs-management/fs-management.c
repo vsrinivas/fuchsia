@@ -14,10 +14,10 @@
 #include <time.h>
 #include <unistd.h>
 
-#include <magenta/device/block.h>
-#include <magenta/device/vfs.h>
-#include <magenta/device/ramdisk.h>
-#include <magenta/syscalls.h>
+#include <zircon/device/block.h>
+#include <zircon/device/vfs.h>
+#include <zircon/device/ramdisk.h>
+#include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 
 #include <fs-management/mount.h>
@@ -52,16 +52,16 @@ static bool mount_unmount(void) {
 
     BEGIN_TEST;
     ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0, "");
-    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), MX_OK, "");
+    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), ZX_OK, "");
     ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "memfs", strlen("memfs")), "");
     int fd = open(ramdisk_path, O_RDWR);
     ASSERT_GT(fd, 0, "");
     ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_async),
-              MX_OK, "");
+              ZX_OK, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "minfs", strlen("minfs")), "");
-    ASSERT_EQ(umount(mount_path), MX_OK, "");
+    ASSERT_EQ(umount(mount_path), ZX_OK, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "memfs", strlen("memfs")), "");
     ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0, "");
     ASSERT_EQ(unlink(mount_path), 0, "");
@@ -74,16 +74,16 @@ static bool mount_mkdir_unmount(void) {
 
     BEGIN_TEST;
     ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0, "");
-    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), MX_OK, "");
+    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), ZX_OK, "");
     int fd = open(ramdisk_path, O_RDWR);
     ASSERT_GT(fd, 0, "");
     mount_options_t options = default_mount_options;
     options.create_mountpoint = true;
     ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &options,
                     launch_stdio_async),
-              MX_OK, "");
+              ZX_OK, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "minfs", strlen("minfs")), "");
-    ASSERT_EQ(umount(mount_path), MX_OK, "");
+    ASSERT_EQ(umount(mount_path), ZX_OK, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "memfs", strlen("memfs")), "");
     ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0, "");
     ASSERT_EQ(unlink(mount_path), 0, "");
@@ -96,7 +96,7 @@ static bool fmount_funmount(void) {
 
     BEGIN_TEST;
     ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0, "");
-    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), MX_OK, "");
+    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), ZX_OK, "");
     ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "memfs", strlen("memfs")), "");
     int fd = open(ramdisk_path, O_RDWR);
@@ -106,9 +106,9 @@ static bool fmount_funmount(void) {
     ASSERT_GT(mountfd, 0, "Couldn't open mount point");
     ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_async),
-              MX_OK, "");
+              ZX_OK, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "minfs", strlen("minfs")), "");
-    ASSERT_EQ(fumount(mountfd), MX_OK, "");
+    ASSERT_EQ(fumount(mountfd), ZX_OK, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "memfs", strlen("memfs")), "");
     ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0, "");
     ASSERT_EQ(close(mountfd), 0, "Couldn't close ex-mount point");
@@ -121,7 +121,7 @@ static bool fmount_funmount(void) {
 bool do_mount_evil(const char* parentfs_name, const char* mount_path) {
     char ramdisk_path[PATH_MAX];
     ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0, "");
-    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), MX_OK, "");
+    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), ZX_OK, "");
     ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
 
     int fd = open(ramdisk_path, O_RDWR);
@@ -135,8 +135,8 @@ bool do_mount_evil(const char* parentfs_name, const char* mount_path) {
     // The directory was unlinked! We can't mount now!
     ASSERT_NE(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
                    launch_stdio_async),
-              MX_OK, "");
-    ASSERT_NE(fumount(mountfd), MX_OK, "");
+              ZX_OK, "");
+    ASSERT_NE(fumount(mountfd), ZX_OK, "");
     ASSERT_EQ(close(mountfd), 0, "Couldn't close unlinked not-mount point");
 
     // Re-acquire the ramdisk mount point; it's always consumed...
@@ -149,8 +149,8 @@ bool do_mount_evil(const char* parentfs_name, const char* mount_path) {
     // Wait a sec, that was a file, not a directory! We can't mount that!
     ASSERT_NE(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
                      launch_stdio_async),
-              MX_OK, "");
-    ASSERT_NE(fumount(mountfd), MX_OK, "");
+              ZX_OK, "");
+    ASSERT_NE(fumount(mountfd), ZX_OK, "");
     ASSERT_EQ(close(mountfd), 0, "Couldn't close file not-mount point");
     ASSERT_EQ(unlink(mount_path), 0, "");
 
@@ -162,7 +162,7 @@ bool do_mount_evil(const char* parentfs_name, const char* mount_path) {
     mountfd = open(mount_path, O_RDONLY | O_DIRECTORY);
     ASSERT_GT(mountfd, 0, "Couldn't open mount point");
     ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
-                     launch_stdio_async), MX_ERR_ACCESS_DENIED, "");
+                     launch_stdio_async), ZX_ERR_ACCESS_DENIED, "");
     ASSERT_EQ(close(mountfd), 0, "Couldn't close the unpriviledged mount point");
 
     // Okay, fine, let's mount successfully...
@@ -172,13 +172,13 @@ bool do_mount_evil(const char* parentfs_name, const char* mount_path) {
     ASSERT_GT(mountfd, 0, "Couldn't open mount point");
     ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_async),
-              MX_OK, "");
+              ZX_OK, "");
     // Awesome, that worked. But we shouldn't be able to mount again!
     fd = open(ramdisk_path, O_RDWR);
     ASSERT_GT(fd, 0, "");
     ASSERT_NE(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
                    launch_stdio_async),
-              MX_OK, "");
+              ZX_OK, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "minfs", strlen("minfs")), "");
 
     // Let's try removing the mount point (we shouldn't be allowed to do so)
@@ -189,18 +189,18 @@ bool do_mount_evil(const char* parentfs_name, const char* mount_path) {
     // WITHOUT O_ADMIN
     int badfd = open(mount_path, O_RDONLY | O_DIRECTORY);
     ASSERT_GT(badfd, 0, "");
-    ASSERT_EQ(ioctl_vfs_unmount_fs(badfd), MX_ERR_ACCESS_DENIED, "");
+    ASSERT_EQ(ioctl_vfs_unmount_fs(badfd), ZX_ERR_ACCESS_DENIED, "");
     ASSERT_EQ(close(badfd), 0, "");
 
     // Let's try unmounting the filesystem WITHOUT O_ADMIN
     // (unpinning the remote handle from the parent FS).
     badfd = open(mount_path, O_RDONLY | O_DIRECTORY);
-    mx_handle_t h;
-    ASSERT_EQ(ioctl_vfs_unmount_node(badfd, &h), MX_ERR_ACCESS_DENIED, "");
+    zx_handle_t h;
+    ASSERT_EQ(ioctl_vfs_unmount_node(badfd, &h), ZX_ERR_ACCESS_DENIED, "");
     ASSERT_EQ(close(badfd), 0, "");
 
     // When we unmount with an O_ADMIN handle, it should successfully detach.
-    ASSERT_EQ(fumount(mountfd), MX_OK, "");
+    ASSERT_EQ(fumount(mountfd), ZX_OK, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, parentfs_name, strlen(parentfs_name)), "");
     ASSERT_EQ(close(mountfd), 0, "");
     ASSERT_EQ(rmdir(mount_path), 0, "");
@@ -220,7 +220,7 @@ static bool mount_evil_minfs(void) {
 
     BEGIN_TEST;
     ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0, "");
-    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), MX_OK, "");
+    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), ZX_OK, "");
     const char* parent_path = "/tmp/parent";
     ASSERT_EQ(mkdir(parent_path, 0666), 0, "");
     int mountfd = open(parent_path, O_RDONLY | O_DIRECTORY | O_ADMIN);
@@ -229,7 +229,7 @@ static bool mount_evil_minfs(void) {
     ASSERT_GT(ramdiskfd, 0, "");
     ASSERT_EQ(fmount(ramdiskfd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_async),
-              MX_OK, "");
+              ZX_OK, "");
     ASSERT_EQ(close(mountfd), 0, "");
 
     const char* mount_path = "/tmp/parent/mount_evil";
@@ -247,7 +247,7 @@ static bool mount_remount(void) {
 
     BEGIN_TEST;
     ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0, "");
-    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), MX_OK, "");
+    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), ZX_OK, "");
     ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
 
     // We should still be able to mount and unmount the filesystem multiple times
@@ -256,8 +256,8 @@ static bool mount_remount(void) {
         ASSERT_GE(fd, 0, "");
         ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
                         launch_stdio_async),
-                  MX_OK, "");
-        ASSERT_EQ(umount(mount_path), MX_OK, "");
+                  ZX_OK, "");
+        ASSERT_EQ(umount(mount_path), ZX_OK, "");
     }
     ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0, "");
     ASSERT_EQ(unlink(mount_path), 0, "");
@@ -270,17 +270,17 @@ static bool mount_fsck(void) {
 
     BEGIN_TEST;
     ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0, "");
-    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), MX_OK, "");
+    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), ZX_OK, "");
     ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
     int fd = open(ramdisk_path, O_RDWR);
     ASSERT_GE(fd, 0, "Could not open ramdisk device");
     ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_async),
-              MX_OK, "");
-    ASSERT_EQ(umount(mount_path), MX_OK, "");
+              ZX_OK, "");
+    ASSERT_EQ(umount(mount_path), ZX_OK, "");
     // fsck shouldn't require any user input for a newly mkfs'd filesystem
     ASSERT_EQ(fsck(ramdisk_path, DISK_FORMAT_MINFS, &default_fsck_options, launch_stdio_sync),
-              MX_OK, "");
+              ZX_OK, "");
     ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0, "");
     ASSERT_EQ(unlink(mount_path), 0, "");
     END_TEST;
@@ -294,14 +294,14 @@ static bool umount_test_evil(void) {
 
     // Create a ramdisk, mount minfs
     ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0, "");
-    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), MX_OK, "");
+    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), ZX_OK, "");
     ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "memfs", strlen("memfs")), "");
     int fd = open(ramdisk_path, O_RDWR);
     ASSERT_GT(fd, 0, "");
     ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_async),
-              MX_OK, "");
+              ZX_OK, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "minfs", strlen("minfs")), "");
 
     // Try re-opening the root without O_ADMIN. We shouldn't be able to umount.
@@ -324,7 +324,7 @@ static bool umount_test_evil(void) {
 
     // Finally, umount using O_NOREMOTE and acquiring the connection
     // that has "O_ADMIN" set.
-    ASSERT_EQ(umount(mount_path), MX_OK, "");
+    ASSERT_EQ(umount(mount_path), ZX_OK, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "memfs", strlen("memfs")), "");
     ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0, "");
     ASSERT_EQ(unlink(mount_path), 0, "");
@@ -337,7 +337,7 @@ static bool mount_get_device(void) {
 
     BEGIN_TEST;
     ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0, "");
-    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), MX_OK, "");
+    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), ZX_OK, "");
     ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "memfs", strlen("memfs")), "");
 
@@ -352,7 +352,7 @@ static bool mount_get_device(void) {
     ASSERT_GT(fd, 0, "");
     ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_async),
-              MX_OK, "");
+              ZX_OK, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "minfs", strlen("minfs")), "");
 
     mountfd = open(mount_path, O_RDONLY | O_ADMIN);
@@ -368,7 +368,7 @@ static bool mount_get_device(void) {
     ASSERT_LT(path_len, 0, "");
     ASSERT_EQ(close(mountfd), 0, "");
 
-    ASSERT_EQ(umount(mount_path), MX_OK, "");
+    ASSERT_EQ(umount(mount_path), ZX_OK, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "memfs", strlen("memfs")), "");
 
     mountfd = open(mount_path, O_RDONLY | O_ADMIN);

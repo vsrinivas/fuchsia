@@ -4,9 +4,9 @@
 
 #include <ddk/debug.h>
 #include <hw/reg.h>
-#include <magenta/types.h>
-#include <magenta/syscalls.h>
-#include <magenta/process.h>
+#include <zircon/types.h>
+#include <zircon/syscalls.h>
+#include <zircon/process.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -116,10 +116,10 @@ static void xhci_read_extended_caps(xhci_t* xhci, void* mmio, volatile uint32_t*
     }
 }
 
-static mx_status_t xhci_claim_ownership(xhci_t* xhci) {
+static zx_status_t xhci_claim_ownership(xhci_t* xhci) {
     xhci_usb_legacy_support_cap_t* cap = xhci->usb_legacy_support_cap;
     if (cap == NULL) {
-        return MX_OK;
+        return ZX_OK;
     }
 
     // The XHCI spec defines this handoff protocol.  We need to wait at most one
@@ -130,62 +130,62 @@ static mx_status_t xhci_claim_ownership(xhci_t* xhci) {
     // BIOS semaphore.  Additionally, all bits besides bit 0 in the OS semaphore
     // are RsvdP, so we need to preserve them on modification.
     cap->os_owned_sem |= 1;
-    mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
-    mx_time_t deadline = now + MX_SEC(1);
+    zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t deadline = now + ZX_SEC(1);
     while ((cap->bios_owned_sem & 1) && now < deadline) {
-        mx_nanosleep(mx_deadline_after(MX_MSEC(10)));
-        now = mx_time_get(MX_CLOCK_MONOTONIC);
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
+        now = zx_time_get(ZX_CLOCK_MONOTONIC);
     }
 
     if (cap->bios_owned_sem & 1) {
         cap->os_owned_sem &= ~1;
-        return MX_ERR_TIMED_OUT;
+        return ZX_ERR_TIMED_OUT;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t xhci_vmo_init(size_t size, mx_handle_t* out_handle, mx_vaddr_t* out_virt,
+static zx_status_t xhci_vmo_init(size_t size, zx_handle_t* out_handle, zx_vaddr_t* out_virt,
                                  bool contiguous) {
-    mx_status_t status;
-    mx_handle_t handle;
+    zx_status_t status;
+    zx_handle_t handle;
 
     if (contiguous) {
-        status = mx_vmo_create_contiguous(get_root_resource(), size, 0, &handle);
+        status = zx_vmo_create_contiguous(get_root_resource(), size, 0, &handle);
     } else {
-        status = mx_vmo_create(size, 0, &handle);
+        status = zx_vmo_create(size, 0, &handle);
     }
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         dprintf(ERROR, "xhci_vmo_init: vmo_create failed: %d\n", status);
         return status;
     }
 
     if (!contiguous) {
-        // needs to be done before MX_VMO_OP_LOOKUP for non-contiguous VMOs
-        status = mx_vmo_op_range(handle, MX_VMO_OP_COMMIT, 0, size, NULL, 0);
-        if (status != MX_OK) {
-            dprintf(ERROR, "xhci_vmo_init: mx_vmo_op_range(MX_VMO_OP_COMMIT) failed %d\n", status);
-            mx_handle_close(handle);
+        // needs to be done before ZX_VMO_OP_LOOKUP for non-contiguous VMOs
+        status = zx_vmo_op_range(handle, ZX_VMO_OP_COMMIT, 0, size, NULL, 0);
+        if (status != ZX_OK) {
+            dprintf(ERROR, "xhci_vmo_init: zx_vmo_op_range(ZX_VMO_OP_COMMIT) failed %d\n", status);
+            zx_handle_close(handle);
             return status;
         }
     }
 
-    status = mx_vmar_map(mx_vmar_root_self(), 0, handle, 0, size,
-                         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, out_virt);
-    if (status != MX_OK) {
-        dprintf(ERROR, "xhci_vmo_init: mx_vmar_map failed: %d\n", status);
-        mx_handle_close(handle);
+    status = zx_vmar_map(zx_vmar_root_self(), 0, handle, 0, size,
+                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, out_virt);
+    if (status != ZX_OK) {
+        dprintf(ERROR, "xhci_vmo_init: zx_vmar_map failed: %d\n", status);
+        zx_handle_close(handle);
         return status;
     }
 
     *out_handle = handle;
-    return MX_OK;
+    return ZX_OK;
 }
 
-static void xhci_vmo_release(mx_handle_t handle, mx_vaddr_t virt) {
+static void xhci_vmo_release(zx_handle_t handle, zx_vaddr_t virt) {
     uint64_t size;
-    mx_vmo_get_size(handle, &size);
-    mx_vmar_unmap(mx_vmar_root_self(), virt, size);
-    mx_handle_close(handle);
+    zx_vmo_get_size(handle, &size);
+    zx_vmar_unmap(zx_vmar_root_self(), virt, size);
+    zx_handle_close(handle);
 }
 
 void xhci_num_interrupts_init(xhci_t* xhci, void* mmio, uint32_t num_msi_interrupts) {
@@ -198,9 +198,9 @@ void xhci_num_interrupts_init(xhci_t* xhci, void* mmio, uint32_t num_msi_interru
                                MIN(INTERRUPTER_COUNT, max_interrupters));
 }
 
-mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
-    mx_status_t result = MX_OK;
-    mx_paddr_t* phys_addrs = NULL;
+zx_status_t xhci_init(xhci_t* xhci, void* mmio) {
+    zx_status_t result = ZX_OK;
+    zx_paddr_t* phys_addrs = NULL;
 
     list_initialize(&xhci->command_queue);
     mtx_init(&xhci->usbsts_lock, mtx_plain);
@@ -237,18 +237,18 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
     // add 1 to allow 1-based indexing of slots
     xhci->slots = (xhci_slot_t*)calloc(xhci->max_slots + 1, sizeof(xhci_slot_t));
     if (!xhci->slots) {
-        result = MX_ERR_NO_MEMORY;
+        result = ZX_ERR_NO_MEMORY;
         goto fail;
     }
 
     xhci->rh_map = (uint8_t *)calloc(xhci->rh_num_ports, sizeof(uint8_t));
     if (!xhci->rh_map) {
-        result = MX_ERR_NO_MEMORY;
+        result = ZX_ERR_NO_MEMORY;
         goto fail;
     }
     xhci->rh_port_map = (uint8_t *)calloc(xhci->rh_num_ports, sizeof(uint8_t));
     if (!xhci->rh_port_map) {
-        result = MX_ERR_NO_MEMORY;
+        result = ZX_ERR_NO_MEMORY;
         goto fail;
     }
     xhci_read_extended_caps(xhci, mmio, hccparams1);
@@ -256,19 +256,19 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
     // We need to claim before we write to any other registers on the
     // controller, but after we've read the extended capabilities.
     result = xhci_claim_ownership(xhci);
-    if (result != MX_OK) {
+    if (result != ZX_OK) {
         dprintf(ERROR, "xhci_claim_ownership failed\n");
         goto fail;
     }
 
     // Allocate DMA memory for various things
     result = xhci_vmo_init(PAGE_SIZE, &xhci->dcbaa_erst_handle, &xhci->dcbaa_erst_virt, false);
-    if (result != MX_OK) {
+    if (result != ZX_OK) {
         dprintf(ERROR, "xhci_vmo_init failed for xhci->dcbaa_erst_handle\n");
         goto fail;
     }
     result = xhci_vmo_init(PAGE_SIZE, &xhci->input_context_handle, &xhci->input_context_virt, false);
-    if (result != MX_OK) {
+    if (result != ZX_OK) {
         dprintf(ERROR, "xhci_vmo_init failed for xhci->input_context_handle\n");
         goto fail;
     }
@@ -277,14 +277,14 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
         size_t scratch_pad_pages_size = scratch_pad_bufs * xhci->page_size;
         result = xhci_vmo_init(scratch_pad_pages_size, &xhci->scratch_pad_pages_handle,
                                &xhci->scratch_pad_pages_virt, xhci->page_size > PAGE_SIZE);
-        if (result != MX_OK) {
+        if (result != ZX_OK) {
             dprintf(ERROR, "xhci_vmo_init failed for xhci->scratch_pad_pages_handle\n");
             goto fail;
         }
         size_t scratch_pad_index_size = PAGE_ROUNDUP(scratch_pad_bufs * sizeof(uint64_t));
         result = xhci_vmo_init(scratch_pad_index_size, &xhci->scratch_pad_index_handle,
                                &xhci->scratch_pad_index_virt, scratch_pad_index_size > PAGE_SIZE);
-        if (result != MX_OK) {
+        if (result != ZX_OK) {
             dprintf(ERROR, "xhci_vmo_init failed for xhci->scratch_pad_index_handle\n");
             goto fail;
         }
@@ -292,22 +292,22 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
 
     // set up DCBAA, ERST array and input context
     xhci->dcbaa = (uint64_t *)xhci->dcbaa_erst_virt;
-    result = mx_vmo_op_range(xhci->dcbaa_erst_handle, MX_VMO_OP_LOOKUP, 0, PAGE_SIZE,
+    result = zx_vmo_op_range(xhci->dcbaa_erst_handle, ZX_VMO_OP_LOOKUP, 0, PAGE_SIZE,
                              &xhci->dcbaa_phys, sizeof(xhci->dcbaa_phys));
-    if (result != MX_OK) {
-        dprintf(ERROR, "mx_vmo_op_range failed for xhci->dcbaa_erst_handle\n");
+    if (result != ZX_OK) {
+        dprintf(ERROR, "zx_vmo_op_range failed for xhci->dcbaa_erst_handle\n");
         goto fail;
     }
     xhci->input_context = (uint8_t *)xhci->input_context_virt;
-    result = mx_vmo_op_range(xhci->input_context_handle, MX_VMO_OP_LOOKUP, 0, PAGE_SIZE,
+    result = zx_vmo_op_range(xhci->input_context_handle, ZX_VMO_OP_LOOKUP, 0, PAGE_SIZE,
                              &xhci->input_context_phys, sizeof(xhci->input_context_phys));
-    if (result != MX_OK) {
-        dprintf(ERROR, "mx_vmo_op_range failed for xhci->input_context_handle\n");
+    if (result != ZX_OK) {
+        dprintf(ERROR, "zx_vmo_op_range failed for xhci->input_context_handle\n");
         goto fail;
     }
 
     // DCBAA can only be 256 * sizeof(uint64_t) = 2048 bytes, so we have room for ERST array after DCBAA
-    mx_off_t erst_offset = 256 * sizeof(uint64_t);
+    zx_off_t erst_offset = 256 * sizeof(uint64_t);
 
     size_t array_bytes = ERST_ARRAY_SIZE * sizeof(erst_entry_t);
     // MSI only supports up to 32 interupts, so the required ERST arrays will fit
@@ -330,22 +330,22 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
         uint64_t* scratch_pad_index = (uint64_t *)xhci->scratch_pad_index_virt;
         off_t offset = 0;
         for (uint32_t i = 0; i < scratch_pad_bufs; i++) {
-            mx_paddr_t scratch_pad_phys;
-            result = mx_vmo_op_range(xhci->scratch_pad_pages_handle, MX_VMO_OP_LOOKUP, offset,
+            zx_paddr_t scratch_pad_phys;
+            result = zx_vmo_op_range(xhci->scratch_pad_pages_handle, ZX_VMO_OP_LOOKUP, offset,
                                      PAGE_SIZE, &scratch_pad_phys, sizeof(scratch_pad_phys));
-            if (result != MX_OK) {
-                dprintf(ERROR, "mx_vmo_op_range failed for xhci->scratch_pad_pages_handle\n");
+            if (result != ZX_OK) {
+                dprintf(ERROR, "zx_vmo_op_range failed for xhci->scratch_pad_pages_handle\n");
                 goto fail;
             }
             scratch_pad_index[i] = scratch_pad_phys;
             offset += xhci->page_size;
         }
 
-        mx_paddr_t scratch_pad_index_phys;
-        result = mx_vmo_op_range(xhci->scratch_pad_index_handle, MX_VMO_OP_LOOKUP, 0, PAGE_SIZE,
+        zx_paddr_t scratch_pad_index_phys;
+        result = zx_vmo_op_range(xhci->scratch_pad_index_handle, ZX_VMO_OP_LOOKUP, 0, PAGE_SIZE,
                                   &scratch_pad_index_phys, sizeof(scratch_pad_index_phys));
-        if (result != MX_OK) {
-            dprintf(ERROR, "mx_vmo_op_range failed for xhci->scratch_pad_index_handle\n");
+        if (result != ZX_OK) {
+            dprintf(ERROR, "zx_vmo_op_range failed for xhci->scratch_pad_index_handle\n");
             goto fail;
         }
 
@@ -355,14 +355,14 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
     }
 
     result = xhci_transfer_ring_init(&xhci->command_ring, COMMAND_RING_SIZE);
-    if (result != MX_OK) {
+    if (result != ZX_OK) {
         dprintf(ERROR, "xhci_command_ring_init failed\n");
         goto fail;
     }
 
     for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
         result = xhci_event_ring_init(xhci, i, EVENT_RING_SIZE);
-        if (result != MX_OK) {
+        if (result != ZX_OK) {
             dprintf(ERROR, "xhci_event_ring_init failed\n");
             goto fail;
         }
@@ -384,12 +384,12 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
     // initialize virtual root hub devices
     for (int i = 0; i < XHCI_RH_COUNT; i++) {
         result = xhci_root_hub_init(xhci, i);
-        if (result != MX_OK) goto fail;
+        if (result != ZX_OK) goto fail;
     }
 
     free(phys_addrs);
 
-    return MX_OK;
+    return ZX_OK;
 
 fail:
     for (int i = 0; i < XHCI_RH_COUNT; i++) {
@@ -453,7 +453,7 @@ void xhci_wait_bits64(volatile uint64_t* ptr, uint64_t bits, uint64_t expected) 
     }
 }
 
-mx_status_t xhci_start(xhci_t* xhci) {
+zx_status_t xhci_start(xhci_t* xhci) {
     volatile uint32_t* usbcmd = &xhci->op_regs->usbcmd;
     volatile uint32_t* usbsts = &xhci->op_regs->usbsts;
 
@@ -469,7 +469,7 @@ mx_status_t xhci_start(xhci_t* xhci) {
     xhci_wait_bits(usbsts, USBSTS_CNR, 0);
 
     // enable bus master
-    mx_status_t status = pci_enable_bus_master(&xhci->pci, true);
+    zx_status_t status = pci_enable_bus_master(&xhci->pci, true);
     if (status < 0) {
         dprintf(ERROR, "usb_xhci_bind enable_bus_master failed %d\n", status);
         return status;
@@ -499,7 +499,7 @@ mx_status_t xhci_start(xhci_t* xhci) {
     xhci_wait_bits(usbsts, USBSTS_HCH, 0);
 
     xhci_start_device_thread(xhci);
-    return MX_OK;
+    return ZX_OK;
 }
 
 void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,
@@ -549,7 +549,7 @@ static void xhci_handle_command_complete_event(xhci_t* xhci, xhci_trb_t* event_t
 static void xhci_handle_mfindex_wrap(xhci_t* xhci) {
     mtx_lock(&xhci->mfindex_mutex);
     xhci->mfindex_wrap_count++;
-    xhci->last_mfindex_wrap = mx_time_get(MX_CLOCK_MONOTONIC);
+    xhci->last_mfindex_wrap = zx_time_get(ZX_CLOCK_MONOTONIC);
     mtx_unlock(&xhci->mfindex_mutex);
 }
 
@@ -560,7 +560,7 @@ uint64_t xhci_get_current_frame(xhci_t* xhci) {
     uint64_t wrap_count = xhci->mfindex_wrap_count;
     // try to detect race condition where mfindex has wrapped but we haven't processed wrap event yet
     if (mfindex < 500) {
-        if (mx_time_get(MX_CLOCK_MONOTONIC) - xhci->last_mfindex_wrap > MX_MSEC(1000)) {
+        if (zx_time_get(ZX_CLOCK_MONOTONIC) - xhci->last_mfindex_wrap > ZX_MSEC(1000)) {
             dprintf(TRACE, "woah, mfindex wrapped before we got the event!\n");
             wrap_count++;
         }

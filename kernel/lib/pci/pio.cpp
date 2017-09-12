@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <endian.h>
 #include <kernel/mutex.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <lib/pci/pio.h>
 #include <kernel/auto_lock.h>
 
@@ -28,12 +28,12 @@ static constexpr uint32_t WidthMask(size_t width) {
     return (width == 32) ? 0xffffffff : (1u << width) - 1u;
 }
 
-mx_status_t PioCfgRead(uint32_t addr, uint32_t* val, size_t width) {
+zx_status_t PioCfgRead(uint32_t addr, uint32_t* val, size_t width) {
     fbl::AutoLock lock(&pio_lock);
 
     size_t shift = (addr & 0x3) * 8u;
     if (shift + width > 32) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     outpd(kPciConfigAddr, addr | kPciCfgEnable);;
@@ -42,20 +42,20 @@ mx_status_t PioCfgRead(uint32_t addr, uint32_t* val, size_t width) {
 
     // Align the read to the correct offset, then mask based on byte width
     *val = (tmp_val >> shift) & width_mask;
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t PioCfgRead(uint8_t bus, uint8_t dev, uint8_t func,
+zx_status_t PioCfgRead(uint8_t bus, uint8_t dev, uint8_t func,
                              uint8_t offset, uint32_t* val, size_t width) {
     return PioCfgRead(PciBdfAddr(bus, dev, func, offset), val, width);
 }
 
-mx_status_t PioCfgWrite(uint32_t addr, uint32_t val, size_t width) {
+zx_status_t PioCfgWrite(uint32_t addr, uint32_t val, size_t width) {
     fbl::AutoLock lock(&pio_lock);
 
     size_t shift = (addr & 0x3) * 8u;
     if (shift + width > 32) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     uint32_t width_mask = WidthMask(width);
@@ -68,31 +68,31 @@ mx_status_t PioCfgWrite(uint32_t addr, uint32_t val, size_t width) {
     tmp_val |= (val << shift);
     outpd(kPciConfigData, LE32(tmp_val));
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t PioCfgWrite(uint8_t bus, uint8_t dev, uint8_t func,
+zx_status_t PioCfgWrite(uint8_t bus, uint8_t dev, uint8_t func,
                               uint8_t offset, uint32_t val, size_t width) {
     return PioCfgWrite(PciBdfAddr(bus, dev, func, offset), val, width);
 }
 
 #else // not x86
-mx_status_t PioCfgRead(uint32_t addr, uint32_t* val, size_t width) {
-    return MX_ERR_NOT_SUPPORTED;
+zx_status_t PioCfgRead(uint32_t addr, uint32_t* val, size_t width) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-mx_status_t PioCfgRead(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset,
+zx_status_t PioCfgRead(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset,
                              uint32_t* val, size_t width) {
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-mx_status_t PioCfgWrite(uint32_t addr, uint32_t val, size_t width) {
-    return MX_ERR_NOT_SUPPORTED;;
+zx_status_t PioCfgWrite(uint32_t addr, uint32_t val, size_t width) {
+    return ZX_ERR_NOT_SUPPORTED;;
 }
 
-mx_status_t PioCfgWrite(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset,
+zx_status_t PioCfgWrite(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset,
                              uint32_t val, size_t width) {
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 #endif // ARCH_X86

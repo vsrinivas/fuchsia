@@ -13,9 +13,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <magenta/compiler.h>
-#include <magenta/process.h>
-#include <magenta/processargs.h>
+#include <zircon/compiler.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
 #include <fbl/unique_ptr.h>
 
 #ifdef __Fuchsia__
@@ -53,18 +53,18 @@ int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
         return -1;
     }
 
-    mx_handle_t h = mx_get_startup_handle(PA_HND(PA_USER0, 0));
-    if (h == MX_HANDLE_INVALID) {
+    zx_handle_t h = zx_get_startup_handle(PA_HND(PA_USER0, 0));
+    if (h == ZX_HANDLE_INVALID) {
         FS_TRACE_ERROR("minfs: Could not access startup handle to mount point\n");
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     async::Loop loop;
     fs::AsyncDispatcher dispatcher(loop.async());
     minfs::vfs.SetDispatcher(&dispatcher);
-    mx_status_t status;
+    zx_status_t status;
     if ((status = minfs::vfs.ServeDirectory(fbl::move(vn),
-                                            mx::channel(h))) != MX_OK) {
+                                            zx::channel(h))) != ZX_OK) {
         return status;
     }
     loop.Run();
@@ -382,7 +382,7 @@ int main(int argc, char** argv) {
 found:
     if ((fd = open(fn, flags, 0644)) < 0) {
         if (flags & O_CREAT) {
-            // temporary workaround for Magenta devfs issue
+            // temporary workaround for Zircon devfs issue
             flags &= (~O_CREAT);
             goto found;
         }

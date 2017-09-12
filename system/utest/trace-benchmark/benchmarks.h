@@ -6,7 +6,7 @@
 
 #include <stdio.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 static constexpr unsigned kWarmUpIterations = 100;
 static constexpr unsigned kRunIterations = 1000000;
@@ -15,13 +15,13 @@ static constexpr unsigned kRunIterations = 1000000;
 // Returns a value in microseconds.
 template <typename T>
 float Measure(unsigned iterations, const T& closure) {
-    uint64_t start = mx_ticks_get();
+    uint64_t start = zx_ticks_get();
     for (unsigned i = 0; i < iterations; i++) {
         closure();
     }
-    uint64_t stop = mx_ticks_get();
+    uint64_t stop = zx_ticks_get();
     return static_cast<float>(stop - start) * 1000000.f /
-           static_cast<float>(mx_ticks_per_second());
+           static_cast<float>(zx_ticks_per_second());
 }
 
 // Runs a closure repeatedly and prints its timing.

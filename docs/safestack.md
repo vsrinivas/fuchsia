@@ -1,4 +1,4 @@
-# SafeStack in Magenta & Fuchsia
+# SafeStack in Zircon & Fuchsia
 
 ## Introduction
 
@@ -22,8 +22,8 @@ overwrite the return address of the containing function, which is the
 basis of exploits and attacks using the so-called *ROP*
 ("return-oriented programming") technique.
 
-The **Compatibility** section of that page does not apply to Magenta (or
-Fuchsia).  In Magenta user-mode code (including all of Fuchsia), the
+The **Compatibility** section of that page does not apply to Zircon (or
+Fuchsia).  In Zircon user-mode code (including all of Fuchsia), the
 runtime support for SafeStack is included directly in the standard C
 runtime library, and everything works fine in shared libraries (DSOs).
 
@@ -42,21 +42,21 @@ safe-stack does not need to do anything about this state to keep it
 correct when calling, or being called by, code that does use
 safe-stack.  The only potential exceptions to this are for code that
 is implementing its own kinds of non-local exits or context-switching
-(e.g. coroutines).  The Magenta C library's `setjmp`/`longjmp` code
+(e.g. coroutines).  The Zircon C library's `setjmp`/`longjmp` code
 saves and restores this additional state automatically, so anything
 that is based on `longjmp` already handles everything correctly even
 if the code calling `setjmp` and `longjmp` doesn't know about
 safe-stack.
 
-## Use in Magenta & Fuchsia
+## Use in Zircon & Fuchsia
 
 This is enabled in the Clang compiler by the `-fsanitize=safe-stack`
 command-line option.  In the near future, this will be the default mode
 of the compiler for `*-fuchsia` targets, and to disable it for a
 specific compilation will require the `-fno-sanitize=safe-stack` option.
 
-Magenta supports safe-stack for both user-mode and kernel code.
-In the Magenta build, safe-stack is always enabled when building
+Zircon supports safe-stack for both user-mode and kernel code.
+In the Zircon build, safe-stack is always enabled when building
 with Clang (pass `USE_CLANG=true` to `make`).
 
 ## Implementation details
@@ -71,15 +71,15 @@ don't actually have a new register, and for compatibility safe-stack
 does not change the basic machine-specific calling conventions that
 assign uses to all the machine registers.
 
-The C and C++ ABI for Magenta and Fuchsia stores the unsafe stack
+The C and C++ ABI for Zircon and Fuchsia stores the unsafe stack
 pointer in memory that's at a fixed offset from the thread pointer.
-The [`<magenta/tls.h>`](../system/public/magenta/tls.h) header defines
+The [`<zircon/tls.h>`](../system/public/zircon/tls.h) header defines
 the offset for each machine.
 
 For x86 user-mode, the thread pointer is the `fsbase`, meaning access
-in assembly code looks like `%fs:MX_TLS_UNSAFE_SP_OFFSET`.
+in assembly code looks like `%fs:ZX_TLS_UNSAFE_SP_OFFSET`.
 For the x86 kernel, the thread pointer is the `gsbase`, meaning access
-in assembly code looks like `%gs:MX_TLS_UNSAFE_SP_OFFSET`.
+in assembly code looks like `%gs:ZX_TLS_UNSAFE_SP_OFFSET`.
 
 For Aarch64 (ARM64), in C or C++ code, `__builtin_thread_pointer()`
 returns the thread pointer.  In user-mode, the thread pointer is in the
@@ -102,7 +102,7 @@ C or C++ code using those constructs does not need to do anything new.
 The context-switch code in the kernel handles switching the unsafe stack
 pointer.  On x86, this is explicit in the code: `%gs` points to the
 `struct x86_percpu`, which has a member `kernel_unsafe_sp` at
-`MX_TLS_UNSAFE_SP_OFFSET`; `arch_context_switch` copies this into the
+`ZX_TLS_UNSAFE_SP_OFFSET`; `arch_context_switch` copies this into the
 `unsafe_sp` field of the old thread's `struct arch_thread` and then
 copies the new thread's `unsafe_sp` into `kernel_unsafe_sp`.  On ARM64,
 this is implicitly done by `set_current_thread`, because that changes

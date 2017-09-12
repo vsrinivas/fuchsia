@@ -10,7 +10,7 @@
 #include <sys/types.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 

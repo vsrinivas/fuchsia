@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <threads.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #define NUM_THREADS 1000
 
@@ -31,15 +31,15 @@ int main(int argc, char** argv) {
     printf("Running thread stress test...\n");
     thrd_t thread[NUM_THREADS];
     while (true) {
-        mx_time_t start = mx_time_get(MX_CLOCK_MONOTONIC);
+        zx_time_t start = zx_time_get(ZX_CLOCK_MONOTONIC);
         for (int i = 0; i != NUM_THREADS; ++i) {
             thread_create(&thread[i]);
         }
-        mx_time_t create = mx_time_get(MX_CLOCK_MONOTONIC);
+        zx_time_t create = zx_time_get(ZX_CLOCK_MONOTONIC);
         for (int i = 0; i != NUM_THREADS; ++i) {
             thread_join(thread[i]);
         }
-        mx_time_t join = mx_time_get(MX_CLOCK_MONOTONIC);
+        zx_time_t join = zx_time_get(ZX_CLOCK_MONOTONIC);
         printf(
             "%d threads in %.2fs (create %.2fs, join %.2fs)\n",
             NUM_THREADS,

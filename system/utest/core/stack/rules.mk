@@ -16,7 +16,7 @@ MODULE_SRCS += \
 MODULE_NAME := stack-test
 
 MODULE_LIBS := \
-    system/ulib/unittest system/ulib/mxio system/ulib/magenta system/ulib/c
+    system/ulib/unittest system/ulib/fdio system/ulib/zircon system/ulib/c
 
 MODULE_HEADER_DEPS := system/ulib/runtime
 

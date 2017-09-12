@@ -11,7 +11,7 @@ using std::ofstream;
 using std::string;
 
 static constexpr char kAuthors[] = "The Fuchsia Authors";
-static constexpr char kWrapMacro[] = "MX_SYSCALL_PARAM_ATTR";
+static constexpr char kWrapMacro[] = "ZX_SYSCALL_PARAM_ATTR";
 static constexpr char kDefaultHandleAnnotation[] = "handle_use";
 bool is_identifier_keyword(const string& iden);
 
@@ -21,7 +21,7 @@ bool Generator::header(ofstream& os) {
 
     os << "// Copyright " << ltime->tm_year + 1900
        << " " << kAuthors << ". All rights reserved.\n";
-    os << "// This is a GENERATED file, see //magenta/system/host/sysgen.\n";
+    os << "// This is a GENERATED file, see //zircon/system/host/sysgen.\n";
     os << "// The license governing this file can be found in the LICENSE file.\n\n";
 
     return os.good();
@@ -183,7 +183,7 @@ void write_argument_annotation(std::ofstream& os, const TypeSpec& arg) {
         }
     }
     // If arg type is a handle (not an array) and no annotation is present, use default annotation
-    if (!has_annotation && arg.type == "mx_handle_t" && arg.arr_spec == nullptr) {
+    if (!has_annotation && arg.type == "zx_handle_t" && arg.arr_spec == nullptr) {
         os << kWrapMacro << "(" << kDefaultHandleAnnotation << ") ";
     }
 }

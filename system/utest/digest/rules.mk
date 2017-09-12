@@ -18,13 +18,13 @@ MODULE_NAME := digest-test
 MODULE_LIBS := \
     system/ulib/unittest \
     system/ulib/digest \
-    system/ulib/magenta \
+    system/ulib/zircon \
     system/ulib/c \
-    system/ulib/mxio \
+    system/ulib/fdio \
 
 MODULE_STATIC_LIBS := \
     third_party/ulib/cryptolib \
-    system/ulib/mxcpp \
+    system/ulib/zxcpp \
     system/ulib/fbl \
 
 include make/module.mk

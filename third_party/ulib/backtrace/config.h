@@ -1,4 +1,4 @@
-/* magenta version of libbacktrace */
+/* zircon version of libbacktrace */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* ELF size: 32 or 64 */

@@ -14,13 +14,13 @@
 #include <unistd.h>
 #include <limits.h>
 
-#include <magenta/assert.h>
-#include <magenta/listnode.h>
-#include <magenta/threads.h>
-#include <magenta/types.h>
-#include <magenta/device/input.h>
+#include <zircon/assert.h>
+#include <zircon/listnode.h>
+#include <zircon/threads.h>
+#include <zircon/types.h>
+#include <zircon/device/input.h>
 
-#include <mxio/watcher.h>
+#include <fdio/watcher.h>
 
 #define DEV_INPUT "/dev/class/input"
 
@@ -60,26 +60,26 @@ static void print_hex(uint8_t* buf, size_t len) {
     printf("\n");
 }
 
-static mx_status_t parse_uint_arg(const char* arg, uint32_t min, uint32_t max, uint32_t* out_val) {
+static zx_status_t parse_uint_arg(const char* arg, uint32_t min, uint32_t max, uint32_t* out_val) {
     if ((arg == NULL) || (out_val == NULL)) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     bool is_hex = (arg[0] == '0') && (arg[1] == 'x');
     if (sscanf(arg, is_hex ? "%x" : "%u", out_val) != 1) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     if ((*out_val < min) || (*out_val > max)) {
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t parse_input_report_type(const char* arg, input_report_type_t* out_type) {
+static zx_status_t parse_input_report_type(const char* arg, input_report_type_t* out_type) {
     if ((arg == NULL) || (out_type == NULL)) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     static const struct {
@@ -94,25 +94,25 @@ static mx_status_t parse_input_report_type(const char* arg, input_report_type_t*
     for (size_t i = 0; i < countof(LUT); ++i) {
         if (!strcasecmp(arg, LUT[i].name)) {
             *out_type = LUT[i].type;
-            return MX_OK;
+            return ZX_OK;
         }
     }
 
-    return MX_ERR_INVALID_ARGS;
+    return ZX_ERR_INVALID_ARGS;
 }
 
-static mx_status_t parse_set_get_report_args(int argc,
+static zx_status_t parse_set_get_report_args(int argc,
                                              const char** argv,
                                              input_report_id_t* out_id,
                                              input_report_type_t* out_type) {
     if ((argc < 3) || (argv == NULL) || (out_id == NULL) || (out_type == NULL)) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    mx_status_t res;
+    zx_status_t res;
     uint32_t tmp;
     res = parse_uint_arg(argv[2], 0, 255, &tmp);
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
         return res;
     }
 
@@ -147,7 +147,7 @@ static int get_report_desc(int fd, const char* name, size_t report_desc_len) {
     uint8_t* buf = malloc(report_desc_len);
     if (!buf) {
         lprintf("hid: out of memory\n");
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     ssize_t rc = ioctl_input_get_report_desc(fd, buf, report_desc_len);
     if (rc < 0) {
@@ -176,7 +176,7 @@ static int get_num_reports(int fd, const char* name, size_t* num_reports) {
 static int get_report_ids(int fd, const char* name, size_t num_reports) {
     size_t out_len = num_reports * sizeof(input_report_id_t);
     input_report_id_t* ids = malloc(out_len);
-    if (!ids) return MX_ERR_NO_MEMORY;
+    if (!ids) return ZX_ERR_NO_MEMORY;
 
     ssize_t rc = ioctl_input_get_report_ids(fd, ids, out_len);
     if (rc < 0) {
@@ -252,7 +252,7 @@ static int hid_status(int fd, const char* name, input_report_size_t* max_report_
     try(get_report_ids(fd, name, num_reports));
     try(get_max_report_len(fd, name, max_report_len));
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static int hid_input_thread(void* arg) {
@@ -266,7 +266,7 @@ static int hid_input_thread(void* arg) {
     max_report_len++;
 
     uint8_t* report = calloc(1, max_report_len);
-    if (!report) return MX_ERR_NO_MEMORY;
+    if (!report) return ZX_ERR_NO_MEMORY;
 
     for (uint32_t i = 0; i < args->num_reads; i++) {
         int r = read(args->fd, report, max_report_len);
@@ -285,17 +285,17 @@ static int hid_input_thread(void* arg) {
     lprintf("hid: closing %s\n", args->name);
     close(args->fd);
     free(args);
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t hid_input_device_added(int dirfd, int event, const char* fn, void* cookie) {
+static zx_status_t hid_input_device_added(int dirfd, int event, const char* fn, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) {
-        return MX_OK;
+        return ZX_OK;
     }
 
     int fd = openat(dirfd, fn, O_RDONLY);
     if (fd < 0) {
-        return MX_OK;
+        return ZX_OK;
     }
 
     input_args_t* args = malloc(sizeof(*args));
@@ -309,19 +309,19 @@ static mx_status_t hid_input_device_added(int dirfd, int event, const char* fn, 
     if (ret != thrd_success) {
         printf("hid: input thread %s did not start (error=%d)\n", args->name, ret);
         close(fd);
-        return thrd_status_to_mx_status(ret);
+        return thrd_status_to_zx_status(ret);
     }
     thrd_detach(t);
-    return MX_OK;
+    return ZX_OK;
 }
 
 static int hid_input_devices_poll_thread(void* arg) {
     int dirfd = open(DEV_INPUT, O_DIRECTORY|O_RDONLY);
     if (dirfd < 0) {
         printf("hid: error opening %s\n", DEV_INPUT);
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
-    mxio_watch_directory(dirfd, hid_input_device_added, MX_TIME_INFINITE, NULL);
+    fdio_watch_directory(dirfd, hid_input_device_added, ZX_TIME_INFINITE, NULL);
     close(dirfd);
     return -1;
 }
@@ -336,8 +336,8 @@ int read_reports(int argc, const char** argv) {
 
     uint32_t tmp = 0xffffffff;
     if (argc > 1) {
-        mx_status_t res = parse_uint_arg(argv[1], 0, 0xffffffff, &tmp);
-        if (res != MX_OK) {
+        zx_status_t res = parse_uint_arg(argv[1], 0, 0xffffffff, &tmp);
+        if (res != ZX_OK) {
             printf("Failed to parse <num reads> (res %d)\n", res);
             usage();
             return 0;
@@ -389,8 +389,8 @@ int get_report(int argc, const char** argv) {
     }
 
     input_get_report_size_t size_arg;
-    mx_status_t res = parse_set_get_report_args(argc, argv, &size_arg.id, &size_arg.type);
-    if (res != MX_OK) {
+    zx_status_t res = parse_set_get_report_args(argc, argv, &size_arg.id, &size_arg.type);
+    if (res != ZX_OK) {
         printf("Failed to parse type/id for get report operation (res %d)\n", res);
         usage();
         return 0;
@@ -458,8 +458,8 @@ int set_report(int argc, const char** argv) {
     }
 
     input_get_report_size_t size_arg;
-    mx_status_t res = parse_set_get_report_args(argc, argv, &size_arg.id, &size_arg.type);
-    if (res != MX_OK) {
+    zx_status_t res = parse_set_get_report_args(argc, argv, &size_arg.id, &size_arg.type);
+    if (res != ZX_OK) {
         printf("Failed to parse type/id for get report operation (res %d)\n", res);
         usage();
         return 0;
@@ -483,7 +483,7 @@ int set_report(int argc, const char** argv) {
     }
 
     // If the set/get report args parsed, then we must have at least 3 arguments.
-    MX_DEBUG_ASSERT(argc >= 3);
+    ZX_DEBUG_ASSERT(argc >= 3);
     input_report_size_t payload_size = argc - 3;
 
     xprintf("hid: report size=%u, tx payload size=%u\n", size, payload_size);
@@ -494,8 +494,8 @@ int set_report(int argc, const char** argv) {
     arg->type = size_arg.type;
     for (int i = 0; i < payload_size; i++) {
         uint32_t tmp;
-        mx_status_t res = parse_uint_arg(argv[i+3], 0, 255, &tmp);
-        if (res != MX_OK) {
+        zx_status_t res = parse_uint_arg(argv[i+3], 0, 255, &tmp);
+        if (res != ZX_OK) {
             printf("Failed to parse payload byte \"%s\" (res = %d)\n", argv[i+3], res);
             rc = res;
             goto finished;

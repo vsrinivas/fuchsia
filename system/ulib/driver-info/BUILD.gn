@@ -14,7 +14,7 @@ static_library("driver-info") {
     "include/driver-info/driver-info.h",
   ]
   deps = [
-    "//magenta/third_party/ulib/cksum",
+    "//zircon/third_party/ulib/cksum",
   ]
   public_configs = [ ":driver-info_config" ]
 }

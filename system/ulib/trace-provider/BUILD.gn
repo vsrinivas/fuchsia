@@ -7,7 +7,7 @@ config("trace_config") {
 }
 
 source_set("trace-provider") {
-  # Don't forget to update rules.mk as well for the Magenta build.
+  # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "handler_impl.cpp",
     "handler_impl.h",
@@ -17,7 +17,7 @@ source_set("trace-provider") {
   ]
 
   public_deps = [
-    "//magenta/system/ulib/trace",
+    "//zircon/system/ulib/trace",
   ]
 
   public_configs = [ ":trace_config" ]

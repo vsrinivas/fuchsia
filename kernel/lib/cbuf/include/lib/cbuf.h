@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <sys/types.h>
 #include <kernel/event.h>
 #include <kernel/spinlock.h>

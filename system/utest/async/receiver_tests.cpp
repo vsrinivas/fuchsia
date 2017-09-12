@@ -19,21 +19,21 @@ public:
 
     Op last_op = Op::NONE;
     async_receiver_t* last_receiver = nullptr;
-    const mx_packet_user_t* last_data = nullptr;
+    const zx_packet_user_t* last_data = nullptr;
 
-    mx_status_t QueuePacket(async_receiver_t* receiver,
-                            const mx_packet_user_t* data) override {
+    zx_status_t QueuePacket(async_receiver_t* receiver,
+                            const zx_packet_user_t* data) override {
         last_op = Op::QUEUE_PACKET;
         last_receiver = receiver;
         last_data = data;
-        return MX_OK;
+        return ZX_OK;
     }
 };
 
 struct Handler {
     Handler(async::Receiver* receiver) {
-        receiver->set_handler([this](async_t* async, mx_status_t status,
-                                     const mx_packet_user_t* data) {
+        receiver->set_handler([this](async_t* async, zx_status_t status,
+                                     const zx_packet_user_t* data) {
             handler_ran = true;
             last_status = status;
             last_data = data;
@@ -41,13 +41,13 @@ struct Handler {
     }
 
     bool handler_ran = false;
-    mx_status_t last_status = MX_ERR_INTERNAL;
-    const mx_packet_user_t* last_data = nullptr;
+    zx_status_t last_status = ZX_ERR_INTERNAL;
+    const zx_packet_user_t* last_data = nullptr;
 };
 
 bool wrapper_test() {
     const uint32_t dummy_flags = ASYNC_FLAG_HANDLE_SHUTDOWN;
-    const mx_packet_user_t dummy_data{};
+    const zx_packet_user_t dummy_data{};
 
     BEGIN_TEST;
 
@@ -71,24 +71,24 @@ bool wrapper_test() {
 
         MockAsync async;
 
-        EXPECT_EQ(MX_OK, explicit_receiver.Queue(&async, nullptr), "queue, null data");
+        EXPECT_EQ(ZX_OK, explicit_receiver.Queue(&async, nullptr), "queue, null data");
         EXPECT_EQ(MockAsync::Op::QUEUE_PACKET, async.last_op, "op");
         EXPECT_EQ(dummy_flags, async.last_receiver->flags, "flags");
         EXPECT_NULL(async.last_data, "data");
 
-        EXPECT_EQ(MX_OK, explicit_receiver.Queue(&async, &dummy_data), "queue, non-null data");
+        EXPECT_EQ(ZX_OK, explicit_receiver.Queue(&async, &dummy_data), "queue, non-null data");
         EXPECT_EQ(MockAsync::Op::QUEUE_PACKET, async.last_op, "op");
         EXPECT_EQ(dummy_flags, async.last_receiver->flags, "flags");
         EXPECT_EQ(&dummy_data, async.last_data, "data");
 
-        async.last_receiver->handler(&async, async.last_receiver, MX_OK, nullptr);
+        async.last_receiver->handler(&async, async.last_receiver, ZX_OK, nullptr);
         EXPECT_TRUE(handler.handler_ran, "handler ran");
-        EXPECT_EQ(MX_OK, handler.last_status, "status");
+        EXPECT_EQ(ZX_OK, handler.last_status, "status");
         EXPECT_NULL(handler.last_data, "data");
 
-        async.last_receiver->handler(&async, async.last_receiver, MX_OK, &dummy_data);
+        async.last_receiver->handler(&async, async.last_receiver, ZX_OK, &dummy_data);
         EXPECT_TRUE(handler.handler_ran, "handler ran");
-        EXPECT_EQ(MX_OK, handler.last_status, "status");
+        EXPECT_EQ(ZX_OK, handler.last_status, "status");
         EXPECT_EQ(&dummy_data, handler.last_data, "data");
     }
 
@@ -100,9 +100,9 @@ bool unsupported_queue_packet_test() {
 
     AsyncStub async;
     async_receiver_t receiver{};
-    EXPECT_EQ(MX_ERR_NOT_SUPPORTED, async_queue_packet(&async, &receiver, nullptr), "valid args without data");
-    mx_packet_user_t data;
-    EXPECT_EQ(MX_ERR_NOT_SUPPORTED, async_queue_packet(&async, &receiver, &data), "valid args with data");
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_queue_packet(&async, &receiver, nullptr), "valid args without data");
+    zx_packet_user_t data;
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_queue_packet(&async, &receiver, &data), "valid args with data");
 
     END_TEST;
 }

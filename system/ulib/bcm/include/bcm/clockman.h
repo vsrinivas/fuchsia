@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 #define BCM_CLOCKMAN_PASSWORD       (uint32_t)( 0x5a000000 )
 

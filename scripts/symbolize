@@ -8,20 +8,20 @@
 
 """
 
-This tool will symbolize a crash from Magenta's crash logger, adding
+This tool will symbolize a crash from Zircon's crash logger, adding
 function names and, if available, source code locations (filenames and
 line numbers from debug info).
 
 Example usage #1:
-  ./scripts/run-magenta -a x86-64 | ./scripts/symbolize devmgr.elf --build-dir=build-magenta-pc-x86-64
+  ./scripts/run-zircon -a x86-64 | ./scripts/symbolize devmgr.elf --build-dir=build-zircon-pc-x86-64
 
 Example usage #2:
-  ./scripts/symbolize devmgr.elf --build-dir=build-magenta-pc-x86-64
-  <copy and paste output from Magenta>
+  ./scripts/symbolize devmgr.elf --build-dir=build-zircon-pc-x86-64
+  <copy and paste output from Zircon>
 
-Example usage #3 (for magenta kernel output):
-  ./scripts/symbolize --build-dir=build-magenta-pc-x86-64
-  <copy and paste output from Magenta>
+Example usage #3 (for zircon kernel output):
+  ./scripts/symbolize --build-dir=build-zircon-pc-x86-64
+  <copy and paste output from Zircon>
 
 
 """
@@ -195,12 +195,12 @@ def main():
     parser.set_defaults(echo=True)
     args = parser.parse_args()
 
-    magenta_build_dir = os.path.join(
-        os.path.dirname(SCRIPT_DIR), "build-magenta-pc-x86-64")
-    if not os.path.exists(magenta_build_dir):
-        magenta_build_dir = os.path.join(
-            os.path.dirname(SCRIPT_DIR), os.pardir, "out", "build-magenta", "build-magenta-pc-x86-64")
-    build_dirs = [magenta_build_dir]
+    zircon_build_dir = os.path.join(
+        os.path.dirname(SCRIPT_DIR), "build-zircon-pc-x86-64")
+    if not os.path.exists(zircon_build_dir):
+        zircon_build_dir = os.path.join(
+            os.path.dirname(SCRIPT_DIR), os.pardir, "out", "build-zircon", "build-zircon-pc-x86-64")
+    build_dirs = [zircon_build_dir]
     if args.build_dir:
         build_dirs = args.build_dir + build_dirs
     else:
@@ -229,15 +229,15 @@ def main():
         "dso: id=([0-9a-z]+) base=(0x[0-9a-f]+) name=(.+)$")
     disasm_re = re.compile("^ *(0x[0-9a-f]+)( .+)$")
 
-    # Magenta backtraces
-    magenta_crash_re = re.compile("^MAGENTA KERNEL PANIC$")
+    # Zircon backtraces
+    zircon_crash_re = re.compile("^ZIRCON KERNEL PANIC$")
     # TODO(cja): Add ARM to the regex
-    magenta_pc_re = re.compile("RIP: (0x[0-9a-z]+)")
-    magenta_bt_re = re.compile(full_prefix +
+    zircon_pc_re = re.compile("RIP: (0x[0-9a-z]+)")
+    zircon_bt_re = re.compile(full_prefix +
         "bt#(\d+): (\dx[0-9a-fA-F]+)$")
-    magenta_elf_path = ''
-    magenta_bt = False
-    magenta_pc = ''
+    zircon_elf_path = ''
+    zircon_bt = False
+    zircon_pc = ''
 
     while True:
         line = args.file.readline()
@@ -268,7 +268,7 @@ def main():
                 name_to_buildid = {}
                 total_stack_size = 0
                 prev_sp = None
-                magenta_bt = False
+                zircon_bt = False
             if end_of_file:
                 break
         m = arch_re.match(line)
@@ -283,7 +283,7 @@ def main():
             name_to_buildid[name] = buildid
             continue
         m = btre.match(line)
-        if m and not magenta_bt:
+        if m and not zircon_bt:
             frame_num = m.group(2)
             m = bt_with_offset_re.match(line)
             if m:
@@ -327,29 +327,29 @@ def main():
             # fallthru print if we don't recognize the format of the backtrace entry
             processed_lines.append("#%s: (unknown)\n" % (frame_num,))
 
-        # Magenta Specific Handling
-        if magenta_crash_re.search(line):
-            magenta_elf_path = find_file_in_build_dir("magenta.elf", build_dirs)
-            if magenta_elf_path:
-                magenta_bt = True
+        # Zircon Specific Handling
+        if zircon_crash_re.search(line):
+            zircon_elf_path = find_file_in_build_dir("zircon.elf", build_dirs)
+            if zircon_elf_path:
+                zircon_bt = True
             else:
-                sys.stderr.write("Symbolize could not find the magenta elf binary. Perhaps you need to build "
-                                  "magenta or specify the build directory with -b?\n")
-        m = magenta_pc_re.search(line)
+                sys.stderr.write("Symbolize could not find the zircon elf binary. Perhaps you need to build "
+                                  "zircon or specify the build directory with -b?\n")
+        m = zircon_pc_re.search(line)
         if m:
-            magenta_pc = m.group(1)
-        m = magenta_bt_re.match(line)
-        if m and magenta_bt:
+            zircon_pc = m.group(1)
+        m = zircon_bt_re.match(line)
+        if m and zircon_bt:
             frame_num = m.group(2)
             addr = m.group(3)
             # If we saw the instruction pointer for the fault/panic then use it once
-            if magenta_pc:
-                prefix = "   pc: %s => " % magenta_pc
-                a2l_out = run_tool(arch, "addr2line", "-Cpife", magenta_elf_path,
-                        magenta_pc)
+            if zircon_pc:
+                prefix = "   pc: %s => " % zircon_pc
+                a2l_out = run_tool(arch, "addr2line", "-Cpife", zircon_elf_path,
+                        zircon_pc)
                 processed_lines.append(prefix +
                         a2l_out.replace("(inlined", (" " * len(prefix)) + "(inlined"))
-                magenta_pc = None
+                zircon_pc = None
 
 
             prefix = "bt#%s: %s => " % (frame_num, addr)
@@ -359,7 +359,7 @@ def main():
             # more correct results in the presence of inlining and
             # 'noreturn' functions.  (See MG-842.)
             call_addr = "0x%x" % (int(addr, 16) - 1)
-            a2l_out = run_tool(arch, "addr2line", "-Cpife", magenta_elf_path,
+            a2l_out = run_tool(arch, "addr2line", "-Cpife", zircon_elf_path,
                                call_addr)
             # In the case of inlined methods, it is more readable if the
             # inlined lines are aligned to be to the right of "=>".

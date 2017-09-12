@@ -4,15 +4,15 @@
 
 #pragma once
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <stddef.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
-// This functions MX_ERR_IO to indicate an error in the POSIXish
+// This functions ZX_ERR_IO to indicate an error in the POSIXish
 // underlying calls, meaning errno has been set with a POSIX-style error.
-// Other errors are verbatim from the mx_vm_object_* calls.
-mx_status_t launchpad_vmo_from_file(const char* filename, mx_handle_t* out);
+// Other errors are verbatim from the zx_vm_object_* calls.
+zx_status_t launchpad_vmo_from_file(const char* filename, zx_handle_t* out);
 
 __END_CDECLS

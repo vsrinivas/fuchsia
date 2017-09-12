@@ -8,9 +8,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
-#include <mxio/util.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
+#include <fdio/util.h>
 
 int main(int argc, char** argv) {
     // The devmgr handles will autoclose, which will signal the

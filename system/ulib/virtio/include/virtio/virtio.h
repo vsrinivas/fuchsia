@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #define VIRTIO_STATUS_ACKNOWLEDGE                   (1u << 0)
 #define VIRTIO_STATUS_DRIVER                        (1u << 1)

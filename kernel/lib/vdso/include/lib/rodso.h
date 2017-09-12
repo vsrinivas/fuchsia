@@ -23,7 +23,7 @@ public:
         return vmo_offset == code_start_ && size == size_ - code_start_;
     }
 
-    mx_status_t Map(fbl::RefPtr<VmAddressRegionDispatcher> vmar,
+    zx_status_t Map(fbl::RefPtr<VmAddressRegionDispatcher> vmar,
                     size_t offset) const;
 
 protected:
@@ -31,11 +31,11 @@ protected:
     RoDso(const char* name, const void* image, size_t size,
           uintptr_t code_start);
 
-    mx_rights_t vmo_rights() const { return vmo_rights_; }
+    zx_rights_t vmo_rights() const { return vmo_rights_; }
 
 private:
 
-    mx_status_t MapSegment(fbl::RefPtr<VmAddressRegionDispatcher> vmar,
+    zx_status_t MapSegment(fbl::RefPtr<VmAddressRegionDispatcher> vmar,
                            bool code,
                            size_t vmar_offset,
                            size_t start_offset,
@@ -43,7 +43,7 @@ private:
 
     const char* name_;
     fbl::RefPtr<VmObjectDispatcher> vmo_;
-    mx_rights_t vmo_rights_;
+    zx_rights_t vmo_rights_;
     uintptr_t code_start_;
     size_t size_;
 };

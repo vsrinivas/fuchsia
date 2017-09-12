@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <stddef.h>
 #include <stdint.h>
 
 extern void *tpm_base;
-extern mx_handle_t irq_handle;
+extern zx_handle_t irq_handle;
 
 enum locality {
     LOCALITY0,
@@ -35,20 +35,20 @@ enum tpm_result {
     TPM_RETRY = 0x800,
 };
 
-mx_status_t tpm_set_irq(enum locality loc, uint8_t vector);
-mx_status_t tpm_enable_irq_type(enum locality loc, enum irq_type type);
-mx_status_t tpm_disable_irq_type(enum locality loc, enum irq_type type);
+zx_status_t tpm_set_irq(enum locality loc, uint8_t vector);
+zx_status_t tpm_enable_irq_type(enum locality loc, enum irq_type type);
+zx_status_t tpm_disable_irq_type(enum locality loc, enum irq_type type);
 
-// Returns MX_OK if this TPM is supported and returns MX_NOT_SUPPORTED if it is not.
+// Returns ZX_OK if this TPM is supported and returns ZX_NOT_SUPPORTED if it is not.
 // Any other error indicates an issue occurred during detection.
-mx_status_t tpm_is_supported(enum locality loc);
+zx_status_t tpm_is_supported(enum locality loc);
 
 // Request use of the given locality
-mx_status_t tpm_request_use(enum locality loc);
+zx_status_t tpm_request_use(enum locality loc);
 // Wait for actual access to the locality
-mx_status_t tpm_wait_for_locality(enum locality loc);
+zx_status_t tpm_wait_for_locality(enum locality loc);
 
-mx_status_t tpm_send_cmd(enum locality loc, uint8_t* cmd, size_t len);
+zx_status_t tpm_send_cmd(enum locality loc, uint8_t* cmd, size_t len);
 // Returns the total number of bytes in the response, may be less than max_len.
 // If negative, the return value is an error code
 ssize_t tpm_recv_resp(enum locality loc, uint8_t* resp, size_t max_len);

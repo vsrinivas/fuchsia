@@ -24,9 +24,9 @@ static ssize_t stub_write(int fd, const void* buf, size_t count) {
 }
 weak_alias(stub_write, write);
 
-static mx_status_t stub_mmap_file(size_t offset, size_t len, uint32_t mx_flags, int flags, int fd,
+static zx_status_t stub_mmap_file(size_t offset, size_t len, uint32_t zx_flags, int flags, int fd,
                                   off_t fd_off, uintptr_t* out) {
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 weak_alias(stub_mmap_file, _mmap_file);
 

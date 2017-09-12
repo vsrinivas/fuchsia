@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 
 namespace fbl {
 
@@ -61,7 +61,7 @@ public:
     }
 
     void Assert() const {
-        MX_DEBUG_ASSERT_MSG(magic_ == magic,
+        ZX_DEBUG_ASSERT_MSG(magic_ == magic,
                             "Invalid canary (expt: %08x, got: %08x)\n",
                             static_cast<uint32_t>(magic), magic_);
     }

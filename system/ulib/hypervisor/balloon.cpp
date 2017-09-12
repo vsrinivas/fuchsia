@@ -11,8 +11,8 @@
 #include <fbl/auto_lock.h>
 #include <hypervisor/vcpu.h>
 #include <hypervisor/virtio.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/port.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/port.h>
 #include <virtio/balloon.h>
 #include <virtio/virtio.h>
 #include <virtio/virtio_ids.h>
@@ -25,21 +25,21 @@ static balloon_t* virtio_device_to_balloon(const virtio_device_t* device) {
     return (balloon_t*)device->impl;
 }
 
-static mx_status_t decommit_pages(balloon_t* balloon, uint64_t addr, uint64_t len) {
-    return mx_vmo_op_range(balloon->vmo, MX_VMO_OP_DECOMMIT, addr, len, NULL, 0);
+static zx_status_t decommit_pages(balloon_t* balloon, uint64_t addr, uint64_t len) {
+    return zx_vmo_op_range(balloon->vmo, ZX_VMO_OP_DECOMMIT, addr, len, NULL, 0);
 }
 
-static mx_status_t commit_pages(balloon_t* balloon, uint64_t addr, uint64_t len) {
+static zx_status_t commit_pages(balloon_t* balloon, uint64_t addr, uint64_t len) {
     if (balloon->deflate_on_demand)
-        return MX_OK;
-    return mx_vmo_op_range(balloon->vmo, MX_VMO_OP_COMMIT, addr, len, NULL, 0);
+        return ZX_OK;
+    return zx_vmo_op_range(balloon->vmo, ZX_VMO_OP_COMMIT, addr, len, NULL, 0);
 }
 
 /* Structure passed to the inflate/deflate queue handler. */
 typedef struct queue_ctx {
     balloon_t* balloon;
     // Operation to perform on the queue (inflate or deflate).
-    mx_status_t (*op)(balloon_t* balloon, uint64_t addr, uint64_t len);
+    zx_status_t (*op)(balloon_t* balloon, uint64_t addr, uint64_t len);
 } queue_ctx_t;
 
 /* Handle balloon inflate/deflate requests.
@@ -60,7 +60,7 @@ typedef struct queue_ctx {
  *  (c) Otherwise, the guest is allowed to re-use pages previously given to the
  *      balloon before the device has acknowledged their withdrawal.
  */
-static mx_status_t queue_range_op(void* addr, uint32_t len, uint16_t flags, uint32_t* used,
+static zx_status_t queue_range_op(void* addr, uint32_t len, uint16_t flags, uint32_t* used,
                                   void* ctx) {
     queue_ctx_t* balloon_op_ctx = static_cast<queue_ctx_t*>(ctx);
     balloon_t* balloon = balloon_op_ctx->balloon;
@@ -80,10 +80,10 @@ static mx_status_t queue_range_op(void* addr, uint32_t len, uint16_t flags, uint
 
         // If we have an existing region; invoke the inflate/deflate op.
         if (region_length > 0) {
-            mx_status_t status = balloon_op_ctx->op(balloon,
+            zx_status_t status = balloon_op_ctx->op(balloon,
                                                     region_base * VIRTIO_BALLOON_PAGE_SIZE,
                                                     region_length * VIRTIO_BALLOON_PAGE_SIZE);
-            if (status != MX_OK)
+            if (status != ZX_OK)
                 return status;
         }
 
@@ -94,20 +94,20 @@ static mx_status_t queue_range_op(void* addr, uint32_t len, uint16_t flags, uint
 
     // Handle the last region.
     if (region_length > 0) {
-        mx_status_t status = balloon_op_ctx->op(balloon, region_base * VIRTIO_BALLOON_PAGE_SIZE,
+        zx_status_t status = balloon_op_ctx->op(balloon, region_base * VIRTIO_BALLOON_PAGE_SIZE,
                                                 region_length * VIRTIO_BALLOON_PAGE_SIZE);
-        if (status != MX_OK)
+        if (status != ZX_OK)
             return status;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t handle_queue_notify(balloon_t* balloon, uint16_t queue_sel) {
+static zx_status_t handle_queue_notify(balloon_t* balloon, uint16_t queue_sel) {
     queue_ctx_t ctx;
     switch (queue_sel) {
     case VIRTIO_BALLOON_Q_STATSQ:
-        return MX_OK;
+        return ZX_OK;
     case VIRTIO_BALLOON_Q_INFLATEQ:
         ctx.op = &decommit_pages;
         break;
@@ -115,31 +115,31 @@ static mx_status_t handle_queue_notify(balloon_t* balloon, uint16_t queue_sel) {
         ctx.op = &commit_pages;
         break;
     default:
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     ctx.balloon = balloon;
     return virtio_queue_handler(&balloon->queues[queue_sel], &queue_range_op, &ctx);
 }
 
-static mx_status_t balloon_queue_notify(virtio_device_t* device, uint16_t queue_sel) {
-    mx_status_t status;
+static zx_status_t balloon_queue_notify(virtio_device_t* device, uint16_t queue_sel) {
+    zx_status_t status;
     balloon_t* balloon = virtio_device_to_balloon(device);
     do {
         status = handle_queue_notify(balloon, queue_sel);
-    } while (status == MX_ERR_NEXT);
+    } while (status == ZX_ERR_NEXT);
     return status;
 }
 
-static mx_status_t balloon_read(const virtio_device_t* device, uint16_t port, uint8_t access_size,
-                                mx_vcpu_io_t* vcpu_io) {
+static zx_status_t balloon_read(const virtio_device_t* device, uint16_t port, uint8_t access_size,
+                                zx_vcpu_io_t* vcpu_io) {
     balloon_t* balloon = virtio_device_to_balloon(device);
 
     fbl::AutoLock lock(&balloon->mutex);
     return virtio_device_config_read(device, &balloon->config, port, access_size, vcpu_io);
 }
 
-static mx_status_t balloon_write(virtio_device_t* device, uint16_t port,
-                                 const mx_vcpu_io_t* io) {
+static zx_status_t balloon_write(virtio_device_t* device, uint16_t port,
+                                 const zx_vcpu_io_t* io) {
     balloon_t* balloon = virtio_device_to_balloon(device);
 
     fbl::AutoLock lock(&balloon->mutex);
@@ -153,7 +153,7 @@ static const virtio_device_ops_t kBalloonVirtioDeviceOps = {
 };
 
 void balloon_init(balloon_t* balloon, uintptr_t guest_physmem_addr, size_t guest_physmem_size,
-                  mx_handle_t guest_physmem_vmo) {
+                  zx_handle_t guest_physmem_vmo) {
     memset(balloon, 0, sizeof(*balloon));
 
     // Virt queue initialization.
@@ -190,8 +190,8 @@ static void wait_for_stats_buffer(balloon_t* balloon, virtio_queue_t* stats_queu
     }
 }
 
-mx_status_t balloon_request_stats(balloon_t* balloon, balloon_stats_fn_t handler, void* ctx) {
-    mx_status_t status;
+zx_status_t balloon_request_stats(balloon_t* balloon, balloon_stats_fn_t handler, void* ctx) {
+    zx_status_t status;
     virtio_queue_t* stats_queue = &balloon->queues[VIRTIO_BALLOON_Q_STATSQ];
 
     // stats.mutex needs to be held during the entire time the guest is
@@ -209,7 +209,7 @@ mx_status_t balloon_request_stats(balloon_t* balloon, balloon_stats_fn_t handler
     balloon->stats.has_buffer = false;
     virtio_queue_return(stats_queue, balloon->stats.desc_index, 0);
     status = virtio_device_notify(&balloon->virtio_device);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         mtx_unlock(&balloon->stats.mutex);
         return status;
     }
@@ -217,14 +217,14 @@ mx_status_t balloon_request_stats(balloon_t* balloon, balloon_stats_fn_t handler
 
     virtio_desc_t desc;
     status = virtio_queue_read_desc(stats_queue, balloon->stats.desc_index, &desc);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         mtx_unlock(&balloon->stats.mutex);
         return status;
     }
 
     if ((desc.len % sizeof(virtio_balloon_stat_t)) != 0) {
         mtx_unlock(&balloon->stats.mutex);
-        return MX_ERR_IO_DATA_INTEGRITY;
+        return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
     // Invoke the handler on the stats.
@@ -235,10 +235,10 @@ mx_status_t balloon_request_stats(balloon_t* balloon, balloon_stats_fn_t handler
 
     // Note we deliberately do not return the buffer here. This will be done to
     // initiate the next stats request.
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t balloon_update_num_pages(balloon_t* balloon, uint32_t num_pages) {
+zx_status_t balloon_update_num_pages(balloon_t* balloon, uint32_t num_pages) {
     mtx_lock(&balloon->mutex);
     balloon->config.num_pages = num_pages;
     mtx_unlock(&balloon->mutex);

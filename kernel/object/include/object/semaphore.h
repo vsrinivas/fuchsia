@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 #include <kernel/thread.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 // You probably don't want to use this class.
 class Semaphore {
@@ -22,7 +22,7 @@ public:
     // Returns the number of ready threads. If it is bigger than 0
     // the caller must call thread_reschedule().
     __WARN_UNUSED_RESULT int Post();
-    mx_status_t Wait(lk_time_t deadline);
+    zx_status_t Wait(lk_time_t deadline);
 
 private:
     int64_t count_;

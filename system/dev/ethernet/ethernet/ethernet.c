@@ -8,11 +8,11 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
 
-#include <magenta/device/ethernet.h>
-#include <magenta/listnode.h>
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
+#include <zircon/device/ethernet.h>
+#include <zircon/listnode.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,7 +24,7 @@
 #define DEVICE_NAME_LEN 16
 
 // This is used for signaling that eth_tx_thread() should exit.
-static const mx_signals_t kSignalFifoTerminate = MX_USER_SIGNAL_0;
+static const zx_signals_t kSignalFifoTerminate = ZX_USER_SIGNAL_0;
 
 // ensure that we will not exceed fifo capacity
 static_assert((FIFO_DEPTH * FIFO_ESIZE) <= 4096, "");
@@ -32,7 +32,7 @@ static_assert((FIFO_DEPTH * FIFO_ESIZE) <= 4096, "");
 // ethernet device
 typedef struct ethdev0 {
     // shared state
-    mx_device_t* macdev;
+    zx_device_t* macdev;
     ethmac_protocol_t mac;
     uint32_t state;
 
@@ -44,7 +44,7 @@ typedef struct ethdev0 {
 
     ethmac_info_t info;
     uint32_t status;
-    mx_device_t* mxdev;
+    zx_device_t* mxdev;
 } ethdev0_t;
 
 // transmit thread has been created
@@ -77,20 +77,20 @@ typedef struct ethdev {
     // fifos are named from the perspective
     // of the packet from from the client
     // to the network interface
-    mx_handle_t tx_fifo;
+    zx_handle_t tx_fifo;
     uint32_t tx_depth;
-    mx_handle_t rx_fifo;
+    zx_handle_t rx_fifo;
     uint32_t rx_depth;
 
     // io buffer
-    mx_handle_t io_vmo;
+    zx_handle_t io_vmo;
     void* io_buf;
     size_t io_size;
 
     // fifo thread
     thrd_t tx_thr;
 
-    mx_device_t* mxdev;
+    zx_device_t* mxdev;
 
     uint32_t fail_rx_read;
     uint32_t fail_rx_write;
@@ -101,12 +101,12 @@ typedef struct ethdev {
 
 static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t extra) {
     eth_fifo_entry_t e;
-    mx_status_t status;
+    zx_status_t status;
     uint32_t count;
 
     // TODO: read multiple and cache locally to reduce syscalls
-    if ((status = mx_fifo_read(edev->rx_fifo, &e, sizeof(e), &count)) < 0) {
-        if (status == MX_ERR_SHOULD_WAIT) {
+    if ((status = zx_fifo_read(edev->rx_fifo, &e, sizeof(e), &count)) < 0) {
+        if (status == ZX_ERR_SHOULD_WAIT) {
             if ((edev->fail_rx_read++ % FAIL_REPORT_RATE) == 0) {
                 dprintf(ERROR, "eth [%s]: no rx buffers available (%u times)\n",
                        edev->name, edev->fail_rx_read);
@@ -132,8 +132,8 @@ static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t
         e.flags = ETH_FIFO_RX_OK | extra;
     }
 
-    if ((status = mx_fifo_write(edev->rx_fifo, &e, sizeof(e), &count)) < 0) {
-        if (status == MX_ERR_SHOULD_WAIT) {
+    if ((status = zx_fifo_write(edev->rx_fifo, &e, sizeof(e), &count)) < 0) {
+        if (status == ZX_ERR_SHOULD_WAIT) {
             if ((edev->fail_rx_write++ % FAIL_REPORT_RATE) == 0) {
                 dprintf(ERROR, "eth [%s]: no rx_fifo space available (%u times)\n",
                        edev->name, edev->fail_rx_write);
@@ -155,7 +155,7 @@ static void eth0_status(void* cookie, uint32_t status) {
 
     ethdev_t* edev;
     list_for_every_entry(&edev0->list_active, edev, ethdev_t, node) {
-        mx_object_signal_peer(edev->rx_fifo, 0, ETH_SIGNAL_STATUS);
+        zx_object_signal_peer(edev->rx_fifo, 0, ETH_SIGNAL_STATUS);
     }
     mtx_unlock(&edev0->lock);
 }
@@ -189,7 +189,7 @@ static void eth_tx_echo(ethdev0_t* edev0, const void* data, size_t len) {
     mtx_unlock(&edev0->lock);
 }
 
-static mx_status_t eth_tx_listen_locked(ethdev_t* edev, bool yes) {
+static zx_status_t eth_tx_listen_locked(ethdev_t* edev, bool yes) {
     ethdev0_t* edev0 = edev->edev0;
 
     // update our state
@@ -216,25 +216,25 @@ static mx_status_t eth_tx_listen_locked(ethdev_t* edev, bool yes) {
         }
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static int eth_tx_thread(void* arg) {
     ethdev_t* edev = (ethdev_t*)arg;
     ethdev0_t* edev0 = edev->edev0;
     eth_fifo_entry_t entries[FIFO_DEPTH / 2];
-    mx_status_t status;
+    zx_status_t status;
     uint32_t count;
 
     for (;;) {
-        if ((status = mx_fifo_read(edev->tx_fifo, entries, sizeof(entries), &count)) < 0) {
-            if (status == MX_ERR_SHOULD_WAIT) {
-                mx_signals_t observed;
-                if ((status = mx_object_wait_one(edev->tx_fifo,
-                                                 MX_FIFO_READABLE |
-                                                 MX_FIFO_PEER_CLOSED |
+        if ((status = zx_fifo_read(edev->tx_fifo, entries, sizeof(entries), &count)) < 0) {
+            if (status == ZX_ERR_SHOULD_WAIT) {
+                zx_signals_t observed;
+                if ((status = zx_object_wait_one(edev->tx_fifo,
+                                                 ZX_FIFO_READABLE |
+                                                 ZX_FIFO_PEER_CLOSED |
                                                  kSignalFifoTerminate,
-                                                 MX_TIME_INFINITE,
+                                                 ZX_TIME_INFINITE,
                                                  &observed)) < 0) {
                     dprintf(ERROR, "eth [%s]: tx_fifo: error waiting: %d\n", edev->name, status);
                     break;
@@ -266,8 +266,8 @@ static int eth_tx_thread(void* arg) {
             count--;
         }
 
-        if ((status = mx_fifo_write(edev->tx_fifo, entries, sizeof(eth_fifo_entry_t) * n, &count)) < 0) {
-            if (status == MX_ERR_SHOULD_WAIT) {
+        if ((status = zx_fifo_write(edev->tx_fifo, entries, sizeof(eth_fifo_entry_t) * n, &count)) < 0) {
+            if (status == ZX_ERR_SHOULD_WAIT) {
                 if ((edev->fail_tx_write++ % FAIL_REPORT_RATE) == 0) {
                     dprintf(ERROR, "eth [%s]: no tx_fifo space available (%u times)\n",
                            edev->name, edev->fail_tx_write);
@@ -286,27 +286,27 @@ static int eth_tx_thread(void* arg) {
     return 0;
 }
 
-static mx_status_t eth_get_fifos_locked(ethdev_t* edev, void* out_buf, size_t out_len,
+static zx_status_t eth_get_fifos_locked(ethdev_t* edev, void* out_buf, size_t out_len,
                                         size_t* out_actual) {
     if (out_len < sizeof(eth_fifos_t)) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
-    if (edev->tx_fifo != MX_HANDLE_INVALID) {
-        return MX_ERR_ALREADY_BOUND;
+    if (edev->tx_fifo != ZX_HANDLE_INVALID) {
+        return ZX_ERR_ALREADY_BOUND;
     }
 
     eth_fifos_t* fifos = out_buf;
 
-    mx_status_t status;
-    if ((status = mx_fifo_create(FIFO_DEPTH, FIFO_ESIZE, 0, &fifos->tx_fifo, &edev->tx_fifo)) < 0) {
+    zx_status_t status;
+    if ((status = zx_fifo_create(FIFO_DEPTH, FIFO_ESIZE, 0, &fifos->tx_fifo, &edev->tx_fifo)) < 0) {
         dprintf(ERROR, "eth_create  [%s]: failed to create tx fifo: %d\n", edev->name, status);
         return status;
     }
-    if ((status = mx_fifo_create(FIFO_DEPTH, FIFO_ESIZE, 0, &fifos->rx_fifo, &edev->rx_fifo)) < 0) {
+    if ((status = zx_fifo_create(FIFO_DEPTH, FIFO_ESIZE, 0, &fifos->rx_fifo, &edev->rx_fifo)) < 0) {
         dprintf(ERROR, "eth_create  [%s]: failed to create rx fifo: %d\n", edev->name, status);
-        mx_handle_close(fifos->rx_fifo);
-        mx_handle_close(edev->tx_fifo);
-        edev->tx_fifo = MX_HANDLE_INVALID;
+        zx_handle_close(fifos->rx_fifo);
+        zx_handle_close(edev->tx_fifo);
+        edev->tx_fifo = ZX_HANDLE_INVALID;
         return status;
     }
 
@@ -316,29 +316,29 @@ static mx_status_t eth_get_fifos_locked(ethdev_t* edev, void* out_buf, size_t ou
     fifos->rx_depth = FIFO_DEPTH;
 
     *out_actual = sizeof(*fifos);
-    return MX_OK;
+    return ZX_OK;
 }
 
 static ssize_t eth_set_iobuf_locked(ethdev_t* edev, const void* in_buf, size_t in_len) {
-    if (in_len < sizeof(mx_handle_t)) {
-        return MX_ERR_INVALID_ARGS;
+    if (in_len < sizeof(zx_handle_t)) {
+        return ZX_ERR_INVALID_ARGS;
     }
-    if (edev->io_vmo != MX_HANDLE_INVALID) {
-        return MX_ERR_ALREADY_BOUND;
+    if (edev->io_vmo != ZX_HANDLE_INVALID) {
+        return ZX_ERR_ALREADY_BOUND;
     }
 
-    mx_handle_t vmo = *((mx_handle_t*)in_buf);
+    zx_handle_t vmo = *((zx_handle_t*)in_buf);
 
     size_t size;
-    mx_status_t status;
+    zx_status_t status;
 
-    if ((status = mx_vmo_get_size(vmo, &size)) < 0) {
+    if ((status = zx_vmo_get_size(vmo, &size)) < 0) {
         dprintf(ERROR, "eth [%s]: could not get io_buf size: %d\n", edev->name, status);
         goto fail;
     }
 
-    if ((status = mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, size,
-                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+    if ((status = zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size,
+                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                               (uintptr_t*)&edev->io_buf)) < 0) {
         dprintf(ERROR, "eth [%s]: could not map io_buf: %d\n", edev->name, status);
         goto fail;
@@ -347,25 +347,25 @@ static ssize_t eth_set_iobuf_locked(ethdev_t* edev, const void* in_buf, size_t i
     edev->io_vmo = vmo;
     edev->io_size = size;
 
-    return MX_OK;
+    return ZX_OK;
 
 fail:
-    mx_handle_close(vmo);
+    zx_handle_close(vmo);
     return status;
 }
 
-static mx_status_t eth_start_locked(ethdev_t* edev) {
+static zx_status_t eth_start_locked(ethdev_t* edev) {
     ethdev0_t* edev0 = edev->edev0;
 
     // Cannot start unless tx/rx rings are configured
-    if ((edev->io_vmo == MX_HANDLE_INVALID) ||
-        (edev->tx_fifo == MX_HANDLE_INVALID) ||
-        (edev->rx_fifo == MX_HANDLE_INVALID)) {
-        return MX_ERR_BAD_STATE;
+    if ((edev->io_vmo == ZX_HANDLE_INVALID) ||
+        (edev->tx_fifo == ZX_HANDLE_INVALID) ||
+        (edev->rx_fifo == ZX_HANDLE_INVALID)) {
+        return ZX_ERR_BAD_STATE;
     }
 
     if (edev->state & ETHDEV_RUNNING) {
-        return MX_OK;
+        return ZX_OK;
     }
 
     if (!(edev->state & ETHDEV_TX_THREAD)) {
@@ -373,12 +373,12 @@ static mx_status_t eth_start_locked(ethdev_t* edev) {
                                       edev, "eth-tx-thread");
         if (r != thrd_success) {
             dprintf(ERROR, "eth [%s]: failed to start tx thread: %d\n", edev->name, r);
-            return MX_ERR_INTERNAL;
+            return ZX_ERR_INTERNAL;
         }
         edev->state |= ETHDEV_TX_THREAD;
     }
 
-    mx_status_t status;
+    zx_status_t status;
     if (list_is_empty(&edev0->list_active)) {
         // Release the lock to allow other device operations in callback routine.
         // Re-acquire lock afterwards. Set busy to prevent problems with other ioctls.
@@ -388,10 +388,10 @@ static mx_status_t eth_start_locked(ethdev_t* edev) {
         mtx_lock(&edev0->lock);
         edev0->state &= ~ETHDEV0_BUSY;
     } else {
-        status = MX_OK;
+        status = ZX_OK;
     }
 
-    if (status == MX_OK) {
+    if (status == ZX_OK) {
         edev->state |= ETHDEV_RUNNING;
         list_delete(&edev->node);
         list_add_tail(&edev0->list_active, &edev->node);
@@ -402,7 +402,7 @@ static mx_status_t eth_start_locked(ethdev_t* edev) {
     return status;
 }
 
-static mx_status_t eth_stop_locked(ethdev_t* edev) {
+static zx_status_t eth_stop_locked(ethdev_t* edev) {
     ethdev0_t* edev0 = edev->edev0;
 
     if (edev->state & ETHDEV_RUNNING) {
@@ -422,7 +422,7 @@ static mx_status_t eth_stop_locked(ethdev_t* edev) {
         }
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static ssize_t eth_set_client_name_locked(ethdev_t* edev, const void* in_buf, size_t in_len) {
@@ -431,50 +431,50 @@ static ssize_t eth_set_client_name_locked(ethdev_t* edev, const void* in_buf, si
     }
     memcpy(edev->name, in_buf, in_len);
     edev->name[in_len] = '\0';
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t eth_get_status_locked(ethdev_t* edev, void* out_buf, size_t out_len,
+static zx_status_t eth_get_status_locked(ethdev_t* edev, void* out_buf, size_t out_len,
                                   size_t* out_actual) {
     if (out_len < sizeof(uint32_t)) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
-    if (edev->rx_fifo == MX_HANDLE_INVALID) {
-        return MX_ERR_BAD_STATE;
+    if (edev->rx_fifo == ZX_HANDLE_INVALID) {
+        return ZX_ERR_BAD_STATE;
     }
-    if (mx_object_signal_peer(edev->rx_fifo, ETH_SIGNAL_STATUS, 0) != MX_OK) {
-        return MX_ERR_INTERNAL;
+    if (zx_object_signal_peer(edev->rx_fifo, ETH_SIGNAL_STATUS, 0) != ZX_OK) {
+        return ZX_ERR_INTERNAL;
     }
 
     uint32_t* status = out_buf;
     *status = edev->edev0->status;
     *out_actual = sizeof(status);
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t eth_ioctl(void* ctx, uint32_t op,
+static zx_status_t eth_ioctl(void* ctx, uint32_t op,
                              const void* in_buf, size_t in_len,
                              void* out_buf, size_t out_len, size_t* out_actual) {
 
     ethdev_t* edev = ctx;
     mtx_lock(&edev->edev0->lock);
-    mx_status_t status;
+    zx_status_t status;
     if (edev->edev0->state & ETHDEV0_BUSY) {
         dprintf(ERROR, "eth [%s]: cannot perform ioctl while device is busy. ioctl: %u\n",
                edev->name, IOCTL_NUMBER(op));
-        status = MX_ERR_SHOULD_WAIT;
+        status = ZX_ERR_SHOULD_WAIT;
         goto done;
     }
 
     if (edev->state & ETHDEV_DEAD) {
-        status = MX_ERR_BAD_STATE;
+        status = ZX_ERR_BAD_STATE;
         goto done;
     }
 
     switch (op) {
     case IOCTL_ETHERNET_GET_INFO: {
         if (out_len < sizeof(eth_info_t)) {
-            status = MX_ERR_BUFFER_TOO_SMALL;
+            status = ZX_ERR_BUFFER_TOO_SMALL;
         } else {
             eth_info_t* info = out_buf;
             memset(info, 0, sizeof(*info));
@@ -487,7 +487,7 @@ static mx_status_t eth_ioctl(void* ctx, uint32_t op,
             }
             info->mtu = edev->edev0->info.mtu;
             *out_actual = sizeof(*info);
-            status = MX_OK;
+            status = ZX_OK;
         }
         break;
     }
@@ -542,16 +542,16 @@ static void eth_kill_locked(ethdev_t* edev) {
 
     // try to convince clients to close us
     if (edev->rx_fifo) {
-        mx_handle_close(edev->rx_fifo);
-        edev->rx_fifo = MX_HANDLE_INVALID;
+        zx_handle_close(edev->rx_fifo);
+        edev->rx_fifo = ZX_HANDLE_INVALID;
     }
     if (edev->tx_fifo) {
         // Ask the TX thread to exit.
-        mx_object_signal(edev->tx_fifo, 0, kSignalFifoTerminate);
+        zx_object_signal(edev->tx_fifo, 0, kSignalFifoTerminate);
     }
     if (edev->io_vmo) {
-        mx_handle_close(edev->io_vmo);
-        edev->io_vmo = MX_HANDLE_INVALID;
+        zx_handle_close(edev->io_vmo);
+        edev->io_vmo = ZX_HANDLE_INVALID;
     }
 
     if (edev->state & ETHDEV_TX_THREAD) {
@@ -562,12 +562,12 @@ static void eth_kill_locked(ethdev_t* edev) {
     }
 
     if (edev->tx_fifo) {
-        mx_handle_close(edev->tx_fifo);
-        edev->tx_fifo = MX_HANDLE_INVALID;
+        zx_handle_close(edev->tx_fifo);
+        edev->tx_fifo = ZX_HANDLE_INVALID;
     }
 
     if (edev->io_buf) {
-        mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)edev->io_buf, 0);
+        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)edev->io_buf, 0);
         edev->io_buf = NULL;
     }
     dprintf(TRACE, "eth [%s]: all resources released\n", edev->name);
@@ -578,7 +578,7 @@ static void eth_release(void* ctx) {
     free(edev);
 }
 
-static mx_status_t eth_close(void* ctx, uint32_t flags) {
+static zx_status_t eth_close(void* ctx, uint32_t flags) {
     ethdev_t* edev = ctx;
 
     mtx_lock(&edev->edev0->lock);
@@ -587,22 +587,22 @@ static mx_status_t eth_close(void* ctx, uint32_t flags) {
     list_delete(&edev->node);
     mtx_unlock(&edev->edev0->lock);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_protocol_device_t ethdev_ops = {
+static zx_protocol_device_t ethdev_ops = {
     .version = DEVICE_OPS_VERSION,
     .close = eth_close,
     .ioctl = eth_ioctl,
     .release = eth_release,
 };
 
-static mx_status_t eth0_open(void* ctx, mx_device_t** out, uint32_t flags) {
+static zx_status_t eth0_open(void* ctx, zx_device_t** out, uint32_t flags) {
     ethdev0_t* edev0 = ctx;
 
     ethdev_t* edev;
     if ((edev = calloc(1, sizeof(ethdev_t))) == NULL) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     edev->edev0 = edev0;
 
@@ -611,11 +611,11 @@ static mx_status_t eth0_open(void* ctx, mx_device_t** out, uint32_t flags) {
         .name = "ethernet",
         .ctx = edev,
         .ops = &ethdev_ops,
-        .proto_id = MX_PROTOCOL_ETHERNET,
+        .proto_id = ZX_PROTOCOL_ETHERNET,
         .flags = DEVICE_ADD_INSTANCE,
     };
 
-    mx_status_t status;
+    zx_status_t status;
     if ((status = device_add(edev0->mxdev, &args, &edev->mxdev)) < 0) {
         free(edev);
         return status;
@@ -626,7 +626,7 @@ static mx_status_t eth0_open(void* ctx, mx_device_t** out, uint32_t flags) {
     mtx_unlock(&edev0->lock);
 
     *out = edev->mxdev;
-    return MX_OK;
+    return ZX_OK;
 }
 
 static void eth0_unbind(void* ctx) {
@@ -654,7 +654,7 @@ static void eth0_release(void* ctx) {
     free(edev0);
 }
 
-static mx_protocol_device_t ethdev0_ops = {
+static zx_protocol_device_t ethdev0_ops = {
     .version = DEVICE_OPS_VERSION,
     .open = eth0_open,
     .unbind = eth0_unbind,
@@ -663,16 +663,16 @@ static mx_protocol_device_t ethdev0_ops = {
 
 #define BAD_FEATURES (ETHMAC_FEATURE_RX_QUEUE | ETHMAC_FEATURE_TX_QUEUE)
 
-static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
+static zx_status_t eth_bind(void* ctx, zx_device_t* dev, void** cookie) {
     ethdev0_t* edev0;
     if ((edev0 = calloc(1, sizeof(ethdev0_t))) == NULL) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
-    mx_status_t status;
-    if (device_get_protocol(dev, MX_PROTOCOL_ETHERMAC, &edev0->mac)) {
+    zx_status_t status;
+    if (device_get_protocol(dev, ZX_PROTOCOL_ETHERMAC, &edev0->mac)) {
         dprintf(ERROR, "eth: bind: no ethermac protocol\n");
-        status = MX_ERR_INTERNAL;
+        status = ZX_ERR_INTERNAL;
         goto fail;
     }
 
@@ -684,7 +684,7 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
     if (edev0->info.features & BAD_FEATURES) {
         dprintf(ERROR, "eth: bind: ethermac requires unsupported features: %08x\n",
                edev0->info.features & BAD_FEATURES);
-        status = MX_ERR_NOT_SUPPORTED;
+        status = ZX_ERR_NOT_SUPPORTED;
         goto fail;
     }
 
@@ -699,25 +699,25 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
         .name = "ethernet",
         .ctx = edev0,
         .ops = &ethdev0_ops,
-        .proto_id = MX_PROTOCOL_ETHERNET,
+        .proto_id = ZX_PROTOCOL_ETHERNET,
     };
 
     if ((status = device_add(dev, &args, &edev0->mxdev)) < 0) {
         goto fail;
     }
 
-    return MX_OK;
+    return ZX_OK;
 
 fail:
     free(edev0);
     return status;
 }
 
-static mx_driver_ops_t eth_driver_ops = {
+static zx_driver_ops_t eth_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = eth_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(ethernet, eth_driver_ops, "magenta", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_ETHERMAC),
-MAGENTA_DRIVER_END(ethernet)
+ZIRCON_DRIVER_BEGIN(ethernet, eth_driver_ops, "zircon", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_ETHERMAC),
+ZIRCON_DRIVER_END(ethernet)

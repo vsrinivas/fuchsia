@@ -6,7 +6,7 @@
 
 #include <stdlib.h>
 
-#include <magenta/status.h>
+#include <zircon/status.h>
 #include <unittest/unittest.h>
 
 // These unit tests are for the Digest object in ulib/digest.
@@ -31,10 +31,10 @@ const char* kDoubleZeroDigest =
 bool DigestStrings(void) {
     BEGIN_TEST;
     Digest actual;
-    mx_status_t rc = actual.Parse(kZeroDigest, strlen(kZeroDigest));
+    zx_status_t rc = actual.Parse(kZeroDigest, strlen(kZeroDigest));
     char buf[(Digest::kLength * 2) + 1];
     rc = actual.ToString(buf, sizeof(buf));
-    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
+    ASSERT_EQ(rc, ZX_OK, zx_status_get_string(rc));
     ASSERT_EQ(strncmp(kZeroDigest, buf, sizeof(buf)), 0, __FUNCTION__);
     END_TEST;
 }
@@ -42,8 +42,8 @@ bool DigestStrings(void) {
 bool DigestZero(void) {
     BEGIN_TEST;
     Digest actual, expected;
-    mx_status_t rc = expected.Parse(kZeroDigest, strlen(kZeroDigest));
-    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
+    zx_status_t rc = expected.Parse(kZeroDigest, strlen(kZeroDigest));
+    ASSERT_EQ(rc, ZX_OK, zx_status_get_string(rc));
     actual.Hash(nullptr, 0);
     ASSERT_TRUE(actual == expected, __FUNCTION__);
     END_TEST;
@@ -52,14 +52,14 @@ bool DigestZero(void) {
 bool DigestSelf(void) {
     BEGIN_TEST;
     Digest actual, expected;
-    mx_status_t rc =
+    zx_status_t rc =
         expected.Parse(kDoubleZeroDigest, strlen(kDoubleZeroDigest));
-    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
+    ASSERT_EQ(rc, ZX_OK, zx_status_get_string(rc));
     rc = actual.Parse(kZeroDigest, strlen(kZeroDigest));
-    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
+    ASSERT_EQ(rc, ZX_OK, zx_status_get_string(rc));
     uint8_t buf[Digest::kLength];
     rc = actual.CopyTo(buf, sizeof(buf));
-    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
+    ASSERT_EQ(rc, ZX_OK, zx_status_get_string(rc));
     actual.Hash(buf, Digest::kLength);
     ASSERT_TRUE(actual == expected, __FUNCTION__);
     END_TEST;
@@ -84,21 +84,21 @@ bool DigestSplit(void) {
 bool DigestCWrappers(void) {
     BEGIN_TEST;
     uint8_t buf[Digest::kLength];
-    mx_status_t rc = digest_hash(nullptr, 0, buf, sizeof(buf) - 1);
-    ASSERT_EQ(rc, MX_ERR_BUFFER_TOO_SMALL, "Small buffer should be rejected");
+    zx_status_t rc = digest_hash(nullptr, 0, buf, sizeof(buf) - 1);
+    ASSERT_EQ(rc, ZX_ERR_BUFFER_TOO_SMALL, "Small buffer should be rejected");
     rc = digest_hash(nullptr, 0, buf, sizeof(buf));
-    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
+    ASSERT_EQ(rc, ZX_OK, zx_status_get_string(rc));
     Digest expected;
     rc = expected.Parse(kZeroDigest, strlen(kZeroDigest));
-    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
+    ASSERT_EQ(rc, ZX_OK, zx_status_get_string(rc));
     ASSERT_TRUE(expected == buf, __FUNCTION__);
     digest_t* digest = nullptr;
     rc = digest_init(&digest);
-    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
+    ASSERT_EQ(rc, ZX_OK, zx_status_get_string(rc));
     expected.Hash(buf, sizeof(buf));
     digest_update(digest, buf, sizeof(buf));
     rc = digest_final(digest, buf, sizeof(buf));
-    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
+    ASSERT_EQ(rc, ZX_OK, zx_status_get_string(rc));
     ASSERT_TRUE(expected == buf, __FUNCTION__);
     END_TEST;
 }
@@ -106,10 +106,10 @@ bool DigestCWrappers(void) {
 bool DigestEquality(void) {
     BEGIN_TEST;
     Digest actual, expected;
-    mx_status_t rc = expected.Parse(kZeroDigest, strlen(kZeroDigest));
-    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
+    zx_status_t rc = expected.Parse(kZeroDigest, strlen(kZeroDigest));
+    ASSERT_EQ(rc, ZX_OK, zx_status_get_string(rc));
     rc = actual.Parse(kZeroDigest, strlen(kZeroDigest));
-    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
+    ASSERT_EQ(rc, ZX_OK, zx_status_get_string(rc));
     ASSERT_FALSE(actual == nullptr, "Does not equal NULL");
     ASSERT_TRUE(actual == actual, "Equals self");
     const uint8_t* actual_bytes = actual.AcquireBytes();

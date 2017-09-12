@@ -2,11 +2,11 @@
 #include "futex_impl.h"
 #include "libc.h"
 #include "pthread_impl.h"
-#include "magenta_impl.h"
+#include "zircon_impl.h"
 #include "stdio_impl.h"
 
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
 #include <pthread.h>
 #include <runtime/thread.h>
 #include <runtime/tls.h>
@@ -17,7 +17,7 @@
 
 static inline pthread_t prestart(void* arg) {
     pthread_t self = arg;
-    mxr_tp_set(mxr_thread_get_handle(&self->mxr_thread), pthread_to_tp(self));
+    zxr_tp_set(zxr_thread_get_handle(&self->zxr_thread), pthread_to_tp(self));
     __sanitizer_thread_start_hook(self->sanitizer_hook, (thrd_t)self);
     return self;
 }
@@ -34,7 +34,7 @@ static void start_c11(void* arg) {
 }
 
 static void deallocate_region(const struct iovec* region) {
-    _mx_vmar_unmap(_mx_vmar_root_self(),
+    _zx_vmar_unmap(_zx_vmar_root_self(),
                    (uintptr_t)region->iov_base, region->iov_len);
 }
 
@@ -46,7 +46,7 @@ int __pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict att
     if (attr._a_stackaddr != NULL)
         return ENOTSUP;
 
-    char thread_name[MX_MAX_NAME_LEN];
+    char thread_name[ZX_MAX_NAME_LEN];
     pthread_t new = __allocate_thread(&attr,
                                       attr.__name != NULL ? attr.__name :
                                       attr.__c11 ? "thrd_t" : "pthread_t",
@@ -55,13 +55,13 @@ int __pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict att
         return EAGAIN;
 
     const char* name = attr.__name != NULL ? attr.__name : thread_name;
-    mx_status_t status =
-        mxr_thread_create(_mx_process_self(), name, attr._a_detach,
-                          &new->mxr_thread);
-    if (status != MX_OK)
+    zx_status_t status =
+        zxr_thread_create(_zx_process_self(), name, attr._a_detach,
+                          &new->zxr_thread);
+    if (status != ZX_OK)
         goto fail_after_alloc;
 
-    mxr_thread_entry_t start = attr.__c11 ? start_c11 : start_pthread;
+    zxr_thread_entry_t start = attr.__c11 ? start_c11 : start_pthread;
 
     new->start = entry;
     new->start_arg = arg;
@@ -82,11 +82,11 @@ int __pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict att
     // This will (hopefully) start the new thread. It could instantly
     // run to completion and deallocate it self. As such, we can't
     // access new->anything after this point.
-    status = mxr_thread_start(&new->mxr_thread,
+    status = zxr_thread_start(&new->zxr_thread,
                               (uintptr_t)new->safe_stack.iov_base,
                               new->safe_stack.iov_len, start, new);
 
-    if (status == MX_OK) {
+    if (status == ZX_OK) {
         __sanitizer_thread_create_hook(sanitizer_hook,
                                        (thrd_t)new, thrd_success);
         return 0;
@@ -97,13 +97,13 @@ int __pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict att
 
     __sanitizer_thread_create_hook(
         sanitizer_hook, (thrd_t)new,
-        status == MX_ERR_ACCESS_DENIED ? thrd_error : thrd_nomem);
+        status == ZX_ERR_ACCESS_DENIED ? thrd_error : thrd_nomem);
 
 fail_after_alloc:
     deallocate_region(&new->safe_stack_region);
     deallocate_region(&new->unsafe_stack_region);
     deallocate_region(&new->tcb_region);
-    return status == MX_ERR_ACCESS_DENIED ? EPERM : EAGAIN;
+    return status == ZX_ERR_ACCESS_DENIED ? EPERM : EAGAIN;
 }
 
 static _Noreturn void final_exit(pthread_t self)
@@ -115,7 +115,7 @@ static __NO_SAFESTACK NO_ASAN void final_exit(pthread_t self) {
 
     // This deallocates the TCB region too for the detached case.
     // If not detached, pthread_join will deallocate it.
-    mxr_thread_exit_unmap_if_detached(&self->mxr_thread, _mx_vmar_root_self(),
+    zxr_thread_exit_unmap_if_detached(&self->zxr_thread, _zx_vmar_root_self(),
                                       (uintptr_t)self->tcb_region.iov_base,
                                       self->tcb_region.iov_len);
 }

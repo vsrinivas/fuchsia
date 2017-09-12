@@ -7,7 +7,7 @@
 #pragma once
 
 #include <lib/crypto/entropy/collector.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/mutex.h>
 
 namespace crypto {
@@ -18,12 +18,12 @@ namespace entropy {
 // as its entropy source. Currently, this is only supported on x86.
 class HwRngCollector : public Collector {
 public:
-    // Gets the current HwRngCollector instance. Returns MX_ERR_NOT_SUPPORTED if
+    // Gets the current HwRngCollector instance. Returns ZX_ERR_NOT_SUPPORTED if
     // hw_rng_draw_entropy is not supported.
     //
     // This function is thread-safe, and the DrawEntropy() method of the global
     // HwRngCollector instance is also thread-safe.
-    static mx_status_t GetInstance(Collector** ptr);
+    static zx_status_t GetInstance(Collector** ptr);
 
     // Inherited from crypto::entropy::Collector; see comments there.
     //

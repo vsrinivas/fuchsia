@@ -16,7 +16,7 @@ MODULE_SRCS = \
 
 MODULE_STATIC_LIBS := \
     system/ulib/trace-engine \
-    system/ulib/mxcpp \
+    system/ulib/zxcpp \
     system/ulib/fbl
 
 MODULE_LIBS := \

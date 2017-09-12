@@ -4,14 +4,14 @@
 
 #include <trace/event.h>
 
-#include <magenta/assert.h>
-#include <magenta/syscalls.h>
+#include <zircon/assert.h>
+#include <zircon/syscalls.h>
 
 namespace {
 
 struct EventHelper {
     EventHelper(trace_context_t* context, const char* name_literal)
-        : ticks(mx_ticks_get()) {
+        : ticks(zx_ticks_get()) {
         trace_context_register_current_thread(context, &thread_ref);
         trace_context_register_string_literal(context, name_literal, &name_ref);
     }
@@ -153,7 +153,7 @@ void trace_internal_write_flow_end_event_record_and_release_context(
 
 void trace_internal_write_kernel_object_record_for_handle_and_release_context(
     trace_context_t* context,
-    mx_handle_t handle,
+    zx_handle_t handle,
     const trace_arg_t* args, size_t num_args) {
     trace_context_write_kernel_object_record_for_handle(
         context, handle, args, num_args);

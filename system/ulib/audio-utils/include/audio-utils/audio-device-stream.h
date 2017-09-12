@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <magenta/device/audio.h>
-#include <magenta/types.h>
-#include <mx/channel.h>
-#include <mx/vmo.h>
+#include <zircon/device/audio.h>
+#include <zircon/types.h>
+#include <zx/channel.h>
+#include <zx/vmo.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
@@ -16,21 +16,21 @@ namespace utils {
 
 class AudioDeviceStream {
 public:
-    mx_status_t Open();
-    mx_status_t GetSupportedFormats(fbl::Vector<audio_stream_format_range_t>* out_formats) const;
-    mx_status_t SetMute(bool mute);
-    mx_status_t SetGain(float gain);
-    mx_status_t GetGain(audio_stream_cmd_get_gain_resp_t* out_gain) const;
-    mx_status_t PlugMonitor(float duration);
-    mx_status_t SetFormat(uint32_t frames_per_second,
+    zx_status_t Open();
+    zx_status_t GetSupportedFormats(fbl::Vector<audio_stream_format_range_t>* out_formats) const;
+    zx_status_t SetMute(bool mute);
+    zx_status_t SetGain(float gain);
+    zx_status_t GetGain(audio_stream_cmd_get_gain_resp_t* out_gain) const;
+    zx_status_t PlugMonitor(float duration);
+    zx_status_t SetFormat(uint32_t frames_per_second,
                           uint16_t channels,
                           audio_sample_format_t sample_format);
-    mx_status_t GetBuffer(uint32_t frames, uint32_t irqs_per_ring);
-    mx_status_t StartRingBuffer();
-    mx_status_t StopRingBuffer();
+    zx_status_t GetBuffer(uint32_t frames, uint32_t irqs_per_ring);
+    zx_status_t StartRingBuffer();
+    zx_status_t StopRingBuffer();
     void        ResetRingBuffer();
 
-    mx_status_t GetPlugState(audio_stream_cmd_plug_detect_resp_t* out_state) const {
+    zx_status_t GetPlugState(audio_stream_cmd_plug_detect_resp_t* out_state) const {
         return GetPlugState(out_state, false);
     }
 
@@ -51,8 +51,8 @@ public:
 protected:
     friend class fbl::unique_ptr<AudioDeviceStream>;
 
-    static bool IsChannelConnected(const mx::channel& ch);
-    mx_status_t GetPlugState(audio_stream_cmd_plug_detect_resp_t* out_state,
+    static bool IsChannelConnected(const zx::channel& ch);
+    zx_status_t GetPlugState(audio_stream_cmd_plug_detect_resp_t* out_state,
                              bool enable_notify) const;
     void        DisablePlugNotifications();
 
@@ -60,9 +60,9 @@ protected:
     AudioDeviceStream(bool input, const char* dev_path);
     virtual ~AudioDeviceStream() { }
 
-    mx::channel stream_ch_;
-    mx::channel rb_ch_;
-    mx::vmo     rb_vmo_;
+    zx::channel stream_ch_;
+    zx::channel rb_ch_;
+    zx::vmo     rb_vmo_;
 
     const bool  input_;
     char        name_[64] = { 0 };

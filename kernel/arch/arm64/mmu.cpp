@@ -53,7 +53,7 @@ static status_t arm64_mmu_alloc_asid(uint16_t* asid) {
         retry--;
         if (retry == 0) {
             mutex_release(&asid_lock);
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
         }
     } while ((asid_pool[new_asid >> 6] & (1 << (new_asid % 64))) || (new_asid == 0));
 
@@ -63,7 +63,7 @@ static status_t arm64_mmu_alloc_asid(uint16_t* asid) {
 
     *asid = new_asid;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static status_t arm64_mmu_free_asid(uint16_t asid) {
@@ -74,7 +74,7 @@ static status_t arm64_mmu_free_asid(uint16_t asid) {
 
     mutex_release(&asid_lock);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 // Convert user level mmu flags to flags that go in L1 descriptors.
@@ -95,7 +95,7 @@ static pte_t mmu_flags_to_pte_attr(uint flags) {
     default:
         // Invalid user-supplied flag.
         DEBUG_ASSERT(1);
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     switch (flags & (ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_WRITE)) {
@@ -141,7 +141,7 @@ status_t ArmArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) 
 
     DEBUG_ASSERT(IsValidVaddr(vaddr));
     if (!IsValidVaddr(vaddr))
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
 
     // Compute shift values based on if this address space is for kernel or user space.
     if (flags_ & ARCH_ASPACE_FLAG_KERNEL) {
@@ -176,7 +176,7 @@ status_t ArmArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) 
                 vaddr, index, index_shift, vaddr_rem, pte);
 
         if (descriptor_type == MMU_PTE_DESCRIPTOR_INVALID)
-            return MX_ERR_NOT_FOUND;
+            return ZX_ERR_NOT_FOUND;
 
         if (descriptor_type == ((index_shift > page_size_shift) ? MMU_PTE_L012_DESCRIPTOR_BLOCK : MMU_PTE_L3_DESCRIPTOR_PAGE)) {
             break;
@@ -244,23 +244,23 @@ status_t ArmArchVmAspace::AllocPageTable(paddr_t* paddrp, uint page_size_shift) 
         size_t ret = pmm_alloc_contiguous(count, PMM_ALLOC_FLAG_KMAP,
                                           static_cast<uint8_t>(page_size_shift), paddrp, NULL);
         if (ret != count)
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
 
         pt_pages_ += count;
     } else if (size == PAGE_SIZE) {
         void* vaddr = pmm_alloc_kpage(paddrp, NULL);
         if (!vaddr)
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
 
         pt_pages_++;
     } else {
         void* vaddr = memalign(size, size);
         if (!vaddr)
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
         *paddrp = vaddr_to_paddr(vaddr);
         if (*paddrp == 0) {
             free(vaddr);
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
         }
         pt_pages_++;
     }
@@ -439,7 +439,7 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
 
     if ((vaddr_rel | paddr | size) & ((1UL << page_size_shift) - 1)) {
         TRACEF("not page aligned\n");
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     mapped_size = 0;
@@ -493,7 +493,7 @@ err:
     UnmapPageTable(vaddr_in, vaddr_rel_in, size_in - size, index_shift,
                    page_size_shift, page_table, asid);
     DSB;
-    return MX_ERR_INTERNAL;
+    return ZX_ERR_INTERNAL;
 }
 
 int ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
@@ -521,7 +521,7 @@ int ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
 
     if ((vaddr_rel | size) & ((1UL << page_size_shift) - 1)) {
         TRACEF("not page aligned\n");
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     while (size) {
@@ -572,7 +572,7 @@ err:
     // here there's a programming bug since the higher level region abstraction
     // should guard against us trying to change permissions on an umapped page
     DSB;
-    return MX_ERR_INTERNAL;
+    return ZX_ERR_INTERNAL;
 }
 
 ssize_t ArmArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr, size_t size,
@@ -589,12 +589,12 @@ ssize_t ArmArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr, size_t size,
     if (vaddr_rel > vaddr_rel_max - size || size > vaddr_rel_max) {
         TRACEF("vaddr %#" PRIxPTR ", size %#" PRIxPTR " out of range vaddr %#" PRIxPTR ", size %#" PRIxPTR "\n",
                vaddr, size, vaddr_base, vaddr_rel_max);
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     if (!top_page_table) {
         TRACEF("page table is NULL\n");
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     ssize_t ret = MapPageTable(vaddr, vaddr_rel, paddr, size, attrs,
@@ -619,12 +619,12 @@ ssize_t ArmArchVmAspace::UnmapPages(vaddr_t vaddr, size_t size,
     if (vaddr_rel > vaddr_rel_max - size || size > vaddr_rel_max) {
         TRACEF("vaddr 0x%lx, size 0x%lx out of range vaddr 0x%lx, size 0x%lx\n",
                vaddr, size, vaddr_base, vaddr_rel_max);
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     if (!top_page_table) {
         TRACEF("page table is NULL\n");
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     ssize_t ret = UnmapPageTable(vaddr, vaddr_rel, size, top_index_shift,
@@ -647,12 +647,12 @@ status_t ArmArchVmAspace::ProtectPages(vaddr_t vaddr, size_t size, pte_t attrs,
     if (vaddr_rel > vaddr_rel_max - size || size > vaddr_rel_max) {
         TRACEF("vaddr %#" PRIxPTR ", size %#" PRIxPTR " out of range vaddr %#" PRIxPTR ", size %#" PRIxPTR "\n",
                vaddr, size, vaddr_base, vaddr_rel_max);
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     if (!top_page_table) {
         TRACEF("page table is NULL\n");
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     status_t ret = ProtectPageTable(vaddr, vaddr_rel, size, attrs,
@@ -672,19 +672,19 @@ status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t paddr, size_t count,
 
     DEBUG_ASSERT(IsValidVaddr(vaddr));
     if (!IsValidVaddr(vaddr))
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
 
     if (!(mmu_flags & ARCH_MMU_FLAG_PERM_READ))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     // paddr and vaddr must be aligned.
     DEBUG_ASSERT(IS_PAGE_ALIGNED(vaddr));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(paddr));
     if (!IS_PAGE_ALIGNED(vaddr) || !IS_PAGE_ALIGNED(paddr))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     if (count == 0)
-        return MX_OK;
+        return ZX_OK;
 
     ssize_t ret;
     {
@@ -710,7 +710,7 @@ status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t paddr, size_t count,
         DEBUG_ASSERT(*mapped <= count);
     }
 
-    return (ret < 0) ? (status_t)ret : MX_OK;
+    return (ret < 0) ? (status_t)ret : ZX_OK;
 }
 
 status_t ArmArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) {
@@ -722,11 +722,11 @@ status_t ArmArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) {
     DEBUG_ASSERT(IsValidVaddr(vaddr));
 
     if (!IsValidVaddr(vaddr))
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(vaddr));
     if (!IS_PAGE_ALIGNED(vaddr))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     fbl::AutoLock a(&lock_);
 
@@ -757,13 +757,13 @@ status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags) {
     canary_.Assert();
 
     if (!IsValidVaddr(vaddr))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     if (!IS_PAGE_ALIGNED(vaddr))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     if (!(mmu_flags & ARCH_MMU_FLAG_PERM_READ))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     fbl::AutoLock a(&lock_);
 
@@ -811,8 +811,8 @@ status_t ArmArchVmAspace::Init(vaddr_t base, size_t size, uint flags) {
         //DEBUG_ASSERT(base >= 0);
         DEBUG_ASSERT(base + size <= 1UL << MMU_USER_SIZE_SHIFT);
 
-        if (arm64_mmu_alloc_asid(&asid_) != MX_OK)
-            return MX_ERR_NO_MEMORY;
+        if (arm64_mmu_alloc_asid(&asid_) != ZX_OK)
+            return ZX_ERR_NO_MEMORY;
 
         base_ = base;
         size_ = size;
@@ -820,7 +820,7 @@ status_t ArmArchVmAspace::Init(vaddr_t base, size_t size, uint flags) {
         paddr_t pa;
         volatile pte_t* va = static_cast<volatile pte_t*>(pmm_alloc_kpage(&pa, NULL));
         if (!va)
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
 
         tt_virt_ = va;
         tt_phys_ = pa;
@@ -833,7 +833,7 @@ status_t ArmArchVmAspace::Init(vaddr_t base, size_t size, uint flags) {
 
     LTRACEF("tt_phys %#" PRIxPTR " tt_virt %p\n", tt_phys_, tt_virt_);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 status_t ArmArchVmAspace::Destroy() {
@@ -855,7 +855,7 @@ status_t ArmArchVmAspace::Destroy() {
     arm64_mmu_free_asid(asid_);
     asid_ = 0;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 void ArmArchVmAspace::ContextSwitch(ArmArchVmAspace* old_aspace, ArmArchVmAspace* aspace) {

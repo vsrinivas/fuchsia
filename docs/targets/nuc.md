@@ -21,10 +21,10 @@ These instructions configure the machine to boot from a USB flash drive.
 
 ## GigaBoot20x6 Setup
 1. Format the first partition on a USB flash drive as FAT.
-2. Build Magenta for x86-64
-3. The bootloader is here: build-magenta-pc-x86-64/bootloader/bootx64.efi
+2. Build Zircon for x86-64
+3. The bootloader is here: build-zircon-pc-x86-64/bootloader/bootx64.efi
 4. Copy `bootx64.efi` to `/EFI/BOOT/BOOTX64.EFI` on the USB flash drive.
 4. Use this flash drive to network boot.
-5. If you copy `magenta.bin` to `/magenta.bin` on the flash drive it will boot from the flash drive instead of the network.
+5. If you copy `zircon.bin` to `/zircon.bin` on the flash drive it will boot from the flash drive instead of the network.
 
 ## Important: network booting only works with the *built-in* ethernet port on the NUC, not via a USB dongle.

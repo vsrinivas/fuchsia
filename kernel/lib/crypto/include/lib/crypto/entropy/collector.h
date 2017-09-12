@@ -51,7 +51,7 @@ protected:
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Collector);
 
-    fbl::Name<MX_MAX_NAME_LEN> name_;
+    fbl::Name<ZX_MAX_NAME_LEN> name_;
 
     size_t entropy_per_1000_bytes_;
 };

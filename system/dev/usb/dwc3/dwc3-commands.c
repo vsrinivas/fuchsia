@@ -51,7 +51,7 @@ void dwc3_cmd_ep_transfer_config(dwc3_t* dwc, unsigned ep_num) {
     dwc3_ep_cmd(dwc, ep_num, DEPXFERCFG, 1, 0, 0, 0);
 }
 
-void dwc3_cmd_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, mx_paddr_t trb_phys) {
+void dwc3_cmd_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, zx_paddr_t trb_phys) {
     dwc3_ep_cmd(dwc, ep_num, DEPSTRTXFER, (uint32_t)(trb_phys >> 32),
                 (uint32_t)trb_phys, 0, DEPCMD_CMDIOC);
 }

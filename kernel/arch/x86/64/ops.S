@@ -58,7 +58,7 @@ FUNCTION(read_msr_safe)
     or %rax, %rdx
     mov %rdx, (%rsi)
 
-    mov $MX_OK, %rax
+    mov $ZX_OK, %rax
     ret
 .Lgpf_handler:
     # Cleanup GPF handler
@@ -66,6 +66,6 @@ FUNCTION(read_msr_safe)
     # Restore interrupts if they were on before
     popfq
 
-    mov $MX_ERR_NOT_SUPPORTED, %rax
+    mov $ZX_ERR_NOT_SUPPORTED, %rax
     ret
 END_FUNCTION(read_msr_safe)

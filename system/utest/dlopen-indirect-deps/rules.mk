@@ -15,7 +15,7 @@ MODULE_NAME := dlopen-indirect-deps-test
 
 MODULE_LIBS := \
     system/ulib/unittest \
-    system/ulib/mxio \
+    system/ulib/fdio \
     system/ulib/c
 
 include make/module.mk

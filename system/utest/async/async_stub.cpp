@@ -6,24 +6,24 @@
 
 namespace {
 
-mx_status_t stub_begin_wait(async_t* async, async_wait_t* wait) {
+zx_status_t stub_begin_wait(async_t* async, async_wait_t* wait) {
     return static_cast<AsyncStub*>(async)->BeginWait(wait);
 }
 
-mx_status_t stub_cancel_wait(async_t* async, async_wait_t* wait) {
+zx_status_t stub_cancel_wait(async_t* async, async_wait_t* wait) {
     return static_cast<AsyncStub*>(async)->CancelWait(wait);
 }
 
-mx_status_t stub_post_task(async_t* async, async_task_t* task) {
+zx_status_t stub_post_task(async_t* async, async_task_t* task) {
     return static_cast<AsyncStub*>(async)->PostTask(task);
 }
 
-mx_status_t stub_cancel_task(async_t* async, async_task_t* task) {
+zx_status_t stub_cancel_task(async_t* async, async_task_t* task) {
     return static_cast<AsyncStub*>(async)->CancelTask(task);
 }
 
-mx_status_t stub_queue_packet(async_t* async, async_receiver_t* receiver,
-                              const mx_packet_user_t* data) {
+zx_status_t stub_queue_packet(async_t* async, async_receiver_t* receiver,
+                              const zx_packet_user_t* data) {
     return static_cast<AsyncStub*>(async)->QueuePacket(receiver, data);
 }
 
@@ -42,23 +42,23 @@ AsyncStub::AsyncStub()
 
 AsyncStub::~AsyncStub() {}
 
-mx_status_t AsyncStub::BeginWait(async_wait_t* wait) {
-    return MX_ERR_NOT_SUPPORTED;
+zx_status_t AsyncStub::BeginWait(async_wait_t* wait) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-mx_status_t AsyncStub::CancelWait(async_wait_t* wait) {
-    return MX_ERR_NOT_SUPPORTED;
+zx_status_t AsyncStub::CancelWait(async_wait_t* wait) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-mx_status_t AsyncStub::PostTask(async_task_t* task) {
-    return MX_ERR_NOT_SUPPORTED;
+zx_status_t AsyncStub::PostTask(async_task_t* task) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-mx_status_t AsyncStub::CancelTask(async_task_t* task) {
-    return MX_ERR_NOT_SUPPORTED;
+zx_status_t AsyncStub::CancelTask(async_task_t* task) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-mx_status_t AsyncStub::QueuePacket(async_receiver_t* receiver,
-                                   const mx_packet_user_t* data) {
-    return MX_ERR_NOT_SUPPORTED;
+zx_status_t AsyncStub::QueuePacket(async_receiver_t* receiver,
+                                   const zx_packet_user_t* data) {
+    return ZX_ERR_NOT_SUPPORTED;
 }

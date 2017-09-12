@@ -14,12 +14,12 @@ MODULE_SRCS += \
 MODULE_NAME := policy-test
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mx \
+    system/ulib/zx \
     system/ulib/fbl \
 
 MODULE_LIBS := \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/unittest \
     system/ulib/c \
     system/ulib/mini-process \

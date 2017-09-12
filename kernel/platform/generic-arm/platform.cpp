@@ -47,7 +47,7 @@
 #include <kernel/thread.h>
 #endif
 
-#include <magenta/boot/bootdata.h>
+#include <zircon/boot/bootdata.h>
 #include <mdi/mdi.h>
 #include <mdi/mdi-defs.h>
 #include <pdev/pdev.h>
@@ -245,7 +245,7 @@ void* platform_get_ramdisk(size_t *size) {
 static void platform_cpu_early_init(mdi_node_ref_t* cpu_map) {
     mdi_node_ref_t  clusters;
 
-    if (mdi_find_node(cpu_map, MDI_CPU_CLUSTERS, &clusters) != MX_OK) {
+    if (mdi_find_node(cpu_map, MDI_CPU_CLUSTERS, &clusters) != ZX_OK) {
         panic("platform_cpu_early_init couldn't find clusters\n");
         return;
     }
@@ -256,11 +256,11 @@ static void platform_cpu_early_init(mdi_node_ref_t* cpu_map) {
         mdi_node_ref_t node;
         uint8_t cpu_count;
 
-        if (mdi_find_node(&cluster, MDI_CPU_COUNT, &node) != MX_OK) {
+        if (mdi_find_node(&cluster, MDI_CPU_COUNT, &node) != ZX_OK) {
             panic("platform_cpu_early_init couldn't find cluster cpu-count\n");
             return;
         }
-        if (mdi_node_uint8(&node, &cpu_count) != MX_OK) {
+        if (mdi_node_uint8(&node, &cpu_count) != ZX_OK) {
             panic("platform_cpu_early_init could not read cluster id\n");
             return;
         }
@@ -334,7 +334,7 @@ void platform_halt_cpu(void) {
                                             VmAspace::VMM_FLAG_VALLOC_SPECIFIC,
                                             perm_flags_rwx);
 
-        if (result != MX_OK) {
+        if (result != ZX_OK) {
             printf("Unable to allocate physical at vaddr = %p, paddr = %p\n",
                    base_of_ram, (void*)pa);
             return;
@@ -465,13 +465,13 @@ static void platform_cpu_init(void) {
     }
 }
 
-static inline bool is_magenta_boot_header(void* addr) {
+static inline bool is_zircon_boot_header(void* addr) {
     DEBUG_ASSERT(addr);
 
-    efi_magenta_hdr_t* header = (efi_magenta_hdr_t*)addr;
+    efi_zircon_hdr_t* header = (efi_zircon_hdr_t*)addr;
 
 
-    return header->magic == EFI_MAGENTA_MAGIC;
+    return header->magic == EFI_ZIRCON_MAGIC;
 }
 
 static inline bool is_bootdata_container(void* addr) {
@@ -502,15 +502,15 @@ static void platform_mdi_init(const bootdata_t* section) {
     const void* section_ptr = reinterpret_cast<const void *>(section);
     const size_t length = reinterpret_cast<uintptr_t>(ramdisk_end) - reinterpret_cast<uintptr_t>(section_ptr);
 
-    if (mdi_init(section_ptr, length, &root) != MX_OK) {
+    if (mdi_init(section_ptr, length, &root) != ZX_OK) {
         panic("mdi_init failed\n");
     }
 
     // search top level nodes for CPU info and kernel drivers
-    if (mdi_find_node(&root, MDI_CPU_MAP, &cpu_map) != MX_OK) {
+    if (mdi_find_node(&root, MDI_CPU_MAP, &cpu_map) != ZX_OK) {
         panic("platform_mdi_init couldn't find cpu-map\n");
     }
-    if (mdi_find_node(&root, MDI_KERNEL, &kernel_drivers) != MX_OK) {
+    if (mdi_find_node(&root, MDI_KERNEL, &kernel_drivers) != ZX_OK) {
         panic("platform_mdi_init couldn't find kernel-drivers\n");
     }
 
@@ -602,8 +602,8 @@ void platform_early_init(void)
         // We leave out arena size for now
         ramdisk_from_bootdata_container(boot_structure_kvaddr, &ramdisk_base,
                                         &ramdisk_size);
-    } else if (is_magenta_boot_header(boot_structure_kvaddr)) {
-            efi_magenta_hdr_t *hdr = (efi_magenta_hdr_t*)boot_structure_kvaddr;
+    } else if (is_zircon_boot_header(boot_structure_kvaddr)) {
+            efi_zircon_hdr_t *hdr = (efi_zircon_hdr_t*)boot_structure_kvaddr;
             cmdline_append(hdr->cmd_line);
             ramdisk_start_phys = hdr->ramdisk_base_phys;
             ramdisk_size = hdr->ramdisk_size;
@@ -635,7 +635,7 @@ void platform_early_init(void)
     // find memory ranges to use if one is found.
     mem_limit_ctx_t ctx;
     status_t status = mem_limit_init(&ctx);
-    if (status == MX_OK) {
+    if (status == ZX_OK) {
         // For these ranges we're using the base physical values
         ctx.kernel_base = MEMBASE + KERNEL_LOAD_OFFSET;
         ctx.kernel_size = (uintptr_t)&_end - ctx.kernel_base;
@@ -648,7 +648,7 @@ void platform_early_init(void)
 
     // If no memory limit was found, or adding arenas from the range failed, then add
     // the existing global arena.
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         pmm_add_arena(&arena);
     }
 
@@ -708,7 +708,7 @@ size_t hw_rng_get_entropy(void* buf, size_t len, bool block) {
 
 /* no built in framebuffer */
 status_t display_get_info(struct display_info *info) {
-    return MX_ERR_NOT_FOUND;
+    return ZX_ERR_NOT_FOUND;
 }
 
 static void reboot() {
@@ -780,8 +780,8 @@ size_t platform_recover_crashlog(size_t len, void* cookie,
     return 0;
 }
 
-mx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len) {
-    return MX_OK;
+zx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len) {
+    return ZX_OK;
 }
 
 void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,

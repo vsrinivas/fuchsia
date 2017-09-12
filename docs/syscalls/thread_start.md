@@ -1,4 +1,4 @@
-# mx_thread_start
+# zx_thread_start
 
 ## NAME
 
@@ -7,9 +7,9 @@ thread_start - start execution on a thread
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-mx_status_t mx_thread_start(mx_handle_t thread, uintptr_t entry, uintptr_t stack,
+zx_status_t zx_thread_start(zx_handle_t thread, uintptr_t entry, uintptr_t stack,
                             uintptr_t arg1, uintptr_t arg2);
 ```
 
@@ -24,23 +24,23 @@ before the thread is started.  All other registers are zero upon start.
 When the last handle to a thread is closed, the thread is destroyed.
 
 Thread handles may be waited on and will assert the signal
-*MX_THREAD_TERMINATED* when the thread stops executing (due to
+*ZX_THREAD_TERMINATED* when the thread stops executing (due to
 *thread_exit**() being called.
 
 ## RETURN VALUE
 
-**thread_start**() returns MX_OK on success.
+**thread_start**() returns ZX_OK on success.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS
 
-**MX_ERR_BAD_HANDLE**  *thread* is not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *thread* is not a valid handle.
 
-**MX_ERR_WRONG_TYPE**  *thread* is not a thread handle.
+**ZX_ERR_WRONG_TYPE**  *thread* is not a thread handle.
 
-**MX_ERR_ACCESS_DENIED**  The handle *thread* lacks *MX_RIGHT_WRITE*.
+**ZX_ERR_ACCESS_DENIED**  The handle *thread* lacks *ZX_RIGHT_WRITE*.
 
-**MX_ERR_BAD_STATE**  *thread* is not ready to run or the process *thread*
+**ZX_ERR_BAD_STATE**  *thread* is not ready to run or the process *thread*
 is part of is no longer alive.
 
 ## SEE ALSO

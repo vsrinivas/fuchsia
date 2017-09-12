@@ -8,7 +8,7 @@
 #include "hi3660-bus.h"
 #include "hi3660-regs.h"
 
-mx_status_t hi3360_usb_init(hi3660_bus_t* bus) {
+zx_status_t hi3360_usb_init(hi3660_bus_t* bus) {
     volatile void* usb3otg_bc = bus->usb3otg_bc.vaddr;
     volatile void* peri_crg = bus->peri_crg.vaddr;
     volatile void* pctrl = bus->pctrl.vaddr;
@@ -19,9 +19,9 @@ mx_status_t hi3360_usb_init(hi3660_bus_t* bus) {
     // GPIOs when switching between host and device mode
 
     gpio_protocol_t gpio;
-    if (pdev_get_protocol(&bus->pdev, MX_PROTOCOL_GPIO, &gpio) != MX_OK) {
+    if (pdev_get_protocol(&bus->pdev, ZX_PROTOCOL_GPIO, &gpio) != ZX_OK) {
         printf("hi3360_usb_init: could not get GPIO protocol!\n");
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
 
     // disable host vbus
@@ -58,16 +58,16 @@ mx_status_t hi3360_usb_init(hi3660_bus_t* bus) {
     temp = readl(usb3otg_bc + USB3OTG_CTRL2);
     temp &= ~(USB3OTG_CTRL2_POWERDOWN_HSP | USB3OTG_CTRL2_POWERDOWN_SSP);
     writel(temp, usb3otg_bc + USB3OTG_CTRL2);
-    mx_nanosleep(mx_deadline_after(MX_USEC(100)));
+    zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
 
     writel(PERI_CRG_IP_RST_USB3OTGPHY_POR, peri_crg + PERI_CRG_RSTDIS4);
     writel(PERI_CRG_IP_RST_USB3OTG, peri_crg + PERI_CRG_RSTDIS4);
-    mx_nanosleep(mx_deadline_after(MX_MSEC(20)));
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(20)));
 
     temp = readl(usb3otg_bc + USB3OTG_CTRL3);
     temp |= (USB3OTG_CTRL3_VBUSVLDEXT | USB3OTG_CTRL3_VBUSVLDEXTSEL);
     writel(temp, usb3otg_bc + USB3OTG_CTRL3);
-    mx_nanosleep(mx_deadline_after(MX_USEC(100)));
+    zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
 
-    return MX_OK;
+    return ZX_OK;
 }

@@ -8,7 +8,7 @@
 #if WITH_DEV_PCIE
 
 #include <dev/pcie_irqs.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <object/interrupt_dispatcher.h>
 #include <object/pci_device_dispatcher.h>
 #include <sys/types.h>
@@ -17,15 +17,15 @@ class PciDeviceDispatcher;
 
 class PciInterruptDispatcher final : public InterruptDispatcher {
 public:
-    static mx_status_t Create(const fbl::RefPtr<PcieDevice>& device,
+    static zx_status_t Create(const fbl::RefPtr<PcieDevice>& device,
                               uint32_t irq_id,
                               bool maskable,
-                              mx_rights_t* out_rights,
+                              zx_rights_t* out_rights,
                               fbl::RefPtr<Dispatcher>* out_interrupt);
 
     ~PciInterruptDispatcher() final;
-    mx_status_t InterruptComplete() final;
-    mx_status_t UserSignal() final;
+    zx_status_t InterruptComplete() final;
+    zx_status_t UserSignal() final;
 
 private:
     static pcie_irq_handler_retval_t IrqThunk(const PcieDevice& dev,

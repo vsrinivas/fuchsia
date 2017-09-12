@@ -4,7 +4,7 @@
 
 #include "asm.h"
 #include "setjmp_impl.h"
-#include <magenta/tls.h>
+#include <zircon/tls.h>
 
 ENTRY(setjmp)
 
@@ -12,7 +12,7 @@ ENTRY(setjmp)
     mov (%rsp), %rax                            // PC
     mov %rsp, %rcx                              // SP
     mov %rbp, %rdx                              // FP
-    mov %fs:MX_TLS_UNSAFE_SP_OFFSET, %rsi       // Unsafe SP
+    mov %fs:ZX_TLS_UNSAFE_SP_OFFSET, %rsi       // Unsafe SP
 
     // Store all the vanilla callee-saves registers.
     mov %rbx, 8*JB_RBX(%rdi)

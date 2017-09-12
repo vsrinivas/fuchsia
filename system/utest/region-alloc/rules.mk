@@ -17,12 +17,12 @@ MODULE_NAME := region-alloc-test
 
 MODULE_STATIC_LIBS := \
     system/ulib/region-alloc \
-    system/ulib/mxcpp \
+    system/ulib/zxcpp \
     system/ulib/fbl \
 
 MODULE_LIBS := \
     system/ulib/c \
-    system/ulib/mxio \
+    system/ulib/fdio \
     system/ulib/unittest
 
 include make/module.mk

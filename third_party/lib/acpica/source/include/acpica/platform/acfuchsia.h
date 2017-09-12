@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include <threads.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <semaphore.h>
 
 /*
@@ -25,9 +25,9 @@
 #error Unexpected architecture
 #endif
 
-extern mx_handle_t root_resource_handle;
+extern zx_handle_t root_resource_handle;
 
-#define ACPI_FLUSH_CPU_CACHE() mx_acpi_cache_flush(root_resource_handle)
+#define ACPI_FLUSH_CPU_CACHE() zx_acpi_cache_flush(root_resource_handle)
 
 // Use the standard library headers
 #define ACPI_USE_STANDARD_HEADERS

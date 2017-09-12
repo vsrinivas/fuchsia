@@ -52,8 +52,8 @@ float complex ctanhf(float complex z) {
         return CMPLXF(ix ? y - y : x, y - y);
 
     if (ix >= 0x41300000) { /* x >= 11 */
-        float exp_mx = expf(-fabsf(x));
-        return CMPLXF(copysignf(1, x), 4 * sinf(y) * cosf(y) * exp_mx * exp_mx);
+        float exp_zx = expf(-fabsf(x));
+        return CMPLXF(copysignf(1, x), 4 * sinf(y) * cosf(y) * exp_zx * exp_zx);
     }
 
     t = tanf(y);

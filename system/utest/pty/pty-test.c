@@ -10,14 +10,14 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <mxio/io.h>
+#include <fdio/io.h>
 
-#include <magenta/device/pty.h>
+#include <zircon/device/pty.h>
 
 // returns an int to avoid sign errors from ASSERT_*()
 static int fd_signals(int fd) {
     uint32_t signals = 0;
-    mxio_wait_fd(fd, 0, &signals, 0);
+    fdio_wait_fd(fd, 0, &signals, 0);
     return signals;
 }
 
@@ -176,14 +176,14 @@ static bool pty_test(void) {
     ASSERT_EQ(errno, EAGAIN, "");
 
     uint32_t n = 2;
-    ASSERT_EQ(ioctl_pty_make_active(pc, &n), MX_ERR_NOT_FOUND, "");
+    ASSERT_EQ(ioctl_pty_make_active(pc, &n), ZX_ERR_NOT_FOUND, "");
 
     // non-controlling client cannot change active client
-    ASSERT_EQ(ioctl_pty_make_active(pc1, &n), MX_ERR_ACCESS_DENIED, "");
+    ASSERT_EQ(ioctl_pty_make_active(pc1, &n), ZX_ERR_ACCESS_DENIED, "");
 
     // but controlling client can
     n = 1;
-    ASSERT_EQ(ioctl_pty_make_active(pc, &n), MX_OK, "");
+    ASSERT_EQ(ioctl_pty_make_active(pc, &n), ZX_OK, "");
     ASSERT_EQ(fd_signals(pc), 0, "");
     ASSERT_EQ(fd_signals(pc1), POLLOUT, "");
     ASSERT_EQ(write(pc1, "test", 4), 4, "");

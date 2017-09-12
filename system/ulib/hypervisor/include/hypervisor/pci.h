@@ -6,7 +6,7 @@
 
 #include <threads.h>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <sys/types.h>
 
 // clang-format off
@@ -46,21 +46,21 @@ __BEGIN_CDECLS
 
 typedef struct instruction instruction_t;
 typedef struct io_apic io_apic_t;
-typedef struct mx_packet_guest_io mx_packet_guest_io_t;
-typedef struct mx_packet_guest_mem mx_packet_guest_mem_t;
-typedef struct mx_vcpu_io mx_vcpu_io_t;
+typedef struct zx_packet_guest_io zx_packet_guest_io_t;
+typedef struct zx_packet_guest_mem zx_packet_guest_mem_t;
+typedef struct zx_vcpu_io zx_vcpu_io_t;
 typedef struct pci_bus pci_bus_t;
 typedef struct pci_device pci_device_t;
 
 /* Device specific callbacks. */
 typedef struct pci_device_ops {
     // Read from a region mapped by a BAR register.
-    mx_status_t (*read_bar)(const pci_device_t* device, uint8_t bar, uint16_t port,
-                            uint8_t access_size, mx_vcpu_io_t* vcpu_io);
+    zx_status_t (*read_bar)(const pci_device_t* device, uint8_t bar, uint16_t port,
+                            uint8_t access_size, zx_vcpu_io_t* vcpu_io);
 
     // Write to a region mapped by a BAR register.
-    mx_status_t (*write_bar)(pci_device_t* device, uint8_t bar, uint16_t port,
-                             const mx_vcpu_io_t* io);
+    zx_status_t (*write_bar)(pci_device_t* device, uint8_t bar, uint16_t port,
+                             const zx_vcpu_io_t* io);
 } pci_device_ops_t;
 
 /* PCI capability structure.
@@ -138,30 +138,30 @@ typedef struct pci_bus {
     uint32_t pio_base;
 } pci_bus_t;
 
-mx_status_t pci_bus_init(pci_bus_t* bus, const io_apic_t* io_apic);
+zx_status_t pci_bus_init(pci_bus_t* bus, const io_apic_t* io_apic);
 
 /* Connect a PCI device to the bus.
  *
  * slot must be between 1 and PCI_MAX_DEVICES (slot 0 is reserved for
  * the root complex).
  */
-mx_status_t pci_bus_connect(pci_bus_t* bus, pci_device_t* device, uint8_t slot);
+zx_status_t pci_bus_connect(pci_bus_t* bus, pci_device_t* device, uint8_t slot);
 
 /* Handle reads from the PCI ECAM region. */
-mx_status_t pci_ecam_read(pci_bus_t* bus, mx_vaddr_t addr, uint8_t access_size, mx_vcpu_io_t* io);
+zx_status_t pci_ecam_read(pci_bus_t* bus, zx_vaddr_t addr, uint8_t access_size, zx_vcpu_io_t* io);
 
 /* Handle writes to the PCI ECAM region. */
-mx_status_t pci_ecam_write(pci_bus_t* bus, mx_vaddr_t addr, const mx_vcpu_io_t* io);
+zx_status_t pci_ecam_write(pci_bus_t* bus, zx_vaddr_t addr, const zx_vcpu_io_t* io);
 
 /* Handle PIO reads to the PCI config space. */
-mx_status_t pci_bus_read(const pci_bus_t* bus, uint16_t port, uint8_t access_size,
-                         mx_vcpu_io_t* vcpu_io);
+zx_status_t pci_bus_read(const pci_bus_t* bus, uint16_t port, uint8_t access_size,
+                         zx_vcpu_io_t* vcpu_io);
 
 /* Handle PIO writes to the PCI config space. */
-mx_status_t pci_bus_write(pci_bus_t* bus, const mx_packet_guest_io_t* io);
+zx_status_t pci_bus_write(pci_bus_t* bus, const zx_packet_guest_io_t* io);
 
-mx_status_t pci_device_read(const pci_device_t* device, uint16_t reg, uint8_t len, uint32_t* value);
-mx_status_t pci_device_write(pci_device_t* device, uint16_t reg, uint8_t len, uint32_t value);
+zx_status_t pci_device_read(const pci_device_t* device, uint16_t reg, uint8_t len, uint32_t* value);
+zx_status_t pci_device_write(pci_device_t* device, uint16_t reg, uint8_t len, uint32_t value);
 
 /* Return the device that has a BAR mapped to the given address with the
  * specified IO type. Returns NULL if no mapping exists or IO is disabled for
@@ -180,9 +180,9 @@ uint32_t pci_bar_base(pci_bar_t* bar);
 uint16_t pci_bar_size(pci_bar_t* bar);
 
 /* Start asynchronous handling of writes to the pci device. */
-mx_status_t pci_device_async(pci_device_t* device, mx_handle_t guest);
+zx_status_t pci_device_async(pci_device_t* device, zx_handle_t guest);
 
 /* Raise the configured interrupt for the given PCI device. */
-mx_status_t pci_interrupt(pci_device_t* device);
+zx_status_t pci_interrupt(pci_device_t* device);
 
 __END_CDECLS

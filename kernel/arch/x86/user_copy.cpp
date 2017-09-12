@@ -38,7 +38,7 @@ status_t arch_copy_from_user(void *dst, const void *src, size_t len)
     DEBUG_ASSERT(!ac_flag());
 
     if (!can_access(src, len))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     thread_t *thr = get_current_thread();
     status_t status = _x86_copy_to_or_from_user(dst, src, len,
@@ -53,7 +53,7 @@ status_t arch_copy_to_user(void *dst, const void *src, size_t len)
     DEBUG_ASSERT(!ac_flag());
 
     if (!can_access(dst, len))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     thread_t *thr = get_current_thread();
     status_t status = _x86_copy_to_or_from_user(dst, src, len,

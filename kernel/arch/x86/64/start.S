@@ -12,7 +12,7 @@
 #include <arch/x86/descriptor.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/registers.h>
-#include <magenta/tls.h>
+#include <zircon/tls.h>
 
 /* shared code to set up a default 64bit page table structure */
 .macro page_table_init
@@ -143,7 +143,7 @@ paging_setup:
     btsl $(31), %eax
     mov %eax,  %cr0
 
-    /* Start using the magenta stack from its physical address. */
+    /* Start using the zircon stack from its physical address. */
     mov $PHYS(_kstack + 4096), %esp
 
     /* Using another long jump to be on 64 bit mode
@@ -200,7 +200,7 @@ high_entry:
     call choose_stack_guard
 
     // Move it into place.
-    mov %rcx, %gs:MX_TLS_STACK_GUARD_OFFSET
+    mov %rcx, %gs:ZX_TLS_STACK_GUARD_OFFSET
     // Don't leak that value to other code.
     xor %ecx, %ecx
 

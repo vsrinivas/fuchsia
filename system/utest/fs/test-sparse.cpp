@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
@@ -27,7 +27,7 @@ bool test_sparse(void) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<uint8_t[]> wbuf(new (&ac) uint8_t[WriteSize]);
     ASSERT_EQ(ac.check(), true);
-    unsigned int seed = static_cast<unsigned int>(mx_ticks_get());
+    unsigned int seed = static_cast<unsigned int>(zx_ticks_get());
     unittest_printf("Sparse test using seed: %u\n", seed);
     for (size_t i = 0; i < WriteSize; i++) {
         wbuf[i] = (uint8_t) rand_r(&seed);

@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
-void devhost_acpi_set_rpc(mx_handle_t handle);
+void devhost_acpi_set_rpc(zx_handle_t handle);
 
 void devhost_acpi_reboot(void);
 void devhost_acpi_poweroff(void);

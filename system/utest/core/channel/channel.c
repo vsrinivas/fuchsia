@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <magenta/compiler.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/object.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
 #include <unittest/unittest.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -13,7 +13,7 @@
 #include <threads.h>
 #include <unistd.h>
 
-mx_handle_t _channel[4];
+zx_handle_t _channel[4];
 
 /**
  * Channel tests with wait multiple.
@@ -39,34 +39,34 @@ mx_handle_t _channel[4];
 
 static int reader_thread(void* arg) {
     const unsigned int index = 2;
-    mx_handle_t* channel = &_channel[index];
-    __UNUSED mx_status_t status;
+    zx_handle_t* channel = &_channel[index];
+    __UNUSED zx_status_t status;
     unsigned int packets[2] = {0, 0};
     bool closed[2] = {false, false};
-    mx_wait_item_t items[2];
+    zx_wait_item_t items[2];
     items[0].handle = channel[0];
     items[1].handle = channel[1];
-    items[0].waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
-    items[1].waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
+    items[0].waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+    items[1].waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     do {
-        status = mx_object_wait_many(items, 2, MX_TIME_INFINITE);
-        assert(status == MX_OK);
+        status = zx_object_wait_many(items, 2, ZX_TIME_INFINITE);
+        assert(status == ZX_OK);
         uint32_t data;
         uint32_t num_bytes = sizeof(uint32_t);
-        if (items[0].pending & MX_CHANNEL_READABLE) {
-            status = mx_channel_read(channel[0], 0u, &data, NULL,
+        if (items[0].pending & ZX_CHANNEL_READABLE) {
+            status = zx_channel_read(channel[0], 0u, &data, NULL,
                                      num_bytes, 0, &num_bytes, NULL);
-            assert(status == MX_OK);
+            assert(status == ZX_OK);
             packets[0] += 1;
-        } else if (items[1].pending & MX_CHANNEL_READABLE) {
-            status = mx_channel_read(channel[1], 0u, &data, NULL,
+        } else if (items[1].pending & ZX_CHANNEL_READABLE) {
+            status = zx_channel_read(channel[1], 0u, &data, NULL,
                                      num_bytes, 0, &num_bytes, NULL);
-            assert(status == MX_OK);
+            assert(status == ZX_OK);
             packets[1] += 1;
         } else {
-            if (items[0].pending & MX_CHANNEL_PEER_CLOSED)
+            if (items[0].pending & ZX_CHANNEL_PEER_CLOSED)
                 closed[0] = true;
-            if (items[1].pending & MX_CHANNEL_PEER_CLOSED)
+            if (items[1].pending & ZX_CHANNEL_PEER_CLOSED)
                 closed[1] = true;
         }
     } while (!closed[0] || !closed[1]);
@@ -75,38 +75,38 @@ static int reader_thread(void* arg) {
     return 0;
 }
 
-static mx_signals_t get_satisfied_signals(mx_handle_t handle) {
-    mx_signals_t pending = 0;
-    __UNUSED mx_status_t status = mx_object_wait_one(handle, 0u, 0u, &pending);
-    assert(status == MX_ERR_TIMED_OUT);
+static zx_signals_t get_satisfied_signals(zx_handle_t handle) {
+    zx_signals_t pending = 0;
+    __UNUSED zx_status_t status = zx_object_wait_one(handle, 0u, 0u, &pending);
+    assert(status == ZX_ERR_TIMED_OUT);
     return pending;
 }
 
 static bool channel_test(void) {
     BEGIN_TEST;
 
-    mx_status_t status;
+    zx_status_t status;
 
-    mx_handle_t h[2];
-    status = mx_channel_create(0, &h[0], &h[1]);
-    ASSERT_EQ(status, MX_OK, "error in channel create");
+    zx_handle_t h[2];
+    status = zx_channel_create(0, &h[0], &h[1]);
+    ASSERT_EQ(status, ZX_OK, "error in channel create");
 
-    ASSERT_EQ(get_satisfied_signals(h[0]), MX_CHANNEL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
-    ASSERT_EQ(get_satisfied_signals(h[1]), MX_CHANNEL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
+    ASSERT_EQ(get_satisfied_signals(h[0]), ZX_CHANNEL_WRITABLE | ZX_SIGNAL_LAST_HANDLE, "");
+    ASSERT_EQ(get_satisfied_signals(h[1]), ZX_CHANNEL_WRITABLE | ZX_SIGNAL_LAST_HANDLE, "");
 
     _channel[0] = h[0];
     _channel[2] = h[1];
 
     static const uint32_t write_data = 0xdeadbeef;
-    status = mx_channel_write(_channel[0], 0u, &write_data, sizeof(uint32_t), NULL, 0u);
-    ASSERT_EQ(status, MX_OK, "error in message write");
+    status = zx_channel_write(_channel[0], 0u, &write_data, sizeof(uint32_t), NULL, 0u);
+    ASSERT_EQ(status, ZX_OK, "error in message write");
     ASSERT_EQ(get_satisfied_signals(
-        _channel[0]), MX_CHANNEL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
+        _channel[0]), ZX_CHANNEL_WRITABLE | ZX_SIGNAL_LAST_HANDLE, "");
     ASSERT_EQ(get_satisfied_signals(
-        _channel[2]), MX_CHANNEL_READABLE | MX_CHANNEL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
+        _channel[2]), ZX_CHANNEL_READABLE | ZX_CHANNEL_WRITABLE | ZX_SIGNAL_LAST_HANDLE, "");
 
-    status = mx_channel_create(0, &h[0], &h[1]);
-    ASSERT_EQ(status, MX_OK, "error in channel create");
+    status = zx_channel_create(0, &h[0], &h[1]);
+    ASSERT_EQ(status, ZX_OK, "error in channel create");
 
     _channel[1] = h[0];
     _channel[3] = h[1];
@@ -114,118 +114,118 @@ static bool channel_test(void) {
     thrd_t thread;
     ASSERT_EQ(thrd_create(&thread, reader_thread, NULL), thrd_success, "error in thread create");
 
-    status = mx_channel_write(_channel[1], 0u, &write_data, sizeof(uint32_t), NULL, 0u);
-    ASSERT_EQ(status, MX_OK, "error in message write");
+    status = zx_channel_write(_channel[1], 0u, &write_data, sizeof(uint32_t), NULL, 0u);
+    ASSERT_EQ(status, ZX_OK, "error in message write");
 
     usleep(1);
 
-    status = mx_channel_write(_channel[0], 0u, &write_data, sizeof(uint32_t), NULL, 0u);
-    ASSERT_EQ(status, MX_OK, "error in message write");
+    status = zx_channel_write(_channel[0], 0u, &write_data, sizeof(uint32_t), NULL, 0u);
+    ASSERT_EQ(status, ZX_OK, "error in message write");
 
-    status = mx_channel_write(_channel[0], 0u, &write_data, sizeof(uint32_t), NULL, 0u);
-    ASSERT_EQ(status, MX_OK, "error in message write");
+    status = zx_channel_write(_channel[0], 0u, &write_data, sizeof(uint32_t), NULL, 0u);
+    ASSERT_EQ(status, ZX_OK, "error in message write");
 
     usleep(1);
 
-    status = mx_channel_write(_channel[1], 0u, &write_data, sizeof(uint32_t), NULL, 0u);
-    ASSERT_EQ(status, MX_OK, "error in message write");
+    status = zx_channel_write(_channel[1], 0u, &write_data, sizeof(uint32_t), NULL, 0u);
+    ASSERT_EQ(status, ZX_OK, "error in message write");
 
-    mx_handle_close(_channel[1]);
+    zx_handle_close(_channel[1]);
     // The reader thread is reading from _channel[3], so we may or may not have "readable".
-    ASSERT_TRUE((get_satisfied_signals(_channel[3]) & MX_CHANNEL_PEER_CLOSED), "");
+    ASSERT_TRUE((get_satisfied_signals(_channel[3]) & ZX_CHANNEL_PEER_CLOSED), "");
 
     usleep(1);
-    mx_handle_close(_channel[0]);
+    zx_handle_close(_channel[0]);
 
     EXPECT_EQ(thrd_join(thread, NULL), thrd_success, "error in thread join");
 
     // Since the the other side of _channel[3] is closed, and the read thread read everything
     // from it, the only satisfied/satisfiable signals should be "peer closed".
     ASSERT_EQ(get_satisfied_signals(
-        _channel[3]), MX_CHANNEL_PEER_CLOSED | MX_SIGNAL_LAST_HANDLE, "");
+        _channel[3]), ZX_CHANNEL_PEER_CLOSED | ZX_SIGNAL_LAST_HANDLE, "");
 
-    mx_handle_close(_channel[2]);
-    mx_handle_close(_channel[3]);
+    zx_handle_close(_channel[2]);
+    zx_handle_close(_channel[3]);
 
     END_TEST;
 }
 
 static bool channel_read_error_test(void) {
     BEGIN_TEST;
-    mx_handle_t channel[2];
-    mx_status_t status = mx_channel_create(0, &channel[0], &channel[1]);
-    ASSERT_EQ(status, MX_OK, "error in channel create");
+    zx_handle_t channel[2];
+    zx_status_t status = zx_channel_create(0, &channel[0], &channel[1]);
+    ASSERT_EQ(status, ZX_OK, "error in channel create");
 
     // Read from an empty channel.
-    status = mx_channel_read(channel[0], 0u, NULL, NULL, 0, 0, NULL, NULL);
-    ASSERT_EQ(status, MX_ERR_SHOULD_WAIT, "read on empty non-closed channel produced incorrect error");
+    status = zx_channel_read(channel[0], 0u, NULL, NULL, 0, 0, NULL, NULL);
+    ASSERT_EQ(status, ZX_ERR_SHOULD_WAIT, "read on empty non-closed channel produced incorrect error");
 
     char data = 'x';
-    status = mx_channel_write(channel[1], 0u, &data, 1u, NULL, 0u);
-    ASSERT_EQ(status, MX_OK, "write failed");
+    status = zx_channel_write(channel[1], 0u, &data, 1u, NULL, 0u);
+    ASSERT_EQ(status, ZX_OK, "write failed");
 
-    mx_handle_close(channel[1]);
+    zx_handle_close(channel[1]);
 
     // Read a message with the peer closed, should yield the message.
     char read_data = '\0';
     uint32_t read_data_size = 1u;
-    status = mx_channel_read(channel[0], 0u, &read_data, NULL,
+    status = zx_channel_read(channel[0], 0u, &read_data, NULL,
                              read_data_size, 0, &read_data_size, NULL);
-    ASSERT_EQ(status, MX_OK, "read failed with peer closed but message in the channel");
+    ASSERT_EQ(status, ZX_OK, "read failed with peer closed but message in the channel");
     ASSERT_EQ(read_data_size, 1u, "read returned incorrect number of bytes");
     ASSERT_EQ(read_data, 'x', "read returned incorrect data");
 
     // Read from an empty channel with a closed peer, should yield a channel closed error.
-    status = mx_channel_read(channel[0], 0u, NULL, NULL, 0, 0, NULL, NULL);
-    ASSERT_EQ(status, MX_ERR_PEER_CLOSED, "read on empty closed channel produced incorrect error");
+    status = zx_channel_read(channel[0], 0u, NULL, NULL, 0, 0, NULL, NULL);
+    ASSERT_EQ(status, ZX_ERR_PEER_CLOSED, "read on empty closed channel produced incorrect error");
 
     END_TEST;
 }
 
 static bool channel_close_test(void) {
     BEGIN_TEST;
-    mx_handle_t channel[2];
+    zx_handle_t channel[2];
 
     // Channels should gain PEER_CLOSED (and lose WRITABLE) if their peer is closed
-    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), MX_OK, "");
-    ASSERT_EQ(mx_handle_close(channel[1]), MX_OK, "");
+    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(channel[1]), ZX_OK, "");
     ASSERT_EQ(get_satisfied_signals(
-        channel[0]), MX_CHANNEL_PEER_CLOSED | MX_SIGNAL_LAST_HANDLE, "");
-    ASSERT_EQ(mx_handle_close(channel[0]), MX_OK, "");
+        channel[0]), ZX_CHANNEL_PEER_CLOSED | ZX_SIGNAL_LAST_HANDLE, "");
+    ASSERT_EQ(zx_handle_close(channel[0]), ZX_OK, "");
 
-    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), MX_OK, "");
-    mx_handle_t channel1[2];
-    ASSERT_EQ(mx_channel_create(0, &channel1[0], &channel1[1]), MX_OK, "");
-    mx_handle_t channel2[2];
-    ASSERT_EQ(mx_channel_create(0, &channel2[0], &channel2[1]), MX_OK, "");
+    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
+    zx_handle_t channel1[2];
+    ASSERT_EQ(zx_channel_create(0, &channel1[0], &channel1[1]), ZX_OK, "");
+    zx_handle_t channel2[2];
+    ASSERT_EQ(zx_channel_create(0, &channel2[0], &channel2[1]), ZX_OK, "");
 
     // Write channel1[0] to channel[0] (to be received by channel[1])
     // and channel2[0] to channel[1] (to be received by channel[0]).
-    ASSERT_EQ(mx_channel_write(channel[0], 0u, NULL, 0u, &channel1[0], 1u), MX_OK, "");
-    channel1[0] = MX_HANDLE_INVALID;
-    ASSERT_EQ(mx_channel_write(channel[1], 0u, NULL, 0u, &channel2[0], 1u), MX_OK, "");
-    channel2[0] = MX_HANDLE_INVALID;
+    ASSERT_EQ(zx_channel_write(channel[0], 0u, NULL, 0u, &channel1[0], 1u), ZX_OK, "");
+    channel1[0] = ZX_HANDLE_INVALID;
+    ASSERT_EQ(zx_channel_write(channel[1], 0u, NULL, 0u, &channel2[0], 1u), ZX_OK, "");
+    channel2[0] = ZX_HANDLE_INVALID;
 
     // Close channel[1]; the former channel1[0] should be closed, so channel1[1] should have
     // peer closed.
-    ASSERT_EQ(mx_handle_close(channel[1]), MX_OK, "");
-    channel[1] = MX_HANDLE_INVALID;
-    ASSERT_EQ(mx_object_wait_one(
-        channel1[1], MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL), MX_OK, "");
+    ASSERT_EQ(zx_handle_close(channel[1]), ZX_OK, "");
+    channel[1] = ZX_HANDLE_INVALID;
+    ASSERT_EQ(zx_object_wait_one(
+        channel1[1], ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE, NULL), ZX_OK, "");
     ASSERT_EQ(get_satisfied_signals(
-        channel2[1]), MX_CHANNEL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
+        channel2[1]), ZX_CHANNEL_WRITABLE | ZX_SIGNAL_LAST_HANDLE, "");
 
     // Close channel[0]; the former channel2[0] should be closed, so channel2[1]
     // should have peer closed.
-    ASSERT_EQ(mx_handle_close(channel[0]), MX_OK, "");
-    channel[0] = MX_HANDLE_INVALID;
+    ASSERT_EQ(zx_handle_close(channel[0]), ZX_OK, "");
+    channel[0] = ZX_HANDLE_INVALID;
     ASSERT_EQ(get_satisfied_signals(
-        channel1[1]), MX_CHANNEL_PEER_CLOSED | MX_SIGNAL_LAST_HANDLE, "");
-    ASSERT_EQ(mx_object_wait_one(
-        channel2[1], MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL), MX_OK, "");
+        channel1[1]), ZX_CHANNEL_PEER_CLOSED | ZX_SIGNAL_LAST_HANDLE, "");
+    ASSERT_EQ(zx_object_wait_one(
+        channel2[1], ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE, NULL), ZX_OK, "");
 
-    ASSERT_EQ(mx_handle_close(channel1[1]), MX_OK, "");
-    ASSERT_EQ(mx_handle_close(channel2[1]), MX_OK, "");
+    ASSERT_EQ(zx_handle_close(channel1[1]), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(channel2[1]), ZX_OK, "");
 
     END_TEST;
 }
@@ -233,26 +233,26 @@ static bool channel_close_test(void) {
 static bool channel_non_transferable(void) {
     BEGIN_TEST;
 
-    mx_handle_t channel[2];
-    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), MX_OK, "");
-    mx_handle_t event;
-    ASSERT_EQ(mx_event_create(0u, &event), 0, "failed to create event");
-    mx_info_handle_basic_t event_handle_info;
+    zx_handle_t channel[2];
+    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
+    zx_handle_t event;
+    ASSERT_EQ(zx_event_create(0u, &event), 0, "failed to create event");
+    zx_info_handle_basic_t event_handle_info;
 
-    mx_status_t status = mx_object_get_info(event, MX_INFO_HANDLE_BASIC, &event_handle_info,
+    zx_status_t status = zx_object_get_info(event, ZX_INFO_HANDLE_BASIC, &event_handle_info,
                                             sizeof(event_handle_info), NULL, NULL);
-    ASSERT_EQ(status, MX_OK, "failed to get event info");
-    mx_rights_t initial_event_rights = event_handle_info.rights;
-    mx_handle_t non_transferable_event;
-    mx_handle_duplicate(
-        event, initial_event_rights & ~MX_RIGHT_TRANSFER, &non_transferable_event);
+    ASSERT_EQ(status, ZX_OK, "failed to get event info");
+    zx_rights_t initial_event_rights = event_handle_info.rights;
+    zx_handle_t non_transferable_event;
+    zx_handle_duplicate(
+        event, initial_event_rights & ~ZX_RIGHT_TRANSFER, &non_transferable_event);
 
-    mx_status_t write_result = mx_channel_write(
+    zx_status_t write_result = zx_channel_write(
         channel[0], 0u, NULL, 0, &non_transferable_event, 1u);
-    EXPECT_EQ(write_result, MX_ERR_ACCESS_DENIED, "message_write should fail with ACCESS_DENIED");
+    EXPECT_EQ(write_result, ZX_ERR_ACCESS_DENIED, "message_write should fail with ACCESS_DENIED");
 
-    mx_status_t close_result = mx_handle_close(non_transferable_event);
-    EXPECT_EQ(close_result, MX_OK, "");
+    zx_status_t close_result = zx_handle_close(non_transferable_event);
+    EXPECT_EQ(close_result, ZX_OK, "");
 
     END_TEST;
 }
@@ -260,22 +260,22 @@ static bool channel_non_transferable(void) {
 static bool channel_duplicate_handles(void) {
     BEGIN_TEST;
 
-    mx_handle_t channel[2];
-    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), MX_OK, "");
+    zx_handle_t channel[2];
+    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
 
-    mx_handle_t event;
-    ASSERT_EQ(mx_event_create(0u, &event), 0, "failed to create event");
+    zx_handle_t event;
+    ASSERT_EQ(zx_event_create(0u, &event), 0, "failed to create event");
 
-    mx_handle_t dup_handles[2] = { event, event };
-    mx_status_t write_result = mx_channel_write(channel[0], 0u, NULL, 0, dup_handles, 2u);
-    EXPECT_EQ(write_result, MX_ERR_INVALID_ARGS, "message_write should fail with MX_ERR_INVALID_ARGS");
+    zx_handle_t dup_handles[2] = { event, event };
+    zx_status_t write_result = zx_channel_write(channel[0], 0u, NULL, 0, dup_handles, 2u);
+    EXPECT_EQ(write_result, ZX_ERR_INVALID_ARGS, "message_write should fail with ZX_ERR_INVALID_ARGS");
 
-    mx_status_t close_result = mx_handle_close(event);
-    EXPECT_EQ(close_result, MX_OK, "");
-    close_result = mx_handle_close(channel[0]);
-    EXPECT_EQ(close_result, MX_OK, "");
-    close_result = mx_handle_close(channel[1]);
-    EXPECT_EQ(close_result, MX_OK, "");
+    zx_status_t close_result = zx_handle_close(event);
+    EXPECT_EQ(close_result, ZX_OK, "");
+    close_result = zx_handle_close(channel[0]);
+    EXPECT_EQ(close_result, ZX_OK, "");
+    close_result = zx_handle_close(channel[1]);
+    EXPECT_EQ(close_result, ZX_OK, "");
 
     END_TEST;
 }
@@ -291,9 +291,9 @@ static int multithread_reader(void* arg) {
     for (uint32_t i = 0; i < multithread_read_num_messages / 2; i++) {
         uint32_t msg = MSG_UNSET;
         uint32_t msg_size = sizeof(msg);
-        mx_status_t status = mx_channel_read(_channel[0], 0u, &msg, NULL,
+        zx_status_t status = zx_channel_read(_channel[0], 0u, &msg, NULL,
                                              msg_size, 0, &msg_size, NULL);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             ((uint32_t*)arg)[i] = MSG_READ_FAILED;
             break;
         }
@@ -315,11 +315,11 @@ static bool channel_multithread_read(void) {
     BEGIN_TEST;
 
     // We'll write from channel[0] and read from channel[1].
-    mx_handle_t channel[2];
-    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), MX_OK, "");
+    zx_handle_t channel[2];
+    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
 
     for (uint32_t i = 0; i < multithread_read_num_messages; i++)
-        ASSERT_EQ(mx_channel_write(channel[0], 0, &i, sizeof(i), NULL, 0), MX_OK, "");
+        ASSERT_EQ(zx_channel_write(channel[0], 0, &i, sizeof(i), NULL, 0), ZX_OK, "");
 
     _channel[0] = channel[1];
 
@@ -340,8 +340,8 @@ static bool channel_multithread_read(void) {
     EXPECT_EQ(thrd_join(reader0, NULL), thrd_success, "");
     EXPECT_EQ(thrd_join(reader1, NULL), thrd_success, "");
 
-    EXPECT_EQ(mx_handle_close(channel[0]), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(channel[1]), MX_OK, "");
+    EXPECT_EQ(zx_handle_close(channel[0]), ZX_OK, "");
+    EXPECT_EQ(zx_handle_close(channel[1]), ZX_OK, "");
 
     // Check data.
     bool* received_flags = calloc(multithread_read_num_messages, sizeof(bool));
@@ -367,90 +367,90 @@ static bool channel_multithread_read(void) {
     free(received1);
     free(received_flags);
 
-    _channel[0] = MX_HANDLE_INVALID;
+    _channel[0] = ZX_HANDLE_INVALID;
 
     END_TEST;
 }
 
 // |handle| must be valid (and duplicatable and transferable) if |num_handles > 0|.
-static void write_test_message(mx_handle_t channel,
-                               mx_handle_t handle,
+static void write_test_message(zx_handle_t channel,
+                               zx_handle_t handle,
                                uint32_t size,
                                uint32_t num_handles) {
     static const char data[1000] = {};
-    mx_handle_t handles[10] = {};
+    zx_handle_t handles[10] = {};
 
     assert(size <= sizeof(data));
     assert(num_handles <= countof(handles));
 
     for (uint32_t i = 0; i < num_handles; i++) {
-        mx_status_t status = mx_handle_duplicate(handle, MX_RIGHT_TRANSFER, &handles[i]);
-        assert(status == MX_OK);
+        zx_status_t status = zx_handle_duplicate(handle, ZX_RIGHT_TRANSFER, &handles[i]);
+        assert(status == ZX_OK);
     }
 
-    __UNUSED mx_status_t status = mx_channel_write(channel, 0u, data, size, handles, num_handles);
-    assert(status == MX_OK);
+    __UNUSED zx_status_t status = zx_channel_write(channel, 0u, data, size, handles, num_handles);
+    assert(status == ZX_OK);
 }
 
 static bool channel_may_discard(void) {
     BEGIN_TEST;
 
-    mx_handle_t channel[2];
-    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), MX_OK, "");
+    zx_handle_t channel[2];
+    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
 
-    mx_handle_t event;
-    ASSERT_EQ(mx_event_create(0u, &event), 0, "failed to create event");
+    zx_handle_t event;
+    ASSERT_EQ(zx_event_create(0u, &event), 0, "failed to create event");
 
-    EXPECT_EQ(mx_object_wait_one(channel[1], MX_CHANNEL_READABLE, 0u, NULL), MX_ERR_TIMED_OUT, "");
+    EXPECT_EQ(zx_object_wait_one(channel[1], ZX_CHANNEL_READABLE, 0u, NULL), ZX_ERR_TIMED_OUT, "");
 
     write_test_message(channel[0], event, 10u, 0u);
-    EXPECT_EQ(mx_channel_read(channel[1], MX_CHANNEL_READ_MAY_DISCARD, NULL, NULL, 0, 0, NULL, NULL),
-              MX_ERR_BUFFER_TOO_SMALL, "");
+    EXPECT_EQ(zx_channel_read(channel[1], ZX_CHANNEL_READ_MAY_DISCARD, NULL, NULL, 0, 0, NULL, NULL),
+              ZX_ERR_BUFFER_TOO_SMALL, "");
 
-    EXPECT_EQ(mx_object_wait_one(channel[1], MX_CHANNEL_READABLE, 0u, NULL), MX_ERR_TIMED_OUT, "");
+    EXPECT_EQ(zx_object_wait_one(channel[1], ZX_CHANNEL_READABLE, 0u, NULL), ZX_ERR_TIMED_OUT, "");
 
     char data[1000];
     uint32_t size;
 
     write_test_message(channel[0], event, 100u, 0u);
     size = 10u;
-    EXPECT_EQ(mx_channel_read(channel[1], MX_CHANNEL_READ_MAY_DISCARD, data, NULL, size, 0, &size, NULL),
-              MX_ERR_BUFFER_TOO_SMALL, "");
+    EXPECT_EQ(zx_channel_read(channel[1], ZX_CHANNEL_READ_MAY_DISCARD, data, NULL, size, 0, &size, NULL),
+              ZX_ERR_BUFFER_TOO_SMALL, "");
     EXPECT_EQ(size, 100u, "wrong size");
 
-    EXPECT_EQ(mx_object_wait_one(channel[1], MX_CHANNEL_READABLE, 0u, NULL), MX_ERR_TIMED_OUT, "");
+    EXPECT_EQ(zx_object_wait_one(channel[1], ZX_CHANNEL_READABLE, 0u, NULL), ZX_ERR_TIMED_OUT, "");
 
-    mx_handle_t handles[10];
+    zx_handle_t handles[10];
     uint32_t num_handles;
 
     write_test_message(channel[0], event, 0u, 5u);
     size = 10u;
     num_handles = 1u;
-    EXPECT_EQ(mx_channel_read(channel[1], MX_CHANNEL_READ_MAY_DISCARD, data, handles,
+    EXPECT_EQ(zx_channel_read(channel[1], ZX_CHANNEL_READ_MAY_DISCARD, data, handles,
                               size, num_handles, &size, &num_handles),
-              MX_ERR_BUFFER_TOO_SMALL, "");
+              ZX_ERR_BUFFER_TOO_SMALL, "");
     EXPECT_EQ(size, 0u, "wrong size");
     EXPECT_EQ(num_handles, 5u, "wrong number of handles");
 
-    EXPECT_EQ(mx_object_wait_one(channel[1], MX_CHANNEL_READABLE, 0u, NULL), MX_ERR_TIMED_OUT, "");
+    EXPECT_EQ(zx_object_wait_one(channel[1], ZX_CHANNEL_READABLE, 0u, NULL), ZX_ERR_TIMED_OUT, "");
 
     write_test_message(channel[0], event, 100u, 5u);
     size = 10u;
     num_handles = 1u;
-    EXPECT_EQ(mx_channel_read(channel[1], MX_CHANNEL_READ_MAY_DISCARD, data, handles,
+    EXPECT_EQ(zx_channel_read(channel[1], ZX_CHANNEL_READ_MAY_DISCARD, data, handles,
                               size, num_handles, &size, &num_handles),
-              MX_ERR_BUFFER_TOO_SMALL, "");
+              ZX_ERR_BUFFER_TOO_SMALL, "");
     EXPECT_EQ(size, 100u, "wrong size");
     EXPECT_EQ(num_handles, 5u, "wrong number of handles");
 
-    EXPECT_EQ(mx_object_wait_one(channel[1], MX_CHANNEL_READABLE, 0u, NULL), MX_ERR_TIMED_OUT, "");
+    EXPECT_EQ(zx_object_wait_one(channel[1], ZX_CHANNEL_READABLE, 0u, NULL), ZX_ERR_TIMED_OUT, "");
 
-    mx_status_t close_result = mx_handle_close(event);
-    EXPECT_EQ(close_result, MX_OK, "");
-    close_result = mx_handle_close(channel[0]);
-    EXPECT_EQ(close_result, MX_OK, "");
-    close_result = mx_handle_close(channel[1]);
-    EXPECT_EQ(close_result, MX_OK, "");
+    zx_status_t close_result = zx_handle_close(event);
+    EXPECT_EQ(close_result, ZX_OK, "");
+    close_result = zx_handle_close(channel[0]);
+    EXPECT_EQ(close_result, ZX_OK, "");
+    close_result = zx_handle_close(channel[1]);
+    EXPECT_EQ(close_result, ZX_OK, "");
 
     END_TEST;
 }
@@ -463,16 +463,16 @@ static cnd_t call_test_cvar;
 // we use txid_t for cmd here so that the test
 // works with both 32bit and 64bit txids
 typedef struct {
-    mx_txid_t txid;
-    mx_txid_t cmd;
+    zx_txid_t txid;
+    zx_txid_t cmd;
     uint32_t bit;
     unsigned action;
-    mx_status_t expect;
-    mx_status_t expect_rs;
+    zx_status_t expect;
+    zx_status_t expect_rs;
     const char* name;
     const char* err;
     int val;
-    mx_handle_t h;
+    zx_handle_t h;
     thrd_t t;
 } ccargs_t;
 
@@ -485,15 +485,15 @@ typedef struct {
 
 static int call_client(void* _args) {
     ccargs_t* ccargs = _args;
-    mx_channel_call_args_t args;
+    zx_channel_call_args_t args;
 
-    mx_txid_t data[2];
-    mx_handle_t txhandle = 0;
-    mx_handle_t rxhandle = 0;
+    zx_txid_t data[2];
+    zx_handle_t txhandle = 0;
+    zx_handle_t rxhandle = 0;
 
-    mx_status_t r;
+    zx_status_t r;
     if (ccargs->action & CLI_SEND_HANDLE) {
-        if ((r = mx_event_create(0, &txhandle)) != MX_OK) {
+        if ((r = zx_event_create(0, &txhandle)) != ZX_OK) {
             ccargs->err = "failed to create event";
             goto done;
         }
@@ -511,26 +511,26 @@ static int call_client(void* _args) {
     uint32_t act_bytes = 0xffffffff;
     uint32_t act_handles = 0xffffffff;
 
-    mx_time_t deadline = (ccargs->action & CLI_SHORT_WAIT) ? mx_deadline_after(MX_MSEC(250)) :
-            MX_TIME_INFINITE;
-    mx_status_t rs = MX_OK;
-    if ((r = mx_channel_call(ccargs->h, 0, deadline, &args, &act_bytes, &act_handles, &rs)) != ccargs->expect) {
+    zx_time_t deadline = (ccargs->action & CLI_SHORT_WAIT) ? zx_deadline_after(ZX_MSEC(250)) :
+            ZX_TIME_INFINITE;
+    zx_status_t rs = ZX_OK;
+    if ((r = zx_channel_call(ccargs->h, 0, deadline, &args, &act_bytes, &act_handles, &rs)) != ccargs->expect) {
         ccargs->err = "channel call returned";
         ccargs->val = r;
     }
     if (txhandle && (r < 0)) {
-        mx_handle_close(txhandle);
+        zx_handle_close(txhandle);
     }
     if (rxhandle) {
-        mx_handle_close(rxhandle);
+        zx_handle_close(rxhandle);
     }
-    if (r == MX_ERR_CALL_FAILED) {
+    if (r == ZX_ERR_CALL_FAILED) {
         if (ccargs->expect_rs && (ccargs->expect_rs != rs)) {
             ccargs->err = "read_status not what was expected";
             ccargs->val = ccargs->expect_rs;
         }
     }
-    if (r == MX_OK) {
+    if (r == ZX_OK) {
         if (act_bytes != sizeof(data)) {
             ccargs->err = "expected 8 bytes";
             ccargs->val = act_bytes;
@@ -557,13 +557,13 @@ static ccargs_t ccargs[] = {
     {
         .name = "too large reply",
         .action = SRV_SEND_DATA,
-        .expect = MX_ERR_CALL_FAILED,
-        .expect_rs = MX_ERR_BUFFER_TOO_SMALL,
+        .expect = ZX_ERR_CALL_FAILED,
+        .expect_rs = ZX_ERR_BUFFER_TOO_SMALL,
     },
     {
         .name = "no reply",
         .action = SRV_DISCARD | CLI_SHORT_WAIT,
-        .expect = MX_ERR_TIMED_OUT,
+        .expect = ZX_ERR_TIMED_OUT,
     },
     {
         .name = "reply handle",
@@ -572,8 +572,8 @@ static ccargs_t ccargs[] = {
     {
         .name = "unwanted reply handle",
         .action = SRV_SEND_HANDLE,
-        .expect = MX_ERR_CALL_FAILED,
-        .expect_rs = MX_ERR_BUFFER_TOO_SMALL,
+        .expect = ZX_ERR_CALL_FAILED,
+        .expect_rs = ZX_ERR_BUFFER_TOO_SMALL,
     },
     {
         .name = "send-handle",
@@ -598,24 +598,24 @@ static ccargs_t ccargs[] = {
 };
 
 static int call_server(void* ptr) {
-    mx_handle_t h = (mx_handle_t) (uintptr_t) ptr;
+    zx_handle_t h = (zx_handle_t) (uintptr_t) ptr;
 
     ccargs_t msg[countof(ccargs)];
     memset(msg, 0, sizeof(msg));
 
     // received the expected number of messages
     for (unsigned n = 0; n < countof(ccargs); n++) {
-        mx_object_wait_one(h, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL);
+        zx_object_wait_one(h, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
 
         uint32_t bytes = sizeof(msg[0]);
         uint32_t handles = 1;
-        mx_handle_t handle = 0;
-        if (mx_channel_read(h, 0, &msg[n], &handle, bytes, handles, &bytes, &handles) != MX_OK) {
+        zx_handle_t handle = 0;
+        if (zx_channel_read(h, 0, &msg[n], &handle, bytes, handles, &bytes, &handles) != ZX_OK) {
             fprintf(stderr, "call_server() read failed\n");
             break;
         }
         if (handle) {
-            mx_handle_close(handle);
+            zx_handle_close(handle);
         }
     }
 
@@ -627,19 +627,19 @@ static int call_server(void* ptr) {
             continue;
         }
 
-        mx_txid_t data[4];
+        zx_txid_t data[4];
         data[0] = m->txid;
         data[1] = m->txid * 31337;
         data[2] = 0x22222222;
         data[3] = 0x33333333;
 
-        uint32_t bytes = sizeof(mx_txid_t) * ((m->action & SRV_SEND_DATA) ? 4 : 2);
+        uint32_t bytes = sizeof(zx_txid_t) * ((m->action & SRV_SEND_DATA) ? 4 : 2);
         uint32_t handles = (m->action & SRV_SEND_HANDLE) ? 1 : 0;
-        mx_handle_t handle = 0;
+        zx_handle_t handle = 0;
         if (handles) {
-            mx_event_create(0, &handle);
+            zx_event_create(0, &handle);
         }
-        if (mx_channel_write(h, 0, data, bytes, &handle, handles) != MX_OK) {
+        if (zx_channel_write(h, 0, data, bytes, &handle, handles) != ZX_OK) {
             fprintf(stderr, "call_server() write failed\n");
             break;
         }
@@ -653,8 +653,8 @@ static bool channel_call(void) {
     mtx_init(&call_test_lock, mtx_plain);
     cnd_init(&call_test_cvar);
 
-    mx_handle_t cli, srv;
-    ASSERT_EQ(mx_channel_create(0, &cli, &srv), MX_OK, "");
+    zx_handle_t cli, srv;
+    ASSERT_EQ(zx_channel_create(0, &cli, &srv), ZX_OK, "");
 
     // start test server
     thrd_t srvt;
@@ -701,46 +701,46 @@ static bool channel_call(void) {
     }
     mtx_unlock(&call_test_lock);
 
-    mx_handle_close(cli);
-    mx_handle_close(srv);
+    zx_handle_close(cli);
+    zx_handle_close(srv);
     END_TEST;
 }
 
-static bool create_and_nest(mx_handle_t out, mx_handle_t* end, size_t n) {
+static bool create_and_nest(zx_handle_t out, zx_handle_t* end, size_t n) {
     BEGIN_TEST;
 
-    mx_handle_t channel[2];
+    zx_handle_t channel[2];
     if (n == 1) {
-        ASSERT_EQ(mx_channel_create(0, &channel[0], end), MX_OK, "");
-        ASSERT_EQ(mx_channel_write(out, 0u, NULL, 0u, channel, 1u), MX_OK, "");
+        ASSERT_EQ(zx_channel_create(0, &channel[0], end), ZX_OK, "");
+        ASSERT_EQ(zx_channel_write(out, 0u, NULL, 0u, channel, 1u), ZX_OK, "");
         return true;
     }
 
-    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), MX_OK, "");
+    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
     ASSERT_TRUE(create_and_nest(channel[0], end, n - 1), "");
-    ASSERT_EQ(mx_channel_write(out, 0u, NULL, 0u, channel, 2u), MX_OK, "");
+    ASSERT_EQ(zx_channel_write(out, 0u, NULL, 0u, channel, 2u), ZX_OK, "");
 
     END_TEST;
 }
 
 static int call_server2(void* ptr) {
-    mx_handle_t h = (mx_handle_t) (uintptr_t) ptr;
-    mx_nanosleep(mx_deadline_after(MX_MSEC(250)));
-    mx_handle_close(h);
+    zx_handle_t h = (zx_handle_t) (uintptr_t) ptr;
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(250)));
+    zx_handle_close(h);
     return 0;
 }
 
 static bool channel_call2(void) {
     BEGIN_TEST;
 
-    mx_handle_t cli, srv;
-    ASSERT_EQ(mx_channel_create(0, &cli, &srv), MX_OK, "");
+    zx_handle_t cli, srv;
+    ASSERT_EQ(zx_channel_create(0, &cli, &srv), ZX_OK, "");
 
     thrd_t t;
     ASSERT_EQ(thrd_create(&t, call_server2, (void*) (uintptr_t) srv), thrd_success, "");
 
     char msg[8] = { 0, };
-    mx_channel_call_args_t args = {
+    zx_channel_call_args_t args = {
         .wr_bytes = msg,
         .wr_handles = NULL,
         .wr_num_bytes = sizeof(msg),
@@ -754,20 +754,20 @@ static bool channel_call2(void) {
     uint32_t act_bytes = 0xffffffff;
     uint32_t act_handles = 0xffffffff;
 
-    mx_status_t rs = MX_OK;
-    mx_status_t r = mx_channel_call(cli, 0, mx_deadline_after(MX_MSEC(1000)), &args, &act_bytes,
+    zx_status_t rs = ZX_OK;
+    zx_status_t r = zx_channel_call(cli, 0, zx_deadline_after(ZX_MSEC(1000)), &args, &act_bytes,
                                     &act_handles, &rs);
 
-    mx_handle_close(cli);
+    zx_handle_close(cli);
 
-    EXPECT_EQ(r, MX_ERR_CALL_FAILED, "");
-    EXPECT_EQ(rs, MX_ERR_PEER_CLOSED, "");
+    EXPECT_EQ(r, ZX_ERR_CALL_FAILED, "");
+    EXPECT_EQ(rs, ZX_ERR_PEER_CLOSED, "");
 
     END_TEST;
 }
 
-// SYSCALL_mx_channel_call_finish is an internal system call used in the
-// vDSO's implementation of mx_channel_call.  It's not part of the ABI and
+// SYSCALL_zx_channel_call_finish is an internal system call used in the
+// vDSO's implementation of zx_channel_call.  It's not part of the ABI and
 // so it's not exported from the vDSO.  It's hard to test the kernel's
 // invariants without calling this directly.  So use some chicanery to
 // find its address in the vDSO despite it not being public.
@@ -776,17 +776,17 @@ static bool channel_call2(void) {
 // the offsets of the internal functions.  So take a public vDSO function,
 // subtract its offset to discover the vDSO base (could do this other ways,
 // but this is the simplest), and then add the offset of the internal
-// SYSCALL_mx_channel_call_finish function we want to call.
+// SYSCALL_zx_channel_call_finish function we want to call.
 #include "vdso-code.h"
-static mx_status_t mx_channel_call_finish(mx_time_t deadline,
-                                          const mx_channel_call_args_t* args,
+static zx_status_t zx_channel_call_finish(zx_time_t deadline,
+                                          const zx_channel_call_args_t* args,
                                           uint32_t* actual_bytes,
                                           uint32_t* actual_handles,
-                                          mx_status_t* read_status) {
+                                          zx_status_t* read_status) {
     uintptr_t vdso_base =
-        (uintptr_t)&mx_handle_close - VDSO_SYSCALL_mx_handle_close;
-    uintptr_t fnptr = vdso_base + VDSO_SYSCALL_mx_channel_call_finish;
-    return (*(__typeof(mx_channel_call_finish)*)fnptr)(
+        (uintptr_t)&zx_handle_close - VDSO_SYSCALL_zx_handle_close;
+    uintptr_t fnptr = vdso_base + VDSO_SYSCALL_zx_channel_call_finish;
+    return (*(__typeof(zx_channel_call_finish)*)fnptr)(
         deadline, args, actual_bytes, actual_handles, read_status);
 }
 
@@ -794,7 +794,7 @@ static bool bad_channel_call_finish(void) {
     BEGIN_TEST;
 
     char msg[8] = { 0, };
-    mx_channel_call_args_t args = {
+    zx_channel_call_args_t args = {
         .wr_bytes = msg,
         .wr_handles = NULL,
         .wr_num_bytes = sizeof(msg),
@@ -809,31 +809,31 @@ static bool bad_channel_call_finish(void) {
     uint32_t act_handles = 0xffffffff;
 
     // Call channel_call_finish without having had a channel call interrupted
-    mx_status_t rs = MX_OK;
-    mx_status_t r = mx_channel_call_finish(mx_deadline_after(MX_MSEC(1000)), &args, &act_bytes,
+    zx_status_t rs = ZX_OK;
+    zx_status_t r = zx_channel_call_finish(zx_deadline_after(ZX_MSEC(1000)), &args, &act_bytes,
                                            &act_handles, &rs);
 
-    EXPECT_EQ(r, MX_ERR_BAD_STATE, "");
-    EXPECT_EQ(rs, MX_OK, ""); // The syscall leaves this unchanged.
+    EXPECT_EQ(r, ZX_ERR_BAD_STATE, "");
+    EXPECT_EQ(rs, ZX_OK, ""); // The syscall leaves this unchanged.
 
     END_TEST;
 }
 
 static bool channel_nest(void) {
     BEGIN_TEST;
-    mx_handle_t channel[2];
+    zx_handle_t channel[2];
 
-    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), MX_OK, "");
+    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
 
-    mx_handle_t end;
+    zx_handle_t end;
     ASSERT_TRUE(create_and_nest(channel[0], &end, 10), "");
-    EXPECT_EQ(mx_handle_close(channel[1]), MX_OK, "");
-    EXPECT_EQ(mx_object_wait_one(channel[0], MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL), MX_OK, "");
+    EXPECT_EQ(zx_handle_close(channel[1]), ZX_OK, "");
+    EXPECT_EQ(zx_object_wait_one(channel[0], ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE, NULL), ZX_OK, "");
 
-    EXPECT_EQ(mx_object_wait_one(end, MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(end), MX_OK, "");
+    EXPECT_EQ(zx_object_wait_one(end, ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE, NULL), ZX_OK, "");
+    EXPECT_EQ(zx_handle_close(end), ZX_OK, "");
 
-    EXPECT_EQ(mx_handle_close(channel[0]), MX_OK, "");
+    EXPECT_EQ(zx_handle_close(channel[0]), ZX_OK, "");
 
     END_TEST;
 }
@@ -844,13 +844,13 @@ static bool channel_nest(void) {
 static bool channel_disallow_write_to_self(void) {
     BEGIN_TEST;
 
-    mx_handle_t channel[2];
-    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), MX_OK, "");
-    EXPECT_EQ(mx_channel_write(channel[0], 0, NULL, 0, &channel[0], 1),
-              MX_ERR_NOT_SUPPORTED, "");
+    zx_handle_t channel[2];
+    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
+    EXPECT_EQ(zx_channel_write(channel[0], 0, NULL, 0, &channel[0], 1),
+              ZX_ERR_NOT_SUPPORTED, "");
     // Clean up.
-    EXPECT_EQ(mx_handle_close(channel[0]), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(channel[1]), MX_OK, "");
+    EXPECT_EQ(zx_handle_close(channel[0]), ZX_OK, "");
+    EXPECT_EQ(zx_handle_close(channel[1]), ZX_OK, "");
 
     END_TEST;
 }

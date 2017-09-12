@@ -118,8 +118,8 @@
 #include <poll.h>
 
 #ifdef __Fuchsia__
-#include <magenta/device/console.h>
-#include <mxio/io.h>
+#include <zircon/device/console.h>
+#include <fdio/io.h>
 #endif
 
 #include "linenoise.h"
@@ -318,7 +318,7 @@ static int getCursorPosition(int ifd, int ofd) {
 static int getColumns(int ifd, int ofd) {
 #ifdef __Fuchsia__
     ioctl_console_dimensions_t dims;
-    ssize_t r = mxio_ioctl(0, IOCTL_CONSOLE_GET_DIMENSIONS,NULL, 0, &dims,
+    ssize_t r = fdio_ioctl(0, IOCTL_CONSOLE_GET_DIMENSIONS,NULL, 0, &dims,
         sizeof(dims));
     if (r != sizeof(dims)) {
 #else

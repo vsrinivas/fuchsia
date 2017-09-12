@@ -14,7 +14,7 @@
 #include <fbl/type_support.h>
 #include <fbl/unique_free_ptr.h>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 #include <assert.h>
 #include <limits.h>
@@ -195,12 +195,12 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Bcache);
     friend class BlockNode;
 
-    static mx_status_t Create(fbl::unique_ptr<Bcache>* out, int fd, uint32_t blockmax);
+    static zx_status_t Create(fbl::unique_ptr<Bcache>* out, int fd, uint32_t blockmax);
 
     // Raw block read functions.
     // These do not track blocks (or attempt to access the block cache)
-    mx_status_t Readblk(blk_t bno, void* data);
-    mx_status_t Writeblk(blk_t bno, const void* data);
+    zx_status_t Readblk(blk_t bno, void* data);
+    zx_status_t Writeblk(blk_t bno, const void* data);
 
     // Returns the maximum number of available blocks,
     // assuming the filesystem is non-resizable.
@@ -208,34 +208,34 @@ public:
 
 #ifdef __Fuchsia__
     ssize_t GetDevicePath(char* out, size_t out_len);
-    mx_status_t AttachVmo(mx_handle_t vmo, vmoid_t* out);
-    mx_status_t Txn(block_fifo_request_t* requests, size_t count) {
+    zx_status_t AttachVmo(zx_handle_t vmo, vmoid_t* out);
+    zx_status_t Txn(block_fifo_request_t* requests, size_t count) {
         return block_fifo_txn(fifo_client_, requests, count);
     }
     txnid_t TxnId() const { return txnid_; }
 
-    mx_status_t FVMQuery(fvm_info_t* info) {
+    zx_status_t FVMQuery(fvm_info_t* info) {
         ssize_t r = ioctl_block_fvm_query(fd_, info);
         if (r < 0) {
-            return static_cast<mx_status_t>(r);
+            return static_cast<zx_status_t>(r);
         }
-        return MX_OK;
+        return ZX_OK;
     }
 
-    mx_status_t FVMExtend(const extend_request_t* request) {
+    zx_status_t FVMExtend(const extend_request_t* request) {
         ssize_t r = ioctl_block_fvm_extend(fd_, request);
         if (r < 0) {
-            return static_cast<mx_status_t>(r);
+            return static_cast<zx_status_t>(r);
         }
-        return MX_OK;
+        return ZX_OK;
     }
 
-    mx_status_t FVMShrink(const extend_request_t* request) {
+    zx_status_t FVMShrink(const extend_request_t* request) {
         ssize_t r = ioctl_block_fvm_shrink(fd_, request);
         if (r < 0) {
-            return static_cast<mx_status_t>(r);
+            return static_cast<zx_status_t>(r);
         }
-        return MX_OK;
+        return ZX_OK;
     }
 #endif
 

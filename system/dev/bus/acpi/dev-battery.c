@@ -6,10 +6,10 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 
-#include <magenta/types.h>
-#include <magenta/syscalls.h>
-#include <magenta/device/power.h>
-#include <mxio/debug.h>
+#include <zircon/types.h>
+#include <zircon/syscalls.h>
+#include <zircon/device/power.h>
+#include <fdio/debug.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <threads.h>
@@ -26,7 +26,7 @@
 #define ACPI_BATTERY_STATE_CRITICAL    (1 << 2)
 
 typedef struct acpi_battery_device {
-    mx_device_t* mxdev;
+    zx_device_t* mxdev;
 
     ACPI_HANDLE acpi_handle;
 
@@ -39,7 +39,7 @@ typedef struct acpi_battery_device {
     mtx_t lock;
 
     // event to notify on
-    mx_handle_t event;
+    zx_handle_t event;
 
     power_info_t power_info;
     battery_info_t battery_info;
@@ -51,7 +51,7 @@ typedef struct acpi_battery_device {
     uint32_t capacity_remaining;
 } acpi_battery_device_t;
 
-static mx_status_t call_STA(acpi_battery_device_t* dev) {
+static zx_status_t call_STA(acpi_battery_device_t* dev) {
     ACPI_OBJECT obj = {
         .Type = ACPI_TYPE_INTEGER,
     };
@@ -61,7 +61,7 @@ static mx_status_t call_STA(acpi_battery_device_t* dev) {
     };
     ACPI_STATUS acpi_status = AcpiEvaluateObject(dev->acpi_handle, (char*)"_STA", NULL, &buffer);
     if (acpi_status != AE_OK) {
-        return acpi_to_mx_status(acpi_status);
+        return acpi_to_zx_status(acpi_status);
     }
 
     xprintf("acpi_battery: _STA returned 0x%llx\n", obj.Integer.Value);
@@ -75,13 +75,13 @@ static mx_status_t call_STA(acpi_battery_device_t* dev) {
     }
 
     if (old != dev->power_info.state) {
-        mx_object_signal(dev->event, 0, MX_USER_SIGNAL_0);
+        zx_object_signal(dev->event, 0, ZX_USER_SIGNAL_0);
     }
     mtx_unlock(&dev->lock);
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t call_BIF(acpi_battery_device_t* dev) {
+static zx_status_t call_BIF(acpi_battery_device_t* dev) {
     mtx_lock(&dev->lock);
 
     ACPI_STATUS acpi_status = AcpiEvaluateObject(dev->acpi_handle,
@@ -121,13 +121,13 @@ static mx_status_t call_BIF(acpi_battery_device_t* dev) {
 
     mtx_unlock(&dev->lock);
 
-    return MX_OK;
+    return ZX_OK;
 err:
     mtx_unlock(&dev->lock);
-    return acpi_to_mx_status(acpi_status);
+    return acpi_to_zx_status(acpi_status);
 }
 
-static mx_status_t call_BST(acpi_battery_device_t* dev) {
+static zx_status_t call_BST(acpi_battery_device_t* dev) {
     mtx_lock(&dev->lock);
 
     ACPI_STATUS acpi_status = AcpiEvaluateObject(dev->acpi_handle,
@@ -181,15 +181,15 @@ static mx_status_t call_BST(acpi_battery_device_t* dev) {
     binfo->present_voltage = bst_elem[3].Integer.Value;
 
     if (old != pinfo->state) {
-        mx_object_signal(dev->event, 0, MX_USER_SIGNAL_0);
+        zx_object_signal(dev->event, 0, ZX_USER_SIGNAL_0);
     }
 
     mtx_unlock(&dev->lock);
 
-    return MX_OK;
+    return ZX_OK;
 err:
     mtx_unlock(&dev->lock);
-    return acpi_to_mx_status(acpi_status);
+    return acpi_to_zx_status(acpi_status);
 }
 
 static void acpi_battery_notify(ACPI_HANDLE handle, UINT32 value, void* ctx) {
@@ -208,7 +208,7 @@ static void acpi_battery_notify(ACPI_HANDLE handle, UINT32 value, void* ctx) {
     }
 }
 
-static mx_status_t acpi_battery_read(void* ctx, void* buf, size_t count, mx_off_t off, size_t* actual) {
+static zx_status_t acpi_battery_read(void* ctx, void* buf, size_t count, zx_off_t off, size_t* actual) {
     acpi_battery_device_t* device = ctx;
     mtx_lock(&device->lock);
     ssize_t rc = 0;
@@ -231,34 +231,34 @@ static mx_status_t acpi_battery_read(void* ctx, void* buf, size_t count, mx_off_
         return rc;
     }
     *actual = rc;
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t acpi_battery_ioctl(void* ctx, uint32_t op,
+static zx_status_t acpi_battery_ioctl(void* ctx, uint32_t op,
                                       const void* in_buf, size_t in_len,
                                       void* out_buf, size_t out_len, size_t* out_actual) {
     acpi_battery_device_t* dev = ctx;
-    mx_status_t status = MX_ERR_NOT_SUPPORTED;
+    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     switch (op) {
     case IOCTL_POWER_GET_INFO: {
         if (out_len != sizeof(power_info_t)) {
-            status = MX_ERR_INVALID_ARGS;
+            status = ZX_ERR_INVALID_ARGS;
             goto err;
         }
 
         // reading state clears the signal
-        mx_object_signal(dev->event, MX_USER_SIGNAL_0, 0);
+        zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
 
         power_info_t* info = (power_info_t*)out_buf;
         mtx_lock(&dev->lock);
         memcpy(info, &dev->power_info, sizeof(power_info_t));
         mtx_unlock(&dev->lock);
         *out_actual = sizeof(power_info_t);
-        return MX_OK;
+        return ZX_OK;
     }
     case IOCTL_POWER_GET_BATTERY_INFO: {
         if (out_len != sizeof(battery_info_t)) {
-            status = MX_ERR_INVALID_ARGS;
+            status = ZX_ERR_INVALID_ARGS;
             goto err;
         }
         call_BST(dev);
@@ -267,28 +267,28 @@ static mx_status_t acpi_battery_ioctl(void* ctx, uint32_t op,
         memcpy(info, &dev->battery_info, sizeof(battery_info_t));
         mtx_unlock(&dev->lock);
         *out_actual = sizeof(battery_info_t);
-        return MX_OK;
+        return ZX_OK;
     }
     case IOCTL_POWER_GET_STATE_CHANGE_EVENT: {
-        if (out_len != sizeof(mx_handle_t)) {
-            status = MX_ERR_INVALID_ARGS;
+        if (out_len != sizeof(zx_handle_t)) {
+            status = ZX_ERR_INVALID_ARGS;
             goto err;
         }
-        mx_handle_t* out = (mx_handle_t*)out_buf;
-        mx_status_t status = mx_handle_duplicate(dev->event,
-                                                 MX_RIGHT_READ | MX_RIGHT_TRANSFER,
+        zx_handle_t* out = (zx_handle_t*)out_buf;
+        zx_status_t status = zx_handle_duplicate(dev->event,
+                                                 ZX_RIGHT_READ | ZX_RIGHT_TRANSFER,
                                                  out);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             goto err;
         }
 
         // clear the signal before returning
-        mx_object_signal(dev->event, MX_USER_SIGNAL_0, 0);
-        *out_actual = sizeof(mx_handle_t);
-        return MX_OK;
+        zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
+        *out_actual = sizeof(zx_handle_t);
+        return ZX_OK;
     }
     default:
-        status = MX_ERR_NOT_SUPPORTED;
+        status = ZX_ERR_NOT_SUPPORTED;
     }
 err:
     *out_actual = 0;
@@ -304,13 +304,13 @@ static void acpi_battery_release(void* ctx) {
     if (dev->bif_buffer.Length != ACPI_ALLOCATE_BUFFER) {
         AcpiOsFree(dev->bif_buffer.Pointer);
     }
-    if (dev->event != MX_HANDLE_INVALID) {
-        mx_handle_close(dev->event);
+    if (dev->event != ZX_HANDLE_INVALID) {
+        zx_handle_close(dev->event);
     }
     free(dev);
 }
 
-static mx_protocol_device_t acpi_battery_device_proto = {
+static zx_protocol_device_t acpi_battery_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .read = acpi_battery_read,
     .ioctl = acpi_battery_ioctl,
@@ -320,13 +320,13 @@ static mx_protocol_device_t acpi_battery_device_proto = {
 static int acpi_battery_poll_thread(void* arg) {
     acpi_battery_device_t* dev = arg;
     for (;;) {
-        mx_status_t status = call_BST(dev);
-        if (status != MX_OK) {
+        zx_status_t status = call_BST(dev);
+        if (status != ZX_OK) {
             goto out;
         }
 
         status = call_BIF(dev);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             goto out;
         }
 
@@ -351,26 +351,26 @@ static int acpi_battery_poll_thread(void* arg) {
         dev->capacity_full = dev->battery_info.last_full_capacity;
         mtx_unlock(&dev->lock);
 
-        mx_nanosleep(mx_deadline_after(MX_MSEC(1000)));
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(1000)));
     }
 out:
     printf("acpi-battery: poll thread exiting\n");
     return 0;
 }
 
-mx_status_t battery_init(mx_device_t* parent, ACPI_HANDLE acpi_handle) {
+zx_status_t battery_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
     xprintf("acpi-battery: init\n");
 
     acpi_battery_device_t* dev = calloc(1, sizeof(acpi_battery_device_t));
     if (!dev) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     dev->acpi_handle = acpi_handle;
     mtx_init(&dev->lock, mtx_plain);
 
-    mx_status_t status = mx_event_create(0, &dev->event);
-    if (status != MX_OK) {
+    zx_status_t status = zx_event_create(0, &dev->event);
+    if (status != ZX_OK) {
         free(dev);
         return status;
     }
@@ -394,7 +394,7 @@ mx_status_t battery_init(mx_device_t* parent, ACPI_HANDLE acpi_handle) {
     if (acpi_status != AE_OK) {
         xprintf("acpi-battery: could not install notify handler\n");
         acpi_battery_release(dev);
-        return acpi_to_mx_status(acpi_status);
+        return acpi_to_zx_status(acpi_status);
     }
 
     // deprecated - create polling thread
@@ -411,11 +411,11 @@ mx_status_t battery_init(mx_device_t* parent, ACPI_HANDLE acpi_handle) {
         .name = "acpi-battery",
         .ctx = dev,
         .ops = &acpi_battery_device_proto,
-        .proto_id = MX_PROTOCOL_POWER,
+        .proto_id = ZX_PROTOCOL_POWER,
     };
 
     status = device_add(parent, &args, &dev->mxdev);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         xprintf("acpi-battery: could not add device! err=%d\n", status);
         acpi_battery_release(dev);
         return status;
@@ -427,15 +427,15 @@ mx_status_t battery_init(mx_device_t* parent, ACPI_HANDLE acpi_handle) {
         .name = "acpi-battery",
         .ctx = dev,
         .ops = &acpi_battery_device_proto,
-        .proto_id = MX_PROTOCOL_BATTERY,
+        .proto_id = ZX_PROTOCOL_BATTERY,
     };
 
     status = device_add(parent, &args2, NULL);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         xprintf("acpi-battery: could not add deprecated device! err=%d\n", status);
     }
 
     printf("acpi-battery: initialized\n");
 
-    return MX_OK;
+    return ZX_OK;
 }

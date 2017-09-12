@@ -8,7 +8,7 @@
 #pragma once
 
 #include <arch.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <sys/types.h>
 
 // forward declare the per-address space arch-specific context object

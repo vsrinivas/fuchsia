@@ -11,7 +11,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS := \
-    $(SRC_DIR)/cpu-aarch64-magenta.cpp \
+    $(SRC_DIR)/cpu-aarch64-zircon.cpp \
 
 MODULE_SRCS += \
     $(SRC_DIR)/chacha/chacha.c \
@@ -36,7 +36,7 @@ endif
 MODULE_NAME := uboringssl
 
 MODULE_LIBS := \
-    system/ulib/mxio \
+    system/ulib/fdio \
     system/ulib/c \
 
 include make/module.mk

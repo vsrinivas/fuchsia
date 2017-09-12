@@ -1,12 +1,12 @@
 language: c
 script: ./scripts/travis-builds.sh
 env:
-    # full magenta kernel + user space builds
-    - PROJECT=magenta-pc-x86-64
-    - PROJECT=magenta-qemu-arm64
-    - PROJECT=magenta-rpi3-arm64
-    - PROJECT=magenta-hikey960-arm64
-    - PROJECT=magenta-odroidc2-arm64
+    # full zircon kernel + user space builds
+    - PROJECT=zircon-pc-x86-64
+    - PROJECT=zircon-qemu-arm64
+    - PROJECT=zircon-rpi3-arm64
+    - PROJECT=zircon-hikey960-arm64
+    - PROJECT=zircon-odroidc2-arm64
 
 sudo: required
 dist: trusty

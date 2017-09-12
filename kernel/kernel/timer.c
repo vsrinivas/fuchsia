@@ -431,13 +431,13 @@ status_t timer_trylock_or_cancel(timer_t* t, spin_lock_t* lock) {
         /* we failed to grab it, check for cancel */
         if (t->cancel) {
             /* we were canceled, so bail immediately */
-            return MX_ERR_TIMED_OUT;
+            return ZX_ERR_TIMED_OUT;
         }
         /* tell the arch to wait */
         arch_spinloop_pause();
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 void timer_transition_off_cpu(uint old_cpu) {
@@ -527,7 +527,7 @@ static int cmd_timers(int argc, const cmd_args* argv, uint32_t flags) {
     // timer spinlock
     char* buf = malloc(timer_buffer_size);
     if (!buf)
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     dump_timer_queues(buf, timer_buffer_size);
 

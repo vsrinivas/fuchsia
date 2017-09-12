@@ -11,10 +11,10 @@
 #include <threads.h>
 
 #include <hw/inout.h>
-#include <magenta/assert.h>
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
-#include <mxcpp/new.h>
+#include <zircon/assert.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zxcpp/new.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/unique_ptr.h>
@@ -25,10 +25,10 @@
 
 #include "acpi.h"
 
-__WEAK mx_handle_t root_resource_handle;
+__WEAK zx_handle_t root_resource_handle;
 
 #define _COMPONENT          ACPI_OS_SERVICES
-ACPI_MODULE_NAME    ("osmagenta")
+ACPI_MODULE_NAME    ("oszircon")
 
 #define LOCAL_TRACE 0
 
@@ -53,7 +53,7 @@ public:
     // @param length Length of the mapping
     // @param vmo_handle Handle to the mapped VMO
     AcpiOsMappingNode(uintptr_t vaddr, uintptr_t vaddr_actual,
-                      size_t length, mx_handle_t vmo_handle);
+                      size_t length, zx_handle_t vmo_handle);
     ~AcpiOsMappingNode();
 
     // Trait implementation for fbl::HashTable
@@ -64,7 +64,7 @@ private:
     uintptr_t vaddr_;
     uintptr_t vaddr_actual_;
     size_t length_;
-    mx_handle_t vmo_handle_;
+    zx_handle_t vmo_handle_;
 };
 
 fbl::Mutex os_mapping_lock;
@@ -75,39 +75,39 @@ const size_t PCIE_MAX_DEVICES_PER_BUS = 32;
 const size_t PCIE_MAX_FUNCTIONS_PER_DEVICE = 8;
 
 AcpiOsMappingNode::AcpiOsMappingNode(uintptr_t vaddr, uintptr_t vaddr_actual,
-                                     size_t length, mx_handle_t vmo_handle)
+                                     size_t length, zx_handle_t vmo_handle)
     : vaddr_(vaddr), vaddr_actual_(vaddr_actual),
       length_(length), vmo_handle_(vmo_handle) {
 }
 
 AcpiOsMappingNode::~AcpiOsMappingNode() {
-    mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)vaddr_actual_, length_);
-    mx_handle_close(vmo_handle_);
+    zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)vaddr_actual_, length_);
+    zx_handle_close(vmo_handle_);
 }
 
-static mx_status_t mmap_physical(mx_paddr_t phys, size_t size, uint32_t cache_policy,
-                                 mx_handle_t* out_vmo, mx_vaddr_t* out_vaddr) {
-    mx_handle_t vmo;
-    mx_vaddr_t vaddr;
-    mx_status_t st = mx_vmo_create_physical(root_resource_handle, phys, size, &vmo);
-    if (st != MX_OK) {
+static zx_status_t mmap_physical(zx_paddr_t phys, size_t size, uint32_t cache_policy,
+                                 zx_handle_t* out_vmo, zx_vaddr_t* out_vaddr) {
+    zx_handle_t vmo;
+    zx_vaddr_t vaddr;
+    zx_status_t st = zx_vmo_create_physical(root_resource_handle, phys, size, &vmo);
+    if (st != ZX_OK) {
         return st;
     }
-    st = mx_vmo_set_cache_policy(vmo, cache_policy);
-    if (st != MX_OK) {
-        mx_handle_close(vmo);
+    st = zx_vmo_set_cache_policy(vmo, cache_policy);
+    if (st != ZX_OK) {
+        zx_handle_close(vmo);
         return st;
     }
-    st = mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, size,
-                     MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_MAP_RANGE,
+    st = zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size,
+                     ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_MAP_RANGE,
                      &vaddr);
-    if (st != MX_OK) {
-        mx_handle_close(vmo);
+    if (st != ZX_OK) {
+        zx_handle_close(vmo);
         return st;
     } else {
         *out_vmo = vmo;
         *out_vaddr = vaddr;
-        return MX_OK;
+        return ZX_OK;
     }
 }
 
@@ -135,7 +135,7 @@ ACPI_STATUS AcpiOsInitialize() {
         return status;
     }
     /* TODO(teisenbe): be less permissive */
-    mx_mmap_device_io(root_resource_handle, 0, 65536);
+    zx_mmap_device_io(root_resource_handle, 0, 65536);
     return AE_OK;
 }
 
@@ -162,7 +162,7 @@ ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
     ACPI_PHYSICAL_ADDRESS TableAddress = 0;
     ACPI_STATUS status = AcpiFindRootPointer(&TableAddress);
 
-    uint32_t uefi_rsdp = (uint32_t)mx_acpi_uefi_rsdp(root_resource_handle);
+    uint32_t uefi_rsdp = (uint32_t)zx_acpi_uefi_rsdp(root_resource_handle);
     if (uefi_rsdp != 0) {
         return uefi_rsdp;
     }
@@ -226,7 +226,7 @@ ACPI_STATUS AcpiOsPhysicalTableOverride(
     return AE_OK;
 }
 
-// If we decide to make use of a more Magenta specific cache mechanism,
+// If we decide to make use of a more Zircon specific cache mechanism,
 // remove the ACPI_USE_LOCAL_CACHE define from the header and implement these
 // functions.
 #if 0
@@ -330,10 +330,10 @@ void *AcpiOsMapMemory(
 
     uintptr_t vaddr;
     size_t length = end - aligned_address;
-    mx_handle_t vmo;
-    mx_status_t status = mmap_physical(aligned_address, end - aligned_address,
-                                       MX_CACHE_POLICY_CACHED, &vmo, &vaddr);
-    if (status != MX_OK) {
+    zx_handle_t vmo;
+    zx_status_t status = mmap_physical(aligned_address, end - aligned_address,
+                                       ZX_CACHE_POLICY_CACHED, &vmo, &vaddr);
+    if (status != ZX_OK) {
         return NULL;
     }
 
@@ -390,7 +390,7 @@ void AcpiOsFree(void *Memory) {
  *         executing thread. The value -1 is reserved and must not be returned
  *         by this interface.
  */
-static_assert(sizeof(ACPI_THREAD_ID) >= sizeof(mx_handle_t), "tid size");
+static_assert(sizeof(ACPI_THREAD_ID) >= sizeof(zx_handle_t), "tid size");
 ACPI_THREAD_ID AcpiOsGetThreadId() {
     return (uintptr_t)thrd_current();
 }
@@ -504,7 +504,7 @@ void AcpiOsSleep(UINT64 Milliseconds) {
         // If we're asked to sleep for a long time (>1.5 months), shorten it
         Milliseconds = UINT32_MAX;
     }
-    mx_nanosleep(mx_deadline_after(MX_MSEC(Milliseconds)));
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(Milliseconds)));
 }
 
 /**
@@ -515,7 +515,7 @@ void AcpiOsSleep(UINT64 Milliseconds) {
  * @param Microseconds The amount of time to delay, in microseconds.
  */
 void AcpiOsStall(UINT32 Microseconds) {
-    mx_nanosleep(mx_deadline_after(MX_USEC(Microseconds)));
+    zx_nanosleep(zx_deadline_after(ZX_USEC(Microseconds)));
 }
 
 /**
@@ -584,24 +584,24 @@ ACPI_STATUS AcpiOsWaitSemaphore(
 
     if (Timeout == UINT16_MAX) {
         if (sem_wait(Handle) < 0) {
-            MX_ASSERT_MSG(false, "sem_wait failed %d", errno);
+            ZX_ASSERT_MSG(false, "sem_wait failed %d", errno);
         }
         return AE_OK;
     }
 
-    mx_time_t now = mx_time_get(MX_CLOCK_UTC);
+    zx_time_t now = zx_time_get(ZX_CLOCK_UTC);
     struct timespec then = {
-        .tv_sec = static_cast<time_t>(now / MX_SEC(1)),
-        .tv_nsec = static_cast<long>(now % MX_SEC(1)),
+        .tv_sec = static_cast<time_t>(now / ZX_SEC(1)),
+        .tv_nsec = static_cast<long>(now % ZX_SEC(1)),
     };
-    then.tv_nsec += MX_MSEC(Timeout);
-    if (then.tv_nsec > static_cast<long>(MX_SEC(1))) {
-        then.tv_sec += then.tv_nsec / MX_SEC(1);
-        then.tv_nsec %= MX_SEC(1);
+    then.tv_nsec += ZX_MSEC(Timeout);
+    if (then.tv_nsec > static_cast<long>(ZX_SEC(1))) {
+        then.tv_sec += then.tv_nsec / ZX_SEC(1);
+        then.tv_nsec %= ZX_SEC(1);
     }
 
     if (sem_timedwait(Handle, &then) < 0) {
-        MX_ASSERT_MSG(errno == ETIMEDOUT, "sem_timedwait failed unexpectedly %d", errno);
+        ZX_ASSERT_MSG(errno == ETIMEDOUT, "sem_timedwait failed unexpectedly %d", errno);
         return AE_TIME;
     }
     return AE_OK;
@@ -696,21 +696,21 @@ void AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags) {
 // ACPICA's
 struct acpi_irq_thread_arg {
     ACPI_OSD_HANDLER handler;
-    mx_handle_t irq_handle;
+    zx_handle_t irq_handle;
     void *context;
 };
 static int acpi_irq_thread(void *arg) {
     struct acpi_irq_thread_arg *real_arg = (struct acpi_irq_thread_arg *)arg;
     while (1) {
-        mx_status_t status = mx_interrupt_wait(real_arg->irq_handle);
-        if (status != MX_OK) {
+        zx_status_t status = zx_interrupt_wait(real_arg->irq_handle);
+        if (status != ZX_OK) {
             continue;
         }
 
         // TODO: Should we do something with the return value from the handler?
         real_arg->handler(real_arg->context);
 
-        mx_interrupt_complete(real_arg->irq_handle);
+        zx_interrupt_complete(real_arg->irq_handle);
     }
     return 0;
 }
@@ -754,10 +754,10 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(
         return AE_NO_MEMORY;
     }
 
-    mx_handle_t handle;
-    mx_status_t status = mx_interrupt_create(root_resource_handle, InterruptLevel,
-                                             MX_FLAG_REMAP_IRQ, &handle);
-    if (status != MX_OK) {
+    zx_handle_t handle;
+    zx_status_t status = zx_interrupt_create(root_resource_handle, InterruptLevel,
+                                             ZX_FLAG_REMAP_IRQ, &handle);
+    if (status != ZX_OK) {
         free(arg);
         return AE_ERROR;
     }
@@ -951,17 +951,17 @@ static ACPI_STATUS AcpiOsReadWritePciConfiguration(
     uint8_t offset = static_cast<uint8_t>(Register);
     uint8_t width = static_cast<uint8_t>(Width);
     uint32_t val = *Value & 0xFFFFFFFF; // PIO access can only be 32 bits
-    mx_status_t status = mx_pci_cfg_pio_rw(root_resource_handle, bus, dev, func, offset,
+    zx_status_t status = zx_pci_cfg_pio_rw(root_resource_handle, bus, dev, func, offset,
                                            &val, width, Write);
 
     *Value = val;
 
 #ifdef ACPI_DEBUG_OUTPUT
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         printf("ACPIOS: pci rw error: %d\n", status);
     }
 #endif // ACPI_DEBUG_OUTPUT
-    return (status == MX_OK) ? AE_OK : AE_ERROR;
+    return (status == ZX_OK) ? AE_OK : AE_ERROR;
 #endif // __x86_64__
 
     return AE_NOT_IMPLEMENTED;

@@ -1,7 +1,7 @@
 #include <threads.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 void thrd_yield() {
-    _mx_nanosleep(0ull);
+    _zx_nanosleep(0ull);
 }

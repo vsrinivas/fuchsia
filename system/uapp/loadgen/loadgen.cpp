@@ -6,9 +6,9 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include <magenta/errors.h>
-#include <magenta/types.h>
-#include <magenta/syscalls.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
+#include <zircon/syscalls.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
@@ -28,7 +28,7 @@ public:
     LoadGeneratorThread(unsigned int seed) : seed_(seed) { }
     ~LoadGeneratorThread();
 
-    mx_status_t Start();
+    zx_status_t Start();
 
     static float& min_work_msec() { return min_work_msec_; }
     static float& max_work_msec() { return max_work_msec_; }
@@ -66,8 +66,8 @@ LoadGeneratorThread::~LoadGeneratorThread() {
     }
 }
 
-mx_status_t LoadGeneratorThread::Start() {
-    if (thread_started_) return MX_ERR_BAD_STATE;
+zx_status_t LoadGeneratorThread::Start() {
+    if (thread_started_) return ZX_ERR_BAD_STATE;
 
     int c11_res = thrd_create(
             &thread_,
@@ -77,26 +77,26 @@ mx_status_t LoadGeneratorThread::Start() {
     if (c11_res != thrd_success) {
         printf("Failed to create new client thread (res %d)!\n", c11_res);
         // TODO(johngro) : translate musl error
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 int LoadGeneratorThread::Run() {
     constexpr double kMinNum = 1.0;
     constexpr double kMaxNum = 100000000.0;
-    uint32_t ticks_per_msec = static_cast<uint32_t>(mx_ticks_per_second() / 1000);
+    uint32_t ticks_per_msec = static_cast<uint32_t>(zx_ticks_per_second() / 1000);
     accumulator_ = MakeRandomDouble(kMinNum, kMaxNum);
 
     // While it is not time to quit, waste time performing pointless double
     // precision floating point math.
     while (!quit_) {
         double work_delay = MakeRandomDouble(min_work_msec(), max_work_msec());
-        uint64_t work_deadline_ticks = mx_ticks_get()
-                                     + static_cast<mx_time_t>(work_delay * ticks_per_msec);
+        uint64_t work_deadline_ticks = zx_ticks_get()
+                                     + static_cast<zx_time_t>(work_delay * ticks_per_msec);
 
-        while (!quit_ && (mx_ticks_get() < work_deadline_ticks)) {
+        while (!quit_ && (zx_ticks_get() < work_deadline_ticks)) {
             accumulator_ += MakeRandomDouble(kMinNum, kMaxNum);
             accumulator_ *= MakeRandomDouble(kMinNum, kMaxNum);
             accumulator_ -= MakeRandomDouble(kMinNum, kMaxNum);
@@ -110,20 +110,20 @@ int LoadGeneratorThread::Run() {
             break;
 
         double sleep_delay = MakeRandomDouble(min_sleep_msec(), max_sleep_msec());
-        mx_time_t sleep_deadline = mx_time_get(MX_CLOCK_MONOTONIC)
-                                 + static_cast<mx_time_t>(sleep_delay * 1000000.0);
+        zx_time_t sleep_deadline = zx_time_get(ZX_CLOCK_MONOTONIC)
+                                 + static_cast<zx_time_t>(sleep_delay * 1000000.0);
 
         do {
-            static constexpr mx_time_t max_sleep = MX_MSEC(10);
-            mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
+            static constexpr zx_time_t max_sleep = ZX_MSEC(10);
+            zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
 
             if (now >= sleep_deadline)
                 break;
 
             if ((sleep_deadline - now) > max_sleep) {
-                mx_nanosleep(now + max_sleep);
+                zx_nanosleep(now + max_sleep);
             } else {
-                mx_nanosleep(sleep_deadline);
+                zx_nanosleep(sleep_deadline);
                 break;
             }
         } while (!quit_);
@@ -144,7 +144,7 @@ void usage(const char* program_name) {
            "  N             : Number of threads to create.  Default %u\n"
            "  min/max_work  : Min/max msec for threads to work for.  Default %.1f,%.1f mSec\n"
            "  min/max_sleep : Min/max msec for threads to sleep for.  Default %.1f,%.1f mSec\n"
-           "  seed          : RNG seed to use.  Defaults to seeding from mx_time_get\n",
+           "  seed          : RNG seed to use.  Defaults to seeding from zx_time_get\n",
            program_name,
            kDefaultNumThreads,
            kDefaultMinWorkMsec,
@@ -193,7 +193,7 @@ int main(int argc, char** argv) {
     }
 
     // Parse the PRNG seed, if present.
-    unsigned int seed = static_cast<unsigned int>(mx_time_get(CLOCK_MONOTONIC));
+    unsigned int seed = static_cast<unsigned int>(zx_time_get(CLOCK_MONOTONIC));
     if (argc >= 7) {
         if (sscanf(argv[6], "%u", &seed) != 1) return -1;
     }
@@ -227,8 +227,8 @@ int main(int argc, char** argv) {
     }
 
     for (auto& t : threads) {
-        mx_status_t res = t.Start();
-        if (res != MX_OK) {
+        zx_status_t res = t.Start();
+        if (res != ZX_OK) {
             printf("Failed to start thread.  (res %d)\n", res);
             return res;
         }

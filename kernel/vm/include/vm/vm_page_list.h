@@ -38,7 +38,7 @@ public:
             start = (start_offset - obj_offset_) / PAGE_SIZE;
         }
         if (end_offset < obj_offset_) {
-            return MX_ERR_NEXT;
+            return ZX_ERR_NEXT;
         }
         if (end_offset < obj_offset_ + kPageFanOut * PAGE_SIZE) {
             end = (end_offset - obj_offset_) / PAGE_SIZE;
@@ -46,12 +46,12 @@ public:
         for (size_t i = start; i < end; i++) {
             if (pages_[i]) {
                 status_t status = func(pages_[i], obj_offset_ + i * PAGE_SIZE);
-                if (unlikely(status != MX_ERR_NEXT)) {
+                if (unlikely(status != ZX_ERR_NEXT)) {
                     return status;
                 }
             }
         }
-        return MX_ERR_NEXT;
+        return ZX_ERR_NEXT;
     }
 
     // for every valid page in the node call the passed in function
@@ -64,7 +64,7 @@ public:
             start = (start_offset - obj_offset_) / PAGE_SIZE;
         }
         if (end_offset < obj_offset_) {
-            return MX_ERR_NEXT;
+            return ZX_ERR_NEXT;
         }
         if (end_offset < obj_offset_ + kPageFanOut * PAGE_SIZE) {
             end = (end_offset - obj_offset_) / PAGE_SIZE;
@@ -72,12 +72,12 @@ public:
         for (size_t i = start; i < end; i++) {
             if (pages_[i]) {
                 status_t status = func(pages_[i], obj_offset_ + i * PAGE_SIZE);
-                if (unlikely(status != MX_ERR_NEXT)) {
+                if (unlikely(status != ZX_ERR_NEXT)) {
                     return status;
                 }
             }
         }
-        return MX_ERR_NEXT;
+        return ZX_ERR_NEXT;
     }
 
     vm_page* GetPage(size_t index);
@@ -112,14 +112,14 @@ public:
         for (auto& pl : list_) {
             status_t status = pl.ForEveryPage(per_page_func, pl.offset(),
                                               pl.offset() + pl.kPageFanOut * PAGE_SIZE);
-            if (unlikely(status != MX_ERR_NEXT)) {
-                if (status == MX_ERR_STOP) {
+            if (unlikely(status != ZX_ERR_NEXT)) {
+                if (status == ZX_ERR_STOP) {
                     break;
                 }
                 return status;
             }
         }
-        return MX_OK;
+        return ZX_OK;
     }
 
     // walk the page tree, calling the passed in function on every tree node
@@ -128,14 +128,14 @@ public:
         for (auto& pl : list_) {
             status_t status = pl.ForEveryPage(per_page_func, pl.offset(),
                                               pl.offset() + pl.kPageFanOut * PAGE_SIZE);
-            if (unlikely(status != MX_ERR_NEXT)) {
-                if (status == MX_ERR_STOP) {
+            if (unlikely(status != ZX_ERR_NEXT)) {
+                if (status == ZX_ERR_STOP) {
                     break;
                 }
                 return status;
             }
         }
-        return MX_OK;
+        return ZX_OK;
     }
 
     // walk the page tree, calling the passed in function on every tree node
@@ -152,14 +152,14 @@ public:
         for (auto itr = start; itr != end; ++itr) {
             auto& pl = *itr;
             status_t status = pl.ForEveryPage(per_page_func, start_offset, end_offset);
-            if (unlikely(status != MX_ERR_NEXT)) {
-                if (status == MX_ERR_STOP) {
+            if (unlikely(status != ZX_ERR_NEXT)) {
+                if (status == ZX_ERR_STOP) {
                     break;
                 }
                 return status;
             }
         }
-        return MX_OK;
+        return ZX_OK;
     }
 
     template <typename T>
@@ -176,14 +176,14 @@ public:
         for (auto itr = start; itr != end; ++itr) {
             auto& pl = *itr;
             status_t status = pl.ForEveryPage(per_page_func, start_offset, end_offset);
-            if (unlikely(status != MX_ERR_NEXT)) {
-                if (status == MX_ERR_STOP) {
+            if (unlikely(status != ZX_ERR_NEXT)) {
+                if (status == ZX_ERR_STOP) {
                     break;
                 }
                 return status;
             }
         }
-        return MX_OK;
+        return ZX_OK;
     }
 
     status_t AddPage(vm_page*, uint64_t offset);

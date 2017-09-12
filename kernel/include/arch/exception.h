@@ -6,13 +6,13 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <sys/types.h>
 
 __BEGIN_CDECLS
 
 typedef struct arch_exception_context arch_exception_context_t;
-typedef struct mx_exception_report mx_exception_report_t;
+typedef struct zx_exception_report zx_exception_report_t;
 
 // Called by arch code when it cannot handle an exception.
 // |context| is architecture-specific, and can be dumped to the console
@@ -33,6 +33,6 @@ void arch_dump_exception_context(const arch_exception_context_t* context);
 // Sets |report| using architecture-specific information from |context|.
 // Implemented by arch code.
 void arch_fill_in_exception_context(
-    const arch_exception_context_t* context, mx_exception_report_t* report);
+    const arch_exception_context_t* context, zx_exception_report_t* report);
 
 __END_CDECLS

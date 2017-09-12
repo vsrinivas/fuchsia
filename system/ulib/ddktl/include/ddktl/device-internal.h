@@ -10,18 +10,18 @@
 namespace ddk {
 namespace internal {
 
-// base_device is a tag that default initalizes the mx_protocol_device_t so the mixin classes
+// base_device is a tag that default initalizes the zx_protocol_device_t so the mixin classes
 // can fill in the table.
 struct base_device {
   protected:
-    base_device(mx_device_t* parent)
+    base_device(zx_device_t* parent)
       : parent_(parent) {
         ddk_device_proto_.version = DEVICE_OPS_VERSION;
     }
 
-    mx_protocol_device_t ddk_device_proto_ = {};
-    mx_device_t* mxdev_ = nullptr;
-    mx_device_t* const parent_;
+    zx_protocol_device_t ddk_device_proto_ = {};
+    zx_device_t* mxdev_ = nullptr;
+    zx_device_t* const parent_;
 };
 
 // base_mixin is a tag that all mixins must inherit from.
@@ -55,9 +55,9 @@ constexpr void CheckGetProtocolable() {
     static_assert(fbl::is_base_of<base_device, D>::value,
                   "GetProtocolable classes must be derived from ddk::Device<...>.");
     static_assert(fbl::is_same<decltype(&D::DdkGetProtocol),
-                                mx_status_t (D::*)(uint32_t, void*)>::value,
+                                zx_status_t (D::*)(uint32_t, void*)>::value,
                   "DdkGetProtocol must be a public non-static member function with signature "
-                  "'mx_status_t DdkGetProtocol(uint32_t, void*)'.");
+                  "'zx_status_t DdkGetProtocol(uint32_t, void*)'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_open, DdkOpen);
@@ -68,9 +68,9 @@ constexpr void CheckOpenable() {
     static_assert(fbl::is_base_of<base_device, D>::value,
                   "Openable classes must be derived from ddk::Device<...>.");
     static_assert(fbl::is_same<decltype(&D::DdkOpen),
-                                mx_status_t (D::*)(mx_device_t**, uint32_t)>::value,
+                                zx_status_t (D::*)(zx_device_t**, uint32_t)>::value,
                   "DdkOpen must be a public non-static member function with signature "
-                  "'mx_status_t DdkOpen(mx_device_t**, uint32_t)'.");
+                  "'zx_status_t DdkOpen(zx_device_t**, uint32_t)'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_open_at, DdkOpenAt);
@@ -83,9 +83,9 @@ constexpr void CheckOpenAtable() {
                   "OpenAtable classes must be derived from ddk::Device<...>.");
     static_assert(
             fbl::is_same<decltype(&D::DdkOpenAt),
-                          mx_status_t (D::*)(mx_device_t**, const char*, uint32_t)>::value,
+                          zx_status_t (D::*)(zx_device_t**, const char*, uint32_t)>::value,
                   "DdkOpenAt must be a public non-static member function with signature "
-                  "'mx_status_t DdkOpenAt(mx_device_t**, const char*, uint32_t)'.");
+                  "'zx_status_t DdkOpenAt(zx_device_t**, const char*, uint32_t)'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_close, DdkClose);
@@ -96,9 +96,9 @@ constexpr void CheckClosable() {
                   "Closable classes must implement DdkClose");
     static_assert(fbl::is_base_of<base_device, D>::value,
                   "Closable classes must be derived from ddk::Device<...>.");
-    static_assert(fbl::is_same<decltype(&D::DdkClose), mx_status_t (D::*)(uint32_t)>::value,
+    static_assert(fbl::is_same<decltype(&D::DdkClose), zx_status_t (D::*)(uint32_t)>::value,
                   "DdkClose must be a public non-static member function with signature "
-                  "'mx_status_t DdkClose(uint32)'.");
+                  "'zx_status_t DdkClose(uint32)'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_unbind, DdkUnbind);
@@ -134,9 +134,9 @@ constexpr void CheckReadable() {
     static_assert(fbl::is_base_of<base_device, D>::value,
                   "Readable classes must be derived from ddk::Device<...>.");
     static_assert(fbl::is_same<decltype(&D::DdkRead),
-                                mx_status_t (D::*)(void*, size_t, mx_off_t, size_t*)>::value,
+                                zx_status_t (D::*)(void*, size_t, zx_off_t, size_t*)>::value,
                   "DdkRead must be a public non-static member function with signature "
-                  "'mx_status_t DdkRead(void*, size_t, mx_off_t, size_t*)'.");
+                  "'zx_status_t DdkRead(void*, size_t, zx_off_t, size_t*)'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_write, DdkWrite);
@@ -148,9 +148,9 @@ constexpr void CheckWritable() {
     static_assert(fbl::is_base_of<base_device, D>::value,
                   "Writable classes must be derived from ddk::Device<...>.");
     static_assert(fbl::is_same<decltype(&D::DdkWrite),
-                                mx_status_t (D::*)(const void*, size_t, mx_off_t, size_t*)>::value,
+                                zx_status_t (D::*)(const void*, size_t, zx_off_t, size_t*)>::value,
                   "DdkWrite must be a public non-static member function with signature "
-                  "'mx_status_t DdkWrite(const void*, size_t, mx_off_t, size_t*)'.");
+                  "'zx_status_t DdkWrite(const void*, size_t, zx_off_t, size_t*)'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_iotxn_queue, DdkIotxnQueue);
@@ -174,9 +174,9 @@ constexpr void CheckGetSizable() {
                   "GetSizable classes must implement DdkGetSize");
     static_assert(fbl::is_base_of<base_device, D>::value,
                   "GetSizable classes must be derived from ddk::Device<...>.");
-    static_assert(fbl::is_same<decltype(&D::DdkGetSize), mx_off_t (D::*)(void)>::value,
+    static_assert(fbl::is_same<decltype(&D::DdkGetSize), zx_off_t (D::*)(void)>::value,
                   "DdkGetSize must be a public non-static member function with signature "
-                  "'mx_off_t DdkGetSize()'.");
+                  "'zx_off_t DdkGetSize()'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_ioctl, DdkIoctl);
@@ -188,10 +188,10 @@ constexpr void CheckIoctlable() {
     static_assert(fbl::is_base_of<base_device, D>::value,
                   "Ioctlable classes must be derived from ddk::Device<...>.");
     static_assert(fbl::is_same<decltype(&D::DdkIoctl),
-                                mx_status_t (D::*)(uint32_t, const void*, size_t,
+                                zx_status_t (D::*)(uint32_t, const void*, size_t,
                                                    void*, size_t, size_t*)>::value,
                   "DdkIoctl must be a public non-static member function with signature "
-                  "'mx_status_t DdkIoctl(uint32_t, const void*, size_t, void*, size_t, size_t*)'.");
+                  "'zx_status_t DdkIoctl(uint32_t, const void*, size_t, void*, size_t, size_t*)'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_suspend, DdkSuspend);
@@ -202,9 +202,9 @@ constexpr void CheckSuspendable() {
                   "Suspendable classes must implement DdkSuspend");
     static_assert(fbl::is_base_of<base_device, D>::value,
                   "Suspendable classes must be derived from ddk::Device<...>.");
-    static_assert(fbl::is_same<decltype(&D::DdkSuspend), mx_status_t (D::*)(uint32_t)>::value,
+    static_assert(fbl::is_same<decltype(&D::DdkSuspend), zx_status_t (D::*)(uint32_t)>::value,
                   "DdkSuspend must be a public non-static member function with signature "
-                  "'mx_status_t DdkSuspend(uint32_t)'.");
+                  "'zx_status_t DdkSuspend(uint32_t)'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_resume, DdkResume);
@@ -215,9 +215,9 @@ constexpr void CheckResumable() {
                   "Resumable classes must implement DdkResume");
     static_assert(fbl::is_base_of<base_device, D>::value,
                   "Resumable classes must be derived from ddk::Device<...>.");
-    static_assert(fbl::is_same<decltype(&D::DdkResume), mx_status_t (D::*)(uint32_t)>::value,
+    static_assert(fbl::is_same<decltype(&D::DdkResume), zx_status_t (D::*)(uint32_t)>::value,
                   "DdkResume must be a public non-static member function with signature "
-                  "'mx_status_t DdkResume(uint32_t)'.");
+                  "'zx_status_t DdkResume(uint32_t)'.");
 }
 
 // all_mixins

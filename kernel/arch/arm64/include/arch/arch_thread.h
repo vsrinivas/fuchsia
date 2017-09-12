@@ -10,8 +10,8 @@
 #ifndef ASSEMBLY
 
 #include <assert.h>
-#include <magenta/compiler.h>
-#include <magenta/tls.h>
+#include <zircon/compiler.h>
+#include <zircon/tls.h>
 #include <stddef.h>
 #include <sys/types.h>
 
@@ -59,10 +59,10 @@ struct arch_thread {
      (int)offsetof(struct arch_thread, thread_pointer_location))
 
 static_assert(
-    thread_pointer_offsetof(stack_guard) == MX_TLS_STACK_GUARD_OFFSET,
+    thread_pointer_offsetof(stack_guard) == ZX_TLS_STACK_GUARD_OFFSET,
     "stack_guard field in wrong place");
 static_assert(
-    thread_pointer_offsetof(unsafe_sp) == MX_TLS_UNSAFE_SP_OFFSET,
+    thread_pointer_offsetof(unsafe_sp) == ZX_TLS_UNSAFE_SP_OFFSET,
     "unsafe_sp field in wrong place");
 
 __END_CDECLS

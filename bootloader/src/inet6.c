@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include <inet6.h>
-#include <magenta/boot/netboot.h>
+#include <zircon/boot/netboot.h>
 
 // Enable at your own risk. Some of these packet errors can be fairly
 // common when the buffers start to overflow.

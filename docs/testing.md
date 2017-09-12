@@ -34,7 +34,7 @@ hex bitwise OR of "TEST_SMALL" and "TEST_MEDIUM" -- though this information
 should be parsed using the [unittest header][unittest-header], as it may be
 updated in the future).
 
-## Magenta Tests (ulib/test, and/or using ulib/unittest)
+## Zircon Tests (ulib/test, and/or using ulib/unittest)
 
 The following macros can be used to filter tests into these categories:
 ```

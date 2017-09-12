@@ -11,9 +11,9 @@
 #include <platform.h>
 #include <pow2.h>
 
-#include <magenta/compiler.h>
-#include <magenta/rights.h>
-#include <magenta/syscalls/port.h>
+#include <zircon/compiler.h>
+#include <zircon/rights.h>
+#include <zircon/syscalls/port.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/arena.h>
 #include <fbl/auto_lock.h>
@@ -22,18 +22,18 @@
 
 using fbl::AutoLock;
 
-static_assert(sizeof(mx_packet_signal_t) == sizeof(mx_packet_user_t),
-              "size of mx_packet_signal_t must match mx_packet_user_t");
-static_assert(sizeof(mx_packet_exception_t) == sizeof(mx_packet_user_t),
-              "size of mx_packet_exception_t must match mx_packet_user_t");
-static_assert(sizeof(mx_packet_guest_mem_t) == sizeof(mx_packet_user_t),
-              "size of mx_packet_guest_mem_t must match mx_packet_user_t");
-static_assert(sizeof(mx_packet_guest_io_t) == sizeof(mx_packet_user_t),
-              "size of mx_packet_guest_io_t must match mx_packet_user_t");
+static_assert(sizeof(zx_packet_signal_t) == sizeof(zx_packet_user_t),
+              "size of zx_packet_signal_t must match zx_packet_user_t");
+static_assert(sizeof(zx_packet_exception_t) == sizeof(zx_packet_user_t),
+              "size of zx_packet_exception_t must match zx_packet_user_t");
+static_assert(sizeof(zx_packet_guest_mem_t) == sizeof(zx_packet_user_t),
+              "size of zx_packet_guest_mem_t must match zx_packet_user_t");
+static_assert(sizeof(zx_packet_guest_io_t) == sizeof(zx_packet_user_t),
+              "size of zx_packet_guest_io_t must match zx_packet_user_t");
 
 class ArenaPortAllocator final : public PortAllocator {
 public:
-    mx_status_t Init();
+    zx_status_t Init();
     virtual ~ArenaPortAllocator() = default;
 
     virtual PortPacket* Alloc();
@@ -48,7 +48,7 @@ constexpr size_t kMaxPendingPacketCount = 16 * 1024u;
 ArenaPortAllocator port_allocator;
 }  // namespace.
 
-mx_status_t ArenaPortAllocator::Init() {
+zx_status_t ArenaPortAllocator::Init() {
     return arena_.Init("packets", kMaxPendingPacketCount);
 }
 
@@ -76,7 +76,7 @@ PortPacket::PortPacket(const void* handle, PortAllocator* allocator)
 }
 
 PortObserver::PortObserver(uint32_t type, const Handle* handle, fbl::RefPtr<PortDispatcher> port,
-                           uint64_t key, mx_signals_t signals)
+                           uint64_t key, zx_signals_t signals)
     : type_(type),
       trigger_(signals),
       packet_(handle, nullptr),
@@ -85,13 +85,13 @@ PortObserver::PortObserver(uint32_t type, const Handle* handle, fbl::RefPtr<Port
     DEBUG_ASSERT(handle != nullptr);
 
     auto& packet = packet_.packet;
-    packet.status = MX_OK;
+    packet.status = ZX_OK;
     packet.key = key;
     packet.type = type_;
     packet.signal.trigger = trigger_;
 }
 
-StateObserver::Flags PortObserver::OnInitialize(mx_signals_t initial_state,
+StateObserver::Flags PortObserver::OnInitialize(zx_signals_t initial_state,
                                                 const StateObserver::CountInfo* cinfo) {
     uint64_t count = 1u;
 
@@ -106,7 +106,7 @@ StateObserver::Flags PortObserver::OnInitialize(mx_signals_t initial_state,
     return MaybeQueue(initial_state, count);
 }
 
-StateObserver::Flags PortObserver::OnStateChange(mx_signals_t new_state) {
+StateObserver::Flags PortObserver::OnStateChange(zx_signals_t new_state) {
     return MaybeQueue(new_state, 1u);
 }
 
@@ -129,14 +129,14 @@ void PortObserver::OnRemoved() {
         delete this;
 }
 
-StateObserver::Flags PortObserver::MaybeQueue(mx_signals_t new_state, uint64_t count) {
+StateObserver::Flags PortObserver::MaybeQueue(zx_signals_t new_state, uint64_t count) {
     // Always called with the object state lock being held.
     if ((trigger_ & new_state) == 0u)
         return 0;
 
     auto status = port_->Queue(&packet_, new_state, count);
 
-    if ((type_ == MX_PKT_TYPE_SIGNAL_ONE) || (status < 0))
+    if ((type_ == ZX_PKT_TYPE_SIGNAL_ONE) || (status < 0))
         return kNeedRemoval;
 
     return 0;
@@ -152,17 +152,17 @@ PortAllocator* PortDispatcher::DefaultPortAllocator() {
     return &port_allocator;
 }
 
-mx_status_t PortDispatcher::Create(uint32_t options, fbl::RefPtr<Dispatcher>* dispatcher,
-                                   mx_rights_t* rights) {
+zx_status_t PortDispatcher::Create(uint32_t options, fbl::RefPtr<Dispatcher>* dispatcher,
+                                   zx_rights_t* rights) {
     DEBUG_ASSERT(options == 0);
     fbl::AllocChecker ac;
     auto disp = new (&ac) PortDispatcher(options);
     if (!ac.check())
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
-    *rights = MX_DEFAULT_PORT_RIGHTS;
+    *rights = ZX_DEFAULT_PORT_RIGHTS;
     *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
-    return MX_OK;
+    return ZX_OK;
 }
 
 PortDispatcher::PortDispatcher(uint32_t /*options*/)
@@ -190,18 +190,18 @@ void PortDispatcher::on_zero_handles() {
             lock_.Acquire();
         }
     }
-    while (Dequeue(0ull, nullptr) == MX_OK) {}
+    while (Dequeue(0ull, nullptr) == ZX_OK) {}
 }
 
-mx_status_t PortDispatcher::QueueUser(const mx_port_packet_t& packet) {
+zx_status_t PortDispatcher::QueueUser(const zx_port_packet_t& packet) {
     canary_.Assert();
 
     auto port_packet = port_allocator.Alloc();
     if (!port_packet)
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     port_packet->packet = packet;
-    port_packet->packet.type = MX_PKT_TYPE_USER | PKT_FLAG_EPHEMERAL;
+    port_packet->packet.type = ZX_PKT_TYPE_USER | PKT_FLAG_EPHEMERAL;
 
     auto status = Queue(port_packet, 0u, 0u);
     if (status < 0)
@@ -209,18 +209,18 @@ mx_status_t PortDispatcher::QueueUser(const mx_port_packet_t& packet) {
     return status;
 }
 
-mx_status_t PortDispatcher::Queue(PortPacket* port_packet, mx_signals_t observed, uint64_t count) {
+zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed, uint64_t count) {
     canary_.Assert();
 
     int wake_count = 0;
     {
         AutoLock al(&lock_);
         if (zero_handles_)
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
 
         if (observed) {
             if (port_packet->InContainer())
-                return MX_OK;
+                return ZX_OK;
             port_packet->packet.signal.observed = observed;
             port_packet->packet.signal.count = count;
         }
@@ -232,10 +232,10 @@ mx_status_t PortDispatcher::Queue(PortPacket* port_packet, mx_signals_t observed
     if (wake_count)
         thread_reschedule();
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t PortDispatcher::Dequeue(mx_time_t deadline, mx_port_packet_t* out_packet) {
+zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, zx_port_packet_t* out_packet) {
     canary_.Assert();
 
     while (true) {
@@ -262,11 +262,11 @@ mx_status_t PortDispatcher::Dequeue(mx_time_t deadline, mx_port_packet_t* out_pa
             }
         }
 
-        return MX_OK;
+        return ZX_OK;
 
 wait:
-        mx_status_t st = sema_.Wait(deadline);
-        if (st != MX_OK)
+        zx_status_t st = sema_.Wait(deadline);
+        if (st != ZX_OK)
             return st;
     }
 }
@@ -283,27 +283,27 @@ bool PortDispatcher::CanReap(PortObserver* observer, PortPacket* port_packet) {
     return false;
 }
 
-mx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint64_t key,
-                                         mx_signals_t signals) {
+zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint64_t key,
+                                         zx_signals_t signals) {
     canary_.Assert();
 
     // Called under the handle table lock.
 
     auto dispatcher = handle->dispatcher();
     if (!dispatcher->get_state_tracker())
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 
     fbl::AllocChecker ac;
-    auto type = (options == MX_WAIT_ASYNC_ONCE) ?
-        MX_PKT_TYPE_SIGNAL_ONE : MX_PKT_TYPE_SIGNAL_REP;
+    auto type = (options == ZX_WAIT_ASYNC_ONCE) ?
+        ZX_PKT_TYPE_SIGNAL_ONE : ZX_PKT_TYPE_SIGNAL_REP;
 
     auto observer = new (&ac) PortObserver(type, handle, fbl::RefPtr<PortDispatcher>(this), key,
                                            signals);
     if (!ac.check())
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     dispatcher->add_observer(observer);
-    return MX_OK;
+    return ZX_OK;
 }
 
 bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {

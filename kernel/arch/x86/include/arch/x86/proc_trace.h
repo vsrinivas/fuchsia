@@ -9,8 +9,8 @@
 #include <err.h>
 #include <stdint.h>
 
-#include <magenta/compiler.h>
-#include <magenta/device/intel-pt.h>
+#include <zircon/compiler.h>
+#include <zircon/device/intel-pt.h>
 
 __BEGIN_CDECLS
 
@@ -35,8 +35,8 @@ status_t x86_ipt_cpu_mode_start();
 
 status_t x86_ipt_cpu_mode_stop();
 
-status_t x86_ipt_stage_cpu_data(uint32_t options, const mx_x86_pt_regs_t* regs);
+status_t x86_ipt_stage_cpu_data(uint32_t options, const zx_x86_pt_regs_t* regs);
 
-status_t x86_ipt_get_cpu_data(uint32_t options, mx_x86_pt_regs_t* regs);
+status_t x86_ipt_get_cpu_data(uint32_t options, zx_x86_pt_regs_t* regs);
 
 #endif // __cplusplus

@@ -1,30 +1,30 @@
-# mx_cprng_add_entropy
+# zx_cprng_add_entropy
 
 ## NAME
 
-mx_cprng_add_entropy - Add entropy to the kernel CPRNG
+zx_cprng_add_entropy - Add entropy to the kernel CPRNG
 
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-mx_status_t mx_cprng_add_entropy(const void* buffer, size_t len);
+zx_status_t zx_cprng_add_entropy(const void* buffer, size_t len);
 ```
 
 ## DESCRIPTION
 
-**mx_cprng_add_entropy**() mixes the given entropy into the kernel CPRNG.
-a privileged operation.  It will accept at most **MX_CPRNG_ADD_ENTROPY_MAX_LEN**
+**zx_cprng_add_entropy**() mixes the given entropy into the kernel CPRNG.
+a privileged operation.  It will accept at most **ZX_CPRNG_ADD_ENTROPY_MAX_LEN**
 bytes of entropy at a time.
 
 ## RETURN VALUE
 
-**mx_cprng_add_entropy**() returns **MX_OK** on success.
+**zx_cprng_add_entropy**() returns **ZX_OK** on success.
 
 ## ERRORS
 
-**MX_ERR_INVALID_ARGS** *len* is too large, or *buffer* is not a valid
+**ZX_ERR_INVALID_ARGS** *len* is too large, or *buffer* is not a valid
 userspace pointer.
 
 ## BUGS

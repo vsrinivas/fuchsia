@@ -94,9 +94,9 @@ static bool test_runner(const platform_test_case_t test, size_t mem_limit) {
     for (size_t i = 0; i < test.range_cnt; i++) {
         size_t used;
         total_platform_size += test.ranges[i].size;
-        mx_status_t status = mem_limit_get_iovs(&ctx, test.ranges[i].base, test.ranges[i].size, vecs, &used);
+        zx_status_t status = mem_limit_get_iovs(&ctx, test.ranges[i].base, test.ranges[i].size, vecs, &used);
 
-        REQUIRE_EQ(MX_OK, status, "checking mem_limit_get_iovs status");
+        REQUIRE_EQ(ZX_OK, status, "checking mem_limit_get_iovs status");
 
         for (size_t j = 0; j < used; j++) {
             size += vecs[j].iov_len;
@@ -138,8 +138,8 @@ static bool ml_test_large_ramdisk(void* context) {
     ctx.ramdisk_size = 64 * MB;
     ctx.memory_limit = memory_limit;
     for (size_t i = 0; i < fbl::count_of(nuc_ranges); i++) {
-        mx_status_t status = mem_limit_get_iovs(&ctx, nuc_ranges[i].base, nuc_ranges[i].size, vecs, &used);
-        EXPECT_EQ(MX_OK, status, "checking status");
+        zx_status_t status = mem_limit_get_iovs(&ctx, nuc_ranges[i].base, nuc_ranges[i].size, vecs, &used);
+        EXPECT_EQ(ZX_OK, status, "checking status");
         for (size_t i = 0; i < used; i++) {
             size += vecs[i].iov_len;
         }

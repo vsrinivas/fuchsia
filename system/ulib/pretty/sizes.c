@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 
 char* format_size_fixed(char* str, size_t str_size, size_t bytes, char unit) {
     static const char units[] = "BkMGTPE";
@@ -19,7 +19,7 @@ char* format_size_fixed(char* str, size_t str_size, size_t bytes, char unit) {
         // Even if NULL.
         return str;
     }
-    MX_DEBUG_ASSERT(str != NULL);
+    ZX_DEBUG_ASSERT(str != NULL);
     if (str_size == 1) {
         str[0] = '\0';
         return str;
@@ -47,7 +47,7 @@ retry:;
         if (ui >= num_units) {
             // We probably got an unknown unit. Fall back to a natural unit,
             // but leave a hint that something's wrong.
-            MX_DEBUG_ASSERT(str_size > 1);
+            ZX_DEBUG_ASSERT(str_size > 1);
             *str++ = '?';
             str_size--;
             unit = 0;

@@ -4,7 +4,7 @@
 
 #include "asm.h"
 #include "setjmp_impl.h"
-#include <magenta/tls.h>
+#include <zircon/tls.h>
 
 #define DW_CFA_expression       0x10
 #define DW_CFA_val_expression   0x16
@@ -146,7 +146,7 @@ ENTRY(longjmp)
 
     // Restore SP last.
     // After this, our CFA is setjmp's CFA rather than longjmp's CFA.
-    str x2, [x0, #MX_TLS_UNSAFE_SP_OFFSET]
+    str x2, [x0, #ZX_TLS_UNSAFE_SP_OFFSET]
     //.cfi_same_value unsafe_sp  -- No DWARF register number for it!
     mov sp, x3
     .cfi_same_value sp

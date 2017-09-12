@@ -12,9 +12,9 @@
 #include <kernel/mutex.h>
 #include <object/dispatcher.h>
 
-#include <magenta/syscalls/exception.h>
-#include <magenta/syscalls/port.h>
-#include <magenta/types.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/types.h>
 #include <fbl/auto_lock.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
@@ -34,14 +34,14 @@ class ExceptionPort : public fbl::DoublyLinkedListable<fbl::RefPtr<ExceptionPort
 public:
     enum class Type { NONE, DEBUGGER, THREAD, PROCESS, JOB};
 
-    static mx_status_t Create(Type type, fbl::RefPtr<PortDispatcher> port,
+    static zx_status_t Create(Type type, fbl::RefPtr<PortDispatcher> port,
                               uint64_t port_key,
                               fbl::RefPtr<ExceptionPort>* eport);
     ~ExceptionPort();
 
     Type type() const { return type_; }
 
-    mx_status_t SendPacket(ThreadDispatcher* thread, uint32_t type);
+    zx_status_t SendPacket(ThreadDispatcher* thread, uint32_t type);
 
     void OnThreadStart(ThreadDispatcher* thread);
 
@@ -62,7 +62,7 @@ public:
     // Called by the target when the port is explicitly unbound.
     void OnTargetUnbind();
 
-    static void BuildArchReport(mx_exception_report_t* report, uint32_t type,
+    static void BuildArchReport(zx_exception_report_t* report, uint32_t type,
                                 const arch_exception_context_t* arch_context);
 
 private:
@@ -73,7 +73,7 @@ private:
     ExceptionPort(const ExceptionPort&) = delete;
     ExceptionPort& operator=(const ExceptionPort&) = delete;
 
-    mx_status_t SendPacketWorker(uint32_t type, mx_koid_t pid, mx_koid_t tid);
+    zx_status_t SendPacketWorker(uint32_t type, zx_koid_t pid, zx_koid_t tid);
 
     // Unbinds from the target if bound, and drops the ref to |port_|.
     // Called by |port_| when it reaches zero handles.
@@ -93,7 +93,7 @@ private:
         return target_ != nullptr;
     }
 
-    static void BuildReport(mx_exception_report_t* report, uint32_t type);
+    static void BuildReport(zx_exception_report_t* report, uint32_t type);
 
     fbl::Canary<fbl::magic("EXCP")> canary_;
 
@@ -118,7 +118,7 @@ private:
 
 // Sets the system exception port. |eport| must be non-null; use
 // ResetSystemExceptionPort() to remove the currently-set port.
-mx_status_t SetSystemExceptionPort(fbl::RefPtr<ExceptionPort> eport);
+zx_status_t SetSystemExceptionPort(fbl::RefPtr<ExceptionPort> eport);
 
 // Removes the system exception port. Returns true if a port had been set.
 bool ResetSystemExceptionPort();

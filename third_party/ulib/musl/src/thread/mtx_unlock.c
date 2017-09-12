@@ -2,6 +2,6 @@
 #include <threads.h>
 
 int mtx_unlock(mtx_t* m) {
-    mxr_mutex_unlock((mxr_mutex_t*)&m->__i);
+    zxr_mutex_unlock((zxr_mutex_t*)&m->__i);
     return thrd_success;
 }

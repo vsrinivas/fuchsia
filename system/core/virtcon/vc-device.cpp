@@ -8,9 +8,9 @@
 #include <string.h>
 #include <sys/param.h>
 
-#include <magenta/device/display.h>
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
+#include <zircon/device/display.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
 
 #include <fbl/auto_lock.h>
 
@@ -23,7 +23,7 @@ static uint32_t default_palette[] = {
     0xff00aa00, // green
     0xffaa5500, // brown
     0xff0000aa, // blue
-    0xffaa00aa, // magenta
+    0xffaa00aa, // zircon
     0xff00aaaa, // cyan
     0xffaaaaaa, // grey
     // 8-15 Bright/light versions of colors
@@ -32,7 +32,7 @@ static uint32_t default_palette[] = {
     0xff55ff55, // bright green
     0xffffff55, // yellow
     0xff5555ff, // bright blue
-    0xffff55ff, // bright magenta
+    0xffff55ff, // bright zircon
     0xff55ffff, // bright cyan
     0xffffffff, // white
 };
@@ -52,7 +52,7 @@ extern gfx_surface* vc_gfx;
 extern gfx_surface* vc_tb_gfx;
 extern const gfx_font* vc_font;
 
-static mx_status_t vc_setup(vc_t* vc, bool special) {
+static zx_status_t vc_setup(vc_t* vc, bool special) {
     // calculate how many rows/columns we have
     vc->rows = vc_gfx->height / vc->charh;
     vc->columns = vc_gfx->width / vc->charw;
@@ -64,14 +64,14 @@ static mx_status_t vc_setup(vc_t* vc, bool special) {
     vc->text_buf = reinterpret_cast<vc_char_t*>(
         calloc(1, vc->rows * vc->columns * sizeof(vc_char_t)));
     if (!vc->text_buf)
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     // allocate the scrollback buffer
     vc->scrollback_buf = reinterpret_cast<vc_char_t*>(
         calloc(1, vc->scrollback_rows_max * vc->columns * sizeof(vc_char_t)));
     if (!vc->scrollback_buf) {
         free(vc->text_buf);
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     // set up the default palette
@@ -84,7 +84,7 @@ static mx_status_t vc_setup(vc_t* vc, bool special) {
         vc->back_color = DEFAULT_BACK_COLOR;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static void vc_invalidate(void* cookie, int x0, int y0, int w, int h) {
@@ -437,11 +437,11 @@ const gfx_font* vc_get_font() {
     return &font9x16;
 }
 
-mx_status_t vc_alloc(vc_t** out, bool special) {
+zx_status_t vc_alloc(vc_t** out, bool special) {
     vc_t* vc =
         reinterpret_cast<vc_t*>(calloc(1, sizeof(vc_t)));
     if (!vc) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     vc->fd = -1;
 
@@ -465,7 +465,7 @@ mx_status_t vc_alloc(vc_t** out, bool special) {
     vc_reset(vc);
 
     *out = vc;
-    return MX_OK;
+    return ZX_OK;
 }
 
 void vc_free(vc_t* vc) {

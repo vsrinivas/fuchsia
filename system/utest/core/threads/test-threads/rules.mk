@@ -16,7 +16,7 @@ MODULE_COMPILEFLAGS += $(NO_SAFESTACK) $(NO_SANITIZERS)
 MODULE_NAME := threads-test-threads
 
 MODULE_LIBS := \
-    system/ulib/unittest system/ulib/mxio system/ulib/magenta system/ulib/c
+    system/ulib/unittest system/ulib/fdio system/ulib/zircon system/ulib/c
 MODULE_STATIC_LIBS := system/ulib/runtime
 
 include make/module.mk

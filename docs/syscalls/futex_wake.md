@@ -1,4 +1,4 @@
-# mx_futex_wake
+# zx_futex_wake
 
 ## NAME
 
@@ -7,9 +7,9 @@ futex_wake - Wake some number of threads waiting on a futex.
 ## SYNOPSIS
 
 ```
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
-mx_status_t mx_futex_wake(const mx_futex_t* value_ptr, uint32_t wake_count);
+zx_status_t zx_futex_wake(const zx_futex_t* value_ptr, uint32_t wake_count);
 ```
 
 ## DESCRIPTION
@@ -22,11 +22,11 @@ address for `value_ptr` is not an error condition.
 
 ## RETURN VALUE
 
-**futex_wake**() returns **MX_OK** on success.
+**futex_wake**() returns **ZX_OK** on success.
 
 ## ERRORS
 
-**MX_ERR_INVALID_ARGS**  *value_ptr* is not aligned.
+**ZX_ERR_INVALID_ARGS**  *value_ptr* is not aligned.
 
 ## SEE ALSO
 

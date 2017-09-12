@@ -12,13 +12,13 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/svcfs.cpp \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mx \
+    system/ulib/zx \
     system/ulib/fbl \
 
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/fs \
-    system/ulib/magenta \
-    system/ulib/mxio \
+    system/ulib/zircon \
+    system/ulib/fdio \
 
 include make/module.mk

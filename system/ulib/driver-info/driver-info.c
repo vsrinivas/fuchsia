@@ -11,23 +11,23 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <magenta/driver/binding.h>
-#include <magenta/types.h>
+#include <zircon/driver/binding.h>
+#include <zircon/types.h>
 
 typedef Elf64_Ehdr elfhdr;
 typedef Elf64_Phdr elfphdr;
 typedef Elf64_Nhdr notehdr;
 
-static mx_status_t find_note(const char* name, size_t nlen, uint32_t type,
+static zx_status_t find_note(const char* name, size_t nlen, uint32_t type,
                              void* data, size_t size,
-                             mx_status_t (*func)(void* note, size_t sz,
+                             zx_status_t (*func)(void* note, size_t sz,
                                                  void* cookie),
                              void* cookie) {
     while (size >= sizeof(notehdr)) {
         const notehdr* hdr = data;
         uint32_t nsz = (hdr->n_namesz + 3) & (~3);
         if (nsz > (size - sizeof(notehdr))) {
-            return MX_ERR_INTERNAL;
+            return ZX_ERR_INTERNAL;
         }
         size_t hsz = sizeof(notehdr) + nsz;
         data += hsz;
@@ -35,7 +35,7 @@ static mx_status_t find_note(const char* name, size_t nlen, uint32_t type,
 
         uint32_t dsz = (hdr->n_descsz + 3) & (~3);
         if (dsz > size) {
-            return MX_ERR_INTERNAL;
+            return ZX_ERR_INTERNAL;
         }
 
         if ((hdr->n_type == type) &&
@@ -47,12 +47,12 @@ static mx_status_t find_note(const char* name, size_t nlen, uint32_t type,
         data += dsz;
         size -= dsz;
     }
-    return MX_ERR_NOT_FOUND;
+    return ZX_ERR_NOT_FOUND;
 }
 
-static mx_status_t for_each_note(int fd, const char* name, uint32_t type,
+static zx_status_t for_each_note(int fd, const char* name, uint32_t type,
                                  void* data, size_t dsize,
-                                 mx_status_t (*func)(void* note,
+                                 zx_status_t (*func)(void* note,
                                                      size_t sz, void* cookie),
                                  void* cookie) {
     size_t nlen = strlen(name) + 1;
@@ -60,22 +60,22 @@ static mx_status_t for_each_note(int fd, const char* name, uint32_t type,
     elfhdr eh;
     if (pread(fd, &eh, sizeof(eh), 0) != sizeof(eh)) {
         printf("for_each_note: pread(eh) failed\n");
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
     if (memcmp(&eh, ELFMAG, 4) ||
         (eh.e_ehsize != sizeof(elfhdr)) ||
         (eh.e_phentsize != sizeof(elfphdr))) {
         printf("for_each_note: bad elf magic\n");
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
     size_t sz = sizeof(elfphdr) * eh.e_phnum;
     if (sz > sizeof(ph)) {
         printf("for_each_note: too many phdrs\n");
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
     if ((pread(fd, ph, sz, eh.e_phoff) != (ssize_t)sz)) {
         printf("for_each_note: pread(sz,eh.e_phoff) failed\n");
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
     for (int i = 0; i < eh.e_phnum; i++) {
         if ((ph[i].p_type != PT_NOTE) ||
@@ -84,48 +84,48 @@ static mx_status_t for_each_note(int fd, const char* name, uint32_t type,
         }
         if ((pread(fd, data, ph[i].p_filesz, ph[i].p_offset) != (ssize_t)ph[i].p_filesz)) {
             printf("for_each_note: pread(ph[i]) failed\n");
-            return MX_ERR_IO;
+            return ZX_ERR_IO;
         }
         int r = find_note(name, nlen, type, data, ph[i].p_filesz, func, cookie);
-        if (r == MX_OK) {
+        if (r == ZX_OK) {
             return r;
         }
     }
-    return MX_ERR_NOT_FOUND;
+    return ZX_ERR_NOT_FOUND;
 }
 
 typedef struct {
     void* cookie;
-    void (*func)(magenta_driver_note_payload_t* note,
-                 const mx_bind_inst_t* binding, void* cookie);
+    void (*func)(zircon_driver_note_payload_t* note,
+                 const zx_bind_inst_t* binding, void* cookie);
 } context;
 
-static mx_status_t callback(void* note, size_t sz, void* _ctx) {
+static zx_status_t callback(void* note, size_t sz, void* _ctx) {
     context* ctx = _ctx;
-    magenta_driver_note_t* dn = note;
-    if (sz < sizeof(magenta_driver_note_t)) {
-        return MX_ERR_INTERNAL;
+    zircon_driver_note_t* dn = note;
+    if (sz < sizeof(zircon_driver_note_t)) {
+        return ZX_ERR_INTERNAL;
     }
-    size_t max = (sz - sizeof(magenta_driver_note_t)) / sizeof(mx_bind_inst_t);
+    size_t max = (sz - sizeof(zircon_driver_note_t)) / sizeof(zx_bind_inst_t);
     if (dn->payload.bindcount > max) {
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
-    const mx_bind_inst_t* binding = (const void*)(&dn->payload + 1);
+    const zx_bind_inst_t* binding = (const void*)(&dn->payload + 1);
     ctx->func(&dn->payload, binding, ctx->cookie);
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t di_read_driver_info(int fd, void *cookie,
+zx_status_t di_read_driver_info(int fd, void *cookie,
                                 void (*func)(
-                                    magenta_driver_note_payload_t* note,
-                                    const mx_bind_inst_t* binding,
+                                    zircon_driver_note_payload_t* note,
+                                    const zx_bind_inst_t* binding,
                                     void *cookie)) {
     context ctx = {
         .cookie = cookie,
         .func = func,
     };
     uint8_t data[4096];
-    return for_each_note(fd, MAGENTA_NOTE_NAME, MAGENTA_NOTE_DRIVER,
+    return for_each_note(fd, ZIRCON_NOTE_NAME, ZIRCON_NOTE_DRIVER,
                          data, sizeof(data), callback, &ctx);
 }
 
@@ -161,7 +161,7 @@ const char* di_bind_param_name(uint32_t param_num) {
     }
 }
 
-void di_dump_bind_inst(const mx_bind_inst_t* b, char* buf, size_t buf_len) {
+void di_dump_bind_inst(const zx_bind_inst_t* b, char* buf, size_t buf_len) {
     if (!b || !buf || !buf_len) {
         return;
     }

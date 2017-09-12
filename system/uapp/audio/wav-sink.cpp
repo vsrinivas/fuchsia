@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 #include <fbl/auto_call.h>
 #include <fbl/algorithm.h>
 #include <fbl/limits.h>
-#include <mxio/io.h>
+#include <fdio/io.h>
 #include <stdio.h>
 
 #include "wav-sink.h"
 
-mx_status_t WAVSink::SetFormat(const AudioStream::Format& format) {
+zx_status_t WAVSink::SetFormat(const AudioStream::Format& format) {
     WAVHeader wav_hdr;
 
     if ((fd_ < 0) || format_set_) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
-    if (format.channels > 8) return MX_ERR_INVALID_ARGS;
-    if (format.frame_rate == 0) return MX_ERR_INVALID_ARGS;
+    if (format.channels > 8) return ZX_ERR_INVALID_ARGS;
+    if (format.frame_rate == 0) return ZX_ERR_INVALID_ARGS;
 
     bool inv_endian = (format.sample_format & AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN) != 0;
     bool unsigned_fmt = (format.sample_format & AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED) != 0;
@@ -29,7 +29,7 @@ mx_status_t WAVSink::SetFormat(const AudioStream::Format& format) {
     // TODO(johngro): deal with endianness.  Right now, we just assume that we
     // are on a little endian system and demand that the samples given to us be
     // in host-endian (aka, little).
-    if (inv_endian) return MX_ERR_NOT_SUPPORTED;
+    if (inv_endian) return ZX_ERR_NOT_SUPPORTED;
 
     wav_hdr.wave_four_cc = WAVE_FOUR_CC;
     wav_hdr.fmt_four_cc = FMT_FOUR_CC;
@@ -43,7 +43,7 @@ mx_status_t WAVSink::SetFormat(const AudioStream::Format& format) {
     //
     // Only 8 bit formats are unsigned.
     if ((noflag_format == AUDIO_SAMPLE_FORMAT_8BIT) != unsigned_fmt)
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 
     wav_hdr.format = FORMAT_LPCM;
 
@@ -62,14 +62,14 @@ mx_status_t WAVSink::SetFormat(const AudioStream::Format& format) {
 
     case AUDIO_SAMPLE_FORMAT_20BIT_PACKED:
     default:
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     wav_hdr.frame_size = static_cast<uint16_t>((wav_hdr.bits_per_sample >> 3u) *
                                                 wav_hdr.channel_count);
     wav_hdr.average_byte_rate = static_cast<uint32_t>(wav_hdr.frame_size) * wav_hdr.frame_rate;
 
-    mx_status_t res;
+    zx_status_t res;
     RIFFChunkHeader riff_chunk;
 
     // Note: we don't know the length of our RIFF chunk or our DATA chunk yet;
@@ -79,14 +79,14 @@ mx_status_t WAVSink::SetFormat(const AudioStream::Format& format) {
     riff_chunk.length  = sizeof(RIFFChunkHeader) + sizeof(WAVHeader);
     riff_chunk.FixupEndian();
     res = Write(&riff_chunk, sizeof(riff_chunk));
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
         printf("Failed to write top level RIFF header (res = %d)\n", res);
         return res;
     }
 
     wav_hdr.FixupEndian();
     res = Write(&wav_hdr, sizeof(wav_hdr));
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
         printf("Failed to write WAVE header (res = %d)\n", res);
         return res;
     }
@@ -95,24 +95,24 @@ mx_status_t WAVSink::SetFormat(const AudioStream::Format& format) {
     riff_chunk.length  = 0;
     riff_chunk.FixupEndian();
     res = Write(&riff_chunk, sizeof(riff_chunk));
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
         printf("Failed to write DATA header (res = %d)\n", res);
         return res;
     }
 
     format_set_ = true;
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t WAVSink::PutFrames(const void* buffer, uint32_t amt) {
-    MX_DEBUG_ASSERT(buffer != nullptr);
+zx_status_t WAVSink::PutFrames(const void* buffer, uint32_t amt) {
+    ZX_DEBUG_ASSERT(buffer != nullptr);
 
     if ((fd_ < 0) || !format_set_) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
-    mx_status_t res = Write(buffer, amt);
-    if (res != MX_OK) {
+    zx_status_t res = Write(buffer, amt);
+    if (res != ZX_OK) {
         printf("Error writing %u bytes to WAV output (res %d)\n", amt, res);
         return res;
     }
@@ -121,9 +121,9 @@ mx_status_t WAVSink::PutFrames(const void* buffer, uint32_t amt) {
     return res;
 }
 
-mx_status_t WAVSink::Finalize() {
+zx_status_t WAVSink::Finalize() {
     if ((fd_ < 0) || !format_set_) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     constexpr size_t riff_overhead = sizeof(RIFFChunkHeader) + sizeof(WAVHeader);
@@ -132,7 +132,7 @@ mx_status_t WAVSink::Finalize() {
     auto data_size = fbl::min<uint64_t>(fbl::numeric_limits<uint32_t>::max(),
                                          bytes_written_);
 
-    mx_status_t res;
+    zx_status_t res;
     RIFFChunkHeader riff_chunk;
 
     res = Seek(0);
@@ -169,5 +169,5 @@ mx_status_t WAVSink::Finalize() {
     format_set_ = false;
     bytes_written_ = 0;
 
-    return MX_OK;
+    return ZX_OK;
 }

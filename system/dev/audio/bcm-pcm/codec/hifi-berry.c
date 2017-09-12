@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include <fcntl.h>
-#include <magenta/device/i2c.h>
-#include <magenta/syscalls.h>
+#include <zircon/device/i2c.h>
+#include <zircon/syscalls.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -31,27 +31,27 @@ typedef struct {
 
 static hifiberry_t* hfb = NULL;
 
-static mx_status_t hifiberry_LED_ctl(bool state) {
+static zx_status_t hifiberry_LED_ctl(bool state) {
 
     if (!hfb)
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     if (hfb->i2c_fd < 0)
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     if (hfb->state == HIFIBERRY_STATE_SHUTDOWN)
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     // Not using any other GPIO pins, so don't worry about state of other
     //  pins.
     pcm5122_write_reg(hfb->i2c_fd, PCM5122_REG_GPIO_CONTROL,
                      (state) ? (PCM5122_GPIO_HIGH << PCM5122_GPIO4) :
                                (PCM5122_GPIO_LOW  << PCM5122_GPIO4));
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t hifiberry_release(void) {
+zx_status_t hifiberry_release(void) {
 
     if (!hfb)
-        return MX_OK;
+        return ZX_OK;
     hifiberry_LED_ctl(false);
 
     if (hfb->i2c_fd >= 0) {
@@ -61,33 +61,33 @@ mx_status_t hifiberry_release(void) {
     free(hfb);
     hfb = NULL;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t hifiberry_start(void) {
+zx_status_t hifiberry_start(void) {
     return hifiberry_LED_ctl(true);
 }
 
-mx_status_t hifiberry_stop(void) {
+zx_status_t hifiberry_stop(void) {
     return hifiberry_LED_ctl(false);
 }
 
-mx_status_t hifiberry_init(void) {
+zx_status_t hifiberry_init(void) {
 
     // Check to see if already initialized
     if ((hfb) && (hfb->state != HIFIBERRY_STATE_SHUTDOWN))
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
     if (hfb == NULL) {
         hfb = calloc(1, sizeof(hifiberry_t));
         if (!hfb)
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
     }
 
     hfb->i2c_fd = open(DEVNAME, O_RDWR);
     if (hfb->i2c_fd < 0) {
         printf("HIFIBERRY: Control channel not found\n");
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
     }
 
     i2c_ioctl_add_slave_args_t add_slave_args = {
@@ -97,7 +97,7 @@ mx_status_t hifiberry_init(void) {
 
     ssize_t ret = ioctl_i2c_bus_add_slave(hfb->i2c_fd, &add_slave_args);
     if (ret < 0) {
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
     // configure LED GPIO
     pcm5122_write_reg(hfb->i2c_fd, PCM5122_REG_GPIO_ENABLE,
@@ -138,7 +138,7 @@ mx_status_t hifiberry_init(void) {
 
     hfb->state |= HIFIBERRY_STATE_INITIALIZED;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 bool hifiberry_is_valid_mode(audio_stream_cmd_set_format_req_t req) {

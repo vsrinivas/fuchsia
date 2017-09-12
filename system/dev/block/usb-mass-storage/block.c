@@ -11,11 +11,11 @@ static void ums_block_queue(void* ctx, iotxn_t* txn) {
     ums_block_t* dev = ctx;
 
     if (txn->offset % dev->block_size) {
-        iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
         return;
     }
     if (txn->length % dev->block_size) {
-        iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
         return;
     }
     txn->context = dev;
@@ -35,7 +35,7 @@ static void ums_get_info(void* ctx, block_info_t* info) {
     info->flags = dev->flags;
 }
 
-static mx_status_t ums_block_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen,
+static zx_status_t ums_block_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen,
                                    void* reply, size_t max, size_t* out_actual) {
     ums_block_t* dev = ctx;
 
@@ -44,10 +44,10 @@ static mx_status_t ums_block_ioctl(void* ctx, uint32_t op, const void* cmd, size
     case IOCTL_BLOCK_GET_INFO: {
         block_info_t* info = reply;
         if (max < sizeof(*info))
-            return MX_ERR_BUFFER_TOO_SMALL;
+            return ZX_ERR_BUFFER_TOO_SMALL;
         ums_get_info(dev, info);
         *out_actual = sizeof(*info);
-        return MX_OK;
+        return ZX_OK;
     }
     case IOCTL_BLOCK_RR_PART: {
         // rebind to reread the partition table
@@ -64,7 +64,7 @@ static mx_status_t ums_block_ioctl(void* ctx, uint32_t op, const void* cmd, size
         }
         if (!txn) {
             mtx_unlock(&ums->iotxn_lock);
-            return MX_OK;
+            return ZX_OK;
         }
         // queue a stack allocated sync node on ums_t.sync_nodes
         node.iotxn = txn;
@@ -72,19 +72,19 @@ static mx_status_t ums_block_ioctl(void* ctx, uint32_t op, const void* cmd, size
         list_add_head(&ums->sync_nodes, &node.node);
         mtx_unlock(&ums->iotxn_lock);
 
-        return completion_wait(&node.completion, MX_TIME_INFINITE);
+        return completion_wait(&node.completion, ZX_TIME_INFINITE);
     }
     default:
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
-static mx_off_t ums_block_get_size(void* ctx) {
+static zx_off_t ums_block_get_size(void* ctx) {
     ums_block_t* dev = ctx;
     return dev->block_size * dev->total_blocks;
 }
 
-static mx_protocol_device_t ums_block_proto = {
+static zx_protocol_device_t ums_block_proto = {
     .version = DEVICE_OPS_VERSION,
     .iotxn_queue = ums_block_queue,
     .ioctl = ums_block_ioctl,
@@ -102,13 +102,13 @@ static void ums_async_complete(iotxn_t* txn, void* cookie) {
     iotxn_release(txn);
 }
 
-static void ums_async_read(void* ctx, mx_handle_t vmo, uint64_t length,
+static void ums_async_read(void* ctx, zx_handle_t vmo, uint64_t length,
                            uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     ums_block_t* dev = ctx;
 
     iotxn_t* txn;
-    mx_status_t status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length);
-    if (status != MX_OK) {
+    zx_status_t status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length);
+    if (status != ZX_OK) {
         dev->cb->complete(cookie, status);
         return;
     }
@@ -120,13 +120,13 @@ static void ums_async_read(void* ctx, mx_handle_t vmo, uint64_t length,
     iotxn_queue(dev->mxdev, txn);
 }
 
-static void ums_async_write(void* ctx, mx_handle_t vmo, uint64_t length,
+static void ums_async_write(void* ctx, zx_handle_t vmo, uint64_t length,
                             uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     ums_block_t* dev = ctx;
 
     iotxn_t* txn;
-    mx_status_t status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length);
-    if (status != MX_OK) {
+    zx_status_t status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length);
+    if (status != ZX_OK) {
         dev->cb->complete(cookie, status);
         return;
     }
@@ -145,7 +145,7 @@ static block_protocol_ops_t ums_block_ops = {
     .write = ums_async_write,
 };
 
-mx_status_t ums_block_add_device(ums_t* ums, ums_block_t* dev) {
+zx_status_t ums_block_add_device(ums_t* ums, ums_block_t* dev) {
     dev->cb = NULL;
 
     char name[16];
@@ -156,7 +156,7 @@ mx_status_t ums_block_add_device(ums_t* ums, ums_block_t* dev) {
         .name = name,
         .ctx = dev,
         .ops = &ums_block_proto,
-        .proto_id = MX_PROTOCOL_BLOCK_CORE,
+        .proto_id = ZX_PROTOCOL_BLOCK_CORE,
         .proto_ops = &ums_block_ops,
     };
 

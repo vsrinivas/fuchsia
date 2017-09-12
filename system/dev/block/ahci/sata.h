@@ -33,7 +33,7 @@
 #define SATA_DEVINFO_MODEL_ID_LEN 40
 
 typedef struct sata_pdata {
-    mx_time_t timeout; // for ahci driver watchdog
+    zx_time_t timeout; // for ahci driver watchdog
     uint64_t lba;   // in blocks
     uint16_t count; // in blocks
     uint8_t cmd;
@@ -44,4 +44,4 @@ typedef struct sata_pdata {
 
 #define sata_iotxn_pdata(txn) iotxn_pdata(txn, sata_pdata_t)
 
-mx_status_t sata_bind(mx_device_t* dev, int port);
+zx_status_t sata_bind(zx_device_t* dev, int port);

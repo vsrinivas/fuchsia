@@ -12,11 +12,11 @@
 #include <unistd.h>
 
 #include <fs/mapped-vmo.h>
-#include <magenta/device/block.h>
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
-#include <mxio/debug.h>
-#include <mxio/watcher.h>
+#include <zircon/device/block.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
+#include <fdio/debug.h>
+#include <fdio/watcher.h>
 #include <fbl/unique_ptr.h>
 
 #include "fvm/fvm.h"
@@ -39,7 +39,7 @@ bool generation_ge(uint64_t g1, uint64_t g2) {
 // Validate the metadata's hash value.
 // Returns 'true' if it matches, 'false' otherwise.
 bool fvm_check_hash(const void* metadata, size_t metadata_size) {
-    MX_DEBUG_ASSERT(metadata_size >= sizeof(fvm::fvm_t));
+    ZX_DEBUG_ASSERT(metadata_size >= sizeof(fvm::fvm_t));
     const fvm::fvm_t* header = static_cast<const fvm::fvm_t*>(metadata);
     const void* metadata_after_hash =
         reinterpret_cast<const void*>(header->hash + sizeof(header->hash));
@@ -84,7 +84,7 @@ void fvm_update_hash(void* metadata, size_t metadata_size) {
     memcpy(header->hash, hash, sizeof(header->hash));
 }
 
-mx_status_t fvm_validate_header(const void* metadata, const void* backup,
+zx_status_t fvm_validate_header(const void* metadata, const void* backup,
                                 size_t metadata_size, const void** out) {
     const fvm::fvm_t* primary_header = static_cast<const fvm::fvm_t*>(metadata);
     const fvm::fvm_t* backup_header = static_cast<const fvm::fvm_t*>(backup);
@@ -97,7 +97,7 @@ mx_status_t fvm_validate_header(const void* metadata, const void* backup,
     bool use_primary;
     if (!primary_valid && !backup_valid) {
         fprintf(stderr, "fvm: Neither copy of metadata is valid\n");
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     } else if (primary_valid && !backup_valid) {
         use_primary = true;
     } else if (!primary_valid && backup_valid) {
@@ -109,11 +109,11 @@ mx_status_t fvm_validate_header(const void* metadata, const void* backup,
     const fvm::fvm_t* header = use_primary ? primary_header : backup_header;
     if (header->magic != FVM_MAGIC) {
         fprintf(stderr, "fvm: Bad magic\n");
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     if (header->version > FVM_VERSION) {
         fprintf(stderr, "fvm: Header Version does not match fvm driver\n");
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     // TODO(smklein): Additional validation....
@@ -121,12 +121,12 @@ mx_status_t fvm_validate_header(const void* metadata, const void* backup,
     if (out) {
         *out = use_primary ? metadata : backup;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t fvm_init(int fd, size_t slice_size) {
+zx_status_t fvm_init(int fd, size_t slice_size) {
     if (slice_size % FVM_BLOCK_SIZE != 0) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     // The metadata layout of the FVM is dependent on the
@@ -134,19 +134,19 @@ mx_status_t fvm_init(int fd, size_t slice_size) {
     block_info_t block_info;
     ssize_t rc = ioctl_block_get_info(fd, &block_info);
     if (rc < 0) {
-        return static_cast<mx_status_t>(rc);
+        return static_cast<zx_status_t>(rc);
     } else if (rc != sizeof(block_info)) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     } else if (slice_size == 0 || slice_size % block_info.block_size) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     size_t disk_size = block_info.block_count * block_info.block_size;
     size_t metadata_size = fvm::MetadataSize(disk_size, slice_size);
 
     fbl::unique_ptr<MappedVmo> mvmo;
-    mx_status_t status = MappedVmo::Create(metadata_size * 2, "fvm-meta", &mvmo);
-    if (status != MX_OK) {
+    zx_status_t status = MappedVmo::Create(metadata_size * 2, "fvm-meta", &mvmo);
+    if (status != ZX_OK) {
         return status;
     }
 
@@ -165,7 +165,7 @@ mx_status_t fvm_init(int fd, size_t slice_size) {
     sb->generation = 0;
 
     if (sb->pslice_count == 0) {
-        return MX_ERR_NO_SPACE;
+        return ZX_ERR_NO_SPACE;
     }
 
     fvm_update_hash(mvmo->GetData(), metadata_size);
@@ -173,21 +173,21 @@ mx_status_t fvm_init(int fd, size_t slice_size) {
     const void* backup = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(mvmo->GetData()) +
                                                  metadata_size);
     status = fvm_validate_header(mvmo->GetData(), backup, metadata_size, nullptr);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
 
     if (lseek(fd, 0, SEEK_SET) < 0) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     // Write to primary copy.
     if (write(fd, mvmo->GetData(), metadata_size) != static_cast<ssize_t>(metadata_size)) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     // Write to secondary copy, to overwrite any previous FVM metadata copy that
     // could be here.
     if (write(fd, mvmo->GetData(), metadata_size) != static_cast<ssize_t>(metadata_size)) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     xprintf("fvm_init: Success\n");
@@ -202,13 +202,13 @@ mx_status_t fvm_init(int fd, size_t slice_size) {
            fvm::SlicesStart(disk_size, slice_size),
            fvm::UsableSlicesCount(disk_size, slice_size));
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 // Helper function to allocate, find, and open VPartition.
 int fvm_allocate_partition(int fvm_fd, const alloc_req_t* request) {
     ssize_t r;
-    if ((r = ioctl_block_fvm_alloc(fvm_fd, request)) != MX_OK) {
+    if ((r = ioctl_block_fvm_alloc(fvm_fd, request)) != ZX_OK) {
         return -1;
     }
 
@@ -222,19 +222,19 @@ int fvm_allocate_partition(int fvm_fd, const alloc_req_t* request) {
 
     auto cb = [](int dirfd, int event, const char* fn, void* cookie) {
         if (event != WATCH_EVENT_ADD_FILE) {
-            return MX_OK;
+            return ZX_OK;
         }
         auto info = static_cast<alloc_helper_info_t*>(cookie);
         int devfd = openat(dirfd, fn, O_RDWR);
         if (devfd < 0) {
-            return MX_OK;
+            return ZX_OK;
         }
         if (is_partition(devfd, info->request->guid, info->request->type)) {
             info->out_partition = devfd;
-            return MX_ERR_STOP;
+            return ZX_ERR_STOP;
         }
         close(devfd);
-        return MX_OK;
+        return ZX_OK;
     };
 
     DIR* dir = opendir(kBlockDevPath);
@@ -242,8 +242,8 @@ int fvm_allocate_partition(int fvm_fd, const alloc_req_t* request) {
         return -1;
     }
 
-    mx_time_t deadline = mx_deadline_after(MX_SEC(2));
-    if (mxio_watch_directory(dirfd(dir), cb, deadline, &info) != MX_ERR_STOP) {
+    zx_time_t deadline = zx_deadline_after(ZX_SEC(2));
+    if (fdio_watch_directory(dirfd(dir), cb, deadline, &info) != ZX_ERR_STOP) {
         return -1;
     }
     closedir(dir);

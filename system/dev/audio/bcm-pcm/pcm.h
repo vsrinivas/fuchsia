@@ -8,7 +8,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 typedef volatile struct {
 

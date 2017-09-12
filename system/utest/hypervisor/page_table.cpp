@@ -60,7 +60,7 @@ static bool page_table_1gb(void) {
     page_table actual[4] = INITIALIZE_PAGE_TABLE;
     page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 1 << 30, &pte_off), MX_OK);
+    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 1 << 30, &pte_off), ZX_OK);
 
     // pml4
     expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
@@ -79,7 +79,7 @@ static bool page_table_2mb(void) {
     page_table actual[4] = INITIALIZE_PAGE_TABLE;
     page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 2 << 20, &pte_off), MX_OK);
+    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 2 << 20, &pte_off), ZX_OK);
 
     // pml4
     expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
@@ -100,7 +100,7 @@ static bool page_table_4kb(void) {
     page_table actual[4] = INITIALIZE_PAGE_TABLE;
     page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 4 * 4 << 10, &pte_off), MX_OK);
+    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 4 * 4 << 10, &pte_off), ZX_OK);
 
     // pml4
     expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
@@ -126,7 +126,7 @@ static bool page_table_mixed_pages(void) {
     page_table actual[4] = INITIALIZE_PAGE_TABLE;
     page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, (2 << 20) + (4 << 10), &pte_off), MX_OK);
+    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, (2 << 20) + (4 << 10), &pte_off), ZX_OK);
 
     // pml4
     expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
@@ -168,7 +168,7 @@ static bool page_table_complex(void) {
     //
     // PT
     // >  264 mapped pages
-    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 0x87B08000, &pte_off), MX_OK);
+    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 0x87B08000, &pte_off), ZX_OK);
 
     // pml4
     expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;

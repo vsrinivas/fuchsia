@@ -50,9 +50,9 @@ endif
 LOCAL_CFLAGS += -ffreestanding
 
 LOCAL_SRCS := \
-    $(LOCAL_DIR)/magenta/get_startup_handle.c \
-    $(LOCAL_DIR)/magenta/internal.c \
-    $(LOCAL_DIR)/magenta/thrd_get_mx_handle.c \
+    $(LOCAL_DIR)/zircon/get_startup_handle.c \
+    $(LOCAL_DIR)/zircon/internal.c \
+    $(LOCAL_DIR)/zircon/thrd_get_zx_handle.c \
     $(LOCAL_DIR)/pthread/allocate.c \
     $(LOCAL_DIR)/pthread/pthread_atfork.c \
     $(LOCAL_DIR)/pthread/pthread_attr_destroy.c \
@@ -1098,7 +1098,7 @@ MODULE_COMPILEFLAGS := $(LOCAL_COMPILEFLAGS)
 MODULE_CFLAGS := $(LOCAL_CFLAGS)
 MODULE_SRCS := $(LOCAL_SRCS)
 
-MODULE_LIBS := system/ulib/magenta
+MODULE_LIBS := system/ulib/zircon
 MODULE_STATIC_LIBS := system/ulib/runtime
 
 # At link time and in DT_SONAME, musl is known as libc.so.  But the

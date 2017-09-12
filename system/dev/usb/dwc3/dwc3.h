@@ -8,9 +8,9 @@
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/usb-dci.h>
-#include <magenta/listnode.h>
-#include <magenta/types.h>
-#include <magenta/hw/usb.h>
+#include <zircon/listnode.h>
+#include <zircon/types.h>
+#include <zircon/hw/usb.h>
 
 #include <threads.h>
 
@@ -73,13 +73,13 @@ typedef struct {
 } dwc3_endpoint_t;
 
 typedef struct {
-    mx_device_t* mxdev;
+    zx_device_t* mxdev;
     usb_dci_interface_t dci_intf;
     pdev_mmio_buffer_t mmio;
 
     // event stuff
     io_buffer_t event_buffer;
-    mx_handle_t irq_handle;
+    zx_handle_t irq_handle;
     thrd_t irq_thread;
 
     dwc3_endpoint_t eps[DWC3_MAX_EPS];
@@ -115,30 +115,30 @@ void dwc3_cmd_start_new_config(dwc3_t* dwc, unsigned ep_num, unsigned resource_i
 void dwc3_cmd_ep_set_config(dwc3_t* dwc, unsigned ep_num, unsigned ep_type,
                             unsigned max_packet_size, unsigned interval, bool modify);
 void dwc3_cmd_ep_transfer_config(dwc3_t* dwc, unsigned ep_num);
-void dwc3_cmd_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, mx_paddr_t trb_phys);
+void dwc3_cmd_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, zx_paddr_t trb_phys);
 void dwc3_cmd_ep_end_transfer(dwc3_t* dwc, unsigned ep_num);
 void dwc3_cmd_ep_set_stall(dwc3_t* dwc, unsigned ep_num);
 void dwc3_cmd_ep_clear_stall(dwc3_t* dwc, unsigned ep_num);
 
 // Endpoints
-mx_status_t dwc3_ep_fifo_init(dwc3_t* dwc, unsigned ep_num);
+zx_status_t dwc3_ep_fifo_init(dwc3_t* dwc, unsigned ep_num);
 void dwc3_ep_fifo_release(dwc3_t* dwc, unsigned ep_num);
-mx_status_t dwc3_ep_config(dwc3_t* dwc, usb_endpoint_descriptor_t* ep_desc,
+zx_status_t dwc3_ep_config(dwc3_t* dwc, usb_endpoint_descriptor_t* ep_desc,
                                   usb_ss_ep_comp_descriptor_t* ss_comp_desc);
 void dwc3_ep_set_config(dwc3_t* dwc, unsigned ep_num, bool enable);
-mx_status_t dwc3_ep_disable(dwc3_t* dwc, uint8_t ep_addr);
+zx_status_t dwc3_ep_disable(dwc3_t* dwc, uint8_t ep_addr);
 void dwc3_start_eps(dwc3_t* dwc);
 void dwc3_ep_queue(dwc3_t* dwc, unsigned ep_num, iotxn_t* txn);
-void dwc3_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, unsigned type, mx_paddr_t buffer,
+void dwc3_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, unsigned type, zx_paddr_t buffer,
                             size_t length);
 void dwc3_ep_xfer_started(dwc3_t* dwc, unsigned ep_num, unsigned rsrc_id);
 void dwc3_ep_xfer_complete(dwc3_t* dwc, unsigned ep_num);
 void dwc3_ep_xfer_not_ready(dwc3_t* dwc, unsigned ep_num, unsigned stage);
-mx_status_t dwc3_ep_set_stall(dwc3_t* dwc, unsigned ep_num, bool stall);
-void dwc3_ep_end_transfers(dwc3_t* dwc, unsigned ep_num, mx_status_t reason);
+zx_status_t dwc3_ep_set_stall(dwc3_t* dwc, unsigned ep_num, bool stall);
+void dwc3_ep_end_transfers(dwc3_t* dwc, unsigned ep_num, zx_status_t reason);
 
 // Endpoint 0
-mx_status_t dwc3_ep0_init(dwc3_t* dwc);
+zx_status_t dwc3_ep0_init(dwc3_t* dwc);
 void dwc3_ep0_reset(dwc3_t* dwc);
 void dwc3_ep0_start(dwc3_t* dwc);
 void dwc3_ep0_xfer_not_ready(dwc3_t* dwc, unsigned ep_num, unsigned stage);

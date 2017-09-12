@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
-mx_status_t setup_linux(const uintptr_t addr, const size_t size, const uintptr_t first_page,
+zx_status_t setup_linux(const uintptr_t addr, const size_t size, const uintptr_t first_page,
                         const int fd, const char* initrd_path, const char* cmdline,
                         uintptr_t* guest_ip, uintptr_t* zero_page);

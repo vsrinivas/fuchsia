@@ -7,8 +7,8 @@
 #pragma once
 
 #include <lib/user_copy/user_ptr.h>
-#include <magenta/syscalls/object.h>
-#include <magenta/types.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/types.h>
 #include <fbl/ref_ptr.h>
 
 class ProcessDispatcher;
@@ -20,8 +20,8 @@ class VmAspace;
 // been written is returned via |available|.
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-mx_status_t GetVmAspaceMaps(fbl::RefPtr<VmAspace> aspace,
-                            user_ptr<mx_info_maps_t> maps, size_t max,
+zx_status_t GetVmAspaceMaps(fbl::RefPtr<VmAspace> aspace,
+                            user_ptr<zx_info_maps_t> maps, size_t max,
                             size_t* actual, size_t* available);
 
 // Walks the VmAspace and writes entries that describe its mapped VMOs into
@@ -30,8 +30,8 @@ mx_status_t GetVmAspaceMaps(fbl::RefPtr<VmAspace> aspace,
 // have been written is returned via |available|.
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-mx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> aspace,
-                            user_ptr<mx_info_vmo_t> vmos, size_t max,
+zx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> aspace,
+                            user_ptr<zx_info_vmo_t> vmos, size_t max,
                             size_t* actual, size_t* available);
 
 // For every VMO in the process's handle table, writes an entry into |vmos|,
@@ -40,8 +40,8 @@ mx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> aspace,
 // been written is returned via |available|.
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-mx_status_t GetProcessVmosViaHandles(ProcessDispatcher* process,
-                                     user_ptr<mx_info_vmo_t> vmos, size_t max,
+zx_status_t GetProcessVmosViaHandles(ProcessDispatcher* process,
+                                     user_ptr<zx_info_vmo_t> vmos, size_t max,
                                      size_t* actual, size_t* available);
 
 // Prints (with the supplied prefix) the number of mapped, committed bytes for

@@ -15,9 +15,9 @@
 
 #include <stddef.h>
 #include <threads.h>
-#include <magenta/types.h>
-#include <magenta/compiler.h>
-#include <magenta/syscalls/object.h>
+#include <zircon/types.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls/object.h>
 #include <launchpad/launchpad.h>
 
 __BEGIN_CDECLS
@@ -37,111 +37,111 @@ char* tu_asprintf(const char* fmt, ...);
 // |what| is typically the name of the function that had the syscall failure,
 // but it can include more descriptive text as desired.
 
-void tu_fatal(const char *what, mx_status_t status);
+void tu_fatal(const char *what, zx_status_t status);
 
-// A wrapper on mx_handle_close.
+// A wrapper on zx_handle_close.
 
-void tu_handle_close(mx_handle_t handle);
+void tu_handle_close(zx_handle_t handle);
 
 // A wrapper on launchpad_launch.
 
-mx_handle_t tu_launch(mx_handle_t job, const char* name,
+zx_handle_t tu_launch(zx_handle_t job, const char* name,
                       int argc, const char* const* argv,
                       const char* const* envp,
-                      size_t num_handles, mx_handle_t* handles,
+                      size_t num_handles, zx_handle_t* handles,
                       uint32_t* handle_ids);
 
-// The first part of launchpad_launch_mxio_etc that creates the
+// The first part of launchpad_launch_fdio_etc that creates the
 // launchpad and initializes the process.
 
-launchpad_t* tu_launch_mxio_init(mx_handle_t job, const char* name,
+launchpad_t* tu_launch_fdio_init(zx_handle_t job, const char* name,
                                  int argc, const char* const* argv,
                                  const char* const* envp,
-                                 size_t num_handles, mx_handle_t* handles,
+                                 size_t num_handles, zx_handle_t* handles,
                                  uint32_t* handle_ids);
 
-// The second part of launchpad_launch_mxio_etc that starts the process.
+// The second part of launchpad_launch_fdio_etc that starts the process.
 // Returns a handle of the started process.
 
-mx_handle_t tu_launch_mxio_fini(launchpad_t* lp);
+zx_handle_t tu_launch_fdio_fini(launchpad_t* lp);
 
 // A wrapper on C11 thrd_create.
 
 void tu_thread_create_c11(thrd_t* thread, thrd_start_t entry, void* arg,
                           const char* name);
 
-// A wrapper on mx_channel_create.
+// A wrapper on zx_channel_create.
 
-void tu_channel_create(mx_handle_t* handle0, mx_handle_t* handle1);
+void tu_channel_create(zx_handle_t* handle0, zx_handle_t* handle1);
 
 
-// A wrapper on mx_channel_write.
+// A wrapper on zx_channel_write.
 
-void tu_channel_write(mx_handle_t handle, uint32_t flags, const void* bytes, uint32_t num_bytes,
-                      const mx_handle_t* handles, uint32_t num_handles);
+void tu_channel_write(zx_handle_t handle, uint32_t flags, const void* bytes, uint32_t num_bytes,
+                      const zx_handle_t* handles, uint32_t num_handles);
 
-// A wrapper on mx_channel_read.
+// A wrapper on zx_channel_read.
 
-void tu_channel_read(mx_handle_t handle, uint32_t flags, void* bytes, uint32_t* num_bytes,
-                     mx_handle_t* handles, uint32_t* num_handles);
+void tu_channel_read(zx_handle_t handle, uint32_t flags, void* bytes, uint32_t* num_bytes,
+                     zx_handle_t* handles, uint32_t* num_handles);
 
 // Wait for |channel| to be readable.
 // Returns true if the channel is readable, and false if the peer has closed its end.
 // The call fails and the process terminates if the call times out within TU_WATCHDOG_DURATION_NANOSECONDS.
-bool tu_channel_wait_readable(mx_handle_t channel);
+bool tu_channel_wait_readable(zx_handle_t channel);
 
-// Wait for |process| to be signaled (MX_PROCESS_TERMINATED).
+// Wait for |process| to be signaled (ZX_PROCESS_TERMINATED).
 // The call fails and the calling process terminates if the call times out within TU_WATCHDOG_DURATION_NANOSECONDS.
 
-void tu_process_wait_signaled(mx_handle_t process);
+void tu_process_wait_signaled(zx_handle_t process);
 
 // Return true if |process| has exited.
 
-bool tu_process_has_exited(mx_handle_t process);
+bool tu_process_has_exited(zx_handle_t process);
 
 // Fetch the return code of |process|.
 
-int tu_process_get_return_code(mx_handle_t process);
+int tu_process_get_return_code(zx_handle_t process);
 
 // Wait for |process| to exit and then fetch its return code.
 
-int tu_process_wait_exit(mx_handle_t process);
+int tu_process_wait_exit(zx_handle_t process);
 
 // Create a child job of |job|.
 
-mx_handle_t tu_job_create(mx_handle_t job);
+zx_handle_t tu_job_create(zx_handle_t job);
 
 // Create an io port.
 
-mx_handle_t tu_io_port_create(void);
+zx_handle_t tu_io_port_create(void);
 
 // Set the system exception port.
 
-void tu_set_system_exception_port(mx_handle_t eport, uint64_t key);
+void tu_set_system_exception_port(zx_handle_t eport, uint64_t key);
 
 // Set the exception port for |handle| which is a process or thread.
 
-void tu_set_exception_port(mx_handle_t handle, mx_handle_t eport, uint64_t key, uint32_t options);
+void tu_set_exception_port(zx_handle_t handle, zx_handle_t eport, uint64_t key, uint32_t options);
 
 // Get basic handle info for |handle|.
 
-void tu_handle_get_basic_info(mx_handle_t handle, mx_info_handle_basic_t* info);
+void tu_handle_get_basic_info(zx_handle_t handle, zx_info_handle_basic_t* info);
 
 // Return the koid of the object of |handle|.
 
-mx_koid_t tu_get_koid(mx_handle_t handle);
+zx_koid_t tu_get_koid(zx_handle_t handle);
 
 // Return the "related" koid of the object of |handle|.
 
-mx_koid_t tu_get_related_koid(mx_handle_t handle);
+zx_koid_t tu_get_related_koid(zx_handle_t handle);
 
 // Return a handle of thread |tid|.
 
-mx_handle_t tu_get_thread(mx_handle_t proc, mx_koid_t tid);
+zx_handle_t tu_get_thread(zx_handle_t proc, zx_koid_t tid);
 
-// Return mx_info_thread_t of |thread|.
+// Return zx_info_thread_t of |thread|.
 
-mx_info_thread_t tu_thread_get_info(mx_handle_t thread);
+zx_info_thread_t tu_thread_get_info(zx_handle_t thread);
 
 // Run a program and wait for it to exit.
 // Any error in trying to run the program is fatal.

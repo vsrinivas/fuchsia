@@ -45,7 +45,7 @@ bool VdsoWrapperGenerator::syscall(ofstream& os, const Syscall& sc) {
     os << "}\n\n";
 
     // Now put the wrapper into the public interface.
-    os << "VDSO_INTERFACE_FUNCTION(mx_" << sc.name << ");\n\n";
+    os << "VDSO_INTERFACE_FUNCTION(zx_" << sc.name << ");\n\n";
 
     return os.good();
 }
@@ -72,11 +72,11 @@ bool TestWrapper::applies(const Syscall& sc) const {
 }
 
 void TestWrapper::preCall(ofstream& os, const Syscall& sc) const {
-    os << in << "if (a < 0 || b < 0 || c < 0) return MX_ERR_INVALID_ARGS;\n";
+    os << in << "if (a < 0 || b < 0 || c < 0) return ZX_ERR_INVALID_ARGS;\n";
 }
 
 void TestWrapper::postCall(ofstream& os, const Syscall& sc, string return_var) const {
-    os << in << "if (" << return_var << " > 50) return MX_ERR_OUT_OF_RANGE;\n";
+    os << in << "if (" << return_var << " > 50) return ZX_ERR_OUT_OF_RANGE;\n";
 }
 
 bool BlockingRetryWrapper::applies(const Syscall& sc) const {
@@ -89,5 +89,5 @@ void BlockingRetryWrapper::preCall(ofstream& os, const Syscall& sc) const {
 
 void BlockingRetryWrapper::postCall(
     ofstream& os, const Syscall& sc, string return_var) const {
-    os << in << "} while (unlikely(" << return_var << " == MX_ERR_INTERNAL_INTR_RETRY));\n";
+    os << in << "} while (unlikely(" << return_var << " == ZX_ERR_INTERNAL_INTR_RETRY));\n";
 }

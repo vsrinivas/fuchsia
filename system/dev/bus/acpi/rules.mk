@@ -33,13 +33,13 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/acpisvc-client \
     third_party/ulib/acpica \
-    system/ulib/mxcpp \
+    system/ulib/zxcpp \
 
 MODULE_LIBS := \
     system/ulib/driver \
-    system/ulib/magenta \
+    system/ulib/zircon \
     system/ulib/c \
-    system/ulib/mxio \
+    system/ulib/fdio \
 
 else # !ARCH=x86
 
@@ -50,9 +50,9 @@ MODULE_TYPE := userapp
 MODULE_SRCS += $(LOCAL_DIR)/dummy.c
 
 MODULE_LIBS := \
-    system/ulib/magenta \
+    system/ulib/zircon \
     system/ulib/c \
-    system/ulib/mxio \
+    system/ulib/fdio \
 
 endif # ARCH=x86
 

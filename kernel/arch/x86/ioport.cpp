@@ -102,7 +102,7 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
     DEBUG_ASSERT(!arch_ints_disabled());
 
     if ((port + len < port) || (port + len > IO_BITMAP_BITS))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     fbl::unique_ptr<bitmap::RleBitmap> optimistic_bitmap;
     if (!bitmap_) {
@@ -112,7 +112,7 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
         fbl::AllocChecker ac;
         optimistic_bitmap.reset(new (&ac) bitmap::RleBitmap());
         if (!ac.check()) {
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
         }
     }
 
@@ -125,14 +125,14 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
         fbl::AllocChecker ac;
         bitmap_freelist.push_back(fbl::unique_ptr<bitmap::RleBitmapElement>(new (&ac) bitmap::RleBitmapElement()));
         if (!ac.check()) {
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
         }
     }
 
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, 0);
 
-    status_t status = MX_OK;
+    status_t status = ZX_OK;
     do {
         AutoSpinLock guard(&lock_);
 
@@ -144,7 +144,7 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
         status = enable ?
                 bitmap_->SetNoAlloc(port, port + len, &bitmap_freelist) :
                 bitmap_->ClearNoAlloc(port, port + len, &bitmap_freelist);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             break;
         }
 
@@ -161,7 +161,7 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
     } while (0);
 
     // Let all other CPUs know about the update
-    if (status == MX_OK) {
+    if (status == ZX_OK) {
         struct ioport_update_context task_context = {.io_bitmap = this};
         mp_sync_exec(MP_IPI_TARGET_ALL_BUT_LOCAL, 0, IoBitmap::UpdateTask, &task_context);
     }

@@ -17,8 +17,8 @@ MODULE_NAME := vmar-test
 
 MODULE_LIBS := \
 	system/ulib/c \
-	system/ulib/magenta \
-	system/ulib/mxio \
+	system/ulib/zircon \
+	system/ulib/fdio \
     system/ulib/unittest \
 
 MODULE_STATIC_LIBS := \

@@ -10,17 +10,17 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <mxcpp/new.h>
+#include <zxcpp/new.h>
 #include <object/handle_reaper.h>
 
 // static
-mx_status_t MessagePacket::NewPacket(uint32_t data_size, uint32_t num_handles,
+zx_status_t MessagePacket::NewPacket(uint32_t data_size, uint32_t num_handles,
                                      fbl::unique_ptr<MessagePacket>* msg) {
     // Although the API uses uint32_t, we pack the handle count into a smaller
     // field internally. Make sure it fits.
     static_assert(kMaxMessageHandles <= UINT16_MAX, "");
     if (data_size > kMaxMessageSize || num_handles > kMaxMessageHandles) {
-        return MX_ERR_OUT_OF_RANGE;
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
     // Allocate space for the MessagePacket object followed by num_handles
@@ -32,7 +32,7 @@ mx_status_t MessagePacket::NewPacket(uint32_t data_size, uint32_t num_handles,
                                           num_handles * sizeof(Handle*) +
                                           data_size));
     if (ptr == nullptr) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     // The storage space for the Handle*s is not initialized because
@@ -42,38 +42,38 @@ mx_status_t MessagePacket::NewPacket(uint32_t data_size, uint32_t num_handles,
     msg->reset(new (ptr) MessagePacket(
         data_size, num_handles,
         reinterpret_cast<Handle**>(ptr + sizeof(MessagePacket))));
-    return MX_OK;
+    return ZX_OK;
 }
 
 // static
-mx_status_t MessagePacket::Create(user_ptr<const void> data, uint32_t data_size,
+zx_status_t MessagePacket::Create(user_ptr<const void> data, uint32_t data_size,
                                   uint32_t num_handles,
                                   fbl::unique_ptr<MessagePacket>* msg) {
-    mx_status_t status = NewPacket(data_size, num_handles, msg);
-    if (status != MX_OK) {
+    zx_status_t status = NewPacket(data_size, num_handles, msg);
+    if (status != ZX_OK) {
         return status;
     }
     if (data_size > 0u) {
-        if (data.copy_array_from_user((*msg)->data(), data_size) != MX_OK) {
+        if (data.copy_array_from_user((*msg)->data(), data_size) != ZX_OK) {
             msg->reset();
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 // static
-mx_status_t MessagePacket::Create(const void* data, uint32_t data_size,
+zx_status_t MessagePacket::Create(const void* data, uint32_t data_size,
                                   uint32_t num_handles,
                                   fbl::unique_ptr<MessagePacket>* msg) {
-    mx_status_t status = NewPacket(data_size, num_handles, msg);
-    if (status != MX_OK) {
+    zx_status_t status = NewPacket(data_size, num_handles, msg);
+    if (status != ZX_OK) {
         return status;
     }
     if (data_size > 0u) {
         memcpy((*msg)->data(), data, data_size);
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 MessagePacket::~MessagePacket() {

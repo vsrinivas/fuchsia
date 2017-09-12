@@ -8,7 +8,7 @@
 
 #include <stddef.h>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
@@ -47,7 +47,7 @@ public:
 
     // Sets all bits in the range [*bitoff*, *bitmax*).  Only fails on allocation
     // error or if bitmax < bitoff.
-    mx_status_t Set(size_t bitoff, size_t bitmax) override;
+    zx_status_t Set(size_t bitoff, size_t bitmax) override;
 
     // Sets all bits in the range [*bitoff*, *bitmax*).  Only fails if
     // *bitmax* < *bitoff* or if an allocation is needed and *free_list*
@@ -57,11 +57,11 @@ public:
     // it will be drawn from it.  This function is guaranteed to need at most
     // one allocation.  If any nodes need to be deleted, they will be appended
     // to *free_list*.
-    mx_status_t SetNoAlloc(size_t bitoff, size_t bitmax, FreeList* free_list);
+    zx_status_t SetNoAlloc(size_t bitoff, size_t bitmax, FreeList* free_list);
 
     // Clears all bits in the range [*bitoff*, *bitmax*).  Only fails on allocation
     // error or if bitmax < bitoff.
-    mx_status_t Clear(size_t bitoff, size_t bitmax) override;
+    zx_status_t Clear(size_t bitoff, size_t bitmax) override;
 
     // Clear all bits in the range [*bitoff*, *bitmax*).  Only fails if
     // *bitmax* < *bitoff* or if an allocation is needed and *free_list*
@@ -71,7 +71,7 @@ public:
     // it will be drawn from it.  This function is guaranteed to need at most
     // one allocation.  If any nodes need to be deleted, they will be appended
     // to *free_list*.
-    mx_status_t ClearNoAlloc(size_t bitoff, size_t bitmax, FreeList* free_list);
+    zx_status_t ClearNoAlloc(size_t bitoff, size_t bitmax, FreeList* free_list);
 
     // Clear all bits in the bitmap.
     void ClearAll() override;
@@ -84,8 +84,8 @@ public:
     const_iterator cend() const { return elems_.cend(); }
 
 private:
-    mx_status_t SetInternal(size_t bitoff, size_t bitmax, FreeList* free_list);
-    mx_status_t ClearInternal(size_t bitoff, size_t bitmax, FreeList* free_list);
+    zx_status_t SetInternal(size_t bitoff, size_t bitmax, FreeList* free_list);
+    zx_status_t ClearInternal(size_t bitoff, size_t bitmax, FreeList* free_list);
 
     // The ranges of the bitmap.
     ListType elems_;

@@ -14,7 +14,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <magenta/device/vfs.h>
+#include <zircon/device/vfs.h>
 
 int usage(void) {
     fprintf(stderr, "usage: df [ <option>* ] [paths]\n");

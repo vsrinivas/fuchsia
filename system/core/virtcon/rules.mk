@@ -18,12 +18,12 @@ LOCAL_STATIC_LIBS := \
     system/ulib/gfx \
     system/ulib/hid \
     system/ulib/port \
-    system/ulib/mxcpp \
+    system/ulib/zxcpp \
     system/ulib/fbl \
 
 LOCAL_LIBS := \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/c
 
 

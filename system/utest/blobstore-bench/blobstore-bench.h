@@ -51,7 +51,7 @@ private:
     void print_order();
 
     // reporting
-    inline void sample_end(mx_time_t start, test_name_t name, size_t index);
+    inline void sample_end(zx_time_t start, test_name_t name, size_t index);
     bool report_test(test_name_t name);
 
     // tests
@@ -64,6 +64,6 @@ private:
     size_t blob_count;
     traversal_order_t order;
     size_t* indices;
-    mx_time_t** samples;
+    zx_time_t** samples;
     char** paths;
 };

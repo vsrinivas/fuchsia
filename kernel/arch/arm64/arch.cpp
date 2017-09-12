@@ -18,7 +18,7 @@
 #include <kernel/thread.h>
 #include <lk/init.h>
 #include <lk/main.h>
-#include <magenta/errors.h>
+#include <zircon/errors.h>
 #include <inttypes.h>
 #include <platform.h>
 #include <string.h>
@@ -53,8 +53,8 @@ static_assert(offsetof(arm64_sp_info_t, mpid) == 0,
 
 #define TP_OFFSET(field) \
     ((int)offsetof(arm64_sp_info_t, field) - (int)sizeof(arm64_sp_info_t))
-static_assert(TP_OFFSET(stack_guard) == MX_TLS_STACK_GUARD_OFFSET, "");
-static_assert(TP_OFFSET(unsafe_sp) == MX_TLS_UNSAFE_SP_OFFSET, "");
+static_assert(TP_OFFSET(stack_guard) == ZX_TLS_STACK_GUARD_OFFSET, "");
+static_assert(TP_OFFSET(unsafe_sp) == ZX_TLS_UNSAFE_SP_OFFSET, "");
 #undef TP_OFFSET
 
 /* smp boot lock */
@@ -81,7 +81,7 @@ status_t arm64_set_secondary_sp(uint cluster, uint cpu,
         i++;
     }
     if (i==SMP_MAX_CPUS)
-        return MX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_RESOURCES;
     LTRACEF("set mpid 0x%lx sp to %p\n", mpid, sp);
 #if __has_feature(safe_stack)
     LTRACEF("set mpid 0x%lx unsafe-sp to %p\n", mpid, unsafe_sp);
@@ -93,7 +93,7 @@ status_t arm64_set_secondary_sp(uint cluster, uint cpu,
     arm64_secondary_sp_list[i].stack_guard = get_current_thread()->arch.stack_guard;
     arm64_secondary_sp_list[i].unsafe_sp = unsafe_sp;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static void parse_ccsid(arm64_cache_desc_t* desc, uint64_t ccsid) {

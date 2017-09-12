@@ -11,7 +11,7 @@
 #include <kernel/vm.h>
 #include <lib/user_copy/user_ptr.h>
 #include <list.h>
-#include <magenta/thread_annotations.h>
+#include <zircon/thread_annotations.h>
 #include <fbl/array.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
@@ -35,8 +35,8 @@ class VmObject : public fbl::RefCounted<VmObject>,
                  public fbl::DoublyLinkedListable<VmObject*> {
 public:
     // public API
-    virtual status_t Resize(uint64_t size) { return MX_ERR_NOT_SUPPORTED; }
-    virtual status_t ResizeLocked(uint64_t size) TA_REQ(lock_) { return MX_ERR_NOT_SUPPORTED; }
+    virtual status_t Resize(uint64_t size) { return ZX_ERR_NOT_SUPPORTED; }
+    virtual status_t ResizeLocked(uint64_t size) TA_REQ(lock_) { return ZX_ERR_NOT_SUPPORTED; }
 
     virtual uint64_t size() const { return 0; }
 
@@ -56,24 +56,24 @@ public:
 
     // find physical pages to back the range of the object
     virtual status_t CommitRange(uint64_t offset, uint64_t len, uint64_t* committed) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // find a contiguous run of physical pages to back the range of the object
     virtual status_t CommitRangeContiguous(uint64_t offset, uint64_t len, uint64_t* committed,
                                            uint8_t alignment_log2) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // free a range of the vmo back to the default state
     virtual status_t DecommitRange(uint64_t offset, uint64_t len, uint64_t* decommitted) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Pin the given range of the vmo.  If any pages are not committed, this
-    // returns a MX_ERR_NO_MEMORY.
+    // returns a ZX_ERR_NO_MEMORY.
     virtual status_t Pin(uint64_t offset, uint64_t len) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Unpin the given range of the vmo.  This asserts if it tries to unpin a
@@ -85,31 +85,31 @@ public:
 
     // read/write operators against kernel pointers only
     virtual status_t Read(void* ptr, uint64_t offset, size_t len, size_t* bytes_read) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
     virtual status_t Write(const void* ptr, uint64_t offset, size_t len, size_t* bytes_written) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // execute lookup_fn on a given range of physical addresses within the vmo
     virtual status_t Lookup(uint64_t offset, uint64_t len, uint pf_flags,
                             vmo_lookup_fn_t lookup_fn, void* context) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // read/write operators against user space pointers only
     virtual status_t ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
     virtual status_t WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len,
                                size_t* bytes_written) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // translate a range of the vmo to physical addresses and store in the buffer
     virtual status_t LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
                                 size_t buffer_size) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Returns a null-terminated name, or the empty string if set_name() has not
@@ -121,7 +121,7 @@ public:
     status_t set_name(const char* name, size_t len);
 
     // Returns a user ID associated with this VMO, or zero.
-    // Typically used to hold a magenta koid for Dispatcher-wrapped VMOs.
+    // Typically used to hold a zircon koid for Dispatcher-wrapped VMOs.
     uint64_t user_id() const;
 
     // Returns the parent's user_id() if this VMO has a parent,
@@ -135,31 +135,31 @@ public:
 
     // cache maintainence operations.
     virtual status_t InvalidateCache(const uint64_t offset, const uint64_t len) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
     virtual status_t CleanCache(const uint64_t offset, const uint64_t len) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
     virtual status_t CleanInvalidateCache(const uint64_t offset, const uint64_t len) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
     virtual status_t SyncCache(const uint64_t offset, const uint64_t len) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     virtual status_t GetMappingCachePolicy(uint32_t* cache_policy) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     virtual status_t SetMappingCachePolicy(const uint32_t cache_policy) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // create a copy-on-write clone vmo at the page-aligned offset and length
     // note: it's okay to start or extend past the size of the parent
     virtual status_t CloneCOW(uint64_t offset, uint64_t size, bool copy_name,
                               fbl::RefPtr<VmObject>* clone_vmo) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Returns true if this VMO was created via CloneCOW().
@@ -171,7 +171,7 @@ public:
     // valid flags are VMM_PF_FLAG_*
     virtual status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
                                    vm_page_t** page, paddr_t* pa) TA_REQ(lock_) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     fbl::Mutex* lock() TA_RET_CAP(lock_) { return &lock_; }
@@ -201,11 +201,11 @@ public:
         fbl::AutoLock a(&all_vmos_lock_);
         for (const auto& iter : all_vmos_) {
             status_t s = func(iter);
-            if (s != MX_OK) {
+            if (s != ZX_OK) {
                 return s;
             }
         }
-        return MX_OK;
+        return ZX_OK;
     }
 
 protected:
@@ -258,7 +258,7 @@ protected:
 
     // The user-friendly VMO name. For debug purposes only. That
     // is, there is no mechanism to get access to a VMO via this name.
-    fbl::Name<MX_MAX_NAME_LEN> name_;
+    fbl::Name<ZX_MAX_NAME_LEN> name_;
 
 private:
     // Per-node state for the global VMO list.

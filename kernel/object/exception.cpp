@@ -22,19 +22,19 @@
 
 static const char* excp_type_to_string(uint type) {
     switch (type) {
-    case MX_EXCP_FATAL_PAGE_FAULT:
+    case ZX_EXCP_FATAL_PAGE_FAULT:
         return "fatal page fault";
-    case MX_EXCP_UNDEFINED_INSTRUCTION:
+    case ZX_EXCP_UNDEFINED_INSTRUCTION:
         return "undefined instruction";
-    case MX_EXCP_GENERAL:
+    case ZX_EXCP_GENERAL:
         return "general fault";
-    case MX_EXCP_SW_BREAKPOINT:
+    case ZX_EXCP_SW_BREAKPOINT:
         return "software breakpoint";
-    case MX_EXCP_HW_BREAKPOINT:
+    case ZX_EXCP_HW_BREAKPOINT:
         return "hardware breakpoint";
-    case MX_EXCP_UNALIGNED_ACCESS:
+    case ZX_EXCP_UNALIGNED_ACCESS:
         return "alignment fault";
-    case MX_EXCP_POLICY_ERROR:
+    case ZX_EXCP_POLICY_ERROR:
         return "policy error";
     default:
         return "unknown fault";
@@ -116,9 +116,9 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(ExceptionPortIterator);
 };
 
-static mx_status_t try_exception_handler(fbl::RefPtr<ExceptionPort> eport,
+static zx_status_t try_exception_handler(fbl::RefPtr<ExceptionPort> eport,
                                          ThreadDispatcher* thread,
-                                         const mx_exception_report_t* report,
+                                         const zx_exception_report_t* report,
                                          const arch_exception_context_t* arch_context,
                                          ThreadDispatcher::ExceptionStatus* estatus) {
     LTRACEF("Trying exception port type %d\n", static_cast<int>(eport->type()));
@@ -149,7 +149,7 @@ static handler_status_t exception_handler_worker(uint exception_type,
                                                  bool* out_processed) {
     *out_processed = false;
 
-    mx_exception_report_t report;
+    zx_exception_report_t report;
     ExceptionPort::BuildArchReport(&report, exception_type, context);
 
     ExceptionPortIterator iter(thread);
@@ -162,10 +162,10 @@ static handler_status_t exception_handler_worker(uint exception_type,
         LTRACEF("handler returned %d/%d\n",
                 static_cast<int>(status), static_cast<int>(estatus));
         switch (status) {
-        case MX_ERR_INTERNAL_INTR_KILLED:
-            // thread was killed, probably with mx_task_kill
+        case ZX_ERR_INTERNAL_INTR_KILLED:
+            // thread was killed, probably with zx_task_kill
             return HS_KILLED;
-        case MX_OK:
+        case ZX_OK:
             switch (estatus) {
             case ThreadDispatcher::ExceptionStatus::TRY_NEXT:
                 *out_processed = true;
@@ -190,11 +190,11 @@ static handler_status_t exception_handler_worker(uint exception_type,
 // Dispatches an exception to the appropriate handler. Called by arch code
 // when it cannot handle an exception.
 //
-// If we return MX_OK, the caller is expected to resume the thread "as if"
+// If we return ZX_OK, the caller is expected to resume the thread "as if"
 // nothing happened, the handler is expected to have modified state such that
 // resumption is possible.
 //
-// If we return MX_ERR_BAD_STATE, the current thread is not a user thread
+// If we return ZX_ERR_BAD_STATE, the current thread is not a user thread
 // (i.e., not associated with a ThreadDispatcher).
 //
 // Otherwise, we cause the current thread to exit and do not return at all.
@@ -208,7 +208,7 @@ status_t dispatch_user_exception(uint exception_type,
     ThreadDispatcher* thread = ThreadDispatcher::GetCurrent();
     if (unlikely(!thread)) {
         // The current thread is not a user thread; bail.
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     bool processed;
@@ -216,7 +216,7 @@ status_t dispatch_user_exception(uint exception_type,
                                                         thread, &processed);
     switch (hstatus) {
         case HS_RESUME:
-            return MX_OK;
+            return ZX_OK;
         case HS_KILLED:
             thread->Exit();
             __UNREACHABLE;
@@ -233,9 +233,9 @@ status_t dispatch_user_exception(uint exception_type,
     if (!processed) {
         // only print this if an exception handler wasn't involved
         // in handling the exception
-        char pname[MX_MAX_NAME_LEN];
+        char pname[ZX_MAX_NAME_LEN];
         process->get_name(pname);
-        char tname[MX_MAX_NAME_LEN];
+        char tname[ZX_MAX_NAME_LEN];
         thread->get_name(tname);
         printf("KERN: %s in user thread '%s' in process '%s'\n",
                excp_type_to_string(exception_type), tname, pname);

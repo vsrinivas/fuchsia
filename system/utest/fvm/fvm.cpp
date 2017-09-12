@@ -23,12 +23,12 @@
 #include <fs-management/ramdisk.h>
 #include <fvm/fvm.h>
 #include <gpt/gpt.h>
-#include <magenta/device/block.h>
-#include <magenta/device/device.h>
-#include <magenta/device/ramdisk.h>
-#include <magenta/device/vfs.h>
-#include <magenta/syscalls.h>
-#include <mx/vmo.h>
+#include <zircon/device/block.h>
+#include <zircon/device/device.h>
+#include <zircon/device/ramdisk.h>
+#include <zircon/device/vfs.h>
+#include <zircon/syscalls.h>
+#include <zx/vmo.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/limits.h>
@@ -59,8 +59,8 @@ static int StartFVMTest(uint64_t blk_size, uint64_t blk_count, uint64_t slice_si
         return -1;
     }
 
-    mx_status_t status = fvm_init(fd, slice_size);
-    if (status != MX_OK) {
+    zx_status_t status = fvm_init(fd, slice_size);
+    if (status != ZX_OK) {
         fprintf(stderr, "fvm: Could not initialize fvm\n");
         destroy_ramdisk(ramdisk_path_out);
         close(fd);
@@ -186,7 +186,7 @@ public:
     bool CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len);
     bool Txn(block_fifo_request_t* requests, size_t count) {
         BEGIN_HELPER;
-        ASSERT_EQ(block_fifo_txn(client_, &requests[0], count), MX_OK); END_HELPER;
+        ASSERT_EQ(block_fifo_txn(client_, &requests[0], count), ZX_OK); END_HELPER;
     }
 
     int fd() const { return fd_; }
@@ -210,12 +210,12 @@ public:
         fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[size]);
         ASSERT_TRUE(ac.check());
 
-        mx::vmo vmo;
-        ASSERT_EQ(mx::vmo::create(size, 0, &vmo), MX_OK);
+        zx::vmo vmo;
+        ASSERT_EQ(zx::vmo::create(size, 0, &vmo), ZX_OK);
 
-        mx_handle_t xfer_vmo;
-        ASSERT_EQ(mx_handle_duplicate(vmo.get(), MX_RIGHT_SAME_RIGHTS,
-                                      &xfer_vmo), MX_OK);
+        zx_handle_t xfer_vmo;
+        ASSERT_EQ(zx_handle_duplicate(vmo.get(), ZX_RIGHT_SAME_RIGHTS,
+                                      &xfer_vmo), ZX_OK);
 
         vmoid_t vmoid;
         ASSERT_GT(ioctl_block_attach_vmo(client->fd(), &xfer_vmo, &vmoid), 0);
@@ -242,13 +242,13 @@ public:
 private:
     friend VmoClient;
 
-    VmoBuf(fbl::RefPtr<VmoClient> client, mx::vmo vmo,
+    VmoBuf(fbl::RefPtr<VmoClient> client, zx::vmo vmo,
            fbl::unique_ptr<uint8_t[]> buf, vmoid_t vmoid) :
         client_(fbl::move(client)), vmo_(fbl::move(vmo)),
         buf_(fbl::move(buf)), vmoid_(vmoid) {}
 
     fbl::RefPtr<VmoClient> client_;
-    mx::vmo vmo_;
+    zx::vmo vmo_;
     fbl::unique_ptr<uint8_t[]> buf_;
     vmoid_t vmoid_;
 };
@@ -258,10 +258,10 @@ bool VmoClient::Create(int fd, fbl::RefPtr<VmoClient>* out) {
     fbl::AllocChecker ac;
     fbl::RefPtr<VmoClient> vc = fbl::AdoptRef(new (&ac) VmoClient());
     ASSERT_TRUE(ac.check());
-    mx_handle_t fifo;
+    zx_handle_t fifo;
     ASSERT_GT(ioctl_block_get_fifos(fd, &fifo), 0, "Failed to get FIFO");
     ASSERT_GT(ioctl_block_alloc_txn(fd, &vc->txnid_), 0, "Failed to alloc txn");
-    ASSERT_EQ(block_fifo_create_client(fifo, &vc->client_), MX_OK);
+    ASSERT_EQ(block_fifo_create_client(fifo, &vc->client_), ZX_OK);
     vc->fd_ = fd;
     *out = fbl::move(vc);
     END_HELPER;
@@ -275,7 +275,7 @@ bool VmoClient::CheckWrite(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t 
 
     // Write to the registered VMO
     size_t actual;
-    ASSERT_EQ(vbuf->vmo_.write(&vbuf->buf_[buf_off], buf_off, len, &actual), MX_OK);
+    ASSERT_EQ(vbuf->vmo_.write(&vbuf->buf_[buf_off], buf_off, len, &actual), ZX_OK);
     ASSERT_EQ(len, actual);
 
     // Write to the block device
@@ -311,7 +311,7 @@ bool VmoClient::CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t l
 
     // Read from the registered VMO
     size_t actual;
-    ASSERT_EQ(vbuf->vmo_.read(out.get(), buf_off, len, &actual), MX_OK);
+    ASSERT_EQ(vbuf->vmo_.read(out.get(), buf_off, len, &actual), ZX_OK);
     ASSERT_EQ(len, actual);
 
     ASSERT_EQ(memcmp(&vbuf->buf_[buf_off], out.get(), len), 0);
@@ -423,7 +423,7 @@ static bool TestTooSmall(void) {
     int fd = open(ramdisk_path, O_RDWR);
     ASSERT_GT(fd, 0);
     size_t slice_size = blk_size * blk_count;
-    ASSERT_EQ(fvm_init(fd, slice_size), MX_ERR_NO_SPACE);
+    ASSERT_EQ(fvm_init(fd, slice_size), ZX_ERR_NO_SPACE);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1537,14 +1537,14 @@ static bool TestMounting(void) {
              fvm_driver, kTestPartName1);
     ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_MINFS, launch_stdio_sync,
                    &default_mkfs_options),
-              MX_OK);
+              ZX_OK);
 
     // Mount the VPart
     const char* mount_path = "/tmp/minfs_test_mountpath";
     ASSERT_EQ(mkdir(mount_path, 0666), 0);
     ASSERT_EQ(mount(vp_fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_async),
-              MX_OK);
+              ZX_OK);
 
     // Verify that the mount was successful
     int rootfd = open(mount_path, O_RDONLY | O_DIRECTORY);
@@ -1562,7 +1562,7 @@ static bool TestMounting(void) {
 
     // Clean up
     ASSERT_EQ(close(rootfd), 0);
-    ASSERT_EQ(umount(mount_path), MX_OK);
+    ASSERT_EQ(umount(mount_path), ZX_OK);
     ASSERT_EQ(rmdir(mount_path), 0);
     ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
@@ -1805,7 +1805,7 @@ struct fvm_test_state_t {
 template <size_t ThreadCount>
 int random_access_thread(void* arg) {
     auto st = static_cast<fvm_test_state_t<ThreadCount>*>(arg);
-    unsigned int seed = static_cast<unsigned int>(mx_ticks_get());
+    unsigned int seed = static_cast<unsigned int>(zx_ticks_get());
     unittest_printf("random_access_thread using seed: %u\n", seed);
 
     uint8_t color = 0;

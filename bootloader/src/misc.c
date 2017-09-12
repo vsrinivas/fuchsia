@@ -8,7 +8,7 @@
 #include <string.h>
 #include <xefi.h>
 
-#include <magenta/pixelformat.h>
+#include <zircon/pixelformat.h>
 
 static efi_guid AcpiTableGUID = ACPI_TABLE_GUID;
 static efi_guid Acpi2TableGUID = ACPI_20_TABLE_GUID;
@@ -45,7 +45,7 @@ static void get_bit_range(uint32_t mask, int* high, int* low) {
     *high = idx - 1;
 }
 
-static int get_mx_pixel_format_from_bitmask(efi_pixel_bitmask bitmask) {
+static int get_zx_pixel_format_from_bitmask(efi_pixel_bitmask bitmask) {
     int r_hi = -1, r_lo = -1, g_hi = -1, g_lo = -1, b_hi = -1, b_lo = -1;
 
     get_bit_range(bitmask.RedMask, &r_hi, &r_lo);
@@ -59,42 +59,42 @@ static int get_mx_pixel_format_from_bitmask(efi_pixel_bitmask bitmask) {
     if ((r_hi == 23 && r_lo == 16) &&
         (g_hi == 15 && g_lo == 8) &&
         (b_hi == 7 && b_lo == 0)) {
-        return MX_PIXEL_FORMAT_RGB_x888;
+        return ZX_PIXEL_FORMAT_RGB_x888;
     }
 
     if ((r_hi == 7 && r_lo == 5) &&
         (g_hi == 4 && g_lo == 2) &&
         (b_hi == 1 && b_lo == 0)) {
-        return MX_PIXEL_FORMAT_RGB_332;
+        return ZX_PIXEL_FORMAT_RGB_332;
     }
 
     if ((r_hi == 15 && r_lo == 11) &&
         (g_hi == 10 && g_lo == 5) &&
         (b_hi == 4 && b_lo == 0)) {
-        return MX_PIXEL_FORMAT_RGB_565;
+        return ZX_PIXEL_FORMAT_RGB_565;
     }
 
     if ((r_hi == 7 && r_lo == 6) &&
         (g_hi == 5 && g_lo == 4) &&
         (b_hi == 3 && b_lo == 2)) {
-        return MX_PIXEL_FORMAT_RGB_2220;
+        return ZX_PIXEL_FORMAT_RGB_2220;
     }
 
 unsupported:
     printf("unsupported pixel format bitmask: r %08x / g %08x / b %08x\n",
             bitmask.RedMask, bitmask.GreenMask, bitmask.BlueMask);
-    return MX_PIXEL_FORMAT_NONE;
+    return ZX_PIXEL_FORMAT_NONE;
 }
 
-uint32_t get_mx_pixel_format(efi_graphics_output_protocol* gop) {
+uint32_t get_zx_pixel_format(efi_graphics_output_protocol* gop) {
     efi_graphics_pixel_format efi_fmt = gop->Mode->Info->PixelFormat;
     switch (efi_fmt) {
     case PixelBlueGreenRedReserved8BitPerColor:
-        return MX_PIXEL_FORMAT_RGB_x888;
+        return ZX_PIXEL_FORMAT_RGB_x888;
     case PixelBitMask:
-        return get_mx_pixel_format_from_bitmask(gop->Mode->Info->PixelInformation);
+        return get_zx_pixel_format_from_bitmask(gop->Mode->Info->PixelInformation);
     default:
         printf("unsupported pixel format %d!\n", efi_fmt);
-        return MX_PIXEL_FORMAT_NONE;
+        return ZX_PIXEL_FORMAT_NONE;
     }
 }

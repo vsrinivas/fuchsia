@@ -6,8 +6,8 @@
 
 #include <stddef.h>
 
-#include <magenta/errors.h>
-#include <magenta/types.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
@@ -64,43 +64,43 @@ void RleBitmap::ClearAll() {
     num_elems_ = 0;
 }
 
-mx_status_t RleBitmap::Set(size_t bitoff, size_t bitmax) {
+zx_status_t RleBitmap::Set(size_t bitoff, size_t bitmax) {
     return SetInternal(bitoff, bitmax, nullptr);
 }
 
-mx_status_t RleBitmap::SetNoAlloc(size_t bitoff, size_t bitmax, FreeList* free_list) {
+zx_status_t RleBitmap::SetNoAlloc(size_t bitoff, size_t bitmax, FreeList* free_list) {
     if (free_list == nullptr) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     return SetInternal(bitoff, bitmax, free_list);
 }
 
-mx_status_t RleBitmap::Clear(size_t bitoff, size_t bitmax) {
+zx_status_t RleBitmap::Clear(size_t bitoff, size_t bitmax) {
     return ClearInternal(bitoff, bitmax, nullptr);
 }
 
-mx_status_t RleBitmap::ClearNoAlloc(size_t bitoff, size_t bitmax, FreeList* free_list) {
+zx_status_t RleBitmap::ClearNoAlloc(size_t bitoff, size_t bitmax, FreeList* free_list) {
     if (free_list == nullptr) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     return ClearInternal(bitoff, bitmax, free_list);
 }
 
-mx_status_t RleBitmap::SetInternal(size_t bitoff, size_t bitmax, FreeList* free_list) {
+zx_status_t RleBitmap::SetInternal(size_t bitoff, size_t bitmax, FreeList* free_list) {
     if (bitmax < bitoff) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     const size_t bitlen = bitmax - bitoff;
     if (bitlen == 0) {
-        return MX_OK;
+        return ZX_OK;
     }
 
     fbl::unique_ptr<RleBitmapElement> new_elem = AllocateElement(free_list);
     if (!new_elem) {
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
     ++num_elems_;
     new_elem->bitoff = bitoff;
@@ -116,7 +116,7 @@ mx_status_t RleBitmap::SetInternal(size_t bitoff, size_t bitmax, FreeList* free_
 
     // If ends_after was the end of the list, there is no merging to do.
     if (ends_after == elems_.end()) {
-        return MX_OK;
+        return ZX_OK;
     }
 
     auto itr = ends_after;
@@ -146,16 +146,16 @@ mx_status_t RleBitmap::SetInternal(size_t bitoff, size_t bitmax, FreeList* free_
         --num_elems_;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t RleBitmap::ClearInternal(size_t bitoff, size_t bitmax, FreeList* free_list) {
+zx_status_t RleBitmap::ClearInternal(size_t bitoff, size_t bitmax, FreeList* free_list) {
     if (bitmax < bitoff) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     if (bitmax - bitoff == 0) {
-        return MX_OK;
+        return ZX_OK;
     }
 
     auto itr = elems_.begin();
@@ -177,7 +177,7 @@ mx_status_t RleBitmap::ClearInternal(size_t bitoff, size_t bitmax, FreeList* fre
                 // '*itr' contains [bitoff, bitmax), and we need to split it.
                 fbl::unique_ptr<RleBitmapElement> new_elem = AllocateElement(free_list);
                 if (!new_elem) {
-                    return MX_ERR_NO_MEMORY;
+                    return ZX_ERR_NO_MEMORY;
                 }
                 ++num_elems_;
                 new_elem->bitoff = bitmax;
@@ -201,7 +201,7 @@ mx_status_t RleBitmap::ClearInternal(size_t bitoff, size_t bitmax, FreeList* fre
             }
         }
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 } // namespace bitmap

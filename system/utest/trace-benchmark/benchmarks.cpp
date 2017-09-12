@@ -6,7 +6,7 @@
 
 #include <stdio.h>
 
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 
 #include <trace-engine/instrumentation.h>
 #include <trace/event.h>
@@ -47,7 +47,7 @@ void RunBenchmarks(bool tracing_enabled) {
             trace_string_ref_t category_ref;
             trace_context_t* context = trace_acquire_context_for_category(
                 "-disabled", &category_ref);
-            MX_DEBUG_ASSERT(!context);
+            ZX_DEBUG_ASSERT(!context);
         });
     }
 

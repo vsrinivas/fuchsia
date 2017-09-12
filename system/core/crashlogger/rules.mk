@@ -19,7 +19,7 @@ MODULE_SRCS += \
 MODULE_NAME := crashlogger
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mxcpp \
+    system/ulib/zxcpp \
     system/ulib/fbl \
     system/ulib/pretty \
     system/ulib/runtime
@@ -28,8 +28,8 @@ MODULE_LIBS := \
     third_party/ulib/backtrace \
     third_party/ulib/ngunwind \
     system/ulib/launchpad \
-    system/ulib/mxio \
-    system/ulib/magenta \
+    system/ulib/fdio \
+    system/ulib/zircon \
     system/ulib/c
 
 # Compile this with frame pointers so that if we crash

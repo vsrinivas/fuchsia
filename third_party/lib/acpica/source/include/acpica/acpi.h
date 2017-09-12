@@ -44,7 +44,7 @@
 #ifndef __ACPI_H__
 #define __ACPI_H__
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 

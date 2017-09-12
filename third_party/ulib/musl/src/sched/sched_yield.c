@@ -1,8 +1,8 @@
 #include <sched.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 int sched_yield() {
-    _mx_nanosleep(0ull);
+    _zx_nanosleep(0ull);
     return 0;
 }

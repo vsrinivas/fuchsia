@@ -6,7 +6,7 @@
 #
 # TODO(tkilbourn)
 # This driver is disabled until we can update it to use the new
-# MX_PROTOCOL_HIDBUS protocol, which requires rationalizing all of the device
+# ZX_PROTOCOL_HIDBUS protocol, which requires rationalizing all of the device
 # lifecycle events.
 #
 ################################################################################
@@ -21,7 +21,7 @@
 #
 #MODULE_STATIC_LIBS := system/ulib/ddk
 #
-#MODULE_LIBS := system/ulib/driver system/ulib/magenta system/ulib/c
+#MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 #
 #include make/module.mk
 

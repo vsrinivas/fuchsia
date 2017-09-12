@@ -6,7 +6,7 @@
 #include <audio-utils/audio-input.h>
 #include <audio-utils/audio-output.h>
 #include <audio-proto-utils/format-utils.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <stdio.h>
@@ -146,15 +146,15 @@ void dump_format_range(size_t ndx, const audio_stream_format_range_t& range) {
     }
 }
 
-mx_status_t dump_stream_info(const audio::utils::AudioDeviceStream& stream) {
-    mx_status_t res;
+zx_status_t dump_stream_info(const audio::utils::AudioDeviceStream& stream) {
+    zx_status_t res;
     printf("Info for audio %s at \"%s\"\n",
             stream.input() ? "input" : "output", stream.name());
 
     // Fetch and print the current gain settings for this audio stream.
     audio_stream_cmd_get_gain_resp gain_state;
     res = stream.GetGain(&gain_state);
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
         printf("Failed to fetch gain information! (res %d)\n", res);
         return res;
     }
@@ -176,7 +176,7 @@ mx_status_t dump_stream_info(const audio::utils::AudioDeviceStream& stream) {
     // Fetch and print the current pluged/unplugged state for this audio stream.
     audio_stream_cmd_plug_detect_resp plug_state;
     res = stream.GetPlugState(&plug_state);
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
         printf("Failed to fetch plug state information! (res %d)\n", res);
         return res;
     }
@@ -191,7 +191,7 @@ mx_status_t dump_stream_info(const audio::utils::AudioDeviceStream& stream) {
     // Fetch and print the currently supported audio formats for this audio stream.
     fbl::Vector<audio_stream_format_range_t> fmts;
     res = stream.GetSupportedFormats(&fmts);
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
         printf("Failed to fetch supported formats! (res %d)\n", res);
         return res;
     }
@@ -200,7 +200,7 @@ mx_status_t dump_stream_info(const audio::utils::AudioDeviceStream& stream) {
     for (size_t i = 0; i < fmts.size(); ++i)
         dump_format_range(i, fmts[i]);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 int main(int argc, const char** argv) {
@@ -408,12 +408,12 @@ int main(int argc, const char** argv) {
     else       stream = audio::utils::AudioOutput::Create(dev_id);
     if (stream == nullptr) {
         printf("Out of memory!\n");
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     // No need to log in the case of failure.  Open has already done so.
-    mx_status_t res = stream->Open();
-    if (res != MX_OK)
+    zx_status_t res = stream->Open();
+    if (res != ZX_OK)
         return res;
 
     // Execute the chosen command.
@@ -432,7 +432,7 @@ int main(int argc, const char** argv) {
 
         SineSource sine_source;
         res = sine_source.Init(tone_freq, 1.0, duration, frame_rate, channels, sample_format);
-        if (res != MX_OK) {
+        if (res != ZX_OK) {
             printf("Failed to initialize sine wav generator (res %d)\n", res);
             return res;
         }
@@ -449,7 +449,7 @@ int main(int argc, const char** argv) {
 
         WAVSource wav_source;
         res = wav_source.Initialize(wav_filename);
-        if (res != MX_OK)
+        if (res != ZX_OK)
             return res;
 
         return static_cast<audio::utils::AudioOutput*>(stream.get())->Play(wav_source);
@@ -462,7 +462,7 @@ int main(int argc, const char** argv) {
         }
 
         res = stream->SetFormat(frame_rate, static_cast<uint16_t>(channels), sample_format);
-        if (res != MX_OK) {
+        if (res != ZX_OK) {
             printf("Failed to set format (rate %u, chan %u, fmt 0x%08x, res %d)\n",
                     frame_rate, channels, sample_format, res);
             return -1;
@@ -470,14 +470,14 @@ int main(int argc, const char** argv) {
 
         WAVSink wav_sink;
         res = wav_sink.Initialize(wav_filename);
-        if (res != MX_OK)
+        if (res != ZX_OK)
             return res;
 
         return static_cast<audio::utils::AudioInput*>(stream.get())->Record(wav_sink, duration);
     }
 
     default:
-        MX_DEBUG_ASSERT(false);
+        ZX_DEBUG_ASSERT(false);
         return -1;
     }
 }

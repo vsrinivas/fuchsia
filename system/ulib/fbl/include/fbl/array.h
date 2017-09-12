@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 #include <fbl/macros.h>
 
 namespace fbl {
@@ -74,7 +74,7 @@ public:
     }
 
     T& operator[](size_t i) const {
-        MX_DEBUG_ASSERT(i < count_);
+        ZX_DEBUG_ASSERT(i < count_);
         return ptr_[i];
     }
 
