@@ -2,7 +2,9 @@
 
 git ls-tree -r HEAD | awk -v sedscript="$(dirname $0)/zirconize.sed" '
 {
-  file = $NF
+  $1 = $2 = $3 = ""
+  file = gensub(/^ */, "", 1, $0)
+  file = gensub(/ *$/, "", 1, file)
   if (file ~ /zirconize/) next
   if (file ~ /magenta/ || file ~ /[^a-z0-9]mx[^a-z0-9]/ || file ~ /mxio|mxtl|mxcpp/) {
     new = gensub(/magenta/, "zircon", "g", file)
@@ -21,10 +23,10 @@ END {
     if (new != file) {
       newdir = new
       gsub(/\/[^/]+$/, "", newdir)
-      if (newdir != new) print "mkdir -p", newdir
-      print "git mv", file, new
+      if (newdir != new) print "mkdir -p", "'\''"newdir "'\''"
+      print "git mv", "'\''" file "'\''", "'\''" new "'\''"
     }
-    print "sed -i -f", sedscript, new
+    print "sed -i -f", sedscript, "'\''" new "'\''"
   }
 }' | sh -xe
 
