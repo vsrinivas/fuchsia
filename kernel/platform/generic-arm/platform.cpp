@@ -380,7 +380,7 @@ void platform_halt_cpu(void) {
 #else
 
 void platform_halt_cpu(void) {
-    PANIC_UNIMPLEMENTED;
+    psci_cpu_off();
 }
 
 #endif
