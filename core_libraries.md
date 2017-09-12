@@ -54,14 +54,14 @@ we need (e.g., a featureful logging system) or has a version of what we need
 doesn't meet our requirements (e.g., `std::shared_ptr` is twice as large as
 `fxl::RefPtr`).
 
-# Magenta Template Libary (MTL)
+# FSL
 
-MTL is a Magenta-specific library containing high-level C++ concepts for working
-with the Magenta system calls. For example, MTL provides an `mtl::MessageLoop`
-abstraction on top of Magenta's underlying waiting primitives. MTL also contains
+FSL is a Magenta-specific library containing high-level C++ concepts for working
+with the Magenta system calls. For example, FSL provides an `fsl::MessageLoop`
+abstraction on top of Magenta's underlying waiting primitives. FSL also contains
 helpers for working with Magenta primitives asynchronously that build upon
-`mtl::MessageLoop` (e.g., for draining a socket asynchronously).
+`fsl::MessageLoop` (e.g., for draining a socket asynchronously).
 
-MTL depends on FXL and implements some interfaces defined in FXL, such as
-`fxl::TaskRunner`. MTL also depends on `libfidl` and implements FIDL's
-asynchronous waiter mechanism using `mtl::MessageLoop`.
+FSL depends on FXL and implements some interfaces defined in FXL, such as
+`fxl::TaskRunner`. FSL also depends on `libfidl` and implements FIDL's
+asynchronous waiter mechanism using `fsl::MessageLoop`.
