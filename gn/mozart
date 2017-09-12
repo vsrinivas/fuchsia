@@ -6,7 +6,7 @@
         "dart",
         "fxl",
         "magma",
-        "mtl",
+        "fsl",
         "tracing",
         "zlib"
     ],

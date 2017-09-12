@@ -6,7 +6,7 @@
         "boringssl_libssl",
         "fxl",
         "magentix",
-        "mtl",
+        "fsl",
         "netconnector",
         "netstack",
         "network",

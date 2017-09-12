@@ -6,7 +6,7 @@
         "boringssl_libssl",
         "cobalt_client",
         "fxl",
-        "mtl",
+        "fsl",
         "url"
     ],
     "packages": {

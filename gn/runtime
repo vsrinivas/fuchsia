@@ -4,7 +4,7 @@
     ],
     "imports": [
         "icu",
-        "mtl"
+        "fsl"
     ],
     "labels": [
         "//garnet/bin/appmgr",

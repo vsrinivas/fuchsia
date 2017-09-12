@@ -2,7 +2,7 @@
     "imports": [
         "magma",
         "fxl",
-        "mtl",
+        "fsl",
         "runtime_config"
     ],
     "packages": {

@@ -4,7 +4,7 @@
     ],
     "imports": [
         "fxl",
-        "mtl"
+        "fsl"
     ],
     "labels": [
         "//garnet/bin/listen"

@@ -1,7 +1,7 @@
 {
     "imports": [
         "fxl",
-        "mtl",
+        "fsl",
         "netstack",
         "runtime_config",
         "test_runner"

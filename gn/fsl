@@ -6,6 +6,6 @@
         "fxl"
     ],
     "packages": {
-        "mtl": "//garnet/public/lib/mtl:package"
+        "fsl": "//garnet/public/lib/fsl:package"
     }
 }
