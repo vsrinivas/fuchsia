@@ -25,6 +25,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/handle.cpp \
     $(LOCAL_DIR)/handle_reaper.cpp \
     $(LOCAL_DIR)/interrupt_event_dispatcher.cpp \
+    $(LOCAL_DIR)/iommu_dispatcher.cpp \
     $(LOCAL_DIR)/job_dispatcher.cpp \
     $(LOCAL_DIR)/log_dispatcher.cpp \
     $(LOCAL_DIR)/mbuf.cpp \

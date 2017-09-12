@@ -60,7 +60,7 @@ static void DumpProcessListKeyMap() {
 }
 
 static const char* ObjectTypeToString(zx_obj_type_t type) {
-    static_assert(ZX_OBJ_TYPE_LAST == 23, "need to update switch below");
+    static_assert(ZX_OBJ_TYPE_LAST == 24, "need to update switch below");
 
     switch (type) {
         case ZX_OBJ_TYPE_PROCESS: return "process";
@@ -81,6 +81,7 @@ static const char* ObjectTypeToString(zx_obj_type_t type) {
         case ZX_OBJ_TYPE_GUEST: return "guest";
         case ZX_OBJ_TYPE_VCPU: return "vcpu";
         case ZX_OBJ_TYPE_TIMER: return "timer";
+        case ZX_OBJ_TYPE_IOMMU: return "iommu";
         default: return "???";
     }
 }
