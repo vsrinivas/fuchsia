@@ -20,7 +20,7 @@
 static const uint8_t xhci_language_list[] =
     { 4, /* bLength */ USB_DT_STRING, 0x09, 0x04, /* language ID */ };
 static const uint8_t xhci_manufacturer_string [] = // "Zircon"
-    { 18, /* bLength */ USB_DT_STRING, 'M', 0, 'a', 0, 'g', 0, 'e', 0, 'n', 0, 't', 0, 'a', 0, 0, 0 };
+    { 16, /* bLength */ USB_DT_STRING, 'Z', 0, 'i', 0, 'r', 0, 'c', 0, 'o', 0, 'n', 0, 0, 0 };
 static const uint8_t xhci_product_string_2 [] = // "USB 2.0 Root Hub"
     { 36, /* bLength */ USB_DT_STRING, 'U', 0, 'S', 0, 'B', 0, ' ', 0, '2', 0, '.', 0, '0', 0,' ', 0,
                         'R', 0, 'o', 0, 'o', 0, 't', 0, ' ', 0, 'H', 0, 'u', 0, 'b', 0, 0, 0, };
