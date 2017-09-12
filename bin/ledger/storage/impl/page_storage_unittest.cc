@@ -30,6 +30,9 @@
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
@@ -38,9 +41,6 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/threading/create_thread.h"
 
 namespace storage {
 

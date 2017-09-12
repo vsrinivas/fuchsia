@@ -8,9 +8,9 @@
 #include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/network/network_service.h"
-#include "lib/network/fidl/network_service.fidl.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
+#include "lib/network/fidl/network_service.fidl.h"
 
 namespace ledger {
 

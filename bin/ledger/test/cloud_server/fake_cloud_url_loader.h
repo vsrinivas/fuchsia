@@ -9,8 +9,8 @@
 
 #include "apps/ledger/src/test/cloud_server/firebase_server.h"
 #include "apps/ledger/src/test/cloud_server/gcs_server.h"
-#include "lib/network/fidl/network_service.fidl.h"
 #include "lib/fxl/macros.h"
+#include "lib/network/fidl/network_service.fidl.h"
 
 namespace ledger {
 

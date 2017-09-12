@@ -12,9 +12,9 @@
 #include "apps/ledger/src/test/integration/test_utils.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fxl/macros.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/macros.h"
 #include "mx/vmo.h"
 
 namespace test {

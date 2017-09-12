@@ -8,12 +8,12 @@
 #include "apps/ledger/src/cloud_provider/impl/timestamp_conversions.h"
 #include "apps/ledger/src/firebase/encoding.h"
 #include "apps/ledger/src/firebase/status.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fsl/vmo/strings.h"
 
 namespace cloud_provider_firebase {
 namespace {

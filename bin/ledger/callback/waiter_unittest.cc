@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/callback/capture.h"
+#include "apps/ledger/src/callback/waiter.h"
 #include "gtest/gtest.h"
 
 namespace callback {

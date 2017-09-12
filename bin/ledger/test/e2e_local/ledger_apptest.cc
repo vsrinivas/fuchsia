@@ -4,8 +4,6 @@
 
 #include <string.h>
 
-#include "lib/app/cpp/connect.h"
-#include "lib/app/fidl/application_environment.fidl.h"
 #include "apps/ledger/services/internal/internal.fidl-sync.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl-sync.h"
@@ -14,13 +12,15 @@
 #include "apps/ledger/src/test/app_test.h"
 #include "apps/ledger/src/test/fake_token_provider.h"
 #include "gtest/gtest.h"
+#include "lib/app/cpp/connect.h"
+#include "lib/app/fidl/application_environment.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/vmo/strings.h"
 
 namespace test {
 namespace e2e_local {

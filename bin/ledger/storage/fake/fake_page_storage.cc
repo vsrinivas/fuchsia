@@ -13,10 +13,10 @@
 #include "apps/ledger/src/storage/fake/fake_commit.h"
 #include "apps/ledger/src/storage/fake/fake_journal.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/logging.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 
 namespace storage {
 namespace fake {

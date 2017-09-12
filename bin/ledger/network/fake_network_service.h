@@ -6,9 +6,9 @@
 #define APPS_LEDGER_SRC_NETWORK_FAKE_NETWORK_SERVICE_H_
 
 #include "apps/ledger/src/network/network_service.h"
-#include "lib/network/fidl/network_service.fidl.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
+#include "lib/network/fidl/network_service.fidl.h"
 
 namespace ledger {
 

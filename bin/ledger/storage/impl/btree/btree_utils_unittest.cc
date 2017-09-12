@@ -20,11 +20,11 @@
 #include "apps/ledger/src/storage/public/types.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace storage {
 namespace btree {

@@ -10,9 +10,9 @@
 #include <string>
 
 #include "apps/ledger/src/callback/destruction_sentinel.h"
+#include "lib/fsl/socket/socket_drainer.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
-#include "lib/fsl/socket/socket_drainer.h"
 
 namespace glue {
 

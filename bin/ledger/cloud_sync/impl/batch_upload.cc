@@ -13,8 +13,8 @@
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/cloud_provider/public/commit.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
-#include "lib/fxl/logging.h"
 #include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/logging.h"
 
 namespace cloud_sync {
 

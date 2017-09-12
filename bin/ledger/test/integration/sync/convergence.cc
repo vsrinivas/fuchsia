@@ -12,9 +12,9 @@
 #include "apps/ledger/src/storage/public/types.h"
 #include "apps/ledger/src/test/data_generator.h"
 #include "apps/ledger/src/test/get_ledger.h"
+#include "lib/fsl/vmo/vector.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fsl/vmo/vector.h"
 
 namespace test {
 namespace integration {

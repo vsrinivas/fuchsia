@@ -7,17 +7,17 @@
 #include <iostream>
 #include <unordered_set>
 
-#include "lib/app/cpp/connect.h"
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
 #include "apps/ledger/src/firebase/encoding.h"
 #include "apps/ledger/src/tool/convert.h"
 #include "apps/ledger/src/tool/inspect_command.h"
-#include "lib/network/fidl/network_service.fidl.h"
+#include "lib/app/cpp/connect.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/network/fidl/network_service.fidl.h"
 
 namespace tool {
 

@@ -11,14 +11,14 @@
 #include <mx/socket.h>
 
 #include "apps/ledger/src/test/test_with_message_loop.h"
-#include "lib/network/fidl/network_service.fidl.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/macros.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/macros.h"
 #include "lib/netstack/fidl/net_address.fidl.h"
+#include "lib/network/fidl/network_service.fidl.h"
 
 namespace ledger {
 namespace {

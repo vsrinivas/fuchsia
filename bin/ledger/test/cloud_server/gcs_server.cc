@@ -6,9 +6,9 @@
 
 #include "apps/ledger/src/glue/socket/socket_pair.h"
 #include "apps/ledger/src/glue/socket/socket_writer.h"
+#include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/fsl/vmo/strings.h"
 #include "lib/url/gurl.h"
 
 namespace ledger {

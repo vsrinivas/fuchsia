@@ -12,8 +12,8 @@
 #include "apps/ledger/src/app/page_utils.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/storage/public/object.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace ledger {
 namespace diff_utils {

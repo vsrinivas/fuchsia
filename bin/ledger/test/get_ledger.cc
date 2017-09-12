@@ -6,14 +6,14 @@
 
 #include <utility>
 
-#include "lib/app/cpp/connect.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
+#include "lib/app/cpp/connect.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace test {
 namespace {

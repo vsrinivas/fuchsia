@@ -8,7 +8,6 @@
 #include <functional>
 #include <memory>
 
-#include "lib/app/cpp/application_context.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/fidl_helpers/bound_interface_set.h"
 #include "apps/ledger/src/test/fake_token_provider.h"
@@ -16,6 +15,7 @@
 #include "apps/ledger/src/test/ledger_app_instance_factory.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 

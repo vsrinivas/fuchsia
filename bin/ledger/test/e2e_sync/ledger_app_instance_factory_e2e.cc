@@ -6,19 +6,19 @@
 
 #include <thread>
 
-#include "lib/app/cpp/application_context.h"
-#include "lib/app/cpp/connect.h"
 #include "apps/ledger/src/callback/synchronous_task.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/fidl_helpers/bound_interface_set.h"
 #include "apps/ledger/src/test/fake_token_provider.h"
 #include "gtest/gtest.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/create_thread.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace test {
 namespace {

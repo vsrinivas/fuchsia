@@ -8,12 +8,12 @@
 #include <functional>
 #include <string>
 
-#include "lib/app/cpp/application_context.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/fidl_helpers/boundable.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
-#include "lib/fxl/strings/string_view.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace test {
 enum SyncState { DISABLED = 0, CLOUD_SYNC_ENABLED };

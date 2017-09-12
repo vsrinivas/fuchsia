@@ -12,10 +12,10 @@
 #include "apps/ledger/src/test/integration/test_utils.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace test {
 namespace integration {

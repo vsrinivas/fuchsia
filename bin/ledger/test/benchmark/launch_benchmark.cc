@@ -7,11 +7,11 @@
 #include <iostream>
 
 #include "apps/ledger/src/test/benchmark/put/put.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 

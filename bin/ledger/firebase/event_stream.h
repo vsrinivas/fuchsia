@@ -11,9 +11,9 @@
 
 #include "apps/ledger/src/callback/destruction_sentinel.h"
 #include "apps/ledger/src/firebase/status.h"
+#include "lib/fsl/socket/socket_drainer.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/fsl/socket/socket_drainer.h"
 
 namespace firebase {
 

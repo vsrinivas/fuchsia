@@ -4,13 +4,13 @@
 
 #include <trace-provider/provider.h>
 
-#include "lib/app/cpp/application_context.h"
 #include "apps/ledger/cloud_provider_firebase/factory_impl.h"
 #include "apps/modular/services/lifecycle/lifecycle.fidl.h"
 #include "garnet/public/lib/fidl/cpp/bindings/binding_set.h"
+#include "garnet/public/lib/fsl/tasks/message_loop.h"
 #include "garnet/public/lib/fxl/command_line.h"
 #include "garnet/public/lib/fxl/log_settings_command_line.h"
-#include "garnet/public/lib/fsl/tasks/message_loop.h"
+#include "lib/app/cpp/application_context.h"
 
 namespace cloud_provider_firebase {
 namespace {

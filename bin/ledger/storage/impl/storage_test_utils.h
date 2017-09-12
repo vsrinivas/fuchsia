@@ -11,8 +11,8 @@
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/types.h"
 #include "apps/ledger/src/test/test_with_coroutines.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fsl/socket/strings.h"
+#include "lib/fxl/functional/closure.h"
 
 namespace storage {
 

@@ -14,11 +14,11 @@
 #include "apps/ledger/src/convert/convert.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/vmo/strings.h"
 
 namespace test {
 namespace integration {

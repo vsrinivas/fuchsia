@@ -9,11 +9,11 @@
 #include <utility>
 
 #include "apps/ledger/src/glue/socket/socket_drainer_client.h"
+#include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/ascii.h"
 #include "lib/fxl/strings/join_strings.h"
-#include "lib/fsl/vmo/strings.h"
 
 namespace firebase {
 

@@ -9,10 +9,10 @@
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/test/benchmark/lib/logging.h"
 #include "apps/ledger/src/test/get_ledger.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/logging.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 
 namespace {
 

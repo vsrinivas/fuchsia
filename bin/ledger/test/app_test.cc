@@ -4,10 +4,10 @@
 
 #include "apps/ledger/src/test/app_test.h"
 
-#include "lib/app/cpp/application_context.h"
 #include "apps/ledger/src/test/get_ledger.h"
 #include "apps/test_runner/lib/reporting/gtest_listener.h"
 #include "apps/test_runner/lib/reporting/reporter.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fxl/logging.h"
 
 namespace test {

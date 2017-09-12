@@ -8,8 +8,8 @@
 
 #include "apps/ledger/src/app/page_utils.h"
 #include "apps/ledger/src/callback/waiter.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace ledger {
 

@@ -6,19 +6,19 @@
 
 #include <iostream>
 
-#include <trace/event.h>
 #include <trace-provider/provider.h>
+#include <trace/event.h>
 
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/test/benchmark/lib/logging.h"
 #include "apps/ledger/src/test/get_ledger.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/vmo/strings.h"
 
 namespace {
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/sync";

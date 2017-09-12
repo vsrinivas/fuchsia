@@ -17,11 +17,11 @@
 #include "apps/ledger/src/test/integration/test_utils.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/create_thread.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace test {
 namespace {

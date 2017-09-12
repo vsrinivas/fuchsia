@@ -11,7 +11,6 @@
 #include <magenta/device/vfs.h>
 #include <trace-provider/provider.h>
 
-#include "lib/app/cpp/application_context.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/src/app/erase_remote_repository_operation.h"
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
@@ -20,8 +19,9 @@
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/network/network_service_impl.h"
 #include "apps/ledger/src/network/no_network_service.h"
-#include "lib/network/fidl/network_service.fidl.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/log_settings_command_line.h"
@@ -29,7 +29,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/network/fidl/network_service.fidl.h"
 
 namespace ledger {
 

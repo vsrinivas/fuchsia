@@ -17,8 +17,8 @@
 #include "apps/ledger/src/storage/public/ledger_storage.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/macros.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/macros.h"
 
 namespace ledger {
 namespace {

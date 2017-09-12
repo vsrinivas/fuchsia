@@ -7,8 +7,8 @@
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/impl/object_id.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
 #include "third_party/leveldb/include/leveldb/db.h"
 
 namespace storage {

@@ -19,10 +19,10 @@
 #include "apps/ledger/src/storage/test/page_storage_empty_impl.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/macros.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/macros.h"
 
 namespace cloud_sync {
 namespace {

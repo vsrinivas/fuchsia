@@ -7,8 +7,8 @@
 
 #include <unordered_map>
 
-#include "lib/network/fidl/network_service.fidl.h"
 #include "lib/fxl/macros.h"
+#include "lib/network/fidl/network_service.fidl.h"
 
 namespace ledger {
 

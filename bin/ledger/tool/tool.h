@@ -9,11 +9,11 @@
 #include <string>
 #include <vector>
 
-#include "lib/app/cpp/application_context.h"
 #include "apps/ledger/src/cloud_sync/public/user_config.h"
 #include "apps/ledger/src/firebase/firebase_impl.h"
 #include "apps/ledger/src/network/network_service_impl.h"
 #include "apps/ledger/src/tool/command.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
 
