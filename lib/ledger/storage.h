@@ -49,7 +49,7 @@ constexpr char kMessageQueueTokenKeyPrefix[] = "MessageQueueToken/";
 //    Agent Trigger page:
 constexpr char kTriggerKeyPrefix[] = "Trigger/";
 //    Story page:
-constexpr char kLinkKeyPrefix[] = "Link/";
+constexpr char kLinkKeyPrefix[] = "Link|2/";  // version 2 == incremental
 constexpr char kModuleKeyPrefix[] = "Module/";
 constexpr char kPerDeviceKeyPrefix[] = "PerDevice/";
 constexpr char kStoryContextLogKeyPrefix[] = "StoryContextLog/";
