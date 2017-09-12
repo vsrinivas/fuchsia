@@ -17,7 +17,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace test_runner {
 namespace {
@@ -35,7 +35,7 @@ class TestRunObserverImpl : public test_runner::TestRunObserver {
   void Teardown(const std::string& test_id, bool success) override {
     FXL_CHECK(test_id == test_id_);
     success_ = success;
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 
   bool success() { return success_; }
@@ -56,7 +56,7 @@ bool RunTest(std::shared_ptr<app::ApplicationContext> app_context,
   test_runner::TestRunContext context(app_context, &observer, test_id, url,
                                       args);
 
-  mtl::MessageLoop::GetCurrent()->Run();
+  fsl::MessageLoop::GetCurrent()->Run();
 
   return observer.success();
 }
@@ -69,7 +69,7 @@ void PrintKnownTests(const TestRunnerConfig& config) {
 }
 
 int RunIntegrationTestsMain(int argc, char** argv) {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   fxl::CommandLine settings = fxl::CommandLineFromArgcArgv(argc, argv);
   std::string test_file;
   if (!settings.GetOptionValue("test_file", &test_file) ||

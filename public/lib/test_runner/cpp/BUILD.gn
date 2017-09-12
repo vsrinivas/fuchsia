@@ -16,7 +16,7 @@ source_set("lib") {
     "//garnet/public/lib/app/cpp",
     "//apps/test_runner/services:test_runner_sync",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
     "//third_party/rapidjson",
   ]
 }

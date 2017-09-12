@@ -43,7 +43,7 @@
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/fxl/synchronization/sleep.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
@@ -116,7 +116,7 @@ void TestRunnerImpl::WillTerminate(const double withinSeconds) {
     return;
   }
   waiting_for_termination_ = true;
-  termination_timer_.Start(mtl::MessageLoop::GetCurrent()->task_runner().get(),
+  termination_timer_.Start(fsl::MessageLoop::GetCurrent()->task_runner().get(),
                            [this, withinSeconds] {
                              FXL_LOG(ERROR) << program_name_
                                             << " termination timed out after "

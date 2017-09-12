@@ -11,7 +11,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "apps/test_runner/services/test_runner.fidl.h"
 #include "lib/fxl/time/stopwatch.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 class Reporter {
  public:
@@ -34,9 +34,9 @@ class Reporter {
 
     test_runner_->ReportResult(std::move(result));
     test_runner_->Teardown([] {
-      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+      fsl::MessageLoop::GetCurrent()->PostQuitTask();
     });
-    mtl::MessageLoop::GetCurrent()->Run();
+    fsl::MessageLoop::GetCurrent()->Run();
   }
 
  private:
@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
     name = "report_result";
   }
 
-  mtl::MessageLoop message_loop;
+  fsl::MessageLoop message_loop;
   auto app_context = app::ApplicationContext::CreateFromStartupInfo();
   auto test_runner =
       app_context->ConnectToEnvironmentService<test_runner::TestRunner>();

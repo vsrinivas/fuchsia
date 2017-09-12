@@ -7,7 +7,7 @@
 #include "apps/test_runner/lib/reporting/gtest_listener.h"
 #include "apps/test_runner/lib/reporting/reporter.h"
 #include "gtest/gtest.h"
-#include "lib/mtl/threading/thread.h"
+#include "lib/fsl/threading/thread.h"
 
 int main(int argc, char** argv) {
   test_runner::Reporter reporter(argv[0]);

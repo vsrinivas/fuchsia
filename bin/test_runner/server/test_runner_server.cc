@@ -47,7 +47,7 @@
 #include "lib/fxl/strings/string_view.h"
 #include "lib/fxl/synchronization/sleep.h"
 #include "lib/fxl/tasks/one_shot_timer.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 // TODO(vardhan): Make listen port command-line configurable.
 constexpr uint16_t kListenPort = 8342;  // TCP port
@@ -93,7 +93,7 @@ class TestRunnerConnection : public TestRunObserver {
  private:
   ~TestRunnerConnection() override {
     close(socket_);
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 
   // Read and entire command (which consists of one line) and return it.
@@ -220,7 +220,7 @@ class TestRunnerTCPServer {
 }  // namespace test_runner
 
 int main() {
-  mtl::MessageLoop loop;
+  fsl::MessageLoop loop;
   test_runner::TestRunnerTCPServer server(kListenPort);
   while (1) {
     // TODO(vardhan): Because our sockets are POSIX fds, they don't work with
