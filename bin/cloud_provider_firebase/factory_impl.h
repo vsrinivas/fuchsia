@@ -11,8 +11,8 @@
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/callback/cancellable.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
-#include "garnet/public/lib/fxl/functional/closure.h"
-#include "garnet/public/lib/fxl/macros.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
 
 namespace cloud_provider_firebase {
 

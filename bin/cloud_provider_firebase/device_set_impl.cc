@@ -4,7 +4,7 @@
 
 #include "apps/ledger/cloud_provider_firebase/device_set_impl.h"
 
-#include "garnet/public/lib/fxl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace cloud_provider_firebase {
 

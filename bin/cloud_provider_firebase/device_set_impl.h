@@ -7,9 +7,9 @@
 
 #include "apps/ledger/services/cloud_provider/cloud_provider.fidl.h"
 #include "apps/ledger/src/auth_provider/auth_provider.h"
-#include "garnet/public/lib/fidl/cpp/bindings/array.h"
-#include "garnet/public/lib/fidl/cpp/bindings/binding.h"
-#include "garnet/public/lib/fxl/macros.h"
+#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fxl/macros.h"
 
 namespace cloud_provider_firebase {
 

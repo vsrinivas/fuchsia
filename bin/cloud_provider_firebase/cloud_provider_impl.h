@@ -12,10 +12,10 @@
 #include "apps/ledger/src/auth_provider/auth_provider_impl.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
-#include "garnet/public/lib/fidl/cpp/bindings/binding.h"
-#include "garnet/public/lib/fxl/functional/closure.h"
-#include "garnet/public/lib/fxl/macros.h"
-#include "garnet/public/lib/fxl/tasks/task_runner.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace cloud_provider_firebase {
 

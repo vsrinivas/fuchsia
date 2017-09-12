@@ -9,9 +9,9 @@
 #include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/test/fake_token_provider.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
-#include "garnet/public/lib/fidl/cpp/bindings/binding.h"
-#include "garnet/public/lib/fxl/macros.h"
-#include "garnet/public/lib/fxl/time/time_delta.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/time/time_delta.h"
 
 namespace cloud_provider_firebase {
 namespace {

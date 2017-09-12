@@ -7,7 +7,7 @@
 
 #include "apps/ledger/src/coroutine/coroutine_impl.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
-#include "garnet/public/lib/fxl/functional/closure.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 
 namespace test {

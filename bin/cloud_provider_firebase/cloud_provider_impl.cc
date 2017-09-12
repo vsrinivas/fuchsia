@@ -7,7 +7,7 @@
 #include <utility>
 
 #include "apps/ledger/src/convert/convert.h"
-#include "garnet/public/lib/fxl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace cloud_provider_firebase {
 

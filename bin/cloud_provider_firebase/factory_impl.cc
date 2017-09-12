@@ -5,8 +5,8 @@
 #include "apps/ledger/cloud_provider_firebase/factory_impl.h"
 
 #include "apps/ledger/src/backoff/exponential_backoff.h"
-#include "garnet/public/lib/fxl/functional/make_copyable.h"
-#include "garnet/public/lib/fxl/logging.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 
 namespace cloud_provider_firebase {
 
