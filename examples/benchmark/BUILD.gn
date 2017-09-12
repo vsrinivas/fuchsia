@@ -8,8 +8,8 @@ executable("benchmark_example") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/ftl",
-    "//garnet/public/lib/mtl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//magenta/system/ulib/trace-provider",
   ]
 }
