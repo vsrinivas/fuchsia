@@ -263,11 +263,14 @@ void PageDelegate::Rollback(const Page::RollbackCallback& callback) {
           callback(Status::NO_TRANSACTION_IN_PROGRESS);
           return;
         }
-        storage::Status status = storage_->RollbackJournal(std::move(journal_));
-        journal_.reset();
-        journal_parent_commit_.clear();
-        callback(PageUtils::ConvertStatus(status));
-        branch_tracker_.StopTransaction(nullptr);
+        storage_->RollbackJournal(
+            std::move(journal_),
+            [ this, callback = std::move(callback) ](storage::Status status) {
+              journal_.reset();
+              journal_parent_commit_.clear();
+              callback(PageUtils::ConvertStatus(status));
+              branch_tracker_.StopTransaction(nullptr);
+            });
       });
 }
 
@@ -321,14 +324,16 @@ void PageDelegate::RunInTransaction(
   ](storage::Status status, std::unique_ptr<storage::Journal> journal) {
     if (status != storage::Status::OK) {
       callback(PageUtils::ConvertStatus(status));
-      storage_->RollbackJournal(std::move(journal));
+      storage_->RollbackJournal(std::move(journal),
+                                [](storage::Status /*rollback_status*/) {});
       branch_tracker_.StopTransaction(nullptr);
       return;
     }
     Status ledger_status = runnable(journal.get());
     if (ledger_status != Status::OK) {
       callback(ledger_status);
-      storage_->RollbackJournal(std::move(journal));
+      storage_->RollbackJournal(std::move(journal),
+                                [](storage::Status /*rollback_status*/) {});
       branch_tracker_.StopTransaction(nullptr);
       return;
     }

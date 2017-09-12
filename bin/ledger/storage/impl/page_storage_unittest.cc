@@ -640,7 +640,11 @@ TEST_F(PageStorageTest, CreateJournals) {
       left_id, right_id, callback::Capture(MakeQuitTask(), &status, &journal));
   EXPECT_EQ(storage::Status::OK, status);
   EXPECT_NE(nullptr, journal);
-  EXPECT_EQ(Status::OK, storage_->RollbackJournal(std::move(journal)));
+
+  storage_->RollbackJournal(std::move(journal),
+                            callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
 }
 
 TEST_F(PageStorageTest, CreateJournalHugeNode) {

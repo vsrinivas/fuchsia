@@ -51,7 +51,8 @@ class PageStorageEmptyImpl : public PageStorage {
       std::function<void(Status, std::unique_ptr<const storage::Commit>)>
           callback) override;
 
-  Status RollbackJournal(std::unique_ptr<Journal> journal) override;
+  void RollbackJournal(std::unique_ptr<Journal> journal,
+                       std::function<void(Status)> callback) override;
 
   Status AddCommitWatcher(CommitWatcher* watcher) override;
 

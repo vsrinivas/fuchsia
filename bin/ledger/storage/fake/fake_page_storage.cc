@@ -104,8 +104,9 @@ void FakePageStorage::CommitJournal(
   static_cast<FakeJournal*>(journal.get())->Commit(std::move(callback));
 }
 
-Status FakePageStorage::RollbackJournal(std::unique_ptr<Journal> journal) {
-  return static_cast<FakeJournal*>(journal.get())->Rollback();
+void FakePageStorage::RollbackJournal(std::unique_ptr<Journal> journal,
+                                      std::function<void(Status)> callback) {
+  callback(static_cast<FakeJournal*>(journal.get())->Rollback());
 }
 
 Status FakePageStorage::AddCommitWatcher(CommitWatcher* /*watcher*/) {

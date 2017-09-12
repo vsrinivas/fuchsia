@@ -105,7 +105,10 @@ void JournalDBImpl::Commit(
           if (parents.size() == 1 &&
               parents.front()->GetRootId() == object_id) {
             FXL_DCHECK(new_nodes.empty());
-            callback(Rollback(), std::move(parents.front()));
+            Rollback(fxl::MakeCopyable([
+              parent = std::move(parents.front()),
+              callback = std::move(callback)
+            ](Status status) mutable { callback(status, std::move(parent)); }));
             return;
           }
           std::unique_ptr<storage::Commit> commit =
@@ -181,15 +184,16 @@ void JournalDBImpl::GetParents(
   waiter->Finalize(std::move(callback));
 }
 
-Status JournalDBImpl::Rollback() {
+void JournalDBImpl::Rollback(std::function<void(Status)> callback) {
   if (!valid_) {
-    return Status::ILLEGAL_STATE;
+    callback(Status::ILLEGAL_STATE);
+    return;
   }
   Status s = db_->RemoveJournal(id_);
   if (s == Status::OK) {
     valid_ = false;
   }
-  return s;
+  callback(s);
 }
 
 void JournalDBImpl::GetObjectsToSync(

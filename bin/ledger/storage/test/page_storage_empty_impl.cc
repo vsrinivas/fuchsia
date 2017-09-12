@@ -62,10 +62,11 @@ void PageStorageEmptyImpl::CommitJournal(
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
 
-Status PageStorageEmptyImpl::RollbackJournal(
-    std::unique_ptr<Journal> /*journal*/) {
+void PageStorageEmptyImpl::RollbackJournal(
+    std::unique_ptr<Journal> /*journal*/,
+    std::function<void(Status)> callback) {
   FXL_NOTIMPLEMENTED();
-  return Status::NOT_IMPLEMENTED;
+  callback(Status::NOT_IMPLEMENTED);
 }
 
 Status PageStorageEmptyImpl::AddCommitWatcher(CommitWatcher* /*watcher*/) {

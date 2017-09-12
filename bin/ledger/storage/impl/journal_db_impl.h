@@ -56,7 +56,7 @@ class JournalDBImpl : public Journal {
 
   // Rolls back all changes to this |Journal|. Trying to update entries or
   // commit will fail with an |ILLEGAL_STATE| after a successful rollback.
-  Status Rollback();
+  void Rollback(std::function<void(Status)> callback);
 
   // Journal:
   Status Put(convert::ExtendedStringView key,

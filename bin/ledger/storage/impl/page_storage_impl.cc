@@ -75,8 +75,9 @@ struct StringPointerComparator {
   }
 };
 
-Status RollbackJournalInternal(std::unique_ptr<Journal> journal) {
-  return static_cast<JournalDBImpl*>(journal.get())->Rollback();
+void RollbackJournalInternal(std::unique_ptr<Journal> journal,
+                             std::function<void(Status)> callback) {
+  static_cast<JournalDBImpl*>(journal.get())->Rollback(std::move(callback));
 }
 
 }  // namespace
@@ -237,14 +238,18 @@ void PageStorageImpl::CommitJournal(
   ](Status status, std::unique_ptr<const Commit> commit) mutable {
     if (status != Status::OK) {
       // Commit failed, roll the journal back.
-      RollbackJournalInternal(std::move(journal));
+      RollbackJournalInternal(std::move(journal), [
+        status, callback = std::move(callback)
+      ](Status /*rollback_status*/) { callback(status, nullptr); });
+      return;
     }
-    callback(status, std::move(commit));
+    callback(Status::OK, std::move(commit));
   }));
 }
 
-Status PageStorageImpl::RollbackJournal(std::unique_ptr<Journal> journal) {
-  return RollbackJournalInternal(std::move(journal));
+void PageStorageImpl::RollbackJournal(std::unique_ptr<Journal> journal,
+                                      std::function<void(Status)> callback) {
+  RollbackJournalInternal(std::move(journal), std::move(callback));
 }
 
 Status PageStorageImpl::AddCommitWatcher(CommitWatcher* watcher) {

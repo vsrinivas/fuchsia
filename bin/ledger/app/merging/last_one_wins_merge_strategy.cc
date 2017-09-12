@@ -62,7 +62,8 @@ LastOneWinsMergeStrategy::LastOneWinsMerger::LastOneWinsMerger(
 
 LastOneWinsMergeStrategy::LastOneWinsMerger::~LastOneWinsMerger() {
   if (journal_) {
-    storage_->RollbackJournal(std::move(journal_));
+    storage_->RollbackJournal(std::move(journal_),
+                              [](storage::Status /*status*/) {});
   }
 }
 
@@ -83,7 +84,8 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::Start() {
 void LastOneWinsMergeStrategy::LastOneWinsMerger::Cancel() {
   cancelled_ = true;
   if (journal_) {
-    storage_->RollbackJournal(std::move(journal_));
+    storage_->RollbackJournal(std::move(journal_),
+                              [](storage::Status /*status*/) {});
     journal_.reset();
   }
 }

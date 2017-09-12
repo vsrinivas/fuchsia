@@ -44,7 +44,8 @@ ConflictResolverClient::ConflictResolverClient(
 
 ConflictResolverClient::~ConflictResolverClient() {
   if (journal_) {
-    storage_->RollbackJournal(std::move(journal_));
+    storage_->RollbackJournal(std::move(journal_),
+                              [](storage::Status /*status*/) {});
   }
 }
 
@@ -143,7 +144,8 @@ void ConflictResolverClient::OnNextMergeResult(
 
 void ConflictResolverClient::Finalize(Status status) {
   if (journal_) {
-    storage_->RollbackJournal(std::move(journal_));
+    storage_->RollbackJournal(std::move(journal_),
+                              [](storage::Status /*rollback_status*/) {});
     journal_.reset();
   }
   auto callback = std::move(callback_);
