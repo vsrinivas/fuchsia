@@ -60,7 +60,9 @@ config("ccache") {
 }
 
 config("compiler") {
-  cflags = []
+  # TODO(TO-448): -fasynchronous-unwind-tables should be the compiler's
+  # default.  Remove it when the fixed toolchain lands.
+  cflags = [ "-fasynchronous-unwind-tables" ]
   cflags_c = [ "-std=c11" ]
   cflags_cc = [ "-std=c++14" ]
   ldflags = [ "-Wl,--threads" ]
