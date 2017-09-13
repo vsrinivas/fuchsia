@@ -17,7 +17,7 @@ Handle::Handle(fbl::RefPtr<Dispatcher> dispatcher, uint32_t rights,
 }
 
 Handle::Handle(const Handle* rhs, zx_rights_t rights, uint32_t base_value)
-    : process_id_(rhs->process_id_),
+    : process_id_(rhs->process_id()),
       dispatcher_(rhs->dispatcher_),
       rights_(rights),
       base_value_(base_value) {

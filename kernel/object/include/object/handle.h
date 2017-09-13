@@ -9,6 +9,7 @@
 #include <stdint.h>
 
 #include <zircon/types.h>
+#include <fbl/atomic.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 
@@ -29,12 +30,12 @@ public:
     // Returns the process that owns this instance. Used to guarantee
     // that one process may not access a handle owned by a different process.
     zx_koid_t process_id() const {
-        return process_id_;
+        return process_id_.load(fbl::memory_order_relaxed);
     }
 
     // Sets the value returned by process_id().
     void set_process_id(zx_koid_t pid) {
-        process_id_ = pid;
+        process_id_.store(pid, fbl::memory_order_relaxed);
     }
 
     // Returns the |rights| parameter that was provided when this instance
@@ -74,7 +75,10 @@ private:
     friend void internal::TearDownHandle(Handle* handle);
     ~Handle() = default;
 
-    zx_koid_t process_id_;
+    // process_id_ is atomic because threads from different processes can
+    // access it concurrently, while holding different instances of
+    // handle_table_lock_.
+    fbl::atomic<zx_koid_t> process_id_;
     fbl::RefPtr<Dispatcher> dispatcher_;
     const zx_rights_t rights_;
     const uint32_t base_value_;

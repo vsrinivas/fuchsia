@@ -140,7 +140,7 @@ void internal::TearDownHandle(Handle* handle) TA_EXCL(handle_mutex) {
     // no process can refer to this slot while it's free. This isn't
     // completely legal since |handle| points to unconstructed memory,
     // but it should be safe enough for an assertion.
-    DEBUG_ASSERT(handle->process_id_ == 0);
+    DEBUG_ASSERT(handle->process_id() == 0);
 }
 
 static void high_handle_count(size_t count) {
