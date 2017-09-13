@@ -41,6 +41,14 @@ static bool vc_handle_control_keys(uint8_t keycode, int modifiers) {
         }
         break;
 
+    case HID_USAGE_KEY_VOL_UP:
+        vc_set_active(g_active_vc_index == 0 ? g_vc_count - 1 : g_active_vc_index - 1, NULL);
+        break;
+
+    case HID_USAGE_KEY_VOL_DOWN:
+        vc_set_active(g_active_vc_index == g_vc_count - 1 ? 0 : g_active_vc_index + 1, NULL);
+        break;
+
     case HID_USAGE_KEY_UP:
         if (modifiers & MOD_ALT) {
             vc_scroll_viewport(g_active_vc, -1);
@@ -105,7 +113,13 @@ static bool vc_handle_device_control_keys(uint8_t keycode, int modifiers){
             return true;
         }
         break;
+
+    case HID_USAGE_KEY_LEFT_GUI:
+        // Also known as the "windows key".
+        vc_toggle_framebuffer();
+        break;
     }
+
     return false;
 }
 
