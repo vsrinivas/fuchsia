@@ -19,13 +19,11 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := \
     system/ulib/async \
-    system/ulib/async.loop \
     system/ulib/zx \
     system/ulib/zxcpp \
     system/ulib/fbl \
 
 MODULE_LIBS := \
-    system/ulib/async.default \
     system/ulib/c \
     system/ulib/zircon \
     system/ulib/fdio \

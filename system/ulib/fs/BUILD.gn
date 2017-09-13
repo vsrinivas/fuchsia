@@ -38,8 +38,6 @@ static_library("fs") {
 
   deps = [
     "//zircon/system/ulib/async",
-    "//zircon/system/ulib/async:default",
-    "//zircon/system/ulib/async:loop",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxcpp",
     "//zircon/system/ulib/fbl",
