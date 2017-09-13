@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "filesystems.h"
@@ -42,6 +43,11 @@ bool test_maxfile(void) {
             break;
         }
     }
+
+    struct stat buf;
+    ASSERT_EQ(fstat(fd, &buf), 0, "");
+    ASSERT_EQ(buf.st_size, sz, "Unexpected max file size");
+
     ASSERT_EQ(close(fd), 0, "");
     ASSERT_EQ(unlink("::bigfile"), 0, "");
     fprintf(stderr, "wrote %lu bytes\n", (size_t)sz);

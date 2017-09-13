@@ -1194,18 +1194,17 @@ zx_status_t VnodeMinfs::WriteInternal(WriteTxn* txn, const void* data,
             if ((status = vmo_.set_size(fbl::roundup(new_size, kMinfsBlockSize))) != ZX_OK) {
                 goto done;
             }
-            inode_.size = static_cast<uint32_t>(new_size);
         }
 
         // Update this block of the in-memory VMO
         if ((status = VmoWriteExact(data, xfer_off, xfer)) != ZX_OK) {
-            return ZX_ERR_IO;
+            goto done;
         }
 
         // Update this block on-disk
         blk_t bno;
         if ((status = GetBno(txn, n, &bno)) != ZX_OK) {
-            return status;
+            goto done;
         }
         ZX_DEBUG_ASSERT(bno != 0);
         txn->Enqueue(vmoid_, n, bno + fs_->info_.dat_block, 1);
@@ -1217,11 +1216,11 @@ zx_status_t VnodeMinfs::WriteInternal(WriteTxn* txn, const void* data,
         ZX_DEBUG_ASSERT(bno != 0);
         char wdata[kMinfsBlockSize];
         if (fs_->bc_->Readblk(bno + fs_->info_.dat_block, wdata)) {
-            return ZX_ERR_IO;
+            goto done;
         }
         memcpy(wdata + adjust, data, xfer);
         if (fs_->bc_->Writeblk(bno + fs_->info_.dat_block, wdata)) {
-            return ZX_ERR_IO;
+            goto done;
         }
 #endif
 
@@ -1240,7 +1239,7 @@ done:
             return ZX_ERR_FILE_BIG;
         }
 
-        return ZX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_SPACE;
     }
     if ((off + len) > inode_.size) {
         inode_.size = static_cast<uint32_t>(off + len);
