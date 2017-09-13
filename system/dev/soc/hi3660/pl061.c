@@ -74,7 +74,7 @@ static zx_status_t pl061_gpio_read(void* ctx, unsigned pin, unsigned* out_value)
     volatile uint8_t* regs = gpios->buffer.vaddr + PAGE_SIZE * (pin / GPIOS_PER_PAGE);
     uint8_t bit = 1 << (pin % GPIOS_PER_PAGE);
 
-    *out_value = !!(readb(regs + GPIODATA(0)) & bit);
+    *out_value = !!(readb(regs + GPIODATA(bit)) & bit);
     return ZX_OK;
 }
 
