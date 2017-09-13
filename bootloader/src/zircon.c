@@ -317,8 +317,8 @@ fail:
 
 static char cmdline[CMDLINE_MAX];
 
-int mxboot(efi_handle img, efi_system_table* sys,
-           void* image, size_t sz) {
+int zedboot(efi_handle img, efi_system_table* sys,
+            void* image, size_t sz) {
 
     size_t hsz, flen, klen;
     if (header_check(image, sz, NULL, &hsz, &flen, &klen)) {
@@ -329,7 +329,7 @@ int mxboot(efi_handle img, efi_system_table* sys,
     uint32_t rlen = flen - hsz - klen;
     uint32_t roff = (hsz * 2) + klen;
     if (rlen == 0) {
-        printf("mxboot: no ramdisk?!\n");
+        printf("zedboot: no ramdisk?!\n");
         return -1;
     }
 
@@ -341,7 +341,7 @@ int mxboot(efi_handle img, efi_system_table* sys,
     efi_status r = bs->AllocatePages(AllocateAnyPages, EfiLoaderData, pages,
                                      (efi_physical_addr*)&ramdisk);
     if (r) {
-        printf("mxboot: cannot allocate ramdisk buffer\n");
+        printf("zedboot: cannot allocate ramdisk buffer\n");
         return -1;
     }
 

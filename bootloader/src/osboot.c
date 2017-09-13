@@ -376,10 +376,10 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
     // First look for a self-contained zirconboot image
     size_t ksz = 0;
-    void* kernel = xefi_load_file(L"mxboot.bin", &ksz, 0);
+    void* kernel = xefi_load_file(L"zedboot.bin", &ksz, 0);
 
     if (kernel) {
-        mxboot(img, sys, kernel, ksz);
+        zedboot(img, sys, kernel, ksz);
     }
 
     // Look for a kernel image on disk
