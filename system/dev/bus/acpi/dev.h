@@ -8,10 +8,11 @@
 #include <ddk/device.h>
 #include <zircon/compiler.h>
 
-#define BATTERY_HID_STRING      "PNP0C0A"
-#define EC_HID_STRING           "PNP0C09"
-#define PWRSRC_HID_STRING       "ACPI0003"
-#define GOOGLE_TBMC_HID_STRING  "GOOG0006"
+#define BATTERY_HID_STRING         "PNP0C0A"
+#define EC_HID_STRING              "PNP0C09"
+#define PWRSRC_HID_STRING          "ACPI0003"
+#define GOOGLE_CROS_EC_HID_STRING  "GOOG0004"
+#define GOOGLE_TBMC_HID_STRING     "GOOG0006"
 
 __BEGIN_CDECLS
 
@@ -19,5 +20,6 @@ zx_status_t battery_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 zx_status_t pwrsrc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 zx_status_t tbmc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
+zx_status_t cros_ec_lpc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 
 __END_CDECLS

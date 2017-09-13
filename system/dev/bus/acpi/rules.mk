@@ -20,6 +20,8 @@ MODULE_COMPILEFLAGS += -Ithird_party/lib/acpica/source/include
 MODULE_SRCS := \
     $(LOCAL_DIR)/bus-acpi.c \
     $(LOCAL_DIR)/dev-battery.c \
+    $(LOCAL_DIR)/dev-cros-ec/dev.cpp \
+    $(LOCAL_DIR)/dev-cros-ec/motion.cpp \
     $(LOCAL_DIR)/dev-ec.c \
     $(LOCAL_DIR)/dev-pwrsrc.c \
     $(LOCAL_DIR)/dev-tbmc.cpp \
@@ -36,6 +38,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddktl \
     system/ulib/acpisvc-client \
     third_party/ulib/acpica \
+    third_party/ulib/chromiumos-platform-ec \
     system/ulib/zxcpp \
     system/ulib/fbl \
 
