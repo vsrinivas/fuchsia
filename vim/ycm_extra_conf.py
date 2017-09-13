@@ -15,8 +15,8 @@ fuchsia_buildtools = os.path.realpath(os.path.join(fuchsia_root, 'buildtools'))
 
 for f in os.listdir(os.path.join(fuchsia_buildtools, 'toolchain')):
   if f.startswith('clang'):
-    fuchsia_toolchain_builtins = os.path.join(
-        fuchsia_buildtools, 'toolchain', f, 'x86_64-fuchsia')
+    fuchsia_toolchain_builtins = os.path.join(fuchsia_buildtools, 'toolchain',
+                                              f)
 assert fuchsia_toolchain_builtins, \
     'Could not find toolchain in {}'.format(fuchsia_buildtools)
 
