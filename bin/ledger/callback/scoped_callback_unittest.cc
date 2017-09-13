@@ -13,9 +13,9 @@ namespace {
 
 class Witness {
  public:
-  Witness(bool* value) : value_(value) {}
+  explicit Witness(bool* value) : value_(value) {}
 
-  operator bool() const { return *value_; }
+  explicit operator bool() const { return *value_; }
 
  private:
   bool* value_;

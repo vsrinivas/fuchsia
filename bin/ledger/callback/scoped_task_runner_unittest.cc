@@ -16,17 +16,20 @@ class FakeTaskRunner : public fxl::TaskRunner {
     return AdoptRef(new FakeTaskRunner());
   }
 
-  void PostTask(fxl::Closure task) { tasks.push_back(std::move(task)); }
-
-  void PostTaskForTime(fxl::Closure task, fxl::TimePoint target_time) {
+  void PostTask(fxl::Closure task) override {
     tasks.push_back(std::move(task));
   }
 
-  void PostDelayedTask(fxl::Closure task, fxl::TimeDelta delay) {
+  void PostTaskForTime(fxl::Closure task,
+                       fxl::TimePoint /*target_time*/) override {
     tasks.push_back(std::move(task));
   }
 
-  bool RunsTasksOnCurrentThread() {
+  void PostDelayedTask(fxl::Closure task, fxl::TimeDelta /*delay*/) override {
+    tasks.push_back(std::move(task));
+  }
+
+  bool RunsTasksOnCurrentThread() override {
     runs_task_on_current_thread_called = true;
     return true;
   }

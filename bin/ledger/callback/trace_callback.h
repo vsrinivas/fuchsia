@@ -83,11 +83,13 @@ class TracingLambda {
   FXL_DISALLOW_COPY_AND_ASSIGN(TracingLambda);
 };
 
+// NOLINT suppresses check about 'args' being unused. It might be used in the
+// future if TRACE_CALLBACK (see below) is used providing additional arguments.
 template <typename C, typename... ArgType>
 auto TraceCallback(C callback,
                    const char* category,
                    const char* name,
-                   ArgType... args) {
+                   ArgType... args) {  // NOLINT
   uint64_t id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN(category, name, id, std::forward<ArgType>(args)...);
   return fxl::MakeCopyable(

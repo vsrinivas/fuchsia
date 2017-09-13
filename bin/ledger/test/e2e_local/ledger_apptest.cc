@@ -337,7 +337,7 @@ TEST_F(LedgerAppTest, EraseRepositoryNoFirebaseConfiguration) {
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(ledger::Status::OK, status);
 
-  size_t entry_count;
+  size_t entry_count = 0u;
   ASSERT_TRUE(GetPageEntryCount(&page, &entry_count));
   EXPECT_EQ(1u, entry_count);
 

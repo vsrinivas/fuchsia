@@ -20,7 +20,7 @@ namespace callback {
 // member of a class.
 class ScopedTaskRunner {
  public:
-  ScopedTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner);
+  explicit ScopedTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner);
   ~ScopedTaskRunner();
 
   // Posts a task to run as soon as possible.
