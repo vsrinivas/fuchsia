@@ -4,6 +4,7 @@
 
 library fuchsia;
 
+import 'dart:isolate';
 import 'dart:zircon';
 
 // ignore_for_file: native_function_body_in_non_sdk_code
