@@ -15,6 +15,7 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/iotxn.h>
+#include <ddk/debug.h>
 #include <ddk/protocol/sdmmc.h>
 
 // Zircon Includes
@@ -32,16 +33,6 @@
 #define SDMMC_STATE_TRAN 0x4
 #define SDMMC_STATE_RECV 0x5
 #define SDMMC_STATE_DATA 0x6
-
-#define TRACE 0
-
-#if TRACE
-#define xprintf(fmt...) printf(fmt)
-#else
-#define xprintf(fmt...) \
-    do {                \
-    } while (0)
-#endif
 
 static void sdmmc_txn_cplt(iotxn_t* request, void* cookie) {
     completion_signal((completion_t*)cookie);
@@ -112,7 +103,7 @@ static void sdmmc_release(void* ctx) {
 
 static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
     if (txn->offset % SDHC_BLOCK_SIZE) {
-        xprintf("sdmmc: iotxn offset not aligned to block boundary, "
+        dprintf(ERROR, "sdmmc: iotxn offset not aligned to block boundary, "
                 "offset =%" PRIu64 ", block size = %d\n",
                 txn->offset, SDHC_BLOCK_SIZE);
         iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
@@ -120,7 +111,7 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
     }
 
     if (txn->length % SDHC_BLOCK_SIZE) {
-        xprintf("sdmmc: iotxn length not aligned to block boundary, "
+        dprintf(ERROR, "sdmmc: iotxn length not aligned to block boundary, "
                 "offset =%" PRIu64 ", block size = %d\n",
                 txn->length, SDHC_BLOCK_SIZE);
         iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
@@ -155,7 +146,7 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
     }
 
     if (iotxn_alloc(&emmc_txn, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, txn->length) != ZX_OK) {
-        xprintf("sdmmc: error allocating emmc iotxn\n");
+        dprintf(ERROR, "sdmmc: error allocating emmc iotxn\n");
         iotxn_complete(txn, ZX_ERR_INTERNAL, 0);
         return;
     }
@@ -300,7 +291,7 @@ static block_protocol_ops_t sdmmc_block_ops = {
 };
 
 static int sdmmc_bootstrap_thread(void* arg) {
-    xprintf("sdmmc: bootstrap\n");
+    dprintf(TRACE, "sdmmc: bootstrap\n");
     zx_device_t* dev = arg;
 
     zx_status_t st;
@@ -310,14 +301,14 @@ static int sdmmc_bootstrap_thread(void* arg) {
     // Allocate the device.
     sdmmc = calloc(1, sizeof(*sdmmc));
     if (!sdmmc) {
-        xprintf("sdmmc: no memory to allocate sdmmc device!\n");
+        dprintf(ERROR, "sdmmc: no memory to allocate sdmmc device!\n");
         goto err;
     }
     sdmmc->host_zxdev = dev;
 
     // Allocate a single iotxn that we use to bootstrap the card with.
     if ((st = iotxn_alloc(&setup_txn, IOTXN_ALLOC_CONTIGUOUS, SDHC_BLOCK_SIZE)) != ZX_OK) {
-        xprintf("sdmmc: failed to allocate iotxn for setup, rc = %d\n", st);
+        dprintf(ERROR, "sdmmc: failed to allocate iotxn for setup, rc = %d\n", st);
         goto err;
     }
 
@@ -327,14 +318,14 @@ static int sdmmc_bootstrap_thread(void* arg) {
     // No matter what state the card is in, issuing the GO_IDLE_STATE command will
     // put the card into the idle state.
     if ((st = sdmmc_do_command(dev, SDMMC_GO_IDLE_STATE, 0, setup_txn)) != ZX_OK) {
-        xprintf("sdmmc: SDMMC_GO_IDLE_STATE failed, retcode = %d\n", st);
+        dprintf(ERROR, "sdmmc: SDMMC_GO_IDLE_STATE failed, retcode = %d\n", st);
         goto err;
     }
 
     // Probe for SD, then MMC
     if ((st = sdmmc_probe_sd(sdmmc, setup_txn)) != ZX_OK) {
         if ((st = sdmmc_probe_mmc(sdmmc, setup_txn)) != ZX_OK) {
-            xprintf("sdmmc: failed to probe\n");
+            dprintf(ERROR, "sdmmc: failed to probe\n");
             goto err;
         }
     }
@@ -353,7 +344,7 @@ static int sdmmc_bootstrap_thread(void* arg) {
          goto err;
     }
 
-    xprintf("sdmmc: bind success!\n");
+    dprintf(TRACE, "sdmmc: bind success!\n");
 
     return 0;
 err:
