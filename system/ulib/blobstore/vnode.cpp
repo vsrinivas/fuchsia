@@ -64,6 +64,8 @@ zx_status_t VnodeBlob::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t l
 }
 
 zx_status_t VnodeBlob::Read(void* data, size_t len, size_t off, size_t* out_actual) {
+    TRACE_DURATION("blobstore", "VnodeBlob::Read", "len", len, "off", off);
+
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;
     }
@@ -73,6 +75,7 @@ zx_status_t VnodeBlob::Read(void* data, size_t len, size_t off, size_t* out_actu
 
 zx_status_t VnodeBlob::Write(const void* data, size_t len, size_t offset,
                              size_t* out_actual) {
+    TRACE_DURATION("blobstore", "VnodeBlob::Write", "len", len, "off", offset);
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;
     }
@@ -88,6 +91,7 @@ zx_status_t VnodeBlob::Append(const void* data, size_t len, size_t* out_end,
 }
 
 zx_status_t VnodeBlob::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
+    TRACE_DURATION("blobstore", "VnodeBlob::Lookup", "name", name);
     assert(memchr(name.data(), '/', name.length()) == nullptr);
     if (name == "." && IsDirectory()) {
         // Special case: Accessing root directory via '.'
@@ -127,7 +131,9 @@ zx_status_t VnodeBlob::Getattr(vnattr_t* a) {
 }
 
 zx_status_t VnodeBlob::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) {
+    TRACE_DURATION("blobstore", "VnodeBlob::Create", "name", name, "mode", mode);
     assert(memchr(name.data(), '/', name.length()) == nullptr);
+
     if (!IsDirectory()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -195,6 +201,8 @@ zx_status_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, voi
 }
 
 zx_status_t VnodeBlob::Truncate(size_t len) {
+    TRACE_DURATION("blobstore", "VnodeBlob::Truncate", "len", len);
+
     if (IsDirectory()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -203,7 +211,9 @@ zx_status_t VnodeBlob::Truncate(size_t len) {
 }
 
 zx_status_t VnodeBlob::Unlink(fbl::StringPiece name, bool must_be_dir) {
+    TRACE_DURATION("blobstore", "VnodeBlob::Unlink", "name", name, "must_be_dir", must_be_dir);
     assert(memchr(name.data(), '/', name.length()) == nullptr);
+
     if (!IsDirectory()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -221,6 +231,8 @@ zx_status_t VnodeBlob::Unlink(fbl::StringPiece name, bool must_be_dir) {
 }
 
 zx_status_t VnodeBlob::Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) {
+    TRACE_DURATION("blobstore", "VnodeBlob::Mmap", "flags", flags, "len", len, "off", off);
+
     if (IsDirectory()) {
         return ZX_ERR_NOT_SUPPORTED;
     }

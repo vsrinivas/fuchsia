@@ -25,6 +25,7 @@
 #ifdef __Fuchsia__
 #include <async/loop.h>
 #include <blobstore/blobstore.h>
+#include <trace-provider/provider.h>
 #else
 #include <blobstore/host.h>
 #endif
@@ -75,6 +76,7 @@ int do_blobstore_mount(fbl::unique_fd fd, const blob_options_t& options) {
     if ((status = vfs.ServeDirectory(fbl::move(vn), zx::channel(h))) != ZX_OK) {
         return status;
     }
+    trace::TraceProvider provider(loop.async());
     loop.Run();
     return ZX_OK;
 }

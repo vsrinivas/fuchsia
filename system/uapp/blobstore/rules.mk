@@ -22,6 +22,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/async.loop \
     system/ulib/block-client \
     system/ulib/digest \
+    system/ulib/trace-provider \
     system/ulib/trace \
     third_party/ulib/uboringssl \
     system/ulib/zx \

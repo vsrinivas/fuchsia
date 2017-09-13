@@ -113,6 +113,8 @@ blobstore_inode_t* Blobstore::GetNode(size_t index) const {
 }
 
 zx_status_t VnodeBlob::InitVmos() {
+    TRACE_DURATION("blobstore", "Blobstore::InitVmos");
+
     if (blob_ != nullptr) {
         return ZX_OK;
     }
@@ -149,7 +151,6 @@ uint64_t VnodeBlob::SizeData() const {
 VnodeBlob::VnodeBlob(fbl::RefPtr<Blobstore> bs, const Digest& digest)
     : blobstore_(fbl::move(bs)),
       flags_(kBlobStateEmpty) {
-
     digest.CopyTo(digest_, sizeof(digest_));
 }
 
@@ -163,6 +164,8 @@ void VnodeBlob::BlobCloseHandles() {
 }
 
 zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
+    TRACE_DURATION("blobstore", "Blobstore::SpaceAllocate", "size_data", size_data);
+
     if (size_data == 0) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -207,6 +210,9 @@ fail:
 // A helper function for dumping either the Merkle Tree or the actual blob data
 // to both (1) The containing VMO, and (2) disk.
 zx_status_t VnodeBlob::WriteShared(WriteTxn* txn, size_t start, size_t len, uint64_t start_block) {
+    TRACE_DURATION("blobstore", "Blobstore::WriteShared", "txn", txn, "start", start, "len", len,
+                   "start_block", start_block);
+
     // Write as many 'entire blocks' as possible
     uint64_t n = start / kBlobstoreBlockSize;
     uint64_t n_end = (start + len + kBlobstoreBlockSize - 1) / kBlobstoreBlockSize;
@@ -225,6 +231,8 @@ void* VnodeBlob::GetMerkle() const {
 }
 
 zx_status_t VnodeBlob::WriteMetadata() {
+    TRACE_DURATION("blobstore", "Blobstore::WriteMetadata");
+
     assert(GetState() == kBlobStateDataWrite);
 
     // All data has been written to the containing VMO
@@ -270,6 +278,8 @@ zx_status_t VnodeBlob::WriteMetadata() {
 }
 
 zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actual) {
+    TRACE_DURATION("blobstore", "Blobstore::WriteInternal", "data", data, "len", len);
+
     *actual = 0;
     if (len == 0) {
         return ZX_OK;
@@ -337,6 +347,7 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
 }
 
 zx_status_t VnodeBlob::GetReadableEvent(zx_handle_t* out) {
+    TRACE_DURATION("blobstore", "Blobstore::GetReadableEvent");
     zx_status_t status;
     // This is the first 'wait until read event' request received
     if (!readable_event_.is_valid()) {
@@ -355,6 +366,7 @@ zx_status_t VnodeBlob::GetReadableEvent(zx_handle_t* out) {
 }
 
 zx_status_t VnodeBlob::CopyVmo(zx_rights_t rights, zx_handle_t* out) {
+    TRACE_DURATION("blobstore", "Blobstore::CopyVmo", "rights", rights, "out", out);
     if (GetState() != kBlobStateReadable) {
         return ZX_ERR_BAD_STATE;
     }
@@ -396,6 +408,8 @@ zx_status_t VnodeBlob::CopyVmo(zx_rights_t rights, zx_handle_t* out) {
 }
 
 zx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* actual) {
+    TRACE_DURATION("blobstore", "Blobstore::ReadInternal", "len", len, "off", off);
+
     if (GetState() != kBlobStateReadable) {
         return ZX_ERR_BAD_STATE;
     }
@@ -435,6 +449,8 @@ void VnodeBlob::QueueUnlink() {
 
 // Allocates Blocks IN MEMORY
 zx_status_t Blobstore::AllocateBlocks(size_t nblocks, size_t* blkno_out) {
+    TRACE_DURATION("blobstore", "Blobstore::AllocateBlocks", "nblocks", nblocks);
+
     zx_status_t status;
     if ((status = block_map_.Find(false, 0, block_map_.size(), nblocks, blkno_out)) != ZX_OK) {
         // If we have run out of blocks, attempt to add block slices via FVM
@@ -454,6 +470,7 @@ zx_status_t Blobstore::AllocateBlocks(size_t nblocks, size_t* blkno_out) {
 
 // Frees Blocks IN MEMORY
 void Blobstore::FreeBlocks(size_t nblocks, size_t blkno) {
+    TRACE_DURATION("blobstore", "Blobstore::FreeBlocks", "nblocks", nblocks, "blkno", blkno);
     zx_status_t status = block_map_.Clear(blkno, blkno + nblocks);
     info_.alloc_block_count -= nblocks;
     assert(status == ZX_OK);
@@ -461,6 +478,7 @@ void Blobstore::FreeBlocks(size_t nblocks, size_t blkno) {
 
 // Allocates a node IN MEMORY
 zx_status_t Blobstore::AllocateNode(size_t* node_index_out) {
+    TRACE_DURATION("blobstore", "Blobstore::AllocateNode");
     for (size_t i = 0; i < info_.inode_count; ++i) {
         if (GetNode(i)->start_block == kStartBlockFree) {
             // Found a free node. Mark it as reserved so no one else can allocate it.
@@ -492,15 +510,18 @@ zx_status_t Blobstore::AllocateNode(size_t* node_index_out) {
 
 // Frees a node IN MEMORY
 void Blobstore::FreeNode(size_t node_index) {
+    TRACE_DURATION("blobstore", "Blobstore::FreeNode", "node_index", node_index);
     memset(GetNode(node_index), 0, sizeof(blobstore_inode_t));
     info_.alloc_inode_count--;
 }
 
 zx_status_t Blobstore::Unmount() {
+    TRACE_DURATION("blobstore", "Blobstore::Unmount");
     // Explicitly delete this (rather than just letting the memory release when
     // the process exits) to ensure that the block device's fifo has been
     // closed.
     delete this;
+
     // TODO(smklein): To not bind filesystem lifecycle to a process, shut
     // down (closing dispatcher) rather than calling exit.
     exit(0);
@@ -508,6 +529,8 @@ zx_status_t Blobstore::Unmount() {
 }
 
 zx_status_t Blobstore::WriteBitmap(WriteTxn* txn, uint64_t nblocks, uint64_t start_block) {
+    TRACE_DURATION("blobstore", "Blobstore::WriteBitmap", "nblocks", nblocks, "start_block",
+                   start_block);
     uint64_t bbm_start_block = start_block / kBlobstoreBlockBits;
     uint64_t bbm_end_block = fbl::round_up(start_block + nblocks,
                                            kBlobstoreBlockBits) / kBlobstoreBlockBits;
@@ -519,12 +542,14 @@ zx_status_t Blobstore::WriteBitmap(WriteTxn* txn, uint64_t nblocks, uint64_t sta
 }
 
 zx_status_t Blobstore::WriteNode(WriteTxn* txn, size_t map_index) {
+    TRACE_DURATION("blobstore", "Blobstore::WriteNode", "map_index", map_index);
     uint64_t b = (map_index * sizeof(blobstore_inode_t)) / kBlobstoreBlockSize;
     txn->Enqueue(node_map_vmoid_, b, NodeMapStartBlock(info_) + b, 1);
     return txn->Flush();
 }
 
 zx_status_t Blobstore::NewBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out) {
+    TRACE_DURATION("blobstore", "Blobstore::NewBlob");
     zx_status_t status;
     // If the blob already exists (or we're having trouble looking up the blob),
     // return an error.
@@ -543,6 +568,8 @@ zx_status_t Blobstore::NewBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out
 }
 
 zx_status_t Blobstore::ReleaseBlob(VnodeBlob* vn) {
+    TRACE_DURATION("blobstore", "Blobstore::ReleaseBlob");
+
     // TODO(smklein): What if kBlobFlagSync is set? Do we risk writing out
     // parts of the blob AFTER it has been deleted?
     // Ex: open, alloc, disk write async start, unlink, release, disk write async end.
@@ -602,6 +629,7 @@ static_assert(sizeof(dircookie_t) <= sizeof(fs::vdircookie_t),
 
 zx_status_t Blobstore::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
                                size_t* out_actual) {
+    TRACE_DURATION("blobstore", "Blobstore::Readdir", "len", len);
     fs::DirentFiller df(dirents, len);
     dircookie_t* c = reinterpret_cast<dircookie_t*>(cookie);
 
@@ -626,6 +654,7 @@ zx_status_t Blobstore::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t l
 }
 
 zx_status_t Blobstore::LookupBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out) {
+    TRACE_DURATION("blobstore", "Blobstore::LookupBlob");
     // Look up blob in the fast map (is the blob open elsewhere?)
     fbl::RefPtr<VnodeBlob> vn = fbl::RefPtr<VnodeBlob>(hash_.find(digest.AcquireBytes()).CopyPointer());
     digest.ReleaseBytes();
@@ -676,6 +705,8 @@ zx_status_t Blobstore::AttachVmo(zx_handle_t vmo, vmoid_t* out) {
 }
 
 zx_status_t Blobstore::AddInodes() {
+    TRACE_DURATION("blobstore", "Blobstore::AddInodes");
+
     if (!(info_.flags & kBlobstoreFlagFVM)) {
         return ZX_ERR_NO_SPACE;
     }
@@ -721,6 +752,8 @@ zx_status_t Blobstore::AddInodes() {
 }
 
 zx_status_t Blobstore::AddBlocks(size_t nblocks) {
+    TRACE_DURATION("blobstore", "Blobstore::AddBlocks", "nblocks", nblocks);
+
     if (!(info_.flags & kBlobstoreFlagFVM)) {
         return ZX_ERR_NO_SPACE;
     }
@@ -788,6 +821,7 @@ Blobstore::~Blobstore() {
 
 zx_status_t Blobstore::Create(fbl::unique_fd fd, const blobstore_info_t* info,
                               fbl::RefPtr<Blobstore>* out) {
+    TRACE_DURATION("blobstore", "Blobstore::Create");
     zx_status_t status = blobstore_check_info(info, TotalBlocks(*info));
     if (status < 0) {
         fprintf(stderr, "blobstore: Check info failure\n");
@@ -865,6 +899,7 @@ zx_status_t Blobstore::GetRootBlob(fbl::RefPtr<VnodeBlob>* out) {
 }
 
 zx_status_t Blobstore::LoadBitmaps() {
+    TRACE_DURATION("blobstore", "Blobstore::LoadBitmaps");
     ReadTxn txn(this);
     txn.Enqueue(block_map_vmoid_, 0, BlockMapStartBlock(info_), BlockMapBlocks(info_));
     txn.Enqueue(node_map_vmoid_, 0, NodeMapStartBlock(info_), NodeMapBlocks(info_));

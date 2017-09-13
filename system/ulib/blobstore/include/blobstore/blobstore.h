@@ -30,6 +30,7 @@
 
 #include <block-client/client.h>
 #include <fs/mapped-vmo.h>
+#include <trace/event.h>
 #include <zx/event.h>
 #include <zx/vmo.h>
 
@@ -250,6 +251,7 @@ public:
 
     zx_status_t AttachVmo(zx_handle_t vmo, vmoid_t* out);
     zx_status_t Txn(block_fifo_request_t* requests, size_t count) {
+        TRACE_DURATION("blobstore", "Blobstore::Txn", "count", count);
         return block_fifo_txn(fifo_client_, requests, count);
     }
     txnid_t TxnId() const { return txnid_; }
