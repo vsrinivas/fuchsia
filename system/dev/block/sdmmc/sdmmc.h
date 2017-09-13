@@ -10,6 +10,8 @@
 #include <ddk/protocol/block.h>
 #include <hw/sdmmc.h>
 
+#include <threads.h>
+
 __BEGIN_CDECLS;
 
 typedef struct sdmmc {
@@ -37,6 +39,14 @@ typedef struct sdmmc {
     uint32_t raw_cid[4];
     uint32_t raw_csd[4];
     uint8_t raw_ext_csd[512];
+
+    mtx_t lock;
+
+    list_node_t txn_list;   // list of iotxn
+
+    thrd_t worker_thread;
+    zx_handle_t worker_event;
+    bool worker_thread_running;
 
     block_callbacks_t* callbacks;
 } sdmmc_t;
