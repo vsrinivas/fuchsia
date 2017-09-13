@@ -4,7 +4,7 @@
 
 module auth;
 
-import "apps/auth/services/token_manager/token_provider.fidl";
+import "lib/auth/fidl/token_manager/token_provider.fidl";
 import "lib/ui/views/fidl/view_token.fidl";
 
 // Stores attributes related to an account that is exposed to device shell.

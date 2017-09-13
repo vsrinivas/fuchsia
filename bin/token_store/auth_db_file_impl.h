@@ -7,8 +7,8 @@
 
 #include <string>
 
-#include "apps/auth/src/store/auth_db.h"
-#include "apps/auth/src/store/credentials_generated.h"
+#include "auth_db.h"
+#include "garnet/bin/token_store/credentials_generated.h"
 
 namespace auth {
 namespace store {

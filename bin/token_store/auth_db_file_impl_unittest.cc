@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "auth_db_file_impl.h"
+
 #include <stdlib.h>
 
 #include <random>
 
-#include "apps/auth/src/store/auth_db_file_impl.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"

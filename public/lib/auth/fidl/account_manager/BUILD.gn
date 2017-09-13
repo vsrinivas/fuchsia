@@ -10,7 +10,7 @@ fidl("account_manager") {
   ]
 
   public_deps = [
-    "//apps/auth/services/token_manager",
+    "//garnet/public/lib/auth/fidl/token_manager",
     "//garnet/public/lib/ui/views/fidl",
   ]
 }

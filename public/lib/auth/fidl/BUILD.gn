@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("services") {
+group("fidl") {
   deps = [
-    "//apps/auth/services/account_manager",
-    "//apps/auth/services/token_manager",
+    "//garnet/public/lib/auth/fidl/account_manager",
+    "//garnet/public/lib/auth/fidl/token_manager",
   ]
 }

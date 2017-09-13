@@ -46,3 +46,10 @@ group("store") {
   ]
 }
 
+executable("auth_unittests") {
+  testonly = true
+
+  deps = [
+    ":unittests",
+  ]
+}
