@@ -30,25 +30,25 @@ import (
 
 var (
 	fuchsiaBuildDir = os.Getenv("FUCHSIA_BUILD_DIR")
-	magentaBuildDir = os.Getenv("MAGENTA_BUILD_DIR")
+	zirconBuildDir = os.Getenv("ZIRCON_BUILD_DIR")
 
-	magentaDir = os.Getenv("MAGENTA_DIR")
+	zirconDir = os.Getenv("ZIRCON_DIR")
 )
 
 var (
-	bootloader     = flag.String("bootloader", filepath.Join(magentaBuildDir, "bootloader/bootx64.efi"), "path to bootx64.efi")
-	kernel         = flag.String("kernel", filepath.Join(magentaBuildDir, "magenta.bin"), "path to magenta.bin")
-	bootfsmanifest = flag.String("bootfsmanifest", filepath.Join(magentaBuildDir, "bootfs.manifest"), "path to magenta bootfs.manifest")
+	bootloader     = flag.String("bootloader", filepath.Join(zirconBuildDir, "bootloader/bootx64.efi"), "path to bootx64.efi")
+	kernel         = flag.String("kernel", filepath.Join(zirconBuildDir, "zircon.bin"), "path to zircon.bin")
+	bootfsmanifest = flag.String("bootfsmanifest", filepath.Join(zirconBuildDir, "bootfs.manifest"), "path to zircon bootfs.manifest")
 	bootmanifest   = flag.String("bootmanifest", filepath.Join(fuchsiaBuildDir, "gen/packages/gn/boot.bootfs.manifest"), "path to boot manifest")
 	sysmanifest    = flag.String("sysmanifest", filepath.Join(fuchsiaBuildDir, "gen/packages/gn/system.bootfs.manifest"), "path to system manifest")
 	packages       = flag.String("packages", filepath.Join(fuchsiaBuildDir, "gen/packages/gn/packages"), "file containing list of packages to include")
 	packagesDir    = flag.String("packagesDir", filepath.Join(fuchsiaBuildDir, "package"), "path to the build packages directory")
 	cmdline        = flag.String("cmdline", filepath.Join(fuchsiaBuildDir, "cmdline"), "path to command line file (if exists)")
 
-	rpi3     = flag.Bool("rpi3", strings.Contains(os.Getenv("MAGENTA_PROJECT"), "rpi"), "install rpi3 layout")
-	rpi3Root = flag.String("rpi3Root", filepath.Join(magentaDir, "kernel/target/rpi3"), "magenta rpi3 target root")
+	rpi3     = flag.Bool("rpi3", strings.Contains(os.Getenv("ZIRCON_PROJECT"), "rpi"), "install rpi3 layout")
+	rpi3Root = flag.String("rpi3Root", filepath.Join(zirconDir, "kernel/target/rpi3"), "zircon rpi3 target root")
 
-	efiOnly = flag.Bool("efionly", false, "install only Magenta EFI partition")
+	efiOnly = flag.Bool("efionly", false, "install only Zircon EFI partition")
 
 	blockSize           = flag.Int64("blockSize", 0, "the block size of the target disk (0 means detect)")
 	physicalBlockSize   = flag.Int64("physicalBlockSize", 0, "the physical block size of the target disk (0 means detect)")
@@ -379,7 +379,7 @@ func main() {
 		for _, f := range []string{"cmdline.txt", "config.txt", "bcm2710-rpi-3-b.dtb"} {
 			msCopyIn(filepath.Join(*rpi3Root, f), root, "")
 		}
-		root.Rename(root, "magenta.bin", "kernel8.img")
+		root.Rename(root, "zircon.bin", "kernel8.img")
 		root.Sync()
 
 		to, _, err := root.Open("start.elf", fs.OpenFlagWrite|fs.OpenFlagCreate|fs.OpenFlagFile)

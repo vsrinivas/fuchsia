@@ -1,0 +1,4 @@
+#compdef zgo
+
+# complete zgo with directories under ${ZIRCON_DIR}
+_files -/ -W ${ZIRCON_DIR} zgo

@@ -5,7 +5,7 @@
 import os.path
 
 FUCHSIA_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MAGENTA_ROOT = os.path.join(FUCHSIA_ROOT, "magenta")
+ZIRCON_ROOT = os.path.join(FUCHSIA_ROOT, "zircon")
 BUILDTOOLS_ROOT = os.path.join(FUCHSIA_ROOT, "buildtools")
 FLUTTER_ROOT = os.path.join(FUCHSIA_ROOT, "lib", "flutter")
 DART_ROOT = os.path.join(FLUTTER_ROOT, "bin", "cache", "dart-sdk")

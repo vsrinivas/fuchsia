@@ -13,7 +13,7 @@
 #   $ fbuild
 #
 # Functions prefixed with 'f' are for fuchsia.
-# Functions prefixed with 'm' are for magenta.
+# Functions prefixed with 'z' are for zircon.
 #
 
 if [[ -n "${ZSH_VERSION}" ]]; then
@@ -33,7 +33,7 @@ esac
 
 export FUCHSIA_DIR="$(dirname "${FUCHSIA_SCRIPTS_DIR}")"
 export FUCHSIA_OUT_DIR="${FUCHSIA_DIR}/out"
-export MAGENTA_DIR="${FUCHSIA_DIR}/magenta"
+export ZIRCON_DIR="${FUCHSIA_DIR}/zircon"
 export QEMU_DIR="${FUCHSIA_DIR}/buildtools/${HOST_PLATFORM}/qemu/bin"
 export FUCHSIA_ENV_SH_VERSION="$(git --git-dir=${FUCHSIA_SCRIPTS_DIR}/.git rev-parse HEAD)"
 
@@ -57,8 +57,8 @@ function envhelp() {
     cat <<END
 env.sh functions:
   envhelp, env_sh_version
-magenta functions:
-  mboot, mbuild, mcheck, mgo, mrun, mset, msymbolize
+zircon functions:
+  zboot, zbuild, zcheck, zgo, zrun, zset, zsymbolize
 fuchsia functions:
   fboot, fbuild, fbuild-sysroot, fcheck, fcmd, fcp, fgen,
   fgen-if-changed, fgo, finstall, freboot, frun, fset, fsymbolize, ftrace
@@ -88,47 +88,47 @@ function envprompt() {
   fi
 }
 
-### mgo: navigate to directory within magenta
+### zgo: navigate to directory within zircon
 
-function mgo-usage() {
+function zgo-usage() {
   cat >&2 <<END
-Usage: mgo [dir]
-Navigates to directory within magenta.
+Usage: zgo [dir]
+Navigates to directory within zircon.
 END
 }
 
-function mgo() {
+function zgo() {
   if [[ $# -gt 1 ]]; then
-    mgo-usage
+    zgo-usage
     return 1
   fi
 
-  cd "${MAGENTA_DIR}/$1"
+  cd "${ZIRCON_DIR}/$1"
 }
 
 if [[ -z "${ZSH_VERSION}" ]]; then
-  function _mgo() {
+  function _zgo() {
     local cur
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
-    COMPREPLY=($(ls -dp1 --color=never ${MAGENTA_DIR}/${cur}* 2>/dev/null | \
-      sed -n "s|^${MAGENTA_DIR}/\(.*/\)\$|\1|p" | xargs echo))
+    COMPREPLY=($(ls -dp1 --color=never ${ZIRCON_DIR}/${cur}* 2>/dev/null | \
+      sed -n "s|^${ZIRCON_DIR}/\(.*/\)\$|\1|p" | xargs echo))
   }
-  complete -o nospace -F _mgo mgo
+  complete -o nospace -F _zgo zgo
 fi
 
-### mset: set magenta build properties
+### zset: set zircon build properties
 
-function mset-usage() {
+function zset-usage() {
   cat >&2 <<END
-Usage: mset x86-64|arm64|rpi3|odroidc2|hikey960
-Sets magenta build options.
+Usage: zset x86-64|arm64|rpi3|odroidc2|hikey960
+Sets zircon build options.
 END
 }
 
-function mset() {
+function zset() {
   if [[ $# -ne 1 ]]; then
-    mset-usage
+    zset-usage
     return 1
   fi
 
@@ -136,145 +136,145 @@ function mset() {
 
   case $1 in
     x86-64)
-      export MAGENTA_PROJECT=magenta-pc-x86-64
-      export MAGENTA_ARCH=x86-64
-      export MAGENTA_BUILD_TARGET=x86_64
+      export ZIRCON_PROJECT=zircon-pc-x86-64
+      export ZIRCON_ARCH=x86-64
+      export ZIRCON_BUILD_TARGET=x86_64
       ;;
     arm64)
-      export MAGENTA_PROJECT=magenta-qemu-arm64
-      export MAGENTA_ARCH=arm64
-      export MAGENTA_BUILD_TARGET=aarch64
+      export ZIRCON_PROJECT=zircon-qemu-arm64
+      export ZIRCON_ARCH=arm64
+      export ZIRCON_BUILD_TARGET=aarch64
       ;;
     rpi3)
-      export MAGENTA_PROJECT=magenta-rpi3-arm64
-      export MAGENTA_ARCH=arm64
-      export MAGENTA_BUILD_TARGET=rpi3
+      export ZIRCON_PROJECT=zircon-rpi3-arm64
+      export ZIRCON_ARCH=arm64
+      export ZIRCON_BUILD_TARGET=rpi3
       ;;
     odroidc2)
-      export MAGENTA_PROJECT=magenta-odroidc2-arm64
-      export MAGENTA_ARCH=arm64
-      export MAGENTA_BUILD_TARGET=odroidc2
+      export ZIRCON_PROJECT=zircon-odroidc2-arm64
+      export ZIRCON_ARCH=arm64
+      export ZIRCON_BUILD_TARGET=odroidc2
       ;;
     hikey960)
-      export MAGENTA_PROJECT=magenta-hikey960-arm64
-      export MAGENTA_ARCH=arm64
-      export MAGENTA_BUILD_TARGET=hikey960
+      export ZIRCON_PROJECT=zircon-hikey960-arm64
+      export ZIRCON_ARCH=arm64
+      export ZIRCON_BUILD_TARGET=hikey960
       ;;
     *)
-      mset-usage
+      zset-usage
       return 1
   esac
 
-  export MAGENTA_BUILD_ROOT="${FUCHSIA_OUT_DIR}/build-magenta"
-  export MAGENTA_BUILD_DIR="${MAGENTA_BUILD_ROOT}/build-${MAGENTA_PROJECT}"
-  export MAGENTA_TOOLS_DIR="${MAGENTA_BUILD_ROOT}/tools"
-  export MAGENTA_BUILD_REV_CACHE="${MAGENTA_BUILD_DIR}/build.rev";
-  export MAGENTA_SETTINGS="${settings}"
-  export ENVPROMPT_INFO="${MAGENTA_ARCH}"
+  export ZIRCON_BUILD_ROOT="${FUCHSIA_OUT_DIR}/build-zircon"
+  export ZIRCON_BUILD_DIR="${ZIRCON_BUILD_ROOT}/build-${ZIRCON_PROJECT}"
+  export ZIRCON_TOOLS_DIR="${ZIRCON_BUILD_ROOT}/tools"
+  export ZIRCON_BUILD_REV_CACHE="${ZIRCON_BUILD_DIR}/build.rev";
+  export ZIRCON_SETTINGS="${settings}"
+  export ENVPROMPT_INFO="${ZIRCON_ARCH}"
 
   # add tools to path, removing prior tools directory if any
-  export PATH="${PATH//:${MAGENTA_DIR}\/build-*\/tools}:${MAGENTA_TOOLS_DIR}"
+  export PATH="${PATH//:${ZIRCON_DIR}\/build-*\/tools}:${ZIRCON_TOOLS_DIR}"
 }
 
-### mcheck: checks whether mset was run
+### zcheck: checks whether zset was run
 
-function mcheck-usage() {
+function zcheck-usage() {
   cat >&2 <<END
-Usage: mcheck
-Checks whether magenta build options have been set.
+Usage: zcheck
+Checks whether zircon build options have been set.
 END
 }
 
-function mcheck() {
-  if [[ -z "${MAGENTA_SETTINGS}" ]]; then
-    echo "Must run mset first (see envhelp for more)." >&2
+function zcheck() {
+  if [[ -z "${ZIRCON_SETTINGS}" ]]; then
+    echo "Must run zset first (see envhelp for more)." >&2
     return 1
   fi
   return 0
 }
 
-### mbuild: build magenta
+### zbuild: build zircon
 
-function mbuild-usage() {
+function zbuild-usage() {
   cat >&2 <<END
-Usage: mbuild [extra make args...]
-Builds magenta.
+Usage: zbuild [extra make args...]
+Builds zircon.
 END
 }
 
-function mbuild() {
-  mcheck || return 1
+function zbuild() {
+  zcheck || return 1
 
-  echo "Building magenta..." \
-    && "${FUCHSIA_SCRIPTS_DIR}/build-magenta.sh" \
-         -t "${MAGENTA_BUILD_TARGET}" "$@"
+  echo "Building zircon..." \
+    && "${FUCHSIA_SCRIPTS_DIR}/build-zircon.sh" \
+         -t "${ZIRCON_BUILD_TARGET}" "$@"
 }
 
-function mbuild-if-changed() {
-  echo "Deprecated - just run mbuild"
-  mbuild
+function zbuild-if-changed() {
+  echo "Deprecated - just run zbuild"
+  zbuild
 }
 
-### mboot: run magenta bootserver
+### zboot: run zircon bootserver
 
-function mboot-usage() {
+function zboot-usage() {
   cat >&2 <<END
-Usage: mboot [extra bootserver args...]
-Runs magenta system bootserver.
+Usage: zboot [extra bootserver args...]
+Runs zircon system bootserver.
 END
 }
 
-function mboot() {
-  mcheck || return 1
+function zboot() {
+  zcheck || return 1
 
-  "${MAGENTA_TOOLS_DIR}/bootserver" "${MAGENTA_BUILD_DIR}/magenta.bin" "$@"
+  "${ZIRCON_TOOLS_DIR}/bootserver" "${ZIRCON_BUILD_DIR}/zircon.bin" "$@"
 }
 
-### mrun: run magenta in qemu
+### zrun: run zircon in qemu
 
-function mrun-usage() {
+function zrun-usage() {
   cat >&2 <<END
-Usage: mrun [extra qemu args...]
-Runs magenta system in qemu.
+Usage: zrun [extra qemu args...]
+Runs zircon system in qemu.
 END
 }
 
-function mrun() {
-  mcheck || return 1
+function zrun() {
+  zcheck || return 1
 
-  "${MAGENTA_DIR}/scripts/run-magenta" -o "${MAGENTA_BUILD_DIR}" -a "${MAGENTA_ARCH}" \
+  "${ZIRCON_DIR}/scripts/run-zircon" -o "${ZIRCON_BUILD_DIR}" -a "${ZIRCON_ARCH}" \
     -q "${QEMU_DIR}" $@
 }
 
-### msymbolize: symbolizes stack traces
+### zsymbolize: symbolizes stack traces
 
-function msymbolize-usage() {
+function zsymbolize-usage() {
   cat >&2 <<END
-Usage: msymbolize [extra symbolize args...]
+Usage: zsymbolize [extra symbolize args...]
 Symbolizes stack trace from standard input.
 END
 }
 
-function msymbolize() {
-  mcheck || return 1
+function zsymbolize() {
+  zcheck || return 1
 
   # TODO(jeffbrown): Fix symbolize to support arch other than x86-64
-  "${MAGENTA_DIR}/scripts/symbolize" --build-dir "${MAGENTA_BUILD_DIR}" "$@"
+  "${ZIRCON_DIR}/scripts/symbolize" --build-dir "${ZIRCON_BUILD_DIR}" "$@"
 }
 
-### mlog: run magenta log listener
+### zlog: run zircon log listener
 
-function mlog-usage() {
+function zlog-usage() {
   cat >&2 <<END
-Usage: mlog [extra log listener args...]
-Runs magenta log listener.
+Usage: zlog [extra log listener args...]
+Runs zircon log listener.
 END
 }
 
-function mlog() {
-  mcheck || return 1
+function zlog() {
+  zcheck || return 1
 
-  "${MAGENTA_TOOLS_DIR}/loglistener" "$@"
+  "${ZIRCON_TOOLS_DIR}/loglistener" "$@"
 }
 
 
@@ -343,12 +343,12 @@ function fset() {
 
   case $1 in
     x86-64)
-      mset x86-64
+      zset x86-64
       # TODO(jeffbrown): we should really align these
       export FUCHSIA_GEN_TARGET=x86-64
       ;;
     arm64|rpi3|odroidc2|hikey960)
-      mset $1
+      zset $1
       export FUCHSIA_GEN_TARGET=aarch64
       ;;
     *)
@@ -423,9 +423,9 @@ function fset() {
   export GOPATH="${FUCHSIA_BUILD_DIR}"
 
   # Add tools to path, removing prior tools directory if any.  This also
-  # matches the Magenta tools directory added by mset, so add it back too.
+  # matches the Zircon tools directory added by mset, so add it back too.
   export PATH="${PATH//:${FUCHSIA_OUT_DIR}\/*\/tools}\
-:${FUCHSIA_TOOLS_DIR}:${MAGENTA_TOOLS_DIR}"
+:${FUCHSIA_TOOLS_DIR}:${ZIRCON_TOOLS_DIR}"
 
   # If a goma directory wasn't specified explicitly then default to "~/goma".
   if [[ -n "${goma_dir}" ]]; then
@@ -510,7 +510,7 @@ function fgen() {
 
   echo "Generating ninja files..."
   rm -f "${FUCHSIA_GEN_ARGS_CACHE}"
-  mbuild \
+  zbuild \
     && fgen-internal "$@" \
     && (echo "${FUCHSIA_GEN_ARGS}" > "${FUCHSIA_GEN_ARGS_CACHE}")
 }
@@ -542,12 +542,12 @@ function fgen-if-changed() {
 
 function fbuild-sysroot() {
   echo "Deprecated - just run fbuild"
-  mbuild
+  zbuild
 }
 
 function fbuild-sysroot-if-changed() {
-  echo "Deprecated - just run mbuild"
-  mbuild
+  echo "Deprecated - just run zbuild"
+  zbuild
 }
 
 ### fbuild: build fuchsia
@@ -577,7 +577,7 @@ function fbuild-internal() {
 function fbuild() {
   fcheck || return 1
 
-  mbuild \
+  zbuild \
     && fgen-if-changed \
     && fbuild-goma-ensure-start \
     && echo "Building fuchsia..." \
@@ -668,7 +668,7 @@ END
 function fboot() {
   fcheck || return 1
 
-  mboot "${FUCHSIA_BUILD_DIR}/user.bootfs" "$@"
+  zboot "${FUCHSIA_BUILD_DIR}/user.bootfs" "$@"
 }
 
 ### finstall: build installer image and run boot server
@@ -686,7 +686,7 @@ function finstall() {
   "${FUCHSIA_SCRIPTS_DIR}/installer/build-installable-userfs.sh" \
       -b "${FUCHSIA_BUILD_DIR}" \
     && echo "After netbooting, please run 'install-fuchsia' on the device to complete the installation." \
-    && mboot "${FUCHSIA_BUILD_DIR}/installer.bootfs" "$@"
+    && zboot "${FUCHSIA_BUILD_DIR}/installer.bootfs" "$@"
 }
 
 ### frun: run fuchsia in qemu
@@ -701,7 +701,7 @@ END
 function frun() {
   fcheck || return 1
 
-  mrun -x "${FUCHSIA_BUILD_DIR}/user.bootfs" "$@"
+  zrun -x "${FUCHSIA_BUILD_DIR}/user.bootfs" "$@"
 }
 
 ### fbox: run fuchsia in virtualbox
@@ -725,8 +725,8 @@ function fsymbolize() {
   fcheck || return 1
 
   # TODO(jeffbrown): Fix symbolize to support arch other than x86-64
-  "${MAGENTA_DIR}/scripts/symbolize" \
-      --build-dir "${MAGENTA_BUILD_DIR}" "${FUCHSIA_BUILD_DIR}" "$@"
+  "${ZIRCON_DIR}/scripts/symbolize" \
+      --build-dir "${ZIRCON_BUILD_DIR}" "${FUCHSIA_BUILD_DIR}" "$@"
 }
 
 ### freboot: reboot the attached device
@@ -800,9 +800,9 @@ function fmkbootloader() {
   local TARGET_DIR=$1/EFI/BOOT
   (
     set -e
-    mbuild
+    zbuild
     mkdir -p ${TARGET_DIR}
-    cp ${MAGENTA_BUILD_DIR}/bootloader/bootx64.efi \
+    cp ${ZIRCON_BUILD_DIR}/bootloader/bootx64.efi \
       ${TARGET_DIR}/BOOTX64.EFI
   ) && \
     echo "Bootloader loaded to $1"

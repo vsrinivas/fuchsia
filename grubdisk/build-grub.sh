@@ -5,9 +5,9 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/env.sh
 
-toolchain="$MAGENTA_DIR/prebuilt/downloads/x86_64-elf-6.3.0-$(uname)-x86_64/bin"
+toolchain="$ZIRCON_DIR/prebuilt/downloads/x86_64-elf-6.3.0-$(uname)-x86_64/bin"
 if [[ ! -d $toolchain ]]; then
-  "./$MAGENTA_DIR/scripts/download-toolchain"
+  "./$ZIRCON_DIR/scripts/download-toolchain"
 fi
 
 if [[ ! -e $FUCHSIA_OUT_DIR/build-objconv/bin/objconv ]]; then

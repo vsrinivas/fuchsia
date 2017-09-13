@@ -34,7 +34,7 @@ FUCHSIA_GCE_USER=${FUCHSIA_GCE_USER:-"$USER"}
 FUCHSIA_GCE_INSTANCE=${FUCHSIA_GCE_INSTANCE:-"$FUCHSIA_GCE_USER-fuchsia"}
 FUCHSIA_GCE_IMAGE=${FUCHSIA_GCE_IMAGE:-"$FUCHSIA_GCE_INSTANCE-img"}
 FUCHSIA_GCE_DISK=${FUCHSIA_GCE_DISK:-"$FUCHSIA_GCE_INSTANCE-disk"}
-FUCHSIA_GCE_GRUB=${FUCHSIA_GCE_GRUB:-magenta-grub}
+FUCHSIA_GCE_GRUB=${FUCHSIA_GCE_GRUB:-zircon-grub}
 
 [[ -n $FUCHSIA_GCE_PROJECT ]] || (echo "Set a default gcloud config for project or set \$FUCHSIA_GCE_PROJECT" >&2 && exit 1)
 [[ -n $FUCHSIA_GCE_ZONE ]] || (echo "Set a default gcloud config for compute zone or set \$FUCHSIA_GCE_ZONE" >&2 && exit 1)

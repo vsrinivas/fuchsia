@@ -30,7 +30,7 @@ export FUCHSIA_VBOX_RAW=${FUCHSIA_VBOX_RAW:-$FUCHSIA_OUT_DIR/vbox/disk.raw}
 export FUCHSIA_VBOX_VMDK=${FUCHSIA_VBOX_VMDK:-$FUCHSIA_OUT_DIR/vbox/disk.vmdk}
 export FUCHSIA_VBOX_CONSOLE_SOCK=${FUCHSIA_VBOX_CONSOLE_SOCK:-"$FUCHSIA_OUT_DIR/vbox/${FUCHSIA_VBOX_NAME}.sock"}
 
-# XXX(raggi): Virtualbox and Magenta are not getting along with serial
+# XXX(raggi): Virtualbox and Zircon are not getting along with serial
 # interrupts. Moving to 1 CPU provides sane serial performance for now.
 # if [[ -z ${FUCHSIA_VBOX_CPUS} ]]; then
 # 	ncpu=$(getconf _NPROCESSORS_ONLN || echo 4)

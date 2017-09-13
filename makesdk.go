@@ -81,28 +81,28 @@ func init() {
 		{
 
 			sysroot,
-			"out/build-magenta/build-magenta-qemu-arm64/sysroot",
+			"out/build-zircon/build-zircon-qemu-arm64/sysroot",
 			"sysroot/aarch64-fuchsia",
 			dir,
 			nil,
 		},
 		{
 			sysroot,
-			"out/build-magenta/build-magenta-pc-x86-64/sysroot",
+			"out/build-zircon/build-zircon-pc-x86-64/sysroot",
 			"sysroot/x86_64-fuchsia",
 			dir,
 			nil,
 		},
 		{
 			kernelImg,
-			"out/build-magenta/build-magenta-pc-x86-64/magenta.bin",
-			"kernel/magenta.bin",
+			"out/build-zircon/build-zircon-pc-x86-64/zircon.bin",
+			"kernel/zircon.bin",
 			file,
 			nil,
 		},
 		{
 			kernelDebugObjs,
-			"out/build-magenta/build-magenta-pc-x86-64",
+			"out/build-zircon/build-zircon-pc-x86-64",
 			"kernel/debug",
 			custom,
 			copyKernelDebugObjs,
@@ -123,7 +123,7 @@ func init() {
 		},
 		{
 			tools,
-			"out/build-magenta/tools",
+			"out/build-zircon/tools",
 			"tools",
 			dir,
 			nil,

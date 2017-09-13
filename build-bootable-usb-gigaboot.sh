@@ -28,18 +28,18 @@ command -v sgdisk > /dev/null 2>&1 || {
 usage(){
   echo "build-bootable-usb-gigaboot.sh [-r] [-m] [-f]"
   echo "-r: use release build files instead of debug"
-  echo "-m: DON'T include the Magenta kernel"
+  echo "-m: DON'T include the Zircon kernel"
   echo "-f: DON'T include the Fuchsia filesystem"
 }
 
 FUCHSIA_CONFIG="debug"
-INCLUDE_MAGENTA=1
+INCLUDE_ZIRCON=1
 INCLUDE_FUCHSIA=1
 
 while getopts "rmf" opt; do
     case "${opt}" in
         r) FUCHSIA_CONFIG="release" ;;
-        m) INCLUDE_MAGENTA=0 ;;
+        m) INCLUDE_ZIRCON=0 ;;
         f) INCLUDE_FUCHSIA=0 ;;
         *) usage
            exit 0
@@ -50,9 +50,9 @@ done
 SCRIPT_DIR=$( cd $( dirname "${BASH_SOURCE[0]}" ) && pwd)
 FUCHSIA_DIR="$SCRIPT_DIR/.."
 
-# Ensure Magenta has been built prior to formatting USB
-pushd "$FUCHSIA_DIR/magenta" > /dev/null
-./scripts/build-magenta-x86-64
+# Ensure Zircon has been built prior to formatting USB
+pushd "$FUCHSIA_DIR/zircon" > /dev/null
+./scripts/build-zircon-x86-64
 popd > /dev/null
 
 lsblk
@@ -148,13 +148,13 @@ trap "umount_retry \"${MOUNT_PATH}\" && rm -rf \"${MOUNT_PATH}\" && echo \"Unmou
 
 sudo mkdir -p "${MOUNT_PATH}/EFI/BOOT"
 echo -n "Copying Bootloader..."
-sudo cp "$FUCHSIA_DIR/out/build-magenta/build-magenta-pc-x86-64/bootloader/bootx64.efi" "${MOUNT_PATH}/EFI/BOOT/BOOTX64.EFI"
+sudo cp "$FUCHSIA_DIR/out/build-zircon/build-zircon-pc-x86-64/bootloader/bootx64.efi" "${MOUNT_PATH}/EFI/BOOT/BOOTX64.EFI"
 echo " SUCCESS"
 
-if [ "$INCLUDE_MAGENTA" -eq 1 ]; then
-  echo -n "Copying magenta.bin..."
-  sudo cp "$FUCHSIA_DIR/magenta/build-magenta-pc-x86-64/magenta.bin" "${MOUNT_PATH}/magenta.bin"
-  sudo cp "$FUCHSIA_DIR/magenta/build-magenta-pc-x86-64/bootdata.bin" "${MOUNT_PATH}/ramdisk.bin"
+if [ "$INCLUDE_ZIRCON" -eq 1 ]; then
+  echo -n "Copying zircon.bin..."
+  sudo cp "$FUCHSIA_DIR/zircon/build-zircon-pc-x86-64/zircon.bin" "${MOUNT_PATH}/zircon.bin"
+  sudo cp "$FUCHSIA_DIR/zircon/build-zircon-pc-x86-64/bootdata.bin" "${MOUNT_PATH}/ramdisk.bin"
   echo " SUCCESS"
 fi
 

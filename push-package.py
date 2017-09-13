@@ -16,7 +16,7 @@ DEFAULT_OUT_DIR = 'out/debug-x86-64'
 
 
 def netaddr_cmd(out_dir, device):
-  path = os.path.join(out_dir, '../build-magenta/tools/netaddr')
+  path = os.path.join(out_dir, '../build-zircon/tools/netaddr')
   command = [
       path,
       '--fuchsia',

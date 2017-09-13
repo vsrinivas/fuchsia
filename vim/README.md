@@ -57,8 +57,8 @@
 
 ## See also
 
-For Magenta YouCompleteMe integration:
-https://fuchsia.googlesource.com/magenta/+/master/docs/editors.md
+For Zircon YouCompleteMe integration:
+https://fuchsia.googlesource.com/zircon/+/master/docs/editors.md
 
 ## TODO
 

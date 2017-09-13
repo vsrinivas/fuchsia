@@ -1,8 +1,8 @@
 # grubdisk
 
 The scripts contained within are a small set of tools that reliably build a disk
-that can boot Magenta systems from a GPT EFI System Partition on the same
-machine. This is a convenience for booting Magenta/Fuchsia on BIOS based
+that can boot Zircon systems from a GPT EFI System Partition on the same
+machine. This is a convenience for booting Zircon/Fuchsia on BIOS based
 systems, while still using a GPT layouts.
 
 ## Quick & Easy
@@ -15,7 +15,7 @@ fbuild
 
 The output will be `out/grub.raw`, which may be installed as a disk to any BIOS
 based computer, such as a compute VM. The configuration will search for a GPT
-ESP partition on the system containing `magenta.bin` and `bootdata.bin` and boot
+ESP partition on the system containing `zircon.bin` and `bootdata.bin` and boot
 it.
 
 ## Step by Step Usage
@@ -73,8 +73,8 @@ installs the grub boot.img into the PMBR Boot Code, and then installs the
 core.img into the BIOS partition it created.
 
 The core.img that is created contains an embedded grub.cfg that searches the
-system GPTs for a partition containing `magenta.bin`. Once it finds that, it
-will multiboot `magenta.bin` with `bootdata.bin`.
+system GPTs for a partition containing `zircon.bin`. Once it finds that, it
+will multiboot `zircon.bin` with `bootdata.bin`.
 
 ## TODO
 

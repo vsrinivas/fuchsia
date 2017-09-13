@@ -24,31 +24,31 @@ usage() {
 
 build() {
   local target="$1" outdir="$2" clean="$3" verbose="$4" asan="$5"
-  local magenta_buildroot="${outdir}/build-magenta"
+  local zircon_buildroot="${outdir}/build-zircon"
 
   if [[ "${clean}" = "true" ]]; then
-    rm -rf -- "${magenta_buildroot}"
+    rm -rf -- "${zircon_buildroot}"
   fi
 
   case "${target}" in
-    "x86_64") local magenta_target="magenta-pc-x86-64" ;;
-    "aarch64"|"arm64") local magenta_target="magenta-qemu-arm64" ;;
-    "rpi3") local magenta_target="magenta-rpi3-arm64" ;;
-    "odroidc2") local magenta_target="magenta-odroidc2-arm64" ;;
-    "hikey960") local magenta_target="magenta-hikey960-arm64" ;;
+    "x86_64") local zircon_target="zircon-pc-x86-64" ;;
+    "aarch64"|"arm64") local zircon_target="zircon-qemu-arm64" ;;
+    "rpi3") local zircon_target="zircon-rpi3-arm64" ;;
+    "odroidc2") local zircon_target="zircon-odroidc2-arm64" ;;
+    "hikey960") local zircon_target="zircon-hikey960-arm64" ;;
     *) echo "unknown target '${target}'" 1>&2 && exit 1;;
   esac
 
-  local asan_magenta asan_ulib
+  local asan_zircon asan_ulib
   if [[ "${asan}" = "true" ]]; then
-      asan_magenta=true
+      asan_zircon=true
       asan_ulib=false
   else
-      asan_magenta=false
+      asan_zircon=false
       asan_ulib=true
   fi
 
-  pushd "${ROOT_DIR}/magenta" > /dev/null
+  pushd "${ROOT_DIR}/zircon" > /dev/null
   if [[ "${verbose}" = "true" ]]; then
       export QUIET=0
   else
@@ -56,16 +56,16 @@ build() {
   fi
   # build host tools
   make -j ${JOBS} \
-    BUILDDIR=${outdir}/build-magenta DEBUG_BUILDROOT=../../magenta tools
-  # build magenta (including its portion of the sysroot) for the target architecture
-  make -j ${JOBS} ${magenta_build_type_flags:-} ${magenta_target} \
-    BUILDROOT=${magenta_buildroot} DEBUG_BUILDROOT=../../magenta \
-    TOOLS=${outdir}/build-magenta/tools USE_ASAN=${asan_magenta} \
+    BUILDDIR=${outdir}/build-zircon DEBUG_BUILDROOT=../../zircon tools
+  # build zircon (including its portion of the sysroot) for the target architecture
+  make -j ${JOBS} ${zircon_build_type_flags:-} ${zircon_target} \
+    BUILDROOT=${zircon_buildroot} DEBUG_BUILDROOT=../../zircon \
+    TOOLS=${outdir}/build-zircon/tools USE_ASAN=${asan_zircon} \
     BUILDDIR_SUFFIX=
   # Build the alternate shared libraries (ASan).
-  make -j ${JOBS} ${magenta_build_type_flags:-} ${magenta_target} \
-    BUILDROOT=${magenta_buildroot} DEBUG_BUILDROOT=../../magenta \
-    TOOLS=${outdir}/build-magenta/tools USE_ASAN=${asan_ulib} \
+  make -j ${JOBS} ${zircon_build_type_flags:-} ${zircon_target} \
+    BUILDROOT=${zircon_buildroot} DEBUG_BUILDROOT=../../zircon \
+    TOOLS=${outdir}/build-zircon/tools USE_ASAN=${asan_ulib} \
     ENABLE_ULIB_ONLY=true ENABLE_BUILD_SYSROOT=false BUILDDIR_SUFFIX=-ulib
   popd > /dev/null
 }

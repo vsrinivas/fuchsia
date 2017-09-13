@@ -25,7 +25,7 @@ BOOTFS_PREAMBLE = "user.bootfs\n"
 EFI_DISK_IMG_PATH = "installer/efi_fs.lz4"
 DIR_EFI = "EFI"
 DIR_EFI_BOOT = "EFI/BOOT"
-FILE_KERNEL = "magenta.bin"
+FILE_KERNEL = "zircon.bin"
 FILE_KERNEL_RD = "ramdisk.bin"
 FILE_KERNEL_CMDLINE = "cmdline"
 
@@ -146,12 +146,12 @@ parser.add_argument('--boot_manifest', action='store', required=False,
                     not provided it will be assumed to be relative to build_dir""")
 parser.add_argument('--minfs_path', action='store', required=True,
                     help="The location of the host-compiled minfs binary")
-parser.add_argument('--build_dir_magenta', action='store', required=False,
+parser.add_argument('--build_dir_zircon', action='store', required=False,
                     help="""Directory in which to find magneta build artifacts.
                     either this or both the kernel AND efi_loader args must be
                     supplied.""")
 parser.add_argument('--kernel', action='store', required=False,
-                    help="""Location of magenta.bin, if not supplied this will
+                    help="""Location of zircon.bin, if not supplied this will
                     be assumed to be relative to --build_dir""")
 parser.add_argument('--efi_loader', action='store', required=False,
                     help="""Location of the kernel bootloader loaded by EFI
@@ -180,7 +180,7 @@ args = parser.parse_args()
 disk_path_efi = args.efi_disk
 bootloader = args.efi_loader
 kernel = args.kernel
-build_dir_magenta = args.build_dir_magenta
+build_dir_zircon = args.build_dir_zircon
 bootdata = args.bootdata
 kernel_cmdline = args.kernel_cmdline
 enable_thread_exp = not args.disable_thread_exp
@@ -195,31 +195,31 @@ if arch is None:
 if not runtime_dir:
   runtime_dir = args.build_dir
 
-# if bootloader was not supplied, find it relative to the magenta build dir
+# if bootloader was not supplied, find it relative to the zircon build dir
 if bootloader is None:
-  if build_dir_magenta is not None:
-    bootloader = os.path.join(build_dir_magenta, "bootloader", "bootx64.efi")
+  if build_dir_zircon is not None:
+    bootloader = os.path.join(build_dir_zircon, "bootloader", "bootx64.efi")
   else:
-    print """You must supply either the magenta build dir or the path to
+    print """You must supply either the zircon build dir or the path to
     the EFI bootloader"""
     sys.exit(-1)
 
-# if the kernel was not supplied, find it relative to the magenta build dir
+# if the kernel was not supplied, find it relative to the zircon build dir
 if kernel is None:
-  if build_dir_magenta is not None:
-    kernel = os.path.join(build_dir_magenta, "magenta.bin")
+  if build_dir_zircon is not None:
+    kernel = os.path.join(build_dir_zircon, "zircon.bin")
   else:
-    print """You must supply either the magenta build dir or the path to
+    print """You must supply either the zircon build dir or the path to
     the kernel"""
     sys.exit(-1)
 
-# if the kernel ram disk was not supplied, find it relative to the magenta build
+# if the kernel ram disk was not supplied, find it relative to the zircon build
 # dir
 if not bootdata:
-  if build_dir_magenta is not None:
-    bootdata = os.path.join(build_dir_magenta, "bootdata.bin")
+  if build_dir_zircon is not None:
+    bootdata = os.path.join(build_dir_zircon, "bootdata.bin")
   else:
-    print """You must supply either the magenta build dir or the path
+    print """You must supply either the zircon build dir or the path
     to the bootdata.bin"""
     sys.exit(-1)
 
@@ -261,7 +261,7 @@ package_list = os.path.join(build_gen_dir, "packages")
 
 mkbootfs_path = args.mkbootfs
 if mkbootfs_path is None:
-  mkbootfs_path = os.path.join(args.build_dir, "..", "build-magenta", "tools",
+  mkbootfs_path = os.path.join(args.build_dir, "..", "build-zircon", "tools",
                                "mkbootfs")
 
 minfs_bin = args.minfs_path

@@ -21,15 +21,15 @@ fi
 
 SCRIPT_DIR=$( cd $( dirname "${BASH_SOURCE[0]}" ) && pwd)
 FUCHSIA_DIR="$SCRIPT_DIR/.."
-MINFS="$FUCHSIA_DIR/out/build-magenta/tools/minfs"
+MINFS="$FUCHSIA_DIR/out/build-zircon/tools/minfs"
 MANIFEST_BUILDER="$SCRIPT_DIR/installer/manifest-builder.py"
 
 echo $FUCHSIA_DIR
 
 
-# Ensure Magenta has been built prior to formatting USB
-pushd "$FUCHSIA_DIR/magenta" > /dev/null
-./scripts/make-parallel magenta-rpi3-arm64
+# Ensure Zircon has been built prior to formatting USB
+pushd "$FUCHSIA_DIR/zircon" > /dev/null
+./scripts/make-parallel zircon-rpi3-arm64
 popd > /dev/null
 
 if [[ ! -e "$MINFS" ]]; then
@@ -140,7 +140,7 @@ DATA_PTN_PATH="${DEVICE_PATH}3"
 # read it
 sudo mkfs.vfat "$BOOT_PTN_PATH"
 
-# Format the root and data partitions as MinFS so that magenta can
+# Format the root and data partitions as MinFS so that zircon can
 # read them
 sudo $MINFS "$ROOT_PTN_PATH@$ROOT_PTN_SZ_B" create
 sudo $MINFS "$DATA_PTN_PATH@$DATA_PTN_SZ_B" create
@@ -173,24 +173,24 @@ sudo mount "$BOOT_PTN_PATH" "$MOUNT_PATH"
 trap "umount_retry \"${MOUNT_PATH}\" && rm -rf \"${MOUNT_PATH}\" && echo \"Unmounted succesfully\"" INT TERM EXIT
 
 # Copy the kernel to the boot partition.
-sudo cp "$FUCHSIA_DIR/magenta/build-magenta-rpi3-arm64/magenta.bin" \
+sudo cp "$FUCHSIA_DIR/zircon/build-zircon-rpi3-arm64/zircon.bin" \
         "${MOUNT_PATH}/kernel8.img"
 
 # Copy the rpi configuration
-sudo cp "$FUCHSIA_DIR/magenta/kernel/target/rpi3/cmdline.txt" \
+sudo cp "$FUCHSIA_DIR/zircon/kernel/target/rpi3/cmdline.txt" \
         "${MOUNT_PATH}/"
-sudo cp "$FUCHSIA_DIR/magenta/kernel/target/rpi3/config.txt" \
+sudo cp "$FUCHSIA_DIR/zircon/kernel/target/rpi3/config.txt" \
         "${MOUNT_PATH}/"
-sudo cp "$FUCHSIA_DIR/magenta/kernel/target/rpi3/bcm2710-rpi-3-b.dtb" \
+sudo cp "$FUCHSIA_DIR/zircon/kernel/target/rpi3/bcm2710-rpi-3-b.dtb" \
         "${MOUNT_PATH}/"
 
-# Copy the magenta boot image to the disk as well. Note that the fuchsia build
+# Copy the zircon boot image to the disk as well. Note that the fuchsia build
 # also generates a fuchsia boot image that contains the entire boot image, we
 # abstain from using this because it relies on the whole image being loaded into
 # memory as a ramfs. Building the fuchsia system in a /system partition directly
 # to the SD card reduces memory presure and alleviates the need for the RPi3's
 # bootloader to load the whole fuchsia system from the SD card to RAM upon boot.
-sudo cp "$FUCHSIA_DIR/magenta/build-magenta-rpi3-arm64/bootdata.bin" \
+sudo cp "$FUCHSIA_DIR/zircon/build-zircon-rpi3-arm64/bootdata.bin" \
         "${MOUNT_PATH}/"
 
 curl -L "https://github.com/raspberrypi/firmware/raw/390f53ed0fd79df274bdcc81d99e09fa262f03ab/boot/start.elf" > \

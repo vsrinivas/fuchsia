@@ -1,7 +1,7 @@
-#compdef mset
+#compdef zset
 
-_mset() {
-  # supported magenta architectures
+_zset() {
+  # supported zircon architectures
   local -a archs
   archs=(
     'x86-64:64 bit Intel'
@@ -10,4 +10,4 @@ _mset() {
   _arguments "1: :{_describe 'arch' archs}"
 }
 
-_mset
+_zset

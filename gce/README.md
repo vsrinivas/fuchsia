@@ -50,7 +50,7 @@ the name of the GCE instance you create/delete can be done by setting
 
 The approach these scripts use create two disks for your GCE instance. One
 contains a minimal preconfigured GRUB bootloader that searches for, and boots,
-a Magenta image in an EFI-style directory layout on any disk in the system.
+a Zircon image in an EFI-style directory layout on any disk in the system.
 
 The Fuchsia disk images are built as standard x86-64 EFI bootable GPT volumes.
 The Grub image is mostly static and rarely needs to change. It can be shared

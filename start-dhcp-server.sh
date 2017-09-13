@@ -9,7 +9,7 @@
 # kill old instances of dnsmasq from previous runs of the script for this
 # interface.
 #
-# It can be passed with -u as a start-up script to run-magenta-* or frun to
+# It can be passed with -u as a start-up script to run-zircon-* or frun to
 # bring up a network for a new qemu instance
 #
 # If the environment variable FUCHSIA_IP is set it will give that IP to the
@@ -139,7 +139,7 @@ if $DARWIN
 then
   # OSX will not bring up ipv6 until an ipv6 address is assigned, but as soon
   # as an address is assigned, it will also assign a link-local address. Here
-  # we assign the same address as used by the magenta ifup script, and let OSX
+  # we assign the same address as used by the zircon ifup script, and let OSX
   # assign the link-local address. Previously we computed and assigned a
   # link-local address, but this resulted in duplicate addresses assigned to
   # the interface, and TAP just duplicated that traffic to applications.

@@ -42,7 +42,7 @@ bootdata="$FUCHSIA_BUILD_DIR/bootdata.bin"
 syncstamp="$FUCHSIA_BUILD_DIR/sync.stamp"
 
 boot-manifests() {
-  echo "$MAGENTA_BUILD_DIR/bootfs.manifest"
+  echo "$ZIRCON_BUILD_DIR/bootfs.manifest"
   while IFS='' read pkg; do
     local manifest="$packagedir/$pkg/boot_manifest"
     test -s "$manifest" && echo $manifest
@@ -126,7 +126,7 @@ mount-writable-parts() {
 sftp-batch-updated-efi-files() {
   local stamp="$1"
   local files=(
-    "$MAGENTA_BUILD_DIR/magenta.bin"
+    "$ZIRCON_BUILD_DIR/zircon.bin"
     "$FUCHSIA_BUILD_DIR/cmdline"
     "$FUCHSIA_BUILD_DIR/bootdata.bin"
   )

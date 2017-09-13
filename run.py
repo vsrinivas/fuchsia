@@ -27,8 +27,8 @@ def main():
     parser.add_argument("--fuchsia-userspace", dest="fuchsia",
                         action="store_true", default=True,
                         help="use Fuchsia userspace")
-    parser.add_argument("--magenta-userspace", dest="fuchsia",
-                        action="store_false", help="use only Magenta userspace")
+    parser.add_argument("--zircon-userspace", dest="fuchsia",
+                        action="store_false", help="use only Zircon userspace")
     parser.add_argument("--boot-server", dest="bootserver", action="store_true",
                         default=False,
                         help="run the bootserver instead of running via qemu")
@@ -46,8 +46,8 @@ def main():
                                          "-" + args.arch)
     # TODO(vtl): Not sure what to use instead of "qemu" for booting on real
     # ARM64 hardware (probably varies depending on hardware).
-    magenta_build_dir = os.path.join(paths.FUCHSIA_ROOT, "out", "build-magenta",
-            "build-magenta-%s-%s" % ("pc" if args.arch == "x86-64" else "qemu", args.arch))
+    zircon_build_dir = os.path.join(paths.FUCHSIA_ROOT, "out", "build-zircon",
+            "build-zircon-%s-%s" % ("pc" if args.arch == "x86-64" else "qemu", args.arch))
 
     qemu_dir = os.path.join(paths.FUCHSIA_ROOT, "buildtools", "qemu", "bin")
 
@@ -55,15 +55,15 @@ def main():
                   else None)
 
     if args.bootserver:
-        command = [os.path.join(paths.FUCHSIA_ROOT, "out", "build-magenta",
+        command = [os.path.join(paths.FUCHSIA_ROOT, "out", "build-zircon",
                    "tools", "bootserver")]
-        command += [os.path.join(magenta_build_dir, "magenta.bin")]
+        command += [os.path.join(zircon_build_dir, "zircon.bin")]
         if boot_fs:
             command += [boot_fs]
     else:
-        command = [os.path.join(paths.MAGENTA_ROOT, "scripts", "run-magenta")]
+        command = [os.path.join(paths.ZIRCON_ROOT, "scripts", "run-zircon")]
         command += ["-a", args.arch]
-        command += ["-o", magenta_build_dir]
+        command += ["-o", zircon_build_dir]
         command += ["-q", qemu_dir]
         if boot_fs:
             command += ["-x", boot_fs]

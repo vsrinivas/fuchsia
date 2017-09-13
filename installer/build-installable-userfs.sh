@@ -38,7 +38,7 @@ DEFAULT_SIZE_SYSTEM=4
 DEFAULT_SIZE_EFI=1
 BLOCK_SIZE=1024
 STAGING_DIR="${FUCHSIA_OUT_DIR:-${script_dir}}/build-installer"
-# TODO take a size for the magenta partition as well
+# TODO take a size for the zircon partition as well
 bytes_sys=$(($DEFAULT_SIZE_SYSTEM * 1024 * 1024 * 1024))
 # FAT wants the sector count to be a multiple of 63 (for total sectors) and of
 # 32 (sectors per track) and this value gets us close to 1GiB
@@ -48,7 +48,7 @@ debug=0
 platform="x86-64"
 build_dir_fuchsia=""
 minfs_path=""
-build_dir_magenta=""
+build_dir_zircon=""
 device_type="pc"
 kernel_cmdline=""
 bootdata=""
@@ -73,8 +73,8 @@ while (( "$#")); do
       echo "-b: specify the build directory manually, this will cause -r and" \
         "-d arguments to be ignored"
       echo "-m: path to the host architecture minfs binary, perhaps you need" \
-        "to run 'make' in magenta/system/uapp/minfs"
-      echo "-a: artifacts directory for magenta, will be used to find files" \
+        "to run 'make' in zircon/system/uapp/minfs"
+      echo "-a: artifacts directory for zircon, will be used to find files" \
         "to place on the EFI partition. If not supplied, this will be assumed" \
         "relative to fuchsia build directory."
       echo "-t: the device type, for example 'qemu', 'rpi', 'pc', etc"
@@ -114,7 +114,7 @@ while (( "$#")); do
       ;;
     "-a")
       shift
-      build_dir_magenta=$1
+      build_dir_zircon=$1
       ;;
     "-t")
       shift
@@ -144,7 +144,7 @@ while (( "$#")); do
   shift
 done
 
-if [ "$build_dir_fuchsia" = "" ] || [ "$build_dir_magenta" = "" ]; then
+if [ "$build_dir_fuchsia" = "" ] || [ "$build_dir_zircon" = "" ]; then
   if [ "$release" -eq "$debug" ]; then
     if [ "$debug" -eq 0 ]; then
       debug=1
@@ -178,8 +178,8 @@ case $platform in
     exit -1
 esac
 
-echo "Building magenta for installer"
-"$script_dir/../build-magenta.sh" -t "$build_arch"
+echo "Building zircon for installer"
+"$script_dir/../build-zircon.sh" -t "$build_arch"
 
 if [ "$build_arch" == "x86_64" ]; then
   build_arch="x86-64"
@@ -194,12 +194,12 @@ else
   fi
 fi
 
-if [ "$build_dir_magenta" = "" ]; then
-  build_dir_magenta="${script_dir}/../../out/build-magenta/build-magenta-${device_type}-"
+if [ "$build_dir_zircon" = "" ]; then
+  build_dir_zircon="${script_dir}/../../out/build-zircon/build-zircon-${device_type}-"
   if [ "$build_arch" = "aarch64" ]; then
-    build_dir_magenta="${build_dir_magenta}arm64"
+    build_dir_zircon="${build_dir_zircon}arm64"
   elif [ "$build_arch" = "x86-64" ]; then
-    build_dir_magenta="${build_dir_magenta}${build_arch}"
+    build_dir_zircon="${build_dir_zircon}${build_arch}"
   fi
 else
   if [ "$device_type" != "" ]; then
@@ -208,7 +208,7 @@ else
 fi
 
 if [ "$minfs_path" = "" ]; then
-  minfs_path=$build_dir_magenta/tools/minfs
+  minfs_path=$build_dir_zircon/tools/minfs
 fi
 
 if [ ! -f "$minfs_path" ]; then
@@ -311,7 +311,7 @@ fi
 imager_cmd=( "${script_dir}"/imager.py --disk_path="$disk_path" --mcp_path="$mcpy_loc"
   --mmd_path="$mmd_loc" --lz4_path="$lz4_path" --build_dir="$build_dir_fuchsia"
   --temp_dir="$STAGING_DIR" --minfs_path="$minfs_path" --arch="$arch"
-  --efi_disk="$disk_path_efi" --build_dir_magenta="$build_dir_magenta"
+  --efi_disk="$disk_path_efi" --build_dir_zircon="$build_dir_zircon"
   --bootdata="$bootdata" --boot_manifest="$boot_manifest"
   --mdir_path="$mdir_loc" --runtime_dir="$mgtix_out" "${extras[@]}" )
 
