@@ -17,6 +17,9 @@ def main():
     parser.add_argument('--dartanalyzer',
                         help='Path to the Dart analyzer executable',
                         required=True)
+    parser.add_argument('--server-snapshot',
+                        help='Path to the analysis server snapshot',
+                        required=True)
     parser.add_argument('--dart-sdk', help='Path to the Dart SDK',
                         required=True)
     parser.add_argument('--options', help='Path to analysis options',
@@ -40,7 +43,7 @@ def main():
     call_args = [
         args.dartanalyzer,
         '--packages=%s' % args.dot_packages,
-        '--dart-sdk=%s' % args.dart_sdk,
+        '--server-snapshot=%s' % args.server_snapshot,
         '--options=%s' % args.options,
         args.source_dir,
         '--fatal-warnings',

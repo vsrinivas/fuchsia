@@ -9,6 +9,8 @@ dart_tool("analyzer") {
 
   source_dir = "bin"
 
+  disable_analysis = true
+
   deps = [
     "//third_party/dart-pkg/pub/analysis_server_lib",
     "//third_party/dart-pkg/pub/args",

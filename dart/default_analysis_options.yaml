@@ -1,7 +1,6 @@
 analyzer:
   strong-mode: true
   language:
-    enableAssertInitializer: true
     enableSuperMixins: true
 linter:
   # Full list available at http://dart-lang.github.io/linter/lints/options/options.html.

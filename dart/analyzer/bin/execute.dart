@@ -17,26 +17,31 @@ import 'package:path/path.dart' as path;
 
 // ignore_for_file: unawaited_futures
 
-const String _optionSdkPath = 'sdk-path';
+const String _optionServerSnapshot = 'server-snapshot';
 const String _optionSourceDir = 'source-dir';
 const String _optionShowResults = 'show-results';
 const String _optionCachePath = 'cache-path';
 const String _optionStamp = 'stamp';
 const String _optionDepName = 'depname';
 const String _optionDepFile = 'depfile';
+const String _optionPackageRoot = 'package-root';
 const List<String> _requiredOptions = const [
-  _optionSdkPath,
+  _optionServerSnapshot,
   _optionSourceDir,
   _optionCachePath,
   _optionStamp,
   _optionDepName,
   _optionDepFile,
+  _optionPackageRoot,
 ];
 
 Future<Null> main(List<String> args) async {
   final ArgParser parser = new ArgParser()
-    ..addOption(_optionSdkPath, help: 'Path to the Dart SDK')
-    ..addOption(_optionSourceDir, help: 'The source directory')
+    ..addOption(_optionServerSnapshot,
+        help: 'Path to the analysis server snapshot')
+    ..addOption(_optionPackageRoot, help: 'Path to the package root')
+    ..addOption(_optionSourceDir,
+        help: 'Path to the source directory relative to the package root')
     ..addFlag(_optionShowResults,
         help: 'Whether to always show results', negatable: true)
     ..addOption(_optionCachePath, help: 'Path to the analysis cache')
@@ -53,7 +58,7 @@ Future<Null> main(List<String> args) async {
   final stopwatch = new Stopwatch()..start();
 
   final client = await AnalysisServer.create(
-    sdkPath: path.canonicalize(argResults[_optionSdkPath]),
+    scriptPath: path.canonicalize(argResults[_optionServerSnapshot]),
     clientId: 'Fuchsia Dart build analyzer',
     clientVersion: '0.1',
     serverArgs: ['--cache', path.canonicalize(argResults[_optionCachePath])],
@@ -94,8 +99,20 @@ Future<Null> main(List<String> args) async {
   });
 
   // Set the path to analyze.
-  final analysisRoot = path.canonicalize(argResults[_optionSourceDir]);
-  client.analysis.setAnalysisRoots([analysisRoot], []);
+  final sourceDir = argResults[_optionSourceDir];
+  final analysisRoot = path.canonicalize(argResults[_optionPackageRoot]);
+  final excluded = [];
+  if (sourceDir != '.') {
+    for (FileSystemEntity entity in new Directory(analysisRoot).listSync()) {
+      if (entity is Directory) {
+        final name = path.relative(entity.path, from: analysisRoot);
+        if (name != sourceDir) {
+          excluded.add(entity.path);
+        }
+      }
+    }
+  }
+  client.analysis.setAnalysisRoots([analysisRoot], excluded);
 
   // Wait for analysis to finish.
   try {

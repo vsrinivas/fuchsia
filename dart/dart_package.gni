@@ -216,7 +216,13 @@ template("dart_package") {
 
     if (run_dart_analysis) {
       action(target_name) {
-        script = "//build/dart/run_analysis.py"
+        runner_label = "//build/dart/analyzer($host_toolchain)"
+        runner_out_dir = get_label_info(runner_label, "root_out_dir")
+        script = "$runner_out_dir/dart-tools/analyzer"
+
+        server_label = "//dart/pkg/analysis_server:analysis_server_bin($host_toolchain)"
+        server_gen_dir = get_label_info(server_label, "target_gen_dir")
+        server_snaphost = "$server_gen_dir/analysis_server_bin.snapshot"
 
         depfile = "$target_gen_dir/$target_name.analysis.d"
 
@@ -226,31 +232,33 @@ template("dart_package") {
           options_file,
         ]
 
+        pool = "//build/dart:analysis_pool($default_toolchain)"
+
         outputs = [
           output_file,
         ]
 
         args = [
+          "--package-root",
+          rebase_path("."),
           "--source-dir",
-          rebase_path(source_dir),
-          "--dot-packages",
-          rebase_path(dot_packages_file),
-          "--dartanalyzer",
-          rebase_path(dart_analyzer_binary),
-          "--dart-sdk",
-          rebase_path(dart_sdk_dir),
-          "--options",
-          rebase_path(options_file),
+          rebase_path(source_dir, "."),
+          "--server-snapshot",
+          rebase_path(server_snaphost),
           "--stamp",
           rebase_path(output_file),
           "--depname",
           rebase_path(output_file, root_build_dir),
           "--depfile",
           rebase_path(depfile),
+          "--cache-path",
+          rebase_path("$root_out_dir/analysis-cache"),
         ]
 
         deps = [
           ":$invocation_target_name",
+          runner_label,
+          server_label,
         ]
       }
     }
