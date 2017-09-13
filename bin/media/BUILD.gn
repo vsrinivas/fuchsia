@@ -2,12 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//garnet/public/lib/fidl/fidl.gni")
 import("//packages/package.gni")
 
 group("services") {
   public_deps = [
     "//garnet/bin/media/audio_policy_service",
-    "//garnet/bin/media/audio_server",
     "//garnet/bin/media/flog_service",
     "//garnet/bin/media/media_service",
     "//garnet/bin/media/net_media_service",
@@ -21,43 +21,17 @@ group("tools") {
   ]
 }
 
-group("examples") {
-  public_deps = [
-    "//garnet/examples/media/audio_player",
-    "//garnet/examples/media/master_gain",
-    "//garnet/examples/media/media_player",
-    "//garnet/examples/media/media_player_flutter",
-    "//garnet/examples/media/vu_meter",
-  ]
-}
-
-group("lib") {
-  public_deps = [
-    "//garnet/public/lib/media/c",
-  ]
-}
-
 package("media") {
   app = true
 
   deps = [
-    ":examples",
-    ":lib",
     ":services",
     ":tools",
   ]
 
   binaries = [
     {
-      name = "audio_player"
-    },
-
-    {
       name = "audio_policy_service"
-    },
-
-    {
-      name = "audio_server"
     },
 
     {
@@ -66,19 +40,6 @@ package("media") {
 
     {
       name = "flog_viewer"
-    },
-
-    {
-      name = "master_gain"
-    },
-
-    {
-      name = "media_player"
-    },
-
-    {
-      name = "media_player_flutter"
-      source = "gen/garnet/examples/media/media_player_flutter/media_player_flutter.flx"
     },
 
     {
@@ -92,21 +53,76 @@ package("media") {
     {
       name = "vol"
     },
+  ]
+}
+
+package("audio_server") {
+  app = true
+
+  deps = [
+    "//garnet/bin/media/audio_server",
+  ]
+
+  binaries = [ {
+        name = "audio_server"
+      } ]
+}
+
+package("media_client") {
+  deps = [
+    "//garnet/public/lib/media/c",
+  ]
+
+  libraries = [ {
+        name = "libmedia_client.so"
+      } ]
+}
+
+package("examples") {
+  package_name = "media_examples"
+  app = true
+  deps = [
+    "//garnet/examples/media/audio_player",
+    "//garnet/examples/media/master_gain",
+    "//garnet/examples/media/media_player",
+    "//garnet/examples/media/vu_meter",
+  ]
+
+  binaries = [
+    {
+      name = "audio_player"
+    },
+
+    {
+      name = "master_gain"
+    },
+
+    {
+      name = "media_player"
+    },
 
     {
       name = "vu_meter"
     },
   ]
 
-  libraries = [ {
-      name = "libmedia_client.so"
-  } ]
+  resources = []
 
-  resources = [ {
-      path = rebase_path(
-              "//garnet/examples/media/media_player_flutter/media_player_flutter.config")
-      dest = "media_player_flutter/media_player_flutter.config"
-  } ]
+  # This example depend on generated code for Dart, so we need to evaluate the build rules only
+  # when we're performing generation for Dart code.
+  if (generate_fidl_for_dart) {
+    deps += [ "//garnet/examples/media/media_player_flutter" ]
+
+    binaries += [ {
+          name = "media_player_flutter"
+          source = "gen/garnet/examples/media/media_player_flutter/media_player_flutter.flx"
+        } ]
+    resources = [ {
+          path = rebase_path(
+                  "//garnet/examples/media/media_player_flutter/media_player_flutter.config")
+          dest = "media_player_flutter/media_player_flutter.config"
+        } ]
+  }
 }
 
 package("tests") {
@@ -115,14 +131,14 @@ package("tests") {
   package_name = "media_tests"
 
   deps = [
-    "//garnet/public/lib/media/c:tests",
-    "//garnet/public/lib/media/timeline:tests",
-    "//garnet/public/lib/media/transport:tests",
     "//garnet/bin/media/audio:tests",
     "//garnet/bin/media/demux:tests",
     "//garnet/bin/media/media_service:tests",
     "//garnet/bin/media/net_media_service:tests",
     "//garnet/bin/media/util:tests",
+    "//garnet/public/lib/media/c:tests",
+    "//garnet/public/lib/media/timeline:tests",
+    "//garnet/public/lib/media/transport:tests",
   ]
 
   tests = [
