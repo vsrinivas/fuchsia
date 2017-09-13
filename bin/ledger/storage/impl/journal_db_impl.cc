@@ -111,28 +111,33 @@ void JournalDBImpl::Commit(
           std::unique_ptr<storage::Commit> commit =
               CommitImpl::FromContentAndParents(page_storage_, object_id,
                                                 std::move(parents));
-          std::vector<ObjectId> objects_to_sync;
-          status = GetObjectsToSync(&objects_to_sync);
-          if (status != Status::OK) {
-            callback(status, nullptr);
-            return;
-          }
-          objects_to_sync.reserve(objects_to_sync.size() + new_nodes.size());
-          // TODO(qsr): When using C++17, move data out of the set using
-          // extract.
-          objects_to_sync.insert(objects_to_sync.end(), new_nodes.begin(),
-                                 new_nodes.end());
-          page_storage_->AddCommitFromLocal(
-              commit->Clone(), std::move(objects_to_sync),
-              fxl::MakeCopyable([ this, commit = std::move(commit),
-                                  callback ](Status status) mutable {
-                valid_ = false;
-                if (status != Status::OK) {
-                  callback(status, nullptr);
-                  return;
-                }
-                callback(db_->RemoveJournal(id_), std::move(commit));
-              }));
+          GetObjectsToSync(fxl::MakeCopyable([
+            this, new_nodes = std::move(new_nodes), commit = std::move(commit),
+            callback = std::move(callback)
+          ](Status status, std::vector<ObjectId> objects_to_sync) mutable {
+            if (status != Status::OK) {
+              callback(status, nullptr);
+              return;
+            }
+
+            objects_to_sync.reserve(objects_to_sync.size() + new_nodes.size());
+            // TODO(qsr): When using C++17, move data out of the set using
+            // extract.
+            objects_to_sync.insert(objects_to_sync.end(), new_nodes.begin(),
+                                   new_nodes.end());
+            page_storage_->AddCommitFromLocal(
+                commit->Clone(), std::move(objects_to_sync), fxl::MakeCopyable([
+                  this, commit = std::move(commit),
+                  callback = std::move(callback)
+                ](Status status) mutable {
+                  valid_ = false;
+                  if (status != Status::OK) {
+                    callback(status, nullptr);
+                    return;
+                  }
+                  callback(db_->RemoveJournal(id_), std::move(commit));
+                }));
+          }));
         }));
   });
 }
@@ -187,11 +192,14 @@ Status JournalDBImpl::Rollback() {
   return s;
 }
 
-Status JournalDBImpl::GetObjectsToSync(std::vector<ObjectId>* objects_to_sync) {
+void JournalDBImpl::GetObjectsToSync(
+    std::function<void(Status status, std::vector<ObjectId> objects_to_sync)>
+        callback) {
   std::unique_ptr<Iterator<const EntryChange>> entries;
   Status s = db_->GetJournalEntries(id_, &entries);
   if (s != Status::OK) {
-    return s;
+    callback(s, {});
+    return;
   }
   // Compute the key-value pairs added in this journal.
   std::map<std::string, ObjectId> key_values;
@@ -212,10 +220,10 @@ Status JournalDBImpl::GetObjectsToSync(std::vector<ObjectId>* objects_to_sync) {
       result_set.insert(key_value.second);
     }
   }
-  std::vector<ObjectId> result;
-  std::copy(result_set.begin(), result_set.end(), std::back_inserter(result));
-  objects_to_sync->swap(result);
-  return Status::OK;
+  std::vector<ObjectId> objects_to_sync;
+  std::copy(result_set.begin(), result_set.end(),
+            std::back_inserter(objects_to_sync));
+  callback(Status::OK, std::move(objects_to_sync));
 }
 
 }  // namespace storage

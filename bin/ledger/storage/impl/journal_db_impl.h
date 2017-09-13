@@ -77,7 +77,9 @@ class JournalDBImpl : public Journal {
                          std::vector<std::unique_ptr<const storage::Commit>>)>
           callback);
 
-  Status GetObjectsToSync(std::vector<ObjectId>* objects_to_sync);
+  void GetObjectsToSync(
+      std::function<void(Status status, std::vector<ObjectId> objects_to_sync)>
+          callback);
 
   const JournalType type_;
   coroutine::CoroutineService* const coroutine_service_;
