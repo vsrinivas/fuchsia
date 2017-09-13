@@ -1,0 +1,19 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+import "lib/media/fidl/media_capturer.fidl";
+
+[ServiceName="maxwell.SpeechToText"]
+interface SpeechToText {
+  BeginCapture(media.MediaCapturer media_capturer,
+    TranscriptionListener transcription_listener);
+};
+
+// Represents an active transcription session. Either side may close this
+// interface to indicate that transcription should stop.
+interface TranscriptionListener {
+  OnTranscriptUpdate(string spoken_text);
+};

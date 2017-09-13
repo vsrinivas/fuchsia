@@ -163,6 +163,9 @@ class SuggestionEngineImpl : public SuggestionEngine,
                   fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
                   fidl::InterfaceHandle<ContextWriter> context_writer) override;
 
+  // |SuggestionEngine|
+  void SetSpeechToText(fidl::InterfaceHandle<SpeechToText> service) override;
+
   // |AskDispatcher|
   void DispatchAsk(UserInputPtr input) override;
 
@@ -286,6 +289,8 @@ class SuggestionEngineImpl : public SuggestionEngine,
   media::MediaPacketProducerPtr media_packet_producer_;
   media::MediaTimelineControlPointPtr time_lord_;
   media::TimelineConsumerPtr media_timeline_consumer_;
+
+  SpeechToTextPtr speech_to_text_;
 
   // The debugging interface for all Suggestions.
   SuggestionDebugImpl debug_;

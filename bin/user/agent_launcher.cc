@@ -11,7 +11,7 @@ constexpr char kEnvironmentLabel[] = "agent";
 
 }  // namespace
 
-void AgentLauncher::StartAgent(
+app::ServiceProviderPtr AgentLauncher::StartAgent(
     const std::string& url,
     std::unique_ptr<app::ApplicationEnvironmentHost> env_host) {
   fidl::InterfaceHandle<app::ApplicationEnvironmentHost> agent_host_handle =
@@ -27,8 +27,11 @@ void AgentLauncher::StartAgent(
 
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = url;
+  app::ServiceProviderPtr services;
+  launch_info->services = services.NewRequest();
   FXL_LOG(INFO) << "Starting Maxwell agent " << url;
   agent_launcher->CreateApplication(std::move(launch_info), NULL);
+  return services;
 }
 
 }  // namespace maxwell

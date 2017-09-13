@@ -42,12 +42,21 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   using ServiceProviderInitializer =
       std::function<void(const std::string& url,
                          app::ServiceNamespace* agent_host)>;
+  // A ServiceProviderInitializer that adds standard agent services, including
+  // attributed context and suggestion service entry points.
   void AddStandardServices(const std::string& url,
                            app::ServiceNamespace* agent_host);
 
-  app::ServiceProviderPtr StartServiceProviderApp(const std::string& url);
-  void StartAgent(const std::string& url);
-  void StartAgent(const std::string& url, ServiceProviderInitializer services);
+  // Starts an app in the parent environment, with full access to environment
+  // services.
+  app::ServiceProviderPtr StartTrustedApp(const std::string& url);
+  // Starts an app in a child environment, with access only to standard agent
+  // services (see AddStandardServices).
+  app::ServiceProviderPtr StartAgent(const std::string& url);
+  // Starts an app in a child environment, with access only to services added by
+  // the given ServiceProviderInitializer.
+  app::ServiceProviderPtr StartAgent(const std::string& url,
+                                     ServiceProviderInitializer services);
   void StartActionLog(SuggestionEngine* suggestion_engine);
 
   app::ApplicationContext* app_context_;  // Not owned.

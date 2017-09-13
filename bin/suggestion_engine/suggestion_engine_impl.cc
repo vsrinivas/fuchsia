@@ -233,9 +233,18 @@ void SuggestionEngineImpl::SubscribeToNext(
 void SuggestionEngineImpl::InitiateAsk(
     fidl::InterfaceHandle<SuggestionListener> listener,
     fidl::InterfaceRequest<AskController> controller) {
+  fidl::InterfaceHandle<TranscriptionListener> transcription_listener;
   AskSubscriber* subscriber = new AskSubscriber(
-      ask_suggestions_, this, std::move(listener), std::move(controller));
+      ask_suggestions_, this, transcription_listener.NewRequest(),
+      std::move(listener), std::move(controller));
   ask_channel_.AddSubscriber(std::move(subscriber));
+
+  if (speech_to_text_ && media_service_) {
+    fidl::InterfaceHandle<media::MediaCapturer> media_capturer;
+    media_service_->CreateAudioCapturer(media_capturer.NewRequest());
+    speech_to_text_->BeginCapture(std::move(media_capturer),
+                                  std::move(transcription_listener));
+  }
 }
 
 // |SuggestionProvider|
@@ -297,6 +306,11 @@ void SuggestionEngineImpl::Initialize(
   context_writer_.Bind(std::move(context_writer));
 
   timeline_stories_watcher_.reset(new TimelineStoriesWatcher(&story_provider_));
+}
+
+void SuggestionEngineImpl::SetSpeechToText(
+    fidl::InterfaceHandle<SpeechToText> service) {
+  speech_to_text_ = SpeechToTextPtr::Create(std::move(service));
 }
 
 // end SuggestionEngine

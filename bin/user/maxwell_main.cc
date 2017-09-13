@@ -44,6 +44,7 @@ const char kConfigSchema[] = R"SCHEMA(
       "type": "array",
       "items": { "type": "string" }
     },
+    "kronk": { "type": "string" },
     "mi_dashboard": { "type": "boolean" }
   },
   "required": [ "startup_agents", "mi_dashboard" ],
@@ -86,6 +87,11 @@ bool LoadAndValidateConfig(const std::string& path, Config* out) {
   }
 
   // Read values into the |out| struct.
+
+  if (config_doc.HasMember("kronk")) {
+    out->kronk = config_doc["kronk"].GetString();
+  }
+
   out->mi_dashboard = config_doc["mi_dashboard"].GetBool();
 #ifdef DEPRECATED_NO_MI_DASHBOARD
   // TODO(thatguy): Remove this once references to it in Modular tests

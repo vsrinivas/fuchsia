@@ -14,6 +14,9 @@ struct Config {
   // A list of Agents to start during Maxwell initialization.
   std::list<std::string> startup_agents;
 
+  // Kronk startup URL (omit to exclude Kronk from startup).
+  std::string kronk;
+
   // Set to true if the MI Dashboard should be started.
   bool mi_dashboard;
 };
