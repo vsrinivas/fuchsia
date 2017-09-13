@@ -549,35 +549,33 @@ zx_status_t VPartition::SliceSetLocked(size_t vslice, uint32_t pslice) {
         if (!extent->push_back(pslice)) {
             return ZX_ERR_NO_MEMORY;
         }
-        ZX_DEBUG_ASSERT(SliceGetLocked(vslice) == pslice);
-        AddBlocksLocked((mgr_->SliceSize() / info_.block_size));
-        return ZX_OK;
-    }
-
-    // Longer case: there is no extent for this vslice, so we should make
-    // one.
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<SliceExtent> new_extent(new (&ac) SliceExtent(vslice));
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    } else if (!new_extent->push_back(pslice)) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    ZX_DEBUG_ASSERT(new_extent->GetKey() == vslice);
-    ZX_DEBUG_ASSERT(new_extent->get(vslice) == pslice);
-    slice_map_.insert(fbl::move(new_extent));
-
-    auto nextExtent = --slice_map_.upper_bound(vslice + 1);
-    if (nextExtent.IsValid() && (vslice + 1 == nextExtent->start())) {
-        // Try to coalesce with the next slice
+    } else {
+        // Longer case: there is no extent for this vslice, so we should make
+        // one.
+        fbl::AllocChecker ac;
+        fbl::unique_ptr<SliceExtent> new_extent(new (&ac) SliceExtent(vslice));
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        } else if (!new_extent->push_back(pslice)) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        ZX_DEBUG_ASSERT(new_extent->GetKey() == vslice);
+        ZX_DEBUG_ASSERT(new_extent->get(vslice) == pslice);
+        slice_map_.insert(fbl::move(new_extent));
         extent = --slice_map_.upper_bound(vslice);
+    }
+
+    ZX_DEBUG_ASSERT(SliceGetLocked(vslice) == pslice);
+    AddBlocksLocked((mgr_->SliceSize() / info_.block_size));
+
+    // Merge with the next contiguous extent (if any)
+    auto nextExtent = slice_map_.upper_bound(vslice);
+    if (nextExtent.IsValid() && (vslice + 1 == nextExtent->start())) {
         if (extent->Merge(*nextExtent)) {
             slice_map_.erase(*nextExtent);
         }
     }
 
-    ZX_DEBUG_ASSERT(SliceGetLocked(vslice) == pslice);
-    AddBlocksLocked((mgr_->SliceSize() / info_.block_size));
     return ZX_OK;
 }
 
