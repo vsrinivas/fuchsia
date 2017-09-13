@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/usb.h>
@@ -17,15 +18,6 @@
 #include <zircon/listnode.h>
 #include <threads.h>
 #include <unistd.h>
-
-//#define TRACE 1
-#if TRACE
-#define xprintf(fmt...) printf(fmt)
-#else
-#define xprintf(fmt...) \
-    do {                \
-    } while (0)
-#endif
 
 // usb_port_status_t.wPortStatus
 typedef uint16_t port_status_t;
@@ -81,50 +73,50 @@ static zx_status_t usb_hub_get_port_status(usb_hub_t* hub, int port, port_status
         return result;
     }
 
-    xprintf("usb_hub_get_port_status port %d ", port);
+    dprintf(TRACE, "usb_hub_get_port_status port %d ", port);
 
     uint16_t port_change = status.wPortChange;
     if (port_change & USB_C_PORT_CONNECTION) {
-        xprintf("USB_C_PORT_CONNECTION ");
+        dprintf(TRACE, "USB_C_PORT_CONNECTION ");
         usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_CONNECTION, port,
                           ZX_TIME_INFINITE);
     }
     if (port_change & USB_C_PORT_ENABLE) {
-        xprintf("USB_C_PORT_ENABLE ");
+        dprintf(TRACE, "USB_C_PORT_ENABLE ");
         usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_ENABLE, port,
                           ZX_TIME_INFINITE);
     }
     if (port_change & USB_C_PORT_SUSPEND) {
-        xprintf("USB_C_PORT_SUSPEND ");
+        dprintf(TRACE, "USB_C_PORT_SUSPEND ");
         usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_SUSPEND, port,
                           ZX_TIME_INFINITE);
     }
     if (port_change & USB_C_PORT_OVER_CURRENT) {
-        xprintf("USB_C_PORT_OVER_CURRENT ");
+        dprintf(TRACE, "USB_C_PORT_OVER_CURRENT ");
         usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_OVER_CURRENT, port,
                           ZX_TIME_INFINITE);
     }
     if (port_change & USB_C_PORT_RESET) {
-        xprintf("USB_C_PORT_RESET");
+        dprintf(TRACE, "USB_C_PORT_RESET");
         usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_RESET, port,
                           ZX_TIME_INFINITE);
     }
     if (port_change & USB_C_BH_PORT_RESET) {
-        xprintf("USB_C_BH_PORT_RESET");
+        dprintf(TRACE, "USB_C_BH_PORT_RESET");
         usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_BH_PORT_RESET, port,
                           ZX_TIME_INFINITE);
     }
     if (port_change & USB_C_PORT_LINK_STATE) {
-        xprintf("USB_C_PORT_LINK_STATE");
+        dprintf(TRACE, "USB_C_PORT_LINK_STATE");
         usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_LINK_STATE, port,
                           ZX_TIME_INFINITE);
     }
     if (port_change & USB_C_PORT_CONFIG_ERROR) {
-        xprintf("USB_C_PORT_CONFIG_ERROR");
+        dprintf(TRACE, "USB_C_PORT_CONFIG_ERROR");
         usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_CONFIG_ERROR, port,
                           ZX_TIME_INFINITE);
     }
-    xprintf("\n");
+    dprintf(TRACE, "\n");
 
     *out_status = status.wPortStatus;
     return ZX_OK;
@@ -162,7 +154,7 @@ static zx_status_t usb_hub_wait_for_port(usb_hub_t* hub, int port, port_status_t
 }
 
 static void usb_hub_interrupt_complete(iotxn_t* txn, void* cookie) {
-    xprintf("usb_hub_interrupt_complete got %d %" PRIu64 "\n", txn->status, txn->actual);
+    dprintf(TRACE, "usb_hub_interrupt_complete got %d %" PRIu64 "\n", txn->status, txn->actual);
     usb_hub_t* hub = (usb_hub_t*)cookie;
     completion_signal(&hub->completion);
 }
@@ -175,13 +167,13 @@ static void usb_hub_power_on_port(usb_hub_t* hub, int port) {
 static void usb_hub_port_enabled(usb_hub_t* hub, int port) {
     port_status_t status;
 
-    xprintf("port %d usb_hub_port_enabled\n", port);
+    dprintf(TRACE, "port %d usb_hub_port_enabled\n", port);
 
     // USB 2.0 spec section 9.1.2 recommends 100ms delay before enumerating
     // wait for USB_PORT_ENABLE == 1 and USB_PORT_RESET == 0
     if (usb_hub_wait_for_port(hub, port, &status, USB_PORT_ENABLE, USB_PORT_ENABLE | USB_PORT_RESET,
                               ZX_MSEC(100)) != ZX_OK) {
-        printf("usb_hub_wait_for_port USB_PORT_RESET failed for USB hub, port %d\n", port);
+        dprintf(ERROR, "usb_hub_wait_for_port USB_PORT_RESET failed for USB hub, port %d\n", port);
         return;
     }
 
@@ -196,7 +188,7 @@ static void usb_hub_port_enabled(usb_hub_t* hub, int port) {
         speed = USB_SPEED_FULL;
     }
 
-    xprintf("call hub_device_added for port %d\n", port);
+    dprintf(TRACE, "call hub_device_added for port %d\n", port);
     usb_bus_hub_device_added(&hub->bus, hub->usb_device, port, speed);
     usb_hub_set_port_attached(hub, port, true);
 }
@@ -204,12 +196,12 @@ static void usb_hub_port_enabled(usb_hub_t* hub, int port) {
 static void usb_hub_port_connected(usb_hub_t* hub, int port) {
     port_status_t status;
 
-    xprintf("port %d usb_hub_port_connected\n", port);
+    dprintf(TRACE, "port %d usb_hub_port_connected\n", port);
 
     // USB 2.0 spec section 7.1.7.3 recommends 100ms between connect and reset
     if (usb_hub_wait_for_port(hub, port, &status, USB_PORT_CONNECTION, USB_PORT_CONNECTION,
                               ZX_MSEC(100)) != ZX_OK) {
-        printf("usb_hub_wait_for_port USB_PORT_CONNECTION failed for USB hub, port %d\n", port);
+        dprintf(ERROR, "usb_hub_wait_for_port USB_PORT_CONNECTION failed for USB hub, port %d\n", port);
         return;
     }
 
@@ -218,7 +210,7 @@ static void usb_hub_port_connected(usb_hub_t* hub, int port) {
 }
 
 static void usb_hub_port_disconnected(usb_hub_t* hub, int port) {
-    xprintf("port %d usb_hub_port_disconnected\n", port);
+    dprintf(TRACE, "port %d usb_hub_port_disconnected\n", port);
     usb_bus_hub_device_removed(&hub->bus, hub->usb_device, port);
     usb_hub_set_port_attached(hub, port, false);
 }
@@ -226,7 +218,7 @@ static void usb_hub_port_disconnected(usb_hub_t* hub, int port) {
 static void usb_hub_handle_port_status(usb_hub_t* hub, int port, port_status_t status) {
     port_status_t old_status = hub->port_status[port];
 
-    xprintf("usb_hub_handle_port_status port: %d status: %04X old_status: %04X\n", port, status,
+    dprintf(TRACE, "usb_hub_handle_port_status port: %d status: %04X old_status: %04X\n", port, status,
             old_status);
 
     hub->port_status[port] = status;
@@ -291,13 +283,13 @@ static int usb_hub_thread(void* arg) {
     zx_status_t result = usb_get_descriptor(&hub->usb, USB_TYPE_CLASS | USB_RECIP_DEVICE,
                                             desc_type, 0, &desc, sizeof(desc), ZX_TIME_INFINITE);
     if (result < 0) {
-        printf("get hub descriptor failed: %d\n", result);
+        dprintf(ERROR, "get hub descriptor failed: %d\n", result);
         return result;
     }
 
     result = usb_bus_configure_hub(&hub->bus, hub->usb_device, hub->hub_speed, &desc);
     if (result < 0) {
-        printf("configure_hub failed: %d\n", result);
+        dprintf(ERROR, "configure_hub failed: %d\n", result);
         return result;
     }
 
@@ -353,7 +345,7 @@ static int usb_hub_thread(void* arg) {
         // bit zero is hub status
         if (bitmap[0] & 1) {
             // what to do here?
-            printf("usb_hub_interrupt_complete hub status changed\n");
+            dprintf(ERROR, "usb_hub_interrupt_complete hub status changed\n");
         }
 
         int port = 1;
@@ -394,7 +386,7 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device, void** cookie) {
         bus_device = device_get_parent(bus_device);
     }
     if (!bus_device || !bus.ops) {
-        printf("usb_hub_bind could not find bus device\n");
+        dprintf(ERROR, "usb_hub_bind could not find bus device\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -424,7 +416,7 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device, void** cookie) {
 
     usb_hub_t* hub = calloc(1, sizeof(usb_hub_t));
     if (!hub) {
-        printf("Not enough memory for usb_hub_t.\n");
+        dprintf(ERROR, "Not enough memory for usb_hub_t.\n");
         return ZX_ERR_NO_MEMORY;
     }
 
