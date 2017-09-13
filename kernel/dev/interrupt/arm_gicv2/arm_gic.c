@@ -314,7 +314,8 @@ static void gic_init_percpu(void) {
 }
 
 static void gic_shutdown(void) {
-    PANIC_UNIMPLEMENTED;
+    // Turn off all GIC0 interrupts at the distributor.
+    GICREG(0, GICD_CTLR) = 0;
 }
 
 static const struct pdev_interrupt_ops gic_ops = {
