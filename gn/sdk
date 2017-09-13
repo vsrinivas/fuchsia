@@ -1,5 +1,6 @@
 {
     "imports": [
+        "media_audio",
         "netstack",
         "openssh",
         "runtime",
