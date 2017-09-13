@@ -276,6 +276,13 @@ Specify the keymap for the virtual console.  "qwerty" and "dvorak" are supported
 
 Specify the font for the virtual console.  "9x16" and "18x32" are supported.
 
+## zircon.nodename=\<name>
+
+Set the system nodename, as used by `bootserver`, `loglistener`, and the
+`net{addr,cp,ls,runcmd}` tools.  If omitted, the system will generate a
+human-readable nodename from its MAC address.  This cmdline is honored by
+GigaBoot and Zircon.
+
 # Additional Gigaboot Commandline Options
 
 ## bootloader.timeout=\<num>
