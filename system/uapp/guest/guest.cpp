@@ -227,7 +227,7 @@ int main(int argc, char** argv) {
 
     if (status == ZX_ERR_NOT_SUPPORTED) {
         const char* linux_fmt_string = "earlyprintk=serial,ttyS,115200 console=ttyS0,115200 "
-                                       "io_delay=none acpi_rsdp=%#lx %s";
+                                       "io_delay=none acpi_rsdp=%#lx clocksource=tsc %s";
         snprintf(guest_cmdline, PATH_MAX, linux_fmt_string, pt_end_off, cmdline ? cmdline : "");
         status = setup_linux(addr, kVmoSize, first_page, fd, ramdisk_path, guest_cmdline, &guest_ip,
                              &bootdata_off);
