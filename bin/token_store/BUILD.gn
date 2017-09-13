@@ -1,0 +1,48 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/flatbuffers/flatbuffer.gni")
+
+flatbuffer("credentials") {
+  sources = [
+    "credentials.fbs",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "auth_db.h",
+    "auth_db.cc",
+    "auth_db_file_impl.h",
+    "auth_db_file_impl.cc",
+  ]
+
+  deps = [
+    ":credentials",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "auth_db_file_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":credentials",
+    ":lib",
+    "//garnet/public/lib/fxl",
+    "//third_party/gtest",
+  ]
+}
+
+group("store") {
+  deps = [
+    ":lib",
+  ]
+}
+

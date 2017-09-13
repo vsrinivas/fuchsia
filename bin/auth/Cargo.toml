@@ -1,0 +1,9 @@
+[package]
+name = "fuchsia-auth"
+version = "0.0.0"
+authors = ["Jason Schein <jschein@google.com>"]
+description = "Binaries for third party oauth services in fuchsia."
+license = "BSD-3-Clause"
+repository = "https://fuchsia.googlesource.com/auth/"
+
+[dependencies]

@@ -1,0 +1,111 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module auth;
+
+import "apps/auth/services/token_manager/token_provider.fidl";
+import "lib/ui/views/fidl/view_token.fidl";
+
+// Stores attributes related to an account that is exposed to device shell.
+// A list of existing account(s) can be obtained via
+// UserProvider.PreviousUsers() and a new account can be added via
+// UserProvider.AddAccount().
+struct Account {
+  // A randomly generated identifier that is used to identify this
+  // account on this device. This is meant to be used by device shell when it
+  // wants to login as a user who has previously logged in.
+  string id;
+
+  // The identity provider that was used to authenticate the user on this
+  // device.
+  IdentityProvider identity_provider;
+
+  // The name that is displayed on the device shell while logging in. Display
+  // name is fetched from user profile attributes as configured by the user at
+  // the given identity provider.
+  string display_name;
+
+  // User's profile url that is used by the device shell while logging in.
+  // Profile url is fetched from user profile attributes as configured by the
+  // user at the given identity provider.
+  string url;
+
+  // User's profile image url that is used by the device shell while logging in.
+  // Profile image url is fetched from user profile attributes as configured by
+  // the user at the given identity provider.
+  string image_url;
+};
+
+// List of supported identity providers. An identity provider provides
+// identifiers for users to interact with the system and may provide information
+// about the user that is known to the provider.
+enum IdentityProvider {
+  // An identity provider that's used for development and testing. No tokens
+  // are issued for this IDP.
+  DEV,
+
+  // Uses Google as the identity provider. Doing this requires a working network
+  // connection and a web view.
+  GOOGLE,
+};
+
+// An interface that allows the Framework to talk to the token manager service
+// to add new accounts or be able to get a |TokenProviderFactory| that can
+// be used to provide specialized instances of |TokenProvider| to third party
+// agents.
+[ServiceName="auth::AccountProvider"]
+interface AccountProvider {
+  // Called by the Framework once, right after starting up a token manager
+  // application.
+  Initialize(AccountProviderContext account_provider_context);
+
+  // Adds a new user account. This involves connecting to the identity provider
+  // and registering user. Once user has been successfully added, user profile
+  // information such as email, image_url, profile_url, first and last names are
+  // pre-populated in |account| before returning along with Ok status.
+  //
+  // In case of an error, AuthErr status is returned with detailed error code
+  // and message.
+  AddAccount(IdentityProvider identity_provider)
+       => (Account? account, AuthErr status);
+
+  // Removes an existing user account. This involves talking to account's
+  // identity provider and revoking user credentials both locally and remotely.
+  // This operation also deletes cached tokens for the given account.
+  // TODO(ukode): Modify this api to take account_id and IDP as input once the
+  // Account struct is cleaned up.
+  //
+  // In case of an error, AuthErr status is returned with detailed error code
+  // and message.
+  RemoveAccount(Account account) => (AuthErr status);
+
+  // Get a |TokenProviderFactory| associated with an |account_id|. It is used
+  // by the Framework to provide a specialized instances of |TokenProvider| to
+  // third party agents.
+  GetTokenProviderFactory(string account_id,
+                          TokenProviderFactory& request);
+};
+
+// Implemented by device runner and provided to AccountProvider.Initialize().
+// It is used by the client application to request the Framework to display to
+// the user.
+interface AccountProviderContext {
+  GetAuthenticationContext(string account_id, AuthenticationContext& request);
+};
+
+interface TokenProviderFactory {
+  GetTokenProvider(string application_url, TokenProvider& request);
+};
+
+// This interface is typically implemented by device shell. It is used to notify
+// the device shell that a view for login needs to be started / stopped.
+interface AuthenticationContext {
+  // Requests device shell to display |view_owner| for authentication. Note that
+  // another call to StartOverlay() will not be made until StopOverlay() has
+  // been called.
+  StartOverlay(mozart.ViewOwner view_owner);
+
+  // Requests device shell to stop displaying the auth view.
+  StopOverlay();
+};
