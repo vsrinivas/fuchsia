@@ -89,6 +89,31 @@ bool ReadFileToVector(const std::string& path, std::vector<uint8_t>* result) {
   return ReadFile(path, result);
 }
 
+std::pair<uint8_t*, intptr_t> ReadFileToBytes(const std::string& path) {
+  std::pair<uint8_t*, intptr_t> failure_pair {nullptr, -1};
+  fxl::UniqueFD fd(open(path.c_str(), O_RDONLY));
+  if (!fd.is_valid())
+    return failure_pair;
+  struct stat st;
+  if (fstat(fd.get(), &st) != 0) {
+    return failure_pair;
+  }
+  intptr_t file_size = st.st_size;
+  uint8_t* ptr = (uint8_t*)malloc(file_size);
+
+  size_t bytes_left = file_size;
+  size_t offset = 0;
+  while (bytes_left > 0) {
+    ssize_t bytes_read = HANDLE_EINTR(read(fd.get(), &ptr[offset], bytes_left));
+    if (bytes_read < 0) {
+      return failure_pair;
+    }
+    offset += bytes_read;
+    bytes_left -= bytes_read;
+  }
+  return std::pair<uint8_t*, long>(ptr, file_size);
+}
+
 bool IsFile(const std::string& path) {
   struct stat buf;
   if (stat(path.c_str(), &buf) != 0)
