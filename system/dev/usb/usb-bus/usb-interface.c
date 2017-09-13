@@ -93,7 +93,7 @@ static void usb_interface_iotxn_queue(void* ctx, iotxn_t* txn) {
     txn->context = intf;
     clone->complete_cb = clone_complete;
     clone->cookie = txn;
-    iotxn_queue(intf->hci_mxdev, clone);
+    iotxn_queue(intf->hci_zxdev, clone);
 }
 
 static zx_status_t usb_interface_ioctl(void* ctx, uint32_t op, const void* in_buf,
@@ -126,7 +126,7 @@ static zx_status_t usb_interface_ioctl(void* ctx, uint32_t op, const void* in_bu
     }
     default:
         // other ioctls are handled by top level device
-        return device_ioctl(intf->device->mxdev, op, in_buf, in_len,
+        return device_ioctl(intf->device->zxdev, op, in_buf, in_len,
                             out_buf, out_len, out_actual);
     }
 }
@@ -257,7 +257,7 @@ static zx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_
     txn->length = length;
     txn->complete_cb = usb_control_complete;
     txn->cookie = &completion;
-    iotxn_queue(intf->mxdev, txn);
+    iotxn_queue(intf->zxdev, txn);
     status = completion_wait(&completion, timeout);
 
     if (status == ZX_OK) {
@@ -290,7 +290,7 @@ static void usb_interface_queue(void* ctx, iotxn_t* txn, uint8_t ep_address, uin
     memset(data, 0, sizeof(*data));
     data->ep_address = ep_address;
     data->frame = frame;
-    iotxn_queue(intf->mxdev, txn);
+    iotxn_queue(intf->zxdev, txn);
 }
 
 static usb_speed_t usb_interface_get_speed(void* ctx) {
@@ -438,7 +438,7 @@ zx_status_t usb_device_add_interface(usb_device_t* device,
     list_initialize(&intf->completed_txns);
 
     intf->device = device;
-    intf->hci_mxdev = device->hci_mxdev;
+    intf->hci_zxdev = device->hci_zxdev;
     memcpy(&intf->hci, &device->hci, sizeof(usb_hci_protocol_t));
     intf->device_id = device->device_id;
     intf->last_interface_id = interface_desc->bInterfaceNumber;
@@ -495,7 +495,7 @@ zx_status_t usb_device_add_interface(usb_device_t* device,
         .prop_count = countof(props),
     };
 
-    status = device_add(device->mxdev, &args, &intf->mxdev);
+    status = device_add(device->zxdev, &args, &intf->zxdev);
     if (status != ZX_OK) {
         stop_callback_thread(intf);
         list_delete(&intf->node);
@@ -518,7 +518,7 @@ zx_status_t usb_device_add_interface_association(usb_device_t* device,
     list_initialize(&intf->completed_txns);
 
     intf->device = device;
-    intf->hci_mxdev = device->hci_mxdev;
+    intf->hci_zxdev = device->hci_zxdev;
     memcpy(&intf->hci, &device->hci, sizeof(usb_hci_protocol_t));
     intf->device_id = device->device_id;
     // Interfaces in an IAD interface collection must be contiguous.
@@ -583,7 +583,7 @@ zx_status_t usb_device_add_interface_association(usb_device_t* device,
         .prop_count = countof(props),
     };
 
-    zx_status_t status = device_add(device->mxdev, &args, &intf->mxdev);
+    zx_status_t status = device_add(device->zxdev, &args, &intf->zxdev);
     if (status != ZX_OK) {
         stop_callback_thread(intf);
         list_delete(&intf->node);
@@ -599,7 +599,7 @@ void usb_device_remove_interfaces(usb_device_t* device) {
 
     usb_interface_t* intf;
     while ((intf = list_remove_head_type(&device->children, usb_interface_t, node)) != NULL) {
-        device_remove(intf->mxdev);
+        device_remove(intf->zxdev);
     }
 
     mtx_unlock(&device->interface_mutex);
@@ -612,7 +612,7 @@ bool usb_device_remove_interface_by_id_locked(usb_device_t* device, uint8_t inte
     list_for_every_entry_safe(&device->children, intf, tmp, usb_interface_t, node) {
         if (usb_interface_contains_interface(intf, interface_id)) {
             list_delete(&intf->node);
-            device_remove(intf->mxdev);
+            device_remove(intf->zxdev);
             return true;
         }
     }
@@ -649,7 +649,7 @@ zx_status_t usb_interface_set_alt_setting(usb_interface_t* intf, uint8_t interfa
     zx_status_t status = usb_interface_configure_endpoints(intf, interface_id, alt_setting);
     if (status != ZX_OK) return status;
 
-    return usb_device_control(intf->hci_mxdev, intf->device_id,
+    return usb_device_control(intf->hci_zxdev, intf->device_id,
                               USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE,
                               USB_REQ_SET_INTERFACE, alt_setting, interface_id, NULL, 0);
 }

@@ -13,8 +13,8 @@
 __BEGIN_CDECLS;
 
 typedef struct sdmmc {
-    zx_device_t* mxdev;
-    zx_device_t* host_mxdev;
+    zx_device_t* zxdev;
+    zx_device_t* host_zxdev;
 
     uint8_t type;
 #define SDMMC_TYPE_SD   0

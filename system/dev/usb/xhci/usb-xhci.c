@@ -138,7 +138,7 @@ static void xhci_iotxn_queue(void* ctx, iotxn_t* txn) {
     usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
     zx_status_t status;
 
-    if (txn->length > xhci_get_max_transfer_size(xhci->mxdev, data->device_id, data->ep_address)) {
+    if (txn->length > xhci_get_max_transfer_size(xhci->zxdev, data->device_id, data->ep_address)) {
         status = ZX_ERR_INVALID_ARGS;
     } else {
         status = xhci_queue_transfer(xhci, txn);
@@ -153,7 +153,7 @@ static void xhci_unbind(void* ctx) {
     xhci_t* xhci = ctx;
     dprintf(TRACE, "xhci_unbind\n");
 
-    device_remove(xhci->mxdev);
+    device_remove(xhci->zxdev);
 }
 
 static void xhci_release(void* ctx) {
@@ -242,7 +242,7 @@ static int xhci_start_thread(void* arg) {
         .proto_ops = &xhci_hci_protocol,
     };
 
-    status = device_add(xhci->parent, &args, &xhci->mxdev);
+    status = device_add(xhci->parent, &args, &xhci->zxdev);
     if (status != ZX_OK) {
         goto error_return;
     }

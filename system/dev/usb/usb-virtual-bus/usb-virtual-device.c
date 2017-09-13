@@ -17,7 +17,7 @@
 #include "usb-virtual-bus.h"
 
 typedef struct usb_virtual_device {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     usb_virtual_bus_t* bus;
     usb_dci_interface_t dci_intf;
 } usb_virtual_device_t;
@@ -94,13 +94,13 @@ printf("device_open\n");
 
 static void virt_device_iotxn_queue(void* ctx, iotxn_t* txn) {
     usb_virtual_device_t* device = ctx;
-    iotxn_queue(device->bus->mxdev, txn);
+    iotxn_queue(device->bus->zxdev, txn);
 }
 
 static void virt_device_unbind(void* ctx) {
     printf("virt_device_unbind\n");
     usb_virtual_device_t* device = ctx;
-    device_remove(device->mxdev);
+    device_remove(device->zxdev);
 }
 
 static void virt_device_release(void* ctx) {
@@ -132,7 +132,7 @@ zx_status_t usb_virtual_device_add(usb_virtual_bus_t* bus, usb_virtual_device_t*
         .proto_ops = &virtual_device_protocol,
     };
 
-    zx_status_t status = device_add(device->bus->mxdev, &args, &device->mxdev);
+    zx_status_t status = device_add(device->bus->zxdev, &args, &device->zxdev);
 
     if (status != ZX_OK) {
         free(device);
@@ -144,5 +144,5 @@ zx_status_t usb_virtual_device_add(usb_virtual_bus_t* bus, usb_virtual_device_t*
 }
 
 void usb_virtual_device_release(usb_virtual_device_t* device) {
-    device_remove(device->mxdev);
+    device_remove(device->zxdev);
 }

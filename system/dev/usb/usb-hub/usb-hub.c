@@ -24,7 +24,7 @@ typedef uint16_t port_status_t;
 
 typedef struct usb_hub {
     // the device we are publishing
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
 
     // Underlying USB device
     zx_device_t* usb_device;
@@ -249,7 +249,7 @@ static void usb_hub_unbind(void* ctx) {
             usb_hub_port_disconnected(hub, port);
         }
     }
-    device_remove(hub->mxdev);
+    device_remove(hub->zxdev);
 }
 
 static zx_status_t usb_hub_free(usb_hub_t* hub) {
@@ -319,7 +319,7 @@ static int usb_hub_thread(void* arg) {
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    result = device_add(hub->usb_device, &args, &hub->mxdev);
+    result = device_add(hub->usb_device, &args, &hub->zxdev);
     if (result != ZX_OK) {
         usb_hub_free(hub);
         return result;

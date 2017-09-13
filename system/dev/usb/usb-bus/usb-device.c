@@ -101,7 +101,7 @@ zx_status_t usb_device_set_configuration(usb_device_t* dev, int config) {
     if (!config_desc) return ZX_ERR_INVALID_ARGS;
 
     // set configuration
-    zx_status_t status = usb_device_control(dev->hci_mxdev, dev->device_id,
+    zx_status_t status = usb_device_control(dev->hci_zxdev, dev->device_id,
                              USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
                              USB_REQ_SET_CONFIGURATION, config, 0,
                              NULL, 0);
@@ -192,7 +192,7 @@ static zx_status_t usb_device_ioctl(void* ctx, uint32_t op, const void* in_buf, 
         if (out_len == 0) return 0;
         int id = *((int *)in_buf);
         char string[MAX_USB_STRING_LEN];
-        zx_status_t result = usb_device_get_string_descriptor(dev->hci_mxdev, dev->device_id, id,
+        zx_status_t result = usb_device_get_string_descriptor(dev->hci_zxdev, dev->device_id, id,
                                                               string, sizeof(string));
         if (result < 0) return result;
         size_t length = strlen(string) + 1;
@@ -254,7 +254,7 @@ static zx_status_t usb_device_ioctl(void* ctx, uint32_t op, const void* in_buf, 
 
 void usb_device_remove(usb_device_t* dev) {
     usb_device_remove_interfaces(dev);
-    device_remove(dev->mxdev);
+    device_remove(dev->zxdev);
 }
 
 static void usb_device_release(void* ctx) {
@@ -377,7 +377,7 @@ static zx_status_t usb_device_add_interfaces(usb_device_t* parent,
     return result;
 }
 
-zx_status_t usb_device_add(zx_device_t* hci_mxdev, usb_hci_protocol_t* hci_protocol,
+zx_status_t usb_device_add(zx_device_t* hci_zxdev, usb_hci_protocol_t* hci_protocol,
                            zx_device_t* parent,  uint32_t device_id, uint32_t hub_id,
                            usb_speed_t speed, usb_device_t** out_device) {
 
@@ -387,7 +387,7 @@ zx_status_t usb_device_add(zx_device_t* hci_mxdev, usb_hci_protocol_t* hci_proto
 
     // read device descriptor
     usb_device_descriptor_t* device_desc = &dev->device_desc;
-    zx_status_t status = usb_device_get_descriptor(hci_mxdev, device_id, USB_DT_DEVICE, 0, 0,
+    zx_status_t status = usb_device_get_descriptor(hci_zxdev, device_id, USB_DT_DEVICE, 0, 0,
                                                    device_desc, sizeof(*device_desc));
     if (status != sizeof(*device_desc)) {
         dprintf(ERROR, "usb_device_add: usb_device_get_descriptor failed\n");
@@ -406,7 +406,7 @@ zx_status_t usb_device_add(zx_device_t* hci_mxdev, usb_hci_protocol_t* hci_proto
     for (int config = 0; config < num_configurations; config++) {
         // read configuration descriptor header to determine size
         usb_configuration_descriptor_t config_desc_header;
-        status = usb_device_get_descriptor(hci_mxdev, device_id, USB_DT_CONFIG, config, 0,
+        status = usb_device_get_descriptor(hci_zxdev, device_id, USB_DT_CONFIG, config, 0,
                                            &config_desc_header, sizeof(config_desc_header));
         if (status != sizeof(config_desc_header)) {
             dprintf(ERROR, "usb_device_add: usb_device_get_descriptor failed\n");
@@ -421,7 +421,7 @@ zx_status_t usb_device_add(zx_device_t* hci_mxdev, usb_hci_protocol_t* hci_proto
         configs[config] = config_desc;
 
         // read full configuration descriptor
-        status = usb_device_get_descriptor(hci_mxdev, device_id, USB_DT_CONFIG, config, 0,
+        status = usb_device_get_descriptor(hci_zxdev, device_id, USB_DT_CONFIG, config, 0,
                                            config_desc, config_desc_size);
          if (status != config_desc_size) {
             dprintf(ERROR, "usb_device_add: usb_device_get_descriptor failed\n");
@@ -447,7 +447,7 @@ zx_status_t usb_device_add(zx_device_t* hci_mxdev, usb_hci_protocol_t* hci_proto
     dev->current_config_index = configuration - 1;
 
     // set configuration
-    status = usb_device_control(hci_mxdev, device_id,
+    status = usb_device_control(hci_zxdev, device_id,
                              USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
                              USB_REQ_SET_CONFIGURATION,
                              configs[dev->current_config_index]->bConfigurationValue, 0, NULL, 0);
@@ -461,7 +461,7 @@ zx_status_t usb_device_add(zx_device_t* hci_mxdev, usb_hci_protocol_t* hci_proto
             device_desc->bcdUSB & 0xff, configuration);
 
     list_initialize(&dev->children);
-    dev->hci_mxdev = hci_mxdev;
+    dev->hci_zxdev = hci_zxdev;
     memcpy(&dev->hci, hci_protocol, sizeof(usb_hci_protocol_t));
     dev->device_id = device_id;
     dev->hub_id = hub_id;
@@ -492,7 +492,7 @@ zx_status_t usb_device_add(zx_device_t* hci_mxdev, usb_hci_protocol_t* hci_proto
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    status = device_add(parent, &args, &dev->mxdev);
+    status = device_add(parent, &args, &dev->zxdev);
     if (status == ZX_OK) {
         *out_device = dev;
     } else {

@@ -396,7 +396,7 @@ zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, size_t vslice_st
             }
 
             // Remove device, VPartition if this was a request to free all slices.
-            device_remove(mxdev());
+            device_remove(zxdev());
             auto entry = GetVPartEntryLocked(vp->GetEntryIndex());
             entry->clear();
             vp->KillLocked();
@@ -492,7 +492,7 @@ zx_status_t VPartitionManager::DdkIoctl(uint32_t op, const void* cmd,
 }
 
 void VPartitionManager::DdkUnbind() {
-    device_remove(mxdev());
+    device_remove(zxdev());
 }
 
 void VPartitionManager::DdkRelease() {
@@ -501,7 +501,7 @@ void VPartitionManager::DdkRelease() {
 }
 
 VPartition::VPartition(VPartitionManager* vpm, size_t entry_index)
-    : PartitionDeviceType(vpm->mxdev()), mgr_(vpm), entry_index_(entry_index) {
+    : PartitionDeviceType(vpm->zxdev()), mgr_(vpm), entry_index_(entry_index) {
 
     memcpy(&info_, &mgr_->info_, sizeof(block_info_t));
     info_.block_count = 0;
@@ -618,7 +618,7 @@ void VPartition::Txn(uint32_t opcode, zx_handle_t vmo, uint64_t length,
     txn->complete_cb = vpart_block_complete;
     txn->cookie = cookie;
     memcpy(txn->extra, &callbacks_, sizeof(void*));
-    iotxn_queue(mxdev(), txn);
+    iotxn_queue(zxdev(), txn);
 }
 
 static zx_status_t RequestBoundCheck(const extend_request_t* request,
@@ -885,7 +885,7 @@ zx_off_t VPartition::DdkGetSize() {
 }
 
 void VPartition::DdkUnbind() {
-    device_remove(mxdev());
+    device_remove(zxdev());
 }
 
 void VPartition::DdkRelease() {

@@ -23,7 +23,7 @@
 #define MAX_INTERFACES 32
 
 typedef struct {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     zx_device_t* dci_dev;
     struct usb_device* dev;
     list_node_t node;
@@ -35,7 +35,7 @@ typedef struct {
 } usb_function_t;
 
 typedef struct usb_device {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     zx_device_t* dci_dev;
     usb_dci_protocol_t usb_dci;
     usb_device_descriptor_t device_desc;
@@ -607,7 +607,7 @@ static zx_status_t usb_dev_bind_functions(usb_device_t* dev) {
             .prop_count = countof(props),
         };
 
-        zx_status_t status = device_add(dev->mxdev, &args, &function->mxdev);
+        zx_status_t status = device_add(dev->zxdev, &args, &function->zxdev);
         if (status != ZX_OK) {
             dprintf(ERROR, "usb_dev_bind_functions add_device failed %d\n", status);
             return status;
@@ -624,7 +624,7 @@ static zx_status_t usb_dev_bind_functions(usb_device_t* dev) {
 static zx_status_t usb_dev_clear_functions(usb_device_t* dev) {
     usb_function_t* function;
     while ((function = list_remove_head_type(&dev->functions, usb_function_t, node)) != NULL) {
-        device_remove(function->mxdev);
+        device_remove(function->zxdev);
     }
     free(dev->config_desc);
     dev->config_desc = NULL;
@@ -663,7 +663,7 @@ static void usb_dev_unbind(void* ctx) {
     dprintf(TRACE, "usb_dev_unbind\n");
     usb_device_t* dev = ctx;
     usb_dev_clear_functions(dev);
-    device_remove(dev->mxdev);
+    device_remove(dev->zxdev);
 }
 
 static void usb_dev_release(void* ctx) {
@@ -763,7 +763,7 @@ zx_status_t usb_dev_bind(void* ctx, zx_device_t* parent, void** cookie) {
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    zx_status_t status = device_add(parent, &args, &dev->mxdev);
+    zx_status_t status = device_add(parent, &args, &dev->zxdev);
     if (status != ZX_OK) {
         dprintf(ERROR, "usb_device_bind add_device failed %d\n", status);
         free(dev);

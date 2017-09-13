@@ -26,7 +26,7 @@
 #define to_usb_hid(d) containerof(d, usb_hid_device_t, hiddev)
 
 typedef struct usb_hid_device {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     zx_device_t* usbdev;
     usb_protocol_t usb;
 
@@ -211,7 +211,7 @@ static hidbus_protocol_ops_t usb_hid_bus_ops = {
 
 static void usb_hid_unbind(void* ctx) {
     usb_hid_device_t* hid = ctx;
-    device_remove(hid->mxdev);
+    device_remove(hid->zxdev);
 }
 
 static void usb_hid_release(void* ctx) {
@@ -313,7 +313,7 @@ static zx_status_t usb_hid_bind(void* ctx, zx_device_t* dev, void** cookie) {
             .proto_ops = &usb_hid_bus_ops,
         };
 
-        status = device_add(dev, &args, &usbhid->mxdev);
+        status = device_add(dev, &args, &usbhid->zxdev);
         if (status != ZX_OK) {
             usb_desc_iter_release(&iter);
             iotxn_release(usbhid->txn);

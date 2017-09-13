@@ -83,7 +83,7 @@ typedef struct sdhci_device {
     volatile sdhci_regs_t* regs;
 
     // Device heirarchy
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     zx_device_t* parent;
 
     // Protocol ops
@@ -720,7 +720,7 @@ static zx_status_t sdhci_ioctl(void* ctx, uint32_t op,
 
 static void sdhci_unbind(void* ctx) {
     sdhci_device_t* dev = ctx;
-    device_remove(dev->mxdev);
+    device_remove(dev->zxdev);
 }
 
 static void sdhci_release(void* ctx) {
@@ -915,7 +915,7 @@ static zx_status_t sdhci_bind(void* ctx, zx_device_t* parent, void** cookie) {
         .proto_id = ZX_PROTOCOL_SDMMC,
     };
 
-    status = device_add(parent, &args, &dev->mxdev);
+    status = device_add(parent, &args, &dev->zxdev);
     if (status != ZX_OK) {
         goto fail;
     }

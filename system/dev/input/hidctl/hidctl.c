@@ -18,7 +18,7 @@
 #define from_hid_device(d) containerof(d, hidctl_instance_t, hiddev)
 
 typedef struct hidctl_instance {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     zx_device_t* parent;
     zx_hid_device_t hiddev;
 
@@ -27,7 +27,7 @@ typedef struct hidctl_instance {
 } hidctl_instance_t;
 
 typedef struct hidctl_root {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
 } hidctl_root_t;
 
 zx_status_t hidctl_get_descriptor(zx_hid_device_t* dev, uint8_t desc_type, void** data, size_t* len) {
@@ -146,29 +146,29 @@ static zx_status_t hidctl_open(void* ctx, zx_device_t** dev_out, uint32_t flags)
     if (inst == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
-    inst->parent = root->mxdev;
+    inst->parent = root->zxdev;
 
     zx_status_t status;
     if ((status = device_create("hidctl-inst", inst, &hidctl_instance_proto, &_driver_hidctl,
-                                &inst->mxdev)) < 0) {
+                                &inst->zxdev)) < 0) {
         free(inst);
         return status;
     }
 
-    status = device_add_instance(inst->mxdev, root->mxdev);
+    status = device_add_instance(inst->zxdev, root->zxdev);
     if (status != ZX_OK) {
         printf("hidctl: could not open instance: %d\n", status);
-        device_destroy(inst->mxdev);
+        device_destroy(inst->zxdev);
         free(inst);
         return status;
     }
-    *dev_out = inst->mxdev;
+    *dev_out = inst->zxdev;
     return ZX_OK;
 }
 
 static void hidctl_root_release(void* ctx) {
     hidctl_root_t* root = ctx;
-    device_destroy(root->mxdev);
+    device_destroy(root->zxdev);
     free(root);
 }
 
@@ -184,12 +184,12 @@ static zx_status_t hidctl_bind(void* ctx, zx_device_t* parent, void** cookie) {
     }
 
     zx_status_t status;
-    if ((status = device_create("hidctl", root, &hidctl_device_proto, driver, &root->mxdev)) < 0) {
+    if ((status = device_create("hidctl", root, &hidctl_device_proto, driver, &root->zxdev)) < 0) {
         free(root);
         return status;
     }
-    if ((status = device_add(root->mxdev, parent)) < 0) {
-        device_destroy(root->mxdev);
+    if ((status = device_add(root->zxdev, parent)) < 0) {
+        device_destroy(root->zxdev);
         free(root);
         return status;
     }

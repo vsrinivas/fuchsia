@@ -69,7 +69,7 @@ typedef union {
 
 typedef struct {
    platform_device_protocol_t pdev;
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     zx_device_t* parent;
     bcm_pcm_regs_t* control_regs;
     bcm_gpio_ctrl_t* gpio_regs;
@@ -416,7 +416,7 @@ static void pcm_audio_sink_unbind(void* ctx) {
     pcm_deinit_locked(pcm);
     mtx_unlock(&pcm->pcm_lock);
 
-    device_remove(pcm->mxdev);
+    device_remove(pcm->zxdev);
 }
 
 static zx_status_t pcm_get_buffer(bcm_pcm_t* ctx, audio_rb_cmd_get_buffer_req_t req) {
@@ -710,7 +710,7 @@ static int pcm_bootstrap_thread(void* arg) {
         .proto_id = ZX_PROTOCOL_AUDIO_OUTPUT,
     };
 
-    status = device_add(pcm_ctx->parent, &args, &pcm_ctx->mxdev);
+    status = device_add(pcm_ctx->parent, &args, &pcm_ctx->zxdev);
     if (status != ZX_OK)
         goto pcm_err;
 

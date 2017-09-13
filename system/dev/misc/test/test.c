@@ -13,7 +13,7 @@
 #include <zircon/listnode.h>
 
 typedef struct test_device {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     zx_handle_t output;
     zx_handle_t control;
     test_func_t test_func;
@@ -21,7 +21,7 @@ typedef struct test_device {
 } test_device_t;
 
 typedef struct test_root {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
 } test_root_t;
 
 static void test_device_set_output_socket(void* ctx, zx_handle_t handle) {
@@ -67,7 +67,7 @@ static zx_status_t test_device_run_tests(void *ctx, test_report_t* report, const
 
 static void test_device_destroy(void *ctx) {
     test_device_t* device = ctx;
-    device_remove(device->mxdev);
+    device_remove(device->zxdev);
 }
 
 static test_protocol_ops_t test_test_proto = {
@@ -107,7 +107,7 @@ static zx_status_t test_device_ioctl(void* ctx, uint32_t op, const void* in, siz
         return status;
 
     case IOCTL_TEST_DESTROY_DEVICE:
-        device_remove(dev->mxdev);
+        device_remove(dev->zxdev);
         return 0;
 
     default:
@@ -169,7 +169,7 @@ static zx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inl
     };
 
     zx_status_t status;
-    if ((status = device_add(root->mxdev, &args, &device->mxdev)) != ZX_OK) {
+    if ((status = device_add(root->zxdev, &args, &device->zxdev)) != ZX_OK) {
         free(device);
         return status;
     }
@@ -196,7 +196,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* dev, void** cookie) {
         .ops = &test_root_proto,
     };
 
-    return device_add(dev, &args, &root->mxdev);
+    return device_add(dev, &args, &root->zxdev);
 }
 
 static zx_driver_ops_t test_driver_ops = {

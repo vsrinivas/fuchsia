@@ -42,7 +42,7 @@ zx_status_t sdmmc_probe_sd(sdmmc_t* sdmmc, iotxn_t* setup_txn) {
     // Issue the SEND_IF_COND command, this will tell us that we can talk to
     // the card correctly and it will also tell us if the voltage range that we
     // have supplied has been accepted.
-    if ((st = sdmmc_do_command(sdmmc->host_mxdev, SDMMC_SEND_IF_COND, 0x1aa, setup_txn)) != ZX_OK) {
+    if ((st = sdmmc_do_command(sdmmc->host_zxdev, SDMMC_SEND_IF_COND, 0x1aa, setup_txn)) != ZX_OK) {
         xprintf("sdmmc: SDMMC_SEND_IF_COND failed, retcode = %d\n", st);
         goto err;
     }
@@ -54,11 +54,11 @@ zx_status_t sdmmc_probe_sd(sdmmc_t* sdmmc, iotxn_t* setup_txn) {
     }
 
     // Get the operating conditions from the card.
-    if ((st = sdmmc_do_command(sdmmc->host_mxdev, SDMMC_APP_CMD, 0, setup_txn)) != ZX_OK) {
+    if ((st = sdmmc_do_command(sdmmc->host_zxdev, SDMMC_APP_CMD, 0, setup_txn)) != ZX_OK) {
         xprintf("sdmmc: SDMMC_APP_CMD failed, retcode = %d\n", st);
         goto err;
     }
-    if ((sdmmc_do_command(sdmmc->host_mxdev, SDMMC_SD_SEND_OP_COND, 0, setup_txn)) != ZX_OK) {
+    if ((sdmmc_do_command(sdmmc->host_zxdev, SDMMC_SD_SEND_OP_COND, 0, setup_txn)) != ZX_OK) {
         xprintf("sdmmc: SDMMC_SD_SEND_OP_COND failed, retcode = %d\n", st);
         goto err;
     }
@@ -69,11 +69,11 @@ zx_status_t sdmmc_probe_sd(sdmmc_t* sdmmc, iotxn_t* setup_txn) {
     while (true) {
         // Ask for high speed.
         const uint32_t flags = (1 << 30)  | 0x00ff8000 | (1 << 24);
-        if ((st = sdmmc_do_command(sdmmc->host_mxdev, SDMMC_APP_CMD, 0, setup_txn)) != ZX_OK) {
+        if ((st = sdmmc_do_command(sdmmc->host_zxdev, SDMMC_APP_CMD, 0, setup_txn)) != ZX_OK) {
             xprintf("sdmmc: APP_CMD failed with retcode = %d\n", st);
             goto err;
         }
-        if ((st = sdmmc_do_command(sdmmc->host_mxdev, SDMMC_SD_SEND_OP_COND, flags, setup_txn)) != ZX_OK) {
+        if ((st = sdmmc_do_command(sdmmc->host_zxdev, SDMMC_SD_SEND_OP_COND, flags, setup_txn)) != ZX_OK) {
             xprintf("sdmmc: SD_SEND_OP_COND failed with retcode = %d\n", st);
             goto err;
         }
@@ -98,7 +98,7 @@ zx_status_t sdmmc_probe_sd(sdmmc_t* sdmmc, iotxn_t* setup_txn) {
     }
 
     uint32_t new_bus_frequency = 25000000;
-    st = device_ioctl(sdmmc->host_mxdev, IOCTL_SDMMC_SET_BUS_FREQ, &new_bus_frequency,
+    st = device_ioctl(sdmmc->host_zxdev, IOCTL_SDMMC_SET_BUS_FREQ, &new_bus_frequency,
                       sizeof(new_bus_frequency), NULL, 0, NULL);
     if (st != ZX_OK) {
         // This is non-fatal but the card will run slowly.
@@ -107,14 +107,14 @@ zx_status_t sdmmc_probe_sd(sdmmc_t* sdmmc, iotxn_t* setup_txn) {
 
     // Try to switch the bus voltage to 1.8v
     if (card_supports_18v_signalling) {
-        if ((st = sdmmc_do_command(sdmmc->host_mxdev, SDMMC_VOLTAGE_SWITCH, 0, setup_txn)) != ZX_OK) {
+        if ((st = sdmmc_do_command(sdmmc->host_zxdev, SDMMC_VOLTAGE_SWITCH, 0, setup_txn)) != ZX_OK) {
             xprintf("sdmmc: failed to send switch voltage command to card, "
                     "retcode = %d\n", st);
             goto err;
         }
 
         const uint32_t new_voltage = SDMMC_SIGNAL_VOLTAGE_180;
-        st = device_ioctl(sdmmc->host_mxdev, IOCTL_SDMMC_SET_SIGNAL_VOLTAGE, &new_voltage,
+        st = device_ioctl(sdmmc->host_zxdev, IOCTL_SDMMC_SET_SIGNAL_VOLTAGE, &new_voltage,
                           sizeof(new_voltage), NULL, 0, NULL);
         if (st != ZX_OK) {
             xprintf("sdmmc: Card supports 1.8v signalling but was unable to "
@@ -123,12 +123,12 @@ zx_status_t sdmmc_probe_sd(sdmmc_t* sdmmc, iotxn_t* setup_txn) {
         }
     }
 
-    if ((st = sdmmc_do_command(sdmmc->host_mxdev, SDMMC_ALL_SEND_CID, 0, setup_txn)) != ZX_OK) {
+    if ((st = sdmmc_do_command(sdmmc->host_zxdev, SDMMC_ALL_SEND_CID, 0, setup_txn)) != ZX_OK) {
         xprintf("sdmmc: ALL_SEND_CID failed with retcode = %d\n", st);
         goto err;
     }
 
-    if ((st = sdmmc_do_command(sdmmc->host_mxdev, SDMMC_SEND_RELATIVE_ADDR, 0, setup_txn)) != ZX_OK) {
+    if ((st = sdmmc_do_command(sdmmc->host_zxdev, SDMMC_SEND_RELATIVE_ADDR, 0, setup_txn)) != ZX_OK) {
         xprintf("sdmmc: SEND_RELATIVE_ADDR failed with retcode = %d\n", st);
         goto err;
     }
@@ -148,7 +148,7 @@ zx_status_t sdmmc_probe_sd(sdmmc_t* sdmmc, iotxn_t* setup_txn) {
     }
 
     // Determine the size of the card.
-    if ((st = sdmmc_do_command(sdmmc->host_mxdev, SDMMC_SEND_CSD, sdmmc->rca << 16, setup_txn)) != ZX_OK) {
+    if ((st = sdmmc_do_command(sdmmc->host_zxdev, SDMMC_SEND_CSD, sdmmc->rca << 16, setup_txn)) != ZX_OK) {
         xprintf("sdmmc: failed to send app cmd, retcode = %d\n", st);
         goto err;
     }
@@ -167,18 +167,18 @@ zx_status_t sdmmc_probe_sd(sdmmc_t* sdmmc, iotxn_t* setup_txn) {
     sdmmc->capacity = (c_size + 1ul) * 512ul * 1024ul;
     printf("sdmmc: found card with capacity = %"PRIu64"B\n", sdmmc->capacity);
 
-    if ((st = sdmmc_do_command(sdmmc->host_mxdev, SDMMC_SELECT_CARD, sdmmc->rca << 16, setup_txn)) != ZX_OK) {
+    if ((st = sdmmc_do_command(sdmmc->host_zxdev, SDMMC_SELECT_CARD, sdmmc->rca << 16, setup_txn)) != ZX_OK) {
         xprintf("sdmmc: SELECT_CARD failed with retcode = %d\n", st);
         goto err;
     }
 
     pdata->blockcount = 1;
     pdata->blocksize = 8;
-    if ((st = sdmmc_do_command(sdmmc->host_mxdev, SDMMC_APP_CMD, sdmmc->rca << 16, setup_txn)) != ZX_OK) {
+    if ((st = sdmmc_do_command(sdmmc->host_zxdev, SDMMC_APP_CMD, sdmmc->rca << 16, setup_txn)) != ZX_OK) {
         xprintf("sdmmc: APP_CMD failed with retcode = %d\n", st);
         goto err;
     }
-    if ((st = sdmmc_do_command(sdmmc->host_mxdev, SDMMC_SEND_SCR, 0, setup_txn)) != ZX_OK) {
+    if ((st = sdmmc_do_command(sdmmc->host_zxdev, SDMMC_SEND_SCR, 0, setup_txn)) != ZX_OK) {
         xprintf("sdmmc: SEND_SCR failed with retcode = %d\n", st);
         goto err;
     }
@@ -195,17 +195,17 @@ zx_status_t sdmmc_probe_sd(sdmmc_t* sdmmc, iotxn_t* setup_txn) {
 
         do {
             // First tell the card to go into four bit mode:
-            if ((st = sdmmc_do_command(sdmmc->host_mxdev, SDMMC_APP_CMD, sdmmc->rca << 16, setup_txn)) != ZX_OK) {
+            if ((st = sdmmc_do_command(sdmmc->host_zxdev, SDMMC_APP_CMD, sdmmc->rca << 16, setup_txn)) != ZX_OK) {
                 xprintf("sdmmc: failed to send app cmd, retcode = %d\n", st);
                 break;
             }
-            if ((st = sdmmc_do_command(sdmmc->host_mxdev, SDMMC_SET_BUS_WIDTH, 2, setup_txn)) != ZX_OK) {
+            if ((st = sdmmc_do_command(sdmmc->host_zxdev, SDMMC_SET_BUS_WIDTH, 2, setup_txn)) != ZX_OK) {
                 xprintf("sdmmc: failed to set card bus width, retcode = %d\n", st);
                 break;
             }
             const uint32_t new_bus_width = SDMMC_BUS_WIDTH_4;
             // FIXME(yky) use #define
-            st = device_ioctl(sdmmc->host_mxdev, IOCTL_SDMMC_SET_BUS_WIDTH, &new_bus_width,
+            st = device_ioctl(sdmmc->host_zxdev, IOCTL_SDMMC_SET_BUS_WIDTH, &new_bus_width,
                               sizeof(new_bus_width), NULL, 0, NULL);
             if (st != ZX_OK) {
                 xprintf("sdmmc: failed to set host bus width, retcode = %d\n", st);

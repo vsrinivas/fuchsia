@@ -36,8 +36,8 @@
 // #define USB_PID 0x0001
 
 typedef struct {
-    zx_device_t* mxdev;
-    zx_device_t* usb_mxdev;
+    zx_device_t* zxdev;
+    zx_device_t* usb_zxdev;
     usb_protocol_t usb;
 
     zx_handle_t cmd_channel;
@@ -68,7 +68,7 @@ static void queue_acl_read_requests_locked(hci_t* hci) {
     list_node_t* node;
     while ((node = list_remove_head(&hci->free_acl_read_reqs)) != NULL) {
         iotxn_t* txn = containerof(node, iotxn_t, node);
-        iotxn_queue(hci->usb_mxdev, txn);
+        iotxn_queue(hci->usb_zxdev, txn);
     }
 }
 
@@ -76,7 +76,7 @@ static void queue_interrupt_requests_locked(hci_t* hci) {
     list_node_t* node;
     while ((node = list_remove_head(&hci->free_event_reqs)) != NULL) {
         iotxn_t* txn = containerof(node, iotxn_t, node);
-        iotxn_queue(hci->usb_mxdev, txn);
+        iotxn_queue(hci->usb_zxdev, txn);
     }
 }
 
@@ -322,7 +322,7 @@ static bool hci_handle_acl_read_events(hci_t* hci, zx_wait_item_t* acl_item) {
         iotxn_t* txn = containerof(node, iotxn_t, node);
         iotxn_copyto(txn, buf, length, 0);
         txn->length = length;
-        iotxn_queue(hci->usb_mxdev, txn);
+        iotxn_queue(hci->usb_zxdev, txn);
     }
 
     return true;
@@ -498,7 +498,7 @@ static void hci_unbind(void* ctx) {
 
     mtx_unlock(&hci->mutex);
 
-    device_remove(hci->mxdev);
+    device_remove(hci->zxdev);
 }
 
 static void hci_release(void* ctx) {
@@ -588,7 +588,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device, void** cookie) {
 
     mtx_init(&hci->mutex, mtx_plain);
 
-    hci->usb_mxdev = device;
+    hci->usb_zxdev = device;
     memcpy(&hci->usb, &usb, sizeof(hci->usb));
 
     for (int i = 0; i < EVENT_REQ_COUNT; i++) {
@@ -638,7 +638,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device, void** cookie) {
         .proto_id = ZX_PROTOCOL_BLUETOOTH_HCI,
     };
 
-    status = device_add(device, &args, &hci->mxdev);
+    status = device_add(device, &args, &hci->zxdev);
     if (status == ZX_OK) return ZX_OK;
 
 fail:

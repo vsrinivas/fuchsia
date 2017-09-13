@@ -131,7 +131,7 @@ zx_status_t platform_bus_publish_device(platform_bus_t* bus, mdi_node_ref_t* dev
         .prop_count = countof(props),
     };
 
-    status = device_add(bus->mxdev, &args, &dev->mxdev);
+    status = device_add(bus->zxdev, &args, &dev->zxdev);
 
 fail:
     if (status != ZX_OK) {

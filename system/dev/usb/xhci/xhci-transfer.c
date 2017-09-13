@@ -633,7 +633,7 @@ int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, u
     txn->length = length;
     txn->complete_cb = xhci_control_complete;
     txn->cookie = &completion;
-    iotxn_queue(xhci->mxdev, txn);
+    iotxn_queue(xhci->zxdev, txn);
     status = completion_wait(&completion, ZX_SEC(1));
     if (status == ZX_OK) {
         status = txn->status;

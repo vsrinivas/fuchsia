@@ -115,7 +115,7 @@ typedef struct dwc_usb_device {
 } dwc_usb_device_t;
 
 typedef struct dwc_usb {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     usb_bus_interface_t bus;
     zx_handle_t irq_handle;
     thrd_t irq_thread;
@@ -519,7 +519,7 @@ static void dwc_iotxn_queue(void* ctx, iotxn_t* txn) {
     dwc_usb_t* usb_dwc = ctx;
     usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
 
-    if (txn->length > dwc_get_max_transfer_size(usb_dwc->mxdev, data->device_id, data->ep_address)) {
+    if (txn->length > dwc_get_max_transfer_size(usb_dwc->zxdev, data->device_id, data->ep_address)) {
         iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
     } else {
         dwc_usb_t* dwc = ctx;
@@ -671,7 +671,7 @@ zx_status_t dwc_hub_device_added(void* _ctx, uint32_t hub_address, int port,
     pdata->setup.wIndex = 0;
     pdata->setup.wLength = 8;
 
-    iotxn_queue(dwc->mxdev, get_desc);
+    iotxn_queue(dwc->zxdev, get_desc);
     completion_wait(&completion, ZX_TIME_INFINITE);
 
     usb_device_descriptor_t short_descriptor;
@@ -703,7 +703,7 @@ zx_status_t dwc_hub_device_added(void* _ctx, uint32_t hub_address, int port,
     pdata->setup.wIndex = 0;
     pdata->setup.wLength = 0;
 
-    iotxn_queue(dwc->mxdev, set_addr);
+    iotxn_queue(dwc->zxdev, set_addr);
     completion_wait(&completion, ZX_TIME_INFINITE);
 
     zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
@@ -1788,7 +1788,7 @@ static zx_status_t usb_dwc_bind(void* ctx, zx_device_t* dev, void** cookie) {
         .proto_ops = &dwc_hci_protocol,
     };
 
-    if ((st = device_add(dev, &args, &usb_dwc->mxdev)) != ZX_OK) {
+    if ((st = device_add(dev, &args, &usb_dwc->zxdev)) != ZX_OK) {
         free(usb_dwc);
         return st;
     }

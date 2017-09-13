@@ -19,7 +19,7 @@
 #include <unistd.h>
 
 typedef struct pci_sdhci_device {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     pci_protocol_t pci;
 
     volatile sdhci_regs_t* regs;
@@ -104,7 +104,7 @@ static sdhci_protocol_ops_t pci_sdhci_sdhci_proto = {
 
 static void pci_sdhci_unbind(void* ctx) {
     pci_sdhci_device_t* dev = ctx;
-    device_remove(dev->mxdev);
+    device_remove(dev->zxdev);
 }
 
 static void pci_sdhci_release(void* ctx) {
@@ -150,7 +150,7 @@ static zx_status_t pci_sdhci_bind(void* ctx, zx_device_t* parent, void** cookie)
         .proto_ops = &pci_sdhci_sdhci_proto,
     };
 
-    status = device_add(parent, &args, &dev->mxdev);
+    status = device_add(parent, &args, &dev->zxdev);
     if (status != ZX_OK) {
         goto fail;
     }

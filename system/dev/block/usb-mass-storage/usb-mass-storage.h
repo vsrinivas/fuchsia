@@ -23,7 +23,7 @@ typedef struct {
 
 // struct representing a block device for a logical unit
 typedef struct {
-    zx_device_t* mxdev;         // block device we publish
+    zx_device_t* zxdev;         // block device we publish
     block_callbacks_t* cb;      // callbacks for async block protocol
 
     uint64_t total_blocks;
@@ -36,8 +36,8 @@ typedef struct {
 
 // main struct for the UMS driver
 typedef struct {
-    zx_device_t* mxdev;         // root device we publish
-    zx_device_t* usb_mxdev;     // USB device we are bound to
+    zx_device_t* zxdev;         // root device we publish
+    zx_device_t* usb_zxdev;     // USB device we are bound to
     usb_protocol_t usb;
 
     uint32_t tag_send;          // next tag to send in CBW

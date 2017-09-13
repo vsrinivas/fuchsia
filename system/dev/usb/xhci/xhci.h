@@ -87,7 +87,7 @@ typedef struct {
 
 struct xhci {
     // the device we implement
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
 
     // interface for calling back to usb bus driver
     usb_bus_interface_t bus;

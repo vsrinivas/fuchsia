@@ -106,13 +106,13 @@ static zx_status_t kpci_init_child(zx_device_t* parent, uint32_t index, bool sav
             .flags = DEVICE_ADD_BUSDEV,
         };
 
-        status = device_add(parent, &args, &device->mxdev);
+        status = device_add(parent, &args, &device->zxdev);
     } else {
         return ZX_ERR_BAD_STATE;
     }
 
     if (status == ZX_OK) {
-        *out = device->mxdev;
+        *out = device->zxdev;
     } else {
         if (handle != ZX_HANDLE_INVALID) {
             zx_handle_close(handle);

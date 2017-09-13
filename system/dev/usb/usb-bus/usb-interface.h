@@ -12,9 +12,9 @@
 
 // Represents an interface within a composite device
 typedef struct {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     usb_device_t* device;
-    zx_device_t* hci_mxdev;
+    zx_device_t* hci_zxdev;
     usb_hci_protocol_t hci;
     uint32_t device_id;
 

@@ -35,7 +35,7 @@ typedef struct {
 
 // context structure for the platform bus
 typedef struct {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     pbus_interface_t interface;
     zx_handle_t resource;   // root resource for platform bus
     mdi_node_ref_t  platform_node;
@@ -51,7 +51,7 @@ typedef struct {
 
 // context structure for a platform device
 typedef struct {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     platform_bus_t* bus;
     // resources must be last
     platform_resources_t resources;

@@ -24,7 +24,7 @@ typedef zx_status_t status_t;
 typedef struct ethernet_device {
     ethdev_t eth;
     mtx_t lock;
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     pci_protocol_t pci;
     zx_handle_t ioh;
     zx_handle_t irqh;
@@ -220,7 +220,7 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev, void** cookie) {
         .proto_ops = &ethmac_ops,
     };
 
-    if (device_add(dev, &args, &edev->mxdev)) {
+    if (device_add(dev, &args, &edev->zxdev)) {
         goto fail;
     }
 

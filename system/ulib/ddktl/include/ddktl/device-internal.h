@@ -20,7 +20,7 @@ struct base_device {
     }
 
     zx_protocol_device_t ddk_device_proto_ = {};
-    zx_device_t* mxdev_ = nullptr;
+    zx_device_t* zxdev_ = nullptr;
     zx_device_t* const parent_;
 };
 

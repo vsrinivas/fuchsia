@@ -266,7 +266,7 @@ static void dwc3_unbind(void* ctx) {
 
     zx_interrupt_signal(dwc->irq_handle);
     thrd_join(dwc->irq_thread, NULL);
-    device_remove(dwc->mxdev);
+    device_remove(dwc->zxdev);
 }
 
 static void dwc3_iotxn_queue(void* ctx, iotxn_t* txn) {
@@ -371,7 +371,7 @@ static zx_status_t dwc3_bind(void* ctx, zx_device_t* dev, void** cookie) {
         .proto_ops = &dwc_dci_protocol,
     };
 
-    status = device_add(dev, &args, &dwc->mxdev);
+    status = device_add(dev, &args, &dwc->zxdev);
     if (status != ZX_OK) {
         goto fail;
     }

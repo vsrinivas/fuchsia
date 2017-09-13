@@ -218,7 +218,7 @@ static zx_status_t usb_bus_ioctl(void* ctx, uint32_t op, const void* in_buf, siz
 
 static void usb_bus_unbind(void* ctx) {
     usb_virtual_bus_t* bus = ctx;
-    device_remove(bus->mxdev);
+    device_remove(bus->zxdev);
 }
 
 static void usb_bus_release(void* ctx) {
@@ -257,7 +257,7 @@ printf("usb_virtual_bus_bind\n");
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    zx_status_t status = device_add(parent, &args, &bus->mxdev);
+    zx_status_t status = device_add(parent, &args, &bus->zxdev);
     if (status != ZX_OK) {
         free(bus);
         return status;

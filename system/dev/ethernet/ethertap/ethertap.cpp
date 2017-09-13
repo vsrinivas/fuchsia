@@ -46,7 +46,7 @@ zx_status_t TapCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
         config.name[ETHERTAP_MAX_NAME_LEN] = '\0';
 
         auto tap = fbl::unique_ptr<eth::TapDevice>(
-                new eth::TapDevice(mxdev(), &config, fbl::move(local)));
+                new eth::TapDevice(zxdev(), &config, fbl::move(local)));
 
         status = tap->DdkAdd(config.name);
         if (status != ZX_OK) {

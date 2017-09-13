@@ -34,7 +34,7 @@
 #define CDC_BITRATE         1000000000  // say we are gigabit
 
 typedef struct {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     usb_function_protocol_t function;
 
     list_node_t bulk_out_txns;
@@ -484,7 +484,7 @@ usb_function_interface_ops_t device_ops = {
 static void usb_cdc_unbind(void* ctx) {
     dprintf(TRACE, "%s\n", __FUNCTION__);
     usb_cdc_t* cdc = ctx;
-    device_remove(cdc->mxdev);
+    device_remove(cdc->zxdev);
 }
 
 static void usb_cdc_release(void* ctx) {
@@ -603,7 +603,7 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent, void** cookie) {
         .proto_ops = &ethmac_ops,
     };
 
-    status = device_add(parent, &args, &cdc->mxdev);
+    status = device_add(parent, &args, &cdc->zxdev);
     if (status != ZX_OK) {
         dprintf(ERROR, "%s: add_device failed %d\n", __FUNCTION__, status);
         goto fail;

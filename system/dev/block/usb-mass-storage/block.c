@@ -51,7 +51,7 @@ static zx_status_t ums_block_ioctl(void* ctx, uint32_t op, const void* cmd, size
     }
     case IOCTL_BLOCK_RR_PART: {
         // rebind to reread the partition table
-        return device_rebind(dev->mxdev);
+        return device_rebind(dev->zxdev);
     }
     case IOCTL_DEVICE_SYNC: {
         ums_sync_node_t node;
@@ -117,7 +117,7 @@ static void ums_async_read(void* ctx, zx_handle_t vmo, uint64_t length,
     txn->complete_cb = ums_async_complete;
     txn->cookie = cookie;
     txn->extra[0] = (uintptr_t)dev;
-    iotxn_queue(dev->mxdev, txn);
+    iotxn_queue(dev->zxdev, txn);
 }
 
 static void ums_async_write(void* ctx, zx_handle_t vmo, uint64_t length,
@@ -135,7 +135,7 @@ static void ums_async_write(void* ctx, zx_handle_t vmo, uint64_t length,
     txn->complete_cb = ums_async_complete;
     txn->cookie = cookie;
     txn->extra[0] = (uintptr_t)dev;
-    iotxn_queue(dev->mxdev, txn);
+    iotxn_queue(dev->zxdev, txn);
 }
 
 static block_protocol_ops_t ums_block_ops = {
@@ -160,5 +160,5 @@ zx_status_t ums_block_add_device(ums_t* ums, ums_block_t* dev) {
         .proto_ops = &ums_block_ops,
     };
 
-    return device_add(ums->mxdev, &args, &dev->mxdev);
+    return device_add(ums->zxdev, &args, &dev->zxdev);
 }

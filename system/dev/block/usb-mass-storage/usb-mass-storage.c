@@ -43,7 +43,7 @@ static zx_status_t ums_reset(ums_t* ums) {
 }
 
 static void ums_queue_request(ums_t* ums, iotxn_t* txn) {
-    iotxn_queue(ums->usb_mxdev, txn);
+    iotxn_queue(ums->usb_zxdev, txn);
 }
 
 static void ums_txn_complete(iotxn_t* txn, void* cookie) {
@@ -427,12 +427,12 @@ static void ums_unbind(void* ctx) {
         ums_block_t* dev = &ums->block_devs[lun];
 
         if (dev->device_added) {
-            device_remove(dev->mxdev);
+            device_remove(dev->zxdev);
         }
     }
 
     // remove our root device
-    device_remove(ums->mxdev);
+    device_remove(ums->zxdev);
 }
 
 static void ums_release(void* ctx) {
@@ -536,7 +536,7 @@ static zx_status_t ums_check_luns_ready(ums_t* ums) {
                 printf("UMS: device_add for block device failed %d\n", status);
             }
         } else if (!ready && dev->device_added) {
-            device_remove(dev->mxdev);
+            device_remove(dev->zxdev);
             dev->device_added = false;
         }
     }
@@ -576,7 +576,7 @@ static int ums_worker_thread(void* arg) {
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    status = device_add(ums->usb_mxdev, &args, &ums->mxdev);
+    status = device_add(ums->usb_zxdev, &args, &ums->zxdev);
     if (status != ZX_OK) {
         goto fail;
     }
@@ -736,7 +736,7 @@ static zx_status_t ums_bind(void* ctx, zx_device_t* device, void** cookie) {
     completion_reset(&ums->iotxn_completion);
     mtx_init(&ums->iotxn_lock, mtx_plain);
 
-    ums->usb_mxdev = device;
+    ums->usb_zxdev = device;
     memcpy(&ums->usb, &usb, sizeof(ums->usb));
     ums->bulk_in_addr = bulk_in_addr;
     ums->bulk_out_addr = bulk_out_addr;

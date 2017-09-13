@@ -21,7 +21,7 @@
 #include "server.h"
 
 typedef struct blkdev {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     zx_device_t* parent;
     block_protocol_t proto;
 
@@ -210,7 +210,7 @@ static zx_off_t blkdev_get_size(void* ctx) {
 
 static void blkdev_unbind(void* ctx) {
     blkdev_t* blkdev = ctx;
-    device_remove(blkdev->mxdev);
+    device_remove(blkdev->zxdev);
 }
 
 static void blkdev_release(void* ctx) {
@@ -262,7 +262,7 @@ static zx_status_t block_driver_bind(void* ctx, zx_device_t* dev, void** cookie)
         .proto_id = ZX_PROTOCOL_BLOCK,
     };
 
-    status = device_add(dev, &args, &bdev->mxdev);
+    status = device_add(dev, &args, &bdev->zxdev);
     if (status != ZX_OK) {
         goto fail;
     }

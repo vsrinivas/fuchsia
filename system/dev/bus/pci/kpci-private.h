@@ -9,7 +9,7 @@
 #include <zircon/types.h>
 
 typedef struct kpci_device {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     zx_handle_t handle;
     uint32_t index;
     zx_pcie_device_info_t info;

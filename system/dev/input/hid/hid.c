@@ -47,7 +47,7 @@ typedef struct hid_report_size {
 } hid_report_size_t;
 
 typedef struct hid_device {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
 
     hid_info_t info;
     hidbus_protocol_t hid;
@@ -74,7 +74,7 @@ typedef struct hid_device {
 } hid_device_t;
 
 typedef struct hid_instance {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     hid_device_t* base;
 
     uint32_t flags;
@@ -306,7 +306,7 @@ static zx_status_t hid_read_instance(void* ctx, void* buf, size_t count, zx_off_
     r = zx_hid_fifo_read(&hid->fifo, buf, xfer);
     left = zx_hid_fifo_size(&hid->fifo);
     if (left == 0) {
-        device_state_clr(hid->mxdev, DEV_STATE_READABLE);
+        device_state_clr(hid->zxdev, DEV_STATE_READABLE);
     }
     mtx_unlock(&hid->fifo.lock);
     if (r > 0) {
@@ -699,7 +699,7 @@ static zx_status_t hid_open_device(void* ctx, zx_device_t** dev_out, uint32_t fl
         .flags = DEVICE_ADD_INSTANCE,
     };
 
-    zx_status_t status = status = device_add(hid->mxdev, &args, &inst->mxdev);
+    zx_status_t status = status = device_add(hid->zxdev, &args, &inst->zxdev);
     if (status != ZX_OK) {
         dprintf(ERROR, "hid: error creating instance %d\n", status);
         free(inst);
@@ -711,7 +711,7 @@ static zx_status_t hid_open_device(void* ctx, zx_device_t** dev_out, uint32_t fl
     list_add_tail(&hid->instance_list, &inst->node);
     mtx_unlock(&hid->instance_lock);
 
-    *dev_out = inst->mxdev;
+    *dev_out = inst->zxdev;
     return ZX_OK;
 }
 
@@ -721,10 +721,10 @@ static void hid_unbind_device(void* ctx) {
     hid_instance_t* instance;
     foreach_instance(hid, instance) {
         instance->flags |= HID_FLAGS_DEAD;
-        device_state_set(instance->mxdev, DEV_STATE_READABLE);
+        device_state_set(instance->zxdev, DEV_STATE_READABLE);
     }
     mtx_unlock(&hid->instance_lock);
-    device_remove(hid->mxdev);
+    device_remove(hid->zxdev);
 }
 
 zx_protocol_device_t hid_device_proto = {
@@ -820,7 +820,7 @@ void hid_io_queue(void* cookie, const uint8_t* buf, size_t len) {
             } else {
                 instance->flags &= ~HID_FLAGS_WRITE_FAILED;
                 if (was_empty) {
-                    device_state_set(instance->mxdev, DEV_STATE_READABLE);
+                    device_state_set(instance->zxdev, DEV_STATE_READABLE);
                 }
             }
             mtx_unlock(&instance->fifo.lock);
@@ -901,7 +901,7 @@ static zx_status_t hid_bind(void* ctx, zx_device_t* parent, void** cookie) {
         .proto_id = ZX_PROTOCOL_INPUT,
     };
 
-    status = device_add(parent, &args, &hiddev->mxdev);
+    status = device_add(parent, &args, &hiddev->zxdev);
     if (status != ZX_OK) {
         dprintf(ERROR, "hid: device_add failed for HID device: %d\n", status);
         goto fail;
@@ -911,7 +911,7 @@ static zx_status_t hid_bind(void* ctx, zx_device_t* parent, void** cookie) {
     status = hid_op_start(hiddev, &hid_ifc, hiddev);
     if (status != ZX_OK) {
         dprintf(ERROR, "hid: could not start hid device: %d\n", status);
-        device_remove(hiddev->mxdev);
+        device_remove(hiddev->zxdev);
         // Don't fail, since we've been added. Need to let devmgr clean us up.
         return status;
     }

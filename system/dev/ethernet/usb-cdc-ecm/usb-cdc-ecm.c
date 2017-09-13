@@ -37,7 +37,7 @@ typedef struct {
 } ecm_endpoint_t;
 
 typedef struct {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     zx_device_t* usb_device;
     usb_protocol_t usb;
 
@@ -73,7 +73,7 @@ typedef struct {
 static void ecm_unbind(void* cookie) {
     xprintf("%s: unbinding\n", module_name);
     ecm_ctx_t* ctx = cookie;
-    device_remove(ctx->mxdev);
+    device_remove(ctx->zxdev);
 }
 
 static void ecm_free(ecm_ctx_t* ctx) {
@@ -656,7 +656,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device, void** cookie) {
         .proto_id = ZX_PROTOCOL_ETHERMAC,
         .proto_ops = &ethmac_ops,
     };
-    result = device_add(ecm_ctx->usb_device, &args, &ecm_ctx->mxdev);
+    result = device_add(ecm_ctx->usb_device, &args, &ecm_ctx->zxdev);
     if (result < 0) {
         printf("%s: failed to add device: %d\n", module_name, (int)result);
         goto fail;

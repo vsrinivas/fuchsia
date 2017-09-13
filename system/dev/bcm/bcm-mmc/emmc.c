@@ -60,7 +60,7 @@
 
 
 typedef struct emmc {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     zx_device_t* parent;
    platform_device_protocol_t pdev;
    void* mmio_base;
@@ -130,7 +130,7 @@ static sdhci_protocol_ops_t emmc_sdhci_proto = {
 
 static void emmc_unbind(void* ctx) {
     emmc_t* emmc = ctx;
-    device_remove(emmc->mxdev);
+    device_remove(emmc->zxdev);
 }
 
 static void emmc_release(void* ctx) {
@@ -170,7 +170,7 @@ static zx_status_t emmc_bind(void* drv_ctx, zx_device_t* dev, void** cookie) {
         .proto_id = ZX_PROTOCOL_SDHCI,
         .proto_ops = &emmc_sdhci_proto,
     };
-    st = device_add(emmc->parent, &args, &emmc->mxdev);
+    st = device_add(emmc->parent, &args, &emmc->zxdev);
     if (st != ZX_OK) {
         goto fail;
     }

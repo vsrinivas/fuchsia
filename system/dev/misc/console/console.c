@@ -18,7 +18,7 @@
 #define FIFOMASK (FIFOSIZE - 1)
 
 typedef struct console_ctx {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
 } console_device_t;
 
 static struct {
@@ -74,7 +74,7 @@ static zx_status_t console_read(void* ctx, void* buf, size_t count, zx_off_t off
         data++;
     }
     if (fifo.head == fifo.tail) {
-        device_state_clr(console->mxdev, DEV_STATE_READABLE);
+        device_state_clr(console->zxdev, DEV_STATE_READABLE);
     }
     mtx_unlock(&fifo.lock);
     ssize_t length = data - (uint8_t*)buf;
@@ -131,7 +131,7 @@ static zx_status_t console_bind(void* ctx, zx_device_t* parent, void** cookie) {
         .ops = &console_device_proto,
     };
 
-    zx_status_t status = device_add(parent, &args, &console->mxdev);
+    zx_status_t status = device_add(parent, &args, &console->zxdev);
     if (status != ZX_OK) {
         printf("console: device_add() failed\n");
         free(console);
@@ -139,7 +139,7 @@ static zx_status_t console_bind(void* ctx, zx_device_t* parent, void** cookie) {
     }
 
     thrd_t t;
-    thrd_create_with_name(&t, debug_reader, console->mxdev, "debug-reader");
+    thrd_create_with_name(&t, debug_reader, console->zxdev, "debug-reader");
 
     return ZX_OK;
 }

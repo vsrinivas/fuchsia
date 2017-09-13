@@ -23,7 +23,7 @@ typedef struct {
 } usb_virtual_ep_t;
 
 typedef struct {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     usb_virtual_host_t* host;
     usb_virtual_device_t* device;
 

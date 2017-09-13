@@ -66,7 +66,7 @@ typedef enum {
 };
 
 typedef struct {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     usb_function_protocol_t function;
     iotxn_t* cbw_iotxn;
     iotxn_t* data_iotxn;
@@ -466,7 +466,7 @@ usb_function_interface_ops_t ums_device_ops = {
 static void usb_ums_unbind(void* ctx) {
     dprintf(TRACE, "usb_ums_unbind\n");
     usb_ums_t* ums = ctx;
-    device_remove(ums->mxdev);
+    device_remove(ums->zxdev);
 }
 
 static void usb_ums_release(void* ctx) {
@@ -569,7 +569,7 @@ zx_status_t usb_ums_bind(void* ctx, zx_device_t* parent, void** cookie) {
         .ops = &usb_ums_proto,
     };
 
-    status = device_add(parent, &args, &ums->mxdev);
+    status = device_add(parent, &args, &ums->zxdev);
     if (status != ZX_OK) {
         dprintf(ERROR, "usb_device_bind add_device failed %d\n", status);
         goto fail;

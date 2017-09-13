@@ -102,7 +102,7 @@ static zx_status_t sdmmc_ioctl(void* ctx, uint32_t op, const void* cmd,
 
 static void sdmmc_unbind(void* ctx) {
     sdmmc_t* sdmmc = ctx;
-    device_remove(sdmmc->mxdev);
+    device_remove(sdmmc->zxdev);
 }
 
 static void sdmmc_release(void* ctx) {
@@ -129,7 +129,7 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
 
     iotxn_t* emmc_txn = NULL;
     sdmmc_t* sdmmc = ctx;
-    zx_device_t* sdmmc_mxdev = sdmmc->host_mxdev;
+    zx_device_t* sdmmc_zxdev = sdmmc->host_zxdev;
     uint32_t cmd = 0;
 
     // Figure out which SD command we need to issue.
@@ -170,7 +170,7 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
     const size_t max_attempts = 10;
     size_t attempt = 0;
     for (; attempt <= max_attempts; attempt++) {
-        zx_status_t rc = sdmmc_do_command(sdmmc_mxdev, SDMMC_SEND_STATUS,
+        zx_status_t rc = sdmmc_do_command(sdmmc_zxdev, SDMMC_SEND_STATUS,
                                           sdmmc->rca << 16, emmc_txn);
         if (rc != ZX_OK) {
             iotxn_complete(txn, rc, 0);
@@ -180,7 +180,7 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
         current_state = (pdata->response[0] >> 9) & 0xf;
 
         if (current_state == SDMMC_STATE_RECV) {
-            rc = sdmmc_do_command(sdmmc_mxdev, SDMMC_STOP_TRANSMISSION, 0, emmc_txn);
+            rc = sdmmc_do_command(sdmmc_zxdev, SDMMC_STOP_TRANSMISSION, 0, emmc_txn);
             continue;
         } else if (current_state == SDMMC_STATE_TRAN) {
             break;
@@ -209,7 +209,7 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
         bytes_processed = txn->length;
     }
 
-    zx_status_t rc = sdmmc_do_command(sdmmc_mxdev, cmd, blkid, emmc_txn);
+    zx_status_t rc = sdmmc_do_command(sdmmc_zxdev, cmd, blkid, emmc_txn);
     if (rc != ZX_OK) {
         iotxn_complete(txn, rc, 0);
     }
@@ -280,7 +280,7 @@ static void block_do_txn(sdmmc_t* dev, uint32_t opcode, zx_handle_t vmo, uint64_
     txn->complete_cb = sdmmc_block_complete;
     txn->cookie = cookie;
     memcpy(txn->extra, &dev, sizeof(sdmmc_t*));
-    iotxn_queue(dev->mxdev, txn);
+    iotxn_queue(dev->zxdev, txn);
 }
 
 static void sdmmc_block_read(void* ctx, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
@@ -313,7 +313,7 @@ static int sdmmc_bootstrap_thread(void* arg) {
         xprintf("sdmmc: no memory to allocate sdmmc device!\n");
         goto err;
     }
-    sdmmc->host_mxdev = dev;
+    sdmmc->host_zxdev = dev;
 
     // Allocate a single iotxn that we use to bootstrap the card with.
     if ((st = iotxn_alloc(&setup_txn, IOTXN_ALLOC_CONTIGUOUS, SDHC_BLOCK_SIZE)) != ZX_OK) {
@@ -348,7 +348,7 @@ static int sdmmc_bootstrap_thread(void* arg) {
         .proto_ops = &sdmmc_block_ops,
     };
 
-    st = device_add(dev, &args, &sdmmc->mxdev);
+    st = device_add(dev, &args, &sdmmc->zxdev);
     if (st != ZX_OK) {
          goto err;
     }

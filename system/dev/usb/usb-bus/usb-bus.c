@@ -16,8 +16,8 @@
 
 // Represents a USB bus, which manages all devices for a USB host controller
 typedef struct usb_bus {
-    zx_device_t* mxdev;
-    zx_device_t* hci_mxdev;
+    zx_device_t* zxdev;
+    zx_device_t* hci_zxdev;
     usb_hci_protocol_t hci;
 
     // top-level USB devices, indexed by device_id
@@ -32,7 +32,7 @@ static zx_status_t bus_add_device(void* ctx, uint32_t device_id, uint32_t hub_id
     if (device_id >= bus->max_device_count) return ZX_ERR_INVALID_ARGS;
 
     usb_device_t* usb_device;
-    zx_status_t result = usb_device_add(bus->hci_mxdev, &bus->hci, bus->mxdev, device_id,
+    zx_status_t result = usb_device_add(bus->hci_zxdev, &bus->hci, bus->zxdev, device_id,
                                         hub_id, speed, &usb_device);
     if (result == ZX_OK) {
         bus->devices[device_id] = usb_device;
@@ -99,11 +99,11 @@ static void usb_bus_unbind(void* ctx) {
     for (size_t i = 0; i < bus->max_device_count; i++) {
         usb_device_t* device = bus->devices[i];
         if (device) {
-            device_remove(device->mxdev);
+            device_remove(device->zxdev);
             bus->devices[i] = NULL;
         }
     }
-    device_remove(bus->mxdev);
+    device_remove(bus->zxdev);
 }
 
 static void usb_bus_release(void* ctx) {
@@ -130,7 +130,7 @@ static zx_status_t usb_bus_bind(void* ctx, zx_device_t* device, void** cookie) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    bus->hci_mxdev = device;
+    bus->hci_zxdev = device;
     bus->max_device_count = usb_hci_get_max_device_count(&bus->hci);
     bus->devices = calloc(bus->max_device_count, sizeof(usb_device_t *));
     if (!bus->devices) {
@@ -150,7 +150,7 @@ static zx_status_t usb_bus_bind(void* ctx, zx_device_t* device, void** cookie) {
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    zx_status_t status = device_add(device, &args, &bus->mxdev);
+    zx_status_t status = device_add(device, &args, &bus->zxdev);
     if (status == ZX_OK) {
         static usb_bus_interface_t bus_intf;
         bus_intf.ops = &_bus_interface;

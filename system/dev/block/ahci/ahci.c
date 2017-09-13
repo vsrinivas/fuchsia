@@ -68,7 +68,7 @@ typedef struct ahci_port {
 } ahci_port_t;
 
 typedef struct ahci_device {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
 
     ahci_hba_t* regs;
     uint64_t regs_size;
@@ -684,7 +684,7 @@ static int ahci_init_thread(void* arg) {
         if (ahci_read(&port->regs->ssts) & AHCI_PORT_SSTS_DET_PRESENT) {
             port->flags |= AHCI_PORT_FLAG_PRESENT;
             if (ahci_read(&port->regs->sig) == AHCI_PORT_SIG_SATA) {
-                sata_bind(dev->mxdev, port->nr);
+                sata_bind(dev->zxdev, port->nr);
             }
         }
     }
@@ -793,7 +793,7 @@ static zx_status_t ahci_bind(void* ctx, zx_device_t* dev, void** cookie) {
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    status = device_add(dev, &args, &device->mxdev);
+    status = device_add(dev, &args, &device->zxdev);
     if (status != ZX_OK) {
         xprintf("ahci: error %d in device_add\n", status);
         goto fail;

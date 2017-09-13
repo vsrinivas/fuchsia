@@ -11,7 +11,7 @@
 #include <stdint.h>
 
 typedef struct intel_serialio_i2c_slave_device {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     struct intel_serialio_i2c_device* controller;
 
     uint8_t chip_address_width;

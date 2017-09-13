@@ -23,11 +23,11 @@
 #include <threads.h>
 
 typedef struct {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
 } ramctl_device_t;
 
 typedef struct ramdisk_device {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     uint64_t blk_size;
     uint64_t blk_count;
     zx_handle_t vmo;
@@ -136,7 +136,7 @@ static void ramdisk_unbind(void* ctx) {
     mtx_lock(&ramdev->lock);
     ramdev->dead = true;
     mtx_unlock(&ramdev->lock);
-    device_remove(ramdev->mxdev);
+    device_remove(ramdev->zxdev);
 }
 
 static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd,
@@ -168,7 +168,7 @@ static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd,
         return ZX_OK;
     }
     case IOCTL_BLOCK_RR_PART: {
-        return device_rebind(ramdev->mxdev);
+        return device_rebind(ramdev->zxdev);
     }
     case IOCTL_DEVICE_SYNC: {
         // Wow, we sync so quickly!
@@ -279,7 +279,7 @@ static zx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
             .proto_ops = &ramdisk_block_ops,
         };
 
-        if ((status = device_add(ramctl->mxdev, &args, &ramdev->mxdev)) != ZX_OK) {
+        if ((status = device_add(ramctl->zxdev, &args, &ramdev->zxdev)) != ZX_OK) {
             zx_vmar_unmap(zx_vmar_root_self(), ramdev->mapped_addr, sizebytes(ramdev));
             zx_handle_close(ramdev->vmo);
             free(ramdev);
@@ -312,7 +312,7 @@ static zx_status_t ramdisk_driver_bind(void* ctx, zx_device_t* parent, void** co
         .ctx = ramctl,
     };
 
-    return device_add(parent, &args, &ramctl->mxdev);
+    return device_add(parent, &args, &ramctl->zxdev);
 }
 
 static zx_driver_ops_t ramdisk_driver_ops = {

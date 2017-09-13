@@ -26,7 +26,7 @@
 #define ACPI_BATTERY_STATE_CRITICAL    (1 << 2)
 
 typedef struct acpi_battery_device {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
 
     ACPI_HANDLE acpi_handle;
 
@@ -414,7 +414,7 @@ zx_status_t battery_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
         .proto_id = ZX_PROTOCOL_POWER,
     };
 
-    status = device_add(parent, &args, &dev->mxdev);
+    status = device_add(parent, &args, &dev->zxdev);
     if (status != ZX_OK) {
         xprintf("acpi-battery: could not add device! err=%d\n", status);
         acpi_battery_release(dev);

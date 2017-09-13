@@ -33,7 +33,7 @@
 #define PTY_CLI_PEER_CLOSED (0x00040000u)
 
 struct pty_client {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     pty_server_t* srv;
     uint32_t id;
     uint32_t flags;
@@ -56,10 +56,10 @@ static zx_status_t pty_client_read(void* ctx, void* buf, size_t count, zx_off_t 
     bool was_full = pty_fifo_is_full(&pc->fifo);
     size_t length = pty_fifo_read(&pc->fifo, buf, count);
     if (pty_fifo_is_empty(&pc->fifo)) {
-        device_state_clr(pc->mxdev, DEV_STATE_READABLE);
+        device_state_clr(pc->zxdev, DEV_STATE_READABLE);
     }
     if (was_full && length) {
-        device_state_set(ps->mxdev, DEV_STATE_WRITABLE);
+        device_state_set(ps->zxdev, DEV_STATE_WRITABLE);
     }
     mtx_unlock(&ps->lock);
 
@@ -85,7 +85,7 @@ static zx_status_t pty_client_write(void* ctx, const void* buf, size_t count, zx
         if (r == ZX_OK) {
             *actual = length;
         } else if (r == ZX_ERR_SHOULD_WAIT) {
-            device_state_clr(pc->mxdev, DEV_STATE_WRITABLE);
+            device_state_clr(pc->zxdev, DEV_STATE_WRITABLE);
         }
     } else {
         r = (pc->flags & PTY_CLI_PEER_CLOSED) ? ZX_ERR_PEER_CLOSED : ZX_ERR_SHOULD_WAIT;
@@ -103,15 +103,15 @@ static void pty_make_active_locked(pty_server_t* ps, pty_client_t* pc) {
     if (ps->active != pc) {
         if (ps->active) {
             ps->active->flags &= (~PTY_CLI_ACTIVE);
-            device_state_clr(ps->active->mxdev, DEV_STATE_WRITABLE);
+            device_state_clr(ps->active->zxdev, DEV_STATE_WRITABLE);
         }
         ps->active = pc;
         pc->flags |= PTY_CLI_ACTIVE;
-        device_state_set(pc->mxdev, DEV_STATE_WRITABLE);
+        device_state_set(pc->zxdev, DEV_STATE_WRITABLE);
         if (pty_fifo_is_full(&pc->fifo)) {
-            device_state_clr_set(ps->mxdev, DEV_STATE_WRITABLE | DEV_STATE_HANGUP, 0);
+            device_state_clr_set(ps->zxdev, DEV_STATE_WRITABLE | DEV_STATE_HANGUP, 0);
         } else {
-            device_state_clr_set(ps->mxdev, DEV_STATE_HANGUP, DEV_STATE_WRITABLE);
+            device_state_clr_set(ps->zxdev, DEV_STATE_HANGUP, DEV_STATE_WRITABLE);
         }
     }
 }
@@ -129,7 +129,7 @@ static void pty_adjust_signals_locked(pty_client_t* pc) {
     } else {
         set = DEV_STATE_READABLE;
     }
-    device_state_clr_set(pc->mxdev, clr, set);
+    device_state_clr_set(pc->zxdev, clr, set);
 }
 
 
@@ -210,7 +210,7 @@ static zx_status_t pty_client_ioctl(void* ctx, uint32_t op,
             events |= PTY_EVENT_HANGUP;
         }
         *((uint32_t*) out_buf) = events;
-        device_state_clr(pc->mxdev, PTY_SIGNAL_EVENT);
+        device_state_clr(pc->zxdev, PTY_SIGNAL_EVENT);
         mtx_unlock(&ps->lock);
         *out_actual = sizeof(uint32_t);
         return ZX_OK;
@@ -241,13 +241,13 @@ static void pty_client_release(void* ctx) {
     if (ps->active == pc) {
         // signal controlling client as well, if there is one
         if (ps->control) {
-            device_state_set(ps->control->mxdev, PTY_SIGNAL_EVENT | DEV_STATE_HANGUP);
+            device_state_set(ps->control->zxdev, PTY_SIGNAL_EVENT | DEV_STATE_HANGUP);
         }
         ps->active = NULL;
     }
     // signal server, if the last client has gone away
     if (list_is_empty(&ps->clients)) {
-        device_state_clr_set(ps->mxdev, DEV_STATE_WRITABLE, DEV_STATE_READABLE | DEV_STATE_HANGUP);
+        device_state_clr_set(ps->zxdev, DEV_STATE_WRITABLE, DEV_STATE_READABLE | DEV_STATE_HANGUP);
     }
     mtx_unlock(&ps->lock);
 
@@ -329,9 +329,9 @@ static zx_status_t pty_openat(pty_server_t* ps, zx_device_t** out, uint32_t id, 
         .flags = DEVICE_ADD_INSTANCE,
     };
 
-    status = device_add(ps->mxdev, &args, &pc->mxdev);
+    status = device_add(ps->zxdev, &args, &pc->zxdev);
     if (status < 0) {
-        pty_client_release(pc->mxdev);
+        pty_client_release(pc->zxdev);
         return status;
     }
 
@@ -350,12 +350,12 @@ static zx_status_t pty_openat(pty_server_t* ps, zx_device_t** out, uint32_t id, 
         // if there were no clients, make sure we take server
         // out of HANGUP and READABLE, where it landed if all
         // its clients had closed
-        device_state_clr(ps->mxdev, DEV_STATE_READABLE | DEV_STATE_HANGUP);
+        device_state_clr(ps->zxdev, DEV_STATE_READABLE | DEV_STATE_HANGUP);
     }
     pty_adjust_signals_locked(pc);
     mtx_unlock(&ps->lock);
 
-    *out = pc->mxdev;
+    *out = pc->zxdev;
     return ZX_OK;
 }
 
@@ -364,7 +364,7 @@ static zx_status_t pty_openat(pty_server_t* ps, zx_device_t** out, uint32_t id, 
 
 void pty_server_resume_locked(pty_server_t* ps) {
     if (ps->active) {
-        device_state_set(ps->active->mxdev, DEV_STATE_WRITABLE);
+        device_state_set(ps->active->zxdev, DEV_STATE_WRITABLE);
     }
 }
 
@@ -398,16 +398,16 @@ zx_status_t pty_server_send(pty_server_t* ps, const void* data, size_t len, bool
                 ps->events |= evt;
                 xprintf("pty cli %p evt %x\n", pc, evt);
                 if (ps->control) {
-                    device_state_set(ps->control->mxdev, PTY_SIGNAL_EVENT);
+                    device_state_set(ps->control->zxdev, PTY_SIGNAL_EVENT);
                 }
             }
             *actual = r;
         }
         if (was_empty && *actual) {
-            device_state_set(pc->mxdev, DEV_STATE_READABLE);
+            device_state_set(pc->zxdev, DEV_STATE_READABLE);
         }
         if (pty_fifo_is_full(&pc->fifo)) {
-            device_state_clr(ps->mxdev, DEV_STATE_WRITABLE);
+            device_state_clr(ps->zxdev, DEV_STATE_WRITABLE);
         }
         status = ZX_OK;
     } else {
@@ -440,7 +440,7 @@ void pty_server_release(void* ctx) {
     pty_client_t* pc;
     list_for_every_entry(&ps->clients, pc, pty_client_t, node) {
         pc->flags = (pc->flags & (~PTY_CLI_ACTIVE)) | PTY_CLI_PEER_CLOSED;
-        device_state_set(pc->mxdev, DEV_STATE_HANGUP);
+        device_state_set(pc->zxdev, DEV_STATE_HANGUP);
     }
     int32_t refcount = --ps->refcount;
     mtx_unlock(&ps->lock);

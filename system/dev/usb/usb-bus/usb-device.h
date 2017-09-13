@@ -22,8 +22,8 @@ typedef enum {
 
 // Represents a USB top-level device
 typedef struct usb_device {
-    zx_device_t* mxdev;
-    zx_device_t* hci_mxdev;
+    zx_device_t* zxdev;
+    zx_device_t* hci_zxdev;
     usb_hci_protocol_t hci;
 
     // ID assigned by host controller

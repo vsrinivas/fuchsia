@@ -38,7 +38,7 @@
 #define SATA_FLAG_LBA48 (1 << 1)
 
 typedef struct sata_device {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     zx_device_t* parent;
 
     block_callbacks_t* callbacks;
@@ -205,7 +205,7 @@ static zx_status_t sata_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cm
     }
     case IOCTL_BLOCK_RR_PART: {
         // rebind to reread the partition table
-        return device_rebind(device->mxdev);
+        return device_rebind(device->zxdev);
     }
     case IOCTL_DEVICE_SYNC: {
         iotxn_t* txn;
@@ -220,7 +220,7 @@ static zx_status_t sata_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cm
         txn->length = 0;
         txn->complete_cb = sata_sync_complete;
         txn->cookie = &completion;
-        iotxn_queue(device->mxdev, txn);
+        iotxn_queue(device->zxdev, txn);
         completion_wait(&completion, ZX_TIME_INFINITE);
         status = txn->status;
         iotxn_release(txn);
@@ -291,7 +291,7 @@ static void sata_block_txn(sata_device_t* dev, uint32_t opcode, zx_handle_t vmo,
     txn->cookie = cookie;
     memcpy(txn->extra, &dev, sizeof(sata_device_t*));
 
-    iotxn_queue(dev->mxdev, txn);
+    iotxn_queue(dev->zxdev, txn);
 }
 
 static void sata_block_read(void* ctx, zx_handle_t vmo, uint64_t length,
@@ -342,7 +342,7 @@ zx_status_t sata_bind(zx_device_t* dev, int port) {
         .proto_ops = &sata_block_ops,
     };
 
-    status = device_add(dev, &args, &device->mxdev);
+    status = device_add(dev, &args, &device->zxdev);
     if (status < 0) {
         free(device);
         return status;

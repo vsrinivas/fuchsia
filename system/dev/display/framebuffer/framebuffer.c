@@ -25,7 +25,7 @@ typedef struct fb fb_t;
 #define GROUP_FULLSCREEN 1
 
 struct fb {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     display_protocol_t dpy;
     zx_display_info_t info;
     size_t bufsz;
@@ -296,7 +296,7 @@ static zx_status_t fb_open_at(void* ctx, zx_device_t** out, const char* path, ui
     }
 
     zx_status_t r;
-    if ((r = device_add(fb->mxdev, &args, out)) < 0) {
+    if ((r = device_add(fb->zxdev, &args, out)) < 0) {
         fbi_release(fbi);
         return r;
     }
@@ -386,7 +386,7 @@ static zx_status_t fb_bind(void* ctx, zx_device_t* dev, void** cookie) {
         .proto_id = ZX_PROTOCOL_FRAMEBUFFER,
     };
 
-    if ((r = device_add(dev, &args, &fb->mxdev)) < 0) {
+    if ((r = device_add(dev, &args, &fb->zxdev)) < 0) {
         goto fail;
     }
 

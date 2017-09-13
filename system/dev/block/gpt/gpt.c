@@ -38,7 +38,7 @@
 #define TXN_SIZE 0x4000 // 128 partition entries
 
 typedef struct gptpart_device {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     zx_device_t* parent;
 
     gpt_entry_t gpt_entry;
@@ -177,7 +177,7 @@ static zx_off_t gpt_getsize(void* ctx) {
 
 static void gpt_unbind(void* ctx) {
     gptpart_device_t* device = ctx;
-    device_remove(device->mxdev);
+    device_remove(device->zxdev);
 }
 
 static void gpt_release(void* ctx) {
@@ -424,7 +424,7 @@ static int gpt_bind_thread(void* arg) {
             .proto_ops = &gpt_block_ops,
         };
 
-        if (device_add(dev, &args, &device->mxdev) != ZX_OK) {
+        if (device_add(dev, &args, &device->zxdev) != ZX_OK) {
             printf("gpt device_add failed\n");
             free(device);
             continue;

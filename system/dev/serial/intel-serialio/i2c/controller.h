@@ -124,7 +124,7 @@ enum {
 };
 
 typedef struct intel_serialio_i2c_device {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     zx_device_t* pcidev;
 
     intel_serialio_i2c_regs* regs;

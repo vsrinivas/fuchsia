@@ -228,7 +228,7 @@ static zx_status_t platform_bus_bind(void* ctx, zx_device_t* parent, void** cook
         .prop_count = countof(props),
     };
 
-    status = device_add(parent, &add_args, &bus->mxdev);
+    status = device_add(parent, &add_args, &bus->zxdev);
     if (status != ZX_OK) {
         goto fail;
     }

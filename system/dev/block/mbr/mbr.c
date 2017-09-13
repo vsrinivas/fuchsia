@@ -64,7 +64,7 @@ typedef struct __PACKED mbr {
 } mbr_t;
 
 typedef struct mbrpart_device {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     zx_device_t* parent;
     mbr_partition_entry_t partition;
     block_info_t info;
@@ -122,7 +122,7 @@ static zx_status_t mbr_ioctl(void* ctx, uint32_t op, const void* cmd,
     case IOCTL_BLOCK_GET_NAME: {
         char* name = reply;
         memset(name, 0, max);
-        strncpy(name, device_get_name(device->mxdev), max);
+        strncpy(name, device_get_name(device->zxdev), max);
         *out_actual = strnlen(name, max);
         return ZX_OK;
     }
@@ -167,7 +167,7 @@ static zx_off_t mbr_getsize(void* ctx) {
 
 static void mbr_unbind(void* ctx) {
     mbrpart_device_t* device = ctx;
-    device_remove(device->mxdev);
+    device_remove(device->zxdev);
 }
 
 static void mbr_release(void* ctx) {
@@ -367,7 +367,7 @@ static int mbr_bind_thread(void* arg) {
             .proto_ops = &mbr_block_ops,
         };
 
-        if ((st = device_add(dev, &args, &pdev->mxdev)) != ZX_OK) {
+        if ((st = device_add(dev, &args, &pdev->zxdev)) != ZX_OK) {
             xprintf("mbr: device_add failed, retcode = %d\n", st);
             free(pdev);
             continue;

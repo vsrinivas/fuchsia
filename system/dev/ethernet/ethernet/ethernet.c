@@ -44,7 +44,7 @@ typedef struct ethdev0 {
 
     ethmac_info_t info;
     uint32_t status;
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
 } ethdev0_t;
 
 // transmit thread has been created
@@ -90,7 +90,7 @@ typedef struct ethdev {
     // fifo thread
     thrd_t tx_thr;
 
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
 
     uint32_t fail_rx_read;
     uint32_t fail_rx_write;
@@ -616,7 +616,7 @@ static zx_status_t eth0_open(void* ctx, zx_device_t** out, uint32_t flags) {
     };
 
     zx_status_t status;
-    if ((status = device_add(edev0->mxdev, &args, &edev->mxdev)) < 0) {
+    if ((status = device_add(edev0->zxdev, &args, &edev->zxdev)) < 0) {
         free(edev);
         return status;
     }
@@ -625,7 +625,7 @@ static zx_status_t eth0_open(void* ctx, zx_device_t** out, uint32_t flags) {
     list_add_tail(&edev0->list_idle, &edev->node);
     mtx_unlock(&edev0->lock);
 
-    *out = edev->mxdev;
+    *out = edev->zxdev;
     return ZX_OK;
 }
 
@@ -646,7 +646,7 @@ static void eth0_unbind(void* ctx) {
 
     mtx_unlock(&edev0->lock);
 
-    device_remove(edev0->mxdev);
+    device_remove(edev0->zxdev);
 }
 
 static void eth0_release(void* ctx) {
@@ -702,7 +702,7 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev, void** cookie) {
         .proto_id = ZX_PROTOCOL_ETHERNET,
     };
 
-    if ((status = device_add(dev, &args, &edev0->mxdev)) < 0) {
+    if ((status = device_add(dev, &args, &edev0->zxdev)) < 0) {
         goto fail;
     }
 

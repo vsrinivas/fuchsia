@@ -34,7 +34,7 @@
 #define HID_LENGTH 8
 
 typedef struct acpi_device {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
 
     // handle to the corresponding ACPI node
     ACPI_HANDLE ns_node;
@@ -158,14 +158,14 @@ static zx_device_t* publish_device(zx_device_t* parent,
     };
 
     zx_status_t status;
-    if ((status = device_add(parent, &args, &dev->mxdev)) != ZX_OK) {
+    if ((status = device_add(parent, &args, &dev->zxdev)) != ZX_OK) {
         xprintf("acpi-bus: error %d in device_add, parent=%s(%p)\n", status, device_get_name(parent), parent);
         free(dev);
         return NULL;
     } else {
         xprintf("acpi-bus: published device %s(%p), parent=%s(%p), handle=%p\n",
                 name, dev, device_get_name(parent), parent, (void*)dev->ns_node);
-        return dev->mxdev;
+        return dev->zxdev;
     }
 }
 

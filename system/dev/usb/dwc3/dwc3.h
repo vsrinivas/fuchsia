@@ -73,7 +73,7 @@ typedef struct {
 } dwc3_endpoint_t;
 
 typedef struct {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     usb_dci_interface_t dci_intf;
     pdev_mmio_buffer_t mmio;
 

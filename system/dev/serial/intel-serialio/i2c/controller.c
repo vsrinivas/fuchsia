@@ -137,7 +137,7 @@ static zx_status_t intel_serialio_i2c_add_slave(
         .prop_count = count,
     };
 
-    status = device_add(device->mxdev, &args, &slave->mxdev);
+    status = device_add(device->zxdev, &args, &slave->zxdev);
     if (status != ZX_OK) {
         goto fail1;
     }
@@ -177,7 +177,7 @@ static zx_status_t intel_serialio_i2c_remove_slave(
         goto remove_slave_finish;
     }
 
-    status = device_remove(slave->mxdev);
+    status = device_remove(slave->zxdev);
     if (status < 0)
         goto remove_slave_finish;
 
@@ -723,7 +723,7 @@ zx_status_t intel_serialio_bind_i2c(zx_device_t* dev) {
         .ops = &intel_serialio_i2c_device_proto,
     };
 
-    status = device_add(dev, &args, &device->mxdev);
+    status = device_add(dev, &args, &device->zxdev);
     if (status < 0) {
         goto fail;
     }

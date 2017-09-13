@@ -23,7 +23,7 @@
 #define CLIENT_SPEED    USB_SPEED_HIGH
 
 typedef struct usb_virtual_host {
-    zx_device_t* mxdev;
+    zx_device_t* zxdev;
     usb_virtual_bus_t* bus;
     usb_bus_interface_t bus_intf;
 
@@ -100,14 +100,14 @@ static usb_hci_protocol_ops_t virtual_host_protocol = {
 
 static void virt_host_iotxn_queue(void* ctx, iotxn_t* txn) {
     usb_virtual_host_t* host = ctx;
-    iotxn_queue(host->bus->mxdev, txn);
+    iotxn_queue(host->bus->zxdev, txn);
 }
 
 static void virt_host_unbind(void* ctx) {
     printf("virt_host_unbind\n");
     usb_virtual_host_t* host = ctx;
 
-    device_remove(host->mxdev);
+    device_remove(host->zxdev);
 }
 
 static void virt_host_release(void* ctx) {
@@ -143,7 +143,7 @@ zx_status_t usb_virtual_host_add(usb_virtual_bus_t* bus, usb_virtual_host_t** ou
         .proto_ops = &virtual_host_protocol,
     };
 
-    zx_status_t status = device_add(host->bus->mxdev, &args, &host->mxdev);
+    zx_status_t status = device_add(host->bus->zxdev, &args, &host->zxdev);
     if (status != ZX_OK) {
         free(host);
         return status;
@@ -154,7 +154,7 @@ zx_status_t usb_virtual_host_add(usb_virtual_bus_t* bus, usb_virtual_host_t** ou
 }
 
 void usb_virtual_host_release(usb_virtual_host_t* host) {
-    device_remove(host->mxdev);
+    device_remove(host->zxdev);
 }
 
 void usb_virtual_host_set_connected(usb_virtual_host_t* host, bool connected) {

@@ -37,7 +37,7 @@ static zx_status_t psd_recv(pty_server_t* ps, const void* data, size_t len, size
     bool was_empty = pty_fifo_is_empty(&psd->fifo);
     *actual = pty_fifo_write(&psd->fifo, data, len, false);
     if (was_empty && *actual) {
-        device_state_set(ps->mxdev, DEV_STATE_READABLE);
+        device_state_set(ps->zxdev, DEV_STATE_READABLE);
     }
 
     if (*actual == 0) {
@@ -59,7 +59,7 @@ static zx_status_t psd_read(void* ctx, void* buf, size_t count, zx_off_t off, si
         if (list_is_empty(&psd->srv.clients)) {
             eof = true;
         } else {
-            device_state_clr(psd->srv.mxdev, DEV_STATE_READABLE);
+            device_state_clr(psd->srv.zxdev, DEV_STATE_READABLE);
         }
     }
     if (was_full && length) {
@@ -149,12 +149,12 @@ static zx_status_t ptmx_open(void* ctx, zx_device_t** out, uint32_t flags) {
     };
 
     zx_status_t status;
-    if ((status = device_add(pty_root, &args, &psd->srv.mxdev)) < 0) {
+    if ((status = device_add(pty_root, &args, &psd->srv.zxdev)) < 0) {
         free(psd);
         return status;
     }
 
-    *out = psd->srv.mxdev;
+    *out = psd->srv.zxdev;
     return ZX_OK;
 }
 

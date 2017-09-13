@@ -298,7 +298,7 @@ template <class D, template <typename> class... Mixins>
 class Device : public ::ddk::internal::base_device, public Mixins<D>... {
   public:
     zx_status_t DdkAdd(const char* name) {
-        if (mxdev_ != nullptr) {
+        if (zxdev_ != nullptr) {
             return ZX_ERR_BAD_STATE;
         }
 
@@ -311,36 +311,36 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
         args.ops = &ddk_device_proto_;
         AddProtocol(&args);
 
-        return device_add(parent_, &args, &mxdev_);
+        return device_add(parent_, &args, &zxdev_);
     }
 
     zx_status_t DdkRemove() {
-        if (mxdev_ == nullptr) {
+        if (zxdev_ == nullptr) {
             return ZX_ERR_BAD_STATE;
         }
 
-        zx_status_t res = device_remove(mxdev_);
-        mxdev_ = nullptr;
+        zx_status_t res = device_remove(zxdev_);
+        zxdev_ = nullptr;
         return res;
     }
 
-    const char* name() const { return mxdev() ? device_get_name(mxdev()) : nullptr; }
+    const char* name() const { return zxdev() ? device_get_name(zxdev()) : nullptr; }
 
     // The opaque pointer representing this device.
-    zx_device_t* mxdev() const { return mxdev_; }
+    zx_device_t* zxdev() const { return zxdev_; }
     // The opaque pointer representing the device's parent.
     zx_device_t* parent() const { return parent_; }
 
     void SetState(zx_signals_t stateflag) {
-        device_state_set(mxdev_, stateflag);
+        device_state_set(zxdev_, stateflag);
     }
 
     void ClearState(zx_signals_t stateflag) {
-        device_state_clr(mxdev_, stateflag);
+        device_state_clr(zxdev_, stateflag);
     }
 
     void ClearAndSetState(zx_signals_t clearflag, zx_signals_t setflag) {
-        device_state_clr_set(mxdev_, clearflag, setflag);
+        device_state_clr_set(zxdev_, clearflag, setflag);
     }
 
   protected:
