@@ -8,6 +8,7 @@
 #include <zircon/types.h>
 #include <zircon/device/i2c.h>
 #include <zircon/listnode.h>
+#include <zircon/thread_annotations.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -60,8 +61,12 @@ static int rx_fifo_empty(intel_serialio_i2c_device_t *controller) {
     return !(*REG32(&controller->regs->i2c_sta) & (0x1 << I2C_STA_RFNE));
 }
 
+// Thread safety analysis cannot see the control flow through the
+// gotos, and cannot prove that the lock is unheld at return through
+// all paths.
 static zx_status_t intel_serialio_i2c_slave_transfer(
-    intel_serialio_i2c_slave_device_t* slave, i2c_slave_segment_t *segments, int segment_count) {
+    intel_serialio_i2c_slave_device_t* slave, i2c_slave_segment_t *segments, int segment_count)
+    TA_NO_THREAD_SAFETY_ANALYSIS {
     zx_status_t status = ZX_OK;
 
     for (int i = 0; i < segment_count; i++) {

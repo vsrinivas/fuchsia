@@ -767,10 +767,10 @@ zx_status_t launchpad_elf_load(launchpad_t* lp, zx_handle_t vmo) {
 
 static zx_handle_t vdso_vmo = ZX_HANDLE_INVALID;
 static mtx_t vdso_mutex = MTX_INIT;
-static void vdso_lock(void) {
+static void vdso_lock(void) __TA_ACQUIRE(&vdso_mutex) {
     mtx_lock(&vdso_mutex);
 }
-static void vdso_unlock(void) {
+static void vdso_unlock(void) __TA_RELEASE(&vdso_mutex) {
     mtx_unlock(&vdso_mutex);
 }
 static zx_handle_t vdso_get_vmo(void) {

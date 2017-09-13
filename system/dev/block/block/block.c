@@ -31,8 +31,7 @@ typedef struct blkdev {
     bool dead; // Release has been called; we should free memory and leave.
 } blkdev_t;
 
-static int blockserver_thread(void* arg) {
-    blkdev_t* bdev = (blkdev_t*)arg;
+static int blockserver_thread_serve(blkdev_t* bdev) TA_REL(bdev->lock) {
     BlockServer* bs = bdev->bs;
     bdev->threadcount++;
     mtx_unlock(&bdev->lock);
@@ -58,7 +57,15 @@ static int blockserver_thread(void* arg) {
     return 0;
 }
 
-static zx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_len) {
+static int blockserver_thread(void* arg) TA_REL(((blkdev_t*)arg)->lock) {
+    return blockserver_thread_serve((blkdev_t*)arg);
+}
+
+// This function conditionally acquires bdev->lock, and the code
+// responsible for unlocking in the success case is on another
+// thread. The analysis is not up to reasoning about this.
+static zx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_len)
+    TA_NO_THREAD_SAFETY_ANALYSIS {
     if (out_len < sizeof(zx_handle_t)) {
         return ZX_ERR_INVALID_ARGS;
     }

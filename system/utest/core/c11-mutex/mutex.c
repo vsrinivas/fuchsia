@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <zircon/syscalls.h>
+#include <zircon/thread_annotations.h>
 #include <unittest/unittest.h>
 #include <inttypes.h>
 #include <stddef.h>
@@ -62,7 +63,9 @@ static bool got_lock_1 = false;
 static bool got_lock_2 = false;
 static bool got_lock_3 = false;
 
-static int mutex_try_thread_1(void* arg) {
+// These tests all conditionally acquire the lock, by design. The
+// thread safety analysis is not up to this, so disable it.
+static int mutex_try_thread_1(void* arg) TA_NO_THREAD_SAFETY_ANALYSIS {
     xlog("thread 1 started\n");
 
     for (int times = 0; times < 300 || !got_lock_1; times++) {
@@ -78,7 +81,7 @@ static int mutex_try_thread_1(void* arg) {
     return 0;
 }
 
-static int mutex_try_thread_2(void* arg) {
+static int mutex_try_thread_2(void* arg) TA_NO_THREAD_SAFETY_ANALYSIS {
     xlog("thread 2 started\n");
 
     for (int times = 0; times < 150 || !got_lock_2; times++) {
@@ -94,7 +97,7 @@ static int mutex_try_thread_2(void* arg) {
     return 0;
 }
 
-static int mutex_try_thread_3(void* arg) {
+static int mutex_try_thread_3(void* arg) TA_NO_THREAD_SAFETY_ANALYSIS {
     xlog("thread 3 started\n");
 
     for (int times = 0; times < 100 || !got_lock_3; times++) {
@@ -172,7 +175,7 @@ typedef struct {
     zx_handle_t done_event;
 } timeout_args;
 
-static int test_timeout_helper(void* ctx) {
+static int test_timeout_helper(void* ctx) TA_NO_THREAD_SAFETY_ANALYSIS {
     timeout_args* args = ctx;
     ASSERT_EQ(mtx_lock(&args->mutex), thrd_success, "f to lock");
     // Inform the main thread that we have acquired the lock.

@@ -20,6 +20,7 @@
 #include <zircon/assert.h>
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
+#include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
 #include <fdio/remoteio.h>
@@ -121,7 +122,7 @@ static inline bool device_is_bound(zx_device_t* dev) {
     return dev->owner != NULL;
 }
 
-void dev_ref_release(zx_device_t* dev) {
+void dev_ref_release(zx_device_t* dev) TA_REQ(&__devhost_api_lock) {
     if (dev->refcount < 1) {
         printf("device: %p: REFCOUNT GOING NEGATIVE\n", dev);
         //TODO: probably should assert, but to start with let's
@@ -277,7 +278,7 @@ zx_status_t devhost_device_install(zx_device_t* dev) {
 
 zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
                                const zx_device_prop_t* props, uint32_t prop_count,
-                               const char* proxy_args) {
+                               const char* proxy_args) TA_REQ(&__devhost_api_lock) {
     zx_status_t status;
     if ((status = device_validate(dev)) < 0) {
         goto fail;
@@ -394,7 +395,7 @@ static const char* removal_problem(uint32_t flags) {
     return "?";
 }
 
-static void devhost_unbind_child(zx_device_t* child) {
+static void devhost_unbind_child(zx_device_t* child) TA_REQ(&__devhost_api_lock) {
     // call child's unbind op
     if (child->ops->unbind) {
 #if TRACE_ADD_REMOVE
@@ -409,7 +410,7 @@ static void devhost_unbind_child(zx_device_t* child) {
     }
 }
 
-static void devhost_unbind_children(zx_device_t* dev) {
+static void devhost_unbind_children(zx_device_t* dev) TA_REQ(&__devhost_api_lock) {
     zx_device_t* child = NULL;
     zx_device_t* temp = NULL;
 #if TRACE_ADD_REMOVE
@@ -423,7 +424,7 @@ static void devhost_unbind_children(zx_device_t* dev) {
     }
 }
 
-zx_status_t devhost_device_remove(zx_device_t* dev) {
+zx_status_t devhost_device_remove(zx_device_t* dev) TA_REQ(&__devhost_api_lock) {
     if (dev->flags & REMOVAL_BAD_FLAGS) {
         printf("device: %p(%s): cannot be removed (%s)\n",
                dev, dev->name, removal_problem(dev->flags));
@@ -464,7 +465,7 @@ zx_status_t devhost_device_remove(zx_device_t* dev) {
     return ZX_OK;
 }
 
-zx_status_t devhost_device_rebind(zx_device_t* dev) {
+zx_status_t devhost_device_rebind(zx_device_t* dev) TA_REQ(&__devhost_api_lock) {
     dev->flags |= DEV_FLAG_BUSY;
 
     // remove children
@@ -493,7 +494,8 @@ zx_status_t devhost_device_rebind(zx_device_t* dev) {
     return ZX_OK;
 }
 
-zx_status_t devhost_device_open_at(zx_device_t* dev, zx_device_t** out, const char* path, uint32_t flags) {
+zx_status_t devhost_device_open_at(zx_device_t* dev, zx_device_t** out, const char* path, uint32_t flags)
+    TA_REQ(&__devhost_api_lock) {
     if (dev->flags & DEV_FLAG_DEAD) {
         printf("device open: %p(%s) is dead!\n", dev, dev->name);
         return ZX_ERR_BAD_STATE;
@@ -523,7 +525,7 @@ zx_status_t devhost_device_open_at(zx_device_t* dev, zx_device_t** out, const ch
     return r;
 }
 
-zx_status_t devhost_device_close(zx_device_t* dev, uint32_t flags) {
+zx_status_t devhost_device_close(zx_device_t* dev, uint32_t flags) TA_REQ(&__devhost_api_lock) {
     zx_status_t r;
     DM_UNLOCK();
     r = dev_op_close(dev, flags);
@@ -532,7 +534,7 @@ zx_status_t devhost_device_close(zx_device_t* dev, uint32_t flags) {
     return r;
 }
 
-zx_status_t devhost_device_unbind(zx_device_t* dev) {
+zx_status_t devhost_device_unbind(zx_device_t* dev) TA_REQ(&__devhost_api_lock) {
     if (!dev->owner) {
         return ZX_ERR_INVALID_ARGS;
     }

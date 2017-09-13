@@ -7,14 +7,16 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <zircon/thread_annotations.h>
+
 static mtx_t big_lock;
 
-int block_forever(void *arg) {
+int block_forever(void *arg) TA_ACQ(&big_lock) {
     mtx_lock(&big_lock);
     return 0;
 }
 
-bool mutex_block(void) {
+bool mutex_block(void) TA_ACQ(&big_lock) {
     BEGIN_TEST;
     mtx_init(&big_lock, mtx_plain);
     mtx_lock(&big_lock);

@@ -12,6 +12,7 @@
 #include <zircon/listnode.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
+#include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
 #include <stdio.h>
@@ -354,7 +355,9 @@ fail:
     return status;
 }
 
-static zx_status_t eth_start_locked(ethdev_t* edev) {
+// The thread safety analysis cannot reason through the aliasing of
+// edev0 and edev->edev0, so disable it.
+static zx_status_t eth_start_locked(ethdev_t* edev) TA_NO_THREAD_SAFETY_ANALYSIS {
     ethdev0_t* edev0 = edev->edev0;
 
     // Cannot start unless tx/rx rings are configured
@@ -402,7 +405,9 @@ static zx_status_t eth_start_locked(ethdev_t* edev) {
     return status;
 }
 
-static zx_status_t eth_stop_locked(ethdev_t* edev) {
+// The thread safety analysis cannot reason through the aliasing of
+// edev0 and edev->edev0, so disable it.
+static zx_status_t eth_stop_locked(ethdev_t* edev) TA_NO_THREAD_SAFETY_ANALYSIS {
     ethdev0_t* edev0 = edev->edev0;
 
     if (edev->state & ETHDEV_RUNNING) {

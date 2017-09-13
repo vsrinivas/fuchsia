@@ -14,6 +14,7 @@
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
+#include <zircon/thread_annotations.h>
 #include <zxcpp/new.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_hash_table.h>
@@ -676,7 +677,7 @@ void AcpiOsDeleteLock(ACPI_SPINLOCK Handle) {
  *
  * @return Platform-dependent CPU flags.  To be used when the lock is released.
  */
-ACPI_CPU_FLAGS AcpiOsAcquireLock(ACPI_SPINLOCK Handle) {
+ACPI_CPU_FLAGS AcpiOsAcquireLock(ACPI_SPINLOCK Handle) TA_ACQ(Handle) {
     mtx_lock(Handle);
     return 0;
 }
@@ -688,7 +689,7 @@ ACPI_CPU_FLAGS AcpiOsAcquireLock(ACPI_SPINLOCK Handle) {
  *        previous call to AcpiOsCreateLock.
  * @param Flags CPU Flags that were returned from AcpiOsAcquireLock.
  */
-void AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags) {
+void AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags) TA_REL(Handle) {
     mtx_unlock(Handle);
 }
 

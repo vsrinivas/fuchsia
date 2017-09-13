@@ -107,7 +107,7 @@ static inline void __DM_DIE(const char* fn, int ln) {
     cprintf("OOPS: %s: %d\n", fn, ln);
     *((int*) 0x3333) = 1;
 }
-static inline void __DM_LOCK(const char* fn, int ln) {
+static inline void __DM_LOCK(const char* fn, int ln) __TA_ACQUIRE(&__devhost_api_lock) {
     //cprintf(devhost_is_remote ? "X" : "+");
     if (__dm_locked) __DM_DIE(fn, ln);
     mtx_lock(&__devhost_api_lock);
@@ -115,7 +115,7 @@ static inline void __DM_LOCK(const char* fn, int ln) {
     __dm_locked = true;
 }
 
-static inline void __DM_UNLOCK(const char* fn, int ln) {
+static inline void __DM_UNLOCK(const char* fn, int ln) __TA_RELEASE(&__devhost_api_lock) {
     cprintf("UNLK: %s: %d\n", fn, ln);
     //cprintf(devhost_is_remote ? "x" : "-");
     if (!__dm_locked) __DM_DIE(fn, ln);
@@ -126,11 +126,11 @@ static inline void __DM_UNLOCK(const char* fn, int ln) {
 #define DM_LOCK() __DM_LOCK(__FILE__, __LINE__)
 #define DM_UNLOCK() __DM_UNLOCK(__FILE__, __LINE__)
 #else
-static inline void DM_LOCK(void) {
+static inline void DM_LOCK(void) __TA_ACQUIRE(&__devhost_api_lock) {
     mtx_lock(&__devhost_api_lock);
 }
 
-static inline void DM_UNLOCK(void) {
+static inline void DM_UNLOCK(void) __TA_RELEASE(&__devhost_api_lock) {
     mtx_unlock(&__devhost_api_lock);
 }
 #endif
