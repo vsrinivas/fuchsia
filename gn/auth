@@ -3,8 +3,8 @@
         "cpp"
     ],
     "labels": [
-        "//apps/auth",
-        "//apps/auth:tests"
+        "//garnet/bin/token_store:auth_unittests",
+        "//garnet/public/lib/auth/fidl"
     ],
     "binaries": [
         {
