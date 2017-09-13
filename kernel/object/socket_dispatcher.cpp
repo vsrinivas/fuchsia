@@ -277,7 +277,8 @@ zx_status_t SocketDispatcher::WriteControlSelf(user_ptr<const void> src,
     control_msg_len_ = static_cast<uint32_t>(len);
 
     state_tracker_.UpdateState(0u, ZX_SOCKET_CONTROL_READABLE);
-    other_->state_tracker_.UpdateState(ZX_SOCKET_CONTROL_WRITABLE, 0u);
+    if (other_)
+        other_->state_tracker_.UpdateState(ZX_SOCKET_CONTROL_WRITABLE, 0u);
 
     return ZX_OK;
 }
@@ -308,7 +309,7 @@ zx_status_t SocketDispatcher::WriteSelf(user_ptr<const void> src, size_t len,
             state_tracker_.UpdateState(0u, ZX_SOCKET_READABLE);
     }
 
-    if (is_full())
+    if (other_ && is_full())
         other_->state_tracker_.UpdateState(ZX_SOCKET_WRITABLE, 0u);
 
     *written = st;
@@ -379,7 +380,8 @@ zx_status_t SocketDispatcher::ReadControl(user_ptr<void> dst, size_t len,
 
     control_msg_len_ = 0;
     state_tracker_.UpdateState(ZX_SOCKET_CONTROL_READABLE, 0u);
-    other_->state_tracker_.UpdateState(0u, ZX_SOCKET_CONTROL_WRITABLE);
+    if (other_)
+        other_->state_tracker_.UpdateState(0u, ZX_SOCKET_CONTROL_WRITABLE);
 
     *nread = copy_len;
     return ZX_OK;
