@@ -61,6 +61,32 @@
 
 namespace ddk {
 
+class HidBusIfcProxy {
+  public:
+    HidBusIfcProxy()
+      : ifc_(nullptr), cookie_(nullptr) {}
+
+    HidBusIfcProxy(hidbus_ifc_t* ifc, void* cookie)
+      : ifc_(ifc), cookie_(cookie) {}
+
+    void IoQueue(const uint8_t* buf, size_t len) {
+        ifc_->io_queue(cookie_, buf, len);
+    }
+
+    bool is_valid() const {
+        return ifc_ != nullptr;
+    }
+
+    void clear() {
+        ifc_ = nullptr;
+        cookie_ = nullptr;
+    }
+
+  private:
+    hidbus_ifc_t* ifc_;
+    void* cookie_;
+};
+
 template <typename D>
 class HidBusProtocol : public internal::base_protocol {
   public:
@@ -128,32 +154,6 @@ class HidBusProtocol : public internal::base_protocol {
     }
 
     hidbus_protocol_ops_t ops_ = {};
-};
-
-class HidBusIfcProxy {
-  public:
-    HidBusIfcProxy()
-      : ifc_(nullptr), cookie_(nullptr) {}
-
-    HidBusIfcProxy(hidbus_ifc_t* ifc, void* cookie)
-      : ifc_(ifc), cookie_(cookie) {}
-
-    void IoQueue(const uint8_t* buf, size_t len) {
-        ifc_->io_queue(cookie_, buf, len);
-    }
-
-    bool is_valid() const {
-        return ifc_ != nullptr;
-    }
-
-    void clear() {
-        ifc_ = nullptr;
-        cookie_ = nullptr;
-    }
-
-  private:
-    hidbus_ifc_t* ifc_;
-    void* cookie_;
 };
 
 }  // namespace ddk
