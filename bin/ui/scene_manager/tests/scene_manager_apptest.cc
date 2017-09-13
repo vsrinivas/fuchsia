@@ -31,7 +31,7 @@ bool IsFenceSignalled(const mx::event& fence) {
   return signals & kFenceSignalledOrClosed;
 }
 
-TEST_F(SceneManagerTest, ReleaseFences) {
+TEST_F(SceneManagerTest, DISABLED_ReleaseFences) {
   // Tests creating a session, and calling Present with two release fences.
   // The release fences should be signalled after a subsequent Present.
   EXPECT_EQ(0u, engine()->GetSessionCount());
