@@ -8,18 +8,21 @@
 #ifndef __CROS_EC_EC_COMMANDS_H
 #define __CROS_EC_EC_COMMANDS_H
 
-#if !defined(__ACPI__) && !defined(__KERNEL__)
+#include <stddef.h>
 #include <stdint.h>
-#endif
+#include <zircon/types.h>
 
-/*
- * Include common.h for CONFIG_HOSTCMD_ALIGNED, if it's defined. This
- * generates more efficient code for accessing request/response structures on
- * ARM Cortex-M if the structures are guaranteed 32-bit aligned.
- */
-#ifdef CHROMIUM_EC
-#include "common.h"
-#endif
+namespace CrOsEc {
+
+// Execute a version 3 command over LPC
+zx_status_t CommandLpc3(uint16_t command, uint8_t command_version, const void *outdata, size_t outsize,
+                        void *indata, size_t insize, size_t *actual);
+
+// Check if the version 3 LPC protocol is supported
+bool IsLpc3Supported();
+
+
+} // namespace CrOsEc
 
 /*
  * Current version of this protocol
