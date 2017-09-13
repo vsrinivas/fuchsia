@@ -338,6 +338,7 @@ void ApplicationEnvironmentImpl::CreateApplicationWithRunner(
   NamespaceBuilder builder;
   builder.AddRoot();
   builder.AddServices(std::move(svc));
+  builder.AddDev();
 
   // Add the custom namespace.
   // Note that this must be the last |builder| step adding entries to the
@@ -369,6 +370,7 @@ void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
   NamespaceBuilder builder;
   builder.AddRoot();
   builder.AddServices(std::move(svc));
+  builder.AddDev();
 
   // Add the custom namespace.
   // Note that this must be the last |builder| step adding entries to the

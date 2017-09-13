@@ -26,6 +26,7 @@ class NamespaceBuilder {
   void AddPackage(zx::channel package);
   void AddDirectoryIfNotPresent(const std::string& path, zx::channel directory);
   void AddServices(zx::channel services);
+  void AddDev();
   void AddSandbox(const SandboxMetadata& sandbox);
 
   // Returns an fdio_flat_namespace_t representing the built namespace.

@@ -71,6 +71,10 @@ void NamespaceBuilder::AddServices(zx::channel services) {
   PushDirectoryFromChannel("/svc", std::move(services));
 }
 
+void NamespaceBuilder::AddDev() {
+  PushDirectoryFromPath("/dev", O_RDWR);
+}
+
 void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
   if (sandbox.dev().empty())
     return;
