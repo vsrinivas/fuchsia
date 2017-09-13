@@ -1,13 +1,30 @@
 Daisies Everywhere
 ===
+> Status: DRAFT
 
 A [`Daisy`](../services/story/daisy.fidl) is a runtime structure for describing
-an abstract action in Fuchsia. The primary producers of a `Daisy` are 3rd-party
-code and some platform components.
+a composable action in Fuchsia. `Daisies` are produced by 3rd-party
+code and platform components.
 
 Ultimately, the action a `Daisy` describes will be carried out by a
-[`Module`](module.md). It is through a process called [Module
-Resolution](module_resolution.md) that compatible `Modules` are discovered.
+[`Module`](module.md). A process called [Module
+Resolution](module_resolution.md) finds compatible `Modules` capable of executing the
+requested action.
+
+## Overview
+
+Daisies have two roles:
+
+1. Enumerating constraints on the world of all Modules to filter it down to
+   just those that can successfully execute the described action.
+2. Provide a set of initial data to pass to the Module once instantiated.
+
+The first (1) is employed by [Module Resolution](module_resolution.md) to
+search the ecosystem of Modules. The second (2) is employed by the Framework to
+seed values in the `Link` that is provided to the running Module.
+
+> TODO(thatguy): Add documentation about the process of instantiating a Module whose 
+> specification started off as a Daisy.
 
 ## What makes a Daisy
 
