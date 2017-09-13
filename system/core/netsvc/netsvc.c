@@ -86,14 +86,14 @@ void netifc_recv(void* data, size_t len) {
     eth_recv(data, len);
 }
 
-static const char* mxboot_banner =
-"\n"
-"                                  _          _                 _   \n"
-" _ __ ___   __ _  __ _  ___ _ __ | |_ __ _  | |__   ___   ___ | |_ \n"
-"| '_ ` _ \\ / _` |/ _` |/ _ \\ '_ \\| __/ _` | | '_ \\ / _ \\ / _ \\| __|\n"
-"| | | | | | (_| | (_| |  __/ | | | || (_| | | |_) | (_) | (_) | |_ \n"
-"|_| |_| |_|\\__,_|\\__, |\\___|_| |_|\\__\\__,_| |_.__/ \\___/ \\___/ \\__|\n"
-"                 |___/                                             \n"
+static const char* zedboot_banner =
+"              _ _                 _   \n"
+"             | | |               | |  \n"
+"  _______  __| | |__   ___   ___ | |_ \n"
+" |_  / _ \\/ _` | '_ \\ / _ \\ / _ \\| __|\n"
+"  / /  __/ (_| | |_) | (_) | (_) | |_ \n"
+" /___\\___|\\__,_|_.__/ \\___/ \\___/ \\__|\n"
+"                                      \n"
 "\n";
 
 int main(int argc, char** argv) {
@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
         }
 
         if (netbootloader) {
-            puts(mxboot_banner);
+            puts(zedboot_banner);
         }
 
         printf("netsvc: nodename='%s'\n", nodename);
