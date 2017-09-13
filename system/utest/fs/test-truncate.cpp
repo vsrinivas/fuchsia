@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include <zircon/syscalls.h>
+#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 
@@ -86,8 +87,37 @@ bool test_truncate_small(void) {
     END_TEST;
 }
 
+bool fill_file(int fd, uint8_t* u8, ssize_t new_len, ssize_t old_len) {
+    BEGIN_HELPER;
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> readbuf(new (&ac) uint8_t[new_len]);
+    ASSERT_TRUE(ac.check());
+    if (new_len > old_len) { // Expanded the file
+        // Verify that the file is unchanged up to old_len
+        ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
+        ASSERT_STREAM_ALL(read, fd, readbuf.get(), old_len);
+        ASSERT_EQ(memcmp(readbuf.get(), u8, old_len), 0);
+        // Verify that the file is filled with zeroes from old_len to new_len
+        ASSERT_EQ(lseek(fd, old_len, SEEK_SET), old_len);
+        ASSERT_STREAM_ALL(read, fd, readbuf.get(), new_len - old_len);
+        for (ssize_t n = 0; n < (new_len - old_len); n++) {
+            ASSERT_EQ(readbuf[n], 0);
+        }
+        // Overwrite those zeroes with the contents of u8
+        ASSERT_EQ(lseek(fd, old_len, SEEK_SET), old_len);
+        ASSERT_STREAM_ALL(write, fd, u8 + old_len, new_len - old_len);
+    } else { // Shrunk the file (or kept it the same length)
+        // Verify that the file is unchanged up to new_len
+        ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
+        ASSERT_STREAM_ALL(read, fd, readbuf.get(), new_len);
+        ASSERT_EQ(memcmp(readbuf.get(), u8, new_len), 0);
+    }
+    END_HELPER;
+}
+
 template <bool Remount>
 bool checked_truncate(const char* filename, uint8_t* u8, ssize_t new_len) {
+    BEGIN_HELPER;
     // Acquire the old size
     struct stat st;
     ASSERT_EQ(stat(filename, &st), 0);
@@ -115,41 +145,41 @@ bool checked_truncate(const char* filename, uint8_t* u8, ssize_t new_len) {
         fd = open(filename, O_RDWR, 0644);
     }
 
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<uint8_t[]> readbuf(new (&ac) uint8_t[new_len]);
-    ASSERT_TRUE(ac.check());
-    if (new_len > old_len) { // Expanded the file
-        // Verify that the file is unchanged up to old_len
-        ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
-        ASSERT_STREAM_ALL(read, fd, readbuf.get(), old_len);
-        ASSERT_EQ(memcmp(readbuf.get(), u8, old_len), 0);
-        // Verify that the file is filled with zeroes from old_len to new_len
-        ASSERT_EQ(lseek(fd, old_len, SEEK_SET), old_len);
-        ASSERT_STREAM_ALL(read, fd, readbuf.get(), new_len - old_len);
-        for (ssize_t n = 0; n < (new_len - old_len); n++) {
-            ASSERT_EQ(readbuf[n], 0);
-        }
-        // Overwrite those zeroes with the contents of u8
-        ASSERT_EQ(lseek(fd, old_len, SEEK_SET), old_len);
-        ASSERT_STREAM_ALL(write, fd, u8 + old_len, new_len - old_len);
-    } else { // Shrunk the file (or kept it the same length)
-        // Verify that the file is unchanged up to new_len
-        ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
-        ASSERT_STREAM_ALL(read, fd, readbuf.get(), new_len);
-        ASSERT_EQ(memcmp(readbuf.get(), u8, new_len), 0);
-    }
+    ASSERT_TRUE(fill_file(fd, u8, new_len, old_len));
     ASSERT_EQ(close(fd), 0);
-
-    return true;
+    END_HELPER;
 }
+
+bool fchecked_truncate(int fd, uint8_t* u8, ssize_t new_len) {
+    BEGIN_HELPER;
+
+    // Acquire the old size
+    struct stat st;
+    ASSERT_EQ(fstat(fd, &st), 0);
+    ssize_t old_len = st.st_size;
+
+    // Truncate the file, verify the size gets updated
+    ASSERT_EQ(ftruncate(fd, new_len), 0);
+    ASSERT_EQ(fstat(fd, &st), 0);
+    ASSERT_EQ(st.st_size, new_len);
+
+    ASSERT_TRUE(fill_file(fd, u8, new_len, old_len));
+    END_HELPER;
+}
+
+enum TestType {
+    KeepOpen,
+    Reopen,
+    Remount,
+};
 
 // Test that truncate doesn't have issues dealing with larger files
 // Repeatedly write to / truncate a file.
-template <size_t BufSize, size_t Iterations, bool Remount>
+template <size_t BufSize, size_t Iterations, TestType Test>
 bool test_truncate_large(void) {
     BEGIN_TEST;
 
-    if (Remount && !test_info->can_be_mounted) {
+    if ((Test == Remount) && !test_info->can_be_mounted) {
         fprintf(stderr, "Filesystem cannot be mounted; cannot test persistence\n");
         return true;
     }
@@ -166,19 +196,79 @@ bool test_truncate_large(void) {
         buf[n] = static_cast<uint8_t>(rand_r(&seed));
     }
 
-    // Start a file filled with the u8 buffer
+    // Start a file filled with a buffer
     const char* filename = "::alpha";
     int fd = open(filename, O_RDWR | O_CREAT, 0644);
     ASSERT_GT(fd, 0);
     ASSERT_STREAM_ALL(write, fd, buf.get(), BufSize);
-    ASSERT_EQ(close(fd), 0);
+
+    if (Test != KeepOpen) {
+        ASSERT_EQ(close(fd), 0);
+    }
 
     // Repeatedly truncate / write to the file
     for (size_t i = 0; i < Iterations; i++) {
         size_t len = rand_r(&seed) % BufSize;
-        ASSERT_TRUE(checked_truncate<Remount>(filename, buf.get(), len));
+        if (Test == KeepOpen) {
+            ASSERT_TRUE(fchecked_truncate(fd, buf.get(), len));
+        } else {
+            ASSERT_TRUE(checked_truncate<Test == Remount>(filename, buf.get(), len));
+        }
     }
     ASSERT_EQ(unlink(filename), 0);
+    if (Test == KeepOpen) {
+        ASSERT_EQ(close(fd), 0);
+    }
+
+    END_TEST;
+}
+
+// This test catches a particular regression in MinFS truncation, where,
+// if a block is cut in half for truncation, it is read, filled with
+// zeroes, and writen back out to disk.
+//
+// This test tries to proke at a variety of offsets of interest.
+bool test_truncate_partial_block_sparse(void) {
+    BEGIN_TEST;
+
+    if (strcmp(test_info->name, "minfs")) {
+        fprintf(stderr, "Test is MinFS-Exclusive; ignoring\n");
+        return true;
+    }
+
+    // TODO(smklein): Acquire these constants directly from MinFS's header
+    constexpr size_t kBlockSize = 8192;
+    constexpr size_t kDirectBlocks = 16;
+    constexpr size_t kIndirectBlocks = 31;
+    constexpr size_t kDirectPerIndirect = kBlockSize / 4;
+
+    uint8_t buf[kBlockSize];
+    memset(buf, 0xAB, sizeof(buf));
+
+    off_t write_offsets[] = {
+        kBlockSize * 5,
+        kBlockSize * kDirectBlocks,
+        kBlockSize * kDirectBlocks + kBlockSize * kDirectPerIndirect * 1,
+        kBlockSize * kDirectBlocks + kBlockSize * kDirectPerIndirect * 2,
+        kBlockSize * kDirectBlocks + kBlockSize * kDirectPerIndirect * kIndirectBlocks - 2 * kBlockSize,
+        kBlockSize * kDirectBlocks + kBlockSize * kDirectPerIndirect * kIndirectBlocks - kBlockSize,
+        kBlockSize * kDirectBlocks + kBlockSize * kDirectPerIndirect * kIndirectBlocks,
+        kBlockSize * kDirectBlocks + kBlockSize * kDirectPerIndirect * kIndirectBlocks + kBlockSize,
+    };
+
+    for (size_t i = 0; i < fbl::count_of(write_offsets); i++) {
+        off_t write_off = write_offsets[i];
+        int fd = open("::truncate-sparse", O_CREAT | O_RDWR);
+        ASSERT_GT(fd, 0);
+        ASSERT_EQ(lseek(fd, write_off, SEEK_SET), write_off);
+        ASSERT_EQ(write(fd, buf, sizeof(buf)), sizeof(buf));
+        ASSERT_EQ(ftruncate(fd, write_off + 2 * kBlockSize), 0);
+        ASSERT_EQ(ftruncate(fd, write_off + kBlockSize + kBlockSize / 2), 0);
+        ASSERT_EQ(ftruncate(fd, write_off + kBlockSize / 2), 0);
+        ASSERT_EQ(ftruncate(fd, write_off - kBlockSize / 2), 0);
+        ASSERT_EQ(unlink("::truncate-sparse"), 0);
+        ASSERT_EQ(close(fd), 0);
+    }
 
     END_TEST;
 }
@@ -202,11 +292,16 @@ bool test_truncate_errno(void) {
 
 RUN_FOR_ALL_FILESYSTEMS(truncate_tests,
     RUN_TEST_MEDIUM(test_truncate_small)
-    RUN_TEST_MEDIUM((test_truncate_large<1 << 10, 100, false>))
-    RUN_TEST_MEDIUM((test_truncate_large<1 << 15, 50, false>))
-    RUN_TEST_LARGE((test_truncate_large<1 << 20, 50, false>))
-    RUN_TEST_LARGE((test_truncate_large<1 << 20, 50, true>))
-    RUN_TEST_LARGE((test_truncate_large<1 << 25, 50, false>))
-    RUN_TEST_LARGE((test_truncate_large<1 << 25, 50, true>))
+    RUN_TEST_MEDIUM((test_truncate_large<1 << 10, 100, KeepOpen>))
+    RUN_TEST_MEDIUM((test_truncate_large<1 << 10, 100, Reopen>))
+    RUN_TEST_MEDIUM((test_truncate_large<1 << 15, 50, KeepOpen>))
+    RUN_TEST_MEDIUM((test_truncate_large<1 << 15, 50, Reopen>))
+    RUN_TEST_LARGE((test_truncate_large<1 << 20, 50, KeepOpen>))
+    RUN_TEST_LARGE((test_truncate_large<1 << 20, 50, Reopen>))
+    RUN_TEST_LARGE((test_truncate_large<1 << 20, 50, Remount>))
+    RUN_TEST_LARGE((test_truncate_large<1 << 25, 50, KeepOpen>))
+    RUN_TEST_LARGE((test_truncate_large<1 << 25, 50, Reopen>))
+    RUN_TEST_LARGE((test_truncate_large<1 << 25, 50, Remount>))
+    RUN_TEST_MEDIUM(test_truncate_partial_block_sparse)
     RUN_TEST_MEDIUM(test_truncate_errno)
 )

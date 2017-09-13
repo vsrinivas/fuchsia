@@ -443,7 +443,11 @@ zx_status_t VnodeMinfs::GetBnoDirect(WriteTxn* txn, blk_t* bno, bool* dirty) {
     // direct blocks are simple... is there an entry in dnum[]?
     blk_t hint = 0;
 
-    if ((*bno == 0) && (txn != nullptr)) {
+    if (*bno == 0) {
+        if (txn == nullptr) {
+            *bno = 0;
+            return ZX_OK;
+        }
         // allocate a new block
         zx_status_t status = fs_->BlockNew(txn, hint, bno);
         if (status != ZX_OK) {
@@ -469,7 +473,11 @@ zx_status_t VnodeMinfs::GetBnoIndirect(WriteTxn* txn, uint32_t bindex, uint32_t 
 #endif
 
     // retrieve indirect block at this index
-    if ((*ibno == 0) && (txn != nullptr)) {
+    if (*ibno == 0) {
+        if (txn == nullptr) {
+            *bno = 0;
+            return ZX_OK;
+        }
         // allocate new indirect block if it does not exist
         if ((status = fs_->BlockNew(txn, 0, ibno)) != ZX_OK) {
             return status;
@@ -517,17 +525,14 @@ zx_status_t VnodeMinfs::GetBnoDoublyIndirect(WriteTxn* txn, uint32_t ibindex, ui
                                              uint32_t dib_vmo_offset, uint32_t ib_vmo_offset,
                                              blk_t* dibno, blk_t* bno, bool* dirty) {
     zx_status_t status;
-#ifdef __Fuchsia__
-    // If the vmo_indirect_ vmo has not been created, make it now.
-    if ((status = InitIndirectVmo()) != ZX_OK) {
-        return status;
-    }
-
-    ZX_DEBUG_ASSERT(vmo_indirect_ != nullptr);
-#endif
 
     // look up the doubly indirect bno, create if it doesn't already exist
-    if ((*dibno == 0) && (txn != nullptr)) {
+    if (*dibno == 0) {
+        if (txn == nullptr) {
+            *bno = 0;
+            return ZX_OK;
+        }
+
         // allocate a new doubly indirect block
         if ((status = fs_->BlockNew(txn, 0, dibno)) != ZX_OK) {
             return status;
@@ -632,8 +637,13 @@ zx_status_t VnodeMinfs::GetBno(WriteTxn* txn, blk_t n, blk_t* bno) {
         uint32_t bindex = n % kMinfsDirectPerIndirect;
 
     #ifdef __Fuchsia__
-        // Grow VMO if we need more space to fit this set of indirect blocks
         zx_status_t status;
+        // If the vmo_indirect_ vmo has not been created, make it now.
+        if ((status = InitIndirectVmo()) != ZX_OK) {
+            return status;
+        }
+
+        // Grow VMO if we need more space to fit this set of indirect blocks
         uint64_t vmo_size = GetVmoSizeForIndirect(dibindex);
         if (vmo_indirect_->GetSize() < vmo_size) {
             if ((status = vmo_indirect_->Grow(vmo_size)) != ZX_OK) {
@@ -1620,10 +1630,6 @@ zx_status_t VnodeMinfs::TruncateInternal(WriteTxn* txn, size_t len) {
         // Truncate should make the file longer, filled with zeroes.
         if (kMinfsMaxFileSize < len) {
             return ZX_ERR_INVALID_ARGS;
-        }
-        char zero = 0;
-        if ((r = WriteExactInternal(txn, &zero, 1, len - 1)) != ZX_OK) {
-            return r;
         }
     }
 
