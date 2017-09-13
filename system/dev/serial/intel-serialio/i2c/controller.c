@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
@@ -38,7 +39,8 @@
 // Signals used on the controller's event_handle
 #define RX_FULL_SIGNAL ZX_USER_SIGNAL_0
 #define TX_EMPTY_SIGNAL ZX_USER_SIGNAL_1
-#define STOP_DETECT_SIGNAL ZX_USER_SIGNAL_2
+#define STOP_DETECTED_SIGNAL ZX_USER_SIGNAL_2
+#define ERROR_DETECTED_SIGNAL ZX_USER_SIGNAL_3
 
 // Implement the functionality of the i2c bus device.
 
@@ -324,13 +326,15 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
         xprintf("Received i2c interrupt: %x %x\n", intr_stat, *REG32(&dev->regs->raw_intr_stat));
         if (intr_stat & (1u << INTR_RX_UNDER)) {
             // If we hit an underflow, it's a bug.
-            __builtin_trap();
+            zx_object_signal(dev->event_handle, 0, ERROR_DETECTED_SIGNAL);
             *REG32(&dev->regs->clr_rx_under);
+            dprintf(ERROR, "i2c: rx underflow detected!\n");
         }
         if (intr_stat & (1u << INTR_RX_OVER)) {
             // If we hit an overflow, it's a bug.
-            __builtin_trap();
+            zx_object_signal(dev->event_handle, 0, ERROR_DETECTED_SIGNAL);
             *REG32(&dev->regs->clr_rx_over);
+            dprintf(ERROR, "i2c: rx overflow detected!\n");
         }
         if (intr_stat & (1u << INTR_RX_FULL)) {
             mtx_lock(&dev->irq_mask_mutex);
@@ -340,8 +344,9 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
         }
         if (intr_stat & (1u << INTR_TX_OVER)) {
             // If we hit an overflow, it's a bug.
-            __builtin_trap();
+            zx_object_signal(dev->event_handle, 0, ERROR_DETECTED_SIGNAL);
             *REG32(&dev->regs->clr_tx_over);
+            dprintf(ERROR, "i2c: tx overflow detected!\n");
         }
         if (intr_stat & (1u << INTR_TX_EMPTY)) {
             mtx_lock(&dev->irq_mask_mutex);
@@ -350,22 +355,29 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
             mtx_unlock(&dev->irq_mask_mutex);
         }
         if (intr_stat & (1u << INTR_TX_ABORT)) {
+            zx_object_signal(dev->event_handle, 0, ERROR_DETECTED_SIGNAL);
             *REG32(&dev->regs->clr_tx_abort);
         }
         if (intr_stat & (1u << INTR_ACTIVITY)) {
-            // Should always be masked
-            __builtin_trap();
+            // Should always be masked...remask it.
+            mtx_lock(&dev->irq_mask_mutex);
+            RMWREG32(&dev->regs->intr_mask, INTR_ACTIVITY, 1, 0);
+            mtx_unlock(&dev->irq_mask_mutex);
+            dprintf(INFO, "i2c: spurious activity irq\n");
         }
         if (intr_stat & (1u << INTR_STOP_DETECTION)) {
-            zx_object_signal(dev->event_handle, 0, STOP_DETECT_SIGNAL);
+            zx_object_signal(dev->event_handle, 0, STOP_DETECTED_SIGNAL);
             *REG32(&dev->regs->clr_stop_det);
         }
         if (intr_stat & (1u << INTR_START_DETECTION)) {
             *REG32(&dev->regs->clr_start_det);
         }
         if (intr_stat & (1u << INTR_GENERAL_CALL)) {
-            // Should be masked
-            __builtin_trap();
+            // Should always be masked...remask it.
+            mtx_lock(&dev->irq_mask_mutex);
+            RMWREG32(&dev->regs->intr_mask, INTR_GENERAL_CALL, 1, 0);
+            mtx_unlock(&dev->irq_mask_mutex);
+            dprintf(INFO, "i2c: spurious general call irq\n");
         }
 
         zx_interrupt_complete(dev->irq_handle);
@@ -377,26 +389,69 @@ zx_status_t intel_serialio_i2c_wait_for_rx_full(
     intel_serialio_i2c_device_t* controller,
     zx_time_t deadline) {
 
-    return zx_object_wait_one(controller->event_handle, RX_FULL_SIGNAL, deadline, NULL);
+    uint32_t observed;
+    zx_status_t status = zx_object_wait_one(controller->event_handle,
+                                            RX_FULL_SIGNAL | ERROR_DETECTED_SIGNAL,
+                                            deadline, &observed);
+    if (status != ZX_OK) {
+        return status;
+    }
+    if (observed & ERROR_DETECTED_SIGNAL) {
+        return ZX_ERR_IO;
+    }
+    return ZX_OK;
 }
 
 zx_status_t intel_serialio_i2c_wait_for_tx_empty(
     intel_serialio_i2c_device_t* controller,
     zx_time_t deadline) {
 
-    return zx_object_wait_one(controller->event_handle, TX_EMPTY_SIGNAL, deadline, NULL);
+    uint32_t observed;
+    zx_status_t status = zx_object_wait_one(controller->event_handle,
+                                            TX_EMPTY_SIGNAL | ERROR_DETECTED_SIGNAL,
+                                            deadline, &observed);
+    if (status != ZX_OK) {
+        return status;
+    }
+    if (observed & ERROR_DETECTED_SIGNAL) {
+        return ZX_ERR_IO;
+    }
+    return ZX_OK;
 }
 
 zx_status_t intel_serialio_i2c_wait_for_stop_detect(
     intel_serialio_i2c_device_t* controller,
     zx_time_t deadline) {
 
-    return zx_object_wait_one(controller->event_handle, STOP_DETECT_SIGNAL,
-                              deadline, NULL);
+    uint32_t observed;
+    zx_status_t status = zx_object_wait_one(controller->event_handle,
+                                            STOP_DETECTED_SIGNAL | ERROR_DETECTED_SIGNAL,
+                                            deadline, &observed);
+    if (status != ZX_OK) {
+        return status;
+    }
+    if (observed & ERROR_DETECTED_SIGNAL) {
+        return ZX_ERR_IO;
+    }
+    return ZX_OK;
+}
+
+zx_status_t intel_serialio_i2c_check_for_error(intel_serialio_i2c_device_t* controller) {
+
+    uint32_t observed;
+    zx_status_t status = zx_object_wait_one(controller->event_handle, ERROR_DETECTED_SIGNAL, 0,
+                                            &observed);
+    if (status != ZX_OK && status != ZX_ERR_TIMED_OUT) {
+        return status;
+    }
+    if (observed & ERROR_DETECTED_SIGNAL) {
+        return ZX_ERR_IO;
+    }
+    return ZX_OK;
 }
 
 zx_status_t intel_serialio_i2c_clear_stop_detect(intel_serialio_i2c_device_t* controller) {
-    return zx_object_signal(controller->event_handle, STOP_DETECT_SIGNAL, 0);
+    return zx_object_signal(controller->event_handle, STOP_DETECTED_SIGNAL, 0);
 }
 
 // Perform a write to the DATA_CMD register, and clear
@@ -570,7 +625,8 @@ zx_status_t intel_serialio_i2c_reset_controller(
 
     // Clear the signals
     status = zx_object_signal(device->event_handle,
-                              RX_FULL_SIGNAL | TX_EMPTY_SIGNAL | STOP_DETECT_SIGNAL, 0);
+                              RX_FULL_SIGNAL | TX_EMPTY_SIGNAL | STOP_DETECTED_SIGNAL |
+                              ERROR_DETECTED_SIGNAL, 0);
     if (status != ZX_OK) {
         goto cleanup;
     }

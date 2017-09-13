@@ -170,7 +170,11 @@ zx_status_t intel_serialio_i2c_read_rx(
 zx_status_t intel_serialio_i2c_issue_tx(
     intel_serialio_i2c_device_t* controller,
     uint32_t data_cmd);
+
 zx_status_t intel_serialio_i2c_clear_stop_detect(
+    intel_serialio_i2c_device_t* controller);
+
+zx_status_t intel_serialio_i2c_check_for_error(
     intel_serialio_i2c_device_t* controller);
 
 void intel_serialio_i2c_get_rx_fifo_threshold(

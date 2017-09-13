@@ -238,6 +238,9 @@ static zx_status_t intel_serialio_i2c_slave_transfer(
         goto transfer_finish_1;
     }
 
+    status = intel_serialio_i2c_check_for_error(controller);
+    // fall-through for error processing
+
 transfer_finish_1:
     if (status < 0) {
         intel_serialio_i2c_reset_controller(controller);
