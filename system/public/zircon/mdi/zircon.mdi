@@ -99,3 +99,4 @@ const PDEV_PID_GENERIC = 0
 const PDEV_DID_USB_DWC3 = 1
 const PDEV_DID_USB_XHCI = 2
 const PDEV_DID_KPCI = 3
+const PDEV_DID_ARM_MALI = 4

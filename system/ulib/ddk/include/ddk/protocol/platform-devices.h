@@ -16,5 +16,6 @@ __BEGIN_CDECLS;
 #define PDEV_DID_USB_DWC3   1
 #define PDEV_DID_USB_XHCI   2
 #define PDEV_DID_KPCI       3
+#define PDEV_DID_ARM_MALI   4
 
 __END_CDECLS;
