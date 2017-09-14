@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Low level bindings for runtime services provided by Magenta
+//! Low level bindings for runtime services provided by Zircon
 
 #![allow(non_camel_case_types)]
 
-extern crate magenta_sys;
+extern crate zircon_sys;
 
 use std::os::raw::c_char;
 
-use magenta_sys::mx_handle_t;
-use magenta_sys::mx_status_t;
+use zircon_sys::zx_handle_t;
+use zircon_sys::zx_status_t;
 
-pub const MX_HANDLE_INVALID: mx_handle_t = 0;
+pub const ZX_HANDLE_INVALID: zx_handle_t = 0;
 
-// Startup handle types, derived from magenta/system/public/magenta/processargs.h
+// Startup handle types, derived from zircon/system/public/zircon/processargs.h
 
 // Handle to our own process.
 pub const PA_PROC_SELF: u32 = 0x01;
@@ -47,14 +47,14 @@ pub const PA_VMO_BOOTFS: u32 = 0x1B;
 // Job can be the same as the one used to create this process or it can
 // be different.
 pub const PA_JOB_DEFAULT: u32 = 0x03;
-// Handle types the mxio library uses
-pub const PA_MXIO_ROOT: u32 = 0x30;
-pub const PA_MXIO_CWD: u32 = 0x31;
-pub const PA_MXIO_REMOTE: u32 = 0x32;
-pub const PA_MXIO_PIPE: u32 = 0x33;
-pub const PA_MXIO_EVENT: u32 = 0x34;
-pub const PA_MXIO_LOGGER: u32 = 0x35;
-pub const PA_MXIO_SOCKET: u32 = 0x36;
+// Handle types the fdio library uses
+pub const PA_FDIO_ROOT: u32 = 0x30;
+pub const PA_FDIO_CWD: u32 = 0x31;
+pub const PA_FDIO_REMOTE: u32 = 0x32;
+pub const PA_FDIO_PIPE: u32 = 0x33;
+pub const PA_FDIO_EVENT: u32 = 0x34;
+pub const PA_FDIO_LOGGER: u32 = 0x35;
+pub const PA_FDIO_SOCKET: u32 = 0x36;
 // Used by devmgr and devhosts
 pub const PA_RESOURCE: u32 = 0x3F;
 // Handle types used by the application model
@@ -69,9 +69,9 @@ pub const PA_USER0: u32 = 0xF0;
 pub const PA_USER1: u32 = 0xF1;
 pub const PA_USER2: u32 = 0xF2;
 
-#[link(name="mxio")]
+#[link(name="fdio")]
 extern {
-    pub fn mx_get_startup_handle(id: u32) -> mx_handle_t;
-    pub fn mxio_service_connect(svcpath: *const c_char, h: mx_handle_t) -> mx_status_t;
-    pub fn mxio_service_connect_at(dir: mx_handle_t, path: *const c_char, h: mx_handle_t) -> mx_status_t;
+    pub fn zx_get_startup_handle(id: u32) -> zx_handle_t;
+    pub fn fdio_service_connect(svcpath: *const c_char, h: zx_handle_t) -> zx_status_t;
+    pub fn fdio_service_connect_at(dir: zx_handle_t, path: *const c_char, h: zx_handle_t) -> zx_status_t;
 }

@@ -5,10 +5,10 @@
 //! A simple fidl server, written in terms of low level messages, and missing
 //! error cases.
 
-extern crate magenta;
+extern crate zircon;
 extern crate mxruntime;
 
-use magenta::{AsHandleRef, Channel, MessageBuf, MX_TIME_INFINITE, MX_CHANNEL_READABLE};
+use zircon::{AsHandleRef, Channel, MessageBuf, ZX_TIME_INFINITE, ZX_CHANNEL_READABLE};
 use mxruntime::{HandleType, get_startup_handle};
 
 fn align(offset: usize, alignment: usize) -> usize {
@@ -28,12 +28,12 @@ fn main() {
         .expect("couldn't get outgoing services handle");
     // wait for ConnectToService request
     let c1 = Channel::from(h1);
-    let _ = c1.wait_handle(MX_CHANNEL_READABLE, MX_TIME_INFINITE);
+    let _ = c1.wait_handle(ZX_CHANNEL_READABLE, ZX_TIME_INFINITE);
     let mut buf = MessageBuf::new();
     let _ = c1.read(0, &mut buf);
     let h2 = buf.take_handle(0).expect("couldn't get service provider handle");
     let c2 = Channel::from(h2);
-    let _ = c2.wait_handle(MX_CHANNEL_READABLE, MX_TIME_INFINITE);
+    let _ = c2.wait_handle(ZX_CHANNEL_READABLE, ZX_TIME_INFINITE);
     let _ = c2.read(0, &mut buf);
     let mut empty = vec![];
     let answer = "hello from Rust";

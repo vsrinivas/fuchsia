@@ -1,7 +1,7 @@
-Rust bindings for Magenta runtime services
+Rust bindings for Zircon runtime services
 ==========================================
 
-This repository contains bindings for Magenta runtime services other than those
+This repository contains bindings for Zircon runtime services other than those
 directly provided by kernel syscalls. At the moment, that's primarily access to
 startup handles, but this also the correct place for launchpad bindings.
 
