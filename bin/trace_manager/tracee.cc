@@ -16,26 +16,26 @@ namespace {
 // during the transfer.
 Tracee::TransferStatus WriteBufferToSocket(const uint8_t* buffer,
                                            size_t len,
-                                           const mx::socket& socket) {
+                                           const zx::socket& socket) {
   size_t offset = 0;
   while (offset < len) {
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
     size_t actual = 0;
     if ((status = socket.write(0u, buffer + offset, len - offset, &actual)) <
         0) {
-      if (status == MX_ERR_SHOULD_WAIT) {
-        mx_signals_t pending = 0;
-        status = socket.wait_one(MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
-                                 MX_TIME_INFINITE, &pending);
+      if (status == ZX_ERR_SHOULD_WAIT) {
+        zx_signals_t pending = 0;
+        status = socket.wait_one(ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED,
+                                 ZX_TIME_INFINITE, &pending);
         if (status < 0) {
           FXL_LOG(ERROR) << "Wait on socket failed: " << status;
           return Tracee::TransferStatus::kCorrupted;
         }
 
-        if (pending & MX_SOCKET_WRITABLE)
+        if (pending & ZX_SOCKET_WRITABLE)
           continue;
 
-        if (pending & MX_SOCKET_PEER_CLOSED) {
+        if (pending & ZX_SOCKET_PEER_CLOSED) {
           FXL_LOG(ERROR) << "Peer closed while writing to socket";
           return Tracee::TransferStatus::kReceiverDead;
         }
@@ -73,29 +73,29 @@ bool Tracee::Start(size_t buffer_size,
   FXL_DCHECK(stop_callback);
   FXL_DCHECK(start_callback);
 
-  mx::vmo buffer_vmo;
-  mx_status_t status = mx::vmo::create(buffer_size, 0u, &buffer_vmo);
-  if (status != MX_OK) {
+  zx::vmo buffer_vmo;
+  zx_status_t status = zx::vmo::create(buffer_size, 0u, &buffer_vmo);
+  if (status != ZX_OK) {
     FXL_LOG(ERROR) << *bundle_
                    << ": Failed to create trace buffer: status=" << status;
     return false;
   }
 
-  mx::vmo buffer_vmo_for_provider;
+  zx::vmo buffer_vmo_for_provider;
   status =
-      buffer_vmo.duplicate(MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER |
-                               MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_MAP,
+      buffer_vmo.duplicate(ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER |
+                               ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP,
                            &buffer_vmo_for_provider);
-  if (status != MX_OK) {
+  if (status != ZX_OK) {
     FXL_LOG(ERROR) << *bundle_
                    << ": Failed to duplicate trace buffer for provider: status="
                    << status;
     return false;
   }
 
-  mx::eventpair fence, fence_for_provider;
-  status = mx::eventpair::create(0u, &fence, &fence_for_provider);
-  if (status != MX_OK) {
+  zx::eventpair fence, fence_for_provider;
+  status = zx::eventpair::create(0u, &fence, &fence_for_provider);
+  if (status != ZX_OK) {
     FXL_LOG(ERROR) << *bundle_
                    << ": Failed to create trace buffer fence: status="
                    << status;
@@ -116,7 +116,7 @@ bool Tracee::Start(size_t buffer_size,
   start_callback_ = std::move(start_callback);
   stop_callback_ = std::move(stop_callback);
   fence_handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
-      this, fence_.get(), MX_EPAIR_PEER_CLOSED);
+      this, fence_.get(), ZX_EPAIR_PEER_CLOSED);
   TransitionToState(State::kStartPending);
   return true;
 }
@@ -148,10 +148,10 @@ void Tracee::OnProviderStarted(bool success) {
   start_callback(success);
 }
 
-void Tracee::OnHandleReady(mx_handle_t handle,
-                           mx_signals_t pending,
+void Tracee::OnHandleReady(zx_handle_t handle,
+                           zx_signals_t pending,
                            uint64_t count) {
-  FXL_DCHECK(pending & MX_EPAIR_PEER_CLOSED);
+  FXL_DCHECK(pending & ZX_EPAIR_PEER_CLOSED);
   FXL_DCHECK(state_ == State::kStartPending || state_ == State::kStarted ||
              state_ == State::kStartAcknowledged || state_ == State::kStopping);
   FXL_DCHECK(stop_callback_);
@@ -164,14 +164,14 @@ void Tracee::OnHandleReady(mx_handle_t handle,
   TransitionToState(State::kStopped);
 }
 
-void Tracee::OnHandleError(mx_handle_t handle, mx_status_t error) {
-  FXL_DCHECK(error == MX_ERR_CANCELED);
+void Tracee::OnHandleError(zx_handle_t handle, zx_status_t error) {
+  FXL_DCHECK(error == ZX_ERR_CANCELED);
   FXL_DCHECK(state_ == State::kStartPending || state_ == State::kStarted ||
              state_ == State::kStartAcknowledged || state_ == State::kStopping);
   TransitionToState(State::kStopped);
 }
 
-Tracee::TransferStatus Tracee::TransferRecords(const mx::socket& socket) const {
+Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
   FXL_DCHECK(socket);
   FXL_DCHECK(buffer_vmo_);
 
@@ -188,7 +188,7 @@ Tracee::TransferStatus Tracee::TransferRecords(const mx::socket& socket) const {
 
   size_t actual = 0;
   if ((buffer_vmo_.read(buffer.data(), 0, buffer_vmo_size_, &actual) !=
-       MX_OK) ||
+       ZX_OK) ||
       (actual != buffer_vmo_size_)) {
     FXL_LOG(WARNING) << *bundle_ << ": Failed to read data from buffer_vmo: "
                      << "actual size=" << actual
@@ -213,7 +213,7 @@ Tracee::TransferStatus Tracee::TransferRecords(const mx::socket& socket) const {
 }
 
 Tracee::TransferStatus Tracee::WriteProviderInfoRecord(
-    const mx::socket& socket) const {
+    const zx::socket& socket) const {
   FXL_DCHECK(bundle_->label.size() <=
              internal::ProviderInfoMetadataRecordFields::kMaxNameLength);
 

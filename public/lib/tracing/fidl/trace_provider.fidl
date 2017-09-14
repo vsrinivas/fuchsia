@@ -18,7 +18,7 @@ interface TraceProvider {
   // and close both |buffer| and |fence| to indicate to the trace manager
   // that tracing is finished.
   //
-  // When the trace provider observes |MX_EPAIR_CLOSED| on |fence|, it must
+  // When the trace provider observes |ZX_EPAIR_CLOSED| on |fence|, it must
   // assume the trace manager has terminated abnormally (since |Stop| was
   // not received as usual) and stop tracing automatically.
   //
@@ -28,7 +28,7 @@ interface TraceProvider {
   //
   // TODO(ZX-1046): Previously this interface was expected to restart tracing
   // if tracing was already running.  Some trace providers implement this more
-  // elaborate behavior.  Once we port them to Magenta we can modify that
+  // elaborate behavior.  Once we port them to Zircon we can modify that
   // code to return false instead then delete this TODO.
   //
   // Returns the result of the operation in |success|, true indicates that

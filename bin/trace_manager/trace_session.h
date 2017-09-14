@@ -9,8 +9,8 @@
 #include <list>
 #include <vector>
 
-#include <mx/socket.h>
-#include <mx/vmo.h>
+#include <zx/socket.h>
+#include <zx/vmo.h>
 
 #include "apps/tracing/services/trace_provider.fidl.h"
 #include "apps/tracing/src/trace_manager/trace_provider_bundle.h"
@@ -37,7 +37,7 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   //
   // |abort_handler| is invoked whenever the session encounters
   // unrecoverable errors that render the session dead.
-  explicit TraceSession(mx::socket destination,
+  explicit TraceSession(zx::socket destination,
                         fidl::Array<fidl::String> categories,
                         size_t trace_buffer_size,
                         fxl::Closure abort_handler);
@@ -73,7 +73,7 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   void TransitionToState(State state);
 
   State state_ = State::kReady;
-  mx::socket destination_;
+  zx::socket destination_;
   fidl::Array<fidl::String> categories_;
   size_t trace_buffer_size_;
   std::vector<uint8_t> buffer_;

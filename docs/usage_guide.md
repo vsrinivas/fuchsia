@@ -38,7 +38,7 @@ trace record --duration=15 --categories=gfx,flutter launch noodles_view
 ```
 
 The default output file is `/tmp/trace.json`.
-Assuming that networking is configured correctly (see [Getting Started](https://fuchsia.googlesource.com/magenta/+/master/docs/getting_started.md)),
+Assuming that networking is configured correctly (see [Getting Started](https://fuchsia.googlesource.com/zircon/+/master/docs/getting_started.md)),
 the resulting trace can then be retrieved from the device with `netcp` as in:
 ```
 $ netcp :/tmp/trace.json trace.json

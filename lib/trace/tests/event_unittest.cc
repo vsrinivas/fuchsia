@@ -4,8 +4,8 @@
 
 #include "apps/tracing/lib/trace/event.h"
 
-#include <magenta/process.h>
-#include <mx/vmo.h>
+#include <zircon/process.h>
+#include <zx/vmo.h>
 
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -16,10 +16,10 @@ namespace {
 
 struct EventTest : public ::testing::Test {
   EventTest() {
-    mx::vmo buffer;
-    mx::eventpair fence;
-    assert(MX_OK == mx::vmo::create(100000, 0u, &buffer));
-    assert(MX_OK == mx::eventpair::create(0u, &fence, &control_));
+    zx::vmo buffer;
+    zx::eventpair fence;
+    assert(ZX_OK == zx::vmo::create(100000, 0u, &buffer));
+    assert(ZX_OK == zx::eventpair::create(0u, &fence, &control_));
     StartTracing(std::move(buffer), std::move(fence), {"cat"},
                  [this](TraceDisposition disposition) { loop_.QuitNow(); });
   }
@@ -31,7 +31,7 @@ struct EventTest : public ::testing::Test {
 
  private:
   fsl::MessageLoop loop_;
-  mx::eventpair control_;
+  zx::eventpair control_;
 };
 
 TEST_F(EventTest, Koid) {
@@ -165,11 +165,11 @@ TEST_F(EventTest, FlowEnd) {
 }
 
 TEST_F(EventTest, Handle) {
-  TRACE_HANDLE(mx_process_self());
-  TRACE_HANDLE(mx_process_self(), "k1", "v1");
-  TRACE_HANDLE(mx_process_self(), "k1", "v1", "k2", "v2");
-  TRACE_HANDLE(mx_process_self(), "k1", "v1", "k2", "v2", "k3", "v3");
-  TRACE_HANDLE(mx_process_self(), "k1", "v1", "k2", "v2", "k3", "v3", "k4",
+  TRACE_HANDLE(zx_process_self());
+  TRACE_HANDLE(zx_process_self(), "k1", "v1");
+  TRACE_HANDLE(zx_process_self(), "k1", "v1", "k2", "v2");
+  TRACE_HANDLE(zx_process_self(), "k1", "v1", "k2", "v2", "k3", "v3");
+  TRACE_HANDLE(zx_process_self(), "k1", "v1", "k2", "v2", "k3", "v3", "k4",
                "v4");
 }
 

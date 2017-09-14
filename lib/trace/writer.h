@@ -13,8 +13,8 @@
 #include <utility>
 #include <vector>
 
-#include <mx/eventpair.h>
-#include <mx/vmo.h>
+#include <zx/eventpair.h>
+#include <zx/vmo.h>
 
 #include "apps/tracing/lib/trace/cwriter.h"
 #include "apps/tracing/lib/trace/internal/fields.h"
@@ -66,8 +66,8 @@ using TraceFinishedCallback = std::function<void(TraceDisposition)>;
 //
 // Returns true if tracing started successfully, false if the trace buffer
 // could not be mapped.
-bool StartTracing(mx::vmo buffer,
-                  mx::eventpair fence,
+bool StartTracing(zx::vmo buffer,
+                  zx::eventpair fence,
                   std::vector<std::string> enabled_categories,
                   TraceFinishedCallback finished_callback);
 
@@ -263,7 +263,7 @@ class StringRef {
 // thread table index.
 class ThreadRef {
  public:
-  static ThreadRef MakeInlined(mx_koid_t process_koid, mx_koid_t thread_koid) {
+  static ThreadRef MakeInlined(zx_koid_t process_koid, zx_koid_t thread_koid) {
     return ThreadRef(::tracing::internal::ThreadRefFields::kInline,
                      process_koid, thread_koid);
   }
@@ -287,8 +287,8 @@ class ThreadRef {
 
   const ctrace_threadref_t& c_ref() const { return ref_; }
   EncodedThreadRef encoded_value() const { return ref_.encoded_value; }
-  mx_koid_t inline_process_koid() const { return ref_.inline_process_koid; }
-  mx_koid_t inline_thread_koid() const { return ref_.inline_thread_koid; }
+  zx_koid_t inline_process_koid() const { return ref_.inline_process_koid; }
+  zx_koid_t inline_thread_koid() const { return ref_.inline_thread_koid; }
 
   size_t Size() const { return is_inlined() ? 2 * sizeof(uint64_t) : 0; }
 
@@ -299,8 +299,8 @@ class ThreadRef {
 
  private:
   explicit ThreadRef(EncodedThreadRef encoded_value,
-                     mx_koid_t inline_process_koid,
-                     mx_koid_t inline_thread_koid) {
+                     zx_koid_t inline_process_koid,
+                     zx_koid_t inline_thread_koid) {
     ref_.encoded_value = encoded_value;
     ref_.inline_process_koid = inline_process_koid;
     ref_.inline_thread_koid = inline_thread_koid;
@@ -482,7 +482,7 @@ class PointerArgument : public Argument {
 
 class KoidArgument : public Argument {
  public:
-  explicit KoidArgument(const StringRef& name_ref, mx_koid_t koid)
+  explicit KoidArgument(const StringRef& name_ref, zx_koid_t koid)
       : Argument(name_ref), koid_(koid) {}
 
   size_t Size() const { return Argument::Size() + sizeof(uint64_t); }
@@ -493,7 +493,7 @@ class KoidArgument : public Argument {
   }
 
  private:
-  mx_koid_t const koid_;
+  zx_koid_t const koid_;
 };
 
 // Represents a list of arguments.
@@ -588,21 +588,21 @@ class TraceWriter final {
   // Registers process and thread id into the thread table.
   // The caller is responsible for writing the process and thread descriptions
   // separately if needed.
-  ThreadRef RegisterThread(mx_koid_t process_koid, mx_koid_t thread_koid);
+  ThreadRef RegisterThread(zx_koid_t process_koid, zx_koid_t thread_koid);
 
   // Writes a description of the specified process.
-  void WriteProcessDescription(mx_koid_t process_koid,
+  void WriteProcessDescription(zx_koid_t process_koid,
                                const std::string& process_name);
 
   // Writes a description of the specified thread.
-  void WriteThreadDescription(mx_koid_t process_koid,
-                              mx_koid_t thread_koid,
+  void WriteThreadDescription(zx_koid_t process_koid,
+                              zx_koid_t thread_koid,
                               const std::string& thread_name);
 
   // Writes a kernel object record about |handle| into the trace buffer.
   // Discards the record if it cannot be written.
   template <typename... Args>
-  void WriteKernelObjectRecord(mx_handle_t handle,
+  void WriteKernelObjectRecord(zx_handle_t handle,
                                const ArgumentList<Args...>& args = {}) {
     if (Payload payload = WriteKernelObjectRecordBase(
             handle, args.ElementCount(), args.Size())) {
@@ -806,7 +806,7 @@ class TraceWriter final {
   explicit TraceWriter(::tracing::internal::TraceEngine* engine)
       : engine_(engine) {}
 
-  Payload WriteKernelObjectRecordBase(mx_handle_t handle,
+  Payload WriteKernelObjectRecordBase(zx_handle_t handle,
                                       size_t argument_count,
                                       size_t payload_size);
   Payload WriteEventRecordBase(EventType event_type,

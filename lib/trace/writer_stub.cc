@@ -4,7 +4,7 @@
 
 #include "apps/tracing/lib/trace/writer.h"
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #include "lib/fxl/logging.h"
 
@@ -19,8 +19,8 @@ __WEAK void ReleaseEngine() {
 
 namespace writer {
 
-__WEAK bool StartTracing(mx::vmo buffer,
-                         mx::eventpair fence,
+__WEAK bool StartTracing(zx::vmo buffer,
+                         zx::eventpair fence,
                          std::vector<std::string> enabled_categories,
                          TraceFinishedCallback finished_callback) {
   return false;
@@ -70,26 +70,26 @@ __WEAK ThreadRef TraceWriter::RegisterCurrentThread() {
   return ThreadRef::MakeUnknown();
 }
 
-__WEAK ThreadRef TraceWriter::RegisterThread(mx_koid_t process_koid,
-                                             mx_koid_t thread_koid) {
+__WEAK ThreadRef TraceWriter::RegisterThread(zx_koid_t process_koid,
+                                             zx_koid_t thread_koid) {
   FXL_DCHECK(false);
   return ThreadRef::MakeUnknown();
 }
 
 __WEAK void TraceWriter::WriteProcessDescription(
-    mx_koid_t process_koid,
+    zx_koid_t process_koid,
     const std::string& process_name) {
   FXL_DCHECK(false);
 }
 
 __WEAK void TraceWriter::WriteThreadDescription(
-    mx_koid_t process_koid,
-    mx_koid_t thread_koid,
+    zx_koid_t process_koid,
+    zx_koid_t thread_koid,
     const std::string& thread_name) {
   FXL_DCHECK(false);
 }
 
-__WEAK Payload TraceWriter::WriteKernelObjectRecordBase(mx_handle_t handle,
+__WEAK Payload TraceWriter::WriteKernelObjectRecordBase(zx_handle_t handle,
                                                         size_t argument_count,
                                                         size_t payload_size) {
   FXL_DCHECK(false);

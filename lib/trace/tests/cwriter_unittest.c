@@ -4,7 +4,7 @@
 
 #include "apps/tracing/lib/trace/tests/cwriter_unittest.h"
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #include <stdlib.h>
 #include <threads.h>
@@ -19,7 +19,7 @@
     TA_DOUBLE("double", 42.42), \
     TA_STR("cstring", "constant"), \
     TA_PTR("pointer", "pointer-value"), \
-    TA_KOID("koid", (mx_koid_t)(1 << 10)))
+    TA_KOID("koid", (zx_koid_t)(1 << 10)))
 
 bool cwriter_test_string_registration_and_retrieval(void) {
   ctrace_writer_t* writer = ctrace_writer_acquire();
@@ -131,22 +131,22 @@ bool cwriter_test_event_writing(void) {
   C_EXPECT_TRUE(ctrace_register_category_string(writer, "cat", true, &category_ref));
   ctrace_register_string(writer, "name", &name_ref);
 
-  ctrace_write_duration_begin_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_duration_begin_event_record(writer, zx_ticks_get(), &thread_ref,
                                        &category_ref, &name_ref, NULL);
-  ctrace_write_duration_end_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_duration_end_event_record(writer, zx_ticks_get(), &thread_ref,
                                      &category_ref, &name_ref, NULL);
-  ctrace_write_async_begin_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_async_begin_event_record(writer, zx_ticks_get(), &thread_ref,
                                     &category_ref, &name_ref, 42, NULL);
-  ctrace_write_async_instant_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_async_instant_event_record(writer, zx_ticks_get(), &thread_ref,
                                       &category_ref, &name_ref, 42, NULL);
-  ctrace_write_async_end_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_async_end_event_record(writer, zx_ticks_get(), &thread_ref,
                                   &category_ref, &name_ref, 42, NULL);
 
-  ctrace_write_flow_begin_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_flow_begin_event_record(writer, zx_ticks_get(), &thread_ref,
                                    &category_ref, &name_ref, 42, NULL);
-  ctrace_write_flow_step_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_flow_step_event_record(writer, zx_ticks_get(), &thread_ref,
                                   &category_ref, &name_ref, 42, NULL);
-  ctrace_write_flow_end_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_flow_end_event_record(writer, zx_ticks_get(), &thread_ref,
                                  &category_ref, &name_ref, 42, NULL);
 
   ctrace_writer_release(writer);
@@ -163,21 +163,21 @@ static int EventWritingMultiThreaded_ThreadFunc(void* arg) {
   C_EXPECT_TRUE(ctrace_register_category_string(writer, "cat", true, &category_ref));
   ctrace_register_string(writer, "name", &name_ref);
 
-  ctrace_write_duration_begin_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_duration_begin_event_record(writer, zx_ticks_get(), &thread_ref,
                                        &category_ref, &name_ref, NULL);
-  ctrace_write_duration_end_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_duration_end_event_record(writer, zx_ticks_get(), &thread_ref,
                                      &category_ref, &name_ref, NULL);
-  ctrace_write_async_begin_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_async_begin_event_record(writer, zx_ticks_get(), &thread_ref,
                                     &category_ref, &name_ref, 42, NULL);
-  ctrace_write_async_instant_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_async_instant_event_record(writer, zx_ticks_get(), &thread_ref,
                                       &category_ref, &name_ref, 42, NULL);
-  ctrace_write_async_end_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_async_end_event_record(writer, zx_ticks_get(), &thread_ref,
                                   &category_ref, &name_ref, 42, NULL);
-  ctrace_write_flow_begin_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_flow_begin_event_record(writer, zx_ticks_get(), &thread_ref,
                                    &category_ref, &name_ref, 42, NULL);
-  ctrace_write_flow_step_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_flow_step_event_record(writer, zx_ticks_get(), &thread_ref,
                                   &category_ref, &name_ref, 42, NULL);
-  ctrace_write_flow_end_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_flow_end_event_record(writer, zx_ticks_get(), &thread_ref,
                                  &category_ref, &name_ref, 42, NULL);
 
   ctrace_writer_release(writer);
@@ -210,28 +210,28 @@ bool cwriter_test_event_writing_with_arguments(void) {
 
   NEW_ARGUMENT_LIST(args);
 
-  ctrace_write_duration_begin_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_duration_begin_event_record(writer, zx_ticks_get(), &thread_ref,
                                        &category_ref, &name_ref, &args);
 
-  ctrace_write_duration_end_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_duration_end_event_record(writer, zx_ticks_get(), &thread_ref,
                                      &category_ref, &name_ref, &args);
 
-  ctrace_write_async_begin_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_async_begin_event_record(writer, zx_ticks_get(), &thread_ref,
                                     &category_ref, &name_ref, 42, &args);
 
-  ctrace_write_async_instant_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_async_instant_event_record(writer, zx_ticks_get(), &thread_ref,
                                       &category_ref, &name_ref, 42, &args);
 
-  ctrace_write_async_end_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_async_end_event_record(writer, zx_ticks_get(), &thread_ref,
                                   &category_ref, &name_ref, 42, &args);
 
-  ctrace_write_flow_begin_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_flow_begin_event_record(writer, zx_ticks_get(), &thread_ref,
                                    &category_ref, &name_ref, 42, &args);
 
-  ctrace_write_flow_step_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_flow_step_event_record(writer, zx_ticks_get(), &thread_ref,
                                   &category_ref, &name_ref, 42, &args);
 
-  ctrace_write_flow_end_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_flow_end_event_record(writer, zx_ticks_get(), &thread_ref,
                                  &category_ref, &name_ref, 42, &args);
 
   ctrace_writer_release(writer);
@@ -250,28 +250,28 @@ static int EventWritingWithArgumentsMultiThreaded_ThreadFunc(void* arg) {
 
   NEW_ARGUMENT_LIST(args);
 
-  ctrace_write_duration_begin_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_duration_begin_event_record(writer, zx_ticks_get(), &thread_ref,
                                        &category_ref, &name_ref, &args);
 
-  ctrace_write_duration_end_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_duration_end_event_record(writer, zx_ticks_get(), &thread_ref,
                                      &category_ref, &name_ref, &args);
 
-  ctrace_write_async_begin_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_async_begin_event_record(writer, zx_ticks_get(), &thread_ref,
                                     &category_ref, &name_ref, 42, &args);
 
-  ctrace_write_async_instant_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_async_instant_event_record(writer, zx_ticks_get(), &thread_ref,
                                       &category_ref, &name_ref, 42, &args);
 
-  ctrace_write_async_end_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_async_end_event_record(writer, zx_ticks_get(), &thread_ref,
                                   &category_ref, &name_ref, 42, &args);
 
-  ctrace_write_flow_begin_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_flow_begin_event_record(writer, zx_ticks_get(), &thread_ref,
                                    &category_ref, &name_ref, 42, &args);
 
-  ctrace_write_flow_step_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_flow_step_event_record(writer, zx_ticks_get(), &thread_ref,
                                   &category_ref, &name_ref, 42, &args);
 
-  ctrace_write_flow_end_event_record(writer, mx_ticks_get(), &thread_ref,
+  ctrace_write_flow_end_event_record(writer, zx_ticks_get(), &thread_ref,
                                  &category_ref, &name_ref, 42, &args);
 
   ctrace_writer_release(writer);

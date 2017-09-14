@@ -294,7 +294,7 @@ void ctrace_internal_write_instant_event_record(
   ctrace_register_current_thread(writer, &current_thread);
   ctrace_register_string(writer, name, &name_ref);
   ctrace_write_instant_event_record(
-      writer, mx_ticks_get(), &current_thread,
+      writer, zx_ticks_get(), &current_thread,
       category_ref, &name_ref, scope, args);
 }
 
@@ -322,7 +322,7 @@ void ctrace_internal_write_counter_event_record(
   ctrace_register_current_thread(writer, &current_thread);
   ctrace_register_string(writer, name, &name_ref);
   ctrace_write_counter_event_record(
-      writer, mx_ticks_get(), &current_thread,
+      writer, zx_ticks_get(), &current_thread,
       category_ref, &name_ref, id, args);
 }
 
@@ -364,7 +364,7 @@ void ctrace_internal_write_duration_begin_event_record(
   ctrace_register_current_thread(writer, &current_thread);
   ctrace_register_string(writer, name, &name_ref);
   ctrace_write_duration_begin_event_record(
-      writer, mx_ticks_get(), &current_thread,
+      writer, zx_ticks_get(), &current_thread,
       category_ref, &name_ref, args);
 }
 
@@ -390,7 +390,7 @@ void ctrace_internal_write_duration_end_event_record(
   ctrace_register_current_thread(writer, &current_thread);
   ctrace_register_string(writer, name, &name_ref);
   ctrace_write_duration_end_event_record(
-      writer, mx_ticks_get(), &current_thread,
+      writer, zx_ticks_get(), &current_thread,
       category_ref, &name_ref, args);
 }
 
@@ -418,7 +418,7 @@ void ctrace_internal_write_async_begin_event_record(
   ctrace_register_current_thread(writer, &current_thread);
   ctrace_register_string(writer, name, &name_ref);
   ctrace_write_async_begin_event_record(
-      writer, mx_ticks_get(), &current_thread,
+      writer, zx_ticks_get(), &current_thread,
       category_ref, &name_ref, id, args);
 }
 
@@ -446,7 +446,7 @@ void ctrace_internal_write_async_instant_event_record(
   ctrace_register_current_thread(writer, &current_thread);
   ctrace_register_string(writer, name, &name_ref);
   ctrace_write_async_instant_event_record(
-      writer, mx_ticks_get(), &current_thread,
+      writer, zx_ticks_get(), &current_thread,
       category_ref, &name_ref, id, args);
 }
 
@@ -474,7 +474,7 @@ void ctrace_internal_write_async_end_event_record(
   ctrace_register_current_thread(writer, &current_thread);
   ctrace_register_string(writer, name, &name_ref);
   ctrace_write_async_end_event_record(
-      writer, mx_ticks_get(), &current_thread,
+      writer, zx_ticks_get(), &current_thread,
       category_ref, &name_ref, id, args);
 }
 
@@ -502,7 +502,7 @@ void ctrace_internal_write_flow_begin_event_record(
   ctrace_register_current_thread(writer, &current_thread);
   ctrace_register_string(writer, name, &name_ref);
   ctrace_write_flow_begin_event_record(
-      writer, mx_ticks_get(), &current_thread,
+      writer, zx_ticks_get(), &current_thread,
       category_ref, &name_ref, id, args);
 }
 
@@ -530,7 +530,7 @@ void ctrace_internal_write_flow_step_event_record(
   ctrace_register_current_thread(writer, &current_thread);
   ctrace_register_string(writer, name, &name_ref);
   ctrace_write_flow_step_event_record(
-      writer, mx_ticks_get(), &current_thread,
+      writer, zx_ticks_get(), &current_thread,
       category_ref, &name_ref, id, args);
 }
 
@@ -558,13 +558,13 @@ void ctrace_internal_write_flow_end_event_record(
   ctrace_register_current_thread(writer, &current_thread);
   ctrace_register_string(writer, name, &name_ref);
   ctrace_write_flow_end_event_record(
-      writer, mx_ticks_get(), &current_thread,
+      writer, zx_ticks_get(), &current_thread,
       category_ref, &name_ref, id, args);
 }
 
 void ctrace_write_kernel_object_record(
     ctrace_writer_t* writer,
-    mx_handle_t handle,
+    zx_handle_t handle,
     const ctrace_arglist_t* c_args) {
   FXL_DCHECK(writer);
   auto engine = ToEngine(writer);
@@ -577,7 +577,7 @@ void ctrace_write_kernel_object_record(
 
 void ctrace_internal_write_kernel_object_record(
     ctrace_writer_t* writer,
-    mx_handle_t handle,
+    zx_handle_t handle,
     const ctrace_arglist_t* args) {
   ctrace_write_kernel_object_record(writer, handle, args);
 }

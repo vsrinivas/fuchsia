@@ -4,8 +4,8 @@
 
 #include <iostream>
 
-#include <mx/socket.h>
-#include <mx/time.h>
+#include <zx/socket.h>
+#include <zx/time.h>
 
 #include "apps/tracing/src/trace/commands/dump_provider.h"
 
@@ -47,31 +47,31 @@ void DumpProvider::Run(const fxl::CommandLine& command_line) {
     return;
   }
 
-  mx::socket incoming, outgoing;
-  mx_status_t status = mx::socket::create(0u, &incoming, &outgoing);
-  FXL_CHECK(status == MX_OK);
+  zx::socket incoming, outgoing;
+  zx_status_t status = zx::socket::create(0u, &incoming, &outgoing);
+  FXL_CHECK(status == ZX_OK);
 
   trace_controller()->DumpProvider(provider_id, std::move(outgoing));
 
   std::vector<uint8_t> buffer(kBufferSize);
   for (;;) {
-    mx_signals_t pending;
-    status = incoming.wait_one(MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
-                               mx::deadline_after(kReadTimeout.ToNanoseconds()),
+    zx_signals_t pending;
+    status = incoming.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
+                               zx::deadline_after(kReadTimeout.ToNanoseconds()),
                                &pending);
-    if (status == MX_ERR_TIMED_OUT) {
+    if (status == ZX_ERR_TIMED_OUT) {
       err() << "Timed out after " << kReadTimeout.ToSecondsF()
             << " seconds waiting for provider to write data" << std::endl;
       break;
     }
-    FXL_CHECK(status == MX_OK);
+    FXL_CHECK(status == ZX_OK);
 
-    if (!(pending & MX_SOCKET_READABLE))
+    if (!(pending & ZX_SOCKET_READABLE))
       break;  // done reading
 
     size_t actual;
     status = incoming.read(0u, buffer.data(), buffer.size(), &actual);
-    FXL_CHECK(status == MX_OK);
+    FXL_CHECK(status == ZX_OK);
 
     out().write(reinterpret_cast<const char*>(buffer.data()), actual);
     if (out().bad())

@@ -12,7 +12,7 @@ namespace writer {
 namespace {
 
 TEST(CWriterStubTest, AllFunctionsDoNothing) {
-  EXPECT_FALSE(StartTracing(mx::vmo(), mx::eventpair(), {},
+  EXPECT_FALSE(StartTracing(zx::vmo(), zx::eventpair(), {},
                             [](TraceDisposition disposition) {}));
   StopTracing();
   EXPECT_FALSE(ctrace_is_enabled());
@@ -45,7 +45,7 @@ TEST(CWriterStubTest, AllFunctionsDoNothing) {
     ctrace_internal_write_flow_begin_event_record(NULL, NULL, NULL, 0u, NULL);
     ctrace_internal_write_flow_step_event_record(NULL, NULL, NULL, 0u, NULL);
     ctrace_internal_write_flow_end_event_record(NULL, NULL, NULL, 0u, NULL);
-    ctrace_internal_write_kernel_object_record(NULL, MX_HANDLE_INVALID, NULL);
+    ctrace_internal_write_kernel_object_record(NULL, ZX_HANDLE_INVALID, NULL);
 
     // Stubs for the public facing API.
     ctrace_write_instant_event_record(NULL, 0u, NULL, NULL, NULL, CTRACE_SCOPE_THREAD, NULL);
@@ -58,7 +58,7 @@ TEST(CWriterStubTest, AllFunctionsDoNothing) {
     ctrace_write_flow_begin_event_record(NULL, 0u, NULL, NULL, NULL, 0u, NULL);
     ctrace_write_flow_step_event_record(NULL, 0u, NULL, NULL, NULL, 0u, NULL);
     ctrace_write_flow_end_event_record(NULL, 0u, NULL, NULL, NULL, 0u, NULL);
-    ctrace_write_kernel_object_record(NULL, MX_HANDLE_INVALID, NULL);
+    ctrace_write_kernel_object_record(NULL, ZX_HANDLE_INVALID, NULL);
 
     ctrace_writer_release(writer);
   }

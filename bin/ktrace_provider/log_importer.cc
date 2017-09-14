@@ -4,8 +4,8 @@
 
 #include "apps/tracing/src/ktrace_provider/log_importer.h"
 
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/log.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/log.h>
 #include <trace-engine/instrumentation.h>
 
 #include "lib/fxl/logging.h"
@@ -25,42 +25,42 @@ void LogImporter::Start() {
   if (log_)
     return;
 
-  mx_status_t status = mx::log::create(&log_, MX_LOG_FLAG_READABLE);
-  if (status != MX_OK) {
+  zx_status_t status = zx::log::create(&log_, ZX_LOG_FLAG_READABLE);
+  if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to open kernel log: status=" << status;
     return;
   }
 
-  start_ticks_ = mx_ticks_get();
-  start_time_ = mx_time_get(MX_CLOCK_MONOTONIC);
+  start_ticks_ = zx_ticks_get();
+  start_time_ = zx_time_get(ZX_CLOCK_MONOTONIC);
 
   wait_.set_object(log_.get());
-  wait_.set_trigger(MX_LOG_READABLE);
+  wait_.set_trigger(ZX_LOG_READABLE);
   status = wait_.Begin(fsl::MessageLoop::GetCurrent()->async());
-  FXL_CHECK(status == MX_OK) << "status=" << status;
+  FXL_CHECK(status == ZX_OK) << "status=" << status;
 }
 
 void LogImporter::Stop() {
   if (!log_)
     return;
 
-  mx_status_t status = wait_.Cancel(fsl::MessageLoop::GetCurrent()->async());
-  FXL_CHECK(status == MX_OK) << "status=" << status;
+  zx_status_t status = wait_.Cancel(fsl::MessageLoop::GetCurrent()->async());
+  FXL_CHECK(status == ZX_OK) << "status=" << status;
 
   log_.reset();
 }
 
 async_wait_result_t LogImporter::Handle(async_t* async,
-                                        mx_status_t status,
-                                        const mx_packet_signal_t* signal) {
-  alignas(mx_log_record_t) char log_buffer[MX_LOG_RECORD_MAX];
-  mx_log_record_t* log_record = reinterpret_cast<mx_log_record_t*>(log_buffer);
+                                        zx_status_t status,
+                                        const zx_packet_signal_t* signal) {
+  alignas(zx_log_record_t) char log_buffer[ZX_LOG_RECORD_MAX];
+  zx_log_record_t* log_record = reinterpret_cast<zx_log_record_t*>(log_buffer);
 
   for (;;) {
-    mx_status_t status = log_.read(MX_LOG_RECORD_MAX, log_record, 0);
-    if (status == MX_ERR_SHOULD_WAIT)
+    zx_status_t status = log_.read(ZX_LOG_RECORD_MAX, log_record, 0);
+    if (status == ZX_ERR_SHOULD_WAIT)
       break;
-    FXL_CHECK(status >= MX_OK) << "status=" << status;
+    FXL_CHECK(status >= ZX_OK) << "status=" << status;
 
     if (log_record->timestamp < start_time_)
       continue;

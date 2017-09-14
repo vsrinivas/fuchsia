@@ -16,8 +16,8 @@ source_set("types") {
 
   if (!is_fuchsia) {
     # If not built on a Fuchsia system, we need to manually tell the compiler
-    # where to find magenta headers.
-    public_deps = [ "//magenta/system/public" ]
+    # where to find zircon headers.
+    public_deps = [ "//zircon/system/public" ]
   }
 }
 
@@ -53,7 +53,7 @@ source_set("trace") {
   public_deps = [
     ":types",
     "//garnet/public/lib/app/cpp",
-    "//magenta/system/ulib/mx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

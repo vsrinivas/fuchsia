@@ -5,8 +5,8 @@
 #ifndef APPS_TRACING_LIB_TRACE_TYPES_H_
 #define APPS_TRACING_LIB_TRACE_TYPES_H_
 
-#include <magenta/syscalls/object.h>
-#include <magenta/types.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/types.h>
 
 #include <stdint.h>
 
@@ -98,20 +98,20 @@ enum class ThreadState {
 // This structure is used to distinguish koids from other 64-bit integers.
 struct Koid {
   Koid() : value(0u) {}
-  explicit Koid(mx_koid_t value) : value(value) {}
+  explicit Koid(zx_koid_t value) : value(value) {}
 
   explicit operator bool() const { return value; }
 
   bool operator==(const Koid& other) const { return value == other.value; }
   bool operator!=(const Koid& other) const { return !(*this == other); }
 
-  mx_koid_t value;
+  zx_koid_t value;
 };
 
 // Represents a process koid and thread koid pair.
 struct ProcessThread {
   ProcessThread() : process_koid(0u), thread_koid(0u) {}
-  explicit ProcessThread(mx_koid_t process_koid, mx_koid_t thread_koid)
+  explicit ProcessThread(zx_koid_t process_koid, zx_koid_t thread_koid)
       : process_koid(process_koid), thread_koid(thread_koid) {}
 
   explicit operator bool() const { return thread_koid && process_koid; }
@@ -130,8 +130,8 @@ struct ProcessThread {
     return thread_koid < other.thread_koid;
   }
 
-  mx_koid_t process_koid;
-  mx_koid_t thread_koid;
+  zx_koid_t process_koid;
+  zx_koid_t thread_koid;
 };
 
 }  // namespace tracing

@@ -5,7 +5,7 @@
 #ifndef APPS_TRACING_SRC_TRACE_TRACER_H_
 #define APPS_TRACING_SRC_TRACE_TRACER_H_
 
-#include <mx/socket.h>
+#include <zx/socket.h>
 
 #include <functional>
 #include <string>
@@ -44,8 +44,8 @@ class Tracer : private fsl::MessageLoopHandler {
 
  private:
   // |MessageLoopHandler|:
-  void OnHandleReady(mx_handle_t handle,
-                     mx_signals_t pending,
+  void OnHandleReady(zx_handle_t handle,
+                     zx_signals_t pending,
                      uint64_t count) override;
 
   void DrainSocket();
@@ -59,7 +59,7 @@ class Tracer : private fsl::MessageLoopHandler {
   State state_ = State::kStopped;
   fxl::Closure start_callback_;
   fxl::Closure done_callback_;
-  mx::socket socket_;
+  zx::socket socket_;
   fsl::MessageLoop::HandlerKey handler_key_;
   std::unique_ptr<reader::TraceReader> reader_;
   std::vector<uint8_t> buffer_;

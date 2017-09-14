@@ -6,7 +6,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #include "apps/tracing/src/ktrace_provider/reader.h"
 #include "lib/fxl/logging.h"
@@ -15,8 +15,8 @@
 namespace ktrace_provider {
 namespace {
 
-constexpr mx_koid_t kNoProcess = 0u;
-constexpr mx_koid_t kKernelThreadFlag = 0x100000000;
+constexpr zx_koid_t kNoProcess = 0u;
+constexpr zx_koid_t kKernelThreadFlag = 0x100000000;
 constexpr uint32_t kProbeFlag = 0x800;
 
 constexpr uint64_t ToUInt64(uint32_t lo, uint32_t hi) {
@@ -29,16 +29,16 @@ constexpr trace_thread_state_t ToTraceThreadState(int value) {
   switch (value) {
     case 0:  // THREAD_INITIAL
     case 1:  // THREAD_READY
-      return MX_THREAD_STATE_NEW;
+      return ZX_THREAD_STATE_NEW;
     case 2:  // THREAD_RUNNING
-      return MX_THREAD_STATE_RUNNING;
+      return ZX_THREAD_STATE_RUNNING;
     case 3:  // THREAD_BLOCKED
     case 4:  // THREAD_SLEEPING
-      return MX_THREAD_STATE_BLOCKED;
+      return ZX_THREAD_STATE_BLOCKED;
     case 5:  // THREAD_SUSPENDED
-      return MX_THREAD_STATE_SUSPENDED;
+      return ZX_THREAD_STATE_SUSPENDED;
     case 6:  // THREAD_DEATH
-      return MX_THREAD_STATE_DEAD;
+      return ZX_THREAD_STATE_DEAD;
     default:  // ???
       FXL_LOG(WARNING) << "Imported unknown thread state from ktrace: "
                        << value;
@@ -159,7 +159,7 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record,
     case KTRACE_EVENT(TAG_TICKS_PER_MS): {
       trace_ticks_t kernel_ticks_per_second =
           ToUInt64(record->a, record->b) * 1000u;
-      trace_ticks_t user_ticks_per_second = mx_ticks_per_second();
+      trace_ticks_t user_ticks_per_second = zx_ticks_per_second();
       if (kernel_ticks_per_second != user_ticks_per_second) {
         FXL_LOG(WARNING) << "Kernel and userspace are using different tracing "
                             "timebases, "
@@ -283,8 +283,8 @@ bool Importer::HandleKernelThreadName(KernelThread kernel_thread,
   return true;
 }
 
-bool Importer::HandleThreadName(mx_koid_t thread,
-                                mx_koid_t process,
+bool Importer::HandleThreadName(zx_koid_t thread,
+                                zx_koid_t process,
                                 const fbl::StringPiece& name) {
   trace_string_ref name_ref =
       trace_make_inline_string_ref(name.data(), name.length());
@@ -294,7 +294,7 @@ bool Importer::HandleThreadName(mx_koid_t thread,
   return true;
 }
 
-bool Importer::HandleProcessName(mx_koid_t process,
+bool Importer::HandleProcessName(zx_koid_t process,
                                  const fbl::StringPiece& name) {
   trace_string_ref name_ref =
       trace_make_inline_string_ref(name.data(), name.length());
@@ -395,9 +395,9 @@ bool Importer::HandlePageFault(trace_ticks_t event_time,
 bool Importer::HandleContextSwitch(trace_ticks_t event_time,
                                    trace_cpu_number_t cpu_number,
                                    trace_thread_state_t outgoing_thread_state,
-                                   mx_koid_t outgoing_thread,
+                                   zx_koid_t outgoing_thread,
                                    KernelThread outgoing_kernel_thread,
-                                   mx_koid_t incoming_thread,
+                                   zx_koid_t incoming_thread,
                                    KernelThread incoming_kernel_thread) {
   trace_thread_ref_t outgoing_thread_ref = GetCpuCurrentThread(cpu_number);
   trace_thread_ref_t incoming_thread_ref =
@@ -414,8 +414,8 @@ bool Importer::HandleContextSwitch(trace_ticks_t event_time,
 }
 
 bool Importer::HandleObjectDelete(trace_ticks_t event_time,
-                                  mx_koid_t thread,
-                                  mx_koid_t object) {
+                                  zx_koid_t thread,
+                                  zx_koid_t object) {
   auto it = channels_.ids_.find(object);
   if (it != channels_.ids_.end()) {
     channels_.message_counters_.erase(it->second);
@@ -425,45 +425,45 @@ bool Importer::HandleObjectDelete(trace_ticks_t event_time,
 }
 
 bool Importer::HandleThreadCreate(trace_ticks_t event_time,
-                                  mx_koid_t thread,
-                                  mx_koid_t affected_thread,
-                                  mx_koid_t affected_process) {
+                                  zx_koid_t thread,
+                                  zx_koid_t affected_thread,
+                                  zx_koid_t affected_process) {
   return false;
 }
 
 bool Importer::HandleThreadStart(trace_ticks_t event_time,
-                                 mx_koid_t thread,
-                                 mx_koid_t affected_thread) {
+                                 zx_koid_t thread,
+                                 zx_koid_t affected_thread) {
   return false;
 }
 
-bool Importer::HandleThreadExit(trace_ticks_t event_time, mx_koid_t thread) {
+bool Importer::HandleThreadExit(trace_ticks_t event_time, zx_koid_t thread) {
   return false;
 }
 
 bool Importer::HandleProcessCreate(trace_ticks_t event_time,
-                                   mx_koid_t thread,
-                                   mx_koid_t affected_process) {
+                                   zx_koid_t thread,
+                                   zx_koid_t affected_process) {
   return false;
 }
 
 bool Importer::HandleProcessStart(trace_ticks_t event_time,
-                                  mx_koid_t thread,
-                                  mx_koid_t affected_thread,
-                                  mx_koid_t affected_process) {
+                                  zx_koid_t thread,
+                                  zx_koid_t affected_thread,
+                                  zx_koid_t affected_process) {
   return false;
 }
 
 bool Importer::HandleProcessExit(trace_ticks_t event_time,
-                                 mx_koid_t thread,
-                                 mx_koid_t affected_process) {
+                                 zx_koid_t thread,
+                                 zx_koid_t affected_process) {
   return false;
 }
 
 bool Importer::HandleChannelCreate(trace_ticks_t event_time,
-                                   mx_koid_t thread,
-                                   mx_koid_t channel0,
-                                   mx_koid_t channel1,
+                                   zx_koid_t thread,
+                                   zx_koid_t channel0,
+                                   zx_koid_t channel1,
                                    uint32_t flags) {
   if (channels_.ids_.count(channel0) != 0 ||
       channels_.ids_.count(channel1) != 0) {
@@ -478,8 +478,8 @@ bool Importer::HandleChannelCreate(trace_ticks_t event_time,
 }
 
 bool Importer::HandleChannelWrite(trace_ticks_t event_time,
-                                  mx_koid_t thread,
-                                  mx_koid_t channel,
+                                  zx_koid_t thread,
+                                  zx_koid_t channel,
                                   uint32_t num_bytes,
                                   uint32_t num_handles) {
   auto it = channels_.ids_.find(channel);
@@ -502,8 +502,8 @@ bool Importer::HandleChannelWrite(trace_ticks_t event_time,
 }
 
 bool Importer::HandleChannelRead(trace_ticks_t event_time,
-                                 mx_koid_t thread,
-                                 mx_koid_t channel,
+                                 zx_koid_t thread,
+                                 zx_koid_t channel,
                                  uint32_t num_bytes,
                                  uint32_t num_handles) {
   auto it = channels_.ids_.find(channel);
@@ -526,49 +526,49 @@ bool Importer::HandleChannelRead(trace_ticks_t event_time,
 }
 
 bool Importer::HandlePortWait(trace_ticks_t event_time,
-                              mx_koid_t thread,
-                              mx_koid_t port) {
+                              zx_koid_t thread,
+                              zx_koid_t port) {
   return false;
 }
 
 bool Importer::HandlePortWaitDone(trace_ticks_t event_time,
-                                  mx_koid_t thread,
-                                  mx_koid_t port,
+                                  zx_koid_t thread,
+                                  zx_koid_t port,
                                   uint32_t status) {
   return false;
 }
 
 bool Importer::HandlePortCreate(trace_ticks_t event_time,
-                                mx_koid_t thread,
-                                mx_koid_t port) {
+                                zx_koid_t thread,
+                                zx_koid_t port) {
   return false;
 }
 
 bool Importer::HandlePortQueue(trace_ticks_t event_time,
-                               mx_koid_t thread,
-                               mx_koid_t port,
+                               zx_koid_t thread,
+                               zx_koid_t port,
                                uint32_t num_bytes) {
   return false;
 }
 
 bool Importer::HandleWaitOne(trace_ticks_t event_time,
-                             mx_koid_t thread,
-                             mx_koid_t object,
+                             zx_koid_t thread,
+                             zx_koid_t object,
                              uint32_t signals,
-                             mx_time_t timeout) {
+                             zx_time_t timeout) {
   return false;
 }
 
 bool Importer::HandleWaitOneDone(trace_ticks_t event_time,
-                                 mx_koid_t thread,
-                                 mx_koid_t object,
+                                 zx_koid_t thread,
+                                 zx_koid_t object,
                                  uint32_t status,
                                  uint32_t pending) {
   return false;
 }
 
 bool Importer::HandleProbe(trace_ticks_t event_time,
-                           mx_koid_t thread,
+                           zx_koid_t thread,
                            uint32_t probe) {
   trace_thread_ref_t thread_ref = GetThreadRef(thread);
   trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", probe);
@@ -579,7 +579,7 @@ bool Importer::HandleProbe(trace_ticks_t event_time,
 }
 
 bool Importer::HandleProbe(trace_ticks_t event_time,
-                           mx_koid_t thread,
+                           zx_koid_t thread,
                            uint32_t probe,
                            uint32_t arg0,
                            uint32_t arg1) {
@@ -602,7 +602,7 @@ trace_thread_ref_t Importer::GetCpuCurrentThread(
 }
 
 trace_thread_ref_t Importer::SwitchCpuToThread(trace_cpu_number_t cpu_number,
-                                               mx_koid_t thread) {
+                                               zx_koid_t thread) {
   if (cpu_number >= cpu_infos_.size())
     cpu_infos_.resize(cpu_number + 1u);
   return cpu_infos_[cpu_number].current_thread_ref = GetThreadRef(thread);
@@ -631,7 +631,7 @@ const trace_string_ref_t& Importer::GetNameRef(
   return it->second;
 }
 
-const trace_thread_ref_t& Importer::GetThreadRef(mx_koid_t thread) {
+const trace_thread_ref_t& Importer::GetThreadRef(zx_koid_t thread) {
   auto it = thread_refs_.find(thread);
   if (it == thread_refs_.end()) {
     std::tie(it, std::ignore) = thread_refs_.emplace(

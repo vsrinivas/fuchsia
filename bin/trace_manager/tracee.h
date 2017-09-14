@@ -8,8 +8,8 @@
 #include <functional>
 #include <iosfwd>
 
-#include <mx/socket.h>
-#include <mx/vmo.h>
+#include <zx/socket.h>
+#include <zx/vmo.h>
 
 #include "apps/tracing/src/trace_manager/trace_provider_bundle.h"
 #include "lib/fidl/cpp/bindings/array.h"
@@ -61,7 +61,7 @@ class Tracee : private fsl::MessageLoopHandler {
              fxl::Closure stop_callback,
              ProviderStartedCallback provider_started_callback);
   void Stop();
-  TransferStatus TransferRecords(const mx::socket& socket) const;
+  TransferStatus TransferRecords(const zx::socket& socket) const;
 
   TraceProviderBundle* bundle() const { return bundle_; }
   State state() const { return state_; }
@@ -70,18 +70,18 @@ class Tracee : private fsl::MessageLoopHandler {
   void TransitionToState(State new_state);
   void OnProviderStarted(bool success);
   // |fsl::MessageLoopHandler|
-  void OnHandleReady(mx_handle_t handle,
-                     mx_signals_t pending,
+  void OnHandleReady(zx_handle_t handle,
+                     zx_signals_t pending,
                      uint64_t count) override;
-  void OnHandleError(mx_handle_t handle, mx_status_t error) override;
+  void OnHandleError(zx_handle_t handle, zx_status_t error) override;
 
-  TransferStatus WriteProviderInfoRecord(const mx::socket& socket) const;
+  TransferStatus WriteProviderInfoRecord(const zx::socket& socket) const;
 
   TraceProviderBundle* bundle_;
   State state_ = State::kReady;
-  mx::vmo buffer_vmo_;
+  zx::vmo buffer_vmo_;
   size_t buffer_vmo_size_ = 0u;
-  mx::eventpair fence_;
+  zx::eventpair fence_;
   ProviderStartedCallback start_callback_;
   fxl::Closure stop_callback_;
   fsl::MessageLoop::HandlerKey fence_handler_key_{};

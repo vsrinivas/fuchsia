@@ -36,8 +36,8 @@ void TraceProviderImpl::SetDumpCallback(DumpCallback callback) {
   dump_callback_ = callback;
 }
 
-void TraceProviderImpl::Start(mx::vmo buffer,
-                              mx::eventpair fence,
+void TraceProviderImpl::Start(zx::vmo buffer,
+                              zx::eventpair fence,
                               ::fidl::Array<::fidl::String> categories,
                               const StartCallback& callback) {
   Stop();
@@ -57,7 +57,7 @@ void TraceProviderImpl::Stop() {
   }
 }
 
-void TraceProviderImpl::Dump(mx::socket output) {
+void TraceProviderImpl::Dump(zx::socket output) {
   if (dump_callback_) {
     dump_callback_(std::make_unique<tracing::Dump>(std::move(output)));
   }

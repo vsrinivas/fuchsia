@@ -132,7 +132,7 @@ class ArgumentValue {
     return ArgumentValue(PointerTag(), value);
   }
 
-  static ArgumentValue MakeKoid(mx_koid_t value) {
+  static ArgumentValue MakeKoid(zx_koid_t value) {
     return ArgumentValue(KoidTag(), value);
   }
 
@@ -183,7 +183,7 @@ class ArgumentValue {
     return uint64_;
   }
 
-  mx_koid_t GetKoid() const {
+  zx_koid_t GetKoid() const {
     FXL_DCHECK(type_ == ArgumentType::kKoid);
     return uint64_;
   }
@@ -215,7 +215,7 @@ class ArgumentValue {
   explicit ArgumentValue(PointerTag, uintptr_t pointer)
       : type_(ArgumentType::kPointer), uint64_(pointer) {}
 
-  explicit ArgumentValue(KoidTag, mx_koid_t koid)
+  explicit ArgumentValue(KoidTag, zx_koid_t koid)
       : type_(ArgumentType::kKoid), uint64_(koid) {}
 
   ArgumentValue& Destroy();
@@ -479,8 +479,8 @@ class Record {
 
   // Kernel Object record data.
   struct KernelObject {
-    mx_koid_t koid;
-    mx_obj_type_t object_type;
+    zx_koid_t koid;
+    zx_obj_type_t object_type;
     std::string name;
     std::vector<Argument> arguments;
   };

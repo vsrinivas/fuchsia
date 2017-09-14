@@ -9,9 +9,9 @@
 #include <string>
 #include <vector>
 
-#include <mx/eventpair.h>
-#include <mx/socket.h>
-#include <mx/vmo.h>
+#include <zx/eventpair.h>
+#include <zx/socket.h>
+#include <zx/vmo.h>
 
 #include "apps/tracing/lib/trace/provider.h"
 #include "apps/tracing/lib/trace/settings.h"
@@ -33,12 +33,12 @@ class TraceProviderImpl : public TraceProvider {
 
  private:
   // |TraceProvider|
-  void Start(mx::vmo buffer,
-             mx::eventpair fence,
+  void Start(zx::vmo buffer,
+             zx::eventpair fence,
              ::fidl::Array<::fidl::String> categories,
              const StartCallback& callback) override;
   void Stop() override;
-  void Dump(mx::socket output) override;
+  void Dump(zx::socket output) override;
 
   void StartPendingTrace();
   void FinishedTrace();
@@ -52,8 +52,8 @@ class TraceProviderImpl : public TraceProvider {
   DumpCallback dump_callback_;
 
   struct PendingTrace {
-    mx::vmo buffer;
-    mx::eventpair fence;
+    zx::vmo buffer;
+    zx::eventpair fence;
     std::vector<std::string> enabled_categories;
     StartCallback start_callback;
   };

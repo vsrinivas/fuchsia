@@ -592,13 +592,13 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
 
 bool TraceReader::ReadKernelObjectRecord(Chunk& record, RecordHeader header) {
   auto object_type =
-      KernelObjectRecordFields::ObjectType::Get<mx_obj_type_t>(header);
+      KernelObjectRecordFields::ObjectType::Get<zx_obj_type_t>(header);
   auto name_ref =
       KernelObjectRecordFields::NameStringRef::Get<EncodedStringRef>(header);
   auto argument_count =
       KernelObjectRecordFields::ArgumentCount::Get<size_t>(header);
 
-  mx_koid_t koid;
+  zx_koid_t koid;
   std::string name;
   std::vector<Argument> arguments;
   if (!record.Read(&koid) ||
@@ -752,7 +752,7 @@ bool TraceReader::ReadArguments(Chunk& record,
         break;
       }
       case ArgumentType::kKoid: {
-        mx_koid_t value;
+        zx_koid_t value;
         if (!arg.Read(&value)) {
           context_.ReportError("Failed to read koid argument value");
           return false;

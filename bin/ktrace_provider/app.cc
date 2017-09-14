@@ -7,8 +7,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include <magenta/device/ktrace.h>
-#include <magenta/syscalls/log.h>
+#include <zircon/device/ktrace.h>
+#include <zircon/syscalls/log.h>
 #include <trace-engine/instrumentation.h>
 #include <trace-provider/provider.h>
 
@@ -52,14 +52,14 @@ fxl::UniqueFD OpenKTrace() {
 }
 
 void IoctlKtraceStop(int fd) {
-  mx_status_t status = ioctl_ktrace_stop(fd);
-  if (status != MX_OK)
+  zx_status_t status = ioctl_ktrace_stop(fd);
+  if (status != ZX_OK)
     FXL_LOG(ERROR) << "ioctl_ktrace_stop failed: status=" << status;
 }
 
 void IoctlKtraceStart(int fd, uint32_t group_mask) {
-  mx_status_t status = ioctl_ktrace_start(fd, &group_mask);
-  if (status != MX_OK)
+  zx_status_t status = ioctl_ktrace_start(fd, &group_mask);
+  if (status != ZX_OK)
     FXL_LOG(ERROR) << "ioctl_ktrace_start failed: status=" << status;
 }
 

@@ -8,7 +8,7 @@
 #include <stdint.h>
 
 #ifdef __Fuchsia__
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #endif
 
 namespace tracing {
@@ -20,12 +20,12 @@ using Ticks = uint64_t;
 
 // Gets the current timestamp in ticks elapsed since some arbitrary epoch.
 inline Ticks GetTicksNow() {
-  return mx_ticks_get();
+  return zx_ticks_get();
 }
 
 // Gets the tick resolution in ticks per second.
 inline Ticks GetTicksPerSecond() {
-  return mx_ticks_per_second();
+  return zx_ticks_per_second();
 }
 
 #endif  // __Fuchsia__

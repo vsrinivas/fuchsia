@@ -40,9 +40,9 @@ void Tracer::Start(TraceOptionsPtr options,
   done_callback_ = std::move(done_callback);
   start_callback_ = std::move(start_callback);
 
-  mx::socket outgoing_socket;
-  mx_status_t status = mx::socket::create(0u, &socket_, &outgoing_socket);
-  if (status != MX_OK) {
+  zx::socket outgoing_socket;
+  zx_status_t status = zx::socket::create(0u, &socket_, &outgoing_socket);
+  if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create socket: status=" << status;
     Done();
     return;
@@ -55,7 +55,7 @@ void Tracer::Start(TraceOptionsPtr options,
   reader_.reset(new reader::TraceReader(record_consumer, error_handler));
 
   handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
-      this, socket_.get(), MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED);
+      this, socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
 }
 
 void Tracer::Stop() {
@@ -66,14 +66,14 @@ void Tracer::Stop() {
   }
 }
 
-void Tracer::OnHandleReady(mx_handle_t handle,
-                           mx_signals_t pending,
+void Tracer::OnHandleReady(zx_handle_t handle,
+                           zx_signals_t pending,
                            uint64_t count) {
   FXL_DCHECK(state_ == State::kStarted || state_ == State::kStopping);
 
-  if (pending & MX_SOCKET_READABLE) {
+  if (pending & ZX_SOCKET_READABLE) {
     DrainSocket();
-  } else if (pending & MX_SOCKET_PEER_CLOSED) {
+  } else if (pending & ZX_SOCKET_PEER_CLOSED) {
     Done();
   } else {
     FXL_CHECK(false);
@@ -83,14 +83,14 @@ void Tracer::OnHandleReady(mx_handle_t handle,
 void Tracer::DrainSocket() {
   for (;;) {
     size_t actual;
-    mx_status_t status =
+    zx_status_t status =
         socket_.read(0u, buffer_.data() + buffer_end_,
                      buffer_.capacity() - buffer_end_, &actual);
-    if (status == MX_ERR_SHOULD_WAIT)
+    if (status == ZX_ERR_SHOULD_WAIT)
       return;
 
     if (status || actual == 0) {
-      if (status != MX_ERR_PEER_CLOSED) {
+      if (status != ZX_ERR_PEER_CLOSED) {
         FXL_LOG(ERROR) << "Failed to read data from socket: status=" << status;
       }
       Done();

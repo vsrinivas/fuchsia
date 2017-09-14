@@ -41,7 +41,7 @@ TraceManager::TraceManager(app::ApplicationContext* context,
 TraceManager::~TraceManager() = default;
 
 void TraceManager::StartTracing(TraceOptionsPtr options,
-                                mx::socket output,
+                                zx::socket output,
                                 const StartTracingCallback& start_callback) {
   if (session_) {
     FXL_LOG(ERROR) << "Trace already in progress";
@@ -81,7 +81,7 @@ void TraceManager::StopTracing() {
       kStopTimeout);
 }
 
-void TraceManager::DumpProvider(uint32_t provider_id, mx::socket output) {
+void TraceManager::DumpProvider(uint32_t provider_id, zx::socket output) {
   for (const auto& provider : providers_) {
     if (provider.id == provider_id) {
       FXL_LOG(INFO) << "Dumping provider: " << provider;

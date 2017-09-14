@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #include <stdio.h>
 
@@ -13,8 +13,8 @@
 
 namespace {
 
-mx_time_t now() {
-    return mx_time_get(MX_CLOCK_MONOTONIC);
+zx_time_t now() {
+    return zx_time_get(ZX_CLOCK_MONOTONIC);
 }
 
 } // namespace
@@ -25,11 +25,11 @@ int main(int argc, char** argv) {
 
     puts("Starting Benchmark...");
 
-    mx_time_t start_time = now();
-    mx_time_t quit_time = start_time + MX_SEC(2);
+    zx_time_t start_time = now();
+    zx_time_t quit_time = start_time + ZX_SEC(2);
     async::Task task(start_time);
     // This async task runs for two seconds until `quit_time` is reached.
-    task.set_handler([&task, &loop, quit_time](async_t* async, mx_status_t status) {
+    task.set_handler([&task, &loop, quit_time](async_t* async, zx_status_t status) {
         // `task_start` and `task_end` are used to measure the time between
         // `example` benchmarks.  This is measured with a `time_between`
         // measurement type.
@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
         TRACE_DURATION("benchmark", "example");
 
         // Simulate some kind of workload.
-        mx_nanosleep(now() + MX_MSEC(10));
+        zx_nanosleep(now() + ZX_MSEC(10));
 
         // Stop if quitting.
         if (task.deadline() > quit_time) {
@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
         }
 
         // Schedule another benchmark.
-        task.set_deadline(now() + MX_MSEC(5));
+        task.set_deadline(now() + ZX_MSEC(5));
         TRACE_INSTANT("benchmark", "task_end", TRACE_SCOPE_PROCESS);
         return ASYNC_TASK_REPEAT;
     });

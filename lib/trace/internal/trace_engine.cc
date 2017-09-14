@@ -4,7 +4,7 @@
 
 #include "apps/tracing/lib/trace/internal/trace_engine.h"
 
-#include <magenta/syscalls/object.h>
+#include <zircon/syscalls/object.h>
 
 #include <tuple>
 #include <unordered_map>
@@ -18,7 +18,7 @@ namespace internal {
 namespace {
 
 std::atomic<uint32_t> g_next_generation{1u};
-mx_koid_t g_process_koid;
+zx_koid_t g_process_koid;
 
 using StringSpec = uint32_t;
 constexpr StringSpec kStringIndexMask = 0x7fff;
@@ -35,7 +35,7 @@ struct LocalState {
 
   // Thread table state.
   uint32_t thread_generation = 0u;
-  mx_koid_t thread_koid = MX_KOID_INVALID;
+  zx_koid_t thread_koid = ZX_KOID_INVALID;
   TraceEngine::ThreadRef thread_ref = TraceEngine::ThreadRef::MakeUnknown();
 };
 thread_local LocalState g_local_state;
@@ -50,7 +50,7 @@ inline uint64_t MakeRecordHeader(RecordType type, size_t size) {
 }  // namespace
 
 TraceEngine::TraceEngine(fxl::RefPtr<fsl::SharedVmo> buffer,
-                         mx::eventpair fence,
+                         zx::eventpair fence,
                          std::vector<std::string> enabled_categories)
     : generation_(g_next_generation.fetch_add(1u, std::memory_order_relaxed)),
       buffer_(std::move(buffer)),
@@ -76,15 +76,15 @@ TraceEngine::~TraceEngine() {
 }
 
 std::unique_ptr<TraceEngine> TraceEngine::Create(
-    mx::vmo buffer,
-    mx::eventpair fence,
+    zx::vmo buffer,
+    zx::eventpair fence,
     std::vector<std::string> enabled_categories) {
   FXL_DCHECK(buffer);
   FXL_DCHECK(fence);
   FXL_DCHECK(fsl::MessageLoop::GetCurrent());
 
   auto buffer_shared_vmo = fxl::MakeRefCounted<fsl::SharedVmo>(
-      std::move(buffer), MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+      std::move(buffer), ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE);
   if (!buffer_shared_vmo->Map()) {
     FXL_LOG(ERROR) << "Could not map trace buffer.";
     return nullptr;
@@ -106,7 +106,7 @@ void TraceEngine::StartTracing(TraceFinishedCallback finished_callback) {
   WriteProcessDescription(g_process_koid, fsl::GetCurrentProcessName());
 
   fence_handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
-      this, fence_.get(), MX_EPAIR_PEER_CLOSED);
+      this, fence_.get(), ZX_EPAIR_PEER_CLOSED);
 }
 
 void TraceEngine::StopTracing() {
@@ -207,7 +207,7 @@ TraceEngine::ThreadRef TraceEngine::RegisterCurrentThread() {
 
   if (state.thread_generation < generation_) {
     state.thread_generation = generation_;
-    if (state.thread_koid == MX_KOID_INVALID) {
+    if (state.thread_koid == ZX_KOID_INVALID) {
       state.thread_koid = fsl::GetCurrentThreadKoid();
     }
 
@@ -221,8 +221,8 @@ TraceEngine::ThreadRef TraceEngine::RegisterCurrentThread() {
   return ThreadRef::MakeInlined(g_process_koid, state.thread_koid);
 }
 
-TraceEngine::ThreadRef TraceEngine::RegisterThread(mx_koid_t process_koid,
-                                                   mx_koid_t thread_koid) {
+TraceEngine::ThreadRef TraceEngine::RegisterThread(zx_koid_t process_koid,
+                                                   zx_koid_t thread_koid) {
   ProcessThread process_thread{process_koid, thread_koid};
 
   std::lock_guard<std::mutex> lock(table_mutex_);
@@ -235,8 +235,8 @@ TraceEngine::ThreadRef TraceEngine::RegisterThread(mx_koid_t process_koid,
 }
 
 TraceEngine::ThreadRef TraceEngine::RegisterThreadInternal(
-    mx_koid_t process_koid,
-    mx_koid_t thread_koid) {
+    zx_koid_t process_koid,
+    zx_koid_t thread_koid) {
   ThreadIndex thread_index =
       next_thread_index_.fetch_add(1u, std::memory_order_relaxed);
   if (thread_index <= ThreadRefFields::kMaxIndex) {
@@ -249,20 +249,20 @@ TraceEngine::ThreadRef TraceEngine::RegisterThreadInternal(
   return ThreadRef::MakeInlined(process_koid, thread_koid);
 }
 
-void TraceEngine::WriteProcessDescription(mx_koid_t process_koid,
+void TraceEngine::WriteProcessDescription(zx_koid_t process_koid,
                                           const std::string& process_name) {
-  WriteKernelObjectRecordBase(process_koid, MX_OBJ_TYPE_PROCESS,
+  WriteKernelObjectRecordBase(process_koid, ZX_OBJ_TYPE_PROCESS,
                               StringRef::MakeInlinedOrEmpty(process_name), 0u,
                               0u);
 }
 
-void TraceEngine::WriteThreadDescription(mx_koid_t process_koid,
-                                         mx_koid_t thread_koid,
+void TraceEngine::WriteThreadDescription(zx_koid_t process_koid,
+                                         zx_koid_t thread_koid,
                                          const std::string& thread_name) {
   ::tracing::writer::KoidArgument process_arg(
       RegisterString(kProcessArgKey, false), process_koid);
   Payload payload = WriteKernelObjectRecordBase(
-      thread_koid, MX_OBJ_TYPE_THREAD,
+      thread_koid, ZX_OBJ_TYPE_THREAD,
       StringRef::MakeInlinedOrEmpty(thread_name), 1u, process_arg.Size());
   if (payload)
     payload.WriteValue(process_arg);
@@ -295,8 +295,8 @@ void TraceEngine::WriteStringRecord(StringIndex index, const char* value) {
 }
 
 void TraceEngine::WriteThreadRecord(ThreadIndex index,
-                                    mx_koid_t process_koid,
-                                    mx_koid_t thread_koid) {
+                                    zx_koid_t process_koid,
+                                    zx_koid_t thread_koid) {
   FXL_DCHECK(index != ThreadRefFields::kInline);
 
   const size_t record_size = sizeof(RecordHeader) + WordsToBytes(2);
@@ -342,24 +342,24 @@ TraceEngine::Payload TraceEngine::WriteEventRecordBase(
 }
 
 TraceEngine::Payload TraceEngine::WriteKernelObjectRecordBase(
-    mx_handle_t handle,
+    zx_handle_t handle,
     size_t argument_count,
     size_t payload_size) {
-  mx_info_handle_basic_t info;
-  mx_status_t status = mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, &info,
+  zx_info_handle_basic_t info;
+  zx_status_t status = zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info,
                                           sizeof(info), nullptr, nullptr);
-  if (status != MX_OK)
+  if (status != ZX_OK)
     return Payload(nullptr);
 
   return WriteKernelObjectRecordBase(
-      info.koid, static_cast<mx_obj_type_t>(info.type),
+      info.koid, static_cast<zx_obj_type_t>(info.type),
       StringRef::MakeInlinedOrEmpty(fsl::GetObjectName(handle)), argument_count,
       payload_size);
 }
 
 TraceEngine::Payload TraceEngine::WriteKernelObjectRecordBase(
-    mx_koid_t koid,
-    mx_obj_type_t object_type,
+    zx_koid_t koid,
+    zx_obj_type_t object_type,
     const StringRef& name_ref,
     size_t argument_count,
     size_t payload_size) {
@@ -442,16 +442,16 @@ TraceEngine::Payload TraceEngine::AllocateRecord(size_t num_bytes) {
   return Payload(nullptr);
 }
 
-void TraceEngine::OnHandleReady(mx_handle_t handle,
-                                mx_signals_t pending,
+void TraceEngine::OnHandleReady(zx_handle_t handle,
+                                zx_signals_t pending,
                                 uint64_t count) {
-  FXL_DCHECK(pending & MX_EPAIR_PEER_CLOSED);
+  FXL_DCHECK(pending & ZX_EPAIR_PEER_CLOSED);
 
   StopTracing(TraceDisposition::kConnectionLost, true);
 }
 
-void TraceEngine::OnHandleError(mx_handle_t handle, mx_status_t error) {
-  FXL_DCHECK(error == MX_ERR_CANCELED);
+void TraceEngine::OnHandleError(zx_handle_t handle, zx_status_t error) {
+  FXL_DCHECK(error == ZX_ERR_CANCELED);
 
   StopTracing(TraceDisposition::kConnectionLost, true);
 }

@@ -50,8 +50,8 @@ class TraceEngine final : private fsl::MessageLoopHandler {
   // Must be called on a |MessageLoop| thread.
   // Returns nullptr if the engine could not be created.
   static std::unique_ptr<TraceEngine> Create(
-      mx::vmo buffer,
-      mx::eventpair fence,
+      zx::vmo buffer,
+      zx::eventpair fence,
       std::vector<std::string> enabled_categories);
 
   const fxl::RefPtr<fxl::TaskRunner>& task_runner() const {
@@ -70,19 +70,19 @@ class TraceEngine final : private fsl::MessageLoopHandler {
   StringRef RegisterString(const char* constant, bool check_category);
   StringRef RegisterStringCopy(const std::string& string);
   ThreadRef RegisterCurrentThread();
-  ThreadRef RegisterThread(mx_koid_t process_koid, mx_koid_t thread_koid);
+  ThreadRef RegisterThread(zx_koid_t process_koid, zx_koid_t thread_koid);
 
-  void WriteProcessDescription(mx_koid_t process_koid,
+  void WriteProcessDescription(zx_koid_t process_koid,
                                const std::string& process_name);
-  void WriteThreadDescription(mx_koid_t process_koid,
-                              mx_koid_t thread_koid,
+  void WriteThreadDescription(zx_koid_t process_koid,
+                              zx_koid_t thread_koid,
                               const std::string& thread_name);
 
   void WriteInitializationRecord(Ticks ticks_per_second);
   void WriteStringRecord(StringIndex index, const char* value);
   void WriteThreadRecord(ThreadIndex index,
-                         mx_koid_t process_koid,
-                         mx_koid_t thread_koid);
+                         zx_koid_t process_koid,
+                         zx_koid_t thread_koid);
   Payload WriteEventRecordBase(EventType event_type,
                                Ticks event_time,
                                const ThreadRef& thread_ref,
@@ -90,11 +90,11 @@ class TraceEngine final : private fsl::MessageLoopHandler {
                                const StringRef& name_ref,
                                size_t argument_count,
                                size_t payload_size);
-  Payload WriteKernelObjectRecordBase(mx_handle_t handle,
+  Payload WriteKernelObjectRecordBase(zx_handle_t handle,
                                       size_t argument_count,
                                       size_t payload_size);
-  Payload WriteKernelObjectRecordBase(mx_koid_t koid,
-                                      mx_obj_type_t object_type,
+  Payload WriteKernelObjectRecordBase(zx_koid_t koid,
+                                      zx_obj_type_t object_type,
                                       const StringRef& name_ref,
                                       size_t argument_count,
                                       size_t payload_size);
@@ -110,17 +110,17 @@ class TraceEngine final : private fsl::MessageLoopHandler {
 
  private:
   explicit TraceEngine(fxl::RefPtr<fsl::SharedVmo> buffer,
-                       mx::eventpair fence,
+                       zx::eventpair fence,
                        std::vector<std::string> enabled_categories);
 
   // |fsl::MessageLoopHandler|
-  void OnHandleReady(mx_handle_t handle,
-                     mx_signals_t pending,
+  void OnHandleReady(zx_handle_t handle,
+                     zx_signals_t pending,
                      uint64_t count) override;
-  void OnHandleError(mx_handle_t handle, mx_status_t error) override;
+  void OnHandleError(zx_handle_t handle, zx_status_t error) override;
 
-  ThreadRef RegisterThreadInternal(mx_koid_t process_koid,
-                                   mx_koid_t thread_koid);
+  ThreadRef RegisterThreadInternal(zx_koid_t process_koid,
+                                   zx_koid_t thread_koid);
   Payload AllocateRecord(size_t num_bytes);
 
   void StopTracing(TraceDisposition disposition, bool immediate);
@@ -132,7 +132,7 @@ class TraceEngine final : private fsl::MessageLoopHandler {
   uintptr_t const buffer_start_;
   uintptr_t const buffer_end_;
   std::atomic<uintptr_t> buffer_current_;
-  mx::eventpair const fence_;
+  zx::eventpair const fence_;
 
   // We must keep both the vector and the set since the set contains
   // string views into the strings which are backed by the vector.

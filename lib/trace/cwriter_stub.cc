@@ -4,7 +4,7 @@
 
 #include "apps/tracing/lib/trace/cwriter.h"
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #include "apps/tracing/lib/trace/internal/cevent_helpers.h"
 #include "lib/fxl/logging.h"
@@ -140,7 +140,7 @@ __WEAK void ctrace_internal_write_flow_end_event_record(
 
 __WEAK void ctrace_internal_write_kernel_object_record(
     ctrace_writer_t* writer,
-    mx_handle_t handle,
+    zx_handle_t handle,
     const ctrace_arglist_t* args) {
   FXL_DCHECK(false);
 }
@@ -267,7 +267,7 @@ __WEAK void ctrace_write_flow_end_event_record(
 
 __WEAK void ctrace_write_kernel_object_record(
     ctrace_writer_t* writer,
-    mx_handle_t handle,
+    zx_handle_t handle,
     const ctrace_arglist_t* args) {
   FXL_DCHECK(false);
 }

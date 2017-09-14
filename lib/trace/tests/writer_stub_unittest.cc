@@ -11,7 +11,7 @@ namespace writer {
 namespace {
 
 TEST(WriterStubTest, AllFunctionsDoNothing) {
-  EXPECT_FALSE(StartTracing(mx::vmo(), mx::eventpair(), {},
+  EXPECT_FALSE(StartTracing(zx::vmo(), zx::eventpair(), {},
                             [](TraceDisposition disposition) {}));
   StopTracing();
   EXPECT_FALSE(IsTracingEnabled());

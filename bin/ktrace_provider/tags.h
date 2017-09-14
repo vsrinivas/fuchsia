@@ -5,7 +5,7 @@
 #ifndef APPS_TRACING_SRC_KTRACE_PROVIDER_TAGS_H_
 #define APPS_TRACING_SRC_KTRACE_PROVIDER_TAGS_H_
 
-#include <magenta/ktrace.h>
+#include <zircon/ktrace.h>
 
 #include "stdint.h"
 

@@ -138,7 +138,7 @@ network::URLRequestPtr MakeRequest(const std::string& server_url,
   request->method = "POST";
 
   std::string payload = "data=" + data;
-  mx::vmo buffer;
+  zx::vmo buffer;
   bool res = fsl::VmoFromString(payload, &buffer);
   if (!res) {
     return nullptr;

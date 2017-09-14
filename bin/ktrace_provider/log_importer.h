@@ -6,7 +6,7 @@
 #define APPS_TRACING_SRC_KTRACE_PROVIDER_LOG_IMPORTER_H_
 
 #include <async/wait.h>
-#include <mx/log.h>
+#include <zx/log.h>
 #include <trace-engine/types.h>
 
 #include "lib/fxl/macros.h"
@@ -23,12 +23,12 @@ class LogImporter {
 
  private:
   async_wait_result_t Handle(async_t* async,
-                             mx_status_t status,
-                             const mx_packet_signal_t* signal);
+                             zx_status_t status,
+                             const zx_packet_signal_t* signal);
 
-  mx::log log_;
+  zx::log log_;
   trace_ticks_t start_ticks_;
-  mx_time_t start_time_;
+  zx_time_t start_time_;
   async::Wait wait_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LogImporter);

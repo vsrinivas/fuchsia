@@ -157,8 +157,8 @@ void ReleaseEngine() {
 
 namespace writer {
 
-bool StartTracing(mx::vmo buffer,
-                  mx::eventpair fence,
+bool StartTracing(zx::vmo buffer,
+                  zx::eventpair fence,
                   std::vector<std::string> enabled_categories,
                   TraceFinishedCallback finished_callback) {
   FXL_VLOG(1) << "StartTracing";
@@ -287,26 +287,26 @@ ThreadRef TraceWriter::RegisterCurrentThread() {
   return engine_->RegisterCurrentThread();
 }
 
-ThreadRef TraceWriter::RegisterThread(mx_koid_t process_koid,
-                                      mx_koid_t thread_koid) {
+ThreadRef TraceWriter::RegisterThread(zx_koid_t process_koid,
+                                      zx_koid_t thread_koid) {
   FXL_DCHECK(engine_);
   return engine_->RegisterThread(process_koid, thread_koid);
 }
 
-void TraceWriter::WriteProcessDescription(mx_koid_t process_koid,
+void TraceWriter::WriteProcessDescription(zx_koid_t process_koid,
                                           const std::string& process_name) {
   FXL_DCHECK(engine_);
   engine_->WriteProcessDescription(process_koid, process_name);
 }
 
-void TraceWriter::WriteThreadDescription(mx_koid_t process_koid,
-                                         mx_koid_t thread_koid,
+void TraceWriter::WriteThreadDescription(zx_koid_t process_koid,
+                                         zx_koid_t thread_koid,
                                          const std::string& thread_name) {
   FXL_DCHECK(engine_);
   engine_->WriteThreadDescription(process_koid, thread_koid, thread_name);
 }
 
-Payload TraceWriter::WriteKernelObjectRecordBase(mx_handle_t handle,
+Payload TraceWriter::WriteKernelObjectRecordBase(zx_handle_t handle,
                                                  size_t argument_count,
                                                  size_t payload_size) {
   FXL_DCHECK(engine_);

@@ -38,8 +38,8 @@ class ChromiumExporter {
   // By default ticks are in nanoseconds.
   double tick_scale_ = 0.001;
 
-  std::unordered_map<mx_koid_t, std::string> processes_;
-  std::unordered_map<mx_koid_t, std::tuple<mx_koid_t, std::string>> threads_;
+  std::unordered_map<zx_koid_t, std::string> processes_;
+  std::unordered_map<zx_koid_t, std::tuple<zx_koid_t, std::string>> threads_;
 };
 
 }  // namespace tracing

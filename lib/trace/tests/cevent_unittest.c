@@ -4,7 +4,7 @@
 
 #include "apps/tracing/lib/trace/tests/cevent_unittest.h"
 
-#include <magenta/process.h>
+#include <zircon/process.h>
 #include <stdio.h>
 
 #include "apps/tracing/lib/trace/cevent.h"
@@ -171,12 +171,12 @@ bool cevent_test_flow_end(void) {
 }
 
 bool cevent_test_handle(void) {
-  CTRACE_HANDLE(mx_process_self());
-  CTRACE_HANDLE(mx_process_self(), TA_STR("k1", "v1"));
-  CTRACE_HANDLE(mx_process_self(), TA_STR("k1", "v1"), TA_STR("k2", "v2"));
-  CTRACE_HANDLE(mx_process_self(), TA_STR("k1", "v1"), TA_STR("k2", "v2"),
+  CTRACE_HANDLE(zx_process_self());
+  CTRACE_HANDLE(zx_process_self(), TA_STR("k1", "v1"));
+  CTRACE_HANDLE(zx_process_self(), TA_STR("k1", "v1"), TA_STR("k2", "v2"));
+  CTRACE_HANDLE(zx_process_self(), TA_STR("k1", "v1"), TA_STR("k2", "v2"),
                 TA_STR("k3", "v3"));
-  CTRACE_HANDLE(mx_process_self(), TA_STR("k1", "v1"), TA_STR("k2", "v2"),
+  CTRACE_HANDLE(zx_process_self(), TA_STR("k1", "v1"), TA_STR("k2", "v2"),
                 TA_STR("k3", "v3"), TA_STR("k4", "v4"));
 
   return true;

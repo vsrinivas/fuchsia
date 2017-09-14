@@ -11,7 +11,7 @@
 
 namespace tracing {
 
-TraceSession::TraceSession(mx::socket destination,
+TraceSession::TraceSession(zx::socket destination,
                            fidl::Array<fidl::String> categories,
                            size_t trace_buffer_size,
                            fxl::Closure abort_handler)

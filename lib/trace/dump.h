@@ -5,7 +5,7 @@
 #ifndef APPS_TRACING_LIB_TRACE_DUMP_H_
 #define APPS_TRACING_LIB_TRACE_DUMP_H_
 
-#include <mx/socket.h>
+#include <zx/socket.h>
 
 #include <functional>
 #include <memory>
@@ -18,13 +18,13 @@ namespace tracing {
 // Helper for dumping state in a human-readable form.
 class Dump {
  public:
-  explicit Dump(mx::socket socket);
+  explicit Dump(zx::socket socket);
   ~Dump();
 
   std::ostream& out() { return out_; }
 
  private:
-  mx::socket socket_;
+  zx::socket socket_;
   std::ostringstream out_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Dump);

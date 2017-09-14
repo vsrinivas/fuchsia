@@ -7,7 +7,7 @@
 #pragma once
 
 #include <assert.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #include "apps/tracing/lib/trace/cwriter.h"
 
@@ -258,7 +258,7 @@ void ctrace_internal_write_flow_end_event_record(
 
 void ctrace_internal_write_kernel_object_record(
     ctrace_writer_t* writer,
-    mx_handle_t handle,
+    zx_handle_t handle,
     const ctrace_arglist_t* args);
 
 __END_CDECLS

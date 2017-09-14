@@ -5,7 +5,7 @@
 #ifndef APPS_TRACING_SRC_KTRACE_PROVIDER_READER_H_
 #define APPS_TRACING_SRC_KTRACE_PROVIDER_READER_H_
 
-#include <magenta/ktrace.h>
+#include <zircon/ktrace.h>
 
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"

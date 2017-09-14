@@ -7,7 +7,7 @@
 
 #include "apps/tracing/lib/trace/internal/event_helpers.h"
 
-// Converts a |mx_koid_t| koid value into one which can be passed as an
+// Converts a |zx_koid_t| koid value into one which can be passed as an
 // argument to the trace macros to distinguish it from other 64-bit integers.
 #define TRACE_KOID(value) (::tracing::Koid(value))
 

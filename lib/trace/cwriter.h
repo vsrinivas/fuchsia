@@ -10,8 +10,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include "apps/tracing/lib/trace/ctypes.h"
 
@@ -59,8 +59,8 @@ typedef struct ctrace_writer ctrace_writer_t;
 // thread table index.
 typedef struct ctrace_threadref {
   ctrace_encoded_threadref_t encoded_value;
-  mx_koid_t inline_process_koid;
-  mx_koid_t inline_thread_koid;
+  zx_koid_t inline_process_koid;
+  zx_koid_t inline_thread_koid;
 } ctrace_threadref_t;
 
 // A string reference which is either encoded inline or indirectly by
@@ -203,7 +203,7 @@ void ctrace_write_flow_end_event_record(
 
 void ctrace_write_kernel_object_record(
     ctrace_writer_t* writer,
-    mx_handle_t handle,
+    zx_handle_t handle,
     const ctrace_arglist_t* args);
 
 __END_CDECLS

@@ -26,10 +26,10 @@ auto NewArgumentList(TraceWriter& writer) {
 
 struct WriterTest : public ::testing::Test {
   WriterTest() {
-    mx::vmo buffer;
-    mx::eventpair fence;
-    assert(MX_OK == mx::vmo::create(100000, 0u, &buffer));
-    assert(MX_OK == mx::eventpair::create(0u, &fence, &control_));
+    zx::vmo buffer;
+    zx::eventpair fence;
+    assert(ZX_OK == zx::vmo::create(100000, 0u, &buffer));
+    assert(ZX_OK == zx::eventpair::create(0u, &fence, &control_));
     StartTracing(std::move(buffer), std::move(fence), {"cat"},
                  [this](TraceDisposition disposition) { loop_.QuitNow(); });
   }
@@ -41,7 +41,7 @@ struct WriterTest : public ::testing::Test {
 
  private:
   fsl::MessageLoop loop_;
-  mx::eventpair control_;
+  zx::eventpair control_;
 };
 
 TEST_F(WriterTest, StringRegistrationAndRetrieval) {

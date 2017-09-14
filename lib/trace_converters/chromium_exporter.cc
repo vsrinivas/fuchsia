@@ -15,7 +15,7 @@ namespace tracing {
 namespace {
 
 constexpr char kProcessArgKey[] = "process";
-constexpr mx_koid_t kNoProcess = 0u;
+constexpr zx_koid_t kNoProcess = 0u;
 
 bool IsEventTypeSupported(EventType type) {
   switch (type) {
@@ -73,7 +73,7 @@ void ChromiumExporter::Start() {
 
 void ChromiumExporter::Stop() {
   for (const auto& pair : processes_) {
-    const mx_koid_t process_koid = pair.first;
+    const zx_koid_t process_koid = pair.first;
     const std::string& name = pair.second;
 
     writer_.StartObject();
@@ -109,8 +109,8 @@ void ChromiumExporter::Stop() {
   }
 
   for (const auto& pair : threads_) {
-    const mx_koid_t thread_koid = pair.first;
-    const mx_koid_t process_koid = std::get<0>(pair.second);
+    const zx_koid_t thread_koid = pair.first;
+    const zx_koid_t process_koid = std::get<0>(pair.second);
     const std::string& name = std::get<1>(pair.second);
 
     writer_.StartObject();
@@ -308,7 +308,7 @@ void ChromiumExporter::ExportKernelObject(
   // that the ktrace provider may truncate names, so we try to pick the
   // longest one to preserve.
   switch (kernel_object.object_type) {
-    case MX_OBJ_TYPE_PROCESS: {
+    case ZX_OBJ_TYPE_PROCESS: {
       auto it = processes_.find(kernel_object.koid);
       if (it == processes_.end()) {
         processes_.emplace(kernel_object.koid, kernel_object.name);
@@ -317,12 +317,12 @@ void ChromiumExporter::ExportKernelObject(
       }
       break;
     }
-    case MX_OBJ_TYPE_THREAD: {
+    case ZX_OBJ_TYPE_THREAD: {
       const reader::ArgumentValue* process_arg =
           GetArgumentValue(kernel_object.arguments, kProcessArgKey);
       if (!process_arg || process_arg->type() != ArgumentType::kKoid)
         break;
-      mx_koid_t process_koid = process_arg->GetKoid();
+      zx_koid_t process_koid = process_arg->GetKoid();
       auto it = threads_.find(kernel_object.koid);
       if (it == threads_.end()) {
         threads_.emplace(kernel_object.koid,

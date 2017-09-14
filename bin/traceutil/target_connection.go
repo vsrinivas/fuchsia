@@ -37,7 +37,7 @@ func findDefaultTarget() (string, error) {
 		return "", fmt.Errorf("FUCHSIA_OUT_DIR not set.")
 	}
 
-	netaddr := path.Join(fuchsiaOutDir, "build-magenta", "tools", "netaddr")
+	netaddr := path.Join(fuchsiaOutDir, "build-zircon", "tools", "netaddr")
 	output, err := getCommandOutput(netaddr, "--fuchsia")
 	output = strings.TrimSpace(output)
 	if err != nil {
