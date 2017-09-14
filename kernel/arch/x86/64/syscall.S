@@ -299,12 +299,10 @@ FUNCTION_LABEL(x86_syscall)
 
     // Any changes to the stack here need to be reflected in
     // pre_push and post_pop macros above to maintain alignment.
-#if WITH_LIB_SYSCALLS
     // Verify the syscall is in range and jump to it.
     cmp     $ZX_SYS_COUNT, %rax
     jae     .Lunknown_syscall
     jmp     *.Lcall_wrapper_table(, %rax, 8)
-#endif
 .Lunknown_syscall:
     pre_0_args
     call    unknown_syscall
@@ -402,6 +400,4 @@ FUNCTION_LABEL(x86_syscall)
 
 END_FUNCTION(x86_syscall)
 
-#if WITH_LIB_SYSCALLS
 #include <zircon/syscall-kernel-branches.S>
-#endif
