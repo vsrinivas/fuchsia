@@ -4,10 +4,10 @@
 including the [FAR Archive Format][far], the Blob Storage Filesystem, and the
 [Package Manager][pm].
 
-In [Magenta][magenta] `mx-verity` provides an API for application components to
+In [Zircon][zircon] `zx-verity` provides an API for application components to
 read data from local storage. When retrieving data the integrity of the data is
 verified and causing reads to fail when the data has been modified or corrupted.
-mx-verity is based on a [Merkle Tree][merkletree], and is derived form a similar
+zx-verity is based on a [Merkle Tree][merkletree], and is derived from a similar
 system in [Chrome OS][dmverity].
 
 All of these implementations share the algorithm documented herein.
@@ -81,4 +81,4 @@ the SHA-256 of 8 0 bytes, the block identity of a single 0 length block.
 [dmverity]: https://www.chromium.org/chromium-os/chromiumos-design-docs/verified-boot "Chrome OS Verified Boot"
 [far]: archive_format.md "Archive Format"
 [pm]: https://fuchsia.googlesource.com/pm/+/master/README.md "Package Manager"
-[magenta]: https://fuchsia.googlesource.com/magenta/+/master/README.md "Magenta"
+[zircon]: https://fuchsia.googlesource.com/zircon/+/master/README.md "Zircon"

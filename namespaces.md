@@ -172,7 +172,7 @@ are not valid arguments to a container's `Open()` method; they must be
 translated by the client prior to communicating with the namespace.
 See [FIDL Interfaces](#fidl-interfaces).
 
-For example, `mxio` implements client-side interpretation of `..` paths
+For example, `fdio` implements client-side interpretation of `..` paths
 in file manipulation APIs such as `open()`, `stat()`, `unlink()`, etc.
 
 ## Namespace Transfer

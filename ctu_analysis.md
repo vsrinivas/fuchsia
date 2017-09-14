@@ -1,12 +1,12 @@
-# Cross Translation Unit Static Analysis in Magenta
+# Cross Translation Unit Static Analysis in Zircon
 
 This document describes:
 
-* How to set up cross-translation-unit analysis (**CTU**) with the Clang Static Analyzer (**CSA**) in Magenta;
+* How to set up cross-translation-unit analysis (**CTU**) with the Clang Static Analyzer (**CSA**) in Zircon;
 * The work done by Kareem Khazem during his internship; and
-* The remaining work needed to get CTU fully supported on Magenta.
+* The remaining work needed to get CTU fully supported on Zircon.
 
-## Setting up and running CTU on Magenta
+## Setting up and running CTU on Zircon
 
 **Summary**: Download the source for Clang, and apply several non-mainline patches to it before compiling it. Run my wrapper script around the analysis tools. Download the `CodeChecker` tool; use it to digest the results of the analysis, and start a web server to view the results with a web interface.
 
@@ -17,7 +17,7 @@ There are two patchsets to be aware of:
 * The [Samsung](https://github.com/haoNoQ/clang/tree/summary-ipa-draft) patchset, which is an enormous patch adding AST merging support to Clang. It consists mostly of additions to `lib/AST/ASTImporter.cpp`. There is also a (primitive, not working very well) set of tools for CTU analysis under `tools/xtu-build/*`. This patchset is based on an old revision of Clang; this fact, as well as its large size, makes it very difficult to rebase wholesale onto tip-of-tree (**ToT**) Clang.
 * The [Ericsson](https://github.com/dkrupp/clang/blob/ctu-master/tools/xtu-build-new/xtu-analyze.py) patchset, which includes a subset of Samsung’s AST merging work and also adds several new tools (`tools/xtu-build-new/*` and `tools/scan-build-py/*`) that allow for CTU analysis. The xtu-build-new tools improve on, and are somewhat different to, Samsung’s xtu-build tools. This patchset is much newer than the Samsung one, and the authors are making an effort to keep it rebased on ToT.
 
-We will be patching Clang with Ericsson’s patchset, since the AST merging work rebases cleanly and we also get the newer analysis tools. However, note that CTU support for Magenta is incomplete; in some cases, the Samsung patchset contains code that provides the required functionality (more details below).
+We will be patching Clang with Ericsson’s patchset, since the AST merging work rebases cleanly and we also get the newer analysis tools. However, note that CTU support for Zircon is incomplete; in some cases, the Samsung patchset contains code that provides the required functionality (more details below).
 
 ### Steps to build CTU-capable CSA
 
@@ -32,12 +32,12 @@ We will be patching Clang with Ericsson’s patchset, since the AST merging work
    ```
    for p in $(ls $PATCH_DIR/*.patch | sort -n); do git am < $p; done
    ```
-5. Apply Kareem Khazem’s patches that are listed [below](#magenta-patches) if they haven’t already landed
+5. Apply Kareem Khazem’s patches that are listed [below](#zircon-patches) if they haven’t already landed
 6. Re-build upstream Clang & LLVM.
 
 ## Running CTU analysis
 
-**Summary:** Run my wrapper script. This builds Magenta normally, then builds it again but dumping serialised ASTs instead of object files, and then finally analyses each file using the dumped ASTs to achieve CTU.
+**Summary:** Run my wrapper script. This builds Zircon normally, then builds it again but dumping serialised ASTs instead of object files, and then finally analyses each file using the dumped ASTs to achieve CTU.
 
 ### How CTU works
 
@@ -47,11 +47,11 @@ Non-CTU static analysis analyzes the AST of each TU; any function calls to exter
 
 Thus, a CTU analysis will start analyzing an AST as usual, but when it encounters a function call node, it will try to *merge in* the AST for that function. This relies on the AST for the function already having been serialized to disk beforehand, so that the analyzer can re-load the AST into memory. It also relies on support for AST merging, which is what the Samsung patch to `ASTImporter.cpp` (and the Ericsson patch derived from it) is for.
 
-In order to serialize the ASTs to disk, we need to emulate the real build process. The way to do this is to actually do a real build of Magenta while recording the compiler invocations; this allows us to ‘play back’ the invocations, but with the compiler flags modified to dump AST files rather than object files.
+In order to serialize the ASTs to disk, we need to emulate the real build process. The way to do this is to actually do a real build of Zircon while recording the compiler invocations; this allows us to ‘play back’ the invocations, but with the compiler flags modified to dump AST files rather than object files.
 
 So to summarise, forwards this time:
 
-* Build magenta using Clang, and wrap the build process in a program like [bear](https://github.com/rizsotto/Bear) in order to record compiler invocations and generate a JSON compilation database.
+* Build zircon using Clang, and wrap the build process in a program like [bear](https://github.com/rizsotto/Bear) in order to record compiler invocations and generate a JSON compilation database.
 * Replay the same compilation steps, but dumping AST files instead of object files. This is what the [xtu-build.py](https://github.com/dkrupp/clang/blob/ctu-master/tools/xtu-build-new/xtu-build.py) tool does.
 * Perform static analysis as usual, but deserialize the AST of every called function when needed. This is what the [xtu-analyze.py](https://github.com/dkrupp/clang/blob/ctu-master/tools/xtu-build-new/xtu-analyze.py) tool does at the top level, by invoking tools in the [scan-build-py/libscanbuild](https://github.com/dkrupp/clang/tree/ctu-master/tools/scan-build-py/libscanbuild) directory through the thin [scan-build replacement](https://github.com/dkrupp/clang/blob/ctu-master/tools/scan-build-py/bin/scan-build) written by the Ericsson team.
 
@@ -66,7 +66,7 @@ There are two sets of tools for running cross-translation-unit analysis:
 
 ### Fuchsia wrapper script<a name="fuchsia-wrapper-script"></a>
 
-[This very small shell script](https://gist.github.com/karkhaz/c8ded50e564d73853731266fec729454) wraps the Ericsson `xtu-build-new` wrappers. To do a complete analysis of Magenta, make sure to clean first, and specify the correct path to your build of Clang. Then, in the magenta directory:
+[This very small shell script](https://gist.github.com/karkhaz/c8ded50e564d73853731266fec729454) wraps the Ericsson `xtu-build-new` wrappers. To do a complete analysis of Zircon, make sure to clean first, and specify the correct path to your build of Clang. Then, in the zircon directory:
 
 ```
 make clean && ./run.sh
@@ -75,10 +75,10 @@ make clean && ./run.sh
 In order to build only the kernel, specify a `TARGET` as an environment variable:
 
 ```
-make clean && TARGET=./build-magenta-pc-x86-64/magenta.elf ./run.sh
+make clean && TARGET=./build-zircon-pc-x86-64/zircon.elf ./run.sh
 ```
 
-The script also requires [clangify.py](https://gist.github.com/karkhaz/2ab5e8c7a8783318d44ceca715f20438) to be in the magenta directory with executable bit set. After the analysis has finished, there will be a `.result-xtu` directory, containing:
+The script also requires [clangify.py](https://gist.github.com/karkhaz/2ab5e8c7a8783318d44ceca715f20438) to be in the zircon directory with executable bit set. After the analysis has finished, there will be a `.result-xtu` directory, containing:
 
 * A bunch of Apple plist files, which are the bug reports;
 * A fails directory, containing the std{out,err} of analyzer invocations that returned non-zero;
@@ -104,23 +104,23 @@ I ([Kareem Khazem](mailto:karkhaz@karkhaz.com)) am also happy to help out where 
 
 The LLVM irc channel can also be helpful.
 
-## Magenta-specific analyses
+## Zircon-specific analyses
 
-Upstream Clang has been very receptive to receiving patches for Magenta-specific Clang checkers. The [MutexInInterruptContext](https://reviews.llvm.org/D27854) checker is one example (ported from an LLVM pass written by Farid Molazem Tabrizi), as are the [SpinLockChecker](https://reviews.llvm.org/D26340) and [MutexChecker](https://reviews.llvm.org/D26342). Potential reviewers for Clang checks are Devin Coughlin (from Apple), Artem Dergachev (on Aleksei Sidorin’s team at Samsung) and Anna Zaks (also at Apple).
+Upstream Clang has been very receptive to receiving patches for Zircon-specific Clang checkers. The [MutexInInterruptContext](https://reviews.llvm.org/D27854) checker is one example (ported from an LLVM pass written by Farid Molazem Tabrizi), as are the [SpinLockChecker](https://reviews.llvm.org/D26340) and [MutexChecker](https://reviews.llvm.org/D26342). Potential reviewers for Clang checks are Devin Coughlin (from Apple), Artem Dergachev (on Aleksei Sidorin’s team at Samsung) and Anna Zaks (also at Apple).
 
-These checkers are typically *opt-in*, meaning that you need to pass a flag to the analyzer to enable them: something like `-analyzer-checker=optin.magenta.MutexInInterruptContext`.
+These checkers are typically *opt-in*, meaning that you need to pass a flag to the analyzer to enable them: something like `-analyzer-checker=optin.zircon.MutexInInterruptContext`.
 
-If those patches haven’t landed in Clang, you will need to apply them. To use them for analyzing Magenta with the [Ericsson wrapper scripts](#ericsson-wrapper-script), you should modify the [Fuchsia wrapper script](#fuchsia-wrapper-script) by adding the option `-e optin.magenta.MutexInInterruptContext` to the invocation of `xtu-analyze.py` at the end of the file. The patch for `MutexInInterruptContext` has a test suite, which can be used as an example of what the analysis is capable of.
+If those patches haven’t landed in Clang, you will need to apply them. To use them for analyzing Zircon with the [Ericsson wrapper scripts](#ericsson-wrapper-script), you should modify the [Fuchsia wrapper script](#fuchsia-wrapper-script) by adding the option `-e optin.zircon.MutexInInterruptContext` to the invocation of `xtu-analyze.py` at the end of the file. The patch for `MutexInInterruptContext` has a test suite, which can be used as an example of what the analysis is capable of.
 
-# Progress on CTU support in Magenta
+# Progress on CTU support in Zircon
 
 ## Problems fixed in the AST importer
 
-The upstream CSA crashes on the vast majority of Magenta files. This section describes some of the problems that Kareem Khazem encountered and their fixes.
+The upstream CSA crashes on the vast majority of Zircon files. This section describes some of the problems that Kareem Khazem encountered and their fixes.
 
-### Unsupported AST Nodes<a name="magenta-patches"></a>
+### Unsupported AST Nodes<a name="zircon-patches"></a>
 
-The Clang Static Analyzer is unable to import a lot of Magenta code, due to not having implemented support for importing certain kinds of AST nodes. Patches to support these nodes are listed here:
+The Clang Static Analyzer is unable to import a lot of Zircon code, due to not having implemented support for importing certain kinds of AST nodes. Patches to support these nodes are listed here:
 
 <table>
   <tr>

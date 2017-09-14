@@ -69,7 +69,7 @@ redirect these requests to a local handle representing the “/bin” directory,
 rather than sending a request directly to the “bin” directory within the “root”
 directory. Namespaces, like all filesystem constructs, are not visible from the
 kernel: rather, they are implemented in client-side runtimes (such as
-[libmxio](life_of_an_open.md#Mxio)) and are interposed between most client code
+[libfdio](life_of_an_open.md#Fdio)) and are interposed between most client code
 and the handles to remote filesystems.
 
 Since namespaces operate on handles, and most Fuchsia resources and services
@@ -97,20 +97,20 @@ In the case of files, directories, and devices, these operations use the
 RemoteIO protocol; in the case of services, these operations use the FIDL2
 protocol, though there are plans to unify all operations into the FIDL protocol.
 
-As an example, to seek within a file, a client would send an `MXRIO_SEEK`
+As an example, to seek within a file, a client would send an `ZXRIO_SEEK`
 message with the desired position and “whence” within the RIO message, and the
-new seek position would be returned. To truncate a file, an `MXIO_TRUNCATE`
+new seek position would be returned. To truncate a file, an `FDIO_TRUNCATE`
 message could be sent with the new desired filesystem, and a status message
-would be returned. To read a directory, an `MXRIO_READDIR` message could be
+would be returned. To read a directory, an `ZXRIO_READDIR` message could be
 sent, and a list of direntries would be returned. If these requests were sent to
 a filesystem entity that can’t handle them, an error would be sent, and the
-operation would not be executed (like an `MXRIO_READDIR` message sent to a text
+operation would not be executed (like an `ZXRIO_READDIR` message sent to a text
 file).
 
 ### Memory Mapping
 
 For filesystems capable of supporting it, memory mapping files is slightly more
-complicated. To actually “mmap” part of a file, a client sends an “MXIO_MMAP”
+complicated. To actually “mmap” part of a file, a client sends an “FDIO_MMAP”
 message, and receives a Virtual Memory Object, or VMO, in response. This object
 is then typically mapped into the client’s address space using a Virtual Memory
 Address Region, or VMAR. Transmitting a limited view of the file’s internal
@@ -142,7 +142,7 @@ location. This complicates their usage: if a call to “rename(‘/foo/bar’,
   * Open the parent directories of both paths
   * Operate on both parent directories and trailing pathnames simultaneously
 
-To satisfy this behavior, the VFS layer takes advantage of a Magenta concept
+To satisfy this behavior, the VFS layer takes advantage of a Zircon concept
 called “cookies”. These cookies allow client-side operations to store open
 state on a server, using a handle, and refer to it later using that same
 handles. Fuchsia filesystems use this ability to refer to one Vnode while
@@ -171,7 +171,7 @@ this channel is saved as a field named “remote” in the parent Vnode, the oth
 end will be connected to the root directory of the new filesystem), and
 (optionally) another to contact the underlying [block device](block_devices.md).
 Once a filesystem has been initialized (reading initial state off the block
-device, finding the root vnode, etc) it flags a signal (`MX_USER_SIGNAL0`) on
+device, finding the root vnode, etc) it flags a signal (`ZX_USER_SIGNAL0`) on
 the mount point channel. This informs the parent (mounting) system that the
 child filesystem is ready to be utilized. At this point, the channel passed to
 the filesystem on initialization may be used to send filesystem requests, such
@@ -199,7 +199,7 @@ intending to satisfy a variety of distinct needs.
 
 ### MemFS: An in-memory filesystem
 
-[MemFS](https://fuchsia.googlesource.com/magenta/+/master/system/core/devmgr/vfs-memory.cpp)
+[MemFS](https://fuchsia.googlesource.com/zircon/+/master/system/core/devmgr/vfs-memory.cpp)
 is used to implement requests to temporary filesystems like `/tmp`, where files
 exist entirely in RAM, and are not transmitted to an underlying block device.
 This filesystem is also currently used for the “bootfs” protocol, where a
@@ -209,7 +209,7 @@ unwrapped into user-accessible Vnodes at boot (these files are accessible in
 
 ### MinFS: A persistent filesystem
 
-[MinFS](https://fuchsia.googlesource.com/magenta/+/master/system/uapp/minfs/)
+[MinFS](https://fuchsia.googlesource.com/zircon/+/master/system/uapp/minfs/)
 is a simple, traditional filesystem which is capable of storing files
 persistently. Like MemFS, it makes extensive use of the VFS layers mentioned
 earlier, but unlike MemFS, it requires an additional handle to a block device
@@ -220,7 +220,7 @@ filesystems to a namespace from the command line.
 
 ### Blobstore: An immutable, integrity-verifying package storage filesystem
 
-[Blobstore](https://fuchsia.googlesource.com/magenta/+/master/system/uapp/blobstore/)
+[Blobstore](https://fuchsia.googlesource.com/zircon/+/master/system/uapp/blobstore/)
 is a simple, flat filesystem optimized for “write-once, then read-only” [signed
 data](merkleroot.md), such as [application packages](package_metadata.md).
 Other than two small prerequisites (file names which are deterministic, content
@@ -241,11 +241,11 @@ filesystem, found on EFI partitions and many USB sticks.
 
 ### ServiceFS (svcfs): A filesystem used for service discovery
 
-[ServiceFS](https://fuchsia.googlesource.com/magenta/+/master/system/ulib/svcfs),
+[ServiceFS](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/svcfs),
 used by the [Fuchsia Application
 Manager](https://fuchsia.googlesource.com/application/+/master), provides a
 mechanism for discovering non-filesystem services using the filesystem
-namespace. As mentioned earlier, the client-provided tools in mxio which can be
+namespace. As mentioned earlier, the client-provided tools in fdio which can be
 used to access files have the option of both synchronous and asynchronous
 operations, and upon success, return a handle (or handles) to a remote
 filesystem. ServiceFS takes this one step further -- since arbitrary services

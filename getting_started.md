@@ -9,11 +9,11 @@ Fuchsia.
 
 *** note
 NOTE: The Fuchsia source includes
-[Magenta](https://fuchsia.googlesource.com/magenta/+/master/README.md),
+[Zircon](https://fuchsia.googlesource.com/zircon/+/master/README.md),
 the core platform that underpins Fuchsia.
-The Fuchsia build process will build Magenta as a side-effect;
-to work on Magenta only, read and follow Magenta's
-[Getting Started](https://fuchsia.googlesource.com/magenta/+/master/docs/getting_started.md)
+The Fuchsia build process will build Zircon as a side-effect;
+to work on Zircon only, read and follow Zircon's
+[Getting Started](https://fuchsia.googlesource.com/zircon/+/master/docs/getting_started.md)
 doc.
 ***
 
@@ -122,7 +122,7 @@ Once you have setup your build environment, simply run:
 fbuild
 ```
 
-This builds Magenta, the sysroot, and the default Fuchsia build.
+This builds Zircon, the sysroot, and the default Fuchsia build.
 
 ## Boot Fuchsia
 
@@ -136,25 +136,25 @@ target hardware, using a USB drive is a good option for doing this.
 If you want to netboot or create a bootable USB drive, but not install Fuchsia
 you can use the [build-bootable-usb-gigaboot.sh script](https://fuchsia.googlesource.com/scripts/+/master/build-bootable-usb-gigaboot.sh).
 If you plan to netboot, pass the `-m` and `-f` options to skip copying over the
-Magenta kernel and Fuchsia system images since the bootserver will supply these.
+Zircon kernel and Fuchsia system images since the bootserver will supply these.
 
 It may be useful to look at some of the hardware specific instructions. The
 Raspberry Pi 3 requires very different procedures and the other guides may help
 with hardware-specific firmware configuration.
 
-* [Acer Switch Alpha 12](https://fuchsia.googlesource.com/magenta/+/master/docs/targets/acer12.md)
-* [Intel NUC](https://fuchsia.googlesource.com/magenta/+/master/docs/targets/nuc.md)
-* [Raspberry Pi 3](https://fuchsia.googlesource.com/magenta/+/master/docs/targets/rpi3.md)
+* [Acer Switch Alpha 12](https://fuchsia.googlesource.com/zircon/+/master/docs/targets/acer12.md)
+* [Intel NUC](https://fuchsia.googlesource.com/zircon/+/master/docs/targets/nuc.md)
+* [Raspberry Pi 3](https://fuchsia.googlesource.com/zircon/+/master/docs/targets/rpi3.md)
 
 Once your hardware is configured, you can run `fboot` to start the bootserver.
 
 ### Boot from QEMU
 
 If you don't have the supported hardware, you can run Fuchsia under emulation
-using [QEMU](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/qemu.md).
+using [QEMU](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/qemu.md).
 Fuchsia includes prebuilt binaries for QEMU under `buildtools/qemu`.
 
-The `frun` command will launch Magenta within QEMU, using the locally built
+The `frun` command will launch Zircon within QEMU, using the locally built
 `user.bootfs`:
 
 ```
@@ -180,7 +180,7 @@ frun -g
 
 Note: Networking support within QEMU is only available under x86_64.
 
-First, [configure](https://fuchsia.googlesource.com/magenta/+/master/docs/qemu.md#Enabling-Networking-under-QEMU-x86_64-only)
+First, [configure](https://fuchsia.googlesource.com/zircon/+/master/docs/qemu.md#Enabling-Networking-under-QEMU-x86_64-only)
 a virtual interface for QEMU's use.
 
 Once this is done you can add the `-N` and `-u` flags to `frun`:
@@ -245,7 +245,7 @@ box and typing "moterm"
 
 ## Additional helpful documents
 
-* Using Magenta - copying files, network booting, log viewing, and more are [here](https://fuchsia.googlesource.com/magenta/+/master/docs/getting_started.md#Copying-files-to-and-from-Magenta)
+* Using Zircon - copying files, network booting, log viewing, and more are [here](https://fuchsia.googlesource.com/zircon/+/master/docs/getting_started.md#Copying-files-to-and-from-Zircon)
 * [Fuchsia documentation](https://fuchsia.googlesource.com/docs) hub
 * Build [Fuchsia's toolchain](toolchain.md)
 * More about the [build commands](build_system.md) called under-the-hood by `fbuild`

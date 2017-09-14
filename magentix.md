@@ -1,6 +1,6 @@
 # Magentix
 
-Magentix is a build configuration of the system that contains the Magenta
+Magentix is a build configuration of the system that contains the Zircon
 kernel, drivers, benchmarks, and some traditional POSIX-like userland tools.
 The Magentix configuration can be built with a subset of the full source tree.
 

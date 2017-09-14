@@ -1,6 +1,6 @@
 # launchpad
 
-[launchpad][launchpad] is a Magenta library that provides the
+[launchpad][launchpad] is a Zircon library that provides the
 functionality to create and start new processes (including loading ELF
 binaries, passing initial RPC messages needed by runtime init, etc).
 It is a low-level library and over time it is expected that few pieces
@@ -17,5 +17,5 @@ new Process. This includes:
 There is extensive documentation about launchpad in [its primary
 header file][launchpad-header].
 
-[launchpad]: https://fuchsia.googlesource.com/magenta/+/master/system/ulib/launchpad "launchpad"
-[launchpad-header]: https://fuchsia.googlesource.com/magenta/+/master/system/ulib/launchpad/include/launchpad/launchpad.h "launchpad header"
+[launchpad]: https://fuchsia.googlesource.com/zircon/+/master/system/ulib/launchpad "launchpad"
+[launchpad-header]: https://fuchsia.googlesource.com/zircon/+/master/system/ulib/launchpad/include/launchpad/launchpad.h "launchpad header"

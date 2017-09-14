@@ -66,9 +66,9 @@ Available commands and constructs are defined in the
 
 ##### A
 
-The first step is to build the Magenta kernel which uses its own build system:
+The first step is to build the Zircon kernel which uses its own build system:
 ```
-$ scripts/build-magenta.sh
+$ scripts/build-zircon.sh
 ```
 
 ##### B
@@ -107,7 +107,7 @@ or if you need to include a new module, you should rerun **B** before running
 
 #### After syncing sources
 
-You’ll most likely need to run **A** once if anything in the Magenta tree was
+You’ll most likely need to run **A** once if anything in the Zircon tree was
 changed. After that, run **C** again.
 In the rare case that a module file you depend on was sync’d in the process,
 you’ll also need to run **B** in the usual order.

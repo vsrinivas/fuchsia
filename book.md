@@ -5,17 +5,17 @@ _A modular, capability-based operating system_
 This "book" is a collection of topics describing the Fuchsia operating system.
 Sections will be populated over time.
 
-# Magenta Kernel
+# Zircon Kernel
 
- - [Concepts][magenta-concepts]
- - [System Calls][magenta-syscalls] / VDSO (libmagenta)
+ - [Concepts][zircon-concepts]
+ - [System Calls][zircon-syscalls] / VDSO (libzircon)
  - Boot Sequence
 
-# Magenta Core
+# Zircon Core
 
  - Device Manager & Device Hosts
  - Device Driver Model (DDK)
- - [C Library (libc) & POSIX IO (libmxio)](libc.md)
+ - [C Library (libc) & POSIX IO (libfdio)](libc.md)
  - [Process Start / ELF Loading (liblaunchpad)](launchpad.md)
 
 # Framework
@@ -98,8 +98,8 @@ Sections will be populated over time.
 
 
 
-[magenta-concepts]: https://fuchsia.googlesource.com/magenta/+/master/docs/concepts.md "Magenta concepts"
-[magenta-syscalls]: https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls.md "Magenta syscalls"
+[zircon-concepts]: https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md "Zircon concepts"
+[zircon-syscalls]: https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls.md "Zircon syscalls"
 [framework-story]: https://fuchsia.googlesource.com/modular/+/master/docs/story.md "Framework story"
 [framework-module]: https://fuchsia.googlesource.com/modular/+/master/docs/module.md "Framework module"
 [framework-agent]: https://fuchsia.googlesource.com/modular/+/master/docs/agent.md "Framework agent"

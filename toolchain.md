@@ -27,20 +27,20 @@ LLVM_SRCDIR=${HOME}/llvm
 ```
 
 Before building the runtime libraries that are built along with the
-compiler, you need a Magenta `sysroot` built.  This comes from the
-Magenta build and sits in the `sysroot` subdirectory of the main Magenta
-build directory.  For example, `.../build-magenta-pc-x86-64/sysroot`.
+compiler, you need a Zircon `sysroot` built.  This comes from the
+Zircon build and sits in the `sysroot` subdirectory of the main Zircon
+build directory.  For example, `.../build-zircon-pc-x86-64/sysroot`.
 In the following commands, the string `${FUCHSIA_${arch}_SYSROOT}`
 stands in for this absolute directory name.  You can cut & paste these
 commands into a shell after setting the `FUCHSIA_${arch}_SYSROOT`
 variable, e.g.:
 
 ```bash
-make magenta-pc-x86-64
-FUCHSIA_x86_64_SYSROOT=`pwd`/build-magenta-pc-x86-64/sysroot
+make zircon-pc-x86-64
+FUCHSIA_x86_64_SYSROOT=`pwd`/build-zircon-pc-x86-64/sysroot
 
-make magenta-qemu-arm64
-FUCHSIA_aarch64_SYSROOT=`pwd`/build-magenta-qemu-arm64/sysroot
+make zircon-qemu-arm64
+FUCHSIA_aarch64_SYSROOT=`pwd`/build-zircon-qemu-arm64/sysroot
 ```
 
 You can build a Fuchsia Clang compiler using the following commands.
@@ -64,7 +64,7 @@ ninja stage2-install-distribution
 To use the compiler just built without installing it into a system-wide
 shared location, you can just refer to its build directory explicitly as
 `${LLVM_OBJDIR}/tools/clang/stage2-bins/bin/` (where `LLVM_OBJDIR` is
-your LLVM build directory).  For example, in a Magenta build, you can
+your LLVM build directory).  For example, in a Zircon build, you can
 pass the argument:
 
 ```bash
@@ -104,7 +104,7 @@ flags:
 For this kind of build, the `bin` directory immediate under your main LLVM
 build directory contains the compiler binaries.  You can put that directory
 into your shell's `PATH`, or use it explicitly in commands, or use it in the
-`CLANG_TOOLCHAIN_PREFIX` variable (with trailing slash) for a Magenta build.
+`CLANG_TOOLCHAIN_PREFIX` variable (with trailing slash) for a Zircon build.
 
 Clang is a large project and compiler performance is absolutely critical. To
 reduce the build time, we recommend using Clang as a host compiler, and if
@@ -119,7 +119,7 @@ To set the host compiler, you can use the following extra flags:
 
 This assumes that `${CLANG_TOOLCHAIN_PREFIX}` points to the `bin` directory
 of a Clang installation, with a trailing slash (as this Make variable is used
-in the Magenta build).  For example, to use the compiler from your Fuchsia
+in the Zircon build).  For example, to use the compiler from your Fuchsia
 checkout (on Linux):
 
 ```bash

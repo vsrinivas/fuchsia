@@ -6,13 +6,13 @@ will have one or more handles to these underlying drivers. Similar to filesystem
 clients, which may send “read” or “write” requests to servers by encoding these
 requests within RPC messages, programs may act as clients to block devices, and
 may transmit RPC messages to a “device host” (referred to as “devhost” within
-Magenta). The devhost process then transforms these requests into
+Zircon). The devhost process then transforms these requests into
 driver-understood “I/O transactions”, where they are actually transmitted to the
 particular block device driver, and eventually to real hardware.
 
 Particular block device drivers (USB, AHCI / SATA, Ramdisk, GPT, etc) implement
-the [`MX_PROTOCOL_BLOCK_CORE`
-prototol](https://fuchsia.googlesource.com/magenta/+/master/system/public/magenta/device/block.h),
+the [`ZX_PROTOCOL_BLOCK_CORE`
+prototol](https://fuchsia.googlesource.com/zircon/+/master/system/public/zircon/device/block.h),
 which allows clients to queue transactions and query the block device.
 
 ## Fast Block I/O

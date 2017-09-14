@@ -44,7 +44,7 @@ synchronize their state across multiple devices.  Follow the steps in Ledger's
 [User Guide](https://fuchsia.googlesource.com/ledger/+/master/docs/user_guide.md)
 to:
 
-* Set up [persistent storage](https://fuchsia.googlesource.com/magenta/+/master/docs/minfs.md). (optional)
+* Set up [persistent storage](https://fuchsia.googlesource.com/zircon/+/master/docs/minfs.md). (optional)
 * Verify the network is connected.
 * Configure a Firebase instance.
 * Setup sync on each device using `configure_ledger`.

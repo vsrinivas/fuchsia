@@ -25,8 +25,8 @@ $ cd $FUCHSIA_DIR
 $ mkfile -n 1g blk.bin
 ```
 
-## Start magenta
-You don't need a full Fuchsia UI to set up the disk image so start just magenta
+## Start zircon
+You don't need a full Fuchsia UI to set up the disk image so start just zircon
 but tell it to mount ```
 $ mrun -d
 [00000.000] 00000.00000> multiboot: info @ 0xffffff8000009500

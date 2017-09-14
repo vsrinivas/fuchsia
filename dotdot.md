@@ -41,9 +41,9 @@ Certain paths, such as “foo/../bar”, which can be transformed to “bar”, 
 determined without accessing a filesystem server in the absence of symbolic
 links (and at the time of writing, symbolic links do not exist on Fuchsia).
 These paths may be canonicalized, or cleaned, on the client-side, prior to
-sending path-based requests to filesystem servers: the libmxio library already
-does this for any mxio operations which are eventually transmitted to
-filesystem servers in a function called `__mxio_cleanpath`.
+sending path-based requests to filesystem servers: the libfdio library already
+does this for any fdio operations which are eventually transmitted to
+filesystem servers in a function called `__fdio_cleanpath`.
 
 ## What about shell traversal?
 

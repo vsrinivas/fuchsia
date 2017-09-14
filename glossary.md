@@ -54,10 +54,10 @@ but are certainly not limited to modules and agents.
 
 #### **Channel**
 
-A Channel is the fundamental IPC primitive provided by Magenta.  It is a bidirectional,
+A Channel is the fundamental IPC primitive provided by Zircon.  It is a bidirectional,
 datagram-like transport that can transfer small messages including
 [Handles](#Handle).
-- [Channel Overview](https://fuchsia.googlesource.com/magenta/+/master/docs/objects/channel.md)
+- [Channel Overview](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/channel.md)
 
 #### **DevHost**
 
@@ -73,10 +73,10 @@ servers for the boot filesystem, launching [AppMgr](#AppMgr), and so on).
 
 #### **DDK**
 
-The Driver Development Kit is the documentation, APIs, and ABIs necessary to build Magenta
-Device Drivers.  Device drivers are implemented as ELF shared libraries loaded by Magenta's
+The Driver Development Kit is the documentation, APIs, and ABIs necessary to build Zircon
+Device Drivers.  Device drivers are implemented as ELF shared libraries loaded by Zircon's
 Device Manager.
-- [DDK includes](https://fuchsia.googlesource.com/magenta/+/master/system/ulib/ddk/include/ddk/)
+- [DDK includes](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/ddk/include/ddk/)
 
 #### **Escher**
 
@@ -87,8 +87,8 @@ qualities suitable for user interfaces.
 
 #### **FAR**
 
-The Fuchsia Archive Format is a container for files to be used by Magenta and Fuchsia.
-It will replace Magenta's older BootFS container and be used in Fuchsia Packages.
+The Fuchsia Archive Format is a container for files to be used by Zircon and Fuchsia.
+It will replace Zircon's older BootFS container and be used in Fuchsia Packages.
 - [FAR Spec](https://fuchsia.googlesource.com/docs/+/master/archive_format.md)
 
 #### **FIDL**
@@ -117,9 +117,9 @@ GN files, named `BUILD.gn`, are located all over the repository.
 
 #### **Handle**
 
-The "file descriptor" of the Magenta kernel.  A Handle is how a userspace process refers
+The "file descriptor" of the Zircon kernel.  A Handle is how a userspace process refers
 to a kernel object.  They can be passed to other processes over [Channel](#Channel)s.
-- [Handle (in Magenta Concepts Doc)](https://fuchsia.googlesource.com/magenta/+/master/docs/concepts.md)
+- [Handle (in Zircon Concepts Doc)](https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md)
 
 #### **Jiri**
 
@@ -127,12 +127,12 @@ to a kernel object.  They can be passed to other processes over [Channel](#Chann
 
 #### **Launchpad**
 
-[Launchpad](launchpad.md) is a library provided by Magenta that provides the
+[Launchpad](launchpad.md) is a library provided by Zircon that provides the
 functionality to create and start new processes (including loading ELF binaries,
 passing initial RPC messages needed by runtime init, etc).  It is a low-level
 library and over time it is expected that few pieces of code will make direct
 use of it.
-- [Launchpad API (launchpad.h)](https://fuchsia.googlesource.com/magenta/+/master/system/ulib/launchpad/include/launchpad/launchpad.h)
+- [Launchpad API (launchpad.h)](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/launchpad/include/launchpad/launchpad.h)
 
 #### **Ledger**
 
@@ -143,19 +143,19 @@ Ledger under-the-hood.
 
 #### **LK**
 
-Little Kernel (LK) is the embedded kernel that formed the core of the Magenta Kernel.
+Little Kernel (LK) is the embedded kernel that formed the core of the Zircon Kernel.
 LK is more microcontroller-centric and lacks support for MMUs, userspace, system calls --
-features that Magenta added.
+features that Zircon added.
 - [LK on Github](https://github.com/littlekernel/lk)
 
-#### **Magenta**
+#### **Zircon**
 
-Magenta is the [microkernel](https://en.wikipedia.org/wiki/Microkernel) and lowest level
+Zircon is the [microkernel](https://en.wikipedia.org/wiki/Microkernel) and lowest level
 userspace components (driver runtime environment, core drivers, libc, etc) at the core of
-Fuchsia.  In a traditional monolithic kernel, many of the userspace components of Magenta
+Fuchsia.  In a traditional monolithic kernel, many of the userspace components of Zircon
 would be part of the kernel itself.
-- [Magenta Documentation](https://fuchsia.googlesource.com/magenta/+/master/README.md)
-- [Magenta Concepts](https://fuchsia.googlesource.com/magenta/+/master/docs/concepts.md)
+- [Zircon Documentation](https://fuchsia.googlesource.com/zircon/+/master/README.md)
+- [Zircon Concepts](https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md)
 
 #### **Maxwell**
 
@@ -176,19 +176,19 @@ The view subsystem. Includes views, input, compositor, and GPU service.
 #### **Musl**
 
 Fuchsia's standard C library (libc) is based on Musl Libc.
-- [Source](https://fuchsia.googlesource.com/magenta/+/master/third_party/ulib/musl/)
+- [Source](https://fuchsia.googlesource.com/zircon/+/master/third_party/ulib/musl/)
 - [Musl Homepage](https://www.musl-libc.org/)
 
-#### **MX**
+#### **ZX**
 
-MX is an abbreviation of "Magenta" used in Magenta C APIs/ABIs (`mx_channel_create()`, `mx_handle_t`,
- `MX_EVENT_SIGNALED`, etc) and libraries (libmx in particular).
+ZX is an abbreviation of "Zircon" used in Zircon C APIs/ABIs (`zx_channel_create()`, `zx_handle_t`,
+ `ZX_EVENT_SIGNALED`, etc) and libraries (libzx in particular).
 
-#### **mxio**
+#### **fdio**
 
-mxio is the Magenta IO Library.  It provides the implementation of posix-style open(), close(),
+fdio is the Zircon IO Library.  It provides the implementation of posix-style open(), close(),
 read(), write(), select(), poll(), etc, against the RemoteIO RPC protocol.  These APIs are
-return-not-supported stubs in libc, and linking against libmxio overrides these stubs with
+return-not-supported stubs in libc, and linking against libfdio overrides these stubs with
 functional implementations.
 
 #### **Namespace**
@@ -212,7 +212,7 @@ should be generated by more featureful systems, such as [GN](#gn) in Fuchsia.
 
 #### **RemoteIO**
 
-RemoteIO is the Magenta RPC protocol used between mxio (open/close/read/write/ioctl)
+RemoteIO is the Zircon RPC protocol used between fdio (open/close/read/write/ioctl)
 and filesystems, device drivers, etc.  As part of [FIDL](#FIDL) v2, it will become a set
 of FIDL Interfaces (File, Directory, Device, ...) allowing easier interoperability,
 and more flexible asynchronous IO for clients or servers.
@@ -248,21 +248,21 @@ with modules.
 
 #### **VDSO**
 
-The VDSO is a Virtual Shared Library -- it is provided by the [Magenta](#Magenta) kernel
-and does not appear in the filesystem or a package.  It provides the Magenta System Call
+The VDSO is a Virtual Shared Library -- it is provided by the [Zircon](#Zircon) kernel
+and does not appear in the filesystem or a package.  It provides the Zircon System Call
 API/ABI to userspace processes in the form of an ELF library that's "always there."
-In the Fuchsia SDK and [Magenta DDK](#DDK) it exists as `libmagenta.so` for the purpose of
+In the Fuchsia SDK and [Zircon DDK](#DDK) it exists as `libzircon.so` for the purpose of
 having something to pass to the linker representing the VDSO.
 
 #### **VMAR**
 
-A Virtual Memory Address Range is a Magenta Kernel Object that controls where and how
+A Virtual Memory Address Range is a Zircon Kernel Object that controls where and how
 VMOs may be mapped into the address space of a process.
-- [VMAR Overview](https://fuchsia.googlesource.com/magenta/+/master/docs/objects/vm_address_region.md)
+- [VMAR Overview](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/vm_address_region.md)
 
 #### **VMO**
 
-A Virtual Memory Object is a Magenta Kernel Object that represents a collection of pages
+A Virtual Memory Object is a Zircon Kernel Object that represents a collection of pages
 (or the potential for pages) which may be read, written, mapped into the address space of
 a process, or shared with another process by passing a Handle over a Channel.
-- [VMO Overview](https://fuchsia.googlesource.com/magenta/+/master/docs/objects/vm_object.md)
+- [VMO Overview](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/vm_object.md)

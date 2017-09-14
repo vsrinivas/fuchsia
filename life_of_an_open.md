@@ -17,7 +17,7 @@ Where does that request go?
 The ‘open’ call is a function, provided by a [standard library](libc.md). For
 C/C++ programs, this will normally be declared in `unistd.h`, which has a
 backing definition in
-[libmxio](https://fuchsia.googlesource.com/magenta/+/master/system/ulib/mxio/).
+[libfdio](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fdio/).
 For Go programs, there is an equivalent (but distinct) implementation in the Go
 standard library. For each language and runtime, developers may opt into their
 own definition of “open”.
@@ -25,7 +25,7 @@ own definition of “open”.
 On a monolithic kernel, `open` would be a lightweight shim around a system
 call, where the kernel might handle path parsing, redirection, etc. In that
 model, the kernel would need to mediate access to resources based on exterior
-knowledge about the caller. The Magenta kernel, however, intentionally has no
+knowledge about the caller. The Zircon kernel, however, intentionally has no
 such system call. Instead, clients access filesystems through **channels** --
 when a process is initialized, it may be provided a handle representing the
 **root (“/”) directory** and a handle representing the current working
@@ -45,10 +45,10 @@ pipes, etc, what does the standard library do to make all these resources
 appear functionally the same? How does that client know what messages to send
 over these handles?
 
-## Mxio
+## Fdio
 
 A library called
-[**mxio**](https://fuchsia.googlesource.com/magenta/+/master/system/ulib/mxio/)
+[**fdio**](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fdio/)
 is responsible for providing a unified interface to a variety of resources --
 files, sockets, services, pipes, and more. This layer defines a group of
 functions, such as **read, write, open, close, seek, etc** that may be used on
@@ -67,16 +67,16 @@ used by filesystem clients: RemoteIO.
 ## RemoteIO
 
 A program calling `open("foo")` will have called into the standard library,
-found an “mxio” object corresponding to the current working directory, and will
+found an “fdio” object corresponding to the current working directory, and will
 need to send a request to a remote server to “please open foo”. How can this be
 accomplished? The program has the following tools:
 
   * One or more **handles** representing a connection to the CWD
-  * [mx_channel_write](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/channel_write.md):
+  * [zx_channel_write](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/channel_write.md):
     A system call which can send bytes and handles (over a channel)
-  * [mx_channel_read](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/channel_read.md):
+  * [zx_channel_read](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/channel_read.md):
     A system call which can receive bytes and handles (over a channel)
-  * [mx_object_wait_one](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_wait_one.md):
+  * [zx_object_wait_one](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/object_wait_one.md):
     A system call which can wait for a handle to be readable / writable
 
 Using these primitives, the client can write a message to the filesystem server
@@ -93,11 +93,11 @@ have arbitrary control over the server, this communication layer would be ripe
 for exploitation.
 
 The [RemoteIO protocol
-(RIO)](https://fuchsia.googlesource.com/magenta/+/master/system/ulib/mxio/include/mxio/remoteio.h)
+(RIO)](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fdio/include/fdio/remoteio.h)
 describes the wire-format of what these bytes and handles should actually mean
 when transmitted between two entities. The protocol describes things like
 “expected number of handles”, “enumerated operation”, and “data”. In our case,
-`open("foo")` creates an `MXRIO_OPEN` message, and sets the “data” field of the RIO
+`open("foo")` creates an `ZXRIO_OPEN` message, and sets the “data” field of the RIO
 message to the string “foo”. Additionally, if any flags are passed to
 open (such as `O_RDONLY, O_RDWR, O_CREAT`, etc) these flags would be placed in
 the “arg” field of the rio structure. However, if the operation was changed
@@ -117,7 +117,7 @@ advantage of the multiple-runtime interoperability that FIDL provides. In the
 future, the two protocols will become unified, and FIDL binding will be
 automatically generated and typechecked in a variety of languages.
 
-**libmxio** contains both the client and server-side code for the C/C++
+**libfdio** contains both the client and server-side code for the C/C++
 implementation of RIO, and is responsible for cautiously verifying the input
 and output of both ends.
 
@@ -134,9 +134,9 @@ is actually opened. This behavior is critical for interaction with services
 (which will be described in more detail in the “ServiceFS” section).
 
 To recap, an “open” call has gone through the standard library, acted on the
-“CWD” mxio object, which transformed the request into a RIO message which is
-sent to the server using the `mx_channel_write` system call. The client can
-optionally wait for the server’s response using `mx_object_wait_one`, or continue
+“CWD” fdio object, which transformed the request into a RIO message which is
+sent to the server using the `zx_channel_write` system call. The client can
+optionally wait for the server’s response using `zx_object_wait_one`, or continue
 processing asynchronously. Either way, a channel has been created, where
 one end lives with the client, and the other end is transmitted to the
 “server".
@@ -159,7 +159,7 @@ to read the message transmitted by the client. This process isn’t automatic --
 the server will need to intentionally wait for incoming messages on the
 receiving handle, which in this case was the “current working directory”
 handle. When server objects (files, directories, services, etc) are opened,
-their handles are registered with a server-side Magenta **port** that waits for
+their handles are registered with a server-side Zircon **port** that waits for
 their underlying handles to be **readable** (implying a message has arrived) or
 **closed** (implying they will never receive more messages). This object which
 dispatches incoming requests to appropriate handles is known as the dispatcher;
@@ -184,7 +184,7 @@ For C++ filesystems using libfs, this callback function is called
 This handler function, equipped with this information, acts as a large
 “switch/case” table, redirecting the RIO message to an appropriate function
 depending on the “operation” field provided by the client. In the open case, the
-`MXRIO_OPEN` field is noticed as the operation, so (1) a handle is expected, and
+`ZXRIO_OPEN` field is noticed as the operation, so (1) a handle is expected, and
 (2) the ‘data’ field (“foo”) is interpreted as the path.
 
 ### VFS Layer
@@ -197,9 +197,9 @@ they have no obligation to use it. To be a filesystem server, a process must
 merely understand the remote IO wire format. As a consequence, there could be
 any number of “VFS” implementations in a language, but at the time of writing,
 two well-known implementations exist: one written in C++ within the [libfs
-library](https://fuchsia.googlesource.com/magenta/+/master/system/ulib/fs/),
+library](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fs/),
 and another written in Go in the [rpc package of
-ThinFS](https://fuchsia.googlesource.com/thinfs/+/master/magenta/rpc/rpc.go)]
+ThinFS](https://fuchsia.googlesource.com/thinfs/+/master/zircon/rpc/rpc.go)]
 
 The VFS layer defines the interface of operations which may be routed to the
 underlying filesystem, including:
@@ -252,7 +252,7 @@ server. Since the call was synchronous, the client proceeded to wait for a
 response on the handle. Once the server properly found, opened, and initialized
 I/O state for this file, it sent back a “success” RIO description object. This
 object would be read by the client, identifying that the call completed
-successfully. At this point, the client could create an mxio object
+successfully. At this point, the client could create an fdio object
 representing the handle to “foo”, reference it with an entry in a file
 descriptor table, and return the fd back to whoever called the original “open”
 function. Furthermore, if the client wants to send any additional requests
@@ -267,13 +267,13 @@ need to route through the ‘CWD’ on future requests.
              | Client Program |
 +-----------------------------+
 |   fd: x    |   fd: y    |
-| Mxio (RIO) | Mxio (RIO) |
+| Fdio (RIO) | Fdio (RIO) |
 +-------------------------+
 | '/' Handle | CWD Handle |
 +-------------------------+
       ^            ^
       |            |
-Magenta Channels, speaking RIO                   State BEFORE open(‘foo’)
+Zircon Channels, speaking RIO                   State BEFORE open(‘foo’)
       |            |
       v            v
 +-------------------------+
@@ -291,13 +291,13 @@ Magenta Channels, speaking RIO                   State BEFORE open(‘foo’)
              | Client Program |
 +-----------------------------+
 |   fd: x    |   fd: y    |
-| Mxio (RIO) | Mxio (RIO) |
+| Fdio (RIO) | Fdio (RIO) |
 +-------------------------+
 | '/' Handle | CWD Handle |   **foo Handle x2**
 +-------------------------+
       ^            ^
       |            |
-Magenta Channels, speaking RIO                   Client Creates Channel
+Zircon Channels, speaking RIO                   Client Creates Channel
       |            |
       v            v
 +-------------------------+
@@ -315,13 +315,13 @@ Magenta Channels, speaking RIO                   Client Creates Channel
              | Client Program |
 +-----------------------------+
 |   fd: x    |   fd: y    |
-| Mxio (RIO) | Mxio (RIO) |
+| Fdio (RIO) | Fdio (RIO) |
 +-------------------------+--------------+
 | '/' Handle | CWD Handle | ‘foo’ Handle |
 +-------------------------+--------------+
       ^            ^
       |            |
-Magenta Channels, speaking RIO                   Client Sends RIO message to Server
+Zircon Channels, speaking RIO                   Client Sends RIO message to Server
       |            |                             Message includes a ‘foo’ handle
       v            v                             (and waits for response)
 +-------------------------+
@@ -339,13 +339,13 @@ Magenta Channels, speaking RIO                   Client Sends RIO message to Ser
              | Client Program |
 +-----------------------------+
 |   fd: x    |   fd: y    |
-| Mxio (RIO) | Mxio (RIO) |
+| Fdio (RIO) | Fdio (RIO) |
 +-------------------------+--------------+
 | '/' Handle | CWD Handle | ‘foo’ Handle |
 +-------------------------+--------------+
       ^            ^
       |            |
-Magenta Channels, speaking RIO                   Server dispatches message to I/O State,
+Zircon Channels, speaking RIO                   Server dispatches message to I/O State,
       |            |                             Interprets as ‘open’
       v            v                             Finds or Creates ‘foo’
 +-------------------------+
@@ -363,13 +363,13 @@ Magenta Channels, speaking RIO                   Server dispatches message to I/
              | Client Program |
 +-----------------------------+
 |   fd: x    |   fd: y    |
-| Mxio (RIO) | Mxio (RIO) |
+| Fdio (RIO) | Fdio (RIO) |
 +-------------------------+--------------+
 | '/' Handle | CWD Handle | ‘foo’ Handle |
 +-------------------------+--------------+
       ^            ^          ^
       |            |          |
-Magenta Channels, speaking RIO|                  Server allocates I/O state for Vnode
+Zircon Channels, speaking RIO|                  Server allocates I/O state for Vnode
       |            |          |                  Responds to client-provided handle
       v            v          v
 +-------------------------+--------------+
@@ -387,14 +387,14 @@ Magenta Channels, speaking RIO|                  Server allocates I/O state for 
              | Client Program |
 +-----------------------------+----------+
 |   fd: x    |   fd: y    |    fd: z     |
-| Mxio (RIO) | Mxio (RIO) |  Mxio (RIO)  |
+| Fdio (RIO) | Fdio (RIO) |  Fdio (RIO)  |
 +-------------------------+--------------+
 | '/' Handle | CWD Handle | ‘foo’ Handle |
 +-------------------------+--------------+
       ^            ^          ^
       |            |          |
-Magenta Channels, speaking RIO|                  Client recognizes that ‘foo’ was opened
-      |            |          |                  Allocated Mxio + fd, ‘open’ succeeds.
+Zircon Channels, speaking RIO|                  Client recognizes that ‘foo’ was opened
+      |            |          |                  Allocated Fdio + fd, ‘open’ succeeds.
       v            v          v
 +-------------------------+--------------+
 | '/' Handle | CWD Handle | ‘foo’ Handle |

@@ -1,7 +1,7 @@
 Fuchsia Boot Sequence
 =====================
 
-This document describes the boot sequence for Fuchsia from the time the Magenta
+This document describes the boot sequence for Fuchsia from the time the Zircon
 layer hands control over to the Fuchsia layer.  This document is a work in
 progress that will need to be extended as we bring up more of the system
 
@@ -9,7 +9,7 @@ progress that will need to be extended as we bring up more of the system
 
 `appmgr`'s job is to host the environment tree and help create
 processes in these environments.  Processes created by `appmgr`
-have an `mx::channel` back to their environment, which lets them create other
+have an `zx::channel` back to their environment, which lets them create other
 processes in their environment and to create nested environments.
 
 At startup, `appmgr` creates an empty root environment and creates

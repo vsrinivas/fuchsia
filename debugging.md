@@ -43,7 +43,7 @@ $ /boot/test/debugger-test segfault
 [00029.045] 01093.01133> arch: x86_64
 [00029.064] 01093.01133> dso: id=018157dff2cf7052d9a0e198c08875cf080d1fc5 base=0x4000000e1000 name=<vDSO>
 [00029.064] 01093.01133> dso: id=bbcefdf213bbac0271e69abc2ea163e9a7bb83a8 base=0x400000000000 name=libc.so
-[00029.064] 01093.01133> dso: id=fcb157b4ae828f8456769dcd217f29745902393c base=0x101a000 name=libmxio.so
+[00029.064] 01093.01133> dso: id=fcb157b4ae828f8456769dcd217f29745902393c base=0x101a000 name=libfdio.so
 [00029.064] 01093.01133> dso: id=62e9ae64cd4b9915f4aa0fae8817df47f236f3ef base=0x1011000 name=liblaunchpad.so
 [00029.064] 01093.01133> dso: id=2bdcafce47915aa12e0942d59f44726c3832f0a2 base=0x100d000 name=libunittest.so
 [00029.064] 01093.01133> dso: id=cc891abcdb9d2f0d8fcae0ae2a98f421a0a592a8 base=0x1008000 name=libtest-utils.so
@@ -72,26 +72,26 @@ addresses in the backtrace to symbolic form. This program is `symbolize`:
 Copy the above to a file, say `backtrace.out`, and then run:
 
 ```
-bash$ MAGENTA_BUILD_DIR=$FUCHSIA_DIR/out/build-magenta/build-magenta-pc-x86-64
-bash$ cat backtrace.out | $FUCHSIA_DIR/magenta/scripts/symbolize \
-  --build-dir=$MAGENTA_BUILD_DIR \
-  $MAGENTA_BUILD_DIR/system/utest/debugger/debugger.elf
+bash$ ZIRCON_BUILD_DIR=$FUCHSIA_DIR/out/build-zircon/build-zircon-pc-x86-64
+bash$ cat backtrace.out | $FUCHSIA_DIR/zircon/scripts/symbolize \
+  --build-dir=$ZIRCON_BUILD_DIR \
+  $ZIRCON_BUILD_DIR/system/utest/debugger/debugger.elf
 [00029.042] 01093.01133> <== fatal exception: process [6354] thread [6403]
 ... same output as "raw" backtrace ...
 start of symbolized stack:
-#01: test_segfault_leaf at /home/fuchsia/magenta/system/utest/debugger/debugger.c:570
-#02: test_segfault_doit1 at /home/fuchsia/magenta/system/utest/debugger/debugger.c:585
-#03: test_segfault_doit2 at /home/fuchsia/magenta/system/utest/debugger/debugger.c:589
-#04: test_segfault_doit1 at /home/fuchsia/magenta/system/utest/debugger/debugger.c:582
-#05: test_segfault_doit2 at /home/fuchsia/magenta/system/utest/debugger/debugger.c:589
-#06: test_segfault_doit1 at /home/fuchsia/magenta/system/utest/debugger/debugger.c:582
-#07: test_segfault_doit2 at /home/fuchsia/magenta/system/utest/debugger/debugger.c:589
-#08: test_segfault_doit1 at /home/fuchsia/magenta/system/utest/debugger/debugger.c:582
-#09: test_segfault_doit2 at /home/fuchsia/magenta/system/utest/debugger/debugger.c:589
-#10: test_segfault_doit1 at /home/fuchsia/magenta/system/utest/debugger/debugger.c:582
-#11: test_segfault at /home/fuchsia/magenta/system/utest/debugger/debugger.c:599
-#12: main at /home/fuchsia/magenta/system/utest/debugger/debugger.c:640
-#13: start_main at /home/fuchsia/magenta/third_party/ulib/musl/src/env/__libc_start_main.c:47
+#01: test_segfault_leaf at /home/fuchsia/zircon/system/utest/debugger/debugger.c:570
+#02: test_segfault_doit1 at /home/fuchsia/zircon/system/utest/debugger/debugger.c:585
+#03: test_segfault_doit2 at /home/fuchsia/zircon/system/utest/debugger/debugger.c:589
+#04: test_segfault_doit1 at /home/fuchsia/zircon/system/utest/debugger/debugger.c:582
+#05: test_segfault_doit2 at /home/fuchsia/zircon/system/utest/debugger/debugger.c:589
+#06: test_segfault_doit1 at /home/fuchsia/zircon/system/utest/debugger/debugger.c:582
+#07: test_segfault_doit2 at /home/fuchsia/zircon/system/utest/debugger/debugger.c:589
+#08: test_segfault_doit1 at /home/fuchsia/zircon/system/utest/debugger/debugger.c:582
+#09: test_segfault_doit2 at /home/fuchsia/zircon/system/utest/debugger/debugger.c:589
+#10: test_segfault_doit1 at /home/fuchsia/zircon/system/utest/debugger/debugger.c:582
+#11: test_segfault at /home/fuchsia/zircon/system/utest/debugger/debugger.c:599
+#12: main at /home/fuchsia/zircon/system/utest/debugger/debugger.c:640
+#13: start_main at /home/fuchsia/zircon/third_party/ulib/musl/src/env/__libc_start_main.c:47
 #14: (unknown)
 end of symbolized stack
 ```
@@ -107,7 +107,7 @@ backtrace at a particular point in your code.
 Include this header:
 
 ```
-#include <magenta/crashlogger.h>
+#include <zircon/crashlogger.h>
 ```
 
 and then add the following where you want the backtrace printed:
