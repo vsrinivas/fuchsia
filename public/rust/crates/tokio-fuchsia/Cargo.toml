@@ -1,0 +1,12 @@
+[package]
+name = "tokio-fuchsia"
+version = "0.1.0"
+license = "BSD-3-Clause"
+authors = ["Tristan Hume <trishume@google.com>"]
+repository = "https://fuchsia.googlesource.com/tokio-fuchsia/"
+
+[dependencies]
+futures = "0.1"
+magenta = { path = "../magenta-rs", version = "0.2" }
+mio = "0.6"
+tokio-core = "0.1.9"
