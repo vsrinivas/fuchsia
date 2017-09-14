@@ -16,7 +16,7 @@ scripts/build-zircon-x86-64
 
 # Optional: Build Linux, an initial RAM disk, and an EXT2 file-system.
 system/uapp/guest/scripts/mklinux.sh
-system/uapp/guest/scripts/mktoybox.sh -ri
+system/uapp/guest/scripts/mksysroot.sh -ri
 
 # Optional: Build a GPT disk image for Zircon guests.
 system/uapp/guest/scripts/mkgpt.sh

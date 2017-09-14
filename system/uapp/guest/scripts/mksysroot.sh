@@ -6,10 +6,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 #
-# Download and build toybox to be an initrd for linux.
-#
-# .config is "make defconfig" with the following additions:
-#  + sh (toysh)
+# Download and build toybox to be an initrd for linux
+# and download and build dash as the system shell.
 #
 # More additions to come as and when desired / needed.
 
@@ -29,13 +27,17 @@ TOYBOX_ROOTFS="$TOYBOX_SRC_DIR/rootfs.ext2"
 # Where to prep the toybox directory structure.
 TOYBOX_SYSROOT="$TOYBOX_SRC_DIR/fs"
 
+# Where the dash sources are expected to be.
+DASH_SRC_DIR="/tmp/dash"
+
 usage() {
-    echo "usage: ${0} [-rif] [-d toybox_dir]"
+    echo "usage: ${0} [-rif] [-d toybox_dir] [-s dash_dir]"
     echo ""
     echo "    -r Build ext2 filesystem image."
     echo "    -i Build initrd CPIO archive."
     echo "    -f Force a rebuild even if the artifact already exists."
     echo "    -d Directory to clone toybox into."
+    echo "    -s Directory to clone dash into."
     echo ""
     exit 1
 }
@@ -65,6 +67,31 @@ build_toybox() {
 
   mkdir -p "$sysroot_dir"/{bin,sbin,etc,proc,sys,usr/{bin,sbin}}
   PREFIX=$sysroot_dir make -C "$toybox_src" install
+}
+
+# Ensures the dash sources are downloaded.
+#
+# $1 - Directory to unpack the sources into.
+get_dash_source() {
+  local dash_src=$1
+
+  if [ ! -d "$dash_src" ]; then
+    git clone --depth 1 https://zircon-guest.googlesource.com/third_party/dash "$dash_src"
+  fi
+}
+
+# Build dash, copy it to sysroot and make it sh.
+#
+# $1 - Dash source directory.
+# $2 - Directory of toybox sysroot.
+build_dash() {
+  local dash_src=$1
+  local sysroot_dir="$2"
+
+  ( cd $dash_src && ./autogen.sh && ./configure LDFLAGS="-static" && make )
+  mkdir -p "$sysroot_dir/bin"
+  # TODO(andymutton): Remove the -f when we can disable toysh in the toybox repo
+  cp -f "$dash_src/src/dash" "$sysroot_dir/bin/sh"
 }
 
 # Generate a simple init script at /init in the target sysroot.
@@ -141,12 +168,13 @@ declare FORCE="${FORCE:-false}"
 declare BUILD_INITRD="${BUILD_INITRD:-false}"
 declare BUILD_ROOTFS="${BUILD_ROOTFS:-false}"
 
-while getopts "fird:" opt; do
+while getopts "fird:s:" opt; do
   case "${opt}" in
     f) FORCE="true" ;;
     i) BUILD_INITRD="true" ;;
     r) BUILD_ROOTFS="true" ;;
     d) TOYBOX_SRC_DIR="${OPTARG}" ;;
+    s) DASH_SRC_DIR="${OPTARG}" ;;
     *) usage ;;
   esac
 done
@@ -180,6 +208,10 @@ fi
 get_toybox_source "${TOYBOX_SRC_DIR}"
 
 build_toybox "${TOYBOX_SRC_DIR}" "${TOYBOX_SYSROOT}"
+
+get_dash_source "${DASH_SRC_DIR}"
+
+build_dash "${DASH_SRC_DIR}" "${TOYBOX_SYSROOT}"
 
 generate_init "${TOYBOX_SRC_DIR}" "${TOYBOX_SYSROOT}"
 
