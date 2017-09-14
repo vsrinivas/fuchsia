@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Type-safe bindings for Magenta channel objects.
+//! Type-safe bindings for Zircon channel objects.
 
 use {AsHandleRef, HandleBased, Handle, HandleRef, INVALID_HANDLE, Peered, Status, Time, usize_into_u32, size_to_u32_sat};
 use {sys, handle_drop, into_result};
 use std::mem;
 
-/// An object representing a Magenta
-/// [channel](https://fuchsia.googlesource.com/magenta/+/master/docs/objects/channel.md).
+/// An object representing a Zircon
+/// [channel](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/channel.md).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
@@ -22,13 +22,13 @@ impl Channel {
     /// sides of the channel. Messages written into one maybe read from the opposite.
     ///
     /// Wraps the
-    /// [mx_channel_create](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/channel_create.md)
+    /// [zx_channel_create](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/channel_create.md)
     /// syscall.
     pub fn create(opts: ChannelOpts) -> Result<(Channel, Channel), Status> {
         unsafe {
             let mut handle0 = 0;
             let mut handle1 = 0;
-            let status = sys::mx_channel_create(opts as u32, &mut handle0, &mut handle1);
+            let status = sys::zx_channel_create(opts as u32, &mut handle0, &mut handle1);
             into_result(status, ||
                 (Self::from(Handle(handle0)),
                     Self::from(Handle(handle1))))
@@ -36,7 +36,7 @@ impl Channel {
     }
 
     /// Read a message from a channel. Wraps the
-    /// [mx_channel_read](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/channel_read.md)
+    /// [zx_channel_read](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/channel_read.md)
     /// syscall.
     ///
     /// If the `MessageBuf` lacks the capacity to hold the pending message,
@@ -50,10 +50,10 @@ impl Channel {
             let raw_handle = self.raw_handle();
             let mut num_bytes: u32 = size_to_u32_sat(buf.bytes.capacity());
             let mut num_handles: u32 = size_to_u32_sat(buf.handles.capacity());
-            let status = sys::mx_channel_read(raw_handle, opts,
+            let status = sys::zx_channel_read(raw_handle, opts,
                 buf.bytes.as_mut_ptr(), buf.handles.as_mut_ptr(),
                 num_bytes, num_handles, &mut num_bytes, &mut num_handles);
-            if status == sys::MX_ERR_BUFFER_TOO_SMALL {
+            if status == sys::ZX_ERR_BUFFER_TOO_SMALL {
                 Err((num_bytes as usize, num_handles as usize))
             } else {
                 Ok(into_result(status, || {
@@ -82,7 +82,7 @@ impl Channel {
     }
 
     /// Write a message to a channel. Wraps the
-    /// [mx_channel_write](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/channel_write.md)
+    /// [zx_channel_write](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/channel_write.md)
     /// syscall.
     pub fn write(&self, bytes: &[u8], handles: &mut Vec<Handle>, opts: u32)
             -> Result<(), Status>
@@ -90,8 +90,8 @@ impl Channel {
         let n_bytes = try!(usize_into_u32(bytes.len()).map_err(|_| Status::ErrOutOfRange));
         let n_handles = try!(usize_into_u32(handles.len()).map_err(|_| Status::ErrOutOfRange));
         unsafe {
-            let status = sys::mx_channel_write(self.raw_handle(), opts, bytes.as_ptr(), n_bytes,
-                handles.as_ptr() as *const sys::mx_handle_t, n_handles);
+            let status = sys::zx_channel_write(self.raw_handle(), opts, bytes.as_ptr(), n_bytes,
+                handles.as_ptr() as *const sys::zx_handle_t, n_handles);
             into_result(status, || {
                 // Handles were successfully transferred, forget them on sender side
                 handles.set_len(0);
@@ -103,7 +103,7 @@ impl Channel {
     /// bytes should start with a four byte 'txid' which is used to identify the matching reply.
     ///
     /// Wraps the
-    /// [mx_channel_call](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/channel_call.md)
+    /// [zx_channel_call](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/channel_call.md)
     /// syscall.
     ///
     /// Note that unlike [`read`][read], the caller must ensure that the MessageBuf has enough
@@ -123,9 +123,9 @@ impl Channel {
         buf.reset_handles();
         let read_num_bytes: u32 = size_to_u32_sat(buf.bytes.capacity());
         let read_num_handles: u32 = size_to_u32_sat(buf.handles.capacity());
-        let args = sys::mx_channel_call_args_t {
+        let args = sys::zx_channel_call_args_t {
             wr_bytes: bytes.as_ptr(),
-            wr_handles: handles.as_ptr() as *const sys::mx_handle_t,
+            wr_handles: handles.as_ptr() as *const sys::zx_handle_t,
             rd_bytes: buf.bytes.as_mut_ptr(),
             rd_handles: buf.handles.as_mut_ptr(),
             wr_num_bytes: write_num_bytes,
@@ -135,12 +135,12 @@ impl Channel {
         };
         let mut actual_read_bytes: u32 = 0;
         let mut actual_read_handles: u32 = 0;
-        let mut read_status = sys::MX_OK;
+        let mut read_status = sys::ZX_OK;
         let status = unsafe {
-            sys::mx_channel_call(self.raw_handle(), options, timeout, &args, &mut actual_read_bytes,
+            sys::zx_channel_call(self.raw_handle(), options, timeout, &args, &mut actual_read_bytes,
                 &mut actual_read_handles, &mut read_status)
         };
-        if status == sys::MX_OK || status == sys::MX_ERR_TIMED_OUT || status == sys::MX_ERR_CALL_FAILED
+        if status == sys::ZX_OK || status == sys::ZX_ERR_TIMED_OUT || status == sys::ZX_ERR_CALL_FAILED
         {
             // Handles were successfully transferred, even if we didn't get a response, so forget
             // them on the sender side.
@@ -150,7 +150,7 @@ impl Channel {
             buf.bytes.set_len(actual_read_bytes as usize);
             buf.handles.set_len(actual_read_handles as usize);
         }
-        if status == sys::MX_OK {
+        if status == sys::ZX_OK {
             Ok(())
         } else {
             Err((Status::from_raw(status), Status::from_raw(read_status)))
@@ -183,7 +183,7 @@ impl Default for ChannelOpts {
 #[derive(Debug)]
 pub struct MessageBuf {
     bytes: Vec<u8>,
-    handles: Vec<sys::mx_handle_t>,
+    handles: Vec<sys::zx_handle_t>,
 }
 
 impl MessageBuf {
@@ -257,7 +257,7 @@ fn ensure_capacity<T>(vec: &mut Vec<T>, size: usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {Duration, MX_CHANNEL_READABLE, MX_CHANNEL_WRITABLE, MX_RIGHT_SAME_RIGHTS, MX_SIGNAL_LAST_HANDLE, Vmo, VmoOpts};
+    use {Duration, ZX_CHANNEL_READABLE, ZX_CHANNEL_WRITABLE, ZX_RIGHT_SAME_RIGHTS, ZX_SIGNAL_LAST_HANDLE, Vmo, VmoOpts};
     use deadline_after;
     use std::thread;
 
@@ -295,7 +295,7 @@ mod tests {
         let vmo = Vmo::create(hello_length as u64, VmoOpts::Default).unwrap();
 
         // Duplicate VMO handle and send it down the channel.
-        let duplicate_vmo_handle = vmo.duplicate_handle(MX_RIGHT_SAME_RIGHTS).unwrap().into();
+        let duplicate_vmo_handle = vmo.duplicate_handle(ZX_RIGHT_SAME_RIGHTS).unwrap().into();
         let mut handles_to_send: Vec<Handle> = vec![duplicate_vmo_handle];
         assert!(p1.write(b"", &mut handles_to_send, 0).is_ok());
         // Handle should be removed from vector.
@@ -331,7 +331,7 @@ mod tests {
         let vmo = Vmo::create(0 as u64, VmoOpts::Default).unwrap();
 
         // Duplicate VMO handle and send it along with the call.
-        let duplicate_vmo_handle = vmo.duplicate_handle(MX_RIGHT_SAME_RIGHTS).unwrap().into();
+        let duplicate_vmo_handle = vmo.duplicate_handle(ZX_RIGHT_SAME_RIGHTS).unwrap().into();
         let mut handles_to_send: Vec<Handle> = vec![duplicate_vmo_handle];
         let mut buf = MessageBuf::new();
         assert_eq!(p1.call(0, deadline_after(ten_ms), b"call", &mut handles_to_send, &mut buf),
@@ -356,8 +356,8 @@ mod tests {
 
         // Start a new thread to respond to the call.
         let server = thread::spawn(move || {
-            assert_eq!(p2.wait_handle(MX_CHANNEL_READABLE, deadline_after(hundred_ms)),
-                Ok(MX_CHANNEL_READABLE | MX_CHANNEL_WRITABLE | MX_SIGNAL_LAST_HANDLE));
+            assert_eq!(p2.wait_handle(ZX_CHANNEL_READABLE, deadline_after(hundred_ms)),
+                Ok(ZX_CHANNEL_READABLE | ZX_CHANNEL_WRITABLE | ZX_SIGNAL_LAST_HANDLE));
             let mut buf = MessageBuf::new();
             assert_eq!(p2.read(0, &mut buf), Ok(()));
             assert_eq!(buf.bytes(), b"txidcall");

@@ -90,9 +90,9 @@ string SysrootPath(const string& triple, const string& self_path) {
   size_t pos = self_path.find(out_dir_name);
   if (pos != string::npos) {
     string out_path = self_path.substr(0, pos + out_dir_name.length());
-    string magenta_name = triple == "x86_64-unknown-fuchsia" ?
-      "build-magenta-pc-x86-64" : "build-magenta-qemu-arm64";
-    string sysroot_path = out_path + "build-magenta/" + magenta_name + "/sysroot";
+    string zircon_name = triple == "x86_64-unknown-fuchsia" ?
+      "build-zircon-pc-x86-64" : "build-zircon-qemu-arm64";
+    string sysroot_path = out_path + "build-zircon/" + zircon_name + "/sysroot";
     struct stat stat_buf;
     int status = stat(sysroot_path.c_str(), &stat_buf);
     if (status == 0) {

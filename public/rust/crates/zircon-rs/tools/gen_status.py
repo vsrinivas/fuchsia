@@ -4,12 +4,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# A tool for autogenerating the mapping between Status and mx_status_t
-# Usage: python gen_status.py magenta/system/public/magenta/errors.h {sys,enum,match}
+# A tool for autogenerating the mapping between Status and zx_status_t
+# Usage: python gen_status.py zircon/system/public/zircon/errors.h {sys,enum,match}
 import re
 import sys
 
-status_re = re.compile('#define\s+(MX_\w+)\s+\((\-?\d+)\)$')
+status_re = re.compile('#define\s+(ZX_\w+)\s+\((\-?\d+)\)$')
 
 def parse(in_filename):
     result = []
@@ -30,13 +30,13 @@ def out(style, l):
     longest = max(len(name) for (name, num) in l)
     if style == 'sys':
         for (name, num) in l:
-            print('pub const %s : mx_status_t = %d;' % (name.ljust(longest), num))
+            print('pub const %s : zx_status_t = %d;' % (name.ljust(longest), num))
     if style == 'enum':
         print('pub enum Status {')
         for (name, num) in l:
             print('    %s = %d,' % (to_snake_case(name[3:]), num))
         print('');
-        print('    /// Any mx_status_t not in the set above will map to the following:')
+        print('    /// Any zx_status_t not in the set above will map to the following:')
         print('    UnknownOther = -32768,')
         print('}')
     if style == 'match':

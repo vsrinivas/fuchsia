@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Type-safe bindings for Magenta sockets.
+//! Type-safe bindings for Zircon sockets.
 
 use {AsHandleRef, HandleBased, Handle, HandleRef, Peered};
 use {sys, Status, into_result};
 
 use std::ptr;
 
-/// An object representing a Magenta
-/// [socket](https://fuchsia.googlesource.com/magenta/+/master/docs/concepts.md#Message-Passing_Sockets-and-Channels).
+/// An object representing a Zircon
+/// [socket](https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md#Message-Passing_Sockets-and-Channels).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
@@ -66,12 +66,12 @@ impl Socket {
     /// into one may be read from the other.
     ///
     /// Wraps
-    /// [mx_socket_create](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/socket_create.md).
+    /// [zx_socket_create](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/socket_create.md).
     pub fn create(opts: SocketOpts) -> Result<(Socket, Socket), Status> {
         unsafe {
             let mut out0 = 0;
             let mut out1 = 0;
-            let status = sys::mx_socket_create(opts as u32, &mut out0, &mut out1);
+            let status = sys::zx_socket_create(opts as u32, &mut out0, &mut out1);
             into_result(status, ||
                 (Self::from(Handle(out0)),
                     Self::from(Handle(out1))))
@@ -82,11 +82,11 @@ impl Socket {
     /// Return value (on success) is number of bytes actually written.
     ///
     /// Wraps
-    /// [mx_socket_write](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/socket_write.md).
+    /// [zx_socket_write](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/socket_write.md).
     pub fn write(&self, opts: SocketWriteOpts, bytes: &[u8]) -> Result<usize, Status> {
         let mut actual = 0;
         let status = unsafe {
-            sys::mx_socket_write(self.raw_handle(), opts as u32, bytes.as_ptr(), bytes.len(),
+            sys::zx_socket_write(self.raw_handle(), opts as u32, bytes.as_ptr(), bytes.len(),
                 &mut actual)
         };
         into_result(status, || actual)
@@ -96,14 +96,14 @@ impl Socket {
     /// Return value (on success) is number of bytes actually read.
     ///
     /// Wraps
-    /// [mx_socket_read](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/socket_read.md).
+    /// [zx_socket_read](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/socket_read.md).
     pub fn read(&self, opts: SocketReadOpts, bytes: &mut [u8]) -> Result<usize, Status> {
         let mut actual = 0;
         let status = unsafe {
-            sys::mx_socket_read(self.raw_handle(), opts as u32, bytes.as_mut_ptr(),
+            sys::zx_socket_read(self.raw_handle(), opts as u32, bytes.as_mut_ptr(),
                 bytes.len(), &mut actual)
         };
-        if status != sys::MX_OK {
+        if status != sys::ZX_OK {
             // If an error is returned then actual is undefined, so to be safe we set it to 0 and
             // ignore any data that is set in bytes.
             actual = 0;
@@ -113,10 +113,10 @@ impl Socket {
 
     /// Close half of the socket, so attempts by the other side to write will fail.
     ///
-    /// Implements the `MX_SOCKET_HALF_CLOSE` option of
-    /// [mx_socket_write](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/socket_write.md).
+    /// Implements the `ZX_SOCKET_HALF_CLOSE` option of
+    /// [zx_socket_write](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/socket_write.md).
     pub fn half_close(&self) -> Result<(), Status> {
-        let status = unsafe { sys::mx_socket_write(self.raw_handle(), sys::MX_SOCKET_HALF_CLOSE,
+        let status = unsafe { sys::zx_socket_write(self.raw_handle(), sys::ZX_SOCKET_HALF_CLOSE,
             ptr::null(), 0, ptr::null_mut()) };
         into_result(status, || ())
     }
@@ -124,7 +124,7 @@ impl Socket {
     pub fn outstanding_read_bytes(&self) -> Result<usize, Status> {
         let mut outstanding = 0;
         let status = unsafe {
-            sys::mx_socket_read(self.raw_handle(), 0, ptr::null_mut(), 0, &mut outstanding)
+            sys::zx_socket_read(self.raw_handle(), 0, ptr::null_mut(), 0, &mut outstanding)
         };
         into_result(status, || outstanding)
     }

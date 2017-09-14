@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Type-safe bindings for Magenta fifo objects.
+//! Type-safe bindings for Zircon fifo objects.
 
 use {AsHandleRef, HandleBased, Handle, HandleRef, Status};
 use {sys, into_result};
 
-/// An object representing a Magenta fifo.
+/// An object representing a Zircon fifo.
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
@@ -17,7 +17,7 @@ impl_handle_based!(Fifo);
 impl Fifo {
     /// Create a pair of fifos and return their endpoints. Writing to one endpoint enqueues an
     /// element into the fifo from which the opposing endpoint reads. Wraps the
-    /// [mx_fifo_create](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/fifo_create.md)
+    /// [zx_fifo_create](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/fifo_create.md)
     /// syscall.
     pub fn create(elem_count: u32, elem_size: u32, options: FifoOpts)
         -> Result<(Fifo, Fifo), Status>
@@ -25,7 +25,7 @@ impl Fifo {
         let mut out0 = 0;
         let mut out1 = 0;
         let status = unsafe {
-            sys::mx_fifo_create(elem_count, elem_size, options as u32, &mut out0, &mut out1)
+            sys::zx_fifo_create(elem_count, elem_size, options as u32, &mut out0, &mut out1)
         };
         into_result(status, || (Self::from(Handle(out0)), Self::from(Handle(out1))))
     }
@@ -35,11 +35,11 @@ impl Fifo {
     /// Return value (on success) is number of elements actually written.
     ///
     /// Wraps
-    /// [mx_fifo_write](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/fifo_write.md).
+    /// [zx_fifo_write](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/fifo_write.md).
     pub fn write(&self, bytes: &[u8]) -> Result<u32, Status> {
         let mut num_entries_written = 0;
         let status = unsafe {
-            sys::mx_fifo_write(self.raw_handle(), bytes.as_ptr(), bytes.len(),
+            sys::zx_fifo_write(self.raw_handle(), bytes.as_ptr(), bytes.len(),
                 &mut num_entries_written)
         };
         into_result(status, || num_entries_written)
@@ -50,11 +50,11 @@ impl Fifo {
     /// Return value (on success) is number of elements actually read.
     ///
     /// Wraps
-    /// [mx_fifo_read](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/fifo_read.md).
+    /// [zx_fifo_read](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/fifo_read.md).
     pub fn read(&self, bytes: &mut [u8]) -> Result<u32, Status> {
         let mut num_entries_read = 0;
         let status = unsafe {
-            sys::mx_fifo_read(self.raw_handle(), bytes.as_mut_ptr(), bytes.len(),
+            sys::zx_fifo_read(self.raw_handle(), bytes.as_mut_ptr(), bytes.len(),
                 &mut num_entries_read)
         };
         into_result(status, || num_entries_read)

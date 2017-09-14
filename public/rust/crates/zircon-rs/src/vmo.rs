@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Type-safe bindings for Magenta vmo objects.
+//! Type-safe bindings for Zircon vmo objects.
 
 use {AsHandleRef, Cookied, HandleBased, Handle, HandleRef, Status};
 use {sys, into_result};
 use std::{mem, ptr};
 
-/// An object representing a Magenta
-/// [virtual memory object](https://fuchsia.googlesource.com/magenta/+/master/docs/objects/vm_object.md).
+/// An object representing a Zircon
+/// [virtual memory object](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/vm_object.md).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
@@ -21,24 +21,24 @@ impl Vmo {
     /// Create a virtual memory object.
     ///
     /// Wraps the
-    /// `mx_vmo_create`
+    /// `zx_vmo_create`
     /// syscall. See the
-    /// [Shared Memory: Virtual Memory Objects (VMOs)](https://fuchsia.googlesource.com/magenta/+/master/docs/concepts.md#Shared-Memory_Virtual-Memory-Objects-VMOs)
+    /// [Shared Memory: Virtual Memory Objects (VMOs)](https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md#Shared-Memory_Virtual-Memory-Objects-VMOs)
     /// for more information.
     pub fn create(size: u64, options: VmoOpts) -> Result<Vmo, Status> {
         let mut handle = 0;
-        let status = unsafe { sys::mx_vmo_create(size, options as u32, &mut handle) };
+        let status = unsafe { sys::zx_vmo_create(size, options as u32, &mut handle) };
         into_result(status, ||
             Vmo::from(Handle(handle)))
     }
 
     /// Read from a virtual memory object.
     ///
-    /// Wraps the `mx_vmo_read` syscall.
+    /// Wraps the `zx_vmo_read` syscall.
     pub fn read(&self, data: &mut [u8], offset: u64) -> Result<usize, Status> {
         unsafe {
             let mut actual = 0;
-            let status = sys::mx_vmo_read(self.raw_handle(), data.as_mut_ptr(),
+            let status = sys::zx_vmo_read(self.raw_handle(), data.as_mut_ptr(),
                 offset, data.len(), &mut actual);
             into_result(status, || actual)
         }
@@ -46,11 +46,11 @@ impl Vmo {
 
     /// Write to a virtual memory object.
     ///
-    /// Wraps the `mx_vmo_write` syscall.
+    /// Wraps the `zx_vmo_write` syscall.
     pub fn write(&self, data: &[u8], offset: u64) -> Result<usize, Status> {
         unsafe {
             let mut actual = 0;
-            let status = sys::mx_vmo_write(self.raw_handle(), data.as_ptr(),
+            let status = sys::zx_vmo_write(self.raw_handle(), data.as_ptr(),
                 offset, data.len(), &mut actual);
             into_result(status, || actual)
         }
@@ -58,29 +58,29 @@ impl Vmo {
 
     /// Get the size of a virtual memory object.
     ///
-    /// Wraps the `mx_vmo_get_size` syscall.
+    /// Wraps the `zx_vmo_get_size` syscall.
     pub fn get_size(&self) -> Result<u64, Status> {
         let mut size = 0;
-        let status = unsafe { sys::mx_vmo_get_size(self.raw_handle(), &mut size) };
+        let status = unsafe { sys::zx_vmo_get_size(self.raw_handle(), &mut size) };
         into_result(status, || size)
     }
 
     /// Attempt to change the size of a virtual memory object.
     ///
-    /// Wraps the `mx_vmo_set_size` syscall.
+    /// Wraps the `zx_vmo_set_size` syscall.
     pub fn set_size(&self, size: u64) -> Result<(), Status> {
-        let status = unsafe { sys::mx_vmo_set_size(self.raw_handle(), size) };
+        let status = unsafe { sys::zx_vmo_set_size(self.raw_handle(), size) };
         into_result(status, || ())
     }
 
     /// Perform an operation on a range of a virtual memory object.
     ///
     /// Wraps the
-    /// [mx_vmo_op_range](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/vmo_op_range.md)
+    /// [zx_vmo_op_range](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/vmo_op_range.md)
     /// syscall.
     pub fn op_range(&self, op: VmoOp, offset: u64, size: u64) -> Result<(), Status> {
         let status = unsafe {
-            sys::mx_vmo_op_range(self.raw_handle(), op as u32, offset, size, ptr::null_mut(), 0)
+            sys::zx_vmo_op_range(self.raw_handle(), op as u32, offset, size, ptr::null_mut(), 0)
         };
         into_result(status, || ())
     }
@@ -89,14 +89,14 @@ impl Vmo {
     /// `offset` to `offset`+`size`, and store them in `buffer`.
     ///
     /// Wraps the
-    /// [mx_vmo_op_range](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/vmo_op_range.md)
-    /// syscall with MX_VMO_OP_LOOKUP.
-    pub fn lookup(&self, offset: u64, size: u64, buffer: &mut [sys::mx_paddr_t])
+    /// [zx_vmo_op_range](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/vmo_op_range.md)
+    /// syscall with ZX_VMO_OP_LOOKUP.
+    pub fn lookup(&self, offset: u64, size: u64, buffer: &mut [sys::zx_paddr_t])
         -> Result<(), Status>
     {
         let status = unsafe {
-            sys::mx_vmo_op_range(self.raw_handle(), sys::MX_VMO_OP_LOOKUP, offset, size,
-                buffer.as_mut_ptr() as *mut u8, buffer.len() * mem::size_of::<sys::mx_paddr_t>())
+            sys::zx_vmo_op_range(self.raw_handle(), sys::ZX_VMO_OP_LOOKUP, offset, size,
+                buffer.as_mut_ptr() as *mut u8, buffer.len() * mem::size_of::<sys::zx_paddr_t>())
         };
         into_result(status, || ())
     }
@@ -104,12 +104,12 @@ impl Vmo {
     /// Create a new virtual memory object that clones a range of this one.
     ///
     /// Wraps the
-    /// [mx_vmo_clone](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/vmo_clone.md)
+    /// [zx_vmo_clone](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/vmo_clone.md)
     /// syscall.
     pub fn clone(&self, options: VmoCloneOpts, offset: u64, size: u64) -> Result<Vmo, Status> {
         let mut out = 0;
         let status = unsafe {
-            sys::mx_vmo_clone(self.raw_handle(), options as u32, offset, size, &mut out)
+            sys::zx_vmo_clone(self.raw_handle(), options as u32, offset, size, &mut out)
         };
         into_result(status, || Vmo::from(Handle(out)))
     }
@@ -133,28 +133,28 @@ impl Default for VmoOpts {
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum VmoOp {
     /// Commit `size` bytes worth of pages starting at byte `offset` for the VMO.
-    Commit = sys::MX_VMO_OP_COMMIT,
+    Commit = sys::ZX_VMO_OP_COMMIT,
     /// Release a range of pages previously committed to the VMO from `offset` to `offset`+`size`.
-    Decommit = sys::MX_VMO_OP_DECOMMIT,
+    Decommit = sys::ZX_VMO_OP_DECOMMIT,
     // Presently unsupported.
-    Lock = sys::MX_VMO_OP_LOCK,
+    Lock = sys::ZX_VMO_OP_LOCK,
     // Presently unsupported.
-    Unlock = sys::MX_VMO_OP_UNLOCK,
+    Unlock = sys::ZX_VMO_OP_UNLOCK,
     /// Perform a cache sync operation.
-    CacheSync = sys::MX_VMO_OP_CACHE_SYNC,
+    CacheSync = sys::ZX_VMO_OP_CACHE_SYNC,
     /// Perform a cache invalidation operation.
-    CacheInvalidate = sys::MX_VMO_OP_CACHE_INVALIDATE,
+    CacheInvalidate = sys::ZX_VMO_OP_CACHE_INVALIDATE,
     /// Perform a cache clean operation.
-    CacheClean = sys::MX_VMO_OP_CACHE_CLEAN,
+    CacheClean = sys::ZX_VMO_OP_CACHE_CLEAN,
     /// Perform cache clean and invalidation operations together.
-    CacheCleanInvalidate = sys::MX_VMO_OP_CACHE_CLEAN_INVALIDATE,
+    CacheCleanInvalidate = sys::ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
 }
 
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum VmoCloneOpts {
     /// Create a copy-on-write clone.
-    CopyOnWrite = sys::MX_VMO_CLONE_COPY_ON_WRITE,
+    CopyOnWrite = sys::ZX_VMO_CLONE_COPY_ON_WRITE,
 }
 
 impl Default for VmoCloneOpts {

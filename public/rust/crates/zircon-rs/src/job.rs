@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Type-safe bindings for Magenta job.
+//! Type-safe bindings for Zircon job.
 
 use {AsHandleRef, HandleBased, Handle, HandleRef};
 
-/// An object representing a Magenta job.
+/// An object representing a Zircon job.
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]

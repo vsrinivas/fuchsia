@@ -1,10 +1,10 @@
 [package]
-name = "zircon"
+name = "zircon-sys"
 version = "0.2.0"
 license = "BSD-3-Clause"
 authors = ["Raph Levien <raph@google.com>"]
-description = "Rust bindings for the Zircon kernel"
+description = "Low-level Rust bindings for the Zircon kernel"
 repository = "https://fuchsia.googlesource.com/zircon-rs/"
 
 [dependencies]
-zircon-sys = { path = "zircon-sys", version = "0.2.0" }
+bitflags = "0.7.0"

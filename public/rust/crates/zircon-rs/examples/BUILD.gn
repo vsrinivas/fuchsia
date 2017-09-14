@@ -4,6 +4,6 @@
 
 group("examples") {
   deps = [
-    "//rust/magenta-rs/examples/mx_toy",
+    "//rust/zircon-rs/examples/zx_toy",
   ]
 }

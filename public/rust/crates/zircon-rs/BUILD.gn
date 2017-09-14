@@ -4,9 +4,9 @@
 
 import("//build/rust/rust_library.gni")
 
-rust_library("magenta") {
+rust_library("zircon") {
   deps = [
-    "//rust/magenta-rs/magenta-sys",
+    "//rust/zircon-rs/zircon-sys",
   ]
 
   with_tests = true

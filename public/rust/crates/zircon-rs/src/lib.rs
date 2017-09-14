@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Type-safe bindings for Magenta kernel
-//! [syscalls](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls.md).
+//! Type-safe bindings for Zircon kernel
+//! [syscalls](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls.md).
 
 extern crate core;
-extern crate magenta_sys;
+extern crate zircon_sys;
 
 use std::marker::PhantomData;
 
@@ -58,21 +58,21 @@ pub use timer::{Timer, TimerOpts};
 pub use thread::Thread;
 pub use vmo::{Vmo, VmoCloneOpts, VmoOp, VmoOpts};
 
-use magenta_sys as sys;
+use zircon_sys as sys;
 
-type Duration = sys::mx_duration_t;
-type Time = sys::mx_time_t;
-pub use magenta_sys::MX_TIME_INFINITE;
+type Duration = sys::zx_duration_t;
+type Time = sys::zx_time_t;
+pub use zircon_sys::ZX_TIME_INFINITE;
 
 // A placeholder value used for handles that have been taken from the message buf.
 // We rely on the kernel never to produce any actual handles with this value.
-const INVALID_HANDLE: sys::mx_handle_t = 0;
+const INVALID_HANDLE: sys::zx_handle_t = 0;
 
-/// A status code returned from the Magenta kernel.
+/// A status code returned from the Zircon kernel.
 ///
 /// See
-/// [errors.md](https://fuchsia.googlesource.com/magenta/+/master/docs/errors.md)
-/// in the Magenta documentation for more information about the meaning of these
+/// [errors.md](https://fuchsia.googlesource.com/zircon/+/master/docs/errors.md)
+/// in the Zircon documentation for more information about the meaning of these
 /// codes.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[repr(i32)]
@@ -113,48 +113,48 @@ pub enum Status {
     ErrStop = -60,
     ErrNext = -61,
 
-    /// Any mx_status_t not in the set above will map to the following:
+    /// Any zx_status_t not in the set above will map to the following:
     UnknownOther = -32768,
 }
 
 impl Status {
-    pub fn from_raw(raw: sys::mx_status_t) -> Self {
+    pub fn from_raw(raw: sys::zx_status_t) -> Self {
         match raw {
             // Auto-generated using tools/gen_status.py
-            sys::MX_OK => Status::NoError,
-            sys::MX_ERR_INTERNAL => Status::ErrInternal,
-            sys::MX_ERR_NOT_SUPPORTED => Status::ErrNotSupported,
-            sys::MX_ERR_NO_RESOURCES => Status::ErrNoResources,
-            sys::MX_ERR_NO_MEMORY => Status::ErrNoMemory,
-            sys::MX_ERR_CALL_FAILED => Status::ErrCallFailed,
-            sys::MX_ERR_INTERRUPTED_RETRY => Status::ErrInterruptedRetry,
-            sys::MX_ERR_INVALID_ARGS => Status::ErrInvalidArgs,
-            sys::MX_ERR_BAD_HANDLE => Status::ErrBadHandle,
-            sys::MX_ERR_WRONG_TYPE => Status::ErrWrongType,
-            sys::MX_ERR_BAD_SYSCALL => Status::ErrBadSyscall,
-            sys::MX_ERR_OUT_OF_RANGE => Status::ErrOutOfRange,
-            sys::MX_ERR_BUFFER_TOO_SMALL => Status::ErrBufferTooSmall,
-            sys::MX_ERR_BAD_STATE => Status::ErrBadState,
-            sys::MX_ERR_TIMED_OUT => Status::ErrTimedOut,
-            sys::MX_ERR_SHOULD_WAIT => Status::ErrShouldWait,
-            sys::MX_ERR_CANCELED => Status::ErrCanceled,
-            sys::MX_ERR_PEER_CLOSED => Status::ErrPeerClosed,
-            sys::MX_ERR_NOT_FOUND => Status::ErrNotFound,
-            sys::MX_ERR_ALREADY_EXISTS => Status::ErrAlreadyExists,
-            sys::MX_ERR_ALREADY_BOUND => Status::ErrAlreadyBound,
-            sys::MX_ERR_UNAVAILABLE => Status::ErrUnavailable,
-            sys::MX_ERR_ACCESS_DENIED => Status::ErrAccessDenied,
-            sys::MX_ERR_IO => Status::ErrIo,
-            sys::MX_ERR_IO_REFUSED => Status::ErrIoRefused,
-            sys::MX_ERR_IO_DATA_INTEGRITY => Status::ErrIoDataIntegrity,
-            sys::MX_ERR_IO_DATA_LOSS => Status::ErrIoDataLoss,
-            sys::MX_ERR_BAD_PATH => Status::ErrBadPath,
-            sys::MX_ERR_NOT_DIR => Status::ErrNotDir,
-            sys::MX_ERR_NOT_FILE => Status::ErrNotFile,
-            sys::MX_ERR_FILE_BIG => Status::ErrFileBig,
-            sys::MX_ERR_NO_SPACE => Status::ErrNoSpace,
-            sys::MX_ERR_STOP => Status::ErrStop,
-            sys::MX_ERR_NEXT => Status::ErrNext,
+            sys::ZX_OK => Status::NoError,
+            sys::ZX_ERR_INTERNAL => Status::ErrInternal,
+            sys::ZX_ERR_NOT_SUPPORTED => Status::ErrNotSupported,
+            sys::ZX_ERR_NO_RESOURCES => Status::ErrNoResources,
+            sys::ZX_ERR_NO_MEMORY => Status::ErrNoMemory,
+            sys::ZX_ERR_CALL_FAILED => Status::ErrCallFailed,
+            sys::ZX_ERR_INTERRUPTED_RETRY => Status::ErrInterruptedRetry,
+            sys::ZX_ERR_INVALID_ARGS => Status::ErrInvalidArgs,
+            sys::ZX_ERR_BAD_HANDLE => Status::ErrBadHandle,
+            sys::ZX_ERR_WRONG_TYPE => Status::ErrWrongType,
+            sys::ZX_ERR_BAD_SYSCALL => Status::ErrBadSyscall,
+            sys::ZX_ERR_OUT_OF_RANGE => Status::ErrOutOfRange,
+            sys::ZX_ERR_BUFFER_TOO_SMALL => Status::ErrBufferTooSmall,
+            sys::ZX_ERR_BAD_STATE => Status::ErrBadState,
+            sys::ZX_ERR_TIMED_OUT => Status::ErrTimedOut,
+            sys::ZX_ERR_SHOULD_WAIT => Status::ErrShouldWait,
+            sys::ZX_ERR_CANCELED => Status::ErrCanceled,
+            sys::ZX_ERR_PEER_CLOSED => Status::ErrPeerClosed,
+            sys::ZX_ERR_NOT_FOUND => Status::ErrNotFound,
+            sys::ZX_ERR_ALREADY_EXISTS => Status::ErrAlreadyExists,
+            sys::ZX_ERR_ALREADY_BOUND => Status::ErrAlreadyBound,
+            sys::ZX_ERR_UNAVAILABLE => Status::ErrUnavailable,
+            sys::ZX_ERR_ACCESS_DENIED => Status::ErrAccessDenied,
+            sys::ZX_ERR_IO => Status::ErrIo,
+            sys::ZX_ERR_IO_REFUSED => Status::ErrIoRefused,
+            sys::ZX_ERR_IO_DATA_INTEGRITY => Status::ErrIoDataIntegrity,
+            sys::ZX_ERR_IO_DATA_LOSS => Status::ErrIoDataLoss,
+            sys::ZX_ERR_BAD_PATH => Status::ErrBadPath,
+            sys::ZX_ERR_NOT_DIR => Status::ErrNotDir,
+            sys::ZX_ERR_NOT_FILE => Status::ErrNotFile,
+            sys::ZX_ERR_FILE_BIG => Status::ErrFileBig,
+            sys::ZX_ERR_NO_SPACE => Status::ErrNoSpace,
+            sys::ZX_ERR_STOP => Status::ErrStop,
+            sys::ZX_ERR_NEXT => Status::ErrNext,
             _ => Status::UnknownOther,
         }
     }
@@ -165,67 +165,67 @@ impl Status {
 
 /// Rights associated with a handle.
 ///
-/// See [rights.md](https://fuchsia.googlesource.com/magenta/+/master/docs/rights.md)
+/// See [rights.md](https://fuchsia.googlesource.com/zircon/+/master/docs/rights.md)
 /// for more information.
-pub type Rights = sys::mx_rights_t;
-pub use magenta_sys::{
-    MX_RIGHT_NONE,
-    MX_RIGHT_DUPLICATE,
-    MX_RIGHT_TRANSFER,
-    MX_RIGHT_READ,
-    MX_RIGHT_WRITE,
-    MX_RIGHT_EXECUTE,
-    MX_RIGHT_MAP,
-    MX_RIGHT_GET_PROPERTY,
-    MX_RIGHT_SET_PROPERTY,
-    MX_RIGHT_DEBUG,
-    MX_RIGHT_SAME_RIGHTS,
+pub type Rights = sys::zx_rights_t;
+pub use zircon_sys::{
+    ZX_RIGHT_NONE,
+    ZX_RIGHT_DUPLICATE,
+    ZX_RIGHT_TRANSFER,
+    ZX_RIGHT_READ,
+    ZX_RIGHT_WRITE,
+    ZX_RIGHT_EXECUTE,
+    ZX_RIGHT_MAP,
+    ZX_RIGHT_GET_PROPERTY,
+    ZX_RIGHT_SET_PROPERTY,
+    ZX_RIGHT_DEBUG,
+    ZX_RIGHT_SAME_RIGHTS,
 };
 
 /// Signals that can be waited upon.
 ///
 /// See
-/// [Objects and signals](https://fuchsia.googlesource.com/magenta/+/master/docs/concepts.md#Objects-and-Signals)
-/// in the Magenta kernel documentation. Note: the names of signals are still in flux.
-pub type Signals = sys::mx_signals_t;
+/// [Objects and signals](https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md#Objects-and-Signals)
+/// in the Zircon kernel documentation. Note: the names of signals are still in flux.
+pub type Signals = sys::zx_signals_t;
 
-pub use magenta_sys::{
-        MX_SIGNAL_NONE,
+pub use zircon_sys::{
+        ZX_SIGNAL_NONE,
 
-        MX_SIGNAL_HANDLE_CLOSED,
-        MX_SIGNAL_LAST_HANDLE,
+        ZX_SIGNAL_HANDLE_CLOSED,
+        ZX_SIGNAL_LAST_HANDLE,
 
-        MX_USER_SIGNAL_0,
-        MX_USER_SIGNAL_1,
-        MX_USER_SIGNAL_2,
-        MX_USER_SIGNAL_3,
-        MX_USER_SIGNAL_4,
-        MX_USER_SIGNAL_5,
-        MX_USER_SIGNAL_6,
-        MX_USER_SIGNAL_7,
+        ZX_USER_SIGNAL_0,
+        ZX_USER_SIGNAL_1,
+        ZX_USER_SIGNAL_2,
+        ZX_USER_SIGNAL_3,
+        ZX_USER_SIGNAL_4,
+        ZX_USER_SIGNAL_5,
+        ZX_USER_SIGNAL_6,
+        ZX_USER_SIGNAL_7,
 
         // Event
-        MX_EVENT_SIGNALED,
+        ZX_EVENT_SIGNALED,
 
         // EventPair
-        MX_EPAIR_SIGNALED,
-        MX_EPAIR_CLOSED,
+        ZX_EPAIR_SIGNALED,
+        ZX_EPAIR_CLOSED,
 
         // Task signals (process, thread, job)
-        MX_TASK_TERMINATED,
+        ZX_TASK_TERMINATED,
 
         // Channel
-        MX_CHANNEL_READABLE,
-        MX_CHANNEL_WRITABLE,
-        MX_CHANNEL_PEER_CLOSED,
+        ZX_CHANNEL_READABLE,
+        ZX_CHANNEL_WRITABLE,
+        ZX_CHANNEL_PEER_CLOSED,
 
         // Socket
-        MX_SOCKET_READABLE,
-        MX_SOCKET_WRITABLE,
-        MX_SOCKET_PEER_CLOSED,
+        ZX_SOCKET_READABLE,
+        ZX_SOCKET_WRITABLE,
+        ZX_SOCKET_PEER_CLOSED,
 
         // Timer
-        MX_TIMER_SIGNALED,
+        ZX_TIMER_SIGNALED,
 };
 
 /// A "wait item" containing a handle reference and information about what signals
@@ -243,29 +243,29 @@ pub struct WaitItem<'a> {
 
 
 /// An identifier to select a particular clock. See
-/// [mx_time_get](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/time_get.md)
+/// [zx_time_get](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/time_get.md)
 /// for more information about the possible values.
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ClockId {
     /// The number of nanoseconds since the system was powered on. Corresponds to
-    /// `MX_CLOCK_MONOTONIC`.
+    /// `ZX_CLOCK_MONOTONIC`.
     Monotonic = 0,
     /// The number of wall clock nanoseconds since the Unix epoch (midnight on January 1 1970) in
-    /// UTC. Corresponds to MX_CLOCK_UTC.
+    /// UTC. Corresponds to ZX_CLOCK_UTC.
     UTC = 1,
     /// The number of nanoseconds the current thread has been running for. Corresponds to
-    /// MX_CLOCK_THREAD.
+    /// ZX_CLOCK_THREAD.
     Thread = 2,
 }
 
 /// Get the current time, from the specific clock id.
 ///
 /// Wraps the
-/// [mx_time_get](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/time_get.md)
+/// [zx_time_get](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/time_get.md)
 /// syscall.
 pub fn time_get(clock_id: ClockId) -> Time {
-    unsafe { sys::mx_time_get(clock_id as u32) }
+    unsafe { sys::zx_time_get(clock_id as u32) }
 }
 
 /// Read the number of high-precision timer ticks since boot. These ticks may be processor cycles,
@@ -273,71 +273,71 @@ pub fn time_get(clock_id: ClockId) -> Time {
 /// system is asleep.
 ///
 /// Wraps the
-/// [mx_ticks_get](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/ticks_get.md)
+/// [zx_ticks_get](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/ticks_get.md)
 /// syscall.
 pub fn ticks_get() -> u64 {
-    unsafe { sys::mx_ticks_get() }
+    unsafe { sys::zx_ticks_get() }
 }
 
 /// Compute a deadline for the time in the future that is the given `Duration` away.
 ///
 /// Wraps the
-/// [mx_deadline_after](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/deadline_after.md)
+/// [zx_deadline_after](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/deadline_after.md)
 /// syscall.
 pub fn deadline_after(nanos: Duration) -> Time {
-    unsafe { sys::mx_deadline_after(nanos) }
+    unsafe { sys::zx_deadline_after(nanos) }
 }
 
 /// Sleep until the given deadline.
 ///
 /// Wraps the
-/// [mx_nanosleep](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/nanosleep.md)
+/// [zx_nanosleep](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/nanosleep.md)
 /// syscall.
 pub fn nanosleep(deadline: Time) {
-    unsafe { sys::mx_nanosleep(deadline); }
+    unsafe { sys::zx_nanosleep(deadline); }
 }
 
 /// Return the number of high-precision timer ticks in a second.
 ///
 /// Wraps the
-/// [mx_ticks_per_second](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/ticks_per_second.md)
+/// [zx_ticks_per_second](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/ticks_per_second.md)
 /// syscall.
 pub fn ticks_per_second() -> u64 {
-    unsafe { sys::mx_ticks_per_second() }
+    unsafe { sys::zx_ticks_per_second() }
 }
 
-pub use magenta_sys::{
-    MX_CPRNG_DRAW_MAX_LEN,
-    MX_CPRNG_ADD_ENTROPY_MAX_LEN,
+pub use zircon_sys::{
+    ZX_CPRNG_DRAW_MAX_LEN,
+    ZX_CPRNG_ADD_ENTROPY_MAX_LEN,
 };
 
 /// Draw random bytes from the kernel's CPRNG to fill the given buffer. Returns the actual number of
 /// bytes drawn, which may sometimes be less than the size of the buffer provided.
 ///
-/// The buffer must have length less than `MX_CPRNG_DRAW_MAX_LEN`.
+/// The buffer must have length less than `ZX_CPRNG_DRAW_MAX_LEN`.
 ///
 /// Wraps the
-/// [mx_cprng_draw](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/syscalls/cprng_draw.md)
+/// [zx_cprng_draw](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/syscalls/cprng_draw.md)
 /// syscall.
 pub fn cprng_draw(buffer: &mut [u8]) -> Result<usize, Status> {
     let mut actual = 0;
-    let status = unsafe { sys::mx_cprng_draw(buffer.as_mut_ptr(), buffer.len(), &mut actual) };
+    let status = unsafe { sys::zx_cprng_draw(buffer.as_mut_ptr(), buffer.len(), &mut actual) };
     into_result(status, || actual)
 }
 
 /// Mix the given entropy into the kernel CPRNG.
 ///
-/// The buffer must have length less than `MX_CPRNG_ADD_ENTROPY_MAX_LEN`.
+/// The buffer must have length less than `ZX_CPRNG_ADD_ENTROPY_MAX_LEN`.
 ///
 /// Wraps the
-/// [mx_cprng_add_entropy](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/syscalls/cprng_add_entropy.md)
+/// [zx_cprng_add_entropy](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/syscalls/cprng_add_entropy.md)
 /// syscall.
 pub fn cprng_add_entropy(buffer: &[u8]) -> Result<(), Status> {
-    let status = unsafe { sys::mx_cprng_add_entropy(buffer.as_ptr(), buffer.len()) };
+    let status = unsafe { sys::zx_cprng_add_entropy(buffer.as_ptr(), buffer.len()) };
     into_result(status, || ())
 }
 
-fn into_result<T, F>(status: sys::mx_status_t, f: F) -> Result<T, Status>
+fn into_result<T, F>(status: sys::zx_status_t, f: F) -> Result<T, Status>
     where F: FnOnce() -> T {
     // All non-negative values are assumed successful. Note: calls that don't try
     // to multiplex success values into status return could be more strict here.
@@ -355,33 +355,33 @@ fn into_result<T, F>(status: sys::mx_status_t, f: F) -> Result<T, Status>
 /// Mostly useful as part of a `WaitItem`.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct HandleRef<'a> {
-    handle: sys::mx_handle_t,
-    phantom: PhantomData<&'a sys::mx_handle_t>,
+    handle: sys::zx_handle_t,
+    phantom: PhantomData<&'a sys::zx_handle_t>,
 }
 
 impl<'a> HandleRef<'a> {
-    pub fn raw_handle(&self) -> sys::mx_handle_t {
+    pub fn raw_handle(&self) -> sys::zx_handle_t {
         self.handle
     }
 
     pub fn duplicate(&self, rights: Rights) -> Result<Handle, Status> {
         let handle = self.handle;
         let mut out = 0;
-        let status = unsafe { sys::mx_handle_duplicate(handle, rights, &mut out) };
+        let status = unsafe { sys::zx_handle_duplicate(handle, rights, &mut out) };
         into_result(status, || Handle(out))
     }
 
     pub fn signal(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
         let handle = self.handle;
-        let status = unsafe { sys::mx_object_signal(handle, clear_mask.bits(), set_mask.bits()) };
+        let status = unsafe { sys::zx_object_signal(handle, clear_mask.bits(), set_mask.bits()) };
         into_result(status, || ())
     }
 
     pub fn wait(&self, signals: Signals, deadline: Time) -> Result<Signals, Status> {
         let handle = self.handle;
-        let mut pending = sys::mx_signals_t::empty();
+        let mut pending = sys::zx_signals_t::empty();
         let status = unsafe {
-            sys::mx_object_wait_one(handle, signals, deadline, &mut pending)
+            sys::zx_object_wait_one(handle, signals, deadline, &mut pending)
         };
         into_result(status, || pending)
     }
@@ -391,7 +391,7 @@ impl<'a> HandleRef<'a> {
     {
         let handle = self.handle;
         let status = unsafe {
-            sys::mx_object_wait_async(handle, port.raw_handle(), key, signals, options as u32)
+            sys::zx_object_wait_async(handle, port.raw_handle(), key, signals, options as u32)
         };
         into_result(status, || ())
     }
@@ -406,26 +406,26 @@ pub trait AsHandleRef {
     /// Interpret the reference as a raw handle (an integer type). Two distinct
     /// handles will have different raw values (so it can perhaps be used as a
     /// key in a data structure).
-    fn raw_handle(&self) -> sys::mx_handle_t {
+    fn raw_handle(&self) -> sys::zx_handle_t {
         self.as_handle_ref().raw_handle()
     }
 
     /// Set and clear userspace-accessible signal bits on an object. Wraps the
-    /// [mx_object_signal](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_signal.md)
+    /// [zx_object_signal](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/object_signal.md)
     /// syscall.
     fn signal_handle(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
         self.as_handle_ref().signal(clear_mask, set_mask)
     }
 
     /// Waits on a handle. Wraps the
-    /// [mx_object_wait_one](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_wait_one.md)
+    /// [zx_object_wait_one](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/object_wait_one.md)
     /// syscall.
     fn wait_handle(&self, signals: Signals, deadline: Time) -> Result<Signals, Status> {
         self.as_handle_ref().wait(signals, deadline)
     }
 
     /// Causes packet delivery on the given port when the object changes state and matches signals.
-    /// [mx_object_wait_async](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_wait_async.md)
+    /// [zx_object_wait_async](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/object_wait_async.md)
     /// syscall.
     fn wait_async_handle(&self, port: &Port, key: u64, signals: Signals, options: WaitAsyncOpts)
         -> Result<(), Status>
@@ -447,7 +447,7 @@ impl<'a> AsHandleRef for HandleRef<'a> {
 /// interface.
 pub trait HandleBased: AsHandleRef + From<Handle> + Into<Handle> {
     /// Duplicate a handle, possibly reducing the rights available. Wraps the
-    /// [mx_handle_duplicate](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/handle_duplicate.md)
+    /// [zx_handle_duplicate](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/handle_duplicate.md)
     /// syscall.
     fn duplicate_handle(&self, rights: Rights) -> Result<Self, Status> {
         self.as_handle_ref().duplicate(rights).map(|handle| Self::from(handle))
@@ -455,7 +455,7 @@ pub trait HandleBased: AsHandleRef + From<Handle> + Into<Handle> {
 
     /// Create a replacement for a handle, possibly reducing the rights available. This invalidates
     /// the original handle. Wraps the
-    /// [mx_handle_replace](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/handle_replace.md)
+    /// [zx_handle_replace](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/handle_replace.md)
     /// syscall.
     fn replace_handle(self, rights: Rights) -> Result<Self, Status> {
         <Self as Into<Handle>>::into(self)
@@ -491,12 +491,12 @@ pub trait HandleBased: AsHandleRef + From<Handle> + Into<Handle> {
 /// A trait implemented by all handles for objects which have a peer.
 pub trait Peered: HandleBased {
     /// Set and clear userspace-accessible signal bits on the object's peer. Wraps the
-    /// [mx_object_signal_peer](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_signal.md)
+    /// [zx_object_signal_peer](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/object_signal.md)
     /// syscall.
     fn signal_peer(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
         let handle = self.as_handle_ref().handle;
         let status = unsafe {
-            sys::mx_object_signal_peer(handle, clear_mask.bits(), set_mask.bits())
+            sys::zx_object_signal_peer(handle, clear_mask.bits(), set_mask.bits())
         };
         into_result(status, || ())
     }
@@ -505,28 +505,28 @@ pub trait Peered: HandleBased {
 /// A trait implemented by all handles for objects which can have a cookie attached.
 pub trait Cookied: HandleBased {
     /// Get the cookie attached to this object, if any. Wraps the
-    /// [mx_object_get_cookie](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/syscalls/object_get_cookie.md)
+    /// [zx_object_get_cookie](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/syscalls/object_get_cookie.md)
     /// syscall.
     fn get_cookie(&self, scope: &HandleRef) -> Result<u64, Status> {
         let handle = self.as_handle_ref().handle;
         let mut cookie = 0;
-        let status = unsafe { sys::mx_object_get_cookie(handle, scope.handle, &mut cookie) };
+        let status = unsafe { sys::zx_object_get_cookie(handle, scope.handle, &mut cookie) };
         into_result(status, || cookie)
     }
 
     /// Attach an opaque cookie to this object with the given scope. The cookie may be read or
     /// changed in future only with the same scope. Wraps the
-    /// [mx_object_set_cookie](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/syscalls/object_set_cookie.md)
+    /// [zx_object_set_cookie](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/syscalls/object_set_cookie.md)
     /// syscall.
     fn set_cookie(&self, scope: &HandleRef, cookie: u64) -> Result<(), Status> {
         let handle = self.as_handle_ref().handle;
-        let status = unsafe { sys::mx_object_set_cookie(handle, scope.handle, cookie) };
+        let status = unsafe { sys::zx_object_set_cookie(handle, scope.handle, cookie) };
         into_result(status, || ())
     }
 }
 
-fn handle_drop(handle: sys::mx_handle_t) {
-    let _ = unsafe { sys::mx_handle_close(handle) };
+fn handle_drop(handle: sys::zx_handle_t) {
+    let _ = unsafe { sys::zx_handle_close(handle) };
 }
 
 /// Wait on multiple handles.
@@ -534,14 +534,14 @@ fn handle_drop(handle: sys::mx_handle_t) {
 /// provided handle references was closed during the wait.
 ///
 /// Wraps the
-/// [mx_object_wait_many](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_wait_many.md)
+/// [zx_object_wait_many](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/object_wait_many.md)
 /// syscall.
 pub fn object_wait_many(items: &mut [WaitItem], deadline: Time) -> Result<bool, Status>
 {
     let len = try!(usize_into_u32(items.len()).map_err(|_| Status::ErrOutOfRange));
-    let items_ptr = items.as_mut_ptr() as *mut sys::mx_wait_item_t;
-    let status = unsafe { sys::mx_object_wait_many( items_ptr, len, deadline) };
-    if status == sys::MX_ERR_CANCELED {
+    let items_ptr = items.as_mut_ptr() as *mut sys::zx_wait_item_t;
+    let status = unsafe { sys::zx_object_wait_many( items_ptr, len, deadline) };
+    if status == sys::ZX_ERR_CANCELED {
         return Ok((true))
     }
     into_result(status, || false)
@@ -549,8 +549,8 @@ pub fn object_wait_many(items: &mut [WaitItem], deadline: Time) -> Result<bool, 
 
 // An untyped handle
 
-/// An object representing a Magenta
-/// [handle](https://fuchsia.googlesource.com/magenta/+/master/docs/handles.md).
+/// An object representing a Zircon
+/// [handle](https://fuchsia.googlesource.com/zircon/+/master/docs/handles.md).
 ///
 /// Internally, it is represented as a 32-bit integer, but this wrapper enforces
 /// strict ownership semantics. The `Drop` implementation closes the handle.
@@ -561,7 +561,7 @@ pub fn object_wait_many(items: &mut [WaitItem], deadline: Time) -> Result<bool, 
 /// returned by the kernel. These conversions don't change the underlying
 /// representation, but do change the type and thus what operations are available.
 #[derive(Debug, Eq, PartialEq, Hash)]
-pub struct Handle(sys::mx_handle_t);
+pub struct Handle(sys::zx_handle_t);
 
 impl AsHandleRef for Handle {
     fn as_handle_ref(&self) -> HandleRef {
@@ -580,14 +580,14 @@ impl Drop for Handle {
 impl Handle {
     /// If a raw handle is obtained from some other source, this method converts
     /// it into a type-safe owned handle.
-    pub unsafe fn from_raw(raw: sys::mx_handle_t) -> Handle {
+    pub unsafe fn from_raw(raw: sys::zx_handle_t) -> Handle {
         Handle(raw)
     }
 
     pub fn replace(self, rights: Rights) -> Result<Handle, Status> {
         let handle = self.0;
         let mut out = 0;
-        let status = unsafe { sys::mx_handle_replace(handle, rights, &mut out) };
+        let status = unsafe { sys::zx_handle_replace(handle, rights, &mut out) };
         into_result(status, || Handle(out))
     }
 }
@@ -660,7 +660,7 @@ mod tests {
         assert!(vmo.write(b"hello", 0).is_ok());
 
         // Replace, reducing rights to read.
-        let readonly_vmo = vmo.duplicate_handle(MX_RIGHT_READ).unwrap();
+        let readonly_vmo = vmo.duplicate_handle(ZX_RIGHT_READ).unwrap();
         // Make sure we can read but not write.
         let mut read_vec = vec![0; hello_length];
         assert_eq!(readonly_vmo.read(&mut read_vec, 0).unwrap(), hello_length);
@@ -683,7 +683,7 @@ mod tests {
         assert!(vmo.write(b"hello", 0).is_ok());
 
         // Replace, reducing rights to read.
-        let readonly_vmo = vmo.replace_handle(MX_RIGHT_READ).unwrap();
+        let readonly_vmo = vmo.replace_handle(ZX_RIGHT_READ).unwrap();
         // Make sure we can read but not write.
         let mut read_vec = vec![0; hello_length];
         assert_eq!(readonly_vmo.read(&mut read_vec, 0).unwrap(), hello_length);
@@ -698,21 +698,21 @@ mod tests {
 
         // Waiting on it without setting any signal should time out.
         assert_eq!(event.wait_handle(
-            MX_USER_SIGNAL_0, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
+            ZX_USER_SIGNAL_0, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
 
         // If we set a signal, we should be able to wait for it.
-        assert!(event.signal_handle(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
-        assert_eq!(event.wait_handle(MX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(),
-            MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE);
+        assert!(event.signal_handle(ZX_SIGNAL_NONE, ZX_USER_SIGNAL_0).is_ok());
+        assert_eq!(event.wait_handle(ZX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(),
+            ZX_USER_SIGNAL_0 | ZX_SIGNAL_LAST_HANDLE);
 
         // Should still work, signals aren't automatically cleared.
-        assert_eq!(event.wait_handle(MX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(),
-            MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE);
+        assert_eq!(event.wait_handle(ZX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(),
+            ZX_USER_SIGNAL_0 | ZX_SIGNAL_LAST_HANDLE);
 
         // Now clear it, and waiting should time out again.
-        assert!(event.signal_handle(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());
+        assert!(event.signal_handle(ZX_USER_SIGNAL_0, ZX_SIGNAL_NONE).is_ok());
         assert_eq!(event.wait_handle(
-            MX_USER_SIGNAL_0, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
+            ZX_USER_SIGNAL_0, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
     }
 
     #[test]
@@ -723,31 +723,31 @@ mod tests {
 
         // Waiting on them now should time out.
         let mut items = vec![
-          WaitItem { handle: e1.as_handle_ref(), waitfor: MX_USER_SIGNAL_0, pending: MX_SIGNAL_NONE },
-          WaitItem { handle: e2.as_handle_ref(), waitfor: MX_USER_SIGNAL_1, pending: MX_SIGNAL_NONE },
+          WaitItem { handle: e1.as_handle_ref(), waitfor: ZX_USER_SIGNAL_0, pending: ZX_SIGNAL_NONE },
+          WaitItem { handle: e2.as_handle_ref(), waitfor: ZX_USER_SIGNAL_1, pending: ZX_SIGNAL_NONE },
         ];
         assert_eq!(object_wait_many(&mut items, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
-        assert_eq!(items[0].pending, MX_SIGNAL_LAST_HANDLE);
-        assert_eq!(items[1].pending, MX_SIGNAL_LAST_HANDLE);
+        assert_eq!(items[0].pending, ZX_SIGNAL_LAST_HANDLE);
+        assert_eq!(items[1].pending, ZX_SIGNAL_LAST_HANDLE);
 
         // Signal one object and it should return success.
-        assert!(e1.signal_handle(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
+        assert!(e1.signal_handle(ZX_SIGNAL_NONE, ZX_USER_SIGNAL_0).is_ok());
         assert!(object_wait_many(&mut items, deadline_after(ten_ms)).is_ok());
-        assert_eq!(items[0].pending, MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE);
-        assert_eq!(items[1].pending, MX_SIGNAL_LAST_HANDLE);
+        assert_eq!(items[0].pending, ZX_USER_SIGNAL_0 | ZX_SIGNAL_LAST_HANDLE);
+        assert_eq!(items[1].pending, ZX_SIGNAL_LAST_HANDLE);
 
         // Signal the other and it should return both.
-        assert!(e2.signal_handle(MX_SIGNAL_NONE, MX_USER_SIGNAL_1).is_ok());
+        assert!(e2.signal_handle(ZX_SIGNAL_NONE, ZX_USER_SIGNAL_1).is_ok());
         assert!(object_wait_many(&mut items, deadline_after(ten_ms)).is_ok());
-        assert_eq!(items[0].pending, MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE);
-        assert_eq!(items[1].pending, MX_USER_SIGNAL_1 | MX_SIGNAL_LAST_HANDLE);
+        assert_eq!(items[0].pending, ZX_USER_SIGNAL_0 | ZX_SIGNAL_LAST_HANDLE);
+        assert_eq!(items[1].pending, ZX_USER_SIGNAL_1 | ZX_SIGNAL_LAST_HANDLE);
 
         // Clear signals on both; now it should time out again.
-        assert!(e1.signal_handle(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());
-        assert!(e2.signal_handle(MX_USER_SIGNAL_1, MX_SIGNAL_NONE).is_ok());
+        assert!(e1.signal_handle(ZX_USER_SIGNAL_0, ZX_SIGNAL_NONE).is_ok());
+        assert!(e2.signal_handle(ZX_USER_SIGNAL_1, ZX_SIGNAL_NONE).is_ok());
         assert_eq!(object_wait_many(&mut items, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
-        assert_eq!(items[0].pending, MX_SIGNAL_LAST_HANDLE);
-        assert_eq!(items[1].pending, MX_SIGNAL_LAST_HANDLE);
+        assert_eq!(items[0].pending, ZX_SIGNAL_LAST_HANDLE);
+        assert_eq!(items[1].pending, ZX_SIGNAL_LAST_HANDLE);
     }
 
     #[test]
@@ -784,10 +784,10 @@ mod tests {
 
     #[test]
     fn cprng_too_large() {
-        let mut buffer = [0; MX_CPRNG_DRAW_MAX_LEN + 1];
+        let mut buffer = [0; ZX_CPRNG_DRAW_MAX_LEN + 1];
         assert_eq!(cprng_draw(&mut buffer), Err(Status::ErrInvalidArgs));
 
-        for mut s in buffer.chunks_mut(MX_CPRNG_DRAW_MAX_LEN) {
+        for mut s in buffer.chunks_mut(ZX_CPRNG_DRAW_MAX_LEN) {
             assert_eq!(cprng_draw(&mut s), Ok(s.len()));
         }
     }
