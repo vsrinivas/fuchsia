@@ -82,7 +82,8 @@ zx_status_t MinfsChecker::GetInodeNthBno(minfs_inode_t* inode, blk_t n,
 
         if (cached_doubly_indirect_ != dibno) {
             zx_status_t status;
-            if ((status = fs_->bc_->Readblk(dibno, doubly_indirect_cache_)) != ZX_OK) {
+            if ((status = fs_->bc_->Readblk(dibno + fs_->info_.dat_block,
+                                            doubly_indirect_cache_)) != ZX_OK) {
                 return status;
             }
             cached_doubly_indirect_ = dibno;
@@ -99,7 +100,8 @@ zx_status_t MinfsChecker::GetInodeNthBno(minfs_inode_t* inode, blk_t n,
 
         if (cached_indirect_ != ibno) {
             zx_status_t status;
-            if ((status = fs_->bc_->Readblk(ibno, indirect_cache_)) != ZX_OK) {
+            if ((status = fs_->bc_->Readblk(ibno + fs_->info_.dat_block,
+                                            indirect_cache_)) != ZX_OK) {
                 return status;
             }
             cached_indirect_ = ibno;
@@ -302,7 +304,8 @@ zx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, ino_t ino) {
 
             char data[kMinfsBlockSize];
             zx_status_t status;
-            if ((status = fs_->bc_->Readblk(inode->dinum[n], data)) != ZX_OK) {
+            if ((status = fs_->bc_->Readblk(inode->dinum[n] + fs_->info_.dat_block,
+                                            data)) != ZX_OK) {
                 return status;
             }
             uint32_t* entry = reinterpret_cast<uint32_t*>(data);
@@ -310,7 +313,7 @@ zx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, ino_t ino) {
             for (unsigned m = 0; m < kMinfsDirectPerIndirect; m++) {
                 if (entry[m]) {
                     if ((msg = CheckDataBlock(entry[m])) != nullptr) {
-                        FS_TRACE_WARN("check: ino#%u: indirect block %u(@%u): %s\n",
+                        FS_TRACE_WARN("check: ino#%u: indirect block (in dind) %u(@%u): %s\n",
                             ino, m, entry[m], msg);
                         conforming_ = false;
                     }

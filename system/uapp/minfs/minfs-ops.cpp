@@ -427,7 +427,7 @@ zx_status_t VnodeMinfs::InitVmo() {
                             fs_->ValidateBno(bno);
                             uint32_t n = kMinfsDirect + kMinfsIndirect * kMinfsDirectPerIndirect
                                          + j * kMinfsDirectPerIndirect + k;
-                            txn.Enqueue(vmoid_, n, bno, 1);
+                            txn.Enqueue(vmoid_, n, bno + fs_->info_.dat_block, 1);
                         }
                     }
                 }
@@ -563,9 +563,9 @@ zx_status_t VnodeMinfs::GetBnoDoublyIndirect(WriteTxn* txn, uint32_t ibindex, ui
     if (*dirty || indirect_dirty) {
         // Write back the doubly indirect block if a new block was allocated
 #ifdef __Fuchsia__
-        txn->Enqueue(vmoid_indirect_, dib_vmo_offset, *dibno +  + fs_->info_.dat_block, 1);
+        txn->Enqueue(vmoid_indirect_, dib_vmo_offset, *dibno + fs_->info_.dat_block, 1);
 #else
-        fs_->bc_->Writeblk(*dibno +  + fs_->info_.dat_block, dientry);
+        fs_->bc_->Writeblk(*dibno + fs_->info_.dat_block, dientry);
 #endif
         InodeSync(txn, kMxFsSyncDefault);
     }
