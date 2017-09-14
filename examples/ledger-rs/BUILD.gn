@@ -6,11 +6,10 @@ import("//build/rust/rust_binary.gni")
 
 rust_binary("ledger_example") {
   deps = [
-    "//garnet/public/lib/app/fidl:services_rust_library",
-    "//garnet/public/lib/app/fidl:service_provider_rust_library",
-    "//garnet/public/lib/app/fidl:service_provider_rust_library",
     "//apps/ledger/services/public:public_rust_library",
     "//apps/ledger/services/internal:internal_rust_library",
+    "//garnet/public/lib/app/fidl:fidl_rust_library",
+    "//garnet/public/lib/app/fidl:service_provider_rust_library",
     "//garnet/public/lib/fidl/rust/fidl",
     "//rust/magenta-rs:magenta",
     "//rust/magenta-rs/magenta-sys",

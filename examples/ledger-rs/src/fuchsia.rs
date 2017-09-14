@@ -1,8 +1,8 @@
 // TODO: remove this
 use mxruntime::{get_service_root, connect_to_environment_service};
 use fidl::ClientEnd;
-use application_services_service_provider::*;
-use application_services::*;
+use garnet_public_lib_app_fidl::*;
+use garnet_public_lib_app_fidl_service_provider::*;
 use ledger::LedgerError;
 use tokio_core::reactor;
 #[cfg(target_arch = "x86_64")]

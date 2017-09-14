@@ -3,16 +3,17 @@
 // found in the LICENSE file.
 #![feature(asm)]
 
+extern crate apps_ledger_services_public;
+extern crate apps_ledger_services_internal;
+extern crate fidl;
+extern crate futures;
+extern crate garnet_public_lib_app_fidl;
+extern crate garnet_public_lib_app_fidl_service_provider;
 extern crate magenta;
 extern crate magenta_sys;
 extern crate mxruntime;
-extern crate fidl;
 extern crate tokio_core;
-extern crate futures;
-extern crate application_services_service_provider;
-extern crate application_services;
-extern crate apps_ledger_services_public;
-extern crate apps_ledger_services_internal;
+
 mod fuchsia;
 mod ledger;
 

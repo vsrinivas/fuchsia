@@ -1,9 +1,9 @@
-use application_services::ApplicationController;
-use application_services_service_provider::ServiceProvider_I;
 use apps_ledger_services_public::*;
 use apps_ledger_services_internal::*;
 use fidl;
 use fuchsia::{Launcher, App};
+use garnet_public_lib_app_fidl::ApplicationController;
+use garnet_public_lib_app_fidl_service_provider::ServiceProvider_I;
 use tokio_core::reactor;
 use futures::{future, Future};
 use magenta::{Vmo, self};
