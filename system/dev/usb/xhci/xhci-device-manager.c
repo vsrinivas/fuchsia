@@ -130,9 +130,25 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     // Setup endpoint context for ep0
     zx_paddr_t tr_dequeue = xhci_transfer_ring_start_phys(transfer_ring);
 
+    // start off with reasonable default max packet size for ep0 based on speed
+    int mps;
+    switch (speed) {
+        case USB_SPEED_SUPER:
+            mps = 512;
+            break;
+        case USB_SPEED_FULL:
+        case USB_SPEED_HIGH:
+            mps = 64;
+            break;
+        case USB_SPEED_LOW:
+        default:
+            mps = 8;
+            break;
+    }
+
     XHCI_SET_BITS32(&ep0c->epc1, EP_CTX_CERR_START, EP_CTX_CERR_BITS, 3); // ???
     XHCI_SET_BITS32(&ep0c->epc1, EP_CTX_EP_TYPE_START, EP_CTX_EP_TYPE_BITS, EP_CTX_EP_TYPE_CONTROL);
-    XHCI_SET_BITS32(&ep0c->epc1, EP_CTX_MAX_PACKET_SIZE_START, EP_CTX_MAX_PACKET_SIZE_BITS, 8);
+    XHCI_SET_BITS32(&ep0c->epc1, EP_CTX_MAX_PACKET_SIZE_START, EP_CTX_MAX_PACKET_SIZE_BITS, mps);
     XHCI_WRITE32(&ep0c->epc2, ((uint32_t)tr_dequeue & EP_CTX_TR_DEQUEUE_LO_MASK) | EP_CTX_DCS);
     XHCI_WRITE32(&ep0c->tr_dequeue_hi, (uint32_t)(tr_dequeue >> 32));
     XHCI_SET_BITS32(&ep0c->epc4, EP_CTX_AVG_TRB_LENGTH_START, EP_CTX_AVG_TRB_LENGTH_BITS, 8); // ???
