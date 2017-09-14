@@ -45,6 +45,28 @@ function __netaddr() {
     netaddr --nowait "$@"
   fi
 }
+
+# __patched_path <old-regex> <new-component>
+# Prints a new path value based on the current $PATH, removing path components
+# that match <old-regex> and adding <new-component> to the end.
+function __patched_path() {
+    local old_regex="$1"
+    local new_component="$2"
+    local stripped
+    # Put each PATH component on a line, delete any lines that match the regex,
+    # then glue back together with ':' characters.
+    stripped="$(
+        set -o pipefail &&
+        echo "${PATH}" |
+        tr ':' '\n' |
+        grep -v -E "^${old_regex}$" |
+        tr '\n' ':'
+    )"
+    # The trailing newline will have become a colon, so no need to add another
+    # one here.
+    echo "${stripped}${new_component}"
+}
+
 ### envhelp: print usage for command or list of commands
 
 function env_sh_version() {
@@ -173,7 +195,10 @@ function zset() {
   export ENVPROMPT_INFO="${ZIRCON_ARCH}"
 
   # add tools to path, removing prior tools directory if any
-  export PATH="${PATH//:${ZIRCON_DIR}\/build-*\/tools}:${ZIRCON_TOOLS_DIR}"
+  export PATH="$(__patched_path \
+      "${ZIRCON_DIR}/build-[^/]*/tools" \
+      "${ZIRCON_TOOLS_DIR}"
+  )"
 }
 
 ### zcheck: checks whether zset was run
@@ -422,10 +447,12 @@ function fset() {
   export FUCHSIA_ENSURE_GOMA="${ensure_goma}"
   export GOPATH="${FUCHSIA_BUILD_DIR}"
 
-  # Add tools to path, removing prior tools directory if any.  This also
-  # matches the Zircon tools directory added by mset, so add it back too.
-  export PATH="${PATH//:${FUCHSIA_OUT_DIR}\/*\/tools}\
-:${FUCHSIA_TOOLS_DIR}:${ZIRCON_TOOLS_DIR}"
+  # Add tools to path, removing prior tools directory if any. This also
+  # matches the Zircon tools directory added by zset, so add it back too.
+  export PATH="$(__patched_path \
+      "${FUCHSIA_OUT_DIR}/[^/]*-[^/]*/tools" \
+      "${FUCHSIA_TOOLS_DIR}:${ZIRCON_TOOLS_DIR}"
+  )"
 
   # If a goma directory wasn't specified explicitly then default to "~/goma".
   if [[ -n "${goma_dir}" ]]; then
