@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Rust DDK for the Magenta kernel.
+//! Rust DDK for the Zircon kernel.
 
 pub trait Device {
 }
