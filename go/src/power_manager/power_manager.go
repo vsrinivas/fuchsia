@@ -167,7 +167,7 @@ func (pm *PowerManager) updateStatus(m mxio.MXIO) error {
 		pm.batteryStatus.Discharging = pi.State&mxio.PowerStateDischarging > 0
 		pm.batteryStatus.Critical = pi.State&mxio.PowerStateCritical > 0
 		if pm.batteryStatus.BatteryPresent {
-			pm.batteryStatus.Level = uint16(bi.RemainingCapacity * 100 / bi.LastFullCapacity)
+			pm.batteryStatus.Level = float32(bi.RemainingCapacity) * 100 / float32(bi.LastFullCapacity)
 			if bi.PresentRate < 0 {
 				pm.batteryStatus.RemainingBatteryLife = float32(bi.RemainingCapacity) / float32(bi.PresentRate*-1)
 			} else {
@@ -225,7 +225,7 @@ func main() {
 	pm := &PowerManager{
 		batteryStatus: power_manager.BatteryStatus{
 			Status:    power_manager.Status_NotAvailable,
-			Level:     uint16(0),
+			Level:     float32(0),
 			Timestamp: now,
 		},
 		batteryStatusTimeStamp: now,

@@ -14,12 +14,6 @@ struct BatteryStatus {
   // Error status
   Status status;
 
-  // Battery level in percentage
-  uint16 level;
-
-  // Remaining Battery life in hours. It is negative when battery is not discharging
-  float remainingBatteryLife;
-
   // If battery is present
   bool batteryPresent;
 
@@ -37,6 +31,12 @@ struct BatteryStatus {
 
   // To distinguish between latest and stale status
   int64 timestamp;
+
+  // Battery level in percentage
+  float level;
+
+  // Remaining Battery life in hours. It is negative when battery is not discharging
+  float remainingBatteryLife;
 };
 
 // Manager Interface used to manage power
