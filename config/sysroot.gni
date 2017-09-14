@@ -10,7 +10,7 @@ declare_args() {
 if (current_os == target_os && target_sysroot != "") {
   sysroot = target_sysroot
 } else if (is_fuchsia) {
-  sysroot = rebase_path("//out/build-magenta/build-${magenta_project}/sysroot")
+  sysroot = rebase_path("//out/build-zircon/build-${zircon_project}/sysroot")
 } else if (is_linux) {
   sysroot = rebase_path("//buildtools/sysroot")
 } else if (is_mac) {

@@ -59,18 +59,18 @@ declare_args() {
   # See //build/toolchain/clang_toolchain.gni for details.
   current_base_toolchain = target_toolchain
 
-  # magenta build project
-  magenta_project = ""
+  # zircon build project
+  zircon_project = ""
 }
 
-if (magenta_project == "") {
+if (zircon_project == "") {
   if (current_cpu == "arm64") {
-    magenta_project = "magenta-qemu-arm64"
+    zircon_project = "zircon-qemu-arm64"
   } else if (current_cpu == "x64") {
-    magenta_project = "magenta-pc-x86-64"
+    zircon_project = "zircon-pc-x86-64"
   }
 }
-assert(magenta_project != "", "unable to set default magenta build project")
+assert(zircon_project != "", "unable to set default zircon build project")
 
 is_android = false
 is_fuchsia = false

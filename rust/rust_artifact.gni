@@ -148,7 +148,7 @@ template("rust_artifact") {
     }
     if (is_fuchsia) {
       clang_wrapper_target =
-          "//rust/magenta-rs/tools:clang_wrapper($host_toolchain)"
+          "//rust/zircon-rs/tools:clang_wrapper($host_toolchain)"
       deps += [ clang_wrapper_target ]
     }
 

@@ -15,13 +15,13 @@ RUST_CRATES = {
     "published": {
         "magenta": {
             "version": "0.2.0",
-            "path": "rust/magenta-rs",
-            "target": "//rust/magenta-rs:magenta",
+            "path": "rust/zircon-rs",
+            "target": "//rust/zircon-rs:zircon",
         },
         "magenta-sys": {
             "version": "0.2.0",
-            "path": "rust/magenta-rs/magenta-sys",
-            "target": "//rust/magenta-rs/magenta-sys",
+            "path": "rust/zircon-rs/zircon-sys",
+            "target": "//rust/zircon-rs/zircon-sys",
         },
     },
     # Third-party crates whose sources are mirrored.

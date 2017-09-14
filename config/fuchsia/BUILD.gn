@@ -93,7 +93,7 @@ config("toolchain_version_stamp") {
 }
 
 config("compiler_sysroot") {
-  # The sysroot for Fuchsia is part of Magenta build which is pointed to by the sysroot variable.
+  # The sysroot for Fuchsia is part of Zircon build which is pointed to by the sysroot variable.
   cflags = [ "--sysroot=${sysroot}" ]
   ldflags = cflags
   asmflags = cflags
@@ -118,8 +118,8 @@ config("shared_library_config") {
   cflags = [ "-fPIC" ]
 }
 
-config("mxio_config") {
-  libs = [ "mxio" ]
+config("fdio_config") {
+  libs = [ "fdio" ]
 }
 
 config("executable_config") {

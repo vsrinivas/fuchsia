@@ -124,7 +124,7 @@ config("boringssl_config") {
   include_dirs = [ "include" ]
   if (is_fuchsia) {
     # rand_fuchsia uses a system call
-    libs = [ "magenta" ]
+    libs = [ "zircon" ]
   }
 }
 

@@ -80,9 +80,9 @@ def main():
     env['GOOS'] = goos
     env['GOPATH'] = gopath
 
-    # the gcc wrappers need to know about some Magenta build paths for some cases (e.g. arm & rpi)
+    # the gcc wrappers need to know about some Zircon build paths for some cases (e.g. arm & rpi)
     for k in os.environ:
-      if k.startswith("MAGENTA_"):
+      if k.startswith("ZIRCON_"):
         env[k] = os.environ.get(k)
 
     # /usr/bin:/bin are required for basic things like bash(1) and env(1), but
