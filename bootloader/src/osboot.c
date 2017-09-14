@@ -309,6 +309,29 @@ void do_netboot() {
     }
 }
 
+// Finds c in s and swaps it with the character at s's head. For example:
+// swap_to_head('b', "foobar", 6) = "boofar";
+static inline void swap_to_head(const char c, char* s, const size_t n) {
+    // Empty buffer?
+    if (n == 0) return;
+
+    // Find c in s
+    size_t i;
+    for (i = 0; i < n; i++) {
+        if (c == s[i]) {
+            break;
+        }
+    }
+
+    // Couldn't find c in s
+    if (i == n) return;
+
+    // Swap c to the head.
+    const char tmp = s[0];
+    s[0] = s[i];
+    s[i] = tmp;
+}
+
 EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     xefi_init(img, sys);
     gConOut->ClearScreen(gConOut);
@@ -375,41 +398,39 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     print_cmdline();
 
     // First look for a self-contained zirconboot image
-    size_t ksz = 0;
-    void* kernel = xefi_load_file(L"zedboot.bin", &ksz, 0);
-
-    if (kernel) {
-        zedboot(img, sys, kernel, ksz);
-    }
+    size_t zedboot_size = 0;
+    void* zedboot_kernel = xefi_load_file(L"zedboot.bin", &zedboot_size, 0);
 
     // Look for a kernel image on disk
-    ksz = 0;
-    kernel = xefi_load_file(L"zircon.bin", &ksz, 0);
+    size_t ksz = 0;
+    void* kernel = xefi_load_file(L"zircon.bin", &ksz, 0);
     if (!have_network && kernel == NULL) {
         goto fail;
     }
 
-    char valid_keys[4];
+    char valid_keys[5];
     memset(valid_keys, 0, sizeof(valid_keys));
     int key_idx = 0;
+
+    if (have_network) {
+        valid_keys[key_idx++] = 'n';
+    }
+    if (kernel != NULL) {
+        valid_keys[key_idx++] = 'm';
+    }
+    if (zedboot_kernel) {
+        valid_keys[key_idx++] = 'z';
+    }
 
     // The first entry in valid_keys will be the default after the timeout.
     // Use the value of bootloader.default to determine the first entry. If
     // bootloader.default is not set, use "network".
     if (!memcmp(defboot, "local", 5)) {
-        if (kernel != NULL) {
-            valid_keys[key_idx++] = 'm';
-        }
-        if (have_network) {
-            valid_keys[key_idx++] = 'n';
-        }
+        swap_to_head('m', valid_keys, key_idx);
+    } else if (!memcmp(defboot, "zedboot", 7)) {
+        swap_to_head('z', valid_keys, key_idx);
     } else {
-        if (have_network) {
-            valid_keys[key_idx++] = 'n';
-        }
-        if (kernel != NULL) {
-            valid_keys[key_idx++] = 'm';
-        }
+        swap_to_head('n', valid_keys, key_idx);
     }
     valid_keys[key_idx++] = 'b';
 
@@ -431,6 +452,10 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
         if (kernel) {
             printf(", ");
             printf("or (m) to boot the zircon.bin on the device");
+        }
+        if (zedboot_kernel) {
+            printf(", ");
+            printf("or (z) to launch zedboot");
         }
         printf(" ...");
 
@@ -460,6 +485,9 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
             }
             boot_kernel(gImg, gSys, kernel, ksz, ramdisk, rsz);
             break;
+        }
+        case 'z': {
+            zedboot(img, sys, zedboot_kernel, zedboot_size);
         }
         default:
             goto fail;

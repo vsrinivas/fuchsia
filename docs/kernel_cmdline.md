@@ -295,8 +295,8 @@ available resolutions for the device.
 
 Example: `bootloader.fbres=640x480`
 
-## bootloader.default=\<network|local>
-This option sets the default boot device to netboot or local zircon.bin.
+## bootloader.default=\<network|local|zedboot>
+This option sets the default boot device to netboot, use a local zircon.bin or to netboot via zedboot.
 
 # How to pass the commandline to the kernel
 
