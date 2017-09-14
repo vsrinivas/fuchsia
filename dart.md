@@ -37,12 +37,12 @@ We use a layout very similar to the [standard layout][package-layout].
 ```
 my_package/
   |
-  |-- pubspec.yaml       # Empty, used as a marker
-  |-- BUILD.gn           # Contains all targets
-  |-- .analysis_options  # Note: can be moved to a central location
-  |-- lib/               # dart_package contents
-  |-- bin/               # dart_binary's (target) or dart_tool's (host)
-  |-- test/              # dart_test contents
+  |-- pubspec.yaml           # Empty, used as a marker [mandatory]
+  |-- BUILD.gn               # Contains all targets
+  |-- analysis_options.yaml  # Analysis configuration [mandatory]
+  |-- lib/                   # dart_package contents
+  |-- bin/                   # dart_binary's (target) or dart_tool's (host)
+  |-- test/                  # dart_test contents
 ```
 
 
@@ -77,14 +77,18 @@ out/<build-type>/gen/path/to/package/package.analyzer.sh
 ```
 Running this script will perform an analysis of the target's sources.
 
-Analysis options for a given target may be set on the target itself in BUILD.gn:
+As with standard Dart packages, analysis options are defined in an
+`analysis_options.yaml` file, which must be placed at the package root.
+This file may refer to a common set of options by way of an `include` directive:
 ```
-dart_package("foo") {
-  analysis_options = "//path/to/my/.analysis_options"
-}
+include: relative/path/to/options.file
+```
+A default set is available at `//build/dart/default_analysis_options.yaml`:
+```
+include: path/to/fuchsia/root/build/dart/default_analysis_options.yaml
 ```
 
-Analysis may likewise be disabled altogether with:
+Analysis may be disabled altogether for a given target with:
 ```
 dart_package("foo") {
   disable_analysis = true
