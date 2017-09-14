@@ -23,6 +23,7 @@
 #include <ddk/device.h>
 #include <ddk/iotxn.h>
 #include <ddk/io-buffer.h>
+#include <ddk/debug.h>
 #include <ddk/protocol/sdmmc.h>
 #include <ddk/protocol/sdhci.h>
 #include <hw/sdmmc.h>
@@ -35,16 +36,6 @@
 #include <pretty/hexdump.h>
 
 #define SD_FREQ_SETUP_HZ  400000
-
-#define TRACE 0
-
-#if TRACE
-#define xprintf(fmt...) printf(fmt)
-#else
-#define xprintf(fmt...) \
-    do {                \
-    } while (0)
-#endif
 
 #define HI32(val)   (((val) >> 32) & 0xffffffff)
 #define LO32(val)   ((val) & 0xffffffff)
@@ -65,10 +56,9 @@ typedef struct sdhci_adma64_desc {
     } __PACKED;
     uint16_t length;
     uint64_t address;
-    uint32_t reserved;
 } __PACKED sdhci_adma64_desc_t;
 
-static_assert(sizeof(sdhci_adma64_desc_t) == 16, "unexpected ADMA2 descriptor size");
+static_assert(sizeof(sdhci_adma64_desc_t) == 12, "unexpected ADMA2 descriptor size");
 
 #define ADMA2_DESC_MAX_LENGTH   0x10000 // 64k
 #define DMA_DESC_COUNT          8192    // for 32M max transfer size for fully discontiguous
@@ -172,7 +162,7 @@ static void sdhci_complete_pending_locked(sdhci_device_t* dev, zx_status_t statu
 
 static void sdhci_cmd_stage_complete_locked(sdhci_device_t* dev) {
     if (!dev->pending) {
-        xprintf("sdhci: spurious CMD_CPLT interrupt!\n");
+        dprintf(TRACE, "sdhci: spurious CMD_CPLT interrupt!\n");
         return;
     }
 
@@ -222,7 +212,7 @@ static void sdhci_cmd_stage_complete_locked(sdhci_device_t* dev) {
 
 static void sdhci_data_stage_read_ready_locked(sdhci_device_t* dev) {
     if (!dev->pending) {
-        xprintf("sdhci: spurious BUFF_READ_READY interrupt!\n");
+        dprintf(TRACE, "sdhci: spurious BUFF_READ_READY interrupt!\n");
         return;
     }
 
@@ -245,7 +235,7 @@ static void sdhci_data_stage_read_ready_locked(sdhci_device_t* dev) {
 
 static void sdhci_data_stage_write_ready_locked(sdhci_device_t* dev) {
     if (!dev->pending) {
-        xprintf("sdhci: spurious BUFF_WRITE_READY interrupt!\n");
+        dprintf(TRACE, "sdhci: spurious BUFF_WRITE_READY interrupt!\n");
         return;
     }
 
@@ -268,7 +258,7 @@ static void sdhci_data_stage_write_ready_locked(sdhci_device_t* dev) {
 
 static void sdhci_transfer_complete_locked(sdhci_device_t* dev) {
     if (!dev->pending) {
-        xprintf("sdhci: spurious XFER_CPLT interrupt!\n");
+        dprintf(TRACE, "sdhci: spurious XFER_CPLT interrupt!\n");
         return;
     }
     sdhci_complete_pending_locked(dev, ZX_OK, dev->pending->length);
@@ -319,7 +309,7 @@ static int sdhci_irq_thread(void *arg) {
         }
 
         const uint32_t irq = regs->irq;
-        xprintf("got irq 0x%08x 0x%08x en 0x%08x\n", regs->irq, irq, regs->irqen);
+        dprintf(TRACE, "got irq 0x%08x 0x%08x en 0x%08x\n", regs->irq, irq, regs->irqen);
 
         // Acknowledge the IRQs that we stashed. IRQs are cleared by writing
         // 1s into the IRQs that fired.
@@ -339,6 +329,12 @@ static int sdhci_irq_thread(void *arg) {
             sdhci_transfer_complete_locked(dev);
         }
         if (irq & error_interrupts) {
+            if (driver_get_log_flags() & DDK_LOG_TRACE) {
+                if (irq & SDHCI_IRQ_ERR_ADMA) {
+                    dprintf(TRACE, "sdhci: ADMA error 0x%x ADMAADDR0 0x%x ADMAADDR1 0x%x\n",
+                            regs->admaerr, regs->admaaddr0, regs->admaaddr1);
+                }
+            }
             sdhci_error_recovery_locked(dev);
         }
         mtx_unlock(&dev->mtx);
@@ -360,10 +356,9 @@ static zx_status_t sdhci_start_txn_locked(sdhci_device_t* dev, iotxn_t* txn) {
 
     zx_status_t st = ZX_OK;
 
-#if 1
-    xprintf("sdhci: start_txn cmd=0x%08x (data %d) blkcnt %u blksiz %u length %" PRIu64 "\n",
+    dprintf(TRACE, "sdhci: start_txn cmd=0x%08x (data %d) blkcnt %u blksiz %u length %"
+            PRIu64 "\n",
             cmd, !!(cmd & SDMMC_RESP_DATA_PRESENT), blkcnt, blksiz, txn->length);
-#endif
 
     pdata->blockid = 0;
     txn->actual = 0;
@@ -408,16 +403,17 @@ static zx_status_t sdhci_start_txn_locked(sdhci_device_t* dev, iotxn_t* txn) {
                         desc->end = 1; // set end bit on the last descriptor
                         break;
                     } else {
-                        xprintf("sdhci: empty descriptor list!\n");
+                        dprintf(TRACE, "sdhci: empty descriptor list!\n");
                         st = ZX_ERR_NOT_SUPPORTED;
                         goto err;
                     }
                 } else if (length > ADMA2_DESC_MAX_LENGTH) {
-                    xprintf("sdhci: chunk size > %zu is unsupported\n", length);
+                    dprintf(TRACE, "sdhci: chunk size > %zu is unsupported\n", length);
                     st = ZX_ERR_NOT_SUPPORTED;
                     goto err;
                 } else if ((++count) > DMA_DESC_COUNT) {
-                    xprintf("sdhci: txn with more than %zd chunks is unsupported\n", length);
+                    dprintf(TRACE, "sdhci: txn with more than %zd chunks is unsupported\n",
+                            length);
                     st = ZX_ERR_NOT_SUPPORTED;
                     goto err;
                 }
@@ -429,16 +425,20 @@ static zx_status_t sdhci_start_txn_locked(sdhci_device_t* dev, iotxn_t* txn) {
                 desc += 1;
             }
 
-#if TRACE
-            desc = dev->descs;
-            do {
-                xprintf("desc: addr=0x%" PRIx64 " length=0x%04x attr=0x%04x\n", desc->address, desc->length, desc->attr);
-            } while (!(desc++)->end);
-#endif
+            if (driver_get_log_flags() & DDK_LOG_SPEW) {
+                desc = dev->descs;
+                do {
+                    dprintf(SPEW, "desc: addr=0x%" PRIx64 " length=0x%04x attr=0x%04x\n",
+                            desc->address, desc->length, desc->attr);
+                } while (!(desc++)->end);
+            }
 
             zx_paddr_t desc_phys = io_buffer_phys(&dev->iobuf);
             dev->regs->admaaddr0 = LO32(desc_phys);
             dev->regs->admaaddr1 = HI32(desc_phys);
+
+            dprintf(SPEW, "sdhci: descs at 0x%x 0x%x\n",
+                    dev->regs->admaaddr0, dev->regs->admaaddr1);
 
             cmd |= SDHCI_XFERMODE_DMA_ENABLE;
 
@@ -644,20 +644,20 @@ static zx_status_t sdhci_set_signal_voltage(sdhci_device_t* dev, uint32_t new_vo
         regs->ctrl2 |= SDHCI_HOSTCTRL2_1P8V_SIGNALLING_ENA;
         // 1.8V regulator out should be stable within 5ms
         zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
-#if TRACE
-        if (!(regs->ctrl2 & SDHCI_HOSTCTRL2_1P8V_SIGNALLING_ENA)) {
-            xprintf("sdhci: 1.8V regulator output did not become stable\n");
+        if (driver_get_log_flags() & DDK_LOG_TRACE) {
+            if (!(regs->ctrl2 & SDHCI_HOSTCTRL2_1P8V_SIGNALLING_ENA)) {
+                dprintf(TRACE, "sdhci: 1.8V regulator output did not become stable\n");
+            }
         }
-#endif
     } else {
         regs->ctrl2 &= ~SDHCI_HOSTCTRL2_1P8V_SIGNALLING_ENA;
         // 3.3V regulator out should be stable within 5ms
         zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
-#if TRACE
-        if (regs->ctrl2 & SDHCI_HOSTCTRL2_1P8V_SIGNALLING_ENA) {
-            xprintf("sdhci: 3.3V regulator output did not become stable\n");
+        if (driver_get_log_flags() & DDK_LOG_TRACE) {
+            if (regs->ctrl2 & SDHCI_HOSTCTRL2_1P8V_SIGNALLING_ENA) {
+                dprintf(TRACE, "sdhci: 3.3V regulator output did not become stable\n");
+            }
         }
-#endif
     }
 
     // Make sure our changes are acknolwedged.
@@ -668,7 +668,8 @@ static zx_status_t sdhci_set_signal_voltage(sdhci_device_t* dev, uint32_t new_vo
         expected_mask |= SDHCI_PWRCTRL_SD_BUS_VOLTAGE_3P3V;
     }
     if ((regs->ctrl0 & expected_mask) != expected_mask) {
-        xprintf("sdhci: after voltage switch ctrl0=0x%08x, expected=0x%08x\n", regs->ctrl0, expected_mask);
+        dprintf(TRACE, "sdhci: after voltage switch ctrl0=0x%08x, expected=0x%08x\n",
+                regs->ctrl0, expected_mask);
         return ZX_ERR_INTERNAL;
     }
 
@@ -764,7 +765,7 @@ static zx_status_t sdhci_controller_init(sdhci_device_t* dev) {
         status = io_buffer_init(&dev->iobuf, DMA_DESC_COUNT * sizeof(sdhci_adma64_desc_t),
                                 IO_BUFFER_RW | IO_BUFFER_CONTIG);
         if (status != ZX_OK) {
-            xprintf("sdhci: error allocating DMA descriptors\n");
+            dprintf(ERROR, "sdhci: error allocating DMA descriptors\n");
             goto fail;
         }
         dev->descs = io_buffer_virt(&dev->iobuf);
@@ -801,7 +802,7 @@ static zx_status_t sdhci_controller_init(sdhci_device_t* dev) {
             break;
 
         if (zx_time_get(ZX_CLOCK_MONOTONIC) > deadline) {
-            xprintf("sdhci: Clock did not stabilize in time\n");
+            dprintf(ERROR, "sdhci: Clock did not stabilize in time\n");
             status = ZX_ERR_TIMED_OUT;
             goto fail;
         }
@@ -856,20 +857,20 @@ static zx_status_t sdhci_bind(void* ctx, zx_device_t* parent, void** cookie) {
     // Map the Device Registers so that we can perform MMIO against the device.
     status = dev->sdhci.ops->get_mmio(dev->sdhci.ctx, &dev->regs);
     if (status != ZX_OK) {
-        xprintf("sdhci: error %d in get_mmio\n", status);
+        dprintf(ERROR, "sdhci: error %d in get_mmio\n", status);
         goto fail;
     }
 
     dev->irq_handle = dev->sdhci.ops->get_interrupt(dev->sdhci.ctx);
     if (dev->irq_handle < 0) {
-        xprintf("sdhci: error %d in get_interrupt\n", status);
+        dprintf(ERROR, "sdhci: error %d in get_interrupt\n", status);
         status = dev->irq_handle;
         goto fail;
     }
 
     thrd_t irq_thread;
     if (thrd_create_with_name(&irq_thread, sdhci_irq_thread, dev, "sdhci_irq_thread") != thrd_success) {
-        xprintf("sdhci: failed to create irq thread\n");
+        dprintf(ERROR, "sdhci: failed to create irq thread\n");
         goto fail;
     }
     thrd_detach(irq_thread);
@@ -878,15 +879,15 @@ static zx_status_t sdhci_bind(void* ctx, zx_device_t* parent, void** cookie) {
     dev->pending_completion = COMPLETION_INIT;
     dev->parent = parent;
 
-    // Ensure that we're SDv3 or above.
+    // Ensure that we're SDv3.
     const uint16_t vrsn = (dev->regs->slotirqversion >> 16) & 0xff;
-    if (vrsn < SDHCI_VERSION_3) {
-        xprintf("sdhci: SD version is %u, only version %u and above are "
-                "supported\n", vrsn, SDHCI_VERSION_3);
+    if (vrsn != SDHCI_VERSION_3) {
+        dprintf(ERROR, "sdhci: SD version is %u, only version %u is supported\n",
+                vrsn, SDHCI_VERSION_3);
         status = ZX_ERR_NOT_SUPPORTED;
         goto fail;
     }
-    xprintf("sdhci: controller version %d\n", vrsn);
+    dprintf(TRACE, "sdhci: controller version %d\n", vrsn);
 
     dev->base_clock = ((dev->regs->caps0 >> 8) & 0xff) * 1000000; /* mhz */
     if (dev->base_clock == 0) {
@@ -894,7 +895,7 @@ static zx_status_t sdhci_bind(void* ctx, zx_device_t* parent, void** cookie) {
         dev->base_clock = dev->sdhci.ops->get_base_clock(dev->sdhci.ctx);
     }
     if (dev->base_clock == 0) {
-        xprintf("sdhci: base clock is 0!\n");
+        dprintf(ERROR, "sdhci: base clock is 0!\n");
         status = ZX_ERR_INTERNAL;
         goto fail;
     }
