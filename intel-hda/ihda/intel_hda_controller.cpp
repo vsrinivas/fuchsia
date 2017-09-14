@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/device/intel-hda.h>
-#include <mxio/io.h>
+#include <zircon/device/intel-hda.h>
+#include <fdio/io.h>
 
 #include "drivers/audio/intel-hda/utils/intel-hda-registers.h"
 
@@ -97,30 +97,30 @@ static void ihda_dump_stream_regs(const char* name,
     }
 }
 
-mx_status_t IntelHDAController::Enumerate() {
+zx_status_t IntelHDAController::Enumerate() {
     static const char* const DEV_PATH = "/dev/class/intel-hda";
     static const char* const DEV_FMT  = "%03hu";
 
-    mx_status_t res = MagentaDevice::Enumerate(nullptr, DEV_PATH, DEV_FMT,
-    [](void*, uint32_t id, const char* const dev_name) -> mx_status_t {
+    zx_status_t res = ZirconDevice::Enumerate(nullptr, DEV_PATH, DEV_FMT,
+    [](void*, uint32_t id, const char* const dev_name) -> zx_status_t {
         fbl::unique_ptr<IntelHDAController> dev(new IntelHDAController(id, dev_name));
 
         if (!controllers_.insert_or_find(fbl::move(dev)))
-            return MX_ERR_INTERNAL;
+            return ZX_ERR_INTERNAL;
 
-        return MX_OK;
+        return ZX_OK;
     });
 
-    if (res != MX_OK)
+    if (res != ZX_OK)
         return res;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t IntelHDAController::DumpRegs(int argc, const char** argv) {
-    mx_status_t res = Connect();
+zx_status_t IntelHDAController::DumpRegs(int argc, const char** argv) {
+    zx_status_t res = Connect();
 
-    if (res != MX_OK)
+    if (res != ZX_OK)
         return res;
 
     ihda_controller_snapshot_regs_req_t req;
@@ -128,7 +128,7 @@ mx_status_t IntelHDAController::DumpRegs(int argc, const char** argv) {
 
     InitRequest(&req, IHDA_CONTROLLER_CMD_SNAPSHOT_REGS);
     res = CallDevice(req, &resp);
-    if (res != MX_OK)
+    if (res != ZX_OK)
         return res;
 
     const auto  regs_ptr = reinterpret_cast<hda_registers_t*>(resp.snapshot);
@@ -181,7 +181,7 @@ mx_status_t IntelHDAController::DumpRegs(int argc, const char** argv) {
     ihda_dump_stream_regs("Output Stream", output_stream_cnt, sregs); sregs += output_stream_cnt;
     ihda_dump_stream_regs("Bi-dir Stream", bidir_stream_cnt,  sregs);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 }  // namespace audio

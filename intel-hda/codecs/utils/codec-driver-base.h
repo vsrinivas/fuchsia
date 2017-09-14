@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/intel-hda-codec.h>
-#include <mx/handle.h>
+#include <zx/handle.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
@@ -27,11 +27,11 @@ public:
     virtual void Shutdown();
 
     // Properties
-    mx_device_t* codec_device() const { return codec_device_; }
-    mx_time_t    create_time()  const { return create_time_; }
+    zx_device_t* codec_device() const { return codec_device_; }
+    zx_time_t    create_time()  const { return create_time_; }
 
     // Unsolicited tag allocation for streams
-    mx_status_t AllocateUnsolTag(const IntelHDAStreamBase& stream, uint8_t* out_tag);
+    zx_status_t AllocateUnsolTag(const IntelHDAStreamBase& stream, uint8_t* out_tag);
     void ReleaseUnsolTag(const IntelHDAStreamBase& stream, uint8_t tag);
     void ReleaseAllUnsolTags(const IntelHDAStreamBase& stream);
 
@@ -49,28 +49,28 @@ protected:
     // Bind should only ever be called exactly once (during driver
     // instantiation).  Drivers must make sure that no other methods are in
     // flight during a call to Bind.
-    mx_status_t Bind(mx_device_t* codec_dev);
+    zx_status_t Bind(zx_device_t* codec_dev);
 
     // Send a codec command to our codec device.
-    mx_status_t SendCodecCommand(uint16_t nid, CodecVerb verb, bool no_ack);
+    zx_status_t SendCodecCommand(uint16_t nid, CodecVerb verb, bool no_ack);
 
-    virtual mx_status_t Start() { return MX_OK; }
-    virtual mx_status_t ProcessUnsolicitedResponse(const CodecResponse& resp) { return MX_OK; }
-    virtual mx_status_t ProcessSolicitedResponse  (const CodecResponse& resp) { return MX_OK; }
+    virtual zx_status_t Start() { return ZX_OK; }
+    virtual zx_status_t ProcessUnsolicitedResponse(const CodecResponse& resp) { return ZX_OK; }
+    virtual zx_status_t ProcessSolicitedResponse  (const CodecResponse& resp) { return ZX_OK; }
 
     // DispatcherChannel::Owner implementation
-    mx_status_t ProcessChannel(DispatcherChannel* channel) final;
+    zx_status_t ProcessChannel(DispatcherChannel* channel) final;
     void NotifyChannelDeactivated(const DispatcherChannel& channel) final;
 
     // Unsolicited tag allocation for codecs.
-    mx_status_t AllocateUnsolTag(uint8_t* out_tag) { return AllocateUnsolTag(CODEC_TID, out_tag); }
+    zx_status_t AllocateUnsolTag(uint8_t* out_tag) { return AllocateUnsolTag(CODEC_TID, out_tag); }
     void ReleaseUnsolTag(uint8_t tag) { ReleaseUnsolTag(CODEC_TID, tag); }
 
     fbl::RefPtr<IntelHDAStreamBase> GetActiveStream(uint32_t stream_id)
         __TA_EXCLUDES(active_streams_lock_);
-    mx_status_t ActivateStream(const fbl::RefPtr<IntelHDAStreamBase>& stream)
+    zx_status_t ActivateStream(const fbl::RefPtr<IntelHDAStreamBase>& stream)
         __TA_EXCLUDES(active_streams_lock_);
-    mx_status_t DeactivateStream(uint32_t stream_id)
+    zx_status_t DeactivateStream(uint32_t stream_id)
         __TA_EXCLUDES(active_streams_lock_);
 
     // Debug logging
@@ -87,10 +87,10 @@ private:
     };
 
     // Unsolicited response tag to stream ID bookkeeping.
-    mx_status_t AllocateUnsolTag(uint32_t stream_id, uint8_t* out_tag);
+    zx_status_t AllocateUnsolTag(uint32_t stream_id, uint8_t* out_tag);
     void        ReleaseUnsolTag (uint32_t stream_id, uint8_t  tag);
     void        ReleaseAllUnsolTags(uint32_t stream_id);
-    mx_status_t MapUnsolTagToStreamId(uint8_t tag, uint32_t* out_stream_id);
+    zx_status_t MapUnsolTagToStreamId(uint8_t tag, uint32_t* out_stream_id);
 
     // Called in order to unlink this device from the controller driver.  After
     // this call returns, the codec driver is guaranteed that no calls to any of
@@ -100,13 +100,13 @@ private:
     // return an error code from the callback.
     void UnlinkFromController();
 
-    mx_status_t ProcessStreamResponse(const fbl::RefPtr<IntelHDAStreamBase>& stream,
+    zx_status_t ProcessStreamResponse(const fbl::RefPtr<IntelHDAStreamBase>& stream,
                                       const CodecChannelResponses& resp,
                                       uint32_t resp_size,
-                                      mx::handle&& rxed_handle);
+                                      zx::handle&& rxed_handle);
 
-    mx_device_t* codec_device_ = nullptr;
-    mx_time_t    create_time_  = mx_time_get(MX_CLOCK_MONOTONIC);
+    zx_device_t* codec_device_ = nullptr;
+    zx_time_t    create_time_  = zx_time_get(ZX_CLOCK_MONOTONIC);
 
     fbl::Mutex device_channel_lock_;
     fbl::RefPtr<DispatcherChannel> device_channel_ __TA_GUARDED(device_channel_lock_);

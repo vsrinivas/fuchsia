@@ -18,7 +18,7 @@ namespace audio {
 namespace intel_hda {
 namespace codecs {
 
-mx_status_t RealtekStream::DisableConverterLocked(bool force_all) {
+zx_status_t RealtekStream::DisableConverterLocked(bool force_all) {
     const Command DISABLE_CONVERTER_VERBS[] = {
         { props_.conv_nid, SET_AMPLIFIER_GAIN_MUTE(true, 0, is_input(), !is_input()) },
         { props_.pc_nid,   SET_AMPLIFIER_GAIN_MUTE(true, 0, is_input(), !is_input()) },
@@ -30,20 +30,20 @@ mx_status_t RealtekStream::DisableConverterLocked(bool force_all) {
     return RunCmdListLocked(DISABLE_CONVERTER_VERBS, countof(DISABLE_CONVERTER_VERBS), force_all);
 }
 
-mx_status_t RealtekStream::UpdateConverterGainLocked(float target_gain) {
+zx_status_t RealtekStream::UpdateConverterGainLocked(float target_gain) {
     if (!conv_.has_amp)
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 
     if ((target_gain < conv_.min_gain) || (target_gain > conv_.max_gain))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
-    MX_DEBUG_ASSERT(conv_.gain_step > 0);
+    ZX_DEBUG_ASSERT(conv_.gain_step > 0);
 
     uint32_t tmp = ((target_gain - conv_.min_gain) + (conv_.gain_step / 2)) / conv_.gain_step;
-    MX_DEBUG_ASSERT(tmp <= conv_.amp_caps.num_steps());
+    ZX_DEBUG_ASSERT(tmp <= conv_.amp_caps.num_steps());
 
     cur_conv_gain_steps_ = ComputeGainSteps(conv_, target_gain);
-    return MX_OK;
+    return ZX_OK;
 }
 
 float RealtekStream::ComputeCurrentGainLocked() {
@@ -52,15 +52,15 @@ float RealtekStream::ComputeCurrentGainLocked() {
         : 0.0f;
 }
 
-mx_status_t RealtekStream::SendGainUpdatesLocked() {
-    mx_status_t res;
+zx_status_t RealtekStream::SendGainUpdatesLocked() {
+    zx_status_t res;
 
     if (conv_.has_amp) {
         bool mute = conv_.amp_caps.can_mute() ? cur_mute_ : false;
         res = RunCmdLocked({ props_.conv_nid, SET_AMPLIFIER_GAIN_MUTE(mute,
                                                                       cur_conv_gain_steps_,
                                                                       is_input(), !is_input()) });
-        if (res != MX_OK)
+        if (res != ZX_OK)
             return res;
     }
 
@@ -69,11 +69,11 @@ mx_status_t RealtekStream::SendGainUpdatesLocked() {
         res = RunCmdLocked({ props_.pc_nid, SET_AMPLIFIER_GAIN_MUTE(mute,
                                                                     cur_pc_gain_steps_,
                                                                     is_input(), !is_input()) });
-        if (res != MX_OK)
+        if (res != ZX_OK)
             return res;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 // TODO(johngro) : re: the plug_notify_targets_ list.  In theory, we could put
@@ -119,46 +119,46 @@ uint8_t RealtekStream::ComputeGainSteps(const CommonCaps& caps, float target_gai
     if (target_gain > caps.max_gain)
         return caps.amp_caps.num_steps() - 1;
 
-    MX_DEBUG_ASSERT(caps.gain_step > 0);
+    ZX_DEBUG_ASSERT(caps.gain_step > 0);
     uint32_t tmp = ((target_gain - caps.min_gain) + (caps.gain_step / 2)) / caps.gain_step;
-    MX_DEBUG_ASSERT(tmp <= caps.amp_caps.num_steps());
+    ZX_DEBUG_ASSERT(tmp <= caps.amp_caps.num_steps());
 
     return static_cast<uint8_t>(tmp);
 }
 
-mx_status_t RealtekStream::RunCmdLocked(const Command& cmd) {
+zx_status_t RealtekStream::RunCmdLocked(const Command& cmd) {
     fbl::unique_ptr<PendingCommand> pending_cmd;
     bool want_response = (cmd.thunk != nullptr);
 
     if (want_response) {
         pending_cmd = PendingCommandAllocator::New(cmd);
         if (pending_cmd == nullptr)
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
     }
 
-    mx_status_t res = SendCodecCommandLocked(cmd.nid,
+    zx_status_t res = SendCodecCommandLocked(cmd.nid,
                                              cmd.verb,
                                              want_response ? Ack::YES : Ack::NO);
     VERBOSE_LOG("SEND: nid %2hu verb 0x%05x%s\n", cmd.nid, cmd.verb.val, want_response ? "*" : "");
 
-    if ((res == MX_OK) && want_response)
+    if ((res == ZX_OK) && want_response)
         pending_cmds_.push_back(fbl::move(pending_cmd));
 
     return res;
 }
 
-mx_status_t RealtekStream::RunCmdListLocked(const Command* list, size_t count, bool force_all) {
-    MX_DEBUG_ASSERT(list);
+zx_status_t RealtekStream::RunCmdListLocked(const Command* list, size_t count, bool force_all) {
+    ZX_DEBUG_ASSERT(list);
 
-    mx_status_t total_res = MX_OK;
+    zx_status_t total_res = ZX_OK;
     for (size_t i = 0; i < count; ++i) {
-        mx_status_t res = RunCmdLocked(list[i]);
+        zx_status_t res = RunCmdLocked(list[i]);
 
-        if (res != MX_OK) {
+        if (res != ZX_OK) {
             if (!force_all)
                 return res;
 
-            if (total_res == MX_OK)
+            if (total_res == ZX_OK)
                 total_res = res;
         }
     }
@@ -175,14 +175,14 @@ void RealtekStream::OnChannelDeactivateLocked(const DispatcherChannel& channel) 
     RemovePDNotificationTgtLocked(channel);
 }
 
-mx_status_t RealtekStream::OnDMAAssignedLocked() {
+zx_status_t RealtekStream::OnDMAAssignedLocked() {
     return UpdateSetupProgressLocked(DMA_ASSIGNMENT_COMPLETE);
 }
 
-mx_status_t RealtekStream::OnSolicitedResponseLocked(const CodecResponse& resp) {
+zx_status_t RealtekStream::OnSolicitedResponseLocked(const CodecResponse& resp) {
     if (pending_cmds_.is_empty()) {
         LOG("Received solicited response (0x%08x), but no commands are pending!\n", resp.data);
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     auto pending_cmd = pending_cmds_.pop_front();
@@ -193,7 +193,7 @@ mx_status_t RealtekStream::OnSolicitedResponseLocked(const CodecResponse& resp) 
     return pending_cmd->Invoke(this, resp);
 }
 
-mx_status_t RealtekStream::OnUnsolicitedResponseLocked(const CodecResponse& resp) {
+zx_status_t RealtekStream::OnUnsolicitedResponseLocked(const CodecResponse& resp) {
     // TODO(johngro) : Which bit should we be using as the pin sense bit?  The
     // Intel HDA spec only specifies what digital display pins are required to
     // use; generally speaking unsolicited response payloads are supposed to be
@@ -207,10 +207,10 @@ mx_status_t RealtekStream::OnUnsolicitedResponseLocked(const CodecResponse& resp
     if (plug_state_ != plugged) {
         // Update our internal state.
         plug_state_ = plugged;
-        last_plug_time_ = mx_time_get(MX_CLOCK_MONOTONIC);
+        last_plug_time_ = zx_time_get(ZX_CLOCK_MONOTONIC);
 
         // Inform anyone who has registered for notification.
-        MX_DEBUG_ASSERT(pc_.async_plug_det);
+        ZX_DEBUG_ASSERT(pc_.async_plug_det);
         if (!plug_notify_targets_.is_empty()) {
             audio_proto::PlugDetectNotify notif;
 
@@ -221,11 +221,11 @@ mx_status_t RealtekStream::OnUnsolicitedResponseLocked(const CodecResponse& resp
             notif.plug_state_time = last_plug_time_;
 
             for (auto iter = plug_notify_targets_.begin(); iter != plug_notify_targets_.end(); ) {
-                mx_status_t res;
+                zx_status_t res;
 
-                MX_DEBUG_ASSERT(iter->channel != nullptr);
+                ZX_DEBUG_ASSERT(iter->channel != nullptr);
                 res = iter->channel->Write(&notif, sizeof(notif));
-                if (res != MX_OK) {
+                if (res != ZX_OK) {
                     // If we have failed to send the notification over our
                     // client channel, something has gone fairly wrong.  Remove
                     // the client from the notification list.
@@ -237,10 +237,10 @@ mx_status_t RealtekStream::OnUnsolicitedResponseLocked(const CodecResponse& resp
         }
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t RealtekStream::BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& fmt) {
+zx_status_t RealtekStream::BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& fmt) {
     // Check the format arguments.
     //
     // Note: in the limited number of Realtek codecs I have seen so far, the
@@ -272,19 +272,19 @@ mx_status_t RealtekStream::BeginChangeStreamFormatLocked(const audio_proto::Stre
     // insist that the format specified by the user exactly match the number of
     // channels present in the converter we are using for this pipeline.
     if (!fmt.channels || (fmt.channels != conv_.widget_caps.ch_count()))
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 
     if (!conv_.sample_caps.SupportsRate(fmt.frames_per_second) ||
         !conv_.sample_caps.SupportsFormat(fmt.sample_format))
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 
     // Looks good, make sure that the converter is muted and not processing any stream tags.
     format_set_ = false;
     return DisableConverterLocked();
 }
 
-mx_status_t RealtekStream::FinishChangeStreamFormatLocked(uint16_t encoded_fmt) {
-    mx_status_t res;
+zx_status_t RealtekStream::FinishChangeStreamFormatLocked(uint16_t encoded_fmt) {
+    zx_status_t res;
     const Command ENABLE_CONVERTER_VERBS[] = {
         { props_.conv_nid, SET_CONVERTER_FORMAT(encoded_fmt) },
         { props_.conv_nid, SET_CONVERTER_STREAM_CHAN(dma_stream_tag(), 0) },
@@ -295,19 +295,19 @@ mx_status_t RealtekStream::FinishChangeStreamFormatLocked(uint16_t encoded_fmt) 
     };
 
     res = RunCmdListLocked(ENABLE_CONVERTER_VERBS, countof(ENABLE_CONVERTER_VERBS));
-    if (res != MX_OK)
+    if (res != ZX_OK)
         return res;
 
     res = SendGainUpdatesLocked();
-    if (res != MX_OK)
+    if (res != ZX_OK)
         return res;
 
     format_set_ = true;
-    return MX_OK;
+    return ZX_OK;
 }
 
 void RealtekStream::OnGetGainLocked(audio_proto::GetGainResp* out_resp) {
-    MX_DEBUG_ASSERT(out_resp);
+    ZX_DEBUG_ASSERT(out_resp);
 
     if (conv_.has_amp) {
         out_resp->cur_gain  = ComputeCurrentGainLocked();
@@ -327,7 +327,7 @@ void RealtekStream::OnGetGainLocked(audio_proto::GetGainResp* out_resp) {
 
 void RealtekStream::OnSetGainLocked(const audio_proto::SetGainReq& req,
                                     audio_proto::SetGainResp* out_resp) {
-    mx_status_t res  = MX_OK;
+    zx_status_t res  = ZX_OK;
     bool mute_target = cur_mute_;
     bool set_mute    = req.flags & AUDIO_SGF_MUTE_VALID;
     bool set_gain    = req.flags & AUDIO_SGF_GAIN_VALID;
@@ -335,17 +335,17 @@ void RealtekStream::OnSetGainLocked(const audio_proto::SetGainReq& req,
     if (set_mute || set_gain) {
         if (set_mute) {
             if (!can_mute()) {
-                res = MX_ERR_INVALID_ARGS;
+                res = ZX_ERR_INVALID_ARGS;
             } else {
                 mute_target = req.flags & AUDIO_SGF_MUTE;
             }
         }
 
-        if ((res == MX_OK) && set_gain)
+        if ((res == ZX_OK) && set_gain)
             res = UpdateConverterGainLocked(req.gain);
     }
 
-    if (res == MX_OK) {
+    if (res == ZX_OK) {
         cur_mute_ = mute_target;
 
         // Don't bother sending any update to the converter if the format is not currently set.
@@ -363,7 +363,7 @@ void RealtekStream::OnSetGainLocked(const audio_proto::SetGainReq& req,
 void RealtekStream::OnPlugDetectLocked(DispatcherChannel* response_channel,
                                        const audio_proto::PlugDetectReq& req,
                                        audio_proto::PlugDetectResp* out_resp) {
-    MX_DEBUG_ASSERT(response_channel != nullptr);
+    ZX_DEBUG_ASSERT(response_channel != nullptr);
 
     // If our pin cannot perform presence detection, just fall back on the base class impl.
     if (!pc_.pin_caps.can_pres_detect()) {
@@ -403,15 +403,15 @@ void RealtekStream::OnPlugDetectLocked(DispatcherChannel* response_channel,
     }
 }
 
-mx_status_t RealtekStream::UpdateSetupProgressLocked(uint32_t stage) {
-    MX_DEBUG_ASSERT(!(setup_progress_ & STREAM_PUBLISHED));
-    MX_DEBUG_ASSERT(!(setup_progress_ & stage));
+zx_status_t RealtekStream::UpdateSetupProgressLocked(uint32_t stage) {
+    ZX_DEBUG_ASSERT(!(setup_progress_ & STREAM_PUBLISHED));
+    ZX_DEBUG_ASSERT(!(setup_progress_ & stage));
 
     setup_progress_ |= stage;
 
     if (setup_progress_ == ALL_SETUP_COMPLETE) {
-        mx_status_t res = FinalizeSetupLocked();
-        if (res != MX_OK)
+        zx_status_t res = FinalizeSetupLocked();
+        if (res != ZX_OK)
             return res;
 
         setup_progress_ |= STREAM_PUBLISHED;
@@ -419,10 +419,10 @@ mx_status_t RealtekStream::UpdateSetupProgressLocked(uint32_t stage) {
         return PublishDeviceLocked();
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t RealtekStream::FinalizeSetupLocked() {
+zx_status_t RealtekStream::FinalizeSetupLocked() {
     // Stash the number of gain steps to use in the pin converter.  This allows
     // us to hardcode gain targets for things like mic boost.  Eventually, we
     // need to expose a way to detect this capability and control it via APIs,
@@ -432,10 +432,10 @@ mx_status_t RealtekStream::FinalizeSetupLocked() {
 
     // Compute the list of formats we support.
     fbl::Vector<audio_proto::FormatRange> supported_formats;
-    mx_status_t res =  MakeFormatRangeList(conv_.sample_caps,
+    zx_status_t res =  MakeFormatRangeList(conv_.sample_caps,
                                            conv_.widget_caps.ch_count(),
                                            &supported_formats);
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
         DEBUG_LOG("Failed to compute supported format ranges!  (res = %d)\n", res);
         return res;
     }
@@ -447,7 +447,7 @@ mx_status_t RealtekStream::FinalizeSetupLocked() {
                   "(formats = 0x%08x, size/rates = 0x%08x)\n",
                   conv_.sample_caps.pcm_formats_,
                   conv_.sample_caps.pcm_size_rate_);
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Go over the list of format ranges produced and tweak it to account for
@@ -463,7 +463,7 @@ mx_status_t RealtekStream::FinalizeSetupLocked() {
 
     SetSupportedFormatsLocked(fbl::move(supported_formats));
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 void RealtekStream::DumpStreamPublishedLocked() {
@@ -546,11 +546,11 @@ void RealtekStream::DumpAmpCaps(const CommonCaps& caps, const char* tag) {
 
 #define THUNK(_method) (&RealtekStream::_method)
 
-mx_status_t RealtekStream::OnActivateLocked() {
+zx_status_t RealtekStream::OnActivateLocked() {
     // Start by attempting to put our pin complex and converter into a disabled
     // state.
-    mx_status_t res = DisableConverterLocked();
-    if (res != MX_OK)
+    zx_status_t res = DisableConverterLocked();
+    if (res != ZX_OK)
         return res;
 
     // Start the setup process by fetching the widget caps for our converter and
@@ -568,7 +568,7 @@ mx_status_t RealtekStream::OnActivateLocked() {
     return RunCmdListLocked(SETUP, countof(SETUP));
 }
 
-mx_status_t RealtekStream::ProcessPinWidgetCaps(const Command& cmd, const CodecResponse& resp) {
+zx_status_t RealtekStream::ProcessPinWidgetCaps(const Command& cmd, const CodecResponse& resp) {
     // Stash the pin's audio-widget caps.  We will need it while processing the
     // pin caps to determine if we need to register for async plug detection
     // notifications before querying the initial pin state.
@@ -589,7 +589,7 @@ mx_status_t RealtekStream::ProcessPinWidgetCaps(const Command& cmd, const CodecR
                          THUNK(ProcessPinAmpCaps) });
 }
 
-mx_status_t RealtekStream::ProcessPinAmpCaps(const Command& cmd, const CodecResponse& resp) {
+zx_status_t RealtekStream::ProcessPinAmpCaps(const Command& cmd, const CodecResponse& resp) {
     pc_.amp_caps.raw_data_ = resp.data;
 
     pc_.gain_step = pc_.amp_caps.step_size_db();
@@ -599,19 +599,19 @@ mx_status_t RealtekStream::ProcessPinAmpCaps(const Command& cmd, const CodecResp
     return UpdateSetupProgressLocked(PIN_COMPLEX_SETUP_COMPLETE);
 }
 
-mx_status_t RealtekStream::ProcessPinCfgDefaults(const Command& cmd, const CodecResponse& resp) {
+zx_status_t RealtekStream::ProcessPinCfgDefaults(const Command& cmd, const CodecResponse& resp) {
     pc_.cfg_defaults.raw_data_ = resp.data;
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t RealtekStream::ProcessPinCaps(const Command& cmd, const CodecResponse& resp) {
+zx_status_t RealtekStream::ProcessPinCaps(const Command& cmd, const CodecResponse& resp) {
     pc_.pin_caps.raw_data_ = resp.data;
 
     // Sanity check out input/output configuration.
     if ((is_input() ? pc_.pin_caps.can_input() : pc_.pin_caps.can_output()) == false) {
         const char* tag = is_input() ? "input" : "output";
         LOG("ERROR: Stream configured for %s, but pin complex cannot %s\n", tag, tag);
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     // Is the Jack Detect Override bit set in our config defaults?  If so,
@@ -643,11 +643,11 @@ mx_status_t RealtekStream::ProcessPinCaps(const Command& cmd, const CodecRespons
     // state.
     pc_.async_plug_det = pc_.widget_caps.can_send_unsol();
     if (pc_.async_plug_det) {
-        mx_status_t res = AllocateUnsolTagLocked(&pc_.unsol_tag);
-        if (res == MX_OK) {
-            mx_status_t res = RunCmdLocked({ props_.pc_nid,
+        zx_status_t res = AllocateUnsolTagLocked(&pc_.unsol_tag);
+        if (res == ZX_OK) {
+            zx_status_t res = RunCmdLocked({ props_.pc_nid,
                                              SET_UNSOLICITED_RESP_CTRL(true, pc_.unsol_tag) });
-            if (res != MX_OK)
+            if (res != ZX_OK)
                 return res;
         } else {
             LOG("WARNING : Failed to allocate unsolicited response tag from "
@@ -661,15 +661,15 @@ mx_status_t RealtekStream::ProcessPinCaps(const Command& cmd, const CodecRespons
     return RunCmdLocked({ props_.pc_nid, GET_PIN_SENSE, THUNK(ProcessPinState) });
 }
 
-mx_status_t RealtekStream::ProcessPinState(const Command& cmd, const CodecResponse& resp) {
+zx_status_t RealtekStream::ProcessPinState(const Command& cmd, const CodecResponse& resp) {
     plug_state_ = PinSenseState(resp.data).presence_detect();
-    last_plug_time_ = mx_time_get(MX_CLOCK_MONOTONIC);
+    last_plug_time_ = zx_time_get(ZX_CLOCK_MONOTONIC);
     return UpdateSetupProgressLocked(PLUG_STATE_SETUP_COMPLETE);
 }
 
-mx_status_t RealtekStream::ProcessConverterWidgetCaps(const Command& cmd,
+zx_status_t RealtekStream::ProcessConverterWidgetCaps(const Command& cmd,
                                                       const CodecResponse& resp) {
-    mx_status_t res;
+    zx_status_t res;
 
     conv_.widget_caps.raw_data_ = resp.data;
     conv_.has_amp = is_input() ? conv_.widget_caps.input_amp_present()
@@ -682,7 +682,7 @@ mx_status_t RealtekStream::ProcessConverterWidgetCaps(const Command& cmd,
         res = RunCmdLocked({ nid,
                              GET_PARAM(AMP_CAPS(is_input())),
                              THUNK(ProcessConverterAmpCaps) });
-        if (res != MX_OK)
+        if (res != ZX_OK)
             return res;
     }
 
@@ -694,13 +694,13 @@ mx_status_t RealtekStream::ProcessConverterWidgetCaps(const Command& cmd,
     };
 
     res = RunCmdListLocked(FETCH_FORMATS, countof(FETCH_FORMATS));
-    if (res != MX_OK)
+    if (res != ZX_OK)
         return res;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t RealtekStream::ProcessConverterAmpCaps(const Command& cmd, const CodecResponse& resp) {
+zx_status_t RealtekStream::ProcessConverterAmpCaps(const Command& cmd, const CodecResponse& resp) {
     conv_.amp_caps.raw_data_ = resp.data;
 
     conv_.gain_step = conv_.amp_caps.step_size_db();
@@ -710,13 +710,13 @@ mx_status_t RealtekStream::ProcessConverterAmpCaps(const Command& cmd, const Cod
     return UpdateConverterGainLocked(fbl::max(props_.default_conv_gain, conv_.min_gain));
 }
 
-mx_status_t RealtekStream::ProcessConverterSampleSizeRate(const Command& cmd,
+zx_status_t RealtekStream::ProcessConverterSampleSizeRate(const Command& cmd,
                                                           const CodecResponse& resp) {
     conv_.sample_caps.pcm_size_rate_ = resp.data;
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t RealtekStream::ProcessConverterSampleFormats(const Command& cmd,
+zx_status_t RealtekStream::ProcessConverterSampleFormats(const Command& cmd,
                                                          const CodecResponse& resp) {
     conv_.sample_caps.pcm_formats_ = resp.data;
     return UpdateSetupProgressLocked(CONVERTER_SETUP_COMPLETE);

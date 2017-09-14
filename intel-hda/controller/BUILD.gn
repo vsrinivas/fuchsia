@@ -32,8 +32,8 @@ driver_module("ihda-controller") {
         "//drivers/audio/audio-proto",
         "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
         "//drivers/audio/intel-hda/utils:ihda-utils",
-        "//magenta/system/ulib/mx",
-        "//magenta/system/ulib/fbl",
+        "//zircon/system/ulib/zx",
+        "//zircon/system/ulib/fbl",
     ]
 
     libs = [

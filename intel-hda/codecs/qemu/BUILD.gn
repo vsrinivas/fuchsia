@@ -19,8 +19,8 @@ driver_module("qemu-ihda-codec") {
     deps = [
         "//drivers/audio/intel-hda/codecs/utils:ihda-codec-utils",
         "//drivers/audio/intel-hda/utils:ihda-utils",
-        "//magenta/system/ulib/mx",
-        "//magenta/system/ulib/fbl",
+        "//zircon/system/ulib/zx",
+        "//zircon/system/ulib/fbl",
     ]
 
     libs = [ ]

@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <magenta/assert.h>
-#include <magenta/device/intel-hda.h>
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
+#include <zircon/assert.h>
+#include <zircon/device/intel-hda.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -15,38 +15,38 @@
 namespace audio {
 namespace intel_hda {
 
-class MagentaDevice {
+class ZirconDevice {
 public:
-    mx_status_t Connect();
+    zx_status_t Connect();
     void Disconnect();
 
     const char* dev_name() const { return dev_name_ ? dev_name_ : "<unknown>"; }
 
-    using EnumerateCbk = mx_status_t (*)(void* ctx, uint32_t id, const char* const str);
-    static mx_status_t Enumerate(void* ctx,
+    using EnumerateCbk = zx_status_t (*)(void* ctx, uint32_t id, const char* const str);
+    static zx_status_t Enumerate(void* ctx,
                                  const char* const dev_path,
                                  const char* const dev_fmt,
                                  EnumerateCbk cbk);
 
 protected:
-    explicit MagentaDevice(const char* const dev_name)
+    explicit ZirconDevice(const char* const dev_name)
         : dev_name_(::strdup(dev_name)) { }
 
-    ~MagentaDevice() {
+    ~ZirconDevice() {
         Disconnect();
         if (dev_name_) ::free(dev_name_);
     }
 
     template <typename ReqType, typename RespType>
-    mx_status_t CallDevice(const ReqType& req, RespType* resp, uint64_t timeout_msec = 100) {
+    zx_status_t CallDevice(const ReqType& req, RespType* resp, uint64_t timeout_msec = 100) {
         if (!resp)
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
 
-        mx_status_t res = Connect();
-        if (res != MX_OK)
+        zx_status_t res = Connect();
+        if (res != ZX_OK)
             return res;
 
-        mx_channel_call_args_t args;
+        zx_channel_call_args_t args;
         memset(&args, 0, sizeof(args));
 
         // TODO(johngro) : get rid of this const cast
@@ -60,7 +60,7 @@ protected:
 
     template <typename ReqType>
     static void InitRequest(ReqType* req, ihda_cmd_t cmd) {
-        MX_DEBUG_ASSERT(req != nullptr);
+        ZX_DEBUG_ASSERT(req != nullptr);
         memset(req, 0, sizeof(*req));
         do {
             req->hdr.transaction_id = ++transaction_id_;
@@ -69,10 +69,10 @@ protected:
     }
 
     char* dev_name_;
-    mx_handle_t dev_channel_ = MX_HANDLE_INVALID;
+    zx_handle_t dev_channel_ = ZX_HANDLE_INVALID;
 
 private:
-    mx_status_t CallDevice(const mx_channel_call_args_t& args, uint64_t timeout_msec);
+    zx_status_t CallDevice(const zx_channel_call_args_t& args, uint64_t timeout_msec);
     static uint32_t transaction_id_;
 };
 

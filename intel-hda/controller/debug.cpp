@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 #include <fbl/auto_lock.h>
 #include <string.h>
 
@@ -21,7 +21,7 @@ fbl::Mutex snapshot_regs_buffer_lock;
 ihda_controller_snapshot_regs_resp_t snapshot_regs_buffer TA_GUARDED(snapshot_regs_buffer_lock);
 }  // anon namespace
 
-mx_status_t IntelHDAController::SnapshotRegs(const DispatcherChannel& channel,
+zx_status_t IntelHDAController::SnapshotRegs(const DispatcherChannel& channel,
                                              const ihda_controller_snapshot_regs_req_t& req) {
     // TODO(johngro) : What an enormous PITA.  Every register needs to be
     // accessed with the proper sized transaction on the PCI bus, so we cannot

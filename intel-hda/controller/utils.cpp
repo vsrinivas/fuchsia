@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 #include <ddk/binding.h>
-#include <magenta/process.h>
+#include <zircon/process.h>
 #include <fbl/algorithm.h>
 #include <string.h>
 
@@ -23,42 +23,42 @@ static constexpr size_t   IHDA_PAGE_MASK = IHDA_PAGE_SIZE - 1;
 static_assert(IHDA_PAGE_SIZE == PAGE_SIZE, "PAGE_SIZE assumption mismatch!!");
 #endif  // PAGE_SIZE
 
-mx_status_t WaitCondition(mx_time_t timeout,
-                          mx_time_t poll_interval,
+zx_status_t WaitCondition(zx_time_t timeout,
+                          zx_time_t poll_interval,
                           WaitConditionFn cond,
                           void* cond_ctx) {
-    MX_DEBUG_ASSERT(poll_interval != MX_TIME_INFINITE);
-    MX_DEBUG_ASSERT(cond != nullptr);
+    ZX_DEBUG_ASSERT(poll_interval != ZX_TIME_INFINITE);
+    ZX_DEBUG_ASSERT(cond != nullptr);
 
-    mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
+    zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
     timeout += now;
 
     while (!cond(cond_ctx)) {
-        now = mx_time_get(MX_CLOCK_MONOTONIC);
+        now = zx_time_get(ZX_CLOCK_MONOTONIC);
         if (now >= timeout)
-            return MX_ERR_TIMED_OUT;
+            return ZX_ERR_TIMED_OUT;
 
-        mx_time_t sleep_time = timeout - now;
+        zx_time_t sleep_time = timeout - now;
         if (poll_interval < sleep_time)
             sleep_time = poll_interval;
 
-        mx_nanosleep(mx_deadline_after(sleep_time));
+        zx_nanosleep(zx_deadline_after(sleep_time));
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t GetVMORegionInfo(const mx::vmo& vmo,
+zx_status_t GetVMORegionInfo(const zx::vmo& vmo,
                              uint64_t       vmo_size,
                              VMORegion*     regions_out,
                              uint32_t*      num_regions_inout) {
-    mx_status_t res;
+    zx_status_t res;
 
     if ((!vmo.is_valid())               ||
         (regions_out        == nullptr) ||
         (num_regions_inout  == nullptr) ||
         (*num_regions_inout == 0))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     // Defaults
     uint32_t num_regions = *num_regions_inout;
@@ -68,7 +68,7 @@ mx_status_t GetVMORegionInfo(const mx::vmo& vmo,
     constexpr size_t   PAGES_PER_VMO_OP = 32;   // 256 bytes on the stack
     constexpr uint64_t BYTES_PER_VMO_OP = PAGES_PER_VMO_OP << IHDA_PAGE_SHIFT;
 
-    mx_paddr_t page_addrs[PAGES_PER_VMO_OP];
+    zx_paddr_t page_addrs[PAGES_PER_VMO_OP];
     uint64_t offset = 0;
     uint32_t region = 0;
 
@@ -77,23 +77,23 @@ mx_status_t GetVMORegionInfo(const mx::vmo& vmo,
         uint32_t todo_pages = static_cast<uint32_t>((todo + IHDA_PAGE_MASK) >> IHDA_PAGE_SHIFT);
 
         memset(page_addrs, 0, sizeof(page_addrs));
-        res = vmo.op_range(MX_VMO_OP_LOOKUP,
+        res = vmo.op_range(ZX_VMO_OP_LOOKUP,
                            offset, todo,
                            &page_addrs, sizeof(page_addrs[0]) * todo_pages);
-        if (res != MX_OK)
+        if (res != ZX_OK)
             return res;
 
         for (uint32_t i = 0; (i < todo_pages) && (region < num_regions); ++i) {
             // Physical addresses must be page aligned and may not be 0.
             if ((page_addrs[i] & IHDA_PAGE_MASK) || (page_addrs[i] == 0))
-                return MX_ERR_INTERNAL;
+                return ZX_ERR_INTERNAL;
 
             bool     merged = false;
             uint64_t region_size = fbl::min(vmo_size - offset, IHDA_PAGE_SIZE);
 
             if (region > 0) {
                 auto& prev = regions_out[region - 1];
-                mx_paddr_t prev_end = prev.phys_addr + prev.size;
+                zx_paddr_t prev_end = prev.phys_addr + prev.size;
 
                 if (prev_end == page_addrs[i]) {
                     // The end of the previous region and the start of this one match.
@@ -106,7 +106,7 @@ mx_status_t GetVMORegionInfo(const mx::vmo& vmo,
             if (!merged) {
                 // The regions do not line up or there was no previous region.
                 // Start a new one.
-                MX_DEBUG_ASSERT(region < num_regions);
+                ZX_DEBUG_ASSERT(region < num_regions);
                 regions_out[region].phys_addr = page_addrs[i];
                 regions_out[region].size      = region_size;
                 region++;
@@ -117,49 +117,49 @@ mx_status_t GetVMORegionInfo(const mx::vmo& vmo,
     }
 
     if (offset < vmo_size)
-        return MX_ERR_BUFFER_TOO_SMALL;
+        return ZX_ERR_BUFFER_TOO_SMALL;
 
     *num_regions_inout = region;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t ContigPhysMem::Allocate(size_t size) {
+zx_status_t ContigPhysMem::Allocate(size_t size) {
     static_assert(fbl::is_pow2(IHDA_PAGE_SIZE),
                   "In what universe is your page size not a power of 2?  Seriously!?");
 
     if (!size)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     if (vmo_.is_valid())
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
-    MX_DEBUG_ASSERT(!size_);
-    MX_DEBUG_ASSERT(!actual_size_);
-    MX_DEBUG_ASSERT(!virt_);
-    MX_DEBUG_ASSERT(!phys_);
+    ZX_DEBUG_ASSERT(!size_);
+    ZX_DEBUG_ASSERT(!actual_size_);
+    ZX_DEBUG_ASSERT(!virt_);
+    ZX_DEBUG_ASSERT(!phys_);
 
     size_ = size;
     actual_size_ = fbl::roundup(size_, IHDA_PAGE_SIZE);
 
     // Allocate a page aligned contiguous buffer.
-    mx::vmo     vmo;
-    mx_status_t res;
+    zx::vmo     vmo;
+    zx_status_t res;
 
-    res = mx_vmo_create_contiguous(get_root_resource(),
+    res = zx_vmo_create_contiguous(get_root_resource(),
                                    actual_size(),
                                    0,
                                    vmo.reset_and_get_address());
-    if (res != MX_OK)
+    if (res != ZX_OK)
         goto finished;
 
     // Now fetch its physical address, so we can tell hardware about it.
-    res = vmo.op_range(MX_VMO_OP_LOOKUP, 0,
+    res = vmo.op_range(ZX_VMO_OP_LOOKUP, 0,
                        fbl::min(actual_size(), IHDA_PAGE_SIZE),
                        &phys_, sizeof(phys_));
 
 finished:
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
         phys_ = 0;
         size_ = 0;
         actual_size_ = 0;
@@ -170,29 +170,29 @@ finished:
     return res;
 }
 
-mx_status_t ContigPhysMem::Map() {
+zx_status_t ContigPhysMem::Map() {
     if (!vmo_.is_valid() || (virt_ != 0))
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
-    MX_DEBUG_ASSERT(size_);
-    MX_DEBUG_ASSERT(actual_size_);
+    ZX_DEBUG_ASSERT(size_);
+    ZX_DEBUG_ASSERT(actual_size_);
 
     // TODO(johngro) : How do I specify the cache policy for this mapping?
-    MX_DEBUG_ASSERT(virt_ == 0);
-    mx_status_t res = mx_vmar_map(mx_vmar_root_self(), 0u,
+    ZX_DEBUG_ASSERT(virt_ == 0);
+    zx_status_t res = zx_vmar_map(zx_vmar_root_self(), 0u,
                                   vmo_.get(), 0u,
                                   actual_size_,
-                                  MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                                  ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                                   &virt_);
 
-    MX_DEBUG_ASSERT((res == MX_OK) == (virt_ != 0u));
+    ZX_DEBUG_ASSERT((res == ZX_OK) == (virt_ != 0u));
     return res;
 }
 
 void ContigPhysMem::Release() {
     if (virt_ != 0) {
-        MX_DEBUG_ASSERT(actual_size_ != 0);
-        mx_vmar_unmap(mx_vmar_root_self(), virt_, actual_size_);
+        ZX_DEBUG_ASSERT(actual_size_ != 0);
+        zx_vmar_unmap(zx_vmar_root_self(), virt_, actual_size_);
         virt_ = 0;
     }
 

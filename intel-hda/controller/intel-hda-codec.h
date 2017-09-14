@@ -7,7 +7,7 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/protocol/intel-hda-codec.h>
-#include <mx/handle.h>
+#include <zx/handle.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -59,7 +59,7 @@ public:
     static fbl::RefPtr<IntelHDACodec> Create(IntelHDAController& controller, uint8_t codec_id);
 
     void PrintDebugPrefix() const;
-    mx_status_t Startup();
+    zx_status_t Startup();
     void ProcessSolicitedResponse(const CodecResponse& resp, fbl::unique_ptr<CodecCmdJob>&& job);
     void ProcessUnsolicitedResponse(const CodecResponse& resp);
     void ProcessWakeupEvt();
@@ -84,7 +84,7 @@ protected:
 private:
     friend class fbl::RefPtr<IntelHDACodec>;
 
-    using ProbeParseCbk = mx_status_t (IntelHDACodec::*)(const CodecResponse& resp);
+    using ProbeParseCbk = zx_status_t (IntelHDACodec::*)(const CodecResponse& resp);
     struct ProbeCommandListEntry {
         CodecVerb     verb;
         ProbeParseCbk parse;
@@ -99,24 +99,24 @@ private:
     static constexpr size_t PROP_VENDOR_STEP = 6;
     static constexpr size_t PROP_COUNT       = 7;
 
-    static mx_protocol_device_t CODEC_DEVICE_THUNKS;
+    static zx_protocol_device_t CODEC_DEVICE_THUNKS;
     static ihda_codec_protocol_ops_t CODEC_PROTO_THUNKS;
 
     IntelHDACodec(IntelHDAController& controller, uint8_t codec_id);
-    virtual ~IntelHDACodec() { MX_DEBUG_ASSERT(state_ == State::SHUT_DOWN); }
+    virtual ~IntelHDACodec() { ZX_DEBUG_ASSERT(state_ == State::SHUT_DOWN); }
 
-    mx_status_t PublishDevice();
+    zx_status_t PublishDevice();
 
     void SendCORBResponse(const fbl::RefPtr<DispatcherChannel>& channel,
                           const CodecResponse& resp,
                           uint32_t transaction_id = IHDA_INVALID_TRANSACTION_ID);
 
     // Parsers for device probing
-    mx_status_t ParseVidDid(const CodecResponse& resp);
-    mx_status_t ParseRevisionId(const CodecResponse& resp);
+    zx_status_t ParseVidDid(const CodecResponse& resp);
+    zx_status_t ParseRevisionId(const CodecResponse& resp);
 
-    // MX_PROTOCOL_IHDA_CODEC Interface
-    mx_status_t CodecGetDispatcherChannel(mx_handle_t* channel_out);
+    // ZX_PROTOCOL_IHDA_CODEC Interface
+    zx_status_t CodecGetDispatcherChannel(zx_handle_t* channel_out);
 
     // Get a reference to the active stream (if any) associated with the specified channel.
     fbl::RefPtr<IntelHDAStream> GetStreamForChannel(const DispatcherChannel& channel,
@@ -125,25 +125,25 @@ private:
     // Implementation of IntelHDADevice<> callback and codec specific request
     // processors.
     friend class IntelHDADevice<IntelHDACodec>;
-    mx_status_t ProcessClientRequest(DispatcherChannel* channel,
+    zx_status_t ProcessClientRequest(DispatcherChannel* channel,
                                      const RequestBufferType& req,
                                      uint32_t req_size,
-                                     mx::handle&& rxed_handle)
+                                     zx::handle&& rxed_handle)
         TA_REQ(process_lock());
 
-    mx_status_t ProcessGetIDs(DispatcherChannel* channel,
+    zx_status_t ProcessGetIDs(DispatcherChannel* channel,
                               const ihda_proto::GetIDsReq& req)
         TA_REQ(process_lock());
-    mx_status_t ProcessSendCORBCmd(DispatcherChannel* channel,
+    zx_status_t ProcessSendCORBCmd(DispatcherChannel* channel,
                                    const ihda_proto::SendCORBCmdReq& req)
         TA_REQ(process_lock());
-    mx_status_t ProcessRequestStream(DispatcherChannel* channel,
+    zx_status_t ProcessRequestStream(DispatcherChannel* channel,
                                      const ihda_proto::RequestStreamReq& req)
         TA_REQ(process_lock());
-    mx_status_t ProcessReleaseStream(DispatcherChannel* channel,
+    zx_status_t ProcessReleaseStream(DispatcherChannel* channel,
                                      const ihda_proto::ReleaseStreamReq& req)
         TA_REQ(process_lock());
-    mx_status_t ProcessSetStreamFmt(DispatcherChannel* channel,
+    zx_status_t ProcessSetStreamFmt(DispatcherChannel* channel,
                                     const ihda_proto::SetStreamFmtReq& req)
         TA_REQ(process_lock());
 
@@ -160,8 +160,8 @@ private:
 
     // Device properties.
     const uint8_t codec_id_;
-    mx_device_prop_t dev_props_[PROP_COUNT];
-    mx_device_t* dev_node_ = nullptr;
+    zx_device_prop_t dev_props_[PROP_COUNT];
+    zx_device_t* dev_node_ = nullptr;
     struct {
         uint16_t vid;
         uint16_t did;

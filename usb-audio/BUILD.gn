@@ -21,16 +21,16 @@ driver_module("usb-audio") {
   deps = [
     "//drivers/audio/audio-proto",
     "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
-    "//magenta/system/ulib/audio-proto-utils",
-    "//magenta/system/ulib/ddktl",
-    "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/fbl",
+    "//zircon/system/ulib/audio-proto-utils",
+    "//zircon/system/ulib/ddktl",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 
   libs = [
     "ddk",
     "driver",
-    "magenta",
+    "zircon",
     "sync",
   ]
 }

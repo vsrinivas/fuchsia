@@ -1,14 +1,14 @@
-#include <magenta/device/intel-hda.h>
-#include <mxio/io.h>
+#include <zircon/device/intel-hda.h>
+#include <fdio/io.h>
 
 #include "intel_hda_device.h"
 
 namespace audio {
 namespace intel_hda {
 
-mx_status_t IntelHDADevice::Probe() {
-    mx_status_t res = MagentaDevice::Connect();
-    if (res != MX_OK)
+zx_status_t IntelHDADevice::Probe() {
+    zx_status_t res = ZirconDevice::Connect();
+    if (res != ZX_OK)
         return res;
 
     ihda_get_ids_req_t req;
@@ -16,7 +16,7 @@ mx_status_t IntelHDADevice::Probe() {
 
     InitRequest(&req, IHDA_CMD_GET_IDS);
     res = CallDevice(req, &resp);
-    if (res != MX_OK)
+    if (res != ZX_OK)
         return res;
 
     vid_       = resp.vid;
@@ -26,7 +26,7 @@ mx_status_t IntelHDADevice::Probe() {
     rev_id_    = resp.rev_id;
     step_id_   = resp.step_id;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 }  // namespace audio

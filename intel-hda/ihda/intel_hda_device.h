@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include "magenta_device.h"
+#include "zircon_device.h"
 
 namespace audio {
 namespace intel_hda {
 
-class IntelHDADevice : public MagentaDevice {
+class IntelHDADevice : public ZirconDevice {
 public:
-    mx_status_t Probe();
+    zx_status_t Probe();
 
     uint16_t vid()       const { return vid_; }
     uint16_t did()       const { return did_; }
@@ -21,7 +21,7 @@ public:
     uint8_t  step_id()   const { return step_id_; }
 
 protected:
-    explicit IntelHDADevice(const char* const dev_name) : MagentaDevice(dev_name) { }
+    explicit IntelHDADevice(const char* const dev_name) : ZirconDevice(dev_name) { }
 
     uint16_t vid_       = 0u;
     uint16_t did_       = 0u;

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/port.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/port.h>
 #include <stdio.h>
 
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
@@ -14,7 +14,7 @@
 namespace audio {
 
 fbl::Mutex DispatcherThread::pool_lock_;
-mx::port    DispatcherThread::port_;
+zx::port    DispatcherThread::port_;
 uint32_t    DispatcherThread::active_client_count_ = 0;
 uint32_t    DispatcherThread::active_thread_count_ = 0;
 fbl::SinglyLinkedList<fbl::unique_ptr<DispatcherThread>> DispatcherThread::thread_pool_;
@@ -28,14 +28,14 @@ void DispatcherThread::PrintDebugPrefix() const {
     printf("[Thread %s] ", name_buffer_);
 }
 
-mx_status_t DispatcherThread::AddClientLocked() {
-    mx_status_t res = MX_OK;
+zx_status_t DispatcherThread::AddClientLocked() {
+    zx_status_t res = ZX_OK;
 
     // If we have never added any clients, we will need to start by creating the
     // central port.
     if (!port_.is_valid()) {
-        res = mx::port::create(0, &port_);
-        if (res != MX_OK) {
+        res = zx::port::create(0, &port_);
+        if (res != ZX_OK) {
             printf("Failed to create client therad pool port (res %d)!\n", res);
             return res;
         }
@@ -49,7 +49,7 @@ mx_status_t DispatcherThread::AddClientLocked() {
     // TODO(johngro) : Should we allow users to have more control over the
     // maximum number of threads in the pool?
     while ((active_thread_count_ < active_client_count_) &&
-           (active_thread_count_ < mx_system_get_num_cpus())) {
+           (active_thread_count_ < zx_system_get_num_cpus())) {
 
         fbl::unique_ptr<DispatcherThread> thread(new DispatcherThread(active_thread_count_));
 
@@ -62,14 +62,14 @@ mx_status_t DispatcherThread::AddClientLocked() {
             printf("Failed to create new client thread (res %d)!\n", c11_res);
             active_client_count_--;
             // TODO(johngro) : translate musl error
-            return MX_ERR_INTERNAL;
+            return ZX_ERR_INTERNAL;
         }
 
         active_thread_count_++;
         thread_pool_.push_front(fbl::move(thread));
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 void DispatcherThread::ShutdownPoolLocked() {
@@ -80,7 +80,7 @@ void DispatcherThread::ShutdownPoolLocked() {
 
     // Have we already been shut down?
     if (!port_.is_valid()) {
-        MX_DEBUG_ASSERT(thread_pool_.is_empty());
+        ZX_DEBUG_ASSERT(thread_pool_.is_empty());
         return;
     }
 
@@ -92,7 +92,7 @@ void DispatcherThread::ShutdownPoolLocked() {
         int musl_ret;
         auto thread = thread_pool_.pop_front();
 
-        // TODO(johngro) : Switch to native magenta threads so we can supply a
+        // TODO(johngro) : Switch to native zircon threads so we can supply a
         // timeout to the join event.
         thrd_join(thread->thread_, &musl_ret);
     }
@@ -103,18 +103,18 @@ void DispatcherThread::ShutdownPoolLocked() {
 int DispatcherThread::Main() {
     // TODO(johngro) : bump our thread priority to the proper level.
     while (port_.is_valid()) {
-        mx_port_packet_t pkt;
-        mx_status_t res;
+        zx_port_packet_t pkt;
+        zx_status_t res;
 
         // Wait for there to be work to dispatch.  If we encounter an error
         // while waiting, it is time to shut down.
         //
         // TODO(johngro) : consider adding a timeout, JiC
-        res = port_.wait(MX_TIME_INFINITE, &pkt, 0);
-        if (res != MX_OK)
+        res = port_.wait(ZX_TIME_INFINITE, &pkt, 0);
+        if (res != ZX_OK)
             break;
 
-        if (pkt.type != MX_PKT_TYPE_SIGNAL_ONE) {
+        if (pkt.type != ZX_PKT_TYPE_SIGNAL_ONE) {
             LOG("Unexpected packet type (%u) in DispatcherThread pool!\n", pkt.type);
             continue;
         }
@@ -129,10 +129,10 @@ int DispatcherThread::Main() {
         // doing this O(log) lookup.
         auto channel = DispatcherChannel::GetActiveChannel(pkt.key);
         if (channel != nullptr) {
-            mx_status_t res = MX_OK;
+            zx_status_t res = ZX_OK;
 
             // Start by processing all of the pending messages a channel has.
-            if ((pkt.signal.observed & MX_CHANNEL_READABLE) != 0) {
+            if ((pkt.signal.observed & ZX_CHANNEL_READABLE) != 0) {
                 res = channel->Process(pkt);
             }
 
@@ -140,8 +140,8 @@ int DispatcherThread::Main() {
             // ran into trouble during processing, deactivate the channel.
             // Otherwise, if the channel has not been deactivated, set up the
             // next wait operation.
-            if ((res != MX_OK) || (pkt.signal.observed & MX_CHANNEL_PEER_CLOSED) != 0) {
-                if (res != MX_OK) {
+            if ((res != ZX_OK) || (pkt.signal.observed & ZX_CHANNEL_PEER_CLOSED) != 0) {
+                if (res != ZX_OK) {
                     DEBUG_LOG("Process error (%d), deactivating channel %" PRIu64 " \n",
                               res, pkt.key);
                 } else {
@@ -151,7 +151,7 @@ int DispatcherThread::Main() {
             } else
             if (channel->InActiveChannelSet()) {
                 res = channel->WaitOnPort(port_);
-                if (res != MX_OK) {
+                if (res != ZX_OK) {
                     DEBUG_LOG("Failed to re-arm channel wait (error %d), "
                               "deactivating channel %" PRIu64 " \n",
                               res, pkt.key);

@@ -5,8 +5,8 @@
 #pragma once
 
 #include <endian.h>
-#include <magenta/assert.h>
-#include <magenta/compiler.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
 #include <stddef.h>
 #include <stdint.h>
 

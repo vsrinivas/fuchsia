@@ -18,7 +18,7 @@ namespace intel_hda {
 namespace codecs {
 
 #define DECLARE_THUNK(_name) \
-    mx_status_t _name(const Command& cmd, const CodecResponse& resp) __TA_REQUIRES(obj_lock());
+    zx_status_t _name(const Command& cmd, const CodecResponse& resp) __TA_REQUIRES(obj_lock());
 
 class RealtekStream : public IntelHDAStreamBase {
 public:
@@ -32,18 +32,18 @@ protected:
     virtual ~RealtekStream() { }
 
     // IntelHDAStreamBase implementation
-    mx_status_t OnActivateLocked()    __TA_REQUIRES(obj_lock()) final;
+    zx_status_t OnActivateLocked()    __TA_REQUIRES(obj_lock()) final;
     void        OnDeactivateLocked()  __TA_REQUIRES(obj_lock()) final;
     void        OnChannelDeactivateLocked(const DispatcherChannel& channel)
         __TA_REQUIRES(obj_lock()) final;
-    mx_status_t OnDMAAssignedLocked() __TA_REQUIRES(obj_lock()) final;
-    mx_status_t OnSolicitedResponseLocked(const CodecResponse& resp)
+    zx_status_t OnDMAAssignedLocked() __TA_REQUIRES(obj_lock()) final;
+    zx_status_t OnSolicitedResponseLocked(const CodecResponse& resp)
         __TA_REQUIRES(obj_lock()) final;
-    mx_status_t OnUnsolicitedResponseLocked(const CodecResponse& resp)
+    zx_status_t OnUnsolicitedResponseLocked(const CodecResponse& resp)
         __TA_REQUIRES(obj_lock()) final;
-    mx_status_t BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& fmt)
+    zx_status_t BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& fmt)
         __TA_REQUIRES(obj_lock()) final;
-    mx_status_t FinishChangeStreamFormatLocked(uint16_t encoded_fmt)
+    zx_status_t FinishChangeStreamFormatLocked(uint16_t encoded_fmt)
         __TA_REQUIRES(obj_lock()) final;
     void OnGetGainLocked(audio_proto::GetGainResp* out_resp) __TA_REQUIRES(obj_lock()) final;
     void OnSetGainLocked(const audio_proto::SetGainReq& req,
@@ -54,7 +54,7 @@ protected:
 
 private:
     struct Command {
-        using Thunk = mx_status_t (RealtekStream::*)(const Command& cmd,
+        using Thunk = zx_status_t (RealtekStream::*)(const Command& cmd,
                                                      const CodecResponse& resp);
         const uint16_t  nid;
         const CodecVerb verb;
@@ -97,9 +97,9 @@ private:
     public:
         const Command& cmd() const { return cmd_; }
 
-        mx_status_t Invoke(RealtekStream* stream,
+        zx_status_t Invoke(RealtekStream* stream,
                            const CodecResponse& resp) __TA_REQUIRES(stream->obj_lock()) {
-            MX_DEBUG_ASSERT((stream != nullptr) && (cmd_.thunk != nullptr));
+            ZX_DEBUG_ASSERT((stream != nullptr) && (cmd_.thunk != nullptr));
             return ((*stream).*(cmd_.thunk))(cmd_, resp);
         }
 
@@ -133,23 +133,23 @@ private:
 
     static uint8_t ComputeGainSteps(const CommonCaps& caps, float target_gai);
 
-    mx_status_t RunCmdLocked(const Command& cmd)
+    zx_status_t RunCmdLocked(const Command& cmd)
         __TA_REQUIRES(obj_lock());
 
-    mx_status_t RunCmdListLocked(const Command* list, size_t count, bool force_all = false)
+    zx_status_t RunCmdListLocked(const Command* list, size_t count, bool force_all = false)
         __TA_REQUIRES(obj_lock());
 
-    mx_status_t DisableConverterLocked(bool force_all = false) __TA_REQUIRES(obj_lock());
-    mx_status_t UpdateConverterGainLocked(float target_gain) __TA_REQUIRES(obj_lock());
+    zx_status_t DisableConverterLocked(bool force_all = false) __TA_REQUIRES(obj_lock());
+    zx_status_t UpdateConverterGainLocked(float target_gain) __TA_REQUIRES(obj_lock());
     float       ComputeCurrentGainLocked() __TA_REQUIRES(obj_lock());
-    mx_status_t SendGainUpdatesLocked() __TA_REQUIRES(obj_lock());
+    zx_status_t SendGainUpdatesLocked() __TA_REQUIRES(obj_lock());
     void        AddPDNotificationTgtLocked(DispatcherChannel* channel) __TA_REQUIRES(obj_lock());
     void        RemovePDNotificationTgtLocked(const DispatcherChannel& channel)
         __TA_REQUIRES(obj_lock());
 
     // Setup state machine methods.
-    mx_status_t UpdateSetupProgressLocked(uint32_t stage) __TA_REQUIRES(obj_lock());
-    mx_status_t FinalizeSetupLocked() __TA_REQUIRES(obj_lock());
+    zx_status_t UpdateSetupProgressLocked(uint32_t stage) __TA_REQUIRES(obj_lock());
+    zx_status_t FinalizeSetupLocked() __TA_REQUIRES(obj_lock());
     void DumpStreamPublishedLocked() __TA_REQUIRES(obj_lock());
     void DumpAmpCaps(const CommonCaps& caps, const char* tag);
     DECLARE_THUNK(ProcessPinWidgetCaps);
@@ -179,7 +179,7 @@ private:
     uint8_t   cur_pc_gain_steps_   __TA_GUARDED(obj_lock()) = 0;
     bool      cur_mute_            __TA_GUARDED(obj_lock()) = false;
     bool      plug_state_          __TA_GUARDED(obj_lock()) = true;
-    mx_time_t last_plug_time_      __TA_GUARDED(obj_lock()) = 0;
+    zx_time_t last_plug_time_      __TA_GUARDED(obj_lock()) = 0;
     NotifyTargetList plug_notify_targets_ __TA_GUARDED(obj_lock());
 
     // Converter and pin complex capabilities.

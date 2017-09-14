@@ -13,7 +13,7 @@ class IntelHDACodec;
 
 class CodecStateFetcher {
 public:
-    using FinishedFn = mx_status_t (InitialCodecStateFetcher::*)();
+    using FinishedFn = zx_status_t (InitialCodecStateFetcher::*)();
 
     InitialCodecStateFetcher(IntelHDACodec& codec);
 
@@ -27,42 +27,42 @@ public:
     CodecState& get_codec() const { return codec_; }
 
     FunctionGroupStatePtr& get_fn_group_ptr() const {
-        MX_DEBUG_ASSERT(codec_.fn_groups_ != nullptr);
-        MX_DEBUG_ASSERT(fn_group_iter_ < codec_.fn_group_count_);
+        ZX_DEBUG_ASSERT(codec_.fn_groups_ != nullptr);
+        ZX_DEBUG_ASSERT(fn_group_iter_ < codec_.fn_group_count_);
         return codec_.fn_groups_[fn_group_iter_];
     }
 
     AudioFunctionGroupState& get_afg() const {
         auto& ptr = get_fn_group_ptr();
-        MX_DEBUG_ASSERT(ptr != nullptr);
-        MX_DEBUG_ASSERT(ptr->type_ == FunctionGroupState::Type::AUDIO);
+        ZX_DEBUG_ASSERT(ptr != nullptr);
+        ZX_DEBUG_ASSERT(ptr->type_ == FunctionGroupState::Type::AUDIO);
         return *(static_cast<AudioFunctionGroupState*>(ptr.get()));
     }
 
     AudioWidgetStatePtr& get_widget_ptr() const {
         auto& afg = get_afg();
-        MX_DEBUG_ASSERT(afg.widgets_ != nullptr);
-        MX_DEBUG_ASSERT(widget_iter_ < afg.widget_count_);
+        ZX_DEBUG_ASSERT(afg.widgets_ != nullptr);
+        ZX_DEBUG_ASSERT(widget_iter_ < afg.widget_count_);
         return afg.widgets_[widget_iter_];
     }
 
     AudioWidgetState& get_widget() const {
         auto& ptr = get_widget_ptr();
-        MX_DEBUG_ASSERT(ptr != nullptr);
+        ZX_DEBUG_ASSERT(ptr != nullptr);
         return *ptr;
     }
 
     uint16_t get_nid() const { return nid_; }
 
 private:
-    mx_status_t FinishedCodecRoot();
-    mx_status_t FinishedFunctionGroup();
-    mx_status_t FinishedFunctionGroupType();
-    mx_status_t FinishedAFGProperties();
-    mx_status_t FinishedAudioWidget();
-    mx_status_t FinishedAudioWidgetType();
-    mx_status_t FinishedAudioWidgetCaps();
-    mx_status_t FinishedConnList();
+    zx_status_t FinishedCodecRoot();
+    zx_status_t FinishedFunctionGroup();
+    zx_status_t FinishedFunctionGroupType();
+    zx_status_t FinishedAFGProperties();
+    zx_status_t FinishedAudioWidget();
+    zx_status_t FinishedAudioWidgetType();
+    zx_status_t FinishedAudioWidgetCaps();
+    zx_status_t FinishedConnList();
 
     void SetupCmdList(const CommandListEntry* cmds,
                       size_t                  cmd_count,

@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/atomic.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/recycler.h>
@@ -40,14 +40,14 @@ public:
     IntelHDAController();
     ~IntelHDAController();
 
-    mx_status_t Init(mx_device_t* pci_dev);
+    zx_status_t Init(zx_device_t* pci_dev);
     void PrintDebugPrefix() const;
     const char*  dev_name() const { return device_get_name(dev_node_); }
-    mx_device_t* dev_node() { return dev_node_; }
+    zx_device_t* dev_node() { return dev_node_; }
     unsigned int id() const { return id_; }
 
     // CORB/RIRB
-    mx_status_t QueueCodecCmd(fbl::unique_ptr<CodecCmdJob>&& job) TA_EXCL(corb_lock_);
+    zx_status_t QueueCodecCmd(fbl::unique_ptr<CodecCmdJob>&& job) TA_EXCL(corb_lock_);
 
     // DMA Streams
     fbl::RefPtr<IntelHDAStream> AllocateStream(IntelHDAStream::Type type)
@@ -55,9 +55,9 @@ public:
     void ReturnStream(fbl::RefPtr<IntelHDAStream>&& stream)
         TA_EXCL(stream_pool_lock_);
 
-    static mx_status_t DriverInit(void** out_ctx);
-    static mx_status_t DriverBind(void* ctx, mx_device_t* device, void** cookie);
-    static void        DriverUnbind(void* ctx, mx_device_t* device, void* cookie);
+    static zx_status_t DriverInit(void** out_ctx);
+    static zx_status_t DriverBind(void* ctx, zx_device_t* device, void** cookie);
+    static void        DriverUnbind(void* ctx, zx_device_t* device, void* cookie);
     static void        DriverRelease(void* ctx);
 
 private:
@@ -82,7 +82,7 @@ private:
 
     // Device interface implementation
     void        DeviceShutdown();
-    mx_status_t DeviceRelease();
+    zx_status_t DeviceRelease();
 
     // State control
     // TODO(johngro) : extend fbl::atomic to support enum classes as well.
@@ -93,17 +93,17 @@ private:
     fbl::RefPtr<IntelHDACodec> GetCodec(uint id);
 
     // Methods used during initialization
-    mx_status_t InitInternal(mx_device_t* pci_dev);
-    mx_status_t ResetControllerHW();
-    mx_status_t SetupPCIDevice(mx_device_t* pci_dev);
-    mx_status_t SetupPCIInterrupts();
-    mx_status_t SetupStreamDescriptors() TA_EXCL(stream_pool_lock_);
-    mx_status_t SetupCommandBufferSize(uint8_t* size_reg, unsigned int* entry_count);
-    mx_status_t SetupCommandBuffer() TA_EXCL(corb_lock_, rirb_lock_);
+    zx_status_t InitInternal(zx_device_t* pci_dev);
+    zx_status_t ResetControllerHW();
+    zx_status_t SetupPCIDevice(zx_device_t* pci_dev);
+    zx_status_t SetupPCIInterrupts();
+    zx_status_t SetupStreamDescriptors() TA_EXCL(stream_pool_lock_);
+    zx_status_t SetupCommandBufferSize(uint8_t* size_reg, unsigned int* entry_count);
+    zx_status_t SetupCommandBuffer() TA_EXCL(corb_lock_, rirb_lock_);
 
     void WaitForIrqOrWakeup();
 
-    mx_status_t ResetCORBRdPtrLocked() TA_REQ(corb_lock_);
+    zx_status_t ResetCORBRdPtrLocked() TA_REQ(corb_lock_);
 
     void SnapshotRIRB() TA_EXCL(corb_lock_, rirb_lock_);
     void ProcessRIRB()  TA_EXCL(corb_lock_, rirb_lock_);
@@ -118,14 +118,14 @@ private:
 
     // Implementation of IntelHDADevice<> callback.
     friend class IntelHDADevice<IntelHDAController>;
-    mx_status_t ProcessClientRequest(DispatcherChannel* channel,
+    zx_status_t ProcessClientRequest(DispatcherChannel* channel,
                                      const RequestBufferType& req,
                                      uint32_t req_size,
-                                     mx::handle&& rxed_handle)
+                                     zx::handle&& rxed_handle)
         TA_REQ(process_lock());
 
     // Client requests
-    mx_status_t SnapshotRegs(const DispatcherChannel& channel,
+    zx_status_t SnapshotRegs(const DispatcherChannel& channel,
                              const ihda_controller_snapshot_regs_req_t& req)
         TA_REQ(process_lock());
 
@@ -135,21 +135,21 @@ private:
     bool                       irq_thread_started_ = false;
 
     // Debug stuff
-    char debug_tag_[MX_DEVICE_NAME_MAX] = { 0 };
+    char debug_tag_[ZX_DEVICE_NAME_MAX] = { 0 };
 
     // Upstream PCI device, protocol interface, and device info.
-    mx_device_t*          pci_dev_   = nullptr;
+    zx_device_t*          pci_dev_   = nullptr;
     pci_protocol_t        pci_ = { nullptr, nullptr };
-    mx_pcie_device_info_t pci_dev_info_;
+    zx_pcie_device_info_t pci_dev_info_;
 
     // Unique ID and published HDA device node.
     const uint32_t id_;
-    mx_device_t* dev_node_ = nullptr;
+    zx_device_t* dev_node_ = nullptr;
 
     // PCI Registers and IRQ
-    mx_handle_t      irq_handle_  = MX_HANDLE_INVALID;
+    zx_handle_t      irq_handle_  = ZX_HANDLE_INVALID;
     bool             msi_irq_     = false;
-    mx_handle_t      regs_handle_ = MX_HANDLE_INVALID;
+    zx_handle_t      regs_handle_ = ZX_HANDLE_INVALID;
     hda_registers_t* regs_        = nullptr;
 
     // Contiguous physical memory allocated for the command buffer (CORB/RIRB)
@@ -194,7 +194,7 @@ private:
     fbl::RefPtr<IntelHDACodec> codecs_[HDA_MAX_CODECS];
 
     static fbl::atomic_uint32_t device_id_gen_;
-    static mx_protocol_device_t  CONTROLLER_DEVICE_THUNKS;
+    static zx_protocol_device_t  CONTROLLER_DEVICE_THUNKS;
 };
 
 }  // namespace intel_hda

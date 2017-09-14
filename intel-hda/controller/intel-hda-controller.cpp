@@ -6,7 +6,7 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/protocol/pci.h>
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 #include <fbl/auto_lock.h>
 #include <stdio.h>
 #include <string.h>
@@ -30,7 +30,7 @@ fbl::atomic_uint32_t IntelHDAController::device_id_gen_(0u);
 
 // Device interface thunks
 #define DEV(_ctx)  static_cast<IntelHDAController*>(_ctx)
-mx_protocol_device_t IntelHDAController::CONTROLLER_DEVICE_THUNKS = {
+zx_protocol_device_t IntelHDAController::CONTROLLER_DEVICE_THUNKS = {
     .version      = DEVICE_OPS_VERSION,
     .get_protocol = nullptr,
     .open         = nullptr,
@@ -48,7 +48,7 @@ mx_protocol_device_t IntelHDAController::CONTROLLER_DEVICE_THUNKS = {
                        size_t       in_len,
                        void*        out_buf,
                        size_t       out_len,
-                       size_t*      out_actual) -> mx_status_t {
+                       size_t*      out_actual) -> zx_status_t {
                         return DEV(ctx)->DeviceIoctl(op, in_buf, in_len, out_buf, out_len,
                                                      out_actual);
                    },
@@ -68,23 +68,23 @@ IntelHDAController::IntelHDAController()
 }
 
 IntelHDAController::~IntelHDAController() {
-    MX_DEBUG_ASSERT((GetState() == State::STARTING) || (GetState() == State::SHUT_DOWN));
+    ZX_DEBUG_ASSERT((GetState() == State::STARTING) || (GetState() == State::SHUT_DOWN));
     // TODO(johngro) : place the device into reset.
 
     // Release our register window.
-    if (regs_handle_ != MX_HANDLE_INVALID) {
-        MX_DEBUG_ASSERT(pci_.ops != nullptr);
-        mx_handle_close(regs_handle_);
+    if (regs_handle_ != ZX_HANDLE_INVALID) {
+        ZX_DEBUG_ASSERT(pci_.ops != nullptr);
+        zx_handle_close(regs_handle_);
     }
 
     // Release our IRQ event.
-    if (irq_handle_ != MX_HANDLE_INVALID)
-        mx_handle_close(irq_handle_);
+    if (irq_handle_ != ZX_HANDLE_INVALID)
+        zx_handle_close(irq_handle_);
 
     // Disable IRQs at the PCI level.
     if (pci_.ops != nullptr) {
-        MX_DEBUG_ASSERT(pci_.ctx != nullptr);
-        pci_.ops->set_irq_mode(pci_.ctx, MX_PCIE_IRQ_MODE_DISABLED, 0);
+        ZX_DEBUG_ASSERT(pci_.ctx != nullptr);
+        pci_.ops->set_irq_mode(pci_.ctx, ZX_PCIE_IRQ_MODE_DISABLED, 0);
     }
 
     // Let go of our stream state.
@@ -116,7 +116,7 @@ fbl::RefPtr<IntelHDAStream> IntelHDAController::AllocateStream(IntelHDAStream::T
     // Users are not allowed to directly request bidirectional stream contexts.
     // It's just what they end up with if there are no other choices.
     default:
-        MX_DEBUG_ASSERT(false);
+        ZX_DEBUG_ASSERT(false);
         return nullptr;
     }
 
@@ -145,13 +145,13 @@ void IntelHDAController::ReturnStream(fbl::RefPtr<IntelHDAStream>&& ptr) {
 void IntelHDAController::ReturnStreamLocked(fbl::RefPtr<IntelHDAStream>&& ptr) {
     IntelHDAStream::Tree* dst;
 
-    MX_DEBUG_ASSERT(ptr);
+    ZX_DEBUG_ASSERT(ptr);
 
     switch (ptr->type()) {
     case IntelHDAStream::Type::INPUT:  dst = &free_input_streams_;  break;
     case IntelHDAStream::Type::OUTPUT: dst = &free_output_streams_; break;
     case IntelHDAStream::Type::BIDIR:  dst = &free_bidir_streams_;  break;
-    default: MX_DEBUG_ASSERT(false); return;
+    default: ZX_DEBUG_ASSERT(false); return;
     }
 
     ptr->Configure(IntelHDAStream::Type::INVALID, 0);
@@ -174,8 +174,8 @@ uint8_t IntelHDAController::AllocateStreamTagLocked(bool input) {
 void IntelHDAController::ReleaseStreamTagLocked(bool input, uint8_t tag) {
     uint16_t& tag_pool = input ? free_input_tags_ : free_output_tags_;
 
-    MX_DEBUG_ASSERT((tag > 0) && (tag <= 15));
-    MX_DEBUG_ASSERT((tag_pool & (1u << tag)) == 0);
+    ZX_DEBUG_ASSERT((tag > 0) && (tag <= 15));
+    ZX_DEBUG_ASSERT((tag_pool & (1u << tag)) == 0);
 
     tag_pool = static_cast<uint16_t>((tag_pool | (1u << tag)));
 }
@@ -185,7 +185,7 @@ void IntelHDAController::ShutdownIRQThread() {
         SetState(State::SHUTTING_DOWN);
         WakeupIRQThread();
         thrd_join(irq_thread_, NULL);
-        MX_DEBUG_ASSERT(GetState() == State::SHUT_DOWN);
+        ZX_DEBUG_ASSERT(GetState() == State::SHUT_DOWN);
         irq_thread_started_ = false;
     }
 }
@@ -199,35 +199,35 @@ void IntelHDAController::DeviceShutdown() {
     ShutdownIRQThread();
 }
 
-mx_status_t IntelHDAController::DeviceRelease() {
+zx_status_t IntelHDAController::DeviceRelease() {
     // Take our unmanaged reference back from our published device node.
     auto thiz = fbl::internal::MakeRefPtrNoAdopt(this);
 
     // ASSERT that we have been properly shut down, then release the DDK's
     // reference to our state as we allow thiz to go out of scope.
-    MX_DEBUG_ASSERT(GetState() == State::SHUT_DOWN);
+    ZX_DEBUG_ASSERT(GetState() == State::SHUT_DOWN);
     thiz.reset();
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t IntelHDAController::ProcessClientRequest(DispatcherChannel* channel,
+zx_status_t IntelHDAController::ProcessClientRequest(DispatcherChannel* channel,
                                                      const RequestBufferType& req,
                                                      uint32_t req_size,
-                                                     mx::handle&& rxed_handle) {
-    MX_DEBUG_ASSERT(channel != nullptr);
+                                                     zx::handle&& rxed_handle) {
+    ZX_DEBUG_ASSERT(channel != nullptr);
 
     if (req_size < sizeof(req.hdr)) {
         DEBUG_LOG("Client request too small to contain header (%u < %zu)\n",
                 req_size, sizeof(req.hdr));
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     VERBOSE_LOG("Client Request 0x%04x len %u\n", req.hdr.cmd, req_size);
 
     if (rxed_handle.is_valid()) {
         DEBUG_LOG("Unexpected handle in client request 0x%04x\n", req.hdr.cmd);
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     switch (req.hdr.cmd) {
@@ -235,11 +235,11 @@ mx_status_t IntelHDAController::ProcessClientRequest(DispatcherChannel* channel,
         if (req_size != sizeof(req.get_ids)) {
             DEBUG_LOG("Bad GET_IDS request length (%u != %zu)\n",
                     req_size, sizeof(req.get_ids));
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
 
-        MX_DEBUG_ASSERT(pci_dev_ != nullptr);
-        MX_DEBUG_ASSERT(regs_ != nullptr);
+        ZX_DEBUG_ASSERT(pci_dev_ != nullptr);
+        ZX_DEBUG_ASSERT(regs_ != nullptr);
 
         ihda_get_ids_resp_t resp;
         resp.hdr       = req.hdr;
@@ -257,44 +257,44 @@ mx_status_t IntelHDAController::ProcessClientRequest(DispatcherChannel* channel,
         if (req_size != sizeof(req.snapshot_regs)) {
             DEBUG_LOG("Bad SNAPSHOT_REGS request length (%u != %zu)\n",
                     req_size, sizeof(req.snapshot_regs));
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
 
         return SnapshotRegs(*channel, req.snapshot_regs);
 
     default:
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 }
 
-mx_status_t IntelHDAController::DriverInit(void** out_ctx) {
+zx_status_t IntelHDAController::DriverInit(void** out_ctx) {
     // Note: It is assumed that calls to Init/Release are serialized by the
     // pci_dev manager.  If this assumption ever needs to be relaxed, explicit
     // serialization will need to be added here.
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t IntelHDAController::DriverBind(void* ctx,
-                                           mx_device_t* device,
+zx_status_t IntelHDAController::DriverBind(void* ctx,
+                                           zx_device_t* device,
                                            void** cookie) {
-    if (cookie == nullptr) return MX_ERR_INVALID_ARGS;
+    if (cookie == nullptr) return ZX_ERR_INVALID_ARGS;
 
     fbl::RefPtr<IntelHDAController> controller(fbl::AdoptRef(new IntelHDAController()));
 
     // If we successfully initialize, transfer our reference into the unmanaged
     // world.  We will re-claim it later when unbind is called.
-    mx_status_t ret = controller->Init(device);
-    if (ret == MX_OK)
+    zx_status_t ret = controller->Init(device);
+    if (ret == ZX_OK)
         *cookie = controller.leak_ref();
 
     return ret;
 }
 
 void IntelHDAController::DriverUnbind(void* ctx,
-                                      mx_device_t* device,
+                                      zx_device_t* device,
                                       void* cookie) {
-    MX_DEBUG_ASSERT(cookie != nullptr);
+    ZX_DEBUG_ASSERT(cookie != nullptr);
 
     // Reclaim our reference from the cookie.
     auto controller =
@@ -313,15 +313,15 @@ void IntelHDAController::DriverRelease(void* ctx) {
 }  // namespace audio
 
 extern "C" {
-mx_status_t ihda_init_hook(void** out_ctx) {
+zx_status_t ihda_init_hook(void** out_ctx) {
     return ::audio::intel_hda::IntelHDAController::DriverInit(out_ctx);
 }
 
-mx_status_t ihda_bind_hook(void* ctx, mx_device_t* pci_dev, void** cookie) {
+zx_status_t ihda_bind_hook(void* ctx, zx_device_t* pci_dev, void** cookie) {
     return ::audio::intel_hda::IntelHDAController::DriverBind(ctx, pci_dev, cookie);
 }
 
-void ihda_unbind_hook(void* ctx, mx_device_t* pci_dev, void* cookie) {
+void ihda_unbind_hook(void* ctx, zx_device_t* pci_dev, void* cookie) {
     ::audio::intel_hda::IntelHDAController::DriverUnbind(ctx, pci_dev, cookie);
 }
 

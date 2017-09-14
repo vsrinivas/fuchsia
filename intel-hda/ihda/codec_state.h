@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <magenta/assert.h>
-#include <magenta/types.h>
+#include <zircon/assert.h>
+#include <zircon/types.h>
 #include <fbl/unique_ptr.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -216,7 +216,7 @@ struct ModemFunctionGroupState : public FunctionGroupState {
 struct VendorFunctionGroupState : public FunctionGroupState {
     explicit VendorFunctionGroupState(Type type)
         : FunctionGroupState(type) {
-            MX_DEBUG_ASSERT((type >= Type::VENDOR_START) &&
+            ZX_DEBUG_ASSERT((type >= Type::VENDOR_START) &&
                             (type <= Type::VENDOR_START));
         }
 };

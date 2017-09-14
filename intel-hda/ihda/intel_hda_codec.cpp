@@ -17,11 +17,11 @@ extern void print_codec_state(const CodecState& codec);
 // response state (present in both function groups and widgets)
 //
 ////////////////////////////////////////////////////////////////////////////////
-static mx_status_t ParseUnsolicitedResponseState(UnsolicitedResponseState& state,
+static zx_status_t ParseUnsolicitedResponseState(UnsolicitedResponseState& state,
                                                  const CodecResponse& resp) {
     // Section 7.3.3.14.
     state.raw_data_ = static_cast<uint8_t>(resp.data & 0xFF);
-    return MX_OK;
+    return ZX_OK;
 }
 
 static const IntelHDACodec::CommandListEntry<UnsolicitedResponseState>
@@ -35,12 +35,12 @@ static const IntelHDACodec::CommandListEntry<UnsolicitedResponseState>
 // state.
 //
 ////////////////////////////////////////////////////////////////////////////////
-static mx_status_t ParseSupportedPowerStates(PowerState& ps, const CodecResponse& resp) {
+static zx_status_t ParseSupportedPowerStates(PowerState& ps, const CodecResponse& resp) {
     ps.supported_states_ = resp.data;
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ParseCurrentPowerState(PowerState& ps, const CodecResponse& resp) {
+static zx_status_t ParseCurrentPowerState(PowerState& ps, const CodecResponse& resp) {
     // Section 7.3.3.10
     ps.set_            = static_cast<uint8_t>(resp.data & 0xF);
     ps.active_         = static_cast<uint8_t>((resp.data >> 4) & 0xF);
@@ -48,7 +48,7 @@ static mx_status_t ParseCurrentPowerState(PowerState& ps, const CodecResponse& r
     ps.clock_stop_ok_  = (resp.data & (1u <<  9)) != 0;
     ps.settings_reset_ = (resp.data & (1u << 10)) != 0;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static const IntelHDACodec::CommandListEntry<PowerState> FETCH_POWER_STATE[] = {
@@ -61,7 +61,7 @@ static const IntelHDACodec::CommandListEntry<PowerState> FETCH_POWER_STATE[] = {
 // Parsers and CommandLists for fetching info about audio widgets
 //
 ////////////////////////////////////////////////////////////////////////////////
-static mx_status_t ParseAWPcmSizeRate(AudioWidgetState& widget, const CodecResponse& resp) {
+static zx_status_t ParseAWPcmSizeRate(AudioWidgetState& widget, const CodecResponse& resp) {
     auto& afg = *widget.afg_;
     const auto& caps = widget.caps_;
 
@@ -69,10 +69,10 @@ static mx_status_t ParseAWPcmSizeRate(AudioWidgetState& widget, const CodecRespo
                           ? resp.data
                           : afg.default_pcm_size_rate_;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ParseAWPcmFormats(AudioWidgetState& widget, const CodecResponse& resp) {
+static zx_status_t ParseAWPcmFormats(AudioWidgetState& widget, const CodecResponse& resp) {
     auto& afg = *widget.afg_;
     const auto& caps = widget.caps_;
 
@@ -80,10 +80,10 @@ static mx_status_t ParseAWPcmFormats(AudioWidgetState& widget, const CodecRespon
                         ? resp.data
                         : afg.default_pcm_formats_;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ParseAWInputAmpCaps(AudioWidgetState& widget, const CodecResponse& resp) {
+static zx_status_t ParseAWInputAmpCaps(AudioWidgetState& widget, const CodecResponse& resp) {
     auto& afg = *widget.afg_;
     const auto& caps = widget.caps_;
 
@@ -93,10 +93,10 @@ static mx_status_t ParseAWInputAmpCaps(AudioWidgetState& widget, const CodecResp
                                : afg.default_input_amp_caps_;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ParseAWOutputAmpCaps(AudioWidgetState& widget, const CodecResponse& resp) {
+static zx_status_t ParseAWOutputAmpCaps(AudioWidgetState& widget, const CodecResponse& resp) {
     auto& afg = *widget.afg_;
     const auto& caps = widget.caps_;
 
@@ -106,10 +106,10 @@ static mx_status_t ParseAWOutputAmpCaps(AudioWidgetState& widget, const CodecRes
                                 : afg.default_output_amp_caps_;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ParseAWConnectionListLen(AudioWidgetState& widget, const CodecResponse& resp) {
+static zx_status_t ParseAWConnectionListLen(AudioWidgetState& widget, const CodecResponse& resp) {
     const auto& caps = widget.caps_;
 
     if (caps.has_conn_list()) {
@@ -124,10 +124,10 @@ static mx_status_t ParseAWConnectionListLen(AudioWidgetState& widget, const Code
         widget.conn_list_len_ = 0;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ParseAWProcessingCaps(AudioWidgetState& widget, const CodecResponse& resp) {
+static zx_status_t ParseAWProcessingCaps(AudioWidgetState& widget, const CodecResponse& resp) {
     const auto& caps = widget.caps_;
 
     if (caps.proc_widget()) {
@@ -135,38 +135,38 @@ static mx_status_t ParseAWProcessingCaps(AudioWidgetState& widget, const CodecRe
         widget.processing_coefficient_count_ = ((resp.data >> 8) & 0xFF);
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ParseAWPinCaps(AudioWidgetState& widget, const CodecResponse& resp) {
+static zx_status_t ParseAWPinCaps(AudioWidgetState& widget, const CodecResponse& resp) {
     widget.pin_caps_ = resp.data;
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ParseAWVolumeKnobCaps(AudioWidgetState& widget, const CodecResponse& resp) {
+static zx_status_t ParseAWVolumeKnobCaps(AudioWidgetState& widget, const CodecResponse& resp) {
     widget.vol_knob_is_delta_ = (resp.data & 0x80) != 0;
     widget.vol_knob_steps_    = (resp.data & 0x7f);
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ParseAWStreamChan(AudioWidgetState& widget, const CodecResponse& resp) {
+static zx_status_t ParseAWStreamChan(AudioWidgetState& widget, const CodecResponse& resp) {
     // Section 7.3.3.11 and Table 85
     widget.stream_tag_  = static_cast<uint8_t>((resp.data >> 4) & 0xF);
     widget.stream_chan_ = static_cast<uint8_t>(resp.data & 0xF);
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ParseAWConfigDefaults(AudioWidgetState& widget, const CodecResponse& resp) {
+static zx_status_t ParseAWConfigDefaults(AudioWidgetState& widget, const CodecResponse& resp) {
     widget.cfg_defaults_.raw_data_ = resp.data;
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ParseAWPinWidgetCtrl(AudioWidgetState& widget, const CodecResponse& resp) {
+static zx_status_t ParseAWPinWidgetCtrl(AudioWidgetState& widget, const CodecResponse& resp) {
     widget.pin_widget_ctrl_.raw_data_ = static_cast<uint8_t>(resp.data & 0xFF);
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ParseAudioWidgetType(AudioWidgetStatePtr& ptr, const CodecResponse& resp) {
+static zx_status_t ParseAudioWidgetType(AudioWidgetStatePtr& ptr, const CodecResponse& resp) {
     AudioWidgetCaps caps(resp.data);
 
     switch (caps.type()) {
@@ -181,12 +181,12 @@ static mx_status_t ParseAudioWidgetType(AudioWidgetStatePtr& ptr, const CodecRes
     case AudioWidgetCaps::Type::VENDOR:
         break;
     default:
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     ptr.reset(new AudioWidgetState(caps));
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static const IntelHDACodec::CommandListEntry<AudioWidgetState> FETCH_AUDIO_INPUT_CAPS[] = {
@@ -257,33 +257,33 @@ static const IntelHDACodec::CommandListEntry<AudioWidgetStatePtr> FETCH_WIDGET_T
 // Parsers and CommandLists for fetching info about function groups.
 //
 ////////////////////////////////////////////////////////////////////////////////
-static mx_status_t ParseAFGCaps(AudioFunctionGroupState& afg, const CodecResponse& resp) {
+static zx_status_t ParseAFGCaps(AudioFunctionGroupState& afg, const CodecResponse& resp) {
     afg.caps_.raw_data_ = resp.data;
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ParseAFGPcmSizeRate(AudioFunctionGroupState& afg, const CodecResponse& resp) {
+static zx_status_t ParseAFGPcmSizeRate(AudioFunctionGroupState& afg, const CodecResponse& resp) {
     // Section 7.3.4.7 : Supported PCM sizes and rates
     afg.default_pcm_size_rate_ = resp.data;
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ParseAFGPcmFormats(AudioFunctionGroupState& afg, const CodecResponse& resp) {
+static zx_status_t ParseAFGPcmFormats(AudioFunctionGroupState& afg, const CodecResponse& resp) {
     afg.default_pcm_formats_ = resp.data;
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ParseAFGInputAmpCaps(AudioFunctionGroupState& afg, const CodecResponse& resp) {
+static zx_status_t ParseAFGInputAmpCaps(AudioFunctionGroupState& afg, const CodecResponse& resp) {
     afg.default_input_amp_caps_.raw_data_ = resp.data;
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ParseAFGOutputAmpCaps(AudioFunctionGroupState& afg, const CodecResponse& resp) {
+static zx_status_t ParseAFGOutputAmpCaps(AudioFunctionGroupState& afg, const CodecResponse& resp) {
     afg.default_output_amp_caps_.raw_data_ = resp.data;
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ParseAFGGPIOCount(AudioFunctionGroupState& afg, const CodecResponse& resp) {
+static zx_status_t ParseAFGGPIOCount(AudioFunctionGroupState& afg, const CodecResponse& resp) {
     // Section 7.3.4.14 : GPIO Counts
     afg.gpio_can_wake_             = (resp.data & 0x80000000) != 0;
     afg.gpio_can_send_unsolicited_ = (resp.data & 0x40000000) != 0;
@@ -291,15 +291,15 @@ static mx_status_t ParseAFGGPIOCount(AudioFunctionGroupState& afg, const CodecRe
     afg.gpo_count_                 = (resp.data >>  8) & 0xFF;
     afg.gpio_count_                = (resp.data >>  0) & 0xFF;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ParseAFGImplId(AudioFunctionGroupState& afg, const CodecResponse& resp) {
+static zx_status_t ParseAFGImplId(AudioFunctionGroupState& afg, const CodecResponse& resp) {
     afg.impl_id_.raw_data_ = resp.data;
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ParseAFGWidgetCount(AudioFunctionGroupState& afg, const CodecResponse& resp) {
+static zx_status_t ParseAFGWidgetCount(AudioFunctionGroupState& afg, const CodecResponse& resp) {
     /* Response format documented in section 7.3.4.1 */
     afg.widget_count_       =  resp.data & 0xFF;
     afg.widget_starting_id_ = (resp.data >> 16) & 0xFF;
@@ -307,13 +307,13 @@ static mx_status_t ParseAFGWidgetCount(AudioFunctionGroupState& afg, const Codec
                               + afg.widget_count_ - 1;
 
     if (last_widget_nid > HDA_MAX_NID)
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
 
     if (afg.widget_count_) {
         afg.widgets_.reset(new AudioWidgetStatePtr[afg.widget_count_]);
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static const IntelHDACodec::CommandListEntry<AudioFunctionGroupState> FETCH_AFG_PROPERTIES[] {
@@ -327,7 +327,7 @@ static const IntelHDACodec::CommandListEntry<AudioFunctionGroupState> FETCH_AFG_
     { GET_PARAM(CodecParam::SUBORDINATE_NODE_COUNT),   ParseAFGWidgetCount },
 };
 
-static mx_status_t ParseFnGroupType(FunctionGroupStatePtr& ptr, const CodecResponse& resp) {
+static zx_status_t ParseFnGroupType(FunctionGroupStatePtr& ptr, const CodecResponse& resp) {
     /* Response format documented in section 7.3.4.1 */
     auto type = static_cast<FunctionGroupState::Type>(resp.data & 0xFF);
 
@@ -344,13 +344,13 @@ static mx_status_t ParseFnGroupType(FunctionGroupStatePtr& ptr, const CodecRespo
             (type <= FunctionGroupState::Type::VENDOR_END)) {
             ptr.reset(new VendorFunctionGroupState(type));
         } else {
-            return MX_ERR_INTERNAL;
+            return ZX_ERR_INTERNAL;
         }
         break;
     }
 
     ptr->can_send_unsolicited_ = ((resp.data & 0x100) != 0);
-    return MX_OK;
+    return ZX_OK;
 }
 
 static const IntelHDACodec::CommandListEntry<FunctionGroupStatePtr> FETCH_FUNCTION_GROUP_TYPE[] = {
@@ -362,16 +362,16 @@ static const IntelHDACodec::CommandListEntry<FunctionGroupStatePtr> FETCH_FUNCTI
 // Parsers and command list for fetching info about core codec capabilities.
 //
 ////////////////////////////////////////////////////////////////////////////////
-static mx_status_t ParseVendorID(CodecState& codec, const CodecResponse& resp) {
+static zx_status_t ParseVendorID(CodecState& codec, const CodecResponse& resp) {
     /* Response format documented in section 7.3.4.1 */
 
     codec.vendor_id_ = static_cast<uint16_t>((resp.data >> 16) & 0xFFFF);
     codec.device_id_ = static_cast<uint16_t>(resp.data & 0xFFFF);;
 
-    return (codec.vendor_id_ != 0) ? MX_OK : MX_ERR_INTERNAL;
+    return (codec.vendor_id_ != 0) ? ZX_OK : ZX_ERR_INTERNAL;
 }
 
-static mx_status_t ParseRevisionID(CodecState& codec, const CodecResponse& resp) {
+static zx_status_t ParseRevisionID(CodecState& codec, const CodecResponse& resp) {
     /* Response format documented in section 7.3.4.2 */
 
     codec.major_rev_          = (resp.data >> 20) & 0xF;
@@ -379,10 +379,10 @@ static mx_status_t ParseRevisionID(CodecState& codec, const CodecResponse& resp)
     codec.vendor_rev_id_      = (resp.data >>  8) & 0xFF;
     codec.vendor_stepping_id_ = resp.data & 0xFF;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t ParseFnGroupCount(CodecState& codec, const CodecResponse& resp) {
+static zx_status_t ParseFnGroupCount(CodecState& codec, const CodecResponse& resp) {
     /* Response format documented in section 7.3.4.3 */
 
     codec.fn_group_count_ = resp.data & 0xFF;
@@ -391,13 +391,13 @@ static mx_status_t ParseFnGroupCount(CodecState& codec, const CodecResponse& res
     uint32_t last_fn_group_nid = static_cast<uint32_t>(codec.fn_group_starting_id_)
                                + codec.fn_group_count_ - 1;
     if (last_fn_group_nid > HDA_MAX_NID)
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
 
     // Allocate the storage for the function group state pointers, then
     // start the process of enumerating their properties and widgets.
     codec.fn_groups_.reset(new FunctionGroupStatePtr[codec.fn_group_count_]);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 static const IntelHDACodec::CommandListEntry<CodecState> FETCH_CODEC_ROOT_COMMANDS[] = {
@@ -406,49 +406,49 @@ static const IntelHDACodec::CommandListEntry<CodecState> FETCH_CODEC_ROOT_COMMAN
     { GET_PARAM(CodecParam::SUBORDINATE_NODE_COUNT), ParseFnGroupCount },
 };
 
-mx_status_t IntelHDACodec::Enumerate() {
+zx_status_t IntelHDACodec::Enumerate() {
     static const char* const DEV_PATH = "/dev/class/intel-hda-codec";
     static const char* const DEV_FMT  = "%03hu";
 
-    mx_status_t res = MagentaDevice::Enumerate(nullptr, DEV_PATH, DEV_FMT,
-    [](void*, uint32_t id, const char* const dev_name) -> mx_status_t {
+    zx_status_t res = ZirconDevice::Enumerate(nullptr, DEV_PATH, DEV_FMT,
+    [](void*, uint32_t id, const char* const dev_name) -> zx_status_t {
         auto codec = fbl::unique_ptr<IntelHDACodec>(new IntelHDACodec(id, dev_name));
 
         if (codec == nullptr)
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
 
         if (!codecs_.insert_or_find(fbl::move(codec)))
-            return MX_ERR_INTERNAL;
+            return ZX_ERR_INTERNAL;
 
-        return MX_OK;
+        return ZX_OK;
     });
 
     return res;
 }
 
-mx_status_t IntelHDACodec::DumpCodec(int argc, const char** argv) {
-    mx_status_t res = ReadCodecState();
-    if (res != MX_OK)
+zx_status_t IntelHDACodec::DumpCodec(int argc, const char** argv) {
+    zx_status_t res = ReadCodecState();
+    if (res != ZX_OK)
         return res;
 
     printf("Codec ID %u :: %s\n", codec_id_, dev_name_);
     print_codec_state(codec_state_);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 #define RUN_COMMAND_LIST(_tgt, _nid, _list, _fail_msg, ...) {   \
     res = RunCommandList(_tgt, _nid, _list, countof(_list));    \
-    if (res != MX_OK) {                                      \
+    if (res != ZX_OK) {                                      \
         printf(_fail_msg " (res %d)\n", ##__VA_ARGS__, res);    \
         return res;                                             \
     }                                                           \
 }
 
-mx_status_t IntelHDACodec::ReadCodecState() {
-    mx_status_t res = Connect();
+zx_status_t IntelHDACodec::ReadCodecState() {
+    zx_status_t res = Connect();
 
-    if (res != MX_OK)
+    if (res != ZX_OK)
         return res;
 
     codec_state_.reset();
@@ -461,15 +461,15 @@ mx_status_t IntelHDACodec::ReadCodecState() {
         auto  nid          = static_cast<uint16_t>(group_ndx + codec_state_.fn_group_starting_id_);
 
         res = ReadFunctionGroupState(fn_group_ptr, nid);
-        if (res != MX_OK)
+        if (res != ZX_OK)
             return res;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t IntelHDACodec::ReadFunctionGroupState(FunctionGroupStatePtr& ptr, uint16_t nid) {
-    mx_status_t res;
+zx_status_t IntelHDACodec::ReadFunctionGroupState(FunctionGroupStatePtr& ptr, uint16_t nid) {
+    zx_status_t res;
 
     RUN_COMMAND_LIST(ptr, nid, FETCH_FUNCTION_GROUP_TYPE,
                     "Failed to fetch function group type (nid %hu)", nid);
@@ -496,16 +496,16 @@ mx_status_t IntelHDACodec::ReadFunctionGroupState(FunctionGroupStatePtr& ptr, ui
     default:
         // ParseFnGroupType should have aborted at this point if the function
         // group type was not valid.
-        MX_DEBUG_ASSERT((ptr->type_ >= FunctionGroupState::Type::VENDOR_START) &&
+        ZX_DEBUG_ASSERT((ptr->type_ >= FunctionGroupState::Type::VENDOR_START) &&
                         (ptr->type_ <= FunctionGroupState::Type::VENDOR_END));
         break;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t IntelHDACodec::ReadAudioFunctionGroupState(AudioFunctionGroupState& afg) {
-    mx_status_t res;
+zx_status_t IntelHDACodec::ReadAudioFunctionGroupState(AudioFunctionGroupState& afg) {
+    zx_status_t res;
 
     RUN_COMMAND_LIST(afg, afg.nid_, FETCH_AFG_PROPERTIES,
                     "Failed to audio fn group properties (nid %hu)", afg.nid_);
@@ -526,15 +526,15 @@ mx_status_t IntelHDACodec::ReadAudioFunctionGroupState(AudioFunctionGroupState& 
         widget_ptr->afg_ = &afg;
 
         res = ReadAudioWidgetState(*widget_ptr);
-        if (res != MX_OK)
+        if (res != ZX_OK)
             return res;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t IntelHDACodec::ReadAudioWidgetState(AudioWidgetState& widget) {
-    mx_status_t res;
+zx_status_t IntelHDACodec::ReadAudioWidgetState(AudioWidgetState& widget) {
+    zx_status_t res;
 
     switch (widget.caps_.type()) {
     case AudioWidgetCaps::Type::INPUT:
@@ -593,13 +593,13 @@ mx_status_t IntelHDACodec::ReadAudioWidgetState(AudioWidgetState& widget) {
     default:
         printf("Unrecognized audio widget type (%u) at nid %hu\n",
                 static_cast<uint32_t>(widget.caps_.type()), widget.nid_);
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     // If this widget has a connection list, read it now.
     if (widget.caps_.has_conn_list()) {
         res = ReadConnList(widget);
-        if (res != MX_OK)
+        if (res != ZX_OK)
             return res;
     }
 
@@ -617,7 +617,7 @@ mx_status_t IntelHDACodec::ReadAudioWidgetState(AudioWidgetState& widget) {
         // State Control (see section 7.3.3.10) then the supported power states
         // for that node will be the same as reported for the Function Group."
         if (widget.power_.supported_states_ == 0) {
-            MX_DEBUG_ASSERT(widget.afg_ != nullptr);
+            ZX_DEBUG_ASSERT(widget.afg_ != nullptr);
             widget.power_.supported_states_ = widget.afg_->power_.supported_states_;
         }
     }
@@ -628,7 +628,7 @@ mx_status_t IntelHDACodec::ReadAudioWidgetState(AudioWidgetState& widget) {
         CodecResponse resp;
 
         res = DoCodecCmd(widget.nid_, GET_CONVERTER_FORMAT, &resp);
-        if (res != MX_OK) {
+        if (res != ZX_OK) {
             printf("Failed to get stream converter format for for nid %hu (res %d)\n",
                     widget.nid_, res);
             return res;
@@ -657,7 +657,7 @@ mx_status_t IntelHDACodec::ReadAudioWidgetState(AudioWidgetState& widget) {
             // should it run at all power states?
             CodecResponse resp;
             res = DoCodecCmd(widget.nid_, GET_PIN_SENSE, &resp);
-            if (res != MX_OK) {
+            if (res != ZX_OK) {
                 printf("Failed to get pin sense status for pin complex nid %hu (res %d)\n",
                         widget.nid_, res);
                 return res;
@@ -678,7 +678,7 @@ mx_status_t IntelHDACodec::ReadAudioWidgetState(AudioWidgetState& widget) {
        (widget.pin_caps_ & AW_PIN_CAPS_FLAG_CAN_EAPD)) {
         CodecResponse resp;
         res = DoCodecCmd(widget.nid_, GET_EAPD_BTL_ENABLE, &resp);
-        if (res != MX_OK) {
+        if (res != ZX_OK) {
             printf("Failed to get EAPD/BTL state for nid %hu (res %d)\n",
                     widget.nid_, res);
             return res;
@@ -700,13 +700,13 @@ mx_status_t IntelHDACodec::ReadAudioWidgetState(AudioWidgetState& widget) {
                 res = ReadAmpState(widget.nid_, true, i,
                                    widget.input_amp_caps_,
                                    &widget.conn_list_[i].amp_state_);
-                if (res != MX_OK)
+                if (res != ZX_OK)
                     return res;
             }
         } else {
             res = ReadAmpState(widget.nid_, true, 0,
                                widget.input_amp_caps_, &widget.input_amp_state_);
-            if (res != MX_OK)
+            if (res != ZX_OK)
                 return res;
         }
     }
@@ -714,7 +714,7 @@ mx_status_t IntelHDACodec::ReadAudioWidgetState(AudioWidgetState& widget) {
     if (widget.caps_.output_amp_present()) {
         res = ReadAmpState(widget.nid_, false, 0,
                            widget.output_amp_caps_, &widget.output_amp_state_);
-        if (res != MX_OK)
+        if (res != ZX_OK)
             return res;
     }
 
@@ -728,22 +728,22 @@ mx_status_t IntelHDACodec::ReadAudioWidgetState(AudioWidgetState& widget) {
     }
 
     // Finished.
-    return MX_OK;
+    return ZX_OK;
 }
 
 #undef RUN_COMMAND_LIST
 
-mx_status_t IntelHDACodec::ReadConnList(AudioWidgetState& widget) {
+zx_status_t IntelHDACodec::ReadConnList(AudioWidgetState& widget) {
     CodecResponse resp;
-    mx_status_t   res;
+    zx_status_t   res;
 
-    MX_DEBUG_ASSERT(widget.conn_list_len_ > 0);
-    MX_DEBUG_ASSERT(widget.conn_list_ != nullptr);
+    ZX_DEBUG_ASSERT(widget.conn_list_len_ > 0);
+    ZX_DEBUG_ASSERT(widget.conn_list_ != nullptr);
 
     size_t i = 0;
     while (i < widget.conn_list_len_) {
         res = DoCodecCmd(widget.nid_, GET_CONNECTION_LIST_ENTRY(static_cast<uint8_t>(i)), &resp);
-        if (res != MX_OK) {
+        if (res != ZX_OK) {
             printf("Failed to get connection list entry at ndx %zu for nid %hu (res %d)\n",
                     i, widget.nid_, res);
             return res;
@@ -775,7 +775,7 @@ mx_status_t IntelHDACodec::ReadConnList(AudioWidgetState& widget) {
                    "Range end may not be the first entry in the connection widget.conn_list_, "
                    "or proceeded by a range end entry.\n",
                    widget.nid_, i);
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
         }
     }
 
@@ -791,7 +791,7 @@ mx_status_t IntelHDACodec::ReadConnList(AudioWidgetState& widget) {
         } else {
             // Select control response format documented in section 7.3.3.2 Table 73
             res = DoCodecCmd(widget.nid_, GET_CONNECTION_SELECT_CONTROL, &resp);
-            if (res != MX_OK) {
+            if (res != ZX_OK) {
                 printf("Failed to get connection selection for nid %hu (res %d)\n",
                         widget.nid_, res);
                 return res;
@@ -807,20 +807,20 @@ mx_status_t IntelHDACodec::ReadConnList(AudioWidgetState& widget) {
         widget.connected_nid_ndx_ = 0;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t IntelHDACodec::ReadAmpState(uint16_t nid, bool is_input, uint8_t ndx,
+zx_status_t IntelHDACodec::ReadAmpState(uint16_t nid, bool is_input, uint8_t ndx,
                                         const AmpCaps& caps,
                                         AudioWidgetState::AmpState* state_out) {
-    MX_DEBUG_ASSERT(state_out);
+    ZX_DEBUG_ASSERT(state_out);
 
     CodecResponse resp;
-    mx_status_t   res;
+    zx_status_t   res;
 
     for (size_t i = 0; i < countof(state_out->gain); ++i) {
         res = DoCodecCmd(nid, GET_AMPLIFIER_GAIN_MUTE(is_input, (i > 0), ndx), &resp);
-        if (res != MX_OK) {
+        if (res != ZX_OK) {
             printf("Failed to get amp settings for nid %hu's %s %s amplifier #%u (res %d)\n",
                     nid,
                     (i > 0)  ? "right" : "left",
@@ -834,14 +834,14 @@ mx_status_t IntelHDACodec::ReadAmpState(uint16_t nid, bool is_input, uint8_t ndx
         state_out->mute[i] = (resp.data & 0x80) != 0;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t IntelHDACodec::DoCodecCmd(uint16_t nid,
+zx_status_t IntelHDACodec::DoCodecCmd(uint16_t nid,
                                       const CodecVerb& verb,
                                       CodecResponse* resp_out) {
 
-    MX_DEBUG_ASSERT(resp_out != nullptr);
+    ZX_DEBUG_ASSERT(resp_out != nullptr);
 
     ihda_codec_send_corb_cmd_req_t  req;
     ihda_codec_send_corb_cmd_resp_t resp;
@@ -850,8 +850,8 @@ mx_status_t IntelHDACodec::DoCodecCmd(uint16_t nid,
     req.nid  = nid;
     req.verb = verb.val;
 
-    mx_status_t res = CallDevice(req, &resp);
-    if (res != MX_OK) {
+    zx_status_t res = CallDevice(req, &resp);
+    if (res != ZX_OK) {
         printf("Codec command failed; [nid, verb] = [%2u, 0x%05x] (res %d)\n", nid, verb.val, res);
         return res;
     }
@@ -859,34 +859,34 @@ mx_status_t IntelHDACodec::DoCodecCmd(uint16_t nid,
     resp_out->data    = resp.data;
     resp_out->data_ex = resp.data_ex;
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 template <typename T>
-mx_status_t IntelHDACodec::RunCommandList(T& target,
+zx_status_t IntelHDACodec::RunCommandList(T& target,
                                           uint16_t nid,
                                           const CommandListEntry<T>* cmds,
                                           size_t cmd_count) {
-    MX_DEBUG_ASSERT(cmds);
+    ZX_DEBUG_ASSERT(cmds);
 
     for (size_t i = 0; i < cmd_count; ++i) {
         const auto& cmd = cmds[i];
-        mx_status_t res;
+        zx_status_t res;
         CodecResponse resp;
 
         res = DoCodecCmd(nid, cmd.verb, &resp);
-        if (res != MX_OK)
+        if (res != ZX_OK)
             return res;
 
         res = cmd.parser(target, resp);
-        if (res != MX_OK) {
+        if (res != ZX_OK) {
             printf("Cmd parse; [nid, verb] = [%2u, 0x%05x] --> resp [0x%08x, 0x%08x] (res %d)\n",
                     nid, cmd.verb.val, resp.data, resp.data_ex, res);
             return res;
         }
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 }  // namespace audio

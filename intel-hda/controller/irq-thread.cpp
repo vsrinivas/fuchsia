@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <endian.h>
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <string.h>
@@ -18,14 +18,14 @@ namespace audio {
 namespace intel_hda {
 
 void IntelHDAController::WakeupIRQThread() {
-    MX_DEBUG_ASSERT(irq_handle_ != MX_HANDLE_INVALID);
+    ZX_DEBUG_ASSERT(irq_handle_ != ZX_HANDLE_INVALID);
 
     VERBOSE_LOG("Waking up IRQ thread\n");
-    mx_interrupt_signal(irq_handle_);
+    zx_interrupt_signal(irq_handle_);
 }
 
 fbl::RefPtr<IntelHDACodec> IntelHDAController::GetCodec(uint id) {
-    MX_DEBUG_ASSERT(id < countof(codecs_));
+    ZX_DEBUG_ASSERT(id < countof(codecs_));
     fbl::AutoLock codec_lock(&codec_lock_);
     return codecs_[id];
 }
@@ -37,10 +37,10 @@ void IntelHDAController::WaitForIrqOrWakeup() {
     // If we are using legacy interrupts, make sure to ack the interrupt before
     // we wait.
     if (!msi_irq_)
-        mx_interrupt_complete(irq_handle_);
+        zx_interrupt_complete(irq_handle_);
 
     VERBOSE_LOG("IRQ thread waiting on IRQ\n");
-    mx_interrupt_wait(irq_handle_);
+    zx_interrupt_wait(irq_handle_);
     VERBOSE_LOG("IRQ thread woke up\n");
 
     // Disable IRQs at the device level
@@ -48,13 +48,13 @@ void IntelHDAController::WaitForIrqOrWakeup() {
 
     // If we are using MSI interrupts, ack the interrupt as soon as we wake up.
     if (msi_irq_)
-        mx_interrupt_complete(irq_handle_);
+        zx_interrupt_complete(irq_handle_);
 }
 
 void IntelHDAController::SnapshotRIRB() {
     fbl::AutoLock rirb_lock(&rirb_lock_);
 
-    MX_DEBUG_ASSERT(rirb_ && rirb_entry_count_ && rirb_mask_);
+    ZX_DEBUG_ASSERT(rirb_ && rirb_entry_count_ && rirb_mask_);
     uint8_t rirbsts = REG_RD(&regs_->rirbsts);
 
     unsigned int rirb_wr_ptr = REG_RD(&regs_->rirbwp) & rirb_mask_;
@@ -87,7 +87,7 @@ void IntelHDAController::SnapshotRIRB() {
 
     REG_WR(&regs_->rirbsts, rirbsts);
 
-    MX_DEBUG_ASSERT(!pending);
+    ZX_DEBUG_ASSERT(!pending);
 
     VERBOSE_LOG("RIRB has %u pending responses; WP is @%u\n", rirb_snapshot_cnt_, rirb_wr_ptr);
 
@@ -122,8 +122,8 @@ void IntelHDAController::SnapshotRIRB() {
 
 void IntelHDAController::ProcessRIRB() {
     fbl::AutoLock rirb_lock(&rirb_lock_);
-    MX_DEBUG_ASSERT(rirb_snapshot_cnt_ < HDA_RIRB_MAX_ENTRIES);
-    MX_DEBUG_ASSERT(rirb_snapshot_cnt_ < rirb_entry_count_);
+    ZX_DEBUG_ASSERT(rirb_snapshot_cnt_ < HDA_RIRB_MAX_ENTRIES);
+    ZX_DEBUG_ASSERT(rirb_snapshot_cnt_ < rirb_entry_count_);
 
     for (unsigned int i = 0; i < rirb_snapshot_cnt_; ++i) {
         auto& resp = rirb_snapshot_[i];
@@ -190,7 +190,7 @@ void IntelHDAController::ProcessRIRB() {
 }
 
 void IntelHDAController::SendCodecCmdLocked(CodecCommand cmd) {
-    MX_DEBUG_ASSERT(corb_space_ > 0);
+    ZX_DEBUG_ASSERT(corb_space_ > 0);
 
     // Write the command into the ring buffer and update the SW shadow of the
     // write pointer.  We will update the HW write pointer later on when we
@@ -208,8 +208,8 @@ void IntelHDAController::SendCodecCmdLocked(CodecCommand cmd) {
     corb_space_--;
 }
 
-mx_status_t IntelHDAController::QueueCodecCmd(fbl::unique_ptr<CodecCmdJob>&& job) {
-    MX_DEBUG_ASSERT(job != nullptr);
+zx_status_t IntelHDAController::QueueCodecCmd(fbl::unique_ptr<CodecCmdJob>&& job) {
+    ZX_DEBUG_ASSERT(job != nullptr);
     DEBUG_LOG("TX: Codec ID %u Node ID %hu Verb 0x%05x\n",
               job->codec_id(), job->nid(), job->verb().val);
 
@@ -220,25 +220,25 @@ mx_status_t IntelHDAController::QueueCodecCmd(fbl::unique_ptr<CodecCmdJob>&& job
     // end of the in-flight queue, and wakeup the IRQ thread.
     //
     fbl::AutoLock corb_lock(&corb_lock_);
-    MX_DEBUG_ASSERT(corb_wr_ptr_ < corb_entry_count_);
-    MX_DEBUG_ASSERT(corb_);
+    ZX_DEBUG_ASSERT(corb_wr_ptr_ < corb_entry_count_);
+    ZX_DEBUG_ASSERT(corb_);
 
     if (!corb_space_) {
         // If we have no space in the CORB, there must be some jobs which are
         // currently in-flight.
-        MX_DEBUG_ASSERT(!in_flight_corb_jobs_.is_empty());
+        ZX_DEBUG_ASSERT(!in_flight_corb_jobs_.is_empty());
         pending_corb_jobs_.push_back(fbl::move(job));
     } else {
         // Alternatively, if there is space in the CORB, the pending job queue
         // had better be empty.
-        MX_DEBUG_ASSERT(pending_corb_jobs_.is_empty());
+        ZX_DEBUG_ASSERT(pending_corb_jobs_.is_empty());
         SendCodecCmdLocked(job->command());
         in_flight_corb_jobs_.push_back(fbl::move(job));
     }
 
     CommitCORBLocked();
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 void IntelHDAController::ProcessCORB() {
@@ -263,7 +263,7 @@ void IntelHDAController::ProcessCORB() {
         //
         LOG("CRITICAL ERROR: controller encountered an unrecoverable "
             "error attempting to read from system memory!\n");
-        MX_DEBUG_ASSERT(false);
+        ZX_DEBUG_ASSERT(false);
     }
 
     // Figure out how much space we have in the CORB
@@ -287,8 +287,8 @@ void IntelHDAController::ProcessCORB() {
 }
 
 void IntelHDAController::ComputeCORBSpaceLocked() {
-    MX_DEBUG_ASSERT(corb_entry_count_ && corb_mask_);
-    MX_DEBUG_ASSERT(corb_wr_ptr_ == REG_RD(&regs_->corbwp));
+    ZX_DEBUG_ASSERT(corb_entry_count_ && corb_mask_);
+    ZX_DEBUG_ASSERT(corb_wr_ptr_ == REG_RD(&regs_->corbwp));
 
     unsigned int corb_rd_ptr = REG_RD(&regs_->corbrp) & corb_mask_;
     unsigned int corb_used   = (corb_entry_count_ + corb_wr_ptr_ - corb_rd_ptr) & corb_mask_;
@@ -296,8 +296,8 @@ void IntelHDAController::ComputeCORBSpaceLocked() {
     /* The way the Intel HDA command ring buffers work, it is impossible to ever
      * be using more than N - 1 of the ring buffer entries.  Our available
      * space should be the ring buffer size, minus the amt currently used, minus 1 */
-    MX_DEBUG_ASSERT(corb_entry_count_   >  corb_used);
-    MX_DEBUG_ASSERT(corb_max_in_flight_ >= corb_used);
+    ZX_DEBUG_ASSERT(corb_entry_count_   >  corb_used);
+    ZX_DEBUG_ASSERT(corb_max_in_flight_ >= corb_used);
     corb_space_ = corb_max_in_flight_ - corb_used;
 }
 
@@ -307,17 +307,17 @@ void IntelHDAController::CommitCORBLocked() {
     // running on an architecure where cache coherency is not automatically
     // managed for us via. snooping or by an explicit uncached or write-thru
     // policy set on our mapped pages in the MMU.
-    MX_DEBUG_ASSERT(regs_);
-    MX_DEBUG_ASSERT(corb_entry_count_ && corb_mask_);
-    MX_DEBUG_ASSERT(corb_wr_ptr_ < corb_entry_count_);
+    ZX_DEBUG_ASSERT(regs_);
+    ZX_DEBUG_ASSERT(corb_entry_count_ && corb_mask_);
+    ZX_DEBUG_ASSERT(corb_wr_ptr_ < corb_entry_count_);
     REG_WR(&regs_->corbwp, corb_wr_ptr_);
 }
 
 void IntelHDAController::ProcessStreamIRQ(uint32_t intsts) {
     for (uint32_t i = 0; intsts; i++, intsts >>= 1) {
         if (intsts & 0x1) {
-            MX_DEBUG_ASSERT(i < countof(all_streams_));
-            MX_DEBUG_ASSERT(all_streams_[i] != nullptr);
+            ZX_DEBUG_ASSERT(i < countof(all_streams_));
+            ZX_DEBUG_ASSERT(all_streams_[i] != nullptr);
             all_streams_[i]->ProcessStreamIRQ();
         }
     }
@@ -344,7 +344,7 @@ void IntelHDAController::ProcessControllerIRQ() {
 
                 // If we successfully created our codec, attempt to start it up.
                 // If it fails to start, release our reference to the codec.
-                if ((codecs_[i] != nullptr) && (codecs_[i]->Startup() != MX_OK)) {
+                if ((codecs_[i] != nullptr) && (codecs_[i]->Startup() != ZX_OK)) {
                     codecs_[i] = nullptr;
                 }
             } else {

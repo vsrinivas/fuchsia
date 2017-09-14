@@ -20,14 +20,14 @@ protected:
     IntelHDADevice() { }
     virtual ~IntelHDADevice() { }
 
-    mx_status_t ProcessChannel(DispatcherChannel* channel) final TA_EXCL(process_lock());
+    zx_status_t ProcessChannel(DispatcherChannel* channel) final TA_EXCL(process_lock());
 
     // Exported for thread analysis purposes.
     const fbl::Mutex& process_lock() const TA_RET_CAP(process_lock_) { return process_lock_; }
 
     void Shutdown() TA_EXCL(process_lock());
 
-    mx_status_t DeviceIoctl(uint32_t op,
+    zx_status_t DeviceIoctl(uint32_t op,
                             const void* in_buf, size_t in_len,
                             void* out_buf, size_t out_len, size_t* out_actual)
         TA_EXCL(process_lock());

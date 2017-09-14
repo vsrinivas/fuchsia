@@ -24,17 +24,17 @@ protected:
     virtual ~QemuStream() { }
 
     // IntelHDAStreamBase implementation
-    mx_status_t OnActivateLocked()    __TA_REQUIRES(obj_lock()) final;
+    zx_status_t OnActivateLocked()    __TA_REQUIRES(obj_lock()) final;
     void        OnDeactivateLocked()  __TA_REQUIRES(obj_lock()) final;
-    mx_status_t BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& fmt)
+    zx_status_t BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& fmt)
         __TA_REQUIRES(obj_lock()) final;
-    mx_status_t FinishChangeStreamFormatLocked(uint16_t encoded_fmt)
+    zx_status_t FinishChangeStreamFormatLocked(uint16_t encoded_fmt)
         __TA_REQUIRES(obj_lock()) final;
 
 private:
-    mx_status_t RunCmdListLocked(const CodecVerb* list, size_t count, bool force_all = false)
+    zx_status_t RunCmdListLocked(const CodecVerb* list, size_t count, bool force_all = false)
         __TA_REQUIRES(obj_lock());
-    mx_status_t DisableConverterLocked(bool force_all = false) __TA_REQUIRES(obj_lock());
+    zx_status_t DisableConverterLocked(bool force_all = false) __TA_REQUIRES(obj_lock());
     const uint16_t converter_nid_;
 };
 

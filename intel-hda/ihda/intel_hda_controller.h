@@ -18,12 +18,12 @@ class IntelHDAController : public IntelHDADevice,
 public:
     using ControllerTree = fbl::WAVLTree<uint32_t, fbl::unique_ptr<IntelHDAController>>;
 
-    mx_status_t DumpRegs(int argc, const char** argv);
+    zx_status_t DumpRegs(int argc, const char** argv);
 
     uint32_t id()     const { return id_; }
     uint32_t GetKey() const { return id(); }
 
-    static mx_status_t Enumerate();
+    static zx_status_t Enumerate();
     static ControllerTree& controllers() { return controllers_; }
 
 private:

@@ -11,14 +11,14 @@ executable("ihda_bin") {
     "intel_hda_codec.cpp",
     "intel_hda_controller.cpp",
     "intel_hda_device.cpp",
-    "magenta_device.cpp",
+    "zircon_device.cpp",
     "print_codec_state.cpp",
   ]
 
   deps = [
     "//drivers/audio/intel-hda/utils:ihda-utils",
-    "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 
   cflags = [ "-Wno-address-of-packed-member" ]

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <stdio.h>
 
 #include "intel_hda_codec.h"
 #include "intel_hda_controller.h"
-#include "magenta_device.h"
+#include "zircon_device.h"
 
 namespace audio {
 namespace intel_hda {
@@ -28,7 +28,7 @@ int main(int argc, const char** argv) {
     int arg = 1;
     int32_t dev_id = 0;
     int32_t codec_id = 0;
-    mx_status_t res;
+    zx_status_t res;
 
     while (arg < argc) {
         if (!strcmp("-d", argv[arg])) {
@@ -52,13 +52,13 @@ int main(int argc, const char** argv) {
         goto usage;
 
     res = IntelHDAController::Enumerate();
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
         printf("Failed to enumerate controller devices (%d)\n", res);
         return res;
     }
 
     res = IntelHDACodec::Enumerate();
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
         printf("Failed to enumerate codec devices (%d)\n", res);
         return res;
     }
@@ -68,7 +68,7 @@ int main(int argc, const char** argv) {
         for (auto& controller : IntelHDAController::controllers()) {
             res = controller.Probe();
 
-            if (res != MX_OK) {
+            if (res != ZX_OK) {
                 printf("Failed to probe controller at \"%s\" (res %d)\n",
                         controller.dev_name(), res);
                 return res;
@@ -89,7 +89,7 @@ int main(int argc, const char** argv) {
         for (auto& codec : IntelHDACodec::codecs()) {
             res = codec.Probe();
 
-            if (res != MX_OK) {
+            if (res != ZX_OK) {
                 printf("Failed to probe codec at \"%s\" (res %d)\n",
                         codec.dev_name(), res);
                 return res;
@@ -109,7 +109,7 @@ int main(int argc, const char** argv) {
 
     static const struct {
         const char* name;
-        mx_status_t (IntelHDAController::*cmd)(int, const char**);
+        zx_status_t (IntelHDAController::*cmd)(int, const char**);
     } CONTROLLER_CMDS[] = {
         { "regs",   &IntelHDAController::DumpRegs },
     };
@@ -122,7 +122,7 @@ int main(int argc, const char** argv) {
 
         if (!iter.IsValid()) {
             printf("Intel HDA controller not found!\n");
-            return MX_ERR_NOT_FOUND;
+            return ZX_ERR_NOT_FOUND;
         }
 
         arg++;
@@ -131,7 +131,7 @@ int main(int argc, const char** argv) {
 
     static const struct {
         const char* name;
-        mx_status_t (IntelHDACodec::*cmd)(int, const char**);
+        zx_status_t (IntelHDACodec::*cmd)(int, const char**);
     } CODEC_CMDS[] = {
         { "codec",   &IntelHDACodec::DumpCodec },
     };
@@ -144,7 +144,7 @@ int main(int argc, const char** argv) {
 
         if (!iter.IsValid()) {
             printf("Intel HDA codec not found!\n");
-            return MX_ERR_NOT_FOUND;
+            return ZX_ERR_NOT_FOUND;
         }
 
         arg++;
