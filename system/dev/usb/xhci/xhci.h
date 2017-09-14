@@ -4,11 +4,11 @@
 
 #pragma once
 
+#include <sync/completion.h>
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb-hub.h>
 #include <zircon/types.h>
 #include <zircon/listnode.h>
-#include <sync/completion.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <threads.h>
@@ -187,17 +187,13 @@ struct xhci {
     zx_time_t last_mfindex_wrap;
 
     // VMO buffer for DCBAA and ERST array
-    zx_handle_t dcbaa_erst_handle;
-    zx_vaddr_t dcbaa_erst_virt;
+    io_buffer_t dcbaa_erst_buffer;
     // VMO buffer for input context
-    zx_handle_t input_context_handle;
-    zx_vaddr_t input_context_virt;
+    io_buffer_t input_context_buffer;
     // VMO buffer for scratch pad pages
-    zx_handle_t scratch_pad_pages_handle;
-    zx_vaddr_t scratch_pad_pages_virt;
+    io_buffer_t scratch_pad_pages_buffer;
     // VMO buffer for scratch pad index
-    zx_handle_t scratch_pad_index_handle;
-    zx_vaddr_t scratch_pad_index_virt;
+    io_buffer_t scratch_pad_index_buffer;
 };
 
 zx_status_t xhci_init(xhci_t* xhci, void* mmio, xhci_mode_t mode, uint32_t num_interrupts);

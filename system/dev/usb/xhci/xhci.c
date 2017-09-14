@@ -144,43 +144,6 @@ static zx_status_t xhci_claim_ownership(xhci_t* xhci) {
     return ZX_OK;
 }
 
-static zx_status_t xhci_vmo_init(size_t size, zx_handle_t* out_handle, zx_vaddr_t* out_virt,
-                                 bool contiguous) {
-    zx_status_t status;
-    zx_handle_t handle;
-
-    if (contiguous) {
-        status = zx_vmo_create_contiguous(get_root_resource(), size, 0, &handle);
-    } else {
-        status = zx_vmo_create(size, 0, &handle);
-    }
-    if (status != ZX_OK) {
-        dprintf(ERROR, "xhci_vmo_init: vmo_create failed: %d\n", status);
-        return status;
-    }
-
-    if (!contiguous) {
-        // needs to be done before ZX_VMO_OP_LOOKUP for non-contiguous VMOs
-        status = zx_vmo_op_range(handle, ZX_VMO_OP_COMMIT, 0, size, NULL, 0);
-        if (status != ZX_OK) {
-            dprintf(ERROR, "xhci_vmo_init: zx_vmo_op_range(ZX_VMO_OP_COMMIT) failed %d\n", status);
-            zx_handle_close(handle);
-            return status;
-        }
-    }
-
-    status = zx_vmar_map(zx_vmar_root_self(), 0, handle, 0, size,
-                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, out_virt);
-    if (status != ZX_OK) {
-        dprintf(ERROR, "xhci_vmo_init: zx_vmar_map failed: %d\n", status);
-        zx_handle_close(handle);
-        return status;
-    }
-
-    *out_handle = handle;
-    return ZX_OK;
-}
-
 static void xhci_vmo_release(zx_handle_t handle, zx_vaddr_t virt) {
     uint64_t size;
     zx_vmo_get_size(handle, &size);
@@ -258,49 +221,41 @@ zx_status_t xhci_init(xhci_t* xhci, void* mmio, xhci_mode_t mode, uint32_t num_i
     }
 
     // Allocate DMA memory for various things
-    result = xhci_vmo_init(PAGE_SIZE, &xhci->dcbaa_erst_handle, &xhci->dcbaa_erst_virt, false);
+    result = io_buffer_init(&xhci->dcbaa_erst_buffer, PAGE_SIZE, IO_BUFFER_RW);
     if (result != ZX_OK) {
-        dprintf(ERROR, "xhci_vmo_init failed for xhci->dcbaa_erst_handle\n");
+        dprintf(ERROR, "io_buffer_init failed for xhci->dcbaa_erst_buffer\n");
         goto fail;
     }
-    result = xhci_vmo_init(PAGE_SIZE, &xhci->input_context_handle, &xhci->input_context_virt, false);
+    result = io_buffer_init(&xhci->input_context_buffer, PAGE_SIZE, IO_BUFFER_RW);
     if (result != ZX_OK) {
-        dprintf(ERROR, "xhci_vmo_init failed for xhci->input_context_handle\n");
+        dprintf(ERROR, "io_buffer_init failed for xhci->input_context_buffer\n");
         goto fail;
     }
 
     if (scratch_pad_bufs > 0) {
+        // map scratchpad buffers read-only
+        uint32_t flags = xhci->page_size > PAGE_SIZE ?
+                            (IO_BUFFER_RO | IO_BUFFER_CONTIG) : IO_BUFFER_RO;
         size_t scratch_pad_pages_size = scratch_pad_bufs * xhci->page_size;
-        result = xhci_vmo_init(scratch_pad_pages_size, &xhci->scratch_pad_pages_handle,
-                               &xhci->scratch_pad_pages_virt, xhci->page_size > PAGE_SIZE);
+        result = io_buffer_init(&xhci->scratch_pad_pages_buffer, scratch_pad_pages_size, flags);
         if (result != ZX_OK) {
-            dprintf(ERROR, "xhci_vmo_init failed for xhci->scratch_pad_pages_handle\n");
+            dprintf(ERROR, "xhci_vmo_init failed for xhci->scratch_pad_pages_buffer\n");
             goto fail;
         }
         size_t scratch_pad_index_size = PAGE_ROUNDUP(scratch_pad_bufs * sizeof(uint64_t));
-        result = xhci_vmo_init(scratch_pad_index_size, &xhci->scratch_pad_index_handle,
-                               &xhci->scratch_pad_index_virt, scratch_pad_index_size > PAGE_SIZE);
+        result = io_buffer_init(&xhci->scratch_pad_index_buffer, scratch_pad_index_size,
+                                IO_BUFFER_RW | IO_BUFFER_CONTIG);
         if (result != ZX_OK) {
-            dprintf(ERROR, "xhci_vmo_init failed for xhci->scratch_pad_index_handle\n");
+            dprintf(ERROR, "io_buffer_init failed for xhci->scratch_pad_index_buffer\n");
             goto fail;
         }
     }
 
     // set up DCBAA, ERST array and input context
-    xhci->dcbaa = (uint64_t *)xhci->dcbaa_erst_virt;
-    result = zx_vmo_op_range(xhci->dcbaa_erst_handle, ZX_VMO_OP_LOOKUP, 0, PAGE_SIZE,
-                             &xhci->dcbaa_phys, sizeof(xhci->dcbaa_phys));
-    if (result != ZX_OK) {
-        dprintf(ERROR, "zx_vmo_op_range failed for xhci->dcbaa_erst_handle\n");
-        goto fail;
-    }
-    xhci->input_context = (uint8_t *)xhci->input_context_virt;
-    result = zx_vmo_op_range(xhci->input_context_handle, ZX_VMO_OP_LOOKUP, 0, PAGE_SIZE,
-                             &xhci->input_context_phys, sizeof(xhci->input_context_phys));
-    if (result != ZX_OK) {
-        dprintf(ERROR, "zx_vmo_op_range failed for xhci->input_context_handle\n");
-        goto fail;
-    }
+    xhci->dcbaa = (uint64_t *)io_buffer_virt(&xhci->dcbaa_erst_buffer);
+    xhci->dcbaa_phys = io_buffer_phys(&xhci->dcbaa_erst_buffer);
+    xhci->input_context = (uint8_t *)io_buffer_virt(&xhci->input_context_buffer);
+    xhci->input_context_phys = io_buffer_phys(&xhci->input_context_buffer);
 
     // DCBAA can only be 256 * sizeof(uint64_t) = 2048 bytes, so we have room for ERST array after DCBAA
     zx_off_t erst_offset = 256 * sizeof(uint64_t);
@@ -311,7 +266,8 @@ zx_status_t xhci_init(xhci_t* xhci, void* mmio, xhci_mode_t mode, uint32_t num_i
     for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
         // Ran out of space in page.
         if (erst_offset + array_bytes > PAGE_SIZE) {
-            dprintf(ERROR, "only have space for %u ERST arrays, want %u\n", i, xhci->num_interrupts);
+            dprintf(ERROR, "only have space for %u ERST arrays, want %u\n", i,
+                    xhci->num_interrupts);
             goto fail;
         }
         xhci->erst_arrays[i] = (void *)xhci->dcbaa + erst_offset;
@@ -323,28 +279,21 @@ zx_status_t xhci_init(xhci_t* xhci, void* mmio, xhci_mode_t mode, uint32_t num_i
     }
 
     if (scratch_pad_bufs > 0) {
-        uint64_t* scratch_pad_index = (uint64_t *)xhci->scratch_pad_index_virt;
+        uint64_t* scratch_pad_index = (uint64_t *)io_buffer_virt(&xhci->scratch_pad_index_buffer);
         off_t offset = 0;
         for (uint32_t i = 0; i < scratch_pad_bufs; i++) {
             zx_paddr_t scratch_pad_phys;
-            result = zx_vmo_op_range(xhci->scratch_pad_pages_handle, ZX_VMO_OP_LOOKUP, offset,
-                                     PAGE_SIZE, &scratch_pad_phys, sizeof(scratch_pad_phys));
+            result = io_buffer_physmap(&xhci->scratch_pad_pages_buffer, offset, PAGE_SIZE,
+                                       sizeof(scratch_pad_phys), &scratch_pad_phys);
             if (result != ZX_OK) {
-                dprintf(ERROR, "zx_vmo_op_range failed for xhci->scratch_pad_pages_handle\n");
+                dprintf(ERROR, "io_buffer_physmap failed for xhci->scratch_pad_pages_buffer\n");
                 goto fail;
             }
             scratch_pad_index[i] = scratch_pad_phys;
             offset += xhci->page_size;
         }
 
-        zx_paddr_t scratch_pad_index_phys;
-        result = zx_vmo_op_range(xhci->scratch_pad_index_handle, ZX_VMO_OP_LOOKUP, 0, PAGE_SIZE,
-                                  &scratch_pad_index_phys, sizeof(scratch_pad_index_phys));
-        if (result != ZX_OK) {
-            dprintf(ERROR, "zx_vmo_op_range failed for xhci->scratch_pad_index_handle\n");
-            goto fail;
-        }
-
+        zx_paddr_t scratch_pad_index_phys = io_buffer_phys(&xhci->scratch_pad_index_buffer);
         xhci->dcbaa[0] = scratch_pad_index_phys;
     } else {
         xhci->dcbaa[0] = 0;
@@ -397,10 +346,10 @@ fail:
         xhci_event_ring_free(xhci, i);
     }
     xhci_transfer_ring_free(&xhci->command_ring);
-    xhci_vmo_release(xhci->dcbaa_erst_handle, xhci->dcbaa_erst_virt);
-    xhci_vmo_release(xhci->input_context_handle, xhci->input_context_virt);
-    xhci_vmo_release(xhci->scratch_pad_pages_handle, xhci->scratch_pad_pages_virt);
-    xhci_vmo_release(xhci->scratch_pad_index_handle, xhci->scratch_pad_index_virt);
+    io_buffer_release(&xhci->dcbaa_erst_buffer);
+    io_buffer_release(&xhci->input_context_buffer);
+    io_buffer_release(&xhci->scratch_pad_pages_buffer);
+    io_buffer_release(&xhci->scratch_pad_index_buffer);
     free(phys_addrs);
     free(xhci->slots);
     return result;
