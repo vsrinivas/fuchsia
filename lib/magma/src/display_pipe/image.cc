@@ -16,7 +16,7 @@ Image::~Image() {
 
 std::unique_ptr<Image> Image::Create(std::shared_ptr<MagmaConnection> conn,
                                      const scenic::ImageInfo &info,
-                                     mx::vmo memory, uint64_t offset) {
+                                     zx::vmo memory, uint64_t offset) {
   if (offset != 0) {
       FXL_LOG(ERROR) << "Can't import an image with a non-zero offset.";
       return nullptr;

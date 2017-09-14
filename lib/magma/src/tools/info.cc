@@ -7,7 +7,7 @@
 #include <unistd.h> // for close
 
 #include "magma_util/macros.h"
-#include "magma_util/platform/magenta/magenta_platform_ioctl.h"
+#include "magma_util/platform/zircon/zircon_platform_ioctl.h"
 
 const char* kDeviceName = "/dev/class/display/000";
 
@@ -19,7 +19,7 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    int ret = mxio_ioctl(fd, IOCTL_MAGMA_DUMP_STATUS, nullptr, 0, nullptr, 0);
+    int ret = fdio_ioctl(fd, IOCTL_MAGMA_DUMP_STATUS, nullptr, 0, nullptr, 0);
     magma::log(magma::LOG_INFO, "Dumping system driver status to system log (%d)", ret);
 
     close(fd);

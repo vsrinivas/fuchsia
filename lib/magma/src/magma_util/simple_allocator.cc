@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 //
-// Derived from magenta vm_aspace.
+// Derived from zircon vm_aspace.
 
 #include "simple_allocator.h"
 #include "magma_util/dlog.h"

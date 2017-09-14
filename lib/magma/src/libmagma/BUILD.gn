@@ -27,6 +27,6 @@ shared_library("libmagma") {
     "$magma_build_root/src/magma_util/platform:trace",
   ]
 
-  libs = [ "mxio" ]
+  libs = [ "fdio" ]
   configs -= [ "//build/config:symbol_visibility_hidden" ]
 }

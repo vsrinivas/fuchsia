@@ -2,26 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "magenta_platform_semaphore.h"
+#include "zircon_platform_semaphore.h"
 #include "platform_port.h"
 
-#include "magenta/syscalls/port.h"
-#include "mx/port.h"
+#include "zircon/syscalls/port.h"
+#include "zx/port.h"
 
 namespace magma {
 
-class MagentaPlatformPort : public PlatformPort {
+class ZirconPlatformPort : public PlatformPort {
 public:
-    MagentaPlatformPort(mx::port port) : port_(std::move(port)) {}
+    ZirconPlatformPort(zx::port port) : port_(std::move(port)) {}
 
     void Close() override { port_.reset(); }
 
     Status Wait(uint64_t* key_out, uint64_t timeout_ms) override;
 
-    mx::port& mx_port() { return port_; }
+    zx::port& zx_port() { return port_; }
 
 private:
-    mx::port port_;
+    zx::port port_;
 };
 
 } // namespace magma

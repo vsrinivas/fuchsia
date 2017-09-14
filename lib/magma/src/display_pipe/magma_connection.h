@@ -5,8 +5,8 @@
 #ifndef _MAGMA_CONNECTION_H_
 #define _MAGMA_CONNECTION_H_
 
-#include <mx/event.h>
-#include <mx/vmo.h>
+#include <zx/event.h>
+#include <zx/vmo.h>
 
 #include "magma.h"
 
@@ -17,11 +17,11 @@ class MagmaConnection {
 
   bool Open();
   bool GetDisplaySize(uint32_t *width, uint32_t *height);
-  bool ImportBuffer(const mx::vmo &vmo_handle, magma_buffer_t *buffer);
+  bool ImportBuffer(const zx::vmo &vmo_handle, magma_buffer_t *buffer);
   void FreeBuffer(magma_buffer_t buffer);
 
   bool CreateSemaphore(magma_semaphore_t *sem);
-  bool ImportSemaphore(const mx::event &event, magma_semaphore_t *sem);
+  bool ImportSemaphore(const zx::event &event, magma_semaphore_t *sem);
   void ReleaseSemaphore(magma_semaphore_t sem);
   void SignalSemaphore(magma_semaphore_t sem);
   void ResetSemaphore(magma_semaphore_t sem);

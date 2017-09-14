@@ -18,11 +18,11 @@ public:
     ImagePipeImpl(std::shared_ptr<MagmaConnection> conn);
     ~ImagePipeImpl() override;
 
-    void AddImage(uint32_t image_id, scenic::ImageInfoPtr image_info, mx::vmo memory,
+    void AddImage(uint32_t image_id, scenic::ImageInfoPtr image_info, zx::vmo memory,
                   scenic::MemoryType memory_type, uint64_t memory_offset) override;
     void RemoveImage(uint32_t image_id) override;
-    void PresentImage(uint32_t image_id, uint64_t presetation_time, mx::event acquire_fence,
-                      mx::event release_fence, const PresentImageCallback& callback) override;
+    void PresentImage(uint32_t image_id, uint64_t presetation_time, zx::event acquire_fence,
+                      zx::event release_fence, const PresentImageCallback& callback) override;
 
     void AddBinding(fidl::InterfaceRequest<ImagePipe> request);
 

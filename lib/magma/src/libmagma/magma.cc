@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "magma.h"
-#include "magenta/magenta_platform_ioctl.h"
+#include "zircon/zircon_platform_ioctl.h"
 #include "magma_util/command_buffer.h"
 #include "magma_util/macros.h"
 #include "platform_connection.h"
@@ -18,10 +18,10 @@ magma_connection_t* magma_create_connection(int fd, uint32_t capabilities)
     request.capabilities = capabilities;
 
     uint32_t device_handle;
-    int ioctl_ret = mxio_ioctl(fd, IOCTL_MAGMA_CONNECT, &request, sizeof(request), &device_handle,
+    int ioctl_ret = fdio_ioctl(fd, IOCTL_MAGMA_CONNECT, &request, sizeof(request), &device_handle,
                                sizeof(device_handle));
     if (ioctl_ret < 0)
-        return DRETP(nullptr, "mxio_ioctl failed: %d", ioctl_ret);
+        return DRETP(nullptr, "fdio_ioctl failed: %d", ioctl_ret);
 
     // Here we release ownership of the connection to the client
     return magma::PlatformIpcConnection::Create(device_handle).release();
@@ -43,9 +43,9 @@ magma_status_t magma_query(int fd, uint64_t id, uint64_t* value_out)
     if (!value_out)
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "bad value_out address");
 
-    int ret = mxio_ioctl(fd, IOCTL_MAGMA_QUERY, &id, sizeof(uint64_t), value_out, sizeof(uint64_t));
+    int ret = fdio_ioctl(fd, IOCTL_MAGMA_QUERY, &id, sizeof(uint64_t), value_out, sizeof(uint64_t));
     if (ret < 0)
-        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "mxio_ioctl failed: %d", ret);
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "fdio_ioctl failed: %d", ret);
 
     DLOG("magma_query id %" PRIu64 " returned 0x%" PRIx64, id, *value_out);
     return MAGMA_STATUS_OK;
@@ -248,9 +248,9 @@ magma_status_t magma_display_get_size(int fd, magma_display_size* size_out)
     if (!size_out)
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "bad size_out address");
 
-    int ret = mxio_ioctl(fd, IOCTL_MAGMA_DISPLAY_GET_SIZE, nullptr, 0, size_out, sizeof(*size_out));
+    int ret = fdio_ioctl(fd, IOCTL_MAGMA_DISPLAY_GET_SIZE, nullptr, 0, size_out, sizeof(*size_out));
     if (ret < 0)
-        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "mxio_ioctl failed: %d", ret);
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "fdio_ioctl failed: %d", ret);
     return MAGMA_STATUS_OK;
 }
 

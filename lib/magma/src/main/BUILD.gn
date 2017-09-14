@@ -10,7 +10,7 @@ source_set("main") {
   ]
 
   deps = [
-    "$magenta_build_root/system/ulib/mx",
+    "$zircon_build_root/system/ulib/zx",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:trace",
     "$magma_build_root/src/sys_driver",
@@ -19,7 +19,7 @@ source_set("main") {
   libs = [
     "driver",
     "ddk",
-    "magenta",
+    "zircon",
   ]
 }
 
@@ -33,7 +33,7 @@ source_set("test_driver") {
   ]
 
   deps = [
-    "$magenta_build_root/system/ulib/mx",
+    "$zircon_build_root/system/ulib/zx",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:trace",
     "$magma_build_root/src/sys_driver",
@@ -54,7 +54,7 @@ source_set("test_driver") {
   libs = [
     "driver",
     "ddk",
-    "magenta",
-    "mxio",
+    "zircon",
+    "fdio",
   ]
 }

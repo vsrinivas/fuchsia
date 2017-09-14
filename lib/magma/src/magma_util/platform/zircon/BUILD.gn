@@ -8,12 +8,12 @@ source_set("buffer") {
   configs += [ "..:platform_include_config" ]
 
   sources = [
-    "magenta_platform_buffer.cc",
+    "zircon_platform_buffer.cc",
   ]
 
   deps = [
     ":object",
-    "$magenta_build_root/system/ulib/mx",
+    "$zircon_build_root/system/ulib/zx",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:trace",
   ]
@@ -21,17 +21,17 @@ source_set("buffer") {
   libs = [
     "ddk",
     "driver",
-    "magenta",
+    "zircon",
   ]
 }
 
 source_set("interrupt") {
   sources = [
-    "magenta_platform_interrupt.h",
+    "zircon_platform_interrupt.h",
   ]
 
   public_deps = [
-    "$magenta_build_root/system/ulib/mx",
+    "$zircon_build_root/system/ulib/zx",
   ]
 }
 
@@ -39,9 +39,9 @@ source_set("device") {
   configs += [ "..:platform_include_config" ]
 
   sources = [
-    "magenta_platform_device.cc",
-    "magenta_platform_device.h",
-    "magenta_platform_interrupt.h",
+    "zircon_platform_device.cc",
+    "zircon_platform_device.h",
+    "zircon_platform_interrupt.h",
   ]
 
   deps = [
@@ -52,7 +52,7 @@ source_set("device") {
   libs = [
     "ddk",
     "driver",
-    "magenta",
+    "zircon",
   ]
 }
 
@@ -60,7 +60,7 @@ source_set("futex") {
   configs += [ "..:platform_include_config" ]
 
   sources = [
-    "magenta_platform_futex.cc",
+    "zircon_platform_futex.cc",
   ]
 
   deps = [
@@ -70,7 +70,7 @@ source_set("futex") {
   libs = [
     "ddk",
     "driver",
-    "magenta",
+    "zircon",
   ]
 }
 
@@ -78,12 +78,12 @@ source_set("connection") {
   configs += [ "..:platform_include_config" ]
 
   sources = [
-    "magenta_platform_connection.cc",
+    "zircon_platform_connection.cc",
   ]
 
   deps = [
     ":event",
-    "$magenta_build_root/system/ulib/mx",
+    "$zircon_build_root/system/ulib/zx",
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util",
   ]
@@ -91,7 +91,7 @@ source_set("connection") {
   libs = [
     "ddk",
     "driver",
-    "magenta",
+    "zircon",
   ]
 }
 
@@ -99,21 +99,21 @@ source_set("thread") {
   configs += [ "..:platform_include_config" ]
 
   sources = [
-    "magenta_platform_thread.cc",
+    "zircon_platform_thread.cc",
   ]
 
-  libs = [ "magenta" ]
+  libs = [ "zircon" ]
 }
 
 source_set("event") {
   configs += [ "..:platform_include_config" ]
 
   sources = [
-    "magenta_platform_event.cc",
+    "zircon_platform_event.cc",
   ]
 
   deps = [
-    "$magenta_build_root/system/ulib/mx",
+    "$zircon_build_root/system/ulib/zx",
     "$magma_build_root/src/magma_util",
   ]
 }
@@ -122,11 +122,11 @@ source_set("object") {
   configs += [ "..:platform_include_config" ]
 
   sources = [
-    "magenta_platform_object.cc",
+    "zircon_platform_object.cc",
   ]
 
   deps = [
-    "$magenta_build_root/system/ulib/mx",
+    "$zircon_build_root/system/ulib/zx",
     "$magma_build_root/src/magma_util",
   ]
 }
@@ -135,12 +135,12 @@ source_set("semaphore") {
   configs += [ "..:platform_include_config" ]
 
   sources = [
-    "magenta_platform_semaphore.cc",
+    "zircon_platform_semaphore.cc",
   ]
 
   deps = [
     ":object",
-    "$magenta_build_root/system/ulib/mx",
+    "$zircon_build_root/system/ulib/zx",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:trace",
   ]
@@ -150,11 +150,11 @@ source_set("port") {
   configs += [ "..:platform_include_config" ]
 
   sources = [
-    "magenta_platform_port.cc",
+    "zircon_platform_port.cc",
   ]
 
   deps = [
-    "$magenta_build_root/system/ulib/mx",
+    "$zircon_build_root/system/ulib/zx",
     "$magma_build_root/src/magma_util",
   ]
 }
@@ -166,7 +166,7 @@ source_set("trace") {
   ]
 
   sources = [
-    "magenta_platform_trace.cc",
+    "zircon_platform_trace.cc",
   ]
 
   deps = [
@@ -176,16 +176,16 @@ source_set("trace") {
   if (magma_enable_tracing) {
     public_deps = [
       "//garnet/public/lib/fsl",
-      "$magenta_build_root/system/ulib/async:loop",
-      "$magenta_build_root/system/ulib/trace",
-      "$magenta_build_root/system/ulib/trace-provider",
+      "$zircon_build_root/system/ulib/async:loop",
+      "$zircon_build_root/system/ulib/trace",
+      "$zircon_build_root/system/ulib/trace-provider",
     ]
   }
 
   libs = [
-    "mxio",
+    "fdio",
     "driver",
     "ddk",
-    "magenta",
+    "zircon",
   ]
 }

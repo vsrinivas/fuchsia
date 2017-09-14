@@ -8,7 +8,7 @@
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "magenta/status.h"
+#include "zircon/status.h"
 #include "magma/src/display_pipe/client/buffer.h"
 #include "magma/src/display_pipe/services/display_provider.fidl.h"
 
@@ -79,16 +79,16 @@ class BufferHandler : public mtl::MessageLoopHandler {
     handler_key_ =
         mtl::MessageLoop::GetCurrent()->AddHandler(this,
                                                    buffer->release_fence().get(),
-                                                   MX_EVENT_SIGNALED);
+                                                   ZX_EVENT_SIGNALED);
   }
 
   ~BufferHandler() override = default;
 
-  void OnHandleReady(mx_handle_t handle,
-                     mx_signals_t pending,
+  void OnHandleReady(zx_handle_t handle,
+                     zx_signals_t pending,
                      uint64_t count) override {
       buffer_->Reset();
-      mx::event acq, rel;
+      zx::event acq, rel;
       buffer_->dupAcquireFence(&acq);
       buffer_->dupReleaseFence(&rel);
 
@@ -103,9 +103,9 @@ class BufferHandler : public mtl::MessageLoopHandler {
       buffer_->Signal();
   }
 
-  void OnHandleError(mx_handle_t handle, mx_status_t error) override {
+  void OnHandleError(zx_handle_t handle, zx_status_t error) override {
       FXL_LOG(ERROR) << "BufferHandler received an error ("
-          << mx_status_get_string(error) << ").  Exiting.";
+          << zx_status_get_string(error) << ").  Exiting.";
       mtl::MessageLoop::GetCurrent()->PostQuitTask();
   };
 
@@ -130,7 +130,7 @@ void allocate_buffer(uint32_t index, uint32_t width, uint32_t height) {
     info->pixel_format = scenic::ImageInfo::PixelFormat::BGRA_8;
     info->color_space = scenic::ImageInfo::ColorSpace::SRGB;
 
-    mx::vmo vmo;
+    zx::vmo vmo;
     buffer->dupVmo(&vmo);
     image_pipe->AddImage(index, std::move(info), std::move(vmo),
                          scenic::MemoryType::HOST_MEMORY, 0);

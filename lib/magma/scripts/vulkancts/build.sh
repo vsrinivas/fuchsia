@@ -14,7 +14,7 @@ ranlib=$fuchsia_root/`find buildtools -name "ranlib"`
 strip=$fuchsia_root/`find buildtools -name "strip"`
 ar=$fuchsia_root/`find buildtools -name "llvm-ar"`
 ranlib=$fuchsia_root/`find buildtools -name "llvm-ranlib"`
-sysroot=$fuchsia_root/out/build-magenta/build-magenta-pc-x86-64/sysroot
+sysroot=$fuchsia_root/out/build-zircon/build-zircon-pc-x86-64/sysroot
 
 if [ ! -d "$sysroot" ]; then
 	echo "Can't find sysroot: $sysroot"

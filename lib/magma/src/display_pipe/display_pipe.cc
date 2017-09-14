@@ -6,9 +6,9 @@
 #include <stdio.h>
 #include <unistd.h> // for close
 
-#include <magenta/syscalls.h>
-#include <mx/vmar.h>
-#include <mx/vmo.h>
+#include <zircon/syscalls.h>
+#include <zx/vmar.h>
+#include <zx/vmo.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/command_line.h"
@@ -17,7 +17,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 #include "magma.h"
 #include "magma_util/macros.h"
-#include "magma_util/platform/magenta/magenta_platform_ioctl.h"
+#include "magma_util/platform/zircon/zircon_platform_ioctl.h"
 
 #include "display_provider_impl.h"
 #include "magma_connection.h"

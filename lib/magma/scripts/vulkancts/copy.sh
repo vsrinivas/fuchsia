@@ -9,7 +9,7 @@ fuchsia_root=`pwd`
 tools_path=$fuchsia_root/buildtools
 build_dir=$fuchsia_root/out/build-vulkancts
 dest_dir=/data/vulkancts
-netaddr=$fuchsia_root/out/build-magenta/tools/netaddr
+netaddr=$fuchsia_root/out/build-zircon/tools/netaddr
 ssh_config="-F $fuchsia_root/out/debug-x86-64/ssh-keys/ssh_config"
 
 ssh $ssh_config `$netaddr --fuchsia` mkdir -p $dest_dir

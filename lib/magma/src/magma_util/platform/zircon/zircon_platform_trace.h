@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MAGENTA_PLATFORM_TRACE_H
-#define MAGENTA_PLATFORM_TRACE_H
+#ifndef ZIRCON_PLATFORM_TRACE_H
+#define ZIRCON_PLATFORM_TRACE_H
 
 #if MAGMA_ENABLE_TRACING
 #include <async/loop.h>
@@ -15,9 +15,9 @@
 namespace magma {
 
 #if MAGMA_ENABLE_TRACING
-class MagentaPlatformTrace : public PlatformTrace {
+class ZirconPlatformTrace : public PlatformTrace {
 public:
-    MagentaPlatformTrace();
+    ZirconPlatformTrace();
 
 private:
     async::Loop loop_;
@@ -27,4 +27,4 @@ private:
 
 } // namespace magma
 
-#endif // MAGENTA_PLATFORM_TRACE_H
+#endif // ZIRCON_PLATFORM_TRACE_H

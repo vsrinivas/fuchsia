@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "magenta_platform_event.h"
+#include "zircon_platform_event.h"
 #include "platform_connection.h"
 
-#include "mx/channel.h"
+#include "zx/channel.h"
 #include <list>
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 namespace magma {
 
@@ -96,7 +96,7 @@ struct GetErrorOp {
 } __attribute__((packed));
 
 template <typename T>
-T* OpCast(uint8_t* bytes, uint32_t num_bytes, mx_handle_t* handles, uint32_t kNumHandles)
+T* OpCast(uint8_t* bytes, uint32_t num_bytes, zx_handle_t* handles, uint32_t kNumHandles)
 {
     if (num_bytes != sizeof(T))
         return DRETP(nullptr, "wrong number of bytes in message, expected %zu, got %u", sizeof(T),
@@ -107,7 +107,7 @@ T* OpCast(uint8_t* bytes, uint32_t num_bytes, mx_handle_t* handles, uint32_t kNu
 }
 
 template <>
-PageFlipOp* OpCast<PageFlipOp>(uint8_t* bytes, uint32_t num_bytes, mx_handle_t* handles,
+PageFlipOp* OpCast<PageFlipOp>(uint8_t* bytes, uint32_t num_bytes, zx_handle_t* handles,
                                uint32_t kNumHandles)
 {
     if (num_bytes < sizeof(PageFlipOp))
@@ -124,11 +124,11 @@ PageFlipOp* OpCast<PageFlipOp>(uint8_t* bytes, uint32_t num_bytes, mx_handle_t* 
     return reinterpret_cast<PageFlipOp*>(bytes);
 }
 
-class MagentaPlatformConnection : public PlatformConnection,
-                                  public std::enable_shared_from_this<MagentaPlatformConnection> {
+class ZirconPlatformConnection : public PlatformConnection,
+                                  public std::enable_shared_from_this<ZirconPlatformConnection> {
 public:
-    MagentaPlatformConnection(std::unique_ptr<Delegate> delegate, mx::channel local_endpoint,
-                              mx::channel remote_endpoint,
+    ZirconPlatformConnection(std::unique_ptr<Delegate> delegate, zx::channel local_endpoint,
+                              zx::channel remote_endpoint,
                               std::unique_ptr<magma::PlatformEvent> shutdown_event)
         : magma::PlatformConnection(std::move(shutdown_event)), delegate_(std::move(delegate)),
           local_endpoint_(std::move(local_endpoint)), remote_endpoint_(std::move(remote_endpoint))
@@ -144,32 +144,32 @@ public:
         uint32_t actual_handles;
 
         uint8_t bytes[num_bytes];
-        mx_handle_t handles[kNumHandles];
+        zx_handle_t handles[kNumHandles];
 
-        auto shutdown_event = static_cast<MagentaPlatformEvent*>(ShutdownEvent().get());
+        auto shutdown_event = static_cast<ZirconPlatformEvent*>(ShutdownEvent().get());
 
         constexpr uint32_t kIndexChannel = 0;
         constexpr uint32_t kIndexShutdown = 1;
 
         constexpr uint32_t wait_item_count = 2;
-        mx_wait_item_t wait_items[wait_item_count];
+        zx_wait_item_t wait_items[wait_item_count];
         wait_items[kIndexChannel] = {local_endpoint_.get(),
-                                      MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, 0};
-        wait_items[kIndexShutdown] = {shutdown_event->mx_handle(), shutdown_event->mx_signal(), 0};
+                                      ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0};
+        wait_items[kIndexShutdown] = {shutdown_event->zx_handle(), shutdown_event->zx_signal(), 0};
 
-        if (mx_object_wait_many(wait_items, wait_item_count, MX_TIME_INFINITE) != MX_OK)
+        if (zx_object_wait_many(wait_items, wait_item_count, ZX_TIME_INFINITE) != ZX_OK)
             return DRETF(false, "wait_many failed");
 
-        if (wait_items[kIndexShutdown].pending & shutdown_event->mx_signal())
+        if (wait_items[kIndexShutdown].pending & shutdown_event->zx_signal())
             return DRETF(false, "shutdown event signalled");
 
-        if (wait_items[kIndexChannel].pending & MX_CHANNEL_PEER_CLOSED)
+        if (wait_items[kIndexChannel].pending & ZX_CHANNEL_PEER_CLOSED)
             return false; // No DRET because this happens on the normal connection closed path
 
-        if (wait_items[kIndexChannel].pending & MX_CHANNEL_READABLE) {
+        if (wait_items[kIndexChannel].pending & ZX_CHANNEL_READABLE) {
             auto status = local_endpoint_.read(0, bytes, num_bytes, &actual_bytes, handles,
                                                kNumHandles, &actual_handles);
-            if (status != MX_OK)
+            if (status != ZX_OK)
                 return DRETF(false, "failed to read from channel");
 
             if (actual_bytes < sizeof(OpCode))
@@ -243,7 +243,7 @@ public:
     }
 
 private:
-    bool ImportBuffer(ImportBufferOp* op, mx_handle_t* handle)
+    bool ImportBuffer(ImportBufferOp* op, zx_handle_t* handle)
     {
         DLOG("Operation: ImportBuffer");
         if (!op)
@@ -264,7 +264,7 @@ private:
         return true;
     }
 
-    bool ImportObject(ImportObjectOp* op, mx_handle_t* handle)
+    bool ImportObject(ImportObjectOp* op, zx_handle_t* handle)
     {
         DLOG("Operation: ImportObject");
         if (!op)
@@ -305,7 +305,7 @@ private:
         return true;
     }
 
-    bool ExecuteCommandBuffer(ExecuteCommandBufferOp* op, mx_handle_t* handle)
+    bool ExecuteCommandBuffer(ExecuteCommandBufferOp* op, zx_handle_t* handle)
     {
         DLOG("Operation: ExecuteCommandBuffer");
         if (!op)
@@ -333,7 +333,7 @@ private:
         return true;
     }
 
-    bool PageFlip(PageFlipOp* op, mx_handle_t* handles)
+    bool PageFlip(PageFlipOp* op, zx_handle_t* handles)
     {
         DLOG("Operation: PageFlip");
         if (!op)
@@ -367,25 +367,25 @@ private:
     void SetError(magma_status_t error)
     {
         if (!error_)
-            error_ = DRET_MSG(error, "MagentaPlatformConnection encountered async error");
+            error_ = DRET_MSG(error, "ZirconPlatformConnection encountered async error");
     }
 
     bool WriteError(magma_status_t error)
     {
         DLOG("Writing error %d to channel", error);
         auto status = local_endpoint_.write(0, &error, sizeof(error), nullptr, 0);
-        return DRETF(status == MX_OK, "failed to write to channel");
+        return DRETF(status == ZX_OK, "failed to write to channel");
     }
 
     std::unique_ptr<Delegate> delegate_;
-    mx::channel local_endpoint_;
-    mx::channel remote_endpoint_;
+    zx::channel local_endpoint_;
+    zx::channel remote_endpoint_;
     magma_status_t error_{};
 };
 
-class MagentaPlatformIpcConnection : public PlatformIpcConnection {
+class ZirconPlatformIpcConnection : public PlatformIpcConnection {
 public:
-    MagentaPlatformIpcConnection(mx::channel channel) : channel_(std::move(channel)) {}
+    ZirconPlatformIpcConnection(zx::channel channel) : channel_(std::move(channel)) {}
 
     // Imports a buffer for use in the system driver
     magma_status_t ImportBuffer(PlatformBuffer* buffer) override
@@ -397,12 +397,12 @@ public:
         if (!buffer->duplicate_handle(&duplicate_handle))
             return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "failed to get duplicate_handle");
 
-        mx_handle_t duplicate_handle_mx = duplicate_handle;
+        zx_handle_t duplicate_handle_zx = duplicate_handle;
 
         ImportBufferOp op;
-        magma_status_t result = channel_write(&op, sizeof(op), &duplicate_handle_mx, 1);
+        magma_status_t result = channel_write(&op, sizeof(op), &duplicate_handle_zx, 1);
         if (result != MAGMA_STATUS_OK) {
-            mx_handle_close(duplicate_handle);
+            zx_handle_close(duplicate_handle);
             return DRET_MSG(result, "failed to write to channel");
         }
 
@@ -424,14 +424,14 @@ public:
 
     magma_status_t ImportObject(uint32_t handle, PlatformObject::Type object_type) override
     {
-        mx_handle_t duplicate_handle_mx = handle;
+        zx_handle_t duplicate_handle_zx = handle;
 
         ImportObjectOp op;
         op.object_type = object_type;
 
-        magma_status_t result = channel_write(&op, sizeof(op), &duplicate_handle_mx, 1);
+        magma_status_t result = channel_write(&op, sizeof(op), &duplicate_handle_zx, 1);
         if (result != MAGMA_STATUS_OK) {
-            mx_handle_close(handle);
+            zx_handle_close(handle);
             return DRET_MSG(result, "failed to write to channel");
         }
 
@@ -478,10 +478,10 @@ public:
         ExecuteCommandBufferOp op;
         op.context_id = context_id;
 
-        mx_handle_t duplicate_handle_mx = command_buffer_handle;
-        magma_status_t result = channel_write(&op, sizeof(op), &duplicate_handle_mx, 1);
+        zx_handle_t duplicate_handle_zx = command_buffer_handle;
+        magma_status_t result = channel_write(&op, sizeof(op), &duplicate_handle_zx, 1);
         if (result != MAGMA_STATUS_OK) {
-            mx_handle_close(command_buffer_handle);
+            zx_handle_close(command_buffer_handle);
             SetError(result);
         }
     }
@@ -523,9 +523,9 @@ public:
             op->semaphore_ids[i] = semaphore_ids[i];
         }
 
-        mx_handle_t mx_buffer_presented_handle = buffer_presented_handle;
+        zx_handle_t zx_buffer_presented_handle = buffer_presented_handle;
         magma_status_t result =
-            channel_write(payload.get(), payload_size, &mx_buffer_presented_handle, 1);
+            channel_write(payload.get(), payload_size, &zx_buffer_presented_handle, 1);
         if (result != 0)
             SetError(result);
     }
@@ -553,7 +553,7 @@ public:
     void SetError(magma_status_t error)
     {
         if (!error_)
-            error_ = DRET_MSG(error, "MagentaPlatformIpcConnection encountered async error");
+            error_ = DRET_MSG(error, "ZirconPlatformIpcConnection encountered async error");
     }
 
     magma_status_t WaitError(magma_status_t* error_out)
@@ -563,27 +563,27 @@ public:
 
     magma_status_t WaitMessage(uint8_t* msg_out, uint32_t msg_size, bool blocking)
     {
-        mx_signals_t signals = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
-        mx_signals_t pending = 0;
+        zx_signals_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+        zx_signals_t pending = 0;
 
-        mx_status_t status = channel_.wait_one(signals, blocking ? MX_TIME_INFINITE : 0, &pending);
-        if (status == MX_ERR_TIMED_OUT) {
-            DLOG("got MX_ERR_TIMED_OUT, returning true");
+        zx_status_t status = channel_.wait_one(signals, blocking ? ZX_TIME_INFINITE : 0, &pending);
+        if (status == ZX_ERR_TIMED_OUT) {
+            DLOG("got ZX_ERR_TIMED_OUT, returning true");
             return 0;
-        } else if (status == MX_OK) {
-            DLOG("got MX_OK, blocking: %s, readable: %s, closed %s", blocking ? "true" : "false",
-                 pending & MX_CHANNEL_READABLE ? "true" : "false",
-                 pending & MX_CHANNEL_PEER_CLOSED ? "true" : "false");
-            if (pending & MX_CHANNEL_READABLE) {
+        } else if (status == ZX_OK) {
+            DLOG("got ZX_OK, blocking: %s, readable: %s, closed %s", blocking ? "true" : "false",
+                 pending & ZX_CHANNEL_READABLE ? "true" : "false",
+                 pending & ZX_CHANNEL_PEER_CLOSED ? "true" : "false");
+            if (pending & ZX_CHANNEL_READABLE) {
                 uint32_t actual_bytes;
-                mx_status_t status =
+                zx_status_t status =
                     channel_.read(0, msg_out, msg_size, &actual_bytes, nullptr, 0, nullptr);
-                if (status != MX_OK)
+                if (status != ZX_OK)
                     return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to read from channel");
                 if (actual_bytes != msg_size)
                     return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR,
                                     "read wrong number of bytes from channel");
-            } else if (pending & MX_CHANNEL_PEER_CLOSED) {
+            } else if (pending & ZX_CHANNEL_PEER_CLOSED) {
                 return DRET_MSG(MAGMA_STATUS_CONNECTION_LOST, "channel, closed");
             }
             return 0;
@@ -593,29 +593,29 @@ public:
     }
 
 private:
-    magma_status_t channel_write(const void* bytes, uint32_t num_bytes, const mx_handle_t* handles,
+    magma_status_t channel_write(const void* bytes, uint32_t num_bytes, const zx_handle_t* handles,
                                  uint32_t num_handles)
     {
-        mx_status_t status = channel_.write(0, bytes, num_bytes, handles, num_handles);
+        zx_status_t status = channel_.write(0, bytes, num_bytes, handles, num_handles);
         switch (status) {
-            case MX_OK:
+            case ZX_OK:
                 return MAGMA_STATUS_OK;
-            case MX_ERR_PEER_CLOSED:
+            case ZX_ERR_PEER_CLOSED:
                 return MAGMA_STATUS_CONNECTION_LOST;
             default:
                 return MAGMA_STATUS_INTERNAL_ERROR;
         }
     }
 
-    mx::channel channel_;
+    zx::channel channel_;
     uint32_t next_context_id_{};
     magma_status_t error_{};
 };
 
 std::unique_ptr<PlatformIpcConnection> PlatformIpcConnection::Create(uint32_t device_handle)
 {
-    return std::unique_ptr<MagentaPlatformIpcConnection>(
-        new MagentaPlatformIpcConnection(mx::channel(device_handle)));
+    return std::unique_ptr<ZirconPlatformIpcConnection>(
+        new ZirconPlatformIpcConnection(zx::channel(device_handle)));
 }
 
 std::shared_ptr<PlatformConnection>
@@ -624,17 +624,17 @@ PlatformConnection::Create(std::unique_ptr<PlatformConnection::Delegate> delegat
     if (!delegate)
         return DRETP(nullptr, "attempting to create PlatformConnection with null delegate");
 
-    mx::channel local_endpoint;
-    mx::channel remote_endpoint;
-    auto status = mx::channel::create(0, &local_endpoint, &remote_endpoint);
-    if (status != MX_OK)
-        return DRETP(nullptr, "mx::channel::create failed");
+    zx::channel local_endpoint;
+    zx::channel remote_endpoint;
+    auto status = zx::channel::create(0, &local_endpoint, &remote_endpoint);
+    if (status != ZX_OK)
+        return DRETP(nullptr, "zx::channel::create failed");
 
     auto shutdown_event = magma::PlatformEvent::Create();
     DASSERT(shutdown_event);
 
-    return std::shared_ptr<MagentaPlatformConnection>(
-        new MagentaPlatformConnection(std::move(delegate), std::move(local_endpoint),
+    return std::shared_ptr<ZirconPlatformConnection>(
+        new ZirconPlatformConnection(std::move(delegate), std::move(local_endpoint),
                                       std::move(remote_endpoint), std::move(shutdown_event)));
 }
 

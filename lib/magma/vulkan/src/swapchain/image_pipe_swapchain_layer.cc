@@ -48,7 +48,7 @@ struct ImagePipeSurface {
 };
 
 struct PendingImageInfo {
-    mx::event release_fence;
+    zx::event release_fence;
     uint32_t image_index;
 };
 
@@ -177,7 +177,7 @@ VkResult ImagePipeSwapchain::Initialize(VkDevice device,
             return result;
         }
 
-        mx::vmo vmo(vmo_handle);
+        zx::vmo vmo(vmo_handle);
 
         auto image_info = scenic::ImageInfo::New();
         image_info->width = width;
@@ -272,18 +272,18 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns, VkSemaphore s
         if (timeout_ns == 0)
             return VK_NOT_READY;
         // wait for image to become available
-        mx_signals_t pending;
+        zx_signals_t pending;
 
-        mx_status_t status = pending_images_[0].release_fence.wait_one(
-            MX_EVENT_SIGNALED,
-            timeout_ns == UINT64_MAX ? MX_TIME_INFINITE : mx_deadline_after(timeout_ns), &pending);
-        if (status == MX_ERR_TIMED_OUT) {
+        zx_status_t status = pending_images_[0].release_fence.wait_one(
+            ZX_EVENT_SIGNALED,
+            timeout_ns == UINT64_MAX ? ZX_TIME_INFINITE : zx_deadline_after(timeout_ns), &pending);
+        if (status == ZX_ERR_TIMED_OUT) {
             return VK_TIMEOUT;
-        } else if (status != MX_OK) {
+        } else if (status != ZX_OK) {
             FXL_DLOG(ERROR) << "event::wait_one returned " << status;
             return VK_ERROR_DEVICE_LOST;
         }
-        FXL_DCHECK(pending & MX_EVENT_SIGNALED);
+        FXL_DCHECK(pending & ZX_EVENT_SIGNALED);
 
         available_ids_.push_back(pending_images_[0].image_index);
         pending_images_.erase(pending_images_.begin());
@@ -315,28 +315,28 @@ VkResult ImagePipeSwapchain::Present(uint32_t index)
     FXL_DCHECK(iter != acquired_ids_.end());
     acquired_ids_.erase(iter);
 
-    mx::event acquire_fence, release_fence;
-    mx_status_t status;
-    status = mx::event::create(0, &acquire_fence);
-    if (status != MX_OK)
+    zx::event acquire_fence, release_fence;
+    zx_status_t status;
+    status = zx::event::create(0, &acquire_fence);
+    if (status != ZX_OK)
         return VK_ERROR_DEVICE_LOST;
 
-    status = mx::event::create(0, &release_fence);
-    if (status != MX_OK)
+    status = zx::event::create(0, &release_fence);
+    if (status != ZX_OK)
         return VK_ERROR_DEVICE_LOST;
 
-    status = acquire_fence.signal(0u, MX_EVENT_SIGNALED);
+    status = acquire_fence.signal(0u, ZX_EVENT_SIGNALED);
     if (status) {
-        FXL_DLOG(ERROR) << "failed to signal fence event, mx::event::signal() failed with status "
+        FXL_DLOG(ERROR) << "failed to signal fence event, zx::event::signal() failed with status "
                         << status;
         return VK_ERROR_DEVICE_LOST;
     }
 
-    mx::event image_release_fence;
-    status = release_fence.duplicate(MX_RIGHT_SAME_RIGHTS, &image_release_fence);
+    zx::event image_release_fence;
+    status = release_fence.duplicate(ZX_RIGHT_SAME_RIGHTS, &image_release_fence);
     if (status) {
         FXL_DLOG(ERROR)
-            << "failed to duplicate release fence, mx::event::duplicate() failed with status "
+            << "failed to duplicate release fence, zx::event::duplicate() failed with status "
             << status;
         return VK_ERROR_DEVICE_LOST;
     }
@@ -354,7 +354,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     VkLayerDispatchTable* pDisp =
         GetLayerDataPtr(get_dispatch_key(queue), layer_data_map)->device_dispatch_table;
 
-    // TODO(MA-264) Should export semaphores to an mx::event handle and give to ImagePipe consumer.
+    // TODO(MA-264) Should export semaphores to an zx::event handle and give to ImagePipe consumer.
     // For now we just idle the queue
     pDisp->QueueWaitIdle(queue);
 
@@ -389,7 +389,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateMagmaSurfaceKHR(VkInstance instance,
         {{VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR}});
     surface->supported_properties = {{pCreateInfo->width, pCreateInfo->height}, formats};
     surface->image_pipe = fidl::SynchronousInterfacePtr<scenic::ImagePipe>::Create(
-        fidl::InterfaceHandle<scenic::ImagePipe>(mx::channel(pCreateInfo->imagePipeHandle), 0u));
+        fidl::InterfaceHandle<scenic::ImagePipe>(zx::channel(pCreateInfo->imagePipeHandle), 0u));
     *pSurface = reinterpret_cast<VkSurfaceKHR>(surface);
     return VK_SUCCESS;
 }

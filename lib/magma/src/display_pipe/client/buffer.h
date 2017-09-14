@@ -6,8 +6,8 @@
 
 #include <stdint.h>
 
-#include <mx/event.h>
-#include <mx/vmo.h>
+#include <zx/event.h>
+#include <zx/vmo.h>
 
 struct Buffer {
  public:
@@ -18,19 +18,19 @@ struct Buffer {
   void Reset();
   void Signal();
 
-  const mx::event& acqure_fence() { return acquire_fence_; }
-  const mx::event& release_fence() { return release_fence_; }
+  const zx::event& acqure_fence() { return acquire_fence_; }
+  const zx::event& release_fence() { return release_fence_; }
 
-  void dupAcquireFence(mx::event *result) {
-     acquire_fence_.duplicate(MX_RIGHT_SAME_RIGHTS, result);
+  void dupAcquireFence(zx::event *result) {
+     acquire_fence_.duplicate(ZX_RIGHT_SAME_RIGHTS, result);
   }
 
-  void dupReleaseFence(mx::event *result) {
-     release_fence_.duplicate(MX_RIGHT_SAME_RIGHTS, result);
+  void dupReleaseFence(zx::event *result) {
+     release_fence_.duplicate(ZX_RIGHT_SAME_RIGHTS, result);
   }
 
-  void dupVmo(mx::vmo *result) {
-     vmo_.duplicate(MX_RIGHT_SAME_RIGHTS, result);
+  void dupVmo(zx::vmo *result) {
+     vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, result);
   }
 
   static Buffer *NewBuffer(uint32_t width, uint32_t height);
@@ -38,14 +38,14 @@ struct Buffer {
  private:
   Buffer() {};
 
-  mx::vmo vmo_;
+  zx::vmo vmo_;
   uint32_t *pixels_;
   uint64_t size_;
   uint32_t width_;
   uint32_t height_;
 
-  mx::event acquire_fence_;
-  mx::event release_fence_;
+  zx::event acquire_fence_;
+  zx::event release_fence_;
 };
 
 #endif  // _DISPLAY_PIPE_BUFFER_H_

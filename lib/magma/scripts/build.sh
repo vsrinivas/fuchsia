@@ -7,7 +7,7 @@
 set -e
 fuchsia_root=`pwd`
 tools_path=$fuchsia_root/buildtools
-magenta_build_dir=$fuchsia_root/out/build-magenta/build-magenta-pc-x86-64
+zircon_build_dir=$fuchsia_root/out/build-zircon/build-zircon-pc-x86-64
 build=debug
 bootfs=$fuchsia_root/out/user.bootfs
 
@@ -40,9 +40,9 @@ cp $build_dir/user.bootfs $bootfs
 
 echo "Recommended bootserver command:"
 echo ""
-echo "$magenta_build_dir/tools/bootserver $magenta_build_dir/magenta.bin $fuchsia_root/out/user.bootfs -- magenta.autorun.system=/system/bin/magma_autorun"
+echo "$zircon_build_dir/tools/bootserver $zircon_build_dir/zircon.bin $fuchsia_root/out/user.bootfs -- zircon.autorun.system=/system/bin/magma_autorun"
 echo ""
 echo "Recommended loglistener command:"
 echo ""
-echo "$magenta_build_dir/tools/loglistener | grep --line-buffered -F -f $fuchsia_root/magma/scripts/test_patterns.txt"
+echo "$zircon_build_dir/tools/loglistener | grep --line-buffered -F -f $fuchsia_root/magma/scripts/test_patterns.txt"
 echo ""

@@ -4,7 +4,7 @@
 
 NOTE: assumes you have a usb device at /dev/class/block/000
 
-netruncmd magenta 'minfs /dev/class/block/001 mkfs'
+netruncmd zircon 'minfs /dev/class/block/001 mkfs'
 
 then reboot
 

@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MAGENTA_PLATFORM_SEMAPHORE_H
-#define MAGENTA_PLATFORM_SEMAPHORE_H
+#ifndef ZIRCON_PLATFORM_SEMAPHORE_H
+#define ZIRCON_PLATFORM_SEMAPHORE_H
 
 #include "magma_util/macros.h"
-#include "mx/event.h"
+#include "zx/event.h"
 #include "platform_semaphore.h"
 #include "platform_trace.h"
 
 namespace magma {
 
-class MagentaPlatformSemaphore : public PlatformSemaphore {
+class ZirconPlatformSemaphore : public PlatformSemaphore {
 public:
-    MagentaPlatformSemaphore(mx::event event, uint64_t koid) : event_(std::move(event)), koid_(koid)
+    ZirconPlatformSemaphore(zx::event event, uint64_t koid) : event_(std::move(event)), koid_(koid)
     {
     }
 
@@ -24,7 +24,7 @@ public:
 
     void Reset() override
     {
-        event_.signal(mx_signal(), 0);
+        event_.signal(zx_signal(), 0);
         TRACE_DURATION("magma:sync", "semaphore reset", "id", koid_);
         TRACE_FLOW_END("magma:sync", "semaphore signal", koid_);
         TRACE_FLOW_END("magma:sync", "semaphore wait async", koid_);
@@ -34,23 +34,23 @@ public:
     {
         TRACE_DURATION("magma:sync", "semaphore signal", "id", koid_);
         TRACE_FLOW_BEGIN("magma:sync", "semaphore signal", koid_);
-        mx_status_t status = event_.signal(0u, mx_signal());
-        DASSERT(status == MX_OK);
+        zx_status_t status = event_.signal(0u, zx_signal());
+        DASSERT(status == ZX_OK);
     }
 
     bool Wait(uint64_t timeout_ms) override;
 
     bool WaitAsync(PlatformPort* platform_port) override;
 
-    mx_handle_t mx_handle() { return event_.get(); }
+    zx_handle_t zx_handle() { return event_.get(); }
 
-    mx_signals_t mx_signal() { return MX_EVENT_SIGNALED; }
+    zx_signals_t zx_signal() { return ZX_EVENT_SIGNALED; }
 
 private:
-    mx::event event_;
+    zx::event event_;
     uint64_t koid_;
 };
 
 } // namespace magma
 
-#endif // MAGENTA_PLATFORM_SEMAPHORE_H
+#endif // ZIRCON_PLATFORM_SEMAPHORE_H

@@ -8,7 +8,7 @@ ImagePipeImpl::ImagePipeImpl(std::shared_ptr<MagmaConnection> conn) : conn_(conn
 
 ImagePipeImpl::~ImagePipeImpl() = default;
 
-void ImagePipeImpl::AddImage(uint32_t image_id, scenic::ImageInfoPtr image_info, mx::vmo memory,
+void ImagePipeImpl::AddImage(uint32_t image_id, scenic::ImageInfoPtr image_info, zx::vmo memory,
                              scenic::MemoryType memory_type, uint64_t memory_offset)
 {
     if (images_.find(image_id) != images_.end()) {
@@ -31,7 +31,7 @@ void ImagePipeImpl::RemoveImage(uint32_t image_id)
 }
 
 void ImagePipeImpl::PresentImage(uint32_t image_id, uint64_t presentation_time,
-                                 mx::event acquire_fence, mx::event release_fence,
+                                 zx::event acquire_fence, zx::event release_fence,
                                  const PresentImageCallback& callback)
 {
     auto i = images_.find(image_id);

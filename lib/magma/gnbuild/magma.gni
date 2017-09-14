@@ -8,7 +8,7 @@ declare_args() {
   expat_build_root = "//third_party/expat"
   msd_intel_gen_build_root = "//drivers/gpu/msd-intel-gen"
   glm_build_root = "//third_party/glm"
-  magenta_build_root = "//magenta"
+  zircon_build_root = "//zircon"
   lib_vulkan_root = "$magma_build_root/vulkan"
 
   magma_python_path = rebase_path("//third_party/mako")

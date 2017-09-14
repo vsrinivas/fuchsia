@@ -56,7 +56,7 @@ bool MagmaConnection::GetDisplaySize(uint32_t *width, uint32_t *height) {
     return true;
 }
 
-bool MagmaConnection::ImportBuffer(const mx::vmo &vmo_handle,
+bool MagmaConnection::ImportBuffer(const zx::vmo &vmo_handle,
                                    magma_buffer_t *buffer) {
     magma_status_t status;
     status = magma_import(conn_, vmo_handle.get(), buffer);
@@ -73,7 +73,7 @@ bool MagmaConnection::CreateSemaphore(magma_semaphore_t *sem) {
     return status == MAGMA_STATUS_OK;
 }
 
-bool MagmaConnection::ImportSemaphore(const mx::event &event,
+bool MagmaConnection::ImportSemaphore(const zx::event &event,
                                       magma_semaphore_t *sem) {
     magma_status_t status;
     status = magma_import_semaphore(conn_, event.get(), sem);

@@ -7,7 +7,7 @@
 #else
 #include <vulkan/vulkan.h>
 #endif
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +16,7 @@
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
-#include "mxio/io.h"
+#include "fdio/io.h"
 
 class VkReadbackTest {
 public:
@@ -272,10 +272,10 @@ bool VkReadbackTest::InitImage()
 
     if (ext_ == EXTERNAL_MEMORY_FD && device_memory_handle_) {
         size_t vmo_size;
-        mx_vmo_get_size(device_memory_handle_, &vmo_size);
+        zx_vmo_get_size(device_memory_handle_, &vmo_size);
         VkImportMemoryFdInfoKHR magma_info = {VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR, nullptr,
                                               VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR,
-                                              mxio_vmo_fd(device_memory_handle_, 0, vmo_size)};
+                                              fdio_vmo_fd(device_memory_handle_, 0, vmo_size)};
         VkMemoryAllocateInfo info;
         info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         info.pNext = &magma_info;
@@ -286,7 +286,7 @@ bool VkReadbackTest::InitImage()
             VK_SUCCESS)
             return DRETF(false, "vkAllocateMemory failed");
     } else if (ext_ == EXTERNAL_MEMORY_FD) {
-        mx_handle_t vmo_handle = 0;
+        zx_handle_t vmo_handle = 0;
         int fd = 0;
         VkMemoryGetFdInfoKHR get_fd_info = {VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR, nullptr,
                                             vk_device_memory_,
@@ -303,14 +303,14 @@ bool VkReadbackTest::InitImage()
         if (result != VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR)
             return DRETF(false, "vkGetMemoryFdPropertiesKHR returned %d", result);
 
-        mx_status_t status = mxio_get_exact_vmo(fd, &vmo_handle);
-        if (status != MX_OK)
-            return DRETF(false, "mxio_get_exact_vmo failed: %d", status);
+        zx_status_t status = fdio_get_exact_vmo(fd, &vmo_handle);
+        if (status != ZX_OK)
+            return DRETF(false, "fdio_get_exact_vmo failed: %d", status);
         device_memory_handle_ = vmo_handle;
         DLOG("got device_memory_handle_ 0x%x", device_memory_handle_);
     } else if (ext_ == EXTERNAL_MEMORY_FUCHSIA && device_memory_handle_) {
         size_t vmo_size;
-        mx_vmo_get_size(device_memory_handle_, &vmo_size);
+        zx_vmo_get_size(device_memory_handle_, &vmo_size);
         VkImportMemoryFuchsiaHandleInfoKHR magma_info = {
             VK_STRUCTURE_TYPE_IMPORT_MEMORY_FUCHSIA_HANDLE_INFO_KHR, nullptr,
             VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR, device_memory_handle_};

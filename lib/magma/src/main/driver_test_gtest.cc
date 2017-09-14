@@ -9,7 +9,7 @@
 #include "gtest/gtest.h"
 #include <ddk/device.h>
 
-void magma_indriver_test(mx_device_t* device)
+void magma_indriver_test(zx_device_t* device)
 {
     DLOG("running magma unit tests");
     TestPlatformDevice::SetInstance(magma::PlatformDevice::Create(device));

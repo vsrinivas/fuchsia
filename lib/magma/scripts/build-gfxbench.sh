@@ -14,7 +14,7 @@ unset EDITOR
 
 CONFIG=Debug
 
-FUCHSIA_PLATFORM_OPTIONS="-DCMAKE_MAKE_PROGRAM=/Volumes/CaseSensitive/projects/fuchsia/buildtools/ninja -DFUCHSIA_SYSTEM_PROCESSOR=x86_64 -DFUCHSIA_SYSROOT=$fuchsia_root/out/build-magenta/build-magenta-pc-x86-64/sysroot -DVULKAN_INCLUDE_DIR=$VULKAN_INCLUDE_DIR -DVULKAN_LIBRARY=$VULKAN_LIBRARY"
+FUCHSIA_PLATFORM_OPTIONS="-DCMAKE_MAKE_PROGRAM=/Volumes/CaseSensitive/projects/fuchsia/buildtools/ninja -DFUCHSIA_SYSTEM_PROCESSOR=x86_64 -DFUCHSIA_SYSROOT=$fuchsia_root/out/build-zircon/build-zircon-pc-x86-64/sysroot -DVULKAN_INCLUDE_DIR=$VULKAN_INCLUDE_DIR -DVULKAN_LIBRARY=$VULKAN_LIBRARY"
 
 cd third_party/gfxbench
 WORKSPACE=${PWD} PLATFORM=fuchsia CONFIG=$CONFIG FUCHSIA_TOOLCHAIN_FILE=$fuchsia_root/build/Fuchsia.cmake NG_CMAKE_GENERATOR="Ninja" NG_CMAKE_PLATFORM_OPT=$FUCHSIA_PLATFORM_OPTIONS scripts/build-3rdparty.sh
@@ -25,9 +25,9 @@ echo --------------------------------------------------------------------------
 echo BUILD COMPLETE
 echo
 echo 'Copy to persistent storage on device (release build):'
-echo 'scp -r -F out/release-x86-64/ssh-keys/ssh_config third_party/gfxbench/tfw-pkg [`out/build-magenta/tools/netaddr --fuchsia`]:/data'
+echo 'scp -r -F out/release-x86-64/ssh-keys/ssh_config third_party/gfxbench/tfw-pkg [`out/build-zircon/tools/netaddr --fuchsia`]:/data'
 echo
 echo 'And execute:'
-echo "out/build-magenta/tools/netruncmd : '/data/tfw-pkg/bin/testfw_app -t vulkan_5_normal'"
+echo "out/build-zircon/tools/netruncmd : '/data/tfw-pkg/bin/testfw_app -t vulkan_5_normal'"
 echo
 echo --------------------------------------------------------------------------

@@ -23,6 +23,6 @@ executable("magma_info") {
   libs = [
     "driver",
     "ddk",
-    "magenta",
+    "zircon",
   ]
 }

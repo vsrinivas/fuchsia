@@ -6,8 +6,8 @@
 
 set -e
 fuchsia_root=`pwd`
-magenta_build_dir=$fuchsia_root/out/build-magenta/build-magenta-pc-x86-64
-netcp=$magenta_build_dir/tools/netcp
-netruncmd=$magenta_build_dir/tools/netruncmd
+zircon_build_dir=$fuchsia_root/out/build-zircon/build-zircon-pc-x86-64
+netcp=$zircon_build_dir/tools/netcp
+netruncmd=$zircon_build_dir/tools/netruncmd
 
 $netruncmd : 'dm reboot'

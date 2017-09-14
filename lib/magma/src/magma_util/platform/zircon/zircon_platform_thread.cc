@@ -5,9 +5,9 @@
 #include "platform_thread.h"
 #include <pthread.h>
 
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/object.h>
-#include <magenta/threads.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/threads.h>
 
 namespace magma {
 
@@ -15,7 +15,7 @@ uint32_t PlatformThreadId::GetCurrentThreadId() { return pthread_self(); }
 
 void PlatformThreadHelper::SetCurrentThreadName(const std::string& name)
 {
-    mx_object_set_property(thrd_get_mx_handle(thrd_current()), MX_PROP_NAME, name.c_str(),
+    zx_object_set_property(thrd_get_zx_handle(thrd_current()), ZX_PROP_NAME, name.c_str(),
                            name.size());
 }
 

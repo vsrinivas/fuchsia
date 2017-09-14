@@ -6,7 +6,7 @@
 #include <thread>
 
 #include "helper/platform_device_helper.h"
-#include "magenta/magenta_platform_ioctl.h"
+#include "zircon/zircon_platform_ioctl.h"
 #include "magma.h"
 #include "magma_util/macros.h"
 #include "gtest/gtest.h"
@@ -162,7 +162,7 @@ static void test_shutdown(uint32_t iters)
             if (complete_count > count) {
                 // Should replace this with a request to devmgr to restart the driver
                 EXPECT_EQ(
-                    mxio_ioctl(test_base.fd(), IOCTL_MAGMA_TEST_RESTART, nullptr, 0, nullptr, 0),
+                    fdio_ioctl(test_base.fd(), IOCTL_MAGMA_TEST_RESTART, nullptr, 0, nullptr, 0),
                     0);
                 count += kRestartCount;
             }

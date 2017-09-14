@@ -33,13 +33,13 @@ executable("display_pipe_service") {
     "//garnet/public/lib/images/fidl",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
-    "//magenta/system/ulib/mx",
+    "//zircon/system/ulib/zx",
     "//magma/src/display_pipe/services",
   ]
 
   libs = [
     "driver",
     "ddk",
-    "magenta",
+    "zircon",
   ]
 }
