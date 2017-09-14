@@ -23,8 +23,9 @@
 
 #include <fs/vfs.h>
 
+#include <hash/hash.h>
+
 #include "minfs.h"
-#include "misc.h"
 
 #define panic(fmt...)         \
     do {                      \

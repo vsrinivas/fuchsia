@@ -14,14 +14,14 @@
 #include <fbl/type_support.h>
 #include <fbl/unique_free_ptr.h>
 
+#include <hash/hash.h>
+
 #include <zircon/types.h>
 
 #include <assert.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
-
-#include "misc.h"
 
 #ifdef __Fuchsia__
 #include <block-client/client.h>

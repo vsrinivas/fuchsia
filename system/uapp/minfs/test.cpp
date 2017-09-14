@@ -15,8 +15,9 @@
 
 #include <fbl/algorithm.h>
 
+#include <hash/hash.h>
+
 #include "host.h"
-#include "misc.h"
 
 #define TRY(func) ({\
     int ret = (func); \
