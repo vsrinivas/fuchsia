@@ -62,9 +62,9 @@ func NewClient(path string, config *Config) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("wlan: client open: %v", err)
 	}
-	m := syscall.MXIOForFD(int(f.Fd()))
+	m := syscall.FDIOForFD(int(f.Fd()))
 	if m == nil {
-		return nil, fmt.Errorf("wlan: no mxio for %s fd: %d", path, f.Fd())
+		return nil, fmt.Errorf("wlan: no fdio for %s fd: %d", path, f.Fd())
 	}
 	info, err := eth.IoctlGetInfo(m)
 	if err != nil {
