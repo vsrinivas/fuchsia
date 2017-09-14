@@ -7,8 +7,8 @@
 // failure of the test.
 
 #include <launchpad/launchpad.h>
-#include <magenta/processargs.h>
-#include <magenta/status.h>
+#include <zircon/processargs.h>
+#include <zircon/status.h>
 
 #include <iostream>
 
@@ -50,7 +50,7 @@ bool RunTest(std::shared_ptr<app::ApplicationContext> app_context,
              const std::vector<std::string>& args) {
   uint64_t random_number;
   size_t random_size;
-  mx_cprng_draw(&random_number, sizeof random_number, &random_size);
+  zx_cprng_draw(&random_number, sizeof random_number, &random_size);
   std::string test_id = fxl::StringPrintf("test_%lX", random_number);
   TestRunObserverImpl observer(test_id);
   test_runner::TestRunContext context(app_context, &observer, test_id, url,

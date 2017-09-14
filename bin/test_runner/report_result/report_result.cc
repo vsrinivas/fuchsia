@@ -4,8 +4,8 @@
 
 #include <iostream>
 #include <launchpad/launchpad.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls/object.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls/object.h>
 #include <unistd.h>
 
 #include "lib/app/cpp/application_context.h"
@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
   int stderr_pipe;
   launchpad_create(0, argv[1], &launchpad);
   launchpad_load_from_file(launchpad, argv[1]);
-  launchpad_clone(launchpad, LP_CLONE_MXIO_NAMESPACE);
+  launchpad_clone(launchpad, LP_CLONE_FDIO_NAMESPACE);
   launchpad_add_pipe(launchpad, &stdout_pipe, 1);
   launchpad_add_pipe(launchpad, &stderr_pipe, 2);
   launchpad_set_args(launchpad, argc - 1, argv + 1);
@@ -92,8 +92,8 @@ int main(int argc, char** argv) {
   reporter.Start();
 
   const char* error;
-  mx_handle_t handle;
-  mx_status_t status = launchpad_go(launchpad, &handle, &error);
+  zx_handle_t handle;
+  zx_status_t status = launchpad_go(launchpad, &handle, &error);
   if (status < 0) {
     reporter.Finish(true, error);
     return 1;
@@ -106,16 +106,16 @@ int main(int argc, char** argv) {
   ReadPipe(stderr_pipe, &stream);
 
   status =
-      mx_object_wait_one(handle, MX_PROCESS_TERMINATED, MX_TIME_INFINITE, NULL);
-  if (status != MX_OK) {
+      zx_object_wait_one(handle, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL);
+  if (status != ZX_OK) {
     reporter.Finish(true, "Failed to wait for exit");
     return 1;
   }
 
-  mx_info_process_t proc_info;
-  status = mx_object_get_info(handle, MX_INFO_PROCESS, &proc_info,
+  zx_info_process_t proc_info;
+  status = zx_object_get_info(handle, ZX_INFO_PROCESS, &proc_info,
                               sizeof(proc_info), NULL, NULL);
-  mx_handle_close(handle);
+  zx_handle_close(handle);
   if (status < 0) {
     reporter.Finish(true, "Failed to get return code");
     return 1;

@@ -146,7 +146,7 @@ class FuchsiaTools(object):
     return (command, f)
 
   def netaddr(self, device):
-    path = os.path.join(self.fuchsia_out_dir, 'build-magenta/tools/netaddr')
+    path = os.path.join(self.fuchsia_out_dir, 'build-zircon/tools/netaddr')
     command = [
       path,
       '--fuchsia',
@@ -156,7 +156,7 @@ class FuchsiaTools(object):
     return command
 
   def netls(self):
-    path = os.path.join(self.fuchsia_out_dir, 'build-magenta/tools/netls')
+    path = os.path.join(self.fuchsia_out_dir, 'build-zircon/tools/netls')
     command = [
       path,
       '--timeout=500',

@@ -10,7 +10,7 @@ integration tests).
 ## Instructions
 
 #### Prerequisites
-- An instance of magenta running (on QEMU or real device), configured with
+- An instance of zircon running (on QEMU or real device), configured with
   networking. For example, see [networking configuration
   doc](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Enabling-Network).
   For QEMU, see also the warning below.
@@ -31,7 +31,7 @@ e1000,netdev=net0 -netdev user,id=net0,hostfwd=tcp::8342-:8342` and then run
 
 #### Running the tests
 
-The script will automatically search for a Magenta device on the local
+The script will automatically search for a Zircon device on the local
 subnet and use it. This discovery is performed using ipv6. This process
 works for both QEMU and for real hardware, but not for the
 [Fuchsia test infrastructure](#Fuchsia-test-infrastructure).
@@ -60,7 +60,7 @@ If you have more than one device, you can select a particular device with
 or you can view all connected devices with the netls command, like this:
 
 ```sh
-$FUCHSIA_OUT_DIR/build-magenta/tools/netls
+$FUCHSIA_OUT_DIR/build-zircon/tools/netls
 ```
 
 Pass the device name to the `run_test` tool:

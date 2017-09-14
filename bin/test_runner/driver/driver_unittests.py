@@ -72,11 +72,11 @@ class FuchsiaToolsTest(unittest.TestCase):
     tools = FuchsiaTools(self.ENV)
     self.assertEqual(
         tools.netaddr('friend'),
-        ['out/build-magenta/tools/netaddr', '--fuchsia', 'friend'])
+        ['out/build-zircon/tools/netaddr', '--fuchsia', 'friend'])
 
   def test_netls(self):
     tools = FuchsiaTools(self.ENV)
-    self.assertEqual(tools.netls()[0], 'out/build-magenta/tools/netls')
+    self.assertEqual(tools.netls()[0], 'out/build-zircon/tools/netls')
 
   # TODO(jimbe) This test should test the contents of the batch file
   def test_sftp(self):

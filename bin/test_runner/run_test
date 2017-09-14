@@ -24,7 +24,7 @@ def parse_args(argv):
   parser.add_argument(
       '--server',
       help='Server to connect to. This can be an IPv4 or IPv6 hostname or '
-           'address (IPv4 will be attempted first), a Magenta device name, or '
+           'address (IPv4 will be attempted first), a Zircon device name, or '
            'a single colon meaning to use the default device given by netls.',
       type=str,
       default=':')
