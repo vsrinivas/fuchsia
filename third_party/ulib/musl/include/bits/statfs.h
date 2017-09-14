@@ -1,7 +1,7 @@
-#if defined(__x86_64__)
-#include "generic/statfs.h"
-#elif defined(__aarch64__)
-#include "generic/statfs.h"
-#else
-#error Unsupported architecture!
-#endif
+struct statfs {
+    unsigned long f_type, f_bsize;
+    fsblkcnt_t f_blocks, f_bfree, f_bavail;
+    fsfilcnt_t f_files, f_ffree;
+    fsid_t f_fsid;
+    unsigned long f_namelen, f_frsize, f_flags, f_spare[4];
+};
