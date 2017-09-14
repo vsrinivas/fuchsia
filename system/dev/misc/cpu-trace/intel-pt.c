@@ -22,7 +22,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <threads.h>
+
+#include "cpu-trace-private.h"
 
 typedef enum {
     IPT_TRACE_CPUS,
@@ -146,7 +147,7 @@ static zx_status_t x86_pt_free(ipt_device_t* ipt_dev);
 
 // The userspace side of the driver
 
-static void x86_pt_init(void)
+void ipt_init_once(void)
 {
     unsigned a, b, c, d, max_leaf;
 
@@ -556,7 +557,7 @@ static zx_status_t x86_pt_free_buffer(ipt_device_t* ipt_dev, uint32_t index) {
 
 // ioctl handlers
 
-static zx_status_t ipt_alloc_trace(ipt_uber_device_t* dev,
+static zx_status_t ipt_alloc_trace(cpu_trace_device_t* dev,
                                    const void* cmd, size_t cmdlen) {
     if (!ipt_config_supported)
         return ZX_ERR_NOT_SUPPORTED;
@@ -615,7 +616,7 @@ static zx_status_t ipt_alloc_trace(ipt_uber_device_t* dev,
     return ZX_OK;
 }
 
-static zx_status_t ipt_free_trace(ipt_uber_device_t* dev) {
+static zx_status_t ipt_free_trace(cpu_trace_device_t* dev) {
     ipt_device_t* ipt_dev = dev->ipt;
     if (ipt_dev->active)
         return ZX_ERR_BAD_STATE;
@@ -890,29 +891,10 @@ static zx_status_t ipt_stop(ipt_device_t* ipt_dev) {
     return ZX_OK;
 }
 
-
-// The DDK interface
-
-static zx_status_t ipt_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
-    ipt_uber_device_t* dev = ctx;
-    if (dev->opened)
-        return ZX_ERR_ALREADY_BOUND;
-
-    dev->opened = true;
-    return ZX_OK;
-}
-
-static zx_status_t ipt_close(void* ctx, uint32_t flags) {
-    ipt_uber_device_t* dev = ctx;
-
-    dev->opened = false;
-    return ZX_OK;
-}
-
-static zx_status_t ipt_ioctl1(ipt_uber_device_t* dev, uint32_t op,
-                              const void* cmd, size_t cmdlen,
-                              void* reply, size_t replymax,
-                              size_t* out_actual) {
+zx_status_t ipt_ioctl(cpu_trace_device_t* dev, uint32_t op,
+                      const void* cmd, size_t cmdlen,
+                      void* reply, size_t replymax,
+                      size_t* out_actual) {
     assert(IOCTL_FAMILY(op) == IOCTL_FAMILY_IPT);
 
     ipt_device_t* ipt_dev = dev->ipt;
@@ -979,80 +961,11 @@ static zx_status_t ipt_ioctl1(ipt_uber_device_t* dev, uint32_t op,
     }
 }
 
-static zx_status_t ipt_ioctl(void* ctx, uint32_t op,
-                             const void* cmd, size_t cmdlen,
-                             void* reply, size_t replymax, size_t* out_actual) {
-    ipt_uber_device_t* dev = ctx;
-
-    mtx_lock(&dev->lock);
-
-    ssize_t result;
-    switch (IOCTL_FAMILY(op)) {
-        case IOCTL_FAMILY_IPT:
-            result = ipt_ioctl1(dev, op, cmd, cmdlen,
-                                reply, replymax, out_actual);
-            break;
-        default:
-            result = ZX_ERR_INVALID_ARGS;
-            break;
-    }
-
-    mtx_unlock(&dev->lock);
-
-    return result;
-}
-
-static void ipt_release(void* ctx) {
-    ipt_uber_device_t* dev = ctx;
-
+void ipt_release(cpu_trace_device_t* dev) {
     // TODO(dje): None of these should fail. What to do?
     // For now flag things as busted and prevent further use.
     if (dev->ipt) {
         ipt_stop(dev->ipt);
         ipt_free_trace(dev);
     }
-
-    free(dev);
 }
-
-static zx_protocol_device_t ipt_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .open = ipt_open,
-    .close = ipt_close,
-    .ioctl = ipt_ioctl,
-    .release = ipt_release,
-};
-
-static zx_status_t ipt_bind(void* ctx, zx_device_t* parent, void** cookie) {
-    x86_pt_init();
-    if (!ipt_config_supported)
-        return ZX_ERR_NOT_SUPPORTED;
-
-    ipt_uber_device_t* dev = calloc(1, sizeof(*dev));
-    if (!dev)
-        return ZX_ERR_NO_MEMORY;
-
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "intel-pt",
-        .ctx = dev,
-        .ops = &ipt_device_proto,
-    };
-
-    zx_status_t status;
-    if ((status = device_add(parent, &args, NULL)) < 0) {
-        free(dev);
-        return status;
-    }
-
-    return ZX_OK;
-}
-
-static zx_driver_ops_t ipt_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = ipt_bind,
-};
-
-ZIRCON_DRIVER_BEGIN(intel_pt, ipt_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
-ZIRCON_DRIVER_END(intel_pt)

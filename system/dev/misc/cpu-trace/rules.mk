@@ -10,7 +10,9 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_SRCS := $(LOCAL_DIR)/intel-pt.c
+MODULE_SRCS := \
+    $(LOCAL_DIR)/cpu-trace.c \
+    $(LOCAL_DIR)/intel-pt.c
 
 MODULE_STATIC_LIBS := system/ulib/ddk
 
