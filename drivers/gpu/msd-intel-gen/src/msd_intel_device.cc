@@ -202,7 +202,7 @@ bool MsdIntelDevice::Init(void* device_handle)
 
     DLOG("Init device_handle %p", device_handle);
 
-    platform_device_ = magma::PlatformDevice::Create(device_handle);
+    platform_device_ = magma::PlatformPciDevice::Create(device_handle);
     if (!platform_device_)
         return DRETF(false, "failed to create platform device");
 

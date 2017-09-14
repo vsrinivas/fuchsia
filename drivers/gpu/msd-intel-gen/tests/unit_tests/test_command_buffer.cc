@@ -170,7 +170,7 @@ public:
 private:
     Test()
     {
-        auto platform_device = TestPlatformDevice::GetInstance();
+        auto platform_device = TestPlatformPciDevice::GetInstance();
         if (!platform_device)
             DLOG("TestCommandBuffer: No platform device");
         DLOG("creating helper");

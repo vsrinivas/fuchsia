@@ -23,7 +23,7 @@ class TestMsdIntelDevice {
 public:
     void CreateAndDestroy()
     {
-        magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+        magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
         ASSERT_NE(platform_device, nullptr);
 
         std::unique_ptr<MsdIntelDevice> device =
@@ -66,7 +66,7 @@ public:
 
     void Dump()
     {
-        magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+        magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
         ASSERT_NE(platform_device, nullptr);
 
         std::unique_ptr<MsdIntelDevice> device =
@@ -144,7 +144,7 @@ public:
 
     void BatchBuffer(bool should_wrap_ringbuffer)
     {
-        magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+        magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
         ASSERT_NE(platform_device, nullptr);
 
         std::unique_ptr<MsdIntelDevice> device(
@@ -235,7 +235,7 @@ public:
 
     void ProcessRequest()
     {
-        magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+        magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
         ASSERT_NE(platform_device, nullptr);
 
         std::unique_ptr<MsdIntelDevice> device(
@@ -270,7 +270,7 @@ public:
 
     void MaxFreq()
     {
-        magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+        magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
         ASSERT_NE(platform_device, nullptr);
 
         std::unique_ptr<MsdIntelDevice> device =
@@ -292,7 +292,7 @@ public:
 
     void QuerySliceInfo()
     {
-        magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+        magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
         ASSERT_NE(platform_device, nullptr);
 
         std::unique_ptr<MsdIntelDevice> device =

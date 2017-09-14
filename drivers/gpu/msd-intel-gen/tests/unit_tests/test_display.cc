@@ -11,7 +11,7 @@ class TestDisplay {
 public:
     static void Flip(uint32_t num_buffers, uint32_t num_frames)
     {
-        magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+        magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
         ASSERT_NE(platform_device, nullptr);
 
         std::unique_ptr<MsdIntelDevice> device(
@@ -71,7 +71,7 @@ public:
 
     static std::unique_ptr<TestDisplay> Create()
     {
-        magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+        magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
         if (!platform_device)
             return DRETP(nullptr, "no platform_device");
 

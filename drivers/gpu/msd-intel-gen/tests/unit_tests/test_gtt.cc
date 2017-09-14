@@ -15,9 +15,9 @@ public:
 
 namespace {
 
-class MockPlatformDevice : public magma::PlatformDevice {
+class MockPlatformPciDevice : public magma::PlatformPciDevice {
 public:
-    MockPlatformDevice(uint64_t bar0_size) : bar0_size_(bar0_size) {}
+    MockPlatformPciDevice(uint64_t bar0_size) : bar0_size_(bar0_size) {}
 
     void* GetDeviceHandle() override { return nullptr; }
 
@@ -99,7 +99,7 @@ public:
         uint64_t reg_size = gtt_size;
 
         platform_device =
-            std::unique_ptr<MockPlatformDevice>(new MockPlatformDevice(reg_size + gtt_size));
+            std::unique_ptr<MockPlatformPciDevice>(new MockPlatformPciDevice(reg_size + gtt_size));
         reg_io = std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(reg_size)));
         gtt = std::unique_ptr<Gtt>(new Gtt(GpuMappingCache::Create()));
 
@@ -124,7 +124,8 @@ public:
         uint64_t gtt_size = 8ULL * 1024 * 1024;
         uint64_t bar0_size = gtt_size * 2;
 
-        platform_device = std::shared_ptr<MockPlatformDevice>(new MockPlatformDevice(bar0_size));
+        platform_device =
+            std::shared_ptr<MockPlatformPciDevice>(new MockPlatformPciDevice(bar0_size));
         reg_io = std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(bar0_size)));
         gtt = std::unique_ptr<Gtt>(new Gtt(GpuMappingCache::Create()));
 
@@ -209,7 +210,7 @@ public:
         EXPECT_TRUE(ret);
     }
 
-    std::shared_ptr<MockPlatformDevice> platform_device;
+    std::shared_ptr<MockPlatformPciDevice> platform_device;
     std::unique_ptr<RegisterIo> reg_io;
     std::unique_ptr<Gtt> gtt;
 };

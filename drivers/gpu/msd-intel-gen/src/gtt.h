@@ -8,7 +8,7 @@
 #include "address_space.h"
 #include "magma_util/address_space_allocator.h"
 #include "platform_buffer.h"
-#include "platform_device.h"
+#include "platform_pci_device.h"
 #include "register_io.h"
 #include <memory>
 
@@ -18,7 +18,7 @@ public:
 
     uint64_t Size() const override { return size_; }
 
-    bool Init(uint64_t gtt_size, magma::PlatformDevice* platform_device);
+    bool Init(uint64_t gtt_size, magma::PlatformPciDevice* platform_device);
 
     // AddressSpace overrides
     bool Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out) override;
@@ -33,7 +33,7 @@ private:
 
     magma::PlatformBuffer* scratch_buffer() { return scratch_.get(); }
 
-    bool MapGttMmio(magma::PlatformDevice* platform_device);
+    bool MapGttMmio(magma::PlatformPciDevice* platform_device);
     bool InitScratch();
     bool InitPageTables(uint64_t start);
     bool Clear(uint64_t start, uint64_t length);

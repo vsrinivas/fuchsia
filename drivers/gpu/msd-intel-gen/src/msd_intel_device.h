@@ -16,7 +16,7 @@
 #include "magma_util/thread.h"
 #include "msd.h"
 #include "msd_intel_connection.h"
-#include "platform_device.h"
+#include "platform_pci_device.h"
 #include "platform_semaphore.h"
 #include "register_io.h"
 #include "sequencer.h"
@@ -189,7 +189,7 @@ private:
     std::thread interrupt_thread_;
     std::thread wait_thread_;
 
-    std::unique_ptr<magma::PlatformDevice> platform_device_;
+    std::unique_ptr<magma::PlatformPciDevice> platform_device_;
     std::unique_ptr<RegisterIo> register_io_;
     std::shared_ptr<Gtt> gtt_;
     std::unique_ptr<RenderEngineCommandStreamer> render_engine_cs_;

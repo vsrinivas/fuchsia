@@ -74,7 +74,7 @@ private:
 
 TEST(ForceWake, Reset)
 {
-    magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+    magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
     ASSERT_NE(platform_device, nullptr);
 
     uint16_t device_id;
@@ -92,7 +92,7 @@ TEST(ForceWake, Reset)
 
 TEST(ForceWake, Request)
 {
-    magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+    magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
     ASSERT_NE(platform_device, nullptr);
 
     uint16_t device_id;
@@ -110,7 +110,7 @@ TEST(ForceWake, Request)
 
 TEST(ForceWake, Release)
 {
-    magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+    magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
     ASSERT_NE(platform_device, nullptr);
 
     uint16_t device_id;

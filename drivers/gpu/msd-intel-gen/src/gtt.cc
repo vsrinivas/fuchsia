@@ -19,7 +19,7 @@ static inline gen_pte_t gen_pte_encode(uint64_t bus_addr, bool valid)
 
 Gtt::Gtt(std::shared_ptr<GpuMappingCache> cache) : AddressSpace(ADDRESS_SPACE_GGTT, cache) {}
 
-bool Gtt::Init(uint64_t gtt_size, magma::PlatformDevice* platform_device)
+bool Gtt::Init(uint64_t gtt_size, magma::PlatformPciDevice* platform_device)
 {
     // address space size
     size_ = (gtt_size / sizeof(gen_pte_t)) * PAGE_SIZE;
@@ -57,7 +57,7 @@ bool Gtt::InitPageTables(uint64_t start)
     return true;
 }
 
-bool Gtt::MapGttMmio(magma::PlatformDevice* platform_device)
+bool Gtt::MapGttMmio(magma::PlatformPciDevice* platform_device)
 {
     mmio_ = platform_device->CpuMapPciMmio(0, magma::PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE);
     if (!mmio_)
