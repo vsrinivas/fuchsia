@@ -63,5 +63,5 @@ tar jcvf "${TARBALL}" "${TOOLCHAIN_DIR}"
 # Upload the prebuilts to Google Storage.  We don't do any authentication here because
 # we assume that the environment has been set up with auth already.  For notes on
 # how to do that, see: https://cloud.google.com/storage/docs/authentication
-readonly GS_BUCKET="gs://fuchsia-build/zircon/toolchain/${ARCH}-${ABI}/${OS}-${HOSTARCH}"
+readonly GS_BUCKET="gs://fuchsia-build/magenta/toolchain/${ARCH}-${ABI}/${OS}-${HOSTARCH}"
 gsutil cp "${TARBALL}" "${GS_BUCKET}/${GIT_SHA}"
