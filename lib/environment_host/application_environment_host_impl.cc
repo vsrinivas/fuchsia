@@ -25,7 +25,7 @@ ApplicationEnvironmentHostImpl::ApplicationEnvironmentHostImpl(
         app::ConnectToService(services.get(), std::move(request));
       });
   AddServiceForName(
-      [parent_env](mx::channel request) {
+      [parent_env](zx::channel request) {
         app::ServiceProviderPtr services;
         parent_env->GetServices(services.NewRequest());
         services->ConnectToService(kNetstack, std::move(request));
