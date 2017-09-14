@@ -8,11 +8,11 @@
 
 #include <iomanip>
 
-#include "lib/app/cpp/connect.h"
 #include "garnet/examples/media/vu_meter/vu_meter_params.h"
-#include "lib/media/fidl/media_service.fidl.h"
-#include "lib/fxl/logging.h"
+#include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
+#include "lib/media/fidl/media_service.fidl.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkPath.h"
 
@@ -160,8 +160,8 @@ void VuMeterView::OnGotSupportedMediaTypes(
     channels_ = std::max(std::min(2u, audio_details.max_channels),
                          audio_details.min_channels);
     frames_per_second_ =
-      std::max(std::min(2u, audio_details.max_frames_per_second),
-               audio_details.min_frames_per_second);
+        std::max(std::min(2u, audio_details.max_frames_per_second),
+                 audio_details.min_frames_per_second);
 
     auto tmp = media::AudioMediaTypeDetails::New();
     tmp->sample_format = media::AudioSampleFormat::SIGNED_16;
@@ -174,10 +174,8 @@ void VuMeterView::OnGotSupportedMediaTypes(
     cfg->details = media::MediaTypeDetails::New();
     cfg->details->set_audio(std::move(tmp));
 
-    FXL_LOG(INFO) << "Configured capture for "
-                  << channels_
-                  << " channel" << ((channels_ == 1) ? " " : "s ")
-                  << frames_per_second_
+    FXL_LOG(INFO) << "Configured capture for " << channels_ << " channel"
+                  << ((channels_ == 1) ? " " : "s ") << frames_per_second_
                   << " Hz 16-bit LPCM";
 
     media_capturer_->SetMediaType(std::move(cfg));
@@ -186,8 +184,7 @@ void VuMeterView::OnGotSupportedMediaTypes(
   }
 
   FXL_LOG(WARNING) << "No compatible media types detect among the "
-                   << media_types.size()
-                   << " supplied.";
+                   << media_types.size() << " supplied.";
 }
 
 void VuMeterView::OnPacketSupplied(

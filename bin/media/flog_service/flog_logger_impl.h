@@ -7,11 +7,11 @@
 #include <memory>
 #include <vector>
 
-#include "lib/media/fidl/flog/flog.fidl.h"
 #include "garnet/bin/media/flog_service/flog_directory.h"
 #include "garnet/bin/media/flog_service/flog_service_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/internal/router.h"
+#include "lib/media/fidl/flog/flog.fidl.h"
 
 namespace flog {
 

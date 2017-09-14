@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "lib/app/cpp/application_context.h"
 #include "garnet/examples/media/audio_player/audio_player_params.h"
-#include "lib/media/timeline/timeline_function.h"
-#include "lib/media/fidl/net_media_player.fidl.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
+#include "lib/media/fidl/net_media_player.fidl.h"
+#include "lib/media/timeline/timeline_function.h"
 
 namespace examples {
 

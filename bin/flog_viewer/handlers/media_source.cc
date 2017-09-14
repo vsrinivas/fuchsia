@@ -6,9 +6,9 @@
 
 #include <iostream>
 
-#include "lib/media/fidl/logs/media_source_channel.fidl.h"
 #include "garnet/bin/flog_viewer/flog_viewer.h"
 #include "garnet/bin/flog_viewer/handlers/media_formatting.h"
+#include "lib/media/fidl/logs/media_source_channel.fidl.h"
 
 namespace flog {
 namespace handlers {
@@ -42,8 +42,7 @@ std::shared_ptr<Accumulator> MediaSource::GetAccumulator() {
 }
 
 void MediaSource::BoundAs(uint64_t koid) {
-  terse_out() << EntryHeader(entry(), entry_index())
-              << "MediaSource.BoundAs\n";
+  terse_out() << EntryHeader(entry(), entry_index()) << "MediaSource.BoundAs\n";
   terse_out() << indent;
   terse_out() << begl << "koid: " << AsKoid(koid) << "\n";
   terse_out() << outdent;

@@ -8,9 +8,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/file_descriptor.h"
 #include "lib/fxl/logging.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace media {
 

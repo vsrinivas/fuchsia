@@ -7,9 +7,9 @@
 #include <trace/event.h>
 
 #include "garnet/bin/media/ffmpeg/av_codec_context.h"
-#include "lib/fxl/logging.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/create_thread.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 

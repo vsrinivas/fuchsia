@@ -6,14 +6,14 @@
 
 #include <vector>
 
-#include "lib/media/timeline/timeline_rate.h"
-#include "lib/media/fidl/logs/media_renderer_channel.fidl.h"
 #include "garnet/bin/flog_viewer/accumulator.h"
 #include "garnet/bin/flog_viewer/channel_handler.h"
 #include "garnet/bin/flog_viewer/counted.h"
 #include "garnet/bin/flog_viewer/handlers/media_packet_consumer.h"
 #include "garnet/bin/flog_viewer/handlers/media_timeline_control_point.h"
 #include "garnet/bin/flog_viewer/tracked.h"
+#include "lib/media/fidl/logs/media_renderer_channel.fidl.h"
+#include "lib/media/timeline/timeline_rate.h"
 
 namespace flog {
 namespace handlers {

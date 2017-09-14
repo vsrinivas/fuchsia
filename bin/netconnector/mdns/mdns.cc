@@ -15,9 +15,9 @@
 #include "garnet/bin/netconnector/mdns/mdns_addresses.h"
 #include "garnet/bin/netconnector/mdns/mdns_names.h"
 #include "garnet/bin/netconnector/mdns/resource_renewer.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace netconnector {
 namespace mdns {

@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include "garnet/examples/media/vu_meter/vu_meter_view.h"
-#include "lib/ui/view_framework/view_provider_app.h"
-#include "lib/fxl/command_line.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/command_line.h"
+#include "lib/ui/view_framework/view_provider_app.h"
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

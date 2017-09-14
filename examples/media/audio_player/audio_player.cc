@@ -6,14 +6,14 @@
 
 #include <iomanip>
 
-#include "lib/app/cpp/connect.h"
 #include "garnet/examples/media/audio_player/audio_player_params.h"
-#include "lib/media/timeline/timeline.h"
+#include "lib/app/cpp/connect.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
 #include "lib/media/fidl/audio_renderer.fidl.h"
 #include "lib/media/fidl/media_service.fidl.h"
 #include "lib/media/fidl/net_media_service.fidl.h"
-#include "lib/fxl/logging.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/media/timeline/timeline.h"
 
 namespace examples {
 

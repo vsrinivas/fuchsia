@@ -7,13 +7,13 @@
 #include <memory>
 #include <vector>
 
-#include "lib/media/timeline/timeline.h"
-#include "lib/media/timeline/timeline_function.h"
-#include "lib/media/fidl/timeline_controller.fidl.h"
 #include "garnet/bin/media/media_service/media_service_impl.h"
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/media/fidl/timeline_controller.fidl.h"
+#include "lib/media/timeline/timeline.h"
+#include "lib/media/timeline/timeline_function.h"
 
 namespace media {
 

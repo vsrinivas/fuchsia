@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "lib/app/cpp/application_context.h"
-#include "lib/media/fidl/media_service.fidl.h"
 #include "garnet/bin/media/util/factory_service_base.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
+#include "lib/media/fidl/media_service.fidl.h"
 
 namespace media {
 

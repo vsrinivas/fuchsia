@@ -8,15 +8,15 @@
 #include <errno.h>
 #include <sys/socket.h>
 
+#include "garnet/bin/media/util/fidl_publisher.h"
 #include "garnet/bin/netconnector/mdns/mdns_addresses.h"
 #include "garnet/go/src/netstack/apps/include/netconfig.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/app/fidl/service_provider.fidl.h"
-#include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace netconnector {
 namespace mdns {
@@ -32,7 +32,8 @@ const fxl::TimeDelta MdnsTransceiver::kMaxAddressRecheckDelay =
 MdnsTransceiver::MdnsTransceiver()
     : task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
       application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
-  netstack_ = application_context_->ConnectToEnvironmentService<netstack::Netstack>();
+  netstack_ =
+      application_context_->ConnectToEnvironmentService<netstack::Netstack>();
 }
 
 MdnsTransceiver::~MdnsTransceiver() {}
@@ -111,7 +112,8 @@ bool MdnsTransceiver::FindNewInterfaces() {
           // We seem to get a good family value regardless of whether we have an
           // IP
           // address, but we check anyway.
-          if (if_info->addr->family == netstack::NetAddressFamily::UNSPECIFIED) {
+          if (if_info->addr->family ==
+              netstack::NetAddressFamily::UNSPECIFIED) {
             FXL_LOG(ERROR) << "Not starting mDNS for interface "
                            << if_info->name << ": unspecified address family";
             continue;
@@ -132,7 +134,8 @@ bool MdnsTransceiver::FindNewInterfaces() {
             }
 
             std::unique_ptr<MdnsInterfaceTransceiver> interface =
-                MdnsInterfaceTransceiver::Create(if_info.get(), interfaces_.size());
+                MdnsInterfaceTransceiver::Create(if_info.get(),
+                                                 interfaces_.size());
 
             if (!interface->Start(host_full_name_, inbound_message_callback_)) {
               continue;

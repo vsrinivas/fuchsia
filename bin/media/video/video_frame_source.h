@@ -8,19 +8,19 @@
 #include <queue>
 #include <unordered_set>
 
-#include "lib/media/flog/flog.h"
-#include "lib/media/timeline/timeline_function.h"
-#include "lib/media/transport/media_packet_consumer_base.h"
+#include "garnet/bin/media/util/fidl_publisher.h"
+#include "garnet/bin/media/util/timeline_control_point.h"
+#include "garnet/bin/media/video/video_converter.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/media/fidl/logs/media_renderer_channel.fidl.h"
 #include "lib/media/fidl/media_renderer.fidl.h"
 #include "lib/media/fidl/media_transport.fidl.h"
 #include "lib/media/fidl/video_renderer.fidl.h"
-#include "garnet/bin/media/util/fidl_publisher.h"
-#include "garnet/bin/media/util/timeline_control_point.h"
-#include "garnet/bin/media/video/video_converter.h"
-#include "lib/ui/view_framework/base_view.h"
+#include "lib/media/flog/flog.h"
+#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/transport/media_packet_consumer_base.h"
 #include "lib/ui/geometry/fidl/geometry.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/ui/view_framework/base_view.h"
 
 namespace media {
 

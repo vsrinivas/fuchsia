@@ -4,10 +4,10 @@
 
 #include "garnet/bin/media/audio/mixer.h"
 
-#include "lib/media/timeline/timeline_rate.h"
 #include "garnet/bin/media/audio/mixer_input_impl.h"
 #include "garnet/bin/media/audio/test/test_utils.h"
 #include "gtest/gtest.h"
+#include "lib/media/timeline/timeline_rate.h"
 
 namespace media {
 namespace test {

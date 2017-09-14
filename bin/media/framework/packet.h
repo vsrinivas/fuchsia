@@ -7,10 +7,10 @@
 #include <limits>
 #include <memory>
 
-#include "lib/media/timeline/timeline_rate.h"
 #include "garnet/bin/media/framework/payload_allocator.h"
 #include "garnet/bin/media/framework/types/stream_type.h"
 #include "lib/fxl/logging.h"
+#include "lib/media/timeline/timeline_rate.h"
 
 namespace media {
 

@@ -7,8 +7,8 @@
 #include <memory>
 #include <string>
 
-#include "lib/app/fidl/service_provider.fidl.h"
 #include "garnet/bin/netconnector/socket_address.h"
+#include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 

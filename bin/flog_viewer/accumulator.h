@@ -6,8 +6,8 @@
 
 #include <limits>
 
-#include "lib/media/fidl/flog/flog.fidl.h"
 #include "lib/fidl/cpp/bindings/message.h"
+#include "lib/media/fidl/flog/flog.fidl.h"
 
 namespace flog {
 

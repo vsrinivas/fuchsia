@@ -6,12 +6,12 @@
 
 #include <zx/handle.h>
 
+#include "garnet/bin/media/framework/formatting.h"
 #include "lib/media/fidl/media_result.fidl.h"
 #include "lib/media/fidl/media_source.fidl.h"
 #include "lib/media/fidl/media_transport.fidl.h"
 #include "lib/media/fidl/media_types.fidl.h"
 #include "lib/media/fidl/timelines.fidl.h"
-#include "garnet/bin/media/framework/formatting.h"
 #include "lib/network/fidl/http_header.fidl.h"
 #include "lib/network/fidl/network_error.fidl.h"
 #include "lib/network/fidl/url_body.fidl.h"

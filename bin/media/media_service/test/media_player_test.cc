@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/app/cpp/connect.h"
-#include "lib/media/timeline/timeline_rate.h"
-#include "lib/media/fidl/media_service.fidl.h"
 #include "garnet/bin/media/fidl/fidl_formatting.h"
 #include "garnet/bin/media/media_service/test/fake_renderer.h"
 #include "garnet/bin/media/media_service/test/fake_wav_reader.h"
-#include "lib/fxl/logging.h"
+#include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
+#include "lib/media/fidl/media_service.fidl.h"
+#include "lib/media/timeline/timeline_rate.h"
 
 namespace media {
 namespace test {
@@ -17,8 +17,7 @@ namespace test {
 class MediaPlayerTester {
  public:
   MediaPlayerTester()
-      : application_context_(
-            app::ApplicationContext::CreateFromStartupInfo()) {
+      : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
     FXL_LOG(INFO) << "MediaPlayerTest starting";
 
     FXL_LOG(INFO) << "connecting to MediaService";

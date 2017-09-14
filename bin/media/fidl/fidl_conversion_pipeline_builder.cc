@@ -4,9 +4,6 @@
 
 #include "garnet/bin/media/fidl/fidl_conversion_pipeline_builder.h"
 
-#include "lib/media/flog/flog.h"
-#include "lib/media/fidl/media_service.fidl.h"
-#include "lib/media/fidl/media_type_converter.fidl.h"
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "garnet/bin/media/framework/formatting.h"
 #include "garnet/bin/media/framework/types/audio_stream_type.h"
@@ -14,6 +11,9 @@
 #include "garnet/bin/media/framework/types/video_stream_type.h"
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "lib/media/fidl/media_service.fidl.h"
+#include "lib/media/fidl/media_type_converter.fidl.h"
+#include "lib/media/flog/flog.h"
 
 namespace media {
 

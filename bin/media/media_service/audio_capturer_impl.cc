@@ -4,11 +4,11 @@
 
 #include "garnet/bin/media/media_service/audio_capturer_impl.h"
 
-#include "lib/media/timeline/timeline.h"
 #include "garnet/bin/media/audio/audio_input.h"
 #include "garnet/bin/media/audio/audio_input_enum.h"
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "lib/fxl/logging.h"
+#include "lib/media/timeline/timeline.h"
 
 namespace media {
 

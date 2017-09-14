@@ -6,8 +6,8 @@
 
 #include <memory>
 
-#include "lib/media/fidl/media_transport.fidl.h"
 #include "garnet/bin/media/framework/types/video_stream_type.h"
+#include "lib/media/fidl/media_transport.fidl.h"
 #include "lib/ui/geometry/fidl/geometry.fidl.h"
 
 namespace media {

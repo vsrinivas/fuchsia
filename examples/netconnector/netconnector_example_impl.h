@@ -6,8 +6,8 @@
 
 #include <zx/channel.h>
 
-#include "lib/app/cpp/application_context.h"
 #include "garnet/examples/netconnector/netconnector_example_params.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/netconnector/cpp/message_relay.h"

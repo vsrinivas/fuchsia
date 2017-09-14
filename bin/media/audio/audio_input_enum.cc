@@ -6,8 +6,8 @@
 
 #include <sstream>
 
-#include <fcntl.h>
 #include <dirent.h>
+#include <fcntl.h>
 
 #include "lib/fxl/files/eintr_wrapper.h"
 #include "lib/fxl/files/unique_fd.h"
@@ -17,7 +17,7 @@ namespace media {
 
 // static
 const std::string AudioInputEnum::kAudioInputDeviceClassPath =
-  "/dev/class/audio-input";
+    "/dev/class/audio-input";
 
 AudioInputEnum::AudioInputEnum() {
   DIR* dir = opendir(kAudioInputDeviceClassPath.c_str());

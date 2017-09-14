@@ -6,8 +6,6 @@
 
 #include <zircon/syscalls.h>
 
-#include "lib/media/fidl/audio_policy_service.fidl.h"
-#include "lib/media/fidl/audio_server.fidl.h"
 #include "garnet/bin/media/media_service/audio_capturer_impl.h"
 #include "garnet/bin/media/media_service/file_reader_impl.h"
 #include "garnet/bin/media/media_service/lpcm_reformatter_impl.h"
@@ -21,6 +19,8 @@
 #include "garnet/bin/media/media_service/video_renderer_impl.h"
 #include "garnet/bin/media/util/multiproc_task_runner.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "lib/media/fidl/audio_policy_service.fidl.h"
+#include "lib/media/fidl/audio_server.fidl.h"
 
 namespace media {
 

@@ -9,10 +9,10 @@
 
 #include <zx/socket.h>
 
-#include "lib/media/fidl/seeking_reader.fidl.h"
 #include "garnet/bin/media/demux/reader.h"
 #include "garnet/bin/media/util/incident.h"
 #include "lib/fxl/tasks/task_runner.h"
+#include "lib/media/fidl/seeking_reader.fidl.h"
 
 namespace media {
 

@@ -6,9 +6,9 @@
 
 #include <limits>
 
-#include "lib/media/fidl/flog/flog.fidl.h"
 #include "garnet/bin/media/flog_service/flog_service_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/media/fidl/flog/flog.fidl.h"
 
 namespace flog {
 

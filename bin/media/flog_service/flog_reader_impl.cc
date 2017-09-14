@@ -6,10 +6,10 @@
 
 #include <unistd.h>
 
-#include "lib/fxl/files/eintr_wrapper.h"
-#include "lib/fxl/logging.h"
 #include "lib/fidl/cpp/bindings/internal/array_serialization.h"
 #include "lib/fidl/cpp/bindings/internal/string_serialization.h"
+#include "lib/fxl/files/eintr_wrapper.h"
+#include "lib/fxl/logging.h"
 
 namespace flog {
 

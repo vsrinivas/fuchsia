@@ -8,10 +8,10 @@
 
 #include <zx/socket.h>
 
-#include "lib/media/fidl/seeking_reader.fidl.h"
 #include "garnet/bin/media/media_service/media_service_impl.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
+#include "lib/media/fidl/seeking_reader.fidl.h"
 
 namespace media {
 

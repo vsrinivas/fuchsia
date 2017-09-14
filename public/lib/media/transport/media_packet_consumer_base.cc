@@ -4,8 +4,8 @@
 
 #include "lib/media/transport/media_packet_consumer_base.h"
 
-#include "lib/fxl/logging.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 

@@ -6,8 +6,8 @@
 
 #include <trace/event.h>
 
-#include "lib/media/timeline/timeline.h"
 #include "lib/fxl/logging.h"
+#include "lib/media/timeline/timeline.h"
 
 namespace media {
 

@@ -4,13 +4,13 @@
 
 #include "garnet/bin/media/media_service/media_player_impl.h"
 
-#include "lib/app/cpp/connect.h"
-#include "lib/media/timeline/fidl_type_conversions.h"
-#include "lib/media/timeline/timeline.h"
 #include "garnet/bin/media/fidl/fidl_formatting.h"
 #include "garnet/bin/media/util/callback_joiner.h"
+#include "lib/app/cpp/connect.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
+#include "lib/media/timeline/fidl_type_conversions.h"
+#include "lib/media/timeline/timeline.h"
 
 namespace media {
 
@@ -244,7 +244,7 @@ void MediaPlayerImpl::Update() {
         if (!reader_transition_pending_) {
           return;
         }
-      // Falls through.
+        // Falls through.
 
       case State::kFlushed:
         // Presentation time is not progressing, and the pipeline is clear of

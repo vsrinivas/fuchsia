@@ -9,10 +9,10 @@
 #include <sys/socket.h>
 
 #include "garnet/bin/netconnector/ip_port.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace netconnector {
 

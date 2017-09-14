@@ -8,10 +8,6 @@
 #include <memory>
 #include <vector>
 
-#include "lib/media/flog/flog.h"
-#include "lib/media/fidl/logs/media_demux_channel.fidl.h"
-#include "lib/media/fidl/media_source.fidl.h"
-#include "lib/media/fidl/seeking_reader.fidl.h"
 #include "garnet/bin/media/demux/demux.h"
 #include "garnet/bin/media/fidl/fidl_packet_producer.h"
 #include "garnet/bin/media/framework/graph.h"
@@ -20,6 +16,10 @@
 #include "garnet/bin/media/util/incident.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/tasks/task_runner.h"
+#include "lib/media/fidl/logs/media_demux_channel.fidl.h"
+#include "lib/media/fidl/media_source.fidl.h"
+#include "lib/media/fidl/seeking_reader.fidl.h"
+#include "lib/media/flog/flog.h"
 
 namespace media {
 

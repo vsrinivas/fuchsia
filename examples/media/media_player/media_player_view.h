@@ -7,15 +7,15 @@
 #include <memory>
 #include <queue>
 
-#include "lib/app/cpp/application_context.h"
 #include "garnet/examples/media/media_player/media_player_params.h"
-#include "lib/media/timeline/timeline_function.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/fxl/macros.h"
 #include "lib/media/fidl/media_player.fidl.h"
 #include "lib/media/fidl/net_media_player.fidl.h"
 #include "lib/media/fidl/video_renderer.fidl.h"
+#include "lib/media/timeline/timeline_function.h"
 #include "lib/ui/scenic/skia/host_canvas_cycler.h"
 #include "lib/ui/view_framework/base_view.h"
-#include "lib/fxl/macros.h"
 
 namespace examples {
 

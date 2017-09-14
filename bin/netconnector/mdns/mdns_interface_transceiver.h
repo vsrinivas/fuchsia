@@ -11,9 +11,9 @@
 #include "garnet/bin/netconnector/mdns/dns_message.h"
 #include "garnet/bin/netconnector/socket_address.h"
 #include "garnet/go/src/netstack/apps/include/netconfig.h"
+#include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
-#include "lib/fsl/tasks/fd_waiter.h"
 
 namespace netstack {
 class NetInterface;
@@ -67,7 +67,8 @@ class MdnsInterfaceTransceiver {
   static constexpr int kTimeToLive_ = 255;
   static constexpr size_t kMaxPacketSize = 1500;
 
-  MdnsInterfaceTransceiver(const netstack::NetInterface* if_info, uint32_t index);
+  MdnsInterfaceTransceiver(const netstack::NetInterface* if_info,
+                           uint32_t index);
 
   uint32_t index() const { return index_; }
 

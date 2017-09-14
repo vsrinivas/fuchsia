@@ -9,13 +9,13 @@
 #include <unordered_set>
 
 #include "lib/app/cpp/application_context.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/threading/create_thread.h"
 
 template <typename Factory>
 class FactoryServiceBase {
@@ -98,7 +98,8 @@ class FactoryServiceBase {
     fidl::Binding<Interface> binding_;
   };
 
-  FactoryServiceBase(std::unique_ptr<app::ApplicationContext> application_context)
+  FactoryServiceBase(
+      std::unique_ptr<app::ApplicationContext> application_context)
       : application_context_(std::move(application_context)),
         task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {}
 

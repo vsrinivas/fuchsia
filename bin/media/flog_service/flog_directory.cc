@@ -4,8 +4,8 @@
 
 #include "garnet/bin/media/flog_service/flog_directory.h"
 
-#include <fcntl.h>
 #include <dirent.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 
 #include <ctime>

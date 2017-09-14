@@ -48,7 +48,8 @@ class Output {
   // is currently holding a packet.
   Demand demand() const;
 
-  // Supplies a packet to mate. Called only by StageImpl::Update implementations.
+  // Supplies a packet to mate. Called only by StageImpl::Update
+  // implementations.
   void SupplyPacket(PacketPtr packet) const;
 
  private:

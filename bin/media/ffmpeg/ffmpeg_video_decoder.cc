@@ -6,10 +6,10 @@
 
 #include <algorithm>
 
-#include "lib/media/timeline/timeline.h"
-#include "lib/media/timeline/timeline_rate.h"
 #include "garnet/bin/media/ffmpeg/ffmpeg_formatting.h"
 #include "lib/fxl/logging.h"
+#include "lib/media/timeline/timeline.h"
+#include "lib/media/timeline/timeline_rate.h"
 extern "C" {
 #include "third_party/ffmpeg/libavutil/imgutils.h"
 }

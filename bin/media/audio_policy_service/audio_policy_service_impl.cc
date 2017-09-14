@@ -4,9 +4,9 @@
 
 #include "garnet/bin/media/audio_policy_service/audio_policy_service_impl.h"
 
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace media {
 namespace {

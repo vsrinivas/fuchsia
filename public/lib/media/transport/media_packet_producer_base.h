@@ -6,14 +6,14 @@
 
 #include <limits>
 
-#include "lib/media/flog/flog.h"
-#include "lib/media/timeline/timeline_rate.h"
-#include "lib/media/transport/shared_buffer_set_allocator.h"
-#include "lib/media/fidl/logs/media_packet_producer_channel.fidl.h"
-#include "lib/media/fidl/media_transport.fidl.h"
 #include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/synchronization/thread_checker.h"
+#include "lib/media/fidl/logs/media_packet_producer_channel.fidl.h"
+#include "lib/media/fidl/media_transport.fidl.h"
+#include "lib/media/flog/flog.h"
+#include "lib/media/timeline/timeline_rate.h"
+#include "lib/media/transport/shared_buffer_set_allocator.h"
 
 namespace media {
 

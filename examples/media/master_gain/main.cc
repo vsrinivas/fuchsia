@@ -7,9 +7,9 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "lib/media/fidl/audio_server.fidl.h"
-#include "lib/fxl/command_line.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/command_line.h"
+#include "lib/media/fidl/audio_server.fidl.h"
 
 void usage(const char* prog_name) {
   std::cout << "Usage: " << prog_name << " [gain]\n";

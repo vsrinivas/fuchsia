@@ -9,8 +9,8 @@
 
 #include <netinet/in.h>
 
-#include "lib/app/cpp/application_context.h"
 #include "garnet/bin/netconnector/mdns/mdns_interface_transceiver.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"

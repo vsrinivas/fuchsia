@@ -6,9 +6,9 @@
 
 #include <iostream>
 
-#include "lib/media/fidl/logs/media_sink_channel.fidl.h"
 #include "garnet/bin/flog_viewer/flog_viewer.h"
 #include "garnet/bin/flog_viewer/handlers/media_formatting.h"
+#include "lib/media/fidl/logs/media_sink_channel.fidl.h"
 
 namespace flog {
 namespace handlers {
@@ -30,8 +30,7 @@ std::shared_ptr<Accumulator> MediaSink::GetAccumulator() {
 }
 
 void MediaSink::BoundAs(uint64_t koid) {
-  terse_out() << EntryHeader(entry(), entry_index())
-              << "MediaSink.BoundAs\n";
+  terse_out() << EntryHeader(entry(), entry_index()) << "MediaSink.BoundAs\n";
   terse_out() << indent;
   terse_out() << begl << "koid: " << AsKoid(koid) << "\n";
   terse_out() << outdent;
@@ -46,8 +45,7 @@ void MediaSink::Config(media::MediaTypePtr input_type,
   FXL_DCHECK(input_type);
   FXL_DCHECK(output_type);
 
-  terse_out() << EntryHeader(entry(), entry_index())
-              << "MediaSink.Config\n";
+  terse_out() << EntryHeader(entry(), entry_index()) << "MediaSink.Config\n";
   terse_out() << indent;
   terse_out() << begl << "input_type: " << input_type << "\n";
   terse_out() << begl << "output_type: " << output_type << "\n";

@@ -4,9 +4,9 @@
 
 #include "garnet/bin/media/ffmpeg/ffmpeg_audio_decoder.h"
 
+#include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_rate.h"
-#include "lib/fxl/logging.h"
 
 namespace media {
 

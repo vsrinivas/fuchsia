@@ -4,10 +4,10 @@
 
 #include "garnet/bin/media/flog_service/flog_service_impl.h"
 
-#include "lib/app/cpp/connect.h"
 #include "garnet/bin/media/flog_service/flog_directory.h"
 #include "garnet/bin/media/flog_service/flog_logger_impl.h"
 #include "garnet/bin/media/flog_service/flog_reader_impl.h"
+#include "lib/app/cpp/connect.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace flog {
@@ -21,18 +21,19 @@ FlogServiceImpl::FlogServiceImpl(
       });
 
   directory_ = std::shared_ptr<FlogDirectory>(new FlogDirectory());
-  directory_->GetExistingFiles([this](
-      std::unique_ptr<std::map<uint32_t, std::string>> labels_by_id) {
-    log_labels_by_id_ = std::move(labels_by_id);
-    FXL_DCHECK(log_labels_by_id_);
-    for (const std::pair<uint32_t, std::string>& pair : *log_labels_by_id_) {
-      if (pair.first > last_allocated_log_id_) {
-        last_allocated_log_id_ = pair.first;
-      }
-    }
+  directory_->GetExistingFiles(
+      [this](std::unique_ptr<std::map<uint32_t, std::string>> labels_by_id) {
+        log_labels_by_id_ = std::move(labels_by_id);
+        FXL_DCHECK(log_labels_by_id_);
+        for (const std::pair<uint32_t, std::string>& pair :
+             *log_labels_by_id_) {
+          if (pair.first > last_allocated_log_id_) {
+            last_allocated_log_id_ = pair.first;
+          }
+        }
 
-    ready_.Occur();
-  });
+        ready_.Occur();
+      });
 }
 
 FlogServiceImpl::~FlogServiceImpl() {}

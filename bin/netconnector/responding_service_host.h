@@ -7,9 +7,9 @@
 #include <unordered_map>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/svc/cpp/service_namespace.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/fxl/macros.h"
+#include "lib/svc/cpp/service_namespace.h"
 
 namespace netconnector {
 

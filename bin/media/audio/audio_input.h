@@ -8,9 +8,9 @@
 #include <string>
 #include <thread>
 
+#include <fbl/unique_ptr.h>
 #include <zircon/device/audio.h>
 #include <zircon/types.h>
-#include <fbl/unique_ptr.h>
 
 #include "garnet/bin/media/framework/models/active_source.h"
 #include "garnet/bin/media/framework/types/audio_stream_type.h"

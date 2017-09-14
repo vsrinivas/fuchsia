@@ -10,9 +10,9 @@
 #include "garnet/bin/netconnector/host_name.h"
 #include "garnet/bin/netconnector/mdns/mdns_names.h"
 #include "garnet/bin/netconnector/netconnector_params.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace netconnector {
 

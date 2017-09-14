@@ -9,11 +9,11 @@
 #include <queue>
 #include <vector>
 
-#include "lib/media/transport/fifo_allocator.h"
-#include "lib/media/transport/shared_buffer_set.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
+#include "lib/media/transport/fifo_allocator.h"
+#include "lib/media/transport/shared_buffer_set.h"
 
 namespace media {
 

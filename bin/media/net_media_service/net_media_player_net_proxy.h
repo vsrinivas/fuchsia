@@ -7,10 +7,10 @@
 #include <memory>
 #include <string>
 
-#include "lib/media/timeline/timeline_function.h"
 #include "garnet/bin/media/net_media_service/net_media_player_messages.h"
 #include "garnet/bin/media/net_media_service/net_media_service_impl.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
+#include "lib/media/timeline/timeline_function.h"
 #include "lib/netconnector/cpp/message_relay.h"
 
 namespace media {

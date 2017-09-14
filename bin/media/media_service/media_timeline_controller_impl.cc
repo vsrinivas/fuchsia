@@ -4,11 +4,11 @@
 
 #include "garnet/bin/media/media_service/media_timeline_controller_impl.h"
 
-#include "lib/media/timeline/fidl_type_conversions.h"
-#include "lib/media/timeline/timeline.h"
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "lib/fxl/logging.h"
+#include "lib/media/timeline/fidl_type_conversions.h"
+#include "lib/media/timeline/timeline.h"
 
 namespace media {
 

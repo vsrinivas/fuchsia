@@ -8,8 +8,8 @@
 
 #include <zx/channel.h>
 
-#include "lib/media/timeline/timeline.h"
 #include "lib/fxl/logging.h"
+#include "lib/media/timeline/timeline.h"
 #include "lib/netconnector/fidl/netconnector.fidl.h"
 
 namespace media {

@@ -7,8 +7,8 @@
 #include <algorithm>
 #include <cmath>
 
-#include "lib/media/fidl/audio_renderer.fidl.h"
 #include "lib/fxl/logging.h"
+#include "lib/media/fidl/audio_renderer.fidl.h"
 
 namespace media {
 namespace {

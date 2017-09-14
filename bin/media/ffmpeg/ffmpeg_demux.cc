@@ -6,8 +6,6 @@
 #include <map>
 #include <thread>
 
-#include "lib/media/timeline/timeline_rate.h"
-#include "lib/media/fidl/problem.fidl.h"
 #include "garnet/bin/media/ffmpeg/av_codec_context.h"
 #include "garnet/bin/media/ffmpeg/av_format_context.h"
 #include "garnet/bin/media/ffmpeg/av_io_context.h"
@@ -15,13 +13,15 @@
 #include "garnet/bin/media/ffmpeg/ffmpeg_demux.h"
 #include "garnet/bin/media/util/incident.h"
 #include "garnet/bin/media/util/safe_clone.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/synchronization/cond_var.h"
 #include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/media/fidl/problem.fidl.h"
+#include "lib/media/timeline/timeline_rate.h"
 
 namespace media {
 

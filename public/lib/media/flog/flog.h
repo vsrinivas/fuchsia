@@ -9,11 +9,11 @@
 #include <string>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/media/fidl/flog/flog.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/message.h"
-#include "lib/fxl/logging.h"
 #include "lib/fsl/handles/object_info.h"
+#include "lib/fxl/logging.h"
+#include "lib/media/fidl/flog/flog.fidl.h"
 
 namespace flog {
 

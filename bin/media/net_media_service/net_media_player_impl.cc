@@ -4,8 +4,8 @@
 
 #include "garnet/bin/media/net_media_service/net_media_player_impl.h"
 
-#include "lib/media/fidl/seeking_reader.fidl.h"
 #include "lib/fxl/logging.h"
+#include "lib/media/fidl/seeking_reader.fidl.h"
 #include "lib/url/gurl.h"
 
 namespace media {

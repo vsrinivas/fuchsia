@@ -8,13 +8,13 @@
 #include <memory>
 #include <vector>
 
-#include "lib/media/fidl/media_renderer.fidl.h"
-#include "lib/media/fidl/video_renderer.fidl.h"
 #include "garnet/bin/media/media_service/media_service_impl.h"
 #include "garnet/bin/media/video/video_frame_source.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/media/fidl/media_renderer.fidl.h"
+#include "lib/media/fidl/video_renderer.fidl.h"
 #include "lib/ui/scenic/client/host_image_cycler.h"
 #include "lib/ui/view_framework/base_view.h"
-#include "lib/fidl/cpp/bindings/binding.h"
 
 namespace media {
 

@@ -9,8 +9,8 @@
 #include <zx/channel.h>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/media/timeline/timeline.h"
 #include "lib/fxl/logging.h"
+#include "lib/media/timeline/timeline.h"
 
 namespace media {
 
@@ -82,7 +82,7 @@ void NetMediaPlayerNetStub::HandleReceivedMessage(
 }
 
 void NetMediaPlayerNetStub::HandleStatusUpdates(uint64_t version,
-                                             MediaPlayerStatusPtr status) {
+                                                MediaPlayerStatusPtr status) {
   if (status) {
     message_relay_.SendMessage(Serializer::Serialize(
         NetMediaPlayerOutMessage::StatusNotification(std::move(status))));
@@ -90,9 +90,9 @@ void NetMediaPlayerNetStub::HandleStatusUpdates(uint64_t version,
 
   // Request a status update.
   player_->GetStatus(
-      version,
-      [weak_this = std::weak_ptr<NetMediaPlayerNetStub>(shared_from_this())](
-          uint64_t version, MediaPlayerStatusPtr status) {
+      version, [weak_this =
+                    std::weak_ptr<NetMediaPlayerNetStub>(shared_from_this())](
+                   uint64_t version, MediaPlayerStatusPtr status) {
         auto shared_this = weak_this.lock();
         if (shared_this) {
           shared_this->HandleStatusUpdates(version, std::move(status));

@@ -6,11 +6,11 @@
 
 #include <iostream>
 
-#include "lib/media/timeline/timeline_function.h"
-#include "lib/media/timeline/timeline_rate.h"
-#include "lib/media/fidl/logs/media_timeline_control_point_channel.fidl.h"
 #include "garnet/bin/flog_viewer/flog_viewer.h"
 #include "garnet/bin/flog_viewer/handlers/media_formatting.h"
+#include "lib/media/fidl/logs/media_timeline_control_point_channel.fidl.h"
+#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/timeline/timeline_rate.h"
 
 namespace flog {
 namespace handlers {

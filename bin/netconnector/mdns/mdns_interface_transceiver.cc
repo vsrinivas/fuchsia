@@ -15,11 +15,11 @@
 #include "garnet/bin/netconnector/mdns/mdns_addresses.h"
 #include "garnet/bin/netconnector/mdns/mdns_interface_transceiver_v4.h"
 #include "garnet/bin/netconnector/mdns/mdns_interface_transceiver_v6.h"
-#include "lib/netstack/fidl/netstack.fidl.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/netstack/fidl/netstack.fidl.h"
 
 namespace netconnector {
 namespace mdns {

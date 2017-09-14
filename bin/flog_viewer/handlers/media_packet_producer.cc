@@ -6,9 +6,9 @@
 
 #include <iostream>
 
-#include "lib/media/fidl/logs/media_packet_producer_channel.fidl.h"
 #include "garnet/bin/flog_viewer/flog_viewer.h"
 #include "garnet/bin/flog_viewer/handlers/media_formatting.h"
+#include "lib/media/fidl/logs/media_packet_producer_channel.fidl.h"
 
 namespace flog {
 namespace handlers {

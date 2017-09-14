@@ -6,11 +6,11 @@
 #include <limits>
 #include <vector>
 
-#include "lib/app/cpp/application_context.h"
 #include "garnet/bin/flog_viewer/channel_handler.h"
 #include "garnet/bin/flog_viewer/flog_viewer.h"
-#include "lib/fxl/command_line.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/command_line.h"
 
 namespace flog {
 

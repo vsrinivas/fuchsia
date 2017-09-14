@@ -6,15 +6,15 @@
 
 #include <atomic>
 
-#include "lib/media/flog/flog.h"
-#include "lib/media/timeline/timeline_rate.h"
-#include "lib/media/transport/shared_buffer_set.h"
-#include "lib/media/fidl/logs/media_packet_consumer_channel.fidl.h"
-#include "lib/media/fidl/media_transport.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/synchronization/thread_checker.h"
 #include "lib/fxl/tasks/task_runner.h"
+#include "lib/media/fidl/logs/media_packet_consumer_channel.fidl.h"
+#include "lib/media/fidl/media_transport.fidl.h"
+#include "lib/media/flog/flog.h"
+#include "lib/media/timeline/timeline_rate.h"
+#include "lib/media/transport/shared_buffer_set.h"
 
 namespace media {
 

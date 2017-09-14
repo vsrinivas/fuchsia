@@ -6,9 +6,9 @@
 
 #include <vector>
 
-#include "lib/media/fidl/logs/media_player_channel.fidl.h"
 #include "garnet/bin/flog_viewer/accumulator.h"
 #include "garnet/bin/flog_viewer/channel_handler.h"
+#include "lib/media/fidl/logs/media_player_channel.fidl.h"
 
 namespace flog {
 namespace handlers {

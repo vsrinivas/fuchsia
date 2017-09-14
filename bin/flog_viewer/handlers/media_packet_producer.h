@@ -6,12 +6,12 @@
 
 #include <unordered_map>
 
-#include "lib/media/fidl/logs/media_packet_producer_channel.fidl.h"
 #include "garnet/bin/flog_viewer/accumulator.h"
 #include "garnet/bin/flog_viewer/binding.h"
 #include "garnet/bin/flog_viewer/channel_handler.h"
 #include "garnet/bin/flog_viewer/counted.h"
 #include "garnet/bin/flog_viewer/tracked.h"
+#include "lib/media/fidl/logs/media_packet_producer_channel.fidl.h"
 
 namespace flog {
 namespace handlers {

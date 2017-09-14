@@ -9,8 +9,8 @@
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "garnet/bin/media/framework/formatting.h"
 #include "garnet/bin/media/util/callback_joiner.h"
-#include "lib/fxl/logging.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 

@@ -10,8 +10,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#include "lib/fxl/logging.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
 
 namespace netconnector {
 

@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "lib/media/timeline/timeline_rate.h"
 #include "garnet/bin/media/ffmpeg/ffmpeg_decoder_base.h"
 #include "garnet/bin/media/ffmpeg/ffmpeg_video_frame_layout.h"
+#include "lib/media/timeline/timeline_rate.h"
 
 namespace media {
 

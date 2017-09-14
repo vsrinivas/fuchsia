@@ -7,13 +7,13 @@
 #include <memory>
 #include <queue>
 
-#include "lib/app/cpp/application_context.h"
 #include "garnet/examples/media/vu_meter/vu_meter_params.h"
-#include "lib/media/transport/media_packet_consumer_base.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/fxl/macros.h"
 #include "lib/media/fidl/media_capturer.fidl.h"
 #include "lib/media/fidl/media_transport.fidl.h"
+#include "lib/media/transport/media_packet_consumer_base.h"
 #include "lib/ui/view_framework/skia_view.h"
-#include "lib/fxl/macros.h"
 
 namespace examples {
 

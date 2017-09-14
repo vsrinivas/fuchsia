@@ -7,12 +7,12 @@
 #include <iostream>
 #include <streambuf>
 
-#include "lib/media/fidl/flog/flog.fidl.h"
 #include "garnet/bin/flog_viewer/accumulator.h"
 #include "garnet/bin/flog_viewer/binding.h"
 #include "garnet/bin/flog_viewer/channel_manager.h"
 #include "lib/fidl/cpp/bindings/message.h"
 #include "lib/fxl/logging.h"
+#include "lib/media/fidl/flog/flog.fidl.h"
 
 namespace flog {
 

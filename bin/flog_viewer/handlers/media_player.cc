@@ -6,9 +6,9 @@
 
 #include <iostream>
 
-#include "lib/media/fidl/logs/media_player_channel.fidl.h"
 #include "garnet/bin/flog_viewer/flog_viewer.h"
 #include "garnet/bin/flog_viewer/handlers/media_formatting.h"
+#include "lib/media/fidl/logs/media_player_channel.fidl.h"
 
 namespace flog {
 namespace handlers {
@@ -128,8 +128,7 @@ void MediaPlayer::StreamsPrepared() {
 }
 
 void MediaPlayer::Flushed() {
-  terse_out() << EntryHeader(entry(), entry_index())
-              << "MediaPlayer.Flushed\n";
+  terse_out() << EntryHeader(entry(), entry_index()) << "MediaPlayer.Flushed\n";
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kFlushed &&
       accumulator_->state_ != MediaPlayerAccumulator::State::kStreamsPrepared &&
@@ -159,8 +158,7 @@ void MediaPlayer::ProgramRangeSet(uint64_t program,
 }
 
 void MediaPlayer::Primed() {
-  terse_out() << EntryHeader(entry(), entry_index())
-              << "MediaPlayer.Primed\n";
+  terse_out() << EntryHeader(entry(), entry_index()) << "MediaPlayer.Primed\n";
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kPrimed &&
       accumulator_->state_ != MediaPlayerAccumulator::State::kPriming &&
@@ -172,8 +170,7 @@ void MediaPlayer::Primed() {
 }
 
 void MediaPlayer::Playing() {
-  terse_out() << EntryHeader(entry(), entry_index())
-              << "MediaPlayer.Playing\n";
+  terse_out() << EntryHeader(entry(), entry_index()) << "MediaPlayer.Playing\n";
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kPlaying &&
       accumulator_->state_ != MediaPlayerAccumulator::State::kPrimed) {
@@ -222,8 +219,7 @@ void MediaPlayer::SeekRequested(int64_t position) {
 }
 
 void MediaPlayer::Seeking(int64_t position) {
-  terse_out() << EntryHeader(entry(), entry_index())
-              << "MediaPlayer.Seeking\n";
+  terse_out() << EntryHeader(entry(), entry_index()) << "MediaPlayer.Seeking\n";
   terse_out() << indent;
   terse_out() << begl << "position: " << position << "\n";
   terse_out() << outdent;
@@ -240,8 +236,7 @@ void MediaPlayer::Seeking(int64_t position) {
 }
 
 void MediaPlayer::Priming() {
-  terse_out() << EntryHeader(entry(), entry_index())
-              << "MediaPlayer.Priming\n";
+  terse_out() << EntryHeader(entry(), entry_index()) << "MediaPlayer.Priming\n";
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kFlushed) {
     ReportProblem() << "Priming out of sequence";

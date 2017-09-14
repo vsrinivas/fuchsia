@@ -4,8 +4,8 @@
 
 #include "garnet/examples/netconnector/netconnector_example_impl.h"
 #include "garnet/examples/netconnector/netconnector_example_params.h"
-#include "lib/fxl/command_line.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/command_line.h"
 #include "lib/netconnector/fidl/netconnector.fidl.h"
 
 int main(int argc, const char** argv) {

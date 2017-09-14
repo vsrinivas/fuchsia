@@ -8,8 +8,8 @@
 #include <string>
 
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
-#include "lib/fxl/logging.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 

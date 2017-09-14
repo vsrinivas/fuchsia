@@ -6,8 +6,8 @@
 
 #include <memory>
 
-#include "lib/media/fidl/net_media_player.fidl.h"
 #include "garnet/bin/media/net_media_service/serialization.h"
+#include "lib/media/fidl/net_media_player.fidl.h"
 
 namespace media {
 

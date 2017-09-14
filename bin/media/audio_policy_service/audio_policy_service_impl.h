@@ -6,19 +6,20 @@
 
 #include <string>
 
+#include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/app/cpp/application_context.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fxl/macros.h"
 #include "lib/media/fidl/audio_policy_service.fidl.h"
 #include "lib/media/fidl/audio_renderer.fidl.h"
 #include "lib/media/fidl/audio_server.fidl.h"
-#include "garnet/bin/media/util/fidl_publisher.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fxl/macros.h"
 
 namespace media {
 
 class AudioPolicyServiceImpl : public AudioPolicyService {
  public:
-  AudioPolicyServiceImpl(std::unique_ptr<app::ApplicationContext> application_context);
+  AudioPolicyServiceImpl(
+      std::unique_ptr<app::ApplicationContext> application_context);
   ~AudioPolicyServiceImpl() override;
 
   // AudioPolicyService implementation.

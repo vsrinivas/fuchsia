@@ -4,11 +4,11 @@
 
 #include "garnet/bin/media/fidl/fidl_packet_producer.h"
 
-#include "lib/media/fidl/logs/media_packet_producer_channel.fidl.h"
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/media/fidl/logs/media_packet_producer_channel.fidl.h"
 
 namespace media {
 

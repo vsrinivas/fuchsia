@@ -6,15 +6,15 @@
 
 #include <audio-utils/audio-input.h>
 #include <errno.h>
-#include <fcntl.h>
-#include <zircon/device/audio.h>
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>
+#include <fcntl.h>
+#include <zircon/device/audio.h>
 
-#include "lib/media/timeline/timeline_function.h"
-#include "lib/media/timeline/timeline_rate.h"
 #include "garnet/bin/media/audio/driver_utils.h"
 #include "lib/fxl/logging.h"
+#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/timeline/timeline_rate.h"
 
 namespace media {
 

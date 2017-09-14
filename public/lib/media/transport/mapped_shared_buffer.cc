@@ -8,9 +8,9 @@
 #include <zx/vmar.h>
 #include <zx/vmo.h>
 
-#include "lib/media/transport/fifo_allocator.h"
-#include "lib/media/fidl/media_transport.fidl.h"
 #include "lib/fxl/logging.h"
+#include "lib/media/fidl/media_transport.fidl.h"
+#include "lib/media/transport/fifo_allocator.h"
 
 namespace media {
 

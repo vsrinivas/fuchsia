@@ -8,15 +8,15 @@
 
 #include <iomanip>
 
-#include "lib/app/cpp/connect.h"
 #include "garnet/examples/media/media_player/media_player_params.h"
-#include "lib/media/timeline/fidl_type_conversions.h"
-#include "lib/media/timeline/timeline.h"
+#include "lib/app/cpp/connect.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
 #include "lib/media/fidl/audio_renderer.fidl.h"
 #include "lib/media/fidl/media_service.fidl.h"
 #include "lib/media/fidl/net_media_service.fidl.h"
-#include "lib/fxl/logging.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/media/timeline/fidl_type_conversions.h"
+#include "lib/media/timeline/timeline.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkPath.h"
 
@@ -187,7 +187,7 @@ void MediaPlayerView::Layout() {
 
   // Make the background fill the space.
   scenic_lib::Rectangle background_shape(session(), logical_size().width,
-                                             logical_size().height);
+                                         logical_size().height);
   background_node_.SetShape(background_shape);
   background_node_.SetTranslation(logical_size().width * .5f,
                                   logical_size().height * .5f,
