@@ -1,7 +1,2 @@
-#if defined(__x86_64__)
-#include "x86_64/posix.h"
-#elif defined(__aarch64__)
-#include "aarch64/posix.h"
-#else
-#error Unsupported architecture!
-#endif
+#define _POSIX_V6_LP64_OFF64 1
+#define _POSIX_V7_LP64_OFF64 1
