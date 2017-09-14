@@ -61,6 +61,17 @@ constexpr const T roundup(const T& val, const U& multiple) {
                 ((val + (multiple - 1)) / multiple) * multiple;
 }
 
+// roundup rounds down val until it is divisible by multiple.
+// Zero is divisible by all multiples.
+template<class T, class U,
+         class = typename enable_if<is_unsigned_integer<T>::value>::type,
+         class = typename enable_if<is_unsigned_integer<U>::value>::type>
+constexpr const T rounddown(const T& val, const U& multiple) {
+    return val == 0 ? 0 :
+            is_pow2<U>(multiple) ? val & ~(multiple - 1) :
+                (val / multiple) * multiple;
+}
+
 // Returns a pointer to the first element that is not less than |value|, or
 // |last| if no such element is found.
 //
