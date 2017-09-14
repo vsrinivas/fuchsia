@@ -15,11 +15,23 @@
 #include <memory>
 
 #include "magma_util/macros.h"
+#include "sys_driver/magma_driver.h"
+#include "sys_driver/magma_system_device.h"
 
 struct arm_mali_device {
     zx_device_t* parent_device;
     zx_device_t* zx_device;
+    std::unique_ptr<MagmaDriver> magma_driver;
+    std::shared_ptr<MagmaSystemDevice> magma_system_device;
 };
+
+static zx_status_t magma_start(arm_mali_device* gpu)
+{
+    gpu->magma_system_device = gpu->magma_driver->CreateDevice(gpu->parent_device);
+    if (!gpu->magma_system_device)
+        return DRET_MSG(ZX_ERR_NO_RESOURCES, "Failed to create device");
+    return ZX_OK;
+}
 
 static zx_status_t arm_mali_open(void* context, zx_device_t** out, uint32_t flags)
 {
@@ -51,6 +63,11 @@ static zx_status_t arm_mali_bind(void* context, zx_device_t* parent, void** cook
     if (!gpu)
         return ZX_ERR_NO_MEMORY;
     gpu->parent_device = parent;
+    gpu->magma_driver = MagmaDriver::Create();
+
+    zx_status_t status = magma_start(gpu.get());
+    if (status != ZX_OK)
+        return status;
 
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
@@ -58,7 +75,7 @@ static zx_status_t arm_mali_bind(void* context, zx_device_t* parent, void** cook
     args.ctx = gpu.get();
     args.ops = &arm_mali_device_proto;
 
-    zx_status_t status = device_add(parent, &args, &gpu->zx_device);
+    status = device_add(parent, &args, &gpu->zx_device);
     if (status != ZX_OK)
         return DRET_MSG(status, "device_add failed");
 

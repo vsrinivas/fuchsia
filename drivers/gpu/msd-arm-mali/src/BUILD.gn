@@ -5,14 +5,25 @@
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
 source_set("src") {
-  sources = [ "main.cc", "entry_stubs.cc"]
+  sources = [
+    "entry_stubs.cc",
+    "main.cc",
+    "msd_arm_connection.cc",
+    "msd_arm_connection.h",
+    "msd_arm_device.cc",
+    "msd_arm_device.h",
+    "msd_arm_driver.cc",
+    "msd_arm_driver.h",
+    "register_io.cc",
+    "register_io.h",
+  ]
 
   deps = [
-    "//zircon/system/ulib/zx",
     "//garnet/lib/magma/src/magma_util",
-    "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/magma_util:command_buffer",
+    "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/sys_driver",
+    "//zircon/system/ulib/zx",
   ]
 
   libs = [
