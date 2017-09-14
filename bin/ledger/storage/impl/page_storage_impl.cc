@@ -75,11 +75,6 @@ struct StringPointerComparator {
   }
 };
 
-void RollbackJournalInternal(std::unique_ptr<Journal> journal,
-                             std::function<void(Status)> callback) {
-  static_cast<JournalDBImpl*>(journal.get())->Rollback(std::move(callback));
-}
-
 }  // namespace
 
 PageStorageImpl::PageStorageImpl(coroutine::CoroutineService* coroutine_service,
@@ -230,16 +225,18 @@ void PageStorageImpl::StartMergeCommit(
 void PageStorageImpl::CommitJournal(
     std::unique_ptr<Journal> journal,
     std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
-  JournalDBImpl* journal_ptr = static_cast<JournalDBImpl*>(journal.get());
-  // |journal| will now be owned by the Commit callback, making sure that it is
-  // not deleted before the end of the computation.
+  auto handler = pending_operation_manager_.Manage(std::move(journal));
+  JournalDBImpl* journal_ptr =
+      static_cast<JournalDBImpl*>(handler.first->get());
+
   journal_ptr->Commit(fxl::MakeCopyable([
-    journal = std::move(journal), callback = std::move(callback)
+    journal_ptr, cleanup = std::move(handler.second),
+    callback = std::move(callback)
   ](Status status, std::unique_ptr<const Commit> commit) mutable {
     if (status != Status::OK) {
       // Commit failed, roll the journal back.
-      RollbackJournalInternal(std::move(journal), [
-        status, callback = std::move(callback)
+      journal_ptr->Rollback([
+        status, cleanup = std::move(cleanup), callback = std::move(callback)
       ](Status /*rollback_status*/) { callback(status, nullptr); });
       return;
     }
@@ -249,7 +246,13 @@ void PageStorageImpl::CommitJournal(
 
 void PageStorageImpl::RollbackJournal(std::unique_ptr<Journal> journal,
                                       std::function<void(Status)> callback) {
-  RollbackJournalInternal(std::move(journal), std::move(callback));
+  auto handler = pending_operation_manager_.Manage(std::move(journal));
+  JournalDBImpl* journal_ptr =
+      static_cast<JournalDBImpl*>(handler.first->get());
+
+  journal_ptr->Rollback([
+    cleanup = std::move(handler.second), callback = std::move(callback)
+  ](Status status) { callback(status); });
 }
 
 Status PageStorageImpl::AddCommitWatcher(CommitWatcher* watcher) {
