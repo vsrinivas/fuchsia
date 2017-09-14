@@ -25,7 +25,7 @@ bool LEConnectionTest::Run(fxl::UniqueFD hci_dev_fd, const common::DeviceAddress
                            bool cancel_right_away) {
   FXL_DCHECK(hci_dev_fd.is_valid());
 
-  auto hci_dev = std::make_unique<hci::MagentaDeviceWrapper>(std::move(hci_dev_fd));
+  auto hci_dev = std::make_unique<hci::ZirconDeviceWrapper>(std::move(hci_dev_fd));
   hci_ = hci::Transport::Create(std::move(hci_dev));
   if (!hci_->Initialize()) {
     FXL_LOG(ERROR) << "Failed to initialize HCI transport";

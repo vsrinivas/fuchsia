@@ -11,8 +11,8 @@
 #include <queue>
 #include <unordered_map>
 
-#include <magenta/compiler.h>
-#include <mx/channel.h>
+#include <zircon/compiler.h>
+#include <zx/channel.h>
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/common/optional.h"
@@ -39,12 +39,12 @@ class Transport;
 // the data thread. Consider making this class fully single threaded and removing the locks.
 class CommandChannel final : public ::fsl::MessageLoopHandler {
  public:
-  // |hci_command_channel| is a Magenta channel construct that can receive
+  // |hci_command_channel| is a Zircon channel construct that can receive
   // Bluetooth HCI command and event packets, in which the remote end is
   // implemented by the underlying Bluetooth HCI device driver.
   //
   // |transport| is the Transport instance that owns this CommandChannel.
-  CommandChannel(Transport* transport, mx::channel hci_command_channel);
+  CommandChannel(Transport* transport, zx::channel hci_command_channel);
   ~CommandChannel() override;
 
   // Starts listening on the HCI command channel and starts handling commands and events.
@@ -158,7 +158,7 @@ class CommandChannel final : public ::fsl::MessageLoopHandler {
   void RemoveEventHandler(EventHandlerId id);
 
   // Returns the underlying channel handle.
-  const mx::channel& channel() const { return channel_; }
+  const zx::channel& channel() const { return channel_; }
 
  private:
   // Represents a pending HCI command.
@@ -230,8 +230,8 @@ class CommandChannel final : public ::fsl::MessageLoopHandler {
   void NotifyEventHandler(std::unique_ptr<EventPacket> event);
 
   // ::fsl::MessageLoopHandler overrides:
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override;
-  void OnHandleError(mx_handle_t handle, mx_status_t error) override;
+  void OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) override;
+  void OnHandleError(zx_handle_t handle, zx_status_t error) override;
 
   // TransactionId counter.
   std::atomic_size_t next_transaction_id_ __TA_GUARDED(send_queue_mutex_);
@@ -246,7 +246,7 @@ class CommandChannel final : public ::fsl::MessageLoopHandler {
   Transport* transport_;  // weak
 
   // The channel we use to send/receive HCI commands/events.
-  mx::channel channel_;
+  zx::channel channel_;
 
   // True if this CommandChannel has been initialized through a call to Initialize().
   std::atomic_bool is_initialized_;

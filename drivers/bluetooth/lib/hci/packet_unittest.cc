@@ -9,7 +9,7 @@
 #include <cstdint>
 
 #include <endian.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #include "gtest/gtest.h"
 

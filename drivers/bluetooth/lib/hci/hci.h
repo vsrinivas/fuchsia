@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #include "apps/bluetooth/lib/common/device_address.h"
 #include "apps/bluetooth/lib/common/uint128.h"
@@ -783,7 +783,7 @@ struct LEDataLengthChangeSubeventParams {
   uint16_t max_rx_octets;
 
   // Range: see kLEMaxTxTime[Min|Max] in hci_constants.h
-  uint16_t mx_rx_time;
+  uint16_t max_rx_time;
 } __PACKED;
 
 // LE Read Local P-256 Public Key Complete Event (v4.2) (LE)

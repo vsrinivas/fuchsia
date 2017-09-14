@@ -9,8 +9,8 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#include <magenta/device/bt-hci.h>
-#include <magenta/status.h>
+#include <zircon/device/bt-hci.h>
+#include <zircon/status.h>
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "lib/fxl/logging.h"
@@ -31,15 +31,15 @@ bool Sniffer::Start() {
     return false;
   }
 
-  mx_handle_t handle = MX_HANDLE_INVALID;
+  zx_handle_t handle = ZX_HANDLE_INVALID;
   ssize_t ioctl_status = ioctl_bt_hci_get_snoop_channel(hci_dev.get(), &handle);
   if (ioctl_status < 0) {
-    std::cout << "Failed to obtain snoop channel handle: " << mx_status_get_string(ioctl_status)
+    std::cout << "Failed to obtain snoop channel handle: " << zx_status_get_string(ioctl_status)
               << std::endl;
     return false;
   }
 
-  FXL_DCHECK(handle != MX_HANDLE_INVALID);
+  FXL_DCHECK(handle != ZX_HANDLE_INVALID);
 
   if (!logger_.Initialize(log_file_path_)) {
     std::cout << "failed to initialize BTSnoop logger";
@@ -47,8 +47,8 @@ bool Sniffer::Start() {
   }
 
   handler_key_ =
-      message_loop_.AddHandler(this, handle, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
-  snoop_channel_ = mx::channel(handle);
+      message_loop_.AddHandler(this, handle, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+  snoop_channel_ = zx::channel(handle);
   hci_dev_ = std::move(hci_dev);
 
   message_loop_.Run();
@@ -56,15 +56,15 @@ bool Sniffer::Start() {
   return true;
 }
 
-void Sniffer::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) {
+void Sniffer::OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) {
   FXL_DCHECK(handle == snoop_channel_.get());
-  FXL_DCHECK(pending & (MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED));
+  FXL_DCHECK(pending & (ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED));
 
   uint32_t read_size;
-  mx_status_t status =
+  zx_status_t status =
       snoop_channel_.read(0u, buffer_, sizeof(buffer_), &read_size, nullptr, 0, nullptr);
   if (status < 0) {
-    std::cout << "Failed to read snoop event bytes: " << mx_status_get_string(status) << std::endl;
+    std::cout << "Failed to read snoop event bytes: " << zx_status_get_string(status) << std::endl;
     message_loop_.QuitNow();
     return;
   }
@@ -74,9 +74,9 @@ void Sniffer::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t c
                       flags & BT_HCI_SNOOP_FLAG_RECEIVED, flags & BT_HCI_SNOOP_FLAG_DATA);
 }
 
-void Sniffer::OnHandleError(mx_handle_t handle, mx_status_t error) {
+void Sniffer::OnHandleError(zx_handle_t handle, zx_status_t error) {
   FXL_DCHECK(handle == snoop_channel_.get());
-  std::cout << "Error on snoop channel: " << mx_status_get_string(error) << std::endl;
+  std::cout << "Error on snoop channel: " << zx_status_get_string(error) << std::endl;
   message_loop_.QuitNow();
 }
 

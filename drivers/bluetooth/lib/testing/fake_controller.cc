@@ -97,7 +97,7 @@ FakeController::LEScanState::LEScanState()
       filter_duplicates(false),
       filter_policy(hci::LEScanFilterPolicy::kNoWhiteList) {}
 
-FakeController::FakeController(mx::channel cmd_channel, mx::channel acl_data_channel)
+FakeController::FakeController(zx::channel cmd_channel, zx::channel acl_data_channel)
     : FakeControllerBase(std::move(cmd_channel), std::move(acl_data_channel)),
       next_conn_handle_(0u),
       le_connect_pending_(false) {}

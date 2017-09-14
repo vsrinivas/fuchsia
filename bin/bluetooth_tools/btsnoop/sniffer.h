@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include "apps/bluetooth/lib/common/bt_snoop_logger.h"
 #include "apps/bluetooth/lib/hci/hci.h"
@@ -27,14 +27,14 @@ class Sniffer final : public ::fsl::MessageLoopHandler {
 
  private:
   // ::fsl::MessageLoopHandler overrides:
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override;
-  void OnHandleError(mx_handle_t handle, mx_status_t error) override;
+  void OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) override;
+  void OnHandleError(zx_handle_t handle, zx_status_t error) override;
 
   std::string hci_dev_path_;
   std::string log_file_path_;
 
   fxl::UniqueFD hci_dev_;
-  mx::channel snoop_channel_;
+  zx::channel snoop_channel_;
   bluetooth::common::BTSnoopLogger logger_;
 
   fsl::MessageLoop::HandlerKey handler_key_;

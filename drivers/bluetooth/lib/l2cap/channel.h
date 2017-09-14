@@ -10,7 +10,7 @@
 #include <mutex>
 #include <queue>
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #include "apps/bluetooth/lib/common/cancelable_callback.h"
 #include "apps/bluetooth/lib/l2cap/sdu.h"

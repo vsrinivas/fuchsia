@@ -8,7 +8,7 @@
 #include <mutex>
 #include <unordered_map>
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #include "apps/bluetooth/lib/common/cancelable_callback.h"
 #include "apps/bluetooth/lib/hci/acl_data_packet.h"

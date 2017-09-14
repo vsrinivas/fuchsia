@@ -6,7 +6,7 @@
 
 #include <thread>
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/common/packet_view.h"
@@ -24,7 +24,7 @@ namespace testing {
 // implementations.
 class FakeControllerBase : ::fsl::MessageLoopHandler {
  public:
-  FakeControllerBase(mx::channel cmd_channel, mx::channel acl_data_channel);
+  FakeControllerBase(zx::channel cmd_channel, zx::channel acl_data_channel);
   ~FakeControllerBase() override;
 
   // Kicks off the FakeController thread and message loop and starts processing transactions.
@@ -53,8 +53,8 @@ class FakeControllerBase : ::fsl::MessageLoopHandler {
   fxl::RefPtr<fxl::TaskRunner> task_runner() const { return task_runner_; }
 
   // Getters for our channel endpoints.
-  const mx::channel& command_channel() const { return cmd_channel_; }
-  const mx::channel& acl_data_channel() const { return acl_channel_; }
+  const zx::channel& command_channel() const { return cmd_channel_; }
+  const zx::channel& acl_data_channel() const { return acl_channel_; }
 
   // Called when there is an incoming command packet.
   virtual void OnCommandPacketReceived(
@@ -65,7 +65,7 @@ class FakeControllerBase : ::fsl::MessageLoopHandler {
 
  private:
   // ::fsl::MessageLoopHandler overrides
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override;
+  void OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) override;
 
   // Read and handle packets received over the channels.
   void HandleCommandPacket();
@@ -78,8 +78,8 @@ class FakeControllerBase : ::fsl::MessageLoopHandler {
   // Used to assert that certain public functions are only called on the creation thread.
   fxl::ThreadChecker thread_checker_;
 
-  mx::channel cmd_channel_;
-  mx::channel acl_channel_;
+  zx::channel cmd_channel_;
+  zx::channel acl_channel_;
   std::thread thread_;
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   fsl::MessageLoop::HandlerKey cmd_handler_key_;

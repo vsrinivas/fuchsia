@@ -4,8 +4,8 @@
 
 #include "transport.h"
 
-#include <magenta/status.h>
-#include <mx/channel.h>
+#include <zircon/status.h>
+#include <zx/channel.h>
 
 #include "lib/fxl/logging.h"
 #include "lib/fsl/threading/create_thread.h"
@@ -40,7 +40,7 @@ bool Transport::Initialize() {
   FXL_DCHECK(!IsInitialized());
 
   // Obtain command channel handle.
-  mx::channel channel = hci_device_->GetCommandChannel();
+  zx::channel channel = hci_device_->GetCommandChannel();
   if (!channel.is_valid()) {
     FXL_LOG(ERROR) << "hci: Transport: Failed to obtain command channel handle";
     return false;
@@ -51,7 +51,7 @@ bool Transport::Initialize() {
   // We watch for handle errors and closures to perform the necessary clean up.
   io_task_runner_->PostTask([ handle = channel.get(), this ] {
     cmd_channel_handler_key_ =
-        fsl::MessageLoop::GetCurrent()->AddHandler(this, handle, MX_CHANNEL_PEER_CLOSED);
+        fsl::MessageLoop::GetCurrent()->AddHandler(this, handle, ZX_CHANNEL_PEER_CLOSED);
   });
 
   command_channel_ = std::make_unique<CommandChannel>(this, std::move(channel));
@@ -68,7 +68,7 @@ bool Transport::InitializeACLDataChannel(const DataBufferInfo& bredr_buffer_info
   FXL_DCHECK(IsInitialized());
 
   // Obtain ACL data channel handle.
-  mx::channel channel = hci_device_->GetACLDataChannel();
+  zx::channel channel = hci_device_->GetACLDataChannel();
   if (!channel.is_valid()) {
     FXL_LOG(ERROR) << "hci: Transport: Failed to obtain ACL data channel handle";
     return false;
@@ -77,7 +77,7 @@ bool Transport::InitializeACLDataChannel(const DataBufferInfo& bredr_buffer_info
   // We watch for handle errors and closures to perform the necessary clean up.
   io_task_runner_->PostTask([ handle = channel.get(), this ] {
     acl_channel_handler_key_ =
-        fsl::MessageLoop::GetCurrent()->AddHandler(this, handle, MX_CHANNEL_PEER_CLOSED);
+        fsl::MessageLoop::GetCurrent()->AddHandler(this, handle, ZX_CHANNEL_PEER_CLOSED);
   });
 
   acl_data_channel_ = std::make_unique<ACLDataChannel>(this, std::move(channel));
@@ -133,13 +133,13 @@ bool Transport::IsInitialized() const {
   return is_initialized_;
 }
 
-void Transport::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) {
-  FXL_DCHECK(pending & MX_CHANNEL_PEER_CLOSED);
+void Transport::OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) {
+  FXL_DCHECK(pending & ZX_CHANNEL_PEER_CLOSED);
   NotifyClosedCallback();
 }
 
-void Transport::OnHandleError(mx_handle_t handle, mx_status_t error) {
-  FXL_LOG(ERROR) << "hci: Transport: channel error: " << mx_status_get_string(error);
+void Transport::OnHandleError(zx_handle_t handle, zx_status_t error) {
+  FXL_LOG(ERROR) << "hci: Transport: channel error: " << zx_status_get_string(error);
   NotifyClosedCallback();
 }
 

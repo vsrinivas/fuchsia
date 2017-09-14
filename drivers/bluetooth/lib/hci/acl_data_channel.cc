@@ -5,7 +5,7 @@
 #include "acl_data_channel.h"
 
 #include <endian.h>
-#include <magenta/status.h>
+#include <zircon/status.h>
 
 #include "apps/bluetooth/lib/common/run_task_sync.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -28,7 +28,7 @@ bool DataBufferInfo::operator==(const DataBufferInfo& other) const {
   return max_data_length_ == other.max_data_length_ && max_num_packets_ == other.max_num_packets_;
 }
 
-ACLDataChannel::ACLDataChannel(Transport* transport, mx::channel hci_acl_channel)
+ACLDataChannel::ACLDataChannel(Transport* transport, zx::channel hci_acl_channel)
     : transport_(transport),
       channel_(std::move(hci_acl_channel)),
       is_initialized_(false),
@@ -53,9 +53,9 @@ void ACLDataChannel::Initialize(const DataBufferInfo& bredr_buffer_info,
   le_buffer_info_ = le_buffer_info;
 
   auto setup_handler_task = [this] {
-    // TODO(armansito): We'll need to pay attention to MX_CHANNEL_WRITABLE as well.
+    // TODO(armansito): We'll need to pay attention to ZX_CHANNEL_WRITABLE as well.
     io_handler_key_ =
-        fsl::MessageLoop::GetCurrent()->AddHandler(this, channel_.get(), MX_CHANNEL_READABLE);
+        fsl::MessageLoop::GetCurrent()->AddHandler(this, channel_.get(), ZX_CHANNEL_READABLE);
     FXL_LOG(INFO) << "hci: ACLDataChannel: I/O handler registered";
   };
 
@@ -259,10 +259,10 @@ void ACLDataChannel::TrySendNextQueuedPacketsLocked() {
     const QueuedDataPacket& packet = to_send.front();
 
     auto packet_bytes = packet.packet->view().data();
-    mx_status_t status = channel_.write(0, packet_bytes.data(), packet_bytes.size(), nullptr, 0);
+    zx_status_t status = channel_.write(0, packet_bytes.data(), packet_bytes.size(), nullptr, 0);
     if (status < 0) {
       FXL_LOG(ERROR) << "hci: ACLDataChannel: Failed to send data packet to HCI driver ("
-                     << mx_status_get_string(status) << ") - dropping packet";
+                     << zx_status_get_string(status) << ") - dropping packet";
       to_send.pop_front();
       continue;
     }
@@ -329,12 +329,12 @@ void ACLDataChannel::IncrementLETotalNumPacketsLocked(size_t count) {
   le_num_sent_packets_ += count;
 }
 
-void ACLDataChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) {
+void ACLDataChannel::OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) {
   if (!is_initialized_) return;
 
   FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
   FXL_DCHECK(handle == channel_.get());
-  FXL_DCHECK(pending & MX_CHANNEL_READABLE);
+  FXL_DCHECK(pending & ZX_CHANNEL_READABLE);
 
   std::lock_guard<std::mutex> lock(rx_mutex_);
   if (!rx_callback_) return;
@@ -349,10 +349,10 @@ void ACLDataChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uin
 
   uint32_t read_size;
   auto packet_bytes = packet->mutable_view()->mutable_data();
-  mx_status_t status = channel_.read(0u, packet_bytes.mutable_data(), packet_bytes.size(),
+  zx_status_t status = channel_.read(0u, packet_bytes.mutable_data(), packet_bytes.size(),
                                      &read_size, nullptr, 0, nullptr);
   if (status < 0) {
-    FXL_VLOG(1) << "hci: ACLDataChannel: Failed to read RX bytes: " << mx_status_get_string(status);
+    FXL_VLOG(1) << "hci: ACLDataChannel: Failed to read RX bytes: " << zx_status_get_string(status);
     // Clear the handler so that we stop receiving events from it.
     fsl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
     return;
@@ -379,11 +379,11 @@ void ACLDataChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uin
   rx_callback_(std::move(packet));
 }
 
-void ACLDataChannel::OnHandleError(mx_handle_t handle, mx_status_t error) {
+void ACLDataChannel::OnHandleError(zx_handle_t handle, zx_status_t error) {
   FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
   FXL_DCHECK(handle == channel_.get());
 
-  FXL_LOG(ERROR) << "hci: ACLDataChannel: channel error: " << mx_status_get_string(error);
+  FXL_LOG(ERROR) << "hci: ACLDataChannel: channel error: " << zx_status_get_string(error);
 
   // Clear the handler so that we stop receiving events from it.
   fsl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);

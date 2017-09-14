@@ -13,7 +13,7 @@ namespace internal {
 // (fbl::DoublyLinkedList and fbl::SinglyLinkedList) to be used with std::unique_ptr.
 //
 // See:
-// https://fuchsia.googlesource.com/magenta/+/master/system/ulib/fbl/include/fbl/intrusive_pointer_traits.h
+// https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fbl/include/fbl/intrusive_pointer_traits.h
 template <typename T>
 struct ContainerPtrTraits<::std::unique_ptr<T>> {
   using ValueType = T;

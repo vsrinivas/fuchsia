@@ -96,7 +96,7 @@ void AdapterManager::OnDeviceFound(int dir_fd, std::string filename) {
     return;
   }
 
-  auto hci_dev = std::make_unique<bluetooth::hci::MagentaDeviceWrapper>(std::move(hci_dev_fd));
+  auto hci_dev = std::make_unique<bluetooth::hci::ZirconDeviceWrapper>(std::move(hci_dev_fd));
   auto adapter = std::make_unique<bluetooth::gap::Adapter>(std::move(hci_dev));
 
   auto self = weak_ptr_factory_.GetWeakPtr();

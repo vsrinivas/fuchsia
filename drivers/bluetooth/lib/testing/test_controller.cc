@@ -4,7 +4,7 @@
 
 #include "test_controller.h"
 
-#include <magenta/status.h>
+#include <zircon/status.h>
 
 #include "gtest/gtest.h"
 
@@ -33,7 +33,7 @@ common::DynamicByteBuffer CommandTransaction::PopNextReply() {
   return reply;
 }
 
-TestController::TestController(mx::channel cmd_channel, mx::channel acl_data_channel)
+TestController::TestController(zx::channel cmd_channel, zx::channel acl_data_channel)
     : FakeControllerBase(std::move(cmd_channel), std::move(acl_data_channel)) {}
 
 TestController::~TestController() {
@@ -75,8 +75,8 @@ void TestController::OnCommandPacketReceived(
 
   while (!current.replies_.empty()) {
     auto& reply = current.replies_.front();
-    mx_status_t status = command_channel().write(0, reply.data(), reply.size(), nullptr, 0);
-    ASSERT_EQ(MX_OK, status) << "Failed to send reply: " << mx_status_get_string(status);
+    zx_status_t status = command_channel().write(0, reply.data(), reply.size(), nullptr, 0);
+    ASSERT_EQ(ZX_OK, status) << "Failed to send reply: " << zx_status_get_string(status);
     current.replies_.pop();
   }
 

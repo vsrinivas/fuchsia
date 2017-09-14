@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include "gtest/gtest.h"
 

@@ -24,7 +24,7 @@ Fragmenter::Fragmenter(hci::ConnectionHandle connection_handle, uint16_t max_acl
 // NOTE(armansito): The following method copies the contents of |data| into ACL data packets. This
 // copying is currently necessary because the complete HCI frame (ACL header + payload fragment) we
 // send over the channel to the bt-hci driver need to be stored contiguously before the call to
-// mx_channel_write. Plus, we perform the HCI flow-control on the host-stack side which requires
+// zx_channel_write. Plus, we perform the HCI flow-control on the host-stack side which requires
 // ACL packets to be buffered.
 //
 // As our future driver architecture will remove the IPC between the HCI driver and the host stack,
@@ -35,8 +35,8 @@ Fragmenter::Fragmenter(hci::ConnectionHandle connection_handle, uint16_t max_acl
 // * Current theoretical number of data copies:
 //     1. service -> L2CAP channel
 //     2. channel -> fragmenter ->(move) HCI layer
-//     3. HCI layer ->(mx_channel_write)
-//     4. (mx_channel_read)-> bt-hci driver
+//     3. HCI layer ->(zx_channel_write)
+//     4. (zx_channel_read)-> bt-hci driver
 //     5. bt-hci driver -> transport driver
 //
 // * Potential number of data copies

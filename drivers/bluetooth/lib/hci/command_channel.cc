@@ -6,7 +6,7 @@
 
 #include <endian.h>
 
-#include <magenta/status.h>
+#include <zircon/status.h>
 
 #include "apps/bluetooth/lib/common/run_task_sync.h"
 #include "lib/fxl/functional/auto_call.h"
@@ -39,7 +39,7 @@ CommandChannel::QueuedCommand::QueuedCommand(TransactionId id,
   packet = std::move(command_packet);
 }
 
-CommandChannel::CommandChannel(Transport* transport, mx::channel hci_command_channel)
+CommandChannel::CommandChannel(Transport* transport, zx::channel hci_command_channel)
     : next_transaction_id_(1u),
       next_event_handler_id_(1u),
       transport_(transport),
@@ -60,7 +60,7 @@ void CommandChannel::Initialize() {
 
   auto setup_handler_task = [this] {
     io_handler_key_ =
-        fsl::MessageLoop::GetCurrent()->AddHandler(this, channel_.get(), MX_CHANNEL_READABLE);
+        fsl::MessageLoop::GetCurrent()->AddHandler(this, channel_.get(), ZX_CHANNEL_READABLE);
     FXL_LOG(INFO) << "hci: CommandChannel: I/O handler registered";
   };
 
@@ -194,12 +194,12 @@ void CommandChannel::TrySendNextQueuedCommand() {
   }
 
   auto packet_bytes = cmd.packet->view().data();
-  mx_status_t status = channel_.write(0, packet_bytes.data(), packet_bytes.size(), nullptr, 0);
+  zx_status_t status = channel_.write(0, packet_bytes.data(), packet_bytes.size(), nullptr, 0);
   if (status < 0) {
     // TODO(armansito): We should notify the |status_callback| of the pending
     // command with a special error code in this case.
     FXL_LOG(ERROR) << "hci: CommandChannel: Failed to send command: "
-                   << mx_status_get_string(status);
+                   << zx_status_get_string(status);
     return;
   }
 
@@ -421,15 +421,15 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
   ]() mutable { event_callback(*event); }));
 }
 
-void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) {
+void CommandChannel::OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) {
   FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
   FXL_DCHECK(handle == channel_.get());
-  FXL_DCHECK(pending & MX_CHANNEL_READABLE);
+  FXL_DCHECK(pending & ZX_CHANNEL_READABLE);
 
   // Allocate a buffer for the event. Since we don't know the size beforehand we allocate the
   // largest possible buffer.
   // TODO(armansito): We could first try to read into a small buffer and retry if the syscall
-  // returns MX_ERR_BUFFER_TOO_SMALL. Not sure if the second syscall would be worth it but
+  // returns ZX_ERR_BUFFER_TOO_SMALL. Not sure if the second syscall would be worth it but
   // investigate.
 
   auto packet = EventPacket::New(slab_allocators::kLargeControlPayloadSize);
@@ -440,11 +440,11 @@ void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uin
 
   uint32_t read_size;
   auto packet_bytes = packet->mutable_view()->mutable_data();
-  mx_status_t status = channel_.read(0u, packet_bytes.mutable_data(), packet_bytes.size(),
+  zx_status_t status = channel_.read(0u, packet_bytes.mutable_data(), packet_bytes.size(),
                                      &read_size, nullptr, 0, nullptr);
   if (status < 0) {
     FXL_VLOG(1) << "hci: CommandChannel: Failed to read event bytes: "
-                << mx_status_get_string(status);
+                << zx_status_get_string(status);
     // Clear the handler so that we stop receiving events from it.
     fsl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
     return;
@@ -491,11 +491,11 @@ void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uin
   NotifyEventHandler(std::move(packet));
 }
 
-void CommandChannel::OnHandleError(mx_handle_t handle, mx_status_t error) {
+void CommandChannel::OnHandleError(zx_handle_t handle, zx_status_t error) {
   FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
   FXL_DCHECK(handle == channel_.get());
 
-  FXL_VLOG(1) << "hci: CommandChannel: channel error: " << mx_status_get_string(error);
+  FXL_VLOG(1) << "hci: CommandChannel: channel error: " << zx_status_get_string(error);
 
   // Clear the handler so that we stop receiving events from it.
   fsl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);

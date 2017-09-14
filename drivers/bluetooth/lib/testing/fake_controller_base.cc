@@ -4,7 +4,7 @@
 
 #include "fake_controller_base.h"
 
-#include <magenta/status.h>
+#include <zircon/status.h>
 
 #include "apps/bluetooth/lib/common/run_task_sync.h"
 #include "apps/bluetooth/lib/hci/acl_data_packet.h"
@@ -15,7 +15,7 @@
 namespace bluetooth {
 namespace testing {
 
-FakeControllerBase::FakeControllerBase(mx::channel cmd_channel, mx::channel acl_data_channel)
+FakeControllerBase::FakeControllerBase(zx::channel cmd_channel, zx::channel acl_data_channel)
     : cmd_channel_(std::move(cmd_channel)), acl_channel_(std::move(acl_data_channel)) {}
 
 FakeControllerBase::~FakeControllerBase() {
@@ -35,10 +35,10 @@ void FakeControllerBase::Start() {
 
   auto setup_task = [this] {
     cmd_handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
-        this, cmd_channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
+        this, cmd_channel_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
     if (acl_channel_.is_valid()) {
       acl_handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
-          this, acl_channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
+          this, acl_channel_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
     }
   };
 
@@ -61,14 +61,14 @@ void FakeControllerBase::Stop() {
 
 void FakeControllerBase::SendCommandChannelPacket(const common::ByteBuffer& packet) {
   FXL_DCHECK(IsStarted());
-  mx_status_t status = cmd_channel_.write(0, packet.data(), packet.size(), nullptr, 0);
-  FXL_DCHECK(MX_OK == status);
+  zx_status_t status = cmd_channel_.write(0, packet.data(), packet.size(), nullptr, 0);
+  FXL_DCHECK(ZX_OK == status);
 }
 
 void FakeControllerBase::SendACLDataChannelPacket(const common::ByteBuffer& packet) {
   FXL_DCHECK(IsStarted());
-  mx_status_t status = acl_channel_.write(0, packet.data(), packet.size(), nullptr, 0);
-  FXL_DCHECK(MX_OK == status);
+  zx_status_t status = acl_channel_.write(0, packet.data(), packet.size(), nullptr, 0);
+  FXL_DCHECK(ZX_OK == status);
 }
 
 void FakeControllerBase::CloseCommandChannel() {
@@ -81,7 +81,7 @@ void FakeControllerBase::CloseACLDataChannel() {
   common::RunTaskSync([this] { CloseACLDataChannelInternal(); }, task_runner_);
 }
 
-void FakeControllerBase::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) {
+void FakeControllerBase::OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) {
   if (handle == cmd_channel_.get()) {
     HandleCommandPacket();
   } else if (handle == acl_channel_.get()) {
@@ -92,15 +92,15 @@ void FakeControllerBase::OnHandleReady(mx_handle_t handle, mx_signals_t pending,
 void FakeControllerBase::HandleCommandPacket() {
   common::StaticByteBuffer<hci::kMaxCommandPacketPayloadSize> buffer;
   uint32_t read_size;
-  mx_status_t status =
+  zx_status_t status =
       cmd_channel_.read(0u, buffer.mutable_data(), hci::kMaxCommandPacketPayloadSize, &read_size,
                         nullptr, 0, nullptr);
-  FXL_DCHECK(status == MX_OK || status == MX_ERR_PEER_CLOSED);
+  FXL_DCHECK(status == ZX_OK || status == ZX_ERR_PEER_CLOSED);
   if (status < 0) {
-    if (status == MX_ERR_PEER_CLOSED)
+    if (status == ZX_ERR_PEER_CLOSED)
       FXL_LOG(INFO) << "Command channel was closed";
     else
-      FXL_LOG(ERROR) << "Failed to read on cmd channel: " << mx_status_get_string(status);
+      FXL_LOG(ERROR) << "Failed to read on cmd channel: " << zx_status_get_string(status);
 
     CloseCommandChannelInternal();
     return;
@@ -119,14 +119,14 @@ void FakeControllerBase::HandleCommandPacket() {
 void FakeControllerBase::HandleACLPacket() {
   common::StaticByteBuffer<hci::kMaxACLPayloadSize + sizeof(hci::ACLDataHeader)> buffer;
   uint32_t read_size;
-  mx_status_t status =
+  zx_status_t status =
       acl_channel_.read(0u, buffer.mutable_data(), buffer.size(), &read_size, nullptr, 0, nullptr);
-  FXL_DCHECK(status == MX_OK || status == MX_ERR_PEER_CLOSED);
+  FXL_DCHECK(status == ZX_OK || status == ZX_ERR_PEER_CLOSED);
   if (status < 0) {
-    if (status == MX_ERR_PEER_CLOSED)
+    if (status == ZX_ERR_PEER_CLOSED)
       FXL_LOG(INFO) << "ACL channel was closed";
     else
-      FXL_LOG(ERROR) << "Failed to read on ACL channel: " << mx_status_get_string(status);
+      FXL_LOG(ERROR) << "Failed to read on ACL channel: " << zx_status_get_string(status);
 
     CloseACLDataChannelInternal();
     return;

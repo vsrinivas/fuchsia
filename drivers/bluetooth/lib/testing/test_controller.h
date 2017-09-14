@@ -45,7 +45,7 @@ class CommandTransaction final {
 // using gtest ASSERT_* macros.
 class TestController : public FakeControllerBase {
  public:
-  TestController(mx::channel cmd_channel, mx::channel acl_data_channel);
+  TestController(zx::channel cmd_channel, zx::channel acl_data_channel);
   ~TestController() override;
 
   // Queues a transaction into the TestController's expected command queue. Each packet received

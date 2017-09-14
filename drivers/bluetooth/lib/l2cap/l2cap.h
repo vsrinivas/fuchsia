@@ -8,7 +8,7 @@
 
 #include <cstdint>
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 namespace bluetooth {
 namespace l2cap {

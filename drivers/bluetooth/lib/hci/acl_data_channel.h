@@ -10,8 +10,8 @@
 #include <queue>
 #include <unordered_map>
 
-#include <magenta/compiler.h>
-#include <mx/channel.h>
+#include <zircon/compiler.h>
+#include <zx/channel.h>
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/hci/acl_data_packet.h"
@@ -65,7 +65,7 @@ class DataBufferInfo {
 // 2, Part E, Section 4.1.1.
 class ACLDataChannel final : public ::fsl::MessageLoopHandler {
  public:
-  ACLDataChannel(Transport* transport, mx::channel hci_acl_channel);
+  ACLDataChannel(Transport* transport, zx::channel hci_acl_channel);
   ~ACLDataChannel() override;
 
   // Starts listening on the HCI ACL data channel and starts handling data flow control.
@@ -111,7 +111,7 @@ class ACLDataChannel final : public ::fsl::MessageLoopHandler {
   bool SendPackets(fbl::DoublyLinkedList<ACLDataPacketPtr> packets, Connection::LinkType ll_type);
 
   // Returns the underlying channel handle.
-  const mx::channel& channel() const { return channel_; }
+  const zx::channel& channel() const { return channel_; }
 
   // Returns the BR/EDR buffer information that the channel was initialized with.
   const DataBufferInfo& GetBufferInfo() const;
@@ -167,8 +167,8 @@ class ACLDataChannel final : public ::fsl::MessageLoopHandler {
   void IncrementLETotalNumPacketsLocked(size_t count) __TA_REQUIRES(send_mutex_);
 
   // ::fsl::MessageLoopHandler overrides:
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override;
-  void OnHandleError(mx_handle_t handle, mx_status_t error) override;
+  void OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) override;
+  void OnHandleError(zx_handle_t handle, zx_status_t error) override;
 
   // Used to assert that certain public functions are only called on the creation thread.
   fxl::ThreadChecker thread_checker_;
@@ -177,7 +177,7 @@ class ACLDataChannel final : public ::fsl::MessageLoopHandler {
   Transport* transport_;  // weak;
 
   // The channel that we use to send/receive HCI ACL data packets.
-  mx::channel channel_;
+  zx::channel channel_;
 
   // True if this instance has been initialized through a call to Initialize().
   std::atomic_bool is_initialized_;

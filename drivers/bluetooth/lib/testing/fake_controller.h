@@ -7,7 +7,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include "apps/bluetooth/lib/common/device_address.h"
 #include "apps/bluetooth/lib/hci/hci.h"
@@ -78,7 +78,7 @@ class FakeController : public FakeControllerBase {
 
   // Constructor initializes the controller with the minimal default settings (equivalent to calling
   // Settings::ApplyDefaults()).
-  FakeController(mx::channel cmd_channel, mx::channel acl_data_channel);
+  FakeController(zx::channel cmd_channel, zx::channel acl_data_channel);
   ~FakeController() override;
 
   // Resets the controller settings.

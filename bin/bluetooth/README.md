@@ -36,9 +36,9 @@ To build the entire Fuchsia tree and also include the FIDL examples:
 A `bt-hci` device is published for each local Bluetooth controller under `/dev/class/bt-hci/`. The
 Bluetooth host-subsystem process and the command-line tools that interact with a Bluetooth
 controller obtain
-[channel](https://fuchsia.googlesource.com/magenta/+/master/docs/objects/channel.md) handles from a
+[channel](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/channel.md) handles from a
 bt-hci device using the ioctls defined
-[here](https://fuchsia.googlesource.com/magenta/+/master/system/public/magenta/device/bt-hci.h).
+[here](https://fuchsia.googlesource.com/zircon/+/master/system/public/zircon/device/bt-hci.h).
 
 ### The bluetooth process
 

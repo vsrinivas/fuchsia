@@ -8,7 +8,7 @@
 #include <functional>
 #include <mutex>
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"

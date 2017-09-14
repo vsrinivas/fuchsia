@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  auto hci_dev = std::make_unique<hci::MagentaDeviceWrapper>(std::move(hci_dev_fd));
+  auto hci_dev = std::make_unique<hci::ZirconDeviceWrapper>(std::move(hci_dev_fd));
   auto hci = hci::Transport::Create(std::move(hci_dev));
   hci->Initialize();
   fsl::MessageLoop message_loop;

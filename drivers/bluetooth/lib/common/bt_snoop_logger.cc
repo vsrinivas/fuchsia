@@ -8,7 +8,7 @@
 
 #include <endian.h>
 #include <fcntl.h>
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/file_descriptor.h"

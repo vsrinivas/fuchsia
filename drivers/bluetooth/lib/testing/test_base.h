@@ -42,14 +42,14 @@ class TestBase : public ::testing::Test {
   // Initializes |test_device_| and returns the DeviceWrapper endpoint which can be passed to
   // classes that are under test.
   std::unique_ptr<hci::DeviceWrapper> SetUpTestDevice() {
-    mx::channel cmd0, cmd1;
-    mx::channel acl0, acl1;
+    zx::channel cmd0, cmd1;
+    zx::channel acl0, acl1;
 
-    mx_status_t status = mx::channel::create(0, &cmd0, &cmd1);
-    FXL_DCHECK(MX_OK == status);
+    zx_status_t status = zx::channel::create(0, &cmd0, &cmd1);
+    FXL_DCHECK(ZX_OK == status);
 
-    status = mx::channel::create(0, &acl0, &acl1);
-    FXL_DCHECK(MX_OK == status);
+    status = zx::channel::create(0, &acl0, &acl1);
+    FXL_DCHECK(ZX_OK == status);
 
     auto hci_dev = std::make_unique<hci::DummyDeviceWrapper>(std::move(cmd0), std::move(acl0));
     test_device_ = std::make_unique<FakeControllerType>(std::move(cmd1), std::move(acl1));

@@ -94,8 +94,8 @@ class Transport final : public ::fsl::MessageLoopHandler,
   ~Transport() override;
 
   // ::fsl::MessageLoopHandler overrides:
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override;
-  void OnHandleError(mx_handle_t handle, mx_status_t error) override;
+  void OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) override;
+  void OnHandleError(zx_handle_t handle, zx_status_t error) override;
 
   // Notifies the closed callback.
   void NotifyClosedCallback();
