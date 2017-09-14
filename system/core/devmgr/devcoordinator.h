@@ -170,6 +170,7 @@ typedef struct {
 #define DC_OP_CREATE_DEVICE_STUB 0x80000001
 #define DC_OP_CREATE_DEVICE      0x80000002
 #define DC_OP_BIND_DRIVER        0x80000003
+#define DC_OP_CONNECT_SHADOW     0x80000004
 
 // Host->Coord Ops
 #define DC_OP_STATUS             0x80000010

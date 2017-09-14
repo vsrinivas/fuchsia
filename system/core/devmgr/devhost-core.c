@@ -99,6 +99,10 @@ static zx_status_t default_resume(void* ctx, uint32_t flags) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
+static zx_status_t default_rxrpc(void* ctx, zx_handle_t channel) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_protocol_device_t device_default_ops = {
     .open = default_open,
     .open_at = default_open_at,
@@ -111,6 +115,7 @@ zx_protocol_device_t device_default_ops = {
     .ioctl = default_ioctl,
     .suspend = default_suspend,
     .resume = default_resume,
+    .rxrpc = default_rxrpc,
 };
 
 static struct list_node unmatched_device_list = LIST_INITIAL_VALUE(unmatched_device_list);
@@ -251,6 +256,7 @@ static zx_status_t device_validate(zx_device_t* dev) {
     DEFAULT_IF_NULL(ops, ioctl);
     DEFAULT_IF_NULL(ops, suspend);
     DEFAULT_IF_NULL(ops, resume);
+    DEFAULT_IF_NULL(ops, rxrpc);
 
     return ZX_OK;
 }

@@ -28,8 +28,16 @@
 #include "devhost.h"
 #include "log.h"
 
-uint32_t log_flags = LOG_ERROR | LOG_INFO;
+uint32_t log_flags = LOG_ERROR | LOG_INFO | LOG_RPC_SDW;
 
+struct shadow_iostate {
+    zx_device_t* dev;
+    port_handler_t ph;
+};
+static void shadow_ios_create(zx_device_t* dev, zx_handle_t h);
+static void shadow_ios_destroy(zx_device_t* dev);
+
+#define shadow_ios_from_ph(ph) containerof(ph, shadow_iostate_t, ph)
 
 #define ios_from_ph(ph) containerof(ph, devhost_iostate_t, ph)
 
@@ -407,6 +415,15 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         zx_channel_write(h, 0, &reply, sizeof(reply), NULL, 0);
         return ZX_OK;
 
+    case DC_OP_CONNECT_SHADOW:
+        if (hcount != 1) {
+            r = ZX_ERR_INVALID_ARGS;
+            break;
+        }
+        log(RPC_SDW, "devhost[%s] connect shadow rpc\n", path);
+        shadow_ios_create(ios->dev, hin[0]);
+        break;
+
     default:
         log(ERROR, "devhost[%s] invalid rpc op %08x\n", path, msg.op);
         r = ZX_ERR_NOT_SUPPORTED;
@@ -479,6 +496,91 @@ static zx_status_t dh_handle_rio_rpc(port_handler_t* ph, zx_signals_t signals, u
     free(ios);
     return r;
 }
+
+
+// Handling RPC From Shadow Devices to BusDevs
+
+static zx_status_t dh_handle_shadow_rpc(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+    shadow_iostate_t* ios = shadow_ios_from_ph(ph);
+
+    if (evt != 0) {
+        log(RPC_SDW, "shadow-rpc: destroy (ios=%p)\n", ios);
+        // we send an event to request the destruction
+        // of an iostate, to ensure that's the *last*
+        // packet about the iostate that we get
+        free(ios);
+        return ZX_ERR_STOP;
+    }
+    if (ios->dev == NULL) {
+        log(RPC_SDW, "shadow-rpc: stale rpc? (ios=%p)\n", ios);
+        // ports does not let us cancel packets that are
+        // alread in the queue, so the dead flag enables us
+        // to ignore them
+        return ZX_ERR_STOP;
+    }
+    if (signals & ZX_CHANNEL_READABLE) {
+        log(RPC_SDW, "shadow-rpc: rpc readable (ios=%p,dev=%p)\n", ios, ios->dev);
+        zx_status_t r = ios->dev->ops->rxrpc(ios->dev, ph->handle);
+        if (r != ZX_OK) {
+            log(RPC_SDW, "shadow-rpc: rpc cb error %d (ios=%p,dev=%p)\n", r, ios, ios->dev);
+destroy:
+            ios->dev->shadow_ios = NULL;
+            zx_handle_close(ios->ph.handle);
+            free(ios);
+            return ZX_ERR_STOP;
+        }
+        return ZX_OK;
+    }
+    if (signals & ZX_CHANNEL_PEER_CLOSED) {
+        log(RPC_SDW, "shadow-rpc: peer closed (ios=%p,dev=%p)\n", ios, ios->dev);
+        goto destroy;
+    }
+    log(ERROR, "devhost: no work? %08x\n", signals);
+    return ZX_OK;
+}
+
+static void shadow_ios_create(zx_device_t* dev, zx_handle_t h) {
+    if (dev->shadow_ios) {
+        shadow_ios_destroy(dev);
+
+        shadow_iostate_t* ios;
+        if ((ios = calloc(sizeof(shadow_iostate_t), 1)) == NULL) {
+            zx_handle_close(h);
+            return;
+        }
+
+        ios->dev = dev;
+        ios->ph.handle = h;
+        ios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+        ios->ph.func = dh_handle_shadow_rpc;
+        if (port_wait(&dh_port, &ios->ph) != ZX_OK) {
+            zx_handle_close(h);
+            free(ios);
+        } else {
+            dev->shadow_ios = ios;
+        }
+    }
+}
+
+static void shadow_ios_destroy(zx_device_t* dev) {
+    shadow_iostate_t* ios = dev->shadow_ios;
+    if (ios) {
+        dev->shadow_ios = NULL;
+
+        // mark iostate detached
+        ios->dev = NULL;
+
+        // cancel any pending waits
+        port_cancel(&dh_port, &ios->ph);
+
+        zx_handle_close(ios->ph.handle);
+        ios->ph.handle = ZX_HANDLE_INVALID;
+
+        // queue an event to destroy the iostate
+        port_queue(&dh_port, &ios->ph, 1);
+    }
+}
+
 
 #define LOGBUF_MAX (ZX_LOG_RECORD_MAX - sizeof(zx_log_record_t))
 
@@ -674,6 +776,9 @@ zx_status_t devhost_remove(zx_device_t* dev) {
 
     // queue an event to destroy the iostate
     port_queue(&dh_port, &ios->ph, 1);
+
+    // shut down our shadow rpc channel if it exists
+    shadow_ios_destroy(dev);
 
     return ZX_OK;
 }

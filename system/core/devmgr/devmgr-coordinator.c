@@ -1067,7 +1067,7 @@ static zx_status_t dc_handle_device(port_handler_t* ph, zx_signals_t signals, ui
 
 // send message to devhost, requesting the creation of a device
 static zx_status_t dh_create_device(device_t* dev, devhost_t* dh,
-                                    const char* args) {
+                                    const char* args, zx_handle_t rpc_shadow) {
     dc_msg_t msg;
     uint32_t mlen;
     zx_status_t r;
@@ -1099,7 +1099,12 @@ static zx_status_t dh_create_device(device_t* dev, devhost_t* dh,
         msg.op = DC_OP_CREATE_DEVICE_STUB;
     }
 
-    if (info->hrsrc != ZX_HANDLE_INVALID) {
+    if (rpc_shadow) {
+        handle[hcount++] = rpc_shadow;
+        if (info->hrsrc) {
+            log(ERROR, "devcoord: shadow device has a resource?!\n");
+        }
+    } else if (info->hrsrc != ZX_HANDLE_INVALID) {
         if ((r = zx_handle_duplicate(info->hrsrc, ZX_RIGHT_SAME_RIGHTS, handle + hcount)) < 0) {
             goto fail;
         }
@@ -1202,6 +1207,22 @@ static zx_status_t dh_bind_driver(device_t* dev, const char* libname) {
     return ZX_OK;
 }
 
+static zx_status_t dh_connect_shadow(device_t* dev, zx_handle_t h) {
+    dc_msg_t msg;
+    uint32_t mlen;
+    zx_status_t r;
+    if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, NULL, NULL)) < 0) {
+        zx_handle_close(h);
+        return r;
+    }
+    msg.txid = 0;
+    msg.op = DC_OP_CONNECT_SHADOW;
+    if ((r = zx_channel_write(dev->hrpc, 0, &msg, mlen, &h, 1)) < 0) {
+        zx_handle_close(h);
+    }
+    return r;
+}
+
 static zx_status_t dc_attempt_bind(driver_t* drv, device_t* dev) {
     // cannot bind driver to already bound device
     if ((dev->flags & DEV_CTX_BOUND) && (!(dev->flags & DEV_CTX_MULTI_BIND))) {
@@ -1236,13 +1257,33 @@ static zx_status_t dc_attempt_bind(driver_t* drv, device_t* dev) {
 
     // if this device has no devhost, first instantiate it
     if (dev->shadow->host == NULL) {
+        zx_handle_t h0 = ZX_HANDLE_INVALID, h1 = ZX_HANDLE_INVALID;
+
+        // the immortal root devices do not provide shadow rpc
+        bool need_shadow_rpc = !(dev->flags & DEV_CTX_IMMORTAL);
+
+        if (need_shadow_rpc) {
+            // create rpc channel for shadow device to talk to the busdev it shadows
+            if ((r = zx_channel_create(0, &h0, &h1)) < 0) {
+                log(ERROR, "devcoord: cannot create shadow rpc channel: %d\n", r);
+                return r;
+            }
+        }
         if ((r = dc_new_devhost(devhostname, &dev->shadow->host)) < 0) {
             log(ERROR, "devcoord: dh_new_devhost: %d\n", r);
+            zx_handle_close(h0);
+            zx_handle_close(h1);
             return r;
         }
-        if ((r = dh_create_device(dev->shadow, dev->shadow->host, arg1)) < 0) {
+        if ((r = dh_create_device(dev->shadow, dev->shadow->host, arg1, h1)) < 0) {
             log(ERROR, "devcoord: dh_create_device: %d\n", r);
+            zx_handle_close(h0);
             return r;
+        }
+        if (need_shadow_rpc) {
+            if ((r = dh_connect_shadow(dev, h0)) < 0) {
+                log(ERROR, "devcoord: dh_connect_shadow: %d\n", r);
+            }
         }
     }
 

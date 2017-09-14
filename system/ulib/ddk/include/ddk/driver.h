@@ -46,7 +46,7 @@ typedef struct zx_driver_ops {
     // instantiate a bus device instance in a new device host process
     zx_status_t (*create)(void* ctx, zx_device_t* parent,
                           const char* name, const char* args,
-                          zx_handle_t resource);
+                          zx_handle_t rpc_channel);
 
     // Last call before driver is unloaded.
     void (*release)(void* ctx);

@@ -191,6 +191,16 @@ typedef struct zx_protocol_device {
 
     // Restarts the device after being suspended
     zx_status_t (*resume)(void* ctx, uint32_t flags);
+
+    //@ ## rxrpc
+    // Only called for bus devices.
+    // When the "shadow" of a busdev sends an rpc message, the
+    // device that is shadowing is notified by the rxrpc op and
+    // should attempt to read and respond to a single message on
+    // the provided channel.
+    // Any error return from this method will result in the channel
+    // being closed and the remote "shadow" losing its connection.
+    zx_status_t (*rxrpc)(void* ctx, zx_handle_t channel);
 } zx_protocol_device_t;
 
 
@@ -226,6 +236,9 @@ zx_status_t device_ioctl(zx_device_t* dev, uint32_t op,
 // otherwise returns ZX_OK aftering queuing the iotxn
 zx_status_t device_iotxn_queue(zx_device_t* dev, iotxn_t* txn);
 
+// return the channel for a shadow device to communicate with its peer.
+// returns ZX_HANDLE_INVALID if this is not a shadow device.
+zx_handle_t device_get_shadow_channel(zx_device_t* dev);
 
 // Device State Change Functions
 //@ #### Device State Bits

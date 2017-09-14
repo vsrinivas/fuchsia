@@ -79,6 +79,7 @@ zx_protocol_device_t kDeviceOps = {
     nullptr, // ioctl
     nullptr, // suspend
     nullptr, // resume
+    nullptr, // rxrpc
 };
 
 // Protocol bridge helpers
