@@ -12,7 +12,7 @@
 
 namespace magma {
 
-// Created from a PlatformDevice.
+// Created from a PlatformPciDevice.
 class PlatformMmio {
 public:
     PlatformMmio(void* addr, uint64_t size) : addr_(addr), size_(size) {}

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "platform_device.h"
+#include "platform_pci_device.h"
 #include "sys_driver/magma_driver.h"
 #include "sys_driver/magma_system_connection.h"
 #include "sys_driver/magma_system_context.h"
@@ -12,7 +12,7 @@
 class CommandBufferHelper {
 public:
     static std::unique_ptr<CommandBufferHelper>
-    Create(magma::PlatformDevice* platform_device = nullptr)
+    Create(magma::PlatformPciDevice* platform_device = nullptr)
     {
         auto msd_drv = msd_driver_unique_ptr_t(msd_driver_create(), &msd_driver_destroy);
         if (!msd_drv)

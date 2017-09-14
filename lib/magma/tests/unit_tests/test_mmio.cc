@@ -5,7 +5,7 @@
 #include "helper/platform_device_helper.h"
 #include "magma_util/macros.h"
 #include "mock/mock_mmio.h"
-#include "platform_device.h"
+#include "platform_pci_device.h"
 #include "gtest/gtest.h"
 
 static void test_mock_mmio(magma::PlatformMmio* mmio)
@@ -46,7 +46,7 @@ TEST(MagmaUtil, MockMmio)
 
 TEST(MagmaUtil, PlatformMmio)
 {
-    magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+    magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
     ASSERT_NE(platform_device, nullptr);
 
     uint32_t pci_bar = 0;

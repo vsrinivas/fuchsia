@@ -52,7 +52,7 @@ public:
         uint64_t device_id;
         if (magma_query(fd(), MAGMA_QUERY_DEVICE_ID, &device_id) != MAGMA_STATUS_OK)
             device_id = 0;
-        return TestPlatformDevice::is_intel_gen(device_id);
+        return TestPlatformPciDevice::is_intel_gen(device_id);
     }
 
     enum How { NORMAL, FAULT, HANG };

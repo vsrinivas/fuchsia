@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PLATFORM_DEVICE_H
-#define PLATFORM_DEVICE_H
+#ifndef PLATFORM_PCI_DEVICE_H
+#define PLATFORM_PCI_DEVICE_H
 
 #include "magma_util/dlog.h"
 #include "platform_interrupt.h"
@@ -12,9 +12,9 @@
 
 namespace magma {
 
-class PlatformDevice {
+class PlatformPciDevice {
 public:
-    virtual ~PlatformDevice() { DLOG("PlatformDevice dtor"); }
+    virtual ~PlatformPciDevice() { DLOG("PlatformPciDevice dtor"); }
 
     virtual void* GetDeviceHandle() = 0;
 
@@ -37,9 +37,9 @@ public:
         return nullptr;
     }
 
-    static std::unique_ptr<PlatformDevice> Create(void* device_handle);
+    static std::unique_ptr<PlatformPciDevice> Create(void* device_handle);
 };
 
 } // namespace magma
 
-#endif // PLATFORM_DEVICE_H
+#endif // PLATFORM_PCI_DEVICE_H

@@ -77,7 +77,7 @@ source_set("magma_platform_tests") {
     "test_mmio.cc",
     "test_platform_buffer.cc",
     "test_platform_connection.cc",
-    "test_platform_device.cc",
+    "test_platform_pci_device.cc",
     "test_platform_event.cc",
     "test_platform_futex.cc",
     "test_platform_interrupt.cc",

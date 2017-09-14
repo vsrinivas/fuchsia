@@ -4,13 +4,13 @@
 
 #include "helper/platform_device_helper.h"
 #include "magma_util/macros.h"
-#include "platform_device.h"
+#include "platform_pci_device.h"
 #include "gtest/gtest.h"
 #include <thread>
 
 TEST(PlatformInterrupt, Register)
 {
-    magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+    magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
     ASSERT_NE(platform_device, nullptr);
 
     auto interrupt = platform_device->RegisterInterrupt();

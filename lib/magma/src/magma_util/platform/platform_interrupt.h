@@ -9,7 +9,7 @@
 
 namespace magma {
 
-// Created from a PlatformDevice.
+// Created from a PlatformPciDevice.
 class PlatformInterrupt {
 public:
     PlatformInterrupt() {}

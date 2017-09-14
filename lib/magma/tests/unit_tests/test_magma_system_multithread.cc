@@ -16,7 +16,7 @@ class TestMultithread {
 public:
     static std::unique_ptr<TestMultithread> Create(bool wait)
     {
-        auto platform_device = TestPlatformDevice::GetInstance();
+        auto platform_device = TestPlatformPciDevice::GetInstance();
         if (!platform_device)
             return DRETP(nullptr, "no platform device");
 
@@ -120,7 +120,7 @@ public:
 
     bool InitBatchBuffer(magma::PlatformBuffer* buffer)
     {
-        if (!TestPlatformDevice::is_intel_gen(device_->GetDeviceId()))
+        if (!TestPlatformPciDevice::is_intel_gen(device_->GetDeviceId()))
             return DRETF(false, "not an intel gen9 device");
 
         void* vaddr;

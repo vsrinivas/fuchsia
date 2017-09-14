@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_PLATFORM_DEVICE_H
-#define ZIRCON_PLATFORM_DEVICE_H
+#ifndef ZIRCON_PLATFORM_PCI_DEVICE_H
+#define ZIRCON_PLATFORM_PCI_DEVICE_H
 
-#include "platform_device.h"
+#include "platform_pci_device.h"
 
 #include <ddk/device.h>
 
 namespace magma {
 
-class ZirconPlatformDevice : public PlatformDevice {
+class ZirconPlatformPciDevice : public PlatformPciDevice {
 public:
-    ZirconPlatformDevice(zx_device_t* zx_device, pci_protocol_t& pci, pci_config_t* cfg,
-                          size_t cfg_size, zx_handle_t cfg_handle)
+    ZirconPlatformPciDevice(zx_device_t* zx_device, pci_protocol_t& pci, pci_config_t* cfg,
+                            size_t cfg_size, zx_handle_t cfg_handle)
         : zx_device_(zx_device), pci_(pci), cfg_(cfg), cfg_size_(cfg_size), cfg_handle_(cfg_handle)
     {
     }
 
-    ~ZirconPlatformDevice() override;
+    ~ZirconPlatformPciDevice() override;
 
     void* GetDeviceHandle() override { return zx_device(); }
 
@@ -44,4 +44,4 @@ private:
 
 } // namespace
 
-#endif // ZIRCON_PLATFORM_DEVICE_H
+#endif // ZIRCON_PLATFORM_PCI_DEVICE_H

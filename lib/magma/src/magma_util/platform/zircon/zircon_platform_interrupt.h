@@ -7,6 +7,8 @@
 
 #include "platform_interrupt.h"
 
+#include <utility>
+
 #include "zx/handle.h"
 #include <ddk/device.h>
 #include <ddk/protocol/pci.h>
