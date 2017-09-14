@@ -6,7 +6,7 @@
 
 #include <dirent.h>
 #include <gpt/gpt.h>
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 // the first and last 17K of the disk using GPT is reserved for
 // 512B for the MBR, 512B the GPT header, and 16K for for 128, 128B
@@ -26,12 +26,12 @@ typedef struct part_location {
   size_t blk_len;
 } part_location_t;
 
-mx_status_t find_partition_entries(gpt_partition_t **gpt_table,
+zx_status_t find_partition_entries(gpt_partition_t **gpt_table,
                                    const uint8_t (*guid)[GPT_GUID_LEN],
                                    uint16_t table_size,
                                    uint16_t *part_id_out);
 
-mx_status_t find_partition(gpt_partition_t **gpt_table,
+zx_status_t find_partition(gpt_partition_t **gpt_table,
                            const uint8_t (*part_guid)[GPT_GUID_LEN],
                            uint64_t min_size, uint64_t block_size,
                            const char *part_name, uint16_t table_size,
@@ -50,12 +50,12 @@ void find_available_space(gpt_device_t *device, size_t blocks_req,
 /*
  * Given a directory, dir, which contains a group of devices, examine each
  * device to determine if any has a GPT whose header GUID matches the supplied
- * disk_guid. If successful we return MX_OK. install_dev_out will be set to
+ * disk_guid. If successful we return ZX_OK. install_dev_out will be set to
  * point to a gpt_device_t which has been opened read-only and whose underlying
  * fd is closed. To modify the device's GPT, use disk_path_out to open the GPT
  * read/write.
  */
-mx_status_t find_disk_by_guid(DIR *dir, const char* dir_path,
+zx_status_t find_disk_by_guid(DIR *dir, const char* dir_path,
                               uint8_t (*disk_guid)[GPT_GUID_LEN],
                               gpt_device_t **install_dev_out,
                               char *disk_path_out, ssize_t max_len);

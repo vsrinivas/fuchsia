@@ -36,7 +36,7 @@ various partitions comfortable for the near future. It is also simple to tune th
 space requirements.
 
 The installer adds an EFI system partition ("ESP"). The ESP will contain the
-Magenta kernel and the gigaboot bootloader. The partition size is set at 1GiB,
+Zircon kernel and the gigaboot bootloader. The partition size is set at 1GiB,
 which is far more than the components need, but this size is chosen to accomodate
 any files for booting other operating systems off the same ESP. This partition is
 FAT32 formatted.
@@ -201,8 +201,8 @@ If you want to run Fuchsia on a dual-boot device, additional effort may be
 required. The ESP we use is configured such that it will always take precendence
 over other ESPs you may have on the device. To deal with this, you may use the
 'gpt' tool to hide our ESP from the UEFI bootloader. All you need to hide the
-ESP is a bootable magenta. To unhide the ESP you'll need a different way to boot
-magenta, such as a USB drive, or another tool that can manipulate the GPT.
+ESP is a bootable zircon. To unhide the ESP you'll need a different way to boot
+zircon, such as a USB drive, or another tool that can manipulate the GPT.
 
 First use 'lsblk' to examine the block devices you have
 
@@ -256,6 +256,6 @@ blocksize=512 blocks=50331648
 GPT changes complete.
 ```
 
-To make the partition visible again, you'll need to boot magenta from an
+To make the partition visible again, you'll need to boot zircon from an
 external drive or use another tool that can manipulate the GPT of the device. If
-you can boot magenta, just change the above 'false' to 'true'.
+you can boot zircon, just change the above 'false' to 'true'.

@@ -3,22 +3,22 @@ executable("install-fuchsia-tests") {
   sources = [ "tests.c" ]
   libs = [
     "fs-management",
-    "magenta",
+    "zircon",
   ]
   deps = [
     "//apps/install-fuchsia/lib:lib",
-    "//magenta/system/ulib/gpt",
-    "//magenta/system/ulib/unittest"
+    "//zircon/system/ulib/gpt",
+    "//zircon/system/ulib/unittest"
    ]
 }
 
 executable("install-fuchsia-sparse-tests") {
   sources = [ "sparse_tests.c" ]
   libs = [
-    "magenta",
+    "zircon",
   ]
   deps = [
     "//apps/install-fuchsia/lib:sparse",
-    "//magenta/system/ulib/unittest"
+    "//zircon/system/ulib/unittest"
   ]
 }

@@ -21,13 +21,13 @@ executable("install-fuchsia") {
 
   libs = [
     "fs-management",
-    "magenta"
+    "zircon"
   ]
 
   deps = [
     "//apps/install-fuchsia/lib",
-    "//magenta/system/ulib/gpt",
-    "//magenta/third_party/ulib/lz4",
+    "//zircon/system/ulib/gpt",
+    "//zircon/third_party/ulib/lz4",
     "//apps/install-fuchsia/lib:sparse",
   ]
 }

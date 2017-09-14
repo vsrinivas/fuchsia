@@ -12,11 +12,11 @@
 #include <limits.h>
 #include <lz4/lz4.h>
 #include <lz4/lz4frame.h>
-#include <magenta/device/block.h>
-#include <magenta/listnode.h>
-#include <magenta/syscalls.h>
-#include <mxio/io.h>
-#include <mxio/util.h>
+#include <zircon/device/block.h>
+#include <zircon/listnode.h>
+#include <zircon/syscalls.h>
+#include <fdio/io.h>
+#include <fdio/util.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -92,26 +92,26 @@ static uint16_t count_partitions(gpt_device_t *device) {
  * Search the path at search_dir for partitions whose ID (NOT type) GUIDs
  * match the ID GUIDs in the gpt_partition_t array pointed to by part_info.
  * num_parts should match both the length of the part_info array and the
- * part_out char* array. If the call reports MX_OK, path_out will contain
+ * part_out char* array. If the call reports ZX_OK, path_out will contain
  * an array of character pointers to paths to the partitions, these paths will
  * be relative to the directory represented by search_dir. The path_out array
  * is ordered the same as the part_info array. If some partitions are not found
  * their entries will contain just a null terminator. An error will be returned
  * if we encounter an error looking through the partition information.
  */
-static mx_status_t find_partition_path(gpt_partition_t *const *part_info,
+static zx_status_t find_partition_path(gpt_partition_t *const *part_info,
                                        char **path_out, DIR *search_dir,
                                        int num_parts) {
   if (num_parts == 0) {
     printf("No partitions requested.\n");
-    return MX_OK;
+    return ZX_OK;
   }
   int found_parts = 0;
   int dir_fd = dirfd(search_dir);
   if (dir_fd < 0) {
     fprintf(stderr, "Could not get descriptor for directory, '%s'.\n",
             strerror(errno));
-    return MX_ERR_IO;
+    return ZX_ERR_IO;
   }
 
   // initialize the path output so we can check this sentinel value later
@@ -149,7 +149,7 @@ static mx_status_t find_partition_path(gpt_partition_t *const *part_info,
           } else {
             fprintf(stderr, "Error, non-unique partition GUIDs!!\n");
             close(file_fd);
-            return MX_ERR_NOT_FOUND;
+            return ZX_ERR_NOT_FOUND;
           }
         }
       }
@@ -167,7 +167,7 @@ static mx_status_t find_partition_path(gpt_partition_t *const *part_info,
     printf("Some partitions were not found.\n");
   }
 
-  return MX_OK;
+  return ZX_OK;
 }
 
 /*
@@ -212,14 +212,14 @@ static partition_flags find_install_partitions(gpt_device_t *gpt_data,
   uint16_t part_id = 0;
   if (part_flags & PART_EFI) {
     // look for a match until we exhaust partitions
-    mx_status_t rc = MX_OK;
-    while (part_info[parts_requested] == NULL && rc == MX_OK) {
+    zx_status_t rc = ZX_OK;
+    while (part_info[parts_requested] == NULL && rc == ZX_OK) {
       uint16_t part_limit = countof(gpt_data->partitions) - part_id;
       rc = find_partition((gpt_partition_t **)&gpt_data->partitions[part_id],
                           &guid_efi_part, MIN_SIZE_EFI_PART, block_size, "ESP",
                           part_limit, &part_id, &part_info[parts_requested]);
 
-      if (rc == MX_OK) {
+      if (rc == ZX_OK) {
         // check if this is the first partition on disk, we could sort
         // but that seems overly involved for our simple requirements
         // for this use case
@@ -251,11 +251,11 @@ static partition_flags find_install_partitions(gpt_device_t *gpt_data,
   }
 
   if (part_flags & PART_SYSTEM) {
-    mx_status_t rc = find_partition(
+    zx_status_t rc = find_partition(
         (gpt_partition_t **)&gpt_data->partitions, &guid_system_part,
         MIN_SIZE_SYSTEM_PART, block_size, "System",
         countof(gpt_data->partitions), &part_id, &part_info[parts_requested]);
-    if (rc == MX_OK) {
+    if (rc == ZX_OK) {
       part_masks[parts_requested] = PART_SYSTEM;
       parts_found++;
     }
@@ -268,9 +268,9 @@ static partition_flags find_install_partitions(gpt_device_t *gpt_data,
 
   block_dir = opendir(PATH_BLOCKDEVS);
   if (block_dir != NULL) {
-    mx_status_t rc = find_partition_path(part_info, part_paths_out, block_dir,
+    zx_status_t rc = find_partition_path(part_info, part_paths_out, block_dir,
                                          parts_requested);
-    if (rc == MX_OK) {
+    if (rc == ZX_OK) {
       size_t base_len = strlen(PATH_BLOCKDEVS);
       for (int idx = 0; idx < parts_requested; idx++) {
         char *str_targ = part_paths_out[idx];
@@ -304,12 +304,12 @@ static partition_flags find_install_partitions(gpt_device_t *gpt_data,
 /*
  * Attempt to unmount all known mount paths.
  */
-static mx_status_t unmount_all(void) {
+static zx_status_t unmount_all(void) {
   const char *static_paths[2] = {"/data", "/system"};
-  mx_status_t result = MX_OK;
+  zx_status_t result = ZX_OK;
   for (uint16_t idx = 0; idx < countof(static_paths); idx++) {
-    mx_status_t rc = umount(static_paths[idx]);
-    if (rc != MX_OK && rc != MX_ERR_NOT_FOUND) {
+    zx_status_t rc = umount(static_paths[idx]);
+    if (rc != ZX_OK && rc != ZX_ERR_NOT_FOUND) {
       // why not return failure? we're just making a best effort attempt,
       // the system can return an error from this unmount call
       result = rc;
@@ -322,7 +322,7 @@ static mx_status_t unmount_all(void) {
   DIR *vols = opendir(PATH_VOLUMES);
   if (vols == NULL) {
     fprintf(stderr, "Couldn't open volumes directory for reading!\n");
-    return MX_ERR_IO;
+    return ZX_ERR_IO;
   }
 
   struct dirent *entry = NULL;
@@ -337,11 +337,11 @@ static mx_status_t unmount_all(void) {
     }
     strncpy(path + path_len, entry->d_name, PATH_MAX - path_len);
 
-    mx_status_t rc = umount(path);
-    if (rc != MX_OK) {
+    zx_status_t rc = umount(path);
+    if (rc != ZX_OK) {
       printf("Warning: Unmounting filesystem at %s failed.\n", path);
     }
-    if (result == MX_OK && rc != MX_OK) {
+    if (result == ZX_OK && rc != ZX_OK) {
       result = rc;
     }
   }
@@ -353,7 +353,7 @@ static mx_status_t unmount_all(void) {
   return result;
 }
 
-static mx_status_t write_partition(int src, int dest, size_t *bytes_copied) {
+static zx_status_t write_partition(int src, int dest, size_t *bytes_copied) {
   uint8_t read_buffer[DECOMP_BLOCK_SIZE];
   uint8_t decomp_buffer[DECOMP_BLOCK_SIZE];
   *bytes_copied = 0;
@@ -364,7 +364,7 @@ static mx_status_t write_partition(int src, int dest, size_t *bytes_copied) {
   if (LZ4F_isError(err)) {
     printf("Error creating decompression context: %s\n",
            LZ4F_getErrorName(err));
-    return MX_ERR_INTERNAL;
+    return ZX_ERR_INTERNAL;
   }
   // we set special initial read parameters so we can read just the header
   // of the first frame to provide hints about how to proceed
@@ -403,7 +403,7 @@ static mx_status_t write_partition(int src, int dest, size_t *bytes_copied) {
                           read_buffer + consumed_count, &req_size, NULL);
       if (LZ4F_isError(chunk_size)) {
         fprintf(stderr, "Error decompressing volume file.\n");
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
       }
 
       if (to_expand > 0) {
@@ -421,7 +421,7 @@ static mx_status_t write_partition(int src, int dest, size_t *bytes_copied) {
           fprintf(stderr, "Error writing to partition, it may be corrupt %zi. %zu %zu %s\n", *bytes_copied, unsparse_data, remainder,
                   strerror(errno));
           LZ4F_freeDecompressionContext(dc_context);
-          return MX_ERR_IO;
+          return ZX_ERR_IO;
         } else if ((size_t) written < unsparse_data) {
           // unsparse_buf didn't consume the whole buffer, move remaining data
           // to front of buffer
@@ -446,18 +446,18 @@ static mx_status_t write_partition(int src, int dest, size_t *bytes_copied) {
   printf("\n");
   if (to_consume < 0) {
     fprintf(stderr, "Error decompressing file: %s.\n", strerror(errno));
-    return MX_ERR_IO;
+    return ZX_ERR_IO;
   }
-  return MX_OK;
+  return ZX_OK;
 }
 
-mx_status_t add_partition(gpt_device_t *device, uint64_t offset_blocks,
+zx_status_t add_partition(gpt_device_t *device, uint64_t offset_blocks,
                           uint64_t size_blocks, uint8_t *guid_type,
                           const char *name) {
   uint8_t guid_id[GPT_GUID_LEN];
   size_t rand_size = 0;
-  mx_status_t rc = mx_cprng_draw(guid_id, GPT_GUID_LEN, &rand_size);
-  if (rc != MX_OK || rand_size != GPT_GUID_LEN) {
+  zx_status_t rc = zx_cprng_draw(guid_id, GPT_GUID_LEN, &rand_size);
+  if (rc != ZX_OK || rand_size != GPT_GUID_LEN) {
     fprintf(stderr, "Sys call failed to set all random bytes, err: %s\n",
             strerror(errno));
     return rc;
@@ -467,16 +467,16 @@ mx_status_t add_partition(gpt_device_t *device, uint64_t offset_blocks,
                                      offset_blocks, size_blocks, 0);
   if (gpt_result < 0) {
     fprintf(stderr, "Error adding partition code: %i\n", gpt_result);
-    return MX_ERR_INTERNAL;
+    return ZX_ERR_INTERNAL;
   }
 
   gpt_result = gpt_device_sync(device);
   if (gpt_result < 0) {
     fprintf(stderr, "Error writing partition table, code: %i\n", gpt_result);
-    return MX_ERR_IO;
+    return ZX_ERR_IO;
   }
 
-  return MX_OK;
+  return ZX_OK;
 }
 
 /*
@@ -496,7 +496,7 @@ mx_status_t add_partition(gpt_device_t *device, uint64_t offset_blocks,
  * the found partitions. max_len should specify the size of the buffer that
  * dev_path_out points to.
  */
-mx_status_t find_install_device(DIR *dir, const char *dir_path,
+zx_status_t find_install_device(DIR *dir, const char *dir_path,
                                 partition_flags requested_parts,
                                 partition_flags *unfound_parts_out,
                                 char *part_paths_out[],
@@ -540,9 +540,9 @@ mx_status_t find_install_device(DIR *dir, const char *dir_path,
   }
 
   if (install_dev != NULL) {
-    return MX_OK;
+    return ZX_OK;
   } else {
-    return MX_ERR_NOT_FOUND;
+    return ZX_ERR_NOT_FOUND;
   }
 }
 
@@ -553,10 +553,10 @@ mx_status_t find_install_device(DIR *dir, const char *dir_path,
  * position of the bit in the masks while the paths_dest array should be
  * indexed based on how many requested partitions there are.
  */
-mx_status_t write_install_data(partition_flags parts_requested,
+zx_status_t write_install_data(partition_flags parts_requested,
                                partition_flags parts_available,
                                char *paths_src[], char *paths_dest[]) {
-  if (unmount_all() != MX_OK) {
+  if (unmount_all() != ZX_OK) {
     // this isn't necessarily a failure, some of the paths that we tried
     // to unmount not exist or might not actually correspond to devices
     // we want to write to. We'll try to open the devices we want to
@@ -590,7 +590,7 @@ mx_status_t write_install_data(partition_flags parts_requested,
     if (fd_dst == -1) {
       fprintf(stderr, "ERROR: Could not open output device for writing, %s\n",
               strerror(errno));
-      return MX_ERR_IO;
+      return ZX_ERR_IO;
     }
 
     printf("writing content to '%s'\n", paths_dest[part_idx]);
@@ -600,12 +600,12 @@ mx_status_t write_install_data(partition_flags parts_requested,
               " the installer build?\n",
               strerror(errno));
       close(fd_dst);
-      return MX_ERR_IO;
+      return ZX_ERR_IO;
     }
 
     time_t start;
     time(&start);
-    mx_status_t rc = write_partition(fd_src, fd_dst, &bytes_written);
+    zx_status_t rc = write_partition(fd_src, fd_dst, &bytes_written);
     time_t end;
     time(&end);
 
@@ -614,13 +614,13 @@ mx_status_t write_install_data(partition_flags parts_requested,
     close(fd_dst);
     close(fd_src);
 
-    if (rc != MX_OK) {
+    if (rc != ZX_OK) {
       fprintf(stderr, "ERROR: Problem writing partition code: %i\n", rc);
       return rc;
     }
   }
 
-  return MX_OK;
+  return ZX_OK;
 }
 
 /*
@@ -694,13 +694,13 @@ void find_device_with_space(DIR *dir, char *dir_path, uint64_t space_required,
  * Create the system partition and ESP on the specified device, starting at the
  * specified block offset.
  */
-mx_status_t create_partitions(char *dev_path, uint64_t block_offset) {
+zx_status_t create_partitions(char *dev_path, uint64_t block_offset) {
   printf("Adding partitions...\n");
   // open a read/write fd for the block device
   int rw_dev = open(dev_path, O_RDWR);
   if (rw_dev < 0) {
     fprintf(stderr, "couldn't open device read/write\n");
-    return MX_ERR_IO;
+    return ZX_ERR_IO;
   }
   uint64_t block_size;
   gpt_device_t *gpt_edit = read_gpt(rw_dev, &block_size);
@@ -709,9 +709,9 @@ mx_status_t create_partitions(char *dev_path, uint64_t block_offset) {
   // install_dev should point to the device we want to modify
   uint64_t size_blocks = MIN_SIZE_SYSTEM_PART / block_size;
   uint8_t type_system[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
-  mx_status_t rc =
+  zx_status_t rc =
       add_partition(gpt_edit, block_offset, size_blocks, type_system, "system");
-  if (rc != MX_OK) {
+  if (rc != ZX_OK) {
     gpt_device_release(gpt_edit);
     close(rw_dev);
     return rc;
@@ -721,7 +721,7 @@ mx_status_t create_partitions(char *dev_path, uint64_t block_offset) {
   uint8_t type_efi[GPT_GUID_LEN] = GUID_EFI_VALUE;
   rc = add_partition(gpt_edit, block_offset + size_blocks, size_blocks_efi,
                      type_efi, "EFI");
-  if (rc != MX_OK) {
+  if (rc != ZX_OK) {
     gpt_device_release(gpt_edit);
     close(rw_dev);
     return rc;
@@ -733,31 +733,31 @@ mx_status_t create_partitions(char *dev_path, uint64_t block_offset) {
   // properly picked up
   ioctl_block_rr_part(rw_dev);
   close(rw_dev);
-  return MX_OK;
+  return ZX_OK;
 }
 
 /*
  * Given a file descriptor open on a GPT device, checks if that GPT has an
  * entry whose type GUID matches the provided GUID.
  * Returns:
- *  MX_OK if the data partition is found
- *  MX_ERR_NOT_FOUND if we were able to look for the partition, but couldn't find
+ *  ZX_OK if the data partition is found
+ *  ZX_ERR_NOT_FOUND if we were able to look for the partition, but couldn't find
  *    it.
- *  MX_ERR_IO if we were unable to read the partition table from device_fd
+ *  ZX_ERR_IO if we were unable to read the partition table from device_fd
  */
-static mx_status_t check_for_partition(int device_fd,
+static zx_status_t check_for_partition(int device_fd,
                                        uint8_t (*guid)[GPT_GUID_LEN]) {
   gpt_device_t *gpt_edit;
   uint64_t block_size;
   gpt_edit = read_gpt(device_fd, &block_size);
   if (gpt_edit == NULL) {
     fprintf(stderr, "Unable to read GPT from device.\n");
-    return MX_ERR_IO;
+    return ZX_ERR_IO;
   }
 
   uint16_t part_count = count_partitions(gpt_edit);
   uint16_t part_idx = 0;
-  mx_status_t rc = find_partition_entries(
+  zx_status_t rc = find_partition_entries(
       (gpt_partition_t **)&gpt_edit->partitions, guid, part_count, &part_idx);
   return rc;
 }
@@ -769,9 +769,9 @@ static mx_status_t check_for_partition(int device_fd,
  * size_pref bytes.
  *
  * If metadata can not be read from the disk or the disk contains less than
- * size_min free space, MX_ERR_NOT_FOUND is returned.
+ * size_min free space, ZX_ERR_NOT_FOUND is returned.
  */
-static mx_status_t get_part_size(gpt_device_t *dev, int device_fd,
+static zx_status_t get_part_size(gpt_device_t *dev, int device_fd,
                                  uint64_t size_pref, uint64_t size_min,
                                  size_t *offset_out, size_t *len_out) {
   part_location_t part_data;
@@ -781,7 +781,7 @@ static mx_status_t get_part_size(gpt_device_t *dev, int device_fd,
   block_info_t info;
   ssize_t rc = ioctl_block_get_info(device_fd, &info);
   if (rc < 0) {
-    return MX_ERR_NOT_FOUND;
+    return ZX_ERR_NOT_FOUND;
   }
 
   uint64_t num_blocks_pref = size_pref / info.block_size;
@@ -790,13 +790,13 @@ static mx_status_t get_part_size(gpt_device_t *dev, int device_fd,
                        &part_data);
 
   if (part_data.blk_len < num_blocks_min) {
-    return MX_ERR_NOT_FOUND;
+    return ZX_ERR_NOT_FOUND;
   }
 
   *len_out = part_data.blk_len >= num_blocks_pref ? num_blocks_pref
                                                   : part_data.blk_len;
   *offset_out = part_data.blk_offset;
-  return MX_OK;
+  return ZX_OK;
 }
 
 /*
@@ -805,7 +805,7 @@ static mx_status_t get_part_size(gpt_device_t *dev, int device_fd,
  * for the partition and format that partition as the requested format with the
  * supplied label.
  */
-static mx_status_t make_part(int device_fd, const char *dev_dir_path,
+static zx_status_t make_part(int device_fd, const char *dev_dir_path,
                              size_t offset, size_t length,
                              uint8_t (*guid)[GPT_GUID_LEN], disk_format_t format,
                              const char *label) {
@@ -816,21 +816,21 @@ static mx_status_t make_part(int device_fd, const char *dev_dir_path,
   gpt_device_t *gpt_edit = read_gpt(device_fd, &block_size);
   if (gpt_edit == NULL) {
     fprintf(stderr, "Couldn't read GPT from device.\n");
-    return MX_ERR_IO;
+    return ZX_ERR_IO;
   }
 
   gpt_device_get_header_guid(gpt_edit, &disk_guid);
-  mx_status_t rc = add_partition(gpt_edit, offset, length, *guid, label);
+  zx_status_t rc = add_partition(gpt_edit, offset, length, *guid, label);
   gpt_device_release(gpt_edit);
-  if (rc != MX_OK) {
+  if (rc != ZX_OK) {
     fprintf(stderr, "Partition entry could not be added to GPT.\n");
-    return MX_ERR_IO;
+    return ZX_ERR_IO;
   }
 
   ssize_t ioctl_rc = ioctl_block_rr_part(device_fd);
   if (ioctl_rc < 0) {
     fprintf(stderr, "Unknown error re-reading GPT.\n");
-    return MX_ERR_IO;
+    return ZX_ERR_IO;
   }
   // a brief pause is required while the system absorbs the GPT change
   sleep(1);
@@ -840,7 +840,7 @@ static mx_status_t make_part(int device_fd, const char *dev_dir_path,
   DIR* dirfp = opendir(dev_dir_path);
   if (dirfp == NULL) {
     fprintf(stderr, "Couldn't open devices directory to read\n");
-    return MX_ERR_IO;
+    return ZX_ERR_IO;
   }
 
   char disk_path[PATH_MAX];
@@ -848,7 +848,7 @@ static mx_status_t make_part(int device_fd, const char *dev_dir_path,
                          PATH_MAX);
 
   closedir(dirfp);
-  if (rc != MX_OK) {
+  if (rc != ZX_OK) {
     fprintf(stderr, "Couldn't locate disk after adding partition.\n");
     return rc;
   }
@@ -856,14 +856,14 @@ static mx_status_t make_part(int device_fd, const char *dev_dir_path,
 
   if (device_fd < 0) {
     fprintf(stderr, "Couldn't open rebound device.\n");
-    return MX_ERR_IO;
+    return ZX_ERR_IO;
   }
 
   gpt_edit = read_gpt(device_fd, &block_size);
   close(device_fd);
   if (gpt_edit == NULL) {
     fprintf(stderr, "Couldn't read GPT after partition addition.\n");
-    return MX_ERR_IO;
+    return ZX_ERR_IO;
   }
 
   // count the number of partitions we have
@@ -873,10 +873,10 @@ static mx_status_t make_part(int device_fd, const char *dev_dir_path,
   uint16_t part_idx = 0;
   rc = find_partition_entries((gpt_partition_t **)&gpt_edit->partitions, guid,
                               part_count, &part_idx);
-  if (rc != MX_OK) {
+  if (rc != ZX_OK) {
     fprintf(stderr, "Partition that was just created is not found.\n");
     gpt_device_release(gpt_edit);
-    return MX_ERR_NOT_FOUND;
+    return ZX_ERR_NOT_FOUND;
   }
 
   // find the partition in the block device directory
@@ -887,9 +887,9 @@ static mx_status_t make_part(int device_fd, const char *dev_dir_path,
   rc = find_partition_path(ptr_cpy, path_holder, dir, 1);
   gpt_device_release(gpt_edit);
 
-  if (rc != MX_OK) {
+  if (rc != ZX_OK) {
     fprintf(stderr, "Problem finding partition path.\n");
-    return MX_ERR_INTERNAL;
+    return ZX_ERR_INTERNAL;
   }
 
   // construct the full path in-place now that we know which device it is
@@ -901,7 +901,7 @@ static mx_status_t make_part(int device_fd, const char *dev_dir_path,
   // around without source and destination regions not overlapping for memcpy
   if (total_len > PATH_MAX) {
     fprintf(stderr, "Device path is too long!\n");
-    return MX_ERR_INTERNAL;
+    return ZX_ERR_INTERNAL;
   }
 
   // move the device-specific part to make space for the prefix
@@ -910,15 +910,15 @@ static mx_status_t make_part(int device_fd, const char *dev_dir_path,
 
   // kick off formatting of the device
   rc = mkfs(part_path, format, launch_stdio_sync, &default_mkfs_options);
-  if (rc != MX_OK) {
+  if (rc != ZX_OK) {
     fprintf(stderr, "ERROR: Partition formatting failed.\n");
-    return MX_ERR_INTERNAL;
+    return ZX_ERR_INTERNAL;
   }
 
-  return MX_OK;
+  return ZX_OK;
 }
 
-static mx_status_t format_existing(int device_fd, char *dev_dir_path,
+static zx_status_t format_existing(int device_fd, char *dev_dir_path,
                                    uint8_t (*guid)[GPT_GUID_LEN],
                                    disk_format_t disk_format) {
     lseek(device_fd, 0, SEEK_SET);
@@ -927,16 +927,16 @@ static mx_status_t format_existing(int device_fd, char *dev_dir_path,
     gpt_device_t *gpt_device = read_gpt(device_fd, &block_size);
     if (gpt_device == NULL) {
       fprintf(stderr, "WARNING: Couldn't read GPT to format partition.\n");
-      return MX_ERR_INTERNAL;
+      return ZX_ERR_INTERNAL;
     }
     uint16_t part_id;
     uint16_t part_count = count_partitions(gpt_device);
     int rc = find_partition_entries((gpt_partition_t**)&gpt_device->partitions,
                                     guid, part_count, &part_id);
-    if (rc != MX_OK) {
+    if (rc != ZX_OK) {
       gpt_device_release(gpt_device);
       fprintf(stderr, "WARNING: Couldn't find partition to format.\n");
-      return MX_ERR_INTERNAL;
+      return ZX_ERR_INTERNAL;
     }
 
     char part_path[PATH_MAX];
@@ -948,14 +948,14 @@ static mx_status_t format_existing(int device_fd, char *dev_dir_path,
     if (dev_dir == NULL) {
       fprintf(stderr, "WARNING: Couldn't open device directory.\n");
       gpt_device_release(gpt_device);
-      return MX_ERR_INTERNAL;
+      return ZX_ERR_INTERNAL;
     }
     rc = find_partition_path((gpt_partition_t**)&gpt_device->partitions[part_id],
                              &indir, dev_dir, 1);
-    if (rc != MX_OK) {
+    if (rc != ZX_OK) {
       gpt_device_release(gpt_device);
       fprintf(stderr, "WARNING: Couldn't locate partition path.\n");
-      return MX_ERR_INTERNAL;
+      return ZX_ERR_INTERNAL;
     }
 
     // construct the full path in-place now that we know which device it is
@@ -968,7 +968,7 @@ static mx_status_t format_existing(int device_fd, char *dev_dir_path,
     if (total_len > PATH_MAX) {
       gpt_device_release(gpt_device);
       fprintf(stderr, "WARNING: Device path is too long!\n");
-      return MX_ERR_INTERNAL;
+      return ZX_ERR_INTERNAL;
     }
 
     // move the device-specific part to make space for the prefix
@@ -984,11 +984,11 @@ static mx_status_t format_existing(int device_fd, char *dev_dir_path,
  * there is already a partition with the supplied GUID. If not, try to create
  * that partition with the given size and format.
  *
- * This returns MX_OK if there already is a partition or if there is enough
+ * This returns ZX_OK if there already is a partition or if there is enough
  * space to create one and it is successfully created and formatted, otherwise
  * returns an error.
  */
-static mx_status_t make_empty_partition(gpt_device_t *install_dev,
+static zx_status_t make_empty_partition(gpt_device_t *install_dev,
                                         char *device_path, char *dev_dir_path,
                                         uint8_t (*guid)[GPT_GUID_LEN],
                                         uint64_t size_pref, uint64_t size_min,
@@ -998,29 +998,29 @@ static mx_status_t make_empty_partition(gpt_device_t *install_dev,
   if (device_fd < 0) {
     printf("WARNING: Problem opening device, '%s' partition not created.\n",
            name);
-    return MX_ERR_IO;
+    return ZX_ERR_IO;
   }
 
-  mx_status_t rc;
-  if ((rc = check_for_partition(device_fd, guid)) == MX_ERR_NOT_FOUND) {
+  zx_status_t rc;
+  if ((rc = check_for_partition(device_fd, guid)) == ZX_ERR_NOT_FOUND) {
     size_t blk_off;
     size_t blk_len;
     if ((get_part_size(install_dev, device_fd, size_pref, size_min, &blk_off,
-                       &blk_len) != MX_OK) ||
+                       &blk_len) != ZX_OK) ||
         (make_part(device_fd, dev_dir_path, blk_off, blk_len, guid, disk_format, name) !=
-         MX_OK)) {
+         ZX_OK)) {
       close(device_fd);
-      return MX_ERR_INTERNAL;
+      return ZX_ERR_INTERNAL;
     }
-  } else if (rc != MX_OK) {
+  } else if (rc != ZX_OK) {
     fprintf(stderr, "Unexpected error '%i' looking for '%s' partition\n", rc,
             name);
     close(device_fd);
     return rc;
-  } else if (rc == MX_OK && reformat) {
+  } else if (rc == ZX_OK && reformat) {
     lseek(device_fd, 0, SEEK_SET);
     rc = format_existing(device_fd, dev_dir_path, guid, disk_format);
-    if (rc != MX_OK) {
+    if (rc != ZX_OK) {
       printf("WARNING: couldn't format existing partition\n");
       close(device_fd);
       return rc;
@@ -1028,7 +1028,7 @@ static mx_status_t make_empty_partition(gpt_device_t *install_dev,
   }
 
   close(device_fd);
-  return MX_OK;
+  return ZX_OK;
 }
 
 static char *utf16_to_cstring(char *dst, const uint16_t *src, size_t len) {
@@ -1148,17 +1148,17 @@ static void print_gpt(gpt_device_t *device, uint64_t block_size,
  * disk and construct a disk_rec_t, a pointer to which will be returned through
  * rec_out.
  * Returns
- *  MX_ERR_NO_MEMORY if memory can't be allocated for the record data
- *  MX_ERR_IO if the device does not contain a GPT or otherwise can not be read
- *  MX_OK if all goes well
+ *  ZX_ERR_NO_MEMORY if memory can't be allocated for the record data
+ *  ZX_ERR_IO if the device does not contain a GPT or otherwise can not be read
+ *  ZX_OK if all goes well
  */
-static mx_status_t build_disk_record(int device_fd, char *path,
+static zx_status_t build_disk_record(int device_fd, char *path,
                                      uint64_t *block_size_out,
                                      disk_rec_t **rec_out) {
   disk_rec_t *disk_rec = malloc(sizeof(disk_rec_t));
   if (disk_rec == NULL) {
     fprintf(stderr, "No memory available to add disk entry.\n");
-    return MX_ERR_NO_MEMORY;
+    return ZX_ERR_NO_MEMORY;
   }
 
   // see if this block device has a GPT we can read and get disk
@@ -1169,7 +1169,7 @@ static mx_status_t build_disk_record(int device_fd, char *path,
       gpt_device_release(target_dev);
     }
     free(disk_rec);
-    return MX_ERR_IO;
+    return ZX_ERR_IO;
   }
   disk_rec->device = target_dev;
 
@@ -1179,7 +1179,7 @@ static mx_status_t build_disk_record(int device_fd, char *path,
     fprintf(stderr, "Out of memory when writing disk path.\n");
     free(disk_rec);
     gpt_device_release(target_dev);
-    return MX_ERR_NO_MEMORY;
+    return ZX_ERR_NO_MEMORY;
   } else {
     strcpy(disk_rec->path, path);
   }
@@ -1187,7 +1187,7 @@ static mx_status_t build_disk_record(int device_fd, char *path,
   disk_rec->part_count = count_partitions(target_dev);
 
   *rec_out = disk_rec;
-  return MX_OK;
+  return ZX_OK;
 }
 
 void print_disk_info(int disk_fd, uint16_t disk_num, char *dev_path) {
@@ -1233,9 +1233,9 @@ static bool build_disk_list(DIR *dev_dir, char *dev_path, size_t path_buf_sz,
     disk_rec_t *disk_rec;
     rc = build_disk_record(device_fd, dev_path, &block_size, &disk_rec);
 
-    if (rc == MX_OK) {
+    if (rc == ZX_OK) {
       list_add_tail(disk_list, &disk_rec->disk_node);
-    } else if (rc == MX_ERR_IO) {
+    } else if (rc == ZX_ERR_IO) {
       // this just wasn't a GPT device or device couldn't be read,
       // continue on to other possible devices
       close(device_fd);
@@ -1453,12 +1453,12 @@ int main(int argc, char **argv) {
     }
 
     char disk_path[PATH_MAX];
-    mx_status_t rc = find_install_device(dir, path_buffer, requested_parts,
+    zx_status_t rc = find_install_device(dir, path_buffer, requested_parts,
                                          &ready_for_install, part_paths,
                                          &install_dev, disk_path, PATH_MAX);
     closedir(dir);
 
-    if (rc == MX_OK && install_dev->valid) {
+    if (rc == ZX_OK && install_dev->valid) {
       install_dev_found = true;
       rc = write_install_data(requested_parts, ready_for_install,
                               disk_img_paths, part_paths);
@@ -1466,7 +1466,7 @@ int main(int argc, char **argv) {
       // Check for a data and blobfs partitions, creating if necessary.
       // Having these partitions is highly desireable, but we can live
       // without it if needed
-      if (rc == MX_OK) {
+      if (rc == ZX_OK) {
         req_data_written = true;
         // store the guid of the disk we're using
         uint8_t disk_guid[GPT_GUID_LEN];
@@ -1476,7 +1476,7 @@ int main(int argc, char **argv) {
         strcat(path_buffer, "/");
         if (make_empty_partition(install_dev, disk_path, path_buffer, &data_guid,
                                  PREFERRED_SIZE_DATA, MIN_SIZE_DATA,
-                                 DISK_FORMAT_MINFS, "data", wipe) != MX_OK) {
+                                 DISK_FORMAT_MINFS, "data", wipe) != ZX_OK) {
           printf("WARNING: Problem locating or creating data partition.\n");
         } else {
           part_data_avail = true;
@@ -1502,7 +1502,7 @@ int main(int argc, char **argv) {
         if (make_empty_partition(install_dev, disk_path, path_buffer,
                                  &blobfs_guid, PREFERRED_SIZE_DATA,
                                  MIN_SIZE_DATA, DISK_FORMAT_BLOBFS, "blobfs", wipe)
-            != MX_OK) {
+            != ZX_OK) {
           printf("WARNING: Problem locating or creating blobfs partition.\n");
         } else {
           part_blob_avail = true;
@@ -1544,7 +1544,7 @@ int main(int argc, char **argv) {
       }
 
       // if partition creation succeeds, set the dirty bit
-      retry = create_partitions(device_path, space_offset) == MX_OK;
+      retry = create_partitions(device_path, space_offset) == ZX_OK;
 
       // if we're going to try again, give the system a moment to absorb
       // newly created partitions
