@@ -27,6 +27,8 @@ type KeyInfo uint16 // Bitmask
 
 func (k KeyInfo) IsSet(test KeyInfo) bool { return k&test != 0 }
 
+func (k KeyInfo) Extract(mask KeyInfo) uint16 { return uint16(k & mask) }
+
 const (
 	KeyInfo_DescriptorVersion KeyInfo = 7 // Bit 0-2
 	KeyInfo_Type              KeyInfo = 1 << 3
@@ -144,7 +146,9 @@ func (f *KeyFrame) Bytes() []uint8 {
 	return buf.Bytes()
 }
 
-// Responsible for processing incoming EAPOL frames and computing the KEK, KCK and TK.
+// Responsible for processing incoming EAPOL frames and computing the KEK, KCK and TK. Note, that
+// none of the incoming EAPOL Key frames was checked or filtered for correctness. It's the
+// implementations responsibility to verify the frame's correctness, e.g., verifying KeyInfo & MIC.
 // TODO(hahnr): Evaluate whether we need a more granular component separation. E.g., to split up
 // authentication, and key derivation.
 type KeyExchange interface {

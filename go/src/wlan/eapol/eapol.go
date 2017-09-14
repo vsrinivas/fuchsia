@@ -5,23 +5,23 @@
 package eapol
 
 import (
-	"errors"
 	"log"
 )
 
 const debug = true
-
-var (
-	ErrUnspecifiedKeyType    = errors.New("KeyType not specified")
-	ErrUnsupportedAuthMethod = errors.New("unsupported authentication method or corrupted EAPOL Key frame")
-	ErrExpectedRequestBit    = errors.New("authenticator mustn't set Request bit")
-)
 
 type Config struct {
 	MICBits     int
 	KeyExchange KeyExchange
 }
 
+// The EAPOL Client is a simple frame decoding and forwarding machinery. There is no, or very
+// limited, frame verification done. The forwarding target should verify the frame's correctness.
+// This intentionally provides no guarantees about the frame. For example there can be no assumption
+// made whether the frame's MIC is valid or its content contains a none which was expected.
+// The reason for this architecture is to not split up frame verification into multiple components,
+// which if it was split up, could cause confusion about guarantees and expectations about a given
+// frame.
 type Client struct {
 	config Config
 }
@@ -52,7 +52,7 @@ func (c *Client) HandleEAPOLFrame(frame []byte) {
 			}
 			return
 		}
-		err = c.handleEAPOLKeyFrame(keyFrame)
+		err = c.config.KeyExchange.HandleEAPOLKeyFrame(keyFrame)
 		if debug && err != nil {
 			log.Println(err)
 		}
@@ -61,21 +61,4 @@ func (c *Client) HandleEAPOLFrame(frame []byte) {
 			log.Printf("unknown EAPOL packet type: %d", hdr.PacketType)
 		}
 	}
-}
-
-func (c *Client) handleEAPOLKeyFrame(frame *KeyFrame) error {
-	if !frame.Info.IsSet(KeyInfo_Type) {
-		return ErrUnspecifiedKeyType
-	}
-	// ACK not being set indicates either a corrupted frame not sent from the authenticator or an
-	// unsupported authentication method.
-	if !frame.Info.IsSet(KeyInfo_ACK) {
-		return ErrUnsupportedAuthMethod
-	}
-	// Must never be set from authenticator.
-	if frame.Info.IsSet(KeyInfo_Request) {
-		return ErrExpectedRequestBit
-	}
-
-	return c.config.KeyExchange.HandleEAPOLKeyFrame(frame)
 }
