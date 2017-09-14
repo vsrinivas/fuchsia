@@ -206,5 +206,7 @@ RUN_FOR_ALL_FILESYSTEMS(truncate_tests,
     RUN_TEST_MEDIUM((test_truncate_large<1 << 15, 50, false>))
     RUN_TEST_LARGE((test_truncate_large<1 << 20, 50, false>))
     RUN_TEST_LARGE((test_truncate_large<1 << 20, 50, true>))
+    RUN_TEST_LARGE((test_truncate_large<1 << 25, 50, false>))
+    RUN_TEST_LARGE((test_truncate_large<1 << 25, 50, true>))
     RUN_TEST_MEDIUM(test_truncate_errno)
 )

@@ -217,7 +217,7 @@ zx_status_t VnodeMinfs::BlocksShrink(WriteTxn *txn, blk_t start) {
     uint32_t ibindex = start / kMinfsDirectPerIndirect;
     uint32_t bindex = start % kMinfsDirectPerIndirect;
     count = ibindex <= kMinfsIndirect ? kMinfsIndirect - ibindex : 0;
-    if ((status = BlocksShrinkIndirect(txn, bindex, count, 0, &inode_.inum[ibindex], &dirty))
+    if ((status = BlocksShrinkIndirect(txn, bindex, count, ibindex, &inode_.inum[ibindex], &dirty))
         != ZX_OK) {
         return status;
     }
@@ -615,7 +615,7 @@ zx_status_t VnodeMinfs::GetBno(WriteTxn* txn, blk_t n, blk_t* bno) {
         uint32_t ibindex = n / kMinfsDirectPerIndirect;
         // index of direct block within indirect block
         uint32_t bindex = n % kMinfsDirectPerIndirect;
-        return GetBnoIndirect(txn, bindex, 0, &inode_.inum[ibindex], bno, &dirty);
+        return GetBnoIndirect(txn, bindex, ibindex, &inode_.inum[ibindex], bno, &dirty);
     }
 
     // for doubly indirect blocks, adjust past the indirect blocks
