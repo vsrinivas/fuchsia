@@ -16,9 +16,9 @@ import (
 
 	"fuchsia.googlesource.com/thinfs/fs"
 	"fuchsia.googlesource.com/thinfs/fs/msdosfs"
-	"fuchsia.googlesource.com/thinfs/magenta/rpc"
+	"fuchsia.googlesource.com/thinfs/zircon/rpc"
 
-	"syscall/mx/mxio/mxc"
+	"syscall/mx/fdio/mxc"
 	"syscall/mx/mxruntime"
 )
 
@@ -57,7 +57,7 @@ func main() {
 	switch action {
 	case "mount":
 		// Open the block device
-		fd, err := mxc.ExtractCMXIO(*blockFDPtr)
+		fd, err := mxc.ExtractCFDIO(*blockFDPtr)
 		if err != nil {
 			println("Failed to open block device: ", err.Error())
 			os.Exit(1)

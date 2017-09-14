@@ -37,7 +37,7 @@ cd $FUCHSIA_ROOT
 ### Running on Fuchsia ###
 
 If you have a partition (either on a hard disk or USB) which is formatted as
-FAT, it will be automatically detected by the Magenta kernel and mounted using
+FAT, it will be automatically detected by the Zircon kernel and mounted using
 thinfs under "/volume".
 
 If you want to manually mount a block device, use the following steps:

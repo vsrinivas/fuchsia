@@ -8,7 +8,7 @@ package file
 
 import (
 	"syscall"
-	"syscall/mx/mxio"
+	"syscall/mx/fdio"
 )
 
 func ioctlBlockGetSize(fd uintptr) (int64, error) {
@@ -28,9 +28,9 @@ func fallocate(fd uintptr, off, len int64) error {
 }
 
 func ioctlDeviceGetTopoPath(fd uintptr) string {
-	m := syscall.MXIOForFD(int(fd))
+	m := syscall.FDIOForFD(int(fd))
 	path := make([]byte, 1024)
-	_, err := m.Ioctl(mxio.IoctlDeviceGetTopoPath, nil, path)
+	_, err := m.Ioctl(fdio.IoctlDeviceGetTopoPath, nil, path)
 
 	if err == nil {
 		return string(path)
