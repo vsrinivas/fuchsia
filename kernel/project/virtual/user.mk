@@ -10,12 +10,12 @@
 KERNEL_DEFINES += WITH_DEBUG_LINEBUFFER=1
 
 MODULES += \
-    kernel/lib/syscalls \
     kernel/lib/userboot \
     kernel/lib/debuglog \
     kernel/lib/ktrace \
     kernel/lib/mtrace \
-    kernel/object
+    kernel/object \
+    kernel/syscalls \
 
 # include all core, dev, uapp, ulib and utest from system/...
 MODULES += $(patsubst %/rules.mk,%,$(wildcard system/core/*/rules.mk))
