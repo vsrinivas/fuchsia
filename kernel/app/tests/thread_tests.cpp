@@ -18,6 +18,7 @@
 #include <rand.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/types.h>
 
 static int sleep_thread(void* arg) {
     for (;;) {
@@ -117,7 +118,7 @@ static int event_waiter(void* arg) {
 
     while (count > 0) {
         printf("thread %p: waiting on event...\n", get_current_thread());
-        status_t err = event_wait_deadline(&e, INFINITE_TIME, true);
+        zx_status_t err = event_wait_deadline(&e, INFINITE_TIME, true);
         if (err == ZX_ERR_INTERNAL_INTR_KILLED) {
             printf("thread %p: killed\n");
             return -1;
@@ -367,7 +368,7 @@ static int join_tester(void* arg) {
 
 static int join_tester_server(void* arg) {
     int ret;
-    status_t err;
+    zx_status_t err;
     thread_t* t;
 
     printf("\ttesting thread_join/thread_detach\n");
@@ -413,7 +414,7 @@ static int join_tester_server(void* arg) {
 
 static void join_test(void) {
     int ret;
-    status_t err;
+    zx_status_t err;
     thread_t* t;
 
     printf("testing thread_join/thread_detach\n");
@@ -454,7 +455,7 @@ static int sleeper_kill_thread(void* arg) {
     thread_sleep_relative(LK_MSEC(100));
 
     lk_time_t t = current_time();
-    status_t err = thread_sleep_etc(t + LK_SEC(5), true);
+    zx_status_t err = thread_sleep_etc(t + LK_SEC(5), true);
     t = (current_time() - t) / LK_MSEC(1);
     TRACEF("thread_sleep_etc returns %d after %" PRIu64 " msecs\n", err, t);
 
@@ -471,7 +472,7 @@ static int waiter_kill_thread_infinite_wait(void* arg) {
     thread_sleep_relative(LK_MSEC(100));
 
     lk_time_t t = current_time();
-    status_t err = event_wait_deadline(e, INFINITE_TIME, true);
+    zx_status_t err = event_wait_deadline(e, INFINITE_TIME, true);
     t = (current_time() - t) / LK_MSEC(1);
     TRACEF("event_wait_deadline returns %d after %" PRIu64 " msecs\n", err, t);
 
@@ -484,7 +485,7 @@ static int waiter_kill_thread(void* arg) {
     thread_sleep_relative(LK_MSEC(100));
 
     lk_time_t t = current_time();
-    status_t err = event_wait_deadline(e, t + LK_SEC(5), true);
+    zx_status_t err = event_wait_deadline(e, t + LK_SEC(5), true);
     t = (current_time() - t) / LK_MSEC(1);
     TRACEF("event_wait_deadline with deadline returns %d after %" PRIu64 " msecs\n", err, t);
 

@@ -16,6 +16,8 @@
 #include <kernel/thread.h>
 #include <kernel/timer.h>
 
+#include <zircon/types.h>
+
 static enum handler_return timer_cb(struct timer* timer, lk_time_t now, void* arg) {
     event_t* event = (event_t*)arg;
     event_signal(event, false);
@@ -178,7 +180,7 @@ static void timer_far_deadline(void) {
     timer_init(&timer);
 
     timer_set(&timer, UINT64_MAX - 5, TIMER_SLACK_CENTER, 0, timer_cb, &event);
-    status_t st = event_wait_deadline(&event, current_time() + LK_MSEC(100), false);
+    zx_status_t st = event_wait_deadline(&event, current_time() + LK_MSEC(100), false);
     if (st != ZX_ERR_TIMED_OUT) {
         printf("error: unexpected timer fired!\n");
     } else {

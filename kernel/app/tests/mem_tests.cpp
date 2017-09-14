@@ -19,6 +19,7 @@
 #include <string.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
+#include <zircon/types.h>
 
 static void mem_test_fail(void* ptr, uint32_t should, uint32_t is) {
     printf("ERROR at %p: should be 0x%x, is 0x%x\n", ptr, should, is);
@@ -27,7 +28,7 @@ static void mem_test_fail(void* ptr, uint32_t should, uint32_t is) {
     hexdump(ptr, 128);
 }
 
-static status_t do_pattern_test(void* ptr, size_t len, uint32_t pat) {
+static zx_status_t do_pattern_test(void* ptr, size_t len, uint32_t pat) {
     volatile uint32_t* vbuf32 = reinterpret_cast<volatile uint32_t*>(ptr);
     size_t i;
 
@@ -46,7 +47,7 @@ static status_t do_pattern_test(void* ptr, size_t len, uint32_t pat) {
     return ZX_OK;
 }
 
-static status_t do_moving_inversion_test(void* ptr, size_t len, uint32_t pat) {
+static zx_status_t do_moving_inversion_test(void* ptr, size_t len, uint32_t pat) {
     volatile uint32_t* vbuf32 = reinterpret_cast<volatile uint32_t*>(ptr);
     size_t i;
 
@@ -173,7 +174,7 @@ static int mem_test(int argc, const cmd_args* argv, uint32_t flags) {
         }
 
         /* allocate a region to test in */
-        status_t err = VmAspace::kernel_aspace()->AllocContiguous(
+        zx_status_t err = VmAspace::kernel_aspace()->AllocContiguous(
             "memtest", len, &ptr, 0, VmAspace::VMM_FLAG_COMMIT,
             ARCH_MMU_FLAG_UNCACHED | ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
         if (err < 0) {
