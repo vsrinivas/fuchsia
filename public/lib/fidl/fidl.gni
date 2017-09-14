@@ -426,8 +426,8 @@ template("fidl") {
 
       deps += [
         "//garnet/public/lib/fidl/rust/fidl",
+        "//garnet/public/rust/crates/tokio-fuchsia",
         "//rust/magenta-rs:magenta",
-        "//rust/tokio-fuchsia",
         "//third_party/rust-crates:futures-0.1.15",
       ]
 

@@ -11,4 +11,4 @@ byteorder = "0.5.3"
 magenta = { path = "../../../../rust/magenta-rs" }
 futures = "0.1"
 tokio-core = "0.1.9"
-tokio-fuchsia = { path = "../../../../rust/tokio-fuchsia", version = "0.1" }
+tokio-fuchsia = { path = "../../../../rust/crates/tokio-fuchsia", version = "0.1" }
