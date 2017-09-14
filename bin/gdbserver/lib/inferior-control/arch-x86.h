@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // Parts of this file are derived from
-// magenta/kernel/arch/x86/include/arch/x86/interrupts.h.
+// zircon/kernel/arch/x86/include/arch/x86/interrupts.h.
 
 #pragma once
 

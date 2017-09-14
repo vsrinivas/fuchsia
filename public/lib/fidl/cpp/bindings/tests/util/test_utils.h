@@ -7,23 +7,23 @@
 
 #include <string>
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 namespace fidl {
 namespace test {
 
 // Writes a message to |handle| with message data |text|. Returns true on
 // success.
-bool WriteTextMessage(const mx::channel& handle, const std::string& text);
+bool WriteTextMessage(const zx::channel& handle, const std::string& text);
 
 // Reads a message from |handle|, putting its contents into |*text|. Returns
 // true on success. (This blocks if necessary and will call |MojoReadMessage()|
 // multiple times, e.g., to query the size of the message.)
-bool ReadTextMessage(const mx::channel& handle, std::string* text);
+bool ReadTextMessage(const zx::channel& handle, std::string* text);
 
 // Discards a message from |handle|. Returns true on success. (This does not
 // block. It will fail if no message is available to discard.)
-bool DiscardMessage(const mx::channel& handle);
+bool DiscardMessage(const zx::channel& handle);
 
 }  // namespace test
 }  // namespace fidl

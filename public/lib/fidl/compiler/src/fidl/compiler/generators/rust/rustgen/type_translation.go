@@ -268,28 +268,28 @@ func fidlToRustType(t fidl_types.Type, context *Context) string {
 	case *fidl_types.TypeHandleType:
 		handle_type := t.Interface().(fidl_types.HandleType)
 		var type_str string
-		// Note that not all of these handle types are currently supported in magenta-rs.
+		// Note that not all of these handle types are currently supported in zircon-rs.
 		switch handle_type.Kind {
 		case fidl_types.HandleType_Kind_Channel:
-			type_str = "::magenta::Channel"
+			type_str = "::zircon::Channel"
 		case fidl_types.HandleType_Kind_Vmo:
-			type_str = "::magenta::Vmo"
+			type_str = "::zircon::Vmo"
 		case fidl_types.HandleType_Kind_Process:
-			type_str = "::magenta::Process"
+			type_str = "::zircon::Process"
 		case fidl_types.HandleType_Kind_Thread:
-			type_str = "::magenta::Thread"
+			type_str = "::zircon::Thread"
 		case fidl_types.HandleType_Kind_Event:
-			type_str = "::magenta::Event"
+			type_str = "::zircon::Event"
 		case fidl_types.HandleType_Kind_Port:
-			type_str = "::magenta::Port"
+			type_str = "::zircon::Port"
 		case fidl_types.HandleType_Kind_Job:
-			type_str = "::magenta::Job"
+			type_str = "::zircon::Job"
 		case fidl_types.HandleType_Kind_Socket:
-			type_str = "::magenta::Socket"
+			type_str = "::zircon::Socket"
 		case fidl_types.HandleType_Kind_EventPair:
-			type_str = "::magenta::EventPair"
+			type_str = "::zircon::EventPair"
 		case fidl_types.HandleType_Kind_Unspecified:
-			type_str = "::magenta::Handle"
+			type_str = "::zircon::Handle"
 		default:
 			log.Fatal("Unknown handle type kind! ", handle_type.Kind)
 		}

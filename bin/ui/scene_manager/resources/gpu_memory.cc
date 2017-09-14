@@ -37,7 +37,7 @@ GpuMemoryPtr GpuMemory::New(Session* session,
 GpuMemoryPtr GpuMemory::New(Session* session,
                             scenic::ResourceId id,
                             vk::Device device,
-                            mx::vmo vmo,
+                            zx::vmo vmo,
                             ErrorReporter* error_reporter) {
   // TODO: Need to change driver semantics so that you can import a VMO twice.
 

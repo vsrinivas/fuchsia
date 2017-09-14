@@ -37,7 +37,7 @@ DisplaySwapchain::DisplaySwapchain(Display* display,
     image_available_semaphores_.push_back(std::move(pair.first));
     watches_.push_back(
         timestamper, std::move(pair.second), kFenceSignalled,
-        [this, i](mx_time_t timestamp) { OnFramePresented(i, timestamp); });
+        [this, i](zx_time_t timestamp) { OnFramePresented(i, timestamp); });
 #endif
   }
 }

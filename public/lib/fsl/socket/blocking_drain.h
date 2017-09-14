@@ -5,7 +5,7 @@
 #ifndef LIB_FSL_SOCKET_BLOCKING_DRAIN_H_
 #define LIB_FSL_SOCKET_BLOCKING_DRAIN_H_
 
-#include <mx/socket.h>
+#include <zx/socket.h>
 
 #include <functional>
 
@@ -17,7 +17,7 @@ namespace fsl {
 // |write_bytes| must return the number of bytes consumed. Returns |true| if the
 // socket has been drained, |false| if an error occured.
 FXL_EXPORT bool BlockingDrainFrom(
-    mx::socket source,
+    zx::socket source,
     const std::function<size_t(const void*, uint32_t)>& write_bytes);
 
 }  // namespace fsl

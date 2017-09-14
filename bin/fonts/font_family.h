@@ -5,7 +5,7 @@
 #ifndef APPS_FONTS_FONT_FAMILY_H_
 #define APPS_FONTS_FONT_FAMILY_H_
 
-#include <mx/vmo.h>
+#include <zx/vmo.h>
 
 #include <vector>
 
@@ -24,7 +24,7 @@ class FontFamily {
   bool Load(const rapidjson::Document::ValueType& family);
 
   const std::string& name() const { return name_; }
-  mx::vmo* GetFontData(const FontRequestPtr& request);
+  zx::vmo* GetFontData(const FontRequestPtr& request);
 
   class Font {
    public:
@@ -34,7 +34,7 @@ class FontFamily {
     std::string asset;
     FontSlant slant;
     int weight;
-    mx::vmo data;
+    zx::vmo data;
   };
 
  private:

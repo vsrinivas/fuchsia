@@ -4,7 +4,7 @@
 
 #include "garnet/bin/ui/scene_manager/engine/frame_scheduler.h"
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <trace/event.h>
 
 #include "garnet/bin/ui/scene_manager/displays/display.h"
@@ -85,7 +85,7 @@ uint64_t FrameScheduler::ComputeTargetPresentationTime(uint64_t now) const {
 
 void FrameScheduler::MaybeScheduleFrame() {
   uint64_t target_time =
-      ComputeTargetPresentationTime(mx_time_get(MX_CLOCK_MONOTONIC));
+      ComputeTargetPresentationTime(zx_time_get(ZX_CLOCK_MONOTONIC));
   if (target_time <= last_presentation_time_) {
     FXL_DCHECK(target_time == last_presentation_time_);
     return;
@@ -151,7 +151,7 @@ void FrameScheduler::ReceiveFrameTimings(FrameTimings* timings) {
 
 // TODO(MZ-260): enable this.
 #if 0
-  mx_time_t presentation_time = ????;  // obtain from FrameTimings
+  zx_time_t presentation_time = ????;  // obtain from FrameTimings
   display_->set_last_vsync(timings->actual_presentation_time());
 #endif
 

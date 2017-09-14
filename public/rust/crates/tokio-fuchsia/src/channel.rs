@@ -9,7 +9,7 @@ use std::borrow::BorrowMut;
 
 use futures::{Async, Future, Poll};
 use mio::fuchsia::EventedHandle;
-use magenta::{self, AsHandleRef, MessageBuf};
+use zircon::{self, AsHandleRef, MessageBuf};
 
 use tokio_core::reactor::{Handle, PollEvented};
 
@@ -17,27 +17,27 @@ use super::{would_block, status_to_io_err};
 
 /// An I/O object representing a `Channel`.
 pub struct Channel {
-    channel: magenta::Channel,
+    channel: zircon::Channel,
     evented: PollEvented<EventedHandle>,
 }
 
 impl AsHandleRef for Channel {
-    fn as_handle_ref(&self) -> magenta::HandleRef {
+    fn as_handle_ref(&self) -> zircon::HandleRef {
         self.channel.as_handle_ref()
     }
 }
 
-impl Into<magenta::Channel> for Channel {
-    fn into(self) -> magenta::Channel {
+impl Into<zircon::Channel> for Channel {
+    fn into(self) -> zircon::Channel {
         self.channel
     }
 }
 
 impl Channel {
-    /// Creates a new `Channel` from a previously-created `magenta::Channel`.
-    pub fn from_channel(channel: magenta::Channel, handle: &Handle) -> io::Result<Channel> {
+    /// Creates a new `Channel` from a previously-created `zircon::Channel`.
+    pub fn from_channel(channel: zircon::Channel, handle: &Handle) -> io::Result<Channel> {
         // This is safe because the `EventedHandle` will only live as long as the
-        // underlying `magenta::Channel`.
+        // underlying `zircon::Channel`.
         let ev_handle = unsafe { EventedHandle::new(channel.raw_handle()) };
         let evented = PollEvented::new(ev_handle, handle)?;
 
@@ -55,13 +55,13 @@ impl Channel {
     }
 
     /// Recieves a message on the channel and registers this `Channel` as
-    /// needing a read on recieving a `magenta::Status::ErrShouldWait`.
+    /// needing a read on recieving a `zircon::Status::ErrShouldWait`.
     pub fn recv_from(&self, opts: u32, buf: &mut MessageBuf) -> io::Result<()> {
         if let Async::NotReady = self.evented.poll_read() {
             return Err(would_block())
         }
         let res = self.channel.read(opts, buf);
-        if res == Err(magenta::Status::ErrShouldWait) {
+        if res == Err(zircon::Status::ErrShouldWait) {
             self.evented.need_read();
         }
         res.map_err(status_to_io_err)
@@ -117,7 +117,7 @@ impl Channel {
     /// Writes a message into the channel.
     pub fn write(&self,
                  bytes: &[u8],
-                 handles: &mut Vec<magenta::Handle>,
+                 handles: &mut Vec<zircon::Handle>,
                  opts: u32
                 ) -> io::Result<()>
     {
@@ -245,7 +245,7 @@ impl<F> Future for RepeatServer<F>
 mod tests {
     use tokio_core::reactor::{Core, Timeout};
     use std::time::Duration;
-    use magenta::{self, MessageBuf, ChannelOpts};
+    use zircon::{self, MessageBuf, ChannelOpts};
     use super::*;
 
     #[test]
@@ -254,7 +254,7 @@ mod tests {
         let handle = core.handle();
         let bytes = &[0,1,2,3];
 
-        let (tx, rx) = magenta::Channel::create(ChannelOpts::Normal).unwrap();
+        let (tx, rx) = zircon::Channel::create(ChannelOpts::Normal).unwrap();
         let f_rx = Channel::from_channel(rx, &handle).unwrap();
 
         let mut buffer = MessageBuf::new();
@@ -283,7 +283,7 @@ mod tests {
         let mut core = Core::new().unwrap();
         let handle = core.handle();
 
-        let (tx, rx) = magenta::Channel::create(ChannelOpts::Normal).unwrap();
+        let (tx, rx) = zircon::Channel::create(ChannelOpts::Normal).unwrap();
         let f_rx = Channel::from_channel(rx, &handle).unwrap();
 
         let mut count = 0;
@@ -316,7 +316,7 @@ mod tests {
         let mut core = Core::new().unwrap();
         let handle = core.handle();
 
-        let (tx, rx) = magenta::Channel::create(ChannelOpts::Normal).unwrap();
+        let (tx, rx) = zircon::Channel::create(ChannelOpts::Normal).unwrap();
         let f_rx = Channel::from_channel(rx, &handle).unwrap();
 
         let mut count = 0;

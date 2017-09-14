@@ -71,8 +71,8 @@ class Message {
   }
 
   // Access the handles.
-  const std::vector<mx_handle_t>* handles() const { return &handles_; }
-  std::vector<mx_handle_t>* mutable_handles() { return &handles_; }
+  const std::vector<zx_handle_t>* handles() const { return &handles_; }
+  std::vector<zx_handle_t>* mutable_handles() { return &handles_; }
 
  private:
   void Initialize();
@@ -80,7 +80,7 @@ class Message {
 
   uint32_t data_num_bytes_;
   internal::MessageData* data_;
-  std::vector<mx_handle_t> handles_;
+  std::vector<zx_handle_t> handles_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Message);
 };
@@ -151,14 +151,14 @@ class MessageReceiverWithResponderStatus : public MessageReceiver {
 // and handles).
 //
 // NOTE: The message isn't validated and may be malformed!
-mx_status_t ReadMessage(const mx::channel& handle, Message* message);
+zx_status_t ReadMessage(const zx::channel& handle, Message* message);
 
 // Read a single message from the channel and dispatch to the given receiver.
 // |handle| must be valid. |receiver| may be null, in which case the read
 // message is simply discarded. If |receiver| is not null, then
 // |receiver_result| should be non-null, and will be set the receiver's return
 // value.
-mx_status_t ReadAndDispatchMessage(const mx::channel& handle,
+zx_status_t ReadAndDispatchMessage(const zx::channel& handle,
                                    MessageReceiver* receiver,
                                    bool* receiver_result);
 

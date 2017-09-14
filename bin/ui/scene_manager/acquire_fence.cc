@@ -4,12 +4,12 @@
 
 #include "garnet/bin/ui/scene_manager/acquire_fence.h"
 
-#include <mx/time.h>
+#include <zx/time.h>
 #include "lib/fxl/logging.h"
 
 namespace scene_manager {
 
-AcquireFence::AcquireFence(mx::event fence) : fence_(std::move(fence)) {
+AcquireFence::AcquireFence(zx::event fence) : fence_(std::move(fence)) {
   FXL_DCHECK(fence_);
 }
 
@@ -18,21 +18,21 @@ AcquireFence::~AcquireFence() {
 }
 
 bool AcquireFence::WaitReady(fxl::TimeDelta timeout) {
-  mx_time_t mx_deadline;
+  zx_time_t zx_deadline;
   if (timeout <= fxl::TimeDelta::Zero())
-    mx_deadline = 0u;
+    zx_deadline = 0u;
   else if (timeout == fxl::TimeDelta::Max())
-    mx_deadline = MX_TIME_INFINITE;
+    zx_deadline = ZX_TIME_INFINITE;
   else
-    mx_deadline = mx::deadline_after(timeout.ToNanoseconds());
+    zx_deadline = zx::deadline_after(timeout.ToNanoseconds());
 
-  mx_signals_t pending = 0u;
+  zx_signals_t pending = 0u;
   while (!ready_) {
-    mx_status_t status =
-        fence_.wait_one(kFenceSignalledOrClosed, mx_deadline, &pending);
-    FXL_DCHECK(status == MX_OK || status == MX_ERR_TIMED_OUT);
+    zx_status_t status =
+        fence_.wait_one(kFenceSignalledOrClosed, zx_deadline, &pending);
+    FXL_DCHECK(status == ZX_OK || status == ZX_ERR_TIMED_OUT);
     ready_ = pending & kFenceSignalledOrClosed;
-    if (mx_deadline != MX_TIME_INFINITE)
+    if (zx_deadline != ZX_TIME_INFINITE)
       break;
   }
   return ready_;
@@ -65,8 +65,8 @@ void AcquireFence::ClearHandler() {
   }
 }
 
-void AcquireFence::OnHandleReady(mx_handle_t handle,
-                                 mx_signals_t pending,
+void AcquireFence::OnHandleReady(zx_handle_t handle,
+                                 zx_signals_t pending,
                                  uint64_t count) {
   FXL_DCHECK(handle == fence_.get());
   FXL_DCHECK(pending & kFenceSignalledOrClosed);

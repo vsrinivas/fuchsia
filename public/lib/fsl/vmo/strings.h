@@ -5,7 +5,7 @@
 #ifndef LIB_FSL_VMO_STRINGS_H_
 #define LIB_FSL_VMO_STRINGS_H_
 
-#include <mx/vmo.h>
+#include <zx/vmo.h>
 
 #include <string>
 
@@ -16,10 +16,10 @@ namespace fsl {
 
 // Make a new shared buffer with the contents of a string.
 FXL_EXPORT bool VmoFromString(const fxl::StringView& string,
-                              mx::vmo* handle_ptr);
+                              zx::vmo* handle_ptr);
 
 // Copy the contents of a shared buffer into a string.
-FXL_EXPORT bool StringFromVmo(const mx::vmo& handle, std::string* string_ptr);
+FXL_EXPORT bool StringFromVmo(const zx::vmo& handle, std::string* string_ptr);
 
 }  // namespace fsl
 

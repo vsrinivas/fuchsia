@@ -4,8 +4,8 @@
 
 #include "registers.h"
 
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/debug.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/debug.h>
 
 #include "debugger-utils/util.h"
 
@@ -19,23 +19,23 @@ namespace arch {
 
 Registers::Registers(Thread* thread) : thread_(thread) {
   FXL_DCHECK(thread);
-  FXL_DCHECK(thread->handle() != MX_HANDLE_INVALID);
+  FXL_DCHECK(thread->handle() != ZX_HANDLE_INVALID);
 }
 
 bool Registers::RefreshGeneralRegisters() {
-  return RefreshRegset(MX_THREAD_STATE_REGSET0);
+  return RefreshRegset(ZX_THREAD_STATE_REGSET0);
 }
 
 bool Registers::WriteGeneralRegisters() {
-  return WriteRegset(MX_THREAD_STATE_REGSET0);
+  return WriteRegset(ZX_THREAD_STATE_REGSET0);
 }
 
 std::string Registers::GetGeneralRegistersAsString() {
-  return GetRegsetAsString(MX_THREAD_STATE_REGSET0);
+  return GetRegsetAsString(ZX_THREAD_STATE_REGSET0);
 }
 
 bool Registers::SetGeneralRegistersFromString(const fxl::StringView& value) {
-  return SetRegsetFromString(MX_THREAD_STATE_REGSET0, value);
+  return SetRegsetFromString(ZX_THREAD_STATE_REGSET0, value);
 }
 
 bool Registers::RefreshRegsetHelper(int regset, void* buf, size_t buf_size) {
@@ -46,11 +46,11 @@ bool Registers::RefreshRegsetHelper(int regset, void* buf, size_t buf_size) {
   }
 
   uint32_t regset_size;
-  mx_status_t status = mx_thread_read_state(
+  zx_status_t status = zx_thread_read_state(
     thread()->handle(), regset, buf, buf_size, &regset_size);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to read regset " << regset << ": "
-                   << util::MxErrorString(status);
+                   << util::ZxErrorString(status);
     return false;
   }
 
@@ -62,11 +62,11 @@ bool Registers::RefreshRegsetHelper(int regset, void* buf, size_t buf_size) {
 
 bool Registers::WriteRegsetHelper(int regset, const void* buf,
                                   size_t buf_size) {
-  mx_status_t status = mx_thread_write_state(thread()->handle(), regset,
+  zx_status_t status = zx_thread_write_state(thread()->handle(), regset,
                                              buf, buf_size);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to write regset " << regset << ": "
-                   << util::MxErrorString(status);
+                   << util::ZxErrorString(status);
     return false;
   }
 
@@ -89,22 +89,22 @@ bool Registers::SetRegsetFromStringHelper(int regset,
   return true;
 }
 
-mx_vaddr_t Registers::GetIntRegister(int regno) {
-  mx_vaddr_t value;
+zx_vaddr_t Registers::GetIntRegister(int regno) {
+  zx_vaddr_t value;
   bool success = GetRegister(regno, &value, sizeof(value));
   FXL_DCHECK(success);
   return value;
 }
 
-mx_vaddr_t Registers::GetPC() {
+zx_vaddr_t Registers::GetPC() {
   return GetIntRegister(GetPCRegisterNumber());
 }
 
-mx_vaddr_t Registers::GetSP() {
+zx_vaddr_t Registers::GetSP() {
   return GetIntRegister(GetSPRegisterNumber());
 }
 
-mx_vaddr_t Registers::GetFP() {
+zx_vaddr_t Registers::GetFP() {
   return GetIntRegister(GetFPRegisterNumber());
 }
 

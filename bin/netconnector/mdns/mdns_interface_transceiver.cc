@@ -136,12 +136,12 @@ int MdnsInterfaceTransceiver::SetOptionSharePort() {
 }
 
 void MdnsInterfaceTransceiver::WaitForInbound() {
-  fd_waiter_.Wait([this](mx_status_t status,
+  fd_waiter_.Wait([this](zx_status_t status,
                          uint32_t events) { InboundReady(status, events); },
                   socket_fd_.get(), POLLIN);
 }
 
-void MdnsInterfaceTransceiver::InboundReady(mx_status_t status,
+void MdnsInterfaceTransceiver::InboundReady(zx_status_t status,
                                             uint32_t events) {
   sockaddr_storage source_address_storage;
   socklen_t source_address_length =

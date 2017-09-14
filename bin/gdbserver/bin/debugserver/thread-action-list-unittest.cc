@@ -10,12 +10,12 @@ namespace debugserver {
 namespace {
 
 constexpr size_t kMaxActions = 4;
-constexpr mx_koid_t kCurProc = 42;
-constexpr mx_koid_t kMinusOne = ~0ull;
+constexpr zx_koid_t kCurProc = 42;
+constexpr zx_koid_t kMinusOne = ~0ull;
 
 struct Action {
   ThreadActionList::Action action;
-  mx_koid_t pid, tid;
+  zx_koid_t pid, tid;
 };
 
 struct ActionTest {

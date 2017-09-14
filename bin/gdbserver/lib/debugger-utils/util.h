@@ -11,8 +11,8 @@
 #include <vector>
 
 #ifdef __Fuchsia__
-#include <magenta/syscalls/exception.h>
-#include <magenta/types.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/types.h>
 #endif  // __Fuchsia__
 
 #include "lib/fxl/strings/string_view.h"
@@ -57,7 +57,7 @@ std::string ErrnoString(int err);
 #ifdef __Fuchsia__
 // Return a string representation of |status|.
 // This includes both the numeric and text values.
-std::string MxErrorString(mx_status_t status);
+std::string ZxErrorString(zx_status_t status);
 #endif  // __Fuchsia__
 
 // Joins multiple strings using the given delimiter. This aims to avoid
@@ -93,13 +93,13 @@ void hexdump_ex(FILE* out, const void* ptr, size_t len, uint64_t disp_addr);
 #ifdef __Fuchsia__
 
 // Return the name of exception |type| as a C string.
-const char* ExceptionName(mx_excp_type_t type);
+const char* ExceptionName(zx_excp_type_t type);
 
 // Return the string representation of an exception.
-std::string ExceptionToString(mx_excp_type_t type,
-                              const mx_exception_context_t& context);
+std::string ExceptionToString(zx_excp_type_t type,
+                              const zx_exception_context_t& context);
 
-bool ReadString(const ByteBlock& m, mx_vaddr_t vaddr, char* ptr, size_t max);
+bool ReadString(const ByteBlock& m, zx_vaddr_t vaddr, char* ptr, size_t max);
 
 #endif  // __Fuchsia__
 

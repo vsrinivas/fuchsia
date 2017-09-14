@@ -35,7 +35,7 @@ class GpuMemory : public Memory {
   static GpuMemoryPtr New(Session* session,
                           scenic::ResourceId id,
                           vk::Device device,
-                          mx::vmo vmo,
+                          zx::vmo vmo,
                           ErrorReporter* error_reporter);
 
   // Helper method that calls the above method with the VMO from |args|. Also

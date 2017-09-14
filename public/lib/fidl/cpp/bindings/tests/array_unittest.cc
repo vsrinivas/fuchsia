@@ -79,44 +79,44 @@ TEST(ArrayTest, Bool) {
 }
 
 
-// Tests that Array<mx::channel> supports transferring handles.
+// Tests that Array<zx::channel> supports transferring handles.
 TEST(ArrayTest, Handle) {
-  mx::channel handle0;
-  mx::channel handle1;
-  mx::channel::create(0, &handle0, &handle1);
+  zx::channel handle0;
+  zx::channel handle1;
+  zx::channel::create(0, &handle0, &handle1);
   
-  auto handles = Array<mx::channel>::New(2);
+  auto handles = Array<zx::channel>::New(2);
   handles[0] = std::move(handle0);
   handles[1].reset(handle1.release());
 
   EXPECT_FALSE(handle0);
   EXPECT_FALSE(handle1);
 
-  Array<mx::channel> handles2 = std::move(handles);
+  Array<zx::channel> handles2 = std::move(handles);
   EXPECT_TRUE(handles2[0]);
   EXPECT_TRUE(handles2[1]);
 
-  mx::channel pipe_handle = std::move(handles2[0]);
+  zx::channel pipe_handle = std::move(handles2[0]);
   EXPECT_TRUE(pipe_handle);
   EXPECT_FALSE(handles2[0]);
 }
 
-// Tests that Array<mx::channel> supports closing handles.
+// Tests that Array<zx::channel> supports closing handles.
 TEST(ArrayTest, HandlesAreClosed) {
-  mx::channel handle0;
-  mx::channel handle1;
-  mx::channel::create(0, &handle0, &handle1);
-  mx_handle_t handle0_val = handle0.get();
+  zx::channel handle0;
+  zx::channel handle1;
+  zx::channel::create(0, &handle0, &handle1);
+  zx_handle_t handle0_val = handle0.get();
 
   {
-    auto handles = Array<mx::channel>::New(2);
+    auto handles = Array<zx::channel>::New(2);
     handles[0] = std::move(handle0);
     handles[1].reset(handle1.get());
   }
 
   // We expect the pipes to have been closed.
-  EXPECT_EQ(MX_ERR_BAD_HANDLE, mx_handle_close(handle0_val));
-  EXPECT_EQ(MX_ERR_BAD_HANDLE, mx_handle_close(handle1.get()));
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(handle0_val));
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(handle1.get()));
 }
 
 TEST(ArrayTest, Clone) {
@@ -179,7 +179,7 @@ TEST(ArrayTest, Clone) {
 
   {
     // Test that array of handles still works although Clone() is not available.
-    auto array = Array<mx::channel>::New(10);
+    auto array = Array<zx::channel>::New(10);
     EXPECT_FALSE(array[0]);
   }
 }
@@ -340,11 +340,11 @@ TEST(ArrayTest, Serialization_ArrayOfString) {
 
 // Tests serializing and deserializing an Array<Handle>.
 TEST(ArrayTest, Serialization_ArrayOfHandle) {
-  auto array = Array<mx::handle>::New(4);
-  mx::channel p0_h0, p0_h1;
-  mx::channel p1_h0, p1_h1;
-  mx::channel::create(0, &p0_h0, &p0_h1);
-  mx::channel::create(0, &p1_h0, &p1_h1);
+  auto array = Array<zx::handle>::New(4);
+  zx::channel p0_h0, p0_h1;
+  zx::channel p1_h0, p1_h1;
+  zx::channel::create(0, &p0_h0, &p0_h1);
+  zx::channel::create(0, &p1_h0, &p1_h1);
 
   // array[0] is left invalid.
   array[1] = std::move(p0_h1);

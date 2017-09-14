@@ -18,7 +18,7 @@ import (
 	"syscall"
 	"syscall/mx"
 	"syscall/mx/mxerror"
-	"syscall/mx/mxio"
+	"syscall/mx/fdio"
 	"time"
 
 	"garnet/public/lib/power/fidl/power_manager"
@@ -62,8 +62,8 @@ func (pm *PowerManager) Watch(watcher power_manager.PowerManagerWatcher_Pointer)
 	return nil
 }
 
-func getPowerInfo(m mxio.MXIO) (*mxio.PowerInfoResult, error) {
-	var pi mxio.PowerInfoResult
+func getPowerInfo(m fdio.FDIO) (*fdio.PowerInfoResult, error) {
+	var pi fdio.PowerInfoResult
 	buf := new(bytes.Buffer)
 	// LE for our arm64 and amd64 archs
 	err := binary.Write(buf, binary.LittleEndian, pi)
@@ -72,7 +72,7 @@ func getPowerInfo(m mxio.MXIO) (*mxio.PowerInfoResult, error) {
 	}
 	b := buf.Bytes()
 
-	_, err = m.Ioctl(mxio.IoctlPowerGetInfo, nil, b)
+	_, err = m.Ioctl(fdio.IoctlPowerGetInfo, nil, b)
 	if err != nil {
 		return nil, fmt.Errorf("ioctl err: %s", err)
 	}
@@ -84,8 +84,8 @@ func getPowerInfo(m mxio.MXIO) (*mxio.PowerInfoResult, error) {
 	return &pi, nil
 }
 
-func getBatteryInfo(m mxio.MXIO) (*mxio.BatteryInfoResult, error) {
-	var bi mxio.BatteryInfoResult
+func getBatteryInfo(m fdio.FDIO) (*fdio.BatteryInfoResult, error) {
+	var bi fdio.BatteryInfoResult
 	buf := new(bytes.Buffer)
 	// LE for our arm64 and amd64 archs
 	err := binary.Write(buf, binary.LittleEndian, bi)
@@ -94,7 +94,7 @@ func getBatteryInfo(m mxio.MXIO) (*mxio.BatteryInfoResult, error) {
 	}
 	b := buf.Bytes()
 
-	_, err = m.Ioctl(mxio.IoctlPowerGetBatteryInfo, nil, b)
+	_, err = m.Ioctl(fdio.IoctlPowerGetBatteryInfo, nil, b)
 	if err != nil {
 		return nil, fmt.Errorf("ioctl err: %s", err)
 	}
@@ -106,8 +106,8 @@ func getBatteryInfo(m mxio.MXIO) (*mxio.BatteryInfoResult, error) {
 	return &bi, nil
 }
 
-func addListener(m mxio.MXIO, callback func(mxio.MXIO)) error {
-	handles, err := m.Ioctl(mxio.IoctlPowerGetStateChangeEvent, nil, nil)
+func addListener(m fdio.FDIO, callback func(fdio.FDIO)) error {
+	handles, err := m.Ioctl(fdio.IoctlPowerGetStateChangeEvent, nil, nil)
 	if err != nil {
 		return fmt.Errorf("ioctl err: %s", err)
 	}
@@ -135,12 +135,12 @@ func addListener(m mxio.MXIO, callback func(mxio.MXIO)) error {
 }
 
 // Updates the status
-func (pm *PowerManager) updateStatus(m mxio.MXIO) error {
+func (pm *PowerManager) updateStatus(m fdio.FDIO) error {
 	pi, err := getPowerInfo(m)
 	if err != nil {
 		return fmt.Errorf("Failed to get power info: %s\n", err)
 	}
-	var bi *mxio.BatteryInfoResult
+	var bi *fdio.BatteryInfoResult
 	if pi.PowerType == 1 {
 		bi, err = getBatteryInfo(m)
 		if err != nil {
@@ -162,10 +162,10 @@ func (pm *PowerManager) updateStatus(m mxio.MXIO) error {
 
 	if pi.PowerType == 1 {
 		pm.batteryStatusTimeStamp = now
-		pm.batteryStatus.BatteryPresent = pi.State&mxio.PowerStateOnline > 0
-		pm.batteryStatus.Charging = pi.State&mxio.PowerStateCharging > 0
-		pm.batteryStatus.Discharging = pi.State&mxio.PowerStateDischarging > 0
-		pm.batteryStatus.Critical = pi.State&mxio.PowerStateCritical > 0
+		pm.batteryStatus.BatteryPresent = pi.State&fdio.PowerStateOnline > 0
+		pm.batteryStatus.Charging = pi.State&fdio.PowerStateCharging > 0
+		pm.batteryStatus.Discharging = pi.State&fdio.PowerStateDischarging > 0
+		pm.batteryStatus.Critical = pi.State&fdio.PowerStateCritical > 0
 		if pm.batteryStatus.BatteryPresent {
 			pm.batteryStatus.Level = float32(bi.RemainingCapacity) * 100 / float32(bi.LastFullCapacity)
 			if bi.PresentRate < 0 {
@@ -176,7 +176,7 @@ func (pm *PowerManager) updateStatus(m mxio.MXIO) error {
 		}
 	} else {
 		pm.powerAdapterTimeStamp = now
-		pm.batteryStatus.PowerAdapterOnline = pi.State&mxio.PowerStateOnline > 0
+		pm.batteryStatus.PowerAdapterOnline = pi.State&fdio.PowerStateOnline > 0
 	}
 
 	pm.batteryStatus.Status = power_manager.Status_Ok
@@ -259,7 +259,7 @@ func main() {
 			continue
 		}
 
-		if err := addListener(m, func(m mxio.MXIO) {
+		if err := addListener(m, func(m fdio.FDIO) {
 			if err := pm.updateStatus(m); err != nil {
 				logger.Printf("Error while updating battery status: %s", err)
 			}
@@ -273,7 +273,7 @@ func main() {
 
 		if pi.PowerType == 1 {
 			batteryDeviceFound = true
-			go func(m mxio.MXIO) {
+			go func(m fdio.FDIO) {
 				for {
 					time.Sleep(time.Duration(updateWaitTimeFlag) * time.Second)
 					if err := pm.updateStatus(m); err != nil {

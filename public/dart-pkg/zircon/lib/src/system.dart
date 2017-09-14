@@ -6,7 +6,7 @@ part of zircon;
 
 // ignore_for_file: native_function_body_in_non_sdk_code
 
-/// An exception representing an error returned as an mx_status_t.
+/// An exception representing an error returned as an zx_status_t.
 class MxStatusException extends Error {
   final int status;
   MxStatusException(this.status);

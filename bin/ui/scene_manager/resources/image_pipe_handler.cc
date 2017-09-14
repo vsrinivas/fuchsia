@@ -16,7 +16,7 @@ ImagePipeHandler::ImagePipeHandler(
 
 void ImagePipeHandler::AddImage(uint32_t image_id,
                                 scenic::ImageInfoPtr image_info,
-                                mx::vmo memory,
+                                zx::vmo memory,
                                 scenic::MemoryType memory_type,
                                 uint64_t memory_offset) {
   image_pipe_->AddImage(image_id, std::move(image_info), std::move(memory),
@@ -29,8 +29,8 @@ void ImagePipeHandler::RemoveImage(uint32_t image_id) {
 
 void ImagePipeHandler::PresentImage(uint32_t image_id,
                                     uint64_t presentation_time,
-                                    mx::event acquire_fence,
-                                    mx::event release_fence,
+                                    zx::event acquire_fence,
+                                    zx::event release_fence,
                                     const PresentImageCallback& callback) {
   image_pipe_->PresentImage(image_id, presentation_time,
                             std::move(acquire_fence), std::move(release_fence),

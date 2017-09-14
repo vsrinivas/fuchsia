@@ -10,7 +10,7 @@
 #include <string.h>
 
 #ifdef __Fuchsia__
-#include <magenta/types.h>
+#include <zircon/types.h>
 #endif
 
 #ifdef __cplusplus
@@ -32,7 +32,7 @@ bool far_reader_read_fd(far_reader_t reader, int fd);
 // Takes ownership of the VMO.
 //
 // The VMO will be closed during far_reader_destroy.
-bool far_reader_read_vmo(far_reader_t reader, mx_handle_t vmo);
+bool far_reader_read_vmo(far_reader_t reader, zx_handle_t vmo);
 #endif
 
 bool far_reader_get_count(far_reader_t reader, uint64_t* count);

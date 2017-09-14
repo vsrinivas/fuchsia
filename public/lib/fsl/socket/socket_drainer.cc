@@ -4,7 +4,7 @@
 
 #include "lib/fsl/socket/socket_drainer.h"
 
-#include <mx/socket.h>
+#include <zx/socket.h>
 #include <utility>
 #include <vector>
 
@@ -29,7 +29,7 @@ SocketDrainer::~SocketDrainer() {
     *destruction_sentinel_ = true;
 }
 
-void SocketDrainer::Start(mx::socket source) {
+void SocketDrainer::Start(zx::socket source) {
   source_ = std::move(source);
   ReadData();
 }
@@ -37,8 +37,8 @@ void SocketDrainer::Start(mx::socket source) {
 void SocketDrainer::ReadData() {
   std::vector<char> buffer(64 * 1024);
   size_t num_bytes = 0;
-  mx_status_t rv = source_.read(0, buffer.data(), buffer.size(), &num_bytes);
-  if (rv == MX_OK) {
+  zx_status_t rv = source_.read(0, buffer.data(), buffer.size(), &num_bytes);
+  if (rv == ZX_OK) {
     // Calling the user callback, and exiting early if this objects is
     // destroyed.
     bool is_destroyed = false;
@@ -49,12 +49,12 @@ void SocketDrainer::ReadData() {
     destruction_sentinel_ = nullptr;
 
     WaitForData();
-  } else if (rv == MX_ERR_SHOULD_WAIT) {
+  } else if (rv == ZX_ERR_SHOULD_WAIT) {
     WaitForData();
-  } else if (rv == MX_ERR_PEER_CLOSED || rv == MX_ERR_BAD_STATE) {
+  } else if (rv == ZX_ERR_PEER_CLOSED || rv == ZX_ERR_BAD_STATE) {
     client_->OnDataComplete();
   } else {
-    FXL_DCHECK(false) << "Unhandled mx_status_t: " << rv;
+    FXL_DCHECK(false) << "Unhandled zx_status_t: " << rv;
   }
 }
 
@@ -62,12 +62,12 @@ void SocketDrainer::WaitForData() {
   FXL_DCHECK(!wait_id_);
   wait_id_ = waiter_->AsyncWait(
       source_.get(),
-      MX_SOCKET_READABLE | MX_SOCKET_READ_DISABLED | MX_SOCKET_PEER_CLOSED,
-      MX_TIME_INFINITE, &WaitComplete, this);
+      ZX_SOCKET_READABLE | ZX_SOCKET_READ_DISABLED | ZX_SOCKET_PEER_CLOSED,
+      ZX_TIME_INFINITE, &WaitComplete, this);
 }
 
-void SocketDrainer::WaitComplete(mx_status_t result,
-                                 mx_signals_t pending,
+void SocketDrainer::WaitComplete(zx_status_t result,
+                                 zx_signals_t pending,
                                  uint64_t count,
                                  void* context) {
   SocketDrainer* drainer = static_cast<SocketDrainer*>(context);

@@ -5,7 +5,7 @@
 #include "garnet/examples/ui/hello_scene_manager/app.h"
 
 #if defined(countof)
-// Workaround for compiler error due to Magenta defining countof() as a macro.
+// Workaround for compiler error due to Zircon defining countof() as a macro.
 // Redefines countof() using GLM_COUNTOF(), which currently provides a more
 // sophisticated implementation anyway.
 #undef countof
@@ -210,7 +210,7 @@ void App::Init(scenic::DisplayInfoPtr display_info) {
       static_cast<float>(display_info->physical_height);
   CreateExampleScene(display_width, display_height);
 
-  start_time_ = mx_time_get(MX_CLOCK_MONOTONIC);
+  start_time_ = zx_time_get(ZX_CLOCK_MONOTONIC);
   camera_anim_start_time_ = start_time_;
   Update(start_time_);
 }

@@ -9,12 +9,12 @@
 namespace debugserver {
 namespace arch {
 
-GdbSignal ComputeGdbSignal(const mx_exception_context_t& context) {
+GdbSignal ComputeGdbSignal(const zx_exception_context_t& context) {
   FXL_NOTIMPLEMENTED();
   return GdbSignal::kUnsupported;
 }
 
-bool IsSingleStepException(const mx_exception_context_t& context) {
+bool IsSingleStepException(const zx_exception_context_t& context) {
   FXL_NOTIMPLEMENTED();
   return false;
 }

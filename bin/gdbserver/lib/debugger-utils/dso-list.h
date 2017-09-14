@@ -11,7 +11,7 @@
 #include <cstdio>
 #include <memory>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 #include "byte-block.h"
 #include "elf-reader.h"
@@ -21,9 +21,9 @@ namespace util {
 
 typedef struct dsoinfo {
   struct dsoinfo* next;
-  mx_vaddr_t base;
-  mx_vaddr_t entry;
-  mx_vaddr_t phdr;
+  zx_vaddr_t base;
+  zx_vaddr_t entry;
+  zx_vaddr_t phdr;
   // Note: This is NULL if num_loadable_phdrs == 0.
   elf::SegmentHeader* loadable_phdrs;
   uint32_t num_loadable_phdrs;
@@ -31,18 +31,18 @@ typedef struct dsoinfo {
   char buildid[elf::Reader::kMaxBuildIdSize * 2 + 1];
   bool is_main_exec;
   bool debug_file_tried;
-  mx_status_t debug_file_status;
+  zx_status_t debug_file_status;
   char* debug_file;
   char name[];
 } dsoinfo_t;
 
 extern dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb,
-                                 mx_vaddr_t lmap,
+                                 zx_vaddr_t lmap,
                                  const char* name);
 
 extern void dso_free_list(dsoinfo_t*);
 
-extern dsoinfo_t* dso_lookup(dsoinfo_t* dso_list, mx_vaddr_t pc);
+extern dsoinfo_t* dso_lookup(dsoinfo_t* dso_list, zx_vaddr_t pc);
 
 extern dsoinfo_t* dso_get_main_exec(dsoinfo_t* dso_list);
 
@@ -50,7 +50,7 @@ extern void dso_print_list(FILE* out, const dsoinfo_t* dso_list);
 
 extern void dso_vlog_list(const dsoinfo_t* dso_list);
 
-extern mx_status_t dso_find_debug_file(dsoinfo_t* dso,
+extern zx_status_t dso_find_debug_file(dsoinfo_t* dso,
                                        const char** out_debug_file);
 
 }  // namespace util

@@ -40,7 +40,7 @@ class ViewImpl : public mozart::View,
       fidl::InterfaceHandle<mozart::ViewContainerListener> listener) override;
   void AddChild(uint32_t child_key,
                 fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
-                mx::eventpair host_import_token) override;
+                zx::eventpair host_import_token) override;
   void RemoveChild(uint32_t child_key,
                    fidl::InterfaceRequest<mozart::ViewOwner>
                        transferred_view_owner_request) override;
@@ -51,7 +51,7 @@ class ViewImpl : public mozart::View,
 
   // |app::ServiceProvider|:
   void ConnectToService(const fidl::String& service_name,
-                        mx::channel client_handle) override;
+                        zx::channel client_handle) override;
 
   ViewRegistry* const registry_;
   ViewState* const state_;

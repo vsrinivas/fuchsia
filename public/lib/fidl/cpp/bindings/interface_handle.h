@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERFACE_HANDLE_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERFACE_HANDLE_H_
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include <cstddef>
 #include <utility>
@@ -31,7 +31,7 @@ class InterfaceHandle {
   InterfaceHandle() : version_(Interface::Version_) {}
   InterfaceHandle(std::nullptr_t) : version_(Interface::Version_) {}
 
-  InterfaceHandle(mx::channel handle, uint32_t version)
+  InterfaceHandle(zx::channel handle, uint32_t version)
       : handle_(std::move(handle)), version_(version) {}
 
   InterfaceHandle(InterfaceHandle&& other)
@@ -75,8 +75,8 @@ class InterfaceHandle {
   InterfaceRequest<Interface> NewRequest() {
     FXL_DCHECK(!is_valid()) << "An existing handle is already bound.";
 
-    mx::channel request_endpoint;
-    mx::channel::create(0, &handle_, &request_endpoint);
+    zx::channel request_endpoint;
+    zx::channel::create(0, &handle_, &request_endpoint);
     return InterfaceRequest<Interface>(std::move(request_endpoint));
   }
 
@@ -84,15 +84,15 @@ class InterfaceHandle {
   explicit operator bool() const { return is_valid(); }
   bool is_valid() const { return !!handle_; }
 
-  mx::channel PassHandle() { return std::move(handle_); }
-  const mx::channel& handle() const { return handle_; }
-  void set_handle(mx::channel handle) { handle_ = std::move(handle); }
+  zx::channel PassHandle() { return std::move(handle_); }
+  const zx::channel& handle() const { return handle_; }
+  void set_handle(zx::channel handle) { handle_ = std::move(handle); }
 
   uint32_t version() const { return version_; }
   void set_version(uint32_t version) { version_ = version; }
 
  private:
-  mx::channel handle_;
+  zx::channel handle_;
   uint32_t version_;
 
   FIDL_MOVE_ONLY_TYPE(InterfaceHandle);

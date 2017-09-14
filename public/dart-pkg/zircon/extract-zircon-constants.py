@@ -7,7 +7,7 @@ import sys
 
 source_dir = os.path.dirname(__file__)
 zircon_include_dir = os.path.join(source_dir,
-                                  '../../../../magenta/system/public/magenta')
+                                  '../../../../zircon/system/public/zircon')
 
 file_header = """// Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
@@ -21,7 +21,7 @@ part of zircon;
 // ignore_for_file: constant_identifier_names
 """
 
-prefix = 'MX_'
+prefix = 'ZX_'
 prefix_len = len(prefix)
 
 

@@ -55,7 +55,7 @@ void NoodlesView::OnSceneInvalidated(
   // Update the animation state.
   uint64_t presentation_time = presentation_info->presentation_time;
   if (!start_time_ ||
-      presentation_time - start_time_ >= MX_SEC(kSecondsBetweenChanges)) {
+      presentation_time - start_time_ >= ZX_SEC(kSecondsBetweenChanges)) {
     start_time_ = presentation_time;
     wx_ = rand() % 9 + 1;
     wy_ = rand() % 9 + 1;

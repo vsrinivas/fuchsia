@@ -21,8 +21,8 @@ class UnresolvedImports : private fsl::MessageLoopHandler {
   // Adds an entry for an unresolved import. |import_koid| must be the koid
   // for |import_token|.
   void AddUnresolvedImport(Import* import,
-                           mx::eventpair import_token,
-                           mx_koid_t import_koid);
+                           zx::eventpair import_token,
+                           zx_koid_t import_koid);
 
   // Listen for the death of the corresponding export token and removes any
   // matching imports if that happens.
@@ -32,35 +32,35 @@ class UnresolvedImports : private fsl::MessageLoopHandler {
 
   // Removes and returns all imports corresponding to |import_koid|.
   std::vector<Import*> GetAndRemoveUnresolvedImportsForKoid(
-      mx_koid_t import_koid);
+      zx_koid_t import_koid);
 
   // A callback that informs us when an import has been destroyed.
   void OnImportDestroyed(Import* import);
 
-  size_t NumUnresolvedImportsForKoid(mx_koid_t import_koid) const;
+  size_t NumUnresolvedImportsForKoid(zx_koid_t import_koid) const;
 
   size_t size() const { return imports_.size(); }
 
  private:
   struct ImportEntry {
     Import* import_ptr;
-    mx::eventpair import_token;
-    mx_koid_t import_koid;
+    zx::eventpair import_token;
+    zx_koid_t import_koid;
     fsl::MessageLoop::HandlerKey death_handler_key = 0;
   };
 
-  void OnHandleReady(mx_handle_t handle,
-                     mx_signals_t pending,
+  void OnHandleReady(zx_handle_t handle,
+                     zx_signals_t pending,
                      uint64_t count) override;
 
-  void OnHandleError(mx_handle_t handle, mx_status_t error) override;
+  void OnHandleError(zx_handle_t handle, zx_status_t error) override;
 
   std::vector<Import*> RemoveUnresolvedImportsForHandle(
-      mx_handle_t import_handle);
+      zx_handle_t import_handle);
 
-  using ImportKoid = mx_koid_t;
+  using ImportKoid = zx_koid_t;
   using ImportPtrsToImportEntries = std::unordered_map<Import*, ImportEntry>;
-  using HandlesToImportKoidsMap = std::unordered_map<mx_handle_t, ImportKoid>;
+  using HandlesToImportKoidsMap = std::unordered_map<zx_handle_t, ImportKoid>;
   using KoidsToImportPtrs =
       std::unordered_map<ImportKoid, std::vector<Import*>>;
 

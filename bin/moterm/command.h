@@ -6,9 +6,9 @@
 #define APPS_MOTERM_COMMAND_H_
 
 #include <launchpad/launchpad.h>
-#include <mx/process.h>
-#include <mx/socket.h>
-#include <mxio/util.h>
+#include <zx/process.h>
+#include <zx/socket.h>
+#include <fdio/util.h>
 
 #include <functional>
 #include <vector>
@@ -38,18 +38,18 @@ class Command : fsl::MessageLoopHandler {
 
  private:
   // |fsl::MessageLoopHandler|:
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count);
+  void OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count);
 
   fxl::Closure termination_callback_;
   ReceiveCallback receive_callback_;
-  mx::socket stdin_;
-  mx::socket stdout_;
-  mx::socket stderr_;
+  zx::socket stdin_;
+  zx::socket stdout_;
+  zx::socket stderr_;
 
   fsl::MessageLoop::HandlerKey termination_key_ = 0;
   fsl::MessageLoop::HandlerKey out_key_ = 0;
   fsl::MessageLoop::HandlerKey err_key_ = 0;
-  mx::process process_;
+  zx::process process_;
 };
 
 }  // namespace moterm

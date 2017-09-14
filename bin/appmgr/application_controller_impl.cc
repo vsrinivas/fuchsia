@@ -16,7 +16,7 @@ ApplicationControllerImpl::ApplicationControllerImpl(
     fidl::InterfaceRequest<ApplicationController> request,
     ApplicationEnvironmentImpl* environment,
     std::unique_ptr<archive::FileSystem> fs,
-    mx::process process,
+    zx::process process,
     std::string path)
     : binding_(this),
       environment_(environment),
@@ -24,7 +24,7 @@ ApplicationControllerImpl::ApplicationControllerImpl(
       process_(std::move(process)),
       path_(std::move(path)) {
   termination_handler_ = fsl::MessageLoop::GetCurrent()->AddHandler(
-      this, process_.get(), MX_TASK_TERMINATED);
+      this, process_.get(), ZX_TASK_TERMINATED);
   if (request.is_pending()) {
     binding_.Bind(std::move(request));
     binding_.set_connection_error_handler([this] { Kill(); });
@@ -51,10 +51,10 @@ void ApplicationControllerImpl::Detach() {
 
 bool ApplicationControllerImpl::SendReturnCodeIfTerminated() {
   // Get process info.
-  mx_info_process_t process_info;
-  mx_status_t result = process_.get_info(MX_INFO_PROCESS, &process_info,
+  zx_info_process_t process_info;
+  zx_status_t result = process_.get_info(ZX_INFO_PROCESS, &process_info,
                                          sizeof(process_info), NULL, NULL);
-  FXL_DCHECK(result == MX_OK);
+  FXL_DCHECK(result == ZX_OK);
 
   if (process_info.exited) {
     // If the process has exited, call the callbacks.
@@ -73,11 +73,11 @@ void ApplicationControllerImpl::Wait(const WaitCallback& callback) {
 }
 
 // Called when process terminates, regardless of if Kill() was invoked.
-void ApplicationControllerImpl::OnHandleReady(mx_handle_t handle,
-                                              mx_signals_t pending,
+void ApplicationControllerImpl::OnHandleReady(zx_handle_t handle,
+                                              zx_signals_t pending,
                                               uint64_t count) {
   FXL_DCHECK(handle == process_.get());
-  FXL_DCHECK(pending & MX_TASK_TERMINATED);
+  FXL_DCHECK(pending & ZX_TASK_TERMINATED);
 
   if (!wait_callbacks_.empty()) {
     bool terminated = SendReturnCodeIfTerminated();

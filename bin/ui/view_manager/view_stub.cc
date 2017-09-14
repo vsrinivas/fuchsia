@@ -33,7 +33,7 @@ class PendingViewOwnerTransferState {
 
 ViewStub::ViewStub(ViewRegistry* registry,
                    fidl::InterfaceHandle<mozart::ViewOwner> owner,
-                   mx::eventpair host_import_token)
+                   zx::eventpair host_import_token)
     : registry_(registry),
       owner_(mozart::ViewOwnerPtr::Create(std::move(owner))),
       host_import_token_(std::move(host_import_token)),

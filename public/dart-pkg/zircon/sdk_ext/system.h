@@ -5,7 +5,7 @@
 #ifndef DART_PKG_ZIRCON_SDK_EXT_SYSTEM_H_
 #define DART_PKG_ZIRCON_SDK_EXT_SYSTEM_H_
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #include "dart/runtime/include/dart_api.h"
 #include "dart-pkg/zircon/sdk_ext/handle.h"
@@ -24,7 +24,7 @@ class System : public fxl::RefCountedThreadSafe<System>,
 
  public:
   static Dart_Handle ChannelCreate(uint32_t options);
-  static mx_status_t ChannelWrite(fxl::RefPtr<Handle> channel,
+  static zx_status_t ChannelWrite(fxl::RefPtr<Handle> channel,
                                   const tonic::DartByteData& data,
                                   std::vector<Handle*> handles);
   // TODO(ianloic): Add ChannelRead
@@ -40,7 +40,7 @@ class System : public fxl::RefCountedThreadSafe<System>,
 
   static Dart_Handle VmoCreate(uint64_t size, uint32_t options);
   static Dart_Handle VmoGetSize(fxl::RefPtr<Handle> vmo);
-  static mx_status_t VmoSetSize(fxl::RefPtr<Handle> vmo, uint64_t size);
+  static zx_status_t VmoSetSize(fxl::RefPtr<Handle> vmo, uint64_t size);
   static Dart_Handle VmoWrite(fxl::RefPtr<Handle> vmo,
                               uint64_t offset,
                               const tonic::DartByteData& data);

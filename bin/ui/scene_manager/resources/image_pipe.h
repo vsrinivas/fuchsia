@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <mx/event.h>
-#include <mx/vmo.h>
+#include <zx/event.h>
+#include <zx/vmo.h>
 
 #include <deque>
 
@@ -38,15 +38,15 @@ class ImagePipe : public ImageBase {
   // Called by |ImagePipeHandler|, part of |ImagePipe| interface.
   void AddImage(uint32_t image_id,
                 scenic::ImageInfoPtr image_info,
-                mx::vmo memory,
+                zx::vmo memory,
                 scenic::MemoryType memory_type,
                 uint64_t memory_offset);
   void RemoveImage(uint32_t image_id);
   // TODO(MZ-152): Add Presentation time to image_pipe.fidl.
   void PresentImage(uint32_t image_id,
                     uint64_t presentation_time,
-                    mx::event acquire_fence,
-                    mx::event release_fence,
+                    zx::event acquire_fence,
+                    zx::event release_fence,
                     const scenic::ImagePipe::PresentImageCallback& callback);
 
   void Accept(class ResourceVisitor* visitor) override;
@@ -89,7 +89,7 @@ class ImagePipe : public ImageBase {
     scenic::ResourceId image_id;
     uint64_t presentation_time;
     std::unique_ptr<AcquireFence> acquire_fence;
-    mx::event release_fence;
+    zx::event release_fence;
 
     // Callback to report when the update has been applied in response to
     // an invocation of |ImagePipe.PresentImage()|.
@@ -100,7 +100,7 @@ class ImagePipe : public ImageBase {
 
   scenic::ResourceId current_image_id_ = 0;
   ImagePtr current_image_;
-  mx::event current_release_fence_;
+  zx::event current_release_fence_;
 
   ResourceMap images_;
   bool is_valid_ = true;

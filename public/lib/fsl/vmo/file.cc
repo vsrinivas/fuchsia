@@ -5,28 +5,28 @@
 #include "lib/fsl/vmo/file.h"
 
 #include <fcntl.h>
-#include <mxio/io.h>
+#include <fdio/io.h>
 #include <unistd.h>
 
 #include "lib/fxl/logging.h"
 
 namespace fsl {
 
-bool VmoFromFd(fxl::UniqueFD fd, mx::vmo* handle_ptr) {
+bool VmoFromFd(fxl::UniqueFD fd, zx::vmo* handle_ptr) {
   FXL_CHECK(handle_ptr);
 
-  mx_handle_t result = MX_HANDLE_INVALID;
-  mx_status_t status = mxio_get_vmo(fd.get(), &result);
-  if (status != MX_OK)
+  zx_handle_t result = ZX_HANDLE_INVALID;
+  zx_status_t status = fdio_get_vmo(fd.get(), &result);
+  if (status != ZX_OK)
     return false;
   handle_ptr->reset(result);
   return true;
 }
 
-bool VmoFromFilename(const std::string& filename, mx::vmo* handle_ptr) {
+bool VmoFromFilename(const std::string& filename, zx::vmo* handle_ptr) {
   int fd = open(filename.c_str(), O_RDONLY);
   if (fd == -1) {
-    FXL_LOG(WARNING) << "mx::vmo::open failed to open file " << filename;
+    FXL_LOG(WARNING) << "zx::vmo::open failed to open file " << filename;
     return false;
   }
   return VmoFromFd(fxl::UniqueFD(fd), handle_ptr);

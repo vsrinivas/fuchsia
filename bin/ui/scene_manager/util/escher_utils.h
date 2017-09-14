@@ -7,21 +7,21 @@
 
 #pragma once
 
-#include <mx/event.h>
-#include <mx/vmo.h>
+#include <zx/event.h>
+#include <zx/vmo.h>
 
 #include "escher/escher.h"
 #include "escher/renderer/semaphore_wait.h"
 
 namespace scene_manager {
 
-// Create a new escher::Semaphore and a corresponding mx::event using
+// Create a new escher::Semaphore and a corresponding zx::event using
 // the VK_KHR_EXTERNAL_SEMAPHORE_FD extension.  If it fails, both elements
 // of the pair will be null.
-std::pair<escher::SemaphorePtr, mx::event> NewSemaphoreEventPair(
+std::pair<escher::SemaphorePtr, zx::event> NewSemaphoreEventPair(
     escher::Escher* escher);
 
-// Export the escher::GpuMem as a mx::vmo.
-mx::vmo ExportMemoryAsVMO(escher::Escher* escher, const escher::GpuMemPtr& mem);
+// Export the escher::GpuMem as a zx::vmo.
+zx::vmo ExportMemoryAsVMO(escher::Escher* escher, const escher::GpuMemPtr& mem);
 
 }  // namespace scene_manager

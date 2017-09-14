@@ -4,7 +4,7 @@
 
 //! Traits and utility functions for interface "pointers" and interface requests
 
-use magenta::{Channel, HandleBased};
+use zircon::{Channel, HandleBased};
 
 use {Encodable, Decodable, EncodeBuf, DecodeBuf, EncodableType, Result};
 use {EncodableNullable, DecodableNullable};

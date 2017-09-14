@@ -4,7 +4,7 @@
 
 #include "garnet/bin/moterm/history.h"
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #include <sys/time.h>
 
@@ -30,7 +30,7 @@ std::string ToString(fidl::Array<uint8_t>& data) {
   return ret;
 }
 
-std::string ToString(const mx::vmo& value) {
+std::string ToString(const zx::vmo& value) {
   std::string ret;
   if (!fsl::StringFromVmo(value, &ret)) {
     FXL_DCHECK(false);
@@ -47,7 +47,7 @@ fidl::Array<uint8_t> ToArray(const std::string& val) {
 using Key = fidl::Array<uint8_t>;
 
 std::string MakeKey() {
-  return fxl::StringPrintf("%120lu-%u", mx_time_get(MX_CLOCK_UTC), rand());
+  return fxl::StringPrintf("%120lu-%u", zx_time_get(ZX_CLOCK_UTC), rand());
 }
 
 void GetMoreEntries(

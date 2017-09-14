@@ -5,7 +5,7 @@
 #ifndef LIB_FSL_VMO_FILE_H_
 #define LIB_FSL_VMO_FILE_H_
 
-#include <mx/vmo.h>
+#include <zx/vmo.h>
 
 #include <string>
 
@@ -15,11 +15,11 @@
 namespace fsl {
 
 // Make a new shared buffer with the contents of a file.
-FXL_EXPORT bool VmoFromFd(fxl::UniqueFD fd, mx::vmo* handle_ptr);
+FXL_EXPORT bool VmoFromFd(fxl::UniqueFD fd, zx::vmo* handle_ptr);
 
 // Make a new shared buffer with the contents of a file.
 FXL_EXPORT bool VmoFromFilename(const std::string& filename,
-                                mx::vmo* handle_ptr);
+                                zx::vmo* handle_ptr);
 
 }  // namespace fsl
 

@@ -4,7 +4,7 @@
 
 package main
 
-// Types from <mxio/socket.h>.
+// Types from <fdio/socket.h>.
 // These were extracted from cgo by building the program:
 //
 //	package typesextract
@@ -16,7 +16,7 @@ package main
 //	// #include <sys/ioctl.h>
 //	// #include <sys/socket.h>
 //	// #include <sys/types.h>
-//	// #include <mxio/socket.h>
+//	// #include <fdio/socket.h>
 //	import "C"
 //
 //	func F() {
@@ -27,12 +27,12 @@ package main
 //		_ = C.struct_mxrio_gai_reply{}
 //		_ = C.struct_mxrio_sockaddr_reply{}
 //		_ = C.struct_mxrio_sockopt_req_reply{}
-//		_ = C.struct_mxio_socket_msg{}
+//		_ = C.struct_fdio_socket_msg{}
 //		_ = C.AF_INET
 //		_ = C.AF_INET6
-//		_ = C.MXRIO_GAI_REQ_NODE_MAXLEN
-//		_ = C.MXRIO_GAI_REQ_SERVICE_MAXLEN
-//		_ = C.MXRIO_GAI_REPLY_MAX
+//		_ = C.ZXRIO_GAI_REQ_NODE_MAXLEN
+//		_ = C.ZXRIO_GAI_REQ_SERVICE_MAXLEN
+//		_ = C.ZXRIO_GAI_REPLY_MAX
 //		_ = C.SOL_SOCKET
 //		_ = C.SOL_TCP
 //
@@ -102,9 +102,9 @@ const IPPROTO_ICMPV6 = 58
 const AF_INET = 2
 const AF_INET6 = 10
 
-const MXRIO_GAI_REQ_NODE_MAXLEN = 256
-const MXRIO_GAI_REQ_SERVICE_MAXLEN = 256
-const MXRIO_GAI_REPLY_MAX = 4
+const ZXRIO_GAI_REQ_NODE_MAXLEN = 256
+const ZXRIO_GAI_REQ_SERVICE_MAXLEN = 256
+const ZXRIO_GAI_REPLY_MAX = 4
 const SOL_IP = 0
 const SOL_SOCKET = 0x1
 const SOL_TCP = 0x6
@@ -189,7 +189,7 @@ type c_addrinfo struct {
 }
 
 type c_mxrio_gai_reply struct {
-	res [MXRIO_GAI_REPLY_MAX]struct {
+	res [ZXRIO_GAI_REPLY_MAX]struct {
 		ai   c_addrinfo
 		addr c_sockaddr_storage
 	}
@@ -203,8 +203,8 @@ type c_mxrio_gai_req struct {
 	hints_is_null   uint8
 	reserved        uint8
 	reserved2       uint32
-	node            [MXRIO_GAI_REQ_NODE_MAXLEN]uint8
-	service         [MXRIO_GAI_REQ_SERVICE_MAXLEN]uint8
+	node            [ZXRIO_GAI_REQ_NODE_MAXLEN]uint8
+	service         [ZXRIO_GAI_REQ_SERVICE_MAXLEN]uint8
 	hints           c_addrinfo
 }
 
@@ -250,14 +250,14 @@ type c_sockaddr_storage struct {
 	__ss_padding [112]uint8
 }
 
-type c_mxio_socket_msg_hdr struct {
+type c_fdio_socket_msg_hdr struct {
 	addr    c_sockaddr_storage
 	addrlen c_socklen
 	flags   int32
 }
 
-type c_mxio_socket_msg struct {
-	hdr  c_mxio_socket_msg_hdr
+type c_fdio_socket_msg struct {
+	hdr  c_fdio_socket_msg_hdr
 	data [1]uint8
 	_    [7]byte
 }

@@ -29,7 +29,7 @@ static_library("debugger-utils") {
     sources += [
       "dso-list.cc",
       "dso-list.h",
-      "util-mx.cc",
+      "util-zx.cc",
     ]
   }
 
@@ -47,9 +47,9 @@ static_library("debugger-utils") {
   ]
 
   if (is_fuchsia) {
-    deps += [ "//magenta/system/ulib/mx" ]
+    deps += [ "//zircon/system/ulib/zx" ]
   } else {
-    deps += [ "//magenta/system/public" ]
+    deps += [ "//zircon/system/public" ]
   }
 }
 
@@ -66,7 +66,7 @@ executable("util-unittests") {
 
   sources = [
     "../../test/run-all-unittests.cc",
-    "util-mx.cc",
+    "util-zx.cc",
     "util-unittest.cc",
     "util.cc",
     "util.h",
@@ -77,5 +77,5 @@ executable("util-unittests") {
     "//third_party/gtest",
   ]
 
-  libs = [ "magenta" ]
+  libs = [ "zircon" ]
 }

@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <mx/event.h>
+#include <zx/event.h>
 
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fsl/vmo/shared_vmo.h"
-#include "magenta/system/ulib/mx/include/mx/event.h"
-#include "magenta/system/ulib/mx/include/mx/eventpair.h"
+#include "zircon/system/ulib/zx/include/zx/event.h"
+#include "zircon/system/ulib/zx/include/zx/eventpair.h"
 
 namespace scene_manager {
 namespace test {
@@ -22,16 +22,16 @@ constexpr fxl::TimeDelta kPumpMessageLoopDuration =
 
 // Synchronously checks whether the event has signalled any of the bits in
 // |signal|.
-bool IsEventSignalled(const mx::event& event, mx_signals_t signal);
+bool IsEventSignalled(const zx::event& event, zx_signals_t signal);
 
 // Create a duplicate of the event.
-mx::event CopyEvent(const mx::event& event);
+zx::event CopyEvent(const zx::event& event);
 
 // Create a duplicate of the eventpair.
-mx::eventpair CopyEventPair(const mx::eventpair& eventpair);
+zx::eventpair CopyEventPair(const zx::eventpair& eventpair);
 
 // Create a duplicate of the VMO.
-mx::vmo CopyVmo(const mx::vmo& vmo);
+zx::vmo CopyVmo(const zx::vmo& vmo);
 
 // Creates a VMO with the specified size, immediately allocate physical memory
 // for it, and wraps in a |fsl::SharedVmo| to make it easy to map it into the

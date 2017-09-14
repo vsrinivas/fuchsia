@@ -7,7 +7,7 @@
 #include "lib/fxl/synchronization/waitable_event.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/thread.h"
-#include "magenta/system/ulib/mx/include/mx/eventpair.h"
+#include "zircon/system/ulib/zx/include/zx/eventpair.h"
 
 #include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/ui/tests/test_with_message_loop.h"
@@ -23,8 +23,8 @@ using ImportThreadedTest = SessionThreadedTest;
 
 TEST_F(ImportTest, ExportsResourceViaOp) {
   // Create the event pair.
-  mx::eventpair source, destination;
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+  zx::eventpair source, destination;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   // Setup the resource to export.
   scenic::ResourceId resource_id = 1;
@@ -42,8 +42,8 @@ TEST_F(ImportTest, ExportsResourceViaOp) {
 
 TEST_F(ImportTest, ImportsUnlinkedImportViaOp) {
   // Create the event pair.
-  mx::eventpair source, destination;
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+  zx::eventpair source, destination;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   // Apply the import op.
   ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
@@ -69,8 +69,8 @@ TEST_F(ImportTest, ImportsUnlinkedImportViaOp) {
 
 TEST_F(ImportTest, PerformsFullLinking) {
   // Create the event pair.
-  mx::eventpair source, destination;
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+  zx::eventpair source, destination;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   // Perform the import
   {
@@ -140,12 +140,12 @@ TEST_F(ImportTest, PerformsFullLinking) {
 TEST_F(ImportTest, HandlesDeadSourceHandle) {
   ResourceLinker linker;
 
-  mx::eventpair source_out;
-  mx::eventpair destination;
+  zx::eventpair source_out;
+  zx::eventpair destination;
   {
-    mx::eventpair source;
-    ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
-    source_out = mx::eventpair{source.get()};
+    zx::eventpair source;
+    ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
+    source_out = zx::eventpair{source.get()};
     // source dies now.
   }
 
@@ -158,14 +158,14 @@ TEST_F(ImportTest, HandlesDeadSourceHandle) {
 TEST_F(ImportTest, HandlesDeadDestinationHandle) {
   ResourceLinker linker;
 
-  mx::eventpair source_out;
-  mx::eventpair destination_out;
+  zx::eventpair source_out;
+  zx::eventpair destination_out;
   {
-    mx::eventpair source;
-    mx::eventpair destination;
-    ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
-    source_out = mx::eventpair{source.get()};
-    destination_out = mx::eventpair{destination.get()};
+    zx::eventpair source;
+    zx::eventpair destination;
+    ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
+    source_out = zx::eventpair{source.get()};
+    destination_out = zx::eventpair{destination.get()};
     // source and destination dies now.
   }
 
@@ -179,9 +179,9 @@ TEST_F(ImportTest, HandlesDeadDestinationHandle) {
 TEST_F(ImportTest, DestroyingExportedResourceSendsEvent) {
   ResourceLinker linker;
 
-  mx::eventpair source;
-  mx::eventpair destination;
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+  zx::eventpair source;
+  zx::eventpair destination;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   // Export an entity node.
   scenic::ResourceId node_id = 1;
@@ -208,9 +208,9 @@ TEST_F(ImportTest, DestroyingExportedResourceSendsEvent) {
 TEST_F(ImportTest, ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
   ResourceLinker linker;
 
-  mx::eventpair source;
-  mx::eventpair destination;
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+  zx::eventpair source;
+  zx::eventpair destination;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   // Export an entity node.
   scenic::ResourceId node_id = 1;
@@ -246,12 +246,12 @@ TEST_F(ImportThreadedTest, KillingImportedResourceEvictsFromResourceLinker) {
         import_expired_latch.Signal();
       });
 
-  mx::eventpair source;
+  zx::eventpair source;
 
   PostTaskSync([this, &source]() {
     // Create the event pair.
-    mx::eventpair destination;
-    ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+    zx::eventpair destination;
+    ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
     // Apply the import op.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
@@ -327,8 +327,8 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
       });
 
   // Create the event pair.
-  mx::eventpair source, destination;
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+  zx::eventpair source, destination;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   fsl::Thread thread;
   thread.Run();
@@ -431,8 +431,8 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
       });
 
   // Create the event pair.
-  mx::eventpair source, destination;
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+  zx::eventpair source, destination;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   fsl::Thread thread;
   thread.Run();
@@ -539,9 +539,9 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
       });
 
   // Create the event pair.
-  mx::eventpair source, destination1;
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination1));
-  mx::eventpair destination2 = CopyEventPair(destination1);
+  zx::eventpair source, destination1;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination1));
+  zx::eventpair destination2 = CopyEventPair(destination1);
 
   fsl::Thread thread;
   thread.Run();
@@ -667,9 +667,9 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
       });
 
   // Create the event pair.
-  mx::eventpair source, destination1;
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination1));
-  mx::eventpair destination2 = CopyEventPair(destination1);
+  zx::eventpair source, destination1;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination1));
+  zx::eventpair destination2 = CopyEventPair(destination1);
 
   fsl::Thread thread;
   thread.Run();
@@ -779,9 +779,9 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
 TEST_F(ImportTest,
        ProxiesCanBeFoundByTheirContainerOrTheirUnderlyingEntityType) {
   // Create an unlinked import resource.
-  mx::eventpair source, destination;
+  zx::eventpair source, destination;
 
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   // Apply the import op.
   ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
@@ -823,9 +823,9 @@ TEST_F(ImportTest,
 
 TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptOps) {
   // Create an unlinked import resource.
-  mx::eventpair source, destination;
+  zx::eventpair source, destination;
   {
-    ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+    ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
     // Apply the import op.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
@@ -863,8 +863,8 @@ TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptOps) {
 
 TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptOps) {
   // Create the event pair.
-  mx::eventpair source, destination;
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+  zx::eventpair source, destination;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   // Perform the import
   {
@@ -933,8 +933,8 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptOps) {
 
 TEST_F(ImportTest, EmbedderCanEmbedNodesFromElsewhere) {
   // Create the token pair.
-  mx::eventpair import_token, export_token;
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &import_token, &export_token));
+  zx::eventpair import_token, export_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &import_token, &export_token));
 
   // Effective node hierarchy must be:
   //

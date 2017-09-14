@@ -164,7 +164,7 @@ class BaseView : private ViewListener,
   void OnEvent(mozart::InputEventPtr event,
                const OnEventCallback& callback) override;
 
-  void PresentScene(mx_time_t presentation_time);
+  void PresentScene(zx_time_t presentation_time);
   void HandleSessionEvents(fidl::Array<scenic::EventPtr> events);
   void AdjustMetricsAndPhysicalSize();
 

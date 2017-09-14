@@ -4,9 +4,9 @@
 
 #include "lib/fsl/tasks/message_loop.h"
 
-#include <mx/channel.h>
-#include <mx/event.h>
-#include <mxio/io.h>
+#include <zx/channel.h>
+#include <zx/event.h>
+#include <fdio/io.h>
 
 #include <poll.h>
 
@@ -227,15 +227,15 @@ class TestMessageLoopHandler : public MessageLoopHandler {
   void clear_error_count() { error_count_ = 0; }
   int error_count() const { return error_count_; }
 
-  mx_status_t last_error_result() const { return last_error_result_; }
+  zx_status_t last_error_result() const { return last_error_result_; }
 
   // MessageLoopHandler:
-  void OnHandleReady(mx_handle_t handle,
-                     mx_signals_t pending,
+  void OnHandleReady(zx_handle_t handle,
+                     zx_signals_t pending,
                      uint64_t count) override {
     ready_count_++;
   }
-  void OnHandleError(mx_handle_t handle, mx_status_t status) override {
+  void OnHandleError(zx_handle_t handle, zx_status_t status) override {
     error_count_++;
     last_error_result_ = status;
   }
@@ -243,7 +243,7 @@ class TestMessageLoopHandler : public MessageLoopHandler {
  private:
   int ready_count_ = 0;
   int error_count_ = 0;
-  mx_status_t last_error_result_ = MX_OK;
+  zx_status_t last_error_result_ = ZX_OK;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestMessageLoopHandler);
 };
@@ -257,8 +257,8 @@ class QuitOnReadyMessageLoopHandler : public TestMessageLoopHandler {
     message_loop_ = message_loop;
   }
 
-  void OnHandleReady(mx_handle_t handle,
-                     mx_signals_t pending,
+  void OnHandleReady(zx_handle_t handle,
+                     zx_signals_t pending,
                      uint64_t count) override {
     message_loop_->QuitNow();
     TestMessageLoopHandler::OnHandleReady(handle, pending, count);
@@ -273,16 +273,16 @@ class QuitOnReadyMessageLoopHandler : public TestMessageLoopHandler {
 // Verifies Quit() from OnHandleReady() quits the loop.
 TEST(MessageLoop, QuitFromReady) {
   QuitOnReadyMessageLoopHandler handler;
-  mx::channel endpoint0;
-  mx::channel endpoint1;
-  mx::channel::create(0, &endpoint0, &endpoint1);
-  mx_status_t rv = endpoint1.write(0, nullptr, 0, nullptr, 0);
-  EXPECT_EQ(MX_OK, rv);
+  zx::channel endpoint0;
+  zx::channel endpoint1;
+  zx::channel::create(0, &endpoint0, &endpoint1);
+  zx_status_t rv = endpoint1.write(0, nullptr, 0, nullptr, 0);
+  EXPECT_EQ(ZX_OK, rv);
 
   MessageLoop message_loop;
   handler.set_message_loop(&message_loop);
   MessageLoop::HandlerKey key = message_loop.AddHandler(
-      &handler, endpoint0.get(), MX_CHANNEL_READABLE, fxl::TimeDelta::Max());
+      &handler, endpoint0.get(), ZX_CHANNEL_READABLE, fxl::TimeDelta::Max());
   message_loop.Run();
   EXPECT_EQ(1, handler.ready_count());
   EXPECT_EQ(0, handler.error_count());
@@ -300,8 +300,8 @@ class RemoveOnReadyMessageLoopHandler : public TestMessageLoopHandler {
 
   void set_handler_key(MessageLoop::HandlerKey key) { key_ = key; }
 
-  void OnHandleReady(mx_handle_t handle,
-                     mx_signals_t pending,
+  void OnHandleReady(zx_handle_t handle,
+                     zx_signals_t pending,
                      uint64_t count) override {
     EXPECT_TRUE(message_loop_->HasHandler(key_));
     message_loop_->RemoveHandler(key_);
@@ -318,16 +318,16 @@ class RemoveOnReadyMessageLoopHandler : public TestMessageLoopHandler {
 
 TEST(MessageLoop, HandleReady) {
   RemoveOnReadyMessageLoopHandler handler;
-  mx::channel endpoint0;
-  mx::channel endpoint1;
-  mx::channel::create(0, &endpoint0, &endpoint1);
-  mx_status_t rv = endpoint1.write(0, nullptr, 0, nullptr, 0);
-  EXPECT_EQ(MX_OK, rv);
+  zx::channel endpoint0;
+  zx::channel endpoint1;
+  zx::channel::create(0, &endpoint0, &endpoint1);
+  zx_status_t rv = endpoint1.write(0, nullptr, 0, nullptr, 0);
+  EXPECT_EQ(ZX_OK, rv);
 
   MessageLoop message_loop;
   handler.set_message_loop(&message_loop);
   MessageLoop::HandlerKey key = message_loop.AddHandler(
-      &handler, endpoint0.get(), MX_CHANNEL_READABLE, fxl::TimeDelta::Max());
+      &handler, endpoint0.get(), ZX_CHANNEL_READABLE, fxl::TimeDelta::Max());
   handler.set_handler_key(key);
   message_loop.Run();
   EXPECT_EQ(1, handler.ready_count());
@@ -337,16 +337,16 @@ TEST(MessageLoop, HandleReady) {
 
 TEST(MessageLoop, AfterHandleReadyCallback) {
   RemoveOnReadyMessageLoopHandler handler;
-  mx::channel endpoint0;
-  mx::channel endpoint1;
-  mx::channel::create(0, &endpoint0, &endpoint1);
-  mx_status_t rv = endpoint1.write(0, nullptr, 0, nullptr, 0);
-  EXPECT_EQ(MX_OK, rv);
+  zx::channel endpoint0;
+  zx::channel endpoint1;
+  zx::channel::create(0, &endpoint0, &endpoint1);
+  zx_status_t rv = endpoint1.write(0, nullptr, 0, nullptr, 0);
+  EXPECT_EQ(ZX_OK, rv);
 
   MessageLoop message_loop;
   handler.set_message_loop(&message_loop);
   MessageLoop::HandlerKey key = message_loop.AddHandler(
-      &handler, endpoint0.get(), MX_CHANNEL_READABLE, fxl::TimeDelta::Max());
+      &handler, endpoint0.get(), ZX_CHANNEL_READABLE, fxl::TimeDelta::Max());
   handler.set_handler_key(key);
   int after_task_callback_count = 0;
   message_loop.SetAfterTaskCallback(
@@ -360,12 +360,12 @@ TEST(MessageLoop, AfterHandleReadyCallback) {
 
 TEST(MessageLoop, AfterDeadlineExpiredCallback) {
   TestMessageLoopHandler handler;
-  mx::channel endpoint0;
-  mx::channel endpoint1;
-  mx::channel::create(0, &endpoint0, &endpoint1);
+  zx::channel endpoint0;
+  zx::channel endpoint1;
+  zx::channel::create(0, &endpoint0, &endpoint1);
 
   MessageLoop message_loop;
-  message_loop.AddHandler(&handler, endpoint0.get(), MX_CHANNEL_READABLE,
+  message_loop.AddHandler(&handler, endpoint0.get(), ZX_CHANNEL_READABLE,
                           fxl::TimeDelta::FromMicroseconds(10000));
   message_loop.task_runner()->PostDelayedTask(
       [&message_loop] { message_loop.QuitNow(); },
@@ -386,7 +386,7 @@ class QuitOnErrorRunMessageHandler : public TestMessageLoopHandler {
     message_loop_ = message_loop;
   }
 
-  void OnHandleError(mx_status_t handle, mx_status_t status) override {
+  void OnHandleError(zx_status_t handle, zx_status_t status) override {
     message_loop_->QuitNow();
     TestMessageLoopHandler::OnHandleError(handle, status);
   }
@@ -401,35 +401,35 @@ class QuitOnErrorRunMessageHandler : public TestMessageLoopHandler {
 // Also ensures that handlers are removed after a timeout occurs.
 TEST(MessageLoop, QuitWhenDeadlineExpired) {
   QuitOnErrorRunMessageHandler handler;
-  mx::channel endpoint0;
-  mx::channel endpoint1;
-  mx::channel::create(0, &endpoint0, &endpoint1);
+  zx::channel endpoint0;
+  zx::channel endpoint1;
+  zx::channel::create(0, &endpoint0, &endpoint1);
 
   MessageLoop message_loop;
   handler.set_message_loop(&message_loop);
   MessageLoop::HandlerKey key =
-      message_loop.AddHandler(&handler, endpoint0.get(), MX_CHANNEL_READABLE,
+      message_loop.AddHandler(&handler, endpoint0.get(), ZX_CHANNEL_READABLE,
                               fxl::TimeDelta::FromMicroseconds(10000));
   message_loop.Run();
   EXPECT_EQ(0, handler.ready_count());
   EXPECT_EQ(1, handler.error_count());
-  EXPECT_EQ(MX_ERR_TIMED_OUT, handler.last_error_result());
+  EXPECT_EQ(ZX_ERR_TIMED_OUT, handler.last_error_result());
   EXPECT_FALSE(message_loop.HasHandler(key));
 }
 
 // Test that handlers are notified of loop destruction.
 TEST(MessageLoop, Destruction) {
   TestMessageLoopHandler handler;
-  mx::channel endpoint0;
-  mx::channel endpoint1;
-  mx::channel::create(0, &endpoint0, &endpoint1);
+  zx::channel endpoint0;
+  zx::channel endpoint1;
+  zx::channel::create(0, &endpoint0, &endpoint1);
   {
     MessageLoop message_loop;
-    message_loop.AddHandler(&handler, endpoint0.get(), MX_CHANNEL_READABLE,
+    message_loop.AddHandler(&handler, endpoint0.get(), ZX_CHANNEL_READABLE,
                             fxl::TimeDelta::Max());
   }
   EXPECT_EQ(1, handler.error_count());
-  EXPECT_EQ(MX_ERR_CANCELED, handler.last_error_result());
+  EXPECT_EQ(ZX_ERR_CANCELED, handler.last_error_result());
 }
 
 class RemoveManyMessageLoopHandler : public TestMessageLoopHandler {
@@ -443,7 +443,7 @@ class RemoveManyMessageLoopHandler : public TestMessageLoopHandler {
 
   void add_handler_key(MessageLoop::HandlerKey key) { keys_.push_back(key); }
 
-  void OnHandleError(mx_handle_t handle, mx_status_t status) override {
+  void OnHandleError(zx_handle_t handle, zx_status_t status) override {
     for (auto key : keys_)
       message_loop_->RemoveHandler(key);
     TestMessageLoopHandler::OnHandleError(handle, status);
@@ -458,10 +458,10 @@ class RemoveManyMessageLoopHandler : public TestMessageLoopHandler {
 
 class ChannelPair {
  public:
-  ChannelPair() { mx::channel::create(0, &endpoint0, &endpoint1); }
+  ChannelPair() { zx::channel::create(0, &endpoint0, &endpoint1); }
 
-  mx::channel endpoint0;
-  mx::channel endpoint1;
+  zx::channel endpoint0;
+  zx::channel endpoint1;
 };
 
 // Test that handlers are notified of loop destruction.
@@ -476,17 +476,17 @@ TEST(MessageLoop, MultipleHandleDestruction) {
     odd_handler.set_message_loop(&message_loop);
     odd_handler.add_handler_key(
         message_loop.AddHandler(&odd_handler, pipe1.endpoint0.get(),
-                                MX_CHANNEL_READABLE, fxl::TimeDelta::Max()));
+                                ZX_CHANNEL_READABLE, fxl::TimeDelta::Max()));
     message_loop.AddHandler(&even_handler, pipe2.endpoint0.get(),
-                            MX_CHANNEL_READABLE, fxl::TimeDelta::Max());
+                            ZX_CHANNEL_READABLE, fxl::TimeDelta::Max());
     odd_handler.add_handler_key(
         message_loop.AddHandler(&odd_handler, pipe3.endpoint0.get(),
-                                MX_CHANNEL_READABLE, fxl::TimeDelta::Max()));
+                                ZX_CHANNEL_READABLE, fxl::TimeDelta::Max()));
   }
   EXPECT_EQ(1, odd_handler.error_count());
   EXPECT_EQ(1, even_handler.error_count());
-  EXPECT_EQ(MX_ERR_CANCELED, odd_handler.last_error_result());
-  EXPECT_EQ(MX_ERR_CANCELED, even_handler.last_error_result());
+  EXPECT_EQ(ZX_ERR_CANCELED, odd_handler.last_error_result());
+  EXPECT_EQ(ZX_ERR_CANCELED, even_handler.last_error_result());
 }
 
 class AddHandlerOnErrorHandler : public TestMessageLoopHandler {
@@ -498,8 +498,8 @@ class AddHandlerOnErrorHandler : public TestMessageLoopHandler {
     message_loop_ = message_loop;
   }
 
-  void OnHandleError(mx_handle_t handle, mx_status_t status) override {
-    message_loop_->AddHandler(this, handle, MX_CHANNEL_READABLE,
+  void OnHandleError(zx_handle_t handle, zx_status_t status) override {
+    message_loop_->AddHandler(this, handle, ZX_CHANNEL_READABLE,
                               fxl::TimeDelta::Max());
     TestMessageLoopHandler::OnHandleError(handle, status);
   }
@@ -515,27 +515,27 @@ class AddHandlerOnErrorHandler : public TestMessageLoopHandler {
 // destruction.
 TEST(MessageLoop, AddHandlerOnError) {
   AddHandlerOnErrorHandler handler;
-  mx::channel endpoint0;
-  mx::channel endpoint1;
-  mx::channel::create(0, &endpoint0, &endpoint1);
+  zx::channel endpoint0;
+  zx::channel endpoint1;
+  zx::channel::create(0, &endpoint0, &endpoint1);
   {
     MessageLoop message_loop;
     handler.set_message_loop(&message_loop);
-    message_loop.AddHandler(&handler, endpoint0.get(), MX_CHANNEL_READABLE,
+    message_loop.AddHandler(&handler, endpoint0.get(), ZX_CHANNEL_READABLE,
                             fxl::TimeDelta::Max());
   }
   EXPECT_EQ(1, handler.error_count());
-  EXPECT_EQ(MX_ERR_CANCELED, handler.last_error_result());
+  EXPECT_EQ(ZX_ERR_CANCELED, handler.last_error_result());
 }
 
 // Tests that waiting on files in a MessageLoop works.
 TEST(MessageLoop, FDWaiter) {
   // Create an event and an FD that reflects that event. The fd
   // shares ownership of the event.
-  mx::event fdevent;
-  EXPECT_EQ(mx::event::create(0u, &fdevent), MX_OK);
+  zx::event fdevent;
+  EXPECT_EQ(zx::event::create(0u, &fdevent), ZX_OK);
   fxl::UniqueFD fd(
-      mxio_handle_fd(fdevent.get(), MX_USER_SIGNAL_0, 0, /*shared=*/true));
+      fdio_handle_fd(fdevent.get(), ZX_USER_SIGNAL_0, 0, /*shared=*/true));
   EXPECT_TRUE(fd.is_valid());
 
   FDWaiter waiter;
@@ -544,11 +544,11 @@ TEST(MessageLoop, FDWaiter) {
     MessageLoop message_loop;
     std::thread thread([&fdevent]() {
       // Poke the fdevent, which pokes the fd.
-      EXPECT_EQ(fdevent.signal(0u, MX_USER_SIGNAL_0), MX_OK);
+      EXPECT_EQ(fdevent.signal(0u, ZX_USER_SIGNAL_0), ZX_OK);
     });
-    auto callback = [&callback_ran, &message_loop](mx_status_t success,
+    auto callback = [&callback_ran, &message_loop](zx_status_t success,
                                                    uint32_t events) {
-      EXPECT_EQ(success, MX_OK);
+      EXPECT_EQ(success, ZX_OK);
       EXPECT_EQ(events, static_cast<uint32_t>(POLLIN));
       callback_ran = true;
       message_loop.QuitNow();
@@ -563,11 +563,11 @@ TEST(MessageLoop, FDWaiter) {
 
 class ErrorHandler : public MessageLoopHandler {
  public:
-  using Callback = std::function<void(mx_handle_t, mx_status_t)>;
+  using Callback = std::function<void(zx_handle_t, zx_status_t)>;
 
   ErrorHandler(Callback callback) : callback_(std::move(callback)) {}
 
-  void OnHandleError(mx_handle_t handle, mx_status_t error) override {
+  void OnHandleError(zx_handle_t handle, zx_status_t error) override {
     callback_(handle, error);
   }
 
@@ -579,15 +579,15 @@ class ErrorHandler : public MessageLoopHandler {
 // message loop destruction (while tearing down remaining tasks and handlers)
 // though any tasks posted to it are immediately destroyed.
 TEST(MessageLoop, TaskRunnerAvailableDuringLoopDestruction) {
-  mx::event event;
-  EXPECT_EQ(MX_OK, mx::event::create(0u, &event));
+  zx::event event;
+  EXPECT_EQ(ZX_OK, zx::event::create(0u, &event));
 
   auto loop = std::make_unique<MessageLoop>();
 
   // Set up a handler which will record some observed state then attempt to
   // post a task.  The task should be destroyed immediately without running.
-  mx_handle_t handler_observed_handle = MX_HANDLE_INVALID;
-  mx_status_t handler_observed_error = MX_OK;
+  zx_handle_t handler_observed_handle = ZX_HANDLE_INVALID;
+  zx_status_t handler_observed_error = ZX_OK;
   bool handler_observed_runs_tasks_on_current_thread = false;
   bool task_posted_from_handler_destroyed = false;
   bool task_posted_from_handler_ran = false;
@@ -598,7 +598,7 @@ TEST(MessageLoop, TaskRunnerAvailableDuringLoopDestruction) {
     &handler_observed_runs_tasks_on_current_thread,  //
     &task_posted_from_handler_ran,                   //
     &task_posted_from_handler_destroyed
-  ](mx_handle_t handle, mx_status_t error) {
+  ](zx_handle_t handle, zx_status_t error) {
     handler_observed_handle = handle;
     handler_observed_error = error;
     handler_observed_runs_tasks_on_current_thread =
@@ -638,11 +638,11 @@ TEST(MessageLoop, TaskRunnerAvailableDuringLoopDestruction) {
        })]{};
 
   loop->task_runner()->PostTask(std::move(task));
-  loop->AddHandler(&handler, event.get(), MX_EVENT_SIGNALED);
+  loop->AddHandler(&handler, event.get(), ZX_EVENT_SIGNALED);
   loop.reset();
 
   EXPECT_EQ(event.get(), handler_observed_handle);
-  EXPECT_EQ(MX_ERR_CANCELED, handler_observed_error);
+  EXPECT_EQ(ZX_ERR_CANCELED, handler_observed_error);
   EXPECT_TRUE(handler_observed_runs_tasks_on_current_thread);
   EXPECT_FALSE(task_posted_from_handler_ran);
   EXPECT_TRUE(task_posted_from_handler_destroyed);

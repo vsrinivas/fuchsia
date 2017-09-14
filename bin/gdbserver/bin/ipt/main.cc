@@ -13,7 +13,7 @@
 
 #include <iostream>
 
-#include <mxio/util.h>
+#include <fdio/util.h>
 
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings.h"
@@ -25,8 +25,8 @@
 
 #ifdef __x86_64__  // for other arches we're just a stub, TO-128
 
-#include <magenta/device/intel-pt.h>
-#include <magenta/syscalls.h>
+#include <zircon/device/intel-pt.h>
+#include <zircon/syscalls.h>
 
 #include "debugger-utils/util.h"
 #include "debugger-utils/x86-pt.h"

@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERNAL_CONNECTOR_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_CONNECTOR_H_
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include "lib/fidl/cpp/bindings/message.h"
 #include "lib/fidl/cpp/waiter/default.h"
@@ -28,7 +28,7 @@ namespace internal {
 class Connector : public MessageReceiver {
  public:
   // The Connector takes ownership of |channel|.
-  explicit Connector(mx::channel channel,
+  explicit Connector(zx::channel channel,
                      const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter());
   ~Connector() override;
 
@@ -63,7 +63,7 @@ class Connector : public MessageReceiver {
 
   // Releases the channel, not triggering the error state. Connector is put into
   // a quiescent state.
-  mx::channel PassChannel();
+  zx::channel PassChannel();
 
   // Is the connector bound to a channel?
   bool is_valid() const { return !!channel_; }
@@ -72,27 +72,27 @@ class Connector : public MessageReceiver {
   // |timeout| elapses, or an error happens. Returns |true| if a message has
   // been delivered, |false| otherwise.
   // When returning |false| closes the channel, unless the reason for
-  // for returning |false| was |MX_ERR_SHOULD_WAIT| or
-  // |MX_ERR_TIMED_OUT|.
+  // for returning |false| was |ZX_ERR_SHOULD_WAIT| or
+  // |ZX_ERR_TIMED_OUT|.
   // Use |encountered_error| to see if an error occurred.
   bool WaitForIncomingMessage(fxl::TimeDelta timeout);
 
   // MessageReceiver implementation:
   bool Accept(Message* message) override;
 
-  mx_handle_t handle() const { return channel_.get(); }
+  zx_handle_t handle() const { return channel_.get(); }
 
  private:
-  static void CallOnHandleReady(mx_status_t result,
-                                mx_signals_t pending,
+  static void CallOnHandleReady(zx_status_t result,
+                                zx_signals_t pending,
                                 uint64_t count,
                                 void* closure);
-  void OnHandleReady(mx_status_t result, mx_signals_t pending, uint64_t count);
+  void OnHandleReady(zx_status_t result, zx_signals_t pending, uint64_t count);
 
   void WaitToReadMore();
 
   // Returns false if |this| was destroyed during message dispatch.
-  FXL_WARN_UNUSED_RESULT bool ReadSingleMessage(mx_status_t* read_result);
+  FXL_WARN_UNUSED_RESULT bool ReadSingleMessage(zx_status_t* read_result);
 
   void NotifyError();
 
@@ -102,7 +102,7 @@ class Connector : public MessageReceiver {
   fxl::Closure connection_error_handler_;
   const FidlAsyncWaiter* waiter_;
 
-  mx::channel channel_;
+  zx::channel channel_;
   MessageReceiver* incoming_receiver_;
 
   FidlAsyncWaitID async_wait_id_;

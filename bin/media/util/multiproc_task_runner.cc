@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/util/multiproc_task_runner.h"
 
-#include <magenta/syscalls/port.h>
+#include <zircon/syscalls/port.h>
 
 #include "lib/fxl/logging.h"
 
@@ -17,9 +17,9 @@ static const uint64_t kQuitKey = 1;
 MultiprocTaskRunner::MultiprocTaskRunner(uint32_t thread_count) {
   FXL_DCHECK(thread_count > 0);
 
-  mx_status_t status = mx::port::create(0u, &port_);
-  if (status != MX_OK) {
-    FXL_LOG(ERROR) << "mx::port::create failed, status " << status;
+  zx_status_t status = zx::port::create(0u, &port_);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "zx::port::create failed, status " << status;
   }
 
   while (thread_count-- != 0) {
@@ -61,14 +61,14 @@ bool MultiprocTaskRunner::RunsTasksOnCurrentThread() {
 
 void MultiprocTaskRunner::Worker(uint32_t thread_number) {
   while (true) {
-    mx_port_packet_t packet;
-    mx_status_t status = port_.wait(MX_TIME_INFINITE, &packet, 0u);
-    if (status != MX_OK) {
-      FXL_LOG(ERROR) << "mx::port::wait failed, status " << status;
+    zx_port_packet_t packet;
+    zx_status_t status = port_.wait(ZX_TIME_INFINITE, &packet, 0u);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "zx::port::wait failed, status " << status;
       break;
     }
 
-    FXL_DCHECK(packet.type == MX_PKT_TYPE_USER);
+    FXL_DCHECK(packet.type == ZX_PKT_TYPE_USER);
     FXL_DCHECK(packet.key == kUpdateKey || packet.key == kQuitKey);
 
     if (packet.key == kQuitKey) {
@@ -85,13 +85,13 @@ void MultiprocTaskRunner::Worker(uint32_t thread_number) {
 }
 
 void MultiprocTaskRunner::QueuePacket(uint64_t key, void* payload) {
-  mx_port_packet_t packet;
-  packet.type = MX_PKT_TYPE_USER;
+  zx_port_packet_t packet;
+  packet.type = ZX_PKT_TYPE_USER;
   packet.key = key;
   packet.user.u64[0] = reinterpret_cast<uint64_t>(payload);
-  mx_status_t status = port_.queue(&packet, 0u);
-  if (status != MX_OK) {
-    FXL_LOG(ERROR) << "mx::port::queue failed, status " << status;
+  zx_status_t status = port_.queue(&packet, 0u);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "zx::port::queue failed, status " << status;
   }
 }
 

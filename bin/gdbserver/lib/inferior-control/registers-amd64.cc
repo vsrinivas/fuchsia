@@ -8,8 +8,8 @@
 #include <cinttypes>
 #include <cstring>
 
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/debug.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/debug.h>
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -38,7 +38,7 @@ namespace {
 
 // Includes all registers if |register_number| is -1.
 // TODO: Here as elsewhere: more regsets.
-std::string GetRegisterAsStringHelper(const mx_x86_64_general_regs_t& gregs,
+std::string GetRegisterAsStringHelper(const zx_x86_64_general_regs_t& gregs,
                                       int regno) {
   FXL_DCHECK(regno >= -1 &&
              regno < static_cast<int>(Amd64Register::NUM_REGISTERS));
@@ -169,7 +169,7 @@ class RegistersAmd64 final : public Registers {
     return result;
   }
 
-  mx_x86_64_general_regs_t gregs_;
+  zx_x86_64_general_regs_t gregs_;
 };
 
 }  // namespace
@@ -181,7 +181,7 @@ std::unique_ptr<Registers> Registers::Create(Thread* thread) {
 
 // static
 std::string Registers::GetUninitializedGeneralRegistersAsString() {
-  return std::string(sizeof(mx_x86_64_general_regs_t) * 2, '0');
+  return std::string(sizeof(zx_x86_64_general_regs_t) * 2, '0');
 }
 
 // static

@@ -24,7 +24,7 @@ class ViewManagerImpl : public mozart::ViewManager {
   void CreateView(fidl::InterfaceRequest<mozart::View> view_request,
                   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
                   fidl::InterfaceHandle<mozart::ViewListener> view_listener,
-                  mx::eventpair parent_export_token,
+                  zx::eventpair parent_export_token,
                   const fidl::String& label) override;
   void CreateViewTree(
       fidl::InterfaceRequest<mozart::ViewTree> view_tree_request,

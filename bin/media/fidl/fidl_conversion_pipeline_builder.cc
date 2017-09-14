@@ -43,7 +43,7 @@ class Builder {
                                    const ConsumerGetter&,
                                    const ProducerGetter&,
                                    std::unique_ptr<StreamType>,
-                                   std::vector<mx_koid_t>)>& callback)
+                                   std::vector<zx_koid_t>)>& callback)
       : media_service_(media_service),
         goal_type_sets_(goal_type_sets),
         producer_getter_(producer_getter),
@@ -109,7 +109,7 @@ class Builder {
                      const ConsumerGetter&,
                      const ProducerGetter&,
                      std::unique_ptr<StreamType>,
-                     std::vector<mx_koid_t>)>
+                     std::vector<zx_koid_t>)>
       callback_;
   std::unique_ptr<StreamType> current_type_;
   std::unique_ptr<StreamType>* type_;  // &original_type_ or &current_type_
@@ -406,12 +406,12 @@ void Builder::Succeed() {
       }
 
       callback_(true, consumer_getter_, producer_getter_, std::move(*type_),
-                std::vector<mx_koid_t>());
+                std::vector<zx_koid_t>());
       delete this;
       return;
     }
 
-    std::vector<mx_koid_t> converter_koids;
+    std::vector<zx_koid_t> converter_koids;
     converter_koids.reserve(converters_.size());
     for (MediaTypeConverterPtr& ptr : converters_) {
       converter_koids.push_back(FLOG_PTR_KOID(ptr));
@@ -470,7 +470,7 @@ void Builder::Succeed() {
 
 void Builder::Fail() {
   callback_(false, nullptr, nullptr, std::move(original_type_),
-            std::vector<mx_koid_t>());
+            std::vector<zx_koid_t>());
   delete this;
 }
 
@@ -486,7 +486,7 @@ void BuildFidlConversionPipeline(
                              const ConsumerGetter&,
                              const ProducerGetter&,
                              std::unique_ptr<StreamType>,
-                             std::vector<mx_koid_t>)>& callback) {
+                             std::vector<zx_koid_t>)>& callback) {
   FXL_DCHECK(media_service);
   FXL_DCHECK(type);
   FXL_DCHECK(callback);

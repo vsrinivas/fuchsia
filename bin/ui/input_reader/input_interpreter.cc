@@ -10,9 +10,9 @@
 #include <hid/paradise.h>
 #include <hid/samsung.h>
 #include <hid/usages.h>
-#include <magenta/device/device.h>
-#include <magenta/device/input.h>
-#include <magenta/types.h>
+#include <zircon/device/device.h>
+#include <zircon/device/input.h>
+#include <zircon/types.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <unistd.h>
@@ -118,8 +118,8 @@ bool InputInterpreter::Initialize() {
     }
 
     if (is_acer12_touch_report_desc(desc.data(), desc.size())) {
-      mx_status_t setup_res = setup_acer12_touch(fd_);
-      if (setup_res != MX_OK) {
+      zx_status_t setup_res = setup_acer12_touch(fd_);
+      if (setup_res != ZX_OK) {
         FXL_LOG(ERROR) << "Failed to setup Acer12 touch (res " << setup_res
                        << ")";
         return false;
@@ -170,8 +170,8 @@ bool InputInterpreter::Initialize() {
 
       touch_device_type_ = TouchDeviceType::ACER12;
     } else if (is_samsung_touch_report_desc(desc.data(), desc.size())) {
-      mx_status_t setup_res = setup_samsung_touch(fd_);
-      if (setup_res != MX_OK) {
+      zx_status_t setup_res = setup_samsung_touch(fd_);
+      if (setup_res != ZX_OK) {
         FXL_LOG(ERROR) << "Failed to setup Samsung touch (res " << setup_res
                        << ")";
         return false;
@@ -200,8 +200,8 @@ bool InputInterpreter::Initialize() {
 
       touch_device_type_ = TouchDeviceType::SAMSUNG;
     } else if (is_paradise_touch_report_desc(desc.data(), desc.size())) {
-      mx_status_t setup_res = setup_paradise_touch(fd_);
-      if (setup_res != MX_OK) {
+      zx_status_t setup_res = setup_paradise_touch(fd_);
+      if (setup_res != ZX_OK) {
         FXL_LOG(ERROR) << "Failed to setup Paradise touch (res " << setup_res
                        << ")";
         return false;
@@ -241,7 +241,7 @@ bool InputInterpreter::Initialize() {
   }
 
   // Get event handle for file descriptor
-  mx_handle_t handle;
+  zx_handle_t handle;
   ssize_t rc = ioctl_device_get_event_handle(fd_, &handle);
   if (rc < 0) {
     FXL_LOG(ERROR) << "Could not convert file descriptor to handle";
@@ -508,7 +508,7 @@ bool InputInterpreter::ParseParadiseTouchscreenReport(uint8_t* r, size_t len) {
 }
 
 
-mx_status_t InputInterpreter::GetProtocol(int* out_proto) {
+zx_status_t InputInterpreter::GetProtocol(int* out_proto) {
   ssize_t rc = ioctl_input_get_protocol(fd_, out_proto);
   if (rc < 0) {
     FXL_LOG(ERROR) << "hid: could not get protocol from " << name_
@@ -517,7 +517,7 @@ mx_status_t InputInterpreter::GetProtocol(int* out_proto) {
   return rc;
 }
 
-mx_status_t InputInterpreter::GetReportDescriptionLength(
+zx_status_t InputInterpreter::GetReportDescriptionLength(
     size_t* out_report_desc_len) {
   ssize_t rc = ioctl_input_get_report_desc_size(fd_, out_report_desc_len);
   if (rc < 0) {
@@ -527,7 +527,7 @@ mx_status_t InputInterpreter::GetReportDescriptionLength(
   return rc;
 }
 
-mx_status_t InputInterpreter::GetReportDescription(uint8_t* out_buf,
+zx_status_t InputInterpreter::GetReportDescription(uint8_t* out_buf,
                                                    size_t out_report_desc_len) {
   ssize_t rc = ioctl_input_get_report_desc(fd_, out_buf, out_report_desc_len);
   if (rc < 0) {
@@ -537,7 +537,7 @@ mx_status_t InputInterpreter::GetReportDescription(uint8_t* out_buf,
   return rc;
 }
 
-mx_status_t InputInterpreter::GetMaxReportLength(
+zx_status_t InputInterpreter::GetMaxReportLength(
     input_report_size_t* out_max_report_len) {
   ssize_t rc = ioctl_input_get_max_reportsize(fd_, out_max_report_len);
   if (rc < 0) {

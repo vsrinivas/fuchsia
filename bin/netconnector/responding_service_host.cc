@@ -25,7 +25,7 @@ void RespondingServiceHost::RegisterSingleton(
       fxl::MakeCopyable([
         this, service_name, launch_info = std::move(launch_info),
         controller = app::ApplicationControllerPtr()
-      ](mx::channel client_handle) mutable {
+      ](zx::channel client_handle) mutable {
         FXL_VLOG(2) << "Handling request for service " << service_name;
 
         auto iter = service_providers_by_name_.find(service_name);
@@ -79,7 +79,7 @@ void RespondingServiceHost::RegisterProvider(
   service_providers_by_name_.emplace(service_name, std::move(service_provider));
 
   service_namespace_.AddServiceForName(
-      [this, service_name](mx::channel client_handle) {
+      [this, service_name](zx::channel client_handle) {
         FXL_VLOG(2) << "Servicing provided service request for "
                     << service_name;
         auto iter = service_providers_by_name_.find(service_name);

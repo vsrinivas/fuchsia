@@ -33,8 +33,8 @@ class ProviderImpl : public sample::Provider {
   }
 
   void EchoMessagePipeHandle(
-      mx::channel a,
-      const std::function<void(mx::channel)>& callback) override {
+      zx::channel a,
+      const std::function<void(zx::channel)>& callback) override {
     callback(std::move(a));
   }
 
@@ -74,7 +74,7 @@ class EnumRecorder {
 class MessagePipeWriter {
  public:
   explicit MessagePipeWriter(const char* text) : text_(text) {}
-  void operator()(mx::channel handle) const { WriteTextMessage(handle, text_); }
+  void operator()(zx::channel handle) const { WriteTextMessage(handle, text_); }
 
  private:
   std::string text_;
@@ -116,8 +116,8 @@ TEST_F(RequestResponseTest, EchoMessagePipeHandle) {
   sample::ProviderPtr provider;
   ProviderImpl provider_impl(provider.NewRequest());
 
-  mx::channel handle0, handle1;
-  mx::channel::create(0, &handle0, &handle1);
+  zx::channel handle0, handle1;
+  zx::channel::create(0, &handle0, &handle1);
   provider->EchoMessagePipeHandle(std::move(handle1),
                                   MessagePipeWriter("hello"));
 

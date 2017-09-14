@@ -5,7 +5,7 @@
 #ifndef APPLICATION_LIB_SVC_SERVICES_H_
 #define APPLICATION_LIB_SVC_SERVICES_H_
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/functional/closure.h"
@@ -15,8 +15,8 @@ namespace app {
 
 // Services is a convenience frontend to a directory that contains services.
 //
-// Services holds an mx::channel that references the directory. Rather than
-// calling mxio_service_connect_at, you can call Connect, which satisfies a
+// Services holds an zx::channel that references the directory. Rather than
+// calling fdio_service_connect_at, you can call Connect, which satisfies a
 // fidl::InterfaceRequest using the directory.
 class Services {
  public:
@@ -31,9 +31,9 @@ class Services {
   // in this object for later use by |Connect|.
   //
   // The returned channel is suitable for use in PA_SERVICE_REQUEST.
-  mx::channel NewRequest();
+  zx::channel NewRequest();
 
-  void Bind(mx::channel directory);
+  void Bind(zx::channel directory);
 
   template <typename Interface>
   void Connect(fidl::InterfaceRequest<Interface> request,
@@ -41,12 +41,12 @@ class Services {
     ConnectToService(request.PassChannel(), service_name);
   }
 
-  void ConnectToService(const std::string& service_name, mx::channel request);
+  void ConnectToService(const std::string& service_name, zx::channel request);
 
-  const mx::channel& directory() const { return directory_; }
+  const zx::channel& directory() const { return directory_; }
 
  private:
-  mx::channel directory_;
+  zx::channel directory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Services);
 };

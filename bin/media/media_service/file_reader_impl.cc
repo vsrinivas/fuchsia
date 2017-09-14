@@ -57,7 +57,7 @@ void FileReaderImpl::ReadAt(uint64_t position, const ReadAtCallback& callback) {
   FXL_DCHECK(position < size_);
 
   if (result_ != MediaResult::OK) {
-    callback(result_, mx::socket());
+    callback(result_, zx::socket());
     return;
   }
 
@@ -74,17 +74,17 @@ void FileReaderImpl::ReadAt(uint64_t position, const ReadAtCallback& callback) {
     // TODO(dalesat): More specific error code.
     FXL_LOG(ERROR) << "seek failed, result " << seek_result;
     result_ = MediaResult::UNKNOWN_ERROR;
-    callback(result_, mx::socket());
+    callback(result_, zx::socket());
     return;
   }
 
-  mx::socket other_socket;
-  mx_status_t status = mx::socket::create(0u, &socket_, &other_socket);
-  if (status != MX_OK) {
+  zx::socket other_socket;
+  zx_status_t status = zx::socket::create(0u, &socket_, &other_socket);
+  if (status != ZX_OK) {
     // TODO(dalesat): More specific error code.
-    FXL_LOG(ERROR) << "mx::socket::create failed, status " << status;
+    FXL_LOG(ERROR) << "zx::socket::create failed, status " << status;
     result_ = MediaResult::UNKNOWN_ERROR;
-    callback(result_, mx::socket());
+    callback(result_, zx::socket());
     return;
   }
 
@@ -97,7 +97,7 @@ void FileReaderImpl::ReadAt(uint64_t position, const ReadAtCallback& callback) {
     // Error occurred during WriteToSocket.
     FXL_LOG(ERROR) << "error occurred during WriteToSocket, result_ "
                    << result_;
-    callback(result_, mx::socket());
+    callback(result_, zx::socket());
     return;
   }
 
@@ -105,20 +105,20 @@ void FileReaderImpl::ReadAt(uint64_t position, const ReadAtCallback& callback) {
 }
 
 // static
-void FileReaderImpl::WriteToSocketStatic(mx_status_t status,
-                                         mx_signals_t pending,
+void FileReaderImpl::WriteToSocketStatic(zx_status_t status,
+                                         zx_signals_t pending,
                                          uint64_t count,
                                          void* closure) {
   FileReaderImpl* reader = reinterpret_cast<FileReaderImpl*>(closure);
   reader->wait_id_ = 0;
-  if (status == MX_ERR_CANCELED) {
+  if (status == ZX_ERR_CANCELED) {
     // Run loop has aborted...the app is shutting down.
     reader->socket_.reset();
     return;
   }
 
-  if (status != MX_OK) {
-    FXL_LOG(ERROR) << "mx::socket::write failed, status " << status;
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "zx::socket::write failed, status " << status;
     reader->socket_.reset();
     return;
   }
@@ -139,32 +139,32 @@ void FileReaderImpl::WriteToSocket() {
     FXL_DCHECK(remaining_buffer_bytes_ != nullptr);
 
     size_t byte_count;
-    mx_status_t status =
+    zx_status_t status =
         socket_.write(0u, remaining_buffer_bytes_,
                       remaining_buffer_bytes_count_, &byte_count);
 
-    if (status == MX_OK) {
+    if (status == ZX_OK) {
       FXL_DCHECK(byte_count != 0);
       remaining_buffer_bytes_ += byte_count;
       remaining_buffer_bytes_count_ -= byte_count;
       continue;
     }
 
-    if (status == MX_ERR_SHOULD_WAIT) {
+    if (status == ZX_ERR_SHOULD_WAIT) {
       wait_id_ = fidl::GetDefaultAsyncWaiter()->AsyncWait(
-          socket_.get(), MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
-          MX_TIME_INFINITE, FileReaderImpl::WriteToSocketStatic, this);
+          socket_.get(), ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED,
+          ZX_TIME_INFINITE, FileReaderImpl::WriteToSocketStatic, this);
       return;
     }
 
-    if (status == MX_ERR_PEER_CLOSED) {
+    if (status == ZX_ERR_PEER_CLOSED) {
       // Consumer end was closed. This is normal behavior, depending on what
       // the consumer is up to.
       socket_.reset();
       return;
     }
 
-    FXL_LOG(ERROR) << "mx::socket::write failed, status " << status;
+    FXL_LOG(ERROR) << "zx::socket::write failed, status " << status;
     socket_.reset();
     // TODO(dalesat): More specific error code.
     result_ = MediaResult::UNKNOWN_ERROR;

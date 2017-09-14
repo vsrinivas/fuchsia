@@ -79,7 +79,7 @@ void MediaSinkImpl::BuildConversionPipeline() {
       [this](bool succeeded, const ConsumerGetter& consumer_getter,
              const ProducerGetter& producer_getter,
              std::unique_ptr<StreamType> stream_type,
-             std::vector<mx_koid_t> converter_koids) {
+             std::vector<zx_koid_t> converter_koids) {
         FXL_DCHECK(!producer_getter);
         FXL_DCHECK(consume_media_type_callback_);
 

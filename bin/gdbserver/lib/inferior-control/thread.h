@@ -6,8 +6,8 @@
 
 #include <memory>
 
-#include <magenta/syscalls/exception.h>
-#include <magenta/types.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/types.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -32,12 +32,12 @@ class Thread final {
     kGone,
   };
 
-  Thread(Process* process, mx_handle_t handle, mx_koid_t id);
+  Thread(Process* process, zx_handle_t handle, zx_koid_t id);
   ~Thread();
 
   Process* process() const { return process_; }
-  mx_handle_t handle() const { return handle_; }
-  mx_koid_t id() const { return id_; }
+  zx_handle_t handle() const { return handle_; }
+  zx_koid_t id() const { return id_; }
 
   std::string GetName() const;
 
@@ -70,14 +70,14 @@ class Thread final {
   arch::GdbSignal GetGdbSignal() const;
 
   // Called when the thread gets an exception.
-  void OnException(const mx_excp_type_t type,
-                   const mx_exception_context_t& context);
+  void OnException(const zx_excp_type_t type,
+                   const zx_exception_context_t& context);
 
   // Resumes the thread from a "stopped in exception" state. Returns true on
   // success, false on failure. The thread state on return is kRunning.
   bool Resume();
 
-  // Resumes the thread from an MX_EXCP_THREAD_EXITING exception.
+  // Resumes the thread from an ZX_EXCP_THREAD_EXITING exception.
   // The thread state on entry must one of kNew, kStopped, kExiting.
   // The thread state on return is kGone.
   void ResumeForExit();
@@ -105,11 +105,11 @@ class Thread final {
   // The owning process.
   Process* process_;  // weak
 
-  // The debug-capable handle that we use to invoke mx_debug_* syscalls.
-  mx_handle_t handle_;
+  // The debug-capable handle that we use to invoke zx_debug_* syscalls.
+  zx_handle_t handle_;
 
   // The thread ID (also the kernel object ID) of this thread.
-  mx_koid_t id_;
+  zx_koid_t id_;
 
   // The arch::Registers object associated with this thread.
   std::unique_ptr<arch::Registers> registers_;
@@ -129,7 +129,7 @@ class Thread final {
   // Pointer to the most recent exception context that this Thread received via
   // an architectural exception. Contains nullptr if the thread never received
   // an exception.
-  std::unique_ptr<mx_exception_context_t> exception_context_;
+  std::unique_ptr<zx_exception_context_t> exception_context_;
 
   // Note: This should remain the last member so it'll be destroyed and
   // invalidate its weak pointers before any other members are destroyed.

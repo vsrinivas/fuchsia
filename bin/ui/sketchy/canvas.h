@@ -47,7 +47,7 @@ class CanvasImpl final : public sketchy::Canvas {
   //     the imported node.
   // |token| Token that the Sketchy service will pass along
   //     to the SceneManager to import the node.
-  bool ScenicImportNode(ResourceId id, mx::eventpair token);
+  bool ScenicImportNode(ResourceId id, zx::eventpair token);
 
   bool ApplyScenicAddChildOp(const scenic::AddChildOpPtr& add_child);
 

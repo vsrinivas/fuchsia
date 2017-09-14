@@ -94,5 +94,5 @@ package("url_tests") {
 #     "//third_party/icu",
 #   ]
 #
-#   libs = [ "magenta" ]
+#   libs = [ "zircon" ]
 # }

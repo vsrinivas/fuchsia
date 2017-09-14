@@ -40,7 +40,7 @@ Each composer provides the following operations:
 - Create rendering targets to specify where the output of the composer
   should be rendered, such as to a display or to an image (e.g. screen shots).
 - Bind scenes to rendering targets.
-- Obtain another Magenta channel which is bound to the same composer
+- Obtain another Zircon channel which is bound to the same composer
   instance.  (Duplicate)
 
 A single composer instance can update, animate, and render multiple `Scenes`
@@ -76,7 +76,7 @@ Each session provides the following operations:
 - Awaiting and signaling fences.
 - Schedule subsequent frame updates.
 - Form links with other sessions (by mutual agreement).
-- Obtain another Magenta channel which is bound to the same session
+- Obtain another Zircon channel which is bound to the same session
   instance.  (Duplicate)
 
 When a session instance is destroyed, all of its resources are released

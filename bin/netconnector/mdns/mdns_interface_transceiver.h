@@ -88,7 +88,7 @@ class MdnsInterfaceTransceiver {
 
   void WaitForInbound();
 
-  void InboundReady(mx_status_t status, uint32_t events);
+  void InboundReady(zx_status_t status, uint32_t events);
 
   std::shared_ptr<DnsResource> MakeAddressResource(
       const std::string& host_full_name,

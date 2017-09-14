@@ -115,8 +115,8 @@ class ValidationIntegrationTest : public testing::Test {
   ~ValidationIntegrationTest() override {}
 
   void SetUp() override {
-    mx::channel tester_endpoint;
-    ASSERT_EQ(MX_OK,
+    zx::channel tester_endpoint;
+    ASSERT_EQ(ZX_OK,
               CreateMessagePipe(nullptr, &tester_endpoint, &testee_endpoint_));
     test_message_receiver_ =
         new TestMessageReceiver(this, tester_endpoint.Pass());
@@ -133,12 +133,12 @@ class ValidationIntegrationTest : public testing::Test {
 
   MessageReceiver* test_message_receiver() { return test_message_receiver_; }
 
-  mx::channel testee_endpoint() { return testee_endpoint_.Pass(); }
+  zx::channel testee_endpoint() { return testee_endpoint_.Pass(); }
 
  private:
   class TestMessageReceiver : public MessageReceiver {
    public:
-    TestMessageReceiver(ValidationIntegrationTest* owner, mx::channel handle)
+    TestMessageReceiver(ValidationIntegrationTest* owner, zx::channel handle)
         : owner_(owner), connector_(handle.Pass()) {
       connector_.set_enforce_errors_from_incoming_receiver(false);
     }
@@ -159,7 +159,7 @@ class ValidationIntegrationTest : public testing::Test {
 
   RunLoop loop_;
   TestMessageReceiver* test_message_receiver_;
-  mx::channel testee_endpoint_;
+  zx::channel testee_endpoint_;
 };
 
 class IntegrationTestInterfaceImpl : public IntegrationTestInterface {

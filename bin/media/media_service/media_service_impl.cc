@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/media_service/media_service_impl.h"
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #include "lib/media/fidl/audio_policy_service.fidl.h"
 #include "lib/media/fidl/audio_server.fidl.h"
@@ -30,7 +30,7 @@ MediaServiceImpl::MediaServiceImpl(
   FLOG_INITIALIZE(application_context(), "media_service");
 
   multiproc_task_runner_ =
-      AdoptRef(new MultiprocTaskRunner(mx_system_get_num_cpus()));
+      AdoptRef(new MultiprocTaskRunner(zx_system_get_num_cpus()));
 
   application_context()->outgoing_services()->AddService<MediaService>(
       [this](fidl::InterfaceRequest<MediaService> request) {

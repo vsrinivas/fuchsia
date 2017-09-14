@@ -5,8 +5,8 @@
 #include "lib/svc/cpp/service_namespace.h"
 
 #include <fcntl.h>
-#include <magenta/device/vfs.h>
-#include <mxio/util.h>
+#include <zircon/device/vfs.h>
+#include <fdio/util.h>
 
 #include <utility>
 
@@ -51,25 +51,25 @@ void ServiceNamespace::RemoveServiceForName(const std::string& service_name) {
   directory_->RemoveService(service_name.data(), service_name.length());
 }
 
-bool ServiceNamespace::ServeDirectory(mx::channel channel) {
-  return vfs_.ServeDirectory(directory_, std::move(channel)) == MX_OK;
+bool ServiceNamespace::ServeDirectory(zx::channel channel) {
+  return vfs_.ServeDirectory(directory_, std::move(channel)) == ZX_OK;
 }
 
 int ServiceNamespace::OpenAsFileDescriptor() {
-  mx::channel h1, h2;
-  if (mx::channel::create(0, &h1, &h2) < 0)
+  zx::channel h1, h2;
+  if (zx::channel::create(0, &h1, &h2) < 0)
     return -1;
   if (!ServeDirectory(std::move(h1)))
     return -1;
-  mxio_t* io = mxio_remote_create(h2.release(), MX_HANDLE_INVALID);
+  fdio_t* io = fdio_remote_create(h2.release(), ZX_HANDLE_INVALID);
   if (!io)
     return -1;
-  return mxio_bind_to_fd(io, -1, 0);
+  return fdio_bind_to_fd(io, -1, 0);
 }
 
 bool ServiceNamespace::MountAtPath(const char* path) {
-  mx::channel h1, h2;
-  if (mx::channel::create(0, &h1, &h2) < 0)
+  zx::channel h1, h2;
+  if (zx::channel::create(0, &h1, &h2) < 0)
     return false;
 
   if (!ServeDirectory(std::move(h1)))
@@ -79,23 +79,23 @@ bool ServiceNamespace::MountAtPath(const char* path) {
   if (fd.get() < 0)
     return false;
 
-  mx_handle_t h = h2.release();
+  zx_handle_t h = h2.release();
   return ioctl_vfs_mount_fs(fd.get(), &h) >= 0;
 }
 
 void ServiceNamespace::Connect(const char* name,
                                size_t len,
-                               mx::channel channel) {
+                               zx::channel channel) {
   ConnectCommon(std::string(name, len), std::move(channel));
 }
 
 void ServiceNamespace::ConnectToService(const fidl::String& service_name,
-                                        mx::channel channel) {
+                                        zx::channel channel) {
   ConnectCommon(service_name, std::move(channel));
 }
 
 void ServiceNamespace::ConnectCommon(const std::string& service_name,
-                                     mx::channel channel) {
+                                     zx::channel channel) {
   auto it = name_to_service_connector_.find(service_name);
   if (it != name_to_service_connector_.end())
     it->second(std::move(channel));

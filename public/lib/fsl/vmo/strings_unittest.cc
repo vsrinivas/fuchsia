@@ -10,7 +10,7 @@ namespace {
 
 TEST(VmoStrings, ShortString) {
   const std::string hello_string = "Hello, world.";
-  mx::vmo hello_buffer;
+  zx::vmo hello_buffer;
   EXPECT_TRUE(VmoFromString(hello_string, &hello_buffer));
   std::string hello_out;
   EXPECT_TRUE(StringFromVmo(std::move(hello_buffer), &hello_out));
@@ -19,7 +19,7 @@ TEST(VmoStrings, ShortString) {
 
 TEST(VmoStrings, EmptyString) {
   const std::string hello_string = "";
-  mx::vmo hello_buffer;
+  zx::vmo hello_buffer;
   EXPECT_TRUE(VmoFromString(hello_string, &hello_buffer));
   std::string hello_out;
   EXPECT_TRUE(StringFromVmo(std::move(hello_buffer), &hello_out));
@@ -31,7 +31,7 @@ TEST(VmoStrings, BinaryString) {
   for (size_t i = 0; i < binary_string.size(); i++) {
     binary_string[i] = (char)i;
   }
-  mx::vmo binary_buffer;
+  zx::vmo binary_buffer;
   EXPECT_TRUE(VmoFromString(binary_string, &binary_buffer));
   std::string binary_out;
   EXPECT_TRUE(StringFromVmo(std::move(binary_buffer), &binary_out));

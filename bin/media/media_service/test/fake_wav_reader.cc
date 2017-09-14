@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/media_service/test/fake_wav_reader.h"
 
-#include <mx/socket.h>
+#include <zx/socket.h>
 
 namespace media {
 
@@ -61,9 +61,9 @@ void FakeWavReader::ReadAt(uint64_t position, const ReadAtCallback& callback) {
     socket_.reset();
   }
 
-  mx::socket other_socket;
-  mx_status_t status = mx::socket::create(0u, &socket_, &other_socket);
-  FXL_DCHECK(status == MX_OK);
+  zx::socket other_socket;
+  zx_status_t status = zx::socket::create(0u, &socket_, &other_socket);
+  FXL_DCHECK(status == ZX_OK);
   callback(MediaResult::OK, std::move(other_socket));
 
   position_ = position;
@@ -76,28 +76,28 @@ void FakeWavReader::WriteToSocket() {
     uint8_t byte = GetByte(position_);
     size_t byte_count;
 
-    mx_status_t status = socket_.write(0u, &byte, 1u, &byte_count);
-    if (status == MX_OK) {
+    zx_status_t status = socket_.write(0u, &byte, 1u, &byte_count);
+    if (status == ZX_OK) {
       FXL_DCHECK(byte_count == 1);
       ++position_;
       continue;
     }
 
-    if (status == MX_ERR_SHOULD_WAIT) {
+    if (status == ZX_ERR_SHOULD_WAIT) {
       wait_id_ = fidl::GetDefaultAsyncWaiter()->AsyncWait(
-          socket_.get(), MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
-          MX_TIME_INFINITE, FakeWavReader::WriteToSocketStatic, this);
+          socket_.get(), ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED,
+          ZX_TIME_INFINITE, FakeWavReader::WriteToSocketStatic, this);
       return;
     }
 
-    if (status == MX_ERR_PEER_CLOSED) {
+    if (status == ZX_ERR_PEER_CLOSED) {
       // Consumer end was closed. This is normal behavior, depending on what
       // the consumer is up to.
       socket_.reset();
       return;
     }
 
-    FXL_DCHECK(false) << "mx::socket::write failed, status " << status;
+    FXL_DCHECK(false) << "zx::socket::write failed, status " << status;
   }
 }
 
@@ -132,18 +132,18 @@ uint8_t FakeWavReader::GetByte(size_t position) {
 }
 
 // static
-void FakeWavReader::WriteToSocketStatic(mx_status_t status,
-                                        mx_signals_t pending,
+void FakeWavReader::WriteToSocketStatic(zx_status_t status,
+                                        zx_signals_t pending,
                                         uint64_t count,
                                         void* closure) {
   FakeWavReader* reader = reinterpret_cast<FakeWavReader*>(closure);
   reader->wait_id_ = 0;
-  if (status == MX_ERR_CANCELED) {
+  if (status == ZX_ERR_CANCELED) {
     // Run loop has aborted...the app is shutting down.
     return;
   }
 
-  if (status != MX_OK) {
+  if (status != ZX_OK) {
     FXL_LOG(ERROR) << "AsyncWait failed " << status;
     reader->socket_.reset();
     return;

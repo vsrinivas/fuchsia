@@ -165,7 +165,7 @@
 }
 
 void {{class_name}}::EncodePointersAndHandles(
-    std::vector<mx_handle_t>* handles) {
+    std::vector<zx_handle_t>* handles) {
   FXL_CHECK(header_.version == {{struct.versions[-1].version}});
 {%- for pf in struct.packed.packed_fields_in_ordinal_order %}
 {%-   if pf.field.kind|is_union_kind %}
@@ -179,7 +179,7 @@ void {{class_name}}::EncodePointersAndHandles(
 }
 
 void {{class_name}}::DecodePointersAndHandles(
-    std::vector<mx_handle_t>* handles) {
+    std::vector<zx_handle_t>* handles) {
   // NOTE: The memory backing |this| may has be smaller than |sizeof(*this)|, if
   // the message comes from an older version.
 {#- Before decoding fields introduced at a certain version, we need to add

@@ -23,8 +23,8 @@ namespace app {
 class ApplicationContext {
  public:
   // The constructor is normally called by CreateFromStartupInfo().
-  ApplicationContext(mx::channel service_root,
-                     mx::channel service_request,
+  ApplicationContext(zx::channel service_root,
+                     zx::channel service_request,
                      fidl::InterfaceRequest<ServiceProvider> outgoing_services);
 
   ~ApplicationContext();
@@ -90,12 +90,12 @@ class ApplicationContext {
   // Connects to a service provided by the application's environment,
   // binding the service to a channel.
   void ConnectToEnvironmentService(const std::string& interface_name,
-                                   mx::channel channel);
+                                   zx::channel channel);
 
  private:
   ApplicationEnvironmentPtr environment_;
   ServiceNamespace outgoing_services_;
-  mx::channel service_root_;
+  zx::channel service_root_;
   ApplicationLauncherPtr launcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationContext);

@@ -6,7 +6,7 @@
 
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
 #include "lib/fxl/macros.h"
-#include "magenta/system/ulib/mx/include/mx/eventpair.h"
+#include "zircon/system/ulib/zx/include/zx/eventpair.h"
 
 namespace scene_manager {
 

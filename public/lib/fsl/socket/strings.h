@@ -5,7 +5,7 @@
 #ifndef LIB_FSL_SOCKET_STRINGS_H_
 #define LIB_FSL_SOCKET_STRINGS_H_
 
-#include <mx/socket.h>
+#include <zx/socket.h>
 
 #include <string>
 
@@ -17,14 +17,14 @@ namespace fsl {
 // Copies the data from |source| into |contents| and returns true on success and
 // false on error. In case of I/O error, |contents| holds the data that could
 // be read from source before the error occurred.
-FXL_EXPORT bool BlockingCopyToString(mx::socket source, std::string* contents);
+FXL_EXPORT bool BlockingCopyToString(zx::socket source, std::string* contents);
 
 FXL_EXPORT bool BlockingCopyFromString(fxl::StringView source,
-                                       const mx::socket& destination);
+                                       const zx::socket& destination);
 
 // Copies the string |contents| to a temporary socket and returns the
 // consumer handle.
-FXL_EXPORT mx::socket WriteStringToSocket(fxl::StringView source);
+FXL_EXPORT zx::socket WriteStringToSocket(fxl::StringView source);
 
 }  // namespace fsl
 

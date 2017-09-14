@@ -18,7 +18,7 @@ source_set("cpp") {
     "//garnet/public/lib/fidl/cpp/waiter",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
-    "//magenta/system/ulib/mx",
+    "//zircon/system/ulib/zx",
   ]
 
   public_configs = [

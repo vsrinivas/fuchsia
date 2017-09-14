@@ -67,7 +67,7 @@ fbl::StringPiece ToStringPiece(fxl::StringView view) {
   return fbl::StringPiece(view.data(), view.size());
 }
 
-fbl::RefPtr<vmofs::VnodeFile> CreateFile(mx_handle_t vmo,
+fbl::RefPtr<vmofs::VnodeFile> CreateFile(zx_handle_t vmo,
                                           const DirectoryTableEntry& entry) {
   return fbl::AdoptRef(
       new vmofs::VnodeFile(vmo, entry.data_offset, entry.data_length));
@@ -83,12 +83,12 @@ void LeaveDirectory(fxl::StringView name, std::vector<DirRecord>* stack) {
 
 }  // namespace
 
-FileSystem::FileSystem(mx::vmo vmo) : vmo_(vmo.get()), vfs_(&dispatcher_) {
+FileSystem::FileSystem(zx::vmo vmo) : vmo_(vmo.get()), vfs_(&dispatcher_) {
   uint64_t num_bytes = 0;
-  mx_status_t status = vmo.get_size(&num_bytes);
-  if (status != MX_OK)
+  zx_status_t status = vmo.get_size(&num_bytes);
+  if (status != ZX_OK)
     return;
-  fxl::UniqueFD fd(mxio_vmo_fd(vmo.release(), 0, num_bytes));
+  fxl::UniqueFD fd(fdio_vmo_fd(vmo.release(), 0, num_bytes));
   if (!fd.is_valid())
     return;
   reader_ = std::make_unique<ArchiveReader>(std::move(fd));
@@ -97,30 +97,30 @@ FileSystem::FileSystem(mx::vmo vmo) : vmo_(vmo.get()), vfs_(&dispatcher_) {
 
 FileSystem::~FileSystem() = default;
 
-bool FileSystem::Serve(mx::channel channel) {
+bool FileSystem::Serve(zx::channel channel) {
   return directory_ && vfs_.ServeDirectory(directory_,
-                                           std::move(channel)) == MX_OK;
+                                           std::move(channel)) == ZX_OK;
 }
 
-mx::channel FileSystem::OpenAsDirectory() {
-  mx::channel h1, h2;
-  if (mx::channel::create(0, &h1, &h2) < 0)
-    return mx::channel();
+zx::channel FileSystem::OpenAsDirectory() {
+  zx::channel h1, h2;
+  if (zx::channel::create(0, &h1, &h2) < 0)
+    return zx::channel();
   if (!Serve(std::move(h1)))
-    return mx::channel();
+    return zx::channel();
   return h2;
 }
 
-mx::vmo FileSystem::GetFileAsVMO(fxl::StringView path) {
+zx::vmo FileSystem::GetFileAsVMO(fxl::StringView path) {
   if (!reader_)
-    return mx::vmo();
+    return zx::vmo();
   DirectoryTableEntry entry;
   if (!reader_->GetDirectoryEntryByPath(path, &entry))
-    return mx::vmo();
-  mx_handle_t result = MX_HANDLE_INVALID;
-  mx_vmo_clone(vmo_, MX_VMO_CLONE_COPY_ON_WRITE, entry.data_offset,
+    return zx::vmo();
+  zx_handle_t result = ZX_HANDLE_INVALID;
+  zx_vmo_clone(vmo_, ZX_VMO_CLONE_COPY_ON_WRITE, entry.data_offset,
                entry.data_length, &result);
-  return mx::vmo(result);
+  return zx::vmo(result);
 }
 
 bool FileSystem::GetFileAsString(fxl::StringView path, std::string* result) {
@@ -132,9 +132,9 @@ bool FileSystem::GetFileAsString(fxl::StringView path, std::string* result) {
   std::string data;
   data.resize(entry.data_length);
   size_t actual;
-  mx_status_t status = mx_vmo_read(vmo_, &data[0], entry.data_offset,
+  zx_status_t status = zx_vmo_read(vmo_, &data[0], entry.data_offset,
                                    entry.data_length, &actual);
-  if (status != MX_OK || actual != entry.data_length)
+  if (status != ZX_OK || actual != entry.data_length)
     return false;
   result->swap(data);
   return true;

@@ -5,7 +5,7 @@
 #ifndef DART_PKG_ZIRCON_SDK_EXT_HANDLE_H_
 #define DART_PKG_ZIRCON_SDK_EXT_HANDLE_H_
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #include <vector>
 
@@ -19,7 +19,7 @@ namespace zircon {
 namespace dart {
 /**
  * Handle is the native peer of a Dart object (Handle in dart:zircon)
- * that holds an mx_handle_t. It tracks active waiters on handle too.
+ * that holds an zx_handle_t. It tracks active waiters on handle too.
  */
 class Handle : public fxl::RefCountedThreadSafe<Handle>,
                public tonic::DartWrappable {
@@ -32,8 +32,8 @@ class Handle : public fxl::RefCountedThreadSafe<Handle>,
 
   static void RegisterNatives(tonic::DartLibraryNatives* natives);
 
-  static fxl::RefPtr<Handle> Create(mx_handle_t handle);
-  static fxl::RefPtr<Handle> Create(mx::handle handle) {
+  static fxl::RefPtr<Handle> Create(zx_handle_t handle);
+  static fxl::RefPtr<Handle> Create(zx::handle handle) {
     return Create(handle.release());
   }
 
@@ -44,23 +44,23 @@ class Handle : public fxl::RefCountedThreadSafe<Handle>,
 
   static Dart_Handle CreateInvalid();
 
-  mx_handle_t ReleaseHandle();
+  zx_handle_t ReleaseHandle();
 
-  bool is_valid() const { return handle_ != MX_HANDLE_INVALID; }
+  bool is_valid() const { return handle_ != ZX_HANDLE_INVALID; }
 
-  mx_handle_t handle() const { return handle_; }
+  zx_handle_t handle() const { return handle_; }
 
-  mx_status_t Close();
+  zx_status_t Close();
 
-  fxl::RefPtr<HandleWaiter> AsyncWait(mx_signals_t signals,
+  fxl::RefPtr<HandleWaiter> AsyncWait(zx_signals_t signals,
                                       Dart_Handle callback);
 
   void ReleaseWaiter(HandleWaiter* waiter);
 
  private:
-  explicit Handle(mx_handle_t handle);
+  explicit Handle(zx_handle_t handle);
 
-  mx_handle_t handle_;
+  zx_handle_t handle_;
 
   std::vector<HandleWaiter*> waiters_;
 };

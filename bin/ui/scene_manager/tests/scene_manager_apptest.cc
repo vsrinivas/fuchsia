@@ -24,10 +24,10 @@ TEST_F(SceneManagerTest, CreateAndDestroySession) {
   RUN_MESSAGE_LOOP_UNTIL(engine()->GetSessionCount() == 0);
 }
 
-bool IsFenceSignalled(const mx::event& fence) {
-  mx_signals_t signals = 0u;
-  mx_status_t status = fence.wait_one(kFenceSignalledOrClosed, 0, &signals);
-  FXL_DCHECK(status == MX_OK || status == MX_ERR_TIMED_OUT);
+bool IsFenceSignalled(const zx::event& fence) {
+  zx_signals_t signals = 0u;
+  zx_status_t status = fence.wait_one(kFenceSignalledOrClosed, 0, &signals);
+  FXL_DCHECK(status == ZX_OK || status == ZX_ERR_TIMED_OUT);
   return signals & kFenceSignalledOrClosed;
 }
 
@@ -53,12 +53,12 @@ TEST_F(SceneManagerTest, DISABLED_ReleaseFences) {
   EXPECT_EQ(1u, handler->enqueue_count());
 
   // Create release fences
-  mx::event release_fence1;
-  ASSERT_EQ(MX_OK, mx::event::create(0, &release_fence1));
-  mx::event release_fence2;
-  ASSERT_EQ(MX_OK, mx::event::create(0, &release_fence2));
+  zx::event release_fence1;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &release_fence1));
+  zx::event release_fence2;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &release_fence2));
 
-  ::fidl::Array<mx::event> release_fences;
+  ::fidl::Array<zx::event> release_fences;
   release_fences.push_back(CopyEvent(release_fence1));
   release_fences.push_back(CopyEvent(release_fence2));
 
@@ -66,7 +66,7 @@ TEST_F(SceneManagerTest, DISABLED_ReleaseFences) {
   EXPECT_FALSE(IsFenceSignalled(release_fence2));
 
   // Call Present with release fences.
-  session->Present(0u, ::fidl::Array<mx::event>::New(0),
+  session->Present(0u, ::fidl::Array<zx::event>::New(0),
                    std::move(release_fences),
                    [](scenic::PresentationInfoPtr info) {});
   RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 1);
@@ -75,8 +75,8 @@ TEST_F(SceneManagerTest, DISABLED_ReleaseFences) {
   EXPECT_FALSE(IsFenceSignalled(release_fence1));
   EXPECT_FALSE(IsFenceSignalled(release_fence2));
   // Call Present again with no release fences.
-  session->Present(0u, ::fidl::Array<mx::event>::New(0),
-                   ::fidl::Array<mx::event>::New(0),
+  session->Present(0u, ::fidl::Array<zx::event>::New(0),
+                   ::fidl::Array<zx::event>::New(0),
                    [](scenic::PresentationInfoPtr info) {});
   RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 2);
   EXPECT_EQ(2u, handler->present_count());
@@ -108,15 +108,15 @@ TEST_F(SceneManagerTest, AcquireAndReleaseFences) {
   EXPECT_EQ(1u, handler->enqueue_count());
 
   // Create acquire and release fences
-  mx::event acquire_fence;
-  ASSERT_EQ(MX_OK, mx::event::create(0, &acquire_fence));
-  mx::event release_fence;
-  ASSERT_EQ(MX_OK, mx::event::create(0, &release_fence));
+  zx::event acquire_fence;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &acquire_fence));
+  zx::event release_fence;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &release_fence));
 
-  ::fidl::Array<mx::event> acquire_fences;
+  ::fidl::Array<zx::event> acquire_fences;
   acquire_fences.push_back(CopyEvent(acquire_fence));
 
-  ::fidl::Array<mx::event> release_fences;
+  ::fidl::Array<zx::event> release_fences;
   release_fences.push_back(CopyEvent(release_fence));
 
   // Call Present with both the acquire and release fences.
@@ -128,8 +128,8 @@ TEST_F(SceneManagerTest, AcquireAndReleaseFences) {
   EXPECT_FALSE(IsFenceSignalled(release_fence));
 
   // Call Present again with no fences.
-  session->Present(0u, ::fidl::Array<mx::event>::New(0),
-                   ::fidl::Array<mx::event>::New(0),
+  session->Present(0u, ::fidl::Array<zx::event>::New(0),
+                   ::fidl::Array<zx::event>::New(0),
                    [](scenic::PresentationInfoPtr info) {});
   RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 2);
 

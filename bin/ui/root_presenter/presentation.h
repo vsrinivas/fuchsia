@@ -103,11 +103,11 @@ class Presentation : private mozart::ViewTreeListener,
   scenic_lib::Scene scene_;
   scenic_lib::Camera camera_;
   scenic_lib::EntityNode root_view_host_node_;
-  mx::eventpair root_view_host_import_token_;
+  zx::eventpair root_view_host_import_token_;
   scenic_lib::ImportNode root_view_parent_node_;
-  mx::eventpair root_view_parent_export_token_;
+  zx::eventpair root_view_parent_export_token_;
   scenic_lib::EntityNode content_view_host_node_;
-  mx::eventpair content_view_host_import_token_;
+  zx::eventpair content_view_host_import_token_;
   scenic_lib::RoundedRectangle cursor_shape_;
   scenic_lib::Material cursor_material_;
 

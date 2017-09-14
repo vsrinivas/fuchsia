@@ -4,7 +4,7 @@
 
 #include "lib/fsl/vfs/vfs_dispatcher.h"
 
-#include <mxio/remoteio.h>
+#include <fdio/remoteio.h>
 
 #include "lib/fsl/vfs/vfs_handler.h"
 
@@ -17,13 +17,13 @@ VFSDispatcher::~VFSDispatcher() {
     delete handler;
 }
 
-mx_status_t VFSDispatcher::AddVFSHandler(mx::channel channel,
+zx_status_t VFSDispatcher::AddVFSHandler(zx::channel channel,
                                          fs::vfs_dispatcher_cb_t callback,
                                          void* iostate) {
   VFSHandler* handler = new VFSHandler(this);
   handler->Start(std::move(channel), callback, iostate);
   handlers_.insert(handler);
-  return MX_OK;
+  return ZX_OK;
 }
 
 void VFSDispatcher::Stop(VFSHandler* handler) {

@@ -7,7 +7,7 @@
 #include <thread>
 #include <vector>
 
-#include <mx/port.h>
+#include <zx/port.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
@@ -35,7 +35,7 @@ class MultiprocTaskRunner : public fxl::TaskRunner {
 
   void QueuePacket(uint64_t key, void* payload = nullptr);
 
-  mx::port port_;
+  zx::port port_;
   std::vector<std::thread> threads_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MultiprocTaskRunner);

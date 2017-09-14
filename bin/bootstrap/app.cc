@@ -7,8 +7,8 @@
 
 #include "garnet/bin/bootstrap/app.h"
 
-#include <magenta/process.h>
-#include <magenta/processargs.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -21,8 +21,8 @@ namespace {
 // |/dev/socket|, which needs to happen eagerly, instead of being discovered
 // via |/svc/net.Netstack|, which can happen asynchronously.
 void LaunchNetstack(app::ServiceProvider* provider) {
-  mx::channel h1, h2;
-  mx::channel::create(0, &h1, &h2);
+  zx::channel h1, h2;
+  zx::channel::create(0, &h1, &h2);
   provider->ConnectToService("net.Netstack", std::move(h1));
 }
 
@@ -31,8 +31,8 @@ void LaunchNetstack(app::ServiceProvider* provider) {
 // TODO: Remove this hard-coded logic once we have a more sophisticated
 // system service manager that can do this sort of thing using config files.
 void LaunchWlanstack(app::ServiceProvider* provider) {
-  mx::channel h1, h2;
-  mx::channel::create(0, &h1, &h2);
+  zx::channel h1, h2;
+  zx::channel::create(0, &h1, &h2);
   provider->ConnectToService("wlan::WlanService", std::move(h1));
 }
 
@@ -108,7 +108,7 @@ void App::RegisterSingleton(std::string service_name,
       fxl::MakeCopyable([
         this, service_name, launch_info = std::move(launch_info),
         controller = app::ApplicationControllerPtr()
-      ](mx::channel client_handle) mutable {
+      ](zx::channel client_handle) mutable {
         FXL_VLOG(2) << "Servicing singleton service request for "
                     << service_name;
         auto it = services_.find(launch_info->url);

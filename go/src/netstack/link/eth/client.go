@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Package eth implements a client for magenta's ethernet interface.
-// It is comparable to magenta/system/ulib/inet6/eth-client.h.
+// Package eth implements a client for zircon's ethernet interface.
+// It is comparable to zircon/system/ulib/inet6/eth-client.h.
 //
 // Sending a packet:
 //
@@ -50,8 +50,8 @@ import (
 )
 
 // A Client is an ethernet client.
-// It connects to a magenta ethernet driver using a FIFO-based protocol.
-// The protocol is described in system/public/magenta/device/ethernet.h.
+// It connects to a zircon ethernet driver using a FIFO-based protocol.
+// The protocol is described in system/public/zircon/device/ethernet.h.
 type Client struct {
 	MTU int
 	MAC [6]byte
@@ -84,9 +84,9 @@ func NewClient(clientName, path string, arena *Arena, stateFunc func(State)) (*C
 	if err != nil {
 		return nil, fmt.Errorf("eth: client open: %v", err)
 	}
-	m := syscall.MXIOForFD(int(f.Fd()))
+	m := syscall.FDIOForFD(int(f.Fd()))
 	if m == nil {
-		return nil, fmt.Errorf("eth: no mxio for %s fd: %d", path, f.Fd())
+		return nil, fmt.Errorf("eth: no fdio for %s fd: %d", path, f.Fd())
 	}
 
 	IoctlSetClientName(m, []byte(clientName))
@@ -173,7 +173,7 @@ func (c *Client) closeLocked() {
 		return
 	}
 
-	m := syscall.MXIOForFD(int(c.f.Fd()))
+	m := syscall.FDIOForFD(int(c.f.Fd()))
 	IoctlStop(m)
 
 	c.tx.Close()
@@ -348,7 +348,7 @@ func (c *Client) WaitRecv() {
 // ListenTX tells the ethernet driver to reflect all transmitted
 // packets back to this ethernet client.
 func (c *Client) ListenTX() {
-	m := syscall.MXIOForFD(int(c.f.Fd()))
+	m := syscall.FDIOForFD(int(c.f.Fd()))
 	IoctlTXListenStart(m)
 }
 

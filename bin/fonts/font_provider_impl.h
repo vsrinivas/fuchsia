@@ -5,7 +5,7 @@
 #ifndef APPS_FONTS_FONT_PROVIDER_IMPL_H_
 #define APPS_FONTS_FONT_PROVIDER_IMPL_H_
 
-#include <mx/vmo.h>
+#include <zx/vmo.h>
 
 #include <unordered_map>
 #include <vector>

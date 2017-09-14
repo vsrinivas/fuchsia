@@ -44,19 +44,19 @@ class ResponsePrinter {
     }
   }
 
-  void PrintResponseBody(mx::socket body) const {
+  void PrintResponseBody(zx::socket body) const {
     // Read response body in blocking fashion.
     printf(">>> Body <<<\n");
 
     for (;;) {
       char buf[512];
       size_t num_bytes = sizeof(buf);
-      mx_status_t result = body.read(0u, buf, num_bytes, &num_bytes);
+      zx_status_t result = body.read(0u, buf, num_bytes, &num_bytes);
 
-      if (result == MX_ERR_SHOULD_WAIT) {
-        body.wait_one(MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
-                      MX_TIME_INFINITE, nullptr);
-      } else if (result == MX_OK) {
+      if (result == ZX_ERR_SHOULD_WAIT) {
+        body.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
+                      ZX_TIME_INFINITE, nullptr);
+      } else if (result == ZX_OK) {
         if (fwrite(buf, num_bytes, 1, stdout) != 1) {
           printf("\nUnexpected error writing to file\n");
           break;
@@ -105,10 +105,10 @@ class PostFileApp {
     header->value = "multipart/form-data; boundary=" + boundary;
     request->headers.push_back(std::move(header));
 
-    mx::socket consumer;
-    mx::socket producer;
-    mx_status_t status = mx::socket::create(0u, &producer, &consumer);
-    if (status != MX_OK) {
+    zx::socket consumer;
+    zx::socket producer;
+    zx_status_t status = zx::socket::create(0u, &producer, &consumer);
+    if (status != ZX_OK) {
       printf("cannot create socket\n");
       return false;
     }

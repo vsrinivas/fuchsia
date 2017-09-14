@@ -6,35 +6,35 @@
 
 use std::marker::PhantomData;
 
-use magenta;
+use zircon;
 use {Encodable, Decodable, EncodableNullable, DecodableNullable, encode_handle, decode_handle,
     EncodeBuf, DecodeBuf, EncodableType, Result};
 
 pub struct ClientEnd<T> {
-    inner: magenta::Channel,
+    inner: zircon::Channel,
     phantom: PhantomData<T>,
 }
 
 impl<T> ClientEnd<T> {
-    pub fn new(inner: magenta::Channel) -> Self {
+    pub fn new(inner: zircon::Channel) -> Self {
         ClientEnd { inner, phantom: PhantomData }
     }
 }
 
-impl<T> magenta::AsHandleRef for ClientEnd<T> {
-    fn as_handle_ref(&self) -> magenta::HandleRef {
+impl<T> zircon::AsHandleRef for ClientEnd<T> {
+    fn as_handle_ref(&self) -> zircon::HandleRef {
         self.inner.as_handle_ref()
     }
 }
 
-impl<T> Into<magenta::Handle> for ClientEnd<T> {
-    fn into(self) -> magenta::Handle {
+impl<T> Into<zircon::Handle> for ClientEnd<T> {
+    fn into(self) -> zircon::Handle {
         self.inner.into()
     }
 }
 
-impl<T> From<magenta::Handle> for ClientEnd<T> {
-    fn from(handle: magenta::Handle) -> Self {
+impl<T> From<zircon::Handle> for ClientEnd<T> {
+    fn from(handle: zircon::Handle) -> Self {
         ClientEnd {
             inner: handle.into(),
             phantom: PhantomData,
@@ -42,7 +42,7 @@ impl<T> From<magenta::Handle> for ClientEnd<T> {
     }
 }
 
-impl<T> magenta::HandleBased for ClientEnd<T> {}
+impl<T> zircon::HandleBased for ClientEnd<T> {}
 
 impl<T> Encodable for ClientEnd<T> {
     fn encode(self, buf: &mut EncodeBuf, base: usize, offset: usize) {
@@ -71,34 +71,34 @@ impl<T> DecodableNullable for ClientEnd<T> {}
 
 
 pub struct ServerEnd<T> {
-    inner: magenta::Channel,
+    inner: zircon::Channel,
     phantom: PhantomData<T>,
 }
 
 impl<T> ServerEnd<T> {
-    pub fn new(inner: magenta::Channel) -> ServerEnd<T> {
+    pub fn new(inner: zircon::Channel) -> ServerEnd<T> {
         ServerEnd { inner, phantom: PhantomData }
     }
 
-    pub fn into_channel(self) -> ::magenta::Channel {
+    pub fn into_channel(self) -> ::zircon::Channel {
         self.inner
     }
 }
 
-impl<T> magenta::AsHandleRef for ServerEnd<T> {
-    fn as_handle_ref(&self) -> magenta::HandleRef {
+impl<T> zircon::AsHandleRef for ServerEnd<T> {
+    fn as_handle_ref(&self) -> zircon::HandleRef {
         self.inner.as_handle_ref()
     }
 }
 
-impl<T> Into<magenta::Handle> for ServerEnd<T> {
-    fn into(self) -> magenta::Handle {
+impl<T> Into<zircon::Handle> for ServerEnd<T> {
+    fn into(self) -> zircon::Handle {
         self.inner.into()
     }
 }
 
-impl<T> From<magenta::Handle> for ServerEnd<T> {
-    fn from(handle: magenta::Handle) -> Self {
+impl<T> From<zircon::Handle> for ServerEnd<T> {
+    fn from(handle: zircon::Handle) -> Self {
         ServerEnd {
             inner: handle.into(),
             phantom: PhantomData,
@@ -106,7 +106,7 @@ impl<T> From<magenta::Handle> for ServerEnd<T> {
     }
 }
 
-impl<T> magenta::HandleBased for ServerEnd<T> {}
+impl<T> zircon::HandleBased for ServerEnd<T> {}
 
 impl<T> Encodable for ServerEnd<T> {
     fn encode(self, buf: &mut EncodeBuf, base: usize, offset: usize) {

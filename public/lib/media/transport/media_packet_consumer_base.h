@@ -120,7 +120,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   void PullDemandUpdate(const PullDemandUpdateCallback& callback) final;
 
   void AddPayloadBuffer(uint32_t payload_buffer_id,
-                        mx::vmo payload_buffer) final;
+                        zx::vmo payload_buffer) final;
 
   void RemovePayloadBuffer(uint32_t payload_buffer_id) final;
 

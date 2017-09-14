@@ -25,8 +25,8 @@ class SessionHandlerForTest : public SessionHandler {
   // scenic::Session interface methods.
   void Enqueue(::fidl::Array<scenic::OpPtr> ops) override;
   void Present(uint64_t presentation_time,
-               ::fidl::Array<mx::event> acquire_fences,
-               ::fidl::Array<mx::event> release_fences,
+               ::fidl::Array<zx::event> acquire_fences,
+               ::fidl::Array<zx::event> release_fences,
                const PresentCallback& callback) override;
 
   // Return the number of Enqueue()/Present()/Connect() messages that have
@@ -44,7 +44,7 @@ class ReleaseFenceSignallerForTest : public ReleaseFenceSignaller {
   ReleaseFenceSignallerForTest(
       escher::impl::CommandBufferSequencer* command_buffer_sequencer);
 
-  void AddCPUReleaseFence(mx::event fence) override;
+  void AddCPUReleaseFence(zx::event fence) override;
 
   uint32_t num_calls_to_add_cpu_release_fence() {
     return num_calls_to_add_cpu_release_fence_;

@@ -75,7 +75,7 @@ class AudioOutputManager {
   // Handles a plugged/unplugged state change for the supplied audio output.
   void HandlePlugStateChange(AudioOutputPtr output,
                              bool plugged,
-                             mx_time_t plug_time);
+                             zx_time_t plug_time);
 
   // Master gain control.  Only safe to access via the main message loop thread.
   void  SetMasterGain(float db_gain);

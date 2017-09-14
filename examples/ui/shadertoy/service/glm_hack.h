@@ -4,7 +4,7 @@
 
 #pragma once
 
-// Workaround for compiler error due to Magenta defining countof() as a macro.
+// Workaround for compiler error due to Zircon defining countof() as a macro.
 // Redefines countof() using GLM_COUNTOF(), which currently provides a more
 // sophisticated implementation anyway.
 //

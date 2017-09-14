@@ -5,7 +5,7 @@
 #include "garnet/bin/ui/input_reader/input_reader.h"
 
 #include <fcntl.h>
-#include <magenta/device/display.h>
+#include <zircon/device/display.h>
 #include <unistd.h>
 
 #define DEV_INPUT "/dev/class/input"
@@ -62,7 +62,7 @@ void InputReader::WatchDisplayOwnershipChanges(int dir_fd) {
         gfx_console_fd, &display_ownership_event_);
     if (result == sizeof(display_ownership_event_)) {
       // Add handler to listen for signals on this event
-      mx_signals_t signals = MX_USER_SIGNAL_0 | MX_USER_SIGNAL_1;
+      zx_signals_t signals = ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1;
       display_ownership_handler_key_ =
           fsl::MessageLoop::GetCurrent()->AddHandler(
               this, display_ownership_event_, signals);
@@ -77,7 +77,7 @@ void InputReader::WatchDisplayOwnershipChanges(int dir_fd) {
   }
 }
 
-void InputReader::DeviceRemoved(mx_handle_t handle) {
+void InputReader::DeviceRemoved(zx_handle_t handle) {
   FXL_VLOG(1) << "Input device " << devices_.at(handle)->interpreter()->name()
               << " removed";
   fsl::MessageLoop::GetCurrent()->RemoveHandler(devices_.at(handle)->key());
@@ -86,8 +86,8 @@ void InputReader::DeviceRemoved(mx_handle_t handle) {
 
 void InputReader::DeviceAdded(std::unique_ptr<InputInterpreter> interpreter) {
   FXL_VLOG(1) << "Input device " << interpreter->name() << " added ";
-  mx_handle_t handle = interpreter->handle();
-  mx_signals_t signals = MX_USER_SIGNAL_0;
+  zx_handle_t handle = interpreter->handle();
+  zx_signals_t signals = ZX_USER_SIGNAL_0;
   fsl::MessageLoop::HandlerKey key =
       fsl::MessageLoop::GetCurrent()->AddHandler(this, handle, signals);
 
@@ -96,10 +96,10 @@ void InputReader::DeviceAdded(std::unique_ptr<InputInterpreter> interpreter) {
   devices_.emplace(handle, std::move(info));
 }
 
-void InputReader::OnDeviceHandleReady(mx_handle_t handle,
-                                      mx_signals_t pending) {
+void InputReader::OnDeviceHandleReady(zx_handle_t handle,
+                                      zx_signals_t pending) {
   InputInterpreter* interpreter = devices_[handle]->interpreter();
-  if (pending & MX_USER_SIGNAL_0) {
+  if (pending & ZX_USER_SIGNAL_0) {
     bool ret = interpreter->Read(!display_owned_ && !ignore_console_);
     if (!ret) {
       DeviceRemoved(handle);
@@ -107,25 +107,25 @@ void InputReader::OnDeviceHandleReady(mx_handle_t handle,
   }
 }
 
-void InputReader::OnDisplayHandleReady(mx_handle_t handle,
-                                       mx_signals_t pending) {
+void InputReader::OnDisplayHandleReady(zx_handle_t handle,
+                                       zx_signals_t pending) {
   fsl::MessageLoop::GetCurrent()->RemoveHandler(display_ownership_handler_key_);
-  if (pending & MX_USER_SIGNAL_0) {
+  if (pending & ZX_USER_SIGNAL_0) {
     display_owned_ = false;
     display_ownership_handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
-        this, display_ownership_event_, MX_USER_SIGNAL_1);
-  } else if (pending & MX_USER_SIGNAL_1) {
+        this, display_ownership_event_, ZX_USER_SIGNAL_1);
+  } else if (pending & ZX_USER_SIGNAL_1) {
     display_owned_ = true;
     display_ownership_handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
-        this, display_ownership_event_, MX_USER_SIGNAL_0);
+        this, display_ownership_event_, ZX_USER_SIGNAL_0);
   }
 }
 
 #pragma mark fsl::MessageLoopHandler
 // |fsl::MessageLoopHandler|:
 
-void InputReader::OnHandleReady(mx_handle_t handle,
-                                mx_signals_t pending,
+void InputReader::OnHandleReady(zx_handle_t handle,
+                                zx_signals_t pending,
                                 uint64_t count) {
   if (handle == display_ownership_event_) {
     OnDisplayHandleReady(handle, pending);

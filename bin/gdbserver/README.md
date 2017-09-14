@@ -12,7 +12,7 @@ The stub currently communicates with GDB over a TCP connection using BSD sockets
 and thus requires a working Fuchsia network stack and a network connection
 between the target and host environments. Follow the general network set up
 instructions (click
-[here](https://fuchsia.googlesource.com/magenta/+/master/docs/qemu.md#Enabling-Networking-under-Qemu-x86_64-only)
+[here](https://fuchsia.googlesource.com/zircon/+/master/docs/qemu.md#Enabling-Networking-under-Qemu-x86_64-only)
 for enabling network under QEMU)
 
 **N.B.** If using QEMU make sure you are using version 2.5.0 or later.
@@ -38,7 +38,7 @@ The gdb binary can be found in `out/toolchain/gdb-x86_64-linux/bin/gdb`.
 ### On the target machine running Fuchsia
 
 First, make sure that the TCP stack is running and has acquired an IP address.
-Magenta should print its ipv4 address when it boots.
+Zircon should print its ipv4 address when it boots.
 GDB doesn't currently support ipv6.
 
 **N.B.** The following step is only necessary if qemu is started with netsvc
@@ -96,7 +96,7 @@ Remote debugging using 192.168.3.53:7000
 From here we can use gdb as usual:
 
 ```
-(gdb) file out/build-magenta/build-magenta-pc-x86-64/utest/debugger/debugger.elf
+(gdb) file out/build-zircon/build-zircon-pc-x86-64/utest/debugger/debugger.elf
 (gdb) break main
 (gdb) run
 Starting program: ...
@@ -151,7 +151,7 @@ On Linux:
 
 ```
 fuchsia$ out/toolchain/gdb-x86_64-linux/bin/gdb
-(gdb) file out/build-magenta/build-magenta-pc-x86-64/utest/debugger/debugger.elf
+(gdb) file out/build-zircon/build-zircon-pc-x86-64/utest/debugger/debugger.elf
 (gdb) tar ext 192.168.3.53:7000
 (gdb) set remote exec-file /boot/test/debugger-test
 (gdb) r segfault

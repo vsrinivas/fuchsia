@@ -7,7 +7,7 @@
 
 #include <mutex>
 
-#include <mx/vmo.h>
+#include <zx/vmo.h>
 
 #include "lib/fxl/fxl_export.h"
 #include "lib/fxl/macros.h"
@@ -26,13 +26,13 @@ class FXL_EXPORT SharedVmo : public fxl::RefCountedThreadSafe<SharedVmo> {
   //
   // |vmo| must be a valid VMO handle.
   // If not zero, |map_flags| specifies the flags which should be passed to
-  // |mx::vmar::map| when the VMO is mapped.
-  explicit SharedVmo(mx::vmo vmo, uint32_t map_flags = 0u);
+  // |zx::vmar::map| when the VMO is mapped.
+  explicit SharedVmo(zx::vmo vmo, uint32_t map_flags = 0u);
 
   virtual ~SharedVmo();
 
   // Gets the underlying VMO.
-  const mx::vmo& vmo() const { return vmo_; }
+  const zx::vmo& vmo() const { return vmo_; }
 
   // Gets the size of the VMO.
   size_t vmo_size() const { return vmo_size_; }
@@ -45,7 +45,7 @@ class FXL_EXPORT SharedVmo : public fxl::RefCountedThreadSafe<SharedVmo> {
   void* Map();
 
  private:
-  mx::vmo const vmo_;
+  zx::vmo const vmo_;
   uint32_t const map_flags_;
   size_t vmo_size_;
 

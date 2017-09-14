@@ -7,7 +7,7 @@
 #include <queue>
 #include <vector>
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include "lib/netconnector/cpp/message_relay.h"
 #include "lib/fxl/files/unique_fd.h"
@@ -68,7 +68,7 @@ class MessageTransceiver {
   MessageTransceiver(fxl::UniqueFD socket_fd);
 
   // Sets the channel that the transceiver should use to forward messages.
-  void SetChannel(mx::channel channel);
+  void SetChannel(zx::channel channel);
 
   // Sends a service name.
   void SendServiceName(const std::string& service_name);
@@ -109,7 +109,7 @@ class MessageTransceiver {
 
   static const size_t kRecvBufferSize = 2048;
   static const uint8_t kSentinel = 0xcc;
-  // TODO(dalesat): Make this larger when mx::channel messages can be larger.
+  // TODO(dalesat): Make this larger when zx::channel messages can be larger.
   static const uint32_t kMaxPayloadSize = 65536;
   static const uint32_t kVersion = 1;
   static const uint32_t kNullVersion = 0;
@@ -172,7 +172,7 @@ class MessageTransceiver {
 
   fxl::UniqueFD socket_fd_;
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
-  mx::channel channel_;
+  zx::channel channel_;
   MessageRelay message_relay_;
 
   uint32_t version_ = kNullVersion;

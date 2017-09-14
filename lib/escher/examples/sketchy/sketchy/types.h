@@ -6,7 +6,7 @@
 
 #include "escher/forward_declarations.h"
 
-// Safely include <glm/glm.hpp> despite Magenta countof() macro.
+// Safely include <glm/glm.hpp> despite Zircon countof() macro.
 #include "escher/geometry/types.h"
 
 namespace sketchy {

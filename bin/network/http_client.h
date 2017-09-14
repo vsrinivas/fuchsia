@@ -5,7 +5,7 @@
 #ifndef APPS_NETWORK_HTTP_CLIENT_H_
 #define APPS_NETWORK_HTTP_CLIENT_H_
 
-#include <magenta/status.h>
+#include <zircon/status.h>
 
 #include "garnet/bin/network/net_errors.h"
 #include "garnet/bin/network/upload_element_reader.h"
@@ -39,7 +39,7 @@ class URLLoaderImpl::HTTPClient {
 
   HTTPClient<T>(URLLoaderImpl* loader, asio::io_service& io_service);
 
-  mx_status_t CreateRequest(
+  zx_status_t CreateRequest(
       const std::string& server,
       const std::string& path,
       const std::string& method,
@@ -57,8 +57,8 @@ class URLLoaderImpl::HTTPClient {
   void OnHandShake(const asio::error_code& err);
   void OnWriteRequest(const asio::error_code& err, std::size_t transferred);
   void OnReadStatusLine(const asio::error_code& err);
-  mx_status_t SendStreamedBody();
-  mx_status_t SendBufferedBody();
+  zx_status_t SendStreamedBody();
+  zx_status_t SendBufferedBody();
   void ParseHeaderField(const std::string& header,
                         std::string* name,
                         std::string* value);
@@ -87,7 +87,7 @@ class URLLoaderImpl::HTTPClient {
   std::string status_message_;
 
   URLResponsePtr response_;          // used for buffered responses
-  mx::socket response_body_stream_;  // used for streamed responses (default)
+  zx::socket response_body_stream_;  // used for streamed responses (default)
 };
 
 template <typename T>
@@ -128,7 +128,7 @@ URLLoaderImpl::HTTPClient<nonssl_socket_t>::HTTPClient(
     : loader_(loader), resolver_(io_service), socket_(io_service) {}
 
 template <typename T>
-mx_status_t URLLoaderImpl::HTTPClient<T>::CreateRequest(
+zx_status_t URLLoaderImpl::HTTPClient<T>::CreateRequest(
     const std::string& server,
     const std::string& path,
     const std::string& method,
@@ -136,7 +136,7 @@ mx_status_t URLLoaderImpl::HTTPClient<T>::CreateRequest(
     const std::vector<std::unique_ptr<UploadElementReader>>& element_readers) {
   if (!IsMethodAllowed(method)) {
     FXL_VLOG(1) << "Method " << method << " is not allowed";
-    return MX_ERR_INVALID_ARGS;
+    return ZX_ERR_INVALID_ARGS;
   }
 
   std::ostream request_header_stream(&request_header_buf_);
@@ -158,8 +158,8 @@ mx_status_t URLLoaderImpl::HTTPClient<T>::CreateRequest(
   std::ostream request_body_stream(&request_body_buf_);
 
   for (auto it = element_readers.begin(); it != element_readers.end(); ++it) {
-    mx_status_t result = (*it)->ReadAll(&request_body_stream);
-    if (result != MX_OK)
+    zx_status_t result = (*it)->ReadAll(&request_body_stream);
+    if (result != ZX_OK)
       return result;
   }
 
@@ -173,7 +173,7 @@ mx_status_t URLLoaderImpl::HTTPClient<T>::CreateRequest(
   request_bufs_.push_back(request_header_buf_.data());
   request_bufs_.push_back(request_body_buf_.data());
 
-  return MX_OK;
+  return ZX_OK;
 }
 
 template <typename T>
@@ -338,7 +338,7 @@ void URLLoaderImpl::HTTPClient<T>::OnReadStatusLine(
 }
 
 template <typename T>
-mx_status_t URLLoaderImpl::HTTPClient<T>::SendStreamedBody() {
+zx_status_t URLLoaderImpl::HTTPClient<T>::SendStreamedBody() {
   size_t size = response_buf_.size();
 
   if (size > 0) {
@@ -350,30 +350,30 @@ mx_status_t URLLoaderImpl::HTTPClient<T>::SendStreamedBody() {
       FXL_DCHECK(todo > 0);
       response_stream.read(buffer, todo);
       size_t written;
-      mx_status_t result =
+      zx_status_t result =
           response_body_stream_.write(0, buffer, todo, &written);
-      if (result == MX_ERR_SHOULD_WAIT) {
+      if (result == ZX_ERR_SHOULD_WAIT) {
         result = response_body_stream_.wait_one(
-            MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED, MX_TIME_INFINITE,
+            ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED, ZX_TIME_INFINITE,
             nullptr);
-        if (result == MX_OK)
+        if (result == ZX_OK)
           continue;  // retry now that the socket is ready
       }
-      if (result != MX_OK) {
-        // If the other end closes the socket, MX_ERR_PEER_CLOSED
+      if (result != ZX_OK) {
+        // If the other end closes the socket, ZX_ERR_PEER_CLOSED
         // can happen.
-        if (result != MX_ERR_PEER_CLOSED)
+        if (result != ZX_ERR_PEER_CLOSED)
           FXL_VLOG(1) << "SendStreamedBody: result=" << result;
         return result;
       }
       done += written;
     } while (done < size);
   }
-  return MX_OK;
+  return ZX_OK;
 }
 
 template <typename T>
-mx_status_t URLLoaderImpl::HTTPClient<T>::SendBufferedBody() {
+zx_status_t URLLoaderImpl::HTTPClient<T>::SendBufferedBody() {
   size_t size = response_buf_.size();
 
   if (size > 0) {
@@ -382,9 +382,9 @@ mx_status_t URLLoaderImpl::HTTPClient<T>::SendBufferedBody() {
     // VMOs without burdening the memory unduly, perhaps we'll want to create
     // the VMO earlier and resize it as we buffer more to take advantage of
     // VMO virtualization.
-    mx::vmo vmo;
-    mx_status_t result = mx::vmo::create(size, 0u, &vmo);
-    if (result != MX_OK) {
+    zx::vmo vmo;
+    zx_status_t result = zx::vmo::create(size, 0u, &vmo);
+    if (result != ZX_OK) {
       FXL_VLOG(1) << "SendBufferedBody: Unable to create vmo: " << result;
       return result;
     }
@@ -398,12 +398,12 @@ mx_status_t URLLoaderImpl::HTTPClient<T>::SendBufferedBody() {
       response_stream.read(buffer, todo);
       size_t written;
       result = vmo.write(buffer, done, todo, &written);
-      if (result != MX_OK) {
+      if (result != ZX_OK) {
         FXL_VLOG(1) << "SendBufferedBody: result=" << result;
         return result;
       }
       if (written < todo) {
-        FXL_VLOG(1) << "mx::vmo::write wrote " << written
+        FXL_VLOG(1) << "zx::vmo::write wrote " << written
                     << " bytes instead of " << todo << " bytes.";
       }
 
@@ -412,7 +412,7 @@ mx_status_t URLLoaderImpl::HTTPClient<T>::SendBufferedBody() {
 
     response_->body->set_buffer(std::move(vmo));
   }
-  return MX_OK;
+  return ZX_OK;
 }
 
 template <typename T>
@@ -474,12 +474,12 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
                          std::bind(&HTTPClient<T>::OnBufferBody, this,
                                    std::placeholders::_1));
       } else {
-        mx::socket consumer;
-        mx::socket producer;
-        mx_status_t status = mx::socket::create(0u, &producer, &consumer);
-        if (status != MX_OK) {
+        zx::socket consumer;
+        zx::socket producer;
+        zx_status_t status = zx::socket::create(0u, &producer, &consumer);
+        if (status != ZX_OK) {
           FXL_VLOG(1) << "Unable to create socket:"
-                      << mx_status_get_string(status);
+                      << zx_status_get_string(status);
           return;
         }
         response_body_stream_ = std::move(producer);
@@ -487,7 +487,7 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
 
         loader_->SendResponse(std::move(response));
 
-        if (SendStreamedBody() != MX_OK) {
+        if (SendStreamedBody() != ZX_OK) {
           response_body_stream_.reset();
           return;
         }
@@ -516,7 +516,7 @@ void URLLoaderImpl::HTTPClient<T>::OnBufferBody(const asio::error_code& err) {
 
 template <typename T>
 void URLLoaderImpl::HTTPClient<T>::OnStreamBody(const asio::error_code& err) {
-  if (!err && SendStreamedBody() == MX_OK) {
+  if (!err && SendStreamedBody() == ZX_OK) {
     asio::async_read(
         socket_, response_buf_, asio::transfer_at_least(1),
         std::bind(&HTTPClient<T>::OnStreamBody, this, std::placeholders::_1));

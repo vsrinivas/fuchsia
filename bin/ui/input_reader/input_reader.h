@@ -46,23 +46,23 @@ class InputReader : fsl::MessageLoopHandler {
   void WatchDisplayOwnershipChanges(int dir_fd);
 
   void DeviceAdded(std::unique_ptr<InputInterpreter> interpreter);
-  void DeviceRemoved(mx_handle_t handle);
+  void DeviceRemoved(zx_handle_t handle);
 
-  void OnDirectoryHandleReady(mx_handle_t handle, mx_signals_t pending);
-  void OnDeviceHandleReady(mx_handle_t handle, mx_signals_t pending);
-  void OnDisplayHandleReady(mx_handle_t handle, mx_signals_t pending);
+  void OnDirectoryHandleReady(zx_handle_t handle, zx_signals_t pending);
+  void OnDeviceHandleReady(zx_handle_t handle, zx_signals_t pending);
+  void OnDisplayHandleReady(zx_handle_t handle, zx_signals_t pending);
 
-  void OnInternalReport(mx_handle_t handle, InputInterpreter::ReportType type);
+  void OnInternalReport(zx_handle_t handle, InputInterpreter::ReportType type);
 
   // |fsl::MessageLoopHandler|:
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count);
+  void OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count);
 
   mozart::InputDeviceRegistry* registry_;
 
-  std::map<mx_handle_t, std::unique_ptr<DeviceInfo>> devices_;
+  std::map<zx_handle_t, std::unique_ptr<DeviceInfo>> devices_;
   std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
   std::unique_ptr<fsl::DeviceWatcher> console_watcher_;
-  mx_handle_t display_ownership_event_;
+  zx_handle_t display_ownership_event_;
   fsl::MessageLoop::HandlerKey display_ownership_handler_key_;
   bool ignore_console_;
   bool display_owned_ = true;

@@ -17,7 +17,7 @@ constexpr float kQuaternionDefault[4] = {0.f, 0.f, 0.f, 1.f};
 
 // Resource creation.
 scenic::OpPtr NewCreateMemoryOp(uint32_t id,
-                                mx::vmo vmo,
+                                zx::vmo vmo,
                                 scenic::MemoryType memory_type);
 scenic::OpPtr NewCreateImageOp(uint32_t id,
                                uint32_t memory_id,
@@ -88,21 +88,21 @@ scenic::OpPtr NewReleaseResourceOp(uint32_t id);
 
 // Export & Import operations.
 scenic::OpPtr NewExportResourceOp(uint32_t resource_id,
-                                  mx::eventpair export_token);
+                                  zx::eventpair export_token);
 scenic::OpPtr NewImportResourceOp(uint32_t resource_id,
                                   scenic::ImportSpec spec,
-                                  mx::eventpair import_token);
+                                  zx::eventpair import_token);
 
 // Exports the resource and returns an import token in |out_import_token|
 // which allows it to be imported into other sessions.
 scenic::OpPtr NewExportResourceOpAsRequest(uint32_t resource_id,
-                                           mx::eventpair* out_import_token);
+                                           zx::eventpair* out_import_token);
 
 // Imports the resource and returns an export token in |out_export_token|
 // by which another session can export a resource to associate with this import.
 scenic::OpPtr NewImportResourceOpAsRequest(uint32_t resource_id,
                                            scenic::ImportSpec import_spec,
-                                           mx::eventpair* out_export_token);
+                                           zx::eventpair* out_export_token);
 
 // Node operations.
 scenic::OpPtr NewAddChildOp(uint32_t node_id, uint32_t child_id);

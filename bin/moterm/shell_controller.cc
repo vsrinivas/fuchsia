@@ -8,7 +8,7 @@
 
 #include <sstream>
 
-#include <magenta/processargs.h>
+#include <zircon/processargs.h>
 
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
@@ -50,10 +50,10 @@ std::vector<std::string> ShellController::GetShellCommand() {
 std::vector<fsl::StartupHandle> ShellController::GetStartupHandles() {
   std::vector<fsl::StartupHandle> ret;
 
-  mx::channel shell_handle;
-  mx_status_t status = mx::channel::create(0, &channel_, &shell_handle);
-  if (status != MX_OK) {
-    FXL_LOG(ERROR) << "Failed to create an mx::channel for the shell, status: "
+  zx::channel shell_handle;
+  zx_status_t status = zx::channel::create(0, &channel_, &shell_handle);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to create an zx::channel for the shell, status: "
                    << status;
     return {};
   }
@@ -83,9 +83,9 @@ void ShellController::OnRemoteEntry(const std::string& entry) {
     return;
   }
   std::string command = kAddRemoteEntryCommand + entry;
-  mx_status_t status =
+  zx_status_t status =
       channel_.write(0, command.data(), command.size(), nullptr, 0);
-  if (status != MX_OK && status != MX_ERR_NO_MEMORY) {
+  if (status != ZX_OK && status != ZX_ERR_NO_MEMORY) {
     FXL_LOG(ERROR) << "Failed to write a " << kAddRemoteEntryCommand
                    << " command, status: " << status;
   }
@@ -94,20 +94,20 @@ void ShellController::OnRemoteEntry(const std::string& entry) {
 bool ShellController::SendBackHistory(std::vector<std::string> entries) {
   const std::string history_str = SerializeHistory(entries);
 
-  mx::vmo data;
+  zx::vmo data;
   if (!fsl::VmoFromString(history_str, &data)) {
     FXL_LOG(ERROR) << "Failed to write terminal history to a vmo.";
     return false;
   }
 
-  const mx_handle_t handles[] = {data.release()};
+  const zx_handle_t handles[] = {data.release()};
   const std::string command = "";
-  mx_status_t status =
+  zx_status_t status =
       channel_.write(0, command.data(), command.size(), handles, 1);
-  if (status != MX_OK) {
+  if (status != ZX_OK) {
     FXL_LOG(ERROR)
         << "Failed to write the terminal history response to channel.";
-    mx_handle_close(handles[0]);
+    zx_handle_close(handles[0]);
     return false;
   }
   return true;
@@ -122,10 +122,10 @@ void ShellController::ReadCommand() {
   // of a history entry.
   char buffer[kMaxHistoryEntrySize + 100];
   uint32_t num_bytes = 0;
-  mx_status_t rv =
-      channel_.read(MX_CHANNEL_READ_MAY_DISCARD, buffer, sizeof(buffer),
+  zx_status_t rv =
+      channel_.read(ZX_CHANNEL_READ_MAY_DISCARD, buffer, sizeof(buffer),
                     &num_bytes, nullptr, 0, nullptr);
-  if (rv == MX_OK) {
+  if (rv == ZX_OK) {
     const std::string command = std::string(buffer, num_bytes);
     if (command == kGetHistoryCommand) {
       history_->ReadInitialEntries([this](std::vector<std::string> entries) {
@@ -140,29 +140,29 @@ void ShellController::ReadCommand() {
     }
 
     WaitForShell();
-  } else if (rv == MX_ERR_SHOULD_WAIT) {
+  } else if (rv == ZX_ERR_SHOULD_WAIT) {
     WaitForShell();
-  } else if (rv == MX_ERR_BUFFER_TOO_SMALL) {
+  } else if (rv == ZX_ERR_BUFFER_TOO_SMALL) {
     // Ignore the command.
     FXL_LOG(WARNING) << "The command sent by shell didn't fit in the buffer.";
-  } else if (rv == MX_ERR_PEER_CLOSED) {
+  } else if (rv == ZX_ERR_PEER_CLOSED) {
     channel_.reset();
     return;
   } else {
-    FXL_DCHECK(false) << "Unhandled mx_status_t: " << rv;
+    FXL_DCHECK(false) << "Unhandled zx_status_t: " << rv;
   }
 }
 
 void ShellController::WaitForShell() {
   FXL_DCHECK(!wait_id_);
   wait_id_ = waiter_->AsyncWait(channel_.get(),
-                                MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
-                                MX_TIME_INFINITE, &WaitComplete, this);
+                                ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                ZX_TIME_INFINITE, &WaitComplete, this);
 }
 
 // static.
-void ShellController::WaitComplete(mx_status_t result,
-                                   mx_signals_t pending,
+void ShellController::WaitComplete(zx_status_t result,
+                                   zx_signals_t pending,
                                    uint64_t count,
                                    void* context) {
   ShellController* controller = static_cast<ShellController*>(context);

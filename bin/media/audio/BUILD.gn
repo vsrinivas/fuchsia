@@ -37,8 +37,8 @@ source_set("audio") {
     "//garnet/public/lib/media/timeline",
     "//garnet/bin/media/framework",
     "//garnet/bin/media/util",
-    "//magenta/system/ulib/audio-proto-utils",
-    "//magenta/system/ulib/audio-utils",
+    "//zircon/system/ulib/audio-proto-utils",
+    "//zircon/system/ulib/audio-utils",
   ]
 }
 

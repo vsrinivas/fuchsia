@@ -17,7 +17,7 @@ class AcquireFenceSetTest : public ::testing::Test {};
 
 TEST_F(AcquireFenceSetTest, EmptySet) {
   // Create an empty AcquireFenceSet.
-  ::fidl::Array<mx::event> acquire_fences;
+  ::fidl::Array<zx::event> acquire_fences;
 
   AcquireFenceSet acquire_fence_set(std::move(acquire_fences));
 
@@ -32,15 +32,15 @@ TEST_F(AcquireFenceSetTest, EmptySet) {
 
 TEST_F(AcquireFenceSetTest, ReadyStateSignalled) {
   // Create an AcquireFenceSet.
-  ::fidl::Array<mx::event> acquire_fences;
-  mx::event fence1;
-  ASSERT_EQ(MX_OK, mx::event::create(0, &fence1));
+  ::fidl::Array<zx::event> acquire_fences;
+  zx::event fence1;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &fence1));
   acquire_fences.push_back(CopyEvent(fence1));
-  mx::event fence2;
-  ASSERT_EQ(MX_OK, mx::event::create(0, &fence2));
+  zx::event fence2;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &fence2));
   acquire_fences.push_back(CopyEvent(fence2));
-  mx::event fence3;
-  ASSERT_EQ(MX_OK, mx::event::create(0, &fence3));
+  zx::event fence3;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &fence3));
   acquire_fences.push_back(CopyEvent(fence3));
 
   AcquireFenceSet acquire_fence_set(std::move(acquire_fences));
@@ -75,12 +75,12 @@ TEST_F(AcquireFenceSetTest, ReadyStateSignalled) {
 
 TEST_F(AcquireFenceSetTest, DestroyWhileWaiting) {
   // Create an AcquireFenceSet.
-  ::fidl::Array<mx::event> acquire_fences;
-  mx::event fence1;
-  ASSERT_EQ(MX_OK, mx::event::create(0, &fence1));
+  ::fidl::Array<zx::event> acquire_fences;
+  zx::event fence1;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &fence1));
   acquire_fences.push_back(CopyEvent(fence1));
-  mx::event fence2;
-  ASSERT_EQ(MX_OK, mx::event::create(0, &fence2));
+  zx::event fence2;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &fence2));
   acquire_fences.push_back(CopyEvent(fence2));
 
   {

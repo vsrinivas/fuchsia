@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERNAL_BOUNDS_CHECKER_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_BOUNDS_CHECKER_H_
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <stddef.h>
 #include <stdint.h>
 

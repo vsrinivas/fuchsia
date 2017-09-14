@@ -55,8 +55,8 @@ struct DecoderConfig {
 };
 
 struct Process {
-  Process(mx_koid_t p, uint64_t c, uint64_t start, uint64_t end);
-  mx_koid_t pid;
+  Process(zx_koid_t p, uint64_t c, uint64_t start, uint64_t end);
+  zx_koid_t pid;
   uint64_t cr3;
   // The time, in units ktrace uses, when the process was live.
   // An end time of zero means "unknown".
@@ -84,10 +84,10 @@ class DecoderState {
 
   ~DecoderState();
 
-  const Process* LookupProcessByPid(mx_koid_t pid);
+  const Process* LookupProcessByPid(zx_koid_t pid);
   const Process* LookupProcessByCr3(uint64_t cr3);
 
-  const LoadMap* LookupMapEntry(mx_koid_t pid, uint64_t addr);
+  const LoadMap* LookupMapEntry(zx_koid_t pid, uint64_t addr);
 
   const BuildId* LookupBuildId(const std::string& bid);
 
@@ -151,8 +151,8 @@ class DecoderState {
   static int ProcessKtraceRecord(debugserver::ktrace::KtraceRecord* rec,
                                  void* arg);
 
-  bool AddProcess(mx_koid_t pid, uint64_t cr3, uint64_t start_time);
-  bool MarkProcessExited(mx_koid_t pid, uint64_t end_time);
+  bool AddProcess(zx_koid_t pid, uint64_t cr3, uint64_t start_time);
+  bool MarkProcessExited(zx_koid_t pid, uint64_t end_time);
 
   void AddPtFile(const std::string& file_dir,
                  uint64_t id,

@@ -163,7 +163,7 @@ TEST(UnionTest, PodValidation) {
   fidl::internal::FixedBufferForTesting buf(size);
   auto* data = internal::PodUnion_Data::New(&buf);
   SerializeUnion_(pod.get(), &buf, &data);
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -328,7 +328,7 @@ TEST(UnionTest, StringSerialization) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(pod1.get(), &buf, &data);
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   data->DecodePointersAndHandles(&handles);
 
@@ -448,7 +448,7 @@ TEST(UnionTest, PodUnionInArrayValidation) {
   fidl::internal::ArrayValidateParams validate_params(0, false, nullptr);
   SerializeArray_(&array, &buf, &data, &validate_params);
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -529,7 +529,7 @@ TEST(UnionTest, Serialization_UnionOfObjects) {
   EXPECT_EQ(fidl::internal::ValidationError::NONE,
             Serialize_(obj_struct.get(), &buf, &data));
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   data->DecodePointersAndHandles(&handles);
 
@@ -552,7 +552,7 @@ TEST(UnionTest, Validation_UnionsInStruct) {
   EXPECT_EQ(fidl::internal::ValidationError::NONE,
             Serialize_(small_struct.get(), &buf, &data));
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -579,7 +579,7 @@ TEST(UnionTest, Validation_PodUnionInStruct_Failure) {
             Serialize_(small_struct.get(), &buf, &data));
   data->pod_union.tag = static_cast<internal::PodUnion_Data::PodUnion_Tag>(100);
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -623,7 +623,7 @@ TEST(UnionTest, Validation_NullableUnion) {
   EXPECT_EQ(fidl::internal::ValidationError::NONE,
             Serialize_(small_struct.get(), &buf, &data));
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -660,7 +660,7 @@ TEST(UnionTest, Validation_NullableObjectUnion) {
   EXPECT_EQ(fidl::internal::ValidationError::NONE,
             Serialize_(small_struct.get(), &buf, &data));
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -761,7 +761,7 @@ TEST(UnionTest, StructInUnionSerialization) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   data->DecodePointersAndHandles(&handles);
 
@@ -783,7 +783,7 @@ TEST(UnionTest, StructInUnionValidation) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -808,7 +808,7 @@ TEST(UnionTest, StructInUnionValidationNonNullable) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -833,7 +833,7 @@ TEST(UnionTest, StructInUnionValidationNullable) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -873,7 +873,7 @@ TEST(UnionTest, ArrayInUnionSerialization) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   data->DecodePointersAndHandles(&handles);
 
@@ -897,7 +897,7 @@ TEST(UnionTest, ArrayInUnionValidation) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -938,7 +938,7 @@ TEST(UnionTest, MapInUnionSerialization) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   data->DecodePointersAndHandles(&handles);
 
@@ -964,7 +964,7 @@ TEST(UnionTest, MapInUnionValidation) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -1002,7 +1002,7 @@ TEST(UnionTest, UnionInUnionSerialization) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   data->DecodePointersAndHandles(&handles);
 
@@ -1025,7 +1025,7 @@ TEST(UnionTest, UnionInUnionValidation) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
 
   void* raw_buf = buf.Leak();
@@ -1048,7 +1048,7 @@ TEST(UnionTest, UnionInUnionValidationNonNullable) {
   fidl::internal::FixedBufferForTesting buf(size);
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
 
   void* raw_buf = buf.Leak();
@@ -1061,10 +1061,10 @@ TEST(UnionTest, UnionInUnionValidationNonNullable) {
 }
 
 TEST(UnionTest, HandleInUnionGetterSetter) {
-  mx::channel pipe0;
-  mx::channel pipe1;
+  zx::channel pipe0;
+  zx::channel pipe1;
 
-  mx::channel::create(0, &pipe0, &pipe1);
+  zx::channel::create(0, &pipe0, &pipe1);
 
   HandleUnionPtr handle(HandleUnion::New());
   handle->set_f_message_pipe(std::move(pipe1));
@@ -1079,10 +1079,10 @@ TEST(UnionTest, HandleInUnionGetterSetter) {
 }
 
 TEST(UnionTest, HandleInUnionSerialization) {
-  mx::channel pipe0;
-  mx::channel pipe1;
+  zx::channel pipe0;
+  zx::channel pipe1;
 
-  mx::channel::create(0, &pipe0, &pipe1);
+  zx::channel::create(0, &pipe0, &pipe1);
 
   HandleUnionPtr handle(HandleUnion::New());
   handle->set_f_message_pipe(std::move(pipe1));
@@ -1094,7 +1094,7 @@ TEST(UnionTest, HandleInUnionSerialization) {
   auto* data = internal::HandleUnion_Data::New(&buf);
   SerializeUnion_(handle.get(), &buf, &data);
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_EQ(1U, handles.size());
   data->DecodePointersAndHandles(&handles);
@@ -1112,10 +1112,10 @@ TEST(UnionTest, HandleInUnionSerialization) {
 }
 
 TEST(UnionTest, HandleInUnionValidation) {
-  mx::channel pipe0;
-  mx::channel pipe1;
+  zx::channel pipe0;
+  zx::channel pipe1;
 
-  mx::channel::create(0, &pipe0, &pipe1);
+  zx::channel::create(0, &pipe0, &pipe1);
 
   HandleUnionPtr handle(HandleUnion::New());
   handle->set_f_message_pipe(std::move(pipe1));
@@ -1127,7 +1127,7 @@ TEST(UnionTest, HandleInUnionValidation) {
   auto* data = internal::HandleUnion_Data::New(&buf);
   SerializeUnion_(handle.get(), &buf, &data);
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
 
   void* raw_buf = buf.Leak();
@@ -1140,7 +1140,7 @@ TEST(UnionTest, HandleInUnionValidation) {
 }
 
 TEST(UnionTest, HandleInUnionValidationNull) {
-  mx::channel pipe;
+  zx::channel pipe;
   HandleUnionPtr handle(HandleUnion::New());
   handle->set_f_message_pipe(std::move(pipe));
 
@@ -1151,7 +1151,7 @@ TEST(UnionTest, HandleInUnionValidationNull) {
   auto* data = internal::HandleUnion_Data::New(&buf);
   SerializeUnion_(handle.get(), &buf, &data);
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
 
   void* raw_buf = buf.Leak();
@@ -1206,7 +1206,7 @@ TEST(UnionTest, InterfaceInUnionSerialization) {
   auto* data = internal::HandleUnion_Data::New(&buf);
   SerializeUnion_(handle.get(), &buf, &data);
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_EQ(1U, handles.size());
   data->DecodePointersAndHandles(&handles);

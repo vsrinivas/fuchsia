@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! A wrapper to expose Magenta kernel objects for use in tokio.
+//! A wrapper to expose Zircon kernel objects for use in tokio.
 
 #[macro_use]
 extern crate futures;
 #[macro_use]
 extern crate tokio_core;
 extern crate mio;
-extern crate magenta;
+extern crate zircon;
 
 mod channel;
 
@@ -21,12 +21,12 @@ fn would_block() -> io::Error {
     io::Error::new(io::ErrorKind::WouldBlock, "would block")
 }
 
-/// Convert from magenta::Status to io::Error.
+/// Convert from zircon::Status to io::Error.
 ///
 /// Note: these conversions are done on a "best-effort" basis and may not necessarily reflect
 /// exactly equivalent error types.
-fn status_to_io_err(status: magenta::Status) -> io::Error {
-    use magenta::Status;
+fn status_to_io_err(status: zircon::Status) -> io::Error {
+    use zircon::Status;
 
     let err_kind: io::ErrorKind = match status {
         Status::ErrInterruptedRetry => io::ErrorKind::Interrupted,

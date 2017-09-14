@@ -8,7 +8,7 @@ use std::borrow::{Borrow, BorrowMut};
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use magenta::{Handle, MessageBuf};
+use zircon::{Handle, MessageBuf};
 
 /// A buffer for encoding messages.
 pub struct EncodeBuf {

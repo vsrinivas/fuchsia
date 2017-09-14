@@ -8,8 +8,8 @@
 #include <unordered_map>
 
 #include <launchpad/launchpad.h>
-#include <magenta/syscalls/exception.h>
-#include <magenta/types.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/types.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -42,27 +42,27 @@ class Process final {
     // Called when a new that is part of this process has been started.
     virtual void OnThreadStarting(Process* process,
                                   Thread* thread,
-                                  const mx_exception_context_t& context) = 0;
+                                  const zx_exception_context_t& context) = 0;
 
-    // Called when |thread| has exited (MX_EXCP_THREAD_EXITING).
+    // Called when |thread| has exited (ZX_EXCP_THREAD_EXITING).
     virtual void OnThreadExiting(
         Process* process,
         Thread* thread,
-        const mx_excp_type_t type,
-        const mx_exception_context_t& context) = 0;
+        const zx_excp_type_t type,
+        const zx_exception_context_t& context) = 0;
 
     // Called when |process| has exited.
     virtual void OnProcessExit(
         Process* process,
-        const mx_excp_type_t type,
-        const mx_exception_context_t& context) = 0;
+        const zx_excp_type_t type,
+        const zx_exception_context_t& context) = 0;
 
     // Called when the kernel reports an architectural exception.
     virtual void OnArchitecturalException(
         Process* process,
         Thread* thread,
-        const mx_excp_type_t type,
-        const mx_exception_context_t& context) = 0;
+        const zx_excp_type_t type,
+        const zx_exception_context_t& context) = 0;
   };
 
   explicit Process(Server* server,
@@ -95,7 +95,7 @@ class Process final {
   // The process must still be attached to by calling Attach().
   // Do not call this if the process is currently live (state is kStarting or
   // kRunning).
-  bool Initialize(mx_koid_t pid);
+  bool Initialize(zx_koid_t pid);
 
   // Obtains a debug-capable handle and binds an exception port for receiving
   // exceptions from the inferior process.
@@ -128,28 +128,28 @@ class Process final {
 
   // Returns the process handle. This handle is owned and managed by this
   // Process instance, thus the caller should not close the handle.
-  mx_handle_t handle() const { return handle_; }
+  zx_handle_t handle() const { return handle_; }
 
   // Returns the process ID.
-  mx_koid_t id() const { return id_; }
+  zx_koid_t id() const { return id_; }
 
   // Returns a mutable handle to the set of breakpoints managed by this process.
   arch::ProcessBreakpointSet* breakpoints() { return &breakpoints_; }
 
   // Returns the base load address of the dynamic linker.
-  mx_vaddr_t base_address() const { return base_address_; }
+  zx_vaddr_t base_address() const { return base_address_; }
 
   // Returns the entry point of the dynamic linker.
-  mx_vaddr_t entry_address() const { return entry_address_; }
+  zx_vaddr_t entry_address() const { return entry_address_; }
 
   // Returns the thread with the thread ID |thread_id| that's owned by this
   // process. Returns nullptr if no such thread exists. The returned pointer is
   // owned and managed by this Process instance.
-  Thread* FindThreadById(mx_koid_t thread_id);
+  Thread* FindThreadById(zx_koid_t thread_id);
 
   // Returns an arbitrary thread that is owned by this process. This picks the
-  // first thread that is returned from mx_object_get_info for the
-  // MX_INFO_PROCESS_THREADS topic. This will refresh all threads.
+  // first thread that is returned from zx_object_get_info for the
+  // ZX_INFO_PROCESS_THREADS topic. This will refresh all threads.
   // TODO(dje): ISTR GNU gdbserver being more random to avoid starving threads.
   Thread* PickOneThread();
 
@@ -205,7 +205,7 @@ class Process final {
 
   // Return the DSO for |pc| or nullptr if none.
   // TODO(dje): Result is not const for debug file lookup support.
-  util::dsoinfo_t* LookupDso(mx_vaddr_t pc) const;
+  util::dsoinfo_t* LookupDso(zx_vaddr_t pc) const;
 
   // Return the entry for the main executable from the dsos list.
   // Returns nullptr if not present (could happen if inferior data structure
@@ -216,8 +216,8 @@ class Process final {
   Process() = default;
 
   // The exception handler invoked by ExceptionPort.
-  void OnException(const mx_port_packet_t& packet,
-                   const mx_exception_context_t& context);
+  void OnException(const zx_port_packet_t& packet,
+                   const zx_exception_context_t& context);
 
   // Debug handle mgmt.
   bool AllocDebugHandle();
@@ -247,20 +247,20 @@ class Process final {
   // owns this instance and holds on to it until it gets destroyed.
   launchpad_t* launchpad_ = nullptr;
 
-  // The debug-capable handle that we use to invoke mx_debug_* syscalls.
-  mx_handle_t handle_ = MX_HANDLE_INVALID;
+  // The debug-capable handle that we use to invoke zx_debug_* syscalls.
+  zx_handle_t handle_ = ZX_HANDLE_INVALID;
 
   // The current state of this process.
   State state_ = State::kNew;
 
   // The process ID (also the kernel object ID).
-  mx_koid_t id_ = MX_KOID_INVALID;
+  zx_koid_t id_ = ZX_KOID_INVALID;
 
   // The base load address of the dynamic linker.
-  mx_vaddr_t base_address_ = 0;
+  zx_vaddr_t base_address_ = 0;
 
   // The entry point of the dynamic linker.
-  mx_vaddr_t entry_address_ = 0;
+  zx_vaddr_t entry_address_ = 0;
 
   // The key we receive after binding an exception port.
   ExceptionPort::Key eport_key_ = 0;
@@ -278,7 +278,7 @@ class Process final {
   // The threads owned by this process. This is map is populated lazily when
   // threads are requested through FindThreadById(). It can also be repopulated
   // from scratch, e.g., when attaching to an already running program.
-  using ThreadMap = std::unordered_map<mx_koid_t, std::unique_ptr<Thread>>;
+  using ThreadMap = std::unordered_map<zx_koid_t, std::unique_ptr<Thread>>;
   ThreadMap threads_;
 
   // If true then |threads_| needs to be recalculated from scratch.

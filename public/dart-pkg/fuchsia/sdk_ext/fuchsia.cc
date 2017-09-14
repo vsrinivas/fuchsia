@@ -4,7 +4,7 @@
 
 #include "dart-pkg/fuchsia/sdk_ext/fuchsia.h"
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #include <stdio.h>
 #include <string.h>

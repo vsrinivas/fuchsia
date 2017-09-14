@@ -12,7 +12,7 @@ import (
 	"sync"
 	"syscall/mx"
 	"syscall/mx/mxerror"
-	"syscall/mx/mxio"
+	"syscall/mx/fdio"
 	"syscall/mx/mxruntime"
 
 	"app/context"
@@ -31,10 +31,10 @@ import (
 const debug = true
 const debug2 = false
 
-const MX_SOCKET_HALF_CLOSE = 1
-const MXSIO_SIGNAL_INCOMING = mx.SignalUser0
-const MXSIO_SIGNAL_CONNECTED = mx.SignalUser3
-const MXSIO_SIGNAL_HALFCLOSED = mx.SignalUser4
+const ZX_SOCKET_HALF_CLOSE = 1
+const ZXSIO_SIGNAL_INCOMING = mx.SignalUser0
+const ZXSIO_SIGNAL_CONNECTED = mx.SignalUser3
+const ZXSIO_SIGNAL_HALFCLOSED = mx.SignalUser4
 const LOCAL_SIGNAL_CLOSING = mx.SignalUser5
 
 const defaultNIC = 2
@@ -45,8 +45,8 @@ const (
 )
 
 var (
-	ioctlNetcGetIfInfo   = mxio.IoctlNum(mxio.IoctlKindDefault, mxio.IoctlFamilyNetconfig, 0)
-	ioctlNetcGetNodename = mxio.IoctlNum(mxio.IoctlKindDefault, mxio.IoctlFamilyNetconfig, 8)
+	ioctlNetcGetIfInfo   = fdio.IoctlNum(fdio.IoctlKindDefault, fdio.IoctlFamilyNetconfig, 0)
+	ioctlNetcGetNodename = fdio.IoctlNum(fdio.IoctlKindDefault, fdio.IoctlFamilyNetconfig, 8)
 )
 
 type app struct {
@@ -54,7 +54,7 @@ type app struct {
 }
 
 func (a *app) Bind(h mx.Handle) {
-	if err := a.socket.dispatcher.AddHandler(h, mxio.ServerHandler(a.socket.mxioHandler), 0); err != nil {
+	if err := a.socket.dispatcher.AddHandler(h, fdio.ServerHandler(a.socket.fdioHandler), 0); err != nil {
 		h.Close()
 	}
 
@@ -68,7 +68,7 @@ func (a *app) Name() string {
 }
 
 func socketDispatcher(stk tcpip.Stack, ctx *context.Context) (*socketServer, error) {
-	d, err := mxio.NewDispatcher(mxio.Handler)
+	d, err := fdio.NewDispatcher(fdio.Handler)
 	if err != nil {
 		return nil, err
 	}
@@ -246,12 +246,12 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 				// TODO: get socket closed message from loopSocketWrite
 				continue
 			} else if err == tcpip.ErrClosedForReceive {
-				_, err := dataHandle.Write(nil, MX_SOCKET_HALF_CLOSE)
+				_, err := dataHandle.Write(nil, ZX_SOCKET_HALF_CLOSE)
 				switch mxerror.Status(err) {
 				case mx.ErrOk:
 				case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 				default:
-					log.Printf("socket read: send MX_SOCKET_HALF_CLOSE failed: %v", err)
+					log.Printf("socket read: send ZX_SOCKET_HALF_CLOSE failed: %v", err)
 				}
 				return
 			}
@@ -308,7 +308,7 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 func (ios *iostate) loopShutdown() {
 	defer ios.ep.Close()
 	for {
-		obs, err := ios.dataHandle.WaitOne(mx.SignalSocketPeerClosed|MXSIO_SIGNAL_HALFCLOSED, mx.TimensecInfinite)
+		obs, err := ios.dataHandle.WaitOne(mx.SignalSocketPeerClosed|ZXSIO_SIGNAL_HALFCLOSED, mx.TimensecInfinite)
 		switch mxerror.Status(err) {
 		case mx.ErrOk:
 			// NOP
@@ -321,7 +321,7 @@ func (ios *iostate) loopShutdown() {
 		switch {
 		case obs&mx.SignalSocketPeerClosed != 0:
 			return
-		case obs&MXSIO_SIGNAL_HALFCLOSED != 0:
+		case obs&ZXSIO_SIGNAL_HALFCLOSED != 0:
 			err := ios.ep.Shutdown(tcpip.ShutdownRead | tcpip.ShutdownWrite)
 			if debug2 && err != nil {
 				log.Printf("shutdown: %v", err) // typically ignored
@@ -351,7 +351,7 @@ func (ios *iostate) loopDgramRead(stk tcpip.Stack) {
 				if debug2 {
 					log.Printf("TODO loopDgramRead closed")
 				}
-				// TODO _, err := ios.dataHandle.Write(nil, MX_SOCKET_HALF_CLOSE)
+				// TODO _, err := ios.dataHandle.Write(nil, ZX_SOCKET_HALF_CLOSE)
 				return
 			}
 			// TODO communicate to user
@@ -360,9 +360,9 @@ func (ios *iostate) loopDgramRead(stk tcpip.Stack) {
 		}
 		ios.wq.EventUnregister(&waitEntry)
 
-		out := make([]byte, c_mxio_socket_msg_hdr_len+len(v))
+		out := make([]byte, c_fdio_socket_msg_hdr_len+len(v))
 		writeSocketMsgHdr(out, sender)
-		copy(out[c_mxio_socket_msg_hdr_len:], v)
+		copy(out[c_fdio_socket_msg_hdr_len:], v)
 
 	writeLoop:
 		for {
@@ -431,7 +431,7 @@ func (ios *iostate) loopDgramWrite(stk tcpip.Stack) {
 
 		ios.wq.EventRegister(&waitEntry, waiter.EventOut)
 		for {
-			_, err := ios.ep.Write(v[c_mxio_socket_msg_hdr_len:], receiver)
+			_, err := ios.ep.Write(v[c_fdio_socket_msg_hdr_len:], receiver)
 			if err == tcpip.ErrWouldBlock {
 				<-notifyCh
 				continue
@@ -515,10 +515,10 @@ func (s *socketServer) newIostate(h mx.Handle, iosOrig *iostate, netProto tcpip.
 
 	// Before we add a dispatcher for this iostate, respond to the client describing what
 	// kind of object this is.
-	ro := mxio.RioObject{
-		RioObjectHeader: mxio.RioObjectHeader{
+	ro := fdio.RioObject{
+		RioObjectHeader: fdio.RioObjectHeader{
 			Status: errStatus(nil),
-			Type:   uint32(mxio.ProtocolSocket),
+			Type:   uint32(fdio.ProtocolSocket),
 		},
 		Esize: 0,
 	}
@@ -528,7 +528,7 @@ func (s *socketServer) newIostate(h mx.Handle, iosOrig *iostate, netProto tcpip.
 	}
 	ro.Write(h, 0)
 
-	if err := s.dispatcher.AddHandler(h, mxio.ServerHandler(s.mxioHandler), int64(newCookie)); err != nil {
+	if err := s.dispatcher.AddHandler(h, fdio.ServerHandler(s.fdioHandler), int64(newCookie)); err != nil {
 		s.mu.Lock()
 		delete(s.io, newCookie)
 		s.mu.Unlock()
@@ -552,7 +552,7 @@ func (s *socketServer) newIostate(h mx.Handle, iosOrig *iostate, netProto tcpip.
 }
 
 type socketServer struct {
-	dispatcher *mxio.Dispatcher
+	dispatcher *fdio.Dispatcher
 	stack      tcpip.Stack
 	dnsClient  *dns.Client
 	ns         *netstack
@@ -562,7 +562,7 @@ type socketServer struct {
 	io   map[cookie]*iostate
 }
 
-func (s *socketServer) opSocket(h mx.Handle, ios *iostate, msg *mxio.Msg, path string) (err error) {
+func (s *socketServer) opSocket(h mx.Handle, ios *iostate, msg *fdio.Msg, path string) (err error) {
 	var domain, typ, protocol int
 	if n, _ := fmt.Sscanf(path, "socket/%d/%d/%d\x00", &domain, &typ, &protocol); n != 3 {
 		return mxerror.Errorf(mx.ErrInvalidArgs, "socket: bad path %q (n=%d)", path, n)
@@ -629,7 +629,7 @@ func sockProto(typ, protocol int) (t tcpip.TransportProtocolNumber, err error) {
 
 var errShouldWait = mx.Error{Status: mx.ErrShouldWait, Text: "netstack"}
 
-func (s *socketServer) opAccept(h mx.Handle, ios *iostate, msg *mxio.Msg, path string) (err error) {
+func (s *socketServer) opAccept(h mx.Handle, ios *iostate, msg *fdio.Msg, path string) (err error) {
 	if ios.ep == nil {
 		return mxerror.Errorf(mx.ErrBadState, "accept: no socket")
 	}
@@ -639,9 +639,9 @@ func (s *socketServer) opAccept(h mx.Handle, ios *iostate, msg *mxio.Msg, path s
 	}
 	if ios.ep.Readiness(waiter.EventIn) == 0 {
 		// If we just accepted the only queued incoming connection,
-		// clear the signal so the mxio client knows no incoming
+		// clear the signal so the fdio client knows no incoming
 		// connection is available.
-		err := mx.Handle(ios.dataHandle).SignalPeer(MXSIO_SIGNAL_INCOMING, 0)
+		err := mx.Handle(ios.dataHandle).SignalPeer(ZXSIO_SIGNAL_INCOMING, 0)
 		switch mxerror.Status(err) {
 		case mx.ErrOk:
 			// NOP
@@ -650,7 +650,7 @@ func (s *socketServer) opAccept(h mx.Handle, ios *iostate, msg *mxio.Msg, path s
 			// as we have accepted a new endpoint and it can be
 			// valid.
 		default:
-			log.Printf("accept: clearing MXSIO_SIGNAL_INCOMING: %v", err)
+			log.Printf("accept: clearing ZXSIO_SIGNAL_INCOMING: %v", err)
 		}
 	}
 	if e != nil {
@@ -718,7 +718,7 @@ func mxNetError(e *tcpip.Error) mx.Status {
 	return mx.ErrInternal
 }
 
-func (s *socketServer) opGetSockOpt(ios *iostate, msg *mxio.Msg) mx.Status {
+func (s *socketServer) opGetSockOpt(ios *iostate, msg *fdio.Msg) mx.Status {
 	var val c_mxrio_sockopt_req_reply
 	if err := val.Decode(msg.Data[:msg.Datalen]); err != nil {
 		if debug {
@@ -782,7 +782,7 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *mxio.Msg) mx.Status {
 	return mx.ErrOk
 }
 
-func (s *socketServer) opSetSockOpt(ios *iostate, msg *mxio.Msg) mx.Status {
+func (s *socketServer) opSetSockOpt(ios *iostate, msg *fdio.Msg) mx.Status {
 	var val c_mxrio_sockopt_req_reply
 	if err := val.Decode(msg.Data[:msg.Datalen]); err != nil {
 		if debug {
@@ -804,7 +804,7 @@ func (s *socketServer) opSetSockOpt(ios *iostate, msg *mxio.Msg) mx.Status {
 	return mx.ErrOk
 }
 
-func (s *socketServer) opBind(ios *iostate, msg *mxio.Msg) (status mx.Status) {
+func (s *socketServer) opBind(ios *iostate, msg *fdio.Msg) (status mx.Status) {
 	addr, err := readSockaddrIn(msg.Data[:msg.Datalen])
 	if err != nil {
 		if debug {
@@ -832,7 +832,7 @@ func (s *socketServer) opBind(ios *iostate, msg *mxio.Msg) (status mx.Status) {
 	return mx.ErrOk
 }
 
-func (s *socketServer) opIoctl(ios *iostate, msg *mxio.Msg) mx.Status {
+func (s *socketServer) opIoctl(ios *iostate, msg *fdio.Msg) mx.Status {
 	// TODO: deprecated in favor of FIDL service. Remove.
 	switch msg.IoctlOp() {
 	case ioctlNetcGetIfInfo:
@@ -879,7 +879,7 @@ func (s *socketServer) opIoctl(ios *iostate, msg *mxio.Msg) mx.Status {
 	return mx.ErrInvalidArgs
 }
 
-func mxioSockAddrReply(a tcpip.FullAddress, msg *mxio.Msg) mx.Status {
+func fdioSockAddrReply(a tcpip.FullAddress, msg *fdio.Msg) mx.Status {
 	var err error
 	rep := c_mxrio_sockaddr_reply{}
 	rep.len, err = writeSockaddrStorage(&rep.addr, a)
@@ -891,7 +891,7 @@ func mxioSockAddrReply(a tcpip.FullAddress, msg *mxio.Msg) mx.Status {
 	return mx.ErrOk
 }
 
-func (s *socketServer) opGetSockName(ios *iostate, msg *mxio.Msg) mx.Status {
+func (s *socketServer) opGetSockName(ios *iostate, msg *fdio.Msg) mx.Status {
 	a, err := ios.ep.GetLocalAddress()
 	if err != nil {
 		return mxNetError(err)
@@ -899,10 +899,10 @@ func (s *socketServer) opGetSockName(ios *iostate, msg *mxio.Msg) mx.Status {
 	if debug2 {
 		log.Printf("getsockname(): %v", a)
 	}
-	return mxioSockAddrReply(a, msg)
+	return fdioSockAddrReply(a, msg)
 }
 
-func (s *socketServer) opGetPeerName(ios *iostate, msg *mxio.Msg) (status mx.Status) {
+func (s *socketServer) opGetPeerName(ios *iostate, msg *fdio.Msg) (status mx.Status) {
 	if ios.ep == nil {
 		return mx.ErrBadState
 	}
@@ -910,10 +910,10 @@ func (s *socketServer) opGetPeerName(ios *iostate, msg *mxio.Msg) (status mx.Sta
 	if err != nil {
 		return mxNetError(err)
 	}
-	return mxioSockAddrReply(a, msg)
+	return fdioSockAddrReply(a, msg)
 }
 
-func (s *socketServer) opListen(ios *iostate, msg *mxio.Msg) (status mx.Status) {
+func (s *socketServer) opListen(ios *iostate, msg *fdio.Msg) (status mx.Status) {
 	d := msg.Data[:msg.Datalen]
 	if len(d) != 4 {
 		if debug {
@@ -937,20 +937,20 @@ func (s *socketServer) opListen(ios *iostate, msg *mxio.Msg) (status mx.Status) 
 	go func() {
 		// When an incoming connection is queued up (that is,
 		// calling accept would return a new connection),
-		// signal the mxio socket that it exists. This allows
+		// signal the fdio socket that it exists. This allows
 		// the socket API client to implement a blocking accept.
 		inEntry, inCh := waiter.NewChannelEntry(nil)
 		ios.wq.EventRegister(&inEntry, waiter.EventIn)
 		defer ios.wq.EventUnregister(&inEntry)
 		for range inCh {
-			err := mx.Handle(ios.dataHandle).SignalPeer(0, MXSIO_SIGNAL_INCOMING)
+			err := mx.Handle(ios.dataHandle).SignalPeer(0, ZXSIO_SIGNAL_INCOMING)
 			switch mxerror.Status(err) {
 			case mx.ErrOk:
 				continue
 			case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 				return
 			default:
-				log.Printf("socket signal MXSIO_SIGNAL_INCOMING: %v", err)
+				log.Printf("socket signal ZXSIO_SIGNAL_INCOMING: %v", err)
 			}
 		}
 	}()
@@ -960,7 +960,7 @@ func (s *socketServer) opListen(ios *iostate, msg *mxio.Msg) (status mx.Status) 
 	return mx.ErrOk
 }
 
-func (s *socketServer) opConnect(ios *iostate, msg *mxio.Msg) (status mx.Status) {
+func (s *socketServer) opConnect(ios *iostate, msg *fdio.Msg) (status mx.Status) {
 	if msg.Datalen == 0 {
 		if ios.transProto == udp.ProtocolNumber {
 			// connect() can be called with no address to
@@ -1014,7 +1014,7 @@ func (s *socketServer) opConnect(ios *iostate, msg *mxio.Msg) (status mx.Status)
 		log.Printf("connect: connected")
 	}
 	if ios.transProto == tcp.ProtocolNumber {
-		err := mx.Handle(ios.dataHandle).SignalPeer(0, MXSIO_SIGNAL_CONNECTED)
+		err := mx.Handle(ios.dataHandle).SignalPeer(0, ZXSIO_SIGNAL_CONNECTED)
 		switch status := mxerror.Status(err); status {
 		case mx.ErrOk:
 			// NOP
@@ -1030,7 +1030,7 @@ func (s *socketServer) opConnect(ios *iostate, msg *mxio.Msg) (status mx.Status)
 	return mx.ErrOk
 }
 
-func (s *socketServer) opGetAddrInfo(ios *iostate, msg *mxio.Msg) mx.Status {
+func (s *socketServer) opGetAddrInfo(ios *iostate, msg *fdio.Msg) mx.Status {
 	var val c_mxrio_gai_req
 	if err := val.Decode(msg); err != nil {
 		return errStatus(err)
@@ -1140,16 +1140,16 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *mxio.Msg) mx.Status {
 	return mx.ErrOk
 }
 
-func (s *socketServer) opFcntl(ios *iostate, msg *mxio.Msg) mx.Status {
+func (s *socketServer) opFcntl(ios *iostate, msg *fdio.Msg) mx.Status {
 	cmd := uint32(msg.Arg)
 	if debug2 {
 		log.Printf("fcntl: cmd %v, flags %v", cmd, msg.FcntlFlags())
 	}
 	switch cmd {
-	case mxio.OpFcntlCmdGetFL:
+	case fdio.OpFcntlCmdGetFL:
 		// Set flags to 0 as O_NONBLOCK is handled on the client side.
 		msg.SetFcntlFlags(0)
-	case mxio.OpFcntlCmdSetFL:
+	case fdio.OpFcntlCmdSetFL:
 		// Do nothing.
 	default:
 		return mx.ErrNotSupported
@@ -1184,37 +1184,37 @@ func (s *socketServer) iosCloseHandler(ios *iostate, cookie cookie) {
 	}
 }
 
-func (s *socketServer) mxioHandler(msg *mxio.Msg, rh mx.Handle, cookieVal int64) mx.Status {
+func (s *socketServer) fdioHandler(msg *fdio.Msg, rh mx.Handle, cookieVal int64) mx.Status {
 	cookie := cookie(cookieVal)
 	op := msg.Op()
 	if debug2 {
-		log.Printf("socketServer.mxio: op=%v, len=%d, arg=%v, hcount=%d", op, msg.Datalen, msg.Arg, msg.Hcount)
+		log.Printf("socketServer.fdio: op=%v, len=%d, arg=%v, hcount=%d", op, msg.Datalen, msg.Arg, msg.Hcount)
 	}
 
-	// if the remote side is closed, mxio.Handler synthesizes an opClose message with rh == 0.
-	if rh <= 0 && op != mxio.OpClose {
+	// if the remote side is closed, fdio.Handler synthesizes an opClose message with rh == 0.
+	if rh <= 0 && op != fdio.OpClose {
 		if debug2 {
-			log.Printf("socketServer.mxio invalid rh (op=%v)", op) // DEBUG
+			log.Printf("socketServer.fdio invalid rh (op=%v)", op) // DEBUG
 		}
 		return mx.ErrInvalidArgs
 	}
 	s.mu.Lock()
 	ios := s.io[cookie]
 	s.mu.Unlock()
-	if ios == nil && op != mxio.OpOpen {
+	if ios == nil && op != fdio.OpOpen {
 		return mx.ErrBadState
 	}
 
 	switch op {
-	case mxio.OpOpen:
+	case fdio.OpOpen:
 		path := string(msg.Data[:msg.Datalen])
 		var err error
 		switch {
-		case strings.HasPrefix(path, "none"): // MXRIO_SOCKET_DIR_NONE
+		case strings.HasPrefix(path, "none"): // ZXRIO_SOCKET_DIR_NONE
 			_, err = s.newIostate(msg.Handle[0], nil, ipv4.ProtocolNumber, tcp.ProtocolNumber, nil, nil)
-		case strings.HasPrefix(path, "socket/"): // MXRIO_SOCKET_DIR_SOCKET
+		case strings.HasPrefix(path, "socket/"): // ZXRIO_SOCKET_DIR_SOCKET
 			err = s.opSocket(msg.Handle[0], ios, msg, path)
-		case strings.HasPrefix(path, "accept"): // MXRIO_SOCKET_DIR_ACCEPT
+		case strings.HasPrefix(path, "accept"): // ZXRIO_SOCKET_DIR_ACCEPT
 			err = s.opAccept(msg.Handle[0], ios, msg, path)
 		default:
 			if debug2 {
@@ -1224,71 +1224,71 @@ func (s *socketServer) mxioHandler(msg *mxio.Msg, rh mx.Handle, cookieVal int64)
 		}
 
 		if err != nil {
-			ro := mxio.RioObject{
-				RioObjectHeader: mxio.RioObjectHeader{
+			ro := fdio.RioObject{
+				RioObjectHeader: fdio.RioObjectHeader{
 					Status: errStatus(err),
-					Type:   uint32(mxio.ProtocolSocket),
+					Type:   uint32(fdio.ProtocolSocket),
 				},
 				Esize: 0,
 			}
 			ro.Write(msg.Handle[0], 0)
 			msg.Handle[0].Close()
 		}
-		return mxio.ErrIndirect.Status
-	case mxio.OpClone:
+		return fdio.ErrIndirect.Status
+	case fdio.OpClone:
 		ios.acquire()
 		_, err := s.newIostate(msg.Handle[0], ios, ios.netProto, tcp.ProtocolNumber, nil, nil)
 		if err != nil {
 			ios.release(func() { s.iosCloseHandler(ios, cookie) })
-			ro := mxio.RioObject{
-				RioObjectHeader: mxio.RioObjectHeader{
+			ro := fdio.RioObject{
+				RioObjectHeader: fdio.RioObjectHeader{
 					Status: errStatus(err),
-					Type:   uint32(mxio.ProtocolSocket),
+					Type:   uint32(fdio.ProtocolSocket),
 				},
 				Esize: 0,
 			}
 			ro.Write(msg.Handle[0], 0)
 			msg.Handle[0].Close()
 		}
-		return mxio.ErrIndirect.Status
+		return fdio.ErrIndirect.Status
 
-	case mxio.OpConnect:
+	case fdio.OpConnect:
 		return s.opConnect(ios, msg) // do_connect
-	case mxio.OpClose:
+	case fdio.OpClose:
 		ios.release(func() { s.iosCloseHandler(ios, cookie) })
 		return mx.ErrOk
-	case mxio.OpRead:
+	case fdio.OpRead:
 		if debug {
 			log.Printf("unexpected opRead")
 		}
-	case mxio.OpWrite:
+	case fdio.OpWrite:
 		if debug {
 			log.Printf("unexpected opWrite")
 		}
-	case mxio.OpWriteAt:
-	case mxio.OpSeek:
+	case fdio.OpWriteAt:
+	case fdio.OpSeek:
 		return mx.ErrOk
-	case mxio.OpStat:
-	case mxio.OpTruncate:
-	case mxio.OpSync:
-	case mxio.OpSetAttr:
-	case mxio.OpBind:
+	case fdio.OpStat:
+	case fdio.OpTruncate:
+	case fdio.OpSync:
+	case fdio.OpSetAttr:
+	case fdio.OpBind:
 		return s.opBind(ios, msg)
-	case mxio.OpListen:
+	case fdio.OpListen:
 		return s.opListen(ios, msg)
-	case mxio.OpIoctl:
+	case fdio.OpIoctl:
 		return s.opIoctl(ios, msg)
-	case mxio.OpGetAddrInfo:
+	case fdio.OpGetAddrInfo:
 		return s.opGetAddrInfo(ios, msg)
-	case mxio.OpGetSockname:
+	case fdio.OpGetSockname:
 		return s.opGetSockName(ios, msg)
-	case mxio.OpGetPeerName:
+	case fdio.OpGetPeerName:
 		return s.opGetPeerName(ios, msg)
-	case mxio.OpGetSockOpt:
+	case fdio.OpGetSockOpt:
 		return s.opGetSockOpt(ios, msg)
-	case mxio.OpSetSockOpt:
+	case fdio.OpSetSockOpt:
 		return s.opSetSockOpt(ios, msg)
-	case mxio.OpFcntl:
+	case fdio.OpFcntl:
 		return s.opFcntl(ios, msg)
 	default:
 		log.Printf("unknown socket op: %v", op)

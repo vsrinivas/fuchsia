@@ -10,7 +10,7 @@
 #include <mach/kern_return.h>
 #include <mach/mach_time.h>
 #elif defined(OS_FUCHSIA)
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #elif defined(OS_WIN)
 #include <windows.h>
 #else
@@ -47,7 +47,7 @@ TimePoint TimePoint::Now() {
 
 // static
 TimePoint TimePoint::Now() {
-  return TimePoint(mx_time_get(MX_CLOCK_MONOTONIC));
+  return TimePoint(zx_time_get(ZX_CLOCK_MONOTONIC));
 }
 
 #elif defined(OS_WIN)

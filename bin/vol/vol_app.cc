@@ -174,7 +174,7 @@ class VolApp {
   // Calls |HandleKeystroke| on the message loop when console input is ready.
   void WaitForKeystroke() {
     fd_waiter_.Wait(
-        [this](mx_status_t status, uint32_t events) { HandleKeystroke(); }, 0,
+        [this](zx_status_t status, uint32_t events) { HandleKeystroke(); }, 0,
         POLLIN);
   }
 

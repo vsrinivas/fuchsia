@@ -200,9 +200,9 @@ bool CommandHandler::Handle_c(const fxl::StringView& packet,
   // If the packet contains an address parameter, then try to set the program
   // counter to then continue at that address. Otherwise, the PC register will
   // remain untouched.
-  mx_vaddr_t addr;
+  zx_vaddr_t addr;
   if (!packet.empty()) {
-    if (!fxl::StringToNumberWithError<mx_vaddr_t>(packet, &addr,
+    if (!fxl::StringToNumberWithError<zx_vaddr_t>(packet, &addr,
                                                   fxl::Base::k16)) {
       FXL_LOG(ERROR) << "c: Malformed address given: " << packet;
       return ReplyWithError(util::ErrorCode::INVAL, callback);
@@ -242,7 +242,7 @@ bool CommandHandler::Handle_c(const fxl::StringView& packet,
   // yet. We start it and set the current thread to the first one the kernel
   // gives us.
   // TODO(armansito): Remove this logic now that we handle
-  // MX_EXCP_THREAD_STARTING?
+  // ZX_EXCP_THREAD_STARTING?
   FXL_DCHECK(!current_process->IsLive());
   if (!current_process->Start()) {
     FXL_LOG(ERROR) << "c: Failed to start the current inferior";
@@ -308,8 +308,8 @@ bool CommandHandler::Handle_C(const fxl::StringView& packet,
   // TODO(armansito): Make Thread::Resume take an optional address argument so
   // we don't have to keep repeating this code.
   if (!addr_param.empty()) {
-    mx_vaddr_t addr;
-    if (!fxl::StringToNumberWithError<mx_vaddr_t>(addr_param, &addr,
+    zx_vaddr_t addr;
+    if (!fxl::StringToNumberWithError<zx_vaddr_t>(addr_param, &addr,
                                                   fxl::Base::k16)) {
       FXL_LOG(ERROR) << "C: Malformed address given: " << packet;
       return ReplyWithError(util::ErrorCode::INVAL, callback);
@@ -350,8 +350,8 @@ bool CommandHandler::Handle_D(const fxl::StringView& packet,
 
   // For now we only support detaching from the one process we have.
   if (packet[0] == ';') {
-    mx_koid_t pid;
-    if (!fxl::StringToNumberWithError<mx_koid_t>(packet.substr(1), &pid,
+    zx_koid_t pid;
+    if (!fxl::StringToNumberWithError<zx_koid_t>(packet.substr(1), &pid,
                                                  fxl::Base::k16)) {
       FXL_LOG(ERROR) << "D: bad pid: " << packet;
       return ReplyWithError(util::ErrorCode::INVAL, callback);
@@ -636,8 +636,8 @@ bool CommandHandler::Handle_M(const fxl::StringView& packet,
 
     // TODO(armansito): The error code definitions from GDB aren't really
     // granular enough to aid debug various error conditions (e.g. we may want
-    // to report why the memory write failed based on the mx_status_t returned
-    // from Magenta). (See TODO in util.h).
+    // to report why the memory write failed based on the zx_status_t returned
+    // from Zircon). (See TODO in util.h).
     return ReplyWithError(util::ErrorCode::PERM, callback);
   }
 
@@ -696,8 +696,8 @@ bool CommandHandler::Handle_T(const fxl::StringView& packet,
     return ReplyWithError(util::ErrorCode::NOENT, callback);
   }
 
-  mx_koid_t tid;
-  if (!fxl::StringToNumberWithError<mx_koid_t>(packet, &tid,
+  zx_koid_t tid;
+  if (!fxl::StringToNumberWithError<zx_koid_t>(packet, &tid,
                                                fxl::Base::k16)) {
     FXL_LOG(ERROR) << "T: Malformed thread id given: " << packet;
     return ReplyWithError(util::ErrorCode::INVAL, callback);
@@ -830,7 +830,7 @@ bool CommandHandler::HandleQueryCurrentThreadId(
   }
 
   std::string thread_id =
-      fxl::NumberToString<mx_koid_t>(current_thread->id(), fxl::Base::k16);
+      fxl::NumberToString<zx_koid_t>(current_thread->id(), fxl::Base::k16);
 
   std::string reply = "QC" + thread_id;
   callback(reply);
@@ -964,7 +964,7 @@ bool CommandHandler::HandleQueryThreadInfo(bool is_first,
   size_t buf_size = 0;
   current_process->ForEachLiveThread([&thread_ids, &buf_size](Thread* thread) {
     std::string thread_id =
-        fxl::NumberToString<mx_koid_t>(thread->id(), fxl::Base::k16);
+        fxl::NumberToString<zx_koid_t>(thread->id(), fxl::Base::k16);
     buf_size += thread_id.length();
     thread_ids.push_back(thread_id);
   });
@@ -1090,8 +1090,8 @@ bool CommandHandler::Handle_vAttach(const fxl::StringView& packet,
     return ReplyWithError(util::ErrorCode::PERM, callback);
   }
 
-  mx_koid_t pid;
-  if (!fxl::StringToNumberWithError<mx_koid_t>(packet, &pid, fxl::Base::k16)) {
+  zx_koid_t pid;
+  if (!fxl::StringToNumberWithError<zx_koid_t>(packet, &pid, fxl::Base::k16)) {
     FXL_LOG(ERROR) << "vAttach:: Malformed pid: " << packet;
     return ReplyWithError(util::ErrorCode::INVAL, callback);
   }
@@ -1163,8 +1163,8 @@ bool CommandHandler::Handle_vCont(const fxl::StringView& packet,
   bool action_list_ok = true;
   current_process->ForEachLiveThread(
       [&actions, ok_ptr = &action_list_ok](Thread * thread) {
-        mx_koid_t pid = thread->process()->id();
-        mx_koid_t tid = thread->id();
+        zx_koid_t pid = thread->process()->id();
+        zx_koid_t tid = thread->id();
         ThreadActionList::Action action = actions.GetAction(pid, tid);
         switch (action) {
           case ThreadActionList::Action::kStep:
@@ -1184,8 +1184,8 @@ bool CommandHandler::Handle_vCont(const fxl::StringView& packet,
     return ReplyWithError(util::ErrorCode::INVAL, callback);
 
   current_process->ForEachLiveThread([&actions](Thread* thread) {
-    mx_koid_t pid = thread->process()->id();
-    mx_koid_t tid = thread->id();
+    zx_koid_t pid = thread->process()->id();
+    zx_koid_t tid = thread->id();
     ThreadActionList::Action action = actions.GetAction(pid, tid);
     FXL_VLOG(1) << "vCont; Thread " << thread->GetDebugName()
                 << " state: " << thread->StateName(thread->state())
@@ -1229,8 +1229,8 @@ bool CommandHandler::Handle_vKill(const fxl::StringView& packet,
     return ReplyWithError(util::ErrorCode::PERM, callback);
   }
 
-  mx_koid_t pid;
-  if (!fxl::StringToNumberWithError<mx_koid_t>(packet, &pid, fxl::Base::k16)) {
+  zx_koid_t pid;
+  if (!fxl::StringToNumberWithError<zx_koid_t>(packet, &pid, fxl::Base::k16)) {
     FXL_LOG(ERROR) << "vAttach:: Malformed pid: " << packet;
     return ReplyWithError(util::ErrorCode::INVAL, callback);
   }
@@ -1298,10 +1298,10 @@ bool CommandHandler::Handle_vRun(const fxl::StringView& packet,
   FXL_DCHECK(current_process->IsAttached());
 
   // On Linux, the program is considered "live" after vRun, e.g. $pc is set. On
-  // Magenta, calling mx_process_start (called by launchpad_start, which is
+  // Zircon, calling zx_process_start (called by launchpad_start, which is
   // called by Process::Start()) creates a synthetic exception of type
-  // MX_EXCP_START if a debugger is attached to the process and halts until a
-  // call to mx_task_resume (i.e. called by Thread::Resume() in gdbserver).
+  // ZX_EXCP_START if a debugger is attached to the process and halts until a
+  // call to zx_task_resume (i.e. called by Thread::Resume() in gdbserver).
   if (!current_process->Start()) {
     FXL_LOG(ERROR) << "vRun: Failed to start process";
     return ReplyWithError(util::ErrorCode::PERM, callback);

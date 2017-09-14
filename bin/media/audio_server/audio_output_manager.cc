@@ -123,7 +123,7 @@ void AudioOutputManager::ShutdownOutput(AudioOutputPtr output) {
 
 void AudioOutputManager::HandlePlugStateChange(AudioOutputPtr output,
                                                bool plugged,
-                                               mx_time_t plug_time) {
+                                               zx_time_t plug_time) {
   FXL_DCHECK(output);
   if (output->UpdatePlugState(plugged, plug_time)) {
     if (plugged) {

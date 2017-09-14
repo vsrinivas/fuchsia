@@ -12,7 +12,7 @@ import (
 	"log"
 	"syscall/mx"
 	"syscall/mx/mxerror"
-	"syscall/mx/mxio"
+	"syscall/mx/fdio"
 	"unsafe"
 
 	"github.com/google/netstack/tcpip"
@@ -23,7 +23,7 @@ const (
 	c_sockaddr_in6_len         = int(unsafe.Sizeof(c_sockaddr_in6{}))
 	c_sockaddr_storage_len     = int(unsafe.Sizeof(c_sockaddr_storage{}))
 	c_mxrio_sockaddr_reply_len = int(unsafe.Sizeof(c_mxrio_sockaddr_reply{}))
-	c_mxio_socket_msg_hdr_len  = int(unsafe.Sizeof(c_mxio_socket_msg_hdr{}))
+	c_fdio_socket_msg_hdr_len  = int(unsafe.Sizeof(c_fdio_socket_msg_hdr{}))
 )
 
 func init() {
@@ -44,13 +44,13 @@ func (v *c_mxrio_sockopt_req_reply) Decode(data []byte) error {
 	return nil
 }
 
-func (v *c_mxrio_sockopt_req_reply) Encode(msg *mxio.Msg) {
+func (v *c_mxrio_sockopt_req_reply) Encode(msg *fdio.Msg) {
 	r := (*c_mxrio_sockopt_req_reply)(unsafe.Pointer(&msg.Data[0]))
 	*r = *v
 	msg.Datalen = uint32(unsafe.Sizeof(*v))
 }
 
-func (v *c_mxrio_gai_req) Decode(msg *mxio.Msg) error {
+func (v *c_mxrio_gai_req) Decode(msg *fdio.Msg) error {
 	data := msg.Data[:msg.Datalen]
 	if uintptr(len(data)) < unsafe.Sizeof(c_mxrio_gai_req{}) {
 		return fmt.Errorf("netstack: short c_mxrio_gai_req: %d", len(data))
@@ -60,13 +60,13 @@ func (v *c_mxrio_gai_req) Decode(msg *mxio.Msg) error {
 	return nil
 }
 
-func (v *c_mxrio_gai_reply) Encode(msg *mxio.Msg) {
+func (v *c_mxrio_gai_reply) Encode(msg *fdio.Msg) {
 	r := (*c_mxrio_gai_reply)(unsafe.Pointer(&msg.Data[0]))
 	*r = *v
 	msg.Datalen = uint32(unsafe.Sizeof(*v))
 }
 
-func (v *c_mxrio_sockaddr_reply) Encode(msg *mxio.Msg) {
+func (v *c_mxrio_sockaddr_reply) Encode(msg *fdio.Msg) {
 	r := (*c_mxrio_sockaddr_reply)(unsafe.Pointer(&msg.Data[0]))
 	*r = *v
 	msg.Datalen = uint32(unsafe.Sizeof(*v))
@@ -90,7 +90,7 @@ func (v *c_netc_get_if_info) Decode(data []byte) error {
 	return nil
 }
 
-func (v *c_netc_get_if_info) Encode(msg *mxio.Msg) {
+func (v *c_netc_get_if_info) Encode(msg *fdio.Msg) {
 	r := (*c_netc_get_if_info)(unsafe.Pointer(&msg.Data[0]))
 	*r = *v
 	msg.Datalen = uint32(unsafe.Sizeof(*v))
@@ -177,21 +177,21 @@ func readSockaddrIn(data []byte) (*tcpip.FullAddress, error) {
 }
 
 func readSocketMsgHdr(data []byte) (*tcpip.FullAddress, error) {
-	if len(data) < c_mxio_socket_msg_hdr_len {
+	if len(data) < c_fdio_socket_msg_hdr_len {
 		return nil, mxerror.Errorf(mx.ErrInvalidArgs, "reading socket msg header: too short: %d", len(data))
 	}
-	hdr := (*c_mxio_socket_msg_hdr)(unsafe.Pointer(&data[0]))
+	hdr := (*c_fdio_socket_msg_hdr)(unsafe.Pointer(&data[0]))
 	if hdr.addrlen == 0 {
 		return nil, nil
 	}
-	return readSockaddrIn(data) // first field of c_mxio_socket_msg_hdr is c_sockaddr_storage
+	return readSockaddrIn(data) // first field of c_fdio_socket_msg_hdr is c_sockaddr_storage
 }
 
 func writeSocketMsgHdr(data []byte, addr tcpip.FullAddress) error {
-	if len(data) < c_mxio_socket_msg_hdr_len {
+	if len(data) < c_fdio_socket_msg_hdr_len {
 		return mxerror.Errorf(mx.ErrInvalidArgs, "writing socket msg header: too short: %d", len(data))
 	}
-	hdr := (*c_mxio_socket_msg_hdr)(unsafe.Pointer(&data[0]))
+	hdr := (*c_fdio_socket_msg_hdr)(unsafe.Pointer(&data[0]))
 	l, err := writeSockaddrStorage(&hdr.addr, addr)
 	hdr.addrlen = l
 	hdr.flags = 0

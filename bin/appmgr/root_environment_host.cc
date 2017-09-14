@@ -32,7 +32,7 @@ void RootEnvironmentHost::GetApplicationEnvironmentServices(
 }
 
 void RootEnvironmentHost::ConnectToService(const fidl::String& interface_name,
-                                           mx::channel channel) {
+                                           zx::channel channel) {
   if (interface_name == ApplicationLoader::Name_) {
     loader_bindings_.AddBinding(
         &loader_,

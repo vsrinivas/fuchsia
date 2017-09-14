@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <mx/vmo.h>
+#include <zx/vmo.h>
 
 #include <string>
 
@@ -26,7 +26,7 @@ TEST(VMOAndFile, VmoFromFd) {
   EXPECT_TRUE(fd.is_valid());
   EXPECT_EQ(7, write(fd.get(), "Payload", 7));
 
-  mx::vmo vmo;
+  zx::vmo vmo;
   EXPECT_TRUE(VmoFromFd(std::move(fd), &vmo));
 
   std::string data;
@@ -46,7 +46,7 @@ TEST(VMOAndFile, VmoFromFilename) {
   EXPECT_EQ(16, write(fd.get(), "Another playload", 16));
   fd.reset();
 
-  mx::vmo vmo;
+  zx::vmo vmo;
   EXPECT_TRUE(VmoFromFilename(path.c_str(), &vmo));
 
   std::string data;

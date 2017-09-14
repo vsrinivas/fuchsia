@@ -32,13 +32,13 @@ void HandleWaiter::RegisterNatives(tonic::DartLibraryNatives* natives) {
 }
 
 fxl::RefPtr<HandleWaiter> HandleWaiter::Create(Handle* handle,
-                                               mx_signals_t signals,
+                                               zx_signals_t signals,
                                                Dart_Handle callback) {
   return fxl::MakeRefCounted<HandleWaiter>(handle, signals, callback);
 }
 
 HandleWaiter::HandleWaiter(Handle* handle,
-                           mx_signals_t signals,
+                           zx_signals_t signals,
                            Dart_Handle callback)
     : wait_(async_get_default(), handle->handle(), signals),
       handle_(handle),
@@ -46,13 +46,13 @@ HandleWaiter::HandleWaiter(Handle* handle,
   FXL_CHECK(handle_ != nullptr);
   FXL_CHECK(handle_->is_valid());
 
-  wait_.set_handler([this](async_t* async, mx_status_t status,
-                           const mx_packet_signal_t* signal) {
+  wait_.set_handler([this](async_t* async, zx_status_t status,
+                           const zx_packet_signal_t* signal) {
     OnWaitComplete(status, signal->observed);
     return ASYNC_WAIT_FINISHED;
   });
-  mx_status_t status = wait_.Begin();
-  FXL_DCHECK(status == MX_OK);
+  zx_status_t status = wait_.Begin();
+  FXL_DCHECK(status == ZX_OK);
 }
 
 HandleWaiter::~HandleWaiter() {
@@ -80,7 +80,7 @@ void HandleWaiter::Cancel() {
   FXL_DCHECK(!wait_.is_pending());
 }
 
-void HandleWaiter::OnWaitComplete(mx_status_t status, mx_signals_t pending) {
+void HandleWaiter::OnWaitComplete(zx_status_t status, zx_signals_t pending) {
   FXL_DCHECK(handle_);
 
   FXL_DCHECK(!callback_.is_empty());

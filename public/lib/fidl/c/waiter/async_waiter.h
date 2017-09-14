@@ -5,15 +5,15 @@
 #ifndef LIB_FIDL_C_WAITER_ASYNC_WAITER_H_
 #define LIB_FIDL_C_WAITER_ASYNC_WAITER_H_
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <stdint.h>
 
 typedef uint64_t FidlAsyncWaitID;
 static_assert(sizeof(uintptr_t) <= sizeof(uint64_t),
               "uintptr_t larger than uint64_t!");
 
-typedef void (*FidlAsyncWaitCallback)(mx_status_t result,
-                                      mx_signals_t pending,
+typedef void (*FidlAsyncWaitCallback)(zx_status_t result,
+                                      zx_signals_t pending,
                                       uint64_t count,
                                       void* closure);
 
@@ -33,15 +33,15 @@ typedef void (*FidlAsyncWaitCallback)(mx_status_t result,
 struct FidlAsyncWaiter {
   // Arranges for |callback| to be called on the current thread at some future
   // when |handle| satisfies |signals| or it is known that it will never satisfy
-  // |signals| (with the same behavior as |mx_object_wait_one()|).
+  // |signals| (with the same behavior as |zx_object_wait_one()|).
   //
   // |callback| will not be called in the nested context of |AsyncWait()|, but
   // only, e.g., from some run loop. |callback| is provided with the |closure|
   // argument as well as the result of the wait. For each call to |AsyncWait()|,
   // |callback| will be called at most once.
   //
-  // |handle| must not be closed or transferred (via |mx_channel_write()| or
-  // |mx_channel_call()|; this is equivalent to closing the handle) until either
+  // |handle| must not be closed or transferred (via |zx_channel_write()| or
+  // |zx_channel_call()|; this is equivalent to closing the handle) until either
   // the callback has been executed or the async wait has been cancelled using
   // the returned (nonzero) |FidlAsyncWaitID| (see |CancelWait()|). Otherwise,
   // an invalid (or, worse, re-used) handle may be waited on by the
@@ -49,9 +49,9 @@ struct FidlAsyncWaiter {
   //
   // Note that once the callback has been called, the returned |FidlAsyncWaitID|
   // becomes invalid.
-  FidlAsyncWaitID (*AsyncWait)(mx_handle_t handle,
-                               mx_signals_t signals,
-                               mx_time_t timeout,
+  FidlAsyncWaitID (*AsyncWait)(zx_handle_t handle,
+                               zx_signals_t signals,
+                               zx_time_t timeout,
                                FidlAsyncWaitCallback callback,
                                void* closure);
 

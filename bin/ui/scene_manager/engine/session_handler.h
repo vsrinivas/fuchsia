@@ -41,8 +41,8 @@ class SessionHandler : public scenic::Session,
   // scenic::Session interface methods.
   void Enqueue(::fidl::Array<scenic::OpPtr> ops) override;
   void Present(uint64_t presentation_time,
-               ::fidl::Array<mx::event> acquire_fences,
-               ::fidl::Array<mx::event> release_fences,
+               ::fidl::Array<zx::event> acquire_fences,
+               ::fidl::Array<zx::event> release_fences,
                const PresentCallback& callback) override;
 
   void HitTest(uint32_t node_id,

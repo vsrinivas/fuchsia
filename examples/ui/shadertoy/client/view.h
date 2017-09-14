@@ -34,7 +34,7 @@ class View : public mozart::BaseView {
 
   std::vector<scenic_lib::ShapeNode> nodes_;
 
-  const mx_time_t start_time_;
+  const zx_time_t start_time_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(View);
 };

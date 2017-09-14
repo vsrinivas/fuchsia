@@ -187,9 +187,9 @@ static void AddProgbits(elf::Reader* elf,
       struct pt_asid asid;
       int err;
 
-      /* The first loadable section in magenta.elf is
+      /* The first loadable section in zircon.elf is
          unusable to us. Plus we want to ignore it here.
-         This test is an attempt to not be too magenta specific. */
+         This test is an attempt to not be too zircon specific. */
       if (phdr.p_vaddr < phdr.p_paddr)
         continue;
 

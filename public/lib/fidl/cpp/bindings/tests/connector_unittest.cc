@@ -24,7 +24,7 @@ class ConnectorTest : public testing::Test {
  public:
   ConnectorTest() {}
 
-  void SetUp() override { mx::channel::create(0, &handle0_, &handle1_); }
+  void SetUp() override { zx::channel::create(0, &handle0_, &handle1_); }
 
   void TearDown() override { ClearAsyncWaiter(); }
 
@@ -39,8 +39,8 @@ class ConnectorTest : public testing::Test {
   void PumpMessages() { WaitForAsyncWaiter(); }
 
  protected:
-  mx::channel handle0_;
-  mx::channel handle1_;
+  zx::channel handle0_;
+  zx::channel handle1_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(ConnectorTest);
@@ -212,8 +212,8 @@ TEST_F(ConnectorTest, MessageWithHandles) {
   Message message1;
   AllocMessage(kText, &message1);
 
-  mx::channel handle0, handle1;
-  mx::channel::create(0, &handle0, &handle1);
+  zx::channel handle0, handle1;
+  zx::channel::create(0, &handle0, &handle1);
   message1.mutable_handles()->push_back(handle0.release());
 
   connector0.Accept(&message1);
@@ -238,9 +238,9 @@ TEST_F(ConnectorTest, MessageWithHandles) {
 
   // Now send a message to the transferred handle and confirm it's sent through
   // to the orginal pipe.
-  mx::channel smph;
+  zx::channel smph;
   smph.reset(message_received.handles()->front());
-  message_received.mutable_handles()->front() = MX_HANDLE_INVALID;
+  message_received.mutable_handles()->front() = ZX_HANDLE_INVALID;
   // |smph| now owns this handle.
 
   internal::Connector connector_received(std::move(smph));

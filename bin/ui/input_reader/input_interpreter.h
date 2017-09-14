@@ -6,9 +6,9 @@
 #define APPS_MOZART_SRC_INPUT_READER_INPUT_DEVICE_H_
 
 #include <hid/acer12.h>
-#include <magenta/device/input.h>
-#include <magenta/types.h>
-#include <mx/event.h>
+#include <zircon/device/input.h>
+#include <zircon/types.h>
+#include <zx/event.h>
 
 #include <map>
 #include <string>
@@ -38,7 +38,7 @@ class InputInterpreter {
   bool Read(bool discard);
 
   const std::string& name() const { return name_; }
-  mx_handle_t handle() { return event_.get(); }
+  zx_handle_t handle() { return event_.get(); }
 
  private:
   enum class TouchDeviceType {
@@ -52,11 +52,11 @@ class InputInterpreter {
                    int fd,
                    mozart::InputDeviceRegistry* registry);
 
-  mx_status_t GetProtocol(int* out_proto);
-  mx_status_t GetReportDescriptionLength(size_t* out_report_desc_len);
-  mx_status_t GetReportDescription(uint8_t* out_buf,
+  zx_status_t GetProtocol(int* out_proto);
+  zx_status_t GetReportDescriptionLength(size_t* out_report_desc_len);
+  zx_status_t GetReportDescription(uint8_t* out_buf,
                                    size_t out_report_desc_len);
-  mx_status_t GetMaxReportLength(input_report_size_t* out_max_report_len);
+  zx_status_t GetMaxReportLength(input_report_size_t* out_max_report_len);
 
   void NotifyRegistry();
 
@@ -71,7 +71,7 @@ class InputInterpreter {
   const std::string name_;
   mozart::InputDeviceRegistry* registry_;
 
-  mx::event event_;
+  zx::event event_;
   std::vector<uint8_t> report_;
   input_report_size_t max_report_len_ = 0;
 

@@ -4,12 +4,12 @@
 
 #include "garnet/bin/ui/scene_manager/acquire_fence_set.h"
 
-#include <mx/time.h>
+#include <zx/time.h>
 #include "lib/fxl/logging.h"
 
 namespace scene_manager {
 
-AcquireFenceSet::AcquireFenceSet(::fidl::Array<mx::event> acquire_fences)
+AcquireFenceSet::AcquireFenceSet(::fidl::Array<zx::event> acquire_fences)
     : fences_(std::move(acquire_fences)) {}
 
 AcquireFenceSet::~AcquireFenceSet() {
@@ -49,8 +49,8 @@ void AcquireFenceSet::ClearHandlers() {
   handler_keys_.clear();
 }
 
-void AcquireFenceSet::OnHandleReady(mx_handle_t handle,
-                                    mx_signals_t pending,
+void AcquireFenceSet::OnHandleReady(zx_handle_t handle,
+                                    zx_signals_t pending,
                                     uint64_t count) {
   FXL_DCHECK(pending & kFenceSignalledOrClosed);
   FXL_DCHECK(ready_callback_);

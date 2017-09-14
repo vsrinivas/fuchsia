@@ -33,7 +33,7 @@ BaseView::BaseView(ViewManagerPtr view_manager,
   FXL_DCHECK(view_manager_);
   FXL_DCHECK(view_owner_request);
 
-  mx::eventpair parent_export_token;
+  zx::eventpair parent_export_token;
   parent_node_.BindAsRequest(&parent_export_token);
   view_manager_->CreateView(view_.NewRequest(), std::move(view_owner_request),
                             view_listener_binding_.NewBinding(),
@@ -74,10 +74,10 @@ void BaseView::InvalidateScene() {
 
   invalidate_pending_ = true;
   if (!present_pending_)
-    PresentScene(mx_time_get(MX_CLOCK_MONOTONIC));
+    PresentScene(zx_time_get(ZX_CLOCK_MONOTONIC));
 }
 
-void BaseView::PresentScene(mx_time_t presentation_time) {
+void BaseView::PresentScene(zx_time_t presentation_time) {
   FXL_DCHECK(!present_pending_);
 
   present_pending_ = true;
@@ -85,7 +85,7 @@ void BaseView::PresentScene(mx_time_t presentation_time) {
       presentation_time, [this](scenic::PresentationInfoPtr info) {
         FXL_DCHECK(present_pending_);
 
-        mx_time_t next_presentation_time =
+        zx_time_t next_presentation_time =
             info->presentation_time + info->presentation_interval;
 
         bool present_needed = false;

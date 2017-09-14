@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mx/socket.h>
+#include <zx/socket.h>
 
 #include <vector>
 
@@ -14,7 +14,7 @@ namespace fsl {
 namespace {
 
 TEST(BlockingDrain, BlockingDrainFrom) {
-  mx::socket socket = WriteStringToSocket("Hello");
+  zx::socket socket = WriteStringToSocket("Hello");
   std::vector<char> buffer;
 
   EXPECT_TRUE(

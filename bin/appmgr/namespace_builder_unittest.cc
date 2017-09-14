@@ -22,7 +22,7 @@ TEST(NamespaceBuilder, Control) {
   NamespaceBuilder builder;
   builder.AddSandbox(sandbox);
 
-  mxio_flat_namespace_t* flat = builder.Build();
+  fdio_flat_namespace_t* flat = builder.Build();
   EXPECT_EQ(3u, flat->count);
 
   std::vector<std::string> paths;
@@ -37,7 +37,7 @@ TEST(NamespaceBuilder, Control) {
               paths.end());
 
   for (size_t i = 0; i < flat->count; ++i)
-    mx_handle_close(flat->handle[i]);
+    zx_handle_close(flat->handle[i]);
 }
 
 }  // namespace

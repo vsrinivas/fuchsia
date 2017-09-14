@@ -5,7 +5,7 @@
 #ifndef APPLICATION_SRC_MANAGER_APPLICATION_CONTROLLER_IMPL_H_
 #define APPLICATION_SRC_MANAGER_APPLICATION_CONTROLLER_IMPL_H_
 
-#include <mx/process.h>
+#include <zx/process.h>
 
 #include "garnet/lib/farfs/file_system.h"
 #include "lib/app/fidl/application_controller.fidl.h"
@@ -24,7 +24,7 @@ class ApplicationControllerImpl : public ApplicationController,
       fidl::InterfaceRequest<ApplicationController> request,
       ApplicationEnvironmentImpl* environment,
       std::unique_ptr<archive::FileSystem> fs,
-      mx::process process,
+      zx::process process,
       std::string path);
   ~ApplicationControllerImpl() override;
 
@@ -37,14 +37,14 @@ class ApplicationControllerImpl : public ApplicationController,
 
  private:
   // |fsl::MessageLoopHandler| implementation:
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override;
+  void OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) override;
 
   bool SendReturnCodeIfTerminated();
 
   fidl::Binding<ApplicationController> binding_;
   ApplicationEnvironmentImpl* environment_;
   std::unique_ptr<archive::FileSystem> fs_;
-  mx::process process_;
+  zx::process process_;
   std::string path_;
   std::vector<WaitCallback> wait_callbacks_;
 

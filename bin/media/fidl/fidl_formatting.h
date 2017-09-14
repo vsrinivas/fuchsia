@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <mx/handle.h>
+#include <zx/handle.h>
 
 #include "lib/media/fidl/media_result.fidl.h"
 #include "lib/media/fidl/media_source.fidl.h"
@@ -62,7 +62,7 @@ std::ostream& operator<<(std::ostream& os,
                          const network::NetworkErrorPtr& value);
 
 template <typename T>
-std::ostream& operator<<(std::ostream& os, const mx::object<T>& value) {
+std::ostream& operator<<(std::ostream& os, const zx::object<T>& value) {
   if (value) {
     return os << "<valid>";
   } else {

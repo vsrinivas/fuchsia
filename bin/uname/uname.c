@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 enum { DUMP_KERNEL_NAME       = 1U << 1,
        DUMP_NODENAME          = 1U << 2,
@@ -104,7 +104,7 @@ int main(int argc, char* const argv[]) {
 
     /* Kernel name */
     if (selected_options & DUMP_KERNEL_NAME) {
-        print_string("Magenta");
+        print_string("Zircon");
     }
 
     /* Network name */
@@ -126,7 +126,7 @@ int main(int argc, char* const argv[]) {
     /* Kernel version */
     if (selected_options & DUMP_KERNEL_VERSION) {
         char kernel_version[256];
-        if (mx_system_get_version(kernel_version, sizeof(kernel_version)) == MX_OK) {
+        if (zx_system_get_version(kernel_version, sizeof(kernel_version)) == ZX_OK) {
             print_string(kernel_version);
         } else {
             print_string("unknown");

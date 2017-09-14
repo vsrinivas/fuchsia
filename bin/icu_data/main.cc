@@ -16,7 +16,7 @@ class App {
  public:
   App() : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     if (!icu_data_.LoadData())
-      exit(MX_ERR_UNAVAILABLE);
+      exit(ZX_ERR_UNAVAILABLE);
     context_->outgoing_services()->AddService<ICUDataProvider>(
         [this](fidl::InterfaceRequest<ICUDataProvider> request) {
           icu_data_.AddBinding(std::move(request));

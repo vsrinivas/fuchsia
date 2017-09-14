@@ -29,7 +29,7 @@ class NetStubResponder {
     FXL_DCHECK(application_context);
 
     service_namespace_.AddServiceForName(
-        [this](mx::channel channel) {
+        [this](zx::channel channel) {
           stubs_.insert(std::shared_ptr<TStub>(
               new TStub(actual_, std::move(channel), this)));
         },

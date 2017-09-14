@@ -28,7 +28,7 @@ class DeviceServiceProvider : public app::ServiceProvider {
   ~DeviceServiceProvider() override;
 
   void ConnectToService(const fidl::String& service_name,
-                        mx::channel channel) override;
+                        zx::channel channel) override;
 
  private:
   DeviceServiceProvider(const std::string& device_name,

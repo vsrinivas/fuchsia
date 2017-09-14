@@ -67,7 +67,7 @@ const interfaceOtherDeclTmplText = `
 {{- $interface := . -}}
 type {{$interface.Name}}_Request bindings.InterfaceRequest
 
-func (r {{$interface.Name}}_Request) PassChannel() mx.Handle {
+func (r {{$interface.Name}}_Request) PassChannel() zx.Handle {
 	i := bindings.InterfaceRequest(r)
 	return i.PassChannel()
 }
@@ -86,7 +86,7 @@ type {{$interface.Name}}_Binder interface {
 	Bind(request {{$interface.Name}}_Request)
 }
 
-func (f *{{$interface.Name}}_ServiceBinder) Bind(handle mx.Handle) {
+func (f *{{$interface.Name}}_ServiceBinder) Bind(handle zx.Handle) {
 	request := {{$interface.Name}}_Request{bindings.NewChannelHandleOwner(handle)}
 	f.Delegate.Bind(request)
 }

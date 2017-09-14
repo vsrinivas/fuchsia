@@ -7,7 +7,7 @@
 #include <audio-utils/audio-input.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <magenta/device/audio.h>
+#include <zircon/device/audio.h>
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>
 
@@ -25,8 +25,8 @@ constexpr uint32_t AudioInput::kPacketsPerSecond;
 std::shared_ptr<AudioInput> AudioInput::Create(const std::string& device_path) {
   std::shared_ptr<AudioInput> device(new AudioInput(device_path));
 
-  mx_status_t result = device->Initalize();
-  if (result != MX_OK) {
+  zx_status_t result = device->Initalize();
+  if (result != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to open and initialize audio input device \""
                    << device_path << "\" (res " << result << ")";
     return nullptr;
@@ -41,23 +41,23 @@ AudioInput::AudioInput(const std::string& device_path)
   audio_input_ = audio::utils::AudioInput::Create(device_path.c_str());
 }
 
-mx_status_t AudioInput::Initalize() {
+zx_status_t AudioInput::Initalize() {
   if (state_ != State::kUninitialized) {
-    return MX_ERR_BAD_STATE;
+    return ZX_ERR_BAD_STATE;
   }
 
   if (audio_input_ == nullptr) {
-    return MX_ERR_NO_MEMORY;
+    return ZX_ERR_NO_MEMORY;
   }
 
-  mx_status_t res = audio_input_->Open();
-  if (res != MX_OK) {
+  zx_status_t res = audio_input_->Open();
+  if (res != ZX_OK) {
     return res;
   }
 
   fbl::Vector<audio_stream_format_range_t> formats;
   res = audio_input_->GetSupportedFormats(&formats);
-  if (res != MX_OK) {
+  if (res != ZX_OK) {
     return res;
   }
 
@@ -67,7 +67,7 @@ mx_status_t AudioInput::Initalize() {
 
   state_ = State::kStopped;
 
-  return MX_OK;
+  return ZX_OK;
 }
 
 AudioInput::~AudioInput() {
@@ -177,7 +177,7 @@ void AudioInput::Worker() {
   FXL_DCHECK((state_ == State::kStarted) || (state_ == State::kStopping));
   FXL_DCHECK(config_valid_);
 
-  mx_status_t res;
+  zx_status_t res;
   uint32_t cached_frames_per_packet = frames_per_packet();
   uint32_t cached_packet_size = packet_size();
 
@@ -190,7 +190,7 @@ void AudioInput::Worker() {
   res =
       audio_input_->SetFormat(configured_frames_per_second_,
                               configured_channels_, configured_sample_format_);
-  if (res != MX_OK) {
+  if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed set device format to "
                    << configured_frames_per_second_ << " Hz "
                    << configured_channels_ << " channel"
@@ -203,7 +203,7 @@ void AudioInput::Worker() {
   // kPacketPerRingBuffer packets.
   uint32_t rb_frame_count = cached_packet_size * kPacketsPerRingBuffer;
   res = audio_input_->GetBuffer(rb_frame_count, 0);
-  if (res != MX_OK) {
+  if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed fetch ring buffer (" << rb_frame_count
                    << " frames, res = " << res << ")";
     return;
@@ -224,7 +224,7 @@ void AudioInput::Worker() {
 
   // Start capturing audio.
   res = audio_input_->StartRingBuffer();
-  if (res != MX_OK) {
+  if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to start capture (res = " << res << ")";
     return;
   }
@@ -237,10 +237,10 @@ void AudioInput::Worker() {
       configured_bytes_per_frame_;
 
   TimelineFunction ticks_to_wr_ptr(audio_input_->start_ticks(), -fifo_frames,
-                                   mx_ticks_per_second(),
+                                   zx_ticks_per_second(),
                                    configured_frames_per_second_);
 
-  // TODO(johngro) : If/when the magenta APIs support specifying deadlines using
+  // TODO(johngro) : If/when the zircon APIs support specifying deadlines using
   // the tick timeline instead of the clock monotonic timeline, use that
   // instead.
   TimelineRate nsec_per_frame(1000000000u, configured_frames_per_second_);
@@ -248,7 +248,7 @@ void AudioInput::Worker() {
   while (state_ == State::kStarted) {
     // Steady state operation.  Start by figuring out how many full packets we
     // have waiting for us in the ring buffer.
-    uint64_t now_ticks = mx_ticks_get();
+    uint64_t now_ticks = zx_ticks_get();
     int64_t wr_ptr = ticks_to_wr_ptr.Apply(now_ticks);
     int64_t pending_packets = (wr_ptr - frames_rxed) / cached_frames_per_packet;
 
@@ -329,7 +329,7 @@ void AudioInput::Worker() {
     int64_t needed_frames = frames_rxed + cached_frames_per_packet + 1 - wr_ptr;
     int64_t sleep_nsec = nsec_per_frame.Scale(needed_frames);
     if (sleep_nsec > 0) {
-      mx_nanosleep(mx_deadline_after(sleep_nsec));
+      zx_nanosleep(zx_deadline_after(sleep_nsec));
     }
   }
 }

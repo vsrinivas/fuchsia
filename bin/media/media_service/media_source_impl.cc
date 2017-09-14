@@ -180,7 +180,7 @@ MediaSourceImpl::Stream::Stream(
           bool succeeded, const ConsumerGetter& consumer_getter,
           const ProducerGetter& producer_getter,
           std::unique_ptr<StreamType> stream_type,
-          std::vector<mx_koid_t> converter_koids) {
+          std::vector<zx_koid_t> converter_koids) {
         FXL_DCHECK(!consumer_getter);
         if (succeeded) {
           FXL_DCHECK(producer_getter);

@@ -7,8 +7,8 @@
 #include <cinttypes>
 #include <string>
 
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/exception.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/exception.h>
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -39,7 +39,7 @@ const char* Thread::StateName(Thread::State state) {
   return "(unknown)";
 }
 
-Thread::Thread(Process* process, mx_handle_t handle, mx_koid_t id)
+Thread::Thread(Process* process, zx_handle_t handle, zx_koid_t id)
     : process_(process),
       handle_(handle),
       id_(id),
@@ -47,8 +47,8 @@ Thread::Thread(Process* process, mx_handle_t handle, mx_koid_t id)
       breakpoints_(this),
       weak_ptr_factory_(this) {
   FXL_DCHECK(process_);
-  FXL_DCHECK(handle_ != MX_HANDLE_INVALID);
-  FXL_DCHECK(id_ != MX_KOID_INVALID);
+  FXL_DCHECK(handle_ != ZX_HANDLE_INVALID);
+  FXL_DCHECK(id_ != ZX_KOID_INVALID);
 
   registers_ = arch::Registers::Create(this);
   FXL_DCHECK(registers_.get());
@@ -88,9 +88,9 @@ bool Thread::IsLive() const {
 
 void Thread::Clear() {
   // We close the handle here so the o/s will release the thread.
-  if (handle_ != MX_HANDLE_INVALID)
-    mx_handle_close(handle_);
-  handle_ = MX_HANDLE_INVALID;
+  if (handle_ != ZX_HANDLE_INVALID)
+    zx_handle_close(handle_);
+  handle_ = ZX_HANDLE_INVALID;
 }
 
 fxl::WeakPtr<Thread> Thread::AsWeakPtr() {
@@ -106,11 +106,11 @@ arch::GdbSignal Thread::GetGdbSignal() const {
   return arch::ComputeGdbSignal(*exception_context_);
 }
 
-void Thread::OnException(const mx_excp_type_t type,
-                         const mx_exception_context_t& context) {
+void Thread::OnException(const zx_excp_type_t type,
+                         const zx_exception_context_t& context) {
   // TODO(dje): While having a pointer allows for a simple "do we have a
   // context" check, it might be simpler to just store the struct in the class.
-  exception_context_.reset(new mx_exception_context_t);
+  exception_context_.reset(new zx_exception_context_t);
   *exception_context_ = context;
 
   State prev_state = state_;
@@ -120,7 +120,7 @@ void Thread::OnException(const mx_excp_type_t type,
   // If the user wants to try the singlestep again it must be re-requested.
   // If the thread has exited we may not be able to, and there's no point
   // anyway.
-  if (prev_state == State::kStepping && type != MX_EXCP_THREAD_EXITING) {
+  if (prev_state == State::kStepping && type != ZX_EXCP_THREAD_EXITING) {
     FXL_DCHECK(breakpoints_.SingleStepBreakpointInserted());
     if (!breakpoints_.RemoveSingleStepBreakpoint()) {
       FXL_LOG(ERROR) << "Unable to clear single-step bkpt";
@@ -142,10 +142,10 @@ bool Thread::Resume() {
   // thread).
   FXL_VLOG(2) << "Thread " << GetName() << " is now running";
 
-  mx_status_t status = mx_task_resume(handle_, MX_RESUME_EXCEPTION);
+  zx_status_t status = zx_task_resume(handle_, ZX_RESUME_EXCEPTION);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to resume thread: "
-                   << util::MxErrorString(status);
+                   << util::ZxErrorString(status);
     return false;
   }
 
@@ -166,24 +166,24 @@ void Thread::ResumeForExit() {
 
   FXL_VLOG(2) << "Thread " << GetName() << " is exiting";
 
-  auto status = mx_task_resume(handle_, MX_RESUME_EXCEPTION);
+  auto status = zx_task_resume(handle_, ZX_RESUME_EXCEPTION);
   if (status < 0) {
     // This might fail if the process has been killed in the interim.
     // It shouldn't otherwise fail. Just log the failure, nothing else
     // we can do.
-    mx_info_process_t info;
-    auto info_status = mx_object_get_info(process()->handle(),
-                                          MX_INFO_PROCESS, &info,
+    zx_info_process_t info;
+    auto info_status = zx_object_get_info(process()->handle(),
+                                          ZX_INFO_PROCESS, &info,
                                           sizeof(info), nullptr, nullptr);
-    if (info_status != MX_OK) {
+    if (info_status != ZX_OK) {
       FXL_LOG(ERROR) << "error getting process info: "
-                     << util::MxErrorString(info_status);
+                     << util::ZxErrorString(info_status);
     }
-    if (info_status == MX_OK && info.exited) {
+    if (info_status == ZX_OK && info.exited) {
       FXL_VLOG(2) << "Process " << process()->GetName() << " exited too";
     } else {
       FXL_LOG(ERROR) << "Failed to resume thread for exit: "
-                     << util::MxErrorString(status);
+                     << util::ZxErrorString(status);
     }
   }
 
@@ -202,7 +202,7 @@ bool Thread::Step() {
     FXL_LOG(ERROR) << "Failed refreshing gregs";
     return false;
   }
-  mx_vaddr_t pc = registers_->GetPC();
+  zx_vaddr_t pc = registers_->GetPC();
 
   if (!breakpoints_.InsertSingleStepBreakpoint(pc))
     return false;
@@ -212,11 +212,11 @@ bool Thread::Step() {
   // thread).
   FXL_LOG(INFO) << "Thread " << GetName() << " is now stepping";
 
-  mx_status_t status = mx_task_resume(handle_, MX_RESUME_EXCEPTION);
+  zx_status_t status = zx_task_resume(handle_, ZX_RESUME_EXCEPTION);
   if (status < 0) {
     breakpoints_.RemoveSingleStepBreakpoint();
     FXL_LOG(ERROR) << "Failed to resume thread for step: "
-                   << util::MxErrorString(status);
+                   << util::ZxErrorString(status);
     return false;
   }
 

@@ -4,7 +4,7 @@
 
 #include "lib/fsl/io/redirection.h"
 
-#include <magenta/processargs.h>
+#include <zircon/processargs.h>
 
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
@@ -13,13 +13,13 @@ namespace fsl {
 namespace {
 
 TEST(Redirection, CreateRedirectedSocket) {
-  mx::socket socket;
+  zx::socket socket;
   StartupHandle startup_handle;
-  mx_status_t status = CreateRedirectedSocket(2, &socket, &startup_handle);
+  zx_status_t status = CreateRedirectedSocket(2, &socket, &startup_handle);
 
-  ASSERT_EQ(MX_OK, status);
+  ASSERT_EQ(ZX_OK, status);
   EXPECT_TRUE(socket);
-  EXPECT_EQ(static_cast<uint32_t>(PA_HND(PA_MXIO_PIPE, 2)),
+  EXPECT_EQ(static_cast<uint32_t>(PA_HND(PA_FDIO_PIPE, 2)),
             startup_handle.id);
   EXPECT_TRUE(startup_handle.handle);
 }

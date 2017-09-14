@@ -46,8 +46,8 @@ void SessionHandler::Enqueue(::fidl::Array<scenic::OpPtr> ops) {
 }
 
 void SessionHandler::Present(uint64_t presentation_time,
-                             ::fidl::Array<mx::event> acquire_fences,
-                             ::fidl::Array<mx::event> release_fences,
+                             ::fidl::Array<zx::event> acquire_fences,
+                             ::fidl::Array<zx::event> release_fences,
                              const PresentCallback& callback) {
   session_->ScheduleUpdate(presentation_time, std::move(buffered_ops_),
                            std::move(acquire_fences), std::move(release_fences),

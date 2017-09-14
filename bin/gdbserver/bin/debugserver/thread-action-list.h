@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
@@ -36,17 +36,17 @@ class ThreadActionList final {
   // Utility class to hold one entry in ThreadActionList.
   class Entry final {
    public:
-    Entry(Action action, mx_koid_t pid, mx_koid_t tid);
+    Entry(Action action, zx_koid_t pid, zx_koid_t tid);
     ~Entry() = default;
 
     Action action() const { return action_; }
-    mx_koid_t pid() const { return pid_; }
-    mx_koid_t tid() const { return tid_; }
+    zx_koid_t pid() const { return pid_; }
+    zx_koid_t tid() const { return tid_; }
 
     // Call this to upgrade a "pick one" entry (tid == 0) to the chosen value.
-    void set_picked_tid(mx_koid_t tid);
+    void set_picked_tid(zx_koid_t tid);
 
-    bool Contains(mx_koid_t pid, mx_koid_t tid) const;
+    bool Contains(zx_koid_t pid, zx_koid_t tid) const;
 
    private:
     friend class ThreadActionList;
@@ -55,21 +55,21 @@ class ThreadActionList final {
     // random one" zero values do not end up in |pid_|. The "pick one" must be
     // done before an Entry is created. The "pick one" for |tid_| is resolved
     // later though, after the Entry is created.
-    mx_koid_t pid_;
-    mx_koid_t tid_;
+    zx_koid_t pid_;
+    zx_koid_t tid_;
   };
 
   // For pid,tid values, means "all processes" or "all threads".
   // TODO(dje): This is a legitimate value, we "should" use a different value,
   // but this is fine for now. The kernel reserves the first 1K, possibly we
   // could use one of those.
-  static constexpr mx_koid_t kAll = ~0ull;
+  static constexpr zx_koid_t kAll = ~0ull;
 
   static bool DecodeAction(char c, Action* out_action);
 
   static const char* ActionToString(Action action);
 
-  ThreadActionList(const fxl::StringView& str, mx_koid_t cur_proc);
+  ThreadActionList(const fxl::StringView& str, zx_koid_t cur_proc);
 
   ~ThreadActionList() = default;
 
@@ -83,7 +83,7 @@ class ThreadActionList final {
   void MarkPickOnesResolved() { pick_ones_resolved_ = true; }
 
   // Return the action for |thread|.
-  Action GetAction(mx_koid_t pid, mx_koid_t tid) const;
+  Action GetAction(zx_koid_t pid, zx_koid_t tid) const;
 
   Action default_action() const { return default_action_; }
   const std::vector<Entry>& actions() const { return actions_; }

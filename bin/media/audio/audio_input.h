@@ -8,8 +8,8 @@
 #include <string>
 #include <thread>
 
-#include <magenta/device/audio.h>
-#include <magenta/types.h>
+#include <zircon/device/audio.h>
+#include <zircon/types.h>
 #include <fbl/unique_ptr.h>
 
 #include "garnet/bin/media/framework/models/active_source.h"
@@ -53,7 +53,7 @@ class AudioInput : public ActiveSource {
   enum class State { kUninitialized, kStopped, kStarted, kStopping };
 
   AudioInput(const std::string& device_path);
-  mx_status_t Initalize();
+  zx_status_t Initalize();
 
   void Worker();
 

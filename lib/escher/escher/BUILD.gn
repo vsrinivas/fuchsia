@@ -224,7 +224,7 @@ static_library("escher") {
 
   if (is_fuchsia) {
     public_deps += [ "//magma:vulkan" ]
-    deps += [ "//magenta/system/ulib/trace" ]
+    deps += [ "//zircon/system/ulib/trace" ]
   }
 
   if (is_linux) {

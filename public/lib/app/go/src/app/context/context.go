@@ -10,7 +10,7 @@ import (
 	"fmt"
 
 	"syscall/mx"
-	"syscall/mx/mxio"
+	"syscall/mx/fdio"
 	"syscall/mx/mxruntime"
 
 	"garnet/public/lib/app/fidl/application_environment"
@@ -39,7 +39,7 @@ func getServiceRoot() mx.Handle {
 	}
 
 	// TODO: Use "/svc" once that actually works.
-	err = mxio.ServiceConnect("/svc/.", c0.Handle)
+	err = fdio.ServiceConnect("/svc/.", c0.Handle)
 	if err != nil {
 		return mx.HANDLE_INVALID
 	}
@@ -99,7 +99,7 @@ func (c *Context) ConnectToEnvService(r interfaceRequest) {
 }
 
 func (c *Context) ConnectToEnvServiceAt(name string, h mx.Handle) {
-	err := mxio.ServiceConnectAt(c.serviceRoot, name, h)
+	err := fdio.ServiceConnectAt(c.serviceRoot, name, h)
 	if err != nil {
 		panic(fmt.Sprintf("ConnectToEnvService: %v: %v", name, err))
 	}

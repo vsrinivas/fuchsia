@@ -7,7 +7,7 @@
 #include <cmath>
 
 #if defined(countof)
-// Workaround for compiler error due to Magenta defining countof() as a macro.
+// Workaround for compiler error due to Zircon defining countof() as a macro.
 // Redefines countof() using GLM_COUNTOF(), which currently provides a more
 // sophisticated implementation anyway.
 #undef countof
@@ -341,7 +341,7 @@ void Presentation::HandleAltPrtSc() {
       return;
   }
 
-  animation_start_time_ = mx_time_get(MX_CLOCK_MONOTONIC);
+  animation_start_time_ = zx_time_get(ZX_CLOCK_MONOTONIC);
   UpdateAnimation(animation_start_time_);
 }
 

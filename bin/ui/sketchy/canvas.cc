@@ -118,7 +118,7 @@ bool CanvasImpl::ApplyScenicImportResourceOp(
 // Delegates ImportNodeOp to Scenic.
 // @param id Id of the node that the client exports.
 // @param token Token of the node that the client exports.
-bool CanvasImpl::ScenicImportNode(ResourceId id, mx::eventpair token) {
+bool CanvasImpl::ScenicImportNode(ResourceId id, zx::eventpair token) {
   FXL_LOG(INFO) << "CanvasImpl::ScenicImportNode()";
   // As a client of Scenic, Canvas creates an ImportNode given token.
   auto node = fxl::MakeRefCounted<ImportNode>(session_, std::move(token));

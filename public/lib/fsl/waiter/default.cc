@@ -12,7 +12,7 @@ namespace {
 
 class HandleWatcher : public MessageLoopHandler {
  public:
-  HandleWatcher(mx_handle_t handle,
+  HandleWatcher(zx_handle_t handle,
                 FidlAsyncWaitCallback callback,
                 void* context)
       : key_(0), handle_(handle), callback_(callback), context_(context) {}
@@ -22,11 +22,11 @@ class HandleWatcher : public MessageLoopHandler {
       MessageLoop::GetCurrent()->RemoveHandler(key_);
   }
 
-  void Start(mx_signals_t signals, mx_time_t timeout) {
+  void Start(zx_signals_t signals, zx_time_t timeout) {
     MessageLoop* message_loop = MessageLoop::GetCurrent();
     FXL_DCHECK(message_loop) << "DefaultAsyncWaiter requires a MessageLoop";
     fxl::TimeDelta timeout_delta;
-    if (timeout == MX_TIME_INFINITE)
+    if (timeout == ZX_TIME_INFINITE)
       timeout_delta = fxl::TimeDelta::Max();
     else
       timeout_delta = fxl::TimeDelta::FromNanoseconds(timeout);
@@ -34,18 +34,18 @@ class HandleWatcher : public MessageLoopHandler {
   }
 
  protected:
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override {
+  void OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) override {
     FXL_DCHECK(handle_ == handle);
-    CallCallback(MX_OK, pending, count);
+    CallCallback(ZX_OK, pending, count);
   }
 
-  void OnHandleError(mx_handle_t handle, mx_status_t status) override {
+  void OnHandleError(zx_handle_t handle, zx_status_t status) override {
     FXL_DCHECK(handle_ == handle);
-    CallCallback(status, MX_SIGNAL_NONE, 0);
+    CallCallback(status, ZX_SIGNAL_NONE, 0);
   }
 
  private:
-  void CallCallback(mx_status_t status, mx_signals_t pending, uint64_t count) {
+  void CallCallback(zx_status_t status, zx_signals_t pending, uint64_t count) {
     FidlAsyncWaitCallback callback = callback_;
     void* context = context_;
     delete this;
@@ -53,16 +53,16 @@ class HandleWatcher : public MessageLoopHandler {
   }
 
   MessageLoop::HandlerKey key_;
-  mx_handle_t handle_;
+  zx_handle_t handle_;
   FidlAsyncWaitCallback callback_;
   void* context_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(HandleWatcher);
 };
 
-FidlAsyncWaitID AsyncWait(mx_handle_t handle,
-                          mx_signals_t signals,
-                          mx_time_t timeout,
+FidlAsyncWaitID AsyncWait(zx_handle_t handle,
+                          zx_signals_t signals,
+                          zx_time_t timeout,
                           FidlAsyncWaitCallback callback,
                           void* context) {
   // This instance will be deleted when done or cancelled.

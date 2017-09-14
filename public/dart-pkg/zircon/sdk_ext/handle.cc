@@ -16,28 +16,28 @@ namespace dart {
 
 IMPLEMENT_WRAPPERTYPEINFO(zircon, Handle);
 
-Handle::Handle(mx_handle_t handle) : handle_(handle) {}
+Handle::Handle(zx_handle_t handle) : handle_(handle) {}
 
 Handle::~Handle() {
   if (is_valid()) {
-    mx_status_t status = Close();
-    FXL_DCHECK(status == MX_OK);
+    zx_status_t status = Close();
+    FXL_DCHECK(status == ZX_OK);
   }
 }
 
-fxl::RefPtr<Handle> Handle::Create(mx_handle_t handle) {
+fxl::RefPtr<Handle> Handle::Create(zx_handle_t handle) {
   return fxl::MakeRefCounted<Handle>(handle);
 }
 
 Dart_Handle Handle::CreateInvalid() {
-  return ToDart(Create(MX_HANDLE_INVALID));
+  return ToDart(Create(ZX_HANDLE_INVALID));
 }
 
-mx_handle_t Handle::ReleaseHandle() {
+zx_handle_t Handle::ReleaseHandle() {
   FXL_DCHECK(is_valid());
 
-  mx_handle_t handle = handle_;
-  handle_ = MX_HANDLE_INVALID;
+  zx_handle_t handle = handle_;
+  handle_ = ZX_HANDLE_INVALID;
   while (waiters_.size()) {
     // HandleWaiter::Cancel calls Handle::ReleaseWaiter which removes the
     // HandleWaiter from waiters_.
@@ -50,15 +50,15 @@ mx_handle_t Handle::ReleaseHandle() {
   return handle;
 }
 
-mx_status_t Handle::Close() {
+zx_status_t Handle::Close() {
   if (is_valid()) {
-    mx_handle_t handle = ReleaseHandle();
-    return mx_handle_close(handle);
+    zx_handle_t handle = ReleaseHandle();
+    return zx_handle_close(handle);
   }
-  return MX_ERR_BAD_HANDLE;
+  return ZX_ERR_BAD_HANDLE;
 }
 
-fxl::RefPtr<HandleWaiter> Handle::AsyncWait(mx_signals_t signals,
+fxl::RefPtr<HandleWaiter> Handle::AsyncWait(zx_signals_t signals,
                                             Dart_Handle callback) {
   if (!is_valid()) {
     FXL_LOG(WARNING) << "Attempt to wait on an invalid handle.";

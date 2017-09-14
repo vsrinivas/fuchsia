@@ -17,20 +17,20 @@
 namespace debugserver {
 
 ThreadActionList::Entry::Entry(ThreadActionList::Action action,
-                               mx_koid_t pid,
-                               mx_koid_t tid)
+                               zx_koid_t pid,
+                               zx_koid_t tid)
     : action_(action), pid_(pid), tid_(tid) {
   FXL_DCHECK(pid_ != 0);
   // A tid value of zero is ok.
 }
 
-void ThreadActionList::Entry::set_picked_tid(mx_koid_t tid) {
+void ThreadActionList::Entry::set_picked_tid(zx_koid_t tid) {
   FXL_DCHECK(tid != 0);
   FXL_DCHECK(tid_ == 0);
   tid_ = tid;
 }
 
-bool ThreadActionList::Entry::Contains(mx_koid_t pid, mx_koid_t tid) const {
+bool ThreadActionList::Entry::Contains(zx_koid_t pid, zx_koid_t tid) const {
   FXL_DCHECK(pid != 0 && pid != kAll);
   FXL_DCHECK(tid != 0 && tid != kAll);
   // A "0" meaning "arbitrary process" is resolved to the current process at
@@ -76,7 +76,7 @@ const char* ThreadActionList::ActionToString(ThreadActionList::Action action) {
 }
 
 ThreadActionList::ThreadActionList(const fxl::StringView& str,
-                                   mx_koid_t cur_proc) {
+                                   zx_koid_t cur_proc) {
   size_t len = str.size();
   size_t s = 0;
   Action default_action = Action::kNone;
@@ -143,8 +143,8 @@ ThreadActionList::ThreadActionList(const fxl::StringView& str,
   valid_ = true;
 }
 
-ThreadActionList::Action ThreadActionList::GetAction(mx_koid_t pid,
-                                                     mx_koid_t tid) const {
+ThreadActionList::Action ThreadActionList::GetAction(zx_koid_t pid,
+                                                     zx_koid_t tid) const {
   FXL_DCHECK(pick_ones_resolved_);
 
   for (auto e : actions_) {

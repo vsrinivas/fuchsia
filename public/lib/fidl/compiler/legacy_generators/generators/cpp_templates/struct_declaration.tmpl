@@ -9,8 +9,8 @@ class {{class_name}} {
       ::fidl::internal::BoundsChecker* bounds_checker,
       std::string* err);
 
-  void EncodePointersAndHandles(std::vector<mx_handle_t>* handles);
-  void DecodePointersAndHandles(std::vector<mx_handle_t>* handles);
+  void EncodePointersAndHandles(std::vector<zx_handle_t>* handles);
+  void DecodePointersAndHandles(std::vector<zx_handle_t>* handles);
 
   ::fidl::internal::StructHeader header_;
 {%- for packed_field in struct.packed.packed_fields %}

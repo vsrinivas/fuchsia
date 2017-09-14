@@ -272,9 +272,9 @@ std::ostream& operator<<(std::ostream& os, const network::URLBodyPtr& value) {
     return os << "<nullptr>\n";
   } else {
     if (value->is_stream()) {
-      return os << "mx::socket stream: " << value->get_stream() << "\n";
+      return os << "zx::socket stream: " << value->get_stream() << "\n";
     } else if (value->is_buffer()) {
-      return os << "mx::vmo buffer: " << value->get_buffer() << "\n";
+      return os << "zx::vmo buffer: " << value->get_buffer() << "\n";
     } else {
       return os << "<unknown>\n";
     }
@@ -315,7 +315,7 @@ std::ostream& operator<<(std::ostream& os,
 
   os << indent;
   os << begl << "network::NetworkErrorPtr error: " << value->error;
-  os << begl << "mx::socket body: " << value->body << "\n";
+  os << begl << "zx::socket body: " << value->body << "\n";
   os << begl << "fidl::String url: " << value->url << "\n";
   os << begl << "uint32_t status_code: " << value->status_code << "\n";
   os << begl << "fidl::String status_line: " << value->status_line << "\n";

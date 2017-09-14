@@ -14,9 +14,9 @@ namespace {
 
 TEST(SharedVmos, Unmappable) {
   std::string content("hello");
-  mx::vmo vmo;
+  zx::vmo vmo;
   ASSERT_TRUE(VmoFromString(content, &vmo));
-  mx_handle_t vmo_handle = vmo.get();
+  zx_handle_t vmo_handle = vmo.get();
 
   auto shared_vmo = fxl::MakeRefCounted<SharedVmo>(std::move(vmo));
   ASSERT_NE(nullptr, shared_vmo.get());
@@ -28,16 +28,16 @@ TEST(SharedVmos, Unmappable) {
 
 TEST(SharedVmos, Mapped) {
   std::string content("hello");
-  mx::vmo vmo;
+  zx::vmo vmo;
   ASSERT_TRUE(VmoFromString(content, &vmo));
-  mx_handle_t vmo_handle = vmo.get();
+  zx_handle_t vmo_handle = vmo.get();
 
   auto shared_vmo =
-      fxl::MakeRefCounted<SharedVmo>(std::move(vmo), MX_VM_FLAG_PERM_READ);
+      fxl::MakeRefCounted<SharedVmo>(std::move(vmo), ZX_VM_FLAG_PERM_READ);
   ASSERT_NE(nullptr, shared_vmo.get());
   EXPECT_EQ(vmo_handle, shared_vmo->vmo().get());
   EXPECT_EQ(content.size(), shared_vmo->vmo_size());
-  EXPECT_EQ(MX_VM_FLAG_PERM_READ, shared_vmo->map_flags());
+  EXPECT_EQ(ZX_VM_FLAG_PERM_READ, shared_vmo->map_flags());
   const char* data = static_cast<const char*>(shared_vmo->Map());
   EXPECT_NE(nullptr, data);
   EXPECT_EQ(0, memcmp(content.c_str(), data, content.size()));

@@ -18,8 +18,8 @@ TEST(FDWaiter, DISABLED_WaitStdOut) {
 
   FDWaiter waiter;
   EXPECT_TRUE(waiter.Wait(
-      [&](mx_status_t status, uint32_t events) {
-        EXPECT_EQ(MX_OK, status);
+      [&](zx_status_t status, uint32_t events) {
+        EXPECT_EQ(ZX_OK, status);
         EXPECT_TRUE(events & POLLOUT);
         message_loop.QuitNow();
       },
@@ -32,7 +32,7 @@ TEST(FDWaiter, WaitFailed) {
   MessageLoop message_loop;
   FDWaiter waiter;
   EXPECT_FALSE(
-      waiter.Wait([](mx_status_t status, uint32_t events) {}, -1, POLLOUT));
+      waiter.Wait([](zx_status_t status, uint32_t events) {}, -1, POLLOUT));
 }
 
 }  // namespace

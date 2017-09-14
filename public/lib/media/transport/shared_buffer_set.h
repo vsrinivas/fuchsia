@@ -9,8 +9,8 @@
 #include <memory>
 #include <vector>
 
-#include <magenta/types.h>
-#include <mx/vmo.h>
+#include <zircon/types.h>
+#include <zx/vmo.h>
 
 #include "lib/media/transport/mapped_shared_buffer.h"
 
@@ -62,16 +62,16 @@ class SharedBufferSet {
   virtual ~SharedBufferSet();
 
   // Adds the indicated buffer.
-  mx_status_t AddBuffer(uint32_t buffer_id, mx::vmo vmo);
+  zx_status_t AddBuffer(uint32_t buffer_id, zx::vmo vmo);
 
   // Creates a new buffer of the indicated size. If successful, delivers the
   // buffer id assigned to the buffer and a vmo to the buffer via
   // |buffer_id_out| and |out_vmo|. |vmo_rights| specifies the rights for
   // |out_vmo|.
-  mx_status_t CreateNewBuffer(uint64_t size,
+  zx_status_t CreateNewBuffer(uint64_t size,
                               uint32_t* buffer_id_out,
-                              mx_rights_t vmo_rights,
-                              mx::vmo* out_vmo);
+                              zx_rights_t vmo_rights,
+                              zx::vmo* out_vmo);
 
   // Removes a buffer.
   void RemoveBuffer(uint32_t buffer_id);

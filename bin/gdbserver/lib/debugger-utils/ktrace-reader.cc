@@ -13,7 +13,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <magenta/ktrace.h>
+#include <zircon/ktrace.h>
 
 #include "ktrace-reader.h"
 
@@ -55,7 +55,7 @@ const char* RecName(uint32_t tag) {
   // TODO: Remove magic number
   switch (tag & 0xffffff00u) {
 #define KTRACE_DEF(num,type,name,group) case KTRACE_TAG(num,KTRACE_GRP_##group, 0): return #name;
-#include <magenta/ktrace-def.h>
+#include <zircon/ktrace-def.h>
   default: return "UNKNOWN";
   }
 }
@@ -95,7 +95,7 @@ static void DumpRecord(const KtraceRecord* rec) {
   case KTRACE_TAG(num,KTRACE_GRP_##group, 0): \
     Dump_ ## type(&rec->r_ ## type); \
     break;
-#include <magenta/ktrace-def.h>
+#include <zircon/ktrace-def.h>
   default:
     printf(" ???");
     break;

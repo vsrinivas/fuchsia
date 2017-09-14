@@ -5,9 +5,9 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <launchpad/launchpad.h>
-#include <magenta/process.h>
-#include <mx/job.h>
-#include <mxio/io.h>
+#include <zircon/process.h>
+#include <zx/job.h>
+#include <fdio/io.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <poll.h>
@@ -29,8 +29,8 @@
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fsl/tasks/message_loop.h"
 
-constexpr mx_rights_t kChildJobRights =
-    MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
+constexpr zx_rights_t kChildJobRights =
+    ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE;
 
 class Service : private fsl::MessageLoopHandler {
  public:
@@ -57,11 +57,11 @@ class Service : private fsl::MessageLoopHandler {
       exit(1);
     }
 
-    FXL_CHECK(mx::job::create(mx_job_default(), 0, &job_) == MX_OK);
+    FXL_CHECK(zx::job::create(zx_job_default(), 0, &job_) == ZX_OK);
     std::string job_name = fxl::StringPrintf("tcp:%d", port);
-    FXL_CHECK(job_.set_property(MX_PROP_NAME, job_name.data(),
-                                job_name.size()) == MX_OK);
-    FXL_CHECK(job_.replace(kChildJobRights, &job_) == MX_OK);
+    FXL_CHECK(job_.set_property(ZX_PROP_NAME, job_name.data(),
+                                job_name.size()) == ZX_OK);
+    FXL_CHECK(job_.replace(kChildJobRights, &job_) == ZX_OK);
 
     Wait();
   }
@@ -70,15 +70,15 @@ class Service : private fsl::MessageLoopHandler {
     for (auto iter = process_handler_key_.begin(); iter != process_handler_key_.end(); iter++) {
       process_handler_key_.erase(iter);
       fsl::MessageLoop::GetCurrent()->RemoveHandler(iter->second);
-      FXL_CHECK(mx_task_kill(iter->first) == MX_OK);
-      FXL_CHECK(mx_handle_close(iter->first) == MX_OK);
+      FXL_CHECK(zx_task_kill(iter->first) == ZX_OK);
+      FXL_CHECK(zx_handle_close(iter->first) == ZX_OK);
     }
   }
 
  private:
   void Wait() {
     waiter_.Wait(
-        [this](mx_status_t success, uint32_t events) {
+        [this](zx_status_t success, uint32_t events) {
           struct sockaddr_in6 peer_addr;
           socklen_t peer_addr_len = sizeof(peer_addr);
           int conn = accept(sock_, (struct sockaddr*)&peer_addr, &peer_addr_len);
@@ -109,11 +109,11 @@ class Service : private fsl::MessageLoopHandler {
 
   void Launch(int conn, const std::string& peer_name) {
     // Create a new job to run the child in.
-    mx::job child_job;
-    FXL_CHECK(mx::job::create(job_.get(), 0, &child_job) == MX_OK);
-    FXL_CHECK(child_job.set_property(MX_PROP_NAME, peer_name.data(),
-                                peer_name.size()) == MX_OK);
-    FXL_CHECK(child_job.replace(kChildJobRights, &child_job) == MX_OK);
+    zx::job child_job;
+    FXL_CHECK(zx::job::create(job_.get(), 0, &child_job) == ZX_OK);
+    FXL_CHECK(child_job.set_property(ZX_PROP_NAME, peer_name.data(),
+                                peer_name.size()) == ZX_OK);
+    FXL_CHECK(child_job.replace(kChildJobRights, &child_job) == ZX_OK);
 
     launchpad_t* lp;
     launchpad_create(child_job.get(), argv_[0], &lp);
@@ -121,7 +121,7 @@ class Service : private fsl::MessageLoopHandler {
     launchpad_set_args(lp, argc_, argv_);
     // TODO: configurable cwd
     // TODO: filesystem sandboxing
-    launchpad_clone(lp, LP_CLONE_MXIO_NAMESPACE | LP_CLONE_MXIO_CWD);
+    launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE | LP_CLONE_FDIO_CWD);
     // TODO: set up environment
 
     // Transfer the socket as stdin and stdout
@@ -130,10 +130,10 @@ class Service : private fsl::MessageLoopHandler {
     // Clone this process' stderr.
     launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
 
-    mx_handle_t proc = 0;
+    zx_handle_t proc = 0;
     const char* errmsg;
 
-    mx_status_t status = launchpad_go(lp, &proc, &errmsg);
+    zx_status_t status = launchpad_go(lp, &proc, &errmsg);
     if (status < 0) {
       shutdown(conn, SHUT_RDWR);
       close(conn);
@@ -142,20 +142,20 @@ class Service : private fsl::MessageLoopHandler {
     }
 
     auto handler_key = fsl::MessageLoop::GetCurrent()->AddHandler(
-        this, proc, MX_PROCESS_TERMINATED);
+        this, proc, ZX_PROCESS_TERMINATED);
     FXL_CHECK(handler_key != 0);
     process_handler_key_.insert(std::make_pair(proc, handler_key));
   }
 
   // fsl::MessageLoopHandler
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) {
-    FXL_CHECK(pending & MX_PROCESS_TERMINATED);
+  void OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) {
+    FXL_CHECK(pending & ZX_PROCESS_TERMINATED);
     auto iter = process_handler_key_.find(handle);
     FXL_CHECK(iter != process_handler_key_.end());
     process_handler_key_.erase(iter);
     fsl::MessageLoop::GetCurrent()->RemoveHandler(iter->second);
-    FXL_CHECK(mx_task_kill(handle) == MX_OK);
-    FXL_CHECK(mx_handle_close(handle) == MX_OK);
+    FXL_CHECK(zx_task_kill(handle) == ZX_OK);
+    FXL_CHECK(zx_handle_close(handle) == ZX_OK);
   }
 
   int port_;
@@ -163,8 +163,8 @@ class Service : private fsl::MessageLoopHandler {
   const char** argv_;
   int sock_;
   fsl::FDWaiter waiter_;
-  mx::job job_;
-  std::map<mx_handle_t, fsl::MessageLoop::HandlerKey> process_handler_key_;
+  zx::job job_;
+  std::map<zx_handle_t, fsl::MessageLoop::HandlerKey> process_handler_key_;
 };
 
 void usage(const char* command) {

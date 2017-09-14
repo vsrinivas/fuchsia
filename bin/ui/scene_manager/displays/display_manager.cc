@@ -4,7 +4,7 @@
 
 #include "garnet/bin/ui/scene_manager/displays/display_manager.h"
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #include "garnet/bin/ui/scene_manager/displays/display_watcher.h"
 #include "garnet/bin/ui/scene_manager/resources/renderers/renderer.h"

@@ -42,14 +42,14 @@ int audio_output_stream_free(fuchsia_audio_output_stream* stream) {
 }
 
 int audio_output_stream_get_min_delay(fuchsia_audio_output_stream* stream,
-                                      mx_duration_t* delay_nsec_out) {
+                                      zx_duration_t* delay_nsec_out) {
   return fuchsia_audio_output_stream_get_min_delay(stream, delay_nsec_out);
 }
 
 int audio_output_stream_write(fuchsia_audio_output_stream* stream,
                               float* sample_buffer,
                               int num_samples,
-                              mx_time_t pres_time) {
+                              zx_time_t pres_time) {
   return fuchsia_audio_output_stream_write(stream, sample_buffer, num_samples,
                                            pres_time);
 }

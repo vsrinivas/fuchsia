@@ -6,7 +6,7 @@
 
 #include <fcntl.h>
 
-#include <magenta/device/display.h>
+#include <zircon/device/display.h>
 
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
@@ -58,7 +58,7 @@ void DisplayWatcher::HandleDevice(DisplayReadyCallback callback,
     callback(false, 0, 0, 0.f);
     return;
   }
-  mx_handle_close(description.vmo);  // we don't need the vmo
+  zx_handle_close(description.vmo);  // we don't need the vmo
 
   // Invoke the callback, passing the display attributes.
   callback(true, description.info.width, description.info.height,

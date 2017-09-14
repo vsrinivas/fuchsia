@@ -356,7 +356,7 @@ void RspServer::OnIOError() {
 
 void RspServer::OnThreadStarting(Process* process,
                                  Thread* thread,
-                                 const mx_exception_context_t& context) {
+                                 const zx_exception_context_t& context) {
   FXL_DCHECK(process);
 
   // TODO(armansito): We send a stop-reply packet for the new thread. This
@@ -386,8 +386,8 @@ void RspServer::OnThreadStarting(Process* process,
 
 void RspServer::OnThreadExiting(Process* process,
                                 Thread* thread,
-                                const mx_excp_type_t type,
-                                const mx_exception_context_t& context) {
+                                const zx_excp_type_t type,
+                                const zx_exception_context_t& context) {
   std::vector<char> packet;
   FXL_LOG(INFO) << "Thread " << thread->GetName() << " exited";
   int exit_code = 0; // TODO(dje)
@@ -405,8 +405,8 @@ void RspServer::OnThreadExiting(Process* process,
 }
 
 void RspServer::OnProcessExit(Process* process,
-                              const mx_excp_type_t type,
-                              const mx_exception_context_t& context) {
+                              const zx_excp_type_t type,
+                              const zx_exception_context_t& context) {
   std::vector<char> packet;
   FXL_LOG(INFO) << "Process " << process->GetName() << " exited";
   SetCurrentThread(nullptr);
@@ -420,8 +420,8 @@ void RspServer::OnProcessExit(Process* process,
 void RspServer::OnArchitecturalException(
     Process* process,
     Thread* thread,
-    const mx_excp_type_t type,
-    const mx_exception_context_t& context) {
+    const zx_excp_type_t type,
+    const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
   FXL_VLOG(1) << "Architectural Exception: "

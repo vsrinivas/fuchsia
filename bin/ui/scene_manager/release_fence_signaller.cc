@@ -20,13 +20,13 @@ ReleaseFenceSignaller::~ReleaseFenceSignaller() {
   Unregister(command_buffer_sequencer_);
 };
 
-void ReleaseFenceSignaller::AddVulkanReleaseFence(mx::event fence) {
+void ReleaseFenceSignaller::AddVulkanReleaseFence(zx::event fence) {
   // TODO: Submit a command buffer with the vulkan fence as a semaphore
   FXL_LOG(ERROR) << "Vulkan Release Fences not yet supported.";
   FXL_DCHECK(false);
 }
 
-void ReleaseFenceSignaller::AddCPUReleaseFence(mx::event fence) {
+void ReleaseFenceSignaller::AddCPUReleaseFence(zx::event fence) {
   uint64_t latest_sequence_number =
       command_buffer_sequencer_->latest_sequence_number();
 

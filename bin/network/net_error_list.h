@@ -242,7 +242,7 @@ NET_ERROR(NAME_RESOLUTION_FAILED, -137)
 
 // Permission to access the network was denied. This is used to distinguish
 // errors that were most likely caused by a firewall from other access denied
-// errors. See also MX_ERR_ACCESS_DENIED.
+// errors. See also ZX_ERR_ACCESS_DENIED.
 NET_ERROR(NETWORK_ACCESS_DENIED, -138)
 
 // The request throttler module cancelled this request to avoid DDOS.

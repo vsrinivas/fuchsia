@@ -46,7 +46,7 @@ class Resource {
   //     canvas can import.
   // |spec| Type of the resource.
   void EnqueueImportResourceOp(ResourceId resource_id,
-                               mx::eventpair token,
+                               zx::eventpair token,
                                scenic::ImportSpec spec);
 
   // Enqueue an op in canvas.

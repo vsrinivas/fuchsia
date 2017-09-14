@@ -5,7 +5,7 @@
 // Serialization warnings are only recorded in debug build.
 #ifndef NDEBUG
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/array.h"
@@ -23,14 +23,14 @@ namespace {
 using fidl::internal::ArrayValidateParams;
 
 // Creates an array of arrays of handles (2 X 3) for testing.
-Array<Array<mx::handle>> CreateTestNestedHandleArray() {
-  auto array = Array<Array<mx::handle>>::New(2);
+Array<Array<zx::handle>> CreateTestNestedHandleArray() {
+  auto array = Array<Array<zx::handle>>::New(2);
   for (size_t i = 0; i < array.size(); ++i) {
-    auto nested_array = Array<mx::handle>::New(3);
+    auto nested_array = Array<zx::handle>::New(3);
     for (size_t j = 0; j < nested_array.size(); ++j) {
-      mx::channel handle0, handle1;
-      mx::channel::create(0, &handle0, &handle1);
-      nested_array[j] = mx::handle(std::move(handle1));
+      zx::channel handle0, handle1;
+      zx::channel::create(0, &handle0, &handle1);
+      nested_array[j] = zx::handle(std::move(handle1));
     }
     array[i] = std::move(nested_array);
   }
@@ -82,8 +82,8 @@ TEST_F(SerializationWarningTest, HandleInStruct) {
               fidl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE);
 
   test_struct = Struct2::New();
-  mx::channel handle0, handle1;
-  mx::channel::create(0, &handle0, &handle1);
+  zx::channel handle0, handle1;
+  zx::channel::create(0, &handle0, &handle1);
   test_struct->hdl = std::move(handle1);
 
   TestWarning(std::move(test_struct), fidl::internal::ValidationError::NONE);
@@ -163,9 +163,9 @@ TEST_F(SerializationWarningTest, StringInStruct) {
 }
 
 TEST_F(SerializationWarningTest, ArrayOfArraysOfHandles) {
-  Array<Array<mx::handle>> test_array = CreateTestNestedHandleArray();
-  test_array[0] = Array<mx::handle>();
-  test_array[1][0] = mx::handle();
+  Array<Array<zx::handle>> test_array = CreateTestNestedHandleArray();
+  test_array[0] = Array<zx::handle>();
+  test_array[1][0] = zx::handle();
 
   ArrayValidateParams validate_params_0(
       0, true, new ArrayValidateParams(0, true, nullptr));
@@ -173,7 +173,7 @@ TEST_F(SerializationWarningTest, ArrayOfArraysOfHandles) {
                    &validate_params_0);
 
   test_array = CreateTestNestedHandleArray();
-  test_array[0] = Array<mx::handle>();
+  test_array[0] = Array<zx::handle>();
   ArrayValidateParams validate_params_1(
       0, false, new ArrayValidateParams(0, true, nullptr));
   TestArrayWarning(std::move(test_array),
@@ -181,7 +181,7 @@ TEST_F(SerializationWarningTest, ArrayOfArraysOfHandles) {
                    &validate_params_1);
 
   test_array = CreateTestNestedHandleArray();
-  test_array[1][0] = mx::handle();
+  test_array[1][0] = zx::handle();
   ArrayValidateParams validate_params_2(
       0, true, new ArrayValidateParams(0, false, nullptr));
   TestArrayWarning(std::move(test_array),

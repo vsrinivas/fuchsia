@@ -7,7 +7,7 @@
 #include <deque>
 #include <queue>
 
-#include <mx/event.h>
+#include <zx/event.h>
 #include "escher/impl/command_buffer_sequencer.h"
 #include "lib/fxl/logging.h"
 
@@ -27,10 +27,10 @@ class ReleaseFenceSignaller
   ~ReleaseFenceSignaller();
 
   // Must be called on the same thread that we're submitting frames to Escher.
-  void AddVulkanReleaseFence(mx::event fence);
+  void AddVulkanReleaseFence(zx::event fence);
 
   // Must be called on the same thread that we're submitting frames to Escher.
-  virtual void AddCPUReleaseFence(mx::event fence);
+  virtual void AddCPUReleaseFence(zx::event fence);
 
  private:
   // The sequence number for the most recently finished CommandBuffer.
@@ -45,7 +45,7 @@ class ReleaseFenceSignaller
   // signalled.
   struct FenceWithSequenceNumber {
     uint64_t sequence_number;
-    mx::event fence;
+    zx::event fence;
   };
 
   // Queue of fences we need to signal along with their corresponding sequence

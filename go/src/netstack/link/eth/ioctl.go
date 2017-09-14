@@ -8,7 +8,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"syscall/mx"
-	"syscall/mx/mxio"
+	"syscall/mx/fdio"
 )
 
 type EthInfo struct {
@@ -43,8 +43,8 @@ const (
 	ioctlOpSetClientName = 7 // IOCTL_ETHERNET_SET_CLIENT_NAME, IOCTL_KIND_DEFAULT
 )
 
-func IoctlGetInfo(m mxio.MXIO) (info EthInfo, err error) {
-	num := mxio.IoctlNum(mxio.IoctlKindDefault, ioctlFamilyETH, ioctlOpGetInfo)
+func IoctlGetInfo(m fdio.FDIO) (info EthInfo, err error) {
+	num := fdio.IoctlNum(fdio.IoctlKindDefault, ioctlFamilyETH, ioctlOpGetInfo)
 	res := make([]byte, 64)
 	if _, err := m.Ioctl(num, nil, res); err != nil {
 		return info, fmt.Errorf("IOCTL_ETHERNET_GET_INFO: %v", err)
@@ -55,8 +55,8 @@ func IoctlGetInfo(m mxio.MXIO) (info EthInfo, err error) {
 	return info, nil
 }
 
-func IoctlGetFifos(m mxio.MXIO) (fifos ethfifos, err error) {
-	num := mxio.IoctlNum(mxio.IoctlKindGetTwoHandles, ioctlFamilyETH, ioctlOpGetFifos)
+func IoctlGetFifos(m fdio.FDIO) (fifos ethfifos, err error) {
+	num := fdio.IoctlNum(fdio.IoctlKindGetTwoHandles, ioctlFamilyETH, ioctlOpGetFifos)
 	res := make([]byte, 8)
 	h, err := m.Ioctl(num, nil, res)
 	if err != nil {
@@ -72,8 +72,8 @@ func IoctlGetFifos(m mxio.MXIO) (fifos ethfifos, err error) {
 	return fifos, nil
 }
 
-func IoctlSetIobuf(m mxio.MXIO, h mx.Handle) error {
-	num := mxio.IoctlNum(mxio.IoctlKindSetHandle, ioctlFamilyETH, ioctlOpSetIobuf)
+func IoctlSetIobuf(m fdio.FDIO, h mx.Handle) error {
+	num := fdio.IoctlNum(fdio.IoctlKindSetHandle, ioctlFamilyETH, ioctlOpSetIobuf)
 	err := m.IoctlSetHandle(num, h)
 	if err != nil {
 		return fmt.Errorf("IOCTL_ETHERNET_SET_IOBUF: %v", err)
@@ -81,8 +81,8 @@ func IoctlSetIobuf(m mxio.MXIO, h mx.Handle) error {
 	return nil
 }
 
-func IoctlSetClientName(m mxio.MXIO, name []byte) error {
-	num := mxio.IoctlNum(mxio.IoctlKindDefault, ioctlFamilyETH, ioctlOpSetClientName)
+func IoctlSetClientName(m fdio.FDIO, name []byte) error {
+	num := fdio.IoctlNum(fdio.IoctlKindDefault, ioctlFamilyETH, ioctlOpSetClientName)
 	_, err := m.Ioctl(num, name, nil)
 	if err != nil {
 		return fmt.Errorf("IOCTL_ETHERNET_SET_CLIENT_NAME: %v", err)
@@ -90,8 +90,8 @@ func IoctlSetClientName(m mxio.MXIO, name []byte) error {
 	return nil
 }
 
-func IoctlStart(m mxio.MXIO) error {
-	num := mxio.IoctlNum(mxio.IoctlKindDefault, ioctlFamilyETH, ioctlOpStart)
+func IoctlStart(m fdio.FDIO) error {
+	num := fdio.IoctlNum(fdio.IoctlKindDefault, ioctlFamilyETH, ioctlOpStart)
 	_, err := m.Ioctl(num, nil, nil)
 	if err != nil {
 		return fmt.Errorf("IOCTL_ETHERNET_START: %v", err)
@@ -99,8 +99,8 @@ func IoctlStart(m mxio.MXIO) error {
 	return nil
 }
 
-func IoctlStop(m mxio.MXIO) error {
-	num := mxio.IoctlNum(mxio.IoctlKindDefault, ioctlFamilyETH, ioctlOpStop)
+func IoctlStop(m fdio.FDIO) error {
+	num := fdio.IoctlNum(fdio.IoctlKindDefault, ioctlFamilyETH, ioctlOpStop)
 	_, err := m.Ioctl(num, nil, nil)
 	if err != nil {
 		return fmt.Errorf("IOCTL_ETHERNET_STOP: %v", err)
@@ -108,8 +108,8 @@ func IoctlStop(m mxio.MXIO) error {
 	return nil
 }
 
-func IoctlTXListenStart(m mxio.MXIO) error {
-	num := mxio.IoctlNum(mxio.IoctlKindDefault, ioctlFamilyETH, ioctlOpTXListenStart)
+func IoctlTXListenStart(m fdio.FDIO) error {
+	num := fdio.IoctlNum(fdio.IoctlKindDefault, ioctlFamilyETH, ioctlOpTXListenStart)
 	_, err := m.Ioctl(num, nil, nil)
 	if err != nil {
 		return fmt.Errorf("IOCTL_ETHERNET_TX_LISTEN_START: %v", err)

@@ -5,7 +5,7 @@
 #include "lib/fsl/socket/files.h"
 
 #include <fcntl.h>
-#include <mx/socket.h>
+#include <zx/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -53,8 +53,8 @@ TEST(SocketAndFile, CopyFromFileDescriptor) {
   fxl::UniqueFD source(open(tmp_file.c_str(), O_RDONLY));
   EXPECT_TRUE(source.is_valid());
 
-  mx::socket socket1, socket2;
-  EXPECT_EQ(MX_OK, mx::socket::create(0u, &socket1, &socket2));
+  zx::socket socket1, socket2;
+  EXPECT_EQ(ZX_OK, zx::socket::create(0u, &socket1, &socket2));
 
   bool success;
   CopyFromFileDescriptor(

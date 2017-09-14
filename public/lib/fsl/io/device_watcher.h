@@ -5,7 +5,7 @@
 #ifndef LIB_FSL_IO_DEVICE_WATCHER_H_
 #define LIB_FSL_IO_DEVICE_WATCHER_H_
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include <functional>
 #include <memory>
@@ -23,7 +23,7 @@ namespace fsl {
 // Watches for devices to be registered in devfs.
 //
 // TODO(jeffbrown): Generalize to watching arbitrary directories or dealing
-// with removal when mxio has a protocol for it.
+// with removal when fdio has a protocol for it.
 class FXL_EXPORT DeviceWatcher : private fsl::MessageLoopHandler {
  public:
   // Callback function which is invoked whenever a device is found.
@@ -42,17 +42,17 @@ class FXL_EXPORT DeviceWatcher : private fsl::MessageLoopHandler {
                                                Callback callback);
 
  private:
-  DeviceWatcher(fxl::UniqueFD dir_fd, mx::channel dir_watch, Callback callback);
+  DeviceWatcher(fxl::UniqueFD dir_fd, zx::channel dir_watch, Callback callback);
 
   static void ListDevices(fxl::WeakPtr<DeviceWatcher> weak, int dir_fd);
 
   // |MessageLoopHandler|:
-  void OnHandleReady(mx_handle_t handle,
-                     mx_signals_t pending,
+  void OnHandleReady(zx_handle_t handle,
+                     zx_signals_t pending,
                      uint64_t count) override;
 
   fxl::UniqueFD dir_fd_;
-  mx::channel dir_watch_;
+  zx::channel dir_watch_;
   Callback callback_;
   fsl::MessageLoop::HandlerKey handler_key_;
   fxl::WeakPtrFactory<DeviceWatcher> weak_ptr_factory_;

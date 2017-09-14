@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/process.h>
-#include <magenta/processargs.h>
-#include <mxio/util.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <fdio/util.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
@@ -15,14 +15,14 @@ namespace {
 
 constexpr char kServiceRootPath[] = "/svc";
 
-mx::channel GetServiceRoot() {
-  mx::channel h1, h2;
-  if (mx::channel::create(0, &h1, &h2) != MX_OK)
-    return mx::channel();
+zx::channel GetServiceRoot() {
+  zx::channel h1, h2;
+  if (zx::channel::create(0, &h1, &h2) != ZX_OK)
+    return zx::channel();
 
   // TODO(abarth): Use kServiceRootPath once that actually works.
-  if (mxio_service_connect("/svc/.", h1.release()) != MX_OK)
-    return mx::channel();
+  if (fdio_service_connect("/svc/.", h1.release()) != ZX_OK)
+    return zx::channel();
 
   return h2;
 }
@@ -30,8 +30,8 @@ mx::channel GetServiceRoot() {
 }  // namespace
 
 ApplicationContext::ApplicationContext(
-    mx::channel service_root,
-    mx::channel service_request,
+    zx::channel service_root,
+    zx::channel service_request,
     fidl::InterfaceRequest<ServiceProvider> outgoing_services)
     : outgoing_services_(std::move(outgoing_services)),
       service_root_(std::move(service_root)) {
@@ -55,11 +55,11 @@ ApplicationContext::CreateFromStartupInfo() {
 
 std::unique_ptr<ApplicationContext>
 ApplicationContext::CreateFromStartupInfoNotChecked() {
-  mx_handle_t service_request = mx_get_startup_handle(PA_SERVICE_REQUEST);
-  mx_handle_t services = mx_get_startup_handle(PA_APP_SERVICES);
+  zx_handle_t service_request = zx_get_startup_handle(PA_SERVICE_REQUEST);
+  zx_handle_t services = zx_get_startup_handle(PA_APP_SERVICES);
   return std::make_unique<ApplicationContext>(
-      GetServiceRoot(), mx::channel(service_request),
-      fidl::InterfaceRequest<ServiceProvider>(mx::channel(services)));
+      GetServiceRoot(), zx::channel(service_request),
+      fidl::InterfaceRequest<ServiceProvider>(zx::channel(services)));
 }
 
 std::unique_ptr<ApplicationContext> ApplicationContext::CreateFrom(
@@ -68,7 +68,7 @@ std::unique_ptr<ApplicationContext> ApplicationContext::CreateFrom(
   if (flat->paths.size() != flat->directories.size())
     return nullptr;
 
-  mx::channel service_root;
+  zx::channel service_root;
   for (size_t i = 0; i < flat->paths.size(); ++i) {
     if (flat->paths[i] == kServiceRootPath) {
       service_root = std::move(flat->directories[i]);
@@ -83,8 +83,8 @@ std::unique_ptr<ApplicationContext> ApplicationContext::CreateFrom(
 
 void ApplicationContext::ConnectToEnvironmentService(
     const std::string& interface_name,
-    mx::channel channel) {
-  mxio_service_connect_at(service_root_.get(), interface_name.c_str(),
+    zx::channel channel) {
+  fdio_service_connect_at(service_root_.get(), interface_name.c_str(),
                           channel.release());
 }
 

@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERFACE_REQUEST_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERFACE_REQUEST_H_
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include <cstddef>
 #include <utility>
@@ -36,7 +36,7 @@ class InterfaceRequest {
 
   // Constructs an InterfaceRequest from a channel handle (if |handle| is
   // not set, then this constructs an "empty" InterfaceRequest).
-  explicit InterfaceRequest(mx::channel handle) : handle_(std::move(handle)) {}
+  explicit InterfaceRequest(zx::channel handle) : handle_(std::move(handle)) {}
 
   // Takes the channel from another InterfaceRequest.
   InterfaceRequest(InterfaceRequest&& other) {
@@ -57,7 +57,7 @@ class InterfaceRequest {
   // Binds the request to a channel over which Interface is to be
   // requested.  If the request is already bound to a channel, the current
   // channel will be closed.
-  void Bind(mx::channel handle) { handle_ = std::move(handle); }
+  void Bind(zx::channel handle) { handle_ = std::move(handle); }
 
   // Indicates whether the request currently contains a valid channel.
   bool is_pending() const { return !!handle_; }
@@ -66,10 +66,10 @@ class InterfaceRequest {
   explicit operator bool() const { return is_pending(); }
 
   // Removes the channel from the request and returns it.
-  mx::channel PassChannel() { return std::move(handle_); }
+  zx::channel PassChannel() { return std::move(handle_); }
 
  private:
-  mx::channel handle_;
+  zx::channel handle_;
 
   FIDL_MOVE_ONLY_TYPE(InterfaceRequest);
 };
@@ -84,9 +84,9 @@ class InterfaceRequest {
 // as you still need to convert it into something like InterfacePtr<>.
 template <typename Interface>
 InterfaceRequest<Interface> GetProxy(InterfaceHandle<Interface>* handle) {
-  mx::channel endpoint0;
-  mx::channel endpoint1;
-  mx::channel::create(0, &endpoint0, &endpoint1);
+  zx::channel endpoint0;
+  zx::channel endpoint1;
+  zx::channel::create(0, &endpoint0, &endpoint1);
   *handle = InterfaceHandle<Interface>(std::move(endpoint0),
                                        Interface::Version_);
   return InterfaceRequest<Interface>(std::move(endpoint1));

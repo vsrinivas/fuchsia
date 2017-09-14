@@ -4,7 +4,7 @@
 
 #include "garnet/examples/ui/tile/tile_view.h"
 
-#include <mxio/util.h>
+#include <fdio/util.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
@@ -80,7 +80,7 @@ void TileView::CreateNestedEnvironment() {
       });
 
   env_services_.SetDefaultServiceConnector(
-      [this](std::string service_name, mx::channel channel) {
+      [this](std::string service_name, zx::channel channel) {
         application_context_->ConnectToEnvironmentService(service_name,
                                                           std::move(channel));
       });
@@ -113,7 +113,7 @@ void TileView::AddChildView(
   auto view_data = std::make_unique<ViewData>(
       url, view_key, std::move(app_controller), session());
 
-  mx::eventpair host_import_token;
+  zx::eventpair host_import_token;
   view_data->host_node.ExportAsRequest(&host_import_token);
   container_node_.AddChild(view_data->host_node);
   views_.emplace(view_key, std::move(view_data));

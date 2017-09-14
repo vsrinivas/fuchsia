@@ -16,7 +16,7 @@
 namespace debugserver {
 namespace arch {
 
-GdbSignal ComputeGdbSignal(const mx_exception_context_t& context) {
+GdbSignal ComputeGdbSignal(const zx_exception_context_t& context) {
   GdbSignal sigval;
   auto arch_exception = context.arch.u.x86_64.vector;
 
@@ -89,7 +89,7 @@ GdbSignal ComputeGdbSignal(const mx_exception_context_t& context) {
   return sigval;
 }
 
-bool IsSingleStepException(const mx_exception_context_t& context) {
+bool IsSingleStepException(const zx_exception_context_t& context) {
   auto arch_exception = context.arch.u.x86_64.vector;
 
   return arch_exception == x86::INT_DEBUG;

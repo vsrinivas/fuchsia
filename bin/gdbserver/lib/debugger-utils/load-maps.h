@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 #include "lib/fxl/macros.h"
 
@@ -16,7 +16,7 @@ namespace debugserver {
 namespace util {
 
 struct LoadMap {
-  mx_koid_t pid;
+  zx_koid_t pid;
   uint64_t base_addr;
   uint64_t load_addr;
   uint64_t end_addr;
@@ -31,7 +31,7 @@ class LoadMapTable {
 
   bool ReadLogListenerOutput(const std::string& file);
 
-  const LoadMap* LookupLoadMap(mx_koid_t pid, uint64_t addr);
+  const LoadMap* LookupLoadMap(zx_koid_t pid, uint64_t addr);
 
  private:
   void Clear();

@@ -27,11 +27,11 @@ class Resource {
   uint32_t id() const { return id_; }
 
   // Exports the resource and associates it with |export_token|.
-  void Export(mx::eventpair export_token);
+  void Export(zx::eventpair export_token);
 
   // Exports the resource and returns an import token in |out_import_token|
   // which allows it to be imported into other sessions.
-  void ExportAsRequest(mx::eventpair* out_import_token);
+  void ExportAsRequest(zx::eventpair* out_import_token);
 
   // Sets which events a resource should deliver to the session listener.
   void SetEventMask(uint32_t event_mask);
@@ -57,7 +57,7 @@ class Resource {
 // TODO(MZ-268): Make this class final, and add public move constructor.
 class Memory : public Resource {
  public:
-  Memory(Session* session, mx::vmo vmo, scenic::MemoryType memory_type);
+  Memory(Session* session, zx::vmo vmo, scenic::MemoryType memory_type);
   ~Memory();
 
   // Gets the underlying VMO's memory type, indicating whether it represents
@@ -316,11 +316,11 @@ class ImportNode final : public ContainerNode {
   ~ImportNode();
 
   // Imports the node associated with |import_token|.
-  void Bind(mx::eventpair import_token);
+  void Bind(zx::eventpair import_token);
 
   // Imports the node and returns an export token in |out_export_token|
   // by which another session can export a node to associate with this import.
-  void BindAsRequest(mx::eventpair* out_export_token);
+  void BindAsRequest(zx::eventpair* out_export_token);
 
   // Returns true if the import has been bound.
   bool is_bound() const { return is_bound_; }

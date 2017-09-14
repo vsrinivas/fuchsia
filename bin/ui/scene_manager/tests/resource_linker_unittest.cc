@@ -8,7 +8,7 @@
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/thread.h"
-#include "magenta/system/ulib/mx/include/mx/eventpair.h"
+#include "zircon/system/ulib/zx/include/zx/eventpair.h"
 
 #include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/ui/tests/test_with_message_loop.h"
@@ -25,23 +25,23 @@ using ResourceLinkerTest = SessionTest;
 TEST_F(ResourceLinkerTest, HandleBehavior) {
   ResourceLinker linker;
 
-  mx::eventpair destination;
-  mx_handle_t source_handle;
+  zx::eventpair destination;
+  zx_handle_t source_handle;
   {
-    mx::eventpair source;
-    ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+    zx::eventpair source;
+    ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
     source_handle = source.get();
   }
   // Source handle is dead.
-  mx_koid_t import_koid = fsl::GetRelatedKoid(source_handle);
-  ASSERT_EQ(MX_KOID_INVALID, import_koid);
+  zx_koid_t import_koid = fsl::GetRelatedKoid(source_handle);
+  ASSERT_EQ(ZX_KOID_INVALID, import_koid);
 }
 
 TEST_F(ResourceLinkerTest, AllowsExport) {
   ResourceLinker linker;
 
-  mx::eventpair source, destination;
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+  zx::eventpair source, destination;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   auto resource =
       fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
@@ -54,8 +54,8 @@ TEST_F(ResourceLinkerTest, AllowsExport) {
 TEST_F(ResourceLinkerTest, AllowsImport) {
   ResourceLinker linker;
 
-  mx::eventpair source, destination;
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+  zx::eventpair source, destination;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   auto exported =
       fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
@@ -90,12 +90,12 @@ TEST_F(ResourceLinkerTest, AllowsImport) {
 TEST_F(ResourceLinkerTest, CannotImportWithDeadSourceAndDestinationHandles) {
   ResourceLinker linker;
 
-  mx::eventpair destination_out;
+  zx::eventpair destination_out;
   {
-    mx::eventpair destination;
-    mx::eventpair source;
-    ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
-    destination_out = mx::eventpair{destination.get()};
+    zx::eventpair destination;
+    zx::eventpair source;
+    ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
+    destination_out = zx::eventpair{destination.get()};
     // source and destination dies now.
   }
 
@@ -119,13 +119,13 @@ TEST_F(ResourceLinkerTest, CannotImportWithDeadSourceAndDestinationHandles) {
 TEST_F(ResourceLinkerTest, CannotImportWithDeadDestinationHandles) {
   ResourceLinker linker;
 
-  mx::eventpair destination_out;
-  mx::eventpair source;
+  zx::eventpair destination_out;
+  zx::eventpair source;
   {
-    mx::eventpair destination;
+    zx::eventpair destination;
 
-    ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
-    destination_out = mx::eventpair{destination.get()};
+    ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
+    destination_out = zx::eventpair{destination.get()};
     // destination dies now.
   }
 
@@ -147,13 +147,13 @@ TEST_F(ResourceLinkerTest, CannotImportWithDeadDestinationHandles) {
 }
 
 TEST_F(ResourceLinkerTest, CanImportWithDeadSourceHandle) {
-  mx::eventpair destination;
-  mx::eventpair source_out;
+  zx::eventpair destination;
+  zx::eventpair source_out;
   {
-    mx::eventpair source;
+    zx::eventpair source;
 
-    ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
-    source_out = mx::eventpair{source.get()};
+    ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
+    source_out = zx::eventpair{source.get()};
     // source dies now.
   }
 
@@ -209,12 +209,12 @@ TEST_F(ResourceLinkerTest, CanImportWithDeadSourceHandle) {
 TEST_F(ResourceLinkerTest, CannotExportWithDeadSourceAndDestinationHandles) {
   ResourceLinker linker;
 
-  mx::eventpair source_out;
+  zx::eventpair source_out;
   {
-    mx::eventpair destination;
-    mx::eventpair source;
-    ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
-    source_out = mx::eventpair{source.get()};
+    zx::eventpair destination;
+    zx::eventpair source;
+    ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
+    source_out = zx::eventpair{source.get()};
     // source and destination dies now.
   }
 
@@ -227,12 +227,12 @@ TEST_F(ResourceLinkerTest, CannotExportWithDeadSourceAndDestinationHandles) {
 TEST_F(ResourceLinkerTest, CannotExportWithDeadSourceHandle) {
   ResourceLinker linker;
 
-  mx::eventpair destination;
-  mx::eventpair source_out;
+  zx::eventpair destination;
+  zx::eventpair source_out;
   {
-    mx::eventpair source;
-    ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
-    source_out = mx::eventpair{source.get()};
+    zx::eventpair source;
+    ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
+    source_out = zx::eventpair{source.get()};
     // source dies now.
   }
 
@@ -248,10 +248,10 @@ TEST_F(ResourceLinkerTest, CannotExportWithDeadSourceHandle) {
 TEST_F(ResourceLinkerTest, CanExportWithDeadDestinationHandle) {
   ResourceLinker linker;
 
-  mx::eventpair source;
+  zx::eventpair source;
   {
-    mx::eventpair destination;
-    ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+    zx::eventpair destination;
+    ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
     // destination dies now.
   }
 
@@ -291,8 +291,8 @@ TEST_F(ResourceLinkerTest, CanExportWithDeadDestinationHandle) {
 
 TEST_F(ResourceLinkerTest,
        DestinationHandleDeathAutomaticallyCleansUpResourceExport) {
-  mx::eventpair source, destination;
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+  zx::eventpair source, destination;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   fsl::Thread thread;
   thread.Run();
@@ -334,8 +334,8 @@ TEST_F(ResourceLinkerTest,
 
 TEST_F(ResourceLinkerTest,
        SourceHandleDeathAutomaticallyCleansUpUnresolvedImports) {
-  mx::eventpair source, destination;
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+  zx::eventpair source, destination;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   fsl::Thread thread;
   thread.Run();
@@ -387,8 +387,8 @@ TEST_F(ResourceLinkerTest,
 }
 
 TEST_F(ResourceLinkerTest, ResourceDeathAutomaticallyCleansUpResourceExport) {
-  mx::eventpair source, destination;
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+  zx::eventpair source, destination;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   fsl::Thread thread;
   thread.Run();
@@ -429,8 +429,8 @@ TEST_F(ResourceLinkerTest, ResourceDeathAutomaticallyCleansUpResourceExport) {
 TEST_F(ResourceLinkerTest, ImportsBeforeExportsAreServiced) {
   ResourceLinker linker;
 
-  mx::eventpair source, destination;
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+  zx::eventpair source, destination;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   auto exported =
       fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
@@ -467,8 +467,8 @@ TEST_F(ResourceLinkerTest, ImportsBeforeExportsAreServiced) {
 TEST_F(ResourceLinkerTest, ImportAfterReleasedExportedResourceFails) {
   ResourceLinker linker;
 
-  mx::eventpair source, destination;
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+  zx::eventpair source, destination;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   bool did_resolve = false;
   {
@@ -508,8 +508,8 @@ TEST_F(ResourceLinkerTest, ImportAfterReleasedExportedResourceFails) {
 TEST_F(ResourceLinkerTest, DuplicatedDestinationHandlesAllowMultipleImports) {
   ResourceLinker linker;
 
-  mx::eventpair source, destination;
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+  zx::eventpair source, destination;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   auto exported =
       fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
@@ -530,7 +530,7 @@ TEST_F(ResourceLinkerTest, DuplicatedDestinationHandlesAllowMultipleImports) {
 
   std::vector<ImportPtr> imports;
   for (size_t i = 1; i <= kImportCount; ++i) {
-    mx::eventpair duplicate_destination = CopyEventPair(destination);
+    zx::eventpair duplicate_destination = CopyEventPair(destination);
 
     ImportPtr import = fxl::MakeRefCounted<Import>(
         session_.get(), i + 1, scenic::ImportSpec::NODE, &linker);
@@ -556,8 +556,8 @@ TEST_F(ResourceLinkerTest, DuplicatedDestinationHandlesAllowMultipleImports) {
 TEST_F(ResourceLinkerTest, UnresolvedImportIsRemovedIfDestroyed) {
   ResourceLinker linker;
 
-  mx::eventpair source, destination;
-  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+  zx::eventpair source, destination;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   auto exported =
       fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
@@ -574,7 +574,7 @@ TEST_F(ResourceLinkerTest, UnresolvedImportIsRemovedIfDestroyed) {
   static const size_t kImportCount = 2;
 
   for (size_t i = 1; i <= kImportCount; ++i) {
-    mx::eventpair duplicate_destination = CopyEventPair(destination);
+    zx::eventpair duplicate_destination = CopyEventPair(destination);
 
     ImportPtr import = fxl::MakeRefCounted<Import>(
         session_.get(), i + 1, scenic::ImportSpec::NODE, &linker);

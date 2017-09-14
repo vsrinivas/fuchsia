@@ -33,7 +33,7 @@ class RootEnvironmentHost : public ApplicationEnvironmentHost,
   // ServiceProvider implementation:
 
   void ConnectToService(const fidl::String& interface_name,
-                        mx::channel channel) override;
+                        zx::channel channel) override;
 
  private:
   RootApplicationLoader loader_;

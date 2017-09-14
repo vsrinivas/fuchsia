@@ -20,7 +20,7 @@ source_set("view_framework") {
     "//garnet/public/lib/fxl",
   ]
 
-  deps = [ "//magenta/system/ulib/trace" ]
+  deps = [ "//zircon/system/ulib/trace" ]
 }
 
 source_set("view_provider") {

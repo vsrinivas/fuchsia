@@ -155,7 +155,7 @@ func (a *Arena) bufferFromEntry(e bufferEntry) Buffer {
 //
 // The layout is known to ethernet drivers as eth_fifo_entry_t.
 //
-// In a departure from the magenta convention, we store a buffer index
+// In a departure from the zircon convention, we store a buffer index
 // in cookie instead of a pointer.
 type bufferEntry struct {
 	offset uint32

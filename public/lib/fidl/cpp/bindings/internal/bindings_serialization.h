@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERNAL_BINDINGS_SERIALIZATION_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_BINDINGS_SERIALIZATION_H_
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 #include <vector>
 
@@ -20,7 +20,7 @@ namespace internal {
 
 // Please note that this is a different value than |fidl::kInvalidHandleValue|,
 // which is the "decoded" invalid handle.
-const mx_handle_t kEncodedInvalidHandleValue = static_cast<mx_handle_t>(-1);
+const zx_handle_t kEncodedInvalidHandleValue = static_cast<zx_handle_t>(-1);
 
 size_t Align(size_t size);
 char* AlignPointer(char* ptr);
@@ -48,17 +48,17 @@ inline void DecodePointer(const uint64_t* offset, T** ptr) {
 // Handles are encoded as indices into a vector of handles. These functions
 // manipulate the value of |handle|, mapping it to and from an index.
 
-void EncodeHandle(WrappedHandle* handle, std::vector<mx_handle_t>* handles);
-void EncodeHandle(Interface_Data* data, std::vector<mx_handle_t>* handles);
+void EncodeHandle(WrappedHandle* handle, std::vector<zx_handle_t>* handles);
+void EncodeHandle(Interface_Data* data, std::vector<zx_handle_t>* handles);
 // Note: The following three functions don't validate the encoded handle value.
-void DecodeHandle(WrappedHandle* handle, std::vector<mx_handle_t>* handles);
-void DecodeHandle(Interface_Data* data, std::vector<mx_handle_t>* handles);
+void DecodeHandle(WrappedHandle* handle, std::vector<zx_handle_t>* handles);
+void DecodeHandle(Interface_Data* data, std::vector<zx_handle_t>* handles);
 
 // The following 2 functions are used to encode/decode all objects (structs and
 // arrays) in a consistent manner.
 
 template <typename T>
-inline void Encode(T* obj, std::vector<mx_handle_t>* handles) {
+inline void Encode(T* obj, std::vector<zx_handle_t>* handles) {
   if (obj->ptr)
     obj->ptr->EncodePointersAndHandles(handles);
   EncodePointer(obj->ptr, &obj->offset);
@@ -66,7 +66,7 @@ inline void Encode(T* obj, std::vector<mx_handle_t>* handles) {
 
 // Note: This function doesn't validate the encoded pointer and handle values.
 template <typename T>
-inline void Decode(T* obj, std::vector<mx_handle_t>* handles) {
+inline void Decode(T* obj, std::vector<zx_handle_t>* handles) {
   DecodePointer(&obj->offset, &obj->ptr);
   if (obj->ptr)
     obj->ptr->DecodePointersAndHandles(handles);
@@ -83,7 +83,7 @@ template <typename T>
 inline void InterfaceDataToHandle(Interface_Data* input,
                                   InterfaceHandle<T>* output) {
   *output = InterfaceHandle<T>(
-      UnwrapHandle<mx::channel>(FetchAndReset(&input->handle)), input->version);
+      UnwrapHandle<zx::channel>(FetchAndReset(&input->handle)), input->version);
 }
 
 }  // namespace internal

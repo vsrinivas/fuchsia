@@ -38,7 +38,7 @@ MessageTransceiver::~MessageTransceiver() {
   CancelWaiters();
 }
 
-void MessageTransceiver::SetChannel(mx::channel channel) {
+void MessageTransceiver::SetChannel(zx::channel channel) {
   FXL_DCHECK(channel);
 
   if (!socket_fd_.is_valid()) {
@@ -117,7 +117,7 @@ void MessageTransceiver::MaybeWaitToSend() {
   }
 
   if (!fd_send_waiter_.Wait(
-          [this](mx_status_t status, uint32_t events) {
+          [this](zx_status_t status, uint32_t events) {
             FXL_DCHECK(!send_tasks_.empty());
             auto task = send_tasks_.front();
             send_tasks_.pop();
@@ -173,7 +173,7 @@ void MessageTransceiver::SendPacket(PacketType type,
 void MessageTransceiver::WaitToReceive() {
   fd_recv_waiter_waiting_ = true;
   if (!fd_recv_waiter_.Wait(
-          [this](mx_status_t status, uint32_t events) {
+          [this](zx_status_t status, uint32_t events) {
             fd_recv_waiter_waiting_ = false;
             ReceiveMessage();
           },

@@ -10,8 +10,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <magenta/types.h>
-#include <magenta/syscalls.h>
+#include <zircon/types.h>
+#include <zircon/syscalls.h>
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -42,7 +42,7 @@ static dsoinfo_t* dsolist_add(dsoinfo_t** list,
   memset(dso->buildid, 'x', sizeof(dso->buildid) - 1);
   dso->base = base;
   dso->debug_file_tried = false;
-  dso->debug_file_status = MX_ERR_BAD_STATE;
+  dso->debug_file_status = ZX_ERR_BAD_STATE;
   while (*list != nullptr) {
     if ((*list)->base < dso->base) {
       dso->next = *list;
@@ -56,7 +56,7 @@ static dsoinfo_t* dsolist_add(dsoinfo_t** list,
   return dso;
 }
 
-dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, mx_vaddr_t lmap_addr,
+dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, zx_vaddr_t lmap_addr,
                           const char* name) {
   dsoinfo_t* dsolist = nullptr;
   // The first dso we see is the main executable.
@@ -71,7 +71,7 @@ dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, mx_vaddr_t lmap_addr,
 
     if (!bb->Read(lmap_addr, &lmap, sizeof(lmap)))
       break;
-    if (!ReadString(*bb, reinterpret_cast<mx_vaddr_t>(lmap.l_name), dsoname,
+    if (!ReadString(*bb, reinterpret_cast<zx_vaddr_t>(lmap.l_name), dsoname,
                     sizeof(dsoname)))
       break;
 
@@ -136,7 +136,7 @@ dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, mx_vaddr_t lmap_addr,
     dso->phnum = hdr.e_phnum;
 
     is_main_exec = false;
-    lmap_addr = reinterpret_cast<mx_vaddr_t>(lmap.l_next);
+    lmap_addr = reinterpret_cast<zx_vaddr_t>(lmap.l_next);
   }
 
   return dsolist;
@@ -152,7 +152,7 @@ void dso_free_list(dsoinfo_t* list) {
   }
 }
 
-dsoinfo_t* dso_lookup(dsoinfo_t* dso_list, mx_vaddr_t pc) {
+dsoinfo_t* dso_lookup(dsoinfo_t* dso_list, zx_vaddr_t pc) {
   for (auto dso = dso_list; dso != nullptr; dso = dso->next) {
     if (pc >= dso->base)
       return dso;
@@ -184,14 +184,14 @@ void dso_vlog_list(const dsoinfo_t* dso_list) {
   }
 }
 
-mx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
+zx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
   // Have we already tried?
   // Yeah, if we OOM it's possible it'll succeed next time, but
   // it's not worth the extra complexity to avoid printing the debugging
   // messages twice.
   if (dso->debug_file_tried) {
     switch (dso->debug_file_status) {
-      case MX_OK:
+      case ZX_OK:
         FXL_DCHECK(dso->debug_file != nullptr);
         *out_debug_file = dso->debug_file;
       // fall through
@@ -208,7 +208,7 @@ mx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
   if (asprintf(&path, "%s/%s%s", kDebugDirectory, dso->buildid, kDebugSuffix) <
       0) {
     FXL_VLOG(1) << "OOM building debug file path for dso " << dso->name;
-    dso->debug_file_status = MX_ERR_NO_MEMORY;
+    dso->debug_file_status = ZX_ERR_NO_MEMORY;
     return dso->debug_file_status;
   }
 
@@ -218,13 +218,13 @@ mx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
   if (fd < 0) {
     FXL_VLOG(1) << "debug file for dso " << dso->name << " not found: " << path;
     free(path);
-    dso->debug_file_status = MX_ERR_NOT_FOUND;
+    dso->debug_file_status = ZX_ERR_NOT_FOUND;
   } else {
     FXL_VLOG(1) << "found debug file for dso " << dso->name << ": " << path;
     close(fd);
     dso->debug_file = path;
     *out_debug_file = path;
-    dso->debug_file_status = MX_OK;
+    dso->debug_file_status = ZX_OK;
   }
 
   return dso->debug_file_status;

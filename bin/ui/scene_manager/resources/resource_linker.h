@@ -45,7 +45,7 @@ class ResourceLinker : private fsl::MessageLoopHandler {
   // via ImportResourceOp with the peer of |export_token|.
   //
   // Returns true if there are no errors.
-  bool ExportResource(Resource* resource, mx::eventpair export_token);
+  bool ExportResource(Resource* resource, zx::eventpair export_token);
 
   // Registers an |import| with a given |spec| and |import_token|. |import| is
   // new resource in the importing session that acts as a import for a resource
@@ -57,7 +57,7 @@ class ResourceLinker : private fsl::MessageLoopHandler {
   // Returns true if there are no errors.
   bool ImportResource(Import* import,
                       scenic::ImportSpec spec,
-                      mx::eventpair import_token);
+                      zx::eventpair import_token);
 
   size_t NumExports() const;
 
@@ -83,13 +83,13 @@ class ResourceLinker : private fsl::MessageLoopHandler {
   friend class Import;
 
   struct ExportEntry {
-    mx::eventpair export_token;
+    zx::eventpair export_token;
     fsl::MessageLoop::HandlerKey death_handler_key = 0;
     Resource* resource;
   };
 
-  using ImportKoid = mx_koid_t;
-  using HandleToKoidMap = std::unordered_map<mx_handle_t, ImportKoid>;
+  using ImportKoid = zx_koid_t;
+  using HandleToKoidMap = std::unordered_map<zx_handle_t, ImportKoid>;
   using KoidsToExportsMap = std::unordered_map<ImportKoid, ExportEntry>;
   using ResourcesToKoidsMap = std::multimap<Resource*, ImportKoid>;
 
@@ -118,24 +118,24 @@ class ResourceLinker : private fsl::MessageLoopHandler {
                                    Resource* actual,
                                    ImportResolutionResult resolution_result);
 
-  void OnHandleReady(mx_handle_t handle,
-                     mx_signals_t pending,
+  void OnHandleReady(zx_handle_t handle,
+                     zx_signals_t pending,
                      uint64_t count) override;
 
-  void OnHandleError(mx_handle_t handle, mx_status_t error) override;
+  void OnHandleError(zx_handle_t handle, zx_status_t error) override;
 
   void InvokeExpirationCallback(Resource* resource, ExpirationCause cause);
 
-  Resource* RemoveExportEntryForExpiredHandle(mx_handle_t handle);
+  Resource* RemoveExportEntryForExpiredHandle(zx_handle_t handle);
 
   void RemoveExportedResourceIfUnbound(Resource* exported_resource);
 
   // Returns true if a link was made.
-  bool PerformLinkingNow(mx_koid_t import_koid);
+  bool PerformLinkingNow(zx_koid_t import_koid);
 
   // Helper method to remove |import_koid| from |resources_to_import_koids_|.
   void RemoveFromExportedResourceToImportKoidsMap(Resource* resource,
-                                                  mx_koid_t import_koid);
+                                                  zx_koid_t import_koid);
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ResourceLinker);
 };

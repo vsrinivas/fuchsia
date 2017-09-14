@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/process.h>
-#include <magenta/processargs.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
 #include <stdlib.h>
 
 #include <string>

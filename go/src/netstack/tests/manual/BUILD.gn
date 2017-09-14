@@ -10,8 +10,8 @@ executable("sockettest") {
   ]
 
   libs = [
-    "mxio",
-    "magenta",
+    "fdio",
+    "zircon",
   ]
 }
 
@@ -23,8 +23,8 @@ executable("mctest") {
   ]
 
   libs = [
-    "mxio",
-    "magenta",
+    "fdio",
+    "zircon",
   ]
 }
 
@@ -36,8 +36,8 @@ executable("nbiotest") {
   ]
 
   libs = [
-    "mxio",
-    "magenta",
+    "fdio",
+    "zircon",
   ]
 }
 
@@ -49,8 +49,8 @@ executable("polltest") {
   ]
 
   libs = [
-    "mxio",
-    "magenta",
+    "fdio",
+    "zircon",
   ]
 }
 
@@ -62,8 +62,8 @@ executable("selecttest") {
   ]
 
   libs = [
-    "mxio",
-    "magenta",
+    "fdio",
+    "zircon",
   ]
 }
 
@@ -75,8 +75,8 @@ executable("udptest") {
   ]
 
   libs = [
-    "mxio",
-    "magenta",
+    "fdio",
+    "zircon",
   ]
 }
 
@@ -88,8 +88,8 @@ executable("closetest") {
   ]
 
   libs = [
-    "mxio",
-    "magenta",
+    "fdio",
+    "zircon",
     "launchpad",
   ]
 }
@@ -102,8 +102,8 @@ executable("sockopttest") {
   ]
 
   libs = [
-    "mxio",
-    "magenta",
+    "fdio",
+    "zircon",
   ]
 }
 
@@ -115,8 +115,8 @@ executable("passfdtest") {
   ]
 
   libs = [
-    "mxio",
-    "magenta",
+    "fdio",
+    "zircon",
     "launchpad",
   ]
 }

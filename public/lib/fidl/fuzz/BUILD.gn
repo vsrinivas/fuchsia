@@ -13,7 +13,7 @@ executable("fidl-fuzzer") {
     "test.h",
   ]
   deps = [
-    "//magenta/system/host/fidl:compiler",
+    "//zircon/system/host/fidl:compiler",
   ]
 
   cflags = [

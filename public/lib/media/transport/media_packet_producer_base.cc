@@ -9,9 +9,9 @@
 namespace media {
 
 MediaPacketProducerBase::MediaPacketProducerBase()
-    : allocator_(MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
-                 MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ |
-                     MX_RIGHT_MAP) {
+    : allocator_(ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+                 ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ |
+                     ZX_RIGHT_MAP) {
   // No demand initially.
   demand_.min_packets_outstanding = 0;
   demand_.min_pts = MediaPacket::kNoTimestamp;
@@ -136,7 +136,7 @@ void MediaPacketProducerBase::ProducePacket(
 
   // Make sure the consumer is up-to-date with respect to buffers.
   uint32_t buffer_id;
-  mx::vmo vmo;
+  zx::vmo vmo;
   while (allocator_.PollForBufferUpdate(&buffer_id, &vmo)) {
     if (vmo) {
       consumer_->AddPayloadBuffer(buffer_id, std::move(vmo));

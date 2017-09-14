@@ -4,7 +4,7 @@
 
 #include "lib/fsl/tasks/fd_waiter.h"
 
-#include <magenta/errors.h>
+#include <zircon/errors.h>
 
 namespace fsl {
 
@@ -25,15 +25,15 @@ bool FDWaiter::Wait(Callback callback,
   FXL_DCHECK(!io_);
   FXL_DCHECK(!key_);
 
-  io_ = __mxio_fd_to_io(fd);
+  io_ = __fdio_fd_to_io(fd);
   if (!io_)
     return false;
 
-  mx_handle_t handle = MX_HANDLE_INVALID;
-  mx_signals_t signals = MX_SIGNAL_NONE;
-  __mxio_wait_begin(io_, events, &handle, &signals);
+  zx_handle_t handle = ZX_HANDLE_INVALID;
+  zx_signals_t signals = ZX_SIGNAL_NONE;
+  __fdio_wait_begin(io_, events, &handle, &signals);
 
-  if (handle == MX_HANDLE_INVALID) {
+  if (handle == ZX_HANDLE_INVALID) {
     Cancel();
     return false;
   }
@@ -51,7 +51,7 @@ void FDWaiter::Cancel() {
   if (key_)
     MessageLoop::GetCurrent()->RemoveHandler(key_);
 
-  __mxio_release(io_);
+  __fdio_release(io_);
   io_ = nullptr;
   key_ = 0;
 
@@ -59,23 +59,23 @@ void FDWaiter::Cancel() {
   callback_ = Callback();
 }
 
-void FDWaiter::OnHandleReady(mx_handle_t handle,
-                             mx_signals_t pending,
+void FDWaiter::OnHandleReady(zx_handle_t handle,
+                             zx_signals_t pending,
                              uint64_t count) {
   FXL_DCHECK(io_);
   FXL_DCHECK(key_);
 
   uint32_t events = 0;
-  __mxio_wait_end(io_, pending, &events);
+  __fdio_wait_end(io_, pending, &events);
 
   Callback callback = std::move(callback_);
   Cancel();
 
   // Last to prevent re-entrancy from the callback.
-  callback(MX_OK, events);
+  callback(ZX_OK, events);
 }
 
-void FDWaiter::OnHandleError(mx_handle_t handle, mx_status_t error) {
+void FDWaiter::OnHandleError(zx_handle_t handle, zx_status_t error) {
   Callback callback = std::move(callback_);
   Cancel();
 

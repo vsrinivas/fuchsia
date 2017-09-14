@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_BINDING_H_
 #define LIB_FIDL_CPP_BINDINGS_BINDING_H_
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include <memory>
 #include <utility>
@@ -70,7 +70,7 @@ class Binding {
   // |impl|. Does not take ownership of |impl|, which must outlive the binding.
   // See class comment for definition of |waiter|.
   Binding(ImplPtr impl,
-          mx::channel handle,
+          zx::channel handle,
           const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter())
       : Binding(std::forward<ImplPtr>(impl)) {
     Bind(std::move(handle), waiter);
@@ -116,7 +116,7 @@ class Binding {
   // Completes a binding that was constructed with only an interface
   // implementation. Takes ownership of |handle| and binds it to the previously
   // specified implementation. See class comment for definition of |waiter|.
-  void Bind(mx::channel handle,
+  void Bind(zx::channel handle,
             const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter()) {
     FXL_DCHECK(!internal_router_);
 
@@ -143,9 +143,9 @@ class Binding {
   // class comment for definition of |waiter|.
   void Bind(InterfaceHandle<Interface>* interface_handle,
             const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter()) {
-    mx::channel endpoint0;
-    mx::channel endpoint1;
-    mx::channel::create(0, &endpoint0, &endpoint1);
+    zx::channel endpoint0;
+    zx::channel endpoint1;
+    zx::channel::create(0, &endpoint0, &endpoint1);
     *interface_handle =
         InterfaceHandle<Interface>(std::move(endpoint0), Interface::Version_);
     Bind(std::move(endpoint1), waiter);
@@ -204,7 +204,7 @@ class Binding {
   // be used to make explicit Wait/WaitMany calls. Requires that the Binding be
   // bound. Ownership of the handle is retained by the Binding, it is not
   // transferred to the caller.
-  mx_handle_t handle() const {
+  zx_handle_t handle() const {
     FXL_DCHECK(is_bound());
     return internal_router_->handle();
   }

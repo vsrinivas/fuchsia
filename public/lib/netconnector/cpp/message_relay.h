@@ -7,13 +7,13 @@
 #include <queue>
 #include <vector>
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include "lib/netconnector/cpp/async_wait.h"
 
 namespace netconnector {
 
-// Moves data-only (no handles) messages across an mx::channel. This is an
+// Moves data-only (no handles) messages across an zx::channel. This is an
 // abstract base class with overridables for message arrival and channel
 // closure. Use MessageRelay if you prefer to set callbacks for those things.
 //
@@ -23,7 +23,7 @@ class MessageRelayBase {
   virtual ~MessageRelayBase();
 
   // Sets the channel that the relay should use to move messages.
-  void SetChannel(mx::channel channel);
+  void SetChannel(zx::channel channel);
 
   // Sends a message.
   void SendMessage(std::vector<uint8_t> message);
@@ -47,13 +47,13 @@ class MessageRelayBase {
   // Writes all the messages in messages_to_write_.
   void WriteChannelMessages();
 
-  mx::channel channel_;
+  zx::channel channel_;
   AsyncWait read_async_wait_;
   AsyncWait write_async_wait_;
   std::queue<std::vector<uint8_t>> messages_to_write_;
 };
 
-// Moves data-only (no handles) messages across an mx::channel.
+// Moves data-only (no handles) messages across an zx::channel.
 //
 // MessageRelay is not thread-safe. All methods calls must be serialized.
 class MessageRelay : public MessageRelayBase {

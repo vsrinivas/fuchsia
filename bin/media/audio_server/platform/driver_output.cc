@@ -5,9 +5,9 @@
 #include "garnet/bin/media/audio_server/platform/driver_output.h"
 
 #include <fcntl.h>
-#include <magenta/device/audio.h>
-#include <magenta/process.h>
-#include <mxio/io.h>
+#include <zircon/device/audio.h>
+#include <zircon/process.h>
+#include <fdio/io.h>
 #include <fbl/atomic.h>
 #include <fbl/auto_call.h>
 #include <fbl/limits.h>
@@ -35,31 +35,31 @@ static constexpr uint32_t kDefaultRingBufferBytes =
     kDefaultRingBufferFrames * kDefaultFrameSize;
 static constexpr int64_t kDefaultLowWaterNsec = 15000000;   // 15 msec for now
 static constexpr int64_t kDefaultHighWaterNsec = 20000000;  // 20 msec for now
-static constexpr mx_duration_t kUnderflowCooldown = MX_SEC(1);
+static constexpr zx_duration_t kUnderflowCooldown = ZX_SEC(1);
 
-static fbl::atomic<mx_txid_t> TXID_GEN(1);
-static thread_local mx_txid_t TXID = TXID_GEN.fetch_add(1);
+static fbl::atomic<zx_txid_t> TXID_GEN(1);
+static thread_local zx_txid_t TXID = TXID_GEN.fetch_add(1);
 
-AudioOutputPtr DriverOutput::Create(mx::channel channel,
+AudioOutputPtr DriverOutput::Create(zx::channel channel,
                                      AudioOutputManager* manager) {
   return AudioOutputPtr(new DriverOutput(std::move(channel), manager));
 }
 
-DriverOutput::DriverOutput(mx::channel channel, AudioOutputManager* manager)
+DriverOutput::DriverOutput(zx::channel channel, AudioOutputManager* manager)
     : StandardOutputBase(manager), stream_channel_(std::move(channel)) {}
 
 DriverOutput::~DriverOutput() {}
 
 template <typename ReqType, typename RespType>
-mx_status_t DriverOutput::SyncDriverCall(const mx::channel& channel,
+zx_status_t DriverOutput::SyncDriverCall(const zx::channel& channel,
                                           const ReqType& req,
                                           RespType* resp,
-                                          mx_handle_t* resp_handle_out) {
-  constexpr mx_time_t CALL_TIMEOUT = MX_MSEC(500u);
-  mx_channel_call_args_t args;
+                                          zx_handle_t* resp_handle_out) {
+  constexpr zx_time_t CALL_TIMEOUT = ZX_MSEC(500u);
+  zx_channel_call_args_t args;
 
   FXL_DCHECK((resp_handle_out == nullptr) ||
-             (*resp_handle_out == MX_HANDLE_INVALID));
+             (*resp_handle_out == ZX_HANDLE_INVALID));
 
   args.wr_bytes = const_cast<ReqType*>(&req);
   args.wr_num_bytes = sizeof(ReqType);
@@ -71,13 +71,13 @@ mx_status_t DriverOutput::SyncDriverCall(const mx::channel& channel,
   args.rd_num_handles = resp_handle_out ? 1 : 0;
 
   uint32_t bytes, handles;
-  mx_status_t read_status, write_status;
+  zx_status_t read_status, write_status;
 
-  write_status = channel.call(0, mx_deadline_after(CALL_TIMEOUT),
+  write_status = channel.call(0, zx_deadline_after(CALL_TIMEOUT),
                               &args, &bytes, &handles, &read_status);
 
-  if (write_status != MX_OK) {
-    if (write_status == MX_ERR_CALL_FAILED) {
+  if (write_status != ZX_OK) {
+    if (write_status == ZX_ERR_CALL_FAILED) {
       FXL_LOG(WARNING) << "Cmd read failure (cmd 0x" << std::hex
                        << std::setfill('0') << std::setw(4) << req.hdr.cmd
                        << ", res " << std::dec << std::setfill(' ')
@@ -95,7 +95,7 @@ mx_status_t DriverOutput::SyncDriverCall(const mx::channel& channel,
   if (bytes != sizeof(RespType)) {
     FXL_LOG(WARNING) << "Unexpected response size (got " << bytes
                      << ", expected " << sizeof(RespType) << ")";
-    return MX_ERR_INTERNAL;
+    return ZX_ERR_INTERNAL;
   }
 
   return resp->result;
@@ -110,7 +110,7 @@ MediaResult DriverOutput::Init() {
   //
   // TODO(johngro): Actually do format negotiation here.  Don't depend on on
   // 48KHz 16-bit stereo.
-  mx_status_t res;
+  zx_status_t res;
   auto cleanup = fbl::MakeAutoCall([&]() { Cleanup(); });
 
   {
@@ -126,7 +126,7 @@ MediaResult DriverOutput::Init() {
                          req,
                          &resp,
                          rb_channel_.reset_and_get_address());
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to set format " << req.frames_per_second
                      << "Hz " << req.channels << "-Ch 0x" << std::hex
                      << req.sample_format << "(res " << std::dec << res << ")";
@@ -140,11 +140,11 @@ MediaResult DriverOutput::Init() {
   {
     audio_stream_cmd_plug_detect_req_t req;
     req.hdr.cmd = AUDIO_STREAM_CMD_PLUG_DETECT;
-    req.hdr.transaction_id = std::numeric_limits<mx_txid_t>::max();
+    req.hdr.transaction_id = std::numeric_limits<zx_txid_t>::max();
     req.flags = AUDIO_PDF_ENABLE_NOTIFICATIONS;
 
     res = stream_channel_.write(0, &req, sizeof(req), nullptr, 0);
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to request initial plug state (res "
                      << res << ")";
       return MediaResult::INTERNAL_ERROR;
@@ -155,7 +155,7 @@ MediaResult DriverOutput::Init() {
     FXL_DCHECK(reflector_ != nullptr);
 
     res = reflector_->Activate(fbl::move(stream_channel_));
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to activate event reflector (res "
                      << res << ")";
       return MediaResult::INTERNAL_ERROR;
@@ -173,7 +173,7 @@ MediaResult DriverOutput::Init() {
     req.hdr.transaction_id = TXID;
 
     res = SyncDriverCall(rb_channel_, req, &resp);
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to fetch ring buffer fifo depth (res " << res
                      << ")";
       return MediaResult::INTERNAL_ERROR;
@@ -215,7 +215,7 @@ MediaResult DriverOutput::Init() {
                          rb_vmo_.reset_and_get_address());
 
     // TODO(johngro): Do a better job of translating errors.
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to get ring buffer VMO (res " << res << ")";
       return MediaResult::INSUFFICIENT_RESOURCES;
     }
@@ -224,7 +224,7 @@ MediaResult DriverOutput::Init() {
   // Fetch and sanity check the size of the VMO we got back from the ring buffer
   // channel.
   res = rb_vmo_.get_size(&rb_size_);
-  if (res != MX_OK) {
+  if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get ring buffer VMO size (res " << res << ")";
     return MediaResult::INTERNAL_ERROR;
   }
@@ -246,10 +246,10 @@ MediaResult DriverOutput::Init() {
 
   // Map the VMO into our address space and fill it with silence.
   // TODO(johngro) : How do I specify the cache policy for this mapping?
-  res = mx_vmar_map(mx_vmar_root_self(), 0u, rb_vmo_.get(), 0u, rb_size_,
-                    MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+  res = zx_vmar_map(zx_vmar_root_self(), 0u, rb_vmo_.get(), 0u, rb_size_,
+                    ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                     reinterpret_cast<uintptr_t*>(&rb_virt_));
-  if (res != MX_OK) {
+  if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to map ring buffer VMO (res " << res << ")";
     return MediaResult::INTERNAL_ERROR;
   }
@@ -281,7 +281,7 @@ void DriverOutput::Cleanup() {
   }
 
   if (rb_virt_ != nullptr) {
-    mx_vmar_unmap(rb_vmo_.get(), reinterpret_cast<uintptr_t>(rb_virt_),
+    zx_vmar_unmap(rb_vmo_.get(), reinterpret_cast<uintptr_t>(rb_virt_),
                   rb_size_);
     rb_virt_ = nullptr;
   }
@@ -298,7 +298,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
   // TODO(johngro) : See MG-940.  Eliminate this as soon as we have a more
   // official way of meeting real-time latency requirements.
   if (!mix_job_prio_bumped_) {
-      mx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
+      zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
       mix_job_prio_bumped_ = true;
   }
 
@@ -309,8 +309,8 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
     req.hdr.cmd = AUDIO_RB_CMD_START;
     req.hdr.transaction_id = TXID;
 
-    mx_status_t res = SyncDriverCall(rb_channel_, req, &resp);
-    if (res != MX_OK) {
+    zx_status_t res = SyncDriverCall(rb_channel_, req, &resp);
+    if (res != ZX_OK) {
       // TODO(johngro): Ugh... if we cannot start the ring buffer, return
       // without scheduling a callback.  The StandardOutputBase implementation
       // will interpret this as a fatal error and should shut this output down.
@@ -318,14 +318,14 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
       return false;
     }
 
-    // Convert the start time from the mx_get_ticks timeline to the
-    // mx_get_time(MX_CLOCK_MONOTONIC) timeline.
+    // Convert the start time from the zx_get_ticks timeline to the
+    // zx_get_time(ZX_CLOCK_MONOTONIC) timeline.
     //
     // TODO(johngro): This conversion makes a bunch of assumptions.  It would be
     // better to just convert the mixer to work in ticks instead of
     // CLOCK_MONOTONIC.  Eventually, we need to work clock recovery into this
     // mix, so this may all become a moot point.
-    uint64_t ticks_per_sec = mx_ticks_per_second();
+    uint64_t ticks_per_sec = zx_ticks_per_second();
     FXL_DCHECK(ticks_per_sec <= fbl::numeric_limits<uint32_t>::max());
     int64_t local_start =
         TimelineRate::Scale(resp.start_ticks, 1000000000u, ticks_per_sec);
@@ -393,7 +393,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
       // Regardless of whether this was the first or a subsequent underflow,
       // update the cooldown deadline (the time at which we will start producing
       // frames again, provided we don't underflow again)
-      underflow_cooldown_deadline_ = mx_deadline_after(kUnderflowCooldown);
+      underflow_cooldown_deadline_ = zx_deadline_after(kUnderflowCooldown);
     }
 
     int64_t fill_target = local_to_output_.Apply(now + kDefaultHighWaterNsec);
@@ -401,7 +401,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
     // Are we in the middle of an underflow cooldown?  If so, check to see if we
     // have recovered yet.
     if (underflow_start_time_) {
-      if (static_cast<mx_time_t>(now) < underflow_cooldown_deadline_) {
+      if (static_cast<zx_time_t>(now) < underflow_cooldown_deadline_) {
         // Looks like we have not recovered yet.  Pretend to have produced the
         // frames we were going to produce and schedule the next wakeup time.
         frames_sent_ = fill_target;
@@ -494,12 +494,12 @@ void DriverOutput::ScheduleNextLowWaterWakeup() {
       fxl::TimeDelta::FromNanoseconds(low_water_time)));
 }
 
-mx_status_t DriverOutput::EventReflector::Activate(
-    mx::channel stream_channel) {
+zx_status_t DriverOutput::EventReflector::Activate(
+    zx::channel stream_channel) {
   auto ch = ::audio::DispatcherChannelAllocator::New();
 
   if (ch == nullptr)
-    return MX_ERR_NO_MEMORY;
+    return ZX_ERR_NO_MEMORY;
 
   // Simply activate the channel and get out.  The dispatcher pool will hold a
   // reference to it while it is active.  There is no (current) reason for us
@@ -508,7 +508,7 @@ mx_status_t DriverOutput::EventReflector::Activate(
   return ch->Activate(fbl::WrapRefPtr(this), fbl::move(stream_channel));
 }
 
-mx_status_t DriverOutput::EventReflector::ProcessChannel(
+zx_status_t DriverOutput::EventReflector::ProcessChannel(
     DispatcherChannel* channel) {
   FXL_DCHECK(channel != nullptr);
 
@@ -519,8 +519,8 @@ mx_status_t DriverOutput::EventReflector::ProcessChannel(
   } msg;
 
   uint32_t bytes;
-  mx_status_t res = channel->Read(&msg, sizeof(msg), &bytes);
-  if (res != MX_OK) {
+  zx_status_t res = channel->Read(&msg, sizeof(msg), &bytes);
+  if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to read message from driver (res " << res << ")";
     return res;
   }
@@ -533,7 +533,7 @@ mx_status_t DriverOutput::EventReflector::ProcessChannel(
         FXL_LOG(ERROR) << "Bad message length.  Expected "
                        << sizeof(msg.pd_resp)
                        << " Got " << bytes;
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
       }
 
       // TODO(johngro) : If this stream supports plug detection, but requires
@@ -541,7 +541,7 @@ mx_status_t DriverOutput::EventReflector::ProcessChannel(
 
       const auto& m = msg.pd_resp;
       HandlePlugStateChange(m.flags & AUDIO_PDNF_PLUGGED, m.plug_state_time);
-      return MX_OK;
+      return ZX_OK;
     }
 
     case AUDIO_STREAM_PLUG_DETECT_NOTIFY: {
@@ -549,17 +549,17 @@ mx_status_t DriverOutput::EventReflector::ProcessChannel(
         FXL_LOG(ERROR) << "Bad message length.  Expected "
                        << sizeof(msg.pd_notify) << " Got "
                        << bytes;
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
       }
 
       const auto& m = msg.pd_notify;
       HandlePlugStateChange(m.flags & AUDIO_PDNF_PLUGGED, m.plug_state_time);
-      return MX_OK;
+      return ZX_OK;
     }
 
     default:
       FXL_LOG(ERROR) << "Unexpected message type 0x" << std::hex << msg.hdr.cmd;
-      return MX_ERR_INVALID_ARGS;
+      return ZX_ERR_INVALID_ARGS;
   }
 }
 
@@ -579,10 +579,10 @@ void DriverOutput::EventReflector::NotifyChannelDeactivated(
 }
 
 void DriverOutput::EventReflector::HandlePlugStateChange(bool plugged,
-                                                          mx_time_t plug_time) {
+                                                          zx_time_t plug_time) {
   // If this was a hardwired output, just use the current time as the plug time.
   if (!plug_time) {
-    plug_time = mx_time_get(MX_CLOCK_MONOTONIC);
+    plug_time = zx_time_get(ZX_CLOCK_MONOTONIC);
   }
 
   // Reflect this message to the AudioOutputManager so it can deal with the plug

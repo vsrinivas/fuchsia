@@ -7,8 +7,8 @@
 #include <cstdint>
 #include <string>
 
-#include <magenta/device/intel-pt.h>
-#include <magenta/syscalls.h>
+#include <zircon/device/intel-pt.h>
+#include <zircon/syscalls.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
@@ -50,7 +50,7 @@ struct IptConfig {
   uint32_t mode;
 
   // The number of cpus on this system, as reported by
-  // mx_system_get_num_cpus().
+  // zx_system_get_num_cpus().
   uint32_t num_cpus;
 
   // When tracing threads, the max number of threads we can trace.
@@ -107,18 +107,18 @@ class IptServer final : public Server {
   // Process::Delegate overrides.
   void OnThreadStarting(Process* process,
                         Thread* thread,
-                        const mx_exception_context_t& context) override;
+                        const zx_exception_context_t& context) override;
   void OnThreadExiting(Process* process,
                        Thread* thread,
-                       const mx_excp_type_t type,
-                       const mx_exception_context_t& context) override;
+                       const zx_excp_type_t type,
+                       const zx_exception_context_t& context) override;
   void OnProcessExit(Process* process,
-                     const mx_excp_type_t type,
-                     const mx_exception_context_t& context) override;
+                     const zx_excp_type_t type,
+                     const zx_exception_context_t& context) override;
   void OnArchitecturalException(Process* process,
                                 Thread* thread,
-                                const mx_excp_type_t type,
-                                const mx_exception_context_t& context) override;
+                                const zx_excp_type_t type,
+                                const zx_exception_context_t& context) override;
 
   IptConfig config_;
 

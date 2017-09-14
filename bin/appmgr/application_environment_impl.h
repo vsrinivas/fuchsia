@@ -98,8 +98,8 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
   ApplicationLoaderPtr loader_;
   std::string label_;
 
-  mx::job job_;
-  mx::job job_for_child_;
+  zx::job job_;
+  zx::job job_for_child_;
 
   std::unordered_map<ApplicationEnvironmentImpl*,
                      std::unique_ptr<ApplicationEnvironmentControllerImpl>>

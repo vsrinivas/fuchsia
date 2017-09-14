@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 config("bindings_config") {
-  configs = [ "//magenta/system/ulib/mx:mx_config" ]
+  configs = [ "//zircon/system/ulib/zx:zx_config" ]
 }
 
 # This target provides source files and dependencies required for serializing
@@ -46,7 +46,7 @@ source_set("serialization") {
   public_deps = [
     "//garnet/public/lib/fidl/cpp/waiter",
     "//garnet/public/lib/fxl:fxl_logging",
-    "//magenta/system/ulib/mx",
+    "//zircon/system/ulib/zx",
   ]
 
   public_configs = [ ":bindings_config" ]

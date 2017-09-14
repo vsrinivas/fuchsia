@@ -10,7 +10,7 @@
 #include <functional>
 #include <utility>
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/internal/interface_ptr_internal.h"
@@ -99,9 +99,9 @@ class InterfacePtr {
   InterfaceRequest<Interface> NewRequest() {
     FXL_DCHECK(!is_bound()) << "An existing handle is already bound.";
 
-    mx::channel endpoint0;
-    mx::channel endpoint1;
-    mx::channel::create(0, &endpoint0, &endpoint1);
+    zx::channel endpoint0;
+    zx::channel endpoint1;
+    zx::channel::create(0, &endpoint0, &endpoint1);
     Bind(InterfaceHandle<Interface>(std::move(endpoint0), Interface::Version_));
     return InterfaceRequest<Interface>(std::move(endpoint1));
   }

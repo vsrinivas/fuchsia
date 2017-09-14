@@ -3,18 +3,18 @@
 This repository contains the interface and implementation of FIDL
 Network Service.
 
-     +-----------+         +-----------+
-     | FIDL app  |         | POSIX app |
-     +------+----+         +-----+-----+
-            |                    |
-    +-------v--------------+     |
-    | FIDL network service |     |
-    |   (//garnet/bin/network)   |     |
-    +-------+--------------+     |
-            |                    |
-      +-----v--------------------v-----+
+     +-----------+           +-----------+
+     | FIDL app  |           | POSIX app |
+     +------+----+           +-----+-----+
+            |                      |
+    +-------v----------------+     |
+    |  FIDL network service  |     |
+    | (//garnet/bin/network) |     |
+    +-------+----------------+     |
+            |                      |
+      +-----v----------------------v---+
       |         BSD socket API         |
-      |  (//magenta/system/ulib/mxio)  |
+      |  (//zircon/system/ulib/fdio)   |
       +---------------+----------------+
                       |
         +-------------v--------------+
@@ -24,5 +24,5 @@ Network Service.
                       |
      +----------------v-----------------+
      |         Ethernet driver          |
-     | (//magenta/system/udev/ethernet) |
+     | (//zircon/system/udev/ethernet)  |
      +----------------------------------+

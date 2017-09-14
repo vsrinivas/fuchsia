@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
 #include "lib/fxl/strings/string_view.h"
 
@@ -47,7 +47,7 @@ class StopReplyPacket final {
 
   // Sets the thread and process IDs to be reported. This can only be set if the
   // packet type is equal to kReceivedSignal.
-  void SetThreadId(mx_koid_t process_id, mx_koid_t thread_id);
+  void SetThreadId(zx_koid_t process_id, zx_koid_t thread_id);
 
   // Adds a register value to be reported. This can only be set if the packet
   // type is equal to kReceivedSignal. |value| must contain a series of bytes in

@@ -5,7 +5,7 @@
 #ifndef APPLICATION_SRC_MANAGER_APPLICATION_RUNNER_HOLDER_H_
 #define APPLICATION_SRC_MANAGER_APPLICATION_RUNNER_HOLDER_H_
 
-#include <mx/vmo.h>
+#include <zx/vmo.h>
 
 #include "lib/app/fidl/application_controller.fidl.h"
 #include "lib/app/fidl/application_runner.fidl.h"

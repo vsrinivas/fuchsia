@@ -16,7 +16,7 @@ static const uint64_t kLargeAlloc = 256 * 1024;
 
 uint32_t VerifyBufferAdd(SharedBufferSetAllocator* under_test) {
   uint32_t buffer_id;
-  mx::vmo vmo;
+  zx::vmo vmo;
   EXPECT_TRUE(under_test->PollForBufferUpdate(&buffer_id, &vmo));
   EXPECT_TRUE(vmo);
   return buffer_id;
@@ -24,7 +24,7 @@ uint32_t VerifyBufferAdd(SharedBufferSetAllocator* under_test) {
 
 void VerifyNoBufferUpdate(SharedBufferSetAllocator* under_test) {
   uint32_t buffer_id;
-  mx::vmo vmo;
+  zx::vmo vmo;
   EXPECT_FALSE(under_test->PollForBufferUpdate(&buffer_id, &vmo));
 }
 
@@ -65,7 +65,7 @@ void* AllocateRegion(SharedBufferSetAllocator* under_test,
 uint32_t VerifyBufferRemove(SharedBufferSetAllocator* under_test,
                             uint32_t expected_buffer_id) {
   uint32_t buffer_id;
-  mx::vmo vmo;
+  zx::vmo vmo;
   EXPECT_TRUE(under_test->PollForBufferUpdate(&buffer_id, &vmo));
   EXPECT_EQ(expected_buffer_id, buffer_id);
   EXPECT_FALSE(vmo);
@@ -76,8 +76,8 @@ uint32_t VerifyBufferRemove(SharedBufferSetAllocator* under_test,
 // allocations.
 TEST(SharedBufferSetAllocatorTest, TwoSmallAllocations) {
   SharedBufferSetAllocator under_test(
-      MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
-      MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_MAP);
+      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+      ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_MAP);
 
   uint32_t buffer_id;
   void* region_0 = AllocateRegion(&under_test, kSmallAlloc, &buffer_id);
@@ -94,8 +94,8 @@ TEST(SharedBufferSetAllocatorTest, TwoSmallAllocations) {
 // allocations.
 TEST(SharedBufferSetAllocatorTest, TwoLargeAllocations) {
   SharedBufferSetAllocator under_test(
-      MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
-      MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_MAP);
+      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+      ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_MAP);
 
   uint32_t buffer_id_0;
   void* region_0 = AllocateRegion(&under_test, kLargeAlloc, &buffer_id_0);
@@ -114,8 +114,8 @@ TEST(SharedBufferSetAllocatorTest, TwoLargeAllocations) {
 // allocations that require a new buffer.
 TEST(SharedBufferSetAllocatorTest, ManySmallAllocations) {
   SharedBufferSetAllocator under_test(
-      MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
-      MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_MAP);
+      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+      ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_MAP);
 
   std::vector<void*> first_buffer_allocations;
   uint32_t first_buffer_id;
@@ -129,7 +129,7 @@ TEST(SharedBufferSetAllocatorTest, ManySmallAllocations) {
     void* region = under_test.AllocateRegion(kSmallAlloc);
 
     uint32_t buffer_id;
-    mx::vmo vmo;
+    zx::vmo vmo;
     if (under_test.PollForBufferUpdate(&buffer_id, &vmo)) {
       EXPECT_TRUE(vmo);
       EXPECT_NE(first_buffer_id, buffer_id);

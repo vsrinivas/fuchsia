@@ -9,7 +9,7 @@
 #include <async/loop.h>
 #include <async/task.h>
 #include <async/wait.h>
-#include <mx/event.h>
+#include <zx/event.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -27,7 +27,7 @@ class EventTimestamper {
   class Wait;
 
  public:
-  using Callback = std::function<void(mx_time_t timestamp)>;
+  using Callback = std::function<void(zx_time_t timestamp)>;
 
   EventTimestamper();
   ~EventTimestamper();
@@ -43,8 +43,8 @@ class EventTimestamper {
    public:
     Watch();
     Watch(EventTimestamper* ts,
-          mx::event event,
-          mx_status_t trigger,
+          zx::event event,
+          zx_status_t trigger,
           Callback callback);
     Watch(Watch&&);
     ~Watch();
@@ -71,8 +71,8 @@ class EventTimestamper {
     enum class State { STARTED, STOPPED, ABANDONED };
 
     Wait(const fxl::RefPtr<fxl::TaskRunner>& task_runner,
-         mx::event event,
-         mx_status_t trigger,
+         zx::event event,
+         zx_status_t trigger,
          Callback callback);
     ~Wait();
 
@@ -83,11 +83,11 @@ class EventTimestamper {
 
    private:
     async_wait_result_t Handle(async_t* async,
-                               mx_status_t status,
-                               const mx_packet_signal_t* signal);
+                               zx_status_t status,
+                               const zx_packet_signal_t* signal);
 
     fxl::RefPtr<fxl::TaskRunner> task_runner_;
-    mx::event event_;
+    zx::event event_;
     Callback callback_;
     State state_ = State::STOPPED;
     async::Wait wait_;

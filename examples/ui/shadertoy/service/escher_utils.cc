@@ -8,19 +8,19 @@
 
 namespace shadertoy {
 
-std::pair<escher::SemaphorePtr, mx::event> NewSemaphoreEventPair(
+std::pair<escher::SemaphorePtr, zx::event> NewSemaphoreEventPair(
     escher::Escher* escher) {
-  mx::event event;
-  mx_status_t status = mx::event::create(0u, &event);
-  if (status != MX_OK) {
+  zx::event event;
+  zx_status_t status = zx::event::create(0u, &event);
+  if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create event to import as VkSemaphore.";
-    return std::make_pair(escher::SemaphorePtr(), mx::event());
+    return std::make_pair(escher::SemaphorePtr(), zx::event());
   }
 
-  mx::event event_copy;
-  if (event.duplicate(MX_RIGHT_SAME_RIGHTS, &event_copy) != MX_OK) {
+  zx::event event_copy;
+  if (event.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_copy) != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to duplicate event.";
-    return std::make_pair(escher::SemaphorePtr(), mx::event());
+    return std::make_pair(escher::SemaphorePtr(), zx::event());
   }
 
   auto device = escher->device();
@@ -36,21 +36,21 @@ std::pair<escher::SemaphorePtr, mx::event> NewSemaphoreEventPair(
                         reinterpret_cast<VkImportSemaphoreFdInfoKHR*>(&info))) {
     FXL_LOG(ERROR) << "Failed to import event as VkSemaphore.";
     // Don't leak handle.
-    mx_handle_close(info.fd);
-    return std::make_pair(escher::SemaphorePtr(), mx::event());
+    zx_handle_close(info.fd);
+    return std::make_pair(escher::SemaphorePtr(), zx::event());
   }
 
   return std::make_pair(std::move(sema), std::move(event));
 }
 
-mx::vmo ExportMemoryAsVMO(escher::Escher* escher,
+zx::vmo ExportMemoryAsVMO(escher::Escher* escher,
                           const escher::GpuMemPtr& mem) {
   auto result = escher->vulkan_context().device.exportMemoryMAGMA(mem->base());
   if (result.result != vk::Result::eSuccess) {
-    FXL_LOG(ERROR) << "Failed to export escher::GpuMem as mx::vmo";
-    return mx::vmo();
+    FXL_LOG(ERROR) << "Failed to export escher::GpuMem as zx::vmo";
+    return zx::vmo();
   }
-  return mx::vmo(result.value);
+  return zx::vmo(result.value);
 }
 
 }  // namespace shadertoy

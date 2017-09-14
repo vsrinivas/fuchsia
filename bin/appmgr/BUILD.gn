@@ -37,7 +37,7 @@ source_set("lib") {
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
-    "//magenta/system/ulib/mx",
+    "//zircon/system/ulib/zx",
     "//third_party/rapidjson",
   ]
 

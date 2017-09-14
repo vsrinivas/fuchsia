@@ -5,8 +5,8 @@
 #include "lib/svc/cpp/service_provider_bridge.h"
 
 #include <fcntl.h>
-#include <magenta/device/vfs.h>
-#include <mxio/util.h>
+#include <zircon/device/vfs.h>
+#include <fdio/util.h>
 
 #include <utility>
 
@@ -31,39 +31,39 @@ void ServiceProviderBridge::AddServiceForName(ServiceConnector connector,
   name_to_service_connector_[service_name] = std::move(connector);
 }
 
-bool ServiceProviderBridge::ServeDirectory(mx::channel channel) {
-  return vfs_.ServeDirectory(directory_, std::move(channel)) == MX_OK;
+bool ServiceProviderBridge::ServeDirectory(zx::channel channel) {
+  return vfs_.ServeDirectory(directory_, std::move(channel)) == ZX_OK;
 }
 
-mx::channel ServiceProviderBridge::OpenAsDirectory() {
-  mx::channel h1, h2;
-  if (mx::channel::create(0, &h1, &h2) < 0)
-    return mx::channel();
+zx::channel ServiceProviderBridge::OpenAsDirectory() {
+  zx::channel h1, h2;
+  if (zx::channel::create(0, &h1, &h2) < 0)
+    return zx::channel();
   if (!ServeDirectory(std::move(h1)))
-    return mx::channel();
+    return zx::channel();
   return h2;
 }
 
 int ServiceProviderBridge::OpenAsFileDescriptor() {
-  mx::channel h1, h2;
-  if (mx::channel::create(0, &h1, &h2) < 0)
+  zx::channel h1, h2;
+  if (zx::channel::create(0, &h1, &h2) < 0)
     return -1;
   if (!ServeDirectory(std::move(h1)))
     return -1;
-  mxio_t* io = mxio_remote_create(h2.release(), MX_HANDLE_INVALID);
+  fdio_t* io = fdio_remote_create(h2.release(), ZX_HANDLE_INVALID);
   if (!io)
     return -1;
-  return mxio_bind_to_fd(io, -1, 0);
+  return fdio_bind_to_fd(io, -1, 0);
 }
 
 void ServiceProviderBridge::Connect(const char* name,
                                     size_t len,
-                                    mx::channel channel) {
+                                    zx::channel channel) {
   ConnectToService(fidl::String(name, len), std::move(channel));
 }
 
 void ServiceProviderBridge::ConnectToService(const fidl::String& service_name,
-                                             mx::channel channel) {
+                                             zx::channel channel) {
   auto it = name_to_service_connector_.find(service_name.get());
   if (it != name_to_service_connector_.end())
     it->second(std::move(channel));

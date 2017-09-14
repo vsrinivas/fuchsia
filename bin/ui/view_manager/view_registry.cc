@@ -140,7 +140,7 @@ void ViewRegistry::CreateView(
     fidl::InterfaceRequest<mozart::View> view_request,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     mozart::ViewListenerPtr view_listener,
-    mx::eventpair parent_export_token,
+    zx::eventpair parent_export_token,
     const fidl::String& label) {
   FXL_DCHECK(view_request.is_pending());
   FXL_DCHECK(view_owner_request.is_pending());
@@ -280,7 +280,7 @@ void ViewRegistry::AddChild(
     ViewContainerState* container_state,
     uint32_t child_key,
     fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
-    mx::eventpair host_import_token) {
+    zx::eventpair host_import_token) {
   FXL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
   FXL_DCHECK(child_view_owner);
   FXL_DCHECK(host_import_token);
@@ -686,7 +686,7 @@ void ViewRegistry::PresentSession() {
 
 void ViewRegistry::ConnectToViewService(ViewState* view_state,
                                         const fidl::String& service_name,
-                                        mx::channel client_handle) {
+                                        zx::channel client_handle) {
   FXL_DCHECK(IsViewStateRegisteredDebug(view_state));
   if (service_name == mozart::InputConnection::Name_) {
     CreateInputConnection(view_state->view_token()->Clone(),
@@ -697,7 +697,7 @@ void ViewRegistry::ConnectToViewService(ViewState* view_state,
 
 void ViewRegistry::ConnectToViewTreeService(ViewTreeState* tree_state,
                                             const fidl::String& service_name,
-                                            mx::channel client_handle) {
+                                            zx::channel client_handle) {
   FXL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
   if (service_name == mozart::InputDispatcher::Name_) {
     CreateInputDispatcher(tree_state->view_tree_token()->Clone(),

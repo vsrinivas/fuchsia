@@ -37,7 +37,7 @@ void StopReplyPacket::SetSignalNumber(uint8_t signal_number) {
   signo_ = signal_number;
 }
 
-void StopReplyPacket::SetThreadId(mx_koid_t process_id, mx_koid_t thread_id) {
+void StopReplyPacket::SetThreadId(zx_koid_t process_id, zx_koid_t thread_id) {
   FXL_DCHECK(type_ == Type::kReceivedSignal || type_ == Type::kThreadExited);
   tid_string_ = util::EncodeThreadId(process_id, thread_id);
 }

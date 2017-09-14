@@ -22,9 +22,9 @@ class AsyncWait {
 
   // Starts waiting for |signals| on |handle|. Cannot be called if this
   // AsyncWait is currently waiting.
-  void Start(mx_handle_t handle,
-             mx_signals_t signals,
-             mx_time_t timeout,
+  void Start(zx_handle_t handle,
+             zx_signals_t signals,
+             zx_time_t timeout,
              const std::function<void()> callback);
 
   // Cancels a wait in progress if there is one in progress, otherwise does
@@ -32,20 +32,20 @@ class AsyncWait {
   void Cancel();
 
   bool is_waiting() const { return wait_id_ != 0; }
-  mx_status_t status() const { return status_; }
-  mx_signals_t pending() const { return pending_; }
+  zx_status_t status() const { return status_; }
+  zx_signals_t pending() const { return pending_; }
 
  private:
-  static void CallbackHandler(mx_status_t status,
-                              mx_signals_t pending,
+  static void CallbackHandler(zx_status_t status,
+                              zx_signals_t pending,
                               uint64_t count,
                               void* closure);
 
   const FidlAsyncWaiter* waiter_;
   std::function<void()> callback_;
   FidlAsyncWaitID wait_id_;
-  mx_status_t status_;
-  mx_signals_t pending_;
+  zx_status_t status_;
+  zx_signals_t pending_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AsyncWait);
 };

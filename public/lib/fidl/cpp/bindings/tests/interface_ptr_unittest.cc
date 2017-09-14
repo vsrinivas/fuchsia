@@ -252,11 +252,11 @@ TEST_F(InterfacePtrTest, Resettable) {
 
   EXPECT_TRUE(!a);
 
-  mx::channel handle0, handle1;
-  mx::channel::create(0, &handle0, &handle1);
+  zx::channel handle0, handle1;
+  zx::channel::create(0, &handle0, &handle1);
 
   // Save this so we can test it later.
-  mx_handle_t handle = handle0.get();
+  zx_handle_t handle = handle0.get();
 
   a = math::CalculatorPtr::Create(
       InterfaceHandle<math::Calculator>(std::move(handle0), 0u));
@@ -269,7 +269,7 @@ TEST_F(InterfacePtrTest, Resettable) {
   EXPECT_FALSE(a.internal_state()->router_for_testing());
 
   // Test that handle was closed.
-  EXPECT_EQ(MX_ERR_BAD_HANDLE, mx_handle_close(handle));
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(handle));
 }
 
 TEST_F(InterfacePtrTest, BindInvalidHandle) {
@@ -388,7 +388,7 @@ TEST_F(InterfacePtrTest, ReentrantWaitForIncomingMethodCall) {
 
 class StrongMathCalculatorImpl : public math::Calculator {
  public:
-  StrongMathCalculatorImpl(mx::channel handle,
+  StrongMathCalculatorImpl(zx::channel handle,
                            bool* error_received,
                            bool* destroyed)
       : error_received_(error_received),
@@ -424,8 +424,8 @@ TEST(StrongConnectorTest, Math) {
   bool error_received = false;
   bool destroyed = false;
 
-  mx::channel handle0, handle1;
-  mx::channel::create(0, &handle0, &handle1);
+  zx::channel handle0, handle1;
+  zx::channel::create(0, &handle0, &handle1);
   new StrongMathCalculatorImpl(std::move(handle0), &error_received,
                                &destroyed);
 
@@ -457,7 +457,7 @@ TEST(StrongConnectorTest, Math) {
 
 class WeakMathCalculatorImpl : public math::Calculator {
  public:
-  WeakMathCalculatorImpl(mx::channel handle,
+  WeakMathCalculatorImpl(zx::channel handle,
                          bool* error_received,
                          bool* destroyed)
       : error_received_(error_received),
@@ -492,8 +492,8 @@ TEST(WeakConnectorTest, Math) {
   bool error_received = false;
   bool destroyed = false;
 
-  mx::channel handle0, handle1;
-  mx::channel::create(0, &handle0, &handle1);
+  zx::channel handle0, handle1;
+  zx::channel::create(0, &handle0, &handle1);
   WeakMathCalculatorImpl impl(std::move(handle0), &error_received, &destroyed);
 
   math::CalculatorPtr calc;

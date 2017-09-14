@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/media_service/network_reader_impl.h"
 
-#include <mx/socket.h>
+#include <zx/socket.h>
 
 #include "lib/app/cpp/connect.h"
 #include "garnet/bin/network/net_errors.h"
@@ -92,12 +92,12 @@ void NetworkReaderImpl::ReadAt(uint64_t position,
                                const ReadAtCallback& callback) {
   ready_.When([this, position, callback]() {
     if (result_ != MediaResult::OK) {
-      callback(result_, mx::socket());
+      callback(result_, zx::socket());
       return;
     }
 
     if (!can_seek_ && position != 0) {
-      callback(MediaResult::INVALID_ARGUMENT, mx::socket());
+      callback(MediaResult::INVALID_ARGUMENT, zx::socket());
       return;
     }
 
@@ -124,7 +124,7 @@ void NetworkReaderImpl::ReadAt(uint64_t position,
             FXL_LOG(WARNING)
                 << "GET response status code " << response->status_code;
             result_ = MediaResult::UNKNOWN_ERROR;
-            callback(result_, mx::socket());
+            callback(result_, zx::socket());
             return;
           }
 

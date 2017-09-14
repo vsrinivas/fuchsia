@@ -35,6 +35,6 @@ source_set("printer") {
   ]
 
   if (!is_fuchsia) {
-    deps += [ "//magenta/system/public" ]
+    deps += [ "//zircon/system/public" ]
   }
 }

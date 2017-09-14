@@ -10,7 +10,7 @@
 
 namespace scene_manager {
 
-static mx_signals_t kEventPairDeathSignals = MX_EPAIR_PEER_CLOSED;
+static zx_signals_t kEventPairDeathSignals = ZX_EPAIR_PEER_CLOSED;
 
 #define ASSERT_INTERNAL_EXPORTS_CONSISTENCY                \
   FXL_DCHECK(export_handles_to_import_koids_.size() ==     \
@@ -34,12 +34,12 @@ ResourceLinker::~ResourceLinker() {
 }
 
 bool ResourceLinker::ExportResource(Resource* resource,
-                                    mx::eventpair export_token) {
+                                    zx::eventpair export_token) {
   // Basic sanity checks for resource validity.
   FXL_DCHECK(resource);
 
-  mx_koid_t import_koid = fsl::GetRelatedKoid(export_token.get());
-  if (import_koid == MX_KOID_INVALID) {
+  zx_koid_t import_koid = fsl::GetRelatedKoid(export_token.get());
+  if (import_koid == ZX_KOID_INVALID) {
     // We were passed a bad export handle.
     return false;
   }
@@ -142,10 +142,10 @@ void ResourceLinker::RemoveExportedResourceIfUnbound(
 
 bool ResourceLinker::ImportResource(Import* import,
                                     scenic::ImportSpec import_spec,
-                                    mx::eventpair import_token) {
+                                    zx::eventpair import_token) {
   // Make sure the import handle is valid.
-  mx_koid_t import_koid = fsl::GetKoid(import_token.get());
-  if (import_koid == MX_KOID_INVALID) {
+  zx_koid_t import_koid = fsl::GetKoid(import_token.get());
+  if (import_koid == ZX_KOID_INVALID) {
     // We were passed a bad import handle.
     return false;
   }
@@ -165,8 +165,8 @@ bool ResourceLinker::ImportResource(Import* import,
   return true;
 }
 
-void ResourceLinker::OnHandleReady(mx_handle_t export_handle,
-                                   mx_signals_t pending,
+void ResourceLinker::OnHandleReady(zx_handle_t export_handle,
+                                   zx_signals_t pending,
                                    uint64_t count) {
   // This is invoked when all the peers for the registered export
   // handle are closed.
@@ -175,10 +175,10 @@ void ResourceLinker::OnHandleReady(mx_handle_t export_handle,
   }
 }
 
-void ResourceLinker::OnHandleError(mx_handle_t export_handle,
-                                   mx_status_t error) {
+void ResourceLinker::OnHandleError(zx_handle_t export_handle,
+                                   zx_status_t error) {
   // Should only happen in case of timeout or loop death.
-  if (error == MX_ERR_TIMED_OUT || error == MX_ERR_CANCELED) {
+  if (error == ZX_ERR_TIMED_OUT || error == ZX_ERR_CANCELED) {
     RemoveExportEntryForExpiredHandle(export_handle);
   }
 }
@@ -191,11 +191,11 @@ void ResourceLinker::InvokeExpirationCallback(Resource* resource,
 }
 
 Resource* ResourceLinker::RemoveExportEntryForExpiredHandle(
-    mx_handle_t export_handle) {
+    zx_handle_t export_handle) {
   // Find the import_koid that maps to |export_handle|.
   auto import_koid_iter = export_handles_to_import_koids_.find(export_handle);
   FXL_DCHECK(import_koid_iter != export_handles_to_import_koids_.end());
-  mx_koid_t import_koid = import_koid_iter->second;
+  zx_koid_t import_koid = import_koid_iter->second;
 
   // Remove from |export_handles_to_import_koids_|.
   export_handles_to_import_koids_.erase(import_koid_iter);
@@ -229,7 +229,7 @@ void ResourceLinker::OnExportedResourceDestroyed(Resource* resource) {
   // exported more than once).
   auto range = exported_resources_to_import_koids_.equal_range(resource);
   for (auto import_koid_iter = range.first; import_koid_iter != range.second;) {
-    mx_koid_t import_koid = import_koid_iter->second;
+    zx_koid_t import_koid = import_koid_iter->second;
 
     auto export_entry_iter = export_entries_.find(import_koid);
     FXL_DCHECK(export_entry_iter != export_entries_.end());
@@ -294,7 +294,7 @@ size_t ResourceLinker::NumExportsForSession(Session* session) {
   return count;
 }
 
-bool ResourceLinker::PerformLinkingNow(mx_koid_t import_koid) {
+bool ResourceLinker::PerformLinkingNow(zx_koid_t import_koid) {
   // Find the unresolved import entries if present.
   size_t num_imports =
       unresolved_imports_.NumUnresolvedImportsForKoid(import_koid);
@@ -330,7 +330,7 @@ bool ResourceLinker::PerformLinkingNow(mx_koid_t import_koid) {
 
 void ResourceLinker::RemoveFromExportedResourceToImportKoidsMap(
     Resource* resource,
-    mx_koid_t import_koid) {
+    zx_koid_t import_koid) {
   // Remove this specific export from |export_entries_by_resource_|. (The
   // same resource can be exported multiple times).
   auto range = exported_resources_to_import_koids_.equal_range(resource);

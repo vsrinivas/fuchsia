@@ -66,7 +66,7 @@ func (t *translator) translateStringType(mojomType fidl_types.StringType) (goTyp
 }
 
 func (t *translator) translateHandleType(mojomType fidl_types.HandleType) (goType string) {
-	t.imports["mx"] = "syscall/mx"
+	t.imports["zx"] = "syscall/mx"
 	switch mojomType.Kind {
 	default:
 		panic("Unknown handle type. This should never happen.")
@@ -89,7 +89,7 @@ func (t *translator) translateHandleType(mojomType fidl_types.HandleType) (goTyp
 	case fidl_types.HandleType_Kind_Socket:
 		fallthrough
 	case fidl_types.HandleType_Kind_EventPair:
-		goType = "mx.Handle"
+		goType = "zx.Handle"
 	}
 	if mojomType.Nullable {
 		goType = "*" + goType

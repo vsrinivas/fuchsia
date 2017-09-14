@@ -6,8 +6,8 @@
 #define APPS_NETWORK_UPLOAD_ELEMENT_READER_H_
 
 #include "lib/fxl/macros.h"
-#include "mx/socket.h"
-#include "mx/vmo.h"
+#include "zx/socket.h"
+#include "zx/vmo.h"
 
 #include <array>
 
@@ -20,7 +20,7 @@ class UploadElementReader {
   UploadElementReader() {}
   virtual ~UploadElementReader(){};
 
-  virtual mx_status_t ReadAll(std::ostream* os) = 0;
+  virtual zx_status_t ReadAll(std::ostream* os) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(UploadElementReader);
@@ -28,25 +28,25 @@ class UploadElementReader {
 
 class SocketUploadElementReader : public UploadElementReader {
  public:
-  SocketUploadElementReader(mx::socket socket);
+  SocketUploadElementReader(zx::socket socket);
   ~SocketUploadElementReader() override;
 
-  mx_status_t ReadAll(std::ostream* os) override;
+  zx_status_t ReadAll(std::ostream* os) override;
 
  private:
-  mx::socket socket_;
+  zx::socket socket_;
   std::array<char, BUFSIZE> buf_;
 };
 
 class VmoUploadElementReader : public UploadElementReader {
  public:
-  VmoUploadElementReader(mx::vmo vmo);
+  VmoUploadElementReader(zx::vmo vmo);
   ~VmoUploadElementReader() override;
 
-  mx_status_t ReadAll(std::ostream* os) override;
+  zx_status_t ReadAll(std::ostream* os) override;
 
  private:
-  mx::vmo vmo_;
+  zx::vmo vmo_;
   std::array<char, BUFSIZE> buf_;
 };
 

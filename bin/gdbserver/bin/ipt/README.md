@@ -91,7 +91,7 @@ This mode is not supported quite yet.
 ## Collecting trace output
 
 The first step in printing a trace is copying the trace output files
-from the magenta device to the development host: printing is currently
+from the zircon device to the development host: printing is currently
 only supported on linux/macosx.
 
 There are several output files:
@@ -119,7 +119,7 @@ to the host:
 
 ```
 $ sh bin/gdbserver/bin/ipt-dump/ipt-copy-ptout.sh \
-  <magenta-hostname> <input-path-prefix> <output-path-prefix>
+  <zircon-hostname> <input-path-prefix> <output-path-prefix>
 ```
 
 Example:
@@ -129,15 +129,15 @@ $ sh bin/gdbserver/bin/ipt-dump/ipt-copy-ptout.sh \
   "" /tmp/ptout ./ptout
 ```
 
-This will copy files from the default magenta host ("") with prefix
+This will copy files from the default zircon host ("") with prefix
 "/tmp/ptout" on the target and write them locally with prefix "./ptout".
 
 Example session:
 
 ```
-magenta$ ipt --num-buffers=256 --config="'cyc;cyc-thresh=2'" \
+zircon$ ipt --num-buffers=256 --config="'cyc;cyc-thresh=2'" \
   /system/test/debugserver/syscall-test 1000
-magenta$ ls -l /tmp/ptout.*
+zircon$ ls -l /tmp/ptout.*
 -rw-------    1 0        0            621984 Jul 11 13:08 ptout.cpu0.pt
 -rw-------    1 0        0             10080 Jul 11 13:08 ptout.cpu1.pt
 -rw-------    1 0        0            259440 Jul 11 13:08 ptout.cpu2.pt
@@ -186,15 +186,15 @@ and so was never checked in. It's still a work-in-progress to add this feature.
 To obtain a dump of raw output:
 
 ```
-linux$ MAGENTA_BUILDROOT=out/build-magenta/build-magenta-pc-x86-64
+linux$ ZIRCON_BUILDROOT=out/build-zircon/build-zircon-pc-x86-64
 linux$ FUCHSIA_BUILDROOT=out/debug-x86-64
 linux$ $FUCHSIA_BUILDROOT/host_x64/ipt-dump \
   --ktrace=ptout.ktrace \
   --pt-list=ptout.xptlist \
   --map=loglistener.log \
-  --ids=$MAGENTA_BUILDROOT/ids.txt \
+  --ids=$ZIRCON_BUILDROOT/ids.txt \
   --ids=$FUCHSIA_BUILDROOT/ids.txt \
-  --kernel=$MAGENTA_BUILDROOT/magenta.elf \
+  --kernel=$ZIRCON_BUILDROOT/zircon.elf \
   --output-format=raw \
   --output-file=ptout.raw
 ```
@@ -210,14 +210,14 @@ Current function is now /usr/local/google/home/dje/fnl/ipt/fuchsia/out/debug-x86
 227640018981: 608ffd596050: call
 Entering unknown function
 227640018981: 608ffd596120: jump
-Current function is now /usr/local/google/home/dje/fnl/ipt/fuchsia/out/build-magenta/build-magenta-pc-x86-64/system/ulib/magenta/libmagenta.so:VDSO_mx_syscall_test_0
+Current function is now /usr/local/google/home/dje/fnl/ipt/fuchsia/out/build-zircon/build-zircon-pc-x86-64/system/ulib/zircon/libzircon.so:VDSO_zx_syscall_test_0
 227640019074: 5d162fcd9e3a: other
 227640019074: 5d162fcd9e3c: other
 227640019074: 5d162fcd9e3e: other
 227640019074: 5d162fcd9e41: other
 227640019074: 5d162fcd9e46: fcall
 Space is now kernel
-Current function is now ../out/build-magenta/build-magenta-pc-x86-64/magenta.elf:x86_syscall
+Current function is now ../out/build-zircon/build-zircon-pc-x86-64/zircon.elf:x86_syscall
 227640019105: ffffffff80114c7f: other
 227640019105: ffffffff80114c82: other
 227640019105: ffffffff80114c8b: other
@@ -242,15 +242,15 @@ Note: The output looks way cooler with the disassembly. :-) In time.
 To obtain a dump of calls output:
 
 ```
-linux$ MAGENTA_BUILDROOT=out/build-magenta/build-magenta-pc-x86-64
+linux$ ZIRCON_BUILDROOT=out/build-zircon/build-zircon-pc-x86-64
 linux$ FUCHSIA_BUILDROOT=out/debug-x86-64
 linux$ $FUCHSIA_BUILDROOT/host_x64/ipt-dump \
   --ktrace=ptout.ktrace \
   --pt-list=ptout.xptlist \
   --map=loglistener.log \
-  --ids=$MAGENTA_BUILDROOT/ids.txt \
+  --ids=$ZIRCON_BUILDROOT/ids.txt \
   --ids=$FUCHSIA_BUILDROOT/ids.txt \
-  --kernel=$MAGENTA_BUILDROOT/magenta.elf \
+  --kernel=$ZIRCON_BUILDROOT/zircon.elf \
   --output-format=calls \
   --output-file=ptout.calls
 ```
@@ -260,7 +260,7 @@ A sample of the output:
 ```
 [ 5288094]                         [+   5] U call    main+64 -> 608ffd596120
 [ 5288095] 5889746   [93]          [+   1] U jump        101b4a000:608ffd596120
-[ 5288100]                         [+   5] U fcall       VDSO_mx_syscall_test_0+12 -> x86_syscall
+[ 5288100]                         [+   5] U fcall       VDSO_zx_syscall_test_0+12 -> x86_syscall
 [ 5288101] 5889777   [31]          [+   1] K other           x86_syscall
 [ 5288109] 5889910   [133]         [+   8] K jump            x86_syscall+38
 [ 5288110] 5891330   [1420]        [+   1] K other           101b4a000:ffffffff80115579
@@ -277,8 +277,8 @@ A sample of the output:
 [ 5288180] 5891675   [11]          [+   1] K other           101b4a000:ffffffff80115583
 [ 5288191] 5891738   [63]          [+  11] K other           x86_syscall+85
 [ 5288194]                         [+   3] K freturn         x86_syscall+90
-[ 5288195] 5891741   [3]           [+   1] U other       VDSO_mx_syscall_test_0+14
-[ 5288197]                         [+   2] U return      VDSO_mx_syscall_test_0+18
+[ 5288195] 5891741   [3]           [+   1] U other       VDSO_zx_syscall_test_0+14
+[ 5288197]                         [+   2] U return      VDSO_zx_syscall_test_0+18
 [ 5288198] 5891746   [5]           [+   1] U other   main+69
 ```
 
@@ -392,7 +392,7 @@ Also, one must save "loglistener" output to a file and pass the
 PATH of this file to "ipt-dump". The author runs loglistener thusly:
 
 ```
-$ TOOLSDIR="out/build-magenta/build-magenta-pc-x86-64/tools"
+$ TOOLSDIR="out/build-zircon/build-zircon-pc-x86-64/tools"
 $ $TOOLSDIR/loglistener 2>&1 | tee loglistener.log
 ```
 

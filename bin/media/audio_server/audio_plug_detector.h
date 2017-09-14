@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <magenta/device/vfs.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/device/vfs.h>
+#include <zircon/types.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 

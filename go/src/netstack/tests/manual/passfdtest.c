@@ -6,8 +6,8 @@
 #include <ctype.h>
 #include <errno.h>
 #include <launchpad/launchpad.h>
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <stdio.h>
@@ -74,11 +74,11 @@ static int server(const char* service) {
          sa_to_str((struct sockaddr*)&addr, str, sizeof(str)));
 
   launchpad_t* lp;
-  launchpad_create(mx_job_default(), kProgram, &lp);
+  launchpad_create(zx_job_default(), kProgram, &lp);
   const char* argv[2] = {kProgram, "ECHO"};
   launchpad_load_from_file(lp, kProgram);
   launchpad_set_args(lp, 2, argv);
-  launchpad_clone(lp, LP_CLONE_MXIO_NAMESPACE | LP_CLONE_MXIO_CWD);
+  launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE | LP_CLONE_FDIO_CWD);
 #ifdef CAN_CLONE_SOCKETS
   launchpad_clone_fd(lp, conn, STDIN_FILENO);
   launchpad_transfer_fd(lp, conn, STDOUT_FILENO);
@@ -88,18 +88,18 @@ static int server(const char* service) {
 #endif
   launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
 
-  mx_handle_t proc = 0;
+  zx_handle_t proc = 0;
   const char* errmsg;
 
-  mx_status_t status = launchpad_go(lp, &proc, &errmsg);
+  zx_status_t status = launchpad_go(lp, &proc, &errmsg);
   if (status < 0) {
     fprintf(stderr, "error from launchpad_go: %s\n", errmsg);
     return -1;
   }
 
   printf("launched %s %s, waiting for it to exit...\n", argv[0], argv[1]);
-  mx_signals_t observed;
-  mx_object_wait_one(proc, MX_PROCESS_TERMINATED, MX_TIME_INFINITE, &observed);
+  zx_signals_t observed;
+  zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, &observed);
 
   printf("child exited.\n");
 

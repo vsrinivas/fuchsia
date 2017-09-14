@@ -4,7 +4,7 @@
 
 #include "garnet/bin/icu_data/icu_data_provider_impl.h"
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <utility>
 
 #include "lib/icu_data/cpp/constants.h"
@@ -15,8 +15,8 @@ namespace icu_data {
 namespace {
 
 constexpr char kICUDataPath[] = "/pkg/data/icudtl.dat";
-constexpr mx_rights_t kICUDataRights =
-    MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_MAP;
+constexpr zx_rights_t kICUDataRights =
+    ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_MAP;
 
 }  // namespace
 

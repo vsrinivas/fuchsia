@@ -10,7 +10,7 @@
 
 #include <functional>
 
-#include <mx/event.h>
+#include <zx/event.h>
 
 #include "lib/fxl/macros.h"
 
@@ -72,11 +72,11 @@ class Session : private scenic::SessionListener {
 
   // Registers an acquire fence to be submitted during the subsequent call to
   // |Present()|.
-  void EnqueueAcquireFence(mx::event fence);
+  void EnqueueAcquireFence(zx::event fence);
 
   // Registers a release fence to be submitted during the subsequent call to
   // |Present()|.
-  void EnqueueReleaseFence(mx::event fence);
+  void EnqueueReleaseFence(zx::event fence);
 
   // Flushes queued operations to the session.
   void Flush();
@@ -102,8 +102,8 @@ class Session : private scenic::SessionListener {
   uint32_t resource_count_ = 0u;
 
   fidl::Array<scenic::OpPtr> ops_;
-  fidl::Array<mx::event> acquire_fences_;
-  fidl::Array<mx::event> release_fences_;
+  fidl::Array<zx::event> acquire_fences_;
+  fidl::Array<zx::event> release_fences_;
 
   EventHandler event_handler_;
   fidl::Binding<scenic::SessionListener> session_listener_binding_;

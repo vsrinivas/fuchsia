@@ -37,7 +37,7 @@ void ViewTreeImpl::SetListener(
 void ViewTreeImpl::AddChild(
     uint32_t child_key,
     fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
-    mx::eventpair host_import_token) {
+    zx::eventpair host_import_token) {
   registry_->AddChild(state_, child_key, std::move(child_view_owner),
                       std::move(host_import_token));
 }
@@ -61,7 +61,7 @@ void ViewTreeImpl::RequestFocus(uint32_t child_key) {
 }
 
 void ViewTreeImpl::ConnectToService(const fidl::String& service_name,
-                                    mx::channel client_handle) {
+                                    zx::channel client_handle) {
   registry_->ConnectToViewTreeService(state_, service_name,
                                       std::move(client_handle));
 }

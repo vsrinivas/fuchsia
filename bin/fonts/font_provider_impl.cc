@@ -6,8 +6,8 @@
 
 #include <string.h>
 
-#include <magenta/status.h>
-#include <magenta/syscalls.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
 #include <utility>
 
 #include "lib/fxl/files/file.h"
@@ -22,8 +22,8 @@ constexpr char kFontManifestPath[] = "/pkg/data/manifest.json";
 constexpr char kFallback[] = "fallback";
 constexpr char kFamilies[] = "families";
 
-constexpr mx_rights_t kFontDataRights =
-    MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_MAP;
+constexpr zx_rights_t kFontDataRights =
+    ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_MAP;
 
 }  // namespace
 
@@ -110,7 +110,7 @@ void FontProviderImpl::GetFont(FontRequestPtr request,
     return;
   }
 
-  mx::vmo* font_data = it->second->GetFontData(request);
+  zx::vmo* font_data = it->second->GetFontData(request);
   if (!font_data) {
     callback(nullptr);
     return;

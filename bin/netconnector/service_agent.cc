@@ -26,11 +26,11 @@ ServiceAgent::~ServiceAgent() {}
 void ServiceAgent::OnVersionReceived(uint32_t version) {}
 
 void ServiceAgent::OnServiceNameReceived(const std::string& service_name) {
-  mx::channel local;
-  mx::channel remote;
-  mx_status_t status = mx::channel::create(0u, &local, &remote);
+  zx::channel local;
+  zx::channel remote;
+  zx_status_t status = zx::channel::create(0u, &local, &remote);
 
-  if (status != MX_OK) {
+  if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create channel, status " << status;
     CloseConnection();
     return;

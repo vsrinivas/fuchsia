@@ -128,18 +128,18 @@ class RspServer final : public Server {
   // Process::Delegate overrides.
   void OnThreadStarting(Process* process,
                        Thread* thread,
-                       const mx_exception_context_t& context) override;
+                       const zx_exception_context_t& context) override;
   void OnThreadExiting(Process* process,
                        Thread* thread,
-                       const mx_excp_type_t type,
-                       const mx_exception_context_t& context) override;
+                       const zx_excp_type_t type,
+                       const zx_exception_context_t& context) override;
   void OnProcessExit(Process* process,
-                     const mx_excp_type_t type,
-                     const mx_exception_context_t& context) override;
+                     const zx_excp_type_t type,
+                     const zx_exception_context_t& context) override;
   void OnArchitecturalException(Process* process,
                                 Thread* thread,
-                                const mx_excp_type_t type,
-                                const mx_exception_context_t& context) override;
+                                const zx_excp_type_t type,
+                                const zx_exception_context_t& context) override;
 
   // TCP port number that we will listen on.
   uint16_t port_;

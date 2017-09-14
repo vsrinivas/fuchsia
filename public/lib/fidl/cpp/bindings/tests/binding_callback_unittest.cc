@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -89,8 +89,8 @@ class InterfaceImpl : public sample::Provider {
   }
 
   void EchoMessagePipeHandle(
-      mx::channel a,
-      const std::function<void(mx::channel)>& callback) override {
+      zx::channel a,
+      const std::function<void(zx::channel)>& callback) override {
     FXL_CHECK(false) << "Not implemented.";
   }
 

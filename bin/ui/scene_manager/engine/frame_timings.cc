@@ -12,7 +12,7 @@ FrameTimings::FrameTimings() : FrameTimings(nullptr, 0, 0) {}
 
 FrameTimings::FrameTimings(FrameScheduler* frame_scheduler,
                            uint64_t frame_number,
-                           mx_time_t target_presentation_time)
+                           zx_time_t target_presentation_time)
     : frame_scheduler_(frame_scheduler),
       frame_number_(frame_number),
       target_presentation_time_(target_presentation_time) {}
@@ -28,7 +28,7 @@ size_t FrameTimings::AddSwapchain(Swapchain* swapchain) {
 }
 
 void FrameTimings::OnFrameFinishedRendering(size_t swapchain_index,
-                                            mx_time_t time) {
+                                            zx_time_t time) {
   FXL_DCHECK(swapchain_index < swapchain_records_.size());
   FXL_DCHECK(frame_finished_rendering_count_ < swapchain_records_.size());
   FXL_DCHECK(swapchain_records_[swapchain_index].frame_finished_time == 0);
@@ -42,7 +42,7 @@ void FrameTimings::OnFrameFinishedRendering(size_t swapchain_index,
   }
 }
 
-void FrameTimings::OnFramePresented(size_t swapchain_index, mx_time_t time) {
+void FrameTimings::OnFramePresented(size_t swapchain_index, zx_time_t time) {
   FXL_DCHECK(swapchain_index < swapchain_records_.size());
   FXL_DCHECK(frame_presented_count_ < swapchain_records_.size());
   FXL_DCHECK(swapchain_records_[swapchain_index].frame_presented_time == 0);

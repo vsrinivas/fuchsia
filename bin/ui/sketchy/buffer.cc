@@ -13,7 +13,7 @@ static scenic_lib::Buffer NewScenicBufferFromEscherBuffer(
   auto result = buffer->device().exportMemoryMAGMA(buffer->mem()->base());
   FXL_CHECK(result.result == vk::Result::eSuccess);
 
-  scenic_lib::Memory memory(session, mx::vmo(result.value),
+  scenic_lib::Memory memory(session, zx::vmo(result.value),
                             scenic::MemoryType::VK_DEVICE_MEMORY);
 
   return scenic_lib::Buffer(memory, 0, buffer->size());

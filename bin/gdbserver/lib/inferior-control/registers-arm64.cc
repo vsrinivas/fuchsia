@@ -8,9 +8,9 @@
 #include <cinttypes>
 #include <cstring>
 
-#include <magenta/compiler.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/debug.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/debug.h>
 
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
@@ -40,7 +40,7 @@ namespace {
 // In the GDB RSP, cpsr is 32 bits, which throws a wrench into the works.
 
 struct RspArm64GeneralRegs {
-  // same as mx_arm64_general_regs_t except cpsr is 32 bits
+  // same as zx_arm64_general_regs_t except cpsr is 32 bits
   uint64_t r[30];
   uint64_t lr;
   uint64_t sp;
@@ -173,7 +173,7 @@ class RegistersArm64 final : public Registers {
     gregs_.cpsr = rsp_gregs->cpsr;
   }
 
-  mx_arm64_general_regs_t gregs_;
+  zx_arm64_general_regs_t gregs_;
 };
 
 }  // namespace

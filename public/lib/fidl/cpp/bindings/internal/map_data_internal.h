@@ -129,12 +129,12 @@ class Map_Data {
   ArrayPointer<Key> keys;
   ArrayPointer<Value> values;
 
-  void EncodePointersAndHandles(std::vector<mx_handle_t>* handles) {
+  void EncodePointersAndHandles(std::vector<zx_handle_t>* handles) {
     Encode(&keys, handles);
     Encode(&values, handles);
   }
 
-  void DecodePointersAndHandles(std::vector<mx_handle_t>* handles) {
+  void DecodePointersAndHandles(std::vector<zx_handle_t>* handles) {
     Decode(&keys, handles);
     Decode(&values, handles);
   }

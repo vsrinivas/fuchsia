@@ -122,7 +122,7 @@ bool FontFamily::Load(const rapidjson::Document::ValueType& family) {
   return true;
 }
 
-mx::vmo* FontFamily::GetFontData(const FontRequestPtr& request) {
+zx::vmo* FontFamily::GetFontData(const FontRequestPtr& request) {
   Matcher matcher(request->slant, request->weight);
   auto it = std::min_element(fonts_.begin(), fonts_.end(), matcher);
   if (it == fonts_.end())

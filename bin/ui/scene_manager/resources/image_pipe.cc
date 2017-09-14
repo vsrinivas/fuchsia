@@ -31,7 +31,7 @@ ImagePipe::ImagePipe(Session* session,
 
 void ImagePipe::AddImage(uint32_t image_id,
                          scenic::ImageInfoPtr image_info,
-                         mx::vmo vmo,
+                         zx::vmo vmo,
                          scenic::MemoryType memory_type,
                          uint64_t memory_offset) {
   if (image_id == 0) {
@@ -105,8 +105,8 @@ void ImagePipe::RemoveImage(uint32_t image_id) {
 void ImagePipe::PresentImage(
     uint32_t image_id,
     uint64_t presentation_time,
-    mx::event acquire_fence,
-    mx::event release_fence,
+    zx::event acquire_fence,
+    zx::event release_fence,
     const scenic::ImagePipe::PresentImageCallback& callback) {
   // Verify that image_id is valid.
   if (!images_.FindResource<Image>(image_id)) {
@@ -140,7 +140,7 @@ bool ImagePipe::Update(uint64_t presentation_time,
                  presentation_interval);
 
   scenic::ResourceId next_image_id = current_image_id_;
-  mx::event next_release_fence;
+  zx::event next_release_fence;
 
   while (!frames_.empty() &&
          frames_.front().presentation_time <= presentation_time &&

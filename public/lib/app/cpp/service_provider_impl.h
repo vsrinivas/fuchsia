@@ -5,7 +5,7 @@
 #ifndef APPLICATION_LIB_APP_SERVICE_PROVIDER_IMPL_H_
 #define APPLICATION_LIB_APP_SERVICE_PROVIDER_IMPL_H_
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include <functional>
 #include <string>
@@ -25,13 +25,13 @@ class ServiceProviderImpl : public ServiceProvider {
   // |ServiceConnector| is the generic, type-unsafe interface for objects used
   // by |ServiceProviderImpl| to connect generic "interface requests" (i.e.,
   // just channels) specified by service name to service implementations.
-  using ServiceConnector = std::function<void(mx::channel)>;
+  using ServiceConnector = std::function<void(zx::channel)>;
 
   // |DefaultServiceConnector| is the default last resort service connector
   // which is called when the service provider does not recognize a particular
   // service name.  This may be used to implement service provider delegation
   // or more complex name-based service resolution strategies.
-  using DefaultServiceConnector = std::function<void(std::string, mx::channel)>;
+  using DefaultServiceConnector = std::function<void(std::string, zx::channel)>;
 
   // A |InterfaceRequestHandler<Interface>| is simply a function that
   // handles an interface request for |Interface|. If it determines that the
@@ -82,7 +82,7 @@ class ServiceProviderImpl : public ServiceProvider {
   void AddService(InterfaceRequestHandler<Interface> handler,
                   const std::string& service_name = Interface::Name_) {
     AddServiceForName(
-        [handler](mx::channel channel) {
+        [handler](zx::channel channel) {
           handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
         },
         service_name);
@@ -119,7 +119,7 @@ class ServiceProviderImpl : public ServiceProvider {
  private:
   // Overridden from |ServiceProvider|:
   void ConnectToService(const fidl::String& service_name,
-                        mx::channel client_handle) override;
+                        zx::channel client_handle) override;
 
   fidl::BindingSet<ServiceProvider> bindings_;
 

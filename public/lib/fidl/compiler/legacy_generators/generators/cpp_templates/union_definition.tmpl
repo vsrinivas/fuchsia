@@ -60,7 +60,7 @@ void {{class_name}}::set_null() {
 }
 
 void {{class_name}}::EncodePointersAndHandles(
-    std::vector<mx_handle_t>* handles) {
+    std::vector<zx_handle_t>* handles) {
   switch (tag) {
 {%- for field in union.fields %}
     case {{enum_name}}::{{field.name|upper}}: {
@@ -84,7 +84,7 @@ void {{class_name}}::EncodePointersAndHandles(
 }
 
 void {{class_name}}::DecodePointersAndHandles(
-    std::vector<mx_handle_t>* handles) {
+    std::vector<zx_handle_t>* handles) {
   switch (tag) {
 {%- for field in union.fields %}
     case {{enum_name}}::{{field.name|upper}}: {

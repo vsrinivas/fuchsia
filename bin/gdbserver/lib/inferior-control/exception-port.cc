@@ -7,8 +7,8 @@
 #include <cinttypes>
 #include <string>
 
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/port.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/port.h>
 
 #include "lib/fxl/logging.h"
 #include "lib/fsl/handles/object_info.h"
@@ -25,17 +25,17 @@ namespace debugserver {
 
 namespace {
 
-std::string IOPortPacketTypeToString(const mx_port_packet_t& pkt) {
-  if (MX_PKT_IS_EXCEPTION(pkt.type)) {
-    return "MX_PKT_TYPE_EXCEPTION";
+std::string IOPortPacketTypeToString(const zx_port_packet_t& pkt) {
+  if (ZX_PKT_IS_EXCEPTION(pkt.type)) {
+    return "ZX_PKT_TYPE_EXCEPTION";
   }
 #define CASE_TO_STR(x) \
   case x:              \
     return #x
   switch (pkt.type) {
-    CASE_TO_STR(MX_PKT_TYPE_USER);
-    CASE_TO_STR(MX_PKT_TYPE_SIGNAL_ONE);
-    CASE_TO_STR(MX_PKT_TYPE_SIGNAL_REP);
+    CASE_TO_STR(ZX_PKT_TYPE_USER);
+    CASE_TO_STR(ZX_PKT_TYPE_SIGNAL_ONE);
+    CASE_TO_STR(ZX_PKT_TYPE_SIGNAL_REP);
     default:
       break;
   }
@@ -63,10 +63,10 @@ bool ExceptionPort::Run() {
   FXL_DCHECK(!keep_running_);
 
   // Create an I/O port.
-  mx_status_t status = mx::port::create(0, &eport_handle_);
+  zx_status_t status = zx::port::create(0, &eport_handle_);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to create the exception port: "
-                   << util::MxErrorString(status);
+                   << util::ZxErrorString(status);
     return false;
   }
 
@@ -84,17 +84,17 @@ void ExceptionPort::Quit() {
 
   FXL_LOG(INFO) << "Quitting exception port I/O loop";
 
-  // Close the I/O port. This should cause mx_port_wait to return if one is
+  // Close the I/O port. This should cause zx_port_wait to return if one is
   // pending.
   keep_running_ = false;
   {
     lock_guard<mutex> lock(eport_mutex_);
 
     // The only way it seems possible to make the I/O thread return from
-    // mx_port_wait is to queue a dummy packet on the port.
-    mx_port_packet_t packet;
+    // zx_port_wait is to queue a dummy packet on the port.
+    zx_port_packet_t packet;
     memset(&packet, 0, sizeof(packet));
-    packet.type = MX_PKT_TYPE_USER;
+    packet.type = ZX_PKT_TYPE_USER;
     eport_handle_.queue(&packet, 0);
   }
 
@@ -103,9 +103,9 @@ void ExceptionPort::Quit() {
   FXL_LOG(INFO) << "Exception port I/O loop exited";
 }
 
-ExceptionPort::Key ExceptionPort::Bind(mx_handle_t process_handle,
+ExceptionPort::Key ExceptionPort::Bind(zx_handle_t process_handle,
                                        const Callback& callback) {
-  FXL_DCHECK(process_handle != MX_HANDLE_INVALID);
+  FXL_DCHECK(process_handle != ZX_HANDLE_INVALID);
   FXL_DCHECK(callback);
   FXL_DCHECK(eport_handle_);
 
@@ -118,12 +118,12 @@ ExceptionPort::Key ExceptionPort::Bind(mx_handle_t process_handle,
     return 0;
   }
 
-  mx_status_t status =
-      mx_task_bind_exception_port(process_handle, eport_handle_.get(),
-                                    next_key, MX_EXCEPTION_PORT_DEBUGGER);
+  zx_status_t status =
+      zx_task_bind_exception_port(process_handle, eport_handle_.get(),
+                                    next_key, ZX_EXCEPTION_PORT_DEBUGGER);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to bind exception port: "
-                   << util::MxErrorString(status);
+                   << util::ZxErrorString(status);
     return 0;
   }
 
@@ -148,8 +148,8 @@ bool ExceptionPort::Unbind(const Key key) {
 
   // Unbind the exception port. This is a best effort operation so if it fails,
   // there isn't really anything we can do to recover.
-  mx_task_bind_exception_port(iter->second.process_handle, MX_HANDLE_INVALID,
-                                key, MX_EXCEPTION_PORT_DEBUGGER);
+  zx_task_bind_exception_port(iter->second.process_handle, ZX_HANDLE_INVALID,
+                                key, ZX_EXCEPTION_PORT_DEBUGGER);
   callbacks_.erase(iter);
 
   return true;
@@ -163,29 +163,29 @@ void ExceptionPort::Worker() {
 
   FXL_VLOG(1) << "ExceptionPort I/O thread started";
 
-  mx_handle_t eport;
+  zx_handle_t eport;
   {
     lock_guard<mutex> lock(eport_mutex_);
     eport = eport_handle_.get();
   }
   while (keep_running_) {
-    mx_port_packet_t packet;
-    mx_status_t status =
-        mx_port_wait(eport, MX_TIME_INFINITE, &packet, 0);
+    zx_port_packet_t packet;
+    zx_status_t status =
+        zx_port_wait(eport, ZX_TIME_INFINITE, &packet, 0);
     if (status < 0) {
-      FXL_LOG(ERROR) << "mx_port_wait returned error: "
-                     << util::MxErrorString(status);
+      FXL_LOG(ERROR) << "zx_port_wait returned error: "
+                     << util::ZxErrorString(status);
     }
 
     FXL_VLOG(2) << "IO port packet received - key: " << packet.key
                 << " type: " << IOPortPacketTypeToString(packet);
 
     // TODO(armansito): How to handle this?
-    if (!MX_PKT_IS_EXCEPTION(packet.type))
+    if (!ZX_PKT_IS_EXCEPTION(packet.type))
       continue;
 
     FXL_VLOG(1) << "Exception received: "
-                << util::ExceptionName(static_cast<const mx_excp_type_t>(
+                << util::ExceptionName(static_cast<const zx_excp_type_t>(
                        packet.type))
                 << " (" << packet.type
                 << "), pid: " << packet.exception.pid
@@ -199,26 +199,26 @@ void ExceptionPort::Worker() {
         return;
       }
 
-      mx_exception_report_t report;
+      zx_exception_report_t report;
 
-      if (MX_EXCP_IS_ARCH(packet.type)) {
+      if (ZX_EXCP_IS_ARCH(packet.type)) {
         // TODO(dje): We already maintain a table of threads plus their
         // handles. Rewrite this to work with that table. Now would be a fine
         // time to notice new threads, but for existing threads there's no
         // point in doing a lookup to get a new handle.
-        mx_handle_t thread;
-        mx_status_t status = mx_object_get_child(iter->second.process_handle,
+        zx_handle_t thread;
+        zx_status_t status = zx_object_get_child(iter->second.process_handle,
                                                  packet.exception.tid,
-                                                 MX_RIGHT_SAME_RIGHTS,
+                                                 ZX_RIGHT_SAME_RIGHTS,
                                                  &thread);
         if (status < 0) {
           FXL_VLOG(1) << "Failed to get a handle to [" << packet.exception.pid
                       << "." << packet.exception.tid << "]";
           return;
         }
-        status = mx_object_get_info(thread, MX_INFO_THREAD_EXCEPTION_REPORT,
+        status = zx_object_get_info(thread, ZX_INFO_THREAD_EXCEPTION_REPORT,
                                     &report, sizeof(report), NULL, NULL);
-        mx_handle_close(thread);
+        zx_handle_close(thread);
         if (status < 0) {
           FXL_VLOG(1) << "Failed to get exception report for [" << packet.exception.pid
                       << "." << packet.exception.tid << "]";
@@ -243,23 +243,23 @@ void ExceptionPort::Worker() {
 }
 
 void PrintException(FILE* out, Process* process, Thread* thread,
-                    mx_excp_type_t type,
-                    const mx_exception_context_t& context) {
-  if (MX_EXCP_IS_ARCH(type)) {
+                    zx_excp_type_t type,
+                    const zx_exception_context_t& context) {
+  if (ZX_EXCP_IS_ARCH(type)) {
     fprintf(out, "Thread %s received exception %s\n",
             thread->GetDebugName().c_str(),
             util::ExceptionToString(type, context).c_str());
-    mx_vaddr_t pc = thread->registers()->GetPC();
+    zx_vaddr_t pc = thread->registers()->GetPC();
     fprintf(out, "PC 0x%" PRIxPTR "\n", pc);
   } else {
     switch (type) {
-    case MX_EXCP_THREAD_STARTING:
+    case ZX_EXCP_THREAD_STARTING:
       fprintf(out, "Thread %s is starting\n", thread->GetDebugName().c_str());
       break;
-    case MX_EXCP_THREAD_EXITING:
+    case ZX_EXCP_THREAD_EXITING:
       fprintf(out, "Thread %s is exiting\n", thread->GetDebugName().c_str());
       break;
-    case MX_EXCP_GONE:
+    case ZX_EXCP_GONE:
       if (thread)
         fprintf(out, "Thread %s is gone\n", thread->GetDebugName().c_str());
       else

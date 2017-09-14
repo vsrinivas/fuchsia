@@ -10,7 +10,7 @@
 #include <tuple>
 #include <vector>
 
-#include <mx/vmo.h>
+#include <zx/vmo.h>
 
 #include "lib/app/fidl/application_loader.fidl.h"
 #include "lib/fxl/macros.h"

@@ -100,7 +100,7 @@ class SharedBufferSetAllocator : public SharedBufferSet {
   // Constructs a SharedBufferSetAllocator. |local_map_flags| specifies flags
   // used to map vmos for local access. |remote_rights| specifies the rights
   // applies to vmos sent to the remote party via buffer updates.
-  SharedBufferSetAllocator(uint32_t local_map_flags, mx_rights_t remote_rights);
+  SharedBufferSetAllocator(uint32_t local_map_flags, zx_rights_t remote_rights);
 
   ~SharedBufferSetAllocator() override;
 
@@ -115,7 +115,7 @@ class SharedBufferSetAllocator : public SharedBufferSet {
   // there is one, false if not. If this method returns true, |*buffer_id_out|
   // and |*handle_out| are updated. If |*handle_out| is valid, the update is
   // a buffer add, a buffer remove if not.
-  bool PollForBufferUpdate(uint32_t* buffer_id_out, mx::vmo* handle_out);
+  bool PollForBufferUpdate(uint32_t* buffer_id_out, zx::vmo* handle_out);
 
  private:
   struct Buffer {
@@ -135,14 +135,14 @@ class SharedBufferSetAllocator : public SharedBufferSet {
   };
 
   struct BufferUpdate {
-    BufferUpdate(uint32_t buffer_id, mx::vmo vmo);
+    BufferUpdate(uint32_t buffer_id, zx::vmo vmo);
 
     BufferUpdate(uint32_t buffer_id);
 
     ~BufferUpdate();
 
     uint32_t buffer_id_;
-    mx::vmo vmo_;
+    zx::vmo vmo_;
   };
 
   static constexpr uint64_t kWholeRegionMinimumSize = 64 * 1024;
@@ -178,7 +178,7 @@ class SharedBufferSetAllocator : public SharedBufferSet {
   void MaybeDeleteSlicedBuffer(uint32_t id)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
-  mx_rights_t remote_rights_;
+  zx_rights_t remote_rights_;
   mutable fxl::Mutex mutex_;
   std::vector<Buffer> buffers_ FXL_GUARDED_BY(mutex_);
   std::multimap<uint64_t, uint32_t> free_whole_buffer_ids_by_size_

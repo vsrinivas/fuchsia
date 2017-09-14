@@ -8,14 +8,14 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
-#include <mx/time.h>
+#include <zx/time.h>
 
 namespace fidl {
 namespace internal {
 
 // ----------------------------------------------------------------------------
 
-Connector::Connector(mx::channel channel, const FidlAsyncWaiter* waiter)
+Connector::Connector(zx::channel channel, const FidlAsyncWaiter* waiter)
     : waiter_(waiter),
       channel_(std::move(channel)),
       incoming_receiver_(nullptr),
@@ -41,7 +41,7 @@ void Connector::CloseChannel() {
   channel_.reset();
 }
 
-mx::channel Connector::PassChannel() {
+zx::channel Connector::PassChannel() {
   CancelWait();
   return std::move(channel_);
 }
@@ -50,25 +50,25 @@ bool Connector::WaitForIncomingMessage(fxl::TimeDelta timeout) {
   if (error_)
     return false;
 
-  mx_signals_t pending = MX_SIGNAL_NONE;
-  mx_status_t rv = channel_.wait_one(MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
+  zx_signals_t pending = ZX_SIGNAL_NONE;
+  zx_status_t rv = channel_.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                      timeout == fxl::TimeDelta::Max()
-                                         ? MX_TIME_INFINITE
-                                         : mx::deadline_after(timeout.ToNanoseconds()),
+                                         ? ZX_TIME_INFINITE
+                                         : zx::deadline_after(timeout.ToNanoseconds()),
                                      &pending);
-  if (rv == MX_ERR_SHOULD_WAIT || rv == MX_ERR_TIMED_OUT)
+  if (rv == ZX_ERR_SHOULD_WAIT || rv == ZX_ERR_TIMED_OUT)
     return false;
-  if (rv != MX_OK) {
+  if (rv != ZX_OK) {
     NotifyError();
     return false;
   }
-  if (pending & MX_CHANNEL_READABLE) {
+  if (pending & ZX_CHANNEL_READABLE) {
     bool ok = ReadSingleMessage(&rv);
     FXL_ALLOW_UNUSED_LOCAL(ok);
-    return (rv == MX_OK);
+    return (rv == ZX_OK);
   }
 
-  FXL_DCHECK(pending & MX_CHANNEL_PEER_CLOSED);
+  FXL_DCHECK(pending & ZX_CHANNEL_PEER_CLOSED);
   NotifyError();
   return false;
 }
@@ -81,21 +81,21 @@ bool Connector::Accept(Message* message) {
   if (drop_writes_)
     return true;
 
-  mx_status_t rv =
+  zx_status_t rv =
       channel_.write(0, message->data(), message->data_num_bytes(),
                      message->mutable_handles()->empty()
                          ? nullptr
-                         : reinterpret_cast<const mx_handle_t*>(
+                         : reinterpret_cast<const zx_handle_t*>(
                                &message->mutable_handles()->front()),
                      static_cast<uint32_t>(message->mutable_handles()->size()));
 
   switch (rv) {
-    case MX_OK:
+    case ZX_OK:
       // The handles were successfully transferred, so we don't need the message
       // to track their lifetime any longer.
       message->mutable_handles()->clear();
       break;
-    case MX_ERR_BAD_STATE:
+    case ZX_ERR_BAD_STATE:
       // There's no point in continuing to write to this channel since the other
       // end is gone. Avoid writing any future messages. Hide write failures
       // from the caller since we'd like them to continue consuming any backlog
@@ -111,42 +111,42 @@ bool Connector::Accept(Message* message) {
 }
 
 // static
-void Connector::CallOnHandleReady(mx_status_t result,
-                                  mx_signals_t pending,
+void Connector::CallOnHandleReady(zx_status_t result,
+                                  zx_signals_t pending,
                                   uint64_t count,
                                   void* closure) {
   Connector* self = static_cast<Connector*>(closure);
   self->OnHandleReady(result, pending, count);
 }
 
-void Connector::OnHandleReady(mx_status_t result,
-                              mx_signals_t pending,
+void Connector::OnHandleReady(zx_status_t result,
+                              zx_signals_t pending,
                               uint64_t count) {
   FXL_CHECK(async_wait_id_ != 0);
   async_wait_id_ = 0;
-  if (result != MX_OK) {
+  if (result != ZX_OK) {
     NotifyError();
     return;
   }
   FXL_DCHECK(!error_);
 
-  if (pending & MX_CHANNEL_READABLE) {
+  if (pending & ZX_CHANNEL_READABLE) {
     // Return immediately if |this| was destroyed. Do not touch any members!
-    mx_status_t rv;
+    zx_status_t rv;
     for (uint64_t i = 0; i < count; i++) {
       if (!ReadSingleMessage(&rv))
         return;
 
-      // If we get MX_ERR_PEER_CLOSED (or another error), we'll already have
+      // If we get ZX_ERR_PEER_CLOSED (or another error), we'll already have
       // notified the error and likely been destroyed.
-      FXL_DCHECK(rv == MX_OK || rv == MX_ERR_SHOULD_WAIT);
-      if (rv != MX_OK) {
+      FXL_DCHECK(rv == ZX_OK || rv == ZX_ERR_SHOULD_WAIT);
+      if (rv != ZX_OK) {
         break;
       }
     }
     WaitToReadMore();
 
-  } else if (pending & MX_CHANNEL_PEER_CLOSED) {
+  } else if (pending & ZX_CHANNEL_PEER_CLOSED) {
     // Notice that we don't notify an error until we've drained all the messages
     // out of the channel.
     NotifyError();
@@ -157,11 +157,11 @@ void Connector::OnHandleReady(mx_status_t result,
 void Connector::WaitToReadMore() {
   FXL_CHECK(!async_wait_id_);
   async_wait_id_ = waiter_->AsyncWait(
-      channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
-      MX_TIME_INFINITE, &Connector::CallOnHandleReady, this);
+      channel_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+      ZX_TIME_INFINITE, &Connector::CallOnHandleReady, this);
 }
 
-bool Connector::ReadSingleMessage(mx_status_t* read_result) {
+bool Connector::ReadSingleMessage(zx_status_t* read_result) {
   bool receiver_result = false;
 
   // Detect if |this| was destroyed during message dispatch. Allow for the
@@ -170,7 +170,7 @@ bool Connector::ReadSingleMessage(mx_status_t* read_result) {
   bool* previous_destroyed_flag = destroyed_flag_;
   destroyed_flag_ = &was_destroyed_during_dispatch;
 
-  mx_status_t rv =
+  zx_status_t rv =
       ReadAndDispatchMessage(channel_, incoming_receiver_, &receiver_result);
   if (read_result)
     *read_result = rv;
@@ -182,10 +182,10 @@ bool Connector::ReadSingleMessage(mx_status_t* read_result) {
   }
   destroyed_flag_ = previous_destroyed_flag;
 
-  if (rv == MX_ERR_SHOULD_WAIT)
+  if (rv == ZX_ERR_SHOULD_WAIT)
     return true;
 
-  if (rv != MX_OK ||
+  if (rv != ZX_OK ||
       (enforce_errors_from_incoming_receiver_ && !receiver_result)) {
     NotifyError();
     return false;

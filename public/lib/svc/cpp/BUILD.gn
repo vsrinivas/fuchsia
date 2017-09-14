@@ -17,9 +17,9 @@ source_set("cpp") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
-    "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/fbl",
-    "//magenta/system/ulib/svcfs",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/svcfs",
   ]
 
   deps = [

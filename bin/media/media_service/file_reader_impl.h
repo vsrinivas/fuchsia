@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include <mx/socket.h>
+#include <zx/socket.h>
 
 #include "lib/media/fidl/seeking_reader.fidl.h"
 #include "garnet/bin/media/media_service/media_service_impl.h"
@@ -39,8 +39,8 @@ class FileReaderImpl : public MediaServiceImpl::Product<SeekingReader>,
                  MediaServiceImpl* owner);
 
   // Callback function for WriteToSocket's async wait.
-  static void WriteToSocketStatic(mx_status_t status,
-                                  mx_signals_t pending,
+  static void WriteToSocketStatic(zx_status_t status,
+                                  zx_signals_t pending,
                                   uint64_t count,
                                   void* closure);
 
@@ -53,7 +53,7 @@ class FileReaderImpl : public MediaServiceImpl::Product<SeekingReader>,
   fxl::UniqueFD fd_;
   MediaResult result_ = MediaResult::OK;
   uint64_t size_ = kUnknownSize;
-  mx::socket socket_;
+  zx::socket socket_;
   FidlAsyncWaitID wait_id_ = 0;
   std::vector<char> buffer_;
   size_t remaining_buffer_bytes_count_ = 0;

@@ -10,7 +10,7 @@ executable("sysinfo") {
   ]
   libs = [
     "launchpad",
-    "magenta",
+    "zircon",
   ]
   deps = [
     "//garnet/public/lib/fxl",

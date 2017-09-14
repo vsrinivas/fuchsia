@@ -175,11 +175,11 @@ struct ArraySerializationHelper<T, false, false> {
 
   static void EncodePointersAndHandles(const ArrayHeader* header,
                                        ElementType* elements,
-                                       std::vector<mx_handle_t>* handles) {}
+                                       std::vector<zx_handle_t>* handles) {}
 
   static void DecodePointersAndHandles(const ArrayHeader* header,
                                        ElementType* elements,
-                                       std::vector<mx_handle_t>* handles) {}
+                                       std::vector<zx_handle_t>* handles) {}
 
   static ValidationError ValidateElements(
       const ArrayHeader* header,
@@ -201,11 +201,11 @@ struct ArraySerializationHelper<WrappedHandle, true, false> {
 
   static void EncodePointersAndHandles(const ArrayHeader* header,
                                        ElementType* elements,
-                                       std::vector<mx_handle_t>* handles);
+                                       std::vector<zx_handle_t>* handles);
 
   static void DecodePointersAndHandles(const ArrayHeader* header,
                                        ElementType* elements,
-                                       std::vector<mx_handle_t>* handles);
+                                       std::vector<zx_handle_t>* handles);
 
   static ValidationError ValidateElements(
       const ArrayHeader* header,
@@ -239,7 +239,7 @@ struct ArraySerializationHelper<H, true, false> {
 
   static void EncodePointersAndHandles(const ArrayHeader* header,
                                        ElementType* elements,
-                                       std::vector<mx_handle_t>* handles) {
+                                       std::vector<zx_handle_t>* handles) {
     ArraySerializationHelper<WrappedHandle, true,
                              false>::EncodePointersAndHandles(header, elements,
                                                               handles);
@@ -247,7 +247,7 @@ struct ArraySerializationHelper<H, true, false> {
 
   static void DecodePointersAndHandles(const ArrayHeader* header,
                                        ElementType* elements,
-                                       std::vector<mx_handle_t>* handles) {
+                                       std::vector<zx_handle_t>* handles) {
     ArraySerializationHelper<WrappedHandle, true,
                              false>::DecodePointersAndHandles(header, elements,
                                                               handles);
@@ -273,14 +273,14 @@ struct ArraySerializationHelper<P*, false, false> {
 
   static void EncodePointersAndHandles(const ArrayHeader* header,
                                        ElementType* elements,
-                                       std::vector<mx_handle_t>* handles) {
+                                       std::vector<zx_handle_t>* handles) {
     for (uint32_t i = 0; i < header->num_elements; ++i)
       Encode(&elements[i], handles);
   }
 
   static void DecodePointersAndHandles(const ArrayHeader* header,
                                        ElementType* elements,
-                                       std::vector<mx_handle_t>* handles) {
+                                       std::vector<zx_handle_t>* handles) {
     for (uint32_t i = 0; i < header->num_elements; ++i)
       Decode(&elements[i], handles);
   }
@@ -357,14 +357,14 @@ struct ArraySerializationHelper<P, false, true> {
 
   static void EncodePointersAndHandles(const ArrayHeader* header,
                                        ElementType* elements,
-                                       std::vector<mx_handle_t>* handles) {
+                                       std::vector<zx_handle_t>* handles) {
     for (uint32_t i = 0; i < header->num_elements; ++i)
       elements[i].EncodePointersAndHandles(handles);
   }
 
   static void DecodePointersAndHandles(const ArrayHeader* header,
                                        ElementType* elements,
-                                       std::vector<mx_handle_t>* handles) {
+                                       std::vector<zx_handle_t>* handles) {
     for (uint32_t i = 0; i < header->num_elements; ++i)
       elements[i].DecodePointersAndHandles(handles);
   }
@@ -483,11 +483,11 @@ class Array_Data {
         reinterpret_cast<const char*>(this) + sizeof(*this));
   }
 
-  void EncodePointersAndHandles(std::vector<mx_handle_t>* handles) {
+  void EncodePointersAndHandles(std::vector<zx_handle_t>* handles) {
     Helper::EncodePointersAndHandles(&header_, storage(), handles);
   }
 
-  void DecodePointersAndHandles(std::vector<mx_handle_t>* handles) {
+  void DecodePointersAndHandles(std::vector<zx_handle_t>* handles) {
     Helper::DecodePointersAndHandles(&header_, storage(), handles);
   }
 

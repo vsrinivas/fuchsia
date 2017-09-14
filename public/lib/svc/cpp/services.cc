@@ -4,7 +4,7 @@
 
 #include "lib/svc/cpp/services.h"
 
-#include <mxio/util.h>
+#include <fdio/util.h>
 
 #include "lib/fxl/logging.h"
 
@@ -22,19 +22,19 @@ Services& Services::operator=(Services&& other) {
   return *this;
 }
 
-mx::channel Services::NewRequest() {
-  mx::channel request;
-  FXL_CHECK(mx::channel::create(0, &request, &directory_) == MX_OK);
+zx::channel Services::NewRequest() {
+  zx::channel request;
+  FXL_CHECK(zx::channel::create(0, &request, &directory_) == ZX_OK);
   return request;
 }
 
-void Services::Bind(mx::channel directory) {
+void Services::Bind(zx::channel directory) {
   directory_ = std::move(directory);
 }
 
 void Services::ConnectToService(const std::string& service_name,
-                                mx::channel request) {
-  mxio_service_connect_at(directory_.get(), service_name.c_str(),
+                                zx::channel request) {
+  fdio_service_connect_at(directory_.get(), service_name.c_str(),
                           request.release());
 }
 

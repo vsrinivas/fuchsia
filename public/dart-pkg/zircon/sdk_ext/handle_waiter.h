@@ -5,7 +5,7 @@
 #ifndef DART_PKG_ZIRCON_SDK_EXT_HANDLE_WAITER_H_
 #define DART_PKG_ZIRCON_SDK_EXT_HANDLE_WAITER_H_
 
-#include <mx/handle.h>
+#include <zx/handle.h>
 #include <async/auto_wait.h>
 
 #include "lib/tonic/dart_wrappable.h"
@@ -27,7 +27,7 @@ class HandleWaiter : public fxl::RefCountedThreadSafe<HandleWaiter>,
 
  public:
   static fxl::RefPtr<HandleWaiter> Create(Handle* handle,
-                                          mx_signals_t signals,
+                                          zx_signals_t signals,
                                           Dart_Handle callback);
 
   void Cancel();
@@ -38,11 +38,11 @@ class HandleWaiter : public fxl::RefCountedThreadSafe<HandleWaiter>,
 
  private:
   explicit HandleWaiter(Handle* handle,
-                        mx_signals_t signals,
+                        zx_signals_t signals,
                         Dart_Handle callback);
   ~HandleWaiter();
 
-  void OnWaitComplete(mx_status_t status, mx_signals_t pending);
+  void OnWaitComplete(zx_status_t status, zx_signals_t pending);
 
   async::AutoWait wait_;
   Handle* handle_;

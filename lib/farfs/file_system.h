@@ -5,8 +5,8 @@
 #ifndef APPLICATION_LIB_FARFS_FARFS_H_
 #define APPLICATION_LIB_FARFS_FARFS_H_
 
-#include <mx/channel.h>
-#include <mx/vmo.h>
+#include <zx/channel.h>
+#include <zx/vmo.h>
 #include <vmofs/vmofs.h>
 
 #include <memory>
@@ -19,24 +19,24 @@ namespace archive {
 
 class FileSystem {
  public:
-  explicit FileSystem(mx::vmo vmo);
+  explicit FileSystem(zx::vmo vmo);
   ~FileSystem();
 
   // Serves a directory containing the contents of the archive on the given
   // channel.
   //
   // Returns true on success.
-  bool Serve(mx::channel channel);
+  bool Serve(zx::channel channel);
 
   // Returns a channel that speaks the directory protocol and contains the files
   // from the archive.
-  mx::channel OpenAsDirectory();
+  zx::channel OpenAsDirectory();
 
   // Returns the contents of the the given path as a VMO.
   //
   // The VMO is a copy-on-write clone of the contents of the file, which means
   // writes to the VMO do not mutate the data in the underlying archive.
-  mx::vmo GetFileAsVMO(fxl::StringView path);
+  zx::vmo GetFileAsVMO(fxl::StringView path);
 
   // Returns the contents of the the given path as a string.
   bool GetFileAsString(fxl::StringView path, std::string* result);
@@ -46,7 +46,7 @@ class FileSystem {
 
   // The owning reference to the vmo is stored inside |reader_| as a file
   /// descriptor.
-  mx_handle_t vmo_;
+  zx_handle_t vmo_;
   fs::Vfs vfs_;
   fsl::VFSDispatcher dispatcher_;
   std::unique_ptr<ArchiveReader> reader_;

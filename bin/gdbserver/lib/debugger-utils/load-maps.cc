@@ -170,7 +170,7 @@ void LoadMapTable::Clear() {
   maps_.clear();
 }
 
-const LoadMap* LoadMapTable::LookupLoadMap(mx_koid_t pid, uint64_t addr) {
+const LoadMap* LoadMapTable::LookupLoadMap(zx_koid_t pid, uint64_t addr) {
   for (auto& m : maps_) {
     if (pid == m.pid && addr >= m.load_addr && addr < m.end_addr)
       return &m;

@@ -48,8 +48,8 @@ class {{class_name}} {
   {{enum_name}} tag;
   Union_ data;
 
-  void EncodePointersAndHandles(std::vector<mx_handle_t>* handles);
-  void DecodePointersAndHandles(std::vector<mx_handle_t>* handles);
+  void EncodePointersAndHandles(std::vector<zx_handle_t>* handles);
+  void DecodePointersAndHandles(std::vector<zx_handle_t>* handles);
 };
 static_assert(sizeof({{class_name}}) == 16,
               "Bad sizeof({{class_name}})");

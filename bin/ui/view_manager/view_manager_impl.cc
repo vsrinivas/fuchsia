@@ -25,7 +25,7 @@ void ViewManagerImpl::CreateView(
     fidl::InterfaceRequest<mozart::View> view_request,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     fidl::InterfaceHandle<mozart::ViewListener> view_listener,
-    mx::eventpair parent_export_token,
+    zx::eventpair parent_export_token,
     const fidl::String& label) {
   registry_->CreateView(
       std::move(view_request), std::move(view_owner_request),

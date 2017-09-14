@@ -4,7 +4,7 @@
 
 #include "dart-pkg/zircon/sdk_ext/natives.h"
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #include <stdio.h>
 #include <string.h>

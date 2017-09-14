@@ -10,7 +10,7 @@ namespace {
 
 TEST(VmoVector, ShortVector) {
   std::vector<char> v(123, 'f');
-  mx::vmo sb;
+  zx::vmo sb;
   EXPECT_TRUE(VmoFromVector(v, &sb));
   std::vector<char> v_out;
   EXPECT_TRUE(VectorFromVmo(std::move(sb), &v_out));
@@ -19,7 +19,7 @@ TEST(VmoVector, ShortVector) {
 
 TEST(VmoVector, EmptyVector) {
   std::vector<char> v;
-  mx::vmo sb;
+  zx::vmo sb;
   EXPECT_TRUE(VmoFromVector(v, &sb));
   std::vector<char> v_out;
   EXPECT_TRUE(VectorFromVmo(std::move(sb), &v_out));

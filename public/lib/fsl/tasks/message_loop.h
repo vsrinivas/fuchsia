@@ -54,8 +54,8 @@ class FXL_EXPORT MessageLoop : private internal::TaskQueueDelegate {
   // TODO(jeffbrown): Bring the handler API in line with |AsyncDispatcher|
   // and manage timeouts through cancelable tasks instead.
   HandlerKey AddHandler(MessageLoopHandler* handler,
-                        mx_handle_t handle,
-                        mx_signals_t trigger,
+                        zx_handle_t handle,
+                        zx_signals_t trigger,
                         fxl::TimeDelta timeout = fxl::TimeDelta::Max());
 
   // The message loop will no longer call the handler identified by the key. It

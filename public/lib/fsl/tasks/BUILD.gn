@@ -17,12 +17,12 @@ source_set("tasks") {
   ]
   libs = [
     "async-default",
-    "magenta",
+    "zircon",
   ]
   public_deps = [
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl/handles",
-    "//magenta/system/ulib/async:loop",
-    "//magenta/system/ulib/mx",
+    "//zircon/system/ulib/async:loop",
+    "//zircon/system/ulib/zx",
   ]
 }

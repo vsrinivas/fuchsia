@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 #include <stdio.h>
 #include <stdlib.h>
 #define _ALL_SOURCE
@@ -20,7 +20,7 @@ static void ThreadCreate(thrd_t* t, thrd_start_t entry, void* arg,
                          const char* name) {
   int ret = thrd_create_with_name(t, entry, arg, name);
   if (ret != thrd_success) {
-    // tu_fatal takes mx_status_t values.
+    // tu_fatal takes zx_status_t values.
     // The translation doesn't have to be perfect.
     switch (ret) {
     case thrd_nomem:

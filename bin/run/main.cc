@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mxio/util.h>
+#include <fdio/util.h>
 
 #include "lib/app/fidl/application_controller.fidl-sync.h"
 #include "lib/app/fidl/application_launcher.fidl-sync.h"
@@ -22,17 +22,17 @@ int main(int argc, const char** argv) {
 
   // Manually connect to the service root instead of using ApplicationContext to
   // avoid having to spin up a message loop just to send 2 messages.
-  mx::channel h1, service_root;
-  if (mx::channel::create(0, &h1, &service_root) != MX_OK)
+  zx::channel h1, service_root;
+  if (zx::channel::create(0, &h1, &service_root) != ZX_OK)
     return 1;
 
   // TODO(abarth): Use "/svc/" once that actually works.
-  if (mxio_service_connect("/svc/.", h1.release()) != MX_OK)
+  if (fdio_service_connect("/svc/.", h1.release()) != ZX_OK)
     return 1;
 
   fidl::SynchronousInterfacePtr<app::ApplicationLauncher> launcher;
   auto launcher_request = GetSynchronousProxy(&launcher);
-  mxio_service_connect_at(service_root.get(), launcher->Name_,
+  fdio_service_connect_at(service_root.get(), launcher->Name_,
                           launcher_request.PassChannel().release());
 
   fidl::SynchronousInterfacePtr<app::ApplicationController> controller;

@@ -16,7 +16,7 @@
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"
-#include "mx/socket.h"
+#include "zx/socket.h"
 
 namespace network {
 
@@ -30,24 +30,24 @@ class NetworkServiceImpl : public NetworkService,
 
   // NetworkService methods:
   void CreateURLLoader(fidl::InterfaceRequest<URLLoader> request) override;
-  void GetCookieStore(mx::channel cookie_store) override;
-  void CreateWebSocket(mx::channel socket) override;
+  void GetCookieStore(zx::channel cookie_store) override;
+  void CreateWebSocket(zx::channel socket) override;
   void CreateTCPBoundSocket(
       netstack::NetAddressPtr local_address,
-      mx::channel bound_socket,
+      zx::channel bound_socket,
       const CreateTCPBoundSocketCallback& callback) override;
   void CreateTCPConnectedSocket(
       netstack::NetAddressPtr remote_address,
-      mx::socket send_stream,
-      mx::socket receive_stream,
-      mx::channel client_socket,
+      zx::socket send_stream,
+      zx::socket receive_stream,
+      zx::channel client_socket,
       const CreateTCPConnectedSocketCallback& callback) override;
-  void CreateUDPSocket(mx::channel socket) override;
+  void CreateUDPSocket(zx::channel socket) override;
   void CreateHttpServer(netstack::NetAddressPtr local_address,
-                        mx::channel delegate,
+                        zx::channel delegate,
                         const CreateHttpServerCallback& callback) override;
-  void RegisterURLLoaderInterceptor(mx::channel factory) override;
-  void CreateHostResolver(mx::channel host_resolver) override;
+  void RegisterURLLoaderInterceptor(zx::channel factory) override;
+  void CreateHostResolver(zx::channel host_resolver) override;
 
  private:
   class UrlLoaderContainer;

@@ -42,7 +42,7 @@ void RootApplicationLoader::LoadApplication(
         }
       }
     }
-    mx::vmo data;
+    zx::vmo data;
     if (fd.is_valid() && fsl::VmoFromFd(std::move(fd), &data)) {
       ApplicationPackagePtr package = ApplicationPackage::New();
       package->data = std::move(data);

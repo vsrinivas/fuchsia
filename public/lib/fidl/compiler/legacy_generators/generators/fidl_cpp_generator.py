@@ -135,25 +135,25 @@ def GetCppArrayArgWrapperType(kind):
   if mojom.IsStringKind(kind):
     return "::fidl::String"
   if mojom.IsGenericHandleKind(kind):
-    return "mx::handle"
+    return "zx::handle"
   if mojom.IsChannelKind(kind):
-    return "mx::channel"
+    return "zx::channel"
   if mojom.IsVMOKind(kind):
-    return "mx::vmo"
+    return "zx::vmo"
   if mojom.IsProcessKind(kind):
-    return "mx::process"
+    return "zx::process"
   if mojom.IsThreadKind(kind):
-    return "mx::thread"
+    return "zx::thread"
   if mojom.IsEventKind(kind):
-    return "mx::event"
+    return "zx::event"
   if mojom.IsPortKind(kind):
-    return "mx::port"
+    return "zx::port"
   if mojom.IsJobKind(kind):
-    return "mx::job"
+    return "zx::job"
   if mojom.IsSocketKind(kind):
-    return "mx::socket"
+    return "zx::socket"
   if mojom.IsEventPairKind(kind):
-    return "mx::eventpair"
+    return "zx::eventpair"
   return GetCppTypeForKind(kind)
 
 def GetCppResultWrapperType(kind):
@@ -173,25 +173,25 @@ def GetCppResultWrapperType(kind):
   if mojom.IsStringKind(kind):
     return "::fidl::String"
   if mojom.IsGenericHandleKind(kind):
-    return "mx::handle"
+    return "zx::handle"
   if mojom.IsChannelKind(kind):
-    return "mx::channel"
+    return "zx::channel"
   if mojom.IsVMOKind(kind):
-    return "mx::vmo"
+    return "zx::vmo"
   if mojom.IsProcessKind(kind):
-    return "mx::process"
+    return "zx::process"
   if mojom.IsThreadKind(kind):
-    return "mx::thread"
+    return "zx::thread"
   if mojom.IsEventKind(kind):
-    return "mx::event"
+    return "zx::event"
   if mojom.IsPortKind(kind):
-    return "mx::port"
+    return "zx::port"
   if mojom.IsJobKind(kind):
-    return "mx::job"
+    return "zx::job"
   if mojom.IsSocketKind(kind):
-    return "mx::socket"
+    return "zx::socket"
   if mojom.IsEventPairKind(kind):
-    return "mx::eventpair"
+    return "zx::eventpair"
   return GetCppTypeForKind(kind)
 
 def GetCppWrapperType(kind):
@@ -211,25 +211,25 @@ def GetCppWrapperType(kind):
   if mojom.IsStringKind(kind):
     return "::fidl::String"
   if mojom.IsGenericHandleKind(kind):
-    return "mx::handle"
+    return "zx::handle"
   if mojom.IsChannelKind(kind):
-    return "mx::channel"
+    return "zx::channel"
   if mojom.IsVMOKind(kind):
-    return "mx::vmo"
+    return "zx::vmo"
   if mojom.IsProcessKind(kind):
-    return "mx::process"
+    return "zx::process"
   if mojom.IsThreadKind(kind):
-    return "mx::thread"
+    return "zx::thread"
   if mojom.IsEventKind(kind):
-    return "mx::event"
+    return "zx::event"
   if mojom.IsPortKind(kind):
-    return "mx::port"
+    return "zx::port"
   if mojom.IsJobKind(kind):
-    return "mx::job"
+    return "zx::job"
   if mojom.IsSocketKind(kind):
-    return "mx::socket"
+    return "zx::socket"
   if mojom.IsEventPairKind(kind):
-    return "mx::eventpair"
+    return "zx::eventpair"
   return GetCppTypeForKind(kind)
 
 def GetCppConstWrapperType(kind):
@@ -249,25 +249,25 @@ def GetCppConstWrapperType(kind):
   if mojom.IsStringKind(kind):
     return "const ::fidl::String&"
   if mojom.IsGenericHandleKind(kind):
-    return "mx::handle"
+    return "zx::handle"
   if mojom.IsChannelKind(kind):
-    return "mx::channel"
+    return "zx::channel"
   if mojom.IsVMOKind(kind):
-    return "mx::vmo"
+    return "zx::vmo"
   if mojom.IsProcessKind(kind):
-    return "mx::process"
+    return "zx::process"
   if mojom.IsThreadKind(kind):
-    return "mx::thread"
+    return "zx::thread"
   if mojom.IsEventKind(kind):
-    return "mx::event"
+    return "zx::event"
   if mojom.IsPortKind(kind):
-    return "mx::port"
+    return "zx::port"
   if mojom.IsJobKind(kind):
-    return "mx::job"
+    return "zx::job"
   if mojom.IsSocketKind(kind):
-    return "mx::socket"
+    return "zx::socket"
   if mojom.IsEventPairKind(kind):
-    return "mx::eventpair"
+    return "zx::eventpair"
   if not kind in _kind_to_cpp_type:
     print "missing:", kind.spec
   return GetCppTypeForKind(kind)

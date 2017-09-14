@@ -39,7 +39,7 @@ source_set("ffmpeg") {
     "//garnet/bin/media/util",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
-    "//magenta/system/ulib/trace",
+    "//zircon/system/ulib/trace",
     "//third_party/ffmpeg",
   ]
 

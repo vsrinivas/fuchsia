@@ -112,12 +112,12 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
       ctx.set_default_verify_paths();
 #endif
       HTTPClient<asio::ssl::stream<tcp::socket>> c(this, io_service, ctx);
-      mx_status_t result = c.CreateRequest(
+      zx_status_t result = c.CreateRequest(
           current_url_.host(),
           current_url_.path() +
               (current_url_.has_query() ? "?" + current_url_.query() : ""),
           method, extra_headers, element_readers);
-      if (result != MX_OK) {
+      if (result != ZX_OK) {
         SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
         break;
       }
@@ -141,12 +141,12 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
 #endif
     } else if (current_url_.SchemeIs("http")) {
       HTTPClient<tcp::socket> c(this, io_service);
-      mx_status_t result = c.CreateRequest(
+      zx_status_t result = c.CreateRequest(
           current_url_.host(),
           current_url_.path() +
               (current_url_.has_query() ? "?" + current_url_.query() : ""),
           method, extra_headers, element_readers);
-      if (result != MX_OK) {
+      if (result != ZX_OK) {
         SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
         break;
       }

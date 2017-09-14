@@ -224,21 +224,21 @@ class FlogProxy : public T::Proxy_ {
 };
 
 template <typename T>
-mx_koid_t GetInterfaceRequestKoid(fidl::InterfaceRequest<T>* request) {
+zx_koid_t GetInterfaceRequestKoid(fidl::InterfaceRequest<T>* request) {
   FXL_DCHECK(request != nullptr);
   FXL_DCHECK(*request);
-  mx::channel channel = request->PassChannel();
-  mx_koid_t result = fsl::GetKoid(channel.get());
+  zx::channel channel = request->PassChannel();
+  zx_koid_t result = fsl::GetKoid(channel.get());
   request->Bind(std::move(channel));
   return result;
 }
 
 template <typename T>
-mx_koid_t GetInterfacePtrRelatedKoid(fidl::InterfacePtr<T>* ptr) {
+zx_koid_t GetInterfacePtrRelatedKoid(fidl::InterfacePtr<T>* ptr) {
   FXL_DCHECK(ptr != nullptr);
   FXL_DCHECK(*ptr);
   fidl::InterfaceHandle<T> handle = ptr->PassInterfaceHandle();
-  mx_koid_t result = fsl::GetRelatedKoid(handle.handle().get());
+  zx_koid_t result = fsl::GetRelatedKoid(handle.handle().get());
   ptr->Bind(std::move(handle));
   return result;
 }
@@ -251,10 +251,10 @@ mx_koid_t GetInterfacePtrRelatedKoid(fidl::InterfacePtr<T>* ptr) {
 #define FLOG_CHANNEL_WITH_SUBJECT(channel_type, channel_name, subject)
 #define FLOG(channel_name, call) ((void)0)
 #define FLOG_ID(channel_name) 0
-#define FLOG_REQUEST_KOID(request) ((void)request, MX_KOID_INVALID)
-#define FLOG_BINDING_KOID(binding) ((void)binding, MX_KOID_INVALID)
-#define FLOG_PTR_KOID(ptr) ((void)ptr, MX_KOID_INVALID)
-#define FLOG_HANDLE_KOID(h) ((void)h, MX_KOID_INVALID)
+#define FLOG_REQUEST_KOID(request) ((void)request, ZX_KOID_INVALID)
+#define FLOG_BINDING_KOID(binding) ((void)binding, ZX_KOID_INVALID)
+#define FLOG_PTR_KOID(ptr) ((void)ptr, ZX_KOID_INVALID)
+#define FLOG_HANDLE_KOID(h) ((void)h, ZX_KOID_INVALID)
 #define FLOG_INSTANCE_CHANNEL(channel_type, channel_name)
 #define FLOG_CHANNEL(channel_type, channel_name)
 

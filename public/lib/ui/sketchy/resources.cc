@@ -32,7 +32,7 @@ void Resource::EnqueueCreateResourceOp(ResourceId resource_id,
 }
 
 void Resource::EnqueueImportResourceOp(ResourceId resource_id,
-                                       mx::eventpair token,
+                                       zx::eventpair token,
                                        scenic::ImportSpec spec) {
   auto import_resource = scenic::ImportResourceOp::New();
   import_resource->id = resource_id;
@@ -68,7 +68,7 @@ void StrokeGroup::AddStroke(Stroke& stroke) {
 
 ImportNode::ImportNode(Canvas* canvas, scenic_lib::EntityNode& export_node)
     : Resource(canvas) {
-  mx::eventpair token;
+  zx::eventpair token;
   export_node.ExportAsRequest(&token);
   EnqueueImportResourceOp(id(), std::move(token), scenic::ImportSpec::NODE);
 }

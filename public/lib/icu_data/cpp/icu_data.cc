@@ -4,7 +4,7 @@
 
 #include "lib/icu_data/cpp/icu_data.h"
 
-#include <mx/vmar.h>
+#include <zx/vmar.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/icu_data/cpp/constants.h"
@@ -21,18 +21,18 @@ static size_t g_icu_data_size = 0;
 // return a pointer to the memory.
 // |size_out| is required and is set with the size of the mapped memory
 // region.
-uintptr_t GetDataFromVMO(const mx::vmo& vmo, size_t* size_out) {
+uintptr_t GetDataFromVMO(const zx::vmo& vmo, size_t* size_out) {
   if (!size_out)
     return 0u;
   uint64_t data_size = 0u;
-  mx_status_t status = vmo.get_size(&data_size);
-  if (status != MX_OK || data_size > std::numeric_limits<size_t>::max())
+  zx_status_t status = vmo.get_size(&data_size);
+  if (status != ZX_OK || data_size > std::numeric_limits<size_t>::max())
     return 0u;
 
   uintptr_t data = 0u;
-  status = mx::vmar::root_self().map(0, vmo, 0, static_cast<size_t>(data_size),
-                                     MX_VM_FLAG_PERM_READ, &data);
-  if (status == MX_OK) {
+  status = zx::vmar::root_self().map(0, vmo, 0, static_cast<size_t>(data_size),
+                                     ZX_VM_FLAG_PERM_READ, &data);
+  if (status == ZX_OK) {
     *size_out = static_cast<size_t>(data_size);
     return data;
   }
@@ -94,11 +94,11 @@ bool Initialize(app::ApplicationContext* context) {
 bool Release() {
   if (g_icu_data_ptr) {
     // Unmap the ICU data.
-    mx_status_t status =
-        mx::vmar::root_self().unmap(g_icu_data_ptr, g_icu_data_size);
+    zx_status_t status =
+        zx::vmar::root_self().unmap(g_icu_data_ptr, g_icu_data_size);
     g_icu_data_ptr = 0u;
     g_icu_data_size = 0;
-    return status == MX_OK;
+    return status == ZX_OK;
   } else {
     return false;
   }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This file is based on magenta/kernel/arch/x86/include/arch/x86/feature.h.
+// This file is based on zircon/kernel/arch/x86/include/arch/x86/feature.h.
 // TODO(dje): As with generic elf, dwarf, et.al, move to application
 // independent library.
 

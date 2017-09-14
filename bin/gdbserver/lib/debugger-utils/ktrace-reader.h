@@ -10,7 +10,7 @@
 
 #include <stdint.h>
 
-#include <magenta/ktrace.h>
+#include <zircon/ktrace.h>
 
 namespace debugserver {
 namespace ktrace {

@@ -11,7 +11,7 @@ use std::io;
 use futures::{Async, Future, Poll};
 use tokio_core::reactor::Handle;
 
-use magenta::Channel;
+use zircon::Channel;
 
 use tokio_fuchsia;
 
@@ -91,7 +91,7 @@ impl<S: Stub> Future for Server<S> {
 mod tests {
     use tokio_core::reactor::{Core, Timeout};
     use std::time::Duration;
-    use magenta::{self, MessageBuf, ChannelOpts};
+    use zircon::{self, MessageBuf, ChannelOpts};
     use tokio_fuchsia::Channel;
     use futures::future;
     use byteorder::{ByteOrder, LittleEndian};
@@ -120,7 +120,7 @@ mod tests {
         let handle = core.handle();
         let req = EncodeBuf::new_request(42);
 
-        let (client_end, server_end) = magenta::Channel::create(ChannelOpts::Normal).unwrap();
+        let (client_end, server_end) = zircon::Channel::create(ChannelOpts::Normal).unwrap();
         let dispatcher = DummyDispatcher;
         let server = Server::new(dispatcher, server_end, &handle).unwrap();
 
@@ -143,7 +143,7 @@ mod tests {
         let handle = core.handle();
         let req = EncodeBuf::new_request_expecting_response(43);
 
-        let (client_end, server_end) = magenta::Channel::create(ChannelOpts::Normal).unwrap();
+        let (client_end, server_end) = zircon::Channel::create(ChannelOpts::Normal).unwrap();
         let dispatcher = DummyDispatcher;
         let server = Server::new(dispatcher, server_end, &handle).unwrap();
 

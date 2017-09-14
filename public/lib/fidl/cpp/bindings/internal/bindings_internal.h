@@ -7,8 +7,8 @@
 
 #include <type_traits>
 
-#include <mx/channel.h>
-#include <mx/object.h>
+#include <zx/channel.h>
+#include <zx/object.h>
 
 #include "lib/fidl/cpp/bindings/internal/template_util.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
@@ -67,7 +67,7 @@ union StringPointer {
 static_assert(sizeof(StringPointer) == 8, "Bad_sizeof(StringPointer)");
 
 struct WrappedHandle {
-  mx_handle_t value;
+  zx_handle_t value;
 };
 static_assert(sizeof(WrappedHandle) == 4, "Bad_sizeof(WrappedHandle)");
 
@@ -101,7 +101,7 @@ T FetchAndReset(T* ptr) {
 
 template <typename T>
 T UnwrapHandle(const WrappedHandle& handle) {
-  return T(mx::handle(handle.value));
+  return T(zx::handle(handle.value));
 }
 
 template <typename T>
@@ -118,10 +118,10 @@ static_assert(internal::IsWrappedHandle<WrappedHandle>::value,
     "|struct WrappedHandle| must be a valid handle encoding.");
 static_assert(!internal::IsWrappedHandle<int>::value,
     "|int| must be a valid handle encoding.");
-static_assert(!internal::IsWrappedHandle<mx_handle_t>::value,
-    "|mx_handle_t| must be a valid handle encoding.");
-static_assert(!internal::IsWrappedHandle<mx::channel>::value,
-    "|mx::channel| must be a valid handle encoding.");
+static_assert(!internal::IsWrappedHandle<zx_handle_t>::value,
+    "|zx_handle_t| must be a valid handle encoding.");
+static_assert(!internal::IsWrappedHandle<zx::channel>::value,
+    "|zx::channel| must be a valid handle encoding.");
 
 // TODO(vardhan): Replace RemoveStructPtr<> and UnwrapStructPtr<> with
 // specializations of std::pointer_traits<> on [Inlined]StructPtr<>.
@@ -229,13 +229,13 @@ struct WrapperTraits;
 
 template <typename T>
 struct IsHandleType {
-  static constexpr bool value = std::is_base_of<mx::object<T>, T>::value ||
-                                IsSpecializationOf<mx::object, T>::value;
+  static constexpr bool value = std::is_base_of<zx::object<T>, T>::value ||
+                                IsSpecializationOf<zx::object, T>::value;
 };
-static_assert(IsHandleType<mx::handle>::value,
-              "mx::handle should be considered a handle");
-static_assert(IsHandleType<mx::channel>::value,
-              "mx::channel should be considered a handle.");
+static_assert(IsHandleType<zx::handle>::value,
+              "zx::handle should be considered a handle");
+static_assert(IsHandleType<zx::channel>::value,
+              "zx::channel should be considered a handle.");
 
 // Catch-all for all mojom types not specialized below.
 template <typename T>

@@ -4,7 +4,7 @@
 
 //! Library and runtime for fidl bindings.
 
-extern crate magenta;
+extern crate zircon;
 extern crate byteorder;
 extern crate futures;
 #[macro_use]

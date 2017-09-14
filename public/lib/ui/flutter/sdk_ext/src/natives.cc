@@ -85,7 +85,7 @@ const uint8_t* NativeSymbol(Dart_NativeFunction native_function) {
       FXL_LOG(ERROR) << "Error unwrapping handle";  \
       return;                                                                  \
     }                                                                          \
-    if (*result == MX_HANDLE_INVALID) {                                        \
+    if (*result == ZX_HANDLE_INVALID) {                                        \
       FXL_LOG(INFO) << "Invalid handle from unwrap"; \
       return;                                                                  \
     }                                                                          \
@@ -133,7 +133,7 @@ void Mozart_offerServiceProvider(Dart_NativeArguments args) {
   NativesDelegate* delegate = reinterpret_cast<NativesDelegate*>(context);
   fidl::InterfaceHandle<app::ServiceProvider> provider =
       fidl::InterfaceHandle<app::ServiceProvider>(
-          mx::channel(handle->ReleaseHandle()), 0);
+          zx::channel(handle->ReleaseHandle()), 0);
 
   View* view = delegate->GetMozartView();
   view->OfferServiceProvider(std::move(provider), std::move(services));

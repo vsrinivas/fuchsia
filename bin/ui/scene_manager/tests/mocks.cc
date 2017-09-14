@@ -25,8 +25,8 @@ void SessionHandlerForTest::Enqueue(::fidl::Array<scenic::OpPtr> ops) {
 }
 
 void SessionHandlerForTest::Present(uint64_t presentation_time,
-                                    ::fidl::Array<mx::event> acquire_fences,
-                                    ::fidl::Array<mx::event> release_fences,
+                                    ::fidl::Array<zx::event> acquire_fences,
+                                    ::fidl::Array<zx::event> release_fences,
                                     const PresentCallback& callback) {
   SessionHandler::Present(presentation_time, std::move(acquire_fences),
                           std::move(release_fences), callback);
@@ -37,7 +37,7 @@ ReleaseFenceSignallerForTest::ReleaseFenceSignallerForTest(
     escher::impl::CommandBufferSequencer* command_buffer_sequencer)
     : ReleaseFenceSignaller(command_buffer_sequencer) {}
 
-void ReleaseFenceSignallerForTest::AddCPUReleaseFence(mx::event fence) {
+void ReleaseFenceSignallerForTest::AddCPUReleaseFence(zx::event fence) {
   num_calls_to_add_cpu_release_fence_++;
   // Signal immediately for testing purposes.
   fence.signal(0u, kFenceSignalled);

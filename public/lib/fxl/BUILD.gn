@@ -150,7 +150,7 @@ source_set("fxl_lib") {
   }
 
   if (is_fuchsia) {
-    libs = [ "magenta" ]
+    libs = [ "zircon" ]
   }
 
   public_deps = [

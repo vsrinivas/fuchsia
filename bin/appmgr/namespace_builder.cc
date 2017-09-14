@@ -4,9 +4,9 @@
 
 #include "garnet/bin/appmgr/namespace_builder.h"
 
-#include <magenta/processargs.h>
-#include <mxio/limits.h>
-#include <mxio/util.h>
+#include <zircon/processargs.h>
+#include <fdio/limits.h>
+#include <fdio/util.h>
 
 #include <fcntl.h>
 #include <stdlib.h>
@@ -17,25 +17,25 @@
 namespace app {
 namespace {
 
-mx::channel CloneChannel(int fd) {
-  mx_handle_t handle[MXIO_MAX_HANDLES];
-  uint32_t type[MXIO_MAX_HANDLES];
+zx::channel CloneChannel(int fd) {
+  zx_handle_t handle[FDIO_MAX_HANDLES];
+  uint32_t type[FDIO_MAX_HANDLES];
 
-  mx_status_t r = mxio_clone_fd(fd, 0, handle, type);
+  zx_status_t r = fdio_clone_fd(fd, 0, handle, type);
   if (r < 0 || r == 0)
-    return mx::channel();
+    return zx::channel();
 
-  if (type[0] != PA_MXIO_REMOTE) {
+  if (type[0] != PA_FDIO_REMOTE) {
     for (int i = 0; i < r; ++i)
-      mx_handle_close(handle[i]);
-    return mx::channel();
+      zx_handle_close(handle[i]);
+    return zx::channel();
   }
 
   // Close any extra handles.
   for (int i = 1; i < r; ++i)
-    mx_handle_close(handle[i]);
+    zx_handle_close(handle[i]);
 
-  return mx::channel(handle[0]);
+  return zx::channel(handle[0]);
 }
 
 }  // namespace
@@ -56,18 +56,18 @@ void NamespaceBuilder::AddRoot() {
   PushDirectoryFromPath("/", O_RDWR);
 }
 
-void NamespaceBuilder::AddPackage(mx::channel package) {
+void NamespaceBuilder::AddPackage(zx::channel package) {
   PushDirectoryFromChannel("/pkg", std::move(package));
 }
 
 void NamespaceBuilder::AddDirectoryIfNotPresent(const std::string& path,
-                                                mx::channel directory) {
+                                                zx::channel directory) {
   if (std::find(paths_.begin(), paths_.end(), path) != paths_.end())
     return;
   PushDirectoryFromChannel(path, std::move(directory));
 }
 
-void NamespaceBuilder::AddServices(mx::channel services) {
+void NamespaceBuilder::AddServices(zx::channel services) {
   PushDirectoryFromChannel("/svc", std::move(services));
 }
 
@@ -83,7 +83,7 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
     fxl::UniqueFD entry(openat(dir.get(), path.c_str(), O_DIRECTORY | O_RDWR));
     if (!entry.is_valid())
       continue;
-    mx::channel handle = CloneChannel(entry.get());
+    zx::channel handle = CloneChannel(entry.get());
     if (!handle)
       continue;
     PushDirectoryFromChannel("/dev/" + path, std::move(handle));
@@ -103,14 +103,14 @@ void NamespaceBuilder::PushDirectoryFromPath(std::string path, int oflags) {
   fxl::UniqueFD dir(open(path.c_str(), O_DIRECTORY | oflags));
   if (!dir.is_valid())
     return;
-  mx::channel handle = CloneChannel(dir.get());
+  zx::channel handle = CloneChannel(dir.get());
   if (!handle)
     return;
   PushDirectoryFromChannel(std::move(path), std::move(handle));
 }
 
 void NamespaceBuilder::PushDirectoryFromChannel(std::string path,
-                                                mx::channel channel) {
+                                                zx::channel channel) {
   FXL_DCHECK(std::find(paths_.begin(), paths_.end(), path) == paths_.end());
   types_.push_back(PA_HND(PA_NS_DIR, types_.size()));
   handles_.push_back(channel.get());
@@ -119,7 +119,7 @@ void NamespaceBuilder::PushDirectoryFromChannel(std::string path,
   handle_pool_.push_back(std::move(channel));
 }
 
-mxio_flat_namespace_t* NamespaceBuilder::Build() {
+fdio_flat_namespace_t* NamespaceBuilder::Build() {
   path_data_.resize(paths_.size());
   for (size_t i = 0; i < paths_.size(); ++i)
     path_data_[i] = paths_[i].c_str();

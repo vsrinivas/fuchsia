@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/media/timeline/timeline.h"
@@ -16,7 +16,7 @@ namespace media {
 
 NetMediaPlayerNetStub::NetMediaPlayerNetStub(
     NetMediaPlayer* player,
-    mx::channel channel,
+    zx::channel channel,
     netconnector::NetStubResponder<NetMediaPlayer, NetMediaPlayerNetStub>*
         responder)
     : player_(player), responder_(responder) {

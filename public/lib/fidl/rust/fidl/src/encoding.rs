@@ -16,7 +16,7 @@ use Error;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use magenta::Handle;
+use zircon::Handle;
 
 #[derive(PartialEq)]
 pub enum EncodableType {
@@ -715,15 +715,15 @@ macro_rules! impl_codable_handle {
 
 // Note: Add other handle types here as needed.
 impl_codable_handle!(Handle);
-impl_codable_handle!(::magenta::Channel);
-impl_codable_handle!(::magenta::Event);
-impl_codable_handle!(::magenta::EventPair);
-impl_codable_handle!(::magenta::Job);
-impl_codable_handle!(::magenta::Port);
-impl_codable_handle!(::magenta::Process);
-impl_codable_handle!(::magenta::Socket);
-impl_codable_handle!(::magenta::Thread);
-impl_codable_handle!(::magenta::Vmo);
+impl_codable_handle!(::zircon::Channel);
+impl_codable_handle!(::zircon::Event);
+impl_codable_handle!(::zircon::EventPair);
+impl_codable_handle!(::zircon::Job);
+impl_codable_handle!(::zircon::Port);
+impl_codable_handle!(::zircon::Process);
+impl_codable_handle!(::zircon::Socket);
+impl_codable_handle!(::zircon::Thread);
+impl_codable_handle!(::zircon::Vmo);
 
 pub trait CodableUnion : Encodable + Decodable {
     // Encode the object as a pointer reference. Primarily used for nested unions.

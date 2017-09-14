@@ -5,7 +5,7 @@
 #ifndef APPLICATION_LIB_SVC_SERVICE_NAMESPACE_H_
 #define APPLICATION_LIB_SVC_SERVICE_NAMESPACE_H_
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 #include <fbl/ref_ptr.h>
 #include <svcfs/svcfs.h>
 
@@ -27,7 +27,7 @@ class ServiceNamespace : public svcfs::ServiceProvider,
   // |ServiceConnector| is the generic, type-unsafe interface for objects used
   // by |ServiceNamespace| to connect generic "interface requests" (i.e.,
   // just channels) specified by service name to service implementations.
-  using ServiceConnector = std::function<void(mx::channel)>;
+  using ServiceConnector = std::function<void(zx::channel)>;
 
   // A |InterfaceRequestHandler<Interface>| is simply a function that
   // handles an interface request for |Interface|. If it determines that the
@@ -79,7 +79,7 @@ class ServiceNamespace : public svcfs::ServiceProvider,
   void AddService(InterfaceRequestHandler<Interface> handler,
                   const std::string& service_name = Interface::Name_) {
     AddServiceForName(
-        [handler](mx::channel channel) {
+        [handler](zx::channel channel) {
           handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
         },
         service_name);
@@ -100,7 +100,7 @@ class ServiceNamespace : public svcfs::ServiceProvider,
   // Serves a directory containing these services on the given channel.
   //
   // Returns true on success.
-  bool ServeDirectory(mx::channel channel);
+  bool ServeDirectory(zx::channel channel);
 
   // Retuns a file descriptor to a directory containing these services.
   int OpenAsFileDescriptor();
@@ -110,13 +110,13 @@ class ServiceNamespace : public svcfs::ServiceProvider,
 
  private:
   // Overridden from |svcfs::ServiceProvider|:
-  void Connect(const char* name, size_t len, mx::channel channel) override;
+  void Connect(const char* name, size_t len, zx::channel channel) override;
 
   // Overridden from |app::ServiceProvider|:
   void ConnectToService(const fidl::String& service_name,
-                        mx::channel channel) override;
+                        zx::channel channel) override;
 
-  void ConnectCommon(const std::string& service_name, mx::channel channel);
+  void ConnectCommon(const std::string& service_name, zx::channel channel);
 
   std::unordered_map<std::string, ServiceConnector> name_to_service_connector_;
 

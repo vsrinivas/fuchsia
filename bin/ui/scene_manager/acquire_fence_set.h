@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <mx/event.h>
+#include <zx/event.h>
 
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fxl/functional/closure.h"
@@ -23,7 +23,7 @@ class AcquireFenceSet : private fsl::MessageLoopHandler {
  public:
   // Takes ownership of the fences.
   // |acquire_fences| must be valid handles.
-  explicit AcquireFenceSet(::fidl::Array<mx::event> acquire_fences);
+  explicit AcquireFenceSet(::fidl::Array<zx::event> acquire_fences);
 
   // Releases the fence, implicitly signalling to the producer that the
   // buffer is available to be recycled.
@@ -40,16 +40,16 @@ class AcquireFenceSet : private fsl::MessageLoopHandler {
 
  private:
   // |fsl::MessageLoopHandler|
-  void OnHandleReady(mx_handle_t handle,
-                     mx_signals_t pending,
+  void OnHandleReady(zx_handle_t handle,
+                     zx_signals_t pending,
                      uint64_t count) override;
 
   void ClearHandlers();
 
-  ::fidl::Array<mx::event> fences_;
+  ::fidl::Array<zx::event> fences_;
   uint32_t num_signalled_fences_ = 0;
 
-  // HandlerKeys, each corresponding to an |mx::event| with the same index in
+  // HandlerKeys, each corresponding to an |zx::event| with the same index in
   // |fences_|. The size of this array must match that of |fences_|.
   std::vector<fsl::MessageLoop::HandlerKey> handler_keys_;
 

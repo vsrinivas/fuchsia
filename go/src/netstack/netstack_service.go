@@ -66,7 +66,7 @@ func (ni *netstackImpl) GetPortForService(service string, protocol nsfidl.Protoc
 
 func (ni *netstackImpl) GetAddress(name string, port uint16) (out []net_address.SocketAddress, netErr nsfidl.NetErr, retErr error) {
 	// TODO: This should handle IP address strings, empty strings, "localhost", etc. Pull the logic from
-	// mxio's getaddrinfo into here.
+	// fdio's getaddrinfo into here.
 	addrs, err := ns.dispatcher.dnsClient.LookupIP(name)
 	if err == nil {
 		out = make([]net_address.SocketAddress, len(addrs))

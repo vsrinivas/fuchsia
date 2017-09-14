@@ -67,7 +67,7 @@ class SampleFactoryImpl : public sample::Factory {
       : binding_(this, std::move(request)) {}
 
   void DoStuff(sample::RequestPtr request,
-               mx::channel pipe,
+               zx::channel pipe,
                const DoStuffCallback& callback) override {
     std::string text1;
     if (pipe)
@@ -81,9 +81,9 @@ class SampleFactoryImpl : public sample::Factory {
       EXPECT_TRUE(request->pipe);
     }
 
-    mx::channel pipe0;
+    zx::channel pipe0;
     if (!text2.empty()) {
-      mx::channel::create(0, &pipe0, &pipe1_);
+      zx::channel::create(0, &pipe0, &pipe1_);
       EXPECT_TRUE(WriteTextMessage(pipe1_, text2));
     }
 
@@ -116,7 +116,7 @@ class SampleFactoryImpl : public sample::Factory {
           callback) override {}
 
  private:
-  mx::channel pipe1_;
+  zx::channel pipe1_;
   Binding<sample::Factory> binding_;
 };
 
@@ -144,7 +144,7 @@ struct DoStuffCallback {
       EXPECT_EQ(std::string(kText2), text2);
 
       // Do some more tests of handle passing:
-      mx::channel p = std::move(response->pipe);
+      zx::channel p = std::move(response->pipe);
       EXPECT_TRUE(p);
       EXPECT_FALSE(response->pipe);
     }
@@ -160,12 +160,12 @@ TEST_F(HandlePassingTest, Basic) {
   sample::FactoryPtr factory;
   SampleFactoryImpl factory_impl(factory.NewRequest());
 
-  mx::channel pipe0_handle0, pipe0_handle1;
-  mx::channel::create(0, &pipe0_handle0, &pipe0_handle1);
+  zx::channel pipe0_handle0, pipe0_handle1;
+  zx::channel::create(0, &pipe0_handle0, &pipe0_handle1);
   EXPECT_TRUE(WriteTextMessage(pipe0_handle1, kText1));
 
-  mx::channel pipe1_handle0, pipe1_handle1;
-  mx::channel::create(0, &pipe1_handle0, &pipe1_handle1);
+  zx::channel pipe1_handle0, pipe1_handle1;
+  zx::channel::create(0, &pipe1_handle0, &pipe1_handle1);
   EXPECT_TRUE(WriteTextMessage(pipe1_handle1, kText2));
 
   imported::ImportedInterfacePtr imported;
@@ -199,7 +199,7 @@ TEST_F(HandlePassingTest, PassInvalid) {
   bool got_response = false;
   std::string got_text_reply;
   DoStuffCallback cb(&got_response, &got_text_reply);
-  factory->DoStuff(std::move(request), mx::channel(), cb);
+  factory->DoStuff(std::move(request), zx::channel(), cb);
 
   EXPECT_FALSE(*cb.got_response);
 
@@ -212,27 +212,27 @@ TEST_F(HandlePassingTest, PipesAreClosed) {
   sample::FactoryPtr factory;
   SampleFactoryImpl factory_impl(factory.NewRequest());
 
-  mx::channel handle0, handle1;
-  mx::channel::create(0, &handle0, &handle1);
+  zx::channel handle0, handle1;
+  zx::channel::create(0, &handle0, &handle1);
 
-  mx_handle_t handle0_value = handle0.get();
-  mx_handle_t handle1_value = handle1.get();
+  zx_handle_t handle0_value = handle0.get();
+  zx_handle_t handle1_value = handle1.get();
 
   {
-    auto pipes = Array<mx::channel>::New(2);
+    auto pipes = Array<zx::channel>::New(2);
     pipes[0] = std::move(handle0);
     pipes[1] = std::move(handle1);
 
     sample::RequestPtr request(sample::Request::New());
     request->more_pipes = std::move(pipes);
 
-    factory->DoStuff(std::move(request), mx::channel(),
+    factory->DoStuff(std::move(request), zx::channel(),
                      [](sample::ResponsePtr, const String&){});
   }
 
   // We expect the pipes to have been closed.
-  EXPECT_EQ(MX_ERR_BAD_HANDLE, mx_handle_close(handle0_value));
-  EXPECT_EQ(MX_ERR_BAD_HANDLE, mx_handle_close(handle1_value));
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(handle0_value));
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(handle1_value));
 }
 
 TEST_F(HandlePassingTest, CreateNamedObject) {

@@ -61,14 +61,14 @@ void Message::Initialize() {
 void Message::FreeDataAndCloseHandles() {
   free(data_);
 
-  for (std::vector<mx_handle_t>::iterator it = handles_.begin();
+  for (std::vector<zx_handle_t>::iterator it = handles_.begin();
        it != handles_.end(); ++it) {
     if (*it)
-      mx_handle_close(*it);
+      zx_handle_close(*it);
   }
 }
 
-mx_status_t ReadMessage(const mx::channel& handle, Message* message) {
+zx_status_t ReadMessage(const zx::channel& handle, Message* message) {
   FXL_DCHECK(handle);
   FXL_DCHECK(message);
   FXL_DCHECK(message->handles()->empty());
@@ -76,9 +76,9 @@ mx_status_t ReadMessage(const mx::channel& handle, Message* message) {
 
   uint32_t num_bytes = 0;
   uint32_t num_handles = 0;
-  mx_status_t rv =
+  zx_status_t rv =
       handle.read(0, nullptr, 0, &num_bytes, nullptr, 0, &num_handles);
-  if (rv != MX_ERR_BUFFER_TOO_SMALL)
+  if (rv != ZX_ERR_BUFFER_TOO_SMALL)
     return rv;
 
   message->AllocUninitializedData(num_bytes);
@@ -89,7 +89,7 @@ mx_status_t ReadMessage(const mx::channel& handle, Message* message) {
   rv = handle.read(0, message->mutable_data(), num_bytes, &num_bytes_actual,
                    message->mutable_handles()->empty()
                        ? nullptr
-                       : reinterpret_cast<mx_handle_t*>(
+                       : reinterpret_cast<zx_handle_t*>(
                              &message->mutable_handles()->front()),
                    num_handles, &num_handles_actual);
 
@@ -99,12 +99,12 @@ mx_status_t ReadMessage(const mx::channel& handle, Message* message) {
   return rv;
 }
 
-mx_status_t ReadAndDispatchMessage(const mx::channel& handle,
+zx_status_t ReadAndDispatchMessage(const zx::channel& handle,
                                    MessageReceiver* receiver,
                                    bool* receiver_result) {
   Message message;
-  mx_status_t rv = ReadMessage(handle, &message);
-  if (receiver && rv == MX_OK)
+  zx_status_t rv = ReadMessage(handle, &message);
+  if (receiver && rv == ZX_OK)
     *receiver_result = receiver->Accept(&message);
 
   return rv;

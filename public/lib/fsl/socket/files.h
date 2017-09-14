@@ -5,7 +5,7 @@
 #ifndef LIB_FSL_SOCKET_FILES_H_
 #define LIB_FSL_SOCKET_FILES_H_
 
-#include <mx/socket.h>
+#include <zx/socket.h>
 
 #include <functional>
 
@@ -19,7 +19,7 @@ namespace fsl {
 // The given |callback| is run upon completion. File writes and |callback| will
 // be scheduled on the given |task_runner|.
 FXL_EXPORT void CopyToFileDescriptor(
-    mx::socket source,
+    zx::socket source,
     fxl::UniqueFD destination,
     fxl::RefPtr<fxl::TaskRunner> task_runner,
     const std::function<void(bool /*success*/, fxl::UniqueFD /*destination*/)>&
@@ -30,7 +30,7 @@ FXL_EXPORT void CopyToFileDescriptor(
 // scheduled to the given |task_runner|.
 FXL_EXPORT void CopyFromFileDescriptor(
     fxl::UniqueFD source,
-    mx::socket destination,
+    zx::socket destination,
     fxl::RefPtr<fxl::TaskRunner> task_runner,
     const std::function<void(bool /*success*/, fxl::UniqueFD /*source*/)>&
         callback);

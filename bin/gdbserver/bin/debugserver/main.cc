@@ -70,9 +70,9 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
 
   std::string attach_pid_str;
-  mx_koid_t attach_pid = MX_KOID_INVALID;
+  zx_koid_t attach_pid = ZX_KOID_INVALID;
   if (cl.GetOptionValue("attach", &attach_pid_str)) {
-    if (!fxl::StringToNumberWithError<mx_koid_t>(attach_pid_str,
+    if (!fxl::StringToNumberWithError<zx_koid_t>(attach_pid_str,
                                                  &attach_pid)) {
       FXL_LOG(ERROR) << "Not a valid process id: " << attach_pid_str;
       return EXIT_FAILURE;
@@ -97,12 +97,12 @@ int main(int argc, char* argv[]) {
   auto inferior = new debugserver::Process(&server, &server);
 
   // Are we passed a pid or a program?
-  if (attach_pid != MX_KOID_INVALID && inferior_argv.size() != 0) {
+  if (attach_pid != ZX_KOID_INVALID && inferior_argv.size() != 0) {
     FXL_LOG(ERROR) << "Cannot specify both --attach=pid and a program";
     return EXIT_FAILURE;
   }
 
-  if (attach_pid != MX_KOID_INVALID) {
+  if (attach_pid != ZX_KOID_INVALID) {
     if (!inferior->Initialize(attach_pid)) {
       FXL_LOG(ERROR) << "Failed to set up inferior";
       return EXIT_FAILURE;

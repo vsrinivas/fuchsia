@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include <mx/eventpair.h>
+#include <zx/eventpair.h>
 
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/views/fidl/views.fidl.h"
@@ -50,7 +50,7 @@ class ViewStub {
   // that the parent view exported to host the view's graphical contents.
   ViewStub(ViewRegistry* registry,
            fidl::InterfaceHandle<mozart::ViewOwner> owner,
-           mx::eventpair host_import_token);
+           zx::eventpair host_import_token);
   ~ViewStub();
 
   fxl::WeakPtr<ViewStub> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
@@ -148,7 +148,7 @@ class ViewStub {
   ViewState* state_ = nullptr;
   bool unavailable_ = false;
 
-  mx::eventpair host_import_token_;
+  zx::eventpair host_import_token_;
   std::unique_ptr<scenic_lib::ImportNode> host_node_;
 
   // Non-null when we are waiting to transfer the |ViewOwner|.

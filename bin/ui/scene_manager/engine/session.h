@@ -78,8 +78,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   // TODO: nothing is currently done with the acquire and release fences.
   void ScheduleUpdate(uint64_t presentation_time,
                       ::fidl::Array<scenic::OpPtr> ops,
-                      ::fidl::Array<mx::event> acquire_fences,
-                      ::fidl::Array<mx::event> release_fences,
+                      ::fidl::Array<zx::event> acquire_fences,
+                      ::fidl::Array<zx::event> release_fences,
                       const scenic::Session::PresentCallback& callback);
 
   // Called by ImagePipe::PresentImage().  Stashes the arguments without
@@ -244,7 +244,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
 
     ::fidl::Array<scenic::OpPtr> ops;
     std::unique_ptr<AcquireFenceSet> acquire_fences;
-    ::fidl::Array<mx::event> release_fences;
+    ::fidl::Array<zx::event> release_fences;
 
     // Callback to report when the update has been applied in response to
     // an invocation of |Session.Present()|.
@@ -252,7 +252,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   };
   bool ApplyUpdate(Update* update);
   std::queue<Update> scheduled_updates_;
-  ::fidl::Array<mx::event> fences_to_release_on_next_update_;
+  ::fidl::Array<zx::event> fences_to_release_on_next_update_;
 
   struct ImagePipeUpdate {
     uint64_t presentation_time;

@@ -255,7 +255,7 @@
 {%-     elif kind|is_interface_kind %}
     ::fidl::internal::InterfaceDataToHandle(&{{input}}->{{name}}, &{{output_field}});
 {%-     elif kind|is_interface_request_kind %}
-    {{output_field}}.Bind(::fidl::internal::UnwrapHandle<mx::channel>(
+    {{output_field}}.Bind(::fidl::internal::UnwrapHandle<zx::channel>(
       ::fidl::internal::FetchAndReset(&{{input}}->{{name}})));
 {%-     elif kind|is_any_handle_kind %}
     {{output_field}}.reset(::fidl::internal::FetchAndReset(&{{input}}->{{name}}).value);

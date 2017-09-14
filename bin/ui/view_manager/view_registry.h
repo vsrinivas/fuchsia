@@ -40,7 +40,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   void CreateView(fidl::InterfaceRequest<mozart::View> view_request,
                   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
                   mozart::ViewListenerPtr view_listener,
-                  mx::eventpair parent_export_token,
+                  zx::eventpair parent_export_token,
                   const fidl::String& label);
   void CreateViewTree(
       fidl::InterfaceRequest<mozart::ViewTree> view_tree_request,
@@ -71,7 +71,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   void AddChild(ViewContainerState* container_state,
                 uint32_t child_key,
                 fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
-                mx::eventpair host_import_token);
+                zx::eventpair host_import_token);
 
   // Removes a child.
   // Destroys |container_state| if an error occurs.
@@ -96,13 +96,13 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   // Destroys |view_state| if an error occurs.
   void ConnectToViewService(ViewState* view_state,
                             const fidl::String& service_name,
-                            mx::channel client_handle);
+                            zx::channel client_handle);
 
   // Connects to a view service.
   // Destroys |view_state| if an error occurs.
   void ConnectToViewTreeService(ViewTreeState* tree_state,
                                 const fidl::String& service_name,
-                                mx::channel client_handle);
+                                zx::channel client_handle);
 
   // VIEW INSPECTOR REQUESTS
 

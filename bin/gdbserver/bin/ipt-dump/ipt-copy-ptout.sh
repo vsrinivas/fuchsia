@@ -11,13 +11,13 @@ declare -r SIDEBAND_SUFFIXES=".ktrace .ptlist"
 
 if [ $# -ne 3 ]
 then
-    echo "Usage: $SCRIPT <magenta-hostname> <path-prefix> <output-path-prefix>" >&2
+    echo "Usage: $SCRIPT <zircon-hostname> <path-prefix> <output-path-prefix>" >&2
     echo "Use \"\" for the hostname if unknown and there's only one." >&2
     echo "Example: $SCRIPT \"\" /tmp/ptout ./ptout" >&2
     exit 1
 fi
 
-declare -r MAGENTA_HOSTNAME=$1
+declare -r ZIRCON_HOSTNAME=$1
 declare -r SOURCE_SPEC=$2
 declare -r OUTPUT_SPEC=$3
 declare -r OUTPUT_DIR="$(dirname $OUTPUT_SPEC)"
@@ -34,7 +34,7 @@ set -x
 for s in $SIDEBAND_SUFFIXES
 do
     file="${OUTPUT_SPEC}${s}"
-    netcp "${MAGENTA_HOSTNAME}:${SOURCE_SPEC}${s}" "$file"
+    netcp "${ZIRCON_HOSTNAME}:${SOURCE_SPEC}${s}" "$file"
 done
 
 # This file contains a list of the files with trace buffers.
@@ -51,6 +51,6 @@ do
     file=$2
     cpu_suffix="${file#${SOURCE_SPEC}}"
     output_file="${OUTPUT_SPEC}${cpu_suffix}"
-    netcp "${MAGENTA_HOSTNAME}:$file" "$output_file"
+    netcp "${ZIRCON_HOSTNAME}:$file" "$output_file"
     echo "$seqno $output_file" >> "$XPTLIST_FILE"
 done < "$PTLIST_FILE"

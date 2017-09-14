@@ -13,8 +13,8 @@ EventTimestamper::EventTimestamper()
     : main_loop_(fsl::MessageLoop::GetCurrent()), task_(0u) {
   FXL_DCHECK(main_loop_);
   background_loop_.StartThread();
-  task_.set_handler([](async_t*, mx_status_t) {
-    mx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
+  task_.set_handler([](async_t*, zx_status_t) {
+    zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
     return ASYNC_TASK_FINISHED;
   });
 
@@ -35,8 +35,8 @@ void EventTimestamper::IncreaseBackgroundThreadPriority() {
 EventTimestamper::Watch::Watch() : wait_(nullptr), timestamper_(nullptr) {}
 
 EventTimestamper::Watch::Watch(EventTimestamper* ts,
-                               mx::event event,
-                               mx_status_t trigger,
+                               zx::event event,
+                               zx_status_t trigger,
                                Callback callback)
     : wait_(new EventTimestamper::Wait(ts->main_loop_->task_runner(),
                                        std::move(event),
@@ -69,7 +69,7 @@ EventTimestamper::Watch::~Watch() {
       delete wait_;
       break;
     case Wait::State::STARTED:
-      if (MX_OK ==
+      if (ZX_OK ==
           wait_->wait().Cancel(timestamper_->background_loop_.async())) {
         delete wait_;
       } else {
@@ -91,8 +91,8 @@ void EventTimestamper::Watch::Start() {
 }
 
 EventTimestamper::Wait::Wait(const fxl::RefPtr<fxl::TaskRunner>& task_runner,
-                             mx::event event,
-                             mx_status_t trigger,
+                             zx::event event,
+                             zx_status_t trigger,
                              Callback callback)
     : task_runner_(task_runner),
       event_(std::move(event)),
@@ -107,9 +107,9 @@ EventTimestamper::Wait::~Wait() {
 
 async_wait_result_t EventTimestamper::Wait::Handle(
     async_t* async,
-    mx_status_t status,
-    const mx_packet_signal_t* signal) {
-  mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
+    zx_status_t status,
+    const zx_packet_signal_t* signal) {
+  zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
   task_runner_->PostTask([now, this] {
     if (state_ == State::ABANDONED) {
       // The EventTimestamper::Watch that owned us was destroyed; we must

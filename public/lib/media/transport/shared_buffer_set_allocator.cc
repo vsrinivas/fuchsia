@@ -7,7 +7,7 @@
 namespace media {
 
 SharedBufferSetAllocator::SharedBufferSetAllocator(uint32_t local_map_flags,
-                                                   mx_rights_t remote_rights)
+                                                   zx_rights_t remote_rights)
     : SharedBufferSet(local_map_flags), remote_rights_(remote_rights) {}
 
 SharedBufferSetAllocator::~SharedBufferSetAllocator() {}
@@ -44,7 +44,7 @@ void SharedBufferSetAllocator::ReleaseRegion(void* ptr) {
 }
 
 bool SharedBufferSetAllocator::PollForBufferUpdate(uint32_t* buffer_id_out,
-                                                   mx::vmo* handle_out) {
+                                                   zx::vmo* handle_out) {
   FXL_DCHECK(buffer_id_out != nullptr);
   FXL_DCHECK(handle_out != nullptr);
 
@@ -168,9 +168,9 @@ void SharedBufferSetAllocator::ReleaseSlicedRegion(const Locator& locator) {
 
 uint32_t SharedBufferSetAllocator::CreateBuffer(bool whole, uint64_t size) {
   uint32_t buffer_id;
-  mx::vmo vmo;
-  mx_status_t status = CreateNewBuffer(size, &buffer_id, remote_rights_, &vmo);
-  if (status != MX_OK) {
+  zx::vmo vmo;
+  zx_status_t status = CreateNewBuffer(size, &buffer_id, remote_rights_, &vmo);
+  if (status != ZX_OK) {
     return kNullBufferId;
   }
 
@@ -210,7 +210,7 @@ SharedBufferSetAllocator::Buffer::Buffer() {}
 SharedBufferSetAllocator::Buffer::~Buffer() {}
 
 SharedBufferSetAllocator::BufferUpdate::BufferUpdate(uint32_t buffer_id,
-                                                     mx::vmo vmo)
+                                                     zx::vmo vmo)
     : buffer_id_(buffer_id), vmo_(std::move(vmo)) {}
 
 SharedBufferSetAllocator::BufferUpdate::BufferUpdate(uint32_t buffer_id)

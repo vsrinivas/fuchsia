@@ -6,8 +6,8 @@
 #include <string>
 #include <vector>
 
-#include <magenta/errors.h>
-#include <magenta/syscalls.h>
+#include <zircon/errors.h>
+#include <zircon/syscalls.h>
 
 #include "lib/fxl/logging.h"
 
@@ -25,7 +25,7 @@ static const char* kStubDeviceNames[kStubNumDevices] = {"Dummy Audio Output 1",
 constexpr int kStubDeviceRates[kStubNumDevices] = {44100, 48000};
 constexpr int kStubDeviceNumChans[kStubNumDevices] = {2, 1};
 constexpr int kStubDeviceBufferSizes[kStubNumDevices] = {1024, 3000};
-constexpr mx_duration_t kStubDeviceMinDelaysNSec[kStubNumDevices] = {200000,
+constexpr zx_duration_t kStubDeviceMinDelaysNSec[kStubNumDevices] = {200000,
                                                                      100000000};
 }  // namespace
 // End of stub-related placeholder values
@@ -43,7 +43,7 @@ constexpr char kFuchsiaAudioBlankTag[] = "    ";
 struct _fuchsia_audio_output_stream {
   char tag[kTagSize];
   fuchsia_audio_parameters stream_params;
-  mx_time_t delay_nsec;
+  zx_time_t delay_nsec;
   bool received_first_pres_time;
   fuchsia_audio_manager* manager;
 };
@@ -85,7 +85,7 @@ fuchsia_audio_manager* fuchsia_audio_manager_create() {
 int fuchsia_audio_manager_free(fuchsia_audio_manager* manager) {
   FXL_DCHECK(manager);
   if (!is_valid_manager(manager)) {
-    return MX_ERR_BAD_HANDLE;
+    return ZX_ERR_BAD_HANDLE;
   }
 
   strncpy(manager->tag, kFuchsiaAudioBlankTag, 4);
@@ -95,7 +95,7 @@ int fuchsia_audio_manager_free(fuchsia_audio_manager* manager) {
 
   delete manager->streams;
   delete manager;
-  return MX_OK;
+  return ZX_OK;
 }
 
 int fuchsia_audio_manager_get_output_devices(
@@ -104,14 +104,14 @@ int fuchsia_audio_manager_get_output_devices(
     int num_device_descriptions) {
   FXL_DCHECK(manager);
   if (!is_valid_manager(manager)) {
-    return MX_ERR_BAD_HANDLE;
+    return ZX_ERR_BAD_HANDLE;
   }
 
   if (!buffer != !num_device_descriptions) {
-    return MX_ERR_INVALID_ARGS;
+    return ZX_ERR_INVALID_ARGS;
   }
   if (num_device_descriptions < 0) {
-    return MX_ERR_OUT_OF_RANGE;
+    return ZX_ERR_OUT_OF_RANGE;
   }
 
   if (!buffer) {
@@ -135,15 +135,15 @@ int fuchsia_audio_manager_get_output_device_default_parameters(
     fuchsia_audio_parameters* stream_params) {
   FXL_DCHECK(manager);
   if (!is_valid_manager(manager)) {
-    return MX_ERR_BAD_HANDLE;
+    return ZX_ERR_BAD_HANDLE;
   }
 
   if (!device_id || !strlen(device_id)) {
-    return MX_ERR_INVALID_ARGS;
+    return ZX_ERR_INVALID_ARGS;
   }
 
   if (!stream_params) {
-    return MX_ERR_INVALID_ARGS;
+    return ZX_ERR_INVALID_ARGS;
   }
 
   for (int dev_num = 0; dev_num < kStubNumDevices; ++dev_num) {
@@ -151,10 +151,10 @@ int fuchsia_audio_manager_get_output_device_default_parameters(
       stream_params->sample_rate = kStubDeviceRates[dev_num];
       stream_params->num_channels = kStubDeviceNumChans[dev_num];
       stream_params->buffer_size = kStubDeviceBufferSizes[dev_num];
-      return MX_OK;
+      return ZX_OK;
     }
   }
-  return MX_ERR_NOT_FOUND;
+  return ZX_ERR_NOT_FOUND;
 }
 
 int fuchsia_audio_manager_create_output_stream(
@@ -164,7 +164,7 @@ int fuchsia_audio_manager_create_output_stream(
     fuchsia_audio_output_stream** stream_out) {
   FXL_DCHECK(manager);
   if (!is_valid_manager(manager)) {
-    return MX_ERR_BAD_HANDLE;
+    return ZX_ERR_BAD_HANDLE;
   }
 
   int dev_num = 0;
@@ -177,21 +177,21 @@ int fuchsia_audio_manager_create_output_stream(
     }
   }
   if (dev_num == kStubNumDevices) {
-    return MX_ERR_NOT_FOUND;
+    return ZX_ERR_NOT_FOUND;
   }
 
   if (!stream_params) {
-    return MX_ERR_INVALID_ARGS;
+    return ZX_ERR_INVALID_ARGS;
   }
   if (stream_params->num_channels < kMinNumChannels ||
       stream_params->num_channels > kMaxNumChannels ||
       stream_params->sample_rate < kMinSampleRate ||
       stream_params->sample_rate > kMaxSampleRate) {
-    return MX_ERR_OUT_OF_RANGE;
+    return ZX_ERR_OUT_OF_RANGE;
   }
 
   if (!stream_out) {
-    return MX_ERR_INVALID_ARGS;
+    return ZX_ERR_INVALID_ARGS;
   }
 
   *stream_out = new fuchsia_audio_output_stream{
@@ -204,13 +204,13 @@ int fuchsia_audio_manager_create_output_stream(
   manager->streams->push_back(*stream_out);
   strncpy((*stream_out)->tag, kFuchsiaAudioOutputStreamTag, 4);
 
-  return MX_OK;
+  return ZX_OK;
 }
 
 int fuchsia_audio_output_stream_free(fuchsia_audio_output_stream* stream) {
   FXL_DCHECK(stream);
   if (!is_valid_stream(stream)) {
-    return MX_ERR_BAD_HANDLE;
+    return ZX_ERR_BAD_HANDLE;
   }
 
   strncpy(stream->tag, kFuchsiaAudioBlankTag, 4);
@@ -225,56 +225,56 @@ int fuchsia_audio_output_stream_free(fuchsia_audio_output_stream* stream) {
   }
 
   delete stream;
-  return MX_OK;
+  return ZX_OK;
 }
 
 int fuchsia_audio_output_stream_get_min_delay(
     fuchsia_audio_output_stream* stream,
-    mx_duration_t* delay_nsec_out) {
+    zx_duration_t* delay_nsec_out) {
   FXL_DCHECK(stream);
   if (!is_valid_stream(stream)) {
-    return MX_ERR_BAD_HANDLE;
+    return ZX_ERR_BAD_HANDLE;
   }
 
   if (!delay_nsec_out) {
-    return MX_ERR_INVALID_ARGS;
+    return ZX_ERR_INVALID_ARGS;
   }
 
   *delay_nsec_out = stream->delay_nsec;
-  return MX_OK;
+  return ZX_OK;
 }
 
 int fuchsia_audio_output_stream_write(fuchsia_audio_output_stream* stream,
                                       float* sample_buffer,
                                       int num_samples,
-                                      mx_time_t pres_time) {
+                                      zx_time_t pres_time) {
   FXL_DCHECK(stream);
   if (!is_valid_stream(stream)) {
-    return MX_ERR_BAD_HANDLE;
+    return ZX_ERR_BAD_HANDLE;
   }
 
   if (!sample_buffer || num_samples <= 0) {
-    return MX_ERR_INVALID_ARGS;
+    return ZX_ERR_INVALID_ARGS;
   }
   if (num_samples % stream->stream_params.num_channels) {
-    return MX_ERR_INVALID_ARGS;
+    return ZX_ERR_INVALID_ARGS;
   }
 
   if (!pres_time) {
-    return MX_ERR_INVALID_ARGS;
+    return ZX_ERR_INVALID_ARGS;
   }
   if (pres_time > FUCHSIA_AUDIO_NO_TIMESTAMP) {
-    return MX_ERR_OUT_OF_RANGE;
+    return ZX_ERR_OUT_OF_RANGE;
   }
   if (pres_time == FUCHSIA_AUDIO_NO_TIMESTAMP &&
       !stream->received_first_pres_time) {
-    return MX_ERR_BAD_STATE;
+    return ZX_ERR_BAD_STATE;
   }
-  mx_time_t deadline = stream->delay_nsec + mx_time_get(MX_CLOCK_MONOTONIC);
+  zx_time_t deadline = stream->delay_nsec + zx_time_get(ZX_CLOCK_MONOTONIC);
   if (pres_time < deadline) {
-    return MX_ERR_IO_MISSED_DEADLINE;
+    return ZX_ERR_IO_MISSED_DEADLINE;
   }
 
   stream->received_first_pres_time = true;
-  return MX_OK;
+  return ZX_OK;
 }

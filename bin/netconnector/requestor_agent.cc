@@ -17,7 +17,7 @@ namespace netconnector {
 std::unique_ptr<RequestorAgent> RequestorAgent::Create(
     const SocketAddress& address,
     const std::string& service_name,
-    mx::channel local_channel,
+    zx::channel local_channel,
     NetConnectorImpl* owner) {
   FXL_DCHECK(address.is_valid());
   FXL_DCHECK(!service_name.empty());
@@ -41,7 +41,7 @@ std::unique_ptr<RequestorAgent> RequestorAgent::Create(
 
 RequestorAgent::RequestorAgent(fxl::UniqueFD socket_fd,
                                const std::string& service_name,
-                               mx::channel local_channel,
+                               zx::channel local_channel,
                                NetConnectorImpl* owner)
     : MessageTransceiver(std::move(socket_fd)),
       service_name_(service_name),

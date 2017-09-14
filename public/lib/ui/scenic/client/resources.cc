@@ -26,11 +26,11 @@ Resource::~Resource() {
     session_->ReleaseResource(id_);
 }
 
-void Resource::Export(mx::eventpair export_token) {
+void Resource::Export(zx::eventpair export_token) {
   session_->Enqueue(NewExportResourceOp(id(), std::move(export_token)));
 }
 
-void Resource::ExportAsRequest(mx::eventpair* out_import_token) {
+void Resource::ExportAsRequest(zx::eventpair* out_import_token) {
   session_->Enqueue(NewExportResourceOpAsRequest(id(), out_import_token));
 }
 
@@ -131,7 +131,7 @@ Buffer::Buffer(Buffer&& moved) : Resource(std::move(moved)) {}
 
 Buffer::~Buffer() = default;
 
-Memory::Memory(Session* session, mx::vmo vmo, scenic::MemoryType memory_type)
+Memory::Memory(Session* session, zx::vmo vmo, scenic::MemoryType memory_type)
     : Resource(session), memory_type_(memory_type) {
   session->Enqueue(NewCreateMemoryOp(id(), std::move(vmo), memory_type));
 }
@@ -270,14 +270,14 @@ ImportNode::~ImportNode() {
   FXL_DCHECK(is_bound_) << "Import was never bound.";
 }
 
-void ImportNode::Bind(mx::eventpair import_token) {
+void ImportNode::Bind(zx::eventpair import_token) {
   FXL_DCHECK(!is_bound_);
   session()->Enqueue(NewImportResourceOp(id(), scenic::ImportSpec::NODE,
                                          std::move(import_token)));
   is_bound_ = true;
 }
 
-void ImportNode::BindAsRequest(mx::eventpair* out_export_token) {
+void ImportNode::BindAsRequest(zx::eventpair* out_export_token) {
   FXL_DCHECK(!is_bound_);
   session()->Enqueue(NewImportResourceOpAsRequest(
       id(), scenic::ImportSpec::NODE, out_export_token));

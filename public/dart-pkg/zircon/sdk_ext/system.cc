@@ -80,7 +80,7 @@ class ByteDataScope {
   void* data_ = nullptr;
 };
 
-Dart_Handle MakeHandleList(const std::vector<mx_handle_t>& in_handles) {
+Dart_Handle MakeHandleList(const std::vector<zx_handle_t>& in_handles) {
   Dart_Handle list = Dart_NewList(in_handles.size());
   if (Dart_IsError(list))
     return list;
@@ -117,9 +117,9 @@ Dart_Handle ConstructDartObject(const char* class_name, Args&&... args) {
 IMPLEMENT_WRAPPERTYPEINFO(zircon, System);
 
 Dart_Handle System::ChannelCreate(uint32_t options) {
-  mx_handle_t out0 = 0, out1 = 0;
-  mx_status_t status = mx_channel_create(options, &out0, &out1);
-  if (status != MX_OK) {
+  zx_handle_t out0 = 0, out1 = 0;
+  zx_status_t status = zx_channel_create(options, &out0, &out1);
+  if (status != ZX_OK) {
     return ConstructDartObject(kHandlePairResult, ToDart(status));
   } else {
     return ConstructDartObject(kHandlePairResult, ToDart(status),
@@ -128,22 +128,22 @@ Dart_Handle System::ChannelCreate(uint32_t options) {
   }
 }
 
-mx_status_t System::ChannelWrite(fxl::RefPtr<Handle> channel,
+zx_status_t System::ChannelWrite(fxl::RefPtr<Handle> channel,
                                  const tonic::DartByteData& data,
                                  std::vector<Handle*> handles) {
   if (!channel || !channel->is_valid()) {
-    return MX_ERR_BAD_HANDLE;
+    return ZX_ERR_BAD_HANDLE;
   }
 
-  std::vector<mx_handle_t> mx_handles;
+  std::vector<zx_handle_t> zx_handles;
   for (Handle* handle : handles) {
-    mx_handles.push_back(handle->handle());
+    zx_handles.push_back(handle->handle());
   }
 
-  mx_status_t status = mx_channel_write(channel->handle(), 0, data.data(),
+  zx_status_t status = zx_channel_write(channel->handle(), 0, data.data(),
                                         data.length_in_bytes(),
-                                        mx_handles.data(), mx_handles.size());
-  if (status == MX_OK) {
+                                        zx_handles.data(), zx_handles.size());
+  if (status == ZX_OK) {
     // Handles were transferred.
     for (Handle* handle : handles) {
       handle->ReleaseHandle();
@@ -155,16 +155,16 @@ mx_status_t System::ChannelWrite(fxl::RefPtr<Handle> channel,
 
 Dart_Handle System::ChannelQueryAndRead(fxl::RefPtr<Handle> channel) {
   if (!channel || !channel->is_valid()) {
-    return ConstructDartObject(kReadResult, ToDart(MX_ERR_BAD_HANDLE));
+    return ConstructDartObject(kReadResult, ToDart(ZX_ERR_BAD_HANDLE));
   }
 
   uint32_t actual_bytes = 0;
   uint32_t actual_handles = 0;
 
   // Query the size of the next message.
-  mx_status_t status = mx_channel_read(channel->handle(), 0, nullptr, nullptr,
+  zx_status_t status = zx_channel_read(channel->handle(), 0, nullptr, nullptr,
                                        0, 0, &actual_bytes, &actual_handles);
-  if (status != MX_ERR_BUFFER_TOO_SMALL) {
+  if (status != ZX_ERR_BUFFER_TOO_SMALL) {
     // An empty message or an error.
     return ConstructDartObject(kReadResult, ToDart(status));
   }
@@ -172,17 +172,17 @@ Dart_Handle System::ChannelQueryAndRead(fxl::RefPtr<Handle> channel) {
   // Allocate space for the bytes and handles.
   ByteDataScope bytes(actual_bytes);
   FXL_DCHECK(bytes.is_valid());
-  std::vector<mx_handle_t> handles(actual_handles);
+  std::vector<zx_handle_t> handles(actual_handles);
 
   // Make the call to actually get the message.
-  status = mx_channel_read(channel->handle(), 0, bytes.data(), handles.data(),
+  status = zx_channel_read(channel->handle(), 0, bytes.data(), handles.data(),
                            bytes.size(), handles.size(), &actual_bytes,
                            &actual_handles);
-  FXL_DCHECK(status != MX_OK || bytes.size() == actual_bytes);
+  FXL_DCHECK(status != ZX_OK || bytes.size() == actual_bytes);
 
   bytes.Release();
 
-  if (status == MX_OK) {
+  if (status == ZX_OK) {
     FXL_DCHECK(handles.size() == actual_handles);
 
     // return a ReadResult object.
@@ -194,9 +194,9 @@ Dart_Handle System::ChannelQueryAndRead(fxl::RefPtr<Handle> channel) {
 }
 
 Dart_Handle System::EventpairCreate(uint32_t options) {
-  mx_handle_t out0 = 0, out1 = 0;
-  mx_status_t status = mx_eventpair_create(0, &out0, &out1);
-  if (status != MX_OK) {
+  zx_handle_t out0 = 0, out1 = 0;
+  zx_status_t status = zx_eventpair_create(0, &out0, &out1);
+  if (status != ZX_OK) {
     return ConstructDartObject(kHandlePairResult, ToDart(status));
   } else {
     return ConstructDartObject(kHandlePairResult, ToDart(status),
@@ -206,9 +206,9 @@ Dart_Handle System::EventpairCreate(uint32_t options) {
 }
 
 Dart_Handle System::SocketCreate(uint32_t options) {
-  mx_handle_t out0 = 0, out1 = 0;
-  mx_status_t status = mx_socket_create(options, &out0, &out1);
-  if (status != MX_OK) {
+  zx_handle_t out0 = 0, out1 = 0;
+  zx_status_t status = zx_socket_create(options, &out0, &out1);
+  if (status != ZX_OK) {
     return ConstructDartObject(kHandlePairResult, ToDart(status));
   } else {
     return ConstructDartObject(kHandlePairResult, ToDart(status),
@@ -222,11 +222,11 @@ Dart_Handle System::SocketWrite(fxl::RefPtr<Handle> socket,
                                 int options) {
   if (!socket || !socket->is_valid()) {
     data.Release();
-    return ConstructDartObject(kWriteResult, ToDart(MX_ERR_BAD_HANDLE));
+    return ConstructDartObject(kWriteResult, ToDart(ZX_ERR_BAD_HANDLE));
   }
 
   size_t actual;
-  mx_status_t status = mx_socket_write(socket->handle(), options, data.data(),
+  zx_status_t status = zx_socket_write(socket->handle(), options, data.data(),
                                        data.length_in_bytes(), &actual);
   data.Release();
   return ConstructDartObject(kWriteResult, ToDart(status), ToDart(actual));
@@ -234,15 +234,15 @@ Dart_Handle System::SocketWrite(fxl::RefPtr<Handle> socket,
 
 Dart_Handle System::SocketRead(fxl::RefPtr<Handle> socket, size_t size) {
   if (!socket || !socket->is_valid()) {
-    return ConstructDartObject(kReadResult, ToDart(MX_ERR_BAD_HANDLE));
+    return ConstructDartObject(kReadResult, ToDart(ZX_ERR_BAD_HANDLE));
   }
 
   ByteDataScope bytes(size);
   size_t actual;
-  mx_status_t status =
-      mx_socket_read(socket->handle(), 0, bytes.data(), size, &actual);
+  zx_status_t status =
+      zx_socket_read(socket->handle(), 0, bytes.data(), size, &actual);
   bytes.Release();
-  if (status == MX_OK) {
+  if (status == ZX_OK) {
     FXL_DCHECK(actual <= size);
     return ConstructDartObject(kReadResult, ToDart(status), bytes.dart_handle(),
                                ToDart(actual));
@@ -252,9 +252,9 @@ Dart_Handle System::SocketRead(fxl::RefPtr<Handle> socket, size_t size) {
 }
 
 Dart_Handle System::VmoCreate(uint64_t size, uint32_t options) {
-  mx_handle_t vmo = MX_HANDLE_INVALID;
-  mx_status_t status = mx_vmo_create(size, options, &vmo);
-  if (status != MX_OK) {
+  zx_handle_t vmo = ZX_HANDLE_INVALID;
+  zx_status_t status = zx_vmo_create(size, options, &vmo);
+  if (status != ZX_OK) {
     return ConstructDartObject(kHandleResult, ToDart(status));
   } else {
     return ConstructDartObject(kHandleResult, ToDart(status),
@@ -264,31 +264,31 @@ Dart_Handle System::VmoCreate(uint64_t size, uint32_t options) {
 
 Dart_Handle System::VmoGetSize(fxl::RefPtr<Handle> vmo) {
   if (!vmo || !vmo->is_valid()) {
-    return ConstructDartObject(kGetSizeResult, ToDart(MX_ERR_BAD_HANDLE));
+    return ConstructDartObject(kGetSizeResult, ToDart(ZX_ERR_BAD_HANDLE));
   }
 
   uint64_t size;
-  mx_status_t status = mx_vmo_get_size(vmo->handle(), &size);
+  zx_status_t status = zx_vmo_get_size(vmo->handle(), &size);
 
   return ConstructDartObject(kGetSizeResult, ToDart(status), ToDart(size));
 }
 
-mx_status_t System::VmoSetSize(fxl::RefPtr<Handle> vmo, uint64_t size) {
+zx_status_t System::VmoSetSize(fxl::RefPtr<Handle> vmo, uint64_t size) {
   if (!vmo || !vmo->is_valid()) {
-    return MX_ERR_BAD_HANDLE;
+    return ZX_ERR_BAD_HANDLE;
   }
-  return mx_vmo_set_size(vmo->handle(), size);
+  return zx_vmo_set_size(vmo->handle(), size);
 }
 
 Dart_Handle System::VmoWrite(fxl::RefPtr<Handle> vmo,
                              uint64_t offset,
                              const tonic::DartByteData& data) {
   if (!vmo || !vmo->is_valid()) {
-    return ConstructDartObject(kWriteResult, ToDart(MX_ERR_BAD_HANDLE));
+    return ConstructDartObject(kWriteResult, ToDart(ZX_ERR_BAD_HANDLE));
   }
 
   size_t actual;
-  mx_status_t status = mx_vmo_write(vmo->handle(), data.data(), offset,
+  zx_status_t status = zx_vmo_write(vmo->handle(), data.data(), offset,
                                     data.length_in_bytes(), &actual);
 
   return ConstructDartObject(kWriteResult, ToDart(status), ToDart(actual));
@@ -298,16 +298,16 @@ Dart_Handle System::VmoRead(fxl::RefPtr<Handle> vmo,
                             uint64_t offset,
                             size_t size) {
   if (!vmo || !vmo->is_valid()) {
-    return ConstructDartObject(kReadResult, ToDart(MX_ERR_BAD_HANDLE));
+    return ConstructDartObject(kReadResult, ToDart(ZX_ERR_BAD_HANDLE));
   }
 
   // TODO: constrain size?
   ByteDataScope bytes(size);
   size_t actual;
-  mx_status_t status =
-      mx_vmo_read(vmo->handle(), bytes.data(), offset, size, &actual);
+  zx_status_t status =
+      zx_vmo_read(vmo->handle(), bytes.data(), offset, size, &actual);
   bytes.Release();
-  if (status == MX_OK) {
+  if (status == ZX_OK) {
     FXL_DCHECK(actual <= size);
     return ConstructDartObject(kReadResult, ToDart(status), bytes.dart_handle(),
                                ToDart(size));
@@ -317,7 +317,7 @@ Dart_Handle System::VmoRead(fxl::RefPtr<Handle> vmo,
 }
 
 uint64_t System::TimeGet(uint32_t clock_id) {
-  return mx_time_get(clock_id);
+  return zx_time_get(clock_id);
 }
 
   // clang-format: off

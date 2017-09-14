@@ -4,9 +4,9 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/object.h>
-#include <mxio/util.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
+#include <fdio/util.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <stdio.h>

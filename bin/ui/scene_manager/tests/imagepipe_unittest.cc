@@ -38,8 +38,8 @@ class ImagePipeTest : public SessionTest, public escher::ResourceManager {
 
 TEST_F(ImagePipeTest, SimpleAcquireFenceSignalling) {
   // Create an AcquireFence.
-  mx::event fence1;
-  ASSERT_EQ(MX_OK, mx::event::create(0, &fence1));
+  zx::event fence1;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &fence1));
   AcquireFence buffer_fence1(CopyEvent(fence1));
 
   // Expect that it is not signalled initially.
@@ -59,8 +59,8 @@ TEST_F(ImagePipeTest, SimpleAcquireFenceSignalling) {
 
 TEST_F(ImagePipeTest, AsyncAcquireFenceSignalling) {
   // Create an AcquireFence.
-  mx::event fence1;
-  ASSERT_EQ(MX_OK, mx::event::create(0, &fence1));
+  zx::event fence1;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &fence1));
   AcquireFence buffer_fence1(CopyEvent(fence1));
 
   // Expect that it is not signalled initially.
@@ -178,10 +178,10 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   }
 
   // Make checkerboard the currently displayed image.
-  mx::event acquire_fence1;
-  ASSERT_EQ(MX_OK, mx::event::create(0, &acquire_fence1));
-  mx::event release_fence1;
-  ASSERT_EQ(MX_OK, mx::event::create(0, &release_fence1));
+  zx::event acquire_fence1;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &acquire_fence1));
+  zx::event release_fence1;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &release_fence1));
 
   image_pipe->PresentImage(imageId1, 0, CopyEvent(acquire_fence1),
                            CopyEvent(release_fence1), nullptr);
@@ -229,10 +229,10 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   ASSERT_FALSE(IsEventSignalled(release_fence1, kFenceSignalled));
 
   // Make gradient the currently displayed image.
-  mx::event acquire_fence2;
-  ASSERT_EQ(MX_OK, mx::event::create(0, &acquire_fence2));
-  mx::event release_fence2;
-  ASSERT_EQ(MX_OK, mx::event::create(0, &release_fence2));
+  zx::event acquire_fence2;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &acquire_fence2));
+  zx::event release_fence2;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &release_fence2));
 
   image_pipe->PresentImage(imageId2, 0, CopyEvent(acquire_fence2),
                            CopyEvent(release_fence2), nullptr);

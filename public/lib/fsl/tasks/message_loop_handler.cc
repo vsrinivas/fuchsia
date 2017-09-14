@@ -8,10 +8,10 @@ namespace fsl {
 
 MessageLoopHandler::~MessageLoopHandler() {}
 
-void MessageLoopHandler::OnHandleReady(mx_handle_t handle,
-                                       mx_signals_t pending,
+void MessageLoopHandler::OnHandleReady(zx_handle_t handle,
+                                       zx_signals_t pending,
                                        uint64_t count) {}
 
-void MessageLoopHandler::OnHandleError(mx_handle_t handle, mx_status_t error) {}
+void MessageLoopHandler::OnHandleError(zx_handle_t handle, zx_status_t error) {}
 
 }  // namespace fsl

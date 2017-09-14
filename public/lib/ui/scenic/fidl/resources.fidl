@@ -56,7 +56,7 @@ struct ImagePipeArgs {
   scenic.ImagePipe& image_pipe_request;
 };
 
-// |Memory| is a |Resource| that wraps a client-provided Magenta vmo to register
+// |Memory| is a |Resource| that wraps a client-provided Zircon vmo to register
 // it with Scenic.
 // TODO: specify resizing behavior.  Who can resize?  Client/Scenic/both/none?
 struct Memory {

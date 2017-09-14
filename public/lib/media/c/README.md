@@ -62,8 +62,8 @@ int fuchsia_audio_manager_free(
 obtained from the system via a *fuchsia_audio_manager_create()* call.
 
 ##### Returns
-- **MX_ERR_BAD_HANDLE**: audio_manager is unknown or already freed.
-- **MX_OK**: call succeeded; audio_manager has been deregistered and freed.
+- **ZX_ERR_BAD_HANDLE**: audio_manager is unknown or already freed.
+- **ZX_OK**: call succeeded; audio_manager has been deregistered and freed.
 
 ##### Notes
 By freeing the audio manager struct, the client closes its connection to the
@@ -87,10 +87,10 @@ the system should copy device descriptions.
 the system to copy to the supplied *device_desc_buffer* location.
 
 ##### Returns
-- **MX_ERR_BAD_HANDLE**: audio_manager is unknown or already freed.
-- **MX_ERR_INVALID_ARGS**: only one of buffer and num_device_descriptions is
+- **ZX_ERR_BAD_HANDLE**: audio_manager is unknown or already freed.
+- **ZX_ERR_INVALID_ARGS**: only one of buffer and num_device_descriptions is
 non-zero. Both should be zero-NULL, or both should be non-zero.
-- **MX_ERR_OUT_OF_RANGE**: num_device_descriptions is negative.
+- **ZX_ERR_OUT_OF_RANGE**: num_device_descriptions is negative.
 - **Positive value**: call succeeded; return value is either
   1. total number of devices in the system (usage 1), or
   2. number of device descriptions copied into the provided buffer (usage 2:
@@ -148,12 +148,12 @@ should copy default parameters for the specified device, via a
 *fuchsia_audio_parameters* struct.
 
 ##### Returns
-- **MX_ERR_BAD_HANDLE**: audio_manager is unknown or already freed.
-- **MX_ERR_INVALID_ARGS**: device_id is NULL, or params_out pointer is NULL,
+- **ZX_ERR_BAD_HANDLE**: audio_manager is unknown or already freed.
+- **ZX_ERR_INVALID_ARGS**: device_id is NULL, or params_out pointer is NULL,
 or device_id is empty string.
-- **MX_ERR_NOT_FOUND**: device_id does not match to any device found in the
+- **ZX_ERR_NOT_FOUND**: device_id does not match to any device found in the
 system.
-- **MX_OK**: call succeeded.
+- **ZX_OK**: call succeeded.
 
 Additionally, **params_out** is an out parameter. if the call succeeds, the
 system copies into *params_out* a *fuchsia_audio_parameters* struct
@@ -188,12 +188,12 @@ successful, this is where the system will copy a pointer to an
 *fuchsia_audio_output_stream* that it has allocated and populated.
 
 ##### Returns
-- **MX_ERR_BAD_HANDLE**: audio_manager is unknown or already freed.
-- **MX_ERR_INVALID_ARGS**: stream_params pointer is NULL, or stream pointer
+- **ZX_ERR_BAD_HANDLE**: audio_manager is unknown or already freed.
+- **ZX_ERR_INVALID_ARGS**: stream_params pointer is NULL, or stream pointer
 is NULL.
-- **MX_ERR_NOT_FOUND**: device_id does not match to any device found in the
+- **ZX_ERR_NOT_FOUND**: device_id does not match to any device found in the
 system.
-- **MX_OK**: call succeeded; the output stream has been created.
+- **ZX_OK**: call succeeded; the output stream has been created.
 
 Additionally, **stream_out** is an out parameter, populated with a pointer to a
 system-allocated *fuchsia_audio_output_stream* struct if the call succeeds.
@@ -223,8 +223,8 @@ int fuchsia_audio_output_stream_free(
 system.
 
 ##### Returns
-- **MX_ERR_BAD_HANDLE**: output_stream is unknown or already freed.
-- **MX_OK**: call succeeded; stream has been stopped and freed.
+- **ZX_ERR_BAD_HANDLE**: output_stream is unknown or already freed.
+- **ZX_OK**: call succeeded; stream has been stopped and freed.
 
 ##### Notes
 This call stops and closes an audio output stream. To the extent possible,
@@ -235,20 +235,20 @@ but not yet played, and will do so before the call returns.
 ```
 int fuchsia_audio_output_stream_get_min_delay(
     fuchsia_audio_output_stream*stream,
-    mx_duration_t*delay_nsec_out
+    zx_duration_t*delay_nsec_out
   );
 ```
 ##### Inputs
 - **stream**: pointer to an *fuchsia_audio_output_stream* received from the
 system.
-- **delay_nsec_out**: pointer to a *mx_duration_t* allocated by client. This
+- **delay_nsec_out**: pointer to a *zx_duration_t* allocated by client. This
 is where the system will copy the minimum delay (in nanoseconds) of this
 output stream.
 
 ##### Returns
-- **MX_ERR_BAD_HANDLE**: output_stream is unknown or already freed.
-- **MX_ERR_INVALID_ARGS**: delay_nsec_out pointer is NULL.
-- **MX_OK**: call succeeded.
+- **ZX_ERR_BAD_HANDLE**: output_stream is unknown or already freed.
+- **ZX_ERR_INVALID_ARGS**: delay_nsec_out pointer is NULL.
+- **ZX_OK**: call succeeded.
 
 ##### Notes
 This call returns the minimum downstream delay for this output stream, taking
@@ -259,7 +259,7 @@ presentation timestamp greater than [now + delay] will guarantee that they are
 played without glitches or excessive latency.
 
 Note that *delay_nsec_out* is specified in the same units as the system clock
-(MX_CLOCK_MONOTONIC).
+(ZX_CLOCK_MONOTONIC).
 
 ### fuchsia_audio_output_stream_write
 ```
@@ -267,7 +267,7 @@ int fuchsia_audio_output_stream_write(
     fuchsia_audio_output_stream* stream,
     float* sample_buffer,
     int num_samples,
-    mx_time_t pres_time
+    zx_time_t pres_time
   );
 ```
 ##### Inputs
@@ -278,7 +278,7 @@ samples of audio data to be played. Audio samples are in *float* format.
 - **num_samples**: total number of audio samples found in sample_buffer. This
 should be a multiple of the num_channels used when creating this stream.
 - **pres_time**: when to present the first audio sample in this buffer, as
-specified by MX_CLOCK_MONOTONIC. If this is the first buffer sent to this
+specified by ZX_CLOCK_MONOTONIC. If this is the first buffer sent to this
 output_stream, a future value that incorporates the stream's *min_delay*
 should be specified. Otherwise, a value of FUCHSIA_AUDIO_NO_TIMESTAMP is
 allowed -- this indicates that the buffer should be presented immediately
@@ -286,26 +286,26 @@ following the previous one, and that the system can calculate the appropriate
 pres_time.
 
 ##### Returns
-- **MX_ERR_BAD_HANDLE**: output_stream is unknown or already freed.
-- **MX_ERR_BAD_STATE**: the client specified FUCHSIA_AUDIO_NO_TIMESTAMP in
+- **ZX_ERR_BAD_HANDLE**: output_stream is unknown or already freed.
+- **ZX_ERR_BAD_STATE**: the client specified FUCHSIA_AUDIO_NO_TIMESTAMP in
 the first buffer sent to this stream (or the first buffer after a gap in
 playback). As a result, the buffer has not been submitted, and the API must
 be called again with a true presentation timestamp.
-- **MX_ERR_INVALID_ARGS**: sample_buffer is NULL, or num_samples is zero or
+- **ZX_ERR_INVALID_ARGS**: sample_buffer is NULL, or num_samples is zero or
 negative, or num_samples is not a multiple of num_channels, or pres_time is
 zero or negative.
-- **MX_ERR_IO_MISSED_DEADLINE**: the client specified a pres_time that was
+- **ZX_ERR_IO_MISSED_DEADLINE**: the client specified a pres_time that was
 too soon. The buffer has not been submitted, and the API must be called
 again with an updated presentation timestamp.
-- **MX_ERR_OUT_OF_RANGE**: pres_time is greater than the value of
+- **ZX_ERR_OUT_OF_RANGE**: pres_time is greater than the value of
 FUCHSIA_AUDIO_NO_TIMESTAMP, and hence an inappropriate value for this API.
-- **MX_OK**: call succeeded; audio data has been queued to the output stream
+- **ZX_OK**: call succeeded; audio data has been queued to the output stream
 to be played.
 
 ##### Notes
 This call submits a buffer of audio data to the output stream to be played at
 the specified presentation time. The presentation time must be calculated by
-adding the current time (in MX_CLOCK_MONOTONIC terms) to the min_delay for
+adding the current time (in ZX_CLOCK_MONOTONIC terms) to the min_delay for
 this output stream.
 
 For subsequent calls to fuchsia_audio_output_stream_write, a value of
@@ -317,7 +317,7 @@ Any error code returned from the system means that it has not queued any of
 the audio data from the client-supplied buffer. In these cases, the client
 must call *fuchsia_audio_output_stream_write()* again with correct parameters.
 
-Specifically if the error code *MX_ERR_IO_MISSED_DEADLINE* is returned, then
+Specifically if the error code *ZX_ERR_IO_MISSED_DEADLINE* is returned, then
 the client must recalculate an appropriate presentation timestamp and include
 it instead of using *FUCHSIA_AUDIO_NO_TIMESTAMP*. Note: this may require the
 client to drop audio data (likely from the front of the buffer used in the
@@ -430,7 +430,7 @@ appropriate presentation timestamp so that the buffer of audio data being
 written should be queued immediately subsequent to the previously submitted
 audio data, for "gapless playback".
 
-Although the range of mx_time_t is the entire unsigned int64 range, we limit
+Although the range of zx_time_t is the entire unsigned int64 range, we limit
 this to only the bottom half of that range, to smoothly interface with
 signed int64 timestamps elsewhere in the system. Hence the highest possible
 timestamp (and the one that we reserve to signify 'system should just

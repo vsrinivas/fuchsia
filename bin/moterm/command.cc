@@ -4,7 +4,7 @@
 
 #include "garnet/bin/moterm/command.h"
 
-#include <magenta/status.h>
+#include <zircon/status.h>
 #include <unistd.h>
 
 #include "lib/fxl/logging.h"
@@ -12,17 +12,17 @@
 namespace moterm {
 namespace {
 
-mx_status_t AddRedirectedSocket(
+zx_status_t AddRedirectedSocket(
     std::vector<fsl::StartupHandle>* startup_handles,
     int startup_fd,
-    mx::socket* out_socket) {
+    zx::socket* out_socket) {
   fsl::StartupHandle startup_handle;
-  mx_status_t status =
+  zx_status_t status =
       fsl::CreateRedirectedSocket(startup_fd, out_socket, &startup_handle);
-  if (status != MX_OK)
+  if (status != ZX_OK)
     return status;
   startup_handles->push_back(std::move(startup_handle));
-  return MX_OK;
+  return ZX_OK;
 }
 
 std::vector<const char*> GetArgv(const std::vector<std::string>& command) {
@@ -52,7 +52,7 @@ bool Command::Start(std::vector<std::string> command,
                     fxl::Closure termination_callback) {
   FXL_DCHECK(!command.empty());
 
-  mx_status_t status;
+  zx_status_t status;
   if ((status = AddRedirectedSocket(&startup_handles, STDIN_FILENO, &stdin_))) {
     FXL_LOG(ERROR) << "Failed to create stdin pipe: status=" << status;
     return false;
@@ -69,7 +69,7 @@ bool Command::Start(std::vector<std::string> command,
   }
 
   std::vector<uint32_t> ids;
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   for (const auto& startup_handle : startup_handles) {
     ids.push_back(startup_handle.id);
     handles.push_back(startup_handle.handle.get());
@@ -77,17 +77,17 @@ bool Command::Start(std::vector<std::string> command,
 
   launchpad_t* lp;
   launchpad_create(0, command[0].c_str(), &lp);
-  launchpad_clone(lp, LP_CLONE_ALL & ~LP_CLONE_MXIO_STDIO);
+  launchpad_clone(lp, LP_CLONE_ALL & ~LP_CLONE_FDIO_STDIO);
   launchpad_set_args(lp, command.size(), GetArgv(command).data());
   launchpad_add_handles(lp, ids.size(), handles.data(), ids.data());
   launchpad_load_from_file(lp, command[0].c_str());
 
-  mx_handle_t proc;
+  zx_handle_t proc;
   const char* errmsg;
   status = launchpad_go(lp, &proc, &errmsg);
-  if (status != MX_OK) {
+  if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Cannot run executable " << command[0] << " due to error "
-                   << status << " (" << mx_status_get_string(status)
+                   << status << " (" << zx_status_get_string(status)
                    << "): " << errmsg;
     return false;
   }
@@ -97,32 +97,32 @@ bool Command::Start(std::vector<std::string> command,
   receive_callback_ = std::move(receive_callback);
 
   termination_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
-      this, process_.get(), MX_PROCESS_TERMINATED);
+      this, process_.get(), ZX_PROCESS_TERMINATED);
 
   out_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(this, stdout_.get(),
-                                                        MX_SOCKET_READABLE);
+                                                        ZX_SOCKET_READABLE);
   err_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(this, stderr_.get(),
-                                                        MX_SOCKET_READABLE);
+                                                        ZX_SOCKET_READABLE);
   return true;
 }
 
-void Command::OnHandleReady(mx_handle_t handle,
-                            mx_signals_t pending,
+void Command::OnHandleReady(zx_handle_t handle,
+                            zx_signals_t pending,
                             uint64_t count) {
-  if (handle == process_.get() && (pending & MX_PROCESS_TERMINATED)) {
+  if (handle == process_.get() && (pending & ZX_PROCESS_TERMINATED)) {
     fsl::MessageLoop::GetCurrent()->RemoveHandler(termination_key_);
     termination_key_ = 0;
     termination_callback_();
-  } else if (pending & MX_SOCKET_READABLE) {
+  } else if (pending & ZX_SOCKET_READABLE) {
     char buffer[2048];
     size_t len;
 
     if (handle == stdout_.get()) {
-      if (stdout_.read(0, buffer, sizeof(buffer), &len) != MX_OK) {
+      if (stdout_.read(0, buffer, sizeof(buffer), &len) != ZX_OK) {
         return;
       }
     } else if (handle == stderr_.get()) {
-      if (stderr_.read(0, buffer, sizeof(buffer), &len) != MX_OK) {
+      if (stderr_.read(0, buffer, sizeof(buffer), &len) != ZX_OK) {
         return;
       }
     } else {
@@ -134,7 +134,7 @@ void Command::OnHandleReady(mx_handle_t handle,
 
 void Command::SendData(const void* bytes, size_t num_bytes) {
   size_t len;
-  if (stdin_.write(0, bytes, num_bytes, &len) != MX_OK) {
+  if (stdin_.write(0, bytes, num_bytes, &len) != ZX_OK) {
     // TODO: Deal with the socket being full.
     FXL_LOG(ERROR) << "Failed to send";
   }

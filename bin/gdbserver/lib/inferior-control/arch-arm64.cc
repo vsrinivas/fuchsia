@@ -9,7 +9,7 @@
 namespace debugserver {
 namespace arch {
 
-GdbSignal ComputeGdbSignal(const mx_exception_context_t& context) {
+GdbSignal ComputeGdbSignal(const zx_exception_context_t& context) {
   // Initialize just in case something goes wrong below.
   GdbSignal sigval = GdbSignal::kSegv;
   uint32_t esr = context.arch.u.arm_64.esr;
@@ -53,7 +53,7 @@ GdbSignal ComputeGdbSignal(const mx_exception_context_t& context) {
   return sigval;
 }
 
-bool IsSingleStepException(const mx_exception_context_t& context) {
+bool IsSingleStepException(const zx_exception_context_t& context) {
   FXL_NOTIMPLEMENTED();
   return false;
 }

@@ -193,7 +193,7 @@ impl Drop for MessageResponse {
 
 #[cfg(test)]
 mod tests {
-    use magenta::{self, MessageBuf, ChannelOpts};
+    use zircon::{self, MessageBuf, ChannelOpts};
     use std::time::Duration;
     use tokio_fuchsia::Channel;
     use tokio_core::reactor::{Core, Timeout};
@@ -205,7 +205,7 @@ mod tests {
         let mut core = Core::new().unwrap();
         let handle = core.handle();
 
-        let (client_end, server_end) = magenta::Channel::create(ChannelOpts::Normal).unwrap();
+        let (client_end, server_end) = zircon::Channel::create(ChannelOpts::Normal).unwrap();
         let client_end = Channel::from_channel(client_end, &handle).unwrap();
         let client = Client::new(client_end, &handle);
 
@@ -237,7 +237,7 @@ mod tests {
         let mut core = Core::new().unwrap();
         let handle = core.handle();
 
-        let (client_end, server_end) = magenta::Channel::create(ChannelOpts::Normal).unwrap();
+        let (client_end, server_end) = zircon::Channel::create(ChannelOpts::Normal).unwrap();
         let client_end = Channel::from_channel(client_end, &handle).unwrap();
         let client = Client::new(client_end, &handle);
 

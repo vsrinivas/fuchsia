@@ -10,27 +10,27 @@ const GenerateEndpoint = `
 {{- $endpoint := .Name -}}
 {{- $interface := .Interface -}}
 
-pub struct {{$endpoint}}(::magenta::Channel);
+pub struct {{$endpoint}}(::zircon::Channel);
 
-impl ::magenta::HandleRef for {{$endpoint}} {
-    fn as_handle_ref(&self) -> ::magenta::HandleRef {
+impl ::zircon::HandleRef for {{$endpoint}} {
+    fn as_handle_ref(&self) -> ::zircon::HandleRef {
         self.0.get_ref()
     }
 }
 
-impl Into<::magenta::Handle> for {{$endpoint}} {
-    fn into(self) -> ::magenta::Handle {
-        {{$endpoint}}(::magenta::Channel::from(handle))
+impl Into<::zircon::Handle> for {{$endpoint}} {
+    fn into(self) -> ::zircon::Handle {
+        {{$endpoint}}(::zircon::Channel::from(handle))
     }
 }
 
-impl From<::magenta::Handle> for {{$endpoint}} {
-    fn from(hande: ::magenta::Handle) -> Self {
+impl From<::zircon::Handle> for {{$endpoint}} {
+    fn from(hande: ::zircon::Handle) -> Self {
         self.0.into()
     }
 }
 
-impl ::magenta::HandleBased for {{$endpoint}}
+impl ::zircon::HandleBased for {{$endpoint}}
 
 impl_codable_handle!({{$endpoint}});
 
@@ -48,7 +48,7 @@ pub use {{$interface.Name}}::I as {{$interface.Name}}_I;
 pub mod {{$interface.Name}} {
     use fidl::{self, DecodeBuf, EncodeBuf, EncodablePtr, DecodablePtr, Stub};
     use futures::{Future, future};
-    use magenta;
+    use zircon;
     use tokio_core::reactor;
     use super::*;
     pub const SERVICE_NAME: &'static str = "{{$interface.ServiceName}}";
@@ -136,14 +136,14 @@ pub mod {{$interface.Name}} {
 
     // This is implemented as a module-level function because Proxy::new could collide with fidl methods.
     pub fn new_proxy(client_end: fidl::ClientEnd<Marker>, handle: &reactor::Handle) -> Result<Proxy, ::fidl::Error> {
-        let channel = ::tokio_fuchsia::Channel::from_channel(::magenta::Channel::from(
-            <fidl::ClientEnd<Marker> as Into<::magenta::Handle>>::into(client_end)
+        let channel = ::tokio_fuchsia::Channel::from_channel(::zircon::Channel::from(
+            <fidl::ClientEnd<Marker> as Into<::zircon::Handle>>::into(client_end)
         ), handle)?;
         Ok(Proxy(fidl::Client::new(channel, handle)))
     }
 
     pub fn new_pair(handle: &reactor::Handle) -> Result<(Proxy, fidl::ServerEnd<Marker>), ::fidl::Error> {
-        let (s1, s2) = magenta::Channel::create(magenta::ChannelOpts::Normal).unwrap();
+        let (s1, s2) = zircon::Channel::create(zircon::ChannelOpts::Normal).unwrap();
         let client_end = fidl::ClientEnd::new(s1);
         let server_end = fidl::ServerEnd::new(s2);
         Ok((new_proxy(client_end, handle)?, server_end))

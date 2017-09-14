@@ -10,7 +10,7 @@ executable("listen") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
-    "//magenta/system/ulib/mx",
+    "//zircon/system/ulib/zx",
   ]
   libs = [ "launchpad" ]
 }

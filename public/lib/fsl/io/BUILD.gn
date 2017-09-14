@@ -12,11 +12,11 @@ source_set("io") {
     "redirection.h",
   ]
 
-  libs = [ "magenta" ]
+  libs = [ "zircon" ]
 
   public_deps = [
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl/tasks",
-    "//magenta/system/ulib/mx",
+    "//zircon/system/ulib/zx",
   ]
 }

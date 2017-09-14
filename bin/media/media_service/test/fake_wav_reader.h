@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include <mx/socket.h>
+#include <zx/socket.h>
 
 #include "lib/media/fidl/seeking_reader.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -50,8 +50,8 @@ class FakeWavReader : public SeekingReader {
   static constexpr uint16_t kBitsPerSample = 16;       // 16-bit samples
 
   // Callback function for WriteToSocket's async wait.
-  static void WriteToSocketStatic(mx_status_t status,
-                                  mx_signals_t pending,
+  static void WriteToSocketStatic(zx_status_t status,
+                                  zx_signals_t pending,
                                   uint64_t count,
                                   void* closure);
 
@@ -76,7 +76,7 @@ class FakeWavReader : public SeekingReader {
   fidl::Binding<SeekingReader> binding_;
   std::vector<uint8_t> header_;
   uint64_t size_ = kDefaultSize;
-  mx::socket socket_;
+  zx::socket socket_;
   FidlAsyncWaitID wait_id_ = 0;
   uint64_t position_;
 };

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <mx/event.h>
+#include <zx/event.h>
 
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
@@ -21,7 +21,7 @@ class AcquireFence : private fsl::MessageLoopHandler {
  public:
   // Takes ownership of the fence.
   // |fence| must be a valid handle.
-  explicit AcquireFence(mx::event fence);
+  explicit AcquireFence(zx::event fence);
 
   // Releases the fence, implicitly signalling to the producer that the
   // buffer is available to be recycled.
@@ -42,13 +42,13 @@ class AcquireFence : private fsl::MessageLoopHandler {
 
  private:
   // |fsl::MessageLoopHandler|
-  void OnHandleReady(mx_handle_t handle,
-                     mx_signals_t pending,
+  void OnHandleReady(zx_handle_t handle,
+                     zx_signals_t pending,
                      uint64_t count) override;
 
   void ClearHandler();
 
-  mx::event fence_;
+  zx::event fence_;
 
   fsl::MessageLoop::HandlerKey handler_key_ = 0;
   fxl::Closure ready_callback_;

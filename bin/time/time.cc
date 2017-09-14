@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <launchpad/launchpad.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/object.h>
-#include <magenta/types.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/types.h>
 #include <stdio.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -22,35 +22,35 @@ int main(int argc, char **argv) {
 
   launchpad_t* lp;
   // Use the default job.
-  launchpad_create(MX_HANDLE_INVALID, argv[1], &lp);
+  launchpad_create(ZX_HANDLE_INVALID, argv[1], &lp);
   launchpad_load_from_file(lp, argv[1]);
   launchpad_clone(lp, LP_CLONE_ALL);
   launchpad_set_args(lp, argc - 1, argv + 1);
 
-  mx_handle_t proc = MX_HANDLE_INVALID;
+  zx_handle_t proc = ZX_HANDLE_INVALID;
   const char* errmsg = NULL;
-  mx_status_t status = launchpad_go(lp, &proc, &errmsg);
-  if (status != MX_OK) {
+  zx_status_t status = launchpad_go(lp, &proc, &errmsg);
+  if (status != ZX_OK) {
     fprintf(stderr, "Failed to launch %s: %d: %s\n", argv[1], status, errmsg);
     return 1;
   }
   status =
-      mx_object_wait_one(proc, MX_PROCESS_TERMINATED, MX_TIME_INFINITE, NULL);
+      zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL);
 
   gettimeofday(&endtimeval, NULL);
 
-  if (status != MX_OK) {
+  if (status != ZX_OK) {
     fprintf(stderr, "Failed to wait for process exiting %s: %d\n", argv[1],
            status);
     return 1;
   }
 
-  mx_info_process_t proc_info;
-  status = mx_object_get_info(proc, MX_INFO_PROCESS, &proc_info,
+  zx_info_process_t proc_info;
+  status = zx_object_get_info(proc, ZX_INFO_PROCESS, &proc_info,
                               sizeof(proc_info), nullptr, nullptr);
-  mx_handle_close(proc);
+  zx_handle_close(proc);
 
-  if (status != MX_OK) {
+  if (status != ZX_OK) {
     fprintf(stderr, "Failed to get process return code %s: %d\n", argv[1],
            status);
     return 1;

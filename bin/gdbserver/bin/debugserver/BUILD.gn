@@ -28,14 +28,14 @@ executable("debugserver") {
     "../../lib/inferior-control",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
-    "//magenta/system/ulib/mx",
+    "//zircon/system/ulib/zx",
   ]
 
   include_dirs = [ "../../lib" ]
 
   libs = [
     "launchpad",
-    "magenta",
+    "zircon",
   ]
 }
 
@@ -71,5 +71,5 @@ executable("debugserver-unittests") {
 
   include_dirs = [ "../../lib" ]
 
-  libs = [ "magenta" ]
+  libs = [ "zircon" ]
 }

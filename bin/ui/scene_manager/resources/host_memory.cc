@@ -11,11 +11,11 @@ const ResourceTypeInfo HostMemory::kTypeInfo = {
 
 HostMemory::HostMemory(Session* session,
                        scenic::ResourceId id,
-                       mx::vmo vmo,
+                       zx::vmo vmo,
                        uint64_t vmo_size)
     : Memory(session, id, HostMemory::kTypeInfo),
       shared_vmo_(fxl::MakeRefCounted<fsl::SharedVmo>(std::move(vmo),
-                                                      MX_VM_FLAG_PERM_READ)),
+                                                      ZX_VM_FLAG_PERM_READ)),
       size_(vmo_size) {}
 
 HostMemoryPtr HostMemory::New(Session* session,
@@ -34,7 +34,7 @@ HostMemoryPtr HostMemory::New(Session* session,
 HostMemoryPtr HostMemory::New(Session* session,
                               scenic::ResourceId id,
                               vk::Device device,
-                              mx::vmo vmo,
+                              zx::vmo vmo,
                               ErrorReporter* error_reporter) {
   uint64_t vmo_size;
   vmo.get_size(&vmo_size);

@@ -72,7 +72,7 @@ bool Router::HandleIncomingMessageThunk::Accept(Message* message) {
 
 // ----------------------------------------------------------------------------
 
-Router::Router(mx::channel channel,
+Router::Router(zx::channel channel,
                MessageValidatorList validators,
                const FidlAsyncWaiter* waiter)
     : thunk_(this),

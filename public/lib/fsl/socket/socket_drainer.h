@@ -5,7 +5,7 @@
 #ifndef LIB_FSL_SOCKET_SOCKET_DRAINER_H_
 #define LIB_FSL_SOCKET_SOCKET_DRAINER_H_
 
-#include <mx/socket.h>
+#include <zx/socket.h>
 
 #include "lib/fidl/c/waiter/async_waiter.h"
 #include "lib/fidl/cpp/waiter/default.h"
@@ -29,18 +29,18 @@ class FXL_EXPORT SocketDrainer {
                 const FidlAsyncWaiter* waiter = fidl::GetDefaultAsyncWaiter());
   ~SocketDrainer();
 
-  void Start(mx::socket source);
+  void Start(zx::socket source);
 
  private:
   void ReadData();
   void WaitForData();
-  static void WaitComplete(mx_status_t result,
-                           mx_signals_t pending,
+  static void WaitComplete(zx_status_t result,
+                           zx_signals_t pending,
                            uint64_t count,
                            void* context);
 
   Client* client_;
-  mx::socket source_;
+  zx::socket source_;
   const FidlAsyncWaiter* waiter_;
   FidlAsyncWaitID wait_id_;
   bool* destruction_sentinel_;

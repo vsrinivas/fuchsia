@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include <mx/vmo.h>
+#include <zx/vmo.h>
 
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/fxl/memory/ref_counted.h"
@@ -20,11 +20,11 @@ namespace scenic_lib {
 class HostData : public fxl::RefCountedThreadSafe<HostData> {
  public:
   // Maps a range of an existing VMO into memory.
-  HostData(const mx::vmo& vmo,
+  HostData(const zx::vmo& vmo,
            off_t offset,
            size_t size,
-           uint32_t flags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
-                            MX_VM_FLAG_MAP_RANGE);
+           uint32_t flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
+                            ZX_VM_FLAG_MAP_RANGE);
 
   // Gets the size of the data in bytes.
   size_t size() const { return size_; }
@@ -65,7 +65,7 @@ class HostMemory final : public Memory {
 
  private:
   explicit HostMemory(Session* session,
-                      std::pair<mx::vmo, fxl::RefPtr<HostData>> init);
+                      std::pair<zx::vmo, fxl::RefPtr<HostData>> init);
 
   fxl::RefPtr<HostData> data_;
 

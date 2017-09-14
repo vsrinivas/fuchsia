@@ -7,8 +7,8 @@
 #include <memory>
 #include <string>
 
-#include <magenta/syscalls/exception.h>
-#include <magenta/types.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/types.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
@@ -105,15 +105,15 @@ class Registers {
 
   // Get the value of the PC.
   // RefreshGeneralRegisters() must be called first.
-  mx_vaddr_t GetPC();
+  zx_vaddr_t GetPC();
 
   // Get the value of the SP.
   // RefreshGeneralRegisters() must be called first.
-  mx_vaddr_t GetSP();
+  zx_vaddr_t GetSP();
 
   // Get the value of the FP.
   // RefreshGeneralRegisters() must be called first.
-  mx_vaddr_t GetFP();
+  zx_vaddr_t GetFP();
 
   // Set the h/w singlestepping register.
   virtual bool SetSingleStep(bool enable) = 0;
@@ -126,7 +126,7 @@ class Registers {
   // return register values when there is a current inferior but no current
   // thread.
   // TODO(armansito): This is because we don't quite have a "stopped state" yet.
-  // With the existing Magenta syscall surface, a process is either "started" or
+  // With the existing Zircon syscall surface, a process is either "started" or
   // "not started".
   static std::string GetUninitializedGeneralRegistersAsString();
 
@@ -157,7 +157,7 @@ class Registers {
   Thread* thread_;  // weak
 
   // Helper function for GetPC,GetSP,GetFP.
-  mx_vaddr_t GetIntRegister(int regno);
+  zx_vaddr_t GetIntRegister(int regno);
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Registers);
 };

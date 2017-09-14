@@ -107,7 +107,7 @@ DecoderState::~DecoderState() {
     pt_image_free(image_);
 }
 
-Process::Process(mx_koid_t p, uint64_t c, uint64_t start, uint64_t end)
+Process::Process(zx_koid_t p, uint64_t c, uint64_t start, uint64_t end)
     : pid(p), cr3(c), start_time(start), end_time(end) {
   FXL_VLOG(2) << fxl::StringPrintf(
       "pid %" PRIu64 " cr3 0x%" PRIx64 " start %" PRIu64, pid, cr3, start_time);
@@ -118,7 +118,7 @@ PtFile::PtFile(uint64_t i, const std::string& f) : id(i), file(f) {
                                    file.c_str());
 }
 
-const Process* DecoderState::LookupProcessByPid(mx_koid_t pid) {
+const Process* DecoderState::LookupProcessByPid(zx_koid_t pid) {
   // TODO(dje): Add O(1) lookup when there's a need.
   for (const auto& p : processes_) {
     if (p.pid == pid)
@@ -143,7 +143,7 @@ const Process* DecoderState::LookupProcessByCr3(uint64_t cr3) {
   return nullptr;
 }
 
-const LoadMap* DecoderState::LookupMapEntry(mx_koid_t pid, uint64_t addr) {
+const LoadMap* DecoderState::LookupMapEntry(zx_koid_t pid, uint64_t addr) {
   return load_maps_.LookupLoadMap(pid, addr);
 }
 
@@ -225,7 +225,7 @@ bool DecoderState::AllocImage(const std::string& name) {
   return true;
 }
 
-bool DecoderState::AddProcess(mx_koid_t pid, uint64_t cr3,
+bool DecoderState::AddProcess(zx_koid_t pid, uint64_t cr3,
                               uint64_t start_time) {
   FXL_VLOG(2) << fxl::StringPrintf("New process: %" PRIu64 ", cr3 0x%" PRIx64
                                    " @%" PRIu64,
@@ -234,7 +234,7 @@ bool DecoderState::AddProcess(mx_koid_t pid, uint64_t cr3,
   return true;
 }
 
-bool DecoderState::MarkProcessExited(mx_koid_t pid, uint64_t end_time) {
+bool DecoderState::MarkProcessExited(zx_koid_t pid, uint64_t end_time) {
   FXL_VLOG(2) << fxl::StringPrintf(
       "Marking process exit: %" PRIu64 " @%" PRIu64, pid, end_time);
 

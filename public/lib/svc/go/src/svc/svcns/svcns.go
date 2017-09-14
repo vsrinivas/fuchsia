@@ -10,7 +10,7 @@ import (
 	"svc/svcfs"
 
 	"syscall/mx"
-	"syscall/mx/mxio"
+	"syscall/mx/fdio"
 )
 
 type binder interface {
@@ -24,7 +24,7 @@ type binder interface {
 
 type Namespace struct {
 	binders    map[string]binder
-	Dispatcher *mxio.Dispatcher
+	Dispatcher *fdio.Dispatcher
 }
 
 func New() *Namespace {
@@ -32,7 +32,7 @@ func New() *Namespace {
 }
 
 func (sn *Namespace) ServeDirectory(h mx.Handle) error {
-	d, err := mxio.NewDispatcher(mxio.Handler)
+	d, err := fdio.NewDispatcher(fdio.Handler)
 	if err != nil {
 		panic(fmt.Sprintf("context.New: %v", err))
 	}

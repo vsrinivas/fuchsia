@@ -10,7 +10,7 @@
 
 namespace scene_manager {
 
-static mx_signals_t kEventPairDeathSignals = MX_EPAIR_PEER_CLOSED;
+static zx_signals_t kEventPairDeathSignals = ZX_EPAIR_PEER_CLOSED;
 
 #define ASSERT_INTERNAL_EXPORTS_CONSISTENCY                \
   FXL_DCHECK(imports_.size() == handles_to_koids_.size()); \
@@ -39,10 +39,10 @@ UnresolvedImports::~UnresolvedImports() {
 }
 
 void UnresolvedImports::AddUnresolvedImport(Import* import,
-                                            mx::eventpair import_token,
-                                            mx_koid_t import_koid) {
+                                            zx::eventpair import_token,
+                                            zx_koid_t import_koid) {
   // Make sure the import koid we've been passed is valid.
-  FXL_DCHECK(import_koid != MX_KOID_INVALID);
+  FXL_DCHECK(import_koid != ZX_KOID_INVALID);
   FXL_DCHECK(import_koid == fsl::GetKoid(import_token.get()));
 
   // Make sure we're not using the same import twice.
@@ -85,7 +85,7 @@ void UnresolvedImports::ListenForPeerHandleDeath(Import* import) {
 }
 
 std::vector<Import*> UnresolvedImports::RemoveUnresolvedImportsForHandle(
-    mx_handle_t import_handle) {
+    zx_handle_t import_handle) {
   auto import_koid_iter = handles_to_koids_.find(import_handle);
   FXL_DCHECK(import_koid_iter != handles_to_koids_.end());
 
@@ -100,7 +100,7 @@ std::vector<Import*> UnresolvedImports::RemoveUnresolvedImportsForHandle(
 }
 
 std::vector<Import*> UnresolvedImports::GetAndRemoveUnresolvedImportsForKoid(
-    mx_koid_t import_koid) {
+    zx_koid_t import_koid) {
   // Look up the import entries for this koid.
   auto import_ptr_collection_iter = koids_to_import_ptrs_.find(import_koid);
   FXL_DCHECK(import_ptr_collection_iter != koids_to_import_ptrs_.end());
@@ -160,7 +160,7 @@ void UnresolvedImports::OnImportDestroyed(Import* import) {
       import, nullptr, ImportResolutionResult::kImportDestroyedBeforeBind);
 
   // Remove from |koids_to_import_ptrs_|.
-  mx_koid_t import_koid = entry_iter->second.import_koid;
+  zx_koid_t import_koid = entry_iter->second.import_koid;
   Remove(import, &koids_to_import_ptrs_[import_koid]);
 
   // Remove from |handles_to_koids_|.
@@ -191,7 +191,7 @@ void UnresolvedImports::OnImportDestroyed(Import* import) {
 }
 
 size_t UnresolvedImports::NumUnresolvedImportsForKoid(
-    mx_koid_t import_koid) const {
+    zx_koid_t import_koid) const {
   // Look up the import entries for this koid.
   auto import_ptr_collection_iter = koids_to_import_ptrs_.find(import_koid);
   if (import_ptr_collection_iter == koids_to_import_ptrs_.end()) {
@@ -201,8 +201,8 @@ size_t UnresolvedImports::NumUnresolvedImportsForKoid(
   }
 }
 
-void UnresolvedImports::OnHandleReady(mx_handle_t import_handle,
-                                      mx_signals_t pending,
+void UnresolvedImports::OnHandleReady(zx_handle_t import_handle,
+                                      zx_signals_t pending,
                                       uint64_t count) {
   // This is invoked when all the peers for the registered import
   // handle are closed.
@@ -216,10 +216,10 @@ void UnresolvedImports::OnHandleReady(mx_handle_t import_handle,
   }
 }
 
-void UnresolvedImports::OnHandleError(mx_handle_t import_handle,
-                                      mx_status_t error) {
+void UnresolvedImports::OnHandleError(zx_handle_t import_handle,
+                                      zx_status_t error) {
   // Should only happen in case of timeout or loop death.
-  if (error == MX_ERR_TIMED_OUT || error == MX_ERR_CANCELED) {
+  if (error == ZX_ERR_TIMED_OUT || error == ZX_ERR_CANCELED) {
     auto imports = RemoveUnresolvedImportsForHandle(import_handle);
 
     for (auto& import : imports) {

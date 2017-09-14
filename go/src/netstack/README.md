@@ -1,21 +1,21 @@
 # Netstack
 
-Netstack is a userspace TCP/IP network stack and interfaces with magenta
+Netstack is a userspace TCP/IP network stack and interfaces with zircon
 network drivers.
-Netstack serves as a back-end for mxio socket API.
+Netstack serves as a back-end for fdio socket API.
 
-     +-----------+         +-----------+
-     | FIDL app  |         | POSIX app |
-     +------+----+         +-----+-----+
-            |                    |
-    +-------v--------------+     |
-    | FIDL network service |     |
-    |   (//garnet/bin/network)   |     |
-    +-------+--------------+     |
-            |                    |
-      +-----v--------------------v-----+
+     +-----------+           +-----------+
+     | FIDL app  |           | POSIX app |
+     +------+----+           +-----+-----+
+            |                      |
+    +-------v----------------+     |
+    |  FIDL network service  |     |
+    | (//garnet/bin/network) |     |
+    +-------+----------------+     |
+            |                      |
+      +-----v----------------------v---+
       |         BSD socket API         |
-      |  (//magenta/system/ulib/mxio)  |
+      |  (//zircon/system/ulib/fdio)   |
       +---------------+----------------+
                       |
         +-------------v--------------+
@@ -25,5 +25,5 @@ Netstack serves as a back-end for mxio socket API.
                       |
      +----------------v-----------------+
      |         Ethernet driver          |
-     | (//magenta/system/udev/ethernet) |
+     | (//zircon/system/udev/ethernet)  |
      +----------------------------------+

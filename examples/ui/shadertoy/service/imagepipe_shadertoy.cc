@@ -13,7 +13,7 @@
 namespace {
 // TODO: Copied this constant from mozart/src/scene_manager/fence.h.
 // Put it in a shared header file somewhere.
-constexpr mx_status_t kFenceSignalled = MX_EVENT_SIGNALED;
+constexpr zx_status_t kFenceSignalled = ZX_EVENT_SIGNALED;
 }  // namespace
 
 namespace shadertoy {
@@ -77,7 +77,7 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
     release_semaphore_pair.second.signal(0u, kFenceSignalled);
 
     auto image = factory.NewImage(escher_image_info);
-    mx::vmo vmo = ExportMemoryAsVMO(escher(), image->memory());
+    zx::vmo vmo = ExportMemoryAsVMO(escher(), image->memory());
     if (!vmo) {
       FXL_LOG(ERROR) << "OnSetResolution() failed.";
       ClearFramebuffers();
@@ -106,10 +106,10 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
   }
 }
 
-static mx::event DuplicateEvent(const mx::event& evt) {
-  mx::event dup;
-  auto result = evt.duplicate(MX_RIGHT_SAME_RIGHTS, &dup);
-  if (result != MX_OK) {
+static zx::event DuplicateEvent(const zx::event& evt) {
+  zx::event dup;
+  auto result = evt.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+  if (result != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to duplicate event (status: " << result << ").";
   }
   return dup;
@@ -120,8 +120,8 @@ void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
   // Prepare arguments.
   auto& fb = framebuffers_[next_framebuffer_index_];
   next_framebuffer_index_ = (next_framebuffer_index_ + 1) % kNumFramebuffers;
-  mx::event acquire_fence(DuplicateEvent(fb.acquire_fence));
-  mx::event release_fence(DuplicateEvent(fb.release_fence));
+  zx::event acquire_fence(DuplicateEvent(fb.acquire_fence));
+  zx::event release_fence(DuplicateEvent(fb.release_fence));
   if (!acquire_fence || !release_fence) {
     Close();
     return;

@@ -14,7 +14,7 @@ type ServiceFactory interface {
 
 	// Create binds an implementation of fidl service to the provided
 	// channel and runs it.
-	Create(h mx.Handle)
+	Create(h zx.Handle)
 }
 
 type ServiceProviderImpl struct {
@@ -25,7 +25,7 @@ func New() *ServiceProviderImpl {
 	return &ServiceProviderImpl{make(map[string]ServiceFactory)}
 }
 
-func (spi *ServiceProviderImpl) ConnectToService(name string, handle mx.Handle) error {
+func (spi *ServiceProviderImpl) ConnectToService(name string, handle zx.Handle) error {
 	factory, ok := spi.factories[name]
 	if !ok {
 		handle.Close()

@@ -29,45 +29,45 @@ func TestTranslateType(t *testing.T) {
 		{"uint64", &fidl_types.TypeSimpleType{fidl_types.SimpleType_Uint64}},
 		{"string", &fidl_types.TypeStringType{fidl_types.StringType{Nullable: false}}},
 		{"*string", &fidl_types.TypeStringType{fidl_types.StringType{Nullable: true}}},
-		{"mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"zx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Unspecified, Nullable: false}}},
-		{"mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"zx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Channel, Nullable: false}}},
-		{"mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"zx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Vmo, Nullable: false}}},
-		{"mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"zx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Process, Nullable: false}}},
-		{"mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"zx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Thread, Nullable: false}}},
-		{"mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"zx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Event, Nullable: false}}},
-		{"mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"zx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Port, Nullable: false}}},
-		{"mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"zx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Job, Nullable: false}}},
-		{"mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"zx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Socket, Nullable: false}}},
-		{"mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"zx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_EventPair, Nullable: false}}},
-		{"*mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"*zx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Unspecified, Nullable: true}}},
-		{"*mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"*zx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Channel, Nullable: true}}},
-		{"*mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"*zx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Vmo, Nullable: true}}},
-		{"*mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"*zx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Process, Nullable: true}}},
-		{"*mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"*zx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Thread, Nullable: true}}},
-		{"*mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"*zx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Event, Nullable: true}}},
-		{"*mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"*zx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Port, Nullable: true}}},
-		{"*mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"*zx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Job, Nullable: true}}},
-		{"*mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"*zx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Socket, Nullable: true}}},
-		{"*mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"*zx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_EventPair, Nullable: true}}},
 		{"[]float32", &fidl_types.TypeArrayType{fidl_types.ArrayType{
 			FixedLength: -1, Nullable: false,

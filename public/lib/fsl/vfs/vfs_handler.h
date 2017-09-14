@@ -6,7 +6,7 @@
 #define LIB_FSL_VFS_VFS_HANDLER_H_
 
 #include <fs/dispatcher.h>
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include "lib/fxl/fxl_export.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -20,22 +20,22 @@ class FXL_EXPORT VFSHandler : public MessageLoopHandler {
   explicit VFSHandler(VFSDispatcher* dispatcher);
   ~VFSHandler() override;
 
-  void Start(mx::channel channel,
+  void Start(zx::channel channel,
              fs::vfs_dispatcher_cb_t callback,
              void* iostate);
 
  private:
   // |MessageLoopHandler| implementation:
-  void OnHandleReady(mx_handle_t handle,
-                     mx_signals_t pending,
+  void OnHandleReady(zx_handle_t handle,
+                     zx_signals_t pending,
                      uint64_t count) override;
-  void OnHandleError(mx_handle_t handle, mx_status_t error) override;
+  void OnHandleError(zx_handle_t handle, zx_status_t error) override;
 
   void Stop(bool needs_close);
 
   VFSDispatcher* dispatcher_;
   MessageLoop::HandlerKey key_;
-  mx::channel channel_;
+  zx::channel channel_;
   fs::vfs_dispatcher_cb_t callback_;
   void* iostate_;
 

@@ -4,7 +4,7 @@
 
 #include "garnet/examples/netconnector/netconnector_example_impl.h"
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include "garnet/examples/netconnector/netconnector_example_params.h"
 #include "lib/fxl/logging.h"
@@ -49,7 +49,7 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
     // Params say we should be responding. Register the responding service.
     FXL_LOG(INFO) << "Running as responder";
     application_context_->outgoing_services()->AddServiceForName(
-        [this](mx::channel channel) {
+        [this](zx::channel channel) {
           message_relay_.SetChannel(std::move(channel));
         },
         kRespondingServiceName);
@@ -78,12 +78,12 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
             ->ConnectToEnvironmentService<netconnector::NetConnector>();
 
     // Create a pair of channels.
-    mx::channel local;
-    mx::channel remote;
-    mx_status_t status = mx::channel::create(0u, &local, &remote);
+    zx::channel local;
+    zx::channel remote;
+    zx_status_t status = zx::channel::create(0u, &local, &remote);
 
-    FXL_CHECK(status == MX_OK)
-        << "mx::channel::create failed, status " << status;
+    FXL_CHECK(status == ZX_OK)
+        << "zx::channel::create failed, status " << status;
 
     // Give the local end of the channel to the relay.
     message_relay_.SetChannel(std::move(local));

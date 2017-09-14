@@ -38,7 +38,7 @@ executable("audio_server") {
     "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
-    "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 }

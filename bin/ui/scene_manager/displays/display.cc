@@ -4,20 +4,20 @@
 
 #include "garnet/bin/ui/scene_manager/displays/display.h"
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #include "lib/fxl/logging.h"
 
 namespace scene_manager {
 
 Display::Display(uint32_t width, uint32_t height, float device_pixel_ratio)
-    : last_vsync_time_(mx_time_get(MX_CLOCK_MONOTONIC)),
+    : last_vsync_time_(zx_time_get(ZX_CLOCK_MONOTONIC)),
       width_(width),
       height_(height),
       device_pixel_ratio_(device_pixel_ratio) {}
 
-mx_time_t Display::GetLastVsyncTime() {
-  mx_time_t current_time = mx_time_get(MX_CLOCK_MONOTONIC);
+zx_time_t Display::GetLastVsyncTime() {
+  zx_time_t current_time = zx_time_get(ZX_CLOCK_MONOTONIC);
   uint64_t num_elapsed_intervals =
       (current_time - last_vsync_time_) / kHardcodedPresentationIntervalNanos;
   uint64_t kMaxElapsedIntervals = 10000;

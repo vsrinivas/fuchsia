@@ -5,7 +5,7 @@
 #include "memory-process.h"
 
 #include <cinttypes>
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -23,17 +23,17 @@ bool ProcessMemory::Read(uintptr_t address,
                          size_t length) const {
   FXL_DCHECK(out_buffer);
 
-  mx_handle_t handle = process_->handle();
-  FXL_DCHECK(handle != MX_HANDLE_INVALID);
+  zx_handle_t handle = process_->handle();
+  FXL_DCHECK(handle != ZX_HANDLE_INVALID);
 
   size_t bytes_read;
-  mx_status_t status =
-      mx_process_read_memory(handle, address, out_buffer, length, &bytes_read);
-  if (status != MX_OK) {
+  zx_status_t status =
+      zx_process_read_memory(handle, address, out_buffer, length, &bytes_read);
+  if (status != ZX_OK) {
     FXL_LOG(ERROR) << fxl::StringPrintf(
                           "Failed to read memory at addr: %" PRIxPTR ": ",
                           address)
-                   << util::MxErrorString(status);
+                   << util::ZxErrorString(status);
     return false;
   }
 
@@ -53,8 +53,8 @@ bool ProcessMemory::Write(uintptr_t address,
 
   // We could be trying to remove a breakpoint after the process has exited.
   // So if the process is gone just return.
-  mx_handle_t handle = process_->handle();
-  if (handle == MX_HANDLE_INVALID) {
+  zx_handle_t handle = process_->handle();
+  if (handle == ZX_HANDLE_INVALID) {
     FXL_VLOG(2) << "No process memory to write to";
     return false;
   }
@@ -65,13 +65,13 @@ bool ProcessMemory::Write(uintptr_t address,
   }
 
   size_t bytes_written;
-  mx_status_t status =
-      mx_process_write_memory(handle, address, buffer, length, &bytes_written);
-  if (status != MX_OK) {
+  zx_status_t status =
+      zx_process_write_memory(handle, address, buffer, length, &bytes_written);
+  if (status != ZX_OK) {
     FXL_LOG(ERROR) << fxl::StringPrintf(
                           "Failed to write memory at addr: %" PRIxPTR ": ",
                           address)
-                   << util::MxErrorString(status);
+                   << util::ZxErrorString(status);
     return false;
   }
 

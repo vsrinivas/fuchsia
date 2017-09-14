@@ -16,7 +16,7 @@ executable("scene_manager") {
   deps = [
     ":common",
     "//garnet/lib/escher/examples/common",
-    "//magenta/system/ulib/trace-provider",
+    "//zircon/system/ulib/trace-provider",
   ]
 }
 
@@ -156,7 +156,7 @@ source_set("common") {
   public_configs = [ ":common_include_dirs" ]
 
   deps = [
-    "//magenta/system/ulib/trace",
+    "//zircon/system/ulib/trace",
     "//magma:vulkan",
   ]
 }

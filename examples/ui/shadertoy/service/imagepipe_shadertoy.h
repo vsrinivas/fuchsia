@@ -31,10 +31,10 @@ class ShadertoyStateForImagePipe : public ShadertoyState {
     escher::SemaphorePtr release_semaphore;
     // Signaled by Renderer when frame is finished, and therefore ready for the
     // ImagePipe consumer to use.
-    mx::event acquire_fence;
+    zx::event acquire_fence;
     // Signaled by the ImagePipe consumer when the framebuffer is no longer used
     // and can therefore be rendered into.
-    mx::event release_fence;
+    zx::event release_fence;
     uint32_t image_pipe_id = 0;
   };
   static constexpr uint32_t kNumFramebuffers = 2;

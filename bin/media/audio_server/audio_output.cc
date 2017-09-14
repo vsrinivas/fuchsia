@@ -225,7 +225,7 @@ void AudioOutput::UnlinkFromRenderers() {
   }
 }
 
-bool AudioOutput::UpdatePlugState(bool plugged, mx_time_t plug_time) {
+bool AudioOutput::UpdatePlugState(bool plugged, zx_time_t plug_time) {
   if ((plugged != plugged_) && (plug_time >= plug_time_)) {
     plugged_ = plugged;
     plug_time_ = plug_time;

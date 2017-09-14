@@ -954,8 +954,8 @@ bool Session::AssertValueIsOfType(const scenic::ValuePtr& value,
 
 void Session::ScheduleUpdate(uint64_t presentation_time,
                              ::fidl::Array<scenic::OpPtr> ops,
-                             ::fidl::Array<mx::event> acquire_fences,
-                             ::fidl::Array<mx::event> release_events,
+                             ::fidl::Array<zx::event> acquire_fences,
+                             ::fidl::Array<zx::event> release_events,
                              const scenic::Session::PresentCallback& callback) {
   if (is_valid()) {
     auto acquire_fence_set =

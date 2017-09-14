@@ -120,7 +120,7 @@ class HumanResourceSystemServer : public ApplicationImplBase {
 }  // namespace test
 }  // namespace fidl
 
-mx_status_t MojoMain(MojoHandle application_request) {
+zx_status_t MojoMain(MojoHandle application_request) {
   fidl::test::versioning::HumanResourceSystemServer hr_system_server;
   return fidl::RunApplication(application_request, &hr_system_server);
 }

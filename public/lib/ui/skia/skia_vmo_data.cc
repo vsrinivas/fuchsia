@@ -7,7 +7,7 @@
 #include <atomic>
 
 #include <trace/event.h>
-#include <mx/vmar.h>
+#include <zx/vmar.h>
 
 #include "lib/fxl/logging.h"
 
@@ -26,24 +26,24 @@ void TraceCount(int32_t delta) {
 
 void UnmapMemory(const void* buffer, void* context) {
   const uint64_t size = reinterpret_cast<uint64_t>(context);
-  mx_status_t status =
-      mx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(buffer), size);
-  FXL_CHECK(status == MX_OK);
+  zx_status_t status =
+      zx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(buffer), size);
+  FXL_CHECK(status == ZX_OK);
   TraceCount(-1);
 }
 
 }  // namespace
 
-sk_sp<SkData> MakeSkDataFromVMO(const mx::vmo& vmo) {
+sk_sp<SkData> MakeSkDataFromVMO(const zx::vmo& vmo) {
   uint64_t size = 0u;
-  mx_status_t status = vmo.get_size(&size);
-  if (status != MX_OK)
+  zx_status_t status = vmo.get_size(&size);
+  if (status != ZX_OK)
     return nullptr;
 
   uintptr_t buffer = 0u;
   status =
-      mx::vmar::root_self().map(0, vmo, 0u, size, MX_VM_FLAG_PERM_READ, &buffer);
-  if (status != MX_OK)
+      zx::vmar::root_self().map(0, vmo, 0u, size, ZX_VM_FLAG_PERM_READ, &buffer);
+  if (status != ZX_OK)
     return nullptr;
 
   sk_sp<SkData> data = SkData::MakeWithProc(reinterpret_cast<void*>(buffer),
@@ -51,8 +51,8 @@ sk_sp<SkData> MakeSkDataFromVMO(const mx::vmo& vmo) {
                                             reinterpret_cast<void*>(size));
   if (!data) {
     FXL_LOG(ERROR) << "Could not create SkData";
-    status = mx::vmar::root_self().unmap(buffer, size);
-    FXL_CHECK(status == MX_OK);
+    status = zx::vmar::root_self().unmap(buffer, size);
+    FXL_CHECK(status == ZX_OK);
     return nullptr;
   }
 

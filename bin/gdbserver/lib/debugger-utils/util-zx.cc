@@ -7,7 +7,7 @@
 #include <cctype>
 #include <cinttypes>
 
-#include <magenta/status.h>
+#include <zircon/status.h>
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
@@ -18,37 +18,37 @@
 namespace debugserver {
 namespace util {
 
-std::string MxErrorString(mx_status_t status) {
-  return fxl::StringPrintf("%s(%d)", mx_status_get_string(status), status);
+std::string ZxErrorString(zx_status_t status) {
+  return fxl::StringPrintf("%s(%d)", zx_status_get_string(status), status);
 }
 
-const char* ExceptionName(mx_excp_type_t type) {
+const char* ExceptionName(zx_excp_type_t type) {
 #define CASE_TO_STR(x) \
   case x:              \
     return #x
   switch (type) {
-    CASE_TO_STR(MX_EXCP_GENERAL);
-    CASE_TO_STR(MX_EXCP_FATAL_PAGE_FAULT);
-    CASE_TO_STR(MX_EXCP_UNDEFINED_INSTRUCTION);
-    CASE_TO_STR(MX_EXCP_SW_BREAKPOINT);
-    CASE_TO_STR(MX_EXCP_HW_BREAKPOINT);
-    CASE_TO_STR(MX_EXCP_THREAD_STARTING);
-    CASE_TO_STR(MX_EXCP_THREAD_EXITING);
-    CASE_TO_STR(MX_EXCP_GONE);
+    CASE_TO_STR(ZX_EXCP_GENERAL);
+    CASE_TO_STR(ZX_EXCP_FATAL_PAGE_FAULT);
+    CASE_TO_STR(ZX_EXCP_UNDEFINED_INSTRUCTION);
+    CASE_TO_STR(ZX_EXCP_SW_BREAKPOINT);
+    CASE_TO_STR(ZX_EXCP_HW_BREAKPOINT);
+    CASE_TO_STR(ZX_EXCP_THREAD_STARTING);
+    CASE_TO_STR(ZX_EXCP_THREAD_EXITING);
+    CASE_TO_STR(ZX_EXCP_GONE);
     default:
       return "UNKNOWN";
   }
 #undef CASE_TO_STR
 }
 
-std::string ExceptionToString(mx_excp_type_t type,
-                              const mx_exception_context_t& context) {
+std::string ExceptionToString(zx_excp_type_t type,
+                              const zx_exception_context_t& context) {
   std::string result(ExceptionName(type));
   // TODO(dje): Add more info to the string.
   return result;
 }
 
-bool ReadString(const ByteBlock& m, mx_vaddr_t vaddr, char* ptr, size_t max) {
+bool ReadString(const ByteBlock& m, zx_vaddr_t vaddr, char* ptr, size_t max) {
   while (max > 1) {
     if (!m.Read(vaddr, ptr, 1)) {
       *ptr = '\0';

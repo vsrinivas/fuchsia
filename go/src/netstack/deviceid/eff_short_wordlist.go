@@ -1,7 +1,7 @@
 package deviceid
 
 // Dictionary of words to use to build device names.
-// Keep in sync with magenta/system/core/netsvc/eff_short_wordlist_1.h
+// Keep in sync with zircon/system/core/netsvc/eff_short_wordlist_1.h
 var dictionary = [...]string{
 	"acid",
 	"acorn",

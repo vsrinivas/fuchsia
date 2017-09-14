@@ -14,7 +14,7 @@ import (
 
 	"syscall"
 	"syscall/mx"
-	"syscall/mx/mxio"
+	"syscall/mx/fdio"
 )
 
 type status int
@@ -49,7 +49,7 @@ func NewWatcher(dir string) (*Watcher, error) {
 	}
 	w := &Watcher{
 		C: make(chan string),
-		f: os.NewFile(uintptr(syscall.OpenMXIO(m)), dir+" watcher"),
+		f: os.NewFile(uintptr(syscall.OpenFDIO(m)), dir+" watcher"),
 		h: mx.Channel{Handle: h},
 		s: stopped,
 	}
@@ -119,20 +119,20 @@ func (w *Watcher) wait() (string, uint, error) {
 		return "", 0, errors.New("watcher: malformed message")
 	}
 
-	if msg[0] != mxio.VFSWatchEventAdded {
+	if msg[0] != fdio.VFSWatchEventAdded {
 		// TODO(smklein): Support other watch events
 		return "", 0, errors.New("watcher: Invalid event")
 	}
 	return string(msg[2 : 2+uint16(msg[1])]), uint(msg[0]), nil
 }
 
-func ioctlVFSWatchDir(m mxio.MXIO) (h mx.Handle, err error) {
+func ioctlVFSWatchDir(m fdio.FDIO) (h mx.Handle, err error) {
 
 	c1, c2, err := mx.NewChannel(0)
 	if err != nil {
 		return 0, fmt.Errorf("IOCTL_VFS_WATCH_DIR: %s", err)
 	}
-	msg := mxio.VFSWatchDirRequest{H: c1.Handle, Mask: mxio.VFSWatchMaskAdded, Options: 0}
+	msg := fdio.VFSWatchDirRequest{H: c1.Handle, Mask: fdio.VFSWatchMaskAdded, Options: 0}
 
 	buf := new(bytes.Buffer)
 	// LE for our arm64 and amd64 archs
@@ -141,7 +141,7 @@ func ioctlVFSWatchDir(m mxio.MXIO) (h mx.Handle, err error) {
 		return 0, fmt.Errorf("binary.Write failed: %s", err)
 	}
 
-	_, err = m.Ioctl(mxio.IoctlVFSWatchDir, buf.Bytes(), nil)
+	_, err = m.Ioctl(fdio.IoctlVFSWatchDir, buf.Bytes(), nil)
 	if err != nil {
 		return 0, fmt.Errorf("IOCTL_VFS_WATCH_DIR:  %s", err)
 	}

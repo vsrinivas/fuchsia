@@ -13,7 +13,7 @@
 #include <vector>
 
 #include <launchpad/launchpad.h>
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
@@ -29,7 +29,7 @@ constexpr char IptConfig::kDefaultOutputPathPrefix[];
 
 IptConfig::IptConfig()
   : mode(kDefaultMode),
-    num_cpus(mx_system_get_num_cpus()),
+    num_cpus(zx_system_get_num_cpus()),
     max_threads(kDefaultMaxThreads),
     num_buffers(kDefaultNumBuffers),
     buffer_order(kDefaultBufferOrder),
@@ -209,11 +209,11 @@ void IptServer::OnIOError() {
 
 void IptServer::OnThreadStarting(Process* process,
                                  Thread* thread,
-                                 const mx_exception_context_t& context) {
+                                 const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
 
-  PrintException(stdout, process, thread, MX_EXCP_THREAD_STARTING, context);
+  PrintException(stdout, process, thread, ZX_EXCP_THREAD_STARTING, context);
 
   switch (process->state()) {
   case Process::State::kStarting:
@@ -238,8 +238,8 @@ void IptServer::OnThreadStarting(Process* process,
 
 void IptServer::OnThreadExiting(Process* process,
                                 Thread* thread,
-                                const mx_excp_type_t type,
-                                const mx_exception_context_t& context) {
+                                const zx_excp_type_t type,
+                                const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
 
@@ -260,8 +260,8 @@ void IptServer::OnThreadExiting(Process* process,
 }
 
 void IptServer::OnProcessExit(Process* process,
-                              const mx_excp_type_t type,
-                              const mx_exception_context_t& context) {
+                              const zx_excp_type_t type,
+                              const zx_exception_context_t& context) {
   FXL_DCHECK(process);
 
   PrintException(stdout, process, nullptr, type, context);
@@ -273,8 +273,8 @@ void IptServer::OnProcessExit(Process* process,
 
 void IptServer::OnArchitecturalException(Process* process,
                                          Thread* thread,
-                                         const mx_excp_type_t type,
-                                         const mx_exception_context_t& context) {
+                                         const zx_excp_type_t type,
+                                         const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
   // TODO(armansito): Fine-tune this check if we ever support multi-processing.

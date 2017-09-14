@@ -8,9 +8,9 @@
 
 #include <sys/socket.h>
 
-#include <magenta/device/ioctl.h>
-#include <magenta/device/ioctl-wrapper.h>
-#include <magenta/types.h>
+#include <zircon/device/ioctl.h>
+#include <zircon/device/ioctl-wrapper.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -83,7 +83,7 @@ IOCTL_WRAPPER_IN(ioctl_netc_set_if_addr, IOCTL_NETC_SET_IF_ADDR, netc_set_if_add
 
 // Get if gateway
 static inline ssize_t ioctl_netc_get_if_gateway(int fd, char* name, struct sockaddr_storage* ss) {
-  return mxio_ioctl(fd, IOCTL_NETC_GET_IF_GATEWAY, name, NETC_IFNAME_SIZE,
+  return fdio_ioctl(fd, IOCTL_NETC_GET_IF_GATEWAY, name, NETC_IFNAME_SIZE,
                     ss, sizeof(struct sockaddr_storage));
 }
 
@@ -93,7 +93,7 @@ IOCTL_WRAPPER_IN(ioctl_netc_set_if_gateway, IOCTL_NETC_SET_IF_GATEWAY, netc_set_
 
 // Get DHCP status
 static inline ssize_t ioctl_netc_get_dhcp_status(int fd, char* name, int* status) {
-  return mxio_ioctl(fd, IOCTL_NETC_GET_DHCP_STATUS, name, NETC_IFNAME_SIZE,
+  return fdio_ioctl(fd, IOCTL_NETC_GET_DHCP_STATUS, name, NETC_IFNAME_SIZE,
                     status, sizeof(int));
 }
 

@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include "lib/media/timeline/timeline.h"
 #include "lib/fxl/logging.h"
@@ -50,11 +50,11 @@ NetMediaPlayerNetProxy::NetMediaPlayerNetProxy(
       owner->ConnectToEnvironmentService<netconnector::NetConnector>();
 
   // Create a pair of channels.
-  mx::channel local;
-  mx::channel remote;
-  mx_status_t status = mx::channel::create(0u, &local, &remote);
+  zx::channel local;
+  zx::channel remote;
+  zx_status_t status = zx::channel::create(0u, &local, &remote);
 
-  FXL_CHECK(status == MX_OK) << "mx::channel::create failed, status "
+  FXL_CHECK(status == ZX_OK) << "zx::channel::create failed, status "
                                 << status;
 
   // Give the local end of the channel to the relay.

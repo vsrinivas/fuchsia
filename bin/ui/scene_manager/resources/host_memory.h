@@ -24,7 +24,7 @@ class HostMemory : public Memory {
   // Constructor for host memory.
   HostMemory(Session* session,
              scenic::ResourceId id,
-             mx::vmo vmo,
+             zx::vmo vmo,
              uint64_t vmo_size);
 
   // Helper method for creating HostMemory object from a scenic::Memory.
@@ -34,7 +34,7 @@ class HostMemory : public Memory {
   static HostMemoryPtr New(Session* session,
                            scenic::ResourceId id,
                            vk::Device device,
-                           mx::vmo vmo,
+                           zx::vmo vmo,
                            ErrorReporter* error_reporter);
 
   // Helper method that calls the above method with the VMO from |args|. Also

@@ -47,12 +47,12 @@ void Session::Enqueue(scenic::OpPtr op) {
   ops_.push_back(std::move(op));
 }
 
-void Session::EnqueueAcquireFence(mx::event fence) {
+void Session::EnqueueAcquireFence(zx::event fence) {
   FXL_DCHECK(fence);
   acquire_fences_.push_back(std::move(fence));
 }
 
-void Session::EnqueueReleaseFence(mx::event fence) {
+void Session::EnqueueReleaseFence(zx::event fence) {
   FXL_DCHECK(fence);
   release_fences_.push_back(std::move(fence));
 }

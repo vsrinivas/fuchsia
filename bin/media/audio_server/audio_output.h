@@ -54,11 +54,11 @@ class AudioOutput {
   //
   // plugged   : true when an audio output stream is either hardwired, or
   //             believes that it has something connected to its plug.
-  // plug_time : The last time (according to mx_time_get(MX_CLOCK_MONOTONIC) at
+  // plug_time : The last time (according to zx_time_get(ZX_CLOCK_MONOTONIC) at
   //             which the plugged/unplugged state of the output stream last
   //             changed.
   bool plugged() const { return plugged_; }
-  mx_time_t plug_time() const { return plug_time_; }
+  zx_time_t plug_time() const { return plug_time_; }
 
  protected:
   explicit AudioOutput(AudioOutputManager* manager);
@@ -155,7 +155,7 @@ class AudioOutput {
   // plug state.
   //
   // Returns true if the plug state has changed, or false otherwise.
-  bool UpdatePlugState(bool plugged, mx_time_t plug_time);
+  bool UpdatePlugState(bool plugged, zx_time_t plug_time);
 
   // TODO(johngro): Order this by priority.  Figure out how we are going to be
   // able to quickly find a renderer with a specific priority in order to
@@ -211,7 +211,7 @@ class AudioOutput {
   // Plug state is protected by the fact that it is only ever accessed on the
   // main message loop thread.
   bool plugged_ = false;
-  mx_time_t plug_time_ = 0;
+  zx_time_t plug_time_ = 0;
 
   // TODO(johngro): Someday, when we expose output enumeration and control from
   // the audio service, add the ability to change this value and update the

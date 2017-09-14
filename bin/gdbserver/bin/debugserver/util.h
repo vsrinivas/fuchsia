@@ -10,8 +10,8 @@
 #include <string>
 #include <vector>
 
-#include <magenta/syscalls/exception.h>
-#include <magenta/types.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/types.h>
 
 #include "lib/fxl/strings/string_view.h"
 
@@ -61,7 +61,7 @@ std::string BuildErrorPacket(ErrorCode error_code);
 // |out_pid| and |out_tid|. If a process ID is present, then the value of
 // |out_has_pid| is set to true, and to false otherwise.
 //
-// Note that we are not using mx_koid_t here because it is defined as uint64_t
+// Note that we are not using zx_koid_t here because it is defined as uint64_t
 // and the GDB remote protocol allows a value of "-1" to refer to "all"
 // processes/threads. So we do our best and use int64_t.
 //
@@ -81,7 +81,7 @@ bool ParseThreadId(const fxl::StringView& bytes,
 // (See
 // https://sourceware.org/gdb/current/onlinedocs/gdb/Packets.html#thread%2did%20syntax
 // for reference).
-std::string EncodeThreadId(mx_koid_t pid, mx_koid_t tid);
+std::string EncodeThreadId(zx_koid_t pid, zx_koid_t tid);
 
 // Finds and returns the index of the first occurence of |val| within |packet|,
 // such that it is not preceded by an escape character.

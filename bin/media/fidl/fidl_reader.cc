@@ -95,7 +95,7 @@ void FidlReader::ContinueReadAt() {
     }
 
     seeking_reader_->ReadAt(read_at_position_,
-                            [this](MediaResult result, mx::socket socket) {
+                            [this](MediaResult result, zx::socket socket) {
                               result_ = Convert(result);
                               if (result_ != Result::kOk) {
                                 CompleteReadAt(result_);
@@ -113,18 +113,18 @@ void FidlReader::ReadFromSocket() {
   while (true) {
     FXL_DCHECK(read_at_bytes_remaining_ < std::numeric_limits<uint32_t>::max());
     size_t byte_count = 0;
-    mx_status_t status = socket_.read(0u, read_at_buffer_,
+    zx_status_t status = socket_.read(0u, read_at_buffer_,
                                       read_at_bytes_remaining_, &byte_count);
 
-    if (status == MX_ERR_SHOULD_WAIT) {
+    if (status == ZX_ERR_SHOULD_WAIT) {
       wait_id_ = fidl::GetDefaultAsyncWaiter()->AsyncWait(
-          socket_.get(), MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
-          MX_TIME_INFINITE, FidlReader::ReadFromSocketStatic, this);
+          socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
+          ZX_TIME_INFINITE, FidlReader::ReadFromSocketStatic, this);
       break;
     }
 
-    if (status != MX_OK) {
-      FXL_LOG(ERROR) << "mx::socket::read failed, status " << status;
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "zx::socket::read failed, status " << status;
       FailReadAt(status);
       break;
     }
@@ -147,9 +147,9 @@ void FidlReader::CompleteReadAt(Result result, size_t bytes_read) {
   read_at_callback(result, bytes_read);
 }
 
-void FidlReader::FailReadAt(mx_status_t status) {
+void FidlReader::FailReadAt(zx_status_t status) {
   switch (status) {
-    case MX_ERR_PEER_CLOSED:
+    case ZX_ERR_PEER_CLOSED:
       result_ = Result::kInternalError;
       break;
     // TODO(dalesat): Expect more statuses here.
@@ -165,15 +165,15 @@ void FidlReader::FailReadAt(mx_status_t status) {
 }
 
 // static
-void FidlReader::ReadFromSocketStatic(mx_status_t status,
-                                      mx_signals_t pending,
+void FidlReader::ReadFromSocketStatic(zx_status_t status,
+                                      zx_signals_t pending,
                                       uint64_t count,
                                       void* closure) {
   FidlReader* reader = reinterpret_cast<FidlReader*>(closure);
 
   reader->wait_id_ = 0;
 
-  if (status != MX_OK) {
+  if (status != ZX_OK) {
     FXL_LOG(ERROR) << "AsyncWait failed, status " << status;
     reader->FailReadAt(status);
     return;

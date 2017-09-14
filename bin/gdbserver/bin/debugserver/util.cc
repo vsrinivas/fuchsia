@@ -7,7 +7,7 @@
 #include <cctype>
 #include <cinttypes>
 
-#include <magenta/status.h>
+#include <zircon/status.h>
 
 #include "debugger-utils/byte-block.h"
 #include "debugger-utils/util.h"
@@ -72,9 +72,9 @@ bool ParseThreadId(const fxl::StringView& bytes,
                                                fxl::Base::k16);
 }
 
-std::string EncodeThreadId(mx_koid_t pid, mx_koid_t tid) {
-  std::string pid_string = fxl::NumberToString<mx_koid_t>(pid, fxl::Base::k16);
-  std::string tid_string = fxl::NumberToString<mx_koid_t>(tid, fxl::Base::k16);
+std::string EncodeThreadId(zx_koid_t pid, zx_koid_t tid) {
+  std::string pid_string = fxl::NumberToString<zx_koid_t>(pid, fxl::Base::k16);
+  std::string tid_string = fxl::NumberToString<zx_koid_t>(tid, fxl::Base::k16);
 
   return fxl::StringPrintf("p%s.%s", pid_string.c_str(), tid_string.c_str());
 }

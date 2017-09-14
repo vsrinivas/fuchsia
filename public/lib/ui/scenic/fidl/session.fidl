@@ -68,10 +68,10 @@ interface Session {
   // resources are ready to render (or to allow downstream components, such as
   // the Vulkan driver, to wait for these resources).
   //
-  // For example, Fuchsia's Vulkan driver allows an mx::event to be obtained
+  // For example, Fuchsia's Vulkan driver allows an zx::event to be obtained
   // from a VkSemaphore.  This allows a Mozart client to submit a Vulkan command
   // buffer to generate images/meshes/etc., and instructing Vulkan to signal a
-  // VkSemaphore when it is done.  By inserting the mx::event corresponding to
+  // VkSemaphore when it is done.  By inserting the zx::event corresponding to
   // this semaphore into |acquire_fences|, the client allows Mozart to submit work
   // to the Vulkan driver without waiting on the CPU for the event to be
   // signalled.

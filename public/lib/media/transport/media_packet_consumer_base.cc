@@ -14,12 +14,12 @@ namespace media {
 namespace {
 
 // Gets the size of a shared buffer.
-uint64_t SizeOf(const mx::vmo& vmo) {
+uint64_t SizeOf(const zx::vmo& vmo) {
   uint64_t size;
-  mx_status_t status = vmo.get_size(&size);
+  zx_status_t status = vmo.get_size(&size);
 
-  if (status != MX_OK) {
-    FXL_LOG(ERROR) << "mx::vmo::get_size failed, status " << status;
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "zx::vmo::get_size failed, status " << status;
     return 0;
   }
 
@@ -175,14 +175,14 @@ void MediaPacketConsumerBase::PullDemandUpdate(
 }
 
 void MediaPacketConsumerBase::AddPayloadBuffer(uint32_t payload_buffer_id,
-                                               mx::vmo payload_buffer) {
+                                               zx::vmo payload_buffer) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(payload_buffer);
   FLOG(log_channel_,
        AddPayloadBufferRequested(payload_buffer_id, SizeOf(payload_buffer)));
-  mx_status_t status = counter_->buffer_set().AddBuffer(
+  zx_status_t status = counter_->buffer_set().AddBuffer(
       payload_buffer_id, std::move(payload_buffer));
-  RCHECK(status == MX_OK, "failed to map buffer");
+  RCHECK(status == ZX_OK, "failed to map buffer");
 }
 
 void MediaPacketConsumerBase::RemovePayloadBuffer(uint32_t payload_buffer_id) {
@@ -329,7 +329,7 @@ MediaPacketConsumerBase::SuppliedPacket::~SuppliedPacket() {
 MediaPacketConsumerBase::SuppliedPacketCounter::SuppliedPacketCounter(
     MediaPacketConsumerBase* owner)
     : owner_(owner),
-      buffer_set_(MX_VM_FLAG_PERM_READ),
+      buffer_set_(ZX_VM_FLAG_PERM_READ),
       packets_outstanding_(0) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();

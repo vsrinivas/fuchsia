@@ -67,8 +67,8 @@ FooPtr MakeFoo() {
     array_of_array_of_bools[i] = std::move(array_of_bools);
   }
 
-  mx::channel handle0, handle1;
-  mx::channel::create(0, &handle0, &handle1);
+  zx::channel handle0, handle1;
+  zx::channel::create(0, &handle0, &handle1);
   FooPtr foo(Foo::New());
   foo->name = name;
   foo->x = 1;
@@ -155,7 +155,7 @@ void Print(int depth, const char* name, uint8_t value) {
 template <typename H>
 void Print(int depth,
            const char* name,
-           const mx::object<H>& value) {
+           const zx::object<H>& value) {
   PrintSpacer(depth);
   std::cout << name << ": 0x" << std::hex << value.get() << std::endl;
 }

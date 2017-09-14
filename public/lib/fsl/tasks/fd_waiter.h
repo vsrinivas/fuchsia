@@ -5,8 +5,8 @@
 #ifndef LIB_FSL_TASKS_FD_WAITER_H_
 #define LIB_FSL_TASKS_FD_WAITER_H_
 
-#include <magenta/types.h>
-#include <mxio/private.h>
+#include <zircon/types.h>
+#include <fdio/private.h>
 
 #include <functional>
 
@@ -21,12 +21,12 @@ class FXL_EXPORT FDWaiter : public MessageLoopHandler {
   FDWaiter();
   ~FDWaiter() override;
 
-  // If the wait was successful, the first argument will be MX_OK and the
+  // If the wait was successful, the first argument will be ZX_OK and the
   // second argument will be the pending events on the file descriptor. If the
   // wait failed (e.g., because the file descriptor was closed during the wait),
   // the first argument will be the error code and the second argument will be
   // zero.
-  using Callback = std::function<void(mx_status_t, uint32_t)>;
+  using Callback = std::function<void(zx_status_t, uint32_t)>;
 
   // Creates an asynchronous, one-shot wait for the given events on the given
   // file descriptor until the given timeout. Calls |callback| when the wait
@@ -55,12 +55,12 @@ class FXL_EXPORT FDWaiter : public MessageLoopHandler {
   void Cancel();
 
  private:
-  void OnHandleReady(mx_handle_t handle,
-                     mx_signals_t pending,
+  void OnHandleReady(zx_handle_t handle,
+                     zx_signals_t pending,
                      uint64_t count) override;
-  void OnHandleError(mx_handle_t handle, mx_status_t error) override;
+  void OnHandleError(zx_handle_t handle, zx_status_t error) override;
 
-  mxio_t* io_;
+  fdio_t* io_;
   MessageLoop::HandlerKey key_;
   Callback callback_;
 

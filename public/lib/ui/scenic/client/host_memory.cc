@@ -4,8 +4,8 @@
 
 #include "lib/ui/scenic/client/host_memory.h"
 
-#include <mx/vmar.h>
-#include <mx/vmo.h>
+#include <zx/vmar.h>
+#include <zx/vmo.h>
 
 #include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/fxl/logging.h"
@@ -19,47 +19,47 @@ bool CanReuseMemory(const HostMemory& memory, size_t desired_size) {
          memory.data_size() <= desired_size * 2;
 }
 
-std::pair<mx::vmo, fxl::RefPtr<HostData>> AllocateMemory(size_t size) {
+std::pair<zx::vmo, fxl::RefPtr<HostData>> AllocateMemory(size_t size) {
   // Create the vmo and map it into this process.
-  mx::vmo local_vmo;
-  mx_status_t status = mx::vmo::create(size, 0u, &local_vmo);
-  FXL_CHECK(status == MX_OK) << "vmo create failed: status=" << status;
+  zx::vmo local_vmo;
+  zx_status_t status = zx::vmo::create(size, 0u, &local_vmo);
+  FXL_CHECK(status == ZX_OK) << "vmo create failed: status=" << status;
   auto data = fxl::MakeRefCounted<HostData>(local_vmo, 0u, size);
 
   // Drop rights before we transfer the VMO to the session manager.
-  mx::vmo remote_vmo;
+  zx::vmo remote_vmo;
   status = local_vmo.replace(
-      MX_RIGHT_READ | MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_MAP,
+      ZX_RIGHT_READ | ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_MAP,
       &remote_vmo);
-  FXL_CHECK(status == MX_OK) << "replace rights failed: status=" << status;
+  FXL_CHECK(status == ZX_OK) << "replace rights failed: status=" << status;
   return std::make_pair(std::move(remote_vmo), std::move(data));
 }
 
 }  // namespace
 
-HostData::HostData(const mx::vmo& vmo,
+HostData::HostData(const zx::vmo& vmo,
                    off_t offset,
                    size_t size,
                    uint32_t flags)
     : size_(size) {
   uintptr_t ptr;
-  mx_status_t status =
-      mx::vmar::root_self().map(0, vmo, offset, size, flags, &ptr);
-  FXL_CHECK(status == MX_OK) << "map failed: status=" << status;
+  zx_status_t status =
+      zx::vmar::root_self().map(0, vmo, offset, size, flags, &ptr);
+  FXL_CHECK(status == ZX_OK) << "map failed: status=" << status;
   ptr_ = reinterpret_cast<void*>(ptr);
 }
 
 HostData::~HostData() {
-  mx_status_t status =
-      mx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(ptr_), size_);
-  FXL_CHECK(status == MX_OK) << "unmap failed: status=" << status;
+  zx_status_t status =
+      zx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(ptr_), size_);
+  FXL_CHECK(status == ZX_OK) << "unmap failed: status=" << status;
 }
 
 HostMemory::HostMemory(Session* session, size_t size)
     : HostMemory(session, AllocateMemory(size)) {}
 
 HostMemory::HostMemory(Session* session,
-                       std::pair<mx::vmo, fxl::RefPtr<HostData>> init)
+                       std::pair<zx::vmo, fxl::RefPtr<HostData>> init)
     : Memory(session, std::move(init.first), scenic::MemoryType::HOST_MEMORY),
       data_(std::move(init.second)) {}
 

@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_ICU_DATA_ICU_DATA_PROVIDER_IMPL_H_
 #define GARNET_BIN_ICU_DATA_ICU_DATA_PROVIDER_IMPL_H_
 
-#include <mx/vmo.h>
+#include <zx/vmo.h>
 
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
@@ -30,7 +30,7 @@ class ICUDataProviderImpl : public ICUDataProvider {
 
   fidl::BindingSet<ICUDataProvider> bindings_;
 
-  mx::vmo icu_data_vmo_;
+  zx::vmo icu_data_vmo_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ICUDataProviderImpl);
 };

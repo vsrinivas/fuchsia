@@ -4,7 +4,7 @@
 
 #include "lib/media/transport/shared_buffer_set.h"
 
-#include <mx/vmo.h>
+#include <zx/vmo.h>
 
 #include "lib/fxl/logging.h"
 
@@ -15,7 +15,7 @@ SharedBufferSet::SharedBufferSet(uint32_t local_map_flags)
 
 SharedBufferSet::~SharedBufferSet() {}
 
-mx_status_t SharedBufferSet::AddBuffer(uint32_t buffer_id, mx::vmo vmo) {
+zx_status_t SharedBufferSet::AddBuffer(uint32_t buffer_id, zx::vmo vmo) {
   if (buffer_id >= buffers_.size()) {
     buffers_.resize(buffer_id + 1);
   } else {
@@ -23,20 +23,20 @@ mx_status_t SharedBufferSet::AddBuffer(uint32_t buffer_id, mx::vmo vmo) {
   }
 
   MappedSharedBuffer* mapped_shared_buffer = new MappedSharedBuffer();
-  mx_status_t status =
+  zx_status_t status =
       mapped_shared_buffer->InitFromVmo(std::move(vmo), local_map_flags_);
 
-  if (status == MX_OK) {
+  if (status == ZX_OK) {
     AddBuffer(buffer_id, mapped_shared_buffer);
   }
 
   return status;
 }
 
-mx_status_t SharedBufferSet::CreateNewBuffer(uint64_t size,
+zx_status_t SharedBufferSet::CreateNewBuffer(uint64_t size,
                                              uint32_t* buffer_id_out,
-                                             mx_rights_t vmo_rights,
-                                             mx::vmo* out_vmo) {
+                                             zx_rights_t vmo_rights,
+                                             zx::vmo* out_vmo) {
   FXL_DCHECK(size != 0);
   FXL_DCHECK(buffer_id_out != nullptr);
   FXL_DCHECK(out_vmo != nullptr);
@@ -44,9 +44,9 @@ mx_status_t SharedBufferSet::CreateNewBuffer(uint64_t size,
   uint32_t buffer_id = AllocateBufferId();
 
   MappedSharedBuffer* mapped_shared_buffer = new MappedSharedBuffer();
-  mx_status_t status = mapped_shared_buffer->InitNew(size, local_map_flags_);
+  zx_status_t status = mapped_shared_buffer->InitNew(size, local_map_flags_);
 
-  if (status == MX_OK) {
+  if (status == ZX_OK) {
     *buffer_id_out = buffer_id;
     *out_vmo = mapped_shared_buffer->GetDuplicateVmo(vmo_rights);
     AddBuffer(buffer_id, mapped_shared_buffer);

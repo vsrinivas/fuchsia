@@ -9,18 +9,18 @@ import (
 	"strings"
 
 	"syscall/mx"
-	"syscall/mx/mxio"
+	"syscall/mx/fdio"
 )
 
 type Provider func(name string, h mx.Handle)
 
 type Namespace struct {
 	Provider   Provider
-	Dispatcher *mxio.Dispatcher
+	Dispatcher *fdio.Dispatcher
 }
 
 func (n *Namespace) Serve(h mx.Handle) error {
-	if err := n.Dispatcher.AddHandler(h, mxio.ServerHandler(n.handler), 0); err != nil {
+	if err := n.Dispatcher.AddHandler(h, fdio.ServerHandler(n.handler), 0); err != nil {
 		return err
 	}
 
@@ -38,18 +38,18 @@ func errStatus(err error) mx.Status {
 }
 
 // TODO(abarth): Switch to msg.Pipelined() once that exists.
-func pipelined(msg *mxio.Msg) bool {
+func pipelined(msg *fdio.Msg) bool {
 	return msg.Arg&0x10000000 != 0
 }
 
-func (n *Namespace) opClone(msg *mxio.Msg, h mx.Handle) mx.Status {
+func (n *Namespace) opClone(msg *fdio.Msg, h mx.Handle) mx.Status {
 	err := n.Serve(h)
 
 	if !pipelined(msg) {
-		ro := mxio.RioObject{
-			RioObjectHeader: mxio.RioObjectHeader{
+		ro := fdio.RioObject{
+			RioObjectHeader: fdio.RioObjectHeader{
 				Status: errStatus(err),
-				Type:   uint32(mxio.ProtocolRemote),
+				Type:   uint32(fdio.ProtocolRemote),
 			},
 		}
 		ro.Write(h, 0)
@@ -59,14 +59,14 @@ func (n *Namespace) opClone(msg *mxio.Msg, h mx.Handle) mx.Status {
 		h.Close()
 	}
 
-	return mxio.ErrIndirect.Status
+	return fdio.ErrIndirect.Status
 }
 
-func (n *Namespace) handler(msg *mxio.Msg, rh mx.Handle, cookieVal int64) mx.Status {
+func (n *Namespace) handler(msg *fdio.Msg, rh mx.Handle, cookieVal int64) mx.Status {
 	op := msg.Op()
 
 	switch op {
-	case mxio.OpOpen:
+	case fdio.OpOpen:
 		h := msg.Handle[0]
 		if h == mx.HANDLE_INVALID {
 			return mx.ErrBadState
@@ -84,19 +84,19 @@ func (n *Namespace) handler(msg *mxio.Msg, rh mx.Handle, cookieVal int64) mx.Sta
 		}
 
 		if !pipelined(msg) {
-			ro := mxio.RioObject{
-				RioObjectHeader: mxio.RioObjectHeader{
+			ro := fdio.RioObject{
+				RioObjectHeader: fdio.RioObjectHeader{
 					Status: mx.ErrOk,
-					Type:   uint32(mxio.ProtocolService),
+					Type:   uint32(fdio.ProtocolService),
 				},
 			}
 			ro.Write(h, 0)
 		}
 
 		n.Provider(path, h)
-		return mxio.ErrIndirect.Status
+		return fdio.ErrIndirect.Status
 
-	case mxio.OpClone:
+	case fdio.OpClone:
 		h := msg.Handle[0]
 		if h == mx.HANDLE_INVALID {
 			return mx.ErrBadState

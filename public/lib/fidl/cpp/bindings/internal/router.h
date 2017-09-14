@@ -22,7 +22,7 @@ namespace internal {
 // response messages back to the sender.
 class Router : public MessageReceiverWithResponder {
  public:
-  Router(mx::channel channel,
+  Router(zx::channel channel,
          MessageValidatorList validators,
          const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter());
   ~Router() override;
@@ -49,7 +49,7 @@ class Router : public MessageReceiverWithResponder {
 
   void CloseChannel() { connector_.CloseChannel(); }
 
-  mx::channel PassChannel() { return connector_.PassChannel(); }
+  zx::channel PassChannel() { return connector_.PassChannel(); }
 
   // MessageReceiver implementation:
   bool Accept(Message* message) override;
@@ -59,8 +59,8 @@ class Router : public MessageReceiverWithResponder {
   // Blocks the current thread until the first incoming method call, i.e.,
   // either a call to a client method or a callback method, or |timeout|.
   // When returning |false| closes the channel, unless the reason for
-  // for returning |false| was |MX_ERR_SHOULD_WAIT| or
-  // |MX_ERR_TIMED_OUT|.
+  // for returning |false| was |ZX_ERR_SHOULD_WAIT| or
+  // |ZX_ERR_TIMED_OUT|.
   // Use |encountered_error| to see if an error occurred.
   bool WaitForIncomingMessage(fxl::TimeDelta timeout) {
     return connector_.WaitForIncomingMessage(timeout);
@@ -73,7 +73,7 @@ class Router : public MessageReceiverWithResponder {
   //   receiver.
   void EnableTestingMode();
 
-  mx_handle_t handle() const { return connector_.handle(); }
+  zx_handle_t handle() const { return connector_.handle(); }
 
  private:
   typedef std::map<uint64_t, MessageReceiver*> ResponderMap;

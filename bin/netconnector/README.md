@@ -6,7 +6,7 @@ NetConnector is a Fuchsia service intended to unblock development of
 cross-device scenarios. It has two responsibilities:
 
 - To serve, in LAN scope, as a rendezvous between services and the clients that want to use those services.
-- To provide mx::channel forwarding so that clients and services can communicate using channels.
+- To provide zx::channel forwarding so that clients and services can communicate using channels.
 
 In addition, NetConnector hosts an mDNS implementation, which it uses to
 enumerate Fuchsia devices on the LAN and which it offers as a separate service.
@@ -14,7 +14,7 @@ enumerate Fuchsia devices on the LAN and which it offers as a separate service.
 The word 'service' is used a lot in this document and in NetConnector. It has
 a specific meaning in the context of mDNS, but otherwise, it really just means
 'service' in the Fuchsia sense. A Fuchsia service is running software that
-talks to a client over an mx::channel. It's normal practice to bind such a
+talks to a client over an zx::channel. It's normal practice to bind such a
 channel to a FIDL proxy. This isn't done over NetConnector, because FIDL isn't
 an suited to RPC.
 
@@ -38,7 +38,7 @@ know the name of the device and service they want to connect to, though
 unknown device. In our current work, ledger is used to establish the device and
 service names.
 
-mx:channel provides a full-duplex message transport that can carry binary data
+zx:channel provides a full-duplex message transport that can carry binary data
 and handles. The channel forwarding implemented by NetConnector allows data
 only; no handles are permitted in messages. I’ve experimented with support for
 channel handles, which is doable and potentially useful.

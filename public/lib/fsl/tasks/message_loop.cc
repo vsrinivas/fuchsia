@@ -8,7 +8,7 @@
 
 #include <async/task.h>
 #include <async/wait_with_timeout.h>
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #include "lib/fxl/logging.h"
 
@@ -21,7 +21,7 @@ thread_local MessageLoop* g_current;
 
 class MessageLoop::TaskRecord {
  public:
-  TaskRecord(mx_time_t deadline, fxl::Closure closure);
+  TaskRecord(zx_time_t deadline, fxl::Closure closure);
   ~TaskRecord();
 
   async::Task& task() { return task_; }
@@ -32,9 +32,9 @@ class MessageLoop::TaskRecord {
 
 class MessageLoop::HandlerRecord {
  public:
-  HandlerRecord(mx_handle_t object,
-                mx_signals_t trigger,
-                mx_time_t deadline,
+  HandlerRecord(zx_handle_t object,
+                zx_signals_t trigger,
+                zx_time_t deadline,
                 MessageLoop* loop,
                 MessageLoopHandler* handler,
                 HandlerKey key);
@@ -44,8 +44,8 @@ class MessageLoop::HandlerRecord {
 
  private:
   async_wait_result_t Handle(async_t* async,
-                             mx_status_t status,
-                             const mx_packet_signal_t* signal);
+                             zx_status_t status,
+                             const zx_packet_signal_t* signal);
 
   async::WaitWithTimeout wait_;
   MessageLoop* loop_;
@@ -90,42 +90,42 @@ void MessageLoop::PostTask(fxl::Closure task, fxl::TimePoint target_time) {
   auto record = new TaskRecord(target_time.ToEpochDelta().ToNanoseconds(),
                                std::move(task));
 
-  mx_status_t status = record->task().Post(loop_.async());
-  if (status == MX_ERR_BAD_STATE) {
+  zx_status_t status = record->task().Post(loop_.async());
+  if (status == ZX_ERR_BAD_STATE) {
     // Suppress request when shutting down.
     delete record;
     return;
   }
 
   // The record will be destroyed when the task runs.
-  FXL_CHECK(status == MX_OK) << "Failed to post task: status=" << status;
+  FXL_CHECK(status == ZX_OK) << "Failed to post task: status=" << status;
 }
 
 MessageLoop::HandlerKey MessageLoop::AddHandler(MessageLoopHandler* handler,
-                                                mx_handle_t handle,
-                                                mx_signals_t trigger,
+                                                zx_handle_t handle,
+                                                zx_signals_t trigger,
                                                 fxl::TimeDelta timeout) {
   FXL_DCHECK(g_current == this);
   FXL_DCHECK(handler);
-  FXL_DCHECK(handle != MX_HANDLE_INVALID);
+  FXL_DCHECK(handle != ZX_HANDLE_INVALID);
 
   // TODO(jeffbrown): Consider allocating handlers from a pool.
   HandlerKey key = next_handler_key_++;
   auto record =
       new HandlerRecord(handle, trigger,
                         timeout == fxl::TimeDelta::Max()
-                            ? MX_TIME_INFINITE
-                            : mx_deadline_after(timeout.ToNanoseconds()),
+                            ? ZX_TIME_INFINITE
+                            : zx_deadline_after(timeout.ToNanoseconds()),
                         this, handler, key);
-  mx_status_t status = record->wait().Begin(loop_.async());
-  if (status == MX_ERR_BAD_STATE) {
+  zx_status_t status = record->wait().Begin(loop_.async());
+  if (status == ZX_ERR_BAD_STATE) {
     // Suppress request when shutting down.
     delete record;
     return key;
   }
 
   // The record will be destroyed when the handler runs or is removed.
-  FXL_CHECK(status == MX_OK) << "Failed to add handler: status=" << status;
+  FXL_CHECK(status == ZX_OK) << "Failed to add handler: status=" << status;
   handlers_.emplace(key, record);
   return key;
 }
@@ -143,8 +143,8 @@ void MessageLoop::RemoveHandler(HandlerKey key) {
   if (current_handler_ == record) {
     current_handler_removed_ = true;  // defer cleanup
   } else {
-    mx_status_t status = record->wait().Cancel(loop_.async());
-    FXL_CHECK(status == MX_OK) << "Failed to cancel handler: status=" << status;
+    zx_status_t status = record->wait().Cancel(loop_.async());
+    FXL_CHECK(status == ZX_OK) << "Failed to cancel handler: status=" << status;
     delete record;
   }
 }
@@ -161,12 +161,12 @@ void MessageLoop::Run() {
   FXL_CHECK(!is_running_) << "Cannot run a nested message loop.";
   is_running_ = true;
 
-  mx_status_t status = loop_.Run();
-  FXL_CHECK(status == MX_OK || status == MX_ERR_CANCELED)
+  zx_status_t status = loop_.Run();
+  FXL_CHECK(status == ZX_OK || status == ZX_ERR_CANCELED)
       << "Loop stopped abnormally: status=" << status;
 
   status = loop_.ResetQuit();
-  FXL_DCHECK(status == MX_OK)
+  FXL_DCHECK(status == ZX_OK)
       << "Failed to reset quit state: status=" << status;
 
   FXL_DCHECK(is_running_);
@@ -206,11 +206,11 @@ void MessageLoop::Epilogue(async_t* async, void* data) {
     loop->after_task_callback_();
 }
 
-MessageLoop::TaskRecord::TaskRecord(mx_time_t deadline, fxl::Closure closure)
+MessageLoop::TaskRecord::TaskRecord(zx_time_t deadline, fxl::Closure closure)
     : task_(deadline, ASYNC_FLAG_HANDLE_SHUTDOWN) {
   task_.set_handler(
-      [ this, closure = std::move(closure) ](async_t*, mx_status_t status) {
-        if (status == MX_OK)
+      [ this, closure = std::move(closure) ](async_t*, zx_status_t status) {
+        if (status == ZX_OK)
           closure();
         delete this;
         return ASYNC_TASK_FINISHED;
@@ -219,9 +219,9 @@ MessageLoop::TaskRecord::TaskRecord(mx_time_t deadline, fxl::Closure closure)
 
 MessageLoop::TaskRecord::~TaskRecord() = default;
 
-MessageLoop::HandlerRecord::HandlerRecord(mx_handle_t object,
-                                          mx_signals_t trigger,
-                                          mx_time_t deadline,
+MessageLoop::HandlerRecord::HandlerRecord(zx_handle_t object,
+                                          zx_signals_t trigger,
+                                          zx_time_t deadline,
                                           MessageLoop* loop,
                                           MessageLoopHandler* handler,
                                           HandlerKey key)
@@ -237,12 +237,12 @@ MessageLoop::HandlerRecord::~HandlerRecord() = default;
 
 async_wait_result_t MessageLoop::HandlerRecord::Handle(
     async_t* async,
-    mx_status_t status,
-    const mx_packet_signal_t* signal) {
+    zx_status_t status,
+    const zx_packet_signal_t* signal) {
   FXL_DCHECK(!loop_->current_handler_);
   loop_->current_handler_ = this;
 
-  if (status == MX_OK) {
+  if (status == ZX_OK) {
     handler_->OnHandleReady(wait_.object(), signal->observed, signal->count);
   } else {
     handler_->OnHandleError(wait_.object(), status);

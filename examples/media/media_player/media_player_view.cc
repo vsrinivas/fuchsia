@@ -94,7 +94,7 @@ MediaPlayerView::MediaPlayerView(
     mozart::ViewOwnerPtr video_view_owner;
     video_renderer_->CreateView(video_view_owner.NewRequest());
 
-    mx::eventpair video_host_import_token;
+    zx::eventpair video_host_import_token;
     video_host_node_.reset(new scenic_lib::EntityNode(session()));
     video_host_node_->ExportAsRequest(&video_host_import_token);
     parent_node().AddChild(*video_host_node_);

@@ -22,7 +22,7 @@ class ImportNode final : public Resource {
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
-  ImportNode(scenic_lib::Session* session, mx::eventpair token);
+  ImportNode(scenic_lib::Session* session, zx::eventpair token);
   void AddChild(const StrokeGroupPtr& stroke_group);
 
   // Resource ID shared with scene manager.

@@ -6,12 +6,12 @@
 
 #include <fcntl.h>
 #include <launchpad/launchpad.h>
-#include <magenta/process.h>
-#include <magenta/processargs.h>
-#include <magenta/status.h>
-#include <mx/process.h>
-#include <mxio/namespace.h>
-#include <mxio/util.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <zircon/status.h>
+#include <zx/process.h>
+#include <fdio/namespace.h>
+#include <fdio/util.h>
 #include <unistd.h>
 
 #include <utility>
@@ -29,8 +29,8 @@
 namespace app {
 namespace {
 
-constexpr mx_rights_t kChildJobRights =
-    MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
+constexpr zx_rights_t kChildJobRights =
+    ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE;
 
 constexpr char kFuchsiaMagic[] = "#!fuchsia ";
 constexpr size_t kFuchsiaMagicLength = sizeof(kFuchsiaMagic) - 1;
@@ -55,10 +55,10 @@ std::vector<const char*> GetArgv(const ApplicationLaunchInfoPtr& launch_info) {
   return argv;
 }
 
-mx::channel TakeAppServices(ApplicationLaunchInfoPtr& launch_info) {
+zx::channel TakeAppServices(ApplicationLaunchInfoPtr& launch_info) {
   if (launch_info->services)
     return launch_info->services.PassChannel();
-  return mx::channel();
+  return zx::channel();
 }
 
 // The very first nested environment process we create gets the
@@ -67,11 +67,11 @@ mx::channel TakeAppServices(ApplicationLaunchInfoPtr& launch_info) {
 // reorganizing the boot process so that the root environment's services are
 // the ones we want to publish.
 void PublishServicesForFirstNestedEnvironment(ServiceProviderBridge* services) {
-  static mx_handle_t request = mx_get_startup_handle(PA_SERVICE_REQUEST);
-  if (request == MX_HANDLE_INVALID)
+  static zx_handle_t request = zx_get_startup_handle(PA_SERVICE_REQUEST);
+  if (request == ZX_HANDLE_INVALID)
     return;
-  services->ServeDirectory(mx::channel(request));
-  request = MX_HANDLE_INVALID;
+  services->ServeDirectory(zx::channel(request));
+  request = ZX_HANDLE_INVALID;
 }
 
 std::string GetLabelFromURL(const std::string& url) {
@@ -81,16 +81,16 @@ std::string GetLabelFromURL(const std::string& url) {
   return url.substr(last_slash + 1);
 }
 
-mx::process Launch(const mx::job& job,
+zx::process Launch(const zx::job& job,
                    const std::string& label,
                    uint32_t what,
                    const std::vector<const char*>& argv,
-                   mxio_flat_namespace_t* flat,
-                   mx::channel app_services,
-                   mx::channel service_request,
-                   mx::vmo data) {
+                   fdio_flat_namespace_t* flat,
+                   zx::channel app_services,
+                   zx::channel service_request,
+                   zx::vmo data) {
   std::vector<uint32_t> ids;
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
 
   if (app_services) {
     ids.push_back(PA_APP_SERVICES);
@@ -107,7 +107,7 @@ mx::process Launch(const mx::job& job,
     handles.push_back(flat->handle[i]);
   }
 
-  data.set_property(MX_PROP_NAME, label.data(), label.size());
+  data.set_property(ZX_PROP_NAME, label.data(), label.size());
 
   // TODO(abarth): We probably shouldn't pass environ, but currently this
   // is very useful as a way to tell the loader in the child process to
@@ -120,49 +120,49 @@ mx::process Launch(const mx::job& job,
   launchpad_add_handles(lp, handles.size(), handles.data(), ids.data());
   launchpad_load_from_vmo(lp, data.release());
 
-  mx_handle_t proc;
+  zx_handle_t proc;
   const char* errmsg;
   auto status = launchpad_go(lp, &proc, &errmsg);
-  if (status != MX_OK) {
+  if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Cannot run executable " << label << " due to error "
-                   << status << " (" << mx_status_get_string(status)
+                   << status << " (" << zx_status_get_string(status)
                    << "): " << errmsg;
-    return mx::process();
+    return zx::process();
   }
-  return mx::process(proc);
+  return zx::process(proc);
 }
 
-mx::process CreateProcess(const mx::job& job,
+zx::process CreateProcess(const zx::job& job,
                           ApplicationPackagePtr package,
                           ApplicationLaunchInfoPtr launch_info,
-                          mxio_flat_namespace_t* flat) {
+                          fdio_flat_namespace_t* flat) {
   return Launch(job, GetLabelFromURL(launch_info->url),
-                LP_CLONE_MXIO_CWD | LP_CLONE_MXIO_STDIO | LP_CLONE_ENVIRON,
+                LP_CLONE_FDIO_CWD | LP_CLONE_FDIO_STDIO | LP_CLONE_ENVIRON,
                 GetArgv(launch_info), flat, TakeAppServices(launch_info),
                 std::move(launch_info->service_request),
                 std::move(package->data));
 }
 
-mx::process CreateSandboxedProcess(const mx::job& job,
-                                   mx::vmo data,
+zx::process CreateSandboxedProcess(const zx::job& job,
+                                   zx::vmo data,
                                    ApplicationLaunchInfoPtr launch_info,
-                                   mxio_flat_namespace_t* flat) {
+                                   fdio_flat_namespace_t* flat) {
   if (!data)
-    return mx::process();
+    return zx::process();
 
   return Launch(job, GetLabelFromURL(launch_info->url),
-                LP_CLONE_MXIO_STDIO | LP_CLONE_ENVIRON, GetArgv(launch_info),
+                LP_CLONE_FDIO_STDIO | LP_CLONE_ENVIRON, GetArgv(launch_info),
                 flat, TakeAppServices(launch_info),
                 std::move(launch_info->service_request), std::move(data));
 }
 
-LaunchType Classify(const mx::vmo& data, std::string* runner) {
+LaunchType Classify(const zx::vmo& data, std::string* runner) {
   if (!data)
     return LaunchType::kProcess;
   std::string hint(kMaxShebangLength, '\0');
   size_t count;
-  mx_status_t status = data.read(&hint[0], 0, hint.length(), &count);
-  if (status != MX_OK)
+  zx_status_t status = data.read(&hint[0], 0, hint.length(), &count);
+  if (status != ZX_OK)
     return LaunchType::kProcess;
   if (memcmp(hint.data(), &archive::kMagic, sizeof(archive::kMagic)) == 0)
     return LaunchType::kArchive;
@@ -189,10 +189,10 @@ ApplicationEnvironmentImpl::ApplicationEnvironmentImpl(
 
   // parent_ is null if this is the root application environment. if so, we
   // derive from the application manager's job.
-  mx_handle_t parent_job =
-      parent_ != nullptr ? parent_->job_.get() : mx_job_default();
-  FXL_CHECK(mx::job::create(parent_job, 0u, &job_) == MX_OK);
-  FXL_CHECK(job_.duplicate(kChildJobRights, &job_for_child_) == MX_OK);
+  zx_handle_t parent_job =
+      parent_ != nullptr ? parent_->job_.get() : zx_job_default();
+  FXL_CHECK(zx::job::create(parent_job, 0u, &job_) == ZX_OK);
+  FXL_CHECK(job_.duplicate(kChildJobRights, &job_for_child_) == ZX_OK);
 
   // Get the ApplicationLoader service up front.
   ServiceProviderPtr service_provider;
@@ -331,7 +331,7 @@ void ApplicationEnvironmentImpl::CreateApplicationWithRunner(
     ApplicationLaunchInfoPtr launch_info,
     std::string runner,
     fidl::InterfaceRequest<ApplicationController> controller) {
-  mx::channel svc = services_.OpenAsDirectory();
+  zx::channel svc = services_.OpenAsDirectory();
   if (!svc)
     return;
 
@@ -362,7 +362,7 @@ void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
     ApplicationPackagePtr package,
     ApplicationLaunchInfoPtr launch_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
-  mx::channel svc = services_.OpenAsDirectory();
+  zx::channel svc = services_.OpenAsDirectory();
   if (!svc)
     return;
 
@@ -377,7 +377,7 @@ void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
   builder.AddFlatNamespace(std::move(launch_info->flat_namespace));
 
   const std::string url = launch_info->url;  // Keep a copy before moving it.
-  mx::process process = CreateProcess(job_for_child_, std::move(package),
+  zx::process process = CreateProcess(job_for_child_, std::move(package),
                                       std::move(launch_info), builder.Build());
 
   if (process) {
@@ -394,10 +394,10 @@ void ApplicationEnvironmentImpl::CreateApplicationFromArchive(
     fidl::InterfaceRequest<ApplicationController> controller) {
   auto file_system =
       std::make_unique<archive::FileSystem>(std::move(package->data));
-  mx::channel pkg = file_system->OpenAsDirectory();
+  zx::channel pkg = file_system->OpenAsDirectory();
   if (!pkg)
     return;
-  mx::channel svc = services_.OpenAsDirectory();
+  zx::channel svc = services_.OpenAsDirectory();
   if (!svc)
     return;
 
@@ -461,7 +461,7 @@ void ApplicationEnvironmentImpl::CreateApplicationFromArchive(
                              std::move(controller));
   } else {
     const std::string url = launch_info->url;  // Keep a copy before moving it.
-    mx::process process = CreateSandboxedProcess(
+    zx::process process = CreateSandboxedProcess(
         job_for_child_, file_system->GetFileAsVMO(kAppPath),
         std::move(launch_info), builder.Build());
 

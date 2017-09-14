@@ -21,7 +21,7 @@ View::View(app::ApplicationContext* application_context,
       // create a Shadertoy.  What is the best way to achieve this?
       shadertoy_factory_(application_context_->ConnectToEnvironmentService<
                          mozart::example::ShadertoyFactory>()),
-      start_time_(mx_time_get(MX_CLOCK_MONOTONIC)) {
+      start_time_(zx_time_get(ZX_CLOCK_MONOTONIC)) {
   shadertoy_factory_.set_connection_error_handler([this] {
     FXL_LOG(INFO) << "Lost connection to ShadertoyFactory.";
     loop_->QuitNow();

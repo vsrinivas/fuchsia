@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mx/socket.h>
+#include <zx/socket.h>
 
 #include <string>
 
@@ -13,8 +13,8 @@ namespace fsl {
 namespace {
 
 TEST(SocketAndString, BlockingCopy) {
-  mx::socket socket0, socket1;
-  EXPECT_EQ(MX_OK, mx::socket::create(0, &socket0, &socket1));
+  zx::socket socket0, socket1;
+  EXPECT_EQ(ZX_OK, zx::socket::create(0, &socket0, &socket1));
 
   EXPECT_TRUE(BlockingCopyFromString("Payload", socket0));
   socket0.reset();
@@ -23,7 +23,7 @@ TEST(SocketAndString, BlockingCopy) {
   EXPECT_TRUE(BlockingCopyToString(std::move(socket1), &result));
   EXPECT_EQ(result, "Payload");
 
-  mx::socket socket = WriteStringToSocket("Another payload");
+  zx::socket socket = WriteStringToSocket("Another payload");
 
   EXPECT_TRUE(BlockingCopyToString(std::move(socket), &result));
   EXPECT_EQ(result, "Another payload");

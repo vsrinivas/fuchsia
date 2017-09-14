@@ -20,7 +20,7 @@ class RequestorAgent : public MessageTransceiver {
  public:
   static std::unique_ptr<RequestorAgent> Create(const SocketAddress& address,
                                                 const std::string& service_name,
-                                                mx::channel local_channel,
+                                                zx::channel local_channel,
                                                 NetConnectorImpl* owner);
 
   ~RequestorAgent() override;
@@ -36,11 +36,11 @@ class RequestorAgent : public MessageTransceiver {
  private:
   RequestorAgent(fxl::UniqueFD socket_fd,
                  const std::string& service_name,
-                 mx::channel local_channel,
+                 zx::channel local_channel,
                  NetConnectorImpl* owner);
 
   std::string service_name_;
-  mx::channel local_channel_;
+  zx::channel local_channel_;
   NetConnectorImpl* owner_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RequestorAgent);

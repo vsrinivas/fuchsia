@@ -6,38 +6,38 @@
 
 #include <string>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #include "lib/fxl/logging.h"
 
 namespace fidl {
 namespace test {
 
-bool WriteTextMessage(const mx::channel& handle,
+bool WriteTextMessage(const zx::channel& handle,
                       const std::string& text) {
-  mx_status_t rv =
+  zx_status_t rv =
       handle.write(0, text.data(), static_cast<uint32_t>(text.size()),
                       nullptr, 0u);
-  return rv == MX_OK;
+  return rv == ZX_OK;
 }
 
-bool ReadTextMessage(const mx::channel& handle, std::string* text) {
-  mx_status_t rv;
+bool ReadTextMessage(const zx::channel& handle, std::string* text) {
+  zx_status_t rv;
   bool did_wait = false;
 
   uint32_t num_bytes = 0u;
   uint32_t num_handles = 0u;
   for (;;) {
     rv = handle.read(0, nullptr, 0, &num_bytes, nullptr, 0, &num_handles);
-    if (rv == MX_ERR_SHOULD_WAIT) {
+    if (rv == ZX_ERR_SHOULD_WAIT) {
       if (did_wait) {
         FXL_DCHECK(false);  // Looping endlessly!?
         return false;
       }
-      rv = mx_object_wait_one(handle.get(),
-                              MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
-                              MX_TIME_INFINITE, nullptr);
-      if (rv != MX_OK)
+      rv = zx_object_wait_one(handle.get(),
+                              ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                              ZX_TIME_INFINITE, nullptr);
+      if (rv != ZX_OK)
         return false;
       did_wait = true;
     } else {
@@ -49,13 +49,13 @@ bool ReadTextMessage(const mx::channel& handle, std::string* text) {
   text->resize(num_bytes);
   rv = handle.read(0, &text->at(0), num_bytes, &num_bytes,
                    nullptr, num_handles, &num_handles);
-  return rv == MX_OK;
+  return rv == ZX_OK;
 }
 
-bool DiscardMessage(const mx::channel& handle) {
-  mx_status_t rv = handle.read(MX_CHANNEL_READ_MAY_DISCARD,
+bool DiscardMessage(const zx::channel& handle) {
+  zx_status_t rv = handle.read(ZX_CHANNEL_READ_MAY_DISCARD,
                                nullptr, 0, nullptr, nullptr, 0, nullptr);
-  return rv == MX_OK;
+  return rv == ZX_OK;
 }
 
 }  // namespace test

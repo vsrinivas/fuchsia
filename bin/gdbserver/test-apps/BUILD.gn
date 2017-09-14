@@ -46,7 +46,7 @@ executable("syscall-test") {
   ]
 
   libs = [
-    "magenta",
+    "zircon",
   ]
 }
 

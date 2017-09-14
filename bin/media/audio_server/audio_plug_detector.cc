@@ -6,11 +6,11 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <magenta/compiler.h>
-#include <magenta/device/audio.h>
-#include <magenta/device/device.h>
-#include <magenta/device/vfs.h>
-#include <mx/channel.h>
+#include <zircon/compiler.h>
+#include <zircon/device/audio.h>
+#include <zircon/device/device.h>
+#include <zircon/device/vfs.h>
+#include <zx/channel.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
@@ -87,7 +87,7 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name) {
   }
 
   AudioOutputPtr new_output;
-  mx::channel channel;
+  zx::channel channel;
   ssize_t res;
 
   res = ioctl_audio_get_channel(dev_node.get(),

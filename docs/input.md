@@ -4,7 +4,7 @@ This document describes how the input system works inside Mozart.
 
 ## Devices
 
-Magenta provides access to devices through the file system under
+Zircon provides access to devices through the file system under
 `/dev/class/input`. Those are HID devices and there are associated ioctls to
 retrieve the description report and simple reads on those devices will return
 the event reports.

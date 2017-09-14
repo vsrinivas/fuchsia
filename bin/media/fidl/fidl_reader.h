@@ -7,7 +7,7 @@
 #include <atomic>
 #include <memory>
 
-#include <mx/socket.h>
+#include <zx/socket.h>
 
 #include "lib/media/fidl/seeking_reader.fidl.h"
 #include "garnet/bin/media/demux/reader.h"
@@ -38,8 +38,8 @@ class FidlReader : public Reader,
 
  private:
   // Calls ReadFromSocket.
-  static void ReadFromSocketStatic(mx_status_t status,
-                                   mx_signals_t pending,
+  static void ReadFromSocketStatic(zx_status_t status,
+                                   zx_signals_t pending,
                                    uint64_t count,
                                    void* closure);
 
@@ -56,7 +56,7 @@ class FidlReader : public Reader,
   void CompleteReadAt(Result result, size_t bytes_read = 0);
 
   // Shuts down the consumer handle and calls CompleteReadAt.
-  void FailReadAt(mx_status_t status);
+  void FailReadAt(zx_status_t status);
 
   SeekingReaderPtr seeking_reader_;
   Result result_ = Result::kOk;
@@ -71,7 +71,7 @@ class FidlReader : public Reader,
   size_t read_at_bytes_to_read_;
   size_t read_at_bytes_remaining_;
   ReadAtCallback read_at_callback_;
-  mx::socket socket_;
+  zx::socket socket_;
   size_t socket_position_ = kUnknownSize;
   FidlAsyncWaitID wait_id_ = 0;
 };

@@ -61,12 +61,12 @@ TEST(SocketDrainer, ShutdownRead) {
   MessageLoop message_loop;
   Client client([] {}, [&message_loop] { message_loop.QuitNow(); });
   SocketDrainer drainer(&client);
-  mx::socket socket1, socket2;
-  ASSERT_EQ(MX_OK, mx::socket::create(0u, &socket1, &socket2));
+  zx::socket socket1, socket2;
+  ASSERT_EQ(ZX_OK, zx::socket::create(0u, &socket1, &socket2));
   drainer.Start(std::move(socket2));
   char buf[] = {'H', 'e', 'l', 'l', 'o'};
   socket1.write(0u, buf, sizeof(buf), nullptr);
-  socket1.write(MX_SOCKET_SHUTDOWN_WRITE, nullptr, 0u, nullptr);
+  socket1.write(ZX_SOCKET_SHUTDOWN_WRITE, nullptr, 0u, nullptr);
   message_loop.Run();
   EXPECT_EQ("Hello", client.GetValue());
 }

@@ -42,7 +42,7 @@ void ServiceProviderImpl::RemoveServiceForName(
 }
 
 void ServiceProviderImpl::ConnectToService(const fidl::String& service_name,
-                                           mx::channel client_handle) {
+                                           zx::channel client_handle) {
   auto it = name_to_service_connector_.find(service_name);
   if (it != name_to_service_connector_.end())
     it->second(std::move(client_handle));
@@ -64,7 +64,7 @@ void ServiceProviderImpl::SetDefaultServiceProvider(
 
   default_service_connector_ =
       fxl::MakeCopyable([provider = std::move(provider)](
-          std::string service_name, mx::channel client_handle) {
+          std::string service_name, zx::channel client_handle) {
         provider->ConnectToService(service_name, std::move(client_handle));
       });
 }

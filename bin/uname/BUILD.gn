@@ -10,7 +10,7 @@ executable("uname") {
   ]
 
   libs = [
-    "magenta",
+    "zircon",
   ]
 }
 

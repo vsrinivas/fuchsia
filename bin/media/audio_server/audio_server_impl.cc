@@ -42,7 +42,7 @@ AudioServerImpl::AudioServerImpl(std::unique_ptr<app::ApplicationContext> applic
   // restructuring.  We will cross that bridge when we have the TBD way to deal
   // with realtime requirements in place.
   task_runner_->PostTask(
-      []() { mx_thread_set_priority(24 /* HIGH_PRIORITY in LK */); });
+      []() { zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */); });
 
   // Set up our output manager.
   MediaResult res = output_manager_.Init();

@@ -40,7 +40,7 @@ executable("service") {
     "//garnet/public/lib/fsl",
     "//garnet/lib/escher/escher",
     "//garnet/lib/escher/examples/common",
-    "//magenta/system/ulib/trace-provider",
+    "//zircon/system/ulib/trace-provider",
     "//magma:vulkan",
   ]
 

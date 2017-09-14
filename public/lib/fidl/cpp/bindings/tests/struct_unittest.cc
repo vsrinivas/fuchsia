@@ -6,7 +6,7 @@
 
 #include <type_traits>
 
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/internal/fixed_buffer.h"
@@ -46,8 +46,8 @@ MultiVersionStructPtr MakeMultiVersionStruct() {
   output->f_array[0] = 10;
   output->f_array[1] = 9;
   output->f_array[2] = 8;
-  mx::channel handle0, handle1;
-  mx::channel::create(0, &handle0, &handle1);
+  zx::channel handle0, handle1;
+  zx::channel::create(0, &handle0, &handle1);
   output->f_message_pipe = std::move(handle0);
   output->f_int16 = 42;
 
@@ -65,7 +65,7 @@ U SerializeAndDeserialize(T input) {
   EXPECT_EQ(fidl::internal::ValidationError::NONE,
             Serialize_(input.get(), &buf, &data));
 
-  std::vector<mx_handle_t> handles;
+  std::vector<zx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
 
   // Set the subsequent area to a special value, so that we can find out if we
@@ -357,8 +357,8 @@ TEST(StructTest, Versioning_OldToNew) {
     input->f_array[0] = 10;
     input->f_array[1] = 9;
     input->f_array[2] = 8;
-    mx::channel handle0, handle1;
-    mx::channel::create(0, &handle0, &handle1);
+    zx::channel handle0, handle1;
+    zx::channel::create(0, &handle0, &handle1);
     input->f_message_pipe = std::move(handle0);
 
     MultiVersionStructPtr expected_output(MultiVersionStruct::New());
@@ -370,7 +370,7 @@ TEST(StructTest, Versioning_OldToNew) {
     expected_output->f_array[1] = 9;
     expected_output->f_array[2] = 8;
     // Save the raw handle value separately so that we can compare later.
-    mx_handle_t expected_handle = input->f_message_pipe.get();
+    zx_handle_t expected_handle = input->f_message_pipe.get();
 
     MultiVersionStructPtr output =
         SerializeAndDeserialize<MultiVersionStructPtr>(std::move(input));
@@ -394,7 +394,7 @@ TEST(StructTest, Versioning_NewToOld) {
     expected_output->f_array[1] = 9;
     expected_output->f_array[2] = 8;
     // Save the raw handle value separately so that we can compare later.
-    mx_handle_t expected_handle = input->f_message_pipe.get();
+    zx_handle_t expected_handle = input->f_message_pipe.get();
 
     MultiVersionStructV7Ptr output =
         SerializeAndDeserialize<MultiVersionStructV7Ptr>(std::move(input));

@@ -16,7 +16,7 @@ class App {
  public:
   App() : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     if (!font_provider_.LoadFonts())
-      exit(MX_ERR_UNAVAILABLE);
+      exit(ZX_ERR_UNAVAILABLE);
     context_->outgoing_services()->AddService<FontProvider>(
         [this](fidl::InterfaceRequest<FontProvider> request) {
           font_provider_.AddBinding(std::move(request));

@@ -168,17 +168,17 @@ void NetworkServiceImpl::CreateURLLoader(
   container->Start();
 }
 
-void NetworkServiceImpl::GetCookieStore(mx::channel cookie_store) {
+void NetworkServiceImpl::GetCookieStore(zx::channel cookie_store) {
   FXL_NOTIMPLEMENTED();
 }
 
-void NetworkServiceImpl::CreateWebSocket(mx::channel socket) {
+void NetworkServiceImpl::CreateWebSocket(zx::channel socket) {
   FXL_NOTIMPLEMENTED();
 }
 
 void NetworkServiceImpl::CreateTCPBoundSocket(
     netstack::NetAddressPtr local_address,
-    mx::channel bound_socket,
+    zx::channel bound_socket,
     const CreateTCPBoundSocketCallback& callback) {
   FXL_NOTIMPLEMENTED();
   callback(MakeNetworkError(network::NETWORK_ERR_NOT_IMPLEMENTED), nullptr);
@@ -186,31 +186,31 @@ void NetworkServiceImpl::CreateTCPBoundSocket(
 
 void NetworkServiceImpl::CreateTCPConnectedSocket(
     netstack::NetAddressPtr remote_address,
-    mx::socket send_stream,
-    mx::socket receive_stream,
-    mx::channel client_socket,
+    zx::socket send_stream,
+    zx::socket receive_stream,
+    zx::channel client_socket,
     const CreateTCPConnectedSocketCallback& callback) {
   FXL_NOTIMPLEMENTED();
   callback(MakeNetworkError(network::NETWORK_ERR_NOT_IMPLEMENTED), nullptr);
 }
 
-void NetworkServiceImpl::CreateUDPSocket(mx::channel request) {
+void NetworkServiceImpl::CreateUDPSocket(zx::channel request) {
   FXL_NOTIMPLEMENTED();
 }
 
 void NetworkServiceImpl::CreateHttpServer(
     netstack::NetAddressPtr local_address,
-    mx::channel delegate,
+    zx::channel delegate,
     const CreateHttpServerCallback& callback) {
   FXL_NOTIMPLEMENTED();
   callback(MakeNetworkError(network::NETWORK_ERR_NOT_IMPLEMENTED), nullptr);
 }
 
-void NetworkServiceImpl::RegisterURLLoaderInterceptor(mx::channel factory) {
+void NetworkServiceImpl::RegisterURLLoaderInterceptor(zx::channel factory) {
   FXL_NOTIMPLEMENTED();
 }
 
-void NetworkServiceImpl::CreateHostResolver(mx::channel host_resolver) {
+void NetworkServiceImpl::CreateHostResolver(zx::channel host_resolver) {
   FXL_NOTIMPLEMENTED();
 }
 

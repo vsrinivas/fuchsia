@@ -7,9 +7,9 @@ import("//packages/package.gni")
 group("fsl") {
   public_deps = [
     ":fsl_lib",
-    "//magenta/system/ulib/fbl",
-    "//magenta/system/ulib/fs",
-    "//magenta/system/ulib/mx",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/zx",
   ]
 }
 

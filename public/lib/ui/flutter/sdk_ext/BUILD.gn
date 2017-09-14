@@ -14,6 +14,6 @@ source_set("sdk_ext") {
     "//garnet/public/dart-pkg/zircon",
     "//garnet/public/lib/fxl",
     "//lib/tonic",
-    "//magenta/system/ulib/mx",
+    "//zircon/system/ulib/zx",
   ]
 }

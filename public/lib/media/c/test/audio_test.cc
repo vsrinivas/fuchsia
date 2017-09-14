@@ -4,7 +4,7 @@
 
 #include <vector>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #include "gtest/gtest.h"
 
@@ -28,11 +28,11 @@ int audio_manager_create_output_stream(
     fuchsia_audio_output_stream** stream_out);
 int audio_output_stream_free(fuchsia_audio_output_stream* stream);
 int audio_output_stream_get_min_delay(fuchsia_audio_output_stream* stream,
-                                      mx_duration_t* delay_nsec_out);
+                                      zx_duration_t* delay_nsec_out);
 int audio_output_stream_write(fuchsia_audio_output_stream* stream,
                               float* sample_buffer,
                               int num_samples,
-                              mx_time_t pres_time);
+                              zx_time_t pres_time);
 }
 
 namespace media {
@@ -40,7 +40,7 @@ namespace client_test {
 
 constexpr char UNKNOWN_DEVICE_STR[] = "unknown_device_id";
 constexpr char* UNKNOWN_DEVICE_ID = (char* const)UNKNOWN_DEVICE_STR;
-constexpr mx_duration_t TEST_DELAY_VALUE = 0xDEADBEEFABADD00D;
+constexpr zx_duration_t TEST_DELAY_VALUE = 0xDEADBEEFABADD00D;
 constexpr int WRITE_BUFFER_NUM_SAMPLES = 16 * 3 * 5 * 7;  // Mods w/num_channels
 
 //
@@ -78,10 +78,10 @@ TEST(media_client, audio_manager) {
   ASSERT_NE(mgr3, mgr4);
 
   // Freeing audio_managers out of sequence
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(mgr2));
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(mgr1));
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(mgr4));
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(mgr3));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(mgr2));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(mgr1));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(mgr4));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(mgr3));
 }
 
 TEST(media_client, audio_manager_errors) {
@@ -90,13 +90,13 @@ TEST(media_client, audio_manager_errors) {
 
   // Free an unknown audio_manager
   manager = (fuchsia_audio_manager*)&local_var;
-  ASSERT_EQ(MX_ERR_BAD_HANDLE, fuchsia_audio_manager_free(manager));
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE, fuchsia_audio_manager_free(manager));
 
   // Double-free an audio_manager
   manager = fuchsia_audio_manager_create();
   ASSERT_TRUE(manager);
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(manager));
-  ASSERT_EQ(MX_ERR_BAD_HANDLE, fuchsia_audio_manager_free(manager));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(manager));
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE, fuchsia_audio_manager_free(manager));
 }
 
 TEST(media_client, audio_device_descs) {
@@ -138,7 +138,7 @@ TEST(media_client, audio_device_descs) {
   ASSERT_EQ(0, dev_list[num_devices].name[0]);
   ASSERT_EQ(0, dev_list[num_devices].id[0]);
 
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(manager));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(manager));
 }
 
 TEST(media_client, audio_device_descs_errors) {
@@ -149,25 +149,25 @@ TEST(media_client, audio_device_descs_errors) {
   fuchsia_audio_device_description dev_desc;
   fuchsia_audio_manager* not_an_audio_manager =
       (fuchsia_audio_manager*)&dev_desc;
-  ASSERT_EQ(MX_ERR_BAD_HANDLE, fuchsia_audio_manager_get_output_devices(
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE, fuchsia_audio_manager_get_output_devices(
                                    not_an_audio_manager, &dev_desc, 1));
   ASSERT_EQ(0, dev_desc.name[0]);
 
   // get dev_desc with NULL device_description buffer
-  ASSERT_EQ(MX_ERR_INVALID_ARGS,
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
             fuchsia_audio_manager_get_output_devices(manager, NULL, 1));
 
   // get dev_desc with zero num_devices
-  ASSERT_EQ(MX_ERR_INVALID_ARGS,
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
             fuchsia_audio_manager_get_output_devices(manager, &dev_desc, 0));
   ASSERT_EQ(0, dev_desc.name[0]);
 
   // get dev_desc with negative num_devices
-  ASSERT_EQ(MX_ERR_OUT_OF_RANGE,
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE,
             fuchsia_audio_manager_get_output_devices(manager, &dev_desc, -1));
   ASSERT_EQ(0, dev_desc.name[0]);
 
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(manager));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(manager));
 }
 
 TEST(media_client, audio_device_default_params) {
@@ -183,14 +183,14 @@ TEST(media_client, audio_device_default_params) {
 
   std::vector<fuchsia_audio_parameters> param_list(num_devices);
   for (int dev_num = 0; dev_num < num_devices; ++dev_num) {
-    ASSERT_EQ(MX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
+    ASSERT_EQ(ZX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
                          manager, dev_list[dev_num].id, &param_list[dev_num]));
     ASSERT_NE(0, param_list[dev_num].sample_rate);
     ASSERT_NE(0, param_list[dev_num].num_channels);
     ASSERT_NE(0, param_list[dev_num].buffer_size);
   }
 
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(manager));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(manager));
 }
 
 TEST(media_client, audio_device_default_params_errors) {
@@ -207,32 +207,32 @@ TEST(media_client, audio_device_default_params_errors) {
   // Get device defaults with bad audio_manager
   fuchsia_audio_parameters params;
   fuchsia_audio_manager* not_an_audio_manager = (fuchsia_audio_manager*)&params;
-  ASSERT_EQ(MX_ERR_BAD_HANDLE,
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE,
             fuchsia_audio_manager_get_output_device_default_parameters(
                 not_an_audio_manager, dev_list[0].id, &params));
 
   // Get device defaults with NULL device_id
-  ASSERT_EQ(MX_ERR_INVALID_ARGS,
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
             fuchsia_audio_manager_get_output_device_default_parameters(
                 manager, NULL, &params));
 
   // Get device defaults with unknown device_id
-  ASSERT_EQ(MX_ERR_NOT_FOUND,
+  ASSERT_EQ(ZX_ERR_NOT_FOUND,
             fuchsia_audio_manager_get_output_device_default_parameters(
                 // manager, &"mystery_device_id", &params));
                 manager, UNKNOWN_DEVICE_ID, &params));
 
   // Get device defaults with empty device_id
-  ASSERT_EQ(MX_ERR_INVALID_ARGS,
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
             fuchsia_audio_manager_get_output_device_default_parameters(
                 manager, (char*)"", &params));
 
   // Get device defaults with NULL params
-  ASSERT_EQ(MX_ERR_INVALID_ARGS,
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
             fuchsia_audio_manager_get_output_device_default_parameters(
                 manager, dev_list[0].id, NULL));
 
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(manager));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(manager));
 }
 
 TEST(media_client, audio_streams) {
@@ -250,9 +250,9 @@ TEST(media_client, audio_streams) {
   std::vector<fuchsia_audio_output_stream*> stream_list(num_devices);
 
   for (int dev_num = 0; dev_num < num_devices; ++dev_num) {
-    ASSERT_EQ(MX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
+    ASSERT_EQ(ZX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
                          manager, dev_list[dev_num].id, &param_list[dev_num]));
-    ASSERT_EQ(MX_OK, fuchsia_audio_manager_create_output_stream(
+    ASSERT_EQ(ZX_OK, fuchsia_audio_manager_create_output_stream(
                          manager, dev_list[dev_num].id, &param_list[dev_num],
                          &stream_list[dev_num]));
     ASSERT_TRUE(stream_list[dev_num]);
@@ -260,9 +260,9 @@ TEST(media_client, audio_streams) {
 
   // Open all the streams before we start freeing any of them
   for (int dev_num = 0; dev_num < num_devices; ++dev_num) {
-    ASSERT_EQ(MX_OK, fuchsia_audio_output_stream_free(stream_list[dev_num]));
+    ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_free(stream_list[dev_num]));
   }
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(manager));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(manager));
 }
 
 TEST(media_client, audio_stream_default) {
@@ -276,23 +276,23 @@ TEST(media_client, audio_stream_default) {
   ASSERT_EQ(1, fuchsia_audio_manager_get_output_devices(manager, &dev_desc, 1));
 
   fuchsia_audio_parameters params;
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
                        manager, dev_desc.id, &params));
 
   // Open stream with NULL device_id (default)
   fuchsia_audio_output_stream* stream = NULL;
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_create_output_stream(
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_create_output_stream(
                        manager, NULL, &params, &stream));
   ASSERT_TRUE(stream);
-  ASSERT_EQ(MX_OK, fuchsia_audio_output_stream_free(stream));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_free(stream));
 
   // Open stream with empty device_id (default)
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_create_output_stream(
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_create_output_stream(
                        manager, (char*)"", &params, &stream));
   ASSERT_TRUE(stream);
-  ASSERT_EQ(MX_OK, fuchsia_audio_output_stream_free(stream));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_free(stream));
 
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(manager));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(manager));
 }
 
 TEST(media_client, audio_stream_params) {
@@ -313,7 +313,7 @@ TEST(media_client, audio_stream_params) {
     params.buffer_size = 128;
 
     fuchsia_audio_output_stream* stream1 = NULL;
-    ASSERT_EQ(MX_OK, fuchsia_audio_manager_create_output_stream(
+    ASSERT_EQ(ZX_OK, fuchsia_audio_manager_create_output_stream(
                          manager, dev_list[dev_num].id, &params, &stream1));
     ASSERT_TRUE(stream1);
 
@@ -322,14 +322,14 @@ TEST(media_client, audio_stream_params) {
     params.buffer_size = 12800;
 
     fuchsia_audio_output_stream* stream2 = NULL;
-    ASSERT_EQ(MX_OK, fuchsia_audio_manager_create_output_stream(
+    ASSERT_EQ(ZX_OK, fuchsia_audio_manager_create_output_stream(
                          manager, dev_list[dev_num].id, &params, &stream2));
     ASSERT_TRUE(stream2);
 
-    ASSERT_EQ(MX_OK, fuchsia_audio_output_stream_free(stream1));
-    ASSERT_EQ(MX_OK, fuchsia_audio_output_stream_free(stream2));
+    ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_free(stream1));
+    ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_free(stream2));
   }
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(manager));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(manager));
 }
 
 TEST(media_client, audio_stream_errors) {
@@ -343,42 +343,42 @@ TEST(media_client, audio_stream_errors) {
   ASSERT_EQ(1, fuchsia_audio_manager_get_output_devices(manager, &dev_desc, 1));
 
   fuchsia_audio_parameters params;
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
                        manager, dev_desc.id, &params));
 
   fuchsia_audio_output_stream* stream = NULL;
   // Open stream with unknown audio_manager
   fuchsia_audio_manager* not_an_audio_manager =
       (fuchsia_audio_manager*)&dev_desc;
-  ASSERT_EQ(MX_ERR_BAD_HANDLE,
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE,
             fuchsia_audio_manager_create_output_stream(
                 not_an_audio_manager, dev_desc.id, &params, &stream));
   ASSERT_TRUE(NULL == stream);
 
   // Open stream with unknown device_id
-  ASSERT_EQ(MX_ERR_NOT_FOUND,
+  ASSERT_EQ(ZX_ERR_NOT_FOUND,
             fuchsia_audio_manager_create_output_stream(
                 manager, UNKNOWN_DEVICE_ID, &params, &stream));
   ASSERT_TRUE(NULL == stream);
 
   // Open stream with NULL stream_out
-  ASSERT_EQ(MX_ERR_INVALID_ARGS, fuchsia_audio_manager_create_output_stream(
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, fuchsia_audio_manager_create_output_stream(
                                      manager, dev_desc.id, &params, NULL));
 
   // Free unknown stream
   fuchsia_audio_output_stream* not_an_audio_output_stream =
       (fuchsia_audio_output_stream*)&params;
-  ASSERT_EQ(MX_ERR_BAD_HANDLE,
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE,
             fuchsia_audio_output_stream_free(not_an_audio_output_stream));
 
   // Double-free stream
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_create_output_stream(
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_create_output_stream(
                        manager, dev_desc.id, &params, &stream));
   ASSERT_TRUE(stream);
-  ASSERT_EQ(MX_OK, fuchsia_audio_output_stream_free(stream));
-  ASSERT_EQ(MX_ERR_BAD_HANDLE, fuchsia_audio_output_stream_free(stream));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_free(stream));
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE, fuchsia_audio_output_stream_free(stream));
 
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(manager));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(manager));
 }
 
 TEST(media_client, audio_stream_params_errors) {
@@ -392,19 +392,19 @@ TEST(media_client, audio_stream_params_errors) {
   ASSERT_EQ(1, fuchsia_audio_manager_get_output_devices(manager, &dev_desc, 1));
 
   fuchsia_audio_parameters params;
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
                        manager, dev_desc.id, &params));
 
   fuchsia_audio_output_stream* stream = NULL;
   // Open stream with NULL params
-  ASSERT_EQ(MX_ERR_INVALID_ARGS, fuchsia_audio_manager_create_output_stream(
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, fuchsia_audio_manager_create_output_stream(
                                      manager, dev_desc.id, NULL, &stream));
   ASSERT_TRUE(NULL == stream);
 
   // Open stream with too-high num_channels
   int saved = params.num_channels;
   params.num_channels = 3;
-  ASSERT_EQ(MX_ERR_OUT_OF_RANGE, fuchsia_audio_manager_create_output_stream(
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, fuchsia_audio_manager_create_output_stream(
                                      manager, dev_desc.id, &params, &stream));
   ASSERT_TRUE(NULL == stream);
   params.num_channels = saved;
@@ -412,18 +412,18 @@ TEST(media_client, audio_stream_params_errors) {
   // Open stream with too-low sample_rate
   saved = params.sample_rate;
   params.sample_rate = 7999;
-  ASSERT_EQ(MX_ERR_OUT_OF_RANGE, fuchsia_audio_manager_create_output_stream(
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, fuchsia_audio_manager_create_output_stream(
                                      manager, dev_desc.id, &params, &stream));
   ASSERT_TRUE(NULL == stream);
 
   // Open stream with too-high sample_rate
   params.sample_rate = 96001;
-  ASSERT_EQ(MX_ERR_OUT_OF_RANGE, fuchsia_audio_manager_create_output_stream(
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, fuchsia_audio_manager_create_output_stream(
                                      manager, dev_desc.id, &params, &stream));
   ASSERT_TRUE(NULL == stream);
   params.sample_rate = saved;
 
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(manager));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(manager));
 }
 
 TEST(media_client, audio_stream_delay) {
@@ -439,25 +439,25 @@ TEST(media_client, audio_stream_delay) {
 
   std::vector<fuchsia_audio_parameters> param_list(num_devices);
   std::vector<fuchsia_audio_output_stream*> stream_list(num_devices);
-  std::vector<mx_duration_t> delay_list(num_devices, 0);
+  std::vector<zx_duration_t> delay_list(num_devices, 0);
 
   for (int dev_num = 0; dev_num < num_devices; ++dev_num) {
-    ASSERT_EQ(MX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
+    ASSERT_EQ(ZX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
                          manager, dev_list[dev_num].id, &param_list[dev_num]));
-    ASSERT_EQ(MX_OK, fuchsia_audio_manager_create_output_stream(
+    ASSERT_EQ(ZX_OK, fuchsia_audio_manager_create_output_stream(
                          manager, dev_list[dev_num].id, &param_list[dev_num],
                          &stream_list[dev_num]));
     ASSERT_TRUE(stream_list[dev_num]);
-    ASSERT_EQ(MX_OK, fuchsia_audio_output_stream_get_min_delay(
+    ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_get_min_delay(
                          stream_list[dev_num], &delay_list[dev_num]));
     ASSERT_TRUE(delay_list[dev_num] > 0);
   }
 
   // Get all delays before starting to free them
   for (int dev_num = 0; dev_num < num_devices; ++dev_num) {
-    ASSERT_EQ(MX_OK, fuchsia_audio_output_stream_free(stream_list[dev_num]));
+    ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_free(stream_list[dev_num]));
   }
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(manager));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(manager));
 }
 
 TEST(media_client, audio_stream_delay_errors) {
@@ -471,28 +471,28 @@ TEST(media_client, audio_stream_delay_errors) {
   ASSERT_EQ(1, fuchsia_audio_manager_get_output_devices(manager, &dev_desc, 1));
 
   fuchsia_audio_parameters params;
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
                        manager, dev_desc.id, &params));
 
   fuchsia_audio_output_stream* stream = NULL;
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_create_output_stream(
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_create_output_stream(
                        manager, dev_desc.id, &params, &stream));
   ASSERT_TRUE(stream);
 
   // Get delay with null delay_out
-  ASSERT_EQ(MX_ERR_INVALID_ARGS,
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
             fuchsia_audio_output_stream_get_min_delay(stream, NULL));
 
   // Get delay with unknown stream - delay_nsec should not be touched
   fuchsia_audio_output_stream* not_an_audio_stream;
-  mx_duration_t delay_nsec = TEST_DELAY_VALUE;
+  zx_duration_t delay_nsec = TEST_DELAY_VALUE;
   not_an_audio_stream = (fuchsia_audio_output_stream*)&delay_nsec;
-  ASSERT_EQ(MX_ERR_BAD_HANDLE, fuchsia_audio_output_stream_get_min_delay(
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE, fuchsia_audio_output_stream_get_min_delay(
                                    not_an_audio_stream, &delay_nsec));
   ASSERT_EQ(delay_nsec, TEST_DELAY_VALUE);
 
-  ASSERT_EQ(MX_OK, fuchsia_audio_output_stream_free(stream));
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(manager));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_free(stream));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(manager));
 }
 
 TEST(media_client, audio_stream_write) {
@@ -508,7 +508,7 @@ TEST(media_client, audio_stream_write) {
 
   std::vector<fuchsia_audio_parameters> param_list(num_devices);
   std::vector<fuchsia_audio_output_stream*> stream_list(num_devices);
-  std::vector<mx_duration_t> delay_list(num_devices, 0);
+  std::vector<zx_duration_t> delay_list(num_devices, 0);
 
   std::vector<float> audio_buffer1(WRITE_BUFFER_NUM_SAMPLES);
   std::vector<float> audio_buffer2(WRITE_BUFFER_NUM_SAMPLES);
@@ -518,35 +518,35 @@ TEST(media_client, audio_stream_write) {
   populate_audio_buffer(&audio_buffer3);
 
   for (int dev_num = 0; dev_num < num_devices; ++dev_num) {
-    ASSERT_EQ(MX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
+    ASSERT_EQ(ZX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
                          manager, dev_list[dev_num].id, &param_list[dev_num]));
-    ASSERT_EQ(MX_OK, fuchsia_audio_manager_create_output_stream(
+    ASSERT_EQ(ZX_OK, fuchsia_audio_manager_create_output_stream(
                          manager, dev_list[dev_num].id, &param_list[dev_num],
                          &stream_list[dev_num]));
     ASSERT_TRUE(stream_list[dev_num]);
-    ASSERT_EQ(MX_OK, fuchsia_audio_output_stream_get_min_delay(
+    ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_get_min_delay(
                          stream_list[dev_num], &delay_list[dev_num]));
     ASSERT_TRUE(delay_list[dev_num] > 0);
 
-    mx_time_t pres_time =
-        (2 * delay_list[dev_num]) + mx_time_get(MX_CLOCK_MONOTONIC);
-    ASSERT_EQ(MX_OK, fuchsia_audio_output_stream_write(
+    zx_time_t pres_time =
+        (2 * delay_list[dev_num]) + zx_time_get(ZX_CLOCK_MONOTONIC);
+    ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_write(
                          stream_list[dev_num], audio_buffer1.data(),
                          WRITE_BUFFER_NUM_SAMPLES, pres_time));
-    ASSERT_EQ(MX_OK, fuchsia_audio_output_stream_write(
+    ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_write(
                          stream_list[dev_num], audio_buffer2.data(),
                          param_list[dev_num].num_channels,
                          FUCHSIA_AUDIO_NO_TIMESTAMP));
-    ASSERT_EQ(MX_OK, fuchsia_audio_output_stream_write(
+    ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_write(
                          stream_list[dev_num], audio_buffer3.data(),
                          param_list[dev_num].num_channels * 32,
                          FUCHSIA_AUDIO_NO_TIMESTAMP));
   }
 
   for (int dev_num = 0; dev_num < num_devices; ++dev_num) {
-    ASSERT_EQ(MX_OK, fuchsia_audio_output_stream_free(stream_list[dev_num]));
+    ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_free(stream_list[dev_num]));
   }
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(manager));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(manager));
 }
 
 TEST(media_client, audio_stream_write_errors) {
@@ -560,16 +560,16 @@ TEST(media_client, audio_stream_write_errors) {
   ASSERT_EQ(1, fuchsia_audio_manager_get_output_devices(manager, &dev_desc, 1));
 
   fuchsia_audio_parameters params;
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
                        manager, dev_desc.id, &params));
 
   fuchsia_audio_output_stream* stream = NULL;
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_create_output_stream(
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_create_output_stream(
                        manager, dev_desc.id, &params, &stream));
   ASSERT_TRUE(stream);
 
-  mx_duration_t delay_nsec = 0;
-  ASSERT_EQ(MX_OK,
+  zx_duration_t delay_nsec = 0;
+  ASSERT_EQ(ZX_OK,
             fuchsia_audio_output_stream_get_min_delay(stream, &delay_nsec));
   ASSERT_TRUE(delay_nsec > 0);
 
@@ -579,20 +579,20 @@ TEST(media_client, audio_stream_write_errors) {
   // Write with unknown stream
   fuchsia_audio_output_stream* not_an_audio_output_stream =
       (fuchsia_audio_output_stream*)manager;
-  mx_time_t pres_time = (delay_nsec * 2) + mx_time_get(MX_CLOCK_MONOTONIC);
-  ASSERT_EQ(MX_ERR_BAD_HANDLE,
+  zx_time_t pres_time = (delay_nsec * 2) + zx_time_get(ZX_CLOCK_MONOTONIC);
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE,
             fuchsia_audio_output_stream_write(
                 not_an_audio_output_stream, audio_buffer.data(),
                 WRITE_BUFFER_NUM_SAMPLES, pres_time));
 
   // Write with NULL audio_buffer
-  pres_time = (delay_nsec * 2) + mx_time_get(MX_CLOCK_MONOTONIC);
-  ASSERT_EQ(MX_ERR_INVALID_ARGS,
+  pres_time = (delay_nsec * 2) + zx_time_get(ZX_CLOCK_MONOTONIC);
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
             fuchsia_audio_output_stream_write(
                 stream, NULL, WRITE_BUFFER_NUM_SAMPLES, pres_time));
 
-  ASSERT_EQ(MX_OK, fuchsia_audio_output_stream_free(stream));
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(manager));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_free(stream));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(manager));
 }
 
 TEST(media_client, audio_stream_write_samples_errors) {
@@ -608,26 +608,26 @@ TEST(media_client, audio_stream_write_samples_errors) {
 
   std::vector<fuchsia_audio_parameters> param_list(num_devices);
   std::vector<fuchsia_audio_output_stream*> stream_list(num_devices);
-  std::vector<mx_duration_t> delay_list(num_devices, 0);
+  std::vector<zx_duration_t> delay_list(num_devices, 0);
 
   std::vector<float> audio_buffer(WRITE_BUFFER_NUM_SAMPLES);
   populate_audio_buffer(&audio_buffer);
-  mx_time_t pres_time;
+  zx_time_t pres_time;
   for (int dev_num = 0; dev_num < num_devices; ++dev_num) {
-    ASSERT_EQ(MX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
+    ASSERT_EQ(ZX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
                          manager, dev_list[dev_num].id, &param_list[dev_num]));
-    ASSERT_EQ(MX_OK, fuchsia_audio_manager_create_output_stream(
+    ASSERT_EQ(ZX_OK, fuchsia_audio_manager_create_output_stream(
                          manager, dev_list[dev_num].id, &param_list[dev_num],
                          &stream_list[dev_num]));
     ASSERT_TRUE(stream_list[dev_num]);
-    ASSERT_EQ(MX_OK, fuchsia_audio_output_stream_get_min_delay(
+    ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_get_min_delay(
                          stream_list[dev_num], &delay_list[dev_num]));
     ASSERT_TRUE(delay_list[dev_num] > 0);
 
     // Write mismatch samples (not a multiple of the stream's num_channels)
     if (param_list[dev_num].num_channels > 1) {
-      pres_time = (delay_list[dev_num] * 2) + mx_time_get(MX_CLOCK_MONOTONIC);
-      ASSERT_EQ(MX_ERR_INVALID_ARGS,
+      pres_time = (delay_list[dev_num] * 2) + zx_time_get(ZX_CLOCK_MONOTONIC);
+      ASSERT_EQ(ZX_ERR_INVALID_ARGS,
                 fuchsia_audio_output_stream_write(
                     stream_list[dev_num], audio_buffer.data(),
                     WRITE_BUFFER_NUM_SAMPLES - 1, pres_time));
@@ -635,21 +635,21 @@ TEST(media_client, audio_stream_write_samples_errors) {
   }
 
   // Write zero samples
-  pres_time = (delay_list[0] * 2) + mx_time_get(MX_CLOCK_MONOTONIC);
-  ASSERT_EQ(MX_ERR_INVALID_ARGS,
+  pres_time = (delay_list[0] * 2) + zx_time_get(ZX_CLOCK_MONOTONIC);
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
             fuchsia_audio_output_stream_write(
                 stream_list[0], audio_buffer.data(), 0, pres_time));
 
   // Write negative samples
-  pres_time = (delay_list[0] * 2) + mx_time_get(MX_CLOCK_MONOTONIC);
-  ASSERT_EQ(MX_ERR_INVALID_ARGS, fuchsia_audio_output_stream_write(
+  pres_time = (delay_list[0] * 2) + zx_time_get(ZX_CLOCK_MONOTONIC);
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, fuchsia_audio_output_stream_write(
                                      stream_list[0], audio_buffer.data(),
                                      -WRITE_BUFFER_NUM_SAMPLES, pres_time));
 
   for (int dev_num = 0; dev_num < num_devices; ++dev_num) {
-    ASSERT_EQ(MX_OK, fuchsia_audio_output_stream_free(stream_list[dev_num]));
+    ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_free(stream_list[dev_num]));
   }
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(manager));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(manager));
 }
 
 TEST(media_client, audio_stream_write_time_errors) {
@@ -663,16 +663,16 @@ TEST(media_client, audio_stream_write_time_errors) {
   ASSERT_EQ(1, fuchsia_audio_manager_get_output_devices(manager, &dev_desc, 1));
 
   fuchsia_audio_parameters params;
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
                        manager, dev_desc.id, &params));
 
   fuchsia_audio_output_stream* stream = NULL;
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_create_output_stream(
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_create_output_stream(
                        manager, dev_desc.id, &params, &stream));
   ASSERT_TRUE(stream);
 
-  mx_duration_t delay_nsec = 0;
-  ASSERT_EQ(MX_OK,
+  zx_duration_t delay_nsec = 0;
+  ASSERT_EQ(ZX_OK,
             fuchsia_audio_output_stream_get_min_delay(stream, &delay_nsec));
   ASSERT_TRUE(delay_nsec > 0);
 
@@ -681,38 +681,38 @@ TEST(media_client, audio_stream_write_time_errors) {
   populate_audio_buffer(&audio_buffer);
 
   // Write with no pres_time for FIRST buffer
-  mx_time_t pres_time = FUCHSIA_AUDIO_NO_TIMESTAMP;
-  ASSERT_EQ(MX_ERR_BAD_STATE,
+  zx_time_t pres_time = FUCHSIA_AUDIO_NO_TIMESTAMP;
+  ASSERT_EQ(ZX_ERR_BAD_STATE,
             fuchsia_audio_output_stream_write(stream, audio_buffer.data(),
                                               buff_size, pres_time));
 
   // Write with zero presentation time
   pres_time = 0;
-  ASSERT_EQ(MX_ERR_INVALID_ARGS,
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
             fuchsia_audio_output_stream_write(stream, audio_buffer.data(),
                                               buff_size, pres_time));
 
   // Write with invalid presentation time (above INT64_MAX)
   pres_time = FUCHSIA_AUDIO_NO_TIMESTAMP + (delay_nsec * 2) +
-              mx_time_get(MX_CLOCK_MONOTONIC);
-  ASSERT_EQ(MX_ERR_OUT_OF_RANGE,
+              zx_time_get(ZX_CLOCK_MONOTONIC);
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE,
             fuchsia_audio_output_stream_write(stream, audio_buffer.data(),
                                               buff_size, pres_time));
 
   // Write with no-delay presentation time
-  pres_time = mx_time_get(MX_CLOCK_MONOTONIC);
-  ASSERT_EQ(MX_ERR_IO_MISSED_DEADLINE,
+  pres_time = zx_time_get(ZX_CLOCK_MONOTONIC);
+  ASSERT_EQ(ZX_ERR_IO_MISSED_DEADLINE,
             fuchsia_audio_output_stream_write(stream, audio_buffer.data(),
                                               buff_size, pres_time));
 
   // Write with insufficient-delay presentation time
-  pres_time = (delay_nsec / 2) + mx_time_get(MX_CLOCK_MONOTONIC);
-  ASSERT_EQ(MX_ERR_IO_MISSED_DEADLINE,
+  pres_time = (delay_nsec / 2) + zx_time_get(ZX_CLOCK_MONOTONIC);
+  ASSERT_EQ(ZX_ERR_IO_MISSED_DEADLINE,
             fuchsia_audio_output_stream_write(stream, audio_buffer.data(),
                                               buff_size, pres_time));
 
-  ASSERT_EQ(MX_OK, fuchsia_audio_output_stream_free(stream));
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(manager));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_free(stream));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(manager));
 }
 
 TEST(media_client, audio_teardown_manager) {
@@ -728,62 +728,62 @@ TEST(media_client, audio_teardown_manager) {
 
   std::vector<fuchsia_audio_parameters> param_list(num_devices);
   std::vector<fuchsia_audio_output_stream*> stream_list(num_devices);
-  std::vector<mx_duration_t> delay_list(num_devices, 0);
+  std::vector<zx_duration_t> delay_list(num_devices, 0);
   for (int dev_num = 0; dev_num < num_devices; ++dev_num) {
-    ASSERT_EQ(MX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
+    ASSERT_EQ(ZX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
                          manager, dev_list[dev_num].id, &param_list[dev_num]));
-    ASSERT_EQ(MX_OK, fuchsia_audio_manager_create_output_stream(
+    ASSERT_EQ(ZX_OK, fuchsia_audio_manager_create_output_stream(
                          manager, dev_list[dev_num].id, &param_list[dev_num],
                          &stream_list[dev_num]));
     ASSERT_TRUE(stream_list[dev_num]);
-    ASSERT_EQ(MX_OK, fuchsia_audio_output_stream_get_min_delay(
+    ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_get_min_delay(
                          stream_list[dev_num], &delay_list[dev_num]));
     ASSERT_TRUE(delay_list[dev_num] > 0);
   }
 
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(manager));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(manager));
 
   // Write after freed audio_manager
   std::vector<float> audio_buffer(WRITE_BUFFER_NUM_SAMPLES);
   populate_audio_buffer(&audio_buffer);
-  mx_time_t pres_time = (delay_list[0] * 2) + mx_time_get(MX_CLOCK_MONOTONIC);
-  ASSERT_EQ(MX_ERR_BAD_HANDLE, fuchsia_audio_output_stream_write(
+  zx_time_t pres_time = (delay_list[0] * 2) + zx_time_get(ZX_CLOCK_MONOTONIC);
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE, fuchsia_audio_output_stream_write(
                                    stream_list[0], audio_buffer.data(),
                                    WRITE_BUFFER_NUM_SAMPLES, pres_time));
   // TODO(mpuryear): On audio_manager free, do active outputs drain their audio?
 
   // Get min_delay after freed audio_manager
-  mx_duration_t delay_nsec = TEST_DELAY_VALUE;
-  ASSERT_EQ(MX_ERR_BAD_HANDLE, fuchsia_audio_output_stream_get_min_delay(
+  zx_duration_t delay_nsec = TEST_DELAY_VALUE;
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE, fuchsia_audio_output_stream_get_min_delay(
                                    stream_list[0], &delay_nsec));
   ASSERT_EQ(TEST_DELAY_VALUE, delay_nsec);
 
   // Free stream after freed audio_manager
   for (int dev_num = 0; dev_num < num_devices; ++dev_num) {
-    ASSERT_EQ(MX_ERR_BAD_HANDLE,
+    ASSERT_EQ(ZX_ERR_BAD_HANDLE,
               fuchsia_audio_output_stream_free(stream_list[dev_num]));
   }
 
   // Create stream after freed audio_manager
   fuchsia_audio_output_stream* stream = NULL;
-  ASSERT_EQ(MX_ERR_BAD_HANDLE,
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE,
             fuchsia_audio_manager_create_output_stream(
                 manager, dev_list[0].id, &param_list[0], &stream));
   ASSERT_TRUE(stream == NULL);
 
   // Get device defaults after freed audio_manager
   fuchsia_audio_parameters params;
-  ASSERT_EQ(MX_ERR_BAD_HANDLE,
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE,
             fuchsia_audio_manager_get_output_device_default_parameters(
                 manager, dev_list[0].id, &params));
 
   // Get device after freed audio_manager
   fuchsia_audio_device_description dev_desc;
-  ASSERT_EQ(MX_ERR_BAD_HANDLE,
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE,
             fuchsia_audio_manager_get_output_devices(manager, &dev_desc, 1));
 
   // Get num_devices after freed audio_manager
-  ASSERT_EQ(MX_ERR_BAD_HANDLE,
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE,
             fuchsia_audio_manager_get_output_devices(manager, NULL, 0));
 }
 
@@ -798,37 +798,37 @@ TEST(media_client, audio_teardown_streams) {
   ASSERT_EQ(1, fuchsia_audio_manager_get_output_devices(manager, &dev_desc, 1));
 
   fuchsia_audio_parameters params;
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
                        manager, dev_desc.id, &params));
 
   fuchsia_audio_output_stream* stream = NULL;
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_create_output_stream(
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_create_output_stream(
                        manager, dev_desc.id, &params, &stream));
   ASSERT_TRUE(stream);
 
-  mx_duration_t delay_nsec = 0;
-  ASSERT_EQ(MX_OK,
+  zx_duration_t delay_nsec = 0;
+  ASSERT_EQ(ZX_OK,
             fuchsia_audio_output_stream_get_min_delay(stream, &delay_nsec));
   ASSERT_TRUE(delay_nsec > 0);
 
-  ASSERT_EQ(MX_OK, fuchsia_audio_output_stream_free(stream));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_free(stream));
 
   // Write after freed audio_stream
   std::vector<float> audio_buffer(WRITE_BUFFER_NUM_SAMPLES);
   populate_audio_buffer(&audio_buffer);
-  mx_time_t pres_time = (delay_nsec * 2) + mx_time_get(MX_CLOCK_MONOTONIC);
-  ASSERT_EQ(MX_ERR_BAD_HANDLE, fuchsia_audio_output_stream_write(
+  zx_time_t pres_time = (delay_nsec * 2) + zx_time_get(ZX_CLOCK_MONOTONIC);
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE, fuchsia_audio_output_stream_write(
                                    stream, audio_buffer.data(),
                                    WRITE_BUFFER_NUM_SAMPLES, pres_time));
   // TODO(mpuryear): If an actively playing output is freed, does it drain out?
 
   // Get delay after freed audio_stream
   delay_nsec = TEST_DELAY_VALUE;
-  ASSERT_EQ(MX_ERR_BAD_HANDLE,
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE,
             fuchsia_audio_output_stream_get_min_delay(stream, &delay_nsec));
   ASSERT_EQ(delay_nsec, TEST_DELAY_VALUE);
 
-  ASSERT_EQ(MX_OK, fuchsia_audio_manager_free(manager));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_free(manager));
 }
 
 TEST(media_client, audio_stream_write_c) {
@@ -842,28 +842,28 @@ TEST(media_client, audio_stream_write_c) {
   ASSERT_EQ(1, audio_manager_get_output_devices(manager, &dev_desc, 1));
 
   fuchsia_audio_parameters params;
-  ASSERT_EQ(MX_OK, audio_manager_get_output_device_default_parameters(
+  ASSERT_EQ(ZX_OK, audio_manager_get_output_device_default_parameters(
                        manager, dev_desc.id, &params));
 
   fuchsia_audio_output_stream* stream = NULL;
-  ASSERT_EQ(MX_OK, audio_manager_create_output_stream(manager, dev_desc.id,
+  ASSERT_EQ(ZX_OK, audio_manager_create_output_stream(manager, dev_desc.id,
                                                       &params, &stream));
   ASSERT_TRUE(stream);
 
-  mx_duration_t delay_nsec = 0;
-  ASSERT_EQ(MX_OK, audio_output_stream_get_min_delay(stream, &delay_nsec));
+  zx_duration_t delay_nsec = 0;
+  ASSERT_EQ(ZX_OK, audio_output_stream_get_min_delay(stream, &delay_nsec));
   ASSERT_TRUE(delay_nsec > 0);
 
   std::vector<float> audio_buffer(WRITE_BUFFER_NUM_SAMPLES);
   populate_audio_buffer(&audio_buffer);
-  mx_time_t pres_time = (2 * delay_nsec) + mx_time_get(MX_CLOCK_MONOTONIC);
+  zx_time_t pres_time = (2 * delay_nsec) + zx_time_get(ZX_CLOCK_MONOTONIC);
 
-  ASSERT_EQ(MX_OK,
+  ASSERT_EQ(ZX_OK,
             audio_output_stream_write(stream, audio_buffer.data(),
                                       WRITE_BUFFER_NUM_SAMPLES, pres_time));
 
-  ASSERT_EQ(MX_OK, audio_output_stream_free(stream));
-  ASSERT_EQ(MX_OK, audio_manager_free(manager));
+  ASSERT_EQ(ZX_OK, audio_output_stream_free(stream));
+  ASSERT_EQ(ZX_OK, audio_manager_free(manager));
 }
 
 }  // namespace client_test

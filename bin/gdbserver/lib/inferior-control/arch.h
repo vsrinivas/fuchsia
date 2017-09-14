@@ -6,8 +6,8 @@
 
 #include <cstdio>
 
-#include <magenta/syscalls/exception.h>
-#include <magenta/types.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/types.h>
 
 namespace debugserver {
 namespace arch {
@@ -41,10 +41,10 @@ enum class GdbSignal {
 // Maps the architecture-specific exception code to a UNIX compatible signal
 // value that GDB understands. Returns kUnsupported if the current
 // architecture is not currently supported.
-GdbSignal ComputeGdbSignal(const mx_exception_context_t& context);
+GdbSignal ComputeGdbSignal(const zx_exception_context_t& context);
 
 // Returns true if |context| is a single-stepping exception.
-bool IsSingleStepException(const mx_exception_context_t& context);
+bool IsSingleStepException(const zx_exception_context_t& context);
 
 // Dump random bits about the architecuture.
 // TODO(dje): Switch to iostreams maybe later.

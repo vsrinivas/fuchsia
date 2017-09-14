@@ -128,7 +128,7 @@ class RouterTest : public testing::Test {
   RouterTest() {}
 
   void SetUp() override {
-    mx::channel::create(0, &handle0_, &handle1_);
+    zx::channel::create(0, &handle0_, &handle1_);
   }
 
   void TearDown() override {}
@@ -136,8 +136,8 @@ class RouterTest : public testing::Test {
   void PumpMessages() { WaitForAsyncWaiter(); }
 
  protected:
-  mx::channel handle0_;
-  mx::channel handle1_;
+  zx::channel handle0_;
+  zx::channel handle1_;
 };
 
 TEST_F(RouterTest, BasicRequestResponse) {

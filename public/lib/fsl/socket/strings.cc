@@ -11,7 +11,7 @@
 
 namespace fsl {
 
-bool BlockingCopyToString(mx::socket source, std::string* result) {
+bool BlockingCopyToString(zx::socket source, std::string* result) {
   FXL_CHECK(result);
   result->clear();
   return BlockingDrainFrom(
@@ -22,37 +22,37 @@ bool BlockingCopyToString(mx::socket source, std::string* result) {
 }
 
 bool BlockingCopyFromString(fxl::StringView source,
-                            const mx::socket& destination) {
+                            const zx::socket& destination) {
   const char* ptr = source.data();
   size_t to_write = source.size();
   for (;;) {
     size_t written;
-    mx_status_t result = destination.write(0, ptr, to_write, &written);
-    if (result == MX_OK) {
+    zx_status_t result = destination.write(0, ptr, to_write, &written);
+    if (result == ZX_OK) {
       if (written == to_write)
         return true;
       to_write -= written;
       ptr += written;
-    } else if (result == MX_ERR_SHOULD_WAIT) {
-      result = destination.wait_one(MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
-                                    MX_TIME_INFINITE, nullptr);
-      if (result != MX_OK) {
+    } else if (result == ZX_ERR_SHOULD_WAIT) {
+      result = destination.wait_one(ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED,
+                                    ZX_TIME_INFINITE, nullptr);
+      if (result != ZX_OK) {
         // If the socket was closed, then treat as EOF.
-        return result == MX_ERR_PEER_CLOSED;
+        return result == ZX_ERR_PEER_CLOSED;
       }
     } else {
       // If the socket was closed, then treat as EOF.
-      return result == MX_ERR_PEER_CLOSED;
+      return result == ZX_ERR_PEER_CLOSED;
     }
   }
 }
 
-mx::socket WriteStringToSocket(fxl::StringView source) {
+zx::socket WriteStringToSocket(fxl::StringView source) {
   // TODO(qsr): Check that source.size() <= socket max capacity when the
   // information is retrievable. Until then use the know socket capacity.
   FXL_DCHECK(source.size() < 256 * 1024);
-  mx::socket socket1, socket2;
-  mx::socket::create(0u, &socket1, &socket2);
+  zx::socket socket1, socket2;
+  zx::socket::create(0u, &socket1, &socket2);
   BlockingCopyFromString(source, std::move(socket1));
   return socket2;
 }

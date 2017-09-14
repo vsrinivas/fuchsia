@@ -11,9 +11,9 @@
 #include <thread>
 #include <unordered_map>
 
-#include <magenta/syscalls/exception.h>
-#include <magenta/types.h>
-#include <mx/port.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/types.h>
+#include <zx/port.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -34,9 +34,9 @@ class ExceptionPort final {
 
   // Handler callback invoked when the kernel reports an exception. For more
   // information about the possible values and fields of the |type| and
-  // |context| parameters, see <magenta/syscalls/exception.h>.
-  using Callback = std::function<void(const mx_port_packet_t& packet,
-                                      const mx_exception_context_t& context)>;
+  // |context| parameters, see <zircon/syscalls/exception.h>.
+  using Callback = std::function<void(const zx_port_packet_t& packet,
+                                      const zx_exception_context_t& context)>;
 
   ExceptionPort();
   ~ExceptionPort();
@@ -59,7 +59,7 @@ class ExceptionPort final {
   // created.
   //
   // This must be called AFTER a successful call to Run().
-  Key Bind(const mx_handle_t process_handle, const Callback& callback);
+  Key Bind(const zx_handle_t process_handle, const Callback& callback);
 
   // Unbinds a previously bound exception port and returns true on success.
   // This must be called AFTER a successful call to Run().
@@ -68,10 +68,10 @@ class ExceptionPort final {
  private:
   struct BindData {
     BindData() = default;
-    BindData(mx_handle_t process_handle, const Callback& callback)
+    BindData(zx_handle_t process_handle, const Callback& callback)
         : process_handle(process_handle), callback(callback) {}
 
-    mx_handle_t process_handle;
+    zx_handle_t process_handle;
     Callback callback;
   };
 
@@ -82,7 +82,7 @@ class ExceptionPort final {
   void Worker();
 
   // Set to false by Quit(). This tells |io_thread_| whether it should terminate
-  // its loop as soon as mx_port_wait returns.
+  // its loop as soon as zx_port_wait returns.
   std::atomic_bool keep_running_;
 
   // The origin task runner used to post observer callback events to the thread
@@ -95,7 +95,7 @@ class ExceptionPort final {
   // Worker() even runs on the |io_thread_| which is extremely unlikely. But we
   // play safe anyway.
   std::mutex eport_mutex_;
-  mx::port eport_handle_;
+  zx::port eport_handle_;
 
   // The thread on which we wait on the exception port.
   std::thread io_thread_;
@@ -111,7 +111,7 @@ class ExceptionPort final {
 // the exception.
 // This doesn't have a better place at the moment.
 void PrintException(FILE* out, Process* process, Thread* thread,
-                    mx_excp_type_t type,
-                    const mx_exception_context_t& context);
+                    zx_excp_type_t type,
+                    const zx_exception_context_t& context);
 
 }  // namespace debugserver

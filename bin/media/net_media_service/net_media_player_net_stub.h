@@ -7,7 +7,7 @@
 #include <memory>
 
 #include <endian.h>
-#include <mx/channel.h>
+#include <zx/channel.h>
 
 #include "lib/media/fidl/net_media_player.fidl.h"
 #include "garnet/bin/media/net_media_service/net_media_player_messages.h"
@@ -23,7 +23,7 @@ class NetMediaPlayerNetStub
  public:
   NetMediaPlayerNetStub(
       NetMediaPlayer* player,
-      mx::channel channel,
+      zx::channel channel,
       netconnector::NetStubResponder<NetMediaPlayer, NetMediaPlayerNetStub>*
           responder);
 

@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-// This file is based on magenta/kernel/arch/x86/feature.c.
+// This file is based on zircon/kernel/arch/x86/feature.c.
 // TODO(dje): As with generic elf, dwarf, et.al, move to application
 // independent library.
 
