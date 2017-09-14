@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <magenta/syscalls/port.h>
-#include <magenta/types.h>
-#include <mx/channel.h>
-#include <mx/handle.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/types.h>
+#include <zx/channel.h>
+#include <zx/handle.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
@@ -27,7 +27,7 @@ using DispatcherChannelAllocator = fbl::SlabAllocator<DispatcherChannelAllocTrai
 // class DispatcherChannel
 //
 // DispatcherChannels are objects used in the dispatcher-pool framework to
-// manage a magenta channel endpoint, and its relationship to the dispatcher
+// manage a zircon channel endpoint, and its relationship to the dispatcher
 // thread pool (@see DispatcherThread) and the channel endpoint's Owner (@see
 // DispatcherChannel::Owner).
 //
@@ -134,8 +134,8 @@ public:
         virtual ~Owner() {
             // Assert that the Owner implementation properly deactivated itself
             // before destructing.
-            MX_DEBUG_ASSERT(deactivated_);
-            MX_DEBUG_ASSERT(channels_.is_empty());
+            ZX_DEBUG_ASSERT(deactivated_);
+            ZX_DEBUG_ASSERT(channels_.is_empty());
         }
 
         void ShutdownDispatcherChannels() __TA_EXCLUDES(channels_lock_);
@@ -146,7 +146,7 @@ public:
         // there is a message pending on the channel.  Returning any error at
         // this point in time will cause the channel to be deactivated and
         // be released.
-        virtual mx_status_t ProcessChannel(DispatcherChannel* channel)
+        virtual zx_status_t ProcessChannel(DispatcherChannel* channel)
             __TA_EXCLUDES(channels_lock_) = 0;
 
         // NotifyChannelDeactivated.
@@ -161,7 +161,7 @@ public:
             __TA_EXCLUDES(channels_lock_) { }
 
     private:
-        mx_status_t AddChannel(fbl::RefPtr<DispatcherChannel>&& channel)
+        zx_status_t AddChannel(fbl::RefPtr<DispatcherChannel>&& channel)
             __TA_EXCLUDES(channels_lock_);
         void RemoveChannel(DispatcherChannel* channel)
             __TA_EXCLUDES(channels_lock_);
@@ -198,31 +198,31 @@ public:
     bool      InOwnersList()       const { return dll_node_state_.InContainer(); }
     bool      InActiveChannelSet() const { return wavl_node_state_.InContainer(); }
 
-    mx_status_t WaitOnPort(const mx::port& port) __TA_EXCLUDES(obj_lock_, active_channels_lock_) {
+    zx_status_t WaitOnPort(const zx::port& port) __TA_EXCLUDES(obj_lock_, active_channels_lock_) {
         fbl::AutoLock obj_lock(&obj_lock_);
         return WaitOnPortLocked(port);
     }
 
-    mx_status_t Activate(fbl::RefPtr<Owner>&& owner, mx::channel* client_channel_out)
+    zx_status_t Activate(fbl::RefPtr<Owner>&& owner, zx::channel* client_channel_out)
         __TA_EXCLUDES(obj_lock_, active_channels_lock_);
 
-    mx_status_t Activate(fbl::RefPtr<Owner>&& owner, mx::channel&& client_channel)
+    zx_status_t Activate(fbl::RefPtr<Owner>&& owner, zx::channel&& client_channel)
         __TA_EXCLUDES(obj_lock_, active_channels_lock_) {
         fbl::AutoLock obj_lock(&obj_lock_);
         return ActivateLocked(fbl::move(owner), fbl::move(client_channel));
     }
 
     void Deactivate(bool do_notify) __TA_EXCLUDES(obj_lock_, active_channels_lock_);
-    mx_status_t Process(const mx_port_packet_t& port_packet)
+    zx_status_t Process(const zx_port_packet_t& port_packet)
         __TA_EXCLUDES(obj_lock_, active_channels_lock_);
-    mx_status_t Read(void* buf,
+    zx_status_t Read(void* buf,
                      uint32_t buf_len,
                      uint32_t* bytes_read_out,
-                     mx::handle* rxed_handle = nullptr) const
+                     zx::handle* rxed_handle = nullptr) const
         __TA_EXCLUDES(obj_lock_, active_channels_lock_);
-    mx_status_t Write(const void* buf,
+    zx_status_t Write(const void* buf,
                       uint32_t buf_len,
-                      mx::handle&& tx_handle = mx::handle()) const
+                      zx::handle&& tx_handle = zx::handle()) const
         __TA_EXCLUDES(obj_lock_, active_channels_lock_);
 
 private:
@@ -240,14 +240,14 @@ private:
     DispatcherChannel(uintptr_t owner_ctx = 0);
     ~DispatcherChannel();
 
-    mx_status_t WaitOnPortLocked(const mx::port& port)
+    zx_status_t WaitOnPortLocked(const zx::port& port)
         __TA_REQUIRES(obj_lock_);
 
-    mx_status_t ActivateLocked(fbl::RefPtr<Owner>&& owner, mx::channel&& channel)
+    zx_status_t ActivateLocked(fbl::RefPtr<Owner>&& owner, zx::channel&& channel)
         __TA_REQUIRES(obj_lock_);
 
     fbl::RefPtr<Owner>  owner_    __TA_GUARDED(obj_lock_);
-    mx::channel          channel_  __TA_GUARDED(obj_lock_);
+    zx::channel          channel_  __TA_GUARDED(obj_lock_);
     mutable fbl::Mutex  obj_lock_ __TA_ACQUIRED_BEFORE(active_channels_lock_,
                                                         owner_->channels_lock_);
     const bool           client_thread_active_;

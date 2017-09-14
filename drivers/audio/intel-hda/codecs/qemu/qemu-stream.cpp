@@ -12,7 +12,7 @@ namespace codecs {
 
 static constexpr uint8_t UNITY_GAIN = 74;
 
-mx_status_t QemuStream::DisableConverterLocked(bool force_all) {
+zx_status_t QemuStream::DisableConverterLocked(bool force_all) {
     const CodecVerb DISABLE_CONVERTER_VERBS[] = {
         SET_AMPLIFIER_GAIN_MUTE(true, 0, is_input(), !is_input()),
         SET_CONVERTER_STREAM_CHAN(IHDA_INVALID_STREAM_TAG, 0),
@@ -21,25 +21,25 @@ mx_status_t QemuStream::DisableConverterLocked(bool force_all) {
     return RunCmdListLocked(DISABLE_CONVERTER_VERBS, countof(DISABLE_CONVERTER_VERBS), force_all);
 }
 
-mx_status_t QemuStream::RunCmdListLocked(const CodecVerb* list, size_t count, bool force_all) {
-    MX_DEBUG_ASSERT(list);
+zx_status_t QemuStream::RunCmdListLocked(const CodecVerb* list, size_t count, bool force_all) {
+    ZX_DEBUG_ASSERT(list);
 
-    mx_status_t total_res = MX_OK;
+    zx_status_t total_res = ZX_OK;
     for (size_t i = 0; i < count; ++i) {
         const auto& verb = list[i];
 
-        mx_status_t res = SendCodecCommandLocked(converter_nid_, verb, Ack::NO);
-        if ((res != MX_OK) && !force_all)
+        zx_status_t res = SendCodecCommandLocked(converter_nid_, verb, Ack::NO);
+        if ((res != ZX_OK) && !force_all)
             return res;
 
-        if (total_res == MX_OK)
+        if (total_res == ZX_OK)
             total_res = res;
     }
 
     return total_res;
 }
 
-mx_status_t QemuStream::OnActivateLocked() {
+zx_status_t QemuStream::OnActivateLocked() {
     fbl::Vector<audio_proto::FormatRange> supported_formats;
 
     audio_proto::FormatRange range;
@@ -53,7 +53,7 @@ mx_status_t QemuStream::OnActivateLocked() {
     fbl::AllocChecker ac;
     supported_formats.push_back(range, &ac);
     if (!ac.check())
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     SetSupportedFormatsLocked(fbl::move(supported_formats));
 
@@ -64,11 +64,11 @@ void QemuStream::OnDeactivateLocked() {
     DisableConverterLocked(true);
 }
 
-mx_status_t QemuStream::BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& fmt) {
+zx_status_t QemuStream::BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& fmt) {
     return DisableConverterLocked();
 }
 
-mx_status_t QemuStream::FinishChangeStreamFormatLocked(uint16_t encoded_fmt) {
+zx_status_t QemuStream::FinishChangeStreamFormatLocked(uint16_t encoded_fmt) {
     const CodecVerb ENABLE_CONVERTER_VERBS[] = {
         SET_CONVERTER_FORMAT(encoded_fmt),
         SET_CONVERTER_STREAM_CHAN(dma_stream_tag(), 0),

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/syscalls/object.h>
+#include <zircon/syscalls/object.h>
 
 #include "drivers/audio/intel-hda/utils/utils.h"
 
@@ -49,24 +49,24 @@ static const struct {
     { FRAME_RATE_LUT_44_1K, countof(FRAME_RATE_LUT_44_1K), ASF_RANGE_FLAG_FPS_44100_FAMILY },
 };
 
-mx_obj_type_t GetHandleType(const mx::handle& handle) {
-    mx_info_handle_basic_t basic_info;
+zx_obj_type_t GetHandleType(const zx::handle& handle) {
+    zx_info_handle_basic_t basic_info;
 
     if (!handle.is_valid())
-        return MX_OBJ_TYPE_NONE;
+        return ZX_OBJ_TYPE_NONE;
 
-    mx_status_t res = handle.get_info(MX_INFO_HANDLE_BASIC,
+    zx_status_t res = handle.get_info(ZX_INFO_HANDLE_BASIC,
                                       &basic_info, sizeof(basic_info),
                                       nullptr, nullptr);
 
-    return (res == MX_OK) ? static_cast<mx_obj_type_t>(basic_info.type) : MX_OBJ_TYPE_NONE;
+    return (res == ZX_OK) ? static_cast<zx_obj_type_t>(basic_info.type) : ZX_OBJ_TYPE_NONE;
 }
 
-mx_status_t MakeFormatRangeList(const SampleCaps& sample_caps,
+zx_status_t MakeFormatRangeList(const SampleCaps& sample_caps,
                                 uint32_t max_channels,
                                 fbl::Vector<audio_stream_format_range_t>* ranges) {
-    if (ranges == nullptr || ranges->size()) return MX_ERR_INVALID_ARGS;
-    if (!max_channels) return MX_ERR_INVALID_ARGS;
+    if (ranges == nullptr || ranges->size()) return ZX_ERR_INVALID_ARGS;
+    if (!max_channels) return ZX_ERR_INVALID_ARGS;
 
     // Signed and unsigned formats require separate audio_sample_format_t
     // encodings.  8-bit is the only unsigned format supported by IHDA, however.
@@ -108,7 +108,7 @@ mx_status_t MakeFormatRangeList(const SampleCaps& sample_caps,
     // If we do not support any sample formats, simply get out early.  There is
     // no point in trying to compute the frame rate ranges.
     if (!signed_formats && !unsigned_8bit_supported)
-        return MX_OK;
+        return ZX_OK;
 
     // Next, produce the sets of frame rates in the 48 and 44.1KHz frame rate
     // families which can be expressed using the [min, max] notation.  In
@@ -155,7 +155,7 @@ mx_status_t MakeFormatRangeList(const SampleCaps& sample_caps,
                     fbl::AllocChecker ac;
                     ranges->push_back(range, &ac);
                     if (!ac.check())
-                        return MX_ERR_NO_MEMORY;
+                        return ZX_ERR_NO_MEMORY;
                 }
 
                 if (unsigned_8bit_supported) {
@@ -164,7 +164,7 @@ mx_status_t MakeFormatRangeList(const SampleCaps& sample_caps,
                     fbl::AllocChecker ac;
                     ranges->push_back(range, &ac);
                     if (!ac.check())
-                        return MX_ERR_NO_MEMORY;
+                        return ZX_ERR_NO_MEMORY;
                 }
 
                 active_range = false;
@@ -172,7 +172,7 @@ mx_status_t MakeFormatRangeList(const SampleCaps& sample_caps,
         }
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 }  // namespace intel_hda

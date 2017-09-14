@@ -4,7 +4,7 @@
 
 #include <ddk/device.h>
 #include <driver/usb.h>
-#include <magenta/device/midi.h>
+#include <zircon/device/midi.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -16,8 +16,8 @@
 #define READ_REQ_COUNT 20
 
 typedef struct {
-    mx_device_t* mxdev;
-    mx_device_t* usb_mxdev;
+    zx_device_t* mxdev;
+    zx_device_t* usb_mxdev;
     usb_protocol_t usb;
 
     // pool of free USB requests
@@ -31,11 +31,11 @@ typedef struct {
     bool dead;
 
     // the last signals we reported
-    mx_signals_t signals;
+    zx_signals_t signals;
 } usb_midi_source_t;
 
 static void update_signals(usb_midi_source_t* source) {
-    mx_signals_t new_signals = 0;
+    zx_signals_t new_signals = 0;
     if (source->dead) {
         new_signals |= (DEV_STATE_READABLE | DEV_STATE_ERROR);
     } else if (!list_is_empty(&source->completed_reads)) {
@@ -52,14 +52,14 @@ static void update_signals(usb_midi_source_t* source) {
 static void usb_midi_source_read_complete(iotxn_t* txn, void* cookie) {
     usb_midi_source_t* source = (usb_midi_source_t*)cookie;
 
-    if (txn->status == MX_ERR_IO_NOT_PRESENT) {
+    if (txn->status == ZX_ERR_IO_NOT_PRESENT) {
         iotxn_release(txn);
         return;
     }
 
     mtx_lock(&source->mutex);
 
-    if (txn->status == MX_OK && txn->actual > 0) {
+    if (txn->status == ZX_OK && txn->actual > 0) {
         list_add_tail(&source->completed_reads, &txn->node);
     } else {
         iotxn_queue(source->usb_mxdev, txn);
@@ -91,16 +91,16 @@ static void usb_midi_source_release(void* ctx) {
     usb_midi_source_free(source);
 }
 
-static mx_status_t usb_midi_source_open(void* ctx, mx_device_t** dev_out, uint32_t flags) {
+static zx_status_t usb_midi_source_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
     usb_midi_source_t* source = ctx;
-    mx_status_t result;
+    zx_status_t result;
 
     mtx_lock(&source->mutex);
     if (source->open) {
-        result = MX_ERR_ALREADY_BOUND;
+        result = ZX_ERR_ALREADY_BOUND;
     } else {
         source->open = true;
-        result = MX_OK;
+        result = ZX_OK;
     }
 
     // queue up reads, including stale completed reads
@@ -116,32 +116,32 @@ static mx_status_t usb_midi_source_open(void* ctx, mx_device_t** dev_out, uint32
     return result;
 }
 
-static mx_status_t usb_midi_source_close(void* ctx, uint32_t flags) {
+static zx_status_t usb_midi_source_close(void* ctx, uint32_t flags) {
     usb_midi_source_t* source = ctx;
 
     mtx_lock(&source->mutex);
     source->open = false;
     mtx_unlock(&source->mutex);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t usb_midi_source_read(void* ctx, void* data, size_t len, mx_off_t off,
+static zx_status_t usb_midi_source_read(void* ctx, void* data, size_t len, zx_off_t off,
                                         size_t* actual) {
     usb_midi_source_t* source = ctx;
 
     if (source->dead) {
-        return MX_ERR_IO_NOT_PRESENT;
+        return ZX_ERR_IO_NOT_PRESENT;
     }
 
-    mx_status_t status = MX_OK;
-    if (len < 3) return MX_ERR_BUFFER_TOO_SMALL;
+    zx_status_t status = ZX_OK;
+    if (len < 3) return ZX_ERR_BUFFER_TOO_SMALL;
 
     mtx_lock(&source->mutex);
 
     list_node_t* node = list_peek_head(&source->completed_reads);
     if (!node) {
-        status = MX_ERR_SHOULD_WAIT;
+        status = ZX_ERR_SHOULD_WAIT;
         goto out;
     }
     iotxn_t* txn = containerof(node, iotxn_t, node);
@@ -162,23 +162,23 @@ out:
     return status;
 }
 
-static mx_status_t usb_midi_source_ioctl(void* ctx, uint32_t op, const void* in_buf,
+static zx_status_t usb_midi_source_ioctl(void* ctx, uint32_t op, const void* in_buf,
                                          size_t in_len, void* out_buf, size_t out_len,
                                          size_t* out_actual) {
     switch (op) {
     case IOCTL_MIDI_GET_DEVICE_TYPE: {
         int* reply = out_buf;
-        if (out_len < sizeof(*reply)) return MX_ERR_BUFFER_TOO_SMALL;
+        if (out_len < sizeof(*reply)) return ZX_ERR_BUFFER_TOO_SMALL;
         *reply = MIDI_TYPE_SOURCE;
         *out_actual = sizeof(*reply);
-        return MX_OK;
+        return ZX_OK;
     }
     }
 
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-static mx_protocol_device_t usb_midi_source_device_proto = {
+static zx_protocol_device_t usb_midi_source_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .unbind = usb_midi_source_unbind,
     .release = usb_midi_source_release,
@@ -188,12 +188,12 @@ static mx_protocol_device_t usb_midi_source_device_proto = {
     .ioctl = usb_midi_source_ioctl,
 };
 
-mx_status_t usb_midi_source_create(mx_device_t* device, usb_protocol_t* usb, int index,
+zx_status_t usb_midi_source_create(zx_device_t* device, usb_protocol_t* usb, int index,
                                   usb_interface_descriptor_t* intf, usb_endpoint_descriptor_t* ep) {
     usb_midi_source_t* source = calloc(1, sizeof(usb_midi_source_t));
     if (!source) {
         printf("Not enough memory for usb_midi_source_t\n");
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     list_initialize(&source->free_read_reqs);
@@ -209,7 +209,7 @@ mx_status_t usb_midi_source_create(mx_device_t* device, usb_protocol_t* usb, int
         iotxn_t* txn = usb_alloc_iotxn(ep->bEndpointAddress, packet_size);
         if (!txn) {
             usb_midi_source_free(source);
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
         }
         txn->length = packet_size;
         txn->complete_cb = usb_midi_source_read_complete;
@@ -217,7 +217,7 @@ mx_status_t usb_midi_source_create(mx_device_t* device, usb_protocol_t* usb, int
         list_add_head(&source->free_read_reqs, &txn->node);
     }
 
-    char name[MX_DEVICE_NAME_MAX];
+    char name[ZX_DEVICE_NAME_MAX];
     snprintf(name, sizeof(name), "usb-midi-source-%d\n", index);
 
     device_add_args_t args = {
@@ -225,11 +225,11 @@ mx_status_t usb_midi_source_create(mx_device_t* device, usb_protocol_t* usb, int
         .name = name,
         .ctx = source,
         .ops = &usb_midi_source_device_proto,
-        .proto_id = MX_PROTOCOL_MIDI,
+        .proto_id = ZX_PROTOCOL_MIDI,
     };
 
-    mx_status_t status = device_add(device, &args, &source->mxdev);
-    if (status != MX_OK) {
+    zx_status_t status = device_add(device, &args, &source->mxdev);
+    if (status != ZX_OK) {
         printf("device_add failed in usb_midi_source_create\n");
         usb_midi_source_free(source);
     }

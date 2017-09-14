@@ -5,8 +5,8 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <magenta/types.h>
-#include <mx/vmo.h>
+#include <zircon/types.h>
+#include <zx/vmo.h>
 #include <fbl/macros.h>
 
 namespace audio {
@@ -18,8 +18,8 @@ template <typename T> _SIC_ T AND(T x, T y) { return static_cast<T>(x & y); }
 #undef _SIC_
 
 using WaitConditionFn = bool (*)(void*);
-mx_status_t WaitCondition(mx_time_t timeout,
-                          mx_time_t poll_interval,
+zx_status_t WaitCondition(zx_time_t timeout,
+                          zx_time_t poll_interval,
                           WaitConditionFn cond,
                           void* cond_ctx);
 
@@ -34,15 +34,15 @@ mx_status_t WaitCondition(mx_time_t timeout,
 // @param num_regions_inout A pointer to an integer which holds the length of
 //        the regions_out array on input, and hold the number of populated
 //        elements of the array on output.  Only valid on output if the return
-//        code is MX_OK.
-// @returns An mx_status_t indicating success or failure of the operation.
+//        code is ZX_OK.
+// @returns An zx_status_t indicating success or failure of the operation.
 struct VMORegion;
-mx_status_t GetVMORegionInfo(const mx::vmo& vmo,
+zx_status_t GetVMORegionInfo(const zx::vmo& vmo,
                              uint64_t       vmo_size,
                              VMORegion*     regions_out,
                              uint32_t*      num_regions_inout);
 struct VMORegion {
-    mx_paddr_t phys_addr;
+    zx_paddr_t phys_addr;
     uint64_t   size;
 };
 
@@ -57,26 +57,26 @@ public:
 
     // Allocate at least size bytes of contiguous physical memory.  Allocatation
     // will round up to the nearest page size.
-    mx_status_t Allocate(size_t size);
+    zx_status_t Allocate(size_t size);
 
     // Map a successfully allocated buffer into this address space with
     // read/write permissions.
     //
     // TODO(johngro) : Should we provide control of permissions and cache policy
     // here?
-    mx_status_t Map();
+    zx_status_t Map();
 
     // If mapped, unmap.  Then, if allocated, deallocate.
     void Release();
 
-    mx_paddr_t  phys()        const { return phys_; }
+    zx_paddr_t  phys()        const { return phys_; }
     uintptr_t   virt()        const { return virt_; }
     size_t      size()        const { return size_; }
     size_t      actual_size() const { return actual_size_; }
 
 private:
-    mx::vmo     vmo_;
-    mx_paddr_t  phys_ = 0;
+    zx::vmo     vmo_;
+    zx_paddr_t  phys_ = 0;
     uintptr_t   virt_ = 0;
     size_t      size_ = 0;
     size_t      actual_size_ = 0;

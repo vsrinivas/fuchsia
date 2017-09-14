@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/device/intel-hda.h>
+#include <zircon/device/intel-hda.h>
 
 namespace audio {
 namespace ihda_proto {

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/device/audio.h>
+#include <zircon/device/audio.h>
 
 namespace audio {
 namespace audio_proto {

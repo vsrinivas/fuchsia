@@ -14,7 +14,7 @@ source_set("ihda-utils") {
     ]
 
     deps = [
-        "//magenta/system/ulib/mx",
-        "//magenta/system/ulib/fbl",
+        "//zircon/system/ulib/zx",
+        "//zircon/system/ulib/fbl",
     ]
 }

@@ -330,13 +330,13 @@ static void ihda_dump_conn_list(const AudioWidgetState& widget) {
         return;
     }
 
-    MX_DEBUG_ASSERT(widget.conn_list_);
+    ZX_DEBUG_ASSERT(widget.conn_list_);
     for (uint32_t i = 0; i < widget.conn_list_len_; ++i) {
         if(i > 0)
             printf(" ");
 
         const auto& first = widget.conn_list_[i];
-        MX_DEBUG_ASSERT(!first.range_);
+        ZX_DEBUG_ASSERT(!first.range_);
 
         // Is this entry the start of a range or not?
         if ((i + 1) < widget.conn_list_len_) {
@@ -536,7 +536,7 @@ static void ihda_dump_widget(const AudioWidgetState& widget, uint32_t id, uint32
 
 #define FMT(fmt) "%s%26s : " fmt, pad
 static void ihda_dump_codec_fn_group(const CodecState& codec, uint32_t id) {
-    MX_DEBUG_ASSERT(codec.fn_groups_ && (id < codec.fn_group_count_) && codec.fn_groups_[id]);
+    ZX_DEBUG_ASSERT(codec.fn_groups_ && (id < codec.fn_group_count_) && codec.fn_groups_[id]);
     static const char* pad = "+--- ";
     const auto& fn_group = *codec.fn_groups_[id];
 
@@ -605,7 +605,7 @@ static void ihda_dump_codec_fn_group(const CodecState& codec, uint32_t id) {
     printf(FMT("%u\n"), "Widgets", afg.widget_count_);
 
     for (uint32_t i = 0; i < afg.widget_count_; ++i) {
-        MX_DEBUG_ASSERT(afg.widgets_[i]);
+        ZX_DEBUG_ASSERT(afg.widgets_[i]);
         ihda_dump_widget(*afg.widgets_[i], i + 1, afg.widget_count_);
     }
 }

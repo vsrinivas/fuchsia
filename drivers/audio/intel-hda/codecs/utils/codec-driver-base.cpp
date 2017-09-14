@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/assert.h>
-#include <magenta/compiler.h>
-#include <mx/channel.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
+#include <zx/channel.h>
 #include <fbl/auto_lock.h>
 #include <fbl/limits.h>
 #include <string.h>
@@ -24,33 +24,33 @@ void IntelHDACodecDriverBase::PrintDebugPrefix() const {
     printf("HDACodec : ");
 }
 
-mx_status_t IntelHDACodecDriverBase::Bind(mx_device_t* codec_dev) {
-    mx_status_t res;
+zx_status_t IntelHDACodecDriverBase::Bind(zx_device_t* codec_dev) {
+    zx_status_t res;
 
     if (codec_dev == nullptr)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     if (codec_device_ != nullptr)
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
     ihda_codec_protocol_t proto;
-    res = device_get_protocol(codec_dev, MX_PROTOCOL_IHDA_CODEC, &proto);
-    if (res != MX_OK)
+    res = device_get_protocol(codec_dev, ZX_PROTOCOL_IHDA_CODEC, &proto);
+    if (res != ZX_OK)
         return res;
 
     if ((proto.ops == nullptr) ||
         (proto.ops->get_driver_channel == nullptr))
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
 
     // Allocate a DispatcherChannel object which we will use to talk to the codec device
     fbl::RefPtr<DispatcherChannel> device_channel = DispatcherChannelAllocator::New(1);
     if (device_channel == nullptr)
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
     // Obtain a channel handle from the device
-    mx::channel channel;
+    zx::channel channel;
     res = proto.ops->get_driver_channel(proto.ctx, channel.reset_and_get_address());
-    if (res != MX_OK)
+    if (res != ZX_OK)
         return res;
 
     // Stash our reference to our device channel.  If activate succeeds, we
@@ -63,7 +63,7 @@ mx_status_t IntelHDACodecDriverBase::Bind(mx_device_t* codec_dev) {
     // Activate our device channel.  If something goes wrong, clear out the
     // internal device_channel_ reference.
     res = device_channel->Activate(fbl::WrapRefPtr(this), fbl::move(channel));
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
         fbl::AutoLock device_channel_lock(&device_channel_lock_);
         device_channel_.reset();
         return res;
@@ -72,7 +72,7 @@ mx_status_t IntelHDACodecDriverBase::Bind(mx_device_t* codec_dev) {
     // Success!  Now that we are started, stash a pointer to the codec device
     // that we are the driver for.
     codec_device_ = codec_dev;
-    return MX_OK;
+    return ZX_OK;
 }
 
 void IntelHDACodecDriverBase::Shutdown() {
@@ -109,7 +109,7 @@ void IntelHDACodecDriverBase::Shutdown() {
             DEBUG_LOG("Bad " #_ioctl                        \
                       " response length (%u != %zu)\n",     \
                       resp_size, sizeof(resp._payload));    \
-            return MX_ERR_INVALID_ARGS;                        \
+            return ZX_ERR_INVALID_ARGS;                        \
         }                                                   \
     } while (0)
 #define CHECK_RESP(_ioctl, _payload)                \
@@ -117,20 +117,20 @@ void IntelHDACodecDriverBase::Shutdown() {
         if (rxed_handle.is_valid()) {               \
             DEBUG_LOG("Unexpected handle in "       \
                        #_ioctl " response\n");      \
-            return MX_ERR_INVALID_ARGS;                \
+            return ZX_ERR_INVALID_ARGS;                \
         }                                           \
         CHECK_RESP_ALLOW_HANDLE(_ioctl, _payload);  \
     } while (0)
 
-mx_status_t IntelHDACodecDriverBase::ProcessChannel(DispatcherChannel* channel) {
-    MX_DEBUG_ASSERT(channel != nullptr);
+zx_status_t IntelHDACodecDriverBase::ProcessChannel(DispatcherChannel* channel) {
+    ZX_DEBUG_ASSERT(channel != nullptr);
 
     uint32_t resp_size;
     CodecChannelResponses resp;
-    mx::handle rxed_handle;
+    zx::handle rxed_handle;
 
-    mx_status_t res = channel->Read(&resp, sizeof(resp), &resp_size, &rxed_handle);
-    if (res != MX_OK) {
+    zx_status_t res = channel->Read(&resp, sizeof(resp), &resp_size, &rxed_handle);
+    if (res != ZX_OK) {
         DEBUG_LOG("Error reading from device channel (res %d)!\n", res);
         return res;
     }
@@ -138,7 +138,7 @@ mx_status_t IntelHDACodecDriverBase::ProcessChannel(DispatcherChannel* channel) 
     if (resp_size < sizeof(resp.hdr)) {
         DEBUG_LOG("Bad length (%u) reading from device channel (expectd at least %zu)!\n",
                   resp_size, sizeof(resp.hdr));
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     // Does this response belong to one of our streams?
@@ -149,7 +149,7 @@ mx_status_t IntelHDACodecDriverBase::ProcessChannel(DispatcherChannel* channel) 
         if (stream == nullptr) {
             DEBUG_LOG("Received codec device response for inactive stream (id %u)\n",
                       resp.hdr.transaction_id);
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
         } else {
             return ProcessStreamResponse(stream, resp, resp_size, fbl::move(rxed_handle));
         }
@@ -166,11 +166,11 @@ mx_status_t IntelHDACodecDriverBase::ProcessChannel(DispatcherChannel* channel) 
             // owned by a stream or not.  If it is, dispatch the payload to the
             // stream, otherwise give it to the codec.
             uint32_t stream_id;
-            mx_status_t res = MapUnsolTagToStreamId(payload.unsol_tag(), &stream_id);
-            if (res != MX_OK) {
+            zx_status_t res = MapUnsolTagToStreamId(payload.unsol_tag(), &stream_id);
+            if (res != ZX_OK) {
                 DEBUG_LOG("Received unexpected unsolicited reponse (tag %u)\n",
                           payload.unsol_tag());
-                return MX_OK;
+                return ZX_OK;
             }
 
             if (stream_id == CODEC_TID)
@@ -180,7 +180,7 @@ mx_status_t IntelHDACodecDriverBase::ProcessChannel(DispatcherChannel* channel) 
             if (stream == nullptr) {
                 DEBUG_LOG("Received unsolicited reponse (tag %u) for inactive stream (id %u)\n",
                           payload.unsol_tag(), stream_id);
-                return MX_OK;
+                return ZX_OK;
             } else {
                 return stream->ProcessResponse(payload);
             }
@@ -189,18 +189,18 @@ mx_status_t IntelHDACodecDriverBase::ProcessChannel(DispatcherChannel* channel) 
         default:
             DEBUG_LOG("Received unexpected response type (%u) for codec device!\n",
                       resp.hdr.cmd);
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
     }
 }
 
-mx_status_t IntelHDACodecDriverBase::ProcessStreamResponse(
+zx_status_t IntelHDACodecDriverBase::ProcessStreamResponse(
         const fbl::RefPtr<IntelHDAStreamBase>& stream,
         const CodecChannelResponses& resp,
         uint32_t resp_size,
-        mx::handle&& rxed_handle) {
-    mx_status_t res;
-    MX_DEBUG_ASSERT(stream != nullptr);
+        zx::handle&& rxed_handle) {
+    zx_status_t res;
+    ZX_DEBUG_ASSERT(stream != nullptr);
 
     switch(resp.hdr.cmd) {
     case IHDA_CODEC_SEND_CORB_CMD: {
@@ -210,7 +210,7 @@ mx_status_t IntelHDACodecDriverBase::ProcessStreamResponse(
         if (payload.unsolicited()) {
             DEBUG_LOG("Unsolicited response sent directly to stream ID %u! (0x%08x, 0x%08x)\n",
                       stream->id(), payload.data, payload.data_ex);
-            return MX_ERR_INVALID_ARGS;
+            return ZX_ERR_INVALID_ARGS;
         }
 
         return stream->ProcessResponse(payload);
@@ -223,9 +223,9 @@ mx_status_t IntelHDACodecDriverBase::ProcessStreamResponse(
     case IHDA_CODEC_SET_STREAM_FORMAT: {
         CHECK_RESP_ALLOW_HANDLE(IHDA_CODEC_SET_STREAM_FORMAT, set_stream_fmt);
 
-        mx::channel channel;
+        zx::channel channel;
         res = ConvertHandle(&rxed_handle, &channel);
-        if (res != MX_OK) {
+        if (res != ZX_OK) {
             DEBUG_LOG("Invalid or non-Channel handle in IHDA_CODEC_SET_STREAM_FORMAT "
                       "response (res %d)\n", res);
             return res;
@@ -237,7 +237,7 @@ mx_status_t IntelHDACodecDriverBase::ProcessStreamResponse(
     default:
         DEBUG_LOG("Received unexpected response type (%u) for codec stream device!\n",
                   resp.hdr.cmd);
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 }
 
@@ -272,7 +272,7 @@ void IntelHDACodecDriverBase::UnlinkFromController() {
     }
 }
 
-mx_status_t IntelHDACodecDriverBase::SendCodecCommand(uint16_t  nid,
+zx_status_t IntelHDACodecDriverBase::SendCodecCommand(uint16_t  nid,
                                                       CodecVerb verb,
                                                       bool      no_ack) {
     fbl::RefPtr<DispatcherChannel> device_channel;
@@ -282,7 +282,7 @@ mx_status_t IntelHDACodecDriverBase::SendCodecCommand(uint16_t  nid,
     }
 
     if (device_channel == nullptr)
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
     ihda_codec_send_corb_cmd_req_t cmd;
 
@@ -300,16 +300,16 @@ fbl::RefPtr<IntelHDAStreamBase> IntelHDACodecDriverBase::GetActiveStream(uint32_
     return iter.IsValid() ? iter.CopyPointer() : nullptr;
 }
 
-mx_status_t IntelHDACodecDriverBase::ActivateStream(
+zx_status_t IntelHDACodecDriverBase::ActivateStream(
         const fbl::RefPtr<IntelHDAStreamBase>& stream) {
     if ((stream == nullptr) ||
         (stream->id() == IHDA_INVALID_TRANSACTION_ID) ||
         (stream->id() == CODEC_TID))
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     fbl::AutoLock shutdown_lock(&shutdown_lock_);
     if (shutting_down_)
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
     // Grab a reference to the channel we use to talk to the codec device.  If
     // the channel has already been closed, we cannot activate this stream.
@@ -317,7 +317,7 @@ mx_status_t IntelHDACodecDriverBase::ActivateStream(
     {
         fbl::AutoLock device_channel_lock(&device_channel_lock_);
         if (device_channel_ == nullptr)
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
         device_channel = device_channel_;
     }
 
@@ -327,14 +327,14 @@ mx_status_t IntelHDACodecDriverBase::ActivateStream(
     {
         fbl::AutoLock active_streams_lock(&active_streams_lock_);
         if (!active_streams_.insert_or_find(stream))
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
     }
 
     // Go ahead and activate the stream.
     return stream->Activate(fbl::WrapRefPtr(this), device_channel);
 }
 
-mx_status_t IntelHDACodecDriverBase::AllocateUnsolTag(const IntelHDAStreamBase& stream,
+zx_status_t IntelHDACodecDriverBase::AllocateUnsolTag(const IntelHDAStreamBase& stream,
                                                       uint8_t* out_tag) {
     return AllocateUnsolTag(stream.id(), out_tag);
 }
@@ -347,7 +347,7 @@ void IntelHDACodecDriverBase::ReleaseAllUnsolTags(const IntelHDAStreamBase& stre
     return ReleaseAllUnsolTags(stream.id());
 }
 
-mx_status_t IntelHDACodecDriverBase::DeactivateStream(uint32_t stream_id) {
+zx_status_t IntelHDACodecDriverBase::DeactivateStream(uint32_t stream_id) {
     fbl::RefPtr<IntelHDAStreamBase> stream;
     {
         fbl::AutoLock active_streams_lock(&active_streams_lock_);
@@ -355,15 +355,15 @@ mx_status_t IntelHDACodecDriverBase::DeactivateStream(uint32_t stream_id) {
     }
 
     if (stream == nullptr)
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
 
     stream->Deactivate();
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t IntelHDACodecDriverBase::AllocateUnsolTag(uint32_t stream_id, uint8_t* out_tag) {
-    MX_DEBUG_ASSERT(out_tag != nullptr);
+zx_status_t IntelHDACodecDriverBase::AllocateUnsolTag(uint32_t stream_id, uint8_t* out_tag) {
+    ZX_DEBUG_ASSERT(out_tag != nullptr);
     fbl::AutoLock unsol_tag_lock(&unsol_tag_lock_);
 
     static_assert(sizeof(free_unsol_tags_) == sizeof(long long int),
@@ -372,14 +372,14 @@ mx_status_t IntelHDACodecDriverBase::AllocateUnsolTag(uint32_t stream_id, uint8_
 
     uint32_t first_set = ffsll(free_unsol_tags_);
     if (!first_set)
-      return MX_ERR_NO_MEMORY;
+      return ZX_ERR_NO_MEMORY;
 
     --first_set;
 
     *out_tag = first_set;
     free_unsol_tags_ &= ~(1ull << first_set);
     unsol_tag_to_stream_id_map_[first_set] = stream_id;
-    return MX_OK;
+    return ZX_OK;
 
 }
 
@@ -387,10 +387,10 @@ void IntelHDACodecDriverBase::ReleaseUnsolTag(uint32_t stream_id, uint8_t tag) {
     fbl::AutoLock unsol_tag_lock(&unsol_tag_lock_);
     uint64_t mask = uint64_t(1u) << tag;
 
-    MX_DEBUG_ASSERT(mask != 0);
-    MX_DEBUG_ASSERT(!(free_unsol_tags_ & mask));
-    MX_DEBUG_ASSERT(tag < countof(unsol_tag_to_stream_id_map_));
-    MX_DEBUG_ASSERT(unsol_tag_to_stream_id_map_[tag] == stream_id);
+    ZX_DEBUG_ASSERT(mask != 0);
+    ZX_DEBUG_ASSERT(!(free_unsol_tags_ & mask));
+    ZX_DEBUG_ASSERT(tag < countof(unsol_tag_to_stream_id_map_));
+    ZX_DEBUG_ASSERT(unsol_tag_to_stream_id_map_[tag] == stream_id);
 
     free_unsol_tags_ |= mask;
 }
@@ -406,18 +406,18 @@ void IntelHDACodecDriverBase::ReleaseAllUnsolTags(uint32_t stream_id) {
     }
 }
 
-mx_status_t IntelHDACodecDriverBase::MapUnsolTagToStreamId(uint8_t tag, uint32_t* out_stream_id) {
-    MX_DEBUG_ASSERT(out_stream_id != nullptr);
+zx_status_t IntelHDACodecDriverBase::MapUnsolTagToStreamId(uint8_t tag, uint32_t* out_stream_id) {
+    ZX_DEBUG_ASSERT(out_stream_id != nullptr);
 
     fbl::AutoLock unsol_tag_lock(&unsol_tag_lock_);
     uint64_t mask = uint64_t(1u) << tag;
 
     if ((!mask) || (free_unsol_tags_ & mask))
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
 
-    MX_DEBUG_ASSERT(tag < countof(unsol_tag_to_stream_id_map_));
+    ZX_DEBUG_ASSERT(tag < countof(unsol_tag_to_stream_id_map_));
     *out_stream_id = unsol_tag_to_stream_id_map_[tag];
-    return MX_OK;
+    return ZX_OK;
 }
 
 }  // namespace codecs

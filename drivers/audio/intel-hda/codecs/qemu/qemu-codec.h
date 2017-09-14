@@ -17,8 +17,8 @@ class QemuCodec : public IntelHDACodecDriverBase {
 public:
     static fbl::RefPtr<QemuCodec> Create();
 
-    mx_status_t Init(mx_device_t* codec_dev);
-    mx_status_t Start() override;
+    zx_status_t Init(zx_device_t* codec_dev);
+    zx_status_t Start() override;
 
 protected:
     void PrintDebugPrefix() const override;

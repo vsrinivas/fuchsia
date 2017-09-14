@@ -36,62 +36,62 @@ fbl::RefPtr<QemuCodec> QemuCodec::Create() {
     return fbl::AdoptRef(new QemuCodec);
 }
 
-mx_status_t QemuCodec::Init(mx_device_t* codec_dev) {
-    mx_status_t res = Bind(codec_dev);
-    if (res != MX_OK)
+zx_status_t QemuCodec::Init(zx_device_t* codec_dev) {
+    zx_status_t res = Bind(codec_dev);
+    if (res != ZX_OK)
         return res;
 
     res = Start();
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
         Shutdown();
         return res;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t QemuCodec::Start() {
-    mx_status_t res;
+zx_status_t QemuCodec::Start() {
+    zx_status_t res;
 
     auto output = fbl::AdoptRef<QemuStream>(new QemuOutputStream());
     res = ActivateStream(output);
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
         LOG("Failed to activate output stream (res %d)!", res);
         return res;
     }
 
     auto input = fbl::AdoptRef<QemuStream>(new QemuInputStream());
     res = ActivateStream(input);
-    if (res != MX_OK) {
+    if (res != ZX_OK) {
         LOG("Failed to activate input stream (res %d)!", res);
         return res;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-extern "C" mx_status_t qemu_ihda_codec_bind_hook(void* ctx,
-                                                 mx_device_t* codec_dev,
+extern "C" zx_status_t qemu_ihda_codec_bind_hook(void* ctx,
+                                                 zx_device_t* codec_dev,
                                                  void** cookie) {
     if (cookie == nullptr)
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
 
     auto codec = QemuCodec::Create();
-    MX_DEBUG_ASSERT(codec != nullptr);
+    ZX_DEBUG_ASSERT(codec != nullptr);
 
     // Init our codec.  If we succeed, transfer our reference to the unmanaged
     // world.  We will re-claim it later when unbind is called.
-    mx_status_t res = codec->Init(codec_dev);
-    if (res == MX_OK)
+    zx_status_t res = codec->Init(codec_dev);
+    if (res == ZX_OK)
         *cookie = codec.leak_ref();
 
     return res;
 }
 
 extern "C" void qemu_ihda_codec_unbind_hook(void* ctx,
-                                            mx_device_t* codec_dev,
+                                            zx_device_t* codec_dev,
                                             void* cookie) {
-    MX_DEBUG_ASSERT(cookie != nullptr);
+    ZX_DEBUG_ASSERT(cookie != nullptr);
 
     // Reclaim our reference from the cookie.
     auto codec = fbl::internal::MakeRefPtrNoAdopt(reinterpret_cast<QemuCodec*>(cookie));

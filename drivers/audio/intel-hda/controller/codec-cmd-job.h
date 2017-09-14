@@ -31,7 +31,7 @@ public:
     CodecVerb    verb()      const { return cmd_.verb(); }
 
     const fbl::RefPtr<DispatcherChannel>& response_channel() const { return response_channel_; }
-    mx_txid_t transaction_id() const { return transaction_id_; }
+    zx_txid_t transaction_id() const { return transaction_id_; }
 
 private:
     // Only our slab allocators is allowed to construct us, and only the
@@ -50,7 +50,7 @@ private:
     ~CodecCmdJob() = default;
 
     const CodecCommand cmd_;
-    const mx_txid_t    transaction_id_ = IHDA_INVALID_TRANSACTION_ID;
+    const zx_txid_t    transaction_id_ = IHDA_INVALID_TRANSACTION_ID;
     fbl::RefPtr<DispatcherChannel> response_channel_ = nullptr;
 };
 

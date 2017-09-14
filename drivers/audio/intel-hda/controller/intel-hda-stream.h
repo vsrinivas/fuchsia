@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <mx/handle.h>
-#include <mx/vmo.h>
+#include <zx/handle.h>
+#include <zx/vmo.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -59,16 +59,16 @@ public:
     uint16_t id()              const { return id_; }
     uint16_t GetKey()          const { return id(); }
 
-    mx_status_t SetStreamFormat(uint16_t encoded_fmt,
+    zx_status_t SetStreamFormat(uint16_t encoded_fmt,
                                 const fbl::RefPtr<DispatcherChannel>& channel)
         TA_EXCL(channel_lock_);
     void Deactivate() TA_EXCL(channel_lock_);
     void OnChannelClosed(const DispatcherChannel& channel) TA_EXCL(channel_lock_);
 
-    mx_status_t ProcessClientRequest(DispatcherChannel* channel,
+    zx_status_t ProcessClientRequest(DispatcherChannel* channel,
                                      const RequestBufferType& req,
                                      uint32_t req_size,
-                                     mx::handle&& rxed_handle) TA_EXCL(channel_lock_);
+                                     zx::handle&& rxed_handle) TA_EXCL(channel_lock_);
 
     void ProcessStreamIRQ() TA_EXCL(notif_lock_);
 
@@ -79,7 +79,7 @@ private:
     IntelHDAStream(Type                    type,
                    uint16_t                id,
                    hda_stream_desc_regs_t* regs,
-                   mx_paddr_t              bdl_phys,
+                   zx_paddr_t              bdl_phys,
                    uintptr_t               bdl_virt);
     ~IntelHDAStream();
 
@@ -89,12 +89,12 @@ private:
     void EnsureStoppedLocked() TA_REQ(channel_lock_) { EnsureStopped(regs_); }
 
     // Client request handlers
-    mx_status_t ProcessGetFifoDepthLocked(const audio_proto::RingBufGetFifoDepthReq& req)
+    zx_status_t ProcessGetFifoDepthLocked(const audio_proto::RingBufGetFifoDepthReq& req)
         TA_REQ(channel_lock_);
-    mx_status_t ProcessGetBufferLocked(const audio_proto::RingBufGetBufferReq& req)
+    zx_status_t ProcessGetBufferLocked(const audio_proto::RingBufGetBufferReq& req)
         TA_REQ(channel_lock_);
-    mx_status_t ProcessStartLocked(const audio_proto::RingBufStartReq& req) TA_REQ(channel_lock_);
-    mx_status_t ProcessStopLocked(const audio_proto::RingBufStopReq& req) TA_REQ(channel_lock_);
+    zx_status_t ProcessStartLocked(const audio_proto::RingBufStartReq& req) TA_REQ(channel_lock_);
+    zx_status_t ProcessStopLocked(const audio_proto::RingBufStopReq& req) TA_REQ(channel_lock_);
 
     // Release the client ring buffer (if one has been assigned)
     void ReleaseRingBufferLocked() TA_REQ(channel_lock_);
@@ -122,7 +122,7 @@ private:
     const uint16_t                id_         = 0;
     hda_stream_desc_regs_t* const regs_       = nullptr;
     IntelHDABDLEntry*       const bdl_        = nullptr;
-    const mx_paddr_t              bdl_phys_   = 0;
+    const zx_paddr_t              bdl_phys_   = 0;
 
     // Parameters determined at allocation time.
     Type    configured_type_;
@@ -132,7 +132,7 @@ private:
     // been set by the codec.
     fbl::Mutex channel_lock_;
     fbl::RefPtr<DispatcherChannel> channel_ TA_GUARDED(channel_lock_);
-    mx::vmo ring_buffer_vmo_ TA_GUARDED(channel_lock_);
+    zx::vmo ring_buffer_vmo_ TA_GUARDED(channel_lock_);
 
     // Paramters determined after stream format configuration.
     uint16_t encoded_fmt_ = 0;

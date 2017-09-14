@@ -21,9 +21,9 @@ source_set("ihda-codec-utils") {
     deps = [
         "//drivers/audio/audio-proto",
         "//drivers/audio/intel-hda/utils:ihda-utils",
-        "//magenta/system/ulib/audio-proto-utils",
-        "//magenta/system/ulib/mx",
-        "//magenta/system/ulib/fbl",
+        "//zircon/system/ulib/audio-proto-utils",
+        "//zircon/system/ulib/zx",
+        "//zircon/system/ulib/fbl",
     ]
 
     libs = [

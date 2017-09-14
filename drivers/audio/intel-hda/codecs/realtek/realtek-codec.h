@@ -19,18 +19,18 @@ class RealtekCodec : public IntelHDACodecDriverBase {
 public:
     static fbl::RefPtr<RealtekCodec> Create();
 
-    mx_status_t Init(mx_device_t* codec_dev);
-    mx_status_t Start() override;
-    mx_status_t ProcessSolicitedResponse(const CodecResponse& resp) override;
+    zx_status_t Init(zx_device_t* codec_dev);
+    zx_status_t Start() override;
+    zx_status_t ProcessSolicitedResponse(const CodecResponse& resp) override;
 
 protected:
     void PrintDebugPrefix() const override;
 
-    mx_status_t SetupCommon();
-    mx_status_t SetupAcer12();
-    mx_status_t SetupIntelNUC();
-    mx_status_t RunCommandList(const CommandListEntry* cmds, size_t cmd_count);
-    mx_status_t CreateAndStartStreams(const StreamProperties* streams, size_t stream_cnt);
+    zx_status_t SetupCommon();
+    zx_status_t SetupAcer12();
+    zx_status_t SetupIntelNUC();
+    zx_status_t RunCommandList(const CommandListEntry* cmds, size_t cmd_count);
+    zx_status_t CreateAndStartStreams(const StreamProperties* streams, size_t stream_cnt);
 
 private:
     friend class fbl::RefPtr<RealtekCodec>;

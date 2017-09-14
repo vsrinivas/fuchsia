@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
+#include <zircon/compiler.h>
 
 #define TA_CAP(x) __TA_CAPABILITY(x)
 #define TA_GUARDED(x) __TA_GUARDED(x)

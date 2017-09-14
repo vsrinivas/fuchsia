@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mx/handle.h>
+#include <zx/handle.h>
 #include <fbl/type_support.h>
 
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
@@ -16,28 +16,28 @@ namespace audio {
 namespace intel_hda {
 
 template <typename DeviceType>
-mx_status_t IntelHDADevice<DeviceType>::DeviceIoctl(uint32_t op,
+zx_status_t IntelHDADevice<DeviceType>::DeviceIoctl(uint32_t op,
                                                     const void* in_buf, size_t in_len,
                                                     void* out_buf, size_t out_len,
                                                     size_t* out_actual) {
     if (op != IHDA_IOCTL_GET_CHANNEL) {
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
     if ((out_buf == nullptr) ||
         (out_actual == nullptr) ||
-        (out_len != sizeof(mx_handle_t))) {
-        return MX_ERR_INVALID_ARGS;
+        (out_len != sizeof(zx_handle_t))) {
+        return ZX_ERR_INVALID_ARGS;
     }
 
     auto channel = DispatcherChannelAllocator::New();
     if (channel == nullptr)
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
 
-    mx::channel out_channel;
-    mx_status_t res = channel->Activate(fbl::WrapRefPtr(this), &out_channel);
-    if (res == MX_OK) {
-        *(reinterpret_cast<mx_handle_t*>(out_buf)) = out_channel.release();
-        *out_actual = sizeof(mx_handle_t);
+    zx::channel out_channel;
+    zx_status_t res = channel->Activate(fbl::WrapRefPtr(this), &out_channel);
+    if (res == ZX_OK) {
+        *(reinterpret_cast<zx_handle_t*>(out_buf)) = out_channel.release();
+        *out_actual = sizeof(zx_handle_t);
     }
 
     return res;
@@ -59,8 +59,8 @@ void IntelHDADevice<DeviceType>::Shutdown() {
 }
 
 template <typename DeviceType>
-mx_status_t IntelHDADevice<DeviceType>::ProcessChannel(DispatcherChannel* channel) {
-    MX_DEBUG_ASSERT(channel != nullptr);
+zx_status_t IntelHDADevice<DeviceType>::ProcessChannel(DispatcherChannel* channel) {
+    ZX_DEBUG_ASSERT(channel != nullptr);
 
     using RequestBufferType = typename DeviceType::RequestBufferType;
 
@@ -73,11 +73,11 @@ mx_status_t IntelHDADevice<DeviceType>::ProcessChannel(DispatcherChannel* channe
     // should be no possibility of message re-ordering on a given channel.
     RequestBufferType request_buffer;
     uint32_t    bytes;
-    mx::handle  handle;
-    mx_status_t res = channel->Read(&request_buffer, sizeof(request_buffer), &bytes, &handle);
+    zx::handle  handle;
+    zx_status_t res = channel->Read(&request_buffer, sizeof(request_buffer), &bytes, &handle);
 
-    if (res != MX_OK) {
-        MX_DEBUG_ASSERT(handle == MX_HANDLE_INVALID);
+    if (res != ZX_OK) {
+        ZX_DEBUG_ASSERT(handle == ZX_HANDLE_INVALID);
         return res;
     }
 

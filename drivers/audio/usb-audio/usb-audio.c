@@ -5,8 +5,8 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
-#include <magenta/hw/usb-audio.h>
-#include <magenta/listnode.h>
+#include <zircon/hw/usb-audio.h>
+#include <zircon/listnode.h>
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -26,7 +26,7 @@
     } while (0)
 #endif
 
-extern mx_status_t usb_audio_sink_create(mx_device_t* device, usb_protocol_t* usb, int index,
+extern zx_status_t usb_audio_sink_create(zx_device_t* device, usb_protocol_t* usb, int index,
                                          usb_interface_descriptor_t* intf,
                                          usb_endpoint_descriptor_t* ep,
                                          usb_audio_ac_format_type_i_desc* format_desc);
@@ -43,14 +43,14 @@ static bool want_interface(usb_interface_descriptor_t* intf, void* arg) {
             intf->bInterfaceSubClass != USB_SUBCLASS_AUDIO_CONTROL);
 }
 
-static mx_status_t usb_audio_bind(void* ctx, mx_device_t* device, void** cookie) {
+static zx_status_t usb_audio_bind(void* ctx, zx_device_t* device, void** cookie) {
     usb_protocol_t usb;
-    mx_status_t status = device_get_protocol(device, MX_PROTOCOL_USB, &usb);
-    if (status != MX_OK) {
+    zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
+    if (status != ZX_OK) {
         return status;
     }
     status = usb_claim_additional_interfaces(&usb, want_interface, NULL);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
 
@@ -238,16 +238,16 @@ static mx_status_t usb_audio_bind(void* ctx, mx_device_t* device, void** cookie)
     }
     usb_desc_iter_release(&iter);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_driver_ops_t usb_audio_driver_ops = {
+static zx_driver_ops_t usb_audio_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = usb_audio_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(usb_audio, usb_audio_driver_ops, "magenta", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(usb_audio, usb_audio_driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_AUDIO),
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_AUDIO_CONTROL),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 0),
-MAGENTA_DRIVER_END(usb_audio)
+ZIRCON_DRIVER_END(usb_audio)

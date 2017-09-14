@@ -4,7 +4,7 @@
 
 #include <ddk/device.h>
 #include <driver/usb.h>
-#include <magenta/device/midi.h>
+#include <zircon/device/midi.h>
 #include <sync/completion.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -17,8 +17,8 @@
 #define WRITE_REQ_COUNT 20
 
 typedef struct {
-    mx_device_t* mxdev;
-    mx_device_t* usb_mxdev;
+    zx_device_t* mxdev;
+    zx_device_t* usb_mxdev;
     usb_protocol_t usb;
 
     // pool of free USB requests
@@ -32,11 +32,11 @@ typedef struct {
     bool dead;
 
     // the last signals we reported
-    mx_signals_t signals;
+    zx_signals_t signals;
 } usb_midi_sink_t;
 
 static void update_signals(usb_midi_sink_t* sink) {
-    mx_signals_t new_signals = 0;
+    zx_signals_t new_signals = 0;
     if (sink->dead) {
         new_signals |= (DEV_STATE_WRITABLE | DEV_STATE_ERROR);
     } else if (!list_is_empty(&sink->free_write_reqs)) {
@@ -51,7 +51,7 @@ static void update_signals(usb_midi_sink_t* sink) {
 }
 
 static void usb_midi_sink_write_complete(iotxn_t* txn, void* cookie) {
-    if (txn->status == MX_ERR_IO_NOT_PRESENT) {
+    if (txn->status == ZX_ERR_IO_NOT_PRESENT) {
         iotxn_release(txn);
         return;
     }
@@ -86,49 +86,49 @@ static void usb_midi_sink_release(void* ctx) {
     usb_midi_sink_free(sink);
 }
 
-static mx_status_t usb_midi_sink_open(void* ctx, mx_device_t** dev_out, uint32_t flags) {
+static zx_status_t usb_midi_sink_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
     usb_midi_sink_t* sink = ctx;
-    mx_status_t result;
+    zx_status_t result;
 
     mtx_lock(&sink->mutex);
     if (sink->open) {
-        result = MX_ERR_ALREADY_BOUND;
+        result = ZX_ERR_ALREADY_BOUND;
     } else {
         sink->open = true;
-        result = MX_OK;
+        result = ZX_OK;
     }
     mtx_unlock(&sink->mutex);
 
     return result;
 }
 
-static mx_status_t usb_midi_sink_close(void* ctx, uint32_t flags) {
+static zx_status_t usb_midi_sink_close(void* ctx, uint32_t flags) {
     usb_midi_sink_t* sink = ctx;
 
     mtx_lock(&sink->mutex);
     sink->open = false;
     mtx_unlock(&sink->mutex);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-static mx_status_t usb_midi_sink_write(void* ctx, const void* data, size_t length,
-                                       mx_off_t offset, size_t* actual) {
+static zx_status_t usb_midi_sink_write(void* ctx, const void* data, size_t length,
+                                       zx_off_t offset, size_t* actual) {
     usb_midi_sink_t* sink = ctx;
 
     if (sink->dead) {
-        return MX_ERR_IO_NOT_PRESENT;
+        return ZX_ERR_IO_NOT_PRESENT;
     }
 
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
     size_t out_actual = length;
 
     const uint8_t* src = (uint8_t *)data;
 
     while (length > 0) {
-        completion_wait(&sink->free_write_completion, MX_TIME_INFINITE);
+        completion_wait(&sink->free_write_completion, ZX_TIME_INFINITE);
         if (sink->dead) {
-            return MX_ERR_IO_NOT_PRESENT;
+            return ZX_ERR_IO_NOT_PRESENT;
         }
         mtx_lock(&sink->mutex);
         list_node_t* node = list_remove_head(&sink->free_write_reqs);
@@ -138,13 +138,13 @@ static mx_status_t usb_midi_sink_write(void* ctx, const void* data, size_t lengt
         mtx_unlock(&sink->mutex);
         if (!node) {
             // shouldn't happen!
-            status = MX_ERR_INTERNAL;
+            status = ZX_ERR_INTERNAL;
             goto out;
         }
         iotxn_t* txn = containerof(node, iotxn_t, node);
 
         size_t message_length = get_midi_message_length(*src);
-        if (message_length < 1 || message_length > length) return MX_ERR_INVALID_ARGS;
+        if (message_length < 1 || message_length > length) return ZX_ERR_INVALID_ARGS;
 
         uint8_t buffer[4];
         buffer[0] = (src[0] & 0xF0) >> 4;
@@ -162,29 +162,29 @@ static mx_status_t usb_midi_sink_write(void* ctx, const void* data, size_t lengt
 
 out:
     update_signals(sink);
-    if (status == MX_OK) {
+    if (status == ZX_OK) {
         *actual = out_actual;
     }
     return status;
 }
 
-static mx_status_t usb_midi_sink_ioctl(void* ctx, uint32_t op, const void* in_buf,
+static zx_status_t usb_midi_sink_ioctl(void* ctx, uint32_t op, const void* in_buf,
                                        size_t in_len, void* out_buf, size_t out_len,
                                        size_t* out_actual) {
     switch (op) {
     case IOCTL_MIDI_GET_DEVICE_TYPE: {
         int* reply = out_buf;
-        if (out_len < sizeof(*reply)) return MX_ERR_BUFFER_TOO_SMALL;
+        if (out_len < sizeof(*reply)) return ZX_ERR_BUFFER_TOO_SMALL;
         *reply = MIDI_TYPE_SINK;
         *out_actual = sizeof(*reply);
-        return MX_OK;
+        return ZX_OK;
     }
     }
 
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-static mx_protocol_device_t usb_midi_sink_device_proto = {
+static zx_protocol_device_t usb_midi_sink_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .unbind = usb_midi_sink_unbind,
     .release = usb_midi_sink_release,
@@ -194,12 +194,12 @@ static mx_protocol_device_t usb_midi_sink_device_proto = {
     .ioctl = usb_midi_sink_ioctl,
 };
 
-mx_status_t usb_midi_sink_create(mx_device_t* device, usb_protocol_t* usb, int index,
+zx_status_t usb_midi_sink_create(zx_device_t* device, usb_protocol_t* usb, int index,
                                   usb_interface_descriptor_t* intf, usb_endpoint_descriptor_t* ep) {
     usb_midi_sink_t* sink = calloc(1, sizeof(usb_midi_sink_t));
     if (!sink) {
         printf("Not enough memory for usb_midi_sink_t\n");
-        return MX_ERR_NO_MEMORY;
+        return ZX_ERR_NO_MEMORY;
     }
 
     list_initialize(&sink->free_write_reqs);
@@ -214,7 +214,7 @@ mx_status_t usb_midi_sink_create(mx_device_t* device, usb_protocol_t* usb, int i
         iotxn_t* txn = usb_alloc_iotxn(ep->bEndpointAddress, usb_ep_max_packet(ep));
         if (!txn) {
             usb_midi_sink_free(sink);
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
         }
         txn->length = packet_size;
         txn->complete_cb = usb_midi_sink_write_complete;
@@ -223,7 +223,7 @@ mx_status_t usb_midi_sink_create(mx_device_t* device, usb_protocol_t* usb, int i
     }
     completion_signal(&sink->free_write_completion);
 
-    char name[MX_DEVICE_NAME_MAX];
+    char name[ZX_DEVICE_NAME_MAX];
     snprintf(name, sizeof(name), "usb-midi-sink-%d\n", index);
 
     device_add_args_t args = {
@@ -231,11 +231,11 @@ mx_status_t usb_midi_sink_create(mx_device_t* device, usb_protocol_t* usb, int i
         .name = name,
         .ctx = sink,
         .ops = &usb_midi_sink_device_proto,
-        .proto_id = MX_PROTOCOL_MIDI,
+        .proto_id = ZX_PROTOCOL_MIDI,
     };
 
-    mx_status_t status = device_add(device, &args, &sink->mxdev);
-    if (status != MX_OK) {
+    zx_status_t status = device_add(device, &args, &sink->mxdev);
+    if (status != ZX_OK) {
         printf("device_add failed in usb_midi_sink_create\n");
         usb_midi_sink_free(sink);
     }

@@ -7,8 +7,8 @@
 #include <ddktl/device.h>
 #include <ddktl/device-internal.h>
 #include <driver/usb.h>
-#include <magenta/listnode.h>
-#include <mx/vmo.h>
+#include <zircon/listnode.h>
+#include <zx/vmo.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 
@@ -20,10 +20,10 @@ namespace usb {
 
 struct AudioStreamProtocol : public ddk::internal::base_protocol {
     explicit AudioStreamProtocol(bool is_input) {
-        ddk_proto_id_ = is_input ? MX_PROTOCOL_AUDIO_INPUT : MX_PROTOCOL_AUDIO_OUTPUT;
+        ddk_proto_id_ = is_input ? ZX_PROTOCOL_AUDIO_INPUT : ZX_PROTOCOL_AUDIO_OUTPUT;
     }
 
-    bool is_input() const { return (ddk_proto_id_ == MX_PROTOCOL_AUDIO_INPUT); }
+    bool is_input() const { return (ddk_proto_id_ == ZX_PROTOCOL_AUDIO_INPUT); }
 };
 
 class UsbAudioStream;
@@ -35,8 +35,8 @@ class UsbAudioStream : public UsbAudioStreamBase,
                        public AudioStreamProtocol,
                        public DispatcherChannel::Owner {
 public:
-    static mx_status_t Create(bool is_input,
-                              mx_device_t* parent,
+    static zx_status_t Create(bool is_input,
+                              zx_device_t* parent,
                               usb_protocol_t* usb,
                               int index,
                               usb_interface_descriptor_t* usb_interface,
@@ -48,14 +48,14 @@ public:
     // DDK device implementation
     void DdkUnbind();
     void DdkRelease();
-    mx_status_t DdkIoctl(uint32_t op,
+    zx_status_t DdkIoctl(uint32_t op,
                          const void* in_buf, size_t in_len,
                          void* out_buf, size_t out_len, size_t* out_actual);
 
 
 protected:
     // DispatcherChannel implementation
-    mx_status_t ProcessChannel(DispatcherChannel* channel) override;
+    zx_status_t ProcessChannel(DispatcherChannel* channel) override;
     void NotifyChannelDeactivated(const DispatcherChannel& channel) override;
 
 private:
@@ -69,50 +69,50 @@ private:
         STARTED,
     };
 
-    UsbAudioStream(mx_device_t* parent, usb_protocol_t* usb, bool is_input, int usb_index)
+    UsbAudioStream(zx_device_t* parent, usb_protocol_t* usb, bool is_input, int usb_index)
         : UsbAudioStreamBase(parent),
           AudioStreamProtocol(is_input),
           usb_(*usb),
           usb_index_(usb_index),
-          create_time_(mx_time_get(MX_CLOCK_MONOTONIC)) { }
+          create_time_(zx_time_get(ZX_CLOCK_MONOTONIC)) { }
 
     virtual ~UsbAudioStream();
 
-    mx_status_t Bind(const char* devname,
+    zx_status_t Bind(const char* devname,
                      usb_interface_descriptor_t* usb_interface,
                      usb_endpoint_descriptor_t* usb_endpoint,
                      usb_audio_ac_format_type_i_desc* format_desc);
 
     void ReleaseRingBufferLocked() __TA_REQUIRES(lock_);
 
-    mx_status_t AddFormats(const usb_audio_ac_format_type_i_desc& format_desc,
+    zx_status_t AddFormats(const usb_audio_ac_format_type_i_desc& format_desc,
                            fbl::Vector<audio_stream_format_range_t>* supported_formats);
 
-    mx_status_t ProcessStreamChannelLocked(DispatcherChannel* channel) __TA_REQUIRES(lock_);
-    mx_status_t ProcessRingBufChannelLocked(DispatcherChannel* channel) __TA_REQUIRES(lock_);
+    zx_status_t ProcessStreamChannelLocked(DispatcherChannel* channel) __TA_REQUIRES(lock_);
+    zx_status_t ProcessRingBufChannelLocked(DispatcherChannel* channel) __TA_REQUIRES(lock_);
 
     // Stream command handlers
-    mx_status_t OnGetStreamFormatsLocked(DispatcherChannel* channel,
+    zx_status_t OnGetStreamFormatsLocked(DispatcherChannel* channel,
                                          const audio_proto::StreamGetFmtsReq& req)
         __TA_REQUIRES(lock_);
-    mx_status_t OnSetStreamFormatLocked(DispatcherChannel* channel,
+    zx_status_t OnSetStreamFormatLocked(DispatcherChannel* channel,
                                         const audio_proto::StreamSetFmtReq& req)
         __TA_REQUIRES(lock_);
-    mx_status_t OnGetGainLocked(DispatcherChannel* channel, const audio_proto::GetGainReq& req)
+    zx_status_t OnGetGainLocked(DispatcherChannel* channel, const audio_proto::GetGainReq& req)
         __TA_REQUIRES(lock_);
-    mx_status_t OnSetGainLocked(DispatcherChannel* channel, const audio_proto::SetGainReq& req)
+    zx_status_t OnSetGainLocked(DispatcherChannel* channel, const audio_proto::SetGainReq& req)
         __TA_REQUIRES(lock_);
-    mx_status_t OnPlugDetectLocked(DispatcherChannel* channel,
+    zx_status_t OnPlugDetectLocked(DispatcherChannel* channel,
                                    const audio_proto::PlugDetectReq& req) __TA_REQUIRES(lock_);
 
     // Ring buffer command handlers
-    mx_status_t OnGetFifoDepthLocked(DispatcherChannel* channel,
+    zx_status_t OnGetFifoDepthLocked(DispatcherChannel* channel,
             const audio_proto::RingBufGetFifoDepthReq& req) __TA_REQUIRES(lock_);
-    mx_status_t OnGetBufferLocked(DispatcherChannel* channel,
+    zx_status_t OnGetBufferLocked(DispatcherChannel* channel,
             const audio_proto::RingBufGetBufferReq& req) __TA_REQUIRES(lock_);
-    mx_status_t OnStartLocked(DispatcherChannel* channel, const audio_proto::RingBufStartReq& req)
+    zx_status_t OnStartLocked(DispatcherChannel* channel, const audio_proto::RingBufStartReq& req)
         __TA_REQUIRES(lock_);
-    mx_status_t OnStopLocked(DispatcherChannel* channel, const audio_proto::RingBufStopReq& req)
+    zx_status_t OnStopLocked(DispatcherChannel* channel, const audio_proto::RingBufStopReq& req)
         __TA_REQUIRES(lock_);
 
     void IotxnComplete(iotxn_t* txn);
@@ -143,7 +143,7 @@ private:
     uint32_t                        bytes_per_notification_ = 0;
     uint32_t                        notification_acc_ __TA_GUARDED(txn_lock_);
 
-    mx::vmo                         ring_buffer_vmo_;
+    zx::vmo                         ring_buffer_vmo_;
     void*                           ring_buffer_virt_  = nullptr;
     uint32_t                        ring_buffer_size_  = 0;
     uint32_t                        ring_buffer_pos_ __TA_GUARDED(txn_lock_);
@@ -164,8 +164,8 @@ private:
     uint8_t                         alt_setting_ = 0;
     uint8_t                         usb_ep_addr_ = 0;
     const int                       usb_index_;
-    const mx_time_t                 create_time_;
-    const uint64_t                  ticks_per_msec_ = mx_ticks_per_second() / 1000u;
+    const zx_time_t                 create_time_;
+    const uint64_t                  ticks_per_msec_ = zx_ticks_per_second() / 1000u;
 
     // TODO(johngro) : See MG-940.  eliminate this ASAP
     bool iotxn_complete_prio_bumped_ = false;
