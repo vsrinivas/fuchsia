@@ -215,17 +215,6 @@ static device_t platform_device = {
     .refcount = 1,
 };
 
-device_t socket_device = {
-    .flags = DEV_CTX_IMMORTAL,
-    .protocol_id = 0,
-    .name = "socket",
-    .libname = "",
-    .args = "",
-    .children = LIST_INITIAL_VALUE(socket_device.children),
-    .pending = LIST_INITIAL_VALUE(socket_device.pending),
-    .refcount = 1,
-};
-
 void devmgr_set_mdi(zx_handle_t mdi_handle) {
     // MDI VMO handle is passed via via the resource handle
     platform_device.hrsrc = mdi_handle;
@@ -1470,7 +1459,6 @@ void coordinator(void) {
 #endif
 
     devfs_publish(&root_device, &misc_device);
-    devfs_publish(&root_device, &socket_device);
     devfs_publish(&root_device, &acpi_device);
     if (platform_device.hrsrc != ZX_HANDLE_INVALID) {
         devfs_publish(&root_device, &platform_device);

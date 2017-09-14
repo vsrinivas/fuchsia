@@ -19,8 +19,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern device_t socket_device;
-
 typedef struct dc_watcher watcher_t;
 typedef struct dc_iostate iostate_t;
 
@@ -461,12 +459,6 @@ static void devfs_open(devnode_t* dirdn, zx_handle_t h, char* path, uint32_t fla
         }
     } else {
         path = (char*) ".";
-        if (dn->device == &socket_device) {
-            // don't hand off opens of the /dev/socket "directory"
-            // to netstack, since it doesn't want to deal with STAT
-            // or the like
-            flags |= O_NOREMOTE;
-        }
     }
 
     if (r < 0) {
@@ -613,24 +605,6 @@ static zx_status_t devfs_rio_handler(zxrio_msg_t* msg, void* cookie) {
         return r;
     case ZXRIO_IOCTL_1H:
         switch (msg->arg2.op) {
-        case IOCTL_VFS_MOUNT_FS: {
-            zx_status_t r;
-            if (len != sizeof(zx_handle_t)) {
-                r = ZX_ERR_INVALID_ARGS;
-            } else if (dn->device != &socket_device) {
-                r = ZX_ERR_NOT_SUPPORTED;
-            } else {
-                if (socket_device.hrpc != ZX_HANDLE_INVALID) {
-                    zx_handle_close(socket_device.hrpc);
-                }
-                socket_device.hrpc = msg->handle[0];
-                r = ZX_OK;
-            }
-            if (r != ZX_OK) {
-                zx_handle_close(msg->handle[0]);
-            }
-            return r;
-        }
         case IOCTL_VFS_WATCH_DIR: {
             vfs_watch_dir_t* wd = (vfs_watch_dir_t*) msg->data;
             if ((len != sizeof(vfs_watch_dir_t)) ||
