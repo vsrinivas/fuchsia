@@ -6,8 +6,8 @@
 
 #include "clock.h"
 
-#include <magenta/types.h>
-#include <mx/timer.h>
+#include <zircon/types.h>
+#include <zx/timer.h>
 
 namespace wlan {
 
@@ -16,48 +16,48 @@ class Timer {
     explicit Timer(uint64_t id);
     virtual ~Timer();
 
-    virtual mx_time_t Now() const = 0;
+    virtual zx_time_t Now() const = 0;
 
     // TODO(tkilbourn): add slack
-    mx_status_t SetTimer(mx_time_t deadline);
-    mx_status_t CancelTimer();
+    zx_status_t SetTimer(zx_time_t deadline);
+    zx_status_t CancelTimer();
 
     uint64_t id() const { return id_; }
-    mx_time_t deadline() const { return deadline_; }
+    zx_time_t deadline() const { return deadline_; }
 
   protected:
-    virtual mx_status_t SetTimerImpl(mx_time_t deadline) = 0;
-    virtual mx_status_t CancelTimerImpl() = 0;
+    virtual zx_status_t SetTimerImpl(zx_time_t deadline) = 0;
+    virtual zx_status_t CancelTimerImpl() = 0;
 
   private:
     uint64_t id_;
-    mx_time_t deadline_ = 0;
+    zx_time_t deadline_ = 0;
 };
 
 class SystemTimer final : public Timer {
   public:
-    SystemTimer(uint64_t id, mx::timer timer);
+    SystemTimer(uint64_t id, zx::timer timer);
 
-    mx_time_t Now() const override { return clock_.Now(); }
+    zx_time_t Now() const override { return clock_.Now(); }
 
   protected:
-    mx_status_t SetTimerImpl(mx_time_t deadline) override;
-    mx_status_t CancelTimerImpl() override;
+    zx_status_t SetTimerImpl(zx_time_t deadline) override;
+    zx_status_t CancelTimerImpl() override;
 
   private:
     SystemClock clock_;
-    mx::timer timer_;
+    zx::timer timer_;
 };
 
 class TestTimer final : public Timer {
   public:
     TestTimer(uint64_t id, TestClock* clock) : Timer(id), clock_(clock) {}
 
-    mx_time_t Now() const override { return clock_->Now(); }
+    zx_time_t Now() const override { return clock_->Now(); }
 
   protected:
-    mx_status_t SetTimerImpl(mx_time_t duration) override;
-    mx_status_t CancelTimerImpl() override;
+    zx_status_t SetTimerImpl(zx_time_t duration) override;
+    zx_status_t CancelTimerImpl() override;
 
   private:
     TestClock* clock_;

@@ -9,15 +9,15 @@
 namespace wlan {
 namespace testing {
 
-Device::Device(mx_device_t* device, test_protocol_t* test_proto)
+Device::Device(zx_device_t* device, test_protocol_t* test_proto)
   : TestBaseDevice(device),
     test_proxy_(test_proto) {}
 
-mx_status_t Device::Bind() {
+zx_status_t Device::Bind() {
     std::printf("wlan::testing::Device::Bind()\n");
 
     auto status = DdkAdd("wlan-test");
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         std::printf("wlan-test: could not add test device: %d\n", status);
     }
     return status;
@@ -34,18 +34,18 @@ void Device::DdkRelease() {
     delete this;
 }
 
-mx_status_t Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+zx_status_t Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                              size_t out_len, size_t* out_actual) {
-    return MX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-mx_status_t Device::WlanmacQuery(uint32_t options, ethmac_info_t* info) {
+zx_status_t Device::WlanmacQuery(uint32_t options, ethmac_info_t* info) {
     std::printf("wlan::testing::Device::WlanmacQuery()\n");
     static uint8_t mac[ETH_MAC_SIZE] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06 };
     info->features = ETHMAC_FEATURE_WLAN;
     info->mtu = 1500;
     std::memcpy(info->mac, mac, ETH_MAC_SIZE);
-    return MX_OK;
+    return ZX_OK;
 }
 
 void Device::WlanmacStop() {
@@ -55,25 +55,25 @@ void Device::WlanmacStop() {
     wlanmac_proxy_.reset();
 }
 
-mx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
+zx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     std::printf("wlan::testing::Device::WlanmacStart()\n");
     std::lock_guard<std::mutex> lock(lock_);
     SetState(DEV_STATE_READABLE | DEV_STATE_WRITABLE);
     if (wlanmac_proxy_ != nullptr) {
-        return MX_ERR_ALREADY_BOUND;
+        return ZX_ERR_ALREADY_BOUND;
     } else {
         wlanmac_proxy_.swap(proxy);
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 void Device::WlanmacTx(uint32_t options, const void* data, size_t length) {
 
 }
 
-mx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
+zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
     std::printf("wlan::testing::Device::WlanmacSetChannel()  chan=%u\n", chan->channel_num);
-    return MX_OK;
+    return ZX_OK;
 }
 
 }  // namespace testing

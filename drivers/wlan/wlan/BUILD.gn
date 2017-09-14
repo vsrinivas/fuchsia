@@ -7,7 +7,7 @@ import("//packages/package.gni")
 
 config("wlan_config") {
   include_dirs = [ "." ]
-  defines = [ "MX_DEBUGLEVEL=2" ]
+  defines = [ "ZX_DEBUGLEVEL=2" ]
 }
 
 source_set("mlme") {
@@ -36,8 +36,8 @@ source_set("mlme") {
 
   public_deps = [
     "//apps/wlan/services:mlme_data_only",
-    "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 
   public_configs = [ ":wlan_config" ]
@@ -55,9 +55,9 @@ driver_module("wlan_driver") {
 
   deps = [
     ":mlme",
-    "//magenta/system/ulib/ddktl",
-    "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/fbl",
+    "//zircon/system/ulib/ddktl",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 
   libs = [ "driver" ]

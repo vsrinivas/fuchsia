@@ -18,12 +18,12 @@
 
 namespace ath10k {
 
-Device::Device(mx_device_t* device, pci_protocol_t* pci)
+Device::Device(zx_device_t* device, pci_protocol_t* pci)
   : BaseDevice(device), pci_(pci) {}
 
-mx_status_t Device::Bind() {
+zx_status_t Device::Bind() {
     DdkAdd("ath10k");
-    return MX_OK;
+    return ZX_OK;
 }
 
 void Device::DdkUnbind() {
@@ -34,20 +34,20 @@ void Device::DdkRelease() {
     delete this;
 }
 
-mx_status_t Device::WlanmacQuery(uint32_t options, ethmac_info_t* info) {
+zx_status_t Device::WlanmacQuery(uint32_t options, ethmac_info_t* info) {
     info->mtu = 1500;
     std::memcpy(info->mac, mac_addr_, ETH_MAC_SIZE);
     info->features |= ETHMAC_FEATURE_WLAN;
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
+zx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     std::lock_guard<std::mutex> guard(lock_);
     if (wlanmac_proxy_ != nullptr) {
-        return MX_ERR_ALREADY_BOUND;
+        return ZX_ERR_ALREADY_BOUND;
     }
     wlanmac_proxy_.swap(proxy);
-    return MX_OK;
+    return ZX_OK;
 }
 
 void Device::WlanmacStop() {
@@ -59,9 +59,9 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
     // TODO
 }
 
-mx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
+zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
     // TODO
-    return MX_OK;
+    return ZX_OK;
 }
 
 }  // namespace ath10k

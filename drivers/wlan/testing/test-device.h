@@ -8,8 +8,8 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/test.h>
 #include <ddktl/protocol/wlan.h>
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 #include <fbl/unique_ptr.h>
 
 #include <mutex>
@@ -23,20 +23,20 @@ using TestBaseDevice = ddk::Device<Device, ddk::Unbindable, ddk::Ioctlable>;
 class Device : public TestBaseDevice,
                public ddk::WlanmacProtocol<Device> {
   public:
-    Device(mx_device_t* device, test_protocol_t* test_proto);
+    Device(zx_device_t* device, test_protocol_t* test_proto);
 
-    mx_status_t Bind();
+    zx_status_t Bind();
 
     void DdkUnbind();
     void DdkRelease();
-    mx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                          size_t out_len, size_t* out_actual);
 
-    mx_status_t WlanmacQuery(uint32_t options, ethmac_info_t* info);
+    zx_status_t WlanmacQuery(uint32_t options, ethmac_info_t* info);
     void WlanmacStop();
-    mx_status_t WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy);
+    zx_status_t WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy);
     void WlanmacTx(uint32_t options, const void* data, size_t length);
-    mx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
+    zx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
 
   private:
     ddk::TestProtocolProxy test_proxy_;

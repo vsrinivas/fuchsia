@@ -6,17 +6,17 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 
-extern mx_status_t ralink_bind(void* ctx, mx_device_t* device, void** cookie);
+extern zx_status_t ralink_bind(void* ctx, zx_device_t* device, void** cookie);
 
-static mx_driver_ops_t ralink_driver_ops = {
+static zx_driver_ops_t ralink_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = ralink_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(ralink, ralink_driver_ops, "magenta", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB),
+ZIRCON_DRIVER_BEGIN(ralink, ralink_driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_VID, 0x148f),
     BI_MATCH_IF(EQ, BIND_USB_PID, 0x5370),
-MAGENTA_DRIVER_END(ralink)
+ZIRCON_DRIVER_END(ralink)

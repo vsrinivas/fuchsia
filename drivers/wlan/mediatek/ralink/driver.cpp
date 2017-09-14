@@ -15,12 +15,12 @@
 #include "device.h"
 #include "logging.h"
 
-extern "C" mx_status_t ralink_bind(void* ctx, mx_device_t* device, void** cookie) {
+extern "C" zx_status_t ralink_bind(void* ctx, zx_device_t* device, void** cookie) {
     std::printf("%s\n", __func__);
 
     usb_protocol_t usb;
-    mx_status_t result = device_get_protocol(device, MX_PROTOCOL_USB, &usb);
-    if (result != MX_OK) {
+    zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
+    if (result != ZX_OK) {
         return result;
     }
 
@@ -31,7 +31,7 @@ extern "C" mx_status_t ralink_bind(void* ctx, mx_device_t* device, void** cookie
     usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
     if (!intf || intf->bNumEndpoints < 3) {
         usb_desc_iter_release(&iter);
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     uint8_t blkin_endpt = 0;
@@ -50,15 +50,15 @@ extern "C" mx_status_t ralink_bind(void* ctx, mx_device_t* device, void** cookie
 
     if (!blkin_endpt || blkout_endpts.empty()) {
         std::printf("%s could not find endpoints\n", __func__);
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     auto rtdev = new ralink::Device(device, &usb, blkin_endpt, std::move(blkout_endpts));
     auto f = std::async(std::launch::async, [rtdev]() {
                 auto status = rtdev->Bind();
-                if (status != MX_OK) {
+                if (status != ZX_OK) {
                     delete rtdev;
                 }
             });
-    return MX_OK;
+    return ZX_OK;
 }

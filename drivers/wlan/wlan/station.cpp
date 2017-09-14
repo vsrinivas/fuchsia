@@ -16,8 +16,8 @@
 
 namespace wlan {
 
-static constexpr mx_duration_t kAssocTimeoutTu = 20;
-static constexpr mx_duration_t kSignalReportTimeoutTu = 10;
+static constexpr zx_duration_t kAssocTimeoutTu = 20;
+static constexpr zx_duration_t kSignalReportTimeoutTu = 10;
 
 Station::Station(DeviceInterface* device, fbl::unique_ptr<Timer> timer)
   : device_(device), timer_(std::move(timer)) {
@@ -35,10 +35,10 @@ void Station::Reset() {
     last_seen_ = 0;
 }
 
-mx_status_t Station::Join(JoinRequestPtr req) {
+zx_status_t Station::Join(JoinRequestPtr req) {
     debugfn();
 
-    MX_DEBUG_ASSERT(!req.is_null());
+    ZX_DEBUG_ASSERT(!req.is_null());
 
     if (req->selected_bss.is_null()) {
         errorf("bad join request\n");
@@ -54,8 +54,8 @@ mx_status_t Station::Join(JoinRequestPtr req) {
     bss_ = std::move(req->selected_bss);
     address_.set_data(bss_->bssid.data());
     debugjoin("setting channel to %u\n", bss_->channel);
-    mx_status_t status = device_->SetChannel(wlan_channel_t{bss_->channel});
-    if (status != MX_OK) {
+    zx_status_t status = device_->SetChannel(wlan_channel_t{bss_->channel});
+    if (status != ZX_OK) {
         errorf("could not set wlan channel: %d\n", status);
         Reset();
         SendJoinResponse();
@@ -64,7 +64,7 @@ mx_status_t Station::Join(JoinRequestPtr req) {
 
     join_timeout_ = deadline_after_bcn_period(req->join_failure_timeout);
     status = timer_->SetTimer(join_timeout_);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("could not set join timer: %d\n", status);
         Reset();
         SendJoinResponse();
@@ -72,13 +72,13 @@ mx_status_t Station::Join(JoinRequestPtr req) {
     return status;
 }
 
-mx_status_t Station::Authenticate(AuthenticateRequestPtr req) {
+zx_status_t Station::Authenticate(AuthenticateRequestPtr req) {
     debugfn();
 
-    MX_DEBUG_ASSERT(!req.is_null());
+    ZX_DEBUG_ASSERT(!req.is_null());
 
     if (bss_.is_null()) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     // TODO(tkilbourn): better result codes
@@ -106,7 +106,7 @@ mx_status_t Station::Authenticate(AuthenticateRequestPtr req) {
     size_t auth_len = sizeof(MgmtFrameHeader) + sizeof(Authentication);
     fbl::unique_ptr<Buffer> buffer = GetBuffer(auth_len);
     if (buffer == nullptr) {
-        return MX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     const DeviceAddress& mymac = device_->GetState()->address();
@@ -128,8 +128,8 @@ mx_status_t Station::Authenticate(AuthenticateRequestPtr req) {
     auth->auth_txn_seq_number = 1;
     auth->status_code = 0;  // Reserved, so set to 0
 
-    mx_status_t status = device_->SendWlan(std::move(packet));
-    if (status != MX_OK) {
+    zx_status_t status = device_->SendWlan(std::move(packet));
+    if (status != ZX_OK) {
         errorf("could not send auth packet: %d\n", status);
         SendAuthResponse(AuthenticateResultCodes::REFUSED);
         return status;
@@ -137,7 +137,7 @@ mx_status_t Station::Authenticate(AuthenticateRequestPtr req) {
 
     auth_timeout_ = deadline_after_bcn_period(req->auth_failure_timeout);
     status = timer_->SetTimer(auth_timeout_);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("could not set auth timer: %d\n", status);
         // This is the wrong result code, but we need to define our own codes at some later time.
         SendAuthResponse(AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
@@ -146,13 +146,13 @@ mx_status_t Station::Authenticate(AuthenticateRequestPtr req) {
     return status;
 }
 
-mx_status_t Station::Associate(AssociateRequestPtr req) {
+zx_status_t Station::Associate(AssociateRequestPtr req) {
     debugfn();
 
-    MX_DEBUG_ASSERT(!req.is_null());
+    ZX_DEBUG_ASSERT(!req.is_null());
 
     if (bss_.is_null()) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     // TODO(tkilbourn): better result codes
@@ -175,7 +175,7 @@ mx_status_t Station::Associate(AssociateRequestPtr req) {
     size_t assoc_len = sizeof(MgmtFrameHeader) + sizeof(AssociationRequest) + 128;
     fbl::unique_ptr<Buffer> buffer = GetBuffer(assoc_len);
     if (buffer == nullptr) {
-        return MX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     const DeviceAddress& mymac = device_->GetState()->address();
@@ -200,7 +200,7 @@ mx_status_t Station::Associate(AssociateRequestPtr req) {
     if (!w.write<SsidElement>(bss_->ssid.data())) {
         errorf("could not write ssid \"%s\" to association request\n", bss_->ssid.data());
         SendAssocResponse(AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
     // TODO(tkilbourn): add extended rates support to get the rest of 802.11g rates.
     // TODO(tkilbourn): determine these rates based on hardware and the AP
@@ -208,36 +208,36 @@ mx_status_t Station::Associate(AssociateRequestPtr req) {
     if (!w.write<SupportedRatesElement>(std::move(rates))) {
         errorf("could not write supported rates\n");
         SendAssocResponse(AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
 
     std::vector<uint8_t> ext_rates = { 0x30, 0x48, 0x60, 0x6c };
     if (!w.write<ExtendedSupportedRatesElement>(std::move(ext_rates))) {
         errorf("could not write extended supported rates\n");
         SendAssocResponse(AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
 
     // Write RSNE from MLME-Association.request if available.
     if (req->rsn) {
         if (!w.write<RsnElement>(req->rsn.data(), req->rsn.size())) {
-            return MX_ERR_IO;
+            return ZX_ERR_IO;
         }
     }
 
     // Validate the request in debug mode
-    MX_DEBUG_ASSERT(assoc->Validate(w.size()));
+    ZX_DEBUG_ASSERT(assoc->Validate(w.size()));
 
     size_t actual_len = sizeof(MgmtFrameHeader) + sizeof(AssociationRequest) + w.size();
-    mx_status_t status = packet->set_len(actual_len);
-    if (status != MX_OK) {
+    zx_status_t status = packet->set_len(actual_len);
+    if (status != ZX_OK) {
         errorf("could not set packet length to %zu: %d\n", actual_len, status);
         SendAssocResponse(AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return status;
     }
 
     status = device_->SendWlan(std::move(packet));
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("could not send assoc packet: %d\n", status);
         SendAssocResponse(AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return status;
@@ -246,7 +246,7 @@ mx_status_t Station::Associate(AssociateRequestPtr req) {
     // TODO(tkilbourn): get the assoc timeout from somewhere
     assoc_timeout_ = deadline_after_bcn_period(kAssocTimeoutTu);
     status = timer_->SetTimer(assoc_timeout_);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("could not set auth timer: %d\n", status);
         // This is the wrong result code, but we need to define our own codes at some later time.
         SendAssocResponse(AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
@@ -256,20 +256,20 @@ mx_status_t Station::Associate(AssociateRequestPtr req) {
 }
 
 // TODO(hahnr): Support ProbeResponses.
-mx_status_t Station::HandleBeacon(const Packet* packet) {
+zx_status_t Station::HandleBeacon(const Packet* packet) {
     debugfn();
 
-    MX_DEBUG_ASSERT(!bss_.is_null());
+    ZX_DEBUG_ASSERT(!bss_.is_null());
 
     auto rxinfo = packet->ctrl_data<wlan_rx_info_t>();
-    MX_DEBUG_ASSERT(rxinfo);
+    ZX_DEBUG_ASSERT(rxinfo);
 
     auto hdr = packet->field<MgmtFrameHeader>(0);
     if (DeviceAddress(hdr->addr3) != bss_->bssid.data()) {
         // Not our beacon -- this shouldn't happen because the Mlme should not have routed this
         // packet to this Station.
-        MX_DEBUG_ASSERT(false);
-        return MX_ERR_BAD_STATE;
+        ZX_DEBUG_ASSERT(false);
+        return ZX_ERR_BAD_STATE;
     }
 
     avg_rssi_.add(rxinfo->rssi);
@@ -308,47 +308,47 @@ mx_status_t Station::HandleBeacon(const Packet* packet) {
     }
 
 done_iter:
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Station::HandleAuthentication(const Packet* packet) {
+zx_status_t Station::HandleAuthentication(const Packet* packet) {
     debugfn();
 
     if (state_ != WlanState::kUnauthenticated) {
         // TODO(tkilbourn): should we process this Authentication packet anyway? The spec is
         // unclear.
         debugjoin("unexpected authentication frame\n");
-        return MX_OK;
+        return ZX_OK;
     }
 
     auto hdr = packet->field<MgmtFrameHeader>(0);
-    MX_DEBUG_ASSERT(hdr->fc.subtype() == ManagementSubtype::kAuthentication);
-    MX_DEBUG_ASSERT(DeviceAddress(hdr->addr3) == bss_->bssid.data());
+    ZX_DEBUG_ASSERT(hdr->fc.subtype() == ManagementSubtype::kAuthentication);
+    ZX_DEBUG_ASSERT(DeviceAddress(hdr->addr3) == bss_->bssid.data());
 
     auto auth = packet->field<Authentication>(sizeof(MgmtFrameHeader));
     if (!auth) {
         errorf("authentication packet too small (len=%zd)\n", packet->len() - sizeof(MgmtFrameHeader));
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
 
     if (auth->auth_algorithm_number != auth_alg_) {
         errorf("mismatched authentication algorithm (expected %u, got %u)\n",
                 auth_alg_, auth->auth_algorithm_number);
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     // TODO(tkilbourn): this only makes sense for Open System.
     if (auth->auth_txn_seq_number != 2) {
         errorf("unexpected auth txn sequence number (expected 2, got %u)\n",
                 auth->auth_txn_seq_number);
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     if (auth->status_code != status_code::kSuccess) {
         errorf("authentication failed (status code=%u)\n", auth->status_code);
         // TODO(tkilbourn): is this the right result code?
         SendAuthResponse(AuthenticateResultCodes::AUTHENTICATION_REJECTED);
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     debugjoin("authenticated to " MAC_ADDR_FMT "\n", MAC_ADDR_ARGS(bss_->bssid.data()));
@@ -356,26 +356,26 @@ mx_status_t Station::HandleAuthentication(const Packet* packet) {
     auth_timeout_ = 0;
     timer_->CancelTimer();
     SendAuthResponse(AuthenticateResultCodes::SUCCESS);
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Station::HandleDeauthentication(const Packet* packet) {
+zx_status_t Station::HandleDeauthentication(const Packet* packet) {
     debugfn();
 
     if (state_ != WlanState::kAssociated ||
         state_ != WlanState::kAuthenticated) {
         debugjoin("got spurious deauthenticate; ignoring\n");
-        return MX_OK;
+        return ZX_OK;
     }
 
     auto hdr = packet->field<MgmtFrameHeader>(0);
-    MX_DEBUG_ASSERT(hdr->fc.subtype() == ManagementSubtype::kDeauthentication);
-    MX_DEBUG_ASSERT(DeviceAddress(hdr->addr3) == bss_->bssid.data());
+    ZX_DEBUG_ASSERT(hdr->fc.subtype() == ManagementSubtype::kDeauthentication);
+    ZX_DEBUG_ASSERT(DeviceAddress(hdr->addr3) == bss_->bssid.data());
 
     auto deauth = packet->field<Deauthentication>(sizeof(MgmtFrameHeader));
     if (!deauth) {
         errorf("deauthentication packet too small len=%zu\n", packet->len());
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
     infof("deauthenticating from %s, reason=%u\n", bss_->ssid.data(), deauth->reason_code);
 
@@ -383,31 +383,31 @@ mx_status_t Station::HandleDeauthentication(const Packet* packet) {
     return SendDeauthIndication(deauth->reason_code);
 }
 
-mx_status_t Station::HandleAssociationResponse(const Packet* packet) {
+zx_status_t Station::HandleAssociationResponse(const Packet* packet) {
     debugfn();
 
     if (state_ != WlanState::kAuthenticated) {
         // TODO(tkilbourn): should we process this Association response packet anyway? The spec is
         // unclear.
         debugjoin("unexpected association response frame\n");
-        return MX_OK;
+        return ZX_OK;
     }
 
     auto hdr = packet->field<MgmtFrameHeader>(0);
-    MX_DEBUG_ASSERT(hdr->fc.subtype() == ManagementSubtype::kAssociationResponse);
-    MX_DEBUG_ASSERT(DeviceAddress(hdr->addr3) == bss_->bssid.data());
+    ZX_DEBUG_ASSERT(hdr->fc.subtype() == ManagementSubtype::kAssociationResponse);
+    ZX_DEBUG_ASSERT(DeviceAddress(hdr->addr3) == bss_->bssid.data());
 
     auto assoc = packet->field<AssociationResponse>(sizeof(MgmtFrameHeader));
     if (!assoc) {
         errorf("association response packet too small (len=%zd)\n", packet->len() - sizeof(MgmtFrameHeader));
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
 
     if (assoc->status_code != status_code::kSuccess) {
         errorf("association failed (status code=%u)\n", assoc->status_code);
         // TODO(tkilbourn): map to the correct result code
         SendAssocResponse(AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     debugjoin("associated with " MAC_ADDR_FMT "\n", MAC_ADDR_ARGS(bss_->bssid.data()));
@@ -421,7 +421,7 @@ mx_status_t Station::HandleAssociationResponse(const Packet* packet) {
     signal_report_timeout_ = deadline_after_bcn_period(kSignalReportTimeoutTu);
     timer_->SetTimer(signal_report_timeout_);
     auto rxinfo = packet->ctrl_data<wlan_rx_info_t>();
-    MX_DEBUG_ASSERT(rxinfo);
+    ZX_DEBUG_ASSERT(rxinfo);
     avg_rssi_.reset();
     avg_rssi_.add(rxinfo->rssi);
     SendSignalReportIndication(rxinfo->rssi);
@@ -431,25 +431,25 @@ mx_status_t Station::HandleAssociationResponse(const Packet* packet) {
 
     std::printf("associated\n");
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Station::HandleDisassociation(const Packet* packet) {
+zx_status_t Station::HandleDisassociation(const Packet* packet) {
     debugfn();
 
     if (state_ != WlanState::kAssociated) {
         debugjoin("got spurious disassociate; ignoring\n");
-        return MX_OK;
+        return ZX_OK;
     }
 
     auto hdr = packet->field<MgmtFrameHeader>(0);
-    MX_DEBUG_ASSERT(hdr->fc.subtype() == ManagementSubtype::kDisassociation);
-    MX_DEBUG_ASSERT(DeviceAddress(hdr->addr3) == bss_->bssid.data());
+    ZX_DEBUG_ASSERT(hdr->fc.subtype() == ManagementSubtype::kDisassociation);
+    ZX_DEBUG_ASSERT(DeviceAddress(hdr->addr3) == bss_->bssid.data());
 
     auto disassoc = packet->field<Disassociation>(sizeof(MgmtFrameHeader));
     if (!disassoc) {
         errorf("disassociation packet too small len=%zu\n", packet->len());
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
     infof("disassociating from %s, reason=%u\n", bss_->ssid.data(), disassoc->reason_code);
 
@@ -462,21 +462,21 @@ mx_status_t Station::HandleDisassociation(const Packet* packet) {
     return SendDisassociateIndication(disassoc->reason_code);
 }
 
-mx_status_t Station::HandleData(const Packet* packet) {
+zx_status_t Station::HandleData(const Packet* packet) {
     if (state_ != WlanState::kAssociated) {
         // Drop packets when not associated
         debugf("dropping data packet while not associated\n");
-        return MX_OK;
+        return ZX_OK;
     }
 
     // Take signal strength into account.
     auto rxinfo = packet->ctrl_data<wlan_rx_info_t>();
-    MX_DEBUG_ASSERT(rxinfo);
+    ZX_DEBUG_ASSERT(rxinfo);
     avg_rssi_.add(rxinfo->rssi);
 
     // DataFrameHeader was also parsed by MLME so this should not fail
     auto hdr = packet->field<DataFrameHeader>(0);
-    MX_DEBUG_ASSERT(hdr != nullptr);
+    ZX_DEBUG_ASSERT(hdr != nullptr);
     debughdr("Frame control: %04x  duration: %u  seq: %u frag: %u\n",
               hdr->fc.val(), hdr->duration, hdr->sc.seq(), hdr->sc.frag());
     debughdr("dest: " MAC_ADDR_FMT "  bssid: " MAC_ADDR_FMT "  source: " MAC_ADDR_FMT "\n",
@@ -486,34 +486,34 @@ mx_status_t Station::HandleData(const Packet* packet) {
 
     if (hdr->fc.subtype() != 0) {
         warnf("unsupported data subtype %02x\n", hdr->fc.subtype());
-        return MX_OK;
+        return ZX_OK;
     }
 
     auto llc = packet->field<LlcHeader>(sizeof(DataFrameHeader));
     if (llc == nullptr) {
         errorf("short data packet len=%zu\n", packet->len());
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
-    MX_DEBUG_ASSERT(packet->len() >= kDataPayloadHeader);
+    ZX_DEBUG_ASSERT(packet->len() >= kDataPayloadHeader);
 
     // Forward EAPOL frames to SME.
     if (be16toh(llc->protocol_id) == kEapolProtocolId) {
         size_t offset = sizeof(DataFrameHeader) + sizeof(LlcHeader);
         auto eapol = packet->field<EapolFrame>(offset);
         if (eapol == nullptr) {
-            return MX_OK;
+            return ZX_OK;
         }
         uint16_t actual_body_len = packet->len() - (offset + sizeof(EapolFrame));
         uint16_t expected_body_len = be16toh(eapol->packet_body_length);
         if (actual_body_len >= expected_body_len) {
             SendEapolIndication(eapol, hdr->addr3, hdr->addr1);
         }
-        return MX_OK;
+        return ZX_OK;
     }
 
     // Drop packets if RSN was not yet authorized.
     if (controlled_port_ == PortState::kBlocked) {
-        return MX_OK;
+        return ZX_OK;
     }
 
     // PS-POLL if there are more buffered unicast frames.
@@ -525,7 +525,7 @@ mx_status_t Station::HandleData(const Packet* packet) {
     const size_t eth_len = packet->len() - kDataPayloadHeader + sizeof(EthernetII);
     auto buffer = GetBuffer(eth_len);
     if (buffer == nullptr) {
-        return MX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     auto eth_packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), eth_len));
@@ -537,30 +537,30 @@ mx_status_t Station::HandleData(const Packet* packet) {
     eth->ether_type = llc->protocol_id;
     std::memcpy(eth->payload, llc->payload, packet->len() - kDataPayloadHeader);
 
-    mx_status_t status = device_->SendEthernet(std::move(eth_packet));
-    if (status != MX_OK) {
+    zx_status_t status = device_->SendEthernet(std::move(eth_packet));
+    if (status != ZX_OK) {
         errorf("could not send ethernet data: %d\n", status);
     }
     return status;
 }
 
-mx_status_t Station::HandleEth(const Packet* packet) {
+zx_status_t Station::HandleEth(const Packet* packet) {
     if (state_ != WlanState::kAssociated) {
         // Drop packets when not associated
         debugf("dropping eth packet while not associated\n");
-        return MX_OK;
+        return ZX_OK;
     }
 
     auto eth = packet->field<EthernetII>(0);
     if (eth == nullptr) {
         errorf("bad ethernet frame len=%zu\n", packet->len());
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
 
     const size_t wlan_len = packet->len() - sizeof(EthernetII) + kDataPayloadHeader;
     auto buffer = GetBuffer(wlan_len);
     if (buffer == nullptr) {
-        return MX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     auto wlan_packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), wlan_len));
@@ -591,16 +591,16 @@ mx_status_t Station::HandleEth(const Packet* packet) {
 
     std::memcpy(llc->payload, eth->payload, packet->len() - sizeof(EthernetII));
 
-    mx_status_t status = device_->SendWlan(std::move(wlan_packet));
-    if (status != MX_OK) {
+    zx_status_t status = device_->SendWlan(std::move(wlan_packet));
+    if (status != ZX_OK) {
         errorf("could not send wlan data: %d\n", status);
     }
     return status;
 }
 
-mx_status_t Station::HandleTimeout() {
+zx_status_t Station::HandleTimeout() {
     debugfn();
-    mx_time_t now = timer_->Now();
+    zx_time_t now = timer_->Now();
     if (join_timeout_ > 0 && now > join_timeout_) {
         debugjoin("join timed out; resetting\n");
 
@@ -628,10 +628,10 @@ mx_status_t Station::HandleTimeout() {
         SendSignalReportIndication(avg_rssi_.avg());
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Station::SendJoinResponse() {
+zx_status_t Station::SendJoinResponse() {
     debugfn();
     auto resp = JoinResponse::New();
     resp->result_code = state_ == WlanState::kUnjoined ?
@@ -641,13 +641,13 @@ mx_status_t Station::SendJoinResponse() {
     size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
     fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
-        return MX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
-    mx_status_t status = SerializeServiceMsg(packet.get(), Method::JOIN_confirm, resp);
-    if (status != MX_OK) {
+    zx_status_t status = SerializeServiceMsg(packet.get(), Method::JOIN_confirm, resp);
+    if (status != ZX_OK) {
         errorf("could not serialize JoinResponse: %d\n", status);
     } else {
         status = device_->SendService(std::move(packet));
@@ -656,7 +656,7 @@ mx_status_t Station::SendJoinResponse() {
     return status;
 }
 
-mx_status_t Station::SendAuthResponse(AuthenticateResultCodes code) {
+zx_status_t Station::SendAuthResponse(AuthenticateResultCodes code) {
     debugfn();
     auto resp = AuthenticateResponse::New();
     resp->peer_sta_address = fidl::Array<uint8_t>::New(DeviceAddress::kSize);
@@ -668,13 +668,13 @@ mx_status_t Station::SendAuthResponse(AuthenticateResultCodes code) {
     size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
     fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
-        return MX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
-    mx_status_t status = SerializeServiceMsg(packet.get(), Method::AUTHENTICATE_confirm, resp);
-    if (status != MX_OK) {
+    zx_status_t status = SerializeServiceMsg(packet.get(), Method::AUTHENTICATE_confirm, resp);
+    if (status != ZX_OK) {
         errorf("could not serialize AuthenticateResponse: %d\n", status);
     } else {
         status = device_->SendService(std::move(packet));
@@ -683,7 +683,7 @@ mx_status_t Station::SendAuthResponse(AuthenticateResultCodes code) {
     return status;
 }
 
-mx_status_t Station::SendDeauthIndication(uint16_t code) {
+zx_status_t Station::SendDeauthIndication(uint16_t code) {
     debugfn();
     auto ind = DeauthenticateIndication::New();
     ind->peer_sta_address = fidl::Array<uint8_t>::New(DeviceAddress::kSize);
@@ -693,13 +693,13 @@ mx_status_t Station::SendDeauthIndication(uint16_t code) {
     size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
     fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
-        return MX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
-    mx_status_t status = SerializeServiceMsg(packet.get(), Method::DEAUTHENTICATE_indication, ind);
-    if (status != MX_OK) {
+    zx_status_t status = SerializeServiceMsg(packet.get(), Method::DEAUTHENTICATE_indication, ind);
+    if (status != ZX_OK) {
         errorf("could not serialize DeauthenticateIndication: %d\n", status);
     } else {
         status = device_->SendService(std::move(packet));
@@ -708,7 +708,7 @@ mx_status_t Station::SendDeauthIndication(uint16_t code) {
     return status;
 }
 
-mx_status_t Station::SendAssocResponse(AssociateResultCodes code) {
+zx_status_t Station::SendAssocResponse(AssociateResultCodes code) {
     debugfn();
     auto resp = AssociateResponse::New();
     resp->result_code = code;
@@ -717,13 +717,13 @@ mx_status_t Station::SendAssocResponse(AssociateResultCodes code) {
     size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
     fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
-        return MX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
-    mx_status_t status = SerializeServiceMsg(packet.get(), Method::ASSOCIATE_confirm, resp);
-    if (status != MX_OK) {
+    zx_status_t status = SerializeServiceMsg(packet.get(), Method::ASSOCIATE_confirm, resp);
+    if (status != ZX_OK) {
         errorf("could not serialize AssociateResponse: %d\n", status);
     } else {
         status = device_->SendService(std::move(packet));
@@ -732,7 +732,7 @@ mx_status_t Station::SendAssocResponse(AssociateResultCodes code) {
     return status;
 }
 
-mx_status_t Station::SendDisassociateIndication(uint16_t code) {
+zx_status_t Station::SendDisassociateIndication(uint16_t code) {
     debugfn();
     auto ind = DisassociateIndication::New();
     ind->peer_sta_address = fidl::Array<uint8_t>::New(DeviceAddress::kSize);
@@ -742,13 +742,13 @@ mx_status_t Station::SendDisassociateIndication(uint16_t code) {
     size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
     fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
-        return MX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
-    mx_status_t status = SerializeServiceMsg(packet.get(), Method::DISASSOCIATE_indication, ind);
-    if (status != MX_OK) {
+    zx_status_t status = SerializeServiceMsg(packet.get(), Method::DISASSOCIATE_indication, ind);
+    if (status != ZX_OK) {
         errorf("could not serialize DisassociateIndication: %d\n", status);
     } else {
         status = device_->SendService(std::move(packet));
@@ -757,10 +757,10 @@ mx_status_t Station::SendDisassociateIndication(uint16_t code) {
     return status;
 }
 
-mx_status_t Station::SendSignalReportIndication(uint8_t rssi) {
+zx_status_t Station::SendSignalReportIndication(uint8_t rssi) {
     debugfn();
     if (state_ != WlanState::kAssociated) {
-        return MX_OK;
+        return ZX_OK;
     }
 
     auto ind = SignalReportIndication::New();
@@ -769,13 +769,13 @@ mx_status_t Station::SendSignalReportIndication(uint8_t rssi) {
     size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
     fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
-        return MX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
-    mx_status_t status = SerializeServiceMsg(packet.get(), Method::SIGNAL_REPORT_indication, ind);
-    if (status != MX_OK) {
+    zx_status_t status = SerializeServiceMsg(packet.get(), Method::SIGNAL_REPORT_indication, ind);
+    if (status != ZX_OK) {
         errorf("could not serialize SignalReportIndication: %d\n", status);
     } else {
         status = device_->SendService(std::move(packet));
@@ -784,22 +784,22 @@ mx_status_t Station::SendSignalReportIndication(uint8_t rssi) {
     return status;
 }
 
-mx_status_t Station::SendEapolRequest(EapolRequestPtr req) {
+zx_status_t Station::SendEapolRequest(EapolRequestPtr req) {
     debugfn();
 
-    MX_DEBUG_ASSERT(!req.is_null());
+    ZX_DEBUG_ASSERT(!req.is_null());
     if (!bss_) {
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     if (state_ != WlanState::kAssociated) {
         debugf("dropping MLME-EAPOL.request while not being associated. STA in state %d\n", state_);
-        return MX_OK;
+        return ZX_OK;
     }
 
     size_t len = sizeof(DataFrameHeader) + sizeof(LlcHeader) + req->data.size();
     fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
     if (buffer == nullptr) {
-        return MX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_RESOURCES;
     }
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), len));
     packet->clear();
@@ -824,8 +824,8 @@ mx_status_t Station::SendEapolRequest(EapolRequestPtr req) {
     llc->protocol_id = htobe16(kEapolProtocolId);
     std::memcpy(llc->payload, req->data.data(), req->data.size());
 
-    mx_status_t status = device_->SendWlan(std::move(packet));
-    if (status != MX_OK) {
+    zx_status_t status = device_->SendWlan(std::move(packet));
+    if (status != ZX_OK) {
         errorf("could not send eapol request packet: %d\n", status);
         SendEapolResponse(EapolResultCodes::TRANSMISSION_FAILURE);
         return status;
@@ -836,7 +836,7 @@ mx_status_t Station::SendEapolRequest(EapolRequestPtr req) {
     return status;
 }
 
-mx_status_t Station::SendEapolResponse(EapolResultCodes result_code) {
+zx_status_t Station::SendEapolResponse(EapolResultCodes result_code) {
     debugfn();
 
     auto resp = EapolResponse::New();
@@ -845,13 +845,13 @@ mx_status_t Station::SendEapolResponse(EapolResultCodes result_code) {
     size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
     fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
-        return MX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
-    mx_status_t status = SerializeServiceMsg(packet.get(), Method::EAPOL_confirm, resp);
-    if (status != MX_OK) {
+    zx_status_t status = SerializeServiceMsg(packet.get(), Method::EAPOL_confirm, resp);
+    if (status != ZX_OK) {
         errorf("could not serialize EapolResponse: %d\n", status);
     } else {
         status = device_->SendService(std::move(packet));
@@ -860,7 +860,7 @@ mx_status_t Station::SendEapolResponse(EapolResultCodes result_code) {
     return status;
 }
 
-mx_status_t Station::SendEapolIndication(const EapolFrame* eapol, const uint8_t src[],
+zx_status_t Station::SendEapolIndication(const EapolFrame* eapol, const uint8_t src[],
                                          const uint8_t dst[]) {
     debugfn();
 
@@ -870,7 +870,7 @@ mx_status_t Station::SendEapolIndication(const EapolFrame* eapol, const uint8_t 
     // TODO(hahnr): If necessary, find a better upper bound once we support EAP.
     size_t len = sizeof(EapolFrame) + be16toh(eapol->packet_body_length);
     if (len > 255) {
-        return MX_OK;
+        return ZX_OK;
     }
 
     auto ind = EapolIndication::New();
@@ -884,13 +884,13 @@ mx_status_t Station::SendEapolIndication(const EapolFrame* eapol, const uint8_t 
     size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
     fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
-        return MX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
-    mx_status_t status = SerializeServiceMsg(packet.get(), Method::EAPOL_indication, ind);
-    if (status != MX_OK) {
+    zx_status_t status = SerializeServiceMsg(packet.get(), Method::EAPOL_indication, ind);
+    if (status != ZX_OK) {
         errorf("could not serialize EapolIndication: %d\n", status);
     } else {
         status = device_->SendService(std::move(packet));
@@ -898,10 +898,10 @@ mx_status_t Station::SendEapolIndication(const EapolFrame* eapol, const uint8_t 
     return status;
 }
 
-mx_status_t Station::PreChannelChange(wlan_channel_t chan) {
+zx_status_t Station::PreChannelChange(wlan_channel_t chan) {
     debugfn();
     if (state_ != WlanState::kAssociated) {
-        return MX_OK;
+        return ZX_OK;
     }
 
     auto assoc_chan_num = channel().channel_num;
@@ -910,13 +910,13 @@ mx_status_t Station::PreChannelChange(wlan_channel_t chan) {
         SetPowerManagementMode(true);
         // TODO(hahnr): start buffering tx packets (not here though)
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Station::PostChannelChange() {
+zx_status_t Station::PostChannelChange() {
     debugfn();
     if (state_ != WlanState::kAssociated) {
-        return MX_OK;
+        return ZX_OK;
     }
 
     auto assoc_chan_num = channel().channel_num;
@@ -925,20 +925,20 @@ mx_status_t Station::PostChannelChange() {
         SetPowerManagementMode(false);
         // TODO(hahnr): wait for TIM, and PS-POLL all buffered frames from AP.
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Station::SetPowerManagementMode(bool ps_mode) {
+zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
     if (state_ != WlanState::kAssociated) {
         warnf("cannot adjust power management before being associated\n");
-        return MX_OK;
+        return ZX_OK;
     }
 
     const DeviceAddress& mymac = device_->GetState()->address();
     size_t len = sizeof(DataFrameHeader);
     fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
     if (buffer == nullptr) {
-        return MX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_RESOURCES;
     }
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), len));
     packet->clear();
@@ -955,27 +955,27 @@ mx_status_t Station::SetPowerManagementMode(bool ps_mode) {
     uint16_t seq = device_->GetState()->next_seq();
     hdr->sc.set_seq(seq);
 
-    mx_status_t status = device_->SendWlan(std::move(packet));
-    if (status != MX_OK) {
+    zx_status_t status = device_->SendWlan(std::move(packet));
+    if (status != ZX_OK) {
         errorf("could not send power management packet: %d\n", status);
         return status;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Station::SendPsPoll() {
+zx_status_t Station::SendPsPoll() {
     // TODO(hahnr): We should probably wait for an RSNA if the network is an
     // RSN. Else we cannot work with the incoming data frame.
     if (state_ != WlanState::kAssociated) {
         warnf("cannot send ps-poll before being associated\n");
-        return MX_OK;
+        return ZX_OK;
     }
 
     const DeviceAddress& mymac = device_->GetState()->address();
     size_t len = sizeof(PsPollFrame);
     fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
     if (buffer == nullptr) {
-        return MX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_RESOURCES;
     }
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), len));
     packet->clear();
@@ -987,12 +987,12 @@ mx_status_t Station::SendPsPoll() {
     std::memcpy(frame->bssid, bss_->bssid.data(), sizeof(frame->bssid));
     std::memcpy(frame->ta, mymac.data(), sizeof(frame->ta));
 
-    mx_status_t status = device_->SendWlan(std::move(packet));
-    if (status != MX_OK) {
+    zx_status_t status = device_->SendWlan(std::move(packet));
+    if (status != ZX_OK) {
         errorf("could not send power management packet: %d\n", status);
         return status;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 uint16_t Station::next_seq() {
@@ -1007,8 +1007,8 @@ uint16_t Station::next_seq() {
     return seq;
 }
 
-mx_time_t Station::deadline_after_bcn_period(mx_duration_t tus) {
-    MX_DEBUG_ASSERT(!bss_.is_null());
+zx_time_t Station::deadline_after_bcn_period(zx_duration_t tus) {
+    ZX_DEBUG_ASSERT(!bss_.is_null());
     return timer_->Now() + WLAN_TU(bss_->beacon_period * tus);
 }
 

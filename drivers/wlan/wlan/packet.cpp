@@ -4,7 +4,7 @@
 
 #include "packet.h"
 
-#include <magenta/assert.h>
+#include <zircon/assert.h>
 
 #include <algorithm>
 #include <utility>
@@ -13,17 +13,17 @@ namespace wlan {
 
 Packet::Packet(fbl::unique_ptr<Buffer> buffer, size_t len)
   : buffer_(std::move(buffer)), len_(len) {
-    MX_ASSERT(buffer_.get());
-    MX_DEBUG_ASSERT(len <= buffer_->capacity());
+    ZX_ASSERT(buffer_.get());
+    ZX_DEBUG_ASSERT(len <= buffer_->capacity());
 }
 
-mx_status_t Packet::CopyFrom(const void* src, size_t len, size_t offset) {
+zx_status_t Packet::CopyFrom(const void* src, size_t len, size_t offset) {
     if (offset + len > buffer_->capacity()) {
-        return MX_ERR_BUFFER_TOO_SMALL;
+        return ZX_ERR_BUFFER_TOO_SMALL;
     }
     std::memcpy(buffer_->data() + offset, src, len);
     len_ = std::max(len_, offset + len);
-    return MX_OK;
+    return ZX_OK;
 }
 
 fbl::unique_ptr<Buffer> GetBuffer(size_t len) {

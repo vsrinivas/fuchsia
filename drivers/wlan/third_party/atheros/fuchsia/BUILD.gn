@@ -26,12 +26,12 @@ driver_module("ath10k_driver") {
     "driver.cpp",
   ]
 
-  defines = [ "MX_DEBUGLEVEL=2" ]
+  defines = [ "ZX_DEBUGLEVEL=2" ]
 
   deps = [
     "//drivers/wifi/common",
-    "//magenta/system/ulib/ddktl",
-    "//magenta/system/ulib/fbl",
+    "//zircon/system/ulib/ddktl",
+    "//zircon/system/ulib/fbl",
   ]
 
   libs = [

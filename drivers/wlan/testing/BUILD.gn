@@ -21,7 +21,7 @@ driver_module("wlan-testdev") {
 
   defines = [
     "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS",
-    "MX_DEBUGLEVEL=2",
+    "ZX_DEBUGLEVEL=2",
   ]
 
   cflags = [
@@ -30,9 +30,9 @@ driver_module("wlan-testdev") {
   ]
 
   deps = [
-    "//magenta/system/ulib/ddktl",
-    "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/fbl",
+    "//zircon/system/ulib/ddktl",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 
   libs = [
@@ -47,7 +47,7 @@ executable("wlan-testutil") {
   ]
 
   deps = [
-    "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 }

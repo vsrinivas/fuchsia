@@ -9,8 +9,8 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/wlan.h>
 #include <driver/usb.h>
-#include <magenta/compiler.h>
-#include <mx/time.h>
+#include <zircon/compiler.h>
+#include <zx/time.h>
 #include <fbl/unique_ptr.h>
 
 #include <array>
@@ -30,22 +30,22 @@ template <uint16_t A> class EepromField;
 
 class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacProtocol<Device> {
   public:
-    Device(mx_device_t* device, usb_protocol_t* usb, uint8_t bulk_in,
+    Device(zx_device_t* device, usb_protocol_t* usb, uint8_t bulk_in,
            std::vector<uint8_t>&& bulk_out);
     ~Device();
 
-    mx_status_t Bind();
+    zx_status_t Bind();
 
     // ddk::Device methods
     void DdkUnbind();
     void DdkRelease();
 
     // ddk::WlanmacProtocol methods
-    mx_status_t WlanmacQuery(uint32_t options, ethmac_info_t* info);
-    mx_status_t WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy);
+    zx_status_t WlanmacQuery(uint32_t options, ethmac_info_t* info);
+    zx_status_t WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy);
     void WlanmacStop();
     void WlanmacTx(uint32_t options, const void* data, size_t len);
-    mx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
+    zx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
 
   private:
     // wireless channel information
@@ -66,56 +66,56 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     };
 
     // read and write general registers
-    mx_status_t ReadRegister(uint16_t offset, uint32_t* value);
-    template <uint16_t A> mx_status_t ReadRegister(Register<A>* reg);
-    mx_status_t WriteRegister(uint16_t offset, uint32_t value);
-    template <uint16_t A> mx_status_t WriteRegister(const Register<A>& reg);
+    zx_status_t ReadRegister(uint16_t offset, uint32_t* value);
+    template <uint16_t A> zx_status_t ReadRegister(Register<A>* reg);
+    zx_status_t WriteRegister(uint16_t offset, uint32_t value);
+    template <uint16_t A> zx_status_t WriteRegister(const Register<A>& reg);
 
     // read and write the eeprom
-    mx_status_t ReadEeprom();
-    mx_status_t ReadEepromField(uint16_t addr, uint16_t* value);
-    template <uint16_t A> mx_status_t ReadEepromField(EepromField<A>* field);
-    template <uint16_t A> mx_status_t WriteEepromField(const EepromField<A>& field);
-    mx_status_t ValidateEeprom();
+    zx_status_t ReadEeprom();
+    zx_status_t ReadEepromField(uint16_t addr, uint16_t* value);
+    template <uint16_t A> zx_status_t ReadEepromField(EepromField<A>* field);
+    template <uint16_t A> zx_status_t WriteEepromField(const EepromField<A>& field);
+    zx_status_t ValidateEeprom();
 
     // read and write baseband processor registers
-    mx_status_t ReadBbp(uint8_t addr, uint8_t* val);
-    template <uint8_t A> mx_status_t ReadBbp(BbpRegister<A>* reg);
-    mx_status_t WriteBbp(uint8_t addr, uint8_t val);
-    template <uint8_t A> mx_status_t WriteBbp(const BbpRegister<A>& reg);
-    mx_status_t WaitForBbp();
+    zx_status_t ReadBbp(uint8_t addr, uint8_t* val);
+    template <uint8_t A> zx_status_t ReadBbp(BbpRegister<A>* reg);
+    zx_status_t WriteBbp(uint8_t addr, uint8_t val);
+    template <uint8_t A> zx_status_t WriteBbp(const BbpRegister<A>& reg);
+    zx_status_t WaitForBbp();
 
     // read and write rf registers
-    mx_status_t ReadRfcsr(uint8_t addr, uint8_t* val);
-    template <uint8_t A> mx_status_t ReadRfcsr(RfcsrRegister<A>* reg);
-    mx_status_t WriteRfcsr(uint8_t addr, uint8_t val);
-    template <uint8_t A> mx_status_t WriteRfcsr(const RfcsrRegister<A>& reg);
+    zx_status_t ReadRfcsr(uint8_t addr, uint8_t* val);
+    template <uint8_t A> zx_status_t ReadRfcsr(RfcsrRegister<A>* reg);
+    zx_status_t WriteRfcsr(uint8_t addr, uint8_t val);
+    template <uint8_t A> zx_status_t WriteRfcsr(const RfcsrRegister<A>& reg);
 
     // send a command to the MCU
-    mx_status_t McuCommand(uint8_t command, uint8_t token, uint8_t arg0, uint8_t arg1);
+    zx_status_t McuCommand(uint8_t command, uint8_t token, uint8_t arg0, uint8_t arg1);
 
     // initialization functions
-    mx_status_t LoadFirmware();
-    mx_status_t EnableRadio();
-    mx_status_t InitRegisters();
-    mx_status_t InitBbp();
-    mx_status_t InitRfcsr();
+    zx_status_t LoadFirmware();
+    zx_status_t EnableRadio();
+    zx_status_t InitRegisters();
+    zx_status_t InitBbp();
+    zx_status_t InitRfcsr();
 
-    mx_status_t DetectAutoRun(bool* autorun);
-    mx_status_t DisableWpdma();
-    mx_status_t WaitForMacCsr();
-    mx_status_t SetRxFilter();
-    mx_status_t NormalModeSetup();
-    mx_status_t StartQueues();
-    mx_status_t StopRxQueue();
-    mx_status_t SetupInterface();
+    zx_status_t DetectAutoRun(bool* autorun);
+    zx_status_t DisableWpdma();
+    zx_status_t WaitForMacCsr();
+    zx_status_t SetRxFilter();
+    zx_status_t NormalModeSetup();
+    zx_status_t StartQueues();
+    zx_status_t StopRxQueue();
+    zx_status_t SetupInterface();
 
-    mx_status_t ConfigureChannel(const Channel& channel);
-    mx_status_t ConfigureTxPower(const Channel& channel);
+    zx_status_t ConfigureChannel(const Channel& channel);
+    zx_status_t ConfigureTxPower(const Channel& channel);
 
     template <typename R, typename Predicate>
-    mx_status_t BusyWait(R* reg, Predicate pred,
-            mx_duration_t delay = kDefaultBusyWait);
+    zx_status_t BusyWait(R* reg, Predicate pred,
+            zx_duration_t delay = kDefaultBusyWait);
 
     void HandleRxComplete(iotxn_t* request);
     void HandleTxComplete(iotxn_t* request);
@@ -132,7 +132,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     constexpr static size_t kEepromSize = 0x0100;
     std::array<uint16_t, kEepromSize> eeprom_ = {};
 
-    constexpr static mx_duration_t kDefaultBusyWait = MX_USEC(100);
+    constexpr static zx_duration_t kDefaultBusyWait = ZX_USEC(100);
 
     // constants read out of the device
     uint16_t rt_type_ = 0;

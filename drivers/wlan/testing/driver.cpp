@@ -11,18 +11,18 @@
 #include <cstdio>
 #include <memory>
 
-extern "C" mx_status_t wlan_test_bind(void* ctx, mx_device_t* device, void** cookie) {
+extern "C" zx_status_t wlan_test_bind(void* ctx, zx_device_t* device, void** cookie) {
     std::printf("%s\n", __func__);
 
     test_protocol_t proto;
-    auto status = device_get_protocol(device, MX_PROTOCOL_TEST, reinterpret_cast<void*>(&proto));
-    if (status != MX_OK) {
+    auto status = device_get_protocol(device, ZX_PROTOCOL_TEST, reinterpret_cast<void*>(&proto));
+    if (status != ZX_OK) {
         return status;
     }
 
     auto dev = std::make_unique<wlan::testing::Device>(device, &proto);
     status = dev->Bind();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         std::printf("wlan-test: could not bind: %d\n", status);
     } else {
         // devhost is now responsible for the memory used by wlan-test. It will

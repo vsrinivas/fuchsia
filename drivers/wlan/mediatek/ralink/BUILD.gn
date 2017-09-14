@@ -17,13 +17,13 @@ driver_module("ralink_driver") {
     "ralink.h",
   ]
 
-  defines = [ "MX_DEBUGLEVEL=2" ]
+  defines = [ "ZX_DEBUGLEVEL=2" ]
 
   deps = [
     "//drivers/wifi/common",
-    "//magenta/system/ulib/ddktl",
-    "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/fbl",
+    "//zircon/system/ulib/ddktl",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 
   libs = [

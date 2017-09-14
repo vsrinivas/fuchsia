@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <magenta/types.h>
-#include <mx/time.h>
+#include <zircon/types.h>
+#include <zx/time.h>
 
 #include <cstdint>
 
@@ -15,14 +15,14 @@ class Clock {
   public:
     virtual ~Clock() {}
 
-    virtual mx_time_t Now() const = 0;
+    virtual zx_time_t Now() const = 0;
 };
 
 class SystemClock : public Clock {
   public:
-    SystemClock(uint32_t clock_id = MX_CLOCK_MONOTONIC) : clock_id_(clock_id) {}
+    SystemClock(uint32_t clock_id = ZX_CLOCK_MONOTONIC) : clock_id_(clock_id) {}
 
-    mx_time_t Now() const override { return mx::time::get(clock_id_); }
+    zx_time_t Now() const override { return zx::time::get(clock_id_); }
 
   private:
     uint32_t clock_id_;
@@ -32,11 +32,11 @@ class TestClock : public Clock {
   public:
     TestClock() {}
 
-    mx_time_t Now() const override { return now_; }
-    void Set(mx_time_t time) { now_ = time; }
+    zx_time_t Now() const override { return now_; }
+    void Set(zx_time_t time) { now_ = time; }
 
   private:
-    mx_time_t now_ = 0;
+    zx_time_t now_ = 0;
 };
 
 }  // namespace wlan

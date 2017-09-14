@@ -11,36 +11,36 @@
 namespace wlan {
 
 template <typename T>
-mx_status_t DeserializeServiceMsg(const Packet& packet, Method m, ::fidl::StructPtr<T>* out) {
-    if (out == nullptr) return MX_ERR_INVALID_ARGS;
+zx_status_t DeserializeServiceMsg(const Packet& packet, Method m, ::fidl::StructPtr<T>* out) {
+    if (out == nullptr) return ZX_ERR_INVALID_ARGS;
 
     const uint8_t* p = packet.data();
     auto h = FromBytes<ServiceHeader>(p, packet.len());
-    if (static_cast<Method>(h->ordinal) != m) return MX_ERR_IO;
+    if (static_cast<Method>(h->ordinal) != m) return ZX_ERR_IO;
 
     *out = T::New();
     auto reqptr = reinterpret_cast<const void*>(h->payload);
     if (!(*out)->Deserialize(const_cast<void*>(reqptr), packet.len() - h->len)) {
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 template <typename T>
-mx_status_t SerializeServiceMsg(Packet* packet, Method m, const T& msg) {
+zx_status_t SerializeServiceMsg(Packet* packet, Method m, const T& msg) {
     size_t buf_len = sizeof(ServiceHeader) + msg->GetSerializedSize();
     auto header = FromBytes<ServiceHeader>(packet->mut_data(), buf_len);
     if (header == nullptr) {
-        return MX_ERR_BUFFER_TOO_SMALL;
+        return ZX_ERR_BUFFER_TOO_SMALL;
     }
     header->len = sizeof(ServiceHeader);
     header->txn_id = 1;  // TODO(tkilbourn): txn ids
     header->flags = 0;
     header->ordinal = static_cast<uint32_t>(m);
     if (!msg->Serialize(header->payload, buf_len - sizeof(ServiceHeader))) {
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 }  // namespace wlan

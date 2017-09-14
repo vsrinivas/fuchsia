@@ -22,19 +22,19 @@
 #include <cstdio>
 #include <memory>
 
-extern "C" mx_status_t ath10k_bind(void* ctx, mx_device_t* device, void** cookie) {
+extern "C" zx_status_t ath10k_bind(void* ctx, zx_device_t* device, void** cookie) {
     std::printf("%s\n", __func__);
 
     pci_protocol_t pci;
-    mx_status_t status =
-        device_get_protocol(device, MX_PROTOCOL_PCI, reinterpret_cast<void*>(&pci));
-    if (status != MX_OK) {
+    zx_status_t status =
+        device_get_protocol(device, ZX_PROTOCOL_PCI, reinterpret_cast<void*>(&pci));
+    if (status != ZX_OK) {
         return status;
     }
 
     auto dev = std::make_unique<ath10k::Device>(device, &pci);
     status = dev->Bind();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         std::printf("ath10k: could not bind: %d\n", status);
     } else {
         // devhost is now responsible for the memory used by dev. It will be

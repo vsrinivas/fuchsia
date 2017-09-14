@@ -8,9 +8,9 @@
 
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/wlan.h>
-#include <magenta/assert.h>
-#include <magenta/hw/usb.h>
-#include <mx/vmo.h>
+#include <zircon/assert.h>
+#include <zircon/hw/usb.h>
+#include <zx/vmo.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 
@@ -25,7 +25,7 @@
 
 #define CHECK_REG(reg, op, status) \
     do { \
-        if (status != MX_OK) { \
+        if (status != ZX_OK) { \
             errorf("" #op "Register error for " #reg ": %d\n", status); \
             return status; \
         } \
@@ -35,8 +35,8 @@
 
 namespace {
 
-mx_status_t sleep_for(mx_duration_t t) {
-    return mx::nanosleep(mx::deadline_after(t));
+zx_status_t sleep_for(zx_duration_t t) {
+    return zx::nanosleep(zx::deadline_after(t));
 }
 
 constexpr size_t kReadReqCount = 32;
@@ -62,9 +62,9 @@ uint16_t extract_tx_power(int hw_index, uint16_t txpower) {
 
 namespace ralink {
 
-constexpr mx_duration_t Device::kDefaultBusyWait;
+constexpr zx_duration_t Device::kDefaultBusyWait;
 
-Device::Device(mx_device_t* device, usb_protocol_t* usb, uint8_t bulk_in,
+Device::Device(zx_device_t* device, usb_protocol_t* usb, uint8_t bulk_in,
                std::vector<uint8_t>&& bulk_out)
   : ddk::Device<Device, ddk::Unbindable>(device),
     usb_(*usb),
@@ -97,7 +97,7 @@ Device::~Device() {
     }
 }
 
-mx_status_t Device::Bind() {
+zx_status_t Device::Bind() {
     debugfn();
 
     AsicVerId avi;
@@ -110,7 +110,7 @@ mx_status_t Device::Bind() {
 
     bool autorun = false;
     status = DetectAutoRun(&autorun);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
 
@@ -123,13 +123,13 @@ mx_status_t Device::Bind() {
     debugf("efuse present: %s\n", efuse_present ? "Y" : "N");
 
     status = ReadEeprom();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("failed to read eeprom\n");
         return status;
     }
 
     status = ValidateEeprom();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("failed to validate eeprom\n");
         return status;
     }
@@ -153,7 +153,7 @@ mx_status_t Device::Bind() {
 
     if (rt_type_ == RT5390) {
         status = ReadEepromField(EEPROM_CHIP_ID, &rf_type_);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             errorf("could not read chip id err=%d\n", status);
             return status;
         }
@@ -161,7 +161,7 @@ mx_status_t Device::Bind() {
     } else {
         // TODO(tkilbourn): support other RF chipsets
         errorf("RF chipset %#x not supported!\n", rf_type_);
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // TODO(tkilbourn): default antenna configs
@@ -194,37 +194,37 @@ mx_status_t Device::Bind() {
     // Add the device. The radios are not active yet though; we wait until the wlanmac start method
     // is called.
     status = DdkAdd("ralink");
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("could not add device err=%d\n", status);
     } else {
         infof("device added\n");
     }
 
-    // TODO(tkilbourn): if status != MX_OK, reset the hw
+    // TODO(tkilbourn): if status != ZX_OK, reset the hw
     return status;
 }
 
-mx_status_t Device::ReadRegister(uint16_t offset, uint32_t* value) {
+zx_status_t Device::ReadRegister(uint16_t offset, uint32_t* value) {
     auto ret = usb_control(&usb_, (USB_DIR_IN | USB_TYPE_VENDOR), kMultiRead, 0,
-            offset, value, sizeof(*value), MX_TIME_INFINITE);
-    return ret < 0 ? ret : MX_OK;
+            offset, value, sizeof(*value), ZX_TIME_INFINITE);
+    return ret < 0 ? ret : ZX_OK;
 }
 
-template <uint16_t A> mx_status_t Device::ReadRegister(Register<A>* reg) {
+template <uint16_t A> zx_status_t Device::ReadRegister(Register<A>* reg) {
     return ReadRegister(A, reg->mut_val());
 }
 
-mx_status_t Device::WriteRegister(uint16_t offset, uint32_t value) {
+zx_status_t Device::WriteRegister(uint16_t offset, uint32_t value) {
     auto ret = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0,
-            offset, &value, sizeof(value), MX_TIME_INFINITE);
-    return ret < 0 ? ret : MX_OK;
+            offset, &value, sizeof(value), ZX_TIME_INFINITE);
+    return ret < 0 ? ret : ZX_OK;
 }
 
-template <uint16_t A> mx_status_t Device::WriteRegister(const Register<A>& reg) {
+template <uint16_t A> zx_status_t Device::WriteRegister(const Register<A>& reg) {
     return WriteRegister(A, reg.val());
 }
 
-mx_status_t Device::ReadEeprom() {
+zx_status_t Device::ReadEeprom() {
     debugfn();
     // Read 4 entries at a time
     static_assert((kEepromSize % 8) == 0, "EEPROM size must be a multiple of 8.");
@@ -243,8 +243,8 @@ mx_status_t Device::ReadEeprom() {
 
         // Wait until the registers are ready for reading.
         status = BusyWait(&ec, [&ec]() { return !ec.efsrom_kick(); });
-        if (status != MX_OK) {
-            if (status == MX_ERR_TIMED_OUT) {
+        if (status != ZX_OK) {
+            if (status == ZX_ERR_TIMED_OUT) {
                 errorf("ralink busy wait for EFUSE_CTRL failed\n");
             }
             return status;
@@ -289,30 +289,30 @@ mx_status_t Device::ReadEeprom() {
     std::printf("\n");
 #endif
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Device::ReadEepromField(uint16_t addr, uint16_t* value) {
+zx_status_t Device::ReadEepromField(uint16_t addr, uint16_t* value) {
     if (addr >= eeprom_.size()) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     *value = letoh16(eeprom_[addr]);
-    return MX_OK;
+    return ZX_OK;
 }
 
-template <uint16_t A> mx_status_t Device::ReadEepromField(EepromField<A>* field) {
+template <uint16_t A> zx_status_t Device::ReadEepromField(EepromField<A>* field) {
     return ReadEepromField(field->addr(), field->mut_val());
 }
 
-template <uint16_t A> mx_status_t Device::WriteEepromField(const EepromField<A>& field) {
+template <uint16_t A> zx_status_t Device::WriteEepromField(const EepromField<A>& field) {
     if (field.addr() > kEepromSize) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     eeprom_[field.addr()] = field.val();
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Device::ValidateEeprom() {
+zx_status_t Device::ValidateEeprom() {
     debugfn();
     memcpy(mac_addr_, eeprom_.data() + EEPROM_MAC_ADDR_0, sizeof(mac_addr_));
     // TODO(tkilbourn): validate mac address
@@ -324,14 +324,14 @@ mx_status_t Device::ValidateEeprom() {
     if (enc0.val() == 0xffff || enc0.val() == 0x2860 || enc0.val() == 0x2872) {
         // These values need some eeprom patching; not supported yet.
         errorf("unsupported value for EEPROM_NIC_CONF0=%#x\n", enc0.val());
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     EepromNicConf1 enc1;
     ReadEepromField(&enc1);
     if (enc1.val() == 0xffff) {
         errorf("unsupported value for EEPROM_NIC_CONF1=%#x\n", enc1.val());
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     EepromFreq ef;
@@ -372,38 +372,38 @@ mx_status_t Device::ValidateEeprom() {
 
     // TODO(tkilbourn): check and set RSSI for A
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Device::LoadFirmware() {
+zx_status_t Device::LoadFirmware() {
     debugfn();
-    mx_handle_t fw_handle;
+    zx_handle_t fw_handle;
     size_t fw_size = 0;
-    auto status = load_firmware(mxdev(), kFirmwareFile, &fw_handle, &fw_size);
-    if (status != MX_OK) {
+    auto status = load_firmware(zxdev(), kFirmwareFile, &fw_handle, &fw_size);
+    if (status != ZX_OK) {
         errorf("failed to load firmware '%s': err=%d\n", kFirmwareFile, status);
         return status;
     }
     if (fw_size < 4) {
         errorf("FW: bad length (%zu)\n", fw_size);
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     infof("opened firmware '%s' (%zd bytes)\n", kFirmwareFile, fw_size);
 
-    mx::vmo fw(fw_handle);
+    zx::vmo fw(fw_handle);
     uint8_t fwversion[2];
     size_t actual = 0;
     status = fw.read(fwversion, fw_size - 4, 2, &actual);
-    if (status != MX_OK || actual != sizeof(fwversion)) {
+    if (status != ZX_OK || actual != sizeof(fwversion)) {
         errorf("error reading fw version\n");
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
     infof("FW version %u.%u\n", fwversion[0], fwversion[1]);
     // Linux rt2x00 driver has more intricate size checking for different
     // chipsets. We just care that it's 8kB for ralink.
     if (fw_size != 8192) {
         errorf("FW: bad length (%zu)\n", fw_size);
-        return MX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     }
 
     // TODO(tkilbourn): check crc, 4kB at a time
@@ -416,25 +416,25 @@ mx_status_t Device::LoadFirmware() {
 
     // Wait for hardware to stabilize
     status = WaitForMacCsr();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("unstable hardware\n");
         return status;
     }
     debugf("hardware stabilized\n");
 
     status = DisableWpdma();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
 
     bool autorun = false;
     status = DetectAutoRun(&autorun);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
     if (autorun) {
         infof("not loading firmware, NIC is in autorun mode\n");
-        return MX_OK;
+        return ZX_OK;
     }
     debugf("autorun not enabled\n");
 
@@ -447,15 +447,15 @@ mx_status_t Device::LoadFirmware() {
     while (remaining) {
         size_t to_send = std::min(remaining, sizeof(buf));
         status = fw.read(buf, offset, to_send, &actual);
-        if (status != MX_OK || actual != to_send) {
+        if (status != ZX_OK || actual != to_send) {
             errorf("error reading firmware\n");
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
         }
         status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite,
-                             0, addr, buf, to_send, MX_TIME_INFINITE);
+                             0, addr, buf, to_send, ZX_TIME_INFINITE);
         if (status < (ssize_t)to_send) {
             errorf("failed to send firmware\n");
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
         }
         remaining -= to_send;
         offset += to_send;
@@ -475,21 +475,21 @@ mx_status_t Device::LoadFirmware() {
 
     // Tell the device to load the firmware
     status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kDeviceMode,
-                         kFirmware, 0, NULL, 0, MX_TIME_INFINITE);
-    if (status != MX_OK) {
+                         kFirmware, 0, NULL, 0, ZX_TIME_INFINITE);
+    if (status != ZX_OK) {
         errorf("failed to send load firmware command\n");
         return status;
     }
-    sleep_for(MX_MSEC(10));
+    sleep_for(ZX_MSEC(10));
 
     H2mMailboxCsr hmcsr;
     status = WriteRegister(hmcsr);
     CHECK_WRITE(H2M_MAILBOX_CSR, status);
 
     SysCtrl sc;
-    status = BusyWait(&sc, [&sc]() { return sc.mcu_ready(); }, MX_MSEC(1));
-    if (status != MX_OK) {
-        if (status == MX_ERR_TIMED_OUT) {
+    status = BusyWait(&sc, [&sc]() { return sc.mcu_ready(); }, ZX_MSEC(1));
+    if (status != ZX_OK) {
+        if (status == ZX_ERR_TIMED_OUT) {
             errorf("system MCU not ready\n");
         }
         return status;
@@ -497,7 +497,7 @@ mx_status_t Device::LoadFirmware() {
 
     // Disable WPDMA again
     status = DisableWpdma();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
 
@@ -514,32 +514,32 @@ mx_status_t Device::LoadFirmware() {
     CHECK_WRITE(H2M_INT_SRC, status);
 
     status = McuCommand(MCU_BOOT_SIGNAL, 0, 0, 0);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("error booting MCU err=%d\n", status);
         return status;
     }
-    sleep_for(MX_MSEC(1));
+    sleep_for(ZX_MSEC(1));
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Device::EnableRadio() {
+zx_status_t Device::EnableRadio() {
     debugfn();
 
     // Wakeup the MCU
     auto status = McuCommand(MCU_WAKEUP, 0xff, 0, 2);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("error waking MCU err=%d\n", status);
         return status;
     }
-    sleep_for(MX_MSEC(1));
+    sleep_for(ZX_MSEC(1));
 
     // Wait for WPDMA to be ready
     WpdmaGloCfg wgc;
     auto wpdma_pred = [&wgc]() { return !wgc.tx_dma_busy() && !wgc.rx_dma_busy(); };
-    status = BusyWait(&wgc, wpdma_pred, MX_MSEC(10));
-    if (status != MX_OK) {
-        if (status == MX_ERR_TIMED_OUT) {
+    status = BusyWait(&wgc, wpdma_pred, ZX_MSEC(10));
+    if (status != ZX_OK) {
+        if (status == ZX_ERR_TIMED_OUT) {
             errorf("WPDMA busy\n");
         }
         return status;
@@ -563,25 +563,25 @@ mx_status_t Device::EnableRadio() {
     CHECK_WRITE(USB_DMA_CFG, status);
 
     // Wait for WPDMA again
-    status = BusyWait(&wgc, wpdma_pred, MX_MSEC(10));
-    if (status != MX_OK) {
-        if (status == MX_ERR_TIMED_OUT) {
+    status = BusyWait(&wgc, wpdma_pred, ZX_MSEC(10));
+    if (status != ZX_OK) {
+        if (status == ZX_ERR_TIMED_OUT) {
             errorf("WPDMA busy\n");
         }
         return status;
     }
 
     status = InitRegisters();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("failed to initialize registers\n");
         return status;
     }
 
     // Wait for MAC status ready
     MacStatusReg msr;
-    status = BusyWait(&msr, [&msr]() { return !msr.tx_status() && !msr.rx_status(); }, MX_MSEC(10));
-    if (status != MX_OK) {
-        if (status == MX_ERR_TIMED_OUT) {
+    status = BusyWait(&msr, [&msr]() { return !msr.tx_status() && !msr.rx_status(); }, ZX_MSEC(10));
+    if (status != ZX_OK) {
+        if (status == ZX_ERR_TIMED_OUT) {
             errorf("BBP busy\n");
         }
         return status;
@@ -601,26 +601,26 @@ mx_status_t Device::EnableRadio() {
     CHECK_WRITE(H2M_INT_SRC, status);
 
     status = McuCommand(MCU_BOOT_SIGNAL, 0, 0, 0);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("error booting MCU err=%d\n", status);
         return status;
     }
-    sleep_for(MX_MSEC(1));
+    sleep_for(ZX_MSEC(1));
 
     status = WaitForBbp();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("error waiting for BBP=%d\n", status);
         return status;
     }
 
     status = InitBbp();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("error initializing BBP=%d\n", status);
         return status;
     }
 
     status = InitRfcsr();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("error initializing RF=%d\n", status);
         return status;
     }
@@ -634,7 +634,7 @@ mx_status_t Device::EnableRadio() {
     status = WriteRegister(msc);
     CHECK_WRITE(MAC_SYS_CTRL, status);
 
-    sleep_for(MX_USEC(50));
+    sleep_for(ZX_USEC(50));
 
     status = ReadRegister(&wgc);
     CHECK_READ(WPDMA_GLO_CFG, status);
@@ -654,19 +654,19 @@ mx_status_t Device::EnableRadio() {
 
     // TODO(tkilbourn): LED control stuff
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Device::InitRegisters() {
+zx_status_t Device::InitRegisters() {
     debugfn();
 
     auto status = DisableWpdma();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
 
     status = WaitForMacCsr();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("hardware unstable\n");
         return status;
     }
@@ -689,8 +689,8 @@ mx_status_t Device::InitRegisters() {
     CHECK_WRITE(USB_DMA_CFG, status);
 
     status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kDeviceMode,
-            kReset, 0, NULL, 0, MX_TIME_INFINITE);
-    if (status != MX_OK) {
+            kReset, 0, NULL, 0, ZX_TIME_INFINITE);
+    if (status != ZX_OK) {
         errorf("failed reset\n");
         return status;
     }
@@ -732,7 +732,7 @@ mx_status_t Device::InitRegisters() {
     CHECK_WRITE(BCN_TIME_CFG, status);
 
     status = SetRxFilter();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
 
@@ -1020,10 +1020,10 @@ mx_status_t Device::InitRegisters() {
     for (int i = 0; i < 256; i++) {
         uint16_t addr = RX_WCID_BASE + i * sizeof(rwe);
         status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite,
-                             0, addr, &rwe, sizeof(rwe), MX_TIME_INFINITE);
+                             0, addr, &rwe, sizeof(rwe), ZX_TIME_INFINITE);
         if (status < (ssize_t)sizeof(rwe)) {
             errorf("failed to set RX WCID search entry\n");
-            return MX_ERR_BAD_STATE;
+            return ZX_ERR_BAD_STATE;
         }
 
         status = WriteRegister(WCID_ATTR_BASE + i * sizeof(uint32_t), 0);
@@ -1136,7 +1136,7 @@ mx_status_t Device::InitRegisters() {
     status = WriteRegister(ctc);
     CHECK_WRITE(CH_TIME_CFG, status);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 namespace {
@@ -1171,7 +1171,7 @@ const struct {
 };
 }  // namespace
 
-mx_status_t Device::InitBbp() {
+zx_status_t Device::InitBbp() {
     debugfn();
 
     Bbp4 reg;
@@ -1183,7 +1183,7 @@ mx_status_t Device::InitBbp() {
 
     for (const auto& breg : BBP_REGS) {
         status = WriteBbp(breg.addr, breg.val);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             errorf("WriteRegister error for BBP reg %u: %d\n", breg.addr, status);
             return status;
         }
@@ -1239,13 +1239,13 @@ mx_status_t Device::InitBbp() {
         CHECK_READ(EEPROM_BBP, status);
         if (val != 0xffff && val != 0x0000) {
             status = WriteBbp(val >> 8, val & 0xff);
-            if (status != MX_OK) {
+            if (status != ZX_OK) {
                 errorf("WriteRegister error for BBP reg %u: %d\n", val >> 8, status);
                 return status;
             }
         }
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 namespace {
@@ -1319,7 +1319,7 @@ const struct {
 };
 }  // namespace
 
-mx_status_t Device::InitRfcsr() {
+zx_status_t Device::InitRfcsr() {
     debugfn();
 
     // Init calibration
@@ -1331,7 +1331,7 @@ mx_status_t Device::InitRfcsr() {
     status = WriteRfcsr(r2);
     CHECK_WRITE(RF2, status);
 
-    sleep_for(MX_MSEC(1));
+    sleep_for(ZX_MSEC(1));
     r2.set_rescal_en(0);
     status = WriteRfcsr(r2);
     CHECK_WRITE(RF2, status);
@@ -1346,27 +1346,27 @@ mx_status_t Device::InitRfcsr() {
         } else {
             status = WriteRfcsr(entry.addr, entry.val);
         }
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             errorf("WriteRegister error for RFCSR %u: %d\n", entry.addr, status);
             return status;
         }
     }
 
     status = NormalModeSetup();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
 
     // TODO(tkilbourn): led open drain enable ??? (doesn't appear in vendor driver?)
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Device::McuCommand(uint8_t command, uint8_t token, uint8_t arg0, uint8_t arg1) {
+zx_status_t Device::McuCommand(uint8_t command, uint8_t token, uint8_t arg0, uint8_t arg1) {
     debugf("McuCommand %u\n", command);
     H2mMailboxCsr hmc;
     auto status = BusyWait(&hmc, [&hmc]() { return !hmc.owner(); });
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
 
@@ -1381,18 +1381,18 @@ mx_status_t Device::McuCommand(uint8_t command, uint8_t token, uint8_t arg0, uin
     hc.set_command(command);
     status = WriteRegister(hc);
     CHECK_WRITE(HOST_CMD, status);
-    sleep_for(MX_MSEC(1));
+    sleep_for(ZX_MSEC(1));
 
     return status;
 }
 
-mx_status_t Device::ReadBbp(uint8_t addr, uint8_t* val) {
+zx_status_t Device::ReadBbp(uint8_t addr, uint8_t* val) {
     BbpCsrCfg bcc;
     auto pred = [&bcc]() { return !bcc.bbp_csr_kick(); };
 
     auto status = BusyWait(&bcc, pred);
-    if (status != MX_OK) {
-        if (status == MX_ERR_TIMED_OUT) {
+    if (status != ZX_OK) {
+        if (status == ZX_ERR_TIMED_OUT) {
             errorf("timed out waiting for BBP\n");
         }
         return status;
@@ -1407,8 +1407,8 @@ mx_status_t Device::ReadBbp(uint8_t addr, uint8_t* val) {
     CHECK_WRITE(BBP_CSR_CFG, status);
 
     status = BusyWait(&bcc, pred);
-    if (status != MX_OK) {
-        if (status == MX_ERR_TIMED_OUT) {
+    if (status != ZX_OK) {
+        if (status == ZX_ERR_TIMED_OUT) {
             errorf("timed out waiting for BBP\n");
             *val = 0xff;
         }
@@ -1416,18 +1416,18 @@ mx_status_t Device::ReadBbp(uint8_t addr, uint8_t* val) {
     }
 
     *val = bcc.bbp_data();
-    return MX_OK;
+    return ZX_OK;
 }
 
-template <uint8_t A> mx_status_t Device::ReadBbp(BbpRegister<A>* reg) {
+template <uint8_t A> zx_status_t Device::ReadBbp(BbpRegister<A>* reg) {
     return ReadBbp(reg->addr(), reg->mut_val());
 }
 
-mx_status_t Device::WriteBbp(uint8_t addr, uint8_t val) {
+zx_status_t Device::WriteBbp(uint8_t addr, uint8_t val) {
     BbpCsrCfg bcc;
     auto status = BusyWait(&bcc, [&bcc]() { return !bcc.bbp_csr_kick(); });
-    if (status != MX_OK) {
-        if (status == MX_ERR_TIMED_OUT) {
+    if (status != ZX_OK) {
+        if (status == ZX_ERR_TIMED_OUT) {
             errorf("timed out waiting for BBP\n");
         }
         return status;
@@ -1444,11 +1444,11 @@ mx_status_t Device::WriteBbp(uint8_t addr, uint8_t val) {
     return status;
 }
 
-template <uint8_t A> mx_status_t Device::WriteBbp(const BbpRegister<A>& reg) {
+template <uint8_t A> zx_status_t Device::WriteBbp(const BbpRegister<A>& reg) {
     return WriteBbp(reg.addr(), reg.val());
 }
 
-mx_status_t Device::WaitForBbp() {
+zx_status_t Device::WaitForBbp() {
     H2mBbpAgent hba;
     auto status = WriteRegister(hba);
     CHECK_WRITE(H2M_BBP_AGENT, status);
@@ -1456,28 +1456,28 @@ mx_status_t Device::WaitForBbp() {
     H2mMailboxCsr hmc;
     status = WriteRegister(hmc);
     CHECK_WRITE(H2M_MAILBOX_CSR, status);
-    sleep_for(MX_MSEC(1));
+    sleep_for(ZX_MSEC(1));
 
     uint8_t val;
     for (unsigned int i = 0; i < kMaxBusyReads; i++) {
         status = ReadBbp(0, &val);
         CHECK_READ(BBP0, status);
         if ((val != 0xff) && (val != 0x00)) {
-            return MX_OK;
+            return ZX_OK;
         }
         sleep_for(kDefaultBusyWait);
     }
     errorf("timed out waiting for BBP ready\n");
-    return MX_ERR_TIMED_OUT;
+    return ZX_ERR_TIMED_OUT;
 }
 
-mx_status_t Device::ReadRfcsr(uint8_t addr, uint8_t* val) {
+zx_status_t Device::ReadRfcsr(uint8_t addr, uint8_t* val) {
     RfCsrCfg rcc;
     auto pred = [&rcc]() { return !rcc.rf_csr_kick(); };
 
     auto status = BusyWait(&rcc, pred);
-    if (status != MX_OK) {
-        if (status == MX_ERR_TIMED_OUT) {
+    if (status != ZX_OK) {
+        if (status == ZX_ERR_TIMED_OUT) {
             errorf("timed out waiting for RFCSR\n");
         }
         return status;
@@ -1491,8 +1491,8 @@ mx_status_t Device::ReadRfcsr(uint8_t addr, uint8_t* val) {
     CHECK_WRITE(RF_CSR_CFG, status);
 
     status = BusyWait(&rcc, pred);
-    if (status != MX_OK) {
-        if (status == MX_ERR_TIMED_OUT) {
+    if (status != ZX_OK) {
+        if (status == ZX_ERR_TIMED_OUT) {
             errorf("timed out waiting for RFCSR\n");
             *val = 0xff;
         }
@@ -1500,18 +1500,18 @@ mx_status_t Device::ReadRfcsr(uint8_t addr, uint8_t* val) {
     }
 
     *val = rcc.rf_csr_data();
-    return MX_OK;
+    return ZX_OK;
 }
 
-template <uint8_t A> mx_status_t Device::ReadRfcsr(RfcsrRegister<A>* reg) {
+template <uint8_t A> zx_status_t Device::ReadRfcsr(RfcsrRegister<A>* reg) {
     return ReadRfcsr(reg->addr(), reg->mut_val());
 }
 
-mx_status_t Device::WriteRfcsr(uint8_t addr, uint8_t val) {
+zx_status_t Device::WriteRfcsr(uint8_t addr, uint8_t val) {
     RfCsrCfg rcc;
     auto status = BusyWait(&rcc, [&rcc]() { return !rcc.rf_csr_kick(); });
-    if (status != MX_OK) {
-        if (status == MX_ERR_TIMED_OUT) {
+    if (status != ZX_OK) {
+        if (status == ZX_ERR_TIMED_OUT) {
             errorf("timed out waiting for RFCSR\n");
         }
         return status;
@@ -1527,11 +1527,11 @@ mx_status_t Device::WriteRfcsr(uint8_t addr, uint8_t val) {
     return status;
 }
 
-template <uint8_t A> mx_status_t Device::WriteRfcsr(const RfcsrRegister<A>& reg) {
+template <uint8_t A> zx_status_t Device::WriteRfcsr(const RfcsrRegister<A>& reg) {
     return WriteRfcsr(reg.addr(), reg.val());
 }
 
-mx_status_t Device::DisableWpdma() {
+zx_status_t Device::DisableWpdma() {
     WpdmaGloCfg wgc;
     auto status = ReadRegister(&wgc);
     CHECK_READ(WPDMA_GLO_CFG, status);
@@ -1543,13 +1543,13 @@ mx_status_t Device::DisableWpdma() {
     status = WriteRegister(wgc);
     CHECK_WRITE(WPDMA_GLO_CFG, status);
     debugf("disabled WPDMA\n");
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Device::DetectAutoRun(bool* autorun) {
+zx_status_t Device::DetectAutoRun(bool* autorun) {
     uint32_t fw_mode = 0;
-    mx_status_t status = usb_control(&usb_, (USB_DIR_IN | USB_TYPE_VENDOR),
-            kDeviceMode, kAutorun, 0, &fw_mode, sizeof(fw_mode), MX_TIME_INFINITE);
+    zx_status_t status = usb_control(&usb_, (USB_DIR_IN | USB_TYPE_VENDOR),
+            kDeviceMode, kAutorun, 0, &fw_mode, sizeof(fw_mode), ZX_TIME_INFINITE);
     if (status < 0) {
         errorf("DeviceMode error: %d\n", status);
         return status;
@@ -1562,15 +1562,15 @@ mx_status_t Device::DetectAutoRun(bool* autorun) {
     } else {
         *autorun = false;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Device::WaitForMacCsr() {
+zx_status_t Device::WaitForMacCsr() {
     AsicVerId avi;
-    return BusyWait(&avi, [&avi]() { return avi.val() && avi.val() != ~0u; }, MX_MSEC(1));
+    return BusyWait(&avi, [&avi]() { return avi.val() && avi.val() != ~0u; }, ZX_MSEC(1));
 }
 
-mx_status_t Device::SetRxFilter() {
+zx_status_t Device::SetRxFilter() {
     RxFiltrCfg rfc;
     auto status = ReadRegister(&rfc);
     CHECK_READ(RX_FILTR_CFG, status);
@@ -1594,10 +1594,10 @@ mx_status_t Device::SetRxFilter() {
     status = WriteRegister(rfc);
     CHECK_WRITE(RX_FILTR_CFG, status);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Device::NormalModeSetup() {
+zx_status_t Device::NormalModeSetup() {
     debugfn();
 
     Bbp138 bbp138;
@@ -1645,10 +1645,10 @@ mx_status_t Device::NormalModeSetup() {
     status = WriteRfcsr(r30);
     CHECK_WRITE(RF30, status);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Device::StartQueues() {
+zx_status_t Device::StartQueues() {
     debugfn();
 
     // RX queue
@@ -1671,10 +1671,10 @@ mx_status_t Device::StartQueues() {
 
     // kick the rx queue???
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Device::StopRxQueue() {
+zx_status_t Device::StopRxQueue() {
     MacSysCtrl msc;
     auto status = ReadRegister(&msc);
     CHECK_READ(MAC_SYS_CTRL, status);
@@ -1682,10 +1682,10 @@ mx_status_t Device::StopRxQueue() {
     status = WriteRegister(msc);
     CHECK_WRITE(MAC_SYS_CTRL, status);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Device::SetupInterface() {
+zx_status_t Device::SetupInterface() {
     BcnTimeCfg btc;
     auto status = ReadRegister(&btc);
     CHECK_READ(BCN_TIME_CFG, status);
@@ -1717,13 +1717,13 @@ mx_status_t Device::SetupInterface() {
     status = WriteRegister(mac1);
     CHECK_WRITE(MAC_ADDR_DW1, status);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 constexpr uint8_t kRfPowerBound = 0x27;
 constexpr uint8_t kFreqOffsetBound = 0x5f;
 
-mx_status_t Device::ConfigureChannel(const Channel& channel) {
+zx_status_t Device::ConfigureChannel(const Channel& channel) {
     EepromLna lna;
     auto status = ReadEepromField(&lna);
     CHECK_READ(EEPROM_LNA, status);
@@ -1771,7 +1771,7 @@ mx_status_t Device::ConfigureChannel(const Channel& channel) {
 
     if (r17.freq_offset() != ef.offset()) {
         status = McuCommand(MCU_FREQ_OFFSET, 0xff, freq_offset, prev_freq_off);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             errorf("could not set frequency offset\n");
             return status;
         }
@@ -1787,14 +1787,14 @@ mx_status_t Device::ConfigureChannel(const Channel& channel) {
                 0x07, 0x07, 0x06, 0x05, 0x04, 0x04, };
             static_assert(sizeof(r55) == sizeof(r59),
                     "r55 and r59 should have the same number of entries.");
-            MX_DEBUG_ASSERT(channel.hw_index < (ssize_t)sizeof(r55));
+            ZX_DEBUG_ASSERT(channel.hw_index < (ssize_t)sizeof(r55));
             WriteRfcsr(RfcsrRegister<55>(r55[channel.hw_index]));
             WriteRfcsr(RfcsrRegister<59>(r59[channel.hw_index]));
         } else {
             static const uint8_t r59[] = {
                 0x8f, 0x8f, 0x8f, 0x8f, 0x8f, 0x8f, 0x8f, 0x8d,
                 0x8a, 0x88, 0x88, 0x87, 0x87, 0x86, };
-            MX_DEBUG_ASSERT(channel.hw_index < (ssize_t)sizeof(r59));
+            ZX_DEBUG_ASSERT(channel.hw_index < (ssize_t)sizeof(r59));
             WriteRfcsr(RfcsrRegister<59>(r59[channel.hw_index]));
         }
     }
@@ -1853,7 +1853,7 @@ mx_status_t Device::ConfigureChannel(const Channel& channel) {
     status = WriteBbp(b3);
     CHECK_WRITE(BBP3, status);
 
-    sleep_for(MX_MSEC(1));
+    sleep_for(ZX_MSEC(1));
 
     // Clear channel stats by reading the registers
     ChIdleSta cis;
@@ -1866,7 +1866,7 @@ mx_status_t Device::ConfigureChannel(const Channel& channel) {
     status = ReadRegister(&ecbs);
     CHECK_READ(EXT_CH_BUSY_STA, status);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 namespace {
@@ -1878,7 +1878,7 @@ uint8_t CompensateTx(uint8_t power) {
 }
 }  // namespace
 
-mx_status_t Device::ConfigureTxPower(const Channel& channel) {
+zx_status_t Device::ConfigureTxPower(const Channel& channel) {
     // TODO(tkilbourn): calculate tx power control
     //       use 0 (normal) for now
     Bbp1 b1;
@@ -1983,16 +1983,16 @@ mx_status_t Device::ConfigureTxPower(const Channel& channel) {
     status = WriteRegister(tpc4);
     CHECK_WRITE(TX_PWR_CFG_4, status);
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 template <typename R, typename Predicate>
-mx_status_t Device::BusyWait(R* reg, Predicate pred, mx_duration_t delay) {
-    mx_status_t status;
+zx_status_t Device::BusyWait(R* reg, Predicate pred, zx_duration_t delay) {
+    zx_status_t status;
     unsigned int busy;
     for (busy = 0; busy < kMaxBusyReads; busy++) {
         status = ReadRegister(reg);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             return status;
         }
         if (pred()) {
@@ -2001,9 +2001,9 @@ mx_status_t Device::BusyWait(R* reg, Predicate pred, mx_duration_t delay) {
         sleep_for(delay);
     }
     if (busy == kMaxBusyReads) {
-        return MX_ERR_TIMED_OUT;
+        return ZX_ERR_TIMED_OUT;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 static void dump_rx(iotxn_t* request, RxInfo rx_info, RxDesc rx_desc,
@@ -2061,7 +2061,7 @@ static const uint8_t kDataRates[4][8] = {
 static void fill_rx_info(wlan_rx_info_t* info, Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 rxwi3,
                          uint8_t* rssi_offsets, uint8_t lna_gain) {
     info->flags |= WLAN_RX_INFO_PHY_PRESENT;
-    MX_DEBUG_ASSERT(rxwi1.phy_mode() < 4);
+    ZX_DEBUG_ASSERT(rxwi1.phy_mode() < 4);
     switch (rxwi1.phy_mode()) {
     case PhyMode::kLegacyCck:
         info->phy = WLAN_PHY_CCK;
@@ -2129,14 +2129,14 @@ static void fill_rx_info(wlan_rx_info_t* info, Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 r
 }
 
 void Device::HandleRxComplete(iotxn_t* request) {
-    if (request->status == MX_ERR_IO_REFUSED) {
+    if (request->status == ZX_ERR_IO_REFUSED) {
         debugf("usb_reset_endpoint\n");
         usb_reset_endpoint(&usb_, rx_endpt_);
     }
     std::lock_guard<std::mutex> guard(lock_);
     auto ac = fbl::MakeAutoCall([&]() { iotxn_queue(parent(), request); });
 
-    if (request->status == MX_OK) {
+    if (request->status == ZX_OK) {
         // Handle completed rx
         if (request->actual < 24) {
             errorf("short read\n");
@@ -2168,14 +2168,14 @@ void Device::HandleRxComplete(iotxn_t* request) {
 
         dump_rx(request, rx_info, rx_desc, rxwi0, rxwi1, rxwi2, rxwi3);
     } else {
-        if (request->status != MX_ERR_IO_REFUSED) {
+        if (request->status != ZX_ERR_IO_REFUSED) {
             errorf("rx txn status %d\n", request->status);
         }
     }
 }
 
 void Device::HandleTxComplete(iotxn_t* request) {
-    if (request->status == MX_ERR_IO_REFUSED) {
+    if (request->status == ZX_ERR_IO_REFUSED) {
         debugf("usb_reset_endpoint\n");
         usb_reset_endpoint(&usb_, tx_endpts_.front());
     }
@@ -2186,7 +2186,7 @@ void Device::HandleTxComplete(iotxn_t* request) {
 
 void Device::DdkUnbind() {
     debugfn();
-    device_remove(mxdev());
+    device_remove(zxdev());
 }
 
 void Device::DdkRelease() {
@@ -2194,23 +2194,23 @@ void Device::DdkRelease() {
     delete this;
 }
 
-mx_status_t Device::WlanmacQuery(uint32_t options, ethmac_info_t* info) {
+zx_status_t Device::WlanmacQuery(uint32_t options, ethmac_info_t* info) {
     info->mtu = 1500;
     std::memcpy(info->mac, mac_addr_, ETH_MAC_SIZE);
     info->features |= ETHMAC_FEATURE_WLAN;
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
+zx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     debugfn();
     std::lock_guard<std::mutex> guard(lock_);
 
     if (wlanmac_proxy_ != nullptr) {
-        return MX_ERR_ALREADY_BOUND;
+        return ZX_ERR_ALREADY_BOUND;
     }
 
     auto status = LoadFirmware();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("failed to load firmware\n");
         return status;
     }
@@ -2221,7 +2221,7 @@ mx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
         auto* req = usb_alloc_iotxn(rx_endpt_, kReadBufSize);
         if (req == nullptr) {
             errorf("failed to allocate rx iotxn\n");
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
         }
         req->length = kReadBufSize;
         req->complete_cb = &Device::ReadIotxnComplete;
@@ -2234,7 +2234,7 @@ mx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
         auto* req = usb_alloc_iotxn(tx_endpt, kWriteBufSize);
         if (req == nullptr) {
             errorf("failed to allocate tx iotxn\n");
-            return MX_ERR_NO_MEMORY;
+            return ZX_ERR_NO_MEMORY;
         }
         req->length = kWriteBufSize;
         req->complete_cb = &Device::WriteIotxnComplete;
@@ -2243,19 +2243,19 @@ mx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     }
 
     status = EnableRadio();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("could not enable radio\n");
         return status;
     }
 
     status = StartQueues();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("could not start queues\n");
         return status;
     }
 
     status = SetupInterface();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("could not setup interface\n");
         return status;
     }
@@ -2283,7 +2283,7 @@ mx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     CHECK_WRITE(AUTO_WAKEUP_CFG, status);
 
     status = McuCommand(MCU_WAKEUP, 0xff, 0, 2);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("error waking MCU err=%d\n", status);
         return status;
     }
@@ -2306,7 +2306,7 @@ mx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     CHECK_WRITE(BBP66, status);
 
     status = SetRxFilter();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
 
@@ -2317,12 +2317,12 @@ mx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     wlan_channel_t chan;
     chan.channel_num = 1;
     status = WlanmacSetChannel(0, &chan);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         warnf("could not set channel err=%d\n", status);
     }
 
     infof("wlan started\n");
-    return MX_OK;
+    return ZX_OK;
 }
 
 void Device::WlanmacStop() {
@@ -2348,11 +2348,11 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
         req = free_write_reqs_.back();
         free_write_reqs_.pop_back();
     }
-    MX_DEBUG_ASSERT(req != nullptr);
+    ZX_DEBUG_ASSERT(req != nullptr);
 
     TxPacket* packet;
-    mx_status_t status = iotxn_mmap(req, reinterpret_cast<void**>(&packet));
-    if (status != MX_OK) {
+    zx_status_t status = iotxn_mmap(req, reinterpret_cast<void**>(&packet));
+    if (status != ZX_OK) {
         errorf("could not map iotxn: %d\n", status);
         std::lock_guard<std::mutex> guard(lock_);
         free_write_reqs_.push_back(req);
@@ -2379,39 +2379,39 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
     iotxn_queue(parent(), req);
 }
 
-mx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
+zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
     if (options != 0) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     auto channel = channels_.find(chan->channel_num);
     if (channel == channels_.end()) {
-        return MX_ERR_NOT_FOUND;
+        return ZX_ERR_NOT_FOUND;
     }
     auto status = StopRxQueue();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("could not stop rx queue\n");
         return status;
     }
     status = ConfigureChannel(channel->second);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
     status = ConfigureTxPower(channel->second);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         return status;
     }
     status = StartQueues();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("could not start queues\n");
         return status;
     }
 
     current_channel_ = chan->channel_num;
-    return MX_OK;
+    return ZX_OK;
 }
 
 void Device::ReadIotxnComplete(iotxn_t* request, void* cookie) {
-    if (request->status == MX_ERR_IO_NOT_PRESENT) {
+    if (request->status == ZX_ERR_IO_NOT_PRESENT) {
         iotxn_release(request);
         return;
     }
@@ -2421,7 +2421,7 @@ void Device::ReadIotxnComplete(iotxn_t* request, void* cookie) {
 }
 
 void Device::WriteIotxnComplete(iotxn_t* request, void* cookie) {
-    if (request->status == MX_ERR_IO_NOT_PRESENT) {
+    if (request->status == ZX_ERR_IO_NOT_PRESENT) {
         iotxn_release(request);
         return;
     }

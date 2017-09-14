@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/device/device.h>
-#include <magenta/device/test.h>
-#include <mx/time.h>
+#include <zircon/device/device.h>
+#include <zircon/device/test.h>
+#include <zx/time.h>
 
 #include <cerrno>
 #include <cstring>
@@ -45,7 +45,7 @@ int add_wlan() {
         if (devfd >= 0) {
             break;
         }
-        mx::nanosleep(mx_deadline_after(MX_SEC(1)));
+        zx::nanosleep(zx_deadline_after(ZX_SEC(1)));
     } while (++retry < 100);
 
     if (devfd < 0) {

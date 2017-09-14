@@ -12,33 +12,33 @@ Timer::Timer(uint64_t id) : id_(id) {}
 
 Timer::~Timer() {}
 
-mx_status_t Timer::SetTimer(mx_time_t deadline) {
+zx_status_t Timer::SetTimer(zx_time_t deadline) {
     deadline_ = deadline;
     return SetTimerImpl(deadline);
 }
 
-mx_status_t Timer::CancelTimer() {
+zx_status_t Timer::CancelTimer() {
     deadline_ = 0u;
     return CancelTimerImpl();
 }
 
-SystemTimer::SystemTimer(uint64_t id, mx::timer timer)
+SystemTimer::SystemTimer(uint64_t id, zx::timer timer)
   : Timer(id), timer_(std::move(timer)) {}
 
-mx_status_t SystemTimer::SetTimerImpl(mx_time_t deadline) {
+zx_status_t SystemTimer::SetTimerImpl(zx_time_t deadline) {
     return timer_.set(deadline, 0);
 }
 
-mx_status_t SystemTimer::CancelTimerImpl() {
+zx_status_t SystemTimer::CancelTimerImpl() {
     return timer_.cancel();
 }
 
-mx_status_t TestTimer::SetTimerImpl(mx_time_t duration) {
-    return MX_OK;
+zx_status_t TestTimer::SetTimerImpl(zx_time_t duration) {
+    return ZX_OK;
 }
 
-mx_status_t TestTimer::CancelTimerImpl() {
-    return MX_OK;
+zx_status_t TestTimer::CancelTimerImpl() {
+    return ZX_OK;
 }
 
 }  // namespace wlan

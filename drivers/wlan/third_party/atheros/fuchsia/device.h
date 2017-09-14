@@ -19,7 +19,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/pci.h>
 #include <ddktl/protocol/wlan.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/unique_ptr.h>
 
 #include <cstdint>
@@ -33,20 +33,20 @@ using BaseDevice = ddk::Device<Device, ddk::Unbindable>;
 class Device : public BaseDevice,
                public ddk::WlanmacProtocol<Device> {
   public:
-    Device(mx_device_t* device, pci_protocol_t* pci);
+    Device(zx_device_t* device, pci_protocol_t* pci);
 
-    mx_status_t Bind();
+    zx_status_t Bind();
 
     // ddk::Device methods
     void DdkUnbind();
     void DdkRelease();
 
     // ddk::WlanmacProtocol methods
-    mx_status_t WlanmacQuery(uint32_t options, ethmac_info_t* info);
-    mx_status_t WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy);
+    zx_status_t WlanmacQuery(uint32_t options, ethmac_info_t* info);
+    zx_status_t WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy);
     void WlanmacStop();
     void WlanmacTx(uint32_t options, const void* data, size_t len);
-    mx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
+    zx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
 
   private:
     ddk::PciProtocolProxy pci_;

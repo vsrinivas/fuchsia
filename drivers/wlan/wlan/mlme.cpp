@@ -16,9 +16,9 @@
 
 #include <apps/wlan/services/wlan_mlme.fidl-common.h>
 #include <drivers/wifi/common/bitfield.h>
-#include <magenta/assert.h>
-#include <magenta/syscalls.h>
-#include <mx/time.h>
+#include <zircon/assert.h>
+#include <zircon/syscalls.h>
+#include <zx/time.h>
 
 #include <cinttypes>
 #include <cstring>
@@ -59,15 +59,15 @@ Mlme::Mlme(DeviceInterface* device)
 
 Mlme::~Mlme() {}
 
-mx_status_t Mlme::Init() {
+zx_status_t Mlme::Init() {
     debugfn();
 
     fbl::unique_ptr<Timer> timer;
     ObjectId timer_id;
     timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
     timer_id.set_target(to_enum_type(ObjectTarget::kScanner));
-    mx_status_t status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
-    if (status != MX_OK) {
+    zx_status_t status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
+    if (status != ZX_OK) {
         errorf("could not create scan timer: %d\n", status);
         return status;
     }
@@ -88,10 +88,10 @@ void DumpPacket(const Packet& packet) {
 }
 }  // namespace
 
-mx_status_t Mlme::HandlePacket(const Packet* packet) {
+zx_status_t Mlme::HandlePacket(const Packet* packet) {
     debugfn();
-    MX_DEBUG_ASSERT(packet != nullptr);
-    MX_DEBUG_ASSERT(packet->peer() != Packet::Peer::kUnknown);
+    ZX_DEBUG_ASSERT(packet != nullptr);
+    ZX_DEBUG_ASSERT(packet->peer() != Packet::Peer::kUnknown);
     debughdr("packet data=%p len=%zu peer=%s\n",
               packet->data(), packet->len(),
               packet->peer() == Packet::Peer::kWlan ? "Wlan" :
@@ -102,7 +102,7 @@ mx_status_t Mlme::HandlePacket(const Packet* packet) {
         DumpPacket(*packet);
     }
 
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
     switch (packet->peer()) {
     case Packet::Peer::kService:
         status = HandleSvcPacket(packet);
@@ -125,7 +125,7 @@ mx_status_t Mlme::HandlePacket(const Packet* packet) {
             break;
         default:
             warnf("unknown MAC frame type %u\n", fc->type());
-            status = MX_ERR_NOT_SUPPORTED;
+            status = ZX_ERR_NOT_SUPPORTED;
             break;
         }
         break;
@@ -137,9 +137,9 @@ mx_status_t Mlme::HandlePacket(const Packet* packet) {
     return status;
 }
 
-mx_status_t Mlme::HandlePortPacket(uint64_t key) {
+zx_status_t Mlme::HandlePortPacket(uint64_t key) {
     debugfn();
-    MX_DEBUG_ASSERT(ToPortKeyType(key) == PortKeyType::kMlme);
+    ZX_DEBUG_ASSERT(ToPortKeyType(key) == PortKeyType::kMlme);
 
     ObjectId id(ToPortKeyId(key));
     switch (id.subtype()) {
@@ -149,7 +149,7 @@ mx_status_t Mlme::HandlePortPacket(uint64_t key) {
             scanner_->HandleTimeout();
             break;
         case to_enum_type(ObjectTarget::kStation):
-            MX_DEBUG_ASSERT(sta_ != nullptr);
+            ZX_DEBUG_ASSERT(sta_ != nullptr);
             if (id.mac() != sta_->bssid()->to_u64()) {
                 warnf("timeout for unknown bssid: %" PRIu64 "\n", id.mac());
                 break;
@@ -164,36 +164,36 @@ mx_status_t Mlme::HandlePortPacket(uint64_t key) {
     default:
         warnf("unknown MLME event subtype: %u\n", id.subtype());
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Mlme::HandleCtrlPacket(const Packet* packet) {
+zx_status_t Mlme::HandleCtrlPacket(const Packet* packet) {
     debugfn();
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Mlme::HandleDataPacket(const Packet* packet) {
+zx_status_t Mlme::HandleDataPacket(const Packet* packet) {
     debugfn();
     if (IsStaValid()) {
         auto hdr = packet->field<DataFrameHeader>(0);
         if (hdr == nullptr) {
             errorf("short data packet len=%zu\n", packet->len());
-            return MX_OK;
+            return ZX_OK;
         }
 
         if (*sta_->bssid() == hdr->addr2) {
             return sta_->HandleData(packet);
         }
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Mlme::HandleMgmtPacket(const Packet* packet) {
+zx_status_t Mlme::HandleMgmtPacket(const Packet* packet) {
     debugfn();
     auto hdr = packet->field<MgmtFrameHeader>(0);
     if (hdr == nullptr) {
         errorf("short mgmt packet len=%zu\n", packet->len());
-        return MX_OK;
+        return ZX_OK;
     }
     debughdr("Frame control: %04x  duration: %u  seq: %u frag: %u\n",
               hdr->fc.val(), hdr->duration, hdr->sc.seq(), hdr->sc.frag());
@@ -218,31 +218,31 @@ mx_status_t Mlme::HandleMgmtPacket(const Packet* packet) {
     default:
         break;
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Mlme::HandleEthPacket(const Packet* packet) {
+zx_status_t Mlme::HandleEthPacket(const Packet* packet) {
     debugfn();
-    return IsStaValid() ? sta_->HandleEth(packet) : MX_OK;
+    return IsStaValid() ? sta_->HandleEth(packet) : ZX_OK;
 }
 
-mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
+zx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
     debugfn();
     const uint8_t* p = packet->data();
     auto h = FromBytes<ServiceHeader>(p, packet->len());
     if (h == nullptr) {
         errorf("short service packet len=%zu\n", packet->len());
-        return MX_OK;
+        return ZX_OK;
     }
     debughdr("service packet txn_id=%" PRIu64 " flags=%u ordinal=%u\n",
               h->txn_id, h->flags, h->ordinal);
 
-    mx_status_t status = MX_OK;
+    zx_status_t status = ZX_OK;
     switch (static_cast<Method>(h->ordinal)) {
     case Method::SCAN_request: {
         ScanRequestPtr req;
         status = DeserializeServiceMsg(*packet, Method::SCAN_request, &req);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             errorf("could not deserialize ScanRequest: %d\n", status);
             break;
         }
@@ -253,7 +253,7 @@ mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
     case Method::JOIN_request: {
         JoinRequestPtr req;
         status = DeserializeServiceMsg(*packet, Method::JOIN_request, &req);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             errorf("could not deserialize JoinRequest: %d\n", status);
             break;
         }
@@ -264,7 +264,7 @@ mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
         timer_id.set_target(to_enum_type(ObjectTarget::kStation));
         timer_id.set_mac(DeviceAddress(req->selected_bss->bssid.data()).to_u64());
         status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             errorf("could not create station timer: %d\n", status);
             return status;
         }
@@ -276,7 +276,7 @@ mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
         // TODO(tkilbourn): send error response back to service is !IsStaValid
         AuthenticateRequestPtr req;
         status = DeserializeServiceMsg(*packet, Method::AUTHENTICATE_request, &req);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             errorf("could not deserialize AuthenticateRequest: %d\n", status);
             break;
         }
@@ -290,7 +290,7 @@ mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
         // TODO(tkilbourn): send error response back to service is !IsStaValid
         AssociateRequestPtr req;
         status = DeserializeServiceMsg(*packet, Method::ASSOCIATE_request, &req);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             errorf("could not deserialize AssociateRequest: %d\n", status);
             break;
         }
@@ -303,7 +303,7 @@ mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
     case Method::EAPOL_request: {
         EapolRequestPtr req;
         status = DeserializeServiceMsg(*packet, Method::EAPOL_request, &req);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             errorf("could not deserialize EapolRequest: %d\n", status);
             break;
         }
@@ -315,13 +315,13 @@ mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
     }
     default:
         warnf("unknown MLME method %u\n", h->ordinal);
-        status = MX_ERR_NOT_SUPPORTED;
+        status = ZX_ERR_NOT_SUPPORTED;
     }
 
     return status;
 }
 
-mx_status_t Mlme::HandleBeacon(const Packet* packet) {
+zx_status_t Mlme::HandleBeacon(const Packet* packet) {
     debugfn();
 
     if (scanner_->IsRunning()) {
@@ -335,20 +335,20 @@ mx_status_t Mlme::HandleBeacon(const Packet* packet) {
         }
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Mlme::HandleProbeResponse(const Packet* packet) {
+zx_status_t Mlme::HandleProbeResponse(const Packet* packet) {
     debugfn();
 
     if (scanner_->IsRunning()) {
         scanner_->HandleBeaconOrProbeResponse(packet);
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Mlme::HandleAuthentication(const Packet* packet) {
+zx_status_t Mlme::HandleAuthentication(const Packet* packet) {
     debugfn();
 
     if (IsStaValid()) {
@@ -357,10 +357,10 @@ mx_status_t Mlme::HandleAuthentication(const Packet* packet) {
             sta_->HandleAuthentication(packet);
         }
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Mlme::HandleDeauthentication(const Packet* packet) {
+zx_status_t Mlme::HandleDeauthentication(const Packet* packet) {
     debugfn();
 
     if (IsStaValid()) {
@@ -369,10 +369,10 @@ mx_status_t Mlme::HandleDeauthentication(const Packet* packet) {
             sta_->HandleDeauthentication(packet);
         }
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Mlme::HandleAssociationResponse(const Packet* packet) {
+zx_status_t Mlme::HandleAssociationResponse(const Packet* packet) {
     debugfn();
 
     if (IsStaValid()) {
@@ -381,10 +381,10 @@ mx_status_t Mlme::HandleAssociationResponse(const Packet* packet) {
             sta_->HandleAssociationResponse(packet);
         }
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Mlme::HandleDisassociation(const Packet* packet) {
+zx_status_t Mlme::HandleDisassociation(const Packet* packet) {
     debugfn();
 
     if (IsStaValid()) {
@@ -393,27 +393,27 @@ mx_status_t Mlme::HandleDisassociation(const Packet* packet) {
             sta_->HandleDisassociation(packet);
         }
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 bool Mlme::IsStaValid() const {
     return sta_ != nullptr && sta_->bssid() != nullptr;
 }
 
-mx_status_t Mlme::PreChannelChange(wlan_channel_t chan) {
+zx_status_t Mlme::PreChannelChange(wlan_channel_t chan) {
     debugfn();
     if (IsStaValid()) {
         sta_->PreChannelChange(chan);
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Mlme::PostChannelChange() {
+zx_status_t Mlme::PostChannelChange() {
     debugfn();
     if (IsStaValid()) {
         sta_->PostChannelChange();
     }
-    return MX_OK;
+    return ZX_OK;
 }
 
 }  // namespace wlan

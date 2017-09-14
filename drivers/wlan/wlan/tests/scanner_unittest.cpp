@@ -32,34 +32,34 @@ struct MockDevice : public DeviceInterface {
         state = fbl::AdoptRef(new DeviceState);
     }
 
-    mx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) override final {
+    zx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) override final {
         // Should not be used by Scanner at this time.
-        return MX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
-    mx_status_t SendEthernet(fbl::unique_ptr<Packet> packet) override final {
+    zx_status_t SendEthernet(fbl::unique_ptr<Packet> packet) override final {
         eth_queue.Enqueue(std::move(packet));
-        return MX_OK;
+        return ZX_OK;
     }
 
-    mx_status_t SendWlan(fbl::unique_ptr<Packet> packet) override final {
+    zx_status_t SendWlan(fbl::unique_ptr<Packet> packet) override final {
         wlan_queue.Enqueue(std::move(packet));
-        return MX_OK;
+        return ZX_OK;
     }
 
-    mx_status_t SendService(fbl::unique_ptr<Packet> packet) override final {
+    zx_status_t SendService(fbl::unique_ptr<Packet> packet) override final {
         svc_queue.Enqueue(std::move(packet));
-        return MX_OK;
+        return ZX_OK;
     }
 
-    mx_status_t SetChannel(wlan_channel_t chan) override final {
+    zx_status_t SetChannel(wlan_channel_t chan) override final {
         state->set_channel(chan);
-        return MX_OK;
+        return ZX_OK;
     }
 
-    mx_status_t SetStatus(uint32_t status) override final {
+    zx_status_t SetStatus(uint32_t status) override final {
         state->set_online(status == 1);
-        return MX_OK;
+        return ZX_OK;
     }
 
     fbl::RefPtr<DeviceState> GetState() override final {
@@ -94,7 +94,7 @@ class ScannerTest : public ::testing::Test {
         req_->scan_type = ScanTypes::ACTIVE;
     }
 
-    mx_status_t Start() {
+    zx_status_t Start() {
         return scanner_.Start(req_.Clone());
     }
 
@@ -102,7 +102,7 @@ class ScannerTest : public ::testing::Test {
         return mock_dev_.GetState()->channel().channel_num;
     }
 
-    mx_status_t DeserializeResponse() {
+    zx_status_t DeserializeResponse() {
         EXPECT_EQ(1u, mock_dev_.svc_queue.size());
         auto packet = mock_dev_.svc_queue.Dequeue();
         return DeserializeServiceMsg(*packet, Method::SCAN_confirm, &resp_);
@@ -119,7 +119,7 @@ TEST_F(ScannerTest, Start) {
     EXPECT_EQ(0u, CurrentChannel());
     EXPECT_FALSE(scanner_.IsRunning());
 
-    EXPECT_EQ(MX_OK, Start());
+    EXPECT_EQ(ZX_OK, Start());
     EXPECT_TRUE(scanner_.IsRunning());
 
     EXPECT_EQ(1u, CurrentChannel());
@@ -131,11 +131,11 @@ TEST_F(ScannerTest, Start_InvalidChannelTimes) {
 
     EXPECT_EQ(0u, CurrentChannel());
 
-    EXPECT_EQ(MX_OK, Start());
+    EXPECT_EQ(ZX_OK, Start());
     EXPECT_FALSE(scanner_.IsRunning());
     EXPECT_EQ(0u, CurrentChannel());
 
-    EXPECT_EQ(MX_OK, DeserializeResponse());
+    EXPECT_EQ(ZX_OK, DeserializeResponse());
     EXPECT_EQ(0u, resp_->bss_description_set.size());
     EXPECT_EQ(ScanResultCodes::NOT_SUPPORTED, resp_->result_code);
 }
@@ -146,17 +146,17 @@ TEST_F(ScannerTest, Start_NoChannels) {
 
     EXPECT_EQ(0u, CurrentChannel());
 
-    EXPECT_EQ(MX_OK, Start());
+    EXPECT_EQ(ZX_OK, Start());
     EXPECT_FALSE(scanner_.IsRunning());
     EXPECT_EQ(0u, CurrentChannel());
 
-    EXPECT_EQ(MX_OK, DeserializeResponse());
+    EXPECT_EQ(ZX_OK, DeserializeResponse());
     EXPECT_EQ(0u, resp_->bss_description_set.size());
     EXPECT_EQ(ScanResultCodes::NOT_SUPPORTED, resp_->result_code);
 }
 
 TEST_F(ScannerTest, Reset) {
-    ASSERT_EQ(MX_OK, Start());
+    ASSERT_EQ(ZX_OK, Start());
     ASSERT_TRUE(scanner_.IsRunning());
 
     scanner_.Reset();
@@ -167,19 +167,19 @@ TEST_F(ScannerTest, Reset) {
 TEST_F(ScannerTest, PassiveScan) {
     SetPassive();
 
-    ASSERT_EQ(MX_OK, Start());
+    ASSERT_EQ(ZX_OK, Start());
     EXPECT_EQ(Scanner::Type::kPassive, scanner_.ScanType());
 }
 
 TEST_F(ScannerTest, ActiveScan) {
     SetActive();
 
-    ASSERT_EQ(MX_OK, Start());
+    ASSERT_EQ(ZX_OK, Start());
     EXPECT_EQ(Scanner::Type::kActive, scanner_.ScanType());
 }
 
 TEST_F(ScannerTest, ScanChannel) {
-    ASSERT_EQ(MX_OK, Start());
+    ASSERT_EQ(ZX_OK, Start());
     auto chan = scanner_.ScanChannel();
     EXPECT_EQ(1u, chan.channel_num);
 }
@@ -189,11 +189,11 @@ TEST_F(ScannerTest, Timeout_MinChannelTime) {
     req_->min_channel_time = 1;
     req_->max_channel_time = 10;
 
-    ASSERT_EQ(MX_OK, Start());
+    ASSERT_EQ(ZX_OK, Start());
     EXPECT_EQ(WLAN_TU(req_->min_channel_time), scanner_.timer().deadline());
 
     clock_.Set(WLAN_TU(req_->min_channel_time));
-    EXPECT_EQ(MX_OK, scanner_.HandleTimeout());
+    EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
     EXPECT_EQ(WLAN_TU(req_->max_channel_time), scanner_.timer().deadline());
 }
 
@@ -202,15 +202,15 @@ TEST_F(ScannerTest, Timeout_MaxChannelTime) {
     req_->min_channel_time = 1;
     req_->max_channel_time = 10;
 
-    ASSERT_EQ(MX_OK, Start());
+    ASSERT_EQ(ZX_OK, Start());
 
     clock_.Set(WLAN_TU(req_->min_channel_time));
-    ASSERT_EQ(MX_OK, scanner_.HandleTimeout());
+    ASSERT_EQ(ZX_OK, scanner_.HandleTimeout());
 
     clock_.Set(WLAN_TU(req_->max_channel_time));
-    EXPECT_EQ(MX_OK, scanner_.HandleTimeout());
+    EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
 
-    EXPECT_EQ(MX_OK, DeserializeResponse());
+    EXPECT_EQ(ZX_OK, DeserializeResponse());
     EXPECT_EQ(0u, resp_->bss_description_set.size());
     EXPECT_EQ(ScanResultCodes::SUCCESS, resp_->result_code);
 }
@@ -223,16 +223,16 @@ TEST_F(ScannerTest, Timeout_NextChannel) {
 
     EXPECT_EQ(0u, CurrentChannel());
 
-    ASSERT_EQ(MX_OK, Start());
+    ASSERT_EQ(ZX_OK, Start());
     ASSERT_EQ(1u, scanner_.ScanChannel().channel_num);
 
     EXPECT_EQ(1u, CurrentChannel());
 
     clock_.Set(WLAN_TU(req_->min_channel_time));
-    ASSERT_EQ(MX_OK, scanner_.HandleTimeout());
+    ASSERT_EQ(ZX_OK, scanner_.HandleTimeout());
 
     clock_.Set(WLAN_TU(req_->max_channel_time));
-    EXPECT_EQ(MX_OK, scanner_.HandleTimeout());
+    EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
     EXPECT_EQ(2u, scanner_.ScanChannel().channel_num);
     EXPECT_EQ(clock_.Now() + WLAN_TU(req_->min_channel_time), scanner_.timer().deadline());
 
@@ -245,18 +245,18 @@ TEST_F(ScannerTest, DISABLED_Timeout_ProbeDelay) {
     req_->min_channel_time = 5;
     req_->max_channel_time = 10;
 
-    ASSERT_EQ(MX_OK, Start());
+    ASSERT_EQ(ZX_OK, Start());
     EXPECT_EQ(WLAN_TU(req_->probe_delay), scanner_.timer().deadline());
 
     clock_.Set(WLAN_TU(req_->probe_delay));
-    EXPECT_EQ(MX_OK, scanner_.HandleTimeout());
+    EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
     EXPECT_EQ(WLAN_TU(req_->min_channel_time), scanner_.timer().deadline());
 }
 
 TEST_F(ScannerTest, ScanResponse) {
     SetPassive();
 
-    ASSERT_EQ(MX_OK, Start());
+    ASSERT_EQ(ZX_OK, Start());
 
     auto buf = LargeBufferAllocator::New();
     ASSERT_NE(nullptr, buf);
@@ -270,11 +270,11 @@ TEST_F(ScannerTest, ScanResponse) {
     info.snr = 60;
     p.CopyCtrlFrom(info);
 
-    EXPECT_EQ(MX_OK, scanner_.HandleBeaconOrProbeResponse(&p));
+    EXPECT_EQ(ZX_OK, scanner_.HandleBeaconOrProbeResponse(&p));
     clock_.Set(1);
-    EXPECT_EQ(MX_OK, scanner_.HandleTimeout());
+    EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
 
-    EXPECT_EQ(MX_OK, DeserializeResponse());
+    EXPECT_EQ(ZX_OK, DeserializeResponse());
     ASSERT_EQ(1u, resp_->bss_description_set.size());
     EXPECT_EQ(ScanResultCodes::SUCCESS, resp_->result_code);
 

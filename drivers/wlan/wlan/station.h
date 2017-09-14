@@ -11,7 +11,7 @@
 #include <apps/wlan/services/wlan_mlme_ext.fidl-common.h>
 #include <ddk/protocol/wlan.h>
 #include <drivers/wifi/common/moving_average.h>
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/unique_ptr.h>
 
 namespace wlan {
@@ -54,48 +54,48 @@ class Station {
     uint16_t aid() const { return aid_; }
 
     wlan_channel_t channel() const {
-        MX_DEBUG_ASSERT(state_ != WlanState::kUnjoined);
-        MX_DEBUG_ASSERT(!bss_.is_null());
+        ZX_DEBUG_ASSERT(state_ != WlanState::kUnjoined);
+        ZX_DEBUG_ASSERT(!bss_.is_null());
         return wlan_channel_t{ bss_->channel };
     }
 
-    mx_status_t Join(JoinRequestPtr req);
-    mx_status_t Authenticate(AuthenticateRequestPtr req);
-    mx_status_t Associate(AssociateRequestPtr req);
+    zx_status_t Join(JoinRequestPtr req);
+    zx_status_t Authenticate(AuthenticateRequestPtr req);
+    zx_status_t Associate(AssociateRequestPtr req);
 
-    mx_status_t HandleBeacon(const Packet* packet);
-    mx_status_t HandleAuthentication(const Packet* packet);
-    mx_status_t HandleDeauthentication(const Packet* packet);
-    mx_status_t HandleAssociationResponse(const Packet* packet);
-    mx_status_t HandleDisassociation(const Packet* packet);
-    mx_status_t HandleData(const Packet* packet);
-    mx_status_t HandleEth(const Packet* packet);
-    mx_status_t HandleTimeout();
+    zx_status_t HandleBeacon(const Packet* packet);
+    zx_status_t HandleAuthentication(const Packet* packet);
+    zx_status_t HandleDeauthentication(const Packet* packet);
+    zx_status_t HandleAssociationResponse(const Packet* packet);
+    zx_status_t HandleDisassociation(const Packet* packet);
+    zx_status_t HandleData(const Packet* packet);
+    zx_status_t HandleEth(const Packet* packet);
+    zx_status_t HandleTimeout();
 
-    mx_status_t SendEapolRequest(EapolRequestPtr req);
+    zx_status_t SendEapolRequest(EapolRequestPtr req);
 
-    mx_status_t PreChannelChange(wlan_channel_t chan);
-    mx_status_t PostChannelChange();
+    zx_status_t PreChannelChange(wlan_channel_t chan);
+    zx_status_t PostChannelChange();
 
     const Timer& timer() const { return *timer_; }
 
 
   private:
-    mx_status_t SendJoinResponse();
-    mx_status_t SendAuthResponse(AuthenticateResultCodes code);
-    mx_status_t SendDeauthIndication(uint16_t code);
-    mx_status_t SendAssocResponse(AssociateResultCodes code);
-    mx_status_t SendDisassociateIndication(uint16_t code);
+    zx_status_t SendJoinResponse();
+    zx_status_t SendAuthResponse(AuthenticateResultCodes code);
+    zx_status_t SendDeauthIndication(uint16_t code);
+    zx_status_t SendAssocResponse(AssociateResultCodes code);
+    zx_status_t SendDisassociateIndication(uint16_t code);
 
-    mx_status_t SendSignalReportIndication(uint8_t rssi);
-    mx_status_t SendEapolResponse(EapolResultCodes result_code);
-    mx_status_t SendEapolIndication(const EapolFrame* eapol, const uint8_t src[],
+    zx_status_t SendSignalReportIndication(uint8_t rssi);
+    zx_status_t SendEapolResponse(EapolResultCodes result_code);
+    zx_status_t SendEapolIndication(const EapolFrame* eapol, const uint8_t src[],
                                     const uint8_t dst[]);
 
-    mx_status_t SetPowerManagementMode(bool ps_mode);
-    mx_status_t SendPsPoll();
+    zx_status_t SetPowerManagementMode(bool ps_mode);
+    zx_status_t SendPsPoll();
 
-    mx_time_t deadline_after_bcn_period(mx_duration_t tus);
+    zx_time_t deadline_after_bcn_period(zx_duration_t tus);
     uint16_t next_seq();
 
     DeviceInterface* device_;
@@ -105,11 +105,11 @@ class Station {
     uint16_t last_seq_ = kMaxSequenceNumber;
 
     WlanState state_ = WlanState::kUnjoined;
-    mx_time_t join_timeout_ = 0;
-    mx_time_t auth_timeout_ = 0;
-    mx_time_t assoc_timeout_ = 0;
-    mx_time_t signal_report_timeout_ = 0;
-    mx_time_t last_seen_ = 0;
+    zx_time_t join_timeout_ = 0;
+    zx_time_t auth_timeout_ = 0;
+    zx_time_t assoc_timeout_ = 0;
+    zx_time_t signal_report_timeout_ = 0;
+    zx_time_t last_seen_ = 0;
     uint16_t aid_ = 0;
     common::MovingAverage<uint8_t, uint16_t, 20> avg_rssi_;
     AuthAlgorithm auth_alg_ = AuthAlgorithm::kOpenSystem;

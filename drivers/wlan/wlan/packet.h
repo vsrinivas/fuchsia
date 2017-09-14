@@ -6,7 +6,7 @@
 
 #include "wlan.h"
 
-#include <magenta/types.h>
+#include <zircon/types.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/slab_allocator.h>
 #include <fbl/unique_ptr.h>
@@ -109,10 +109,10 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
     uint8_t* mut_data() { return buffer_->data(); }
 
     // Length can only be made shorter at this time.
-    mx_status_t set_len(size_t len) {
-        if (len > len_) return MX_ERR_INVALID_ARGS;
+    zx_status_t set_len(size_t len) {
+        if (len > len_) return ZX_ERR_INVALID_ARGS;
         len_ = len;
-        return MX_OK;
+        return ZX_OK;
     }
     size_t len() const { return len_; }
 
@@ -148,7 +148,7 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
         ctrl_len_ = sizeof(T);
     }
 
-    mx_status_t CopyFrom(const void* src, size_t len, size_t offset);
+    zx_status_t CopyFrom(const void* src, size_t len, size_t offset);
 
   private:
     fbl::unique_ptr<Buffer> buffer_;
@@ -169,12 +169,12 @@ class PacketQueue {
     }
 
     void Enqueue(PacketPtr packet) {
-        MX_DEBUG_ASSERT(packet.get() != nullptr);
+        ZX_DEBUG_ASSERT(packet.get() != nullptr);
         queue_.push_front(std::move(packet));
         size_++;
     }
     void UndoEnqueue() {
-        MX_DEBUG_ASSERT(!is_empty());
+        ZX_DEBUG_ASSERT(!is_empty());
         queue_.pop_front();
         size_--;
     }

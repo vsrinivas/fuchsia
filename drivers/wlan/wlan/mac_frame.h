@@ -7,17 +7,17 @@
 #include "element.h"
 
 #include <drivers/wifi/common/bitfield.h>
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 #include <fbl/type_support.h>
 
 #include <cstdint>
 
 namespace wlan {
 
-static constexpr mx_duration_t TimeUnit = MX_USEC(1024);
+static constexpr zx_duration_t TimeUnit = ZX_USEC(1024);
 template <typename T>
-static inline constexpr mx_duration_t WLAN_TU(T n) {
+static inline constexpr zx_duration_t WLAN_TU(T n) {
     static_assert(fbl::is_unsigned_integer<T>::value, "Time unit must be an unsigned integer");
     return TimeUnit * n;
 }

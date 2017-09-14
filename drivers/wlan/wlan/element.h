@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <magenta/assert.h>
-#include <magenta/compiler.h>
-#include <magenta/types.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 #include <fbl/type_support.h>
 
 #include <drivers/wifi/common/bitfield.h>
@@ -53,7 +53,7 @@ class ElementReader {
         if (!is_valid()) return nullptr;
         if (offset_ + sizeof(E) > len_) return nullptr;
         const E* elt = reinterpret_cast<const E*>(buf_ + offset_);
-        MX_DEBUG_ASSERT(elt->hdr.id == E::element_id());
+        ZX_DEBUG_ASSERT(elt->hdr.id == E::element_id());
         offset_ += sizeof(ElementHeader) + elt->hdr.len;
         return elt;
     }
@@ -83,7 +83,7 @@ class ElementWriter {
             E::Create(buf_ + offset_, len_ - offset_, &actual, std::forward<Args>(args)...);
         if (!success) return false;
         offset_ += actual;
-        MX_DEBUG_ASSERT(offset_ <= len_);
+        ZX_DEBUG_ASSERT(offset_ <= len_);
         return true;
     }
 

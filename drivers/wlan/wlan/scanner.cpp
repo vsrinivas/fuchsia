@@ -16,8 +16,8 @@
 
 #include "lib/fidl/cpp/bindings/array.h"
 
-#include <magenta/assert.h>
-#include <mx/time.h>
+#include <zircon/assert.h>
+#include <zx/time.h>
 
 #include <cinttypes>
 #include <utility>
@@ -26,30 +26,30 @@ namespace wlan {
 
 Scanner::Scanner(DeviceInterface* device, fbl::unique_ptr<Timer> timer)
   : device_(device), timer_(std::move(timer)) {
-    MX_DEBUG_ASSERT(timer_.get());
+    ZX_DEBUG_ASSERT(timer_.get());
 }
 
-mx_status_t Scanner::Start(ScanRequestPtr req, ScanResponsePtr resp) {
+zx_status_t Scanner::Start(ScanRequestPtr req, ScanResponsePtr resp) {
     debugfn();
     resp_ = std::move(resp);
     resp_->bss_description_set = fidl::Array<BSSDescriptionPtr>::New(0);
     resp_->result_code = ScanResultCodes::NOT_SUPPORTED;
 
     if (IsRunning()) {
-        return MX_ERR_UNAVAILABLE;
+        return ZX_ERR_UNAVAILABLE;
     }
-    MX_DEBUG_ASSERT(req_.is_null());
-    MX_DEBUG_ASSERT(channel_index_ == 0);
-    MX_DEBUG_ASSERT(channel_start_ == 0);
+    ZX_DEBUG_ASSERT(req_.is_null());
+    ZX_DEBUG_ASSERT(channel_index_ == 0);
+    ZX_DEBUG_ASSERT(channel_start_ == 0);
 
     if (req->channel_list.size() == 0) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     if (req->max_channel_time < req->min_channel_time) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
     if (!BSSTypes_IsValidValue(req->bss_type) || !ScanTypes_IsValidValue(req->scan_type)) {
-        return MX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     // TODO(tkilbourn): define another result code (out of spec) for errors that aren't
@@ -58,28 +58,28 @@ mx_status_t Scanner::Start(ScanRequestPtr req, ScanResponsePtr resp) {
     req_ = std::move(req);
 
     channel_start_ = timer_->Now();
-    mx_time_t timeout;
+    zx_time_t timeout;
     if (req_->scan_type == ScanTypes::PASSIVE) {
         timeout = channel_start_ + WLAN_TU(req_->min_channel_time);
     } else {
         timeout = channel_start_ + WLAN_TU(req_->probe_delay);
     }
-    mx_status_t status = timer_->SetTimer(timeout);
-    if (status != MX_OK) {
+    zx_status_t status = timer_->SetTimer(timeout);
+    if (status != ZX_OK) {
         errorf("could not start scan timer: %d\n", status);
     }
 
     return status;
 }
 
-mx_status_t Scanner::Start(ScanRequestPtr req) {
+zx_status_t Scanner::Start(ScanRequestPtr req) {
     debugfn();
     if (IsRunning()) {
-        return MX_ERR_UNAVAILABLE;
+        return ZX_ERR_UNAVAILABLE;
     }
-    MX_DEBUG_ASSERT(req_.is_null());
-    MX_DEBUG_ASSERT(channel_index_ == 0);
-    MX_DEBUG_ASSERT(channel_start_ == 0);
+    ZX_DEBUG_ASSERT(req_.is_null());
+    ZX_DEBUG_ASSERT(channel_index_ == 0);
+    ZX_DEBUG_ASSERT(channel_start_ == 0);
 
     resp_ = ScanResponse::New();
     resp_->bss_description_set = fidl::Array<BSSDescriptionPtr>::New(0);
@@ -101,9 +101,9 @@ mx_status_t Scanner::Start(ScanRequestPtr req) {
     req_ = std::move(req);
 
     channel_start_ = timer_->Now();
-    mx_time_t timeout = InitialTimeout();
-    mx_status_t status = device_->SetChannel(ScanChannel());
-    if (status != MX_OK) {
+    zx_time_t timeout = InitialTimeout();
+    zx_status_t status = device_->SetChannel(ScanChannel());
+    if (status != ZX_OK) {
         errorf("could not queue set channel: %d\n", status);
         SendScanResponse();
         Reset();
@@ -111,7 +111,7 @@ mx_status_t Scanner::Start(ScanRequestPtr req) {
     }
 
     status = timer_->SetTimer(timeout);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("could not start scan timer: %d\n", status);
         resp_->result_code = ScanResultCodes::NOT_SUPPORTED;
         SendScanResponse();
@@ -119,7 +119,7 @@ mx_status_t Scanner::Start(ScanRequestPtr req) {
         return status;
     }
 
-    return MX_OK;
+    return ZX_OK;
 }
 
 void Scanner::Reset() {
@@ -137,7 +137,7 @@ bool Scanner::IsRunning() const {
 }
 
 Scanner::Type Scanner::ScanType() const {
-    MX_DEBUG_ASSERT(IsRunning());
+    ZX_DEBUG_ASSERT(IsRunning());
     switch (req_->scan_type) {
     case ScanTypes::PASSIVE:
         return Type::kPassive;
@@ -148,8 +148,8 @@ Scanner::Type Scanner::ScanType() const {
 
 wlan_channel_t Scanner::ScanChannel() const {
     debugfn();
-    MX_DEBUG_ASSERT(IsRunning());
-    MX_DEBUG_ASSERT(channel_index_ < req_->channel_list.size());
+    ZX_DEBUG_ASSERT(IsRunning());
+    ZX_DEBUG_ASSERT(channel_index_ < req_->channel_list.size());
 
     return wlan_channel_t{req_->channel_list[channel_index_]};
 }
@@ -159,12 +159,12 @@ wlan_channel_t Scanner::ScanChannel() const {
 // for either frame type which we have to process on a per frame type basis in the future. For now,
 // stick with this kind of unification.
 // TODO(hahnr): find a way to properly split up the Beacon and ProbeResponse processing
-mx_status_t Scanner::HandleBeaconOrProbeResponse(const Packet* packet) {
+zx_status_t Scanner::HandleBeaconOrProbeResponse(const Packet* packet) {
     debugfn();
-    MX_DEBUG_ASSERT(IsRunning());
+    ZX_DEBUG_ASSERT(IsRunning());
 
     auto rxinfo = packet->ctrl_data<wlan_rx_info_t>();
-    MX_DEBUG_ASSERT(rxinfo);
+    ZX_DEBUG_ASSERT(rxinfo);
     auto hdr = packet->field<MgmtFrameHeader>(0);
     auto bcn = packet->field<Beacon>(sizeof(MgmtFrameHeader));
     debugbcn("timestamp: %" PRIu64 " beacon interval: %u capabilities: %04x\n",
@@ -231,7 +231,7 @@ mx_status_t Scanner::HandleBeaconOrProbeResponse(const Packet* packet) {
             char* bptr = buf;
             for (int i = 0; i < supprates->hdr.len; i++) {
                 size_t used = bptr - buf;
-                MX_DEBUG_ASSERT(sizeof(buf) > used);
+                ZX_DEBUG_ASSERT(sizeof(buf) > used);
                 bptr += snprintf(bptr, sizeof(buf) - used, " %u", supprates->rates[i]);
             }
             debugbcn("supported rates:%s\n", buf);
@@ -265,15 +265,15 @@ mx_status_t Scanner::HandleBeaconOrProbeResponse(const Packet* packet) {
     }
 done_iter:
 
-    return MX_OK;
+    return ZX_OK;
 }
 
-mx_status_t Scanner::HandleTimeout() {
+zx_status_t Scanner::HandleTimeout() {
     debugfn();
-    MX_DEBUG_ASSERT(IsRunning());
+    ZX_DEBUG_ASSERT(IsRunning());
 
-    mx_time_t now = timer_->Now();
-    mx_status_t status = MX_OK;
+    zx_time_t now = timer_->Now();
+    zx_status_t status = ZX_OK;
 
     // Reached max channel dwell time
     if (now >= channel_start_ + WLAN_TU(req_->max_channel_time)) {
@@ -286,7 +286,7 @@ mx_status_t Scanner::HandleTimeout() {
         } else {
             channel_start_ = timer_->Now();
             status = timer_->SetTimer(InitialTimeout());
-            if (status != MX_OK) {
+            if (status != ZX_OK) {
                 goto timer_fail;
             }
             return device_->SetChannel(ScanChannel());
@@ -301,12 +301,12 @@ mx_status_t Scanner::HandleTimeout() {
         // TODO(tkilbourn): if there was no sign of activity on this channel, skip ahead to the next
         // one
         // For now, just continue the scan.
-        mx_time_t timeout = channel_start_ + WLAN_TU(req_->max_channel_time);
+        zx_time_t timeout = channel_start_ + WLAN_TU(req_->max_channel_time);
         status = timer_->SetTimer(timeout);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             goto timer_fail;
         }
-        return MX_OK;
+        return ZX_OK;
     }
 
     // Reached probe delay for an active scan
@@ -314,17 +314,17 @@ mx_status_t Scanner::HandleTimeout() {
         now >= channel_start_ + WLAN_TU(req_->probe_delay)) {
         debugf("Reached probe delay\n");
         // TODO(hahnr): Add support for CCA as described in IEEE Std 802.11-2016 11.1.4.3.2 f)
-        mx_time_t timeout = channel_start_ + WLAN_TU(req_->min_channel_time);
+        zx_time_t timeout = channel_start_ + WLAN_TU(req_->min_channel_time);
         status = timer_->SetTimer(timeout);
-        if (status != MX_OK) {
+        if (status != ZX_OK) {
             goto timer_fail;
         }
         SendProbeRequest();
-        return MX_OK;
+        return ZX_OK;
     }
 
     // Haven't reached a timeout yet; continue scanning
-    return MX_OK;
+    return ZX_OK;
 
 timer_fail:
     errorf("could not set scan timer: %d\n", status);
@@ -333,7 +333,7 @@ timer_fail:
     return status;
 }
 
-mx_status_t Scanner::HandleError(mx_status_t error_code) {
+zx_status_t Scanner::HandleError(zx_status_t error_code) {
     debugfn();
     resp_ = ScanResponse::New();
     // TODO(tkilbourn): report the error code somehow
@@ -341,7 +341,7 @@ mx_status_t Scanner::HandleError(mx_status_t error_code) {
     return SendScanResponse();
 }
 
-mx_time_t Scanner::InitialTimeout() const {
+zx_time_t Scanner::InitialTimeout() const {
     if (req_->scan_type == ScanTypes::PASSIVE) {
         return channel_start_ + WLAN_TU(req_->min_channel_time);
     } else {
@@ -350,14 +350,14 @@ mx_time_t Scanner::InitialTimeout() const {
 }
 
 // TODO(hahnr): support SSID list (IEEE Std 802.11-2016 11.1.4.3.2)
-mx_status_t Scanner::SendProbeRequest() {
+zx_status_t Scanner::SendProbeRequest() {
     debugfn();
 
     // TODO(hahnr): better size management; for now reserve 128 bytes for Probe elements
     size_t probe_len = sizeof(MgmtFrameHeader) + sizeof(ProbeRequest) + 128;
     fbl::unique_ptr<Buffer> buffer = GetBuffer(probe_len);
     if (buffer == nullptr) {
-        return MX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     const DeviceAddress& mymac = device_->GetState()->address();
@@ -381,7 +381,7 @@ mx_status_t Scanner::SendProbeRequest() {
     ElementWriter w(probe->elements, ele_len);
     if (!w.write<SsidElement>(req_->ssid.data())) {
         errorf("could not write ssid \"%s\" to probe request\n", req_->ssid.data());
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
 
     // TODO(hahnr): determine these rates based on hardware
@@ -389,35 +389,35 @@ mx_status_t Scanner::SendProbeRequest() {
     std::vector<uint8_t> rates = { 0x02, 0x04, 0x0b, 0x0c, 0x12, 0x16, 0x18, 0x24 };
     if (!w.write<SupportedRatesElement>(std::move(rates))) {
         errorf("could not write supported rates\n");
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
 
     // Rates (in Mbps): 24, 36, 48, 54
     std::vector<uint8_t> ext_rates = { 0x30, 0x48, 0x60, 0x6c };
     if (!w.write<ExtendedSupportedRatesElement>(std::move(ext_rates))) {
         errorf("could not write extended supported rates\n");
-        return MX_ERR_IO;
+        return ZX_ERR_IO;
     }
 
     // Validate the request in debug mode
-    MX_DEBUG_ASSERT(probe->Validate(w.size()));
+    ZX_DEBUG_ASSERT(probe->Validate(w.size()));
 
     size_t actual_len = sizeof(MgmtFrameHeader) + sizeof(ProbeRequest) + w.size();
-    mx_status_t status = packet->set_len(actual_len);
-    if (status != MX_OK) {
+    zx_status_t status = packet->set_len(actual_len);
+    if (status != ZX_OK) {
         errorf("could not set packet length to %zu: %d\n", actual_len, status);
         return status;
     }
 
     status = device_->SendWlan(std::move(packet));
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         errorf("could not send probe request packet: %d\n", status);
         return status;
     }
     return status;
 }
 
-mx_status_t Scanner::SendScanResponse() {
+zx_status_t Scanner::SendScanResponse() {
     debugfn();
     for (auto& bss : bss_descriptors_) {
         if (req_->ssid.size() == 0 ||
@@ -429,13 +429,13 @@ mx_status_t Scanner::SendScanResponse() {
     size_t buf_len = sizeof(ServiceHeader) + resp_->GetSerializedSize();
     fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
-        return MX_ERR_NO_RESOURCES;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
-    mx_status_t status = SerializeServiceMsg(packet.get(), Method::SCAN_confirm, resp_);
-    if (status != MX_OK) {
+    zx_status_t status = SerializeServiceMsg(packet.get(), Method::SCAN_confirm, resp_);
+    if (status != ZX_OK) {
         errorf("could not serialize ScanResponse: %d\n", status);
     } else {
         status = device_->SendService(std::move(packet));

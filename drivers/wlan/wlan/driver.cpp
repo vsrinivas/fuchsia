@@ -10,18 +10,18 @@
 #include <cstdio>
 #include <memory>
 
-extern "C" mx_status_t wlan_bind(void* ctx, mx_device_t* device, void** cookie) {
+extern "C" zx_status_t wlan_bind(void* ctx, zx_device_t* device, void** cookie) {
     std::printf("%s\n", __func__);
 
     wlanmac_protocol_t wlanmac_proto;
-    if (device_get_protocol(device, MX_PROTOCOL_WLANMAC, reinterpret_cast<void*>(&wlanmac_proto))) {
+    if (device_get_protocol(device, ZX_PROTOCOL_WLANMAC, reinterpret_cast<void*>(&wlanmac_proto))) {
         std::printf("wlan: bind: no wlanmac protocol\n");
-        return MX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
     }
 
     auto wlandev = std::make_unique<wlan::Device>(device, &wlanmac_proto);
     auto status = wlandev->Bind();
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
         std::printf("wlan: could not bind: %d\n", status);
     } else {
         // devhost is now responsible for the memory used by wlandev. It will be

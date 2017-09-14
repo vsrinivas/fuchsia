@@ -12,9 +12,9 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/ethernet.h>
 #include <ddktl/protocol/wlan.h>
-#include <magenta/compiler.h>
-#include <mx/channel.h>
-#include <mx/port.h>
+#include <zircon/compiler.h>
+#include <zx/channel.h>
+#include <zx/port.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
@@ -23,7 +23,7 @@
 #include <mutex>
 #include <thread>
 
-typedef struct mx_port_packet mx_port_packet_t;
+typedef struct zx_port_packet zx_port_packet_t;
 
 namespace wlan {
 
@@ -37,15 +37,15 @@ class Device : public WlanBaseDevice,
                public ddk::WlanmacIfc<Device>,
                public DeviceInterface {
   public:
-    Device(mx_device_t* device, wlanmac_protocol_t* wlanmac_proto);
+    Device(zx_device_t* device, wlanmac_protocol_t* wlanmac_proto);
     ~Device();
 
-    mx_status_t Bind();
+    zx_status_t Bind();
 
     // ddk::Device methods
     void DdkUnbind();
     void DdkRelease();
-    mx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                          size_t out_len, size_t* out_actual);
 
     // ddk::WlanmacIfc methods
@@ -53,18 +53,18 @@ class Device : public WlanBaseDevice,
     void WlanmacRecv(uint32_t flags, const void* data, size_t length, wlan_rx_info_t* info);
 
     // ddk::EthmacProtocol methods
-    mx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);
-    mx_status_t EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) __TA_EXCLUDES(lock_);
+    zx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);
+    zx_status_t EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) __TA_EXCLUDES(lock_);
     void EthmacStop() __TA_EXCLUDES(lock_);
     void EthmacSend(uint32_t options, void* data, size_t length);
 
     // DeviceInterface methods
-    mx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) override final;
-    mx_status_t SendEthernet(fbl::unique_ptr<Packet> packet) override final;
-    mx_status_t SendWlan(fbl::unique_ptr<Packet> packet) override final;
-    mx_status_t SendService(fbl::unique_ptr<Packet> packet) override final;
-    mx_status_t SetChannel(wlan_channel_t chan) override final;
-    mx_status_t SetStatus(uint32_t status) override final;
+    zx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) override final;
+    zx_status_t SendEthernet(fbl::unique_ptr<Packet> packet) override final;
+    zx_status_t SendWlan(fbl::unique_ptr<Packet> packet) override final;
+    zx_status_t SendService(fbl::unique_ptr<Packet> packet) override final;
+    zx_status_t SetChannel(wlan_channel_t chan) override final;
+    zx_status_t SetStatus(uint32_t status) override final;
     fbl::RefPtr<DeviceState> GetState() override final;
 
   private:
@@ -84,14 +84,14 @@ class Device : public WlanBaseDevice,
         return packet;
     }
 
-    mx_status_t QueuePacket(fbl::unique_ptr<Packet> packet) __TA_EXCLUDES(packet_queue_lock_);
+    zx_status_t QueuePacket(fbl::unique_ptr<Packet> packet) __TA_EXCLUDES(packet_queue_lock_);
 
     void MainLoop();
-    void ProcessChannelPacketLocked(const mx_port_packet_t& pkt) __TA_REQUIRES(lock_);
-    mx_status_t RegisterChannelWaitLocked() __TA_REQUIRES(lock_);
-    mx_status_t QueueDevicePortPacket(DevicePacket id);
+    void ProcessChannelPacketLocked(const zx_port_packet_t& pkt) __TA_REQUIRES(lock_);
+    zx_status_t RegisterChannelWaitLocked() __TA_REQUIRES(lock_);
+    zx_status_t QueueDevicePortPacket(DevicePacket id);
 
-    mx_status_t GetChannel(mx::channel* out) __TA_EXCLUDES(lock_);
+    zx_status_t GetChannel(zx::channel* out) __TA_EXCLUDES(lock_);
     void SetStatusLocked(uint32_t status);
 
     ddk::WlanmacProtocolProxy wlanmac_proxy_;
@@ -102,12 +102,12 @@ class Device : public WlanBaseDevice,
 
     std::mutex lock_;
     std::thread work_thread_;
-    mx::port port_;
+    zx::port port_;
 
     Mlme mlme_ __TA_GUARDED(lock_);
 
     bool dead_ __TA_GUARDED(lock_) = false;
-    mx::channel channel_ __TA_GUARDED(lock_);
+    zx::channel channel_ __TA_GUARDED(lock_);
 
     std::mutex packet_queue_lock_;
     PacketQueue packet_queue_ __TA_GUARDED(packet_queue_lock_);
