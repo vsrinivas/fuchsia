@@ -27,7 +27,7 @@ esac
 export GOROOT="$SCRIPT_ROOT/$HOST_PLATFORM/go"
 
 if [[ "$GOOS" == "fuchsia" ]]; then
-	export MAGENTA="$(cd $(dirname ${BASH_SOURCE[0]} )/.. && pwd)/magenta"
+	export ZIRCON="$(cd $(dirname ${BASH_SOURCE[0]} )/.. && pwd)/zircon"
 	export CC="$GOROOT/misc/fuchsia/gccwrap.sh"
 fi
 
