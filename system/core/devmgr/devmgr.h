@@ -44,4 +44,6 @@ void block_device_watcher(zx_handle_t job);
 // "false", otherwise it returns true.
 bool getenv_bool(const char* key, bool _default);
 
+zx_handle_t devfs_root_clone(void);
+
 __END_CDECLS

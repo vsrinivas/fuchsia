@@ -20,6 +20,7 @@
 #include <zircon/syscalls/log.h>
 
 #include <fdio/io.h>
+#include <fdio/namespace.h>
 #include <fdio/remoteio.h>
 #include <fdio/util.h>
 
@@ -89,7 +90,7 @@ zx_status_t devmgr_launch(zx_handle_t job, const char* name,
     launchpad_set_args(lp, argc, argv);
     launchpad_set_environ(lp, envp);
 
-    const char* nametable[2] = { "/", "/svc", };
+    const char* nametable[3] = { "/", NULL, NULL, };
     size_t name_count = 0;
 
     zx_handle_t h = vfs_create_global_root_handle();
@@ -97,9 +98,13 @@ zx_status_t devmgr_launch(zx_handle_t job, const char* name,
 
     //TODO: constrain to /svc/debug, or other as appropriate
     if (strcmp(name, "init") && ((h = get_service_root()) != ZX_HANDLE_INVALID)) {
+        nametable[name_count] = "/svc";
         launchpad_add_handle(lp, h, PA_HND(PA_NS_DIR, name_count++));
     }
-
+    if ((h = devfs_root_clone()) != ZX_HANDLE_INVALID) {
+        nametable[name_count] = "/dev";
+        launchpad_add_handle(lp, h, PA_HND(PA_NS_DIR, name_count++));
+    }
     launchpad_set_nametable(lp, name_count, nametable);
 
     if (stdiofd < 0) {
@@ -342,9 +347,19 @@ void devmgr_vfs_init(void) {
 
     vfs_global_init(vfs_create_global_root());
 
-    // give our own process access to files in the vfs
-    zx_handle_t h = vfs_create_global_root_handle();
-    if (h > 0) {
-        fdio_install_root(fdio_remote_create(h, 0));
+    fdio_ns_t* ns;
+    zx_status_t r;
+    if ((r = fdio_ns_create(&ns)) != ZX_OK) {
+        printf("devmgr: cannot create namespace: %d\n", r);
+        return;
+    }
+    if ((r = fdio_ns_bind(ns, "/", vfs_create_global_root_handle())) != ZX_OK) {
+        printf("devmgr: cannot bind / to namespace: %d\n", r);
+    }
+    if ((r = fdio_ns_bind(ns, "/dev", devfs_root_clone())) != ZX_OK) {
+        printf("devmgr: cannot bind /dev to namespace: %d\n", r);
+    }
+    if ((r = fdio_ns_install(ns)) != ZX_OK) {
+        printf("devmgr: cannot install namespace: %d\n", r);
     }
 }

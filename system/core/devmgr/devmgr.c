@@ -137,8 +137,56 @@ int service_timeout(void* arg) {
 }
 
 int service_starter(void* arg) {
-    // create a directory for sevice rendezvous
-    mkdir("/svc", 0755);
+    // Features like Intel Processor Trace need a dump of ld.so activity.
+    // The output has a specific format, and will eventually be recorded
+    // via a specific mechanism (magenta tracing support), so we use a specific
+    // env var (and don't, for example, piggyback on LD_DEBUG).
+    // We enable this pretty early so that we get a trace of as many processes
+    // as possible.
+    if (getenv(LDSO_TRACE_CMDLINE)) {
+        // This takes care of places that clone our environment.
+        putenv(strdup(LDSO_TRACE_ENV));
+        // There is still devmgr_launch() which does not clone our enviroment.
+        // It has its own check.
+    }
+
+    // Start crashlogger.
+    if (!getenv_bool("crashlogger.disable", false)) {
+        static const char* argv_crashlogger[] = {
+            "/boot/bin/crashlogger",
+            NULL,  // room for -pton
+        };
+        const char* crashlogger_pt = getenv("crashlogger.pt");
+        int argc_crashlogger = 1;
+        if (crashlogger_pt && strcmp(crashlogger_pt, "true") == 0) {
+            // /dev/misc/intel-pt may not be available yet, so we can't
+            // actually turn on PT here. Just tell crashlogger to dump the
+            // trace buffers if they're available.
+            argv_crashlogger[argc_crashlogger++] = "-pton";
+        }
+
+        // Bind the exception port now, to avoid missing any crashes that
+        // might occur early on before the crashlogger process has finished
+        // initializing.
+        zx_handle_t exception_port;
+        // This should match the value used by crashlogger.
+        const uint64_t kSysExceptionKey = 1166444u;
+        if (zx_port_create(0, &exception_port) == ZX_OK &&
+            zx_task_bind_exception_port(ZX_HANDLE_INVALID, exception_port,
+                                        kSysExceptionKey, 0) == ZX_OK) {
+            zx_handle_t handles[] = { exception_port };
+            uint32_t handle_types[] = { PA_HND(PA_USER0, 0) };
+
+            devmgr_launch(svcs_job_handle, "crashlogger",
+                          argc_crashlogger, argv_crashlogger,
+                          NULL, -1, handles, handle_types,
+                          countof(handles), NULL);
+        }
+    }
+
+    if (secondary_bootfs_ready()) {
+        devmgr_start_appmgr(NULL);
+    }
 
     char vcmd[64];
     bool netboot = false;
@@ -408,60 +456,9 @@ int main(int argc, char** argv) {
     }
     zx_object_set_property(fuchsia_job_handle, ZX_PROP_NAME, "fuchsia", 7);
 
-    // Features like Intel Processor Trace need a dump of ld.so activity.
-    // The output has a specific format, and will eventually be recorded
-    // via a specific mechanism (zircon tracing support), so we use a specific
-    // env var (and don't, for example, piggyback on LD_DEBUG).
-    // We enable this pretty early so that we get a trace of as many processes
-    // as possible.
-    if (getenv(LDSO_TRACE_CMDLINE)) {
-        // This takes care of places that clone our environment.
-        putenv(strdup(LDSO_TRACE_ENV));
-        // There is still devmgr_launch() which does not clone our enviroment.
-        // It has its own check.
-    }
-
-    // Start crashlogger.
-    if (!getenv_bool("crashlogger.disable", false)) {
-        static const char* argv_crashlogger[] = {
-            "/boot/bin/crashlogger",
-            NULL,  // room for -pton
-        };
-        const char* crashlogger_pt = getenv("crashlogger.pt");
-        int argc_crashlogger = 1;
-        if (crashlogger_pt && strcmp(crashlogger_pt, "true") == 0) {
-            // /dev/misc/intel-pt may not be available yet, so we can't
-            // actually turn on PT here. Just tell crashlogger to dump the
-            // trace buffers if they're available.
-            argv_crashlogger[argc_crashlogger++] = "-pton";
-        }
-
-        // Bind the exception port now, to avoid missing any crashes that
-        // might occur early on before the crashlogger process has finished
-        // initializing.
-        zx_handle_t exception_port;
-        // This should match the value used by crashlogger.
-        const uint64_t kSysExceptionKey = 1166444u;
-        if (zx_port_create(0, &exception_port) == ZX_OK &&
-            zx_task_bind_exception_port(ZX_HANDLE_INVALID, exception_port,
-                                        kSysExceptionKey, 0) == ZX_OK) {
-            zx_handle_t handles[] = { exception_port };
-            uint32_t handle_types[] = { PA_HND(PA_USER0, 0) };
-
-            devmgr_launch(svcs_job_handle, "crashlogger",
-                          argc_crashlogger, argv_crashlogger,
-                          NULL, -1, handles, handle_types,
-                          countof(handles), NULL);
-        }
-    }
-
     zx_channel_create(0, &svc_root_handle, &svc_request_handle);
 
     start_console_shell();
-
-    if (secondary_bootfs_ready()) {
-        devmgr_start_appmgr(NULL);
-    }
 
     thrd_t t;
     if ((thrd_create_with_name(&t, service_starter, NULL, "service-starter")) == thrd_success) {

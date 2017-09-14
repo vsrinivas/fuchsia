@@ -13,6 +13,7 @@
 #include <zircon/device/vfs.h>
 
 #include <fdio/remoteio.h>
+#include <fdio/util.h>
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -666,6 +667,12 @@ static zx_status_t dc_rio_handler(port_handler_t* ph, zx_signals_t signals, uint
     return r;
 }
 
+static zx_handle_t devfs_root;
+
+zx_handle_t devfs_root_clone(void) {
+    return fdio_service_clone(devfs_root);
+}
+
 void devmgr_init(zx_handle_t root_job) {
     printf("devmgr: init\n");
 
@@ -682,9 +689,8 @@ void devmgr_init(zx_handle_t root_job) {
         zx_handle_close(h1);
         return;
     }
-    // set the "fs ready" signal
-    zx_object_signal(h1, 0, ZX_USER_SIGNAL_0);
-    devfs_mount(h1);
+
+    devfs_root = h1;
 }
 
 void devmgr_handle_messages(void) {
