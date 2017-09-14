@@ -97,7 +97,7 @@ zx_status_t bcm_dma_init(bcm_dma_t* dma, uint32_t ch) {
     // pre-init the control block buffer
     status = io_buffer_init(&dma->ctl_blks,
                             BCM_DMA_NUM_CONTROL_BLOCKS * sizeof(bcm_dma_cb_t),
-                            IO_BUFFER_RW);
+                            IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
         xprintf("\nBCM_DMA: Error Allocating control blocks: %d\n", status);
         goto dma_init_err;

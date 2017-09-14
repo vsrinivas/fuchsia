@@ -5,6 +5,7 @@
 #pragma once
 
 #include <zircon/compiler.h>
+#include <zircon/syscalls.h>
 #include <zircon/types.h>
 
 #include <stdbool.h>
@@ -22,8 +23,10 @@ typedef struct {
 } io_buffer_t;
 
 enum {
-    IO_BUFFER_RO = ZX_VM_FLAG_PERM_READ,
-    IO_BUFFER_RW = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+    IO_BUFFER_RO         = (0 << 0),
+    IO_BUFFER_RW         = (1 << 0),
+    IO_BUFFER_CONTIG     = (1 << 1),
+    IO_BUFFER_FLAGS_MASK = IO_BUFFER_RW | IO_BUFFER_CONTIG,
 };
 
 // Initializes a new io_buffer
@@ -54,6 +57,12 @@ static inline void* io_buffer_virt(io_buffer_t* buffer) {
 
 static inline zx_paddr_t io_buffer_phys(io_buffer_t* buffer) {
     return buffer->phys + buffer->offset;
+}
+
+static inline zx_paddr_t io_buffer_physmap(io_buffer_t* buffer, zx_off_t offset, size_t length,
+                                           size_t phys_count, zx_paddr_t* physmap) {
+    return zx_vmo_op_range(buffer->vmo_handle, ZX_VMO_OP_LOOKUP, offset, length,
+                           physmap, phys_count * sizeof(*physmap));
 }
 
 __END_CDECLS;

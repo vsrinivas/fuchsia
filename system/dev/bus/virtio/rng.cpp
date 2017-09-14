@@ -33,7 +33,7 @@ zx_status_t RngDevice::Init() {
     }
 
     // allocate the entropy buffer
-    zx_status_t rc = io_buffer_init(&buf_, kBufferSize, IO_BUFFER_RO);
+    zx_status_t rc = io_buffer_init(&buf_, kBufferSize, IO_BUFFER_RO | IO_BUFFER_CONTIG);
     if (rc != ZX_OK) {
         dprintf(ERROR, "virtio-rng: cannot allocate entropy buffer: %d\n", rc);
         return rc;

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/io-buffer.h>
+#include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -13,9 +14,15 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t vmo_ha
                                          zx_off_t offset, uint32_t flags) {
     zx_vaddr_t virt;
 
+    if (flags & IO_BUFFER_RW) {
+        flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+    } else {
+        flags = ZX_VM_FLAG_PERM_READ;
+    }
+
     zx_status_t status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_handle, 0, size, flags, &virt);
     if (status != ZX_OK) {
-        printf("io_buffer: zx_vmar_map failed %d size: %zu\n", status, size);
+        dprintf(ERROR, "io_buffer: zx_vmar_map failed %d size: %zu\n", status, size);
         zx_handle_close(vmo_handle);
         return status;
     }
@@ -24,7 +31,7 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t vmo_ha
     size_t lookup_size = size < PAGE_SIZE ? size : PAGE_SIZE;
     status = zx_vmo_op_range(vmo_handle, ZX_VMO_OP_LOOKUP, 0, lookup_size, &phys, sizeof(phys));
     if (status != ZX_OK) {
-        printf("io_buffer: zx_vmo_op_range failed %d size: %zu\n", status, size);
+        dprintf(ERROR, "io_buffer: zx_vmo_op_range failed %d size: %zu\n", status, size);
         zx_vmar_unmap(zx_vmar_root_self(), virt, size);
         zx_handle_close(vmo_handle);
         return status;
@@ -35,6 +42,10 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t vmo_ha
     buffer->offset = offset;
     buffer->virt = (void *)virt;
     buffer->phys = phys;
+
+    // ensure that the kernel finishes zeroing pages before we use buffer for DMA
+    io_buffer_cache_op(buffer, ZX_VMO_OP_CACHE_CLEAN, 0, size);
+
     return ZX_OK;
 }
 
@@ -42,15 +53,32 @@ zx_status_t io_buffer_init_aligned(io_buffer_t* buffer, size_t size, uint32_t al
     if (size == 0) {
         return ZX_ERR_INVALID_ARGS;
     }
-    if (flags != IO_BUFFER_RO && flags != IO_BUFFER_RW) {
+    if (flags & ~IO_BUFFER_FLAGS_MASK) {
         return ZX_ERR_INVALID_ARGS;
     }
 
     zx_handle_t vmo_handle;
-    zx_status_t status = zx_vmo_create_contiguous(get_root_resource(), size, alignment_log2, &vmo_handle);
+    zx_status_t status;
+    bool contiguous = (flags & IO_BUFFER_CONTIG) && size > PAGE_SIZE;
+
+    if (contiguous) {
+        status = zx_vmo_create_contiguous(get_root_resource(), size, 0, &vmo_handle);
+    } else {
+        status = zx_vmo_create(size, 0, &vmo_handle);
+    }
     if (status != ZX_OK) {
-        printf("io_buffer: zx_vmo_create_contiguous failed %d\n", status);
+        dprintf(ERROR, "io_buffer: zx_vmo_create failed %d\n", status);
         return status;
+    }
+
+    if (!contiguous) {
+        // needs to be done before ZX_VMO_OP_LOOKUP for non-contiguous VMOs
+        status = zx_vmo_op_range(vmo_handle, ZX_VMO_OP_COMMIT, 0, size, NULL, 0);
+        if (status != ZX_OK) {
+            dprintf(ERROR, "io_buffer: zx_vmo_op_range(ZX_VMO_OP_COMMIT) failed %d\n", status);
+            zx_handle_close(vmo_handle);
+            return status;
+        }
     }
 
     return io_buffer_init_common(buffer, vmo_handle, size, 0, flags);
@@ -86,13 +114,13 @@ zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_paddr_t addr, size_t
     zx_handle_t vmo_handle;
     zx_status_t status = zx_vmo_create_physical(resource, addr, size, &vmo_handle);
     if (status != ZX_OK) {
-        printf("io_buffer: zx_vmo_create_physical failed %d\n", status);
+        dprintf(ERROR, "io_buffer: zx_vmo_create_physical failed %d\n", status);
         return status;
     }
 
     status = zx_vmo_set_cache_policy(vmo_handle, cache_policy);
     if (status != ZX_OK) {
-        printf("io_buffer: zx_vmo_set_cache_policy failed %d\n", status);
+        dprintf(ERROR, "io_buffer: zx_vmo_set_cache_policy failed %d\n", status);
         zx_handle_close(vmo_handle);
         return status;
     }
@@ -101,7 +129,7 @@ zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_paddr_t addr, size_t
     zx_vaddr_t virt;
     status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_handle, 0, size, flags, &virt);
     if (status != ZX_OK) {
-        printf("io_buffer: zx_vmar_map failed %d size: %zu\n", status, size);
+        dprintf(ERROR, "io_buffer: zx_vmar_map failed %d size: %zu\n", status, size);
         zx_handle_close(vmo_handle);
         return status;
     }

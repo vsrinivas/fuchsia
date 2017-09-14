@@ -5,7 +5,8 @@
 #include "xhci.h"
 
 zx_status_t xhci_transfer_ring_init(xhci_transfer_ring_t* ring, int count) {
-    zx_status_t status = io_buffer_init(&ring->buffer, count * sizeof(xhci_trb_t), IO_BUFFER_RW);
+    zx_status_t status = io_buffer_init(&ring->buffer, count * sizeof(xhci_trb_t),
+                                        IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) return status;
 
     ring->start = io_buffer_virt(&ring->buffer);
@@ -41,7 +42,8 @@ size_t xhci_transfer_ring_free_trbs(xhci_transfer_ring_t* ring) {
 zx_status_t xhci_event_ring_init(xhci_t* xhci, int interrupter, int count) {
     xhci_event_ring_t* ring = &xhci->event_rings[interrupter];
     // allocate buffer for TRBs
-    zx_status_t status = io_buffer_init(&ring->buffer, count * sizeof(xhci_trb_t), IO_BUFFER_RW);
+    zx_status_t status = io_buffer_init(&ring->buffer, count * sizeof(xhci_trb_t),
+                                        IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) return status;
 
     ring->start = io_buffer_virt(&ring->buffer);

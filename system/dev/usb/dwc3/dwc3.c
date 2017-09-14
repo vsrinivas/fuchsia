@@ -343,14 +343,14 @@ static zx_status_t dwc3_bind(void* ctx, zx_device_t* dev, void** cookie) {
         goto fail;
     }
 
-    status = io_buffer_init(&dwc->event_buffer, EVENT_BUFFER_SIZE, IO_BUFFER_RO);
+    status = io_buffer_init(&dwc->event_buffer, EVENT_BUFFER_SIZE, IO_BUFFER_RO | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
         dprintf(ERROR, "dwc3_bind: io_buffer_init failed\n");
         goto fail;
     }
     io_buffer_cache_op(&dwc->event_buffer, ZX_VMO_OP_CACHE_CLEAN, 0, EVENT_BUFFER_SIZE);
 
-    status = io_buffer_init(&dwc->ep0_buffer, 65536, IO_BUFFER_RW);
+    status = io_buffer_init(&dwc->ep0_buffer, 65536, IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
         dprintf(ERROR, "dwc3_bind: io_buffer_init failed\n");
         goto fail;

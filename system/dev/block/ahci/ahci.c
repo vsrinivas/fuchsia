@@ -331,7 +331,7 @@ static zx_status_t ahci_port_initialize(ahci_port_t* port) {
     // allocate memory for the command list, FIS receive area, command table and PRDT
     size_t mem_sz = sizeof(ahci_fis_t) + sizeof(ahci_cl_t) * AHCI_MAX_COMMANDS
                     + (sizeof(ahci_ct_t) + sizeof(ahci_prd_t) * AHCI_MAX_PRDS) * AHCI_MAX_COMMANDS;
-    zx_status_t status = io_buffer_init(&port->buffer, mem_sz, IO_BUFFER_RW);
+    zx_status_t status = io_buffer_init(&port->buffer, mem_sz, IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status < 0) {
         xprintf("ahci.%d: error %d allocating dma memory\n", port->nr, status);
         return status;

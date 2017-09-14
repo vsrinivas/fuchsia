@@ -391,7 +391,8 @@ static zx_status_t x86_pt_alloc_buffer1(ipt_device_t* ipt_dev, ipt_per_trace_sta
     for (uint32_t i = 0; i < num; ++i) {
         // ToPA entries of size N must be aligned to N, too.
         uint32_t alignment_log2 = PAGE_SIZE_SHIFT + order;
-        status = io_buffer_init_aligned(&per_trace->buffers[i], buffer_pages * PAGE_SIZE, alignment_log2, IO_BUFFER_RW);
+        status = io_buffer_init_aligned(&per_trace->buffers[i], buffer_pages * PAGE_SIZE,
+                                        alignment_log2, IO_BUFFER_RW | IO_BUFFER_CONTIG);
         if (status != ZX_OK)
             return status;
         // Keep track of allocated buffers as we go in case we later fail:
@@ -425,7 +426,8 @@ static zx_status_t x86_pt_alloc_buffer1(ipt_device_t* ipt_dev, ipt_per_trace_sta
         return ZX_ERR_NO_MEMORY;
 
     for (uint32_t i = 0; i < table_count; ++i) {
-        status = io_buffer_init(&per_trace->topas[i], sizeof(uint64_t) * IPT_TOPA_MAX_TABLE_ENTRIES, IO_BUFFER_RW);
+        status = io_buffer_init(&per_trace->topas[i], sizeof(uint64_t) * IPT_TOPA_MAX_TABLE_ENTRIES,
+                                IO_BUFFER_RW | IO_BUFFER_CONTIG);
         if (status != ZX_OK)
             return ZX_ERR_NO_MEMORY;
         // Keep track of allocated tables as we go in case we later fail:
