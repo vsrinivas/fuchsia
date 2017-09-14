@@ -23,22 +23,13 @@ of `verb`s.
   {
     "binary": "bin/myPersonPreviewer",
     "local_name": "previewPerson",
-    "verb": {
-      "package": "https://fuchsia.io/package/coreVerbs",
-      "name": "Preview"
-    },
+    "verb": "https://fuchsia.io/package/coreVerbs/Preview",
     "noun_constraints": [
       {
         "name": "entityToPreview",
         "types": [
-          {
-            "package": "https://fuchsia.io/package/coreTypes",
-            "name": "Person"
-          },
-          {
-            "package": "https://fuchsia.instagram.com/types",
-            "name": "Friend"
-          }
+          "https://fuchsia.io/package/coreTypes/Person",
+          "https://fuchsia.instagram.com/types/Friend"
         ]
       }
     ]
@@ -46,26 +37,15 @@ of `verb`s.
   {
     "binary": "bin/myContactPicker",
     "local_name": "pickContact",
-    "verb": {
-      "package": "https://fuchsia.io/package/coreVerbs",
-      "name": "Pick"
-    },
+    "verb": "https://fuchsia.io/package/coreVerbs/Pick",
     "noun_constraints": [
       {
         "name": "source",
-        "types": [
-          {
-            "package": "https://fuchsia.instagram.com/types",
-            "name": "FriendRepository"
-          }
-        ]
+        "types": [ "https://fuchsia.instagram.com/types/FriendRepository" ]
       },
       {
         "name": "picked",
-        "type": {
-          "package": "https://fuchsia.instagram.com/types",
-          "name": "Friend"
-        }
+        "types": [ "https://fuchsia.instagram.com/types/Friend" ]
       }
     ]
   }
@@ -105,23 +85,16 @@ call. (**TODO(thatguy)**: create and document this in FIDL file)
 #### verb
 
 ```javascript
-"verb": {
-  "package": "https://fuchsia.io/package/coreVerbs",
-  "name": "Preview"
-},
+"verb": "https://fuchsia.io/package/coreVerbs/Preview",
 ```
+> NOTE: The exactly format of the verb attribute is likely to evolve.
 
-The `verb` attribute identifies a verb defined in another package. The fully
-qualified verb name consists of two parts:
+The `verb` attribute identifies which verb this Module implements. This dictates the semantic function of this Module, as well as the role of each noun.
 
-1. `package`
-2. `name`
+The `verb` must match a `verb` name in an associated
+[`meta/verb_template`](verb_template.md) file.
 
-The `package` is the unique ID of a Fuchsia package (**TODO:** link). It
-identifies where the verb template associated with the `name` is defined.
-
-The `name` must match a `verb` name in the referenced package's
-[`meta/verb_template`](verb_template.md) file. 
+> TODO(thatguy): Add information about where verbs are discoverable.
 
 #### noun constraints
 
@@ -130,14 +103,8 @@ The `name` must match a `verb` name in the referenced package's
   {
     "name": "entityToPreview",
     "types": [
-      {
-        "package": "https://fuchsia.io/package/coreTypes",
-        "name": "Person"
-      },
-      {
-        "package": "https://fuchsia.instagram.com/types",
-        "name": "Friend"
-      }
+      "https://fuchsia.io/package/coreTypes/Person",
+      "https://fuchsia.instagram.com/types/Friend"
     ]
   },
   ...
@@ -145,25 +112,28 @@ The `name` must match a `verb` name in the referenced package's
 ```
 
 In the [verb template](verb_template.md), the nouns are given names but not
-assigned concrete Entity types (**TODO** link). Here, we constrain a single
-verb implementation to operate only on a specific set of Entity (**TODO** link)
+assigned concrete Entity types (**TODO** link). Here, we constrain this
+verb implementation to operate on a specific set of [Entity](../entity.md)
 types.
 
 Each noun in the verb template gets an entry in `noun_constraints`. Each entry
 is made up of the following fields:
 
 * `name`: this is the name of the noun given in the [verb template](verb_template.md)
-* `types`: a list of Entity types (each defined by an [entity type](entity_type_.md)). 
-   Multiple entries in this list indicate that any of the listed types are compatible. A 
-   type entry is made up of:
-     - `package`: the Fuchsia package ID where the [Entity type](entity_type.md) is defined.
-     - `name`: the name of the Entity type found in `package`'s `meta/entity_type.md` file.
+* `types`: a list of [Entity](../entity.md) types.
+   Multiple entries in this list indicate that any of the listed types are compatible.
+   
+   > TODO(thatguy): Add information about where entity types & schemas are discoverable.
+   
+   > TODO(thatguy): The semantics of `types` doesn't make a lot of sense for *output*
+     or maybe *input/output* nouns.
 
 At runtime, this `Module` will communicate with its parent (the invoker of the
-`Module`) through a `Link` interface (**TODO** link). The `Link` enforces the
+`Module`) through a [`Link`](../../services/story/link.fidl) interface. The `Link` enforces the
 typing described here, making any attempt to write an `Entity` with an
 incompatible type an error. This applies for all values of `direction` (`input`,
-`output` and `input/output`) on the nouns.
+`output` and `input/output`) on the nouns as specified in the *verb*'s corresponding
+[verb_template](verb_template.md) file.
 
 #### outgoing services
 

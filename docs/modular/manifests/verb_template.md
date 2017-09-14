@@ -12,22 +12,29 @@ on or the modules that implement them.
 
 A **verb template** defines the *call signature* and *semantics* for a single
 *verb*. Verbs are labels given to high-level operations in Fuchsia that may be
-performed by `Modules` (**TODO: link**) with a given set of data.
+performed by [`Modules`](../module.md) with a given set of data.
 
 Example verbs could include `Navigate`, `Preview` or `Summarize`.
+> TODO(thatguy): Add more examples, and once we have platform-provided verbs,
+> include those here.
 
 Modules implement verbs and must adhere to the call signature and behavior
 described in the verb template.
 
 There is no prescribed ontology of verbs. Anyone may publish a verb template and
-begin to utilize the verb defined within. For this reason, verbs are
+begin to utilize the verb defined within. <s>For this reason, verbs are
 unambiguously identified by both the package in which they were published as
-well as the verb itself.
+well as the verb itself.</s>
 
-## The `meta/verb_template` file
+> TODO(thatguy): Add information about how verb names are derived & how they
+> are guaranteed to avoid collisions by using author identity as a component.
+> 
+> TODO(thatguy): Add information about where verbs are published.
 
-Verb templates are defined in the `verb_template` metadata file (**TODO:
-link**) of a Fuchsia package. The content of the metadata file is a JSON array
+## File format
+
+Verb templates are defined in a <s>`verb_template` metadata file</s> JSON file.
+The content of the file is a JSON array
 of dictionaries. The full JSON schema, for reference, can be [found
 here](../src/package_manager/metadata_schemas/verb_template.json).
 
@@ -35,7 +42,7 @@ Below is an example, followed by a detailed breakdown of the properties.
 
 ## Example
 
-The following `meta/verb_template` file defines three verbs: `Preview`,
+The following `verb_template` file defines three verbs: `Preview`,
 `Navigate` and `Pick`.
 
 `Preview` accepts a single required argument (called a "noun"), which
@@ -49,7 +56,7 @@ single "picked" entity.
 ```javascript
 [
   {
-    "name": "Preview",
+    "name": "https://fuchsia.io/package/verbs/Preview",
     "nouns": [
       {
         "name": "entityToPreview",
@@ -64,7 +71,7 @@ single "picked" entity.
     // larger preview, or launches a new Module / experience.
   },
   {
-    "name": "Navigate",
+    "name": "https://fuchsia.io/package/verbs/Navigate",
     "nouns": [
       {
         "name": "start",
@@ -79,7 +86,7 @@ single "picked" entity.
     "doc": "docs/navigate.md"
   },
   {
-    "name": "Pick",
+    "name": "https://fuchsia.io/package/verbs/Pick",
     "nouns": [
       {
         "name": "source",
@@ -103,19 +110,18 @@ Let's go through the properties that make up a verb template.
 ### verb name
 
 ```javascript
-"name": "Preview",
+"name": "https://fuchsia.io/package/verbs/Preview",
 ```
 > TODO(thatguy): This is a machine-readable name, not a human-readable name. Add
 > something for humans that supports localization.
 
-This is the verb's name, unique within the `verb_template` file. Verb names are
-constrained to the following characters: `[a-zA-Z0-9_]`. It is convention to use
-camel-case with the first letter capitalized.
+This is the verb's name. It uniquely identifies this verb.
+
+> TODO(thatguy): Add information about how verb names are associated with the author
+> so no collisions are possible.
 
 Verb names allow `Module` [metadata files](module.md) to reference this verb
-template when they declare that they provide an implementation. When
-referencing, the developer will include both the package containing this
-`meta/verb_template` file, as well as the `name`.
+template when they declare that they provide an implementation, and allows [`Daisies`](../daisy.md) to reference the same verb when a client requests the associated action to take place.
 
 ### nouns
 
