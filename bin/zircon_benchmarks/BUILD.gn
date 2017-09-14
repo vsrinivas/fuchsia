@@ -20,6 +20,6 @@ executable("benchmarks") {
   ]
   libs = [
     "launchpad",
-    "magenta",
+    "zircon",
   ]
 }

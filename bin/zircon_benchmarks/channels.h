@@ -5,7 +5,7 @@
 #pragma once
 
 constexpr uint32_t HELPER_HANDLE_ID = 0x23011985;
-constexpr const char HELPER_PATH[] = "/system/bin/magenta-benchmarks";
+constexpr const char HELPER_PATH[] = "/system/bin/zircon-benchmarks";
 
 enum {
   CHANNEL_READ,

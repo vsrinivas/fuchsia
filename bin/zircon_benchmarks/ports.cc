@@ -3,20 +3,20 @@
 // found in the LICENSE file.
 
 #include <benchmark/benchmark.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/port.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/port.h>
 
 class Port : public benchmark::Fixture {};
 
 BENCHMARK_DEFINE_F(Port, Create)(benchmark::State& state) {
-  mx_handle_t out;
+  zx_handle_t out;
   while (state.KeepRunning()) {
-    if (mx_port_create(state.range(0), &out) != MX_OK) {
+    if (zx_port_create(state.range(0), &out) != ZX_OK) {
       state.SkipWithError("Failed to create port");
       return;
     }
     state.PauseTiming();
-    mx_handle_close(out);
+    zx_handle_close(out);
     state.ResumeTiming();
   }
 }

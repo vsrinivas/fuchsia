@@ -1,3 +1,3 @@
-# Magenta Benchmarks
+# Zircon Benchmarks
 
-Microbenchmarks for the Magenta kernel and services.
+Microbenchmarks for the Zircon kernel and services.

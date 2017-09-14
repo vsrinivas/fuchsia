@@ -3,35 +3,35 @@
 // found in the LICENSE file.
 
 #include <benchmark/benchmark.h>
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 class Socket : public benchmark::Fixture {
  private:
   void SetUp(benchmark::State& state) override {
-    if (mx_socket_create(0, &in, &out) != MX_OK) {
+    if (zx_socket_create(0, &in, &out) != ZX_OK) {
       state.SkipWithError("Failed to create socket");
     }
   }
 
   void TearDown(benchmark::State& state) override {
-    mx_handle_close(in);
-    mx_handle_close(out);
+    zx_handle_close(in);
+    zx_handle_close(out);
   }
 
  protected:
-  mx_handle_t in;
-  mx_handle_t out;
+  zx_handle_t in;
+  zx_handle_t out;
 };
 
 BENCHMARK_DEFINE_F(Socket, Write)(benchmark::State& state) {
   std::vector<char> buffer(state.range(0));
-  mx_status_t status;
+  zx_status_t status;
   uint64_t bytes_processed = 0;
   while (state.KeepRunning()) {
     size_t bytes_written;
-    status = mx_socket_write(
+    status = zx_socket_write(
         in, 0, buffer.data(), buffer.size(), &bytes_written);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
       state.SkipWithError("Failed to write to socket");
       return;
     }
@@ -40,8 +40,8 @@ BENCHMARK_DEFINE_F(Socket, Write)(benchmark::State& state) {
     // Make sure we drain the socket.
     state.PauseTiming();
     size_t bytes_read;
-    status = mx_socket_read(out, 0, buffer.data(), buffer.size(), &bytes_read);
-    if (status != MX_OK) {
+    status = zx_socket_read(out, 0, buffer.data(), buffer.size(), &bytes_read);
+    if (status != ZX_OK) {
       state.SkipWithError("Failed to read from socket");
       return;
     }
@@ -61,23 +61,23 @@ BENCHMARK_REGISTER_F(Socket, Write)
 
 BENCHMARK_DEFINE_F(Socket, Read)(benchmark::State& state) {
   std::vector<char> buffer(state.range(0));
-  mx_status_t status;
+  zx_status_t status;
   uint64_t bytes_processed = 0;
   while (state.KeepRunning()) {
     // Write the data to read into the socket.
     state.PauseTiming();
     size_t bytes_written;
-    status = mx_socket_write(
+    status = zx_socket_write(
         in, 0, buffer.data(), buffer.size(), &bytes_written);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
       state.SkipWithError("Failed to write to socket");
       return;
     }
     state.ResumeTiming();
 
     size_t bytes_read;
-    status = mx_socket_read(out, 0, buffer.data(), buffer.size(), &bytes_read);
-    if (status != MX_OK) {
+    status = zx_socket_read(out, 0, buffer.data(), buffer.size(), &bytes_read);
+    if (status != ZX_OK) {
       state.SkipWithError("Failed to read from socket");
       return;
     }
