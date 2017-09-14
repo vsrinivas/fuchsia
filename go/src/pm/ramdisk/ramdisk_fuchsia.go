@@ -25,11 +25,11 @@ import (
 	"unsafe"
 	"runtime"
 	"fmt"
-	"syscall/mx/mxio"
+	"syscall/mx/fdio"
 )
 
 type Ramdisk struct {
-	path [mxio.PathMax]byte
+	path [fdio.PathMax]byte
 }
 
 // New constructs and creates a ramdisk of size bytes at the given path.

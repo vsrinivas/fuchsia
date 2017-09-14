@@ -326,7 +326,7 @@ func IsFAR(r io.Reader) bool {
 	return bytes.Equal(m, []byte(Magic))
 }
 
-// TODO(raggi): implement a VMO clone mxio approach on fuchsia
+// TODO(raggi): implement a VMO clone fdio approach on fuchsia
 type entryReader struct {
 	offset uint64
 	length uint64

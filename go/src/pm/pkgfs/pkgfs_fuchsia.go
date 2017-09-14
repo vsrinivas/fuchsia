@@ -13,10 +13,10 @@ import (
 
 	"syscall"
 	"syscall/mx"
-	"syscall/mx/mxio"
+	"syscall/mx/fdio"
 
 	"fuchsia.googlesource.com/thinfs/fs"
-	"fuchsia.googlesource.com/thinfs/magenta/rpc"
+	"fuchsia.googlesource.com/thinfs/zircon/rpc"
 )
 
 // mountInfo is a platform specific type that carries platform specific mounting
@@ -49,7 +49,7 @@ func (f *Filesystem) Mount(path string) error {
 		return fmt.Errorf("channel creation: %s", err)
 	}
 
-	if err := syscall.MXIOForFD(int(f.mountInfo.parentFd.Fd())).IoctlSetHandle(mxio.IoctlVFSMountFS, f.mountInfo.serveChannel.Handle); err != nil {
+	if err := syscall.FDIOForFD(int(f.mountInfo.parentFd.Fd())).IoctlSetHandle(fdio.IoctlVFSMountFS, f.mountInfo.serveChannel.Handle); err != nil {
 		f.mountInfo.serveChannel.Close()
 		f.mountInfo.serveChannel = nil
 		f.mountInfo.parentFd.Close()
@@ -76,7 +76,7 @@ func (f *Filesystem) Mount(path string) error {
 
 // Unmount detaches the filesystem from a previously mounted path. If mount was not previously called or successful, this will panic.
 func (f *Filesystem) Unmount() {
-	syscall.MXIOForFD(int(f.mountInfo.parentFd.Fd())).IoctlSetHandle(mxio.IoctlVFSUnmountFS, f.mountInfo.serveChannel.Handle)
+	syscall.FDIOForFD(int(f.mountInfo.parentFd.Fd())).IoctlSetHandle(fdio.IoctlVFSUnmountFS, f.mountInfo.serveChannel.Handle)
 	// TODO(raggi): log errors?
 	f.mountInfo.serveChannel.Close()
 	f.mountInfo.parentFd.Close()
