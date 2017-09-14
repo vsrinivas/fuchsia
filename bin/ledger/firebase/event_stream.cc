@@ -16,7 +16,7 @@ EventStream::EventStream() {}
 EventStream::~EventStream() {}
 
 void EventStream::Start(
-    mx::socket source,
+    zx::socket source,
     const std::function<EventCallback>& event_callback,
     const std::function<CompletionCallback>& completion_callback) {
   event_callback_ = event_callback;

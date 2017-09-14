@@ -37,7 +37,7 @@ void IntegrationTest::TearDown() {
   ::testing::Test::TearDown();
 }
 
-mx::socket IntegrationTest::StreamDataToSocket(std::string data) {
+zx::socket IntegrationTest::StreamDataToSocket(std::string data) {
   glue::SocketPair sockets;
   socket_task_runner_->PostTask(fxl::MakeCopyable([
     socket = std::move(sockets.socket1), data = std::move(data)

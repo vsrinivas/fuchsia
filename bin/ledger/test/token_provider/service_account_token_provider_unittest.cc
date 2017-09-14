@@ -98,7 +98,7 @@ class ServiceAccountTokenProviderTest : public TestWithMessageLoop {
     auto response = network::URLResponse::New();
     response->error = std::move(error);
     response->status_code = status;
-    mx::vmo buffer;
+    zx::vmo buffer;
     if (!fsl::VmoFromString(body, &buffer)) {
       ADD_FAILURE() << "Unable to convert string to Vmo.";
     }

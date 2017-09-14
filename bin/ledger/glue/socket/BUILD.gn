@@ -18,7 +18,7 @@ source_set("socket") {
     "//garnet/public/lib/fidl/c/waiter",
     "//garnet/public/lib/fidl/cpp/waiter",
     "//garnet/public/lib/fsl",
-    "//magenta/system/ulib/mx",
+    "//zircon/system/ulib/zx",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

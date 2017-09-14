@@ -55,7 +55,7 @@ Status LevelDBObject::GetData(fxl::StringView* data) const {
   return Status::OK;
 }
 
-VmoObject::VmoObject(ObjectId id, mx::vmo vmo)
+VmoObject::VmoObject(ObjectId id, zx::vmo vmo)
     : id_(std::move(id)), vmo_(std::move(vmo)) {}
 
 VmoObject::~VmoObject() {
@@ -77,16 +77,16 @@ Status VmoObject::GetData(fxl::StringView* data) const {
   return Status::OK;
 }
 
-Status VmoObject::GetVmo(mx::vmo* vmo) const {
+Status VmoObject::GetVmo(zx::vmo* vmo) const {
   Status status = Initialize();
   if (status != Status::OK) {
     return status;
   }
 
-  mx_status_t mx_status = vmo_.duplicate(
-      MX_RIGHT_DUPLICATE | MX_RIGHT_READ | MX_RIGHT_MAP | MX_RIGHT_TRANSFER,
+  zx_status_t zx_status = vmo_.duplicate(
+      ZX_RIGHT_DUPLICATE | ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER,
       vmo);
-  if (mx_status != MX_OK) {
+  if (zx_status != ZX_OK) {
     return Status::INTERNAL_IO_ERROR;
   }
   return Status::OK;
@@ -98,30 +98,30 @@ Status VmoObject::Initialize() const {
   }
 
   size_t size;
-  mx_status_t mx_status = vmo_.get_size(&size);
-  if (mx_status != MX_OK) {
-    FXL_LOG(ERROR) << "Unable to get VMO size. Error: " << mx_status;
+  zx_status_t zx_status = vmo_.get_size(&size);
+  if (zx_status != ZX_OK) {
+    FXL_LOG(ERROR) << "Unable to get VMO size. Error: " << zx_status;
     return Status::INTERNAL_IO_ERROR;
   }
 
   uintptr_t allocate_address;
-  mx_status = mx::vmar::root_self().allocate(0, ToFullPages(size),
-                                             MX_VM_FLAG_CAN_MAP_READ |
-                                                 MX_VM_FLAG_CAN_MAP_WRITE |
-                                                 MX_VM_FLAG_CAN_MAP_SPECIFIC,
+  zx_status = zx::vmar::root_self().allocate(0, ToFullPages(size),
+                                             ZX_VM_FLAG_CAN_MAP_READ |
+                                                 ZX_VM_FLAG_CAN_MAP_WRITE |
+                                                 ZX_VM_FLAG_CAN_MAP_SPECIFIC,
                                              &vmar_, &allocate_address);
-  if (mx_status != MX_OK) {
-    FXL_LOG(ERROR) << "Unable to allocate VMAR. Error: " << mx_status;
+  if (zx_status != ZX_OK) {
+    FXL_LOG(ERROR) << "Unable to allocate VMAR. Error: " << zx_status;
     return Status::INTERNAL_IO_ERROR;
   }
 
   char* mapped_address;
-  mx_status = vmar_.map(
+  zx_status = vmar_.map(
       0, vmo_, 0, size,
-      MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
       reinterpret_cast<uintptr_t*>(&mapped_address));
-  if (mx_status != MX_OK) {
-    FXL_LOG(ERROR) << "Unable to map VMO. Error: " << mx_status;
+  if (zx_status != ZX_OK) {
+    FXL_LOG(ERROR) << "Unable to map VMO. Error: " << zx_status;
     vmar_.reset();
     return Status::INTERNAL_IO_ERROR;
   }

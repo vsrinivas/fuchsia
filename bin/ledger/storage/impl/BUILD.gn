@@ -77,7 +77,7 @@ source_set("lib") {
     "//apps/ledger/src/storage/public",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
-    "//magenta/system/ulib/trace",
+    "//zircon/system/ulib/trace",
   ]
 
   public_deps = [

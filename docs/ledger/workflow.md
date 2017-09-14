@@ -12,5 +12,5 @@ See [Testing](testing.md) for how to run Ledger tests locally. Upload the CL for
 review using `git push origin HEAD:refs/for/master`.
 
 [Fuchsia documentation]: https://fuchsia.googlesource.com/docs/+/master/README.md
-[persistent file system]: https://fuchsia.googlesource.com/magenta/+/master/docs/minfs.md
+[persistent file system]: https://fuchsia.googlesource.com/zircon/+/master/docs/minfs.md
 [networking]: https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Enabling-Network

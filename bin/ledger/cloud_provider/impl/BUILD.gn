@@ -30,7 +30,7 @@ source_set("impl") {
     "//apps/ledger/src/storage/public",  # For serialization version constant.
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
-    "//magenta/system/ulib/mx",
+    "//zircon/system/ulib/zx",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

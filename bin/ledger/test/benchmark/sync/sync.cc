@@ -32,7 +32,7 @@ constexpr fxl::StringView kRefsOffFlag = "off";
 constexpr fxl::StringView kRefsAutoFlag = "auto";
 
 constexpr size_t kKeySize = 100;
-constexpr size_t kMaxInlineDataSize = MX_CHANNEL_MAX_MSG_BYTES * 9 / 10;
+constexpr size_t kMaxInlineDataSize = ZX_CHANNEL_MAX_MSG_BYTES * 9 / 10;
 
 void PrintUsage(const char* executable_name) {
   std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
@@ -133,7 +133,7 @@ void SyncBenchmark::RunSingle(size_t i) {
   if (reference_strategy_ != ReferenceStrategy::OFF &&
       (reference_strategy_ == ReferenceStrategy::ON ||
        value_size_ > kMaxInlineDataSize)) {
-    mx::vmo vmo;
+    zx::vmo vmo;
     if (!fsl::VmoFromString(convert::ToStringView(value), &vmo)) {
       benchmark::QuitOnError(ledger::Status::IO_ERROR, "fsl::VmoFromString");
       return;

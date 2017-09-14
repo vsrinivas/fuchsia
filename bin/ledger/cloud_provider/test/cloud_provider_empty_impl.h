@@ -10,8 +10,8 @@
 #include <vector>
 
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
-#include "mx/socket.h"
-#include "mx/vmo.h"
+#include "zx/socket.h"
+#include "zx/vmo.h"
 
 namespace cloud_provider_firebase {
 namespace test {
@@ -40,13 +40,13 @@ class CloudProviderEmptyImpl : public CloudProvider {
 
   void AddObject(const std::string& auth_token,
                  ObjectIdView object_id,
-                 mx::vmo data,
+                 zx::vmo data,
                  std::function<void(Status)> callback) override;
 
   void GetObject(
       const std::string& auth_token,
       ObjectIdView object_id,
-      std::function<void(Status status, uint64_t size, mx::socket data)>
+      std::function<void(Status status, uint64_t size, zx::socket data)>
           callback) override;
 };
 

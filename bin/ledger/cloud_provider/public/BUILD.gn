@@ -20,7 +20,7 @@ source_set("public") {
     "//apps/ledger/src/firebase",
     "//apps/ledger/src/gcs",
     "//garnet/public/lib/fxl",
-    "//magenta/system/ulib/mx",
+    "//zircon/system/ulib/zx",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

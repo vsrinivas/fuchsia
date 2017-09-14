@@ -133,7 +133,7 @@ class PageStorageImpl : public PageStorage {
       ObjectIdView object_id,
       std::function<void(Status, std::unique_ptr<const Object>)> callback);
   void FillBufferWithObjectContent(ObjectIdView object_id,
-                                   mx::vmo vmo,
+                                   zx::vmo vmo,
                                    size_t offset,
                                    size_t size,
                                    std::function<void(Status)> callback);

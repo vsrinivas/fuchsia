@@ -22,7 +22,7 @@ class FakeNetworkService : public NetworkService {
 
   void SetResponse(network::URLResponsePtr response);
 
-  void SetSocketResponse(mx::socket body, uint32_t status_code);
+  void SetSocketResponse(zx::socket body, uint32_t status_code);
 
   void SetStringResponse(const std::string& body, uint32_t status_code);
 

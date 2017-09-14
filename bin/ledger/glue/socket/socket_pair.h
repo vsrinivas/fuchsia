@@ -7,7 +7,7 @@
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "mx/socket.h"
+#include "zx/socket.h"
 
 namespace glue {
 
@@ -17,15 +17,15 @@ class SocketPair {
   SocketPair();
   ~SocketPair();
 
-  mx::socket socket1;
-  mx::socket socket2;
+  zx::socket socket1;
+  zx::socket socket2;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(SocketPair);
 };
 
 inline SocketPair::SocketPair() {
-  FXL_CHECK(mx::socket::create(0u, &socket1, &socket2) == MX_OK);
+  FXL_CHECK(zx::socket::create(0u, &socket1, &socket2) == ZX_OK);
 }
 
 inline SocketPair::~SocketPair() {}

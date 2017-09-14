@@ -84,13 +84,13 @@ CloudStorageImpl::~CloudStorageImpl() {}
 
 void CloudStorageImpl::UploadObject(std::string auth_token,
                                     const std::string& key,
-                                    mx::vmo data,
+                                    zx::vmo data,
                                     std::function<void(Status)> callback) {
   std::string url = GetUploadUrl(key);
 
   uint64_t data_size;
-  mx_status_t status = data.get_size(&data_size);
-  if (status != MX_OK) {
+  zx_status_t status = data.get_size(&data_size);
+  if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to retrieve the size of the vmo.";
     callback(Status::INTERNAL_ERROR);
     return;
@@ -116,8 +116,8 @@ void CloudStorageImpl::UploadObject(std::string auth_token,
     content_length_header->value = fxl::NumberToString(data_size);
     request->headers.push_back(std::move(content_length_header));
 
-    mx::vmo duplicated_data;
-    data.duplicate(MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ,
+    zx::vmo duplicated_data;
+    data.duplicate(ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ,
                    &duplicated_data);
     request->body = network::URLBody::New();
     request->body->set_buffer(std::move(duplicated_data));
@@ -134,7 +134,7 @@ void CloudStorageImpl::UploadObject(std::string auth_token,
 void CloudStorageImpl::DownloadObject(
     std::string auth_token,
     const std::string& key,
-    std::function<void(Status status, uint64_t size, mx::socket data)>
+    std::function<void(Status status, uint64_t size, zx::socket data)>
         callback) {
   std::string url = GetDownloadUrl(key);
 
@@ -202,26 +202,26 @@ void CloudStorageImpl::OnResponse(
 }
 
 void CloudStorageImpl::OnDownloadResponseReceived(
-    const std::function<void(Status status, uint64_t size, mx::socket data)>
+    const std::function<void(Status status, uint64_t size, zx::socket data)>
         callback,
     Status status,
     network::URLResponsePtr response) {
   if (status != Status::OK) {
-    callback(status, 0u, mx::socket());
+    callback(status, 0u, zx::socket());
     return;
   }
 
   network::HttpHeaderPtr size_header =
       GetHeader(response->headers, kContentLengthHeader);
   if (!size_header) {
-    callback(Status::PARSE_ERROR, 0u, mx::socket());
+    callback(Status::PARSE_ERROR, 0u, zx::socket());
     return;
   }
 
   uint64_t expected_file_size;
   if (!fxl::StringToNumberWithError(size_header->value.get(),
                                     &expected_file_size)) {
-    callback(Status::PARSE_ERROR, 0u, mx::socket());
+    callback(Status::PARSE_ERROR, 0u, zx::socket());
     return;
   }
 

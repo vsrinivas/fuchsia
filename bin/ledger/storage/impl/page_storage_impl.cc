@@ -43,8 +43,8 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/strings/concatenate.h"
-#include "mx/vmar.h"
-#include "mx/vmo.h"
+#include "zx/vmar.h"
+#include "zx/vmo.h"
 
 namespace storage {
 
@@ -396,9 +396,9 @@ void PageStorageImpl::GetObject(
       return;
     }
 
-    mx::vmo vmo;
-    mx_status_t mx_status = mx::vmo::create(file_index->size(), 0, &vmo);
-    if (mx_status != MX_OK) {
+    zx::vmo vmo;
+    zx_status_t zx_status = zx::vmo::create(file_index->size(), 0, &vmo);
+    if (zx_status != ZX_OK) {
       callback(Status::INTERNAL_IO_ERROR, nullptr);
       return;
     }
@@ -410,11 +410,11 @@ void PageStorageImpl::GetObject(
         callback(Status::FORMAT_ERROR, nullptr);
         return;
       }
-      mx::vmo vmo_copy;
-      mx_status_t mx_status =
-          vmo.duplicate(MX_RIGHT_DUPLICATE | MX_RIGHT_WRITE, &vmo_copy);
-      if (mx_status != MX_OK) {
-        FXL_LOG(ERROR) << "Unable to duplicate vmo. Status: " << mx_status;
+      zx::vmo vmo_copy;
+      zx_status_t zx_status =
+          vmo.duplicate(ZX_RIGHT_DUPLICATE | ZX_RIGHT_WRITE, &vmo_copy);
+      if (zx_status != ZX_OK) {
+        FXL_LOG(ERROR) << "Unable to duplicate vmo. Status: " << zx_status;
         callback(Status::INTERNAL_IO_ERROR, nullptr);
         return;
       }
@@ -611,7 +611,7 @@ void PageStorageImpl::DownloadFullObject(ObjectIdView object_id,
 
   page_sync_->GetObject(object_id, [
     this, callback = std::move(callback), object_id = object_id.ToString()
-  ](Status status, uint64_t size, mx::socket data) mutable {
+  ](Status status, uint64_t size, zx::socket data) mutable {
     if (status != Status::OK) {
       callback(status);
       return;
@@ -710,7 +710,7 @@ bool PageStorageImpl::ObjectIsUntracked(ObjectIdView object_id) {
 
 void PageStorageImpl::FillBufferWithObjectContent(
     ObjectIdView object_id,
-    mx::vmo vmo,
+    zx::vmo vmo,
     size_t offset,
     size_t size,
     std::function<void(Status)> callback) {
@@ -744,11 +744,11 @@ void PageStorageImpl::FillBufferWithObjectContent(
                  return;
                }
                size_t written_size;
-               mx_status_t mx_status =
+               zx_status_t zx_status =
                    vmo.write(content.data(), offset, size, &written_size);
-               if (mx_status != MX_OK) {
+               if (zx_status != ZX_OK) {
                  FXL_LOG(ERROR)
-                     << "Unable to write to vmo. Status: " << mx_status;
+                     << "Unable to write to vmo. Status: " << zx_status;
                  callback(Status::INTERNAL_IO_ERROR);
                  return;
                }
@@ -788,12 +788,12 @@ void PageStorageImpl::FillBufferWithObjectContent(
                  callback(Status::FORMAT_ERROR);
                  return;
                }
-               mx::vmo vmo_copy;
-               mx_status_t mx_status = vmo.duplicate(
-                   MX_RIGHT_DUPLICATE | MX_RIGHT_WRITE, &vmo_copy);
-               if (mx_status != MX_OK) {
+               zx::vmo vmo_copy;
+               zx_status_t zx_status = vmo.duplicate(
+                   ZX_RIGHT_DUPLICATE | ZX_RIGHT_WRITE, &vmo_copy);
+               if (zx_status != ZX_OK) {
                  FXL_LOG(ERROR)
-                     << "Unable to duplicate vmo. Status: " << mx_status;
+                     << "Unable to duplicate vmo. Status: " << zx_status;
                  callback(Status::INTERNAL_IO_ERROR);
                  return;
                }

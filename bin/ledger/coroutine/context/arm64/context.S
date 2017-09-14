@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/tls.h>
+#include <zircon/tls.h>
 
 #include "apps/ledger/src/coroutine/context/arm64/context.h"
 
@@ -31,7 +31,7 @@ FUNCTION(_ZN7context10GetContextEPNS_15InternalContextE)
     str x1,  [x0, #X0_O]
 
     mrs x1, TPIDR_EL0
-    ldr x1, [x1, #MX_TLS_UNSAFE_SP_OFFSET]
+    ldr x1, [x1, #ZX_TLS_UNSAFE_SP_OFFSET]
     str x1, [x0, #UNSAFE_SP_O]
 
     mov x0,  #0xFFFFFFFFFFFFFFFF
@@ -69,7 +69,7 @@ FUNCTION(_ZN7context10SetContextEPNS_15InternalContextE)
 
     ldr x2,  [x0, #UNSAFE_SP_O]
     mrs x1, TPIDR_EL0
-    str x2, [x1, #MX_TLS_UNSAFE_SP_OFFSET]
+    str x2, [x1, #ZX_TLS_UNSAFE_SP_OFFSET]
 
     ldr x0, [x0, #X0_O]
     br x30

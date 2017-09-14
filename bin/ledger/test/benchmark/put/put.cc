@@ -18,7 +18,7 @@ namespace {
 
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/put";
 
-constexpr size_t kMaxInlineDataSize = MX_CHANNEL_MAX_MSG_BYTES * 9 / 10;
+constexpr size_t kMaxInlineDataSize = ZX_CHANNEL_MAX_MSG_BYTES * 9 / 10;
 
 }  // namespace
 
@@ -117,7 +117,7 @@ void PutBenchmark::PutEntry(fidl::Array<uint8_t> key,
     page_->Put(std::move(key), std::move(value), put_callback);
     return;
   }
-  mx::vmo vmo;
+  zx::vmo vmo;
   FXL_CHECK(fsl::VmoFromString(convert::ToString(value), &vmo));
   page_->CreateReferenceFromVmo(
       std::move(vmo), fxl::MakeCopyable([

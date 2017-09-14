@@ -4,7 +4,7 @@
 
 #include "apps/ledger/src/glue/crypto/rand.h"
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 
 #include <atomic>
 
@@ -16,8 +16,8 @@ namespace glue {
 namespace {
 
 void InitEntropy() {
-  auto current_time = mx_time_get(MX_CLOCK_UTC);
-  if (mx_cprng_add_entropy(&current_time, sizeof(current_time)) != MX_OK) {
+  auto current_time = zx_time_get(ZX_CLOCK_UTC);
+  if (zx_cprng_add_entropy(&current_time, sizeof(current_time)) != ZX_OK) {
     FXL_LOG(WARNING)
         << "Unable to add entropy to the kernel. No additional entropy added.";
     return;

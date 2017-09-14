@@ -53,7 +53,7 @@ class EventStreamTest : public ::testing::Test {
   void Done() { event_stream_->OnDataComplete(); }
 
   fsl::MessageLoop message_loop_;
-  mx::socket producer_socket_;
+  zx::socket producer_socket_;
   std::unique_ptr<EventStream> event_stream_;
   std::vector<Status> status_;
   std::vector<std::string> events_;

@@ -23,7 +23,7 @@ executable("app") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
-    "//magenta/system/ulib/trace-provider",
+    "//zircon/system/ulib/trace-provider",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]
@@ -102,7 +102,7 @@ source_set("lib") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
-    "//magenta/system/ulib/trace",
+    "//zircon/system/ulib/trace",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

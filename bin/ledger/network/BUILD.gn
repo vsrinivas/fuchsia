@@ -18,7 +18,7 @@ source_set("network") {
     "//apps/ledger/src/callback",
     "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/fxl",
-    "//magenta/system/ulib/mx",
+    "//zircon/system/ulib/zx",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

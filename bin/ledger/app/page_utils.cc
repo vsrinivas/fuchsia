@@ -17,7 +17,7 @@ namespace {
 Status ToBuffer(convert::ExtendedStringView value,
                 int64_t offset,
                 int64_t max_size,
-                mx::vmo* buffer) {
+                zx::vmo* buffer) {
   size_t start = value.size();
   // Valid indices are between -N and N-1.
   if (offset >= -static_cast<int64_t>(value.size()) &&
@@ -86,18 +86,18 @@ void PageUtils::GetPartialReferenceAsBuffer(
     int64_t max_size,
     storage::PageStorage::Location location,
     Status not_found_status,
-    std::function<void(Status, mx::vmo)> callback) {
+    std::function<void(Status, zx::vmo)> callback) {
   GetReferenceAsStringView(
       storage, reference_id, location, not_found_status,
       [offset, max_size, callback](Status status, fxl::StringView data) {
         if (status != Status::OK) {
-          callback(status, mx::vmo());
+          callback(status, zx::vmo());
           return;
         }
-        mx::vmo buffer;
+        zx::vmo buffer;
         Status buffer_status = ToBuffer(data, offset, max_size, &buffer);
         if (buffer_status != Status::OK) {
-          callback(buffer_status, mx::vmo());
+          callback(buffer_status, zx::vmo());
           return;
         }
         callback(Status::OK, std::move(buffer));

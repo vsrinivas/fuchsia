@@ -305,13 +305,13 @@ class TestCloudProvider
                  cloud_provider_firebase::ObjectIdView object_id,
                  std::function<void(cloud_provider_firebase::Status status,
                                     uint64_t size,
-                                    mx::socket data)> callback) override {
+                                    zx::socket data)> callback) override {
     get_object_calls++;
     get_object_auth_tokens.push_back(auth_token);
     if (should_fail_get_object) {
       message_loop_->task_runner()->PostTask([callback]() {
         callback(cloud_provider_firebase::Status::NETWORK_ERROR, 0,
-                 mx::socket());
+                 zx::socket());
       });
       return;
     }
@@ -1028,7 +1028,7 @@ TEST_F(PageSyncImplTest, GetObject) {
 
   storage::Status status;
   uint64_t size;
-  mx::socket data;
+  zx::socket data;
   page_sync_->GetObject(
       storage::ObjectIdView("object_id"),
       callback::Capture(MakeQuitTask(), &status, &size, &data));
@@ -1056,7 +1056,7 @@ TEST_F(PageSyncImplTest, GetObjectAuthError) {
   auth_provider_.token_to_return = "";
   storage::Status status;
   uint64_t size;
-  mx::socket data;
+  zx::socket data;
   page_sync_->GetObject(
       storage::ObjectIdView("object_id"),
       callback::Capture(MakeQuitTask(), &status, &size, &data));
@@ -1082,7 +1082,7 @@ TEST_F(PageSyncImplTest, RetryGetObject) {
   });
   storage::Status status;
   uint64_t size;
-  mx::socket data;
+  zx::socket data;
   page_sync_->GetObject(
       storage::ObjectIdView("object_id"),
       callback::Capture(MakeQuitTask(), &status, &size, &data));

@@ -12,8 +12,8 @@
 #include "apps/ledger/src/gcs/cloud_storage.h"
 #include "apps/ledger/src/network/network_service.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "mx/socket.h"
-#include "mx/vmo.h"
+#include "zx/socket.h"
+#include "zx/vmo.h"
 
 namespace gcs {
 
@@ -30,13 +30,13 @@ class CloudStorageImpl : public CloudStorage {
   // CloudStorage implementation.
   void UploadObject(std::string auth_token,
                     const std::string& key,
-                    mx::vmo data,
+                    zx::vmo data,
                     std::function<void(Status)> callback) override;
 
   void DownloadObject(
       std::string auth_token,
       const std::string& key,
-      std::function<void(Status status, uint64_t size, mx::socket data)>
+      std::function<void(Status status, uint64_t size, zx::socket data)>
           callback) override;
 
  private:
@@ -53,7 +53,7 @@ class CloudStorageImpl : public CloudStorage {
       network::URLResponsePtr response);
 
   void OnDownloadResponseReceived(
-      std::function<void(Status status, uint64_t size, mx::socket data)>
+      std::function<void(Status status, uint64_t size, zx::socket data)>
           callback,
       Status status,
       network::URLResponsePtr response);

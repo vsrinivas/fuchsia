@@ -24,7 +24,7 @@ std::function<network::URLRequestPtr()> MakeRequest(
     const std::string& method,
     const std::string& message,
     bool stream_request = false) {
-  mx::vmo body;
+  zx::vmo body;
   if (!message.empty()) {
     if (!fsl::VmoFromString(message, &body)) {
       FXL_LOG(ERROR) << "Unable to create VMO from string.";
@@ -39,8 +39,8 @@ std::function<network::URLRequestPtr()> MakeRequest(
         request->method = method;
         request->auto_follow_redirects = true;
         if (body) {
-          mx::vmo duplicated_body;
-          body.duplicate(MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ,
+          zx::vmo duplicated_body;
+          body.duplicate(ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ,
                          &duplicated_body);
           request->body = network::URLBody::New();
           request->body->set_buffer(std::move(duplicated_body));

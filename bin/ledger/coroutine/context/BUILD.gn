@@ -18,7 +18,7 @@ source_set("context") {
   ]
 
   public_deps = [
-    "//magenta/system/ulib/mx",
+    "//zircon/system/ulib/zx",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

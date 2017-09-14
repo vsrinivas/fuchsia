@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "mx/vmo.h"
+#include "zx/vmo.h"
 
 namespace test {
 namespace integration {
@@ -45,9 +45,9 @@ std::string SnapshotFetchPartial(ledger::PageSnapshotPtr* snapshot,
                                  int64_t offset,
                                  int64_t max_size);
 
-std::string ToString(const mx::vmo& vmo);
+std::string ToString(const zx::vmo& vmo);
 
-fidl::Array<uint8_t> ToArray(const mx::vmo& vmo);
+fidl::Array<uint8_t> ToArray(const zx::vmo& vmo);
 
 }  // namespace integration
 }  // namespace test

@@ -38,7 +38,7 @@ void ComputePageChange(
     std::string next_token = "";
   };
 
-  auto waiter = callback::Waiter<Status, mx::vmo>::Create(Status::OK);
+  auto waiter = callback::Waiter<Status, zx::vmo>::Create(Status::OK);
 
   auto context = std::make_unique<Context>();
   context->page_change->timestamp = other.GetTimestamp();
@@ -120,7 +120,7 @@ void ComputePageChange(
     // asynchronous calls and |result_callback| processes them.
     auto result_callback = fxl::MakeCopyable([
       context = std::move(context), callback = std::move(callback)
-    ](Status status, std::vector<mx::vmo> results) mutable {
+    ](Status status, std::vector<zx::vmo> results) mutable {
       if (status != Status::OK) {
         FXL_LOG(ERROR)
             << "Error while reading changed values when computing PageChange: "

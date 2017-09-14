@@ -43,7 +43,7 @@ executable("ledger_benchmark_put") {
     ":lib",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
-    "//magenta/system/ulib/trace-provider",
+    "//zircon/system/ulib/trace-provider",
   ]
 
   sources = [

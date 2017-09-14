@@ -10,7 +10,7 @@
 
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/public/types.h"
-#include "mx/vmar.h"
+#include "zx/vmar.h"
 #include "third_party/leveldb/include/leveldb/iterator.h"
 
 #include <memory>
@@ -64,21 +64,21 @@ class LevelDBObject : public Object {
 // Object whose data is backed by a VMO.
 class VmoObject : public Object {
  public:
-  VmoObject(ObjectId id, mx::vmo vmo);
+  VmoObject(ObjectId id, zx::vmo vmo);
   ~VmoObject() override;
 
   // Object:
   ObjectId GetId() const override;
   Status GetData(fxl::StringView* data) const override;
-  Status GetVmo(mx::vmo* vmo) const override;
+  Status GetVmo(zx::vmo* vmo) const override;
 
  private:
   Status Initialize() const;
 
   mutable bool initialized_ = false;
   const ObjectId id_;
-  mx::vmo vmo_;
-  mutable mx::vmar vmar_;
+  zx::vmo vmo_;
+  mutable zx::vmar vmar_;
   mutable fxl::StringView data_;
 };
 

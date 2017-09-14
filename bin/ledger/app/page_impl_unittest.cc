@@ -32,7 +32,7 @@
 namespace ledger {
 namespace {
 
-std::string ToString(const mx::vmo& vmo) {
+std::string ToString(const zx::vmo& vmo) {
   std::string value;
   bool status = fsl::StringFromVmo(vmo, &value);
   FXL_DCHECK(status);
@@ -478,7 +478,7 @@ TEST_F(PageImplTest, CreateReferenceFromSocket) {
 
 TEST_F(PageImplTest, CreateReferenceFromVmo) {
   std::string value("a small value");
-  mx::vmo vmo;
+  zx::vmo vmo;
   ASSERT_TRUE(fsl::VmoFromString(value, &vmo));
 
   Status status;
@@ -1044,8 +1044,8 @@ TEST_F(PageImplTest, SnapshotGetSmall) {
   EXPECT_FALSE(RunLoopWithTimeout());
   PageSnapshotPtr snapshot = GetSnapshot();
 
-  mx::vmo actual_value;
-  auto callback_get = [this, &actual_value](Status status, mx::vmo value) {
+  zx::vmo actual_value;
+  auto callback_get = [this, &actual_value](Status status, zx::vmo value) {
     EXPECT_EQ(Status::OK, status);
     actual_value = std::move(value);
     message_loop_.PostQuitTask();
@@ -1085,8 +1085,8 @@ TEST_F(PageImplTest, SnapshotGetLarge) {
   EXPECT_FALSE(RunLoopWithTimeout());
   PageSnapshotPtr snapshot = GetSnapshot();
 
-  mx::vmo actual_value;
-  auto callback_get = [this, &actual_value](Status status, mx::vmo value) {
+  zx::vmo actual_value;
+  auto callback_get = [this, &actual_value](Status status, zx::vmo value) {
     EXPECT_EQ(Status::OK, status);
     actual_value = std::move(value);
     message_loop_.PostQuitTask();
@@ -1122,7 +1122,7 @@ TEST_F(PageImplTest, SnapshotGetNeedsFetch) {
 
   PageSnapshotPtr snapshot = GetSnapshot();
 
-  mx::vmo actual_value;
+  zx::vmo actual_value;
   snapshot->Get(convert::ToArray(key),
                 ::callback::Capture(postquit_callback, &status, &actual_value));
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -1151,10 +1151,10 @@ TEST_F(PageImplTest, SnapshotFetchPartial) {
   PageSnapshotPtr snapshot = GetSnapshot();
 
   Status status;
-  mx::vmo buffer;
+  zx::vmo buffer;
   snapshot->FetchPartial(convert::ToArray(key), 2, 5,
                          [this, &status, &buffer](Status received_status,
-                                                  mx::vmo received_buffer) {
+                                                  zx::vmo received_buffer) {
                            status = received_status;
                            buffer = std::move(received_buffer);
                            message_loop_.PostQuitTask();
@@ -1217,7 +1217,7 @@ TEST_F(PageImplTest, ParallelPut) {
 
   std::string actual_value1;
   auto callback_getvalue1 = [this, &actual_value1](Status status,
-                                                   mx::vmo returned_value) {
+                                                   zx::vmo returned_value) {
     EXPECT_EQ(Status::OK, status);
     actual_value1 = ToString(returned_value);
     message_loop_.PostQuitTask();
@@ -1227,7 +1227,7 @@ TEST_F(PageImplTest, ParallelPut) {
 
   std::string actual_value2;
   auto callback_getvalue2 = [this, &actual_value2](Status status,
-                                                   mx::vmo returned_value) {
+                                                   zx::vmo returned_value) {
     EXPECT_EQ(Status::OK, status);
     actual_value2 = ToString(returned_value);
     message_loop_.PostQuitTask();

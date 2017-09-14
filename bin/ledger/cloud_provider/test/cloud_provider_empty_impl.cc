@@ -36,7 +36,7 @@ void CloudProviderEmptyImpl::GetCommits(
 void CloudProviderEmptyImpl::AddObject(
     const std::string& /*auth_token*/,
     ObjectIdView /*object_id*/,
-    mx::vmo /*data*/,
+    zx::vmo /*data*/,
     std::function<void(Status)> /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
@@ -44,7 +44,7 @@ void CloudProviderEmptyImpl::AddObject(
 void CloudProviderEmptyImpl::GetObject(
     const std::string& /*auth_token*/,
     ObjectIdView /*object_id*/,
-    std::function<void(Status status, uint64_t size, mx::socket data)>
+    std::function<void(Status status, uint64_t size, zx::socket data)>
     /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }

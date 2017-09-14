@@ -27,9 +27,9 @@ fidl::Array<uint8_t> DoubleToArray(double dbl) {
   return array;
 }
 
-::testing::AssertionResult VmoToDouble(const mx::vmo& vmo, double* dbl) {
+::testing::AssertionResult VmoToDouble(const zx::vmo& vmo, double* dbl) {
   size_t num_read;
-  mx_status_t status = vmo.read(dbl, 0, sizeof(double), &num_read);
+  zx_status_t status = vmo.read(dbl, 0, sizeof(double), &num_read);
   if (status < 0) {
     return ::testing::AssertionFailure() << "Unable to read the VMO.";
   }

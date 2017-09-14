@@ -26,7 +26,7 @@ SocketWriter::~SocketWriter() {
   }
 }
 
-void SocketWriter::Start(mx::socket destination) {
+void SocketWriter::Start(zx::socket destination) {
   destination_ = std::move(destination);
   GetData();
 }
@@ -45,16 +45,16 @@ void SocketWriter::GetData() {
 }
 
 void SocketWriter::WriteData(fxl::StringView data) {
-  mx_status_t status = MX_OK;
-  while (status == MX_OK && !data.empty()) {
+  zx_status_t status = ZX_OK;
+  while (status == ZX_OK && !data.empty()) {
     size_t written;
     status = destination_.write(0u, data.data(), data.size(), &written);
-    if (status == MX_OK) {
+    if (status == ZX_OK) {
       data = data.substr(written);
     }
   }
 
-  if (status == MX_OK) {
+  if (status == ZX_OK) {
     FXL_DCHECK(data.empty());
     data_.clear();
     data_view_ = "";
@@ -64,12 +64,12 @@ void SocketWriter::WriteData(fxl::StringView data) {
 
   FXL_DCHECK(!data.empty());
 
-  if (status == MX_ERR_PEER_CLOSED) {
+  if (status == ZX_ERR_PEER_CLOSED) {
     Done();
     return;
   }
 
-  if (status == MX_ERR_SHOULD_WAIT) {
+  if (status == ZX_ERR_SHOULD_WAIT) {
     if (data_.empty()) {
       data_ = data.ToString();
       data_view_ = data_;
@@ -79,18 +79,18 @@ void SocketWriter::WriteData(fxl::StringView data) {
     WaitForSocket();
     return;
   }
-  FXL_DCHECK(false) << "Unhandled mx_status_t: " << status;
+  FXL_DCHECK(false) << "Unhandled zx_status_t: " << status;
 }
 
 void SocketWriter::WaitForSocket() {
   wait_id_ = waiter_->AsyncWait(destination_.get(),
-                                MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
-                                MX_TIME_INFINITE, &WaitComplete, this);
+                                ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED,
+                                ZX_TIME_INFINITE, &WaitComplete, this);
 }
 
 // static
-void SocketWriter::WaitComplete(mx_status_t /*result*/,
-                                mx_signals_t /*pending*/,
+void SocketWriter::WaitComplete(zx_status_t /*result*/,
+                                zx_signals_t /*pending*/,
                                 uint64_t /*count*/,
                                 void* context) {
   SocketWriter* writer = static_cast<SocketWriter*>(context);
@@ -106,7 +106,7 @@ void SocketWriter::Done() {
 StringSocketWriter::StringSocketWriter(const FidlAsyncWaiter* waiter)
     : socket_writer_(this, waiter) {}
 
-void StringSocketWriter::Start(std::string data, mx::socket destination) {
+void StringSocketWriter::Start(std::string data, zx::socket destination) {
   data_ = std::move(data);
   socket_writer_.Start(std::move(destination));
 }

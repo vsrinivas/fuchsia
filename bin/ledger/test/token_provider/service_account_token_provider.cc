@@ -341,7 +341,7 @@ network::URLRequestPtr ServiceAccountTokenProvider::GetIdentityRequest(
   accept_header->value = "application/json";
   request->headers.push_back(std::move(accept_header));
 
-  mx::vmo data;
+  zx::vmo data;
   bool result = fsl::VmoFromString(GetIdentityRequestBody(custom_token), &data);
   FXL_DCHECK(result);
 

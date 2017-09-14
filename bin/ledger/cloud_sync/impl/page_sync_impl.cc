@@ -113,7 +113,7 @@ void PageSyncImpl::OnNewCommits(
 
 void PageSyncImpl::GetObject(
     storage::ObjectIdView object_id,
-    std::function<void(storage::Status status, uint64_t size, mx::socket data)>
+    std::function<void(storage::Status status, uint64_t size, zx::socket data)>
         callback) {
   GetAuthToken([ this, object_id = object_id.ToString(),
                  callback ](std::string auth_token) mutable {
@@ -121,7 +121,7 @@ void PageSyncImpl::GetObject(
         auth_token, object_id,
         [ this, object_id, callback = std::move(callback) ](
             cloud_provider_firebase::Status status, uint64_t size,
-            mx::socket data) mutable {
+            zx::socket data) mutable {
           if (status == cloud_provider_firebase::Status::NETWORK_ERROR) {
             FXL_LOG(WARNING)
                 << log_prefix_
@@ -138,7 +138,7 @@ void PageSyncImpl::GetObject(
             FXL_LOG(WARNING)
                 << log_prefix_
                 << "Fetching remote object failed with status: " << status;
-            callback(storage::Status::IO_ERROR, 0, mx::socket());
+            callback(storage::Status::IO_ERROR, 0, zx::socket());
             return;
           }
 
@@ -149,7 +149,7 @@ void PageSyncImpl::GetObject(
                  FXL_LOG(ERROR)
                      << log_prefix_ << "Failed to retrieve the auth token, "
                      << "cannot download the object.";
-                 callback(storage::Status::IO_ERROR, 0, mx::socket());
+                 callback(storage::Status::IO_ERROR, 0, zx::socket());
                });
 }
 

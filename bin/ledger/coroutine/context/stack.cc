@@ -7,7 +7,7 @@
 #include <stdlib.h>
 
 #include "lib/fxl/logging.h"
-#include "mx/vmar.h"
+#include "zx/vmar.h"
 
 namespace context {
 
@@ -18,31 +18,31 @@ size_t ToFullPages(size_t value) {
   return (value + PAGE_SIZE - 1) & (~(PAGE_SIZE - 1));
 }
 
-void AllocateStack(const mx::vmo& vmo,
+void AllocateStack(const zx::vmo& vmo,
                    size_t vmo_offset,
                    size_t stack_size,
-                   mx::vmar* vmar,
+                   zx::vmar* vmar,
                    uintptr_t* addr) {
   uintptr_t allocate_address;
-  mx_status_t status = mx::vmar::root_self().allocate(
+  zx_status_t status = zx::vmar::root_self().allocate(
       0, stack_size + 2 * kStackGuardSize,
-      MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE |
-          MX_VM_FLAG_CAN_MAP_SPECIFIC,
+      ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
+          ZX_VM_FLAG_CAN_MAP_SPECIFIC,
       vmar, &allocate_address);
-  FXL_DCHECK(status == MX_OK);
+  FXL_DCHECK(status == ZX_OK);
 
   status = vmar->map(
       kStackGuardSize, vmo, vmo_offset, stack_size,
-      MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC, addr);
-  FXL_DCHECK(status == MX_OK);
+      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC, addr);
+  FXL_DCHECK(status == ZX_OK);
 }
 }  // namespace
 
 Stack::Stack(size_t stack_size) : stack_size_(ToFullPages(stack_size)) {
   FXL_DCHECK(stack_size_);
 
-  mx_status_t status = mx::vmo::create(2 * stack_size_, 0, &vmo_);
-  FXL_DCHECK(status == MX_OK);
+  zx_status_t status = zx::vmo::create(2 * stack_size_, 0, &vmo_);
+  FXL_DCHECK(status == ZX_OK);
 
   AllocateStack(vmo_, 0, stack_size_, &safe_stack_mapping_, &safe_stack_);
   AllocateStack(vmo_, stack_size_, stack_size_, &unsafe_stack_mapping_,
@@ -58,9 +58,9 @@ Stack::~Stack() {
 }
 
 void Stack::Release() {
-  mx_status_t status =
-      vmo_.op_range(MX_VMO_OP_DECOMMIT, 0, 2 * stack_size_, nullptr, 0);
-  FXL_DCHECK(status == MX_OK);
+  zx_status_t status =
+      vmo_.op_range(ZX_VMO_OP_DECOMMIT, 0, 2 * stack_size_, nullptr, 0);
+  FXL_DCHECK(status == ZX_OK);
 }
 
 }  // namespace context

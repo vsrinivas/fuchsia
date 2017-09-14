@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include <mx/socket.h>
+#include <zx/socket.h>
 
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
@@ -81,34 +81,34 @@ class FakeNetworkService : public network::NetworkService {
     loaders_.push_back(std::make_unique<FakeURLLoader>(
         std::move(loader), std::move(response_to_return_), &request_received_));
   }
-  void GetCookieStore(mx::channel /*cookie_store*/) override {
+  void GetCookieStore(zx::channel /*cookie_store*/) override {
     FXL_DCHECK(false);
   }
-  void CreateWebSocket(mx::channel /*socket*/) override { FXL_DCHECK(false); }
+  void CreateWebSocket(zx::channel /*socket*/) override { FXL_DCHECK(false); }
   void CreateTCPBoundSocket(
       netstack::NetAddressPtr /*local_address*/,
-      mx::channel /*bound_socket*/,
+      zx::channel /*bound_socket*/,
       const CreateTCPBoundSocketCallback& /*callback*/) override {
     FXL_DCHECK(false);
   }
   void CreateTCPConnectedSocket(
       netstack::NetAddressPtr /*remote_address*/,
-      mx::socket /*send_stream*/,
-      mx::socket /*receive_stream*/,
-      mx::channel /*client_socket*/,
+      zx::socket /*send_stream*/,
+      zx::socket /*receive_stream*/,
+      zx::channel /*client_socket*/,
       const CreateTCPConnectedSocketCallback& /*callback*/) override {
     FXL_DCHECK(false);
   }
-  void CreateUDPSocket(mx::channel /*socket*/) override { FXL_DCHECK(false); }
+  void CreateUDPSocket(zx::channel /*socket*/) override { FXL_DCHECK(false); }
   void CreateHttpServer(netstack::NetAddressPtr /*local_address*/,
-                        mx::channel /*delegate*/,
+                        zx::channel /*delegate*/,
                         const CreateHttpServerCallback& /*callback*/) override {
     FXL_DCHECK(false);
   }
-  void RegisterURLLoaderInterceptor(mx::channel /*factory*/) override {
+  void RegisterURLLoaderInterceptor(zx::channel /*factory*/) override {
     FXL_DCHECK(false);
   }
-  void CreateHostResolver(mx::channel /*host_resolver*/) override {
+  void CreateHostResolver(zx::channel /*host_resolver*/) override {
     FXL_DCHECK(false);
   }
 
@@ -143,7 +143,7 @@ class NetworkServiceImplTest : public test::TestWithMessageLoop {
       : network_service_(message_loop_.task_runner(),
                          [this] { return NewNetworkService(); }) {}
 
-  void SetSocketResponse(mx::socket body, uint32_t status_code) {
+  void SetSocketResponse(zx::socket body, uint32_t status_code) {
     network::URLResponsePtr server_response = network::URLResponse::New();
     server_response->body = network::URLBody::New();
     server_response->body->set_stream(std::move(body));

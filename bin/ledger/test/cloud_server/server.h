@@ -42,7 +42,7 @@ class Server {
   network::URLResponsePtr BuildResponse(
       const std::string& url,
       ResponseCode code,
-      mx::socket body,
+      zx::socket body,
       const std::unordered_map<std::string, std::string>& headers);
 
   network::URLResponsePtr BuildResponse(const std::string& url,

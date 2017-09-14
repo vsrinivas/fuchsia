@@ -22,7 +22,7 @@ source_set("convert") {
   public_deps = [
     ":byte_storage",
     "//garnet/public/lib/fxl",
-    "//magenta/system/ulib/mx",
+    "//zircon/system/ulib/zx",
     "//third_party/leveldb",
     "//third_party/rapidjson",
   ]

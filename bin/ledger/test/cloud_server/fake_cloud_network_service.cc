@@ -17,48 +17,48 @@ void FakeCloudNetworkService::CreateURLLoader(
   loader_bindings_.AddBinding(&url_loader_, std::move(loader));
 }
 
-void FakeCloudNetworkService::GetCookieStore(mx::channel /*cookie_store*/) {
+void FakeCloudNetworkService::GetCookieStore(zx::channel /*cookie_store*/) {
   FXL_NOTIMPLEMENTED();
 }
 
-void FakeCloudNetworkService::CreateWebSocket(mx::channel /*socket*/) {
+void FakeCloudNetworkService::CreateWebSocket(zx::channel /*socket*/) {
   FXL_NOTIMPLEMENTED();
 }
 
 void FakeCloudNetworkService::CreateTCPBoundSocket(
     netstack::NetAddressPtr /*local_address*/,
-    mx::channel /*bound_socket*/,
+    zx::channel /*bound_socket*/,
     const CreateTCPBoundSocketCallback& /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
 void FakeCloudNetworkService::CreateTCPConnectedSocket(
     netstack::NetAddressPtr /*remote_address*/,
-    mx::socket /*send_stream*/,
-    mx::socket /*receive_stream*/,
-    mx::channel /*client_socket*/,
+    zx::socket /*send_stream*/,
+    zx::socket /*receive_stream*/,
+    zx::channel /*client_socket*/,
     const CreateTCPConnectedSocketCallback& /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
-void FakeCloudNetworkService::CreateUDPSocket(mx::channel /*socket*/) {
+void FakeCloudNetworkService::CreateUDPSocket(zx::channel /*socket*/) {
   FXL_NOTIMPLEMENTED();
 }
 
 void FakeCloudNetworkService::CreateHttpServer(
     netstack::NetAddressPtr /*local_address*/,
-    mx::channel /*delegate*/,
+    zx::channel /*delegate*/,
     const CreateHttpServerCallback& /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
 void FakeCloudNetworkService::RegisterURLLoaderInterceptor(
-    mx::channel /*factory*/) {
+    zx::channel /*factory*/) {
   FXL_NOTIMPLEMENTED();
 }
 
 void FakeCloudNetworkService::CreateHostResolver(
-    mx::channel /*host_resolver*/) {
+    zx::channel /*host_resolver*/) {
   FXL_NOTIMPLEMENTED();
 }
 

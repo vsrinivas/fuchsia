@@ -7,8 +7,8 @@
 
 #include <stddef.h>
 
-#include "mx/vmar.h"
-#include "mx/vmo.h"
+#include "zx/vmar.h"
+#include "zx/vmo.h"
 
 namespace context {
 
@@ -39,10 +39,10 @@ class Stack {
   uintptr_t unsafe_stack() const { return unsafe_stack_; };
 
   const size_t stack_size_;
-  mx::vmo vmo_;
-  mx::vmar safe_stack_mapping_;
+  zx::vmo vmo_;
+  zx::vmar safe_stack_mapping_;
   uintptr_t safe_stack_;
-  mx::vmar unsafe_stack_mapping_;
+  zx::vmar unsafe_stack_mapping_;
   uintptr_t unsafe_stack_;
 };
 }  // namespace context

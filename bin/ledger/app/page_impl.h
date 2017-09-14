@@ -45,11 +45,11 @@ class PageImpl : public Page {
 
   void CreateReferenceFromSocket(
       uint64_t size,
-      mx::socket data,
+      zx::socket data,
       const CreateReferenceFromSocketCallback& callback) override;
 
   void CreateReferenceFromVmo(
-      mx::vmo data,
+      zx::vmo data,
       const CreateReferenceFromVmoCallback& callback) override;
 
   void StartTransaction(const StartTransactionCallback& callback) override;

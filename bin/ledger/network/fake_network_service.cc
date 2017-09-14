@@ -29,7 +29,7 @@ void FakeNetworkService::SetResponse(network::URLResponsePtr response) {
   response_to_return_ = std::move(response);
 }
 
-void FakeNetworkService::SetSocketResponse(mx::socket body,
+void FakeNetworkService::SetSocketResponse(zx::socket body,
                                            uint32_t status_code) {
   network::URLResponsePtr server_response = network::URLResponse::New();
   server_response->body = network::URLBody::New();

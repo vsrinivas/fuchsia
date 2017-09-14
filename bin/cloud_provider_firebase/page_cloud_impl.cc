@@ -35,7 +35,7 @@ void PageCloudImpl::GetCommits(fidl::Array<uint8_t> /*min_position_token*/,
 }
 
 void PageCloudImpl::AddObject(fidl::Array<uint8_t> /*id*/,
-                              mx::vmo /*data*/,
+                              zx::vmo /*data*/,
                               const AddObjectCallback& callback) {
   FXL_NOTIMPLEMENTED();
   callback(cloud_provider::Status::INTERNAL_ERROR);
@@ -44,7 +44,7 @@ void PageCloudImpl::AddObject(fidl::Array<uint8_t> /*id*/,
 void PageCloudImpl::GetObject(fidl::Array<uint8_t> /*id*/,
                               const GetObjectCallback& callback) {
   FXL_NOTIMPLEMENTED();
-  callback(cloud_provider::Status::INTERNAL_ERROR, 0u, mx::socket());
+  callback(cloud_provider::Status::INTERNAL_ERROR, 0u, zx::socket());
 }
 
 void PageCloudImpl::SetWatcher(

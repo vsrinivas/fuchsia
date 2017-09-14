@@ -175,7 +175,7 @@ class TestCloudProvider
   void AddObject(
       const std::string& auth_token,
       cloud_provider_firebase::ObjectIdView object_id,
-      mx::vmo data,
+      zx::vmo data,
       std::function<void(cloud_provider_firebase::Status)> callback) override {
     add_object_calls++;
     received_object_tokens.push_back(auth_token);

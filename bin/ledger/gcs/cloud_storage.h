@@ -10,8 +10,8 @@
 
 #include "apps/ledger/src/gcs/status.h"
 #include "lib/fxl/macros.h"
-#include "mx/socket.h"
-#include "mx/vmo.h"
+#include "zx/socket.h"
+#include "zx/vmo.h"
 
 namespace gcs {
 
@@ -22,13 +22,13 @@ class CloudStorage {
 
   virtual void UploadObject(std::string auth_token,
                             const std::string& key,
-                            mx::vmo data,
+                            zx::vmo data,
                             std::function<void(Status)> callback) = 0;
 
   virtual void DownloadObject(
       std::string auth_token,
       const std::string& key,
-      std::function<void(Status status, uint64_t size, mx::socket data)>
+      std::function<void(Status status, uint64_t size, zx::socket data)>
           callback) = 0;
 
  private:

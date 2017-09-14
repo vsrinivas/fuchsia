@@ -10,7 +10,7 @@
 #include "apps/ledger/src/storage/public/types.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
-#include "mx/vmo.h"
+#include "zx/vmo.h"
 
 namespace storage {
 
@@ -27,7 +27,7 @@ class Object {
   virtual Status GetData(fxl::StringView* data) const = 0;
 
   // Returns a vmo containing the data.
-  virtual Status GetVmo(mx::vmo* vmo) const;
+  virtual Status GetVmo(zx::vmo* vmo) const;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Object);

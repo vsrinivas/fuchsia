@@ -79,7 +79,7 @@ class CloudStorageImplTest : public test::TestWithMessageLoop {
 
 TEST_F(CloudStorageImplTest, TestUpload) {
   std::string content = "Hello World\n";
-  mx::vmo data;
+  zx::vmo data;
   ASSERT_TRUE(fsl::VmoFromString(content, &data));
 
   SetResponse("", 0, 200);
@@ -111,7 +111,7 @@ TEST_F(CloudStorageImplTest, TestUpload) {
 
 TEST_F(CloudStorageImplTest, TestUploadAuth) {
   std::string content = "Hello World\n";
-  mx::vmo data;
+  zx::vmo data;
   ASSERT_TRUE(fsl::VmoFromString(content, &data));
 
   SetResponse("", 0, 200);
@@ -128,7 +128,7 @@ TEST_F(CloudStorageImplTest, TestUploadAuth) {
 
 TEST_F(CloudStorageImplTest, TestUploadWhenObjectAlreadyExists) {
   std::string content;
-  mx::vmo data;
+  zx::vmo data;
   ASSERT_TRUE(fsl::VmoFromString(content, &data));
   SetResponse("", 0, 412);
 
@@ -146,7 +146,7 @@ TEST_F(CloudStorageImplTest, TestDownload) {
 
   Status status;
   uint64_t size;
-  mx::socket data;
+  zx::socket data;
   gcs_.DownloadObject("", "hello-world",
                       callback::Capture(MakeQuitTask(), &status, &size, &data));
   ASSERT_FALSE(RunLoopWithTimeout());
@@ -170,7 +170,7 @@ TEST_F(CloudStorageImplTest, TestDownloadAuth) {
 
   Status status;
   uint64_t size;
-  mx::socket data;
+  zx::socket data;
   gcs_.DownloadObject("this-is-a-token", "hello-world",
                       callback::Capture(MakeQuitTask(), &status, &size, &data));
   ASSERT_FALSE(RunLoopWithTimeout());
@@ -186,7 +186,7 @@ TEST_F(CloudStorageImplTest, TestDownloadNotFound) {
 
   Status status;
   uint64_t size;
-  mx::socket data;
+  zx::socket data;
   gcs_.DownloadObject("", "whoa",
                       callback::Capture(MakeQuitTask(), &status, &size, &data));
   ASSERT_FALSE(RunLoopWithTimeout());
@@ -205,7 +205,7 @@ TEST_F(CloudStorageImplTest, TestDownloadWithResponseBodyTooShort) {
 
   Status status;
   uint64_t size;
-  mx::socket data;
+  zx::socket data;
   gcs_.DownloadObject("", "hello-world",
                       callback::Capture(MakeQuitTask(), &status, &size, &data));
   ASSERT_FALSE(RunLoopWithTimeout());

@@ -75,7 +75,7 @@ TEST_F(DataSourceTest, Array) {
 TEST_F(DataSourceTest, Vmo) {
   std::string value = "Hello World";
 
-  mx::vmo vmo;
+  zx::vmo vmo;
   EXPECT_TRUE(fsl::VmoFromString(value, &vmo));
 
   EXPECT_TRUE(TestDataSource(value, DataSource::Create(std::move(vmo))));
@@ -125,7 +125,7 @@ TEST_F(DataSourceTest, SocketMultipleChunk) {
     EXPECT_EQ(i, chunks.size());
 
     size_t actual = 0;
-    EXPECT_EQ(MX_OK, socket_pair.socket1.write(0, value.c_str(), value.size(),
+    EXPECT_EQ(ZX_OK, socket_pair.socket1.write(0, value.c_str(), value.size(),
                                                &actual));
     EXPECT_EQ(value.size(), actual);
 

@@ -22,7 +22,7 @@ class SocketDrainerClient : public fsl::SocketDrainer::Client {
 
   ~SocketDrainerClient() override;
 
-  void Start(mx::socket source,
+  void Start(zx::socket source,
              const std::function<void(std::string)>& callback);
 
   void set_on_empty(fxl::Closure on_empty_callback) {

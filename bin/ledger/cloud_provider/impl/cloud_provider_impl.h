@@ -15,8 +15,8 @@
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/firebase/watch_client.h"
 #include "apps/ledger/src/gcs/cloud_storage.h"
-#include "mx/socket.h"
-#include "mx/vmo.h"
+#include "zx/socket.h"
+#include "zx/vmo.h"
 
 namespace cloud_provider_firebase {
 
@@ -44,13 +44,13 @@ class CloudProviderImpl : public CloudProvider {
 
   void AddObject(const std::string& auth_token,
                  ObjectIdView object_id,
-                 mx::vmo data,
+                 zx::vmo data,
                  std::function<void(Status)> callback) override;
 
   void GetObject(
       const std::string& auth_token,
       ObjectIdView object_id,
-      std::function<void(Status status, uint64_t size, mx::socket data)>
+      std::function<void(Status status, uint64_t size, zx::socket data)>
           callback) override;
 
  private:

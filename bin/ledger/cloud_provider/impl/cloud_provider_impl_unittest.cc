@@ -23,8 +23,8 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "mx/socket.h"
-#include "mx/vmo.h"
+#include "zx/socket.h"
+#include "zx/vmo.h"
 
 #include <rapidjson/document.h>
 
@@ -43,7 +43,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   // gcs::CloudStorage:
   void UploadObject(std::string auth_token,
                     const std::string& key,
-                    mx::vmo data,
+                    zx::vmo data,
                     std::function<void(gcs::Status)> callback) override {
     upload_auth_tokens_.push_back(std::move(auth_token));
     upload_keys_.push_back(key);
@@ -55,7 +55,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   void DownloadObject(
       std::string auth_token,
       const std::string& key,
-      std::function<void(gcs::Status status, uint64_t size, mx::socket data)>
+      std::function<void(gcs::Status status, uint64_t size, zx::socket data)>
           callback) override {
     download_auth_tokens_.push_back(std::move(auth_token));
     download_keys_.push_back(key);
@@ -152,12 +152,12 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   std::vector<std::string> download_keys_;
   std::vector<std::string> upload_auth_tokens_;
   std::vector<std::string> upload_keys_;
-  std::vector<mx::vmo> upload_data_;
+  std::vector<zx::vmo> upload_data_;
 
   // These members hold response data that GCS client is to return when called
   // by CloudProviderImpl.
   uint64_t download_response_size_ = 0;
-  mx::socket download_response_;
+  zx::socket download_response_;
   gcs::Status download_status_ = gcs::Status::OK;
 
   // These members track calls made by CloudProviderImpl to Firebase client.
@@ -636,7 +636,7 @@ TEST_F(CloudProviderImplTest, GetCommitsWhenThereAreNone) {
 }
 
 TEST_F(CloudProviderImplTest, AddObject) {
-  mx::vmo data;
+  zx::vmo data;
   ASSERT_TRUE(fsl::VmoFromString("bazinga", &data));
 
   Status status;
@@ -661,7 +661,7 @@ TEST_F(CloudProviderImplTest, GetObject) {
 
   Status status;
   uint64_t size;
-  mx::socket data;
+  zx::socket data;
   cloud_provider_->GetObject(
       "this-is-a-token", "object_id",
       callback::Capture(MakeQuitTask(), &status, &size, &data));
@@ -684,7 +684,7 @@ TEST_F(CloudProviderImplTest, GetObjectNotFound) {
 
   Status status;
   uint64_t size;
-  mx::socket data;
+  zx::socket data;
   cloud_provider_->GetObject(
       "", "object_id",
       callback::Capture(MakeQuitTask(), &status, &size, &data));

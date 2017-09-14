@@ -34,7 +34,7 @@ class IntegrationTest : public test::TestWithMessageLoop {
   void SetUp() override;
   void TearDown() override;
 
-  mx::socket StreamDataToSocket(std::string data);
+  zx::socket StreamDataToSocket(std::string data);
 
   std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
   NewLedgerAppInstance();

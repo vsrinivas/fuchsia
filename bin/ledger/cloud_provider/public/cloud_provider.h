@@ -14,8 +14,8 @@
 #include "apps/ledger/src/cloud_provider/public/record.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
 #include "lib/fxl/macros.h"
-#include "mx/socket.h"
-#include "mx/vmo.h"
+#include "zx/socket.h"
+#include "zx/vmo.h"
 
 namespace cloud_provider_firebase {
 
@@ -80,7 +80,7 @@ class CloudProvider {
   // Uploads the given object to the cloud under the given id.
   virtual void AddObject(const std::string& auth_token,
                          ObjectIdView object_id,
-                         mx::vmo data,
+                         zx::vmo data,
                          std::function<void(Status)> callback) = 0;
 
   // Retrieves the object of the given id from the cloud. The size of the object
@@ -89,7 +89,7 @@ class CloudProvider {
   virtual void GetObject(
       const std::string& auth_token,
       ObjectIdView object_id,
-      std::function<void(Status status, uint64_t size, mx::socket data)>
+      std::function<void(Status status, uint64_t size, zx::socket data)>
           callback) = 0;
 
  private:

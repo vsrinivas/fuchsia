@@ -315,7 +315,7 @@ void PageSnapshotImpl::Get(fidl::Array<uint8_t> key,
   ](storage::Status status, storage::Entry entry) mutable {
     if (status != storage::Status::OK) {
       callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
-               mx::vmo());
+               zx::vmo());
       return;
     }
     PageUtils::GetPartialReferenceAsBuffer(
@@ -364,7 +364,7 @@ void PageSnapshotImpl::Fetch(fidl::Array<uint8_t> key,
   ](storage::Status status, storage::Entry entry) {
     if (status != storage::Status::OK) {
       callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
-               mx::vmo());
+               zx::vmo());
       return;
     }
     PageUtils::GetPartialReferenceAsBuffer(
@@ -386,7 +386,7 @@ void PageSnapshotImpl::FetchPartial(fidl::Array<uint8_t> key,
   ](storage::Status status, storage::Entry entry) {
     if (status != storage::Status::OK) {
       callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
-               mx::vmo());
+               zx::vmo());
       return;
     }
 

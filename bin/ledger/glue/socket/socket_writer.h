@@ -13,7 +13,7 @@
 #include "lib/fidl/cpp/waiter/default.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
-#include "mx/socket.h"
+#include "zx/socket.h"
 
 namespace glue {
 
@@ -37,14 +37,14 @@ class SocketWriter {
       const FidlAsyncWaiter* waiter = fidl::GetDefaultAsyncWaiter());
   ~SocketWriter();
 
-  void Start(mx::socket destination);
+  void Start(zx::socket destination);
 
  private:
   void GetData();
   void WriteData(fxl::StringView data);
   void WaitForSocket();
-  static void WaitComplete(mx_status_t result,
-                           mx_signals_t pending,
+  static void WaitComplete(zx_status_t result,
+                           zx_signals_t pending,
                            uint64_t count,
                            void* context);
   void Done();
@@ -56,7 +56,7 @@ class SocketWriter {
   std::string data_;
   // Data left to send.
   fxl::StringView data_view_;
-  mx::socket destination_;
+  zx::socket destination_;
   const FidlAsyncWaiter* waiter_;
   FidlAsyncWaitID wait_id_ = 0;
 
@@ -69,7 +69,7 @@ class StringSocketWriter : public SocketWriter::Client {
   explicit StringSocketWriter(
       const FidlAsyncWaiter* waiter = fidl::GetDefaultAsyncWaiter());
 
-  void Start(std::string data, mx::socket destination);
+  void Start(std::string data, zx::socket destination);
 
  private:
   void GetNext(size_t offset,

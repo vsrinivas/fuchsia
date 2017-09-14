@@ -10,7 +10,7 @@
 #include <sstream>
 #include <unordered_map>
 
-#include <magenta/syscalls.h>
+#include <zircon/syscalls.h>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -54,7 +54,7 @@ class ListenerContainer : public glue::SocketWriter::Client {
 
   Filter* filter() { return filter_.get(); }
 
-  void Start(mx::socket socket) { writer_.Start(std::move(socket)); }
+  void Start(zx::socket socket) { writer_.Start(std::move(socket)); }
 
   void SendChunk(std::string data) {
     FXL_DCHECK(!data.empty());
@@ -266,7 +266,7 @@ void FillTimestamp(rapidjson::Value* value,
   }
 
   if (timestamp == std::numeric_limits<int64_t>::min()) {
-    timestamp = mx_time_get(MX_CLOCK_UTC) / 1000;
+    timestamp = zx_time_get(ZX_CLOCK_UTC) / 1000;
   }
 
   std::vector<std::string> elements_to_change;
@@ -308,7 +308,7 @@ class FirebaseServer::Listeners {
 
   void AddListener(PathView path,
                    std::unique_ptr<Filter> filter,
-                   mx::socket socket,
+                   zx::socket socket,
                    rapidjson::Value* initial_value);
 
   void SendEvent(const std::string& event_name,
@@ -322,7 +322,7 @@ class FirebaseServer::Listeners {
 
 void FirebaseServer::Listeners::AddListener(PathView path,
                                             std::unique_ptr<Filter> filter,
-                                            mx::socket socket,
+                                            zx::socket socket,
                                             rapidjson::Value* initial_value) {
   if (!path.empty()) {
     children_[path[0]].AddListener(path.Tail(), std::move(filter),

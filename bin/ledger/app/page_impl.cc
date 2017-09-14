@@ -75,7 +75,7 @@ void PageImpl::Delete(fidl::Array<uint8_t> key,
 //   => (Status status, Reference reference);
 void PageImpl::CreateReferenceFromSocket(
     uint64_t size,
-    mx::socket data,
+    zx::socket data,
     const CreateReferenceFromSocketCallback& callback) {
   auto timed_callback =
       TRACE_CALLBACK(callback, "ledger", "page_create_reference_from_socket");
@@ -86,7 +86,7 @@ void PageImpl::CreateReferenceFromSocket(
 // CreateReferenceFromVmo(handle<vmo> data)
 //   => (Status status, Reference reference);
 void PageImpl::CreateReferenceFromVmo(
-    mx::vmo data,
+    zx::vmo data,
     const CreateReferenceFromSocketCallback& callback) {
   auto timed_callback =
       TRACE_CALLBACK(callback, "ledger", "page_create_reference_from_vmo");

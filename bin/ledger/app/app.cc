@@ -8,7 +8,7 @@
 #include <memory>
 #include <utility>
 
-#include <magenta/device/vfs.h>
+#include <zircon/device/vfs.h>
 #include <trace-provider/provider.h>
 
 #include "apps/ledger/services/internal/internal.fidl.h"

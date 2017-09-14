@@ -34,7 +34,7 @@ source_set("impl") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//magenta/system/ulib/trace",
+    "//zircon/system/ulib/trace",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

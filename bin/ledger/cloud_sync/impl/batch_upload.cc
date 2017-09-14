@@ -98,7 +98,7 @@ void BatchUpload::UploadNextObject() {
 }
 
 void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
-  mx::vmo data;
+  zx::vmo data;
   auto status = object->GetVmo(&data);
   // TODO(ppi): LE-225 Handle disk IO errors.
   FXL_DCHECK(status == storage::Status::OK);

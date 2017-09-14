@@ -95,7 +95,7 @@ class PageSyncImpl : public PageSync,
   void GetObject(storage::ObjectIdView object_id,
                  std::function<void(storage::Status status,
                                     uint64_t size,
-                                    mx::socket data)> callback) override;
+                                    zx::socket data)> callback) override;
 
   // cloud_provider_firebase::CommitWatcher:
   void OnRemoteCommits(

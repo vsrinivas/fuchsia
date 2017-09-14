@@ -99,7 +99,7 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
 
   void GetObject(
       ObjectIdView object_id,
-      std::function<void(Status status, uint64_t size, mx::socket data)>
+      std::function<void(Status status, uint64_t size, zx::socket data)>
           callback) override {
     std::string id = object_id.ToString();
     std::string& value = id_to_value_[id];

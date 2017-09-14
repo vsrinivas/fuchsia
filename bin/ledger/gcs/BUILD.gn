@@ -22,7 +22,7 @@ source_set("gcs") {
     "//apps/ledger/src/glue/socket",
     "//apps/ledger/src/network",
     "//garnet/public/lib/fxl",
-    "//magenta/system/ulib/mx",
+    "//zircon/system/ulib/zx",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

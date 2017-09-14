@@ -6,7 +6,7 @@
 
 #include "apps/ledger/src/convert/convert.h"
 #include "lib/fsl/socket/socket_drainer.h"
-#include "mx/vmar.h"
+#include "zx/vmar.h"
 
 namespace storage {
 
@@ -51,19 +51,19 @@ class StringLikeDataSource : public DataSource {
 
 class VmoDataChunk : public DataSource::DataChunk {
  public:
-  VmoDataChunk(mx::vmo vmo, uint64_t vmo_size)
+  VmoDataChunk(zx::vmo vmo, uint64_t vmo_size)
       : vmo_(std::move(vmo)), vmo_size_(vmo_size) {}
 
-  mx_status_t Init() {
+  zx_status_t Init() {
     uintptr_t allocate_address;
-    mx_status_t status = mx::vmar::root_self().allocate(
-        0, ToFullPages(vmo_size_), MX_VM_FLAG_CAN_MAP_READ, &vmar_,
+    zx_status_t status = zx::vmar::root_self().allocate(
+        0, ToFullPages(vmo_size_), ZX_VM_FLAG_CAN_MAP_READ, &vmar_,
         &allocate_address);
-    if (status != MX_OK) {
+    if (status != ZX_OK) {
       return status;
     }
 
-    return vmar_.map(0, vmo_, 0, vmo_size_, MX_VM_FLAG_PERM_READ,
+    return vmar_.map(0, vmo_, 0, vmo_size_, ZX_VM_FLAG_PERM_READ,
                      &mapped_address_);
   }
 
@@ -76,18 +76,18 @@ class VmoDataChunk : public DataSource::DataChunk {
     return fxl::StringView(reinterpret_cast<char*>(mapped_address_), vmo_size_);
   }
 
-  mx::vmo vmo_;
+  zx::vmo vmo_;
   uint64_t vmo_size_;
-  mx::vmar vmar_;
+  zx::vmar vmar_;
   uintptr_t mapped_address_;
 };
 
 class VmoDataSource : public DataSource {
  public:
-  explicit VmoDataSource(mx::vmo value) : vmo_(std::move(value)) {
+  explicit VmoDataSource(zx::vmo value) : vmo_(std::move(value)) {
     FXL_DCHECK(vmo_);
-    mx_status_t status = vmo_.get_size(&vmo_size_);
-    if (status != MX_OK) {
+    zx_status_t status = vmo_.get_size(&vmo_size_);
+    if (status != ZX_OK) {
       vmo_.reset();
     }
   }
@@ -106,14 +106,14 @@ class VmoDataSource : public DataSource {
       return;
     }
     auto data = std::make_unique<VmoDataChunk>(std::move(vmo_), vmo_size_);
-    if (data->Init() != MX_OK) {
+    if (data->Init() != ZX_OK) {
       callback(nullptr, Status::ERROR);
       return;
     }
     callback(std::move(data), Status::DONE);
   }
 
-  mx::vmo vmo_;
+  zx::vmo vmo_;
   uint64_t vmo_size_;
 #ifndef NDEBUG
   bool called_ = false;
@@ -122,7 +122,7 @@ class VmoDataSource : public DataSource {
 
 class SocketDataSource : public DataSource, public fsl::SocketDrainer::Client {
  public:
-  SocketDataSource(mx::socket socket, uint64_t expected_size)
+  SocketDataSource(zx::socket socket, uint64_t expected_size)
       : socket_(std::move(socket)),
         expected_size_(expected_size),
         remaining_bytes_(expected_size) {
@@ -171,7 +171,7 @@ class SocketDataSource : public DataSource, public fsl::SocketDrainer::Client {
               Status::DONE);
   }
 
-  mx::socket socket_;
+  zx::socket socket_;
   uint64_t expected_size_;
   uint64_t remaining_bytes_;
   std::unique_ptr<fsl::SocketDrainer> socket_drainer_;
@@ -214,11 +214,11 @@ std::unique_ptr<DataSource> DataSource::Create(fidl::Array<uint8_t> value) {
       std::move(value));
 }
 
-std::unique_ptr<DataSource> DataSource::Create(mx::vmo vmo) {
+std::unique_ptr<DataSource> DataSource::Create(zx::vmo vmo) {
   return std::make_unique<VmoDataSource>(std::move(vmo));
 }
 
-std::unique_ptr<DataSource> DataSource::Create(mx::socket socket,
+std::unique_ptr<DataSource> DataSource::Create(zx::socket socket,
                                                uint64_t size) {
   return std::make_unique<SocketDataSource>(std::move(socket), size);
 }

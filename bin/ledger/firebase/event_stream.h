@@ -30,7 +30,7 @@ class EventStream : public fsl::SocketDrainer::Client {
   EventStream();
   ~EventStream() override;
 
-  void Start(mx::socket source,
+  void Start(zx::socket source,
              const std::function<EventCallback>& event_callback,
              const std::function<CompletionCallback>& completion_callback);
 

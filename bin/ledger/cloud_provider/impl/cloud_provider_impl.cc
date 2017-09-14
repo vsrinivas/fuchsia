@@ -84,7 +84,7 @@ void CloudProviderImpl::GetCommits(
 
 void CloudProviderImpl::AddObject(const std::string& auth_token,
                                   ObjectIdView object_id,
-                                  mx::vmo data,
+                                  zx::vmo data,
                                   std::function<void(Status)> callback) {
   // Even though this yields path to be used in GCS, we use Firebase key
   // encoding, as it happens to produce valid GCS object names. To be revisited
@@ -99,12 +99,12 @@ void CloudProviderImpl::AddObject(const std::string& auth_token,
 void CloudProviderImpl::GetObject(
     const std::string& auth_token,
     ObjectIdView object_id,
-    std::function<void(Status status, uint64_t size, mx::socket data)>
+    std::function<void(Status status, uint64_t size, zx::socket data)>
         callback) {
   cloud_storage_->DownloadObject(
       auth_token, firebase::EncodeKey(object_id),
       [callback = std::move(callback)](gcs::Status status, uint64_t size,
-                                       mx::socket data) {
+                                       zx::socket data) {
         callback(ConvertGcsStatus(status), size, std::move(data));
       });
 }
