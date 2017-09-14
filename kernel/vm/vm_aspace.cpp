@@ -28,6 +28,7 @@
 #include <vm/vm_object.h>
 #include <vm/vm_object_paged.h>
 #include <vm/vm_object_physical.h>
+#include <zircon/types.h>
 
 #if WITH_LIB_VDSO
 #include <lib/vdso.h>
@@ -133,7 +134,7 @@ VmAspace::VmAspace(vaddr_t base, size_t size, uint32_t flags, const char* name)
     LTRACEF("%p '%s'\n", this, name_);
 }
 
-status_t VmAspace::Init() {
+zx_status_t VmAspace::Init() {
     canary_.Assert();
 
     LTRACEF("%p '%s'\n", this, name_);
@@ -144,7 +145,7 @@ status_t VmAspace::Init() {
     uint arch_aspace_flags =
         (is_high_kernel ? ARCH_ASPACE_FLAG_KERNEL : 0u) |
         (is_guest ? ARCH_ASPACE_FLAG_GUEST_PASPACE : 0u);
-    status_t status = arch_aspace_.Init(base_, size_, arch_aspace_flags);
+    zx_status_t status = arch_aspace_.Init(base_, size_, arch_aspace_flags);
     if (status != ZX_OK) {
         return status;
     }
@@ -238,7 +239,7 @@ fbl::RefPtr<VmAddressRegion> VmAspace::RootVmar() {
     return fbl::move(ref);
 }
 
-status_t VmAspace::Destroy() {
+zx_status_t VmAspace::Destroy() {
     canary_.Assert();
     LTRACEF("%p '%s'\n", this, name_);
 
@@ -252,7 +253,7 @@ status_t VmAspace::Destroy() {
 
     // tear down and free all of the regions in our address space
     if (root_vmar_) {
-        status_t status = root_vmar_->DestroyLocked();
+        zx_status_t status = root_vmar_->DestroyLocked();
         if (status != ZX_OK && status != ZX_ERR_BAD_STATE) {
             return status;
         }
@@ -270,9 +271,9 @@ bool VmAspace::is_destroyed() const {
     return aspace_destroyed_;
 }
 
-status_t VmAspace::MapObjectInternal(fbl::RefPtr<VmObject> vmo, const char* name, uint64_t offset,
-                                     size_t size, void** ptr, uint8_t align_pow2, uint vmm_flags,
-                                     uint arch_mmu_flags) {
+zx_status_t VmAspace::MapObjectInternal(fbl::RefPtr<VmObject> vmo, const char* name, uint64_t offset,
+                                        size_t size, void** ptr, uint8_t align_pow2, uint vmm_flags,
+                                        uint arch_mmu_flags) {
 
     canary_.Assert();
     LTRACEF("aspace %p name '%s' vmo %p, offset %#" PRIx64 " size %#zx "
@@ -317,9 +318,9 @@ status_t VmAspace::MapObjectInternal(fbl::RefPtr<VmObject> vmo, const char* name
 
     // allocate a region and put it in the aspace list
     fbl::RefPtr<VmMapping> r(nullptr);
-    status_t status = RootVmar()->CreateVmMapping(vmar_offset, size, align_pow2,
-                                                  vmar_flags,
-                                                  vmo, offset, arch_mmu_flags, name, &r);
+    zx_status_t status = RootVmar()->CreateVmMapping(vmar_offset, size, align_pow2,
+                                                     vmar_flags,
+                                                     vmo, offset, arch_mmu_flags, name, &r);
     if (status != ZX_OK) {
         return status;
     }
@@ -338,7 +339,7 @@ status_t VmAspace::MapObjectInternal(fbl::RefPtr<VmObject> vmo, const char* name
     return ZX_OK;
 }
 
-status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
+zx_status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
     canary_.Assert();
     LTRACEF("aspace %p name '%s' size %#zx vaddr %#" PRIxPTR "\n", this, name, size, vaddr);
 
@@ -377,8 +378,8 @@ status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
                              arch_mmu_flags);
 }
 
-status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint8_t align_pow2,
-                                 paddr_t paddr, uint vmm_flags, uint arch_mmu_flags) {
+zx_status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint8_t align_pow2,
+                                    paddr_t paddr, uint vmm_flags, uint arch_mmu_flags) {
     canary_.Assert();
     LTRACEF("aspace %p name '%s' size %#zx ptr %p paddr %#" PRIxPTR " vmm_flags 0x%x arch_mmu_flags 0x%x\n",
             this, name, size, ptr ? *ptr : 0, paddr, vmm_flags, arch_mmu_flags);
@@ -394,7 +395,7 @@ status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint
 
     // create a vm object to back it
     fbl::RefPtr<VmObject> vmo;
-    status_t status = VmObjectPhysical::Create(paddr, size, &vmo);
+    zx_status_t status = VmObjectPhysical::Create(paddr, size, &vmo);
     if (status != ZX_OK)
         return status;
 
@@ -411,8 +412,8 @@ status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint
                              arch_mmu_flags);
 }
 
-status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr, uint8_t align_pow2,
-                                   uint vmm_flags, uint arch_mmu_flags) {
+zx_status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr, uint8_t align_pow2,
+                                      uint vmm_flags, uint arch_mmu_flags) {
     canary_.Assert();
     LTRACEF("aspace %p name '%s' size 0x%zx ptr %p align %hhu vmm_flags 0x%x arch_mmu_flags 0x%x\n", this,
             name, size, ptr ? *ptr : 0, align_pow2, vmm_flags, arch_mmu_flags);
@@ -446,8 +447,8 @@ status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr, ui
                              arch_mmu_flags);
 }
 
-status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t align_pow2,
-                         uint vmm_flags, uint arch_mmu_flags) {
+zx_status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t align_pow2,
+                            uint vmm_flags, uint arch_mmu_flags) {
     canary_.Assert();
     LTRACEF("aspace %p name '%s' size 0x%zx ptr %p align %hhu vmm_flags 0x%x arch_mmu_flags 0x%x\n", this,
             name, size, ptr ? *ptr : 0, align_pow2, vmm_flags, arch_mmu_flags);
@@ -481,7 +482,7 @@ status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t alig
                              arch_mmu_flags);
 }
 
-status_t VmAspace::FreeRegion(vaddr_t va) {
+zx_status_t VmAspace::FreeRegion(vaddr_t va) {
     DEBUG_ASSERT(!is_user());
 
     fbl::RefPtr<VmAddressRegionOrMapping> r = RootVmar()->FindRegion(va);
@@ -522,7 +523,7 @@ void VmAspace::AttachToThread(thread_t* t) {
     t->aspace = reinterpret_cast<vmm_aspace_t*>(this);
 }
 
-status_t VmAspace::PageFault(vaddr_t va, uint flags) {
+zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
     canary_.Assert();
     DEBUG_ASSERT(!aspace_destroyed_);
     LTRACEF("va %#" PRIxPTR ", flags %#x\n", va, flags);

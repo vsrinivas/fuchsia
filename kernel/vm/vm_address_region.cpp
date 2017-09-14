@@ -18,6 +18,7 @@
 #include <trace.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
+#include <zircon/types.h>
 
 #if WITH_LIB_VDSO
 #include <lib/vdso.h>
@@ -62,8 +63,8 @@ VmAddressRegion::VmAddressRegion()
     LTRACEF("%p '%s'\n", this, name_);
 }
 
-status_t VmAddressRegion::CreateRoot(VmAspace& aspace, uint32_t vmar_flags,
-                                     fbl::RefPtr<VmAddressRegion>* out) {
+zx_status_t VmAddressRegion::CreateRoot(VmAspace& aspace, uint32_t vmar_flags,
+                                        fbl::RefPtr<VmAddressRegion>* out) {
     DEBUG_ASSERT(out);
 
     fbl::AllocChecker ac;
@@ -77,11 +78,11 @@ status_t VmAddressRegion::CreateRoot(VmAspace& aspace, uint32_t vmar_flags,
     return ZX_OK;
 }
 
-status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint8_t align_pow2,
-                                                uint32_t vmar_flags, fbl::RefPtr<VmObject> vmo,
-                                                uint64_t vmo_offset, uint arch_mmu_flags,
-                                                const char* name,
-                                                fbl::RefPtr<VmAddressRegionOrMapping>* out) {
+zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint8_t align_pow2,
+                                                   uint32_t vmar_flags, fbl::RefPtr<VmObject> vmo,
+                                                   uint64_t vmo_offset, uint arch_mmu_flags,
+                                                   const char* name,
+                                                   fbl::RefPtr<VmAddressRegionOrMapping>* out) {
     DEBUG_ASSERT(out);
 
     AutoLock guard(aspace_->lock());
@@ -112,7 +113,7 @@ status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint
     // way anyway.
     if (vmo) {
         uint32_t cache_policy;
-        status_t status = vmo->GetMappingCachePolicy(&cache_policy);
+        zx_status_t status = vmo->GetMappingCachePolicy(&cache_policy);
         if (status == ZX_OK) {
             // Warn in the event that we somehow receive a VMO that has a cache
             // policy set while also holding cache policy flags within the arch
@@ -156,7 +157,7 @@ status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint
         }
     } else {
         // If we're not mapping to a specific place, search for an opening.
-        status_t status = AllocSpotLocked(size, align_pow2, arch_mmu_flags, &new_base);
+        zx_status_t status = AllocSpotLocked(size, align_pow2, arch_mmu_flags, &new_base);
         if (status != ZX_OK) {
             return status;
         }
@@ -202,9 +203,9 @@ status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint
     return ZX_OK;
 }
 
-status_t VmAddressRegion::CreateSubVmar(size_t offset, size_t size, uint8_t align_pow2,
-                                        uint32_t vmar_flags, const char* name,
-                                        fbl::RefPtr<VmAddressRegion>* out) {
+zx_status_t VmAddressRegion::CreateSubVmar(size_t offset, size_t size, uint8_t align_pow2,
+                                           uint32_t vmar_flags, const char* name,
+                                           fbl::RefPtr<VmAddressRegion>* out) {
     DEBUG_ASSERT(out);
 
     if (!IS_PAGE_ALIGNED(size)) {
@@ -217,8 +218,8 @@ status_t VmAddressRegion::CreateSubVmar(size_t offset, size_t size, uint8_t alig
     }
 
     fbl::RefPtr<VmAddressRegionOrMapping> res;
-    status_t status = CreateSubVmarInternal(offset, size, align_pow2, vmar_flags, nullptr, 0,
-                                            ARCH_MMU_FLAG_INVALID, name, &res);
+    zx_status_t status = CreateSubVmarInternal(offset, size, align_pow2, vmar_flags, nullptr, 0,
+                                               ARCH_MMU_FLAG_INVALID, name, &res);
     if (status != ZX_OK) {
         return status;
     }
@@ -227,10 +228,10 @@ status_t VmAddressRegion::CreateSubVmar(size_t offset, size_t size, uint8_t alig
     return ZX_OK;
 }
 
-status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size, uint8_t align_pow2,
-                                          uint32_t vmar_flags, fbl::RefPtr<VmObject> vmo,
-                                          uint64_t vmo_offset, uint arch_mmu_flags, const char* name,
-                                          fbl::RefPtr<VmMapping>* out) {
+zx_status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size, uint8_t align_pow2,
+                                             uint32_t vmar_flags, fbl::RefPtr<VmObject> vmo,
+                                             uint64_t vmo_offset, uint arch_mmu_flags, const char* name,
+                                             fbl::RefPtr<VmMapping>* out) {
     DEBUG_ASSERT(out);
     LTRACEF("%p %#zx %#zx %x\n", this, mapping_offset, size, vmar_flags);
 
@@ -267,7 +268,7 @@ status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size, ui
     }
 
     fbl::RefPtr<VmAddressRegionOrMapping> res;
-    status_t status =
+    zx_status_t status =
         CreateSubVmarInternal(mapping_offset, size, align_pow2, vmar_flags, fbl::move(vmo),
                               vmo_offset, arch_mmu_flags, name, &res);
     if (status != ZX_OK) {
@@ -278,7 +279,7 @@ status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size, ui
     return ZX_OK;
 }
 
-status_t VmAddressRegion::OverwriteVmMapping(
+zx_status_t VmAddressRegion::OverwriteVmMapping(
     vaddr_t base, size_t size, uint32_t vmar_flags,
     fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
     uint arch_mmu_flags, fbl::RefPtr<VmAddressRegionOrMapping>* out) {
@@ -297,7 +298,7 @@ status_t VmAddressRegion::OverwriteVmMapping(
         return ZX_ERR_NO_MEMORY;
     }
 
-    status_t status = UnmapInternalLocked(base, size, false /* can_destroy_regions */);
+    zx_status_t status = UnmapInternalLocked(base, size, false /* can_destroy_regions */);
     if (status != ZX_OK) {
         return status;
     }
@@ -307,7 +308,7 @@ status_t VmAddressRegion::OverwriteVmMapping(
     return ZX_OK;
 }
 
-status_t VmAddressRegion::DestroyLocked() {
+zx_status_t VmAddressRegion::DestroyLocked() {
     canary_.Assert();
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
     LTRACEF("%p '%s'\n", this, name_);
@@ -321,7 +322,7 @@ status_t VmAddressRegion::DestroyLocked() {
         fbl::RefPtr<VmAddressRegionOrMapping> child(&subregions_.front());
 
         // DestroyLocked should remove this child from our list on success
-        status_t status = child->DestroyLocked();
+        zx_status_t status = child->DestroyLocked();
         if (status != ZX_OK) {
             // TODO(teisenbe): Do we want to handle this case differently?
             return status;
@@ -379,7 +380,7 @@ size_t VmAddressRegion::AllocatedPagesLocked() const {
     return sum;
 }
 
-status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags) {
+zx_status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags) {
     canary_.Assert();
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
@@ -508,8 +509,8 @@ not_found:
     return true; // not_found: stop search
 }
 
-status_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags,
-                                          vaddr_t* spot) {
+zx_status_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags,
+                                             vaddr_t* spot) {
     canary_.Assert();
     DEBUG_ASSERT(size > 0 && IS_PAGE_ALIGNED(size));
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
@@ -574,7 +575,7 @@ void VmAddressRegion::Activate() {
     parent_->subregions_.insert(fbl::RefPtr<VmAddressRegionOrMapping>(this));
 }
 
-status_t VmAddressRegion::Unmap(vaddr_t base, size_t size) {
+zx_status_t VmAddressRegion::Unmap(vaddr_t base, size_t size) {
     canary_.Assert();
 
     size = ROUNDUP(size, PAGE_SIZE);
@@ -590,7 +591,7 @@ status_t VmAddressRegion::Unmap(vaddr_t base, size_t size) {
     return UnmapInternalLocked(base, size, true /* can_destroy_regions */);
 }
 
-status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size, bool can_destroy_regions) {
+zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size, bool can_destroy_regions) {
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     if (!is_in_range(base, size)) {
@@ -645,7 +646,7 @@ status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size, bool ca
 
             // If we're unmapping the entire region, just call Destroy
             if (unmap_base == curr->base() && unmap_size == curr->size()) {
-                __UNUSED status_t status = curr->as_vm_mapping()->DestroyLocked();
+                __UNUSED zx_status_t status = curr->as_vm_mapping()->DestroyLocked();
                 DEBUG_ASSERT(status == ZX_OK);
                 continue;
             }
@@ -657,14 +658,14 @@ status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size, bool ca
             // TODO(teisenbe): Technically arch_mmu_unmap() itself can also
             // fail.  We need to rework the system so that is no longer
             // possible.
-            status_t status = curr->as_vm_mapping()->UnmapLocked(unmap_base, unmap_size);
+            zx_status_t status = curr->as_vm_mapping()->UnmapLocked(unmap_base, unmap_size);
             DEBUG_ASSERT(status == ZX_OK || curr == begin);
             if (status != ZX_OK) {
                 return status;
             }
         } else {
             DEBUG_ASSERT(curr->base() >= base && curr_end <= end_addr);
-            __UNUSED status_t status = curr->DestroyLocked();
+            __UNUSED zx_status_t status = curr->DestroyLocked();
             DEBUG_ASSERT(status == ZX_OK);
         }
     }
@@ -672,7 +673,7 @@ status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size, bool ca
     return ZX_OK;
 }
 
-status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags) {
+zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags) {
     canary_.Assert();
 
     size = ROUNDUP(size, PAGE_SIZE);
@@ -740,8 +741,8 @@ status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mmu_f
         const vaddr_t protect_end = fbl::min(curr_end, end_addr);
         const size_t protect_size = protect_end - protect_base;
 
-        status_t status = itr->as_vm_mapping()->ProtectLocked(protect_base, protect_size,
-                                                              new_arch_mmu_flags);
+        zx_status_t status = itr->as_vm_mapping()->ProtectLocked(protect_base, protect_size,
+                                                                 new_arch_mmu_flags);
         if (status != ZX_OK) {
             // TODO(teisenbe): Try to work out a way to guarantee success, or
             // provide a full unwind?
@@ -754,8 +755,8 @@ status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mmu_f
     return ZX_OK;
 }
 
-status_t VmAddressRegion::LinearRegionAllocatorLocked(size_t size, uint8_t align_pow2,
-                                                      uint arch_mmu_flags, vaddr_t* spot) {
+zx_status_t VmAddressRegion::LinearRegionAllocatorLocked(size_t size, uint8_t align_pow2,
+                                                         uint arch_mmu_flags, vaddr_t* spot) {
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     const vaddr_t base = 0;
@@ -825,9 +826,9 @@ constexpr size_t AllocationSpotsInRange(size_t range_size, size_t alloc_size, ui
 // Perform allocations for VMARs that aren't using the COMPACT policy.  This
 // allocator works by choosing uniformly at random from the set of positions
 // that could satisfy the allocation.
-status_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
-                                                                    uint arch_mmu_flags,
-                                                                    vaddr_t* spot) {
+zx_status_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
+                                                                       uint arch_mmu_flags,
+                                                                       vaddr_t* spot) {
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
     DEBUG_ASSERT(spot);
 
@@ -896,9 +897,9 @@ status_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t size,
 // The COMPACT allocator begins by picking a random offset in the region to
 // start allocations at, and then places new allocations to the left and right
 // of the original region with small random-length gaps between.
-status_t VmAddressRegion::CompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
-                                                                 uint arch_mmu_flags,
-                                                                 vaddr_t* spot) {
+zx_status_t VmAddressRegion::CompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
+                                                                    uint arch_mmu_flags,
+                                                                    vaddr_t* spot) {
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     align_pow2 = fbl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));

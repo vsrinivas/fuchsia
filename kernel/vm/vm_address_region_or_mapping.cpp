@@ -16,6 +16,7 @@
 #include <string.h>
 #include <trace.h>
 #include <vm/vm_aspace.h>
+#include <zircon/types.h>
 
 using fbl::AutoLock;
 
@@ -29,7 +30,7 @@ VmAddressRegionOrMapping::VmAddressRegionOrMapping(
     LTRACEF("%p\n", this);
 }
 
-status_t VmAddressRegionOrMapping::Destroy() {
+zx_status_t VmAddressRegionOrMapping::Destroy() {
     canary_.Assert();
 
     AutoLock guard(aspace_->lock());

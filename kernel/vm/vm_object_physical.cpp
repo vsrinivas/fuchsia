@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/types.h>
 
 using fbl::AutoLock;
 
@@ -34,7 +35,7 @@ VmObjectPhysical::~VmObjectPhysical() {
     LTRACEF("%p\n", this);
 }
 
-status_t VmObjectPhysical::Create(paddr_t base, uint64_t size, fbl::RefPtr<VmObject>* obj) {
+zx_status_t VmObjectPhysical::Create(paddr_t base, uint64_t size, fbl::RefPtr<VmObject>* obj) {
     if (!IS_PAGE_ALIGNED(base) || !IS_PAGE_ALIGNED(size) || size == 0)
         return ZX_ERR_INVALID_ARGS;
 
@@ -68,8 +69,8 @@ void VmObjectPhysical::Dump(uint depth, bool verbose) {
 }
 
 // get the physical address of a page at offset
-status_t VmObjectPhysical::GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
-                                         vm_page_t** _page, paddr_t* _pa) {
+zx_status_t VmObjectPhysical::GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
+                                            vm_page_t** _page, paddr_t* _pa) {
     canary_.Assert();
 
     if (_page)
@@ -87,8 +88,8 @@ status_t VmObjectPhysical::GetPageLocked(uint64_t offset, uint pf_flags, list_no
     return ZX_OK;
 }
 
-status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
-                                      size_t buffer_size) {
+zx_status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
+                                         size_t buffer_size) {
     canary_.Assert();
 
     if (unlikely(len == 0))
@@ -130,7 +131,7 @@ status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ptr<pa
     return ZX_OK;
 }
 
-status_t VmObjectPhysical::GetMappingCachePolicy(uint32_t* cache_policy) {
+zx_status_t VmObjectPhysical::GetMappingCachePolicy(uint32_t* cache_policy) {
     AutoLock l(&lock_);
 
     if (!cache_policy) {
@@ -141,7 +142,7 @@ status_t VmObjectPhysical::GetMappingCachePolicy(uint32_t* cache_policy) {
     return ZX_OK;
 }
 
-status_t VmObjectPhysical::SetMappingCachePolicy(const uint32_t cache_policy) {
+zx_status_t VmObjectPhysical::SetMappingCachePolicy(const uint32_t cache_policy) {
     AutoLock l(&lock_);
 
     // Is it a valid cache flag?

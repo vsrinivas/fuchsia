@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page_list.h>
+#include <zircon/types.h>
 
 // Creation flags for VmAddressRegion and VmMappings
 
@@ -96,7 +97,7 @@ public:
     //
     // Returns ZX_OK on success, ZX_ERR_BAD_STATE if already dead, and other
     // values on error (typically unmap failure).
-    virtual status_t Destroy();
+    virtual zx_status_t Destroy();
 
     // accessors
     vaddr_t base() const { return base_; }
@@ -114,7 +115,7 @@ public:
 
     // Page fault in an address within the region.  Recursively traverses
     // the regions to find the target mapping, if it exists.
-    virtual status_t PageFault(vaddr_t va, uint pf_flags) = 0;
+    virtual zx_status_t PageFault(vaddr_t va, uint pf_flags) = 0;
 
     // WAVL tree key function
     vaddr_t GetKey() const { return base(); }
@@ -160,7 +161,7 @@ protected:
     bool IsAliveLocked() const;
 
     // Version of Destroy() that does not acquire the aspace lock
-    virtual status_t DestroyLocked() = 0;
+    virtual zx_status_t DestroyLocked() = 0;
 
     // Version of AllocatedPages() that does not acquire the aspace lock
     virtual size_t AllocatedPagesLocked() const = 0;
@@ -202,18 +203,18 @@ protected:
 class VmAddressRegion : public VmAddressRegionOrMapping {
 public:
     // Create a root region.  This will span the entire aspace
-    static status_t CreateRoot(VmAspace& aspace, uint32_t vmar_flags,
+    static zx_status_t CreateRoot(VmAspace& aspace, uint32_t vmar_flags,
                                fbl::RefPtr<VmAddressRegion>* out);
     // Create a subregion of this region
-    virtual status_t CreateSubVmar(size_t offset, size_t size, uint8_t align_pow2,
+    virtual zx_status_t CreateSubVmar(size_t offset, size_t size, uint8_t align_pow2,
                                    uint32_t vmar_flags, const char* name,
                                    fbl::RefPtr<VmAddressRegion>* out);
     // Create a VmMapping within this region
-    virtual status_t CreateVmMapping(size_t mapping_offset, size_t size, uint8_t align_pow2,
-                                     uint32_t vmar_flags,
-                                     fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
-                                     uint arch_mmu_flags, const char* name,
-                                     fbl::RefPtr<VmMapping>* out);
+    virtual zx_status_t CreateVmMapping(size_t mapping_offset, size_t size, uint8_t align_pow2,
+                                        uint32_t vmar_flags,
+                                        fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
+                                        uint arch_mmu_flags, const char* name,
+                                        fbl::RefPtr<VmMapping>* out);
 
     // Find the child region that contains the given addr.  If addr is in a gap,
     // returns nullptr.  This is a non-recursive search.
@@ -223,18 +224,18 @@ public:
     // returning it to this region to allocate.  If a subregion is entirely in
     // the range, that subregion is destroyed.  If a subregion is partially in
     // the range, Unmap() will fail.
-    virtual status_t Unmap(vaddr_t base, size_t size);
+    virtual zx_status_t Unmap(vaddr_t base, size_t size);
 
     // Change protections on a subset of the region of memory in the containing
     // address space.  If the requested range overlaps with a subregion,
     // Protect() will fail.
-    virtual status_t Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags);
+    virtual zx_status_t Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags);
 
     const char* name() const { return name_; }
     bool is_mapping() const override { return false; }
 
     void Dump(uint depth, bool verbose) const override;
-    status_t PageFault(vaddr_t va, uint pf_flags) override;
+    zx_status_t PageFault(vaddr_t va, uint pf_flags) override;
 
 protected:
     // constructor for use in creating a VmAddressRegionDummy
@@ -272,28 +273,28 @@ private:
     fbl::RefPtr<VmAddressRegionOrMapping> FindRegionLocked(vaddr_t addr);
 
     // Version of Destroy() that does not acquire the aspace lock
-    status_t DestroyLocked() override;
+    zx_status_t DestroyLocked() override;
 
     void Activate() override;
 
     // Helper to share code between CreateSubVmar and CreateVmMapping
-    status_t CreateSubVmarInternal(size_t offset, size_t size, uint8_t align_pow2,
-                                   uint32_t vmar_flags,
-                                   fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
-                                   uint arch_mmu_flags, const char* name,
-                                   fbl::RefPtr<VmAddressRegionOrMapping>* out);
+    zx_status_t CreateSubVmarInternal(size_t offset, size_t size, uint8_t align_pow2,
+                                      uint32_t vmar_flags,
+                                      fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
+                                      uint arch_mmu_flags, const char* name,
+                                      fbl::RefPtr<VmAddressRegionOrMapping>* out);
 
     // Create a new VmMapping within this region, overwriting any existing
     // mappings that are in the way.  If the range crosses a subregion, the call
     // fails.
-    status_t OverwriteVmMapping(vaddr_t base, size_t size, uint32_t vmar_flags,
-                                fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
-                                uint arch_mmu_flags,
-                                fbl::RefPtr<VmAddressRegionOrMapping>* out);
+    zx_status_t OverwriteVmMapping(vaddr_t base, size_t size, uint32_t vmar_flags,
+                                   fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
+                                   uint arch_mmu_flags,
+                                   fbl::RefPtr<VmAddressRegionOrMapping>* out);
 
     // Implementation for Unmap() and OverwriteVmMapping() that does not hold
     // the aspace lock.
-    status_t UnmapInternalLocked(vaddr_t base, size_t size, bool can_destroy_regions);
+    zx_status_t UnmapInternalLocked(vaddr_t base, size_t size, bool can_destroy_regions);
 
     // internal utilities for interacting with the children list
 
@@ -308,15 +309,15 @@ private:
                         size_t region_size, size_t min_gap, uint arch_mmu_flags);
 
     // search for a spot to allocate for a region of a given size
-    status_t AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags, vaddr_t* spot);
+    zx_status_t AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags, vaddr_t* spot);
 
     // Allocators
-    status_t LinearRegionAllocatorLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags,
-                                         vaddr_t* spot);
-    status_t NonCompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
+    zx_status_t LinearRegionAllocatorLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags,
+                                            vaddr_t* spot);
+    zx_status_t NonCompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
+                                                          uint arch_mmu_flags, vaddr_t* spot);
+    zx_status_t CompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
                                                        uint arch_mmu_flags, vaddr_t* spot);
-    status_t CompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
-                                                    uint arch_mmu_flags, vaddr_t* spot);
 
     // Utility for allocators for iterating over gaps between allocations
     // F should have a signature of bool func(vaddr_t gap_base, size_t gap_size).
@@ -338,16 +339,16 @@ public:
     VmAddressRegionDummy()
         : VmAddressRegion() {}
 
-    status_t CreateSubVmar(size_t offset, size_t size, uint8_t align_pow2,
-                           uint32_t vmar_flags, const char* name,
-                           fbl::RefPtr<VmAddressRegion>* out) override {
+    zx_status_t CreateSubVmar(size_t offset, size_t size, uint8_t align_pow2,
+                              uint32_t vmar_flags, const char* name,
+                              fbl::RefPtr<VmAddressRegion>* out) override {
         return ZX_ERR_BAD_STATE;
     }
-    status_t CreateVmMapping(size_t mapping_offset, size_t size, uint8_t align_pow2,
-                             uint32_t vmar_flags,
-                             fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
-                             uint arch_mmu_flags, const char* name,
-                             fbl::RefPtr<VmMapping>* out) override {
+    zx_status_t CreateVmMapping(size_t mapping_offset, size_t size, uint8_t align_pow2,
+                                uint32_t vmar_flags,
+                                fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
+                                uint arch_mmu_flags, const char* name,
+                                fbl::RefPtr<VmMapping>* out) override {
         return ZX_ERR_BAD_STATE;
     }
 
@@ -355,11 +356,11 @@ public:
         return nullptr;
     }
 
-    status_t Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags) override {
+    zx_status_t Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags) override {
         return ZX_ERR_BAD_STATE;
     }
 
-    status_t Unmap(vaddr_t base, size_t size) override {
+    zx_status_t Unmap(vaddr_t base, size_t size) override {
         return ZX_ERR_BAD_STATE;
     }
 
@@ -367,7 +368,7 @@ public:
         return;
     }
 
-    status_t PageFault(vaddr_t va, uint pf_flags) override {
+    zx_status_t PageFault(vaddr_t va, uint pf_flags) override {
         // We should never be trying to page fault on this...
         ASSERT(false);
         return ZX_ERR_BAD_STATE;
@@ -377,7 +378,7 @@ public:
         return 0;
     }
 
-    status_t Destroy() override {
+    zx_status_t Destroy() override {
         return ZX_ERR_BAD_STATE;
     }
 
@@ -387,7 +388,7 @@ public:
         return 0;
     }
 
-    status_t DestroyLocked() override {
+    zx_status_t DestroyLocked() override {
         return ZX_ERR_BAD_STATE;
     }
 
@@ -411,27 +412,27 @@ public:
 
     // Convenience wrapper for vmo()->DecommitRange() with the necessary
     // offset modification and locking.
-    status_t DecommitRange(size_t offset, size_t len, size_t* decommitted);
+    zx_status_t DecommitRange(size_t offset, size_t len, size_t* decommitted);
 
     // Map in pages from the underlying vm object, optionally committing pages as it goes
-    status_t MapRange(size_t offset, size_t len, bool commit);
+    zx_status_t MapRange(size_t offset, size_t len, bool commit);
 
     // Unmap a subset of the region of memory in the containing address space,
     // returning it to the parent region to allocate.  If all of the memory is unmapped,
     // Destroy()s this mapping.  If a subrange of the mapping is specified, the
     // mapping may be split.
-    status_t Unmap(vaddr_t base, size_t size);
+    zx_status_t Unmap(vaddr_t base, size_t size);
 
     // Change access permissions for this mapping.  It is an error to specify a
     // caching mode in the flags.  This will persist the caching mode the
     // mapping was created with.  If a subrange of the mapping is specified, the
     // mapping may be split.
-    status_t Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags);
+    zx_status_t Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags);
 
     bool is_mapping() const override { return true; }
 
     void Dump(uint depth, bool verbose) const override;
-    status_t PageFault(vaddr_t va, uint pf_flags) override;
+    zx_status_t PageFault(vaddr_t va, uint pf_flags) override;
 
 protected:
     ~VmMapping() override;
@@ -441,7 +442,7 @@ protected:
     friend class VmObject;
 
     // unmap any pages that map the passed in vmo range. May not intersect with this range
-    status_t UnmapVmoRangeLocked(uint64_t start, uint64_t size) const;
+    zx_status_t UnmapVmoRangeLocked(uint64_t start, uint64_t size) const;
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmMapping);
@@ -457,14 +458,14 @@ private:
               fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags);
 
     // Version of Destroy() that does not acquire the aspace lock
-    status_t DestroyLocked() override;
+    zx_status_t DestroyLocked() override;
 
     // Implementation for Unmap().  This does not acquire the aspace lock, and
     // supports partial unmapping.
-    status_t UnmapLocked(vaddr_t base, size_t size);
+    zx_status_t UnmapLocked(vaddr_t base, size_t size);
 
     // Implementation for Protect().  This does not acquire the aspace lock.
-    status_t ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_flags);
+    zx_status_t ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_flags);
 
     // Version of AllocatedPages() that does not acquire the aspace lock
     size_t AllocatedPagesLocked() const override;

@@ -12,6 +12,7 @@
 #include <fbl/alloc_checker.h>
 #include <trace.h>
 #include <vm/pmm.h>
+#include <zircon/types.h>
 
 #include "vm_priv.h"
 
@@ -50,7 +51,7 @@ vm_page* VmPageListNode::RemovePage(size_t index) {
     return p;
 }
 
-status_t VmPageListNode::AddPage(vm_page* p, size_t index) {
+zx_status_t VmPageListNode::AddPage(vm_page* p, size_t index) {
     canary_.Assert();
     DEBUG_ASSERT(index < kPageFanOut);
     if (pages_[index])
@@ -68,7 +69,7 @@ VmPageList::~VmPageList() {
     DEBUG_ASSERT(list_.is_empty());
 }
 
-status_t VmPageList::AddPage(vm_page* p, uint64_t offset) {
+zx_status_t VmPageList::AddPage(vm_page* p, uint64_t offset) {
     uint64_t node_offset = ROUNDDOWN(offset, PAGE_SIZE * VmPageListNode::kPageFanOut);
     size_t index = (offset >> PAGE_SIZE_SHIFT) % VmPageListNode::kPageFanOut;
 
@@ -112,7 +113,7 @@ vm_page* VmPageList::GetPage(uint64_t offset) {
     return pln->GetPage(index);
 }
 
-status_t VmPageList::FreePage(uint64_t offset) {
+zx_status_t VmPageList::FreePage(uint64_t offset) {
     uint64_t node_offset = ROUNDDOWN(offset, PAGE_SIZE * VmPageListNode::kPageFanOut);
     size_t index = (offset >> PAGE_SIZE_SHIFT) % VmPageListNode::kPageFanOut;
 

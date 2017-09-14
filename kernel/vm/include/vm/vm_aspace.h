@@ -20,13 +20,14 @@
 #include <fbl/ref_ptr.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/vm_address_region.h>
+#include <zircon/types.h>
 
 class VmObject;
 
 class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCounted<VmAspace> {
 public:
     // complete initialization, may fail in OOM cases
-    status_t Init();
+    zx_status_t Init();
 
     // factory that creates a user/kernel address space based on flags
     // may fail due to resource starvation
@@ -56,7 +57,7 @@ public:
     fbl::RefPtr<VmAddressRegion> RootVmar();
 
     // destroy but not free the address space
-    status_t Destroy();
+    zx_status_t Destroy();
 
     // Returns true if the address space has been destroyed.
     bool is_destroyed() const;
@@ -107,7 +108,7 @@ public:
     };
 
     // Counts memory usage under the VmAspace.
-    status_t GetMemoryUsage(vm_usage_t* usage);
+    zx_status_t GetMemoryUsage(vm_usage_t* usage);
 
     size_t AllocatedPages() const;
 
@@ -123,21 +124,21 @@ public:
     // These all assume a flat VMAR structure in which all VMOs are mapped
     // as children of the root.  They will all assert if used on user aspaces
     // TODO(teisenbe): remove uses of these in favor of new VMAR interfaces
-    status_t ReserveSpace(const char* name, size_t size, vaddr_t vaddr);
-    status_t AllocPhysical(const char* name, size_t size, void** ptr, uint8_t align_pow2,
-                           paddr_t paddr, uint vmm_flags,
-                           uint arch_mmu_flags);
-    status_t AllocContiguous(const char* name, size_t size, void** ptr, uint8_t align_pow2,
-                             uint vmm_flags, uint arch_mmu_flags);
-    status_t Alloc(const char* name, size_t size, void** ptr, uint8_t align_pow2,
-                   uint vmm_flags, uint arch_mmu_flags);
-    status_t FreeRegion(vaddr_t va);
+    zx_status_t ReserveSpace(const char* name, size_t size, vaddr_t vaddr);
+    zx_status_t AllocPhysical(const char* name, size_t size, void** ptr, uint8_t align_pow2,
+                              paddr_t paddr, uint vmm_flags,
+                              uint arch_mmu_flags);
+    zx_status_t AllocContiguous(const char* name, size_t size, void** ptr, uint8_t align_pow2,
+                                uint vmm_flags, uint arch_mmu_flags);
+    zx_status_t Alloc(const char* name, size_t size, void** ptr, uint8_t align_pow2,
+                      uint vmm_flags, uint arch_mmu_flags);
+    zx_status_t FreeRegion(vaddr_t va);
 
     // Internal use function for mapping VMOs.  Do not use.  This is exposed in
     // the public API purely for tests.
-    status_t MapObjectInternal(fbl::RefPtr<VmObject> vmo, const char* name, uint64_t offset,
-                               size_t size, void** ptr, uint8_t align_pow2, uint vmm_flags,
-                               uint arch_mmu_flags);
+    zx_status_t MapObjectInternal(fbl::RefPtr<VmObject> vmo, const char* name, uint64_t offset,
+                                  size_t size, void** ptr, uint8_t align_pow2, uint vmm_flags,
+                                  uint arch_mmu_flags);
 
 #if WITH_LIB_VDSO
     uintptr_t vdso_base_address() const;
@@ -169,10 +170,10 @@ private:
     friend fbl::RefPtr<VmAspace>;
 
     // internal page fault routine, friended to be only called by vmm_page_fault_handler
-    status_t PageFault(vaddr_t va, uint flags);
-    friend status_t vmm_page_fault_handler(vaddr_t va, uint flags);
-    friend status_t vmm_guest_page_fault_handler(vaddr_t va, uint flags,
-                                                 fbl::RefPtr<VmAspace> aspace);
+    zx_status_t PageFault(vaddr_t va, uint flags);
+    friend zx_status_t vmm_page_fault_handler(vaddr_t va, uint flags);
+    friend zx_status_t vmm_guest_page_fault_handler(vaddr_t va, uint flags,
+                                                    fbl::RefPtr<VmAspace> aspace);
 
     void InitializeAslr();
 

@@ -12,6 +12,7 @@
 #include <lib/user_copy/user_ptr.h>
 #include <list.h>
 #include <zircon/thread_annotations.h>
+#include <zircon/types.h>
 #include <fbl/array.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
@@ -24,23 +25,23 @@
 // VMO representing a physical range of memory
 class VmObjectPhysical final : public VmObject {
 public:
-    static status_t Create(paddr_t base, uint64_t size, fbl::RefPtr<VmObject>* vmo);
+    static zx_status_t Create(paddr_t base, uint64_t size, fbl::RefPtr<VmObject>* vmo);
 
     uint64_t size() const override
         // TODO: Figure out whether it's safe to lock here without causing
         // any deadlocks.
         TA_NO_THREAD_SAFETY_ANALYSIS { return size_; }
 
-    status_t LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
-                        size_t buffer_size) override;
+    zx_status_t LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
+                           size_t buffer_size) override;
 
     void Dump(uint depth, bool verbose) override;
 
-    status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
-                           vm_page_t**, paddr_t* pa) override TA_REQ(lock_);
+    zx_status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
+                              vm_page_t**, paddr_t* pa) override TA_REQ(lock_);
 
-    status_t GetMappingCachePolicy(uint32_t* cache_policy) override;
-    status_t SetMappingCachePolicy(const uint32_t cache_policy) override;
+    zx_status_t GetMappingCachePolicy(uint32_t* cache_policy) override;
+    zx_status_t SetMappingCachePolicy(const uint32_t cache_policy) override;
 
 private:
     // private constructor (use Create())

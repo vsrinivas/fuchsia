@@ -12,6 +12,7 @@
 #include <lib/user_copy/user_ptr.h>
 #include <list.h>
 #include <zircon/thread_annotations.h>
+#include <zircon/types.h>
 #include <fbl/array.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
@@ -25,7 +26,7 @@
 
 class VmMapping;
 
-typedef status_t (*vmo_lookup_fn_t)(void* context, size_t offset, size_t index, paddr_t pa);
+typedef zx_status_t (*vmo_lookup_fn_t)(void* context, size_t offset, size_t index, paddr_t pa);
 
 // The base vm object that holds a range of bytes of data
 //
@@ -35,8 +36,8 @@ class VmObject : public fbl::RefCounted<VmObject>,
                  public fbl::DoublyLinkedListable<VmObject*> {
 public:
     // public API
-    virtual status_t Resize(uint64_t size) { return ZX_ERR_NOT_SUPPORTED; }
-    virtual status_t ResizeLocked(uint64_t size) TA_REQ(lock_) { return ZX_ERR_NOT_SUPPORTED; }
+    virtual zx_status_t Resize(uint64_t size) { return ZX_ERR_NOT_SUPPORTED; }
+    virtual zx_status_t ResizeLocked(uint64_t size) TA_REQ(lock_) { return ZX_ERR_NOT_SUPPORTED; }
 
     virtual uint64_t size() const { return 0; }
 
@@ -55,24 +56,24 @@ public:
     }
 
     // find physical pages to back the range of the object
-    virtual status_t CommitRange(uint64_t offset, uint64_t len, uint64_t* committed) {
+    virtual zx_status_t CommitRange(uint64_t offset, uint64_t len, uint64_t* committed) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     // find a contiguous run of physical pages to back the range of the object
-    virtual status_t CommitRangeContiguous(uint64_t offset, uint64_t len, uint64_t* committed,
-                                           uint8_t alignment_log2) {
+    virtual zx_status_t CommitRangeContiguous(uint64_t offset, uint64_t len, uint64_t* committed,
+                                              uint8_t alignment_log2) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     // free a range of the vmo back to the default state
-    virtual status_t DecommitRange(uint64_t offset, uint64_t len, uint64_t* decommitted) {
+    virtual zx_status_t DecommitRange(uint64_t offset, uint64_t len, uint64_t* decommitted) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Pin the given range of the vmo.  If any pages are not committed, this
     // returns a ZX_ERR_NO_MEMORY.
-    virtual status_t Pin(uint64_t offset, uint64_t len) {
+    virtual zx_status_t Pin(uint64_t offset, uint64_t len) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -84,31 +85,31 @@ public:
     }
 
     // read/write operators against kernel pointers only
-    virtual status_t Read(void* ptr, uint64_t offset, size_t len, size_t* bytes_read) {
+    virtual zx_status_t Read(void* ptr, uint64_t offset, size_t len, size_t* bytes_read) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    virtual status_t Write(const void* ptr, uint64_t offset, size_t len, size_t* bytes_written) {
+    virtual zx_status_t Write(const void* ptr, uint64_t offset, size_t len, size_t* bytes_written) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     // execute lookup_fn on a given range of physical addresses within the vmo
-    virtual status_t Lookup(uint64_t offset, uint64_t len, uint pf_flags,
-                            vmo_lookup_fn_t lookup_fn, void* context) {
+    virtual zx_status_t Lookup(uint64_t offset, uint64_t len, uint pf_flags,
+                               vmo_lookup_fn_t lookup_fn, void* context) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     // read/write operators against user space pointers only
-    virtual status_t ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read) {
+    virtual zx_status_t ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    virtual status_t WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len,
+    virtual zx_status_t WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len,
                                size_t* bytes_written) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     // translate a range of the vmo to physical addresses and store in the buffer
-    virtual status_t LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
-                                size_t buffer_size) {
+    virtual zx_status_t LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
+                                   size_t buffer_size) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -118,7 +119,7 @@ public:
 
     // Sets the name of the object. May truncate internally. |len| is the size
     // of the buffer pointed to by |name|.
-    status_t set_name(const char* name, size_t len);
+    zx_status_t set_name(const char* name, size_t len);
 
     // Returns a user ID associated with this VMO, or zero.
     // Typically used to hold a zircon koid for Dispatcher-wrapped VMOs.
@@ -134,31 +135,31 @@ public:
     virtual void Dump(uint depth, bool verbose) = 0;
 
     // cache maintainence operations.
-    virtual status_t InvalidateCache(const uint64_t offset, const uint64_t len) {
+    virtual zx_status_t InvalidateCache(const uint64_t offset, const uint64_t len) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    virtual status_t CleanCache(const uint64_t offset, const uint64_t len) {
+    virtual zx_status_t CleanCache(const uint64_t offset, const uint64_t len) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    virtual status_t CleanInvalidateCache(const uint64_t offset, const uint64_t len) {
+    virtual zx_status_t CleanInvalidateCache(const uint64_t offset, const uint64_t len) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    virtual status_t SyncCache(const uint64_t offset, const uint64_t len) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    virtual status_t GetMappingCachePolicy(uint32_t* cache_policy) {
+    virtual zx_status_t SyncCache(const uint64_t offset, const uint64_t len) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    virtual status_t SetMappingCachePolicy(const uint32_t cache_policy) {
+    virtual zx_status_t GetMappingCachePolicy(uint32_t* cache_policy) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    virtual zx_status_t SetMappingCachePolicy(const uint32_t cache_policy) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     // create a copy-on-write clone vmo at the page-aligned offset and length
     // note: it's okay to start or extend past the size of the parent
-    virtual status_t CloneCOW(uint64_t offset, uint64_t size, bool copy_name,
-                              fbl::RefPtr<VmObject>* clone_vmo) {
+    virtual zx_status_t CloneCOW(uint64_t offset, uint64_t size, bool copy_name,
+                                 fbl::RefPtr<VmObject>* clone_vmo) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -169,8 +170,8 @@ public:
 
     // get a pointer to the page structure and/or physical address at the specified offset.
     // valid flags are VMM_PF_FLAG_*
-    virtual status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
-                                   vm_page_t** page, paddr_t* pa) TA_REQ(lock_) {
+    virtual zx_status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
+                                      vm_page_t** page, paddr_t* pa) TA_REQ(lock_) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -197,10 +198,10 @@ public:
     // from oldest to newest. Stops if |func| returns an error, returning the
     // error value.
     template <typename T>
-    static status_t ForEach(T func) {
+    static zx_status_t ForEach(T func) {
         fbl::AutoLock a(&all_vmos_lock_);
         for (const auto& iter : all_vmos_) {
-            status_t s = func(iter);
+            zx_status_t s = func(iter);
             if (s != ZX_OK) {
                 return s;
             }

@@ -8,6 +8,7 @@
 #pragma once
 
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 #include <sys/types.h>
 #include <vm/page.h>
 
@@ -25,7 +26,7 @@ typedef struct pmm_arena_info {
 #define PMM_ARENA_FLAG_KMAP (0x1) // this arena is already mapped and useful for kallocs
 
 // Add a pre-filled memory arena to the physical allocator.
-status_t pmm_add_arena(const pmm_arena_info_t* arena) __NONNULL((1));
+zx_status_t pmm_add_arena(const pmm_arena_info_t* arena) __NONNULL((1));
 
 // flags for allocation routines below
 #define PMM_ALLOC_FLAG_ANY (0x0)  // no restrictions on which arena to allocate from

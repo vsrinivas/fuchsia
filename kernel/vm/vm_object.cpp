@@ -21,6 +21,7 @@
 #include <string.h>
 #include <trace.h>
 #include <vm/vm_address_region.h>
+#include <zircon/types.h>
 
 using fbl::AutoLock;
 
@@ -76,7 +77,7 @@ void VmObject::get_name(char* out_name, size_t len) const {
     name_.get(len, out_name);
 }
 
-status_t VmObject::set_name(const char* name, size_t len) {
+zx_status_t VmObject::set_name(const char* name, size_t len) {
     canary_.Assert();
     return name_.set(name, len);
 }

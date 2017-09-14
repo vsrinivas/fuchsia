@@ -25,6 +25,7 @@
 #include "vm_priv.h"
 
 #include <zircon/thread_annotations.h>
+#include <zircon/types.h>
 #include <zxcpp/new.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
@@ -74,7 +75,7 @@ vm_page_t* paddr_to_vm_page(paddr_t addr) TA_NO_THREAD_SAFETY_ANALYSIS {
 
 // We disable thread safety analysis here, since this function is only called
 // during early boot before threading exists.
-status_t pmm_add_arena(const pmm_arena_info_t* info) TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t pmm_add_arena(const pmm_arena_info_t* info) TA_NO_THREAD_SAFETY_ANALYSIS {
     LTRACEF("arena %p name '%s' base %#" PRIxPTR " size %#zx\n", info, info->name, info->base, info->size);
 
     // Make sure we're in early boot (ints disabled and no active CPUs according

@@ -21,6 +21,7 @@
 #include <vm/pmm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
+#include <zircon/types.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 #define TRACE_PAGE_FAULT 0
@@ -39,7 +40,7 @@ void vmm_context_switch(vmm_aspace_t* oldspace, vmm_aspace_t* newaspace) {
     vmm_context_switch(reinterpret_cast<VmAspace*>(oldspace), reinterpret_cast<VmAspace*>(newaspace));
 }
 
-status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
+zx_status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
 
     // hardware fault, mark it as such
     flags |= VMM_PF_FLAG_HW_FAULT;
@@ -57,7 +58,7 @@ status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
         return ZX_ERR_NOT_FOUND;
 
     // page fault it
-    status_t status = aspace->PageFault(addr, flags);
+    zx_status_t status = aspace->PageFault(addr, flags);
 
     // If it's a user fault, dump info about process memory usage.
     // If it's a kernel fault, the kernel could possibly already
@@ -121,7 +122,7 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
 
         void* ptr = (void*)0x99;
         uint8_t align = (argc >= 4) ? (uint8_t)argv[3].u : 0u;
-        status_t err = test_aspace->Alloc("alloc test", argv[2].u, &ptr, align, 0, 0);
+        zx_status_t err = test_aspace->Alloc("alloc test", argv[2].u, &ptr, align, 0, 0);
         printf("VmAspace::Alloc returns %d, ptr %p\n", err, ptr);
     } else if (!strcmp(argv[1].str, "alloc_physical")) {
         if (argc < 4)
@@ -129,7 +130,7 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
 
         void* ptr = (void*)0x99;
         uint8_t align = (argc >= 5) ? (uint8_t)argv[4].u : 0u;
-        status_t err = test_aspace->AllocPhysical("physical test", argv[3].u, &ptr, align, argv[2].u,
+        zx_status_t err = test_aspace->AllocPhysical("physical test", argv[3].u, &ptr, align, argv[2].u,
                                                   0, ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ |
                                                          ARCH_MMU_FLAG_PERM_WRITE);
         printf("VmAspace::AllocPhysical returns %d, ptr %p\n", err, ptr);
@@ -139,14 +140,14 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
 
         void* ptr = (void*)0x99;
         uint8_t align = (argc >= 4) ? (uint8_t)argv[3].u : 0u;
-        status_t err = test_aspace->AllocContiguous("contig test", argv[2].u, &ptr, align, 0,
+        zx_status_t err = test_aspace->AllocContiguous("contig test", argv[2].u, &ptr, align, 0,
                                                     ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
         printf("VmAspace::AllocContiguous returns %d, ptr %p\n", err, ptr);
     } else if (!strcmp(argv[1].str, "free_region")) {
         if (argc < 2)
             goto notenoughargs;
 
-        status_t err = test_aspace->FreeRegion(reinterpret_cast<vaddr_t>(argv[2].u));
+        zx_status_t err = test_aspace->FreeRegion(reinterpret_cast<vaddr_t>(argv[2].u));
         printf("VmAspace::FreeRegion returns %d\n", err);
     } else if (!strcmp(argv[1].str, "create_aspace")) {
         fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test");
@@ -171,7 +172,7 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
             thread_sleep(1); // hack
         }
 
-        status_t err = aspace->Destroy();
+        zx_status_t err = aspace->Destroy();
         printf("VmAspace::Destroy() returns %d\n", err);
     } else if (!strcmp(argv[1].str, "set_test_aspace")) {
         if (argc < 2)

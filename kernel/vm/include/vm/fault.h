@@ -8,6 +8,7 @@
 #pragma once
 
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 // page fault flags
 const uint VMM_PF_FLAG_WRITE = (1u << 0);
@@ -30,4 +31,4 @@ static const char* vmm_pf_flags_to_string(uint pf_flags, char str[5]) {
 }
 
 // page fault handler, called during page fault context, with interrupts enabled
-status_t vmm_page_fault_handler(vaddr_t addr, uint pf_flags);
+zx_status_t vmm_page_fault_handler(vaddr_t addr, uint pf_flags);

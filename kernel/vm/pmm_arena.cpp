@@ -12,6 +12,7 @@
 #include <pretty/sizes.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/types.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
@@ -215,7 +216,7 @@ retry:
     return 0;
 }
 
-status_t PmmArena::FreePage(vm_page_t* page) {
+zx_status_t PmmArena::FreePage(vm_page_t* page) {
     LTRACEF("page %p\n", page);
     if (!page_belongs_to_arena(page))
         return ZX_ERR_NOT_FOUND;

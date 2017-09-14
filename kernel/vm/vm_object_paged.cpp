@@ -22,6 +22,7 @@
 #include <trace.h>
 #include <vm/fault.h>
 #include <vm/vm_address_region.h>
+#include <zircon/types.h>
 
 using fbl::AutoLock;
 
@@ -92,7 +93,7 @@ zx_status_t VmObjectPaged::Create(uint32_t pmm_alloc_flags, uint64_t size, fbl::
     return ZX_OK;
 }
 
-status_t VmObjectPaged::CloneCOW(uint64_t offset, uint64_t size, bool copy_name, fbl::RefPtr<VmObject>* clone_vmo) {
+zx_status_t VmObjectPaged::CloneCOW(uint64_t offset, uint64_t size, bool copy_name, fbl::RefPtr<VmObject>* clone_vmo) {
     LTRACEF("vmo %p offset %#" PRIx64 " size %#" PRIx64 "\n", this, offset, size);
 
     canary_.Assert();
@@ -178,13 +179,13 @@ size_t VmObjectPaged::AllocatedPagesInRange(uint64_t offset, uint64_t len) const
     return count;
 }
 
-status_t VmObjectPaged::AddPage(vm_page_t* p, uint64_t offset) {
+zx_status_t VmObjectPaged::AddPage(vm_page_t* p, uint64_t offset) {
     AutoLock a(&lock_);
 
     return AddPageLocked(p, offset);
 }
 
-status_t VmObjectPaged::AddPageLocked(vm_page_t* p, uint64_t offset) {
+zx_status_t VmObjectPaged::AddPageLocked(vm_page_t* p, uint64_t offset) {
     canary_.Assert();
     DEBUG_ASSERT(lock_.IsHeld());
 
@@ -195,7 +196,7 @@ status_t VmObjectPaged::AddPageLocked(vm_page_t* p, uint64_t offset) {
     if (offset >= size_)
         return ZX_ERR_OUT_OF_RANGE;
 
-    status_t err = page_list_.AddPage(p, offset);
+    zx_status_t err = page_list_.AddPage(p, offset);
     if (err != ZX_OK)
         return err;
 
@@ -267,8 +268,8 @@ zx_status_t VmObjectPaged::CreateFromROData(const void* data, size_t size, fbl::
 // this function may allocate from.  This function will need at most one entry,
 // and will not fail if |free_list| is a non-empty list, faulting in was requested,
 // and offset is in range.
-status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
-                                      vm_page_t** const page_out, paddr_t* const pa_out) {
+zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
+                                         vm_page_t** const page_out, paddr_t* const pa_out) {
     canary_.Assert();
     DEBUG_ASSERT(lock_.IsHeld());
 
@@ -301,8 +302,8 @@ status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_node*
         // make sure we don't cause the parent to fault in new pages, just ask for any that already exist
         uint parent_pf_flags = pf_flags & ~(VMM_PF_FLAG_FAULT_MASK);
 
-        status_t status = parent_->GetPageLocked(parent_offset.ValueOrDie(), parent_pf_flags,
-                                                 nullptr, &p, &pa);
+        zx_status_t status = parent_->GetPageLocked(parent_offset.ValueOrDie(), parent_pf_flags,
+                                                    nullptr, &p, &pa);
         if (status == ZX_OK) {
             // we have a page from them. if we're read-only faulting, return that page so they can map
             // or read from it directly
@@ -393,7 +394,7 @@ status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_node*
     // TODO: remove once pmm returns zeroed pages
     ZeroPage(pa);
 
-    status_t status = AddPageLocked(p, offset);
+    zx_status_t status = AddPageLocked(p, offset);
     DEBUG_ASSERT(status == ZX_OK);
 
     // other mappings may have covered this offset into the vmo, so unmap those ranges
@@ -409,7 +410,7 @@ status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_node*
     return ZX_OK;
 }
 
-status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len, uint64_t* committed) {
+zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len, uint64_t* committed) {
     canary_.Assert();
     LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
 
@@ -478,7 +479,7 @@ status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len, uint64_t* com
         const uint flags = VMM_PF_FLAG_SW_FAULT | VMM_PF_FLAG_WRITE;
         // Should not be able to fail, since we're providing it memory and the
         // range should be valid.
-        status_t status = GetPageLocked(o, flags, &page_list, &p, &pa);
+        zx_status_t status = GetPageLocked(o, flags, &page_list, &p, &pa);
         ASSERT(status == ZX_OK);
 
         if (committed)
@@ -493,8 +494,8 @@ status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len, uint64_t* com
     return ZX_OK;
 }
 
-status_t VmObjectPaged::CommitRangeContiguous(uint64_t offset, uint64_t len, uint64_t* committed,
-                                              uint8_t alignment_log2) {
+zx_status_t VmObjectPaged::CommitRangeContiguous(uint64_t offset, uint64_t len, uint64_t* committed,
+                                                 uint8_t alignment_log2) {
     canary_.Assert();
     LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 ", alignment %hhu\n", offset, len, alignment_log2);
 
@@ -577,7 +578,7 @@ status_t VmObjectPaged::CommitRangeContiguous(uint64_t offset, uint64_t len, uin
     return ZX_OK;
 }
 
-status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len, uint64_t* decommitted) {
+zx_status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len, uint64_t* decommitted) {
     canary_.Assert();
     LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
 
@@ -627,14 +628,14 @@ status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len, uint64_t* d
     return ZX_OK;
 }
 
-status_t VmObjectPaged::Pin(uint64_t offset, uint64_t len) {
+zx_status_t VmObjectPaged::Pin(uint64_t offset, uint64_t len) {
     canary_.Assert();
 
     AutoLock a(&lock_);
     return PinLocked(offset, len);
 }
 
-status_t VmObjectPaged::PinLocked(uint64_t offset, uint64_t len) {
+zx_status_t VmObjectPaged::PinLocked(uint64_t offset, uint64_t len) {
     canary_.Assert();
 
     // verify that the range is within the object
@@ -648,7 +649,7 @@ status_t VmObjectPaged::PinLocked(uint64_t offset, uint64_t len) {
     const uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
 
     uint64_t expected_next_off = start_page_offset;
-    status_t status = page_list_.ForEveryPageInRange(
+    zx_status_t status = page_list_.ForEveryPageInRange(
         [&expected_next_off](const auto p, uint64_t off) {
             if (off != expected_next_off) {
                 return ZX_ERR_NOT_FOUND;
@@ -695,7 +696,7 @@ void VmObjectPaged::UnpinLocked(uint64_t offset, uint64_t len) {
     const uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
 
     uint64_t expected_next_off = start_page_offset;
-    status_t status = page_list_.ForEveryPageInRange(
+    zx_status_t status = page_list_.ForEveryPageInRange(
         [&expected_next_off](const auto p, uint64_t off) {
             if (off != expected_next_off) {
                 return ZX_ERR_NOT_FOUND;
@@ -737,7 +738,7 @@ bool VmObjectPaged::AnyPagesPinnedLocked(uint64_t offset, size_t len) {
     return found_pinned;
 }
 
-status_t VmObjectPaged::ResizeLocked(uint64_t s) {
+zx_status_t VmObjectPaged::ResizeLocked(uint64_t s) {
     canary_.Assert();
     DEBUG_ASSERT(lock_.IsHeld());
 
@@ -789,13 +790,13 @@ status_t VmObjectPaged::ResizeLocked(uint64_t s) {
     return ZX_OK;
 }
 
-status_t VmObjectPaged::Resize(uint64_t s) {
+zx_status_t VmObjectPaged::Resize(uint64_t s) {
     AutoLock a(&lock_);
 
     return ResizeLocked(s);
 }
 
-status_t VmObjectPaged::SetParentOffsetLocked(uint64_t offset) {
+zx_status_t VmObjectPaged::SetParentOffsetLocked(uint64_t offset) {
     DEBUG_ASSERT(lock_.IsHeld());
 
     // offset must be page aligned
@@ -818,8 +819,8 @@ status_t VmObjectPaged::SetParentOffsetLocked(uint64_t offset) {
 // perform some sort of copy in/out on a range of the object using a passed in lambda
 // for the copy routine
 template <typename T>
-status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, size_t* bytes_copied, bool write,
-                                          T copyfunc) {
+zx_status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, size_t* bytes_copied, bool write,
+                                             T copyfunc) {
     canary_.Assert();
     if (bytes_copied)
         *bytes_copied = 0;
@@ -868,7 +869,7 @@ status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, size_t* b
     return ZX_OK;
 }
 
-status_t VmObjectPaged::Read(void* _ptr, uint64_t offset, size_t len, size_t* bytes_read) {
+zx_status_t VmObjectPaged::Read(void* _ptr, uint64_t offset, size_t len, size_t* bytes_read) {
     canary_.Assert();
     // test to make sure this is a kernel pointer
     if (!is_kernel_address(reinterpret_cast<vaddr_t>(_ptr))) {
@@ -878,7 +879,7 @@ status_t VmObjectPaged::Read(void* _ptr, uint64_t offset, size_t len, size_t* by
 
     // read routine that just uses a memcpy
     uint8_t* ptr = reinterpret_cast<uint8_t*>(_ptr);
-    auto read_routine = [ptr](const void* src, size_t offset, size_t len) -> status_t {
+    auto read_routine = [ptr](const void* src, size_t offset, size_t len) -> zx_status_t {
         memcpy(ptr + offset, src, len);
         return ZX_OK;
     };
@@ -886,7 +887,7 @@ status_t VmObjectPaged::Read(void* _ptr, uint64_t offset, size_t len, size_t* by
     return ReadWriteInternal(offset, len, bytes_read, false, read_routine);
 }
 
-status_t VmObjectPaged::Write(const void* _ptr, uint64_t offset, size_t len, size_t* bytes_written) {
+zx_status_t VmObjectPaged::Write(const void* _ptr, uint64_t offset, size_t len, size_t* bytes_written) {
     canary_.Assert();
     // test to make sure this is a kernel pointer
     if (!is_kernel_address(reinterpret_cast<vaddr_t>(_ptr))) {
@@ -896,7 +897,7 @@ status_t VmObjectPaged::Write(const void* _ptr, uint64_t offset, size_t len, siz
 
     // write routine that just uses a memcpy
     const uint8_t* ptr = reinterpret_cast<const uint8_t*>(_ptr);
-    auto write_routine = [ptr](void* dst, size_t offset, size_t len) -> status_t {
+    auto write_routine = [ptr](void* dst, size_t offset, size_t len) -> zx_status_t {
         memcpy(dst, ptr + offset, len);
         return ZX_OK;
     };
@@ -904,8 +905,8 @@ status_t VmObjectPaged::Write(const void* _ptr, uint64_t offset, size_t len, siz
     return ReadWriteInternal(offset, len, bytes_written, true, write_routine);
 }
 
-status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
-                               vmo_lookup_fn_t lookup_fn, void* context) {
+zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
+                                  vmo_lookup_fn_t lookup_fn, void* context) {
     canary_.Assert();
     if (unlikely(len == 0))
         return ZX_ERR_INVALID_ARGS;
@@ -920,7 +921,7 @@ status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
     const uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
 
     uint64_t expected_next_off = start_page_offset;
-    status_t status = page_list_.ForEveryPageInRange(
+    zx_status_t status = page_list_.ForEveryPageInRange(
         [&expected_next_off, this, pf_flags, lookup_fn, context,
          start_page_offset](const auto p, uint64_t off) {
 
@@ -930,7 +931,7 @@ status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
                  missing_off += PAGE_SIZE) {
 
                 paddr_t pa;
-                status_t status = this->GetPageLocked(missing_off, pf_flags, nullptr,
+                zx_status_t status = this->GetPageLocked(missing_off, pf_flags, nullptr,
                                                       nullptr, &pa);
                 if (status != ZX_OK) {
                     return ZX_ERR_NO_MEMORY;
@@ -947,7 +948,7 @@ status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
 
             const size_t index = (off - start_page_offset) / PAGE_SIZE;
             paddr_t pa = vm_page_to_paddr(p);
-            status_t status = lookup_fn(context, off, index, pa);
+            zx_status_t status = lookup_fn(context, off, index, pa);
             if (status != ZX_OK) {
                 if (unlikely(status == ZX_ERR_NEXT || status == ZX_ERR_STOP)) {
                     status = ZX_ERR_INTERNAL;
@@ -966,7 +967,7 @@ status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
     // If expected_next_off isn't at the end, there's a gap to process
     for (uint64_t off = expected_next_off; off < end_page_offset; off += PAGE_SIZE) {
         paddr_t pa;
-        status_t status = GetPageLocked(off, pf_flags, nullptr, nullptr, &pa);
+        zx_status_t status = GetPageLocked(off, pf_flags, nullptr, nullptr, &pa);
         if (status != ZX_OK) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -980,30 +981,30 @@ status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
     return ZX_OK;
 }
 
-status_t VmObjectPaged::ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read) {
+zx_status_t VmObjectPaged::ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read) {
     canary_.Assert();
 
     // read routine that uses copy_to_user
-    auto read_routine = [ptr](const void* src, size_t offset, size_t len) -> status_t {
+    auto read_routine = [ptr](const void* src, size_t offset, size_t len) -> zx_status_t {
         return ptr.byte_offset(offset).copy_array_to_user(src, len);
     };
 
     return ReadWriteInternal(offset, len, bytes_read, false, read_routine);
 }
 
-status_t VmObjectPaged::WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len,
+zx_status_t VmObjectPaged::WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len,
                                   size_t* bytes_written) {
     canary_.Assert();
 
     // write routine that uses copy_from_user
-    auto write_routine = [ptr](void* dst, size_t offset, size_t len) -> status_t {
+    auto write_routine = [ptr](void* dst, size_t offset, size_t len) -> zx_status_t {
         return ptr.byte_offset(offset).copy_array_from_user(dst, len);
     };
 
     return ReadWriteInternal(offset, len, bytes_written, true, write_routine);
 }
 
-status_t VmObjectPaged::LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
+zx_status_t VmObjectPaged::LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
                                    size_t buffer_size) {
     canary_.Assert();
 
@@ -1014,7 +1015,7 @@ status_t VmObjectPaged::LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr
     if (unlikely(table_size > buffer_size))
         return ZX_ERR_BUFFER_TOO_SMALL;
 
-    auto copy_to_user = [](void* context, size_t offset, size_t index, paddr_t pa) -> status_t {
+    auto copy_to_user = [](void* context, size_t offset, size_t index, paddr_t pa) -> zx_status_t {
         user_ptr<paddr_t>* buffer = static_cast<user_ptr<paddr_t>*>(context);
         return buffer->element_offset(index).copy_to_user(pa);
     };
@@ -1022,24 +1023,24 @@ status_t VmObjectPaged::LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr
     return Lookup(offset, len, 0, copy_to_user, &buffer);
 }
 
-status_t VmObjectPaged::InvalidateCache(const uint64_t offset, const uint64_t len) {
+zx_status_t VmObjectPaged::InvalidateCache(const uint64_t offset, const uint64_t len) {
     return CacheOp(offset, len, CacheOpType::Invalidate);
 }
 
-status_t VmObjectPaged::CleanCache(const uint64_t offset, const uint64_t len) {
+zx_status_t VmObjectPaged::CleanCache(const uint64_t offset, const uint64_t len) {
     return CacheOp(offset, len, CacheOpType::Clean);
 }
 
-status_t VmObjectPaged::CleanInvalidateCache(const uint64_t offset, const uint64_t len) {
+zx_status_t VmObjectPaged::CleanInvalidateCache(const uint64_t offset, const uint64_t len) {
     return CacheOp(offset, len, CacheOpType::CleanInvalidate);
 }
 
-status_t VmObjectPaged::SyncCache(const uint64_t offset, const uint64_t len) {
+zx_status_t VmObjectPaged::SyncCache(const uint64_t offset, const uint64_t len) {
     return CacheOp(offset, len, CacheOpType::Sync);
 }
 
-status_t VmObjectPaged::CacheOp(const uint64_t start_offset, const uint64_t len,
-                                const CacheOpType type) {
+zx_status_t VmObjectPaged::CacheOp(const uint64_t start_offset, const uint64_t len,
+                                   const CacheOpType type) {
     canary_.Assert();
 
     if (unlikely(len == 0))

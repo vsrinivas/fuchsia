@@ -10,6 +10,7 @@
 
 #include <trace.h>
 #include <vm/pmm.h>
+#include <zircon/types.h>
 
 #define PMM_ENABLE_FREE_FILL 0
 #define PMM_FREE_FILL_BYTE 0x42
@@ -51,7 +52,7 @@ public:
     vm_page_t* AllocSpecific(paddr_t pa);
     size_t AllocPages(size_t count, list_node* list);
     size_t AllocContiguous(size_t count, uint8_t alignment_log2, paddr_t* pa, struct list_node* list);
-    status_t FreePage(vm_page_t* page);
+    zx_status_t FreePage(vm_page_t* page);
 
     // helpers
     bool page_belongs_to_arena(const vm_page* page) const {

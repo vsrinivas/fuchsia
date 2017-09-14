@@ -22,6 +22,7 @@
 #include <vm/initial_map.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
+#include <zircon/types.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
@@ -62,7 +63,7 @@ void MarkPagesInUse(vaddr_t va, size_t len) {
         uint flags;
         paddr_t pa;
 
-        status_t err = VmAspace::kernel_aspace()->arch_aspace().Query(va + offset, &pa, &flags);
+        zx_status_t err = VmAspace::kernel_aspace()->arch_aspace().Query(va + offset, &pa, &flags);
         if (err >= 0) {
             LTRACEF("va %#" PRIxPTR ", pa %#" PRIxPTR ", flags %#x, err %d, start_pa %#" PRIxPTR
                     " runlen %#" PRIxPTR "\n",
@@ -94,7 +95,7 @@ void MarkPagesInUse(vaddr_t va, size_t len) {
     list_for_every_entry (&list, p, vm_page_t, free.node) { p->state = VM_PAGE_STATE_WIRED; }
 }
 
-status_t ProtectRegion(VmAspace* aspace, vaddr_t va, uint arch_mmu_flags) {
+zx_status_t ProtectRegion(VmAspace* aspace, vaddr_t va, uint arch_mmu_flags) {
     auto r = aspace->FindRegion(va);
     if (!r)
         return ZX_ERR_NOT_FOUND;
@@ -198,7 +199,7 @@ void vm_init_postheap(uint level) {
         dprintf(INFO, "VM: reserving kernel region [%016" PRIxPTR ", %016" PRIxPTR ") flags %#x name '%s'\n",
                 region->base, region->base + region->size, region->arch_mmu_flags, region->name);
 
-        status_t status = aspace->ReserveSpace(region->name, region->size, region->base);
+        zx_status_t status = aspace->ReserveSpace(region->name, region->size, region->base);
         ASSERT(status == ZX_OK);
         status = ProtectRegion(aspace, region->base, region->arch_mmu_flags);
         ASSERT(status == ZX_OK);
@@ -234,7 +235,7 @@ void vm_init_postheap(uint level) {
             // If vaddr isn't the start of a kernel code/data region, then we should make
             // a mapping between it and the next closest one.
             if (next_kernel_region != vaddr) {
-                status_t status = aspace->ReserveSpace(map->name, next_kernel_region - vaddr, vaddr);
+                zx_status_t status = aspace->ReserveSpace(map->name, next_kernel_region - vaddr, vaddr);
                 ASSERT(status == ZX_OK);
 
                 if (map->flags & MMU_INITIAL_MAPPING_TEMPORARY) {
@@ -262,7 +263,7 @@ void vm_init_postheap(uint level) {
     const struct mmu_initial_mapping* first_mapping = mmu_initial_mappings;
     vaddr_t end_first_mapping = first_mapping->virt + first_mapping->size;
 
-    status_t status = aspace->ReserveSpace("random_padding", random_size, end_first_mapping);
+    zx_status_t status = aspace->ReserveSpace("random_padding", random_size, end_first_mapping);
     ASSERT(status == ZX_OK);
     LTRACEF("VM: aspace random padding size: %#" PRIxPTR "\n", random_size);
 }
@@ -286,7 +287,7 @@ paddr_t vaddr_to_paddr(const void* ptr) {
         return (paddr_t) nullptr;
 
     paddr_t pa;
-    status_t rc = aspace->arch_aspace().Query((vaddr_t)ptr, &pa, nullptr);
+    zx_status_t rc = aspace->arch_aspace().Query((vaddr_t)ptr, &pa, nullptr);
     if (rc)
         return (paddr_t) nullptr;
 
@@ -324,7 +325,7 @@ static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
 
         paddr_t pa;
         uint flags;
-        status_t err = aspace->arch_aspace().Query(argv[2].u, &pa, &flags);
+        zx_status_t err = aspace->arch_aspace().Query(argv[2].u, &pa, &flags);
         printf("arch_mmu_query returns %d\n", err);
         if (err >= 0) {
             printf("\tpa %#" PRIxPTR ", flags %#x\n", pa, flags);
