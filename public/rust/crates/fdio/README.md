@@ -1,4 +1,4 @@
-Rust bindings for mxio
+Rust bindings for fdio
 =======================================
 
-This repository contains bindings for a portion of the Magenta mxio library.
+This repository contains bindings for a portion of the Zircon fdio library.

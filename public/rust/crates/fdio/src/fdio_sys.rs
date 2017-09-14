@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use magenta_sys as sys;
+use zircon_sys as sys;
 use std::os::raw;
 
 #[allow(non_camel_case_types)]
@@ -11,18 +11,18 @@ pub type watchdir_func_t = unsafe extern "C" fn(
     event: ::std::os::raw::c_int,
     fn_: *const ::std::os::raw::c_char,
     cookie: *const ::std::os::raw::c_void,
-) -> sys::mx_status_t;
+) -> sys::zx_status_t;
 
-#[link(name = "mxio")]
+#[link(name = "fdio")]
 extern "C" {
-    pub fn mxio_watch_directory(
+    pub fn fdio_watch_directory(
         dirfd: raw::c_int,
         cb: watchdir_func_t,
-        deadline: sys::mx_time_t,
+        deadline: sys::zx_time_t,
         cookie: *const raw::c_void,
-    ) -> sys::mx_status_t;
+    ) -> sys::zx_status_t;
 
-    pub fn mxio_ioctl(
+    pub fn fdio_ioctl(
         fd: i32,
         op: i32,
         in_buf: *const u8,
