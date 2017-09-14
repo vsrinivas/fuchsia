@@ -47,7 +47,7 @@ get_toybox_source() {
   local toybox_src=$1
 
   if [ ! -d "$toybox_src" ]; then
-    git clone --depth 1 --branch machina https://zircon-guest.googlesource.com/third_party/toybox "$toybox_src"
+    git clone --depth 1 https://zircon-guest.googlesource.com/third_party/toybox "$toybox_src"
   fi
 }
 

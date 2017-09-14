@@ -24,7 +24,7 @@ echo "Building linux with $DEFCONFIG in $LINUXDIR"
 
 # Shallow clone the repository.
 if [ ! -d "$LINUXDIR" ]; then
-  git clone --depth 1 --branch machina https://zircon-guest.googlesource.com/third_party/linux "$LINUXDIR"
+  git clone --depth 1 https://zircon-guest.googlesource.com/third_party/linux "$LINUXDIR"
 fi
 
 # Update the repository.
