@@ -111,7 +111,7 @@ std::pair<uint8_t*, intptr_t> ReadFileToBytes(const std::string& path) {
     offset += bytes_read;
     bytes_left -= bytes_read;
   }
-  return std::pair<uint8_t*, long>(ptr, file_size);
+  return std::pair<uint8_t*, intptr_t>(ptr, file_size);
 }
 
 bool IsFile(const std::string& path) {
