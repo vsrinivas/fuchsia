@@ -45,8 +45,8 @@ function downloadGCCToolchain() {
   local version_file="${PREBUILTS_DIR}/versions/${common_path}/version.sha"
   if [[ ! -f "${version_file}" ]]; then
     echo "File ${version_file} does not exist."
-    echo "Your operating system is probably not supported, aborting."
-    exit 1
+    echo "Your operating system is probably not supported, aborting gcc download."
+    return
   fi
   local required_version="$(cat "${version_file}" )"
   local prebuilt_url="${ZIRCON_GS_BUCKET}/${common_path}/${required_version}"
@@ -87,9 +87,10 @@ function downloadGCCToolchain() {
 }
 
 function downloadClangToolchain() {
-  case "${OS}" in
-    "Darwin") local host_platform="mac-amd64" ;;
-    "Linux") local host_platform="linux-amd64" ;;
+  case "${OS}-${HOSTARCH}" in
+    "Darwin-x86_64") local host_platform="mac-amd64" ;;
+    "Linux-x86_64") local host_platform="linux-amd64" ;;
+    "Linux-aarch64") local host_platform="linux-aarch64" ;;
     "*") echo "Unknown operating system." 1>&2 && exit 1 ;;
   esac
 
@@ -98,8 +99,8 @@ function downloadClangToolchain() {
   local version_file="${PREBUILTS_DIR}/versions/${common_path}/clang.sha1"
   if [[ ! -f "${version_file}" ]]; then
     echo "File ${version_file} does not exist."
-    echo "Your operating system is probably not supported, aborting."
-    exit 1
+    echo "Your operating system is probably not supported, aborting clang download."
+    return
   fi
   local required_version="$(cat "${version_file}" )"
   local prebuilt_url="${FUCHSIA_GS_BUCKET}/clang/${host_platform}/${required_version}"
@@ -144,6 +145,7 @@ downloadClangToolchain
 
 # Clear old config lines from prebuilt/config.mk.
 readonly ENV_MK="${PREBUILTS_DIR}/config.mk"
+echo "generating ${ENV_MK}"
 if [[ -f "${ENV_MK}" ]]; then
   sed -i.bak '/ARCH_.*_TOOLCHAIN_PREFIX/d' "${ENV_MK}"
   sed -i.bak '/CLANG_TOOLCHAIN_PREFIX/d' "${ENV_MK}"
