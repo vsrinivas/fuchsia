@@ -5,8 +5,8 @@
 #include "roughtime_server.h"
 
 #include <errno.h>
-#include <magenta/syscalls.h>
-#include <magenta/types.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 #include <netdb.h>
 #include <poll.h>
 #include <sys/socket.h>
@@ -98,7 +98,7 @@ Status RoughTimeServer::GetTimeFromServer(
   do {
     r = send(sock_fd, request.data(), request.size(), 0);
   } while (r == -1 && errno == EINTR);
-  const uint64_t start_us = mx_time_get(MX_CLOCK_MONOTONIC);
+  const uint64_t start_us = zx_time_get(ZX_CLOCK_MONOTONIC);
 
   if (r < 0 || static_cast<size_t>(r) != request.size()) {
     TS_LOG(ERROR) << "send on UDP socket" << strerror(errno);
@@ -127,7 +127,7 @@ Status RoughTimeServer::GetTimeFromServer(
   }
   buf_len = recv(sock_fd, recv_buf, sizeof(recv_buf), 0 /* flags */);
 
-  const uint64_t end_us = mx_time_get(MX_CLOCK_MONOTONIC);
+  const uint64_t end_us = zx_time_get(ZX_CLOCK_MONOTONIC);
 
   if (buf_len == -1) {
     TS_LOG(ERROR) << "recv from UDP socket: " << strerror(errno);

@@ -6,7 +6,7 @@
 
 #include <fcntl.h>
 #include <inttypes.h>
-#include <magenta/device/rtc.h>
+#include <zircon/device/rtc.h>
 #include <sys/time.h>
 #include <unistd.h>
 
