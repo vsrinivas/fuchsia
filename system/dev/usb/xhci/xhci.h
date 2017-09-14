@@ -15,6 +15,7 @@
 
 #include <ddk/device.h>
 #include <ddk/protocol/pci.h>
+#include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/usb-bus.h>
 
 #include "xhci-hw.h"
@@ -85,6 +86,12 @@ typedef struct {
     void* data;
 } xhci_command_context_t;
 
+typedef enum {
+    XHCI_PCI_LEGACY,
+    XHCI_PCI_MSI,
+    XHCI_PDEV,
+} xhci_mode_t;
+
 struct xhci {
     // the device we implement
     zx_device_t* zxdev;
@@ -92,19 +99,25 @@ struct xhci {
     // interface for calling back to usb bus driver
     usb_bus_interface_t bus;
 
-    bool legacy_irq_mode;
+    xhci_mode_t mode;
+
     // Desired number of interrupters. This may be greater than what is
     // supported by hardware. The actual number of interrupts configured
     // will not exceed this, and is stored in num_interrupts.
 #define INTERRUPTER_COUNT 2
     zx_handle_t irq_handles[INTERRUPTER_COUNT];
     zx_handle_t mmio_handle;
-    zx_handle_t cfg_handle;
     thrd_t irq_thread;
 
     // used by the start thread
     zx_device_t* parent;
+
+    // PCI support
     pci_protocol_t pci;
+    zx_handle_t cfg_handle;
+
+    // platform device support
+    platform_device_protocol_t* pdev;
 
     // MMIO data structures
     xhci_cap_regs_t* cap_regs;
@@ -187,14 +200,10 @@ struct xhci {
     zx_vaddr_t scratch_pad_index_virt;
 };
 
-// Initializes num_interrupts field of xhci. The number of interrupts
-// is constrained by the number of interrupters supported by XHCI,
-// number of interrupts supported by MSI, and INTERRUPTER_COUNT.
-void xhci_num_interrupts_init(xhci_t* xhci, void* mmio, uint32_t num_msi_interrupts);
-zx_status_t xhci_init(xhci_t* xhci, void* mmio);
+zx_status_t xhci_init(xhci_t* xhci, void* mmio, xhci_mode_t mode, uint32_t num_interrupts);
 int xhci_get_ep_ctx_state(xhci_endpoint_t* ep);
 zx_status_t xhci_start(xhci_t* xhci);
-void xhci_handle_interrupt(xhci_t* xhci, bool legacy, uint32_t interrupter);
+void xhci_handle_interrupt(xhci_t* xhci, uint32_t interrupter);
 void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,
                        xhci_command_context_t* context);
 void xhci_wait_bits(volatile uint32_t* ptr, uint32_t bits, uint32_t expected);

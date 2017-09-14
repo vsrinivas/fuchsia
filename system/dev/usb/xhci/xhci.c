@@ -188,17 +188,7 @@ static void xhci_vmo_release(zx_handle_t handle, zx_vaddr_t virt) {
     zx_handle_close(handle);
 }
 
-void xhci_num_interrupts_init(xhci_t* xhci, void* mmio, uint32_t num_msi_interrupts) {
-    xhci_cap_regs_t* cap_regs = (xhci_cap_regs_t*)mmio;
-    volatile uint32_t* hcsparams1 = &cap_regs->hcsparams1;
-
-    uint32_t max_interrupters = XHCI_GET_BITS32(hcsparams1, HCSPARAMS1_MAX_INTRS_START,
-                                                HCSPARAMS1_MAX_INTRS_BITS);
-    xhci->num_interrupts = MIN(num_msi_interrupts,
-                               MIN(INTERRUPTER_COUNT, max_interrupters));
-}
-
-zx_status_t xhci_init(xhci_t* xhci, void* mmio) {
+zx_status_t xhci_init(xhci_t* xhci, void* mmio, xhci_mode_t mode, uint32_t num_interrupts) {
     zx_status_t result = ZX_OK;
     zx_paddr_t* phys_addrs = NULL;
 
@@ -218,6 +208,12 @@ zx_status_t xhci_init(xhci_t* xhci, void* mmio) {
     volatile uint32_t* hcsparams2 = &xhci->cap_regs->hcsparams2;
     volatile uint32_t* hccparams1 = &xhci->cap_regs->hccparams1;
     volatile uint32_t* hccparams2 = &xhci->cap_regs->hccparams2;
+
+    xhci->mode = mode;
+    uint32_t max_interrupters = XHCI_GET_BITS32(hcsparams1, HCSPARAMS1_MAX_INTRS_START,
+                                                HCSPARAMS1_MAX_INTRS_BITS);
+    max_interrupters = MIN(INTERRUPTER_COUNT, max_interrupters);
+    xhci->num_interrupts = MIN(max_interrupters, num_interrupts);
 
     xhci->max_slots = XHCI_GET_BITS32(hcsparams1, HCSPARAMS1_MAX_SLOTS_START,
                                       HCSPARAMS1_MAX_SLOTS_BITS);
@@ -468,11 +464,13 @@ zx_status_t xhci_start(xhci_t* xhci) {
     xhci_wait_bits(usbcmd, USBCMD_HCRST, 0);
     xhci_wait_bits(usbsts, USBSTS_CNR, 0);
 
-    // enable bus master
-    zx_status_t status = pci_enable_bus_master(&xhci->pci, true);
-    if (status < 0) {
-        dprintf(ERROR, "usb_xhci_bind enable_bus_master failed %d\n", status);
-        return status;
+    if (xhci->mode == XHCI_PCI_MSI || xhci->mode == XHCI_PCI_LEGACY) {
+        // enable bus master
+        zx_status_t status = pci_enable_bus_master(&xhci->pci, true);
+        if (status < 0) {
+            dprintf(ERROR, "usb_xhci_bind enable_bus_master failed %d\n", status);
+            return status;
+        }
     }
 
     // setup operational registers
@@ -604,7 +602,7 @@ static void xhci_handle_events(xhci_t* xhci, int interrupter) {
     }
 }
 
-void xhci_handle_interrupt(xhci_t* xhci, bool legacy, uint32_t interrupter) {
+void xhci_handle_interrupt(xhci_t* xhci, uint32_t interrupter) {
     volatile uint32_t* usbsts = &xhci->op_regs->usbsts;
 
     mtx_lock(&xhci->usbsts_lock);
@@ -622,9 +620,9 @@ void xhci_handle_interrupt(xhci_t* xhci, bool legacy, uint32_t interrupter) {
 
     mtx_unlock(&xhci->usbsts_lock);
 
-    // If we are in legacy IRQ mode, clear the IP (Interrupt Pending) bit
+    // If we not using MSI interrupts, clear the IP (Interrupt Pending) bit
     // from the IMAN register of our interrupter.
-    if (legacy) {
+    if (xhci->mode != XHCI_PCI_MSI) {
         xhci_intr_regs_t* intr_regs = &xhci->runtime_regs->intr_regs[interrupter];
         XHCI_SET32(&intr_regs->iman, IMAN_IP, IMAN_IP);
     }
