@@ -11,7 +11,6 @@
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/vm.h>
-#include <list.h>
 #include <lk/init.h>
 #include <fbl/limits.h>
 #include <dev/interrupt.h>

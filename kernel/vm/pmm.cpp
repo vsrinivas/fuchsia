@@ -14,7 +14,6 @@
 #include <kernel/timer.h>
 #include <kernel/vm.h>
 #include <lib/console.h>
-#include <list.h>
 #include <lk/init.h>
 #include <platform.h>
 #include <pow2.h>

@@ -17,7 +17,6 @@
 #include <kernel/spinlock.h>
 #include <kernel/vm.h>
 #include <vm/arch_vm_aspace.h>
-#include <list.h>
 #include <lk/init.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
