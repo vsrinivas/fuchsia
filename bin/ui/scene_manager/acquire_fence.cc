@@ -5,16 +5,19 @@
 #include "garnet/bin/ui/scene_manager/acquire_fence.h"
 
 #include <zx/time.h>
+#include "garnet/public/lib/fxl/functional/closure.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
 namespace scene_manager {
 
-AcquireFence::AcquireFence(zx::event fence) : fence_(std::move(fence)) {
+AcquireFence::AcquireFence(zx::event fence)
+    : fence_(std::move(fence)),
+      waiter_(fsl::MessageLoop::GetCurrent()->async(),  // dispatcher
+              fence_.get(),                             // handle
+              kFenceSignalledOrClosed)                  // trigger
+{
   FXL_DCHECK(fence_);
-}
-
-AcquireFence::~AcquireFence() {
-  ClearHandler();
 }
 
 bool AcquireFence::WaitReady(fxl::TimeDelta timeout) {
@@ -51,35 +54,36 @@ void AcquireFence::WaitReadyAsync(fxl::Closure ready_callback) {
     return;
   }
 
-  // Returned key will always be non-zero.
-  FXL_DCHECK(handler_key_ == 0);
-  handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
-      this, fence_.get(), kFenceSignalledOrClosed);
+  waiter_.set_handler(std::bind(&AcquireFence::OnFenceSignalledOrClosed, this,
+                                std::placeholders::_2, std::placeholders::_3));
+  zx_status_t status = waiter_.Begin();
+  FXL_CHECK(status == ZX_OK);
   ready_callback_ = std::move(ready_callback);
 }
 
-void AcquireFence::ClearHandler() {
-  if (handler_key_) {
-    fsl::MessageLoop::GetCurrent()->RemoveHandler(handler_key_);
-    handler_key_ = 0u;
+async_wait_result_t AcquireFence::OnFenceSignalledOrClosed(
+    zx_status_t status,
+    const zx_packet_signal* signal) {
+  if (status == ZX_OK) {
+    zx_signals_t pending = signal->observed;
+    FXL_DCHECK(pending & kFenceSignalledOrClosed);
+    FXL_DCHECK(ready_callback_);
+
+    ready_ = true;
+    fxl::Closure callback = std::move(ready_callback_);
+    waiter_.Cancel();
+
+    callback();
+    return ASYNC_WAIT_FINISHED;
+  } else {
+    FXL_LOG(ERROR) << "AcquireFence::OnFenceSignalledOrClosed received an "
+                      "error status code: "
+                   << status;
+
+    // TODO(MZ-173): Close the session if there is an error, or if the fence
+    // is closed.
+    return ASYNC_WAIT_FINISHED;
   }
-}
-
-void AcquireFence::OnHandleReady(zx_handle_t handle,
-                                 zx_signals_t pending,
-                                 uint64_t count) {
-  FXL_DCHECK(handle == fence_.get());
-  FXL_DCHECK(pending & kFenceSignalledOrClosed);
-  FXL_DCHECK(ready_callback_);
-
-  // TODO: Handle the case where there is an error condition, probably want to
-  // close the session.
-
-  ready_ = true;
-  fxl::Closure callback = std::move(ready_callback_);
-  ClearHandler();
-
-  callback();
 }
 
 }  // namespace scene_manager

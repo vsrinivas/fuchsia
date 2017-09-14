@@ -13,23 +13,18 @@ namespace scene_manager {
 static zx_signals_t kEventPairDeathSignals = ZX_EPAIR_PEER_CLOSED;
 
 #define ASSERT_INTERNAL_EXPORTS_CONSISTENCY                \
-  FXL_DCHECK(export_handles_to_import_koids_.size() ==     \
-             export_entries_.size());                      \
   FXL_DCHECK(exported_resources_to_import_koids_.size() == \
              export_entries_.size());
 
 ResourceLinker::ResourceLinker() : unresolved_imports_(this){};
 
 ResourceLinker::~ResourceLinker() {
-  auto message_loop = fsl::MessageLoop::GetCurrent();
   for (const auto& item : export_entries_) {
     // Resource could be null if ExportResource() were called, but the
     // import tokens weren't all released yet.
     if (item.second.resource != nullptr) {
       item.second.resource->SetExported(false);
     }
-    FXL_DCHECK(item.second.export_token);
-    message_loop->RemoveHandler(item.second.death_handler_key);
   }
 }
 
@@ -54,20 +49,22 @@ bool ResourceLinker::ExportResource(Resource* resource,
 
   // The resource must be removed from being considered for import if its
   // peer is closed.
-  fsl::MessageLoop::HandlerKey death_key =
-      fsl::MessageLoop::GetCurrent()->AddHandler(
-          this,                    // handler
-          export_token.get(),      // handle
-          kEventPairDeathSignals,  // trigger
-          fxl::TimeDelta::Max()    // timeout
-      );
+  auto wait = std::make_unique<async::AutoWait>(
+      fsl::MessageLoop::GetCurrent()->async(),  // async dispatcher
+      export_token.get(),                       // handle
+      kEventPairDeathSignals                    // trigger
+  );
+  wait->set_handler(std::bind(&ResourceLinker::OnTokenPeerDeath, this,
+                              import_koid, std::placeholders::_2,
+                              std::placeholders::_3));
+  zx_status_t status = wait->Begin();
+  FXL_CHECK(status == ZX_OK);
 
   // Add the resource and export token to our data structures.
-  export_handles_to_import_koids_[export_token.get()] = import_koid;
   export_entries_[import_koid] = ExportEntry{
-      .export_token = std::move(export_token),  // own the export token
-      .death_handler_key = death_key,           //
-      .resource = resource,                     //
+      .export_token = std::move(export_token),     // own the export token
+      .token_peer_death_waiter = std::move(wait),  //
+      .resource = resource,                        //
   };
   exported_resources_to_import_koids_.insert({resource, import_koid});
   exported_resources_.insert(resource);
@@ -158,29 +155,22 @@ bool ResourceLinker::ImportResource(Import* import,
   // which may access the linker. We need that view to be consistent.
 
   if (!PerformLinkingNow(import_koid)) {
-    // If |import| was not bound, it should listen for its peer handle dying
+    // If |import| was not bound, it should listen for its peer token dying
     // to know if it should be removed.
-    unresolved_imports_.ListenForPeerHandleDeath(import);
+    unresolved_imports_.ListenForTokenPeerDeath(import);
   }
   return true;
 }
 
-void ResourceLinker::OnHandleReady(zx_handle_t export_handle,
-                                   zx_signals_t pending,
-                                   uint64_t count) {
+async_wait_result_t ResourceLinker::OnTokenPeerDeath(
+    zx_koid_t import_koid,
+    zx_status_t status,
+    const zx_packet_signal* signal) {
   // This is invoked when all the peers for the registered export
-  // handle are closed.
-  if (pending & kEventPairDeathSignals) {
-    RemoveExportEntryForExpiredHandle(export_handle);
-  }
-}
+  // handle are closed, or if there is a loop death or other error.
+  RemoveExportEntryForExpiredKoid(import_koid);
 
-void ResourceLinker::OnHandleError(zx_handle_t export_handle,
-                                   zx_status_t error) {
-  // Should only happen in case of timeout or loop death.
-  if (error == ZX_ERR_TIMED_OUT || error == ZX_ERR_CANCELED) {
-    RemoveExportEntryForExpiredHandle(export_handle);
-  }
+  return ASYNC_WAIT_FINISHED;
 }
 
 void ResourceLinker::InvokeExpirationCallback(Resource* resource,
@@ -190,23 +180,11 @@ void ResourceLinker::InvokeExpirationCallback(Resource* resource,
   }
 }
 
-Resource* ResourceLinker::RemoveExportEntryForExpiredHandle(
-    zx_handle_t export_handle) {
-  // Find the import_koid that maps to |export_handle|.
-  auto import_koid_iter = export_handles_to_import_koids_.find(export_handle);
-  FXL_DCHECK(import_koid_iter != export_handles_to_import_koids_.end());
-  zx_koid_t import_koid = import_koid_iter->second;
-
-  // Remove from |export_handles_to_import_koids_|.
-  export_handles_to_import_koids_.erase(import_koid_iter);
-
+Resource* ResourceLinker::RemoveExportEntryForExpiredKoid(
+    zx_koid_t import_koid) {
   auto export_entry_iter = export_entries_.find(import_koid);
   FXL_DCHECK(export_entry_iter != export_entries_.end());
   Resource* resource = export_entry_iter->second.resource;
-
-  // Unregister handler.
-  fsl::MessageLoop::GetCurrent()->RemoveHandler(
-      export_entry_iter->second.death_handler_key);
 
   // Remove from |export_entries_|.
   export_entries_.erase(export_entry_iter);
@@ -233,16 +211,6 @@ void ResourceLinker::OnExportedResourceDestroyed(Resource* resource) {
 
     auto export_entry_iter = export_entries_.find(import_koid);
     FXL_DCHECK(export_entry_iter != export_entries_.end());
-
-    // Unregister our handler.
-    fsl::MessageLoop::GetCurrent()->RemoveHandler(
-        export_entry_iter->second.death_handler_key);
-
-    // Remove from |export_handles_to_import_koids_|.
-    auto handle_iter = export_handles_to_import_koids_.find(
-        export_entry_iter->second.export_token.get());
-    FXL_DCHECK(handle_iter != export_handles_to_import_koids_.end());
-    export_handles_to_import_koids_.erase(handle_iter);
 
     // Remove from |export_entries_|.
     export_entries_.erase(export_entry_iter);

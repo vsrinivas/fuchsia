@@ -7,12 +7,12 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include <async/auto_wait.h>
 #include "lib/fsl/handles/object_info.h"
-#include "lib/fsl/tasks/message_loop.h"
 
-#include "lib/ui/scenic/fidl/ops.fidl-common.h"
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
 #include "garnet/bin/ui/scene_manager/resources/unresolved_imports.h"
+#include "lib/ui/scenic/fidl/ops.fidl-common.h"
 
 namespace scene_manager {
 
@@ -33,9 +33,9 @@ namespace scene_manager {
 ///
 /// There are two ways an export can be removed: Either the resource is
 /// destroyed using |OnExportedResourceDestroyed|, or all the import tokens have
-/// been closed which results in a call to |RemoveExportEntryForExpiredHandle|.
+/// been closed which results in a call to |RemoveExportEntryForExpiredKoid|.
 
-class ResourceLinker : private fsl::MessageLoopHandler {
+class ResourceLinker {
  public:
   ResourceLinker();
 
@@ -66,7 +66,7 @@ class ResourceLinker : private fsl::MessageLoopHandler {
   enum class ExpirationCause {
     kInternalError,
     kNoImportsBound,
-    kExportHandleClosed,
+    kExportTokenClosed,
     kResourceDestroyed,
   };
   using OnExpiredCallback = std::function<void(Resource*, ExpirationCause)>;
@@ -84,19 +84,17 @@ class ResourceLinker : private fsl::MessageLoopHandler {
 
   struct ExportEntry {
     zx::eventpair export_token;
-    fsl::MessageLoop::HandlerKey death_handler_key = 0;
+    std::unique_ptr<async::AutoWait> token_peer_death_waiter;
     Resource* resource;
   };
 
   using ImportKoid = zx_koid_t;
-  using HandleToKoidMap = std::unordered_map<zx_handle_t, ImportKoid>;
   using KoidsToExportsMap = std::unordered_map<ImportKoid, ExportEntry>;
   using ResourcesToKoidsMap = std::multimap<Resource*, ImportKoid>;
 
   OnExpiredCallback expiration_callback_;
   OnImportResolvedCallback import_resolved_callback_;
 
-  HandleToKoidMap export_handles_to_import_koids_;
   KoidsToExportsMap export_entries_;
   ResourcesToKoidsMap exported_resources_to_import_koids_;
 
@@ -118,15 +116,13 @@ class ResourceLinker : private fsl::MessageLoopHandler {
                                    Resource* actual,
                                    ImportResolutionResult resolution_result);
 
-  void OnHandleReady(zx_handle_t handle,
-                     zx_signals_t pending,
-                     uint64_t count) override;
-
-  void OnHandleError(zx_handle_t handle, zx_status_t error) override;
+  async_wait_result_t OnTokenPeerDeath(zx_koid_t import_koid,
+                                       zx_status_t status,
+                                       const zx_packet_signal* signal);
 
   void InvokeExpirationCallback(Resource* resource, ExpirationCause cause);
 
-  Resource* RemoveExportEntryForExpiredHandle(zx_handle_t handle);
+  Resource* RemoveExportEntryForExpiredKoid(zx_koid_t import_koid);
 
   void RemoveExportedResourceIfUnbound(Resource* exported_resource);
 

@@ -12,31 +12,16 @@ namespace scene_manager {
 
 static zx_signals_t kEventPairDeathSignals = ZX_EPAIR_PEER_CLOSED;
 
-#define ASSERT_INTERNAL_EXPORTS_CONSISTENCY                \
-  FXL_DCHECK(imports_.size() == handles_to_koids_.size()); \
-  {                                                        \
-    size_t i = 0;                                          \
-    for (auto& it : koids_to_import_ptrs_)                 \
-      i += it.second.size();                               \
-    FXL_DCHECK(imports_.size() == i);                      \
+#define ASSERT_INTERNAL_EXPORTS_CONSISTENCY \
+  {                                         \
+    size_t i = 0;                           \
+    for (auto& it : koids_to_import_ptrs_)  \
+      i += it.second.size();                \
+    FXL_DCHECK(imports_.size() == i);       \
   }
 
 UnresolvedImports::UnresolvedImports(ResourceLinker* resource_linker)
     : resource_linker_(resource_linker){};
-
-UnresolvedImports::~UnresolvedImports() {
-  auto message_loop = fsl::MessageLoop::GetCurrent();
-  for (auto& entry_iter : imports_) {
-    FXL_DCHECK(entry_iter.second.import_token);
-    message_loop->RemoveHandler(entry_iter.second.death_handler_key);
-#ifndef NDEBUG
-    num_handler_keys_--;
-#endif
-  }
-#ifndef NDEBUG
-  FXL_DCHECK(num_handler_keys_ == 0);
-#endif
-}
 
 void UnresolvedImports::AddUnresolvedImport(Import* import,
                                             zx::eventpair import_token,
@@ -49,47 +34,39 @@ void UnresolvedImports::AddUnresolvedImport(Import* import,
   FXL_DCHECK(imports_.find(import) == imports_.end());
 
   // Add to our data structures.
-  FXL_DCHECK(handles_to_koids_.find(import_token.get()) ==
-             handles_to_koids_.end());
-  handles_to_koids_[import_token.get()] = import_koid;
   imports_[import] = ImportEntry{.import_ptr = import,
                                  .import_token = std::move(import_token),
-                                 .import_koid = import_koid,
-                                 .death_handler_key = 0};
+                                 .import_koid = import_koid};
   koids_to_import_ptrs_[import_koid].push_back(import);
 
   ASSERT_INTERNAL_EXPORTS_CONSISTENCY;
 }
 
-void UnresolvedImports::ListenForPeerHandleDeath(Import* import) {
+void UnresolvedImports::ListenForTokenPeerDeath(Import* import) {
   auto import_entry_iter = imports_.find(import);
   if (import_entry_iter != imports_.end()) {
+    zx_handle_t import_handle = import_entry_iter->second.import_token.get();
+    zx_koid_t import_koid = import_entry_iter->second.import_koid;
+
     // The resource must be removed from being considered for import
     // if its peer is closed.
-    fsl::MessageLoop::HandlerKey death_key =
-        fsl::MessageLoop::GetCurrent()->AddHandler(
-            this,                                          // handler
-            import_entry_iter->second.import_token.get(),  // handle
-            kEventPairDeathSignals,                        // trigger
-            fxl::TimeDelta::Max()                          // timeout
-        );
-    import_entry_iter->second.death_handler_key = death_key;
-#ifndef NDEBUG
-    num_handler_keys_++;
-#endif
+    auto wait = std::make_unique<async::AutoWait>(
+        fsl::MessageLoop::GetCurrent()->async(), import_handle,
+        kEventPairDeathSignals);
+    wait->set_handler(std::bind(&UnresolvedImports::OnTokenPeerDeath, this,
+                                import_koid, std::placeholders::_1,
+                                std::placeholders::_2, std::placeholders::_3));
+    zx_status_t status = wait->Begin();
+    FXL_CHECK(status == ZX_OK);
+
+    import_entry_iter->second.token_peer_death_waiter = std::move(wait);
   }
   ASSERT_INTERNAL_EXPORTS_CONSISTENCY;
-#ifndef NDEBUG
-  FXL_DCHECK(imports_.size() == num_handler_keys_);
-#endif
 }
 
-std::vector<Import*> UnresolvedImports::RemoveUnresolvedImportsForHandle(
-    zx_handle_t import_handle) {
-  auto import_koid_iter = handles_to_koids_.find(import_handle);
-  FXL_DCHECK(import_koid_iter != handles_to_koids_.end());
-
-  auto imports = GetAndRemoveUnresolvedImportsForKoid(import_koid_iter->second);
+std::vector<Import*> UnresolvedImports::RemoveUnresolvedImportsForKoid(
+    zx_koid_t import_koid) {
+  auto imports = GetAndRemoveUnresolvedImportsForKoid(import_koid);
 
   for (auto& entry : imports) {
     resource_linker_->OnImportResolvedForResource(
@@ -114,21 +91,6 @@ std::vector<Import*> UnresolvedImports::GetAndRemoveUnresolvedImportsForKoid(
     auto entry_iter = imports_.find(import_ptr);
     FXL_DCHECK(entry_iter != imports_.end());
 
-    // Remove from |handles_to_koids_|.
-    size_t num_removed =
-        handles_to_koids_.erase(entry_iter->second.import_token.get());
-    FXL_DCHECK(num_removed == 1);
-
-    // Unregister the handler
-    if (entry_iter->second.death_handler_key != 0) {
-      FXL_DCHECK(entry_iter->second.import_token);
-      fsl::MessageLoop::GetCurrent()->RemoveHandler(
-          entry_iter->second.death_handler_key);
-#ifndef NDEBUG
-      num_handler_keys_--;
-#endif
-    }
-
     // Remove from |imports_|.
     imports_.erase(entry_iter);
   }
@@ -137,9 +99,6 @@ std::vector<Import*> UnresolvedImports::GetAndRemoveUnresolvedImportsForKoid(
   koids_to_import_ptrs_.erase(import_ptr_collection_iter);
 
   ASSERT_INTERNAL_EXPORTS_CONSISTENCY;
-#ifndef NDEBUG
-  FXL_DCHECK(imports_.size() == num_handler_keys_);
-#endif
 
   return imports;
 }
@@ -163,21 +122,6 @@ void UnresolvedImports::OnImportDestroyed(Import* import) {
   zx_koid_t import_koid = entry_iter->second.import_koid;
   Remove(import, &koids_to_import_ptrs_[import_koid]);
 
-  // Remove from |handles_to_koids_|.
-  size_t num_removed =
-      handles_to_koids_.erase(entry_iter->second.import_token.get());
-  FXL_DCHECK(num_removed == 1);
-
-  // Unregister the handler
-  if (entry_iter->second.death_handler_key != 0) {
-    FXL_DCHECK(entry_iter->second.import_token);
-    fsl::MessageLoop::GetCurrent()->RemoveHandler(
-        entry_iter->second.death_handler_key);
-#ifndef NDEBUG
-    num_handler_keys_--;
-#endif
-  }
-
   // Remove from |imports_|.
   imports_.erase(entry_iter);
 
@@ -185,9 +129,6 @@ void UnresolvedImports::OnImportDestroyed(Import* import) {
       import, ResourceLinker::ExpirationCause::kResourceDestroyed);
 
   ASSERT_INTERNAL_EXPORTS_CONSISTENCY;
-#ifndef NDEBUG
-  FXL_DCHECK(imports_.size() == num_handler_keys_);
-#endif
 }
 
 size_t UnresolvedImports::NumUnresolvedImportsForKoid(
@@ -201,32 +142,21 @@ size_t UnresolvedImports::NumUnresolvedImportsForKoid(
   }
 }
 
-void UnresolvedImports::OnHandleReady(zx_handle_t import_handle,
-                                      zx_signals_t pending,
-                                      uint64_t count) {
-  // This is invoked when all the peers for the registered import
-  // handle are closed.
-  if (pending & kEventPairDeathSignals) {
-    auto imports = RemoveUnresolvedImportsForHandle(import_handle);
+async_wait_result_t UnresolvedImports::OnTokenPeerDeath(
+    zx_koid_t import_koid,
+    async_t*,
+    zx_status_t status,
+    const zx_packet_signal* signal) {
+  // Remove |import_koid|, even if there was an error (i.e. status != ZX_OK).
+  auto imports = RemoveUnresolvedImportsForKoid(import_koid);
 
-    for (auto& import : imports) {
-      resource_linker_->InvokeExpirationCallback(
-          import, ResourceLinker::ExpirationCause::kExportHandleClosed);
-    }
+  for (auto& import : imports) {
+    resource_linker_->InvokeExpirationCallback(
+        import, status == ZX_OK
+                    ? ResourceLinker::ExpirationCause::kExportTokenClosed
+                    : ResourceLinker::ExpirationCause::kInternalError);
   }
-}
-
-void UnresolvedImports::OnHandleError(zx_handle_t import_handle,
-                                      zx_status_t error) {
-  // Should only happen in case of timeout or loop death.
-  if (error == ZX_ERR_TIMED_OUT || error == ZX_ERR_CANCELED) {
-    auto imports = RemoveUnresolvedImportsForHandle(import_handle);
-
-    for (auto& import : imports) {
-      resource_linker_->InvokeExpirationCallback(
-          import, ResourceLinker::ExpirationCause::kInternalError);
-    }
-  }
+  return ASYNC_WAIT_FINISHED;
 }
 
 }  // namespace scene_manager

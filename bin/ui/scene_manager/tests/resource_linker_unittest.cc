@@ -167,9 +167,8 @@ TEST_F(ResourceLinkerTest, CanImportWithDeadSourceHandle) {
     // Set an expiry callback that checks the resource expired for the right
     // reason and signal the latch.
     linker->SetOnExpiredCallback(
-        [linker, &latch](Resource*, ResourceLinker::ExpirationCause cause) {
-          ASSERT_EQ(ResourceLinker::ExpirationCause::kExportHandleClosed,
-                    cause);
+        [&linker, &latch](Resource*, ResourceLinker::ExpirationCause cause) {
+          ASSERT_EQ(ResourceLinker::ExpirationCause::kExportTokenClosed, cause);
           ASSERT_EQ(0u, linker->NumUnresolvedImports());
           ASSERT_EQ(0u, linker->NumExports());
           latch.Signal();

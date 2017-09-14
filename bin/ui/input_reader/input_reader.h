@@ -8,18 +8,17 @@
 #include <map>
 #include <utility>
 
+#include <async/auto_wait.h>
+#include "garnet/bin/ui/input_reader/input_interpreter.h"
+#include "lib/fsl/io/device_watcher.h"
+#include "lib/fxl/macros.h"
 #include "lib/ui/input/fidl/input_device_registry.fidl.h"
 #include "lib/ui/input/fidl/input_reports.fidl.h"
-#include "garnet/bin/ui/input_reader/input_interpreter.h"
-#include "lib/fxl/macros.h"
-#include "lib/fsl/io/device_watcher.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/tasks/message_loop_handler.h"
 
 namespace mozart {
 namespace input {
 
-class InputReader : fsl::MessageLoopHandler {
+class InputReader {
  public:
   InputReader(mozart::InputDeviceRegistry* registry,
               bool ignore_console = false);
@@ -30,15 +29,14 @@ class InputReader : fsl::MessageLoopHandler {
   class DeviceInfo {
    public:
     DeviceInfo(std::unique_ptr<InputInterpreter> interpreter,
-               fsl::MessageLoop::HandlerKey key);
+               std::unique_ptr<async::AutoWait> waiter);
     ~DeviceInfo();
 
     InputInterpreter* interpreter() { return interpreter_.get(); }
-    fsl::MessageLoop::HandlerKey key() { return key_; };
 
    private:
     std::unique_ptr<InputInterpreter> interpreter_;
-    fsl::MessageLoop::HandlerKey key_;
+    std::unique_ptr<async::AutoWait> waiter_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(DeviceInfo);
   };
@@ -48,14 +46,11 @@ class InputReader : fsl::MessageLoopHandler {
   void DeviceAdded(std::unique_ptr<InputInterpreter> interpreter);
   void DeviceRemoved(zx_handle_t handle);
 
-  void OnDirectoryHandleReady(zx_handle_t handle, zx_signals_t pending);
-  void OnDeviceHandleReady(zx_handle_t handle, zx_signals_t pending);
-  void OnDisplayHandleReady(zx_handle_t handle, zx_signals_t pending);
-
-  void OnInternalReport(zx_handle_t handle, InputInterpreter::ReportType type);
-
-  // |fsl::MessageLoopHandler|:
-  void OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count);
+  async_wait_result_t OnDeviceHandleReady(zx_handle_t handle,
+                                          zx_status_t status,
+                                          const zx_packet_signal_t* signal);
+  async_wait_result_t OnDisplayHandleReady(zx_status_t status,
+                                           const zx_packet_signal_t* signal);
 
   mozart::InputDeviceRegistry* registry_;
 
@@ -63,7 +58,7 @@ class InputReader : fsl::MessageLoopHandler {
   std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
   std::unique_ptr<fsl::DeviceWatcher> console_watcher_;
   zx_handle_t display_ownership_event_;
-  fsl::MessageLoop::HandlerKey display_ownership_handler_key_;
+  std::unique_ptr<async::AutoWait> display_ownership_waiter_;
   bool ignore_console_;
   bool display_owned_ = true;
 

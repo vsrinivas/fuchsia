@@ -6,26 +6,21 @@
 
 #include <zx/event.h>
 
+#include <async/auto_wait.h>
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/tasks/message_loop_handler.h"
 
 #include "garnet/bin/ui/scene_manager/fence.h"
 
 namespace scene_manager {
 
 // Provides access to the consumption fence associated with a call to |Present|.
-class AcquireFence : private fsl::MessageLoopHandler {
+class AcquireFence {
  public:
   // Takes ownership of the fence.
   // |fence| must be a valid handle.
   explicit AcquireFence(zx::event fence);
-
-  // Releases the fence, implicitly signalling to the producer that the
-  // buffer is available to be recycled.
-  ~AcquireFence();
 
   // Waits for the fence to indicate that the buffer is ready or for the
   // timeout to expire, whichever comes first.
@@ -41,16 +36,14 @@ class AcquireFence : private fsl::MessageLoopHandler {
   bool ready() const { return ready_; }
 
  private:
-  // |fsl::MessageLoopHandler|
-  void OnHandleReady(zx_handle_t handle,
-                     zx_signals_t pending,
-                     uint64_t count) override;
+  async_wait_result_t OnFenceSignalledOrClosed(zx_status_t status,
+                                               const zx_packet_signal* signal);
 
   void ClearHandler();
 
   zx::event fence_;
 
-  fsl::MessageLoop::HandlerKey handler_key_ = 0;
+  async::AutoWait waiter_;
   fxl::Closure ready_callback_;
   bool ready_ = false;
 
