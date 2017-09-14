@@ -18,9 +18,6 @@
 
 #include "virtio_priv.h"
 
-/* Controls what PCI interface we expose. */
-static const VirtioPciMode kVirtioPciMode = VirtioPciMode::MODERN;
-
 static uint8_t kPciCapTypeVendorSpecific = 0x9;
 
 static uint16_t kPciVendorIdVirtio = 0x1af4;
@@ -28,31 +25,27 @@ static uint16_t kPciVendorIdVirtio = 0x1af4;
 /* Virtio PCI Bar Layout.
  *
  * We currently use a simple layout where all fields appear sequentially in
- * BAR 1 (this allows BAR 0 to be used for a transitional device if desired).
- * We place the device config as the last capability as it has a variable
- * length.
+ * BAR 0. We place the device config as the last capability as it has a
+ * variable length.
  *
- *        BAR0                   BAR1
- *    ------------  00h      ------------  00h
- *   | Virtio PCI |         | Virtio PCI |
- *   |   Legacy   |         |   Common   |
- *   |   Common   |         |   Config   |
- *   |   Config   |         |------------| 38h
- *   |------------| 14h     |   Notify   |
- *   |  Device-   |         |   Config   |
- *   | Specific   |         |------------| 3ah
- *   |  Config    |         | ISR Config |
- *   |            |         |------------| 3ch
- *   |            |         |  Device-   |
- *   |            |         | Specific   |
- *   |            |         |  Config    |
- *    ------------           ------------
+ *          BAR0
+ *      ------------  00h
+ *     | Virtio PCI |
+ *     |   Common   |
+ *     |   Config   |
+ *     |------------| 38h
+ *     |   Notify   |
+ *     |   Config   |
+ *     |------------| 3ah
+ *     | ISR Config |
+ *     |------------| 3ch
+ *     |  Device-   |
+ *     | Specific   |
+ *     |  Config    |
+ *      ------------
  * These structures are defined in Virtio 1.0 Section 4.1.4.
  */
-enum VirtioPciBar : uint8_t {
-    LEGACY = 0,
-    MODERN = 1,
-};
+static const uint8_t kVirtioPciBar = 0;
 
 // Common configuration.
 static const size_t kVirtioPciCommonCfgBase = 0;
@@ -213,7 +206,7 @@ static zx_status_t virtio_pci_common_cfg_read(const pci_device_t* pci_device, ui
 
 static zx_status_t virtio_pci_read(const pci_device_t* pci_device, uint8_t bar, uint16_t port,
                                    uint8_t access_size, zx_vcpu_io_t* vcpu_io) {
-    if (bar != VirtioPciBar::MODERN)
+    if (bar != kVirtioPciBar)
         return ZX_ERR_NOT_SUPPORTED;
 
     virtio_device_t* device = pci_device_to_virtio(pci_device);
@@ -343,7 +336,7 @@ static zx_status_t virtio_pci_common_cfg_write(pci_device_t* pci_device, uint16_
 
 static zx_status_t virtio_pci_write(pci_device_t* pci_device, uint8_t bar, uint16_t port,
                                     const zx_vcpu_io_t* io) {
-    if (bar != VirtioPciBar::MODERN)
+    if (bar != kVirtioPciBar)
         return ZX_ERR_NOT_SUPPORTED;
 
     virtio_device_t* device = pci_device_to_virtio(pci_device);
@@ -367,38 +360,6 @@ static zx_status_t virtio_pci_write(pci_device_t* pci_device, uint8_t bar, uint1
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t virtio_pci_transitional_write(pci_device_t* pci_device, uint8_t bar,
-                                                 uint16_t port, const zx_vcpu_io_t* io) {
-    if (bar == VirtioPciBar::LEGACY)
-        return virtio_pci_legacy_write(pci_device, bar, port, io);
-
-    return virtio_pci_write(pci_device, bar, port, io);
-}
-
-static zx_status_t virtio_pci_transitional_read(const pci_device_t* pci_device, uint8_t bar,
-                                                uint16_t port, uint8_t access_size,
-                                                zx_vcpu_io_t* vcpu_io) {
-    if (bar == VirtioPciBar::LEGACY)
-        return virtio_pci_legacy_read(pci_device, bar, port, access_size, vcpu_io);
-
-    return virtio_pci_read(pci_device, bar, port, access_size, vcpu_io);
-}
-
-/* Transitional ops expose the legacy interface on BAR 0 and the modern
- * interface on BAR 1.
- */
-static const pci_device_ops_t kVirtioPciTransitionalDeviceOps = {
-    .read_bar = &virtio_pci_transitional_read,
-    .write_bar = &virtio_pci_transitional_write,
-};
-
-/* Legacy ops expose the legacy interface on BAR 0 only. */
-static const pci_device_ops_t kVirtioPciLegacyDeviceOps = {
-    .read_bar = &virtio_pci_legacy_read,
-    .write_bar = &virtio_pci_legacy_write,
-};
-
-/* Expose the modern interface on BAR 1 only. */
 static const pci_device_ops_t kVirtioPciDeviceOps = {
     .read_bar = &virtio_pci_read,
     .write_bar = &virtio_pci_write,
@@ -407,7 +368,7 @@ static const pci_device_ops_t kVirtioPciDeviceOps = {
 static void virtio_pci_setup_cap(pci_cap_t* cap, virtio_pci_cap_t* virtio_cap, uint8_t cfg_type,
                                  size_t cap_len, size_t data_length, size_t bar_offset) {
     virtio_cap->cfg_type = cfg_type;
-    virtio_cap->bar = VirtioPciBar::MODERN;
+    virtio_cap->bar = kVirtioPciBar;
     virtio_cap->offset = static_cast<uint32_t>(bar_offset);
     virtio_cap->length = static_cast<uint32_t>(data_length);
 
@@ -446,56 +407,27 @@ static void virtio_pci_setup_caps(virtio_device_t* device) {
     device->pci_device.capabilities = device->capabilities;
     device->pci_device.num_capabilities = kVirtioPciNumCapabilities;
 
-    static_assert(VirtioPciBar::MODERN < PCI_MAX_BARS, "Not enough BAR registers available.");
-    device->pci_device.bar[VirtioPciBar::MODERN].size = static_cast<uint32_t>(
+    static_assert(kVirtioPciBar < PCI_MAX_BARS, "Not enough BAR registers available.");
+    device->pci_device.bar[kVirtioPciBar].size = static_cast<uint32_t>(
           kVirtioPciDeviceCfgBase + device->config_size);
-    device->pci_device.bar[VirtioPciBar::MODERN].io_type = PCI_BAR_IO_TYPE_MMIO;
+    device->pci_device.bar[kVirtioPciBar].io_type = PCI_BAR_IO_TYPE_MMIO;
 }
 
-static void virtio_pci_setup_legacy_bar(virtio_device_t* device) {
-    uint16_t legacy_config_size = static_cast<uint16_t>(
-        sizeof(virtio_pci_legacy_config_t) + device->config_size);
-    device->pci_device.bar[0].size = legacy_config_size;
-    device->pci_device.bar[0].io_type = PCI_BAR_IO_TYPE_PIO;
-}
-
-static constexpr uint16_t virtio_pci_id(VirtioPciMode mode, uint16_t virtio_id) {
-    if (mode == VirtioPciMode::MODERN) {
-        return static_cast<uint16_t>(virtio_id + 0x1040u);
-    }
-    // Virtio 1.0 Section 4.1.2.3: Transitional devices MUST have the
-    // Transitional PCI Device ID in the range 0x1000 to 0x103f.
-    return static_cast<uint16_t>(virtio_id + 0xfffu);
+static constexpr uint16_t virtio_pci_id(uint16_t virtio_id) {
+    return static_cast<uint16_t>(virtio_id + 0x1040u);
 }
 
 void virtio_pci_init(virtio_device_t* device) {
     device->pci_device.vendor_id = kPciVendorIdVirtio;
-    device->pci_device.device_id = virtio_pci_id(kVirtioPciMode, device->device_id);
+    device->pci_device.device_id = virtio_pci_id(device->device_id);
     device->pci_device.subsystem_vendor_id = 0;
     device->pci_device.subsystem_id = device->device_id;
     device->pci_device.class_code = 0;
     device->pci_device.impl = device;
 
-    switch (kVirtioPciMode) {
-    case VirtioPciMode::LEGACY:
-        device->pci_device.revision_id = 0;
-        device->pci_device.ops = &kVirtioPciLegacyDeviceOps;
-        virtio_pci_setup_legacy_bar(device);
-        break;
-    case VirtioPciMode::MODERN:
-        // Virtio 1.0 Section 4.1.2.1: Non-transitional devices SHOULD have a
-        // PCI Revision ID of 1 or higher.
-        device->pci_device.revision_id = 1;
-        device->pci_device.ops = &kVirtioPciDeviceOps;
-        virtio_pci_setup_caps(device);
-        break;
-    case VirtioPciMode::TRANSITIONAL:
-        // Virtio 1.0 Section 4.1.2.3: Transitional devices MUST have a PCI
-        // Revision ID of 0.
-        device->pci_device.revision_id = 0;
-        device->pci_device.ops = &kVirtioPciTransitionalDeviceOps;
-        virtio_pci_setup_caps(device);
-        virtio_pci_setup_legacy_bar(device);
-        break;
-    }
+    // Virtio 1.0 Section 4.1.2.1: Non-transitional devices SHOULD have a
+    // PCI Revision ID of 1 or higher.
+    device->pci_device.revision_id = 1;
+    device->pci_device.ops = &kVirtioPciDeviceOps;
+    virtio_pci_setup_caps(device);
 }

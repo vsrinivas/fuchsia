@@ -16,7 +16,7 @@
 #define PCI_DEVICE_VIRTIO_BLOCK     2u
 #define PCI_DEVICE_INVALID          UINT16_MAX
 #define PCI_MAX_DEVICES             3u
-#define PCI_MAX_BARS                2u
+#define PCI_MAX_BARS                1u
 
 // PCI configuration constants.
 #define PCI_BAR_IO_TYPE_MASK        0x0001u

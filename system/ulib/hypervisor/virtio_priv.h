@@ -9,24 +9,6 @@
 #include <zircon/types.h>
 #include <virtio/virtio.h>
 
-/* Virtio PCI interface types. */
-enum class VirtioPciMode {
-    // As defined in Virtio 0.9.5.
-    LEGACY,
-    // As defined as a 'non-transitional device' in Virtio 1.0 spec.
-    MODERN,
-    // As defined as a 'transitional device' in Virtio 1.0 spec.
-    TRANSITIONAL,
-};
-
-
-/* Legacy PCI device functions. */
-zx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, uint8_t bar, uint16_t port,
-                                    const zx_vcpu_io_t* io);
-
-zx_status_t virtio_pci_legacy_read(const pci_device_t* pci_device, uint8_t bar, uint16_t port,
-                                   uint8_t access_size, zx_vcpu_io_t* vcpu_io);
-
 /* Read bytes from a devices config structure.
  *
  * |config| must point to an in-memory representation of the config structure

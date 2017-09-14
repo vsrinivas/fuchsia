@@ -25,7 +25,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vcpu.cpp \
     $(LOCAL_DIR)/virtio.cpp \
     $(LOCAL_DIR)/virtio_pci.cpp \
-    $(LOCAL_DIR)/virtio_pci_legacy.cpp \
 
 ifeq ($(SUBARCH),x86-64)
 MODULE_SRCS += \
