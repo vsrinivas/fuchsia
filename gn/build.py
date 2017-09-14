@@ -14,8 +14,8 @@ def main():
     parser.add_argument("--release", "-r", help="build in release mode",
             action="store_true")
     args, unknown_args = parser.parse_known_args()
-    magenta_build_script = os.path.join(paths.FUCHSIA_ROOT, "scripts", "build-magenta.sh")
-    subprocess.check_call([magenta_build_script])
+    zircon_build_script = os.path.join(paths.FUCHSIA_ROOT, "scripts", "build-zircon.sh")
+    subprocess.check_call([zircon_build_script])
     ninja_path = os.path.join(paths.FUCHSIA_ROOT, "buildtools", "ninja")
     outdir = paths.DEBUG_OUT_DIR
     if args.release:

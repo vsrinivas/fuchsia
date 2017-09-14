@@ -4,12 +4,12 @@
         "rust"
     ],
     "labels": [
-        "//rust/magenta-rs/examples"
+        "//rust/zircon-rs/examples"
     ],
     "binaries": [
         {
-            "binary": "mx_toy",
-            "bootfs_path": "bin/example_mx_toy"
+            "binary": "zx_toy",
+            "bootfs_path": "bin/example_zx_toy"
         }
     ]
 }

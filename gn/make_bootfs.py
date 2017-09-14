@@ -56,7 +56,7 @@ def add_paths_to_map(path_map, manifest_path):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Make a bootfs for loading into Magenta')
+        description='Make a bootfs for loading into Zircon')
     parser.add_argument('--output-file', help='Place to put built userfs')
     parser.add_argument(
         '--build-id-map', help='Place to put mapping from build id to paths')

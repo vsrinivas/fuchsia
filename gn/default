@@ -30,7 +30,7 @@
         "leveldb",
         "libc-tests",
         "lua",
-        "magenta_benchmarks",
+        "zircon_benchmarks",
         "make-fuchsia-vol",
         "maxwell",
         "media",

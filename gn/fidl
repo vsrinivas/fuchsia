@@ -10,7 +10,7 @@
     ],
     "labels": [
         "//garnet/public/lib/fidl",
-        "//magenta/system/host/fidl:fidl2(//build/toolchain:host_x64)"
+        "//zircon/system/host/fidl:fidl2(//build/toolchain:host_x64)"
     ],
     "binaries": [
         {

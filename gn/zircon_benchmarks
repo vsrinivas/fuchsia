@@ -3,12 +3,12 @@
         "cpp"
     ],
     "labels": [
-        "//magenta/benchmarks"
+        "//zircon/benchmarks"
     ],
     "binaries": [
         {
             "binary": "benchmarks",
-            "bootfs_path": "bin/magenta-benchmarks"
+            "bootfs_path": "bin/zircon-benchmarks"
         }
     ]
 }

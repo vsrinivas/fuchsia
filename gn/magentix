@@ -1,7 +1,7 @@
 {
     "imports": [
         "drivers",
-        "magenta_benchmarks",
+        "zircon_benchmarks",
         "netstack",
         "openssh",
         "openssh-keys",

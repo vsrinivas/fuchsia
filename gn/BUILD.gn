@@ -65,10 +65,10 @@ action("mkbootfs") {
     component_index,
   ]
 
-  magenta_bootdata = "//out/build-magenta/build-$magenta_project/bootdata.bin"
+  zircon_bootdata = "//out/build-zircon/build-$zircon_project/bootdata.bin"
 
   inputs = [
-    magenta_bootdata,
+    zircon_bootdata,
   ]
 
   args = [
@@ -81,7 +81,7 @@ action("mkbootfs") {
     "--system-manifest",
     rebase_path(system_manifest_file),
     "--pre-binaries",
-    rebase_path(magenta_bootdata),
+    rebase_path(zircon_bootdata),
   ]
   args += read_file(packages_file, "list lines")
 }

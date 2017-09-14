@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 declare_args() {
-  # Path to the root of the magenta build directory.
-  magenta_build_dir = "//out//build-magenta"
+  # Path to the root of the zircon build directory.
+  zircon_build_dir = "//out//build-zircon"
 }
 
 # Defines a package

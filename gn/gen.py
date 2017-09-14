@@ -19,8 +19,8 @@ def main():
     parser.add_argument("--help-args", dest="gn_args_list", default=False,
                         help="Show GN build arguments usable in --args",
                         action="store_true")
-    parser.add_argument("--magenta_project", "-p", help="magenta project",
-                        default=os.environ.get("MAGENTA_PROJECT"))
+    parser.add_argument("--zircon_project", "-p", help="zircon project",
+                        default=os.environ.get("ZIRCON_PROJECT"))
     parser.add_argument("--modules", "-m", help="comma separted list of modules",
                         default="default")
     parser.add_argument("--release", "-r", help="generate release mode build files",
@@ -104,8 +104,8 @@ def main():
     if args.gn_args:
         gn_args += " " + " ".join(args.gn_args)
 
-    if args.magenta_project:
-        gn_args += " magenta_project=\"%s\"" % args.magenta_project
+    if args.zircon_project:
+        gn_args += " zircon_project=\"%s\"" % args.zircon_project
 
     if args.omit_tests:
         target = "//packages/gn:default"
