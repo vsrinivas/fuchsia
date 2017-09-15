@@ -14,7 +14,7 @@
 namespace svcfs {
 
 static void CopyToArray(const char* string, size_t len, fbl::Array<char>* result) {
-    fbl::Array<char> array(new char[len + 1], len);
+    fbl::Array<char> array(new char[len + 1], len + 1);
     memcpy(array.get(), string, len);
     array[len] = '\0';
     result->swap(array);
