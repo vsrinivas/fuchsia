@@ -26,9 +26,9 @@ from check_rust_licenses import check_licenses
 # taken into account, as will Fuchsia crates published to crates.io.
 CONFIGS = [
     "apps/xi/modules/xi-core",
-    "lib/fidl/rust/fidl",
+    "garnet/public/lib/fidl/rust/fidl",
+    "garnet/public/rust/crates/tokio-fuchsia",
     "rust/rust_sample_module",
-    "rust/tokio-fuchsia",
     "third_party/xi-editor/rust/core-lib",
 ]
 
