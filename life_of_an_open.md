@@ -322,8 +322,8 @@ Zircon Channels, speaking RIO                   Client Creates Channel
       ^            ^
       |            |
 Zircon Channels, speaking RIO                   Client Sends RIO message to Server
-      |            |                             Message includes a ‘foo’ handle
-      v            v                             (and waits for response)
+      |            |                            Message includes a ‘foo’ handle
+      v            v                            (and waits for response)
 +-------------------------+
 | '/' Handle | CWD Handle |
 +-------------------------+
@@ -346,8 +346,8 @@ Zircon Channels, speaking RIO                   Client Sends RIO message to Serv
       ^            ^
       |            |
 Zircon Channels, speaking RIO                   Server dispatches message to I/O State,
-      |            |                             Interprets as ‘open’
-      v            v                             Finds or Creates ‘foo’
+      |            |                            Interprets as ‘open’
+      v            v                            Finds or Creates ‘foo’
 +-------------------------+
 | '/' Handle | CWD Handle |
 +-------------------------+
@@ -369,7 +369,7 @@ Zircon Channels, speaking RIO                   Server dispatches message to I/O
 +-------------------------+--------------+
       ^            ^          ^
       |            |          |
-Zircon Channels, speaking RIO|                  Server allocates I/O state for Vnode
+Zircon Channels, speaking RIO |                  Server allocates I/O state for Vnode
       |            |          |                  Responds to client-provided handle
       v            v          v
 +-------------------------+--------------+
@@ -393,7 +393,7 @@ Zircon Channels, speaking RIO|                  Server allocates I/O state for V
 +-------------------------+--------------+
       ^            ^          ^
       |            |          |
-Zircon Channels, speaking RIO|                  Client recognizes that ‘foo’ was opened
+Zircon Channels, speaking RIO |                  Client recognizes that ‘foo’ was opened
       |            |          |                  Allocated Fdio + fd, ‘open’ succeeds.
       v            v          v
 +-------------------------+--------------+
