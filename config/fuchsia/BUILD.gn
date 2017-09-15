@@ -139,3 +139,12 @@ config("thread_safety_annotations") {
   cflags_cc = [ "-Wthread-safety" ]
   defines = [ "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS" ]
 }
+
+config("zircon_asserts") {
+  if (is_debug) {
+    debug_level = 2
+  } else {
+    debug_level = 0
+  }
+  defines = [ "ZX_DEBUGLEVEL=$debug_level" ]
+}

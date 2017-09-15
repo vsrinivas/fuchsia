@@ -142,6 +142,10 @@ if (is_fuchsia) {
     "//build/config/fuchsia:safestack",
     "//build/config/fuchsia:thread_safety_annotations",
     "//build/config/fuchsia:werror",
+
+    # TODO(mcgrathr): Perhaps restrict this to only affected code.
+    # For now, safest to do it everywhere.
+    "//build/config/fuchsia:zircon_asserts",
   ]
 }
 
