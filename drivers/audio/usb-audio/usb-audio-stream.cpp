@@ -795,14 +795,14 @@ zx_status_t UsbAudioStream::OnStartLocked(DispatcherChannel* channel,
 
     usb_frame_num_ += 2;
 
-    // Queue up all of our transactions.
+    // Flag ourselves as being in the starting state, then queue up all of our
+    // transactions.
+    ring_buffer_state_ = RingBufferState::STARTING;
     while (!list_is_empty(&free_iotxn_))
         QueueIotxnLocked();
 
-    // Flag ourselves as being in the starting state, record the transaction ID
-    // we will send back to our client when we have successfully started, then
-    // get out.
-    ring_buffer_state_ = RingBufferState::STARTING;
+    // Record the transaction ID we will send back to our client when we have
+    // successfully started, then get out.
     pending_job_resp_.start = resp;
     return ZX_OK;
 }
