@@ -131,7 +131,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
     // Without this nanosleep() line, 3 and 4 can have keys BEFORE 1 and 2
     // because the timestamp is at millisecond resolution with a random number
     // to break ties, which means that 3 and 4 would not overwrite the 2.
-    mx_nanosleep(mx_deadline_after(MX_MSEC(2)));
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(2)));
 
     // Watch the log to see what values are actually seen by the Watcher.
     root_peer_->Set(nullptr, "3");

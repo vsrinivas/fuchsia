@@ -229,7 +229,7 @@ ComponentIndexImpl::ComponentIndexImpl(
   // Merge in cloud index.
   {
     resource_loader_->LoadResource(
-        kCloudIndexPath, [this](mx::vmo vmo, network::NetworkErrorPtr error) {
+        kCloudIndexPath, [this](zx::vmo vmo, network::NetworkErrorPtr error) {
           if (error) {
             FXL_LOG(WARNING) << "Failed to load cloud component index";
             return;
@@ -271,7 +271,7 @@ void ComponentIndexImpl::GetComponent(const ::fidl::String& component_id_,
 
   resource_loader_->LoadResource(
       component_id, [this, component_id, callback](
-                        mx::vmo vmo, network::NetworkErrorPtr error) {
+                        zx::vmo vmo, network::NetworkErrorPtr error) {
         // Pass errors to the caller.
         if (error) {
           callback(nullptr, nullptr, std::move(error));

@@ -64,7 +64,7 @@ source_set("unittests") {
     "//apps/modular/src/entity",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
-    "//magenta/system/ulib/trace",
+    "//zircon/system/ulib/trace",
     "//third_party/gtest",
   ]
 }

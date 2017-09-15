@@ -110,7 +110,7 @@ class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
 
   void Cont(FlowToken flow) {
     page_snapshot_->Get(to_array(link_key_), [this, flow](ledger::Status status,
-                                                          mx::vmo value) {
+                                                          zx::vmo value) {
       if (status != ledger::Status::OK) {
         if (status != ledger::Status::KEY_NOT_FOUND) {
           // It's expected that the key is not found when the link is

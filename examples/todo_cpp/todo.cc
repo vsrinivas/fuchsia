@@ -29,7 +29,7 @@ const double kListSizeStdDev = 2.0;
 const int kMinDelaySeconds = 1;
 const int kMaxDelaySeconds = 5;
 
-std::string ToString(const mx::vmo& vmo) {
+std::string ToString(const zx::vmo& vmo) {
   std::string ret;
   if (!fsl::StringFromVmo(vmo, &ret)) {
     FXL_DCHECK(false);

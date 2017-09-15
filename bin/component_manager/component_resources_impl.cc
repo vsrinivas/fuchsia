@@ -34,13 +34,13 @@ void ComponentResourcesImpl::GetResource(const fidl::String& resource_name,
     auto error = network::NetworkError::New();
     error->code = 404;
     error->description = "Not Found";
-    callback(mx::vmo(), std::move(error));
+    callback(zx::vmo(), std::move(error));
     return;
   }
   const std::string& url = i.GetValue();
 
   resource_loader_->LoadResource(
-      url, [callback](mx::vmo vmo, network::NetworkErrorPtr error) {
+      url, [callback](zx::vmo vmo, network::NetworkErrorPtr error) {
         // TODO(ianloic): can the callback be called directly?
         callback(std::move(vmo), std::move(error));
       });

@@ -34,7 +34,7 @@ void ViewHost::ConnectView(
 
   auto view_data = std::make_unique<ViewData>(session());
 
-  mx::eventpair host_import_token;
+  zx::eventpair host_import_token;
   view_data->host_node.ExportAsRequest(&host_import_token);
   container_node_.AddChild(view_data->host_node);
   views_.emplace(child_key, std::move(view_data));

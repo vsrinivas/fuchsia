@@ -268,7 +268,7 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
                       // 4. Read the counter from the root page.
                       page_snapshot_->Get(
                           to_array(kLedgerCounterKey),
-                          [this](ledger::Status status, mx::vmo value) {
+                          [this](ledger::Status status, zx::vmo value) {
                             // 5. If counter doesn't exist, initialize.
                             // Otherwise, increment.
                             if (status == ledger::Status::KEY_NOT_FOUND) {

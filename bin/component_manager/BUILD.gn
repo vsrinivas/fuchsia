@@ -27,7 +27,7 @@ executable("component_manager_main") {
     "//third_party/rapidjson",
   ]
 
-  libs = [ "mxio" ]
+  libs = [ "fdio" ]
 }
 
 fuchsia_component("component_manager") {

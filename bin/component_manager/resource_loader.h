@@ -12,7 +12,7 @@ namespace component {
 
 class ResourceLoader {
  public:
-  using Callback = std::function<void(mx::vmo, network::NetworkErrorPtr)>;
+  using Callback = std::function<void(zx::vmo, network::NetworkErrorPtr)>;
 
   explicit ResourceLoader(network::NetworkServicePtr network_service);
   void LoadResource(const std::string& url, const Callback& callback_);

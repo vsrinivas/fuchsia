@@ -5,8 +5,8 @@
 #include "apps/modular/lib/util/filesystem.h"
 
 #include <fcntl.h>
-#include <magenta/device/vfs.h>
-#include <magenta/syscalls.h>
+#include <zircon/device/vfs.h>
+#include <zircon/syscalls.h>
 #include <unistd.h>
 #include <memory>
 

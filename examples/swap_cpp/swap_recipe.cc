@@ -38,7 +38,7 @@ class RecipeView : public mozart::BaseView {
     if (view_owner) {
       host_node_ = std::make_unique<scenic_lib::EntityNode>(session());
 
-      mx::eventpair host_import_token;
+      zx::eventpair host_import_token;
       host_node_->ExportAsRequest(&host_import_token);
       parent_node().AddChild(*host_node_);
 

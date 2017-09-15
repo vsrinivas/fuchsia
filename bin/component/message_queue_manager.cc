@@ -165,7 +165,7 @@ std::string GenerateQueueToken() {
   // Get 256 bits of pseudo-randomness.
   uint8_t randomness[256 / 8];
   size_t random_size;
-  mx_cprng_draw(&randomness, sizeof randomness, &random_size);
+  zx_cprng_draw(&randomness, sizeof randomness, &random_size);
   // TODO(alhaad): is there a more efficient way to do this?
   std::string token;
   for (uint8_t byte : randomness) {
@@ -223,7 +223,7 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
           key_ = MakeMessageQueueTokenKey(component_namespace_,
                                           component_instance_id_, queue_name_);
           snapshot_->Get(to_array(key_), [this, flow](ledger::Status status,
-                                                      mx::vmo value) {
+                                                      zx::vmo value) {
             if (status == ledger::Status::KEY_NOT_FOUND) {
               // Key wasn't found, that's not an error.
               return;
@@ -293,7 +293,7 @@ class MessageQueueManager::GetMessageSenderCall : Operation<> {
 
           std::string key = MakeMessageQueueKey(token_);
           snapshot_->Get(to_array(key), [this, flow](ledger::Status status,
-                                                     mx::vmo value) {
+                                                     zx::vmo value) {
             if (status != ledger::Status::OK) {
               if (status != ledger::Status::KEY_NOT_FOUND) {
                 // It's expected that the key is not found when the link

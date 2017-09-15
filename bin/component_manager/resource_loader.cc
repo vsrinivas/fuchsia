@@ -37,7 +37,7 @@ ResourceLoader::ResourceLoader(network::NetworkServicePtr network_service)
 void ResourceLoader::LoadResource(const std::string& url,
                                   const Callback& callback_) {
   const Callback& callback(callback_);
-  mx::vmo vmo;
+  zx::vmo vmo;
 
   // Look in the local components directory.
   auto local_path = PathForUrl(url);
@@ -56,7 +56,7 @@ void ResourceLoader::LoadResource(const std::string& url,
   network_service_->CreateURLLoader(url_loader.NewRequest());
   url_loader.set_connection_error_handler([callback] {
     FXL_LOG(ERROR) << "Error from URLLoader connection";
-    callback(mx::vmo(), MakeNetworkError(500, "URLLoader channel closed"));
+    callback(zx::vmo(), MakeNetworkError(500, "URLLoader channel closed"));
   });
 
   network::URLRequestPtr request = network::URLRequest::New();
@@ -70,7 +70,7 @@ void ResourceLoader::LoadResource(const std::string& url,
         if (response->error) {
           FXL_LOG(ERROR) << "URL response contained error: "
                          << response->error->description;
-          callback(mx::vmo(), std::move(response->error));
+          callback(zx::vmo(), std::move(response->error));
           return;
         }
 
@@ -88,16 +88,16 @@ void ResourceLoader::LoadResource(const std::string& url,
         if (!fsl::BlockingCopyToString(std::move(response->body->get_stream()),
                                        &data)) {
           FXL_LOG(ERROR) << "Failed to read URL response stream.";
-          callback(mx::vmo(), MakeNetworkError(
+          callback(zx::vmo(), MakeNetworkError(
                                   500, "Failed to read URL response stream."));
           return;
         }
 
         // Copy the string into a VMO.
-        mx::vmo vmo;
+        zx::vmo vmo;
         if (!fsl::VmoFromString(data, &vmo)) {
           FXL_LOG(ERROR) << "Failed to get vmo from string";
-          callback(mx::vmo(),
+          callback(zx::vmo(),
                    MakeNetworkError(500, "Failed to make vmo from string"));
           return;
         }

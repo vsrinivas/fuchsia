@@ -36,7 +36,7 @@ The available URLs for for flutter module examples are:
 * `example_flutter_hello_world`
 * `example_flutter_counter_parent`
 
-After a successful build of fuchsia, type the following command from the mx
+After a successful build of fuchsia, type the following command from the zx
 console to run the device runner with the dev user shell:
 
 ```

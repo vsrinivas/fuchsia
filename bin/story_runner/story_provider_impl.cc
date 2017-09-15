@@ -36,7 +36,7 @@ namespace {
 void XdrStoryInfo(XdrContext* const xdr, StoryInfo* const data) {
   // TODO(jimbe) Remove error handler after 2017-08-01
   xdr->ReadErrorHandler(
-         [&data] { data->last_focus_time = mx_time_get(MX_CLOCK_UTC); })
+         [&data] { data->last_focus_time = zx_time_get(ZX_CLOCK_UTC); })
       ->Field("last_focus_time", &data->last_focus_time);
   xdr->Field("url", &data->url);
   xdr->Field("id", &data->id);
@@ -172,7 +172,7 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
             auto* const story_info = story_data_->story_info.get();
             story_info->url = url_;
             story_info->id = story_id_;
-            story_info->last_focus_time = mx_time_get(MX_CLOCK_UTC);
+            story_info->last_focus_time = zx_time_get(ZX_CLOCK_UTC);
             story_info->extra = std::move(extra_info_);
             story_info->extra.mark_non_null();
 
@@ -809,7 +809,7 @@ void StoryProviderImpl::OnFocusChange(FocusInfoPtr info) {
   // Last focus time is recorded in the ledger, and story provider watchers are
   // notified through the page watcher.
   auto mutate = [time =
-                     mx_time_get(MX_CLOCK_UTC)](StoryData* const story_data) {
+                     zx_time_get(ZX_CLOCK_UTC)](StoryData* const story_data) {
     story_data->story_info->last_focus_time = time;
     return true;
   };
@@ -845,7 +845,7 @@ StoryContextLogPtr StoryProviderImpl::MakeLogEntry(const StorySignal signal) {
   auto log_entry = StoryContextLog::New();
   log_entry->context = context_handler_.values().Clone();
   log_entry->device_id = device_id_;
-  log_entry->time = mx_time_get(MX_CLOCK_UTC);
+  log_entry->time = zx_time_get(ZX_CLOCK_UTC);
   log_entry->signal = signal;
 
   return log_entry;

@@ -4,9 +4,9 @@
 
 #include "apps/modular/lib/fidl/app_client.h"
 
-#include <magenta/processargs.h>
-#include <mxio/limits.h>
-#include <mxio/util.h>
+#include <zircon/processargs.h>
+#include <fdio/limits.h>
+#include <fdio/util.h>
 
 #include <fcntl.h>
 
@@ -17,28 +17,28 @@
 namespace modular {
 namespace {
 
-mx::channel CloneChannel(int fd) {
-  mx_handle_t handle[MXIO_MAX_HANDLES];
-  uint32_t type[MXIO_MAX_HANDLES];
+zx::channel CloneChannel(int fd) {
+  zx_handle_t handle[FDIO_MAX_HANDLES];
+  uint32_t type[FDIO_MAX_HANDLES];
 
-  mx_status_t r = mxio_clone_fd(fd, 0, handle, type);
+  zx_status_t r = fdio_clone_fd(fd, 0, handle, type);
   if (r < 0 || r == 0) {
-    return mx::channel();
+    return zx::channel();
   }
 
-  if (type[0] != PA_MXIO_REMOTE) {
+  if (type[0] != PA_FDIO_REMOTE) {
     for (int i = 0; i < r; ++i) {
-      mx_handle_close(handle[i]);
+      zx_handle_close(handle[i]);
     }
-    return mx::channel();
+    return zx::channel();
   }
 
   // Close any extra handles.
   for (int i = 1; i < r; ++i) {
-    mx_handle_close(handle[i]);
+    zx_handle_close(handle[i]);
   }
 
-  return mx::channel(handle[0]);
+  return zx::channel(handle[0]);
 }
 
 }  // namespace

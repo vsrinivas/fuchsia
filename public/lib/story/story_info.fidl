@@ -14,7 +14,7 @@ struct StoryInfo {
   string id;
 
   // Wallclock time when the story was last focused. From
-  // mx_time_get(MX_CLOCK_UTC), thus nanoseconds since UNIX epoch (1970-01-01
+  // zx_time_get(ZX_CLOCK_UTC), thus nanoseconds since UNIX epoch (1970-01-01
   // 00:00 UTC).
   int64 last_focus_time;
 

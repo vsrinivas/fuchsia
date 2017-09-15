@@ -76,11 +76,11 @@ and `blk1.bin`.
 
 ### Command line on host
 
-Start two qemu instances running fuchsia/magenta.
+Start two qemu instances running fuchsia/zircon.
 
 ```
-$ scripts/run-magenta-x86-64 -N -I qemu0 -x out/debug-x86-64/user.bootfs -g -- -hda blk0.bin
-$ scripts/run-magenta-x86-64 -N -I qemu1 -x out/debug-x86-64/user.bootfs -g -- -hda blk1.bin
+$ scripts/run-zircon-x86-64 -N -I qemu0 -x out/debug-x86-64/user.bootfs -g -- -hda blk0.bin
+$ scripts/run-zircon-x86-64 -N -I qemu1 -x out/debug-x86-64/user.bootfs -g -- -hda blk1.bin
 ```
 
 ### Prerequisites on fuchsia
@@ -114,8 +114,8 @@ device_runner --user_shell=dev_user_shell --user_shell_args='--story_id=CmfpuRWu
 
 You can also just run the default user shell and restart stories from the timeline.
 
-[qemu]: https://fuchsia.googlesource.com/magenta/+/master/docs/qemu.md "QEMU"
+[qemu]: https://fuchsia.googlesource.com/zircon/+/master/docs/qemu.md "QEMU"
 [fuchsia]: https://fuchsia.googlesource.com/docs/+/HEAD/getting_started.md#Enabling-Network "Fuchsia Network"
-[tap]: https://fuchsia.googlesource.com/magenta/+/master/docs/qemu.md#Enabling-Networking-under-QEMU-x86_64-only "TAP interfaces"
+[tap]: https://fuchsia.googlesource.com/zircon/+/master/docs/qemu.md#Enabling-Networking-under-QEMU-x86_64-only "TAP interfaces"
 [cloudsync]: https://fuchsia.googlesource.com/ledger/+/HEAD/docs/user_guide.md#Cloud-Sync "Cloud Sync in Ledger"
-[minfs]: https://fuchsia.googlesource.com/magenta/+/master/docs/minfs.md
+[minfs]: https://fuchsia.googlesource.com/zircon/+/master/docs/minfs.md

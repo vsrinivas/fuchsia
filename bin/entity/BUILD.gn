@@ -38,7 +38,7 @@ source_set("unittests") {
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//magenta/system/ulib/trace",
+    "//zircon/system/ulib/trace",
     "//third_party/gtest",
   ]
 }

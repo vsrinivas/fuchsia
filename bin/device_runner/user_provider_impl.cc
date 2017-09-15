@@ -46,9 +46,9 @@ auth::AccountPtr Convert(const UserStorage* user) {
 std::string GetRandomId() {
   uint32_t random_number;
   size_t random_size;
-  mx_status_t status =
-      mx_cprng_draw(&random_number, sizeof random_number, &random_size);
-  FXL_CHECK(status == MX_OK);
+  zx_status_t status =
+      zx_cprng_draw(&random_number, sizeof random_number, &random_size);
+  FXL_CHECK(status == ZX_OK);
   FXL_CHECK(sizeof random_number == random_size);
 
   return std::to_string(random_number);
