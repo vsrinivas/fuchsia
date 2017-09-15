@@ -21,8 +21,6 @@
 
 // clang-format on
 
-__BEGIN_CDECLS
-
 typedef struct zx_vcpu_state zx_vcpu_state_t;
 
 /* Stores info from a decoded instruction. */
@@ -112,5 +110,3 @@ static inline zx_status_t inst_test8(const instruction_t* inst, uint8_t inst_val
     return ZX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__
 }
-
-__END_CDECLS

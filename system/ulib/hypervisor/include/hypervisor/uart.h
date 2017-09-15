@@ -31,8 +31,6 @@
 
 // clang-format on
 
-__BEGIN_CDECLS
-
 typedef struct io_apic io_apic_t;
 typedef struct zx_packet_guest_io zx_packet_guest_io_t;
 typedef struct zx_vcpu_io zx_vcpu_io_t;
@@ -74,5 +72,3 @@ zx_status_t uart_write(uart_t* uart, const zx_packet_guest_io_t* io);
 
 /* Start asynchronous handling of UART. */
 zx_status_t uart_async(uart_t* uart, zx_handle_t guest);
-
-__END_CDECLS

@@ -6,8 +6,6 @@
 
 #include <zircon/types.h>
 
-__BEGIN_CDECLS
-
 /**
  * Create an ACPI 1.0 table.
  *
@@ -16,5 +14,3 @@ __BEGIN_CDECLS
  * @param acpi_off The offset to write the ACPI table.
  */
 zx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_off);
-
-__END_CDECLS

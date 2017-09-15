@@ -21,8 +21,6 @@
  */
 #define VIRTIO_BALLOON_PAGE_SIZE 4096
 
-__BEGIN_CDECLS
-
 /* Virtio memory balloon device. */
 typedef struct balloon {
     mtx_t mutex;
@@ -68,5 +66,3 @@ zx_status_t balloon_request_stats(balloon_t* balloon, balloon_stats_fn_t handler
 
 /* Update the 'num_pages' configuration field in the balloon. */
 zx_status_t balloon_update_num_pages(balloon_t* balloon, uint32_t num_pages);
-
-__END_CDECLS

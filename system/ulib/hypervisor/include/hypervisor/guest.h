@@ -6,8 +6,6 @@
 
 #include <zircon/types.h>
 
-__BEGIN_CDECLS
-
 typedef struct e820entry {
     uint64_t addr;
     uint64_t size;
@@ -43,5 +41,3 @@ zx_status_t guest_create_e820(uintptr_t addr, size_t size, uintptr_t e820_off);
  * Get a hypervisor resource to create a guest.
  */
 zx_status_t guest_get_resource(zx_handle_t* resource);
-
-__END_CDECLS

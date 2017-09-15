@@ -8,8 +8,6 @@
 
 #include <zircon/types.h>
 
-__BEGIN_CDECLS
-
 typedef struct zx_packet_guest_io zx_packet_guest_io_t;
 typedef struct zx_vcpu_io zx_vcpu_io_t;
 
@@ -27,5 +25,3 @@ typedef struct io_port {
 void io_port_init(io_port_t* io_port);
 zx_status_t io_port_read(const io_port_t* io_port, uint16_t port, zx_vcpu_io_t* vcpu_io);
 zx_status_t io_port_write(io_port_t* io_port, const zx_packet_guest_io_t* io);
-
-__END_CDECLS

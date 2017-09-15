@@ -13,8 +13,6 @@
 #define IO_APIC_REDIRECT_OFFSETS (IO_APIC_REDIRECTS * 2)
 #define IO_APIC_MAX_LOCAL_APICS 16u
 
-__BEGIN_CDECLS
-
 typedef struct local_apic local_apic_t;
 
 /* Stores the IO APIC state. */
@@ -48,5 +46,3 @@ zx_status_t io_apic_redirect(const io_apic_t* io_apic, uint32_t global_irq, uint
 
 /* Signals the given global IRQ. */
 zx_status_t io_apic_interrupt(const io_apic_t* io_apic, uint32_t global_irq);
-
-__END_CDECLS

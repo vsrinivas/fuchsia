@@ -42,8 +42,6 @@
 
 // clang-format on
 
-__BEGIN_CDECLS
-
 typedef struct instruction instruction_t;
 typedef struct io_apic io_apic_t;
 typedef struct zx_packet_guest_io zx_packet_guest_io_t;
@@ -186,5 +184,3 @@ zx_status_t pci_device_async(pci_device_t* device, zx_handle_t guest);
 
 /* Raise the configured interrupt for the given PCI device. */
 zx_status_t pci_interrupt(pci_device_t* device);
-
-__END_CDECLS

@@ -11,8 +11,6 @@
 
 #define SECTOR_SIZE 512u
 
-__BEGIN_CDECLS
-
 typedef struct io_apic io_apic_t;
 
 /* Stores the state of a block device. */
@@ -38,5 +36,3 @@ zx_status_t block_init(block_t* block, const char* path, uintptr_t guest_physmem
 
 /* Block device that returns reads and writes to a file. */
 zx_status_t file_block_device(block_t* block);
-
-__END_CDECLS

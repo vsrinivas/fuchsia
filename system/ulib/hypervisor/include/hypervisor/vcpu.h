@@ -8,8 +8,6 @@
 
 #include <zircon/syscalls/hypervisor.h>
 
-__BEGIN_CDECLS
-
 typedef struct io_apic io_apic_t;
 typedef struct io_port io_port_t;
 typedef struct zx_port_packet zx_port_packet_t;
@@ -108,5 +106,3 @@ typedef struct trap_args {
  */
 zx_status_t device_async(zx_handle_t guest, const trap_args_t* traps, size_t num_traps,
                          device_handler_fn_t handler, void* ctx);
-
-__END_CDECLS

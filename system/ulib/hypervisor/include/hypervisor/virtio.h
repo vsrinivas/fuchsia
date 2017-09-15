@@ -17,8 +17,6 @@
 
 // clang-format on
 
-__BEGIN_CDECLS
-
 struct vring_desc;
 struct vring_avail;
 struct vring_used;
@@ -247,5 +245,3 @@ zx_status_t virtio_queue_read_desc(virtio_queue_t* queue, uint16_t index, virtio
  * after calling virtio_queue_return.
  */
 void virtio_queue_return(virtio_queue_t* queue, uint16_t index, uint32_t len);
-
-__END_CDECLS
