@@ -288,6 +288,18 @@ static zx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_
     return status;
 }
 
+static void usb_interface_request_queue(void* ctx, usb_request_t* usb_request) {
+    usb_interface_t* intf = ctx;
+    iotxn_t* txn;
+    zx_status_t status = usb_request_to_iotxn(usb_request, &txn);
+    if (status != ZX_OK) {
+        dprintf(ERROR, "usb_request_to_iotxn failed: %d\n", status);
+        usb_request_complete(usb_request, status, 0);
+        return;
+    }
+    iotxn_queue(intf->zxdev, txn);
+}
+
 static void usb_interface_queue(void* ctx, iotxn_t* txn, uint8_t ep_address, uint64_t frame) {
     usb_interface_t* intf = ctx;
     txn->protocol = ZX_PROTOCOL_USB;
@@ -418,6 +430,7 @@ static zx_status_t usb_interface_cancel_all(void* ctx, uint8_t ep_address) {
 
 static usb_protocol_ops_t _usb_protocol = {
     .control = usb_interface_control,
+    .request_queue = usb_interface_request_queue,
     .queue = usb_interface_queue,
     .get_speed = usb_interface_get_speed,
     .set_interface = usb_interface_set_interface,

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/usb-request.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 #include <zircon/hw/usb.h>
@@ -24,6 +25,8 @@ typedef struct usb_protocol_data {
 typedef struct usb_protocol_ops {
     zx_status_t (*control)(void* ctx, uint8_t request_type, uint8_t request, uint16_t value,
                            uint16_t index, void* data, size_t length, zx_time_t timeout);
+    // queues a USB request
+    void (*request_queue)(void* ctx, usb_request_t* usb_request);
     void (*queue)(void* ctx, iotxn_t* txn, uint8_t ep_address, uint64_t frame);
     usb_speed_t (*get_speed)(void* ctx);
     zx_status_t (*set_interface)(void* ctx, int interface_number, int alt_setting);
@@ -71,6 +74,10 @@ static inline zx_status_t usb_set_feature(usb_protocol_t* usb, uint8_t request_t
 static inline zx_status_t usb_clear_feature(usb_protocol_t* usb, uint8_t request_type, int feature,
                                             int index, zx_time_t timeout) {
     return usb_control(usb, request_type, USB_REQ_CLEAR_FEATURE, feature, index, NULL, 0, timeout);
+}
+
+static inline void usb_request_queue(usb_protocol_t* usb, usb_request_t* usb_request) {
+    return usb->ops->request_queue(usb->ctx, usb_request);
 }
 
 static inline void usb_queue(usb_protocol_t* usb, iotxn_t* txn, uint8_t ep_address) {

@@ -6,6 +6,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
+#include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <zircon/hw/usb-cdc.h>
 #include <sync/completion.h>
@@ -56,7 +57,7 @@ typedef struct {
 
     // Interrupt handling
     ecm_endpoint_t int_endpoint;
-    iotxn_t* int_txn_buf;
+    usb_request_t* int_txn_buf;
     completion_t completion;
     thrd_t int_thread;
 
@@ -81,11 +82,11 @@ static void ecm_free(ecm_ctx_t* ctx) {
     if (ctx->int_thread) {
         thrd_join(ctx->int_thread, NULL);
     }
-    iotxn_t* txn;
-    while ((txn = list_remove_head_type(&ctx->tx_txn_bufs, iotxn_t, node)) != NULL) {
-        iotxn_release(txn);
+    usb_request_t* txn;
+    while ((txn = list_remove_head_type(&ctx->tx_txn_bufs, usb_request_t, node)) != NULL) {
+        usb_request_release(txn);
     }
-    iotxn_release(ctx->int_txn_buf);
+    usb_request_release(ctx->int_txn_buf);
     mtx_destroy(&ctx->ethmac_mutex);
     mtx_destroy(&ctx->tx_mutex);
     free(ctx);
@@ -172,11 +173,11 @@ static zx_status_t ethmac_start(void* ctx_cookie, ethmac_ifc_t* ifc, void* ethma
     return status;
 }
 
-static void usb_write_complete(iotxn_t* request, void* cookie) {
+static void usb_write_complete(usb_request_t* request, void* cookie) {
     ecm_ctx_t* ctx = cookie;
 
-    if (request->status == ZX_ERR_IO_NOT_PRESENT) {
-        iotxn_release(request);
+    if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
+        usb_request_release(request);
         return;
     }
 
@@ -185,7 +186,7 @@ static void usb_write_complete(iotxn_t* request, void* cookie) {
     // Return transmission buffer to pool
     list_add_tail(&ctx->tx_txn_bufs, &request->node);
 
-    if (request->status == ZX_ERR_IO_REFUSED) {
+    if (request->response.status == ZX_ERR_IO_REFUSED) {
         xprintf("%s: resetting transmit endpoint\n", module_name);
         usb_reset_endpoint(&ctx->usb, ctx->tx_endpoint.addr);
     }
@@ -198,11 +199,10 @@ static void usb_write_complete(iotxn_t* request, void* cookie) {
 
 // Note: the assumption made here is that no rx transmissions will be processed in parallel,
 // so we do not maintain an rx mutex.
-static void usb_recv(ecm_ctx_t* ctx, iotxn_t* request) {
-    size_t len = request->actual;
+static void usb_recv(ecm_ctx_t* ctx, usb_request_t* request) {
+    size_t len = request->response.actual;
 
-    uint8_t* read_data = NULL;
-    iotxn_mmap(request, (void*)&read_data);
+    uint8_t* read_data = usb_request_virt(request);
 
     mtx_lock(&ctx->ethmac_mutex);
     if (ctx->ethmac_ifc) {
@@ -211,27 +211,27 @@ static void usb_recv(ecm_ctx_t* ctx, iotxn_t* request) {
     mtx_unlock(&ctx->ethmac_mutex);
 }
 
-static void usb_read_complete(iotxn_t* request, void* cookie) {
+static void usb_read_complete(usb_request_t* request, void* cookie) {
     ecm_ctx_t* ctx = cookie;
 
-    if (request->status != ZX_OK) {
+    if (request->response.status != ZX_OK) {
         xprintf("%s: usb_read_complete called with status %d\n",
-                module_name, (int)request->status);
+                module_name, (int)request->response.status);
     }
 
-    if (request->status == ZX_ERR_IO_NOT_PRESENT) {
-        iotxn_release(request);
+    if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
+        usb_request_release(request);
         return;
     }
 
-    if (request->status == ZX_ERR_IO_REFUSED) {
+    if (request->response.status == ZX_ERR_IO_REFUSED) {
         xprintf("%s: resetting receive endpoint\n", module_name);
         usb_reset_endpoint(&ctx->usb, ctx->rx_endpoint.addr);
-    } else if (request->status == ZX_OK) {
+    } else if (request->response.status == ZX_OK) {
         usb_recv(ctx, request);
     }
 
-    iotxn_queue(ctx->usb_device, request);
+    usb_request_queue(&ctx->usb, request);
 }
 
 static void ethmac_send(void* cookie, uint32_t options, void* data, size_t length) {
@@ -252,14 +252,14 @@ static void ethmac_send(void* cookie, uint32_t options, void* data, size_t lengt
     bool send_terminal_packet = (length % ctx->tx_endpoint.max_packet_size == 0);
 
     // Make sure that we can get all of the tx buffers we need to use
-    iotxn_t* tx_req = list_remove_head_type(&ctx->tx_txn_bufs, iotxn_t, node);
+    usb_request_t* tx_req = list_remove_head_type(&ctx->tx_txn_bufs, usb_request_t, node);
     if (tx_req == NULL) {
         printf("%s: no free write txns, dropping packet\n", module_name);
         goto done;
     }
-    iotxn_t* tx_req2;
+    usb_request_t* tx_req2;
     if (send_terminal_packet) {
-        tx_req2 = list_remove_head_type(&ctx->tx_txn_bufs, iotxn_t, node);
+        tx_req2 = list_remove_head_type(&ctx->tx_txn_bufs, usb_request_t, node);
         if (tx_req2 == NULL) {
             printf("%s: no free write txns, dropping packet\n", module_name);
             list_add_tail(&ctx->tx_txn_bufs, &tx_req->node);
@@ -268,8 +268,8 @@ static void ethmac_send(void* cookie, uint32_t options, void* data, size_t lengt
     }
 
     // Send data
-    tx_req->length = length;
-    ssize_t bytes_copied = iotxn_copyto(tx_req, byte_data, tx_req->length, 0);
+    tx_req->header.length = length;
+    ssize_t bytes_copied = usb_request_copyto(tx_req, byte_data, tx_req->header.length, 0);
     if (bytes_copied < 0) {
         printf("%s: failed to copy data into send txn (error %zd)\n", module_name, bytes_copied);
         list_add_tail(&ctx->tx_txn_bufs, &tx_req->node);
@@ -278,12 +278,12 @@ static void ethmac_send(void* cookie, uint32_t options, void* data, size_t lengt
         }
         goto done;
     }
-    iotxn_queue(ctx->usb_device, tx_req);
+    usb_request_queue(&ctx->usb, tx_req);
 
     // Send zero-length terminal packet, if needed
     if (send_terminal_packet) {
-        tx_req2->length = 0;
-        bytes_copied = iotxn_copyto(tx_req2, byte_data, 0, 0);
+        tx_req2->header.length = 0;
+        bytes_copied = usb_request_copyto(tx_req2, byte_data, 0, 0);
         if (bytes_copied < 0) {
             // This leaves us in a very awkward situation, since failing to send the zero-length
             // packet means the ethernet packet will be improperly terminated.
@@ -292,7 +292,7 @@ static void ethmac_send(void* cookie, uint32_t options, void* data, size_t lengt
             list_add_tail(&ctx->tx_txn_bufs, &tx_req2->node);
             goto done;
         }
-        iotxn_queue(ctx->usb_device, tx_req2);
+        usb_request_queue(&ctx->usb, tx_req2);
     }
 
 done:
@@ -306,19 +306,19 @@ static ethmac_protocol_ops_t ethmac_ops = {
     .send = ethmac_send,
 };
 
-static void ecm_interrupt_complete(iotxn_t* request, void* cookie) {
+static void ecm_interrupt_complete(usb_request_t* request, void* cookie) {
     ecm_ctx_t* ctx = cookie;
     completion_signal(&ctx->completion);
 }
 
-static void ecm_handle_interrupt(ecm_ctx_t* ctx, iotxn_t* request) {
-    if (request->actual < sizeof(usb_cdc_notification_t)) {
-        printf("%s: ignored interrupt (size = %ld)\n", module_name, (long)request->actual);
+static void ecm_handle_interrupt(ecm_ctx_t* ctx, usb_request_t* request) {
+    if (request->response.actual < sizeof(usb_cdc_notification_t)) {
+        printf("%s: ignored interrupt (size = %ld)\n", module_name, (long)request->response.actual);
         return;
     }
 
     usb_cdc_notification_t usb_req;
-    iotxn_copyfrom(request, &usb_req, sizeof(usb_cdc_notification_t), 0);
+    usb_request_copyfrom(request, &usb_req, sizeof(usb_cdc_notification_t), 0);
     if (usb_req.bmRequestType == (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) &&
         usb_req.bNotification == USB_CDC_NC_NETWORK_CONNECTION) {
         ecm_update_online_status(ctx, usb_req.wValue != 0);
@@ -333,8 +333,8 @@ static void ecm_handle_interrupt(ecm_ctx_t* ctx, iotxn_t* request) {
         }
         // Data immediately follows notification in packet
         uint32_t new_us_bps, new_ds_bps;
-        iotxn_copyfrom(request, &new_us_bps, 4, sizeof(usb_cdc_notification_t));
-        iotxn_copyfrom(request, &new_ds_bps, 4, sizeof(usb_cdc_notification_t) + 4);
+        usb_request_copyfrom(request, &new_us_bps, 4, sizeof(usb_cdc_notification_t));
+        usb_request_copyfrom(request, &new_ds_bps, 4, sizeof(usb_cdc_notification_t) + 4);
         if (new_us_bps != ctx->us_bps) {
             printf("%s: connection speed change... upstream bits/s: %"PRIu32"\n",
                     module_name, new_us_bps);
@@ -354,23 +354,24 @@ static void ecm_handle_interrupt(ecm_ctx_t* ctx, iotxn_t* request) {
 
 static int ecm_int_handler_thread(void* cookie) {
     ecm_ctx_t* ctx = cookie;
-    iotxn_t* txn = ctx->int_txn_buf;
+    usb_request_t* txn = ctx->int_txn_buf;
 
     while (true) {
         completion_reset(&ctx->completion);
-        iotxn_queue(ctx->usb_device, txn);
+        usb_request_queue(&ctx->usb, txn);
         completion_wait(&ctx->completion, ZX_TIME_INFINITE);
-        if (txn->status == ZX_OK) {
+        if (txn->response.status == ZX_OK) {
             ecm_handle_interrupt(ctx, txn);
-        } else if (txn->status == ZX_ERR_PEER_CLOSED || txn->status == ZX_ERR_IO_NOT_PRESENT) {
+        } else if (txn->response.status == ZX_ERR_PEER_CLOSED ||
+                   txn->response.status == ZX_ERR_IO_NOT_PRESENT) {
             xprintf("%s: terminating interrupt handling thread\n", module_name);
-            return txn->status;
-        } else if (txn->status == ZX_ERR_IO_REFUSED) {
+            return txn->response.status;
+        } else if (txn->response.status == ZX_ERR_IO_REFUSED) {
             xprintf("%s: resetting interrupt endpoint\n", module_name);
             usb_reset_endpoint(&ctx->usb, ctx->int_endpoint.addr);
         } else {
             printf("%s: error (%ld) waiting for interrupt - ignoring\n",
-                   module_name, (long)txn->status);
+                   module_name, (long)txn->response.status);
         }
     }
 }
@@ -589,13 +590,14 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device, void** cookie) {
     usb_set_interface(&usb, data_ifc->bInterfaceNumber, data_ifc->bAlternateSetting);
 
     // Allocate interrupt transaction buffer
-    iotxn_t* int_buf = usb_alloc_iotxn(ecm_ctx->int_endpoint.addr,
-                                       ecm_ctx->int_endpoint.max_packet_size);
-    if (!int_buf) {
-        result = ZX_ERR_NO_MEMORY;
+    usb_request_t* int_buf;
+    zx_status_t alloc_result = usb_request_alloc(&int_buf, ecm_ctx->int_endpoint.max_packet_size,
+                                                 ecm_ctx->int_endpoint.addr);
+    if (alloc_result != ZX_OK) {
+        result = alloc_result;
         goto fail;
     }
-    int_buf->length = ecm_ctx->int_endpoint.max_packet_size;
+
     int_buf->complete_cb = ecm_interrupt_complete;
     int_buf->cookie = ecm_ctx;
     ecm_ctx->int_txn_buf = int_buf;
@@ -608,11 +610,14 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device, void** cookie) {
     }
     size_t tx_buf_remain = MAX_TX_BUF_SZ;
     while (tx_buf_remain >= tx_buf_sz) {
-        iotxn_t* tx_buf = usb_alloc_iotxn(ecm_ctx->tx_endpoint.addr, tx_buf_sz);
-        if (!tx_buf) {
-            result = ZX_ERR_NO_MEMORY;
+        usb_request_t* tx_buf;
+        zx_status_t alloc_result = usb_request_alloc(&tx_buf, tx_buf_sz,
+                                                     ecm_ctx->tx_endpoint.addr);
+        if (alloc_result != ZX_OK) {
+            result = alloc_result;
             goto fail;
         }
+
         tx_buf->complete_cb = usb_write_complete;
         tx_buf->cookie = ecm_ctx;
         list_add_head(&ecm_ctx->tx_txn_bufs, &tx_buf->node);
@@ -627,15 +632,17 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device, void** cookie) {
     }
     size_t rx_buf_remain = MAX_RX_BUF_SZ;
     while (rx_buf_remain >= rx_buf_sz) {
-        iotxn_t* rx_buf = usb_alloc_iotxn(ecm_ctx->rx_endpoint.addr, rx_buf_sz);
-        if (!rx_buf) {
-            result = ZX_ERR_NO_MEMORY;
+        usb_request_t* rx_buf;
+        zx_status_t alloc_result = usb_request_alloc(&rx_buf, rx_buf_sz,
+                                                     ecm_ctx->rx_endpoint.addr);
+        if (alloc_result != ZX_OK) {
+            result = alloc_result;
             goto fail;
         }
+
         rx_buf->complete_cb = usb_read_complete;
         rx_buf->cookie = ecm_ctx;
-        rx_buf->length = rx_buf_sz;
-        iotxn_queue(ecm_ctx->usb_device, rx_buf);
+        usb_request_queue(&ecm_ctx->usb, rx_buf);
         rx_buf_remain -= rx_buf_sz;
     }
 
