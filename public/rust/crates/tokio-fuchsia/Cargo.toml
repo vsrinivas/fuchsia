@@ -7,6 +7,6 @@ repository = "https://fuchsia.googlesource.com/tokio-fuchsia/"
 
 [dependencies]
 futures = "0.1"
-zircon = { path = "../zircon-rs", version = "0.2" }
 mio = "0.6"
 tokio-core = "0.1.9"
+zircon = { path = "../../../../../rust/zircon-rs", version = "0.2" }
