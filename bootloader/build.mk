@@ -74,7 +74,7 @@ EFI_LIBS := $(foreach LIBDIR,$(EFI_LIBDIRS), \
 
 $(BUILDDIR)/bootloader/%.o : $(LOCAL_DIR)/%.c
 	@$(MKDIR)
-	$(call BUILDECHO,compiling $@)
+	$(call BUILDECHO,compiling $<)
 	$(NOECHO)$(EFI_CC) -MMD -MP -o $@ -c $(EFI_CFLAGS) $<
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
