@@ -26,20 +26,15 @@ zx_status_t DeserializeServiceMsg(const Packet& packet, Method m, ::fidl::Struct
     return ZX_OK;
 }
 
-template <typename T>
-zx_status_t SerializeServiceMsg(Packet* packet, Method m, const T& msg) {
+template <typename T> zx_status_t SerializeServiceMsg(Packet* packet, Method m, const T& msg) {
     size_t buf_len = sizeof(ServiceHeader) + msg->GetSerializedSize();
     auto header = FromBytes<ServiceHeader>(packet->mut_data(), buf_len);
-    if (header == nullptr) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
+    if (header == nullptr) { return ZX_ERR_BUFFER_TOO_SMALL; }
     header->len = sizeof(ServiceHeader);
     header->txn_id = 1;  // TODO(tkilbourn): txn ids
     header->flags = 0;
     header->ordinal = static_cast<uint32_t>(m);
-    if (!msg->Serialize(header->payload, buf_len - sizeof(ServiceHeader))) {
-        return ZX_ERR_IO;
-    }
+    if (!msg->Serialize(header->payload, buf_len - sizeof(ServiceHeader))) { return ZX_ERR_IO; }
     return ZX_OK;
 }
 

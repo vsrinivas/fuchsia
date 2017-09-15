@@ -8,9 +8,9 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/test.h>
 #include <ddktl/protocol/wlan.h>
+#include <fbl/unique_ptr.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <fbl/unique_ptr.h>
 
 #include <mutex>
 
@@ -20,9 +20,8 @@ namespace testing {
 class Device;
 using TestBaseDevice = ddk::Device<Device, ddk::Unbindable, ddk::Ioctlable>;
 
-class Device : public TestBaseDevice,
-               public ddk::WlanmacProtocol<Device> {
-  public:
+class Device : public TestBaseDevice, public ddk::WlanmacProtocol<Device> {
+   public:
     Device(zx_device_t* device, test_protocol_t* test_proto);
 
     zx_status_t Bind();
@@ -38,7 +37,7 @@ class Device : public TestBaseDevice,
     void WlanmacTx(uint32_t options, const void* data, size_t length);
     zx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
 
-  private:
+   private:
     ddk::TestProtocolProxy test_proxy_;
 
     std::mutex lock_;

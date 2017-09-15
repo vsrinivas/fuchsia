@@ -11,8 +11,8 @@
 #include <apps/wlan/services/wlan_mlme_ext.fidl-common.h>
 #include <ddk/protocol/wlan.h>
 #include <drivers/wifi/common/moving_average.h>
-#include <zircon/types.h>
 #include <fbl/unique_ptr.h>
+#include <zircon/types.h>
 
 namespace wlan {
 
@@ -20,13 +20,10 @@ class Packet;
 class Timer;
 
 class Station {
-  public:
+   public:
     Station(DeviceInterface* device, fbl::unique_ptr<Timer> timer);
 
-    enum class PortState : bool {
-      kBlocked = false,
-      kOpen = true
-    };
+    enum class PortState : bool { kBlocked = false, kOpen = true };
 
     enum class WlanState {
         // State 0
@@ -45,9 +42,7 @@ class Station {
     void Reset();
 
     const DeviceAddress* bssid() const {
-        if (bss_.is_null()) {
-            return nullptr;
-        }
+        if (bss_.is_null()) { return nullptr; }
         return &address_;
     }
 
@@ -56,7 +51,7 @@ class Station {
     wlan_channel_t channel() const {
         ZX_DEBUG_ASSERT(state_ != WlanState::kUnjoined);
         ZX_DEBUG_ASSERT(!bss_.is_null());
-        return wlan_channel_t{ bss_->channel };
+        return wlan_channel_t{bss_->channel};
     }
 
     zx_status_t Join(JoinRequestPtr req);
@@ -79,8 +74,7 @@ class Station {
 
     const Timer& timer() const { return *timer_; }
 
-
-  private:
+   private:
     zx_status_t SendJoinResponse();
     zx_status_t SendAuthResponse(AuthenticateResultCodes code);
     zx_status_t SendDeauthIndication(uint16_t code);

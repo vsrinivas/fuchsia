@@ -16,22 +16,28 @@ namespace wlan {
 namespace {
 
 TEST(ElementReader, IsValid) {
-    uint8_t no_len_buf[] = { 0 };
+    uint8_t no_len_buf[] = {0};
     ElementReader r1(no_len_buf, sizeof(no_len_buf));
     EXPECT_FALSE(r1.is_valid());
 
-    uint8_t bad_len_buf[] = { 0, 1, };
+    // clang-format off
+    uint8_t bad_len_buf[] = {0, 1,};
+    // clang-format on
     ElementReader r2(bad_len_buf, sizeof(bad_len_buf));
     EXPECT_FALSE(r2.is_valid());
 
-    uint8_t good_len_buf[] = { 0, 2, 3, 4, };
+    // clang-format off
+    uint8_t good_len_buf[] = {0, 2, 3, 4,};
+    // clang-format on
     ElementReader r3(good_len_buf, sizeof(good_len_buf));
     EXPECT_TRUE(r3.is_valid());
     EXPECT_EQ(0u, r3.offset());
 }
 
 TEST(ElementReader, SkipHeader) {
-    uint8_t buf[] = { 0, 1, 0xa5, 1, 2, 0xa6, 0xa7, };
+    // clang-format off
+    uint8_t buf[] = {0, 1, 0xa5, 1, 2, 0xa6, 0xa7,};
+    // clang-format on
     ElementReader r(buf, sizeof(buf));
     ASSERT_TRUE(r.is_valid());
     ASSERT_EQ(0u, r.offset());
@@ -56,6 +62,7 @@ TEST(ElementReader, SkipHeader) {
 }
 
 TEST(ElementReader, ReadElements) {
+    // clang-format off
     uint8_t buf[] = {
         // SSID
         0x00, 0x04, 't', 'e', 's', 't',
@@ -66,6 +73,7 @@ TEST(ElementReader, ReadElements) {
         // Country
         0x07, 0x03, 'U', 'S', 0x00,
     };
+    // clang-format on
     ElementReader r(buf, sizeof(buf));
     ASSERT_TRUE(r.is_valid());
 
@@ -106,10 +114,12 @@ TEST(ElementReader, ReadElements) {
 }
 
 TEST(ElementReader, ReadElements_fail) {
+    // clang-format off
     uint8_t buf[] = {
         // Country, but too small
         0x07, 0x02, 'U', 'S',
     };
+    // clang-format on
     ElementReader r(buf, sizeof(buf));
     // This is valid, because the element length fits within the buffer.
     EXPECT_TRUE(r.is_valid());
@@ -126,7 +136,7 @@ TEST(ElementWriter, Insert) {
     EXPECT_TRUE(w.write<SsidElement>("test"));
     EXPECT_EQ(6u, w.size());
 
-    std::vector<uint8_t> rates = { 1, 2, 3, 4 };
+    std::vector<uint8_t> rates = {1, 2, 3, 4};
     EXPECT_TRUE(w.write<SupportedRatesElement>(std::move(rates)));
     EXPECT_EQ(12u, w.size());
 
@@ -135,7 +145,7 @@ TEST(ElementWriter, Insert) {
 }
 
 class Elements : public ::testing::Test {
-  protected:
+   protected:
     uint8_t buf_[1024] = {};
     size_t actual_ = 0;
 };
@@ -157,7 +167,7 @@ TEST_F(Elements, SsidTooLong) {
 }
 
 TEST_F(Elements, SupportedRates) {
-    std::vector<uint8_t> rates = { 1, 2, 3 };
+    std::vector<uint8_t> rates = {1, 2, 3};
     EXPECT_TRUE(SupportedRatesElement::Create(buf_, sizeof(buf_), &actual_, rates));
     EXPECT_EQ(sizeof(SupportedRatesElement) + rates.size(), actual_);
 
@@ -170,7 +180,7 @@ TEST_F(Elements, SupportedRates) {
 }
 
 TEST_F(Elements, SupportedRatesTooLong) {
-    std::vector<uint8_t> rates = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+    std::vector<uint8_t> rates = {1, 2, 3, 4, 5, 6, 7, 8, 9};
     ASSERT_GT(rates.size(), SupportedRatesElement::kMaxLen);
     EXPECT_FALSE(SupportedRatesElement::Create(buf_, sizeof(buf_), &actual_, rates));
 }
@@ -197,7 +207,7 @@ TEST_F(Elements, CfParamSet) {
 }
 
 TEST_F(Elements, Tim) {
-    std::vector<uint8_t> bmp = { 1, 2, 3, 4, 5 };
+    std::vector<uint8_t> bmp = {1, 2, 3, 4, 5};
     BitmapControl bmp_ctrl = BitmapControl();
     bmp_ctrl.set_group_traffic_ind(1);
     bmp_ctrl.set_offset(7);
@@ -216,9 +226,9 @@ TEST_F(Elements, Tim) {
 
 TEST_F(Elements, TimBufferedTraffic) {
     // Set traffic for aids
-    std::vector<uint16_t> aids = { 1, 42, 1337, 1338, 2007 };
+    std::vector<uint16_t> aids = {1, 42, 1337, 1338, 2007};
     std::vector<uint8_t> bmp(251, 0);
-    for(auto const& aid: aids) {
+    for (auto const& aid : aids) {
         bmp[aid / 8] |= 1 << (aid % 8);
     }
 
@@ -230,21 +240,21 @@ TEST_F(Elements, TimBufferedTraffic) {
 
     auto element = FromBytes<TimElement>(buf_, sizeof(buf_));
     ASSERT_NE(nullptr, element);
-    for(auto const& aid: aids) {
+    for (auto const& aid : aids) {
         EXPECT_EQ(true, element->traffic_buffered(aid));
     }
 }
 
 TEST_F(Elements, TimPartialBitmapBufferedTraffic) {
     // Set traffic for aids
-    std::vector<uint8_t> bmp(8, 0); // Include traffic for 64 aids
-    bmp[0] |= 1; // aid = 32
-    bmp[2] |= 1 << 7; // aid = 55
-    bmp[7] |= 1 << 7; // aid = 95
+    std::vector<uint8_t> bmp(8, 0);  // Include traffic for 64 aids
+    bmp[0] |= 1;                     // aid = 32
+    bmp[2] |= 1 << 7;                // aid = 55
+    bmp[7] |= 1 << 7;                // aid = 95
 
     BitmapControl bmp_ctrl = BitmapControl();
     bmp_ctrl.set_group_traffic_ind(0);
-    bmp_ctrl.set_offset(2); // Skip first 32 aids
+    bmp_ctrl.set_offset(2);  // Skip first 32 aids
     EXPECT_TRUE(TimElement::Create(buf_, sizeof(buf_), &actual_, 1, 2, bmp_ctrl, bmp));
 
     auto element = FromBytes<TimElement>(buf_, sizeof(buf_));

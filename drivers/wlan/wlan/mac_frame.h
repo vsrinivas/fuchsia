@@ -7,24 +7,23 @@
 #include "element.h"
 
 #include <drivers/wifi/common/bitfield.h>
+#include <fbl/type_support.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <fbl/type_support.h>
 
 #include <cstdint>
 
 namespace wlan {
 
 static constexpr zx_duration_t TimeUnit = ZX_USEC(1024);
-template <typename T>
-static inline constexpr zx_duration_t WLAN_TU(T n) {
+template <typename T> static inline constexpr zx_duration_t WLAN_TU(T n) {
     static_assert(fbl::is_unsigned_integer<T>::value, "Time unit must be an unsigned integer");
     return TimeUnit * n;
 }
 
 // IEEE Std 802.11-2016, 9.2.4.1.1
 class FrameControl : public common::BitField<uint16_t> {
-  public:
+   public:
     constexpr explicit FrameControl(uint16_t fc) : common::BitField<uint16_t>(fc) {}
     constexpr FrameControl() = default;
 
@@ -88,16 +87,18 @@ enum ControlSubtype : uint8_t {
 
 // The subtypes for Data frames are essentially composed from the following
 // bitmask.
+// clang-format off
 enum DataSubtype : uint8_t {
     kCfAck =  (1 << 0),
     kCfPoll = (1 << 1),
     kNull =   (1 << 2),
     kQos =    (1 << 3),
 };
+// clang-format on
 
 // IEEE Std 802.11-2016, 9.2.4.4
 class SequenceControl : public common::BitField<uint16_t> {
-  public:
+   public:
     WLAN_BIT_FIELD(frag, 0, 4);
     WLAN_BIT_FIELD(seq, 4, 12);
 };
@@ -106,7 +107,7 @@ constexpr uint16_t kMaxSequenceNumber = (1 << 12) - 1;
 
 // IEEE Std 802.11-2016, 9.2.4.6
 class HtControl : public common::BitField<uint32_t> {
-  public:
+   public:
     WLAN_BIT_FIELD(vht, 0, 1);
 
     // Structure of this middle section is defined in 9.2.4.6.2 for HT, and 9.2.4.6.3 for VHT.
@@ -118,7 +119,7 @@ class HtControl : public common::BitField<uint32_t> {
 
 // IEEE Std 802.11-2016, 9.4.1.4
 class CapabilityInfo : public common::BitField<uint16_t> {
-  public:
+   public:
     WLAN_BIT_FIELD(ess, 0, 1);
     WLAN_BIT_FIELD(ibss, 1, 1);
     WLAN_BIT_FIELD(cf_pollable, 2, 1);
@@ -206,7 +207,7 @@ enum ReasonCode : uint16_t {
     kMeshChannelSwitchUnspecified = 66,
     // 67 - 65535 Reserved
 };
-}  // namespace status_code
+}  // namespace reason_code
 
 // IEEE Std 802.11-2016, 9.4.1.9, Table 9-46
 namespace status_code {

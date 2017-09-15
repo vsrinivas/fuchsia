@@ -28,9 +28,7 @@ const size_t SsidElement::kMaxLen;
 
 bool SsidElement::Create(uint8_t* buf, size_t len, size_t* actual, const char* ssid) {
     size_t ssidlen = 0;
-    if (ssid != nullptr) {
-        ssidlen = strnlen(ssid, kMaxLen + 1);
-    }
+    if (ssid != nullptr) { ssidlen = strnlen(ssid, kMaxLen + 1); }
     if (ssidlen == kMaxLen + 1) return false;
     size_t elem_size = sizeof(SsidElement) + ssidlen;
     if (elem_size > len) return false;
@@ -114,7 +112,7 @@ bool TimElement::traffic_buffered(uint16_t aid) const {
     // Safe to use uint8 since offset is 7 bits.
     uint8_t n1 = bmp_ctrl.offset() << 1;
     uint16_t n2 = (hdr.len - 4) + n1;
-    if (n2 > static_cast<uint16_t> (kMaxLen)) return false;
+    if (n2 > static_cast<uint16_t>(kMaxLen)) return false;
 
     // No traffic buffered for aid.
     uint8_t octet = aid / 8;
@@ -154,7 +152,6 @@ bool ExtendedSupportedRatesElement::Create(uint8_t* buf, size_t len, size_t* act
     *actual = elem_size;
     return true;
 }
-
 
 bool RsnElement::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t* raw, size_t raw_len) {
     if (raw_len < sizeof(RsnElement)) return false;

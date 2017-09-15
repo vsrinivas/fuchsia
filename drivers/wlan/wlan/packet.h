@@ -6,10 +6,10 @@
 
 #include "wlan.h"
 
-#include <zircon/types.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/slab_allocator.h>
 #include <fbl/unique_ptr.h>
+#include <zircon/types.h>
 
 #include <algorithm>
 #include <cstddef>
@@ -21,7 +21,7 @@ namespace wlan {
 // A Buffer is a type that points at bytes and knows how big it is. For now, it can also carry
 // out-of-band control data.
 class Buffer {
-  public:
+   public:
     virtual ~Buffer() {}
     virtual uint8_t* data() = 0;
     virtual uint8_t* ctrl() = 0;
@@ -32,9 +32,8 @@ class Buffer {
 constexpr size_t kCtrlSize = 32;
 
 namespace internal {
-template <size_t BufferSize>
-class FixedBuffer : public Buffer {
-  public:
+template <size_t BufferSize> class FixedBuffer : public Buffer {
+   public:
     uint8_t* data() override { return data_; }
     uint8_t* ctrl() override { return ctrl_; }
     size_t capacity() const override { return BufferSize; }
@@ -43,7 +42,7 @@ class FixedBuffer : public Buffer {
         std::memset(ctrl_, 0, kCtrlSize);
     }
 
-  private:
+   private:
     uint8_t data_[BufferSize];
     // Embedding the control data directly into the buffer is not ideal.
     // TODO(tkilbourn): replace this with a general solution.
@@ -53,12 +52,12 @@ class FixedBuffer : public Buffer {
 
 constexpr size_t kSlabOverhead = 16;  // overhead for the slab allocator as a whole
 
-template <size_t NumBuffers, size_t BufferSize>
-class SlabBuffer;
+template <size_t NumBuffers, size_t BufferSize> class SlabBuffer;
 template <size_t NumBuffers, size_t BufferSize>
 using SlabBufferTraits =
     fbl::StaticSlabAllocatorTraits<fbl::unique_ptr<SlabBuffer<NumBuffers, BufferSize>>,
-        sizeof(internal::FixedBuffer<BufferSize>) * NumBuffers + kSlabOverhead>;
+                                   sizeof(internal::FixedBuffer<BufferSize>) * NumBuffers +
+                                       kSlabOverhead>;
 
 // A SlabBuffer is an implementation of a Buffer that comes from a fbl::SlabAllocator. The size of
 // the internal::FixedBuffer and the number of buffers is part of the typename of the SlabAllocator,
@@ -86,7 +85,7 @@ fbl::unique_ptr<Buffer> GetBuffer(size_t len);
 // A Packet wraps a buffer with information about the recipient/sender and length of the data
 // within the buffer.
 class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
-  public:
+   public:
     enum class Peer {
         kUnknown,
         kDevice,
@@ -116,31 +115,24 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
     }
     size_t len() const { return len_; }
 
-    template <typename T>
-    const T* field(size_t offset) const {
+    template <typename T> const T* field(size_t offset) const {
         return FromBytes<T>(buffer_->data() + offset, len_ - offset);
     }
 
-    template <typename T>
-    T* mut_field(size_t offset) const {
+    template <typename T> T* mut_field(size_t offset) const {
         return FromBytes<T>(buffer_->data() + offset, len_ - offset);
     }
 
-    template <typename T>
-    bool has_ctrl_data() const {
-        return ctrl_len_ == sizeof(T);
-    }
+    template <typename T> bool has_ctrl_data() const { return ctrl_len_ == sizeof(T); }
 
-    template <typename T>
-    const T* ctrl_data() const {
+    template <typename T> const T* ctrl_data() const {
         static_assert(fbl::is_standard_layout<T>::value, "Control data must have standard layout");
         static_assert(kCtrlSize >= sizeof(T),
                       "Control data type too large for Buffer ctrl_data field");
         return FromBytes<T>(buffer_->ctrl(), ctrl_len_);
     }
 
-    template <typename T>
-    void CopyCtrlFrom(const T& t) {
+    template <typename T> void CopyCtrlFrom(const T& t) {
         static_assert(fbl::is_standard_layout<T>::value, "Control data must have standard layout");
         static_assert(kCtrlSize >= sizeof(T),
                       "Control data type too large for Buffer ctrl_data field");
@@ -150,7 +142,7 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
 
     zx_status_t CopyFrom(const void* src, size_t len, size_t offset);
 
-  private:
+   private:
     fbl::unique_ptr<Buffer> buffer_;
     size_t len_ = 0;
     size_t ctrl_len_ = 0;
@@ -158,7 +150,7 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
 };
 
 class PacketQueue {
-  public:
+   public:
     using PacketPtr = fbl::unique_ptr<Packet>;
 
     bool is_empty() const { return queue_.is_empty(); }
@@ -185,7 +177,7 @@ class PacketQueue {
         return packet;
     }
 
-  private:
+   private:
     fbl::DoublyLinkedList<PacketPtr> queue_;
     size_t size_ = 0;
 };

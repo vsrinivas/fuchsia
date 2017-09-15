@@ -9,11 +9,10 @@
 namespace wlan {
 namespace common {
 
-template<typename ValueType>
-class BitField {
-  public:
+template <typename ValueType> class BitField {
+   public:
     static_assert(std::is_unsigned<ValueType>::value,
-            "BitField only supports unsigned value types.");
+                  "BitField only supports unsigned value types.");
 
     constexpr explicit BitField(ValueType val) : val_(val) {}
     constexpr BitField() = default;
@@ -24,20 +23,17 @@ class BitField {
 
     ValueType val() const { return val_; }
 
-    template <unsigned int offset, size_t len>
-    ValueType get_bits() const {
+    template <unsigned int offset, size_t len> ValueType get_bits() const {
         return (val_ & mask<offset, len>()) >> offset;
     }
 
-    template <unsigned int offset, size_t len>
-    void set_bits(ValueType value) {
+    template <unsigned int offset, size_t len> void set_bits(ValueType value) {
         ValueType cleared = val_ & ~mask<offset, len>();
         val_ = cleared | ((value << offset) & mask<offset, len>());
     }
 
-  private:
-    template <unsigned int offset, size_t len>
-    constexpr static ValueType mask() {
+   private:
+    template <unsigned int offset, size_t len> constexpr static ValueType mask() {
         static_assert(len > 0, "BitField member length must be positive");
         static_assert(offset < (sizeof(ValueType) * 8),
                       "offset must be less than size of the BitField");
@@ -49,9 +45,9 @@ class BitField {
     ValueType val_ = 0;
 };
 
-template<typename AddrType, typename ValueType, AddrType A>
+template <typename AddrType, typename ValueType, AddrType A>
 class AddressableBitField : public BitField<ValueType> {
-  public:
+   public:
     static constexpr AddrType addr() { return A; }
 
     constexpr explicit AddressableBitField(ValueType val) : BitField<ValueType>(val) {}
@@ -63,29 +59,29 @@ namespace internal {
 // setters to use uint64_t. The following type traits allow selecting the smallest uintN_t type that
 // will hold the length of the bitfield.
 constexpr size_t next_bitsize(size_t n) {
-    return n < 8  ?  8 :
+    // clang-format off
+    return n < 8 ? 8 :
            n < 16 ? 16 :
            n < 32 ? 32 : 64;
+    // clang-format on
 }
 
-template <size_t N>
-struct IntegerType;
+template <size_t N> struct IntegerType;
 
-template<> struct IntegerType<8>  { using type = uint8_t;  };
-template<> struct IntegerType<16> { using type = uint16_t; };
-template<> struct IntegerType<32> { using type = uint32_t; };
-template<> struct IntegerType<64> { using type = uint64_t; };
+template <> struct IntegerType<8> { using type = uint8_t; };
+template <> struct IntegerType<16> { using type = uint16_t; };
+template <> struct IntegerType<32> { using type = uint32_t; };
+template <> struct IntegerType<64> { using type = uint64_t; };
 
-template <size_t N>
-struct Integer : IntegerType<next_bitsize(N)> {};
+template <size_t N> struct Integer : IntegerType<next_bitsize(N)> {};
 }  // namespace internal
 
-#define WLAN_BIT_FIELD(name, offset, len) \
+#define WLAN_BIT_FIELD(name, offset, len)                               \
     void set_##name(::wlan::common::internal::Integer<len>::type val) { \
-        this->template set_bits<offset, len>(val); \
-    } \
-    ::wlan::common::internal::Integer<len>::type name() const { \
-        return this->template get_bits<offset, len>(); \
+        this->template set_bits<offset, len>(val);                      \
+    }                                                                   \
+    ::wlan::common::internal::Integer<len>::type name() const {         \
+        return this->template get_bits<offset, len>();                  \
     }
 
 }  // namespace common

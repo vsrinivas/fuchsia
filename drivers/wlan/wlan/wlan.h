@@ -10,14 +10,12 @@
 
 namespace wlan {
 
-template <typename T>
-T* FromBytes(uint8_t* buf, size_t len) {
+template <typename T> T* FromBytes(uint8_t* buf, size_t len) {
     if (len < sizeof(T)) return nullptr;
     return reinterpret_cast<T*>(buf);
 }
 
-template <typename T>
-const T* FromBytes(const uint8_t* buf, size_t len) {
+template <typename T> const T* FromBytes(const uint8_t* buf, size_t len) {
     if (len < sizeof(T)) return nullptr;
     return reinterpret_cast<const T*>(buf);
 }

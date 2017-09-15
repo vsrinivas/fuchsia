@@ -12,10 +12,10 @@
 #include "timer.h"
 
 #include <apps/wlan/services/wlan_mlme.fidl-common.h>
-#include <cstring>
-#include <gtest/gtest.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <gtest/gtest.h>
+#include <cstring>
 
 namespace wlan {
 namespace {
@@ -27,10 +27,8 @@ const uint8_t kBeacon[] = {
 };
 
 struct MockDevice : public DeviceInterface {
-  public:
-    MockDevice() {
-        state = fbl::AdoptRef(new DeviceState);
-    }
+   public:
+    MockDevice() { state = fbl::AdoptRef(new DeviceState); }
 
     zx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) override final {
         // Should not be used by Scanner at this time.
@@ -62,9 +60,7 @@ struct MockDevice : public DeviceInterface {
         return ZX_OK;
     }
 
-    fbl::RefPtr<DeviceState> GetState() override final {
-        return state;
-    }
+    fbl::RefPtr<DeviceState> GetState() override final { return state; }
 
     fbl::RefPtr<DeviceState> state;
     PacketQueue eth_queue;
@@ -73,34 +69,25 @@ struct MockDevice : public DeviceInterface {
 };
 
 class ScannerTest : public ::testing::Test {
-  public:
-    ScannerTest()
-      : scanner_(&mock_dev_, fbl::unique_ptr<Timer>(new TestTimer(1u, &clock_))) {
+   public:
+    ScannerTest() : scanner_(&mock_dev_, fbl::unique_ptr<Timer>(new TestTimer(1u, &clock_))) {
         SetupMessages();
     }
 
-  protected:
+   protected:
     void SetupMessages() {
         req_ = ScanRequest::New();
         req_->channel_list.push_back(1);
         resp_ = ScanResponse::New();
     }
 
-    void SetPassive() {
-        req_->scan_type = ScanTypes::PASSIVE;
-    }
+    void SetPassive() { req_->scan_type = ScanTypes::PASSIVE; }
 
-    void SetActive() {
-        req_->scan_type = ScanTypes::ACTIVE;
-    }
+    void SetActive() { req_->scan_type = ScanTypes::ACTIVE; }
 
-    zx_status_t Start() {
-        return scanner_.Start(req_.Clone());
-    }
+    zx_status_t Start() { return scanner_.Start(req_.Clone()); }
 
-    uint16_t CurrentChannel() {
-        return mock_dev_.GetState()->channel().channel_num;
-    }
+    uint16_t CurrentChannel() { return mock_dev_.GetState()->channel().channel_num; }
 
     zx_status_t DeserializeResponse() {
         EXPECT_EQ(1u, mock_dev_.svc_queue.size());
@@ -265,7 +252,7 @@ TEST_F(ScannerTest, ScanResponse) {
     p.CopyFrom(kBeacon, sizeof(kBeacon), 0);
     wlan_rx_info_t info;
     info.flags = WLAN_RX_INFO_RSSI_PRESENT | WLAN_RX_INFO_SNR_PRESENT;
-    info.chan = { 1 };
+    info.chan = {1};
     info.rssi = 10;
     info.snr = 60;
     p.CopyCtrlFrom(info);

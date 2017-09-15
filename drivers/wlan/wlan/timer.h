@@ -12,7 +12,7 @@
 namespace wlan {
 
 class Timer {
-  public:
+   public:
     explicit Timer(uint64_t id);
     virtual ~Timer();
 
@@ -25,41 +25,41 @@ class Timer {
     uint64_t id() const { return id_; }
     zx_time_t deadline() const { return deadline_; }
 
-  protected:
+   protected:
     virtual zx_status_t SetTimerImpl(zx_time_t deadline) = 0;
     virtual zx_status_t CancelTimerImpl() = 0;
 
-  private:
+   private:
     uint64_t id_;
     zx_time_t deadline_ = 0;
 };
 
 class SystemTimer final : public Timer {
-  public:
+   public:
     SystemTimer(uint64_t id, zx::timer timer);
 
     zx_time_t Now() const override { return clock_.Now(); }
 
-  protected:
+   protected:
     zx_status_t SetTimerImpl(zx_time_t deadline) override;
     zx_status_t CancelTimerImpl() override;
 
-  private:
+   private:
     SystemClock clock_;
     zx::timer timer_;
 };
 
 class TestTimer final : public Timer {
-  public:
+   public:
     TestTimer(uint64_t id, TestClock* clock) : Timer(id), clock_(clock) {}
 
     zx_time_t Now() const override { return clock_->Now(); }
 
-  protected:
+   protected:
     zx_status_t SetTimerImpl(zx_time_t duration) override;
     zx_status_t CancelTimerImpl() override;
 
-  private:
+   private:
     TestClock* clock_;
 };
 

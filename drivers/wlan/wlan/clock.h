@@ -12,30 +12,30 @@
 namespace wlan {
 
 class Clock {
-  public:
+   public:
     virtual ~Clock() {}
 
     virtual zx_time_t Now() const = 0;
 };
 
 class SystemClock : public Clock {
-  public:
+   public:
     SystemClock(uint32_t clock_id = ZX_CLOCK_MONOTONIC) : clock_id_(clock_id) {}
 
     zx_time_t Now() const override { return zx::time::get(clock_id_); }
 
-  private:
+   private:
     uint32_t clock_id_;
 };
 
 class TestClock : public Clock {
-  public:
+   public:
     TestClock() {}
 
     zx_time_t Now() const override { return now_; }
     void Set(zx_time_t time) { now_ = time; }
 
-  private:
+   private:
     zx_time_t now_ = 0;
 };
 

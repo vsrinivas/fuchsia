@@ -38,7 +38,7 @@ enum class ObjectTarget : uint8_t {
 
 // An ObjectId is used as an id in a PortKey. Therefore, only the lower 56 bits may be used.
 class ObjectId : public common::BitField<uint64_t> {
-  public:
+   public:
     constexpr explicit ObjectId(uint64_t id) : common::BitField<uint64_t>(id) {}
     constexpr ObjectId() = default;
 
@@ -52,8 +52,7 @@ class ObjectId : public common::BitField<uint64_t> {
 };
 }  // namespace
 
-Mlme::Mlme(DeviceInterface* device)
-  : device_(device) {
+Mlme::Mlme(DeviceInterface* device) : device_(device) {
     debugfn();
 }
 
@@ -79,9 +78,7 @@ namespace {
 void DumpPacket(const Packet& packet) {
     const uint8_t* p = packet.data();
     for (size_t i = 0; i < packet.len(); i++) {
-        if (i % 16 == 0) {
-            std::printf("\nwlan: ");
-        }
+        if (i % 16 == 0) { std::printf("\nwlan: "); }
         std::printf("%02x ", p[i]);
     }
     std::printf("\n");
@@ -92,15 +89,14 @@ zx_status_t Mlme::HandlePacket(const Packet* packet) {
     debugfn();
     ZX_DEBUG_ASSERT(packet != nullptr);
     ZX_DEBUG_ASSERT(packet->peer() != Packet::Peer::kUnknown);
-    debughdr("packet data=%p len=%zu peer=%s\n",
-              packet->data(), packet->len(),
-              packet->peer() == Packet::Peer::kWlan ? "Wlan" :
-              packet->peer() == Packet::Peer::kEthernet ? "Ethernet" :
-              packet->peer() == Packet::Peer::kService ? "Service" : "Unknown");
+    debughdr("packet data=%p len=%zu peer=%s\n", packet->data(), packet->len(),
+             packet->peer() == Packet::Peer::kWlan
+                 ? "Wlan"
+                 : packet->peer() == Packet::Peer::kEthernet
+                       ? "Ethernet"
+                       : packet->peer() == Packet::Peer::kService ? "Service" : "Unknown");
 
-    if (kLogLevel & kLogDataPacketTrace) {
-        DumpPacket(*packet);
-    }
+    if (kLogLevel & kLogDataPacketTrace) { DumpPacket(*packet); }
 
     zx_status_t status = ZX_OK;
     switch (packet->peer()) {
@@ -181,9 +177,7 @@ zx_status_t Mlme::HandleDataPacket(const Packet* packet) {
             return ZX_OK;
         }
 
-        if (*sta_->bssid() == hdr->addr2) {
-            return sta_->HandleData(packet);
-        }
+        if (*sta_->bssid() == hdr->addr2) { return sta_->HandleData(packet); }
     }
     return ZX_OK;
 }
@@ -195,12 +189,10 @@ zx_status_t Mlme::HandleMgmtPacket(const Packet* packet) {
         errorf("short mgmt packet len=%zu\n", packet->len());
         return ZX_OK;
     }
-    debughdr("Frame control: %04x  duration: %u  seq: %u frag: %u\n",
-              hdr->fc.val(), hdr->duration, hdr->sc.seq(), hdr->sc.frag());
+    debughdr("Frame control: %04x  duration: %u  seq: %u frag: %u\n", hdr->fc.val(), hdr->duration,
+             hdr->sc.seq(), hdr->sc.frag());
     debughdr("dest: " MAC_ADDR_FMT "  source: " MAC_ADDR_FMT "  bssid: " MAC_ADDR_FMT "\n",
-              MAC_ADDR_ARGS(hdr->addr1),
-              MAC_ADDR_ARGS(hdr->addr2),
-              MAC_ADDR_ARGS(hdr->addr3));
+             MAC_ADDR_ARGS(hdr->addr1), MAC_ADDR_ARGS(hdr->addr2), MAC_ADDR_ARGS(hdr->addr3));
 
     switch (hdr->fc.subtype()) {
     case ManagementSubtype::kBeacon:
@@ -234,8 +226,8 @@ zx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
         errorf("short service packet len=%zu\n", packet->len());
         return ZX_OK;
     }
-    debughdr("service packet txn_id=%" PRIu64 " flags=%u ordinal=%u\n",
-              h->txn_id, h->flags, h->ordinal);
+    debughdr("service packet txn_id=%" PRIu64 " flags=%u ordinal=%u\n", h->txn_id, h->flags,
+             h->ordinal);
 
     zx_status_t status = ZX_OK;
     switch (static_cast<Method>(h->ordinal)) {
@@ -281,9 +273,7 @@ zx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
             break;
         }
 
-        if (IsStaValid()) {
-            status = sta_->Authenticate(std::move(req));
-        }
+        if (IsStaValid()) { status = sta_->Authenticate(std::move(req)); }
         break;
     }
     case Method::ASSOCIATE_request: {
@@ -295,9 +285,7 @@ zx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
             break;
         }
 
-        if (IsStaValid()) {
-            status = sta_->Associate(std::move(req));
-        }
+        if (IsStaValid()) { status = sta_->Associate(std::move(req)); }
         break;
     }
     case Method::EAPOL_request: {
@@ -308,9 +296,7 @@ zx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
             break;
         }
 
-        if (IsStaValid()) {
-            status = sta_->SendEapolRequest(std::move(req));
-        }
+        if (IsStaValid()) { status = sta_->SendEapolRequest(std::move(req)); }
         break;
     }
     default:
@@ -324,15 +310,11 @@ zx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
 zx_status_t Mlme::HandleBeacon(const Packet* packet) {
     debugfn();
 
-    if (scanner_->IsRunning()) {
-        scanner_->HandleBeaconOrProbeResponse(packet);
-    }
+    if (scanner_->IsRunning()) { scanner_->HandleBeaconOrProbeResponse(packet); }
 
     if (IsStaValid()) {
         auto hdr = packet->field<MgmtFrameHeader>(0);
-        if (*sta_->bssid() == hdr->addr3) {
-            sta_->HandleBeacon(packet);
-        }
+        if (*sta_->bssid() == hdr->addr3) { sta_->HandleBeacon(packet); }
     }
 
     return ZX_OK;
@@ -341,9 +323,7 @@ zx_status_t Mlme::HandleBeacon(const Packet* packet) {
 zx_status_t Mlme::HandleProbeResponse(const Packet* packet) {
     debugfn();
 
-    if (scanner_->IsRunning()) {
-        scanner_->HandleBeaconOrProbeResponse(packet);
-    }
+    if (scanner_->IsRunning()) { scanner_->HandleBeaconOrProbeResponse(packet); }
 
     return ZX_OK;
 }
@@ -353,9 +333,7 @@ zx_status_t Mlme::HandleAuthentication(const Packet* packet) {
 
     if (IsStaValid()) {
         auto hdr = packet->field<MgmtFrameHeader>(0);
-        if (*sta_->bssid() == hdr->addr3) {
-            sta_->HandleAuthentication(packet);
-        }
+        if (*sta_->bssid() == hdr->addr3) { sta_->HandleAuthentication(packet); }
     }
     return ZX_OK;
 }
@@ -365,9 +343,7 @@ zx_status_t Mlme::HandleDeauthentication(const Packet* packet) {
 
     if (IsStaValid()) {
         auto hdr = packet->field<MgmtFrameHeader>(0);
-        if (*sta_->bssid() == hdr->addr3) {
-            sta_->HandleDeauthentication(packet);
-        }
+        if (*sta_->bssid() == hdr->addr3) { sta_->HandleDeauthentication(packet); }
     }
     return ZX_OK;
 }
@@ -377,9 +353,7 @@ zx_status_t Mlme::HandleAssociationResponse(const Packet* packet) {
 
     if (IsStaValid()) {
         auto hdr = packet->field<MgmtFrameHeader>(0);
-        if (*sta_->bssid() == hdr->addr3) {
-            sta_->HandleAssociationResponse(packet);
-        }
+        if (*sta_->bssid() == hdr->addr3) { sta_->HandleAssociationResponse(packet); }
     }
     return ZX_OK;
 }
@@ -389,9 +363,7 @@ zx_status_t Mlme::HandleDisassociation(const Packet* packet) {
 
     if (IsStaValid()) {
         auto hdr = packet->field<MgmtFrameHeader>(0);
-        if (*sta_->bssid() == hdr->addr3) {
-            sta_->HandleDisassociation(packet);
-        }
+        if (*sta_->bssid() == hdr->addr3) { sta_->HandleDisassociation(packet); }
     }
     return ZX_OK;
 }
@@ -402,17 +374,13 @@ bool Mlme::IsStaValid() const {
 
 zx_status_t Mlme::PreChannelChange(wlan_channel_t chan) {
     debugfn();
-    if (IsStaValid()) {
-        sta_->PreChannelChange(chan);
-    }
+    if (IsStaValid()) { sta_->PreChannelChange(chan); }
     return ZX_OK;
 }
 
 zx_status_t Mlme::PostChannelChange() {
     debugfn();
-    if (IsStaValid()) {
-        sta_->PostChannelChange();
-    }
+    if (IsStaValid()) { sta_->PostChannelChange(); }
     return ZX_OK;
 }
 

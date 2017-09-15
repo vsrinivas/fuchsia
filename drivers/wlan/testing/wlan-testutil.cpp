@@ -30,7 +30,8 @@ int add_wlan() {
     }
 
     char devpath[1024];
-    ssize_t rc = ioctl_test_create_device(fd, kWlan, std::strlen(kWlan) + 1, devpath, sizeof(devpath));
+    ssize_t rc =
+        ioctl_test_create_device(fd, kWlan, std::strlen(kWlan) + 1, devpath, sizeof(devpath));
     if (rc < 0) {
         std::cerr << "could not create test device " << kWlan << ": " << rc << std::endl;
         close(fd);
@@ -42,9 +43,7 @@ int add_wlan() {
     int retry = 0;
     do {
         devfd = open(devpath, O_RDWR);
-        if (devfd >= 0) {
-            break;
-        }
+        if (devfd >= 0) { break; }
         zx::nanosleep(zx_deadline_after(ZX_SEC(1)));
     } while (++retry < 100);
 
@@ -75,9 +74,7 @@ int rm_wlan() {
 
 int main(int argc, char* argv[]) {
     const char* appname = argv[0];
-    if (argc < 2) {
-        return usage(appname);
-    }
+    if (argc < 2) { return usage(appname); }
 
     argc--;
     argv++;

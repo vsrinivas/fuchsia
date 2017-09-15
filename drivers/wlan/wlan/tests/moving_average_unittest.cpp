@@ -9,8 +9,8 @@ namespace wlan {
 namespace {
 
 class MovingAverageTest : public ::testing::Test {
- protected:
-  common::MovingAverage<uint8_t, uint16_t, 3> avg_;
+   protected:
+    common::MovingAverage<uint8_t, uint16_t, 3> avg_;
 };
 
 TEST_F(MovingAverageTest, Some) {

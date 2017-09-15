@@ -22,8 +22,7 @@ zx_status_t Timer::CancelTimer() {
     return CancelTimerImpl();
 }
 
-SystemTimer::SystemTimer(uint64_t id, zx::timer timer)
-  : Timer(id), timer_(std::move(timer)) {}
+SystemTimer::SystemTimer(uint64_t id, zx::timer timer) : Timer(id), timer_(std::move(timer)) {}
 
 zx_status_t SystemTimer::SetTimerImpl(zx_time_t deadline) {
     return timer_.set(deadline, 0);

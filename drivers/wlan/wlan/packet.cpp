@@ -11,16 +11,13 @@
 
 namespace wlan {
 
-Packet::Packet(fbl::unique_ptr<Buffer> buffer, size_t len)
-  : buffer_(std::move(buffer)), len_(len) {
+Packet::Packet(fbl::unique_ptr<Buffer> buffer, size_t len) : buffer_(std::move(buffer)), len_(len) {
     ZX_ASSERT(buffer_.get());
     ZX_DEBUG_ASSERT(len <= buffer_->capacity());
 }
 
 zx_status_t Packet::CopyFrom(const void* src, size_t len, size_t offset) {
-    if (offset + len > buffer_->capacity()) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
+    if (offset + len > buffer_->capacity()) { return ZX_ERR_BUFFER_TOO_SMALL; }
     std::memcpy(buffer_->data() + offset, src, len);
     len_ = std::max(len_, offset + len);
     return ZX_OK;

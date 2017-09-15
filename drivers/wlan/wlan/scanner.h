@@ -6,8 +6,8 @@
 
 #include <apps/wlan/services/wlan_mlme.fidl-common.h>
 #include <ddk/protocol/wlan.h>
-#include <zircon/types.h>
 #include <fbl/unique_ptr.h>
+#include <zircon/types.h>
 
 #include <unordered_map>
 
@@ -20,7 +20,7 @@ struct ProbeRequest;
 class Timer;
 
 class Scanner {
-  public:
+   public:
     Scanner(DeviceInterface* device, fbl::unique_ptr<Timer> timer);
 
     enum class Type {
@@ -42,7 +42,7 @@ class Scanner {
 
     const Timer& timer() const { return *timer_; }
 
-  private:
+   private:
     zx_time_t InitialTimeout() const;
     zx_status_t SendScanResponse();
     zx_status_t SendProbeRequest();

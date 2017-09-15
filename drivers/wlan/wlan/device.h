@@ -12,13 +12,13 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/ethernet.h>
 #include <ddktl/protocol/wlan.h>
-#include <zircon/compiler.h>
-#include <zx/channel.h>
-#include <zx/port.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
 #include <fbl/unique_ptr.h>
+#include <zircon/compiler.h>
+#include <zx/channel.h>
+#include <zx/port.h>
 
 #include <mutex>
 #include <thread>
@@ -36,7 +36,7 @@ class Device : public WlanBaseDevice,
                public ddk::EthmacProtocol<Device>,
                public ddk::WlanmacIfc<Device>,
                public DeviceInterface {
-  public:
+   public:
     Device(zx_device_t* device, wlanmac_protocol_t* wlanmac_proto);
     ~Device();
 
@@ -67,7 +67,7 @@ class Device : public WlanBaseDevice,
     zx_status_t SetStatus(uint32_t status) override final;
     fbl::RefPtr<DeviceState> GetState() override final;
 
-  private:
+   private:
     enum class DevicePacket : uint64_t {
         kShutdown,
         kPacketQueued,
@@ -76,11 +76,9 @@ class Device : public WlanBaseDevice,
     fbl::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Peer peer);
     template <typename T>
     fbl::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Peer peer,
-                                           const T& ctrl_data) {
+                                          const T& ctrl_data) {
         auto packet = PreparePacket(data, length, peer);
-        if (packet != nullptr) {
-            packet->CopyCtrlFrom(ctrl_data);
-        }
+        if (packet != nullptr) { packet->CopyCtrlFrom(ctrl_data); }
         return packet;
     }
 

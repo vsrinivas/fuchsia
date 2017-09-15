@@ -5,8 +5,8 @@
 #pragma once
 
 #include <ddk/protocol/wlan.h>
-#include <zircon/types.h>
 #include <fbl/unique_ptr.h>
+#include <zircon/types.h>
 
 namespace wlan {
 
@@ -18,7 +18,7 @@ class Station;
 
 // Mlme is the Mac sub-Layer Management Entity for the wlan driver. It is not thread-safe.
 class Mlme {
-  public:
+   public:
     explicit Mlme(DeviceInterface* device);
     ~Mlme();
 
@@ -33,7 +33,7 @@ class Mlme {
     // whether it changed or not.
     zx_status_t PostChannelChange();
 
-  private:
+   private:
     // MAC frame handlers
     zx_status_t HandleCtrlPacket(const Packet* packet);
     zx_status_t HandleDataPacket(const Packet* packet);

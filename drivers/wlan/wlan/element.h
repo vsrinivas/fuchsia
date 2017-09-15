@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include <fbl/type_support.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <fbl/type_support.h>
 
 #include <drivers/wifi/common/bitfield.h>
 
@@ -23,12 +23,9 @@ struct ElementHeader {
     uint8_t len;
 } __PACKED;
 
-template <typename E, uint8_t ID>
-struct Element {
+template <typename E, uint8_t ID> struct Element {
     static constexpr uint8_t element_id() { return ID; }
-    size_t len() const {
-        return sizeof(ElementHeader) + static_cast<E*>(this)->hdr.len;
-    }
+    size_t len() const { return sizeof(ElementHeader) + static_cast<E*>(this)->hdr.len; }
 };
 
 // An ElementReader can be used to retrieve Elements from a Management frame. The peek() method
@@ -37,7 +34,7 @@ struct Element {
 // the end or parse errors. It is an error to call read() for a type different than the one
 // specified in the ElementHeader.
 class ElementReader {
-  public:
+   public:
     ElementReader(const uint8_t* buf, size_t len);
 
     bool is_valid() const;
@@ -46,8 +43,7 @@ class ElementReader {
     void skip(size_t offset) { offset_ += offset; }
     void skip(const ElementHeader& hdr) { offset_ += sizeof(ElementHeader) + hdr.len; }
 
-    template <typename E>
-    const E* read() {
+    template <typename E> const E* read() {
         static_assert(fbl::is_base_of<Element<E, E::element_id()>, E>::value,
                       "Only Elements may be retrieved.");
         if (!is_valid()) return nullptr;
@@ -58,7 +54,7 @@ class ElementReader {
         return elt;
     }
 
-  private:
+   private:
     size_t NextElementLen() const;
 
     const uint8_t* const buf_;
@@ -69,11 +65,10 @@ class ElementReader {
 // An ElementWriter will serialize Elements into a buffer. The size() method will return the total
 // length of the buffer.
 class ElementWriter {
-  public:
+   public:
     ElementWriter(uint8_t* buf, size_t len);
 
-    template <typename E, typename... Args>
-    bool write(Args&&... args) {
+    template <typename E, typename... Args> bool write(Args&&... args) {
         static_assert(fbl::is_base_of<Element<E, E::element_id()>, E>::value,
                       "Only Elements may be inserted.");
         if (offset_ >= len_) return false;
@@ -89,7 +84,7 @@ class ElementWriter {
 
     size_t size() const { return offset_; }
 
-  private:
+   private:
     uint8_t* buf_;
     const size_t len_;
     size_t offset_ = 0;
@@ -308,8 +303,7 @@ struct SsidElement : public Element<SsidElement, element_id::kSsid> {
 } __PACKED;
 
 struct SupportedRatesElement : public Element<SupportedRatesElement, element_id::kSuppRates> {
-    static bool Create(uint8_t* buf, size_t len, size_t* actual,
-                       const std::vector<uint8_t>& rates);
+    static bool Create(uint8_t* buf, size_t len, size_t* actual, const std::vector<uint8_t>& rates);
     static const size_t kMaxLen = 8;
 
     ElementHeader hdr;
@@ -336,7 +330,7 @@ struct CfParamSetElement : public Element<CfParamSetElement, element_id::kCfPara
 
 // IEEE Std 802.11-2016, 9.4.2.6
 class BitmapControl : public common::BitField<uint8_t> {
-  public:
+   public:
     WLAN_BIT_FIELD(group_traffic_ind, 0, 1);
     WLAN_BIT_FIELD(offset, 1, 7);
 };
@@ -365,16 +359,14 @@ struct CountryElement : public Element<CountryElement, element_id::kCountry> {
     uint8_t triplets[];  // TODO(tkilbourn): define these
 } __PACKED;
 
-struct ExtendedSupportedRatesElement :
-    public Element<ExtendedSupportedRatesElement, element_id::kExtSuppRates> {
-    static bool Create(uint8_t* buf, size_t len, size_t* actual,
-                       const std::vector<uint8_t>& rates);
+struct ExtendedSupportedRatesElement
+    : public Element<ExtendedSupportedRatesElement, element_id::kExtSuppRates> {
+    static bool Create(uint8_t* buf, size_t len, size_t* actual, const std::vector<uint8_t>& rates);
     static const size_t kMaxLen = 255;
 
     ElementHeader hdr;
     uint8_t rates[];
 } __PACKED;
-
 
 const uint16_t kEapolProtocolId = 0x888E;
 

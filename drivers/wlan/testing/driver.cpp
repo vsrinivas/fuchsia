@@ -16,9 +16,7 @@ extern "C" zx_status_t wlan_test_bind(void* ctx, zx_device_t* device, void** coo
 
     test_protocol_t proto;
     auto status = device_get_protocol(device, ZX_PROTOCOL_TEST, reinterpret_cast<void*>(&proto));
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     auto dev = std::make_unique<wlan::testing::Device>(device, &proto);
     status = dev->Bind();

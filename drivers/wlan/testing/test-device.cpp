@@ -10,16 +10,13 @@ namespace wlan {
 namespace testing {
 
 Device::Device(zx_device_t* device, test_protocol_t* test_proto)
-  : TestBaseDevice(device),
-    test_proxy_(test_proto) {}
+    : TestBaseDevice(device), test_proxy_(test_proto) {}
 
 zx_status_t Device::Bind() {
     std::printf("wlan::testing::Device::Bind()\n");
 
     auto status = DdkAdd("wlan-test");
-    if (status != ZX_OK) {
-        std::printf("wlan-test: could not add test device: %d\n", status);
-    }
+    if (status != ZX_OK) { std::printf("wlan-test: could not add test device: %d\n", status); }
     return status;
 }
 
@@ -41,7 +38,7 @@ zx_status_t Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
 
 zx_status_t Device::WlanmacQuery(uint32_t options, ethmac_info_t* info) {
     std::printf("wlan::testing::Device::WlanmacQuery()\n");
-    static uint8_t mac[ETH_MAC_SIZE] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06 };
+    static uint8_t mac[ETH_MAC_SIZE] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
     info->features = ETHMAC_FEATURE_WLAN;
     info->mtu = 1500;
     std::memcpy(info->mac, mac, ETH_MAC_SIZE);
@@ -67,9 +64,7 @@ zx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     return ZX_OK;
 }
 
-void Device::WlanmacTx(uint32_t options, const void* data, size_t length) {
-
-}
+void Device::WlanmacTx(uint32_t options, const void* data, size_t length) {}
 
 zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
     std::printf("wlan::testing::Device::WlanmacSetChannel()  chan=%u\n", chan->channel_num);
