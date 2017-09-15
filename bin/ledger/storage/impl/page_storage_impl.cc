@@ -235,9 +235,9 @@ void PageStorageImpl::CommitJournal(
   ](Status status, std::unique_ptr<const Commit> commit) mutable {
     if (status != Status::OK) {
       // Commit failed, roll the journal back.
-      journal_ptr->Rollback([
+      journal_ptr->Rollback(fxl::MakeCopyable([
         status, cleanup = std::move(cleanup), callback = std::move(callback)
-      ](Status /*rollback_status*/) { callback(status, nullptr); });
+      ](Status /*rollback_status*/) { callback(status, nullptr); }));
       return;
     }
     callback(Status::OK, std::move(commit));
@@ -250,9 +250,9 @@ void PageStorageImpl::RollbackJournal(std::unique_ptr<Journal> journal,
   JournalDBImpl* journal_ptr =
       static_cast<JournalDBImpl*>(handler.first->get());
 
-  journal_ptr->Rollback([
+  journal_ptr->Rollback(fxl::MakeCopyable([
     cleanup = std::move(handler.second), callback = std::move(callback)
-  ](Status status) { callback(status); });
+  ](Status status) { callback(status); }));
 }
 
 Status PageStorageImpl::AddCommitWatcher(CommitWatcher* watcher) {
