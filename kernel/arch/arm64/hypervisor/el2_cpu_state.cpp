@@ -14,11 +14,10 @@ static fbl::Mutex el2_mutex;
 static size_t num_guests TA_GUARDED(el2_mutex) = 0;
 static fbl::unique_ptr<El2CpuState> el2_cpu_state TA_GUARDED(el2_mutex);
 
-static zx_status_t el2_set_stack(zx_paddr_t stack_top) {
-    register zx_status_t status asm("x0") = ZX_OK;
-    __asm__ volatile("hvc #0" ::: "x0");
-    return status;
-}
+__BEGIN_CDECLS
+extern zx_status_t arm64_el2_on(zx_paddr_t stack_top);
+extern zx_status_t arm64_el2_off();
+__END_CDECLS
 
 El2Stack::~El2Stack() {
     if (stack_paddr_ != 0)
@@ -38,9 +37,9 @@ static zx_status_t el2_on_task(void* context, uint cpu_num) {
     auto stacks = static_cast<fbl::Array<El2Stack>*>(context);
     El2Stack& stack = (*stacks)[cpu_num];
 
-    zx_status_t status = el2_set_stack(stack.Top());
+    zx_status_t status = arm64_el2_on(stack.Top());
     if (status != ZX_OK) {
-        dprintf(CRITICAL, "Failed to set EL2 stack for CPU %u\n", cpu_num);
+        dprintf(CRITICAL, "Failed to turn EL2 on for CPU %u\n", cpu_num);
         return status;
     }
 
@@ -48,18 +47,18 @@ static zx_status_t el2_on_task(void* context, uint cpu_num) {
 }
 
 static void el2_off_task(void* arg) {
-    zx_status_t status = el2_set_stack(0);
+    zx_status_t status = arm64_el2_off();
     if (status != ZX_OK)
-        dprintf(CRITICAL, "Failed to clear EL2 stack for CPU %u\n", arch_curr_cpu_num());
+        dprintf(CRITICAL, "Failed to turn EL2 off for CPU %u\n", arch_curr_cpu_num());
 }
 
 // static
 zx_status_t El2CpuState::Create(fbl::unique_ptr<El2CpuState>* out) {
     fbl::AllocChecker ac;
-    fbl::unique_ptr<El2CpuState> el2_cpu_state(new (&ac) El2CpuState);
+    fbl::unique_ptr<El2CpuState> cpu_state(new (&ac) El2CpuState);
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
-    zx_status_t status = el2_cpu_state->Init();
+    zx_status_t status = cpu_state->Init();
     if (status != ZX_OK)
         return status;
 
@@ -82,8 +81,8 @@ zx_status_t El2CpuState::Create(fbl::unique_ptr<El2CpuState>* out) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    el2_cpu_state->el2_stacks_ = fbl::move(el2_stacks);
-    *out = fbl::move(el2_cpu_state);
+    cpu_state->stacks_ = fbl::move(el2_stacks);
+    *out = fbl::move(cpu_state);
     return ZX_OK;
 }
 

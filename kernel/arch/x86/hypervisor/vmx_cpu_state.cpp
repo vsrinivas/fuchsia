@@ -204,10 +204,10 @@ static void vmxoff_task(void* arg) {
 // static
 zx_status_t VmxCpuState::Create(fbl::unique_ptr<VmxCpuState>* out) {
     fbl::AllocChecker ac;
-    fbl::unique_ptr<VmxCpuState> vmx_cpu_state(new (&ac) VmxCpuState);
+    fbl::unique_ptr<VmxCpuState> cpu_state(new (&ac) VmxCpuState);
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
-    zx_status_t status = vmx_cpu_state->Init();
+    zx_status_t status = cpu_state->Init();
     if (status != ZX_OK)
         return status;
 
@@ -231,8 +231,8 @@ zx_status_t VmxCpuState::Create(fbl::unique_ptr<VmxCpuState>* out) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    vmx_cpu_state->vmxon_pages_ = fbl::move(vmxon_pages);
-    *out = fbl::move(vmx_cpu_state);
+    cpu_state->vmxon_pages_ = fbl::move(vmxon_pages);
+    *out = fbl::move(cpu_state);
     return ZX_OK;
 }
 

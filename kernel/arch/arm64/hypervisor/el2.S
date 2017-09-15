@@ -11,24 +11,20 @@
 
 #define ESR_EL2_EC_MASK     0xfc000000
 #define ESR_EL2_ISS_MASK    0x01ffffff
-#define HVC_MAX_INDEX       1
+#define SCTLR_EL2_M         (1 << 0)
+#define SCTLR_EL2_C         (1 << 2)
+#define SCTLR_EL2_I         (1 << 12)
+#define HVC_MAX_INDEX       2
 
 .section .text.el2,"ax",@progbits
-.align 12
-
-// EL2 functions
-LOCAL_FUNCTION(el2_set_stack)
-    mov sp, x0
-    mov x0, #ZX_OK
-    eret
-END_FUNCTION(el2_set_stack)
-
-.section .text.boot.vectab.el2,"ax",@progbits
 .align 12
 
 .macro invalid_exception
     // TODO(abdulla): Check VMID from VTTBR_EL2. ERET to host with error. If
     // VMID was not 0, terminate guest.
+    //
+    // In the meantime, generate a breakpoint exception.
+    brk #0
     eret
 .endm
 
@@ -44,10 +40,11 @@ END_FUNCTION(el2_set_stack)
     br x9
 
 table:
-    b el2_set_stack
+    b el2_on
+    b el2_off
 
 out_of_range:
-    mov x0, ZX_ERR_OUT_OF_RANGE
+    movlit x0, ZX_ERR_OUT_OF_RANGE
     eret
 .endm
 
@@ -136,3 +133,58 @@ END_FUNCTION(arm64_el2_fiq_lower_el_32)
 LOCAL_FUNCTION(arm64_el2_err_exc_lower_el_32)
     invalid_exception
 END_FUNCTION(arm64_el2_err_exc_lower_el_32)
+
+// zx_status_t arm64_el2_on(zx_paddr_t stack_top);
+//
+// |stack_top| must point to the physical address of a contiguous stack.
+FUNCTION(arm64_el2_on)
+    hvc #0
+    ret
+END_FUNCTION(arm64_el2_on)
+LOCAL_FUNCTION(el2_on)
+    mov sp, x0
+
+    // Setup memory attributes and translation controls.
+    movlit x9, MMU_MAIR_VAL
+    msr mair_el2, x9
+    movlit x9, MMU_TCR_FLAGS_IDENT
+    msr tcr_el2, x9
+    isb
+
+    // Setup translation table to point at the trampoline, which contains an
+    // identity mapped translation table.
+    adr_global x9, tt_trampoline
+    msr ttbr0_el2, x9
+    isb
+
+    // Invalidate all EL2 TLB entries and flush I-cache and D-cache.
+    tlbi alle2
+    isb
+    dsb sy
+
+    // Enable the MMU for EL2, with I-cache and D-cache.
+    mrs x9, sctlr_el2
+    movlit x10, SCTLR_EL2_M | SCTLR_EL2_C | SCTLR_EL2_I
+    orr x9, x9, x10
+    msr sctlr_el2, x9
+    isb
+
+    mov x0, #ZX_OK
+    eret
+END_FUNCTION(el2_on)
+
+// zx_status_t arm64_el2_off();
+FUNCTION(arm64_el2_off)
+    hvc #1
+    ret
+END_FUNCTION(arm64_el2_off)
+LOCAL_FUNCTION(el2_off)
+    // Disable the MMU for EL2.
+    mrs x9, sctlr_el2
+    bic x9, x9, #SCTLR_EL2_M
+    msr sctlr_el2, x9
+    isb
+
+    mov x0, #ZX_OK
+    eret
+END_FUNCTION(el2_off)

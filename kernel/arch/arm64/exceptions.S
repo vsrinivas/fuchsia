@@ -11,7 +11,7 @@
 #include <arch/arm64.h>
 #include <arch/arm64/exceptions.h>
 
-.section .text.boot.vectab.el1,"ax",@progbits
+.section .text.boot.vectab,"ax",@progbits
 .align 12
 
 #define DW_REG_lr   30

@@ -31,7 +31,7 @@ public:
     ~El2CpuState();
 
 private:
-    fbl::Array<El2Stack> el2_stacks_;
+    fbl::Array<El2Stack> stacks_;
 
     El2CpuState() = default;
 };
