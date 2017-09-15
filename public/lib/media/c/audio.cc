@@ -25,7 +25,7 @@ static const char* kStubDeviceNames[kStubNumDevices] = {"Dummy Audio Output 1",
 constexpr int kStubDeviceRates[kStubNumDevices] = {44100, 48000};
 constexpr int kStubDeviceNumChans[kStubNumDevices] = {2, 1};
 constexpr int kStubDeviceBufferSizes[kStubNumDevices] = {1024, 3000};
-constexpr zx_duration_t kStubDeviceMinDelaysNSec[kStubNumDevices] = {200000,
+constexpr zx_duration_t kStubDeviceMinDelaysNSec[kStubNumDevices] = {20000000,
                                                                      100000000};
 }  // namespace
 // End of stub-related placeholder values
