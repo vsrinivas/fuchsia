@@ -13,6 +13,7 @@ HOSTAPPS := \
 	$(LOCAL_DIR)/merkleroot/rules.mk \
 	$(LOCAL_DIR)/mkbootfs/rules.mk \
 	$(LOCAL_DIR)/mkfs-msdosfs/rules.mk \
+	$(LOCAL_DIR)/mkkdtb/rules.mk \
 	$(LOCAL_DIR)/netprotocol/rules.mk \
 	$(LOCAL_DIR)/sysgen/rules.mk \
 	$(LOCAL_DIR)/h2md/rules.mk \
