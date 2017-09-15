@@ -192,7 +192,7 @@ static zx_status_t usb_device_ioctl(void* ctx, uint32_t op, const void* in_buf, 
         if (out_len == 0) return 0;
         int id = *((int *)in_buf);
         char string[MAX_USB_STRING_LEN];
-        zx_status_t result = usb_device_get_string_descriptor(dev->hci_zxdev, dev->device_id, id,
+        zx_status_t result = usb_device_get_string_descriptor(dev, dev->device_id, id,
                                                               string, sizeof(string));
         if (result < 0) return result;
         size_t length = strlen(string) + 1;

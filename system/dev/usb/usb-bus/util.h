@@ -17,5 +17,5 @@ zx_status_t usb_device_get_descriptor(zx_device_t* hci_device, uint32_t device_i
 #define MAX_USB_STRING_LEN  ((((UINT8_MAX - sizeof(usb_descriptor_header_t)) / sizeof(uint16_t)) * 3) + 1)
 
 // returns length of string returned (including zero termination) or an error
-zx_status_t usb_device_get_string_descriptor(zx_device_t* hci_device, uint32_t device_id, uint8_t id,
+zx_status_t usb_device_get_string_descriptor(usb_device_t* dev, uint32_t device_id, uint8_t id,
                                              char* buf, size_t buflen);

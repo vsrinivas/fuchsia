@@ -67,7 +67,7 @@ zx_status_t usb_device_get_descriptor(zx_device_t* hci_device, uint32_t device_i
                            USB_REQ_GET_DESCRIPTOR, type << 8 | index, language, data, length);
 }
 
-zx_status_t usb_device_get_string_descriptor(zx_device_t* hci_device, uint32_t device_id, uint8_t id,
+zx_status_t usb_device_get_string_descriptor(usb_device_t* dev, uint32_t device_id, uint8_t id,
                                              char* buf, size_t buflen) {
     uint16_t buffer[128];
     uint16_t languages[128];
@@ -77,9 +77,15 @@ zx_status_t usb_device_get_string_descriptor(zx_device_t* hci_device, uint32_t d
     memset(languages, 0, sizeof(languages));
 
     // read list of supported languages
-    zx_status_t result = usb_device_get_descriptor(hci_device, device_id, USB_DT_STRING, 0, 0,
+    zx_status_t result = usb_device_get_descriptor(dev->hci_zxdev, device_id, USB_DT_STRING, 0, 0,
                                                    languages, sizeof(languages));
-    if (result < 0) {
+    if (result == ZX_ERR_IO_REFUSED) {
+        // some devices do not support fetching language list
+        // in that case assume US English (0x0409)
+        usb_hci_reset_endpoint(&dev->hci, device_id, 0);
+        languages[1] = htole16(0x0409);
+        result = 4;
+    } else if (result < 0) {
         return result;
     }
     languageCount = (result - 2) / 2;
@@ -87,7 +93,7 @@ zx_status_t usb_device_get_string_descriptor(zx_device_t* hci_device, uint32_t d
     for (int language = 1; language <= languageCount; language++) {
         memset(buffer, 0, sizeof(buffer));
 
-        result = usb_device_get_descriptor(hci_device, device_id, USB_DT_STRING, id,
+        result = usb_device_get_descriptor(dev->hci_zxdev, device_id, USB_DT_STRING, id,
                                            le16toh(languages[language]), buffer, sizeof(buffer));
         // use first language on the list
         if (result > 0) {
@@ -122,6 +128,8 @@ zx_status_t usb_device_get_string_descriptor(zx_device_t* hci_device, uint32_t d
             }
             *dest++ = 0;
             return dest - buf;
+        } else if (result == ZX_ERR_IO_REFUSED) {
+            usb_hci_reset_endpoint(&dev->hci, device_id, 0);
         }
     }
     // default to empty string
