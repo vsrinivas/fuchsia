@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "time_server_config.h"
+#include "garnet/bin/network_time/time_server_config.h"
 
 #include <string>
 #include <vector>
@@ -16,7 +16,7 @@
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
 
-#include "logging.h"
+#include "garnet/bin/network_time/logging.h"
 
 #define MULTILINE(...) #__VA_ARGS__
 

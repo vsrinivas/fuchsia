@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "roughtime_server.h"
+#include "garnet/bin/network_time/roughtime_server.h"
 
 namespace timeservice {
 

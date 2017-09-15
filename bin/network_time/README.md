@@ -1,5 +1,5 @@
-Time-Service
-=======================================
+Network Time
+============
 
 This service uses roughtime service to set the time of the machine at startup.
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "roughtime_server.h"
+#include "garnet/bin/network_time/roughtime_server.h"
 
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -58,7 +58,7 @@ void listen(int sock) {
   ASSERT_GE(n, 0) << "sendto: " << strerror(errno);
 }
 
-// Checks that server recieves request from time-service
+// Checks that server recieves request from network_time
 TEST(RoughTimeServerTest, TestServerRequest) {
   uint8_t key[ED25519_PUBLIC_KEY_LEN] = {0};
   RoughTimeServer server("name", "127.0.0.1:" + std::to_string(PORT), key,

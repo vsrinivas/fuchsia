@@ -5,8 +5,8 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 
-#include "logging.h"
-#include "time_service.h"
+#include "garnet/bin/network_time/logging.h"
+#include "garnet/bin/network_time/time_service.h"
 
 int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

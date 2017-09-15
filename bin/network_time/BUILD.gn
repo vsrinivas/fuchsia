@@ -4,43 +4,42 @@
 
 import("//packages/package.gni")
 
-package("time-service") {
+package("network_time") {
   deps = [
-    ":time_service",
+    ":network_time_bin",
   ]
 
   binaries = [ {
-        name = "time_service"
+        name = "network_time"
       } ]
   resources = [ {
         path = rebase_path("roughtime-servers.json")
-        dest = "time-service/roughtime-servers.json"
+        dest = "network_time/roughtime-servers.json"
       } ]
 }
 
-package("time-service-tests") {
+package("network_time_tests") {
   testonly = true
   deps = [
     ":tests",
   ]
 
   tests = [ {
-        name = "time_service_tests"
+        name = "network_time_tests"
       } ]
 }
 
-config("ts_config") {
-  visibility = [ ":*" ]
-  include_dirs = [ "include" ]
-}
-
-source_set("time_service_src") {
+source_set("lib") {
   sources = [
-    "src/roughtime_server.cc",
-    "src/time_server_config.cc",
-    "src/time_service.cc",
+    "logging.h",
+    "roughtime_server.cc",
+    "roughtime_server.h",
+    "time_server_config.cc",
+    "time_server_config.h",
+    "time_service.cc",
+    "time_service.h",
   ]
-  public_configs = [ ":ts_config" ]
+
   deps = [
     "//garnet/public/lib/fxl",
     "//third_party/boringssl",
@@ -49,29 +48,31 @@ source_set("time_service_src") {
   ]
 }
 
-executable("time_service") {
+executable("network_time_bin") {
+  output_name = "network_time"
+
   sources = [
-    "src/main.cc",
+    "main.cc",
   ]
-  public_configs = [ ":ts_config" ]
+
   deps = [
-    ":time_service_src",
+    ":lib",
     "//garnet/public/lib/fxl",
   ]
 }
 
 executable("tests") {
-  output_name = "time_service_tests"
+  output_name = "network_time_tests"
 
   testonly = true
 
   sources = [
-    "test/roughtime_server_test.cc",
-    "test/time_server_config_test.cc",
+    "roughtime_server_test.cc",
+    "time_server_config_test.cc",
   ]
 
   deps = [
-    ":time_service_src",
+    ":lib",
     "//apps/test_runner/src:gtest_main",
     "//garnet/public/lib/fxl",
     "//third_party/boringssl",

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "roughtime_server.h"
+#include "garnet/bin/network_time/roughtime_server.h"
 
 #include <errno.h>
 #include <zircon/syscalls.h>
@@ -20,7 +20,7 @@
 
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/functional/auto_call.h"
-#include "logging.h"
+#include "garnet/bin/network_time/logging.h"
 
 namespace timeservice {
 

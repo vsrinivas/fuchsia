@@ -7,4 +7,4 @@
 #include "lib/fxl/log_settings.h"
 #include "lib/fxl/logging.h"
 
-#define TS_LOG(LEVEL) FXL_LOG(LEVEL) << "time-service: "
+#define TS_LOG(LEVEL) FXL_LOG(LEVEL) << "network_time: "
