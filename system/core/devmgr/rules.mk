@@ -69,7 +69,17 @@ include make/module.mk
 #
 MODULE := $(LOCAL_DIR).host
 
-MODULE_NAME := devhost
+# The ASanified devhost is installed as devhost.asan so that
+# devmgr can use the ASanified host for ASanified driver modules.
+# TODO(mcgrathr): One day, both devhost and devhost.asan can both go
+# into the same system image, independent of whether devmgr is ASanified.
+ifeq ($(call TOBOOL,$(USE_ASAN)),true)
+DEVHOST_SUFFIX := .asan
+else
+DEVHOST_SUFFIX :=
+endif
+
+MODULE_NAME := devhost$(DEVHOST_SUFFIX)
 
 MODULE_TYPE := userapp
 MODULE_GROUP := core

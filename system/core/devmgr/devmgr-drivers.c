@@ -60,11 +60,16 @@ static void found_driver(zircon_driver_note_payload_t* note,
     printf("        name: %s\n", note->name);
     printf("      vendor: %s\n", note->vendor);
     printf("     version: %s\n", note->version);
+    printf("       flags: %#x\n", note->flags);
     printf("     binding:\n");
     for (size_t n = 0; n < note->bindcount; n++) {
         printf("         %03zd: %08x %08x\n", n, bi[n].op, bi[n].arg);
     }
 #endif
+
+    if (note->flags & ZIRCON_DRIVER_NOTE_FLAG_ASAN) {
+        dc_asan_drivers = true;
+    }
 
     dc_driver_added(drv, note->version);
 }
@@ -81,9 +86,6 @@ void find_loadable_drivers(const char* path) {
         }
 
         char libname[256 + 32];
-        if (de->d_name[0] == '.') {
-            continue;
-        }
         int r = snprintf(libname, sizeof(libname), "%s/%s", path, de->d_name);
         if ((r < 0) || (r >= (int)sizeof(libname))) {
             continue;

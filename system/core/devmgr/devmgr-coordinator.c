@@ -30,6 +30,8 @@ extern zx_handle_t virtcon_open;
 
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
+bool dc_asan_drivers = false;
+
 static void dc_dump_state(void);
 static void dc_dump_devprops(void);
 static void dc_dump_drivers(void);
@@ -384,7 +386,17 @@ static void process_work(work_t* work) {
     }
 }
 
-static const char* devhost_bin = "/boot/bin/devhost";
+static const char* get_devhost_bin(void) {
+    // If there are any ASan drivers, use the ASan-supporting devhost for
+    // all drivers because even a devhost launched initially with just a
+    // non-ASan driver might later load an ASan driver.  One day we might
+    // be able to be more flexible about which drivers must get loaded into
+    // the same devhost and thus be able to use both ASan and non-ASan
+    // devhosts at the same time when only a subset of drivers use ASan.
+    if (dc_asan_drivers)
+        return "/boot/bin/devhost.asan";
+    return "/boot/bin/devhost";
+}
 
 zx_handle_t get_service_root(void);
 
@@ -487,6 +499,8 @@ static void dc_watch(zx_handle_t h) {
 
 static zx_status_t dc_launch_devhost(devhost_t* host,
                                      const char* name, zx_handle_t hrpc) {
+    const char* devhost_bin = get_devhost_bin();
+
     launchpad_t* lp;
     launchpad_create_with_jobs(devhost_job, 0, name, &lp);
     launchpad_load_from_file(lp, devhost_bin);

@@ -167,7 +167,7 @@ typedef struct {
     }
 
 typedef struct {
-    // Future Expansion
+    // See flag bits below.
     uint32_t flags;
 
     // Driver Metadata
@@ -180,15 +180,24 @@ typedef struct {
     // Driver Bind Program follows
 } zircon_driver_note_payload_t;
 
+// Flag bits in the driver note:
+
+// Driver is built with `-fsanitize=address` and can only be loaded into a
+// devhost that supports the ASan runtime.
+#define ZIRCON_DRIVER_NOTE_FLAG_ASAN (1u << 0)
+
 #define ZIRCON_DRIVER_NOTE_PAYLOAD_INIT(Driver,VendorName,Version,BindCount) \
     {                                                               \
-        /* .flags = */ 0,                                           \
+        /* .flags = */ ZIRCON_DRIVER_NOTE_FLAGS,                    \
         /* .bindcount = */ (BindCount),                             \
         /* .reserved0 = */ 0,                                       \
         /* .name = */ #Driver,                                      \
         /* .vendor = */ VendorName,                                 \
         /* .version = */ Version,                                   \
     }
+
+#define ZIRCON_DRIVER_NOTE_FLAGS \
+    (__has_feature(address_sanitizer) ? ZIRCON_DRIVER_NOTE_FLAG_ASAN : 0)
 
 typedef struct {
     alignas(4) zircon_driver_note_header_t header;
