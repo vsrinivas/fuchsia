@@ -20,5 +20,9 @@ source_set("trace-provider") {
     "//zircon/system/ulib/trace",
   ]
 
+  deps = [
+    "//zircon/system/ulib/hash",
+  ]
+
   public_configs = [ ":trace_config" ]
 }
