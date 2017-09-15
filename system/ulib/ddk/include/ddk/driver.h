@@ -58,7 +58,7 @@ typedef struct zx_driver_ops {
 enum {
     DEVICE_ADD_NON_BINDABLE = (1 << 0),
     DEVICE_ADD_INSTANCE     = (1 << 1),
-    DEVICE_ADD_BUSDEV       = (1 << 2),
+    DEVICE_ADD_MUST_ISOLATE = (1 << 2),
 };
 
 // Device Manager API

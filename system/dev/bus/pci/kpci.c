@@ -103,7 +103,7 @@ static zx_status_t kpci_init_child(zx_device_t* parent, uint32_t index, bool sav
             .prop_count = countof(device->props),
             .busdev_args = busdev_args,
             .rsrc = ZX_HANDLE_INVALID,
-            .flags = DEVICE_ADD_BUSDEV,
+            .flags = DEVICE_ADD_MUST_ISOLATE,
         };
 
         status = device_add(parent, &args, &device->zxdev);

@@ -173,7 +173,7 @@ static zx_status_t libname_to_vmo(const char* libname, zx_handle_t* out) {
 }
 
 static device_t root_device = {
-    .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV | DEV_CTX_MULTI_BIND,
+    .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND,
     .protocol_id = ZX_PROTOCOL_ROOT,
     .name = "root",
     .libname = "",
@@ -184,7 +184,7 @@ static device_t root_device = {
 };
 
 static device_t misc_device = {
-    .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV | DEV_CTX_MULTI_BIND,
+    .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND,
     .protocol_id = ZX_PROTOCOL_MISC_PARENT,
     .name = "misc",
     .libname = "",
@@ -197,7 +197,7 @@ static device_t misc_device = {
 static zx_handle_t acpi_rpc[2] = { ZX_HANDLE_INVALID, ZX_HANDLE_INVALID };
 
 static device_t acpi_device = {
-    .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV,
+    .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE,
     .protocol_id = ZX_PROTOCOL_ACPI_BUS,
     .name = "acpi",
     .libname = "",
@@ -208,7 +208,7 @@ static device_t acpi_device = {
 };
 
 static device_t platform_device = {
-    .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV,
+    .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE,
     .name = "platform",
     .libname = "",
     .args = "platform,,",
@@ -268,13 +268,13 @@ static void dc_dump_device_props(device_t* dev) {
                  dev->libname ? dev->libname : "",
                  dev->libname ? "]" : "");
         dmprintf("Flags   :%s%s%s%s%s%s%s\n",
-                 dev->flags & DEV_CTX_IMMORTAL   ? " Immortal"  : "",
-                 dev->flags & DEV_CTX_BUSDEV     ? " BusDev"    : "",
-                 dev->flags & DEV_CTX_MULTI_BIND ? " MultiBind" : "",
-                 dev->flags & DEV_CTX_BOUND      ? " Bound"     : "",
-                 dev->flags & DEV_CTX_DEAD       ? " Dead"      : "",
-                 dev->flags & DEV_CTX_ZOMBIE     ? " Zombie"    : "",
-                 dev->flags & DEV_CTX_PROXY      ? " Proxy"     : "");
+                 dev->flags & DEV_CTX_IMMORTAL     ? " Immortal"  : "",
+                 dev->flags & DEV_CTX_MUST_ISOLATE ? " Isolate"   : "",
+                 dev->flags & DEV_CTX_MULTI_BIND   ? " MultiBind" : "",
+                 dev->flags & DEV_CTX_BOUND        ? " Bound"     : "",
+                 dev->flags & DEV_CTX_DEAD         ? " Dead"      : "",
+                 dev->flags & DEV_CTX_ZOMBIE       ? " Zombie"    : "",
+                 dev->flags & DEV_CTX_PROXY        ? " Proxy"     : "");
 
         char a = (char)((dev->protocol_id >> 24) & 0xFF);
         char b = (char)((dev->protocol_id >> 16) & 0xFF);
@@ -686,7 +686,7 @@ static zx_status_t dc_add_device(device_t* parent,
     // If we have bus device args or resource handle
     // we are, by definition a bus device.
     if (args[0] || (dev->hrsrc != ZX_HANDLE_INVALID)) {
-        dev->flags |= DEV_CTX_BUSDEV;
+        dev->flags |= DEV_CTX_MUST_ISOLATE;
     }
 
     // We exist within our parent's device host
@@ -820,7 +820,8 @@ static zx_status_t dc_remove_device(device_t* dev, bool forced) {
                 // AND our parent is a BUSDEV
                 // AND our parent's devhost is not dying
                 // THEN we will want to rebind our parent
-                if (!(parent->flags & DEV_CTX_DEAD) && (parent->flags & DEV_CTX_BUSDEV) &&
+                if (!(parent->flags & DEV_CTX_DEAD) &&
+                    (parent->flags & DEV_CTX_MUST_ISOLATE) &&
                     ((parent->host == NULL) || !(parent->host->flags & DEV_HOST_DYING))) {
 
                     log(DEVLC, "devcoord: bus device %p name='%s' is unbound\n",
@@ -1231,7 +1232,7 @@ static zx_status_t dc_attempt_bind(driver_t* drv, device_t* dev) {
     if ((dev->flags & DEV_CTX_BOUND) && (!(dev->flags & DEV_CTX_MULTI_BIND))) {
         return ZX_ERR_BAD_STATE;
     }
-    if (!(dev->flags & DEV_CTX_BUSDEV)) {
+    if (!(dev->flags & DEV_CTX_MUST_ISOLATE)) {
         // non-busdev is pretty simple
         if (dev->host == NULL) {
             log(ERROR, "devcoord: can't bind to device without devhost\n");

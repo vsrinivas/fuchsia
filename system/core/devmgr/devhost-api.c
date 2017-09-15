@@ -33,10 +33,10 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     if (!args->ops || args->ops->version != DEVICE_OPS_VERSION) {
         return ZX_ERR_INVALID_ARGS;
     }
-    if (args->flags & ~(DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INSTANCE | DEVICE_ADD_BUSDEV)) {
+    if (args->flags & ~(DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INSTANCE | DEVICE_ADD_MUST_ISOLATE)) {
         return ZX_ERR_INVALID_ARGS;
     }
-    if ((args->flags & DEVICE_ADD_INSTANCE) && (args->flags & DEVICE_ADD_BUSDEV)) {
+    if ((args->flags & DEVICE_ADD_INSTANCE) && (args->flags & DEVICE_ADD_MUST_ISOLATE)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -61,7 +61,7 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
         *out = dev;
     }
 
-    if (args->flags & DEVICE_ADD_BUSDEV) {
+    if (args->flags & DEVICE_ADD_MUST_ISOLATE) {
         r = devhost_device_add(dev, parent, args->props, args->prop_count, args->busdev_args,
                                args->rsrc);
     } else if (args->flags & DEVICE_ADD_INSTANCE) {

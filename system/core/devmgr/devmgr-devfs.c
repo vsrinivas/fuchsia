@@ -172,7 +172,7 @@ static bool devnode_is_local(devnode_t* dn) {
     if (dn->device->hrpc == ZX_HANDLE_INVALID) {
         return true;
     }
-    if (dn->device->flags & DEV_CTX_BUSDEV) {
+    if (dn->device->flags & DEV_CTX_MUST_ISOLATE) {
         return true;
     }
     return false;
