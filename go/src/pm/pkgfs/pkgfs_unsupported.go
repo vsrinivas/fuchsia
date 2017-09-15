@@ -8,7 +8,7 @@ import (
 	"log"
 	"time"
 
-	"fuchsia.googlesource.com/thinfs/fs"
+	"thinfs/fs"
 )
 
 var debug = true

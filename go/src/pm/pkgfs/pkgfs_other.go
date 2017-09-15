@@ -10,7 +10,7 @@ import (
 	"io"
 	"os"
 
-	"fuchsia.googlesource.com/thinfs/fs"
+	"thinfs/fs"
 )
 
 type mountInfo struct{}

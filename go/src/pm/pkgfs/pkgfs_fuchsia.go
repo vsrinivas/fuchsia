@@ -15,8 +15,8 @@ import (
 	"syscall/mx"
 	"syscall/mx/fdio"
 
-	"fuchsia.googlesource.com/thinfs/fs"
-	"fuchsia.googlesource.com/thinfs/zircon/rpc"
+	"thinfs/fs"
+	"thinfs/zircon/rpc"
 )
 
 // mountInfo is a platform specific type that carries platform specific mounting
