@@ -264,7 +264,7 @@ status_t apic_timer_set_oneshot(uint32_t count, uint8_t divisor, bool masked) {
     uint32_t timer_config = LVT_VECTOR(X86_INT_APIC_TIMER) |
             LVT_TIMER_MODE_ONESHOT;
     if (masked) {
-        timer_config |= masked;
+        timer_config |= LVT_MASKED;
     }
 
     spin_lock_saved_state_t state;
@@ -287,7 +287,7 @@ void apic_timer_set_tsc_deadline(uint64_t deadline, bool masked) {
     uint32_t timer_config = LVT_VECTOR(X86_INT_APIC_TIMER) |
             LVT_TIMER_MODE_TSC_DEADLINE;
     if (masked) {
-        timer_config |= masked;
+        timer_config |= LVT_MASKED;
     }
 
     spin_lock_saved_state_t state;
