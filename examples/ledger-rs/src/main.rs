@@ -9,15 +9,15 @@ extern crate fidl;
 extern crate futures;
 extern crate garnet_public_lib_app_fidl;
 extern crate garnet_public_lib_app_fidl_service_provider;
-extern crate magenta;
-extern crate magenta_sys;
+extern crate zircon;
+extern crate zircon_sys;
 extern crate mxruntime;
 extern crate tokio_core;
 
 mod fuchsia;
 mod ledger;
 
-use magenta::ClockId;
+use zircon::ClockId;
 use tokio_core::reactor;
 use fuchsia::{ApplicationContext, Launcher, install_panic_backtrace_hook};
 use apps_ledger_services_public::*;
@@ -69,7 +69,7 @@ pub fn main() {
 
             // put a new value
             println!("# putting key value");
-            let cur_time = magenta::time_get(ClockId::Monotonic);
+            let cur_time = zircon::time_get(ClockId::Monotonic);
             page.put(key.clone(), cur_time.to_string().into_bytes())
                 .then(ledger::map_ledger_error)
                 .map(|put_status| (instance, put_status))

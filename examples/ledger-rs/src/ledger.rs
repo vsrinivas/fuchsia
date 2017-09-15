@@ -6,7 +6,7 @@ use garnet_public_lib_app_fidl::ApplicationController;
 use garnet_public_lib_app_fidl_service_provider::ServiceProvider_I;
 use tokio_core::reactor;
 use futures::{future, Future};
-use magenta::{Vmo, self};
+use zircon::{Vmo, self};
 
 macro_rules! try_to_fut {
     ($e:expr) => {
@@ -75,7 +75,7 @@ pub fn map_ledger_error(res: Result<Status, fidl::Error>) -> Result<(), LedgerEr
 pub enum LedgerError {
     NeedsFetch,
     LedgerFail(Status),
-    Vmo(magenta::Status),
+    Vmo(zircon::Status),
     FidlError(fidl::Error),
 }
 
