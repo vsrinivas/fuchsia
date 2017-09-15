@@ -471,7 +471,7 @@ find-clang-solib = \
 # to MODULE_EXTRA_OBJS so the linking target will depend on it.
 ASAN_SONAME := libclang_rt.asan-$(CLANG_ARCH).so
 ASAN_SOLIB := $(call find-clang-solib,$(ASAN_SONAME))
-USER_MANIFEST_LINES += lib/$(ASAN_SONAME)=$(ASAN_SOLIB)
+USER_MANIFEST_LINES += {core}lib/$(ASAN_SONAME)=$(ASAN_SOLIB)
 
 # The ASan runtime DSO depends on more DSOs from the toolchain.  We don't
 # link against those, so we don't need any build-time dependencies on them.
@@ -479,7 +479,7 @@ USER_MANIFEST_LINES += lib/$(ASAN_SONAME)=$(ASAN_SOLIB)
 ASAN_RUNTIME_SONAMES := libc++abi.so.1 libunwind.so.1
 USER_MANIFEST_LINES += \
     $(foreach soname,$(ASAN_RUNTIME_SONAMES),\
-	      lib/$(soname)=$(call find-clang-solib,$(soname)))
+	      {core}lib/$(soname)=$(call find-clang-solib,$(soname)))
 endif
 
 ifeq ($(call TOBOOL,$(USE_SANCOV)),true)
