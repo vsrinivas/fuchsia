@@ -41,9 +41,9 @@ size_t xhci_transfer_ring_free_trbs(xhci_transfer_ring_t* ring) {
 
 zx_status_t xhci_event_ring_init(xhci_t* xhci, int interrupter, int count) {
     xhci_event_ring_t* ring = &xhci->event_rings[interrupter];
-    // allocate buffer for TRBs
+    // allocate a read-only buffer for TRBs
     zx_status_t status = io_buffer_init(&ring->buffer, count * sizeof(xhci_trb_t),
-                                        IO_BUFFER_RW | IO_BUFFER_CONTIG);
+                                        IO_BUFFER_RO | IO_BUFFER_CONTIG);
     if (status != ZX_OK) return status;
 
     ring->start = io_buffer_virt(&ring->buffer);
@@ -91,6 +91,10 @@ void xhci_increment_ring(xhci_transfer_ring_t* ring) {
     if (ring->pcs) {
         XHCI_WRITE32(&trb->control, control | ring->pcs);
     }
+#if XHCI_USE_CACHE_OPS
+    io_buffer_cache_op(&ring->buffer, ZX_VMO_OP_CACHE_CLEAN,
+                      (ring->current - ring->start) * sizeof(xhci_trb_t), sizeof(xhci_trb_t));
+#endif
     trb = ++ring->current;
 
     // check for LINK TRB

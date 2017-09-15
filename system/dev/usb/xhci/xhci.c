@@ -355,10 +355,14 @@ fail:
     return result;
 }
 
-int xhci_get_ep_ctx_state(xhci_endpoint_t* ep) {
+int xhci_get_ep_ctx_state(xhci_slot_t* slot, xhci_endpoint_t* ep) {
     if (!ep->epc) {
         return EP_CTX_STATE_DISABLED;
     }
+#if XHCI_USE_CACHE_OPS
+    uint32_t offset = (void *)&ep->epc->epc0 - io_buffer_virt(&slot->buffer);
+    io_buffer_cache_op(&slot->buffer, ZX_VMO_OP_CACHE_INVALIDATE, offset, sizeof(uint32_t));
+#endif
     return XHCI_GET_BITS32(&ep->epc->epc0, EP_CTX_EP_STATE_START, EP_CTX_EP_STATE_BITS);
 }
 
@@ -396,6 +400,14 @@ void xhci_wait_bits64(volatile uint64_t* ptr, uint64_t bits, uint64_t expected) 
         usleep(1000);
         value = XHCI_READ64(ptr);
     }
+}
+
+void xhci_set_dbcaa(xhci_t* xhci, uint32_t slot_id, zx_paddr_t paddr) {
+    XHCI_WRITE64(&xhci->dcbaa[slot_id], paddr);
+#if XHCI_USE_CACHE_OPS
+    uint32_t offset = (void *)&xhci->dcbaa[slot_id] - io_buffer_virt(&xhci->dcbaa_erst_buffer);
+    io_buffer_cache_op(&xhci->dcbaa_erst_buffer, ZX_VMO_OP_CACHE_CLEAN, offset, sizeof(paddr));
+#endif
 }
 
 zx_status_t xhci_start(xhci_t* xhci) {
@@ -520,6 +532,10 @@ uint64_t xhci_get_current_frame(xhci_t* xhci) {
 
 static void xhci_handle_events(xhci_t* xhci, int interrupter) {
     xhci_event_ring_t* er = &xhci->event_rings[interrupter];
+
+#if XHCI_USE_CACHE_OPS
+    io_buffer_cache_op(&er->buffer, ZX_VMO_OP_CACHE_INVALIDATE, 0, er->buffer.size);
+#endif
 
     // process all TRBs with cycle bit matching our CCS
     while ((XHCI_READ32(&er->current->control) & TRB_C) == er->ccs) {

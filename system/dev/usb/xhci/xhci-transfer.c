@@ -27,18 +27,18 @@ static void print_trb(xhci_t* xhci, xhci_transfer_ring_t* ring, xhci_trb_t* trb)
 // This resets the transfer ring's dequeue pointer just past the last completed transfer.
 // This can only be called when the endpoint is stopped and we are locked on ep->lock.
 static zx_status_t xhci_reset_dequeue_ptr_locked(xhci_t* xhci, uint32_t slot_id,
-                                                 uint32_t endpoint) {
+                                                 uint32_t ep_index) {
     xhci_slot_t* slot = &xhci->slots[slot_id];
-    xhci_endpoint_t* ep = &slot->eps[endpoint];
+    xhci_endpoint_t* ep = &slot->eps[ep_index];
     xhci_transfer_ring_t* transfer_ring = &ep->transfer_ring;
 
     xhci_sync_command_t command;
     xhci_sync_command_init(&command);
     uint64_t ptr = xhci_transfer_ring_current_phys(transfer_ring);
     ptr |= transfer_ring->pcs;
-    // command expects device context index, so increment endpoint by 1
+    // command expects device context index, so increment ep_index by 1
     uint32_t control = (slot_id << TRB_SLOT_ID_START) |
-                        ((endpoint + 1) << TRB_ENDPOINT_ID_START);
+                        ((ep_index + 1) << TRB_ENDPOINT_ID_START);
     xhci_post_command(xhci, TRB_CMD_SET_TR_DEQUEUE, ptr, control, &command.context);
     int cc = xhci_sync_command_wait(&command);
     if (cc != TRB_CC_SUCCESS) {
@@ -50,12 +50,12 @@ static zx_status_t xhci_reset_dequeue_ptr_locked(xhci_t* xhci, uint32_t slot_id,
     return ZX_OK;
 }
 
-static void xhci_process_transactions_locked(xhci_t* xhci, xhci_endpoint_t* ep,
+static void xhci_process_transactions_locked(xhci_t* xhci, xhci_slot_t* slot, uint8_t ep_index,
                                              list_node_t* completed_txns);
 
-zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoint) {
+zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t ep_index) {
     xhci_slot_t* slot = &xhci->slots[slot_id];
-    xhci_endpoint_t* ep = &slot->eps[endpoint];
+    xhci_endpoint_t* ep = &slot->eps[ep_index];
     iotxn_t* txn;
 
     // Recover from Halted and Error conditions. See section 4.8.3 of the XHCI spec.
@@ -67,8 +67,8 @@ zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
         return ZX_OK;
     }
 
-    int ep_ctx_state = xhci_get_ep_ctx_state(ep);
-    dprintf(TRACE, "xhci_reset_endpoint %d %d ep_ctx_state %d\n", slot_id, endpoint, ep_ctx_state);
+    int ep_ctx_state = xhci_get_ep_ctx_state(slot, ep);
+    dprintf(TRACE, "xhci_reset_endpoint %d %d ep_ctx_state %d\n", slot_id, ep_index, ep_ctx_state);
 
     if (ep_ctx_state == EP_CTX_STATE_STOPPED || ep_ctx_state == EP_CTX_STATE_RUNNING) {
         ep->state = EP_STATE_RUNNING;
@@ -79,9 +79,9 @@ zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
         // reset the endpoint to move from Halted to Stopped state
         xhci_sync_command_t command;
         xhci_sync_command_init(&command);
-        // command expects device context index, so increment endpoint by 1
+        // command expects device context index, so increment ep_index by 1
         uint32_t control = (slot_id << TRB_SLOT_ID_START) |
-                            ((endpoint + 1) << TRB_ENDPOINT_ID_START);
+                            ((ep_index + 1) << TRB_ENDPOINT_ID_START);
         xhci_post_command(xhci, TRB_CMD_RESET_ENDPOINT, 0, control, &command.context);
         int cc = xhci_sync_command_wait(&command);
         if (cc != TRB_CC_SUCCESS) {
@@ -95,7 +95,7 @@ zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
     // after TRB_CMD_RESET_ENDPOINT.
     if (ep_ctx_state == EP_CTX_STATE_ERROR || ep_ctx_state == EP_CTX_STATE_HALTED) {
         // move transfer ring's dequeue pointer passed the failed transaction
-        zx_status_t status = xhci_reset_dequeue_ptr_locked(xhci, slot_id, endpoint);
+        zx_status_t status = xhci_reset_dequeue_ptr_locked(xhci, slot_id, ep_index);
         if (status != ZX_OK) {
             mtx_unlock(&ep->lock);
             return status;
@@ -110,7 +110,7 @@ zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
         list_add_head(&ep->queued_txns, &txn->node);
     }
 
-    ep_ctx_state = xhci_get_ep_ctx_state(ep);
+    ep_ctx_state = xhci_get_ep_ctx_state(slot, ep);
     zx_status_t status;
     switch (ep_ctx_state) {
     case EP_CTX_STATE_DISABLED:
@@ -136,7 +136,7 @@ zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
     list_node_t completed_txns = LIST_INITIAL_VALUE(completed_txns);
     if (ep->state == EP_STATE_RUNNING) {
         // start processing transactions again
-        xhci_process_transactions_locked(xhci, ep, &completed_txns);
+        xhci_process_transactions_locked(xhci, slot, ep_index, &completed_txns);
     }
 
     mtx_unlock(&ep->lock);
@@ -150,7 +150,9 @@ zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
 }
 
 // locked on ep->lock
-static zx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep, iotxn_t* txn) {
+static zx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_slot_t* slot, uint32_t ep_index,
+                                              iotxn_t* txn) {
+    xhci_endpoint_t* ep = &slot->eps[ep_index];
     xhci_transfer_ring_t* ring = &ep->transfer_ring;
     if (ep->state != EP_STATE_RUNNING) {
         dprintf(ERROR, "xhci_start_transfer_locked bad ep->state %d\n", ep->state);
@@ -179,7 +181,11 @@ static zx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep,
     }
 
     iotxn_phys_iter_init(&state->phys_iter, txn, XHCI_MAX_DATA_BUFFER);
-    xhci_endpoint_context_t* epc = ep->epc;
+    const xhci_endpoint_context_t* epc = ep->epc;
+#if XHCI_USE_CACHE_OPS
+    io_buffer_cache_op(&slot->buffer, ZX_VMO_OP_CACHE_INVALIDATE,
+                       (ep_index + 1) * xhci->context_size, sizeof(xhci_endpoint_context_t));
+#endif
     uint32_t ep_type = XHCI_GET_BITS32(&epc->epc1, EP_CTX_EP_TYPE_START, EP_CTX_EP_TYPE_BITS);
     if (ep_type >= 4) ep_type -= 4;
     state->ep_type = ep_type;
@@ -229,11 +235,12 @@ static zx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep,
 // returns ZX_OK if txn has been successfully queued,
 // ZX_ERR_SHOULD_WAIT if we ran out of TRBs and need to try again later,
 // or other error for a hard failure.
-static zx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep, iotxn_t* txn) {
+static zx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_slot_t* slot,
+                                                 uint32_t ep_index, iotxn_t* txn) {
+    xhci_endpoint_t* ep = &slot->eps[ep_index];
     xhci_transfer_ring_t* ring = &ep->transfer_ring;
 
     usb_protocol_data_t* proto_data = iotxn_pdata(txn, usb_protocol_data_t);
-    uint8_t ep_index = xhci_endpoint_index(proto_data->ep_address);
     xhci_transfer_state_t* state = ep->transfer_state;
     size_t length = txn->length;
     size_t free_trbs = xhci_transfer_ring_free_trbs(&ep->transfer_ring);
@@ -266,6 +273,11 @@ static zx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
             return ZX_ERR_INVALID_ARGS;
         }
     }
+
+#if XHCI_USE_CACHE_OPS
+    // need to clean the cache for both IN and OUT transfers
+    iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, 0, txn->length);
+#endif
 
     // Data Stage
     zx_paddr_t paddr;
@@ -390,7 +402,7 @@ static zx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
 
     XHCI_WRITE32(&xhci->doorbells[proto_data->device_id], ep_index + 1);
     // it seems we need to ring the doorbell a second time when transitioning from STOPPED
-    while (xhci_get_ep_ctx_state(ep) == EP_CTX_STATE_STOPPED) {
+    while (xhci_get_ep_ctx_state(slot, ep) == EP_CTX_STATE_STOPPED) {
         zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
         XHCI_WRITE32(&xhci->doorbells[proto_data->device_id], ep_index + 1);
     }
@@ -398,8 +410,10 @@ static zx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
     return ZX_OK;
 }
 
-static void xhci_process_transactions_locked(xhci_t* xhci, xhci_endpoint_t* ep,
+static void xhci_process_transactions_locked(xhci_t* xhci, xhci_slot_t* slot, uint8_t ep_index,
                                              list_node_t* completed_txns) {
+    xhci_endpoint_t* ep = &slot->eps[ep_index];
+
     // loop until we fill our transfer ring or run out of iotxns to process
     while (1) {
         if (xhci_transfer_ring_free_trbs(&ep->transfer_ring) == 0) {
@@ -415,7 +429,7 @@ static void xhci_process_transactions_locked(xhci_t* xhci, xhci_endpoint_t* ep,
                 return;
             }
 
-            zx_status_t status = xhci_start_transfer_locked(xhci, ep, txn);
+            zx_status_t status = xhci_start_transfer_locked(xhci, slot, ep_index, txn);
             if (status == ZX_OK) {
                 list_add_tail(&ep->pending_txns, &txn->node);
                 ep->current_txn = txn;
@@ -428,7 +442,7 @@ static void xhci_process_transactions_locked(xhci_t* xhci, xhci_endpoint_t* ep,
 
         if (ep->current_txn) {
             iotxn_t* txn = ep->current_txn;
-            zx_status_t status = xhci_continue_transfer_locked(xhci, ep, txn);
+            zx_status_t status = xhci_continue_transfer_locked(xhci, slot, ep_index, txn);
             if (status == ZX_ERR_SHOULD_WAIT) {
                 // no available TRBs - need to wait for some complete
                 return;
@@ -503,7 +517,7 @@ zx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
     list_add_tail(&ep->queued_txns, &txn->node);
 
     list_node_t completed_txns = LIST_INITIAL_VALUE(completed_txns);
-    xhci_process_transactions_locked(xhci, ep, &completed_txns);
+    xhci_process_transactions_locked(xhci, slot, ep_index, &completed_txns);
 
     mtx_unlock(&ep->lock);
 
@@ -515,18 +529,18 @@ zx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
     return ZX_OK;
 }
 
-zx_status_t xhci_cancel_transfers(xhci_t* xhci, uint32_t slot_id, uint32_t endpoint) {
-    dprintf(TRACE, "xhci_cancel_transfers slot_id: %d ep_index: %d\n", slot_id, endpoint);
+zx_status_t xhci_cancel_transfers(xhci_t* xhci, uint32_t slot_id, uint32_t ep_index) {
+    dprintf(TRACE, "xhci_cancel_transfers slot_id: %d ep_index: %d\n", slot_id, ep_index);
 
     if (slot_id < 1 || slot_id > xhci->max_slots) {
         return ZX_ERR_INVALID_ARGS;
     }
-    if (endpoint >= XHCI_NUM_EPS) {
+    if (ep_index >= XHCI_NUM_EPS) {
         return ZX_ERR_INVALID_ARGS;
     }
 
     xhci_slot_t* slot = &xhci->slots[slot_id];
-    xhci_endpoint_t* ep = &slot->eps[endpoint];
+    xhci_endpoint_t* ep = &slot->eps[ep_index];
     list_node_t completed_txns = LIST_INITIAL_VALUE(completed_txns);
     iotxn_t* txn;
     iotxn_t* temp;
@@ -543,7 +557,7 @@ zx_status_t xhci_cancel_transfers(xhci_t* xhci, uint32_t slot_id, uint32_t endpo
         xhci_sync_command_init(&command);
         // command expects device context index, so increment ep_index by 1
         uint32_t control = (slot_id << TRB_SLOT_ID_START) |
-                           ((endpoint + 1) << TRB_ENDPOINT_ID_START);
+                           ((ep_index + 1) << TRB_ENDPOINT_ID_START);
         xhci_post_command(xhci, TRB_CMD_STOP_ENDPOINT, 0, control, &command.context);
 
         // We can't block on command completion while holding the lock.
@@ -569,7 +583,7 @@ zx_status_t xhci_cancel_transfers(xhci_t* xhci, uint32_t slot_id, uint32_t endpo
             list_add_head(&completed_txns, &txn->node);
         }
 
-        status = xhci_reset_dequeue_ptr_locked(xhci, slot_id, endpoint);
+        status = xhci_reset_dequeue_ptr_locked(xhci, slot_id, ep_index);
         if (status == ZX_OK) {
             ep->state = EP_STATE_RUNNING;
         }
@@ -697,7 +711,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         case TRB_CC_USB_TRANSACTION_ERROR:
         case TRB_CC_TRB_ERROR:
         case TRB_CC_STALL_ERROR: {
-            int ep_ctx_state = xhci_get_ep_ctx_state(ep);
+            int ep_ctx_state = xhci_get_ep_ctx_state(slot, ep);
             dprintf(TRACE, "xhci_handle_transfer_event: cc %d ep_ctx_state %d\n", cc, ep_ctx_state);
             if (ep_ctx_state == EP_CTX_STATE_HALTED || ep_ctx_state == EP_CTX_STATE_ERROR) {
                 result = ZX_ERR_IO_REFUSED;
@@ -739,7 +753,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
             }
             break;
         default: {
-            int ep_ctx_state = xhci_get_ep_ctx_state(ep);
+            int ep_ctx_state = xhci_get_ep_ctx_state(slot, ep);
             dprintf(ERROR, "xhci_handle_transfer_event: unhandled transfer event condition code %d "
                    "ep_ctx_state %d:  %08X %08X %08X %08X\n", cc, ep_ctx_state,
                     ((uint32_t*)trb)[0], ((uint32_t*)trb)[1], ((uint32_t*)trb)[2], ((uint32_t*)trb)[3]);
@@ -767,7 +781,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         }
     }
 
-    int ep_ctx_state = xhci_get_ep_ctx_state(ep);
+    int ep_ctx_state = xhci_get_ep_ctx_state(slot, ep);
     if (ep_ctx_state != EP_CTX_STATE_RUNNING) {
         dprintf(TRACE, "xhci_handle_transfer_event: ep ep_ctx_state %d cc %d\n", ep_ctx_state, cc);
     }
@@ -818,13 +832,28 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     if (result == ZX_ERR_IO_REFUSED && ep->state != EP_STATE_DEAD) {
         ep->state = EP_STATE_HALTED;
     } else if (ep->state == EP_STATE_RUNNING) {
-        xhci_process_transactions_locked(xhci, ep, &completed_txns);
+        xhci_process_transactions_locked(xhci, slot, ep_index, &completed_txns);
     }
 
     mtx_unlock(&ep->lock);
 
     // call complete callbacks out of the lock
     while ((txn = list_remove_head_type(&completed_txns, iotxn_t, node)) != NULL) {
+#if XHCI_USE_CACHE_OPS
+        if (txn->actual > 0) {
+            usb_protocol_data_t* proto_data = iotxn_pdata(txn, usb_protocol_data_t);
+            uint8_t direction;
+
+            if (proto_data->ep_address == 0) {
+                direction = proto_data->setup.bmRequestType & USB_ENDPOINT_DIR_MASK;
+            } else {
+                direction = proto_data->ep_address & USB_ENDPOINT_DIR_MASK;
+            }
+            if (direction == USB_DIR_IN) {
+                iotxn_cacheop(txn, ZX_VMO_OP_CACHE_INVALIDATE, 0, txn->actual);
+            }
+        }
+#endif
         iotxn_complete(txn, txn->status, txn->actual);
     }
 }

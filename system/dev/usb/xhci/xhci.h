@@ -22,6 +22,13 @@
 #include "xhci-root-hub.h"
 #include "xhci-trb.h"
 
+#if __x86_64__
+// cache is coherent on x86
+#define XHCI_USE_CACHE_OPS  0
+#else
+#define XHCI_USE_CACHE_OPS  1
+#endif
+
 // choose ring sizes to allow each ring to fit in a single page
 #define COMMAND_RING_SIZE (PAGE_SIZE / sizeof(xhci_trb_t))
 #define TRANSFER_RING_SIZE (PAGE_SIZE / sizeof(xhci_trb_t))
@@ -54,7 +61,7 @@ typedef enum {
 } xhci_ep_state_t;
 
 typedef struct {
-    xhci_endpoint_context_t* epc;
+    const xhci_endpoint_context_t* epc;
     xhci_transfer_ring_t transfer_ring;
     list_node_t queued_txns;    // iotxns waiting to be processed
     iotxn_t* current_txn;       // iotxn currently being processed
@@ -67,7 +74,7 @@ typedef struct {
 typedef struct xhci_slot {
     // buffer for our device context
     io_buffer_t buffer;
-    xhci_slot_context_t* sc;
+    const xhci_slot_context_t* sc;
     // epcs point into DMA memory past sc
     xhci_endpoint_t eps[XHCI_NUM_EPS];
     uint32_t hub_address;
@@ -197,7 +204,8 @@ struct xhci {
 };
 
 zx_status_t xhci_init(xhci_t* xhci, void* mmio, xhci_mode_t mode, uint32_t num_interrupts);
-int xhci_get_ep_ctx_state(xhci_endpoint_t* ep);
+int xhci_get_ep_ctx_state(xhci_slot_t* slot, xhci_endpoint_t* ep);
+void xhci_set_dbcaa(xhci_t* xhci, uint32_t slot_id, zx_paddr_t paddr);
 zx_status_t xhci_start(xhci_t* xhci);
 void xhci_handle_interrupt(xhci_t* xhci, uint32_t interrupter);
 void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,

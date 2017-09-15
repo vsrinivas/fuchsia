@@ -19,5 +19,5 @@ zx_status_t xhci_get_descriptor(xhci_t* xhci, uint32_t slot_id, uint8_t type, ui
                                 uint16_t index, void* data, uint16_t length);
 void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb);
 
-zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoint);
-zx_status_t xhci_cancel_transfers(xhci_t* xhci, uint32_t slot_id, uint32_t endpoint);
+zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t ep_index);
+zx_status_t xhci_cancel_transfers(xhci_t* xhci, uint32_t slot_id, uint32_t ep_index);
