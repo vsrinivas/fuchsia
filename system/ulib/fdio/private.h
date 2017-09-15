@@ -206,7 +206,7 @@ typedef struct {
     mode_t umask;
     fdio_t* root;
     fdio_t* cwd;
-    fdio_t* fdtab[MAX_FDIO_FD];
+    fdio_t* fdtab[FDIO_MAX_FD];
     fdio_ns_t* ns;
     char cwd_path[PATH_MAX];
 } fdio_state_t;

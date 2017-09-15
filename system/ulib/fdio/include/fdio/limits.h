@@ -7,7 +7,7 @@
 #include <limits.h>
 
 // Maximum number of fds per process.
-#define MAX_FDIO_FD 256
+#define FDIO_MAX_FD 256
 
 // Maximum handles used in open/clone/create.
 #define FDIO_MAX_HANDLES 3
@@ -21,3 +21,7 @@
 
 // Maxium length of a filename.
 #define FDIO_MAX_FILENAME NAME_MAX
+
+
+typedef int MAX_FDIO_FD_DEPRECATION __attribute__((deprecated));
+#define MAX_FDIO_FD ((MAX_FDIO_FD_DEPRECATION)(FDIO_MAX_FD))

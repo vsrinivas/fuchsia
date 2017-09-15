@@ -70,7 +70,7 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
     if (fd < 0) {
         // A negative fd implies that any free fd value can be used
         //TODO: bitmap, ffs, etc
-        for (fd = starting_fd; fd < MAX_FDIO_FD; fd++) {
+        for (fd = starting_fd; fd < FDIO_MAX_FD; fd++) {
             if (fdio_fdtab[fd] == NULL) {
                 goto free_fd_found;
             }
@@ -78,7 +78,7 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
         errno = EMFILE;
         mtx_unlock(&fdio_lock);
         return -1;
-    } else if (fd >= MAX_FDIO_FD) {
+    } else if (fd >= FDIO_MAX_FD) {
         errno = EINVAL;
         mtx_unlock(&fdio_lock);
         return -1;
@@ -113,7 +113,7 @@ free_fd_found:
 zx_status_t fdio_unbind_from_fd(int fd, fdio_t** out) {
     zx_status_t status;
     mtx_lock(&fdio_lock);
-    if (fd >= MAX_FDIO_FD) {
+    if (fd >= FDIO_MAX_FD) {
         status = ZX_ERR_INVALID_ARGS;
         goto done;
     }
@@ -140,7 +140,7 @@ done:
 }
 
 fdio_t* __fdio_fd_to_io(int fd) {
-    if ((fd < 0) || (fd >= MAX_FDIO_FD)) {
+    if ((fd < 0) || (fd >= FDIO_MAX_FD)) {
         return NULL;
     }
     fdio_t* io = NULL;
@@ -154,7 +154,7 @@ fdio_t* __fdio_fd_to_io(int fd) {
 
 static void fdio_exit(void) {
     mtx_lock(&fdio_lock);
-    for (int fd = 0; fd < MAX_FDIO_FD; fd++) {
+    for (int fd = 0; fd < FDIO_MAX_FD; fd++) {
         fdio_t* io = fdio_fdtab[fd];
         if (io) {
             fdio_fdtab[fd] = NULL;
@@ -194,7 +194,7 @@ static fdio_t* fdio_iodir(const char** path, int dirfd) {
         }
     } else if (dirfd == AT_FDCWD) {
         iodir = fdio_cwd_handle;
-    } else if ((dirfd >= 0) && (dirfd < MAX_FDIO_FD)) {
+    } else if ((dirfd >= 0) && (dirfd < FDIO_MAX_FD)) {
         iodir = fdio_fdtab[dirfd];
     }
     if (iodir != NULL) {
@@ -482,7 +482,7 @@ void __libc_extensions_init(uint32_t handle_count,
         // and become all of stdin/out/err
         if (arg & FDIO_FLAG_USE_FOR_STDIO) {
             arg &= (~FDIO_FLAG_USE_FOR_STDIO);
-            if (arg < MAX_FDIO_FD) {
+            if (arg < FDIO_MAX_FD) {
                 stdio_fd = arg;
             }
         }
@@ -1012,7 +1012,7 @@ ssize_t pwrite(int fd, const void* buf, size_t size, off_t ofs) {
 
 int close(int fd) {
     mtx_lock(&fdio_lock);
-    if ((fd < 0) || (fd >= MAX_FDIO_FD) || (fdio_fdtab[fd] == NULL)) {
+    if ((fd < 0) || (fd >= FDIO_MAX_FD) || (fdio_fdtab[fd] == NULL)) {
         mtx_unlock(&fdio_lock);
         return ERRNO(EBADF);
     }

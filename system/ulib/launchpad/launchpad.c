@@ -341,7 +341,7 @@ zx_status_t launchpad_add_pipe(launchpad_t* lp, int* fd_out, int target_fd) {
 
     if (lp->error)
         return lp->error;
-    if ((target_fd < 0) || (target_fd >= MAX_FDIO_FD)) {
+    if ((target_fd < 0) || (target_fd >= FDIO_MAX_FD)) {
         return lp_error(lp, ZX_ERR_INVALID_ARGS, "add_pipe: invalid target fd");
     }
     zx_status_t status;

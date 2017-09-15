@@ -62,7 +62,7 @@ fdio_t* fdio_service_create(zx_handle_t h) {
 
 zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
     mtx_lock(&fdio_lock);
-    if ((fd < 0) || (fd >= MAX_FDIO_FD) || (fdio_fdtab[fd] == NULL)) {
+    if ((fd < 0) || (fd >= FDIO_MAX_FD) || (fdio_fdtab[fd] == NULL)) {
         mtx_unlock(&fdio_lock);
         return ERRNO(EBADF);
     }
