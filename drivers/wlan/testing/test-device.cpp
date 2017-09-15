@@ -26,7 +26,7 @@ zx_status_t Device::Bind() {
 void Device::DdkUnbind() {
     std::printf("wlan::testing::Device::Unbind()\n");
     ClearAndSetState(DEV_STATE_READABLE | DEV_STATE_WRITABLE, DEV_STATE_HANGUP);
-    device_remove(mxdev());
+    device_remove(zxdev());
 }
 
 void Device::DdkRelease() {
