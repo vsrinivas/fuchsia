@@ -40,5 +40,5 @@ KERNEL_DEFINES += \
 # build MDI
 MDI_SRCS := $(LOCAL_DIR)/odroidc2.mdi
 
-# extra build rules for building fastboot compatible image
-include make/fastboot.mk
+# extra build rules for building kernel boot images
+include make/kernel_images.mk
