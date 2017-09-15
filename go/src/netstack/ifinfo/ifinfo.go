@@ -43,7 +43,7 @@ func (a *netstackClientApp) start(nicName string) {
 		if err != nil {
 			fmt.Printf("Failed to get stats for interface nicid %d name %s: %v\n", nicid, iface.Name, err)
 			// TODO (porce): A single failure leads to
-			// ErrPeerClosed: mx.Channel.Read and
+			// ErrPeerClosed: zx.Channel.Read and
 			// ErrPeerClosed: bindings.Router.AcceptWithResponse.
 			// Think of how a particular interface error will be handled.
 			continue

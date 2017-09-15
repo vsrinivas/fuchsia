@@ -7,37 +7,37 @@ package bindings
 import (
 	"fmt"
 
-	"syscall/mx"
+	"syscall/zx"
 )
 
 // ChannelHandleOwner owns a channel handle, it can only pass it
 // invalidating itself or close it.
 type ChannelHandleOwner struct {
-	handle mx.Handle
+	handle zx.Handle
 }
 
 // PassChannel passes ownership of the underlying channel handle to
 // the newly created handle object, invalidating the underlying handle object
 // in the process.
-func (o *ChannelHandleOwner) PassChannel() mx.Handle {
-	if o.handle == mx.HANDLE_INVALID {
-		return mx.HANDLE_INVALID
+func (o *ChannelHandleOwner) PassChannel() zx.Handle {
+	if o.handle == zx.HANDLE_INVALID {
+		return zx.HANDLE_INVALID
 	}
 	handle := o.handle
-	o.handle = mx.HANDLE_INVALID
+	o.handle = zx.HANDLE_INVALID
 	return handle
 }
 
 // Close closes the underlying handle.
 func (o *ChannelHandleOwner) Close() {
-	if o.handle != mx.HANDLE_INVALID {
+	if o.handle != zx.HANDLE_INVALID {
 		o.handle.Close()
 	}
 }
 
 // NewChannelHandleOwner creates |ChannelHandleOwner| that owns the
 // provided channel handle.
-func NewChannelHandleOwner(handle mx.Handle) ChannelHandleOwner {
+func NewChannelHandleOwner(handle zx.Handle) ChannelHandleOwner {
 	return ChannelHandleOwner{handle}
 }
 
@@ -62,7 +62,7 @@ type InterfacePointer struct {
 // should be attached to appropriate fidl interface implementation and
 // the interface pointer should be attached to fidl interface proxy.
 func CreateChannelForFidlInterface() (InterfaceRequest, InterfacePointer) {
-	c0, c1, err := mx.NewChannel(0)
+	c0, c1, err := zx.NewChannel(0)
 	if err != nil {
 		panic(fmt.Sprintf("can't create a channel: %v", err))
 	}

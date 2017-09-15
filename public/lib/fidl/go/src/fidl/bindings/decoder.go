@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"math"
 
-	"syscall/mx"
+	"syscall/zx"
 )
 
 // Decoder is a helper to decode fidl complex elements from fidl archive format.
@@ -21,7 +21,7 @@ type Decoder struct {
 	end int
 
 	// Array containing handles to decode.
-	handles []mx.Handle
+	handles []zx.Handle
 
 	// The first unclaimed handle index.
 	nextHandle int
@@ -33,7 +33,7 @@ type Decoder struct {
 
 // NewDecoder returns a decoder that will decode structured data from provided
 // byte array and with handles.
-func NewDecoder(bytes []byte, handles []mx.Handle) *Decoder {
+func NewDecoder(bytes []byte, handles []zx.Handle) *Decoder {
 	return &Decoder{buf: bytes, handles: handles}
 }
 
@@ -46,7 +46,7 @@ func (d *Decoder) claimData(size int) error {
 	return nil
 }
 
-func (d *Decoder) claimHandle(index int) (mx.Handle, error) {
+func (d *Decoder) claimHandle(index int) (zx.Handle, error) {
 	if index >= len(d.handles) {
 		return 0, &ValidationError{IllegalHandle, "trying to access non present handle"}
 	}
@@ -362,7 +362,7 @@ func (d *Decoder) ReadPointer() (uint64, error) {
 }
 
 // ReadUntypedHandle reads an untyped handle.
-func (d *Decoder) ReadUntypedHandle() (mx.Handle, error) {
+func (d *Decoder) ReadUntypedHandle() (zx.Handle, error) {
 	handleIndex, err := d.ReadUint32()
 	if err != nil {
 		return 0, err
@@ -374,12 +374,12 @@ func (d *Decoder) ReadUntypedHandle() (mx.Handle, error) {
 }
 
 // ReadHandle reads a handle.
-func (d *Decoder) ReadHandle() (mx.Handle, error) {
+func (d *Decoder) ReadHandle() (zx.Handle, error) {
 	return d.ReadUntypedHandle()
 }
 
 // ReadChannelHandle reads a channel handle.
-func (d *Decoder) ReadChannelHandle() (mx.Handle, error) {
+func (d *Decoder) ReadChannelHandle() (zx.Handle, error) {
 	if handle, err := d.ReadUntypedHandle(); err != nil {
 		return 0, err
 	} else {
@@ -388,7 +388,7 @@ func (d *Decoder) ReadChannelHandle() (mx.Handle, error) {
 }
 
 // ReadVmoHandle reads a shared buffer handle.
-func (d *Decoder) ReadVmoHandle() (mx.Handle, error) {
+func (d *Decoder) ReadVmoHandle() (zx.Handle, error) {
 	if handle, err := d.ReadUntypedHandle(); err != nil {
 		return 0, err
 	} else {
@@ -398,7 +398,7 @@ func (d *Decoder) ReadVmoHandle() (mx.Handle, error) {
 
 // ReadInterface reads an encoded interface and returns the channel handle.
 // The version field is ignored for now.
-func (d *Decoder) ReadInterface() (mx.Handle, error) {
+func (d *Decoder) ReadInterface() (zx.Handle, error) {
 	handle, err := d.ReadChannelHandle()
 	if err != nil {
 		return 0, err

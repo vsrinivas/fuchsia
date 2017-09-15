@@ -8,8 +8,8 @@ import (
 	"app/context"
 	"fidl/bindings"
 
-	"syscall/mx"
-	"syscall/mx/mxerror"
+	"syscall/zx"
+	"syscall/zx/mxerror"
 
 	"garnet/public/lib/wlan/fidl/wlan_service"
 	"netstack/watcher"
@@ -95,7 +95,7 @@ func (ws *Wlanstack) Bind(r wlan_service.Wlan_Request) {
 	go func() {
 		for {
 			if err := s.ServeRequest(); err != nil {
-				if mxerror.Status(err) != mx.ErrPeerClosed {
+				if mxerror.Status(err) != zx.ErrPeerClosed {
 					log.Println(err)
 				}
 				break

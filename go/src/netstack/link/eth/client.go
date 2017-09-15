@@ -27,7 +27,7 @@
 //	var err error
 //	for {
 //		buf, err = c.Recv()
-//		if err != mx.ErrShouldWait {
+//		if err != zx.ErrShouldWait {
 //			break
 //		}
 //		c.WaitRecv()
@@ -45,7 +45,7 @@ import (
 	"os"
 	"sync"
 	"syscall"
-	"syscall/mx"
+	"syscall/zx"
 	"unsafe"
 )
 
@@ -57,8 +57,8 @@ type Client struct {
 	MAC [6]byte
 
 	f       *os.File
-	tx      mx.Handle
-	rx      mx.Handle
+	tx      zx.Handle
+	rx      zx.Handle
 	txDepth int
 	rxDepth int
 
@@ -128,7 +128,7 @@ func NewClient(clientName, path string, arena *Arena, stateFunc func(State)) (*C
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	h, err := mx.Handle(c.arena.iovmo).Duplicate(mx.RightSameRights)
+	h, err := zx.Handle(c.arena.iovmo).Duplicate(zx.RightSameRights)
 	if err != nil {
 		c.closeLocked()
 		return nil, fmt.Errorf("eth: failed to duplicate vmo: %v", err)
@@ -210,7 +210,7 @@ func (c *Client) AllocForSend() Buffer {
 
 // Send sends a Buffer to the ethernet driver.
 // Send does not block.
-// If the client is closed, Send returns mx.ErrPeerClosed.
+// If the client is closed, Send returns zx.ErrPeerClosed.
 func (c *Client) Send(b Buffer) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -220,11 +220,11 @@ func (c *Client) Send(b Buffer) error {
 	c.sendbuf = append(c.sendbuf, c.arena.entry(b))
 	entries, entriesSize := fifoEntries(c.sendbuf)
 	var count uint32
-	status := mx.Sys_fifo_write(c.tx, entries, entriesSize, &count)
+	status := zx.Sys_fifo_write(c.tx, entries, entriesSize, &count)
 	copy(c.sendbuf, c.sendbuf[count:])
 	c.sendbuf = c.sendbuf[:len(c.sendbuf)-int(count)]
-	if status != mx.ErrOk && status != mx.ErrShouldWait {
-		return mx.Error{Status: status, Text: "eth.Client.Send"}
+	if status != zx.ErrOk && status != zx.ErrShouldWait {
+		return zx.Error{Status: status, Text: "eth.Client.Send"}
 	}
 	return nil
 }
@@ -248,7 +248,7 @@ func (c *Client) txCompleteLocked() (bool, error) {
 	buf := c.tmpbuf[:c.txDepth]
 	entries, entriesSize := fifoEntries(buf)
 	var count uint32
-	status := mx.Sys_fifo_read(c.tx, entries, entriesSize, &count)
+	status := zx.Sys_fifo_read(c.tx, entries, entriesSize, &count)
 	n := int(count)
 
 	c.txInFlight -= n
@@ -257,8 +257,8 @@ func (c *Client) txCompleteLocked() (bool, error) {
 		c.arena.free(c, c.arena.bufferFromEntry(buf[i]))
 	}
 	canSend := c.txInFlight < c.txDepth
-	if status != mx.ErrOk && status != mx.ErrShouldWait {
-		return canSend, mx.Error{Status: status, Text: "eth.Client.TX"}
+	if status != zx.ErrOk && status != zx.ErrShouldWait {
+		return canSend, zx.Error{Status: status, Text: "eth.Client.TX"}
 	}
 	return canSend, nil
 }
@@ -274,9 +274,9 @@ func (c *Client) popRecvLocked() Buffer {
 // Recv receives a Buffer from the ethernet driver.
 //
 // Recv does not block. If no data is available, this function
-// returns a nil Buffer and mx.ErrShouldWait.
+// returns a nil Buffer and zx.ErrShouldWait.
 //
-// If the client is closed, Recv returns mx.ErrPeerClosed.
+// If the client is closed, Recv returns zx.ErrPeerClosed.
 func (c *Client) Recv() (b Buffer, err error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -285,12 +285,12 @@ func (c *Client) Recv() (b Buffer, err error) {
 	}
 	entries, entriesSize := fifoEntries(c.recvbuf[:cap(c.recvbuf)])
 	var count uint32
-	status := mx.Sys_fifo_read(c.rx, entries, entriesSize, &count)
+	status := zx.Sys_fifo_read(c.rx, entries, entriesSize, &count)
 	n := int(count)
 	c.recvbuf = c.recvbuf[:n]
 	c.rxInFlight -= n
-	if status != mx.ErrOk {
-		return nil, mx.Error{Status: status, Text: "eth.Client.Recv"}
+	if status != zx.ErrOk {
+		return nil, zx.Error{Status: status, Text: "eth.Client.Recv"}
 	}
 	return c.popRecvLocked(), c.rxCompleteLocked()
 }
@@ -309,14 +309,14 @@ func (c *Client) rxCompleteLocked() error {
 	}
 	entries, entriesSize := fifoEntries(buf)
 	var count uint32
-	status := mx.Sys_fifo_write(c.rx, entries, entriesSize, &count)
+	status := zx.Sys_fifo_write(c.rx, entries, entriesSize, &count)
 	for _, entry := range buf[count:] {
 		b := c.arena.bufferFromEntry(entry)
 		c.arena.free(c, b)
 	}
 	c.rxInFlight += int(count)
-	if status != mx.ErrOk {
-		return mx.Error{Status: status, Text: "eth.Client.RX"}
+	if status != zx.ErrOk {
+		return zx.Error{Status: status, Text: "eth.Client.RX"}
 	}
 	return nil
 }
@@ -332,15 +332,15 @@ func (c *Client) WaitSend() error {
 			return err
 		}
 		// Errors from waiting handled in txComplete.
-		c.tx.WaitOne(mx.SignalFIFOReadable|mx.SignalFIFOPeerClosed, mx.TimensecInfinite)
+		c.tx.WaitOne(zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed, zx.TimensecInfinite)
 	}
 }
 
 // WaitRecv blocks until it is possible to receive a buffer,
 // or the client is closed.
 func (c *Client) WaitRecv() {
-	obs, err := c.rx.WaitOne(mx.SignalFIFOReadable|mx.SignalFIFOPeerClosed, mx.TimensecInfinite)
-	if err != nil || obs&mx.SignalFIFOPeerClosed != 0 {
+	obs, err := c.rx.WaitOne(zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed, zx.TimensecInfinite)
+	if err != nil || obs&zx.SignalFIFOPeerClosed != 0 {
 		c.Close()
 	}
 }

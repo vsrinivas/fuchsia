@@ -9,8 +9,8 @@ import (
 
 	"svc/svcfs"
 
-	"syscall/mx"
-	"syscall/mx/fdio"
+	"syscall/zx"
+	"syscall/zx/fdio"
 )
 
 type binder interface {
@@ -19,7 +19,7 @@ type binder interface {
 
 	// Bind binds an implementation of fidl service to the provided
 	// channel and runs it.
-	Bind(h mx.Handle)
+	Bind(h zx.Handle)
 }
 
 type Namespace struct {
@@ -31,14 +31,14 @@ func New() *Namespace {
 	return &Namespace{binders: make(map[string]binder)}
 }
 
-func (sn *Namespace) ServeDirectory(h mx.Handle) error {
+func (sn *Namespace) ServeDirectory(h zx.Handle) error {
 	d, err := fdio.NewDispatcher(fdio.Handler)
 	if err != nil {
 		panic(fmt.Sprintf("context.New: %v", err))
 	}
 
 	n := &svcfs.Namespace{
-		Provider: func(name string, h mx.Handle) {
+		Provider: func(name string, h zx.Handle) {
 			sn.ConnectToService(name, h)
 		},
 		Dispatcher: d,
@@ -53,7 +53,7 @@ func (sn *Namespace) ServeDirectory(h mx.Handle) error {
 	return nil
 }
 
-func (sn *Namespace) ConnectToService(name string, h mx.Handle) error {
+func (sn *Namespace) ConnectToService(name string, h zx.Handle) error {
 	b, ok := sn.binders[name]
 	if !ok {
 		h.Close()

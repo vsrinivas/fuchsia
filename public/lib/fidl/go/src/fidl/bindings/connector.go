@@ -7,18 +7,18 @@ package bindings
 import (
 	"sync"
 
-	"syscall/mx"
-	"syscall/mx/mxerror"
+	"syscall/zx"
+	"syscall/zx/mxerror"
 )
 
-var errConnectionClosed = mx.Error{Status: mx.ErrPeerClosed}
+var errConnectionClosed = zx.Error{Status: zx.ErrPeerClosed}
 
 // Connector owns a channel handle. It can read and write messages
 // from the channel waiting on it if necessary. The operation are
 // thread-safe.
 type Connector struct {
 	mu      sync.RWMutex // protects channel handle
-	channel *mx.Channel
+	channel *zx.Channel
 
 	done      chan struct{}
 	waitMutex sync.Mutex
@@ -28,9 +28,9 @@ type Connector struct {
 
 // NewStubConnector returns a new |Connector| instance that sends and
 // receives messages from a provided channel handle.
-func NewConnector(handle mx.Handle, waiter AsyncWaiter) *Connector {
+func NewConnector(handle zx.Handle, waiter AsyncWaiter) *Connector {
 	return &Connector{
-		channel:  &mx.Channel{handle},
+		channel:  &zx.Channel{handle},
 		waiter:   waiter,
 		done:     make(chan struct{}),
 		waitChan: make(chan WaitResponse, 1),
@@ -58,19 +58,19 @@ func (c *Connector) ReadMessage() (*Message, error) {
 
 	// TODO: what are the best initial sizes?
 	bytes := make([]byte, 128)
-	handles := make([]mx.Handle, 3)
+	handles := make([]zx.Handle, 3)
 retry:
 	numBytes, numHandles, err := c.channel.Read(bytes, handles, 0)
 	switch mxerror.Status(err) {
-	case mx.ErrOk:
+	case zx.ErrOk:
 		// NOP
-	case mx.ErrBufferTooSmall:
+	case zx.ErrBufferTooSmall:
 		bytes = make([]byte, numBytes)
-		handles = make([]mx.Handle, numHandles)
+		handles = make([]zx.Handle, numHandles)
 		goto retry
-	case mx.ErrShouldWait:
+	case zx.ErrShouldWait:
 		waitId := c.waiter.AsyncWait(c.channel.Handle,
-			mx.SignalChannelReadable|mx.SignalChannelPeerClosed,
+			zx.SignalChannelReadable|zx.SignalChannelPeerClosed,
 			c.waitChan)
 		select {
 		case <-c.waitChan:

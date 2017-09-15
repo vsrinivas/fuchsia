@@ -10,9 +10,9 @@ package main
 import (
 	"fmt"
 	"log"
-	"syscall/mx"
-	"syscall/mx/mxerror"
-	"syscall/mx/fdio"
+	"syscall/zx"
+	"syscall/zx/mxerror"
+	"syscall/zx/fdio"
 	"unsafe"
 
 	"github.com/google/netstack/tcpip"
@@ -127,7 +127,7 @@ func writeSockaddrStorage(dst *c_sockaddr_storage, a tcpip.FullAddress) (c_sockl
 		copy(sockaddr.sin6_addr[:], a.Addr)
 		return writeSockaddrStorage6(dst, &sockaddr), nil
 	}
-	return 0, mxerror.Errorf(mx.ErrInvalidArgs, "write sockaddr: bad address len %d", len(a.Addr))
+	return 0, mxerror.Errorf(zx.ErrInvalidArgs, "write sockaddr: bad address len %d", len(a.Addr))
 }
 
 func (v c_in_port) port() uint16 {
@@ -149,7 +149,7 @@ func readSockaddrIn(data []byte) (*tcpip.FullAddress, error) {
 	switch family {
 	case AF_INET:
 		if len(data) < int(unsafe.Sizeof(c_sockaddr_in{})) {
-			return nil, mxerror.Errorf(mx.ErrInvalidArgs, "reading c_sockaddr_in: len(data)=%d too small", len(data))
+			return nil, mxerror.Errorf(zx.ErrInvalidArgs, "reading c_sockaddr_in: len(data)=%d too small", len(data))
 		}
 		v := (*c_sockaddr_in)(unsafe.Pointer(&data[0]))
 		addr := &tcpip.FullAddress{
@@ -165,7 +165,7 @@ func readSockaddrIn(data []byte) (*tcpip.FullAddress, error) {
 		return addr, nil
 	case AF_INET6:
 		if len(data) < int(unsafe.Sizeof(c_sockaddr_in6{})) {
-			return nil, mxerror.Errorf(mx.ErrInvalidArgs, "reading c_sockaddr_in6: len(data)=%d too small", len(data))
+			return nil, mxerror.Errorf(zx.ErrInvalidArgs, "reading c_sockaddr_in6: len(data)=%d too small", len(data))
 		}
 		v := (*c_sockaddr_in6)(unsafe.Pointer(&data[0]))
 		addr := &tcpip.FullAddress{
@@ -179,13 +179,13 @@ func readSockaddrIn(data []byte) (*tcpip.FullAddress, error) {
 		}
 		return addr, nil
 	default:
-		return nil, mxerror.Errorf(mx.ErrInvalidArgs, "reading c_sockaddr: unknown family: %d", family)
+		return nil, mxerror.Errorf(zx.ErrInvalidArgs, "reading c_sockaddr: unknown family: %d", family)
 	}
 }
 
 func readSocketMsgHdr(data []byte) (*tcpip.FullAddress, error) {
 	if len(data) < c_fdio_socket_msg_hdr_len {
-		return nil, mxerror.Errorf(mx.ErrInvalidArgs, "reading socket msg header: too short: %d", len(data))
+		return nil, mxerror.Errorf(zx.ErrInvalidArgs, "reading socket msg header: too short: %d", len(data))
 	}
 	hdr := (*c_fdio_socket_msg_hdr)(unsafe.Pointer(&data[0]))
 	if hdr.addrlen == 0 {
@@ -196,7 +196,7 @@ func readSocketMsgHdr(data []byte) (*tcpip.FullAddress, error) {
 
 func writeSocketMsgHdr(data []byte, addr tcpip.FullAddress) error {
 	if len(data) < c_fdio_socket_msg_hdr_len {
-		return mxerror.Errorf(mx.ErrInvalidArgs, "writing socket msg header: too short: %d", len(data))
+		return mxerror.Errorf(zx.ErrInvalidArgs, "writing socket msg header: too short: %d", len(data))
 	}
 	hdr := (*c_fdio_socket_msg_hdr)(unsafe.Pointer(&data[0]))
 	l, err := writeSockaddrStorage(&hdr.addr, addr)

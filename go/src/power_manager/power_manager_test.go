@@ -7,8 +7,8 @@ package main
 import (
 	"log"
 	"sync/atomic"
-	"syscall/mx"
-	"syscall/mx/mxerror"
+	"syscall/zx"
+	"syscall/zx/mxerror"
 	"testing"
 	"time"
 
@@ -59,7 +59,7 @@ func TestPowerManagerWatcher(t *testing.T) {
 	go func() {
 		for {
 			if err := s.ServeRequest(); err != nil {
-				if mxerror.Status(err) != mx.ErrPeerClosed {
+				if mxerror.Status(err) != zx.ErrPeerClosed {
 					log.Println(err)
 				}
 				break

@@ -9,9 +9,9 @@ import (
 	"fidl/bindings"
 	"fmt"
 
-	"syscall/mx"
-	"syscall/mx/fdio"
-	"syscall/mx/mxruntime"
+	"syscall/zx"
+	"syscall/zx/fdio"
+	"syscall/zx/mxruntime"
 
 	"garnet/public/lib/app/fidl/application_environment"
 	"garnet/public/lib/app/fidl/application_launcher"
@@ -21,32 +21,32 @@ import (
 type Context struct {
 	Environment     *application_environment.ApplicationEnvironment_Proxy
 	OutgoingService *svcns.Namespace
-	serviceRoot     mx.Handle
+	serviceRoot     zx.Handle
 	Launcher        *application_launcher.ApplicationLauncher_Proxy
-	appServices     mx.Handle
+	appServices     zx.Handle
 }
 
-// TODO: define these in syscall/mx/mxruntime
+// TODO: define these in syscall/zx/mxruntime
 const (
 	HandleServiceRequest mxruntime.HandleType = 0x3B
 	HandleAppServices    mxruntime.HandleType = 0x43
 )
 
-func getServiceRoot() mx.Handle {
-	c0, c1, err := mx.NewChannel(0)
+func getServiceRoot() zx.Handle {
+	c0, c1, err := zx.NewChannel(0)
 	if err != nil {
-		return mx.HANDLE_INVALID
+		return zx.HANDLE_INVALID
 	}
 
 	// TODO: Use "/svc" once that actually works.
 	err = fdio.ServiceConnect("/svc/.", c0.Handle)
 	if err != nil {
-		return mx.HANDLE_INVALID
+		return zx.HANDLE_INVALID
 	}
 	return c1.Handle
 }
 
-func New(serviceRoot, serviceRequest, appServices mx.Handle) *Context {
+func New(serviceRoot, serviceRequest, appServices zx.Handle) *Context {
 	c := &Context{
 		serviceRoot: serviceRoot,
 		appServices: appServices,
@@ -91,14 +91,14 @@ func (c *Context) Serve() {
 
 type interfaceRequest interface {
 	Name() string
-	PassChannel() mx.Handle
+	PassChannel() zx.Handle
 }
 
 func (c *Context) ConnectToEnvService(r interfaceRequest) {
 	c.ConnectToEnvServiceAt(r.Name(), r.PassChannel())
 }
 
-func (c *Context) ConnectToEnvServiceAt(name string, h mx.Handle) {
+func (c *Context) ConnectToEnvServiceAt(name string, h zx.Handle) {
 	err := fdio.ServiceConnectAt(c.serviceRoot, name, h)
 	if err != nil {
 		panic(fmt.Sprintf("ConnectToEnvService: %v: %v", name, err))

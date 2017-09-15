@@ -6,8 +6,8 @@ package wlan
 
 import (
 	"fmt"
-	"syscall/mx"
-	"syscall/mx/fdio"
+	"syscall/zx"
+	"syscall/zx/fdio"
 )
 
 const ioctlFamilyWLAN = 0x24 // IOCTL_FAMILY_WLAN
@@ -15,7 +15,7 @@ const (
 	ioctlOpGetChannel = 0 // IOCTL_WLAN_GET_CHANNEL,        IOCTL_KIND_GET_HANDLE
 )
 
-func ioctlGetChannel(m fdio.FDIO) (ch mx.Handle, err error) {
+func ioctlGetChannel(m fdio.FDIO) (ch zx.Handle, err error) {
 	num := fdio.IoctlNum(fdio.IoctlKindGetHandle, ioctlFamilyWLAN, ioctlOpGetChannel)
 	h, err := m.Ioctl(num, nil, nil)
 	if err != nil {

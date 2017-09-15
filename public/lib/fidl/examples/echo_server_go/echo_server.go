@@ -10,8 +10,8 @@ import (
 	"app/context"
 	"fidl/bindings"
 
-	"syscall/mx"
-	"syscall/mx/mxerror"
+	"syscall/zx"
+	"syscall/zx/mxerror"
 
 	"lib/fidl/examples/services/echo"
 )
@@ -33,7 +33,7 @@ func (delegate *echoDelegate) Bind(r echo.Echo_Request) {
 	go func() {
 		for {
 			if err := s.ServeRequest(); err != nil {
-				if mxerror.Status(err) != mx.ErrPeerClosed {
+				if mxerror.Status(err) != zx.ErrPeerClosed {
 					log.Println(err)
 				}
 				break

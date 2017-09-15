@@ -6,8 +6,8 @@ package eth
 
 import (
 	"log"
-	"syscall/mx"
-	"syscall/mx/mxerror"
+	"syscall/zx"
+	"syscall/zx/mxerror"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
@@ -89,7 +89,7 @@ func (ep *linkEndpoint) dispatch(d stack.NetworkDispatcher) (err error) {
 		var b Buffer
 		for {
 			b, err = ep.c.Recv()
-			if mxerror.Status(err) != mx.ErrShouldWait {
+			if mxerror.Status(err) != zx.ErrShouldWait {
 				break
 			}
 			ep.c.WaitRecv()

@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"sync"
 
-	"syscall/mx"
-	"syscall/mx/mxerror"
+	"syscall/zx"
+	"syscall/zx/mxerror"
 )
 
 // MessageReadResult contains information returned after reading and parsing
@@ -31,7 +31,7 @@ type routeRequest struct {
 // to appropriate receivers. The work is done on a separate go routine.
 type routerWorker struct {
 	// The channel handle to send requests and receive responses.
-	channel *mx.Channel
+	channel *zx.Channel
 	// Map from request id to response channel.
 	responders map[uint64]chan<- MessageReadResult
 	// The channel of incoming requests that require responses.
@@ -56,19 +56,19 @@ func (w *routerWorker) readAndDispatchOutstandingMessages() error {
 	for len(w.responders) > 0 {
 		// TODO: what are the best initial sizes?
 		bytes := make([]byte, 128)
-		handles := make([]mx.Handle, 3)
+		handles := make([]zx.Handle, 3)
 	retry:
 		numBytes, numHandles, err := w.channel.Read(bytes, handles, 0)
 		switch mxerror.Status(err) {
-		case mx.ErrOk:
+		case zx.ErrOk:
 			// NOP
-		case mx.ErrBufferTooSmall:
+		case zx.ErrBufferTooSmall:
 			bytes = make([]byte, numBytes)
-			handles = make([]mx.Handle, numHandles)
+			handles = make([]zx.Handle, numHandles)
 			goto retry
-		case mx.ErrShouldWait:
+		case zx.ErrShouldWait:
 			w.waitId = w.waiter.AsyncWait(w.channel.Handle,
-				mx.SignalChannelReadable|mx.SignalChannelPeerClosed,
+				zx.SignalChannelReadable|zx.SignalChannelPeerClosed,
 				w.waitChan)
 			return nil
 		default:
@@ -114,7 +114,7 @@ func (w *routerWorker) runLoop() error {
 				return err
 			}
 		case <-w.done:
-			return mx.Error{Status: mx.ErrPeerClosed, Text: "bindings.routerWoker.runLoop"}
+			return zx.Error{Status: zx.ErrPeerClosed, Text: "bindings.routerWoker.runLoop"}
 		}
 		// Returns immediately without an error if still waiting for
 		// a new message.
@@ -132,7 +132,7 @@ type Router struct {
 	// closed and the handle.
 	mu sync.Mutex
 	// The channel to send requests and receive responses.
-	channel *mx.Channel
+	channel *zx.Channel
 	// Channel to communicate with worker.
 	requestChan chan<- routeRequest
 
@@ -144,10 +144,10 @@ type Router struct {
 
 // NewRouter returns a new Router instance that sends and receives messages
 // from a provided channel handle.
-func NewRouter(handle mx.Handle, waiter AsyncWaiter) *Router {
+func NewRouter(handle zx.Handle, waiter AsyncWaiter) *Router {
 	requestChan := make(chan routeRequest, 10)
 	doneChan := make(chan struct{})
-	channel := &mx.Channel{handle}
+	channel := &zx.Channel{handle}
 	router := &Router{
 		channel:     channel,
 		requestChan: requestChan,
@@ -182,7 +182,7 @@ func (r *Router) Accept(message *Message) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if !r.channel.Handle.IsValid() {
-		return mx.Error{Status: mx.ErrPeerClosed, Text: "bindings.Router.Accept"}
+		return zx.Error{Status: zx.ErrPeerClosed, Text: "bindings.Router.Accept"}
 	}
 	r.requestChan <- routeRequest{message, nil}
 	return nil
@@ -237,7 +237,7 @@ func (r *Router) AcceptWithResponse(message *Message) <-chan MessageReadResult {
 	// is closed so that we can safely close responseChan once we close the
 	// router.
 	if !r.channel.Handle.IsValid() {
-		responseChan <- MessageReadResult{nil, mx.Error{Status: mx.ErrPeerClosed, Text: "bindings.Router.AcceptWithResponse"}}
+		responseChan <- MessageReadResult{nil, zx.Error{Status: zx.ErrPeerClosed, Text: "bindings.Router.AcceptWithResponse"}}
 		return responseChan
 	}
 	r.requestChan <- routeRequest{message, responseChan}

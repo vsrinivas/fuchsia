@@ -13,8 +13,8 @@ import (
 	"sync"
 
 	"syscall"
-	"syscall/mx"
-	"syscall/mx/fdio"
+	"syscall/zx"
+	"syscall/zx/fdio"
 )
 
 type status int
@@ -30,7 +30,7 @@ type Watcher struct {
 	C   chan string // recieves new file names
 	Err error
 	f   *os.File
-	h   mx.Channel
+	h   zx.Channel
 	s   status
 
 	// Guards s
@@ -50,7 +50,7 @@ func NewWatcher(dir string) (*Watcher, error) {
 	w := &Watcher{
 		C: make(chan string),
 		f: os.NewFile(uintptr(syscall.OpenFDIO(m)), dir+" watcher"),
-		h: mx.Channel{Handle: h},
+		h: zx.Channel{Handle: h},
 		s: stopped,
 	}
 	w.start()
@@ -103,7 +103,7 @@ func (w *Watcher) start() {
 }
 
 func (w *Watcher) wait() (string, uint, error) {
-	_, err := w.h.Handle.WaitOne(mx.SignalChannelReadable|mx.SignalChannelPeerClosed, mx.TimensecInfinite)
+	_, err := w.h.Handle.WaitOne(zx.SignalChannelReadable|zx.SignalChannelPeerClosed, zx.TimensecInfinite)
 	if err != nil {
 		return "", 0, err
 	}
@@ -126,9 +126,9 @@ func (w *Watcher) wait() (string, uint, error) {
 	return string(msg[2 : 2+uint16(msg[1])]), uint(msg[0]), nil
 }
 
-func ioctlVFSWatchDir(m fdio.FDIO) (h mx.Handle, err error) {
+func ioctlVFSWatchDir(m fdio.FDIO) (h zx.Handle, err error) {
 
-	c1, c2, err := mx.NewChannel(0)
+	c1, c2, err := zx.NewChannel(0)
 	if err != nil {
 		return 0, fmt.Errorf("IOCTL_VFS_WATCH_DIR: %s", err)
 	}

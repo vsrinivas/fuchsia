@@ -7,8 +7,8 @@ package eth
 import (
 	"encoding/binary"
 	"fmt"
-	"syscall/mx"
-	"syscall/mx/fdio"
+	"syscall/zx"
+	"syscall/zx/fdio"
 )
 
 type EthInfo struct {
@@ -24,8 +24,8 @@ const FeatureSynth = 0x02
 
 type ethfifos struct {
 	// fifo handles
-	tx mx.Handle
-	rx mx.Handle
+	tx zx.Handle
+	rx zx.Handle
 	// maximum number of items in fifos
 	txDepth uint32
 	rxDepth uint32
@@ -72,7 +72,7 @@ func IoctlGetFifos(m fdio.FDIO) (fifos ethfifos, err error) {
 	return fifos, nil
 }
 
-func IoctlSetIobuf(m fdio.FDIO, h mx.Handle) error {
+func IoctlSetIobuf(m fdio.FDIO, h zx.Handle) error {
 	num := fdio.IoctlNum(fdio.IoctlKindSetHandle, ioctlFamilyETH, ioctlOpSetIobuf)
 	err := m.IoctlSetHandle(num, h)
 	if err != nil {

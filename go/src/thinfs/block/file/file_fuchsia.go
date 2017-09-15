@@ -8,7 +8,7 @@ package file
 
 import (
 	"syscall"
-	"syscall/mx/fdio"
+	"syscall/zx/fdio"
 )
 
 func ioctlBlockGetSize(fd uintptr) (int64, error) {

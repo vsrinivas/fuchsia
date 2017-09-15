@@ -5,7 +5,7 @@
 package service_provider_impl
 
 import (
-	"syscall/mx"
+	"syscall/zx"
 )
 
 type ServiceFactory interface {

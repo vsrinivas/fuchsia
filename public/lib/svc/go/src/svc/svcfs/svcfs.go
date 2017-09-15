@@ -8,33 +8,33 @@ package svcfs
 import (
 	"strings"
 
-	"syscall/mx"
-	"syscall/mx/fdio"
+	"syscall/zx"
+	"syscall/zx/fdio"
 )
 
-type Provider func(name string, h mx.Handle)
+type Provider func(name string, h zx.Handle)
 
 type Namespace struct {
 	Provider   Provider
 	Dispatcher *fdio.Dispatcher
 }
 
-func (n *Namespace) Serve(h mx.Handle) error {
+func (n *Namespace) Serve(h zx.Handle) error {
 	if err := n.Dispatcher.AddHandler(h, fdio.ServerHandler(n.handler), 0); err != nil {
 		return err
 	}
 
-	return h.SignalPeer(0, mx.SignalUser0)
+	return h.SignalPeer(0, zx.SignalUser0)
 }
 
-func errStatus(err error) mx.Status {
+func errStatus(err error) zx.Status {
 	if err == nil {
-		return mx.ErrOk
+		return zx.ErrOk
 	}
-	if s, ok := err.(mx.Error); ok {
+	if s, ok := err.(zx.Error); ok {
 		return s.Status
 	}
-	return mx.ErrInternal
+	return zx.ErrInternal
 }
 
 // TODO(abarth): Switch to msg.Pipelined() once that exists.
@@ -42,7 +42,7 @@ func pipelined(msg *fdio.Msg) bool {
 	return msg.Arg&0x10000000 != 0
 }
 
-func (n *Namespace) opClone(msg *fdio.Msg, h mx.Handle) mx.Status {
+func (n *Namespace) opClone(msg *fdio.Msg, h zx.Handle) zx.Status {
 	err := n.Serve(h)
 
 	if !pipelined(msg) {
@@ -62,21 +62,21 @@ func (n *Namespace) opClone(msg *fdio.Msg, h mx.Handle) mx.Status {
 	return fdio.ErrIndirect.Status
 }
 
-func (n *Namespace) handler(msg *fdio.Msg, rh mx.Handle, cookieVal int64) mx.Status {
+func (n *Namespace) handler(msg *fdio.Msg, rh zx.Handle, cookieVal int64) zx.Status {
 	op := msg.Op()
 
 	switch op {
 	case fdio.OpOpen:
 		h := msg.Handle[0]
-		if h == mx.HANDLE_INVALID {
-			return mx.ErrBadState
+		if h == zx.HANDLE_INVALID {
+			return zx.ErrBadState
 		}
 
 		path := string(msg.Data[:msg.Datalen])
 		if strings.IndexByte(path, '/') != -1 {
 			// TODO(abarth): Implement path traversal.
 			h.Close()
-			return mx.ErrNotSupported
+			return zx.ErrNotSupported
 		}
 
 		if path == "." || path == ".." {
@@ -86,7 +86,7 @@ func (n *Namespace) handler(msg *fdio.Msg, rh mx.Handle, cookieVal int64) mx.Sta
 		if !pipelined(msg) {
 			ro := fdio.RioObject{
 				RioObjectHeader: fdio.RioObjectHeader{
-					Status: mx.ErrOk,
+					Status: zx.ErrOk,
 					Type:   uint32(fdio.ProtocolService),
 				},
 			}
@@ -98,13 +98,13 @@ func (n *Namespace) handler(msg *fdio.Msg, rh mx.Handle, cookieVal int64) mx.Sta
 
 	case fdio.OpClone:
 		h := msg.Handle[0]
-		if h == mx.HANDLE_INVALID {
-			return mx.ErrBadState
+		if h == zx.HANDLE_INVALID {
+			return zx.ErrBadState
 		}
 
 		return n.opClone(msg, h)
 
 	default:
-		return mx.ErrNotSupported
+		return zx.ErrNotSupported
 	}
 }

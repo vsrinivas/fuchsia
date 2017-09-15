@@ -12,8 +12,8 @@ import (
 
 	"fidl/bindings"
 
-	"syscall/mx"
-	"syscall/mx/mxerror"
+	"syscall/zx"
+	"syscall/zx/mxerror"
 
 	"garnet/public/lib/netstack/fidl/net_address"
 	nsfidl "garnet/public/lib/netstack/fidl/netstack"
@@ -142,7 +142,7 @@ func (delegate *netstackDelegate) Bind(request nsfidl.Netstack_Request) {
 	go func() {
 		for {
 			if err := stub.ServeRequest(); err != nil {
-				if mxerror.Status(err) != mx.ErrPeerClosed {
+				if mxerror.Status(err) != zx.ErrPeerClosed {
 					log.Println(err)
 				}
 				break
