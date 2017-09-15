@@ -37,7 +37,7 @@ static uint8_t displacement_size(uint8_t mod_rm) {
     }
 }
 
-static uint8_t mem_size(bool h66, bool rex_w, bool w) {
+static uint8_t operand_size(bool h66, bool rex_w, bool w) {
     if (!w) {
         return 1;
     } else if (rex_w) {
@@ -195,7 +195,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, zx_vcpu_stat
             return ZX_ERR_OUT_OF_RANGE;
         const bool w = opcode & kWMask;
         inst->type = INST_MOV_WRITE;
-        inst->mem = mem_size(h66, rex_w, w);
+        inst->mem = operand_size(h66, rex_w, w);
         inst->imm = 0;
         inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r), inst->mem, rex);
         inst->flags = NULL;
@@ -209,7 +209,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, zx_vcpu_stat
             return ZX_ERR_OUT_OF_RANGE;
         const bool w = opcode & kWMask;
         inst->type = INST_MOV_READ;
-        inst->mem = mem_size(h66, rex_w, w);
+        inst->mem = operand_size(h66, rex_w, w);
         inst->imm = 0;
         inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r), inst->mem, rex);
         inst->flags = NULL;
@@ -226,37 +226,36 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, zx_vcpu_stat
         if ((mod_rm & kModRMRegMask) != 0)
             return ZX_ERR_INVALID_ARGS;
         inst->type = INST_MOV_WRITE;
-        inst->mem = mem_size(h66, rex_w, w);
+        inst->mem = operand_size(h66, rex_w, w);
         inst->imm = 0;
         inst->reg = NULL;
         inst->flags = NULL;
         memcpy(&inst->imm, inst_buf + disp_size + 2, imm_size);
         return ZX_OK;
     }
-    // Move (8-bit) with zero-extend r/m to r.
-    case 0xb60f:
-        if (h66)
-            return ZX_ERR_BAD_STATE;
-        if (inst_len != disp_size + 3u)
-            return ZX_ERR_OUT_OF_RANGE;
-        inst->type = INST_MOV_READ;
-        inst->mem = 1;
-        inst->imm = 0;
-        inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r), inst->mem, rex);
-        inst->flags = NULL;
-        return inst->reg == NULL ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
     // Move (16-bit) with zero-extend r/m to r.
     case 0xb70f:
         if (h66)
             return ZX_ERR_BAD_STATE;
+    // Move (8-bit) with zero-extend r/m to r.
+    case 0xb60f: {
         if (inst_len != disp_size + 3u)
             return ZX_ERR_OUT_OF_RANGE;
+        const bool w = opcode & (kWMask << 8);
+
+        // We'll be operating with different sized operands due to the zero-
+        // extend. The 'w' bit determines if we're reading 8 or 16 bits out of
+        // memory while the h66/rex_w bits are used to select the destination
+        // register size.
+        const uint8_t mem_size = w ? 2 : 1;
+        const uint8_t reg_size = operand_size(h66, rex_w, true);
         inst->type = INST_MOV_READ;
-        inst->mem = 2;
+        inst->mem = mem_size;
         inst->imm = 0;
-        inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r), inst->mem, rex);
+        inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r), reg_size, rex);
         inst->flags = NULL;
         return inst->reg == NULL ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
+    }
     // Logical compare (8-bit) imm with r/m.
     case 0xf6:
         if (h66)

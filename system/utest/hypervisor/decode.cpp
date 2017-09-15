@@ -317,8 +317,6 @@ static bool decode_movz_0f_b6(void) {
     EXPECT_EQ(inst_decode(bad_disp, 3, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
     uint8_t has_sib[] = {0x0f, 0xb6, 0b01000100, 0, 0};
     EXPECT_EQ(inst_decode(has_sib, 5, nullptr, nullptr), ZX_ERR_NOT_SUPPORTED);
-    uint8_t has_h66[] = {0x66, 0x0f, 0xb6, 0b00001000};
-    EXPECT_EQ(inst_decode(has_h66, 4, nullptr, nullptr), ZX_ERR_BAD_STATE);
 
     // movzb (%rax), %ecx
     uint8_t movz[] = {0x0f, 0xb6, 0b00001000};
@@ -365,6 +363,24 @@ static bool decode_movz_0f_b6(void) {
     EXPECT_EQ(inst.mem, 1u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.r12);
+    EXPECT_NULL(inst.flags);
+
+    // movzb (%rax),%cx
+    uint8_t has_h66[] = {0x66, 0x0f, 0xb6, 0b00001000};
+    EXPECT_EQ(inst_decode(has_h66, 4, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_READ);
+    EXPECT_EQ(inst.mem, 1u);
+    EXPECT_EQ(inst.imm, 0u);
+    EXPECT_EQ(inst.reg, &vcpu_state.rcx);
+    EXPECT_NULL(inst.flags);
+
+    // movzb (%rax),%esi
+    uint8_t mov_to_esi[] = {0x0f, 0xb6, 0x30};
+    EXPECT_EQ(inst_decode(mov_to_esi, 3, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_READ);
+    EXPECT_EQ(inst.mem, 1u);
+    EXPECT_EQ(inst.imm, 0u);
+    EXPECT_EQ(inst.reg, &vcpu_state.rsi);
     EXPECT_NULL(inst.flags);
 
     END_TEST;
@@ -427,6 +443,15 @@ static bool decode_movz_0f_b7(void) {
     EXPECT_EQ(inst.mem, 2u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.r12);
+    EXPECT_NULL(inst.flags);
+
+    // movzw (%rax),%esi
+    uint8_t mov_to_esi[] = {0x0f, 0xb7, 0x30};
+    EXPECT_EQ(inst_decode(mov_to_esi, 3, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_READ);
+    EXPECT_EQ(inst.mem, 2u);
+    EXPECT_EQ(inst.imm, 0u);
+    EXPECT_EQ(inst.reg, &vcpu_state.rsi);
     EXPECT_NULL(inst.flags);
 
     END_TEST;
