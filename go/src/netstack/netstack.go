@@ -14,8 +14,8 @@ import (
 
 	"netstack/deviceid"
 	"netstack/link/eth"
+	"netstack/link/stats"
 	"netstack/netiface"
-	"netstack/stats"
 
 	"github.com/google/netstack/dhcp"
 	"github.com/google/netstack/tcpip"
