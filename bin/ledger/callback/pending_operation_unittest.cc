@@ -16,7 +16,7 @@ TEST(PendingOperationManager, Cleanup) {
   auto result =
       operation_manager.Manage(fxl::MakeAutoCall([&called] { ++called; }));
   EXPECT_EQ(0u, called);
-  result.second();
+  result.second.call();
   EXPECT_EQ(1u, called);
 }
 
@@ -39,9 +39,9 @@ TEST(PendingOperationManager, HeterogenousObject) {
   auto result2 =
       operation_manager.Manage(fxl::MakeAutoCall([&called] { ++called; }));
   EXPECT_EQ(0u, called);
-  result1.second();
+  result1.second.call();
   EXPECT_EQ(1u, called);
-  result2.second();
+  result2.second.call();
   EXPECT_EQ(2u, called);
 }
 
@@ -55,7 +55,7 @@ TEST(PendingOperationManager, DoNotCrashIfManagerDeleted) {
   operation_manager.reset();
   // |operation_manager| is deleted and all its storage.
   EXPECT_EQ(1u, called);
-  result.second();
+  result.second.call();
   // Nothing bad should happen
 }
 

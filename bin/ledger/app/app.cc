@@ -147,15 +147,12 @@ class App : public LedgerController,
       std::function<void(bool)> callback) override {
     auto handler = pending_operation_manager_.Manage(
         std::move(erase_remote_repository_operation));
-    handler.first->Start([
+    handler.first->Start(fxl::MakeCopyable( [
       this, cleanup = std::move(handler.second), callback = std::move(callback)
     ](bool succeeded) {
       callback(succeeded);
-      // This lambda is deleted in |cleanup()|, don't access captured members
-      // afterwards.
-      cleanup();
       CheckPendingOperations();
-    });
+    }));
   }
 
   void CheckPendingOperations() {

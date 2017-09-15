@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -26,11 +27,11 @@ class PendingOperationManager {
   // the callback is called, |operation| is owned by the
   // |PendingOperationManager| object.
   template <typename A>
-  std::pair<A*, fxl::Closure> Manage(A operation) {
+  std::pair<A*, fxl::AutoCall<fxl::Closure>> Manage(A operation) {
     auto deleter = std::make_unique<Deleter<A>>(std::move(operation));
     A* result = deleter->operation();
     fxl::Closure cleanup = ManagePendingOperation(std::move(deleter));
-    return std::make_pair(result, std::move(cleanup));
+    return std::make_pair(result, fxl::MakeAutoCall(std::move(cleanup)));
   }
 
   size_t size() { return pending_operations_.size(); }
