@@ -61,7 +61,7 @@
         "sysui",
         "test_runner",
         "thinfs",
-        "time-service",
+        "network_time",
         "tracing",
         "url",
         "vim",

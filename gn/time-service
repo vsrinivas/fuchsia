@@ -1,9 +1,0 @@
-{
-    "languages": [
-        "dart"
-    ],
-    "packages": {
-        "time-service": "//apps/time-service",
-        "time-service-tests": "//apps/time-service:time-service-tests"
-    }
-}

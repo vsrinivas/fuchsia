@@ -1,0 +1,9 @@
+{
+    "languages": [
+        "dart"
+    ],
+    "packages": {
+        "network_time": "//garnet/bin/network_time",
+        "network_time_tests": "//garnet/bin/network_time:network_time_tests"
+    }
+}
