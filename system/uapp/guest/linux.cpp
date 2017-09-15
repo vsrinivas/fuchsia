@@ -10,12 +10,12 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <hypervisor/block.h>
 #include <hypervisor/guest.h>
 
 #include "linux.h"
 
 // clang-format off
+#define SECTOR_SIZE             512u
 
 #define ALIGN(x, alignment)     (((x) + (alignment - 1)) & ~(alignment - 1))
 

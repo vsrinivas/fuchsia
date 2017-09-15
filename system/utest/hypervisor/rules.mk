@@ -37,5 +37,6 @@ MODULE_LIBS := \
 MODULE_STATIC_LIBS += \
     system/ulib/ddk \
     system/ulib/virtio \
+    system/ulib/fbl \
 
 include make/module.mk

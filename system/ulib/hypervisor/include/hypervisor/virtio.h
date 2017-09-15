@@ -4,16 +4,15 @@
 
 #pragma once
 
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 #include <hypervisor/pci.h>
-#include <zircon/syscalls/hypervisor.h>
-#include <zircon/types.h>
 #include <virtio/virtio.h>
+#include <zircon/syscalls/hypervisor.h>
+#include <zircon/thread_annotations.h>
+#include <zircon/types.h>
 
 // clang-format off
-
-// Interrupt status bits.
-#define VIRTIO_ISR_QUEUE                0x1
-#define VIRTIO_ISR_DEVICE               0x2
 
 // clang-format on
 
@@ -21,92 +20,174 @@ struct vring_desc;
 struct vring_avail;
 struct vring_used;
 
+class VirtioDevice;
+
 typedef struct io_apic io_apic_t;
 typedef struct zx_vcpu_io zx_vcpu_io_t;
-typedef struct virtio_device virtio_device_t;
 typedef struct virtio_queue virtio_queue_t;
-
-/* Device-specific operations. */
-typedef struct virtio_device_ops {
-    // Read a device configuration field.
-    zx_status_t (*read)(const virtio_device_t* device, uint16_t port, uint8_t access_size,
-                        zx_vcpu_io_t* vcpu_io);
-
-    // Write a device configuration field.
-    zx_status_t (*write)(virtio_device_t* device, uint16_t port, const zx_vcpu_io_t* io);
-
-    // Handle notify events for one of this devices queues.
-    zx_status_t (*queue_notify)(virtio_device_t* device, uint16_t queue_sel);
-} virtio_device_ops_t;
 
 static const size_t kVirtioPciNumCapabilities = 4;
 
-/* Common state shared by all virtio devices. */
-typedef struct virtio_device {
-    mtx_t mutex;
+/* Virtio PCI transport implementation. */
+class VirtioPci {
+public:
+    VirtioPci(VirtioDevice* device);
 
-    // Feature flags.
-    // See Virtio 1.0 Section 4.1.4.3 for more details.
-    uint32_t features;
-    uint32_t features_sel;
-    uint32_t driver_features;
-    uint32_t driver_features_sel;
+    // Read a value at |bar| and |offset| from this device.
+    zx_status_t PciRead(uint8_t bar, uint16_t offset, uint8_t access_size, zx_vcpu_io_t* vcpu_io);
+    // Write a value at |bar| and |offset| to this device.
+    zx_status_t PciWrite(uint8_t bar, uint16_t offset, const zx_vcpu_io_t* io);
+
+    // Trigger a PCI interrupt for this device.
+    zx_status_t Interrupt();
+
+    // The PCI device used for the transport.
+    pci_device_t& pci_device() { return pci_device_; }
+
+private:
+    zx_status_t CommonCfgRead(uint16_t port, uint8_t access_size, zx_vcpu_io_t* vcpu_io);
+    zx_status_t CommonCfgWrite(uint16_t port, const zx_vcpu_io_t* io);
+
+    void SetupCaps();
+    void SetupCap(pci_cap_t* cap, virtio_pci_cap_t* virtio_cap, uint8_t cfg_type,
+                  size_t cap_len, size_t data_length, size_t bar_offset);
+
+    virtio_queue_t* selected_queue();
+
+    // PCI device for the virtio-pci transport.
+    pci_device_t pci_device_;
+
+    // We need one of these for every virtio_pci_cap_t structure we expose.
+    pci_cap_t capabilities_[kVirtioPciNumCapabilities];
+    // Virtio PCI capabilities.
+    virtio_pci_cap_t common_cfg_cap_;
+    virtio_pci_cap_t device_cfg_cap_;
+    virtio_pci_notify_cap_t notify_cfg_cap_;
+    virtio_pci_cap_t isr_cfg_cap_;
+
+    VirtioDevice* device_;
+};
+
+/* Base class for all virtio devices. */
+class VirtioDevice {
+public:
+    virtual ~VirtioDevice() = default;
+
+    // Read a device-specific configuration field.
+    virtual zx_status_t ReadConfig(uint16_t port, uint8_t access_size, zx_vcpu_io_t* vcpu_io);
+
+    // Write a device-specific configuration field.
+    virtual zx_status_t WriteConfig(uint16_t port, const zx_vcpu_io_t* io);
+
+    // Handle notify events for one of this devices queues.
+    virtual zx_status_t HandleQueueNotify(uint16_t queue_sel) {
+        return ZX_OK;
+    }
+
+    // Send a notification back to the guest that there are new descriptors in
+    // then used ring.
+    //
+    // The method for how this notification is delievered is transport
+    // specific.
+    zx_status_t NotifyGuest();
+
+    uintptr_t guest_physmem_addr() { return guest_physmem_addr_; }
+    size_t guest_physmem_size() { return guest_physmem_size_; }
+
+    // ISR flag values.
+    enum IsrFlags : uint8_t {
+        // Interrupt is caused by a queue.
+        VIRTIO_ISR_QUEUE = 0x1,
+        // Interrupt is caused by a device config change.
+        VIRTIO_ISR_DEVICE = 0x2,
+    };
+
+    // Sets the given flags in the ISR register.
+    void add_isr_flags(uint8_t flags) {
+        fbl::AutoLock lock(&mutex_);
+        isr_status_ |= flags;
+    }
+
+    // Device features.
+    //
+    // These are feature bits that are supported by the device. They may or
+    // may not correspond to the set of feature flags that have been negotiated
+    // at runtime.
+    void add_device_features(uint32_t features) {
+        fbl::AutoLock lock(&mutex_);
+        features_ |= features;
+    }
+    bool has_device_features(uint32_t features) {
+        fbl::AutoLock lock(&mutex_);
+        return (features_ & features) == features;
+    }
+
+    pci_device_t& pci_device() { return pci_.pci_device(); }
+
+protected:
+    VirtioDevice(uint8_t device_id, void* config, size_t config_size, virtio_queue_t* queues,
+                 uint16_t num_queues, uintptr_t guest_physmem_addr, size_t guest_physmem_size);
+
+    // Mutex for accessing device configuration fields.
+    fbl::Mutex config_mutex_;
+
+private:
+    // Temporarily expose our state to the PCI transport until the proper
+    // accessor methods are defined.
+    friend class VirtioPci;
+
+    fbl::Mutex mutex_;
+
+    // Handle kicks from the driver that a queue needs attention.
+    zx_status_t Kick(uint16_t queue_sel);
+
+    // Device feature bits.
+    //
+    // Defined in Virtio 1.0 Section 2.2.
+    uint32_t features_ TA_GUARDED(mutex_) = 0;
+    uint32_t features_sel_ TA_GUARDED(mutex_) = 0;
+
+    // Driver feature bits.
+    uint32_t driver_features_ TA_GUARDED(mutex_) = 0;
+    uint32_t driver_features_sel_ TA_GUARDED(mutex_) = 0;
 
     // Virtio device id.
-    uint8_t device_id;
-    // Virtio status register for the device.
-    uint8_t status;
+    const uint8_t device_id_;
+
+    // Device status field as defined in Virtio 1.0, Section 2.1.
+    uint8_t status_ TA_GUARDED(mutex_) = 0;
+
     // Interrupt status register.
-    uint8_t isr_status;
-    // Currently selected queue.
-    uint16_t queue_sel;
+    uint8_t isr_status_ TA_GUARDED(mutex_) = 0;
+
+    // Index of the queue currently selected by the driver.
+    uint16_t queue_sel_ TA_GUARDED(mutex_) = 0;
+
+    // Pointer to the structure that holds this devices configuration
+    // structure.
+    void* const device_config_ TA_GUARDED(config_mutex_) = nullptr;
+
     // Number of bytes used for this devices configuration space.
     //
     // This should cover only bytes used for the device-specific portions of
     // the configuration header, omitting any of the (transport-specific)
     // shared configuration space.
-    uint32_t config_size;
+    const size_t device_config_size_ = 0;
+
     // Size of queues array.
-    uint16_t num_queues;
+    const uint16_t num_queues_ = 0;
+
     // Virtqueues for this device.
-    virtio_queue_t* queues;
+    virtio_queue_t* const queues_ = nullptr;
 
     // Address of guest physical memory.
-    uintptr_t guest_physmem_addr;
+    const uintptr_t guest_physmem_addr_ = 0;
     // Size of guest physical memory.
-    size_t guest_physmem_size;
+    const size_t guest_physmem_size_ = 0;
 
-    // Device-specific operations.
-    const virtio_device_ops_t* ops;
-    // Private pointer for use by the device implementation.
-    void* impl;
-
-    // PCI device for the virtio-pci transport.
-    pci_device_t pci_device;
-
-    // We need one of these for every virtio_pci_cap_t structure we expose.
-    pci_cap_t capabilities[kVirtioPciNumCapabilities];
-
-    // Virtio PCI capabilities.
-    virtio_pci_cap_t common_cfg_cap;
-    virtio_pci_cap_t device_cfg_cap;
-    virtio_pci_notify_cap_t notify_cfg_cap;
-    virtio_pci_cap_t isr_cfg_cap;
-} virtio_device_t;
-
-/* Configures a device for Virtio PCI functionality.
- *
- * Should be invoked after the rest of the virtio_device_t structure has
- * already been intialized as the PCI configuration depends on some of the
- * virtio device attributes.
- */
-void virtio_pci_init(virtio_device_t* device);
-
-/* Send an interrupt back to the guest for a device. */
-zx_status_t virtio_device_notify(virtio_device_t* device);
-
-/* Handle kicks from the guest to process a queue. */
-zx_status_t virtio_device_kick(virtio_device_t* device, uint16_t queue_sel);
+    // Virtio PCI transport.
+    VirtioPci pci_;
+};
 
 /* Stores the Virtio queue based on the ring provided by the guest.
  *
@@ -135,15 +216,15 @@ typedef struct virtio_queue {
     uint16_t index;
 
     // Pointer to the owning device.
-    virtio_device_t* virtio_device;
+    VirtioDevice* virtio_device;
 
     volatile struct vring_desc* desc; // guest-controlled
 
     volatile struct vring_avail* avail; // guest-controlled
-    volatile uint16_t* used_event; // guest-controlled
+    volatile uint16_t* used_event;      // guest-controlled
 
     volatile struct vring_used* used; // guest-controlled
-    volatile uint16_t* avail_event; // guest-controlled
+    volatile uint16_t* avail_event;   // guest-controlled
 } virtio_queue_t;
 
 /* Callback function for virtio_queue_handler.

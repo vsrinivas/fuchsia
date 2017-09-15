@@ -11,6 +11,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <fbl/unique_ptr.h>
 #include <hypervisor/acpi.h>
 #include <hypervisor/balloon.h>
 #include <hypervisor/block.h>
@@ -20,11 +21,10 @@
 #include <hypervisor/pci.h>
 #include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
+#include <virtio/balloon.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
-#include <fbl/unique_ptr.h>
-#include <virtio/balloon.h>
 
 #include "linux.h"
 #include "zircon.h"
@@ -59,24 +59,21 @@ static zx_status_t create_vmo(uint64_t size, uintptr_t* addr, zx_handle_t* vmo) 
     return zx_vmar_map(zx_vmar_root_self(), 0, *vmo, 0, size, kMapFlags, addr);
 }
 
-static void balloon_stats_handler(const virtio_balloon_stat_t* stats, size_t len, void* ctx) {
-    balloon_t* balloon = static_cast<balloon_t*>(ctx);
+static void balloon_stats_handler(VirtioBalloon* balloon, const virtio_balloon_stat_t* stats,
+                                  size_t len) {
     for (size_t i = 0; i < len; ++i) {
         if (stats[i].tag != VIRTIO_BALLOON_S_AVAIL)
             continue;
 
-        mtx_lock(&balloon->mutex);
-        uint32_t current_pages = balloon->config.num_pages;
-        mtx_unlock(&balloon->mutex);
-
-        uint32_t available_pages = static_cast<uint32_t>(stats[i].val / VIRTIO_BALLOON_PAGE_SIZE);
+        uint32_t current_pages = balloon->num_pages();
+        uint32_t available_pages = static_cast<uint32_t>(stats[i].val / VirtioBalloon::kPageSize);
         uint32_t target_pages = current_pages + (available_pages - balloon_threshold_pages);
         if (current_pages == target_pages)
             return;
 
         printf("virtio-balloon: adjusting target pages %#x -> %#x.\n",
                current_pages, target_pages);
-        zx_status_t status = balloon_update_num_pages(balloon, target_pages);
+        zx_status_t status = balloon->UpdateNumPages(target_pages);
         if (status != ZX_OK)
             fprintf(stderr, "Error %d updating balloon size.\n", status);
         return;
@@ -84,20 +81,23 @@ static void balloon_stats_handler(const virtio_balloon_stat_t* stats, size_t len
 }
 
 typedef struct balloon_task_args {
-    balloon_t* balloon;
+    VirtioBalloon* balloon;
     zx_duration_t interval;
 } balloon_task_args_t;
 
 static int balloon_stats_task(void* ctx) {
     fbl::unique_ptr<balloon_task_args_t> args(static_cast<balloon_task_args_t*>(ctx));
+    VirtioBalloon* balloon = args->balloon;
     while (true) {
         zx_nanosleep(zx_deadline_after(args->interval));
-        balloon_request_stats(args->balloon, &balloon_stats_handler, args->balloon);
+        args->balloon->RequestStats([balloon](const virtio_balloon_stat_t* stats, size_t len) {
+            balloon_stats_handler(balloon, stats, len);
+        });
     }
     return ZX_OK;
 }
 
-static zx_status_t poll_balloon_stats(balloon_t* balloon, zx_duration_t interval) {
+static zx_status_t poll_balloon_stats(VirtioBalloon* balloon, zx_duration_t interval) {
     thrd_t thread;
     auto args = new balloon_task_args_t{balloon, interval};
 
@@ -223,7 +223,7 @@ int main(int argc, char** argv) {
     const char* zircon_fmt_string = "TERM=uart %s";
     snprintf(guest_cmdline, PATH_MAX, zircon_fmt_string, cmdline ? cmdline : "");
     status = setup_zircon(addr, kVmoSize, first_page, pt_end_off, fd, ramdisk_path,
-                           guest_cmdline, &guest_ip, &bootdata_off);
+                          guest_cmdline, &guest_ip, &bootdata_off);
 
     if (status == ZX_ERR_NOT_SUPPORTED) {
         const char* linux_fmt_string = "earlyprintk=serial,ttyS,115200 console=ttyS0,115200 "
@@ -292,30 +292,29 @@ int main(int argc, char** argv) {
         return status;
 
     // Setup block device.
-    block_t block;
-    pci_device_t* virtio_block = &block.virtio_device.pci_device;
+    VirtioBlock block(addr, kVmoSize);
+    pci_device_t& virtio_block = block.pci_device();
     if (block_path != NULL) {
-        status = block_init(&block, block_path, addr, kVmoSize);
+        status = block.Init(block_path);
         if (status != ZX_OK)
             return status;
 
-        status = pci_bus_connect(&bus, virtio_block, PCI_DEVICE_VIRTIO_BLOCK);
+        status = pci_bus_connect(&bus, &virtio_block, PCI_DEVICE_VIRTIO_BLOCK);
         if (status != ZX_OK)
             return status;
 
-        status = pci_device_async(virtio_block, guest);
+        status = pci_device_async(&virtio_block, guest);
         if (status != ZX_OK)
             return status;
     }
     // Setup memory balloon.
-    balloon_t balloon;
-    balloon_init(&balloon, addr, kVmoSize, physmem_vmo);
-    balloon.deflate_on_demand = balloon_deflate_on_demand;
-    status = pci_bus_connect(&bus, &balloon.virtio_device.pci_device,
+    VirtioBalloon balloon(addr, kVmoSize, physmem_vmo);
+    balloon.set_deflate_on_demand(balloon_deflate_on_demand);
+    status = pci_bus_connect(&bus, &balloon.pci_device(),
                              PCI_DEVICE_VIRTIO_BALLOON);
     if (status != ZX_OK)
         return status;
-    status = pci_device_async(&balloon.virtio_device.pci_device, guest);
+    status = pci_device_async(&balloon.pci_device(), guest);
     if (status != ZX_OK)
         return status;
     if (balloon_poll_interval > 0)

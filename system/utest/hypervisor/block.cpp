@@ -7,6 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <fbl/unique_ptr.h>
 #include <hypervisor/block.h>
 #include <hypervisor/vcpu.h>
 #include <hypervisor/virtio.h>
@@ -45,19 +46,26 @@ static void setup_queue(virtio_queue_t* queue, virtio_mem_t* mem) {
     queue->used = (struct vring_used*)mem->used_buf;
 }
 
-static void setup_block(block_t* block, const char* block_path, virtio_mem_t* mem) {
-    block_init(block, block_path, (uintptr_t)mem, sizeof(*mem));
-    setup_queue(&block->queue, mem);
+static zx_status_t setup_block(const char* block_path, virtio_mem_t* mem,
+                               fbl::unique_ptr<VirtioBlock>* block_out) {
+    auto block = fbl::make_unique<VirtioBlock>((uintptr_t)mem, sizeof(*mem));
+    zx_status_t status = block->Init(block_path);
+    if (status != ZX_OK)
+        return status;
+    setup_queue(&block->queue(), mem);
+
+    *block_out = fbl::move(block);
+    return ZX_OK;
 }
 
-static ssize_t mkblk(char* path) {
+static int mkblk(char* path) {
     int fd = mkstemp(path);
     if (fd >= 0) {
-        uint8_t zeroes[SECTOR_SIZE * 8];
+        uint8_t zeroes[VirtioBlock::kSectorSize * 8];
         memset(zeroes, 0, sizeof(zeroes));
         ssize_t ret = write(fd, zeroes, sizeof(zeroes));
         if (ret < 0)
-            return ret;
+            return static_cast<int>(ret);
     }
     return fd;
 }
@@ -77,9 +85,10 @@ static bool file_block_device_empty_queue(void) {
     ASSERT_GE(mkblk(path), 0);
 
     virtio_mem_t mem;
-    block_t block = {};
-    setup_block(&block, path, &mem);
-    ASSERT_EQ(file_block_device(&block), ZX_OK);
+
+    fbl::unique_ptr<VirtioBlock> block;
+    setup_block(path, &mem, &block);
+    ASSERT_EQ(block->FileBlockDevice(), ZX_OK);
 
     END_TEST;
 }
@@ -91,11 +100,11 @@ static bool file_block_device_bad_ring(void) {
     ASSERT_GE(mkblk(path), 0);
 
     virtio_mem_t mem;
-    block_t block = {};
-    setup_block(&block, path, &mem);
-    block.queue.avail->idx = 1;
-    block.queue.avail->ring[0] = QUEUE_SIZE;
-    ASSERT_EQ(file_block_device(&block), ZX_ERR_OUT_OF_RANGE);
+    fbl::unique_ptr<VirtioBlock> block;
+    setup_block(path, &mem, &block);
+    block->queue().avail->idx = 1;
+    block->queue().avail->ring[0] = QUEUE_SIZE;
+    ASSERT_EQ(block->FileBlockDevice(), ZX_ERR_OUT_OF_RANGE);
 
     END_TEST;
 }
@@ -107,34 +116,34 @@ static bool file_block_device_bad_header(void) {
     ASSERT_GE(mkblk(path), 0);
 
     virtio_mem_t mem;
-    block_t block = {};
-    setup_block(&block, path, &mem);
-    block.queue.avail->idx = 1;
+    fbl::unique_ptr<VirtioBlock> block;
+    setup_block(path, &mem, &block);
+    block->queue().avail->idx = 1;
 
-    block.queue.index = 0;
+    block->queue().index = 0;
     set_desc(&mem, 0, sizeof(virtio_mem_t), 1, 0);
-    ASSERT_EQ(file_block_device(&block), ZX_ERR_OUT_OF_RANGE);
-    ASSERT_EQ(block.queue.used->idx, 0u);
+    ASSERT_EQ(block->FileBlockDevice(), ZX_ERR_OUT_OF_RANGE);
+    ASSERT_EQ(block->queue().used->idx, 0u);
 
-    block.queue.index = 0;
+    block->queue().index = 0;
     set_desc(&mem, 0, UINT64_MAX, 0, 0);
-    ASSERT_EQ(file_block_device(&block), ZX_ERR_OUT_OF_RANGE);
-    ASSERT_EQ(block.queue.used->idx, 0u);
+    ASSERT_EQ(block->FileBlockDevice(), ZX_ERR_OUT_OF_RANGE);
+    ASSERT_EQ(block->queue().used->idx, 0u);
 
-    block.queue.index = 0;
+    block->queue().index = 0;
     set_desc(&mem, 0, 0, UINT32_MAX, 0);
-    ASSERT_EQ(file_block_device(&block), ZX_ERR_OUT_OF_RANGE);
-    ASSERT_EQ(block.queue.used->idx, 0u);
+    ASSERT_EQ(block->FileBlockDevice(), ZX_ERR_OUT_OF_RANGE);
+    ASSERT_EQ(block->queue().used->idx, 0u);
 
-    block.queue.index = 0;
+    block->queue().index = 0;
     set_desc(&mem, 0, UINT64_MAX, UINT32_MAX, 0);
-    ASSERT_EQ(file_block_device(&block), ZX_ERR_OUT_OF_RANGE);
-    ASSERT_EQ(block.queue.used->idx, 0u);
+    ASSERT_EQ(block->FileBlockDevice(), ZX_ERR_OUT_OF_RANGE);
+    ASSERT_EQ(block->queue().used->idx, 0u);
 
-    block.queue.index = 0;
+    block->queue().index = 0;
     set_desc(&mem, 0, 0, 1, 0);
-    ASSERT_EQ(file_block_device(&block), ZX_ERR_INVALID_ARGS);
-    ASSERT_EQ(block.queue.used->idx, 0u);
+    ASSERT_EQ(block->FileBlockDevice(), ZX_ERR_INVALID_ARGS);
+    ASSERT_EQ(block->queue().used->idx, 0u);
 
     END_TEST;
 }
@@ -146,14 +155,14 @@ static bool file_block_device_bad_payload(void) {
     ASSERT_GE(mkblk(path), 0);
 
     virtio_mem_t mem;
-    block_t block = {};
-    setup_block(&block, path, &mem);
-    block.queue.avail->idx = 1;
+    fbl::unique_ptr<VirtioBlock> block;
+    setup_block(path, &mem, &block);
+    block->queue().avail->idx = 1;
 
     set_desc(&mem, 0, offsetof(virtio_mem_t, req), sizeof(virtio_blk_req_t), 1);
     set_desc(&mem, 1, sizeof(virtio_mem_t), 1, 2);
-    ASSERT_EQ(file_block_device(&block), ZX_ERR_OUT_OF_RANGE);
-    ASSERT_EQ(block.queue.used->idx, 0u);
+    ASSERT_EQ(block->FileBlockDevice(), ZX_ERR_OUT_OF_RANGE);
+    ASSERT_EQ(block->queue().used->idx, 0u);
 
     END_TEST;
 }
@@ -165,15 +174,15 @@ static bool file_block_device_bad_status(void) {
     ASSERT_GE(mkblk(path), 0);
 
     virtio_mem_t mem;
-    block_t block = {};
-    setup_block(&block, path, &mem);
-    block.queue.avail->idx = 1;
+    fbl::unique_ptr<VirtioBlock> block;
+    setup_block(path, &mem, &block);
+    block->queue().avail->idx = 1;
 
     set_desc(&mem, 0, offsetof(virtio_mem_t, req), sizeof(virtio_blk_req_t), 1);
     set_desc(&mem, 1, offsetof(virtio_mem_t, data), DATA_SIZE, 2);
     set_desc(&mem, 2, offsetof(virtio_mem_t, status), 0, QUEUE_SIZE);
-    ASSERT_EQ(file_block_device(&block), ZX_ERR_INVALID_ARGS);
-    ASSERT_EQ(block.queue.used->idx, 0u);
+    ASSERT_EQ(block->FileBlockDevice(), ZX_ERR_INVALID_ARGS);
+    ASSERT_EQ(block->queue().used->idx, 0u);
 
     END_TEST;
 }
@@ -185,19 +194,19 @@ static bool file_block_device_bad_request(void) {
     ASSERT_GE(mkblk(path), 0);
 
     virtio_mem_t mem;
-    block_t block = {};
-    setup_block(&block, path, &mem);
-    block.queue.avail->idx = 1;
+    fbl::unique_ptr<VirtioBlock> block;
+    setup_block(path, &mem, &block);
+    block->queue().avail->idx = 1;
     mem.req.type = UINT32_MAX;
 
     set_desc(&mem, 0, offsetof(virtio_mem_t, req), sizeof(virtio_blk_req_t), 1);
     set_desc(&mem, 1, offsetof(virtio_mem_t, data), DATA_SIZE, 2);
     set_desc(&mem, 2, offsetof(virtio_mem_t, status), sizeof(uint8_t), QUEUE_SIZE);
-    ASSERT_EQ(file_block_device(&block), ZX_OK);
+    ASSERT_EQ(block->FileBlockDevice(), ZX_OK);
 
-    ASSERT_EQ(block.queue.used->idx, 1u);
-    ASSERT_EQ(block.queue.used->ring[0].id, 0u);
-    ASSERT_EQ(block.queue.used->ring[0].len, 0u);
+    ASSERT_EQ(block->queue().used->idx, 1u);
+    ASSERT_EQ(block->queue().used->ring[0].id, 0u);
+    ASSERT_EQ(block->queue().used->ring[0].len, 0u);
     ASSERT_EQ(mem.status, VIRTIO_BLK_S_IOERR);
 
     END_TEST;
@@ -210,19 +219,19 @@ static bool file_block_device_bad_flush(void) {
     ASSERT_GE(mkblk(path), 0);
 
     virtio_mem_t mem;
-    block_t block = {};
-    setup_block(&block, path, &mem);
-    block.queue.avail->idx = 1;
+    fbl::unique_ptr<VirtioBlock> block;
+    setup_block(path, &mem, &block);
+    block->queue().avail->idx = 1;
     mem.req.type = VIRTIO_BLK_T_FLUSH;
     mem.req.sector = 1;
 
     set_desc(&mem, 0, offsetof(virtio_mem_t, req), sizeof(virtio_blk_req_t), 1);
     set_desc(&mem, 1, offsetof(virtio_mem_t, status), sizeof(uint8_t), QUEUE_SIZE);
-    ASSERT_EQ(file_block_device(&block), ZX_OK);
+    ASSERT_EQ(block->FileBlockDevice(), ZX_OK);
 
-    ASSERT_EQ(block.queue.used->idx, 1u);
-    ASSERT_EQ(block.queue.used->ring[0].id, 0u);
-    ASSERT_EQ(block.queue.used->ring[0].len, 0u);
+    ASSERT_EQ(block->queue().used->idx, 1u);
+    ASSERT_EQ(block->queue().used->ring[0].id, 0u);
+    ASSERT_EQ(block->queue().used->ring[0].len, 0u);
     ASSERT_EQ(mem.status, VIRTIO_BLK_S_IOERR);
 
     END_TEST;
@@ -235,23 +244,23 @@ static bool file_block_device_read(void) {
     ASSERT_GE(mkblk(path), 0);
 
     virtio_mem_t mem;
-    block_t block = {};
-    setup_block(&block, path, &mem);
-    block.queue.avail->idx = 1;
+    fbl::unique_ptr<VirtioBlock> block;
+    setup_block(path, &mem, &block);
+    block->queue().avail->idx = 1;
     memset(mem.data, UINT8_MAX, DATA_SIZE);
 
     set_desc(&mem, 0, offsetof(virtio_mem_t, req), sizeof(virtio_blk_req_t), 1);
     set_desc(&mem, 1, offsetof(virtio_mem_t, data), DATA_SIZE, 2);
     set_desc(&mem, 2, offsetof(virtio_mem_t, status), sizeof(uint8_t), QUEUE_SIZE);
-    ASSERT_EQ(file_block_device(&block), ZX_OK);
+    ASSERT_EQ(block->FileBlockDevice(), ZX_OK);
 
     uint8_t expected[DATA_SIZE];
     memset(expected, 0, DATA_SIZE);
     ASSERT_EQ(memcmp(mem.data, expected, DATA_SIZE), 0);
 
-    ASSERT_EQ(block.queue.used->idx, 1u);
-    ASSERT_EQ(block.queue.used->ring[0].id, 0u);
-    ASSERT_EQ(block.queue.used->ring[0].len, DATA_SIZE);
+    ASSERT_EQ(block->queue().used->idx, 1u);
+    ASSERT_EQ(block->queue().used->ring[0].id, 0u);
+    ASSERT_EQ(block->queue().used->ring[0].len, DATA_SIZE);
     ASSERT_EQ(mem.status, VIRTIO_BLK_S_OK);
 
     END_TEST;
@@ -264,24 +273,24 @@ static bool file_block_device_read_chain(void) {
     ASSERT_GE(mkblk(path), 0);
 
     virtio_mem_t mem;
-    block_t block = {};
-    setup_block(&block, path, &mem);
-    block.queue.avail->idx = 1;
+    fbl::unique_ptr<VirtioBlock> block;
+    setup_block(path, &mem, &block);
+    block->queue().avail->idx = 1;
     memset(mem.data, UINT8_MAX, DATA_SIZE);
 
     set_desc(&mem, 0, offsetof(virtio_mem_t, req), sizeof(virtio_blk_req_t), 1);
     set_desc(&mem, 1, offsetof(virtio_mem_t, data), DATA_SIZE / 2, 2);
     set_desc(&mem, 2, offsetof(virtio_mem_t, data) + (DATA_SIZE / 2), DATA_SIZE / 2, 3);
     set_desc(&mem, 3, offsetof(virtio_mem_t, status), sizeof(uint8_t), QUEUE_SIZE);
-    ASSERT_EQ(file_block_device(&block), ZX_OK);
+    ASSERT_EQ(block->FileBlockDevice(), ZX_OK);
 
     uint8_t expected[DATA_SIZE];
     memset(expected, 0, DATA_SIZE);
     ASSERT_EQ(memcmp(mem.data, expected, DATA_SIZE), 0);
 
-    ASSERT_EQ(block.queue.used->idx, 1u);
-    ASSERT_EQ(block.queue.used->ring[0].id, 0u);
-    ASSERT_EQ(block.queue.used->ring[0].len, DATA_SIZE);
+    ASSERT_EQ(block->queue().used->idx, 1u);
+    ASSERT_EQ(block->queue().used->ring[0].id, 0u);
+    ASSERT_EQ(block->queue().used->ring[0].len, DATA_SIZE);
     ASSERT_EQ(mem.status, VIRTIO_BLK_S_OK);
 
     END_TEST;
@@ -291,31 +300,32 @@ static bool file_block_device_write(void) {
     BEGIN_TEST;
 
     char path[] = "/tmp/file-block-device-write.XXXXXX";
-    ASSERT_GE(mkblk(path), 0);
+    int fd = mkblk(path);
+    ASSERT_GE(fd, 0);
 
     virtio_mem_t mem;
-    block_t block = {};
-    setup_block(&block, path, &mem);
-    block.queue.avail->idx = 1;
+    fbl::unique_ptr<VirtioBlock> block;
+    setup_block(path, &mem, &block);
+    block->queue().avail->idx = 1;
     mem.req.type = VIRTIO_BLK_T_OUT;
     memset(mem.data, UINT8_MAX, DATA_SIZE);
 
     set_desc(&mem, 0, offsetof(virtio_mem_t, req), sizeof(virtio_blk_req_t), 1);
     set_desc(&mem, 1, offsetof(virtio_mem_t, data), DATA_SIZE, 2);
     set_desc(&mem, 2, offsetof(virtio_mem_t, status), sizeof(uint8_t), QUEUE_SIZE);
-    ASSERT_EQ(file_block_device(&block), ZX_OK);
+    ASSERT_EQ(block->FileBlockDevice(), ZX_OK);
 
     uint8_t actual[DATA_SIZE];
-    ASSERT_EQ(lseek(block.fd, 0, SEEK_SET), 0);
-    ASSERT_EQ(read(block.fd, actual, DATA_SIZE), DATA_SIZE);
+    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
+    ASSERT_EQ(read(fd, actual, DATA_SIZE), DATA_SIZE);
 
     uint8_t expected[DATA_SIZE];
     memset(expected, UINT8_MAX, DATA_SIZE);
     ASSERT_EQ(memcmp(actual, expected, DATA_SIZE), 0);
 
-    ASSERT_EQ(block.queue.used->idx, 1u);
-    ASSERT_EQ(block.queue.used->ring[0].id, 0u);
-    ASSERT_EQ(block.queue.used->ring[0].len, DATA_SIZE);
+    ASSERT_EQ(block->queue().used->idx, 1u);
+    ASSERT_EQ(block->queue().used->ring[0].id, 0u);
+    ASSERT_EQ(block->queue().used->ring[0].len, DATA_SIZE);
     ASSERT_EQ(mem.status, VIRTIO_BLK_S_OK);
 
     END_TEST;
@@ -325,12 +335,13 @@ static bool file_block_device_write_chain(void) {
     BEGIN_TEST;
 
     char path[] = "/tmp/file-block-device-write-chain.XXXXXX";
-    ASSERT_GE(mkblk(path), 0);
+    int fd = mkblk(path);
+    ASSERT_GE(fd, 0);
 
     virtio_mem_t mem;
-    block_t block = {};
-    setup_block(&block, path, &mem);
-    block.queue.avail->idx = 1;
+    fbl::unique_ptr<VirtioBlock> block;
+    setup_block(path, &mem, &block);
+    block->queue().avail->idx = 1;
     mem.req.type = VIRTIO_BLK_T_OUT;
     memset(mem.data, UINT8_MAX, DATA_SIZE);
 
@@ -338,19 +349,19 @@ static bool file_block_device_write_chain(void) {
     set_desc(&mem, 1, offsetof(virtio_mem_t, data), DATA_SIZE / 2, 2);
     set_desc(&mem, 2, offsetof(virtio_mem_t, data) + (DATA_SIZE / 2), DATA_SIZE / 2, 3);
     set_desc(&mem, 3, offsetof(virtio_mem_t, status), sizeof(uint8_t), QUEUE_SIZE);
-    ASSERT_EQ(file_block_device(&block), ZX_OK);
+    ASSERT_EQ(block->FileBlockDevice(), ZX_OK);
 
     uint8_t actual[DATA_SIZE];
-    ASSERT_EQ(lseek(block.fd, 0, SEEK_SET), 0);
-    ASSERT_EQ(read(block.fd, actual, DATA_SIZE), DATA_SIZE);
+    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
+    ASSERT_EQ(read(fd, actual, DATA_SIZE), DATA_SIZE);
 
     uint8_t expected[DATA_SIZE];
     memset(expected, UINT8_MAX, DATA_SIZE);
     ASSERT_EQ(memcmp(actual, expected, DATA_SIZE), 0);
 
-    ASSERT_EQ(block.queue.used->idx, 1u);
-    ASSERT_EQ(block.queue.used->ring[0].id, 0u);
-    ASSERT_EQ(block.queue.used->ring[0].len, DATA_SIZE);
+    ASSERT_EQ(block->queue().used->idx, 1u);
+    ASSERT_EQ(block->queue().used->ring[0].id, 0u);
+    ASSERT_EQ(block->queue().used->ring[0].len, DATA_SIZE);
     ASSERT_EQ(mem.status, VIRTIO_BLK_S_OK);
 
     END_TEST;
@@ -363,18 +374,18 @@ static bool file_block_device_flush(void) {
     ASSERT_GE(mkblk(path), 0);
 
     virtio_mem_t mem;
-    block_t block = {};
-    setup_block(&block, path, &mem);
-    block.queue.avail->idx = 1;
+    fbl::unique_ptr<VirtioBlock> block;
+    setup_block(path, &mem, &block);
+    block->queue().avail->idx = 1;
     mem.req.type = VIRTIO_BLK_T_FLUSH;
 
     set_desc(&mem, 0, offsetof(virtio_mem_t, req), sizeof(virtio_blk_req_t), 1);
     set_desc(&mem, 1, offsetof(virtio_mem_t, status), sizeof(uint8_t), QUEUE_SIZE);
-    ASSERT_EQ(file_block_device(&block), ZX_OK);
+    ASSERT_EQ(block->FileBlockDevice(), ZX_OK);
 
-    ASSERT_EQ(block.queue.used->idx, 1u);
-    ASSERT_EQ(block.queue.used->ring[0].id, 0u);
-    ASSERT_EQ(block.queue.used->ring[0].len, 0u);
+    ASSERT_EQ(block->queue().used->idx, 1u);
+    ASSERT_EQ(block->queue().used->ring[0].id, 0u);
+    ASSERT_EQ(block->queue().used->ring[0].len, 0u);
     ASSERT_EQ(mem.status, VIRTIO_BLK_S_OK);
 
     END_TEST;
@@ -387,32 +398,32 @@ static bool file_block_device_flush_data(void) {
     ASSERT_GE(mkblk(path), 0);
 
     virtio_mem_t mem;
-    block_t block = {};
-    setup_block(&block, path, &mem);
-    block.queue.avail->idx = 1;
+    fbl::unique_ptr<VirtioBlock> block;
+    setup_block(path, &mem, &block);
+    block->queue().avail->idx = 1;
     mem.req.type = VIRTIO_BLK_T_FLUSH;
 
     set_desc(&mem, 0, offsetof(virtio_mem_t, req), sizeof(virtio_blk_req_t), 1);
     set_desc(&mem, 1, offsetof(virtio_mem_t, data), DATA_SIZE, 2);
     set_desc(&mem, 2, offsetof(virtio_mem_t, status), sizeof(uint8_t), QUEUE_SIZE);
-    ASSERT_EQ(file_block_device(&block), ZX_OK);
+    ASSERT_EQ(block->FileBlockDevice(), ZX_OK);
 
-    ASSERT_EQ(block.queue.used->idx, 1u);
-    ASSERT_EQ(block.queue.used->ring[0].id, 0u);
-    ASSERT_EQ(block.queue.used->ring[0].len, 128u);
+    ASSERT_EQ(block->queue().used->idx, 1u);
+    ASSERT_EQ(block->queue().used->ring[0].id, 0u);
+    ASSERT_EQ(block->queue().used->ring[0].len, 128u);
     ASSERT_EQ(mem.status, VIRTIO_BLK_S_OK);
 
     END_TEST;
 }
 
 static zx_status_t write_sector(int fd, uint8_t value, uint32_t sector, size_t len) {
-    if (len > SECTOR_SIZE)
+    if (len > VirtioBlock::kSectorSize)
         return ZX_ERR_OUT_OF_RANGE;
 
-    uint8_t buffer[SECTOR_SIZE];
+    uint8_t buffer[VirtioBlock::kSectorSize];
     memset(buffer, value, len);
 
-    ssize_t ret = lseek(fd, sector * SECTOR_SIZE, SEEK_SET);
+    ssize_t ret = lseek(fd, sector * VirtioBlock::kSectorSize, SEEK_SET);
     if (ret < 0)
         return ZX_ERR_IO;
     ret = write(fd, buffer, len);
@@ -429,11 +440,12 @@ static bool file_block_device_multiple_descriptors(void) {
     BEGIN_TEST;
 
     char path[] = "/tmp/file-block-multiple-descriptors.XXXXXX";
-    ASSERT_GE(mkblk(path), 0);
+    int fd = mkblk(path);
+    ASSERT_GE(fd, 0);
 
     virtio_mem_t mem;
-    block_t block = {};
-    setup_block(&block, path, &mem);
+    fbl::unique_ptr<VirtioBlock> block;
+    setup_block(path, &mem, &block);
 
     // Request 1 (descriptors 0,1,2).
     const uint8_t request1_bitpattern = 0xaa;
@@ -443,40 +455,40 @@ static bool file_block_device_multiple_descriptors(void) {
     set_desc(&mem, 0, offsetof(virtio_mem_t, requests[0].req), sizeof(virtio_blk_req_t), 1);
     set_desc(&mem, 1, offsetof(virtio_mem_t, requests[0].data), DATA_SIZE, 2);
     set_desc(&mem, 2, offsetof(virtio_mem_t, requests[0].status), sizeof(uint8_t), QUEUE_SIZE);
-    block.queue.avail->ring[0] = 0;
+    block->queue().avail->ring[0] = 0;
 
     // Request 2 (descriptors 3,4,5).
     const uint8_t request2_bitpattern = 0xdd;
     mem.requests[1].req.type = VIRTIO_BLK_T_IN;
     mem.requests[1].req.sector = 1;
     memset(mem.requests[1].data, UINT8_MAX, DATA_SIZE);
-    block.queue.avail->ring[1] = 3;
+    block->queue().avail->ring[1] = 3;
     set_desc(&mem, 3, offsetof(virtio_mem_t, requests[1].req), sizeof(virtio_blk_req_t), 4);
     set_desc(&mem, 4, offsetof(virtio_mem_t, requests[1].data), DATA_SIZE, 5);
     set_desc(&mem, 5, offsetof(virtio_mem_t, requests[1].status), sizeof(uint8_t), QUEUE_SIZE);
 
-    block.queue.index = 0;
-    block.queue.avail->idx = 2;
+    block->queue().index = 0;
+    block->queue().avail->idx = 2;
 
     // Initalize block device. Write unique bit patterns to sector 1 and 2.
-    ASSERT_EQ(write_sector(block.fd, request1_bitpattern, 0, DATA_SIZE), ZX_OK);
-    ASSERT_EQ(write_sector(block.fd, request2_bitpattern, 1, DATA_SIZE), ZX_OK);
-    ASSERT_EQ(file_block_device(&block), ZX_OK);
+    ASSERT_EQ(write_sector(fd, request1_bitpattern, 0, DATA_SIZE), ZX_OK);
+    ASSERT_EQ(write_sector(fd, request2_bitpattern, 1, DATA_SIZE), ZX_OK);
+    ASSERT_EQ(block->FileBlockDevice(), ZX_OK);
 
     // Verify request 1.
     uint8_t expected[DATA_SIZE];
     memset(expected, request1_bitpattern, DATA_SIZE);
     ASSERT_EQ(memcmp(mem.requests[0].data, expected, DATA_SIZE), 0);
-    ASSERT_EQ(block.queue.used->ring[0].id, 0u);
-    ASSERT_EQ(block.queue.used->ring[0].len, DATA_SIZE);
+    ASSERT_EQ(block->queue().used->ring[0].id, 0u);
+    ASSERT_EQ(block->queue().used->ring[0].len, DATA_SIZE);
 
     // Verify request 2.
     memset(expected, request2_bitpattern, DATA_SIZE);
     ASSERT_EQ(memcmp(mem.requests[1].data, expected, DATA_SIZE), 0);
-    ASSERT_EQ(block.queue.used->ring[1].id, 3u);
-    ASSERT_EQ(block.queue.used->ring[1].len, DATA_SIZE);
+    ASSERT_EQ(block->queue().used->ring[1].id, 3u);
+    ASSERT_EQ(block->queue().used->ring[1].len, DATA_SIZE);
 
-    ASSERT_EQ(block.queue.used->idx, 2u);
+    ASSERT_EQ(block->queue().used->idx, 2u);
     ASSERT_EQ(mem.status, VIRTIO_BLK_S_OK);
 
     END_TEST;
@@ -486,33 +498,34 @@ static bool file_block_device_read_only(void) {
     BEGIN_TEST;
 
     char path[] = "/tmp/file-block-device-read-only.XXXXXX";
-    ASSERT_GE(mkblk(path), 0);
+    int fd = mkblk(path);
+    ASSERT_GE(fd, 0);
 
     virtio_mem_t mem;
-    block_t block = {};
-    setup_block(&block, path, &mem);
-    block.queue.avail->idx = 1;
+    fbl::unique_ptr<VirtioBlock> block;
+    setup_block(path, &mem, &block);
+    block->queue().avail->idx = 1;
     mem.req.type = VIRTIO_BLK_T_OUT;
     memset(mem.data, UINT8_MAX, DATA_SIZE);
-    block.virtio_device.features |= VIRTIO_BLK_F_RO;
+    block->add_device_features(VIRTIO_BLK_F_RO);
 
     set_desc(&mem, 0, offsetof(virtio_mem_t, req), sizeof(virtio_blk_req_t), 1);
     set_desc(&mem, 1, offsetof(virtio_mem_t, data), DATA_SIZE, 2);
     set_desc(&mem, 2, offsetof(virtio_mem_t, status), sizeof(uint8_t), QUEUE_SIZE);
-    ASSERT_EQ(file_block_device(&block), ZX_OK);
+    ASSERT_EQ(block->FileBlockDevice(), ZX_OK);
 
     // Verify the buffer was returned to the used ring.
-    ASSERT_EQ(block.queue.used->idx, 1u);
-    ASSERT_EQ(block.queue.used->ring[0].id, 0u);
+    ASSERT_EQ(block->queue().used->idx, 1u);
+    ASSERT_EQ(block->queue().used->ring[0].id, 0u);
 
     // No bytes written and error status set.
-    ASSERT_EQ(block.queue.used->ring[0].len, 0u);
+    ASSERT_EQ(block->queue().used->ring[0].len, 0u);
     ASSERT_EQ(mem.status, VIRTIO_BLK_S_UNSUPP);
 
     // Read back bytes from the file.
     uint8_t actual[DATA_SIZE];
-    ASSERT_EQ(lseek(block.fd, 0, SEEK_SET), 0);
-    ASSERT_EQ(read(block.fd, actual, DATA_SIZE), DATA_SIZE);
+    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
+    ASSERT_EQ(read(fd, actual, DATA_SIZE), DATA_SIZE);
 
     // The image file is initialized to all 0's and we attempted to write all
     // 1's. Verify that the file contents are unchanged.

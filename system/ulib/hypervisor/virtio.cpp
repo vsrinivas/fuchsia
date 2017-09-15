@@ -16,9 +16,26 @@
 #include <virtio/virtio.h>
 #include <virtio/virtio_ring.h>
 
+#define QUEUE_SIZE 128u
+
 // Convert guest-physical addresses to usable virtual addresses.
 #define guest_paddr_to_host_vaddr(device, addr) \
-    (static_cast<zx_vaddr_t>(((device)->guest_physmem_addr) + (addr)))
+    (static_cast<zx_vaddr_t>(((device)->guest_physmem_addr()) + (addr)))
+
+VirtioDevice::VirtioDevice(uint8_t device_id, void* config, size_t config_size,
+                           virtio_queue_t* queues, uint16_t num_queues,
+                           uintptr_t guest_physmem_addr, size_t guest_physmem_size)
+    : device_id_(device_id), device_config_(config), device_config_size_(config_size),
+      num_queues_(num_queues), queues_(queues), guest_physmem_addr_(guest_physmem_addr),
+      guest_physmem_size_(guest_physmem_size), pci_(this) {
+    // Virt queue initialization.
+    for (int i = 0; i < num_queues_; ++i) {
+        virtio_queue_t* queue = &queues_[i];
+        memset(queue, 0, sizeof(*queue));
+        queue->size = QUEUE_SIZE;
+        queue->virtio_device = this;
+    }
+}
 
 // Returns a circular index into a Virtio ring.
 static uint32_t ring_index(virtio_queue_t* queue, uint32_t index) {
@@ -31,9 +48,9 @@ static int ring_avail_count(virtio_queue_t* queue) {
     return queue->avail->idx - queue->index;
 }
 
-static bool validate_queue_range(virtio_device_t* device, zx_vaddr_t addr, size_t size) {
-    uintptr_t mem_addr = device->guest_physmem_addr;
-    size_t mem_size = device->guest_physmem_size;
+static bool validate_queue_range(VirtioDevice* device, zx_vaddr_t addr, size_t size) {
+    uintptr_t mem_addr = device->guest_physmem_addr();
+    size_t mem_size = device->guest_physmem_size();
     zx_vaddr_t range_end = addr + size;
     zx_vaddr_t mem_end = mem_addr + mem_size;
 
@@ -43,7 +60,7 @@ static bool validate_queue_range(virtio_device_t* device, zx_vaddr_t addr, size_
 template <typename T>
 static void queue_set_segment_addr(virtio_queue_t* queue, uint64_t guest_paddr, size_t size,
                                    T** ptr) {
-    virtio_device_t* device = queue->virtio_device;
+    VirtioDevice* device = queue->virtio_device;
     zx_vaddr_t host_vaddr = guest_paddr_to_host_vaddr(device, guest_paddr);
 
     *ptr = validate_queue_range(device, host_vaddr, size)
@@ -84,35 +101,31 @@ void virtio_queue_signal(virtio_queue_t* queue) {
     mtx_unlock(&queue->mutex);
 }
 
-zx_status_t virtio_device_notify(virtio_device_t* device) {
-    return pci_interrupt(&device->pci_device);
+zx_status_t VirtioDevice::NotifyGuest() {
+    return pci_.Interrupt();
 }
 
-zx_status_t virtio_device_kick(virtio_device_t* device, uint16_t queue_sel) {
-    if (queue_sel >= device->num_queues)
+zx_status_t VirtioDevice::Kick(uint16_t queue_sel) {
+    if (queue_sel >= num_queues_)
         return ZX_ERR_OUT_OF_RANGE;
 
-    // Invoke the device callback if one has been provided.
-    if (device->ops->queue_notify != NULL) {
-        zx_status_t status = device->ops->queue_notify(device, queue_sel);
-        if (status != ZX_OK) {
-            fprintf(stderr, "Failed to handle queue notify event.\n");
-            return status;
-        }
+    zx_status_t status = HandleQueueNotify(queue_sel);
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to handle queue notify event.\n");
+        return status;
+    }
 
-        // Send an interrupt back to the guest if we've generated one while
-        // processing the queue.
-        fbl::AutoLock lock(&device->mutex);
-        if (device->isr_status > 0) {
-            return pci_interrupt(&device->pci_device);
-        }
+    // Send an interrupt back to the guest if we've generated one while
+    // processing the queue.
+    fbl::AutoLock lock(&mutex_);
+    if (isr_status_ > 0) {
+        return NotifyGuest();
     }
 
     // Notify threads waiting on a descriptor.
-    virtio_queue_signal(&device->queues[queue_sel]);
+    virtio_queue_signal(&queues_[queue_sel_]);
     return ZX_OK;
 }
-
 
 // This must not return any errors besides ZX_ERR_NOT_FOUND.
 static zx_status_t virtio_queue_next_avail_locked(virtio_queue_t* queue, uint16_t* index) {
@@ -162,7 +175,7 @@ static int virtio_queue_poll_task(void* ctx) {
             break;
         }
 
-        result = virtio_device_notify(args->queue->virtio_device);
+        result = args->queue->virtio_device->NotifyGuest();
         if (result != ZX_OK)
             break;
     }
@@ -192,9 +205,9 @@ zx_status_t virtio_queue_poll(virtio_queue_t* queue, virtio_queue_poll_fn_t hand
 
 zx_status_t virtio_queue_read_desc(virtio_queue_t* queue, uint16_t desc_index,
                                    virtio_desc_t* out) {
-    virtio_device_t* device = queue->virtio_device;
+    VirtioDevice* device = queue->virtio_device;
     volatile struct vring_desc& desc = queue->desc[desc_index];
-    size_t mem_size = device->guest_physmem_size;
+    size_t mem_size = device->guest_physmem_size();
 
     const uint64_t end = desc.addr + desc.len;
     if (end < desc.addr || end > mem_size)
@@ -222,17 +235,14 @@ void virtio_queue_return(virtio_queue_t* queue, uint16_t index, uint32_t len) {
 
     // Set the queue bit in the device ISR so that the driver knows to check
     // the queues on the next interrupt.
-    virtio_device_t* device = queue->virtio_device;
-    mtx_lock(&device->mutex);
-    device->isr_status |= VIRTIO_ISR_QUEUE;
-    mtx_unlock(&device->mutex);
+    queue->virtio_device->add_isr_flags(VirtioDevice::VIRTIO_ISR_QUEUE);
 }
 
 zx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handler, void* context) {
     uint16_t head;
     uint32_t used_len = 0;
-    uintptr_t mem_addr = queue->virtio_device->guest_physmem_addr;
-    size_t mem_size = queue->virtio_device->guest_physmem_size;
+    uintptr_t mem_addr = queue->virtio_device->guest_physmem_addr();
+    size_t mem_size = queue->virtio_device->guest_physmem_size();
 
     // Get the next descriptor from the available ring. If none are available
     // we can just no-op.
@@ -267,45 +277,45 @@ zx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handle
     return ring_avail_count(queue) > 0 ? ZX_ERR_NEXT : ZX_OK;
 }
 
-zx_status_t virtio_device_config_read(const virtio_device_t* device, void* config, uint16_t port,
-                                      uint8_t access_size, zx_vcpu_io_t* vcpu_io) {
+zx_status_t VirtioDevice::ReadConfig(uint16_t port, uint8_t access_size, zx_vcpu_io_t* vcpu_io) {
+    fbl::AutoLock lock(&config_mutex_);
     vcpu_io->access_size = access_size;
     switch (access_size) {
     case 1: {
-        uint8_t* buf = reinterpret_cast<uint8_t*>(config);
+        uint8_t* buf = reinterpret_cast<uint8_t*>(device_config_);
         vcpu_io->u8 = buf[port];
         return ZX_OK;
     }
     case 2: {
-        uint16_t* buf = reinterpret_cast<uint16_t*>(config);
-        vcpu_io->u16 = buf[port/2];
+        uint16_t* buf = reinterpret_cast<uint16_t*>(device_config_);
+        vcpu_io->u16 = buf[port / 2];
         return ZX_OK;
     }
     case 4: {
-        uint32_t* buf = reinterpret_cast<uint32_t*>(config);
-        vcpu_io->u32 = buf[port/4];
+        uint32_t* buf = reinterpret_cast<uint32_t*>(device_config_);
+        vcpu_io->u32 = buf[port / 4];
         return ZX_OK;
     }
     }
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t virtio_device_config_write(const virtio_device_t* device, void* config, uint16_t port,
-                                       const zx_vcpu_io_t* io) {
+zx_status_t VirtioDevice::WriteConfig(uint16_t port, const zx_vcpu_io_t* io) {
+    fbl::AutoLock lock(&config_mutex_);
     switch (io->access_size) {
     case 1: {
-        uint8_t* buf = reinterpret_cast<uint8_t*>(config);
+        uint8_t* buf = reinterpret_cast<uint8_t*>(device_config_);
         buf[port] = io->u8;
         return ZX_OK;
     }
     case 2: {
-        uint16_t* buf = reinterpret_cast<uint16_t*>(config);
-        buf[port/2] = io->u16;
+        uint16_t* buf = reinterpret_cast<uint16_t*>(device_config_);
+        buf[port / 2] = io->u16;
         return ZX_OK;
     }
     case 4: {
-        uint32_t* buf = reinterpret_cast<uint32_t*>(config);
-        buf[port/4] = io->u32;
+        uint32_t* buf = reinterpret_cast<uint32_t*>(device_config_);
+        buf[port / 4] = io->u32;
         return ZX_OK;
     }
     }
