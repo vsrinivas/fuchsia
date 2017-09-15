@@ -220,7 +220,6 @@ if (is_fuchsia) {
         forward_variables_from(invoker,
                                [
                                  "data_deps",
-                                 "deps",
                                  "public_deps",
                                  "all_dependent_configs",
                                  "public_configs",
