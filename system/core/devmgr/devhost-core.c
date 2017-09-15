@@ -289,8 +289,8 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
     }
     if (parent == dev_create_parent) {
         // check for magic parent value indicating
-        // shadow device creation, and if so, ensure
-        // we don't add more than one shadow device
+        // proxy device creation, and if so, ensure
+        // we don't add more than one proxy device
         // per create() op...
         if (dev_create_device != NULL) {
             return ZX_ERR_BAD_STATE;
@@ -326,7 +326,7 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
     // or, for instanced devices, by the last close
     dev_ref_acquire(dev);
 
-    // shadow devices are created through this handshake process
+    // proxy devices are created through this handshake process
     if (parent == dev_create_parent) {
         dev_create_device = dev;
         dev->flags |= DEV_FLAG_ADDED;

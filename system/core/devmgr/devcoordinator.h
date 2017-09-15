@@ -65,7 +65,7 @@ struct dc_device {
     devnode_t* self;
     devnode_t* link;
     device_t* parent;
-    device_t* shadow;
+    device_t* proxy;
 
     // listnode for this device in its parent's
     // list-of-children
@@ -112,7 +112,7 @@ struct dc_device {
 // with the rpc channel, allowing complete destruction.
 #define DEV_CTX_ZOMBIE     0x20
 
-#define DEV_CTX_SHADOW     0x40
+#define DEV_CTX_PROXY      0x40
 
 struct dc_driver {
     const char* name;
@@ -170,7 +170,7 @@ typedef struct {
 #define DC_OP_CREATE_DEVICE_STUB 0x80000001
 #define DC_OP_CREATE_DEVICE      0x80000002
 #define DC_OP_BIND_DRIVER        0x80000003
-#define DC_OP_CONNECT_SHADOW     0x80000004
+#define DC_OP_CONNECT_PROXY      0x80000004
 
 // Host->Coord Ops
 #define DC_OP_STATUS             0x80000010

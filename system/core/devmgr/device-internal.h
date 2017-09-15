@@ -6,7 +6,7 @@
 
 #include <ddk/device.h>
 
-typedef struct shadow_iostate shadow_iostate_t;
+typedef struct proxy_iostate proxy_iostate_t;
 
 struct zx_device {
     uintptr_t magic;
@@ -51,7 +51,7 @@ struct zx_device {
 
     // iostate
     void* ios;
-    shadow_iostate_t* shadow_ios;
+    proxy_iostate_t* proxy_ios;
 
     char name[ZX_DEVICE_NAME_MAX + 1];
 };

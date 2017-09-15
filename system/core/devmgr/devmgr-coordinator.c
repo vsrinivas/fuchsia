@@ -235,16 +235,16 @@ static void dc_dump_device(device_t* dev, size_t indent) {
     } else {
         dmprintf("%*s%c%s%c pid=%zu%s %s\n",
                  (int) (indent * 3), "",
-                 dev->flags & DEV_CTX_SHADOW ? '<' : '[',
+                 dev->flags & DEV_CTX_PROXY ? '<' : '[',
                  dev->name,
-                 dev->flags & DEV_CTX_SHADOW ? '>' : ']',
+                 dev->flags & DEV_CTX_PROXY ? '>' : ']',
                  pid, extra,
                  dev->libname ? dev->libname : "");
     }
     device_t* child;
-    if (dev->shadow) {
+    if (dev->proxy) {
         indent++;
-        dc_dump_device(dev->shadow, indent);
+        dc_dump_device(dev->proxy, indent);
     }
     list_for_every_entry(&dev->children, child, device_t, node) {
         dc_dump_device(child, indent + 1);
@@ -274,7 +274,7 @@ static void dc_dump_device_props(device_t* dev) {
                  dev->flags & DEV_CTX_BOUND      ? " Bound"     : "",
                  dev->flags & DEV_CTX_DEAD       ? " Dead"      : "",
                  dev->flags & DEV_CTX_ZOMBIE     ? " Zombie"    : "",
-                 dev->flags & DEV_CTX_SHADOW     ? " Shadow"    : "");
+                 dev->flags & DEV_CTX_PROXY      ? " Proxy"     : "");
 
         char a = (char)((dev->protocol_id >> 24) & 0xFF);
         char b = (char)((dev->protocol_id >> 16) & 0xFF);
@@ -305,8 +305,8 @@ static void dc_dump_device_props(device_t* dev) {
     }
 
     device_t* child;
-    if (dev->shadow) {
-        dc_dump_device_props(dev->shadow);
+    if (dev->proxy) {
+        dc_dump_device_props(dev->proxy);
     }
     list_for_every_entry(&dev->children, child, device_t, node) {
         dc_dump_device_props(child);
@@ -407,7 +407,7 @@ static zx_status_t dc_get_topo_path(device_t* dev, char* out, size_t max) {
     size_t total = 1;
 
     while (dev != NULL) {
-        if (dev->flags & DEV_CTX_SHADOW) {
+        if (dev->flags & DEV_CTX_PROXY) {
             dev = dev->parent;
         }
         const char* name;
@@ -597,7 +597,7 @@ static void dc_release_devhost(devhost_t* dh) {
     free(dh);
 }
 
-// called when device children or shadows are removed
+// called when device children or proxys are removed
 static void dc_release_device(device_t* dev) {
     log(DEVLC, "devcoord: release dev %p name='%s' ref=%d\n", dev, dev->name, dev->refcount);
 
@@ -692,10 +692,10 @@ static zx_status_t dc_add_device(device_t* parent,
     // We exist within our parent's device host
     dev->host = parent->host;
 
-    // If our parent is a shadow, for the purpose
+    // If our parent is a proxy, for the purpose
     // of devicefs, we need to work with *its* parent
-    // which is the device that it is shadowing.
-    if (parent->flags & DEV_CTX_SHADOW) {
+    // which is the device that it is proxying.
+    if (parent->flags & DEV_CTX_PROXY) {
         parent = parent->parent;
     }
 
@@ -776,7 +776,7 @@ static zx_status_t dc_remove_device(device_t* dev, bool forced) {
         // If we are responding to a disconnect,
         // we'll remove all the other devices on this devhost too.
         // A side-effect of this is that the devhost will be released,
-        // as well as any shadow devices.
+        // as well as any proxy devices.
         if (forced) {
             dh->flags |= DEV_HOST_DYING;
 
@@ -803,8 +803,8 @@ static zx_status_t dc_remove_device(device_t* dev, bool forced) {
     device_t* parent = dev->parent;
     if (parent != NULL) {
         dev->parent = NULL;
-        if (dev->flags & DEV_CTX_SHADOW) {
-            parent->shadow = NULL;
+        if (dev->flags & DEV_CTX_PROXY) {
+            parent->proxy = NULL;
         } else {
             list_delete(&dev->node);
             if (list_is_empty(&parent->children)) {
@@ -834,7 +834,7 @@ static zx_status_t dc_remove_device(device_t* dev, bool forced) {
         dc_release_device(parent);
     }
 
-    if (!(dev->flags & DEV_CTX_SHADOW)) {
+    if (!(dev->flags & DEV_CTX_PROXY)) {
         // remove from list of all devices
         list_delete(&dev->anode);
         dc_notify(dev, DEVMGR_OP_DEVICE_REMOVED);
@@ -856,8 +856,8 @@ static zx_status_t dc_remove_device(device_t* dev, bool forced) {
 static zx_status_t dc_bind_device(device_t* dev, const char* drvlibname) {
      log(INFO, "devcoord: dc_bind_device() '%s'\n", drvlibname);
 
-    // shouldn't be possible to get a bind request for a shadow device
-    if (dev->flags & DEV_CTX_SHADOW) {
+    // shouldn't be possible to get a bind request for a proxy device
+    if (dev->flags & DEV_CTX_PROXY) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -1070,15 +1070,15 @@ static zx_status_t dc_handle_device(port_handler_t* ph, zx_signals_t signals, ui
 
 // send message to devhost, requesting the creation of a device
 static zx_status_t dh_create_device(device_t* dev, devhost_t* dh,
-                                    const char* args, zx_handle_t rpc_shadow) {
+                                    const char* args, zx_handle_t rpc_proxy) {
     dc_msg_t msg;
     uint32_t mlen;
     zx_status_t r;
 
     // Where to get information to send to devhost from?
-    // Shadow devices defer to the device they're shadowing,
+    // Proxy devices defer to the device they're proxying,
     // otherwise we use the information from the device itself.
-    device_t* info = (dev->flags & DEV_CTX_SHADOW) ? dev->parent : dev;
+    device_t* info = (dev->flags & DEV_CTX_PROXY) ? dev->parent : dev;
     const char* libname = info->libname;
 
     if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, libname, args)) < 0) {
@@ -1102,10 +1102,10 @@ static zx_status_t dh_create_device(device_t* dev, devhost_t* dh,
         msg.op = DC_OP_CREATE_DEVICE_STUB;
     }
 
-    if (rpc_shadow) {
-        handle[hcount++] = rpc_shadow;
+    if (rpc_proxy) {
+        handle[hcount++] = rpc_proxy;
         if (info->hrsrc) {
-            log(ERROR, "devcoord: shadow device has a resource?!\n");
+            log(ERROR, "devcoord: proxy device has a resource?!\n");
         }
     } else if (info->hrsrc != ZX_HANDLE_INVALID) {
         if ((r = zx_handle_duplicate(info->hrsrc, ZX_RIGHT_SAME_RIGHTS, handle + hcount)) < 0) {
@@ -1142,8 +1142,8 @@ fail_watch:
     return r;
 }
 
-static zx_status_t dc_create_shadow(device_t* parent) {
-    if (parent->shadow != NULL) {
+static zx_status_t dc_create_proxy(device_t* parent) {
+    if (parent->proxy != NULL) {
         return ZX_OK;
     }
 
@@ -1162,13 +1162,13 @@ static zx_status_t dc_create_shadow(device_t* parent) {
 
     list_initialize(&dev->children);
     list_initialize(&dev->pending);
-    dev->flags = DEV_CTX_SHADOW;
+    dev->flags = DEV_CTX_PROXY;
     dev->protocol_id = parent->protocol_id;
     dev->parent = parent;
     dev->refcount = 1;
-    parent->shadow = dev;
+    parent->proxy = dev;
     parent->refcount++;
-    log(DEVLC, "devcoord: dev %p name='%s' ++ref=%d (shadow)\n",
+    log(DEVLC, "devcoord: dev %p name='%s' ++ref=%d (proxy)\n",
         parent, parent->name, parent->refcount);
     return ZX_OK;
 }
@@ -1210,7 +1210,7 @@ static zx_status_t dh_bind_driver(device_t* dev, const char* libname) {
     return ZX_OK;
 }
 
-static zx_status_t dh_connect_shadow(device_t* dev, zx_handle_t h) {
+static zx_status_t dh_connect_proxy(device_t* dev, zx_handle_t h) {
     dc_msg_t msg;
     uint32_t mlen;
     zx_status_t r;
@@ -1219,7 +1219,7 @@ static zx_status_t dh_connect_shadow(device_t* dev, zx_handle_t h) {
         return r;
     }
     msg.txid = 0;
-    msg.op = DC_OP_CONNECT_SHADOW;
+    msg.op = DC_OP_CONNECT_PROXY;
     if ((r = zx_channel_write(dev->hrpc, 0, &msg, mlen, &h, 1)) < 0) {
         zx_handle_close(h);
     }
@@ -1241,7 +1241,7 @@ static zx_status_t dc_attempt_bind(driver_t* drv, device_t* dev) {
     }
 
     // busdev args are "processname,args"
-    const char* arg0 = (dev->flags & DEV_CTX_SHADOW) ? dev->parent->args : dev->args;
+    const char* arg0 = (dev->flags & DEV_CTX_PROXY) ? dev->parent->args : dev->args;
     const char* arg1 = strchr(arg0, ',');
     if (arg1 == NULL) {
         return ZX_ERR_INTERNAL;
@@ -1253,44 +1253,44 @@ static zx_status_t dc_attempt_bind(driver_t* drv, device_t* dev) {
     snprintf(devhostname, sizeof(devhostname), "devhost:%.*s", (int) arg0len, arg0);
 
     zx_status_t r;
-    if ((r = dc_create_shadow(dev)) < 0) {
-        log(ERROR, "devcoord: cannot create shadow device: %d\n", r);
+    if ((r = dc_create_proxy(dev)) < 0) {
+        log(ERROR, "devcoord: cannot create proxy device: %d\n", r);
         return r;
     }
 
     // if this device has no devhost, first instantiate it
-    if (dev->shadow->host == NULL) {
+    if (dev->proxy->host == NULL) {
         zx_handle_t h0 = ZX_HANDLE_INVALID, h1 = ZX_HANDLE_INVALID;
 
-        // the immortal root devices do not provide shadow rpc
-        bool need_shadow_rpc = !(dev->flags & DEV_CTX_IMMORTAL);
+        // the immortal root devices do not provide proxy rpc
+        bool need_proxy_rpc = !(dev->flags & DEV_CTX_IMMORTAL);
 
-        if (need_shadow_rpc) {
-            // create rpc channel for shadow device to talk to the busdev it shadows
+        if (need_proxy_rpc) {
+            // create rpc channel for proxy device to talk to the busdev it proxys
             if ((r = zx_channel_create(0, &h0, &h1)) < 0) {
-                log(ERROR, "devcoord: cannot create shadow rpc channel: %d\n", r);
+                log(ERROR, "devcoord: cannot create proxy rpc channel: %d\n", r);
                 return r;
             }
         }
-        if ((r = dc_new_devhost(devhostname, &dev->shadow->host)) < 0) {
+        if ((r = dc_new_devhost(devhostname, &dev->proxy->host)) < 0) {
             log(ERROR, "devcoord: dh_new_devhost: %d\n", r);
             zx_handle_close(h0);
             zx_handle_close(h1);
             return r;
         }
-        if ((r = dh_create_device(dev->shadow, dev->shadow->host, arg1, h1)) < 0) {
+        if ((r = dh_create_device(dev->proxy, dev->proxy->host, arg1, h1)) < 0) {
             log(ERROR, "devcoord: dh_create_device: %d\n", r);
             zx_handle_close(h0);
             return r;
         }
-        if (need_shadow_rpc) {
-            if ((r = dh_connect_shadow(dev, h0)) < 0) {
-                log(ERROR, "devcoord: dh_connect_shadow: %d\n", r);
+        if (need_proxy_rpc) {
+            if ((r = dh_connect_proxy(dev, h0)) < 0) {
+                log(ERROR, "devcoord: dh_connect_proxy: %d\n", r);
             }
         }
     }
 
-    return dh_bind_driver(dev->shadow, drv->libname);
+    return dh_bind_driver(dev->proxy, drv->libname);
 }
 
 static void dc_handle_new_device(device_t* dev) {
