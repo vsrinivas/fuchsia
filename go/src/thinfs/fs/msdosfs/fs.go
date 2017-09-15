@@ -10,13 +10,13 @@ import (
 	"sync"
 	"time"
 
-	"fuchsia.googlesource.com/thinfs/block"
-	"fuchsia.googlesource.com/thinfs/fs"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/bootrecord"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/cluster"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/direntry"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/node"
-	"fuchsia.googlesource.com/thinfs/thinio"
+	"thinfs/block"
+	"thinfs/fs"
+	"thinfs/fs/msdosfs/bootrecord"
+	"thinfs/fs/msdosfs/cluster"
+	"thinfs/fs/msdosfs/direntry"
+	"thinfs/fs/msdosfs/node"
+	"thinfs/thinio"
 	"github.com/golang/glog"
 )
 

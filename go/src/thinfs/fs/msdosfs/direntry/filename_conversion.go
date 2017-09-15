@@ -10,7 +10,7 @@ import (
 	"strings"
 	"unicode/utf16"
 
-	"fuchsia.googlesource.com/thinfs/bitops"
+	"thinfs/bitops"
 )
 
 const (

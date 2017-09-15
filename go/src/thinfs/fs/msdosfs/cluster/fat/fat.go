@@ -15,11 +15,11 @@ import (
 
 	"github.com/golang/glog"
 
-	"fuchsia.googlesource.com/thinfs/bitops"
-	"fuchsia.googlesource.com/thinfs/fs"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/bootrecord"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/cluster/fat/fsinfo"
-	"fuchsia.googlesource.com/thinfs/thinio"
+	"thinfs/bitops"
+	"thinfs/fs"
+	"thinfs/fs/msdosfs/bootrecord"
+	"thinfs/fs/msdosfs/cluster/fat/fsinfo"
+	"thinfs/thinio"
 )
 
 var (

@@ -12,10 +12,10 @@ import (
 
 	"github.com/golang/glog"
 
-	"fuchsia.googlesource.com/thinfs/fs"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/bootrecord"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/cluster/fat"
-	"fuchsia.googlesource.com/thinfs/thinio"
+	"thinfs/fs"
+	"thinfs/fs/msdosfs/bootrecord"
+	"thinfs/fs/msdosfs/cluster/fat"
+	"thinfs/thinio"
 )
 
 // Manager builds on top of the FAT, and can operate it on more complex ways.

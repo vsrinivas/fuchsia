@@ -7,7 +7,7 @@ package bootrecord
 import (
 	"testing"
 
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/testutil"
+	"thinfs/fs/msdosfs/testutil"
 )
 
 func TestClusterSize(t *testing.T) {

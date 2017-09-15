@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"fuchsia.googlesource.com/thinfs/fs"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/node"
+	"thinfs/fs"
+	"thinfs/fs/msdosfs/node"
 )
 
 // Structure representing position within file. May be shared between multiple dup-ed files.

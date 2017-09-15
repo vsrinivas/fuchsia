@@ -12,11 +12,11 @@ import (
 	"fmt"
 	"os"
 
-	fileBlk "fuchsia.googlesource.com/thinfs/block/file"
+	fileBlk "thinfs/block/file"
 
-	"fuchsia.googlesource.com/thinfs/fs"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs"
-	"fuchsia.googlesource.com/thinfs/zircon/rpc"
+	"thinfs/fs"
+	"thinfs/fs/msdosfs"
+	"thinfs/zircon/rpc"
 
 	"syscall/mx/fdio/mxc"
 	"syscall/mx/mxruntime"

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"unsafe"
 
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/bootrecord"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/testutil"
+	"thinfs/fs/msdosfs/bootrecord"
+	"thinfs/fs/msdosfs/testutil"
 )
 
 // Tests the size of the FS Info structure

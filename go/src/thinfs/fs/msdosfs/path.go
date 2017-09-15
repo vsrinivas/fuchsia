@@ -7,9 +7,9 @@ package msdosfs
 import (
 	"strings"
 
-	"fuchsia.googlesource.com/thinfs/fs"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/direntry"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/node"
+	"thinfs/fs"
+	"thinfs/fs/msdosfs/direntry"
+	"thinfs/fs/msdosfs/node"
 )
 
 // Given a path "foo/bar/baz.txt", this function with return a node pointing to "bar" and a string

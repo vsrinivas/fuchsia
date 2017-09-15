@@ -15,7 +15,7 @@ import (
 	"time"
 	"unsafe"
 
-	"fuchsia.googlesource.com/thinfs/fs"
+	"thinfs/fs"
 
 	"syscall/mx"
 	"syscall/mx/fdio"

@@ -12,7 +12,7 @@ import (
 	"testing"
 	"unicode/utf16"
 
-	"fuchsia.googlesource.com/thinfs/mbr"
+	"thinfs/mbr"
 )
 
 func TestReadHeader(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"fuchsia.googlesource.com/thinfs/fs"
+	"thinfs/fs"
 )
 
 // Dcache destribes a cache of directories

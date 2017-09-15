@@ -20,7 +20,7 @@ import (
 	"strings"
 	"unicode/utf16"
 
-	"fuchsia.googlesource.com/thinfs/mbr"
+	"thinfs/mbr"
 )
 
 // ErrInvalidGPT aggregates zero or more errors that occur during validation

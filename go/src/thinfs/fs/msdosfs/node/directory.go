@@ -7,8 +7,8 @@ package node
 import (
 	"time"
 
-	"fuchsia.googlesource.com/thinfs/fs"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/direntry"
+	"thinfs/fs"
+	"thinfs/fs/msdosfs/direntry"
 )
 
 // Lookup finds a dirent with a given name inside a directory node

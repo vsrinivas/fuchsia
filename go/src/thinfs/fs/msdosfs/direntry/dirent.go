@@ -11,7 +11,7 @@ import (
 
 	"github.com/golang/glog"
 
-	"fuchsia.googlesource.com/thinfs/fs"
+	"thinfs/fs"
 )
 
 // GetDirentryCallback returns the directory entry at an index.

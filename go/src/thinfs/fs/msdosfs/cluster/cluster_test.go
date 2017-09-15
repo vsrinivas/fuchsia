@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/bootrecord"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/testutil"
+	"thinfs/fs/msdosfs/bootrecord"
+	"thinfs/fs/msdosfs/testutil"
 )
 
 // Without accessing any clusters, open and close the cluster manager.

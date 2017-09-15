@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"fuchsia.googlesource.com/thinfs/fs"
+	"thinfs/fs"
 )
 
 type root struct {

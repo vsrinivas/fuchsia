@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 
-	"fuchsia.googlesource.com/thinfs/bitops"
+	"thinfs/bitops"
 )
 
 const (

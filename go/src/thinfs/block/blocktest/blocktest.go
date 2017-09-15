@@ -11,7 +11,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"fuchsia.googlesource.com/thinfs/block"
+	"thinfs/block"
 )
 
 const (

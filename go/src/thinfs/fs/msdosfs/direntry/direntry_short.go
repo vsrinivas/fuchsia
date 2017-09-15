@@ -8,7 +8,7 @@ import (
 	"time"
 	"unsafe"
 
-	"fuchsia.googlesource.com/thinfs/bitops"
+	"thinfs/bitops"
 )
 
 const (

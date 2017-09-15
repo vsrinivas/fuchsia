@@ -14,8 +14,8 @@ import (
 	"strconv"
 	"strings"
 
-	"fuchsia.googlesource.com/thinfs/gpt"
-	"fuchsia.googlesource.com/thinfs/mbr"
+	"thinfs/gpt"
+	"thinfs/mbr"
 )
 
 type part struct {

@@ -10,7 +10,7 @@ import (
 	"encoding/binary"
 	"errors"
 
-	"fuchsia.googlesource.com/thinfs/bitops"
+	"thinfs/bitops"
 	"github.com/golang/glog"
 )
 

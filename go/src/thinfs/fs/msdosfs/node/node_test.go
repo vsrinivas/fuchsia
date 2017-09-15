@@ -11,12 +11,12 @@ import (
 
 	"github.com/golang/glog"
 
-	"fuchsia.googlesource.com/thinfs/fs"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/bootrecord"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/cluster"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/direntry"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/testutil"
-	"fuchsia.googlesource.com/thinfs/thinio"
+	"thinfs/fs"
+	"thinfs/fs/msdosfs/bootrecord"
+	"thinfs/fs/msdosfs/cluster"
+	"thinfs/fs/msdosfs/direntry"
+	"thinfs/fs/msdosfs/testutil"
+	"thinfs/thinio"
 )
 
 func setupFAT32(t *testing.T, size string, readonly bool) (*testutil.FileFAT, *Metadata) {

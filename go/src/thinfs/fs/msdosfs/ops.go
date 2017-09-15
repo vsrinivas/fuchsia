@@ -7,9 +7,9 @@ package msdosfs
 import (
 	"time"
 
-	"fuchsia.googlesource.com/thinfs/fs"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/direntry"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/node"
+	"thinfs/fs"
+	"thinfs/fs/msdosfs/direntry"
+	"thinfs/fs/msdosfs/node"
 )
 
 func closeFile(n node.FileNode) error {

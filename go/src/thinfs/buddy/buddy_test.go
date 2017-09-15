@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"fuchsia.googlesource.com/thinfs/bitops"
+	"thinfs/bitops"
 )
 
 const (

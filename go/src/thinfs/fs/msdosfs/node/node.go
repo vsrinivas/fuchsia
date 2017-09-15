@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"fuchsia.googlesource.com/thinfs/fs"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/bootrecord"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/direntry"
+	"thinfs/fs"
+	"thinfs/fs/msdosfs/bootrecord"
+	"thinfs/fs/msdosfs/direntry"
 )
 
 const (

@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"unsafe"
 
-	"fuchsia.googlesource.com/thinfs/bitops"
-	"fuchsia.googlesource.com/thinfs/thinio"
+	"thinfs/bitops"
+	"thinfs/thinio"
 )
 
 const (

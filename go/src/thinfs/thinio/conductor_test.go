@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"fuchsia.googlesource.com/thinfs/block/fake"
+	"thinfs/block/fake"
 )
 
 const (

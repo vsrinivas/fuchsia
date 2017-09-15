@@ -7,7 +7,7 @@ package direntry
 import (
 	"unsafe"
 
-	"fuchsia.googlesource.com/thinfs/bitops"
+	"thinfs/bitops"
 )
 
 const (

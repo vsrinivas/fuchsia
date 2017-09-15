@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"fuchsia.googlesource.com/thinfs/block"
-	"fuchsia.googlesource.com/thinfs/fs"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/testutil"
+	"thinfs/block"
+	"thinfs/fs"
+	"thinfs/fs/msdosfs/testutil"
 )
 
 // Functions to set up and shut down FAT filesystems

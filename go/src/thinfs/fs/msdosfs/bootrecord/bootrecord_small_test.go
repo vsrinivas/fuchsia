@@ -8,7 +8,7 @@ import (
 	"testing"
 	"unsafe"
 
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs/testutil"
+	"thinfs/fs/msdosfs/testutil"
 )
 
 func TestBootrecordSmallSize(t *testing.T) {

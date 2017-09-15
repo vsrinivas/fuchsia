@@ -11,7 +11,7 @@ import (
 	"os"
 	"testing"
 
-	"fuchsia.googlesource.com/thinfs/gpt"
+	"thinfs/gpt"
 )
 
 var parseArgsExamples = []struct {

@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"fuchsia.googlesource.com/thinfs/block"
-	"fuchsia.googlesource.com/thinfs/cache"
+	"thinfs/block"
+	"thinfs/cache"
 	"github.com/golang/glog"
 )
 

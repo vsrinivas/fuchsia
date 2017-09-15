@@ -13,9 +13,9 @@ import (
 	"strings"
 	"testing"
 
-	"fuchsia.googlesource.com/thinfs/block"
-	"fuchsia.googlesource.com/thinfs/block/file"
-	"fuchsia.googlesource.com/thinfs/thinio"
+	"thinfs/block"
+	"thinfs/block/file"
+	"thinfs/thinio"
 )
 
 // FileFAT describes a file-backed FAT image which can be treated like a FAT filesystem.
