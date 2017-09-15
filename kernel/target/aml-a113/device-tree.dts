@@ -1,0 +1,12 @@
+/dts-v1/;
+
+/ {
+    model = "AMLogic-A113";
+
+    chosen {
+        bootargs = "TERM=uart initrd=0x02000000,0x36e2a0";
+    };
+
+    // empty node needed to make fastboot happy
+    memory {};
+};

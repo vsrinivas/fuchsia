@@ -1,0 +1,31 @@
+include "system/public/zircon/mdi/zircon.mdi"
+
+cpu-map = {
+    clusters = {
+        {
+            cpu-count = 4
+        }
+    }
+}
+
+kernel = {
+    s905-uart = {
+        irq = 225
+        base-phys = 0xff803000
+        base-virt = 0xffffffffcf803000
+    }
+
+    arm-gic-v2 = {
+        base-virt = 0xffffffffcfc00000
+        base-phys = 0xffc00000
+        gicc-offset = 0x002000
+        gicd-offset = 0x001000
+        ipi-base = 5
+    }
+    arm-psci = {
+        use-smc = true
+    }
+    arm-timer = {
+        irq-phys = 30
+    }
+}
