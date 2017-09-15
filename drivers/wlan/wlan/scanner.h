@@ -55,6 +55,7 @@ class Scanner {
     size_t channel_index_ = 0;
     zx_time_t channel_start_ = 0;
 
+    // TODO(porce): Use internal representation rather than FIDL.
     std::unordered_map<uint64_t, BSSDescriptionPtr> bss_descriptors_;
 };
 

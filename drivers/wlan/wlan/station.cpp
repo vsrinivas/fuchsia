@@ -415,6 +415,7 @@ zx_status_t Station::HandleAssociationResponse(const Packet* packet) {
     assoc_timeout_ = 0;
     aid_ = assoc->aid & kAidMask;
     timer_->CancelTimer();
+    // TODO(hahnr): For RSNs, only set link status after successfully authenticating with the RSN.
     device_->SetStatus(ETH_STATUS_ONLINE);
     SendAssocResponse(AssociateResultCodes::SUCCESS);
 
@@ -427,7 +428,7 @@ zx_status_t Station::HandleAssociationResponse(const Packet* packet) {
     SendSignalReportIndication(rxinfo->rssi);
 
     // Open port if user connected to an open network.
-    if (!bss_->rsn) controlled_port_ = PortState::kOpen;
+    if (bss_->rsn.is_null() || bss_->rsn.empty()) controlled_port_ = PortState::kOpen;
 
     std::printf("associated\n");
 

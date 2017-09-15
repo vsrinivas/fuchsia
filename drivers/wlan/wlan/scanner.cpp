@@ -185,6 +185,10 @@ zx_status_t Scanner::HandleBeaconOrProbeResponse(const Packet* packet) {
         bss = entry->second.get();
     }
 
+    // TODO(porce): Remove once we changed BSSDescription to use an internal rather than FIDL
+    // representation.
+    bss->rsn.resize(0);
+
     // Insert / update all the fields
     if (bcn->cap.ess()) {
         bss->bss_type = BSSTypes::INFRASTRUCTURE;
