@@ -174,12 +174,6 @@ __EXPORT zx_status_t device_iotxn_queue(zx_device_t* dev, iotxn_t* txn) {
     }
 }
 
-// Shadow Device Plumbing
-
-__EXPORT zx_handle_t device_get_shadow_channel(zx_device_t* dev) {
-    return dev->resource;
-}
-
 // LibDriver Misc Interfaces
 
 extern zx_handle_t root_resource_handle;

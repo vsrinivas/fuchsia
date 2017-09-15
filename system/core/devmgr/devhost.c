@@ -422,7 +422,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         }
         log(RPC_SDW, "devhost[%s] connect shadow rpc\n", path);
         shadow_ios_create(ios->dev, hin[0]);
-        break;
+        return ZX_OK;
 
     default:
         log(ERROR, "devhost[%s] invalid rpc op %08x\n", path, msg.op);
@@ -520,7 +520,7 @@ static zx_status_t dh_handle_shadow_rpc(port_handler_t* ph, zx_signals_t signals
     }
     if (signals & ZX_CHANNEL_READABLE) {
         log(RPC_SDW, "shadow-rpc: rpc readable (ios=%p,dev=%p)\n", ios, ios->dev);
-        zx_status_t r = ios->dev->ops->rxrpc(ios->dev, ph->handle);
+        zx_status_t r = ios->dev->ops->rxrpc(ios->dev->ctx, ph->handle);
         if (r != ZX_OK) {
             log(RPC_SDW, "shadow-rpc: rpc cb error %d (ios=%p,dev=%p)\n", r, ios, ios->dev);
 destroy:
@@ -542,23 +542,23 @@ destroy:
 static void shadow_ios_create(zx_device_t* dev, zx_handle_t h) {
     if (dev->shadow_ios) {
         shadow_ios_destroy(dev);
+    }
 
-        shadow_iostate_t* ios;
-        if ((ios = calloc(sizeof(shadow_iostate_t), 1)) == NULL) {
-            zx_handle_close(h);
-            return;
-        }
+    shadow_iostate_t* ios;
+    if ((ios = calloc(sizeof(shadow_iostate_t), 1)) == NULL) {
+        zx_handle_close(h);
+        return;
+    }
 
-        ios->dev = dev;
-        ios->ph.handle = h;
-        ios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-        ios->ph.func = dh_handle_shadow_rpc;
-        if (port_wait(&dh_port, &ios->ph) != ZX_OK) {
-            zx_handle_close(h);
-            free(ios);
-        } else {
-            dev->shadow_ios = ios;
-        }
+    ios->dev = dev;
+    ios->ph.handle = h;
+    ios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+    ios->ph.func = dh_handle_shadow_rpc;
+    if (port_wait(&dh_port, &ios->ph) != ZX_OK) {
+        zx_handle_close(h);
+        free(ios);
+    } else {
+        dev->shadow_ios = ios;
     }
 }
 

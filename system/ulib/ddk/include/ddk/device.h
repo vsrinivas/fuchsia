@@ -236,10 +236,6 @@ zx_status_t device_ioctl(zx_device_t* dev, uint32_t op,
 // otherwise returns ZX_OK aftering queuing the iotxn
 zx_status_t device_iotxn_queue(zx_device_t* dev, iotxn_t* txn);
 
-// return the channel for a shadow device to communicate with its peer.
-// returns ZX_HANDLE_INVALID if this is not a shadow device.
-zx_handle_t device_get_shadow_channel(zx_device_t* dev);
-
 // Device State Change Functions
 //@ #### Device State Bits
 //{
