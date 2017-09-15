@@ -1,0 +1,19 @@
+#Copyright 2017 The Fuchsia Authors.All rights reserved.
+#Use of this source code is governed by a BSD - style license that can be
+#found in the LICENSE file.
+
+executable("simple_sine") {
+  sources =
+      [
+        "main.cc",
+        "simple_sine.cc",
+        "simple_sine.h",
+      ]
+
+      deps = [
+        "//garnet/public/lib/app/cpp",
+        "//garnet/public/lib/media/transport",
+        "//garnet/public/lib/media/fidl",
+        "//garnet/public/lib/fsl",
+      ]
+}

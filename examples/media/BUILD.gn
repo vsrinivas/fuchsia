@@ -12,6 +12,7 @@ package("media") {
     "audio_player",
     "master_gain",
     "media_player",
+    "simple_sine",
     "vu_meter",
   ]
 
@@ -24,6 +25,9 @@ package("media") {
     },
     {
       name = "media_player"
+    },
+    {
+      name = "simple_sine"
     },
     {
       name = "vu_meter"
