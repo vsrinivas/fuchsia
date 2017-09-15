@@ -801,6 +801,59 @@ function ftrace() {
   "${FUCHSIA_DIR}/apps/tracing/scripts/trace.sh" "$@"
 }
 
+### fmkzedboot: builds the Fuchsia bootloader and zeboot and places it on an
+### external drive
+
+function fmkzedboot-usage() {
+  cat >&2 <<END
+Usage: fmkzedboot <root of external drive>
+Builds Fuchsia bootloader and zedboot and copies it to a drive of
+your choice. Makes zedboot the default boot option.
+END
+}
+
+function fmkzedboot() {
+  if [[ $# -ne 1 ]]; then
+    fmkzedboot-usage
+    return 1
+  fi
+
+  fcheck || return 1
+
+  if [[ ! -d $1 ]]; then
+    echo >&2 "Drive at $1 does not appear to be mounted."
+    return 1
+  fi
+
+  local DRIVE_DIR=$1
+  local EFI_TARGET_DIR=$1/EFI/BOOT
+  (
+    set -e
+
+    # Do a zircon build, and copy the bootloader to drive
+    zbuild
+    mkdir -p ${EFI_TARGET_DIR}
+    cp ${ZIRCON_BUILD_DIR}/bootloader/bootx64.efi \
+      ${EFI_TARGET_DIR}/BOOTX64.EFI
+
+    # Make zedboot
+    echo "netsvc.netboot=true virtcon.font=18x32" > ${ZIRCON_BUILD_DIR}/CMDLINE
+    ${ZIRCON_BUILD_DIR}/tools/mkbootfs -o ${ZIRCON_BUILD_DIR}/zedboot.bin \
+      ${ZIRCON_BUILD_DIR}/zircon.bin                                   \
+      -C ${ZIRCON_BUILD_DIR}/CMDLINE ${ZIRCON_BUILD_DIR}/bootdata.bin
+
+    # Copy zedboot.bin to drive
+    cp ${ZIRCON_BUILD_DIR}/zedboot.bin ${DRIVE_DIR}
+
+    # Set zedboot as the default boot option, with a timeout of 0
+    # (i.e. boot instantly into zedboot)
+    echo "bootloader.default=zedboot bootloader.timeout=0" > ${ZIRCON_BUILD_DIR}/CMDLINE
+    cp ${ZIRCON_BUILD_DIR}/CMDLINE ${DRIVE_DIR}
+  ) && \
+    echo "Bootloader + zedboot loaded to $1"
+}
+
+
 ### fmkbootloader: builds the Fuchsia bootloader and places it on an external
 ### drive
 
