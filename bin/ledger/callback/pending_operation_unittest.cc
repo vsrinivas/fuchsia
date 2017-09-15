@@ -25,7 +25,7 @@ TEST(PendingOperationManager, Deletion) {
   auto updater = fxl::MakeAutoCall([&called] { ++called; });
   {
     PendingOperationManager operation_manager;
-    operation_manager.Manage(std::move(updater));
+    auto result = operation_manager.Manage(std::move(updater));
     EXPECT_EQ(0u, called);
   }
   EXPECT_EQ(1u, called);
