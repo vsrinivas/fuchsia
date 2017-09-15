@@ -243,7 +243,6 @@ static void sdmmc_do_txn(sdmmc_t* sdmmc, iotxn_t* txn) {
                    " length 0x%" PRIx64 "\n", txn, txn->offset, txn->length);
 
     zx_device_t* sdmmc_zxdev = sdmmc->host_zxdev;
-    iotxn_t* emmc_txn = NULL;
     uint32_t cmd = 0;
 
     // Figure out which SD command we need to issue.
@@ -269,35 +268,36 @@ static void sdmmc_do_txn(sdmmc_t* sdmmc, iotxn_t* txn) {
             return;
     }
 
-    if (iotxn_alloc(&emmc_txn, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, txn->length) != ZX_OK) {
-        dprintf(ERROR, "sdmmc: error allocating emmc iotxn\n");
-        iotxn_complete(txn, ZX_ERR_INTERNAL, 0);
+    iotxn_t* clone = NULL;
+    zx_status_t st = iotxn_clone(txn, &clone);
+    if (st != ZX_OK) {
+        dprintf(ERROR, "sdmmc: err %d cloning iotxn\n", st);
+        iotxn_complete(txn, st, 0);
         return;
     }
-    emmc_txn->opcode = txn->opcode;
-    emmc_txn->flags = txn->flags;
-    emmc_txn->offset = txn->offset;
-    emmc_txn->length = txn->length;
-    emmc_txn->protocol = ZX_PROTOCOL_SDMMC;
-    sdmmc_protocol_data_t* pdata = iotxn_pdata(emmc_txn, sdmmc_protocol_data_t);
+
+    clone->protocol = ZX_PROTOCOL_SDMMC;
+    sdmmc_protocol_data_t* pdata = iotxn_pdata(clone, sdmmc_protocol_data_t);
+
+    // Following commands do not use the data buffer and
+    // it is safe to use the cloned iotxn
 
     uint8_t current_state;
     const size_t max_attempts = 10;
     size_t attempt = 0;
     for (; attempt <= max_attempts; attempt++) {
-        zx_status_t rc = sdmmc_do_command(sdmmc_zxdev, SDMMC_SEND_STATUS,
-                                          sdmmc->rca << 16, emmc_txn);
-        if (rc != ZX_OK) {
+        st = sdmmc_do_command(sdmmc_zxdev, SDMMC_SEND_STATUS, sdmmc->rca << 16, clone);
+        if (st != ZX_OK) {
             dprintf(SPEW, "sdmmc: iotxn_complete txn %p status %d (SDMMC_SEND_STATUS)\n",
-                    txn, rc);
-            iotxn_complete(txn, rc, 0);
+                    txn, st);
+            iotxn_complete(txn, st, 0);
             goto out;
         }
 
         current_state = (pdata->response[0] >> 9) & 0xf;
 
         if (current_state == SDMMC_STATE_RECV) {
-            rc = sdmmc_do_command(sdmmc_zxdev, SDMMC_STOP_TRANSMISSION, 0, emmc_txn);
+            st = sdmmc_do_command(sdmmc_zxdev, SDMMC_STOP_TRANSMISSION, 0, clone);
             continue;
         } else if (current_state == SDMMC_STATE_TRAN) {
             break;
@@ -313,39 +313,25 @@ static void sdmmc_do_txn(sdmmc_t* sdmmc, iotxn_t* txn) {
         goto out;
     }
 
-    // Which block to operate against.
-    const uint32_t blkid = emmc_txn->offset / SDHC_BLOCK_SIZE;
+    // Issue the data transfer
 
-    pdata->blockcount = txn->length / SDHC_BLOCK_SIZE;
+    const uint32_t blkid = clone->offset / SDHC_BLOCK_SIZE;
+    pdata->blockcount = clone->length / SDHC_BLOCK_SIZE;
     pdata->blocksize = SDHC_BLOCK_SIZE;
 
-    void* buffer;
-    size_t bytes_processed = 0;
-    if (txn->opcode == IOTXN_OP_WRITE) {
-        iotxn_mmap(txn, &buffer);
-        iotxn_copyto(emmc_txn, buffer, txn->length, 0);
-        bytes_processed = txn->length;
-    }
-
-    zx_status_t rc = sdmmc_do_command(sdmmc_zxdev, cmd, blkid, emmc_txn);
-    if (rc != ZX_OK) {
-        dprintf(SPEW, "sdmmc: iotxn_complete txn %p status %d (cmd 0x%x)\n", txn, rc, cmd);
-        iotxn_complete(txn, rc, 0);
+    st = sdmmc_do_command(sdmmc_zxdev, cmd, blkid, clone);
+    if (st != ZX_OK) {
+        dprintf(SPEW, "sdmmc: iotxn_complete txn %p status %d (cmd 0x%x)\n", txn, st, cmd);
+        iotxn_complete(txn, st, 0);
         goto out;
     }
 
-    if (txn->opcode == IOTXN_OP_READ) {
-        bytes_processed = MIN(emmc_txn->actual, txn->length);
-        iotxn_mmap(emmc_txn, &buffer);
-        iotxn_copyto(txn, buffer, bytes_processed, 0);
-    }
-
     dprintf(SPEW, "sdmmc: iotxn_complete txn %p status %d\n", txn, ZX_OK);
-    iotxn_complete(txn, ZX_OK, bytes_processed);
+    iotxn_complete(txn, ZX_OK, txn->length);
 
 out:
-    if (emmc_txn) {
-        iotxn_release(emmc_txn);
+    if (clone) {
+        iotxn_release(clone);
     }
 }
 
