@@ -39,4 +39,4 @@ GENERATED += $(MDI_TEST_BIN) $(MDI_TEST_HEADER)
 EXTRA_BUILDDEPS += $(MDI_TEST_BIN) $(MDI_TEST_HEADER)
 
 # add our MDI file to the boot image
-USER_MANIFEST_LINES += data/mditest.mdi=$(MDI_TEST_BIN)
+USER_MANIFEST_LINES += {test}data/mditest.mdi=$(MDI_TEST_BIN)

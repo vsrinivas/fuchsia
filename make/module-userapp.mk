@@ -21,6 +21,10 @@ MODULE_USERAPP_OBJECT := $(patsubst %.mod.o,%.elf,$(MODULE_OBJECT))
 ALLUSER_APPS += $(MODULE_USERAPP_OBJECT)
 ALLUSER_MODULES += $(MODULE)
 
+ifeq ($(MODULE_GROUP),)
+$(error $(MODULE): $(MODULE_TYPE) modules must set MODULE_GROUP)
+endif
+
 USER_MANIFEST_LINES += $(MODULE_GROUP)$(MODULE_INSTALL_PATH)/$(MODULE_NAME)=$(addsuffix .strip,$(MODULE_USERAPP_OBJECT))
 
 # These debug info files go in the bootfs image.

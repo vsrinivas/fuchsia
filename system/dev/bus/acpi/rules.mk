@@ -50,6 +50,7 @@ else # !ARCH=x86
 MODULE_NAME := acpisvc
 
 MODULE_TYPE := userapp
+MODULE_GROUP := core
 
 MODULE_SRCS += $(LOCAL_DIR)/dummy.c
 
