@@ -7,19 +7,19 @@ part of zircon;
 // ignore_for_file: native_function_body_in_non_sdk_code
 
 /// An exception representing an error returned as an zx_status_t.
-class MxStatusException extends Error {
+class ZxStatusException extends Error {
   final int status;
-  MxStatusException(this.status);
+  ZxStatusException(this.status);
 }
 
 class _Result {
   final int status;
   const _Result(this.status);
 
-  /// Throw an |MxStatusException| if the |status| is not |ZX_OK|.
+  /// Throw an |ZxStatusException| if the |status| is not |ZX_OK|.
   void checkStatus() {
     if (status != ZX.OK) {
-      throw new MxStatusException(status);
+      throw new ZxStatusException(status);
     }
   }
 }
