@@ -26,17 +26,26 @@ static inline bool host_path(const char* path) {
     }
     return false;
 }
+int emu_mkfs(const char* path);
+int emu_mount(const char* path);
 
 int emu_open(const char* path, int flags, mode_t mode);
 int emu_close(int fd);
-int emu_mkdir(const char* path, mode_t mode);
-ssize_t emu_read(int fd, void* buf, size_t count);
+
 ssize_t emu_write(int fd, const void* buf, size_t count);
+ssize_t emu_pwrite(int fd, const void* buf, size_t count, off_t off);
+ssize_t emu_read(int fd, void* buf, size_t count);
+ssize_t emu_pread(int fd, void* buf, size_t count, off_t off);
+
+int emu_ftruncate(int fd, off_t len);
 off_t emu_lseek(int fd, off_t offset, int whence);
 int emu_fstat(int fd, struct stat* s);
 int emu_stat(const char* fn, struct stat* s);
+
+int emu_mkdir(const char* path, mode_t mode);
 DIR* emu_opendir(const char* name);
 struct dirent* emu_readdir(DIR* dirp);
+void emu_rewinddir(DIR* dirp);
 int emu_closedir(DIR* dirp);
 
 // FileWrapper is a wrapper around an open file descriptor,

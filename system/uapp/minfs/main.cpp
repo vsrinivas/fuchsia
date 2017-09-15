@@ -25,7 +25,7 @@
 
 #include "minfs-private.h"
 #ifndef __Fuchsia__
-#include "host.h"
+#include <minfs/host.h>
 #endif
 
 #ifndef __Fuchsia__

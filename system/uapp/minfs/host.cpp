@@ -4,7 +4,7 @@
 
 // for S_IF*
 #define _XOPEN_SOURCE
-#include "host.h"
+#include <minfs/host.h>
 
 #include <dirent.h>
 #include <errno.h>
@@ -67,6 +67,10 @@ int status_to_errno(zx_status_t status) {
     switch (status) {
     case ZX_OK:
         return 0;
+    case ZX_ERR_FILE_BIG:
+        return EFBIG;
+    case ZX_ERR_NO_SPACE:
+        return ENOSPC;
     default:
         return EIO;
     }
@@ -81,6 +85,60 @@ int status_to_errno(zx_status_t status) {
     FAIL(status_to_errno(status))
 
 fbl::RefPtr<fs::Vnode> fake_root = nullptr;
+
+int emu_mkfs(const char* path) {
+    int fd = open(path, O_RDWR);
+
+    if (fd < 0) {
+        fprintf(stderr, "error: could not open path %s\n", path);
+        return -1;
+    }
+
+    struct stat s;
+    if (fstat(fd, &s) < 0) {
+        fprintf(stderr, "error: minfs could not find end of file/device\n");
+        return -1;
+    }
+
+    off_t size = s.st_size / minfs::kMinfsBlockSize;
+
+    fbl::unique_ptr<minfs::Bcache> bc;
+    if (minfs::Bcache::Create(&bc, fd, (uint32_t) size) < 0) {
+        fprintf(stderr, "error: cannot create block cache\n");
+        return -1;
+    }
+
+    return minfs_mkfs(fbl::move(bc));
+}
+
+int emu_mount(const char* path) {
+    int fd = open(path, O_RDWR);
+    if (fd < 0) {
+        fprintf(stderr, "error: could not open path %s\n", path);
+        return -1;
+    }
+
+    struct stat s;
+    if (fstat(fd, &s) < 0) {
+        fprintf(stderr, "error: minfs could not find end of file/device\n");
+        return 0;
+    }
+
+    off_t size = s.st_size / minfs::kMinfsBlockSize;
+
+    fbl::unique_ptr<minfs::Bcache> bc;
+    if (minfs::Bcache::Create(&bc, fd, (uint32_t) size) < 0) {
+        fprintf(stderr, "error: cannot create block cache\n");
+        return -1;
+    }
+
+    fbl::RefPtr<minfs::VnodeMinfs> vn;
+    if (minfs_mount(&vn, fbl::move(bc)) < 0) {
+        return -1;
+    }
+    fake_root = vn;
+    return 0;
+}
 
 int emu_open(const char* path, int flags, mode_t mode) {
     //TODO: fdtab lock
@@ -116,16 +174,37 @@ int emu_close(int fd) {
     return 0;
 }
 
-int emu_mkdir(const char* path, mode_t mode) {
-    ZX_DEBUG_ASSERT_MSG(!host_path(path), "'emu_' functions can only operate on target paths");
-    mode = S_IFDIR;
-    int fd = emu_open(path, O_CREAT | O_EXCL, S_IFDIR | (mode & 0777));
-    if (fd >= 0) {
-        emu_close(fd);
-        return 0;
-    } else {
-        return fd;
+ssize_t emu_write(int fd, const void* buf, size_t count) {
+    file_t* f = file_get(fd);
+    if (f == nullptr) {
+        return -1;
     }
+    size_t actual;
+    zx_status_t status = f->vn->Write(buf, count, f->off, &actual);
+    if (status == ZX_OK) {
+        f->off += actual;
+        ZX_DEBUG_ASSERT(actual <= fbl::numeric_limits<ssize_t>::max());
+        return static_cast<ssize_t>(actual);
+    }
+
+    ZX_DEBUG_ASSERT(status < 0);
+    STATUS(status);
+}
+
+ssize_t emu_pwrite(int fd, const void* buf, size_t count, off_t off) {
+    file_t* f = file_get(fd);
+    if (f == nullptr) {
+        return -1;
+    }
+    size_t actual;
+    zx_status_t status = f->vn->Write(buf, count, off, &actual);
+    if (status == ZX_OK) {
+        ZX_DEBUG_ASSERT(actual <= fbl::numeric_limits<ssize_t>::max());
+        return static_cast<ssize_t>(actual);
+    }
+
+    ZX_DEBUG_ASSERT(status < 0);
+    STATUS(status);
 }
 
 ssize_t emu_read(int fd, void* buf, size_t count) {
@@ -141,23 +220,31 @@ ssize_t emu_read(int fd, void* buf, size_t count) {
         return static_cast<ssize_t>(actual);
     }
     ZX_DEBUG_ASSERT(status < 0);
-    return static_cast<ssize_t>(status);
+    STATUS(status);
 }
 
-ssize_t emu_write(int fd, const void* buf, size_t count) {
+ssize_t emu_pread(int fd, void* buf, size_t count, off_t off) {
     file_t* f = file_get(fd);
     if (f == nullptr) {
         return -1;
     }
     size_t actual;
-    zx_status_t status = f->vn->Write(buf, count, f->off, &actual);
+    zx_status_t status = f->vn->Read(buf, count, off, &actual);
     if (status == ZX_OK) {
-        f->off += actual;
         ZX_DEBUG_ASSERT(actual <= fbl::numeric_limits<ssize_t>::max());
         return static_cast<ssize_t>(actual);
     }
     ZX_DEBUG_ASSERT(status < 0);
-    return static_cast<ssize_t>(status);
+    STATUS(status);
+}
+
+int emu_ftruncate(int fd, off_t len) {
+    file_t* f = file_get(fd);
+    if (f == nullptr) {
+        return -1;
+    }
+    int r = f->vn->Truncate(len);
+    return r < 0 ? -1 : r;
 }
 
 off_t emu_lseek(int fd, off_t offset, int whence) {
@@ -264,6 +351,18 @@ typedef struct MINDIR {
     struct dirent de;
 } MINDIR;
 
+int emu_mkdir(const char* path, mode_t mode) {
+    ZX_DEBUG_ASSERT_MSG(!host_path(path), "'emu_' functions can only operate on target paths");
+    mode = S_IFDIR;
+    int fd = emu_open(path, O_CREAT | O_EXCL, S_IFDIR | (mode & 0777));
+    if (fd >= 0) {
+        emu_close(fd);
+        return 0;
+    } else {
+        return fd;
+    }
+}
+
 DIR* emu_opendir(const char* name) {
     ZX_DEBUG_ASSERT_MSG(!host_path(name), "'emu_' functions can only operate on target paths");
     fbl::RefPtr<fs::Vnode> vn;
@@ -286,6 +385,7 @@ struct dirent* emu_readdir(DIR* dirp) {
             if (dir->size >= vde->size) {
                 struct dirent* ent = &dir->de;
                 strcpy(ent->d_name, vde->name);
+                ent->d_type = vde->type;
                 dir->ptr += vde->size;
                 dir->size -= vde->size;
                 return ent;
@@ -300,6 +400,13 @@ struct dirent* emu_readdir(DIR* dirp) {
         dir->size = status;
     }
     return nullptr;
+}
+
+void emu_rewinddir(DIR* dirp) {
+    MINDIR* dir = (MINDIR*)dirp;
+    dir->size = 0;
+    dir->ptr = NULL;
+    dir->cookie.n = 0;
 }
 
 int emu_closedir(DIR* dirp) {

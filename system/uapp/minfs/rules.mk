@@ -38,12 +38,29 @@ MODULE_LIBS := \
     system/ulib/async.default \
     system/ulib/bitmap \
     system/ulib/zircon \
-    system/ulib/fdio \
     system/ulib/c \
     system/ulib/fdio \
 
 include make/module.mk
 
+MODULE_HOST_SRCS := \
+    $(LOCAL_DIR)/host.cpp \
+    $(LOCAL_DIR)/bcache.cpp \
+    $(LOCAL_DIR)/minfs.cpp \
+    $(LOCAL_DIR)/minfs-ops.cpp \
+    system/ulib/bitmap/raw-bitmap.cpp \
+    system/ulib/fs/vfs.cpp \
+    system/ulib/fs/vnode.cpp \
+
+MODULE_HOST_COMPILEFLAGS := \
+    -Werror-implicit-function-declaration \
+    -Wstrict-prototypes -Wwrite-strings \
+    -Isystem/ulib/bitmap/include \
+    -Isystem/ulib/zxcpp/include \
+    -Isystem/ulib/fdio/include \
+    -Isystem/ulib/fbl/include \
+    -Isystem/ulib/fs/include \
+    -Isystem/ulib/hash/include \
 
 # host minfs tool
 
@@ -54,24 +71,33 @@ MODULE_NAME := minfs
 MODULE_TYPE := hostapp
 
 MODULE_SRCS := \
+    $(MODULE_HOST_SRCS) \
     $(LOCAL_DIR)/main.cpp \
-    $(LOCAL_DIR)/host.cpp \
-    $(LOCAL_DIR)/bcache.cpp \
-    $(LOCAL_DIR)/minfs.cpp \
-    $(LOCAL_DIR)/minfs-ops.cpp \
-    system/ulib/bitmap/raw-bitmap.cpp \
-    system/ulib/fs/vfs.cpp \
-    system/ulib/fs/vnode.cpp \
 
-MODULE_COMPILEFLAGS := \
-    -Werror-implicit-function-declaration \
-    -Wstrict-prototypes -Wwrite-strings \
-    -Isystem/ulib/bitmap/include \
-    -Isystem/ulib/zxcpp/include \
-    -Isystem/ulib/fdio/include \
-    -Isystem/ulib/fbl/include \
-    -Isystem/ulib/fs/include \
-    -Isystem/ulib/hash/include \
+MODULE_COMPILEFLAGS := $(MODULE_HOST_COMPILEFLAGS)
+
+MODULE_HOST_LIBS := \
+    system/ulib/fbl.hostlib
+
+ifeq ($(HOST_PLATFORM),darwin)
+MODULE_DEFINES := O_DIRECTORY=0200000
+else
+MODULE_DEFINES := _POSIX_C_SOURCE=200809L
+endif
+
+MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
+
+include make/module.mk
+
+MODULE := $(LOCAL_DIR).hostlib
+
+MODULE_TYPE := hostlib
+
+MODULE_SRCS := \
+    $(MODULE_HOST_SRCS) \
+    system/ulib/fbl/alloc_checker.cpp \
+
+MODULE_COMPILEFLAGS := $(MODULE_HOST_COMPILEFLAGS)
 
 MODULE_HOST_LIBS := \
     system/ulib/fbl.hostlib
