@@ -48,6 +48,8 @@ type ifState struct {
 	dhcp   *dhcp.Client
 
 	// guarded by ns.mu
+	// NIC is defined in //garnet/go/src/netstack/netiface/netiface.go
+	// TODO(porce): Consider replacement with //third_party/netstack/tcpip/stack/stack.go
 	nic *netiface.NIC
 
 	// LinkEndpoint responsible to track traffic statistics
@@ -166,12 +168,14 @@ func (ns *netstack) addLoopback() error {
 			},
 		},
 	}
+
 	ifs := &ifState{
 		ns:     ns,
 		ctx:    ctx,
 		cancel: cancel,
 		nic:    nic,
 	}
+	ifs.statsEP.Nic = ifs.nic
 
 	ns.mu.Lock()
 	if len(ns.ifStates) > 0 {
@@ -211,6 +215,7 @@ func (ns *netstack) addEth(path string) error {
 		cancel: cancel,
 		nic:    &netiface.NIC{},
 	}
+	ifs.statsEP.Nic = ifs.nic
 
 	client, err := eth.NewClient("netstack", path, ns.arena, ifs.stateChange)
 	if err != nil {

@@ -11,9 +11,11 @@
 package stats
 
 import (
+	"log"
 	"time"
 
 	nsfidl "garnet/public/lib/netstack/fidl/netstack"
+	"netstack/netiface"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
@@ -28,6 +30,7 @@ type StatsEndpoint struct {
 	// Storage is made of FIDL data structure
 	// enabling conversion-free export and import.
 	Stats nsfidl.NetInterfaceStats
+	Nic   *netiface.NIC
 }
 
 func (e *StatsEndpoint) Wrap(lower tcpip.LinkEndpointID) tcpip.LinkEndpointID {
@@ -46,7 +49,7 @@ func (e *StatsEndpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, remoteLi
 	e.Stats.Rx.PktsTotal += 1
 	e.Stats.Rx.BytesTotal += uint64(vv.Size())
 	raw := vv.First()
-	analyzeTrafficStats(&e.Stats.Rx, protocol, raw)
+	e.analyzeTrafficStats(&e.Stats.Rx, protocol, raw)
 	e.dispatcher.DeliverNetworkPacket(e, remoteLinkAddr, protocol, vv)
 }
 
@@ -78,25 +81,33 @@ func (e *StatsEndpoint) WritePacket(r *stack.Route, hdr *buffer.Prependable, pay
 	e.Stats.Tx.PktsTotal += 1
 	e.Stats.Tx.BytesTotal += uint64(len(payload))
 	raw := hdr.UsedBytes()
-	analyzeTrafficStats(&e.Stats.Tx, protocol, raw)
+	e.analyzeTrafficStats(&e.Stats.Tx, protocol, raw)
 	return e.lower.WritePacket(r, hdr, payload, protocol)
 }
 
-func analyzeTrafficStats(ts *nsfidl.NetTrafficStats, protocol tcpip.NetworkProtocolNumber, raw []byte) {
+func (e *StatsEndpoint) analyzeTrafficStats(ts *nsfidl.NetTrafficStats, protocol tcpip.NetworkProtocolNumber, raw []byte) {
 	switch protocol {
 	case header.IPv4ProtocolNumber:
 		ipPkt := header.IPv4(raw)
-		analyzeIPv4(ts, ipPkt)
+		e.analyzeIPv4(ts, ipPkt)
 
 	case header.IPv6ProtocolNumber:
 		ipPkt := header.IPv6(raw)
-		analyzeIPv6(ts, ipPkt)
+		e.analyzeIPv6(ts, ipPkt)
 
 		// Add other protocol below.
 	}
 }
 
-func analyzeIPv4(ts *nsfidl.NetTrafficStats, ipPkt header.IPv4) {
+func (e *StatsEndpoint) analyzeIPv4(ts *nsfidl.NetTrafficStats, ipPkt header.IPv4) {
+	mcastToSelf := header.IsV4MulticastAddress(ipPkt.DestinationAddress()) && e.IsV4FromSelf(ipPkt)
+
+	// Add conditions not to collect stats in.
+	if mcastToSelf {
+		log.Printf("[stats] detected multicast-to-self at NICID %v: %v -> %v", e.Nic.ID, ipPkt.SourceAddress(), ipPkt.DestinationAddress())
+		return
+	}
+
 	ipPayload := ipPkt[ipPkt.HeaderLength():]
 
 	nextProtocol := ipPkt.Protocol()
@@ -112,7 +123,15 @@ func analyzeIPv4(ts *nsfidl.NetTrafficStats, ipPkt header.IPv4) {
 	}
 }
 
-func analyzeIPv6(ts *nsfidl.NetTrafficStats, ipPkt header.IPv6) {
+func (e *StatsEndpoint) analyzeIPv6(ts *nsfidl.NetTrafficStats, ipPkt header.IPv6) {
+	mcastToSelf := header.IsV6MulticastAddress(ipPkt.DestinationAddress()) && e.IsV6FromSelf(ipPkt)
+
+	// Add conditions not to collect stats in.
+	if mcastToSelf {
+		log.Printf("[stats] detected multicast-to-self at NICID %v: %v -> %v", e.Nic.ID, ipPkt.SourceAddress(), ipPkt.DestinationAddress())
+		return
+	}
+
 	// TODO(porce): Fix this naive assumption by processing
 	// all optional headers first before accessing ICMPv6 packet.
 	ipPayload := ipPkt[header.IPv6MinimumSize:]
@@ -128,4 +147,18 @@ func analyzeIPv6(ts *nsfidl.NetTrafficStats, ipPkt header.IPv6) {
 			ts.PktsEchoRepV6 += 1
 		}
 	}
+}
+
+func (e *StatsEndpoint) IsV4FromSelf(ipPkt header.IPv4) bool {
+	return e.Nic.Addr == ipPkt.SourceAddress()
+}
+
+func (e *StatsEndpoint) IsV6FromSelf(ipPkt header.IPv6) bool {
+	addr := ipPkt.SourceAddress()
+	for _, a := range e.Nic.Ipv6addrs {
+		if a == addr {
+			return true
+		}
+	}
+	return false
 }
