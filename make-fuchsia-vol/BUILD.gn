@@ -12,8 +12,8 @@ go_binary("make-fuchsia-vol") {
       package = "make-fuchsia-vol"
     },
     {
-      source = "//apps/thinfs"
-      package = "fuchsia.googlesource.com/thinfs"
+      package = "thinfs"
+      source = "//garnet/go/src/thinfs"
     }
   ]
 }

@@ -21,16 +21,16 @@ import (
 	"runtime"
 	"strings"
 
-	"fuchsia.googlesource.com/thinfs/block/file"
-	"fuchsia.googlesource.com/thinfs/fs"
-	"fuchsia.googlesource.com/thinfs/fs/msdosfs"
-	"fuchsia.googlesource.com/thinfs/gpt"
-	"fuchsia.googlesource.com/thinfs/mbr"
+	"thinfs/block/file"
+	"thinfs/fs"
+	"thinfs/fs/msdosfs"
+	"thinfs/gpt"
+	"thinfs/mbr"
 )
 
 var (
 	fuchsiaBuildDir = os.Getenv("FUCHSIA_BUILD_DIR")
-	zirconBuildDir = os.Getenv("ZIRCON_BUILD_DIR")
+	zirconBuildDir  = os.Getenv("ZIRCON_BUILD_DIR")
 
 	zirconDir = os.Getenv("ZIRCON_DIR")
 )

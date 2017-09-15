@@ -14,8 +14,8 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"fuchsia.googlesource.com/thinfs/gpt"
-	"fuchsia.googlesource.com/thinfs/mbr"
+	"thinfs/gpt"
+	"thinfs/mbr"
 )
 
 const grubCoreOffset = 92
