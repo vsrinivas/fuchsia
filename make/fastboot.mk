@@ -4,30 +4,44 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# this file contains extra build rules for building fastboot compatible image
+# this file contains extra build rules for building various kernel
+#  package configurations
 
-# include fastboot header in start.S
-KERNEL_DEFINES += FASTBOOT_HEADER=1
+OUT_ZIRCON_IMAGE := $(BUILDDIR)/$(LKNAME).bin
 
-OUTLKIMAGE := $(BUILDDIR)/$(LKNAME).bin
-OUTLKZIMAGE := $(BUILDDIR)/z$(LKNAME).bin
-OUTLKZIMAGE_DTB := $(OUTLKZIMAGE)-dtb
-OUTLKIMAGE_DTB := $(OUTLKIMAGE)-dtb
+OUT_ZIRCON_ZIMAGE := $(BUILDDIR)/z$(LKNAME).bin
+OUT_ZIRCON_ZIMAGE_DTB := $(OUT_ZIRCON_ZIMAGE)-dtb
+OUT_ZIRCON_IMAGE_DTB := $(OUT_ZIRCON_IMAGE)-dtb
+OUT_ZIRCON_ZIMAGE_KDTB := $(BUILDDIR)/z$(LKNAME).kdtb
 
-GENERATED += $(OUTLKZIMAGE) $(OUTLKZIMAGE_DTB)
+
+GENERATED += $(OUT_ZIRCON_ZIMAGE) \
+             $(OUT_ZIRCON_ZIMAGE_DTB) \
+             $(OUT_ZIRCON_IMAGE_DTB) \
+             $(OUT_ZIRCON_ZIMAGE_KDTB)
+
+KERNSIZE=`stat -c%s "$(OUT_ZIRCON_ZIMAGE)"`
+DTBSIZE=`stat -c%s "$(DEVICE_TREE)"`
+
+KDTBTOOL=$(BUILDDIR)/tools/mkkdtb
 
 # rule for gzipping the kernel
-$(OUTLKZIMAGE): $(OUTLKBIN)
+$(OUT_ZIRCON_ZIMAGE): $(OUTLKBIN)
 	$(call BUILDECHO,gzipping image $@)
 	$(NOECHO)gzip -c $< > $@
 
-# rule for appending device tree
-$(OUTLKZIMAGE_DTB): $(OUTLKZIMAGE) $(DEVICE_TREE)
+# rule for appending device tree, compressed kernel
+$(OUT_ZIRCON_ZIMAGE_DTB): $(OUT_ZIRCON_ZIMAGE) $(DEVICE_TREE)
 	$(call BUILDECHO,concatenating device tree $@)
 	$(NOECHO)cat $< $(DEVICE_TREE) > $@
 
-$(OUTLKIMAGE_DTB): $(OUTLKIMAGE) $(DEVICE_TREE)
+# rule for appending device tree, uncompressed kernel
+$(OUT_ZIRCON_IMAGE_DTB): $(OUTLKBIN) $(DEVICE_TREE)
 	$(call BUILDECHO,concatenating device tree $@)
 	$(NOECHO)cat $< $(DEVICE_TREE) > $@
+
+$(OUT_ZIRCON_ZIMAGE_KDTB): $(OUT_ZIRCON_ZIMAGE) $(DEVICE_TREE) $(KDTBTOOL)
+	$(KDTBTOOL) $(OUT_ZIRCON_ZIMAGE) $(DEVICE_TREE) $@
+
 # build gzipped kernel with concatenated device tree
-all:: $(OUTLKZIMAGE_DTB) $(OUTLKIMAGE_DTB)
+all:: $(OUT_ZIRCON_ZIMAGE_DTB) $(OUT_ZIRCON_IMAGE_DTB) $(OUT_ZIRCON_ZIMAGE_KDTB)

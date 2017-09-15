@@ -44,9 +44,7 @@ attr                    .req x27
 
 .section .text.boot, "ax", @progbits
 FUNCTION_LABEL(_start)
-#if FASTBOOT_HEADER
-#include "fastboot-header.S"
-#endif
+#include "kernel-header.S"
 FUNCTION(arm_reset)
     movlit  x9, EFI_BOOT_SIGNATURE
     ldr     x10, [x1]
