@@ -1,0 +1,166 @@
+#!/bin/bash
+
+# Runs a single instance of the early boot entropy collection test.
+#
+# This script assumes that Zircon has already been built to support entropy quality tests (i.e with
+# the ENABLE_ENTROPY_COLLECTOR_TEST flag set at compile time). It handles starting Zircon either in
+# qemu or via netboot, then it extracts the entropy file once the boot-time test completes. Usually
+# you will call a "test driver" script that in turn calls this script, rather than calling this
+# script directly.
+#
+# Where sensible, the option flags agree with scripts/run-zircon.  The -a, -m, and -s command line
+# options are mandatory; the rest are optional. The output directory must also be passed on the
+# command line, as a positional argument (i.e. without a '-?' type flag).
+#
+# This script saves the captured entropy in a file named 'entropy.#########.bin' (to facilitate
+# running repeated tests with the same output directory). It also saves a metadata file, named
+# 'entropy.#########.meta', recording certain test parameters. See the source below for more
+# details.
+#
+# BUGS: netboot isn't supported yet, only qemu.
+
+function HELP {
+    echo "$0 [options] output-dir/" >&2
+    echo "options:" >&2
+    echo "-a <arch>   : arm64 or x86-64" >&2
+    echo "-c <word>   : add word to kernel cmdline" >&2
+    echo "-l <len>    : entropy test length (bytes to collect)" >&2
+    echo "-m <method> : netboot or qemu" >&2
+    echo "-n <name>   : Zircon nodename to use" >&2
+    echo "-o <dir>    : build directory" >&2
+    echo "-s <source> : hwrng or jitterentropy" >&2
+    exit 1
+}
+
+CDPATH=
+ZIRCONDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
+
+ARCH=
+BUILDDIR=
+CMDLINE=""
+LEN=
+METHOD=
+NODENAME=
+OUTDIR=
+SRC=
+
+while getopts "a:c:hl:m:n:o:s:" FLAG; do
+    case "$FLAG" in
+        a) ARCH="$OPTARG";;
+        c) CMDLINE+="$OPTARG ";;
+        h) HELP;;
+        l) LEN="$OPTARG";;
+        m) METHOD="$OPTARG";;
+        n) NODENAME="$OPTARG";;
+        o) BUILDDIR="$OPTARG";;
+        s) SRC="$OPTARG";;
+        \?)
+            echo "unrecognized option" >&2
+            HELP
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+if [[ "$#" -ne "1" ]]; then
+    echo "missing output dir" >&2
+    HELP
+fi
+OUTDIR="$1"
+shift
+
+# check required args
+if [[ -z $ARCH ]]; then
+    echo "must specify arch" >&2
+    HELP
+fi
+if [[ -z $METHOD ]]; then
+    echo "must specify method" >&2
+    HELP
+fi
+if [[ -z $SRC ]]; then
+    echo "must specify source" >&2
+    HELP
+fi
+if [[ -z $OUTDIR ]]; then
+    echo "must specify outdir" >&2
+    HELP
+fi
+
+# handle entropy-test specific cmdline args
+CMDLINE+="kernel.entropy-test.src=$SRC "
+if [[ -n $LEN ]]; then CMDLINE+="kernel.entropy-test.len=$LEN "; fi
+
+# find and read builddir
+if [[ "$ARCH" == "x86-64" ]]; then
+    PROJECT="zircon-pc-x86-64"
+else
+    PROJECT="zircon-qemu-$ARCH"
+fi
+
+if [[ -z "$BUILDDIR" ]]; then
+    BUILDDIR="$ZIRCONDIR/build-$PROJECT"
+fi
+
+if [[ ! -d $BUILDDIR || ! -x $BUILDDIR/tools/netcp ]]; then
+    echo "bad builddir: $BUILDDIR" >&2
+    HELP
+fi
+
+BUILDID="$(sed -n '/^#define\s\+BUILDID/{s/^[^"]*"//;s/".*$//;p;q}' "$BUILDDIR/config-buildid.h")"
+
+# set a few other variables
+if [[ -z $NODENAME ]]; then NODENAME="entropy-test-$(head -c16 /dev/urandom | xxd -p)"; fi
+CMDLINE+="zircon.nodename=$NODENAME "
+NUM="$(cd "$OUTDIR";
+       find . \( -type f -name "entropy.*.bin" -print \) -o \( -type d ! -name . -prune \) |
+       sed 's/^.*entropy\.0*//;s/\.bin$//;s/^$/0/;' | grep '^[0-9]\+$' |
+       sort -nr | head -n 1)"
+if [[ -z $NUM ]]; then NUM=-1; fi
+NUM="$(printf "%09d" "$((NUM + 1))")"
+BINFILE="$OUTDIR/entropy.$NUM.bin"
+METAFILE="$OUTDIR/entropy.$NUM.meta"
+
+# launch zircon
+case "$METHOD" in
+    qemu) "$ZIRCONDIR/scripts/run-zircon" -a "$ARCH" -c "$CMDLINE" -N -o "$BUILDDIR" & ;;
+    *)
+        echo "unrecognized method: $METHOD" >&2
+        HELP
+        ;;
+esac </dev/null
+echo "launched zircon with nodename $NODENAME" >&2
+
+# wait for zircon to send us the entropy file
+while true; do
+    sleep 5;
+    if "$BUILDDIR"/tools/netcp --nowait --timeout=1000 \
+        "$NODENAME:/boot/kernel/debug/entropy.bin" "$BINFILE" &&
+        [[ -z $LEN ||  $(wc -c <"$BINFILE") -eq $LEN ]]
+    then
+        echo "Finished test on nodename $NODENAME" >&2
+        break
+    fi
+done
+
+# write the meta file
+{
+    echo "entropy-test $METHOD"
+    echo "date         $(date +"%Y-%m-%d %H:%M:%S %Z")"
+    echo "buildid      $BUILDID"
+    echo "arch         $ARCH"
+    echo "source       $SRC"
+    echo "len          $LEN"
+    echo "cmdline      $CMDLINE"
+} >$METAFILE
+
+# reset the test device
+case "$METHOD" in
+    qemu)
+        while "$BUILDDIR"/tools/netaddr --nowait --timeout=1000 \
+                "$NODENAME" >/dev/null 2>/dev/null; do
+            "$BUILDDIR"/tools/netruncmd --nowait --timeout=1000 "$NODENAME" dm shutdown
+            sleep 2
+        done
+        ;;
+esac
