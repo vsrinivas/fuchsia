@@ -43,6 +43,9 @@ class ContextWriterImpl : ContextWriter {
   void Update(const fidl::String& id, ContextValuePtr value) override;
 
   // |ContextWriter|
+  void Remove(const fidl::String& id) override;
+
+  // |ContextWriter|
   void WriteEntityTopic(const fidl::String& topic,
                         const fidl::String& value) override;
 

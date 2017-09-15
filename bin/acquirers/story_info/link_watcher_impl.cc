@@ -131,24 +131,14 @@ void LinkWatcherImpl::ProcessContext(const fidl::String& value) {
   FXL_LOG(INFO) << "Publishing context: " << context_value << std::endl
                 << "Original link value: " << value << std::endl
                 << "Parent context value ID: " << parent_value_id_;
-  auto it = value_ids_.find(context.topic);
-  // TODO(thatguy): This pattern of wanting to have a single Context value
-  // and update its state seems to come up. Might be worth creating a
-  // ScopedContextValue class that wraps this logic right here and exposes
-  // a simple Set() operation.
-  if (it == value_ids_.end()) {
-    const fidl::String topic = context.topic;
-    value_ids_.emplace(topic, FutureValue<fidl::String>());
-    writer_->AddChildValue(parent_value_id_, std::move(context_value),
-                           [this, topic](const fidl::String& value_id) {
-                             value_ids_[topic] = value_id;
-                           });
-  } else {
-    it->second.OnValue(fxl::MakeCopyable([ this, value = std::move(context_value) ](
-        const fidl::String& value_id) mutable {
-      writer_->Update(value_id, std::move(value));
-    }));
+  auto it = values_.find(context.topic);
+  if (it == values_.end()) {
+    it = values_
+             .emplace(context.topic,
+                      ScopedContextValue(writer_, parent_value_id_))
+             .first;
   }
+  it->second.Set(std::move(context_value));
 }
 
 }  // namespace maxwell

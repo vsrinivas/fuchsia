@@ -20,6 +20,7 @@ StoryWatcherImpl::StoryWatcherImpl(StoryInfoAcquirer* const owner,
     : owner_(owner),
       writer_(writer),
       story_id_(story_id),
+      context_value_(writer),
       story_watcher_binding_(this),
       story_links_watcher_binding_(this) {
   story_provider->GetController(story_id, story_controller_.NewRequest());
@@ -32,20 +33,20 @@ StoryWatcherImpl::StoryWatcherImpl(StoryInfoAcquirer* const owner,
   story_watcher_binding_.set_connection_error_handler(
       [this] { owner_->DropStoryWatcher(story_id_); });
 
-  metadata_ = ContextMetadata::New();
-  metadata_->story = StoryMetadata::New();
-  metadata_->story->id = story_id;
-  metadata_->story->focused = FocusedState::New();
-  metadata_->story->focused->state = FocusedState::State::NOT_FOCUSED;
+  context_metadata_ = ContextMetadata::New();
+  context_metadata_->story = StoryMetadata::New();
+  context_metadata_->story->id = story_id;
+  context_metadata_->story->focused = FocusedState::New();
+  context_metadata_->story->focused->state = FocusedState::State::NOT_FOCUSED;
+  // TODO(thatguy): Add modular.StoryState.
+  // TODO(thatguy): Add visible state.
 
   auto value = ContextValue::New();
   value->type = ContextValueType::STORY;
-  value->meta = metadata_.Clone();
+  value->meta = context_metadata_.Clone();
 
-  // TODO(thatguy): Add modular.StoryState.
-  // TODO(thatguy): Add visible state.
-  writer_->AddValue(std::move(value), [this](const fidl::String& value_id) {
-    context_value_id_ = value_id;
+  context_value_.Set(std::move(value));
+  context_value_.OnId([this](const fidl::String& value_id) {
     // We have to wait until here to watch the links so that
     // we have |context_value_id_| available to pass to each
     // watcher.
@@ -56,7 +57,6 @@ StoryWatcherImpl::StoryWatcherImpl(StoryInfoAcquirer* const owner,
             WatchLink(link_path);
           }
         });
-
   });
 }
 
@@ -79,13 +79,13 @@ void StoryWatcherImpl::OnModuleAdded(modular::ModuleDataPtr module_data) {
   value->meta = std::move(metadata);
 
   auto path = modular::EncodeModulePath(module_data->module_path);
-  context_value_id_.OnValue(
+  context_value_.OnId(
       fxl::MakeCopyable([ this, value = std::move(value),
                           path ](const fidl::String& value_id) mutable {
-        writer_->AddChildValue(value_id, std::move(value),
-                               [this, path](const fidl::String& value_id) {
-                                 module_value_ids_[path] = value_id;
-                               });
+        auto it =
+            module_values_.emplace(path, ScopedContextValue(writer_, value_id))
+                .first;
+        it->second.Set(std::move(value));
       }));
 }
 
@@ -95,7 +95,7 @@ void StoryWatcherImpl::OnNewLink(modular::LinkPathPtr link_path) {
 }
 
 void StoryWatcherImpl::WatchLink(const modular::LinkPathPtr& link_path) {
-  context_value_id_.OnValue(fxl::MakeCopyable([ this, link_path = link_path.Clone() ](
+  context_value_.OnId(fxl::MakeCopyable([ this, link_path = link_path.Clone() ](
       const fidl::String& value_id) {
     links_.emplace(std::make_pair(modular::MakeLinkKey(link_path),
                                   std::make_unique<LinkWatcherImpl>(
@@ -105,7 +105,7 @@ void StoryWatcherImpl::WatchLink(const modular::LinkPathPtr& link_path) {
 }
 
 void StoryWatcherImpl::OnFocusChange(bool focused) {
-  metadata_->story->focused->state =
+  context_metadata_->story->focused->state =
       focused ? FocusedState::State::FOCUSED : FocusedState::State::NOT_FOCUSED;
   UpdateContext();
 }
@@ -120,9 +120,7 @@ void StoryWatcherImpl::DropLink(const std::string& link_key) {
 }
 
 void StoryWatcherImpl::UpdateContext() {
-  context_value_id_.OnValue([this](const fidl::String& value_id) {
-    writer_->UpdateMetadata(value_id, metadata_.Clone());
-  });
+  context_value_.UpdateMetadata(context_metadata_.Clone());
 }
 
 }  // namespace maxwell

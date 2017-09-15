@@ -60,6 +60,8 @@ class FutureValue {
   void operator=(const T& value) { SetValue(value); }
   void operator=(T&& value) { SetValue(std::move(value)); }
 
+  operator bool() { return value_.get() != nullptr; }
+
   // If |value_| is available, dispatches |fn| immediately. Otherwise, queues
   // |fn| for dispatch later when SetValue() is called. |fn| may be move-only.
   void OnValue(UseValueFunction fn) {

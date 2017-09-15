@@ -27,7 +27,8 @@ interface ContextWriter {
   // Updates the value (both the content and the metadata) for |value_id|.
   Update(string value_id, ContextValue value);
 
-  // TODO(thatguy): Add Remove().
+  // Removes the value specified by |value_id|.
+  Remove(string value_id);
 
   // This method is here to make transitioning from topic-based context
   // publishing to AddValue() easier and will be removed eventually.

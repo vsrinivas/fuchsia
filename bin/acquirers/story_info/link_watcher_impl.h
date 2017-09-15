@@ -9,7 +9,7 @@
 #include <memory>
 #include <string>
 
-#include "apps/maxwell/lib/async/future_value.h"
+#include "apps/maxwell/lib/context/scoped_context_value.h"
 #include "apps/maxwell/services/context/context_writer.fidl.h"
 #include "apps/modular/services/module/module_data.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
@@ -46,8 +46,8 @@ class LinkWatcherImpl : modular::LinkWatcher {
   const fidl::String parent_value_id_;
   const modular::LinkPathPtr link_path_;
 
-  // Per context link topic, the context value id.
-  std::map<fidl::String, FutureValue<fidl::String>> value_ids_;
+  // Per context link topic, the context value.
+  std::map<fidl::String, ScopedContextValue> values_;
 
   fidl::Binding<modular::LinkWatcher> link_watcher_binding_;
 

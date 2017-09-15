@@ -156,6 +156,10 @@ void ContextWriterImpl::UpdateMetadata(const fidl::String& id,
   repository_->Update(id, std::move(value));
 }
 
+void ContextWriterImpl::Remove(const fidl::String& id) {
+  repository_->Remove(id);
+}
+
 void ContextWriterImpl::WriteEntityTopic(const fidl::String& topic,
                                          const fidl::String& value) {
   if (!value) {
