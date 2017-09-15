@@ -23,8 +23,8 @@ class PendingOperationManager {
   ~PendingOperationManager();
 
   // Manage() takes an object |operation| as input, and returns a pair
-  // containing both a pointer to the object, and a callback to delete it. Until
-  // the callback is called, |operation| is owned by the
+  // containing both a pointer to the object, and a AutoCall to delete it. Until
+  // the AutoCall is either called or deleted, |operation| is owned by the
   // |PendingOperationManager| object.
   template <typename A>
   std::pair<A*, fxl::AutoCall<fxl::Closure>> Manage(A operation) {
