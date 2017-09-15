@@ -13,13 +13,6 @@
 
 namespace svcfs {
 
-static void CopyToArray(const char* string, size_t len, fbl::Array<char>* result) {
-    fbl::Array<char> array(new char[len + 1], len + 1);
-    memcpy(array.get(), string, len);
-    array[len] = '\0';
-    result->swap(array);
-}
-
 static bool IsDot(const char* name, size_t len) {
     return (len == 1) && (name[0] == '.');
 }
@@ -47,7 +40,7 @@ ServiceProvider::~ServiceProvider() = default;
 // VnodeSvc --------------------------------------------------------------------
 
 VnodeSvc::VnodeSvc(uint64_t node_id,
-                   fbl::Array<char> name,
+                   fbl::String name,
                    ServiceProvider* provider)
     : node_id_(node_id), name_(fbl::move(name)), provider_(provider) {
 }
@@ -66,7 +59,7 @@ zx_status_t VnodeSvc::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
         return ZX_ERR_UNAVAILABLE;
     }
 
-    provider_->Connect(name_.get(), name_.size(), fbl::move(channel));
+    provider_->Connect(name_.c_str(), name_.size(), fbl::move(channel));
 
     // If node_id_ is zero, this vnode was created during |Lookup| and doesn't
     // have a parent. Without a parent, there isn't anyone to clean up the raw
@@ -78,7 +71,7 @@ zx_status_t VnodeSvc::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
 }
 
 bool VnodeSvc::NameMatch(const char* name, size_t len) const {
-    return (name_.size() == len) && (memcmp(name_.get(), name, len) == 0);
+    return (name_.size() == len) && (memcmp(name_.c_str(), name, len) == 0);
 }
 
 void VnodeSvc::ClearProvider() {
@@ -137,7 +130,7 @@ zx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
         if (c->last_id >= vn.node_id()) {
             continue;
         }
-        if ((r = df.Next(vn.name().get(), vn.name().size(),
+        if ((r = df.Next(vn.name().c_str(), vn.name().size(),
                          VTYPE_TO_DTYPE(V_TYPE_FILE))) != ZX_OK) {
             return df.BytesFilled();
         }
@@ -152,11 +145,8 @@ bool VnodeDir::AddService(const char* name, size_t len, ServiceProvider* provide
         return false;
     }
 
-    fbl::Array<char> array;
-    CopyToArray(name, len, &array);
-
     fbl::RefPtr<VnodeSvc> vn = fbl::AdoptRef(new VnodeSvc(
-        next_node_id_++, fbl::move(array), provider));
+        next_node_id_++, fbl::String(name, len), provider));
 
     services_.push_back(fbl::move(vn));
     Notify(name, len, VFS_WATCH_EVT_ADDED);
@@ -197,10 +187,7 @@ zx_status_t VnodeProviderDir::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* na
         return ZX_ERR_NOT_FOUND;
     }
 
-    fbl::Array<char> array;
-    CopyToArray(name, len, &array);
-
-    *out = fbl::AdoptRef(new VnodeSvc(0, fbl::move(array), provider_));
+    *out = fbl::AdoptRef(new VnodeSvc(0, fbl::String(name, len), provider_));
     return ZX_OK;
 }
 

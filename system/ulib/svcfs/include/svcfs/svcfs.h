@@ -9,7 +9,7 @@
 #include <fs/watcher.h>
 #include <zircon/types.h>
 #include <zx/channel.h>
-#include <fbl/array.h>
+#include <fbl/string.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 
@@ -37,7 +37,7 @@ public:
     };
 
     VnodeSvc(uint64_t node_id,
-             fbl::Array<char> name,
+             fbl::String name,
              ServiceProvider* provider);
     ~VnodeSvc() override;
 
@@ -45,7 +45,7 @@ public:
     zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) final;
 
     uint64_t node_id() const { return node_id_; }
-    const fbl::Array<char>& name() const { return name_; }
+    const fbl::String& name() const { return name_; }
 
     bool NameMatch(const char* name, size_t len) const;
     void ClearProvider();
@@ -58,7 +58,7 @@ private:
     // exactly one |Serve| operation.
     uint64_t node_id_;
 
-    fbl::Array<char> name_;
+    fbl::String name_;
     ServiceProvider* provider_;
 };
 
