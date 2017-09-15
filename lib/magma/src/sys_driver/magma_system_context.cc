@@ -12,7 +12,7 @@
 #include <unordered_set>
 #include <vector>
 
-class MagmaSystemCommandBuffer : public magma::CommandBuffer {
+class MagmaSystemCommandBuffer final : public magma::CommandBuffer {
 public:
     MagmaSystemCommandBuffer(std::unique_ptr<MagmaSystemBuffer> buffer) : buffer_(std::move(buffer))
     {

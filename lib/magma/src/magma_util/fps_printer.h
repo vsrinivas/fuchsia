@@ -7,6 +7,8 @@
 
 #include <chrono>
 
+#include "magma_util/macros.h"
+
 namespace magma {
 
 class FpsPrinter {

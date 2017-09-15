@@ -10,7 +10,7 @@
 
 namespace magma {
 
-class SimpleAllocator : public AddressSpaceAllocator {
+class SimpleAllocator final : public AddressSpaceAllocator {
 public:
     static std::unique_ptr<SimpleAllocator> Create(uint64_t base, size_t size);
 
