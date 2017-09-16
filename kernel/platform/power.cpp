@@ -7,20 +7,19 @@
 
 #include <debug.h>
 #include <err.h>
-#include <zircon/compiler.h>
+#include <kernel/thread.h>
+#include <lib/console.h>
 #include <platform.h>
 #include <platform/debug.h>
-#include <kernel/thread.h>
 #include <stdio.h>
-#include <lib/console.h>
+#include <zircon/compiler.h>
 
 /*
  * default implementations of these routines, if the platform code
  * chooses not to implement.
  */
 __WEAK void platform_halt(platform_halt_action suggested_action,
-                          platform_halt_reason reason)
-{
+                          platform_halt_reason reason) {
 
 #if WITH_PANIC_BACKTRACE
     thread_print_backtrace(get_current_thread(), __GET_FRAME(0));
@@ -28,23 +27,21 @@ __WEAK void platform_halt(platform_halt_action suggested_action,
 
 #if ENABLE_PANIC_SHELL
     if (reason == HALT_REASON_SW_PANIC) {
-        dprintf(ALWAYS, "CRASH: starting debug shell... (reason = %u)\n", reason);
+        dprintf(ALWAYS, "CRASH: starting debug shell... (reason = %d)\n", reason);
         arch_disable_ints();
         panic_shell_start();
     }
-#endif  // ENABLE_PANIC_SHELL
+#endif // ENABLE_PANIC_SHELL
 
-    dprintf(ALWAYS, "HALT: spinning forever... (reason = %u)\n", reason);
+    dprintf(ALWAYS, "HALT: spinning forever... (reason = %d)\n", reason);
     arch_disable_ints();
-    for (;;);
+    for (;;) {}
 }
 
-__WEAK void platform_halt_cpu(void)
-{
+__WEAK void platform_halt_cpu() {
 }
 
-__WEAK void platform_halt_secondary_cpus(void)
-{
+__WEAK void platform_halt_secondary_cpus() {
     PANIC_UNIMPLEMENTED;
 }
 
@@ -52,14 +49,12 @@ __WEAK void platform_halt_secondary_cpus(void)
 
 #include <lib/console.h>
 
-static int cmd_reboot(int argc, const cmd_args *argv, uint32_t flags)
-{
+static int cmd_reboot(int argc, const cmd_args* argv, uint32_t flags) {
     platform_halt(HALT_ACTION_REBOOT, HALT_REASON_SW_RESET);
     return 0;
 }
 
-static int cmd_poweroff(int argc, const cmd_args *argv, uint32_t flags)
-{
+static int cmd_poweroff(int argc, const cmd_args* argv, uint32_t flags) {
     platform_halt(HALT_ACTION_SHUTDOWN, HALT_REASON_SW_RESET);
     return 0;
 }
