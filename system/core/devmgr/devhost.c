@@ -807,12 +807,25 @@ zx_status_t devhost_remove(zx_device_t* dev) {
 }
 
 zx_status_t devhost_get_topo_path(zx_device_t* dev, char* path, size_t max, size_t* actual) {
+    zx_device_t* remote_dev = dev;
+    if (dev->flags & DEV_FLAG_INSTANCE) {
+        // Instances cannot be opened a second time. If dev represents an instance, return the path
+        // to its parent, prefixed with an '@'.
+        if (max < 1) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        path[0] = '@';
+        path++;
+        max--;
+        remote_dev = dev->parent;
+    }
+
     struct {
         dc_status_t rsp;
         char path[DC_PATH_MAX];
     } reply;
     zx_status_t r;
-    if ((r = devhost_rpc(dev, DC_OP_GET_TOPO_PATH, NULL, "get-topo-path",
+    if ((r = devhost_rpc(remote_dev, DC_OP_GET_TOPO_PATH, NULL, "get-topo-path",
                          &reply.rsp, sizeof(reply))) < 0) {
         return r;
     }
@@ -824,6 +837,7 @@ zx_status_t devhost_get_topo_path(zx_device_t* dev, char* path, size_t max, size
 
     memcpy(path, reply.path, len);
     *actual = len;
+    if (dev->flags & DEV_FLAG_INSTANCE) *actual += 1;
     return ZX_OK;
 }
 
