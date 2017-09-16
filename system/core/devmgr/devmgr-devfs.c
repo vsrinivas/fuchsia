@@ -673,7 +673,7 @@ zx_handle_t devfs_root_clone(void) {
     return fdio_service_clone(devfs_root);
 }
 
-void devmgr_init(zx_handle_t root_job) {
+void devfs_init(zx_handle_t root_job) {
     printf("devmgr: init\n");
 
     prepopulate_protocol_dirs();
@@ -693,6 +693,3 @@ void devmgr_init(zx_handle_t root_job) {
     devfs_root = h1;
 }
 
-void devmgr_handle_messages(void) {
-    coordinator();
-}

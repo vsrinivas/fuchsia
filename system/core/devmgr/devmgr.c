@@ -428,7 +428,8 @@ int main(int argc, char** argv) {
 
     printf("devmgr: main()\n");
 
-    devmgr_init(root_job_handle);
+    devfs_init(root_job_handle);
+
     devmgr_vfs_init();
 
     load_cmdline_from_bootfs();
@@ -442,7 +443,6 @@ int main(int argc, char** argv) {
 
     fetch_vmos(PA_VMO_VDSO, "PA_VMO_VDSO");
     fetch_vmos(PA_VMO_KERNEL_FILE, "PA_VMO_KERNEL_FILE");
-
 
     zx_status_t status = zx_job_create(root_job_handle, 0u, &svcs_job_handle);
     if (status < 0) {
@@ -469,7 +469,7 @@ int main(int argc, char** argv) {
         thrd_detach(t);
     }
 
-    devmgr_handle_messages();
-    printf("devmgr: message handler returned?!\n");
+    coordinator();
+    printf("devmgr: coordinator exited?!\n");
     return 0;
 }

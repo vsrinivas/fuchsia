@@ -10,11 +10,14 @@
 
 __BEGIN_CDECLS
 
-void devmgr_init(zx_handle_t root_job);
-void devmgr_handle_messages(void);
+void coordinator(void);
+
+void devfs_init(zx_handle_t root_job);
+zx_handle_t devfs_root_clone(void);
 
 void devmgr_io_init(void);
 void devmgr_vfs_init(void);
+
 zx_status_t devmgr_launch(zx_handle_t job, const char* name,
                           int argc, const char* const* argv,
                           const char** envp, int stdiofd,
@@ -43,7 +46,5 @@ void block_device_watcher(zx_handle_t job);
 // default. If found, it returns false if the found value matches "0", "off", or
 // "false", otherwise it returns true.
 bool getenv_bool(const char* key, bool _default);
-
-zx_handle_t devfs_root_clone(void);
 
 __END_CDECLS
