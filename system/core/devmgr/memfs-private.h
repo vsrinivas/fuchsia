@@ -7,15 +7,17 @@
 #include <threads.h>
 
 #include <ddk/device.h>
-#include <fs/vfs.h>
 #include <zircon/compiler.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
+#include <fdio/io.h>
 #include <fdio/remoteio.h>
 #include <fdio/vfs.h>
 
 #ifdef __cplusplus
 
+#include <fs/vfs.h>
+#include <fs/vnode.h>
 #include <fbl/atomic.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
@@ -31,7 +33,7 @@ class Dnode;
 
 class VnodeMemfs : public fs::Vnode {
 public:
-    virtual zx_status_t Setattr(vnattr_t* a) final;
+    virtual zx_status_t Setattr(const vnattr_t* a) final;
     virtual zx_status_t Sync() final;
     ssize_t Ioctl(uint32_t op, const void* in_buf,
                   size_t in_len, void* out_buf, size_t out_len) override;
@@ -105,7 +107,7 @@ public:
     virtual void SetRemote(zx::channel remote) final;
 
 private:
-    zx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
+    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) final;
 
     // Resolves the question, "Can this directory create a child node with the name?"
     // Returns "ZX_OK" on success; otherwise explains failure with error message.

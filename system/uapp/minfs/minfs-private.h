@@ -20,8 +20,9 @@
 
 #include <fs/block-txn.h>
 #include <fs/mapped-vmo.h>
-
+#include <fs/trace.h>
 #include <fs/vfs.h>
+#include <fs/vnode.h>
 
 #include <hash/hash.h>
 
@@ -207,8 +208,8 @@ private:
     ssize_t Read(void* data, size_t len, size_t off) final;
     ssize_t Write(const void* data, size_t len, size_t off) final;
     zx_status_t Getattr(vnattr_t* a) final;
-    zx_status_t Setattr(vnattr_t* a) final;
-    zx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
+    zx_status_t Setattr(const vnattr_t* a) final;
+    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) final;
     zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len,
                        uint32_t mode) final;
     zx_status_t Unlink(const char* name, size_t len, bool must_be_dir) final;

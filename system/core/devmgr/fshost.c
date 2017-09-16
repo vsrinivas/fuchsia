@@ -10,8 +10,6 @@
 
 #include <fdio/util.h>
 
-#include <fs/vfs.h>
-
 #include <zircon/boot/bootdata.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>

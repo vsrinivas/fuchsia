@@ -10,6 +10,7 @@
 #include <threads.h>
 
 #include <fs/vfs.h>
+#include <fs/vnode.h>
 #include <zircon/process.h>
 #include <zx/event.h>
 #include <fdio/debug.h>
@@ -29,7 +30,7 @@ typedef struct vfs_iostate {
     // operations (see: link, rename). Defaults to ZX_HANDLE_INVALID.
     // Validated on the server side using cookies.
     zx::event token;
-    vdircookie_t dircookie;
+    fs::vdircookie_t dircookie;
     size_t io_off;
     uint32_t io_flags;
 } vfs_iostate_t;
@@ -124,48 +125,6 @@ void zxrio_reply_channel_status(zx::channel channel, zx_status_t status) {
     } reply = {status, 0};
     channel.write(0, &reply, ZXRIO_OBJECT_MINSIZE, nullptr, 0);
 }
-
-} // namespace
-
-zx_status_t Vnode::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
-    zx_status_t r;
-    vfs_iostate_t* ios;
-
-    if ((ios = static_cast<vfs_iostate_t*>(calloc(1, sizeof(vfs_iostate_t)))) == nullptr) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    ios->vn = fbl::RefPtr<fs::Vnode>(this);
-    ios->io_flags = flags;
-    ios->vfs = vfs;
-
-    if ((r = vfs->Serve(fbl::move(channel), ios)) < 0) {
-        free(ios);
-        return r;
-    }
-    return ZX_OK;
-}
-
-zx_status_t Vfs::Serve(zx::channel channel, void* ios) {
-    return dispatcher_->AddVFSHandler(fbl::move(channel), vfs_handler, ios);
-}
-
-zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn,
-                                zx::channel channel) {
-    // Make sure the Vnode really is a directory.
-    zx_status_t r;
-    if ((r = vn->Open(O_DIRECTORY)) != ZX_OK) {
-        return r;
-    }
-
-    // Tell the calling process that we've mounted the directory.
-    if ((r = channel.signal_peer(0, ZX_USER_SIGNAL_0)) != ZX_OK) {
-        return r;
-    }
-
-    return vn->Serve(this, fbl::move(channel), O_ADMIN);
-}
-
-} // namespace fs
 
 static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, vfs_iostate* ios) {
     uint32_t len = msg->datalen;
@@ -538,15 +497,52 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
     }
 }
 
-// TODO(orr): temporary; prevent multithread weirdness while we
-// make locking more fine grained
-static mtx_t vfs_big_lock = MTX_INIT;
-
 zx_status_t vfs_handler(zxrio_msg_t* msg, void* cookie) {
     vfs_iostate_t* ios = static_cast<vfs_iostate_t*>(cookie);
 
-    fbl::AutoLock lock(&vfs_big_lock);
     fbl::RefPtr<fs::Vnode> vn = ios->vn;
     zx_status_t status = vfs_handler_vn(msg, fbl::move(vn), ios);
     return status;
 }
+
+} // namespace
+
+zx_status_t Vnode::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
+    zx_status_t r;
+    vfs_iostate_t* ios;
+
+    if ((ios = static_cast<vfs_iostate_t*>(calloc(1, sizeof(vfs_iostate_t)))) == nullptr) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    ios->vn = fbl::RefPtr<fs::Vnode>(this);
+    ios->io_flags = flags;
+    ios->vfs = vfs;
+
+    if ((r = vfs->Serve(fbl::move(channel), ios)) < 0) {
+        free(ios);
+        return r;
+    }
+    return ZX_OK;
+}
+
+zx_status_t Vfs::Serve(zx::channel channel, void* ios) {
+    return dispatcher_->AddVFSHandler(fbl::move(channel), vfs_handler, ios);
+}
+
+zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn,
+                                zx::channel channel) {
+    // Make sure the Vnode really is a directory.
+    zx_status_t r;
+    if ((r = vn->Open(O_DIRECTORY)) != ZX_OK) {
+        return r;
+    }
+
+    // Tell the calling process that we've mounted the directory.
+    if ((r = channel.signal_peer(0, ZX_USER_SIGNAL_0)) != ZX_OK) {
+        return r;
+    }
+
+    return vn->Serve(this, fbl::move(channel), O_ADMIN);
+}
+
+} // namespace fs

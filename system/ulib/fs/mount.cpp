@@ -9,6 +9,7 @@
 #include <threads.h>
 
 #include <fs/vfs.h>
+#include <fs/vnode.h>
 #include <zircon/thread_annotations.h>
 #include <fdio/debug.h>
 #include <fdio/remoteio.h>
@@ -21,6 +22,29 @@
 #include <fbl/unique_ptr.h>
 
 namespace fs {
+
+constexpr Vfs::MountNode::MountNode() : vn_(nullptr) {}
+
+Vfs::MountNode::~MountNode() {
+    ZX_DEBUG_ASSERT(vn_ == nullptr);
+}
+
+void Vfs::MountNode::SetNode(fbl::RefPtr<Vnode> vn) {
+    ZX_DEBUG_ASSERT(vn_ == nullptr);
+    vn_ = vn;
+}
+
+zx::channel Vfs::MountNode::ReleaseRemote() {
+    ZX_DEBUG_ASSERT(vn_ != nullptr);
+    zx::channel h = vn_->DetachRemote();
+    vn_ = nullptr;
+    return h;
+}
+
+bool Vfs::MountNode::VnodeMatch(fbl::RefPtr<Vnode> vn) const {
+    ZX_DEBUG_ASSERT(vn_ != nullptr);
+    return vn == vn_;
+}
 
 // Installs a remote filesystem on vn and adds it to the remote_list_.
 zx_status_t Vfs::InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) {
@@ -115,7 +139,7 @@ zx_status_t Vfs::UninstallRemoteLocked(fbl::RefPtr<Vnode> vn, zx::channel* h) {
 // Uninstall all remote filesystems. Acts like 'UninstallRemote' for all
 // known remotes.
 zx_status_t Vfs::UninstallAll(zx_time_t deadline) {
-    fbl::unique_ptr<fs::MountNode> mount_point;
+    fbl::unique_ptr<MountNode> mount_point;
     for (;;) {
         {
             fbl::AutoLock lock(&vfs_lock_);

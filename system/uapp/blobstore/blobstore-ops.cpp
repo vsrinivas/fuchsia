@@ -55,7 +55,7 @@ zx_status_t VnodeBlob::Open(uint32_t flags) {
     return ZX_OK;
 }
 
-zx_status_t VnodeBlob::Readdir(void* cookie, void* dirents, size_t len) {
+zx_status_t VnodeBlob::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) {
     if (!IsDirectory()) {
         return ZX_ERR_NOT_DIR;
     }

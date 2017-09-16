@@ -30,7 +30,7 @@ struct dircookie_t {
     uint64_t last_id;
 };
 
-static_assert(sizeof(dircookie_t) <= sizeof(vdircookie_t),
+static_assert(sizeof(dircookie_t) <= sizeof(fs::vdircookie_t),
               "svcfs dircookie too large to fit in IO state");
 
 // ServiceProvider -------------------------------------------------------------
@@ -114,8 +114,8 @@ zx_status_t VnodeDir::WatchDirV2(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) {
     return watcher_.WatchDirV2(vfs, this, cmd);
 }
 
-zx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
-    dircookie_t* c = static_cast<dircookie_t*>(cookie);
+zx_status_t VnodeDir::Readdir(fs::vdircookie_t* cookie, void* data, size_t len) {
+    dircookie_t* c = reinterpret_cast<dircookie_t*>(cookie);
     fs::DirentFiller df(data, len);
 
     zx_status_t r = 0;

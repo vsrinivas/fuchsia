@@ -4,12 +4,13 @@
 
 #pragma once
 
-#include <fs/dispatcher.h>
-#include <fs/vfs.h>
-#include <zircon/types.h>
 #include <fbl/array.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_piece.h>
+#include <fs/dispatcher.h>
+#include <fs/vfs.h>
+#include <fs/vnode.h>
+#include <zircon/types.h>
 
 namespace vmofs {
 
@@ -58,7 +59,7 @@ public:
     zx_status_t Open(uint32_t flags) final;
     zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
     zx_status_t Getattr(vnattr_t* a) final;
-    zx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
+    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) final;
 
     uint32_t GetVType() final;
 

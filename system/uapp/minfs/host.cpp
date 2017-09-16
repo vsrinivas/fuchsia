@@ -38,7 +38,7 @@ static zx_status_t do_stat(fbl::RefPtr<fs::Vnode> vn, struct stat* s) {
 typedef struct {
     fbl::RefPtr<fs::Vnode> vn;
     uint64_t off;
-    vdircookie_t dircookie;
+    fs::vdircookie_t dircookie;
 } file_t;
 
 #define MAXFD 64
@@ -271,7 +271,7 @@ int emu_stat(const char* fn, struct stat* s) {
 typedef struct MINDIR {
     uint64_t magic;
     fbl::RefPtr<fs::Vnode> vn;
-    vdircookie_t cookie;
+    fs::vdircookie_t cookie;
     uint8_t* ptr;
     uint8_t data[DIR_BUFSIZE];
     size_t size;

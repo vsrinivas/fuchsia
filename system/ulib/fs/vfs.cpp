@@ -22,7 +22,9 @@
 #include <fs/remote.h>
 #endif
 
+#include <fs/trace.h>
 #include <fs/vfs.h>
+#include <fs/vnode.h>
 
 uint32_t __trace_bits;
 

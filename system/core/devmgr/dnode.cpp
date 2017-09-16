@@ -131,7 +131,7 @@ struct dircookie_t {
     size_t order; // Minimum 'order' of the next dnode dirent to be read.
 };
 
-static_assert(sizeof(dircookie_t) <= sizeof(vdircookie_t),
+static_assert(sizeof(dircookie_t) <= sizeof(fs::vdircookie_t),
               "MemFS dircookie too large to fit in IO state");
 
 // Read the canned "." and ".." entries that should

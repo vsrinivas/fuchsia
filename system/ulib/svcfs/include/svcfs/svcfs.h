@@ -4,14 +4,15 @@
 
 #pragma once
 
-#include <fs/dispatcher.h>
-#include <fs/vfs.h>
-#include <fs/watcher.h>
-#include <zircon/types.h>
-#include <zx/channel.h>
 #include <fbl/string.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
+#include <fs/dispatcher.h>
+#include <fs/vfs.h>
+#include <fs/vnode.h>
+#include <fs/watcher.h>
+#include <zircon/types.h>
+#include <zx/channel.h>
 
 namespace svcfs {
 
@@ -75,7 +76,7 @@ public:
     zx_status_t WatchDir(zx::channel* out) final;
     zx_status_t WatchDirV2(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) final;
 
-    zx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
+    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) final;
 
     bool AddService(const char* name, size_t len, ServiceProvider* provider);
     bool RemoveService(const char* name, size_t len);

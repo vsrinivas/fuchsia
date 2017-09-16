@@ -21,6 +21,7 @@
 #ifdef __Fuchsia__
 #include <async/loop.h>
 #include <fs/async-dispatcher.h>
+#include <fs/trace.h>
 #endif
 
 #include "minfs-private.h"

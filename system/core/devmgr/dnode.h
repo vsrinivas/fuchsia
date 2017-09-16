@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include <fs/vfs.h>
+#include <fs/vnode.h>
 #include <fdio/vfs.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>

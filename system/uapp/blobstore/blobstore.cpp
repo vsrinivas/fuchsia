@@ -542,12 +542,12 @@ typedef struct dircookie {
     uint64_t reserved; // Unused
 } dircookie_t;
 
-static_assert(sizeof(dircookie_t) <= sizeof(vdircookie_t),
+static_assert(sizeof(dircookie_t) <= sizeof(fs::vdircookie_t),
               "Blobstore dircookie too large to fit in IO state");
 
-zx_status_t Blobstore::Readdir(void* cookie, void* dirents, size_t len) {
+zx_status_t Blobstore::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) {
     fs::DirentFiller df(dirents, len);
-    dircookie_t* c = static_cast<dircookie_t*>(cookie);
+    dircookie_t* c = reinterpret_cast<dircookie_t*>(cookie);
 
     for (size_t i = c->index; i < info_.inode_count; ++i) {
         if (GetNode(i)->start_block >= kStartBlockMinimum) {

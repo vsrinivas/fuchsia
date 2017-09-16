@@ -16,6 +16,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <fs/vfs.h>
+#include <fs/vnode.h>
 #include <fs/watcher.h>
 #include <zx/channel.h>
 

@@ -17,7 +17,7 @@ struct dircookie_t {
     uint64_t last_id;
 };
 
-static_assert(sizeof(dircookie_t) <= sizeof(vdircookie_t),
+static_assert(sizeof(dircookie_t) <= sizeof(fs::vdircookie_t),
               "vmofs dircookie too large to fit in IO state");
 
 // Vnode -----------------------------------------------------------------------
@@ -161,8 +161,8 @@ zx_status_t VnodeDir::Getattr(vnattr_t* attr) {
     return ZX_OK;
 }
 
-zx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
-    dircookie_t* c = static_cast<dircookie_t*>(cookie);
+zx_status_t VnodeDir::Readdir(fs::vdircookie_t* cookie, void* data, size_t len) {
+    dircookie_t* c = reinterpret_cast<dircookie_t*>(cookie);
     fs::DirentFiller df(data, len);
     zx_status_t r = 0;
     if (c->last_id < 1) {

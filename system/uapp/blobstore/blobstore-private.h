@@ -15,9 +15,10 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-
 #include <fs/block-txn.h>
+#include <fs/trace.h>
 #include <fs/vfs.h>
+#include <fs/vnode.h>
 
 #ifdef __Fuchsia__
 #include <block-client/client.h>
@@ -142,7 +143,7 @@ private:
     zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnds,
                            uint32_t* type, void* extra, uint32_t* esize) final;
     zx_status_t Open(uint32_t flags) final;
-    zx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
+    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) final;
     ssize_t Read(void* data, size_t len, size_t off) final;
     ssize_t Write(const void* data, size_t len, size_t off) final;
     zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
@@ -236,7 +237,7 @@ public:
     // Removes blob from 'active' hashmap.
     zx_status_t ReleaseBlob(VnodeBlob* blob);
 
-    zx_status_t Readdir(void* cookie, void* dirents, size_t len);
+    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len);
 
     zx_status_t AttachVmo(zx_handle_t vmo, vmoid_t* out);
     zx_status_t Txn(block_fifo_request_t* requests, size_t count) {

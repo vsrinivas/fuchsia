@@ -302,7 +302,7 @@ zx_status_t VnodeVmo::Getattr(vnattr_t* attr) {
     return ZX_OK;
 }
 
-zx_status_t VnodeMemfs::Setattr(vnattr_t* attr) {
+zx_status_t VnodeMemfs::Setattr(const vnattr_t* attr) {
     if ((attr->valid & ~(ATTR_MTIME)) != 0) {
         // only attr currently supported
         return ZX_ERR_INVALID_ARGS;
@@ -313,7 +313,7 @@ zx_status_t VnodeMemfs::Setattr(vnattr_t* attr) {
     return ZX_OK;
 }
 
-zx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
+zx_status_t VnodeDir::Readdir(fs::vdircookie_t* cookie, void* data, size_t len) {
     fs::DirentFiller df(data, len);
     if (!IsDirectory()) {
         // This WAS a directory, but it has been deleted.

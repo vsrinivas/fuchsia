@@ -1292,7 +1292,7 @@ zx_status_t VnodeMinfs::Getattr(vnattr_t* a) {
     return ZX_OK;
 }
 
-zx_status_t VnodeMinfs::Setattr(vnattr_t* a) {
+zx_status_t VnodeMinfs::Setattr(const vnattr_t* a) {
     int dirty = 0;
     FS_TRACE(MINFS, "minfs_setattr() vn=%p(#%u)\n", this, ino_);
     if ((a->valid & ~(ATTR_CTIME|ATTR_MTIME)) != 0) {
@@ -1320,10 +1320,10 @@ typedef struct dircookie {
     uint32_t seqno;    // inode seq no
 } dircookie_t;
 
-static_assert(sizeof(dircookie_t) <= sizeof(vdircookie_t),
+static_assert(sizeof(dircookie_t) <= sizeof(fs::vdircookie_t),
               "MinFS dircookie too large to fit in IO state");
 
-zx_status_t VnodeMinfs::Readdir(void* cookie, void* dirents, size_t len) {
+zx_status_t VnodeMinfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) {
     FS_TRACE(MINFS, "minfs_readdir() vn=%p(#%u) cookie=%p len=%zd\n", this, ino_, cookie, len);
     dircookie_t* dc = reinterpret_cast<dircookie_t*>(cookie);
     fs::DirentFiller df(dirents, len);
