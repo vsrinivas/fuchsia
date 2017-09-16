@@ -11,10 +11,9 @@ MODULE := $(LOCAL_DIR)
 
 PLATFORM := pc
 
-MODULE_SRCS += $(LOCAL_DIR)/config.c
+MODULE_SRCS := $(LOCAL_DIR)/empty.cpp
 
-MODULE_DEPS += \
+MODULE_DEPS := \
     kernel/dev/intel_rng
 
 include make/module.mk
-
