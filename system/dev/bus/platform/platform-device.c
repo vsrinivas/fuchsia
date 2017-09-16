@@ -6,6 +6,7 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-devices.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -82,7 +83,12 @@ zx_status_t platform_device_enable(platform_dev_t* dev, bool enable) {
             .prop_count = countof(props),
         };
 
-        status = device_add(dev->bus->zxdev, &args, &dev->zxdev);
+        // add PCI root at top level
+        zx_device_t* parent = dev->bus->zxdev;
+        if (dev->did == PDEV_DID_KPCI) {
+            parent = device_get_parent(parent);
+        }
+        status = device_add(parent, &args, &dev->zxdev);
     } else if (!enable && dev->enabled) {
         device_remove(dev->zxdev);
         dev->zxdev = NULL;

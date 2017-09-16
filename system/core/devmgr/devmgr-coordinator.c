@@ -194,32 +194,23 @@ static device_t misc_device = {
     .refcount = 1,
 };
 
+static device_t sys_device = {
+    .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE,
+    .name = "sys",
+    .libname = "",
+    .args = "sys,,",
+    .children = LIST_INITIAL_VALUE(sys_device.children),
+    .pending = LIST_INITIAL_VALUE(sys_device.pending),
+    .refcount = 1,
+};
+
 static zx_handle_t acpi_rpc[2] = { ZX_HANDLE_INVALID, ZX_HANDLE_INVALID };
 
-static device_t acpi_device = {
-    .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE,
-    .protocol_id = ZX_PROTOCOL_ACPI_BUS,
-    .name = "acpi",
-    .libname = "",
-    .args = "acpi,,",
-    .children = LIST_INITIAL_VALUE(acpi_device.children),
-    .pending = LIST_INITIAL_VALUE(acpi_device.pending),
-    .refcount = 1,
-};
-
-static device_t platform_device = {
-    .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE,
-    .name = "platform",
-    .libname = "",
-    .args = "platform,,",
-    .children = LIST_INITIAL_VALUE(platform_device.children),
-    .pending = LIST_INITIAL_VALUE(platform_device.pending),
-    .refcount = 1,
-};
-
 void devmgr_set_mdi(zx_handle_t mdi_handle) {
+#if defined(__aarch64__)
     // MDI VMO handle is passed via via the resource handle
-    platform_device.hrsrc = mdi_handle;
+    sys_device.hrsrc = mdi_handle;
+#endif
 }
 
 static void dc_dump_device(device_t* dev, size_t indent) {
@@ -254,10 +245,7 @@ static void dc_dump_device(device_t* dev, size_t indent) {
 static void dc_dump_state(void) {
     dc_dump_device(&root_device, 0);
     dc_dump_device(&misc_device, 1);
-    dc_dump_device(&acpi_device, 1);
-    if (platform_device.hrsrc != ZX_HANDLE_INVALID) {
-        dc_dump_device(&platform_device, 1);
-    }
+    dc_dump_device(&sys_device, 1);
 }
 
 static void dc_dump_device_props(device_t* dev) {
@@ -316,10 +304,7 @@ static void dc_dump_device_props(device_t* dev) {
 static void dc_dump_devprops(void) {
     dc_dump_device_props(&root_device);
     dc_dump_device_props(&misc_device);
-    dc_dump_device_props(&acpi_device);
-    if (platform_device.hrsrc != ZX_HANDLE_INVALID) {
-        dc_dump_device_props(&platform_device);
-    }
+    dc_dump_device_props(&sys_device);
 }
 
 static void dc_dump_drivers(void) {
@@ -416,8 +401,8 @@ static zx_status_t dc_get_topo_path(device_t* dev, char* out, size_t max) {
             name = dev->name;
         } else if (!strcmp(misc_device.name, dev->name)) {
             name = "dev/misc";
-        } else if (!strcmp(acpi_device.name, dev->name)) {
-            name = "dev/acpi";
+        } else if (!strcmp(sys_device.name, dev->name)) {
+            name = "dev/sys";
         } else {
             name = "dev";
         }
@@ -537,9 +522,11 @@ static zx_status_t dc_launch_devhost(devhost_t* host,
     //TODO: pass a channel to the acpi devhost to rpc with
     //      devcoordinator, so it can call reboot/poweroff/ps0.
     //      come up with a better way to wire this up.
-    if (!strcmp(name, "devhost:acpi")) {
+#if defined(__x86_64__)
+    if (!strcmp(name, "devhost:sys")) {
         launchpad_add_handle(lp, acpi_rpc[1], PA_HND(PA_USER0, 10));
     }
+#endif
 
     const char* errmsg;
     zx_status_t status = launchpad_go(lp, &host->proc, &errmsg);
@@ -1402,11 +1389,14 @@ void dc_bind_driver(driver_t* drv) {
         dc_attempt_bind(drv, &root_device);
     } else if (is_misc_driver(drv)) {
         dc_attempt_bind(drv, &misc_device);
+#if defined(__x86_64__)
     } else if (is_acpi_bus_driver(drv)) {
-        dc_attempt_bind(drv, &acpi_device);
-    } else if (is_platform_bus_driver(drv) &&
-               (platform_device.hrsrc != ZX_HANDLE_INVALID)) {
-        dc_attempt_bind(drv, &platform_device);
+        dc_attempt_bind(drv, &sys_device);
+#endif
+#if defined(__aarch64__)
+    } else if (is_platform_bus_driver(drv) && (sys_device.hrsrc != ZX_HANDLE_INVALID)) {
+        dc_attempt_bind(drv, &sys_device);
+#endif
     } else if (dc_running) {
         device_t* dev;
         list_for_every_entry(&list_devices, dev, device_t, anode) {
@@ -1474,10 +1464,7 @@ void coordinator(void) {
 #endif
 
     devfs_publish(&root_device, &misc_device);
-    devfs_publish(&root_device, &acpi_device);
-    if (platform_device.hrsrc != ZX_HANDLE_INVALID) {
-        devfs_publish(&root_device, &platform_device);
-    }
+    devfs_publish(&root_device, &sys_device);
 
     find_loadable_drivers("/boot/driver");
     find_loadable_drivers("/boot/driver/test");
