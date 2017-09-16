@@ -10,14 +10,13 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_DEPS := \
-	kernel/platform \
-	kernel/target \
 	kernel/app \
-	kernel/dev \
-	kernel/kernel
+	kernel/kernel \
+	kernel/platform \
+	kernel/target
 
 MODULE_SRCS := \
-	$(LOCAL_DIR)/init.c \
-	$(LOCAL_DIR)/main.c \
+	$(LOCAL_DIR)/init.cpp \
+	$(LOCAL_DIR)/main.cpp \
 
 include make/module.mk

@@ -5,44 +5,42 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-
 /*
  * Main entry point to the OS. Initializes modules in order and creates
  * the default thread.
  */
-#include <zircon/compiler.h>
-#include <debug.h>
-#include <string.h>
-#include <app.h>
-#include <arch.h>
-#include <platform.h>
-#include <target.h>
-#include <lib/heap.h>
-#include <kernel/mutex.h>
-#include <kernel/thread.h>
-#include <lk/init.h>
 #include <lk/main.h>
 
-extern void (*const __init_array_start[])(void);
-extern void (*const __init_array_end[])(void);
+#include <app.h>
+#include <arch.h>
+#include <debug.h>
+#include <kernel/mutex.h>
+#include <kernel/thread.h>
+#include <lib/heap.h>
+#include <lk/init.h>
+#include <platform.h>
+#include <string.h>
+#include <target.h>
+#include <zircon/compiler.h>
+
+extern void (*const __init_array_start[])();
+extern void (*const __init_array_end[])();
 extern int __bss_start;
 extern int _end;
 
 static uint secondary_idle_thread_count;
 
-static int bootstrap2(void *arg);
+static int bootstrap2(void* arg);
 
-extern void kernel_init(void);
+extern "C" void kernel_init();
 
-static void call_constructors(void)
-{
-    for (void (*const *a)(void) = __init_array_start; a != __init_array_end; a++)
+static void call_constructors() {
+    for (void (*const* a)() = __init_array_start; a != __init_array_end; a++)
         (*a)();
 }
 
 /* called from arch code */
-void lk_main(void)
-{
+void lk_main() {
     // get us into some sort of thread context
     thread_init_early();
 
@@ -76,7 +74,7 @@ void lk_main(void)
 
     // create a thread to complete system initialization
     dprintf(SPEW, "creating bootstrap completion thread\n");
-    thread_t *t = thread_create("bootstrap2", &bootstrap2, NULL, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
+    thread_t* t = thread_create("bootstrap2", &bootstrap2, NULL, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
     thread_set_pinned_cpu(t, 0);
     thread_detach(t);
     thread_resume(t);
@@ -85,8 +83,7 @@ void lk_main(void)
     thread_become_idle();
 }
 
-static int bootstrap2(void *arg)
-{
+static int bootstrap2(void*) {
     dprintf(SPEW, "top of bootstrap2()\n");
 
     lk_primary_cpu_init_level(LK_INIT_LEVEL_THREADING, LK_INIT_LEVEL_ARCH - 1);
@@ -111,8 +108,7 @@ static int bootstrap2(void *arg)
     return 0;
 }
 
-void lk_secondary_cpu_entry(void)
-{
+void lk_secondary_cpu_entry() {
     uint cpu = arch_curr_cpu_num();
 
     if (cpu > secondary_idle_thread_count) {
@@ -128,15 +124,14 @@ void lk_secondary_cpu_entry(void)
     thread_secondary_cpu_entry();
 }
 
-void lk_init_secondary_cpus(uint secondary_cpu_count)
-{
+void lk_init_secondary_cpus(uint secondary_cpu_count) {
     if (secondary_cpu_count >= SMP_MAX_CPUS) {
         dprintf(CRITICAL, "Invalid secondary_cpu_count %u, SMP_MAX_CPUS %d\n",
                 secondary_cpu_count, SMP_MAX_CPUS);
         secondary_cpu_count = SMP_MAX_CPUS - 1;
     }
     for (uint i = 0; i < secondary_cpu_count; i++) {
-        thread_t *t = thread_create_idle_thread(i + 1);
+        thread_t* t = thread_create_idle_thread(i + 1);
         if (!t) {
             dprintf(CRITICAL, "could not allocate idle thread %u\n", i + 1);
             secondary_idle_thread_count = i;

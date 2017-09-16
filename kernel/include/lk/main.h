@@ -6,12 +6,14 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
+// main entry point from boot assembly
 void lk_main(void) __NO_RETURN __EXTERNALLY_VISIBLE;
+
 void lk_secondary_cpu_entry(void);
 void lk_init_secondary_cpus(uint secondary_cpu_count);
 
