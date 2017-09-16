@@ -36,6 +36,7 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
+    system/ulib/hid \
     system/ulib/acpisvc-client \
     third_party/ulib/acpica \
     third_party/ulib/chromiumos-platform-ec \

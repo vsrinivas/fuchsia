@@ -81,11 +81,12 @@ private:
         uint32_t max_sampling_freq;
         uint32_t fifo_max_event_count;
 
-        // For MOTIONSENSE_TYPE_ACCEL, value is +- |range| Gs
-        //     MOTIONSENSE_TYPE_GYRO, value is +- |range|deg/s
-        //     MOTIONSENSE_TYPE_MAG, value is +- |range|/16 uT
-        //     MOTIONSENSE_TYPE_LIGHT, value is lux? from 0 to |range|
-        int32_t range;
+        // For MOTIONSENSE_TYPE_ACCEL, value is in Gs
+        //     MOTIONSENSE_TYPE_GYRO, value is in deg/s
+        //     MOTIONSENSE_TYPE_MAG, value is in multiples of 1/16 uT
+        //     MOTIONSENSE_TYPE_LIGHT, value is in lux?
+        int32_t phys_min;
+        int32_t phys_max;
     };
 
     static void NotifyHandler(ACPI_HANDLE handle, UINT32 value, void* ctx);
@@ -101,7 +102,8 @@ private:
 
     // Guard against concurrent use of the HID interfaces
     fbl::Mutex hid_lock_;
-    zx_status_t QueueHidReportLocked();
+    void QueueHidReportLocked(const uint8_t* data, size_t len);
+    zx_status_t ConsumeFifoLocked();
 
     // Chat with hardware to build up |sensors_|
     zx_status_t ProbeSensors();
@@ -118,6 +120,6 @@ private:
 
     fbl::Vector<SensorInfo> sensors_;
 
-    fbl::Vector<uint8_t> hid_descriptor_;
-    size_t hid_report_len_ = 0;
+    fbl::unique_ptr<uint8_t[]> hid_descriptor_ = nullptr;
+    size_t hid_descriptor_len_ = 0;
 };
