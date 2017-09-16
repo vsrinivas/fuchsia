@@ -7,12 +7,6 @@
 #pragma once
 
 #include <assert.h>
-#include <kernel/mutex.h>
-#include <kernel/vm.h>
-#include <lib/user_copy/user_ptr.h>
-#include <list.h>
-#include <zircon/thread_annotations.h>
-#include <zircon/types.h>
 #include <fbl/array.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
@@ -20,9 +14,15 @@
 #include <fbl/name.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <kernel/mutex.h>
+#include <kernel/vm.h>
+#include <lib/user_copy/user_ptr.h>
+#include <list.h>
 #include <stdint.h>
 #include <vm/page.h>
 #include <vm/vm_page_list.h>
+#include <zircon/thread_annotations.h>
+#include <zircon/types.h>
 
 class VmMapping;
 
@@ -103,7 +103,7 @@ public:
         return ZX_ERR_NOT_SUPPORTED;
     }
     virtual zx_status_t WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len,
-                               size_t* bytes_written) {
+                                  size_t* bytes_written) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 

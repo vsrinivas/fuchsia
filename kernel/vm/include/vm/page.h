@@ -8,8 +8,8 @@
 #pragma once
 
 #include <list.h>
-#include <zircon/compiler.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
 
 // forward declare
 class VmObject;

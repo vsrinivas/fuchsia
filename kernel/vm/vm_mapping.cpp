@@ -9,11 +9,11 @@
 #include "vm_priv.h"
 #include <assert.h>
 #include <err.h>
-#include <inttypes.h>
-#include <kernel/vm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <inttypes.h>
+#include <kernel/vm.h>
 #include <safeint/safe_math.h>
 #include <trace.h>
 #include <vm/fault.h>

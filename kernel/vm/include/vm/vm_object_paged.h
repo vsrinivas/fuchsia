@@ -7,22 +7,22 @@
 #pragma once
 
 #include <assert.h>
-#include <kernel/mutex.h>
-#include <kernel/vm.h>
-#include <lib/user_copy/user_ptr.h>
-#include <list.h>
-#include <zircon/thread_annotations.h>
-#include <zircon/types.h>
 #include <fbl/array.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <kernel/mutex.h>
+#include <kernel/vm.h>
+#include <lib/user_copy/user_ptr.h>
+#include <list.h>
 #include <stdint.h>
 #include <vm/pmm.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page_list.h>
+#include <zircon/thread_annotations.h>
+#include <zircon/types.h>
 
 // the main VM object type, holding a list of pages
 class VmObjectPaged final : public VmObject {

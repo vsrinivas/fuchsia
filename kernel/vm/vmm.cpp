@@ -131,8 +131,8 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
         void* ptr = (void*)0x99;
         uint8_t align = (argc >= 5) ? (uint8_t)argv[4].u : 0u;
         zx_status_t err = test_aspace->AllocPhysical("physical test", argv[3].u, &ptr, align, argv[2].u,
-                                                  0, ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ |
-                                                         ARCH_MMU_FLAG_PERM_WRITE);
+                                                     0, ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ |
+                                                            ARCH_MMU_FLAG_PERM_WRITE);
         printf("VmAspace::AllocPhysical returns %d, ptr %p\n", err, ptr);
     } else if (!strcmp(argv[1].str, "alloc_contig")) {
         if (argc < 3)
@@ -141,7 +141,7 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
         void* ptr = (void*)0x99;
         uint8_t align = (argc >= 4) ? (uint8_t)argv[3].u : 0u;
         zx_status_t err = test_aspace->AllocContiguous("contig test", argv[2].u, &ptr, align, 0,
-                                                    ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
+                                                       ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
         printf("VmAspace::AllocContiguous returns %d, ptr %p\n", err, ptr);
     } else if (!strcmp(argv[1].str, "free_region")) {
         if (argc < 2)

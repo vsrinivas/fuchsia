@@ -10,13 +10,13 @@
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
+#include <fbl/algorithm.h>
 #include <inttypes.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
 #include <lib/console.h>
 #include <lib/crypto/global_prng.h>
 #include <lk/init.h>
-#include <fbl/algorithm.h>
 #include <string.h>
 #include <trace.h>
 #include <vm/initial_map.h>

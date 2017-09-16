@@ -9,10 +9,10 @@
 #include "vm_priv.h"
 #include <assert.h>
 #include <err.h>
-#include <inttypes.h>
-#include <kernel/vm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <inttypes.h>
+#include <kernel/vm.h>
 #include <string.h>
 #include <trace.h>
 #include <vm/vm_aspace.h>

@@ -9,10 +9,10 @@
 #include "vm_priv.h"
 #include <assert.h>
 #include <err.h>
-#include <inttypes.h>
-#include <kernel/vm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+#include <inttypes.h>
+#include <kernel/vm.h>
 #include <pow2.h>
 #include <safeint/safe_math.h>
 #include <trace.h>
@@ -175,11 +175,11 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
     fbl::RefPtr<VmAddressRegionOrMapping> vmar;
     if (vmo) {
         vmar = fbl::AdoptRef(new (&ac)
-                                  VmMapping(*this, new_base, size, vmar_flags,
-                                            fbl::move(vmo), vmo_offset, arch_mmu_flags));
+                                 VmMapping(*this, new_base, size, vmar_flags,
+                                           fbl::move(vmo), vmo_offset, arch_mmu_flags));
     } else {
         vmar = fbl::AdoptRef(new (&ac)
-                                  VmAddressRegion(*this, new_base, size, vmar_flags, name));
+                                 VmAddressRegion(*this, new_base, size, vmar_flags, name));
     }
 
     if (!ac.check()) {
@@ -292,8 +292,8 @@ zx_status_t VmAddressRegion::OverwriteVmMapping(
     fbl::AllocChecker ac;
     fbl::RefPtr<VmAddressRegionOrMapping> vmar;
     vmar = fbl::AdoptRef(new (&ac)
-                              VmMapping(*this, base, size, vmar_flags,
-                                        fbl::move(vmo), vmo_offset, arch_mmu_flags));
+                             VmMapping(*this, base, size, vmar_flags,
+                                       fbl::move(vmo), vmo_offset, arch_mmu_flags));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }

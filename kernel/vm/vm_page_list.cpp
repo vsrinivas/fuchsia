@@ -7,9 +7,9 @@
 #include <vm/vm_page_list.h>
 
 #include <err.h>
+#include <fbl/alloc_checker.h>
 #include <inttypes.h>
 #include <kernel/vm.h>
-#include <fbl/alloc_checker.h>
 #include <trace.h>
 #include <vm/pmm.h>
 #include <zircon/types.h>

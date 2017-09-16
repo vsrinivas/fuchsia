@@ -24,12 +24,12 @@
 #include "pmm_arena.h"
 #include "vm_priv.h"
 
-#include <zircon/thread_annotations.h>
-#include <zircon/types.h>
-#include <zxcpp/new.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
+#include <zircon/thread_annotations.h>
+#include <zircon/types.h>
+#include <zxcpp/new.h>
 
 using fbl::AutoLock;
 

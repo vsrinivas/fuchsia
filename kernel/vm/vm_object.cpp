@@ -10,12 +10,12 @@
 
 #include <assert.h>
 #include <err.h>
-#include <inttypes.h>
-#include <kernel/vm.h>
-#include <lib/console.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
+#include <inttypes.h>
+#include <kernel/vm.h>
+#include <lib/console.h>
 #include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>

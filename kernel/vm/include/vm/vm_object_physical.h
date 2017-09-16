@@ -7,20 +7,20 @@
 #pragma once
 
 #include <assert.h>
-#include <kernel/mutex.h>
-#include <kernel/vm.h>
-#include <lib/user_copy/user_ptr.h>
-#include <list.h>
-#include <zircon/thread_annotations.h>
-#include <zircon/types.h>
 #include <fbl/array.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <kernel/mutex.h>
+#include <kernel/vm.h>
+#include <lib/user_copy/user_ptr.h>
+#include <list.h>
 #include <stdint.h>
 #include <vm/vm_object.h>
+#include <zircon/thread_annotations.h>
+#include <zircon/types.h>
 
 // VMO representing a physical range of memory
 class VmObjectPhysical final : public VmObject {

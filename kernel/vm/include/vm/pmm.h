@@ -7,10 +7,10 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 #include <sys/types.h>
 #include <vm/page.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 // physical allocator
 typedef struct pmm_arena_info {

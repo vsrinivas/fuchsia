@@ -11,11 +11,11 @@
 #include <arch/ops.h>
 #include <assert.h>
 #include <err.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 #include <inttypes.h>
 #include <kernel/vm.h>
 #include <lib/console.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
 #include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -932,7 +932,7 @@ zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
 
                 paddr_t pa;
                 zx_status_t status = this->GetPageLocked(missing_off, pf_flags, nullptr,
-                                                      nullptr, &pa);
+                                                         nullptr, &pa);
                 if (status != ZX_OK) {
                     return ZX_ERR_NO_MEMORY;
                 }
@@ -993,7 +993,7 @@ zx_status_t VmObjectPaged::ReadUser(user_ptr<void> ptr, uint64_t offset, size_t 
 }
 
 zx_status_t VmObjectPaged::WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len,
-                                  size_t* bytes_written) {
+                                     size_t* bytes_written) {
     canary_.Assert();
 
     // write routine that uses copy_from_user
@@ -1005,7 +1005,7 @@ zx_status_t VmObjectPaged::WriteUser(user_ptr<const void> ptr, uint64_t offset, 
 }
 
 zx_status_t VmObjectPaged::LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
-                                   size_t buffer_size) {
+                                      size_t buffer_size) {
     canary_.Assert();
 
     uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);

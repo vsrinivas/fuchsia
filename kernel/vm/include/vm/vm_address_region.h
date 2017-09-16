@@ -7,7 +7,6 @@
 #pragma once
 
 #include <assert.h>
-#include <zircon/thread_annotations.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
@@ -16,6 +15,7 @@
 #include <stdint.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page_list.h>
+#include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
 // Creation flags for VmAddressRegion and VmMappings
@@ -204,11 +204,11 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
 public:
     // Create a root region.  This will span the entire aspace
     static zx_status_t CreateRoot(VmAspace& aspace, uint32_t vmar_flags,
-                               fbl::RefPtr<VmAddressRegion>* out);
+                                  fbl::RefPtr<VmAddressRegion>* out);
     // Create a subregion of this region
     virtual zx_status_t CreateSubVmar(size_t offset, size_t size, uint8_t align_pow2,
-                                   uint32_t vmar_flags, const char* name,
-                                   fbl::RefPtr<VmAddressRegion>* out);
+                                      uint32_t vmar_flags, const char* name,
+                                      fbl::RefPtr<VmAddressRegion>* out);
     // Create a VmMapping within this region
     virtual zx_status_t CreateVmMapping(size_t mapping_offset, size_t size, uint8_t align_pow2,
                                         uint32_t vmar_flags,
@@ -258,8 +258,8 @@ protected:
 
 private:
     using ChildList = fbl::WAVLTree<vaddr_t, fbl::RefPtr<VmAddressRegionOrMapping>,
-                                     fbl::DefaultKeyedObjectTraits<vaddr_t, VmAddressRegionOrMapping>,
-                                     WAVLTreeTraits>;
+                                    fbl::DefaultKeyedObjectTraits<vaddr_t, VmAddressRegionOrMapping>,
+                                    WAVLTreeTraits>;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmAddressRegion);
 

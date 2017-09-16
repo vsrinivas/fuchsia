@@ -7,11 +7,11 @@
 #pragma once
 
 #include <err.h>
-#include <kernel/vm.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
+#include <kernel/vm.h>
 #include <zircon/types.h>
 
 struct vm_page;

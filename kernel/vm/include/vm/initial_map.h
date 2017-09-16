@@ -26,8 +26,8 @@
 // this file can be included from assembly to get to the defines above
 #ifndef ASSEMBLY
 
-#include <zircon/compiler.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
 
 struct mmu_initial_mapping {
     paddr_t phys;

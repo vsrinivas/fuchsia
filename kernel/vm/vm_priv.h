@@ -7,10 +7,10 @@
 
 #pragma once
 
-#include <kernel/mutex.h>
-#include <kernel/vm.h>
 #include <fbl/algorithm.h>
 #include <fbl/limits.h>
+#include <kernel/mutex.h>
+#include <kernel/vm.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <vm/vm_aspace.h>

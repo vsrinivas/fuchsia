@@ -6,9 +6,9 @@
 
 #include <assert.h>
 #include <err.h>
-#include <kernel/vm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
+#include <kernel/vm.h>
 #include <unittest.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
