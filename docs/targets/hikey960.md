@@ -53,9 +53,26 @@ If using a FTDI style serial adapter:
 
 2. Optional - If not using the mezzanine board, an active low reset is avalable on pin 6 of the 40 pin LS connector.  A jumper wire intermittently shorted from this pin to GND (shields of the connectors are all grounded) can provide an easy way to reset the board and place in fastboot mode.
 
+## Installing Low Level Firmware
+
+We have run into inconsistent behavior between different Hikey 960 boards, depending on the low level firmware came installed on the device.
+We recommend setting up your board with known good firmware from the Android AOSP project.
+To install the firmware, put your board in fastboot mode and run the following commands:
+
+    git clone https://android.googlesource.com/device/linaro/hikey hikey-firmware
+    git -C hikey-firmware checkout 972114436628f874ac9ca28ef38ba82862937fbf
+    fastboot flash ptable hikey-firmware/installer/hikey960/ptable.img
+    fastboot flash xloader hikey-firmware/installer/hikey960/sec_xloader.img
+    fastboot flash fastboot hikey-firmware/installer/hikey960/fastboot.img
+    fastboot flash nvme hikey-firmware/installer/hikey960/nvme.img
+    fastboot flash fw_lpm3 hikey-firmware/installer/hikey960/lpm3.img
+    fastboot flash trustfirmware hikey-firmware/installer/hikey960/bl31.bin
+
+This will install all the firmware from AOSP other than Android itself.
+If you want to use a different bootloader than the one from AOSP, complete the commands above and then install your bootloader.
 
 
-## Installing
+## Installing Zircon
 
 In order to flash the board, it will need to be connected to your workstation via the USB-C OTG connection on the HiKey960.
 
