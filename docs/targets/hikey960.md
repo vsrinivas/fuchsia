@@ -71,6 +71,18 @@ To install the firmware, put your board in fastboot mode and run the following c
 This will install all the firmware from AOSP other than Android itself.
 If you want to use a different bootloader than the one from AOSP, complete the commands above and then install your bootloader.
 
+### Installing UEFI Firmware
+
+Alternatively, if you require the UEFI firmware, you can put your board into recovery mode and run the following command:
+
+    scripts/hikey-efi-prebuilt hikey-uefi
+
+Once the script completes, the board will boot into fastboot mode where you can run the following commands:
+
+    fastboot flash ptable hikey-uefi/prm_ptable.img
+    fastboot flash xloader hikey-uefi/sec_xloader.img
+    fastboot flash fastboot hikey-uefi/l-loader.bin
+    fastboot flash fip hikey-uefi/fip.bin
 
 ## Installing Zircon
 
