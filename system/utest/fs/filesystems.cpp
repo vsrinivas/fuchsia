@@ -79,7 +79,7 @@ void setup_fs_test(size_t disk_size, fs_test_type_t test_class) {
             fprintf(stderr, "[FAILED]: Could not bind disk to FVM driver\n");
             exit(-1);
         } else if (wait_for_driver_bind(test_disk_path, "fvm")) {
-            fprintf(stderr, "[FAILED]: FVM driver never appeared\n");
+            fprintf(stderr, "[FAILED]: FVM driver never appeared at %s\n", test_disk_path);
             exit(-1);
         }
 
@@ -92,9 +92,6 @@ void setup_fs_test(size_t disk_size, fs_test_type_t test_class) {
             fprintf(stderr, "[FAILED]: Could not open FVM driver\n");
             exit(-1);
         }
-        // Restore the "fvm_disk_path" to the ramdisk, so it can
-        // be destroyed when the test completes
-        fvm_disk_path[strlen(fvm_disk_path) - strlen("/fvm")] = 0;
 
         alloc_req_t request;
         request.slice_count = 1;
@@ -117,7 +114,7 @@ void setup_fs_test(size_t disk_size, fs_test_type_t test_class) {
     }
 
     if (test_info->mkfs(test_disk_path)) {
-        fprintf(stderr, "[FAILED]: Could not format ramdisk for test\n");
+        fprintf(stderr, "[FAILED]: Could not format disk (%s) for test\n", test_disk_path);
         exit(-1);
     }
 
@@ -138,13 +135,24 @@ void teardown_fs_test(fs_test_type_t test_class) {
         exit(-1);
     }
 
-    if (!use_real_disk) {
-        if (test_class == FS_TEST_FVM) {
-            // Destryoing the ramdisk will clean up most
-            // of the FVM, but first we need to adjust the "test_disk_path"
-            // from the "fvm partition" --> the disk
-            strcpy(test_disk_path, fvm_disk_path);
+    if (test_class == FS_TEST_FVM) {
+        // Restore the "fvm_disk_path" to the containing disk, so it can
+        // be destroyed when the test completes
+        fvm_disk_path[strlen(fvm_disk_path) - strlen("/fvm")] = 0;
+
+        if (use_real_disk) {
+            if (fvm_destroy(fvm_disk_path) != ZX_OK) {
+                fprintf(stderr, "[FAILED]: Couldn't destroy FVM on test disk\n");
+                exit(-1);
+            }
         }
+
+        // Move the test_disk_path back to the 'real' disk, rather than
+        // a partition within the FVM.
+        strcpy(test_disk_path, fvm_disk_path);
+    }
+
+    if (!use_real_disk) {
         if (destroy_ramdisk(test_disk_path)) {
             fprintf(stderr, "[FAILED]: Error destroying ramdisk\n");
             exit(-1);

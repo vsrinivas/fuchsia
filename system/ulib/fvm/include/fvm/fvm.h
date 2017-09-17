@@ -112,6 +112,10 @@ constexpr size_t SliceStart(size_t total_size, size_t slice_size, size_t pslice)
 
 } // namespace fvm
 
+#endif //  __cplusplus
+
+__BEGIN_CDECLS
+
 // Update's the metadata's hash field to accurately reflect
 // the contents of metadata.
 void fvm_update_hash(void* metadata, size_t metadata_size);
@@ -146,4 +150,4 @@ int fvm_allocate_partition(int fvm_fd, const alloc_req_t* request);
 // the path to the vpartition on success.
 int fvm_open_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID, char* out);
 
-#endif //  __cplusplus
+__END_CDECLS
