@@ -9,6 +9,7 @@
 #include <ddk/protocol/usb-hci.h>
 #include <ddk/protocol/usb.h>
 
+#include <hw/arch_ops.h>
 #include <hw/reg.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -154,17 +155,34 @@ static void xhci_iotxn_queue(void* ctx, iotxn_t* txn) {
 }
 
 static void xhci_unbind(void* ctx) {
+    dprintf(INFO, "xhci_unbind\n");
     xhci_t* xhci = ctx;
-    dprintf(TRACE, "xhci_unbind\n");
+
+    // stop the controller and our device thread
+    xhci_stop(xhci);
+
+    // stop our interrupt threads
+    xhci->shutting_down = true;
+    hw_wmb();
+    for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
+        zx_interrupt_signal(xhci->irq_handles[i]);
+        thrd_join(xhci->completer_threads[i], NULL);
+        zx_handle_close(xhci->irq_handles[i]);
+    }
+    xhci->shutting_down = false;
 
     device_remove(xhci->zxdev);
 }
 
 static void xhci_release(void* ctx) {
-     xhci_t* xhci = ctx;
-
-   // FIXME(voydanoff) - there is a lot more work to do here
-    free(xhci);
+    dprintf(INFO, "xhci_release\n");
+    xhci_t* xhci = ctx;
+    if (xhci->mmio) {
+        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)xhci->mmio, xhci->mmio_size);
+        zx_handle_close(xhci->mmio_handle);
+    }
+    zx_handle_close(xhci->cfg_handle);
+    xhci_free(xhci);
 }
 
 static zx_protocol_device_t xhci_device_proto = {
@@ -175,8 +193,8 @@ static zx_protocol_device_t xhci_device_proto = {
 };
 
 typedef struct completer {
-    uint32_t interrupter;
     xhci_t *xhci;
+    uint32_t interrupter;
     uint32_t priority;
 } completer_t;
 
@@ -198,6 +216,9 @@ static int completer_thread(void *arg) {
             break;
         }
         zx_interrupt_complete(irq_handle);
+        if (completer->xhci->shutting_down) {
+            break;
+        }
         xhci_handle_interrupt(completer->xhci, completer->interrupter);
     }
     dprintf(TRACE, "xhci completer %u thread done\n", completer->interrupter);
@@ -250,9 +271,8 @@ static int xhci_start_thread(void* arg) {
     }
 
     for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
-        thrd_t thread;
-        thrd_create_with_name(&thread, completer_thread, completers[i], "completer_thread");
-        thrd_detach(thread);
+        thrd_create_with_name(&xhci->completer_threads[i], completer_thread, completers[i],
+                              "completer_thread");
     }
 
     dprintf(TRACE, "xhci_start_thread done\n");
@@ -267,7 +287,6 @@ error_return:
 }
 
 static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
-    zx_handle_t mmio_handle = ZX_HANDLE_INVALID;
     zx_handle_t cfg_handle = ZX_HANDLE_INVALID;
     xhci_t* xhci = NULL;
     uint32_t num_irq_handles_initialized = 0;
@@ -279,14 +298,12 @@ static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
         goto error_return;
     }
 
-    void* mmio;
-    uint64_t mmio_len;
     /*
      * eXtensible Host Controller Interface revision 1.1, section 5, xhci
      * should only use BARs 0 and 1. 0 for 32 bit addressing, and 0+1 for 64 bit addressing.
      */
     status = pci_map_resource(pci, PCI_RESOURCE_BAR_0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                              &mmio, &mmio_len, &mmio_handle);
+                              &xhci->mmio, &xhci->mmio_size, &xhci->mmio_handle);
     if (status != ZX_OK) {
         dprintf(ERROR, "usb_xhci_bind could not find bar\n");
         status = ZX_ERR_INTERNAL;
@@ -326,7 +343,6 @@ static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
         }
         num_irq_handles_initialized++;
     }
-    xhci->mmio_handle = mmio_handle;
     xhci->cfg_handle = cfg_handle;
 
     // stash this here for the startup thread to call device_add() with
@@ -334,7 +350,7 @@ static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
     // used for enabling bus mastering
     memcpy(&xhci->pci, pci, sizeof(pci_protocol_t));
 
-    status = xhci_init(xhci, mmio, mode, irq_cnt);
+    status = xhci_init(xhci, mode, irq_cnt);
     if (status != ZX_OK) {
         goto error_return;
     }
@@ -350,14 +366,16 @@ error_return:
     for (uint32_t i = 0; i < num_irq_handles_initialized; i++) {
         zx_handle_close(xhci->irq_handles[i]);
     }
-    zx_handle_close(mmio_handle);
-    zx_handle_close(cfg_handle);
+    if (xhci->mmio) {
+        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)xhci->mmio, xhci->mmio_size);
+        zx_handle_close(xhci->mmio_handle);
+    }
+    zx_handle_close(xhci->cfg_handle);
     return status;
 }
 
 
 static zx_status_t usb_xhci_bind_pdev(zx_device_t* parent, platform_device_protocol_t* pdev) {
-    zx_handle_t mmio_handle = ZX_HANDLE_INVALID;
     zx_handle_t irq_handle = ZX_HANDLE_INVALID;
     xhci_t* xhci = NULL;
     zx_status_t status;
@@ -368,10 +386,8 @@ static zx_status_t usb_xhci_bind_pdev(zx_device_t* parent, platform_device_proto
         goto error_return;
     }
 
-    void* mmio;
-    uint64_t mmio_len;
     status = pdev_map_mmio(pdev, PDEV_MMIO_INDEX, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                           &mmio, &mmio_len, &mmio_handle);
+                           &xhci->mmio, &xhci->mmio_size, &xhci->mmio_handle);
     if (status != ZX_OK) {
         dprintf(ERROR, "usb_xhci_bind_pdev: pdev_map_mmio failed\n");
         goto error_return;
@@ -383,13 +399,12 @@ static zx_status_t usb_xhci_bind_pdev(zx_device_t* parent, platform_device_proto
         goto error_return;
     }
 
-    xhci->mmio_handle = mmio_handle;
     xhci->irq_handles[0] = irq_handle;
 
     // stash this here for the startup thread to call device_add() with
     xhci->parent = parent;
 
-    status = xhci_init(xhci, mmio, XHCI_PDEV, 1);
+    status = xhci_init(xhci, XHCI_PDEV, 1);
     if (status != ZX_OK) {
         goto error_return;
     }
@@ -402,7 +417,10 @@ static zx_status_t usb_xhci_bind_pdev(zx_device_t* parent, platform_device_proto
 
 error_return:
     free(xhci);
-    zx_handle_close(mmio_handle);
+    if (xhci->mmio) {
+        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)xhci->mmio, xhci->mmio_size);
+        zx_handle_close(xhci->mmio_handle);
+    }
     zx_handle_close(irq_handle);
     return status;
 }

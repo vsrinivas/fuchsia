@@ -22,6 +22,7 @@ typedef struct {
         ENUMERATE_DEVICE,
         DISCONNECT_DEVICE,
         START_ROOT_HUBS,
+        STOP_THREAD,
     } command;
     list_node_t node;
     uint32_t hub_address;
@@ -483,14 +484,13 @@ static int xhci_device_thread(void* arg) {
             break;
         case START_ROOT_HUBS:
             xhci_start_root_hubs(xhci);
+            break;
+        case STOP_THREAD:
+            return 0;
         }
     }
 
     return 0;
-}
-
-void xhci_start_device_thread(xhci_t* xhci) {
-    thrd_create_with_name(&xhci->device_thread, xhci_device_thread, xhci, "xhci_device_thread");
 }
 
 static zx_status_t xhci_queue_command(xhci_t* xhci, int command, uint32_t hub_address,
@@ -510,6 +510,15 @@ static zx_status_t xhci_queue_command(xhci_t* xhci, int command, uint32_t hub_ad
     mtx_unlock(&xhci->command_queue_mutex);
 
     return ZX_OK;
+}
+
+void xhci_start_device_thread(xhci_t* xhci) {
+    thrd_create_with_name(&xhci->device_thread, xhci_device_thread, xhci, "xhci_device_thread");
+}
+
+void xhci_stop_device_thread(xhci_t* xhci) {
+    xhci_queue_command(xhci, STOP_THREAD, 0, 0, 0);
+    thrd_join(xhci->device_thread, NULL);
 }
 
 zx_status_t xhci_enumerate_device(xhci_t* xhci, uint32_t hub_address, uint32_t port,

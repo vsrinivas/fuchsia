@@ -49,12 +49,12 @@ int xhci_get_root_hub_index(xhci_t* xhci, uint32_t device_id) {
     return index;
 }
 
-static void xhci_read_extended_caps(xhci_t* xhci, void* mmio, volatile uint32_t* hccparams1) {
+static void xhci_read_extended_caps(xhci_t* xhci, volatile uint32_t* hccparams1) {
     uint32_t offset = XHCI_GET_BITS32(hccparams1, HCCPARAMS1_EXT_CAP_PTR_START,
                                       HCCPARAMS1_EXT_CAP_PTR_BITS);
     if (!offset) return;
     // offset is 32-bit words from MMIO base
-    uint32_t* cap_ptr = (uint32_t *)(mmio + (offset << 2));
+    uint32_t* cap_ptr = (uint32_t *)(xhci->mmio + (offset << 2));
 
     while (cap_ptr) {
         uint32_t cap_id = XHCI_GET_BITS32(cap_ptr, EXT_CAP_CAPABILITY_ID_START,
@@ -151,9 +151,8 @@ static void xhci_vmo_release(zx_handle_t handle, zx_vaddr_t virt) {
     zx_handle_close(handle);
 }
 
-zx_status_t xhci_init(xhci_t* xhci, void* mmio, xhci_mode_t mode, uint32_t num_interrupts) {
+zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
     zx_status_t result = ZX_OK;
-    zx_paddr_t* phys_addrs = NULL;
 
     list_initialize(&xhci->command_queue);
     mtx_init(&xhci->usbsts_lock, mtx_plain);
@@ -163,7 +162,7 @@ zx_status_t xhci_init(xhci_t* xhci, void* mmio, xhci_mode_t mode, uint32_t num_i
     mtx_init(&xhci->input_context_lock, mtx_plain);
     completion_reset(&xhci->command_queue_completion);
 
-    xhci->cap_regs = (xhci_cap_regs_t*)mmio;
+    xhci->cap_regs = (xhci_cap_regs_t*)xhci->mmio;
     xhci->op_regs = (xhci_op_regs_t*)((uint8_t*)xhci->cap_regs + xhci->cap_regs->length);
     xhci->doorbells = (uint32_t*)((uint8_t*)xhci->cap_regs + xhci->cap_regs->dboff);
     xhci->runtime_regs = (xhci_runtime_regs_t*)((uint8_t*)xhci->cap_regs + xhci->cap_regs->rtsoff);
@@ -210,7 +209,7 @@ zx_status_t xhci_init(xhci_t* xhci, void* mmio, xhci_mode_t mode, uint32_t num_i
         result = ZX_ERR_NO_MEMORY;
         goto fail;
     }
-    xhci_read_extended_caps(xhci, mmio, hccparams1);
+    xhci_read_extended_caps(xhci, hccparams1);
 
     // We need to claim before we write to any other registers on the
     // controller, but after we've read the extended capabilities.
@@ -332,26 +331,10 @@ zx_status_t xhci_init(xhci_t* xhci, void* mmio, xhci_mode_t mode, uint32_t num_i
         if (result != ZX_OK) goto fail;
     }
 
-    free(phys_addrs);
-
     return ZX_OK;
 
 fail:
-    for (int i = 0; i < XHCI_RH_COUNT; i++) {
-        xhci_root_hub_free(&xhci->root_hubs[i]);
-    }
-    free(xhci->rh_map);
-    free(xhci->rh_port_map);
-    for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
-        xhci_event_ring_free(xhci, i);
-    }
-    xhci_transfer_ring_free(&xhci->command_ring);
-    io_buffer_release(&xhci->dcbaa_erst_buffer);
-    io_buffer_release(&xhci->input_context_buffer);
-    io_buffer_release(&xhci->scratch_pad_pages_buffer);
-    io_buffer_release(&xhci->scratch_pad_index_buffer);
-    free(phys_addrs);
-    free(xhci->slots);
+    xhci_free(xhci);
     return result;
 }
 
@@ -459,6 +442,74 @@ zx_status_t xhci_start(xhci_t* xhci) {
 
     xhci_start_device_thread(xhci);
     return ZX_OK;
+}
+
+static void xhci_slot_stop(xhci_slot_t* slot) {
+    for (int i = 0; i < XHCI_NUM_EPS; i++) {
+        xhci_endpoint_t* ep = &slot->eps[i];
+
+        mtx_lock(&ep->lock);
+        if (ep->state != EP_STATE_DEAD) {
+            iotxn_t* txn;
+            while ((txn = list_remove_tail_type(&ep->pending_txns, iotxn_t, node)) != NULL) {
+                iotxn_complete(txn, ZX_ERR_IO_NOT_PRESENT, 0);
+            }
+            while ((txn = list_remove_tail_type(&ep->queued_txns, iotxn_t, node)) != NULL) {
+                iotxn_complete(txn, ZX_ERR_IO_NOT_PRESENT, 0);
+            }
+            ep->state = EP_STATE_DEAD;
+        }
+        mtx_unlock(&ep->lock);
+    }
+}
+
+void xhci_stop(xhci_t* xhci) {
+    volatile uint32_t* usbcmd = &xhci->op_regs->usbcmd;
+    volatile uint32_t* usbsts = &xhci->op_regs->usbsts;
+
+    xhci_stop_root_hubs(xhci);
+
+    // stop controller
+    XHCI_SET32(usbcmd, USBCMD_RS, 0);
+    // wait until USBSTS_HCH signals we stopped
+    xhci_wait_bits(usbsts, USBSTS_HCH, USBSTS_HCH);
+
+    for (uint32_t i = 1; i <= xhci->max_slots; i++) {
+        xhci_slot_stop(&xhci->slots[i]);
+    }
+
+    xhci_stop_device_thread(xhci);
+}
+
+void xhci_free(xhci_t* xhci) {
+    for (uint32_t i = 1; i <= xhci->max_slots; i++) {
+        xhci_slot_t* slot = &xhci->slots[i];
+        io_buffer_release(&slot->buffer);
+
+        for (int j = 0; j < XHCI_NUM_EPS; j++) {
+            xhci_endpoint_t* ep = &slot->eps[j];
+            xhci_transfer_ring_free(&ep->transfer_ring);
+        }
+    }
+    free(xhci->slots);
+
+     for (int i = 0; i < XHCI_RH_COUNT; i++) {
+        xhci_root_hub_free(&xhci->root_hubs[i]);
+    }
+    free(xhci->rh_map);
+    free(xhci->rh_port_map);
+
+    for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
+        xhci_event_ring_free(xhci, i);
+    }
+
+    xhci_transfer_ring_free(&xhci->command_ring);
+    io_buffer_release(&xhci->dcbaa_erst_buffer);
+    io_buffer_release(&xhci->input_context_buffer);
+    io_buffer_release(&xhci->scratch_pad_pages_buffer);
+    io_buffer_release(&xhci->scratch_pad_index_buffer);
+
+    free(xhci);
 }
 
 void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,

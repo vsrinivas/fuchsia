@@ -14,6 +14,7 @@ zx_status_t xhci_enumerate_device(xhci_t* xhci, uint32_t hub_address, uint32_t p
                                   usb_speed_t speed);
 zx_status_t xhci_device_disconnected(xhci_t* xhci, uint32_t hub_address, uint32_t port);
 void xhci_start_device_thread(xhci_t* xhci);
+void xhci_stop_device_thread(xhci_t* xhci);
 zx_status_t xhci_queue_start_root_hubs(xhci_t* xhci);
 zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_descriptor_t* ep_desc,
                                  usb_ss_ep_comp_descriptor_t* ss_comp_desc, bool enable);

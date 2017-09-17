@@ -299,6 +299,27 @@ zx_status_t xhci_start_root_hubs(xhci_t* xhci) {
     return ZX_OK;
 }
 
+void xhci_stop_root_hubs(xhci_t* xhci) {
+    dprintf(TRACE, "xhci_stop_root_hubs\n");
+
+    volatile xhci_port_regs_t* port_regs = xhci->op_regs->port_regs;
+    for (uint32_t i = 0; i < xhci->rh_num_ports; i++) {
+        uint32_t portsc = XHCI_READ32(&port_regs[i].portsc);
+        portsc &= PORTSC_CONTROL_BITS;
+        portsc |= PORTSC_PED;   // disable port
+        portsc &= PORTSC_PP;    // power off port
+        XHCI_WRITE32(&port_regs[i].portsc, portsc);
+    }
+
+    for (int i = 0; i < XHCI_RH_COUNT; i++) {
+        iotxn_t* txn;
+        xhci_root_hub_t* rh = &xhci->root_hubs[i];
+        while ((txn = list_remove_tail_type(&rh->pending_intr_reqs, iotxn_t, node)) != NULL) {
+            iotxn_complete(txn, ZX_ERR_IO_NOT_PRESENT, 0);
+        }
+    }
+}
+
 static zx_status_t xhci_rh_get_descriptor(uint8_t request_type, xhci_root_hub_t* rh, uint16_t value,
                                           uint16_t index, size_t length, iotxn_t* txn) {
     uint8_t type = request_type & USB_TYPE_MASK;
