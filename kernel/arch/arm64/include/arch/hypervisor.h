@@ -23,13 +23,15 @@ public:
     ~Guest();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Guest);
 
-    GuestPhysicalAddressSpace* AddressSpace() const { return nullptr; }
-    const PacketMux* Mux() const { return nullptr; }
+    zx_status_t SetTrap(zx_vaddr_t addr, size_t len);
+
+    GuestPhysicalAddressSpace* AddressSpace() const { return gpas_.get(); }
 
 private:
-    const uint8_t vmid_;
+    fbl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
+    uint8_t vmid_ = 0;
 
-    explicit Guest(uint8_t vmid);
+    Guest() = default;
 };
 
 class Vcpu {};
