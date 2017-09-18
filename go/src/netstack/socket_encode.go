@@ -60,8 +60,15 @@ func (v *c_mxrio_gai_req) Decode(msg *fdio.Msg) error {
 	return nil
 }
 
+func (v *c_mxrio_sockopt_tcp_info) Encode(out *c_mxrio_sockopt_req_reply) error {
+	r := (*c_mxrio_sockopt_tcp_info)(unsafe.Pointer(&out.optval[0]))
+	*r = *v
+	out.optlen = c_socklen(unsafe.Sizeof(*v))
+	return nil
+}
+
 func (v *c_mxrio_gai_reply) Encode(msg *fdio.Msg) {
-	r := (*c_mxrio_gai_reply)(unsafe.Pointer(&msg.Data[0]))
+	r := (*c_mxrio_gai_reply)(unsafe.Pointer(&msg.Data[0]))	
 	*r = *v
 	msg.Datalen = uint32(unsafe.Sizeof(*v))
 }

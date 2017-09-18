@@ -217,8 +217,58 @@ type c_mxrio_sockaddr_reply struct {
 type c_mxrio_sockopt_req_reply struct {
 	level   int32
 	optname int32
-	optval  [8]uint8
+	optval  [128]uint8
 	optlen  c_socklen
+}
+
+type c_mxrio_sockopt_tcp_info struct {
+	state              uint8
+	ca_state           uint8
+	retransmits        uint8
+	probes             uint8
+	backoff            uint8
+	options            uint8
+	snd_and_rcv_wscale uint8
+
+	rto     uint32
+	ato     uint32
+	snd_mss uint32
+	rcv_mss uint32
+
+	unacked uint32
+	sacked  uint32
+	lost    uint32
+	retrans uint32
+	fackets uint32
+
+	// Times
+	last_data_sent uint32
+	last_ack_sent  uint32
+	last_data_recv uint32
+	last_ack_recv  uint32
+
+	// Metrics
+	pmtu         uint32
+	rcv_ssthresh uint32
+	rtt          uint32
+	rttvar       uint32
+	snd_ssthresh uint32
+	snd_cwnd     uint32
+	advmss       uint32
+	reordering   uint32
+
+	rcv_rtt   uint32
+	rcv_space uint32
+
+	total_retrans uint32
+
+	pacing_rate     uint64
+	max_pacing_rate uint64
+	bytes_acked     uint64
+	bytes_received  uint64
+
+	segs_out uint32
+	segs_in  uint32
 }
 
 type c_sockaddr struct {

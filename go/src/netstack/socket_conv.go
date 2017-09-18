@@ -103,6 +103,8 @@ func (v *c_mxrio_sockopt_req_reply) Unpack() interface{} {
 		switch v.optname {
 		case TCP_NODELAY:
 			return tcpip.NoDelayOption(v.intValue())
+		case TCP_INFO:
+			return tcpip.InfoOption{}
 		case TCP_MAXSEG:
 		case TCP_CORK:
 		case TCP_KEEPIDLE:
@@ -112,7 +114,6 @@ func (v *c_mxrio_sockopt_req_reply) Unpack() interface{} {
 		case TCP_LINGER2:
 		case TCP_DEFER_ACCEPT:
 		case TCP_WINDOW_CLAMP:
-		case TCP_INFO:
 		case TCP_QUICKACK:
 		}
 		log.Printf("convSockOpt: TODO SOL_TCP optname=%d", v.optname)

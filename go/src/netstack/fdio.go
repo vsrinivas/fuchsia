@@ -460,9 +460,9 @@ func (s *socketServer) newIostate(h mx.Handle, iosOrig *iostate, netProto tcpip.
 		if ep != nil {
 			switch transProto {
 			case tcp.ProtocolNumber, udp.ProtocolNumber:
-				var t uint32;
+				var t uint32
 				if transProto == tcp.ProtocolNumber {
-					t = mx.SocketStream;
+					t = mx.SocketStream
 				} else {
 					t = mx.SocketDatagram
 				}
@@ -771,6 +771,14 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *fdio.Msg) mx.Status {
 			ios.ep.GetSockOpt(&o)
 			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
 			val.optlen = c_socklen(4)
+		case tcpip.InfoOption:
+			ios.ep.GetSockOpt(&o)
+			info := c_mxrio_sockopt_tcp_info{
+				// Microseconds.
+				rtt:    uint32(o.Rtt.Nanoseconds() / 1000),
+				rttvar: uint32(o.Rttvar.Nanoseconds() / 1000),
+			}
+			info.Encode(&val)
 		default:
 			binary.LittleEndian.PutUint32(val.optval[:], 0)
 			val.optlen = c_socklen(4)

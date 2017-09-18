@@ -7,6 +7,7 @@
 
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -286,6 +287,23 @@ void PollSignal(struct sockaddr_in* addr, short events, short* revents,
   EXPECT_EQ(0, close(connfd));
   *revents = fds.revents;
   NotifySuccess(ntfyfd);
+}
+
+TEST_F(NetStreamTest, GetTcpInfo) {
+  // No listen() on acptfd_.
+
+  int connfd = socket(AF_INET, SOCK_STREAM, 0);
+  ASSERT_GE(connfd, 0) << "socket failed: " << errno;
+
+  tcp_info info;
+  socklen_t info_len = sizeof(tcp_info);
+  int rv = getsockopt(connfd, SOL_TCP, TCP_INFO, (void *)&info, &info_len);
+  ASSERT_GE(rv, 0) << "getsockopt failed: " << errno;
+  ASSERT_EQ(sizeof(tcp_info), info_len);
+  ASSERT_EQ(0u, info.tcpi_rtt);
+  ASSERT_EQ(0u, info.tcpi_rttvar);
+
+  ASSERT_EQ(close(connfd), 0);
 }
 
 TEST_F(NetStreamTest, DISABLED_Shutdown) {
