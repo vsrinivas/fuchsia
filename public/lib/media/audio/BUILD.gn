@@ -6,6 +6,8 @@ source_set("audio") {
   sources = [
     "perceived_level.cc",
     "perceived_level.h",
+    "types.cc",
+    "types.h",
   ]
 
   deps = [
