@@ -14,8 +14,6 @@
 #include "timer.h"
 #include "wlan.h"
 
-#include <apps/wlan/services/wlan_mlme.fidl-common.h>
-#include <drivers/wifi/common/bitfield.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zx/time.h>
@@ -23,6 +21,9 @@
 #include <cinttypes>
 #include <cstring>
 #include <sstream>
+
+#include "apps/wlan/services/wlan_mlme.fidl-common.h"
+#include "garnet/drivers/wlan/common/bitfield.h"
 
 namespace wlan {
 

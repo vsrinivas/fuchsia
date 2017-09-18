@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 #include <gtest/gtest.h>
-#include <drivers/wifi/common/moving_average.h>
+
+#include "garnet/drivers/wlan/common/moving_average.h"
 
 namespace wlan {
 namespace {

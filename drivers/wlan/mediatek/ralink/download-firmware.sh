@@ -7,7 +7,7 @@ set -e
 
 readonly SCRIPT_ROOT="$(cd $(dirname ${BASH_SOURCE[0]} ) && pwd)"
 readonly FUCHSIA_URL_BASE="https://storage.googleapis.com/fuchsia-build"
-readonly FUCHSIA_ROOT="${SCRIPT_ROOT}/../../../../"
+readonly FUCHSIA_ROOT="${SCRIPT_ROOT}/../../../../../"
 . "${FUCHSIA_ROOT}/buildtools/download.sh"
 
 download_zipfile rt2870 "${FUCHSIA_URL_BASE}/firmware/ralink" "${SCRIPT_ROOT}/firmware"

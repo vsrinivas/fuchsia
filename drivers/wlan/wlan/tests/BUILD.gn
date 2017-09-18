@@ -24,7 +24,7 @@ source_set("test_main") {
     "//third_party/gtest",
   ]
 
-  configs += [ "//drivers/wifi/wlan:wlan_config" ]
+  configs += [ "//garnet/drivers/wlan/wlan:wlan_config" ]
 }
 
 executable("mac_tests") {
@@ -39,11 +39,11 @@ executable("mac_tests") {
 
   deps = [
     ":test_main",
-    "//drivers/wifi/wlan:mlme",
+    "//garnet/drivers/wlan/wlan:mlme",
     "//third_party/gtest",
   ]
 
-  configs += [ "//drivers/wifi/wlan:wlan_config" ]
+  configs += [ "//garnet/drivers/wlan/wlan:wlan_config" ]
 }
 
 executable("scanner_tests") {
@@ -57,11 +57,11 @@ executable("scanner_tests") {
 
   deps = [
     ":test_main",
-    "//drivers/wifi/wlan:mlme",
+    "//garnet/drivers/wlan/wlan:mlme",
     "//third_party/gtest",
   ]
 
-  configs += [ "//drivers/wifi/wlan:wlan_config" ]
+  configs += [ "//garnet/drivers/wlan/wlan:wlan_config" ]
 }
 
 executable("common_tests") {
@@ -75,7 +75,7 @@ executable("common_tests") {
 
   deps = [
     ":test_main",
-    "//drivers/wifi/common",
+    "//garnet/drivers/wlan/common",
     "//third_party/gtest",
   ]
 }
@@ -85,7 +85,7 @@ package("wlan_tests") {
 
   deps = [
     ":tests",
-    "//drivers/wifi/testing",
+    "//garnet/drivers/wlan/testing",
   ]
 
   binaries = [

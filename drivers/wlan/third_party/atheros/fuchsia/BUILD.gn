@@ -29,7 +29,7 @@ driver_module("ath10k_driver") {
   defines = [ "ZX_DEBUGLEVEL=2" ]
 
   deps = [
-    "//drivers/wifi/common",
+    "//garnet/drivers/wlan/common",
     "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/fbl",
   ]

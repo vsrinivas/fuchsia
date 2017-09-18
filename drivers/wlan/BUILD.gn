@@ -4,9 +4,9 @@
 
 group("wifi") {
   deps = [
-    "//drivers/wifi/mediatek/rt5370",
-    "//drivers/wifi/testing",
-    "//drivers/wifi/third_party/atheros/fuchsia",
-    "//drivers/wifi/wlan",
+    "//garnet/drivers/wlan/mediatek/rt5370",
+    "//garnet/drivers/wlan/testing",
+    "//garnet/drivers/wlan/third_party/atheros/fuchsia",
+    "//garnet/drivers/wlan/wlan",
   ]
 }

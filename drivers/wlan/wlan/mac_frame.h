@@ -6,12 +6,13 @@
 
 #include "element.h"
 
-#include <drivers/wifi/common/bitfield.h>
 #include <fbl/type_support.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <cstdint>
+
+#include "garnet/drivers/wlan/common/bitfield.h"
 
 namespace wlan {
 

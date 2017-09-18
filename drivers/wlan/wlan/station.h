@@ -7,12 +7,13 @@
 #include "device_interface.h"
 #include "mac_frame.h"
 
-#include <apps/wlan/services/wlan_mlme.fidl-common.h>
-#include <apps/wlan/services/wlan_mlme_ext.fidl-common.h>
 #include <ddk/protocol/wlan.h>
-#include <drivers/wifi/common/moving_average.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/types.h>
+
+#include "apps/wlan/services/wlan_mlme.fidl-common.h"
+#include "apps/wlan/services/wlan_mlme_ext.fidl-common.h"
+#include "garnet/drivers/wlan/common/moving_average.h"
 
 namespace wlan {
 

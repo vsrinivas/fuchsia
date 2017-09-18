@@ -9,7 +9,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include <drivers/wifi/common/bitfield.h>
+#include "garnet/drivers/wlan/common/bitfield.h"
 
 #include <cstdint>
 #include <utility>

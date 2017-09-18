@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include <drivers/wifi/common/bitfield.h>
 #include <type_traits>
+
+#include "garnet/drivers/wlan/common/bitfield.h"
 
 namespace ralink {
 
