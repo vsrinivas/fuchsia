@@ -4,6 +4,8 @@
 
 #include "apps/maxwell/src/acquirers/story_info/link_watcher_impl.h"
 
+#include <sstream>
+
 #include "apps/maxwell/lib/context/formatting.h"
 #include "apps/maxwell/src/acquirers/story_info/story_watcher_impl.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
@@ -36,6 +38,12 @@ void XdrSource(modular::XdrContext* const xdr, Source* const data) {
   xdr->Field("story_id", &data->story_id);
   xdr->Field("module_path", &data->module_path);
   xdr->Field("link_name", &data->link_name);
+}
+
+std::string MakeLinkTopic(const fidl::String& base_topic) {
+  std::stringstream s;
+  s << "link/" << base_topic;
+  return s.str();
 }
 
 }  // namespace
@@ -118,7 +126,7 @@ void LinkWatcherImpl::ProcessContext(const fidl::String& value) {
   context_value->type = ContextValueType::ENTITY;
   context_value->meta = ContextMetadata::New();
   context_value->meta->entity = EntityMetadata::New();
-  context_value->meta->entity->topic = context.topic;
+  context_value->meta->entity->topic = MakeLinkTopic(context.topic);
 
   FXL_LOG(INFO) << "Publishing context: " << context_value << std::endl
                 << "Original link value: " << value << std::endl
