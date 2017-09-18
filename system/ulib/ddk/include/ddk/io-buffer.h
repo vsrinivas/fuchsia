@@ -31,6 +31,9 @@ enum {
 
 // Initializes a new io_buffer
 zx_status_t io_buffer_init(io_buffer_t* buffer, size_t size, uint32_t flags);
+// An alignment of zero is interpreted as requesting page alignment.
+// Requesting a specific alignment is not supported for non-contiguous buffers,
+// pass zero for |alignment_log2| if not passing IO_BUFFER_CONTIG.
 zx_status_t io_buffer_init_aligned(io_buffer_t* buffer, size_t size, uint32_t alignment_log2, uint32_t flags);
 
 // Initializes an io_buffer base on an existing VMO.

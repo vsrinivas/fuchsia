@@ -62,8 +62,11 @@ zx_status_t io_buffer_init_aligned(io_buffer_t* buffer, size_t size, uint32_t al
     bool contiguous = (flags & IO_BUFFER_CONTIG) && size > PAGE_SIZE;
 
     if (contiguous) {
-        status = zx_vmo_create_contiguous(get_root_resource(), size, 0, &vmo_handle);
+        status = zx_vmo_create_contiguous(get_root_resource(), size, alignment_log2, &vmo_handle);
     } else {
+        // zx_vmo_create doesn't support passing an alignment.
+        if (alignment_log2 != 0)
+            return ZX_ERR_INVALID_ARGS;
         status = zx_vmo_create(size, 0, &vmo_handle);
     }
     if (status != ZX_OK) {
