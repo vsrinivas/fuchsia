@@ -36,7 +36,7 @@ magma_status_t msd_device_display_get_size(struct msd_device_t* dev,
     return MAGMA_STATUS_INTERNAL_ERROR;
 }
 
-msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id client_id)
+msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id_t client_id)
 {
     return MsdMockDevice::cast(dev)->Open(client_id);
 }

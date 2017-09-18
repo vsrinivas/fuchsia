@@ -14,7 +14,7 @@
 extern "C" {
 #endif
 
-typedef uint32_t msd_client_id;
+typedef uint64_t msd_client_id_t;
 
 // callback type for magma_system_pageflip and msd_device_pageflip
 // |status| indicates whether an error occurred

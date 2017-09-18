@@ -75,7 +75,7 @@ struct magma_system_command_buffer {
 };
 
 struct magma_system_connection_request {
-    uint32_t client_id;
+    uint64_t client_id;
     uint32_t capabilities;
 } __attribute__((packed));
 

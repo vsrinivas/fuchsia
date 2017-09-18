@@ -35,7 +35,7 @@ uint32_t msd_device_get_id(struct msd_device_t* dev);
 void msd_device_dump_status(struct msd_device_t* dev);
 
 // Opens a device for the given client. Returns null on failure
-struct msd_connection_t* msd_device_open(struct msd_device_t* dev, msd_client_id client_id);
+struct msd_connection_t* msd_device_open(struct msd_device_t* dev, msd_client_id_t client_id);
 
 // Reads the size of the display in pixels.
 magma_status_t msd_device_display_get_size(struct msd_device_t* dev,

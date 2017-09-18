@@ -3,18 +3,20 @@
 // found in the LICENSE file.
 
 #include "magma.h"
-#include "zircon/zircon_platform_ioctl.h"
 #include "magma_util/command_buffer.h"
 #include "magma_util/macros.h"
 #include "platform_connection.h"
 #include "platform_semaphore.h"
+#include "platform_thread.h"
 #include "platform_trace.h"
+#include "zircon/zircon_platform_ioctl.h"
 #include <vector>
 
 magma_connection_t* magma_create_connection(int fd, uint32_t capabilities)
 {
+
     magma_system_connection_request request;
-    request.client_id = 0;
+    request.client_id = magma::PlatformThreadId().id();
     request.capabilities = capabilities;
 
     uint32_t device_handle;

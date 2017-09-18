@@ -10,7 +10,7 @@
 uint32_t MagmaSystemDevice::GetDeviceId() { return msd_device_get_id(msd_dev()); }
 
 std::shared_ptr<magma::PlatformConnection>
-MagmaSystemDevice::Open(std::shared_ptr<MagmaSystemDevice> device, msd_client_id client_id,
+MagmaSystemDevice::Open(std::shared_ptr<MagmaSystemDevice> device, msd_client_id_t client_id,
                         uint32_t capabilities)
 {
     // at least one bit must be one and it must be one of the 2 least significant bits

@@ -9,6 +9,7 @@
 #include "msd.h"
 #include "platform_connection.h"
 #include "platform_event.h"
+#include "platform_thread.h"
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -30,7 +31,8 @@ class MagmaSystemDevice {
 public:
     static std::unique_ptr<MagmaSystemDevice> Create(msd_device_unique_ptr_t msd_device)
     {
-        msd_connection_t* connection = msd_device_open(msd_device.get(), 0);
+        msd_connection_t* connection =
+            msd_device_open(msd_device.get(), magma::PlatformThreadId().id());
         if (!connection)
             return DRETP(nullptr, "couldn't open connection");
 
@@ -47,7 +49,7 @@ public:
     // Opens a connection to the device. On success |connection_handle_out| will contain the
     // connection handle to be passed to the client
     static std::shared_ptr<magma::PlatformConnection>
-    Open(std::shared_ptr<MagmaSystemDevice>, msd_client_id client_id, uint32_t capabilities);
+    Open(std::shared_ptr<MagmaSystemDevice>, msd_client_id_t client_id, uint32_t capabilities);
 
     msd_device_t* msd_dev() { return msd_dev_.get(); }
 

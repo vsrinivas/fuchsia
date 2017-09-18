@@ -15,16 +15,16 @@ class PlatformThreadId {
 public:
     PlatformThreadId() { SetToCurrent(); }
 
-    uint32_t id() { return id_; }
+    uint64_t id() { return id_; }
 
     void SetToCurrent() { id_ = GetCurrentThreadId(); }
 
     bool IsCurrent() { return id_ == GetCurrentThreadId(); }
 
 private:
-    static uint32_t GetCurrentThreadId();
+    static uint64_t GetCurrentThreadId();
 
-    uint32_t id_ = 0;
+    uint64_t id_ = 0;
 };
 
 class PlatformThreadHelper {

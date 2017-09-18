@@ -15,6 +15,7 @@ shared_library("libmagma") {
     "$magma_build_root/src/magma_util/platform:buffer",
     "$magma_build_root/src/magma_util/platform:port",
     "$magma_build_root/src/magma_util/platform:semaphore",
+    "$magma_build_root/src/magma_util/platform:thread",
   ]
 
   sources = [

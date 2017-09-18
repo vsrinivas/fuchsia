@@ -111,7 +111,7 @@ public:
     MsdMockDevice() { magic_ = kMagic; }
     virtual ~MsdMockDevice() {}
 
-    virtual msd_connection_t* Open(msd_client_id client_id) { return new MsdMockConnection(); }
+    virtual msd_connection_t* Open(msd_client_id_t client_id) { return new MsdMockConnection(); }
     virtual uint32_t GetDeviceId() { return 0; }
 
     static MsdMockDevice* cast(msd_device_t* dev)
