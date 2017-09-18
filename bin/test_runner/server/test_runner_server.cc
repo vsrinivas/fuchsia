@@ -38,10 +38,10 @@
 #include <vector>
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/test_runner/services/test_runner.fidl.h"
-#include "apps/test_runner/lib/scope.h"
-#include "apps/test_runner/lib/test_runner.h"
-#include "apps/test_runner/lib/test_runner_store_impl.h"
+#include "lib/test_runner/fidl/test_runner.fidl.h"
+#include "lib/test_runner/cpp/scope.h"
+#include "lib/test_runner/cpp/test_runner.h"
+#include "lib/test_runner/cpp/test_runner_store_impl.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_view.h"

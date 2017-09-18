@@ -7,9 +7,9 @@
 
 #include <memory>
 #include "lib/app/cpp/application_context.h"
-#include "apps/test_runner/lib/scope.h"
-#include "apps/test_runner/lib/test_runner_store_impl.h"
-#include "apps/test_runner/services/test_runner.fidl.h"
+#include "lib/test_runner/cpp/scope.h"
+#include "lib/test_runner/cpp/test_runner_store_impl.h"
+#include "lib/test_runner/fidl/test_runner.fidl.h"
 #include "lib/fxl/tasks/one_shot_timer.h"
 
 namespace test_runner {

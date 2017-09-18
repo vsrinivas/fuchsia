@@ -12,8 +12,8 @@
 
 #include <iostream>
 
-#include "apps/test_runner/lib/test_runner.h"
-#include "apps/test_runner/src/run_integration_tests/test_runner_config.h"
+#include "garnet/bin/test_runner/run_integration_tests/test_runner_config.h"
+#include "lib/test_runner/cpp/test_runner.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_printf.h"

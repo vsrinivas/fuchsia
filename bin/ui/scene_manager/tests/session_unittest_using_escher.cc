@@ -6,8 +6,8 @@
 #include "lib/ui/tests/test_with_message_loop.h"
 #include "garnet/bin/ui/scene_manager/tests/escher_test_environment.h"
 #include "garnet/bin/ui/scene_manager/tests/session_test.h"
-#include "apps/test_runner/lib/reporting/gtest_listener.h"
-#include "apps/test_runner/lib/reporting/reporter.h"
+#include "lib/test_runner/cpp/reporting/gtest_listener.h"
+#include "lib/test_runner/cpp/reporting/reporter.h"
 #include "gtest/gtest.h"
 #include "lib/escher/examples/common/demo_harness.h"
 
@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
   g_escher_env = std::make_unique<scene_manager::test::EscherTestEnvironment>();
   g_escher_env->SetUp(argv[0]);
 
-  // TestRunner setup. Copied from //apps/test_runner/src/gtest_main.cc.
+  // TestRunner setup. Copied from //garent/public/lib/test_runner/cpp/gtest_main.cc.
   test_runner::Reporter reporter(argv[0]);
   test_runner::GTestListener listener(argv[0], &reporter);
 

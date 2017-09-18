@@ -17,6 +17,6 @@ template("test") {
       deps = []
     }
 
-    deps += [ "//apps/test_runner/src:gtest_main" ]
+    deps += [ "//garnet/public/lib/test_runner/cpp:gtest_main" ]
   }
 }

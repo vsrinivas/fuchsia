@@ -9,8 +9,8 @@ executable("run_integration_tests") {
     "test_runner_config.h",
   ]
   deps = [
-    "//apps/test_runner/lib",
-    "//apps/test_runner/services:test_runner",
+    "//garnet/public/lib/test_runner/cpp",
+    "//garnet/public/lib/test_runner/fidl",
     "//garnet/public/lib/fxl",
     "//third_party/rapidjson",
   ]

@@ -36,10 +36,10 @@ subnet and use it. This discovery is performed using ipv6. This process
 works for both QEMU and for real hardware, but not for the
 [Fuchsia test infrastructure](#Fuchsia-test-infrastructure).
 
-Run a test using `//apps/test_runner/src/run_test`. For example:
+Run a test using `//garnet/bin/test_runner/run_test`. For example:
 
 ```sh
-$ $FUCHSIA_DIR/apps/test_runner/src/run_test "device_runner --ledger_repository_for_testing --device_shell=dummy_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/agent_trigger_test"
+$ $FUCHSIA_DIR/garnet/bin/test_runner/run_test "device_runner --ledger_repository_for_testing --device_shell=dummy_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/agent_trigger_test"
 ```
 
 This will return when it has completed (either by succeeding or crashing). You
@@ -50,7 +50,7 @@ You can also run a series of tests by supplying a JSON file describing the
 tests to run:
 
 ```sh
-$ $FUCHSIA_DIR/apps/test_runner/src/run_test --test_file=$FUCHSIA_DIR/apps/modular/tests/modular_tests.json
+$ $FUCHSIA_DIR/garnet/bin/test_runner/run_test --test_file=$FUCHSIA_DIR/apps/modular/tests/modular_tests.json
 ```
 
 #### Selecting between multiple devices
@@ -66,7 +66,7 @@ $FUCHSIA_OUT_DIR/build-zircon/tools/netls
 Pass the device name to the `run_test` tool:
 
 ```sh
-$FUCHSIA_DIR/apps/test_runner/src/run_test --server rain-detour-glaze-donut ...
+$FUCHSIA_DIR/garnet/bin/test_runner/run_test --server rain-detour-glaze-donut ...
 ```
 
 #### Fuchsia test infrastructure
@@ -87,7 +87,7 @@ You can control the testing configuration by passing `run_test` the name of a
 JSON file with the `--test_file` parameter. For example:
 
 ```
-$FUCHSIA_DIR/apps/test_runner/src/run_test --test_file=$FUCHSIA_DIR/apps/modular/tests/modular_tests.json
+$FUCHSIA_DIR/garnet/bin/test_runner/run_test --test_file=$FUCHSIA_DIR/apps/modular/tests/modular_tests.json
 ```
 
 You can select a particular test to run by passing `run_test` the --test_name
@@ -95,7 +95,7 @@ parameter in addition to the name of a JSON file with the `--test_file`
 parameter. For example:
 
 ```
-$FUCHSIA_DIR/apps/test_runner/src/run_test --test_file=$FUCHSIA_DIR/apps/modular/tests/modular_tests.json --test_name=parent_child
+$FUCHSIA_DIR/garnet/bin/test_runner/run_test --test_file=$FUCHSIA_DIR/apps/modular/tests/modular_tests.json --test_name=parent_child
 ```
 
 The JSON file looks similar to this:

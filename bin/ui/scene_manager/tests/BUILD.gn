@@ -98,7 +98,7 @@ executable("unittests_using_escher") {
 
   deps = [
     ":testing_deps",
-    "//apps/test_runner/lib/reporting",
+    "//garnet/public/lib/test_runner/cpp/reporting",
     "//garnet/lib/escher/escher",
     "//garnet/lib/escher/examples/common",
   ]

@@ -13,7 +13,7 @@ source_set("reporting") {
   ]
 
   deps = [
-    "//apps/test_runner/services:test_runner_sync",
+    "//garnet/public/lib/test_runner/fidl:fidl_sync",
   ]
 
   public_deps = [

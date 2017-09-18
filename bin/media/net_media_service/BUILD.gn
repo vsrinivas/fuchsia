@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//apps/test_runner/test.gni")
+import("//garnet/public/build/test.gni")
 
 executable("net_media_service") {
   sources = [

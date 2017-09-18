@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("lib") {
+source_set("cpp") {
   sources = [
     "scope.cc",
     "scope.h",
@@ -14,7 +14,7 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/public/lib/app/cpp",
-    "//apps/test_runner/services:test_runner_sync",
+    "//garnet/public/lib/test_runner/fidl:fidl_sync",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
     "//third_party/rapidjson",
@@ -42,8 +42,8 @@ source_set("gtest_main") {
     "gtest_main.cc",
   ]
   deps = [
-    "//apps/test_runner/lib/reporting",
-    "//apps/test_runner/lib:application_context",
+    "//garnet/public/lib/test_runner/cpp/reporting",
+    "//garnet/public/lib/test_runner/cpp:application_context",
   ]
   public_deps = [
     "//third_party/gtest",

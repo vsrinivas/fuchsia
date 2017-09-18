@@ -73,7 +73,7 @@ executable("tests") {
 
   deps = [
     ":lib",
-    "//apps/test_runner/src:gtest_main",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//garnet/public/lib/fxl",
     "//third_party/boringssl",
     "//third_party/gtest",

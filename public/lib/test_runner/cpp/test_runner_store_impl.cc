@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/test_runner/lib/test_runner_store_impl.h"
+#include "lib/test_runner/cpp/test_runner_store_impl.h"
 
 namespace test_runner {
 

@@ -27,7 +27,7 @@ and reports their results over TCP to the host machine.
 ### GoogleTest
 
 If you have a GoogleTest (gtest) binary, include
-`//apps/test_runner/src:gtest_main` as a dependency of your executable test
+`//garnet/public/lib/test_runner/cpp:gtest_main` as a dependency of your executable test
 target in your `BUILD.gn` file. It provides a `main()` function that runs all
 tests and reports success or failure to Test Runner.
 

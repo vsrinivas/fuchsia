@@ -4,8 +4,8 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/ui/tests/test_with_message_loop.h"
-#include "apps/test_runner/lib/reporting/gtest_listener.h"
-#include "apps/test_runner/lib/reporting/reporter.h"
+#include "lib/test_runner/cpp/reporting/gtest_listener.h"
+#include "lib/test_runner/cpp/reporting/reporter.h"
 #include "gtest/gtest.h"
 
 std::unique_ptr<app::ApplicationContext> g_application_context;

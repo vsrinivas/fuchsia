@@ -4,6 +4,6 @@
 
 import("//garnet/public/lib/fidl/fidl.gni")
 
-fidl("test_runner") {
+fidl("fidl") {
   sources = ["test_runner.fidl"]
 }

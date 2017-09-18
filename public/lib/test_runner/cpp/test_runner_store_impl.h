@@ -8,7 +8,7 @@
 #include <map>
 #include <queue>
 
-#include "apps/test_runner/services/test_runner.fidl.h"
+#include "lib/test_runner/fidl/test_runner.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/string.h"
 

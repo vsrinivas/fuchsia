@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/test_runner/lib/application_context.h"
-#include "apps/test_runner/lib/reporting/gtest_listener.h"
-#include "apps/test_runner/lib/reporting/reporter.h"
+#include "lib/test_runner/cpp/application_context.h"
+#include "lib/test_runner/cpp/reporting/gtest_listener.h"
+#include "lib/test_runner/cpp/reporting/reporter.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/threading/thread.h"
 

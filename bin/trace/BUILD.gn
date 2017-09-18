@@ -97,7 +97,7 @@ executable("trace_tests_bin") {
     "//garnet/lib/measure:unittests",
     "//garnet/lib/trace:unittests",
     "//garnet/bin/trace:unittests",
-    "//apps/test_runner/src:gtest_main",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
   ]
 }
 

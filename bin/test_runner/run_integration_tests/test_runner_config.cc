@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/test_runner/src/run_integration_tests/test_runner_config.h"
+#include "garnet/bin/test_runner/run_integration_tests/test_runner_config.h"
 
 #include <sys/socket.h>
 

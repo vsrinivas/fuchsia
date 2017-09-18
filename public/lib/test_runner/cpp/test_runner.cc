@@ -28,7 +28,7 @@
 // runner environment, without teardown; useful for testing modules, which may
 // not need to tear down device_runner.
 
-#include "apps/test_runner/lib/test_runner.h"
+#include "lib/test_runner/cpp/test_runner.h"
 
 #include <arpa/inet.h>
 #include <netinet/in.h>

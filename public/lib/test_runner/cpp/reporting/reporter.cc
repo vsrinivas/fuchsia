@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/test_runner/lib/reporting/reporter.h"
+#include "lib/test_runner/cpp/reporting/reporter.h"
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/test_runner/services/test_runner.fidl.h"
+#include "lib/test_runner/fidl/test_runner.fidl.h"
 
 namespace test_runner {
 
