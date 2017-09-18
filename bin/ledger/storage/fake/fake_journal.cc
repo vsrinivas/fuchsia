@@ -35,5 +35,9 @@ void FakeJournal::Delete(convert::ExtendedStringView key,
   callback(delegate_->Delete(key));
 }
 
+const JournalId& FakeJournal::GetId() const {
+  return delegate_->GetId();
+}
+
 }  // namespace fake
 }  // namespace storage

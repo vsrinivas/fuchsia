@@ -18,6 +18,9 @@ class Journal {
   Journal() {}
   virtual ~Journal() {}
 
+  // Returns the ID of this journal.
+  virtual const JournalId& GetId() const = 0;
+
   // Adds an entry with the given |key| and |object_id| to this |Journal|.
   // Returns |OK| on success or the error code otherwise.
   virtual void Put(convert::ExtendedStringView key,

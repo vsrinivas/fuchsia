@@ -45,9 +45,6 @@ class JournalDBImpl : public Journal {
       const CommitId& base,
       const CommitId& other);
 
-  // Returns the id of this journal.
-  const JournalId& GetId() const;
-
   // Commits the changes of this |Journal|. Trying to update entries or rollback
   // will fail after a successful commit. The callback will be called with the
   // returned status and the new commit. This Journal object should not be
@@ -68,6 +65,7 @@ class JournalDBImpl : public Journal {
            std::function<void(Status)> callback) override;
   void Delete(convert::ExtendedStringView key,
               std::function<void(Status)> callback) override;
+  const JournalId& GetId() const override;
 
  private:
   JournalDBImpl(JournalType type,

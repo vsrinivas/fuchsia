@@ -35,6 +35,7 @@ class FakeJournal : public Journal {
            std::function<void(Status)> callback) override;
   void Delete(convert::ExtendedStringView key,
               std::function<void(Status)> callback) override;
+  const JournalId& GetId() const override;
 
  private:
   FakeJournalDelegate* delegate_;
