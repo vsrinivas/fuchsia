@@ -26,7 +26,7 @@ ResourceLinker::~ResourceLinker() {
     // Resource could be null if ExportResource() were called, but the
     // import tokens weren't all released yet.
     if (item.second.resource != nullptr) {
-      item.second.resource->SetExported(false, nullptr);
+      item.second.resource->SetExported(false);
     }
     FXL_DCHECK(item.second.export_token);
     message_loop->RemoveHandler(item.second.death_handler_key);
@@ -71,7 +71,7 @@ bool ResourceLinker::ExportResource(Resource* resource,
   };
   exported_resources_to_import_koids_.insert({resource, import_koid});
   exported_resources_.insert(resource);
-  resource->SetExported(true, this);
+  resource->SetExported(true);
 
   ASSERT_INTERNAL_EXPORTS_CONSISTENCY;
 
@@ -135,7 +135,7 @@ void ResourceLinker::RemoveExportedResourceIfUnbound(
 
   // Mark the resource as not exported, so it doesn't have to
   // call back to us when it dies.
-  exported_resource->SetExported(false, nullptr);
+  exported_resource->SetExported(false);
 
   InvokeExpirationCallback(exported_resource, ExpirationCause::kNoImportsBound);
 }
@@ -254,7 +254,7 @@ void ResourceLinker::OnExportedResourceDestroyed(Resource* resource) {
 
   // Mark the resource as not exported, so it doesn't have to
   // call back to us when it dies.
-  resource->SetExported(false, nullptr);
+  resource->SetExported(false);
 
   // Remove from |resources_|.
   size_t num_removed = exported_resources_.erase(resource);

@@ -35,10 +35,7 @@ class Import final : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Import(Session* session,
-         scenic::ResourceId id,
-         scenic::ImportSpec spec,
-         ResourceLinker* resource_linker);
+  Import(Session* session, scenic::ResourceId id, scenic::ImportSpec spec);
 
   ~Import() override;
 
@@ -67,7 +64,6 @@ class Import final : public Resource {
   const scenic::ImportSpec import_spec_;
   const ResourcePtr delegate_;
   Resource* imported_resource_ = nullptr;
-  ResourceLinker* resource_linker_ = nullptr;
 
   // |Resource|.
   Resource* GetDelegate(const ResourceTypeInfo& type_info) override;

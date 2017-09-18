@@ -28,8 +28,7 @@ Resource::~Resource() {
     import->UnbindImportedResource();
   }
   if (exported_) {
-    FXL_DCHECK(resource_linker_);
-    resource_linker_->OnExportedResourceDestroyed(this);
+    session_->engine()->resource_linker()->OnExportedResourceDestroyed(this);
   }
   session_->DecrementResourceCount();
 }
@@ -77,10 +76,8 @@ Resource* Resource::GetDelegate(const ResourceTypeInfo& type_info) {
   return type_info_.IsKindOf(type_info) ? this : nullptr;
 }
 
-void Resource::SetExported(bool exported, ResourceLinker* resource_linker) {
-  FXL_DCHECK(exported == (resource_linker != nullptr));
+void Resource::SetExported(bool exported) {
   exported_ = exported;
-  resource_linker_ = resource_linker;
 }
 
 }  // namespace scene_manager
