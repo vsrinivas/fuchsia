@@ -35,7 +35,7 @@ namespace {
 
 constexpr char kModuleUrl[] =
     "file:///system/apps/modular_tests/context_link_module";
-constexpr char kTopic[] = "context_link_test";
+constexpr char kTopic[] = "link/context_link_test";
 constexpr char kLink[] = "context_link";
 
 // A context reader watcher implementation.
