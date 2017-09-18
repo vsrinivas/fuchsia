@@ -1,0 +1,51 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module tracing;
+
+// The provider interface which applications must implement and register
+// with the |TraceRegistry| to participate in tracing.
+//
+// See //apps/tracing/lib/trace/provider.h for a C++ implementation of
+// this interface which can easily be configured by an application.
+[ServiceName="tracing::TraceProvider"]
+interface TraceProvider {
+  // Starts writing trace records for events in the specified |categories|
+  // into |buffer| using |fence| for signaling.
+  //
+  // When the trace provider fills the buffer completely, it must stop tracing
+  // and close both |buffer| and |fence| to indicate to the trace manager
+  // that tracing is finished.
+  //
+  // When the trace provider observes |ZX_EPAIR_CLOSED| on |fence|, it must
+  // assume the trace manager has terminated abnormally (since |Stop| was
+  // not received as usual) and stop tracing automatically.
+  //
+  // At most one trace can be running at a time.  If the trace provider
+  // receives a request to start tracing while already tracing, it must
+  // return false.
+  //
+  // TODO(ZX-1046): Previously this interface was expected to restart tracing
+  // if tracing was already running.  Some trace providers implement this more
+  // elaborate behavior.  Once we port them to Zircon we can modify that
+  // code to return false instead then delete this TODO.
+  //
+  // Returns the result of the operation in |success|, true indicates that
+  // the provider is tracing now, false indicates that tracing could
+  // not be started.
+  //
+  // TODO(jeffbrown): Implement half-full signal and streaming protocol.
+  Start(handle<vmo> buffer, handle<eventpair> fence, array<string> categories) => (bool success);
+
+  // Stops tracing.
+  //
+  // Once the provider has finished writing any final events to the trace
+  // buffer, it must close both |buffer| and |fence| to indicate to the trace
+  // manager that tracing is finished.
+  Stop();
+
+  // Dumps the internal state of the trace provider to |output| in a
+  // human-readable form.
+  Dump(handle<socket> output);
+};

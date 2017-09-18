@@ -1,0 +1,26 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("ktrace_provider") {
+  sources = [
+    "app.cc",
+    "app.h",
+    "importer.cc",
+    "importer.h",
+    "log_importer.cc",
+    "log_importer.h",
+    "main.cc",
+    "reader.cc",
+    "reader.h",
+    "tags.cc",
+    "tags.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//zircon/system/ulib/trace-provider",
+  ]
+}

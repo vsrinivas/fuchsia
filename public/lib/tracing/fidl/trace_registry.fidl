@@ -1,0 +1,21 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module tracing;
+
+import "apps/tracing/services/trace_provider.fidl";
+
+// The interface which applications call into to register their trace providers.
+[ServiceName="tracing::TraceRegistry"]
+interface TraceRegistry {
+  // Maximum length for a provider label.
+  const uint32 kLabelMaxLength = 63;
+
+  // Registers the trace provider.
+  // To unregister, simply close the TraceProvider pipe.
+  //
+  // |label| is a human-readable name to assign to the trace provider.
+  // The label is truncated if longer than |kLabelMaxLength|.
+  RegisterTraceProvider(TraceProvider provider, string? label);
+};

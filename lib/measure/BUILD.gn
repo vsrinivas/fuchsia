@@ -1,0 +1,39 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("measure") {
+  sources = [
+    "duration.cc",
+    "duration.h",
+    "event_spec.cc",
+    "event_spec.h",
+    "measurements.h",
+    "results.cc",
+    "results.h",
+    "time_between.cc",
+    "time_between.h",
+  ]
+
+  public_deps = [
+    "//apps/tracing/lib/trace:reader",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "duration_unittest.cc",
+    "results_unittest.cc",
+    "test_events.cc",
+    "test_events.h",
+    "time_between_unittest.cc",
+  ]
+
+  deps = [
+    ":measure",
+    "//third_party/gtest",
+  ]
+}

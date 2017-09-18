@@ -1,0 +1,66 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module tracing;
+
+// The controller interface used by the trace tool to start/stop tracing.
+[ServiceName="tracing::TraceController"]
+interface TraceController {
+  // Requests to start tracing with the specified |options|.
+  //
+  // The trace controller acknowledges the request when all
+  // registered providers have been started or after |options.start_timeout_milliseconds| milliseconds.
+  //
+  // The trace controller emits trace data to |output| as a sequence of
+  // binary formatted trace records.  Traces obtained from different providers
+  // are delimited by metadata records within the stream.
+  //
+  // The trace controller is responsible for lightly validating the structure of
+  // trace records as it copies them from trace buffers into the output.
+  // In particular, it must verify the size of each record header to ensure
+  // that the framing of trace records in the data stream is maintained.
+  //
+  // The trace controller does not validate the contents of the trace records
+  // themselves.  For example, it should not try to check argument lengths in
+  // events.  This ensures that the trace format can be extended without needing
+  // to modify the trace controller.
+  StartTracing(TraceOptions options, handle<socket> output) => ();
+
+  // Requests to stop tracing.
+  //
+  // The trace controller continues to transfer any remaining data to the
+  // output until finished, then closes the output.
+  StopTracing();
+
+  // Dumps the internal state of the specified trace provider in a
+  // human-readable form.
+  DumpProvider(uint32 provider_id, handle<socket> output);
+
+  // Gets the known categories, as a mapping of name -> description.
+  GetKnownCategories() => (map<string, string> categories);
+
+  // Gets the list of registered providers.
+  GetRegisteredProviders() => (array<TraceProviderInfo> providers);
+};
+
+// Provides options for the trace.
+struct TraceOptions {
+  // The trace categories to record, or an empty array for all.
+  array<string> categories;
+
+  // Suggested size of trace buffer which each provider should receive.
+  uint32 buffer_size_megabytes_hint = 4;
+
+  // Acknowledge start request after at most |start_timeout_milliseconds|.
+  uint64 start_timeout_milliseconds = 5000;
+};
+
+// Information about a registered trace provider.
+struct TraceProviderInfo {
+  // The provider's id.
+  uint32 id;
+
+  // The trace provider's label.
+  string label;
+};

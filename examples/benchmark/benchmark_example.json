@@ -1,0 +1,20 @@
+{
+  "app": "benchmark_example",
+  "args": [],
+  "categories": ["benchmark"],
+  "measure": [
+    {
+      "type": "duration",
+      "split_samples_at": [1, 50],
+      "event_name": "example",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "time_between",
+      "first_event_name": "task_end",
+      "first_event_category": "benchmark",
+      "second_event_name": "task_start",
+      "second_event_category": "benchmark"
+    }
+  ]
+}
