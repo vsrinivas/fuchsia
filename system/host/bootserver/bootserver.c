@@ -29,7 +29,7 @@ char* appname;
 int64_t us_between_packets = DEFAULT_US_BETWEEN_PACKETS;
 bool use_filename_prefix = true;
 
-static bool use_tftp = false;
+static bool use_tftp = true;
 static size_t total_file_size;
 static int progress_reported;
 static int packets_sent;
@@ -125,8 +125,8 @@ void usage(void) {
             "             (ignored with --tftp)\n"
             "  -n         only boot device with this nodename\n"
             "  -w <sz>    tftp window size (default=%d, ignored with --netboot)\n"
-            "  --netboot  use the netboot protocol (default)\n"
-            "  --tftp     use the tftp protocol\n",
+            "  --netboot  use the netboot protocol\n"
+            "  --tftp     use the tftp protocol (default)\n",
             appname, DEFAULT_TFTP_BLOCK_SZ, DEFAULT_US_BETWEEN_PACKETS, DEFAULT_TFTP_WIN_SZ);
     exit(1);
 }
