@@ -5,6 +5,6 @@
     ],
     "packages": {
         "wlanstack_test": "//apps/wlan:wlanstack_test",
-        "wlan_tests": "//drivers/wifi/wlan/tests:wlan_tests"
+        "wlan_tests": "//garnet/drivers/wlan/wlan/tests:wlan_tests"
     }
 }

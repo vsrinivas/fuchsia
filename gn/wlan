@@ -3,7 +3,7 @@
         "cpp"
     ],
     "packages": {
-        "wlan": "//drivers/wifi/wlan",
-        "ralink": "//drivers/wifi/mediatek/ralink"
+        "wlan": "//garnet/drivers/wlan/wlan",
+        "ralink": "//garnet/drivers/wlan/mediatek/ralink"
     }
 }
