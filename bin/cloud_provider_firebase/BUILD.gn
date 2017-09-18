@@ -65,7 +65,7 @@ executable("cloud_provider_firebase_unittests") {
     "//apps/ledger/src/auth_provider/test",
     "//apps/ledger/src/test:lib",
     "//apps/modular/services/auth",
-    "//apps/test_runner/src:gtest_main",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl:fxl_printers",
   ]

@@ -39,7 +39,7 @@ executable("integration") {
     "//apps/ledger/src/test/cloud_server",
     "//apps/ledger/src/test/integration/sync",
     "//apps/modular/services/auth",
-    "//apps/test_runner/src:gtest_main",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
     "//third_party/gtest",

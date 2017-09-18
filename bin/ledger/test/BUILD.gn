@@ -61,7 +61,7 @@ source_set("app_test") {
   ]
 
   deps = [
-    "//apps/test_runner/lib/reporting",
+    "//garnet/public/lib/test_runner/cpp/reporting",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
     "//third_party/gtest",
