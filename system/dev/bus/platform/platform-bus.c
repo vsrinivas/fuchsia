@@ -101,11 +101,25 @@ static zx_status_t platform_bus_map_interrupt(void* ctx, uint32_t index, zx_hand
     return platform_map_interrupt(&bus->resources, index, out_handle);
 }
 
+zx_status_t platform_bus_device_enable(void* ctx, uint32_t vid, uint32_t pid, uint32_t did,
+                                       bool enable) {
+    platform_bus_t* bus = ctx;
+    platform_dev_t* dev;
+    list_for_every_entry(&bus->devices, dev, platform_dev_t, node) {
+        if (dev->vid == vid && dev->pid == pid && dev->did == did) {
+            return platform_device_enable(dev, enable);
+        }
+    }
+
+    return ZX_ERR_NOT_FOUND;
+}
+
 static platform_device_protocol_ops_t platform_bus_proto_ops = {
     .set_interface = platform_bus_set_interface,
     .get_protocol = platform_bus_get_protocol,
     .map_mmio = platform_bus_map_mmio,
     .map_interrupt = platform_bus_map_interrupt,
+    .device_enable = platform_bus_device_enable,
 };
 
 static void platform_bus_release(void* ctx) {
@@ -197,6 +211,7 @@ static zx_status_t platform_bus_bind(void* ctx, zx_device_t* parent, void** cook
     bus->resource = get_root_resource();
     bus->vid = vid;
     bus->pid = pid;
+    list_initialize(&bus->devices);
     memcpy(&bus->platform_node, &platform_node, sizeof(bus->platform_node));
     memcpy(&bus->bus_node, &bus_node, sizeof(bus->bus_node));
     bus->mdi_addr = mdi_addr;

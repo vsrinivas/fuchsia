@@ -46,6 +46,7 @@ typedef struct {
                             size_t* out_size, zx_handle_t* out_handle);
 
     zx_status_t (*map_interrupt)(void* ctx, uint32_t index, zx_handle_t* out_handle);
+    zx_status_t (*device_enable)(void* ctx, uint32_t vid, uint32_t pid, uint32_t did, bool enable);
 } platform_device_protocol_ops_t;
 
 typedef struct {
@@ -77,6 +78,13 @@ static inline zx_status_t pdev_map_mmio(platform_device_protocol_t* pdev, uint32
 static inline zx_status_t pdev_map_interrupt(platform_device_protocol_t* pdev, uint32_t index,
                                              zx_handle_t* out_handle) {
     return pdev->ops->map_interrupt(pdev->ctx, index, out_handle);
+}
+
+// Dynamically enables or disables a platform device by adding or removing it
+// from the DDK device tree. This can only be used by the platform bus implementation driver.
+static inline zx_status_t pdev_device_enable(platform_device_protocol_t* pdev, uint32_t vid,
+                                             uint32_t pid, uint32_t did, bool enable) {
+    return pdev->ops->device_enable(pdev->ctx, vid, pid, did, enable);
 }
 
 // MMIO mapping helpers

@@ -37,11 +37,17 @@ static zx_status_t platform_dev_map_interrupt(void* ctx, uint32_t index, zx_hand
     return platform_map_interrupt(&pdev->resources, index, out_handle);
 }
 
+static zx_status_t platform_dev_device_enable(void* ctx, uint32_t vid, uint32_t pid, uint32_t did,
+                                              bool enable) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 static platform_device_protocol_ops_t platform_dev_proto_ops = {
     .set_interface = platform_dev_set_interface,
     .get_protocol = platform_dev_get_protocol,
     .map_mmio = platform_dev_map_mmio,
     .map_interrupt = platform_dev_map_interrupt,
+    .device_enable = platform_dev_device_enable,
 };
 
 static void platform_dev_release(void* ctx) {
@@ -56,10 +62,45 @@ static zx_protocol_device_t platform_dev_proto = {
     .release = platform_dev_release,
 };
 
+zx_status_t platform_device_enable(platform_dev_t* dev, bool enable) {
+    zx_status_t status = ZX_OK;
+
+    if (enable && !dev->enabled) {
+        zx_device_prop_t props[] = {
+            {BIND_PLATFORM_DEV_VID, 0, dev->vid},
+            {BIND_PLATFORM_DEV_PID, 0, dev->pid},
+            {BIND_PLATFORM_DEV_DID, 0, dev->did},
+        };
+
+        device_add_args_t args = {
+            .version = DEVICE_ADD_ARGS_VERSION,
+            .name = dev->name,
+            .ctx = dev,
+            .ops = &platform_dev_proto,
+            .proto_id = ZX_PROTOCOL_PLATFORM_DEV,
+            .proto_ops = &platform_dev_proto_ops,
+            .props = props,
+            .prop_count = countof(props),
+        };
+
+        status = device_add(dev->bus->zxdev, &args, &dev->zxdev);
+    } else if (!enable && dev->enabled) {
+        device_remove(dev->zxdev);
+        dev->zxdev = NULL;
+    }
+
+    if (status == ZX_OK) {
+        dev->enabled = enable;
+    }
+
+    return status;
+}
+
 zx_status_t platform_bus_publish_device(platform_bus_t* bus, mdi_node_ref_t* device_node) {
     uint32_t vid = bus->vid;
     uint32_t pid = bus->pid;
     uint32_t did = 0;
+    bool enabled = true;
     uint32_t mmio_count = 0;
     uint32_t irq_count = 0;
     const char* name = NULL;
@@ -79,6 +120,9 @@ zx_status_t platform_bus_publish_device(platform_bus_t* bus, mdi_node_ref_t* dev
             break;
         case MDI_PLATFORM_DEVICE_DID:
             mdi_node_uint32(&node, &did);
+            break;
+        case MDI_PLATFORM_DEVICE_ENABLED:
+            mdi_node_boolean(&node, &enabled);
             break;
         case MDI_PLATFORM_MMIOS:
             mmio_count = mdi_child_count(&node);
@@ -104,6 +148,10 @@ zx_status_t platform_bus_publish_device(platform_bus_t* bus, mdi_node_ref_t* dev
         return ZX_ERR_NO_MEMORY;
     }
     dev->bus = bus;
+    strlcpy(dev->name, name, sizeof(dev->name));
+    dev->vid = vid;
+    dev->pid = pid;
+    dev->did = did;
 
     zx_status_t status = ZX_OK;
     platform_init_resources(&dev->resources, mmio_count, irq_count);
@@ -113,25 +161,11 @@ zx_status_t platform_bus_publish_device(platform_bus_t* bus, mdi_node_ref_t* dev
             goto fail;
         }
     }
+    list_add_tail(&bus->devices, &dev->node);
 
-    zx_device_prop_t props[] = {
-        {BIND_PLATFORM_DEV_VID, 0, vid},
-        {BIND_PLATFORM_DEV_PID, 0, pid},
-        {BIND_PLATFORM_DEV_DID, 0, did},
-    };
-
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = name,
-        .ctx = dev,
-        .ops = &platform_dev_proto,
-        .proto_id = ZX_PROTOCOL_PLATFORM_DEV,
-        .proto_ops = &platform_dev_proto_ops,
-        .props = props,
-        .prop_count = countof(props),
-    };
-
-    status = device_add(bus->zxdev, &args, &dev->zxdev);
+    if (enabled) {
+        status = platform_device_enable(dev, true);
+    }
 
 fail:
     if (status != ZX_OK) {

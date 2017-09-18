@@ -45,6 +45,9 @@ typedef struct {
     zx_handle_t mdi_handle;
     uint32_t vid;
     uint32_t pid;
+
+    list_node_t devices;    // list of platform_dev_t
+
     // resources must be last
     platform_resources_t resources;
 } platform_bus_t;
@@ -53,12 +56,20 @@ typedef struct {
 typedef struct {
     zx_device_t* zxdev;
     platform_bus_t* bus;
+    list_node_t node;
+    char name[ZX_DEVICE_NAME_MAX + 1];
+    uint32_t vid;
+    uint32_t pid;
+    uint32_t did;
+    bool enabled;
+
     // resources must be last
     platform_resources_t resources;
 } platform_dev_t;
 
 // platform-device.c
 zx_status_t platform_bus_publish_device(platform_bus_t* bus, mdi_node_ref_t* device_node);
+zx_status_t platform_device_enable(platform_dev_t* dev, bool enable);
 
 // platform-resources.c
 void platform_release_resources(platform_resources_t* resources);

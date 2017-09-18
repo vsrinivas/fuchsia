@@ -24,6 +24,7 @@ list    platform.device                   MDI_PLATFORM_DEVICE                   
 uint32  platform.device.vid               MDI_PLATFORM_DEVICE_VID               203
 uint32  platform.device.pid               MDI_PLATFORM_DEVICE_PID               204
 uint32  platform.device.did               MDI_PLATFORM_DEVICE_DID               205
+boolean platform.device.enabled           MDI_PLATFORM_DEVICE_ENABLED           206
 
 list    platform.bus                      MDI_PLATFORM_BUS                      210
 
