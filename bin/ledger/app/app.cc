@@ -134,7 +134,7 @@ class App : public LedgerController,
     application_context_->outgoing_services()->Close();
     factory_impl_.reset();
 
-    if (pending_operation_manager_.size() == 0u) {
+    if (managed_container_.empty()) {
       // If we still have pending operations, we will post the quit task when
       // the last one completes.
       loop_.PostQuitTask();
@@ -145,21 +145,22 @@ class App : public LedgerController,
   void EraseRepository(
       EraseRemoteRepositoryOperation erase_remote_repository_operation,
       std::function<void(bool)> callback) override {
-    auto handler = pending_operation_manager_.Manage(
-        std::move(erase_remote_repository_operation));
-    handler.first->Start(fxl::MakeCopyable([
-      this, cleanup = std::move(handler.second), callback = std::move(callback)
+    auto managed_operation =
+        managed_container_.Manage(std::move(erase_remote_repository_operation));
+    managed_operation->Start(fxl::MakeCopyable([
+      this, managed_operation = std::move(managed_operation),
+      callback = std::move(callback)
     ](bool succeeded) mutable {
       callback(succeeded);
       // This lambda is deleted in |call()|, don't access captured members
       // afterwards.
-      cleanup.call();
+      managed_operation.reset();
       CheckPendingOperations();
     }));
   }
 
   void CheckPendingOperations() {
-    if (shutdown_in_progress_ && pending_operation_manager_.size() == 0u) {
+    if (shutdown_in_progress_ && managed_container_.empty()) {
       loop_.PostQuitTask();
     }
   }
@@ -176,7 +177,7 @@ class App : public LedgerController,
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;
   fidl::BindingSet<LedgerRepositoryFactory> factory_bindings_;
   fidl::BindingSet<LedgerController> controller_bindings_;
-  callback::PendingOperationManager pending_operation_manager_;
+  callback::ManagedContainer managed_container_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

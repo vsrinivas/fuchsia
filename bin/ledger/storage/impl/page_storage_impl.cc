@@ -225,18 +225,19 @@ void PageStorageImpl::StartMergeCommit(
 void PageStorageImpl::CommitJournal(
     std::unique_ptr<Journal> journal,
     std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
-  auto handler = pending_operation_manager_.Manage(std::move(journal));
+  auto managed_journal = managed_container_.Manage(std::move(journal));
   JournalDBImpl* journal_ptr =
-      static_cast<JournalDBImpl*>(handler.first->get());
+      static_cast<JournalDBImpl*>(managed_journal->get());
 
   journal_ptr->Commit(fxl::MakeCopyable([
-    journal_ptr, cleanup = std::move(handler.second),
+    journal_ptr, managed_journal = std::move(managed_journal),
     callback = std::move(callback)
   ](Status status, std::unique_ptr<const Commit> commit) mutable {
     if (status != Status::OK) {
       // Commit failed, roll the journal back.
       journal_ptr->Rollback(fxl::MakeCopyable([
-        status, cleanup = std::move(cleanup), callback = std::move(callback)
+        status, managed_journal = std::move(managed_journal),
+        callback = std::move(callback)
       ](Status /*rollback_status*/) { callback(status, nullptr); }));
       return;
     }
@@ -246,12 +247,12 @@ void PageStorageImpl::CommitJournal(
 
 void PageStorageImpl::RollbackJournal(std::unique_ptr<Journal> journal,
                                       std::function<void(Status)> callback) {
-  auto handler = pending_operation_manager_.Manage(std::move(journal));
+  auto managed_journal = managed_container_.Manage(std::move(journal));
   JournalDBImpl* journal_ptr =
-      static_cast<JournalDBImpl*>(handler.first->get());
+      static_cast<JournalDBImpl*>(managed_journal->get());
 
   journal_ptr->Rollback(fxl::MakeCopyable([
-    cleanup = std::move(handler.second), callback = std::move(callback)
+    managed_journal = std::move(managed_journal), callback = std::move(callback)
   ](Status status) { callback(status); }));
 }
 
@@ -323,12 +324,12 @@ void PageStorageImpl::AddObjectFromLocal(
   auto traced_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_add_object");
 
-  auto handler = pending_operation_manager_.Manage(std::move(data_source));
+  auto managed_data_source = managed_container_.Manage(std::move(data_source));
   auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
   SplitDataSource(
-      handler.first->get(),
+      managed_data_source->get(),
       fxl::MakeCopyable([
-        this, waiter, cleanup = std::move(handler.second),
+        this, waiter, managed_data_source = std::move(managed_data_source),
         callback = std::move(traced_callback)
       ](IterationStatus status, ObjectId object_id,
         std::unique_ptr<DataSource::DataChunk> chunk) mutable {
@@ -813,12 +814,12 @@ void PageStorageImpl::ReadDataSource(
     std::unique_ptr<DataSource> data_source,
     std::function<void(Status, std::unique_ptr<DataSource::DataChunk>)>
         callback) {
-  auto handler = pending_operation_manager_.Manage(std::move(data_source));
+  auto managed_data_source = managed_container_.Manage(std::move(data_source));
   auto chunks = std::vector<std::unique_ptr<DataSource::DataChunk>>();
-  (*handler.first)
+  (*managed_data_source)
       ->Get(fxl::MakeCopyable([
-        cleanup = std::move(handler.second), chunks = std::move(chunks),
-        callback = std::move(callback)
+        managed_data_source = std::move(managed_data_source),
+        chunks = std::move(chunks), callback = std::move(callback)
       ](std::unique_ptr<DataSource::DataChunk> chunk,
         DataSource::Status status) mutable {
         if (status == DataSource::Status::ERROR) {

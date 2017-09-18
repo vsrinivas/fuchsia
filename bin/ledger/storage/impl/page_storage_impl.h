@@ -10,7 +10,7 @@
 #include <queue>
 #include <set>
 
-#include "apps/ledger/src/callback/pending_operation.h"
+#include "apps/ledger/src/callback/managed_container.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/coroutine/coroutine.h"
 #include "apps/ledger/src/storage/impl/page_db_impl.h"
@@ -202,7 +202,7 @@ class PageStorageImpl : public PageStorage {
   const PageId page_id_;
   PageDbImpl db_;
   std::vector<CommitWatcher*> watchers_;
-  callback::PendingOperationManager pending_operation_manager_;
+  callback::ManagedContainer managed_container_;
   PageSyncDelegate* page_sync_;
   std::queue<
       std::pair<ChangeSource, std::vector<std::unique_ptr<const Commit>>>>

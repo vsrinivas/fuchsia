@@ -13,7 +13,7 @@
 #include "apps/ledger/src/app/ledger_repository_impl.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/callback/cancellable.h"
-#include "apps/ledger/src/callback/pending_operation.h"
+#include "apps/ledger/src/callback/managed_container.h"
 #include "apps/ledger/src/cloud_sync/public/user_config.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
