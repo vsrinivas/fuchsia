@@ -131,6 +131,11 @@ static zx_status_t usb_interface_ioctl(void* ctx, uint32_t op, const void* in_bu
     }
 }
 
+static void usb_interface_unbind(void* ctx) {
+    usb_interface_t* intf = ctx;
+    device_remove(intf->zxdev);
+}
+
 static void usb_interface_release(void* ctx) {
     usb_interface_t* intf = ctx;
 
@@ -143,6 +148,7 @@ static zx_protocol_device_t usb_interface_proto = {
     .version = DEVICE_OPS_VERSION,
     .iotxn_queue = usb_interface_iotxn_queue,
     .ioctl = usb_interface_ioctl,
+    .unbind = usb_interface_unbind,
     .release = usb_interface_release,
 };
 
@@ -591,18 +597,6 @@ zx_status_t usb_device_add_interface_association(usb_device_t* device,
         free(intf);
     }
     return status;
-}
-
-
-void usb_device_remove_interfaces(usb_device_t* device) {
-    mtx_lock(&device->interface_mutex);
-
-    usb_interface_t* intf;
-    while ((intf = list_remove_head_type(&device->children, usb_interface_t, node)) != NULL) {
-        device_remove(intf->zxdev);
-    }
-
-    mtx_unlock(&device->interface_mutex);
 }
 
 bool usb_device_remove_interface_by_id_locked(usb_device_t* device, uint8_t interface_id) {

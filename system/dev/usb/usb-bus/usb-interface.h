@@ -57,8 +57,6 @@ zx_status_t usb_device_add_interface_association(usb_device_t* device,
                                                  usb_interface_assoc_descriptor_t* assoc_desc,
                                                  size_t assoc_desc_length);
 
-void usb_device_remove_interfaces(usb_device_t* device);
-
 // returns whether the interface with the given id was removed.
 bool usb_device_remove_interface_by_id_locked(usb_device_t* device, uint8_t interface_id);
 

@@ -62,6 +62,17 @@ static usb_configuration_descriptor_t* get_config_desc(usb_device_t* dev, int co
     return NULL;
 }
 
+static void usb_device_remove_interfaces(usb_device_t* device) {
+    mtx_lock(&device->interface_mutex);
+
+    usb_interface_t* intf;
+    while ((intf = list_remove_head_type(&device->children, usb_interface_t, node)) != NULL) {
+        device_remove(intf->zxdev);
+    }
+
+    mtx_unlock(&device->interface_mutex);
+}
+
 zx_status_t usb_device_claim_interface(usb_device_t* device, uint8_t interface_id) {
     mtx_lock(&device->interface_mutex);
 
@@ -252,7 +263,8 @@ static zx_status_t usb_device_ioctl(void* ctx, uint32_t op, const void* in_buf, 
     }
 }
 
-void usb_device_remove(usb_device_t* dev) {
+static void usb_device_unbind(void* ctx) {
+    usb_device_t* dev = ctx;
     usb_device_remove_interfaces(dev);
     device_remove(dev->zxdev);
 }

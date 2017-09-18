@@ -48,7 +48,7 @@ static void bus_remove_device(void* ctx, uint32_t device_id) {
     }
     usb_device_t* device = bus->devices[device_id];
     if (device) {
-        usb_device_remove(device);
+        device_remove(device->zxdev);
         bus->devices[device_id] = NULL;
     }
 }
@@ -93,6 +93,7 @@ static usb_bus_protocol_ops_t _bus_protocol = {
 };
 
 static void usb_bus_unbind(void* ctx) {
+    dprintf(INFO, "usb_bus_unbind\n");
     usb_bus_t* bus = ctx;
     usb_hci_set_bus_interface(&bus->hci, NULL);
 
@@ -107,6 +108,7 @@ static void usb_bus_unbind(void* ctx) {
 }
 
 static void usb_bus_release(void* ctx) {
+    dprintf(INFO, "usb_bus_release\n");
     usb_bus_t* bus = ctx;
     free(bus->devices);
     free(bus);
