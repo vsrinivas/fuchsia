@@ -1,0 +1,28 @@
+{
+  "tests": [
+    {
+      "name": "error_no_command",
+      "exec": "/system/bin/report_result"
+    },
+    {
+      "name": "error_bad_command",
+      "exec": "/system/bin/report_result kaboom"
+    },
+    {
+      "name": "fake_failing_command",
+      "exec": "/system/bin/report_result /system/test/fake_command fail"
+    },
+    {
+      "name": "fake_passsing_command",
+      "exec": "/system/bin/report_result /system/test/fake_command"
+    },
+    {
+      "name": "fake_failing_test",
+      "exec": "/system/test/fake_failing_test"
+    },
+    {
+      "name": "fake_passing_test",
+      "exec": "/system/test/fake_passing_test"
+    }
+  ]
+}

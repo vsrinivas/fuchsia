@@ -1,0 +1,16 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("server") {
+  output_name = "test_runner"
+
+  sources = [
+    "test_runner_server.cc",
+  ]
+
+  deps = [
+    "//apps/test_runner/lib",
+    "//apps/test_runner/services:test_runner",
+  ]
+}

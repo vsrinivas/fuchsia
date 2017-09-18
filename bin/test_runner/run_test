@@ -1,0 +1,163 @@
+#!/usr/bin/env python
+
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import argparse
+import json
+import os
+import socket
+import subprocess
+import sys
+import time
+import uuid
+
+sys.path.append(os.path.join(os.path.dirname(__file__), 'driver'))
+from driver import *
+
+
+def parse_args(argv):
+  default_port = 8342
+
+  parser = argparse.ArgumentParser()
+  parser.add_argument(
+      '--server',
+      help='Server to connect to. This can be an IPv4 or IPv6 hostname or '
+           'address (IPv4 will be attempted first), a Zircon device name, or '
+           'a single colon meaning to use the default device given by netls.',
+      type=str,
+      default=':')
+  parser.add_argument(
+      '--port',
+      help=('Port where the test_runner daemon is running. Default: %s' %
+            default_port),
+      type=int,
+      default=default_port)
+  parser.add_argument(
+      '--test_file',
+      help='Path to a json file containing a series of tests to run.',
+      type=str,
+      default=None)
+  parser.add_argument(
+      '--test_name',
+      help='Use with --test_file to select a particular test.',
+      type=str,
+      default=None)
+  parser.add_argument(
+      '--sync',
+      help='Use with --test_file to copy the dependent files to the device.',
+      dest='sync',
+      action='store_true')
+  parser.add_argument(
+      '--no-sync',
+      help=
+      'Use with --test_file to disable copying the dependent files to the device.',
+      dest='sync',
+      action='store_false')
+  parser.set_defaults(sync=False, ip_version=socket.AF_INET6)
+  parser.add_argument('command', nargs='*')
+  args = parser.parse_args()
+
+  if args.test_name and not args.test_file:
+    parser.error('--test_file is required in order to use --test_name')
+
+  if args.test_file is None and len(args.command) == 0:
+    parser.error(
+        'Either a single test command, or --test_file must be specified')
+
+  return args
+
+
+def get_ip_info(server, port):
+  # Host names will be resolved with IPv4 first. So for example, "localhost"
+  # will return "127.0.0.1", not "::1".
+  for version in [socket.AF_INET, socket.AF_INET6]:
+    try:
+      return (version, socket.getaddrinfo(
+          server, port, version, socket.SOCK_STREAM)[0][-1])
+    except socket.gaierror:
+      pass
+  return socket.AF_INET6, None
+
+
+def main(argv):
+  args = parse_args(argv)
+
+  if len(args.command) > 0:
+    tests = [{'name': args.command[0], 'exec': ' '.join(args.command)}]
+  else:
+    config = json.load(open(args.test_file))
+    tests = get_tests(config, args.test_name)
+
+  fuchsia_tools = FuchsiaTools(os.environ)
+  ip_version, address = get_ip_info(args.server, args.port)
+
+  if not address:
+    ip_version = socket.AF_INET6
+    if args.server == ':':
+      netls = fuchsia_tools.netls()
+      device = get_default_device(subprocess.check_output(netls))
+    else:
+      device = args.server
+    netaddr = fuchsia_tools.netaddr(device)
+    host = subprocess.check_output(netaddr).strip()
+    address = socket.getaddrinfo(
+        host, args.port, socket.AF_INET6, socket.SOCK_STREAM)[0][-1]
+
+  sock = socket.socket(ip_version)
+
+  # Allow for retries when connecting, since QEMU might not be listening yet.
+  Log.line('connecting', repr(address))
+  failed = 0
+  while True:
+    try:
+      sock.connect(address)
+      break
+    except socket.error:
+      failed += 1
+      if failed == 10:
+        print 'Failed to connect. Is test_runner running on Fuchsia?'
+        return 1
+      Log.line('connecting', "Couldn't connect, retrying in 3 seconds")
+      time.sleep(3)
+
+  driver = Driver()
+
+  # Sync all files at once because sftp has a 1.3 second startup overhead
+  if args.sync:
+    file_pairs = []
+    for test in tests:
+      for filename, remote_dir in test['copy']:
+        file_pairs.append((filename, remote_dir + '/' + filename))
+    command_tuple = fuchsia_tools.sftp( '[' + host + ']', file_pairs)
+    with open(os.devnull, 'w') as devnull:
+      status = subprocess.call(command_tuple[0], stdout=devnull)
+      command_tuple[1].close()
+      if status != 0:
+        print >> sys.stderr, 'error: sftp failed'
+        return status
+
+  for test in tests:
+    id_ = str(uuid.uuid4())
+    try:
+      sock.send(driver.start_test(id_, test) + '\n')
+      driver.wait_for_teardown(sock.makefile())
+    except (socket.error, MissingTeardown):
+      # MissingTeardown is likely caused by a closed connection.
+      print ('Lost connection to Fuchsia. '
+          'Check the log from the device or emulator.')
+      return 1
+
+  driver.print_summary()
+
+  if driver.failed:
+    # Unique exit code for when tests failed but there was no internal error.
+    # Already taken: 1 for Python exception, 2 for argument error.
+    return 3
+  else:
+    return 0
+
+
+if __name__ == '__main__':
+  sys.exit(main(sys.argv))

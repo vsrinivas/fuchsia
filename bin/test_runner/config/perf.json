@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "name": "ledger_put",
+      "exec": "/system/bin/report_result /system/apps/trace record --spec-file=/system/data/ledger/benchmark/put.tspec"
+    },
+    {
+      "name": "ledger_transaction",
+      "exec": "/system/bin/report_result /system/apps/trace record --spec-file=/system/data/ledger/benchmark/transaction.tspec"
+    }
+  ]
+}

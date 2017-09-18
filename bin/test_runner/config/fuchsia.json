@@ -1,0 +1,60 @@
+{
+  "tests": [
+    {
+      "name": "bluetooth_unittests",
+      "exec": "/system/test/bluetooth_unittests"
+    },
+    {
+      "name": "go_os_test",
+      "exec": "/system/bin/report_result /system/test/go_os_test"
+    },
+    {
+      "name": "ledger_e2e_local",
+      "exec": "/system/test/ledger_e2e_local"
+    },
+    {
+      "name": "ledger_unittests",
+      "exec": "/system/test/ledger_unittests"
+    },
+    {
+      "name": "ledger_integration_tests",
+      "exec": "/system/test/ledger_integration_tests"
+    },
+    {
+      "name": "media_audio_tests",
+      "exec": "/system/test/media_audio_tests"
+    },
+    {
+      "name": "media_demux_tests",
+      "exec": "/system/test/media_demux_tests"
+    },
+    {
+      "name": "media_lib_timeline_tests",
+      "exec": "/system/test/media_lib_timeline_tests"
+    },
+    {
+      "name": "media_lib_transport_tests",
+      "exec": "/system/test/media_lib_transport_tests"
+    },
+    {
+      "name": "media_util_tests",
+      "exec": "/system/test/media_util_tests"
+    },
+    {
+      "name": "netstack_loopback_test",
+      "exec": "/system/test/netstack_loopback_test"
+    },
+    {
+      "name": "netstack_netiface_test",
+      "exec": "/system/bin/report_result /system/test/netstack_netiface_test"
+    },
+    {
+      "name": "power_manager_tests",
+      "exec": "/system/bin/report_result /system/test/power_manager_test"
+    },
+    {
+      "name": "time_service_tests",
+      "exec": "/system/test/time_service_tests"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("run_integration_tests") {
+  sources = [
+    "run_integration_tests.cc",
+    "test_runner_config.cc",
+    "test_runner_config.h",
+  ]
+  deps = [
+    "//apps/test_runner/lib",
+    "//apps/test_runner/services:test_runner",
+    "//garnet/public/lib/fxl",
+    "//third_party/rapidjson",
+  ]
+}

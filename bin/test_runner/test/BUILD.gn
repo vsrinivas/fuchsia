@@ -1,0 +1,45 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+
+  deps = [
+    ":fake_command",
+    ":fake_failing_test",
+    ":fake_passing_test",
+  ]
+}
+
+executable("fake_command") {
+  testonly = true
+
+  sources = [
+    "fake_command.cc",
+  ]
+}
+
+executable("fake_failing_test") {
+  testonly = true
+
+  deps = [
+    "//apps/test_runner/src:gtest_main",
+  ]
+
+  sources = [
+    "fake_failing_test.cc",
+  ]
+}
+
+executable("fake_passing_test") {
+  testonly = true
+
+  deps = [
+    "//apps/test_runner/src:gtest_main",
+  ]
+
+  sources = [
+    "fake_passing_test.cc",
+  ]
+}
