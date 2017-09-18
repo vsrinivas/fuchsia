@@ -72,7 +72,7 @@ typedef struct zxrio_sockaddr_reply {
 typedef struct zxrio_sockopt_req_reply {
     int32_t level;
     int32_t optname;
-    char optval[8];
+    char optval[128];
     socklen_t optlen;
 } zxrio_sockopt_req_reply_t;
 
