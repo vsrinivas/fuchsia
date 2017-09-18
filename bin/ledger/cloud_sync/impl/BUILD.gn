@@ -58,12 +58,13 @@ source_set("unittests") {
     "//apps/ledger/src/cloud_provider/test",
     "//apps/ledger/src/cloud_sync/test",
     "//apps/ledger/src/device_set",
+    "//apps/ledger/src/device_set/test",
     "//apps/ledger/src/network:fake",
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/storage/test",
     "//apps/ledger/src/test:lib",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//third_party/gtest",
   ]
 

@@ -10,6 +10,7 @@
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/backoff/test/test_backoff.h"
 #include "apps/ledger/src/device_set/cloud_device_set.h"
+#include "apps/ledger/src/device_set/test/test_cloud_device_set.h"
 #include "apps/ledger/src/network/fake_network_service.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "lib/fxl/files/file.h"
@@ -28,48 +29,6 @@ class TestSyncStateWatcher : public SyncStateWatcher {
   void Notify(SyncStateContainer /*sync_state*/) override {}
 };
 
-class TestCloudDeviceSet : public cloud_provider_firebase::CloudDeviceSet {
- public:
-  explicit TestCloudDeviceSet(fxl::RefPtr<fxl::TaskRunner> task_runner)
-      : task_runner_(std::move(task_runner)) {}
-  ~TestCloudDeviceSet() override {}
-
-  void CheckFingerprint(std::string /*auth_token*/,
-                        std::string fingerprint,
-                        std::function<void(Status)> callback) override {
-    checked_fingerprint = fingerprint;
-    task_runner_->PostTask([ this, callback = std::move(callback) ] {
-      callback(status_to_return);
-    });
-  }
-
-  void SetFingerprint(std::string /*auth_token*/,
-                      std::string fingerprint,
-                      std::function<void(Status)> callback) override {
-    set_fingerprint = fingerprint;
-    task_runner_->PostTask([ this, callback = std::move(callback) ] {
-      callback(status_to_return);
-    });
-  }
-
-  void WatchFingerprint(std::string /*auth_token*/,
-                        std::string fingerprint,
-                        std::function<void(Status)> callback) override {
-    watched_fingerprint = fingerprint;
-    watch_callback = callback;
-  }
-
-  CloudDeviceSet::Status status_to_return = CloudDeviceSet::Status::OK;
-
-  std::string checked_fingerprint;
-  std::string set_fingerprint;
-  std::string watched_fingerprint;
-  std::function<void(Status)> watch_callback;
-
- private:
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
-};
-
 class UserSyncImplTest : public ::test::TestWithMessageLoop {
  public:
   UserSyncImplTest()
@@ -82,10 +41,12 @@ class UserSyncImplTest : public ::test::TestWithMessageLoop {
     user_config.user_directory = tmp_dir.path();
     user_config.auth_provider = &auth_provider_;
     user_config.cloud_device_set =
-        std::make_unique<TestCloudDeviceSet>(message_loop_.task_runner());
+        std::make_unique<cloud_provider_firebase::TestCloudDeviceSet>(
+            message_loop_.task_runner());
 
     cloud_device_set_ =
-        static_cast<TestCloudDeviceSet*>(user_config.cloud_device_set.get());
+        static_cast<cloud_provider_firebase::TestCloudDeviceSet*>(
+            user_config.cloud_device_set.get());
 
     user_sync_ = std::make_unique<UserSyncImpl>(
         &environment_, std::move(user_config),
@@ -109,7 +70,7 @@ class UserSyncImplTest : public ::test::TestWithMessageLoop {
   auth_provider::test::TestAuthProvider auth_provider_;
   std::unique_ptr<UserSyncImpl> user_sync_;
   TestSyncStateWatcher sync_state_watcher_;
-  TestCloudDeviceSet* cloud_device_set_;
+  cloud_provider_firebase::TestCloudDeviceSet* cloud_device_set_;
 
   int on_version_mismatch_calls_ = 0;
 
