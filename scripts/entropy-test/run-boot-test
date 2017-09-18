@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Copyright 2017 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
 # Runs a single instance of the early boot entropy collection test.
 #
 # This script assumes that Zircon has already been built to support entropy quality tests (i.e with
@@ -19,6 +25,10 @@
 #
 # BUGS: netboot isn't supported yet, only qemu.
 
+set -e -u
+CDPATH=
+ZIRCONDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
+
 function HELP {
     echo "$0 [options] output-dir/" >&2
     echo "options:" >&2
@@ -31,9 +41,6 @@ function HELP {
     echo "-s <source> : hwrng or jitterentropy" >&2
     exit 1
 }
-
-CDPATH=
-ZIRCONDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
 
 ARCH=
 BUILDDIR=

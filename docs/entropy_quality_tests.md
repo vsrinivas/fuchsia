@@ -93,6 +93,27 @@ it's presented as a pseudo-file at `/boot/kernel/debug/entropy.bin`. Userspace
 apps can read this file and export the data (by copying to persistent storage or
 using the network, for example).
 
+In theory, you should be able to build Zircon with entropy collector testing
+enabled using `scripts/entropy-test/make-parallel`, and then you should be able
+to run a single boot-time test with the script
+`scripts/entropy-test/run-boot-test`. The `run-boot-test` script is mostly
+intended to be invoked by other scripts, so it's a little bit rough around the
+edges (for example, most of its arguments are passed via command line options
+like `-a x86-64`, but many of these "options" are in fact mandatory).
+
+Assuming the `run-boot-test` script succeeds, it should produce two files in the
+output directory: `entropy.000000000.bin` and `entropy.000000000.meta`. The
+first is the raw data collected from the entropy source, and the second is a
+simple text file, where each line is a key-value pair. The keys are single words
+matching `/[a-zA-Z0-9_-]+/`, and the values are separated by whitespace matching
+`/[ \t]+/`. This file can be pretty easily parsed via `read` in Bash,
+`str.split()` in Python, or (with the usual caution about buffer overruns)
+`scanf` in C.
+
+In practice, I'm nervous about bit-rot in these scripts, so the next couple
+sections document what the scripts are supposed to do, to make it easier to run
+the tests manually or fix the scripts if/when they break.
+
 ### Boot-time tests: building
 
 Since the boot-time entropy test requires that a large block of memory be
