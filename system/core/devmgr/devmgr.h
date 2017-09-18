@@ -13,7 +13,6 @@ __BEGIN_CDECLS
 void coordinator(void);
 
 void devfs_init(zx_handle_t root_job);
-zx_handle_t devfs_root_clone(void);
 
 void devmgr_io_init(void);
 void devmgr_vfs_init(void);
@@ -29,6 +28,8 @@ void devmgr_launch_devhost(zx_handle_t job,
 ssize_t devmgr_add_systemfs_vmo(zx_handle_t vmo);
 bool secondary_bootfs_ready(void);
 int devmgr_start_appmgr(void* arg);
+void fshost_start(void);
+zx_status_t copy_vmo(zx_handle_t src, zx_off_t offset, size_t length, zx_handle_t* out_dest);
 
 void load_system_drivers(void);
 
@@ -38,7 +39,9 @@ void load_system_drivers(void);
 // The env var to set to enable ld.so tracing.
 #define LDSO_TRACE_ENV "LD_TRACE=1"
 
-zx_handle_t get_service_root(void);
+zx_handle_t fs_root_clone(void);
+zx_handle_t devfs_root_clone(void);
+zx_handle_t svc_root_clone(void);
 
 void block_device_watcher(zx_handle_t job);
 

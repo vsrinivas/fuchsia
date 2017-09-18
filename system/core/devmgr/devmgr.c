@@ -20,6 +20,7 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/status.h>
 
+#include <fdio/namespace.h>
 #include <fdio/util.h>
 
 #include "devmgr.h"
@@ -36,7 +37,7 @@ static zx_handle_t svc_root_handle;
 // If appmgr cannot be launched within a timeout, this handle is closed.
 static zx_handle_t svc_request_handle;
 
-zx_handle_t get_service_root(void) {
+zx_handle_t svc_root_clone(void) {
     return fdio_service_clone(svc_root_handle);
 }
 
@@ -473,3 +474,26 @@ int main(int argc, char** argv) {
     printf("devmgr: coordinator exited?!\n");
     return 0;
 }
+
+void devmgr_vfs_init(void) {
+    printf("devmgr: vfs init\n");
+
+    fshost_start();
+
+    fdio_ns_t* ns;
+    zx_status_t r;
+    if ((r = fdio_ns_create(&ns)) != ZX_OK) {
+        printf("devmgr: cannot create namespace: %d\n", r);
+        return;
+    }
+    if ((r = fdio_ns_bind(ns, "/", fs_root_clone())) != ZX_OK) {
+        printf("devmgr: cannot bind / to namespace: %d\n", r);
+    }
+    if ((r = fdio_ns_bind(ns, "/dev", devfs_root_clone())) != ZX_OK) {
+        printf("devmgr: cannot bind /dev to namespace: %d\n", r);
+    }
+    if ((r = fdio_ns_install(ns)) != ZX_OK) {
+        printf("devmgr: cannot install namespace: %d\n", r);
+    }
+}
+
