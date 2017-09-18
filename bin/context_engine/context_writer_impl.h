@@ -48,7 +48,7 @@ class ContextWriterImpl : ContextWriter {
 
   fidl::Binding<ContextWriter> binding_;
 
-  FutureValue<ContextRepository::Id> parent_value_id_;
+  ContextSelectorPtr parent_value_selector_;
   ContextRepository* const repository_;
 
   // Supports WriteEntityTopic.

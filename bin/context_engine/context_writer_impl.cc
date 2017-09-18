@@ -16,7 +16,18 @@ ContextWriterImpl::ContextWriterImpl(
   FXL_DCHECK(repository != nullptr);
 
   // Set up a query to the repository to get our parent id.
-  // TODO(thatguy)
+  if (client_info->is_module_scope()) {
+    auto selector = ContextSelector::New();
+    selector->type = ContextValueType::MODULE;
+    selector->meta = ContextMetadata::New();
+    selector->meta->story = StoryMetadata::New();
+    selector->meta->story->id = client_info->get_module_scope()->story_id;
+    selector->meta->mod = ModuleMetadata::New();
+    selector->meta->mod->path =
+        client_info->get_module_scope()->module_path.Clone();
+
+    parent_value_selector_ = std::move(selector);
+  }
 }
 
 ContextWriterImpl::~ContextWriterImpl() {}
@@ -63,13 +74,41 @@ void MaybeFillEntityMetadata(ContextValuePtr* const value_ptr) {
   value->meta->entity->type = std::move(new_types);
 }
 
+bool MaybeFindParentValueId(ContextRepository* repository,
+    const ContextSelectorPtr& selector, ContextRepository::Id* out) {
+  if (!selector) return false;
+  // There is technically a race condition here, since on construction, we
+  // are given a ComponentScope, which contains some metadata to find a value
+  // in the context engine. It is the responsibility of the story_info
+  // acquierer to actually create that value, so we query here at
+  // AddValue()-time because it makes it less likely to hit the race
+  // condition.
+  //
+  // This is only exercised when a Module publishes context explicitly,
+  // something that we plan to disallow once Links speak in Entities, as then
+  // Modules that wish to store context can simply write Entities into a new
+  // link.
+  auto ids = repository->Select(selector.Clone());
+  if (ids.size() == 1) {
+    *out = *ids.begin();
+    return true;
+  }
+  return false;
+}
+
 }  // namespace
 
 void ContextWriterImpl::AddValue(ContextValuePtr value,
                                  const AddValueCallback& done) {
   MaybeFillEntityMetadata(&value);
-  auto id = repository_->Add(std::move(value));
-  done(id);
+  if (parent_value_selector_) {
+    ContextRepository::Id parent_id;
+    if (MaybeFindParentValueId(repository_, parent_value_selector_, &parent_id)) {
+      done(repository_->Add(parent_id, std::move(value)));
+      return;
+    }
+  }
+  done(repository_->Add(std::move(value)));
 }
 
 void ContextWriterImpl::AddChildValue(const fidl::String& parent_id,
@@ -81,7 +120,8 @@ void ContextWriterImpl::AddChildValue(const fidl::String& parent_id,
   done(id);
 }
 
-void ContextWriterImpl::Update(const fidl::String& id, ContextValuePtr new_value) {
+void ContextWriterImpl::Update(const fidl::String& id,
+                               ContextValuePtr new_value) {
   if (!repository_->Contains(id)) {
     FXL_LOG(WARNING)
         << "Trying to update content on non-existent context value (" << id
@@ -137,7 +177,14 @@ void ContextWriterImpl::WriteEntityTopic(const fidl::String& topic,
 
   auto it = topic_value_ids_.find(topic);
   if (it == topic_value_ids_.end()) {
-    topic_value_ids_[topic] = repository_->Add(std::move(value_ptr));
+    ContextRepository::Id parent_id;
+    ContextRepository::Id id;
+    if (MaybeFindParentValueId(repository_, parent_value_selector_, &parent_id)) {
+      id = repository_->Add(parent_id, std::move(value_ptr));
+    } else {
+      id = repository_->Add(std::move(value_ptr));
+    }
+    topic_value_ids_[topic] = id;
   } else {
     repository_->Update(it->second, std::move(value_ptr));
   }
