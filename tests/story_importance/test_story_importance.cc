@@ -19,7 +19,7 @@
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
-#include "apps/test_runner/services/test_runner.fidl.h"
+#include "lib/test_runner/fidl/test_runner.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/functional/make_copyable.h"

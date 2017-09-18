@@ -24,7 +24,7 @@ executable("test_user_shell") {
     "//apps/modular/lib/testing:component_base",
     "//apps/modular/services/user",
     "//garnet/public/lib/ui/views/fidl",
-    "//apps/test_runner/services:test_runner",
+    "//garnet/public/lib/test_runner/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",

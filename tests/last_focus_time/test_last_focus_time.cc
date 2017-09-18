@@ -14,7 +14,7 @@
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/modular/lib/common/story_provider_watcher_base.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
-#include "apps/test_runner/services/test_runner.fidl.h"
+#include "lib/test_runner/fidl/test_runner.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"

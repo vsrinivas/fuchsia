@@ -4,7 +4,7 @@
 
 #include "apps/modular/lib/testing/testing.h"
 
-#include "apps/test_runner/services/test_runner.fidl.h"
+#include "lib/test_runner/fidl/test_runner.fidl.h"
 
 namespace modular {
 namespace testing {

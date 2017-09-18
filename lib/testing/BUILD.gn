@@ -12,7 +12,7 @@ source_set("testing") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//apps/test_runner/services:test_runner",
+    "//garnet/public/lib/test_runner/fidl",
   ]
 }
 
@@ -107,7 +107,7 @@ source_set("ledger_repository_for_testing") {
     "//apps/modular/lib/fidl:app_client",
     "//apps/modular/lib/ledger:constants",
     "//apps/modular/services/config",
-    "//apps/test_runner/lib:application_context",
+    "//garnet/public/lib/test_runner/cpp:application_context",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
   ]

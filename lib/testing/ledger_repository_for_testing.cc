@@ -9,7 +9,7 @@
 #include "apps/modular/lib/fidl/app_client.h"
 #include "apps/modular/lib/ledger/constants.h"
 #include "apps/modular/services/config/config.fidl.h"
-#include "apps/test_runner/lib/application_context.h"
+#include "lib/test_runner/cpp/application_context.h"
 
 namespace modular {
 
