@@ -3,12 +3,12 @@
         "cpp"
     ],
     "labels": [
-        "//apps/tracing:host_utils"
+        "//garnet/bin/traceutil"
     ],
     "packages": {
-        "trace": "//apps/tracing:trace",
-        "trace_tests": "//apps/tracing:trace_tests",
-        "ktrace_provider": "//apps/tracing:ktrace_provider",
-        "trace_manager": "//apps/tracing:trace_manager"
+        "trace": "//garnet/bin/trace",
+        "trace_tests": "//garnet/bin/trace:trace_tests",
+        "ktrace_provider": "//garnet/bin/ktrace_provider",
+        "trace_manager": "//garnet/bin/trace_manager"
     }
 }
