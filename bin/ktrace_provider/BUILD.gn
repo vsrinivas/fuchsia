@@ -2,7 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("ktrace_provider") {
+import("//packages/package.gni")
+
+executable("bin") {
+  output_name = "ktrace_provider"
+
   sources = [
     "app.cc",
     "app.h",
@@ -23,4 +27,22 @@ executable("ktrace_provider") {
     "//garnet/public/lib/fsl",
     "//zircon/system/ulib/trace-provider",
   ]
+}
+
+package("ktrace_provider") {
+  archive = true
+
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [ {
+        name = "ktrace_provider"
+        dest = "app"
+      } ]
+
+  meta = [ {
+        path = rebase_path("meta/sandbox")
+        dest = "sandbox"
+      } ]
 }

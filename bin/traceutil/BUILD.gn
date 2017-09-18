@@ -3,12 +3,16 @@
 # found in the LICENSE file.
 
 import("//build/go/go_binary.gni")
+import("//build/host.gni")
+import("//packages/package.gni")
 
-go_binary("traceutil") {
-  gopackage = "fuchsia.googlesource.com/traceutil"
+go_binary("bin") {
+  output_name = "traceutil"
+
+  gopackage = "traceutil"
   go_dependencies = [
     {
-      package = "fuchsia.googlesource.com/traceutil"
+      package = "traceutil"
     },
     {
       package = "github.com/google/subcommands"
@@ -31,5 +35,14 @@ go_binary("traceutil") {
       source = "//third_party/golang/crypto"
     }
 
+  ]
+}
+
+install_host_tools("traceutil") {
+  deps = [
+    ":bin",
+  ]
+  outputs = [
+    "traceutil",
   ]
 }

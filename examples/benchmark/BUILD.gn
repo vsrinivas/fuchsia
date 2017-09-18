@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//packages/package.gni")
+
 executable("benchmark_example") {
   sources = [
     "main.cc",
@@ -12,4 +14,14 @@ executable("benchmark_example") {
     "//garnet/public/lib/fxl",
     "//zircon/system/ulib/trace-provider",
   ]
+}
+
+package("benchmark") {
+  deps = [
+    ":benchmark_example",
+  ]
+
+  binaries = [ {
+        name = "benchmark_example"
+      } ]
 }

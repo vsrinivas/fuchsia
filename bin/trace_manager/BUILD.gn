@@ -2,19 +2,33 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/host.gni")
 import("//packages/package.gni")
 
-executable("trace_tests_bin") {
-  testonly = true
+executable("bin") {
+  output_name = "trace_manager"
 
-  output_name = "trace_tests"
-
+  sources = [
+    "app.cc",
+    "app.h",
+    "config.cc",
+    "config.h",
+    "main.cc",
+    "trace_manager.cc",
+    "trace_manager.h",
+    "trace_provider_bundle.cc",
+    "trace_provider_bundle.h",
+    "trace_session.cc",
+    "trace_session.h",
+    "tracee.cc",
+    "tracee.h",
+  ]
   deps = [
-    "lib/measure:unittests",
-    "lib/trace:unittests",
-    "src/trace:unittests",
-    "//apps/test_runner/src:gtest_main",
+    "//garnet/lib/trace:internal_fields",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/tracing/fidl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//third_party/rapidjson",
   ]
 }
 
@@ -22,7 +36,7 @@ package("trace_manager") {
   archive = true
 
   deps = [
-    "src/trace_manager",
+    ":bin",
   ]
 
   binaries = [ {
@@ -31,85 +45,7 @@ package("trace_manager") {
       } ]
 
   resources = [ {
-        path = rebase_path("src/trace_manager/tracing.config")
+        path = rebase_path("tracing.config")
         dest = "tracing.config"
       } ]
-}
-
-package("ktrace_provider") {
-  archive = true
-
-  deps = [
-    "src/ktrace_provider",
-  ]
-
-  binaries = [ {
-        name = "ktrace_provider"
-        dest = "app"
-      } ]
-
-  meta = [ {
-        path = rebase_path("src/ktrace_provider/meta/sandbox")
-        dest = "sandbox"
-      } ]
-}
-
-package("trace_tests") {
-  testonly = true
-
-  deps = [
-    ":trace_tests_bin",
-    "lib/trace:ctrace_stub_tests",
-    "lib/trace:trace_stub_tests",
-  ]
-
-  tests = [
-    {
-      name = "trace_tests"
-
-      # Disabled because several tests are crashing on release builds.
-      disabled = true
-    },
-    {
-      name = "trace_stub_tests"
-    },
-    {
-      name = "ctrace_stub_tests"
-    },
-  ]
-}
-
-package("benchmark_example") {
-  deps = [
-    "src/benchmark_example",
-  ]
-
-  binaries = [ {
-        name = "benchmark_example"
-      } ]
-}
-
-package("trace") {
-  deps = [
-    "src/trace",
-  ]
-
-  binaries = [ {
-        name = "trace"
-      } ]
-
-  # If your build includes the target trace tool, your $host_tools_dir
-  # contains the utilities to work with traces copied from the target.
-  data_deps = [
-    ":host_utils",
-  ]
-}
-
-install_host_tools("host_utils") {
-  deps = [
-    "src/traceutil",
-  ]
-  outputs = [
-    "traceutil",
-  ]
 }

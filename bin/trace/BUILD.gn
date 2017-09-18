@@ -2,7 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("trace") {
+import("//packages/package.gni")
+
+executable("bin") {
+  output_name = "trace"
+
   sources = [
     "main.cc",
   ]
@@ -64,5 +68,60 @@ source_set("unittests") {
     ":trace_app",
     "//garnet/public/lib/fxl",
     "//third_party/gtest",
+  ]
+}
+
+package("trace") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [ {
+        name = "trace"
+      } ]
+
+  # If your build includes the target trace tool, your $host_tools_dir
+  # contains the utilities to work with traces copied from the target.
+  data_deps = [
+    "//garnet/bin/traceutils",
+  ]
+}
+
+
+executable("trace_tests_bin") {
+  testonly = true
+
+  output_name = "trace_tests"
+
+  deps = [
+    "//garnet/lib/measure:unittests",
+    "//garnet/lib/trace:unittests",
+    "//garnet/bin/trace:unittests",
+    "//apps/test_runner/src:gtest_main",
+  ]
+}
+
+package("trace_tests") {
+  testonly = true
+
+  deps = [
+    ":trace_tests_bin",
+    "//garnet/lib/trace:ctrace_stub_tests",
+    "//garnet/lib/trace:trace_stub_tests",
+  ]
+
+  tests = [
+    {
+      name = "trace_tests"
+
+      # Disabled because several tests are crashing on release builds.
+      disabled = true
+    },
+    {
+      name = "trace_stub_tests"
+    },
+    {
+      name = "ctrace_stub_tests"
+    },
   ]
 }
