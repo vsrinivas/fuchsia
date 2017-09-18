@@ -38,7 +38,7 @@ public:
 
     // This takes ownership of the connection so that ownership can be
     // transferred across the MSD ABI by the caller
-    std::unique_ptr<MsdIntelConnection> Open(msd_client_id client_id);
+    std::unique_ptr<MsdIntelConnection> Open(msd_client_id_t client_id);
 
     uint32_t device_id() { return device_id_; }
     uint32_t subslice_total() { return subslice_total_; }

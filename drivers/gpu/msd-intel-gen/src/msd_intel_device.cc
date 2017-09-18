@@ -191,9 +191,9 @@ void MsdIntelDevice::Destroy()
     }
 }
 
-std::unique_ptr<MsdIntelConnection> MsdIntelDevice::Open(msd_client_id client_id)
+std::unique_ptr<MsdIntelConnection> MsdIntelDevice::Open(msd_client_id_t client_id)
 {
-    return MsdIntelConnection::Create(this, scratch_buffer_);
+    return MsdIntelConnection::Create(this, scratch_buffer_, client_id);
 }
 
 bool MsdIntelDevice::Init(void* device_handle)
@@ -539,7 +539,7 @@ int MsdIntelDevice::DeviceThreadLoop()
     device_thread_id_ = std::make_unique<magma::PlatformThreadId>();
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
-    DLOG("DeviceThreadLoop starting thread 0x%x", device_thread_id_->id());
+    DLOG("DeviceThreadLoop starting thread 0x%lx", device_thread_id_->id());
 
     constexpr uint32_t kTimeoutMs = 300;
 
@@ -914,7 +914,7 @@ void MsdIntelDevice::ReadDisplaySize()
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id client_id)
+msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id_t client_id)
 {
     auto connection = MsdIntelDevice::cast(dev)->Open(client_id);
     if (!connection)

@@ -131,8 +131,8 @@ public:
                     finished_semaphore->Signal();
             });
 
-        auto connection =
-            std::shared_ptr<MsdIntelConnection>(MsdIntelConnection::Create(owner.get(), nullptr));
+        auto connection = std::shared_ptr<MsdIntelConnection>(
+            MsdIntelConnection::Create(owner.get(), nullptr, 0u));
         auto address_space = std::make_shared<MockAddressSpace>(0, PAGE_SIZE);
 
         auto context = std::make_shared<ClientContext>(connection, address_space);

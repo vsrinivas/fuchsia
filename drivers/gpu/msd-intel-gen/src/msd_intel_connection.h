@@ -32,11 +32,14 @@ public:
     };
 
     static std::unique_ptr<MsdIntelConnection>
-    Create(Owner* owner, std::shared_ptr<magma::PlatformBuffer> scratch_buffer);
+    Create(Owner* owner, std::shared_ptr<magma::PlatformBuffer> scratch_buffer,
+           msd_client_id_t client_id);
 
     virtual ~MsdIntelConnection() {}
 
     std::shared_ptr<PerProcessGtt> per_process_gtt() { return ppgtt_; }
+
+    msd_client_id_t client_id() { return client_id_; }
 
     magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
     {
@@ -68,8 +71,9 @@ public:
     void set_context_killed() { context_killed_ = true; }
 
 private:
-    MsdIntelConnection(Owner* owner, std::shared_ptr<PerProcessGtt> ppgtt)
-        : owner_(owner), ppgtt_(std::move(ppgtt))
+    MsdIntelConnection(Owner* owner, std::shared_ptr<PerProcessGtt> ppgtt,
+                       msd_client_id_t client_id)
+        : owner_(owner), ppgtt_(std::move(ppgtt)), client_id_(client_id)
     {
     }
 
@@ -77,6 +81,7 @@ private:
 
     Owner* owner_;
     std::shared_ptr<PerProcessGtt> ppgtt_;
+    msd_client_id_t client_id_;
     bool context_killed_ = false;
 };
 

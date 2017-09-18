@@ -367,10 +367,14 @@ void MsdIntelDevice::FormatDump(DumpState& dump_state, std::string& dump_out)
     if (!dump_state.render_cs.inflight_batches.empty()) {
         dump_out.append("Inflight Batches:\n");
         for (auto batch : dump_state.render_cs.inflight_batches) {
-            fmt = "  Batch %p, context %p\n";
-            size = std::snprintf(nullptr, 0, fmt, batch, batch->GetContext().lock().get());
+            fmt = "  Batch %p, context %p, connection client_id %lu\n";
+            auto context = batch->GetContext().lock().get();
+            auto connection = context ? context->connection().lock() : nullptr;
+            size = std::snprintf(nullptr, 0, fmt, batch, context,
+                                 connection ? connection->client_id() : 0u);
             std::vector<char> buf(size + 1);
-            std::snprintf(&buf[0], buf.size(), fmt, batch, batch->GetContext().lock().get());
+            std::snprintf(&buf[0], buf.size(), fmt, batch, context,
+                          connection ? connection->client_id() : 0u);
             dump_out.append(&buf[0]);
 
             auto batch_mapping = batch->GetBatchMapping();
