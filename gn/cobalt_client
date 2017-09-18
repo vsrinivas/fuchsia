@@ -5,7 +5,7 @@
     "imports": [
         "boringssl_libssl",
         "fxl",
-        "magentix",
+        "installer-system",
         "fsl",
         "netconnector",
         "netstack",
