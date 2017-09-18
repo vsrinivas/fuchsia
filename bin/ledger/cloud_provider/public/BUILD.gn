@@ -6,10 +6,10 @@ visibility = [ "//apps/ledger/src/*" ]
 
 source_set("public") {
   sources = [
-    "cloud_provider.h",
     "commit.cc",
     "commit.h",
     "commit_watcher.h",
+    "page_cloud_handler.h",
     "record.cc",
     "record.h",
     "types.cc",

@@ -9,7 +9,7 @@
 #include <memory>
 #include <string>
 
-#include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
+#include "apps/ledger/src/cloud_provider/public/page_cloud_handler.h"
 #include "apps/ledger/src/cloud_sync/public/page_sync.h"
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/gcs/cloud_storage.h"
@@ -22,7 +22,7 @@ namespace cloud_sync {
 struct PageSyncContext {
   std::unique_ptr<firebase::Firebase> firebase;
   std::unique_ptr<gcs::CloudStorage> cloud_storage;
-  std::unique_ptr<cloud_provider_firebase::CloudProvider> cloud_provider;
+  std::unique_ptr<cloud_provider_firebase::PageCloudHandler> cloud_provider;
   std::unique_ptr<PageSync> page_sync;
 };
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_provider/impl/cloud_provider_impl.h"
+#include "apps/ledger/src/cloud_provider/impl/page_cloud_handler_impl.h"
 
 #include "apps/ledger/src/cloud_provider/impl/encoding.h"
 #include "apps/ledger/src/cloud_provider/impl/timestamp_conversions.h"
@@ -21,13 +21,13 @@ namespace {
 constexpr fxl::StringView kCommitRoot = "commits";
 }  // namespace
 
-CloudProviderImpl::CloudProviderImpl(firebase::Firebase* firebase,
-                                     gcs::CloudStorage* cloud_storage)
+PageCloudHandlerImpl::PageCloudHandlerImpl(firebase::Firebase* firebase,
+                                           gcs::CloudStorage* cloud_storage)
     : firebase_(firebase), cloud_storage_(cloud_storage) {}
 
-CloudProviderImpl::~CloudProviderImpl() {}
+PageCloudHandlerImpl::~PageCloudHandlerImpl() {}
 
-void CloudProviderImpl::AddCommits(
+void PageCloudHandlerImpl::AddCommits(
     const std::string& auth_token,
     std::vector<Commit> commits,
     const std::function<void(Status)>& callback) {
@@ -41,19 +41,19 @@ void CloudProviderImpl::AddCommits(
                    });
 }
 
-void CloudProviderImpl::WatchCommits(const std::string& auth_token,
-                                     const std::string& min_timestamp,
-                                     CommitWatcher* watcher) {
+void PageCloudHandlerImpl::WatchCommits(const std::string& auth_token,
+                                        const std::string& min_timestamp,
+                                        CommitWatcher* watcher) {
   watchers_[watcher] = std::make_unique<WatchClientImpl>(
       firebase_, kCommitRoot.ToString(),
       GetQueryParams(auth_token, min_timestamp), watcher);
 }
 
-void CloudProviderImpl::UnwatchCommits(CommitWatcher* watcher) {
+void PageCloudHandlerImpl::UnwatchCommits(CommitWatcher* watcher) {
   watchers_.erase(watcher);
 }
 
-void CloudProviderImpl::GetCommits(
+void PageCloudHandlerImpl::GetCommits(
     const std::string& auth_token,
     const std::string& min_timestamp,
     std::function<void(Status, std::vector<Record>)> callback) {
@@ -82,10 +82,10 @@ void CloudProviderImpl::GetCommits(
       });
 }
 
-void CloudProviderImpl::AddObject(const std::string& auth_token,
-                                  ObjectIdView object_id,
-                                  zx::vmo data,
-                                  std::function<void(Status)> callback) {
+void PageCloudHandlerImpl::AddObject(const std::string& auth_token,
+                                     ObjectIdView object_id,
+                                     zx::vmo data,
+                                     std::function<void(Status)> callback) {
   // Even though this yields path to be used in GCS, we use Firebase key
   // encoding, as it happens to produce valid GCS object names. To be revisited
   // when we redo the encoding in LE-118.
@@ -96,7 +96,7 @@ void CloudProviderImpl::AddObject(const std::string& auth_token,
       });
 }
 
-void CloudProviderImpl::GetObject(
+void PageCloudHandlerImpl::GetObject(
     const std::string& auth_token,
     ObjectIdView object_id,
     std::function<void(Status status, uint64_t size, zx::socket data)>
@@ -109,7 +109,7 @@ void CloudProviderImpl::GetObject(
       });
 }
 
-std::vector<std::string> CloudProviderImpl::GetQueryParams(
+std::vector<std::string> PageCloudHandlerImpl::GetQueryParams(
     const std::string& auth_token,
     const std::string& min_timestamp) {
   std::vector<std::string> result;

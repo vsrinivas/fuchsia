@@ -20,7 +20,7 @@ namespace cloud_sync {
 
 BatchUpload::BatchUpload(
     storage::PageStorage* storage,
-    cloud_provider_firebase::CloudProvider* cloud_provider,
+    cloud_provider_firebase::PageCloudHandler* cloud_provider,
     auth_provider::AuthProvider* auth_provider,
     std::vector<std::unique_ptr<const storage::Commit>> commits,
     fxl::Closure on_done,

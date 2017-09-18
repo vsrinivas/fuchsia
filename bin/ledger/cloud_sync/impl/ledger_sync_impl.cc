@@ -5,7 +5,7 @@
 #include "apps/ledger/src/cloud_sync/impl/ledger_sync_impl.h"
 
 #include "apps/ledger/src/backoff/exponential_backoff.h"
-#include "apps/ledger/src/cloud_provider/impl/cloud_provider_impl.h"
+#include "apps/ledger/src/cloud_provider/impl/page_cloud_handler_impl.h"
 #include "apps/ledger/src/cloud_provider/impl/paths.h"
 #include "apps/ledger/src/cloud_sync/impl/page_sync_impl.h"
 #include "apps/ledger/src/firebase/encoding.h"
@@ -59,7 +59,7 @@ std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
       cloud_provider_firebase::GetGcsPrefixForPage(app_gcs_prefix_,
                                                    page_storage->GetId()));
   result->cloud_provider =
-      std::make_unique<cloud_provider_firebase::CloudProviderImpl>(
+      std::make_unique<cloud_provider_firebase::PageCloudHandlerImpl>(
           result->firebase.get(), result->cloud_storage.get());
   auto page_sync = std::make_unique<PageSyncImpl>(
       environment_->main_runner(), page_storage, result->cloud_provider.get(),

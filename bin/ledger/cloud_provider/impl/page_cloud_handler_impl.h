@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_CLOUD_PROVIDER_IMPL_CLOUD_PROVIDER_IMPL_H_
-#define APPS_LEDGER_SRC_CLOUD_PROVIDER_IMPL_CLOUD_PROVIDER_IMPL_H_
+#ifndef APPS_LEDGER_SRC_CLOUD_PROVIDER_IMPL_PAGE_CLOUD_HANDLER_IMPL_H_
+#define APPS_LEDGER_SRC_CLOUD_PROVIDER_IMPL_PAGE_CLOUD_HANDLER_IMPL_H_
 
 #include <map>
 #include <memory>
 #include <string>
 
 #include "apps/ledger/src/cloud_provider/impl/watch_client_impl.h"
-#include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
+#include "apps/ledger/src/cloud_provider/public/page_cloud_handler.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/firebase/watch_client.h"
@@ -20,13 +20,13 @@
 
 namespace cloud_provider_firebase {
 
-class CloudProviderImpl : public CloudProvider {
+class PageCloudHandlerImpl : public PageCloudHandler {
  public:
-  CloudProviderImpl(firebase::Firebase* firebase,
-                    gcs::CloudStorage* cloud_storage);
-  ~CloudProviderImpl() override;
+  PageCloudHandlerImpl(firebase::Firebase* firebase,
+                       gcs::CloudStorage* cloud_storage);
+  ~PageCloudHandlerImpl() override;
 
-  // CloudProvider:
+  // PageCloudHandler:
   void AddCommits(const std::string& auth_token,
                   std::vector<Commit> commits,
                   const std::function<void(Status)>& callback) override;
@@ -68,4 +68,4 @@ class CloudProviderImpl : public CloudProvider {
 
 }  // namespace cloud_provider_firebase
 
-#endif  // APPS_LEDGER_SRC_CLOUD_PROVIDER_IMPL_CLOUD_PROVIDER_IMPL_H_
+#endif  // APPS_LEDGER_SRC_CLOUD_PROVIDER_IMPL_PAGE_CLOUD_HANDLER_IMPL_H_

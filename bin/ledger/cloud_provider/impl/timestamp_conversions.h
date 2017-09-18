@@ -9,7 +9,7 @@
 
 // Firebase Realtime Database uses time-since-epoch as timestamps, which we
 // represent as int64_t, until we grow a wall time type in FTL. However,
-// CloudProvider API is more general and operates on opaque bytes - these
+// PageCloudHandler API is more general and operates on opaque bytes - these
 // functions convert back and forth.
 
 namespace cloud_provider_firebase {

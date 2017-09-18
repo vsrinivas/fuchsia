@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_CLOUD_PROVIDER_PUBLIC_CLOUD_PROVIDER_H_
-#define APPS_LEDGER_SRC_CLOUD_PROVIDER_PUBLIC_CLOUD_PROVIDER_H_
+#ifndef APPS_LEDGER_SRC_CLOUD_PROVIDER_PUBLIC_PAGE_CLOUD_HANDLER_H_
+#define APPS_LEDGER_SRC_CLOUD_PROVIDER_PUBLIC_PAGE_CLOUD_HANDLER_H_
 
 #include <functional>
 #include <string>
@@ -21,17 +21,17 @@ namespace cloud_provider_firebase {
 
 // This API captures Ledger requirements for a cloud sync provider.
 //
-// A CloudProvider instance is scoped to a particular page.
+// A PageCloudHandler instance is scoped to a particular page.
 //
 // When delivered from the server, commits come along with timestamps.
 // These timestamps are server timestamps, i.e. they represent the time of
 // registering the commit on the server. Their meaning is opaque to the client
 // and depends on the particular service provider, but they can be used to make
 // scoped queries - see GetCommits(), WatchCommits().
-class CloudProvider {
+class PageCloudHandler {
  public:
-  CloudProvider() {}
-  virtual ~CloudProvider() {}
+  PageCloudHandler() {}
+  virtual ~PageCloudHandler() {}
 
   // Common parameters:
   //   |auth_token| - Firebase authentication token
@@ -47,7 +47,7 @@ class CloudProvider {
 
   // Registers the given watcher to be notified about commits already present
   // and these being added to the cloud later. This includes commits added by
-  // the same CloudProvider instance through AddCommit().
+  // the same PageCloudHandler instance through AddCommit().
   //
   // |watcher| is firstly notified about all commits already present in the
   // cloud. Then, it is notified about new commits as they are registered. This
@@ -93,9 +93,9 @@ class CloudProvider {
           callback) = 0;
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(CloudProvider);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageCloudHandler);
 };
 
 }  // namespace cloud_provider_firebase
 
-#endif  // APPS_LEDGER_SRC_CLOUD_PROVIDER_PUBLIC_CLOUD_PROVIDER_H_
+#endif  // APPS_LEDGER_SRC_CLOUD_PROVIDER_PUBLIC_PAGE_CLOUD_HANDLER_H_

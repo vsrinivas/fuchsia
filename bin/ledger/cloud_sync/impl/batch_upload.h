@@ -11,7 +11,7 @@
 
 #include "apps/ledger/src/auth_provider/auth_provider.h"
 #include "apps/ledger/src/callback/cancellable.h"
-#include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
+#include "apps/ledger/src/cloud_provider/public/page_cloud_handler.h"
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/fxl/functional/closure.h"
@@ -42,7 +42,7 @@ namespace cloud_sync {
 class BatchUpload {
  public:
   BatchUpload(storage::PageStorage* storage,
-              cloud_provider_firebase::CloudProvider* cloud_provider,
+              cloud_provider_firebase::PageCloudHandler* cloud_provider,
               auth_provider::AuthProvider* auth_provider,
               std::vector<std::unique_ptr<const storage::Commit>> commits,
               fxl::Closure on_done,
@@ -75,7 +75,7 @@ class BatchUpload {
   void RefreshAuthToken(fxl::Closure on_refreshed);
 
   storage::PageStorage* const storage_;
-  cloud_provider_firebase::CloudProvider* const cloud_provider_;
+  cloud_provider_firebase::PageCloudHandler* const cloud_provider_;
   auth_provider::AuthProvider* const auth_provider_;
   std::vector<std::unique_ptr<const storage::Commit>> commits_;
   fxl::Closure on_done_;

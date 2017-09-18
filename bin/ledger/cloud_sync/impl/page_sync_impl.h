@@ -12,8 +12,8 @@
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/callback/cancellable.h"
 #include "apps/ledger/src/callback/scoped_task_runner.h"
-#include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
 #include "apps/ledger/src/cloud_provider/public/commit_watcher.h"
+#include "apps/ledger/src/cloud_provider/public/page_cloud_handler.h"
 #include "apps/ledger/src/cloud_sync/impl/batch_download.h"
 #include "apps/ledger/src/cloud_sync/impl/batch_upload.h"
 #include "apps/ledger/src/cloud_sync/public/page_sync.h"
@@ -46,8 +46,8 @@ namespace cloud_sync {
 // Recoverable errors (such as network errors) are automatically retried with
 // the given backoff policy, using the given task runner to schedule the tasks.
 // TODO(ppi): once the network service can notify us about regained
-// connectivity, thread this signal through CloudProvider and use it as a signal
-// to trigger retries.
+// connectivity, thread this signal through PageCloudHandler and use it as a
+// signal to trigger retries.
 //
 // Unrecoverable errors (such as internal errors accessing the storage) cause
 // the page sync to stop, in which case the client is notified using the given
@@ -59,7 +59,7 @@ class PageSyncImpl : public PageSync,
  public:
   PageSyncImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
                storage::PageStorage* storage,
-               cloud_provider_firebase::CloudProvider* cloud_provider,
+               cloud_provider_firebase::PageCloudHandler* cloud_provider,
                auth_provider::AuthProvider* auth_provider,
                std::unique_ptr<backoff::Backoff> backoff,
                fxl::Closure on_error,
@@ -152,7 +152,7 @@ class PageSyncImpl : public PageSync,
                     fxl::Closure on_failed);
 
   storage::PageStorage* const storage_;
-  cloud_provider_firebase::CloudProvider* const cloud_provider_;
+  cloud_provider_firebase::PageCloudHandler* const cloud_provider_;
   auth_provider::AuthProvider* const auth_provider_;
   const std::unique_ptr<backoff::Backoff> backoff_;
   const fxl::Closure on_error_;

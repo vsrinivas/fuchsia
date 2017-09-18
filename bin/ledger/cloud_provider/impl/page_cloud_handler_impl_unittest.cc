@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_provider/impl/cloud_provider_impl.h"
+#include "apps/ledger/src/cloud_provider/impl/page_cloud_handler_impl.h"
 
 #include <functional>
 #include <memory>
@@ -31,14 +31,14 @@
 namespace cloud_provider_firebase {
 namespace {
 
-class CloudProviderImplTest : public test::TestWithMessageLoop,
-                              public gcs::CloudStorage,
-                              public firebase::Firebase,
-                              public CommitWatcher {
+class PageCloudHandlerImplTest : public test::TestWithMessageLoop,
+                                 public gcs::CloudStorage,
+                                 public firebase::Firebase,
+                                 public CommitWatcher {
  public:
-  CloudProviderImplTest()
-      : cloud_provider_(std::make_unique<CloudProviderImpl>(this, this)) {}
-  ~CloudProviderImplTest() override {}
+  PageCloudHandlerImplTest()
+      : cloud_provider_(std::make_unique<PageCloudHandlerImpl>(this, this)) {}
+  ~PageCloudHandlerImplTest() override {}
 
   // gcs::CloudStorage:
   void UploadObject(std::string auth_token,
@@ -145,7 +145,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   void OnMalformedNotification() override { malformed_notification_calls_++; }
 
  protected:
-  const std::unique_ptr<CloudProviderImpl> cloud_provider_;
+  const std::unique_ptr<PageCloudHandlerImpl> cloud_provider_;
 
   // These members keep track of calls made on the GCS client.
   std::vector<std::string> download_auth_tokens_;
@@ -155,12 +155,12 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   std::vector<zx::vmo> upload_data_;
 
   // These members hold response data that GCS client is to return when called
-  // by CloudProviderImpl.
+  // by PageCloudHandlerImpl.
   uint64_t download_response_size_ = 0;
   zx::socket download_response_;
   gcs::Status download_status_ = gcs::Status::OK;
 
-  // These members track calls made by CloudProviderImpl to Firebase client.
+  // These members track calls made by PageCloudHandlerImpl to Firebase client.
   std::vector<std::string> get_keys_;
   std::vector<std::vector<std::string>> get_queries_;
   std::vector<std::string> put_keys_;
@@ -174,10 +174,10 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   firebase::WatchClient* watch_client_ = nullptr;
 
   // These members hold response data that Firebase client is to return when
-  // called by CloudProviderImpl.
+  // called by PageCloudHandlerImpl.
   std::unique_ptr<rapidjson::Document> get_response_;
 
-  // These members track calls received from CloudProviderImpl by this class
+  // These members track calls received from PageCloudHandlerImpl by this class
   // registered as a CommitWatcher.
   std::vector<Commit> commits_;
   std::vector<std::string> server_timestamps_;
@@ -187,10 +187,10 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   unsigned int malformed_notification_calls_ = 0u;
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(CloudProviderImplTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageCloudHandlerImplTest);
 };
 
-TEST_F(CloudProviderImplTest, AddCommit) {
+TEST_F(PageCloudHandlerImplTest, AddCommit) {
   Commit commit("commit_id", "some_content");
   std::vector<Commit> commits;
   commits.push_back(std::move(commit));
@@ -219,7 +219,7 @@ TEST_F(CloudProviderImplTest, AddCommit) {
   EXPECT_EQ(0u, unwatch_count_);
 }
 
-TEST_F(CloudProviderImplTest, AddMultipleCommits) {
+TEST_F(PageCloudHandlerImplTest, AddMultipleCommits) {
   Commit commit1("id1", "content1");
   Commit commit2("id2", "content2");
   std::vector<Commit> commits;
@@ -245,7 +245,7 @@ TEST_F(CloudProviderImplTest, AddMultipleCommits) {
       patch_data_[0]);
 }
 
-TEST_F(CloudProviderImplTest, Watch) {
+TEST_F(PageCloudHandlerImplTest, Watch) {
   cloud_provider_->WatchCommits("this-is-a-token", "", this);
   EXPECT_EQ(1u, watch_keys_.size());
   EXPECT_EQ(1u, watch_queries_.size());
@@ -254,7 +254,7 @@ TEST_F(CloudProviderImplTest, Watch) {
             watch_queries_[0]);
 }
 
-TEST_F(CloudProviderImplTest, WatchUnwatch) {
+TEST_F(PageCloudHandlerImplTest, WatchUnwatch) {
   cloud_provider_->WatchCommits("", "", this);
   EXPECT_EQ(1u, watch_keys_.size());
   EXPECT_EQ(1u, watch_queries_.size());
@@ -266,7 +266,7 @@ TEST_F(CloudProviderImplTest, WatchUnwatch) {
   EXPECT_EQ(1u, unwatch_count_);
 }
 
-TEST_F(CloudProviderImplTest, WatchWithQuery) {
+TEST_F(PageCloudHandlerImplTest, WatchWithQuery) {
   cloud_provider_->WatchCommits("", ServerTimestampToBytes(42), this);
   EXPECT_EQ(1u, watch_keys_.size());
   EXPECT_EQ(1u, watch_queries_.size());
@@ -277,7 +277,7 @@ TEST_F(CloudProviderImplTest, WatchWithQuery) {
 
 // Tests handling a server event containing multiple separate (not batched)
 // commits.
-TEST_F(CloudProviderImplTest, WatchAndGetMultipleCommits) {
+TEST_F(PageCloudHandlerImplTest, WatchAndGetMultipleCommits) {
   cloud_provider_->WatchCommits("", "", this);
 
   std::string put_content =
@@ -309,7 +309,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetMultipleCommits) {
 }
 
 // Tests handling a server event containing a complete batch of commits.
-TEST_F(CloudProviderImplTest, WatchAndGetCompleteBatch) {
+TEST_F(PageCloudHandlerImplTest, WatchAndGetCompleteBatch) {
   cloud_provider_->WatchCommits("", "", this);
 
   std::string put_content = R"({
@@ -348,7 +348,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetCompleteBatch) {
 }
 
 // Tests handling a batch delivered over two separate calls.
-TEST_F(CloudProviderImplTest, WatchAndGetBatchInTwoChunks) {
+TEST_F(PageCloudHandlerImplTest, WatchAndGetBatchInTwoChunks) {
   cloud_provider_->WatchCommits("", "", this);
 
   std::string content_1 = R"({
@@ -392,7 +392,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetBatchInTwoChunks) {
 }
 
 // Tests handling a batch delivered over two separate calls in incorrect order.
-TEST_F(CloudProviderImplTest, WatchAndGetBatchInTwoChunksOutOfOrder) {
+TEST_F(PageCloudHandlerImplTest, WatchAndGetBatchInTwoChunksOutOfOrder) {
   cloud_provider_->WatchCommits("", "", this);
 
   std::string content_2 = R"({
@@ -434,7 +434,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetBatchInTwoChunksOutOfOrder) {
 }
 
 // Tests handling a server event containing a single commit.
-TEST_F(CloudProviderImplTest, WatchAndGetSingleCommit) {
+TEST_F(PageCloudHandlerImplTest, WatchAndGetSingleCommit) {
   cloud_provider_->WatchCommits("", "", this);
 
   std::string put_content =
@@ -458,7 +458,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetSingleCommit) {
 
 // Verifies that the initial response when there is no matching commits is
 // ignored.
-TEST_F(CloudProviderImplTest, WatchWhenThereIsNothingToWatch) {
+TEST_F(PageCloudHandlerImplTest, WatchWhenThereIsNothingToWatch) {
   cloud_provider_->WatchCommits("", "", this);
 
   std::string put_content = "null";
@@ -474,7 +474,7 @@ TEST_F(CloudProviderImplTest, WatchWhenThereIsNothingToWatch) {
 // Verifies that malformed commit notifications are reported through
 // OnMalformedNotification() callback and that processing further notifications
 // is stopped.
-TEST_F(CloudProviderImplTest, WatchMalformedCommits) {
+TEST_F(PageCloudHandlerImplTest, WatchMalformedCommits) {
   rapidjson::Document document;
   EXPECT_EQ(0u, malformed_notification_calls_);
   EXPECT_EQ(0u, unwatch_count_);
@@ -510,7 +510,7 @@ TEST_F(CloudProviderImplTest, WatchMalformedCommits) {
 
 // Verifies that connection errors are reported through the OnConnectionError()
 // callback.
-TEST_F(CloudProviderImplTest, WatchConnectionError) {
+TEST_F(PageCloudHandlerImplTest, WatchConnectionError) {
   rapidjson::Document document;
   EXPECT_EQ(0u, connection_error_calls_);
   EXPECT_EQ(0u, token_expired_calls_);
@@ -525,7 +525,7 @@ TEST_F(CloudProviderImplTest, WatchConnectionError) {
 
 // Verifies that auth revoked errors are reported to the client as token
 // expired errors, so that they can retry setting the watcher.
-TEST_F(CloudProviderImplTest, WatchAuthRevoked) {
+TEST_F(PageCloudHandlerImplTest, WatchAuthRevoked) {
   EXPECT_EQ(0u, connection_error_calls_);
   EXPECT_EQ(0u, token_expired_calls_);
   EXPECT_EQ(0u, unwatch_count_);
@@ -538,7 +538,7 @@ TEST_F(CloudProviderImplTest, WatchAuthRevoked) {
   EXPECT_EQ(1u, unwatch_count_);
 }
 
-TEST_F(CloudProviderImplTest, GetCommits) {
+TEST_F(PageCloudHandlerImplTest, GetCommits) {
   std::string get_response_content =
       "{\"id1V\":"
       "{\"content\":\"xyzV\","
@@ -580,7 +580,7 @@ TEST_F(CloudProviderImplTest, GetCommits) {
 
 // Verifies that out-of-order batch commits are reordered when retrieved through
 // GetCommits().
-TEST_F(CloudProviderImplTest, GetCommitsBatch) {
+TEST_F(PageCloudHandlerImplTest, GetCommitsBatch) {
   std::string get_response_content = R"({
     "id_1V": {
       "id": "id_1V",
@@ -618,7 +618,7 @@ TEST_F(CloudProviderImplTest, GetCommitsBatch) {
   EXPECT_EQ(ServerTimestampToBytes(43), records[1].timestamp);
 }
 
-TEST_F(CloudProviderImplTest, GetCommitsWhenThereAreNone) {
+TEST_F(PageCloudHandlerImplTest, GetCommitsWhenThereAreNone) {
   std::string get_response_content = "null";
   get_response_ = std::make_unique<rapidjson::Document>();
   get_response_->Parse(get_response_content.c_str(),
@@ -635,7 +635,7 @@ TEST_F(CloudProviderImplTest, GetCommitsWhenThereAreNone) {
   EXPECT_TRUE(records.empty());
 }
 
-TEST_F(CloudProviderImplTest, AddObject) {
+TEST_F(PageCloudHandlerImplTest, AddObject) {
   zx::vmo data;
   ASSERT_TRUE(fsl::VmoFromString("bazinga", &data));
 
@@ -654,7 +654,7 @@ TEST_F(CloudProviderImplTest, AddObject) {
   EXPECT_EQ("bazinga", uploaded_content);
 }
 
-TEST_F(CloudProviderImplTest, GetObject) {
+TEST_F(PageCloudHandlerImplTest, GetObject) {
   std::string content = "bazinga";
   download_response_ = fsl::WriteStringToSocket(content);
   download_response_size_ = content.size();
@@ -678,7 +678,7 @@ TEST_F(CloudProviderImplTest, GetObject) {
   EXPECT_EQ(std::vector<std::string>{"object_idV"}, download_keys_);
 }
 
-TEST_F(CloudProviderImplTest, GetObjectNotFound) {
+TEST_F(PageCloudHandlerImplTest, GetObjectNotFound) {
   download_response_ = fsl::WriteStringToSocket("");
   download_status_ = gcs::Status::NOT_FOUND;
 

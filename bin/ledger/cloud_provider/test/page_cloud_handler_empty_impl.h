@@ -2,26 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_CLOUD_PROVIDER_TEST_CLOUD_PROVIDER_EMPTY_IMPL_H_
-#define APPS_LEDGER_SRC_CLOUD_PROVIDER_TEST_CLOUD_PROVIDER_EMPTY_IMPL_H_
+#ifndef APPS_LEDGER_SRC_CLOUD_PROVIDER_TEST_PAGE_CLOUD_HANDLER_EMPTY_IMPL_H_
+#define APPS_LEDGER_SRC_CLOUD_PROVIDER_TEST_PAGE_CLOUD_HANDLER_EMPTY_IMPL_H_
 
 #include <functional>
 #include <string>
 #include <vector>
 
-#include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
+#include "apps/ledger/src/cloud_provider/public/page_cloud_handler.h"
 #include "zx/socket.h"
 #include "zx/vmo.h"
 
 namespace cloud_provider_firebase {
 namespace test {
 
-// Empty implementation of CloudProvider.  All methods do nothing and return
+// Empty implementation of PageCloudHandler.  All methods do nothing and return
 // dummy or empty responses.
-class CloudProviderEmptyImpl : public CloudProvider {
+class PageCloudHandlerEmptyImpl : public PageCloudHandler {
  public:
-  CloudProviderEmptyImpl() = default;
-  ~CloudProviderEmptyImpl() override = default;
+  PageCloudHandlerEmptyImpl() = default;
+  ~PageCloudHandlerEmptyImpl() override = default;
 
   void AddCommits(const std::string& auth_token,
                   std::vector<Commit> commits,
@@ -53,4 +53,4 @@ class CloudProviderEmptyImpl : public CloudProvider {
 }  // namespace test
 }  // namespace cloud_provider_firebase
 
-#endif  // APPS_LEDGER_SRC_CLOUD_PROVIDER_TEST_CLOUD_PROVIDER_EMPTY_IMPL_H_
+#endif  // APPS_LEDGER_SRC_CLOUD_PROVIDER_TEST_PAGE_CLOUD_HANDLER_EMPTY_IMPL_H_

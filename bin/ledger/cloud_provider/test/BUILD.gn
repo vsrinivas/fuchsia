@@ -8,8 +8,8 @@ source_set("test") {
   testonly = true
 
   sources = [
-    "cloud_provider_empty_impl.cc",
-    "cloud_provider_empty_impl.h",
+    "page_cloud_handler_empty_impl.cc",
+    "page_cloud_handler_empty_impl.h",
   ]
 
   public_deps = [

@@ -10,8 +10,8 @@
 
 #include "apps/ledger/src/auth_provider/test/test_auth_provider.h"
 #include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
-#include "apps/ledger/src/cloud_provider/test/cloud_provider_empty_impl.h"
+#include "apps/ledger/src/cloud_provider/public/page_cloud_handler.h"
+#include "apps/ledger/src/cloud_provider/test/page_cloud_handler_empty_impl.h"
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/object.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
@@ -147,16 +147,16 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   std::vector<std::unique_ptr<const storage::Commit>> unsynced_commits;
 };
 
-// Fake implementation of cloud_provider_firebase::CloudProvider. Injects the
+// Fake implementation of cloud_provider_firebase::PageCloudHandler. Injects the
 // returned status for the upload operations, allowing the test to make them
 // fail. Registers the data uploaded by BatchUpload.
-class TestCloudProvider
-    : public cloud_provider_firebase::test::CloudProviderEmptyImpl {
+class TestPageCloudHandler
+    : public cloud_provider_firebase::test::PageCloudHandlerEmptyImpl {
  public:
-  explicit TestCloudProvider(fsl::MessageLoop* message_loop)
+  explicit TestPageCloudHandler(fsl::MessageLoop* message_loop)
       : message_loop_(message_loop) {}
 
-  ~TestCloudProvider() override = default;
+  ~TestPageCloudHandler() override = default;
 
   void AddCommits(const std::string& auth_token,
                   std::vector<cloud_provider_firebase::Commit> commits,
@@ -232,7 +232,7 @@ class BatchUploadTest : public ::test::TestWithMessageLoop {
 
  protected:
   TestPageStorage storage_;
-  TestCloudProvider cloud_provider_;
+  TestPageCloudHandler cloud_provider_;
   auth_provider::test::TestAuthProvider auth_provider_;
 
   unsigned int done_calls_ = 0u;

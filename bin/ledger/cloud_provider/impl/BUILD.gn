@@ -6,10 +6,10 @@ visibility = [ "//apps/ledger/src/*" ]
 
 source_set("impl") {
   sources = [
-    "cloud_provider_impl.cc",
-    "cloud_provider_impl.h",
     "encoding.cc",
     "encoding.h",
+    "page_cloud_handler_impl.cc",
+    "page_cloud_handler_impl.h",
     "paths.cc",
     "paths.h",
     "timestamp_conversions.cc",
@@ -28,8 +28,8 @@ source_set("impl") {
     "//apps/ledger/src/gcs",
     "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/public",  # For serialization version constant.
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//zircon/system/ulib/zx",
   ]
 
@@ -40,8 +40,8 @@ source_set("unittests") {
   testonly = true
 
   sources = [
-    "cloud_provider_impl_unittest.cc",
     "encoding_unittest.cc",
+    "page_cloud_handler_impl_unittest.cc",
     "timestamp_conversions_unittest.cc",
   ]
 
@@ -50,8 +50,8 @@ source_set("unittests") {
     "//apps/ledger/src/firebase",
     "//apps/ledger/src/gcs",
     "//apps/ledger/src/test:lib",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//third_party/gtest",
   ]
 

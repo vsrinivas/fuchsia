@@ -12,7 +12,7 @@
 #include "apps/ledger/src/auth_provider/test/test_auth_provider.h"
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/cloud_provider/test/cloud_provider_empty_impl.h"
+#include "apps/ledger/src/cloud_provider/test/page_cloud_handler_empty_impl.h"
 #include "apps/ledger/src/cloud_sync/impl/constants.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/test/commit_empty_impl.h"
@@ -230,16 +230,16 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   fsl::MessageLoop* message_loop_;
 };
 
-// Fake implementation of cloud_provider_firebase::CloudProvider. Injects the
+// Fake implementation of cloud_provider_firebase::PageCloudHandler. Injects the
 // returned status for commit notification upload, allowing the test to make
 // them fail. Registers for inspection the notifications passed by PageSync.
-class TestCloudProvider
-    : public cloud_provider_firebase::test::CloudProviderEmptyImpl {
+class TestPageCloudHandler
+    : public cloud_provider_firebase::test::PageCloudHandlerEmptyImpl {
  public:
-  explicit TestCloudProvider(fsl::MessageLoop* message_loop)
+  explicit TestPageCloudHandler(fsl::MessageLoop* message_loop)
       : message_loop_(message_loop) {}
 
-  ~TestCloudProvider() override = default;
+  ~TestPageCloudHandler() override = default;
 
   void AddCommits(const std::string& /*auth_token*/,
                   std::vector<cloud_provider_firebase::Commit> commits,
@@ -413,7 +413,7 @@ class PageSyncImplTest : public ::test::TestWithMessageLoop {
   }
 
   TestPageStorage storage_;
-  TestCloudProvider cloud_provider_;
+  TestPageCloudHandler cloud_provider_;
   auth_provider::test::TestAuthProvider auth_provider_;
   int backoff_get_next_calls_ = 0;
   TestSyncStateWatcher* state_watcher_;
@@ -425,7 +425,7 @@ class PageSyncImplTest : public ::test::TestWithMessageLoop {
 };
 
 // Verifies that the backlog of commits to upload returned from
-// GetUnsyncedCommits() is uploaded to CloudProvider.
+// GetUnsyncedCommits() is uploaded to PageCloudHandler.
 TEST_F(PageSyncImplTest, UploadBacklog) {
   storage_.NewCommit("id1", "content1");
   storage_.NewCommit("id2", "content2");
@@ -458,7 +458,7 @@ TEST_F(PageSyncImplTest, UploadBacklog) {
 }
 
 // Verifies that the backlog of commits to upload returned from
-// GetUnsyncedCommits() is uploaded to CloudProvider.
+// GetUnsyncedCommits() is uploaded to PageCloudHandler.
 TEST_F(PageSyncImplTest, PageWatcher) {
   TestSyncStateWatcher watcher;
   storage_.NewCommit("id1", "content1");
@@ -576,7 +576,7 @@ TEST_F(PageSyncImplTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
 }
 
 // Verfies that the new commits that PageSync is notified about through storage
-// watcher are uploaded to CloudProvider, with the exception of commits that
+// watcher are uploaded to PageCloudHandler, with the exception of commits that
 // themselves come from sync.
 TEST_F(PageSyncImplTest, UploadNewCommits) {
   page_sync_->SetOnIdle(MakeQuitTask());

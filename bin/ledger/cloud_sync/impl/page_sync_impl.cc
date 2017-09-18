@@ -20,7 +20,7 @@ namespace cloud_sync {
 PageSyncImpl::PageSyncImpl(
     fxl::RefPtr<fxl::TaskRunner> task_runner,
     storage::PageStorage* storage,
-    cloud_provider_firebase::CloudProvider* cloud_provider,
+    cloud_provider_firebase::PageCloudHandler* cloud_provider,
     auth_provider::AuthProvider* auth_provider,
     std::unique_ptr<backoff::Backoff> backoff,
     fxl::Closure on_error,
