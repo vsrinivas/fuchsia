@@ -98,7 +98,7 @@ using the network, for example).
 Since the boot-time entropy test requires that a large block of memory be
 permanently reserved (for the temporary, pre-VMM buffer), we don't usually build
 the entropy test mode into the kernel. The tests are enabled by passing the
-`ENABLE_ENTROPY_COLLECTOR_TEST` flag at build time, e.g. by adding
+`ENABLE_ENTROPY_COLLECTOR_TEST` flag at build time, e.g. by adding the line
 
 ```
 EXTERNAL_DEFINES += ENABLE_ENTROPY_COLLECTOR_TEST=1
@@ -106,7 +106,7 @@ EXTERNAL_DEFINES += ENABLE_ENTROPY_COLLECTOR_TEST=1
 
 to `local.mk`. Currently, there's also a build-time constant,
 `ENTROPY_COLLECTOR_TEST_MAXLEN`, which (if provided) is the size of the
-statically allocated buffer. The default value if unspecified is 128kB.
+statically allocated buffer. The default value if unspecified is 1MiB.
 
 ### Boot-time tests: configuring
 

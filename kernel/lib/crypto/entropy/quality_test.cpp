@@ -8,13 +8,15 @@
 
 #include <dev/hw_rng.h>
 #include <kernel/cmdline.h>
-#include <vm/vm_object_paged.h>
+#include <inttypes.h>
 #include <lib/crypto/entropy/collector.h>
 #include <lib/crypto/entropy/hw_rng_collector.h>
 #include <lib/crypto/entropy/jitterentropy_collector.h>
 #include <lk/init.h>
-#include <zircon/types.h>
 #include <string.h>
+#include <platform.h>
+#include <vm/vm_object_paged.h>
+#include <zircon/types.h>
 
 namespace crypto {
 
@@ -23,30 +25,33 @@ namespace entropy {
 #if ENABLE_ENTROPY_COLLECTOR_TEST
 
 #ifndef ENTROPY_COLLECTOR_TEST_MAXLEN
-// Default to 1 million bits (we're a kernel, not a hard disk!)
-#define ENTROPY_COLLECTOR_TEST_MAXLEN (128u * 1024u)
+#define ENTROPY_COLLECTOR_TEST_MAXLEN (1024u * 1024u)
 #endif
 
-static uint8_t entropy_buf[ENTROPY_COLLECTOR_TEST_MAXLEN];
+namespace {
+
+uint8_t entropy_buf[ENTROPY_COLLECTOR_TEST_MAXLEN];
+size_t entropy_len;
+
+} // namespace
+
 fbl::RefPtr<VmObject> entropy_vmo;
 bool entropy_was_lost = false;
 
 static void SetupEntropyVmo(uint level) {
-    if (VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, sizeof(entropy_buf),
-                              &entropy_vmo) != ZX_OK) {
-        printf("entropy-record: Failed to create entropy_vmo (data lost)\n");
+    if (VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, entropy_len, &entropy_vmo) != ZX_OK) {
+        printf("entropy-boot-test: Failed to create entropy_vmo (data lost)\n");
         entropy_was_lost = true;
         return;
     }
     size_t actual;
-    if (entropy_vmo->Write(entropy_buf, 0, sizeof(entropy_buf), &actual)
-            != ZX_OK) {
-        printf("entropy-record: Failed to write to entropy_vmo (data lost)\n");
+    if (entropy_vmo->Write(entropy_buf, 0, entropy_len, &actual) != ZX_OK) {
+        printf("entropy-boot-test: Failed to write to entropy_vmo (data lost)\n");
         entropy_was_lost = true;
         return;
     }
-    if (actual < sizeof(entropy_buf)) {
-        printf("entropy-record: partial write to entropy_vmo (data lost)\n");
+    if (actual < entropy_len) {
+        printf("entropy-boot-test: partial write to entropy_vmo (data lost)\n");
         entropy_was_lost = true;
         return;
     }
@@ -54,7 +59,7 @@ static void SetupEntropyVmo(uint level) {
     if (entropy_vmo->set_name(name, strlen(name)) != ZX_OK) {
         // The name is needed because devmgr uses it to add the VMO as a file in
         // the /boot filesystem.
-        printf("entropy-record: could not name entropy_vmo (data lost)\n");
+        printf("entropy-boot-test: could not name entropy_vmo (data lost)\n");
         entropy_was_lost = true;
         return;
     }
@@ -89,23 +94,27 @@ void EarlyBootTest() {
     // TODO(andrewkrieger): add other entropy collectors.
 
     if (!collector) {
-        printf("entropy-test: unrecognized source \"%s\"\n", src_name);
-        printf("entropy-test: skipping test.\n");
+        printf("entropy-boot-test: unrecognized source \"%s\"\n", src_name);
+        printf("entropy-boot-test: skipping test.\n");
         return;
     }
 
-    size_t len = cmdline_get_uint64("kernel.entropy-test.len",
-                                    sizeof(entropy_buf));
-    if (len > sizeof(entropy_buf)) {
-        len = sizeof(entropy_buf);
-        printf("entropy-test: only recording %zu bytes (try defining "
+    entropy_len = cmdline_get_uint64("kernel.entropy-test.len", sizeof(entropy_buf));
+    if (entropy_len > sizeof(entropy_buf)) {
+        entropy_len = sizeof(entropy_buf);
+        printf("entropy-boot-test: only recording %zu bytes (try defining "
                "ENTROPY_COLLECTOR_TEST_MAXLEN)\n", sizeof(entropy_buf));
     }
 
-    size_t result = collector->DrawEntropy(entropy_buf, len);
-    if (result < len) {
-        printf("entropy-test: source only returned %zu bytes.\n", result);
-        memset(entropy_buf + result, 0, sizeof(entropy_buf) - result);
+    lk_time_t start = current_time();
+    size_t result = collector->DrawEntropy(entropy_buf, entropy_len);
+    lk_time_t end = current_time();
+
+    if (result < entropy_len) {
+        printf("entropy-boot-test: source only returned %zu bytes.\n", result);
+        entropy_len = result;
+    } else {
+        printf("entropy-boot-test: successful draw in %" PRIu64 " nanoseconds.\n", end - start);
     }
 }
 
