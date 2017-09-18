@@ -9,19 +9,3 @@ group("src") {
     "server",
   ]
 }
-
-# Drop this into a gtest executable target as a dependency and it will run all
-# of the tests and report results to the TestRunner service.
-source_set("gtest_main") {
-  testonly = true
-  sources = [
-    "gtest_main.cc",
-  ]
-  deps = [
-    "//apps/test_runner/lib/reporting",
-    "//apps/test_runner/lib:application_context",
-  ]
-  public_deps = [
-    "//third_party/gtest",
-  ]
-}
