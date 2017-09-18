@@ -798,7 +798,7 @@ END
 function ftrace() {
   fcheck || return 1
 
-  "${FUCHSIA_DIR}/apps/tracing/scripts/trace.sh" "$@"
+  "${FUCHSIA_SCRIPTS_DIR}/trace.sh" "$@"
 }
 
 ### fmkzedboot: builds the Fuchsia bootloader and zeboot and places it on an
