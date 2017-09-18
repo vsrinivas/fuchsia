@@ -272,10 +272,10 @@ echo "Building magentix for installer"
 gn_gen_path="packages/gn/gen.py"
 ninja_path="buildtools/ninja"
 
-"$script_dir/../../$gn_gen_path" --outdir out/magentix --target_cpu "$build_arch" --modules magentix,install-fuchsia
+"$script_dir/../../$gn_gen_path" --outdir out/installer-system --target_cpu "$build_arch" --modules installer-system,install-fuchsia
 
-mgtix_out="${script_dir}/../../out/magentix-${build_arch}"
-"${script_dir}/../../${ninja_path}" -C "$mgtix_out"
+sys_out="${script_dir}/../../out/installer-system-${build_arch}"
+"${script_dir}/../../${ninja_path}" -C "$sys_out"
 
 # create a suitably large file
 echo "Creating system disk image, this may take some time..."
@@ -313,7 +313,7 @@ imager_cmd=( "${script_dir}"/imager.py --disk_path="$disk_path" --mcp_path="$mcp
   --temp_dir="$STAGING_DIR" --minfs_path="$minfs_path" --arch="$arch"
   --efi_disk="$disk_path_efi" --build_dir_zircon="$build_dir_zircon"
   --bootdata="$bootdata" --boot_manifest="$boot_manifest"
-  --mdir_path="$mdir_loc" --runtime_dir="$mgtix_out" "${extras[@]}" )
+  --mdir_path="$mdir_loc" --runtime_dir="$sys_out" "${extras[@]}" )
 
 if [ "$enable_thread_exp" -eq 0 ]; then
   imager_cmd+=("--disable_thread_exp")
