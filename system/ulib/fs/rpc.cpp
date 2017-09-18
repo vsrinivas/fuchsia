@@ -178,23 +178,27 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
         if (!readable(ios->io_flags)) {
             return ZX_ERR_BAD_HANDLE;
         }
-        ssize_t r = vn->Read(msg->data, arg, ios->io_off);
-        if (r >= 0) {
-            ios->io_off += r;
+        size_t actual;
+        zx_status_t status = vn->Read(msg->data, arg, ios->io_off, &actual);
+        if (status == ZX_OK) {
+            ZX_DEBUG_ASSERT(actual <= static_cast<size_t>(arg));
+            ios->io_off += actual;
             msg->arg2.off = ios->io_off;
-            msg->datalen = static_cast<uint32_t>(r);
+            msg->datalen = static_cast<uint32_t>(actual);
         }
-        return static_cast<zx_status_t>(r);
+        return status == ZX_OK ? static_cast<zx_status_t>(actual) : status;
     }
     case ZXRIO_READ_AT: {
         if (!readable(ios->io_flags)) {
             return ZX_ERR_BAD_HANDLE;
         }
-        ssize_t r = vn->Read(msg->data, arg, msg->arg2.off);
-        if (r >= 0) {
-            msg->datalen = static_cast<uint32_t>(r);
+        size_t actual;
+        zx_status_t status = vn->Read(msg->data, arg, msg->arg2.off, &actual);
+        if (status == ZX_OK) {
+            ZX_DEBUG_ASSERT(actual <= static_cast<size_t>(arg));
+            msg->datalen = static_cast<uint32_t>(actual);
         }
-        return static_cast<zx_status_t>(r);
+        return status == ZX_OK ? static_cast<zx_status_t>(actual) : status;
     }
     case ZXRIO_WRITE: {
         if (!writable(ios->io_flags)) {
@@ -208,19 +212,26 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
             }
             ios->io_off = attr.size;
         }
-        ssize_t r = vn->Write(msg->data, len, ios->io_off);
-        if (r >= 0) {
-            ios->io_off += r;
+        size_t actual;
+        zx_status_t status = vn->Write(msg->data, len, ios->io_off, &actual);
+        if (status == ZX_OK) {
+            ZX_DEBUG_ASSERT(actual <= static_cast<size_t>(len));
+            ios->io_off += actual;
             msg->arg2.off = ios->io_off;
         }
-        return static_cast<zx_status_t>(r);
+        return status == ZX_OK ? static_cast<zx_status_t>(actual) : status;
     }
     case ZXRIO_WRITE_AT: {
         if (!writable(ios->io_flags)) {
             return ZX_ERR_BAD_HANDLE;
         }
-        ssize_t r = vn->Write(msg->data, len, msg->arg2.off);
-        return static_cast<zx_status_t>(r);
+        size_t actual;
+        zx_status_t status = vn->Write(msg->data, len, msg->arg2.off, &actual);
+        if (status == ZX_OK) {
+            ZX_DEBUG_ASSERT(actual <= static_cast<size_t>(len));
+            return static_cast<zx_status_t>(actual);
+        }
+        return status;
     }
     case ZXRIO_SEEK: {
         vnattr_t attr;
@@ -355,14 +366,15 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
             }
             // If our permissions validate, fall through to the VFS ioctl
         }
-        ssize_t r = ios->vfs->Ioctl(fbl::move(vn), msg->arg2.op, in_buf, len,
-                                    msg->data, arg);
-
-        if (r == ZX_ERR_NOT_SUPPORTED) {
+        size_t actual = 0;
+        zx_status_t status = ios->vfs->Ioctl(fbl::move(vn), msg->arg2.op,
+                                             in_buf, len, msg->data, arg,
+                                             &actual);
+        if (status == ZX_ERR_NOT_SUPPORTED) {
             zx_handle_close(msg->handle[0]);
         }
 
-        return static_cast<zx_status_t>(r);
+        return status == ZX_OK ? static_cast<zx_status_t>(actual) : status;
     }
     case ZXRIO_IOCTL: {
         if (len > FDIO_IOCTL_MAX_INPUT ||
@@ -373,20 +385,19 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
         char in_buf[FDIO_IOCTL_MAX_INPUT];
         memcpy(in_buf, msg->data, len);
 
-        ssize_t r;
+        size_t actual = 0;
         switch (msg->arg2.op) {
         case IOCTL_VFS_GET_TOKEN: {
             // Ioctls which act on iostate
             if (arg != sizeof(zx_handle_t)) {
-                r = ZX_ERR_INVALID_ARGS;
-            } else {
-                zx::event token;
-                r = ios->vfs->VnodeToToken(fbl::move(vn), &ios->token, &token);
-                if (r == ZX_OK) {
-                    r = sizeof(zx_handle_t);
-                    zx_handle_t* out = reinterpret_cast<zx_handle_t*>(msg->data);
-                    *out = token.release();
-                }
+                return ZX_ERR_INVALID_ARGS;
+            }
+            zx::event token;
+            zx_status_t status = ios->vfs->VnodeToToken(fbl::move(vn), &ios->token, &token);
+            if (status == ZX_OK) {
+                actual = sizeof(zx_handle_t);
+                zx_handle_t* out = reinterpret_cast<zx_handle_t*>(msg->data);
+                *out = token.release();
             }
             break;
         }
@@ -395,34 +406,37 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
         case IOCTL_VFS_GET_DEVICE_PATH:
             // Unmounting ioctls require iostate privileges
             if (!(ios->io_flags & O_ADMIN)) {
-                r = ZX_ERR_ACCESS_DENIED;
-                break;
+                return ZX_ERR_ACCESS_DENIED;
             }
             // If our permissions validate, fall through to the VFS ioctl
         default:
-            r = ios->vfs->Ioctl(fbl::move(vn), msg->arg2.op, in_buf, len, msg->data, arg);
-        }
-        if (r >= 0) {
-            switch (IOCTL_KIND(msg->arg2.op)) {
-            case IOCTL_KIND_DEFAULT:
-                break;
-            case IOCTL_KIND_GET_HANDLE:
-                msg->hcount = 1;
-                memcpy(msg->handle, msg->data, sizeof(zx_handle_t));
-                break;
-            case IOCTL_KIND_GET_TWO_HANDLES:
-                msg->hcount = 2;
-                memcpy(msg->handle, msg->data, 2 * sizeof(zx_handle_t));
-                break;
-            case IOCTL_KIND_GET_THREE_HANDLES:
-                msg->hcount = 3;
-                memcpy(msg->handle, msg->data, 3 * sizeof(zx_handle_t));
-                break;
+            zx_status_t status = ios->vfs->Ioctl(fbl::move(vn), msg->arg2.op,
+                                                 in_buf, len, msg->data, arg,
+                                                 &actual);
+            if (status != ZX_OK) {
+                return status;
             }
-            msg->arg2.off = 0;
-            msg->datalen = static_cast<uint32_t>(r);
         }
-        return static_cast<uint32_t>(r);
+        switch (IOCTL_KIND(msg->arg2.op)) {
+        case IOCTL_KIND_DEFAULT:
+            break;
+        case IOCTL_KIND_GET_HANDLE:
+            msg->hcount = 1;
+            memcpy(msg->handle, msg->data, sizeof(zx_handle_t));
+            break;
+        case IOCTL_KIND_GET_TWO_HANDLES:
+            msg->hcount = 2;
+            memcpy(msg->handle, msg->data, 2 * sizeof(zx_handle_t));
+            break;
+        case IOCTL_KIND_GET_THREE_HANDLES:
+            msg->hcount = 3;
+            memcpy(msg->handle, msg->data, 3 * sizeof(zx_handle_t));
+            break;
+        }
+        msg->arg2.off = 0;
+        ZX_DEBUG_ASSERT(actual <= static_cast<size_t>(arg));
+        msg->datalen = static_cast<uint32_t>(actual);
+        return static_cast<uint32_t>(actual);
     }
     case ZXRIO_TRUNCATE: {
         if (!writable(ios->io_flags)) {

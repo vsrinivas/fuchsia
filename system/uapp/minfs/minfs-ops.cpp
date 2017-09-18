@@ -1075,17 +1075,16 @@ zx_status_t VnodeMinfs::Open(uint32_t flags) {
     return ZX_OK;
 }
 
-ssize_t VnodeMinfs::Read(void* data, size_t len, size_t off) {
+zx_status_t VnodeMinfs::Read(void* data, size_t len, size_t off, size_t* out_actual) {
     FS_TRACE(MINFS, "minfs_read() vn=%p(#%u) len=%zd off=%zd\n", this, ino_, len, off);
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;
     }
-    size_t r;
-    zx_status_t status = ReadInternal(data, len, off, &r);
+    zx_status_t status = ReadInternal(data, len, off, out_actual);
     if (status != ZX_OK) {
         return status;
     }
-    return r;
+    return ZX_OK;
 }
 
 // Internal read. Usable on directories.
@@ -1144,21 +1143,20 @@ zx_status_t VnodeMinfs::ReadInternal(void* data, size_t len, size_t off, size_t*
     return ZX_OK;
 }
 
-ssize_t VnodeMinfs::Write(const void* data, size_t len, size_t off) {
+zx_status_t VnodeMinfs::Write(const void* data, size_t len, size_t off, size_t* out_actual) {
     FS_TRACE(MINFS, "minfs_write() vn=%p(#%u) len=%zd off=%zd\n", this, ino_, len, off);
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;
     }
     WriteTxn txn(fs_->bc_.get());
-    size_t actual;
-    zx_status_t status = WriteInternal(&txn, data, len, off, &actual);
+    zx_status_t status = WriteInternal(&txn, data, len, off, out_actual);
     if (status != ZX_OK) {
         return status;
     }
-    if (actual != 0) {
+    if (*out_actual != 0) {
         InodeSync(&txn, kMxFsSyncMtime);  // Successful writes updates mtime
     }
-    return actual;
+    return ZX_OK;
 }
 
 // Internal write. Usable on directories.
@@ -1487,8 +1485,8 @@ zx_status_t VnodeMinfs::Create(fbl::RefPtr<fs::Vnode>* out, const char* name, si
 
 constexpr const char kFsName[] = "minfs";
 
-ssize_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                          size_t out_len) {
+zx_status_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+                              size_t out_len, size_t* out_actual) {
     switch (op) {
         case IOCTL_VFS_QUERY_FS: {
             if (out_len < (sizeof(vfs_query_info_t) + strlen(kFsName))) {
@@ -1501,7 +1499,8 @@ ssize_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* 
             info->total_nodes = fs_->info_.inode_count;
             info->used_nodes = fs_->info_.alloc_inode_count;
             memcpy(info->name, kFsName, strlen(kFsName));
-            return sizeof(vfs_query_info_t) + strlen(kFsName);
+            *out_actual = sizeof(vfs_query_info_t) + strlen(kFsName);
+            return ZX_OK;
         }
         case IOCTL_VFS_UNMOUNT_FS: {
             zx_status_t status = Sync();
@@ -1509,6 +1508,7 @@ ssize_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* 
                 FS_TRACE_ERROR("minfs unmount failed to sync; unmounting anyway: %d\n", status);
             }
             // 'fs_' is deleted after Unmount is called.
+            *out_actual = 0;
             return fs_->Unmount();
         }
 #ifdef __Fuchsia__
@@ -1518,8 +1518,10 @@ ssize_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* 
             if ((ssize_t)out_len < len) {
                 return ZX_ERR_INVALID_ARGS;
             }
-
-            return len;
+            if (len >= 0) {
+                *out_actual = len;
+            }
+            return len > 0 ? ZX_OK : static_cast<zx_status_t>(len);
         }
 #endif
         default: {

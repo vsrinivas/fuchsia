@@ -432,8 +432,8 @@ zx_handle_t Vfs::WaitForRemoteLocked(fbl::RefPtr<Vnode> vn) {
 
 #endif  // idfdef __Fuchsia__
 
-ssize_t Vfs::Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
-                   void* out_buf, size_t out_len) {
+zx_status_t Vfs::Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
+                       void* out_buf, size_t out_len, size_t* out_actual) {
     switch (op) {
 #ifdef __Fuchsia__
     case IOCTL_VFS_WATCH_DIR: {
@@ -441,6 +441,7 @@ ssize_t Vfs::Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_
             return ZX_ERR_INVALID_ARGS;
         }
         const vfs_watch_dir_t* request = reinterpret_cast<const vfs_watch_dir_t*>(in_buf);
+        *out_actual = 0;
         return vn->WatchDirV2(this, request);
     }
     case IOCTL_VFS_MOUNT_FS: {
@@ -448,6 +449,7 @@ ssize_t Vfs::Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_
             return ZX_ERR_INVALID_ARGS;
         }
         MountChannel h = MountChannel(*reinterpret_cast<const zx_handle_t*>(in_buf));
+        *out_actual = 0;
         return Vfs::InstallRemote(vn, fbl::move(h));
     }
     case IOCTL_VFS_MOUNT_MKDIR_FS: {
@@ -460,6 +462,7 @@ ssize_t Vfs::Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_
             return ZX_ERR_INVALID_ARGS;
         }
 
+        *out_actual = 0;
         return Vfs::MountMkdir(fbl::move(vn), config);
     }
     case IOCTL_VFS_UNMOUNT_NODE: {
@@ -468,18 +471,20 @@ ssize_t Vfs::Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_
         }
         zx_handle_t* h = (zx_handle_t*)out_buf;
         zx::channel c;
+        *out_actual = 0;
         zx_status_t s = Vfs::UninstallRemote(vn, &c);
         *h = c.release();
         return s;
     }
     case IOCTL_VFS_UNMOUNT_FS: {
         Vfs::UninstallAll(ZX_TIME_INFINITE);
-        vn->Ioctl(op, in_buf, in_len, out_buf, out_len);
+        *out_actual = 0;
+        vn->Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
         return ZX_OK;
     }
 #endif
     default:
-        return vn->Ioctl(op, in_buf, in_len, out_buf, out_len);
+        return vn->Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
     }
 }
 

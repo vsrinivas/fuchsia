@@ -146,21 +146,23 @@ int emu_mkdir(const char* path, mode_t mode) {
 ssize_t emu_read(int fd, void* buf, size_t count) {
     file_t* f;
     FILE_WRAP(f, fd, read, fd, buf, count);
-    ssize_t r = f->vn->Read(buf, count, f->off);
-    if (r > 0) {
-        f->off += r;
+    size_t actual;
+    zx_status_t status = f->vn->Read(buf, count, f->off, &actual);
+    if (status == ZX_OK) {
+        f->off += actual;
     }
-    return r;
+    return status;
 }
 
 ssize_t emu_write(int fd, const void* buf, size_t count) {
     file_t* f;
     FILE_WRAP(f, fd, write, fd, buf, count);
-    ssize_t r = f->vn->Write(buf, count, f->off);
-    if (r > 0) {
-        f->off += r;
+    size_t actual;
+    zx_status_t status = f->vn->Write(buf, count, f->off, &actual);
+    if (status == ZX_OK) {
+        f->off += actual;
     }
-    return r;
+    return status;
 }
 
 off_t emu_lseek(int fd, off_t offset, int whence) {

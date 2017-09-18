@@ -63,29 +63,19 @@ zx_status_t VnodeBlob::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t l
     return blobstore_->Readdir(cookie, dirents, len);
 }
 
-ssize_t VnodeBlob::Read(void* data, size_t len, size_t off) {
+zx_status_t VnodeBlob::Read(void* data, size_t len, size_t off, size_t* out_actual) {
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;
     }
 
-    size_t actual;
-    zx_status_t status = ReadInternal(data, len, off, &actual);
-    if (status != ZX_OK) {
-        return status;
-    }
-    return actual;
+    return ReadInternal(data, len, off, out_actual);
 }
 
-ssize_t VnodeBlob::Write(const void* data, size_t len, size_t off) {
+zx_status_t VnodeBlob::Write(const void* data, size_t len, size_t off, size_t* out_actual) {
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;
     }
-    size_t actual;
-    zx_status_t status = WriteInternal(data, len, &actual);
-    if (status != ZX_OK) {
-        return status;
-    }
-    return actual;
+    return WriteInternal(data, len, out_actual);
 }
 
 zx_status_t VnodeBlob::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
@@ -147,8 +137,8 @@ zx_status_t VnodeBlob::Create(fbl::RefPtr<fs::Vnode>* out, const char* name, siz
 
 constexpr const char kFsName[] = "blobstore";
 
-ssize_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                         size_t out_len) {
+zx_status_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+                             size_t out_len, size_t* out_actual) {
     switch (op) {
     case IOCTL_VFS_QUERY_FS: {
         if (out_len < sizeof(vfs_query_info_t) + strlen(kFsName)) {
@@ -160,13 +150,15 @@ ssize_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* o
         info->total_nodes = blobstore_->info_.inode_count;
         info->used_nodes = blobstore_->info_.alloc_inode_count;
         memcpy(info->name, kFsName, strlen(kFsName));
-        return sizeof(vfs_query_info_t) + strlen(kFsName);
+        *out_actual = sizeof(vfs_query_info_t) + strlen(kFsName);
+        return ZX_OK;
     }
     case IOCTL_VFS_UNMOUNT_FS: {
         zx_status_t status = Sync();
         if (status != ZX_OK) {
             FS_TRACE_ERROR("blobstore unmount failed to sync; unmounting anyway: %d\n", status);
         }
+        *out_actual = 0;
         return blobstore_->Unmount();
     }
 #ifdef __Fuchsia__
@@ -177,7 +169,10 @@ ssize_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* o
             return ZX_ERR_INVALID_ARGS;
         }
 
-        return len;
+        if (len >= 0) {
+            *out_actual = len;
+        }
+        return len > 0 ? ZX_OK : static_cast<zx_status_t>(len);
     }
 #endif
     default: {

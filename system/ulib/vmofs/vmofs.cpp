@@ -64,7 +64,7 @@ zx_status_t VnodeFile::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) 
     return ZX_OK;
 }
 
-ssize_t VnodeFile::Read(void* data, size_t length, size_t offset) {
+zx_status_t VnodeFile::Read(void* data, size_t length, size_t offset, size_t* out_actual) {
     if (offset > length_) {
         return 0;
     }
@@ -72,11 +72,7 @@ ssize_t VnodeFile::Read(void* data, size_t length, size_t offset) {
     if (length > remaining_length) {
         length = remaining_length;
     }
-    zx_status_t r = zx_vmo_read(vmo_, data, offset_ + offset, length, &length);
-    if (r < 0) {
-        return r;
-    }
-    return length;
+    return zx_vmo_read(vmo_, data, offset_ + offset, length, out_actual);
 }
 
 constexpr uint64_t kVmofsBlksize = PAGE_SIZE;

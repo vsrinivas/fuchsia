@@ -82,8 +82,8 @@ public:
 
     bool IsDirectory() const { return flags_ & kBlobFlagDirectory; }
 
-    ssize_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
-                  void* out_buf, size_t out_len) final;
+    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
+                      void* out_buf, size_t out_len, size_t* out_actual) final;
 
     bool DeletionQueued() const {
         return flags_ & kBlobFlagDeletable;
@@ -144,8 +144,8 @@ private:
                            uint32_t* type, void* extra, uint32_t* esize) final;
     zx_status_t Open(uint32_t flags) final;
     zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) final;
-    ssize_t Read(void* data, size_t len, size_t off) final;
-    ssize_t Write(const void* data, size_t len, size_t off) final;
+    zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
+    zx_status_t Write(const void* data, size_t len, size_t off, size_t* out_actual) final;
     zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len,

@@ -104,8 +104,8 @@ public:
                      const char* path, const char** pathout,
                      uint32_t flags, uint32_t mode) __TA_EXCLUDES(vfs_lock_);
     zx_status_t Unlink(fbl::RefPtr<Vnode> vn, const char* path, size_t len) __TA_EXCLUDES(vfs_lock_);
-    ssize_t Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
-                  void* out_buf, size_t out_len) __TA_EXCLUDES(vfs_lock_);
+    zx_status_t Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
+                      void* out_buf, size_t out_len, size_t* out_actual) __TA_EXCLUDES(vfs_lock_);
 
 #ifdef __Fuchsia__
     void TokenDiscard(zx::event* ios_token) __TA_EXCLUDES(vfs_lock_);

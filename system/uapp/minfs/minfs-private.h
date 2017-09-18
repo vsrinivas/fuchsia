@@ -184,8 +184,8 @@ public:
     zx_status_t WriteExactInternal(WriteTxn* txn, const void* data, size_t len,
                                    size_t off);
     zx_status_t TruncateInternal(WriteTxn* txn, size_t len);
-    ssize_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                  size_t out_len) final;
+    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+                      size_t out_len, size_t* out_actual) final;
     zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
     // Lookup which can traverse '..'
     zx_status_t LookupInternal(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len);
@@ -205,8 +205,8 @@ private:
     // Implementing methods from the fs::Vnode, so MinFS vnodes may be utilized
     // by the VFS library.
     zx_status_t Open(uint32_t flags) final;
-    ssize_t Read(void* data, size_t len, size_t off) final;
-    ssize_t Write(const void* data, size_t len, size_t off) final;
+    zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
+    zx_status_t Write(const void* data, size_t len, size_t off, size_t* out_actual) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t Setattr(const vnattr_t* a) final;
     zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) final;

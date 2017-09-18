@@ -94,12 +94,18 @@ public:
     virtual zx_status_t Close();
 
     // Read data from vn at offset.
-    virtual ssize_t Read(void* data, size_t len, size_t off) {
+    //
+    // If successful, returns the number of bytes read in |out_actual|. This must be
+    // less than or equal to |len|.
+    virtual zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Write data to vn at offset.
-    virtual ssize_t Write(const void* data, size_t len, size_t off) {
+    //
+    // If successful, returns the number of bytes written in |out_actual|. This must be
+    // less than or equal to |len|.
+    virtual zx_status_t Write(const void* data, size_t len, size_t off, size_t* out_actual) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -137,8 +143,8 @@ public:
 
     // Performs the given ioctl op on vn.
     // On success, returns the number of bytes received.
-    virtual ssize_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
-                          void* out_buf, size_t out_len) {
+    virtual zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
+                              void* out_buf, size_t out_len, size_t* out_actual) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 

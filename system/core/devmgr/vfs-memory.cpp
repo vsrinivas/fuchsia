@@ -149,35 +149,26 @@ zx_status_t VnodeVmo::GetHandles(uint32_t flags, zx_handle_t* hnds,
     return 1;
 }
 
-ssize_t VnodeFile::Read(void* data, size_t len, size_t off) {
+zx_status_t VnodeFile::Read(void* data, size_t len, size_t off, size_t* out_actual) {
     if ((off >= length_) || (vmo_ == ZX_HANDLE_INVALID)) {
         return 0;
     } else if (len > length_ - off) {
         len = length_ - off;
     }
 
-    size_t actual;
-    zx_status_t status;
-    if ((status = zx_vmo_read(vmo_, data, off, len, &actual)) != ZX_OK) {
-        return status;
-    }
-    return actual;
+    return zx_vmo_read(vmo_, data, off, len, out_actual);
 }
 
-ssize_t VnodeVmo::Read(void* data, size_t len, size_t off) {
+zx_status_t VnodeVmo::Read(void* data, size_t len, size_t off, size_t* out_actual) {
     if (off > length_)
         return 0;
     size_t rlen = length_ - off;
     if (len > rlen)
         len = rlen;
-    zx_status_t r = zx_vmo_read(vmo_, data, offset_ + off, len, &len);
-    if (r < 0) {
-        return r;
-    }
-    return len;
+    return zx_vmo_read(vmo_, data, offset_ + off, len, out_actual);
 }
 
-ssize_t VnodeFile::Write(const void* data, size_t len, size_t off) {
+zx_status_t VnodeFile::Write(const void* data, size_t len, size_t off, size_t* out_actual) {
     zx_status_t status;
     size_t newlen = off + len;
     newlen = newlen > kMemfsMaxFileSize ? kMemfsMaxFileSize : newlen;
@@ -195,20 +186,19 @@ ssize_t VnodeFile::Write(const void* data, size_t len, size_t off) {
         }
     }
 
-    size_t actual;
-    if ((status = zx_vmo_write(vmo_, data, off, len, &actual)) != ZX_OK) {
+    if ((status = zx_vmo_write(vmo_, data, off, len, out_actual)) != ZX_OK) {
         return status;
     }
 
     if (newlen > length_) {
         length_ = newlen;
     }
-    if (actual == 0 && off >= kMemfsMaxFileSize) {
+    if (*out_actual == 0 && off >= kMemfsMaxFileSize) {
         // short write because we're beyond the end of the permissible length
         return ZX_ERR_FILE_BIG;
     }
     UpdateModified();
-    return actual;
+    return ZX_OK;
 }
 
 
@@ -525,15 +515,20 @@ zx_status_t VnodeMemfs::Sync() {
 
 constexpr const char kFsName[] = "memfs";
 
-ssize_t VnodeMemfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
-                          void* out_buf, size_t out_len) {
+zx_status_t VnodeMemfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
+                              void* out_buf, size_t out_len, size_t* out_actual) {
     switch (op) {
     case IOCTL_VFS_MOUNT_BOOTFS_VMO: {
         if (in_len < sizeof(zx_handle_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
         const zx_handle_t* vmo = static_cast<const zx_handle_t*>(in_buf);
-        return devmgr_add_systemfs_vmo(*vmo);
+        ssize_t r = devmgr_add_systemfs_vmo(*vmo);
+        if (r < 0) {
+            return zx_status_t(r);
+        }
+        *out_actual = static_cast<size_t>(r);
+        return ZX_OK;
     }
     case IOCTL_VFS_QUERY_FS: {
         if (out_len < sizeof(vfs_query_info_t) + strlen(kFsName)) {
@@ -547,15 +542,16 @@ ssize_t VnodeMemfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
         info->total_nodes = 0;
         info->used_nodes = 0;
         memcpy(info->name, kFsName, strlen(kFsName));
-        return sizeof(vfs_query_info_t) + strlen(kFsName);
+        *out_actual = sizeof(vfs_query_info_t) + strlen(kFsName);
+        return ZX_OK;
     }
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
-ssize_t VnodeDir::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
-                        void* out_buf, size_t out_len) {
+zx_status_t VnodeDir::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
+                            void* out_buf, size_t out_len, size_t* out_actual) {
     switch (op) {
     case IOCTL_VFS_VMO_CREATE: {
         const auto* config = reinterpret_cast<const vmo_create_config_t*>(in_buf);
@@ -583,10 +579,11 @@ ssize_t VnodeDir::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
         }
 
         bool vmofile = false;
+        *out_actual = 0;
         return CreateFromVmo(vmofile, name, namelen, config->vmo, 0, size);
     }
     default:
-        return VnodeMemfs::Ioctl(op, in_buf, in_len, out_buf, out_len);
+        return VnodeMemfs::Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
     }
 }
 

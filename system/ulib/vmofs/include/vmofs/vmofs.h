@@ -34,7 +34,7 @@ public:
 
     zx_status_t Open(uint32_t flags) final;
     zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) final;
-    ssize_t Read(void* data, size_t len, size_t off) final;
+    zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnds,
                            uint32_t* type, void* extra, uint32_t* esize) final;

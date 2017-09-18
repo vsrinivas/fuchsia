@@ -35,8 +35,8 @@ class VnodeMemfs : public fs::Vnode {
 public:
     virtual zx_status_t Setattr(const vnattr_t* a) final;
     virtual zx_status_t Sync() final;
-    ssize_t Ioctl(uint32_t op, const void* in_buf,
-                  size_t in_len, void* out_buf, size_t out_len) override;
+    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
+                      void* out_buf, size_t out_len, size_t* out_actual) override;
     zx_status_t AttachRemote(fs::MountChannel h) final;
 
     // To be more specific: Is this vnode connected into the directory hierarchy?
@@ -69,8 +69,8 @@ public:
     virtual zx_status_t Open(uint32_t flags) final;
 
 private:
-    ssize_t Read(void* data, size_t len, size_t off) final;
-    ssize_t Write(const void* data, size_t len, size_t off) final;
+    zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
+    zx_status_t Write(const void* data, size_t len, size_t off, size_t* out_actual) final;
     zx_status_t Truncate(size_t len) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) final;
@@ -126,8 +126,8 @@ private:
     zx_status_t Link(const char* name, size_t len, fbl::RefPtr<fs::Vnode> target) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) final;
-    ssize_t Ioctl(uint32_t op, const void* in_buf,
-                  size_t in_len, void* out_buf, size_t out_len) final;
+    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
+                      void* out_buf, size_t out_len, size_t* out_actual) final;
 
     fs::RemoteContainer remoter_;
     fs::WatcherContainer watcher_;
@@ -142,7 +142,7 @@ public:
 
 private:
     zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) final;
-    ssize_t Read(void* data, size_t len, size_t off) final;
+    zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnds,
                            uint32_t* type, void* extra, uint32_t* esize) final;
