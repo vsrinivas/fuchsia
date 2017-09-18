@@ -1,0 +1,12 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("wifi") {
+  deps = [
+    "//drivers/wifi/mediatek/rt5370",
+    "//drivers/wifi/testing",
+    "//drivers/wifi/third_party/atheros/fuchsia",
+    "//drivers/wifi/wlan",
+  ]
+}

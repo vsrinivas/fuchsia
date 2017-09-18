@@ -1,0 +1,74 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//packages/package.gni")
+
+config("wlan_config") {
+  include_dirs = [ "." ]
+  defines = [ "ZX_DEBUGLEVEL=2" ]
+}
+
+source_set("mlme") {
+  sources = [
+    "clock.h",
+    "device_interface.cpp",
+    "device_interface.h",
+    "element.cpp",
+    "element.h",
+    "logging.h",
+    "mac_frame.cpp",
+    "mac_frame.h",
+    "mlme.cpp",
+    "mlme.h",
+    "packet.cpp",
+    "packet.h",
+    "scanner.cpp",
+    "scanner.h",
+    "serialize.h",
+    "station.cpp",
+    "station.h",
+    "timer.cpp",
+    "timer.h",
+    "wlan.h",
+  ]
+
+  public_deps = [
+    "//apps/wlan/services:mlme_data_only",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/fbl",
+  ]
+
+  public_configs = [ ":wlan_config" ]
+}
+
+driver_module("wlan_driver") {
+  output_name = "wlan"
+  sources = [
+    "binding.c",
+    "device.cpp",
+    "device.h",
+    "driver.cpp",
+    "logging.h",
+  ]
+
+  deps = [
+    ":mlme",
+    "//zircon/system/ulib/ddktl",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/fbl",
+  ]
+
+  libs = [ "driver" ]
+}
+
+package("wlan") {
+  deps = [
+    ":wlan_driver",
+  ]
+
+  drivers = [ {
+        name = "wlan.so"
+      } ]
+}

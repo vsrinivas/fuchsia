@@ -1,0 +1,115 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":mac_tests",
+    ":scanner_tests",
+    ":common_tests",
+  ]
+}
+
+source_set("test_main") {
+  testonly = true
+
+  sources = [
+    "test_main.cpp",
+  ]
+
+  deps = [
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//drivers/wifi/wlan:wlan_config" ]
+}
+
+executable("mac_tests") {
+  output_name = "wlan_mac_unittest"
+
+  testonly = true
+
+  sources = [
+    "element_unittest.cpp",
+    "mac_frame_unittest.cpp",
+  ]
+
+  deps = [
+    ":test_main",
+    "//drivers/wifi/wlan:mlme",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//drivers/wifi/wlan:wlan_config" ]
+}
+
+executable("scanner_tests") {
+  output_name = "wlan_scanner_unittest"
+
+  testonly = true
+
+  sources = [
+    "scanner_unittest.cpp",
+  ]
+
+  deps = [
+    ":test_main",
+    "//drivers/wifi/wlan:mlme",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//drivers/wifi/wlan:wlan_config" ]
+}
+
+executable("common_tests") {
+  output_name = "wlan_common_unittest"
+
+  testonly = true
+
+  sources = [
+    "moving_average_unittest.cpp",
+  ]
+
+  deps = [
+    ":test_main",
+    "//drivers/wifi/common",
+    "//third_party/gtest",
+  ]
+}
+
+package("wlan_tests") {
+  testonly = true
+
+  deps = [
+    ":tests",
+    "//drivers/wifi/testing",
+  ]
+
+  binaries = [
+    {
+      name = "wlan-testutil"
+    },
+  ]
+
+  tests = [
+    {
+      name = "wlan_mac_unittest"
+    },
+
+    {
+      name = "wlan_scanner_unittest"
+    },
+
+    {
+      name = "wlan_common_unittest"
+    },
+
+  ]
+
+  drivers = [ {
+        name = "wlan-testdev.so"
+      } ]
+}

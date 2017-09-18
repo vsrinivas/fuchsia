@@ -1,0 +1,62 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//packages/package.gni")
+
+driver_module("ralink_driver") {
+  output_name = "ralink"
+
+  sources = [
+    "binding.c",
+    "device.cpp",
+    "device.h",
+    "driver.cpp",
+    "register.h",
+    "ralink.h",
+  ]
+
+  defines = [ "ZX_DEBUGLEVEL=2" ]
+
+  deps = [
+    "//drivers/wifi/common",
+    "//zircon/system/ulib/ddktl",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/fbl",
+  ]
+
+  libs = [
+    "ddk",
+    "driver",
+    "sync",
+  ]
+}
+
+copy("ralink-firmware") {
+  sources = [
+    "firmware/rt2870.bin",
+  ]
+  outputs = [
+    "$root_out_dir/firmware/rt2870.bin",
+  ]
+}
+
+package("ralink") {
+  deps = [
+    ":ralink_driver",
+
+    # The copy step has to be in the shared-library toolchain to use the
+    # expected output directory, since we treat firmware blobs as if they
+    # were libraries which always use the shared-library toolchain to build.
+    ":ralink-firmware($shlib_toolchain)",
+  ]
+
+  drivers = [ {
+        name = "ralink.so"
+      } ]
+
+  libraries = [ {
+        name = "firmware/rt2870.bin"
+      } ]
+}
