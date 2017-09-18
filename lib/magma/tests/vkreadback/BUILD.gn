@@ -7,12 +7,16 @@ import("//magma/gnbuild/magma.gni")
 use_vulkan_loader = false
 
 executable("vkreadback") {
+  testonly = true
+
   sources = [
+    "main.cc",
     "vkreadback.cc",
   ]
 
   public_deps = [
     "$magma_build_root/src/magma_util",
+    "//third_party/gtest",
   ]
 
   if (use_vulkan_loader) {
@@ -23,6 +27,7 @@ executable("vkreadback") {
       "$mesa_build_root:magma_vulkan",
     ]
   }
+  libs = [ "zircon" ]
 }
 
 executable("mt_create_vkdevice_loop") {
@@ -42,26 +47,4 @@ executable("mt_create_vkdevice_loop") {
       "$mesa_build_root:magma_vulkan",
     ]
   }
-}
-
-executable("vk_import_export_readback") {
-  sources = [
-    "vkreadback.cc",
-  ]
-
-  defines = [ "MAGMA_TEST_IMPORT_EXPORT" ]
-
-  public_deps = [
-    "$magma_build_root/src/magma_util",
-  ]
-
-  if (use_vulkan_loader) {
-    public_deps += [ "$magma_build_root:vulkan" ]
-  } else {
-    public_deps += [
-      "$magma_build_root/tests/vulkan_shim",
-      "$mesa_build_root:magma_vulkan",
-    ]
-  }
-  libs = [ "zircon" ]
 }

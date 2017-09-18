@@ -1,22 +1,25 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#include "gtest/gtest.h"
 
 #if defined(MAGMA_USE_SHIM)
 #include "vulkan_shim.h"
 #else
 #include <vulkan/vulkan.h>
 #endif
-#include <zircon/syscalls.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
+#include <zircon/syscalls.h>
 
+#include "fdio/io.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
-#include "fdio/io.h"
+
+namespace {
 
 class VkReadbackTest {
 public:
@@ -146,9 +149,9 @@ bool VkReadbackTest::InitVulkan()
 
     VkDeviceQueueCreateInfo queue_create_info = {.sType =
                                                      VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-                                                     .pNext = nullptr,
-                                                     .flags = 0,
-                                                     .queueFamilyIndex = 0,
+                                                 .pNext = nullptr,
+                                                 .flags = 0,
+                                                 .queueFamilyIndex = 0,
                                                  .queueCount = 1,
                                                  .pQueuePriorities = queue_priorities};
 
@@ -295,7 +298,8 @@ bool VkReadbackTest::InitImage()
             return DRETF(false, "vkGetMemoryFdKHR failed");
 
         VkMemoryFdPropertiesKHR properties{
-            .sType = VK_STRUCTURE_TYPE_MEMORY_FD_PROPERTIES_KHR, .pNext = nullptr,
+            .sType = VK_STRUCTURE_TYPE_MEMORY_FD_PROPERTIES_KHR,
+            .pNext = nullptr,
         };
         // 'handleType must not be one of the handle types defined as opaque.'
         result = vk_get_memory_fd_properties_khr_(
@@ -334,7 +338,8 @@ bool VkReadbackTest::InitImage()
             return DRETF(false, "vkGetMemoryFuchsiaHandleKHR failed");
 
         VkMemoryFuchsiaHandlePropertiesKHR properties{
-            .sType = VK_STRUCTURE_TYPE_MEMORY_FUCHSIA_HANDLE_PROPERTIES_KHR, .pNext = nullptr,
+            .sType = VK_STRUCTURE_TYPE_MEMORY_FUCHSIA_HANDLE_PROPERTIES_KHR,
+            .pNext = nullptr,
         };
         result = vk_get_memory_fuchsia_handle_properties_khr_(
             vk_device_, VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR, handle, &properties);
@@ -349,7 +354,7 @@ bool VkReadbackTest::InitImage()
     void* addr;
     if ((result = vkMapMemory(vk_device_, vk_device_memory_, 0, VK_WHOLE_SIZE, 0, &addr)) !=
         VK_SUCCESS)
-        return DRETF(false, "vkMapMeory failed: %d", result);
+        return DRETF(false, "vkMapMemory failed: %d", result);
 
     memset(addr, 0xab, memory_reqs.size);
 
@@ -466,9 +471,9 @@ bool VkReadbackTest::Readback()
         }
     }
     if (mismatches) {
-        magma::log(magma::LOG_WARNING, "****** Test Failed! %d mismatches", mismatches);
+        DLOG("****** Test Failed! %d mismatches", mismatches);
     } else {
-        magma::log(magma::LOG_INFO, "****** Test Passed! All values matched.");
+        DLOG("****** Test Passed! All values matched.");
     }
 
     vkUnmapMemory(vk_device_, vk_device_memory);
@@ -476,53 +481,36 @@ bool VkReadbackTest::Readback()
     return mismatches == 0;
 }
 
-int test_import_export(VkReadbackTest::Extension ext)
+TEST(Vulkan, Readback)
 {
-    VkReadbackTest export_app(ext);
-    VkReadbackTest import_app(ext);
+    VkReadbackTest test;
+    ASSERT_TRUE(test.Initialize());
+    ASSERT_TRUE(test.Exec());
+    ASSERT_TRUE(test.Readback());
+}
 
-    if (!export_app.Initialize())
-        return DRET_MSG(-1, "could not initialize export app");
+TEST(Vulkan, ReadbackExternalMemoryFD)
+{
+    VkReadbackTest export_app(VkReadbackTest::EXTERNAL_MEMORY_FD);
+    VkReadbackTest import_app(VkReadbackTest::EXTERNAL_MEMORY_FD);
 
+    ASSERT_TRUE(export_app.Initialize());
     import_app.set_device_memory_handle(export_app.get_device_memory_handle());
-
-    if (!import_app.Initialize())
-        return DRET_MSG(-1, "could not initialize import app");
-
-    if (!export_app.Exec())
-        return DRET_MSG(-1, "Exec failed");
-
-    if (!import_app.Readback())
-        return DRET_MSG(-1, "Readback failed");
-
-    return 0;
+    ASSERT_TRUE(import_app.Initialize());
+    ASSERT_TRUE(export_app.Exec());
+    ASSERT_TRUE(import_app.Readback());
 }
 
-int main(void)
+TEST(Vulkan, ReadbackExternalMemoryFuchsia)
 {
-#if defined(MAGMA_USE_SHIM)
-    VulkanShimInit();
-#endif
+    VkReadbackTest export_app(VkReadbackTest::EXTERNAL_MEMORY_FUCHSIA);
+    VkReadbackTest import_app(VkReadbackTest::EXTERNAL_MEMORY_FUCHSIA);
 
-#if defined(MAGMA_TEST_IMPORT_EXPORT)
-    int result = test_import_export(VkReadbackTest::EXTERNAL_MEMORY_FD);
-    if (result != 0)
-        return result;
-
-    return test_import_export(VkReadbackTest::EXTERNAL_MEMORY_FUCHSIA);
-
-#else
-    VkReadbackTest app;
-
-    if (!app.Initialize())
-        return DRET_MSG(-1, "could not initialize app");
-
-    if (!app.Exec())
-        return DRET_MSG(-1, "Exec failed");
-
-    if (!app.Readback())
-        return DRET_MSG(-1, "Readback failed");
-
-    return 0;
-#endif
+    ASSERT_TRUE(export_app.Initialize());
+    import_app.set_device_memory_handle(export_app.get_device_memory_handle());
+    ASSERT_TRUE(import_app.Initialize());
+    ASSERT_TRUE(export_app.Exec());
+    ASSERT_TRUE(import_app.Readback());
 }
+
+} // namespace
