@@ -9,7 +9,7 @@ executable("bluetooth_unittests") {
 
   deps = [
     "//apps/bluetooth/lib:tests",
-    "//apps/test_runner/src:gtest_main",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//third_party/gtest",
   ]
 }
