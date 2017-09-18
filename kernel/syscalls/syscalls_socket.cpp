@@ -107,8 +107,6 @@ zx_status_t sys_socket_read(zx_handle_t handle, uint32_t options,
                             user_ptr<size_t> _actual) {
     LTRACEF("handle %x\n", handle);
 
-    if (options)
-
     if (!_buffer && size > 0)
         return ZX_ERR_INVALID_ARGS;
 
