@@ -187,7 +187,7 @@ zx_status_t Scanner::HandleBeaconOrProbeResponse(const Packet* packet) {
 
     // TODO(porce): Remove once we changed BSSDescription to use an internal rather than FIDL
     // representation.
-    bss->rsn.resize(0);
+    bss->rsn.reset();
 
     // Insert / update all the fields
     if (bcn->cap.ess()) {
