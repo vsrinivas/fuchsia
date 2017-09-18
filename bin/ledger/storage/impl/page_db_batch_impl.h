@@ -13,10 +13,7 @@ namespace storage {
 
 class PageDbBatchImpl : public PageDb::Batch {
  public:
-  explicit PageDbBatchImpl(std::unique_ptr<Db::Batch> batch,
-                           PageDb* db,
-                           coroutine::CoroutineService* coroutine_service,
-                           PageStorageImpl* page_storage);
+  explicit PageDbBatchImpl(std::unique_ptr<Db::Batch> batch, PageDb* db);
   ~PageDbBatchImpl() override;
 
   // Heads.
@@ -34,14 +31,10 @@ class PageDbBatchImpl : public PageDb::Batch {
                       const CommitId& commit_id) override;
 
   // Journals.
-  Status CreateJournal(coroutine::CoroutineHandler* handler,
-                       JournalType journal_type,
-                       const CommitId& base,
-                       std::unique_ptr<Journal>* journal) override;
-  Status CreateMergeJournal(coroutine::CoroutineHandler* handler,
-                            const CommitId& base,
-                            const CommitId& other,
-                            std::unique_ptr<Journal>* journal) override;
+  Status CreateJournalId(coroutine::CoroutineHandler* handler,
+                         JournalType journal_type,
+                         const CommitId& base,
+                         JournalId* journal_id) override;
   Status RemoveExplicitJournals(coroutine::CoroutineHandler* handler) override;
   Status RemoveJournal(const JournalId& journal_id) override;
 
@@ -83,8 +76,6 @@ class PageDbBatchImpl : public PageDb::Batch {
 
   std::unique_ptr<Db::Batch> batch_;
   PageDb* db_;
-  coroutine::CoroutineService* coroutine_service_;
-  PageStorageImpl* page_storage_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageDbBatchImpl);
 };

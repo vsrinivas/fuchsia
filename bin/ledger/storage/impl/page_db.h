@@ -63,19 +63,12 @@ class PageDbMutator {
                               const CommitId& commit_id) = 0;
 
   // Journals.
-  // Creates a new |Journal| with the given |base| commit id and stores it on
-  // the |journal| parameter.
-  virtual Status CreateJournal(coroutine::CoroutineHandler* handler,
-                               JournalType journal_type,
-                               const CommitId& base,
-                               std::unique_ptr<Journal>* journal) = 0;
-
-  // Creates a new |Journal| for a merge commit with |base| and |other as
-  // parents. The result is stored on the |journal| parameter.
-  virtual Status CreateMergeJournal(coroutine::CoroutineHandler* handler,
-                                    const CommitId& base,
-                                    const CommitId& other,
-                                    std::unique_ptr<Journal>* journal) = 0;
+  // Creates a new id for a journal with the given type and base commit. In a
+  // merge journal, the base commit is always the left one.
+  virtual Status CreateJournalId(coroutine::CoroutineHandler* handler,
+                                 JournalType journal_type,
+                                 const CommitId& base,
+                                 JournalId* journal_id) = 0;
 
   // Removes all information on explicit journals from the database.
   virtual Status RemoveExplicitJournals(
@@ -185,11 +178,11 @@ class PageDb : public PageDbMutator {
   virtual Status GetImplicitJournalIds(coroutine::CoroutineHandler* handler,
                                        std::vector<JournalId>* journal_ids) = 0;
 
-  // Stores the implicit journal with the given |journal_id| in the |journal|
+  // Stores the id of the base commit for the journal with the given |base|
   // parameter.
-  virtual Status GetImplicitJournal(coroutine::CoroutineHandler* handler,
-                                    const JournalId& journal_id,
-                                    std::unique_ptr<Journal>* journal) = 0;
+  virtual Status GetBaseCommitForJournal(coroutine::CoroutineHandler* handler,
+                                         const JournalId& journal_id,
+                                         CommitId* base) = 0;
 
   // Finds the value for the given |key| in the journal with the given id.
   virtual Status GetJournalValue(const JournalId& journal_id,

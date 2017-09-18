@@ -22,9 +22,7 @@ class PageStorageImpl;
 // TRANSIENT objects.
 class PageDbImpl : public PageDb {
  public:
-  PageDbImpl(coroutine::CoroutineService* coroutine_service,
-             PageStorageImpl* page_storage,
-             std::string db_path);
+  PageDbImpl(std::string db_path);
   ~PageDbImpl() override;
 
   Status Init() override;
@@ -36,9 +34,9 @@ class PageDbImpl : public PageDb {
                                std::string* storage_bytes) override;
   Status GetImplicitJournalIds(coroutine::CoroutineHandler* handler,
                                std::vector<JournalId>* journal_ids) override;
-  Status GetImplicitJournal(coroutine::CoroutineHandler* handler,
-                            const JournalId& journal_id,
-                            std::unique_ptr<Journal>* journal) override;
+  Status GetBaseCommitForJournal(coroutine::CoroutineHandler* handler,
+                                 const JournalId& journal_id,
+                                 CommitId* base) override;
   Status GetJournalValue(const JournalId& journal_id,
                          fxl::StringView key,
                          std::string* value) override;
@@ -68,14 +66,10 @@ class PageDbImpl : public PageDb {
                                fxl::StringView storage_bytes) override;
   Status RemoveCommit(coroutine::CoroutineHandler* handler,
                       const CommitId& commit_id) override;
-  Status CreateJournal(coroutine::CoroutineHandler* handler,
-                       JournalType journal_type,
-                       const CommitId& base,
-                       std::unique_ptr<Journal>* journal) override;
-  Status CreateMergeJournal(coroutine::CoroutineHandler* handler,
-                            const CommitId& base,
-                            const CommitId& other,
-                            std::unique_ptr<Journal>* journal) override;
+  Status CreateJournalId(coroutine::CoroutineHandler* handler,
+                         JournalType journal_type,
+                         const CommitId& base,
+                         JournalId* journal_id) override;
   Status RemoveExplicitJournals(coroutine::CoroutineHandler* handler) override;
   Status RemoveJournal(const JournalId& journal_id) override;
   Status AddJournalEntry(const JournalId& journal_id,
@@ -103,8 +97,6 @@ class PageDbImpl : public PageDb {
                          fxl::StringView value) override;
 
  private:
-  coroutine::CoroutineService* const coroutine_service_;
-  PageStorageImpl* const page_storage_;
   LevelDb db_;
 };
 

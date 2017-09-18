@@ -44,7 +44,7 @@ class PageDbTest : public ::test::TestWithCoroutines {
  public:
   PageDbTest()
       : page_storage_(&coroutine_service_, tmp_dir_.path(), "page_id"),
-        page_db_(&coroutine_service_, &page_storage_, tmp_dir_.path()) {}
+        page_db_(tmp_dir_.path()) {}
 
   ~PageDbTest() override {}
 
@@ -153,12 +153,15 @@ TEST_F(PageDbTest, Journals) {
   EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
     CommitId commit_id = RandomCommitId();
 
-    std::unique_ptr<Journal> implicit_journal;
+    JournalId implicit_journal_id;
+    JournalId explicit_journal_id;
     std::unique_ptr<Journal> explicit_journal;
-    EXPECT_EQ(Status::OK, page_db_.CreateJournal(handler, JournalType::IMPLICIT,
-                                                 commit_id, &implicit_journal));
-    EXPECT_EQ(Status::OK, page_db_.CreateJournal(handler, JournalType::EXPLICIT,
-                                                 commit_id, &explicit_journal));
+    EXPECT_EQ(Status::OK,
+              page_db_.CreateJournalId(handler, JournalType::IMPLICIT,
+                                       commit_id, &implicit_journal_id));
+    EXPECT_EQ(Status::OK,
+              page_db_.CreateJournalId(handler, JournalType::EXPLICIT,
+                                       commit_id, &explicit_journal_id));
 
     EXPECT_EQ(Status::OK, page_db_.RemoveExplicitJournals(handler));
 
@@ -166,14 +169,16 @@ TEST_F(PageDbTest, Journals) {
     std::vector<JournalId> journal_ids;
     EXPECT_EQ(Status::OK,
               page_db_.GetImplicitJournalIds(handler, &journal_ids));
-    EXPECT_EQ(1u, journal_ids.size());
+    ASSERT_EQ(1u, journal_ids.size());
+    EXPECT_EQ(implicit_journal_id, journal_ids[0]);
 
-    std::unique_ptr<Journal> found_journal;
-    EXPECT_EQ(Status::OK, page_db_.GetImplicitJournal(handler, journal_ids[0],
-                                                      &found_journal));
+    CommitId found_base_id;
+    EXPECT_EQ(Status::OK, page_db_.GetBaseCommitForJournal(
+                              handler, journal_ids[0], &found_base_id));
+    EXPECT_EQ(commit_id, found_base_id);
     EXPECT_EQ(Status::OK, page_db_.RemoveJournal(journal_ids[0]));
-    EXPECT_EQ(Status::NOT_FOUND, page_db_.GetImplicitJournal(
-                                     handler, journal_ids[0], &found_journal));
+    EXPECT_EQ(Status::NOT_FOUND, page_db_.GetBaseCommitForJournal(
+                                     handler, journal_ids[0], &found_base_id));
     EXPECT_EQ(Status::OK,
               page_db_.GetImplicitJournalIds(handler, &journal_ids));
     EXPECT_EQ(0u, journal_ids.size());
@@ -184,20 +189,21 @@ TEST_F(PageDbTest, JournalEntries) {
   EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
     CommitId commit_id = RandomCommitId();
 
-    std::unique_ptr<Journal> implicit_journal;
-    EXPECT_EQ(Status::OK, page_db_.CreateJournal(handler, JournalType::IMPLICIT,
-                                                 commit_id, &implicit_journal));
+    JournalId journal_id;
     EXPECT_EQ(Status::OK,
-              page_db_.AddJournalEntry(implicit_journal->GetId(), "add-key-1",
-                                       "value1", KeyPriority::LAZY));
+              page_db_.CreateJournalId(handler, JournalType::IMPLICIT,
+                                       commit_id, &journal_id));
     EXPECT_EQ(Status::OK,
-              page_db_.AddJournalEntry(implicit_journal->GetId(), "add-key-2",
-                                       "value2", KeyPriority::EAGER));
+              page_db_.AddJournalEntry(journal_id, "add-key-1", "value1",
+                                       KeyPriority::LAZY));
     EXPECT_EQ(Status::OK,
-              page_db_.AddJournalEntry(implicit_journal->GetId(), "add-key-1",
-                                       "value3", KeyPriority::LAZY));
-    EXPECT_EQ(Status::OK, page_db_.RemoveJournalEntry(implicit_journal->GetId(),
-                                                      "remove-key"));
+              page_db_.AddJournalEntry(journal_id, "add-key-2", "value2",
+                                       KeyPriority::EAGER));
+    EXPECT_EQ(Status::OK,
+              page_db_.AddJournalEntry(journal_id, "add-key-1", "value3",
+                                       KeyPriority::LAZY));
+    EXPECT_EQ(Status::OK,
+              page_db_.RemoveJournalEntry(journal_id, "remove-key"));
 
     EntryChange expected_changes[] = {
         NewEntryChange("add-key-1", "value3", KeyPriority::LAZY),
@@ -205,10 +211,7 @@ TEST_F(PageDbTest, JournalEntries) {
         NewRemoveEntryChange("remove-key"),
     };
     std::unique_ptr<Iterator<const EntryChange>> entries;
-    EXPECT_EQ(Status::OK,
-              page_db_.GetJournalEntries(
-                  static_cast<JournalImpl*>(implicit_journal.get())->GetId(),
-                  &entries));
+    EXPECT_EQ(Status::OK, page_db_.GetJournalEntries(journal_id, &entries));
     for (const auto& expected_change : expected_changes) {
       EXPECT_TRUE(entries->Valid());
       ExpectChangesEqual(expected_change, **entries);

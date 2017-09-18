@@ -28,10 +28,9 @@ Status PageDbEmptyImpl::GetImplicitJournalIds(
     std::vector<JournalId>* /*journal_ids*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::GetImplicitJournal(
-    CoroutineHandler* /*handler*/,
-    const JournalId& /*journal_id*/,
-    std::unique_ptr<Journal>* /*journal*/) {
+Status PageDbEmptyImpl::GetBaseCommitForJournal(CoroutineHandler* /*handler*/,
+                                                const JournalId& /*journal_id*/,
+                                                CommitId* /*base*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::GetJournalValue(const JournalId& /*journal_id*/,
@@ -93,17 +92,10 @@ Status PageDbEmptyImpl::RemoveCommit(CoroutineHandler* /*handler*/,
                                      const CommitId& /*commit_id*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::CreateJournal(CoroutineHandler* /*handler*/,
-                                      JournalType /*journal_type*/,
-                                      const CommitId& /*base*/,
-                                      std::unique_ptr<Journal>* /*journal*/) {
-  return Status::NOT_IMPLEMENTED;
-}
-Status PageDbEmptyImpl::CreateMergeJournal(
-    CoroutineHandler* /*handler*/,
-    const CommitId& /*base*/,
-    const CommitId& /*other*/,
-    std::unique_ptr<Journal>* /*journal*/) {
+Status PageDbEmptyImpl::CreateJournalId(CoroutineHandler* /*handler*/,
+                                        JournalType /*journal_type*/,
+                                        const CommitId& /*base*/,
+                                        JournalId* /*journal*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::RemoveExplicitJournals(CoroutineHandler* /*handler*/) {

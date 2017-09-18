@@ -80,9 +80,16 @@ struct StringPointerComparator {
 PageStorageImpl::PageStorageImpl(coroutine::CoroutineService* coroutine_service,
                                  std::string page_dir,
                                  PageId page_id)
+    : PageStorageImpl(coroutine_service,
+                      std::make_unique<PageDbImpl>(page_dir + kLevelDbDir),
+                      std::move(page_id)) {}
+
+PageStorageImpl::PageStorageImpl(coroutine::CoroutineService* coroutine_service,
+                                 std::unique_ptr<PageDb> page_db,
+                                 PageId page_id)
     : coroutine_service_(coroutine_service),
       page_id_(std::move(page_id)),
-      db_(coroutine_service, this, page_dir + kLevelDbDir),
+      db_(std::move(page_db)),
       page_sync_(nullptr) {}
 
 PageStorageImpl::~PageStorageImpl() {
@@ -120,7 +127,7 @@ void PageStorageImpl::GetHeadCommitIds(
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
     std::vector<CommitId> commit_ids;
-    Status status = db_.GetHeads(handler, &commit_ids);
+    Status status = db_->GetHeads(handler, &commit_ids);
     callback(status, std::move(commit_ids));
   });
 }
@@ -199,10 +206,17 @@ void PageStorageImpl::StartCommit(
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
-    std::unique_ptr<Journal> journal;
+    JournalId journal_id;
     Status status =
-        db_.CreateJournal(handler, journal_type, commit_id, &journal);
-    callback(status, std::move(journal));
+        db_->CreateJournalId(handler, journal_type, commit_id, &journal_id);
+    if (status != Status::OK) {
+      callback(status, nullptr);
+      return;
+    }
+
+    std::unique_ptr<Journal> journal = JournalImpl::Simple(
+        journal_type, coroutine_service_, this, journal_id, commit_id);
+    callback(Status::OK, std::move(journal));
   });
 }
 
@@ -216,9 +230,17 @@ void PageStorageImpl::StartMergeCommit(
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
-    std::unique_ptr<Journal> journal;
-    Status status = db_.CreateMergeJournal(handler, left, right, &journal);
-    callback(status, std::move(journal));
+    JournalId journal_id;
+    Status status =
+        db_->CreateJournalId(handler, JournalType::EXPLICIT, left, &journal_id);
+    if (status != Status::OK) {
+      callback(status, nullptr);
+      return;
+    }
+
+    std::unique_ptr<Journal> journal =
+        JournalImpl::Merge(coroutine_service_, this, journal_id, left, right);
+    callback(Status::OK, std::move(journal));
   });
 }
 
@@ -292,14 +314,14 @@ void PageStorageImpl::MarkCommitSynced(const CommitId& commit_id,
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
-    callback(db_.MarkCommitIdSynced(handler, commit_id));
+    callback(db_->MarkCommitIdSynced(handler, commit_id));
   });
 }
 
 void PageStorageImpl::GetUnsyncedPieces(
     std::function<void(Status, std::vector<ObjectId>)> callback) {
   std::vector<ObjectId> unsynced_object_ids;
-  Status s = db_.GetUnsyncedPieces(&unsynced_object_ids);
+  Status s = db_->GetUnsyncedPieces(&unsynced_object_ids);
   callback(s, unsynced_object_ids);
 }
 
@@ -312,7 +334,7 @@ void PageStorageImpl::MarkPieceSynced(ObjectIdView object_id,
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
     callback(
-        db_.SetObjectStatus(handler, object_id, PageDbObjectStatus::SYNCED));
+        db_->SetObjectStatus(handler, object_id, PageDbObjectStatus::SYNCED));
   });
 }
 
@@ -449,7 +471,7 @@ void PageStorageImpl::GetPiece(
   }
 
   std::unique_ptr<const Object> object;
-  Status status = db_.ReadObject(object_id.ToString(), &object);
+  Status status = db_->ReadObject(object_id.ToString(), &object);
   callback(status, std::move(object));
 }
 
@@ -463,13 +485,13 @@ void PageStorageImpl::SetSyncMetadata(fxl::StringView key,
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
-    callback(db_.SetSyncMetadata(handler, key, value));
+    callback(db_->SetSyncMetadata(handler, key, value));
   });
 }
 
 Status PageStorageImpl::GetSyncMetadata(fxl::StringView key,
                                         std::string* value) {
-  return db_.GetSyncMetadata(key, value);
+  return db_->GetSyncMetadata(key, value);
 }
 
 void PageStorageImpl::GetCommitContents(const Commit& commit,
@@ -530,7 +552,7 @@ void PageStorageImpl::GetJournalEntries(
     std::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>)>
         callback) {
   std::unique_ptr<Iterator<const EntryChange>> entries;
-  Status s = db_.GetJournalEntries(journal_id, &entries);
+  Status s = db_->GetJournalEntries(journal_id, &entries);
   callback(s, std::move(entries));
 }
 
@@ -539,18 +561,18 @@ void PageStorageImpl::AddJournalEntry(const JournalId& journal_id,
                                       fxl::StringView value,
                                       KeyPriority priority,
                                       std::function<void(Status)> callback) {
-  callback(db_.AddJournalEntry(journal_id, key, value, priority));
+  callback(db_->AddJournalEntry(journal_id, key, value, priority));
 }
 
 void PageStorageImpl::RemoveJournalEntry(const JournalId& journal_id,
                                          convert::ExtendedStringView key,
                                          std::function<void(Status)> callback) {
-  callback(db_.RemoveJournalEntry(journal_id, key));
+  callback(db_->RemoveJournalEntry(journal_id, key));
 }
 
 void PageStorageImpl::RemoveJournal(const JournalId& journal_id,
                                     std::function<void(Status)> callback) {
-  callback(db_.RemoveJournal(journal_id));
+  callback(db_->RemoveJournal(journal_id));
 }
 
 void PageStorageImpl::NotifyWatchers() {
@@ -575,7 +597,7 @@ Status PageStorageImpl::MarkAllPiecesLocal(CoroutineHandler* handler,
     batch->SetObjectStatus(handler, object_id, PageDbObjectStatus::LOCAL);
     if (GetObjectIdType(object_id) == ObjectIdType::INDEX_HASH) {
       std::unique_ptr<const Object> object;
-      Status status = db_.ReadObject(object_id, &object);
+      Status status = db_->ReadObject(object_id, &object);
       if (status != Status::OK) {
         return status;
       }
@@ -612,7 +634,7 @@ Status PageStorageImpl::ContainsCommit(CoroutineHandler* handler,
     return Status::OK;
   }
   std::string bytes;
-  return db_.GetCommitStorageBytes(handler, id, &bytes);
+  return db_->GetCommitStorageBytes(handler, id, &bytes);
 }
 
 bool PageStorageImpl::IsFirstCommit(CommitIdView id) {
@@ -677,7 +699,7 @@ void PageStorageImpl::DownloadFullObject(ObjectIdView object_id,
         }
 
         auto id_string = id.ToString();
-        Status status = db_.ReadObject(id_string, nullptr);
+        Status status = db_->ReadObject(id_string, nullptr);
         if (status == Status::NOT_FOUND) {
           DownloadFullObject(id_string, waiter->NewCallback());
           return Status::OK;
@@ -733,7 +755,7 @@ bool PageStorageImpl::ObjectIsUntracked(ObjectIdView object_id) {
   }
 
   PageDbObjectStatus object_status;
-  Status status = db_.GetObjectStatus(object_id, &object_status);
+  Status status = db_->GetObjectStatus(object_id, &object_status);
   FXL_DCHECK(status == Status::OK);
   return object_status == PageDbObjectStatus::TRANSIENT;
 }
@@ -888,26 +910,26 @@ void PageStorageImpl::ReadDataSource(
 
 Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
   // Initialize PageDb.
-  Status s = db_.Init();
+  Status s = db_->Init();
   if (s != Status::OK) {
     return s;
   }
 
   // Add the default page head if this page is empty.
   std::vector<CommitId> heads;
-  s = db_.GetHeads(handler, &heads);
+  s = db_->GetHeads(handler, &heads);
   if (s != Status::OK) {
     return s;
   }
   if (heads.empty()) {
-    s = db_.AddHead(handler, kFirstPageCommitId, 0);
+    s = db_->AddHead(handler, kFirstPageCommitId, 0);
     if (s != Status::OK) {
       return s;
     }
   }
 
   // Remove uncommited explicit journals.
-  if (db_.RemoveExplicitJournals(handler) == Status::INTERRUPTED) {
+  if (db_->RemoveExplicitJournals(handler) == Status::INTERRUPTED) {
     // Only fail if the handler is invalidated. Otherwise, failure to remove
     // explicit journals should not block the initalization.
     return Status::INTERRUPTED;
@@ -915,20 +937,22 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
 
   // Commit uncommited implicit journals.
   std::vector<JournalId> journal_ids;
-  s = db_.GetImplicitJournalIds(handler, &journal_ids);
+  s = db_->GetImplicitJournalIds(handler, &journal_ids);
   if (s != Status::OK) {
     return s;
   }
 
   auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
   for (JournalId& id : journal_ids) {
-    std::unique_ptr<Journal> journal;
-    s = db_.GetImplicitJournal(handler, id, &journal);
+    CommitId base;
+    s = db_->GetBaseCommitForJournal(handler, id, &base);
     if (s != Status::OK) {
       FXL_LOG(ERROR) << "Failed to get implicit journal with status " << s
                      << ". journal id: " << id;
       return s;
     }
+    std::unique_ptr<Journal> journal = JournalImpl::Simple(
+        JournalType::IMPLICIT, coroutine_service_, this, id, base);
 
     CommitJournal(
         std::move(journal), [status_callback = waiter->NewCallback()](
@@ -970,7 +994,7 @@ Status PageStorageImpl::SynchronousGetCommit(
     return s;
   }
   std::string bytes;
-  Status s = db_.GetCommitStorageBytes(handler, commit_id, &bytes);
+  Status s = db_->GetCommitStorageBytes(handler, commit_id, &bytes);
   if (s != Status::OK) {
     return s;
   }
@@ -1068,7 +1092,7 @@ Status PageStorageImpl::SynchronousGetUnsyncedCommits(
     CoroutineHandler* handler,
     std::vector<std::unique_ptr<const Commit>>* unsynced_commits) {
   std::vector<CommitId> commit_ids;
-  Status s = db_.GetUnsyncedCommitIds(handler, &commit_ids);
+  Status s = db_->GetUnsyncedCommitIds(handler, &commit_ids);
   if (s != Status::OK) {
     return s;
   }
@@ -1098,7 +1122,7 @@ Status PageStorageImpl::SynchronousGetUnsyncedCommits(
 
 Status PageStorageImpl::SynchronousMarkCommitSynced(CoroutineHandler* handler,
                                                     const CommitId& commit_id) {
-  return db_.MarkCommitIdSynced(handler, commit_id);
+  return db_->MarkCommitIdSynced(handler, commit_id);
 }
 
 Status PageStorageImpl::SynchronousAddCommits(
@@ -1108,7 +1132,7 @@ Status PageStorageImpl::SynchronousAddCommits(
     std::vector<ObjectId> new_objects,
     bool* notify_watchers) {
   // Apply all changes atomically.
-  std::unique_ptr<PageDb::Batch> batch = db_.StartBatch();
+  std::unique_ptr<PageDb::Batch> batch = db_->StartBatch();
   std::set<const CommitId*, StringPointerComparator> added_commits;
   std::vector<std::unique_ptr<const Commit>> commits_to_send;
 
@@ -1176,8 +1200,8 @@ Status PageStorageImpl::SynchronousAddCommits(
         }
 
         if (source == ChangeSource::LOCAL) {
-          s = db_.MarkCommitIdUnsynced(handler, commit->GetId(),
-                                       commit->GetGeneration());
+          s = db_->MarkCommitIdUnsynced(handler, commit->GetId(),
+                                        commit->GetGeneration());
           if (s != Status::OK) {
             return s;
           }
@@ -1254,12 +1278,12 @@ Status PageStorageImpl::SynchronousAddPiece(
       ComputeObjectId(GetObjectType(GetObjectIdType(object_id)), data->Get()));
 
   std::unique_ptr<const Object> object;
-  Status status = db_.ReadObject(object_id, &object);
+  Status status = db_->ReadObject(object_id, &object);
   if (status == Status::NOT_FOUND) {
     PageDbObjectStatus object_status =
         (source == ChangeSource::LOCAL ? PageDbObjectStatus::TRANSIENT
                                        : PageDbObjectStatus::SYNCED);
-    return db_.WriteObject(handler, object_id, std::move(data), object_status);
+    return db_->WriteObject(handler, object_id, std::move(data), object_status);
   }
   return status;
 }

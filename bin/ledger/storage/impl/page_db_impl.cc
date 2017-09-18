@@ -14,7 +14,6 @@
 #include "apps/ledger/src/storage/impl/number_serialization.h"
 #include "apps/ledger/src/storage/impl/object_impl.h"
 #include "apps/ledger/src/storage/impl/page_db_batch_impl.h"
-#include "apps/ledger/src/storage/impl/page_storage_impl.h"
 #include "lib/fxl/strings/concatenate.h"
 
 #define RETURN_ON_ERROR(expr)   \
@@ -112,14 +111,7 @@ class JournalEntryIterator : public Iterator<const EntryChange> {
 
 }  // namespace
 
-PageDbImpl::PageDbImpl(coroutine::CoroutineService* coroutine_service,
-                       PageStorageImpl* page_storage,
-                       std::string db_path)
-    : coroutine_service_(coroutine_service),
-      page_storage_(page_storage),
-      db_(std::move(db_path)) {
-  FXL_DCHECK(page_storage);
-}
+PageDbImpl::PageDbImpl(std::string db_path) : db_(std::move(db_path)) {}
 
 PageDbImpl::~PageDbImpl() {}
 
@@ -128,8 +120,7 @@ Status PageDbImpl::Init() {
 }
 
 std::unique_ptr<PageDb::Batch> PageDbImpl::StartBatch() {
-  return std::make_unique<PageDbBatchImpl>(db_.StartBatch(), this,
-                                           coroutine_service_, page_storage_);
+  return std::make_unique<PageDbBatchImpl>(db_.StartBatch(), this);
 }
 
 Status PageDbImpl::GetHeads(CoroutineHandler* /*handler*/,
@@ -153,17 +144,12 @@ Status PageDbImpl::GetImplicitJournalIds(CoroutineHandler* /*handler*/,
                          journal_ids);
 }
 
-Status PageDbImpl::GetImplicitJournal(CoroutineHandler* /*handler*/,
-                                      const JournalId& journal_id,
-                                      std::unique_ptr<Journal>* journal) {
+Status PageDbImpl::GetBaseCommitForJournal(CoroutineHandler* /*handler*/,
+                                           const JournalId& journal_id,
+                                           CommitId* base) {
   FXL_DCHECK(journal_id.size() == JournalEntryRow::kJournalIdSize);
   FXL_DCHECK(journal_id[0] == JournalEntryRow::kImplicitPrefix);
-  CommitId base;
-  RETURN_ON_ERROR(
-      db_.Get(ImplicitJournalMetaRow::GetKeyFor(journal_id), &base));
-  *journal = JournalImpl::Simple(JournalType::IMPLICIT, coroutine_service_,
-                                 page_storage_, journal_id, base);
-  return Status::OK;
+  return db_.Get(ImplicitJournalMetaRow::GetKeyFor(journal_id), base);
 }
 
 Status PageDbImpl::GetJournalValue(const JournalId& journal_id,
@@ -280,21 +266,12 @@ Status PageDbImpl::RemoveCommit(CoroutineHandler* handler,
   return batch->Execute();
 }
 
-Status PageDbImpl::CreateJournal(CoroutineHandler* handler,
-                                 JournalType journal_type,
-                                 const CommitId& base,
-                                 std::unique_ptr<Journal>* journal) {
+Status PageDbImpl::CreateJournalId(coroutine::CoroutineHandler* handler,
+                                   JournalType journal_type,
+                                   const CommitId& base,
+                                   JournalId* journal_id) {
   auto batch = StartBatch();
-  batch->CreateJournal(handler, journal_type, base, journal);
-  return batch->Execute();
-}
-
-Status PageDbImpl::CreateMergeJournal(CoroutineHandler* handler,
-                                      const CommitId& base,
-                                      const CommitId& other,
-                                      std::unique_ptr<Journal>* journal) {
-  auto batch = StartBatch();
-  batch->CreateMergeJournal(handler, base, other, journal);
+  batch->CreateJournalId(handler, journal_type, base, journal_id);
   return batch->Execute();
 }
 

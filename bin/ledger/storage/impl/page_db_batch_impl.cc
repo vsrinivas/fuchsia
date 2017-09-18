@@ -15,14 +15,8 @@ namespace storage {
 
 using coroutine::CoroutineHandler;
 
-PageDbBatchImpl::PageDbBatchImpl(std::unique_ptr<Db::Batch> batch,
-                                 PageDb* db,
-                                 coroutine::CoroutineService* coroutine_service,
-                                 PageStorageImpl* page_storage)
-    : batch_(std::move(batch)),
-      db_(db),
-      coroutine_service_(coroutine_service),
-      page_storage_(page_storage) {}
+PageDbBatchImpl::PageDbBatchImpl(std::unique_ptr<Db::Batch> batch, PageDb* db)
+    : batch_(std::move(batch)), db_(db) {}
 
 PageDbBatchImpl::~PageDbBatchImpl() {}
 
@@ -48,27 +42,21 @@ Status PageDbBatchImpl::RemoveCommit(CoroutineHandler* /*handler*/,
   return batch_->Delete(CommitRow::GetKeyFor(commit_id));
 }
 
-Status PageDbBatchImpl::CreateJournal(CoroutineHandler* /*handler*/,
-                                      JournalType journal_type,
-                                      const CommitId& base,
-                                      std::unique_ptr<Journal>* journal) {
+Status PageDbBatchImpl::CreateJournalId(coroutine::CoroutineHandler* handler,
+                                        JournalType journal_type,
+                                        const CommitId& base,
+                                        JournalId* journal_id) {
   JournalId id = JournalEntryRow::NewJournalId(journal_type);
-  *journal = JournalImpl::Simple(journal_type, coroutine_service_,
-                                 page_storage_, id, base);
-  if (journal_type == JournalType::IMPLICIT) {
-    return batch_->Put(ImplicitJournalMetaRow::GetKeyFor(id), base);
-  }
-  return Status::OK;
-}
 
-Status PageDbBatchImpl::CreateMergeJournal(CoroutineHandler* /*handler*/,
-                                           const CommitId& base,
-                                           const CommitId& other,
-                                           std::unique_ptr<Journal>* journal) {
-  *journal = JournalImpl::Merge(
-      coroutine_service_, page_storage_,
-      JournalEntryRow::NewJournalId(JournalType::EXPLICIT), base, other);
-  return Status::OK;
+  Status status = Status::OK;
+  if (journal_type == JournalType::IMPLICIT) {
+    status = batch_->Put(ImplicitJournalMetaRow::GetKeyFor(id), base);
+  }
+
+  if (status == Status::OK) {
+    journal_id->swap(id);
+  }
+  return status;
 }
 
 Status PageDbBatchImpl::RemoveExplicitJournals(CoroutineHandler* /*handler*/) {

@@ -131,6 +131,10 @@ class PageStorageImpl : public PageStorage {
  private:
   friend class PageStorageImplAccessorForTest;
 
+  PageStorageImpl(coroutine::CoroutineService* coroutine_service,
+                  std::unique_ptr<PageDb> page_db,
+                  PageId page_id);
+
   // Marks all pieces needed for the given objects as local.
   Status MarkAllPiecesLocal(coroutine::CoroutineHandler* handler,
                             PageDb::Batch* batch,
@@ -219,7 +223,7 @@ class PageStorageImpl : public PageStorage {
 
   coroutine::CoroutineService* const coroutine_service_;
   const PageId page_id_;
-  PageDbImpl db_;
+  std::unique_ptr<PageDb> db_;
   std::vector<CommitWatcher*> watchers_;
   callback::ManagedContainer managed_container_;
   PageSyncDelegate* page_sync_;

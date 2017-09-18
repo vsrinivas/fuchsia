@@ -24,9 +24,9 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
                                std::string* storage_bytes) override;
   Status GetImplicitJournalIds(coroutine::CoroutineHandler* handler,
                                std::vector<JournalId>* journal_ids) override;
-  Status GetImplicitJournal(coroutine::CoroutineHandler* handler,
-                            const JournalId& journal_id,
-                            std::unique_ptr<Journal>* journal) override;
+  Status GetBaseCommitForJournal(coroutine::CoroutineHandler* handler,
+                                 const JournalId& journal_id,
+                                 CommitId* base) override;
   Status GetJournalValue(const JournalId& journal_id,
                          fxl::StringView key,
                          std::string* value) override;
@@ -58,14 +58,10 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
                                fxl::StringView storage_bytes) override;
   Status RemoveCommit(coroutine::CoroutineHandler* handler,
                       const CommitId& commit_id) override;
-  Status CreateJournal(coroutine::CoroutineHandler* handler,
-                       JournalType journal_type,
-                       const CommitId& base,
-                       std::unique_ptr<Journal>* journal) override;
-  Status CreateMergeJournal(coroutine::CoroutineHandler* handler,
-                            const CommitId& base,
-                            const CommitId& other,
-                            std::unique_ptr<Journal>* journal) override;
+  Status CreateJournalId(coroutine::CoroutineHandler* handler,
+                         JournalType journal_type,
+                         const CommitId& base,
+                         JournalId* journal) override;
   Status RemoveExplicitJournals(coroutine::CoroutineHandler* handler) override;
   Status RemoveJournal(const JournalId& journal_id) override;
   Status AddJournalEntry(const JournalId& journal_id,
