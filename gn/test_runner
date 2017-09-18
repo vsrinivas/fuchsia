@@ -3,7 +3,7 @@
         "cpp"
     ],
     "labels": [
-        "//apps/test_runner"
+        "//garnet/bin/test_runner"
     ],
     "binaries": [
         {

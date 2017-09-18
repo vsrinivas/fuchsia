@@ -6,7 +6,7 @@
         "boot_test_runner"
     ],
     "labels": [
-        "//apps/test_runner/src/test"
+        "//garnet/bin/test_runner/test"
     ],
     "binaries": [
         {
