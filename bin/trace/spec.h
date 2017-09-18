@@ -5,9 +5,9 @@
 #ifndef APPS_TRACING_SRC_TRACE_SPEC_H_
 #define APPS_TRACING_SRC_TRACE_SPEC_H_
 
-#include "apps/tracing/lib/measure/duration.h"
-#include "apps/tracing/lib/measure/measurements.h"
-#include "apps/tracing/lib/measure/time_between.h"
+#include "garnet/lib/measure/duration.h"
+#include "garnet/lib/measure/measurements.h"
+#include "garnet/lib/measure/time_between.h"
 
 #include <string>
 #include <vector>

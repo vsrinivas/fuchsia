@@ -13,10 +13,10 @@
 #include <zx/socket.h>
 #include <zx/vmo.h>
 
-#include "apps/tracing/lib/trace/provider.h"
-#include "apps/tracing/lib/trace/settings.h"
-#include "apps/tracing/services/trace_provider.fidl.h"
-#include "apps/tracing/services/trace_registry.fidl.h"
+#include "garnet/lib/trace/provider.h"
+#include "garnet/lib/trace/settings.h"
+#include "lib/tracing/fidl/trace_provider.fidl.h"
+#include "lib/tracing/fidl/trace_registry.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"

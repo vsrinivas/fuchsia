@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/tracing/src/ktrace_provider/log_importer.h"
+#include "garnet/bin/ktrace_provider/log_importer.h"
 
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>

@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include "apps/tracing/src/trace_manager/trace_provider_bundle.h"
+#include "garnet/bin/trace_manager/trace_provider_bundle.h"
 
 namespace tracing {
 

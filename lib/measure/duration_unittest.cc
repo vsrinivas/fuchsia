@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/tracing/lib/measure/duration.h"
+#include "garnet/lib/measure/duration.h"
 
 #include <string>
 #include <vector>
 
-#include "apps/tracing/lib/measure/test_events.h"
+#include "garnet/lib/measure/test_events.h"
 #include "gtest/gtest.h"
 
 namespace tracing {

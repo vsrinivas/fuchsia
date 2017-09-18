@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/tracing/lib/trace/ctypes.h"
-#include "apps/tracing/lib/trace/internal/cevent_helpers.h"
+#include "garnet/lib/trace/ctypes.h"
+#include "garnet/lib/trace/internal/cevent_helpers.h"
 
 #define TA_NULL(n) { .type = CTRACE_ARGUMENTTYPE_KNULL, .name = n, { .u64 = 0 } }
 #define TA_I32(n, x) { .type = CTRACE_ARGUMENT_INT32, .name = n, { .i32 = (x) } }

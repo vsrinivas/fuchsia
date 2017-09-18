@@ -6,8 +6,8 @@
 #include <thread>
 #include <vector>
 
-#include "apps/tracing/lib/trace/tests/cwriter_unittest.h"
-#include "apps/tracing/lib/trace/writer.h"
+#include "garnet/lib/trace/tests/cwriter_unittest.h"
+#include "garnet/lib/trace/writer.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fsl/tasks/message_loop.h"

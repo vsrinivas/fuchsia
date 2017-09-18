@@ -8,7 +8,7 @@
 #ifndef APPS_TRACING_LIB_TRACE_INTERNAL_EVENT_HELPERS_H_
 #define APPS_TRACING_LIB_TRACE_INTERNAL_EVENT_HELPERS_H_
 
-#include "apps/tracing/lib/trace/writer.h"
+#include "garnet/lib/trace/writer.h"
 
 #define TRACE_INTERNAL_ENABLED() ::tracing::writer::IsTracingEnabled()
 #define TRACE_INTERNAL_CATEGORY_ENABLED(category) \

@@ -15,7 +15,7 @@ source_set("chromium") {
   ]
 
   deps = [
-    "//apps/tracing/lib/trace:reader",
+    "//garnet/lib/trace:reader",
     "//garnet/public/lib/fxl",
     "//third_party/rapidjson",
   ]

@@ -16,7 +16,7 @@ source_set("measure") {
   ]
 
   public_deps = [
-    "//apps/tracing/lib/trace:reader",
+    "//garnet/lib/trace:reader",
     "//garnet/public/lib/fxl",
   ]
 }

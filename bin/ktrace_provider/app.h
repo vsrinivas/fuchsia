@@ -8,7 +8,7 @@
 #include <trace/observer.h>
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/tracing/src/ktrace_provider/log_importer.h"
+#include "garnet/bin/ktrace_provider/log_importer.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"

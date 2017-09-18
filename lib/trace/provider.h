@@ -6,9 +6,9 @@
 #define APPS_TRACING_LIB_TRACE_PROVIDER_H_
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/tracing/lib/trace/dump.h"
-#include "apps/tracing/lib/trace/settings.h"
-#include "apps/tracing/services/trace_registry.fidl.h"
+#include "garnet/lib/trace/dump.h"
+#include "garnet/lib/trace/settings.h"
+#include "lib/tracing/fidl/trace_registry.fidl.h"
 
 namespace tracing {
 

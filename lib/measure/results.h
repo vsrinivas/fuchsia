@@ -9,8 +9,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/tracing/lib/measure/measurements.h"
-#include "apps/tracing/lib/trace/ticks.h"
+#include "garnet/lib/measure/measurements.h"
+#include "garnet/lib/trace/ticks.h"
 
 namespace tracing {
 namespace measure {

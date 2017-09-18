@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/tracing/lib/trace/internal/cevent_helpers.h"
+#include "garnet/lib/trace/internal/cevent_helpers.h"
 
-#include "apps/tracing/lib/trace/internal/event_helpers.h"
+#include "garnet/lib/trace/internal/event_helpers.h"
 
 __BEGIN_CDECLS
 

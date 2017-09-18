@@ -7,7 +7,7 @@ module tracing;
 // The provider interface which applications must implement and register
 // with the |TraceRegistry| to participate in tracing.
 //
-// See //apps/tracing/lib/trace/provider.h for a C++ implementation of
+// See //garnet/lib/trace/provider.h for a C++ implementation of
 // this interface which can easily be configured by an application.
 [ServiceName="tracing::TraceProvider"]
 interface TraceProvider {

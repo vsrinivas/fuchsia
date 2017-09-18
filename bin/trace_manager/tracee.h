@@ -11,7 +11,7 @@
 #include <zx/socket.h>
 #include <zx/vmo.h>
 
-#include "apps/tracing/src/trace_manager/trace_provider_bundle.h"
+#include "garnet/bin/trace_manager/trace_provider_bundle.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fxl/functional/closure.h"

@@ -8,11 +8,11 @@
 #include <list>
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/tracing/services/trace_controller.fidl.h"
-#include "apps/tracing/services/trace_registry.fidl.h"
-#include "apps/tracing/src/trace_manager/config.h"
-#include "apps/tracing/src/trace_manager/trace_provider_bundle.h"
-#include "apps/tracing/src/trace_manager/trace_session.h"
+#include "lib/tracing/fidl/trace_controller.fidl.h"
+#include "lib/tracing/fidl/trace_registry.fidl.h"
+#include "garnet/bin/trace_manager/config.h"
+#include "garnet/bin/trace_manager/trace_provider_bundle.h"
+#include "garnet/bin/trace_manager/trace_session.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"

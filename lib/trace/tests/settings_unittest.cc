@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/tracing/lib/trace/settings.h"
+#include "garnet/lib/trace/settings.h"
 
 #include "gtest/gtest.h"
 #include "lib/fxl/command_line.h"

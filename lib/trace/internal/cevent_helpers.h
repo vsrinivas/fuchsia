@@ -9,7 +9,7 @@
 #include <assert.h>
 #include <zircon/compiler.h>
 
-#include "apps/tracing/lib/trace/cwriter.h"
+#include "garnet/lib/trace/cwriter.h"
 
 __BEGIN_CDECLS
 

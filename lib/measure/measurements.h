@@ -8,8 +8,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/tracing/lib/measure/duration.h"
-#include "apps/tracing/lib/measure/time_between.h"
+#include "garnet/lib/measure/duration.h"
+#include "garnet/lib/measure/time_between.h"
 
 namespace tracing {
 namespace measure {

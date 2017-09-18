@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include "apps/tracing/src/trace/commands/list_categories.h"
+#include "garnet/bin/trace/commands/list_categories.h"
 
 #include "lib/fsl/tasks/message_loop.h"
 

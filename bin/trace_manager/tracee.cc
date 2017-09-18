@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/tracing/src/trace_manager/tracee.h"
-#include "apps/tracing/lib/trace/internal/fields.h"
+#include "garnet/bin/trace_manager/tracee.h"
+#include "garnet/lib/trace/internal/fields.h"
 #include "lib/fxl/logging.h"
 
 namespace tracing {

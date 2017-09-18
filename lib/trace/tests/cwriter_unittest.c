@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/tracing/lib/trace/tests/cwriter_unittest.h"
+#include "garnet/lib/trace/tests/cwriter_unittest.h"
 
 #include <zircon/syscalls.h>
 
 #include <stdlib.h>
 #include <threads.h>
 
-#include "apps/tracing/lib/trace/cevent.h"
-#include "apps/tracing/lib/trace/cwriter.h"
-#include "apps/tracing/lib/trace/tests/ctrace_test_harness.h"
+#include "garnet/lib/trace/cevent.h"
+#include "garnet/lib/trace/cwriter.h"
+#include "garnet/lib/trace/tests/ctrace_test_harness.h"
 
 #define NEW_ARGUMENT_LIST(var) \
   CTRACE_MAKE_LOCAL_ARGS(var, TA_I32("int32", 42), \

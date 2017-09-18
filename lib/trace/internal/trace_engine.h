@@ -15,7 +15,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/tracing/lib/trace/writer.h"
+#include "garnet/lib/trace/writer.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/strings/string_view.h"

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/tracing/src/ktrace_provider/app.h"
+#include "garnet/bin/ktrace_provider/app.h"
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -12,8 +12,8 @@
 #include <trace-engine/instrumentation.h>
 #include <trace-provider/provider.h>
 
-#include "apps/tracing/src/ktrace_provider/importer.h"
-#include "apps/tracing/src/ktrace_provider/reader.h"
+#include "garnet/bin/ktrace_provider/importer.h"
+#include "garnet/bin/ktrace_provider/reader.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"

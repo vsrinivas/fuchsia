@@ -5,7 +5,7 @@
 #ifndef APPS_TRACING_LIB_MEASURE_TEST_EVENTS_H_
 #define APPS_TRACING_LIB_MEASURE_TEST_EVENTS_H_
 
-#include "apps/tracing/lib/trace/reader.h"
+#include "garnet/lib/trace/reader.h"
 
 namespace tracing {
 namespace measure {

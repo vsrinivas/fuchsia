@@ -9,7 +9,7 @@
 
 #include <type_traits>
 
-#include "apps/tracing/lib/trace/types.h"
+#include "garnet/lib/trace/types.h"
 
 namespace tracing {
 namespace internal {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/tracing/src/trace/app.h"
+#include "garnet/bin/trace/app.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fsl/tasks/message_loop.h"

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/tracing/lib/trace/cwriter.h"
+#include "garnet/lib/trace/cwriter.h"
 
 #include <zircon/compiler.h>
 
-#include "apps/tracing/lib/trace/internal/cevent_helpers.h"
+#include "garnet/lib/trace/internal/cevent_helpers.h"
 #include "lib/fxl/logging.h"
 
 __WEAK bool ctrace_is_enabled() {

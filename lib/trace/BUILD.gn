@@ -94,7 +94,7 @@ source_set("provider") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//apps/tracing/services",
+    "//garnet/public/lib/tracing/fidl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
   ]
@@ -155,7 +155,7 @@ source_set("unittests") {
     ":reader",
     ":trace",
     ":types",
-    "//apps/tracing/services",
+    "//garnet/public/lib/tracing/fidl",
     "//garnet/public/lib/fsl",
     "//third_party/gtest",
     "//third_party/rapidjson",

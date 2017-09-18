@@ -10,7 +10,7 @@
 #include <iosfwd>
 #include <string>
 
-#include "apps/tracing/services/trace_provider.fidl.h"
+#include "lib/tracing/fidl/trace_provider.fidl.h"
 
 namespace tracing {
 

@@ -4,7 +4,7 @@
 
 import("//garnet/public/lib/fidl/fidl.gni")
 
-fidl("services") {
+fidl("fidl") {
   sources = [
     "trace_controller.fidl",
     "trace_provider.fidl",

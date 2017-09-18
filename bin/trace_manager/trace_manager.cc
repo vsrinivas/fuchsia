@@ -5,8 +5,8 @@
 #include <algorithm>
 #include <iostream>
 
-#include "apps/tracing/lib/trace/internal/fields.h"
-#include "apps/tracing/src/trace_manager/trace_manager.h"
+#include "garnet/lib/trace/internal/fields.h"
+#include "garnet/bin/trace_manager/trace_manager.h"
 #include "lib/fsl/tasks/message_loop.h"
 
 using namespace tracing::internal;

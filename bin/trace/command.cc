@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include "apps/tracing/src/trace/command.h"
+#include "garnet/bin/trace/command.h"
 
 namespace tracing {
 

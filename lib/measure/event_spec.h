@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "apps/tracing/lib/trace/reader.h"
+#include "garnet/lib/trace/reader.h"
 
 namespace tracing {
 namespace measure {

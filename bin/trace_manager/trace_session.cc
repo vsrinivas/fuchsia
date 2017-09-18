@@ -4,8 +4,8 @@
 
 #include <numeric>
 
-#include "apps/tracing/lib/trace/internal/fields.h"
-#include "apps/tracing/src/trace_manager/trace_session.h"
+#include "garnet/lib/trace/internal/fields.h"
+#include "garnet/bin/trace_manager/trace_session.h"
 #include "lib/fxl/logging.h"
 #include "lib/fsl/tasks/message_loop.h"
 

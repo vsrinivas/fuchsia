@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/tracing/lib/measure/event_spec.h"
+#include "garnet/lib/measure/event_spec.h"
 
 namespace tracing {
 namespace measure {

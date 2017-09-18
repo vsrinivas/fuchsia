@@ -12,8 +12,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/tracing/lib/trace/internal/fields.h"
-#include "apps/tracing/lib/trace/types.h"
+#include "garnet/lib/trace/internal/fields.h"
+#include "garnet/lib/trace/types.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 

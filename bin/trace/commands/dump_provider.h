@@ -5,7 +5,7 @@
 #ifndef APPS_TRACING_SRC_TRACE_COMMANDS_DUMP_PROVIDER_H_
 #define APPS_TRACING_SRC_TRACE_COMMANDS_DUMP_PROVIDER_H_
 
-#include "apps/tracing/src/trace/command.h"
+#include "garnet/bin/trace/command.h"
 
 namespace tracing {
 

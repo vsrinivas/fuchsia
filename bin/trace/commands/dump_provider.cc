@@ -7,7 +7,7 @@
 #include <zx/socket.h>
 #include <zx/time.h>
 
-#include "apps/tracing/src/trace/commands/dump_provider.h"
+#include "garnet/bin/trace/commands/dump_provider.h"
 
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/time/time_delta.h"

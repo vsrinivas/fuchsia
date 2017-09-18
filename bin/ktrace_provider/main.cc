@@ -4,7 +4,7 @@
 
 #include <trace-provider/provider.h>
 
-#include "apps/tracing/src/ktrace_provider/app.h"
+#include "garnet/bin/ktrace_provider/app.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fsl/tasks/message_loop.h"

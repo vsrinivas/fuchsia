@@ -16,7 +16,7 @@
 #include <fbl/string_piece.h>
 #include <trace-engine/context.h>
 
-#include "apps/tracing/src/ktrace_provider/tags.h"
+#include "garnet/bin/ktrace_provider/tags.h"
 #include "lib/fxl/macros.h"
 
 namespace ktrace_provider {

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/tracing/lib/trace/tests/cevent_unittest.h"
+#include "garnet/lib/trace/tests/cevent_unittest.h"
 
 #include <zircon/process.h>
 #include <stdio.h>
 
-#include "apps/tracing/lib/trace/cevent.h"
-#include "apps/tracing/lib/trace/tests/ctrace_test_harness.h"
+#include "garnet/lib/trace/cevent.h"
+#include "garnet/lib/trace/tests/ctrace_test_harness.h"
 
 bool cevent_test_enabled(void) {
   C_EXPECT_EQ(true, CTRACE_ENABLED());

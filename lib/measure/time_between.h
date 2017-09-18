@@ -10,8 +10,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/tracing/lib/measure/event_spec.h"
-#include "apps/tracing/lib/trace/reader.h"
+#include "garnet/lib/measure/event_spec.h"
+#include "garnet/lib/trace/reader.h"
 #include "lib/fxl/macros.h"
 
 namespace tracing {

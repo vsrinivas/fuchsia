@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/tracing/lib/trace/internal/trace_provider_impl.h"
+#include "garnet/lib/trace/internal/trace_provider_impl.h"
 
-#include "apps/tracing/lib/trace/writer.h"
+#include "garnet/lib/trace/writer.h"
 #include "lib/fxl/logging.h"
 #include "lib/fsl/handles/object_info.h"
 

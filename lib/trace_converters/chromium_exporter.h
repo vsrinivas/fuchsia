@@ -9,7 +9,7 @@
 #include <tuple>
 #include <unordered_map>
 
-#include "apps/tracing/lib/trace/reader.h"
+#include "garnet/lib/trace/reader.h"
 #include "third_party/rapidjson/rapidjson/ostreamwrapper.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 

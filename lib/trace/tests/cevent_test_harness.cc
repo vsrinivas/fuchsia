@@ -6,9 +6,9 @@
 #include <zx/eventpair.h>
 #include <zx/vmo.h>
 
-#include "apps/tracing/lib/trace/cevent.h"
-#include "apps/tracing/lib/trace/event.h"
-#include "apps/tracing/lib/trace/tests/cevent_unittest.h"
+#include "garnet/lib/trace/cevent.h"
+#include "garnet/lib/trace/event.h"
+#include "garnet/lib/trace/tests/cevent_unittest.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/logging.h"
 #include "lib/fsl/tasks/message_loop.h"

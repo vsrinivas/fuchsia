@@ -7,8 +7,8 @@
 #include <unordered_set>
 
 #include "lib/network/fidl/network_service.fidl.h"
-#include "apps/tracing/src/trace/commands/record.h"
-#include "apps/tracing/src/trace/results_output.h"
+#include "garnet/bin/trace/commands/record.h"
+#include "garnet/bin/trace/results_output.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/logging.h"

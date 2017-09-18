@@ -10,8 +10,8 @@
 
 #include <stdint.h>
 
-#include "apps/tracing/lib/trace/ctypes.h"
-#include "apps/tracing/lib/trace/ticks.h"
+#include "garnet/lib/trace/ctypes.h"
+#include "garnet/lib/trace/ticks.h"
 
 namespace tracing {
 

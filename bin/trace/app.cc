@@ -5,12 +5,12 @@
 #include <iostream>
 #include <ostream>
 
-#include "apps/tracing/src/trace/app.h"
+#include "garnet/bin/trace/app.h"
 
-#include "apps/tracing/src/trace/commands/dump_provider.h"
-#include "apps/tracing/src/trace/commands/list_categories.h"
-#include "apps/tracing/src/trace/commands/list_providers.h"
-#include "apps/tracing/src/trace/commands/record.h"
+#include "garnet/bin/trace/commands/dump_provider.h"
+#include "garnet/bin/trace/commands/list_categories.h"
+#include "garnet/bin/trace/commands/list_providers.h"
+#include "garnet/bin/trace/commands/record.h"
 
 namespace tracing {
 

@@ -11,8 +11,8 @@
 #include <string>
 #include <vector>
 
-#include "apps/tracing/lib/trace/reader.h"
-#include "apps/tracing/services/trace_controller.fidl.h"
+#include "garnet/lib/trace/reader.h"
+#include "lib/tracing/fidl/trace_controller.fidl.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fsl/tasks/message_loop.h"

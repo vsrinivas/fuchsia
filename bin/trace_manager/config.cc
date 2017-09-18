@@ -8,7 +8,7 @@
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
 
-#include "apps/tracing/src/trace_manager/config.h"
+#include "garnet/bin/trace_manager/config.h"
 #include "lib/fxl/logging.h"
 
 namespace tracing {

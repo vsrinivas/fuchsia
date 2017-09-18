@@ -5,7 +5,7 @@
 #ifndef APPS_TRACING_LIB_TRACE_EVENT_H_
 #define APPS_TRACING_LIB_TRACE_EVENT_H_
 
-#include "apps/tracing/lib/trace/internal/event_helpers.h"
+#include "garnet/lib/trace/internal/event_helpers.h"
 
 // Converts a |zx_koid_t| koid value into one which can be passed as an
 // argument to the trace macros to distinguish it from other 64-bit integers.

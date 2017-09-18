@@ -11,8 +11,8 @@
 #include <vector>
 
 #include "lib/network/fidl/network_service.fidl.h"
-#include "apps/tracing/lib/measure/results.h"
-#include "apps/tracing/src/trace/spec.h"
+#include "garnet/lib/measure/results.h"
+#include "garnet/bin/trace/spec.h"
 
 namespace tracing {
 

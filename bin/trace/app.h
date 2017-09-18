@@ -10,7 +10,7 @@
 #include <memory>
 #include <string>
 
-#include "apps/tracing/src/trace/command.h"
+#include "garnet/bin/trace/command.h"
 #include "lib/fxl/macros.h"
 
 namespace tracing {

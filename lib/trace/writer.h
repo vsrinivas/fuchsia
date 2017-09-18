@@ -16,9 +16,9 @@
 #include <zx/eventpair.h>
 #include <zx/vmo.h>
 
-#include "apps/tracing/lib/trace/cwriter.h"
-#include "apps/tracing/lib/trace/internal/fields.h"
-#include "apps/tracing/lib/trace/types.h"
+#include "garnet/lib/trace/cwriter.h"
+#include "garnet/lib/trace/internal/fields.h"
+#include "garnet/lib/trace/types.h"
 #include "lib/fxl/macros.h"
 
 namespace tracing {

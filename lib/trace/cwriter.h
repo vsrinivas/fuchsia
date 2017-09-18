@@ -13,7 +13,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include "apps/tracing/lib/trace/ctypes.h"
+#include "garnet/lib/trace/ctypes.h"
 
 __BEGIN_CDECLS
 
