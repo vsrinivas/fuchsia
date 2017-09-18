@@ -4,9 +4,10 @@
 
 #include "garnet/bin/moterm/command.h"
 
-#include <zircon/status.h>
 #include <unistd.h>
+#include <zircon/status.h>
 
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
 namespace moterm {
@@ -36,15 +37,6 @@ std::vector<const char*> GetArgv(const std::vector<std::string>& command) {
 }  // namespace
 
 Command::Command() = default;
-
-Command::~Command() {
-  if (termination_key_)
-    fsl::MessageLoop::GetCurrent()->RemoveHandler(termination_key_);
-  if (out_key_)
-    fsl::MessageLoop::GetCurrent()->RemoveHandler(out_key_);
-  if (err_key_)
-    fsl::MessageLoop::GetCurrent()->RemoveHandler(err_key_);
-}
 
 bool Command::Start(std::vector<std::string> command,
                     std::vector<fsl::StartupHandle> startup_handles,
@@ -96,40 +88,73 @@ bool Command::Start(std::vector<std::string> command,
   termination_callback_ = std::move(termination_callback);
   receive_callback_ = std::move(receive_callback);
 
-  termination_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
-      this, process_.get(), ZX_PROCESS_TERMINATED);
+  termination_waiter_ =
+      std::make_unique<async::AutoWait>(fsl::MessageLoop::GetCurrent()->async(),
+                                        process_.get(), ZX_PROCESS_TERMINATED);
+  termination_waiter_->set_handler(std::bind(
+      &Command::OnProcessTerminated, this, process_.get(),
+      std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+  termination_waiter_->Begin();
 
-  out_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(this, stdout_.get(),
-                                                        ZX_SOCKET_READABLE);
-  err_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(this, stderr_.get(),
-                                                        ZX_SOCKET_READABLE);
+  stdout_waiter_ =
+      std::make_unique<async::AutoWait>(fsl::MessageLoop::GetCurrent()->async(),
+                                        stdout_.get(), ZX_SOCKET_READABLE);
+  stdout_waiter_->set_handler(std::bind(
+      &Command::OnSocketReadable, this, &stdout_, std::placeholders::_1,
+      std::placeholders::_2, std::placeholders::_3));
+  stdout_waiter_->Begin();
+
+  stderr_waiter_ =
+      std::make_unique<async::AutoWait>(fsl::MessageLoop::GetCurrent()->async(),
+                                        stderr_.get(), ZX_SOCKET_READABLE);
+  stderr_waiter_->set_handler(std::bind(
+      &Command::OnSocketReadable, this, &stderr_, std::placeholders::_1,
+      std::placeholders::_2, std::placeholders::_3));
+  stderr_waiter_->Begin();
+
   return true;
 }
 
-void Command::OnHandleReady(zx_handle_t handle,
-                            zx_signals_t pending,
-                            uint64_t count) {
-  if (handle == process_.get() && (pending & ZX_PROCESS_TERMINATED)) {
-    fsl::MessageLoop::GetCurrent()->RemoveHandler(termination_key_);
-    termination_key_ = 0;
-    termination_callback_();
-  } else if (pending & ZX_SOCKET_READABLE) {
-    char buffer[2048];
-    size_t len;
-
-    if (handle == stdout_.get()) {
-      if (stdout_.read(0, buffer, sizeof(buffer), &len) != ZX_OK) {
-        return;
-      }
-    } else if (handle == stderr_.get()) {
-      if (stderr_.read(0, buffer, sizeof(buffer), &len) != ZX_OK) {
-        return;
-      }
-    } else {
-      return;
-    }
-    receive_callback_(buffer, len);
+async_wait_result_t Command::OnProcessTerminated(
+    zx_handle_t process_handle,
+    async_t*,
+    zx_status_t status,
+    const zx_packet_signal* signal) {
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR)
+        << "Command::OnProcessTerminated received an error status code: "
+        << status;
+    return ASYNC_WAIT_FINISHED;
   }
+  zx_signals_t pending = signal->observed;
+  FXL_DCHECK(pending & ZX_PROCESS_TERMINATED);
+  FXL_DCHECK(process_handle == process_.get());
+  termination_callback_();
+  termination_waiter_.reset();
+  return ASYNC_WAIT_FINISHED;
+}
+
+async_wait_result_t Command::OnSocketReadable(zx::socket* socket,
+                                              async_t*,
+                                              zx_status_t status,
+                                              const zx_packet_signal* signal) {
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR)
+        << "Command::OnSocketReadable received an error status code: "
+        << status;
+    return ASYNC_WAIT_FINISHED;
+  }
+  zx_signals_t pending = signal->observed;
+  FXL_DCHECK(pending & ZX_SOCKET_READABLE);
+  char buffer[2048];
+  size_t len;
+
+  if (socket->read(0, buffer, sizeof(buffer), &len) != ZX_OK) {
+    FXL_LOG(ERROR) << "Command::OnSocketReadable error reading from socket.";
+    return ASYNC_WAIT_FINISHED;
+  }
+  receive_callback_(buffer, len);
+  return ASYNC_WAIT_AGAIN;
 }
 
 void Command::SendData(const void* bytes, size_t num_bytes) {
