@@ -35,6 +35,7 @@ executable("mac_tests") {
   sources = [
     "element_unittest.cpp",
     "mac_frame_unittest.cpp",
+    "macaddr_unittest.cpp",
   ]
 
   deps = [

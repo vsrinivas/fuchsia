@@ -19,6 +19,8 @@ source_set("mlme") {
     "logging.h",
     "mac_frame.cpp",
     "mac_frame.h",
+    "macaddr.cpp",
+    "macaddr.h",
     "mlme.cpp",
     "mlme.h",
     "packet.cpp",
