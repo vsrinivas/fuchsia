@@ -95,6 +95,25 @@ class PageStorageImpl : public PageStorage {
                        std::function<void(Status)> callback) override;
   Status GetSyncMetadata(fxl::StringView key, std::string* value) override;
 
+  // Methods to be used by JournalImpl.
+  void GetJournalEntries(
+      const JournalId& journal_id,
+      std::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>)>
+          callback);
+
+  void AddJournalEntry(const JournalId& journal_id,
+                       fxl::StringView key,
+                       fxl::StringView value,
+                       KeyPriority priority,
+                       std::function<void(Status)> callback);
+
+  void RemoveJournalEntry(const JournalId& journal_id,
+                          convert::ExtendedStringView key,
+                          std::function<void(Status)> callback);
+
+  void RemoveJournal(const JournalId& journal_id,
+                     std::function<void(Status)> callback);
+
   // Commit contents.
   void GetCommitContents(const Commit& commit,
                          std::string min_key,

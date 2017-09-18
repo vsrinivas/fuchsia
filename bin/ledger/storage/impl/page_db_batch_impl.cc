@@ -7,7 +7,7 @@
 #include <memory>
 
 #include "apps/ledger/src/storage/impl/db_serialization.h"
-#include "apps/ledger/src/storage/impl/journal_db_impl.h"
+#include "apps/ledger/src/storage/impl/journal_impl.h"
 #include "apps/ledger/src/storage/impl/number_serialization.h"
 #include "lib/fxl/strings/concatenate.h"
 
@@ -53,8 +53,8 @@ Status PageDbBatchImpl::CreateJournal(CoroutineHandler* /*handler*/,
                                       const CommitId& base,
                                       std::unique_ptr<Journal>* journal) {
   JournalId id = JournalEntryRow::NewJournalId(journal_type);
-  *journal = JournalDBImpl::Simple(journal_type, coroutine_service_,
-                                   page_storage_, db_, id, base);
+  *journal = JournalImpl::Simple(journal_type, coroutine_service_,
+                                 page_storage_, id, base);
   if (journal_type == JournalType::IMPLICIT) {
     return batch_->Put(ImplicitJournalMetaRow::GetKeyFor(id), base);
   }
@@ -65,8 +65,8 @@ Status PageDbBatchImpl::CreateMergeJournal(CoroutineHandler* /*handler*/,
                                            const CommitId& base,
                                            const CommitId& other,
                                            std::unique_ptr<Journal>* journal) {
-  *journal = JournalDBImpl::Merge(
-      coroutine_service_, page_storage_, db_,
+  *journal = JournalImpl::Merge(
+      coroutine_service_, page_storage_,
       JournalEntryRow::NewJournalId(JournalType::EXPLICIT), base, other);
   return Status::OK;
 }

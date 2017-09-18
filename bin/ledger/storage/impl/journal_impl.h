@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_STORAGE_IMPL_JOURNAL_DB_IMPL_H_
-#define APPS_LEDGER_SRC_STORAGE_IMPL_JOURNAL_DB_IMPL_H_
+#ifndef APPS_LEDGER_SRC_STORAGE_IMPL_JOURNAL_IMPL_H_
+#define APPS_LEDGER_SRC_STORAGE_IMPL_JOURNAL_IMPL_H_
 
 #include "apps/ledger/src/storage/public/journal.h"
 
@@ -14,7 +14,6 @@
 
 #include "apps/ledger/src/callback/operation_serializer.h"
 #include "apps/ledger/src/coroutine/coroutine.h"
-#include "apps/ledger/src/storage/impl/page_db.h"
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/types.h"
@@ -22,17 +21,16 @@
 
 namespace storage {
 
-// A |JournalDBImpl| represents a commit in progress.
-class JournalDBImpl : public Journal {
+// A |JournalImpl| represents a commit in progress.
+class JournalImpl : public Journal {
  public:
-  ~JournalDBImpl() override;
+  ~JournalImpl() override;
 
   // Creates a new Journal for a simple commit.
   static std::unique_ptr<Journal> Simple(
       JournalType type,
       coroutine::CoroutineService* coroutine_service,
       PageStorageImpl* page_storage,
-      PageDb* db,
       const JournalId& id,
       const CommitId& base);
 
@@ -40,7 +38,6 @@ class JournalDBImpl : public Journal {
   static std::unique_ptr<Journal> Merge(
       coroutine::CoroutineService* coroutine_service,
       PageStorageImpl* page_storage,
-      PageDb* db,
       const JournalId& id,
       const CommitId& base,
       const CommitId& other);
@@ -68,12 +65,11 @@ class JournalDBImpl : public Journal {
   const JournalId& GetId() const override;
 
  private:
-  JournalDBImpl(JournalType type,
-                coroutine::CoroutineService* coroutine_service,
-                PageStorageImpl* page_storage,
-                PageDb* db,
-                JournalId id,
-                CommitId base);
+  JournalImpl(JournalType type,
+              coroutine::CoroutineService* coroutine_service,
+              PageStorageImpl* page_storage,
+              JournalId id,
+              CommitId base);
 
   void GetParents(
       std::function<void(Status,
@@ -95,7 +91,6 @@ class JournalDBImpl : public Journal {
   const JournalType type_;
   coroutine::CoroutineService* const coroutine_service_;
   PageStorageImpl* const page_storage_;
-  PageDb* const db_;
   const JournalId id_;
   CommitId base_;
   std::unique_ptr<CommitId> other_;
@@ -114,4 +109,4 @@ class JournalDBImpl : public Journal {
 
 }  // namespace storage
 
-#endif  // APPS_LEDGER_SRC_STORAGE_IMPL_JOURNAL_DB_IMPL_H_
+#endif  // APPS_LEDGER_SRC_STORAGE_IMPL_JOURNAL_IMPL_H_

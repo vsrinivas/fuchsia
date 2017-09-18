@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/journal_db_impl.h"
+#include "apps/ledger/src/storage/impl/journal_impl.h"
 
 #include <functional>
 #include <map>
@@ -12,64 +12,59 @@
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/storage/impl/btree/builder.h"
 #include "apps/ledger/src/storage/impl/commit_impl.h"
-#include "apps/ledger/src/storage/impl/page_db.h"
 #include "apps/ledger/src/storage/public/commit.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace storage {
 
-JournalDBImpl::JournalDBImpl(JournalType type,
-                             coroutine::CoroutineService* coroutine_service,
-                             PageStorageImpl* page_storage,
-                             PageDb* db,
-                             JournalId id,
-                             CommitId base)
+JournalImpl::JournalImpl(JournalType type,
+                         coroutine::CoroutineService* coroutine_service,
+                         PageStorageImpl* page_storage,
+                         JournalId id,
+                         CommitId base)
     : type_(type),
       coroutine_service_(coroutine_service),
       page_storage_(page_storage),
-      db_(db),
       id_(std::move(id)),
       base_(std::move(base)),
       valid_(true),
       failed_operation_(false) {}
 
-JournalDBImpl::~JournalDBImpl() {
+JournalImpl::~JournalImpl() {
   // Log a warning if the journal was not committed or rolled back.
   if (valid_) {
     FXL_LOG(WARNING) << "Journal not committed or rolled back.";
   }
 }
 
-std::unique_ptr<Journal> JournalDBImpl::Simple(
+std::unique_ptr<Journal> JournalImpl::Simple(
     JournalType type,
     coroutine::CoroutineService* coroutine_service,
     PageStorageImpl* page_storage,
-    PageDb* db,
     const JournalId& id,
     const CommitId& base) {
   return std::unique_ptr<Journal>(
-      new JournalDBImpl(type, coroutine_service, page_storage, db, id, base));
+      new JournalImpl(type, coroutine_service, page_storage, id, base));
 }
 
-std::unique_ptr<Journal> JournalDBImpl::Merge(
+std::unique_ptr<Journal> JournalImpl::Merge(
     coroutine::CoroutineService* coroutine_service,
     PageStorageImpl* page_storage,
-    PageDb* db,
     const JournalId& id,
     const CommitId& base,
     const CommitId& other) {
-  JournalDBImpl* db_journal = new JournalDBImpl(
-      JournalType::EXPLICIT, coroutine_service, page_storage, db, id, base);
+  JournalImpl* db_journal = new JournalImpl(
+      JournalType::EXPLICIT, coroutine_service, page_storage, id, base);
   db_journal->other_ = std::make_unique<CommitId>(other);
   std::unique_ptr<Journal> journal(db_journal);
   return journal;
 }
 
-const JournalId& JournalDBImpl::GetId() const {
+const JournalId& JournalImpl::GetId() const {
   return id_;
 }
 
-void JournalDBImpl::Commit(
+void JournalImpl::Commit(
     std::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
   serializer_.Serialize<Status, std::unique_ptr<const storage::Commit>>(
@@ -89,30 +84,35 @@ void JournalDBImpl::Commit(
             callback(status, nullptr);
             return;
           }
-          std::unique_ptr<Iterator<const EntryChange>> changes;
-          status = db_->GetJournalEntries(id_, &changes);
-          if (status != Status::OK) {
-            callback(status, nullptr);
-            return;
-          }
-          CreateCommitFromChanges(std::move(parents), std::move(changes),
-                                  std::move(callback));
-
+          page_storage_->GetJournalEntries(
+              id_,
+              fxl::MakeCopyable([
+                this, parents = std::move(parents),
+                callback = std::move(callback)
+              ](Status status,
+                std::unique_ptr<Iterator<const EntryChange>> changes) mutable {
+                if (status != Status::OK) {
+                  callback(status, nullptr);
+                  return;
+                }
+                CreateCommitFromChanges(std::move(parents), std::move(changes),
+                                        std::move(callback));
+              }));
         });
       });
 }
 
-void JournalDBImpl::Rollback(std::function<void(Status)> callback) {
+void JournalImpl::Rollback(std::function<void(Status)> callback) {
   serializer_.Serialize<Status>(std::move(callback),
                                 [this](std::function<void(Status)> callback) {
                                   RollbackInternal(std::move(callback));
                                 });
 }
 
-void JournalDBImpl::Put(convert::ExtendedStringView key,
-                        ObjectIdView object_id,
-                        KeyPriority priority,
-                        std::function<void(Status)> callback) {
+void JournalImpl::Put(convert::ExtendedStringView key,
+                      ObjectIdView object_id,
+                      KeyPriority priority,
+                      std::function<void(Status)> callback) {
   serializer_.Serialize<Status>(std::move(callback), [
     this, key = key.ToString(), object_id = object_id.ToString(), priority
   ](std::function<void(Status)> callback) {
@@ -120,16 +120,19 @@ void JournalDBImpl::Put(convert::ExtendedStringView key,
       callback(Status::ILLEGAL_STATE);
       return;
     }
-    Status s = db_->AddJournalEntry(id_, key, object_id, priority);
-    if (s != Status::OK) {
-      failed_operation_ = true;
-    }
-    callback(s);
+    page_storage_->AddJournalEntry(
+        id_, key, object_id, priority,
+        [ this, callback = std::move(callback) ](Status s) {
+          if (s != Status::OK) {
+            failed_operation_ = true;
+          }
+          callback(s);
+        });
   });
 }
 
-void JournalDBImpl::Delete(convert::ExtendedStringView key,
-                           std::function<void(Status)> callback) {
+void JournalImpl::Delete(convert::ExtendedStringView key,
+                         std::function<void(Status)> callback) {
   serializer_.Serialize<Status>(
       std::move(callback),
       [ this, key = key.ToString() ](std::function<void(Status)> callback) {
@@ -138,15 +141,17 @@ void JournalDBImpl::Delete(convert::ExtendedStringView key,
           return;
         }
 
-        Status s = db_->RemoveJournalEntry(id_, key);
-        if (s != Status::OK) {
-          failed_operation_ = true;
-        }
-        callback(s);
+        page_storage_->RemoveJournalEntry(
+            id_, key, [ this, callback = std::move(callback) ](Status s) {
+              if (s != Status::OK) {
+                failed_operation_ = true;
+              }
+              callback(s);
+            });
       });
 }
 
-void JournalDBImpl::GetParents(
+void JournalImpl::GetParents(
     std::function<void(Status,
                        std::vector<std::unique_ptr<const storage::Commit>>)>
         callback) {
@@ -160,7 +165,7 @@ void JournalDBImpl::GetParents(
   waiter->Finalize(std::move(callback));
 }
 
-void JournalDBImpl::CreateCommitFromChanges(
+void JournalImpl::CreateCommitFromChanges(
     std::vector<std::unique_ptr<const storage::Commit>> parents,
     std::unique_ptr<Iterator<const EntryChange>> changes,
     std::function<void(Status, std::unique_ptr<const storage::Commit>)>
@@ -213,56 +218,69 @@ void JournalDBImpl::CreateCommitFromChanges(
                   callback(status, nullptr);
                   return;
                 }
-                callback(db_->RemoveJournal(id_), std::move(commit));
+                page_storage_->RemoveJournal(
+                    id_, fxl::MakeCopyable([
+                      commit = std::move(commit), callback = std::move(callback)
+                    ](Status status) mutable {
+                      if (status != Status::OK) {
+                        FXL_LOG(INFO)
+                            << "Commit created, but failed to delete journal.";
+                      }
+                      callback(Status::OK, std::move(commit));
+                    }));
               }));
         }));
       }));
 }
 
-void JournalDBImpl::GetObjectsToSync(
+void JournalImpl::GetObjectsToSync(
     std::function<void(Status status, std::vector<ObjectId> objects_to_sync)>
         callback) {
-  std::unique_ptr<Iterator<const EntryChange>> entries;
-  Status s = db_->GetJournalEntries(id_, &entries);
-  if (s != Status::OK) {
-    callback(s, {});
-    return;
-  }
-  // Compute the key-value pairs added in this journal.
-  std::map<std::string, ObjectId> key_values;
-  while (entries->Valid()) {
-    const Entry& entry = (*entries)->entry;
-    if ((*entries)->deleted) {
-      key_values.erase(entry.key);
-    } else {
-      key_values[entry.key] = entry.object_id;
-    }
-    entries->Next();
-  }
-  // Compute the set of values.
-  std::set<ObjectId> result_set;
-  for (const auto& key_value : key_values) {
-    // Only untracked objects should be synced.
-    if (page_storage_->ObjectIsUntracked(key_value.second)) {
-      result_set.insert(key_value.second);
-    }
-  }
-  std::vector<ObjectId> objects_to_sync;
-  std::copy(result_set.begin(), result_set.end(),
-            std::back_inserter(objects_to_sync));
-  callback(Status::OK, std::move(objects_to_sync));
+  page_storage_->GetJournalEntries(
+      id_, fxl::MakeCopyable([ this, callback = std::move(callback) ](
+               Status s, std::unique_ptr<Iterator<const EntryChange>> entries) {
+        if (s != Status::OK) {
+          callback(s, {});
+          return;
+        }
+        // Compute the key-value pairs added in this journal.
+        std::map<std::string, ObjectId> key_values;
+        while (entries->Valid()) {
+          const Entry& entry = (*entries)->entry;
+          if ((*entries)->deleted) {
+            key_values.erase(entry.key);
+          } else {
+            key_values[entry.key] = entry.object_id;
+          }
+          entries->Next();
+        }
+        // Compute the set of values.
+        std::set<ObjectId> result_set;
+        for (const auto& key_value : key_values) {
+          // Only untracked objects should be synced.
+          if (page_storage_->ObjectIsUntracked(key_value.second)) {
+            result_set.insert(key_value.second);
+          }
+        }
+        std::vector<ObjectId> objects_to_sync;
+        std::copy(result_set.begin(), result_set.end(),
+                  std::back_inserter(objects_to_sync));
+        callback(Status::OK, std::move(objects_to_sync));
+      }));
 }
 
-void JournalDBImpl::RollbackInternal(std::function<void(Status)> callback) {
+void JournalImpl::RollbackInternal(std::function<void(Status)> callback) {
   if (!valid_) {
     callback(Status::ILLEGAL_STATE);
     return;
   }
-  Status s = db_->RemoveJournal(id_);
-  if (s == Status::OK) {
-    valid_ = false;
-  }
-  callback(s);
+  page_storage_->RemoveJournal(
+      id_, [ this, callback = std::move(callback) ](Status s) {
+        if (s == Status::OK) {
+          valid_ = false;
+        }
+        callback(s);
+      });
 }
 
 }  // namespace storage

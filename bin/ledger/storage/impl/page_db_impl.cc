@@ -10,7 +10,7 @@
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/impl/db_serialization.h"
-#include "apps/ledger/src/storage/impl/journal_db_impl.h"
+#include "apps/ledger/src/storage/impl/journal_impl.h"
 #include "apps/ledger/src/storage/impl/number_serialization.h"
 #include "apps/ledger/src/storage/impl/object_impl.h"
 #include "apps/ledger/src/storage/impl/page_db_batch_impl.h"
@@ -161,8 +161,8 @@ Status PageDbImpl::GetImplicitJournal(CoroutineHandler* /*handler*/,
   CommitId base;
   RETURN_ON_ERROR(
       db_.Get(ImplicitJournalMetaRow::GetKeyFor(journal_id), &base));
-  *journal = JournalDBImpl::Simple(JournalType::IMPLICIT, coroutine_service_,
-                                   page_storage_, this, journal_id, base);
+  *journal = JournalImpl::Simple(JournalType::IMPLICIT, coroutine_service_,
+                                 page_storage_, journal_id, base);
   return Status::OK;
 }
 

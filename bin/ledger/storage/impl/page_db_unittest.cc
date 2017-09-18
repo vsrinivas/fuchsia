@@ -14,7 +14,7 @@
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/impl/commit_impl.h"
 #include "apps/ledger/src/storage/impl/commit_random_impl.h"
-#include "apps/ledger/src/storage/impl/journal_db_impl.h"
+#include "apps/ledger/src/storage/impl/journal_impl.h"
 #include "apps/ledger/src/storage/impl/page_db_impl.h"
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
 #include "apps/ledger/src/storage/impl/storage_test_utils.h"
@@ -51,6 +51,12 @@ class PageDbTest : public ::test::TestWithCoroutines {
   // Test:
   void SetUp() override {
     std::srand(0);
+
+    Status status;
+    page_storage_.Init(callback::Capture(MakeQuitTask(), &status));
+    ASSERT_FALSE(RunLoopWithTimeout());
+    ASSERT_EQ(Status::OK, status);
+
     ASSERT_EQ(Status::OK, page_db_.Init());
   }
 
@@ -201,7 +207,7 @@ TEST_F(PageDbTest, JournalEntries) {
     std::unique_ptr<Iterator<const EntryChange>> entries;
     EXPECT_EQ(Status::OK,
               page_db_.GetJournalEntries(
-                  static_cast<JournalDBImpl*>(implicit_journal.get())->GetId(),
+                  static_cast<JournalImpl*>(implicit_journal.get())->GetId(),
                   &entries));
     for (const auto& expected_change : expected_changes) {
       EXPECT_TRUE(entries->Valid());

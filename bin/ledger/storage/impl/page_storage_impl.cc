@@ -28,7 +28,7 @@
 #include "apps/ledger/src/storage/impl/constants.h"
 #include "apps/ledger/src/storage/impl/file_index.h"
 #include "apps/ledger/src/storage/impl/file_index_generated.h"
-#include "apps/ledger/src/storage/impl/journal_db_impl.h"
+#include "apps/ledger/src/storage/impl/journal_impl.h"
 #include "apps/ledger/src/storage/impl/object_id.h"
 #include "apps/ledger/src/storage/impl/object_impl.h"
 #include "apps/ledger/src/storage/impl/split.h"
@@ -226,8 +226,7 @@ void PageStorageImpl::CommitJournal(
     std::unique_ptr<Journal> journal,
     std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
   auto managed_journal = managed_container_.Manage(std::move(journal));
-  JournalDBImpl* journal_ptr =
-      static_cast<JournalDBImpl*>(managed_journal->get());
+  JournalImpl* journal_ptr = static_cast<JournalImpl*>(managed_journal->get());
 
   journal_ptr->Commit(fxl::MakeCopyable([
     journal_ptr, managed_journal = std::move(managed_journal),
@@ -248,8 +247,7 @@ void PageStorageImpl::CommitJournal(
 void PageStorageImpl::RollbackJournal(std::unique_ptr<Journal> journal,
                                       std::function<void(Status)> callback) {
   auto managed_journal = managed_container_.Manage(std::move(journal));
-  JournalDBImpl* journal_ptr =
-      static_cast<JournalDBImpl*>(managed_journal->get());
+  JournalImpl* journal_ptr = static_cast<JournalImpl*>(managed_journal->get());
 
   journal_ptr->Rollback(fxl::MakeCopyable([
     managed_journal = std::move(managed_journal), callback = std::move(callback)
@@ -525,6 +523,34 @@ void PageStorageImpl::GetCommitContentsDiff(
   btree::ForEachDiff(coroutine_service_, this, base_commit.GetRootId(),
                      other_commit.GetRootId(), std::move(min_key),
                      std::move(on_next_diff), std::move(on_done));
+}
+
+void PageStorageImpl::GetJournalEntries(
+    const JournalId& journal_id,
+    std::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>)>
+        callback) {
+  std::unique_ptr<Iterator<const EntryChange>> entries;
+  Status s = db_.GetJournalEntries(journal_id, &entries);
+  callback(s, std::move(entries));
+}
+
+void PageStorageImpl::AddJournalEntry(const JournalId& journal_id,
+                                      fxl::StringView key,
+                                      fxl::StringView value,
+                                      KeyPriority priority,
+                                      std::function<void(Status)> callback) {
+  callback(db_.AddJournalEntry(journal_id, key, value, priority));
+}
+
+void PageStorageImpl::RemoveJournalEntry(const JournalId& journal_id,
+                                         convert::ExtendedStringView key,
+                                         std::function<void(Status)> callback) {
+  callback(db_.RemoveJournalEntry(journal_id, key));
+}
+
+void PageStorageImpl::RemoveJournal(const JournalId& journal_id,
+                                    std::function<void(Status)> callback) {
+  callback(db_.RemoveJournal(journal_id));
 }
 
 void PageStorageImpl::NotifyWatchers() {
