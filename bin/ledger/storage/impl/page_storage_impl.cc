@@ -470,9 +470,16 @@ void PageStorageImpl::GetPiece(
     return;
   }
 
-  std::unique_ptr<const Object> object;
-  Status status = db_->ReadObject(object_id.ToString(), &object);
-  callback(status, std::move(object));
+  coroutine_service_->StartCoroutine([
+    this, object_id = object_id.ToString(), final_callback = std::move(callback)
+  ](CoroutineHandler * handler) mutable {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
+
+    std::unique_ptr<const Object> object;
+    Status status = db_->ReadObject(handler, std::move(object_id), &object);
+    callback(status, std::move(object));
+  });
 }
 
 void PageStorageImpl::SetSyncMetadata(fxl::StringView key,
@@ -626,7 +633,7 @@ Status PageStorageImpl::MarkAllPiecesLocal(CoroutineHandler* handler,
     batch->SetObjectStatus(handler, object_id, PageDbObjectStatus::LOCAL);
     if (GetObjectIdType(object_id) == ObjectIdType::INDEX_HASH) {
       std::unique_ptr<const Object> object;
-      Status status = db_->ReadObject(object_id, &object);
+      Status status = db_->ReadObject(handler, object_id, &object);
       if (status != Status::OK) {
         return status;
       }
@@ -704,56 +711,62 @@ void PageStorageImpl::DownloadFullObject(ObjectIdView object_id,
         callback(status);
         return;
       }
-
-      auto object_id_type = GetObjectIdType(object_id);
-      FXL_DCHECK(object_id_type == ObjectIdType::VALUE_HASH ||
-                 object_id_type == ObjectIdType::INDEX_HASH);
-
-      if (object_id !=
-          ComputeObjectId(GetObjectType(object_id_type), chunk->Get())) {
-        callback(Status::OBJECT_ID_MISMATCH);
-        return;
-      }
-
-      if (object_id_type == ObjectIdType::VALUE_HASH) {
-        AddPiece(std::move(object_id), std::move(chunk), ChangeSource::SYNC,
-                 std::move(callback));
-        return;
-      }
-
-      auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
-      status = ForEachPiece(chunk->Get(), [&](ObjectIdView id) {
-        if (GetObjectIdType(id) == ObjectIdType::INLINE) {
-          return Status::OK;
-        }
-
-        auto id_string = id.ToString();
-        Status status = db_->ReadObject(id_string, nullptr);
-        if (status == Status::NOT_FOUND) {
-          DownloadFullObject(id_string, waiter->NewCallback());
-          return Status::OK;
-        }
-        return status;
-      });
-      if (status != Status::OK) {
-        callback(status);
-        return;
-      }
-
-      waiter->Finalize(fxl::MakeCopyable([
+      coroutine_service_->StartCoroutine(fxl::MakeCopyable([
         this, object_id = std::move(object_id), chunk = std::move(chunk),
-        callback = std::move(callback)
-      ](Status status) mutable {
+        final_callback = std::move(callback)
+      ](CoroutineHandler * handler) mutable {
+        auto callback =
+            UpdateActiveHandlersCallback(handler, std::move(final_callback));
+
+        auto object_id_type = GetObjectIdType(object_id);
+        FXL_DCHECK(object_id_type == ObjectIdType::VALUE_HASH ||
+                   object_id_type == ObjectIdType::INDEX_HASH);
+
+        if (object_id !=
+            ComputeObjectId(GetObjectType(object_id_type), chunk->Get())) {
+          callback(Status::OBJECT_ID_MISMATCH);
+          return;
+        }
+
+        if (object_id_type == ObjectIdType::VALUE_HASH) {
+          AddPiece(std::move(object_id), std::move(chunk), ChangeSource::SYNC,
+                   std::move(callback));
+          return;
+        }
+
+        auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
+        Status status = ForEachPiece(chunk->Get(), [&](ObjectIdView id) {
+          if (GetObjectIdType(id) == ObjectIdType::INLINE) {
+            return Status::OK;
+          }
+
+          auto id_string = id.ToString();
+          Status status = db_->ReadObject(handler, id_string, nullptr);
+          if (status == Status::NOT_FOUND) {
+            DownloadFullObject(id_string, waiter->NewCallback());
+            return Status::OK;
+          }
+          return status;
+        });
         if (status != Status::OK) {
           callback(status);
           return;
         }
 
-        AddPiece(std::move(object_id), std::move(chunk), ChangeSource::SYNC,
-                 std::move(callback));
+        waiter->Finalize(fxl::MakeCopyable([
+          this, object_id = std::move(object_id), chunk = std::move(chunk),
+          callback = std::move(callback)
+        ](Status status) mutable {
+          if (status != Status::OK) {
+            callback(status);
+            return;
+          }
+
+          AddPiece(std::move(object_id), std::move(chunk), ChangeSource::SYNC,
+                   std::move(callback));
+        }));
       }));
     });
-
   });
 }
 
@@ -1307,7 +1320,7 @@ Status PageStorageImpl::SynchronousAddPiece(
       ComputeObjectId(GetObjectType(GetObjectIdType(object_id)), data->Get()));
 
   std::unique_ptr<const Object> object;
-  Status status = db_->ReadObject(object_id, &object);
+  Status status = db_->ReadObject(handler, object_id, &object);
   if (status == Status::NOT_FOUND) {
     PageDbObjectStatus object_status =
         (source == ChangeSource::LOCAL ? PageDbObjectStatus::TRANSIENT

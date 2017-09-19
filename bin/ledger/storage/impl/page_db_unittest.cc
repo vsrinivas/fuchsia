@@ -230,19 +230,21 @@ TEST_F(PageDbTest, ObjectStorage) {
     std::unique_ptr<const Object> object;
     PageDbObjectStatus object_status;
 
-    EXPECT_EQ(Status::NOT_FOUND, page_db_.ReadObject(object_id, &object));
+    EXPECT_EQ(Status::NOT_FOUND,
+              page_db_.ReadObject(handler, object_id, &object));
     ASSERT_EQ(Status::OK,
               page_db_.WriteObject(handler, object_id,
                                    DataSource::DataChunk::Create(content),
                                    PageDbObjectStatus::TRANSIENT));
     page_db_.GetObjectStatus(object_id, &object_status);
     EXPECT_EQ(PageDbObjectStatus::TRANSIENT, object_status);
-    ASSERT_EQ(Status::OK, page_db_.ReadObject(object_id, &object));
+    ASSERT_EQ(Status::OK, page_db_.ReadObject(handler, object_id, &object));
     fxl::StringView object_content;
     EXPECT_EQ(Status::OK, object->GetData(&object_content));
     EXPECT_EQ(content, object_content);
     EXPECT_EQ(Status::OK, page_db_.DeleteObject(handler, object_id));
-    EXPECT_EQ(Status::NOT_FOUND, page_db_.ReadObject(object_id, &object));
+    EXPECT_EQ(Status::NOT_FOUND,
+              page_db_.ReadObject(handler, object_id, &object));
   }));
 }
 

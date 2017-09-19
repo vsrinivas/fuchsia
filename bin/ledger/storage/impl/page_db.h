@@ -198,7 +198,8 @@ class PageDb : public PageDbMutator {
   // Reads the content of the given object. To check whether an object is stored
   // in the PageDb without retrieving its value, |nullptr| can be given for the
   // |object| argument.
-  virtual Status ReadObject(ObjectId object_id,
+  virtual Status ReadObject(coroutine::CoroutineHandler* handler,
+                            ObjectId object_id,
                             std::unique_ptr<const Object>* object) = 0;
 
   // Checks whether the object with the given |object_id| is stored in the

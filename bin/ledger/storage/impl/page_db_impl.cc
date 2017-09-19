@@ -166,7 +166,8 @@ Status PageDbImpl::GetJournalEntries(
   return Status::OK;
 }
 
-Status PageDbImpl::ReadObject(ObjectId object_id,
+Status PageDbImpl::ReadObject(CoroutineHandler* /*handler*/,
+                              ObjectId object_id,
                               std::unique_ptr<const Object>* object) {
   return db_.GetObject(ObjectRow::GetKeyFor(object_id), object_id, object);
 }

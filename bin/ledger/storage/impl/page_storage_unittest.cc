@@ -376,9 +376,11 @@ class PageStorageTest : public StorageTest {
         handler, data->object_id, data->ToChunk(), object_status);
   }
 
-  Status ReadObject(ObjectId object_id, std::unique_ptr<const Object>* object) {
-    return PageStorageImplAccessorForTest::GetDb(storage_).ReadObject(object_id,
-                                                                      object);
+  Status ReadObject(CoroutineHandler* handler,
+                    ObjectId object_id,
+                    std::unique_ptr<const Object>* object) {
+    return PageStorageImplAccessorForTest::GetDb(storage_).ReadObject(
+        handler, object_id, object);
   }
 
   Status DeleteObject(CoroutineHandler* handler, ObjectId object_id) {
@@ -814,48 +816,52 @@ TEST_F(PageStorageTest, DestroyUncommittedJournal) {
 }
 
 TEST_F(PageStorageTest, AddObjectFromLocal) {
-  ObjectData data("Some data", InlineBehavior::PREVENT);
+  EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
+    ObjectData data("Some data", InlineBehavior::PREVENT);
 
-  ObjectId object_id;
-  storage_->AddObjectFromLocal(
-      data.ToDataSource(),
-      [this, &object_id](Status returned_status, ObjectId returned_object_id) {
-        EXPECT_EQ(Status::OK, returned_status);
-        object_id = std::move(returned_object_id);
-        message_loop_.PostQuitTask();
-      });
-  EXPECT_FALSE(RunLoopWithTimeout());
+    ObjectId object_id;
+    storage_->AddObjectFromLocal(
+        data.ToDataSource(), [this, &object_id](Status returned_status,
+                                                ObjectId returned_object_id) {
+          EXPECT_EQ(Status::OK, returned_status);
+          object_id = std::move(returned_object_id);
+          message_loop_.PostQuitTask();
+        });
+    EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_EQ(data.object_id, object_id);
+    EXPECT_EQ(data.object_id, object_id);
 
-  std::unique_ptr<const Object> object;
-  ASSERT_EQ(Status::OK, ReadObject(object_id, &object));
-  fxl::StringView content;
-  ASSERT_EQ(Status::OK, object->GetData(&content));
-  EXPECT_EQ(data.value, content);
-  EXPECT_TRUE(storage_->ObjectIsUntracked(object_id));
+    std::unique_ptr<const Object> object;
+    ASSERT_EQ(Status::OK, ReadObject(handler, object_id, &object));
+    fxl::StringView content;
+    ASSERT_EQ(Status::OK, object->GetData(&content));
+    EXPECT_EQ(data.value, content);
+    EXPECT_TRUE(storage_->ObjectIsUntracked(object_id));
+  }));
 }
 
 TEST_F(PageStorageTest, AddSmallObjectFromLocal) {
-  ObjectData data("Some data");
+  EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
+    ObjectData data("Some data");
 
-  ObjectId object_id;
-  storage_->AddObjectFromLocal(
-      data.ToDataSource(),
-      [this, &object_id](Status returned_status, ObjectId returned_object_id) {
-        EXPECT_EQ(Status::OK, returned_status);
-        object_id = std::move(returned_object_id);
-        message_loop_.PostQuitTask();
-      });
-  EXPECT_FALSE(RunLoopWithTimeout());
+    ObjectId object_id;
+    storage_->AddObjectFromLocal(
+        data.ToDataSource(), [this, &object_id](Status returned_status,
+                                                ObjectId returned_object_id) {
+          EXPECT_EQ(Status::OK, returned_status);
+          object_id = std::move(returned_object_id);
+          message_loop_.PostQuitTask();
+        });
+    EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_EQ(data.object_id, object_id);
-  EXPECT_EQ(data.value, object_id);
+    EXPECT_EQ(data.object_id, object_id);
+    EXPECT_EQ(data.value, object_id);
 
-  std::unique_ptr<const Object> object;
-  EXPECT_EQ(Status::NOT_FOUND, ReadObject(object_id, &object));
-  // Inline object do not need to ever be tracked.
-  EXPECT_FALSE(storage_->ObjectIsUntracked(object_id));
+    std::unique_ptr<const Object> object;
+    EXPECT_EQ(Status::NOT_FOUND, ReadObject(handler, object_id, &object));
+    // Inline objects do not need to ever be tracked.
+    EXPECT_FALSE(storage_->ObjectIsUntracked(object_id));
+  }));
 }
 
 TEST_F(PageStorageTest, InterruptAddObjectFromLocal) {
@@ -885,41 +891,45 @@ TEST_F(PageStorageTest, AddObjectFromLocalWrongSize) {
 }
 
 TEST_F(PageStorageTest, AddLocalPiece) {
-  ObjectData data("Some data", InlineBehavior::PREVENT);
+  EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
+    ObjectData data("Some data", InlineBehavior::PREVENT);
 
-  PageStorageImplAccessorForTest::AddPiece(
-      storage_, data.object_id, data.ToChunk(), ChangeSource::LOCAL,
-      [this](Status returned_status) {
-        EXPECT_EQ(Status::OK, returned_status);
-        message_loop_.PostQuitTask();
-      });
-  EXPECT_FALSE(RunLoopWithTimeout());
+    PageStorageImplAccessorForTest::AddPiece(
+        storage_, data.object_id, data.ToChunk(), ChangeSource::LOCAL,
+        [this](Status returned_status) {
+          EXPECT_EQ(Status::OK, returned_status);
+          message_loop_.PostQuitTask();
+        });
+    EXPECT_FALSE(RunLoopWithTimeout());
 
-  std::unique_ptr<const Object> object;
-  ASSERT_EQ(Status::OK, ReadObject(data.object_id, &object));
-  fxl::StringView content;
-  ASSERT_EQ(Status::OK, object->GetData(&content));
-  EXPECT_EQ(data.value, content);
-  EXPECT_TRUE(storage_->ObjectIsUntracked(data.object_id));
+    std::unique_ptr<const Object> object;
+    ASSERT_EQ(Status::OK, ReadObject(handler, data.object_id, &object));
+    fxl::StringView content;
+    ASSERT_EQ(Status::OK, object->GetData(&content));
+    EXPECT_EQ(data.value, content);
+    EXPECT_TRUE(storage_->ObjectIsUntracked(data.object_id));
+  }));
 }
 
 TEST_F(PageStorageTest, AddSyncPiece) {
-  ObjectData data("Some data", InlineBehavior::PREVENT);
+  EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
+    ObjectData data("Some data", InlineBehavior::PREVENT);
 
-  PageStorageImplAccessorForTest::AddPiece(
-      storage_, data.object_id, data.ToChunk(), ChangeSource::SYNC,
-      [this](Status returned_status) {
-        EXPECT_EQ(Status::OK, returned_status);
-        message_loop_.PostQuitTask();
-      });
-  EXPECT_FALSE(RunLoopWithTimeout());
+    PageStorageImplAccessorForTest::AddPiece(
+        storage_, data.object_id, data.ToChunk(), ChangeSource::SYNC,
+        [this](Status returned_status) {
+          EXPECT_EQ(Status::OK, returned_status);
+          message_loop_.PostQuitTask();
+        });
+    EXPECT_FALSE(RunLoopWithTimeout());
 
-  std::unique_ptr<const Object> object;
-  ASSERT_EQ(Status::OK, ReadObject(data.object_id, &object));
-  fxl::StringView content;
-  ASSERT_EQ(Status::OK, object->GetData(&content));
-  EXPECT_EQ(data.value, content);
-  EXPECT_FALSE(storage_->ObjectIsUntracked(data.object_id));
+    std::unique_ptr<const Object> object;
+    ASSERT_EQ(Status::OK, ReadObject(handler, data.object_id, &object));
+    fxl::StringView content;
+    ASSERT_EQ(Status::OK, object->GetData(&content));
+    EXPECT_EQ(data.value, content);
+    EXPECT_FALSE(storage_->ObjectIsUntracked(data.object_id));
+  }));
 }
 
 TEST_F(PageStorageTest, GetObject) {
@@ -1119,8 +1129,8 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
   EXPECT_TRUE(storage_->ObjectIsUntracked(data_array[2].object_id));
 
   // Create a second commit. After calling Put for "key1" for the second time
-  // object_ids[1] is no longer part of this commit: it should remain untracked
-  // after committing.
+  // object_ids[1] is no longer part of this commit: it should remain
+  // untracked after committing.
   journal.reset();
   storage_->StartCommit(GetFirstHead()->GetId(), JournalType::IMPLICIT,
                         callback::Capture(MakeQuitTask(), &status, &journal));

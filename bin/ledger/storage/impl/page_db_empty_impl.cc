@@ -39,7 +39,8 @@ Status PageDbEmptyImpl::GetJournalEntries(
     std::unique_ptr<Iterator<const EntryChange>>* /*entries*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::ReadObject(ObjectId /*object_id*/,
+Status PageDbEmptyImpl::ReadObject(CoroutineHandler* /*handler*/,
+                                   ObjectId /*object_id*/,
                                    std::unique_ptr<const Object>* /*object*/) {
   return Status::NOT_IMPLEMENTED;
 }

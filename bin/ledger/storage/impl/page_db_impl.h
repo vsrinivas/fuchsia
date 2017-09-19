@@ -41,7 +41,8 @@ class PageDbImpl : public PageDb {
       coroutine::CoroutineHandler* handler,
       const JournalId& journal_id,
       std::unique_ptr<Iterator<const EntryChange>>* entries) override;
-  Status ReadObject(ObjectId object_id,
+  Status ReadObject(coroutine::CoroutineHandler* handler,
+                    ObjectId object_id,
                     std::unique_ptr<const Object>* object) override;
   Status HasObject(ObjectIdView object_id, bool* has_object) override;
   Status GetUnsyncedCommitIds(coroutine::CoroutineHandler* handler,
