@@ -80,7 +80,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/pthread/pthread_getcpuclockid.c \
     $(LOCAL_DIR)/pthread/pthread_getspecific.c \
     $(LOCAL_DIR)/pthread/pthread_join.c \
-    $(LOCAL_DIR)/pthread/pthread_key_create.c \
+    $(LOCAL_DIR)/pthread/pthread_key.c \
     $(LOCAL_DIR)/pthread/pthread_kill.c \
     $(LOCAL_DIR)/pthread/pthread_mutex_consistent.c \
     $(LOCAL_DIR)/pthread/pthread_mutex_destroy.c \
@@ -821,8 +821,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/thread/thrd_join.c \
     $(LOCAL_DIR)/src/thread/thrd_sleep.c \
     $(LOCAL_DIR)/src/thread/thrd_yield.c \
-    $(LOCAL_DIR)/src/thread/tss_create.c \
-    $(LOCAL_DIR)/src/thread/tss_delete.c \
+    $(LOCAL_DIR)/src/thread/tss.c \
     $(LOCAL_DIR)/src/thread/tss_set.c \
     $(LOCAL_DIR)/src/time/__asctime.c \
     $(LOCAL_DIR)/src/time/__map_file.c \

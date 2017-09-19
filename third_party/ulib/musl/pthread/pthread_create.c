@@ -169,7 +169,7 @@ _Noreturn void __pthread_exit(void* result) {
 
     __tls_run_dtors();
 
-    __pthread_tsd_run_dtors();
+    __thread_tsd_run_dtors();
 
     __dl_thread_cleanup();
 

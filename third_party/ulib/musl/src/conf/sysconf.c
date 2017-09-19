@@ -3,6 +3,7 @@
 #include <limits.h>
 #include <signal.h>
 #include <stdint.h>
+#include <threads.h>
 #include <unistd.h>
 
 #include <zircon/syscalls.h>
@@ -80,7 +81,7 @@ long sysconf(int name) {
             [_SC_GETPW_R_SIZE_MAX] = -1,
             [_SC_LOGIN_NAME_MAX] = 256,
             [_SC_TTY_NAME_MAX] = TTY_NAME_MAX,
-            [_SC_THREAD_DESTRUCTOR_ITERATIONS] = PTHREAD_DESTRUCTOR_ITERATIONS,
+            [_SC_THREAD_DESTRUCTOR_ITERATIONS] = TSS_DTOR_ITERATIONS,
             [_SC_THREAD_KEYS_MAX] = PTHREAD_KEYS_MAX,
             [_SC_THREAD_STACK_MIN] = PTHREAD_STACK_MIN,
             [_SC_THREAD_THREADS_MAX] = -1,

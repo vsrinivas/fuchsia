@@ -159,9 +159,6 @@ int __pthread_join(pthread_t t, void** result) ATTR_LIBC_VISIBILITY;
 // Signal n (or all, for -1) threads on a pthread_cond_t or cnd_t.
 void __private_cond_signal(void* condvar, int n) ATTR_LIBC_VISIBILITY;
 
-int __pthread_key_create(tss_t*, void (*)(void*)) ATTR_LIBC_VISIBILITY;
-int __pthread_key_delete(tss_t k) ATTR_LIBC_VISIBILITY;
-
 // This is guaranteed to only return 0, EINVAL, or ETIMEDOUT.
 int __timedwait(atomic_int*, int, clockid_t, const struct timespec*)
     ATTR_LIBC_VISIBILITY;
@@ -174,7 +171,7 @@ int __timedwait(atomic_int*, int, clockid_t, const struct timespec*)
 void __thread_allocation_inhibit(void) ATTR_LIBC_VISIBILITY;
 void __thread_allocation_release(void) ATTR_LIBC_VISIBILITY;
 
-void __pthread_tsd_run_dtors(void) ATTR_LIBC_VISIBILITY;
+void __thread_tsd_run_dtors(void) ATTR_LIBC_VISIBILITY;
 
 #define DEFAULT_PTHREAD_ATTR                                                  \
     ((pthread_attr_t){                                                        \
