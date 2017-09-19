@@ -20,7 +20,9 @@ type FourWayConfig struct {
 
 	// PTK computation.
 	PeerAddr [6]uint8
+	_        [2]uint8  // make the symbol 4-byte aligned to avoid a compiler bug (https://github.com/golang/go/issues/19137)
 	StaAddr  [6]uint8
+	_        [2]uint8  // same as above
 	aNonce   [32]byte
 	sNonce   [32]byte
 
