@@ -105,11 +105,11 @@ zx_status_t VirtioDevice::NotifyGuest() {
     return pci_.Interrupt();
 }
 
-zx_status_t VirtioDevice::Kick(uint16_t queue_sel) {
-    if (queue_sel >= num_queues_)
+zx_status_t VirtioDevice::Kick(uint16_t kicked_queue) {
+    if (kicked_queue >= num_queues_)
         return ZX_ERR_OUT_OF_RANGE;
 
-    zx_status_t status = HandleQueueNotify(queue_sel);
+    zx_status_t status = HandleQueueNotify(kicked_queue);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to handle queue notify event.\n");
         return status;
@@ -123,7 +123,7 @@ zx_status_t VirtioDevice::Kick(uint16_t queue_sel) {
     }
 
     // Notify threads waiting on a descriptor.
-    virtio_queue_signal(&queues_[queue_sel_]);
+    virtio_queue_signal(&queues_[kicked_queue]);
     return ZX_OK;
 }
 
