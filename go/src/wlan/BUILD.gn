@@ -60,6 +60,10 @@ wlan_go_dependencies = [
     package = "garnet/public/lib/netstack/fidl"
     source = "$root_gen_dir/go/src/garnet/public/lib/netstack/fidl"
   },
+  {
+    source = "//third_party/golang/crypto"
+    package = "golang.org/x/crypto"
+  },
 ]
 
 go_test("keywrap_test_bin") {
@@ -78,6 +82,21 @@ go_test("elements_test_bin") {
       {
           package = "wlan/wlan/elements"
           source = "wlan/elements"
+      },
+  ]
+}
+
+go_test("eapol_crypto_test_bin") {
+  output_name = "eapol_crypto_test"
+  gopackage = "wlan/eapol/crypto"
+  go_dependencies = [
+      {
+          package = "wlan/eapol/crypto"
+          source = "eapol/crypto"
+      },
+      {
+        source = "//third_party/golang/crypto"
+        package = "golang.org/x/crypto"
       },
   ]
 }
@@ -171,6 +190,7 @@ package("wlantool") {
 package("wlanstack_test") {
   deps = [
     ":elements_test_bin",
+    ":eapol_crypto_test_bin",
     ":keywrap_test_bin",
     ":wlanstack_test_bin",
   ]
@@ -178,6 +198,9 @@ package("wlanstack_test") {
   tests = [
     {
       name = "elements_test"
+    },
+    {
+      name = "eapol_crypto_test"
     },
     {
       name = "wlanstack_test"
