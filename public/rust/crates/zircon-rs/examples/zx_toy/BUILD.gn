@@ -6,6 +6,6 @@ import("//build/rust/rust_binary.gni")
 
 rust_binary("zx_toy") {
   deps = [
-    "//rust/zircon-rs:zircon",
+    "//garnet/public/rust/crates/zircon-rs:zircon",
   ]
 }
