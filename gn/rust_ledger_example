@@ -3,7 +3,7 @@
         "rust"
     ],
     "labels": [
-        "//rust/ledger_example"
+        "//peridot/examples/ledger-rs:ledger_example"
     ],
     "binaries": [
         {
