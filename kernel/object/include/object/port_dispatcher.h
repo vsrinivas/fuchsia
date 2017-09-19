@@ -120,8 +120,8 @@ private:
     // StateObserver overrides.
     Flags OnInitialize(zx_signals_t initial_state, const StateObserver::CountInfo* cinfo) final;
     Flags OnStateChange(zx_signals_t new_state) final;
-    Flags OnCancel(Handle* handle) final;
-    Flags OnCancelByKey(Handle* handle, const void* port, uint64_t key) final;
+    Flags OnCancel(const Handle* handle) final;
+    Flags OnCancelByKey(const Handle* handle, const void* port, uint64_t key) final;
     void OnRemoved() final;
 
     // The following method can only be called from

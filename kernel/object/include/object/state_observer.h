@@ -55,7 +55,7 @@ public:
     // means it was bound to |handle|.
     // May also return flags: kNeedRemoval, kWokeThreads
     // WARNING: This is called under StateTracker's mutex.
-    virtual Flags OnCancel(Handle* handle) = 0;
+    virtual Flags OnCancel(const Handle* handle) = 0;
 
     // Called when the client wants to cancel an outstanding object_wait_aysnc(..key..). In this
     // case the object might not be destroyed.
@@ -63,7 +63,7 @@ public:
     // means it was bound to |handle| and |key|.
     // May also return flags: kNeedRemoval, kWokeThreads
     // WARNING: This is called under StateTracker's mutex.
-    virtual Flags OnCancelByKey(Handle* handle, const void* port, uint64_t key) { return 0; }
+    virtual Flags OnCancelByKey(const Handle* handle, const void* port, uint64_t key) { return 0; }
 
     // Called after this observer has been removed from the state tracker list. In this callback
     // is safe to delete the observer.

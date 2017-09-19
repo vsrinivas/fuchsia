@@ -39,7 +39,7 @@ private:
     // StateObserver implementation:
     Flags OnInitialize(zx_signals_t initial_state, const StateObserver::CountInfo* cinfo) final;
     Flags OnStateChange(zx_signals_t new_state) final;
-    Flags OnCancel(Handle* handle) final;
+    Flags OnCancel(const Handle* handle) final;
 
     fbl::Canary<fbl::magic("WTSO")> canary_;
 

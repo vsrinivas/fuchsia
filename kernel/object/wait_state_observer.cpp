@@ -89,7 +89,7 @@ StateObserver::Flags WaitStateObserver::OnStateChange(zx_signals_t new_state) {
     return 0;
 }
 
-StateObserver::Flags WaitStateObserver::OnCancel(Handle* handle) {
+StateObserver::Flags WaitStateObserver::OnCancel(const Handle* handle) {
     canary_.Assert();
 
     if (handle == handle_) {

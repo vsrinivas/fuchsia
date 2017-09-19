@@ -26,8 +26,8 @@ private:
         return 0;
     }
     Flags OnStateChange(zx_signals_t new_state) override { return 0; }
-    Flags OnCancel(Handle* handle) override { return 0; }
-    Flags OnCancelByKey(Handle* handle, const void* port, uint64_t key)
+    Flags OnCancel(const Handle* handle) override { return 0; }
+    Flags OnCancelByKey(const Handle* handle, const void* port, uint64_t key)
         override { return 0; }
 
     void OnRemoved() override { removals_++; }
@@ -137,7 +137,7 @@ bool on_cancel(void* context) {
 
     class RmOnCancel : public RemovableObserver {
     public:
-        Flags OnCancel(Handle* handle) {
+        Flags OnCancel(const Handle* handle) override {
             return kNeedRemoval;
         }
     };
@@ -167,7 +167,7 @@ bool on_cancel_by_key(void* context) {
 
     class RmOnCancelByKey : public RemovableObserver {
     public:
-        Flags OnCancelByKey(Handle* handle, const void* port, uint64_t key)
+        Flags OnCancelByKey(const Handle* handle, const void* port, uint64_t key)
             override {
             return kNeedRemoval;
         }

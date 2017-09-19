@@ -110,7 +110,7 @@ StateObserver::Flags PortObserver::OnStateChange(zx_signals_t new_state) {
     return MaybeQueue(new_state, 1u);
 }
 
-StateObserver::Flags PortObserver::OnCancel(Handle* handle) {
+StateObserver::Flags PortObserver::OnCancel(const Handle* handle) {
     if (packet_.handle == handle) {
         return kHandled | kNeedRemoval;
     } else {
@@ -118,7 +118,7 @@ StateObserver::Flags PortObserver::OnCancel(Handle* handle) {
     }
 }
 
-StateObserver::Flags PortObserver::OnCancelByKey(Handle* handle, const void* port, uint64_t key) {
+StateObserver::Flags PortObserver::OnCancelByKey(const Handle* handle, const void* port, uint64_t key) {
     if ((packet_.handle != handle) || (packet_.key() != key) || (port_.get() != port))
         return 0;
     return kHandled | kNeedRemoval;
