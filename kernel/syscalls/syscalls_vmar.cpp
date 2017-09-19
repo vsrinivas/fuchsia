@@ -28,7 +28,7 @@
 
 zx_status_t sys_vmar_allocate(zx_handle_t parent_vmar_handle,
                     size_t offset, size_t size, uint32_t map_flags,
-                    user_ptr<zx_handle_t> _child_vmar, user_ptr<uintptr_t> _child_addr) {
+                    user_ptr<zx_handle_t> child_vmar, user_ptr<uintptr_t> child_addr) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -69,10 +69,10 @@ zx_status_t sys_vmar_allocate(zx_handle_t parent_vmar_handle,
     if (!handle)
         return ZX_ERR_NO_MEMORY;
 
-    if (_child_addr.copy_to_user(base) != ZX_OK)
+    if (child_addr.copy_to_user(base) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
-    if (_child_vmar.copy_to_user(up->MapHandleToValue(handle)) != ZX_OK)
+    if (child_vmar.copy_to_user(up->MapHandleToValue(handle)) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     up->AddHandle(fbl::move(handle));
@@ -93,8 +93,8 @@ zx_status_t sys_vmar_destroy(zx_handle_t vmar_handle) {
 }
 
 zx_status_t sys_vmar_map(zx_handle_t vmar_handle, size_t vmar_offset,
-                    zx_handle_t vmo_handle, uint64_t vmo_offset, size_t len, uint32_t map_flags,
-                    user_ptr<uintptr_t> _mapped_addr) {
+                         zx_handle_t vmo_handle, uint64_t vmo_offset, size_t len, uint32_t map_flags,
+                         user_ptr<uintptr_t> mapped_addr) {
     auto up = ProcessDispatcher::GetCurrent();
 
     // lookup the VMAR dispatcher from handle
@@ -170,7 +170,7 @@ zx_status_t sys_vmar_map(zx_handle_t vmar_handle, size_t vmar_offset,
         }
     }
 
-    if (_mapped_addr.copy_to_user(vm_mapping->base()) != ZX_OK)
+    if (mapped_addr.copy_to_user(vm_mapping->base()) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     cleanup_handler.cancel();

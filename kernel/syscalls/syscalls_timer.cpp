@@ -20,7 +20,7 @@
 
 #include "syscalls_priv.h"
 
-zx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_ptr<zx_handle_t> _out) {
+zx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_ptr<zx_handle_t> out) {
     if (clock_id != ZX_CLOCK_MONOTONIC)
         return ZX_ERR_INVALID_ARGS;
 
@@ -43,7 +43,7 @@ zx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_ptr<zx_ha
 
     zx_handle_t hv = up->MapHandleToValue(handle);
 
-    if (_out.copy_to_user(hv) != ZX_OK)
+    if (out.copy_to_user(hv) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     up->AddHandle(fbl::move(handle));

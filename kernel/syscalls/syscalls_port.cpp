@@ -23,7 +23,7 @@
 
 #define LOCAL_TRACE 0
 
-zx_status_t sys_port_create(uint32_t options, user_ptr<zx_handle_t> _out) {
+zx_status_t sys_port_create(uint32_t options, user_ptr<zx_handle_t> out) {
     LTRACEF("options %u\n", options);
 
     // No options are supported.
@@ -51,7 +51,7 @@ zx_status_t sys_port_create(uint32_t options, user_ptr<zx_handle_t> _out) {
 
     zx_handle_t hv = up->MapHandleToValue(handle);
 
-    if (_out.copy_to_user(hv) != ZX_OK)
+    if (out.copy_to_user(hv) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
     up->AddHandle(fbl::move(handle));
 
@@ -59,7 +59,7 @@ zx_status_t sys_port_create(uint32_t options, user_ptr<zx_handle_t> _out) {
     return ZX_OK;
 }
 
-zx_status_t sys_port_queue(zx_handle_t handle, user_ptr<const void> _packet, size_t size) {
+zx_status_t sys_port_queue(zx_handle_t handle, user_ptr<const void> packet_in, size_t size) {
     LTRACEF("handle %x\n", handle);
 
     if (size != 0u)
@@ -73,14 +73,14 @@ zx_status_t sys_port_queue(zx_handle_t handle, user_ptr<const void> _packet, siz
         return status;
 
     zx_port_packet_t packet;
-    if (_packet.copy_array_from_user(&packet, sizeof(packet)) != ZX_OK)
+    if (packet_in.copy_array_from_user(&packet, sizeof(packet)) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     return port->QueueUser(packet);
 }
 
 zx_status_t sys_port_wait(zx_handle_t handle, zx_time_t deadline,
-                          user_ptr<void> _packet, size_t size) {
+                          user_ptr<void> packet_out, size_t size) {
     LTRACEF("handle %x\n", handle);
 
     if (size != 0u)
@@ -106,7 +106,7 @@ zx_status_t sys_port_wait(zx_handle_t handle, zx_time_t deadline,
     // remove internal flag bits
     pp.type &= PKT_FLAG_MASK;
 
-    if (_packet.copy_array_to_user(&pp, sizeof(pp)) != ZX_OK)
+    if (packet_out.copy_array_to_user(&pp, sizeof(pp)) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     return ZX_OK;

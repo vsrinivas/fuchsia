@@ -88,7 +88,7 @@ zx_status_t sys_clock_adjust(zx_handle_t hrsrc, uint32_t clock_id, int64_t offse
     }
 }
 
-zx_status_t sys_event_create(uint32_t options, user_ptr<zx_handle_t> _out) {
+zx_status_t sys_event_create(uint32_t options, user_ptr<zx_handle_t> event_out) {
     LTRACEF("options 0x%x\n", options);
 
     if (options != 0u)
@@ -110,7 +110,7 @@ zx_status_t sys_event_create(uint32_t options, user_ptr<zx_handle_t> _out) {
     if (!handle)
         return ZX_ERR_NO_MEMORY;
 
-    if (_out.copy_to_user(up->MapHandleToValue(handle)) != ZX_OK)
+    if (event_out.copy_to_user(up->MapHandleToValue(handle)) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     up->AddHandle(fbl::move(handle));
@@ -118,8 +118,8 @@ zx_status_t sys_event_create(uint32_t options, user_ptr<zx_handle_t> _out) {
 }
 
 zx_status_t sys_eventpair_create(uint32_t options,
-                                 user_ptr<zx_handle_t> _out0, user_ptr<zx_handle_t> _out1) {
-    LTRACEF("entry out_handles %p,%p\n", _out0.get(), _out1.get());
+                                 user_ptr<zx_handle_t> out0, user_ptr<zx_handle_t> out1) {
+    LTRACEF("entry out_handles %p,%p\n", out0.get(), out1.get());
 
     if (options != 0u)  // No options defined/supported yet.
         return ZX_ERR_NOT_SUPPORTED;
@@ -143,10 +143,10 @@ zx_status_t sys_eventpair_create(uint32_t options,
     if (!h1)
         return ZX_ERR_NO_MEMORY;
 
-    if (_out0.copy_to_user(up->MapHandleToValue(h0)) != ZX_OK)
+    if (out0.copy_to_user(up->MapHandleToValue(h0)) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
-    if (_out1.copy_to_user(up->MapHandleToValue(h1)) != ZX_OK)
+    if (out1.copy_to_user(up->MapHandleToValue(h1)) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     up->AddHandle(fbl::move(h0));
@@ -195,8 +195,8 @@ zx_status_t sys_debuglog_create(zx_handle_t rsrc, uint32_t options,
     return sys_log_create(options, out);
 }
 
-zx_status_t sys_debuglog_write(zx_handle_t log_handle, uint32_t options, user_ptr<const void> _ptr, size_t len) {
-    LTRACEF("log handle %x, opt %x, ptr 0x%p, len %zu\n", log_handle, options, _ptr.get(), len);
+zx_status_t sys_debuglog_write(zx_handle_t log_handle, uint32_t options, user_ptr<const void> ptr, size_t len) {
+    LTRACEF("log handle %x, opt %x, ptr 0x%p, len %zu\n", log_handle, options, ptr.get(), len);
 
     if (len > DLOG_MAX_DATA)
         return ZX_ERR_OUT_OF_RANGE;
@@ -212,14 +212,14 @@ zx_status_t sys_debuglog_write(zx_handle_t log_handle, uint32_t options, user_pt
         return status;
 
     char buf[DLOG_MAX_RECORD];
-    if (_ptr.reinterpret<const char>().copy_array_from_user(buf, len) != ZX_OK)
+    if (ptr.reinterpret<const char>().copy_array_from_user(buf, len) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     return log->Write(options, buf, len);
 }
 
-zx_status_t sys_debuglog_read(zx_handle_t log_handle, uint32_t options, user_ptr<void> _ptr, size_t len) {
-    LTRACEF("log handle %x, opt %x, ptr 0x%p, len %zu\n", log_handle, options, _ptr.get(), len);
+zx_status_t sys_debuglog_read(zx_handle_t log_handle, uint32_t options, user_ptr<void> ptr, size_t len) {
+    LTRACEF("log handle %x, opt %x, ptr 0x%p, len %zu\n", log_handle, options, ptr.get(), len);
 
     if (options != 0)
         return ZX_ERR_INVALID_ARGS;
@@ -236,21 +236,21 @@ zx_status_t sys_debuglog_read(zx_handle_t log_handle, uint32_t options, user_ptr
     if ((status = log->Read(options, buf, DLOG_MAX_RECORD, &actual)) < 0)
         return status;
 
-    if (_ptr.copy_array_to_user(buf, actual) != ZX_OK)
+    if (ptr.copy_array_to_user(buf, actual) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     return static_cast<zx_status_t>(actual);
 }
 
-zx_status_t sys_log_write(zx_handle_t log_handle, uint32_t len, user_ptr<const void> _ptr, uint32_t options) {
-    return sys_debuglog_write(log_handle, options, _ptr, len);
+zx_status_t sys_log_write(zx_handle_t log_handle, uint32_t len, user_ptr<const void> ptr, uint32_t options) {
+    return sys_debuglog_write(log_handle, options, ptr, len);
 }
 
-zx_status_t sys_log_read(zx_handle_t log_handle, uint32_t len, user_ptr<void> _ptr, uint32_t options) {
-    return sys_debuglog_read(log_handle, options, _ptr, len);
+zx_status_t sys_log_read(zx_handle_t log_handle, uint32_t len, user_ptr<void> ptr, uint32_t options) {
+    return sys_debuglog_read(log_handle, options, ptr, len);
 }
 
-zx_status_t sys_cprng_draw(user_ptr<void> _buffer, size_t len, user_ptr<size_t> _actual) {
+zx_status_t sys_cprng_draw(user_ptr<void> buffer, size_t len, user_ptr<size_t> actual) {
     if (len > kMaxCPRNGDraw)
         return ZX_ERR_INVALID_ARGS;
 
@@ -263,15 +263,15 @@ zx_status_t sys_cprng_draw(user_ptr<void> _buffer, size_t len, user_ptr<size_t> 
     ASSERT(prng->is_thread_safe());
     prng->Draw(kernel_buf, static_cast<int>(len));
 
-    if (_buffer.copy_array_to_user(kernel_buf, len) != ZX_OK)
+    if (buffer.copy_array_to_user(kernel_buf, len) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
-    if (_actual.copy_to_user(len) != ZX_OK)
+    if (actual.copy_to_user(len) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     return ZX_OK;
 }
 
-zx_status_t sys_cprng_add_entropy(user_ptr<const void> _buffer, size_t len) {
+zx_status_t sys_cprng_add_entropy(user_ptr<const void> buffer, size_t len) {
     if (len > kMaxCPRNGSeed)
         return ZX_ERR_INVALID_ARGS;
 
@@ -280,7 +280,7 @@ zx_status_t sys_cprng_add_entropy(user_ptr<const void> _buffer, size_t len) {
     // returns.
     explicit_memory::ZeroDtor<uint8_t> zero_guard(kernel_buf, sizeof(kernel_buf));
 
-    if (_buffer.copy_array_from_user(kernel_buf, len) != ZX_OK)
+    if (buffer.copy_array_from_user(kernel_buf, len) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     auto prng = crypto::GlobalPRNG::GetInstance();

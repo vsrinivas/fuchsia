@@ -26,8 +26,8 @@
 
 #define LOCAL_TRACE 0
 
-zx_status_t sys_socket_create(uint32_t options, user_ptr<zx_handle_t> _out0, user_ptr<zx_handle_t> _out1) {
-    LTRACEF("entry out_handles %p, %p\n", _out0.get(), _out1.get());
+zx_status_t sys_socket_create(uint32_t options, user_ptr<zx_handle_t> out0, user_ptr<zx_handle_t> out1) {
+    LTRACEF("entry out_handles %p, %p\n", out0.get(), out1.get());
 
     auto up = ProcessDispatcher::GetCurrent();
     zx_status_t res = up->QueryPolicy(ZX_POL_NEW_SOCKET);
@@ -48,10 +48,10 @@ zx_status_t sys_socket_create(uint32_t options, user_ptr<zx_handle_t> _out0, use
     if (!h1)
         return ZX_ERR_NO_MEMORY;
 
-    if (_out0.copy_to_user(up->MapHandleToValue(h0)) != ZX_OK)
+    if (out0.copy_to_user(up->MapHandleToValue(h0)) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
-    if (_out1.copy_to_user(up->MapHandleToValue(h1)) != ZX_OK)
+    if (out1.copy_to_user(up->MapHandleToValue(h1)) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     up->AddHandle(fbl::move(h0));
@@ -61,11 +61,11 @@ zx_status_t sys_socket_create(uint32_t options, user_ptr<zx_handle_t> _out0, use
 }
 
 zx_status_t sys_socket_write(zx_handle_t handle, uint32_t options,
-                             user_ptr<const void> _buffer, size_t size,
-                             user_ptr<size_t> _actual) {
+                             user_ptr<const void> buffer, size_t size,
+                             user_ptr<size_t> actual) {
     LTRACEF("handle %x\n", handle);
 
-    if ((size > 0u) && !_buffer)
+    if ((size > 0u) && !buffer)
         return ZX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -78,10 +78,10 @@ zx_status_t sys_socket_write(zx_handle_t handle, uint32_t options,
     size_t nwritten;
     switch (options) {
     case 0:
-        status = socket->Write(_buffer, size, &nwritten);
+        status = socket->Write(buffer, size, &nwritten);
         break;
     case ZX_SOCKET_CONTROL:
-        status = socket->WriteControl(_buffer, size);
+        status = socket->WriteControl(buffer, size);
         if (status == ZX_OK)
             nwritten = size;
         break;
@@ -96,18 +96,18 @@ zx_status_t sys_socket_write(zx_handle_t handle, uint32_t options,
     }
 
     // Caller may ignore results if desired.
-    if (status == ZX_OK && _actual)
-        status = _actual.copy_to_user(nwritten);
+    if (status == ZX_OK && actual)
+        status = actual.copy_to_user(nwritten);
 
     return status;
 }
 
 zx_status_t sys_socket_read(zx_handle_t handle, uint32_t options,
-                            user_ptr<void> _buffer, size_t size,
-                            user_ptr<size_t> _actual) {
+                            user_ptr<void> buffer, size_t size,
+                            user_ptr<size_t> actual) {
     LTRACEF("handle %x\n", handle);
 
-    if (!_buffer && size > 0)
+    if (!buffer && size > 0)
         return ZX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -121,18 +121,18 @@ zx_status_t sys_socket_read(zx_handle_t handle, uint32_t options,
 
     switch (options) {
     case 0:
-        status = socket->Read(_buffer, size, &nread);
+        status = socket->Read(buffer, size, &nread);
         break;
     case ZX_SOCKET_CONTROL:
-        status = socket->ReadControl(_buffer, size, &nread);
+        status = socket->ReadControl(buffer, size, &nread);
         break;
     default:
         return ZX_ERR_INVALID_ARGS;
     }
 
     // Caller may ignore results if desired.
-    if (status == ZX_OK && _actual)
-        status = _actual.copy_to_user(nread);
+    if (status == ZX_OK && actual)
+        status = actual.copy_to_user(nread);
 
     return status;
 }
