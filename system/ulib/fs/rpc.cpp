@@ -9,31 +9,19 @@
 #include <sys/stat.h>
 #include <threads.h>
 
-#include <fs/vfs.h>
-#include <fs/vnode.h>
-#include <zircon/process.h>
-#include <zx/event.h>
+#include <fbl/auto_lock.h>
+#include <fbl/ref_ptr.h>
 #include <fdio/debug.h>
 #include <fdio/io.h>
 #include <fdio/remoteio.h>
 #include <fdio/vfs.h>
-#include <fbl/auto_lock.h>
-#include <fbl/ref_ptr.h>
+#include <fs/connection.h>
+#include <fs/vfs.h>
+#include <fs/vnode.h>
+#include <zircon/process.h>
+#include <zx/event.h>
 
 #define MXDEBUG 0
-
-typedef struct vfs_iostate {
-    fbl::RefPtr<fs::Vnode> vn;
-    // The VFS state & dispatcher associated with this handle.
-    fs::Vfs* vfs;
-    // Handle to event which allows client to refer to open vnodes in multi-patt
-    // operations (see: link, rename). Defaults to ZX_HANDLE_INVALID.
-    // Validated on the server side using cookies.
-    zx::event token;
-    fs::vdircookie_t dircookie;
-    size_t io_off;
-    uint32_t io_flags;
-} vfs_iostate_t;
 
 static bool writable(uint32_t flags) {
     return ((03 & flags) == O_RDWR) || ((03 & flags) == O_WRONLY);
@@ -61,7 +49,7 @@ static void txn_handoff_open(zx_handle_t srv, zx::channel channel,
 
 // Initializes io state for a vnode and attaches it to a dispatcher.
 void vfs_rpc_open(zxrio_msg_t* msg, zx::channel channel, fbl::RefPtr<Vnode> vn,
-                  vfs_iostate_t* ios, const char* path, uint32_t flags, uint32_t mode) {
+                  Connection* connection, const char* path, uint32_t flags, uint32_t mode) {
     zx_status_t r;
 
     // The pipeline directive instructs the VFS layer to open the vnode
@@ -70,7 +58,7 @@ void vfs_rpc_open(zxrio_msg_t* msg, zx::channel channel, fbl::RefPtr<Vnode> vn,
     bool pipeline = flags & O_PIPELINE;
     uint32_t open_flags = flags & (~O_PIPELINE);
 
-    r = ios->vfs->Open(fbl::move(vn), &vn, path, &path, open_flags, mode);
+    r = connection->vfs()->Open(fbl::move(vn), &vn, path, &path, open_flags, mode);
 
     zxrio_object_t obj;
     memset(&obj, 0, sizeof(obj));
@@ -115,7 +103,7 @@ done:
         return;
     }
 
-    vn->Serve(ios->vfs, fbl::move(channel), open_flags);
+    vn->Serve(connection->vfs(), fbl::move(channel), open_flags);
 }
 
 void zxrio_reply_channel_status(zx::channel channel, zx_status_t status) {
@@ -126,7 +114,7 @@ void zxrio_reply_channel_status(zx::channel channel, zx_status_t status) {
     channel.write(0, &reply, ZXRIO_OBJECT_MINSIZE, nullptr, 0);
 }
 
-static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, vfs_iostate* ios) {
+static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, Connection* connection) {
     uint32_t len = msg->datalen;
     int32_t arg = msg->arg;
     msg->datalen = 0;
@@ -146,21 +134,19 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
         zx::channel channel(msg->handle[0]); // take ownership
         if ((len < 1) || (len > PATH_MAX)) {
             fs::zxrio_reply_channel_status(fbl::move(channel), ZX_ERR_INVALID_ARGS);
-        } else if ((arg & O_ADMIN) && !(ios->io_flags & O_ADMIN)) {
+        } else if ((arg & O_ADMIN) && !(connection->flags() & O_ADMIN)) {
             fs::zxrio_reply_channel_status(fbl::move(channel), ZX_ERR_ACCESS_DENIED);
         } else {
             path[len] = 0;
             xprintf("vfs: open name='%s' flags=%d mode=%u\n", path, arg, msg->arg2.mode);
-            fs::vfs_rpc_open(msg, fbl::move(channel), vn, ios, path, arg, msg->arg2.mode);
+            fs::vfs_rpc_open(msg, fbl::move(channel), vn, connection, path, arg, msg->arg2.mode);
         }
         return ERR_DISPATCHER_INDIRECT;
     }
     case ZXRIO_CLOSE: {
-        ios->vfs->TokenDiscard(&ios->token);
-        // this will drop the ref on the vn
+        connection->vfs()->TokenDiscard(connection->token());
         zx_status_t status = vn->Close();
-        ios->vn = nullptr;
-        free(ios);
+        delete connection;
         return status;
     }
     case ZXRIO_CLONE: {
@@ -171,25 +157,25 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
             obj.type = FDIO_PROTOCOL_REMOTE;
             channel.write(0, &obj, ZXRIO_OBJECT_MINSIZE, 0, 0);
         }
-        vn->Serve(ios->vfs, fbl::move(channel), ios->io_flags);
+        vn->Serve(connection->vfs(), fbl::move(channel), connection->flags());
         return ERR_DISPATCHER_INDIRECT;
     }
     case ZXRIO_READ: {
-        if (!readable(ios->io_flags)) {
+        if (!readable(connection->flags())) {
             return ZX_ERR_BAD_HANDLE;
         }
         size_t actual;
-        zx_status_t status = vn->Read(msg->data, arg, ios->io_off, &actual);
+        zx_status_t status = vn->Read(msg->data, arg, connection->offset(), &actual);
         if (status == ZX_OK) {
             ZX_DEBUG_ASSERT(actual <= static_cast<size_t>(arg));
-            ios->io_off += actual;
-            msg->arg2.off = ios->io_off;
+            connection->set_offset(connection->offset() + actual);
+            msg->arg2.off = connection->offset();
             msg->datalen = static_cast<uint32_t>(actual);
         }
         return status == ZX_OK ? static_cast<zx_status_t>(actual) : status;
     }
     case ZXRIO_READ_AT: {
-        if (!readable(ios->io_flags)) {
+        if (!readable(connection->flags())) {
             return ZX_ERR_BAD_HANDLE;
         }
         size_t actual;
@@ -201,28 +187,28 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
         return status == ZX_OK ? static_cast<zx_status_t>(actual) : status;
     }
     case ZXRIO_WRITE: {
-        if (!writable(ios->io_flags)) {
+        if (!writable(connection->flags())) {
             return ZX_ERR_BAD_HANDLE;
         }
-        if (ios->io_flags & O_APPEND) {
+        if (connection->flags() & O_APPEND) {
             vnattr_t attr;
             zx_status_t r;
             if ((r = vn->Getattr(&attr)) < 0) {
                 return r;
             }
-            ios->io_off = attr.size;
+            connection->set_offset(attr.size);
         }
         size_t actual;
-        zx_status_t status = vn->Write(msg->data, len, ios->io_off, &actual);
+        zx_status_t status = vn->Write(msg->data, len, connection->offset(), &actual);
         if (status == ZX_OK) {
             ZX_DEBUG_ASSERT(actual <= static_cast<size_t>(len));
-            ios->io_off += actual;
-            msg->arg2.off = ios->io_off;
+            connection->set_offset(connection->offset() + actual);
+            msg->arg2.off = connection->offset();
         }
         return status == ZX_OK ? static_cast<zx_status_t>(actual) : status;
     }
     case ZXRIO_WRITE_AT: {
-        if (!writable(ios->io_flags)) {
+        if (!writable(connection->flags())) {
             return ZX_ERR_BAD_HANDLE;
         }
         size_t actual;
@@ -248,16 +234,16 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
             n = msg->arg2.off;
             break;
         case SEEK_CUR:
-            n = ios->io_off + msg->arg2.off;
+            n = connection->offset() + msg->arg2.off;
             if (msg->arg2.off < 0) {
                 // if negative seek
-                if (n > ios->io_off) {
+                if (n > connection->offset()) {
                     // wrapped around. attempt to seek before start
                     return ZX_ERR_INVALID_ARGS;
                 }
             } else {
                 // positive seek
-                if (n < ios->io_off) {
+                if (n < connection->offset()) {
                     // wrapped around. overflow
                     return ZX_ERR_INVALID_ARGS;
                 }
@@ -288,8 +274,8 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
                 return ZX_ERR_INVALID_ARGS;
             }
         }
-        ios->io_off = n;
-        msg->arg2.off = ios->io_off;
+        connection->set_offset(n);
+        msg->arg2.off = connection->offset();
         return ZX_OK;
     }
     case ZXRIO_STAT: {
@@ -309,10 +295,10 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
         constexpr uint32_t kStatusFlags = O_APPEND;
         switch (cmd) {
         case F_GETFL:
-            msg->arg2.mode = ios->io_flags & (kStatusFlags | O_ACCMODE);
+            msg->arg2.mode = connection->flags() & (kStatusFlags | O_ACCMODE);
             return ZX_OK;
         case F_SETFL:
-            ios->io_flags = (ios->io_flags & ~kStatusFlags) | (msg->arg2.mode & kStatusFlags);
+            connection->set_flags((connection->flags() & ~kStatusFlags) | (msg->arg2.mode & kStatusFlags));
             return ZX_OK;
         default:
             return ZX_ERR_NOT_SUPPORTED;
@@ -323,10 +309,10 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
             return ZX_ERR_INVALID_ARGS;
         }
         if (msg->arg2.off == READDIR_CMD_RESET) {
-            memset(&ios->dircookie, 0, sizeof(ios->dircookie));
+            connection->dircookie()->Reset();
         }
-        zx_status_t r = ios->vfs->Readdir(vn.get(), &ios->dircookie,
-                                          msg->data, arg);
+        zx_status_t r = connection->vfs()->Readdir(vn.get(), connection->dircookie(),
+                                                   msg->data, arg);
         if (r >= 0) {
             msg->datalen = r;
         }
@@ -355,8 +341,8 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
         switch (msg->arg2.op) {
         case IOCTL_VFS_MOUNT_FS:
         case IOCTL_VFS_MOUNT_MKDIR_FS:
-            // Mounting requires iostate privileges
-            if (!(ios->io_flags & O_ADMIN)) {
+            // Mounting requires ADMIN privileges
+            if (!(connection->flags() & O_ADMIN)) {
                 vfs_unmount_handle(msg->handle[0], 0);
                 zx_handle_close(msg->handle[0]);
                 return ZX_ERR_ACCESS_DENIED;
@@ -364,9 +350,9 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
             // If our permissions validate, fall through to the VFS ioctl
         }
         size_t actual = 0;
-        zx_status_t status = ios->vfs->Ioctl(fbl::move(vn), msg->arg2.op,
-                                             in_buf, len, msg->data, arg,
-                                             &actual);
+        zx_status_t status = connection->vfs()->Ioctl(fbl::move(vn), msg->arg2.op,
+                                                      in_buf, len, msg->data, arg,
+                                                      &actual);
         if (status == ZX_ERR_NOT_SUPPORTED) {
             zx_handle_close(msg->handle[0]);
         }
@@ -385,12 +371,12 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
         size_t actual = 0;
         switch (msg->arg2.op) {
         case IOCTL_VFS_GET_TOKEN: {
-            // Ioctls which act on iostate
+            // Ioctls which act on Connection
             if (arg != sizeof(zx_handle_t)) {
                 return ZX_ERR_INVALID_ARGS;
             }
             zx::event token;
-            zx_status_t status = ios->vfs->VnodeToToken(fbl::move(vn), &ios->token, &token);
+            zx_status_t status = connection->vfs()->VnodeToToken(fbl::move(vn), connection->token(), &token);
             if (status == ZX_OK) {
                 actual = sizeof(zx_handle_t);
                 zx_handle_t* out = reinterpret_cast<zx_handle_t*>(msg->data);
@@ -401,15 +387,15 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
         case IOCTL_VFS_UNMOUNT_NODE:
         case IOCTL_VFS_UNMOUNT_FS:
         case IOCTL_VFS_GET_DEVICE_PATH:
-            // Unmounting ioctls require iostate privileges
-            if (!(ios->io_flags & O_ADMIN)) {
+            // Unmounting ioctls require Connection privileges
+            if (!(connection->flags() & O_ADMIN)) {
                 return ZX_ERR_ACCESS_DENIED;
             }
-            // If our permissions validate, fall through to the VFS ioctl
+        // If our permissions validate, fall through to the VFS ioctl
         default:
-            zx_status_t status = ios->vfs->Ioctl(fbl::move(vn), msg->arg2.op,
-                                                 in_buf, len, msg->data, arg,
-                                                 &actual);
+            zx_status_t status = connection->vfs()->Ioctl(fbl::move(vn), msg->arg2.op,
+                                                          in_buf, len, msg->data, arg,
+                                                          &actual);
             if (status != ZX_OK) {
                 return status;
             }
@@ -436,7 +422,7 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
         return static_cast<uint32_t>(actual);
     }
     case ZXRIO_TRUNCATE: {
-        if (!writable(ios->io_flags)) {
+        if (!writable(connection->flags())) {
             return ZX_ERR_BAD_HANDLE;
         }
         if (msg->arg2.off < 0) {
@@ -466,11 +452,11 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
 
         switch (ZXRIO_OP(msg->op)) {
         case ZXRIO_RENAME:
-            return ios->vfs->Rename(fbl::move(token), fbl::move(vn),
-                                    oldname, newname);
+            return connection->vfs()->Rename(fbl::move(token), fbl::move(vn),
+                                             oldname, newname);
         case ZXRIO_LINK:
-            return ios->vfs->Link(fbl::move(token), fbl::move(vn),
-                                  oldname, newname);
+            return connection->vfs()->Link(fbl::move(token), fbl::move(vn),
+                                           oldname, newname);
         }
         assert(false);
     }
@@ -479,11 +465,11 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
             return ZX_ERR_INVALID_ARGS;
         }
         zxrio_mmap_data_t* data = reinterpret_cast<zxrio_mmap_data_t*>(msg->data);
-        if (ios->io_flags & O_APPEND && data->flags & FDIO_MMAP_FLAG_WRITE) {
+        if (connection->flags() & O_APPEND && data->flags & FDIO_MMAP_FLAG_WRITE) {
             return ZX_ERR_ACCESS_DENIED;
-        } else if (!writable(ios->io_flags) && (data->flags & FDIO_MMAP_FLAG_WRITE)) {
+        } else if (!writable(connection->flags()) && (data->flags & FDIO_MMAP_FLAG_WRITE)) {
             return ZX_ERR_ACCESS_DENIED;
-        } else if (!readable(ios->io_flags)) {
+        } else if (!readable(connection->flags())) {
             return ZX_ERR_ACCESS_DENIED;
         }
 
@@ -498,7 +484,7 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
         return vn->Sync();
     }
     case ZXRIO_UNLINK:
-        return ios->vfs->Unlink(fbl::move(vn), (const char*)msg->data, len);
+        return connection->vfs()->Unlink(fbl::move(vn), (const char*)msg->data, len);
     default:
         // close inbound handles so they do not leak
         for (unsigned i = 0; i < ZXRIO_HC(msg->op); i++) {
@@ -509,10 +495,10 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
 }
 
 zx_status_t vfs_handler(zxrio_msg_t* msg, void* cookie) {
-    vfs_iostate_t* ios = static_cast<vfs_iostate_t*>(cookie);
+    Connection* connection = static_cast<Connection*>(cookie);
 
-    fbl::RefPtr<fs::Vnode> vn = ios->vn;
-    zx_status_t status = vfs_handler_vn(msg, fbl::move(vn), ios);
+    auto vn = fbl::RefPtr<fs::Vnode>(connection->vnode());
+    zx_status_t status = vfs_handler_vn(msg, fbl::move(vn), connection);
     return status;
 }
 
@@ -520,24 +506,16 @@ zx_status_t vfs_handler(zxrio_msg_t* msg, void* cookie) {
 
 zx_status_t Vnode::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
     zx_status_t r;
-    vfs_iostate_t* ios;
-
-    if ((ios = static_cast<vfs_iostate_t*>(calloc(1, sizeof(vfs_iostate_t)))) == nullptr) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    ios->vn = fbl::RefPtr<fs::Vnode>(this);
-    ios->io_flags = flags;
-    ios->vfs = vfs;
-
-    if ((r = vfs->Serve(fbl::move(channel), ios)) < 0) {
-        free(ios);
+    Connection* connection = new Connection(fbl::RefPtr<fs::Vnode>(this), vfs, flags);
+    if ((r = vfs->Serve(fbl::move(channel), connection)) < 0) {
+        delete connection;
         return r;
     }
     return ZX_OK;
 }
 
-zx_status_t Vfs::Serve(zx::channel channel, void* ios) {
-    return dispatcher_->AddVFSHandler(fbl::move(channel), vfs_handler, ios);
+zx_status_t Vfs::Serve(zx::channel channel, void* connection) {
+    return dispatcher_->AddVFSHandler(fbl::move(channel), vfs_handler, connection);
 }
 
 zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn,

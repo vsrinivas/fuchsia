@@ -32,8 +32,6 @@
 
 __BEGIN_CDECLS
 
-typedef struct vfs_iostate vfs_iostate_t;
-
 // Send an unmount signal on a handle to a filesystem and await a response.
 zx_status_t vfs_unmount_handle(zx_handle_t h, zx_time_t deadline);
 
@@ -65,6 +63,10 @@ class Vnode;
 // TODO(smklein): To implement seekdir and telldir, the size
 // of this vdircookie may need to shrink to a 'long'.
 typedef struct vdircookie {
+    void Reset() {
+        memset(this, 0, sizeof(struct vdircookie));
+    }
+
     uint64_t n;
     void* p;
 } vdircookie_t;
