@@ -53,8 +53,7 @@ constexpr fxl::StringView kScheduleIntervalSecondsFlagName =
 // Used to override kMinIntervalDefault;
 constexpr fxl::StringView kMinIntervalSecondsFlagName = "min_interval_seconds";
 
-// TODO(azani): Change to DNS-looked-up address.
-const char kCloudShufflerUri[] = "130.211.218.95:5001";
+const char kCloudShufflerUri[] = "shuffler.cobalt-api.fuchsia.com:8001";
 const int32_t kFuchsiaCustomerId = 1;
 
 const size_t kMaxBytesPerEnvelope = 512 * 1024;  // 0.5 MiB.
