@@ -24,6 +24,12 @@ zx::event CopyEvent(const zx::event& event) {
   return event_copy;
 }
 
+fidl::Array<zx::event> CopyEventIntoFidlArray(const zx::event& event) {
+  auto event_array = fidl::Array<zx::event>::New(1);
+  event_array[0] = CopyEvent(event);
+  return event_array;
+}
+
 zx::eventpair CopyEventPair(const zx::eventpair& eventpair) {
   zx::eventpair eventpair_copy;
   if (eventpair.duplicate(ZX_RIGHT_SAME_RIGHTS, &eventpair_copy) != ZX_OK)

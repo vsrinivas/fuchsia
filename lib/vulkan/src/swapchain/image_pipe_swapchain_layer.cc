@@ -352,10 +352,15 @@ VkResult ImagePipeSwapchain::Present(uint32_t index)
 
     pending_images_.push_back({std::move(image_release_fence), index});
 
+    auto acquire_fences = fidl::Array<zx::event>::New(1);
+    auto release_fences = fidl::Array<zx::event>::New(1);
+    acquire_fences.push_back(std::move(acquire_fence));
+    release_fences.push_back(std::move(release_fence));
+
     scenic::PresentationInfoPtr info;
     image_pipe_->PresentImage(ImageIdFromIndex(index), 0,
-                              std::move(acquire_fence),
-                              std::move(release_fence), &info);
+                              std::move(acquire_fences),
+                              std::move(release_fences), &info);
 
     return VK_SUCCESS;
 }

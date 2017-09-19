@@ -105,8 +105,8 @@ void ImagePipe::RemoveImage(uint32_t image_id) {
 void ImagePipe::PresentImage(
     uint32_t image_id,
     uint64_t presentation_time,
-    zx::event acquire_fence,
-    zx::event release_fence,
+    ::fidl::Array<zx::event> acquire_fences,
+    ::fidl::Array<zx::event> release_fences,
     const scenic::ImagePipe::PresentImageCallback& callback) {
   if (!frames_.empty() &&
       presentation_time < frames_.back().presentation_time) {
@@ -131,7 +131,7 @@ void ImagePipe::PresentImage(
   }
 
   auto acquire_fence_obj =
-      std::make_unique<AcquireFence>(std::move(acquire_fence));
+      std::make_unique<AcquireFenceSet>(std::move(acquire_fences));
   acquire_fence_obj->WaitReadyAsync(
       [ weak = weak_ptr_factory_.GetWeakPtr(), presentation_time ] {
         if (weak) {
@@ -141,7 +141,7 @@ void ImagePipe::PresentImage(
       });
 
   frames_.push(Frame{image_id, presentation_time, std::move(acquire_fence_obj),
-                     std::move(release_fence), callback});
+                     std::move(release_fences), callback});
 };
 
 bool ImagePipe::Update(uint64_t presentation_time,
@@ -151,17 +151,20 @@ bool ImagePipe::Update(uint64_t presentation_time,
                  presentation_interval);
 
   scenic::ResourceId next_image_id = current_image_id_;
-  zx::event next_release_fence;
+  ::fidl::Array<zx::event> next_release_fences;
 
   while (!frames_.empty() &&
          frames_.front().presentation_time <= presentation_time &&
-         frames_.front().acquire_fence->ready()) {
+         frames_.front().acquire_fences->ready()) {
     next_image_id = frames_.front().image_id;
-    if (next_release_fence) {
-      // We're skipping a frame, so we can immediately signal its release fence.
-      next_release_fence.signal(0u, kFenceSignalled);
+    if (!next_release_fences.empty()) {
+      // We're skipping a frame, so we can immediately signal its release
+      // fences.
+      for (auto& fence : next_release_fences) {
+        fence.signal(0u, kFenceSignalled);
+      }
     }
-    next_release_fence = std::move(frames_.front().release_fence);
+    next_release_fences = std::move(frames_.front().release_fences);
 
     auto info = scenic::PresentationInfo::New();
     info->presentation_time = presentation_time;
@@ -181,11 +184,11 @@ bool ImagePipe::Update(uint64_t presentation_time,
     // We're replacing a frame with a new one, so we hand off its release fence
     // to the |ReleaseFenceSignaller|, which will signal it as soon as all work
     // previously submitted to the GPU is finished.
-    if (current_release_fence_) {
-      session()->engine()->release_fence_signaller()->AddCPUReleaseFence(
-          std::move(current_release_fence_));
+    if (current_release_fences_) {
+      session()->engine()->release_fence_signaller()->AddCPUReleaseFences(
+          std::move(current_release_fences_));
     }
-    current_release_fence_ = std::move(next_release_fence);
+    current_release_fences_ = std::move(next_release_fences);
     current_image_id_ = next_image_id;
     current_image_ = std::move(next_image);
 

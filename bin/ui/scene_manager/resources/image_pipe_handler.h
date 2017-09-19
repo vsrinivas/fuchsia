@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "lib/images/fidl/image_pipe.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/images/fidl/image_pipe.fidl.h"
 
 namespace scene_manager {
 
@@ -23,11 +23,11 @@ class ImagePipeHandler : public scenic::ImagePipe {
                 scenic::MemoryType memory_type,
                 uint64_t memory_offset) override;
   void RemoveImage(uint32_t image_id) override;
-  // TODO(MZ-152): Add Presentation time to image_pipe.fidl.
+
   void PresentImage(uint32_t image_id,
                     uint64_t presentation_time,
-                    zx::event acquire_fence,
-                    zx::event release_fence,
+                    ::fidl::Array<zx::event> acquire_fences,
+                    ::fidl::Array<zx::event> release_fences,
                     const PresentImageCallback& callback) override;
 
   ::fidl::Binding<scenic::ImagePipe> binding_;

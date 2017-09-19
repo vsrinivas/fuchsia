@@ -4,11 +4,11 @@
 
 #include "garnet/examples/ui/shadertoy/service/imagepipe_shadertoy.h"
 
-#include "garnet/examples/ui/shadertoy/service/escher_utils.h"
-#include "garnet/examples/ui/shadertoy/service/renderer.h"
 #include "escher/renderer/framebuffer.h"
 #include "escher/renderer/image.h"
 #include "escher/renderer/simple_image_factory.h"
+#include "garnet/examples/ui/shadertoy/service/escher_utils.h"
+#include "garnet/examples/ui/shadertoy/service/renderer.h"
 
 namespace {
 // TODO: Copied this constant from mozart/src/scene_manager/sync/fence.h.
@@ -151,9 +151,14 @@ void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
       self->OnFramePresented(info);
     }
   };
+
+  auto acquire_fences = fidl::Array<zx::event>::New(1);
+  acquire_fences[0] = std::move(acquire_fence);
+  auto release_fences = fidl::Array<zx::event>::New(1);
+  release_fences[0] = std::move(release_fence);
   image_pipe_->PresentImage(fb.image_pipe_id, presentation_time,
-                            std::move(acquire_fence), std::move(release_fence),
-                            present_image_callback);
+                            std::move(acquire_fences),
+                            std::move(release_fences), present_image_callback);
 }
 
 }  // namespace shadertoy

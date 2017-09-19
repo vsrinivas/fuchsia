@@ -26,6 +26,13 @@ void ReleaseFenceSignaller::AddVulkanReleaseFence(zx::event fence) {
   FXL_DCHECK(false);
 }
 
+void ReleaseFenceSignaller::AddVulkanReleaseFences(
+    fidl::Array<zx::event> fences) {
+  // TODO: Submit a command buffer with the vulkan fence as a semaphore
+  FXL_LOG(ERROR) << "Vulkan Release Fences not yet supported.";
+  FXL_DCHECK(false);
+}
+
 void ReleaseFenceSignaller::AddCPUReleaseFence(zx::event fence) {
   uint64_t latest_sequence_number =
       command_buffer_sequencer_->latest_sequence_number();
@@ -39,6 +46,13 @@ void ReleaseFenceSignaller::AddCPUReleaseFence(zx::event fence) {
   } else {
     FXL_CHECK(false) << "ReleaseFenceSignaller::AddCPUReleaseFence: sequence "
                         "numbers are in an invalid state";
+  }
+}
+
+// Must be called on the same thread that we're submitting frames to Escher.
+void ReleaseFenceSignaller::AddCPUReleaseFences(fidl::Array<zx::event> fences) {
+  for (auto& fence : fences) {
+    AddCPUReleaseFence(std::move(fence));
   }
 }
 

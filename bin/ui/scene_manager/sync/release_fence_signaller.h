@@ -9,6 +9,7 @@
 
 #include <zx/event.h>
 #include "escher/impl/command_buffer_sequencer.h"
+#include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fxl/logging.h"
 
 #include "garnet/bin/ui/scene_manager/sync/fence.h"
@@ -30,7 +31,13 @@ class ReleaseFenceSignaller
   void AddVulkanReleaseFence(zx::event fence);
 
   // Must be called on the same thread that we're submitting frames to Escher.
+  void AddVulkanReleaseFences(fidl::Array<zx::event> fences);
+
+  // Must be called on the same thread that we're submitting frames to Escher.
   virtual void AddCPUReleaseFence(zx::event fence);
+
+  // Must be called on the same thread that we're submitting frames to Escher.
+  virtual void AddCPUReleaseFences(fidl::Array<zx::event> fences);
 
  private:
   // The sequence number for the most recently finished CommandBuffer.

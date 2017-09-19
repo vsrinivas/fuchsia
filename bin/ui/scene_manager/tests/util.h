@@ -28,6 +28,10 @@ bool IsEventSignalled(const zx::event& event, zx_signals_t signal);
 // Create a duplicate of the event.
 zx::event CopyEvent(const zx::event& event);
 
+// Create a duplicate of the event, and create a new fidl Array of size one to
+// wrap it.
+fidl::Array<zx::event> CopyEventIntoFidlArray(const zx::event& event);
+
 // Create a duplicate of the eventpair.
 zx::eventpair CopyEventPair(const zx::eventpair& eventpair);
 

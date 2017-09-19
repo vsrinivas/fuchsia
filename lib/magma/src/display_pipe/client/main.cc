@@ -88,9 +88,11 @@ class BufferHandler : public fsl::MessageLoopHandler {
                      zx_signals_t pending,
                      uint64_t count) override {
       buffer_->Reset();
-      zx::event acq, rel;
-      buffer_->dupAcquireFence(&acq);
-      buffer_->dupReleaseFence(&rel);
+
+      auto acq = fidl::Array<zx::event>::New(1);
+      auto rel = fidl::Array<zx::event>::New(1);
+      buffer_->dupAcquireFence(&acq.front());
+      buffer_->dupReleaseFence(&rel.front());
 
       image_pipe->PresentImage(index_, 0, std::move(acq), std::move(rel),
                                [](scenic::PresentationInfoPtr info) {});

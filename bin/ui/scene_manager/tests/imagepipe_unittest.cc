@@ -173,8 +173,10 @@ TEST_F(ImagePipeTest, PresentImagesOutOfOrder) {
   }
   scenic::ImagePipe::PresentImageCallback callback = [](auto) {};
 
-  image_pipe->PresentImage(imageId1, 1, CreateEvent(), CreateEvent(), callback);
-  image_pipe->PresentImage(imageId1, 0, CreateEvent(), CreateEvent(), callback);
+  image_pipe->PresentImage(imageId1, 1, CopyEventIntoFidlArray(CreateEvent()),
+                           CopyEventIntoFidlArray(CreateEvent()), callback);
+  image_pipe->PresentImage(imageId1, 0, CopyEventIntoFidlArray(CreateEvent()),
+                           CopyEventIntoFidlArray(CreateEvent()), callback);
 
   EXPECT_EQ(
       "scene_manager::ImagePipe: Present called with out-of-order presentation "
@@ -202,8 +204,10 @@ TEST_F(ImagePipeTest, PresentImagesInOrder) {
   }
   scenic::ImagePipe::PresentImageCallback callback = [](auto) {};
 
-  image_pipe->PresentImage(imageId1, 1, CreateEvent(), CreateEvent(), callback);
-  image_pipe->PresentImage(imageId1, 1, CreateEvent(), CreateEvent(), callback);
+  image_pipe->PresentImage(imageId1, 1, CopyEventIntoFidlArray(CreateEvent()),
+                           CopyEventIntoFidlArray(CreateEvent()), callback);
+  image_pipe->PresentImage(imageId1, 1, CopyEventIntoFidlArray(CreateEvent()),
+                           CopyEventIntoFidlArray(CreateEvent()), callback);
 
   EXPECT_TRUE(reported_errors_.empty());
 }
@@ -233,8 +237,8 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   zx::event acquire_fence1 = CreateEvent();
   zx::event release_fence1 = CreateEvent();
 
-  image_pipe->PresentImage(imageId1, 0, CopyEvent(acquire_fence1),
-                           CopyEvent(release_fence1), nullptr);
+  image_pipe->PresentImage(imageId1, 0, CopyEventIntoFidlArray(acquire_fence1),
+                           CopyEventIntoFidlArray(release_fence1), nullptr);
 
   // Current presented image should be null, since we haven't signalled
   // acquire fence yet.
@@ -277,8 +281,8 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   zx::event acquire_fence2 = CreateEvent();
   zx::event release_fence2 = CreateEvent();
 
-  image_pipe->PresentImage(imageId2, 0, CopyEvent(acquire_fence2),
-                           CopyEvent(release_fence2), nullptr);
+  image_pipe->PresentImage(imageId2, 0, CopyEventIntoFidlArray(acquire_fence2),
+                           CopyEventIntoFidlArray(release_fence2), nullptr);
 
   // Verify that the currently display image hasn't changed yet, since we
   // haven't signalled the acquire fence.
