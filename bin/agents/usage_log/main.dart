@@ -4,11 +4,11 @@
 
 // This agent uses Cobalt to record usage data in a privacy preserving way.
 // To learn more about Cobalt, see:
-// https://fuchsia.googlesource.com/cobalt_client/+/master/README.md
+// https://fuchsia.googlesource.com/garnet/+/master/bin/cobalt/README.md
 //
 // To view the data collected by this agent in Cobalt, read the following
 // instructions:
-// https://fuchsia.googlesource.com/cobalt_client/+/master/README.md#Report-Client
+// https://fuchsia.googlesource.com/garnet/+/master/bin/cobalt/README.md#Report-Client
 //
 // After downloading the reporting tool, run it with the command line:
 // ./report_client -report_master_uri=35.188.119.76:7001 -project_id=101
@@ -19,7 +19,7 @@
 import 'dart:collection';
 
 import 'package:lib.app.dart/app.dart';
-import 'package:apps.cobalt_client.services..cobalt/cobalt.fidl.dart';
+import 'package:lib.cobalt.fidl/cobalt.fidl.dart';
 import 'package:apps.maxwell.lib.context.dart/context_listener_impl.dart';
 import 'package:apps.maxwell.services.context/context_reader.fidl.dart';
 import 'package:apps.maxwell.services.context/value.fidl.dart';

@@ -54,7 +54,7 @@ source_set("user_intelligence_provider") {
     ":agent_launcher",
     ":config",
     ":intelligence_services",
-    "//apps/cobalt_client/services:cobalt",
+    "//garnet/public/lib/cobalt/fidl",
     "//apps/maxwell/services/action_log",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/resolver",

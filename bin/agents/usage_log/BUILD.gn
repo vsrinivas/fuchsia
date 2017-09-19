@@ -14,7 +14,7 @@ dart_app("usage_log_dart") {
 
   deps = [
     "//garnet/public/lib/app/dart",
-    "//apps/cobalt_client/services:cobalt_dart",
+    "//garnet/public/lib/cobalt/fidl:fidl_dart",
     "//apps/maxwell/lib/context/dart",
     "//apps/maxwell/services/context:context_dart",
     "//garnet/public/lib/fidl/dart",

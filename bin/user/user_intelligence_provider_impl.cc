@@ -5,7 +5,7 @@
 #include "apps/maxwell/src/user/user_intelligence_provider_impl.h"
 
 #include "lib/app/cpp/connect.h"
-#include "apps/cobalt_client/services/cobalt.fidl.h"
+#include "lib/cobalt/fidl/cobalt.fidl.h"
 #include "apps/maxwell/services/action_log/factory.fidl.h"
 #include "apps/maxwell/services/context/debug.fidl.h"
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
