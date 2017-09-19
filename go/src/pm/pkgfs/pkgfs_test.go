@@ -32,7 +32,8 @@ var (
 	blobstorePath string
 )
 
-func TestMain(m *testing.M) {
+// tmain exists for the defer convenience, so that defers are run before os.Exit gets called.
+func tmain(m *testing.M) int {
 	// Undo the defaults that print to the system log...
 	log.SetOutput(os.Stdout)
 
@@ -41,10 +42,13 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
+	defer os.RemoveAll(blobstorePath)
+
 	indexPath, err := ioutil.TempDir("", "pkgfs-test-index")
 	if err != nil {
 		panic(err)
 	}
+	defer os.RemoveAll(indexPath)
 
 	rd, err := ramdisk.New(10 * 1024 * 1024)
 	if err != nil {
@@ -67,6 +71,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
+	defer os.RemoveAll(d)
 
 	pkgfs, err := New(indexPath, blobstorePath)
 	if err != nil {
@@ -77,13 +82,12 @@ func TestMain(m *testing.M) {
 	}
 	pkgfsMount = d
 
-	v := m.Run()
+	return m.Run()
 
-	pkgfs.Unmount()
-	rd.Umount(blobstorePath)
-	rd.Destroy()
+}
 
-	os.Exit(v)
+func TestMain(m *testing.M) {
+	os.Exit(tmain(m))
 }
 
 func TestAddFile(t *testing.T) {
