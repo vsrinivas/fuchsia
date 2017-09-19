@@ -105,13 +105,8 @@ class BufferHandler : public fsl::MessageLoopHandler {
 
   void OnHandleError(zx_handle_t handle, zx_status_t error) override {
       FXL_LOG(ERROR) << "BufferHandler received an error ("
-<<<<<<< HEAD
           << zx_status_get_string(error) << ").  Exiting.";
-      mtl::MessageLoop::GetCurrent()->PostQuitTask();
-=======
-          << mx_status_get_string(error) << ").  Exiting.";
       fsl::MessageLoop::GetCurrent()->PostQuitTask();
->>>>>>> 5ce6cd9... build fixes for image pipe swapchain
   };
 
  private:
