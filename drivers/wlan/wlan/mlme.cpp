@@ -22,7 +22,7 @@
 #include <cstring>
 #include <sstream>
 
-#include "apps/wlan/services/wlan_mlme.fidl-common.h"
+#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
 #include "garnet/drivers/wlan/common/bitfield.h"
 
 namespace wlan {

@@ -5,10 +5,10 @@
 package wlan
 
 import (
-	mlme "apps/wlan/services/wlan_mlme"
-	mlme_ext "apps/wlan/services/wlan_mlme_ext"
 	bindings "fidl/bindings"
 	"fmt"
+	mlme "garnet/public/lib/wlan/fidl/wlan_mlme"
+	mlme_ext "garnet/public/lib/wlan/fidl/wlan_mlme_ext"
 	"log"
 )
 

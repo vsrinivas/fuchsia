@@ -5,12 +5,11 @@
 package wlan
 
 import (
-	mlme "apps/wlan/services/wlan_mlme"
-	mlme_ext "apps/wlan/services/wlan_mlme_ext"
-	"apps/wlan/eapol"
-	"apps/wlan/services/wlan_service"
 	"fidl/bindings"
 	"fmt"
+	mlme "garnet/public/lib/wlan/fidl/wlan_mlme"
+	mlme_ext "garnet/public/lib/wlan/fidl/wlan_mlme_ext"
+	"garnet/public/lib/wlan/fidl/wlan_service"
 	"log"
 	"netstack/link/eth"
 	"os"
@@ -18,6 +17,7 @@ import (
 	"syscall/mx"
 	"syscall/mx/mxerror"
 	"time"
+	"wlan/eapol"
 )
 
 const MX_SOCKET_READABLE = mx.SignalObject0

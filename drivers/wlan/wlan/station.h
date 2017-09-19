@@ -11,8 +11,8 @@
 #include <fbl/unique_ptr.h>
 #include <zircon/types.h>
 
-#include "apps/wlan/services/wlan_mlme.fidl-common.h"
-#include "apps/wlan/services/wlan_mlme_ext.fidl-common.h"
+#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
+#include "lib/wlan/fidl/wlan_mlme_ext.fidl-common.h"
 #include "garnet/drivers/wlan/common/moving_average.h"
 
 namespace wlan {

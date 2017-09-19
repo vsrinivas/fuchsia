@@ -13,15 +13,15 @@ wlan_go_dependencies = [
     source = "wlanstack"
   },
   {
-    package = "apps/wlan/wlan"
+    package = "wlan/wlan"
     source = "wlan"
   },
   {
-    package = "apps/wlan/keywrap"
+    package = "wlan/keywrap"
     source = "keywrap"
   },
   {
-    package = "apps/wlan/eapol"
+    package = "wlan/eapol"
     source = "eapol"
   },
   {
@@ -49,8 +49,8 @@ wlan_go_dependencies = [
     source = "//garnet/public/lib/svc/go/src/svc"
   },
   {
-    package = "apps/wlan/services"
-    source = "$root_gen_dir/go/src/apps/wlan/services"
+    package = "garnet/public/lib/wlan/fidl"
+    source = "$root_gen_dir/go/src/garnet/public/lib/wlan/fidl"
   },
   {
     package = "garnet/public/lib/app/fidl"
@@ -64,7 +64,7 @@ wlan_go_dependencies = [
 
 go_test("keywrap_test_bin") {
   output_name = "keywrap_test"
-  gopackage = "apps/wlan/keywrap"
+  gopackage = "wlan/keywrap"
 
   # TODO(hahnr): This program has a smaller dependency set in practice, its go_dependencies list
   # should be updated to match the code.
@@ -73,10 +73,10 @@ go_test("keywrap_test_bin") {
 
 go_test("elements_test_bin") {
   output_name = "elements_test"
-  gopackage = "apps/wlan/wlan/elements"
+  gopackage = "wlan/wlan/elements"
   go_dependencies = [
       {
-          package = "apps/wlan/wlan/elements"
+          package = "wlan/wlan/elements"
           source = "wlan/elements"
       },
   ]
@@ -86,8 +86,8 @@ go_binary("wlanstack_bin") {
   output_name = "wlanstack"
   gopackage = "wlanstack"
   deps = [
-    "//apps/wlan/services",
-    "//apps/wlan/services:mlme",
+    "//garnet/public/lib/wlan/fidl",
+    "//garnet/public/lib/wlan/fidl:mlme",
     "//garnet/public/lib/netstack/fidl",
   ]
   go_dependencies = wlan_go_dependencies
@@ -97,7 +97,7 @@ go_binary("wlantool_bin") {
   output_name = "wlantool"
   gopackage = "wlantool"
   deps = [
-    "//apps/wlan/services",
+    "//garnet/public/lib/wlan/fidl",
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/netstack/fidl",
   ]
@@ -119,8 +119,8 @@ go_binary("wlantool_bin") {
       source = "//garnet/public/lib/fidl/go/src/fidl"
     },
     {
-      package = "apps/wlan/services"
-      source = "$root_gen_dir/go/src/apps/wlan/services"
+      package = "garnet/public/lib/wlan/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/wlan/fidl"
     },
     {
       package = "garnet/public/lib/app/fidl"
@@ -135,9 +135,9 @@ go_binary("wlantool_bin") {
 
 go_test("wlanstack_test_bin") {
   output_name = "wlanstack_test"
-  gopackage = "apps/wlan/wlan"
+  gopackage = "wlan/wlan"
   deps = [
-    "//apps/wlan/services:mlme",
+    "//garnet/public/lib/wlan/fidl:mlme",
     "//garnet/public/lib/netstack/fidl",
   ]
   go_dependencies = wlan_go_dependencies

@@ -12,7 +12,7 @@ import (
 	"app/context"
 	"fidl/bindings"
 
-	"apps/wlan/services/wlan_service"
+	"garnet/public/lib/wlan/fidl/wlan_service"
 )
 
 const (

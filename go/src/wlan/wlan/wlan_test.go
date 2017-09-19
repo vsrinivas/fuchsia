@@ -5,9 +5,9 @@
 package wlan_test
 
 import (
-	mlme "apps/wlan/services/wlan_mlme"
-	. "apps/wlan/wlan"
+	mlme "garnet/public/lib/wlan/fidl/wlan_mlme"
 	"testing"
+	. "wlan/wlan"
 )
 
 func addBss(index int, ssid string, channel uint8, rssi uint8, resp *mlme.ScanResponse) {

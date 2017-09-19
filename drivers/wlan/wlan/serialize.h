@@ -6,7 +6,7 @@
 
 #include "interface.h"
 
-#include <apps/wlan/services/wlan_mlme.fidl-common.h>
+#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
 
 namespace wlan {
 

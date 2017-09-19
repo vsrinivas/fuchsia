@@ -5,10 +5,10 @@
 package keywrap_test
 
 import (
-	. "apps/wlan/keywrap"
 	"bytes"
 	"encoding/hex"
 	"testing"
+	. "wlan/keywrap"
 )
 
 // RFC 3394, 4.1 Wrap 128 bits of Key Data with a 128-bit KEK

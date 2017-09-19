@@ -5,7 +5,7 @@
 package eapol
 
 import (
-	"apps/wlan/wlan/sme"
+	"wlan/wlan/sme"
 
 	"bytes"
 	"encoding/binary"

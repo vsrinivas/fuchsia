@@ -5,11 +5,11 @@
 package elements_test
 
 import (
-	. "apps/wlan/wlan/elements"
-	"testing"
-	"encoding/hex"
 	"bytes"
+	"encoding/hex"
 	"reflect"
+	"testing"
+	. "wlan/wlan/elements"
 )
 
 var VendorSpecificOUI = [3]byte{0x01, 0x02, 0x03}

@@ -11,9 +11,9 @@ import (
 	"syscall/mx"
 	"syscall/mx/mxerror"
 
-	"apps/wlan/services/wlan_service"
-	"apps/wlan/wlan"
+	"garnet/public/lib/wlan/fidl/wlan_service"
 	"netstack/watcher"
+	"wlan/wlan"
 
 	"log"
 	"sync"

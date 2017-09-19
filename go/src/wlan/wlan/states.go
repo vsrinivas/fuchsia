@@ -5,12 +5,12 @@
 package wlan
 
 import (
-	mlme "apps/wlan/services/wlan_mlme"
-	mlme_ext "apps/wlan/services/wlan_mlme_ext"
-	"apps/wlan/services/wlan_service"
-	"apps/wlan/wlan/elements"
-	"apps/wlan/eapol"
-	"apps/wlan/eapol/handshake"
+	mlme "garnet/public/lib/wlan/fidl/wlan_mlme"
+	mlme_ext "garnet/public/lib/wlan/fidl/wlan_mlme_ext"
+	"garnet/public/lib/wlan/fidl/wlan_service"
+	"wlan/eapol"
+	"wlan/eapol/handshake"
+	"wlan/wlan/elements"
 
 	"fmt"
 	"log"

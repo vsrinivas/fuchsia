@@ -11,11 +11,12 @@
 #include "serialize.h"
 #include "timer.h"
 
-#include <apps/wlan/services/wlan_mlme.fidl-common.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <gtest/gtest.h>
 #include <cstring>
+
+#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
 
 namespace wlan {
 namespace {

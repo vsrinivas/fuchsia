@@ -5,7 +5,7 @@
 package wlan
 
 import (
-	mlme "apps/wlan/services/wlan_mlme"
+	mlme "garnet/public/lib/wlan/fidl/wlan_mlme"
 	"sort"
 )
 

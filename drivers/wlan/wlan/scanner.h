@@ -4,12 +4,13 @@
 
 #pragma once
 
-#include <apps/wlan/services/wlan_mlme.fidl-common.h>
 #include <ddk/protocol/wlan.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/types.h>
 
 #include <unordered_map>
+
+#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
 
 namespace wlan {
 

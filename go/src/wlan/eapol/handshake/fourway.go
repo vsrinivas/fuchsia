@@ -5,11 +5,10 @@
 package handshake
 
 import (
-	"apps/wlan/eapol"
-	"apps/wlan/wlan/elements"
 	"fmt"
 	"math/big"
-	"log"
+	"wlan/eapol"
+	"wlan/wlan/elements"
 )
 
 type FourWayConfig struct {
@@ -40,7 +39,7 @@ func NewFourWay(config FourWayConfig) *FourWay {
 }
 
 func (hs *FourWay) HandleEAPOLKeyFrame(f *eapol.KeyFrame) error {
-	if integrous, err := isIntegrous(f); !integrous {
+	if integrous, err := hs.isIntegrous(f); !integrous {
 		return err
 	}
 
@@ -60,7 +59,7 @@ func (hs *FourWay) HandleEAPOLKeyFrame(f *eapol.KeyFrame) error {
 // only the integrity of the message with respect to the expected information for the given message
 // number in the handshake. For example, the third message of the handshake must have the MIC bit
 // set while the first message must not.
-func isIntegrous(f *eapol.KeyFrame) (bool, error) {
+func (hs *FourWay) isIntegrous(f *eapol.KeyFrame) (bool, error) {
 	// Verify every received bit. Keep all checks as tight as possible.
 	// This will likely block association with incorrectly implemented APs which don't strictly
 	// follow specifications.
