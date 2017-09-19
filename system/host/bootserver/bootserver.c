@@ -28,6 +28,7 @@
 char* appname;
 int64_t us_between_packets = DEFAULT_US_BETWEEN_PACKETS;
 bool use_filename_prefix = true;
+bool use_net186_workaround = false;
 
 static bool use_tftp = true;
 static size_t total_file_size;
@@ -376,6 +377,9 @@ int main(int argc, char** argv) {
                 break;
             }
             continue;
+        }
+        if (msg->arg < NB_VERSION_1_3) {
+            use_net186_workaround = true;
         }
         fprintf(stderr, "%s: got beacon from [%s]%d\n", appname,
                 inet_ntop(AF_INET6, &ra.sin6_addr, tmp, sizeof(tmp)),

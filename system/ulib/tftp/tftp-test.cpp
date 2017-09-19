@@ -696,7 +696,8 @@ bool verify_read_data(const test_state& ts, const tx_test_data& td) {
     auto msg = static_cast<tftp_data_msg*>(ts.out);
     // The upper byte of the opcode is ignored
     EXPECT_EQ(OPCODE_DATA, ntohs(msg->opcode) & 0xff, "bad opcode");
-    EXPECT_EQ(td.expected.block, msg->block, "bad block number");
+    // Don't continue if we have a bad block number or we risk OOB reads
+    ASSERT_EQ(td.expected.block, ntohs(msg->block), "bad block number");
     EXPECT_BYTES_EQ(td.expected.data, msg->data, td.actual.len, "read data mismatch");
     END_HELPER;
 }
@@ -918,8 +919,8 @@ tftp_status mock_write(const void* data, size_t* len, off_t offset, void* cookie
 
 bool verify_write_data(const uint8_t* expected, const tx_test_data& td) {
     BEGIN_HELPER;
-    EXPECT_EQ(td.expected.offset, td.actual.offset, "write offset mismatch");
-    EXPECT_EQ(td.expected.len, td.actual.len, "write length mismatch");
+    ASSERT_EQ(td.expected.offset, td.actual.offset, "write offset mismatch");
+    ASSERT_EQ(td.expected.len, td.actual.len, "write length mismatch");
     EXPECT_BYTES_EQ(expected, td.actual.data + td.actual.offset, td.actual.len, "write data mismatch");
     END_HELPER;
 }
@@ -951,7 +952,7 @@ static bool test_tftp_receive_data(void) {
 
     uint8_t data_buf[516] = {
         0x00, 0x03,  // Opcode (DATA)
-        0x01, 0x00,  // Block
+        0x00, 0x01,  // Block
         0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, // Data; compiler will fill out the rest with zeros
     };
     data_buf[515] = 0x79;  // set the last byte to make sure it all gets copied
@@ -997,7 +998,7 @@ static bool test_tftp_receive_data_final_block(void) {
 
     uint8_t data_buf[516] = {
         0x00, 0x03,  // Opcode (DATA)
-        0x01, 0x00,  // Block
+        0x00, 0x01,  // Block
         0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, // Data; compiler will fill out the rest with zeros
     };
     data_buf[515] = 0x79;  // set the last byte to make sure it all gets copied
@@ -1012,7 +1013,7 @@ static bool test_tftp_receive_data_final_block(void) {
     ASSERT_TRUE(verify_write_data(data_buf + 4, td), "bad write data");
 
     // Update block number and first/last bytes of the data packet
-    data_buf[2]++;
+    data_buf[3]++;
     data_buf[4]++;
     data_buf[515]++;
     td.expected.block++;
@@ -1024,7 +1025,7 @@ static bool test_tftp_receive_data_final_block(void) {
     EXPECT_TRUE(verify_write_data(data_buf + 4, td), "bad write data");
 
     // Last data packet. Empty, indicating end of data.
-    data_buf[2]++;
+    data_buf[3]++;
     status = tftp_process_msg(ts.session, data_buf, 4, ts.out, &ts.outlen, &ts.timeout, nullptr);
     EXPECT_EQ(TFTP_TRANSFER_COMPLETED, status, "receive data failed");
     ASSERT_TRUE(verify_response_opcode(ts, OPCODE_ACK), "bad response");
@@ -1060,7 +1061,7 @@ static bool test_tftp_receive_data_blocksize(void) {
 
     uint8_t data_buf[1028] = {
         0x00, 0x03,  // Opcode (DATA)
-        0x01, 0x00,  // Block
+        0x00, 0x01,  // Block
         0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, // Data; compiler will fill out the rest with zeros
     };
     data_buf[1027] = 0x79;  // set the last byte to make sure it all gets copied
@@ -1109,7 +1110,7 @@ static bool test_tftp_receive_data_windowsize(void) {
 
     uint8_t data_buf[516] = {
         0x00, 0x03,  // Opcode (DATA)
-        0x01, 0x00,  // Block
+        0x00, 0x01,  // Block
         0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, // Data; compiler will fill out the rest with zeros
     };
     data_buf[515] = 0x79;  // set the last byte to make sure it all gets copied
@@ -1126,7 +1127,7 @@ static bool test_tftp_receive_data_windowsize(void) {
     EXPECT_EQ(1, ts.session->window_index, "tftp session window index mismatch");
 
     // Update block number and first/last bytes of the data packet
-    data_buf[2]++;
+    data_buf[3]++;
     data_buf[4]++;
     data_buf[515]++;
     td.expected.block++;
@@ -1170,7 +1171,7 @@ static bool test_tftp_receive_data_skipped_block(void) {
     // This is block 2, meaning we missed block 1 somehow.
     uint8_t data_buf[516] = {
         0x00, 0x03,  // Opcode (DATA)
-        0x02, 0x00,  // Block
+        0x00, 0x02,  // Block
         0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, // Data; compiler will fill out the rest with zeros
     };
     data_buf[515] = 0x79;  // set the last byte to make sure it all gets copied
@@ -1185,7 +1186,7 @@ static bool test_tftp_receive_data_skipped_block(void) {
     EXPECT_EQ(ntohs(msg->opcode) & 0xff, OPCODE_ACK, "bad opcode");
     // The opcode prefix should have been advanced when we saw a dropped block
     EXPECT_EQ((ntohs(msg->opcode) & 0xff00) >> 8, 1, "bad opcode prefix");
-    EXPECT_EQ(msg->block, 0, "bad block number");
+    EXPECT_EQ(ntohs(msg->block), 0, "bad block number");
     EXPECT_EQ(0, ts.session->block_number, "tftp session block number mismatch");
     EXPECT_EQ(0, ts.session->window_index, "tftp session window index mismatch");
 
@@ -1197,7 +1198,7 @@ static bool test_tftp_receive_data_skipped_block(void) {
     msg = reinterpret_cast<tftp_data_msg*>(ts.out);
     EXPECT_EQ(ntohs(msg->opcode) & 0xff, OPCODE_ACK, "bad opcode");
     EXPECT_EQ((ntohs(msg->opcode) & 0xff00) >> 8, 0, "bad opcode prefix");
-    EXPECT_EQ(msg->block, 0, "bad block number");
+    EXPECT_EQ(ntohs(msg->block), 0, "bad block number");
 
     END_TEST;
 }
@@ -1231,7 +1232,7 @@ static bool test_tftp_receive_data_windowsize_skipped_block(void) {
 
     uint8_t data_buf[516] = {
         0x00, 0x03,  // Opcode (DATA)
-        0x01, 0x00,  // Block
+        0x00, 0x01,  // Block
         0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, // Data; compiler will fill out the rest with zeros
     };
     data_buf[515] = 0x79;  // set the last byte to make sure it all gets copied
@@ -1247,7 +1248,7 @@ static bool test_tftp_receive_data_windowsize_skipped_block(void) {
     EXPECT_EQ(1, ts.session->window_index, "tftp session window index mismatch");
 
     // Update block number and first/last bytes of the data packet
-    data_buf[2]++;
+    data_buf[3]++;
     data_buf[4]++;
     data_buf[515]++;
     td.expected.block++;
@@ -1262,7 +1263,7 @@ static bool test_tftp_receive_data_windowsize_skipped_block(void) {
 
     // Update block number and first/last bytes of the data packet. Block number
     // goes up by 2 to indicate a skipped block.
-    data_buf[2] = 4u;
+    data_buf[3] = 4u;
     data_buf[4]++;
     data_buf[515]++;
     status = tftp_process_msg(ts.session, data_buf, sizeof(data_buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
@@ -1272,7 +1273,7 @@ static bool test_tftp_receive_data_windowsize_skipped_block(void) {
     EXPECT_EQ(ntohs(msg->opcode) & 0xff, OPCODE_ACK, "bad opcode");
     // Opcode prefix should have been incremented when a packet was not received
     EXPECT_EQ((ntohs(msg->opcode) & 0xff00) >> 8, 1, "bad opcode prefix");
-    EXPECT_EQ(msg->block, 2, "bad block number");
+    EXPECT_EQ(ntohs(msg->block), 2, "bad block number");
     EXPECT_EQ(0, td.actual.data[1024], "block 3 should be empty");
     EXPECT_EQ(2, ts.session->block_number, "tftp session block number mismatch");
     // Reset the window index after sending the ack with the last known block
@@ -1377,7 +1378,7 @@ static bool test_tftp_send_data_receive_ack(void) {
 
     uint8_t ack_buf[] = {
         0x00, 0x04,  // Opcode (ACK)
-        0x01, 0x00,  // Block
+        0x00, 0x01,  // Block
     };
 
     td.expected.block = 2;
@@ -1423,7 +1424,7 @@ static bool test_tftp_send_data_receive_final_ack(void) {
 
     uint8_t ack_buf[] = {
         0x00, 0x04,  // Opcode (ACK)
-        0x01, 0x00,  // Block
+        0x00, 0x01,  // Block
     };
 
     td.expected.block = 2;
@@ -1434,13 +1435,13 @@ static bool test_tftp_send_data_receive_final_ack(void) {
     EXPECT_TRUE(verify_read_data(ts, td), "bad test data");
 
     // second block
-    ack_buf[2]++;
+    ack_buf[3]++;
     status = tftp_process_msg(ts.session, ack_buf, sizeof(ack_buf), ts.out, &ts.outlen, &ts.timeout, &td);
     ASSERT_EQ(TFTP_NO_ERROR, status, "receive block 2 error");
     EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg), "block 3 not empty");
 
     // Do not expect any more sends.
-    ack_buf[2]++;
+    ack_buf[3]++;
     status = tftp_process_msg(ts.session, ack_buf, sizeof(ack_buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
     EXPECT_EQ(TFTP_TRANSFER_COMPLETED, status, "tftp transfer should be complete");
     EXPECT_EQ(ts.outlen, 0, "no outgoing message expected");
@@ -1536,7 +1537,7 @@ static bool test_tftp_send_data_receive_ack_window_size(void) {
 
     uint8_t ack_buf[] = {
         0x00, 0x04,  // Opcode (ACK)
-        0x02, 0x00,  // Block
+        0x00, 0x02,  // Block
     };
 
     td.expected.block++;
@@ -1684,13 +1685,13 @@ static bool test_tftp_send_data_receive_ack_skip_block_wrap(void) {
     EXPECT_EQ(sizeof(data_buf), data_buf_len, "improperly formatted DATA packet");
     unsigned int opcode = htons(msg->opcode);
     EXPECT_EQ(OPCODE_DATA, opcode, "incorrect DATA packet opcode");
-    uint16_t offset = msg->block;
-    EXPECT_EQ((kLastBlockSent + 1) & 0xffff, offset, "incorrect DATA packet block");
+    uint16_t offset = ntohs(msg->block);
+    ASSERT_EQ((kLastBlockSent + 1) & 0xffff, offset, "incorrect DATA packet block");
 
     // Simulate an ACK response that is before our last block wrap
     tftp_data_msg ack_msg;
     ack_msg.opcode = htons(OPCODE_ACK);
-    ack_msg.block = kAckBlock & 0xffff;
+    ack_msg.block = htons(kAckBlock & 0xffff);
     ifc.read = [](void* data, size_t* length, off_t offset, void* cookie) -> tftp_status {
                    EXPECT_EQ(kAckBlock * kBlockSize, offset, "incorrect read offset");
                    reads_performed++;
@@ -1708,7 +1709,7 @@ static bool test_tftp_send_data_receive_ack_skip_block_wrap(void) {
     EXPECT_EQ(OPCODE_DATA, ntohs(msg->opcode) & 0xff, "incorrect DATA packet opcode");
     // Opcode prefix should have been incremented when a packet was dropped
     EXPECT_EQ(1, (ntohs(msg->opcode) & 0xff00) >> 8, "incorrect opcode prefix");
-    EXPECT_EQ((kAckBlock + 1) & 0xffff, msg->block, "incorrect DATA packet block");
+    EXPECT_EQ((kAckBlock + 1) & 0xffff, ntohs(msg->block), "incorrect DATA packet block");
     EXPECT_EQ(ts.session->block_number, kAckBlock, "session offset not rewound correctly");
     EXPECT_EQ(ts.session->window_index, 1, "window index not set correctly");
 
@@ -1718,7 +1719,7 @@ static bool test_tftp_send_data_receive_ack_skip_block_wrap(void) {
                };
     tftp_session_set_file_interface(ts.session, &ifc);
     tftp_session_set_opcode_prefix_use(ts.session, false);
-    ack_msg.block = (kAckBlock + 1) & 0xffff;
+    ack_msg.block = htons((kAckBlock + 1) & 0xffff);
     status = tftp_process_msg(ts.session, reinterpret_cast<void*>(&ack_msg), sizeof(ack_msg),
                               ts.out, &ts.outlen, &ts.timeout, NULL);
     ASSERT_EQ(TFTP_NO_ERROR, status, "no ACK generated");
@@ -1726,7 +1727,7 @@ static bool test_tftp_send_data_receive_ack_skip_block_wrap(void) {
     msg = reinterpret_cast<tftp_data_msg*>(ts.out);
     EXPECT_EQ(OPCODE_DATA, ntohs(msg->opcode) & 0xff, "incorrect DATA packet opcode");
     EXPECT_EQ(0, (ntohs(msg->opcode) & 0xff00) >> 8, "incorrect opcode prefix");
-    EXPECT_EQ((kAckBlock + 2) & 0xffff, msg->block, "incorrect DATA packet block");
+    EXPECT_EQ((kAckBlock + 2) & 0xffff, ntohs(msg->block), "incorrect DATA packet block");
 
     END_TEST;
 }
