@@ -76,7 +76,7 @@ $ scripts/build-zircon.sh
 Then configure the content of the generated image by choosing the modules to
 incorporate:
 ```
-# fuchsia_base is typically one of "default", "magentix".
+# fuchsia_base is typically "default".
 # my_stuff is a possibly-empty list of extra modules to include.
 
 $ packages/gn/gen.py --modules fuchsia_base,my_stuff
