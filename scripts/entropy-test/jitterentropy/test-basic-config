@@ -102,5 +102,11 @@ readarray -t CMDLINES < <(
 )
 
 # run the tests
-"$ZIRCONDIR"/scripts/entropy-test/repeat-boot-test "${PASSTHROUGH_ARGS[@]}" -s "jitterentropy" -- \
-    "${CMDLINES[@]}"
+
+# The unholy incantation around PASSTHOROUGH_ARGS comes from here:
+#     https://stackoverflow.com/a/7577209
+# TL;DR: In bash, an array is only considered 'set' if it has at least one item. without the
+# nonsense below, if PASSTHROUGH_ARGS is empty (which is legitimate!), then `set -u` will throw.
+"$ZIRCONDIR"/scripts/entropy-test/repeat-boot-test \
+    "${PASSTHROUGH_ARGS[@]+"${PASSTHROUGH_ARGS[@]}"}" \
+    -s "jitterentropy" -- "${CMDLINES[@]}"

@@ -57,6 +57,7 @@ LEN=$((1024*1024))
 NODENAME=
 OUTDIR=
 SOURCE=
+TARGET=
 
 while getopts "b:hl:n:o:rs:t:" FLAG; do
     case "$FLAG" in

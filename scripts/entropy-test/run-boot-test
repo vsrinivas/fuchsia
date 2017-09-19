@@ -101,12 +101,17 @@ if [[ -n $LEN ]]; then CMDLINE+="kernel.entropy-test.len=$LEN "; fi
 # find and read builddir
 if [[ "$ARCH" == "x86-64" ]]; then
     PROJECT="zircon-pc-x86-64"
-else
+elif [[ $METHOD = "qemu" ]]; then
     PROJECT="zircon-qemu-$ARCH"
 fi
 
 if [[ -z "$BUILDDIR" ]]; then
-    BUILDDIR="$ZIRCONDIR/build-$PROJECT"
+    if [[ -n $PROJECT ]]; then
+        BUILDDIR="$ZIRCONDIR/build-$PROJECT"
+    else
+        echo "could not autodetect builddir. use -o." >&2
+        HELP
+    fi
 fi
 
 if [[ ! -d $BUILDDIR || ! -x $BUILDDIR/tools/netcp ]]; then
@@ -117,7 +122,14 @@ fi
 BUILDID="$(sed -n '/^#define\s\+BUILDID/{s/^[^"]*"//;s/".*$//;p;q}' "$BUILDDIR/config-buildid.h")"
 
 # set a few other variables
-if [[ -z $NODENAME ]]; then NODENAME="entropy-test-$(head -c16 /dev/urandom | xxd -p)"; fi
+if [[ -z $NODENAME ]]; then
+    if [[ $METHOD = "qemu" ]]; then
+        NODENAME="entropy-test-$(head -c16 /dev/urandom | xxd -p)";
+    elif [[ $METHOD = "netboot" ]]; then
+        echo "missing nodename - required for netboot" >&2
+        HELP
+    fi
+fi
 CMDLINE+="zircon.nodename=$NODENAME "
 NUM="$(cd "$OUTDIR";
        find . \( -type f -name "entropy.*.bin" -print \) -o \( -type d ! -name . -prune \) |
@@ -130,12 +142,14 @@ METAFILE="$OUTDIR/entropy.$NUM.meta"
 
 # launch zircon
 case "$METHOD" in
-    qemu) "$ZIRCONDIR/scripts/run-zircon" -a "$ARCH" -c "$CMDLINE" -N -o "$BUILDDIR" & ;;
+    qemu)
+        "$ZIRCONDIR/scripts/run-zircon" -a "$ARCH" -c "$CMDLINE" -N -o "$BUILDDIR" </dev/null &
+        ;;
     *)
         echo "unrecognized method: $METHOD" >&2
         HELP
         ;;
-esac </dev/null
+esac
 echo "launched zircon with nodename $NODENAME" >&2
 
 # wait for zircon to send us the entropy file
