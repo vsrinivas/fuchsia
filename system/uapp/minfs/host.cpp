@@ -211,21 +211,6 @@ int emu_fstat(int fd, struct stat* s) {
     STATUS(do_stat(f->vn, s));
 }
 
-int emu_unlink(const char* path) {
-    PATH_WRAP(path, unlink, path);
-    fbl::RefPtr<fs::Vnode> vn;
-    zx_status_t status = minfs::vfs.Walk(fake_root, &vn, path + PREFIX_SIZE, &path);
-    if (status == ZX_OK) {
-        status = vn->Unlink(path, strlen(path), false);
-        vn->Close();
-    }
-    STATUS(status);
-}
-
-int emu_rename(const char* oldpath, const char* newpath) {
-    STATUS(ZX_ERR_NOT_SUPPORTED);
-}
-
 int emu_stat(const char* fn, struct stat* s) {
     PATH_WRAP(fn, stat, fn, s);
     fbl::RefPtr<fs::Vnode> vn = fake_root;

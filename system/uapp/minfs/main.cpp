@@ -33,8 +33,6 @@
 
 extern fbl::RefPtr<minfs::VnodeMinfs> fake_root;
 
-int run_fs_tests(int argc, char** argv);
-
 #endif
 
 namespace {
@@ -79,13 +77,6 @@ int io_setup(fbl::unique_ptr<minfs::Bcache> bc) {
     }
     fake_root = vn;
     return 0;
-}
-
-int do_minfs_test(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
-    if (io_setup(fbl::move(bc))) {
-        return -1;
-    }
-    return run_fs_tests(argc, argv);
 }
 
 int do_cp(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
@@ -149,43 +140,6 @@ int do_mkdir(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
         return -1;
     }
     return emu_mkdir(path, 0);
-}
-
-int do_unlink(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
-    if (argc != 1) {
-        fprintf(stderr, "unlink requires one argument\n");
-        return -1;
-    }
-    if (io_setup(fbl::move(bc))) {
-        return -1;
-    }
-    const char* path = argv[0];
-    if (strncmp(path, PATH_PREFIX, PREFIX_SIZE)) {
-        fprintf(stderr, "error: unlink can only operate minfs paths (must start with %s)\n", PATH_PREFIX);
-        return -1;
-    }
-    return emu_unlink(path);
-}
-
-int do_rename(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
-    if (argc != 2) {
-        fprintf(stderr, "rename requires two arguments\n");
-        return -1;
-    }
-    if (io_setup(fbl::move(bc))) {
-        return -1;
-    }
-    const char* old_path = argv[0];
-    const char* new_path = argv[1];
-    if (strncmp(old_path, PATH_PREFIX, PREFIX_SIZE)) {
-        fprintf(stderr, "error: rename can only operate minfs paths (must start with %s)\n", PATH_PREFIX);
-        return -1;
-    }
-    if (strncmp(new_path, PATH_PREFIX, PREFIX_SIZE)) {
-        fprintf(stderr, "error: rename can only operate minfs paths (must start with %s)\n", PATH_PREFIX);
-        return -1;
-    }
-    return emu_rename(old_path, new_path);
 }
 
 static const char* modestr(uint32_t mode) {
@@ -258,13 +212,8 @@ struct {
 #ifdef __Fuchsia__
     {"mount", do_minfs_mount, O_RDWR, "mount filesystem"},
 #else
-    {"test", do_minfs_test, O_RDWR, "run tests against filesystem"},
     {"cp", do_cp, O_RDWR, "copy to/from fs"},
     {"mkdir", do_mkdir, O_RDWR, "create directory"},
-    {"rm", do_unlink, O_RDWR, "delete file or directory"},
-    {"unlink", do_unlink, O_RDWR, "delete file or directory"},
-    {"mv", do_rename, O_RDWR, "rename file or directory"},
-    {"rename", do_rename, O_RDWR, "rename file or directory"},
     {"ls", do_ls, O_RDWR, "list content of directory"},
 #endif
 };

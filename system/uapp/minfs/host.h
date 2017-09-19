@@ -19,8 +19,6 @@ ssize_t emu_read(int fd, void* buf, size_t count);
 ssize_t emu_write(int fd, const void* buf, size_t count);
 off_t emu_lseek(int fd, off_t offset, int whence);
 int emu_fstat(int fd, struct stat* s);
-int emu_unlink(const char* path);
-int emu_rename(const char* oldpath, const char* newpath);
 int emu_stat(const char* fn, struct stat* s);
 DIR* emu_opendir(const char* name);
 struct dirent* emu_readdir(DIR* dirp);

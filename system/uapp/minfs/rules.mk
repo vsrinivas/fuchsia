@@ -55,7 +55,6 @@ MODULE_TYPE := hostapp
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/main.cpp \
-    $(LOCAL_DIR)/test.cpp \
     $(LOCAL_DIR)/host.cpp \
     $(LOCAL_DIR)/bcache.cpp \
     $(LOCAL_DIR)/minfs.cpp \
