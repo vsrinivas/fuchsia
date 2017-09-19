@@ -15,6 +15,7 @@
 #include <memory>
 
 #include "magma_util/macros.h"
+#include "magma_util/platform/zircon/zircon_platform_ioctl.h"
 #include "sys_driver/magma_driver.h"
 #include "sys_driver/magma_system_device.h"
 
@@ -23,7 +24,13 @@ struct arm_mali_device {
     zx_device_t* zx_device;
     std::unique_ptr<MagmaDriver> magma_driver;
     std::shared_ptr<MagmaSystemDevice> magma_system_device;
+    std::mutex magma_mutex;
 };
+
+arm_mali_device* get_arm_mali_device(void* context)
+{
+    return static_cast<arm_mali_device*>(context);
+}
 
 static zx_status_t magma_start(arm_mali_device* gpu)
 {
@@ -33,20 +40,114 @@ static zx_status_t magma_start(arm_mali_device* gpu)
     return ZX_OK;
 }
 
-static zx_status_t arm_mali_open(void* context, zx_device_t** out, uint32_t flags)
+static zx_status_t magma_stop(arm_mali_device* gpu)
 {
-    return ZX_ERR_NOT_SUPPORTED;
+    gpu->magma_system_device->Shutdown();
+    gpu->magma_system_device.reset();
+    return ZX_OK;
 }
 
-static zx_status_t arm_mali_close(void* context, uint32_t flags) { return ZX_ERR_NOT_SUPPORTED; }
+static zx_status_t arm_mali_open(void* context, zx_device_t** out, uint32_t flags) { return ZX_OK; }
+
+static zx_status_t arm_mali_close(void* context, uint32_t flags) { return ZX_OK; }
 
 static zx_status_t arm_mali_ioctl(void* context, uint32_t op, const void* in_buf, size_t in_len,
                                   void* out_buf, size_t out_len, size_t* out_actual)
 {
-    return ZX_ERR_NOT_SUPPORTED;
+    arm_mali_device* device = get_arm_mali_device(context);
+
+    DASSERT(device->magma_system_device);
+
+    ssize_t result = ZX_ERR_NOT_SUPPORTED;
+
+    switch (op) {
+        case IOCTL_MAGMA_QUERY: {
+            DLOG("IOCTL_MAGMA_QUERY");
+            const uint64_t* param = reinterpret_cast<const uint64_t*>(in_buf);
+            if (!in_buf || in_len < sizeof(*param))
+                return DRET_MSG(ZX_ERR_INVALID_ARGS, "bad in_buf");
+            uint64_t* value_out = reinterpret_cast<uint64_t*>(out_buf);
+            if (!out_buf || out_len < sizeof(*value_out))
+                return DRET_MSG(ZX_ERR_INVALID_ARGS, "bad out_buf");
+            switch (*param) {
+                case MAGMA_QUERY_DEVICE_ID:
+                    *value_out = device->magma_system_device->GetDeviceId();
+                    break;
+                default:
+                    if (!device->magma_system_device->Query(*param, value_out))
+                        return DRET_MSG(ZX_ERR_INVALID_ARGS, "unhandled param 0x%" PRIx64,
+                                        *value_out);
+            }
+            DLOG("query param 0x%" PRIx64 " returning 0x%" PRIx64, *param, *value_out);
+            *out_actual = sizeof(*value_out);
+            result = ZX_OK;
+            break;
+        }
+        case IOCTL_MAGMA_CONNECT: {
+            DLOG("IOCTL_MAGMA_CONNECT");
+            auto request = reinterpret_cast<const magma_system_connection_request*>(in_buf);
+            if (!in_buf || in_len < sizeof(*request))
+                return DRET(ZX_ERR_INVALID_ARGS);
+
+            auto device_handle_out = reinterpret_cast<uint32_t*>(out_buf);
+            if (!out_buf || out_len < sizeof(*device_handle_out))
+                return DRET(ZX_ERR_INVALID_ARGS);
+
+            if (request->capabilities != MAGMA_CAPABILITY_RENDERING)
+                return DRET(ZX_ERR_INVALID_ARGS);
+
+            auto connection = MagmaSystemDevice::Open(device->magma_system_device,
+                                                      request->client_id, request->capabilities);
+            if (!connection)
+                return DRET(ZX_ERR_INVALID_ARGS);
+
+            *device_handle_out = connection->GetHandle();
+            *out_actual = sizeof(*device_handle_out);
+            result = ZX_OK;
+
+            device->magma_system_device->StartConnectionThread(std::move(connection));
+
+            break;
+        }
+
+        case IOCTL_MAGMA_DUMP_STATUS: {
+            DLOG("IOCTL_MAGMA_DUMP_STATUS");
+            std::unique_lock<std::mutex> lock(device->magma_mutex);
+            if (device->magma_system_device)
+                device->magma_system_device->DumpStatus();
+            result = ZX_OK;
+            break;
+        }
+
+#if MAGMA_TEST_DRIVER
+        case IOCTL_MAGMA_TEST_RESTART: {
+            DLOG("IOCTL_MAGMA_TEST_RESTART");
+            std::unique_lock<std::mutex> lock(device->magma_mutex);
+            result = magma_stop(device);
+            if (result != ZX_OK)
+                return DRET_MSG(result, "magma_stop failed");
+            result = magma_start(device);
+            break;
+        }
+#endif
+
+        default:
+            DLOG("arm_mali_ioctl unhandled op 0x%x", op);
+    }
+
+    return result;
 }
 
-static void arm_mali_release(void* context) {}
+static void arm_mali_release(void* context)
+{
+    arm_mali_device* device = get_arm_mali_device(context);
+    {
+        std::unique_lock<std::mutex> lock(device->magma_mutex);
+        magma_stop(device);
+    }
+
+    delete device;
+}
 
 static zx_protocol_device_t arm_mali_device_proto = {
     .version = DEVICE_OPS_VERSION,
@@ -74,11 +175,13 @@ static zx_status_t arm_mali_bind(void* context, zx_device_t* parent, void** cook
     args.name = "arm_mali_gpu";
     args.ctx = gpu.get();
     args.ops = &arm_mali_device_proto;
+    args.proto_id = ZX_PROTOCOL_GPU;
 
     status = device_add(parent, &args, &gpu->zx_device);
     if (status != ZX_OK)
         return DRET_MSG(status, "device_add failed");
 
+    gpu.release();
     return ZX_OK;
 }
 
