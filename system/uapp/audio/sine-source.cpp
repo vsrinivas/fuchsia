@@ -140,7 +140,7 @@ zx_status_t SineSource::GetFramesInternal(void* buffer, uint32_t buf_space, uint
         auto val = static_cast<ComputedType>(amp_ * sin(pos));
 
         for (uint32_t j = 0; j < channels_; ++j)
-            *(++buf) = Traits::encode(val);
+            *(buf++) = Traits::encode(val);
 
         pos += sine_scalar_;
     }
