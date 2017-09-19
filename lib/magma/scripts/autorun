@@ -23,7 +23,6 @@ echo [MESA END==]
 echo [==========]
 echo [APP START=]
 /system/test/vkreadback
-/system/test/vk_import_export_readback
 /system/test/vkext
 echo [APP END===]
 echo [==========]
