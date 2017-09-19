@@ -21,6 +21,6 @@ KERNEL_INCLUDES += $(LOCAL_DIR)/include
 #
 # Several flags related to stack-protection were removed, for compiler
 # compatibility.
-MODULE_CFLAGS += -O0 -fwrapv
+MODULE_CFLAGS += -O0 -fwrapv -I $(LOCAL_DIR)/arch/$(ARCH)
 
 include make/module.mk

@@ -11,8 +11,12 @@
 
 #include <platform.h>
 
+static inline bool jent_have_clock(void) {
+    return true;
+}
+
 static inline void jent_get_nstime(uint64_t* out) {
-    *out = (uint64_t) current_time();
+    *out = current_time();
 }
 
 static inline void* jent_zalloc(size_t len) {

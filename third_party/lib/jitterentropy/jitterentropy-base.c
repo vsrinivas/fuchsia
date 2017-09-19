@@ -51,8 +51,7 @@
  * Modifications by the Fuchsia Authors, 2017
  * =======
  *
- * - Add #include lines for stdlib.h, string.h, and
- *   lib/jitterentropy/internal.h.
+ * - Add #include lines for stdlib.h, string.h, and internal.h.
  * - Change #include line for Zircon file conventions.
  * - Remove CONFIG_CRYPTO_CPU_JITTERENTROPY_STAT flag.
  * - Add jent_entropy_collector_init definition.
@@ -60,13 +59,14 @@
  * - Replace 'min' parameter by 'lfsr_loops_override' and 'mem_loops_override'
  *   in jent_lfsr_var_stat, and moved comment for jent_lfsr_var_stat to
  *   jitterentropy.h.
+ * - Add jent_have_clock check to jent_entropy_init.
  */
 
 #undef _FORTIFY_SOURCE
 
 #include <assert.h>
 #include <lib/jitterentropy/jitterentropy.h>
-#include <lib/jitterentropy/internal.h>
+#include "internal.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -655,6 +655,10 @@ int jent_entropy_init(void)
 	int count_mod = 0;
 	int count_stuck = 0;
 	struct rand_data ec;
+
+	if (!jent_have_clock()) {
+		return ENOTIME;
+	}
 
 	/* We could perform statistical tests here, but the problem is
 	 * that we only have a few loop counts to do testing. These

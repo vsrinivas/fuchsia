@@ -12,4 +12,4 @@ Modifications:
  - Removed COPYING.gplv2
 - Added rules.mk.
 - Modified lib/jitterentropy/jitterentropy.h and jitterentropy-base.c.
-- Added lib/jitterentropy/internal.h.
+- Added arch/*/include/lib/jitterentropy/internal.h.
