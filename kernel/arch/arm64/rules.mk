@@ -29,6 +29,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/mmu.cpp \
 	$(LOCAL_DIR)/spinlock.cpp \
 	$(LOCAL_DIR)/start.S \
+	$(LOCAL_DIR)/sysreg.cpp \
 	$(LOCAL_DIR)/thread.cpp \
 	$(LOCAL_DIR)/user_copy.S \
 	$(LOCAL_DIR)/user_copy_c.cpp \
