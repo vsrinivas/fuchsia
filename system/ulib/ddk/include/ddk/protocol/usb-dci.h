@@ -45,9 +45,6 @@ typedef struct {
     zx_status_t (*config_ep)(void* ctx, usb_endpoint_descriptor_t* ep_desc,
                              usb_ss_ep_comp_descriptor_t* ss_comp_desc);
     zx_status_t (*disable_ep)(void* ctx, uint8_t ep_addr);
-    // enables or disables the device controller hardware
-    // should not be enabled until upper layer is ready to respond to the host
-    zx_status_t (*set_enabled)(void* ctx, bool enabled);
     zx_status_t (*ep_set_stall)(void* ctx, uint8_t ep_address);
     zx_status_t (*ep_clear_stall)(void* ctx, uint8_t ep_address);
 } usb_dci_protocol_ops_t;
@@ -70,10 +67,6 @@ static zx_status_t usb_dci_config_ep(usb_dci_protocol_t* dci,
 
 static inline zx_status_t usb_dci_disable_ep(usb_dci_protocol_t* dci, uint8_t ep_addr) {
     return dci->ops->disable_ep(dci->ctx, ep_addr);
-}
-
-static zx_status_t usb_dci_set_enabled(usb_dci_protocol_t* dci, bool enabled) {
-    return dci->ops->set_enabled(dci->ctx, enabled);
 }
 
 static zx_status_t usb_dci_ep_set_stall(usb_dci_protocol_t* dci, uint8_t ep_address) {

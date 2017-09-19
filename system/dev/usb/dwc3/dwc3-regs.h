@@ -449,10 +449,64 @@
 
 #define DEV_IMOD(n)                     (0xca00 + 4 * (n))  // Device Interrupt Moderation Register
 
-// BC register offsets
-#define BCFG                0xcc30              // BC Configuration Register
-#define BCEVT               0xcc38              // BC Event Register
-#define BCEVTEN             0xcc3c              // BC Event Enable Register
+// OTG and Battery Charger register offsets
+#define OCFG                        0xcc00          // OTG Configuration Register
+#define OCFG_DISPRTPWRCUTOFF        (1 << 5)
+#define OCFG_OTGHIBDISMASK          (1 << 4)
+#define OCFG_OTGSFTRSTMSK           (1 << 3)
+#define OCFG_HNPCAP                 (1 << 1)
+#define OCFG_SRPCAP                 (1 << 0)
+
+#define OCTL                        0xcc04          // OTG Control Register
+#define OCTL_OTG3_GOERR             (1 << 7)
+#define OCTL_PERIMODE               (1 << 6)
+#define OCTL_PRTPWRCTL              (1 << 5)
+#define OCTL_HNPREQ                 (1 << 4)
+#define OCTL_SESREQ                 (1 << 3)
+#define OCTL_TERMSELDLPULSE         (1 << 2)
+#define OCTL_DEVSETHNPEN            (1 << 1)
+#define OCTL_HSTSETHNPEN            (1 << 0)
+
+#define OEVT                        0xcc08          // OTG Event Register
+#define OEVT_DEVICEMOD              (1 << 31)
+#define OEVT_OTGXHCIRUNSTPSETEVNT   (1 << 27)
+#define OEVT_OTGDEVRUNSTPSETEVNT    (1 << 26)
+#define OEVT_OTGHIBENTRYEVNT        (1 << 25)
+#define OEVT_OTGCONIDSTSCHNGEVNT    (1 << 24)
+#define OEVT_HRRCONFNOTIFEVNT       (1 << 23)
+#define OEVT_HRRINITNOTIFEVNT       (1 << 22)
+#define OEVT_OTGADEVIDLEEVNT        (1 << 21)
+#define OEVT_OTGADEVBHOSTENDEVNT    (1 << 20)
+#define OEVT_OTGADEVHOSTEVNT        (1 << 19)
+#define OEVT_OTGADEVHNPCHNGEVNT     (1 << 18)
+#define OEVT_OTGADEVSRPDETEVNT      (1 << 17)
+#define OEVT_OTGADEVSESSENDDETEVNT  (1 << 16)
+#define OEVT_OTGBDEVBHOSTENDEVNT    (1 << 11)
+#define OEVT_OTGBDEVHNPCHNGEVNT     (1 << 10)
+#define OEVT_OTGBDEVSESSVLDDETEVNT  (1 << 9)
+#define OEVT_OTGBDEVVBUSCHNGEVNT    (1 << 8)
+
+#define OEVTEN                      0xcc0c          // OTG Event Enable Register
+
+#define OSTS                        0xcc10          // OTG Status Register
+#define OSTS_OTGSTATE_START         8
+#define OSTS_OTGSTATE_BITS          4
+#define OSTS_PERIPHERALSTATE       (1 << 4)
+#define OSTS_XHCIPRTPOWER          (1 << 3)
+#define OSTS_BSESVLD               (1 << 2)
+#define OSTS_ASESVLD               (1 << 1)
+#define OSTS_CONIDSTS              (1 << 0)
+
+#define BCFG                        0xcc30          // BC Configuration Register
+#define BCFG_IDDIG_SEL              (1 << 1)        // IDDIG Select
+#define BCFG_CHIRP_EN               (1 << 0)        // Chirp Enable
+
+#define BCEVT                       0xcc38          // BC Event Register
+#define BCEVT_MV_CHNG_EVNT          (1 << 24)       // Multi-Valued Input Changed Event
+#define BCEVT_MULT_VAL_ID_BC(e)     ((e) & 0x1f)    // Multi-Valued ID Pin
+
+#define BCEVTEN                     0xcc3c          // BC Event Enable Register
+#define BCEVTEN_CHNG_EVNT_ENA       (1 << 24)       // Multi-Valued Input Changed Event Enable
 
 // Link register offsets
 #define LU1LFPSRXTIM(n)     (0xd000 + 0x80 * (n))   // U1_LFPS_RX_TIMER_REG
@@ -485,4 +539,3 @@
 #define LCSR_TX_DEEMPH_3(n) (0xd06c + 0x80 * (n))   // LCSR_TX_DEEMPH_3 REGISTER
 #define LCSRPTMDEBUG1(n)    (0xd070 + 0x80 * (n))   // LCSRPTMDEBUG1 REGISTER
 #define LCSRPTMDEBUG2(n)    (0xd074 + 0x80 * (n))   // LCSRPTMDELAY2 REGISTER
-

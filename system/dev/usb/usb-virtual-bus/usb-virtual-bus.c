@@ -82,11 +82,11 @@ static int usb_virtual_bus_thread(void* arg) {
     return 0;
 }
 
-zx_status_t usb_virtual_bus_set_device_enabled(usb_virtual_bus_t* bus, bool enabled) {
+zx_status_t usb_virtual_bus_set_mode(usb_virtual_bus_t* bus, usb_mode_t mode) {
     mtx_lock(&bus->lock);
-    bool old_connect = bus->device_enabled && bus->connected;
-    bus->device_enabled = enabled;
-    bool connect = bus->device_enabled && bus->connected;
+    bool old_connect = bus->usb_mode == USB_MODE_DEVICE && bus->connected;
+    bus->usb_mode = mode;
+    bool connect = bus->usb_mode == USB_MODE_DEVICE && bus->connected;
     mtx_unlock(&bus->lock);
 
     if (connect != old_connect) {
@@ -202,9 +202,9 @@ static zx_status_t usb_bus_ioctl(void* ctx, uint32_t op, const void* in_buf, siz
         int connected = *((int *)in_buf);
 
         mtx_lock(&bus->lock);
-        bool old_connect = bus->device_enabled && bus->connected;
+        bool old_connect = bus->usb_mode == USB_MODE_DEVICE && bus->connected;
         bus->connected = !!connected;
-        bool connect = bus->device_enabled && bus->connected;
+        bool connect = bus->usb_mode == USB_MODE_DEVICE && bus->connected;
         mtx_unlock(&bus->lock);
 
         if (connect != old_connect) {

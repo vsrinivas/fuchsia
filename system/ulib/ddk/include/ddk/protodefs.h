@@ -34,6 +34,7 @@ DDK_PROTOCOL_DEF(USB_DCI,        'pUDC', "usb-dci", 0)  // Device Controller Int
 DDK_PROTOCOL_DEF(USB_DEVICE,     'pUSD', "usb-device", 0)
 DDK_PROTOCOL_DEF(USB_FUNCTION,   'pUSF', "usb-function", 0)
 DDK_PROTOCOL_DEF(USB_HCI,        'pUHI', "usb-hci", 0)  // Host Controller Interface
+DDK_PROTOCOL_DEF(USB_MODE_SWITCH,'pUMS', "usb-mode-switch", 0)
 DDK_PROTOCOL_DEF(BLUETOOTH_HCI,  'pBHC', "bt-hci", 0)
 DDK_PROTOCOL_DEF(AUDIO,          'pAUD', "audio", 0)
 DDK_PROTOCOL_DEF(MIDI,           'pMID', "midi", 0)

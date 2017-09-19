@@ -132,11 +132,31 @@ platform = {
             }
         }
     }
+
+    // DWC3 USB controller
     device = {
         name = "dwc3"
         vid = PDEV_VID_GENERIC
         pid = PDEV_PID_GENERIC
         did = PDEV_DID_USB_DWC3
+        mmios = {
+            {
+                name = "USB3OTG"
+                base-phys = 0xff100000
+                length = 0x100000
+            }
+        }
+        irqs = [191]
+    }
+
+    // DWC3 XHCI device
+    device = {
+        name = "dwc3-xhci"
+        enabled = false // enabled/disabled dynamically
+
+        vid = PDEV_VID_GENERIC
+        pid = PDEV_PID_GENERIC
+        did = PDEV_DID_USB_XHCI
         mmios = {
             {
                 name = "USB3OTG"

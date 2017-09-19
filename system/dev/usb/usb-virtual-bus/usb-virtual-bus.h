@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/iotxn.h>
+#include <ddk/protocol/usb-mode-switch.h>
 #include <zircon/types.h>
 #include <zircon/hw/usb.h>
 #include <sync/completion.h>
@@ -31,11 +32,11 @@ typedef struct {
 
     mtx_t lock;
     completion_t completion;
-    bool device_enabled;
+    usb_mode_t usb_mode;
     bool connected;
 } usb_virtual_bus_t;
 
-zx_status_t usb_virtual_bus_set_device_enabled(usb_virtual_bus_t* bus, bool enabled);
+zx_status_t usb_virtual_bus_set_mode(usb_virtual_bus_t* bus, usb_mode_t mode);
 zx_status_t usb_virtual_bus_set_stall(usb_virtual_bus_t* bus, uint8_t ep_address, bool stall);
 
 zx_status_t usb_virtual_host_add(usb_virtual_bus_t* bus, usb_virtual_host_t** out_host);

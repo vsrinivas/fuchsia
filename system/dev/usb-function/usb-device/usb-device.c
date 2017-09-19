@@ -15,10 +15,60 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/usb-dci.h>
 #include <ddk/protocol/usb-function.h>
+#include <ddk/protocol/usb-mode-switch.h>
 #include <zircon/listnode.h>
 #include <zircon/device/usb-device.h>
 #include <zircon/hw/usb-cdc.h>
 #include <zircon/hw/usb.h>
+
+/*
+    THEORY OF OPERATION
+
+    This driver is responsible for USB in the peripheral role, that is,
+    acting as a USB device to a USB host.
+    It serves as the central point of coordination for the peripheral role.
+    It is configured via ioctls in the ZX_PROTOCOL_USB_DEVICE protocol
+    (which is used by the usbctl command line program).
+    Based on this configuration, it creates one or more DDK devices with protocol
+    ZX_PROTOCOL_USB_FUNCTION. These devices are bind points for USB function drivers,
+    which implement USB interfaces for particular functions (like USB ethernet or mass storage).
+    This driver also binds to a device with protocol ZX_PROTOCOL_USB_DCI
+    (Device Controller Interface) which is implemented by a driver for the actual
+    USB controller hardware for the peripheral role.
+
+    There are several steps needed to initialize and start USB in the peripheral role.
+    The first step is setting up the USB configuration via ioctls.
+    ioctl_usb_device_set_device_desc() sets the USB device descriptor to be presented
+    to the host during enumeration.
+    Next, ioctl_usb_device_add_function() can be called one or more times to add
+    descriptors for the USB functions to be included in the USB configuration.
+    Finally after all the functions have been added, ioctl_usb_device_bind_functions()
+    tells this driver that configuration is complete and it is now possible to build
+    the configuration descriptor. Once we get to this point, usb_device_t.functions_bound
+    is set to true.
+
+    Independent of this configuration process, ioctl_usb_device_set_mode() can be used
+    to configure the role of the USB controller. If the role is set to USB_MODE_DEVICE
+    and "functions_bound" is true, then we are ready to start USB in peripheral role.
+    At this point, we create DDK devices for our list of functions.
+    When the function drivers bind to these functions, they register an interface of type
+    usb_function_interface_t with this driver via the usb_function_register() API.
+    Once all of the function drivers have registered themselves this way,
+    usb_device_t.functions_registered is set to true.
+
+    if the usb mode is set to USB_MODE_DEVICE and "functions_registered" is true,
+    we are now finally ready to operate in the peripheral role.
+    At this point we can inform the DCI driver to start running in peripheral role
+    by calling usb_mode_switch_set_mode(USB_MODE_DEVICE) on its ZX_PROTOCOL_USB_MODE_SWITCH
+    interface. Now the USB controller hardware is up and running as a USB peripheral.
+
+    Teardown of the peripheral role one of two ways:
+    First, ioctl_usb_device_clear_functions() will reset this device's list of USB functions.
+    Second, the USB mode can be set to something other than USB_MODE_DEVICE.
+    In this second case, we will remove the DDK devices for the USB functions
+    so the function drivers will unbind, but the USB configuration remains ready to go
+    for when the USB mode is switched back to USB_MODE_DEVICE.
+*/
 
 #define MAX_INTERFACES 32
 
@@ -35,19 +85,45 @@ typedef struct {
 } usb_function_t;
 
 typedef struct usb_device {
+    // the device we publish
     zx_device_t* zxdev;
+    // our parent device
     zx_device_t* dci_dev;
+    // our parent's DCI protocol
     usb_dci_protocol_t usb_dci;
+    // our parent's USB switch protocol
+    usb_mode_switch_protocol_t usb_mode_switch;
+    // USB device descriptor set via ioctl_usb_device_set_device_desc()
     usb_device_descriptor_t device_desc;
+    // USB configuration descriptor, synthesized from our functions' descriptors
     usb_configuration_descriptor_t* config_desc;
+    // map from interface number to function
     usb_function_t* interface_map[MAX_INTERFACES];
+    // map from endpoint index to function
     usb_function_t* endpoint_map[USB_MAX_EPS];
+    // strings for USB string descriptors
     char* strings[256];
+    // list of usb_function_t
     list_node_t functions;
+    // mutex for protecting our state
     mtx_t lock;
+    // current USB mode set via ioctl_usb_device_set_mode()
+    usb_mode_t usb_mode;
+    // our parent's USB mode
+     usb_mode_t dci_usb_mode;
+    // set if ioctl_usb_device_bind_functions() has been called
+    // and we have a complete list of our function.
     bool functions_bound;
+    // set if all our functions have registered their usb_function_interface_t
+    bool functions_registered;
+    // true if we have added child devices for our functions
+    bool function_devs_added;
+    // true if we are connected to a host
     bool connected;
+    // current configuration number selected via USB_REQ_SET_CONFIGURATION
+    // (will be 0 or 1 since we currently do not support multiple configurations)
     uint8_t configuration;
+    // USB connection speed
     usb_speed_t speed;
 } usb_device_t;
 
@@ -60,8 +136,13 @@ typedef struct usb_device {
 #define IN_EP_START     17
 #define IN_EP_END       31
 
+static zx_status_t usb_dev_state_changed_locked(usb_device_t* dev);
+
 static zx_status_t usb_device_alloc_string_desc(usb_device_t* dev, const char* string,
                                                 uint8_t* out_index) {
+
+    mtx_lock(&dev->lock);
+
     unsigned i;
     for (i = 1; i < countof(dev->strings); i++) {
         if (!dev->strings[i]) {
@@ -69,13 +150,18 @@ static zx_status_t usb_device_alloc_string_desc(usb_device_t* dev, const char* s
         }
     }
     if (i == countof(dev->strings)) {
+        mtx_unlock(&dev->lock);
         return ZX_ERR_NO_RESOURCES;
     }
 
     dev->strings[i] = strdup(string);
     if (!dev->strings[i]) {
+        mtx_unlock(&dev->lock);
         return ZX_ERR_NO_MEMORY;
     }
+
+    mtx_unlock(&dev->lock);
+
     *out_index = i;
     return ZX_OK;
 }
@@ -86,17 +172,12 @@ static void usb_function_iotxn_queue(void* ctx, iotxn_t* txn) {
     iotxn_queue(function->dci_dev, txn);
 }
 
-static void usb_function_release(void* ctx) {
-    dprintf(TRACE, "usb_function_release\n");
-    usb_function_t* function = ctx;
-    free(function->descriptors);
-    free(function);
-}
-
 static zx_protocol_device_t function_proto = {
     .version = DEVICE_OPS_VERSION,
     .iotxn_queue = usb_function_iotxn_queue,
-    .release = usb_function_release,
+    // Note that we purposely do not have a release callback for USB functions.
+    // The functions are kept on a list when not active so they can be re-added
+    // when reentering device mode.
 };
 
 static zx_status_t usb_device_function_registered(usb_device_t* dev) {
@@ -147,10 +228,12 @@ static zx_status_t usb_device_function_registered(usb_device_t* dev) {
     }
     dev->config_desc = config_desc;
 
-    mtx_unlock(&dev->lock);
+    dprintf(TRACE, "usb_device_function_registered functions_registered = true\n");
+    dev->functions_registered = true;
 
-// TODO - clean up if this fails?
-    return usb_dci_set_enabled(&dev->usb_dci, true);
+    zx_status_t status = usb_dev_state_changed_locked(dev);
+    mtx_unlock(&dev->lock);
+    return status;
 }
 
 static zx_status_t usb_func_register(void* ctx, usb_function_interface_t* interface) {
@@ -221,13 +304,18 @@ static zx_status_t usb_func_alloc_interface(void* ctx, uint8_t* out_intf_num) {
     usb_function_t* function = ctx;
     usb_device_t* dev = function->dev;
 
+    mtx_lock(&dev->lock);
+
     for (unsigned i = 0; i < countof(dev->interface_map); i++) {
         if (dev->interface_map[i] == NULL) {
             dev->interface_map[i] = function;
+            mtx_unlock(&dev->lock);
             *out_intf_num = i;
             return ZX_OK;
         }
     }
+
+    mtx_unlock(&dev->lock);
     return ZX_ERR_NO_RESOURCES;
 }
 
@@ -563,22 +651,32 @@ static zx_status_t usb_dev_add_function(usb_device_t* dev, const void* in_buf, s
     return ZX_OK;
 }
 
-static zx_status_t usb_dev_bind_functions(usb_device_t* dev) {
-    if (dev->functions_bound) {
-        dprintf(ERROR, "usb_dev_bind_functions: already bound!\n");
-        return ZX_ERR_BAD_STATE;
+static void usb_dev_remove_function_devices_locked(usb_device_t* dev) {
+    dprintf(TRACE, "usb_dev_remove_function_devices_locked\n");
+
+    usb_function_t* function;
+    list_for_every_entry(&dev->functions, function, usb_function_t, node) {
+        if (function->zxdev) {
+            // here we remove the function from the DDK device tree,
+            // but the storage for the function remains on our function list.
+            device_remove(function->zxdev);
+            function->zxdev = NULL;
+        }
+    }
+
+    free(dev->config_desc);
+    dev->config_desc = NULL;
+    dev->functions_registered = false;
+    dev->function_devs_added = false;
+}
+
+static zx_status_t usb_dev_add_function_devices_locked(usb_device_t* dev) {
+    dprintf(TRACE, "usb_dev_add_function_devices_locked\n");
+    if (dev->function_devs_added) {
+        return ZX_OK;
     }
 
     usb_device_descriptor_t* device_desc = &dev->device_desc;
-    if (device_desc->bLength == 0) {
-        dprintf(ERROR, "usb_dev_bind_functions: device descriptor not set\n");
-        return ZX_ERR_BAD_STATE;
-    }
-    if (list_is_empty(&dev->functions)) {
-        dprintf(ERROR, "usb_dev_bind_functions: no functions to bind\n");
-        return ZX_ERR_BAD_STATE;
-    }
-
     int index = 0;
     usb_function_t* function;
     list_for_every_entry(&dev->functions, function, usb_function_t, node) {
@@ -616,26 +714,135 @@ static zx_status_t usb_dev_bind_functions(usb_device_t* dev) {
         index++;
     }
 
-    dev->functions_bound = true;
-
+    dev->function_devs_added = true;
     return ZX_OK;
 }
 
+static zx_status_t usb_dev_state_changed_locked(usb_device_t* dev) {
+    dprintf(TRACE, "usb_dev_state_changed_locked usb_mode: %d dci_usb_mode: %d\n", dev->usb_mode,
+            dev->dci_usb_mode);
+
+    usb_mode_t new_dci_usb_mode = dev->dci_usb_mode;
+    bool add_function_devs = (dev->usb_mode == USB_MODE_DEVICE && dev->functions_bound);
+    zx_status_t status = ZX_OK;
+
+    if (dev->usb_mode == USB_MODE_DEVICE) {
+        if (dev->functions_registered) {
+            // switch DCI to device mode
+            new_dci_usb_mode = USB_MODE_DEVICE;
+        } else {
+            new_dci_usb_mode = USB_MODE_NONE;
+        }
+    } else {
+        new_dci_usb_mode = dev->usb_mode;
+    }
+
+    if (add_function_devs) {
+        // publish child devices if necessary
+        if (!dev->function_devs_added) {
+            status = usb_dev_add_function_devices_locked(dev);
+            if (status != ZX_OK) {
+                return status;
+            }
+        }
+    }
+
+    if (dev->dci_usb_mode != new_dci_usb_mode) {
+        dprintf(TRACE, "usb_dev_state_changed_locked set DCI mode %d\n", new_dci_usb_mode);
+        status = usb_mode_switch_set_mode(&dev->usb_mode_switch, new_dci_usb_mode);
+        if (status != ZX_OK) {
+            usb_mode_switch_set_mode(&dev->usb_mode_switch, USB_MODE_NONE);
+            new_dci_usb_mode = USB_MODE_NONE;
+        }
+        dev->dci_usb_mode = new_dci_usb_mode;
+    }
+
+    if (!add_function_devs && dev->function_devs_added) {
+        usb_dev_remove_function_devices_locked(dev);
+    }
+
+    return status;
+}
+
+static zx_status_t usb_dev_bind_functions(usb_device_t* dev) {
+    mtx_lock(&dev->lock);
+
+    if (dev->functions_bound) {
+        dprintf(ERROR, "usb_dev_bind_functions: already bound!\n");
+        mtx_unlock(&dev->lock);
+        return ZX_ERR_BAD_STATE;
+    }
+
+    usb_device_descriptor_t* device_desc = &dev->device_desc;
+    if (device_desc->bLength == 0) {
+        dprintf(ERROR, "usb_dev_bind_functions: device descriptor not set\n");
+        mtx_unlock(&dev->lock);
+        return ZX_ERR_BAD_STATE;
+    }
+    if (list_is_empty(&dev->functions)) {
+        dprintf(ERROR, "usb_dev_bind_functions: no functions to bind\n");
+        mtx_unlock(&dev->lock);
+        return ZX_ERR_BAD_STATE;
+    }
+
+    dprintf(TRACE, "usb_dev_bind_functions functions_bound = true\n");
+    dev->functions_bound = true;
+    zx_status_t status = usb_dev_state_changed_locked(dev);
+    mtx_unlock(&dev->lock);
+    return status;
+}
+
 static zx_status_t usb_dev_clear_functions(usb_device_t* dev) {
+    dprintf(TRACE, "usb_dev_clear_functions\n");
+    mtx_lock(&dev->lock);
+
     usb_function_t* function;
     while ((function = list_remove_head_type(&dev->functions, usb_function_t, node)) != NULL) {
-        device_remove(function->zxdev);
+        if (function->zxdev) {
+            device_remove(function->zxdev);
+            // device_remove will not actually free the function, so we free it here
+            free(function->descriptors);
+            free(function);
+        }
     }
     free(dev->config_desc);
     dev->config_desc = NULL;
     dev->functions_bound = false;
+    dev->functions_registered = false;
+
     memset(dev->interface_map, 0, sizeof(dev->interface_map));
     memset(dev->endpoint_map, 0, sizeof(dev->endpoint_map));
     for (unsigned i = 0; i < countof(dev->strings); i++) {
         free(dev->strings[i]);
         dev->strings[i] = NULL;
     }
+
+    zx_status_t status = usb_dev_state_changed_locked(dev);
+    mtx_unlock(&dev->lock);
+    return status;
+}
+
+static zx_status_t usb_dev_get_mode(usb_device_t* dev, void* out_buf, size_t out_len,
+                                    size_t* out_actual) {
+    if (out_len < sizeof(usb_mode_t)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    *((usb_mode_t *)out_buf) = dev->usb_mode;
+    *out_actual = sizeof(usb_mode_t);
     return ZX_OK;
+}
+
+static zx_status_t usb_dev_set_mode(usb_device_t* dev, const void* in_buf, size_t in_len) {
+    if (in_len < sizeof(usb_mode_t)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    mtx_lock(&dev->lock);
+    dev->usb_mode = *((usb_mode_t *)in_buf);
+    zx_status_t status = usb_dev_state_changed_locked(dev);
+    mtx_unlock(&dev->lock);
+    return status;
 }
 
 static zx_status_t usb_dev_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
@@ -654,6 +861,10 @@ static zx_status_t usb_dev_ioctl(void* ctx, uint32_t op, const void* in_buf, siz
         return usb_dev_bind_functions(dev);
     case IOCTL_USB_DEVICE_CLEAR_FUNCTIONS:
         return usb_dev_clear_functions(dev);
+    case IOCTL_USB_DEVICE_GET_MODE:
+        return usb_dev_get_mode(dev, out_buf, out_len, out_actual);
+    case IOCTL_USB_DEVICE_SET_MODE:
+        return usb_dev_set_mode(dev, in_buf, in_len);
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -753,6 +964,18 @@ zx_status_t usb_dev_bind(void* ctx, zx_device_t* parent, void** cookie) {
         free(dev);
         return ZX_ERR_NOT_SUPPORTED;
     }
+
+    if (device_get_protocol(parent, ZX_PROTOCOL_USB_MODE_SWITCH, &dev->usb_mode_switch)) {
+        free(dev);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    // start in device mode by default.
+    // we will inform the DCI device after all of our functions have bound
+    dev->usb_mode = USB_MODE_DEVICE;
+    // parent should be in mode USB_MODE_NONE until we are ready
+    usb_mode_switch_set_mode(&dev->usb_mode_switch, USB_MODE_NONE);
+    dev->dci_usb_mode = USB_MODE_NONE;
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,

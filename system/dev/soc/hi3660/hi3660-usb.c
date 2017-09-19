@@ -2,11 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/driver.h>
+#include <ddk/protocol/gpio.h>
+#include <ddk/protocol/platform-devices.h>
 #include <hw/reg.h>
 #include <stdio.h>
 
 #include "hi3660-bus.h"
 #include "hi3660-regs.h"
+#include "hikey960-hw.h"
 
 zx_status_t hi3360_usb_init(hi3660_bus_t* bus) {
     volatile void* usb3otg_bc = bus->usb3otg_bc.vaddr;
@@ -14,23 +18,6 @@ zx_status_t hi3360_usb_init(hi3660_bus_t* bus) {
     volatile void* pctrl = bus->pctrl.vaddr;
     uint32_t temp;
 
-/*
-    // this doesn't seem to be ncessesary now, but we might need to use these
-    // GPIOs when switching between host and device mode
-
-    gpio_protocol_t gpio;
-    if (pdev_get_protocol(&bus->pdev, ZX_PROTOCOL_GPIO, &gpio) != ZX_OK) {
-        printf("hi3360_usb_init: could not get GPIO protocol!\n");
-        return ZX_ERR_INTERNAL;
-    }
-
-    // disable host vbus
-    gpio_config(&gpio, 46, GPIO_DIR_OUT);
-    gpio_write(&gpio, 46, 0);
-    // enable type-c vbus
-    gpio_config(&gpio, 202, GPIO_DIR_OUT);
-    gpio_write(&gpio, 202, 1);
-*/
     writel(PERI_CRG_ISODIS_REFCLK_ISO_EN, peri_crg + PERI_CRG_ISODIS);
     writel(PCTRL_CTRL3_USB_TCXO_EN | (PCTRL_CTRL3_USB_TCXO_EN << PCTRL_CTRL3_MSK_START),
            pctrl + PCTRL_CTRL3);
@@ -69,5 +56,32 @@ zx_status_t hi3360_usb_init(hi3660_bus_t* bus) {
     writel(temp, usb3otg_bc + USB3OTG_CTRL3);
     zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
 
+    return ZX_OK;
+}
+
+zx_status_t hi3660_usb_set_mode(hi3660_bus_t* bus, usb_mode_t mode) {
+    if (mode == bus->usb_mode) {
+        return ZX_OK;
+    }
+
+    gpio_protocol_t gpio;
+    if (pdev_get_protocol(&bus->pdev, ZX_PROTOCOL_GPIO, &gpio) != ZX_OK) {
+        printf("hi3360_usb_init: could not get GPIO protocol!\n");
+        return ZX_ERR_INTERNAL;
+    }
+
+    gpio_config(&gpio, GPIO_HUB_VDD33_EN, GPIO_DIR_OUT);
+    gpio_config(&gpio, GPIO_VBUS_TYPEC, GPIO_DIR_OUT);
+    gpio_config(&gpio, GPIO_USBSW_SW_SEL, GPIO_DIR_OUT);
+
+    gpio_write(&gpio, GPIO_HUB_VDD33_EN, mode == USB_MODE_HOST);
+    gpio_write(&gpio, GPIO_VBUS_TYPEC, mode == USB_MODE_HOST);
+    gpio_write(&gpio, GPIO_USBSW_SW_SEL, mode == USB_MODE_HOST);
+
+    // add or remove XHCI device
+    pdev_device_enable(&bus->pdev, PDEV_VID_GENERIC, PDEV_PID_GENERIC, PDEV_DID_USB_XHCI,
+                       mode == USB_MODE_HOST);
+
+    bus->usb_mode = mode;
     return ZX_OK;
 }

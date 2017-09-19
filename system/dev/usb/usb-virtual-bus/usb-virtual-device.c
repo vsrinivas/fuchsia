@@ -63,11 +63,6 @@ static zx_status_t device_disable_ep(void* ctx, uint8_t ep_addr) {
     return ZX_OK;
 }
 
-static zx_status_t device_set_enabled(void* ctx, bool enabled) {
-    usb_virtual_device_t* device = ctx;
-    return usb_virtual_bus_set_device_enabled(device->bus, enabled);
-}
-
 static zx_status_t device_ep_set_stall(void* ctx, uint8_t ep_address) {
     usb_virtual_device_t* device = ctx;
     return usb_virtual_bus_set_stall(device->bus, ep_address, true);
@@ -78,14 +73,41 @@ static zx_status_t device_ep_clear_stall(void* ctx, uint8_t ep_address) {
     return usb_virtual_bus_set_stall(device->bus, ep_address, false);
 }
 
-usb_dci_protocol_ops_t virtual_device_protocol = {
+usb_dci_protocol_ops_t virt_device_dci_protocol = {
     .set_interface = device_set_interface,
     .config_ep = device_config_ep,
     .disable_ep = device_disable_ep,
-    .set_enabled = device_set_enabled,
     .ep_set_stall = device_ep_set_stall,
     .ep_clear_stall = device_ep_clear_stall,
 };
+
+static zx_status_t virt_device_set_mode(void* ctx, usb_mode_t mode) {
+    usb_virtual_device_t* device = ctx;
+    return usb_virtual_bus_set_mode(device->bus, mode);
+}
+
+usb_mode_switch_protocol_ops_t virt_device_ums_protocol = {
+    .set_mode = virt_device_set_mode,
+};
+
+static zx_status_t virt_device_get_protocol(void* ctx, uint32_t proto_id, void* out) {
+    switch (proto_id) {
+    case ZX_PROTOCOL_USB_DCI: {
+        usb_dci_protocol_t* proto = out;
+        proto->ops = &virt_device_dci_protocol;
+        proto->ctx = ctx;
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_USB_MODE_SWITCH: {
+        usb_mode_switch_protocol_t* proto = out;
+        proto->ops = &virt_device_ums_protocol;
+        proto->ctx = ctx;
+        return ZX_OK;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
 
 static zx_status_t virt_device_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
 printf("device_open\n");
@@ -110,6 +132,7 @@ static void virt_device_release(void* ctx) {
 
 static zx_protocol_device_t usb_virtual_device_device_proto = {
     .version = DEVICE_OPS_VERSION,
+    .get_protocol = virt_device_get_protocol,
     .open = virt_device_open,
     .iotxn_queue = virt_device_iotxn_queue,
     .unbind = virt_device_unbind,
@@ -129,7 +152,7 @@ zx_status_t usb_virtual_device_add(usb_virtual_bus_t* bus, usb_virtual_device_t*
         .ctx = device,
         .ops = &usb_virtual_device_device_proto,
         .proto_id = ZX_PROTOCOL_USB_DCI,
-        .proto_ops = &virtual_device_protocol,
+        .proto_ops = &virt_device_dci_protocol,
     };
 
     zx_status_t status = device_add(device->bus->zxdev, &args, &device->zxdev);
