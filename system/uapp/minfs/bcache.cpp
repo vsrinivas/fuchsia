@@ -21,7 +21,7 @@
 namespace minfs {
 
 zx_status_t Bcache::Readblk(blk_t bno, void* data) {
-    off_t off = bno * kMinfsBlockSize;
+    off_t off = static_cast<off_t>(bno) * kMinfsBlockSize;
     assert(off / kMinfsBlockSize == bno); // Overflow
     FS_TRACE(IO, "readblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);
     if (lseek(fd_, off, SEEK_SET) < 0) {
@@ -36,7 +36,7 @@ zx_status_t Bcache::Readblk(blk_t bno, void* data) {
 }
 
 zx_status_t Bcache::Writeblk(blk_t bno, const void* data) {
-    off_t off = bno * kMinfsBlockSize;
+    off_t off = static_cast<off_t>(bno) * kMinfsBlockSize;
     assert(off / kMinfsBlockSize == bno); // Overflow
     FS_TRACE(IO, "writeblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);
     if (lseek(fd_, off, SEEK_SET) < 0) {
