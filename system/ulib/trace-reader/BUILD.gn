@@ -6,7 +6,7 @@ config("trace_config") {
   include_dirs = [ "include" ]
 }
 
-source_set("trace-provider") {
+source_set("trace-reader") {
   # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "include/trace-reader/reader.h",
