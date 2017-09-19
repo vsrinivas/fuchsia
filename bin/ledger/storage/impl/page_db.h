@@ -76,17 +76,20 @@ class PageDbMutator {
 
   // Removes all information on the journal with the given |journal_id| from the
   // database.
-  virtual Status RemoveJournal(const JournalId& journal_id) = 0;
+  virtual Status RemoveJournal(coroutine::CoroutineHandler* handler,
+                               const JournalId& journal_id) = 0;
 
   // Adds a new |key|-|value| pair with the given |priority| to the journal with
   // the given |journal_id|.
-  virtual Status AddJournalEntry(const JournalId& journal_id,
+  virtual Status AddJournalEntry(coroutine::CoroutineHandler* handler,
+                                 const JournalId& journal_id,
                                  fxl::StringView key,
                                  fxl::StringView value,
                                  KeyPriority priority) = 0;
 
   // Removes the given key from the journal with the given |journal_id|.
-  virtual Status RemoveJournalEntry(const JournalId& journal_id,
+  virtual Status RemoveJournalEntry(coroutine::CoroutineHandler* handler,
+                                    const JournalId& journal_id,
                                     convert::ExtendedStringView key) = 0;
 
   // Object data.
@@ -187,6 +190,7 @@ class PageDb : public PageDbMutator {
   // Finds all the entries of the journal with the given |journal_id| and stores
   // an interator over the results on |entires|.
   virtual Status GetJournalEntries(
+      coroutine::CoroutineHandler* handler,
       const JournalId& journal_id,
       std::unique_ptr<Iterator<const EntryChange>>* entries) = 0;
 

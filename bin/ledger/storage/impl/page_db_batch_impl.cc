@@ -42,10 +42,11 @@ Status PageDbBatchImpl::RemoveCommit(CoroutineHandler* /*handler*/,
   return batch_->Delete(CommitRow::GetKeyFor(commit_id));
 }
 
-Status PageDbBatchImpl::CreateJournalId(coroutine::CoroutineHandler* handler,
-                                        JournalType journal_type,
-                                        const CommitId& base,
-                                        JournalId* journal_id) {
+Status PageDbBatchImpl::CreateJournalId(
+    coroutine::CoroutineHandler* /*handler*/,
+    JournalType journal_type,
+    const CommitId& base,
+    JournalId* journal_id) {
   JournalId id = JournalEntryRow::NewJournalId(journal_type);
 
   Status status = Status::OK;
@@ -66,7 +67,8 @@ Status PageDbBatchImpl::RemoveExplicitJournals(CoroutineHandler* /*handler*/) {
   return batch_->DeleteByPrefix(kExplicitJournalPrefix);
 }
 
-Status PageDbBatchImpl::RemoveJournal(const JournalId& journal_id) {
+Status PageDbBatchImpl::RemoveJournal(CoroutineHandler* /*handler*/,
+                                      const JournalId& journal_id) {
   if (journal_id[0] == JournalEntryRow::kImplicitPrefix) {
     Status status =
         batch_->Delete(ImplicitJournalMetaRow::GetKeyFor(journal_id));
@@ -77,16 +79,20 @@ Status PageDbBatchImpl::RemoveJournal(const JournalId& journal_id) {
   return batch_->DeleteByPrefix(JournalEntryRow::GetPrefixFor(journal_id));
 }
 
-Status PageDbBatchImpl::AddJournalEntry(const JournalId& journal_id,
-                                        fxl::StringView key,
-                                        fxl::StringView value,
-                                        KeyPriority priority) {
+Status PageDbBatchImpl::AddJournalEntry(
+    coroutine::CoroutineHandler* /*handler*/,
+    const JournalId& journal_id,
+    fxl::StringView key,
+    fxl::StringView value,
+    KeyPriority priority) {
   return batch_->Put(JournalEntryRow::GetKeyFor(journal_id, key),
                      JournalEntryRow::GetValueFor(value, priority));
 }
 
-Status PageDbBatchImpl::RemoveJournalEntry(const JournalId& journal_id,
-                                           convert::ExtendedStringView key) {
+Status PageDbBatchImpl::RemoveJournalEntry(
+    coroutine::CoroutineHandler* /*handler*/,
+    const JournalId& journal_id,
+    convert::ExtendedStringView key) {
   return batch_->Put(JournalEntryRow::GetKeyFor(journal_id, key),
                      JournalEntryRow::kDeletePrefix);
 }

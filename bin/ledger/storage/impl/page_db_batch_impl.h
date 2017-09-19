@@ -36,14 +36,17 @@ class PageDbBatchImpl : public PageDb::Batch {
                          const CommitId& base,
                          JournalId* journal_id) override;
   Status RemoveExplicitJournals(coroutine::CoroutineHandler* handler) override;
-  Status RemoveJournal(const JournalId& journal_id) override;
+  Status RemoveJournal(coroutine::CoroutineHandler* handler,
+                       const JournalId& journal_id) override;
 
   // Journal entries.
-  Status AddJournalEntry(const JournalId& journal_id,
+  Status AddJournalEntry(coroutine::CoroutineHandler* handler,
+                         const JournalId& journal_id,
                          fxl::StringView key,
                          fxl::StringView value,
                          KeyPriority priority) override;
-  Status RemoveJournalEntry(const JournalId& journal_id,
+  Status RemoveJournalEntry(coroutine::CoroutineHandler* handler,
+                            const JournalId& journal_id,
                             convert::ExtendedStringView key) override;
 
   // Object data.

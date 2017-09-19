@@ -176,7 +176,7 @@ TEST_F(PageDbTest, Journals) {
     EXPECT_EQ(Status::OK, page_db_.GetBaseCommitForJournal(
                               handler, journal_ids[0], &found_base_id));
     EXPECT_EQ(commit_id, found_base_id);
-    EXPECT_EQ(Status::OK, page_db_.RemoveJournal(journal_ids[0]));
+    EXPECT_EQ(Status::OK, page_db_.RemoveJournal(handler, journal_ids[0]));
     EXPECT_EQ(Status::NOT_FOUND, page_db_.GetBaseCommitForJournal(
                                      handler, journal_ids[0], &found_base_id));
     EXPECT_EQ(Status::OK,
@@ -194,16 +194,16 @@ TEST_F(PageDbTest, JournalEntries) {
               page_db_.CreateJournalId(handler, JournalType::IMPLICIT,
                                        commit_id, &journal_id));
     EXPECT_EQ(Status::OK,
-              page_db_.AddJournalEntry(journal_id, "add-key-1", "value1",
-                                       KeyPriority::LAZY));
+              page_db_.AddJournalEntry(handler, journal_id, "add-key-1",
+                                       "value1", KeyPriority::LAZY));
     EXPECT_EQ(Status::OK,
-              page_db_.AddJournalEntry(journal_id, "add-key-2", "value2",
-                                       KeyPriority::EAGER));
+              page_db_.AddJournalEntry(handler, journal_id, "add-key-2",
+                                       "value2", KeyPriority::EAGER));
     EXPECT_EQ(Status::OK,
-              page_db_.AddJournalEntry(journal_id, "add-key-1", "value3",
-                                       KeyPriority::LAZY));
+              page_db_.AddJournalEntry(handler, journal_id, "add-key-1",
+                                       "value3", KeyPriority::LAZY));
     EXPECT_EQ(Status::OK,
-              page_db_.RemoveJournalEntry(journal_id, "remove-key"));
+              page_db_.RemoveJournalEntry(handler, journal_id, "remove-key"));
 
     EntryChange expected_changes[] = {
         NewEntryChange("add-key-1", "value3", KeyPriority::LAZY),
@@ -211,7 +211,8 @@ TEST_F(PageDbTest, JournalEntries) {
         NewRemoveEntryChange("remove-key"),
     };
     std::unique_ptr<Iterator<const EntryChange>> entries;
-    EXPECT_EQ(Status::OK, page_db_.GetJournalEntries(journal_id, &entries));
+    EXPECT_EQ(Status::OK,
+              page_db_.GetJournalEntries(handler, journal_id, &entries));
     for (const auto& expected_change : expected_changes) {
       EXPECT_TRUE(entries->Valid());
       ExpectChangesEqual(expected_change, **entries);

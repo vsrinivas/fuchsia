@@ -551,9 +551,16 @@ void PageStorageImpl::GetJournalEntries(
     const JournalId& journal_id,
     std::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>)>
         callback) {
-  std::unique_ptr<Iterator<const EntryChange>> entries;
-  Status s = db_->GetJournalEntries(journal_id, &entries);
-  callback(s, std::move(entries));
+  coroutine_service_->StartCoroutine([
+    this, journal_id, final_callback = std::move(callback)
+  ](CoroutineHandler * handler) mutable {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
+
+    std::unique_ptr<Iterator<const EntryChange>> entries;
+    Status s = db_->GetJournalEntries(handler, journal_id, &entries);
+    callback(s, std::move(entries));
+  });
 }
 
 void PageStorageImpl::AddJournalEntry(const JournalId& journal_id,
@@ -561,18 +568,40 @@ void PageStorageImpl::AddJournalEntry(const JournalId& journal_id,
                                       fxl::StringView value,
                                       KeyPriority priority,
                                       std::function<void(Status)> callback) {
-  callback(db_->AddJournalEntry(journal_id, key, value, priority));
+  coroutine_service_->StartCoroutine([
+    this, journal_id, key = key.ToString(), value = value.ToString(), priority,
+    final_callback = std::move(callback)
+  ](CoroutineHandler * handler) mutable {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
+
+    callback(db_->AddJournalEntry(handler, journal_id, key, value, priority));
+  });
 }
 
 void PageStorageImpl::RemoveJournalEntry(const JournalId& journal_id,
                                          convert::ExtendedStringView key,
                                          std::function<void(Status)> callback) {
-  callback(db_->RemoveJournalEntry(journal_id, key));
+  coroutine_service_->StartCoroutine([
+    this, journal_id, key = key.ToString(), final_callback = std::move(callback)
+  ](CoroutineHandler * handler) mutable {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
+
+    callback(db_->RemoveJournalEntry(handler, journal_id, key));
+  });
 }
 
 void PageStorageImpl::RemoveJournal(const JournalId& journal_id,
                                     std::function<void(Status)> callback) {
-  callback(db_->RemoveJournal(journal_id));
+  coroutine_service_->StartCoroutine([
+    this, journal_id, final_callback = std::move(callback)
+  ](CoroutineHandler * handler) mutable {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
+
+    callback(db_->RemoveJournal(handler, journal_id));
+  });
 }
 
 void PageStorageImpl::NotifyWatchers() {

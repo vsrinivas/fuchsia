@@ -153,6 +153,7 @@ Status PageDbImpl::GetBaseCommitForJournal(CoroutineHandler* /*handler*/,
 }
 
 Status PageDbImpl::GetJournalEntries(
+    CoroutineHandler* /*handler*/,
     const JournalId& journal_id,
     std::unique_ptr<Iterator<const EntryChange>>* entries) {
   std::unique_ptr<Iterator<const std::pair<convert::ExtendedStringView,
@@ -257,7 +258,7 @@ Status PageDbImpl::RemoveCommit(CoroutineHandler* handler,
   return batch->Execute();
 }
 
-Status PageDbImpl::CreateJournalId(coroutine::CoroutineHandler* handler,
+Status PageDbImpl::CreateJournalId(CoroutineHandler* handler,
                                    JournalType journal_type,
                                    const CommitId& base,
                                    JournalId* journal_id) {
@@ -272,25 +273,28 @@ Status PageDbImpl::RemoveExplicitJournals(CoroutineHandler* handler) {
   return batch->Execute();
 }
 
-Status PageDbImpl::RemoveJournal(const JournalId& journal_id) {
+Status PageDbImpl::RemoveJournal(CoroutineHandler* handler,
+                                 const JournalId& journal_id) {
   auto batch = StartBatch();
-  batch->RemoveJournal(journal_id);
+  batch->RemoveJournal(handler, journal_id);
   return batch->Execute();
 }
 
-Status PageDbImpl::AddJournalEntry(const JournalId& journal_id,
+Status PageDbImpl::AddJournalEntry(CoroutineHandler* handler,
+                                   const JournalId& journal_id,
                                    fxl::StringView key,
                                    fxl::StringView value,
                                    KeyPriority priority) {
   auto batch = StartBatch();
-  batch->AddJournalEntry(journal_id, key, value, priority);
+  batch->AddJournalEntry(handler, journal_id, key, value, priority);
   return batch->Execute();
 }
 
-Status PageDbImpl::RemoveJournalEntry(const JournalId& journal_id,
+Status PageDbImpl::RemoveJournalEntry(CoroutineHandler* handler,
+                                      const JournalId& journal_id,
                                       convert::ExtendedStringView key) {
   auto batch = StartBatch();
-  batch->RemoveJournalEntry(journal_id, key);
+  batch->RemoveJournalEntry(handler, journal_id, key);
   return batch->Execute();
 }
 
