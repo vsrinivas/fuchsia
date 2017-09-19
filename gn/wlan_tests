@@ -4,7 +4,7 @@
         "go"
     ],
     "packages": {
-        "wlanstack_test": "//apps/wlan:wlanstack_test",
+        "wlanstack_test": "//garnet/go/src/wlan:wlanstack_test",
         "wlan_tests": "//garnet/drivers/wlan/wlan/tests:wlan_tests"
     }
 }

@@ -3,7 +3,7 @@
         "go"
     ],
     "packages": {
-        "wlanstack": "//apps/wlan:wlanstack",
-        "wlantool": "//apps/wlan:wlantool"
+        "wlanstack": "//garnet/go/src/wlan:wlanstack",
+        "wlantool": "//garnet/go/src/wlan:wlantool"
     }
 }
