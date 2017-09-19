@@ -12,8 +12,8 @@ import (
 	"os"
 
 	"syscall"
-	"syscall/mx"
-	"syscall/mx/fdio"
+	"syscall/zx"
+	"syscall/zx/fdio"
 
 	"thinfs/fs"
 	"thinfs/zircon/rpc"
@@ -22,7 +22,7 @@ import (
 // mountInfo is a platform specific type that carries platform specific mounting
 // data, such as the file descriptor or handle of the mount.
 type mountInfo struct {
-	serveChannel *mx.Channel
+	serveChannel *zx.Channel
 	parentFd     *os.File
 }
 
@@ -41,8 +41,8 @@ func (f *Filesystem) Mount(path string) error {
 		return err
 	}
 
-	var rpcChan *mx.Channel
-	rpcChan, f.mountInfo.serveChannel, err = mx.NewChannel(0)
+	var rpcChan *zx.Channel
+	rpcChan, f.mountInfo.serveChannel, err = zx.NewChannel(0)
 	if err != nil {
 		f.mountInfo.parentFd.Close()
 		f.mountInfo.parentFd = nil
@@ -88,9 +88,9 @@ func goErrToFSErr(err error) error {
 		return nil
 	case *os.PathError:
 		return goErrToFSErr(e.Err)
-	case mx.Error:
+	case zx.Error:
 		switch e.Status {
-		case mx.ErrNotFound:
+		case zx.ErrNotFound:
 			return fs.ErrNotFound
 
 		default:

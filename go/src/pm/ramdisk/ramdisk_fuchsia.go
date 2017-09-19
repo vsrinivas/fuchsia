@@ -22,10 +22,10 @@ import "C"
 
 import (
 	"bytes"
-	"unsafe"
-	"runtime"
 	"fmt"
-	"syscall/mx/fdio"
+	"runtime"
+	"syscall/zx/fdio"
+	"unsafe"
 )
 
 type Ramdisk struct {
@@ -81,7 +81,6 @@ func (r *Ramdisk) Umount(mountPath string) error {
 	}
 	return fmt.Errorf("umount failed with %d", n)
 }
-
 
 func finalizeRamdisk(r *Ramdisk) {
 	r.Destroy()
