@@ -261,7 +261,6 @@ executable("fxl_unittests") {
     "synchronization/thread_checker_unittest.cc",
     "synchronization/waitable_event_unittest.cc",
     "tasks/one_shot_timer_unittest.cc",
-    "test/run_all_unittests.cc",
     "test/timeout_tolerance.h",
     "threading/thread_unittest.cc",
     "time/stopwatch_unittest.cc",
@@ -274,6 +273,7 @@ executable("fxl_unittests") {
     ":fxl",
     ":fxl_logging",
     ":fxl_printers",
+    "test:gtest_main",
     "//third_party/gtest",
   ]
 }

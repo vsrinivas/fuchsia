@@ -1,12 +1,17 @@
-# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("test") {
+# Generic main entry point target for GTest executables.
+source_set("gtest_main") {
   testonly = true
 
   sources = [
     "run_all_unittests.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
   ]
 
   public_deps = [

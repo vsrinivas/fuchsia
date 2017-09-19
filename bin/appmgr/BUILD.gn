@@ -67,6 +67,6 @@ executable("tests") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/fsl/test",
+    "//garnet/public/lib/fxl/test:gtest_main",
   ]
 }

@@ -171,7 +171,7 @@ executable("trace_stub_tests") {
 
   deps = [
     ":trace",
-    "//garnet/public/lib/fsl/test",
+    "//garnet/public/lib/fxl/test:gtest_main",
     "//third_party/gtest",
   ]
 }
@@ -185,7 +185,7 @@ executable("ctrace_stub_tests") {
 
   deps = [
     ":trace",
-    "//garnet/public/lib/fsl/test",
+    "//garnet/public/lib/fxl/test:gtest_main",
     "//third_party/gtest",
   ]
 }

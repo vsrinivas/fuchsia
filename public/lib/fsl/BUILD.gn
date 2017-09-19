@@ -50,7 +50,7 @@ executable("fsl_unittests") {
 
   deps = [
     ":fsl",
-    "//garnet/public/lib/fsl/test",
+    "//garnet/public/lib/fxl/test:gtest_main",
     "//third_party/gtest",
   ]
 }
