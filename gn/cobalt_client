@@ -14,6 +14,6 @@
         "runtime_config"
     ],
     "packages": {
-        "cobalt_client": "//apps/cobalt_client/src:cobalt_client"
+        "cobalt": "//garnet/bin/cobalt"
     }
 }
