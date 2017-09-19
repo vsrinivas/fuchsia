@@ -12,8 +12,8 @@ rust_binary("ledger_example") {
     "//garnet/public/lib/app/fidl:service_provider_rust_library",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/crates/mxruntime",
-    "//rust/zircon-rs:zircon",
-    "//rust/zircon-rs/zircon-sys",
+    "//garnet/public/rust/crates/zircon-rs:zircon",
+    "//garnet/public/rust/crates/zircon-rs/zircon-sys",
     "//third_party/rust-crates:tokio-core-0.1.9",
   ]
 }
