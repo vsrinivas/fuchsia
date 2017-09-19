@@ -12,9 +12,9 @@ subdirectories increases.
 
 The `public/` directory defines the public interface to this repository. Code
 outside this repository should not depend on files outside of this directory.
-This directory should not depend on any code in this repository outside of this
+This directory should not depend on any files in this repository outside of this
 directory. This property ensures that code outside this repository does not
-transitively depend on any of the private code in this repository.
+transitively depend on any of the private files in this repository.
 
 ### public/build/
 
@@ -27,10 +27,11 @@ The `public/lib/` directory contains libraries (both static and dynamic) that
 clients can link into their processes. Many of the libraries in this directory
 are defined in FIDL, which are language-agnostic definitions of interprocess
 communication protocols. However, this directory also contains manually
-implemented libraries in various languages.
+implemented libraries in various languages. In these cases, both the headers and
+source files for these libraries are included in this directory.
 
-Libraries that are private implementation details of this repository should be
-in `lib/` instead.
+Libraries that are private implementation details of this repository (i.e., not
+part of this repository's public interface) should be in `lib/` instead.
 
 ### public/dart-pkg/
 
@@ -56,8 +57,7 @@ written in other languages.
 
 The `bin/` directory contains executable binaries. Typically, these binaries
 implement one or more of the interfaces defined in `public/`, but the binaries
-themselves are not part of the public interface of this repository. They are the
-implementation rather than the interface.
+themselves are not part of the public interface of this repository.
 
 ## docs/
 
@@ -82,8 +82,8 @@ internally by this repository. These libraries are internal implementation
 details of this repository and should not be used by code outside this
 repository.
 
-Libraries that are part of the public interface of this repository should be in
-`public/lib/` instead.
+Libraries that are part of the public interface of this repository (i.e., not
+private implementation details) should be in `public/lib/` instead.
 
 ## go/src/
 
