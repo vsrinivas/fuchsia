@@ -7,6 +7,7 @@
 #include "apps/ledger/cloud_provider_firebase/services/factory.fidl.h"
 #include "apps/ledger/services/cloud_provider/cloud_provider.fidl.h"
 #include "apps/ledger/src/callback/capture.h"
+#include "apps/ledger/src/network/fake_network_service.h"
 #include "apps/ledger/src/test/fake_token_provider.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -29,7 +30,8 @@ class FactoryImplTest : public test::TestWithMessageLoop {
       : fake_token_provider_("id_token", "local_id", "email", "client_id"),
         token_provider_binding_(&fake_token_provider_,
                                 token_provider_.NewRequest()),
-        factory_impl_(message_loop_.task_runner()),
+        network_service_(message_loop_.task_runner()),
+        factory_impl_(message_loop_.task_runner(), &network_service_),
         factory_binding_(&factory_impl_, factory_.NewRequest()) {}
   ~FactoryImplTest() override {}
 
@@ -38,6 +40,7 @@ class FactoryImplTest : public test::TestWithMessageLoop {
   test::FakeTokenProvider fake_token_provider_;
   fidl::Binding<modular::auth::TokenProvider> token_provider_binding_;
 
+  ledger::FakeNetworkService network_service_;
   FactoryImpl factory_impl_;
   cloud_provider_firebase::FactoryPtr factory_;
   fidl::Binding<cloud_provider_firebase::Factory> factory_binding_;

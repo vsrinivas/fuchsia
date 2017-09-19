@@ -10,6 +10,7 @@
 #include "apps/ledger/services/cloud_provider/cloud_provider.fidl.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/callback/cancellable.h"
+#include "apps/ledger/src/network/network_service.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
@@ -18,7 +19,9 @@ namespace cloud_provider_firebase {
 
 class FactoryImpl : public Factory {
  public:
-  explicit FactoryImpl(fxl::RefPtr<fxl::TaskRunner> main_runner);
+  explicit FactoryImpl(fxl::RefPtr<fxl::TaskRunner> main_runner,
+                       ledger::NetworkService* network_service);
+
   ~FactoryImpl() override;
 
   void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
@@ -36,6 +39,7 @@ class FactoryImpl : public Factory {
   void CheckEmpty();
 
   fxl::RefPtr<fxl::TaskRunner> main_runner_;
+  ledger::NetworkService* const network_service_;
   callback::CancellableContainer token_requests_;
   callback::AutoCleanableSet<CloudProviderImpl> providers_;
 

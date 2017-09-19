@@ -49,15 +49,33 @@ interface DeviceSet {
 
   // Watches the given |fingerprint| in the cloud so that |watcher| is notified
   // when the fingerprint is erased.
-  SetWatcher(DeviceSetWatcher watcher, array<uint8> fingerprint)
+  //
+  // At most one watcher can be set at any given time. If more than one watcher
+  // is set, only the one set most recently is notified when the fingerprint is
+  // erased.
+  //
+  // The returned status is:
+  //
+  //   - OK, if setting the watcher succeeded,
+  //   - NOT_FOUND, if the fingerprint was not found in the cloud
+  //   - NETWORK_ERROR, if the watcher couldn't be set due to a network error
+  //
+  // If the returned status is not OK, the corresponding error call is also made
+  // on the watcher.
+  SetWatcher(array<uint8> fingerprint, DeviceSetWatcher watcher)
       => (Status status);
 };
 
 // Watcher for push notifications from the cloud registry of devices
 // participating in cloud sync.
 interface DeviceSetWatcher {
-  // Called when cloud provider detects that the cloud storage was erased.
+  // Called when cloud provider detects that the cloud storage was erased. No
+  // further calls are made on the watcher after this is called.
   OnCloudErased();
+
+  // Called when the network connection is lost. No further calls are made on
+  // the watcher after this is called.
+  OnNetworkError();
 };
 
 // Commit stored in the cloud.

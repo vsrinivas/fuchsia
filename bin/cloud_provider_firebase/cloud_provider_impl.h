@@ -11,6 +11,7 @@
 #include "apps/ledger/services/cloud_provider/cloud_provider.fidl.h"
 #include "apps/ledger/src/auth_provider/auth_provider_impl.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
+#include "apps/ledger/src/network/network_service.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/functional/closure.h"
@@ -27,6 +28,7 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
  public:
   CloudProviderImpl(
       fxl::RefPtr<fxl::TaskRunner> main_runner,
+      ledger::NetworkService* network_service,
       std::string user_id,
       ConfigPtr config,
       std::unique_ptr<auth_provider::AuthProvider> auth_provider,
@@ -47,7 +49,9 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
       const GetPageCloudCallback& callback) override;
 
   fxl::RefPtr<fxl::TaskRunner> main_runner_;
+  ledger::NetworkService* const network_service_;
   const std::string user_id_;
+  const std::string server_id_;
   std::unique_ptr<auth_provider::AuthProvider> auth_provider_;
   fidl::Binding<cloud_provider::CloudProvider> binding_;
   fxl::Closure on_empty_;

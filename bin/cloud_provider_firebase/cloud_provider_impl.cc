@@ -6,19 +6,25 @@
 
 #include <utility>
 
+#include "apps/ledger/src/cloud_provider/impl/paths.h"
 #include "apps/ledger/src/convert/convert.h"
+#include "apps/ledger/src/device_set/cloud_device_set_impl.h"
+#include "apps/ledger/src/firebase/firebase_impl.h"
 #include "lib/fxl/logging.h"
 
 namespace cloud_provider_firebase {
 
 CloudProviderImpl::CloudProviderImpl(
     fxl::RefPtr<fxl::TaskRunner> main_runner,
+    ledger::NetworkService* network_service,
     std::string user_id,
-    ConfigPtr /*config*/,
+    ConfigPtr config,
     std::unique_ptr<auth_provider::AuthProvider> auth_provider,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> request)
     : main_runner_(std::move(main_runner)),
+      network_service_(network_service),
       user_id_(std::move(user_id)),
+      server_id_(config->server_id),
       auth_provider_(std::move(auth_provider)),
       binding_(this, std::move(request)) {
   // The class shuts down when the client connection is disconnected.
@@ -34,7 +40,12 @@ CloudProviderImpl::~CloudProviderImpl() {}
 void CloudProviderImpl::GetDeviceSet(
     fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
     const GetDeviceSetCallback& callback) {
-  device_sets_.emplace(auth_provider_.get(), std::move(device_set));
+  auto user_firebase = std::make_unique<firebase::FirebaseImpl>(
+      network_service_, server_id_, GetFirebasePathForUser(user_id_));
+  auto cloud_device_set =
+      std::make_unique<CloudDeviceSetImpl>(std::move(user_firebase));
+  device_sets_.emplace(auth_provider_.get(), std::move(cloud_device_set),
+                       std::move(device_set));
   callback(cloud_provider::Status::OK);
 }
 

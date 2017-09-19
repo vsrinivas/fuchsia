@@ -6,6 +6,7 @@
 
 #include "apps/ledger/services/cloud_provider/cloud_provider.fidl.h"
 #include "apps/ledger/src/auth_provider/test/test_auth_provider.h"
+#include "apps/ledger/src/network/fake_network_service.h"
 #include "apps/ledger/src/test/fake_token_provider.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -35,8 +36,10 @@ std::unique_ptr<auth_provider::AuthProvider> InitAuthProvider(
 class CloudProviderImplTest : public test::TestWithMessageLoop {
  public:
   CloudProviderImplTest()
-      : cloud_provider_impl_(
+      : network_service_(message_loop_.task_runner()),
+        cloud_provider_impl_(
             message_loop_.task_runner(),
+            &network_service_,
             "user_id",
             GetFirebaseConfig(),
             InitAuthProvider(message_loop_.task_runner(), &auth_provider_),
@@ -46,6 +49,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop {
  protected:
   auth_provider::test::TestAuthProvider* auth_provider_ = nullptr;
 
+  ledger::FakeNetworkService network_service_;
   cloud_provider::CloudProviderPtr cloud_provider_;
   CloudProviderImpl cloud_provider_impl_;
 

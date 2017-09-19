@@ -10,8 +10,9 @@
 
 namespace cloud_provider_firebase {
 
-FactoryImpl::FactoryImpl(fxl::RefPtr<fxl::TaskRunner> main_runner)
-    : main_runner_(std::move(main_runner)) {
+FactoryImpl::FactoryImpl(fxl::RefPtr<fxl::TaskRunner> main_runner,
+                         ledger::NetworkService* network_service)
+    : main_runner_(std::move(main_runner)), network_service_(network_service) {
   providers_.set_on_empty([this] { CheckEmpty(); });
   token_requests_.set_on_empty([this] { CheckEmpty(); });
 }
@@ -51,8 +52,9 @@ void FactoryImpl::GetCloudProvider(
       return;
     }
 
-    providers_.emplace(main_runner_, user_id, std::move(config),
-                       std::move(auth_provider), std::move(cloud_provider));
+    providers_.emplace(main_runner_, network_service_, user_id,
+                       std::move(config), std::move(auth_provider),
+                       std::move(cloud_provider));
     callback(cloud_provider::Status::OK);
   }));
   token_requests_.emplace(request);

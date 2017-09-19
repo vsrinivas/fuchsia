@@ -2,10 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//apps/ledger/src/*" ]
+visibility = [
+  "//apps/ledger/src/*",
+  "//apps/ledger/cloud_provider_firebase/*",
+]
 
 group("cloud_provider") {
-  deps = [
+  public_deps = [
     "//apps/ledger/src/cloud_provider/impl",
     "//apps/ledger/src/cloud_provider/public",
   ]

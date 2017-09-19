@@ -5,6 +5,7 @@
 #include <trace-provider/provider.h>
 
 #include "apps/ledger/cloud_provider_firebase/factory_impl.h"
+#include "apps/ledger/src/network/network_service_impl.h"
 #include "apps/modular/services/lifecycle/lifecycle.fidl.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -20,7 +21,13 @@ class App : public modular::Lifecycle {
   App()
       : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
         trace_provider_(loop_.async()),
-        factory_impl_(loop_.task_runner()) {
+        network_service_(
+            loop_.task_runner(),
+            [this] {
+              return application_context_
+                  ->ConnectToEnvironmentService<network::NetworkService>();
+            }),
+        factory_impl_(loop_.task_runner(), &network_service_) {
     FXL_DCHECK(application_context_);
     factory_impl_.set_on_empty([this] { loop_.PostQuitTask(); });
   }
@@ -43,6 +50,8 @@ class App : public modular::Lifecycle {
   std::unique_ptr<app::ApplicationContext> application_context_;
   fsl::MessageLoop loop_;
   trace::TraceProvider trace_provider_;
+
+  ledger::NetworkServiceImpl network_service_;
   FactoryImpl factory_impl_;
   fidl::BindingSet<modular::Lifecycle> lifecycle_bindings_;
   fidl::BindingSet<Factory> factory_bindings_;
