@@ -27,9 +27,6 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
   Status GetBaseCommitForJournal(coroutine::CoroutineHandler* handler,
                                  const JournalId& journal_id,
                                  CommitId* base) override;
-  Status GetJournalValue(const JournalId& journal_id,
-                         fxl::StringView key,
-                         std::string* value) override;
   Status GetJournalEntries(
       const JournalId& journal_id,
       std::unique_ptr<Iterator<const EntryChange>>* entries) override;

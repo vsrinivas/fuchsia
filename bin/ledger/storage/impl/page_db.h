@@ -184,11 +184,6 @@ class PageDb : public PageDbMutator {
                                          const JournalId& journal_id,
                                          CommitId* base) = 0;
 
-  // Finds the value for the given |key| in the journal with the given id.
-  virtual Status GetJournalValue(const JournalId& journal_id,
-                                 fxl::StringView key,
-                                 std::string* value) = 0;
-
   // Finds all the entries of the journal with the given |journal_id| and stores
   // an interator over the results on |entires|.
   virtual Status GetJournalEntries(

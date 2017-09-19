@@ -33,11 +33,6 @@ Status PageDbEmptyImpl::GetBaseCommitForJournal(CoroutineHandler* /*handler*/,
                                                 CommitId* /*base*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::GetJournalValue(const JournalId& /*journal_id*/,
-                                        fxl::StringView /*key*/,
-                                        std::string* /*value*/) {
-  return Status::NOT_IMPLEMENTED;
-}
 Status PageDbEmptyImpl::GetJournalEntries(
     const JournalId& /*journal_id*/,
     std::unique_ptr<Iterator<const EntryChange>>* /*entries*/) {

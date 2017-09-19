@@ -152,15 +152,6 @@ Status PageDbImpl::GetBaseCommitForJournal(CoroutineHandler* /*handler*/,
   return db_.Get(ImplicitJournalMetaRow::GetKeyFor(journal_id), base);
 }
 
-Status PageDbImpl::GetJournalValue(const JournalId& journal_id,
-                                   fxl::StringView key,
-                                   std::string* value) {
-  std::string db_value;
-  RETURN_ON_ERROR(
-      db_.Get(JournalEntryRow::GetKeyFor(journal_id, key), &db_value));
-  return JournalEntryRow::ExtractObjectId(db_value, value);
-}
-
 Status PageDbImpl::GetJournalEntries(
     const JournalId& journal_id,
     std::unique_ptr<Iterator<const EntryChange>>* entries) {
