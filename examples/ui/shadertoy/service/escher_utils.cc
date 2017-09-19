@@ -26,17 +26,18 @@ std::pair<escher::SemaphorePtr, zx::event> NewSemaphoreEventPair(
   auto device = escher->device();
   auto sema = escher::Semaphore::New(device->vk_device());
 
-  vk::ImportSemaphoreFdInfoKHR info;
+  vk::ImportSemaphoreFuchsiaHandleInfoKHR info;
   info.semaphore = sema->vk_semaphore();
-  info.fd = event_copy.release();
-  info.handleType = vk::ExternalSemaphoreHandleTypeFlagBitsKHR::eSyncFd;
+  info.handle = event_copy.release();
+  info.handleType = vk::ExternalSemaphoreHandleTypeFlagBitsKHR::eFuchsiaFence;
 
-  if (VK_SUCCESS != device->proc_addrs().ImportSemaphoreFdKHR(
-                        device->vk_device(),
-                        reinterpret_cast<VkImportSemaphoreFdInfoKHR*>(&info))) {
+  if (VK_SUCCESS !=
+      device->proc_addrs().ImportSemaphoreFuchsiaHandleKHR(
+          device->vk_device(),
+          reinterpret_cast<VkImportSemaphoreFuchsiaHandleInfoKHR*>(&info))) {
     FXL_LOG(ERROR) << "Failed to import event as VkSemaphore.";
     // Don't leak handle.
-    zx_handle_close(info.fd);
+    zx_handle_close(info.handle);
     return std::make_pair(escher::SemaphorePtr(), zx::event());
   }
 
