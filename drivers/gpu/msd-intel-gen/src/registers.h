@@ -552,6 +552,19 @@ public:
     static auto Get() { return RegisterAddr<PowerWellControl2>(0x45404); }
 };
 
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf p.86
+class ArbiterControl {
+public:
+    static constexpr uint32_t kOffset = 0xb004;
+    static constexpr uint32_t kGapsTsvCreditFixEnable = 1 << 7;
+
+    static void workaround(RegisterIo* register_io)
+    {
+        uint32_t value = register_io->Read32(kOffset) | kGapsTsvCreditFixEnable;
+        register_io->Write32(kOffset, value);
+    }
+};
+
 } // namespace
 
 #endif // REGISTERS_H

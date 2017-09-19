@@ -84,6 +84,9 @@ void EngineCommandStreamer::InitHardware()
     registers::GtInterruptEnable0::write(register_io(),
                                          registers::InterruptRegisterBase::RENDER_ENGINE,
                                          registers::InterruptRegisterBase::USER, true);
+
+    // WaEnableGapsTsvCreditFix
+    registers::ArbiterControl::workaround(register_io());
 }
 
 // Register definitions from BSpec BXML Reference.
