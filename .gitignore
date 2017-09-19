@@ -10,6 +10,7 @@
 .landmines
 .packages
 .project
+*.pyc
 .pydevproject
 .vscode
 Session.vim
