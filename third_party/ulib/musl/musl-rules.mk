@@ -509,9 +509,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/network/dns_parse.c \
     $(LOCAL_DIR)/src/network/ent.c \
     $(LOCAL_DIR)/src/network/ether.c \
-    $(LOCAL_DIR)/src/network/freeaddrinfo.c \
     $(LOCAL_DIR)/src/network/gai_strerror.c \
-    $(LOCAL_DIR)/src/network/getaddrinfo.c \
     $(LOCAL_DIR)/src/network/gethostbyaddr.c \
     $(LOCAL_DIR)/src/network/gethostbyaddr_r.c \
     $(LOCAL_DIR)/src/network/gethostbyname.c \
