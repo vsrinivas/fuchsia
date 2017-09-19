@@ -1,0 +1,11 @@
+[package]
+name = "ledger_example"
+version = "0.1.0"
+license = "BSD-3-Clause"
+authors = ["Tristan Hume <trishume@google.com>"]
+description = "Example of a ledger client Fuchsia app in Rust"
+repository = "https://fuchsia.googlesource.com/rust_ledger_example"
+
+[dependencies]
+futures = "0.1"
+tokio-core = "0.1.9"
