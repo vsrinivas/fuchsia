@@ -395,7 +395,7 @@ constexpr size_t GetVmoSizeForDoublyIndirect() {
 // write the inode data of this vnode to disk (default does not update time values)
 void minfs_sync_vnode(fbl::RefPtr<VnodeMinfs> vn, uint32_t flags);
 
-zx_status_t minfs_check_info(const minfs_info_t* info, uint32_t max);
+zx_status_t minfs_check_info(const minfs_info_t* info, Bcache* bc);
 void minfs_dump_info(const minfs_info_t* info);
 void minfs_dump_inode(const minfs_inode_t* inode, ino_t ino);
 

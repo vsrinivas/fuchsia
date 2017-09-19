@@ -225,6 +225,14 @@ public:
         return ZX_OK;
     }
 
+    zx_status_t FVMVsliceQuery(const query_request_t* request, query_response_t* response) {
+        ssize_t r = ioctl_block_fvm_vslice_query(fd_, request, response);
+        if (r != sizeof(query_response_t)) {
+            return r < 0 ? static_cast<zx_status_t>(r) : ZX_ERR_BAD_STATE;
+        }
+        return ZX_OK;
+    }
+
     zx_status_t FVMExtend(const extend_request_t* request) {
         ssize_t r = ioctl_block_fvm_extend(fd_, request);
         if (r < 0) {

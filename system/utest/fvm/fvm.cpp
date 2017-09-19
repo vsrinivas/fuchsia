@@ -1636,6 +1636,128 @@ static bool TestPersistenceSimple(void) {
     END_TEST;
 }
 
+static bool TestCorruptMount(void) {
+    BEGIN_TEST;
+    char ramdisk_path[PATH_MAX];
+    char fvm_driver[PATH_MAX];
+    size_t slice_size = 1 << 20;
+    ASSERT_EQ(StartFVMTest(512, 1 << 20, slice_size, ramdisk_path, fvm_driver), 0,
+              "error mounting FVM");
+
+    int fd = open(fvm_driver, O_RDWR);
+    ASSERT_GT(fd, 0);
+    fvm_info_t fvm_info;
+    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0);
+    ASSERT_EQ(slice_size, fvm_info.slice_size);
+
+    // Allocate one VPart
+    alloc_req_t request;
+    request.slice_count = 1;
+    memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
+    strcpy(request.name, kTestPartName1);
+    memcpy(request.type, kTestPartGUIDData, GUID_LEN);
+    int vp_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(vp_fd, 0);
+
+    // Format the VPart as minfs
+    char partition_path[PATH_MAX];
+    snprintf(partition_path, sizeof(partition_path), "%s/%s-p-1/block",
+             fvm_driver, kTestPartName1);
+    ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_MINFS, launch_stdio_sync,
+                   &default_mkfs_options),
+              ZX_OK);
+
+    size_t kBlocksPerSlice = (slice_size / 8192);
+    // Check initial slice allocation
+    query_request_t query_request;
+    query_request.count = 4;
+    //TODO(planders): Use actual Minfs values instead of hardcoding these
+    query_request.vslice_start[0] = 0x10000 / kBlocksPerSlice;
+    query_request.vslice_start[1] = 0x20000 / kBlocksPerSlice;
+    query_request.vslice_start[2] = 0x30000 / kBlocksPerSlice;
+    query_request.vslice_start[3] = 0x40000 / kBlocksPerSlice;
+
+    query_response_t query_response;
+    ASSERT_EQ(ioctl_block_fvm_vslice_query(vp_fd, &query_request, &query_response),
+              sizeof(query_response_t));
+    ASSERT_TRUE(query_response.vslice_range[0].allocated);
+    ASSERT_EQ(query_response.vslice_range[0].count, 1);
+    ASSERT_TRUE(query_response.vslice_range[1].allocated);
+    ASSERT_EQ(query_response.vslice_range[1].count, 1);
+    ASSERT_TRUE(query_response.vslice_range[2].allocated);
+    ASSERT_EQ(query_response.vslice_range[2].count, 1);
+    ASSERT_TRUE(query_response.vslice_range[3].allocated);
+    ASSERT_EQ(query_response.vslice_range[3].count, 1);
+
+    // Manually grow/shrink slices so FVM will differ from Minfs
+    extend_request_t extend_request;
+    extend_request.offset = (0x10000 / (slice_size / 8192)) + 1;
+    extend_request.length = 1;
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &extend_request), 0);
+    extend_request.offset = (0x20000 / (slice_size / 8192));
+    extend_request.length = 1;
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &extend_request), 0);
+
+    // Check slice allocation after manual grow/shrink
+    ASSERT_EQ(ioctl_block_fvm_vslice_query(vp_fd, &query_request, &query_response),
+              sizeof(query_response_t));
+    ASSERT_TRUE(query_response.vslice_range[0].allocated);
+    ASSERT_EQ(query_response.vslice_range[0].count, 2);
+    ASSERT_FALSE(query_response.vslice_range[1].allocated);
+    ASSERT_EQ(query_response.vslice_range[1].count,
+              query_request.vslice_start[2] - query_request.vslice_start[1]);
+
+    // Mount the VPart
+    const char* mount_path = "/tmp/minfs_test_mountpath";
+    ASSERT_EQ(mkdir(mount_path, 0666), 0);
+    ASSERT_EQ(mount(vp_fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
+                    launch_stdio_async), ZX_OK);
+
+    // Create a file large enough to force slice extension
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[slice_size]);
+    ASSERT_TRUE(ac.check(), "");
+    memset(buf.get(), 0, slice_size);
+
+    char fname[128];
+    snprintf(fname, sizeof(fname), "%s/wow", mount_path);
+    int file_fd = open(fname, O_CREAT | O_RDWR | O_EXCL);
+    ASSERT_GT(file_fd, 0, "");
+    ASSERT_EQ(write(file_fd, buf.get(), slice_size), (ssize_t)slice_size, "");
+    ASSERT_EQ(close(file_fd), 0, "");
+
+    // Clean up
+    ASSERT_EQ(umount(mount_path), ZX_OK);
+
+    vp_fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUIDData, nullptr);
+    ASSERT_GT(vp_fd, 0, "");
+
+    // Verify that data slices increased and others were fixed on mount
+    ASSERT_EQ(ioctl_block_fvm_vslice_query(vp_fd, &query_request, &query_response),
+              sizeof(query_response_t));
+    ASSERT_TRUE(query_response.vslice_range[0].allocated);
+    ASSERT_EQ(query_response.vslice_range[0].count, 1);
+    ASSERT_TRUE(query_response.vslice_range[1].allocated);
+    ASSERT_EQ(query_response.vslice_range[1].count, 1);
+    ASSERT_TRUE(query_response.vslice_range[3].allocated);
+    ASSERT_EQ(query_response.vslice_range[3].count, 2);
+
+    // Free the slice that was just allocated
+    extend_request.offset = (0x40000 / (slice_size / 8192) + 1);
+    extend_request.length = 1;
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &extend_request), 0);
+
+    ASSERT_EQ(mount(vp_fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
+                    launch_stdio_async), ZX_OK);
+    ASSERT_EQ(umount(mount_path), ZX_OK);
+
+    // Clean up
+    ASSERT_EQ(rmdir(mount_path), 0);
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
+    END_TEST;
+}
+
 // Test that the FVM driver can mount filesystems.
 static bool TestMounting(void) {
     BEGIN_TEST;
@@ -2255,6 +2377,7 @@ RUN_TEST_MEDIUM((TestRandomOpMultithreaded<3, /* persistent= */ true>))
 RUN_TEST_MEDIUM((TestRandomOpMultithreaded<5, /* persistent= */ true>))
 RUN_TEST_LARGE((TestRandomOpMultithreaded<10, /* persistent= */ true>))
 RUN_TEST_LARGE((TestRandomOpMultithreaded<25, /* persistent= */ true>))
+RUN_TEST_MEDIUM(TestCorruptMount)
 END_TEST_CASE(fvm_tests)
 
 int main(int argc, char** argv) {

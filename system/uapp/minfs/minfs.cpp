@@ -43,7 +43,8 @@ void minfs_dump_inode(const minfs_inode_t* inode, ino_t ino) {
     FS_TRACE(MINFS, "inode[%u]: links:  %10u\n", ino, inode->link_count);
 }
 
-zx_status_t minfs_check_info(const minfs_info_t* info, uint32_t max) {
+zx_status_t minfs_check_info(const minfs_info_t* info, Bcache* bc) {
+    uint32_t max = bc->Maxblk();
     minfs_dump_info(info);
 
     if ((info->magic0 != kMinfsMagic0) ||
@@ -67,12 +68,84 @@ zx_status_t minfs_check_info(const minfs_info_t* info, uint32_t max) {
             return ZX_ERR_INVALID_ARGS;
         }
     } else {
-        // TODO(smklein): Verify slice size, vslice count.
+        const size_t kBlocksPerSlice = info->slice_size / kMinfsBlockSize;
+#ifdef __Fuchsia__
+        fvm_info_t fvm_info;
+        if (bc->FVMQuery(&fvm_info) != ZX_OK) {
+            FS_TRACE_ERROR("minfs: Unable to query FVM\n");
+            return ZX_ERR_UNAVAILABLE;
+        }
 
+        if (info->slice_size != fvm_info.slice_size) {
+            FS_TRACE_ERROR("minfs: Slice size did not match expected\n");
+            return ZX_ERR_INTERNAL;
+        }
+
+        size_t expected_count[4];
+        expected_count[0] = info->ibm_slices;
+        expected_count[1] = info->abm_slices;
+        expected_count[2] = info->ino_slices;
+        expected_count[3] = info->dat_slices;
+
+        query_request_t request;
+        request.count = 4;
+        request.vslice_start[0] = kFVMBlockInodeBmStart / kBlocksPerSlice;
+        request.vslice_start[1] = kFVMBlockDataBmStart / kBlocksPerSlice;
+        request.vslice_start[2] = kFVMBlockInodeStart / kBlocksPerSlice;
+        request.vslice_start[3] = kFVMBlockDataStart / kBlocksPerSlice;
+
+        query_response_t response;
+
+        if (bc->FVMVsliceQuery(&request, &response) != ZX_OK) {
+            FS_TRACE_ERROR("minfs: Unable to query FVM\n");
+            return ZX_ERR_UNAVAILABLE;
+        }
+
+        if (response.count != request.count) {
+            FS_TRACE_ERROR("minfs: Unable to query FVM\n");
+            return ZX_ERR_CALL_FAILED;
+        }
+
+        for (unsigned i = 0; i < request.count; i++) {
+            size_t expected = expected_count[i];
+            size_t actual = response.vslice_range[i].count;
+
+            if (!response.vslice_range[i].allocated) {
+                // If we find no allocated slices and expect some, grow to the amount we expect
+                extend_request_t extend;
+                extend.length = expected;
+                extend.offset = request.vslice_start[i];
+                if (bc->FVMExtend(&extend) != ZX_OK) {
+                    FS_TRACE_ERROR("minfs: Unable to grow to expected size\n");
+                    return ZX_ERR_IO_DATA_INTEGRITY;
+                }
+                continue;
+            }
+
+            if (actual < expected) {
+                // If FVM doesn't report all slices we expect, try to allocate remainder
+                extend_request_t extend;
+                extend.length = expected - actual;
+                extend.offset = request.vslice_start[i] + actual;
+                if (bc->FVMExtend(&extend) != ZX_OK) {
+                    FS_TRACE_ERROR("minfs: Unable to grow to expected size\n");
+                    return ZX_ERR_IO_DATA_INTEGRITY;
+                }
+            } else if (actual > expected) {
+                // If FVM doesn't report all slices we expect, try to free remainder
+                extend_request_t shrink;
+                shrink.length = actual - expected;
+                shrink.offset = request.vslice_start[i] + expected;
+                if (bc->FVMShrink(&shrink) != ZX_OK) {
+                    FS_TRACE_ERROR("minfs: Unable to shrink to expected size\n");
+                    return ZX_ERR_IO_DATA_INTEGRITY;
+                }
+            }
+        }
+#endif
         // Verify that the allocated slices are sufficient to hold
         // the allocated data structures of the filesystem.
         size_t ibm_blocks_needed = (info->inode_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
-        const size_t kBlocksPerSlice = info->slice_size / kMinfsBlockSize;
         size_t ibm_blocks_allocated = info->ibm_slices * kBlocksPerSlice;
         if (ibm_blocks_needed > ibm_blocks_allocated) {
             FS_TRACE_ERROR("minfs: Not enough slices for inode bitmap\n");
@@ -107,6 +180,9 @@ zx_status_t minfs_check_info(const minfs_info_t* info, uint32_t max) {
         } else if (dat_blocks_allocated + info->dat_block >
                    fbl::numeric_limits<blk_t>::max()) {
             FS_TRACE_ERROR("minfs: Data blocks overflow blk_t\n");
+            return ZX_ERR_INVALID_ARGS;
+        } else if (dat_blocks_needed <= 1) {
+            FS_TRACE_ERROR("minfs: Not enough data blocks\n");
             return ZX_ERR_INVALID_ARGS;
         }
     }
@@ -594,7 +670,7 @@ void minfs_dir_init(void* bdata, ino_t ino_self, ino_t ino_parent) {
 }
 
 zx_status_t Minfs::Create(Minfs** out, fbl::unique_ptr<Bcache> bc, const minfs_info_t* info) {
-    zx_status_t status = minfs_check_info(info, bc->Maxblk());
+    zx_status_t status = minfs_check_info(info, bc.get());
     if (status < 0) {
         return status;
     }

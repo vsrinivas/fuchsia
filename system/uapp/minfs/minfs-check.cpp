@@ -525,7 +525,7 @@ zx_status_t minfs_check(fbl::unique_ptr<Bcache> bc) {
     }
     const minfs_info_t* info = reinterpret_cast<const minfs_info_t*>(data);
     minfs_dump_info(info);
-    if (minfs_check_info(info, bc->Maxblk())) {
+    if (minfs_check_info(info, bc.get())) {
         return -1;
     }
 
