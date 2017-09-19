@@ -1,0 +1,75 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+import("//third_party/protobuf/proto_library.gni")
+
+package("cobalt_client") {
+  app = true
+
+  deps = [
+    ":cobalt",
+    ":cobalt_testapp",
+    ":cobalt_testapp_no_network",
+  ]
+
+  binaries = [
+    {
+      name = "cobalt"
+    },
+
+    {
+      name = "cobalt_testapp"
+    },
+  ]
+
+  tests = [
+    {
+      name = "cobalt_testapp_no_network"
+    },
+  ]
+}
+
+executable("cobalt") {
+  sources = [
+    "cobalt_main.cc",
+    "config.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//apps/cobalt_client/services:cobalt",
+    "//third_party/cobalt/encoder",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//third_party/grpc:grpc++",
+
+    # TODO(rudominer) Change to protobuf_lite after we have a different way
+    # of deserializing a message from a human-readable string.
+    "//third_party/protobuf:protobuf_full",
+  ]
+}
+
+executable("cobalt_testapp") {
+  sources = [
+    "cobalt_testapp.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//apps/cobalt_client/services:cobalt_sync",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+copy("cobalt_testapp_no_network") {
+  sources = [
+    "cobalt_testapp_no_network"
+  ]
+
+  outputs = [
+    "$root_out_dir/cobalt_testapp_no_network"
+  ]
+}

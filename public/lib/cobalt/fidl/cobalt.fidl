@@ -1,0 +1,116 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module cobalt;
+
+// Cobalt is the service used in Fuchsia to report metrics. This file contains
+// interfaces that allow clients to report metric Observations to Cobalt.
+
+// To use Cobalt, you must have a project id, metric id and encoding id
+// registered with the Cobalt system. In the current verison of Cobalt
+// registration consists of entries in the files "registered_encodings.txt"
+// and "registered_metrics.txt" in //third_party/cobalt/config/production. Since
+// the Cobalt servers also read these files, for now it is necessary to
+// contact cobalt-hackers@google.com in order to register additional projects,
+// metrics and encodings. We plan to build a self-registration system in the
+// future.
+
+// Usage: First use CobaltEncoderFactory to get a CobaltEncoder for your
+// project. Then you add Observations using the Add*Observation() methods.
+// Observations are accumulated by the CobaltEncoder and periodically sent
+// to the Cobalt server.
+
+// The maximum size of a single Observation is 100 KB.
+const int64 kMaxBytesPerObservation = 102400;
+
+// Response codes for Cobalt encoder operations.
+enum Status {
+  OK = 0,
+
+  // For example the supplied metric id, encoding id or observation value is
+  // invalid.
+  INVALID_ARGUMENTS,
+
+  // Sending observations failed too many times or with an unrecoverable error
+  // Try the send again later. OBSOLETE: This status is never used.
+  SEND_FAILED,
+
+  // The attempted operation failed because some precondition was not met.
+  // OBSOLETE: This status is never used.
+  FAILED_PRECONDITION,
+
+  // An attempt was made to add an Observation whose seralized size exceeds
+  // kMaxBytesPerObservation.
+  OBSERVATION_TOO_BIG,
+
+  // Cobalt's local cache is temporarily full and cannot handle any more
+  // Observations at this time. This condition should be rare because Cobalt
+  // will automatically send Observations to the server and clear the cache
+  // when it starts to get too full. In the current version of Cobalt,
+  // Observations are cached in memory so this error could possibly occur if the
+  // server is down for a long time. In the future Cobalt will store
+  // Observations in non-volatile storage making this condition much less
+  // likely.
+  TEMPORARILY_FULL,
+
+  // Catch-all for unexpected errors.
+  INTERNAL_ERROR = -1
+};
+
+[ServiceName="cobalt::CobaltEncoderFactory"]
+// CobaltEncoderFactory creates a CobaltEncoder for a particular project.
+interface CobaltEncoderFactory {
+  // Creates a CobaltEncoder for the specified project.
+  // |project_id| Should be a project ID registered with the Cobalt system.
+  GetEncoder(int32 project_id, CobaltEncoder& encoder);
+};
+
+// CobaltEncoder accumulates Observations in a local cache and periodically
+// sends them to the server. An instance of CobaltEncoder is associated with a
+// particular Cobalt project ID.
+interface CobaltEncoder {
+  // Adds a string observation. It will eventually be sent to the Cobalt server.
+  // |metric_id| Must be a metric ID registered with the Cobalt system and
+  //             associated with this encoder's project ID. The specified
+  //             metric must have type STRING.
+  //
+  // |encoding_id| Must be an encoding ID registered with the Cobalt system
+  //               and associated with this encoder's project ID.
+  //
+  // |observation| The string value to be encoded. Must be consistent with
+  //               the definition of the metric and encoding. Some encodings
+  //               restrict the set of values to a pre-defined list.
+  AddStringObservation(uint32 metric_id, uint32 encoding_id, string observation)
+      => (Status status);
+
+  // Adds an observation specified by its index. This only makes sense if
+  // the specified metric and encoding are consistent with values of type INDEX.
+  // The Observation will eventually be sent to the Cobalt server.
+  // |metric_id| Must be a metric ID registered with the Cobalt system and
+  //             associated with this encoder's project ID. The specified
+  //             metric must have type INDEX.
+  //
+  // |encoding_id| Must be an encoding ID registered with the Cobalt system
+  //               and associated with this encoder's project ID. The
+  //               ecoding must support values of type INDEX. Some encoding
+  //               configurations may specify a maximum index and in that case
+  //               |index| must not exceed that maximum.
+  //
+  // |index|  The zero-based index of the value to be encoded. This is an index
+  //          into some enumerated set of values that must be maintained outside
+  //          of the scope of Cobalt's client-side configuration system by the
+  //          client of this API.  Cobalt treats the given |index| as opaque,
+  //          except that human-readable string labels may optionally be
+  //          associated with the indices in Cobalt's server-side configuration
+  //          in a |ReportConfig|. This allows Cobalt to use these strings in
+  //          place of the indices when generating reports. However there is
+  //          no requirement to register a label with an index in order to
+  //          use the index here. Also the label may be added or changed later.
+  AddIndexObservation(uint32 metric_id, uint32 encoding_id, uint32 index)
+      => (Status status);
+
+
+  // Obsolete. This does nothing and always returns OK.
+  SendObservations() => (Status status);
+};

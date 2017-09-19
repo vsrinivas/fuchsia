@@ -1,0 +1,8 @@
+{
+  "tests": [
+    {
+      "name": "cobalt_testapp",
+      "exec": "/system/bin/report_result /system/apps/cobalt_testapp --skip_environment_test"
+    }
+  ]
+}
