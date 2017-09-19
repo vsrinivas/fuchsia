@@ -145,6 +145,12 @@ case "$METHOD" in
     qemu)
         "$ZIRCONDIR/scripts/run-zircon" -a "$ARCH" -c "$CMDLINE" -N -o "$BUILDDIR" </dev/null &
         ;;
+    netboot)
+        "$BUILDDIR/tools/bootserver" --tftp -n "$NODENAME" \
+            "$BUILDDIR/zircon.bin" "$BUILDDIR/bootdata.bin" \
+            -- "$CMDLINE" >/dev/null 2>/dev/null &
+        BOOTSERVER_PID=$!
+        ;;
     *)
         echo "unrecognized method: $METHOD" >&2
         HELP
@@ -181,6 +187,15 @@ case "$METHOD" in
         while "$BUILDDIR"/tools/netaddr --nowait --timeout=1000 \
                 "$NODENAME" >/dev/null 2>/dev/null; do
             "$BUILDDIR"/tools/netruncmd --nowait --timeout=1000 "$NODENAME" dm shutdown
+            sleep 2
+        done
+        ;;
+    netboot)
+        kill "$BOOTSERVER_PID"
+        sleep 1 # make sure bootserver actually has time to shut down
+        while "$BUILDDIR"/tools/netaddr --nowait --timeout=1000 \
+                "$NODENAME" >/dev/null 2>/dev/null; do
+            "$BUILDDIR"/tools/netruncmd --nowait --timeout=1000 "$NODENAME" dm reboot
             sleep 2
         done
         ;;
