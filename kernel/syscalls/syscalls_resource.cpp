@@ -17,9 +17,7 @@
 #include "syscalls_priv.h"
 
 // Create a new resource, child of the provided resource.
-// records must be an array of valid resource info records
-// records[0] must be a zx_rrec_type_self describing the resource.
-// On success, a new resource is created and handle is returned
+// On success, a new resource is created and handle is returned.
 //
 // The range low:high is inclusive on both ends, high must be
 // greater than or equal low.
