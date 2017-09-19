@@ -684,32 +684,6 @@ zx_status_t VnodeDir::AttachVnode(fbl::RefPtr<VnodeMemfs> vn, const char* name, 
 // The following functions exist outside the memfs namespace so they can
 // be exposed to C:
 
-// Unsafe function to create a new directory.
-// Should be called exclusively during initialization stages of filesystem,
-// when it cannot be externally manipulated.
-// postcondition: new vnode linked into namespace
-static zx_status_t memfs_create_directory_unsafe(const char* path, uint32_t flags) __TA_NO_THREAD_SAFETY_ANALYSIS {
-    zx_status_t r;
-    const char* pathout;
-    fbl::RefPtr<fs::Vnode> parent_vn;
-    if ((r = memfs::vfs.Walk(memfs::vfs_root, &parent_vn, path, &pathout)) < 0) {
-        return r;
-    }
-    fbl::RefPtr<memfs::VnodeDir> parent =
-            fbl::RefPtr<memfs::VnodeDir>::Downcast(fbl::move(parent_vn));
-
-    if (strcmp(pathout, "") == 0) {
-        return ZX_ERR_ALREADY_EXISTS;
-    }
-
-    fbl::RefPtr<fs::Vnode> out;
-    r = parent->Create(&out, pathout, strlen(pathout), S_IFDIR);
-    if (r < 0) {
-        return r;
-    }
-    return r;
-}
-
 fbl::RefPtr<memfs::VnodeDir> SystemfsRoot() {
     if (memfs::systemfs_root == nullptr) {
         zx_status_t r = memfs_create_fs("system", &memfs::systemfs_root);
@@ -775,9 +749,14 @@ VnodeDir* vfs_create_global_root() {
         memfs_mount_locked(memfs::vfs_root, BootfsRoot());
         memfs_mount_locked(memfs::vfs_root, MemfsRoot());
 
-        memfs_create_directory_unsafe("/data", 0);
-        memfs_create_directory_unsafe("/volume", 0);
-        memfs_create_directory_unsafe("/dev/socket", 0);
+        fbl::RefPtr<fs::Vnode> vn;
+        const char* pathout;
+        ZX_ASSERT(memfs::vfs.Open(memfs::vfs_root, &vn, "/data", &pathout,
+                                  O_CREAT, S_IFDIR) == ZX_OK);
+        ZX_ASSERT(memfs::vfs.Open(memfs::vfs_root, &vn, "/volume", &pathout,
+                                  O_CREAT, S_IFDIR) == ZX_OK);
+        ZX_ASSERT(memfs::vfs.Open(memfs::vfs_root, &vn, "/dev/socket", &pathout,
+                                  O_CREAT, S_IFDIR) == ZX_OK);
 
         memfs::global_loop.reset(new async::Loop());
         memfs::global_dispatcher.reset(new fs::AsyncDispatcher(memfs::global_loop->async()));

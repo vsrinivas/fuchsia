@@ -94,10 +94,6 @@ private:
 class Vfs {
 public:
     Vfs();
-    // Walk from vn --> out until either only one path segment remains or we
-    // encounter a remote filesystem.
-    zx_status_t Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
-                     const char* path, const char** pathout) __TA_REQUIRES(vfs_lock_);
     // Traverse the path to the target vnode, and create / open it using
     // the underlying filesystem functions (lookup, create, open).
     zx_status_t Open(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
@@ -146,6 +142,10 @@ public:
 #endif
 
 private:
+    // Walk from vn --> out until either only one path segment remains or we
+    // encounter a remote filesystem.
+    zx_status_t Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
+                     const char* path, const char** pathout) __TA_REQUIRES(vfs_lock_);
     zx_status_t OpenLocked(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
                            const char* path, const char** pathout,
                            uint32_t flags, uint32_t mode) __TA_REQUIRES(vfs_lock_);
