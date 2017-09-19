@@ -1,0 +1,14 @@
+[package]
+name = "mxruntime"
+version = "0.1.0"
+license = "BSD-3-Clause"
+authors = ["Raph Levien <raph@google.com>"]
+description = "Rust bindings for Zircon runtime services"
+repository = "https://fuchsia.googlesource.com/mxruntime/"
+
+[dependencies]
+mxruntime-sys = { path = "mxruntime-sys", version = "0.1" }
+
+zircon = { path = "../zircon-rs", version = "0.2" }
+
+zircon-sys = { path = "../zircon-rs/zircon-sys", version = "0.2" }
