@@ -3,8 +3,8 @@
         "cpp"
     ],
     "imports": [
-        "fxl",
-        "fsl"
+        "packages/gn/fxl",
+        "packages/gn/fsl"
     ],
     "labels": [
         "//garnet/bin/listen"

@@ -3,8 +3,8 @@
         "cpp"
     ],
     "imports": [
-        "boringssl_libssl",
-        "zlib"
+        "packages/gn/boringssl_libssl",
+        "packages/gn/zlib"
     ],
     "packages": {
         "curl": "//third_party/curl"

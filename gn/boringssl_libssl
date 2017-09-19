@@ -3,8 +3,8 @@
         "cpp"
     ],
     "imports": [
-        "boringssl_libcrypto",
-        "netstack"
+        "packages/gn/boringssl_libcrypto",
+        "packages/gn/netstack"
     ],
     "packages": {
         "libssl": "//third_party/boringssl:libssl"

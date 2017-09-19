@@ -1,7 +1,7 @@
 {
     "imports": [
-        "audio",
-        "magma",
-        "wlan"
+        "packages/gn/audio",
+        "packages/gn/magma",
+        "packages/gn/wlan"
     ]
 }

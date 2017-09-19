@@ -12,12 +12,12 @@ import sys
 def resolve_imports(import_queue):
     # Hack: Add cpp manifest until we derive runtime information from the
     # package configs themselves.
-    import_queue.append('cpp')
+    import_queue.append('packages/gn/cpp')
     imported = set(import_queue)
     languages = set()
     while import_queue:
         config_name = import_queue.pop()
-        config_path = os.path.join(paths.SCRIPT_DIR, config_name)
+        config_path = os.path.join(paths.FUCHSIA_ROOT, config_name)
         with open(config_path) as f:
             try:
                 config = json.load(f)
@@ -37,7 +37,7 @@ def resolve_imports(import_queue):
 
 def main():
     parser = argparse.ArgumentParser(description="Determine languages used by set of modules")
-    parser.add_argument("--modules", help="list of modules", default="default")
+    parser.add_argument("--modules", help="list of modules", default="packages/gn/default")
     args = parser.parse_args()
 
     languages = resolve_imports(args.modules.split(","))

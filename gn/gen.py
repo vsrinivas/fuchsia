@@ -22,7 +22,7 @@ def main():
     parser.add_argument("--zircon_project", "-p", help="zircon project",
                         default=os.environ.get("ZIRCON_PROJECT"))
     parser.add_argument("--modules", "-m", help="comma separted list of modules",
-                        default="default")
+                        default="packages/gn/default")
     parser.add_argument("--release", "-r", help="generate release mode build files",
         action="store_true")
     parser.add_argument("--outdir", "-o", help="output directory")

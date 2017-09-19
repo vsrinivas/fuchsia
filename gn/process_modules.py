@@ -112,14 +112,14 @@ def detect_duplicate_keys(pairs):
 def resolve_imports(import_queue, omit_files, build_root):
     # Hack: Add cpp manifest until we derive runtime information from the
     # package configs themselves.
-    import_queue.append('cpp')
+    import_queue.append('packages/gn/cpp')
     imported = set(import_queue)
     amalgamation = Amalgamation()
     amalgamation.omit_files = omit_files
     amalgamation.build_root = build_root
     while import_queue:
         config_name = import_queue.pop()
-        config_path = os.path.join(paths.SCRIPT_DIR, config_name)
+        config_path = os.path.join(paths.FUCHSIA_ROOT, config_name)
         with open(config_path) as f:
             try:
                 config = json.load(f, object_pairs_hook=detect_duplicate_keys)

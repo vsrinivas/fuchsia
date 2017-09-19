@@ -3,8 +3,8 @@
         "cpp"
     ],
     "imports": [
-        "magma-common",
-        "vulkan_loader_and_layers"
+        "packages/gn/magma-common",
+        "packages/gn/vulkan_loader_and_layers"
     ],
     "packages": {
         "magma": "//magma"

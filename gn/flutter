@@ -4,11 +4,11 @@
         "dart"
     ],
     "imports": [
-        "fonts",
-        "icu",
-        "mozart",
-        "icu_data",
-        "zlib"
+        "packages/gn/fonts",
+        "packages/gn/icu",
+        "packages/gn/mozart",
+        "packages/gn/icu_data",
+        "packages/gn/zlib"
     ],
     "labels": [
         "//flutter",

@@ -1,9 +1,9 @@
 {
     "imports": [
-        "magma",
-        "fxl",
-        "fsl",
-        "runtime_config"
+        "packages/gn/magma",
+        "packages/gn/fxl",
+        "packages/gn/fsl",
+        "packages/gn/runtime_config"
     ],
     "packages": {
         "magma-fidl": "//magma/vulkan:magma-fidl",

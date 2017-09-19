@@ -3,7 +3,7 @@
         "cpp"
     ],
     "imports": [
-        "fxl"
+        "packages/gn/fxl"
     ],
     "packages": {
         "fsl": "//garnet/public/lib/fsl:package"

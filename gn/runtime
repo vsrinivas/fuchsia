@@ -3,8 +3,8 @@
         "cpp"
     ],
     "imports": [
-        "icu",
-        "fsl"
+        "packages/gn/icu",
+        "packages/gn/fsl"
     ],
     "labels": [
         "//garnet/bin/appmgr",

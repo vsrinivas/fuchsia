@@ -1,10 +1,10 @@
 {
     "imports": [
-        "fxl",
-        "fsl",
-        "netstack",
-        "runtime_config",
-        "test_runner"
+        "packages/gn/fxl",
+        "packages/gn/fsl",
+        "packages/gn/netstack",
+        "packages/gn/runtime_config",
+        "packages/gn/test_runner"
     ],
     "resources": [
         {

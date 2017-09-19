@@ -1,10 +1,10 @@
 {
     "imports": [
-        "iperf",
-        "netstack",
-        "network",
-        "wlan",
-        "wlanstack",
-        "wlan_tests"
+        "packages/gn/iperf",
+        "packages/gn/netstack",
+        "packages/gn/network",
+        "packages/gn/wlan",
+        "packages/gn/wlanstack",
+        "packages/gn/wlan_tests"
     ]
 }

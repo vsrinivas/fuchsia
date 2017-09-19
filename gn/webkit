@@ -3,10 +3,10 @@
         "cpp"
     ],
     "imports": [
-        "curl",
-        "libxml2",
-        "sqlite",
-        "zlib"
+        "packages/gn/curl",
+        "packages/gn/libxml2",
+        "packages/gn/sqlite",
+        "packages/gn/zlib"
     ],
     "packages": {
         "libwebkit": "//apps/web_view:libwebkit"

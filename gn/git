@@ -3,7 +3,7 @@
         "cpp"
     ],
     "imports": [
-        "boringssl_libssl"
+        "packages/gn/boringssl_libssl"
     ],
     "packages": {
         "git": "//third_party/git"

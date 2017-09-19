@@ -3,12 +3,12 @@
         "cpp"
     ],
     "imports": [
-        "dart",
-        "fxl",
-        "magma",
-        "fsl",
-        "tracing",
-        "zlib"
+        "packages/gn/dart",
+        "packages/gn/fxl",
+        "packages/gn/magma",
+        "packages/gn/fsl",
+        "packages/gn/tracing",
+        "packages/gn/zlib"
     ],
     "packages": {
         "mozart": "//garnet/bin/ui:mozart",

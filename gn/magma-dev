@@ -3,8 +3,8 @@
         "cpp"
     ],
     "imports": [
-        "magma-common",
-        "sbase"
+        "packages/gn/magma-common",
+        "packages/gn/sbase"
     ],
     "packages": {
         "magma-dev": "//magma/tests:magma-dev"

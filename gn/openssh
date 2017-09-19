@@ -3,9 +3,9 @@
         "cpp"
     ],
     "imports": [
-        "boringssl",
-        "listen",
-        "zlib"
+        "packages/gn/boringssl",
+        "packages/gn/listen",
+        "packages/gn/zlib"
     ],
     "packages": {
         "openssh-portable": "//third_party/openssh-portable"

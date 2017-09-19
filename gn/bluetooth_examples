@@ -3,7 +3,7 @@
         "dart"
     ],
     "imports": [
-        "bluetooth"
+        "packages/gn/bluetooth"
     ],
     "packages": {
         "bluetooth_examples": "//apps/bluetooth/examples:bluetooth_examples"

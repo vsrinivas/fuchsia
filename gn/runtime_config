@@ -1,6 +1,6 @@
 {
     "imports": [
-        "runtime"
+        "packages/gn/runtime"
     ],
     "resources": [
         {

@@ -3,15 +3,15 @@
         "cpp"
     ],
     "imports": [
-        "boringssl_libssl",
-        "fxl",
-        "installer-system",
-        "fsl",
-        "netconnector",
-        "netstack",
-        "network",
-        "runtime",
-        "runtime_config"
+        "packages/gn/boringssl_libssl",
+        "packages/gn/fxl",
+        "packages/gn/installer-system",
+        "packages/gn/fsl",
+        "packages/gn/netconnector",
+        "packages/gn/netstack",
+        "packages/gn/network",
+        "packages/gn/runtime",
+        "packages/gn/runtime_config"
     ],
     "packages": {
         "cobalt": "//garnet/bin/cobalt"

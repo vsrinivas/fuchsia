@@ -3,14 +3,14 @@
         "dart"
     ],
     "imports": [
-        "calendar",
-        "chat",
-        "contacts",
-        "drive",
-        "email",
-        "music",
-        "prototypes",
-        "video"
+        "packages/gn/calendar",
+        "packages/gn/chat",
+        "packages/gn/contacts",
+        "packages/gn/drive",
+        "packages/gn/email",
+        "packages/gn/music",
+        "packages/gn/prototypes",
+        "packages/gn/video"
     ],
     "packages": {
         "modules_tests": "//apps/modules/common:modules_tests",

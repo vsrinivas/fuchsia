@@ -3,11 +3,11 @@
         "cpp"
     ],
     "imports": [
-        "boringssl_libssl",
-        "cobalt_client",
-        "fxl",
-        "fsl",
-        "url"
+        "packages/gn/boringssl_libssl",
+        "packages/gn/cobalt_client",
+        "packages/gn/fxl",
+        "packages/gn/fsl",
+        "packages/gn/url"
     ],
     "packages": {
         "ledger": "//apps/ledger",

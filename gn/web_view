@@ -3,14 +3,14 @@
         "cpp"
     ],
     "imports": [
-        "cairo",
-        "curl",
-        "fonts",
-        "icu",
-        "libxml2",
-        "mozart",
-        "sqlite",
-        "zlib"
+        "packages/gn/cairo",
+        "packages/gn/curl",
+        "packages/gn/fonts",
+        "packages/gn/icu",
+        "packages/gn/libxml2",
+        "packages/gn/mozart",
+        "packages/gn/sqlite",
+        "packages/gn/zlib"
     ],
     "packages": {
         "libwebkit": "//apps/web_view:libwebkit",
