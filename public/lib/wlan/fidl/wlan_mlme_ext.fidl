@@ -1,0 +1,29 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module wlan;
+
+import "wlan_mlme.fidl";
+
+// Custom primitives for communicating between the wlan service and the MLME drivers.
+// The primitives defined here are not part of the official 802.11 MLME SAP interface specification,
+// but follow the same principle for the sake of consistency.
+
+
+// SIGNAL_REPORT.indication
+
+struct SignalReportIndication {
+    uint8 rssi;
+};
+
+// EAPOL.indication
+
+struct EapolIndication {
+    array<uint8, 6> src_addr;
+    array<uint8, 6> dst_addr;
+    array<uint8> data;
+};
+
+// Method ordinals are defined in wlan_mlme.fidl to prevent error prone overlaps with official
+// MLME primitives.

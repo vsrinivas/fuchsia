@@ -1,0 +1,47 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module wlan;
+
+enum ErrCode {
+  OK,
+  INTERNAL,
+  NOT_FOUND,
+  NOT_SUPPORTED,
+  INVALID_ARGS,
+};
+
+struct Error {
+  ErrCode code;
+  string description;
+};
+
+struct AP {
+  array<uint8> bssid;
+  string       ssid;
+  uint8        last_rssi;
+};
+
+struct ScanRequest {
+  uint8 timeout; // seconds
+  // TODO: more parameters here
+};
+
+struct ScanResult {
+  Error error;
+  array<AP>? aps;
+};
+
+struct ConnectConfig {
+  string ssid;
+  uint8  scanInterval; // seconds
+};
+
+// Stub interface; eventually to be replaced by something based on the 802.11
+// SME / MSGCF.
+[ServiceName="wlan::WlanService"]
+interface Wlan {
+  Scan(ScanRequest request) => (ScanResult result);
+  Connect(ConnectConfig request) => (Error error);
+};

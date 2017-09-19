@@ -1,0 +1,189 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_test.gni")
+import("//packages/package.gni")
+
+# These go dependencies are common to wlanstack and wlanstack_test
+wlan_go_dependencies = [
+  {
+    package = "wlanstack"
+    source = "wlanstack"
+  },
+  {
+    package = "apps/wlan/wlan"
+    source = "wlan"
+  },
+  {
+    package = "apps/wlan/keywrap"
+    source = "keywrap"
+  },
+  {
+    package = "apps/wlan/eapol"
+    source = "eapol"
+  },
+  {
+    package = "fidl"
+    source = "//garnet/public/lib/fidl/go/src/fidl"
+  },
+  {
+    package = "netstack/link/eth"
+    source = "//garnet/go/src/netstack/link/eth"
+  },
+  {
+    package = "github.com/google/netstack"
+    source = "//third_party/netstack"
+  },
+  {
+    package = "netstack/watcher"
+    source = "//garnet/go/src/netstack/watcher"
+  },
+  {
+    package = "app"
+    source = "//garnet/public/lib/app/go/src/app"
+  },
+  {
+    package = "svc"
+    source = "//garnet/public/lib/svc/go/src/svc"
+  },
+  {
+    package = "apps/wlan/services"
+    source = "$root_gen_dir/go/src/apps/wlan/services"
+  },
+  {
+    package = "garnet/public/lib/app/fidl"
+    source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
+  },
+  {
+    package = "garnet/public/lib/netstack/fidl"
+    source = "$root_gen_dir/go/src/garnet/public/lib/netstack/fidl"
+  },
+]
+
+go_test("keywrap_test_bin") {
+  output_name = "keywrap_test"
+  gopackage = "apps/wlan/keywrap"
+
+  # TODO(hahnr): This program has a smaller dependency set in practice, its go_dependencies list
+  # should be updated to match the code.
+  go_dependencies = wlan_go_dependencies
+}
+
+go_test("elements_test_bin") {
+  output_name = "elements_test"
+  gopackage = "apps/wlan/wlan/elements"
+  go_dependencies = [
+      {
+          package = "apps/wlan/wlan/elements"
+          source = "wlan/elements"
+      },
+  ]
+}
+
+go_binary("wlanstack_bin") {
+  output_name = "wlanstack"
+  gopackage = "wlanstack"
+  deps = [
+    "//apps/wlan/services",
+    "//apps/wlan/services:mlme",
+    "//garnet/public/lib/netstack/fidl",
+  ]
+  go_dependencies = wlan_go_dependencies
+}
+
+go_binary("wlantool_bin") {
+  output_name = "wlantool"
+  gopackage = "wlantool"
+  deps = [
+    "//apps/wlan/services",
+    "//garnet/public/lib/app/fidl",
+    "//garnet/public/lib/netstack/fidl",
+  ]
+  go_dependencies = [
+    {
+      package = "wlantool"
+      source = "wlantool"
+    },
+    {
+      package = "app"
+      source = "//garnet/public/lib/app/go/src/app"
+    },
+    {
+      package = "svc"
+      source = "//garnet/public/lib/svc/go/src/svc"
+    },
+    {
+      package = "fidl"
+      source = "//garnet/public/lib/fidl/go/src/fidl"
+    },
+    {
+      package = "apps/wlan/services"
+      source = "$root_gen_dir/go/src/apps/wlan/services"
+    },
+    {
+      package = "garnet/public/lib/app/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
+    },
+    {
+      package = "garnet/public/lib/netstack/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/netstack/fidl"
+    },
+  ]
+}
+
+go_test("wlanstack_test_bin") {
+  output_name = "wlanstack_test"
+  gopackage = "apps/wlan/wlan"
+  deps = [
+    "//apps/wlan/services:mlme",
+    "//garnet/public/lib/netstack/fidl",
+  ]
+  go_dependencies = wlan_go_dependencies
+}
+
+package("wlanstack") {
+  deps = [
+    ":wlanstack_bin",
+  ]
+
+  binaries = [ {
+        name = "wlanstack"
+      } ]
+
+  resources = [ {
+        path = rebase_path("default.json")
+        dest = "wlanstack/config.json"
+      } ]
+}
+
+package("wlantool") {
+  deps = [
+    ":wlantool_bin",
+  ]
+
+  binaries = [ {
+        name = "wlantool"
+      } ]
+}
+
+package("wlanstack_test") {
+  deps = [
+    ":elements_test_bin",
+    ":keywrap_test_bin",
+    ":wlanstack_test_bin",
+  ]
+
+  tests = [
+    {
+      name = "elements_test"
+    },
+    {
+      name = "wlanstack_test"
+    },
+    {
+      name = "keywrap_test"
+    },
+  ]
+}
