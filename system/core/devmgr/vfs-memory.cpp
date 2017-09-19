@@ -151,7 +151,8 @@ zx_status_t VnodeVmo::GetHandles(uint32_t flags, zx_handle_t* hnds,
 
 zx_status_t VnodeFile::Read(void* data, size_t len, size_t off, size_t* out_actual) {
     if ((off >= length_) || (vmo_ == ZX_HANDLE_INVALID)) {
-        return 0;
+        *out_actual = 0;
+        return ZX_OK;
     } else if (len > length_ - off) {
         len = length_ - off;
     }
@@ -160,8 +161,10 @@ zx_status_t VnodeFile::Read(void* data, size_t len, size_t off, size_t* out_actu
 }
 
 zx_status_t VnodeVmo::Read(void* data, size_t len, size_t off, size_t* out_actual) {
-    if (off > length_)
-        return 0;
+    if (off > length_) {
+        *out_actual = 0;
+        return ZX_OK;
+    }
     size_t rlen = length_ - off;
     if (len > rlen)
         len = rlen;
