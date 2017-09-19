@@ -20,6 +20,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/guest.cpp \
     $(LOCAL_DIR)/io_apic.cpp \
     $(LOCAL_DIR)/io_port.cpp \
+    $(LOCAL_DIR)/local_apic.cpp \
     $(LOCAL_DIR)/pci.cpp \
     $(LOCAL_DIR)/uart.cpp \
     $(LOCAL_DIR)/vcpu.cpp \

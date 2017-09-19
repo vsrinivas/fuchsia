@@ -6,6 +6,7 @@
 
 #include <threads.h>
 
+#include <hypervisor/local_apic.h>
 #include <zircon/syscalls/hypervisor.h>
 
 typedef struct io_apic io_apic_t;
@@ -27,46 +28,6 @@ typedef struct guest_ctx {
 typedef struct vcpu_ctx vcpu_ctx_t;
 typedef zx_status_t (*read_state_fn_t)(vcpu_ctx_t* vcpu, uint32_t kind, void* buffer, uint32_t len);
 typedef zx_status_t (*write_state_fn_t)(vcpu_ctx_t* vcpu, uint32_t kind, const void* buffer, uint32_t len);
-
-/* Local APIC registers are all 128-bit aligned. */
-typedef union local_apic_reg {
-    uint32_t data[4];
-    uint32_t u32;
-} __PACKED local_apic_reg_t;
-
-/* Local APIC register map. */
-typedef struct local_apic_regs {
-    local_apic_reg_t reserved1[2];
-
-    local_apic_reg_t id;      // Read/Write.
-    local_apic_reg_t version; // Read Only.
-
-    local_apic_reg_t reserved2[4];
-
-    local_apic_reg_t tpr;    // Read/Write.
-    local_apic_reg_t apr;    // Read Only.
-    local_apic_reg_t ppr;    // Read Only.
-    local_apic_reg_t eoi;    // Write Only.
-    local_apic_reg_t rrd;    // Read Only.
-    local_apic_reg_t ldr;    // Read/Write.
-    local_apic_reg_t dfr;    // Read/Write.
-    local_apic_reg_t isr[8]; // Read Only.
-    local_apic_reg_t tmr[8]; // Read Only.
-    local_apic_reg_t irr[8]; // Read Only.
-    local_apic_reg_t esr;    // Read Only.
-} __PACKED local_apic_regs_t;
-
-/* Stores the local APIC state. */
-typedef struct local_apic {
-    // VCPU associated with this APIC.
-    zx_handle_t vcpu;
-    union {
-        // Address of the local APIC.
-        void* apic_addr;
-        // Register accessors.
-        local_apic_regs_t* regs;
-    };
-} local_apic_t;
 
 /* Stores the state associated with a single VCPU. */
 typedef struct vcpu_ctx {
