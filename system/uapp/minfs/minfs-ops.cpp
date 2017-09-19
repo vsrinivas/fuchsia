@@ -1182,6 +1182,8 @@ zx_status_t VnodeMinfs::WriteInternal(WriteTxn* txn, const void* data,
     if ((status = InitVmo()) != ZX_OK) {
         return status;
     }
+#else
+    size_t max_size = off + len;
 #endif
     const void* const start = data;
     uint32_t n = static_cast<uint32_t>(off / kMinfsBlockSize);
@@ -1227,6 +1229,9 @@ zx_status_t VnodeMinfs::WriteInternal(WriteTxn* txn, const void* data,
             goto done;
         }
         memcpy(wdata + adjust, data, xfer);
+        if (len < kMinfsBlockSize && max_size >= inode_.size) {
+            memset(wdata + adjust + xfer, 0, kMinfsBlockSize - (adjust + xfer));
+        }
         if (fs_->bc_->Writeblk(bno + fs_->info_.dat_block, wdata)) {
             goto done;
         }
