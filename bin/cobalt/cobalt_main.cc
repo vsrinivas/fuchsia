@@ -9,9 +9,9 @@
 #include <utility>
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/cobalt_client/services/cobalt.fidl.h"
-#include "apps/cobalt_client/services/cobalt_controller.fidl.h"
-#include "apps/cobalt_client/src/config.h"
+#include "lib/cobalt/fidl/cobalt.fidl.h"
+#include "lib/cobalt/fidl/cobalt_controller.fidl.h"
+#include "garnet/bin/cobalt/config.h"
 #include "grpc++/grpc++.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/command_line.h"

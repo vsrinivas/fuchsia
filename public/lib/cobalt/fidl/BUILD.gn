@@ -4,7 +4,7 @@
 
 import("//garnet/public/lib/fidl/fidl.gni")
 
-fidl("cobalt") {
+fidl("fidl") {
   sources = [
     "cobalt.fidl",
     "cobalt_controller.fidl",

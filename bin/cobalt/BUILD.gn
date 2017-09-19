@@ -5,11 +5,11 @@
 import("//packages/package.gni")
 import("//third_party/protobuf/proto_library.gni")
 
-package("cobalt_client") {
+package("cobalt") {
   app = true
 
   deps = [
-    ":cobalt",
+    ":bin",
     ":cobalt_testapp",
     ":cobalt_testapp_no_network",
   ]
@@ -31,7 +31,9 @@ package("cobalt_client") {
   ]
 }
 
-executable("cobalt") {
+executable("bin") {
+  output_name = "cobalt"
+
   sources = [
     "cobalt_main.cc",
     "config.h",
@@ -39,7 +41,7 @@ executable("cobalt") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//apps/cobalt_client/services:cobalt",
+    "//garnet/public/lib/cobalt/fidl:fidl",
     "//third_party/cobalt/encoder",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
@@ -58,7 +60,7 @@ executable("cobalt_testapp") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//apps/cobalt_client/services:cobalt_sync",
+    "//garnet/public/lib/cobalt/fidl:fidl_sync",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
   ]
