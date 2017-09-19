@@ -1159,8 +1159,7 @@ zx_status_t VnodeMinfs::ReadInternal(void* data, size_t len, size_t off, size_t*
     return ZX_OK;
 }
 
-zx_status_t VnodeMinfs::Write(const void* data, size_t len, size_t offset,
-                              size_t* out_actual) {
+zx_status_t VnodeMinfs::Write(const void* data, size_t len, size_t offset, size_t* out_actual) {
     FS_TRACE(MINFS, "minfs_write() vn=%p(#%u) len=%zd off=%zd\n", this, ino_, len, offset);
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;

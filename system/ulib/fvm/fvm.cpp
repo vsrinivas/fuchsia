@@ -12,12 +12,16 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#ifdef __Fuchsia__
+#include <fs/mapped-vmo.h>
+#include <zircon/syscalls.h>
+#include <zx/vmo.h>
+#endif
+
 #include <fbl/unique_ptr.h>
 #include <fdio/debug.h>
 #include <fdio/watcher.h>
-#include <fs/mapped-vmo.h>
 #include <zircon/device/block.h>
-#include <zircon/syscalls.h>
 #include <zircon/types.h>
 
 #include "fvm/fvm.h"
@@ -57,6 +61,7 @@ bool fvm_check_hash(const void* metadata, size_t metadata_size) {
     return digest == header->hash;
 }
 
+#ifdef __Fuchsia__
 static bool is_partition(int fd, const uint8_t* uniqueGUID, const uint8_t* typeGUID) {
     uint8_t buf[GUID_LEN];
     if (fd < 0) {
@@ -74,7 +79,7 @@ static bool is_partition(int fd, const uint8_t* uniqueGUID, const uint8_t* typeG
 }
 
 constexpr char kBlockDevPath[] = "/dev/class/block/";
-
+#endif
 } // namespace anonymous
 
 void fvm_update_hash(void* metadata, size_t metadata_size) {
@@ -97,7 +102,6 @@ zx_status_t fvm_validate_header(const void* metadata, const void* backup,
     // for reading.
     bool use_primary;
     if (!primary_valid && !backup_valid) {
-        fprintf(stderr, "fvm: Neither copy of metadata is valid\n");
         return ZX_ERR_BAD_STATE;
     } else if (primary_valid && !backup_valid) {
         use_primary = true;
@@ -125,6 +129,7 @@ zx_status_t fvm_validate_header(const void* metadata, const void* backup,
     return ZX_OK;
 }
 
+#ifdef __Fuchsia__
 zx_status_t fvm_init(int fd, size_t slice_size) {
     if (slice_size % FVM_BLOCK_SIZE != 0) {
         return ZX_ERR_INVALID_ARGS;
@@ -355,3 +360,4 @@ int fvm_open_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID, char*
     closedir(dir);
     return result_fd;
 }
+#endif

@@ -31,6 +31,8 @@ using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 
 // clang-format off
 
+namespace blobstore {
+
 constexpr uint64_t kBlobstoreMagic0  = (0xac2153479e694d21ULL);
 constexpr uint64_t kBlobstoreMagic1  = (0x985000d4d4d3d314ULL);
 constexpr uint32_t kBlobstoreVersion = 0x00000004;
@@ -139,3 +141,9 @@ constexpr uint64_t BlobDataBlocks(const blobstore_inode_t& blobNode) {
 
 void* GetBlock(const RawBitmap& bitmap, uint32_t blkno);
 void* GetBitBlock(const RawBitmap& bitmap, uint32_t* blkno_out, uint32_t bitno);
+
+zx_status_t readblk(int fd, uint64_t bno, void* data);
+zx_status_t writeblk(int fd, uint64_t bno, const void* data);
+zx_status_t blobstore_check_info(const blobstore_info_t* info, uint64_t max);
+zx_status_t blobstore_get_blockcount(int fd, uint64_t* out);
+} // namespace blobstore

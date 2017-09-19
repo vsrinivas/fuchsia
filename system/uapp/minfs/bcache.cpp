@@ -15,7 +15,7 @@
 #include <fbl/unique_ptr.h>
 #include <zircon/device/device.h>
 
-#include "minfs.h"
+#include <minfs/minfs.h>
 #include "minfs-private.h"
 
 namespace minfs {

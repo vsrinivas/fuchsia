@@ -69,12 +69,35 @@ MODULE_COMPILEFLAGS := \
     -Ithird_party/ulib/cryptolib/include \
     -Isystem/ulib/bitmap/include \
     -Isystem/ulib/digest/include \
-    -Isystem/ulib/digest/include \
     -Isystem/ulib/zxcpp/include \
     -Isystem/ulib/fdio/include \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/fs/include \
 
 MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
+
+include make/module.mk
+
+
+# host blobstore lib
+
+MODULE := $(LOCAL_DIR).hostlib
+
+MODULE_TYPE := hostlib
+
+MODULE_SRCS := \
+    $(LOCAL_DIR)/blobstore-common.cpp \
+
+MODULE_COMPILEFLAGS := \
+    -Werror-implicit-function-declaration \
+    -Wstrict-prototypes -Wwrite-strings \
+    -Isystem/ulib/digest/include \
+    -Ithird_party/ulib/cryptolib/include \
+    -Isystem/ulib/fbl/include \
+    -Isystem/ulib/fs/include \
+    -Isystem/ulib/fdio/include \
+    -Isystem/ulib/bitmap/include \
+
+MODULE_DEFINES := DISABLE_THREAD_ANNOTATIONS
 
 include make/module.mk

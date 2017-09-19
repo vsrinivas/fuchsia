@@ -83,13 +83,13 @@ MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
 
 include make/module.mk
 
+# host minfs lib
+
 MODULE := $(LOCAL_DIR).hostlib
 
 MODULE_TYPE := hostlib
 
-MODULE_SRCS := \
-    $(MODULE_HOST_SRCS) \
-    system/ulib/fbl/alloc_checker.cpp \
+MODULE_SRCS := $(MODULE_HOST_SRCS)
 
 MODULE_COMPILEFLAGS := $(MODULE_HOST_COMPILEFLAGS)
 

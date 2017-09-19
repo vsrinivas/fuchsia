@@ -8,6 +8,7 @@
 #include <gpt/gpt.h>
 #include <zircon/device/block.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define FVM_MAGIC (0x54524150204d5646ull) // 'FVM PART'
 #define FVM_VERSION 0x00000001

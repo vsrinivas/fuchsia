@@ -4,8 +4,6 @@
 
 // for S_IF*
 #define _XOPEN_SOURCE
-#include <minfs/host.h>
-
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -20,7 +18,9 @@
 #include <fdio/vfs.h>
 #include <fs/vfs.h>
 #include <zircon/assert.h>
-#include "minfs.h"
+
+#include <minfs/host.h>
+#include <minfs/minfs.h>
 #include "minfs-private.h"
 
 static zx_status_t do_stat(fbl::RefPtr<fs::Vnode> vn, struct stat* s) {

@@ -265,4 +265,7 @@ private:
     uint32_t blockmax_{};
 };
 
+void minfs_dir_init(void* bdata, ino_t ino_self, ino_t ino_parent);
+zx_status_t minfs_check_info(const minfs_info_t* info, Bcache* bc);
+
 } // namespace minfs

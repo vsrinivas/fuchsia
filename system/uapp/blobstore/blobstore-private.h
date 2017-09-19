@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "blobstore.h"
+#include <blobstore/blobstore.h>
 
 #include <string.h>
 
@@ -328,9 +328,6 @@ zx_status_t blobstore_mount(fbl::RefPtr<VnodeBlob>* out, int blockfd);
 zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, int blockfd);
 zx_status_t blobstore_check(fbl::RefPtr<Blobstore> vnode);
 
-zx_status_t readblk(int fd, uint64_t bno, void* data);
-zx_status_t writeblk(int fd, uint64_t bno, const void* data);
-
 uint64_t MerkleTreeBlocks(const blobstore_inode_t& blobNode);
 // Get a pointer to the nth block of the bitmap.
 inline void* get_raw_bitmap_data(const RawBitmap& bm, uint64_t n) {
@@ -338,7 +335,4 @@ inline void* get_raw_bitmap_data(const RawBitmap& bm, uint64_t n) {
     assert(kBlobstoreBlockSize <= (n + 1) * kBlobstoreBlockSize); // Avoid overflow
     return fs::GetBlock<kBlobstoreBlockSize>(bm.StorageUnsafe()->GetData(), n);
 }
-zx_status_t blobstore_check_info(const blobstore_info_t* info, uint64_t max);
-zx_status_t blobstore_get_blockcount(int fd, uint64_t* out);
-
 } // namespace blobstore

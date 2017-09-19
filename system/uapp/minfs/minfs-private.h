@@ -25,7 +25,7 @@
 
 #include <hash/hash.h>
 
-#include "minfs.h"
+#include <minfs/minfs.h>
 
 #define panic(fmt...)         \
     do {                      \
@@ -395,8 +395,6 @@ constexpr size_t GetVmoSizeForDoublyIndirect() {
 
 // write the inode data of this vnode to disk (default does not update time values)
 void minfs_sync_vnode(fbl::RefPtr<VnodeMinfs> vn, uint32_t flags);
-
-zx_status_t minfs_check_info(const minfs_info_t* info, Bcache* bc);
 void minfs_dump_info(const minfs_info_t* info);
 void minfs_dump_inode(const minfs_inode_t* inode, ino_t ino);
 
@@ -453,7 +451,5 @@ zx_status_t minfs_check(fbl::unique_ptr<Bcache> bc);
 #endif
 
 zx_status_t minfs_mount(fbl::RefPtr<VnodeMinfs>* root_out, fbl::unique_ptr<Bcache> bc);
-
-void minfs_dir_init(void* bdata, ino_t ino_self, ino_t ino_parent);
 
 } // namespace minfs

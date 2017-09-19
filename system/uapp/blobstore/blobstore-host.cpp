@@ -22,7 +22,7 @@
 
 #define MXDEBUG 0
 
-#include "blobstore.h"
+#include <blobstore/blobstore.h>
 #include "blobstore-private.h"
 
 using digest::Digest;
