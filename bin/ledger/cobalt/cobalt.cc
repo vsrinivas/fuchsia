@@ -6,11 +6,11 @@
 
 #include <set>
 
-#include "apps/cobalt_client/services/cobalt.fidl.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/application_environment.fidl.h"
+#include "lib/cobalt/fidl/cobalt.fidl.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"

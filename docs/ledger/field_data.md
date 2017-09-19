@@ -10,7 +10,7 @@ In order to add more events:
 In order to view the recorded data, run:
 
 ```
-cd apps/cobalt_client
+cd garnet/bin/cobalt
 ./download_report_client.py
 ./report_client -report_master_uri=35.188.119.76:7001 -project_id=100
 ```

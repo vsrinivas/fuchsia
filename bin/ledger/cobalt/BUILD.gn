@@ -16,7 +16,7 @@ source_set("cobalt") {
   ]
 
   deps = [
-    "//apps/cobalt_client/services:cobalt",
+    "//garnet/public/lib/cobalt/fidl",
     "//apps/ledger/src/backoff",
     "//apps/ledger/src/callback",
   ]
