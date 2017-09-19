@@ -21,6 +21,8 @@ enum message {
     MSG_RECOVERED_FROM_CRASH,
     MSG_START_EXTRA_THREADS,
     MSG_EXTRA_THREADS_STARTED,
+    MSG_GET_THREAD_HANDLE,
+    MSG_THREAD_HANDLE,
 };
 
 extern const char* program_path;
@@ -74,9 +76,15 @@ extern bool start_inferior(launchpad_t* lp);
 
 extern bool verify_inferior_running(zx_handle_t channel);
 
+extern bool get_inferior_thread_handle(zx_handle_t channel, zx_handle_t* thread);
+
 extern bool resume_inferior(zx_handle_t inferior, zx_koid_t tid);
 
 extern bool shutdown_inferior(zx_handle_t channel, zx_handle_t inferior);
 
 extern bool read_exception(zx_handle_t eport, zx_handle_t inferior,
                            zx_port_packet_t* packet);
+
+extern bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t eport);
+
+extern bool get_vdso_exec_range(uintptr_t* start, uintptr_t* end);

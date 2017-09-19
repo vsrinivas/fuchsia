@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
 #include <inttypes.h>
 #include <link.h>
 #include <stdatomic.h>
@@ -19,6 +20,7 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/port.h>
+#include <zircon/threads.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
@@ -46,6 +48,16 @@ typedef bool (wait_inferior_exception_handler_t)(zx_handle_t inferior,
 
 // Produce a backtrace of sufficient size to be interesting but not excessive.
 #define TEST_SEGFAULT_DEPTH 4
+
+// Offsets of $pc,$sp.
+#ifdef __x86_64__
+#define PC_REG_OFFSET offsetof(zx_x86_64_general_regs_t, rip)
+#define SP_REG_OFFSET offsetof(zx_x86_64_general_regs_t, rsp)
+#endif
+#ifdef __aarch64__
+#define PC_REG_OFFSET offsetof(zx_arm64_general_regs_t, pc)
+#define SP_REG_OFFSET offsetof(zx_arm64_general_regs_t, sp)
+#endif
 
 static const char test_inferior_child_name[] = "inferior";
 // The segfault child is not used by the test.
@@ -97,34 +109,29 @@ static void fix_inferior_segv(zx_handle_t thread)
 {
     unittest_printf("Fixing inferior segv\n");
 
-#ifdef __x86_64__
-    // The segv was because r8 == 0, change it to a usable value.
-    // See test_prep_and_segv.
-    uint64_t rsp = get_uint64_register(thread, offsetof(zx_x86_64_general_regs_t, rsp));
-    set_uint64_register(thread, offsetof(zx_x86_64_general_regs_t, r8), rsp);
-#endif
+    uint64_t sp = get_uint64_register(thread, SP_REG_OFFSET);
 
-#ifdef __aarch64__
     // The segv was because r8 == 0, change it to a usable value.
     // See test_prep_and_segv.
-    uint64_t sp = get_uint64_register(thread, offsetof(zx_arm64_general_regs_t, sp));
+#ifdef __x86_64__
+    set_uint64_register(thread, offsetof(zx_x86_64_general_regs_t, r8), sp);
+#endif
+#ifdef __aarch64__
     set_uint64_register(thread, offsetof(zx_arm64_general_regs_t, r[8]), sp);
 #endif
 }
 
 static bool test_segv_pc(zx_handle_t thread)
 {
+    uint64_t pc = get_uint64_register(thread, PC_REG_OFFSET);
+
 #ifdef __x86_64__
-    uint64_t pc = get_uint64_register(
-        thread, offsetof(zx_x86_64_general_regs_t, rip));
     uint64_t r10 = get_uint64_register(
         thread, offsetof(zx_x86_64_general_regs_t, r10));
     ASSERT_EQ(pc, r10, "fault PC does not match r10");
 #endif
 
 #ifdef __aarch64__
-    uint64_t pc = get_uint64_register(
-        thread, offsetof(zx_arm64_general_regs_t, pc));
     uint64_t x10 = get_uint64_register(
         thread, offsetof(zx_arm64_general_regs_t, r[10]));
     ASSERT_EQ(pc, x10, "fault PC does not match x10");
@@ -560,6 +567,491 @@ static bool write_text_segment(void)
     END_TEST;
 }
 
+// These are "call-saved" registers used in the test.
+#ifdef __x86_64__
+#define REG_ACCESS_TEST_REG_NAME "r15"
+#define REG_ACCESS_TEST_REG_OFFSET offsetof(zx_x86_64_general_regs_t, r15)
+#endif
+#ifdef __aarch64__
+#define REG_ACCESS_TEST_REG_NAME "x28"
+#define REG_ACCESS_TEST_REG_OFFSET offsetof(zx_arm64_general_regs_t, r[28])
+#endif
+
+// Note: Neither of these can be zero.
+static const uint64_t reg_access_initial_value = 0xee112233445566eeull;
+static const uint64_t reg_access_write_test_value = 0xee665544332211eeull;
+
+struct suspended_reg_access_arg {
+    zx_handle_t channel;
+    uint64_t initial_value;
+    uint64_t result;
+    uint64_t pc, sp;
+};
+
+static int reg_access_thread_func(void* arg_)
+{
+    struct suspended_reg_access_arg* arg = arg_;
+
+    send_msg(arg->channel, MSG_PONG);
+
+    // The loop has to be written in assembler as we cannot control what
+    // the compiler does with our "reserved" registers outside of the asm;
+    // they're not really reserved in the way we need them to be: the compiler
+    // is free to do with them whatever it wants outside of the assembler.
+    // We do make the assumption that test_reg will not contain
+    // |reg_access_initial_value| until it is set by the assembler.
+
+    uint64_t initial_value = arg->initial_value;
+    uint64_t result = 0;
+    uint64_t pc = 0;
+    uint64_t sp = 0;
+
+// The maximum number of bytes in the assembly.
+// This doesn't have to be perfect. It's used to verify the value read for
+// $pc is within some reasonable range.
+#define REG_ACCESS_MAX_LOOP_SIZE 64
+
+#ifdef __x86_64__
+    __asm__("\
+        call 1f\n\
+      1:\n\
+        pop %[pc]\n\
+        mov %%rsp, %[sp]\n\
+        mov %[initial_value], %%" REG_ACCESS_TEST_REG_NAME "\n\
+      2:\n\
+        pause\n\
+        cmp %[initial_value], %%" REG_ACCESS_TEST_REG_NAME "\n\
+        je 2b\n\
+        mov %%" REG_ACCESS_TEST_REG_NAME ", %[result]"
+            : [result] "=r" (result),
+              [pc] "=r" (pc),
+              [sp] "=r" (sp)
+            : [initial_value] "r" (initial_value)
+            : REG_ACCESS_TEST_REG_NAME);
+#endif
+
+#ifdef __aarch64__
+    __asm__("\
+        adr %[pc], .\n\
+        mov %[sp], sp\n\
+        mov " REG_ACCESS_TEST_REG_NAME ", %[initial_value]\n\
+      1:\n\
+        yield\n\
+        cmp %[initial_value], " REG_ACCESS_TEST_REG_NAME "\n\
+        b.eq 1b\n\
+        mov %[result], " REG_ACCESS_TEST_REG_NAME
+            : [result] "=r" (result),
+              [pc] "=r" (pc),
+              [sp] "=r" (sp)
+            : [initial_value] "r" (initial_value)
+            : REG_ACCESS_TEST_REG_NAME);
+#endif
+
+    arg->result = result;
+    arg->pc = pc;
+    arg->sp = sp;
+
+    tu_handle_close(arg->channel);
+
+    return 0;
+}
+
+static bool suspended_reg_access_test(void)
+{
+    BEGIN_TEST;
+
+    zx_handle_t self_proc = zx_process_self();
+
+    thrd_t thread_c11;
+    struct suspended_reg_access_arg arg = {};
+    arg.initial_value = reg_access_initial_value;
+    zx_handle_t channel;
+    tu_channel_create(&channel, &arg.channel);
+    tu_thread_create_c11(&thread_c11, reg_access_thread_func,
+                         &arg, "reg-access thread");
+    zx_handle_t thread = thrd_get_zx_handle(thread_c11);
+
+    // KISS: Don't attach until the thread is up and running so we don't see
+    // ZX_EXCP_THREAD_STARTING.
+    enum message msg;
+    recv_msg(channel, &msg);
+    // No need to send a ping.
+    ASSERT_EQ(msg, MSG_PONG, "");
+
+    // Attach to debugger port so we can see ZX_EXCP_THREAD_SUSPENDED.
+    // Don't do this until now so that we don't have to process things like
+    // ZX_EXCP_THREAD_STARTING. OTOH, we might still get ZX_EXCP_THREAD_EXITING
+    // from previous tests. See wait_thread_suspended.
+    zx_handle_t eport = attach_inferior(self_proc);
+
+    const size_t test_reg_offset = REG_ACCESS_TEST_REG_OFFSET;
+
+    // Keep looping until we know the thread is stopped in the assembler.
+    // This is the only place we can guarantee particular registers have
+    // particular values.
+    uint64_t test_reg = 0;
+    while (test_reg != reg_access_initial_value) {
+        zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
+        ASSERT_EQ(zx_task_suspend(thread), ZX_OK, "");
+        ASSERT_TRUE(wait_thread_suspended(self_proc, thread, eport), "");
+        test_reg = get_uint64_register(thread, test_reg_offset);
+    }
+
+    uint64_t pc_value = get_uint64_register(thread, PC_REG_OFFSET);
+    uint64_t sp_value = get_uint64_register(thread, SP_REG_OFFSET);
+
+    set_uint64_register(thread, test_reg_offset, reg_access_write_test_value);
+
+    ASSERT_EQ(zx_task_resume(thread, 0), ZX_OK, "");
+    thrd_join(thread_c11, NULL);
+
+    // We can't test the pc value exactly as we don't know on which instruction
+    // the thread will be suspended. But we can verify it is within some
+    // minimal range.
+    EXPECT_GE(pc_value, arg.pc, "");
+    EXPECT_LE(pc_value, arg.pc + REG_ACCESS_MAX_LOOP_SIZE, "");
+
+    EXPECT_EQ(sp_value, arg.sp, "");
+
+    EXPECT_EQ(reg_access_write_test_value, arg.result, "");
+
+    tu_handle_close(channel);
+    tu_handle_close(eport);
+    END_TEST;
+}
+
+struct suspended_in_syscall_reg_access_arg {
+    bool do_channel_call;
+    zx_handle_t syscall_handle;
+    atomic_uintptr_t sp;
+};
+
+// "zx_channel_call treats the leading bytes of the payload as
+// a transaction id of type zx_txid_t"
+static_assert(sizeof(zx_txid_t) == sizeof(uint32_t), "");
+#define CHANNEL_CALL_PACKET_SIZE (sizeof(zx_txid_t) + sizeof("x"))
+
+static int suspended_in_syscall_reg_access_thread_func(void* arg_)
+{
+    struct suspended_in_syscall_reg_access_arg* arg = arg_;
+
+    uint64_t sp;
+#ifdef __x86_64__
+    __asm__("\
+        mov %%rsp, %[sp]"
+            : [sp] "=r" (sp));
+#endif
+#ifdef __aarch64__
+    __asm__("\
+        mov %[sp], sp"
+            : [sp] "=r" (sp));
+#endif
+    atomic_store(&arg->sp, sp);
+
+    if (arg->do_channel_call) {
+        uint8_t send_buf[CHANNEL_CALL_PACKET_SIZE] = "TXIDx";
+        uint8_t recv_buf[CHANNEL_CALL_PACKET_SIZE];
+        uint32_t actual_bytes, actual_handles;
+        zx_channel_call_args_t call_args = {
+            .wr_bytes = send_buf,
+            .wr_handles = NULL,
+            .rd_bytes = recv_buf,
+            .rd_handles = NULL,
+            .wr_num_bytes = sizeof(send_buf),
+            .wr_num_handles = 0,
+            .rd_num_bytes = sizeof(recv_buf),
+            .rd_num_handles = 0,
+        };
+        zx_status_t call_status =
+            zx_channel_call(arg->syscall_handle, 0, ZX_TIME_INFINITE,
+                            &call_args, &actual_bytes, &actual_handles,
+                            NULL);
+        ASSERT_EQ(call_status, ZX_OK, "");
+        EXPECT_EQ(actual_bytes, sizeof(recv_buf), "");
+        EXPECT_EQ(memcmp(recv_buf, "TXIDy", sizeof(recv_buf)), 0, "");
+    } else {
+        zx_signals_t pending;
+        zx_status_t status =
+            zx_object_wait_one(arg->syscall_handle, ZX_EVENT_SIGNALED,
+                               ZX_TIME_INFINITE, &pending);
+        ASSERT_EQ(status, ZX_OK, "");
+        EXPECT_NE(pending & ZX_EVENT_SIGNALED, 0u, "");
+    }
+
+    return 0;
+}
+
+// Channel calls are a little special in that they are a two part syscall,
+// with suspension possible in between the two parts.
+// If |do_channel_call| is true, test zx_channel_call. Otherwise test some
+// random syscall that can block, here we use zx_object_wait_one.
+//
+// The syscall entry point is the vdso, there's no bypassing this for test
+// purposes. Also, the kernel doesn't save userspace regs on entry, it only
+// saves them later if it needs to - at which point many don't necessarily
+// have any useful value. Putting these together means we can't easily test
+// random integer registers: there's no guarantee any value we set in the test
+// will be available when the syscall is suspended. All is not lost, we can
+// still at least test that reading $pc, $sp work.
+
+static bool suspended_in_syscall_reg_access_worker(bool do_channel_call)
+{
+    zx_handle_t self_proc = zx_process_self();
+
+    uintptr_t vdso_start = 0, vdso_end = 0;
+    EXPECT_TRUE(get_vdso_exec_range(&vdso_start, &vdso_end), "");
+
+    struct suspended_in_syscall_reg_access_arg arg = {};
+    arg.do_channel_call = do_channel_call;
+
+    zx_handle_t syscall_handle;
+    if (do_channel_call) {
+        tu_channel_create(&arg.syscall_handle, &syscall_handle);
+    } else {
+        ASSERT_EQ(zx_event_create(0u, &syscall_handle), ZX_OK, "");
+        arg.syscall_handle = syscall_handle;
+    }
+
+    thrd_t thread_c11;
+    tu_thread_create_c11(&thread_c11,
+                         suspended_in_syscall_reg_access_thread_func,
+                         &arg, "reg-access thread");
+    zx_handle_t thread = thrd_get_zx_handle(thread_c11);
+
+    // Busy-wait until thread is blocked inside the syscall.
+    zx_info_thread_t thread_info;
+    do {
+        zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
+        thread_info = tu_thread_get_info(thread);
+    } while (thread_info.state != ZX_THREAD_STATE_BLOCKED);
+    ASSERT_EQ(thread_info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_NONE, "");
+
+    // Extra sanity check for channels.
+    if (do_channel_call) {
+        EXPECT_TRUE(tu_channel_wait_readable(syscall_handle), "");
+    }
+
+    // Attach to debugger port so we can see ZX_EXCP_THREAD_SUSPENDED.
+    // Don't do this until now so that we don't have to process things like
+    // ZX_EXCP_THREAD_STARTING. OTOH, we might still get ZX_EXCP_THREAD_EXITING
+    // from previous tests. See wait_thread_suspended.
+    zx_handle_t eport = attach_inferior(self_proc);
+
+    ASSERT_EQ(zx_task_suspend(thread), ZX_OK, "");
+
+    ASSERT_TRUE(wait_thread_suspended(self_proc, thread, eport), "");
+
+    // Verify the pc is somewhere within the vdso.
+    uint64_t pc_value = get_uint64_register(thread, PC_REG_OFFSET);
+    EXPECT_GE(pc_value, vdso_start, "");
+    EXPECT_LE(pc_value, vdso_end, "");
+
+    // The stack pointer is somewhere within the syscall.
+    // Just verify the value we have is within range.
+    uint64_t sp_value = get_uint64_register(thread, SP_REG_OFFSET);
+    uint64_t arg_sp = atomic_load(&arg.sp);
+    EXPECT_LE(sp_value, arg_sp, "");
+    EXPECT_GE(sp_value + 1024, arg_sp, "");
+
+    // wake the thread
+    if (do_channel_call) {
+        uint8_t buf[CHANNEL_CALL_PACKET_SIZE];
+        uint32_t actual_bytes;
+        ASSERT_EQ(zx_channel_read(syscall_handle, 0, buf, NULL, sizeof(buf), 0, &actual_bytes, NULL),
+                  ZX_OK, "");
+        EXPECT_EQ(actual_bytes, sizeof(buf), "");
+        EXPECT_EQ(memcmp(buf, "TXIDx", sizeof(buf)), 0, "");
+
+        // write a reply
+        buf[sizeof(zx_txid_t)] = 'y';
+        ASSERT_EQ(zx_channel_write(syscall_handle, 0, buf, sizeof(buf), NULL, 0), ZX_OK, "");
+
+        // Make sure the remote channel didn't get signaled
+        EXPECT_EQ(zx_object_wait_one(arg.syscall_handle, ZX_CHANNEL_READABLE, 0, NULL),
+                  ZX_ERR_TIMED_OUT, "");
+
+        // Make sure we can't read from the remote channel (the message should have
+        // been reserved for the other thread, even though it is suspended).
+        EXPECT_EQ(zx_channel_read(arg.syscall_handle, 0, buf, NULL, sizeof(buf), 0,
+                                  &actual_bytes, NULL),
+                  ZX_ERR_SHOULD_WAIT, "");
+    } else {
+        ASSERT_EQ(zx_object_signal(syscall_handle, 0u, ZX_EVENT_SIGNALED), ZX_OK, "");
+    }
+    ASSERT_EQ(zx_task_resume(thread, 0), ZX_OK, "");
+
+    thrd_join(thread_c11, NULL);
+
+    tu_handle_close(eport);
+    if (do_channel_call) {
+        tu_handle_close(arg.syscall_handle);
+    }
+    tu_handle_close(syscall_handle);
+
+    return true;
+}
+
+static bool suspended_in_syscall_reg_access_test(void)
+{
+    BEGIN_TEST;
+
+    EXPECT_TRUE(suspended_in_syscall_reg_access_worker(false), "");
+
+    END_TEST;
+}
+
+static bool suspended_in_channel_call_reg_access_test(void)
+{
+    BEGIN_TEST;
+
+    EXPECT_TRUE(suspended_in_syscall_reg_access_worker(true), "");
+
+    END_TEST;
+}
+
+struct suspend_in_exception_data {
+    atomic_int segv_count;
+    atomic_int suspend_count;
+    atomic_int resume_count;
+    zx_handle_t thread_handle;
+    zx_koid_t thread_id;
+};
+
+// N.B. This runs on the wait-inferior thread.
+
+static bool suspended_in_exception_handler(zx_handle_t inferior,
+                                           const zx_port_packet_t* packet,
+                                           void* handler_arg)
+{
+    BEGIN_HELPER;
+
+    struct suspend_in_exception_data* data = handler_arg;
+    zx_koid_t tid = packet->exception.tid;
+
+    switch (packet->type) {
+        case ZX_EXCP_THREAD_EXITING:
+            EXPECT_TRUE(handle_thread_exiting(inferior, packet), "");
+            break;
+
+        case ZX_EXCP_THREAD_SUSPENDED:
+            ASSERT_EQ(tid, data->thread_id, "");
+            atomic_fetch_add(&data->suspend_count, 1);
+            ASSERT_EQ(zx_task_resume(data->thread_handle, 0), ZX_OK, "");
+            // At this point we should get ZX_EXCP_THREAD_RESUMED, we'll
+            // process it later.
+            break;
+
+        case ZX_EXCP_THREAD_RESUMED:
+            ASSERT_EQ(tid, data->thread_id, "");
+            atomic_fetch_add(&data->resume_count, 1);
+            break;
+
+        case ZX_EXCP_FATAL_PAGE_FAULT: {
+            unittest_printf("wait-inf: got page fault exception\n");
+
+            ASSERT_EQ(tid, data->thread_id, "");
+
+            // Verify that the fault is at the PC we expected.
+            if (!test_segv_pc(data->thread_handle))
+                return false;
+
+            // Suspend the thread before fixing the segv to verify register
+            // access works while the thread is in an exception and suspended.
+            ASSERT_EQ(zx_task_suspend(data->thread_handle), ZX_OK, "");
+
+            // Waiting for the thread to suspend doesn't work here as the
+            // thread stays in the exception until we pass ZX_RESUME_EXCEPTION.
+            // Just give the scheduler a chance to run the thread and process
+            // the ZX_ERR_INTERNAL_INTR_RETRY in ExceptionHandlerExchange.
+            zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
+
+            // Do some tests that require a suspended inferior.
+            // This is required as the inferior does tests after it wakes up
+            // that assumes we've done this.
+            test_memory_ops(inferior, data->thread_handle);
+
+            // Now correct the issue and resume the inferior.
+            fix_inferior_segv(data->thread_handle);
+
+            atomic_fetch_add(&data->segv_count, 1);
+
+            ASSERT_EQ(zx_task_resume(data->thread_handle, ZX_RESUME_EXCEPTION), ZX_OK, "");
+            // At this point we should get ZX_EXCP_THREAD_SUSPENDED, we'll
+            // process it later.
+
+            break;
+        }
+
+        default: {
+            char msg[128];
+            snprintf(msg, sizeof(msg), "unexpected packet type: 0x%x",
+                     packet->type);
+            ASSERT_TRUE(false, msg);
+            __UNREACHABLE;
+        }
+    }
+
+    END_HELPER;
+}
+
+static bool suspended_in_exception_reg_access_test(void)
+{
+    BEGIN_TEST;
+
+    launchpad_t* lp;
+    zx_handle_t inferior, channel;
+    if (!setup_inferior(test_inferior_child_name, &lp, &inferior, &channel))
+        return false;
+
+    if (!start_inferior(lp))
+        return false;
+    if (!verify_inferior_running(channel))
+        return false;
+
+    struct suspend_in_exception_data data;
+    atomic_store(&data.segv_count, 0);
+    atomic_store(&data.suspend_count, 0);
+    atomic_store(&data.resume_count, 0);
+    ASSERT_TRUE(get_inferior_thread_handle(channel, &data.thread_handle), "");
+    data.thread_id = tu_get_koid(data.thread_handle);
+
+    // Defer attaching until now so that we don't have to handle
+    // ZX_EXCP_THREAD_STARTING. OTOH, we might still get ZX_EXCP_THREAD_EXITING
+    // from previous tests.
+    zx_handle_t eport = ZX_HANDLE_INVALID;
+    thrd_t wait_inf_thread =
+        start_wait_inf_thread(inferior, &eport,
+                              suspended_in_exception_handler, &data);
+    EXPECT_GT(eport, 0, "");
+
+    enum message msg;
+    send_msg(channel, MSG_CRASH_AND_RECOVER_TEST);
+    if (!recv_msg(channel, &msg)) {
+        return false;
+    }
+    EXPECT_EQ(msg, MSG_RECOVERED_FROM_CRASH, "");
+
+    if (!shutdown_inferior(channel, inferior))
+        return false;
+
+    // Stop the waiter thread before closing the eport that it's waiting on.
+    join_wait_inf_thread(wait_inf_thread);
+
+    // Don't check these until now to ensure the resume_count has been
+    // updated (we're guaranteed that ZX_EXCP_THREAD_RESUMED will be sent
+    // before ZX_EXCP_GONE for the process).
+    EXPECT_EQ(atomic_load(&data.segv_count), NUM_SEGV_TRIES, "");
+    EXPECT_EQ(atomic_load(&data.suspend_count), NUM_SEGV_TRIES, "");
+    EXPECT_EQ(atomic_load(&data.resume_count), NUM_SEGV_TRIES, "");
+
+    tu_handle_close(data.thread_handle);
+    tu_handle_close(eport);
+    tu_handle_close(channel);
+    tu_handle_close(inferior);
+
+    END_TEST;
+}
+
 // This function is marked as no-inline to avoid duplicate label in case the
 // function call is being inlined.
 __NO_INLINE static bool test_prep_and_segv(void)
@@ -676,6 +1168,16 @@ static bool msg_loop(zx_handle_t channel)
                 zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
             send_msg(channel, MSG_EXTRA_THREADS_STARTED);
             break;
+        case MSG_GET_THREAD_HANDLE: {
+            zx_handle_t self = zx_thread_self();
+            zx_handle_t copy;
+            zx_handle_duplicate(self, ZX_RIGHT_SAME_RIGHTS, &copy);
+            // Note: The handle is transferred to the receiver.
+            uint64_t data = MSG_THREAD_HANDLE;
+            unittest_printf("sending handle %d message on channel %u\n", copy, channel);
+            tu_channel_write(channel, 0, &data, sizeof(data), &copy, 1);
+            break;
+        }
         default:
             unittest_printf("unknown message received: %d\n", msg);
             break;
@@ -760,6 +1262,10 @@ RUN_TEST(debugger_test)
 RUN_TEST(debugger_thread_list_test)
 RUN_TEST(property_process_debug_addr_test)
 RUN_TEST(write_text_segment)
+RUN_TEST(suspended_reg_access_test)
+RUN_TEST(suspended_in_syscall_reg_access_test)
+RUN_TEST(suspended_in_channel_call_reg_access_test)
+RUN_TEST(suspended_in_exception_reg_access_test)
 END_TEST_CASE(debugger_tests)
 
 static void check_verbosity(int argc, char** argv)

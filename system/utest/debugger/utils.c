@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
+#include <link.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +11,7 @@
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 #include <zircon/compiler.h>
+#include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/debug.h>
@@ -392,6 +394,39 @@ bool verify_inferior_running(zx_handle_t channel)
     END_HELPER;
 }
 
+static bool recv_msg_handle(zx_handle_t channel, enum message expected_msg,
+                            zx_handle_t* handle)
+{
+    BEGIN_HELPER;
+
+    unittest_printf("waiting for message on channel %u\n", channel);
+    ASSERT_TRUE(tu_channel_wait_readable(channel), "peer closed while trying to read message");
+
+    uint64_t data;
+    uint32_t num_bytes = sizeof(data);
+    uint32_t num_handles = 1;
+    tu_channel_read(channel, 0, &data, &num_bytes, handle, &num_handles);
+    ASSERT_EQ(num_bytes, sizeof(data), "");
+    ASSERT_EQ(num_handles, 1u, "");
+
+    enum message msg = data;
+    ASSERT_EQ(msg, expected_msg, "");
+
+    unittest_printf("received handle %d\n", *handle);
+
+    END_HELPER;
+}
+
+bool get_inferior_thread_handle(zx_handle_t channel, zx_handle_t* thread)
+{
+    BEGIN_HELPER;
+
+    send_msg(channel, MSG_GET_THREAD_HANDLE);
+    ASSERT_TRUE(recv_msg_handle(channel, MSG_THREAD_HANDLE, thread), "");
+
+    END_HELPER;
+}
+
 bool resume_inferior(zx_handle_t inferior, zx_koid_t tid)
 {
     BEGIN_HELPER;
@@ -447,6 +482,98 @@ bool read_exception(zx_handle_t eport, zx_handle_t inferior,
     ASSERT_EQ(packet->key, exception_port_key, "bad report key");
 
     unittest_printf("read_exception: got exception %d\n", packet->type);
+
+    END_HELPER;
+}
+
+// Wait for the thread to suspend
+// We could get a thread exit report from a previous test, so
+// we need to handle that, but no other exceptions are expected.
+
+bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t eport) {
+    BEGIN_HELPER;
+
+    zx_koid_t tid = tu_get_koid(thread);
+
+    while (true) {
+        zx_port_packet_t packet;
+        zx_status_t status = zx_port_wait(eport, zx_deadline_after(ZX_SEC(1)), &packet, 0);
+        if (status == ZX_ERR_TIMED_OUT) {
+            // This shouldn't really happen unless the system is really loaded.
+            // Just flag it and try again.
+            unittest_printf("%s: timed out???\n", __func__);
+            continue;
+        }
+        ASSERT_EQ(status, ZX_OK, "");
+        ASSERT_EQ(packet.key, exception_port_key, "");
+        zx_koid_t report_tid = packet.exception.tid;
+        if (report_tid != tid) {
+            ASSERT_EQ(packet.type, (uint32_t) ZX_EXCP_THREAD_EXITING, "");
+            // Note the thread may be completely gone by now.
+            zx_handle_t other_thread;
+            zx_status_t status = zx_object_get_child(proc, report_tid, ZX_RIGHT_SAME_RIGHTS, &other_thread);
+            if (status == ZX_OK) {
+                ASSERT_EQ(zx_task_resume(other_thread, ZX_RESUME_EXCEPTION), ZX_OK, "");
+                tu_handle_close(other_thread);
+            }
+            continue;
+        }
+        ASSERT_EQ(packet.type, (uint32_t) ZX_EXCP_THREAD_SUSPENDED, "");
+        break;
+    }
+
+    // Verify thread is suspended
+    zx_info_thread_t info = tu_thread_get_info(thread);
+    ASSERT_EQ(info.state, ZX_THREAD_STATE_SUSPENDED, "");
+    ASSERT_EQ(info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_NONE, "");
+
+    END_HELPER;
+}
+
+static int phdr_info_callback(struct dl_phdr_info* info, size_t size,
+                              void* data) {
+    struct dl_phdr_info* key = data;
+    if (info->dlpi_addr == key->dlpi_addr) {
+        *key = *info;
+        return 1;
+    }
+    return 0;
+}
+
+// Fetch the [inclusive] range of the executable segment of the vdso.
+
+bool get_vdso_exec_range(uintptr_t* start, uintptr_t* end) {
+    BEGIN_HELPER;
+
+    char msg[128];
+
+    uintptr_t prop_vdso_base;
+    zx_status_t status =
+        zx_object_get_property(zx_process_self(),
+                               ZX_PROP_PROCESS_VDSO_BASE_ADDRESS,
+                               &prop_vdso_base, sizeof(prop_vdso_base));
+    snprintf(msg, sizeof(msg), "zx_object_get_property failed: %d", status);
+    ASSERT_EQ(status, 0, msg);
+
+    struct dl_phdr_info info = { .dlpi_addr = prop_vdso_base };
+    int ret = dl_iterate_phdr(&phdr_info_callback, &info);
+    ASSERT_EQ(ret, 1, "dl_iterate_phdr didn't see vDSO?");
+
+    uintptr_t vdso_code_start = 0;
+    size_t vdso_code_len = 0;
+    for (unsigned i = 0; i < info.dlpi_phnum; ++i) {
+        if (info.dlpi_phdr[i].p_type == PT_LOAD &&
+            (info.dlpi_phdr[i].p_flags & PF_X)) {
+            vdso_code_start = info.dlpi_addr + info.dlpi_phdr[i].p_vaddr;
+            vdso_code_len = info.dlpi_phdr[i].p_memsz;
+            break;
+        }
+    }
+    ASSERT_NE(vdso_code_start, 0u, "vDSO has no code segment?");
+    ASSERT_NE(vdso_code_len, 0u, "vDSO has no code segment?");
+
+    *start = vdso_code_start;
+    *end = vdso_code_start + vdso_code_len - 1;
 
     END_HELPER;
 }
