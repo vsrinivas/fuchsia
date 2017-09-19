@@ -99,6 +99,10 @@ struct PortPacket final : public fbl::DoublyLinkedListable<PortPacket*> {
     uint64_t key() const { return packet.key; }
     bool is_ephemeral() const { return allocator != nullptr; }
     void Free() { allocator->Free(this); }
+
+    // The number of outstanding packets that are allocated by this
+    // class, rather than allocated by some other client mechanism.
+    static size_t DiagnosticAllocationCount();
 };
 
 // Observers are weakly contained in state trackers until |remove_| member

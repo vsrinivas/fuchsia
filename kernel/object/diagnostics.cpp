@@ -15,6 +15,7 @@
 #include <fbl/auto_lock.h>
 #include <object/handles.h>
 #include <object/job_dispatcher.h>
+#include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 #include <pretty/sizes.h>
@@ -738,6 +739,11 @@ void DumpProcessMemoryUsage(const char* prefix, size_t min_pages) {
     GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
 }
 
+static void DumpPortPacketInfo() {
+    const size_t count = PortPacket::DiagnosticAllocationCount();
+    printf("port packet allocation count: %zu\n", count);
+}
+
 static int mwd_thread(void* arg) {
     for (;;) {
         thread_sleep_relative(LK_SEC(1));
@@ -760,6 +766,7 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
         printf("                     : dump process/all/hidden VMOs\n");
         printf("                 -u? : fix all sizes to the named unit\n");
         printf("                       where ? is one of [BkMGTPE]\n");
+        printf("%s ppinfo            : port packet arena info\n", argv[0].str);
         printf("%s kill <pid>        : kill process\n", argv[0].str);
         printf("%s asd  <pid>|kernel : dump process/kernel address space\n",
                argv[0].str);
@@ -820,6 +827,10 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
         } else {
             DumpProcessVmObjects(argv[2].u, format_unit);
         }
+    } else if (strcmp(argv[1].str, "ppinfo") == 0) {
+        if (argc != 2)
+            goto usage;
+        DumpPortPacketInfo();
     } else if (strcmp(argv[1].str, "kill") == 0) {
         if (argc < 3)
             goto usage;

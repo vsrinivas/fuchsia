@@ -39,6 +39,10 @@ public:
     virtual PortPacket* Alloc();
     virtual void Free(PortPacket* port_packet);
 
+    size_t DiagnosticCount() const {
+        return arena_.DiagnosticCount();
+    }
+
 private:
     fbl::TypedArena<PortPacket, fbl::Mutex> arena_;
 };
@@ -73,6 +77,11 @@ PortPacket::PortPacket(const void* handle, PortAllocator* allocator)
         // which means that PortObserver always uses the kernel heap.
         DEBUG_ASSERT(allocator == nullptr);
     }
+}
+
+// static
+size_t PortPacket::DiagnosticAllocationCount() {
+    return port_allocator.DiagnosticCount();
 }
 
 PortObserver::PortObserver(uint32_t type, const Handle* handle, fbl::RefPtr<PortDispatcher> port,
