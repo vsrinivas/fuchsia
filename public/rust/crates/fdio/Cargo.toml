@@ -1,0 +1,12 @@
+[package]
+name = "fdio"
+version = "0.1.0"
+license = "BSD-3-Clause"
+authors = ["Tim Kilbourn <tkilbourn@google.com>"]
+description = "Rust bindings for Zircon fdio"
+repository = "https://fuchsia.googlesource.com/fdio-rs/"
+
+[dependencies]
+zircon = { path = "../zircon-rs", version = "0.2" }
+
+zircon-sys = { path = "../zircon-rs/zircon-sys", version = "0.2" }
