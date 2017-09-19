@@ -113,9 +113,9 @@ zx_status_t WatcherContainer::WatchDirV2(Vfs* vfs, Vnode* vn, const vfs_watch_di
         WatchBuffer wb;
         {
             // Send "VFS_WATCH_EVT_EXISTING" for all entries in readdir
-            fbl::AutoLock lock(&vfs->vfs_lock_);
             while (true) {
-                zx_status_t status = vn->Readdir(&dircookie, &readdir_buf, sizeof(readdir_buf));
+                zx_status_t status = vfs->Readdir(vn, &dircookie, readdir_buf,
+                                                  sizeof(readdir_buf));
                 if (status <= 0) {
                     break;
                 }

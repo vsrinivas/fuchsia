@@ -325,11 +325,8 @@ static zx_status_t vfs_handler_vn(zxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, v
         if (msg->arg2.off == READDIR_CMD_RESET) {
             memset(&ios->dircookie, 0, sizeof(ios->dircookie));
         }
-        zx_status_t r;
-        {
-            fbl::AutoLock lock(&ios->vfs->vfs_lock_);
-            r = vn->Readdir(&ios->dircookie, msg->data, arg);
-        }
+        zx_status_t r = ios->vfs->Readdir(vn.get(), &ios->dircookie,
+                                          msg->data, arg);
         if (r >= 0) {
             msg->datalen = r;
         }

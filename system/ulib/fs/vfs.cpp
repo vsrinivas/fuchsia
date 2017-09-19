@@ -141,6 +141,7 @@ void RemoteContainer::SetRemote(zx::channel remote) {
 #endif
 
 Vfs::Vfs() = default;
+Vfs::~Vfs() = default;
 
 #ifdef __Fuchsia__
 Vfs::Vfs(Dispatcher* dispatcher) : dispatcher_(dispatcher) {}
@@ -369,6 +370,12 @@ zx_status_t Vfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent,
     oldparent->Notify(oldname, oldlen, VFS_WATCH_EVT_REMOVED);
     newparent->Notify(newname, newlen, VFS_WATCH_EVT_ADDED);
     return ZX_OK;
+}
+
+zx_status_t Vfs::Readdir(Vnode* vn, vdircookie_t* cookie,
+                         void* dirents, size_t len) {
+    fbl::AutoLock lock(&vfs_lock_);
+    return vn->Readdir(cookie, dirents, len);
 }
 
 zx_status_t Vfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent,

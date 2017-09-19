@@ -42,18 +42,6 @@ inline bool vfs_valid_name(const char* name, size_t len) {
             (len != 2 || strncmp(name, "..", 2)));
 }
 
-// A storage class for a vdircookie which is passed to Readdir.
-// Common vnode implementations may use this struct as scratch
-// space, or cast it to an alternative structure of the same
-// size (or smaller).
-//
-// TODO(smklein): To implement seekdir and telldir, the size
-// of this vdircookie may need to shrink to a 'long'.
-typedef struct vdircookie {
-    uint64_t n;
-    void* p;
-} vdircookie_t;
-
 // The VFS interface declares a default abtract Vnode class with
 // common operations that may be overwritten.
 //

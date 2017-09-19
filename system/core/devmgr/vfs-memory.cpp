@@ -33,7 +33,21 @@
 namespace memfs {
 namespace {
 
-fs::Vfs vfs;
+class MemVfs : public fs::Vfs {
+ public:
+    zx_status_t CreateFromVmo(VnodeDir* parent, bool vmofile, const char* name,
+                              size_t namelen, zx_handle_t vmo, zx_off_t off,
+                              zx_off_t len) {
+        fbl::AutoLock lock(&vfs_lock_);
+        return parent->CreateFromVmo(vmofile, name, namelen, vmo, off, len);
+    }
+
+    void MountSubtree(VnodeDir* parent, fbl::RefPtr<VnodeDir> subtree) {
+        fbl::AutoLock lock(&vfs_lock_);
+        parent->MountSubtree(fbl::move(subtree));
+    }
+} vfs;
+
 fbl::unique_ptr<async::Loop> global_loop;
 fbl::unique_ptr<fs::AsyncDispatcher> global_dispatcher;
 
@@ -583,7 +597,7 @@ zx_status_t VnodeDir::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
 
         bool vmofile = false;
         *out_actual = 0;
-        return CreateFromVmo(vmofile, name, namelen, config->vmo, 0, size);
+        return vfs.CreateFromVmo(this, vmofile, name, namelen, config->vmo, 0, size);
     }
     default:
         return VnodeMemfs::Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
@@ -617,13 +631,12 @@ static zx_status_t memfs_create_fs(const char* name, fbl::RefPtr<VnodeDir>* out)
     return ZX_OK;
 }
 
-static void memfs_mount_locked(fbl::RefPtr<VnodeDir> parent, fbl::RefPtr<VnodeDir> subtree) {
-    Dnode::AddChild(parent->dnode_, subtree->dnode_);
+void VnodeDir::MountSubtree(fbl::RefPtr<VnodeDir> subtree) {
+    Dnode::AddChild(dnode_, subtree->dnode_);
 }
 
 zx_status_t VnodeDir::CreateFromVmo(bool vmofile, const char* name, size_t namelen,
                                     zx_handle_t vmo, zx_off_t off, zx_off_t len) {
-    fbl::AutoLock lock(&memfs::vfs.vfs_lock_);
     zx_status_t status;
     if ((status = CanCreate(name, namelen)) != ZX_OK) {
         return status;
@@ -736,6 +749,48 @@ VnodeDir* systemfs_get_root() {
     return SystemfsRoot().get();
 }
 
+static zx_status_t add_vmofile(fbl::RefPtr<VnodeDir> vnb, const char* path, zx_handle_t vmo,
+                        zx_off_t off, size_t len) {
+    zx_status_t r;
+    if ((path[0] == '/') || (path[0] == 0))
+        return ZX_ERR_INVALID_ARGS;
+    for (;;) {
+        const char* nextpath = strchr(path, '/');
+        if (nextpath == nullptr) {
+            if (path[0] == 0) {
+                return ZX_ERR_INVALID_ARGS;
+            }
+            bool vmofile = true;
+            return memfs::vfs.CreateFromVmo(vnb.get(), vmofile, path,
+                                            strlen(path), vmo, off, len);
+        } else {
+            if (nextpath == path) {
+                return ZX_ERR_INVALID_ARGS;
+            }
+
+            fbl::RefPtr<fs::Vnode> out;
+            r = vnb->Lookup(&out, path, nextpath - path);
+            if (r == ZX_ERR_NOT_FOUND) {
+                r = vnb->Create(&out, path, nextpath - path, S_IFDIR);
+            }
+
+            if (r < 0) {
+                return r;
+            }
+            vnb = fbl::RefPtr<VnodeDir>::Downcast(fbl::move(out));
+            path = nextpath + 1;
+        }
+    }
+}
+
+zx_status_t bootfs_add_file(const char* path, zx_handle_t vmo, zx_off_t off, size_t len) {
+    return add_vmofile(BootfsRoot(), path, vmo, off, len);
+}
+
+zx_status_t systemfs_add_file(const char* path, zx_handle_t vmo, zx_off_t off, size_t len) {
+    return add_vmofile(SystemfsRoot(), path, vmo, off, len);
+}
+
 // Hardcoded initialization function to create/access global root directory
 VnodeDir* vfs_create_global_root() {
     if (memfs::vfs_root == nullptr) {
@@ -745,9 +800,9 @@ VnodeDir* vfs_create_global_root() {
             panic();
         }
 
-        memfs_mount_locked(memfs::vfs_root, DevfsRoot());
-        memfs_mount_locked(memfs::vfs_root, BootfsRoot());
-        memfs_mount_locked(memfs::vfs_root, MemfsRoot());
+        memfs::vfs.MountSubtree(memfs::vfs_root.get(), DevfsRoot());
+        memfs::vfs.MountSubtree(memfs::vfs_root.get(), BootfsRoot());
+        memfs::vfs.MountSubtree(memfs::vfs_root.get(), MemfsRoot());
 
         fbl::RefPtr<fs::Vnode> vn;
         const char* pathout;
@@ -771,8 +826,7 @@ void devmgr_vfs_exit() {
 }
 
 void memfs_mount(memfs::VnodeDir* parent, memfs::VnodeDir* subtree) {
-    fbl::AutoLock lock(&memfs::vfs.vfs_lock_);
-    memfs_mount_locked(fbl::RefPtr<VnodeDir>(parent), fbl::RefPtr<VnodeDir>(subtree));
+    memfs::vfs.MountSubtree(parent, fbl::RefPtr<VnodeDir>(subtree));
 }
 
 // Acquire the root vnode and return a handle to it through the VFS dispatcher

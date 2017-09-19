@@ -25,7 +25,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/devmgr-drivers.c \
     $(LOCAL_DIR)/devmgr-fdio.c \
     $(LOCAL_DIR)/fshost.c \
-    $(LOCAL_DIR)/vfs-boot.cpp \
     $(LOCAL_DIR)/vfs-memory.cpp \
     $(LOCAL_DIR)/vfs-rpc.cpp \
 

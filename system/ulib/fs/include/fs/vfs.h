@@ -57,6 +57,18 @@ namespace fs {
 
 class Vnode;
 
+// A storage class for a vdircookie which is passed to Readdir.
+// Common vnode implementations may use this struct as scratch
+// space, or cast it to an alternative structure of the same
+// size (or smaller).
+//
+// TODO(smklein): To implement seekdir and telldir, the size
+// of this vdircookie may need to shrink to a 'long'.
+typedef struct vdircookie {
+    uint64_t n;
+    void* p;
+} vdircookie_t;
+
 #ifdef __Fuchsia__
 
 // MountChannel functions exactly the same as a channel, except that it
@@ -94,6 +106,8 @@ private:
 class Vfs {
 public:
     Vfs();
+    virtual ~Vfs();
+
     // Traverse the path to the target vnode, and create / open it using
     // the underlying filesystem functions (lookup, create, open).
     zx_status_t Open(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
@@ -111,6 +125,10 @@ public:
                      const char* oldname, const char* newname) __TA_EXCLUDES(vfs_lock_);
     zx_status_t Rename(zx::event token, fbl::RefPtr<Vnode> oldparent,
                        const char* oldname, const char* newname) __TA_EXCLUDES(vfs_lock_);
+    // Calls readdir on the Vnode while holding the vfs_lock, preventing path
+    // modification operations for the duration of the operation.
+    zx_status_t Readdir(Vnode* vn, vdircookie_t* cookie,
+                        void* dirents, size_t len) __TA_EXCLUDES(vfs_lock_);
 
     Vfs(Dispatcher* dispatcher);
 
@@ -136,9 +154,6 @@ public:
     // response of each one with the provided deadline.
     zx_status_t UninstallAll(zx_time_t deadline) __TA_EXCLUDES(vfs_lock_);
 
-    // A lock which should be used to protect lookup and walk operations
-    // TODO(smklein): Encapsulate the lock; make it private.
-    mtx_t vfs_lock_{};
 #endif
 
 private:
@@ -181,6 +196,11 @@ private:
     MountNode::ListType remote_list_ __TA_GUARDED(vfs_lock_){};
 
     Dispatcher* dispatcher_{};
+
+protected:
+    // A lock which should be used to protect lookup and walk operations
+    mtx_t vfs_lock_{};
+
 #endif  // ifdef __Fuchsia__
 };
 

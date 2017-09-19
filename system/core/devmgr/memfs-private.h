@@ -94,6 +94,9 @@ public:
     zx_status_t CreateFromVmo(bool vmofile, const char* name, size_t namelen, zx_handle_t vmo,
                               zx_off_t off, zx_off_t len);
 
+    // Mount a subtree as a child of this directory.
+    void MountSubtree(fbl::RefPtr<VnodeDir> subtree);
+
     // Use the watcher container to implement a directory watcher
     void Notify(const char* name, size_t len, unsigned event) final;
     zx_status_t WatchDir(zx::channel* out) final;
