@@ -103,6 +103,11 @@ struct Suggestion {
   // Lower ranks appear first.
   float rank;
 
+  // The probability that a given suggestion would be selected if it were the
+  // only suggestion shown to the user. This score tends to decrease as rank
+  // increases, but unlike rank this score may be the same between suggestions.
+  float confidence;
+
   // Display properties of the Suggestion
   SuggestionDisplay display;
 
