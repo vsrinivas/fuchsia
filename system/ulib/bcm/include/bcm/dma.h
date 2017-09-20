@@ -84,7 +84,6 @@ typedef struct bcm_dma {
     dma_cb_t callback;
     zx_handle_t irq_handle;
     thrd_t irq_thrd;
-    volatile bool irq_thrd_stop;
 } bcm_dma_t;
 
 zx_status_t bcm_dma_start(bcm_dma_t* dma);

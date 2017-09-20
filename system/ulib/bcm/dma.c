@@ -42,7 +42,7 @@ static int dma_irq_thread(void* arg) {
 
     zx_status_t stat;
 
-    while (!dma->irq_thrd_stop) {
+    while (1) {
 
         zx_interrupt_complete(irq_handle);
         stat = zx_interrupt_wait(irq_handle);
@@ -50,16 +50,15 @@ static int dma_irq_thread(void* arg) {
 
         dma_regs->channels[dma->ch_num].cs |= BCM_DMA_CS_INT;
         if (stat != ZX_OK) {
-            xprintf("dma interrupt wait failed = %d\n", stat);
+            if (stat != ZX_ERR_CANCELED) {
+                xprintf("dma interrupt wait failed = %d\n", stat);
+            }
             break;
         }
-        if (dma->irq_thrd_stop)
-            break;
         if (dma->callback)
             (dma->callback)(dma);
     }
 
-    dma->irq_thrd_stop = false;
     xprintf("dma interrupt thread quitting\n");
     return 0;
 }
@@ -357,7 +356,6 @@ void bcm_dma_deinit(bcm_dma_t* dma) {
     if (dma->irq_handle != ZX_HANDLE_INVALID) {
         //shut down the irq thread
         xprintf("Shutting down irq thread\n");
-        dma->irq_thrd_stop = true;
         //Signal the interrupt since the thread is waiting on it.
         zx_interrupt_signal(dma->irq_handle);
         thrd_join(dma->irq_thrd, NULL);
