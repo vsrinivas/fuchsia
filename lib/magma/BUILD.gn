@@ -12,27 +12,17 @@ group("vulkan") {
 }
 
 package("magma") {
-  if (target_cpu == "x64") {
+  if (build_libvulkan_arm_mali || build_intel_gen) {
     deps = [
       ":libmagma",
       ":libvulkan",
     ]
 
-    libraries = [
-      {
-        name = "libmagma.so"
-      },
-      {
-        name = "libvulkan_intel.so"
-      },
-    ]
-
-    resources = [ {
-          path = rebase_path("icd/magma_icd.json")
-          dest = "vulkan/icd.d/magma_icd.json"
+    libraries = [ {
+          name = "libmagma.so"
         } ]
 
-    if (target_cpu == "x64") {
+    if (build_intel_gen) {
       deps += [ "$msd_intel_gen_build_root:msd_intel" ]
 
       drivers = [ {
@@ -42,30 +32,36 @@ package("magma") {
             early_boot_driver = true
             name = "libmsd_intel.so"
           } ]
+      libraries += [ {
+            name = "libvulkan_intel.so"
+          } ]
+      resources = [ {
+            path = rebase_path("icd/intel_icd.json")
+            dest = "vulkan/icd.d/intel_icd.json"
+          } ]
+    }
+    if (build_libvulkan_arm_mali) {
+      libraries += [ {
+            name = "libvulkan_arm.so"
+          } ]
+      resources = [ {
+            path = rebase_path("icd/arm_icd.json")
+            dest = "vulkan/icd.d/arm_icd.json"
+          } ]
     }
   }
 }
 
 package("magma-dev") {
-  if (target_cpu == "x64") {
+  if (build_libvulkan_arm_mali || build_intel_gen) {
     testonly = true
     deps = [
       ":libmagma",
       ":libvulkan",
     ]
 
-    libraries = [
-      {
-        name = "libmagma.so"
-      },
-      {
-        name = "libvulkan_intel.so"
-      },
-    ]
-
-    resources = [ {
-          path = rebase_path("icd/magma_icd.json")
-          dest = "vulkan/icd.d/magma_icd.json"
+    libraries = [ {
+          name = "libmagma.so"
         } ]
 
     if (target_cpu == "x64") {
@@ -78,20 +74,34 @@ package("magma-dev") {
             early_boot_driver = true
             name = "libmsd_intel_test.so"
           } ]
+      libraries += [ {
+            name = "libvulkan_intel.so"
+          } ]
+      resources = [ {
+            path = rebase_path("icd/intel_icd.json")
+            dest = "vulkan/icd.d/intel_icd.json"
+          } ]
+    }
+    if (build_libvulkan_arm_mali) {
+      libraries += [ {
+            name = "libvulkan_arm.so"
+          } ]
+      resources = [ {
+            path = rebase_path("icd/arm_icd.json")
+            dest = "vulkan/icd.d/arm_icd.json"
+          } ]
     }
   }
 }
 
 package("magma-tools") {
-  if (target_cpu == "x64") {
-    deps = [
-      ":tools",
-    ]
+  deps = [
+    ":tools",
+  ]
 
-    binaries = [ {
-          name = "magma_info"
-        } ]
-  }
+  binaries = [ {
+        name = "magma_info"
+      } ]
 }
 
 package("vkcube") {
@@ -122,26 +132,32 @@ group("libmagma") {
   ]
 }
 
-if (target_cpu == "x64") {
+if (build_intel_gen) {
   group("libvulkan") {
     public_deps = [
       "$mesa_build_root:magma_vulkan",
     ]
   }
-
-  # internal only
-  source_set("libmsd") {
-    deps = [
-      "src/sys_driver",
-    ]
+} else if (build_libvulkan_arm_mali) {
+  group("libvulkan") {
     public_deps = [
-      "include:msd_abi",
+      "$mali_build_root:libvulkan_arm",
     ]
   }
+}
 
-  group("tools") {
-    public_deps = [
-      "src/tools",
-    ]
-  }
+# internal only
+source_set("libmsd") {
+  deps = [
+    "src/sys_driver",
+  ]
+  public_deps = [
+    "include:msd_abi",
+  ]
+}
+
+group("tools") {
+  public_deps = [
+    "src/tools",
+  ]
 }
