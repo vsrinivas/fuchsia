@@ -264,10 +264,12 @@ static zx_status_t vcpu_state_write(vcpu_ctx_t* vcpu_ctx, uint32_t kind, const v
     return zx_vcpu_write_state(vcpu_ctx->vcpu, kind, buffer, len);
 }
 
-void vcpu_init(vcpu_ctx_t* vcpu_ctx) {
+void vcpu_init(vcpu_ctx_t* vcpu_ctx, zx_handle_t vcpu) {
     memset(vcpu_ctx, 0, sizeof(*vcpu_ctx));
     vcpu_ctx->read_state = vcpu_state_read;
     vcpu_ctx->write_state = vcpu_state_write;
+    vcpu_ctx->vcpu = vcpu;
+    vcpu_ctx->local_apic.vcpu = vcpu;
 }
 
 zx_status_t vcpu_loop(vcpu_ctx_t* vcpu_ctx) {

@@ -73,10 +73,14 @@ PciDevice::PciDevice(const Attributes attrs)
 PciBus::PciBus(const io_apic_t* io_apic)
     : io_apic_(io_apic), root_complex_(kRootComplexAttributes) {}
 
-zx_status_t PciBus::Init() {
+zx_status_t PciBus::Init(zx_handle_t guest) {
     root_complex_.bar_[0].size = 0x10;
     root_complex_.bar_[0].io_type = PCI_BAR_IO_TYPE_PIO;
-    return Connect(&root_complex_, PCI_DEVICE_ROOT_COMPLEX);
+    zx_status_t status = Connect(&root_complex_, PCI_DEVICE_ROOT_COMPLEX);
+    if (status != ZX_OK)
+        return status;
+    return zx_guest_set_trap(guest, ZX_GUEST_TRAP_MEM, PCI_ECAM_PHYS_BASE,
+                             PCI_ECAM_PHYS_TOP - PCI_ECAM_PHYS_BASE + 1, ZX_HANDLE_INVALID, 0);
 }
 
 uint32_t PciBus::config_addr() {

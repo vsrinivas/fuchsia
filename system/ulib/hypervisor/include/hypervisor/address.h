@@ -30,6 +30,10 @@
 #define PCI_ECAM_PHYS_BASE              0xd0000000
 #define PCI_ECAM_PHYS_TOP               (PCI_ECAM_PHYS_BASE + PCI_ECAM_SIZE(0, 1) - 1)
 
+/* TPM memory range. */
+#define TPM_PHYS_BASE                   0xfed40000
+#define TPM_PHYS_TOP                    TPM_PHYS_BASE + 0x5000 - 1
+
 /* UART ports. */
 #define UART_RECEIVE_PORT               0x3f8
 #define UART_TRANSMIT_PORT              0x3f8

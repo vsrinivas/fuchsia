@@ -48,6 +48,10 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
     if (status != ZX_OK)
         return status;
 
+    status = guest->mux_.AddPortRange(ZX_GUEST_TRAP_MEM, kIoApicPhysBase, PAGE_SIZE, nullptr, 0);
+    if (status != ZX_OK)
+        return status;
+
     // Setup common APIC access.
     VmxInfo vmx_info;
     status = guest->apic_access_page_.Alloc(vmx_info, 0);
@@ -56,6 +60,10 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
 
     status = guest->gpas_->MapApicPage(APIC_PHYS_BASE,
                                        guest->apic_access_page_.PhysicalAddress());
+    if (status != ZX_OK)
+        return status;
+
+    status = guest->mux_.AddPortRange(ZX_GUEST_TRAP_MEM, APIC_PHYS_BASE, PAGE_SIZE, nullptr, 0);
     if (status != ZX_OK)
         return status;
 

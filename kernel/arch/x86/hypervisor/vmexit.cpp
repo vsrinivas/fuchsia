@@ -478,24 +478,22 @@ static zx_status_t handle_memory(const ExitInfo& exit_info, AutoVmcs* vmcs, vadd
 
     PortRange* port_range;
     zx_status_t status = mux.FindPortRange(ZX_GUEST_TRAP_BELL, guest_paddr, &port_range);
-    switch (status) {
-    case ZX_OK:
-        if (port_range->Kind() == ZX_GUEST_TRAP_BELL) {
-            memset(packet, 0, sizeof(*packet));
-            packet->type = ZX_PKT_TYPE_GUEST_BELL;
-            packet->guest_bell.addr = guest_paddr;
-            if (port_range->HasPort()) {
-                next_rip(exit_info, vmcs);
-                return port_range->Queue(*packet, vmcs);
-            }
-            // If there is no port associated with the bell, we should break out
-            // of the switch statement and process this trap synchronously.
-            break;
-        } else if (port_range->Kind() != ZX_GUEST_TRAP_MEM) {
-            return ZX_ERR_BAD_STATE;
+    if (status != ZX_OK)
+        return status;
+
+    switch (port_range->Kind()) {
+    case ZX_GUEST_TRAP_BELL:
+        memset(packet, 0, sizeof(*packet));
+        packet->type = ZX_PKT_TYPE_GUEST_BELL;
+        packet->guest_bell.addr = guest_paddr;
+        if (port_range->HasPort()) {
+            next_rip(exit_info, vmcs);
+            return port_range->Queue(*packet, vmcs);
         }
-        /* fall-through */
-    case ZX_ERR_NOT_FOUND:
+        // If there is no port associated with the bell, we should break out
+        // of the switch statement and process this trap synchronously.
+        break;
+    case ZX_GUEST_TRAP_MEM:
         memset(packet, 0, sizeof(*packet));
         packet->type = ZX_PKT_TYPE_GUEST_MEM;
         packet->guest_mem.addr = guest_paddr;
@@ -506,7 +504,7 @@ static zx_status_t handle_memory(const ExitInfo& exit_info, AutoVmcs* vmcs, vadd
             return status;
         break;
     default:
-        return status;
+        return ZX_ERR_BAD_STATE;
     }
 
     next_rip(exit_info, vmcs);
@@ -550,13 +548,16 @@ static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmc
     if (!ept_violation_info.present)
         pf_flags |= VMM_PF_FLAG_NOT_PRESENT;
 
-    // TODO(abdulla): Define all traps for an architecture explicitly, then
-    // re-order these statements.
-    zx_status_t result = vmm_guest_page_fault_handler(guest_paddr, pf_flags, gpas->aspace());
-    if (result != ZX_ERR_NOT_FOUND)
-        return result;
+    zx_status_t status = handle_memory(exit_info, vmcs, guest_paddr, gpas, mux, packet);
+    switch (status) {
+    case ZX_ERR_NOT_FOUND:
+        break;
+    case ZX_OK:
+    default:
+        return status;
+    }
 
-    return handle_memory(exit_info, vmcs, guest_paddr, gpas, mux, packet);
+    return vmm_guest_page_fault_handler(guest_paddr, pf_flags, gpas->aspace());
 }
 
 static zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs* vmcs,

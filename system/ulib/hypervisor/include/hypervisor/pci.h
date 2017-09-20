@@ -177,7 +177,7 @@ public:
 
     PciBus(const io_apic_t* io_apic);
 
-    zx_status_t Init();
+    zx_status_t Init(zx_handle_t guest);
 
     // Search for any devices that have a BAR mapped to the provided |io_type|
     // and |addr|.

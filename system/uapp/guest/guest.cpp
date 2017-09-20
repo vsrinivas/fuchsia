@@ -13,6 +13,7 @@
 
 #include <fbl/unique_ptr.h>
 #include <hypervisor/acpi.h>
+#include <hypervisor/address.h>
 #include <hypervisor/balloon.h>
 #include <hypervisor/block.h>
 #include <hypervisor/guest.h>
@@ -39,15 +40,15 @@ static zx_status_t usage(const char* cmd) {
     fprintf(stderr, "usage: %s [OPTIONS] kernel.bin\n", cmd);
     fprintf(stderr, "\n");
     fprintf(stderr, "OPTIONS:\n");
-    fprintf(stderr, "\t-b [block.bin]     Use file 'block.bin' as a virtio-block device.\n");
-    fprintf(stderr, "\t-r [ramdisk.bin]   Use file 'ramdisk.bin' as a ramdisk.\n");
-    fprintf(stderr, "\t-c [cmdline]       Use string 'cmdline' as the kernel command line.\n");
+    fprintf(stderr, "\t-b [block.bin]     Use file 'block.bin' as a virtio-block device\n");
+    fprintf(stderr, "\t-r [ramdisk.bin]   Use file 'ramdisk.bin' as a ramdisk\n");
+    fprintf(stderr, "\t-c [cmdline]       Use string 'cmdline' as the kernel command line\n");
     fprintf(stderr, "\t-m [seconds]       Poll the virtio-balloon device every 'seconds' seconds\n"
                     "\t                   and adjust the balloon size based on the amount of\n"
-                    "\t                   unused guest memory.\n");
+                    "\t                   unused guest memory\n");
     fprintf(stderr, "\t-p [pages]         Number of unused pages to allow the guest to\n"
-                    "\t                   retain. Has no effect unless -m is also used.\n");
-    fprintf(stderr, "\t-d                 Demand-page balloon deflate requests.\n");
+                    "\t                   retain. Has no effect unless -m is also used\n");
+    fprintf(stderr, "\t-d                 Demand-page balloon deflate requests\n");
     fprintf(stderr, "\n");
     return ZX_ERR_INVALID_ARGS;
 }
@@ -71,11 +72,11 @@ static void balloon_stats_handler(VirtioBalloon* balloon, const virtio_balloon_s
         if (current_pages == target_pages)
             return;
 
-        printf("virtio-balloon: adjusting target pages %#x -> %#x.\n",
+        printf("virtio-balloon: adjusting target pages %#x -> %#x\n",
                current_pages, target_pages);
         zx_status_t status = balloon->UpdateNumPages(target_pages);
         if (status != ZX_OK)
-            fprintf(stderr, "Error %d updating balloon size.\n", status);
+            fprintf(stderr, "Error %d updating balloon size\n", status);
         return;
     }
 }
@@ -278,9 +279,9 @@ int main(int argc, char** argv) {
     // Setup PCI.
     PciBus bus(&io_apic);
     guest_ctx.pci_bus = &bus;
-    status = bus.Init();
+    status = bus.Init(guest);
     if (status != ZX_OK) {
-        fprintf(stderr, "Failed to create PCI bus.\n");
+        fprintf(stderr, "Failed to create PCI bus\n");
         return status;
     }
     // Setup UART.
@@ -290,7 +291,9 @@ int main(int argc, char** argv) {
     status = uart_async(&uart, guest);
     if (status != ZX_OK)
         return status;
-
+    // Setup TPM.
+    status = zx_guest_set_trap(guest, ZX_GUEST_TRAP_MEM, TPM_PHYS_BASE,
+                               TPM_PHYS_TOP - TPM_PHYS_BASE + 1, ZX_HANDLE_INVALID, 0);
     // Setup block device.
     VirtioBlock block(addr, kVmoSize);
     PciDevice& virtio_block = block.pci_device();
@@ -320,17 +323,15 @@ int main(int argc, char** argv) {
         poll_balloon_stats(&balloon, balloon_poll_interval);
 
     vcpu_ctx_t vcpu_ctx;
-    vcpu_init(&vcpu_ctx);
-    vcpu_ctx.vcpu = vcpu;
+    vcpu_init(&vcpu_ctx, vcpu);
 #if __x86_64__
     vcpu_ctx.local_apic.apic_addr = (void*)apic_addr;
 #endif // __x86_64__
     vcpu_ctx.guest_ctx = &guest_ctx;
     // Setup Local APIC.
-    vcpu_ctx.local_apic.vcpu = vcpu;
     status = io_apic_register_local_apic(&io_apic, 0, &vcpu_ctx.local_apic);
     if (status != ZX_OK) {
-        fprintf(stderr, "Failed to register Local APIC with IO APIC.\n");
+        fprintf(stderr, "Failed to register Local APIC with IO APIC\n");
         return status;
     }
 

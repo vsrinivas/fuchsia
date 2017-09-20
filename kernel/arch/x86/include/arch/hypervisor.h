@@ -33,8 +33,8 @@ public:
     ~VmxPage();
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmxPage);
 
-    status_t Alloc(const VmxInfo& info, uint8_t fill);
-    paddr_t PhysicalAddress() const;
+    zx_status_t Alloc(const VmxInfo& info, uint8_t fill);
+    zx_paddr_t PhysicalAddress() const;
     void* VirtualAddress() const;
 
     template<typename T>
@@ -45,23 +45,23 @@ public:
     bool IsAllocated() const { return pa_ != 0; }
 
 private:
-    paddr_t pa_ = 0;
+    zx_paddr_t pa_ = 0;
 };
 
 /* Represents a guest within the hypervisor. */
 class Guest {
 public:
-    static status_t Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* out);
+    static zx_status_t Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* out);
     ~Guest();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Guest);
 
-    status_t SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
-                     fbl::RefPtr<PortDispatcher> port, uint64_t key);
+    zx_status_t SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
+                        fbl::RefPtr<PortDispatcher> port, uint64_t key);
 
     GuestPhysicalAddressSpace* AddressSpace() const { return gpas_.get(); }
     PacketMux& Mux() { return mux_; }
-    paddr_t ApicAccessAddress() const { return apic_access_page_.PhysicalAddress(); }
-    paddr_t MsrBitmapsAddress() const { return msr_bitmaps_page_.PhysicalAddress(); }
+    zx_paddr_t ApicAccessAddress() const { return apic_access_page_.PhysicalAddress(); }
+    zx_paddr_t MsrBitmapsAddress() const { return msr_bitmaps_page_.PhysicalAddress(); }
 
 private:
     fbl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
@@ -89,17 +89,17 @@ struct LocalApicState {
 /* Represents a virtual CPU within a guest. */
 class Vcpu {
 public:
-    static status_t Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
-                           paddr_t apic_access_address, paddr_t msr_bitmaps_address,
-                           GuestPhysicalAddressSpace* gpas, PacketMux& mux,
-                           fbl::unique_ptr<Vcpu>* out);
+    static zx_status_t Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
+                              zx_paddr_t apic_access_address, zx_paddr_t msr_bitmaps_address,
+                              GuestPhysicalAddressSpace* gpas, PacketMux& mux,
+                              fbl::unique_ptr<Vcpu>* out);
     ~Vcpu();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vcpu);
 
-    status_t Resume(zx_port_packet_t* packet);
-    status_t Interrupt(uint32_t interrupt);
-    status_t ReadState(uint32_t kind, void* buffer, uint32_t len) const;
-    status_t WriteState(uint32_t kind, const void* buffer, uint32_t len);
+    zx_status_t Resume(zx_port_packet_t* packet);
+    zx_status_t Interrupt(uint32_t interrupt);
+    zx_status_t ReadState(uint32_t kind, void* buffer, uint32_t len) const;
+    zx_status_t WriteState(uint32_t kind, const void* buffer, uint32_t len);
 
     uint16_t vpid() const { return vpid_; }
 
@@ -120,26 +120,26 @@ private:
 };
 
 /* Create a guest. */
-status_t arch_guest_create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* guest);
+zx_status_t arch_guest_create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* guest);
 
 /* Set a trap within a guest. */
-status_t arch_guest_set_trap(Guest* guest, uint32_t kind, zx_vaddr_t addr, size_t len,
-                             fbl::RefPtr<PortDispatcher> port, uint64_t key);
+zx_status_t arch_guest_set_trap(Guest* guest, uint32_t kind, zx_vaddr_t addr, size_t len,
+                                fbl::RefPtr<PortDispatcher> port, uint64_t key);
 
 /* Create a VCPU. */
-status_t x86_vcpu_create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
-                         paddr_t apic_access_address, paddr_t msr_bitmaps_address,
-                         GuestPhysicalAddressSpace* gpas, PacketMux& mux,
-                         fbl::unique_ptr<Vcpu>* out);
+zx_status_t x86_vcpu_create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
+                            zx_paddr_t apic_access_address, zx_paddr_t msr_bitmaps_address,
+                            GuestPhysicalAddressSpace* gpas, PacketMux& mux,
+                            fbl::unique_ptr<Vcpu>* out);
 
 /* Resume execution of a VCPU. */
-status_t arch_vcpu_resume(Vcpu* vcpu, zx_port_packet_t* packet);
+zx_status_t arch_vcpu_resume(Vcpu* vcpu, zx_port_packet_t* packet);
 
 /* Issue an interrupt on a VCPU. */
-status_t arch_vcpu_interrupt(Vcpu* vcpu, uint32_t interrupt);
+zx_status_t arch_vcpu_interrupt(Vcpu* vcpu, uint32_t interrupt);
 
 /* Read the register state of a VCPU. */
-status_t arch_vcpu_read_state(const Vcpu* vcpu, uint32_t kind, void* buffer, uint32_t len);
+zx_status_t arch_vcpu_read_state(const Vcpu* vcpu, uint32_t kind, void* buffer, uint32_t len);
 
 /* Write the register state of a VCPU. */
-status_t arch_vcpu_write_state(Vcpu* vcpu, uint32_t kind, const void* buffer, uint32_t len);
+zx_status_t arch_vcpu_write_state(Vcpu* vcpu, uint32_t kind, const void* buffer, uint32_t len);

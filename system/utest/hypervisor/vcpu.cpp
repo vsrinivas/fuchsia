@@ -27,8 +27,7 @@ typedef struct test {
     PciBus pci_bus;
     zx_vcpu_io_t vcpu_io;
 
-    test()
-        : pci_bus(&io_apic) {}
+    test() : pci_bus(&io_apic) {}
 } test_t;
 
 static zx_status_t vcpu_read_test_state(vcpu_ctx_t* vcpu_ctx, uint32_t kind, void* buffer,
@@ -46,8 +45,8 @@ static zx_status_t vcpu_write_test_state(vcpu_ctx_t* vcpu_ctx, uint32_t kind, co
     return ZX_OK;
 }
 
-static zx_status_t setup(test_t* test) {
-    vcpu_init(&test->vcpu_ctx);
+static void setup(test_t* test) {
+    vcpu_init(&test->vcpu_ctx, ZX_HANDLE_INVALID);
     io_apic_init(&test->io_apic);
     io_port_init(&test->io_port);
 
@@ -61,7 +60,7 @@ static zx_status_t setup(test_t* test) {
     test->vcpu_ctx.read_state = vcpu_read_test_state;
     test->vcpu_ctx.write_state = vcpu_write_test_state;
 
-    return test->pci_bus.Init();
+    test->pci_bus.Init(ZX_HANDLE_INVALID);
 }
 
 /* Test handling of an IO packet for an input instruction.
@@ -74,7 +73,7 @@ static bool handle_input_packet(void) {
 
     test_t test;
     zx_port_packet_t packet = {};
-    ASSERT_EQ(setup(&test), ZX_OK, "Failed to initialize test");
+    setup(&test);
 
     // Initialize the hosts register to an arbitrary non-zero value.
     uart_t uart;
@@ -104,7 +103,7 @@ static bool handle_output_packet(void) {
 
     test_t test;
     zx_packet_guest_io_t io = {};
-    ASSERT_EQ(setup(&test), ZX_OK, "Failed to initialize test");
+    setup(&test);
 
     uart_t uart;
     uart_init(&uart, &test.io_apic);
@@ -144,7 +143,7 @@ static bool write_pci_config_addr_port(void) {
 
     test_t test;
     zx_port_packet_t packet = {};
-    ASSERT_EQ(setup(&test), ZX_OK, "Failed to setup test");
+    setup(&test);
 
     // 32 bit write.
     packet.type = ZX_PKT_TYPE_GUEST_IO;
@@ -185,7 +184,7 @@ static bool read_pci_config_addr_port(void) {
 
     test_t test;
     zx_port_packet_t packet = {};
-    ASSERT_EQ(setup(&test), ZX_OK, "Failed to setup test");
+    setup(&test);
     test.pci_bus.set_config_addr(0x12345678);
 
     // 32 bit read (bits 31..0).
@@ -229,7 +228,7 @@ static bool read_pci_config_data_port(void) {
 
     test_t test;
     zx_port_packet_t packet = {};
-    ASSERT_EQ(setup(&test), ZX_OK, "Failed to setup test");
+    setup(&test);
 
     // 16-bit read.
     test.pci_bus.set_config_addr(PCI_TYPE1_ADDR(0, 0, 0, 0));

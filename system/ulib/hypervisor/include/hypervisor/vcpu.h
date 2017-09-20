@@ -42,7 +42,7 @@ typedef struct vcpu_ctx {
 } vcpu_ctx_t;
 
 /* Initializes a VCPU context. */
-void vcpu_init(vcpu_ctx_t* vcpu_ctx);
+void vcpu_init(vcpu_ctx_t* vcpu_ctx, zx_handle_t vcpu);
 
 /* Controls execution of a VCPU context, providing the main logic. */
 zx_status_t vcpu_loop(vcpu_ctx_t* vcpu_ctx);

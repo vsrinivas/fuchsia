@@ -12,7 +12,7 @@ static bool read_config_register(void) {
     BEGIN_TEST;
 
     PciBus bus(nullptr);
-    EXPECT_EQ(bus.Init(), ZX_OK);
+    bus.Init(ZX_HANDLE_INVALID);
     PciDevice& device = bus.root_complex();
 
     // Access Vendor/Device ID as a single 32bit read.
@@ -30,7 +30,7 @@ static bool read_config_register_bytewise(void) {
     BEGIN_TEST;
 
     PciBus bus(nullptr);
-    EXPECT_EQ(bus.Init(), ZX_OK);
+    bus.Init(ZX_HANDLE_INVALID);
     PciDevice& device = bus.root_complex();
 
     uint32_t expected_device_vendor = PCI_VENDOR_ID_INTEL | (PCI_DEVICE_ID_INTEL_Q35 << 16);
@@ -58,7 +58,7 @@ static bool read_bar_size(void) {
     BEGIN_TEST;
 
     PciBus bus(nullptr);
-    EXPECT_EQ(bus.Init(), ZX_OK);
+    bus.Init(ZX_HANDLE_INVALID);
     PciDevice& device = bus.root_complex();
 
     // Set all bits in the BAR register. The device will ignore writes to the
@@ -87,7 +87,7 @@ static bool read_cap_basic(void) {
     BEGIN_TEST;
 
     PciBus bus(nullptr);
-    EXPECT_EQ(bus.Init(), ZX_OK);
+    bus.Init(ZX_HANDLE_INVALID);
     PciDevice& device = bus.root_complex();
 
     // Create and install a simple capability. First two bytes are ignored.
@@ -140,7 +140,7 @@ static bool read_cap_chained(void) {
     BEGIN_TEST;
 
     PciBus bus(nullptr);
-    EXPECT_EQ(bus.Init(), ZX_OK);
+    bus.Init(ZX_HANDLE_INVALID);
     PciDevice& device = bus.root_complex();
 
     // Build list of caps.
