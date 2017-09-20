@@ -241,8 +241,7 @@ zx_status_t VnodeDir::Mmap(int flags, size_t len, size_t* off, zx_handle_t* out)
 }
 
 bool VnodeDir::IsRemote() const { return remoter_.IsRemote(); }
-zx::channel VnodeDir::DetachRemote() { return remoter_.DetachRemote(flags_); }
-zx_handle_t VnodeDir::WaitForRemote() { return remoter_.WaitForRemote(flags_); }
+zx::channel VnodeDir::DetachRemote() { return remoter_.DetachRemote(); }
 zx_handle_t VnodeDir::GetRemote() const { return remoter_.GetRemote(); }
 void VnodeDir::SetRemote(zx::channel remote) { return remoter_.SetRemote(fbl::move(remote)); }
 

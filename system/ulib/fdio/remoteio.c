@@ -169,14 +169,14 @@ zx_status_t zxrio_handler(zx_handle_t h, void* _cb, void* cookie) {
     }
 }
 
-void zxrio_txn_handoff(zx_handle_t srv, zx_handle_t reply, zxrio_msg_t* msg) {
+zx_status_t zxrio_txn_handoff(zx_handle_t srv, zx_handle_t reply, zxrio_msg_t* msg) {
     msg->txid = 0;
     msg->handle[0] = reply;
     msg->hcount = 1;
 
     zx_status_t r;
     uint32_t dsize = ZXRIO_HDR_SZ + msg->datalen;
-    if ((r = zx_channel_write(srv, 0, msg, dsize, msg->handle, msg->hcount)) < 0) {
+    if ((r = zx_channel_write(srv, 0, msg, dsize, msg->handle, msg->hcount)) != ZX_OK) {
         // nothing to do but inform the caller that we failed
         struct {
             zx_status_t status;
@@ -185,6 +185,7 @@ void zxrio_txn_handoff(zx_handle_t srv, zx_handle_t reply, zxrio_msg_t* msg) {
         zx_channel_write(reply, 0, &error, sizeof(error), NULL, 0);
         zx_handle_close(reply);
     }
+    return r;
 }
 
 // on success, msg->hcount indicates number of valid handles in msg->handle

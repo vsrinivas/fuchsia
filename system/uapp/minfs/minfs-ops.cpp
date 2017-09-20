@@ -1396,8 +1396,7 @@ zx_status_t VnodeMinfs::WatchDir(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) {
 }
 
 bool VnodeMinfs::IsRemote() const { return remoter_.IsRemote(); }
-zx::channel VnodeMinfs::DetachRemote() { return remoter_.DetachRemote(flags_); }
-zx_handle_t VnodeMinfs::WaitForRemote() { return remoter_.WaitForRemote(flags_); }
+zx::channel VnodeMinfs::DetachRemote() { return remoter_.DetachRemote(); }
 zx_handle_t VnodeMinfs::GetRemote() const { return remoter_.GetRemote(); }
 void VnodeMinfs::SetRemote(zx::channel remote) { return remoter_.SetRemote(fbl::move(remote)); }
 

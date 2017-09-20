@@ -103,7 +103,6 @@ public:
     // The vnode is acting as a mount point for a remote filesystem or device.
     virtual bool IsRemote() const final;
     virtual zx::channel DetachRemote() final;
-    virtual zx_handle_t WaitForRemote() final;
     virtual zx_handle_t GetRemote() const final;
     virtual void SetRemote(zx::channel remote) final;
 

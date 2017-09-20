@@ -41,27 +41,24 @@ typedef uint32_t BlobFlags;
 // clang-format off
 
 // After Open;
-constexpr BlobFlags kBlobStateEmpty       = 0x00010000; // Not yet allocated
+constexpr BlobFlags kBlobStateEmpty       = 0x00000001; // Not yet allocated
 // After Ioctl configuring size:
-constexpr BlobFlags kBlobStateDataWrite   = 0x00020000; // Data is being written
+constexpr BlobFlags kBlobStateDataWrite   = 0x00000002; // Data is being written
 // After Writing:
-constexpr BlobFlags kBlobStateReadable    = 0x00040000; // Readable
+constexpr BlobFlags kBlobStateReadable    = 0x00000004; // Readable
 // After Unlink:
-constexpr BlobFlags kBlobStateReleasing   = 0x00080000; // In the process of unlinking
+constexpr BlobFlags kBlobStateReleasing   = 0x00000008; // In the process of unlinking
 // Unrecoverable error state:
-constexpr BlobFlags kBlobStateError       = 0x00100000; // Unrecoverable error state
-constexpr BlobFlags kBlobStateMask        = 0x00FF0000;
+constexpr BlobFlags kBlobStateError       = 0x00000010; // Unrecoverable error state
+constexpr BlobFlags kBlobStateMask        = 0x000000FF;
 
 // Informational non-state flags:
-constexpr BlobFlags kBlobFlagSync         = 0x01000000; // The blob is being written to disk
-constexpr BlobFlags kBlobFlagDeletable    = 0x02000000; // This node should be unlinked when closed
-constexpr BlobFlags kBlobFlagDirectory    = 0x04000000; // This node represents the root directory
-constexpr BlobFlags kBlobOtherMask        = 0xFF000000;
+constexpr BlobFlags kBlobFlagSync         = 0x00000100; // The blob is being written to disk
+constexpr BlobFlags kBlobFlagDeletable    = 0x00000200; // This node should be unlinked when closed
+constexpr BlobFlags kBlobFlagDirectory    = 0x00000400; // This node represents the root directory
+constexpr BlobFlags kBlobOtherMask        = 0x0000FF00;
 
 // clang-format on
-
-static_assert(((kBlobStateMask | kBlobOtherMask) & VFS_FLAG_RESERVED_MASK) == 0,
-              "Blobstore flags conflict with VFS-reserved flags");
 
 #ifdef __Fuchsia__
 
@@ -175,7 +172,7 @@ private:
     WAVLTreeNodeState type_wavl_state_{};
 
     const fbl::RefPtr<Blobstore> blobstore_;
-    BlobFlags flags_;
+    BlobFlags flags_{};
 
     // The blob_ here consists of:
     // 1) The Merkle Tree

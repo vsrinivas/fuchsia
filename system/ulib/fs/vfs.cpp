@@ -102,32 +102,8 @@ bool RemoteContainer::IsRemote() const {
     return remote_.is_valid();
 }
 
-zx::channel RemoteContainer::DetachRemote(uint32_t& flags_) {
-    flags_ &= ~VFS_FLAG_MOUNT_READY;
+zx::channel RemoteContainer::DetachRemote() {
     return fbl::move(remote_);
-}
-
-// Access the remote handle if it's ready -- otherwise, return an error.
-zx_handle_t RemoteContainer::WaitForRemote(uint32_t& flags_) {
-    if (!remote_.is_valid()) {
-        // Trying to get remote on a non-remote vnode
-        return ZX_ERR_UNAVAILABLE;
-    } else if (!(flags_ & VFS_FLAG_MOUNT_READY)) {
-        zx_signals_t observed;
-        zx_status_t status = remote_.wait_one(ZX_USER_SIGNAL_0 | ZX_CHANNEL_PEER_CLOSED,
-                                              0,
-                                              &observed);
-        // Not set (or otherwise remote is bad)
-        // TODO(planders): Add a background thread that waits on all remotes
-        if (observed & ZX_CHANNEL_PEER_CLOSED) {
-            return ZX_ERR_PEER_CLOSED;
-        } else if ((status != ZX_OK)) {
-            return ZX_ERR_UNAVAILABLE;
-        }
-
-        flags_ |= VFS_FLAG_MOUNT_READY;
-    }
-    return remote_.get();
 }
 
 zx_handle_t RemoteContainer::GetRemote() const {
@@ -211,12 +187,12 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
             return r;
         }
 #ifdef __Fuchsia__
-        if (!(flags & O_NOREMOTE) && vn->IsRemote() && !vn->IsDevice()) {
+        if (!(flags & O_NOREMOTE) && vn->IsRemote()) {
             // Opening a mount point: Traverse across remote.
-            // Devices are different, even though they also have remotes.  Ignore them.
             *pathout = ".";
 
-            if ((r = Vfs::WaitForRemoteLocked(vn)) != ZX_ERR_PEER_CLOSED) {
+            if ((r = vn->GetRemote()) > 0) {
+                *out = fbl::move(vn);
                 return r;
             }
         }
@@ -226,13 +202,6 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
         if ((r = vn->Open(flags)) < 0) {
             return r;
         }
-#ifdef __Fuchsia__
-        if (vn->IsDevice() && !(flags & O_DIRECTORY)) {
-            *pathout = ".";
-            r = vn->GetRemote();
-            return r;
-        }
-#endif
         if ((flags & O_TRUNC) && ((r = vn->Truncate(0)) < 0)) {
             return r;
         }
@@ -422,21 +391,6 @@ zx_status_t Vfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent,
     return ZX_OK;
 }
 
-zx_handle_t Vfs::WaitForRemoteLocked(fbl::RefPtr<Vnode> vn) {
-    zx_handle_t h = vn->WaitForRemote();
-
-    if (h == ZX_ERR_PEER_CLOSED) {
-        printf("VFS: Remote filesystem channel closed, unmounting\n");
-        zx::channel c;
-        zx_status_t status;
-        if ((status = Vfs::UninstallRemoteLocked(vn, &c)) != ZX_OK) {
-            return status;
-        }
-    }
-
-    return h;
-}
-
 zx_status_t Vfs::ServeConnection(fbl::unique_ptr<Connection> connection) {
     ZX_DEBUG_ASSERT(connection);
 
@@ -555,17 +509,14 @@ zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
             path = ".";
         }
 #ifdef __Fuchsia__
-        if (vn->IsRemote() && !vn->IsDevice()) {
+        if (vn->IsRemote()) {
             // remote filesystem mount, caller must resolve
-            // devices are different, so ignore them even though they can have vn->remote
-            r = Vfs::WaitForRemoteLocked(vn);
-            if (r != ZX_ERR_PEER_CLOSED) {
-                if (r >= 0) {
-                    *out = vn;
-                    *pathout = path;
-                }
+            if ((r = vn->GetRemote()) > 0) {
+                *out = fbl::move(vn);
+                *pathout = path;
                 return r;
             }
+            return ZX_ERR_NOT_FOUND;
         }
 #endif
 

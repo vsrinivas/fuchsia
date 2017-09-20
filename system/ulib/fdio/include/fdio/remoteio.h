@@ -108,7 +108,7 @@ zx_status_t zxrio_handle_close(zxrio_cb_t cb, void* cookie);
 // without any need to wait for a reply.  The reply channel from the initial
 // request is passed along to the new server.
 // If the write to the server fails, an error reply is sent to the reply channel.
-void zxrio_txn_handoff(zx_handle_t server, zx_handle_t reply, zxrio_msg_t* msg);
+zx_status_t zxrio_txn_handoff(zx_handle_t server, zx_handle_t reply, zxrio_msg_t* msg);
 
 
 // OPEN and CLONE ops do not return a reply

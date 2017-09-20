@@ -19,20 +19,8 @@
 #include <zircon/types.h>
 
 #ifdef __Fuchsia__
-#include <fdio/io.h>
-#include <threads.h>
-#endif
-
-// VFS Helpers (vfs.c)
-// clang-format off
-#define VFS_FLAG_DEVICE          0x00000001
-#define VFS_FLAG_MOUNT_READY     0x00000002
-#define VFS_FLAG_DEVICE_DETACHED 0x00000004
-#define VFS_FLAG_RESERVED_MASK   0x0000FFFF
-// clang-format on
-
-#ifdef __Fuchsia__
 #include <async/dispatcher.h>
+#include <fdio/io.h>
 #include <zx/channel.h>
 #include <zx/event.h>
 #include <zx/vmo.h>
@@ -185,11 +173,6 @@ private:
     zx_status_t InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) __TA_REQUIRES(vfs_lock_);
     zx_status_t UninstallRemoteLocked(fbl::RefPtr<Vnode> vn,
                                       zx::channel* h) __TA_REQUIRES(vfs_lock_);
-    // Waits for a remote handle on a Vnode to become ready to receive requests.
-    // Returns |ZX_ERR_PEER_CLOSED| if the remote will never become available, since it is closed.
-    // Returns |ZX_ERR_UNAVAILABLE| if there is no remote handle, or if the remote handle is not yet ready.
-    // On success, returns the remote handle.
-    zx_handle_t WaitForRemoteLocked(fbl::RefPtr<Vnode> vn) __TA_REQUIRES(vfs_lock_);
 
     // Non-intrusive node in linked list of vnodes acting as mount points
     class MountNode final : public fbl::DoublyLinkedListable<fbl::unique_ptr<MountNode>> {

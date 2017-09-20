@@ -110,10 +110,6 @@ zx::channel Vnode::DetachRemote() {
     return zx::channel();
 }
 
-zx_handle_t Vnode::WaitForRemote() {
-    return ZX_HANDLE_INVALID;
-}
-
 zx_handle_t Vnode::GetRemote() const {
     return ZX_HANDLE_INVALID;
 }

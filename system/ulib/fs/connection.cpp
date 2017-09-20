@@ -31,8 +31,8 @@ void WriteErrorReply(zx::channel channel, zx_status_t status) {
     channel.write(0, &reply, ZXRIO_OBJECT_MINSIZE, nullptr, 0);
 }
 
-void HandoffOpenTransaction(zx_handle_t srv, zx::channel channel,
-                            const char* path, uint32_t flags, uint32_t mode) {
+zx_status_t HandoffOpenTransaction(zx_handle_t srv, zx::channel channel,
+                                   const char* path, uint32_t flags, uint32_t mode) {
     zxrio_msg_t msg;
     memset(&msg, 0, ZXRIO_HDR_SZ);
     size_t len = strlen(path);
@@ -41,7 +41,7 @@ void HandoffOpenTransaction(zx_handle_t srv, zx::channel channel,
     msg.arg2.mode = mode;
     msg.datalen = static_cast<uint32_t>(len) + 1;
     memcpy(msg.data, path, len + 1);
-    zxrio_txn_handoff(srv, channel.release(), &msg);
+    return zxrio_txn_handoff(srv, channel.release(), &msg);
 }
 
 // Performs a path walk and opens a connection to another node.
@@ -62,8 +62,17 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent,
     if (r < 0) {
         xprintf("vfs: open: r=%d\n", r);
     } else if (r > 0) {
-        // Remote handoff, either to a remote device or a remote filesystem node.
-        HandoffOpenTransaction(r, fbl::move(channel), path, flags, mode);
+        // Remote handoff to a remote filesystem node.
+        //
+        // TODO(smklein): There exists a race between multiple threads
+        // opening a "dead" connection, where the second thread may
+        // try to send a txn_handoff_open to a closed handle.
+        r = HandoffOpenTransaction(r, fbl::move(channel), path, flags, mode);
+        if (r == ZX_ERR_PEER_CLOSED) {
+            printf("VFS: Remote filesystem channel closed, unmounting\n");
+            zx::channel c;
+            vfs->UninstallRemote(vnode, &c);
+        }
         return;
     } else {
         // Acquire the handles to the VFS object
@@ -325,12 +334,6 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
             break;
         default:
             return ZX_ERR_INVALID_ARGS;
-        }
-        if (vnode_->IsDevice()) {
-            if (n > attr.size) {
-                // devices may not seek past the end
-                return ZX_ERR_INVALID_ARGS;
-            }
         }
         offset_ = n;
         msg->arg2.off = offset_;

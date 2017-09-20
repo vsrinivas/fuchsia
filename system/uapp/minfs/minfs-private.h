@@ -142,12 +142,8 @@ struct DirectoryOffset {
 #define INO_HASH(ino) fnv1a_tiny(ino, kMinfsHashBits)
 
 // clang-format off
-constexpr uint32_t kMinfsFlagDeletedDirectory = 0x00010000;
-constexpr uint32_t kMinfsFlagReservedMask     = 0xFFFF0000;
+constexpr uint32_t kMinfsFlagDeletedDirectory = 0x00000001;
 // clang-format on
-
-static_assert((kMinfsFlagReservedMask & VFS_FLAG_RESERVED_MASK) == 0,
-              "MinFS should not be using any Vnode flags which are reserved");
 
 class VnodeMinfs final : public fs::Vnode, public fbl::SinglyLinkedListable<VnodeMinfs*> {
 public:
@@ -343,13 +339,13 @@ private:
     // The vnode is acting as a mount point for a remote filesystem or device.
     virtual bool IsRemote() const final;
     virtual zx::channel DetachRemote() final;
-    virtual zx_handle_t WaitForRemote() final;
     virtual zx_handle_t GetRemote() const final;
     virtual void SetRemote(zx::channel remote) final;
 
     fs::RemoteContainer remoter_{};
     fs::WatcherContainer watcher_{};
 #endif
+    uint32_t flags_{};
 };
 
 // Return the block offset in vmo_indirect_ of indirect blocks pointed to by the doubly indirect

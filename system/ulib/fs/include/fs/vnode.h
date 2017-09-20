@@ -25,14 +25,6 @@
 #include <zx/channel.h>
 #endif // __Fuchsia__
 
-// VFS Helpers (vfs.c)
-// clang-format off
-#define VFS_FLAG_DEVICE          0x00000001
-#define VFS_FLAG_MOUNT_READY     0x00000002
-#define VFS_FLAG_DEVICE_DETACHED 0x00000004
-#define VFS_FLAG_RESERVED_MASK   0x0000FFFF
-// clang-format on
-
 namespace fs {
 
 inline bool vfs_valid_name(const char* name, size_t len) {
@@ -163,28 +155,14 @@ public:
     // The vnode is acting as a mount point for a remote filesystem or device.
     virtual bool IsRemote() const;
     virtual zx::channel DetachRemote();
-    virtual zx_handle_t WaitForRemote();
     virtual zx_handle_t GetRemote() const;
     virtual void SetRemote(zx::channel remote);
 
-    // The vnode is a device. Devices may opt to reveal themselves as directories
-    // or endpoints, depending on context. For the purposes of our VFS layer,
-    // during path traversal, devices are NOT treated as mount points, even though
-    // they contain remote handles.
-    bool IsDevice() const { return (flags_ & VFS_FLAG_DEVICE) && IsRemote(); }
-    void DetachDevice() {
-        ZX_DEBUG_ASSERT(flags_ & VFS_FLAG_DEVICE);
-        flags_ |= VFS_FLAG_DEVICE_DETACHED;
-    }
-    bool IsDetachedDevice() const { return (flags_ & VFS_FLAG_DEVICE_DETACHED); }
 #endif
 
 protected:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vnode);
-
     Vnode();
-
-    uint32_t flags_{};
 };
 
 // Helper class used to fill direntries during calls to Readdir.

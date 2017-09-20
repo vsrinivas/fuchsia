@@ -49,14 +49,6 @@ void Dnode::RemoveFromParent() {
             parent_->vnode_->link_count_--;
         }
         parent_->vnode_->UpdateModified();
-        if (parent_->vnode_->IsDetachedDevice() && !parent_->HasChildren()) {
-            // Extremely special case: Parent is a detached device node,
-            // which has had a linked reference, but just ran out of children.
-            // Delete it explicitly, since the raw "vn" ptr was leaked
-            // from a RefPtr when the device was created.
-            parent_->vnode_->dnode_ = nullptr;
-            delete parent_->vnode_.get();
-        }
         parent_ = nullptr;
         vnode_->link_count_--;
     }
