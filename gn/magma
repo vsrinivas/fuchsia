@@ -7,6 +7,6 @@
         "packages/gn/vulkan_loader_and_layers"
     ],
     "packages": {
-        "magma": "//magma"
+        "magma": "//garnet/lib/magma"
     }
 }

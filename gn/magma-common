@@ -3,6 +3,6 @@
         "cpp"
     ],
     "packages": {
-        "magma-common": "//magma:magma-common"
+        "magma-common": "//garnet/lib/magma:magma-common"
     }
 }

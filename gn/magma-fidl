@@ -6,7 +6,7 @@
         "packages/gn/runtime_config"
     ],
     "packages": {
-        "magma-fidl": "//magma/vulkan:magma-fidl",
-        "magma-fidl-tests": "//magma/vulkan:magma-fidl-tests"
+        "magma-fidl": "//garnet/lib/magma/vulkan:magma-fidl",
+        "magma-fidl-tests": "//garnet/lib/magma/vulkan:magma-fidl-tests"
     }
 }

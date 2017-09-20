@@ -7,6 +7,6 @@
         "packages/gn/sbase"
     ],
     "packages": {
-        "magma-dev": "//magma/tests:magma-dev"
+        "magma-dev": "//garnet/lib/magma/tests:magma-dev"
     }
 }
