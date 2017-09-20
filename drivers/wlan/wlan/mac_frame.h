@@ -22,28 +22,6 @@ template <typename T> static inline constexpr zx_duration_t WLAN_TU(T n) {
     return TimeUnit * n;
 }
 
-// IEEE Std 802.11-2016, 9.2.4.1.1
-class FrameControl : public common::BitField<uint16_t> {
-   public:
-    constexpr explicit FrameControl(uint16_t fc) : common::BitField<uint16_t>(fc) {}
-    constexpr FrameControl() = default;
-
-    WLAN_BIT_FIELD(protocol_version, 0, 2);
-    WLAN_BIT_FIELD(type, 2, 2);
-    WLAN_BIT_FIELD(subtype, 4, 4);
-    WLAN_BIT_FIELD(to_ds, 8, 1);
-    WLAN_BIT_FIELD(from_ds, 9, 1);
-    WLAN_BIT_FIELD(more_frag, 10, 1);
-    WLAN_BIT_FIELD(retry, 11, 1);
-    WLAN_BIT_FIELD(pwr_mgmt, 12, 1);
-    WLAN_BIT_FIELD(more_data, 13, 1);
-    WLAN_BIT_FIELD(protected_frame, 14, 1);
-    WLAN_BIT_FIELD(htc_order, 15, 1);
-
-    // For type == Control and subtype == Control Frame Extension
-    WLAN_BIT_FIELD(cf_extension, 8, 4);
-};
-
 // Frame types and subtypes
 // IEEE Std 802.11-2016, 9.2.4.1.3
 
@@ -111,7 +89,8 @@ class HtControl : public common::BitField<uint32_t> {
    public:
     WLAN_BIT_FIELD(vht, 0, 1);
 
-    // Structure of this middle section is defined in 9.2.4.6.2 for HT, and 9.2.4.6.3 for VHT.
+    // Structure of this middle section is defined in 9.2.4.6.2 for HT,
+    // and 9.2.4.6.3 for VHT.
     // TODO(tkilbourn): define bitfield structures for each of these variants
     WLAN_BIT_FIELD(middle, 1, 29);
     WLAN_BIT_FIELD(ac_constraint, 30, 1);
@@ -321,6 +300,41 @@ enum StatusCode : uint16_t {
 };
 }  // namespace status_code
 
+// IEEE Std 802.11-2016 9.2.3
+// Length of optional fields
+const uint16_t kHtCtrlLen = 4;
+const uint16_t kAddr4Len = 4;
+const uint16_t kQosCtrlLen = 2;
+const uint16_t kFcsLen = 4;
+
+// IEEE Std 802.11-2016, 9.2.4.1.1
+class FrameControl : public common::BitField<uint16_t> {
+   public:
+    constexpr explicit FrameControl(uint16_t fc) : common::BitField<uint16_t>(fc) {}
+    constexpr FrameControl() = default;
+
+    WLAN_BIT_FIELD(protocol_version, 0, 2);
+    WLAN_BIT_FIELD(type, 2, 2);
+    WLAN_BIT_FIELD(subtype, 4, 4);
+    WLAN_BIT_FIELD(to_ds, 8, 1);
+    WLAN_BIT_FIELD(from_ds, 9, 1);
+    WLAN_BIT_FIELD(more_frag, 10, 1);
+    WLAN_BIT_FIELD(retry, 11, 1);
+    WLAN_BIT_FIELD(pwr_mgmt, 12, 1);
+    WLAN_BIT_FIELD(more_data, 13, 1);
+    WLAN_BIT_FIELD(protected_frame, 14, 1);
+    WLAN_BIT_FIELD(htc_order, 15, 1);
+
+    // For type == Control and subtype == Control Frame Extension
+    WLAN_BIT_FIELD(cf_extension, 8, 4);
+
+    bool IsMgmt() { return type() == FrameType::kManagement; }
+    bool IsCtrl() { return type() == FrameType::kControl; }
+    bool IsData() { return type() == FrameType::kData; }
+
+    bool HasHtCtrl() { return htc_order() != 0; }
+};
+
 // IEEE Std 802.11-2016, 9.3.3.2
 struct MgmtFrameHeader {
     FrameControl fc;
@@ -330,7 +344,24 @@ struct MgmtFrameHeader {
     uint8_t addr3[6];
     SequenceControl sc;
 
-    // TODO(tkilbourn): HT Control field, or use a separate struct
+    // Use accessors for optional field.
+    // uint8_t ht_ctrl[4];
+
+    uint16_t len() {
+        uint16_t len = sizeof(MgmtFrameHeader);
+        if (fc.HasHtCtrl()) { len += kHtCtrlLen; }
+        return len;
+    }
+
+    HtControl* ht_ctrl() {
+        if (!fc.HasHtCtrl()) return nullptr;
+        uint16_t offset = sizeof(MgmtFrameHeader);
+        return reinterpret_cast<HtControl*>(raw() + offset);
+    }
+
+   private:
+    uint8_t* raw() { return reinterpret_cast<uint8_t*>(this); }
+
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.3.3
@@ -377,8 +408,8 @@ enum AuthAlgorithm : uint16_t {
 // IEEE Std 802.11-2016, 9.3.3.12
 struct Authentication {
     // TODO(tkilbourn): bool Validate(size_t len)
-    // Authentication frames are complicated, so when we need more than Open System auth, figure out
-    // how to proceed.
+    // Authentication frames are complicated, so when we need more than Open
+    // System auth, figure out how to proceed.
 
     // 9.4.1.1
     uint16_t auth_algorithm_number;
@@ -395,7 +426,8 @@ struct Deauthentication {
     // 9.4.1.7
     uint16_t reason_code;
 
-    // Vendor-specific elements and optional Management MIC element (MME) at the end
+    // Vendor-specific elements and optional Management MIC element (MME) at the
+    // end
     uint8_t elements[];
 } __PACKED;
 
@@ -430,7 +462,8 @@ struct Disassociation {
     // 9.4.1.7
     uint16_t reason_code;
 
-    // Vendor-specific elements and optional Management MIC element (MME) at the end
+    // Vendor-specific elements and optional Management MIC element (MME) at the
+    // end
     uint8_t elements[];
 } __PACKED;
 
@@ -443,9 +476,50 @@ struct DataFrameHeader {
     uint8_t addr3[6];
     SequenceControl sc;
 
-    // TODO(tkilbourn): Address 4 field
-    // TODO(tkilbourn): QoS Control field, or use a separate struct
-    // TODO(tkilbourn): HT Control field, or use a separate struct
+    // Use accessors for optional fields.
+    // uint8_t addr4[6];
+    // uint8_t qos_ctrl[2];
+    // HtControl* ht_ctrl;
+
+    bool HasAddr4() { return fc.to_ds() && fc.from_ds(); }
+    bool HasQosCtrl() { return (0 != (fc.subtype() & kQos)); }
+
+    uint16_t len() {
+        uint16_t hdr_len = sizeof(DataFrameHeader);
+        if (HasAddr4()) hdr_len += kAddr4Len;
+        if (HasQosCtrl()) hdr_len += kQosCtrlLen;
+        if (fc.HasHtCtrl()) hdr_len += kHtCtrlLen;
+
+        return hdr_len;
+    }
+
+    uint8_t* addr4() {
+        if (!HasAddr4()) return nullptr;
+        uint16_t offset = sizeof(DataFrameHeader);
+
+        return raw() + offset;
+    }
+
+    // TODO(porce): Cast to QoSControl struct.
+    uint8_t* qos_ctrl() {
+        if (!HasQosCtrl()) return nullptr;
+        uint16_t offset = sizeof(DataFrameHeader);
+        if (HasAddr4()) { offset += kAddr4Len; }
+
+        return raw() + offset;
+    }
+
+    HtControl* ht_ctrl() {
+        if (!fc.HasHtCtrl()) return nullptr;
+        uint16_t offset = sizeof(DataFrameHeader);
+        if (HasAddr4()) { offset += kAddr4Len; }
+        if (HasQosCtrl()) { offset += kQosCtrlLen; }
+
+        return reinterpret_cast<HtControl*>(raw() + offset);
+    }
+
+   private:
+    uint8_t* raw() { return reinterpret_cast<uint8_t*>(this); }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.1.5
