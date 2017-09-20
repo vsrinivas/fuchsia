@@ -94,11 +94,11 @@ TEST_F(AppClientTest, BaseTerminate_Success) {
                                 GetTestAppConfig());
 
   bool app_terminated_callback_called = false;
-  app_client_base.AppTerminate(
+  app_client_base.Teardown(
+      fxl::TimeDelta::Zero(),
       [&app_terminated_callback_called] {
         app_terminated_callback_called = true;
-      },
-      fxl::TimeDelta::Zero());
+      });
 
   EXPECT_TRUE(RunLoopUntil(
       [&app_terminated_callback_called, &test_application_launcher] {

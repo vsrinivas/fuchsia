@@ -14,8 +14,6 @@
 
 namespace modular {
 
-constexpr int kAsyncHolderTimeoutSeconds = 1;
-
 // A smart pointer that holds on to an implementation class and is able to
 // invoke Teardown() on the implementation with a timeout.
 //

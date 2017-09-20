@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include "apps/modular/lib/common/teardown.h"
 #include "apps/modular/lib/fidl/app_client.h"
 #include "apps/modular/lib/ledger/constants.h"
 #include "apps/modular/services/config/config.fidl.h"
@@ -59,7 +60,7 @@ void LedgerRepositoryForTesting::Reset(std::function<void()> done) {
 
 void LedgerRepositoryForTesting::Terminate(std::function<void()> done) {
   if (ledger_app_client_) {
-    ledger_app_client_->AppTerminate([this, done] {
+    ledger_app_client_->Teardown(kBasicTimeout, [this, done] {
         ledger_repo_factory_.reset();
         ledger_app_client_.reset();
         done();

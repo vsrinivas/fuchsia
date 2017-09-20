@@ -80,12 +80,6 @@ AppClientBase::AppClientBase(app::ApplicationLauncher* const launcher,
 
 AppClientBase::~AppClientBase() = default;
 
-void AppClientBase::AppTerminate(const std::function<void()>& done,
-                                 fxl::TimeDelta timeout) {
-  // TODO(mesch): We should just call Teardown() directly.
-  AsyncHolderBase::Teardown(timeout, done);
-}
-
 void AppClientBase::ImplTeardown(std::function<void()> done) {
   ServiceTerminate(std::move(done));
 }

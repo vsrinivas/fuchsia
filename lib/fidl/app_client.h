@@ -22,8 +22,6 @@
 
 namespace modular {
 
-constexpr int kAppClientTimeoutSeconds = 1;
-
 // A class that holds a connection to a single service instance in an
 // application instance. The service instance supports life cycle with a
 // Terminate() method. When calling Terminate(), the service is supposed to
@@ -48,19 +46,6 @@ class AppClientBase : public AsyncHolderBase {
   // obtained from it are not involved in life cycle management provided by
   // AppClient, however. This is used for example to obtain the ViewProvider.
   app::ServiceProvider* services() { return services_.get(); }
-
-  // Invokes the termination sequence for the service. The done callback is
-  // invoked after the application controller connection is released either
-  // after the service was disconnected or a timeout was reached.
-  //
-  // The method is called AppTerminate() to distinguish it from the Terminate()
-  // method of the service. It's important that the Terminate() method is never
-  // invoked through primary_service(), below. TODO(mesch): It would be better
-  // if it were impossible outright. This could be accomplished with a separate
-  // Terminate interface, which would only be exposed to AppClient.
-  void AppTerminate(const std::function<void()>& done,
-                    fxl::TimeDelta timeout =
-                        fxl::TimeDelta::FromSeconds(kAppClientTimeoutSeconds));
 
   // Registers a handler to receive a notification when this application
   // connection encounters an error. This typically happens when this

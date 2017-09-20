@@ -33,6 +33,7 @@ executable("user_runner") {
     "//apps/maxwell/services/user",
     "//apps/modular/lib/device_info",
     "//apps/modular/lib/common:async_holder",
+    "//apps/modular/lib/common:teardown",
     "//apps/modular/lib/fidl:app_client",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:json_xdr",

@@ -9,18 +9,10 @@
 
 #include "lib/app/cpp/connect.h"
 #include "apps/modular/lib/common/async_holder.h"
+#include "apps/modular/lib/common/teardown.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 
 namespace modular {
-
-// This timeout needs to be 5x larger than the default, because UserRunner
-// termination involves 3 sequential steps with the default timeout and 2
-// sequential steps with double the default timeout.
-//
-// TODO(mesch): Obviously, this should adjust, be negotiated, or be set
-// automatically as needed rather than hardcoded.
-constexpr int kUserRunnerTimeoutSeconds = kAppClientTimeoutSeconds * 3
-    + kAsyncHolderTimeoutSeconds * 2 * 2;
 
 UserControllerImpl::UserControllerImpl(
     app::ApplicationLauncher* const application_launcher,
@@ -76,7 +68,7 @@ void UserControllerImpl::Logout(const LogoutCallback& done) {
   user_controller_binding_.Unbind();
   user_context_binding_.Unbind();
 
-  user_runner_->AppTerminate([this] {
+  user_runner_->Teardown(kUserRunnerTimeout, [this] {
     for (const auto& done : logout_response_callbacks_) {
       done();
     }
@@ -86,7 +78,7 @@ void UserControllerImpl::Logout(const LogoutCallback& done) {
     user_watchers_.ForAllPtrs(
         [](UserWatcher* watcher) { watcher->OnLogout(); });
     done_(this);
-  }, fxl::TimeDelta::FromSeconds(kUserRunnerTimeoutSeconds));
+  });
 }
 
 // |UserController|

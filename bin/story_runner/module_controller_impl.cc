@@ -4,6 +4,7 @@
 
 #include "apps/modular/src/story_runner/module_controller_impl.h"
 
+#include "apps/modular/lib/common/teardown.h"
 #include "apps/modular/src/story_runner/story_controller_impl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -15,7 +16,6 @@
 
 namespace modular {
 
-constexpr fxl::TimeDelta kStoryTeardownTimeout = fxl::TimeDelta::FromSeconds(1);
 constexpr char kAppStoragePath[] = "/data/APP_DATA";
 
 namespace {
@@ -128,7 +128,7 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
     module_service_.set_connection_error_handler(nullptr);
     fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(cont);
   } else {
-    app_client_.AppTerminate(cont, kStoryTeardownTimeout);
+    app_client_.Teardown(kBasicTimeout, cont);
   }
 }
 

@@ -104,6 +104,7 @@ source_set("ledger_repository_for_testing") {
     "//garnet/public/lib/app/fidl",
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
+    "//apps/modular/lib/common:teardown",
     "//apps/modular/lib/fidl:app_client",
     "//apps/modular/lib/ledger:constants",
     "//apps/modular/services/config",

@@ -12,6 +12,7 @@
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
+#include "apps/modular/lib/common/teardown.h"
 #include "apps/modular/lib/device_info/device_info.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
@@ -61,11 +62,6 @@ constexpr char kMaxwellUrl[] = "file:///system/apps/maxwell";
 constexpr char kUserScopeLabelPrefix[] = "user-";
 constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
 constexpr char kUserShellLinkName[] = "user-shell-link";
-
-// TODO(mesch): Timeouts should be negotiated, not hardcoded, or at least
-// hardcoded in one place, not scattered.
-constexpr auto kTeardownTimeout =
-    fxl::TimeDelta::FromSeconds(kAsyncHolderTimeoutSeconds * 2);
 
 ledger::FirebaseConfigPtr GetLedgerFirebaseConfig() {
   auto firebase_config = ledger::FirebaseConfig::New();
@@ -307,7 +303,7 @@ void UserRunnerImpl::Terminate() {
   //
   // This list is the reverse from the initialization order executed in
   // Initialize() above.
-  user_shell_->AppTerminate([this] {
+  user_shell_->Teardown(kBasicTimeout, [this] {
       FXL_DLOG(INFO) << "- UserShell down";
       user_shell_.reset();
 
@@ -318,18 +314,18 @@ void UserRunnerImpl::Terminate() {
       // modules running in a story might freak out if agents they are connected
       // to go away while they are still running. On the other hand agents are
       // meant to outlive story lifetimes.
-      story_provider_impl_.Teardown(kTeardownTimeout, [this] {
+      story_provider_impl_.Teardown(kStoryProviderTimeout, [this] {
           FXL_DLOG(INFO) << "- StoryProvider down";
 
           user_intelligence_provider_.reset();
-          maxwell_->AppTerminate([this] {
+          maxwell_->Teardown(kBasicTimeout, [this] {
               FXL_DLOG(INFO) << "- Maxwell down";
               maxwell_.reset();
 
               maxwell_component_context_binding_.reset();
               maxwell_component_context_impl_.reset();
 
-              agent_runner_.Teardown(kTeardownTimeout, [this] {
+              agent_runner_.Teardown(kAgentRunnerTimeout, [this] {
                   FXL_DLOG(INFO) << "- AgentRunner down";
                   agent_runner_storage_.reset();
 
@@ -341,7 +337,7 @@ void UserRunnerImpl::Terminate() {
                   ledger_client_.reset();
                   ledger_repository_.reset();
                   ledger_repository_factory_.reset();
-                  ledger_app_client_->AppTerminate([this] {
+                  ledger_app_client_->Teardown(kBasicTimeout, [this] {
                       FXL_DLOG(INFO) << "- Ledger down";
                       ledger_app_client_.reset();
 

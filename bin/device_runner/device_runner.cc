@@ -12,6 +12,8 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/app/fidl/service_provider.fidl.h"
+#include "apps/modular/lib/common/async_holder.h"
+#include "apps/modular/lib/common/teardown.h"
 #include "apps/modular/lib/fidl/app_client.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/util/filesystem.h"
@@ -178,6 +180,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
  public:
   explicit DeviceRunnerApp(const Settings& settings)
       : settings_(settings),
+        user_provider_impl_("UserProviderImpl"),
         app_context_(
             app::ApplicationContext::CreateFromStartupInfoNotChecked()),
         device_shell_context_binding_(this),
@@ -268,9 +271,9 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
         account_provider_context_binding_.NewBinding());
 
     // 4. Setup user provider.
-    user_provider_impl_ = std::make_unique<UserProviderImpl>(
+    user_provider_impl_.reset(new UserProviderImpl(
         app_context_, settings_.user_runner, settings_.user_shell,
-        settings_.story_shell, token_manager_->primary_service().get());
+        settings_.story_shell, token_manager_->primary_service().get()));
   }
 
   // |DeviceShellContext|
@@ -295,11 +298,11 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
           << "======================== [" << settings_.test_name << "] Done";
     }
 
-    user_provider_impl_->Teardown([this] {
+    user_provider_impl_.Teardown(kUserProviderTimeout, [this] {
       FXL_DLOG(INFO) << "- UserProvider down";
-      token_manager_->AppTerminate([this] {
+      token_manager_->Teardown(kBasicTimeout, [this] {
         FXL_DLOG(INFO) << "- AuthProvider down";
-        device_shell_->AppTerminate([this] {
+        device_shell_->Teardown(kBasicTimeout, [this] {
           FXL_DLOG(INFO) << "- DeviceShell down";
           FXL_LOG(INFO) << "Clean Shutdown";
           fsl::MessageLoop::GetCurrent()->QuitNow();
@@ -317,7 +320,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
   }
 
   const Settings& settings_;  // Not owned nor copied.
-  std::unique_ptr<UserProviderImpl> user_provider_impl_;
+  AsyncHolder<UserProviderImpl> user_provider_impl_;
 
   std::shared_ptr<app::ApplicationContext> app_context_;
   DeviceRunnerMonitorPtr monitor_;

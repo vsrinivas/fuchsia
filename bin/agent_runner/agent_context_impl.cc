@@ -7,15 +7,12 @@
 #include <memory>
 
 #include "lib/app/cpp/connect.h"
+#include "apps/modular/lib/common/teardown.h"
 #include "apps/modular/src/agent_runner/agent_runner.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fsl/tasks/message_loop.h"
 
 namespace modular {
-
-namespace {
-constexpr fxl::TimeDelta kKillTimeout = fxl::TimeDelta::FromSeconds(2);
-}
 
 class AgentContextImpl::InitializeCall : Operation<> {
  public:
@@ -107,8 +104,8 @@ class AgentContextImpl::StopCall : Operation<bool> {
 
   void Stop(FlowToken flow) {
     agent_context_impl_->state_ = State::TERMINATING;
-    agent_context_impl_->app_client_.AppTerminate(
-        [this, flow] { Kill(flow); }, kKillTimeout);
+    agent_context_impl_->app_client_.Teardown(
+        kBasicTimeout, [this, flow] { Kill(flow); });
   }
 
   void Kill(FlowToken flow) {

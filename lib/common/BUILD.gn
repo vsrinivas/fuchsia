@@ -2,6 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+source_set("common") {
+  deps = [
+    ":async_holder",
+    ":story_provider_watcher_base",
+    ":teardown",
+  ]
+}
+
 source_set("async_holder") {
   sources = [
     "async_holder.cc",
@@ -28,9 +36,13 @@ source_set("story_provider_watcher_base") {
   ]
 }
 
-source_set("common") {
-  deps = [
-    ":async_holder",
-    ":story_provider_watcher_base",
+source_set("teardown") {
+  sources = [
+    "teardown.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
   ]
 }
+

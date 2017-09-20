@@ -20,6 +20,7 @@ source_set("agent_runner") {
     "//garnet/public/lib/app/fidl",
     "//apps/ledger/services/public",
     "//apps/maxwell/services/user",
+    "//apps/modular/lib/common:teardown",
     "//apps/modular/lib/fidl:app_client",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:json_xdr",
