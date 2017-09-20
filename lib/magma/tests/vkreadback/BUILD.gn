@@ -22,10 +22,7 @@ executable("vkreadback") {
   if (use_vulkan_loader) {
     public_deps += [ "$magma_build_root:vulkan" ]
   } else {
-    public_deps += [
-      "$magma_build_root/tests/vulkan_shim",
-      "$mesa_build_root:magma_vulkan",
-    ]
+    public_deps += [ "$magma_build_root/tests/vulkan_shim" ]
   }
   libs = [ "zircon" ]
 }
@@ -42,9 +39,6 @@ executable("mt_create_vkdevice_loop") {
   if (use_vulkan_loader) {
     public_deps += [ "$magma_build_root:vulkan" ]
   } else {
-    public_deps += [
-      "$magma_build_root/tests/vulkan_shim",
-      "$mesa_build_root:magma_vulkan",
-    ]
+    public_deps += [ "$magma_build_root/tests/vulkan_shim" ]
   }
 }
