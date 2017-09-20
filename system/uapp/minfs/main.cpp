@@ -87,12 +87,14 @@ int do_cp(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
         return -1;
     }
 
-    int fdi, fdo;
-    if ((fdi = emu_open(argv[0], O_RDONLY, 0)) < 0) {
+    FileWrapper src;
+    FileWrapper dst;
+
+    if (FileWrapper::Open(argv[0], O_RDONLY, 0, &src) < 0) {
         fprintf(stderr, "error: cannot open '%s'\n", argv[0]);
         return -1;
     }
-    if ((fdo = emu_open(argv[1], O_WRONLY | O_CREAT | O_EXCL, 0644)) < 0) {
+    if (FileWrapper::Open(argv[1], O_WRONLY | O_CREAT | O_EXCL, 0644, &dst) < 0) {
         fprintf(stderr, "error: cannot open '%s'\n", argv[1]);
         return -1;
     }
@@ -100,7 +102,7 @@ int do_cp(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
     char buffer[256 * 1024];
     ssize_t r;
     for (;;) {
-        if ((r = emu_read(fdi, buffer, sizeof(buffer))) < 0) {
+        if ((r = src.Read(buffer, sizeof(buffer))) < 0) {
             fprintf(stderr, "error: reading from '%s'\n", argv[0]);
             break;
         } else if (r == 0) {
@@ -109,7 +111,7 @@ int do_cp(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
         void* ptr = buffer;
         ssize_t len = r;
         while (len > 0) {
-            if ((r = emu_write(fdo, ptr, len)) < 0) {
+            if ((r = dst.Write(ptr, len)) < 0) {
                 fprintf(stderr, "error: writing to '%s'\n", argv[1]);
                 goto done;
             }
@@ -118,8 +120,8 @@ int do_cp(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
         }
     }
 done:
-    emu_close(fdi);
-    emu_close(fdo);
+    src.Close();
+    dst.Close();
     return r;
 }
 
@@ -210,9 +212,9 @@ struct {
 #ifdef __Fuchsia__
     {"mount", do_minfs_mount, O_RDWR, "mount filesystem"},
 #else
-    {"cp", do_cp, O_RDWR, "copy to/from fs"},
-    {"mkdir", do_mkdir, O_RDWR, "create directory"},
-    {"ls", do_ls, O_RDWR, "list content of directory"},
+    {"cp", do_cp, O_RDWR, "copy to/from fs. Prefix fs paths with '::'"},
+    {"mkdir", do_mkdir, O_RDWR, "create directory. Prefix paths with '::'"},
+    {"ls", do_ls, O_RDWR, "list content of directory. Prefix paths with '::'"},
 #endif
 };
 

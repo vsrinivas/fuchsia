@@ -19,6 +19,7 @@
 #include <fbl/ref_ptr.h>
 #include <fdio/vfs.h>
 #include <fs/vfs.h>
+#include <zircon/assert.h>
 #include "minfs.h"
 #include "minfs-private.h"
 
@@ -78,35 +79,12 @@ int status_to_errno(zx_status_t status) {
     } while (0)
 #define STATUS(status) \
     FAIL(status_to_errno(status))
-#define FILE_GET(f, fd)                   \
-    do {                                  \
-        if ((f = file_get(fd)) == nullptr) { \
-            FAIL(EBADF);                  \
-        }                                 \
-    } while (0)
-#define FILE_WRAP(f, fd, name, args...) \
-    do {                                \
-        if ((f = file_get(fd)) == nullptr) \
-            return name(args);          \
-    } while (0)
-#define PATH_WRAP(path, name, args...) \
-    do {                               \
-        if (check_path(path))          \
-            return name(args);         \
-    } while (0)
 
-fbl::RefPtr<fs::Vnode> fake_root;
-
-static inline int check_path(const char* path) {
-    if (strncmp(path, PATH_PREFIX, PREFIX_SIZE) || (fake_root == nullptr)) {
-        return -1;
-    }
-    return 0;
-}
+fbl::RefPtr<fs::Vnode> fake_root = nullptr;
 
 int emu_open(const char* path, int flags, mode_t mode) {
     //TODO: fdtab lock
-    PATH_WRAP(path, open, path, flags, mode);
+    ZX_DEBUG_ASSERT_MSG(!host_path(path), "'emu_' functions can only operate on target paths");
     int fd;
     if (flags & O_APPEND) {
         errno = ENOTSUP;
@@ -129,15 +107,17 @@ int emu_open(const char* path, int flags, mode_t mode) {
 
 int emu_close(int fd) {
     //TODO: fdtab lock
-    file_t* f;
-    FILE_WRAP(f, fd, close, fd);
+    file_t* f = file_get(fd);
+    if (f == nullptr) {
+        return -1;
+    }
     f->vn->Close();
     memset(f, 0, sizeof(file_t));
     return 0;
 }
 
 int emu_mkdir(const char* path, mode_t mode) {
-    PATH_WRAP(path, mkdir, path, mode);
+    ZX_DEBUG_ASSERT_MSG(!host_path(path), "'emu_' functions can only operate on target paths");
     mode = S_IFDIR;
     int fd = emu_open(path, O_CREAT | O_EXCL, S_IFDIR | (mode & 0777));
     if (fd >= 0) {
@@ -149,8 +129,10 @@ int emu_mkdir(const char* path, mode_t mode) {
 }
 
 ssize_t emu_read(int fd, void* buf, size_t count) {
-    file_t* f;
-    FILE_WRAP(f, fd, read, fd, buf, count);
+    file_t* f = file_get(fd);
+    if (f == nullptr) {
+        return -1;
+    }
     size_t actual;
     zx_status_t status = f->vn->Read(buf, count, f->off, &actual);
     if (status == ZX_OK) {
@@ -163,8 +145,10 @@ ssize_t emu_read(int fd, void* buf, size_t count) {
 }
 
 ssize_t emu_write(int fd, const void* buf, size_t count) {
-    file_t* f;
-    FILE_WRAP(f, fd, write, fd, buf, count);
+    file_t* f = file_get(fd);
+    if (f == nullptr) {
+        return -1;
+    }
     size_t actual;
     zx_status_t status = f->vn->Write(buf, count, f->off, &actual);
     if (status == ZX_OK) {
@@ -177,8 +161,10 @@ ssize_t emu_write(int fd, const void* buf, size_t count) {
 }
 
 off_t emu_lseek(int fd, off_t offset, int whence) {
-    file_t* f;
-    FILE_WRAP(f, fd, lseek, fd, offset, whence);
+    file_t* f = file_get(fd);
+    if (f == nullptr) {
+        return -1;
+    }
 
     uint64_t old = f->off;
     uint64_t n;
@@ -217,13 +203,15 @@ off_t emu_lseek(int fd, off_t offset, int whence) {
 }
 
 int emu_fstat(int fd, struct stat* s) {
-    file_t* f;
-    FILE_WRAP(f, fd, fstat, fd, s);
+    file_t* f = file_get(fd);
+    if (f == nullptr) {
+        return -1;
+    }
     STATUS(do_stat(f->vn, s));
 }
 
 int emu_stat(const char* fn, struct stat* s) {
-    PATH_WRAP(fn, stat, fn, s);
+    ZX_DEBUG_ASSERT_MSG(!host_path(fn), "'emu_' functions can only operate on target paths");
     fbl::RefPtr<fs::Vnode> vn = fake_root;
     fbl::RefPtr<fs::Vnode> cur = fake_root;
     zx_status_t status;
@@ -277,7 +265,7 @@ typedef struct MINDIR {
 } MINDIR;
 
 DIR* emu_opendir(const char* name) {
-    PATH_WRAP(name, opendir, name);
+    ZX_DEBUG_ASSERT_MSG(!host_path(name), "'emu_' functions can only operate on target paths");
     fbl::RefPtr<fs::Vnode> vn;
     fbl::StringPiece path(name + PREFIX_SIZE);
     zx_status_t status = minfs::vfs.Open(fake_root, &vn, path, &path, O_RDONLY, 0);
