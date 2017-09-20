@@ -550,6 +550,9 @@ zx_status_t pci_device_async(pci_device_t* device, zx_handle_t guest) {
         pci_bar_t* bar = &device->bar[i];
         if (!pci_bar_implemented(device, i))
             continue;
+        // Mem trap ports are not currently supported.
+        if (bar->io_type == PCI_BAR_IO_TYPE_MMIO)
+            continue;
 
         trap_args_t* trap = &traps[num_traps++];
         trap->key = i;
@@ -557,6 +560,9 @@ zx_status_t pci_device_async(pci_device_t* device, zx_handle_t guest) {
         trap->len = pci_bar_size(bar);
         trap->kind = bar->io_type == PCI_BAR_IO_TYPE_PIO ? ZX_GUEST_TRAP_IO : ZX_GUEST_TRAP_MEM;
     }
+
+    if (num_traps == 0)
+        return ZX_OK;
     return device_async(guest, traps, num_traps, pci_handler, device);
 }
 
