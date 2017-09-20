@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//magma/gnbuild/magma.gni")
+import("//garnet/lib/magma/gnbuild/magma.gni")
 
 declare_args() {
   msd_intel_enable_mapping_cache = !is_debug
