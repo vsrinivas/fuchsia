@@ -98,9 +98,9 @@ package("magma-dev") {
   }
 
   if (build_msd_arm_mali) {
-    deps += [ "//garnet/drivers/gpu/msd-arm-mali:msd_arm" ]
+    deps += [ "//garnet/drivers/gpu/msd-arm-mali:msd_arm_test" ]
     drivers = [ {
-          name = "libmsd_arm.so"
+          name = "libmsd_arm_test.so"
         } ]
   }
 }

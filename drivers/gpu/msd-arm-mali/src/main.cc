@@ -19,6 +19,10 @@
 #include "sys_driver/magma_driver.h"
 #include "sys_driver/magma_system_device.h"
 
+#if MAGMA_TEST_DRIVER
+void magma_indriver_test(zx_device_t* device);
+#endif
+
 struct arm_mali_device {
     zx_device_t* parent_device;
     zx_device_t* zx_device;
@@ -164,7 +168,13 @@ static zx_status_t arm_mali_bind(void* context, zx_device_t* parent, void** cook
     if (!gpu)
         return ZX_ERR_NO_MEMORY;
     gpu->parent_device = parent;
+
     gpu->magma_driver = MagmaDriver::Create();
+
+#if MAGMA_TEST_DRIVER
+    DLOG("running magma indriver test");
+    magma_indriver_test(parent);
+#endif
 
     zx_status_t status = magma_start(gpu.get());
     if (status != ZX_OK)

@@ -7,7 +7,6 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 source_set("src") {
   sources = [
     "entry_stubs.cc",
-    "main.cc",
     "msd_arm_connection.cc",
     "msd_arm_connection.h",
     "msd_arm_device.cc",
@@ -23,6 +22,19 @@ source_set("src") {
     "//garnet/lib/magma/src/magma_util:command_buffer",
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/sys_driver",
+  ]
+}
+
+source_set("main") {
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/magma_util:command_buffer",
+    "//garnet/lib/magma/src/magma_util/platform:trace",
+    "//garnet/lib/magma/src/sys_driver",
     "//zircon/system/ulib/zx",
   ]
 
@@ -30,5 +42,38 @@ source_set("src") {
     "driver",
     "ddk",
     "zircon",
+  ]
+}
+
+source_set("test_driver") {
+  testonly = true
+
+  configs += [ "$magma_build_root:magma_tests_include_config" ]
+
+  sources = [
+    "driver_test_gtest.cc",
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/magma_util/platform:trace",
+    "//garnet/lib/magma/src/sys_driver",
+    "//garnet/lib/magma/tests/helper:platform_device_helper",
+    "//zircon/system/ulib/zx",
+  ]
+
+  defines = [ "MAGMA_TEST_DRIVER=1" ]
+  deps += [
+    "//garnet/lib/magma/tests/unit_tests:magma_platform_tests",
+    "//garnet/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
+    "//third_party/gtest",
+  ]
+
+  libs = [
+    "driver",
+    "ddk",
+    "zircon",
+    "fdio",
   ]
 }

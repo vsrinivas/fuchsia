@@ -12,8 +12,20 @@ driver_module("msd_arm") {
 
   deps = [
     "src",
+    "src:main",
   ]
 
   ldflags = [ shared_ldflags ]
 }
 
+driver_module("msd_arm_test") {
+  testonly = true
+  output_name = "libmsd_arm_test"
+
+  deps = [
+    "src",
+    "src:test_driver",
+  ]
+
+  ldflags = [ shared_ldflags ]
+}
