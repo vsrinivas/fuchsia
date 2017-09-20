@@ -125,6 +125,11 @@ static platform_device_protocol_ops_t platform_bus_proto_ops = {
 static void platform_bus_release(void* ctx) {
     platform_bus_t* bus = ctx;
 
+    platform_dev_t* dev;
+    list_for_every_entry(&bus->devices, dev, platform_dev_t, node) {
+        platform_dev_free(dev);
+    }
+
     platform_bus_release_mdi(bus);
     platform_release_resources(&bus->resources);
     free(bus);

@@ -50,16 +50,15 @@ static platform_device_protocol_ops_t platform_dev_proto_ops = {
     .device_enable = platform_dev_device_enable,
 };
 
-static void platform_dev_release(void* ctx) {
-    platform_dev_t* dev = ctx;
-
+void platform_dev_free(platform_dev_t* dev) {
     platform_release_resources(&dev->resources);
     free(dev);
 }
 
 static zx_protocol_device_t platform_dev_proto = {
     .version = DEVICE_OPS_VERSION,
-    .release = platform_dev_release,
+    // Note that we do not have a release callback here because we
+    // need to support re-adding platform devices when they are reenabled.
 };
 
 zx_status_t platform_device_enable(platform_dev_t* dev, bool enable) {
@@ -169,7 +168,7 @@ zx_status_t platform_bus_publish_device(platform_bus_t* bus, mdi_node_ref_t* dev
 
 fail:
     if (status != ZX_OK) {
-        platform_dev_release(dev);
+        platform_dev_free(dev);
     }
 
     return status;

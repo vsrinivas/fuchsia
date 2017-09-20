@@ -68,6 +68,7 @@ typedef struct {
 } platform_dev_t;
 
 // platform-device.c
+void platform_dev_free(platform_dev_t* dev);
 zx_status_t platform_bus_publish_device(platform_bus_t* bus, mdi_node_ref_t* device_node);
 zx_status_t platform_device_enable(platform_dev_t* dev, bool enable);
 
