@@ -28,7 +28,7 @@ executable("oauth_token_manager") {
     "//apps/modular/lib/rapidjson",
     "//apps/modular/services/auth",
     "//garnet/public/lib/network/fidl",
-    "//apps/web_runner/services",
+    "//topaz/runtime/web_runner/services",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",

@@ -24,7 +24,7 @@
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/network/fidl/network_service.fidl.h"
-#include "apps/web_runner/services/web_view.fidl.h"
+#include "topaz/runtime/web_runner/services/web_view.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fxl/command_line.h"
