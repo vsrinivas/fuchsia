@@ -12,7 +12,7 @@
 #include "apps/ledger/src/auth_provider/test/test_auth_provider.h"
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/cloud_provider/test/page_cloud_handler_empty_impl.h"
+#include "apps/ledger/src/cloud_provider/test/test_page_cloud_handler.h"
 #include "apps/ledger/src/cloud_sync/impl/constants.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/test/commit_empty_impl.h"
@@ -230,123 +230,6 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   fsl::MessageLoop* message_loop_;
 };
 
-// Fake implementation of cloud_provider_firebase::PageCloudHandler. Injects the
-// returned status for commit notification upload, allowing the test to make
-// them fail. Registers for inspection the notifications passed by PageSync.
-class TestPageCloudHandler
-    : public cloud_provider_firebase::test::PageCloudHandlerEmptyImpl {
- public:
-  explicit TestPageCloudHandler(fsl::MessageLoop* message_loop)
-      : message_loop_(message_loop) {}
-
-  ~TestPageCloudHandler() override = default;
-
-  void AddCommits(const std::string& /*auth_token*/,
-                  std::vector<cloud_provider_firebase::Commit> commits,
-                  const std::function<void(cloud_provider_firebase::Status)>&
-                      callback) override {
-    ++add_commits_calls;
-    if (commit_status_to_return == cloud_provider_firebase::Status::OK) {
-      std::move(commits.begin(), commits.end(),
-                std::back_inserter(received_commits));
-    }
-    message_loop_->task_runner()->PostTask(
-        [this, callback]() { callback(commit_status_to_return); });
-  }
-
-  void WatchCommits(const std::string& auth_token,
-                    const std::string& min_timestamp,
-                    cloud_provider_firebase::CommitWatcher* watcher) override {
-    watch_commits_auth_tokens.push_back(auth_token);
-    watch_call_min_timestamps.push_back(min_timestamp);
-    watcher_ = watcher;
-    DeliverRemoteCommits();
-  }
-
-  void DeliverRemoteCommits() {
-    for (auto& record : notifications_to_deliver) {
-      message_loop_->task_runner()->PostTask(
-          fxl::MakeCopyable([ this, record = std::move(record) ]() mutable {
-            std::vector<cloud_provider_firebase::Record> records;
-            records.push_back(std::move(record));
-            watcher_->OnRemoteCommits(std::move(records));
-          }));
-    }
-  }
-
-  void UnwatchCommits(
-      cloud_provider_firebase::CommitWatcher* /*watcher*/) override {
-    watcher_ = nullptr;
-    watcher_removed = true;
-  }
-
-  void GetCommits(
-      const std::string& auth_token,
-      const std::string& /*min_timestamp*/,
-      std::function<void(cloud_provider_firebase::Status,
-                         std::vector<cloud_provider_firebase::Record>)>
-          callback) override {
-    get_commits_calls++;
-    get_commits_auth_tokens.push_back(auth_token);
-    if (should_fail_get_commits) {
-      message_loop_->task_runner()->PostTask([callback]() {
-        callback(cloud_provider_firebase::Status::NETWORK_ERROR, {});
-      });
-      return;
-    }
-
-    message_loop_->task_runner()->PostTask([this, callback]() {
-      callback(cloud_provider_firebase::Status::OK,
-               std::move(records_to_return));
-    });
-  }
-
-  void GetObject(const std::string& auth_token,
-                 cloud_provider_firebase::ObjectIdView object_id,
-                 std::function<void(cloud_provider_firebase::Status status,
-                                    uint64_t size,
-                                    zx::socket data)> callback) override {
-    get_object_calls++;
-    get_object_auth_tokens.push_back(auth_token);
-    if (should_fail_get_object) {
-      message_loop_->task_runner()->PostTask([callback]() {
-        callback(cloud_provider_firebase::Status::NETWORK_ERROR, 0,
-                 zx::socket());
-      });
-      return;
-    }
-
-    message_loop_->task_runner()->PostTask(
-        [ this, object_id = object_id.ToString(), callback ]() {
-          callback(cloud_provider_firebase::Status::OK,
-                   objects_to_return[object_id].size(),
-                   fsl::WriteStringToSocket(objects_to_return[object_id]));
-        });
-  }
-
-  bool should_fail_get_commits = false;
-  bool should_fail_get_object = false;
-  std::vector<cloud_provider_firebase::Record> records_to_return;
-  std::vector<cloud_provider_firebase::Record> notifications_to_deliver;
-  cloud_provider_firebase::Status commit_status_to_return =
-      cloud_provider_firebase::Status::OK;
-  std::unordered_map<std::string, std::string> objects_to_return;
-
-  std::vector<std::string> watch_commits_auth_tokens;
-  std::vector<std::string> watch_call_min_timestamps;
-  unsigned int add_commits_calls = 0u;
-  unsigned int get_commits_calls = 0u;
-  std::vector<std::string> get_commits_auth_tokens;
-  unsigned int get_object_calls = 0u;
-  std::vector<std::string> get_object_auth_tokens;
-  std::vector<cloud_provider_firebase::Commit> received_commits;
-  bool watcher_removed = false;
-  cloud_provider_firebase::CommitWatcher* watcher_ = nullptr;
-
- private:
-  fsl::MessageLoop* message_loop_;
-};
-
 // Dummy implementation of a backoff policy, which always returns zero backoff
 // time..
 class TestBackoff : public backoff::Backoff {
@@ -383,7 +266,7 @@ class PageSyncImplTest : public ::test::TestWithMessageLoop {
  public:
   PageSyncImplTest()
       : storage_(&message_loop_),
-        cloud_provider_(&message_loop_),
+        cloud_provider_(message_loop_.task_runner()),
         auth_provider_(message_loop_.task_runner()) {
     std::unique_ptr<TestSyncStateWatcher> watcher =
         std::make_unique<TestSyncStateWatcher>();
@@ -413,7 +296,7 @@ class PageSyncImplTest : public ::test::TestWithMessageLoop {
   }
 
   TestPageStorage storage_;
-  TestPageCloudHandler cloud_provider_;
+  cloud_provider_firebase::test::TestPageCloudHandler cloud_provider_;
   auth_provider::test::TestAuthProvider auth_provider_;
   int backoff_get_next_calls_ = 0;
   TestSyncStateWatcher* state_watcher_;

@@ -10,6 +10,8 @@ source_set("test") {
   sources = [
     "page_cloud_handler_empty_impl.cc",
     "page_cloud_handler_empty_impl.h",
+    "test_page_cloud_handler.cc",
+    "test_page_cloud_handler.h",
   ]
 
   public_deps = [
