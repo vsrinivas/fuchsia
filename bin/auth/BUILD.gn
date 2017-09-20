@@ -1,0 +1,31 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+
+package("auth") {
+  app = true
+
+  deps = [
+    "//garnet/public/lib/auth/fidl",
+    "//garnet/bin/auth/store",
+  ]
+}
+
+package("tests") {
+  testonly = true
+
+  package_name = "auth_tests"
+
+  deps = [
+    "//garnet/bin/auth/store:auth_store_unittests",
+  ]
+
+  tests = [
+    {
+      name = "auth_store_unittests"
+    },
+  ]
+}
+

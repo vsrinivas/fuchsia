@@ -2,14 +2,11 @@
     "languages": [
         "cpp"
     ],
-    "labels": [
-        "//garnet/bin/token_store:auth_unittests",
-        "//garnet/public/lib/auth/fidl"
+    "imports": [
+        "garnet/packages/fxl"
     ],
-    "binaries": [
-        {
-            "binary": "auth_unittests",
-            "bootfs_path": "test/auth_unittests"
-        }
-    ]
+    "packages": {
+        "auth": "//garnet/bin/auth",
+        "auth_tests": "//garnet/bin/auth:tests"
+    }
 }

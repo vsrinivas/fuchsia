@@ -1,19 +1,19 @@
-# Copyright 2017 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
+#Copyright 2017 The Fuchsia Authors.All rights reserved.
+#Use of this source code is governed by a BSD - style license that can be
+#found in the LICENSE file.
 
 import("//third_party/flatbuffers/flatbuffer.gni")
 
 flatbuffer("credentials") {
   sources = [
-    "credentials.fbs",
+      "credentials.fbs",
   ]
 }
 
 source_set("lib") {
   sources = [
     "auth_db.h",
-    "auth_db.cc",
+#    "auth_db.cc",
     "auth_db_file_impl.h",
     "auth_db_file_impl.cc",
   ]
@@ -25,7 +25,7 @@ source_set("lib") {
   ]
 }
 
-source_set("unittests") {
+executable("auth_store_unittests") {
   testonly = true
 
   sources = [
@@ -43,13 +43,5 @@ source_set("unittests") {
 group("store") {
   deps = [
     ":lib",
-  ]
-}
-
-executable("auth_unittests") {
-  testonly = true
-
-  deps = [
-    ":unittests",
   ]
 }
