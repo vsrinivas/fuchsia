@@ -10,10 +10,10 @@ import (
 	"log"
 	"strings"
 	"sync"
-	"syscall/mx"
-	"syscall/mx/mxerror"
-	"syscall/mx/fdio"
-	"syscall/mx/mxruntime"
+	"syscall/zx"
+	"syscall/zx/fdio"
+	"syscall/zx/mxerror"
+	"syscall/zx/mxruntime"
 
 	"app/context"
 
@@ -32,14 +32,14 @@ const debug = true
 const debug2 = false
 
 const ZX_SOCKET_HALF_CLOSE = 1
-const ZXSIO_SIGNAL_INCOMING = mx.SignalUser0
-const ZXSIO_SIGNAL_CONNECTED = mx.SignalUser3
-const ZXSIO_SIGNAL_HALFCLOSED = mx.SignalUser4
-const LOCAL_SIGNAL_CLOSING = mx.SignalUser5
+const ZXSIO_SIGNAL_INCOMING = zx.SignalUser0
+const ZXSIO_SIGNAL_CONNECTED = zx.SignalUser3
+const ZXSIO_SIGNAL_HALFCLOSED = zx.SignalUser4
+const LOCAL_SIGNAL_CLOSING = zx.SignalUser5
 
 const defaultNIC = 2
 
-// TODO: define these in syscall/mx/mxruntime
+// TODO: define these in syscall/zx/mxruntime
 const (
 	handleServicesRequest mxruntime.HandleType = 0x3B
 )
@@ -53,12 +53,12 @@ type app struct {
 	socket socketServer
 }
 
-func (a *app) Bind(h mx.Handle) {
+func (a *app) Bind(h zx.Handle) {
 	if err := a.socket.dispatcher.AddHandler(h, fdio.ServerHandler(a.socket.fdioHandler), 0); err != nil {
 		h.Close()
 	}
 
-	if err := h.SignalPeer(0, mx.SignalUser0); err != nil {
+	if err := h.SignalPeer(0, zx.SignalUser0); err != nil {
 		h.Close()
 	}
 }
@@ -100,9 +100,9 @@ type iostate struct {
 	netProto   tcpip.NetworkProtocolNumber   // IPv4 or IPv6
 	transProto tcpip.TransportProtocolNumber // TCP or UDP
 	// dataHandle is used to communicate with libc.
-	// dataHandle is an mx.Socket for TCP, or an mx.Channel for UDP.
-	dataHandle     mx.Handle
-	peerDataHandle mx.Handle // other end of dataHandle
+	// dataHandle is an zx.Socket for TCP, or an zx.Channel for UDP.
+	dataHandle     zx.Handle
+	peerDataHandle zx.Handle // other end of dataHandle
 
 	mu      sync.Mutex
 	refs    int
@@ -131,20 +131,20 @@ func (ios *iostate) release(f func()) {
 // loopSocketWrite connects libc write to the network stack for TCP sockets.
 //
 // TODO: replace WaitOne with a method that parks goroutines when waiting
-// for a signal on an mx.Socket.
+// for a signal on an zx.Socket.
 //
 // As written, we have two netstack threads per socket.
 // That's not so bad for small client work, but even a client OS is
 // eventually going to feel the overhead of this.
 func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
-	dataHandle := mx.Socket(ios.dataHandle)
+	dataHandle := zx.Socket(ios.dataHandle)
 
 	// Warm up.
-	_, err := dataHandle.WaitOne(mx.SignalSocketReadable|mx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING, mx.TimensecInfinite)
+	_, err := dataHandle.WaitOne(zx.SignalSocketReadable|zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING, zx.TimensecInfinite)
 	switch mxerror.Status(err) {
-	case mx.ErrOk:
+	case zx.ErrOk:
 		// NOP
-	case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
+	case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 		return
 	default:
 		log.Printf("loopSocketWrite: warmup failed: %v", err)
@@ -159,31 +159,31 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 		v := buffer.NewView(2048)
 		n, err := dataHandle.Read([]byte(v), 0)
 		switch mxerror.Status(err) {
-		case mx.ErrOk:
+		case zx.ErrOk:
 			// Success. Pass the data to the endpoint and loop.
-		case mx.ErrBadState:
+		case zx.ErrBadState:
 			return // This side of the socket is closed.
-		case mx.ErrShouldWait:
-			obs, err := dataHandle.WaitOne(mx.SignalSocketReadable|mx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING, mx.TimensecInfinite)
+		case zx.ErrShouldWait:
+			obs, err := dataHandle.WaitOne(zx.SignalSocketReadable|zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING, zx.TimensecInfinite)
 			switch mxerror.Status(err) {
-			case mx.ErrOk:
+			case zx.ErrOk:
 				// Handle signal below.
-			case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
+			case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 				return
 			default:
 				log.Printf("loopSocketWrite: wait failed: %v", err)
 				return
 			}
 			switch {
-			case obs&mx.SignalSocketPeerClosed != 0:
+			case obs&zx.SignalSocketPeerClosed != 0:
 				return
-			case obs&mx.SignalSocketReadable != 0:
+			case obs&zx.SignalSocketReadable != 0:
 				continue
 			case obs&LOCAL_SIGNAL_CLOSING != 0:
 				ios.writeBufFlushed <- struct{}{}
 				return
 			}
-		case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
+		case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 			return
 		default:
 			log.Printf("socket read failed: %v", err) // TODO: communicate this
@@ -212,20 +212,20 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 
 // loopSocketRead connects libc read to the network stack for TCP sockets.
 func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
-	dataHandle := mx.Socket(ios.dataHandle)
+	dataHandle := zx.Socket(ios.dataHandle)
 
 	// Warm up.
-	obs, err := dataHandle.WaitOne(mx.SignalSocketWritable|mx.SignalSocketPeerClosed, mx.TimensecInfinite)
+	obs, err := dataHandle.WaitOne(zx.SignalSocketWritable|zx.SignalSocketPeerClosed, zx.TimensecInfinite)
 	switch mxerror.Status(err) {
-	case mx.ErrOk:
+	case zx.ErrOk:
 		// NOP
-	case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
+	case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 		return
 	default:
 		log.Printf("loopSocketRead: warmup failed: %v", err)
 	}
 	switch {
-	case obs&mx.SignalSocketPeerClosed != 0:
+	case obs&zx.SignalSocketPeerClosed != 0:
 		return
 	}
 
@@ -248,8 +248,8 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 			} else if err == tcpip.ErrClosedForReceive {
 				_, err := dataHandle.Write(nil, ZX_SOCKET_HALF_CLOSE)
 				switch mxerror.Status(err) {
-				case mx.ErrOk:
-				case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
+				case zx.ErrOk:
+				case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 				default:
 					log.Printf("socket read: send ZX_SOCKET_HALF_CLOSE failed: %v", err)
 				}
@@ -268,34 +268,34 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 			n, err := dataHandle.Write([]byte(v), 0)
 			v = v[n:]
 			switch mxerror.Status(err) {
-			case mx.ErrOk:
+			case zx.ErrOk:
 				// Success. Loop and keep writing.
-			case mx.ErrBadState:
+			case zx.ErrBadState:
 				return // This side of the socket is closed.
-			case mx.ErrShouldWait:
+			case zx.ErrShouldWait:
 				if debug2 {
-					log.Printf("loopSocketRead: gto mx.ErrShouldWait")
+					log.Printf("loopSocketRead: gto zx.ErrShouldWait")
 				}
 				obs, err := dataHandle.WaitOne(
-					mx.SignalSocketWritable|mx.SignalSocketPeerClosed,
-					mx.TimensecInfinite,
+					zx.SignalSocketWritable|zx.SignalSocketPeerClosed,
+					zx.TimensecInfinite,
 				)
 				switch mxerror.Status(err) {
-				case mx.ErrOk:
+				case zx.ErrOk:
 					// Handle signal below.
-				case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
+				case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 					return
 				default:
 					log.Printf("loopSocketRead: wait failed: %v", err)
 					return
 				}
 				switch {
-				case obs&mx.SignalSocketPeerClosed != 0:
+				case obs&zx.SignalSocketPeerClosed != 0:
 					return
-				case obs&mx.SignalSocketWritable != 0:
+				case obs&zx.SignalSocketWritable != 0:
 					continue
 				}
-			case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
+			case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 				return
 			default:
 				log.Printf("socket write failed: %v", err) // TODO: communicate this
@@ -308,18 +308,18 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 func (ios *iostate) loopShutdown() {
 	defer ios.ep.Close()
 	for {
-		obs, err := ios.dataHandle.WaitOne(mx.SignalSocketPeerClosed|ZXSIO_SIGNAL_HALFCLOSED, mx.TimensecInfinite)
+		obs, err := ios.dataHandle.WaitOne(zx.SignalSocketPeerClosed|ZXSIO_SIGNAL_HALFCLOSED, zx.TimensecInfinite)
 		switch mxerror.Status(err) {
-		case mx.ErrOk:
+		case zx.ErrOk:
 			// NOP
-		case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
+		case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 			return
 		default:
 			log.Printf("shutdown wait failed: %v", err)
 			return
 		}
 		switch {
-		case obs&mx.SignalSocketPeerClosed != 0:
+		case obs&zx.SignalSocketPeerClosed != 0:
 			return
 		case obs&ZXSIO_SIGNAL_HALFCLOSED != 0:
 			err := ios.ep.Shutdown(tcpip.ShutdownRead | tcpip.ShutdownWrite)
@@ -332,7 +332,7 @@ func (ios *iostate) loopShutdown() {
 
 // loopDgramRead connects libc read to the network stack for UDP messages.
 func (ios *iostate) loopDgramRead(stk tcpip.Stack) {
-	dataHandle := mx.Socket(ios.dataHandle)
+	dataHandle := zx.Socket(ios.dataHandle)
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	for {
@@ -368,11 +368,11 @@ func (ios *iostate) loopDgramRead(stk tcpip.Stack) {
 		for {
 			_, err := dataHandle.Write(out, 0)
 			switch mxerror.Status(err) {
-			case mx.ErrOk:
+			case zx.ErrOk:
 				break writeLoop
-			case mx.ErrBadState:
+			case zx.ErrBadState:
 				return // This side of the socket is closed.
-			case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
+			case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 				return
 			default:
 				log.Printf("socket write failed: %v", err) // TODO: communicate this
@@ -384,29 +384,29 @@ func (ios *iostate) loopDgramRead(stk tcpip.Stack) {
 
 // loopDgramWrite connects libc write to the network stack for UDP messages.
 func (ios *iostate) loopDgramWrite(stk tcpip.Stack) {
-	dataHandle := mx.Socket(ios.dataHandle)
+	dataHandle := zx.Socket(ios.dataHandle)
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	for {
 		v := buffer.NewView(2048)
 		n, err := dataHandle.Read([]byte(v), 0)
 		switch mxerror.Status(err) {
-		case mx.ErrOk:
+		case zx.ErrOk:
 			// Success. Pass the data to the endpoint and loop.
-		case mx.ErrBadState:
+		case zx.ErrBadState:
 			return // This side of the socket is closed.
-		case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
+		case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 			return
-		case mx.ErrShouldWait:
-			obs, err := dataHandle.WaitOne(mx.SignalSocketReadable|mx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING, mx.TimensecInfinite)
+		case zx.ErrShouldWait:
+			obs, err := dataHandle.WaitOne(zx.SignalSocketReadable|zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING, zx.TimensecInfinite)
 			switch mxerror.Status(err) {
-			case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
+			case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 				return
-			case mx.ErrOk:
+			case zx.ErrOk:
 				switch {
-				case obs&mx.SignalSocketPeerClosed != 0:
+				case obs&zx.SignalSocketPeerClosed != 0:
 					return
-				case obs&mx.SignalChannelReadable != 0:
+				case obs&zx.SignalChannelReadable != 0:
 					continue
 				case obs&LOCAL_SIGNAL_CLOSING != 0:
 					ios.writeBufFlushed <- struct{}{}
@@ -446,8 +446,8 @@ func (ios *iostate) loopDgramWrite(stk tcpip.Stack) {
 	}
 }
 
-func (s *socketServer) newIostate(h mx.Handle, iosOrig *iostate, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint) (ios *iostate, reterr error) {
-	var peerS mx.Handle
+func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint) (ios *iostate, reterr error) {
+	var peerS zx.Handle
 	if iosOrig == nil {
 		ios = &iostate{
 			netProto:        netProto,
@@ -462,17 +462,17 @@ func (s *socketServer) newIostate(h mx.Handle, iosOrig *iostate, netProto tcpip.
 			case tcp.ProtocolNumber, udp.ProtocolNumber:
 				var t uint32
 				if transProto == tcp.ProtocolNumber {
-					t = mx.SocketStream
+					t = zx.SocketStream
 				} else {
-					t = mx.SocketDatagram
+					t = zx.SocketDatagram
 				}
-				s0, s1, err := mx.NewSocket(t)
+				s0, s1, err := zx.NewSocket(t)
 				if err != nil {
 					return nil, err
 				}
-				ios.dataHandle = mx.Handle(s0)
-				ios.peerDataHandle = mx.Handle(s1)
-				peerS, err = ios.peerDataHandle.Duplicate(mx.RightSameRights)
+				ios.dataHandle = zx.Handle(s0)
+				ios.peerDataHandle = zx.Handle(s1)
+				peerS, err = ios.peerDataHandle.Duplicate(zx.RightSameRights)
 				if err != nil {
 					ios.dataHandle.Close()
 					ios.peerDataHandle.Close()
@@ -487,12 +487,12 @@ func (s *socketServer) newIostate(h mx.Handle, iosOrig *iostate, netProto tcpip.
 		switch transProto {
 		case tcp.ProtocolNumber:
 			var err error
-			peerS, err = ios.peerDataHandle.Duplicate(mx.RightSameRights)
+			peerS, err = ios.peerDataHandle.Duplicate(zx.RightSameRights)
 			if err != nil {
 				return nil, err
 			}
 		case udp.ProtocolNumber:
-			return nil, mxerror.Errorf(mx.ErrNotSupported, "cannot clone an udp socket")
+			return nil, mxerror.Errorf(zx.ErrNotSupported, "cannot clone an udp socket")
 		default:
 			panic(fmt.Sprintf("unknown transport protocol number: %v", transProto))
 		}
@@ -562,10 +562,10 @@ type socketServer struct {
 	io   map[cookie]*iostate
 }
 
-func (s *socketServer) opSocket(h mx.Handle, ios *iostate, msg *fdio.Msg, path string) (err error) {
+func (s *socketServer) opSocket(h zx.Handle, ios *iostate, msg *fdio.Msg, path string) (err error) {
 	var domain, typ, protocol int
 	if n, _ := fmt.Sscanf(path, "socket/%d/%d/%d\x00", &domain, &typ, &protocol); n != 3 {
-		return mxerror.Errorf(mx.ErrInvalidArgs, "socket: bad path %q (n=%d)", path, n)
+		return mxerror.Errorf(zx.ErrInvalidArgs, "socket: bad path %q (n=%d)", path, n)
 	}
 
 	var n tcpip.NetworkProtocolNumber
@@ -575,7 +575,7 @@ func (s *socketServer) opSocket(h mx.Handle, ios *iostate, msg *fdio.Msg, path s
 	case AF_INET6:
 		n = ipv6.ProtocolNumber
 	default:
-		return mxerror.Errorf(mx.ErrNotSupported, "socket: unknown network protocol: %d", domain)
+		return mxerror.Errorf(zx.ErrNotSupported, "socket: unknown network protocol: %d", domain)
 	}
 
 	transProto, err := sockProto(typ, protocol)
@@ -589,7 +589,7 @@ func (s *socketServer) opSocket(h mx.Handle, ios *iostate, msg *fdio.Msg, path s
 		if debug {
 			log.Printf("socket: new endpoint: %v", e)
 		}
-		return mxerror.Errorf(mx.ErrInternal, "socket: new endpoint: %v", err)
+		return mxerror.Errorf(zx.ErrInternal, "socket: new endpoint: %v", err)
 	}
 	if n == ipv6.ProtocolNumber {
 		if err := ep.SetSockOpt(tcpip.V6OnlyOption(0)); err != nil {
@@ -614,24 +614,24 @@ func sockProto(typ, protocol int) (t tcpip.TransportProtocolNumber, err error) {
 		case IPPROTO_IP, IPPROTO_TCP:
 			return tcp.ProtocolNumber, nil
 		default:
-			return 0, mxerror.Errorf(mx.ErrNotSupported, "unsupported SOCK_STREAM protocol: %d", protocol)
+			return 0, mxerror.Errorf(zx.ErrNotSupported, "unsupported SOCK_STREAM protocol: %d", protocol)
 		}
 	case SOCK_DGRAM:
 		switch protocol {
 		case IPPROTO_IP, IPPROTO_UDP:
 			return udp.ProtocolNumber, nil
 		default:
-			return 0, mxerror.Errorf(mx.ErrNotSupported, "unsupported SOCK_DGRAM protocol: %d", protocol)
+			return 0, mxerror.Errorf(zx.ErrNotSupported, "unsupported SOCK_DGRAM protocol: %d", protocol)
 		}
 	}
-	return 0, mxerror.Errorf(mx.ErrNotSupported, "unsupported protocol: %d/%d", typ, protocol)
+	return 0, mxerror.Errorf(zx.ErrNotSupported, "unsupported protocol: %d/%d", typ, protocol)
 }
 
-var errShouldWait = mx.Error{Status: mx.ErrShouldWait, Text: "netstack"}
+var errShouldWait = zx.Error{Status: zx.ErrShouldWait, Text: "netstack"}
 
-func (s *socketServer) opAccept(h mx.Handle, ios *iostate, msg *fdio.Msg, path string) (err error) {
+func (s *socketServer) opAccept(h zx.Handle, ios *iostate, msg *fdio.Msg, path string) (err error) {
 	if ios.ep == nil {
-		return mxerror.Errorf(mx.ErrBadState, "accept: no socket")
+		return mxerror.Errorf(zx.ErrBadState, "accept: no socket")
 	}
 	newep, newwq, e := ios.ep.Accept()
 	if e == tcpip.ErrWouldBlock {
@@ -641,11 +641,11 @@ func (s *socketServer) opAccept(h mx.Handle, ios *iostate, msg *fdio.Msg, path s
 		// If we just accepted the only queued incoming connection,
 		// clear the signal so the fdio client knows no incoming
 		// connection is available.
-		err := mx.Handle(ios.dataHandle).SignalPeer(ZXSIO_SIGNAL_INCOMING, 0)
+		err := zx.Handle(ios.dataHandle).SignalPeer(ZXSIO_SIGNAL_INCOMING, 0)
 		switch mxerror.Status(err) {
-		case mx.ErrOk:
+		case zx.ErrOk:
 			// NOP
-		case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
+		case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 			// Ignore the closure of the origin endpoint here,
 			// as we have accepted a new endpoint and it can be
 			// valid.
@@ -657,68 +657,68 @@ func (s *socketServer) opAccept(h mx.Handle, ios *iostate, msg *fdio.Msg, path s
 		if debug {
 			log.Printf("accept: %v", err)
 		}
-		return mxerror.Errorf(mx.ErrInternal, "accept: %v", err)
+		return mxerror.Errorf(zx.ErrInternal, "accept: %v", err)
 	}
 
 	_, err = s.newIostate(h, nil, ios.netProto, ios.transProto, newwq, newep)
 	return err
 }
 
-func errStatus(err error) mx.Status {
+func errStatus(err error) zx.Status {
 	if err == nil {
-		return mx.ErrOk
+		return zx.ErrOk
 	}
-	if s, ok := err.(mx.Error); ok {
+	if s, ok := err.(zx.Error); ok {
 		return s.Status
 	}
 
 	log.Printf("%v", err)
-	return mx.ErrInternal
+	return zx.ErrInternal
 }
 
-func mxNetError(e *tcpip.Error) mx.Status {
+func mxNetError(e *tcpip.Error) zx.Status {
 	switch e {
 	case tcpip.ErrUnknownProtocol:
-		return mx.ErrProtocolNotSupported
+		return zx.ErrProtocolNotSupported
 	case tcpip.ErrDuplicateAddress, tcpip.ErrPortInUse:
-		return mx.ErrAddressInUse
+		return zx.ErrAddressInUse
 	case tcpip.ErrNoRoute:
-		return mx.ErrAddressUnreachable
+		return zx.ErrAddressUnreachable
 	case tcpip.ErrAlreadyBound:
-		// Note that tcpip.ErrAlreadyBound and mx.ErrAlreadyBound correspond to different
+		// Note that tcpip.ErrAlreadyBound and zx.ErrAlreadyBound correspond to different
 		// errors. tcpip.ErrAlreadyBound is returned when attempting to bind socket when
-		// it's already bound. mx.ErrAlreadyBound is used to indicate that the local
+		// it's already bound. zx.ErrAlreadyBound is used to indicate that the local
 		// address is already used by someone else.
-		return mx.ErrInvalidArgs
+		return zx.ErrInvalidArgs
 	case tcpip.ErrInvalidEndpointState, tcpip.ErrAlreadyConnecting, tcpip.ErrAlreadyConnected:
-		return mx.ErrBadState
+		return zx.ErrBadState
 	case tcpip.ErrNoPortAvailable:
-		return mx.ErrNoResources
+		return zx.ErrNoResources
 	case tcpip.ErrUnknownProtocolOption, tcpip.ErrBadLocalAddress, tcpip.ErrDestinationRequired:
-		return mx.ErrInvalidArgs
+		return zx.ErrInvalidArgs
 	case tcpip.ErrClosedForSend, tcpip.ErrClosedForReceive, tcpip.ErrConnectionReset:
-		return mx.ErrConnectionReset
+		return zx.ErrConnectionReset
 	case tcpip.ErrWouldBlock:
-		return mx.ErrShouldWait
+		return zx.ErrShouldWait
 	case tcpip.ErrConnectionRefused:
-		return mx.ErrConnectionRefused
+		return zx.ErrConnectionRefused
 	case tcpip.ErrTimeout:
-		return mx.ErrTimedOut
+		return zx.ErrTimedOut
 	case tcpip.ErrConnectStarted:
-		return mx.ErrShouldWait
+		return zx.ErrShouldWait
 	case tcpip.ErrNotSupported, tcpip.ErrQueueSizeNotSupported:
-		return mx.ErrNotSupported
+		return zx.ErrNotSupported
 	case tcpip.ErrNotConnected:
-		return mx.ErrNotConnected
+		return zx.ErrNotConnected
 	case tcpip.ErrConnectionAborted:
-		return mx.ErrConnectionAborted
+		return zx.ErrConnectionAborted
 	}
 
 	log.Printf("%v", e)
-	return mx.ErrInternal
+	return zx.ErrInternal
 }
 
-func (s *socketServer) opGetSockOpt(ios *iostate, msg *fdio.Msg) mx.Status {
+func (s *socketServer) opGetSockOpt(ios *iostate, msg *fdio.Msg) zx.Status {
 	var val c_mxrio_sockopt_req_reply
 	if err := val.Decode(msg.Data[:msg.Datalen]); err != nil {
 		if debug {
@@ -730,7 +730,7 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *fdio.Msg) mx.Status {
 		if debug {
 			log.Printf("getsockopt: no socket")
 		}
-		return mx.ErrBadState
+		return zx.ErrBadState
 	}
 	if opt := val.Unpack(); opt != nil {
 		switch o := opt.(type) {
@@ -787,10 +787,10 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *fdio.Msg) mx.Status {
 		val.optlen = 0
 	}
 	val.Encode(msg)
-	return mx.ErrOk
+	return zx.ErrOk
 }
 
-func (s *socketServer) opSetSockOpt(ios *iostate, msg *fdio.Msg) mx.Status {
+func (s *socketServer) opSetSockOpt(ios *iostate, msg *fdio.Msg) zx.Status {
 	var val c_mxrio_sockopt_req_reply
 	if err := val.Decode(msg.Data[:msg.Datalen]); err != nil {
 		if debug {
@@ -802,17 +802,17 @@ func (s *socketServer) opSetSockOpt(ios *iostate, msg *fdio.Msg) mx.Status {
 		if debug {
 			log.Printf("setsockopt: no socket")
 		}
-		return mx.ErrBadState
+		return zx.ErrBadState
 	}
 	if opt := val.Unpack(); opt != nil {
 		ios.ep.SetSockOpt(opt)
 	}
 	msg.Datalen = 0
 	msg.SetOff(0)
-	return mx.ErrOk
+	return zx.ErrOk
 }
 
-func (s *socketServer) opBind(ios *iostate, msg *fdio.Msg) (status mx.Status) {
+func (s *socketServer) opBind(ios *iostate, msg *fdio.Msg) (status zx.Status) {
 	addr, err := readSockaddrIn(msg.Data[:msg.Datalen])
 	if err != nil {
 		if debug {
@@ -830,17 +830,17 @@ func (s *socketServer) opBind(ios *iostate, msg *fdio.Msg) (status mx.Status) {
 		if debug {
 			log.Printf("bind: no socket")
 		}
-		return mx.ErrBadState
+		return zx.ErrBadState
 	}
 	if err := ios.ep.Bind(*addr, nil); err != nil {
 		return mxNetError(err)
 	}
 	msg.Datalen = 0
 	msg.SetOff(0)
-	return mx.ErrOk
+	return zx.ErrOk
 }
 
-func (s *socketServer) opIoctl(ios *iostate, msg *fdio.Msg) mx.Status {
+func (s *socketServer) opIoctl(ios *iostate, msg *fdio.Msg) zx.Status {
 	// TODO: deprecated in favor of FIDL service. Remove.
 	switch msg.IoctlOp() {
 	case ioctlNetcGetIfInfo:
@@ -869,7 +869,7 @@ func (s *socketServer) opIoctl(ios *iostate, msg *fdio.Msg) mx.Status {
 		}
 		rep.n_info = index
 		rep.Encode(msg)
-		return mx.ErrOk
+		return zx.ErrOk
 	case ioctlNetcGetNodename:
 		s.ns.mu.Lock()
 		nodename := s.ns.nodename
@@ -877,17 +877,17 @@ func (s *socketServer) opIoctl(ios *iostate, msg *fdio.Msg) mx.Status {
 
 		msg.Datalen = uint32(copy(msg.Data[:msg.Arg], nodename))
 		msg.Data[msg.Datalen] = 0
-		return mx.ErrOk
+		return zx.ErrOk
 	}
 
 	if debug {
 		log.Printf("opIoctl op=0x%x, datalen=%d", msg.Op(), msg.Datalen)
 	}
 
-	return mx.ErrInvalidArgs
+	return zx.ErrInvalidArgs
 }
 
-func fdioSockAddrReply(a tcpip.FullAddress, msg *fdio.Msg) mx.Status {
+func fdioSockAddrReply(a tcpip.FullAddress, msg *fdio.Msg) zx.Status {
 	var err error
 	rep := c_mxrio_sockaddr_reply{}
 	rep.len, err = writeSockaddrStorage(&rep.addr, a)
@@ -896,10 +896,10 @@ func fdioSockAddrReply(a tcpip.FullAddress, msg *fdio.Msg) mx.Status {
 	}
 	rep.Encode(msg)
 	msg.SetOff(0)
-	return mx.ErrOk
+	return zx.ErrOk
 }
 
-func (s *socketServer) opGetSockName(ios *iostate, msg *fdio.Msg) mx.Status {
+func (s *socketServer) opGetSockName(ios *iostate, msg *fdio.Msg) zx.Status {
 	a, err := ios.ep.GetLocalAddress()
 	if err != nil {
 		return mxNetError(err)
@@ -910,9 +910,9 @@ func (s *socketServer) opGetSockName(ios *iostate, msg *fdio.Msg) mx.Status {
 	return fdioSockAddrReply(a, msg)
 }
 
-func (s *socketServer) opGetPeerName(ios *iostate, msg *fdio.Msg) (status mx.Status) {
+func (s *socketServer) opGetPeerName(ios *iostate, msg *fdio.Msg) (status zx.Status) {
 	if ios.ep == nil {
-		return mx.ErrBadState
+		return zx.ErrBadState
 	}
 	a, err := ios.ep.GetRemoteAddress()
 	if err != nil {
@@ -921,20 +921,20 @@ func (s *socketServer) opGetPeerName(ios *iostate, msg *fdio.Msg) (status mx.Sta
 	return fdioSockAddrReply(a, msg)
 }
 
-func (s *socketServer) opListen(ios *iostate, msg *fdio.Msg) (status mx.Status) {
+func (s *socketServer) opListen(ios *iostate, msg *fdio.Msg) (status zx.Status) {
 	d := msg.Data[:msg.Datalen]
 	if len(d) != 4 {
 		if debug {
 			log.Printf("listen: bad input length %d", len(d))
 		}
-		return mx.ErrInvalidArgs
+		return zx.ErrInvalidArgs
 	}
 	backlog := binary.LittleEndian.Uint32(d)
 	if ios.ep == nil {
 		if debug {
 			log.Printf("listen: no socket")
 		}
-		return mx.ErrBadState
+		return zx.ErrBadState
 	}
 	if err := ios.ep.Listen(int(backlog)); err != nil {
 		if debug {
@@ -951,11 +951,11 @@ func (s *socketServer) opListen(ios *iostate, msg *fdio.Msg) (status mx.Status) 
 		ios.wq.EventRegister(&inEntry, waiter.EventIn)
 		defer ios.wq.EventUnregister(&inEntry)
 		for range inCh {
-			err := mx.Handle(ios.dataHandle).SignalPeer(0, ZXSIO_SIGNAL_INCOMING)
+			err := zx.Handle(ios.dataHandle).SignalPeer(0, ZXSIO_SIGNAL_INCOMING)
 			switch mxerror.Status(err) {
-			case mx.ErrOk:
+			case zx.ErrOk:
 				continue
-			case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
+			case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 				return
 			default:
 				log.Printf("socket signal ZXSIO_SIGNAL_INCOMING: %v", err)
@@ -965,21 +965,21 @@ func (s *socketServer) opListen(ios *iostate, msg *fdio.Msg) (status mx.Status) 
 
 	msg.Datalen = 0
 	msg.SetOff(0)
-	return mx.ErrOk
+	return zx.ErrOk
 }
 
-func (s *socketServer) opConnect(ios *iostate, msg *fdio.Msg) (status mx.Status) {
+func (s *socketServer) opConnect(ios *iostate, msg *fdio.Msg) (status zx.Status) {
 	if msg.Datalen == 0 {
 		if ios.transProto == udp.ProtocolNumber {
 			// connect() can be called with no address to
 			// disassociate UDP sockets.
 			ios.ep.Shutdown(tcpip.ShutdownRead)
-			return mx.ErrOk
+			return zx.ErrOk
 		}
 		if debug {
 			log.Printf("connect: no input")
 		}
-		return mx.ErrInvalidArgs
+		return zx.ErrInvalidArgs
 	}
 	addr, err := readSockaddrIn(msg.Data[:msg.Datalen])
 	if err != nil {
@@ -1022,11 +1022,11 @@ func (s *socketServer) opConnect(ios *iostate, msg *fdio.Msg) (status mx.Status)
 		log.Printf("connect: connected")
 	}
 	if ios.transProto == tcp.ProtocolNumber {
-		err := mx.Handle(ios.dataHandle).SignalPeer(0, ZXSIO_SIGNAL_CONNECTED)
+		err := zx.Handle(ios.dataHandle).SignalPeer(0, ZXSIO_SIGNAL_CONNECTED)
 		switch status := mxerror.Status(err); status {
-		case mx.ErrOk:
+		case zx.ErrOk:
 			// NOP
-		case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
+		case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 			return status
 		default:
 			log.Printf("connect: signal failed: %v", err)
@@ -1035,10 +1035,10 @@ func (s *socketServer) opConnect(ios *iostate, msg *fdio.Msg) (status mx.Status)
 
 	msg.SetOff(0)
 	msg.Datalen = 0
-	return mx.ErrOk
+	return zx.ErrOk
 }
 
-func (s *socketServer) opGetAddrInfo(ios *iostate, msg *fdio.Msg) mx.Status {
+func (s *socketServer) opGetAddrInfo(ios *iostate, msg *fdio.Msg) zx.Status {
 	var val c_mxrio_gai_req
 	if err := val.Decode(msg); err != nil {
 		return errStatus(err)
@@ -1057,7 +1057,7 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *fdio.Msg) mx.Status {
 		log.Println("getaddrinfo called, but no DNS client available.")
 		rep := c_mxrio_gai_reply{retval: EAI_FAIL}
 		rep.Encode(msg)
-		return mx.ErrOk
+		return zx.ErrOk
 	}
 
 	if hints.ai_socktype == 0 {
@@ -1079,7 +1079,7 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *fdio.Msg) mx.Status {
 		port, err = serviceLookup(service, t)
 		if err != nil {
 			log.Printf("getAddrInfo: %v", err)
-			return mx.ErrNotSupported
+			return zx.ErrNotSupported
 		}
 	}
 
@@ -1121,7 +1121,7 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *fdio.Msg) mx.Status {
 	case 0:
 		rep := c_mxrio_gai_reply{retval: EAI_NONAME}
 		rep.Encode(msg)
-		return mx.ErrOk
+		return zx.ErrOk
 	case 4:
 		rep.res[0].ai.ai_family = AF_INET
 		rep.res[0].ai.ai_addrlen = c_socklen(c_sockaddr_in_len)
@@ -1141,14 +1141,14 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *fdio.Msg) mx.Status {
 			log.Printf("getaddrinfo: len(addr)=%d, wrong size", len(addr))
 		}
 		// TODO: failing to resolve is a valid reply. fill out retval
-		return mx.ErrBadState
+		return zx.ErrBadState
 	}
 	rep.nres = 1
 	rep.Encode(msg)
-	return mx.ErrOk
+	return zx.ErrOk
 }
 
-func (s *socketServer) opFcntl(ios *iostate, msg *fdio.Msg) mx.Status {
+func (s *socketServer) opFcntl(ios *iostate, msg *fdio.Msg) zx.Status {
 	cmd := uint32(msg.Arg)
 	if debug2 {
 		log.Printf("fcntl: cmd %v, flags %v", cmd, msg.FcntlFlags())
@@ -1160,10 +1160,10 @@ func (s *socketServer) opFcntl(ios *iostate, msg *fdio.Msg) mx.Status {
 	case fdio.OpFcntlCmdSetFL:
 		// Do nothing.
 	default:
-		return mx.ErrNotSupported
+		return zx.ErrNotSupported
 	}
 	msg.Datalen = 0
-	return mx.ErrOk
+	return zx.ErrOk
 }
 
 func (s *socketServer) iosCloseHandler(ios *iostate, cookie cookie) {
@@ -1174,11 +1174,11 @@ func (s *socketServer) iosCloseHandler(ios *iostate, cookie cookie) {
 	if ios.ep != nil {
 		// Signal that we're about to close. This tells the write loop to finish flushing
 		// all the data from the dataHandle to the endpoint, and let us know when it's done.
-		err := mx.Handle(ios.dataHandle).Signal(0, LOCAL_SIGNAL_CLOSING)
+		err := zx.Handle(ios.dataHandle).Signal(0, LOCAL_SIGNAL_CLOSING)
 
 		go func() {
 			switch mxerror.Status(err) {
-			case mx.ErrOk:
+			case zx.ErrOk:
 				<-ios.writeBufFlushed
 			default:
 				log.Printf("close: signal failed: %v", err)
@@ -1192,7 +1192,7 @@ func (s *socketServer) iosCloseHandler(ios *iostate, cookie cookie) {
 	}
 }
 
-func (s *socketServer) fdioHandler(msg *fdio.Msg, rh mx.Handle, cookieVal int64) mx.Status {
+func (s *socketServer) fdioHandler(msg *fdio.Msg, rh zx.Handle, cookieVal int64) zx.Status {
 	cookie := cookie(cookieVal)
 	op := msg.Op()
 	if debug2 {
@@ -1204,13 +1204,13 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh mx.Handle, cookieVal int64)
 		if debug2 {
 			log.Printf("socketServer.fdio invalid rh (op=%v)", op) // DEBUG
 		}
-		return mx.ErrInvalidArgs
+		return zx.ErrInvalidArgs
 	}
 	s.mu.Lock()
 	ios := s.io[cookie]
 	s.mu.Unlock()
 	if ios == nil && op != fdio.OpOpen {
-		return mx.ErrBadState
+		return zx.ErrBadState
 	}
 
 	switch op {
@@ -1228,7 +1228,7 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh mx.Handle, cookieVal int64)
 			if debug2 {
 				log.Printf("open: unknown path=%q", path)
 			}
-			err = mxerror.Errorf(mx.ErrNotSupported, "open: unknown path=%q", path)
+			err = mxerror.Errorf(zx.ErrNotSupported, "open: unknown path=%q", path)
 		}
 
 		if err != nil {
@@ -1264,7 +1264,7 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh mx.Handle, cookieVal int64)
 		return s.opConnect(ios, msg) // do_connect
 	case fdio.OpClose:
 		ios.release(func() { s.iosCloseHandler(ios, cookie) })
-		return mx.ErrOk
+		return zx.ErrOk
 	case fdio.OpRead:
 		if debug {
 			log.Printf("unexpected opRead")
@@ -1275,7 +1275,7 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh mx.Handle, cookieVal int64)
 		}
 	case fdio.OpWriteAt:
 	case fdio.OpSeek:
-		return mx.ErrOk
+		return zx.ErrOk
 	case fdio.OpStat:
 	case fdio.OpTruncate:
 	case fdio.OpSync:
@@ -1300,8 +1300,8 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh mx.Handle, cookieVal int64)
 		return s.opFcntl(ios, msg)
 	default:
 		log.Printf("unknown socket op: %v", op)
-		return mx.ErrNotSupported
+		return zx.ErrNotSupported
 	}
-	return mx.ErrBadState
+	return zx.ErrBadState
 	// TODO do_halfclose
 }

@@ -129,7 +129,7 @@ func (t *translator) TranslateFidlFile(fileName string) (tmplFile *TmplFile) {
 		t.imports["bindings"] = "fidl/bindings"
 	}
 	if len(tmplFile.Interfaces) > 0 {
-		t.imports["zx"] = "syscall/mx"
+		t.imports["zx"] = "syscall/zx"
 	}
 	if len(tmplFile.Structs) > 0 || methodDefined {
 		t.imports["sort"] = "sort"

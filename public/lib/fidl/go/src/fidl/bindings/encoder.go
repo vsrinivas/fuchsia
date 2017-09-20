@@ -10,7 +10,7 @@ import (
 	"math"
 	"sort"
 
-	"syscall/mx"
+	"syscall/zx"
 )
 
 // encodingState has information required to encode/decode a one-level value.
@@ -64,7 +64,7 @@ type Encoder struct {
 	end int
 
 	// Array containing encoded handles.
-	handles []mx.Handle
+	handles []zx.Handle
 
 	// A stack of encoder states matching current one-level value stack
 	// of the encoding data structure.
@@ -236,7 +236,7 @@ func (e *Encoder) Finish() error {
 
 // Data returns an encoded message with attached handles.
 // Call this method after finishing encoding of a value.
-func (e *Encoder) Data() ([]byte, []mx.Handle, error) {
+func (e *Encoder) Data() ([]byte, []zx.Handle, error) {
 	if len(e.stateStack) != 0 {
 		return nil, nil, fmt.Errorf("can't return data when encoder has non-empty state stack")
 	}
@@ -377,7 +377,7 @@ func (e *Encoder) WriteInvalidHandle() error {
 }
 
 // WriteHandle writes a handle and invalidates the passed handle object.
-func (e *Encoder) WriteHandle(handle mx.Handle) error {
+func (e *Encoder) WriteHandle(handle zx.Handle) error {
 	if !handle.IsValid() {
 		return fmt.Errorf("can't write an invalid handle")
 	}
@@ -395,7 +395,7 @@ func (e *Encoder) WriteInvalidInterface() error {
 }
 
 // WriteInterface writes an interface and invalidates the passed handle object.
-func (e *Encoder) WriteInterface(handle mx.Handle) error {
+func (e *Encoder) WriteInterface(handle zx.Handle) error {
 	if err := e.WriteHandle(handle); err != nil {
 		return err
 	}

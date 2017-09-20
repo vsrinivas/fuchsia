@@ -7,7 +7,7 @@ package bindings
 import (
 	"fmt"
 
-	"syscall/mx"
+	"syscall/zx"
 )
 
 const (
@@ -159,11 +159,11 @@ func (h *MessageHeader) version() uint32 {
 type Message struct {
 	Header  MessageHeader
 	Bytes   []byte
-	Handles []mx.Handle
+	Handles []zx.Handle
 	Payload []byte
 }
 
-func newMessage(header MessageHeader, bytes []byte, handles []mx.Handle) *Message {
+func newMessage(header MessageHeader, bytes []byte, handles []zx.Handle) *Message {
 	return &Message{header, bytes, handles, bytes[header.dataSize()+dataHeaderSize:]}
 }
 
@@ -195,8 +195,8 @@ func EncodeMessage(header MessageHeader, payload Payload) (*Message, error) {
 
 // ParseMessage parses message header from byte buffer with attached handles
 // and returnes parsed message.
-func ParseMessage(bytes []byte, handles []mx.Handle) (*Message, error) {
-	decoder := NewDecoder(bytes, []mx.Handle{})
+func ParseMessage(bytes []byte, handles []zx.Handle) (*Message, error) {
+	decoder := NewDecoder(bytes, []zx.Handle{})
 	var header MessageHeader
 	if err := header.Decode(decoder); err != nil {
 		return nil, err

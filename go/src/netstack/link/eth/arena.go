@@ -7,7 +7,7 @@ package eth
 import (
 	"fmt"
 	"sync"
-	"syscall/mx"
+	"syscall/zx"
 	"unsafe"
 )
 
@@ -27,7 +27,7 @@ type Buffer []byte
 // Arenas are split into fixed-size Buffers, and are shared with
 // ethernet drivers.
 type Arena struct {
-	iovmo mx.VMO
+	iovmo zx.VMO
 	iobuf uintptr
 
 	mu       sync.Mutex
@@ -38,12 +38,12 @@ type Arena struct {
 // NewArena creates a new Arena of fixed size.
 func NewArena() (*Arena, error) {
 	iosize := uint64(numBuffers * bufferSize)
-	iovmo, err := mx.NewVMO(uint64(iosize), 0)
+	iovmo, err := zx.NewVMO(uint64(iosize), 0)
 	if err != nil {
 		return nil, fmt.Errorf("eth: cannot allocate I/O VMO: %v", err)
 	}
 
-	iobuf, err := mx.VMARRoot.Map(0, iovmo, 0, iosize, mx.VMFlagPermRead|mx.VMFlagPermWrite)
+	iobuf, err := zx.VMARRoot.Map(0, iovmo, 0, iosize, zx.VMFlagPermRead|zx.VMFlagPermWrite)
 	if err != nil {
 		iovmo.Close()
 		return nil, fmt.Errorf("eth.Arena: I/O map failed: %v", err)

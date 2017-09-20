@@ -9,8 +9,8 @@ import (
 	"runtime"
 	"sync"
 
-	"syscall/mx"
-	"syscall/mx/mxerror"
+	"syscall/zx"
+	"syscall/zx/mxerror"
 )
 
 var defaultWaiter *asyncWaiterImpl
@@ -32,7 +32,7 @@ type AsyncWaitId uint64
 // handle.
 type WaitResponse struct {
 	Error   error
-	Pending mx.Signals
+	Pending zx.Signals
 }
 
 // AsyncWaiter defines an interface for asynchronously waiting (and cancelling
@@ -45,7 +45,7 @@ type AsyncWaiter interface {
 	//
 	// |handle| must not be closed or transferred until the wait response
 	// is received from |responseChan|.
-	AsyncWait(handle mx.Handle, signals mx.Signals, responseChan chan<- WaitResponse) AsyncWaitId
+	AsyncWait(handle zx.Handle, signals zx.Signals, responseChan chan<- WaitResponse) AsyncWaitId
 
 	// CancelWait cancels an outstanding async wait (specified by |id|)
 	// initiated by |AsyncWait()|. A response with
@@ -56,8 +56,8 @@ type AsyncWaiter interface {
 // waitRequest is a struct sent to asyncWaiterWorker to add another handle to
 // the list of waiting handles.
 type waitRequest struct {
-	handle  mx.Handle
-	signals mx.Signals
+	handle  zx.Handle
+	signals zx.Signals
 
 	// Used for |CancelWait()| calls. The worker should issue IDs so that
 	// you can't cancel the wait until the worker received the wait request.
@@ -76,7 +76,7 @@ type asyncWaiterWorker struct {
 	// |items| is used to make |WaitMany()| calls directly.
 	// All these arrays should be operated simultaneously; i-th element
 	// of each refers to i-th handle.
-	items        []mx.WaitItem
+	items        []zx.WaitItem
 	asyncWaitIds []AsyncWaitId
 	responses    []chan<- WaitResponse
 
@@ -102,7 +102,7 @@ func (w *asyncWaiterWorker) removeHandle(index int) {
 
 // sendWaitResponseAndRemove send response to corresponding channel and removes
 // index-th waiting handle.
-func (w *asyncWaiterWorker) sendWaitResponseAndRemove(index int, err error, pending mx.Signals) {
+func (w *asyncWaiterWorker) sendWaitResponseAndRemove(index int, err error, pending zx.Signals) {
 	w.responses[index] <- WaitResponse{
 		err,
 		pending,
@@ -130,7 +130,7 @@ func (w *asyncWaiterWorker) processIncomingRequests() {
 	for {
 		select {
 		case request := <-w.waitChan:
-			w.items = append(w.items, mx.WaitItem{Handle: request.handle, WaitFor: request.signals})
+			w.items = append(w.items, zx.WaitItem{Handle: request.handle, WaitFor: request.signals})
 			w.responses = append(w.responses, request.responseChan)
 
 			w.ids++
@@ -149,7 +149,7 @@ func (w *asyncWaiterWorker) processIncomingRequests() {
 			// Do nothing if the id was not found as wait response may be
 			// already sent if the async wait was successful.
 			if index > 0 {
-				w.sendWaitResponseAndRemove(index, mx.Error{Status: mx.ErrCanceled, Text: "bindings.CancelWait"}, mx.Signals(0))
+				w.sendWaitResponseAndRemove(index, zx.Error{Status: zx.ErrCanceled, Text: "bindings.CancelWait"}, zx.Signals(0))
 			}
 		default:
 			return
@@ -164,9 +164,9 @@ func (w *asyncWaiterWorker) processIncomingRequests() {
 func (w *asyncWaiterWorker) runLoop() {
 Loop:
 	for {
-		err := mx.WaitMany(w.items, mx.TimensecInfinite)
+		err := zx.WaitMany(w.items, zx.TimensecInfinite)
 		switch mxerror.Status(err) {
-		case mx.ErrOk, mx.ErrTimedOut:
+		case zx.ErrOk, zx.ErrTimedOut:
 			// NOP
 		default:
 			panic(fmt.Sprintf("error waiting on handles: %v", err))
@@ -175,7 +175,7 @@ Loop:
 		// Zero index means that the worker was signaled by asyncWaiterImpl.
 		if (w.items[0].Pending & w.items[0].WaitFor) != 0 {
 			// Clear the signal from asyncWaiterImpl.
-			w.items[0].Handle.Signal(mx.SignalUser0, 0)
+			w.items[0].Handle.Signal(zx.SignalUser0, 0)
 			w.processIncomingRequests()
 		} else {
 			w.respondToSatisfiedWaits()
@@ -188,7 +188,7 @@ Loop:
 // signal to |wakingEvent| to wake worker from |WaitMany()| call and
 // sending request via |waitChan| and |cancelChan|.
 type asyncWaiterImpl struct {
-	wakingEvent mx.Event
+	wakingEvent zx.Event
 
 	waitChan   chan<- waitRequest // should have a non-empty buffer
 	cancelChan chan<- AsyncWaitId // should have a non-empty buffer
@@ -205,19 +205,19 @@ func finalizeAsyncWaiter(waiter *asyncWaiterImpl) {
 
 // newAsyncWaiter creates an asyncWaiterImpl and starts its worker goroutine.
 func newAsyncWaiter() *asyncWaiterImpl {
-	e0, err := mx.NewEvent(0)
+	e0, err := zx.NewEvent(0)
 	if err != nil {
 		panic(fmt.Sprintf("can't create event %v", err))
 	}
 	waitChan := make(chan waitRequest, 10)
 	cancelChan := make(chan AsyncWaitId, 10)
-	e1, err := e0.Duplicate(mx.RightSameRights)
+	e1, err := e0.Duplicate(zx.RightSameRights)
 	if err != nil {
 		panic(fmt.Sprintf("can't duplicate event %v", err))
 	}
-	item := mx.WaitItem{Handle: mx.Handle(e1), WaitFor: mx.SignalUser0}
+	item := zx.WaitItem{Handle: zx.Handle(e1), WaitFor: zx.SignalUser0}
 	worker := &asyncWaiterWorker{
-		[]mx.WaitItem{item},
+		[]zx.WaitItem{item},
 		[]AsyncWaitId{0},
 		[]chan<- WaitResponse{make(chan WaitResponse)},
 		waitChan,
@@ -239,14 +239,14 @@ func newAsyncWaiter() *asyncWaiterImpl {
 // after sending a message to |waitChan| or |cancelChan| to avoid deadlock.
 func (w *asyncWaiterImpl) wakeWorker() {
 	// Send a signal.
-	// TODO: Add Signal method to mx.Event type
-	err := mx.Handle(w.wakingEvent).Signal(0, mx.SignalUser0)
+	// TODO: Add Signal method to zx.Event type
+	err := zx.Handle(w.wakingEvent).Signal(0, zx.SignalUser0)
 	if err != nil {
 		panic("can't signal an event")
 	}
 }
 
-func (w *asyncWaiterImpl) AsyncWait(handle mx.Handle, signals mx.Signals, responseChan chan<- WaitResponse) AsyncWaitId {
+func (w *asyncWaiterImpl) AsyncWait(handle zx.Handle, signals zx.Signals, responseChan chan<- WaitResponse) AsyncWaitId {
 	idChan := make(chan AsyncWaitId, 1)
 	w.waitChan <- waitRequest{
 		handle,

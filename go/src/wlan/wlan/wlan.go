@@ -14,13 +14,13 @@ import (
 	"netstack/link/eth"
 	"os"
 	"syscall"
-	"syscall/mx"
-	"syscall/mx/mxerror"
+	"syscall/zx"
+	"syscall/zx/mxerror"
 	"time"
 	"wlan/eapol"
 )
 
-const MX_SOCKET_READABLE = mx.SignalObject0
+const ZX_SOCKET_READABLE = zx.SignalObject0
 const debug = false
 
 type commandRequest struct {
@@ -35,7 +35,7 @@ type CommandResult struct {
 }
 
 type mlmeResult struct {
-	observed mx.Signals
+	observed zx.Signals
 	err      error
 }
 
@@ -45,7 +45,7 @@ type Client struct {
 
 	path     string
 	f        *os.File
-	mlmeChan mx.Channel
+	mlmeChan zx.Channel
 	cfg      *Config
 	ap       *AP
 	staAddr  [6]byte
@@ -89,7 +89,7 @@ func NewClient(path string, config *Config) (*Client, error) {
 		mlmeC:    make(chan *mlmeResult, 1),
 		path:     path,
 		f:        f,
-		mlmeChan: mx.Channel{ch},
+		mlmeChan: zx.Channel{ch},
 		cfg:      config,
 		state:    nil,
 		staAddr:  info.MAC,
@@ -225,35 +225,35 @@ func (c *Client) SendMessage(msg bindings.Payload, ordinal int32) error {
 }
 
 func (c *Client) watchMLMEChan(timeout time.Duration) *mlmeResult {
-	deadline := mx.TimensecInfinite
+	deadline := zx.TimensecInfinite
 	if timeout > 0 {
-		deadline = mx.Sys_deadline_after(
-			mx.Duration(timeout.Nanoseconds()))
+		deadline = zx.Sys_deadline_after(
+			zx.Duration(timeout.Nanoseconds()))
 	}
 	obs, err := c.mlmeChan.Handle.WaitOne(
-		mx.SignalChannelReadable|mx.SignalChannelPeerClosed,
+		zx.SignalChannelReadable|zx.SignalChannelPeerClosed,
 		deadline)
 	return &mlmeResult{obs, err}
 }
 
-func (c *Client) handleResponse(obs mx.Signals, err error) (state, error) {
+func (c *Client) handleResponse(obs zx.Signals, err error) (state, error) {
 	var nextState state
 	switch mxerror.Status(err) {
-	case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
+	case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 		return nil, fmt.Errorf("error waiting on handle: %v", err)
 
-	case mx.ErrTimedOut:
+	case zx.ErrTimedOut:
 		nextState, err = c.state.handleMLMETimeout(c)
 		if err != nil {
 			return nil, fmt.Errorf("error handling timeout for state \"%v\": %v", c.state, err)
 		}
 
-	case mx.ErrOk:
+	case zx.ErrOk:
 		switch {
-		case obs&mx.SignalChannelPeerClosed != 0:
+		case obs&zx.SignalChannelPeerClosed != 0:
 			return nil, fmt.Errorf("channel closed")
 
-		case obs&MX_SOCKET_READABLE != 0:
+		case obs&ZX_SOCKET_READABLE != 0:
 			// TODO(tkilbourn): decide on a default buffer size, and support growing the buffer as needed
 			var buf [4096]byte
 			_, _, err := c.mlmeChan.Read(buf[:], nil, 0)

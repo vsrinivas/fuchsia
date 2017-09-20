@@ -16,9 +16,9 @@ import (
 	"path/filepath"
 	"sync"
 	"syscall"
-	"syscall/mx"
-	"syscall/mx/mxerror"
-	"syscall/mx/fdio"
+	"syscall/zx"
+	"syscall/zx/mxerror"
+	"syscall/zx/fdio"
 	"time"
 
 	"garnet/public/lib/power/fidl/power_manager"
@@ -116,14 +116,14 @@ func addListener(m fdio.FDIO, callback func(fdio.FDIO)) error {
 	}
 	go func() {
 		for {
-			wi := []mx.WaitItem{
-				mx.WaitItem{
+			wi := []zx.WaitItem{
+				zx.WaitItem{
 					Handle:  handles[0],
-					WaitFor: mx.SignalUser0,
+					WaitFor: zx.SignalUser0,
 					Pending: 0,
 				},
 			}
-			if err := mx.WaitMany(wi, mx.TimensecInfinite); err != nil {
+			if err := zx.WaitMany(wi, zx.TimensecInfinite); err != nil {
 				logger.Printf("Error while waiting: %s\n", err)
 				break
 			} else {
@@ -204,7 +204,7 @@ func (pm *PowerManager) Bind(r power_manager.PowerManager_Request) {
 		defer logger.Println("Bye Bind")
 		for {
 			if err := s.ServeRequest(); err != nil {
-				if mxerror.Status(err) != mx.ErrPeerClosed {
+				if mxerror.Status(err) != zx.ErrPeerClosed {
 					log.Println(err)
 				}
 				break

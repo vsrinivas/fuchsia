@@ -10,8 +10,8 @@ import (
 	"unsafe"
 
 	"syscall"
-	"syscall/mx"
-	"syscall/mx/fdio"
+	"syscall/zx"
+	"syscall/zx/fdio"
 )
 
 // Watcher watches a directory, send the name of any new file to
@@ -21,7 +21,7 @@ type Watcher struct {
 	Err error
 
 	f *os.File
-	h mx.Channel
+	h zx.Channel
 }
 
 // NewWatcher creates a watcher on the directory dir.
@@ -37,7 +37,7 @@ func NewWatcher(dir string) (*Watcher, error) {
 	w := &Watcher{
 		C: make(chan string),
 		f: os.NewFile(uintptr(syscall.OpenFDIO(m)), dir+" watcher"),
-		h: mx.Channel{Handle: h},
+		h: zx.Channel{Handle: h},
 	}
 	go w.start()
 	return w, nil
@@ -76,7 +76,7 @@ func (w *Watcher) start() {
 }
 
 func (w *Watcher) wait() (string, uint, error) {
-	_, err := w.h.Handle.WaitOne(mx.SignalChannelReadable|mx.SignalChannelPeerClosed, mx.TimensecInfinite)
+	_, err := w.h.Handle.WaitOne(zx.SignalChannelReadable|zx.SignalChannelPeerClosed, zx.TimensecInfinite)
 	if err != nil {
 		return "", 0, err
 	}
@@ -103,9 +103,9 @@ type errorString string
 
 func (e errorString) Error() string { return string(e) }
 
-func ioctlVFSWatchDir(m fdio.FDIO) (h mx.Handle, err error) {
+func ioctlVFSWatchDir(m fdio.FDIO) (h zx.Handle, err error) {
 
-	c1, c2, err := mx.NewChannel(0)
+	c1, c2, err := zx.NewChannel(0)
 	if err != nil {
 		return 0, errorString("IOCTL_VFS_WATCH_DIR: " + err.Error())
 	}

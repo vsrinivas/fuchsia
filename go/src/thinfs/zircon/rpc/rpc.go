@@ -17,15 +17,15 @@ import (
 
 	"thinfs/fs"
 
-	"syscall/mx"
-	"syscall/mx/fdio"
+	"syscall/zx"
+	"syscall/zx/fdio"
 )
 
 type directoryWrapper struct {
 	d       fs.Directory
 	dirents []fs.Dirent
 	reading bool
-	e       mx.Event
+	e       zx.Event
 }
 
 type ThinVFS struct {
@@ -44,7 +44,7 @@ type VfsQueryInfo struct {
 }
 
 // NewServer creates a new ThinVFS server. Serve must be called to begin servicing the filesystem.
-func NewServer(filesys fs.FileSystem, h mx.Handle) (*ThinVFS, error) {
+func NewServer(filesys fs.FileSystem, h zx.Handle) (*ThinVFS, error) {
 	vfs := &ThinVFS{
 		files: make(map[int64]interface{}),
 		fs:    filesys,
@@ -64,7 +64,7 @@ func NewServer(filesys fs.FileSystem, h mx.Handle) (*ThinVFS, error) {
 	vfs.dispatcher = d
 
 	// We're ready to serve
-	if err := h.SignalPeer(0, mx.SignalUser0); err != nil {
+	if err := h.SignalPeer(0, zx.SignalUser0); err != nil {
 		h.Close()
 		return vfs, err
 	}
@@ -80,7 +80,7 @@ func (vfs *ThinVFS) Serve() {
 // AddHandler uses the given handle and cookie as the primary mechanism to communicate with the VFS
 // object, and returns any additional handles required to interact with the object.  (at the moment,
 // no additional handles are supported).
-func (vfs *ThinVFS) AddHandler(h mx.Handle, obj interface{}) error {
+func (vfs *ThinVFS) AddHandler(h zx.Handle, obj interface{}) error {
 	var serverHandler fdio.ServerHandler = vfs.fdioServer
 	cookie := vfs.allocateCookie(obj)
 	if err := vfs.dispatcher.AddHandler(h, serverHandler, int64(cookie)); err != nil {
@@ -91,17 +91,17 @@ func (vfs *ThinVFS) AddHandler(h mx.Handle, obj interface{}) error {
 	return nil
 }
 
-func (dw *directoryWrapper) GetToken(cookie int64) (mx.Handle, error) {
+func (dw *directoryWrapper) GetToken(cookie int64) (zx.Handle, error) {
 	if dw.e != 0 {
-		if e, err := dw.e.Duplicate(mx.RightSameRights); err != nil {
+		if e, err := dw.e.Duplicate(zx.RightSameRights); err != nil {
 			return 0, err
 		} else {
-			return mx.Handle(e), nil
+			return zx.Handle(e), nil
 		}
 	}
 
 	// Create a new event which may later be used to refer to this object
-	e0, err := mx.NewEvent(0)
+	e0, err := zx.NewEvent(0)
 	if err != nil {
 		return 0, err
 	}
@@ -110,14 +110,14 @@ func (dw *directoryWrapper) GetToken(cookie int64) (mx.Handle, error) {
 
 	// One handle to the event returns to the client, one end is kept on the
 	// server (and is accessible within the cookie).
-	var e1 mx.Event
-	if e1, err = e0.Duplicate(mx.RightSameRights); err != nil {
+	var e1 zx.Event
+	if e1, err = e0.Duplicate(zx.RightSameRights); err != nil {
 		goto fail_event_created
 	}
-	if err := mx.Handle(e0).SetCookie(mx.ProcHandle, uint64(cookie)); err != nil {
+	if err := zx.Handle(e0).SetCookie(zx.ProcHandle, uint64(cookie)); err != nil {
 		goto fail_event_duplicated
 	}
-	return mx.Handle(e1), nil
+	return zx.Handle(e1), nil
 
 fail_event_duplicated:
 	e1.Close()
@@ -129,38 +129,38 @@ fail_event_created:
 
 // TODO(smklein): Calibrate thinfs flags with standard C library flags to make conversion smoother
 
-func errorToRIO(err error) mx.Status {
+func errorToRIO(err error) zx.Status {
 	switch err {
 	case nil, fs.ErrEOF:
 		// ErrEOF can be translated directly to ErrOk. For operations which return with an error if
 		// partially complete (such as 'Read'), RemoteIO does not flag an error -- instead, it
 		// simply returns the number of bytes which were processed.
-		return mx.ErrOk
+		return zx.ErrOk
 	case fs.ErrInvalidArgs:
-		return mx.ErrInvalidArgs
+		return zx.ErrInvalidArgs
 	case fs.ErrNotFound:
-		return mx.ErrNotFound
+		return zx.ErrNotFound
 	case fs.ErrAlreadyExists:
-		return mx.ErrAlreadyExists
+		return zx.ErrAlreadyExists
 	case fs.ErrPermission, fs.ErrReadOnly:
 		// We're returning "BadHandle" instead of "AccessDenied"
 		// to match the POSIX convention where bad fd permissions
 		// typically return "EBADF".
-		return mx.ErrBadHandle
+		return zx.ErrBadHandle
 	case fs.ErrNoSpace:
-		return mx.ErrNoSpace
+		return zx.ErrNoSpace
 	case fs.ErrNotEmpty:
-		return mx.ErrNotEmpty
+		return zx.ErrNotEmpty
 	case fs.ErrFailedPrecondition, fs.ErrNotEmpty, fs.ErrNotOpen, fs.ErrIsActive, fs.ErrUnmounted:
-		return mx.ErrBadState
+		return zx.ErrBadState
 	case fs.ErrNotAFile:
-		return mx.ErrNotFile
+		return zx.ErrNotFile
 	case fs.ErrNotADir:
-		return mx.ErrNotDir
+		return zx.ErrNotDir
 	case fs.ErrNotSupported:
-		return mx.ErrNotSupported
+		return zx.ErrNotSupported
 	default:
-		return mx.ErrInternal
+		return zx.ErrInternal
 	}
 }
 
@@ -223,18 +223,18 @@ func openFlagsFromRIO(arg int32, mode uint32) fs.OpenFlags {
 	return res
 }
 
-func (vfs *ThinVFS) processOpFile(msg *fdio.Msg, f fs.File, cookie int64) mx.Status {
+func (vfs *ThinVFS) processOpFile(msg *fdio.Msg, f fs.File, cookie int64) zx.Status {
 	inputData := msg.Data[:msg.Datalen]
 	msg.Datalen = 0
 	switch msg.Op() {
 	case fdio.OpClone:
 		f2, err := f.Dup()
-		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
 			return fdio.IndirectError(msg.Handle[0], mxErr)
 		}
 		ro := &fdio.RioObject{
 			RioObjectHeader: fdio.RioObjectHeader{
-				Status: mx.ErrOk,
+				Status: zx.ErrOk,
 				Type:   uint32(fdio.ProtocolRemote),
 			},
 			Esize:  0,
@@ -251,47 +251,47 @@ func (vfs *ThinVFS) processOpFile(msg *fdio.Msg, f fs.File, cookie int64) mx.Sta
 		return errorToRIO(err)
 	case fdio.OpRead:
 		r, err := f.Read(msg.Data[:msg.Arg], 0, fs.WhenceFromCurrent)
-		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
 			return mxErr
 		}
 		msg.Datalen = uint32(r)
-		return mx.Status(r)
+		return zx.Status(r)
 	case fdio.OpReadAt:
 		r, err := f.Read(msg.Data[:msg.Arg], msg.Off(), fs.WhenceFromStart)
-		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
 			return mxErr
 		}
 		msg.Datalen = uint32(r)
-		return mx.Status(r)
+		return zx.Status(r)
 	case fdio.OpWrite:
 		r, err := f.Write(inputData, 0, fs.WhenceFromCurrent)
-		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
 			return mxErr
 		}
-		return mx.Status(r)
+		return zx.Status(r)
 	case fdio.OpWriteAt:
 		r, err := f.Write(inputData, msg.Off(), fs.WhenceFromStart)
-		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
 			return mxErr
 		}
-		return mx.Status(r)
+		return zx.Status(r)
 	case fdio.OpSeek:
 		r, err := f.Seek(msg.Off(), int(msg.Arg))
-		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
 			return mxErr
 		}
 		msg.SetOff(r)
-		return mx.ErrOk
+		return zx.ErrOk
 	case fdio.OpStat:
 		size, _, mtime, err := f.Stat()
-		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
 			return mxErr
 		}
 		return statShared(msg, size, mtime, false)
 	case fdio.OpTruncate:
 		off := msg.Off()
 		if off < 0 {
-			return mx.ErrInvalidArgs
+			return zx.ErrInvalidArgs
 		}
 		err := f.Truncate(uint64(off))
 		return errorToRIO(err)
@@ -316,20 +316,20 @@ func (vfs *ThinVFS) processOpFile(msg *fdio.Msg, f fs.File, cookie int64) mx.Sta
 				cflags |= syscall.O_WRONLY
 			}
 			msg.SetFcntlFlags(cflags)
-			return mx.ErrOk
+			return zx.ErrOk
 		case fdio.OpFcntlCmdSetFL:
 			err := f.SetOpenFlags((f.GetOpenFlags() & ^statusFlags) | (flags & statusFlags))
 			return errorToRIO(err)
 		default:
 			msg.DiscardHandles()
-			return mx.ErrNotSupported
+			return zx.ErrNotSupported
 		}
 	default:
 		println("ThinFS FILE UNKNOWN OP: ", msg.Op())
 		msg.DiscardHandles()
-		return mx.ErrNotSupported
+		return zx.ErrNotSupported
 	}
-	return mx.ErrNotSupported
+	return zx.ErrNotSupported
 }
 
 func getTimeShared(msg *fdio.Msg) (time.Time, time.Time) {
@@ -343,7 +343,7 @@ func getTimeShared(msg *fdio.Msg) (time.Time, time.Time) {
 
 const pageSize = 4096
 
-func statShared(msg *fdio.Msg, size int64, mtime time.Time, dir bool) mx.Status {
+func statShared(msg *fdio.Msg, size int64, mtime time.Time, dir bool) zx.Status {
 	r := fdio.Vnattr{}
 	if dir {
 		r.Mode = syscall.S_IFDIR
@@ -361,22 +361,22 @@ func statShared(msg *fdio.Msg, size int64, mtime time.Time, dir bool) mx.Status 
 	r.CreateTime = r.ModifyTime
 	*(*fdio.Vnattr)(unsafe.Pointer(&msg.Data[0])) = r
 	msg.Datalen = uint32(unsafe.Sizeof(r))
-	return mx.Status(msg.Datalen)
+	return zx.Status(msg.Datalen)
 }
 
-func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh mx.Handle, dw *directoryWrapper, cookie int64) mx.Status {
+func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *directoryWrapper, cookie int64) zx.Status {
 	inputData := msg.Data[:msg.Datalen]
 	msg.Datalen = 0
 	dir := dw.d
 	switch msg.Op() {
 	case fdio.OpOpen:
 		if len(inputData) < 1 {
-			return fdio.IndirectError(msg.Handle[0], mx.ErrInvalidArgs)
+			return fdio.IndirectError(msg.Handle[0], zx.ErrInvalidArgs)
 		}
 		path := strings.TrimRight(string(inputData), "\x00")
 		flags := openFlagsFromRIO(msg.Arg, msg.Mode())
 		f, d, err := dir.Open(path, flags)
-		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
 			return fdio.IndirectError(msg.Handle[0], mxErr)
 		}
 		var obj interface{}
@@ -389,7 +389,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh mx.Handle, dw *director
 		if !flags.Pipeline() {
 			ro := &fdio.RioObject{
 				RioObjectHeader: fdio.RioObjectHeader{
-					Status: mx.ErrOk,
+					Status: zx.ErrOk,
 					Type:   uint32(fdio.ProtocolRemote),
 				},
 				Esize:  0,
@@ -408,12 +408,12 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh mx.Handle, dw *director
 		return fdio.ErrIndirect.Status
 	case fdio.OpClone:
 		d2, err := dir.Dup()
-		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
 			return fdio.IndirectError(msg.Handle[0], mxErr)
 		}
 		ro := &fdio.RioObject{
 			RioObjectHeader: fdio.RioObjectHeader{
-				Status: mx.ErrOk,
+				Status: zx.ErrOk,
 				Type:   uint32(fdio.ProtocolRemote),
 			},
 			Esize:  0,
@@ -428,21 +428,21 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh mx.Handle, dw *director
 		err := dir.Close()
 		vfs.Lock()
 		if dw.e != 0 {
-			mx.Handle(dw.e).SetCookie(mx.ProcHandle, 0)
+			zx.Handle(dw.e).SetCookie(zx.ProcHandle, 0)
 		}
 		vfs.Unlock()
 		vfs.freeCookie(cookie)
 		return errorToRIO(err)
 	case fdio.OpStat:
 		size, _, mtime, err := dir.Stat()
-		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
 			return mxErr
 		}
 		return statShared(msg, size, mtime, true)
 	case fdio.OpReaddir:
 		maxlen := uint32(msg.Arg)
 		if maxlen > fdio.ChunkSize {
-			return mx.ErrInvalidArgs
+			return zx.ErrInvalidArgs
 		}
 		if msg.Off() == 1 {
 			// TODO(smklein): 1 == ReaddirCmdReset; update the Go standard library to include this
@@ -452,11 +452,11 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh mx.Handle, dw *director
 		if dw.reading && len(dw.dirents) == 0 {
 			// The final read of 'readdir' must return zero
 			dw.reading = false
-			return mx.Status(0)
+			return zx.Status(0)
 		}
 		if !dw.reading {
 			dirents, err := dir.Read()
-			if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+			if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
 				return mxErr
 			}
 			dw.reading = true
@@ -489,7 +489,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh mx.Handle, dw *director
 		}
 		msg.Datalen = bytesWritten
 		dw.reading = true
-		return mx.Status(msg.Datalen)
+		return zx.Status(msg.Datalen)
 	case fdio.OpUnlink:
 		path := strings.TrimRight(string(inputData), "\x00")
 		err := dir.Unlink(path)
@@ -498,25 +498,25 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh mx.Handle, dw *director
 	case fdio.OpRename:
 		defer msg.DiscardHandles()
 		if len(inputData) < 4 { // Src + null + dst + null
-			return mx.ErrInvalidArgs
+			return zx.ErrInvalidArgs
 		}
 		paths := strings.Split(strings.TrimRight(string(inputData), "\x00"), "\x00")
 		if len(paths) != 2 {
-			return mx.ErrInvalidArgs
+			return zx.ErrInvalidArgs
 		}
 
 		vfs.Lock()
 		defer vfs.Unlock()
-		cookie, err := msg.Handle[0].GetCookie(mx.ProcHandle)
+		cookie, err := msg.Handle[0].GetCookie(zx.ProcHandle)
 		if err != nil {
-			return mx.ErrInvalidArgs
+			return zx.ErrInvalidArgs
 		}
 		obj := vfs.files[int64(cookie)]
 		switch obj := obj.(type) {
 		case *directoryWrapper:
 			return errorToRIO(dir.Rename(obj.d, paths[0], paths[1]))
 		default:
-			return mx.ErrInvalidArgs
+			return zx.ErrInvalidArgs
 		}
 	case fdio.OpSync:
 		return errorToRIO(dir.Sync())
@@ -531,7 +531,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh mx.Handle, dw *director
 			}
 			msg.Handle[0] = h
 			msg.Hcount = 1
-			return mx.ErrOk
+			return zx.ErrOk
 		case fdio.IoctlVFSUnmountFS:
 			// Shut down filesystem
 			err := vfs.fs.Close()
@@ -559,20 +559,20 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh mx.Handle, dw *director
 			totalSize := infoSize + uint32(len(name))
 
 			if totalSize > maxlen {
-				return mx.ErrBufferTooSmall
+				return zx.ErrBufferTooSmall
 			}
 
 			copy(msg.Data[0:], (*[infoSize]byte)(unsafe.Pointer(&queryInfo))[:])
 			copy(msg.Data[infoSize:], name)
 			msg.Datalen = totalSize
-			return mx.Status(msg.Datalen)
+			return zx.Status(msg.Datalen)
 		case fdio.IoctlVFSGetDevicePath:
 			path := vfs.fs.DevicePath()
 			copy(msg.Data[0:], path)
 			msg.Datalen = uint32(len(path))
-			return mx.Status(msg.Datalen)
+			return zx.Status(msg.Datalen)
 		default:
-			return mx.ErrNotSupported
+			return zx.ErrNotSupported
 		}
 	case fdio.OpSetAttr:
 		atime, mtime := getTimeShared(msg)
@@ -580,16 +580,16 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh mx.Handle, dw *director
 	default:
 		println("ThinFS DIR UNKNOWN OP: ", msg.Op())
 		msg.DiscardHandles()
-		return mx.ErrNotSupported
+		return zx.ErrNotSupported
 	}
-	return mx.ErrNotSupported
+	return zx.ErrNotSupported
 }
 
-func (vfs *ThinVFS) fdioServer(msg *fdio.Msg, rh mx.Handle, cookie int64) mx.Status {
+func (vfs *ThinVFS) fdioServer(msg *fdio.Msg, rh zx.Handle, cookie int64) zx.Status {
 	if msg.Hcount != msg.OpHandleCount() {
 		// Incoming number of handles must match message type
 		msg.DiscardHandles()
-		return mx.ErrIO
+		return zx.ErrIO
 	}
 
 	// Determine if the object we're acting on is a directory or a file
@@ -598,7 +598,7 @@ func (vfs *ThinVFS) fdioServer(msg *fdio.Msg, rh mx.Handle, cookie int64) mx.Sta
 	vfs.Unlock()
 	if obj == nil && msg.Op() == fdio.OpClose {
 		// Removing object that has already been removed
-		return mx.ErrOk
+		return zx.ErrOk
 	}
 	switch obj := obj.(type) {
 	case fs.File:
@@ -608,7 +608,7 @@ func (vfs *ThinVFS) fdioServer(msg *fdio.Msg, rh mx.Handle, cookie int64) mx.Sta
 	default:
 		fmt.Printf("cookie %d resulted in unexpected type %T\n", cookie, obj)
 		msg.DiscardHandles()
-		return mx.ErrInternal
+		return zx.ErrInternal
 	}
 }
 

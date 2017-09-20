@@ -18,8 +18,8 @@ import (
 	"thinfs/fs/msdosfs"
 	"thinfs/zircon/rpc"
 
-	"syscall/mx/fdio/mxc"
-	"syscall/mx/mxruntime"
+	"syscall/zx/fdio/mxc"
+	"syscall/zx/mxruntime"
 )
 
 var blockFDPtr = flag.Int("blockFD", -1, "File Descriptor to Block Device")
