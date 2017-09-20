@@ -13,7 +13,7 @@ fset and rebuild as shown below:
 
 ``` sh
 source fuchsia/scripts/env.sh
-fset x86-64 --modules boot_headless
+fset x86-64 --modules packages/gn/boot_headless
 fbuild
 ```
 
