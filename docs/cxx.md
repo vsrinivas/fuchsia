@@ -57,7 +57,7 @@ address our particular needs. This library is split into two parts:
   - [slab malloc](../system/ulib/fbl/include/fbl/slab_malloc.h)
 - arrays
   - [fixed sized arrays](../system/ulib/fbl/include/fbl/array.h)
-  - [fixed sized arrays](../system/ulib/fbl/include/fbl/inline_array.h),
+  - [fixed sized arrays](../kernel/lib/fbl/include/fbl/inline_array.h),
     which stack allocates small arrays
 - inline containers
   - [doubly linked list](../system/ulib/fbl/include/fbl/intrusive_double_list.h)

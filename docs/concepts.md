@@ -25,7 +25,7 @@ example [*zx_time_get()*](syscalls/time_get.md)
 and [*zx_nanosleep()*](syscalls/nanosleep.md) may be called by any thread.
 2. Calls which take a Handle as the first parameter, denoting the Object they act upon,
 which are the vast majority, for example [*zx_channel_write()*](syscalls/channel_write.md)
-and [*zx_port_bind()*](syscalls/port_bind.md).
+and [*zx_port_queue()*](syscalls/port_queue.md).
 3. Calls which create new Objects but do not take a Handle, such as
 [*zx_event_create()*](syscalls/event_create.md) and
 [*zx_channel_create()*](syscalls/channel_create.md).  Access to these (and limitations
@@ -139,7 +139,7 @@ pending Signals.
 See: [port_create](syscalls/port_create.md),
 [port_queue](syscalls/port_queue.md),
 [port_wait](syscalls/port_wait.md),
-[port_bind](syscalls/port_bind.md).
+[port_cancel](syscalls/port_cancel.md).
 
 
 ## Events, Event Pairs.

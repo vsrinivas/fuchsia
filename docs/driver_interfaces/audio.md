@@ -142,9 +142,9 @@ may be sent to the driver using the
 [zx_channel_write(...)](../syscalls/channel_write.md) syscall.  If a response is
 expected, it may be read using the
 [zx_channel_read(...)](../syscalls/channel_read.md) syscall.  Best practice,
-however, is to bind your [channel(s)](../objects/channel.md) to a
+however, is to queue packets for your [channel(s)](../objects/channel.md)
 [port](../objects/port.md) using the
-[zx_port_bind(...)](../syscalls/port_bind.md) syscall, and use the
+[zx_port_queue(...)](../syscalls/port_queue.md) syscall, and use the
 [zx_port_wait(...)](../syscalls/port_wait.md) syscall to determine when your set
 of channels have messages (either expected responses or asynchronous
 notifications) to be read.

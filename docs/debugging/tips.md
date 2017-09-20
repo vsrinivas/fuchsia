@@ -49,5 +49,5 @@ is passed.
 
 ## Debugging the kernel with QEMU+GDB.
 
-See "Debugging the kernel with GDB" in [QEMU](qemu.md) for
+See "Debugging the kernel with GDB" in [QEMU](../qemu.md) for
 documentation on debugging zircon with QEMU+GDB.
