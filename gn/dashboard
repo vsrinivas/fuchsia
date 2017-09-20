@@ -3,6 +3,6 @@
         "dart"
     ],
     "packages": {
-        "dashboard": "//apps/modules/dashboard"
+        "dashboard": "//topaz/app/dashboard"
     }
 }

@@ -3,7 +3,6 @@
         "dart"
     ],
     "imports": [
-        "packages/gn/calendar",
         "packages/gn/chat",
         "packages/gn/contacts",
         "packages/gn/drive",

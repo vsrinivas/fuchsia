@@ -3,11 +3,11 @@
         "dart"
     ],
     "labels": [
-        "//apps/latin-ime"
+        "//topaz/app/latin-ime"
     ],
     "binaries": [
         {
-            "binary": "gen/apps/latin-ime/latin-ime.flx",
+            "binary": "gen/topaz/app/latin-ime/latin-ime.flx",
             "bootfs_path": "apps/latin-ime"
         }
     ]
