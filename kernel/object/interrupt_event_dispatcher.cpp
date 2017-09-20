@@ -89,7 +89,7 @@ zx_status_t InterruptEventDispatcher::UserSignal() {
     canary_.Assert();
 
     mask_interrupt(vector_);
-    signal(true);
+    signal(true, ZX_ERR_CANCELED);
     return ZX_OK;
 }
 

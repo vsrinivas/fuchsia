@@ -97,7 +97,7 @@ zx_status_t PciInterruptDispatcher::UserSignal() {
     if (maskable_)
         device_->MaskIrq(irq_id_);
 
-    signal(true);
+    signal(true, ZX_ERR_CANCELED);
 
     return ZX_OK;
 }

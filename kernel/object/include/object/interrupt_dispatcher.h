@@ -49,8 +49,8 @@ protected:
     InterruptDispatcher() {
         event_init(&event_, false, 0);
     }
-    int signal(bool resched = false) {
-        return event_signal(&event_, resched);
+    int signal(bool resched = false, zx_status_t wait_result = ZX_OK) {
+        return event_signal_etc(&event_, resched, wait_result);
     }
     void unsignal() {
         event_unsignal(&event_);
