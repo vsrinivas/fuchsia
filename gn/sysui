@@ -3,7 +3,7 @@
         "dart"
     ],
     "packages": {
-        "sysui": "//apps/sysui",
-        "sysui_tests": "//apps/sysui:sysui_tests"
+        "sysui": "//topaz/shell:sysui",
+        "sysui_tests": "//topaz/shell:sysui_tests"
     }
 }
