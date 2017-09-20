@@ -91,6 +91,8 @@ Sections will be populated over time.
 # Developer tools
 
  - Building
+   - [How to build](build_system.md)
+   - [Build system overview](build_overview.md)
  - Testing
  - [Debugging](debugging.md)
  - Tracing
