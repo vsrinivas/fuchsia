@@ -18,10 +18,10 @@ driver_module("msd_intel") {
   ldflags = [ "$shared_ldflags" ]
 }
 
-driver_module("test") {
+driver_module("msd_intel_test") {
   testonly = true
 
-  output_name = "libmsd-intel-gen-test"
+  output_name = "libmsd_intel_test"
 
   deps = [
     "$magma_build_root/src/main:test_driver",

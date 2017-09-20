@@ -3,10 +3,12 @@
         "cpp"
     ],
     "imports": [
-        "garnet/packages/magma-common",
         "garnet/packages/sbase"
     ],
     "packages": {
-        "magma-dev": "//garnet/lib/magma/tests:magma-dev"
+        "magma-dev": "//garnet/lib/magma:magma-dev",
+        "magma-test": "//garnet/lib/magma/tests:magma-test",
+        "magma-tools": "//garnet/lib/magma:magma-tools",
+        "vkcube" : "//garnet/lib/magma:vkcube"
     }
 }

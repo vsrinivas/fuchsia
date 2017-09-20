@@ -5,15 +5,25 @@
 import("//garnet/lib/magma/gnbuild/magma.gni")
 import("//packages/package.gni")
 
-package("magma-dev") {
-  if (current_cpu == "x64") {
-    testonly = true
+package("magma-test-build-only") {
+  testonly = true
+  if (target_cpu == "x64") {
+    deps = [
+      ":tests",
+      "$mesa_build_root:tests",
+      "$msd_intel_gen_build_root:msd_intel_test",
+      "$msd_intel_gen_build_root:tests",
+    ]
+  }
+}
 
+package("magma-test") {
+  testonly = true
+  if (current_cpu == "x64") {
     deps = [
       ":autorun",
       ":tests",
       "$mesa_build_root:tests",
-      "$msd_intel_gen_build_root:test",
       "$msd_intel_gen_build_root:tests",
     ]
 
@@ -70,10 +80,6 @@ package("magma-dev") {
     binaries = [ {
           name = "autorun"
           dest = "magma_autorun"
-        } ]
-
-    drivers = [ {
-          name = "libmsd-intel-gen-test.so"
         } ]
   }
 }

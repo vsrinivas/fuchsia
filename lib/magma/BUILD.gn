@@ -11,27 +11,11 @@ group("vulkan") {
   ]
 }
 
-package("magma-common") {
+package("magma") {
   if (target_cpu == "x64") {
-    testonly = true
     deps = [
       ":libmagma",
       ":libvulkan",
-      ":tools",
-      "$mesa_build_root:tests",
-      "$msd_intel_gen_build_root:test",
-      "$msd_intel_gen_build_root:tests",
-      "//garnet/lib/magma/tests:tests",
-      "//garnet/lib/magma/tests/vkcube",
-    ]
-
-    binaries = [
-      {
-        name = "magma_info"
-      },
-      {
-        name = "vkcube"
-      },
     ]
 
     libraries = [
@@ -47,20 +31,77 @@ package("magma-common") {
           path = rebase_path("icd/magma_icd.json")
           dest = "vulkan/icd.d/magma_icd.json"
         } ]
+
+    if (target_cpu == "x64") {
+      deps += [ "$msd_intel_gen_build_root:msd_intel" ]
+
+      drivers = [ {
+            # This driver is needed early in bootup (i.e. in the /boot partition)
+            # so that devmgr correctly chooses it over the intel-i915.so driver on
+            # hardware with supported intel GPUs.
+            early_boot_driver = true
+            name = "libmsd_intel.so"
+          } ]
+    }
   }
 }
 
-package("magma") {
+package("magma-dev") {
+  if (target_cpu == "x64") {
+    testonly = true
+    deps = [
+      ":libmagma",
+      ":libvulkan",
+    ]
+
+    libraries = [
+      {
+        name = "libmagma.so"
+      },
+      {
+        name = "libvulkan_intel.so"
+      },
+    ]
+
+    resources = [ {
+          path = rebase_path("icd/magma_icd.json")
+          dest = "vulkan/icd.d/magma_icd.json"
+        } ]
+
+    if (target_cpu == "x64") {
+      deps += [ "$msd_intel_gen_build_root:msd_intel_test" ]
+
+      drivers = [ {
+            # This driver is needed early in bootup (i.e. in the /boot partition)
+            # so that devmgr correctly chooses it over the intel-i915.so driver on
+            # hardware with supported intel GPUs.
+            early_boot_driver = true
+            name = "libmsd_intel_test.so"
+          } ]
+    }
+  }
+}
+
+package("magma-tools") {
   if (target_cpu == "x64") {
     deps = [
-      "$msd_intel_gen_build_root:msd_intel",
+      ":tools",
     ]
-    drivers = [ {
-          # This driver is needed early in bootup (i.e. in the /boot partition)
-          # so that devmgr correctly chooses it over the intel-i915.so driver on
-          # hardware with supported intel GPUs.
-          early_boot_driver = true
-          name = "libmsd_intel.so"
+
+    binaries = [ {
+          name = "magma_info"
+        } ]
+  }
+}
+
+package("vkcube") {
+  if (target_cpu == "x64") {
+    deps = [
+      "//garnet/lib/magma/tests/vkcube",
+    ]
+
+    binaries = [ {
+          name = "vkcube"
         } ]
   }
 }
