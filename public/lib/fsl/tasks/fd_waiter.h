@@ -5,21 +5,22 @@
 #ifndef LIB_FSL_TASKS_FD_WAITER_H_
 #define LIB_FSL_TASKS_FD_WAITER_H_
 
-#include <zircon/types.h>
-#include <fdio/private.h>
-
 #include <functional>
 
+#include <async/wait.h>
+#include <async/default.h>
+#include <fdio/private.h>
+#include <zircon/types.h>
+
 #include "lib/fxl/fxl_export.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/tasks/message_loop_handler.h"
+#include "lib/fxl/macros.h"
 
 namespace fsl {
 
-class FXL_EXPORT FDWaiter : public MessageLoopHandler {
+class FXL_EXPORT FDWaiter {
  public:
-  FDWaiter();
-  ~FDWaiter() override;
+  FDWaiter(async_t* async=async_get_default());
+  ~FDWaiter();
 
   // If the wait was successful, the first argument will be ZX_OK and the
   // second argument will be the pending events on the file descriptor. If the
@@ -38,16 +39,12 @@ class FXL_EXPORT FDWaiter : public MessageLoopHandler {
   //
   // * |callback| is the callback to call when the wait is complete.
   // * |fd| is the file descriptor to wait on.
-  // * |events| is a bitmask of POSIX-style events (EPOLLIN, EPOLLOUT,
-  //   EPOLLERR).
-  // * |timeout| is a time limit for the wait.
+  // * |events| is a bitmask of POSIX-style events (|POLLIN|, |POLLOUT|,
+  //   |POLLERR|).
   //
   // Returns true if |fd| is a valid file descriptor that supports waiting on
   // the given events. Otherwise, returns false.
-  bool Wait(Callback callback,
-            int fd,
-            uint32_t events,
-            fxl::TimeDelta timeout = fxl::TimeDelta::Max());
+  bool Wait(Callback callback, int fd, uint32_t events);
 
   // Cancels an outstanding wait.
   //
@@ -55,13 +52,16 @@ class FXL_EXPORT FDWaiter : public MessageLoopHandler {
   void Cancel();
 
  private:
-  void OnHandleReady(zx_handle_t handle,
-                     zx_signals_t pending,
-                     uint64_t count) override;
-  void OnHandleError(zx_handle_t handle, zx_status_t error) override;
+  // Release the fdio_t*
+  void Release();
 
+  async_wait_result_t Handler(async_t* async,
+                              zx_status_t status,
+                              const zx_packet_signal_t* signal);
+
+  async_t* const async_;
   fdio_t* io_;
-  MessageLoop::HandlerKey key_;
+  async::Wait wait_;
   Callback callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FDWaiter);

@@ -3,84 +3,89 @@
 // found in the LICENSE file.
 
 #include "lib/fsl/tasks/fd_waiter.h"
+#include "lib/fxl/logging.h"
 
+#include <async/default.h>
+#include <fbl/function.h>
 #include <zircon/errors.h>
 
 namespace fsl {
 
-FDWaiter::FDWaiter() : io_(nullptr), key_(0) {}
+FDWaiter::FDWaiter(async_t* async)
+    : async_(async), io_(nullptr) {}
 
 FDWaiter::~FDWaiter() {
-  if (io_)
+  if (io_) {
     Cancel();
+  }
 
   FXL_DCHECK(!io_);
-  FXL_DCHECK(!key_);
 }
 
-bool FDWaiter::Wait(Callback callback,
-                    int fd,
-                    uint32_t events,
-                    fxl::TimeDelta timeout) {
+bool FDWaiter::Wait(Callback callback, int fd, uint32_t events) {
   FXL_DCHECK(!io_);
-  FXL_DCHECK(!key_);
 
   io_ = __fdio_fd_to_io(fd);
-  if (!io_)
+  if (!io_) {
     return false;
+  }
 
   zx_handle_t handle = ZX_HANDLE_INVALID;
   zx_signals_t signals = ZX_SIGNAL_NONE;
   __fdio_wait_begin(io_, events, &handle, &signals);
 
   if (handle == ZX_HANDLE_INVALID) {
-    Cancel();
+    Release();
     return false;
   }
 
-  key_ = MessageLoop::GetCurrent()->AddHandler(this, handle, signals, timeout);
+  wait_.set_object(handle);
+  wait_.set_trigger(signals);
+  wait_.set_handler(fbl::BindMember(this, &FDWaiter::Handler));
+  zx_status_t status = wait_.Begin(async_);
+
+  if (status != ZX_OK) {
+    Release();
+    return false;
+  }
 
   // Last to prevent re-entrancy from the move constructor of the callback.
   callback_ = std::move(callback);
   return true;
 }
 
-void FDWaiter::Cancel() {
+void FDWaiter::Release() {
   FXL_DCHECK(io_);
-
-  if (key_)
-    MessageLoop::GetCurrent()->RemoveHandler(key_);
-
   __fdio_release(io_);
   io_ = nullptr;
-  key_ = 0;
-
-  // Last to prevent re-entrancy from the destructor of the callback.
-  callback_ = Callback();
 }
 
-void FDWaiter::OnHandleReady(zx_handle_t handle,
-                             zx_signals_t pending,
-                             uint64_t count) {
+void FDWaiter::Cancel() {
+  if (io_) {
+    wait_.Cancel(async_);
+    Release();
+
+    // Last to prevent re-entrancy from the destructor of the callback.
+    callback_ = Callback();
+  }
+}
+
+async_wait_result_t FDWaiter::Handler(async_t* async,
+                                      zx_status_t status,
+                                      const zx_packet_signal_t* signal) {
   FXL_DCHECK(io_);
-  FXL_DCHECK(key_);
 
   uint32_t events = 0;
-  __fdio_wait_end(io_, pending, &events);
+  if (status == ZX_OK) {
+    __fdio_wait_end(io_, signal->observed, &events);
+  }
 
   Callback callback = std::move(callback_);
-  Cancel();
+  Release();
 
   // Last to prevent re-entrancy from the callback.
-  callback(ZX_OK, events);
-}
-
-void FDWaiter::OnHandleError(zx_handle_t handle, zx_status_t error) {
-  Callback callback = std::move(callback_);
-  Cancel();
-
-  // Last to prevent re-entrancy from the callback.
-  callback(error, 0);
+  callback(status, events);
+  return ASYNC_WAIT_FINISHED;
 }
 
 }  // namespace fsl

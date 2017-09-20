@@ -538,10 +538,11 @@ TEST(MessageLoop, FDWaiter) {
       fdio_handle_fd(fdevent.get(), ZX_USER_SIGNAL_0, 0, /*shared=*/true));
   EXPECT_TRUE(fd.is_valid());
 
-  FDWaiter waiter;
   bool callback_ran = false;
   {
     MessageLoop message_loop;
+    FDWaiter waiter;
+
     std::thread thread([&fdevent]() {
       // Poke the fdevent, which pokes the fd.
       EXPECT_EQ(fdevent.signal(0u, ZX_USER_SIGNAL_0), ZX_OK);
