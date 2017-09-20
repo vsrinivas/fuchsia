@@ -268,7 +268,7 @@ emptyfile() {
 
 set -e
 
-echo "Building magentix for installer"
+echo "Building boot environment for installer"
 gn_gen_path="packages/gn/gen.py"
 ninja_path="buildtools/ninja"
 

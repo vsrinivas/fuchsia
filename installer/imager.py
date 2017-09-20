@@ -10,6 +10,7 @@ import subprocess
 import sys
 
 import manifest
+import util
 
 # This script is concerned with creating a new user.bootfs which contains
 # whatever the contents of the user.bootfs are according to the supplied
@@ -28,6 +29,8 @@ DIR_EFI_BOOT = "EFI/BOOT"
 FILE_KERNEL = "zircon.bin"
 FILE_KERNEL_RD = "ramdisk.bin"
 FILE_KERNEL_CMDLINE = "cmdline"
+FILE_ZEDBOOT = "zedboot.bin"
+ZEDBOOT_DEFAULT_CMDLINE = "netsvc.netboot=true virtcon.font=18x32"
 
 def compress_file(lz4_path, source, dest, working_dir):
   lz4_cmd = [lz4_path, "-4", "-B4", source, dest]
@@ -175,6 +178,14 @@ parser.add_argument('--mdir_path', action='store', required=True,
 parser.add_argument('--runtime_dir', action='store', required=False,
                     help="""Path to the output directory containing the runtime
                     available when running the installer""")
+parser.add_argument('--build_dir_zedboot', action='store', required=False,
+                    help="Directory to take zedboot artifacts from")
+parser.add_argument('--kernel_zedboot', action='store', required=False,
+                    help="Kernel to use for zedboot")
+parser.add_argument('--bootdata_zedboot', action='store', required=False,
+                    help="Bootdata for zedboot")
+parser.add_argument('--cmdline_zedboot', action='store', required=False,
+                    help="File containging device command line for zedboot")
 
 args = parser.parse_args()
 disk_path_efi = args.efi_disk
@@ -187,6 +198,17 @@ enable_thread_exp = not args.disable_thread_exp
 mdir_path = args.mdir_path
 
 runtime_dir = args.runtime_dir
+zedboot_build_dir = args.build_dir_zedboot
+zedboot_kernel = args.kernel_zedboot
+zedboot_bootdata = args.bootdata_zedboot
+zedboot_cmdline = args.cmdline_zedboot
+
+if zedboot_cmdline is None:
+  zedboot_cmdline = ZEDBOOT_DEFAULT_CMDLINE
+else:
+  if not os.path.exists(zedboot_cmdline):
+    print "Specified zedboot cmdline file doesn't exist!"
+    sys.exit(-1)
 
 arch = args.arch
 if arch is None:
@@ -224,6 +246,18 @@ if not bootdata:
     sys.exit(-1)
 
 runtime_bootdata = bootdata
+
+if zedboot_kernel is None:
+  if zedboot_build_dir is None:
+    zedboot_kernel = kernel
+  else:
+    zedboot_kernel = os.path.join(zedboot_build_dir, "zircon.bin")
+
+if zedboot_bootdata is None:
+  if zedboot_build_dir is None:
+    zedboot_bootdata = bootdata
+  else:
+    zedboot_bootdata = os.path.join(zedboot_build_dir, "bootdata.bin")
 
 if arch == "X64" and not os.path.exists(bootloader):
   print """EFI loader does not exist at path %s, please check the path and try
@@ -315,6 +349,17 @@ bootdata = mk_bootdata_fs(mkbootfs_path,
                           os.path.join(args.build_dir, "installer.bootdata.bootfs"),
                           working_dir, bootdata, boot_manifests)
 
+zedboot_path = os.path.join(args.build_dir, FILE_ZEDBOOT)
+try:
+  util.make_zedboot(mkbootfs_path, zedboot_kernel, zedboot_bootdata,
+                    zedboot_cmdline, zedboot_path)
+except subprocess.CalledProcessError as err:
+  print "Error creating zedboot %s" % err
+  sys.exit(-1)
+except OSError:
+  print "Error executing mkbootfs"
+  sys.exit(-1)
+
 if not (cp_fat(mcopy_path, mdir_path, disk_path_efi, bootloader,
                bootloader_remote_path, working_dir)
         and
@@ -322,7 +367,10 @@ if not (cp_fat(mcopy_path, mdir_path, disk_path_efi, bootloader,
                working_dir)
         and
         cp_fat(mcopy_path, mdir_path, disk_path_efi, bootdata, FILE_KERNEL_RD,
-               working_dir)):
+               working_dir)
+        and
+        cp_fat(mcopy_path, mdir_path, disk_path_efi, zedboot_path,
+               FILE_ZEDBOOT, working_dir)):
   sys.exit(-1)
 
 if not kernel_cmdline:
