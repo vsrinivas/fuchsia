@@ -15,9 +15,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <fs/vfs.h>
-
+#include <fbl/limits.h>
+#include <fbl/ref_ptr.h>
 #include <fdio/vfs.h>
+#include <fs/vfs.h>
 #include "minfs.h"
 #include "minfs-private.h"
 
@@ -150,8 +151,11 @@ ssize_t emu_read(int fd, void* buf, size_t count) {
     zx_status_t status = f->vn->Read(buf, count, f->off, &actual);
     if (status == ZX_OK) {
         f->off += actual;
+        ZX_DEBUG_ASSERT(actual <= fbl::numeric_limits<ssize_t>::max());
+        return static_cast<ssize_t>(actual);
     }
-    return status;
+    ZX_DEBUG_ASSERT(status < 0);
+    return static_cast<ssize_t>(status);
 }
 
 ssize_t emu_write(int fd, const void* buf, size_t count) {
@@ -161,8 +165,11 @@ ssize_t emu_write(int fd, const void* buf, size_t count) {
     zx_status_t status = f->vn->Write(buf, count, f->off, &actual);
     if (status == ZX_OK) {
         f->off += actual;
+        ZX_DEBUG_ASSERT(actual <= fbl::numeric_limits<ssize_t>::max());
+        return static_cast<ssize_t>(actual);
     }
-    return status;
+    ZX_DEBUG_ASSERT(status < 0);
+    return static_cast<ssize_t>(status);
 }
 
 off_t emu_lseek(int fd, off_t offset, int whence) {
