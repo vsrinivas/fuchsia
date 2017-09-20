@@ -54,7 +54,8 @@ right.
 **ZX_ERR_BAD_HANDLE** *guest* or *port* are invalid handles.
 
 **ZX_ERR_INVALID_ARGS** *kind* is not a valid address space, *addr* or *len*
-do not meet the requirements of *kind*, or *len* is 0.
+do not meet the requirements of *kind*, *len* is 0, or *ZX_GUEST_TRAP_MEM* was
+specified with a *port*.
 
 **ZX_ERR_NO_MEMORY** Temporary failure due to lack of memory.
 

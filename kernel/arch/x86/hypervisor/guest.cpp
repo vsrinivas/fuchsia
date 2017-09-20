@@ -94,6 +94,8 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
     case ZX_GUEST_TRAP_MEM:
         if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len))
             return ZX_ERR_INVALID_ARGS;
+        if (port)
+            return ZX_ERR_INVALID_ARGS;
         return gpas_->UnmapRange(addr, len);
     case ZX_GUEST_TRAP_IO:
         if (addr + len > UINT16_MAX)

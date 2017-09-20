@@ -23,7 +23,8 @@ public:
     ~Guest();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Guest);
 
-    zx_status_t SetTrap(zx_vaddr_t addr, size_t len);
+    zx_status_t SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
+                        fbl::RefPtr<PortDispatcher> port, uint64_t key);
 
     GuestPhysicalAddressSpace* AddressSpace() const { return gpas_.get(); }
 

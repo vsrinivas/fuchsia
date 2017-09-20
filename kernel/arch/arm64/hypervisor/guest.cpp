@@ -6,6 +6,7 @@
 
 #include <arch/hypervisor.h>
 #include <hypervisor/guest_physical_address_space.h>
+#include <object/port_dispatcher.h>
 #include <zircon/syscalls/hypervisor.h>
 
 #include "el2_cpu_state_priv.h"
@@ -36,12 +37,24 @@ Guest::~Guest() {
         free_vmid(vmid_);
 }
 
-zx_status_t Guest::SetTrap(zx_vaddr_t addr, size_t len) {
-    if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len) || len == 0)
+zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
+                           fbl::RefPtr<PortDispatcher> port, uint64_t key) {
+    if (len == 0)
         return ZX_ERR_INVALID_ARGS;
     if (SIZE_MAX - len < addr)
         return ZX_ERR_OUT_OF_RANGE;
-    return gpas_->UnmapRange(addr, len);
+    switch (kind) {
+    case ZX_GUEST_TRAP_MEM:
+        if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len))
+            return ZX_ERR_INVALID_ARGS;
+        if (port)
+            return ZX_ERR_INVALID_ARGS;
+        return gpas_->UnmapRange(addr, len);
+    case ZX_GUEST_TRAP_IO:
+        return ZX_ERR_NOT_SUPPORTED;
+    default:
+        return ZX_ERR_INVALID_ARGS;
+    }
 }
 
 zx_status_t arch_guest_create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* guest) {
@@ -52,7 +65,5 @@ zx_status_t arch_guest_create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Gue
 
 zx_status_t arch_guest_set_trap(Guest* guest, uint32_t kind, zx_vaddr_t addr, size_t len,
                                 fbl::RefPtr<PortDispatcher> port, uint64_t key) {
-    if (kind != ZX_GUEST_TRAP_MEM)
-        return ZX_ERR_NOT_SUPPORTED;
-    return guest->SetTrap(addr, len);
+    return guest->SetTrap(kind, addr, len, port, key);
 }
