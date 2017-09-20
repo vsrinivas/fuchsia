@@ -4,6 +4,8 @@
 
 source_set("audio") {
   sources = [
+    "lpcm_payload.cc",
+    "lpcm_payload.h",
     "perceived_level.cc",
     "perceived_level.h",
     "types.cc",
