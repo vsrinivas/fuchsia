@@ -3,16 +3,16 @@
         "dart"
     ],
     "labels": [
-        "//apps/mondrian",
-        "//apps/mondrian:test"
+        "//apps/sysui/mondrian_story_shell:mondrian",
+        "//apps/sysui/mondrian_story_shell:test"
     ],
     "binaries": [
         {
-            "binary": "gen/apps/mondrian/flutter_mondrian.flx",
+            "binary": "gen/apps/sysui/mondrian_story_shell/flutter_mondrian.flx",
             "bootfs_path": "apps/mondrian"
         },
         {
-            "binary": "gen/apps/mondrian/examples/manual/example_manual_relationships.flx",
+            "binary": "gen/apps/sysui/mondrian_story_shell/examples/manual/example_manual_relationships.flx",
             "bootfs_path": "apps/example_manual_relationships"
         }
     ]
