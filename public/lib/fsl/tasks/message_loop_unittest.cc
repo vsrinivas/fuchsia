@@ -386,7 +386,7 @@ class QuitOnErrorRunMessageHandler : public TestMessageLoopHandler {
     message_loop_ = message_loop;
   }
 
-  void OnHandleError(zx_status_t handle, zx_status_t status) override {
+  void OnHandleError(zx_handle_t handle, zx_status_t status) override {
     message_loop_->QuitNow();
     TestMessageLoopHandler::OnHandleError(handle, status);
   }
